@@ -1999,11 +1999,12 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
   if (Config->ZWxneeded)
     AddHdr(PT_OPENBSD_WXNEEDED, PF_X);
 
-  // Create one PT_NOTE per a group of contiguous .note sections.
+  // Create one PT_NOTE per a group of contiguous SHT_NOTE sections with the
+  // same alignment.
   PhdrEntry *Note = nullptr;
   for (OutputSection *Sec : OutputSections) {
     if (Sec->Type == SHT_NOTE && (Sec->Flags & SHF_ALLOC)) {
-      if (!Note || Sec->LMAExpr)
+      if (!Note || Sec->LMAExpr || Note->LastSec->Alignment != Sec->Alignment)
         Note = AddHdr(PT_NOTE, PF_R);
       Note->add(Sec);
     } else {
@@ -2131,7 +2132,7 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
     // segment is the last loadable segment, align the offset of the
     // following section to avoid loading non-segments parts of the file.
     if (LastRX && LastRX->LastSec == Sec)
-      Off = alignTo(Off, Target->PageSize);
+      Off = alignTo(Off, Config->CommonPageSize);
   }
 
   SectionHeaderOff = alignTo(Off, Config->Wordsize);
@@ -2183,7 +2184,7 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
       // The glibc dynamic loader rounds the size down, so we need to round up
       // to protect the last page. This is a no-op on FreeBSD which always
       // rounds up.
-      P->p_memsz = alignTo(P->p_memsz, Target->PageSize);
+      P->p_memsz = alignTo(P->p_memsz, Config->CommonPageSize);
     }
 
     if (P->p_type == PT_TLS && P->p_memsz) {
@@ -2476,10 +2477,10 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
   // Fill the last page.
   for (PhdrEntry *P : Phdrs)
     if (P->p_type == PT_LOAD && (P->p_flags & PF_X))
-      fillTrap(Out::BufferStart +
-                   alignDown(P->p_offset + P->p_filesz, Target->PageSize),
+      fillTrap(Out::BufferStart + alignDown(P->p_offset + P->p_filesz,
+                                            Config->CommonPageSize),
                Out::BufferStart +
-                   alignTo(P->p_offset + P->p_filesz, Target->PageSize));
+                   alignTo(P->p_offset + P->p_filesz, Config->CommonPageSize));
 
   // Round up the file size of the last segment to the page boundary iff it is
   // an executable segment to ensure that other tools don't accidentally
@@ -2490,7 +2491,8 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
       Last = P;
 
   if (Last && (Last->p_flags & PF_X))
-    Last->p_memsz = Last->p_filesz = alignTo(Last->p_filesz, Target->PageSize);
+    Last->p_memsz = Last->p_filesz =
+        alignTo(Last->p_filesz, Config->CommonPageSize);
 }
 
 // Write section contents to a mmap'ed file.
@@ -2540,48 +2542,42 @@ computeHash(llvm::MutableArrayRef<uint8_t> HashBuf,
   HashFn(HashBuf.data(), Hashes);
 }
 
-static std::vector<uint8_t> computeBuildId(llvm::ArrayRef<uint8_t> Buf) {
-  std::vector<uint8_t> BuildId;
+template <class ELFT> void Writer<ELFT>::writeBuildId() {
+  if (!In.BuildId || !In.BuildId->getParent())
+    return;
+
+  if (Config->BuildId == BuildIdKind::Hexstring) {
+    In.BuildId->writeBuildId(Config->BuildIdVector);
+    return;
+  }
+
+  // Compute a hash of all sections of the output file.
+  std::vector<uint8_t> BuildId(In.BuildId->HashSize);
+  llvm::ArrayRef<uint8_t> Buf{Out::BufferStart, size_t(FileSize)};
+
   switch (Config->BuildId) {
   case BuildIdKind::Fast:
-    BuildId.resize(8);
     computeHash(BuildId, Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
       write64le(Dest, xxHash64(Arr));
     });
     break;
   case BuildIdKind::Md5:
-    BuildId.resize(16);
-    computeHash(BuildId, Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
-      memcpy(Dest, MD5::hash(Arr).data(), 16);
+    computeHash(BuildId, Buf, [&](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
+      memcpy(Dest, MD5::hash(Arr).data(), In.BuildId->HashSize);
     });
     break;
   case BuildIdKind::Sha1:
-    BuildId.resize(20);
-    computeHash(BuildId, Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
-      memcpy(Dest, SHA1::hash(Arr).data(), 20);
+    computeHash(BuildId, Buf, [&](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
+      memcpy(Dest, SHA1::hash(Arr).data(), In.BuildId->HashSize);
     });
     break;
   case BuildIdKind::Uuid:
-    BuildId.resize(16);
-    if (auto EC = llvm::getRandomBytes(BuildId.data(), 16))
+    if (auto EC = llvm::getRandomBytes(BuildId.data(), In.BuildId->HashSize))
       error("entropy source failure: " + EC.message());
-    break;
-  case BuildIdKind::Hexstring:
-    BuildId = Config->BuildIdVector;
     break;
   default:
     llvm_unreachable("unknown BuildIdKind");
   }
-  return BuildId;
-}
-
-template <class ELFT> void Writer<ELFT>::writeBuildId() {
-  if (!In.BuildId || !In.BuildId->getParent())
-    return;
-
-  // Compute a hash of all sections of the output file.
-  std::vector<uint8_t> BuildId =
-      computeBuildId({Out::BufferStart, size_t(FileSize)});
   In.BuildId->writeBuildId(BuildId);
 }
 

@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InstPrinter/X86ATTInstPrinter.h"
-#include "InstPrinter/X86InstComments.h"
+#include "MCTargetDesc/X86ATTInstPrinter.h"
 #include "MCTargetDesc/X86BaseInfo.h"
+#include "MCTargetDesc/X86InstComments.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "Utils/X86ShuffleDecode.h"
 #include "X86AsmPrinter.h"
@@ -767,7 +767,7 @@ static unsigned EmitNop(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
 
   unsigned NopSize;
   unsigned Opc, BaseReg, ScaleVal, IndexReg, Displacement, SegmentReg;
-  Opc = IndexReg = Displacement = SegmentReg = 0;
+  IndexReg = Displacement = SegmentReg = 0;
   BaseReg = X86::RAX;
   ScaleVal = 1;
   switch (NumBytes) {

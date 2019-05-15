@@ -12,6 +12,7 @@
 
 #include "MSP430.h"
 #include "MCTargetDesc/MSP430MCTargetDesc.h"
+#include "TargetInfo/MSP430TargetInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"

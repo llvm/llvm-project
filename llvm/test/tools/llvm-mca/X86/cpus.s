@@ -21,7 +21,7 @@ add %edi, %eax
 # BDVER2:           Dispatch Width:    4
 # BDVER2-NEXT:      uOps Per Cycle:    0.97
 # BDVER2-NEXT:      IPC:               0.97
-# BDVER2-NEXT:      Block RThroughput: 0.5
+# BDVER2-NEXT:      Block RThroughput: 1.0
 
 # BROADWELL:        Dispatch Width:    4
 # BROADWELL-NEXT:   uOps Per Cycle:    0.97

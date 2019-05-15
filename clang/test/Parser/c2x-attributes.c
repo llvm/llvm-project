@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -fdouble-square-bracket-attributes -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=gnu2x -verify %s
 
 enum [[]] E {
   One [[]],

@@ -31,7 +31,7 @@ enum DWARFProducer {
   eProcucerOther
 };
 
-class DWARFUnit {
+class DWARFUnit : public lldb_private::UserID {
   using die_iterator_range =
       llvm::iterator_range<DWARFDebugInfoEntry::collection::iterator>;
 
@@ -74,7 +74,6 @@ public:
   virtual uint32_t GetHeaderByteSize() const = 0;
   // Offset of the initial length field.
   dw_offset_t GetOffset() const { return m_offset; }
-  lldb::user_id_t GetID() const;
   /// Get the size in bytes of the length field in the header.
   ///
   /// In DWARF32 this is just 4 bytes
@@ -85,12 +84,12 @@ public:
 
   bool ContainsDIEOffset(dw_offset_t die_offset) const {
     return die_offset >= GetFirstDIEOffset() &&
-           die_offset < GetNextCompileUnitOffset();
+           die_offset < GetNextUnitOffset();
   }
   dw_offset_t GetFirstDIEOffset() const {
     return m_offset + GetHeaderByteSize();
   }
-  dw_offset_t GetNextCompileUnitOffset() const;
+  dw_offset_t GetNextUnitOffset() const;
   // Size of the CU data (without initial length and without header).
   size_t GetDebugInfoSize() const;
   // Size of the CU data incl. header but without initial length.
@@ -169,7 +168,7 @@ public:
   }
 
 protected:
-  DWARFUnit(SymbolFileDWARF *dwarf);
+  DWARFUnit(SymbolFileDWARF *dwarf, lldb::user_id_t uid);
 
   SymbolFileDWARF *m_dwarf = nullptr;
   std::unique_ptr<SymbolFileDWARFDwo> m_dwo_symbol_file;

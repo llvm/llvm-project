@@ -166,9 +166,10 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
 }
 
 /// InsertBinop - Insert the specified binary operator, doing a small amount
-/// of work to avoid inserting an obviously redundant operation.
+/// of work to avoid inserting an obviously redundant operation, and hoisting
+/// to an outer loop when the opportunity is there and it is safe.
 Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
-                                 Value *LHS, Value *RHS) {
+                                 Value *LHS, Value *RHS, bool IsSafeToHoist) {
   // Fold a binop with constant operands.
   if (Constant *CLHS = dyn_cast<Constant>(LHS))
     if (Constant *CRHS = dyn_cast<Constant>(RHS))
@@ -210,14 +211,16 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
   DebugLoc Loc = Builder.GetInsertPoint()->getDebugLoc();
   SCEVInsertPointGuard Guard(Builder, this);
 
-  // Move the insertion point out of as many loops as we can.
-  while (const Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock())) {
-    if (!L->isLoopInvariant(LHS) || !L->isLoopInvariant(RHS)) break;
-    BasicBlock *Preheader = L->getLoopPreheader();
-    if (!Preheader) break;
+  if (IsSafeToHoist) {
+    // Move the insertion point out of as many loops as we can.
+    while (const Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock())) {
+      if (!L->isLoopInvariant(LHS) || !L->isLoopInvariant(RHS)) break;
+      BasicBlock *Preheader = L->getLoopPreheader();
+      if (!Preheader) break;
 
-    // Ok, move up a level.
-    Builder.SetInsertPoint(Preheader->getTerminator());
+      // Ok, move up a level.
+      Builder.SetInsertPoint(Preheader->getTerminator());
+    }
   }
 
   // If we haven't found this binop, insert it.
@@ -734,7 +737,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
       // Instead of doing a negate and add, just do a subtract.
       Value *W = expandCodeFor(SE.getNegativeSCEV(Op), Ty);
       Sum = InsertNoopCastOfTo(Sum, Ty);
-      Sum = InsertBinop(Instruction::Sub, Sum, W);
+      Sum = InsertBinop(Instruction::Sub, Sum, W, /*IsSafeToHoist*/ true);
       ++I;
     } else {
       // A simple add.
@@ -742,7 +745,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
       Sum = InsertNoopCastOfTo(Sum, Ty);
       // Canonicalize a constant to the RHS.
       if (isa<Constant>(Sum)) std::swap(Sum, W);
-      Sum = InsertBinop(Instruction::Add, Sum, W);
+      Sum = InsertBinop(Instruction::Add, Sum, W, /*IsSafeToHoist*/ true);
       ++I;
     }
   }
@@ -794,9 +797,11 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
     if (Exponent & 1)
       Result = P;
     for (uint64_t BinExp = 2; BinExp <= Exponent; BinExp <<= 1) {
-      P = InsertBinop(Instruction::Mul, P, P);
+      P = InsertBinop(Instruction::Mul, P, P, /*IsSafeToHoist*/ true);
       if (Exponent & BinExp)
-        Result = Result ? InsertBinop(Instruction::Mul, Result, P) : P;
+        Result = Result ? InsertBinop(Instruction::Mul, Result, P,
+                                      /*IsSafeToHoist*/ true)
+                        : P;
     }
 
     I = E;
@@ -811,7 +816,8 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
     } else if (I->second->isAllOnesValue()) {
       // Instead of doing a multiply by negative one, just do a negate.
       Prod = InsertNoopCastOfTo(Prod, Ty);
-      Prod = InsertBinop(Instruction::Sub, Constant::getNullValue(Ty), Prod);
+      Prod = InsertBinop(Instruction::Sub, Constant::getNullValue(Ty), Prod,
+                         /*IsSafeToHoist*/ true);
       ++I;
     } else {
       // A simple mul.
@@ -824,9 +830,10 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
         // Canonicalize Prod*(1<<C) to Prod<<C.
         assert(!Ty->isVectorTy() && "vector types are not SCEVable");
         Prod = InsertBinop(Instruction::Shl, Prod,
-                           ConstantInt::get(Ty, RHS->logBase2()));
+                           ConstantInt::get(Ty, RHS->logBase2()),
+                           /*IsSafeToHoist*/ true);
       } else {
-        Prod = InsertBinop(Instruction::Mul, Prod, W);
+        Prod = InsertBinop(Instruction::Mul, Prod, W, /*IsSafeToHoist*/ true);
       }
     }
   }
@@ -842,11 +849,13 @@ Value *SCEVExpander::visitUDivExpr(const SCEVUDivExpr *S) {
     const APInt &RHS = SC->getAPInt();
     if (RHS.isPowerOf2())
       return InsertBinop(Instruction::LShr, LHS,
-                         ConstantInt::get(Ty, RHS.logBase2()));
+                         ConstantInt::get(Ty, RHS.logBase2()),
+                         /*IsSafeToHoist*/ true);
   }
 
   Value *RHS = expandCodeFor(S->getRHS(), Ty);
-  return InsertBinop(Instruction::UDiv, LHS, RHS);
+  return InsertBinop(Instruction::UDiv, LHS, RHS,
+                     /*IsSafeToHoist*/ SE.isKnownNonZero(S->getRHS()));
 }
 
 /// Move parts of Base into Rest to leave Base with the minimal
@@ -1633,7 +1642,8 @@ Value *SCEVExpander::visitSMaxExpr(const SCEVSMaxExpr *S) {
   for (int i = S->getNumOperands()-2; i >= 0; --i) {
     // In the case of mixed integer and pointer types, do the
     // rest of the comparisons as integer.
-    if (S->getOperand(i)->getType() != Ty) {
+    Type *OpTy = S->getOperand(i)->getType();
+    if (OpTy->isIntegerTy() != Ty->isIntegerTy()) {
       Ty = SE.getEffectiveSCEVType(Ty);
       LHS = InsertNoopCastOfTo(LHS, Ty);
     }
@@ -1657,7 +1667,8 @@ Value *SCEVExpander::visitUMaxExpr(const SCEVUMaxExpr *S) {
   for (int i = S->getNumOperands()-2; i >= 0; --i) {
     // In the case of mixed integer and pointer types, do the
     // rest of the comparisons as integer.
-    if (S->getOperand(i)->getType() != Ty) {
+    Type *OpTy = S->getOperand(i)->getType();
+    if (OpTy->isIntegerTy() != Ty->isIntegerTy()) {
       Ty = SE.getEffectiveSCEVType(Ty);
       LHS = InsertNoopCastOfTo(LHS, Ty);
     }
@@ -1665,6 +1676,56 @@ Value *SCEVExpander::visitUMaxExpr(const SCEVUMaxExpr *S) {
     Value *ICmp = Builder.CreateICmpUGT(LHS, RHS);
     rememberInstruction(ICmp);
     Value *Sel = Builder.CreateSelect(ICmp, LHS, RHS, "umax");
+    rememberInstruction(Sel);
+    LHS = Sel;
+  }
+  // In the case of mixed integer and pointer types, cast the
+  // final result back to the pointer type.
+  if (LHS->getType() != S->getType())
+    LHS = InsertNoopCastOfTo(LHS, S->getType());
+  return LHS;
+}
+
+Value *SCEVExpander::visitSMinExpr(const SCEVSMinExpr *S) {
+  Value *LHS = expand(S->getOperand(S->getNumOperands() - 1));
+  Type *Ty = LHS->getType();
+  for (int i = S->getNumOperands() - 2; i >= 0; --i) {
+    // In the case of mixed integer and pointer types, do the
+    // rest of the comparisons as integer.
+    Type *OpTy = S->getOperand(i)->getType();
+    if (OpTy->isIntegerTy() != Ty->isIntegerTy()) {
+      Ty = SE.getEffectiveSCEVType(Ty);
+      LHS = InsertNoopCastOfTo(LHS, Ty);
+    }
+    Value *RHS = expandCodeFor(S->getOperand(i), Ty);
+    Value *ICmp = Builder.CreateICmpSLT(LHS, RHS);
+    rememberInstruction(ICmp);
+    Value *Sel = Builder.CreateSelect(ICmp, LHS, RHS, "smin");
+    rememberInstruction(Sel);
+    LHS = Sel;
+  }
+  // In the case of mixed integer and pointer types, cast the
+  // final result back to the pointer type.
+  if (LHS->getType() != S->getType())
+    LHS = InsertNoopCastOfTo(LHS, S->getType());
+  return LHS;
+}
+
+Value *SCEVExpander::visitUMinExpr(const SCEVUMinExpr *S) {
+  Value *LHS = expand(S->getOperand(S->getNumOperands() - 1));
+  Type *Ty = LHS->getType();
+  for (int i = S->getNumOperands() - 2; i >= 0; --i) {
+    // In the case of mixed integer and pointer types, do the
+    // rest of the comparisons as integer.
+    Type *OpTy = S->getOperand(i)->getType();
+    if (OpTy->isIntegerTy() != Ty->isIntegerTy()) {
+      Ty = SE.getEffectiveSCEVType(Ty);
+      LHS = InsertNoopCastOfTo(LHS, Ty);
+    }
+    Value *RHS = expandCodeFor(S->getOperand(i), Ty);
+    Value *ICmp = Builder.CreateICmpULT(LHS, RHS);
+    rememberInstruction(ICmp);
+    Value *Sel = Builder.CreateSelect(ICmp, LHS, RHS, "umin");
     rememberInstruction(Sel);
     LHS = Sel;
   }
@@ -1778,7 +1839,7 @@ Value *SCEVExpander::expand(const SCEV *S) {
 
   // IndVarSimplify sometimes sets the insertion point at the block start, even
   // when there are PHIs at that point.  We must correct for this.
-  if (isa<PHINode>(*InsertPt)) 
+  if (isa<PHINode>(*InsertPt))
     InsertPt = &*InsertPt->getParent()->getFirstInsertionPt();
 
   // Check to see if we already expanded this here.
@@ -2110,7 +2171,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
 
   // HowManyLessThans uses a Max expression whenever the loop is not guarded by
   // the exit condition.
-  if (isa<SCEVSMaxExpr>(S) || isa<SCEVUMaxExpr>(S))
+  if (isa<SCEVMinMaxExpr>(S))
     return true;
 
   // Recurse past nary expressions, which commonly occur in the

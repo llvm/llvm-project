@@ -196,11 +196,11 @@ bool DebugLocDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
 
 bool DbgVariable::isBlockByrefVariable() const {
   assert(getVariable() && "Invalid complex DbgVariable!");
-  return getVariable()->getType().resolve()->isBlockByrefStruct();
+  return getVariable()->getType()->isBlockByrefStruct();
 }
 
 const DIType *DbgVariable::getType() const {
-  DIType *Ty = getVariable()->getType().resolve();
+  DIType *Ty = getVariable()->getType();
   // FIXME: isBlockByrefVariable should be reformulated in terms of complex
   // addresses instead.
   if (Ty->isBlockByrefStruct()) {
@@ -232,13 +232,13 @@ const DIType *DbgVariable::getType() const {
     uint16_t tag = Ty->getTag();
 
     if (tag == dwarf::DW_TAG_pointer_type)
-      subType = resolve(cast<DIDerivedType>(Ty)->getBaseType());
+      subType = cast<DIDerivedType>(Ty)->getBaseType();
 
     auto Elements = cast<DICompositeType>(subType)->getElements();
     for (unsigned i = 0, N = Elements.size(); i < N; ++i) {
       auto *DT = cast<DIDerivedType>(Elements[i]);
       if (getName() == DT->getName())
-        return resolve(DT->getBaseType());
+        return DT->getBaseType();
     }
   }
   return Ty;
@@ -901,13 +901,6 @@ void DwarfDebug::finalizeModuleInfo() {
     // ranges for all subprogram DIEs for mach-o.
     DwarfCompileUnit &U = SkCU ? *SkCU : TheCU;
 
-    // We don't keep track of which addresses are used in which CU so this
-    // is a bit pessimistic under LTO.
-    if (!AddrPool.isEmpty() &&
-        (getDwarfVersion() >= 5 ||
-         (SkCU && !empty(TheCU.getUnitDie().children()))))
-      U.addAddrTableBase();
-
     if (unsigned NumRanges = TheCU.getRanges().size()) {
       if (NumRanges > 1 && useRangesSection())
         // A DW_AT_low_pc attribute may also be specified in combination with
@@ -919,6 +912,13 @@ void DwarfDebug::finalizeModuleInfo() {
         U.setBaseAddress(TheCU.getRanges().front().getStart());
       U.attachRangesOrLowHighPC(U.getUnitDie(), TheCU.takeRanges());
     }
+
+    // We don't keep track of which addresses are used in which CU so this
+    // is a bit pessimistic under LTO.
+    if (!AddrPool.isEmpty() &&
+        (getDwarfVersion() >= 5 ||
+         (SkCU && !empty(TheCU.getUnitDie().children()))))
+      U.addAddrTableBase();
 
     if (getDwarfVersion() >= 5) {
       if (U.hasRangeLists())

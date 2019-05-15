@@ -18,7 +18,7 @@ namespace clang {
 namespace clangd {
 namespace {
 
-using testing::ElementsAre;
+using ::testing::ElementsAre;
 
 TEST(ClangdUnitTest, GetBeginningOfIdentifier) {
   std::string Preamble = R"cpp(

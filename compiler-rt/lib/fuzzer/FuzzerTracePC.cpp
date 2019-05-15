@@ -369,11 +369,16 @@ void TracePC::AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
     Hash ^= (T << 8) | B2[i];
   }
   size_t I = 0;
-  for (; I < Len; I++)
-    if (B1[I] != B2[I] || (StopAtZero && B1[I] == 0))
+  uint8_t HammingDistance = 0;
+  for (; I < Len; I++) {
+    if (B1[I] != B2[I] || (StopAtZero && B1[I] == 0)) {
+      HammingDistance = Popcountll(B1[I] ^ B2[I]);
       break;
+    }
+  }
   size_t PC = reinterpret_cast<size_t>(caller_pc);
   size_t Idx = (PC & 4095) | (I << 12);
+  Idx += HammingDistance;
   ValueProfileMap.AddValue(Idx);
   TORCW.Insert(Idx ^ Hash, Word(B1, Len), Word(B2, Len));
 }

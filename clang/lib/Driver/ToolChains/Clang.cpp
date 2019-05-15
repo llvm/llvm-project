@@ -731,8 +731,9 @@ static void appendUserToPath(SmallVectorImpl<char> &Result) {
   Result.append(UID.begin(), UID.end());
 }
 
-static void addPGOAndCoverageFlags(Compilation &C, const Driver &D,
-                                   const InputInfo &Output, const ArgList &Args,
+static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
+                                   const Driver &D, const InputInfo &Output,
+                                   const ArgList &Args,
                                    ArgStringList &CmdArgs) {
 
   auto *PGOGenerateArg = Args.getLastArg(options::OPT_fprofile_generate,
@@ -783,6 +784,11 @@ static void addPGOAndCoverageFlags(Compilation &C, const Driver &D,
                                            ProfileGenerateArg->getValue()));
     // The default is to use Clang Instrumentation.
     CmdArgs.push_back("-fprofile-instrument=clang");
+    if (TC.getTriple().isWindowsMSVCEnvironment()) {
+      // Add dependent lib for clang_rt.profile
+      CmdArgs.push_back(Args.MakeArgString("--dependent-lib=" +
+                                           TC.getCompilerRT(Args, "profile")));
+    }
   }
 
   Arg *PGOGenArg = nullptr;
@@ -1007,7 +1013,7 @@ static void RenderDebugInfoCompressionArgs(const ArgList &Args,
   if (checkDebugInfoOption(A, Args, D, TC)) {
     if (A->getOption().getID() == options::OPT_gz) {
       if (llvm::zlib::isAvailable())
-        CmdArgs.push_back("-compress-debug-sections");
+        CmdArgs.push_back("--compress-debug-sections");
       else
         D.Diag(diag::warn_debug_compression_unavailable);
       return;
@@ -1015,11 +1021,11 @@ static void RenderDebugInfoCompressionArgs(const ArgList &Args,
 
     StringRef Value = A->getValue();
     if (Value == "none") {
-      CmdArgs.push_back("-compress-debug-sections=none");
+      CmdArgs.push_back("--compress-debug-sections=none");
     } else if (Value == "zlib" || Value == "zlib-gnu") {
       if (llvm::zlib::isAvailable()) {
         CmdArgs.push_back(
-            Args.MakeArgString("-compress-debug-sections=" + Twine(Value)));
+            Args.MakeArgString("--compress-debug-sections=" + Twine(Value)));
       } else {
         D.Diag(diag::warn_debug_compression_unavailable);
       }
@@ -1150,6 +1156,24 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   // /usr/local/include.
   if (JA.isOffloading(Action::OFK_Cuda))
     getToolChain().AddCudaIncludeArgs(Args, CmdArgs);
+
+  // If we are offloading to a target via OpenMP we need to include the
+  // openmp_wrappers folder which contains alternative system headers.
+  if (JA.isDeviceOffloading(Action::OFK_OpenMP) &&
+      getToolChain().getTriple().isNVPTX()){
+    if (!Args.hasArg(options::OPT_nobuiltininc)) {
+      // Add openmp_wrappers/* to our system include path.  This lets us wrap
+      // standard library headers.
+      SmallString<128> P(D.ResourceDir);
+      llvm::sys::path::append(P, "include");
+      llvm::sys::path::append(P, "openmp_wrappers");
+      CmdArgs.push_back("-internal-isystem");
+      CmdArgs.push_back(Args.MakeArgString(P));
+    }
+
+    CmdArgs.push_back("-include");
+    CmdArgs.push_back("__clang_openmp_math_declares.h");
+  }
 
   // Add -i* options, and automatically translate to
   // -include-pch/-include-pth for transparent PCH support. It's
@@ -4158,7 +4182,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // sampling, overhead of call arc collection is way too high and there's no
   // way to collect the output.
   if (!Triple.isNVPTX())
-    addPGOAndCoverageFlags(C, D, Output, Args, CmdArgs);
+    addPGOAndCoverageFlags(TC, C, D, Output, Args, CmdArgs);
 
   if (auto *ABICompatArg = Args.getLastArg(options::OPT_fclang_abi_compat_EQ))
     ABICompatArg->render(Args, CmdArgs);

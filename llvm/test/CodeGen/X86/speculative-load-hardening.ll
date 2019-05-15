@@ -1142,3 +1142,19 @@ entry:
   call void @sink(i32 %e7)
   ret void
 }
+
+; Make sure we don't crash on idempotent atomic operations which have a
+; hardcoded reference to RSP+offset.
+define void @idempotent_atomic(i32* %x) speculative_load_hardening {
+; X64-LABEL: idempotent_atomic:
+; X64:       # %bb.0:
+; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    retq
+;
+; X64-LFENCE-LABEL: idempotent_atomic:
+; X64-LFENCE:       # %bb.0:
+; X64-LFENCE-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
+; X64-LFENCE-NEXT:    retq
+  %tmp = atomicrmw or i32* %x, i32 0 seq_cst
+  ret void
+}

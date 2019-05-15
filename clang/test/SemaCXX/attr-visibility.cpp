@@ -18,9 +18,3 @@ void foo<int>() {
 struct x3 {
   static int y;
 } __attribute((visibility("default"))); // expected-warning {{attribute 'visibility' after definition is ignored}}
-
-const int test4 __attribute__((visibility("default"))) = 0; // expected-warning {{'visibility' attribute is ignored on a non-external symbol}}
-
-namespace {
-  int test5 __attribute__((visibility("default"))); // expected-warning {{'visibility' attribute is ignored on a non-external symbol}}
-};

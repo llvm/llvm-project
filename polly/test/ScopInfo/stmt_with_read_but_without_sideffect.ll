@@ -86,7 +86,7 @@ for.inc.1:                                        ; preds = %if.then.1, %if.else
 ; CHECK-NEXT:     Stmt_if_else_1_last
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 [p_0] -> { Stmt_if_else_1_last[i0] -> MemRef_min_1_1__phi[] };
-; CHECK-NEXT:            new: [p_0] -> { Stmt_if_else_1_last[i0] -> MemRef_ath[i0] };
+; CHECK-NEXT:            new: [p_0] -> { Stmt_if_else_1_last[i0] -> MemRef_ath[i0] : p_0 <= 576460752303423487 };
 ; CHECK-NEXT:     Stmt_for_inc_1
 ; CHECK-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 [p_0] -> { Stmt_for_inc_1[i0] -> MemRef_min_1_1__phi[] };

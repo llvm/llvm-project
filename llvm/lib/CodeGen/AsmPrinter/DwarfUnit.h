@@ -311,12 +311,6 @@ protected:
   /// create a new ID and insert it in the line table.
   virtual unsigned getOrCreateSourceID(const DIFile *File) = 0;
 
-  /// Look in the DwarfDebug map for the MDNode that corresponds to the
-  /// reference.
-  template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {
-    return Ref.resolve();
-  }
-
   /// Emit the common part of the header for this unit.
   void emitCommonHeader(bool UseOffsets, dwarf::UnitType UT);
 

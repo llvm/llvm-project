@@ -178,7 +178,7 @@ def record_command_line : Separate<["-"], "record-command-line">,
   HelpText<"The string to embed in the .LLVM.command.line section.">;
 def compress_debug_sections : Flag<["-", "--"], "compress-debug-sections">,
     HelpText<"DWARF debug sections compression">;
-def compress_debug_sections_EQ : Joined<["-"], "compress-debug-sections=">,
+def compress_debug_sections_EQ : Joined<["-", "--"], "compress-debug-sections=">,
     HelpText<"DWARF debug sections compression type">;
 def mno_exec_stack : Flag<["-"], "mnoexecstack">,
   HelpText<"Mark the file as not needing an executable stack">;
@@ -557,8 +557,14 @@ def ast_list : Flag<["-"], "ast-list">,
   HelpText<"Build ASTs and print the list of declaration node qualified names">;
 def ast_dump : Flag<["-"], "ast-dump">,
   HelpText<"Build ASTs and then debug dump them">;
+def ast_dump_EQ : Joined<["-"], "ast-dump=">,
+  HelpText<"Build ASTs and then debug dump them in the specified format. "
+           "Supported formats include: default, json">;
 def ast_dump_all : Flag<["-"], "ast-dump-all">,
   HelpText<"Build ASTs and then debug dump them, forcing deserialization">;
+def ast_dump_all_EQ : Joined<["-"], "ast-dump-all=">,
+  HelpText<"Build ASTs and then debug dump them in the specified format, "
+           "forcing deserialization. Supported formats include: default, json">;
 def templight_dump : Flag<["-"], "templight-dump">,
   HelpText<"Dump templight information to stdout">;
 def ast_dump_lookups : Flag<["-"], "ast-dump-lookups">,

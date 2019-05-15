@@ -11,8 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "MSP430MCTargetDesc.h"
-#include "InstPrinter/MSP430InstPrinter.h"
+#include "MSP430InstPrinter.h"
 #include "MSP430MCAsmInfo.h"
+#include "TargetInfo/MSP430TargetInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"

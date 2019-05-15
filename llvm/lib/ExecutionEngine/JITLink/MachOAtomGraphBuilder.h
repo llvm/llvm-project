@@ -34,17 +34,10 @@ protected:
   public:
     MachOSection() = default;
 
-    /// Create a MachO section with the given content.
+    /// Create a MachO section with the given address and alignment.
     MachOSection(Section &GenericSection, JITTargetAddress Address,
-                 unsigned Alignment, StringRef Content)
+                 unsigned Alignment)
         : Address(Address), GenericSection(&GenericSection),
-          ContentPtr(Content.data()), Size(Content.size()),
-          Alignment(Alignment) {}
-
-    /// Create a zero-fill MachO section with the given size.
-    MachOSection(Section &GenericSection, JITTargetAddress Address,
-                 unsigned Alignment, size_t ZeroFillSize)
-        : Address(Address), GenericSection(&GenericSection), Size(ZeroFillSize),
           Alignment(Alignment) {}
 
     /// Create a section without address, content or size (used for common
@@ -61,6 +54,19 @@ protected:
       return GenericSection->getName();
     }
 
+    MachOSection &setContent(StringRef Content) {
+      assert(!ContentPtr && !Size && "Content/zeroFill already set");
+      ContentPtr = Content.data();
+      Size = Content.size();
+      return *this;
+    }
+
+    MachOSection &setZeroFill(uint64_t Size) {
+      assert(!ContentPtr && !this->Size && "Content/zeroFill already set");
+      this->Size = Size;
+      return *this;
+    }
+
     bool isZeroFill() const { return !ContentPtr; }
 
     bool empty() const { return getSize() == 0; }
@@ -69,19 +75,27 @@ protected:
 
     StringRef getContent() const {
       assert(ContentPtr && "getContent() called on zero-fill section");
-      return {ContentPtr, Size};
+      return {ContentPtr, static_cast<size_t>(Size)};
     }
 
     JITTargetAddress getAddress() const { return Address; }
 
     unsigned getAlignment() const { return Alignment; }
 
+    MachOSection &setNoDeadStrip(bool NoDeadStrip) {
+      this->NoDeadStrip = NoDeadStrip;
+      return *this;
+    }
+
+    bool isNoDeadStrip() const { return NoDeadStrip; }
+
   private:
     JITTargetAddress Address = 0;
     Section *GenericSection = nullptr;
     const char *ContentPtr = nullptr;
-    size_t Size = 0;
+    uint64_t Size = 0;
     unsigned Alignment = 0;
+    bool NoDeadStrip = false;
   };
 
   using CustomAtomizeFunction = std::function<Error(MachOSection &S)>;
@@ -96,6 +110,10 @@ protected:
 
   virtual Error addRelocations() = 0;
 
+  /// Returns true if Atom A and Atom B are at a fixed offset from one another
+  /// (i.e. if they're part of the same alt-entry chain).
+  bool areLayoutLocked(const Atom &A, const Atom &B);
+
 private:
   static unsigned getPointerSize(const object::MachOObjectFile &Obj);
   static support::endianness getEndianness(const object::MachOObjectFile &Obj);
@@ -108,6 +126,7 @@ private:
 
   const object::MachOObjectFile &Obj;
   std::unique_ptr<AtomGraph> G;
+  DenseMap<const DefinedAtom *, const DefinedAtom *> AltEntryStarts;
   DenseMap<unsigned, MachOSection> Sections;
   StringMap<CustomAtomizeFunction> CustomAtomizeFunctions;
   Optional<MachOSection> CommonSymbolsSection;

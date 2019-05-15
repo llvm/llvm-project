@@ -74,8 +74,8 @@ void AppleDWARFIndex::GetGlobalVariables(const DWARFUnit &cu,
     return;
 
   DWARFMappedHash::DIEInfoArray hash_data;
-  if (m_apple_names_up->AppendAllDIEsInRange(
-          cu.GetOffset(), cu.GetNextCompileUnitOffset(), hash_data))
+  if (m_apple_names_up->AppendAllDIEsInRange(cu.GetOffset(),
+                                             cu.GetNextUnitOffset(), hash_data))
     DWARFMappedHash::ExtractDIEArray(hash_data, offsets);
 }
 

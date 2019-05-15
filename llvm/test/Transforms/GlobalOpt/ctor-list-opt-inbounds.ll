@@ -6,7 +6,7 @@
 ; CHECK: @H = local_unnamed_addr global i32 2
 ; CHECK: @I = local_unnamed_addr global i32 2
 
-@llvm.global_ctors = appending global [1 x { i32, void ()* }] [ { i32, void ()* } { i32 65535, void ()* @CTOR } ]
+@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [ { i32, void ()*, i8* } { i32 65535, void ()* @CTOR, i8* null } ]
 @addr = external global i32
 @G = internal global [6 x [5 x i32]] zeroinitializer
 @H = global i32 80

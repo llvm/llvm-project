@@ -58,7 +58,7 @@ for.end:                                          ; preds = %for.body
 
 ; Here it is not obvious what the limits are, since 'step' could be negative.
 
-; CHECK: Low: (-1 + (-1 * ((-60001 + (-1 * %a)) umax (-60001 + (40000 * %step) + (-1 * %a)))))
+; CHECK: Low: ((60000 + %a)<nsw> umin (60000 + (-40000 * %step) + %a)) 
 ; CHECK: High: (4 + ((60000 + %a)<nsw> umax (60000 + (-40000 * %step) + %a)))
 
 define void @g(i64 %step) {

@@ -41,7 +41,7 @@ SPARCV9::SPARCV9() {
   PltEntrySize = 32;
   PltHeaderSize = 4 * PltEntrySize;
 
-  PageSize = 8192;
+  DefaultCommonPageSize = 8192;
   DefaultMaxPageSize = 0x100000;
   DefaultImageBase = 0x100000;
 }

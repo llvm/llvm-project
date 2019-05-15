@@ -126,8 +126,10 @@ bool ThreadPlanStepRange::InRange() {
           new_context.line_entry.original_file) {
         if (m_addr_context.line_entry.line == new_context.line_entry.line) {
           m_addr_context = new_context;
-          AddRange(
-              m_addr_context.line_entry.GetSameLineContiguousAddressRange());
+          const bool include_inlined_functions =
+              GetKind() == eKindStepOverRange;
+          AddRange(m_addr_context.line_entry.GetSameLineContiguousAddressRange(
+              include_inlined_functions));
           ret_value = true;
           if (log) {
             StreamString s;
@@ -142,8 +144,10 @@ bool ThreadPlanStepRange::InRange() {
         } else if (new_context.line_entry.line == 0) {
           new_context.line_entry.line = m_addr_context.line_entry.line;
           m_addr_context = new_context;
-          AddRange(
-              m_addr_context.line_entry.GetSameLineContiguousAddressRange());
+          const bool include_inlined_functions =
+              GetKind() == eKindStepOverRange;
+          AddRange(m_addr_context.line_entry.GetSameLineContiguousAddressRange(
+              include_inlined_functions));
           ret_value = true;
           if (log) {
             StreamString s;
@@ -311,9 +315,10 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
     return false;
   else {
     Target &target = GetThread().GetProcess()->GetTarget();
-    uint32_t branch_index;
-    branch_index =
-        instructions->GetIndexOfNextBranchInstruction(pc_index, target);
+    const bool ignore_calls = GetKind() == eKindStepOverRange;
+    uint32_t branch_index =
+        instructions->GetIndexOfNextBranchInstruction(pc_index, target,
+                                                      ignore_calls);
 
     Address run_to_address;
 

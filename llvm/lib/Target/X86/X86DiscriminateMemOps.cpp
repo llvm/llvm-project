@@ -34,6 +34,14 @@ static cl::opt<bool> EnableDiscriminateMemops(
              "the build of the binary consuming the profile."),
     cl::Hidden);
 
+static cl::opt<bool> BypassPrefetchInstructions(
+    "x86-bypass-prefetch-instructions", cl::init(true),
+    cl::desc("When discriminating instructions with memory operands, ignore "
+             "prefetch instructions. This ensures the other memory operand "
+             "instructions have the same identifiers after inserting "
+             "prefetches, allowing for successive insertions."),
+    cl::Hidden);
+
 namespace {
 
 using Location = std::pair<StringRef, unsigned>;
@@ -62,6 +70,10 @@ public:
   X86DiscriminateMemOps();
 };
 
+bool IsPrefetchOpcode(unsigned Opcode) {
+  return Opcode == X86::PREFETCHNTA || Opcode == X86::PREFETCHT0 ||
+         Opcode == X86::PREFETCHT1 || Opcode == X86::PREFETCHT2;
+}
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -98,6 +110,8 @@ bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
       const auto &DI = MI.getDebugLoc();
       if (!DI)
         continue;
+      if (BypassPrefetchInstructions && IsPrefetchOpcode(MI.getDesc().Opcode))
+        continue;
       Location Loc = diToLocation(DI);
       MemOpDiscriminators[Loc] =
           std::max(MemOpDiscriminators[Loc], DI->getBaseDiscriminator());
@@ -114,15 +128,18 @@ bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
     for (auto &MI : MBB) {
       if (X86II::getMemoryOperandNo(MI.getDesc().TSFlags) < 0)
         continue;
+      if (BypassPrefetchInstructions && IsPrefetchOpcode(MI.getDesc().Opcode))
+        continue;
       const DILocation *DI = MI.getDebugLoc();
-      if (!DI) {
+      bool HasDebug = DI;
+      if (!HasDebug) {
         DI = ReferenceDI;
       }
       Location L = diToLocation(DI);
       DenseSet<unsigned> &Set = Seen[L];
       const std::pair<DenseSet<unsigned>::iterator, bool> TryInsert =
           Set.insert(DI->getBaseDiscriminator());
-      if (!TryInsert.second) {
+      if (!TryInsert.second || !HasDebug) {
         unsigned BF, DF, CI = 0;
         DILocation::decodeDiscriminator(DI->getDiscriminator(), BF, DF, CI);
         Optional<unsigned> EncodedDiscriminator = DILocation::encodeDiscriminator(

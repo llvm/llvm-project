@@ -64,6 +64,7 @@ protected:
   virtual uint64_t getSectionOffset(DataRefImpl Sec) const = 0;
 
   virtual Expected<int64_t> getRelocationAddend(DataRefImpl Rel) const = 0;
+  virtual Error getBuildAttributes(ARMAttributeParser &Attributes) const = 0;
 
 public:
   using elf_symbol_iterator_range = iterator_range<elf_symbol_iterator>;
@@ -263,8 +264,8 @@ protected:
   uint64_t getSectionAddress(DataRefImpl Sec) const override;
   uint64_t getSectionIndex(DataRefImpl Sec) const override;
   uint64_t getSectionSize(DataRefImpl Sec) const override;
-  std::error_code getSectionContents(DataRefImpl Sec,
-                                     StringRef &Res) const override;
+  Expected<ArrayRef<uint8_t>>
+  getSectionContents(DataRefImpl Sec) const override;
   uint64_t getSectionAlignment(DataRefImpl Sec) const override;
   bool isSectionCompressed(DataRefImpl Sec) const override;
   bool isSectionText(DataRefImpl Sec) const override;
@@ -352,6 +353,28 @@ protected:
         (Visibility == ELF::STV_DEFAULT || Visibility == ELF::STV_PROTECTED));
   }
 
+  Error getBuildAttributes(ARMAttributeParser &Attributes) const override {
+    auto SectionsOrErr = EF.sections();
+    if (!SectionsOrErr)
+      return SectionsOrErr.takeError();
+
+    for (const Elf_Shdr &Sec : *SectionsOrErr) {
+      if (Sec.sh_type == ELF::SHT_ARM_ATTRIBUTES) {
+        auto ErrorOrContents = EF.getSectionContents(&Sec);
+        if (!ErrorOrContents)
+          return ErrorOrContents.takeError();
+
+        auto Contents = ErrorOrContents.get();
+        if (Contents[0] != ARMBuildAttrs::Format_Version || Contents.size() == 1)
+          return Error::success();
+
+        Attributes.Parse(Contents, ELFT::TargetEndianness == support::little);
+        break;
+      }
+    }
+    return Error::success();
+  }
+
   // This flag is used for classof, to distinguish ELFObjectFile from
   // its subclass. If more subclasses will be created, this flag will
   // have to become an enum.
@@ -392,28 +415,6 @@ public:
   Expected<uint64_t> getStartAddress() const override;
 
   unsigned getPlatformFlags() const override { return EF.getHeader()->e_flags; }
-
-  std::error_code getBuildAttributes(ARMAttributeParser &Attributes) const override {
-    auto SectionsOrErr = EF.sections();
-    if (!SectionsOrErr)
-      return errorToErrorCode(SectionsOrErr.takeError());
-
-    for (const Elf_Shdr &Sec : *SectionsOrErr) {
-      if (Sec.sh_type == ELF::SHT_ARM_ATTRIBUTES) {
-        auto ErrorOrContents = EF.getSectionContents(&Sec);
-        if (!ErrorOrContents)
-          return errorToErrorCode(ErrorOrContents.takeError());
-
-        auto Contents = ErrorOrContents.get();
-        if (Contents[0] != ARMBuildAttrs::Format_Version || Contents.size() == 1)
-          return std::error_code();
-
-        Attributes.Parse(Contents, ELFT::TargetEndianness == support::little);
-        break;
-      }
-    }
-    return std::error_code();
-  }
 
   const ELFFile<ELFT> *getELFFile() const { return &EF; }
 
@@ -700,16 +701,15 @@ uint64_t ELFObjectFile<ELFT>::getSectionSize(DataRefImpl Sec) const {
 }
 
 template <class ELFT>
-std::error_code
-ELFObjectFile<ELFT>::getSectionContents(DataRefImpl Sec,
-                                        StringRef &Result) const {
+Expected<ArrayRef<uint8_t>>
+ELFObjectFile<ELFT>::getSectionContents(DataRefImpl Sec) const {
   const Elf_Shdr *EShdr = getSection(Sec);
   if (std::error_code EC =
           checkOffset(getMemoryBufferRef(),
                       (uintptr_t)base() + EShdr->sh_offset, EShdr->sh_size))
-    return EC;
-  Result = StringRef((const char *)base() + EShdr->sh_offset, EShdr->sh_size);
-  return std::error_code();
+    return errorCodeToError(EC);
+  return makeArrayRef((const uint8_t *)base() + EShdr->sh_offset,
+                      EShdr->sh_size);
 }
 
 template <class ELFT>

@@ -15,7 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InstPrinter/PPCInstPrinter.h"
+#include "MCTargetDesc/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCExpr.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
@@ -25,6 +25,7 @@
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
 #include "PPCTargetStreamer.h"
+#include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"

@@ -7233,6 +7233,11 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F);
   }
 
+  if (BuiltinID == AArch64::BI__builtin_sponentry) {
+    llvm::Function *F = CGM.getIntrinsic(Intrinsic::sponentry);
+    return Builder.CreateCall(F);
+  }
+
   // Find out if any arguments are required to be integer constant
   // expressions.
   unsigned ICEArguments = 0;
@@ -11850,6 +11855,14 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return getCmpIntrinsicCall(Intrinsic::x86_sse2_cmp_sd, 6);
   case X86::BI__builtin_ia32_cmpordsd:
     return getCmpIntrinsicCall(Intrinsic::x86_sse2_cmp_sd, 7);
+
+// AVX512 bf16 intrinsics
+  case X86::BI__builtin_ia32_cvtneps2bf16_128_mask: {
+    Ops[2] = getMaskVecValue(*this, Ops[2],
+                             Ops[0]->getType()->getVectorNumElements());
+    Intrinsic::ID IID = Intrinsic::x86_avx512bf16_mask_cvtneps2bf16_128;
+    return Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
+  }
 
   case X86::BI__emul:
   case X86::BI__emulu: {

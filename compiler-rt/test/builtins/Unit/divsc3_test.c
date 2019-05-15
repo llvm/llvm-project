@@ -102,7 +102,7 @@ int test__divsc3(float a, float b, float c, float d)
             {
             float _Complex z = (a * c + b * d) / (c * c + d * d)
                              + (b * c - a * d) / (c * c + d * d) * _Complex_I;
-            if (r != z)
+            if (cabsf((r-z)/r) > 1.e-6)
                 return 1;
             }
             break;

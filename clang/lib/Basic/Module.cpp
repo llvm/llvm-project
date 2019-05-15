@@ -321,6 +321,21 @@ Module *Module::findSubmodule(StringRef Name) const {
   return SubModules[Pos->getValue()];
 }
 
+Module *Module::findOrInferSubmodule(StringRef Name) {
+  llvm::StringMap<unsigned>::const_iterator Pos = SubModuleIndex.find(Name);
+  if (Pos != SubModuleIndex.end())
+    return SubModules[Pos->getValue()];
+  if (!InferSubmodules)
+    return nullptr;
+  Module *Result = new Module(Name, SourceLocation(), this, false, InferExplicitSubmodules, 0);
+  Result->InferExplicitSubmodules = InferExplicitSubmodules;
+  Result->InferSubmodules = InferSubmodules;
+  Result->InferExportWildcard = InferExportWildcard;
+  if (Result->InferExportWildcard)
+    Result->Exports.push_back(Module::ExportDecl(nullptr, true));
+  return Result;
+}
+
 void Module::getExportedModules(SmallVectorImpl<Module *> &Exported) const {
   // All non-explicit submodules are exported.
   for (std::vector<Module *>::const_iterator I = SubModules.begin(),

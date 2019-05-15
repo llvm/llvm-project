@@ -6669,7 +6669,7 @@ define <2 x double> @test_x86_avx512_mm_cvtu32_sd(<2 x double> %a, i32 %b)
 ;
 ; X64-LABEL: test_x86_avx512_mm_cvtu32_sd:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vcvtusi2sdl %edi, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7f,0x08,0x7b,0xc7]
+; X64-NEXT:    vcvtusi2sd %edi, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7f,0x08,0x7b,0xc7]
 ; X64-NEXT:    retq ## encoding: [0xc3]
 {
   %res = call <2 x double> @llvm.x86.avx512.cvtusi2sd(<2 x double> %a, i32 %b) ; <<<2 x double>> [#uses=1]

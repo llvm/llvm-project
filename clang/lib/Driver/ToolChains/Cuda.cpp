@@ -454,7 +454,8 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   assert(TC.getTriple().isNVPTX() && "Wrong platform");
 
   ArgStringList CmdArgs;
-  CmdArgs.push_back("--cuda");
+  if (TC.CudaInstallation.version() <= CudaVersion::CUDA_100)
+    CmdArgs.push_back("--cuda");
   CmdArgs.push_back(TC.getTriple().isArch64Bit() ? "-64" : "-32");
   CmdArgs.push_back(Args.MakeArgString("--create"));
   CmdArgs.push_back(Args.MakeArgString(Output.getFilename()));
@@ -654,6 +655,9 @@ void CudaToolChain::addClangTargetOptions(
       break;
     case CudaVersion::CUDA_100:
       PtxFeature = "+ptx63";
+      break;
+    case CudaVersion::CUDA_92:
+      PtxFeature = "+ptx61";
       break;
     case CudaVersion::CUDA_91:
       PtxFeature = "+ptx61";

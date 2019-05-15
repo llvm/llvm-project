@@ -67,7 +67,7 @@ Node *postfix::Parse(llvm::StringRef expr, llvm::BumpPtrAllocator &alloc) {
       continue;
     }
 
-    uint32_t value;
+    int64_t value;
     if (to_integer(token, value, 10)) {
       // token is integer literal
       stack.push_back(MakeNode<IntegerNode>(alloc, value));
@@ -124,23 +124,23 @@ public:
   using Visitor<>::Dispatch;
 
 private:
-  void Visit(BinaryOpNode &binary, Node *&);
+  void Visit(BinaryOpNode &binary, Node *&) override;
 
-  void Visit(InitialValueNode &val, Node *&);
+  void Visit(InitialValueNode &val, Node *&) override;
 
-  void Visit(IntegerNode &integer, Node *&) {
-    m_out_stream.PutHex8(DW_OP_constu);
-    m_out_stream.PutULEB128(integer.GetValue());
+  void Visit(IntegerNode &integer, Node *&) override {
+    m_out_stream.PutHex8(DW_OP_consts);
+    m_out_stream.PutSLEB128(integer.GetValue());
     ++m_stack_depth;
   }
 
-  void Visit(RegisterNode &reg, Node *&);
+  void Visit(RegisterNode &reg, Node *&) override;
 
-  void Visit(SymbolNode &symbol, Node *&) {
+  void Visit(SymbolNode &symbol, Node *&) override {
     llvm_unreachable("Symbols should have been resolved by now!");
   }
 
-  void Visit(UnaryOpNode &unary, Node *&);
+  void Visit(UnaryOpNode &unary, Node *&) override;
 
   Stream &m_out_stream;
 

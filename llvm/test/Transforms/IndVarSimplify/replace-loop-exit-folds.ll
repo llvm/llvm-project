@@ -6,13 +6,12 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 define i32 @remove_loop(i32 %size) {
 ; CHECK-LABEL: @remove_loop(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 -1, [[SIZE:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], -32
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 -32
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[SIZE]], [[UMAX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 32
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 5
-; CHECK-NEXT:    [[TMP5:%.*]] = shl i32 [[TMP4]], 5
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[SIZE:%.*]], 31
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[SIZE]], 31
+; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP1]], i32 [[SIZE]], i32 31
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP0]], [[UMAX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP2]], 5
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], 5
 ; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
 ; CHECK:       while.cond:
 ; CHECK-NEXT:    [[SIZE_ADDR_0:%.*]] = phi i32 [ [[SIZE]], [[ENTRY:%.*]] ], [ [[SUB:%.*]], [[WHILE_COND]] ]
@@ -20,8 +19,8 @@ define i32 @remove_loop(i32 %size) {
 ; CHECK-NEXT:    [[SUB]] = add i32 [[SIZE_ADDR_0]], -32
 ; CHECK-NEXT:    br i1 [[CMP]], label [[WHILE_COND]], label [[WHILE_END:%.*]]
 ; CHECK:       while.end:
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 [[SIZE]], [[TMP5]]
-; CHECK-NEXT:    ret i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[SIZE]], [[TMP4]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
 entry:
   br label %while.cond

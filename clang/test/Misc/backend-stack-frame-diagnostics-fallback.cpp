@@ -14,5 +14,7 @@ namespace frameSizeThunkWarning {
 
   // CHECK: warning: stack frame size of {{[0-9]+}} bytes in function 'frameSizeThunkWarning::B::f'
   // CHECK: warning: stack size limit exceeded ({{[0-9]+}}) in {{[^ ]+}}
-  void B::f() { }
+  void B::f() {
+    volatile int x = 0; // Ensure there is stack usage.
+  }
 }

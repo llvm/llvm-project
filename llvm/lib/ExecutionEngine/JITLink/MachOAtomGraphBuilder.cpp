@@ -44,6 +44,33 @@ void MachOAtomGraphBuilder::addCustomAtomizer(StringRef SectionName,
   CustomAtomizeFunctions[SectionName] = std::move(Atomizer);
 }
 
+bool MachOAtomGraphBuilder::areLayoutLocked(const Atom &A, const Atom &B) {
+  // If these atoms are the same then they're trivially "locked".
+  if (&A == &B)
+    return true;
+
+  // If A and B are different, check whether either is undefined. (in which
+  // case they are not locked).
+  if (!A.isDefined() || !B.isDefined())
+    return false;
+
+  // A and B are different, but they're both defined atoms. We need to check
+  // whether they're part of the same alt_entry chain.
+  auto &DA = static_cast<const DefinedAtom &>(A);
+  auto &DB = static_cast<const DefinedAtom &>(B);
+
+  auto AStartItr = AltEntryStarts.find(&DA);
+  if (AStartItr == AltEntryStarts.end()) // If A is not in a chain bail out.
+    return false;
+
+  auto BStartItr = AltEntryStarts.find(&DB);
+  if (BStartItr == AltEntryStarts.end()) // If B is not in a chain bail out.
+    return false;
+
+  // A and B are layout locked if they're in the same chain.
+  return AStartItr->second == BStartItr->second;
+}
+
 unsigned
 MachOAtomGraphBuilder::getPointerSize(const object::MachOObjectFile &Obj) {
   return Obj.is64Bit() ? 8 : 4;
@@ -58,7 +85,7 @@ MachOAtomGraphBuilder::MachOSection &MachOAtomGraphBuilder::getCommonSection() {
   if (!CommonSymbolsSection) {
     auto Prot = static_cast<sys::Memory::ProtectionFlags>(
         sys::Memory::MF_READ | sys::Memory::MF_WRITE);
-    auto &GenericSection = G->createSection("<common>", Prot, true);
+    auto &GenericSection = G->createSection("<common>", 1, Prot, true);
     CommonSymbolsSection = MachOSection(GenericSection);
   }
   return *CommonSymbolsSection;
@@ -73,26 +100,13 @@ Error MachOAtomGraphBuilder::parseSections() {
     if (auto EC = SecRef.getName(Name))
       return errorCodeToError(EC);
 
-    StringRef Content;
-
-    // If this is a virtual section, leave its content empty.
-    if (!SecRef.isVirtual()) {
-      if (auto EC = SecRef.getContents(Content))
-        return errorCodeToError(EC);
-      if (Content.size() != SecRef.getSize())
-        return make_error<JITLinkError>("Section content size does not match "
-                                        "declared size for " +
-                                        Name);
-    }
-
     unsigned SectionIndex = SecRef.getIndex() + 1;
 
-    LLVM_DEBUG({
-      dbgs() << "Adding section " << Name << ": "
-             << format("0x%016" PRIx64, SecRef.getAddress())
-             << ", size: " << Content.size()
-             << ", align: " << SecRef.getAlignment() << "\n";
-    });
+    uint32_t Align = SecRef.getAlignment();
+    if (!isPowerOf2_32(Align))
+      return make_error<JITLinkError>("Section " + Name +
+                                      " has non-power-of-2 "
+                                      "alignment");
 
     // FIXME: Get real section permissions
     // How, exactly, on MachO?
@@ -104,13 +118,42 @@ Error MachOAtomGraphBuilder::parseSections() {
       Prot = static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
                                                        sys::Memory::MF_WRITE);
 
-    auto &GenericSection = G->createSection(Name, Prot, SecRef.isBSS());
-    if (SecRef.isVirtual())
-      Sections[SectionIndex] =
-          MachOSection(GenericSection, SecRef.getAddress(),
-                       SecRef.getAlignment(), SecRef.getSize());
-    Sections[SectionIndex] = MachOSection(GenericSection, SecRef.getAddress(),
-                                          SecRef.getAlignment(), Content);
+    auto &GenericSection = G->createSection(Name, Align, Prot, SecRef.isBSS());
+
+    LLVM_DEBUG({
+      dbgs() << "Adding section " << Name << ": "
+             << format("0x%016" PRIx64, SecRef.getAddress())
+             << ", align: " << SecRef.getAlignment() << "\n";
+    });
+
+    assert(!Sections.count(SectionIndex) && "Section index already in use");
+
+    auto &MachOSec =
+        Sections
+            .try_emplace(SectionIndex, GenericSection, SecRef.getAddress(),
+                         SecRef.getAlignment())
+            .first->second;
+
+    if (!SecRef.isVirtual()) {
+      // If this section has content then record it.
+      StringRef Content;
+      if (auto EC = SecRef.getContents(Content))
+        return errorCodeToError(EC);
+      if (Content.size() != SecRef.getSize())
+        return make_error<JITLinkError>("Section content size does not match "
+                                        "declared size for " +
+                                        Name);
+      MachOSec.setContent(Content);
+    } else {
+      // If this is a zero-fill section then just record the size.
+      MachOSec.setZeroFill(SecRef.getSize());
+    }
+
+    uint32_t SectionFlags =
+        Obj.is64Bit() ? Obj.getSection64(SecRef.getRawDataRefImpl()).flags
+                      : Obj.getSection(SecRef.getRawDataRefImpl()).flags;
+
+    MachOSec.setNoDeadStrip(SectionFlags & MachO::S_ATTR_NO_DEAD_STRIP);
   }
 
   return Error::success();
@@ -126,6 +169,9 @@ Error MachOAtomGraphBuilder::addNonCustomAtoms() {
   DenseMap<MachOSection *, AddrToAtomMap> SecToAtoms;
 
   DenseMap<MachOSection *, unsigned> FirstOrdinal;
+  std::vector<DefinedAtom *> AltEntryAtoms;
+
+  DenseSet<StringRef> ProcessedSymbols; // Used to check for duplicate defs.
 
   for (auto SymI = Obj.symbol_begin(), SymE = Obj.symbol_end(); SymI != SymE;
        ++SymI) {
@@ -134,6 +180,14 @@ Error MachOAtomGraphBuilder::addNonCustomAtoms() {
     auto Name = Sym.getName();
     if (!Name)
       return Name.takeError();
+
+    // Bail out on duplicate definitions: There should never be more than one
+    // definition for a symbol in a given object file.
+    if (ProcessedSymbols.count(*Name))
+      return make_error<JITLinkError>("Duplicate definition within object: " +
+                                      *Name);
+    else
+      ProcessedSymbols.insert(*Name);
 
     auto Addr = Sym.getAddress();
     if (!Addr)
@@ -189,24 +243,42 @@ Error MachOAtomGraphBuilder::addNonCustomAtoms() {
 
     auto &Sec = SecByIndexItr->second;
 
-    auto &A = G->addDefinedAtom(Sec.getGenericSection(), *Name, *Addr,
-                                std::max(Sym.getAlignment(), 1U));
+    auto &DA = G->addDefinedAtom(Sec.getGenericSection(), *Name, *Addr,
+                                 std::max(Sym.getAlignment(), 1U));
 
-    A.setGlobal(Flags & object::SymbolRef::SF_Global);
-    A.setExported(Flags & object::SymbolRef::SF_Exported);
-    A.setWeak(Flags & object::SymbolRef::SF_Weak);
+    DA.setGlobal(Flags & object::SymbolRef::SF_Global);
+    DA.setExported(Flags & object::SymbolRef::SF_Exported);
+    DA.setWeak(Flags & object::SymbolRef::SF_Weak);
 
-    A.setCallable(*SymType & object::SymbolRef::ST_Function);
+    DA.setCallable(*SymType & object::SymbolRef::ST_Function);
+
+    // Check NDesc flags.
+    {
+      uint16_t NDesc = 0;
+      if (Obj.is64Bit())
+        NDesc = Obj.getSymbolTableEntry(SymI->getRawDataRefImpl()).n_desc;
+      else
+        NDesc = Obj.getSymbolTableEntry(SymI->getRawDataRefImpl()).n_desc;
+
+      // Record atom for alt-entry post-processing (where the layout-next
+      // constraints will be added).
+      if (NDesc & MachO::N_ALT_ENTRY)
+        AltEntryAtoms.push_back(&DA);
+
+      // If this atom has a no-dead-strip attr attached then mark it live.
+      if (NDesc & MachO::N_NO_DEAD_STRIP)
+        DA.setLive(true);
+    }
 
     LLVM_DEBUG({
       dbgs() << "  Added " << *Name
              << " addr: " << format("0x%016" PRIx64, *Addr)
-             << ", align: " << A.getAlignment()
+             << ", align: " << DA.getAlignment()
              << ", section: " << Sec.getGenericSection().getName() << "\n";
     });
 
     auto &SecAtoms = SecToAtoms[&Sec];
-    SecAtoms[A.getAddress() - Sec.getAddress()] = &A;
+    SecAtoms[DA.getAddress() - Sec.getAddress()] = &DA;
   }
 
   // Add anonymous atoms.
@@ -241,7 +313,7 @@ Error MachOAtomGraphBuilder::addNonCustomAtoms() {
 
   LLVM_DEBUG(dbgs() << "MachOGraphBuilder setting atom content\n");
 
-  // Set atom contents.
+  // Set atom contents and any section-based flags.
   for (auto &KV : SecToAtoms) {
     auto &S = *KV.first;
     auto &SecAtoms = KV.second;
@@ -255,11 +327,61 @@ Error MachOAtomGraphBuilder::addNonCustomAtoms() {
         dbgs() << "  " << A << " to [ " << S.getAddress() + Offset << " .. "
                << S.getAddress() + LastAtomAddr << " ]\n";
       });
+
       if (S.isZeroFill())
         A.setZeroFill(LastAtomAddr - Offset);
       else
         A.setContent(S.getContent().substr(Offset, LastAtomAddr - Offset));
+
+      // If the section has no-dead-strip set then mark the atom as live.
+      if (S.isNoDeadStrip())
+        A.setLive(true);
+
       LastAtomAddr = Offset;
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "Adding alt-entry starts\n");
+
+  // Sort alt-entry atoms by address in ascending order.
+  llvm::sort(AltEntryAtoms.begin(), AltEntryAtoms.end(),
+             [](const DefinedAtom *LHS, const DefinedAtom *RHS) {
+               return LHS->getAddress() < RHS->getAddress();
+             });
+
+  // Process alt-entry atoms in address order to build the table of alt-entry
+  // atoms to alt-entry chain starts.
+  for (auto *DA : AltEntryAtoms) {
+    assert(!AltEntryStarts.count(DA) && "Duplicate entry in AltEntryStarts");
+
+    // DA is an alt-entry atom. Look for the predecessor atom that it is locked
+    // to, bailing out if we do not find one.
+    auto AltEntryPred = G->findAtomByAddress(DA->getAddress() - 1);
+    if (!AltEntryPred)
+      return AltEntryPred.takeError();
+
+    // Add a LayoutNext edge from the predecessor to this atom.
+    AltEntryPred->setLayoutNext(*DA);
+
+    // Check to see whether the predecessor itself is an alt-entry atom.
+    auto AltEntryStartItr = AltEntryStarts.find(&*AltEntryPred);
+    if (AltEntryStartItr != AltEntryStarts.end()) {
+      // If the predecessor was an alt-entry atom then re-use its value.
+      LLVM_DEBUG({
+        dbgs() << "  " << *DA << " -> " << *AltEntryStartItr->second
+               << " (based on existing entry for " << *AltEntryPred << ")\n";
+      });
+      AltEntryStarts[DA] = AltEntryStartItr->second;
+    } else {
+      // If the predecessor does not have an entry then add an entry for this
+      // atom (i.e. the alt_entry atom) and a self-reference entry for the
+      /// predecessory atom that is the start of this chain.
+      LLVM_DEBUG({
+        dbgs() << "  " << *AltEntryPred << " -> " << *AltEntryPred << "\n"
+               << "  " << *DA << " -> " << *AltEntryPred << "\n";
+      });
+      AltEntryStarts[&*AltEntryPred] = &*AltEntryPred;
+      AltEntryStarts[DA] = &*AltEntryPred;
     }
   }
 

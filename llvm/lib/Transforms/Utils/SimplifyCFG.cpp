@@ -25,8 +25,9 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -65,6 +66,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
@@ -291,9 +293,13 @@ isProfitableToFoldUnconditional(BranchInst *SI1, BranchInst *SI2,
 /// will be the same as those coming in from ExistPred, an existing predecessor
 /// of Succ.
 static void AddPredecessorToBlock(BasicBlock *Succ, BasicBlock *NewPred,
-                                  BasicBlock *ExistPred) {
+                                  BasicBlock *ExistPred,
+                                  MemorySSAUpdater *MSSAU = nullptr) {
   for (PHINode &PN : Succ->phis())
     PN.addIncoming(PN.getIncomingValueForBlock(ExistPred), NewPred);
+  if (MSSAU)
+    if (auto *MPhi = MSSAU->getMemorySSA()->getMemoryAccess(Succ))
+      MPhi->addIncoming(MPhi->getIncomingValueForBlock(ExistPred), NewPred);
 }
 
 /// Compute an abstract "cost" of speculating the given instruction,
@@ -669,7 +675,8 @@ private:
 
 } // end anonymous namespace
 
-static void EraseTerminatorAndDCECond(Instruction *TI) {
+static void EraseTerminatorAndDCECond(Instruction *TI,
+                                      MemorySSAUpdater *MSSAU = nullptr) {
   Instruction *Cond = nullptr;
   if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
     Cond = dyn_cast<Instruction>(SI->getCondition());
@@ -682,7 +689,7 @@ static void EraseTerminatorAndDCECond(Instruction *TI) {
 
   TI->eraseFromParent();
   if (Cond)
-    RecursivelyDeleteTriviallyDeadInstructions(Cond);
+    RecursivelyDeleteTriviallyDeadInstructions(Cond, nullptr, MSSAU);
 }
 
 /// Return true if the specified terminator checks
@@ -1438,10 +1445,9 @@ HoistTerminator:
 static bool canSinkInstructions(
     ArrayRef<Instruction *> Insts,
     DenseMap<Instruction *, SmallVector<Value *, 4>> &PHIOperands) {
-  // Prune out obviously bad instructions to move. Each instruction must have
-  // exactly zero or one use, and we check later that use is by a single, common
-  // PHI instruction in the successor.
-  bool HasUse = !Insts.front()->user_empty();
+  // Prune out obviously bad instructions to move. Any non-store instruction
+  // must have exactly one use, and we check later that use is by a single,
+  // common PHI instruction in the successor.
   for (auto *I : Insts) {
     // These instructions may change or break semantics if moved.
     if (isa<PHINode>(I) || I->isEHPad() || isa<AllocaInst>(I) ||
@@ -1455,10 +1461,9 @@ static bool canSinkInstructions(
       if (C->isInlineAsm())
         return false;
 
-    // Each instruction must have zero or one use.
-    if (HasUse && !I->hasOneUse())
-      return false;
-    if (!HasUse && !I->user_empty())
+    // Everything must have only one use too, apart from stores which
+    // have no uses.
+    if (!isa<StoreInst>(I) && !I->hasOneUse())
       return false;
   }
 
@@ -1467,11 +1472,11 @@ static bool canSinkInstructions(
     if (!I->isSameOperationAs(I0))
       return false;
 
-  // All instructions in Insts are known to be the same opcode. If they have a
-  // use, check that the only user is a PHI or in the same block as the
-  // instruction, because if a user is in the same block as an instruction we're
-  // contemplating sinking, it must already be determined to be sinkable.
-  if (HasUse) {
+  // All instructions in Insts are known to be the same opcode. If they aren't
+  // stores, check the only user of each is a PHI or in the same block as the
+  // instruction, because if a user is in the same block as an instruction
+  // we're contemplating sinking, it must already be determined to be sinkable.
+  if (!isa<StoreInst>(I0)) {
     auto *PNUse = dyn_cast<PHINode>(*I0->user_begin());
     auto *Succ = I0->getParent()->getTerminator()->getSuccessor(0);
     if (!all_of(Insts, [&PNUse,&Succ](const Instruction *I) -> bool {
@@ -1549,7 +1554,7 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   // it is slightly over-aggressive - it gets confused by commutative instructions
   // so double-check it here.
   Instruction *I0 = Insts.front();
-  if (!I0->user_empty()) {
+  if (!isa<StoreInst>(I0)) {
     auto *PNUse = dyn_cast<PHINode>(*I0->user_begin());
     if (!all_of(Insts, [&PNUse](const Instruction *I) -> bool {
           auto *U = cast<Instruction>(*I->user_begin());
@@ -1607,10 +1612,11 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
       I0->andIRFlags(I);
     }
 
-  if (!I0->user_empty()) {
+  if (!isa<StoreInst>(I0)) {
     // canSinkLastInstruction checked that all instructions were used by
     // one and only one PHI node. Find that now, RAUW it to our common
     // instruction and nuke it.
+    assert(I0->hasOneUse());
     auto *PN = cast<PHINode>(*I0->user_begin());
     PN->replaceAllUsesWith(I0);
     PN->eraseFromParent();
@@ -2547,7 +2553,8 @@ static bool extractPredSuccWeights(BranchInst *PBI, BranchInst *BI,
 /// If this basic block is simple enough, and if a predecessor branches to us
 /// and one of our successors, fold the block into the predecessor and use
 /// logical operations to pick the right destination.
-bool llvm::FoldBranchToCommonDest(BranchInst *BI, unsigned BonusInstThreshold) {
+bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
+                                  unsigned BonusInstThreshold) {
   BasicBlock *BB = BI->getParent();
 
   const unsigned PredCount = pred_size(BB);
@@ -2602,7 +2609,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, unsigned BonusInstThreshold) {
   // unconditionally. We denote all involved instructions except the condition
   // as "bonus instructions", and only allow this transformation when the
   // number of the bonus instructions we'll need to create when cloning into
-  // each predecessor does not exceed a certain threshold. 
+  // each predecessor does not exceed a certain threshold.
   unsigned NumBonusInsts = 0;
   for (auto I = BB->begin(); Cond != &*I; ++I) {
     // Ignore dbg intrinsics.
@@ -2619,7 +2626,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, unsigned BonusInstThreshold) {
     // and Cond.
 
     // Account for the cost of duplicating this instruction into each
-    // predecessor. 
+    // predecessor.
     NumBonusInsts += PredCount;
     // Early exits once we reach the limit.
     if (NumBonusInsts > BonusInstThreshold)
@@ -2758,7 +2765,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, unsigned BonusInstThreshold) {
                                    (SuccFalseWeight + SuccTrueWeight) +
                                PredTrueWeight * SuccFalseWeight);
         }
-        AddPredecessorToBlock(TrueDest, PredBlock, BB);
+        AddPredecessorToBlock(TrueDest, PredBlock, BB, MSSAU);
         PBI->setSuccessor(0, TrueDest);
       }
       if (PBI->getSuccessor(1) == BB) {
@@ -2773,7 +2780,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, unsigned BonusInstThreshold) {
           // FalseWeight is FalseWeight for PBI * FalseWeight for BI.
           NewWeights.push_back(PredFalseWeight * SuccFalseWeight);
         }
-        AddPredecessorToBlock(FalseDest, PredBlock, BB);
+        AddPredecessorToBlock(FalseDest, PredBlock, BB, MSSAU);
         PBI->setSuccessor(1, FalseDest);
       }
       if (NewWeights.size() == 2) {
@@ -2821,9 +2828,15 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, unsigned BonusInstThreshold) {
         PHIs[i]->setIncomingValue(PHIs[i]->getBasicBlockIndex(PBI->getParent()),
                                   MergedCond);
       }
+
+      // PBI is changed to branch to TrueDest below. Remove itself from
+      // potential phis from all other successors.
+      if (MSSAU)
+        MSSAU->changeCondBranchToUnconditionalTo(PBI, TrueDest);
+
       // Change PBI from Conditional to Unconditional.
       BranchInst *New_PBI = BranchInst::Create(TrueDest, PBI);
-      EraseTerminatorAndDCECond(PBI);
+      EraseTerminatorAndDCECond(PBI, MSSAU);
       PBI = New_PBI;
     }
 
@@ -5806,7 +5819,7 @@ bool SimplifyCFGOpt::SimplifyUncondBranch(BranchInst *BI,
   // branches to us and our successor, fold the comparison into the
   // predecessor and use logical operations to update the incoming value
   // for PHI nodes in common successor.
-  if (FoldBranchToCommonDest(BI, Options.BonusInstThreshold))
+  if (FoldBranchToCommonDest(BI, nullptr, Options.BonusInstThreshold))
     return requestResimplify();
   return false;
 }
@@ -5870,7 +5883,7 @@ bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   // If this basic block is ONLY a compare and a branch, and if a predecessor
   // branches to us and one of our successors, fold the comparison into the
   // predecessor and use logical operations to pick the right destination.
-  if (FoldBranchToCommonDest(BI, Options.BonusInstThreshold))
+  if (FoldBranchToCommonDest(BI, nullptr, Options.BonusInstThreshold))
     return requestResimplify();
 
   // We have a conditional branch to two blocks that are only reachable

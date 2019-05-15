@@ -18,5 +18,5 @@
 type = Library
 name = WebAssemblyDisassembler
 parent = WebAssembly
-required_libraries = MCDisassembler WebAssemblyInfo WebAssemblyAsmPrinter Support
+required_libraries = WebAssemblyDesc MCDisassembler WebAssemblyInfo Support
 add_to_library_groups = WebAssembly

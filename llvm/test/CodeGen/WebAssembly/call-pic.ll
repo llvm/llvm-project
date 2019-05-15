@@ -7,7 +7,7 @@ declare i32 @foo()
 declare i32 @bar()
 declare hidden i32 @hidden_function()
 
-@indirect_func = global i32 ()* @foo
+@indirect_func = hidden global i32 ()* @foo
 @alias_func = hidden alias i32 (), i32 ()* @local_function
 
 define i32 @local_function() {

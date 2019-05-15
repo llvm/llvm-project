@@ -227,9 +227,6 @@ extern char &GCNRegBankReassignID;
 void initializeGCNNSAReassignPass(PassRegistry &);
 extern char &GCNNSAReassignID;
 
-Target &getTheAMDGPUTarget();
-Target &getTheGCNTarget();
-
 namespace AMDGPU {
 enum TargetIndex {
   TI_CONSTDATA_START,

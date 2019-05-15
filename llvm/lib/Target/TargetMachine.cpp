@@ -144,6 +144,12 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
       isa<GlobalVariable>(GV))
     return false;
 
+  // On COFF, don't mark 'extern_weak' symbols as DSO local. If these symbols
+  // remain unresolved in the link, they can be resolved to zero, which is
+  // outside the current DSO.
+  if (TT.isOSBinFormatCOFF() && GV && GV->hasExternalWeakLinkage())
+    return false;
+
   // Every other GV is local on COFF.
   // Make an exception for windows OS in the triple: Some firmware builds use
   // *-win32-macho triples. This (accidentally?) produced windows relocations
@@ -161,13 +167,13 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   if (GV && !GV->hasDefaultVisibility())
     return true;
 
-  if (TT.isOSBinFormatMachO() || TT.isOSBinFormatWasm()) {
+  if (TT.isOSBinFormatMachO()) {
     if (RM == Reloc::Static)
       return true;
     return GV && GV->isStrongDefinitionForLinker();
   }
 
-  assert(TT.isOSBinFormatELF());
+  assert(TT.isOSBinFormatELF() || TT.isOSBinFormatWasm());
   assert(RM != Reloc::DynamicNoPIC);
 
   bool IsExecutable =
@@ -195,7 +201,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
       return true;
   }
 
-  // ELF supports preemption of other symbols.
+  // ELF & wasm support preemption of other symbols.
   return false;
 }
 

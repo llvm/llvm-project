@@ -11,6 +11,7 @@
 #include "MCTargetDesc/AVRMCELFStreamer.h"
 #include "MCTargetDesc/AVRMCExpr.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
+#include "TargetInfo/AVRTargetInfo.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringSwitch.h"

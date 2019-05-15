@@ -11,11 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "AVRELFStreamer.h"
+#include "AVRInstPrinter.h"
 #include "AVRMCAsmInfo.h"
 #include "AVRMCELFStreamer.h"
 #include "AVRMCTargetDesc.h"
 #include "AVRTargetStreamer.h"
-#include "InstPrinter/AVRInstPrinter.h"
+#include "TargetInfo/AVRTargetInfo.h"
 
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCELFStreamer.h"

@@ -12,8 +12,9 @@
 
 #include "MCTargetDesc/BPFMCTargetDesc.h"
 #include "BPF.h"
-#include "InstPrinter/BPFInstPrinter.h"
+#include "MCTargetDesc/BPFInstPrinter.h"
 #include "MCTargetDesc/BPFMCAsmInfo.h"
+#include "TargetInfo/BPFTargetInfo.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"

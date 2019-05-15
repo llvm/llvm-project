@@ -1177,6 +1177,20 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
 bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
                                                  CmpInst *Cmp,
                                                  Intrinsic::ID IID) {
+  if (BO->getParent() != Cmp->getParent()) {
+    // We used to use a dominator tree here to allow multi-block optimization.
+    // But that was problematic because:
+    // 1. It could cause a perf regression by hoisting the math op into the
+    //    critical path.
+    // 2. It could cause a perf regression by creating a value that was live
+    //    across multiple blocks and increasing register pressure.
+    // 3. Use of a dominator tree could cause large compile-time regression.
+    //    This is because we recompute the DT on every change in the main CGP
+    //    run-loop. The recomputing is probably unnecessary in many cases, so if
+    //    that was fixed, using a DT here would be ok.
+    return false;
+  }
+
   // We allow matching the canonical IR (add X, C) back to (usubo X, -C).
   Value *Arg0 = BO->getOperand(0);
   Value *Arg1 = BO->getOperand(1);
@@ -1186,36 +1200,15 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
     Arg1 = ConstantExpr::getNeg(cast<Constant>(Arg1));
   }
 
-  Instruction *InsertPt;
-  if (BO->hasOneUse() && BO->user_back() == Cmp) {
-    // If the math is only used by the compare, insert at the compare to keep
-    // the condition in the same block as its users. (CGP aggressively sinks
-    // compares to help out SDAG.)
-    InsertPt = Cmp;
-  } else {
-    // The math and compare may be independent instructions. Check dominance to
-    // determine the insertion point for the intrinsic.
-    bool MathDominates = getDT(*BO->getFunction()).dominates(BO, Cmp);
-    if (!MathDominates && !getDT(*BO->getFunction()).dominates(Cmp, BO))
-      return false;
-
-    BasicBlock *MathBB = BO->getParent(), *CmpBB = Cmp->getParent();
-    if (MathBB != CmpBB) {
-      // Avoid hoisting an extra op into a dominating block and creating a
-      // potentially longer critical path.
-      if (!MathDominates)
-        return false;
-      // Check that the insertion doesn't create a value that is live across
-      // more than two blocks, so to minimise the increase in register pressure.
-      BasicBlock *Dominator = MathDominates ? MathBB : CmpBB;
-      BasicBlock *Dominated = MathDominates ? CmpBB : MathBB;
-      auto Successors = successors(Dominator);
-      if (llvm::find(Successors, Dominated) == Successors.end())
-        return false;
+  // Insert at the first instruction of the pair.
+  Instruction *InsertPt = nullptr;
+  for (Instruction &Iter : *Cmp->getParent()) {
+    if (&Iter == BO || &Iter == Cmp) {
+      InsertPt = &Iter;
+      break;
     }
-
-    InsertPt = MathDominates ? cast<Instruction>(BO) : cast<Instruction>(Cmp);
   }
+  assert(InsertPt != nullptr && "Parent block did not contain cmp or binop");
 
   IRBuilder<> Builder(InsertPt);
   Value *MathOV = Builder.CreateBinaryIntrinsic(IID, Arg0, Arg1);
@@ -5911,7 +5904,7 @@ static bool isFormingBranchFromSelectProfitable(const TargetTransformInfo *TTI,
 static Value *getTrueOrFalseValue(
     SelectInst *SI, bool isTrue,
     const SmallPtrSet<const Instruction *, 2> &Selects) {
-  Value *V;
+  Value *V = nullptr;
 
   for (SelectInst *DefSI = SI; DefSI != nullptr && Selects.count(DefSI);
        DefSI = dyn_cast<SelectInst>(V)) {
@@ -5919,6 +5912,8 @@ static Value *getTrueOrFalseValue(
            "The condition of DefSI does not match with SI");
     V = (isTrue ? DefSI->getTrueValue() : DefSI->getFalseValue());
   }
+
+  assert(V && "Failed to get select true/false value");
   return V;
 }
 
@@ -6664,6 +6659,10 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
       DL.getTypeSizeInBits(SplitStoreType))
     return false;
 
+  // Don't split the store if it is volatile.
+  if (SI.isVolatile())
+    return false;
+
   // Match the following patterns:
   // (store (or (zext LValue to i64),
   //            (shl (zext HValue to i64), 32)), HalfValBitSize)
@@ -7228,11 +7227,7 @@ bool CodeGenPrepare::splitBranchCondition(Function &F, bool &ModifiedDT) {
       std::swap(TBB, FBB);
 
     // Replace the old BB with the new BB.
-    for (PHINode &PN : TBB->phis()) {
-      int i;
-      while ((i = PN.getBasicBlockIndex(&BB)) >= 0)
-        PN.setIncomingBlock(i, TmpBB);
-    }
+    TBB->replacePhiUsesWith(&BB, TmpBB);
 
     // Add another incoming edge form the new BB.
     for (PHINode &PN : FBB->phis()) {

@@ -1,0 +1,32 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objcopy --rename-section=.text=.text2 --rename-section=.data=.data2 --prefix-alloc-sections=.prefix %t %t2
+# RUN: llvm-readobj --sections %t2 | FileCheck %s
+
+# .text/.rel.text and .data/.rela.data are the cases when the relocation section
+# comes after/before its target section respectively. We handle them in different
+# ways to perform both --rename-section and --prefix-alloc-sections in one pass.
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+  - Name:            .rel.text
+    Type:            SHT_REL
+    Info:            .text
+  - Name:            .rela.data
+    Type:            SHT_RELA
+    Info:            .data
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+
+# CHECK: Name: .prefix.text2
+# CHECK: Name: .rel.prefix.text2
+# CHECK: Name: .rela.prefix.data2
+# CHECK: Name: .prefix.data2

@@ -7,15 +7,15 @@ define i64 @smlaldx(i16* nocapture readonly %pIn1, i16* nocapture readonly %pIn2
 ; CHECK-LABEL: smlaldx
 ; CHECK: = phi i32 [ 0, %for.body.preheader.new ],
 ; CHECK: [[ACC0:%[^ ]+]] = phi i64 [ 0, %for.body.preheader.new ], [ [[ACC2:%[^ ]+]], %for.body ]
+; CHECK: [[PIN21:%[^ ]+]] = bitcast i16* %pIn2.1 to i32*
+; CHECK: [[IN21:%[^ ]+]] = load i32, i32* [[PIN21]], align 2
+; CHECK: [[PIN10:%[^ ]+]] = bitcast i16* %pIn1.0 to i32*
+; CHECK: [[IN10:%[^ ]+]] = load i32, i32* [[PIN10]], align 2
 ; CHECK: [[PIN23:%[^ ]+]] = bitcast i16* %pIn2.3 to i32*
 ; CHECK: [[IN23:%[^ ]+]] = load i32, i32* [[PIN23]], align 2
 ; CHECK: [[PIN12:%[^ ]+]] = bitcast i16* %pIn1.2 to i32*
 ; CHECK: [[IN12:%[^ ]+]] = load i32, i32* [[PIN12]], align 2
 ; CHECK: [[ACC1:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[IN23]], i32 [[IN12]], i64 [[ACC0]])
-; CHECK: [[PIN21:%[^ ]+]] = bitcast i16* %pIn2.1 to i32*
-; CHECK: [[IN21:%[^ ]+]] = load i32, i32* [[PIN21]], align 2
-; CHECK: [[PIN10:%[^ ]+]] = bitcast i16* %pIn1.0 to i32*
-; CHECK: [[IN10:%[^ ]+]] = load i32, i32* [[PIN10]], align 2
 ; CHECK: [[ACC2]] = call i64 @llvm.arm.smlaldx(i32 [[IN21]], i32 [[IN10]], i64 [[ACC1]])
 ; CHECK-NOT: call i64 @llvm.arm.smlad
 ; CHECK-UNSUPPORTED-NOT:  call i64 @llvm.arm.smlad
@@ -180,19 +180,22 @@ for.cond.cleanup:
 ; CHECK: [[PIN1:%[^ ]+]] = phi i16* [ [[PIN1_NEXT:%[^ ]+]], %for.body ], [ [[PIN1Base]], %for.body.preheader.new ]
 ; CHECK: [[IV:%[^ ]+]] = phi i32
 ; CHECK: [[ACC0:%[^ ]+]] = phi i64 [ 0, %for.body.preheader.new ], [ [[ACC2:%[^ ]+]], %for.body ]
-; CHECK: [[PIN1_2:%[^ ]+]] = getelementptr i16, i16* [[PIN1]], i32 -2
-; CHECK: [[PIN2_2:%[^ ]+]] = getelementptr i16, i16* [[PIN2]], i32 -2
 
 ; CHECK: [[PIN2_CAST:%[^ ]+]] = bitcast i16* [[PIN2]] to i32*
 ; CHECK: [[IN2:%[^ ]+]] = load i32, i32* [[PIN2_CAST]], align 2
+
+; CHECK: [[PIN1_2:%[^ ]+]] = getelementptr i16, i16* [[PIN1]], i32 -2
 ; CHECK: [[PIN1_2_CAST:%[^ ]+]] = bitcast i16* [[PIN1_2]] to i32*
 ; CHECK: [[IN1_2:%[^ ]+]] = load i32, i32* [[PIN1_2_CAST]], align 2
-; CHECK: [[ACC1:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[IN2]], i32 [[IN1_2]], i64 [[ACC0]])
+
+; CHECK: [[PIN2_2:%[^ ]+]] = getelementptr i16, i16* [[PIN2]], i32 -2
+; CHECK: [[PIN2_2_CAST:%[^ ]+]] = bitcast i16* [[PIN2_2]] to i32*
+; CHECK: [[IN2_2:%[^ ]+]] = load i32, i32* [[PIN2_2_CAST]], align 2
 
 ; CHECK: [[PIN1_CAST:%[^ ]+]] = bitcast i16* [[PIN1]] to i32*
 ; CHECK: [[IN1:%[^ ]+]] = load i32, i32* [[PIN1_CAST]], align 2
-; CHECK: [[PIN2_2_CAST:%[^ ]+]] = bitcast i16* [[PIN2_2]] to i32*
-; CHECK: [[IN2_2:%[^ ]+]] = load i32, i32* [[PIN2_2_CAST]], align 2
+
+; CHECK: [[ACC1:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[IN2]], i32 [[IN1_2]], i64 [[ACC0]])
 ; CHECK: [[ACC2]] = call i64 @llvm.arm.smlaldx(i32 [[IN1]], i32 [[IN2_2]], i64 [[ACC1]])
 
 ; CHECK: [[PIN1_NEXT]] = getelementptr i16, i16* [[PIN1]], i32 4

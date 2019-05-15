@@ -22,19 +22,6 @@ MemoryStats::MemoryStats(mach_vm_size_t virtual_size,
     : m_virtual_size(virtual_size), m_resident_size(resident_size),
       m_max_resident_size(max_resident_size) {}
 
-MemoryStats::MemoryStats(const MemoryStats &rhs)
-    : m_virtual_size(rhs.m_virtual_size), m_resident_size(rhs.m_resident_size),
-      m_max_resident_size(rhs.m_max_resident_size) {}
-
-MemoryStats &MemoryStats::operator=(const MemoryStats &rhs) {
-  if (this != &rhs) {
-    m_virtual_size = rhs.m_virtual_size;
-    m_resident_size = rhs.m_resident_size;
-    m_max_resident_size = rhs.m_max_resident_size;
-  }
-  return *this;
-}
-
 MemoryStats &MemoryStats::operator+=(const MemoryStats &rhs) {
   m_virtual_size += rhs.m_virtual_size;
   m_resident_size += rhs.m_resident_size;

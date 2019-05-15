@@ -65,7 +65,8 @@ static StringRef getLineCommentIndentPrefix(StringRef Comment,
 static BreakableToken::Split
 getCommentSplit(StringRef Text, unsigned ContentStartColumn,
                 unsigned ColumnLimit, unsigned TabWidth,
-                encoding::Encoding Encoding, const FormatStyle &Style) {
+                encoding::Encoding Encoding, const FormatStyle &Style,
+                bool DecorationEndsWithStar = false) {
   LLVM_DEBUG(llvm::dbgs() << "Comment split: \"" << Text
                           << "\", Column limit: " << ColumnLimit
                           << ", Content start: " << ContentStartColumn << "\n");
@@ -123,7 +124,10 @@ getCommentSplit(StringRef Text, unsigned ContentStartColumn,
     if (SpaceOffset == 1 && Text[SpaceOffset - 1] == '*')
       return BreakableToken::Split(StringRef::npos, 0);
     StringRef BeforeCut = Text.substr(0, SpaceOffset).rtrim(Blanks);
-    StringRef AfterCut = Text.substr(SpaceOffset).ltrim(Blanks);
+    StringRef AfterCut = Text.substr(SpaceOffset);
+    // Don't trim the leading blanks if it would create a */ after the break.
+    if (!DecorationEndsWithStar || AfterCut.size() <= 1 || AfterCut[1] != '/')
+      AfterCut = AfterCut.ltrim(Blanks);
     return BreakableToken::Split(BeforeCut.size(),
                                  AfterCut.begin() - BeforeCut.end());
   }
@@ -450,6 +454,18 @@ BreakableBlockComment::BreakableBlockComment(
                    << "IN=" << (Content[i].data() - Lines[i].data()) << "\n";
     }
   });
+}
+
+BreakableToken::Split
+BreakableBlockComment::getSplit(unsigned LineIndex, unsigned TailOffset,
+                           unsigned ColumnLimit, unsigned ContentStartColumn,
+                           llvm::Regex &CommentPragmasRegex) const {
+  // Don't break lines matching the comment pragmas regex.
+  if (CommentPragmasRegex.match(Content[LineIndex]))
+    return Split(StringRef::npos, 0);
+  return getCommentSplit(Content[LineIndex].substr(TailOffset),
+                         ContentStartColumn, ColumnLimit, Style.TabWidth,
+                         Encoding, Style, Decoration.endswith("*"));
 }
 
 void BreakableBlockComment::adjustWhitespace(unsigned LineIndex,

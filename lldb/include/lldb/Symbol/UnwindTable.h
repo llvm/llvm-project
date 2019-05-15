@@ -1,4 +1,4 @@
-//===-- Symtab.h ------------------------------------------------*- C++ -*-===//
+//===-- UnwindTable.h -------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,6 +33,7 @@ public:
   lldb_private::CompactUnwindInfo *GetCompactUnwindInfo();
 
   ArmUnwindInfo *GetArmUnwindInfo();
+  SymbolFile *GetSymbolFile();
 
   lldb::FuncUnwindersSP GetFuncUnwindersContainingAddress(const Address &addr,
                                                           SymbolContext &sc);

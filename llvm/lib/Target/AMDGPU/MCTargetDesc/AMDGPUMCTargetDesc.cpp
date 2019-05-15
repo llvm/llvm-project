@@ -13,10 +13,11 @@
 
 #include "AMDGPUMCTargetDesc.h"
 #include "AMDGPUELFStreamer.h"
+#include "AMDGPUInstPrinter.h"
 #include "AMDGPUMCAsmInfo.h"
 #include "AMDGPUTargetStreamer.h"
-#include "InstPrinter/AMDGPUInstPrinter.h"
 #include "SIDefines.h"
+#include "TargetInfo/AMDGPUTargetInfo.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"

@@ -55,6 +55,8 @@ class BoUpSLP;
 
 } // end namespace slpvectorizer
 
+extern cl::opt<bool> RunSLPVectorization;
+
 struct SLPVectorizerPass : public PassInfoMixin<SLPVectorizerPass> {
   using StoreList = SmallVector<StoreInst *, 8>;
   using StoreListMap = MapVector<Value *, StoreList>;

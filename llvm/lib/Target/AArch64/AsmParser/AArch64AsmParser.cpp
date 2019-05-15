@@ -10,6 +10,7 @@
 #include "MCTargetDesc/AArch64MCExpr.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "MCTargetDesc/AArch64TargetStreamer.h"
+#include "TargetInfo/AArch64TargetInfo.h"
 #include "AArch64InstrInfo.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/ADT/APFloat.h"
@@ -241,11 +242,13 @@ public:
     if (S.getTargetStreamer() == nullptr)
       new AArch64TargetStreamer(S);
 
-    // Alias .hword/.word/xword to the target-independent .2byte/.4byte/.8byte
-    // directives as they have the same form and semantics:
-    ///  ::= (.hword | .word | .xword ) [ expression (, expression)* ]
+    // Alias .hword/.word/.[dx]word to the target-independent
+    // .2byte/.4byte/.8byte directives as they have the same form and
+    // semantics:
+    ///  ::= (.hword | .word | .dword | .xword ) [ expression (, expression)* ]
     Parser.addAliasForDirective(".hword", ".2byte");
     Parser.addAliasForDirective(".word", ".4byte");
+    Parser.addAliasForDirective(".dword", ".8byte");
     Parser.addAliasForDirective(".xword", ".8byte");
 
     // Initialize the set of available features.
@@ -1270,9 +1273,11 @@ public:
   bool isExtend64() const {
     if (!isExtend())
       return false;
-    // UXTX and SXTX require a 64-bit source register (the ExtendLSL64 class).
+    // Make sure the extend expects a 32-bit source register.
     AArch64_AM::ShiftExtendType ET = getShiftExtendType();
-    return ET != AArch64_AM::UXTX && ET != AArch64_AM::SXTX;
+    return ET == AArch64_AM::UXTB || ET == AArch64_AM::SXTB ||
+           ET == AArch64_AM::UXTH || ET == AArch64_AM::SXTH ||
+           ET == AArch64_AM::UXTW || ET == AArch64_AM::SXTW;
   }
 
   bool isExtendLSL64() const {
@@ -2471,7 +2476,7 @@ OperandMatchResultTy
 AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
-  const MCExpr *Expr;
+  const MCExpr *Expr = nullptr;
 
   if (Parser.getTok().is(AsmToken::Hash)) {
     Parser.Lex(); // Eat hash token.
@@ -2521,7 +2526,7 @@ AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
 OperandMatchResultTy
 AArch64AsmParser::tryParseAdrLabel(OperandVector &Operands) {
   SMLoc S = getLoc();
-  const MCExpr *Expr;
+  const MCExpr *Expr = nullptr;
 
   // Leave anything with a bracket to the default for SVE
   if (getParser().getTok().is(AsmToken::LBrac))
@@ -2619,7 +2624,7 @@ AArch64AsmParser::tryParseImmWithOptionalShift(OperandVector &Operands) {
     // Operand should start from # or should be integer, emit error otherwise.
     return MatchOperand_NoMatch;
 
-  const MCExpr *Imm;
+  const MCExpr *Imm = nullptr;
   if (parseSymbolicImmVal(Imm))
     return MatchOperand_ParseFail;
   else if (Parser.getTok().isNot(AsmToken::Comma)) {
@@ -2658,7 +2663,7 @@ AArch64AsmParser::tryParseImmWithOptionalShift(OperandVector &Operands) {
   Parser.Lex(); // Eat the number
 
   // Just in case the optional lsl #0 is used for immediates other than zero.
-  if (ShiftAmount == 0 && Imm != 0) {
+  if (ShiftAmount == 0 && Imm != nullptr) {
     SMLoc E = Parser.getTok().getLoc();
     Operands.push_back(AArch64Operand::CreateImm(Imm, S, E, getContext()));
     return MatchOperand_Success;
@@ -2831,6 +2836,11 @@ static const struct Extension {
     {"pan-rwv", {AArch64::FeaturePAN_RWV}},
     {"ccpp", {AArch64::FeatureCCPP}},
     {"sve", {AArch64::FeatureSVE}},
+    {"sve2", {AArch64::FeatureSVE2}},
+    {"sve2-aes", {AArch64::FeatureSVE2AES}},
+    {"sve2-sm4", {AArch64::FeatureSVE2SM4}},
+    {"sve2-sha3", {AArch64::FeatureSVE2SHA3}},
+    {"bitperm", {AArch64::FeatureSVE2BitPerm}},
     // FIXME: Unsupported extensions
     {"pan", {}},
     {"lor", {}},
@@ -4189,7 +4199,7 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "expected AArch64 condition code");
   case Match_AddSubRegExtendSmall:
     return Error(Loc,
-      "expected '[su]xt[bhw]' or 'lsl' with optional integer in range [0, 4]");
+      "expected '[su]xt[bhw]' with optional integer in range [0, 4]");
   case Match_AddSubRegExtendLarge:
     return Error(Loc,
       "expected 'sxtx' 'uxtx' or 'lsl' with optional integer in range [0, 4]");
@@ -5505,6 +5515,8 @@ extern "C" void LLVMInitializeAArch64AsmParser() {
   RegisterMCAsmParser<AArch64AsmParser> X(getTheAArch64leTarget());
   RegisterMCAsmParser<AArch64AsmParser> Y(getTheAArch64beTarget());
   RegisterMCAsmParser<AArch64AsmParser> Z(getTheARM64Target());
+  RegisterMCAsmParser<AArch64AsmParser> W(getTheARM64_32Target());
+  RegisterMCAsmParser<AArch64AsmParser> V(getTheAArch64_32Target());
 }
 
 #define GET_REGISTER_MATCHER

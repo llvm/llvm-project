@@ -181,6 +181,15 @@
 #include <avx512pfintrin.h>
 #endif
 
+#if !defined(_MSC_VER) || __has_feature(modules) || defined(__AVX512BF16__)
+#include <avx512bf16intrin.h>
+#endif
+
+#if !defined(_MSC_VER) || __has_feature(modules) || \
+    (defined(__AVX512VL__) && defined(__AVX512BF16__))
+#include <avx512vlbf16intrin.h>
+#endif
+
 #if !defined(_MSC_VER) || __has_feature(modules) || defined(__PKU__)
 #include <pkuintrin.h>
 #endif
@@ -412,7 +421,7 @@ _storebe_i64(void * __P, long long __D) {
 #include <invpcidintrin.h>
 #endif
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && __has_extension(gnu_asm)
 /* Define the default attributes for these intrinsics */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
 #ifdef __cplusplus
@@ -494,6 +503,6 @@ _InterlockedCompareExchange64_HLERelease(__int64 volatile *_Destination,
 
 #undef __DEFAULT_FN_ATTRS
 
-#endif /* _MSC_VER */
+#endif /* defined(_MSC_VER) && __has_extension(gnu_asm) */
 
 #endif /* __IMMINTRIN_H */

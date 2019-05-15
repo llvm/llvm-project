@@ -1,0 +1,70 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("SparcGenAsmWriter") {
+  visibility = [ ":MCTargetDesc" ]
+  args = [ "-gen-asm-writer" ]
+  td_file = "../Sparc.td"
+}
+
+tablegen("SparcGenInstrInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-instr-info" ]
+  td_file = "../Sparc.td"
+}
+
+tablegen("SparcGenMCCodeEmitter") {
+  visibility = [ ":MCTargetDesc" ]
+  args = [ "-gen-emitter" ]
+  td_file = "../Sparc.td"
+}
+
+tablegen("SparcGenRegisterInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-register-info" ]
+  td_file = "../Sparc.td"
+}
+
+tablegen("SparcGenSubtargetInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-subtarget" ]
+  td_file = "../Sparc.td"
+}
+
+# This should contain tablegen targets generating .inc files included
+# by other targets. .inc files only used by .cpp files in this directory
+# should be in deps on the static_library instead.
+group("tablegen") {
+  visibility = [
+    ":MCTargetDesc",
+    "../TargetInfo",
+  ]
+  public_deps = [
+    ":SparcGenInstrInfo",
+    ":SparcGenRegisterInfo",
+    ":SparcGenSubtargetInfo",
+  ]
+}
+
+static_library("MCTargetDesc") {
+  output_name = "LLVMSparcDesc"
+  public_deps = [
+    ":tablegen",
+  ]
+  deps = [
+    ":SparcGenAsmWriter",
+    ":SparcGenMCCodeEmitter",
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+  ]
+  include_dirs = [ ".." ]
+  sources = [
+    "SparcAsmBackend.cpp",
+    "SparcELFObjectWriter.cpp",
+    "SparcInstPrinter.cpp",
+    "SparcMCAsmInfo.cpp",
+    "SparcMCCodeEmitter.cpp",
+    "SparcMCExpr.cpp",
+    "SparcMCTargetDesc.cpp",
+    "SparcTargetStreamer.cpp",
+  ]
+}

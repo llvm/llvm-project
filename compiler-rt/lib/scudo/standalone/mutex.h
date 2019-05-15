@@ -16,6 +16,7 @@ namespace scudo {
 
 class StaticSpinMutex {
 public:
+  void initLinkerInitialized() {}
   void init() { atomic_store_relaxed(&State, 0); }
 
   void lock() {

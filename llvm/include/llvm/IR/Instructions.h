@@ -1134,71 +1134,6 @@ GetElementPtrInst::GetElementPtrInst(Type *PointeeType, Value *Ptr,
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(GetElementPtrInst, Value)
 
 //===----------------------------------------------------------------------===//
-//                                UnaryOperator Class
-//===----------------------------------------------------------------------===//
-
-/// a unary instruction 
-class UnaryOperator : public UnaryInstruction {
-  void AssertOK();
-
-protected:
-  UnaryOperator(UnaryOps iType, Value *S, Type *Ty,
-                const Twine &Name, Instruction *InsertBefore);
-  UnaryOperator(UnaryOps iType, Value *S, Type *Ty,
-                const Twine &Name, BasicBlock *InsertAtEnd);
-
-  // Note: Instruction needs to be a friend here to call cloneImpl.
-  friend class Instruction;
-
-  UnaryOperator *cloneImpl() const;
-
-public:
-
-  /// Construct a unary instruction, given the opcode and an operand.
-  /// Optionally (if InstBefore is specified) insert the instruction
-  /// into a BasicBlock right before the specified instruction.  The specified
-  /// Instruction is allowed to be a dereferenced end iterator.
-  ///
-  static UnaryOperator *Create(UnaryOps Op, Value *S,
-                               const Twine &Name = Twine(),
-                               Instruction *InsertBefore = nullptr);
-
-  /// Construct a unary instruction, given the opcode and an operand.
-  /// Also automatically insert this instruction to the end of the
-  /// BasicBlock specified.
-  ///
-  static UnaryOperator *Create(UnaryOps Op, Value *S,
-                               const Twine &Name,
-                               BasicBlock *InsertAtEnd);
-
-  /// These methods just forward to Create, and are useful when you
-  /// statically know what type of instruction you're going to create.  These
-  /// helpers just save some typing.
-#define HANDLE_UNARY_INST(N, OPC, CLASS) \
-  static UnaryInstruction *Create##OPC(Value *V, \
-                                       const Twine &Name = "") {\
-    return Create(Instruction::OPC, V, Name);\
-  }
-#include "llvm/IR/Instruction.def"
-#define HANDLE_UNARY_INST(N, OPC, CLASS) \
-  static UnaryInstruction *Create##OPC(Value *V, \
-                                       const Twine &Name, BasicBlock *BB) {\
-    return Create(Instruction::OPC, V, Name, BB);\
-  }
-#include "llvm/IR/Instruction.def"
-#define HANDLE_UNARY_INST(N, OPC, CLASS) \
-  static UnaryInstruction *Create##OPC(Value *V, \
-                                       const Twine &Name, Instruction *I) {\
-    return Create(Instruction::OPC, V, Name, I);\
-  }
-#include "llvm/IR/Instruction.def"
-
-  UnaryOps getOpcode() const {
-    return static_cast<UnaryOps>(Instruction::getOpcode());
-  }
-};
-
-//===----------------------------------------------------------------------===//
 //                               ICmpInst Class
 //===----------------------------------------------------------------------===//
 
@@ -2736,6 +2671,14 @@ public:
   void setIncomingBlock(unsigned i, BasicBlock *BB) {
     assert(BB && "PHI node got a null basic block!");
     block_begin()[i] = BB;
+  }
+
+  /// Replace every incoming basic block \p Old to basic block \p New.
+  void replaceIncomingBlockWith(BasicBlock *Old, BasicBlock *New) {
+    assert(New && Old && "PHI node got a null basic block!");
+    for (unsigned Op = 0, NumOps = getNumOperands(); Op != NumOps; ++Op)
+      if (getIncomingBlock(Op) == Old)
+        setIncomingBlock(Op, New);
   }
 
   /// Add an incoming value to the end of the PHI list

@@ -1,6 +1,6 @@
-; RUN: FileCheck -input-file %s %s 2>&1 | FileCheck -check-prefix QUIET --allow-empty %s
-; RUN: FileCheck -v -input-file %s %s 2>&1 | FileCheck -check-prefix V %s
-; RUN: FileCheck -vv -input-file %s %s 2>&1 | FileCheck -check-prefixes V,VV %s
+; RUN: FileCheck -D#NUMVAR=42 -input-file %s %s 2>&1 | FileCheck -check-prefix QUIET --allow-empty %s
+; RUN: FileCheck -v -D#NUMVAR=42 -input-file %s %s 2>&1 | FileCheck --strict-whitespace -check-prefix V %s
+; RUN: FileCheck -vv -D#NUMVAR=42 -input-file %s %s 2>&1 | FileCheck --strict-whitespace -check-prefixes V,VV %s
 
 foo
 bar
@@ -27,6 +27,39 @@ VV-NEXT: {{C}}HECK-NOT: raboof{{$}}
 VV-NEXT:  {{^           \^$}}
 VV-NEXT: verbose.txt:[[@LINE-22]]:1: note: scanning from here
 VV-NEXT: {{^}}bar{{$}}
+VV-NEXT: {{^}}^{{$}}
+
+NUMVAR:42
+NUMVAR - 1:41
+CHECK: NUMVAR:[[#NUMVAR]]
+CHECK-NOT: [[#NUMVAR + 1]]
+CHECK-NEXT: NUMVAR - 1:[[#NUMVAR - 1]]
+
+V:      verbose.txt:[[#@LINE-4]]:8: remark: {{C}}HECK: expected string found in input
+V-NEXT: {{C}}HECK: {{NUMVAR:[[][[]#NUMVAR[]][]]$}}
+V-NEXT: {{^       \^$}}
+V-NEXT: verbose.txt:[[#@LINE-9]]:1: note: found here
+V-NEXT: {{^}}NUMVAR:42{{$}}
+V-NEXT: {{^}}^~~~~~~~~{{$}}
+V-NEXT: verbose.txt:[[#@LINE-12]]:1: note: with numeric expression "NUMVAR" equal to "42"
+V-NEXT: {{^}}NUMVAR:42{{$}}
+V-NEXT: {{^}}^~~~~~~~~{{$}}
+
+V-NEXT: verbose.txt:[[#@LINE-12]]:13: remark: {{C}}HECK-NEXT: expected string found in input
+V-NEXT: {{C}}HECK-NEXT: {{NUMVAR - 1:[[][[]#NUMVAR - 1[]][]]$}}
+V-NEXT: {{^            \^$}}
+V-NEXT: verbose.txt:[[#@LINE-18]]:1: note: found here
+V-NEXT: {{^}}NUMVAR - 1:41{{$}}
+V-NEXT: {{^}}^~~~~~~~~~~~~{{$}}
+V-NEXT: verbose.txt:[[#@LINE-21]]:1: note: with numeric expression "NUMVAR - 1" equal to "41"
+V-NEXT: {{^}}NUMVAR - 1:41{{$}}
+V-NEXT: {{^}}^~~~~~~~~~~~~{{$}}
+
+VV-NEXT: verbose.txt:[[#@LINE-23]]:12: remark: {{C}}HECK-NOT: excluded string not found in input
+VV-NEXT: {{C}}HECK-NOT: {{[[][[]#NUMVAR [+] 1[]][]]$}}
+VV-NEXT: {{^           \^$}}
+VV-NEXT: verbose.txt:[[#@LINE-28]]:1: note: scanning from here
+VV-NEXT: {{^}}NUMVAR - 1:41{{$}}
 VV-NEXT: {{^}}^{{$}}
 
 before empty
@@ -99,7 +132,7 @@ V-NEXT: {{^}}^~~{{$}}
 
 VV-NEXT: verbose.txt:[[@LINE-9]]:19: remark: implicit EOF: expected string found in input
 VV-NEXT: {{C}}HECK-NOT: {{[{][{]z[}][}]yx$}}
-VV-NEXT:   {{^                 \^$}}
+VV-NEXT:   {{^                  \^$}}
 VV-NEXT: verbose.txt:[[@LINE+13]]:1: note: found here
 VV-NOT:  {{.}}
 VV:      {{^\^$}}

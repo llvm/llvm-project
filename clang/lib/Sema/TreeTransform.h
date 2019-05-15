@@ -2267,8 +2267,8 @@ public:
                                    MultiExprArg Args,
                                    SourceLocation RParenLoc,
                                    Expr *ExecConfig = nullptr) {
-    return getSema().ActOnCallExpr(/*Scope=*/nullptr, Callee, LParenLoc,
-                                   Args, RParenLoc, ExecConfig);
+    return getSema().BuildCallExpr(/*Scope=*/nullptr, Callee, LParenLoc, Args,
+                                   RParenLoc, ExecConfig);
   }
 
   /// Build a new member access expression.
@@ -2751,7 +2751,7 @@ public:
                                SourceRange TypeIdParens,
                                QualType AllocatedType,
                                TypeSourceInfo *AllocatedTypeInfo,
-                               Expr *ArraySize,
+                               Optional<Expr *> ArraySize,
                                SourceRange DirectInitRange,
                                Expr *Initializer) {
     return getSema().BuildCXXNew(StartLoc, UseGlobal,
@@ -3254,9 +3254,10 @@ public:
   ExprResult RebuildCXXFoldExpr(SourceLocation LParenLoc, Expr *LHS,
                                 BinaryOperatorKind Operator,
                                 SourceLocation EllipsisLoc, Expr *RHS,
-                                SourceLocation RParenLoc) {
+                                SourceLocation RParenLoc,
+                                Optional<unsigned> NumExpansions) {
     return getSema().BuildCXXFoldExpr(LParenLoc, LHS, Operator, EllipsisLoc,
-                                      RHS, RParenLoc);
+                                      RHS, RParenLoc, NumExpansions);
   }
 
   /// Build an empty C++1z fold-expression with the given operator.
@@ -10405,9 +10406,16 @@ TreeTransform<Derived>::TransformCXXNewExpr(CXXNewExpr *E) {
     return ExprError();
 
   // Transform the size of the array we're allocating (if any).
-  ExprResult ArraySize = getDerived().TransformExpr(E->getArraySize());
-  if (ArraySize.isInvalid())
-    return ExprError();
+  Optional<Expr *> ArraySize;
+  if (Optional<Expr *> OldArraySize = E->getArraySize()) {
+    ExprResult NewArraySize;
+    if (*OldArraySize) {
+      NewArraySize = getDerived().TransformExpr(*OldArraySize);
+      if (NewArraySize.isInvalid())
+        return ExprError();
+    }
+    ArraySize = NewArraySize.get();
+  }
 
   // Transform the placement arguments (if any).
   bool ArgumentChanged = false;
@@ -10444,7 +10452,7 @@ TreeTransform<Derived>::TransformCXXNewExpr(CXXNewExpr *E) {
 
   if (!getDerived().AlwaysRebuild() &&
       AllocTypeInfo == E->getAllocatedTypeSourceInfo() &&
-      ArraySize.get() == E->getArraySize() &&
+      ArraySize == E->getArraySize() &&
       NewInit.get() == OldInit &&
       OperatorNew == E->getOperatorNew() &&
       OperatorDelete == E->getOperatorDelete() &&
@@ -10471,7 +10479,7 @@ TreeTransform<Derived>::TransformCXXNewExpr(CXXNewExpr *E) {
   }
 
   QualType AllocType = AllocTypeInfo->getType();
-  if (!ArraySize.get()) {
+  if (!ArraySize) {
     // If no array size was specified, but the new expression was
     // instantiated with an array type (e.g., "new T" where T is
     // instantiated with "int[4]"), extract the outer bound from the
@@ -10499,7 +10507,7 @@ TreeTransform<Derived>::TransformCXXNewExpr(CXXNewExpr *E) {
       E->getBeginLoc(), E->isGlobalNew(),
       /*FIXME:*/ E->getBeginLoc(), PlacementArgs,
       /*FIXME:*/ E->getBeginLoc(), E->getTypeIdParens(), AllocType,
-      AllocTypeInfo, ArraySize.get(), E->getDirectInitRange(), NewInit.get());
+      AllocTypeInfo, ArraySize, E->getDirectInitRange(), NewInit.get());
 }
 
 template<typename Derived>
@@ -11816,7 +11824,8 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
   // be expanded.
   bool Expand = true;
   bool RetainExpansion = false;
-  Optional<unsigned> NumExpansions;
+  Optional<unsigned> OrigNumExpansions = E->getNumExpansions(),
+                     NumExpansions = OrigNumExpansions;
   if (getDerived().TryExpandParameterPacks(E->getEllipsisLoc(),
                                            Pattern->getSourceRange(),
                                            Unexpanded,
@@ -11845,7 +11854,7 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
 
     return getDerived().RebuildCXXFoldExpr(
         E->getBeginLoc(), LHS.get(), E->getOperator(), E->getEllipsisLoc(),
-        RHS.get(), E->getEndLoc());
+        RHS.get(), E->getEndLoc(), NumExpansions);
   }
 
   // The transform has determined that we should perform an elementwise
@@ -11866,7 +11875,7 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
 
     Result = getDerived().RebuildCXXFoldExpr(
         E->getBeginLoc(), Out.get(), E->getOperator(), E->getEllipsisLoc(),
-        Result.get(), E->getEndLoc());
+        Result.get(), E->getEndLoc(), OrigNumExpansions);
     if (Result.isInvalid())
       return true;
   }
@@ -11883,7 +11892,8 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
       Result = getDerived().RebuildCXXFoldExpr(
           E->getBeginLoc(), LeftFold ? Result.get() : Out.get(),
           E->getOperator(), E->getEllipsisLoc(),
-          LeftFold ? Out.get() : Result.get(), E->getEndLoc());
+          LeftFold ? Out.get() : Result.get(), E->getEndLoc(),
+          OrigNumExpansions);
     } else if (Result.isUsable()) {
       // We've got down to a single element; build a binary operator.
       Result = getDerived().RebuildBinaryOperator(
@@ -11908,7 +11918,7 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
 
     Result = getDerived().RebuildCXXFoldExpr(
         E->getBeginLoc(), Result.get(), E->getOperator(), E->getEllipsisLoc(),
-        Out.get(), E->getEndLoc());
+        Out.get(), E->getEndLoc(), OrigNumExpansions);
     if (Result.isInvalid())
       return true;
   }

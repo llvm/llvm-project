@@ -1604,6 +1604,22 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       llvm_unreachable("Invalid option in group!");
     case OPT_ast_list:
       Opts.ProgramAction = frontend::ASTDeclList; break;
+    case OPT_ast_dump_all_EQ:
+    case OPT_ast_dump_EQ: {
+      unsigned Val = llvm::StringSwitch<unsigned>(A->getValue())
+                         .CaseLower("default", ADOF_Default)
+                         .CaseLower("json", ADOF_JSON)
+                         .Default(std::numeric_limits<unsigned>::max());
+
+      if (Val != std::numeric_limits<unsigned>::max())
+        Opts.ASTDumpFormat = static_cast<ASTDumpOutputFormat>(Val);
+      else {
+        Diags.Report(diag::err_drv_invalid_value)
+            << A->getAsString(Args) << A->getValue();
+        Opts.ASTDumpFormat = ADOF_Default;
+      }
+      LLVM_FALLTHROUGH;
+    }
     case OPT_ast_dump:
     case OPT_ast_dump_all:
     case OPT_ast_dump_lookups:
@@ -1726,8 +1742,8 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   Opts.FixOnlyWarnings = Args.hasArg(OPT_fix_only_warnings);
   Opts.FixAndRecompile = Args.hasArg(OPT_fixit_recompile);
   Opts.FixToTemporaries = Args.hasArg(OPT_fixit_to_temp);
-  Opts.ASTDumpDecls = Args.hasArg(OPT_ast_dump);
-  Opts.ASTDumpAll = Args.hasArg(OPT_ast_dump_all);
+  Opts.ASTDumpDecls = Args.hasArg(OPT_ast_dump, OPT_ast_dump_EQ);
+  Opts.ASTDumpAll = Args.hasArg(OPT_ast_dump_all, OPT_ast_dump_all_EQ);
   Opts.ASTDumpFilter = Args.getLastArgValue(OPT_ast_dump_filter);
   Opts.ASTDumpLookups = Args.hasArg(OPT_ast_dump_lookups);
   Opts.UseGlobalModuleIndex = !Args.hasArg(OPT_fno_modules_global_index);
@@ -2119,6 +2135,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
   Opts.C99 = Std.isC99();
   Opts.C11 = Std.isC11();
   Opts.C17 = Std.isC17();
+  Opts.C2x = Std.isC2x();
   Opts.CPlusPlus = Std.isCPlusPlus();
   Opts.CPlusPlus11 = Std.isCPlusPlus11();
   Opts.CPlusPlus14 = Std.isCPlusPlus14();
@@ -2185,6 +2202,9 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
   Opts.AlignedAllocation = Opts.CPlusPlus17;
 
   Opts.DollarIdents = !Opts.AsmPreprocessor;
+
+  // Enable [[]] attributes in C++11 and C2x by default.
+  Opts.DoubleSquareBracketAttributes = Opts.CPlusPlus11 || Opts.C2x;
 }
 
 /// Attempt to parse a visibility value out of the given argument.
@@ -2590,10 +2610,10 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.BlocksRuntimeOptional = Args.hasArg(OPT_fblocks_runtime_optional);
   Opts.Coroutines = Opts.CPlusPlus2a || Args.hasArg(OPT_fcoroutines_ts);
 
-  // Enable [[]] attributes in C++11 by default.
   Opts.DoubleSquareBracketAttributes =
       Args.hasFlag(OPT_fdouble_square_bracket_attributes,
-                   OPT_fno_double_square_bracket_attributes, Opts.CPlusPlus11);
+                   OPT_fno_double_square_bracket_attributes,
+                   Opts.DoubleSquareBracketAttributes);
 
   Opts.CPlusPlusModules = Opts.CPlusPlus2a;
   Opts.ModulesTS = Args.hasArg(OPT_fmodules_ts);
@@ -3349,10 +3369,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
                               Res.getFrontendOpts().ProgramAction);
 
   // Turn on -Wspir-compat for SPIR target.
-  auto Arch = T.getArch();
-  if (Arch == llvm::Triple::spir || Arch == llvm::Triple::spir64) {
+  if (T.isSPIR())
     Res.getDiagnosticOpts().Warnings.push_back("spir-compat");
-  }
 
   // If sanitizer is enabled, disable OPT_ffine_grained_bitfield_accesses.
   if (Res.getCodeGenOpts().FineGrainedBitfieldAccesses &&

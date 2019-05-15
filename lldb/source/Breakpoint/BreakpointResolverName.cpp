@@ -8,8 +8,6 @@
 
 #include "lldb/Breakpoint/BreakpointResolverName.h"
 
-#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
-#include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Architecture.h"
 #include "lldb/Core/Module.h"
@@ -18,6 +16,7 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -219,20 +218,27 @@ StructuredData::ObjectSP BreakpointResolverName::SerializeToStructuredData() {
 
 void BreakpointResolverName::AddNameLookup(ConstString name,
                                            FunctionNameType name_type_mask) {
-  ObjCLanguage::MethodName objc_method(name.GetCString(), false);
-  if (objc_method.IsValid(false)) {
-    std::vector<ConstString> objc_names;
-    objc_method.GetFullNames(objc_names, true);
-    for (ConstString objc_name : objc_names) {
-      Module::LookupInfo lookup;
-      lookup.SetName(name);
-      lookup.SetLookupName(objc_name);
-      lookup.SetNameTypeMask(eFunctionNameTypeFull);
-      m_lookups.push_back(lookup);
+
+  Module::LookupInfo lookup(name, name_type_mask, m_language);
+  m_lookups.emplace_back(lookup);
+
+  auto add_variant_funcs = [&](Language *lang) {
+    for (ConstString variant_name : lang->GetMethodNameVariants(name)) {
+      Module::LookupInfo variant_lookup(name, name_type_mask,
+                                        lang->GetLanguageType());
+      variant_lookup.SetLookupName(variant_name);
+      m_lookups.emplace_back(variant_lookup);
     }
+    return true;
+  };
+
+  if (Language *lang = Language::FindPlugin(m_language)) {
+    add_variant_funcs(lang);
   } else {
-    Module::LookupInfo lookup(name, name_type_mask, m_language);
-    m_lookups.push_back(lookup);
+    // Most likely m_language is eLanguageTypeUnknown. We check each language for
+    // possible variants or more qualified names and create lookups for those as
+    // well.
+    Language::ForEach(add_variant_funcs);
   }
 }
 

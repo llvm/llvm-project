@@ -1,0 +1,11 @@
+RUN: %build -n --mode=compile --verbose --arch=64 --compiler=/path/to/my/clang \
+RUN:    -o foo foobar.c | FileCheck %s --check-prefix=CHECK-CLANG
+RUN: %build -n --mode=compile --verbose --arch=64 \
+RUN:    --compiler=/path/to/my/x64/cl.exe -o foo foobar.c | \
+RUN:    FileCheck %s --check-prefix=CHECK-MSVC
+
+CHECK-CLANG: Command Line: /path/to/my/clang
+CHECK-SAME: -o
+
+CHECK-MSVC: Command Line: /path/to/my/x64/cl.exe
+CHECK-SAME: /Fo

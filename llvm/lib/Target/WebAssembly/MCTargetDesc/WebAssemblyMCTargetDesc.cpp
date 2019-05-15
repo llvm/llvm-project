@@ -11,10 +11,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "WebAssemblyMCTargetDesc.h"
-#include "InstPrinter/WebAssemblyInstPrinter.h"
-#include "WebAssemblyMCAsmInfo.h"
-#include "WebAssemblyTargetStreamer.h"
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "MCTargetDesc/WebAssemblyInstPrinter.h"
+#include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
+#include "MCTargetDesc/WebAssemblyTargetStreamer.h"
+#include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"

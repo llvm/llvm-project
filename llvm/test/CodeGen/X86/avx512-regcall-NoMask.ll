@@ -1215,15 +1215,15 @@ define x86_regcallcc i32 @test_argRetMixTypes(double, float, i8 signext, i32, i6
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X32-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
 ; X32-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
-; X32-NEXT:    vcvtsi2sdl %eax, %xmm2, %xmm1
+; X32-NEXT:    vcvtsi2sd %eax, %xmm2, %xmm1
 ; X32-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vcvtsi2sdl %ecx, %xmm2, %xmm1
+; X32-NEXT:    vcvtsi2sd %ecx, %xmm2, %xmm1
 ; X32-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vmovd %edx, %xmm1
 ; X32-NEXT:    vpinsrd $1, %edi, %xmm1, %xmm1
 ; X32-NEXT:    vcvtqq2pd %ymm1, %ymm1
 ; X32-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vcvtsi2sdl %esi, %xmm2, %xmm1
+; X32-NEXT:    vcvtsi2sd %esi, %xmm2, %xmm1
 ; X32-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vcvtsi2sdl (%ebx), %xmm2, %xmm1
 ; X32-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
@@ -1236,13 +1236,13 @@ define x86_regcallcc i32 @test_argRetMixTypes(double, float, i8 signext, i32, i6
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
 ; WIN64-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
-; WIN64-NEXT:    vcvtsi2sdl %eax, %xmm2, %xmm1
+; WIN64-NEXT:    vcvtsi2sd %eax, %xmm2, %xmm1
 ; WIN64-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
-; WIN64-NEXT:    vcvtsi2sdl %ecx, %xmm2, %xmm1
+; WIN64-NEXT:    vcvtsi2sd %ecx, %xmm2, %xmm1
 ; WIN64-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
-; WIN64-NEXT:    vcvtsi2sdq %rdx, %xmm2, %xmm1
+; WIN64-NEXT:    vcvtsi2sd %rdx, %xmm2, %xmm1
 ; WIN64-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
-; WIN64-NEXT:    vcvtsi2sdl %edi, %xmm2, %xmm1
+; WIN64-NEXT:    vcvtsi2sd %edi, %xmm2, %xmm1
 ; WIN64-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; WIN64-NEXT:    vcvtsi2sdl (%rsi), %xmm2, %xmm1
 ; WIN64-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
@@ -1253,13 +1253,13 @@ define x86_regcallcc i32 @test_argRetMixTypes(double, float, i8 signext, i32, i6
 ; LINUXOSX64:       # %bb.0:
 ; LINUXOSX64-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
 ; LINUXOSX64-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
-; LINUXOSX64-NEXT:    vcvtsi2sdl %eax, %xmm2, %xmm1
+; LINUXOSX64-NEXT:    vcvtsi2sd %eax, %xmm2, %xmm1
 ; LINUXOSX64-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
-; LINUXOSX64-NEXT:    vcvtsi2sdl %ecx, %xmm2, %xmm1
+; LINUXOSX64-NEXT:    vcvtsi2sd %ecx, %xmm2, %xmm1
 ; LINUXOSX64-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
-; LINUXOSX64-NEXT:    vcvtsi2sdq %rdx, %xmm2, %xmm1
+; LINUXOSX64-NEXT:    vcvtsi2sd %rdx, %xmm2, %xmm1
 ; LINUXOSX64-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
-; LINUXOSX64-NEXT:    vcvtsi2sdl %edi, %xmm2, %xmm1
+; LINUXOSX64-NEXT:    vcvtsi2sd %edi, %xmm2, %xmm1
 ; LINUXOSX64-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; LINUXOSX64-NEXT:    vcvtsi2sdl (%rsi), %xmm2, %xmm1
 ; LINUXOSX64-NEXT:    vaddsd %xmm1, %xmm0, %xmm0

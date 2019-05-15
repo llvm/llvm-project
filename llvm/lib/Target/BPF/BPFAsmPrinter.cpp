@@ -16,7 +16,8 @@
 #include "BPFMCInstLower.h"
 #include "BPFTargetMachine.h"
 #include "BTFDebug.h"
-#include "InstPrinter/BPFInstPrinter.h"
+#include "MCTargetDesc/BPFInstPrinter.h"
+#include "TargetInfo/BPFTargetInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -54,7 +55,8 @@ public:
 bool BPFAsmPrinter::doInitialization(Module &M) {
   AsmPrinter::doInitialization(M);
 
-  if (MAI->doesSupportDebugInformation()) {
+  // Only emit BTF when debuginfo available.
+  if (MAI->doesSupportDebugInformation() && !empty(M.debug_compile_units())) {
     Handlers.emplace_back(llvm::make_unique<BTFDebug>(this), "emit",
                           "Debug Info Emission", "BTF", "BTF Emission");
   }

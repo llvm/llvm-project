@@ -13,6 +13,7 @@
 #include "AArch64ExternalSymbolizer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
+#include "TargetInfo/AArch64TargetInfo.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm-c/Disassembler.h"
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
@@ -286,10 +287,18 @@ extern "C" void LLVMInitializeAArch64Disassembler() {
                                        createAArch64ExternalSymbolizer);
   TargetRegistry::RegisterMCSymbolizer(getTheAArch64beTarget(),
                                        createAArch64ExternalSymbolizer);
+  TargetRegistry::RegisterMCDisassembler(getTheAArch64_32Target(),
+                                         createAArch64Disassembler);
+  TargetRegistry::RegisterMCSymbolizer(getTheAArch64_32Target(),
+                                       createAArch64ExternalSymbolizer);
 
   TargetRegistry::RegisterMCDisassembler(getTheARM64Target(),
                                          createAArch64Disassembler);
   TargetRegistry::RegisterMCSymbolizer(getTheARM64Target(),
+                                       createAArch64ExternalSymbolizer);
+  TargetRegistry::RegisterMCDisassembler(getTheARM64_32Target(),
+                                         createAArch64Disassembler);
+  TargetRegistry::RegisterMCSymbolizer(getTheARM64_32Target(),
                                        createAArch64ExternalSymbolizer);
 }
 
@@ -1613,7 +1622,7 @@ static DecodeStatus DecodeModImmInstruction(MCInst &Inst, uint32_t insn,
   case AArch64::MOVIv4s_msl:
   case AArch64::MVNIv2s_msl:
   case AArch64::MVNIv4s_msl:
-    Inst.addOperand(MCOperand::createImm(cmode & 1 ? 0x110 : 0x108));
+    Inst.addOperand(MCOperand::createImm((cmode & 1) ? 0x110 : 0x108));
     break;
   }
 

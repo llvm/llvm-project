@@ -634,11 +634,11 @@ void test21(unsigned n) {
 // rdar://problem/12492434
 //   Note that we set the flag saying that we need destruction *and*
 //   the flag saying that we don't also need construction.
-// CHECK-GLOBALS: @"\01l_OBJC_CLASS_RO_$_Test23" = private global [[RO_T:%.*]] { i32 390,
+// CHECK-GLOBALS: @"_OBJC_CLASS_RO_$_Test23" = internal global [[RO_T:%.*]] { i32 390,
 @interface Test23 { id x; } @end
 @implementation Test23 @end
 
-// CHECK-GLOBALS: @"\01l_OBJC_CLASS_RO_$_Test24" = private global [[RO_T:%.*]] { i32 130,
+// CHECK-GLOBALS: @"_OBJC_CLASS_RO_$_Test24" = internal global [[RO_T:%.*]] { i32 130,
 @interface Test24 {} @end
 @implementation Test24 @end
 

@@ -40,6 +40,11 @@ def use_lldb_substitutions(config):
                   extra_args=['--no-lldbinit', '-S',
                               os.path.join(config.test_source_root,
                                            'lit-lldb-init')]),
+        ToolSubst('%lldb-init',
+                  command=FindTool('lldb'),
+                  extra_args=['-S',
+                              os.path.join(config.test_source_root,
+                                           'lit-lldb-init')]),
         lldbmi,
         ToolSubst('%debugserver',
                   command=FindTool(dsname),
@@ -129,6 +134,6 @@ def use_support_substitutions(config):
 
     support_tools = ['yaml2obj', 'obj2yaml', 'llvm-pdbutil',
                      'llvm-mc', 'llvm-readobj', 'llvm-objdump',
-                     'llvm-objcopy']
+                     'llvm-objcopy', 'lli']
     additional_tool_dirs += [config.lldb_tools_dir, config.llvm_tools_dir]
     llvm_config.add_tool_substitutions(support_tools, additional_tool_dirs)

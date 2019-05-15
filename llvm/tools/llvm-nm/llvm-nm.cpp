@@ -903,24 +903,28 @@ static char getSymbolNMTypeChar(ELFObjectFileBase &Obj,
   if (SecI != Obj.section_end()) {
     uint32_t Type = SecI->getType();
     uint64_t Flags = SecI->getFlags();
-    if (Type == ELF::SHT_NOBITS)
-      return 'b';
     if (Flags & ELF::SHF_EXECINSTR)
       return 't';
+    if (Type == ELF::SHT_NOBITS)
+      return 'b';
     if (Flags & ELF::SHF_ALLOC)
       return Flags & ELF::SHF_WRITE ? 'd' : 'r';
+  }
+
+  if (SymI->getELFType() == ELF::STT_SECTION) {
     Expected<StringRef> Name = SymI->getName();
     if (!Name) {
       consumeError(Name.takeError());
       return '?';
     }
-    if (Name->startswith(".debug"))
-      return 'N';
-    if (!(Flags & ELF::SHF_WRITE))
-      return 'n';
+    return StringSwitch<char>(*Name)
+        .StartsWith(".debug", 'N')
+        .StartsWith(".note", 'n')
+        .StartsWith(".comment", 'n')
+        .Default('?');
   }
 
-  return '?';
+  return 'n';
 }
 
 static char getSymbolNMTypeChar(COFFObjectFile &Obj, symbol_iterator I) {
@@ -1215,11 +1219,13 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
       }
       S.TypeName = getNMTypeName(Obj, Sym);
       S.TypeChar = getNMSectionTagAndName(Obj, Sym, S.SectionName);
-      std::error_code EC = Sym.printName(OS);
-      if (EC && MachO)
-        OS << "bad string index";
-      else
-        error(EC);
+      if (Error E = Sym.printName(OS)) {
+        if (MachO) {
+          OS << "bad string index";
+          consumeError(std::move(E));
+        } else
+          error(std::move(E), Obj.getFileName());
+      }
       OS << '\0';
       S.Sym = Sym;
       SymbolList.push_back(S);
@@ -1460,7 +1466,6 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
           B.SymFlags = SymbolRef::SF_Global | SymbolRef::SF_Undefined;
           B.NType = MachO::N_EXT | MachO::N_UNDF;
           B.NSect = 0;
-          B.NDesc = 0;
           B.NDesc = 0;
           MachO::SET_LIBRARY_ORDINAL(B.NDesc, Entry.ordinal());
           B.IndirectName = StringRef();

@@ -239,6 +239,11 @@ if(${LIBOMP_FORTRAN_MODULES})
   configure_file(${LIBOMP_INC_DIR}/omp_lib.h.var omp_lib.h @ONLY)
   configure_file(${LIBOMP_INC_DIR}/omp_lib.f.var omp_lib.f @ONLY)
   configure_file(${LIBOMP_INC_DIR}/omp_lib.f90.var omp_lib.f90 @ONLY)
+  # Workaround for gfortran to build modules with the
+  # omp_sched_monotonic integer parameter
+  if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
+    set(ADDITIONAL_Fortran_FLAGS "-fno-range-check")
+  endif()
   add_custom_target(libomp-mod ALL DEPENDS omp_lib.mod omp_lib_kinds.mod)
   libomp_get_fflags(LIBOMP_CONFIGURED_FFLAGS)
   if(CMAKE_Fortran_COMPILER_SUPPORTS_F90)
@@ -248,7 +253,8 @@ if(${LIBOMP_FORTRAN_MODULES})
   endif()
   add_custom_command(
     OUTPUT omp_lib.mod omp_lib_kinds.mod
-    COMMAND ${CMAKE_Fortran_COMPILER} -c ${LIBOMP_CONFIGURED_FFLAGS} ${LIBOMP_FORTRAN_SOURCE_FILE}
+    COMMAND ${CMAKE_Fortran_COMPILER} -c ${ADDITIONAL_Fortran_FLAGS}
+            ${LIBOMP_CONFIGURED_FFLAGS} ${LIBOMP_FORTRAN_SOURCE_FILE}
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_FORTRAN_SOURCE_FILE}
       ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
   )
@@ -295,7 +301,7 @@ if(WIN32)
     install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E copy \"${LIBOMP_LIB_FILE}\"
       \"${alias}${LIBOMP_LIBRARY_SUFFIX}\" WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/bin)")
     install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E copy \"${LIBOMP_IMP_LIB_FILE}\"
-      \"${alias}${LIBOMP_LIBRARY_SUFFIX}\" WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/${OPENMP_INSTALL_LIBDIR})")
+      \"${alias}${CMAKE_STATIC_LIBRARY_SUFFIX}\" WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/${OPENMP_INSTALL_LIBDIR})")
   endforeach()
 else()
 

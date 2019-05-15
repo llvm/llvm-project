@@ -63,9 +63,9 @@ static bool allocateSGPRTuple(unsigned ValNo, MVT ValVT, MVT LocVT,
   case MVT::v2f32:
   case MVT::v4i16:
   case MVT::v4f16: {
-    // Up to SGPR0-SGPR39
+    // Up to SGPR0-SGPR105
     return allocateCCRegs(ValNo, ValVT, LocVT, LocInfo, ArgFlags, State,
-                          &AMDGPU::SGPR_64RegClass, 20);
+                          &AMDGPU::SGPR_64RegClass, 53);
   }
   default:
     return false;

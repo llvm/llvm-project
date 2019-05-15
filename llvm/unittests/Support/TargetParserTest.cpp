@@ -658,12 +658,15 @@ TEST(TargetParserTest, ARMparseArchEndianAndISA) {
   }
 
   EXPECT_EQ(ARM::EndianKind::LITTLE, ARM::parseArchEndian("aarch64"));
+  EXPECT_EQ(ARM::EndianKind::LITTLE, ARM::parseArchEndian("arm64_32"));
   EXPECT_EQ(ARM::EndianKind::BIG, ARM::parseArchEndian("aarch64_be"));
 
   EXPECT_EQ(ARM::ISAKind::AARCH64, ARM::parseArchISA("aarch64"));
   EXPECT_EQ(ARM::ISAKind::AARCH64, ARM::parseArchISA("aarch64_be"));
   EXPECT_EQ(ARM::ISAKind::AARCH64, ARM::parseArchISA("arm64"));
   EXPECT_EQ(ARM::ISAKind::AARCH64, ARM::parseArchISA("arm64_be"));
+  EXPECT_EQ(ARM::ISAKind::AARCH64, ARM::parseArchISA("arm64_32"));
+  EXPECT_EQ(ARM::ISAKind::AARCH64, ARM::parseArchISA("aarch64_32"));
 }
 
 TEST(TargetParserTest, ARMparseArchProfile) {
@@ -1014,8 +1017,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
                         AArch64::AEK_FP16 | AArch64::AEK_PROFILE |
                         AArch64::AEK_RAS | AArch64::AEK_LSE |
                         AArch64::AEK_RDM | AArch64::AEK_SVE |
-                        AArch64::AEK_DOTPROD | AArch64::AEK_RCPC |
-                        AArch64::AEK_FP16FML;
+                        AArch64::AEK_SVE2 | AArch64::AEK_DOTPROD |
+                        AArch64::AEK_RCPC | AArch64::AEK_FP16FML;
 
   for (unsigned i = 0; i <= Extensions; i++)
     EXPECT_TRUE(i == 0 ? !AArch64::getExtensionFeatures(i, Features)
@@ -1043,6 +1046,14 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
                               {"lse", "nolse", "+lse", "-lse"},
                               {"rdm", "nordm", "+rdm", "-rdm"},
                               {"sve", "nosve", "+sve", "-sve"},
+                              {"sve2", "nosve2", "+sve2", "-sve2"},
+                              {"sve2-aes", "nosve2-aes", "+sve2-aes",
+                               "-sve2-aes"},
+                              {"sve2-sm4", "nosve2-sm4", "+sve2-sm4",
+                               "-sve2-sm4"},
+                              {"sve2-sha3", "nosve2-sha3", "+sve2-sha3",
+                               "-sve2-sha3"},
+                              {"bitperm", "nobitperm", "+bitperm", "-bitperm"},
                               {"dotprod", "nodotprod", "+dotprod", "-dotprod"},
                               {"rcpc", "norcpc", "+rcpc", "-rcpc" },
                               {"rng", "norng", "+rand", "-rand"},

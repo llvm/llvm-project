@@ -43,16 +43,13 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Vectorize.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
+#include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 
 using namespace llvm;
 
 static cl::opt<bool>
     RunPartialInlining("enable-partial-inlining", cl::init(false), cl::Hidden,
                        cl::ZeroOrMore, cl::desc("Run Partial inlinining pass"));
-
-static cl::opt<bool>
-RunSLPVectorization("vectorize-slp", cl::Hidden,
-                    cl::desc("Run the SLP vectorization passes"));
 
 static cl::opt<bool>
 UseGVNAfterVectorization("use-gvn-after-vectorization",

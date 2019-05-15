@@ -1,0 +1,11 @@
+# REQUIRES: target-x86_64
+# XFAIL: system-windows
+
+# RUN: %clang -g -S -emit-llvm --target=x86_64-unknown-unknown-elf -o %t.ll %p/Inputs/jitbp.cpp
+# RUN: %lldb -b -o 'settings set plugin.jit-loader.gdb.enable on' -o 'b jitbp' -o 'run -jit-kind=mcjit %t.ll' lli | FileCheck %s
+
+# CHECK: Breakpoint 1: no locations (pending).
+# CHECK: (lldb) run -jit-kind=mcjit {{.*}}/jitbp_elf.test.tmp.ll
+# CHECK: Process {{.*}} stopped
+# CHECK: JIT(0x{{.*}})`jitbp:
+# CHECK: Process {{.*}} launched: {{.*}}

@@ -69,8 +69,8 @@ Error COFFReader::readSections(Object &Obj) const {
     Section &S = Sections.back();
     S.Header = *Sec;
     ArrayRef<uint8_t> Contents;
-    if (auto EC = COFFObj.getSectionContents(Sec, Contents))
-      return errorCodeToError(EC);
+    if (Error E = COFFObj.getSectionContents(Sec, Contents))
+      return E;
     S.setContentsRef(Contents);
     ArrayRef<coff_relocation> Relocs = COFFObj.getRelocations(Sec);
     for (const coff_relocation &R : Relocs)

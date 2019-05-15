@@ -49,7 +49,7 @@ private:
   unsigned BasePtr;
 
 public:
-  X86RegisterInfo(const Triple &TT);
+  explicit X86RegisterInfo(const Triple &TT);
 
   // FIXME: This should be tablegen'd like getDwarfRegNum is
   int getSEHRegNum(unsigned i) const;
@@ -73,6 +73,11 @@ public:
   const TargetRegisterClass *
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
                             const MachineFunction &MF) const override;
+
+  bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
+                            unsigned DefSubReg,
+                            const TargetRegisterClass *SrcRC,
+                            unsigned SrcSubReg) const override;
 
   /// getPointerRegClass - Returns a TargetRegisterClass used for pointer
   /// values.

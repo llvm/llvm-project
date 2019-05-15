@@ -353,6 +353,9 @@ protected:
   /// Processor has AVX-512 Vector Neural Network Instructions
   bool HasVNNI = false;
 
+  /// Processor has AVX-512 bfloat16 floating-point extensions
+  bool HasBF16 = false;
+
   /// Processor has AVX-512 Bit Algorithms instructions
   bool HasBITALG = false;
 
@@ -392,6 +395,9 @@ protected:
 
   /// Try harder to combine to horizontal vector ops if they are fast.
   bool HasFastHorizontalOps = false;
+
+  /// Prefer a left/right scalar logical shifts pair over a shift+and pair.
+  bool HasFastScalarShiftMasks = false;
 
   /// Prefer a left/right vector logical shifts pair over a shift+and pair.
   bool HasFastVectorShiftMasks = false;
@@ -647,6 +653,7 @@ public:
   bool hasFastSHLDRotate() const { return HasFastSHLDRotate; }
   bool hasFastBEXTR() const { return HasFastBEXTR; }
   bool hasFastHorizontalOps() const { return HasFastHorizontalOps; }
+  bool hasFastScalarShiftMasks() const { return HasFastScalarShiftMasks; }
   bool hasFastVectorShiftMasks() const { return HasFastVectorShiftMasks; }
   bool hasMacroFusion() const { return HasMacroFusion; }
   bool hasBranchFusion() const { return HasBranchFusion; }
@@ -668,6 +675,7 @@ public:
   bool hasVLX() const { return HasVLX; }
   bool hasPKU() const { return HasPKU; }
   bool hasVNNI() const { return HasVNNI; }
+  bool hasBF16() const { return HasBF16; }
   bool hasBITALG() const { return HasBITALG; }
   bool hasMPX() const { return HasMPX; }
   bool hasSHSTK() const { return HasSHSTK; }

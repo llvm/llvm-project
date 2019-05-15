@@ -578,6 +578,12 @@ void MappingTraits<COFFYAML::Section>::mapping(IO &IO, COFFYAML::Section &Sec) {
   else if (Sec.Name == ".debug$H")
     IO.mapOptional("GlobalHashes", Sec.DebugH);
 
+  // Uninitialized sections, such as .bss, typically have no data, but the size
+  // is carried in SizeOfRawData, even though PointerToRawData is zero.
+  if (Sec.SectionData.binary_size() == 0 &&
+      NC->Characteristics & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA)
+    IO.mapOptional("SizeOfRawData", Sec.Header.SizeOfRawData);
+
   IO.mapOptional("Relocations", Sec.Relocations);
 }
 

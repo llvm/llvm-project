@@ -41,11 +41,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TargetSelect.h"
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wglobal-constructors"
-#include "llvm/ExecutionEngine/MCJIT.h"
-#pragma clang diagnostic pop
-
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -153,7 +148,7 @@ public:
   }
 
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                        const clang::Diagnostic &Info) {
+                        const clang::Diagnostic &Info) override {
     if (m_manager) {
       llvm::SmallVector<char, 32> diag_str;
       Info.FormatDiagnostic(diag_str);
@@ -719,7 +714,7 @@ public:
   }
 
   /// Deregisters and destroys this code-completion consumer.
-  virtual ~CodeComplete() {}
+  ~CodeComplete() override {}
 
   /// \name Code-completion filtering
   /// Check if the result should be filtered out.

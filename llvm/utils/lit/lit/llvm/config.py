@@ -9,10 +9,6 @@ from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
 
 
-def binary_feature(on, feature, off_prefix):
-    return feature if on else off_prefix + feature
-
-
 class LLVMConfig(object):
 
     def __init__(self, lit_config, config):
@@ -58,7 +54,7 @@ class LLVMConfig(object):
         elif platform.system() == "Linux":
             features.add('system-linux')
         elif platform.system() in ['FreeBSD']:
-            config.available_features.add('system-freebsd')
+            features.add('system-freebsd')
         elif platform.system() == "NetBSD":
             features.add('system-netbsd')
 
@@ -73,13 +69,16 @@ class LLVMConfig(object):
         # Sanitizers.
         sanitizers = getattr(config, 'llvm_use_sanitizer', '')
         sanitizers = frozenset(x.lower() for x in sanitizers.split(';'))
-        features.add(binary_feature('address' in sanitizers, 'asan', 'not_'))
-        features.add(binary_feature('memory' in sanitizers, 'msan', 'not_'))
-        features.add(binary_feature(
-            'undefined' in sanitizers, 'ubsan', 'not_'))
+        if 'address' in sanitizers:
+            features.add('asan')
+        if 'memory' in sanitizers:
+            features.add('msan')
+        if 'undefined' in sanitizers:
+            features.add('ubsan')
 
         have_zlib = getattr(config, 'have_zlib', None)
-        features.add(binary_feature(have_zlib, 'zlib', 'no'))
+        if have_zlib:
+            features.add('zlib')
 
         # Check if we should run long running tests.
         long_tests = lit_config.params.get('run_long_tests', None)
@@ -233,8 +232,8 @@ class LLVMConfig(object):
             major_version_number = int(version_regex.group(1))
             minor_version_number = int(version_regex.group(2))
             patch_version_number = int(version_regex.group(3))
-            if 'Apple LLVM' in version_string:
-                # Apple LLVM doesn't yet support LSan
+            if ('Apple LLVM' in version_string) or ('Apple clang' in version_string):
+                # Apple clang doesn't yet support LSan
                 return False
             else:
                 return major_version_number >= 5

@@ -12,8 +12,9 @@
 
 #include "ARMMCTargetDesc.h"
 #include "ARMBaseInfo.h"
+#include "ARMInstPrinter.h"
 #include "ARMMCAsmInfo.h"
-#include "InstPrinter/ARMInstPrinter.h"
+#include "TargetInfo/ARMTargetInfo.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"

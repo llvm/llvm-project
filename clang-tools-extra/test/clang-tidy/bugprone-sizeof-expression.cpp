@@ -193,11 +193,15 @@ int Test5() {
     Array10* ptr;
   };
   typedef const MyStruct TMyStruct;
+  typedef const MyStruct *PMyStruct;
+  typedef TMyStruct *PMyStruct2;
 
   static TMyStruct kGlocalMyStruct = {};
   static TMyStruct volatile * kGlocalMyStructPtr = &kGlocalMyStruct;
 
   MyStruct S;
+  PMyStruct PS;
+  PMyStruct2 PS2;
   Array10 A10;
 
   int sum = 0;
@@ -225,8 +229,45 @@ int Test5() {
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
   sum += sizeof(&S);
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
+  sum += sizeof(MyStruct*);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
+  sum += sizeof(PMyStruct);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
+  sum += sizeof(PS);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
+  sum += sizeof(PS2);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
   sum += sizeof(&A10);
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
+
+  return sum;
+}
+
+int Test6() {
+  int sum = 0;
+
+  struct S A = AsStruct(), B = AsStruct();
+  struct S *P = &A, *Q = &B;
+  sum += sizeof(struct S) == P - Q;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+  sum += 5 * sizeof(S) != P - Q;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+  sum += sizeof(S) < P - Q;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+  sum += 5 * sizeof(S) <= P - Q;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+  sum += 5 * sizeof(*P) >= P - Q;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+  sum += Q - P > 3 * sizeof(*P);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+  sum += sizeof(S) + (P - Q);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+  sum += 5 * sizeof(S) - (P - Q);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+  sum += (P - Q) / sizeof(S);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
+  sum += (P - Q) / sizeof(*Q);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
 
   return sum;
 }

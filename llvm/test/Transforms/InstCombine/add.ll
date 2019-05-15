@@ -978,3 +978,81 @@ define i32 @add_to_sub2(i32 %A, i32 %M) {
   %E = add i32 %D, 1
   ret i32 %E
 }
+
+; (X | C1) + C2 --> (X | C1) ^ C1 iff (C1 == -C2)
+define i32 @test44(i32 %A) {
+; CHECK-LABEL: @test44(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -124
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %B = or i32 %A, 123
+  %C = add i32 %B, -123
+  ret i32 %C
+}
+
+define i32 @test44_extra_use(i32 %A) {
+; CHECK-LABEL: @test44_extra_use(
+; CHECK-NEXT:    [[B:%.*]] = or i32 [[A:%.*]], 123
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A]], -124
+; CHECK-NEXT:    [[D:%.*]] = mul i32 [[B]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %B = or i32 %A, 123
+  %C = add i32 %B, -123
+  %D = mul i32 %B, %C
+  ret i32 %D
+}
+
+define i32 @test44_non_matching(i32 %A) {
+; CHECK-LABEL: @test44_non_matching(
+; CHECK-NEXT:    [[B:%.*]] = or i32 [[A:%.*]], 123
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[B]], -321
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %B = or i32 %A, 123
+  %C = add i32 %B, -321
+  ret i32 %C
+}
+
+define <2 x i32> @test44_vec(<2 x i32> %A) {
+; CHECK-LABEL: @test44_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 -124, i32 -124>
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+;
+  %B = or <2 x i32> %A, <i32 123, i32 123>
+  %C = add <2 x i32> %B, <i32 -123, i32 -123>
+  ret <2 x i32> %C
+}
+
+define <2 x i32> @test44_vec_non_matching(<2 x i32> %A) {
+; CHECK-LABEL: @test44_vec_non_matching(
+; CHECK-NEXT:    [[B:%.*]] = or <2 x i32> [[A:%.*]], <i32 123, i32 123>
+; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[B]], <i32 -321, i32 -321>
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %B = or <2 x i32> %A, <i32 123, i32 123>
+  %C = add <2 x i32> %B, <i32 -321, i32 -321>
+  ret <2 x i32> %C
+}
+
+define <2 x i32> @test44_vec_undef(<2 x i32> %A) {
+; CHECK-LABEL: @test44_vec_undef(
+; CHECK-NEXT:    [[B:%.*]] = or <2 x i32> [[A:%.*]], <i32 123, i32 undef>
+; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[B]], <i32 -123, i32 undef>
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %B = or <2 x i32> %A, <i32 123, i32 undef>
+  %C = add <2 x i32> %B, <i32 -123, i32 undef>
+  ret <2 x i32> %C
+}
+
+define <2 x i32> @test44_vec_non_splat(<2 x i32> %A) {
+; CHECK-LABEL: @test44_vec_non_splat(
+; CHECK-NEXT:    [[B:%.*]] = or <2 x i32> [[A:%.*]], <i32 123, i32 456>
+; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[B]], <i32 -123, i32 -456>
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %B = or <2 x i32> %A, <i32 123, i32 456>
+  %C = add <2 x i32> %B, <i32 -123, i32 -456>
+  ret <2 x i32> %C
+}

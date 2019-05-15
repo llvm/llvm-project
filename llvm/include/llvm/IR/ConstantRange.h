@@ -370,6 +370,11 @@ public:
   ConstantRange urem(const ConstantRange &Other) const;
 
   /// Return a new range representing the possible values resulting
+  /// from a signed remainder operation of a value in this range and a
+  /// value in \p Other.
+  ConstantRange srem(const ConstantRange &Other) const;
+
+  /// Return a new range representing the possible values resulting
   /// from a binary-and of a value in this range by a value in \p Other.
   ConstantRange binaryAnd(const ConstantRange &Other) const;
 

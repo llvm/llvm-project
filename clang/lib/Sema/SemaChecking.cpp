@@ -4885,7 +4885,7 @@ static bool checkBuiltinArgument(Sema &S, CallExpr *E, unsigned ArgIndex) {
 
 /// We have a call to a function like __sync_fetch_and_add, which is an
 /// overloaded function based on the pointer type of its first argument.
-/// The main ActOnCallExpr routines have already promoted the types of
+/// The main BuildCallExpr routines have already promoted the types of
 /// arguments because all of these calls are prototyped as void(...).
 ///
 /// This function goes through and does final semantic checking for these
@@ -12155,10 +12155,11 @@ class SequenceChecker : public EvaluatedExprVisitor<SequenceChecker> {
     if (OtherKind == UK_Use)
       std::swap(Mod, ModOrUse);
 
-    SemaRef.Diag(Mod->getExprLoc(),
-                 IsModMod ? diag::warn_unsequenced_mod_mod
-                          : diag::warn_unsequenced_mod_use)
-      << O << SourceRange(ModOrUse->getExprLoc());
+    SemaRef.DiagRuntimeBehavior(
+        Mod->getExprLoc(), {Mod, ModOrUse},
+        SemaRef.PDiag(IsModMod ? diag::warn_unsequenced_mod_mod
+                               : diag::warn_unsequenced_mod_use)
+            << O << SourceRange(ModOrUse->getExprLoc()));
     UI.Diagnosed = true;
   }
 

@@ -93,4 +93,13 @@ void test() {
   _Generic(++a, default: 0) + ++a; // ok
   sizeof(++a) + ++a; // ok
   _Alignof(++a) + ++a; // expected-warning {{extension}}
+
+  __builtin_constant_p(f(++a, 0)) ? f(f(++a, 0), f(++a, 0)) : 0;
+
+  if (0) ++a + ++a; // ok, unreachable
+}
+
+void g(const char *p, int n) {
+  // This resembles code produced by some macros in glibc's <string.h>.
+  __builtin_constant_p(p) && __builtin_constant_p(++n) && (++n + ++n);
 }

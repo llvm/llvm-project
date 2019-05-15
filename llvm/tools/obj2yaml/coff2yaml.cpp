@@ -58,8 +58,6 @@ template <typename T> void COFFDumper::dumpOptionalHeader(T OptionalHeader) {
   YAMLObj.OptionalHeader = COFFYAML::PEHeader();
   YAMLObj.OptionalHeader->Header.AddressOfEntryPoint =
       OptionalHeader->AddressOfEntryPoint;
-  YAMLObj.OptionalHeader->Header.AddressOfEntryPoint =
-      OptionalHeader->AddressOfEntryPoint;
   YAMLObj.OptionalHeader->Header.ImageBase = OptionalHeader->ImageBase;
   YAMLObj.OptionalHeader->Header.SectionAlignment =
       OptionalHeader->SectionAlignment;
@@ -122,7 +120,7 @@ initializeFileAndStringTable(const llvm::object::COFFObjectFile &Obj,
 
     const object::coff_section *COFFSection = Obj.getCOFFSection(S);
 
-    Obj.getSectionContents(COFFSection, sectionData);
+    cantFail(Obj.getSectionContents(COFFSection, sectionData));
 
     BinaryStreamReader Reader(sectionData, support::little);
     uint32_t Magic;
@@ -177,7 +175,7 @@ void COFFDumper::dumpSections(unsigned NumSections) {
 
     ArrayRef<uint8_t> sectionData;
     if (!ObjSection.isBSS())
-      Obj.getSectionContents(COFFSection, sectionData);
+      cantFail(Obj.getSectionContents(COFFSection, sectionData));
     NewYAMLSection.SectionData = yaml::BinaryRef(sectionData);
 
     if (NewYAMLSection.Name == ".debug$S")

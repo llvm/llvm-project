@@ -1,5 +1,5 @@
-Testing LLDB
-============
+Testing
+=======
 
 The LLDB test suite consists of Python scripts located under the test
 directory. Each script contains a number of test cases and is usually
@@ -10,20 +10,29 @@ verify both the LLDB command line interface and the scripting API.
 .. contents::
    :local:
 
+.. note::
+
+   On Windows any invocations of python should be replaced with python_d, the
+   debug interpreter, when running the test suite against a debug version of
+   LLDB.
+
+.. note::
+
+   On NetBSD you must export ``LD_LIBRARY_PATH=$PWD/lib`` in your environment.
+   This is due to lack of the ``$ORIGIN`` linker feature.
+
 Running the Full Test Suite
 ---------------------------
 
-**Windows Note**: In the examples that follow, any invocations of python should
-be replaced with python_d, the debug interpreter, when running the test suite
-against a debug version of LLDB.
-
 The easiest way to run the LLDB test suite is to use the ``check-lldb`` build
-target. By default, the ``check-lldb`` target builds the test programs with the
-same compiler that was used to build LLDB. To build the tests with a different
-compiler, you can set the ``LLDB_TEST_C_COMPILER`` or the ``LLDB_TEST_CXX_COMPILER``
-CMake variables. These variables are ignored unless the respective
-``LLDB_TEST_USE_CUSTOM_C_COMPILER`` and ``LLDB_TEST_USE_CUSTOM_CXX_COMPILER`` are set
-to ``ON``.
+target.
+
+By default, the ``check-lldb`` target builds the test programs with the same
+compiler that was used to build LLDB. To build the tests with a different
+compiler, you can set the ``LLDB_TEST_C_COMPILER`` or the
+``LLDB_TEST_CXX_COMPILER`` CMake variables. These variables are ignored unless
+the respective ``LLDB_TEST_USE_CUSTOM_C_COMPILER`` and
+``LLDB_TEST_USE_CUSTOM_CXX_COMPILER`` are set to ``ON``.
 
 It is possible to customize the architecture of the test binaries and compiler
 used by appending ``-A`` and ``-C`` options respectively to the CMake variable
@@ -38,20 +47,36 @@ built with a custom version of clang, do:
 Note that multiple ``-A`` and ``-C`` flags can be specified to
 ``LLDB_TEST_USER_ARGS``.
 
-Note that on NetBSD you must export ``LD_LIBRARY_PATH=$PWD/lib`` in your
-environment. This is due to lack of the ``$ORIGIN`` linker feature.
 
 Running a Specific Test or Set of Tests
 ---------------------------------------
 
-In addition to running all the LLDB test suites with the "check-lldb" CMake target above, it is possible to run individual LLDB tests. For example, to run the test cases defined in TestInferiorCrashing.py, run:
+In addition to running all the LLDB test suites with the ``check-lldb`` CMake
+target above, it is possible to run individual LLDB tests. If you have a CMake
+build you can use the ``lldb-dotest`` binary, which is a wrapper around
+``dotest.py`` that passes all the arguments configured by CMake. Alternatively,
+you can use ``dotest.py`` directly, if you want to run a test one-off with a
+different configuration.
+
+
+For example, to run the test cases defined in TestInferiorCrashing.py, run:
+
+::
+
+   > lldb-dotest -p TestInferiorCrashing.py
 
 ::
 
    > cd $lldb/test
    > python dotest.py --executable <path-to-lldb> -p TestInferiorCrashing.py ../packages/Python/lldbsuite/test
 
-If the test is not specified by name (e.g. if you leave the -p argument off), LLDB will run all tests in that directory:
+If the test is not specified by name (e.g. if you leave the ``-p`` argument
+off),  all tests in that directory will be executed:
+
+
+::
+
+   > lldb-dotest functionalities/data-formatter
 
 ::
 
@@ -63,11 +88,11 @@ Many more options that are available. To see a list of all of them, run:
 
    > python dotest.py -h
 
-The ``dotest.py`` script runs tests in parallel by default. To disable the parallel
-test running feature, use the ``--no-multiprocess`` flag. The number of concurrent
-tests is controlled by the ``LLDB_TEST_THREADS`` environment variable or the
-``--threads command`` line parameter. The default value is the number of CPU cores
-on your system.
+The ``dotest.py`` script runs tests in parallel by default. To disable the
+parallel test running feature, use the ``--no-multiprocess`` flag. The number
+of concurrent tests is controlled by the ``LLDB_TEST_THREADS`` environment
+variable or the ``--threads command`` line parameter. The default value is the
+number of CPU cores on your system.
 
 The parallel test running feature will handle an additional ``--test-subdir
 SUBDIR`` arg. When specified, ``SUBDIR`` is relative to the root test directory

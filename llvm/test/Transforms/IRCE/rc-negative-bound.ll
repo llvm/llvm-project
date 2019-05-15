@@ -114,49 +114,44 @@ define void @test_03(i32 *%arr, i32 %n, i32 %bound) {
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[BOUND:%.*]], -2147483647
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[TMP0]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[BOUND]], [[SMAX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 -1, [[BOUND]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP3]], -1
-; CHECK-NEXT:    [[SMAX1:%.*]] = select i1 [[TMP4]], i32 [[TMP3]], i32 -1
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 -1, [[SMAX1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt i32 [[TMP5]], -1
-; CHECK-NEXT:    [[SMAX2:%.*]] = select i1 [[TMP6]], i32 [[TMP5]], i32 -1
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[SMAX2]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i32 [[TMP2]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i32 -1, [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 -1, [[N]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp sgt i32 [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[SMAX3:%.*]] = select i1 [[TMP11]], i32 [[TMP9]], i32 [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = sub i32 -1, [[SMAX3]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp sgt i32 [[TMP12]], 0
-; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP13]], i32 [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp slt i32 0, [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP14]], label [[LOOP_PREHEADER5:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
-; CHECK:       loop.preheader5:
+; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[BOUND]], [[SMIN]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[BOUND]], 0
+; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP3]], i32 [[BOUND]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[SMAX]], -1
+; CHECK-NEXT:    [[SMIN1:%.*]] = select i1 [[TMP4]], i32 [[SMAX]], i32 -1
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[SMIN1]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i32 [[N]], [[TMP6]]
+; CHECK-NEXT:    [[SMAX2:%.*]] = select i1 [[TMP7]], i32 [[N]], i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[SMAX2]], 0
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP8]], i32 [[SMAX2]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt i32 0, [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[LOOP_PREHEADER4:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
+; CHECK:       loop.preheader4:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[IN_BOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER5]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[IN_BOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER4]] ]
 ; CHECK-NEXT:    [[IDX_NEXT]] = add i32 [[IDX]], 1
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp slt i32 [[IDX]], [[BOUND]]
-; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT6:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT5:%.*]], !prof !0
 ; CHECK:       in.bounds:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR]]
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp slt i32 [[IDX_NEXT]], [[N]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp slt i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp slt i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
 ; CHECK:       main.exit.selector:
 ; CHECK-NEXT:    [[IDX_NEXT_LCSSA:%.*]] = phi i32 [ [[IDX_NEXT]], [[IN_BOUNDS]] ]
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp slt i32 [[IDX_NEXT_LCSSA]], [[N]]
-; CHECK-NEXT:    br i1 [[TMP16]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp slt i32 [[IDX_NEXT_LCSSA]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       main.pseudo.exit:
 ; CHECK-NEXT:    [[IDX_COPY:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    [[INDVAR_END:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    br label [[POSTLOOP:%.*]]
 ; CHECK:       out.of.bounds.loopexit:
 ; CHECK-NEXT:    br label [[OUT_OF_BOUNDS:%.*]]
-; CHECK:       out.of.bounds.loopexit6:
+; CHECK:       out.of.bounds.loopexit5:
 ; CHECK-NEXT:    br label [[OUT_OF_BOUNDS]]
 ; CHECK:       out.of.bounds:
 ; CHECK-NEXT:    ret void
@@ -211,47 +206,41 @@ define void @test_04(i32 *%arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[FIRST_ITR_CHECK:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[FIRST_ITR_CHECK]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 -1, [[BOUND:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[TMP0]], -1
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 -1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[BOUND]], [[SMAX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 -1, [[SMAX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[TMP4]], -1
-; CHECK-NEXT:    [[SMAX1:%.*]] = select i1 [[TMP5]], i32 [[TMP4]], i32 -1
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[SMAX1]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP3]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = sub i32 -1, [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i32 -1, [[N]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i32 [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP10]], i32 [[TMP8]], i32 [[TMP9]]
-; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = sub i32 -1, [[UMAX]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult i32 0, [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[LOOP_PREHEADER2:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
-; CHECK:       loop.preheader2:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i32 [[BOUND:%.*]], 0
+; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[BOUND]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[BOUND]], [[SMAX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[SMAX]], -1
+; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[TMP2]], i32 [[SMAX]], i32 -1
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[SMIN]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[N]], [[TMP4]]
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP5]], i32 [[N]], i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i32 0, [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[LOOP_PREHEADER1:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
+; CHECK:       loop.preheader1:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[IN_BOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER2]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[IN_BOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER1]] ]
 ; CHECK-NEXT:    [[IDX_NEXT]] = add i32 [[IDX]], 1
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp slt i32 [[IDX]], [[BOUND]]
-; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT3:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT2:%.*]], !prof !0
 ; CHECK:       in.bounds:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR]]
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp ult i32 [[IDX_NEXT]], [[N]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
 ; CHECK:       main.exit.selector:
 ; CHECK-NEXT:    [[IDX_NEXT_LCSSA:%.*]] = phi i32 [ [[IDX_NEXT]], [[IN_BOUNDS]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ult i32 [[IDX_NEXT_LCSSA]], [[N]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i32 [[IDX_NEXT_LCSSA]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       main.pseudo.exit:
 ; CHECK-NEXT:    [[IDX_COPY:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    [[INDVAR_END:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    br label [[POSTLOOP:%.*]]
 ; CHECK:       out.of.bounds.loopexit:
 ; CHECK-NEXT:    br label [[OUT_OF_BOUNDS:%.*]]
-; CHECK:       out.of.bounds.loopexit3:
+; CHECK:       out.of.bounds.loopexit2:
 ; CHECK-NEXT:    br label [[OUT_OF_BOUNDS]]
 ; CHECK:       out.of.bounds:
 ; CHECK-NEXT:    ret void
@@ -413,49 +402,44 @@ define void @test_07(i32 *%arr, i32 %n, i32 %bound) {
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[BOUND:%.*]], -2147483647
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[TMP0]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[BOUND]], [[SMAX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 -1, [[BOUND]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP3]], -1
-; CHECK-NEXT:    [[SMAX1:%.*]] = select i1 [[TMP4]], i32 [[TMP3]], i32 -1
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 -1, [[SMAX1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt i32 [[TMP5]], -1
-; CHECK-NEXT:    [[SMAX2:%.*]] = select i1 [[TMP6]], i32 [[TMP5]], i32 -1
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[SMAX2]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i32 [[TMP2]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i32 -1, [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 -1, [[N]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp sgt i32 [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[SMAX3:%.*]] = select i1 [[TMP11]], i32 [[TMP9]], i32 [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = sub i32 -1, [[SMAX3]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp sgt i32 [[TMP12]], 0
-; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP13]], i32 [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp slt i32 0, [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP14]], label [[LOOP_PREHEADER5:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
-; CHECK:       loop.preheader5:
+; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[BOUND]], [[SMIN]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[BOUND]], 0
+; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP3]], i32 [[BOUND]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[SMAX]], -1
+; CHECK-NEXT:    [[SMIN1:%.*]] = select i1 [[TMP4]], i32 [[SMAX]], i32 -1
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[SMIN1]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i32 [[N]], [[TMP6]]
+; CHECK-NEXT:    [[SMAX2:%.*]] = select i1 [[TMP7]], i32 [[N]], i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[SMAX2]], 0
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP8]], i32 [[SMAX2]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt i32 0, [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[LOOP_PREHEADER4:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
+; CHECK:       loop.preheader4:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[IN_BOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER5]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[IN_BOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER4]] ]
 ; CHECK-NEXT:    [[IDX_NEXT]] = add i32 [[IDX]], 1
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp ult i32 [[IDX]], [[BOUND]]
-; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT6:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT5:%.*]], !prof !0
 ; CHECK:       in.bounds:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR]]
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp slt i32 [[IDX_NEXT]], [[N]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp slt i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp slt i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
 ; CHECK:       main.exit.selector:
 ; CHECK-NEXT:    [[IDX_NEXT_LCSSA:%.*]] = phi i32 [ [[IDX_NEXT]], [[IN_BOUNDS]] ]
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp slt i32 [[IDX_NEXT_LCSSA]], [[N]]
-; CHECK-NEXT:    br i1 [[TMP16]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp slt i32 [[IDX_NEXT_LCSSA]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       main.pseudo.exit:
 ; CHECK-NEXT:    [[IDX_COPY:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    [[INDVAR_END:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    br label [[POSTLOOP:%.*]]
 ; CHECK:       out.of.bounds.loopexit:
 ; CHECK-NEXT:    br label [[OUT_OF_BOUNDS:%.*]]
-; CHECK:       out.of.bounds.loopexit6:
+; CHECK:       out.of.bounds.loopexit5:
 ; CHECK-NEXT:    br label [[OUT_OF_BOUNDS]]
 ; CHECK:       out.of.bounds:
 ; CHECK-NEXT:    ret void
@@ -512,47 +496,41 @@ define void @test_08(i32 *%arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[FIRST_ITR_CHECK:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[FIRST_ITR_CHECK]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 -1, [[BOUND:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[TMP0]], -1
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 -1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[BOUND]], [[SMAX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 -1, [[SMAX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[TMP4]], -1
-; CHECK-NEXT:    [[SMAX1:%.*]] = select i1 [[TMP5]], i32 [[TMP4]], i32 -1
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[SMAX1]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP3]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = sub i32 -1, [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i32 -1, [[N]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i32 [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP10]], i32 [[TMP8]], i32 [[TMP9]]
-; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = sub i32 -1, [[UMAX]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult i32 0, [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[LOOP_PREHEADER2:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
-; CHECK:       loop.preheader2:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i32 [[BOUND:%.*]], 0
+; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[BOUND]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[BOUND]], [[SMAX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[SMAX]], -1
+; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[TMP2]], i32 [[SMAX]], i32 -1
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[SMIN]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[N]], [[TMP4]]
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP5]], i32 [[N]], i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i32 0, [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[LOOP_PREHEADER1:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
+; CHECK:       loop.preheader1:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[IN_BOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER2]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[IN_BOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER1]] ]
 ; CHECK-NEXT:    [[IDX_NEXT]] = add i32 [[IDX]], 1
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp ult i32 [[IDX]], [[BOUND]]
-; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT3:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT2:%.*]], !prof !0
 ; CHECK:       in.bounds:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR]]
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp ult i32 [[IDX_NEXT]], [[N]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
 ; CHECK:       main.exit.selector:
 ; CHECK-NEXT:    [[IDX_NEXT_LCSSA:%.*]] = phi i32 [ [[IDX_NEXT]], [[IN_BOUNDS]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ult i32 [[IDX_NEXT_LCSSA]], [[N]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i32 [[IDX_NEXT_LCSSA]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       main.pseudo.exit:
 ; CHECK-NEXT:    [[IDX_COPY:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    [[INDVAR_END:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    br label [[POSTLOOP:%.*]]
 ; CHECK:       out.of.bounds.loopexit:
 ; CHECK-NEXT:    br label [[OUT_OF_BOUNDS:%.*]]
-; CHECK:       out.of.bounds.loopexit3:
+; CHECK:       out.of.bounds.loopexit2:
 ; CHECK-NEXT:    br label [[OUT_OF_BOUNDS]]
 ; CHECK:       out.of.bounds:
 ; CHECK-NEXT:    ret void

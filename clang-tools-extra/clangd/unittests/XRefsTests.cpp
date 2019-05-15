@@ -25,10 +25,10 @@ namespace clang {
 namespace clangd {
 namespace {
 
-using testing::ElementsAre;
-using testing::IsEmpty;
-using testing::Matcher;
-using testing::UnorderedElementsAreArray;
+using ::testing::ElementsAre;
+using ::testing::IsEmpty;
+using ::testing::Matcher;
+using ::testing::UnorderedElementsAreArray;
 
 class IgnoreDiagnostics : public DiagnosticsConsumer {
   void onDiagnosticsReady(PathRef File,
@@ -120,7 +120,7 @@ MATCHER_P3(Sym, Name, Decl, DefOrNone, "") {
   }
   return true;
 }
-testing::Matcher<LocatedSymbol> Sym(std::string Name, Range Decl) {
+::testing::Matcher<LocatedSymbol> Sym(std::string Name, Range Decl) {
   return Sym(Name, Decl, llvm::None);
 }
 MATCHER_P(Sym, Name, "") { return arg.Name == Name; }
@@ -186,7 +186,8 @@ TEST(LocateSymbol, WithIndex) {
 
 TEST(LocateSymbol, WithIndexPreferredLocation) {
   Annotations SymbolHeader(R"cpp(
-        class $[[Proto]] {};
+        class $p[[Proto]] {};
+        void $f[[func]]() {};
       )cpp");
   TestTU TU;
   TU.HeaderCode = SymbolHeader.code();
@@ -195,13 +196,25 @@ TEST(LocateSymbol, WithIndexPreferredLocation) {
 
   Annotations Test(R"cpp(// only declaration in AST.
         // Shift to make range different.
-        class [[Proto]];
-        P^roto* create();
+        class Proto;
+        void func() {}
+        P$p^roto* create() {
+          fu$f^nc();
+          return nullptr;
+        }
       )cpp");
 
   auto AST = TestTU::withCode(Test.code()).build();
-  auto Locs = clangd::locateSymbolAt(AST, Test.point(), Index.get());
-  EXPECT_THAT(Locs, ElementsAre(Sym("Proto", SymbolHeader.range())));
+  {
+    auto Locs = clangd::locateSymbolAt(AST, Test.point("p"), Index.get());
+    auto CodeGenLoc = SymbolHeader.range("p");
+    EXPECT_THAT(Locs, ElementsAre(Sym("Proto", CodeGenLoc, CodeGenLoc)));
+  }
+  {
+    auto Locs = clangd::locateSymbolAt(AST, Test.point("f"), Index.get());
+    auto CodeGenLoc = SymbolHeader.range("f");
+    EXPECT_THAT(Locs, ElementsAre(Sym("func", CodeGenLoc, CodeGenLoc)));
+  }
 }
 
 TEST(LocateSymbol, All) {

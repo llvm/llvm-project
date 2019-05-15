@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-pc-win32 -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap --check-prefix=COFF %s
 // COFF-DAG: @bar = external dso_local global i32
-// COFF-DAG: @weak_bar = extern_weak dso_local global i32
+// COFF-DAG: @weak_bar = extern_weak global i32
 // COFF-DAG: declare dso_local void @foo()
 // COFF-DAG: @baz = dso_local global i32 42
 // COFF-DAG: define dso_local i32* @zed()

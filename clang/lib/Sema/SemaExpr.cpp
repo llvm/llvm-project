@@ -917,7 +917,7 @@ ExprResult Sema::DefaultVariadicArgumentPromotion(Expr *E, VariadicCallType CT,
     if (TrapFn.isInvalid())
       return ExprError();
 
-    ExprResult Call = ActOnCallExpr(TUScope, TrapFn.get(), E->getBeginLoc(),
+    ExprResult Call = BuildCallExpr(TUScope, TrapFn.get(), E->getBeginLoc(),
                                     None, E->getEndLoc());
     if (Call.isInvalid())
       return ExprError();
@@ -2065,8 +2065,9 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
       // is in the wrong place to recover. Suggest the typo
       // correction, but don't make it a fix-it since we're not going
       // to recover well anyway.
-      AcceptableWithoutRecovery =
-          isa<TypeDecl>(UnderlyingND) || isa<ObjCInterfaceDecl>(UnderlyingND);
+      AcceptableWithoutRecovery = isa<TypeDecl>(UnderlyingND) ||
+                                  getAsTypeTemplateDecl(UnderlyingND) ||
+                                  isa<ObjCInterfaceDecl>(UnderlyingND);
     } else {
       // FIXME: We found a keyword. Suggest it, but don't provide a fix-it
       // because we aren't able to recover.
@@ -2221,8 +2222,10 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // this becomes a performance hit, we can work harder to preserve those
     // results until we get here but it's likely not worth it.
     bool MemberOfUnknownSpecialization;
+    AssumedTemplateKind AssumedTemplate;
     if (LookupTemplateName(R, S, SS, QualType(), /*EnteringContext=*/false,
-                           MemberOfUnknownSpecialization, TemplateKWLoc))
+                           MemberOfUnknownSpecialization, TemplateKWLoc,
+                           &AssumedTemplate))
       return ExprError();
 
     if (MemberOfUnknownSpecialization ||
@@ -5515,10 +5518,33 @@ tryImplicitlyCaptureThisIfImplicitMemberFunctionAccessWithDependentArgs(
   }
 }
 
-/// ActOnCallExpr - Handle a call to Fn with the specified array of arguments.
+ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
+                               MultiExprArg ArgExprs, SourceLocation RParenLoc,
+                               Expr *ExecConfig) {
+  ExprResult Call =
+      BuildCallExpr(Scope, Fn, LParenLoc, ArgExprs, RParenLoc, ExecConfig);
+  if (Call.isInvalid())
+    return Call;
+
+  // Diagnose uses of the C++20 "ADL-only template-id call" feature in earlier
+  // language modes.
+  if (auto *ULE = dyn_cast<UnresolvedLookupExpr>(Fn)) {
+    if (ULE->hasExplicitTemplateArgs() &&
+        ULE->decls_begin() == ULE->decls_end()) {
+      Diag(Fn->getExprLoc(), getLangOpts().CPlusPlus2a
+                                 ? diag::warn_cxx17_compat_adl_only_template_id
+                                 : diag::ext_adl_only_template_id)
+          << ULE->getName();
+    }
+  }
+
+  return Call;
+}
+
+/// BuildCallExpr - Handle a call to Fn with the specified array of arguments.
 /// This provides the location of the left/right parens and a list of comma
 /// locations.
-ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
+ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
                                MultiExprArg ArgExprs, SourceLocation RParenLoc,
                                Expr *ExecConfig, bool IsExecConfig) {
   // Since this might be a postfix expression, get rid of ParenListExprs.
@@ -7718,9 +7744,9 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
   }
 
   if (!lhq.compatiblyIncludes(rhq)) {
-    // Treat address-space mismatches as fatal.  TODO: address subspaces
+    // Treat address-space mismatches as fatal.
     if (!lhq.isAddressSpaceSupersetOf(rhq))
-      ConvTy = Sema::IncompatiblePointerDiscardsQualifiers;
+      return Sema::IncompatiblePointerDiscardsQualifiers;
 
     // It's okay to add or remove GC or lifetime qualifiers when converting to
     // and from void*.
@@ -7793,8 +7819,22 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
     // level of indirection, this must be the issue.
     if (isa<PointerType>(lhptee) && isa<PointerType>(rhptee)) {
       do {
-        lhptee = cast<PointerType>(lhptee)->getPointeeType().getTypePtr();
-        rhptee = cast<PointerType>(rhptee)->getPointeeType().getTypePtr();
+        std::tie(lhptee, lhq) =
+          cast<PointerType>(lhptee)->getPointeeType().split().asPair();
+        std::tie(rhptee, rhq) =
+          cast<PointerType>(rhptee)->getPointeeType().split().asPair();
+
+        // Inconsistent address spaces at this point is invalid, even if the
+        // address spaces would be compatible.
+        // FIXME: This doesn't catch address space mismatches for pointers of
+        // different nesting levels, like:
+        //   __local int *** a;
+        //   int ** b = a;
+        // It's not clear how to actually determine when such pointers are
+        // invalidly incompatible.
+        if (lhq.getAddressSpace() != rhq.getAddressSpace())
+          return Sema::IncompatibleNestedPointerAddressSpaceMismatch;
+
       } while (isa<PointerType>(lhptee) && isa<PointerType>(rhptee));
 
       if (lhptee == rhptee)
@@ -14207,6 +14247,9 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   case IncompatibleNestedPointerQualifiers:
     DiagKind = diag::ext_nested_pointer_qualifier_mismatch;
     break;
+  case IncompatibleNestedPointerAddressSpaceMismatch:
+    DiagKind = diag::err_typecheck_incompatible_nested_address_space;
+    break;
   case IntToBlockPointer:
     DiagKind = diag::err_int_to_block_pointer;
     break;
@@ -15431,7 +15474,9 @@ bool Sema::tryCaptureVariable(
   // Capture global variables if it is required to use private copy of this
   // variable.
   bool IsGlobal = !Var->hasLocalStorage();
-  if (IsGlobal && !(LangOpts.OpenMP && isOpenMPCapturedDecl(Var)))
+  if (IsGlobal &&
+      !(LangOpts.OpenMP && isOpenMPCapturedDecl(Var, /*CheckScopeInfo=*/true,
+                                                MaxFunctionScopesIndex)))
     return true;
   Var = Var->getCanonicalDecl();
 
@@ -15722,7 +15767,12 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
          "Invalid Expr argument to DoMarkVarDeclReferenced");
   Var->setReferenced();
 
-  TemplateSpecializationKind TSK = Var->getTemplateSpecializationKind();
+  if (Var->isInvalidDecl())
+    return;
+
+  auto *MSI = Var->getMemberSpecializationInfo();
+  TemplateSpecializationKind TSK = MSI ? MSI->getTemplateSpecializationKind()
+                                       : Var->getTemplateSpecializationKind();
 
   bool OdrUseContext = isOdrUseContext(SemaRef);
   bool UsableInConstantExpr =
@@ -15755,11 +15805,15 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
         (TSK == TSK_ExplicitInstantiationDeclaration && UsableInConstantExpr);
 
     if (TryInstantiating) {
-      SourceLocation PointOfInstantiation = Var->getPointOfInstantiation();
+      SourceLocation PointOfInstantiation =
+          MSI ? MSI->getPointOfInstantiation() : Var->getPointOfInstantiation();
       bool FirstInstantiation = PointOfInstantiation.isInvalid();
       if (FirstInstantiation) {
         PointOfInstantiation = Loc;
-        Var->setTemplateSpecializationKind(TSK, PointOfInstantiation);
+        if (MSI)
+          MSI->setPointOfInstantiation(PointOfInstantiation);
+        else
+          Var->setTemplateSpecializationKind(TSK, PointOfInstantiation);
       }
 
       bool InstantiationDependent = false;
@@ -16071,7 +16125,7 @@ void Sema::MarkDeclarationsReferencedInExpr(Expr *E,
 /// behavior of a program, such as passing a non-POD value through an ellipsis.
 /// Failure to do so will likely result in spurious diagnostics or failures
 /// during overload resolution or within sizeof/alignof/typeof/typeid.
-bool Sema::DiagRuntimeBehavior(SourceLocation Loc, const Stmt *Statement,
+bool Sema::DiagRuntimeBehavior(SourceLocation Loc, ArrayRef<const Stmt*> Stmts,
                                const PartialDiagnostic &PD) {
   switch (ExprEvalContexts.back().Context) {
   case ExpressionEvaluationContext::Unevaluated:
@@ -16087,9 +16141,9 @@ bool Sema::DiagRuntimeBehavior(SourceLocation Loc, const Stmt *Statement,
 
   case ExpressionEvaluationContext::PotentiallyEvaluated:
   case ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed:
-    if (Statement && getCurFunctionOrMethodDecl()) {
+    if (!Stmts.empty() && getCurFunctionOrMethodDecl()) {
       FunctionScopes.back()->PossiblyUnreachableDiags.
-        push_back(sema::PossiblyUnreachableDiag(PD, Loc, Statement));
+        push_back(sema::PossiblyUnreachableDiag(PD, Loc, Stmts));
       return true;
     }
 
@@ -16112,6 +16166,12 @@ bool Sema::DiagRuntimeBehavior(SourceLocation Loc, const Stmt *Statement,
   }
 
   return false;
+}
+
+bool Sema::DiagRuntimeBehavior(SourceLocation Loc, const Stmt *Statement,
+                               const PartialDiagnostic &PD) {
+  return DiagRuntimeBehavior(
+      Loc, Statement ? llvm::makeArrayRef(Statement) : llvm::None, PD);
 }
 
 bool Sema::CheckCallReturnType(QualType ReturnType, SourceLocation Loc,

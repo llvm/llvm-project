@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InstPrinter/SystemZInstPrinter.h"
+#include "MCTargetDesc/SystemZInstPrinter.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
+#include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"

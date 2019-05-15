@@ -6139,8 +6139,6 @@ static void __kmp_internal_end(void) {
       KMP_DEBUG_ASSERT(thread->th.th_reap_state == KMP_SAFE_TO_REAP);
       thread->th.th_next_pool = NULL;
       thread->th.th_in_pool = FALSE;
-      thread->th.th_active_in_pool = FALSE;
-      KMP_ATOMIC_DEC(&__kmp_thread_pool_active_nth);
       __kmp_reap_thread(thread, 0);
     }
     __kmp_thread_pool_insert_pt = NULL;

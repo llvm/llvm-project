@@ -671,21 +671,6 @@ macro(add_llvm_library name)
     if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "LTO" OR
         ${name} STREQUAL "Remarks" OR
         (LLVM_LINK_LLVM_DYLIB AND ${name} STREQUAL "LLVM"))
-      set(install_dir lib${LLVM_LIBDIR_SUFFIX})
-      if(ARG_MODULE OR ARG_SHARED OR BUILD_SHARED_LIBS)
-        if(WIN32 OR CYGWIN OR MINGW)
-          set(install_type RUNTIME)
-          set(install_dir bin)
-        else()
-          set(install_type LIBRARY)
-        endif()
-      else()
-        set(install_type ARCHIVE)
-      endif()
-
-      if (ARG_MODULE)
-        set(install_type LIBRARY)
-      endif()
 
       set(export_to_llvmexports)
       if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
@@ -697,7 +682,9 @@ macro(add_llvm_library name)
 
       install(TARGETS ${name}
               ${export_to_llvmexports}
-              ${install_type} DESTINATION ${install_dir}
+              LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+              ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+              RUNTIME DESTINATION bin
               COMPONENT ${name})
 
       if (NOT LLVM_ENABLE_IDE)

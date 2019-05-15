@@ -1243,16 +1243,22 @@ static inline void __kmp_clear_x87_fpu_status_word() {
   __asm__ __volatile__("fnclex");
 #endif // KMP_MIC
 }
+#if __SSE__
+static inline void __kmp_load_mxcsr(const kmp_uint32 *p) { _mm_setcsr(*p); }
+static inline void __kmp_store_mxcsr(kmp_uint32 *p) { *p = _mm_getcsr(); }
+#else
+static inline void __kmp_load_mxcsr(const kmp_uint32 *p) {}
+static inline void __kmp_store_mxcsr(kmp_uint32 *p) { *p = 0; }
+#endif
 #else
 // Windows still has these as external functions in assembly file
 extern void __kmp_x86_cpuid(int mode, int mode2, struct kmp_cpuid *p);
 extern void __kmp_load_x87_fpu_control_word(const kmp_int16 *p);
 extern void __kmp_store_x87_fpu_control_word(kmp_int16 *p);
 extern void __kmp_clear_x87_fpu_status_word();
-#endif // KMP_OS_UNIX
-
-#define __kmp_load_mxcsr(p) _mm_setcsr(*(p))
+static inline void __kmp_load_mxcsr(const kmp_uint32 *p) { _mm_setcsr(*p); }
 static inline void __kmp_store_mxcsr(kmp_uint32 *p) { *p = _mm_getcsr(); }
+#endif // KMP_OS_UNIX
 
 #define KMP_X86_MXCSR_MASK 0xffffffc0 /* ignore status flags (6 lsb) */
 
