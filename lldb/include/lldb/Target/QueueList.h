@@ -102,7 +102,7 @@ protected:
   std::mutex m_mutex;
 
 private:
-  QueueList();
+  QueueList() = delete;
 };
 
 } // namespace lldb_private

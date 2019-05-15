@@ -20,9 +20,6 @@ class MemoryStats {
 public:
   MemoryStats(mach_vm_size_t virtual_size = 0, mach_vm_size_t resident_size = 0,
               mach_vm_size_t max_resident_size = 0);
-  MemoryStats(const MemoryStats &rhs);
-
-  MemoryStats &operator=(const MemoryStats &rhs);
 
   MemoryStats &operator+=(const MemoryStats &rhs);
 

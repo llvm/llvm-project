@@ -26,14 +26,8 @@
 
 namespace lldb_private {
 class DataExtractor;
-}
-namespace lldb_private {
 class ExecutionContextScope;
-}
-namespace lldb_private {
 class Module;
-}
-namespace lldb_private {
 
 // A frozen ValueObject copied into host memory
 class ValueObjectConstResult : public ValueObject {

@@ -4316,16 +4316,22 @@ static Value *SimplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
       (FMF.noSignedZeros() || CannotBeNegativeZero(Op0, Q.TLI)))
     return Op0;
 
-  // With nnan: (+/-0.0 - X) + X --> 0.0 (and commuted variant)
+  // With nnan: -X + X --> 0.0 (and commuted variant)
   // We don't have to explicitly exclude infinities (ninf): INF + -INF == NaN.
   // Negative zeros are allowed because we always end up with positive zero:
   // X = -0.0: (-0.0 - (-0.0)) + (-0.0) == ( 0.0) + (-0.0) == 0.0
   // X = -0.0: ( 0.0 - (-0.0)) + (-0.0) == ( 0.0) + (-0.0) == 0.0
   // X =  0.0: (-0.0 - ( 0.0)) + ( 0.0) == (-0.0) + ( 0.0) == 0.0
   // X =  0.0: ( 0.0 - ( 0.0)) + ( 0.0) == ( 0.0) + ( 0.0) == 0.0
-  if (FMF.noNaNs() && (match(Op0, m_FSub(m_AnyZeroFP(), m_Specific(Op1))) ||
-                       match(Op1, m_FSub(m_AnyZeroFP(), m_Specific(Op0)))))
-    return ConstantFP::getNullValue(Op0->getType());
+  if (FMF.noNaNs()) {
+    if (match(Op0, m_FSub(m_AnyZeroFP(), m_Specific(Op1))) ||
+        match(Op1, m_FSub(m_AnyZeroFP(), m_Specific(Op0))))
+      return ConstantFP::getNullValue(Op0->getType());
+
+    if (match(Op0, m_FNeg(m_Specific(Op1))) ||
+        match(Op1, m_FNeg(m_Specific(Op0))))
+      return ConstantFP::getNullValue(Op0->getType());
+  }
 
   // (X - Y) + Y --> X
   // Y + (X - Y) --> X

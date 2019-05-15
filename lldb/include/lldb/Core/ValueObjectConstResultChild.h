@@ -19,17 +19,11 @@
 
 #include <stddef.h>
 #include <stdint.h>
-namespace lldb_private {
-class DataExtractor;
-}
-namespace lldb_private {
-class Status;
-}
-namespace lldb_private {
-class ValueObject;
-}
 
 namespace lldb_private {
+class DataExtractor;
+class Status;
+class ValueObject;
 
 // A child of a ValueObjectConstResult.
 class ValueObjectConstResultChild : public ValueObjectChild {
