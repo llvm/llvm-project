@@ -245,7 +245,7 @@ private:
   lldb::EventDataSP m_data_sp; // User specific data for this event
 
   DISALLOW_COPY_AND_ASSIGN(Event);
-  Event(); // Disallow default constructor
+  Event() = delete;
 };
 
 } // namespace lldb_private

@@ -1,12 +1,12 @@
 ; RUN: opt < %s -S -passes='cgscc(inline),function(early-cse),globalopt' | FileCheck %s
 
-%0 = type { i32, void ()* }
+%0 = type { i32, void ()*, i8* }
 %struct.A = type { i8 }
 %struct.B = type { }
 
 @a = global %struct.A zeroinitializer, align 1
 @__dso_handle = external global i8*
-@llvm.global_ctors = appending global [1 x %0] [%0 { i32 65535, void ()* @_GLOBAL__I_a }]
+@llvm.global_ctors = appending global [1 x %0] [%0 { i32 65535, void ()* @_GLOBAL__I_a, i8* null }]
 
 ; CHECK-NOT: call i32 @__cxa_atexit
 

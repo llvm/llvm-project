@@ -2,7 +2,7 @@
 ; RUN: verify-uselistorder < %s
 	%0 = type { %object.ModuleInfo.__vtbl*, i8*, %"byte[]", %1, %"ClassInfo[]", i32, void ()*, void ()*, void ()*, i8*, void ()* }		; type %0
 	%1 = type { i64, %object.ModuleInfo* }		; type %1
-	%2 = type { i32, void ()* }		; type %2
+	%2 = type { i32, void ()*, i8* }		; type %2
 	%"ClassInfo[]" = type { i64, %object.ClassInfo** }
 	%"Interface[]" = type { i64, %object.Interface* }
 	%"ModuleInfo[]" = type { i64, %object.ModuleInfo** }
@@ -24,7 +24,7 @@
 @_D5tango4core8BitManip8__ModuleZ = global %0 { %object.ModuleInfo.__vtbl* @_D10ModuleInfo6__vtblZ, i8* null, %"byte[]" { i64 19, i8* getelementptr ([20 x i8], [20 x i8]* @.str, i32 0, i32 0) }, %1 zeroinitializer, %"ClassInfo[]" zeroinitializer, i32 4, void ()* null, void ()* null, void ()* null, i8* null, void ()* null }		; <%0*> [#uses=1]
 @_D5tango4core8BitManip11__moduleRefZ = internal global %ModuleReference { %ModuleReference* null, %object.ModuleInfo* bitcast (%0* @_D5tango4core8BitManip8__ModuleZ to %object.ModuleInfo*) }		; <%ModuleReference*> [#uses=2]
 @_Dmodule_ref = external global %ModuleReference*		; <%ModuleReference**> [#uses=2]
-@llvm.global_ctors = appending constant [1 x %2] [%2 { i32 65535, void ()* @_D5tango4core8BitManip16__moduleinfoCtorZ }]		; <[1 x %2]*> [#uses=0]
+@llvm.global_ctors = appending constant [1 x %2] [%2 { i32 65535, void ()* @_D5tango4core8BitManip16__moduleinfoCtorZ, i8* null }]		; <[1 x %2]*> [#uses=0]
 
 define fastcc i32 @_D5tango4core8BitManip6popcntFkZi(i32 %x_arg) nounwind readnone {
 entry:

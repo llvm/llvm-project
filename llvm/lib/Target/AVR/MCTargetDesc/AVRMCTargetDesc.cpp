@@ -16,6 +16,7 @@
 #include "AVRMCELFStreamer.h"
 #include "AVRMCTargetDesc.h"
 #include "AVRTargetStreamer.h"
+#include "TargetInfo/AVRTargetInfo.h"
 
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCELFStreamer.h"

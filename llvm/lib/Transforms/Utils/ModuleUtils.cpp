@@ -27,44 +27,24 @@ static void appendToGlobalArray(const char *Array, Module &M, Function *F,
   // Get the current set of static global constructors and add the new ctor
   // to the list.
   SmallVector<Constant *, 16> CurrentCtors;
-  StructType *EltTy;
+  StructType *EltTy = StructType::get(
+      IRB.getInt32Ty(), PointerType::getUnqual(FnTy), IRB.getInt8PtrTy());
   if (GlobalVariable *GVCtor = M.getNamedGlobal(Array)) {
-    ArrayType *ATy = cast<ArrayType>(GVCtor->getValueType());
-    StructType *OldEltTy = cast<StructType>(ATy->getElementType());
-    // Upgrade a 2-field global array type to the new 3-field format if needed.
-    if (Data && OldEltTy->getNumElements() < 3)
-      EltTy = StructType::get(IRB.getInt32Ty(), PointerType::getUnqual(FnTy),
-                              IRB.getInt8PtrTy());
-    else
-      EltTy = OldEltTy;
     if (Constant *Init = GVCtor->getInitializer()) {
       unsigned n = Init->getNumOperands();
       CurrentCtors.reserve(n + 1);
-      for (unsigned i = 0; i != n; ++i) {
-        auto Ctor = cast<Constant>(Init->getOperand(i));
-        if (EltTy != OldEltTy)
-          Ctor =
-              ConstantStruct::get(EltTy, Ctor->getAggregateElement((unsigned)0),
-                                  Ctor->getAggregateElement(1),
-                                  Constant::getNullValue(IRB.getInt8PtrTy()));
-        CurrentCtors.push_back(Ctor);
-      }
+      for (unsigned i = 0; i != n; ++i)
+        CurrentCtors.push_back(cast<Constant>(Init->getOperand(i)));
     }
     GVCtor->eraseFromParent();
-  } else {
-    // Use the new three-field struct if there isn't one already.
-    EltTy = StructType::get(IRB.getInt32Ty(), PointerType::getUnqual(FnTy),
-                            IRB.getInt8PtrTy());
   }
 
-  // Build a 2 or 3 field global_ctor entry.  We don't take a comdat key.
+  // Build a 3 field global_ctor entry.  We don't take a comdat key.
   Constant *CSVals[3];
   CSVals[0] = IRB.getInt32(Priority);
   CSVals[1] = F;
-  // FIXME: Drop support for the two element form in LLVM 4.0.
-  if (EltTy->getNumElements() >= 3)
-    CSVals[2] = Data ? ConstantExpr::getPointerCast(Data, IRB.getInt8PtrTy())
-                     : Constant::getNullValue(IRB.getInt8PtrTy());
+  CSVals[2] = Data ? ConstantExpr::getPointerCast(Data, IRB.getInt8PtrTy())
+                   : Constant::getNullValue(IRB.getInt8PtrTy());
   Constant *RuntimeCtorInit =
       ConstantStruct::get(EltTy, makeArrayRef(CSVals, EltTy->getNumElements()));
 

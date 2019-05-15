@@ -19,8 +19,6 @@ namespace llvm {
 
 class Target;
 
-Target &getTheARCTarget();
-
 } // end namespace llvm
 
 // Defines symbolic names for ARC registers.  This defines a mapping from
