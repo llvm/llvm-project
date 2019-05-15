@@ -39,10 +39,10 @@
 #if !(defined(_OPENMP) && defined(__cplusplus))
 __DEVICE__ long abs(long);
 __DEVICE__ long long abs(long long);
-#endif
-__DEVICE__ int abs(int) __NOEXCEPT;
 __DEVICE__ double abs(double);
 __DEVICE__ float abs(float);
+#endif
+__DEVICE__ int abs(int) __NOEXCEPT;
 __DEVICE__ double acos(double);
 __DEVICE__ float acos(float);
 __DEVICE__ double acosh(double);
