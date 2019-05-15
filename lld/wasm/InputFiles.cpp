@@ -60,7 +60,7 @@ InputFile *lld::wasm::createObjectFile(MemoryBufferRef MB,
 }
 
 void ObjFile::dumpInfo() const {
-  log("info for: " + getName() +
+  log("info for: " + toString(this) +
       "\n              Symbols : " + Twine(Symbols.size()) +
       "\n     Function Imports : " + Twine(WasmObj->getNumImportedFunctions()) +
       "\n       Global Imports : " + Twine(WasmObj->getNumImportedGlobals()) +
@@ -232,7 +232,7 @@ static void setRelocs(const std::vector<T *> &Chunks,
   }
 }
 
-void ObjFile::parse() {
+void ObjFile::parse(bool IgnoreComdats) {
   // Parse a memory buffer as a wasm file.
   LLVM_DEBUG(dbgs() << "Parsing object: " << toString(this) << "\n");
   std::unique_ptr<Binary> Bin = CHECK(createBinary(MB), toString(this));
@@ -283,9 +283,11 @@ void ObjFile::parse() {
   TypeIsUsed.resize(getWasmObj()->types().size(), false);
 
   ArrayRef<StringRef> Comdats = WasmObj->linkingData().Comdats;
-  UsedComdats.resize(Comdats.size());
   for (unsigned I = 0; I < Comdats.size(); ++I)
-    UsedComdats[I] = Symtab->addComdat(Comdats[I]);
+    if (IgnoreComdats)
+      KeptComdats.push_back(true);
+    else
+      KeptComdats.push_back(Symtab->addComdat(Comdats[I]));
 
   // Populate `Segments`.
   for (const WasmSegment &S : WasmObj->dataSegments())
@@ -326,7 +328,7 @@ bool ObjFile::isExcludedByComdat(InputChunk *Chunk) const {
   uint32_t C = Chunk->getComdat();
   if (C == UINT32_MAX)
     return false;
-  return !UsedComdats[C];
+  return !KeptComdats[C];
 }
 
 FunctionSymbol *ObjFile::getFunctionSymbol(uint32_t Index) const {
@@ -427,7 +429,7 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &Sym) {
   llvm_unreachable("unknown symbol kind");
 }
 
-void ArchiveFile::parse() {
+void ArchiveFile::parse(bool IgnoreComdats) {
   // Parse a MemoryBufferRef as an archive file.
   LLVM_DEBUG(dbgs() << "Parsing library: " << toString(this) << "\n");
   File = CHECK(Archive::create(MB), toString(this));
@@ -474,14 +476,18 @@ static uint8_t mapVisibility(GlobalValue::VisibilityTypes GvVisibility) {
   llvm_unreachable("unknown visibility");
 }
 
-static Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &ObjSym,
+static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
+                                   const lto::InputFile::Symbol &ObjSym,
                                    BitcodeFile &F) {
   StringRef Name = Saver.save(ObjSym.getName());
 
   uint32_t Flags = ObjSym.isWeak() ? WASM_SYMBOL_BINDING_WEAK : 0;
   Flags |= mapVisibility(ObjSym.getVisibility());
 
-  if (ObjSym.isUndefined()) {
+  int C = ObjSym.getComdatIndex();
+  bool ExcludedByComdat = C != -1 && !KeptComdats[C];
+
+  if (ObjSym.isUndefined() || ExcludedByComdat) {
     if (ObjSym.isExecutable())
       return Symtab->addUndefinedFunction(Name, Name, DefaultModule, Flags, &F,
                                           nullptr);
@@ -493,7 +499,7 @@ static Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &ObjSym,
   return Symtab->addDefinedData(Name, Flags, &F, nullptr, 0, 0);
 }
 
-void BitcodeFile::parse() {
+void BitcodeFile::parse(bool IgnoreComdats) {
   Obj = check(lto::InputFile::create(MemoryBufferRef(
       MB.getBuffer(), Saver.save(ArchiveName + MB.getBufferIdentifier()))));
   Triple T(Obj->getTargetTriple());
@@ -501,9 +507,15 @@ void BitcodeFile::parse() {
     error(toString(MB.getBufferIdentifier()) + ": machine type must be wasm32");
     return;
   }
+  std::vector<bool> KeptComdats;
+  for (StringRef S : Obj->getComdatTable())
+    if (IgnoreComdats)
+      KeptComdats.push_back(true);
+    else
+      KeptComdats.push_back(Symtab->addComdat(S));
 
   for (const lto::InputFile::Symbol &ObjSym : Obj->symbols())
-    Symbols.push_back(createBitcodeSymbol(ObjSym, *this));
+    Symbols.push_back(createBitcodeSymbol(KeptComdats, ObjSym, *this));
 }
 
 // Returns a string in the format of "foo.o" or "foo.a(bar.o)".
