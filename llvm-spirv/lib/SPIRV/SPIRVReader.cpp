@@ -550,27 +550,68 @@ void SPIRVToLLVM::setName(llvm::Value *V, SPIRVValue *BV) {
 void SPIRVToLLVM::setLLVMLoopMetadata(SPIRVLoopMerge *LM, BranchInst *BI) {
   if (!LM)
     return;
-  llvm::MDString *Name = nullptr;
   auto Temp = MDNode::getTemporary(*Context, None);
   auto Self = MDNode::get(*Context, Temp.get());
   Self->replaceOperandWith(0, Self);
-
-  if (LM->getLoopControl() == LoopControlMaskNone) {
+  SPIRVWord LC = LM->getLoopControl();
+  if (LC == LoopControlMaskNone) {
     BI->setMetadata("llvm.loop", Self);
     return;
-  } else if (LM->getLoopControl() == LoopControlUnrollMask)
-    Name = llvm::MDString::get(*Context, "llvm.loop.unroll.full");
-  else if (LM->getLoopControl() == LoopControlDontUnrollMask)
-    Name = llvm::MDString::get(*Context, "llvm.loop.unroll.disable");
-  else
-    return;
+  }
 
-  std::vector<llvm::Metadata *> OpValues(1, Name);
-  SmallVector<llvm::Metadata *, 2> Metadata;
+  std::vector<llvm::Metadata *> Metadata;
   Metadata.push_back(llvm::MDNode::get(*Context, Self));
-  Metadata.push_back(llvm::MDNode::get(*Context, OpValues));
-
+  std::vector<SPIRVWord> LoopControlParameters;
+  if (LC & LoopControlUnrollMask)
+    Metadata.push_back(llvm::MDNode::get(
+        *Context, llvm::MDString::get(*Context, "llvm.loop.unroll.full")));
+  else if (LC & LoopControlDontUnrollMask)
+    Metadata.push_back(llvm::MDNode::get(
+        *Context, llvm::MDString::get(*Context, "llvm.loop.unroll.disable")));
+  if (LC & LoopControlDependencyInfiniteMask)
+    Metadata.push_back(llvm::MDNode::get(
+        *Context, llvm::MDString::get(*Context, "llvm.loop.ivdep.enable")));
+  if (LC & LoopControlDependencyLengthMask) {
+    LoopControlParameters = LM->getLoopControlParameters();
+    if (!LoopControlParameters.empty()) {
+      llvm::Metadata *OpValues[] = {
+          MDString::get(*Context, "llvm.loop.ivdep.safelen"),
+          ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(*Context),
+                                                   LoopControlParameters[0]))};
+      Metadata.push_back(llvm::MDNode::get(*Context, OpValues));
+    }
+  }
+  if (LC & LoopControlExtendedControlsMask) {
+    LoopControlParameters = LM->getLoopControlParameters();
+    for (auto LCP = LoopControlParameters.begin();
+         LCP != LoopControlParameters.end(); ++LCP) {
+      switch (*LCP) {
+      case InitiationIntervalINTEL: {
+        // To generate a correct integer part of metadata we skip a parameter
+        // that encodes name of the metadata and take the next one
+        llvm::Metadata *OpValues[] = {
+            MDString::get(*Context, "llvm.loop.ii.count"),
+            ConstantAsMetadata::get(
+                ConstantInt::get(Type::getInt32Ty(*Context), *(++LCP)))};
+        Metadata.push_back(llvm::MDNode::get(*Context, OpValues));
+        break;
+      }
+      case MaxConcurrencyINTEL: {
+        llvm::Metadata *OpValues[] = {
+            MDString::get(*Context, "llvm.loop.max_concurrency.count"),
+            ConstantAsMetadata::get(
+                ConstantInt::get(Type::getInt32Ty(*Context), *(++LCP)))};
+        Metadata.push_back(llvm::MDNode::get(*Context, OpValues));
+        break;
+      }
+      default:
+        break;
+      }
+    }
+  }
   llvm::MDNode *Node = llvm::MDNode::get(*Context, Metadata);
+
+  // Set the first operand to refer itself
   Node->replaceOperandWith(0, Node);
   BI->setMetadata("llvm.loop", Node);
 }
