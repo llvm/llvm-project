@@ -31,8 +31,7 @@ func:
 // DWARF32:   Return address column: 31
 // DWARF32:   Augmentation data:     0B
 //                                   ^^ fde pointer encoding: DW_EH_PE_sdata4
-// DWARF32:   DW_CFA_def_cfa: reg29 +0
-// FIXME: The instructions are different from the ones produces by gas.
+// DWARF32:   DW_CFA_def_cfa_register: reg29
 //
 // DWARF32: 00000014 00000010 00000018 FDE cie=00000018 pc=00000000...00000000
 // DWARF32:   DW_CFA_nop:
@@ -49,8 +48,7 @@ func:
 // DWARF64:   Return address column: 31
 // DWARF64:   Augmentation data:     0C
 //                                   ^^ fde pointer encoding: DW_EH_PE_sdata8
-// DWARF64:   DW_CFA_def_cfa: reg29 +0
-// FIXME: The instructions are different from the ones produces by gas.
+// DWARF64:   DW_CFA_def_cfa_register: reg29
 //
 // DWARF64: 00000014 00000018 00000018 FDE cie=00000018 pc=00000000...00000000
 // DWARF64:   DW_CFA_nop:
