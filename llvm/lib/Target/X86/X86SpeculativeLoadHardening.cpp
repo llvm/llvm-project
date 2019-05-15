@@ -1719,11 +1719,9 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughBlocksAndHarden(
 
         // If we have at least one (non-frame-index, non-RIP) register operand,
         // and neither operand is load-dependent, we need to check the load.
-        // Also handle explicit references to RSP as used by idempotent atomic
-        // or with 0.
         unsigned BaseReg = 0, IndexReg = 0;
         if (!BaseMO.isFI() && BaseMO.getReg() != X86::RIP &&
-            BaseMO.getReg() != X86::RSP && BaseMO.getReg() != X86::NoRegister)
+            BaseMO.getReg() != X86::NoRegister)
           BaseReg = BaseMO.getReg();
         if (IndexMO.getReg() != X86::NoRegister)
           IndexReg = IndexMO.getReg();
