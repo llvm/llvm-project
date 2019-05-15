@@ -357,7 +357,10 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
 
         assert(MI->getOperand(1).isDef());
 
-        int Op32 =  AMDGPU::getVOPe32(Opc);
+        // Make sure to get the 32-bit version of the commuted opcode.
+        unsigned MaybeCommutedOpc = MI->getOpcode();
+        int Op32 = AMDGPU::getVOPe32(MaybeCommutedOpc);
+
         FoldList.push_back(FoldCandidate(MI, CommuteOpNo, OpToFold, true,
                                          Op32));
         return true;
