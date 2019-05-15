@@ -59,25 +59,25 @@ protected:
 
 class Type : public std::enable_shared_from_this<Type>, public UserID {
 public:
-  typedef enum EncodingDataTypeTag {
+  enum EncodingDataType {
     eEncodingInvalid,
     eEncodingIsUID,      ///< This type is the type whose UID is m_encoding_uid
     eEncodingIsConstUID, ///< This type is the type whose UID is m_encoding_uid
-                         ///with the const qualifier added
+                         /// with the const qualifier added
     eEncodingIsRestrictUID, ///< This type is the type whose UID is
-                            ///m_encoding_uid with the restrict qualifier added
+                            /// m_encoding_uid with the restrict qualifier added
     eEncodingIsVolatileUID, ///< This type is the type whose UID is
-                            ///m_encoding_uid with the volatile qualifier added
+                            /// m_encoding_uid with the volatile qualifier added
     eEncodingIsTypedefUID,  ///< This type is pointer to a type whose UID is
-                            ///m_encoding_uid
+                            /// m_encoding_uid
     eEncodingIsPointerUID,  ///< This type is pointer to a type whose UID is
-                            ///m_encoding_uid
+                            /// m_encoding_uid
     eEncodingIsLValueReferenceUID, ///< This type is L value reference to a type
-                                   ///whose UID is m_encoding_uid
+                                   /// whose UID is m_encoding_uid
     eEncodingIsRValueReferenceUID, ///< This type is R value reference to a type
-                                   ///whose UID is m_encoding_uid
+                                   /// whose UID is m_encoding_uid
     eEncodingIsSyntheticUID
-  } EncodingDataType;
+  };
 
   // We must force the underlying type of the enum to be unsigned here.  Not
   // all compilers behave the same with regards to the default underlying type

@@ -108,7 +108,7 @@ section's file address:
 
 
 It is often much easier to specify the actual load location of each section by
-name. Crash logs on Mac OS X have a Binary Images section that specifies that
+name. Crash logs on macOS have a Binary Images section that specifies that
 address of the __TEXT segment for each binary. Specifying a slide requires
 requires that you first find the original (file) address for the __TEXT
 segment, and subtract the two values. If you specify the address of the __TEXT
@@ -161,7 +161,7 @@ shared libraries we want:
    (lldb) target modules add /usr/lib/system/libsystem_kernel.dylib
 
 
-If you have debug symbols in standalone files, such as dSYM files on Mac OS X,
+If you have debug symbols in standalone files, such as dSYM files on macOS,
 you can specify their paths using the --symfile option for the ``target create``
 (recent LLDB releases only) and ``target modules add`` commands:
 
@@ -333,14 +333,14 @@ symbolicate an supplied address.
 
 **lldb.macosx.crashlog**
 
-lldb.macosx.crashlog is a package that is distributed on Mac OS X builds that
+lldb.macosx.crashlog is a package that is distributed on macOS builds that
 subclasses the above classes. This module parses the information in the Darwin
 crash logs and creates symbolication objects that represent the images, the
 sections and the thread frames for the backtraces. It then uses the functions
 in the lldb.utils.symbolication to symbolicate the crash logs.
 
 This module installs a new ``crashlog`` command into the lldb command
-interpreter so that you can use it to parse and symbolicate Mac OS X crash
+interpreter so that you can use it to parse and symbolicate macOS crash
 logs:
 
 ::
