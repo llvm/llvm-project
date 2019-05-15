@@ -791,11 +791,6 @@ AvailabilityResult Decl::getAvailability(StringRef Platform,
     return FTD->getTemplatedDecl()->getAvailability(
         Platform, PlatformMinVersion, Message, RealizedPlatform);
 
-  if (getASTContext().getTargetInfo().hasTargetVariantPlatform() &&
-      getASTContext().getTargetInfo().getTargetVariantPlatform() == Platform) {
-    return AR_Available;
-  }
-
   AvailabilityResult Result = AR_Available;
   std::string ResultMessage;
 
@@ -860,13 +855,21 @@ VersionTuple Decl::getVersionIntroduced() const {
 bool Decl::isDeprecatedInAnyTargetPlatform(std::string *Message) const {
   const TargetInfo &TI = getASTContext().getTargetInfo();
   return getAvailability(TI.getPlatformName(), TI.getPlatformMinVersion()) ==
-         AR_Deprecated;
+             AR_Deprecated ||
+         (TI.hasTargetVariantPlatform() &&
+          getAvailability(TI.getTargetVariantPlatform(),
+                          TI.getTargetVariantPlatformMinVersion()) ==
+              AR_Deprecated);
 }
 
 bool Decl::isUnavailableForAllTargetPlatforms() const {
   const TargetInfo &TI = getASTContext().getTargetInfo();
   return getAvailability(TI.getPlatformName(), TI.getPlatformMinVersion()) ==
-         AR_Unavailable;
+             AR_Unavailable &&
+         (!getASTContext().getTargetInfo().hasTargetVariantPlatform() ||
+          getAvailability(TI.getTargetVariantPlatform(),
+                          TI.getTargetVariantPlatformMinVersion()) ==
+              AR_Unavailable);
 }
 
 bool Decl::canBeWeakImported(bool &IsDefinition) const {
