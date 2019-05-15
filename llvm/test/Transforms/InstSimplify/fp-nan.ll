@@ -117,11 +117,27 @@ define double @unary_fneg_nan_1(double %x) {
   ret double %r
 }
 
+define double @unary_fneg_nan_1(double %x) {
+; CHECK-LABEL: @unary_fneg_nan_1(
+; CHECK-NEXT:    ret double 0xFFFABCDEF0123456
+;
+  %r = fneg double 0x7FFABCDEF0123456
+  ret double %r
+}
+
 define <2 x double> @fneg_nan_2(<2 x double> %x) {
 ; CHECK-LABEL: @fneg_nan_2(
 ; CHECK-NEXT:    ret <2 x double> <double 0x7FF1234567890ABC, double 0xFFF0000000000001>
 ;
   %r = fsub <2 x double> <double -0.0, double -0.0>, <double 0xFFF1234567890ABC, double 0x7FF0000000000001>
+  ret <2 x double> %r
+}
+
+define <2 x double> @unary_fneg_nan_2(<2 x double> %x) {
+; CHECK-LABEL: @unary_fneg_nan_2(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FF1234567890ABC, double 0xFFF0000000000001>
+;
+  %r = fneg <2 x double> <double 0xFFF1234567890ABC, double 0x7FF0000000000001>
   ret <2 x double> %r
 }
 
