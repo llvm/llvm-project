@@ -1,7 +1,12 @@
 #pragma once
 
+#if __cplusplus >= 201703L
+extern int abs (int __x) throw()  __attribute__ ((__const__)) ;
+extern long int labs (long int __x) throw() __attribute__ ((__const__)) ;
+#else
 extern int abs (int __x) __attribute__ ((__const__)) ;
 extern long int labs (long int __x) __attribute__ ((__const__)) ;
+#endif
 
 namespace std
 {

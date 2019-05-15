@@ -27,11 +27,20 @@
   static __inline__ __attribute__((always_inline)) __attribute__((device))
 #endif
 
+// For C++ 17 we need to include noexcept attribute to be compatible
+// with the header-defined version. This may be removed once
+// variant is supported.
+#if defined(_OPENMP) && defined(__cplusplus) && __cplusplus >= 201703L
+#define __NOEXCEPT noexcept
+#else
+#define __NOEXCEPT
+#endif
+
 #if !(defined(_OPENMP) && defined(__cplusplus))
 __DEVICE__ long abs(long);
 __DEVICE__ long long abs(long long);
 #endif
-__DEVICE__ int abs(int);
+__DEVICE__ int abs(int) __NOEXCEPT;
 __DEVICE__ double abs(double);
 __DEVICE__ float abs(float);
 __DEVICE__ double acos(double);
@@ -68,8 +77,8 @@ __DEVICE__ double exp(double);
 __DEVICE__ float exp(float);
 __DEVICE__ double expm1(double);
 __DEVICE__ float expm1(float);
-__DEVICE__ double fabs(double);
-__DEVICE__ float fabs(float);
+__DEVICE__ double fabs(double) __NOEXCEPT;
+__DEVICE__ float fabs(float) __NOEXCEPT;
 __DEVICE__ double fdim(double, double);
 __DEVICE__ float fdim(float, float);
 __DEVICE__ double floor(double);
@@ -119,12 +128,12 @@ __DEVICE__ bool isnormal(double);
 __DEVICE__ bool isnormal(float);
 __DEVICE__ bool isunordered(double, double);
 __DEVICE__ bool isunordered(float, float);
-__DEVICE__ long labs(long);
+__DEVICE__ long labs(long) __NOEXCEPT;
 __DEVICE__ double ldexp(double, int);
 __DEVICE__ float ldexp(float, int);
 __DEVICE__ double lgamma(double);
 __DEVICE__ float lgamma(float);
-__DEVICE__ long long llabs(long long);
+__DEVICE__ long long llabs(long long) __NOEXCEPT;
 __DEVICE__ long long llrint(double);
 __DEVICE__ long long llrint(float);
 __DEVICE__ double log10(double);
@@ -282,6 +291,7 @@ _GLIBCXX_END_NAMESPACE_VERSION
 } // namespace std
 #endif
 
+#undef __NOEXCEPT
 #pragma pop_macro("__DEVICE__")
 
 #endif
