@@ -19830,6 +19830,8 @@ bool DAGCombiner::isAlias(SDNode *Op0, SDNode *Op1) const {
       return false;
   }
 
+  // Try to prove that there is aliasing, or that there is no aliasing. Either
+  // way, we can return now. If nothing can be proved, proceed with more tests.
   bool IsAlias;
   if (BaseIndexOffset::computeAliasing(Op0, MUC0.NumBytes, Op1, MUC1.NumBytes,
                                        DAG, IsAlias))
