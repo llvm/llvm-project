@@ -19,11 +19,24 @@ typedef struct ipc_port *ipc_port_t;
 typedef unsigned mach_port_t;
 typedef uint32_t UInt32;
 
+struct os_refcnt {};
+typedef struct os_refcnt os_refcnt_t;
+
+struct thread {
+  os_refcnt_t ref_count;
+};
+typedef struct thread *thread_t;
+
 kern_return_t vm_deallocate(mach_port_name_t, vm_address_t, vm_size_t);
 kern_return_t mach_vm_deallocate(mach_port_name_t, vm_address_t, vm_size_t);
 void mig_deallocate(vm_address_t, vm_size_t);
 kern_return_t mach_port_deallocate(ipc_space_t, mach_port_name_t);
 void ipc_port_release(ipc_port_t);
+void thread_deallocate(thread_t);
+
+static void os_ref_retain(struct os_refcnt *rc);
+
+#define thread_reference_internal(thread) os_ref_retain(&(thread)->ref_count);
 
 #define MIG_SERVER_ROUTINE __attribute__((mig_server_routine))
 
@@ -237,3 +250,10 @@ class MyClient: public IOUserClient {
                            // expected-note@-1{{MIG callback fails with error after deallocating argument value}}
   }
 };
+
+MIG_SERVER_ROUTINE
+kern_return_t test_os_ref_retain(thread_t thread) {
+  thread_reference_internal(thread);
+  thread_deallocate(thread);
+  return KERN_ERROR; // no-warning
+}
