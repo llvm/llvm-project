@@ -44,7 +44,7 @@ protected:
   ArchSpec m_arch;
 
 private:
-  UnwindAssembly(); // Outlaw default constructor
+  UnwindAssembly() = delete;
   DISALLOW_COPY_AND_ASSIGN(UnwindAssembly);
 };
 
