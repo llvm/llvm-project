@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/X86MCTargetDesc.h"
+#include "TargetInfo/X86TargetInfo.h"
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
