@@ -15,9 +15,6 @@ using namespace lldb_utility;
 
 StringLexer::StringLexer(std::string s) : m_data(s), m_position(0) {}
 
-StringLexer::StringLexer(const StringLexer &rhs)
-    : m_data(rhs.m_data), m_position(rhs.m_position) {}
-
 StringLexer::Character StringLexer::Peek() { return m_data[m_position]; }
 
 bool StringLexer::NextIf(Character c) {

@@ -66,7 +66,6 @@ public:
   explicit Status(const char *format, ...)
       __attribute__((format(printf, 2, 3)));
 
-  Status(const Status &rhs);
   /// Assignment operator.
   ///
   /// \param[in] err

@@ -36,9 +36,7 @@ namespace ptdecoder {
 ///     context.
 class PTInstruction {
 public:
-  PTInstruction();
-
-  PTInstruction(const PTInstruction &insn);
+  PTInstruction() = default;
 
   PTInstruction(const std::shared_ptr<ptdecoder_private::Instruction> &ptr);
 
@@ -82,12 +80,6 @@ private:
 ///     type PTInstruction.
 class PTInstructionList {
 public:
-  PTInstructionList();
-
-  PTInstructionList(const PTInstructionList &insn_list);
-
-  ~PTInstructionList();
-
   // Get number of instructions in the list
   size_t GetSize() const;
 

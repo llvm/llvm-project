@@ -82,14 +82,6 @@ public:
                          LineEntry *line_entry = nullptr,
                          Symbol *symbol = nullptr);
 
-  /// Copy constructor
-  ///
-  /// Makes a copy of the another SymbolContext object \a rhs.
-  ///
-  /// \param[in] rhs
-  ///     A const SymbolContext object reference to copy.
-  SymbolContext(const SymbolContext &rhs);
-
   ~SymbolContext();
 
   /// Assignment operator.

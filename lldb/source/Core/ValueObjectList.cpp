@@ -17,13 +17,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-ValueObjectList::ValueObjectList() : m_value_objects() {}
-
-ValueObjectList::ValueObjectList(const ValueObjectList &rhs)
-    : m_value_objects(rhs.m_value_objects) {}
-
-ValueObjectList::~ValueObjectList() {}
-
 const ValueObjectList &ValueObjectList::operator=(const ValueObjectList &rhs) {
   if (this != &rhs)
     m_value_objects = rhs.m_value_objects;

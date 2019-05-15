@@ -21,18 +21,6 @@ ThreadSpec::ThreadSpec()
     : m_index(UINT32_MAX), m_tid(LLDB_INVALID_THREAD_ID), m_name(),
       m_queue_name() {}
 
-ThreadSpec::ThreadSpec(const ThreadSpec &rhs)
-    : m_index(rhs.m_index), m_tid(rhs.m_tid), m_name(rhs.m_name),
-      m_queue_name(rhs.m_queue_name) {}
-
-const ThreadSpec &ThreadSpec::operator=(const ThreadSpec &rhs) {
-  m_index = rhs.m_index;
-  m_tid = rhs.m_tid;
-  m_name = rhs.m_name;
-  m_queue_name = rhs.m_queue_name;
-  return *this;
-}
-
 std::unique_ptr<ThreadSpec> ThreadSpec::CreateFromStructuredData(
     const StructuredData::Dictionary &spec_dict, Status &error) {
   uint32_t index = UINT32_MAX;

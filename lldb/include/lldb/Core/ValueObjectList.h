@@ -22,13 +22,6 @@ class ValueObject;
 // A collection of ValueObject values that
 class ValueObjectList {
 public:
-  // Constructors and Destructors
-  ValueObjectList();
-
-  ValueObjectList(const ValueObjectList &rhs);
-
-  ~ValueObjectList();
-
   const ValueObjectList &operator=(const ValueObjectList &rhs);
 
   void Append(const lldb::ValueObjectSP &val_obj_sp);

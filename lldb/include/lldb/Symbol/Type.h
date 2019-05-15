@@ -102,10 +102,6 @@ public:
   // they get an error.
   Type();
 
-  Type(const Type &rhs);
-
-  const Type &operator=(const Type &rhs);
-
   void Dump(Stream *s, bool show_context);
 
   void DumpTypeName(Stream *s);
@@ -240,11 +236,9 @@ protected:
 
 class TypeImpl {
 public:
-  TypeImpl();
+  TypeImpl() = default;
 
   ~TypeImpl() {}
-
-  TypeImpl(const TypeImpl &rhs);
 
   TypeImpl(const lldb::TypeSP &type_sp);
 
@@ -261,8 +255,6 @@ public:
   void SetType(const lldb::TypeSP &type_sp, const CompilerType &dynamic);
 
   void SetType(const CompilerType &compiler_type, const CompilerType &dynamic);
-
-  TypeImpl &operator=(const TypeImpl &rhs);
 
   bool operator==(const TypeImpl &rhs) const;
 
@@ -481,9 +473,7 @@ public:
   TypeEnumMemberImpl(const lldb::TypeImplSP &integer_type_sp,
                      ConstString name, const llvm::APSInt &value);
 
-  TypeEnumMemberImpl(const TypeEnumMemberImpl &rhs)
-      : m_integer_type_sp(rhs.m_integer_type_sp), m_name(rhs.m_name),
-        m_value(rhs.m_value), m_valid(rhs.m_valid) {}
+  TypeEnumMemberImpl(const TypeEnumMemberImpl &rhs) = default;
 
   TypeEnumMemberImpl &operator=(const TypeEnumMemberImpl &rhs);
 
