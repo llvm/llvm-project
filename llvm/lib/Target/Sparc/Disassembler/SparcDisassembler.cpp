@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/SparcMCTargetDesc.h"
+#include "TargetInfo/SparcTargetInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -38,12 +39,6 @@ public:
                               raw_ostream &VStream,
                               raw_ostream &CStream) const override;
 };
-}
-
-namespace llvm {
-Target &getTheSparcTarget();
-Target &getTheSparcV9Target();
-Target &getTheSparcelTarget();
 }
 
 static MCDisassembler *createSparcDisassembler(const Target &T,
