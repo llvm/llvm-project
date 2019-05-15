@@ -63,8 +63,8 @@ static_library("MCTargetDesc") {
     "SparcInstPrinter.cpp",
     "SparcMCAsmInfo.cpp",
     "SparcMCCodeEmitter.cpp",
-    "SparcMCTargetDesc.cpp",
     "SparcMCExpr.cpp",
+    "SparcMCTargetDesc.cpp",
     "SparcTargetStreamer.cpp",
   ]
 }
