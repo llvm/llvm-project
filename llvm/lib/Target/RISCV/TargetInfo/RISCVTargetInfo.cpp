@@ -6,19 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
-namespace llvm {
-Target &getTheRISCV32Target() {
+Target &llvm::getTheRISCV32Target() {
   static Target TheRISCV32Target;
   return TheRISCV32Target;
 }
 
-Target &getTheRISCV64Target() {
+Target &llvm::getTheRISCV64Target() {
   static Target TheRISCV64Target;
   return TheRISCV64Target;
-}
 }
 
 extern "C" void LLVMInitializeRISCVTargetInfo() {
