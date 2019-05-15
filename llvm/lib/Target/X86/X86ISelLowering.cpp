@@ -25827,6 +25827,71 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   return Loaded;
 }
 
+/// Emit a locked operation on a stack location which does not change any
+/// memory location, but does involve a lock prefix.  Location is chosen to be
+/// a) very likely accessed only by a single thread to minimize cache traffic,
+/// and b) definitely dereferenceable.  Returns the new Chain result.  
+static SDValue emitLockedStackOp(SelectionDAG &DAG,
+                                 const X86Subtarget &Subtarget,
+                                 SDValue Chain, SDLoc DL) {
+  // Implementation notes:
+  // 1) LOCK prefix creates a full read/write reordering barrier for memory
+  // operations issued by the current processor.  As such, the location
+  // referenced is not relevant for the ordering properties of the instruction.
+  // See: Intel® 64 and IA-32 ArchitecturesSoftware Developer’s Manual,
+  // 8.2.3.9  Loads and Stores Are Not Reordered with Locked Instructions 
+  // 2) Using an immediate operand appears to be the best encoding choice
+  // here since it doesn't require an extra register.
+  // 3) OR appears to be very slightly faster than ADD. (Though, the difference
+  // is small enough it might just be measurement noise.)
+  // 4) When choosing offsets, there are several contributing factors:
+  //   a) If there's no redzone, we default to TOS.  (We could allocate a cache
+  //      line aligned stack object to improve this case.) 
+  //   b) To minimize our chances of introducing a false dependence, we prefer
+  //      to offset the stack usage from TOS slightly.  
+  //   c) To minimize concerns about cross thread stack usage - in particular,
+  //      the idiomatic MyThreadPool.run([&StackVars]() {...}) pattern which
+  //      captures state in the TOS frame and accesses it from many threads -
+  //      we want to use an offset such that the offset is in a distinct cache
+  //      line from the TOS frame.
+  // 
+  // For a general discussion of the tradeoffs and benchmark results, see:
+  // https://shipilev.net/blog/2014/on-the-fence-with-dependencies/
+
+  auto &MF = DAG.getMachineFunction();
+  auto &TFL = *Subtarget.getFrameLowering();
+  const unsigned SPOffset = TFL.has128ByteRedZone(MF) ? -64 : 0;
+
+  if (Subtarget.is64Bit()) {
+    SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i32);
+    SDValue Ops[] = {
+      DAG.getRegister(X86::RSP, MVT::i64),                  // Base
+      DAG.getTargetConstant(1, DL, MVT::i8),                // Scale
+      DAG.getRegister(0, MVT::i64),                         // Index
+      DAG.getTargetConstant(SPOffset, DL, MVT::i32),        // Disp
+      DAG.getRegister(0, MVT::i16),                         // Segment.
+      Zero,
+      Chain};
+    SDNode *Res = DAG.getMachineNode(X86::LOCK_OR32mi8, DL, MVT::i32,
+                                     MVT::Other, Ops);
+    return SDValue(Res, 1);
+  }
+
+  SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i32);
+  SDValue Ops[] = {
+    DAG.getRegister(X86::ESP, MVT::i32),            // Base
+    DAG.getTargetConstant(1, DL, MVT::i8),          // Scale
+    DAG.getRegister(0, MVT::i32),                   // Index
+    DAG.getTargetConstant(SPOffset, DL, MVT::i32),  // Disp
+    DAG.getRegister(0, MVT::i16),                   // Segment.
+    Zero,
+    Chain
+  };
+  SDNode *Res = DAG.getMachineNode(X86::LOCK_OR32mi8, DL, MVT::i32,
+                                   MVT::Other, Ops);
+  return SDValue(Res, 1);
+}
+
 static SDValue LowerATOMIC_FENCE(SDValue Op, const X86Subtarget &Subtarget,
                                  SelectionDAG &DAG) {
   SDLoc dl(Op);
@@ -25842,20 +25907,8 @@ static SDValue LowerATOMIC_FENCE(SDValue Op, const X86Subtarget &Subtarget,
     if (Subtarget.hasMFence())
       return DAG.getNode(X86ISD::MFENCE, dl, MVT::Other, Op.getOperand(0));
 
-    SDValue Chain = Op.getOperand(0);
-    SDValue Zero = DAG.getTargetConstant(0, dl, MVT::i32);
-    SDValue Ops[] = {
-      DAG.getRegister(X86::ESP, MVT::i32),     // Base
-      DAG.getTargetConstant(1, dl, MVT::i8),   // Scale
-      DAG.getRegister(0, MVT::i32),            // Index
-      DAG.getTargetConstant(0, dl, MVT::i32),  // Disp
-      DAG.getRegister(0, MVT::i16),            // Segment.
-      Zero,
-      Chain
-    };
-    SDNode *Res = DAG.getMachineNode(X86::OR32mi8Locked, dl, MVT::i32,
-                                     MVT::Other, Ops);
-    return SDValue(Res, 1);
+    SDValue Chain = Op.getOperand(0); 
+    return emitLockedStackOp(DAG, Subtarget, Chain, dl);
   }
 
   // MEMBARRIER is a compiler barrier; it codegens to a no-op.
@@ -26273,71 +26326,6 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
   Lo = DAG.getNode(X86ISD::PSHUFB, DL, VT, LoMask, Lo);
   Hi = DAG.getNode(X86ISD::PSHUFB, DL, VT, HiMask, Hi);
   return DAG.getNode(ISD::OR, DL, VT, Lo, Hi);
-}
-
-/// Emit a locked operation on a stack location which does not change any
-/// memory location, but does involve a lock prefix.  Location is chosen to be
-/// a) very likely accessed only by a single thread to minimize cache traffic,
-/// and b) definitely dereferenceable.  Returns the new Chain result.  
-static SDValue emitLockedStackOp(SelectionDAG &DAG,
-                                 const X86Subtarget &Subtarget,
-                                 SDValue Chain, SDLoc DL) {
-  // Implementation notes:
-  // 1) LOCK prefix creates a full read/write reordering barrier for memory
-  // operations issued by the current processor.  As such, the location
-  // referenced is not relevant for the ordering properties of the instruction.
-  // See: Intel® 64 and IA-32 ArchitecturesSoftware Developer’s Manual,
-  // 8.2.3.9  Loads and Stores Are Not Reordered with Locked Instructions 
-  // 2) Using an immediate operand appears to be the best encoding choice
-  // here since it doesn't require an extra register.
-  // 3) OR appears to be very slightly faster than ADD. (Though, the difference
-  // is small enough it might just be measurement noise.)
-  // 4) When choosing offsets, there are several contributing factors:
-  //   a) If there's no redzone, we default to TOS.  (We could allocate a cache
-  //      line aligned stack object to improve this case.) 
-  //   b) To minimize our chances of introducing a false dependence, we prefer
-  //      to offset the stack usage from TOS slightly.  
-  //   c) To minimize concerns about cross thread stack usage - in particular,
-  //      the idiomatic MyThreadPool.run([&StackVars]() {...}) pattern which
-  //      captures state in the TOS frame and accesses it from many threads -
-  //      we want to use an offset such that the offset is in a distinct cache
-  //      line from the TOS frame.
-  // 
-  // For a general discussion of the tradeoffs and benchmark results, see:
-  // https://shipilev.net/blog/2014/on-the-fence-with-dependencies/
-
-  auto &MF = DAG.getMachineFunction();
-  auto &TFL = *Subtarget.getFrameLowering();
-  const unsigned SPOffset = TFL.has128ByteRedZone(MF) ? -64 : 0;
-
-  if (Subtarget.is64Bit()) {
-    SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i32);
-    SDValue Ops[] = {
-      DAG.getRegister(X86::RSP, MVT::i64),                  // Base
-      DAG.getTargetConstant(1, DL, MVT::i8),                // Scale
-      DAG.getRegister(0, MVT::i64),                         // Index
-      DAG.getTargetConstant(SPOffset, DL, MVT::i32),        // Disp
-      DAG.getRegister(0, MVT::i16),                         // Segment.
-      Zero,
-      Chain};
-    SDNode *Res = DAG.getMachineNode(X86::LOCK_OR32mi8, DL, MVT::i32,
-                                     MVT::Other, Ops);
-    return SDValue(Res, 1);
-  }
-
-  SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i32);
-  SDValue Ops[] = {
-    DAG.getRegister(X86::ESP, MVT::i32),            // Base
-    DAG.getTargetConstant(1, DL, MVT::i8),          // Scale
-    DAG.getRegister(0, MVT::i32),                   // Index
-    DAG.getTargetConstant(SPOffset, DL, MVT::i32),  // Disp
-    DAG.getRegister(0, MVT::i16),                   // Segment.
-    Zero,
-    Chain
-  };
-  SDNode *Res = DAG.getMachineNode(X86::LOCK_OR32mi8, DL, MVT::i32,
-                                   MVT::Other, Ops);
-  return SDValue(Res, 1);
 }
 
 static SDValue lowerAtomicArithWithLOCK(SDValue N, SelectionDAG &DAG,
