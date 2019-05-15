@@ -110,7 +110,7 @@ Execution Commands
          </tr>
 
          <tr>
-               <td class="header" colspan="2">Launch a process with arguments in new terminal window (Mac OS X only).</td>
+               <td class="header" colspan="2">Launch a process with arguments in new terminal window (macOS only).</td>
          </tr>
          <tr>
                <td class="content">
@@ -125,7 +125,7 @@ Execution Commands
 
          <tr>
                <td class="header" colspan="2">Launch a process with arguments in existing terminal
-                  <cope>/dev/ttys006 (Mac OS X only).</cope>
+                  <cope>/dev/ttys006 (macOS only).</cope>
                </td>
          </tr>
          <tr>
@@ -1385,7 +1385,7 @@ Examining Thread State
                </td>
          </tr>
          <tr>
-               <td class="header" colspan="2">Get information about a specific heap allocation (available on Mac OS X only).</td>
+               <td class="header" colspan="2">Get information about a specific heap allocation (available on macOS only).</td>
          </tr>
          <tr>
                <td class="content">
@@ -1401,7 +1401,7 @@ Examining Thread State
                </td>
          </tr>
          <tr>
-               <td class="header" colspan="2">Get information about a specific heap allocation and cast the result to any dynamic type that can be deduced (available on Mac OS X only)</td>
+               <td class="header" colspan="2">Get information about a specific heap allocation and cast the result to any dynamic type that can be deduced (available on macOS only)</td>
          </tr>
          <tr>
                <td class="content">
@@ -1414,7 +1414,7 @@ Examining Thread State
                </td>
          </tr>
          <tr>
-               <td class="header" colspan="2">Find all heap blocks that contain a pointer specified by an expression EXPR (available on Mac OS X only).</td>
+               <td class="header" colspan="2">Find all heap blocks that contain a pointer specified by an expression EXPR (available on macOS only).</td>
          </tr>
          <tr>
                <td class="content">
@@ -1427,7 +1427,7 @@ Examining Thread State
                </td>
          </tr>
          <tr>
-               <td class="header" colspan="2">Find all heap blocks that contain a C string anywhere in the block (available on Mac OS X only).</td>
+               <td class="header" colspan="2">Find all heap blocks that contain a C string anywhere in the block (available on macOS only).</td>
          </tr>
          <tr>
                <td class="content">

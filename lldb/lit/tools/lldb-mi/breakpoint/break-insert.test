@@ -1,4 +1,5 @@
 # XFAIL: system-netbsd
+# UNSUPPORTED: system-linux
 #
 # RUN: %build %p/inputs/break-insert.c --nodefaultlib -o a.exe
 # RUN: %lldbmi < %s | FileCheck %s

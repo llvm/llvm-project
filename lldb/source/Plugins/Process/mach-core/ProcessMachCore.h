@@ -88,10 +88,7 @@ protected:
 private:
   bool GetDynamicLoaderAddress(lldb::addr_t addr);
 
-  typedef enum CorefilePreference {
-    eUserProcessCorefile,
-    eKernelCorefile
-  } CorefilePreferences;
+  enum CorefilePreference { eUserProcessCorefile, eKernelCorefile };
 
   /// If a core file can be interpreted multiple ways, this establishes
   /// which style wins.

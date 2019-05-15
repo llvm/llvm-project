@@ -1,7 +1,9 @@
-.. title:: Welcome to LLDB's documentation!
+.. title:: LLDB Homepage
 
-LLDB
-====
+The LLDB Debugger
+=================
+
+Welcome to the LLDB version |release| documentation!
 
 LLDB is a next generation, high-performance debugger. It is built as a set of
 reusable components which highly leverage existing libraries in the larger LLVM
@@ -61,8 +63,9 @@ Resources
 API Documentation
 =================
 
-* `C++ API Documentation <https://lldb.llvm.org/cpp_reference/index.html>`_
-* `Python API Documentation <https://lldb.llvm.org/python_reference/index.html>`_
+* `Public Python API Reference <https://lldb.llvm.org/python_reference/index.html>`_
+* `Public C++ API Reference <https://lldb.llvm.org/cpp_reference/namespacelldb.html>`_
+* `Private C++ Reference <https://lldb.llvm.org/cpp_reference/index.html>`_
 
 External Links
 ==============

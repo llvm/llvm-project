@@ -1,3 +1,5 @@
+UNSUPPORTED: system-windows
+
 The double quotes around "BAR" ensure we don't match the command.
 
 RUN: %clangxx -std=c++11 %p/Inputs/env.cpp -o %t
