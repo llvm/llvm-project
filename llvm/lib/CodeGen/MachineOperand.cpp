@@ -181,6 +181,19 @@ void MachineOperand::ChangeToES(const char *SymName,
   setTargetFlags(TargetFlags);
 }
 
+void MachineOperand::ChangeToGA(const GlobalValue *GV, int64_t Offset,
+                                unsigned char TargetFlags) {
+  assert((!isReg() || !isTied()) &&
+         "Cannot change a tied operand into a global address");
+
+  removeRegFromUses();
+
+  OpKind = MO_GlobalAddress;
+  Contents.OffsetedInfo.Val.GV = GV;
+  setOffset(Offset);
+  setTargetFlags(TargetFlags);
+}
+
 void MachineOperand::ChangeToMCSymbol(MCSymbol *Sym) {
   assert((!isReg() || !isTied()) &&
          "Cannot change a tied operand into an MCSymbol");
