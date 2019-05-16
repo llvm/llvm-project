@@ -118,6 +118,7 @@
 #endif
 
 #if defined(__APPLE__) || defined(__linux__) || defined(_WIN32)
+#include "Plugins/ExpressionParser/Swift/SwiftREPL.h"
 #include "Plugins/Language/Swift/SwiftLanguage.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #endif
@@ -141,6 +142,7 @@ static void SwiftInitialize() {
 #if defined(__APPLE__) || defined(__linux__) || defined(_WIN32)
   SwiftLanguage::Initialize();
   SwiftLanguageRuntime::Initialize();
+  SwiftREPL::Initialize();
 #endif
 }
 
@@ -148,6 +150,7 @@ static void SwiftTerminate() {
 #if defined(__APPLE__) || defined(__linux__) || defined(_WIN32)
   SwiftLanguage::Terminate();
   SwiftLanguageRuntime::Terminate();
+  SwiftREPL::Terminate();
 #endif
 }
 
