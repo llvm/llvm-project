@@ -593,13 +593,13 @@ For example:
 
 The above example would match the line:
 
-.. code-block:: llvm
+.. code-block:: gas
 
     add r5, r5, r6
 
 but would not match the line:
 
-.. code-block:: llvm
+.. code-block:: gas
 
     add r5, r5, r7
 

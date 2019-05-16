@@ -312,6 +312,13 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
   return buildFConstant(Res, *CFP);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
+                                                     const APFloat &Val) {
+  auto &Ctx = getMF().getFunction().getContext();
+  auto *CFP = ConstantFP::get(Ctx, Val);
+  return buildFConstant(Res, *CFP);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildBrCond(unsigned Tst,
                                                   MachineBasicBlock &Dest) {
   assert(getMRI()->getType(Tst).isScalar() && "invalid operand type");

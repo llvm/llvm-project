@@ -1223,7 +1223,9 @@ Error IRLinker::linkModuleFlagsMetadata() {
       if (SrcBehaviorValue == Module::Override &&
           SrcOp->getOperand(2) != DstOp->getOperand(2))
         return stringErr("linking module flags '" + ID->getString() +
-                         "': IDs have conflicting override values");
+                         "': IDs have conflicting override values in '" +
+                         SrcM->getModuleIdentifier() + "' and '" +
+                         DstM.getModuleIdentifier() + "'");
       continue;
     } else if (SrcBehaviorValue == Module::Override) {
       // Update the destination flag to that of the source.
@@ -1234,7 +1236,9 @@ Error IRLinker::linkModuleFlagsMetadata() {
     // Diagnose inconsistent merge behavior types.
     if (SrcBehaviorValue != DstBehaviorValue)
       return stringErr("linking module flags '" + ID->getString() +
-                       "': IDs have conflicting behaviors");
+                       "': IDs have conflicting behaviors in '" +
+                       SrcM->getModuleIdentifier() + "' and '" +
+                       DstM.getModuleIdentifier() + "'");
 
     auto replaceDstValue = [&](MDNode *New) {
       Metadata *FlagOps[] = {DstOp->getOperand(0), ID, New};
@@ -1252,7 +1256,9 @@ Error IRLinker::linkModuleFlagsMetadata() {
       // Emit an error if the values differ.
       if (SrcOp->getOperand(2) != DstOp->getOperand(2))
         return stringErr("linking module flags '" + ID->getString() +
-                         "': IDs have conflicting values");
+                         "': IDs have conflicting values in '" +
+                         SrcM->getModuleIdentifier() + "' and '" +
+                         DstM.getModuleIdentifier() + "'");
       continue;
     }
     case Module::Warning: {

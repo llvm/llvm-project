@@ -361,6 +361,13 @@ unsigned ARMSubtarget::getMispredictionPenalty() const {
 }
 
 bool ARMSubtarget::enableMachineScheduler() const {
+  // The MachineScheduler can increase register usage, so we use more high
+  // registers and end up with more T2 instructions that cannot be converted to
+  // T1 instructions. At least until we do better at converting to thumb1
+  // instructions, on cortex-m at Oz where we are size-paranoid, don't use the
+  // Machine scheduler, relying on the DAG register pressure scheduler instead.
+  if (isMClass() && hasMinSize())
+    return false;
   // Enable the MachineScheduler before register allocation for subtargets
   // with the use-misched feature.
   return useMachineScheduler();
