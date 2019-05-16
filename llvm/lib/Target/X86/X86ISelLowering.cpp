@@ -672,6 +672,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FRINT,  MVT::f80, Expand);
     setOperationAction(ISD::FNEARBYINT, MVT::f80, Expand);
     setOperationAction(ISD::FMA, MVT::f80, Expand);
+    setOperationAction(ISD::LROUND, MVT::f80, Expand);
+    setOperationAction(ISD::LLROUND, MVT::f80, Expand);
   }
 
   // Always use a library call for pow.

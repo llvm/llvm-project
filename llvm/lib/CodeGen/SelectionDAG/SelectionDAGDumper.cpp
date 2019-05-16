@@ -328,6 +328,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ADDRSPACECAST:              return "addrspacecast";
   case ISD::FP16_TO_FP:                 return "fp16_to_fp";
   case ISD::FP_TO_FP16:                 return "fp_to_fp16";
+  case ISD::LROUND:                     return "lround";
+  case ISD::LLROUND:                    return "llround";
 
     // Control flow instructions
   case ISD::BR:                         return "br";
