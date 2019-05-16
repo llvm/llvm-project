@@ -553,11 +553,8 @@ size_t ABISysV_mips64::GetRedZoneSize() const { return 0; }
 
 ABISP
 ABISysV_mips64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
-  const llvm::Triple::ArchType arch_type = arch.GetTriple().getArch();
-  if ((arch_type == llvm::Triple::mips64) ||
-      (arch_type == llvm::Triple::mips64el)) {
+  if (arch.GetTriple().isMIPS64())
     return ABISP(new ABISysV_mips64(process_sp));
-  }
   return ABISP();
 }
 

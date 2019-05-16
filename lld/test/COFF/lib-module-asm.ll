@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; PR41803: llvm-link /lib on object with module asm crashes
 ; RUN: rm -f %t.lib
 ; RUN: llvm-as -o %t.obj %s

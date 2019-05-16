@@ -4,6 +4,8 @@
 // RUN: %clangxx -g -o %t -nostdlib %crt1 %crti %crtbegin %t.o %libstdcxx -lc -lm %libgcc %t.so %crtend %crtn
 // RUN: %run %t 2>&1 | FileCheck %s
 
+// XFAIL: arm
+
 #include <stdio.h>
 
 // CHECK: 1

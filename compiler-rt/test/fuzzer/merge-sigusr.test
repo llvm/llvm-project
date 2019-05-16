@@ -1,7 +1,8 @@
 # Check that libFuzzer honors SIGUSR1/SIGUSR2
 # FIXME: Disabled on Windows for now because of reliance on posix only features
 # (eg: export, "&", pkill).
-UNSUPPORTED: darwin, windows
+# TODO(morehouse): rethink test and reenable for linux.
+UNSUPPORTED: darwin, windows, linux
 RUN: rm -rf %t
 RUN: mkdir -p %t
 RUN: %cpp_compiler %S/SleepOneSecondTest.cpp -o %t/LFSIGUSR

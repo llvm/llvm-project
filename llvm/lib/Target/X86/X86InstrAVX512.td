@@ -9410,13 +9410,13 @@ multiclass avx512_masked_scalar_imm<SDNode OpNode, string OpcPrefix, SDNode Move
 }
 
 defm : avx512_masked_scalar_imm<ffloor, "RNDSCALESS", X86Movss,
-                                v4f32x_info, fp32imm0, 0x01, HasAVX512>;
+                                v4f32x_info, fp32imm0, 0x09, HasAVX512>;
 defm : avx512_masked_scalar_imm<fceil, "RNDSCALESS", X86Movss,
-                                v4f32x_info, fp32imm0, 0x02, HasAVX512>;
+                                v4f32x_info, fp32imm0, 0x0A, HasAVX512>;
 defm : avx512_masked_scalar_imm<ffloor, "RNDSCALESD", X86Movsd,
-                                v2f64x_info, fp64imm0, 0x01, HasAVX512>;
+                                v2f64x_info, fp64imm0, 0x09, HasAVX512>;
 defm : avx512_masked_scalar_imm<fceil, "RNDSCALESD", X86Movsd,
-                                v2f64x_info, fp64imm0, 0x02,  HasAVX512>;
+                                v2f64x_info, fp64imm0, 0x0A,  HasAVX512>;
 
 
 //-------------------------------------------------

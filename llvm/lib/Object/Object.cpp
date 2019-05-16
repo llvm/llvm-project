@@ -247,10 +247,10 @@ uint64_t LLVMGetSectionSize(LLVMSectionIteratorRef SI) {
 }
 
 const char *LLVMGetSectionContents(LLVMSectionIteratorRef SI) {
-  StringRef ret;
-  if (std::error_code ec = (*unwrap(SI))->getContents(ret))
-    report_fatal_error(ec.message());
-  return ret.data();
+  if (Expected<StringRef> E = (*unwrap(SI))->getContents())
+    return E->data();
+  else
+    report_fatal_error(E.takeError());
 }
 
 uint64_t LLVMGetSectionAddress(LLVMSectionIteratorRef SI) {

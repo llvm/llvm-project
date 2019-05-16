@@ -50,9 +50,6 @@ private:
 class SymbolStringPtr {
   friend class SymbolStringPool;
   friend struct DenseMapInfo<SymbolStringPtr>;
-  friend bool operator==(const SymbolStringPtr &LHS,
-                         const SymbolStringPtr &RHS);
-  friend bool operator<(const SymbolStringPtr &LHS, const SymbolStringPtr &RHS);
 
   static SymbolStringPool::PoolMapEntry Tombstone;
 
@@ -92,6 +89,21 @@ public:
 
   StringRef operator*() const { return S->first(); }
 
+  friend bool operator==(const SymbolStringPtr &LHS,
+                         const SymbolStringPtr &RHS) {
+    return LHS.S == RHS.S;
+  }
+
+  friend bool operator!=(const SymbolStringPtr &LHS,
+                         const SymbolStringPtr &RHS) {
+    return !(LHS == RHS);
+  }
+
+  friend bool operator<(const SymbolStringPtr &LHS,
+                        const SymbolStringPtr &RHS) {
+    return LHS.S < RHS.S;
+  }
+
 private:
 
   SymbolStringPtr(SymbolStringPool::PoolMapEntry *S)
@@ -102,18 +114,6 @@ private:
 
   SymbolStringPool::PoolMapEntry *S = nullptr;
 };
-
-inline bool operator==(const SymbolStringPtr &LHS, const SymbolStringPtr &RHS) {
-  return LHS.S == RHS.S;
-}
-
-inline bool operator!=(const SymbolStringPtr &LHS, const SymbolStringPtr &RHS) {
-  return !(LHS == RHS);
-}
-
-inline bool operator<(const SymbolStringPtr &LHS, const SymbolStringPtr &RHS) {
-  return LHS.S < RHS.S;
-}
 
 inline SymbolStringPool::~SymbolStringPool() {
 #ifndef NDEBUG

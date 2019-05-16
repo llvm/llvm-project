@@ -8,7 +8,7 @@
 ; as the assembler takes a different path through LLVM, which is
 ; already covered by the fixups-expr.s test.
 
-define i32 @main() {
+define i32 @main() nounwind {
 entry:
   %retval = alloca i32, align 4
   store i32 0, i32* %retval, align 4

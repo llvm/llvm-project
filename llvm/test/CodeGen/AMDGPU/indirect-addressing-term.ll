@@ -14,45 +14,45 @@ define amdgpu_kernel void @extract_w_offset_vgpr(i32 addrspace(1)* %out) {
   ; GCN:   liveins: $vgpr0, $sgpr0_sgpr1
   ; GCN:   renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr0_sgpr1, 36, 0, 0 :: (dereferenceable invariant load 8 from %ir.out.kernarg.offset.cast, align 4, addrspace 4)
   ; GCN:   renamable $sgpr2 = COPY renamable $sgpr1
-  ; GCN:   renamable $sgpr4 = COPY renamable $sgpr0, implicit killed $sgpr0_sgpr1
-  ; GCN:   renamable $sgpr5 = S_MOV_B32 61440
-  ; GCN:   renamable $sgpr6 = S_MOV_B32 -1
-  ; GCN:   undef renamable $sgpr8 = COPY killed renamable $sgpr4, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
+  ; GCN:   renamable $sgpr0 = COPY renamable $sgpr0, implicit killed $sgpr0_sgpr1
+  ; GCN:   renamable $sgpr1 = S_MOV_B32 61440
+  ; GCN:   renamable $sgpr4 = S_MOV_B32 -1
+  ; GCN:   undef renamable $sgpr8 = COPY killed renamable $sgpr0, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
   ; GCN:   renamable $sgpr9 = COPY killed renamable $sgpr2
-  ; GCN:   renamable $sgpr10 = COPY killed renamable $sgpr6
-  ; GCN:   renamable $sgpr11 = COPY killed renamable $sgpr5
-  ; GCN:   renamable $sgpr2 = S_MOV_B32 16
-  ; GCN:   renamable $sgpr4 = S_MOV_B32 15
-  ; GCN:   renamable $sgpr5 = S_MOV_B32 14
-  ; GCN:   renamable $sgpr6 = S_MOV_B32 13
-  ; GCN:   renamable $sgpr7 = S_MOV_B32 12
-  ; GCN:   renamable $sgpr12 = S_MOV_B32 11
-  ; GCN:   renamable $sgpr13 = S_MOV_B32 10
-  ; GCN:   renamable $sgpr14 = S_MOV_B32 9
-  ; GCN:   renamable $sgpr15 = S_MOV_B32 8
-  ; GCN:   renamable $sgpr16 = S_MOV_B32 7
-  ; GCN:   renamable $sgpr17 = S_MOV_B32 6
-  ; GCN:   renamable $sgpr18 = S_MOV_B32 5
-  ; GCN:   renamable $sgpr19 = S_MOV_B32 3
-  ; GCN:   renamable $sgpr20 = S_MOV_B32 2
-  ; GCN:   renamable $sgpr21 = S_MOV_B32 1
-  ; GCN:   renamable $sgpr22 = S_MOV_B32 0
-  ; GCN:   renamable $vgpr1 = COPY killed renamable $sgpr22
-  ; GCN:   renamable $vgpr2 = COPY killed renamable $sgpr21
-  ; GCN:   renamable $vgpr3 = COPY killed renamable $sgpr20
-  ; GCN:   renamable $vgpr4 = COPY killed renamable $sgpr19
-  ; GCN:   renamable $vgpr5 = COPY killed renamable $sgpr18
-  ; GCN:   renamable $vgpr6 = COPY killed renamable $sgpr17
-  ; GCN:   renamable $vgpr7 = COPY killed renamable $sgpr16
-  ; GCN:   renamable $vgpr8 = COPY killed renamable $sgpr15
-  ; GCN:   renamable $vgpr9 = COPY killed renamable $sgpr14
-  ; GCN:   renamable $vgpr10 = COPY killed renamable $sgpr13
-  ; GCN:   renamable $vgpr11 = COPY killed renamable $sgpr12
-  ; GCN:   renamable $vgpr12 = COPY killed renamable $sgpr7
-  ; GCN:   renamable $vgpr13 = COPY killed renamable $sgpr6
-  ; GCN:   renamable $vgpr14 = COPY killed renamable $sgpr5
-  ; GCN:   renamable $vgpr15 = COPY killed renamable $sgpr4
-  ; GCN:   renamable $vgpr16 = COPY killed renamable $sgpr2
+  ; GCN:   renamable $sgpr10 = COPY killed renamable $sgpr4
+  ; GCN:   renamable $sgpr11 = COPY killed renamable $sgpr1
+  ; GCN:   renamable $sgpr0 = S_MOV_B32 16
+  ; GCN:   renamable $sgpr1 = S_MOV_B32 15
+  ; GCN:   renamable $sgpr2 = S_MOV_B32 14
+  ; GCN:   renamable $sgpr4 = S_MOV_B32 13
+  ; GCN:   renamable $sgpr5 = S_MOV_B32 12
+  ; GCN:   renamable $sgpr6 = S_MOV_B32 11
+  ; GCN:   renamable $sgpr7 = S_MOV_B32 10
+  ; GCN:   renamable $sgpr12 = S_MOV_B32 9
+  ; GCN:   renamable $sgpr13 = S_MOV_B32 8
+  ; GCN:   renamable $sgpr14 = S_MOV_B32 7
+  ; GCN:   renamable $sgpr15 = S_MOV_B32 6
+  ; GCN:   renamable $sgpr16 = S_MOV_B32 5
+  ; GCN:   renamable $sgpr17 = S_MOV_B32 3
+  ; GCN:   renamable $sgpr18 = S_MOV_B32 2
+  ; GCN:   renamable $sgpr19 = S_MOV_B32 1
+  ; GCN:   renamable $sgpr20 = S_MOV_B32 0
+  ; GCN:   renamable $vgpr1 = COPY killed renamable $sgpr20
+  ; GCN:   renamable $vgpr2 = COPY killed renamable $sgpr19
+  ; GCN:   renamable $vgpr3 = COPY killed renamable $sgpr18
+  ; GCN:   renamable $vgpr4 = COPY killed renamable $sgpr17
+  ; GCN:   renamable $vgpr5 = COPY killed renamable $sgpr16
+  ; GCN:   renamable $vgpr6 = COPY killed renamable $sgpr15
+  ; GCN:   renamable $vgpr7 = COPY killed renamable $sgpr14
+  ; GCN:   renamable $vgpr8 = COPY killed renamable $sgpr13
+  ; GCN:   renamable $vgpr9 = COPY killed renamable $sgpr12
+  ; GCN:   renamable $vgpr10 = COPY killed renamable $sgpr7
+  ; GCN:   renamable $vgpr11 = COPY killed renamable $sgpr6
+  ; GCN:   renamable $vgpr12 = COPY killed renamable $sgpr5
+  ; GCN:   renamable $vgpr13 = COPY killed renamable $sgpr4
+  ; GCN:   renamable $vgpr14 = COPY killed renamable $sgpr2
+  ; GCN:   renamable $vgpr15 = COPY killed renamable $sgpr1
+  ; GCN:   renamable $vgpr16 = COPY killed renamable $sgpr0
   ; GCN:   undef renamable $vgpr17 = COPY killed renamable $vgpr1, implicit-def $vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32
   ; GCN:   renamable $vgpr18 = COPY killed renamable $vgpr2
   ; GCN:   renamable $vgpr19 = COPY killed renamable $vgpr3
@@ -69,13 +69,13 @@ define amdgpu_kernel void @extract_w_offset_vgpr(i32 addrspace(1)* %out) {
   ; GCN:   renamable $vgpr30 = COPY killed renamable $vgpr14
   ; GCN:   renamable $vgpr31 = COPY killed renamable $vgpr15
   ; GCN:   renamable $vgpr32 = COPY killed renamable $vgpr16
-  ; GCN:   renamable $sgpr0_sgpr1 = S_MOV_B64 $exec
+  ; GCN:   renamable $sgpr22_sgpr23 = S_MOV_B64 $exec
   ; GCN:   renamable $vgpr1 = IMPLICIT_DEF
   ; GCN:   renamable $sgpr24_sgpr25 = IMPLICIT_DEF
   ; GCN:   SI_SPILL_V32_SAVE killed $vgpr0, %stack.0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr3, 0, implicit $exec :: (store 4 into %stack.0, addrspace 5)
   ; GCN:   SI_SPILL_S128_SAVE killed $sgpr8_sgpr9_sgpr10_sgpr11, %stack.1, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr3, implicit-def dead $m0 :: (store 16 into %stack.1, align 4, addrspace 5)
   ; GCN:   SI_SPILL_V512_SAVE killed $vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32, %stack.2, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr3, 0, implicit $exec :: (store 64 into %stack.2, align 4, addrspace 5)
-  ; GCN:   SI_SPILL_S64_SAVE killed $sgpr0_sgpr1, %stack.3, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr3, implicit-def dead $m0 :: (store 8 into %stack.3, align 4, addrspace 5)
+  ; GCN:   SI_SPILL_S64_SAVE killed $sgpr22_sgpr23, %stack.3, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr3, implicit-def dead $m0 :: (store 8 into %stack.3, align 4, addrspace 5)
   ; GCN:   SI_SPILL_V32_SAVE killed $vgpr1, %stack.4, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr3, 0, implicit $exec :: (store 4 into %stack.4, addrspace 5)
   ; GCN:   SI_SPILL_S64_SAVE killed $sgpr24_sgpr25, %stack.5, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr3, implicit-def dead $m0 :: (store 8 into %stack.5, align 4, addrspace 5)
   ; GCN: bb.1:

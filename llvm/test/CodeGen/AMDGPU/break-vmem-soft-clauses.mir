@@ -1,4 +1,7 @@
 # RUN: llc -march=amdgcn -mcpu=carrizo -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,XNACK %s
+
+# Make sure the default assumption is xnack enabled with no cpu
+# RUN: llc -march=amdgcn  -verify-machineinstrs -mattr=+volcanic-islands -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,XNACK %s
 # RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,NOXNACK %s
 ---
 # Trivial clause at beginning of program

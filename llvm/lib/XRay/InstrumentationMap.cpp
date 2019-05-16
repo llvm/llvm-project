@@ -78,9 +78,10 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
         "Failed to find XRay instrumentation map.",
         std::make_error_code(std::errc::executable_format_error));
 
-  if (I->getContents(Contents))
-    return errorCodeToError(
-        std::make_error_code(std::errc::executable_format_error));
+  if (Expected<StringRef> E = I->getContents())
+    Contents = *E;
+  else
+    return E.takeError();
 
   RelocMap Relocs;
   if (ObjFile.getBinary()->isELF()) {
