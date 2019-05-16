@@ -1870,6 +1870,17 @@ multiclass sve2_cintx_dot<string asm> {
 }
 
 //===----------------------------------------------------------------------===//
+// SVE2 Complex Multiply-Add Group
+//===----------------------------------------------------------------------===//
+
+multiclass sve2_int_cmla<bit opc, string asm> {
+  def _B : sve2_complex_int_arith<0b00, { 0b001, opc }, asm, ZPR8, ZPR8>;
+  def _H : sve2_complex_int_arith<0b01, { 0b001, opc }, asm, ZPR16, ZPR16>;
+  def _S : sve2_complex_int_arith<0b10, { 0b001, opc }, asm, ZPR32, ZPR32>;
+  def _D : sve2_complex_int_arith<0b11, { 0b001, opc }, asm, ZPR64, ZPR64>;
+}
+
+//===----------------------------------------------------------------------===//
 // SVE2 Complex Integer Dot Product - Indexed Group
 //===----------------------------------------------------------------------===//
 
@@ -1903,6 +1914,25 @@ multiclass sve2_cintx_dot_by_indexed_elem<string asm> {
     let Inst{18-16} = Zm;
   }
   def _D : sve2_complex_int_arith_indexed<0b11, 0b0100, asm, ZPR64, ZPR16, ZPR4b16, VectorIndexD> {
+    bit iop;
+    bits<4> Zm;
+    let Inst{20} = iop;
+    let Inst{19-16} = Zm;
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// SVE2 Complex Multiply-Add - Indexed Group
+//===----------------------------------------------------------------------===//
+
+multiclass sve2_cmla_by_indexed_elem<bit opc, string asm> {
+  def _H : sve2_complex_int_arith_indexed<0b10, { 0b011, opc }, asm, ZPR16, ZPR16, ZPR3b16, VectorIndexS> {
+    bits<2> iop;
+    bits<3> Zm;
+    let Inst{20-19} = iop;
+    let Inst{18-16} = Zm;
+  }
+  def _S : sve2_complex_int_arith_indexed<0b11, { 0b011, opc }, asm, ZPR32, ZPR32, ZPR4b32, VectorIndexD> {
     bit iop;
     bits<4> Zm;
     let Inst{20} = iop;

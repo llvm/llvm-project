@@ -1057,4 +1057,13 @@ let Predicates = [HasSVE2] in {
 
   // SVE2 complex integer dot product
   defm CDOT_ZZZ : sve2_cintx_dot<"cdot">;
+
+  // SVE2 complex integer multiply-add (indexed)
+  defm CMLA_ZZZI      : sve2_cmla_by_indexed_elem<0b0, "cmla">;
+  // SVE2 complex saturating multiply-add (indexed)
+  defm SQRDCMLAH_ZZZI : sve2_cmla_by_indexed_elem<0b1, "sqrdcmlah">;
+
+  // SVE2 complex integer multiply-add
+  defm CMLA_ZZZ      : sve2_int_cmla<0b0, "cmla">;
+  defm SQRDCMLAH_ZZZ : sve2_int_cmla<0b1, "sqrdcmlah">;
 }
