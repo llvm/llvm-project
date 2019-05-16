@@ -6025,6 +6025,22 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
                              getValue(I.getArgOperand(0))));
     return nullptr;
   }
+  case Intrinsic::lround_i32:
+  case Intrinsic::lround_i64:
+  case Intrinsic::llround: {
+    unsigned Opcode;
+    MVT RetVT;
+    switch (Intrinsic) {
+    default: llvm_unreachable("Impossible intrinsic");  // Can't reach here.
+    case Intrinsic::lround_i32: Opcode = ISD::LROUND;  RetVT = MVT::i32; break;
+    case Intrinsic::lround_i64: Opcode = ISD::LROUND;  RetVT = MVT::i64; break;
+    case Intrinsic::llround:    Opcode = ISD::LLROUND; RetVT = MVT::i64; break;
+    }
+
+    setValue(&I, DAG.getNode(Opcode, sdl, RetVT,
+                             getValue(I.getArgOperand(0))));
+    return nullptr;
+  }
   case Intrinsic::minnum: {
     auto VT = getValue(I.getArgOperand(0)).getValueType();
     unsigned Opc =

@@ -37,20 +37,24 @@ Streams:
           File Date High:       0x3C3D3E3F
           File Date Low:        0x40414243
         CodeView Record: '44454647'
-        Misc Record:     48494A4B
+        Misc Record:     '48494A4B'
       - Base of Image:   0x4C4D4E4F50515253
         Size of Image:   0x54555657
         Module Name:     libb.so
-        CodeView Record: 58595A5B
+        CodeView Record: '58595A5B'
   - Type:            ThreadList
     Threads:
       - Thread Id:         0x5C5D5E5F
         Priority Class:    0x60616263
         Environment Block: 0x6465666768696A6B
-        Context:         7C7D7E7F80818283
+        Context:           '7C7D7E7F80818283'
         Stack:
           Start of Memory Range: 0x6C6D6E6F70717273
-          Content:         7475767778797A7B
+          Content:               '7475767778797A7B'
+  - Type:            MemoryList
+    Memory Ranges:   
+      - Start of Memory Range: 0x7C7D7E7F80818283
+        Content:               '8485868788'
 ...
 
 # CHECK:      --- !minidump
@@ -97,11 +101,15 @@ Streams:
 # CHECK-NEXT:         CodeView Record: 58595A5B
 # CHECK-NEXT:   - Type:            ThreadList
 # CHECK-NEXT:     Threads:
-# CHECK-NEXT:       - Thread Id:       0x5C5D5E5F
-# CHECK-NEXT:         Priority Class:  0x60616263
+# CHECK-NEXT:       - Thread Id:         0x5C5D5E5F
+# CHECK-NEXT:         Priority Class:    0x60616263
 # CHECK-NEXT:         Environment Block: 0x6465666768696A6B
-# CHECK-NEXT:         Context:         7C7D7E7F80818283
+# CHECK-NEXT:         Context:           7C7D7E7F80818283
 # CHECK-NEXT:         Stack:
 # CHECK-NEXT:           Start of Memory Range: 0x6C6D6E6F70717273
-# CHECK-NEXT:           Content:         7475767778797A7B
+# CHECK-NEXT:           Content:               7475767778797A7B
+# CHECK-NEXT:   - Type:            MemoryList
+# CHECK-NEXT:     Memory Ranges:   
+# CHECK-NEXT:       - Start of Memory Range: 0x7C7D7E7F80818283
+# CHECK-NEXT:         Content:               '8485868788'
 # CHECK-NEXT: ...

@@ -595,11 +595,7 @@ const char *ArchSpec::GetArchitectureName() const {
   return "unknown";
 }
 
-bool ArchSpec::IsMIPS() const {
-  const llvm::Triple::ArchType machine = GetMachine();
-  return machine == llvm::Triple::mips || machine == llvm::Triple::mipsel ||
-         machine == llvm::Triple::mips64 || machine == llvm::Triple::mips64el;
-}
+bool ArchSpec::IsMIPS() const { return GetTriple().isMIPS(); }
 
 std::string ArchSpec::GetTargetABI() const {
 
@@ -639,10 +635,8 @@ void ArchSpec::SetFlags(std::string elf_abi) {
 
 std::string ArchSpec::GetClangTargetCPU() const {
   std::string cpu;
-  const llvm::Triple::ArchType machine = GetMachine();
 
-  if (machine == llvm::Triple::mips || machine == llvm::Triple::mipsel ||
-      machine == llvm::Triple::mips64 || machine == llvm::Triple::mips64el) {
+  if (IsMIPS()) {
     switch (m_core) {
     case ArchSpec::eCore_mips32:
     case ArchSpec::eCore_mips32el:

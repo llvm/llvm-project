@@ -1838,6 +1838,178 @@ multiclass sve_intx_dot_by_indexed_elem<bit opc, string asm> {
 }
 
 //===----------------------------------------------------------------------===//
+// SVE2 Complex Integer Dot Product Group
+//===----------------------------------------------------------------------===//
+
+class sve2_complex_int_arith<bits<2> sz, bits<4> opc, string asm,
+                             ZPRRegOp zprty1, ZPRRegOp zprty2>
+: I<(outs zprty1:$Zda), (ins zprty1:$_Zda, zprty2:$Zn, zprty2:$Zm,
+                         complexrotateop:$rot),
+  asm, "\t$Zda, $Zn, $Zm, $rot", "", []>, Sched<[]> {
+  bits<5> Zda;
+  bits<5> Zn;
+  bits<5> Zm;
+  bits<2> rot;
+  let Inst{31-24} = 0b01000100;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b0;
+  let Inst{20-16} = Zm;
+  let Inst{15-12} = opc;
+  let Inst{11-10} = rot;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+
+  let Constraints = "$Zda = $_Zda";
+  let DestructiveInstType = Destructive;
+  let ElementSize = ElementSizeNone;
+}
+
+multiclass sve2_cintx_dot<string asm> {
+  def _S : sve2_complex_int_arith<0b10, 0b0001, asm, ZPR32, ZPR8>;
+  def _D : sve2_complex_int_arith<0b11, 0b0001, asm, ZPR64, ZPR16>;
+}
+
+//===----------------------------------------------------------------------===//
+// SVE2 Complex Multiply-Add Group
+//===----------------------------------------------------------------------===//
+
+multiclass sve2_int_cmla<bit opc, string asm> {
+  def _B : sve2_complex_int_arith<0b00, { 0b001, opc }, asm, ZPR8, ZPR8>;
+  def _H : sve2_complex_int_arith<0b01, { 0b001, opc }, asm, ZPR16, ZPR16>;
+  def _S : sve2_complex_int_arith<0b10, { 0b001, opc }, asm, ZPR32, ZPR32>;
+  def _D : sve2_complex_int_arith<0b11, { 0b001, opc }, asm, ZPR64, ZPR64>;
+}
+
+//===----------------------------------------------------------------------===//
+// SVE2 Complex Integer Dot Product - Indexed Group
+//===----------------------------------------------------------------------===//
+
+class sve2_complex_int_arith_indexed<bits<2> sz, bits<4> opc, string asm,
+                                     ZPRRegOp zprty1, ZPRRegOp zprty2,
+                                     ZPRRegOp zprty3, Operand itype>
+: I<(outs zprty1:$Zda), (ins zprty1:$_Zda, zprty2:$Zn, zprty3:$Zm, itype:$iop,
+                         complexrotateop:$rot),
+  asm, "\t$Zda, $Zn, $Zm$iop, $rot", "", []>, Sched<[]> {
+  bits<5> Zda;
+  bits<5> Zn;
+  bits<2> rot;
+  let Inst{31-24} = 0b01000100;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b1;
+  let Inst{15-12} = opc;
+  let Inst{11-10} = rot;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+
+  let Constraints = "$Zda = $_Zda";
+  let DestructiveInstType = Destructive;
+  let ElementSize = ElementSizeNone;
+}
+
+multiclass sve2_cintx_dot_by_indexed_elem<string asm> {
+  def _S : sve2_complex_int_arith_indexed<0b10, 0b0100, asm, ZPR32, ZPR8, ZPR3b8, VectorIndexS> {
+    bits<2> iop;
+    bits<3> Zm;
+    let Inst{20-19} = iop;
+    let Inst{18-16} = Zm;
+  }
+  def _D : sve2_complex_int_arith_indexed<0b11, 0b0100, asm, ZPR64, ZPR16, ZPR4b16, VectorIndexD> {
+    bit iop;
+    bits<4> Zm;
+    let Inst{20} = iop;
+    let Inst{19-16} = Zm;
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// SVE2 Complex Multiply-Add - Indexed Group
+//===----------------------------------------------------------------------===//
+
+multiclass sve2_cmla_by_indexed_elem<bit opc, string asm> {
+  def _H : sve2_complex_int_arith_indexed<0b10, { 0b011, opc }, asm, ZPR16, ZPR16, ZPR3b16, VectorIndexS> {
+    bits<2> iop;
+    bits<3> Zm;
+    let Inst{20-19} = iop;
+    let Inst{18-16} = Zm;
+  }
+  def _S : sve2_complex_int_arith_indexed<0b11, { 0b011, opc }, asm, ZPR32, ZPR32, ZPR4b32, VectorIndexD> {
+    bit iop;
+    bits<4> Zm;
+    let Inst{20} = iop;
+    let Inst{19-16} = Zm;
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// SVE2 Integer Multiply - Unpredicated Group
+//===----------------------------------------------------------------------===//
+
+class sve2_int_mul<bits<2> sz, bits<3> opc, string asm, ZPRRegOp zprty>
+: I<(outs zprty:$Zd), (ins zprty:$Zn, zprty:$Zm),
+  asm, "\t$Zd, $Zn, $Zm", "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zm;
+  bits<5> Zn;
+  let Inst{31-24} = 0b00000100;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Zm;
+  let Inst{15-13} = 0b011;
+  let Inst{12-10} = opc;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve2_int_mul<bits<3> opc, string asm> {
+  def _B : sve2_int_mul<0b00, opc, asm, ZPR8>;
+  def _H : sve2_int_mul<0b01, opc, asm, ZPR16>;
+  def _S : sve2_int_mul<0b10, opc, asm, ZPR32>;
+  def _D : sve2_int_mul<0b11, opc, asm, ZPR64>;
+}
+
+//===----------------------------------------------------------------------===//
+// SVE2 Integer Multiply - Indexed Group
+//===----------------------------------------------------------------------===//
+
+class sve2_int_mul_by_indexed_elem<bits<2> sz, bits<4> opc, string asm,
+                                   ZPRRegOp zprty1, ZPRRegOp zprty2,
+                                   ZPRRegOp zprty3, Operand itype>
+: I<(outs zprty1:$Zd), (ins zprty2:$Zn, zprty3:$Zm, itype:$iop),
+  asm, "\t$Zd, $Zn, $Zm$iop", "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  let Inst{31-24} = 0b01000100;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b1;
+  let Inst{15-14} = 0b11;
+  let Inst{13-10} = opc;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve2_int_mul_by_indexed_elem<bits<4> opc, string asm> {
+  def _H : sve2_int_mul_by_indexed_elem<{0, ?}, opc, asm, ZPR16, ZPR16, ZPR3b16, VectorIndexH> {
+    bits<3> Zm;
+    bits<3> iop;
+    let Inst{22} = iop{2};
+    let Inst{20-19} = iop{1-0};
+    let Inst{18-16} = Zm;
+  }
+  def _S : sve2_int_mul_by_indexed_elem<0b10, opc, asm, ZPR32, ZPR32, ZPR3b32, VectorIndexS> {
+    bits<3> Zm;
+    bits<2> iop;
+    let Inst{20-19} = iop;
+    let Inst{18-16} = Zm;
+  }
+  def _D : sve2_int_mul_by_indexed_elem<0b11, opc, asm, ZPR64, ZPR64, ZPR4b64, VectorIndexD> {
+    bits<4> Zm;
+    bit iop;
+    let Inst{20} = iop;
+    let Inst{19-16} = Zm;
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // SVE Integer Arithmetic - Unary Predicated Group
 //===----------------------------------------------------------------------===//
 

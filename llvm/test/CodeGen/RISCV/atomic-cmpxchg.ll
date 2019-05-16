@@ -8,7 +8,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+a -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64IA %s
 
-define void @cmpxchg_i8_monotonic_monotonic(i8* %ptr, i8 %cmp, i8 %val) {
+define void @cmpxchg_i8_monotonic_monotonic(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i8_monotonic_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -86,7 +86,7 @@ define void @cmpxchg_i8_monotonic_monotonic(i8* %ptr, i8 %cmp, i8 %val) {
   ret void
 }
 
-define void @cmpxchg_i8_acquire_monotonic(i8* %ptr, i8 %cmp, i8 %val) {
+define void @cmpxchg_i8_acquire_monotonic(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i8_acquire_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -164,7 +164,7 @@ define void @cmpxchg_i8_acquire_monotonic(i8* %ptr, i8 %cmp, i8 %val) {
   ret void
 }
 
-define void @cmpxchg_i8_acquire_acquire(i8* %ptr, i8 %cmp, i8 %val) {
+define void @cmpxchg_i8_acquire_acquire(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i8_acquire_acquire:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -242,7 +242,7 @@ define void @cmpxchg_i8_acquire_acquire(i8* %ptr, i8 %cmp, i8 %val) {
   ret void
 }
 
-define void @cmpxchg_i8_release_monotonic(i8* %ptr, i8 %cmp, i8 %val) {
+define void @cmpxchg_i8_release_monotonic(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i8_release_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -320,7 +320,7 @@ define void @cmpxchg_i8_release_monotonic(i8* %ptr, i8 %cmp, i8 %val) {
   ret void
 }
 
-define void @cmpxchg_i8_release_acquire(i8* %ptr, i8 %cmp, i8 %val) {
+define void @cmpxchg_i8_release_acquire(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i8_release_acquire:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -398,7 +398,7 @@ define void @cmpxchg_i8_release_acquire(i8* %ptr, i8 %cmp, i8 %val) {
   ret void
 }
 
-define void @cmpxchg_i8_acq_rel_monotonic(i8* %ptr, i8 %cmp, i8 %val) {
+define void @cmpxchg_i8_acq_rel_monotonic(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i8_acq_rel_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -476,7 +476,7 @@ define void @cmpxchg_i8_acq_rel_monotonic(i8* %ptr, i8 %cmp, i8 %val) {
   ret void
 }
 
-define void @cmpxchg_i8_acq_rel_acquire(i8* %ptr, i8 %cmp, i8 %val) {
+define void @cmpxchg_i8_acq_rel_acquire(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i8_acq_rel_acquire:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -554,7 +554,7 @@ define void @cmpxchg_i8_acq_rel_acquire(i8* %ptr, i8 %cmp, i8 %val) {
   ret void
 }
 
-define void @cmpxchg_i8_seq_cst_monotonic(i8* %ptr, i8 %cmp, i8 %val) {
+define void @cmpxchg_i8_seq_cst_monotonic(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i8_seq_cst_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -632,7 +632,7 @@ define void @cmpxchg_i8_seq_cst_monotonic(i8* %ptr, i8 %cmp, i8 %val) {
   ret void
 }
 
-define void @cmpxchg_i8_seq_cst_acquire(i8* %ptr, i8 %cmp, i8 %val) {
+define void @cmpxchg_i8_seq_cst_acquire(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i8_seq_cst_acquire:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -710,7 +710,7 @@ define void @cmpxchg_i8_seq_cst_acquire(i8* %ptr, i8 %cmp, i8 %val) {
   ret void
 }
 
-define void @cmpxchg_i8_seq_cst_seq_cst(i8* %ptr, i8 %cmp, i8 %val) {
+define void @cmpxchg_i8_seq_cst_seq_cst(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i8_seq_cst_seq_cst:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -788,7 +788,7 @@ define void @cmpxchg_i8_seq_cst_seq_cst(i8* %ptr, i8 %cmp, i8 %val) {
   ret void
 }
 
-define void @cmpxchg_i16_monotonic_monotonic(i16* %ptr, i16 %cmp, i16 %val) {
+define void @cmpxchg_i16_monotonic_monotonic(i16* %ptr, i16 %cmp, i16 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i16_monotonic_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -868,7 +868,7 @@ define void @cmpxchg_i16_monotonic_monotonic(i16* %ptr, i16 %cmp, i16 %val) {
   ret void
 }
 
-define void @cmpxchg_i16_acquire_monotonic(i16* %ptr, i16 %cmp, i16 %val) {
+define void @cmpxchg_i16_acquire_monotonic(i16* %ptr, i16 %cmp, i16 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i16_acquire_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -948,7 +948,7 @@ define void @cmpxchg_i16_acquire_monotonic(i16* %ptr, i16 %cmp, i16 %val) {
   ret void
 }
 
-define void @cmpxchg_i16_acquire_acquire(i16* %ptr, i16 %cmp, i16 %val) {
+define void @cmpxchg_i16_acquire_acquire(i16* %ptr, i16 %cmp, i16 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i16_acquire_acquire:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1028,7 +1028,7 @@ define void @cmpxchg_i16_acquire_acquire(i16* %ptr, i16 %cmp, i16 %val) {
   ret void
 }
 
-define void @cmpxchg_i16_release_monotonic(i16* %ptr, i16 %cmp, i16 %val) {
+define void @cmpxchg_i16_release_monotonic(i16* %ptr, i16 %cmp, i16 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i16_release_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1108,7 +1108,7 @@ define void @cmpxchg_i16_release_monotonic(i16* %ptr, i16 %cmp, i16 %val) {
   ret void
 }
 
-define void @cmpxchg_i16_release_acquire(i16* %ptr, i16 %cmp, i16 %val) {
+define void @cmpxchg_i16_release_acquire(i16* %ptr, i16 %cmp, i16 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i16_release_acquire:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1188,7 +1188,7 @@ define void @cmpxchg_i16_release_acquire(i16* %ptr, i16 %cmp, i16 %val) {
   ret void
 }
 
-define void @cmpxchg_i16_acq_rel_monotonic(i16* %ptr, i16 %cmp, i16 %val) {
+define void @cmpxchg_i16_acq_rel_monotonic(i16* %ptr, i16 %cmp, i16 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i16_acq_rel_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1268,7 +1268,7 @@ define void @cmpxchg_i16_acq_rel_monotonic(i16* %ptr, i16 %cmp, i16 %val) {
   ret void
 }
 
-define void @cmpxchg_i16_acq_rel_acquire(i16* %ptr, i16 %cmp, i16 %val) {
+define void @cmpxchg_i16_acq_rel_acquire(i16* %ptr, i16 %cmp, i16 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i16_acq_rel_acquire:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1348,7 +1348,7 @@ define void @cmpxchg_i16_acq_rel_acquire(i16* %ptr, i16 %cmp, i16 %val) {
   ret void
 }
 
-define void @cmpxchg_i16_seq_cst_monotonic(i16* %ptr, i16 %cmp, i16 %val) {
+define void @cmpxchg_i16_seq_cst_monotonic(i16* %ptr, i16 %cmp, i16 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i16_seq_cst_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1428,7 +1428,7 @@ define void @cmpxchg_i16_seq_cst_monotonic(i16* %ptr, i16 %cmp, i16 %val) {
   ret void
 }
 
-define void @cmpxchg_i16_seq_cst_acquire(i16* %ptr, i16 %cmp, i16 %val) {
+define void @cmpxchg_i16_seq_cst_acquire(i16* %ptr, i16 %cmp, i16 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i16_seq_cst_acquire:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1508,7 +1508,7 @@ define void @cmpxchg_i16_seq_cst_acquire(i16* %ptr, i16 %cmp, i16 %val) {
   ret void
 }
 
-define void @cmpxchg_i16_seq_cst_seq_cst(i16* %ptr, i16 %cmp, i16 %val) {
+define void @cmpxchg_i16_seq_cst_seq_cst(i16* %ptr, i16 %cmp, i16 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i16_seq_cst_seq_cst:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1588,7 +1588,7 @@ define void @cmpxchg_i16_seq_cst_seq_cst(i16* %ptr, i16 %cmp, i16 %val) {
   ret void
 }
 
-define void @cmpxchg_i32_monotonic_monotonic(i32* %ptr, i32 %cmp, i32 %val) {
+define void @cmpxchg_i32_monotonic_monotonic(i32* %ptr, i32 %cmp, i32 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i32_monotonic_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1640,7 +1640,7 @@ define void @cmpxchg_i32_monotonic_monotonic(i32* %ptr, i32 %cmp, i32 %val) {
   ret void
 }
 
-define void @cmpxchg_i32_acquire_monotonic(i32* %ptr, i32 %cmp, i32 %val) {
+define void @cmpxchg_i32_acquire_monotonic(i32* %ptr, i32 %cmp, i32 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i32_acquire_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1692,7 +1692,7 @@ define void @cmpxchg_i32_acquire_monotonic(i32* %ptr, i32 %cmp, i32 %val) {
   ret void
 }
 
-define void @cmpxchg_i32_acquire_acquire(i32* %ptr, i32 %cmp, i32 %val) {
+define void @cmpxchg_i32_acquire_acquire(i32* %ptr, i32 %cmp, i32 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i32_acquire_acquire:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1744,7 +1744,7 @@ define void @cmpxchg_i32_acquire_acquire(i32* %ptr, i32 %cmp, i32 %val) {
   ret void
 }
 
-define void @cmpxchg_i32_release_monotonic(i32* %ptr, i32 %cmp, i32 %val) {
+define void @cmpxchg_i32_release_monotonic(i32* %ptr, i32 %cmp, i32 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i32_release_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1796,7 +1796,7 @@ define void @cmpxchg_i32_release_monotonic(i32* %ptr, i32 %cmp, i32 %val) {
   ret void
 }
 
-define void @cmpxchg_i32_release_acquire(i32* %ptr, i32 %cmp, i32 %val) {
+define void @cmpxchg_i32_release_acquire(i32* %ptr, i32 %cmp, i32 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i32_release_acquire:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1848,7 +1848,7 @@ define void @cmpxchg_i32_release_acquire(i32* %ptr, i32 %cmp, i32 %val) {
   ret void
 }
 
-define void @cmpxchg_i32_acq_rel_monotonic(i32* %ptr, i32 %cmp, i32 %val) {
+define void @cmpxchg_i32_acq_rel_monotonic(i32* %ptr, i32 %cmp, i32 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i32_acq_rel_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1900,7 +1900,7 @@ define void @cmpxchg_i32_acq_rel_monotonic(i32* %ptr, i32 %cmp, i32 %val) {
   ret void
 }
 
-define void @cmpxchg_i32_acq_rel_acquire(i32* %ptr, i32 %cmp, i32 %val) {
+define void @cmpxchg_i32_acq_rel_acquire(i32* %ptr, i32 %cmp, i32 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i32_acq_rel_acquire:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1952,7 +1952,7 @@ define void @cmpxchg_i32_acq_rel_acquire(i32* %ptr, i32 %cmp, i32 %val) {
   ret void
 }
 
-define void @cmpxchg_i32_seq_cst_monotonic(i32* %ptr, i32 %cmp, i32 %val) {
+define void @cmpxchg_i32_seq_cst_monotonic(i32* %ptr, i32 %cmp, i32 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i32_seq_cst_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -2004,7 +2004,7 @@ define void @cmpxchg_i32_seq_cst_monotonic(i32* %ptr, i32 %cmp, i32 %val) {
   ret void
 }
 
-define void @cmpxchg_i32_seq_cst_acquire(i32* %ptr, i32 %cmp, i32 %val) {
+define void @cmpxchg_i32_seq_cst_acquire(i32* %ptr, i32 %cmp, i32 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i32_seq_cst_acquire:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -2056,7 +2056,7 @@ define void @cmpxchg_i32_seq_cst_acquire(i32* %ptr, i32 %cmp, i32 %val) {
   ret void
 }
 
-define void @cmpxchg_i32_seq_cst_seq_cst(i32* %ptr, i32 %cmp, i32 %val) {
+define void @cmpxchg_i32_seq_cst_seq_cst(i32* %ptr, i32 %cmp, i32 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i32_seq_cst_seq_cst:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -2108,7 +2108,7 @@ define void @cmpxchg_i32_seq_cst_seq_cst(i32* %ptr, i32 %cmp, i32 %val) {
   ret void
 }
 
-define void @cmpxchg_i64_monotonic_monotonic(i64* %ptr, i64 %cmp, i64 %val) {
+define void @cmpxchg_i64_monotonic_monotonic(i64* %ptr, i64 %cmp, i64 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i64_monotonic_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -2168,7 +2168,7 @@ define void @cmpxchg_i64_monotonic_monotonic(i64* %ptr, i64 %cmp, i64 %val) {
   ret void
 }
 
-define void @cmpxchg_i64_acquire_monotonic(i64* %ptr, i64 %cmp, i64 %val) {
+define void @cmpxchg_i64_acquire_monotonic(i64* %ptr, i64 %cmp, i64 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i64_acquire_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -2228,7 +2228,7 @@ define void @cmpxchg_i64_acquire_monotonic(i64* %ptr, i64 %cmp, i64 %val) {
   ret void
 }
 
-define void @cmpxchg_i64_acquire_acquire(i64* %ptr, i64 %cmp, i64 %val) {
+define void @cmpxchg_i64_acquire_acquire(i64* %ptr, i64 %cmp, i64 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i64_acquire_acquire:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -2288,7 +2288,7 @@ define void @cmpxchg_i64_acquire_acquire(i64* %ptr, i64 %cmp, i64 %val) {
   ret void
 }
 
-define void @cmpxchg_i64_release_monotonic(i64* %ptr, i64 %cmp, i64 %val) {
+define void @cmpxchg_i64_release_monotonic(i64* %ptr, i64 %cmp, i64 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i64_release_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -2348,7 +2348,7 @@ define void @cmpxchg_i64_release_monotonic(i64* %ptr, i64 %cmp, i64 %val) {
   ret void
 }
 
-define void @cmpxchg_i64_release_acquire(i64* %ptr, i64 %cmp, i64 %val) {
+define void @cmpxchg_i64_release_acquire(i64* %ptr, i64 %cmp, i64 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i64_release_acquire:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -2408,7 +2408,7 @@ define void @cmpxchg_i64_release_acquire(i64* %ptr, i64 %cmp, i64 %val) {
   ret void
 }
 
-define void @cmpxchg_i64_acq_rel_monotonic(i64* %ptr, i64 %cmp, i64 %val) {
+define void @cmpxchg_i64_acq_rel_monotonic(i64* %ptr, i64 %cmp, i64 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i64_acq_rel_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -2468,7 +2468,7 @@ define void @cmpxchg_i64_acq_rel_monotonic(i64* %ptr, i64 %cmp, i64 %val) {
   ret void
 }
 
-define void @cmpxchg_i64_acq_rel_acquire(i64* %ptr, i64 %cmp, i64 %val) {
+define void @cmpxchg_i64_acq_rel_acquire(i64* %ptr, i64 %cmp, i64 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i64_acq_rel_acquire:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -2528,7 +2528,7 @@ define void @cmpxchg_i64_acq_rel_acquire(i64* %ptr, i64 %cmp, i64 %val) {
   ret void
 }
 
-define void @cmpxchg_i64_seq_cst_monotonic(i64* %ptr, i64 %cmp, i64 %val) {
+define void @cmpxchg_i64_seq_cst_monotonic(i64* %ptr, i64 %cmp, i64 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i64_seq_cst_monotonic:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -2588,7 +2588,7 @@ define void @cmpxchg_i64_seq_cst_monotonic(i64* %ptr, i64 %cmp, i64 %val) {
   ret void
 }
 
-define void @cmpxchg_i64_seq_cst_acquire(i64* %ptr, i64 %cmp, i64 %val) {
+define void @cmpxchg_i64_seq_cst_acquire(i64* %ptr, i64 %cmp, i64 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i64_seq_cst_acquire:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -2648,7 +2648,7 @@ define void @cmpxchg_i64_seq_cst_acquire(i64* %ptr, i64 %cmp, i64 %val) {
   ret void
 }
 
-define void @cmpxchg_i64_seq_cst_seq_cst(i64* %ptr, i64 %cmp, i64 %val) {
+define void @cmpxchg_i64_seq_cst_seq_cst(i64* %ptr, i64 %cmp, i64 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i64_seq_cst_seq_cst:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16

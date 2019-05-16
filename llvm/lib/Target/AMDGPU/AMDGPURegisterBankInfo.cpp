@@ -770,7 +770,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     if (Size == 1) {
       OpdsMapping[0] = OpdsMapping[1] =
-        OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
+        OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, Size);
       break;
     }
 

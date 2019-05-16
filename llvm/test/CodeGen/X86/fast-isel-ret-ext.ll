@@ -26,7 +26,7 @@ define signext i16 @test4(i32 %y) nounwind {
   %conv = trunc i32 %y to i16
   ret i16 %conv
   ; CHECK-LABEL: test4:
-  ; CHECK: {{(movswl.%.x, %eax|cwtl)}}
+  ; CHECK: {{(movswl.%di, %eax|cwtl)}}
 }
 
 define zeroext i1 @test5(i32 %y) nounwind {
