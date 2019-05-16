@@ -23,7 +23,7 @@ private:
 public:
   explicit DWARFContext(Module &module);
 
-  const DWARFDataExtractor *getOrLoadArangesData();
+  const DWARFDataExtractor &getOrLoadArangesData();
 };
 } // namespace lldb_private
 

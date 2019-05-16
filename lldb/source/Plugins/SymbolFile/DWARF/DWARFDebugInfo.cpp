@@ -44,13 +44,10 @@ llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
   assert(m_dwarf2Data);
 
   m_cu_aranges_up = llvm::make_unique<DWARFDebugAranges>();
-  const DWARFDataExtractor *debug_aranges_data =
+  const DWARFDataExtractor &debug_aranges_data =
       m_context.getOrLoadArangesData();
-  if (debug_aranges_data) {
-    llvm::Error error = m_cu_aranges_up->extract(*debug_aranges_data);
-    if (error)
-      return std::move(error);
-  }
+  if (llvm::Error error = m_cu_aranges_up->extract(debug_aranges_data))
+    return std::move(error);
 
   // Make a list of all CUs represented by the arange data in the file.
   std::set<dw_offset_t> cus_with_data;
