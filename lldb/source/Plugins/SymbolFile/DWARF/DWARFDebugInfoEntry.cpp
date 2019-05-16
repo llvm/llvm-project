@@ -693,16 +693,16 @@ void DWARFDebugInfoEntry::DumpAttribute(
 
   case DW_AT_abstract_origin:
   case DW_AT_specification: {
-    uint64_t abstract_die_offset = form_value.Reference();
+    DWARFDIE abstract_die = form_value.Reference();
     form_value.Dump(s);
-    //  *ostrm_ptr << HEX32 << abstract_die_offset << " ( ";
-    GetName(dwarf2Data, cu, abstract_die_offset, s);
+    //  *ostrm_ptr << HEX32 << abstract_die.GetOffset() << " ( ";
+    GetName(dwarf2Data, abstract_die.GetCU(), abstract_die.GetOffset(), s);
   } break;
 
   case DW_AT_type: {
-    uint64_t type_die_offset = form_value.Reference();
+    DWARFDIE type_die = form_value.Reference();
     s.PutCString(" ( ");
-    AppendTypeName(dwarf2Data, cu, type_die_offset, s);
+    AppendTypeName(dwarf2Data, type_die.GetCU(), type_die.GetOffset(), s);
     s.PutCString(" )");
   } break;
 
@@ -734,13 +734,6 @@ size_t DWARFDebugInfoEntry::GetAttributes(
   const DWARFAbbreviationDeclaration *abbrevDecl = nullptr;
   lldb::offset_t offset = 0;
   if (cu) {
-    if (m_tag != DW_TAG_compile_unit && m_tag != DW_TAG_partial_unit) {
-      SymbolFileDWARFDwo *dwo_symbol_file = cu->GetDwoSymbolFile();
-      if (dwo_symbol_file)
-        return GetAttributes(dwo_symbol_file->GetCompileUnit(),
-                             fixed_form_sizes, attributes, curr_depth);
-    }
-
     dwarf2Data = cu->GetSymbolFileDWARF();
     abbrevDecl = GetAbbreviationDeclarationPtr(dwarf2Data, cu, offset);
   }
@@ -779,9 +772,7 @@ size_t DWARFDebugInfoEntry::GetAttributes(
 
       if ((attr == DW_AT_specification) || (attr == DW_AT_abstract_origin)) {
         if (form_value.ExtractValue(debug_info_data, &offset)) {
-          dw_offset_t die_offset = form_value.Reference();
-          DWARFDIE spec_die =
-              const_cast<DWARFUnit *>(cu)->GetDIE(die_offset);
+          DWARFDIE spec_die = form_value.Reference();
           if (spec_die)
             spec_die.GetAttributes(attributes, curr_depth + 1);
         }
@@ -845,8 +836,7 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
 
   if (check_specification_or_abstract_origin) {
     if (GetAttributeValue(dwarf2Data, cu, DW_AT_specification, form_value)) {
-      DWARFDIE die =
-          const_cast<DWARFUnit *>(cu)->GetDIE(form_value.Reference());
+      DWARFDIE die = form_value.Reference();
       if (die) {
         dw_offset_t die_offset = die.GetDIE()->GetAttributeValue(
             die.GetDWARF(), die.GetCU(), attr, form_value, end_attr_offset_ptr,
@@ -857,8 +847,7 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
     }
 
     if (GetAttributeValue(dwarf2Data, cu, DW_AT_abstract_origin, form_value)) {
-      DWARFDIE die =
-          const_cast<DWARFUnit *>(cu)->GetDIE(form_value.Reference());
+      DWARFDIE die = form_value.Reference();
       if (die) {
         dw_offset_t die_offset = die.GetDIE()->GetAttributeValue(
             die.GetDWARF(), die.GetCU(), attr, form_value, end_attr_offset_ptr,
@@ -920,15 +909,14 @@ uint64_t DWARFDebugInfoEntry::GetAttributeValueAsUnsigned(
 //
 // Get the value of an attribute as reference and fix up and compile unit
 // relative offsets as needed.
-uint64_t DWARFDebugInfoEntry::GetAttributeValueAsReference(
-    SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu,
-    const dw_attr_t attr, uint64_t fail_value,
+DWARFDIE DWARFDebugInfoEntry::GetAttributeValueAsReference(
+    SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu, const dw_attr_t attr,
     bool check_specification_or_abstract_origin) const {
   DWARFFormValue form_value;
   if (GetAttributeValue(dwarf2Data, cu, attr, form_value, nullptr,
                         check_specification_or_abstract_origin))
     return form_value.Reference();
-  return fail_value;
+  return {};
 }
 
 uint64_t DWARFDebugInfoEntry::GetAttributeValueAsAddress(
@@ -1207,8 +1195,9 @@ bool DWARFDebugInfoEntry::AppendTypeName(SymbolFileDWARF *dwarf2Data,
         // Follow the DW_AT_type if possible
         DWARFFormValue form_value;
         if (die.GetAttributeValue(dwarf2Data, cu, DW_AT_type, form_value)) {
-          uint64_t next_die_offset = form_value.Reference();
-          result = AppendTypeName(dwarf2Data, cu, next_die_offset, s);
+          DWARFDIE next_die = form_value.Reference();
+          result = AppendTypeName(dwarf2Data, next_die.GetCU(),
+                                  next_die.GetOffset(), s);
         }
 
         switch (abbrevDecl->Tag()) {
@@ -1353,28 +1342,18 @@ DWARFDebugInfoEntry::GetParentDeclContextDIE(
       }
     }
 
-    dw_offset_t die_offset;
-
-    die_offset =
-        attributes.FormValueAsUnsigned(DW_AT_specification, DW_INVALID_OFFSET);
-    if (die_offset != DW_INVALID_OFFSET) {
-      DWARFDIE spec_die = cu->GetDIE(die_offset);
-      if (spec_die) {
-        DWARFDIE decl_ctx_die = spec_die.GetParentDeclContextDIE();
-        if (decl_ctx_die)
-          return decl_ctx_die;
-      }
+    DWARFDIE spec_die = attributes.FormValueAsReference(DW_AT_specification);
+    if (spec_die) {
+      DWARFDIE decl_ctx_die = spec_die.GetParentDeclContextDIE();
+      if (decl_ctx_die)
+        return decl_ctx_die;
     }
 
-    die_offset = attributes.FormValueAsUnsigned(DW_AT_abstract_origin,
-                                                DW_INVALID_OFFSET);
-    if (die_offset != DW_INVALID_OFFSET) {
-      DWARFDIE abs_die = cu->GetDIE(die_offset);
-      if (abs_die) {
-        DWARFDIE decl_ctx_die = abs_die.GetParentDeclContextDIE();
-        if (decl_ctx_die)
-          return decl_ctx_die;
-      }
+    DWARFDIE abs_die = attributes.FormValueAsReference(DW_AT_abstract_origin);
+    if (abs_die) {
+      DWARFDIE decl_ctx_die = abs_die.GetParentDeclContextDIE();
+      if (decl_ctx_die)
+        return decl_ctx_die;
     }
 
     die = die.GetParent();

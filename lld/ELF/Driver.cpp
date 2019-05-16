@@ -1323,20 +1323,41 @@ template <class ELFT> static void handleLibcall(StringRef Name) {
     Symtab->fetchLazy<ELFT>(Sym);
 }
 
+// Replaces common symbols with defined symbols reside in .bss sections.
+// This function is called after all symbol names are resolved. As a
+// result, the passes after the symbol resolution won't see any
+// symbols of type CommonSymbol.
+static void replaceCommonSymbols() {
+  for (Symbol *Sym : Symtab->getSymbols()) {
+    auto *S = dyn_cast<CommonSymbol>(Sym);
+    if (!S)
+      continue;
+
+    auto *Bss = make<BssSection>("COMMON", S->Size, S->Alignment);
+    Bss->File = S->File;
+    Bss->Live = !Config->GcSections;
+    InputSections.push_back(Bss);
+
+    Defined New(S->File, S->getName(), S->Binding, S->StOther, S->Type,
+                /*Value=*/0, S->Size, Bss);
+    replaceSymbol(S, &New);
+  }
+}
+
 // If all references to a DSO happen to be weak, the DSO is not added
 // to DT_NEEDED. If that happens, we need to eliminate shared symbols
 // created from the DSO. Otherwise, they become dangling references
 // that point to a non-existent DSO.
 static void demoteSharedSymbols() {
   for (Symbol *Sym : Symtab->getSymbols()) {
-    if (auto *S = dyn_cast<SharedSymbol>(Sym)) {
-      if (!S->getFile().IsNeeded) {
-        bool Used = S->Used;
-        replaceSymbol<Undefined>(S, nullptr, S->getName(), STB_WEAK, S->StOther,
-                                 S->Type);
-        S->Used = Used;
-      }
-    }
+    auto *S = dyn_cast<SharedSymbol>(Sym);
+    if (!S || S->getFile().IsNeeded)
+      continue;
+
+    bool Used = S->Used;
+    Undefined New(nullptr, S->getName(), STB_WEAK, S->StOther, S->Type);
+    replaceSymbol(S, &New);
+    S->Used = Used;
   }
 }
 
@@ -1405,8 +1426,8 @@ static void findKeepUniqueSections(opt::InputArgList &Args) {
 }
 
 template <class ELFT> static Symbol *addUndefined(StringRef Name) {
-  return Symtab->addUndefined<ELFT>(Name, STB_GLOBAL, STV_DEFAULT, 0, false,
-                                    nullptr);
+  return Symtab->addUndefined<ELFT>(
+      Undefined{nullptr, Name, STB_GLOBAL, STV_DEFAULT, 0});
 }
 
 // The --wrap option is a feature to rename symbols so that you can write
@@ -1680,6 +1701,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // before mergeSections because the .comment section is a mergeable section.
   if (!Config->Relocatable)
     InputSections.push_back(createCommentSection());
+
+  // Replace common symbols with regular symbols.
+  replaceCommonSymbols();
 
   // Do size optimizations: garbage collection, merging of SHF_MERGE sections
   // and identical code folding.

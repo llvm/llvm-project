@@ -153,8 +153,8 @@ BitcodeCompiler::BitcodeCompiler() {
 BitcodeCompiler::~BitcodeCompiler() = default;
 
 static void undefine(Symbol *S) {
-  replaceSymbol<Undefined>(S, nullptr, S->getName(), STB_GLOBAL, STV_DEFAULT,
-                           S->Type);
+  Undefined New(nullptr, S->getName(), STB_GLOBAL, STV_DEFAULT, S->Type);
+  replaceSymbol(S, &New);
 }
 
 void BitcodeCompiler::add(BitcodeFile &F) {

@@ -246,7 +246,6 @@ bool FormatTokenLexer::tryMergeCSharpNullConditionals() {
       StringRef(Identifier->TokenText.begin(),
                 Question->TokenText.end() - Identifier->TokenText.begin());
   Identifier->ColumnWidth += Question->ColumnWidth;
-  Identifier->Type = Identifier->Type;
   Tokens.erase(Tokens.end() - 1);
   return true;
 }

@@ -191,10 +191,10 @@ macro(test_targets)
       # clang's default CPU's. In the 64-bit case, we must also specify the ABI
       # since the default ABI differs between gcc and clang.
       # FIXME: Ideally, we would build the N32 library too.
-      test_target_arch(mipsel "" "-mips32r2" "-mabi=32")
+      test_target_arch(mipsel "" "-mips32r2" "-mabi=32" "-D_LARGEFILE_SOURCE" "-D_FILE_OFFSET_BITS=64")
       test_target_arch(mips64el "" "-mips64r2" "-mabi=64")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "mips")
-      test_target_arch(mips "" "-mips32r2" "-mabi=32")
+      test_target_arch(mips "" "-mips32r2" "-mabi=32" "-D_LARGEFILE_SOURCE" "-D_FILE_OFFSET_BITS=64")
       test_target_arch(mips64 "" "-mips64r2" "-mabi=64")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "arm")
       if(WIN32)
