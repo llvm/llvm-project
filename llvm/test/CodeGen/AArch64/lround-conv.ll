@@ -1,7 +1,8 @@
 ; RUN: llc < %s -mtriple=aarch64 -mattr=+neon | FileCheck %s
 
 ; CHECK-LABEL: testmsws:
-; CHECK:       bl      lroundf
+; CHECK:       fcvtas  x0, s0
+; CHECK:       ret
 define i32 @testmsws(float %x) {
 entry:
   %0 = tail call i64 @llvm.lround.i64.f32(float %x)
@@ -10,7 +11,8 @@ entry:
 }
 
 ; CHECK-LABEL: testmsxs:
-; CHECK:       b       lroundf
+; CHECK:       fcvtas  x0, s0
+; CHECK-NEXT:  ret
 define i64 @testmsxs(float %x) {
 entry:
   %0 = tail call i64 @llvm.lround.i64.f32(float %x)
@@ -18,7 +20,8 @@ entry:
 }
 
 ; CHECK-LABEL: testmswd:
-; CHECK:       bl      lround
+; CHECK:       fcvtas  x0, d0
+; CHECK:       ret
 define i32 @testmswd(double %x) {
 entry:
   %0 = tail call i64 @llvm.lround.i64.f64(double %x)
@@ -27,7 +30,8 @@ entry:
 }
 
 ; CHECK-LABEL: testmsxd:
-; CHECK:       b       lround
+; CHECK:       fcvtas  x0, d0
+; CHECK-NEXT:  ret
 define i64 @testmsxd(double %x) {
 entry:
   %0 = tail call i64 @llvm.lround.i64.f64(double %x)

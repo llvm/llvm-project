@@ -450,6 +450,9 @@ def ffloor     : SDNode<"ISD::FFLOOR"     , SDTFPUnaryOp>;
 def fnearbyint : SDNode<"ISD::FNEARBYINT" , SDTFPUnaryOp>;
 def fround     : SDNode<"ISD::FROUND"     , SDTFPUnaryOp>;
 
+def lround     : SDNode<"ISD::LROUND"     , SDTFPToIntOp>;
+def llround    : SDNode<"ISD::LLROUND"    , SDTFPToIntOp>;
+
 def fpround    : SDNode<"ISD::FP_ROUND"   , SDTFPRoundOp>;
 def fpextend   : SDNode<"ISD::FP_EXTEND"  , SDTFPExtendOp>;
 def fcopysign  : SDNode<"ISD::FCOPYSIGN"  , SDTFPSignOp>;

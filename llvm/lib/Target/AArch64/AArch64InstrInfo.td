@@ -3083,6 +3083,15 @@ defm : FPToIntegerPats<fp_to_uint, ftrunc, "FCVTZU">;
 defm : FPToIntegerPats<fp_to_sint, fround, "FCVTAS">;
 defm : FPToIntegerPats<fp_to_uint, fround, "FCVTAU">;
 
+def : Pat<(i64 (lround f32:$Rn)),
+          (!cast<Instruction>(FCVTASUXSr) f32:$Rn)>;
+def : Pat<(i64 (lround f64:$Rn)),
+          (!cast<Instruction>(FCVTASUXDr) f64:$Rn)>;
+def : Pat<(i64 (llround f32:$Rn)),
+          (!cast<Instruction>(FCVTASUXSr) f32:$Rn)>;
+def : Pat<(i64 (llround f64:$Rn)),
+          (!cast<Instruction>(FCVTASUXDr) f64:$Rn)>;
+
 //===----------------------------------------------------------------------===//
 // Scaled integer to floating point conversion instructions.
 //===----------------------------------------------------------------------===//
