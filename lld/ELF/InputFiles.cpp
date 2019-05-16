@@ -1291,7 +1291,7 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
   Defined New(&F, Name, Binding, Visibility, Type, 0, 0, nullptr);
   if (CanOmitFromDynSym)
     New.ExportDynamic = false;
-  return Symtab->addBitcode(New);
+  return Symtab->addDefined(New);
 }
 
 template <class ELFT>

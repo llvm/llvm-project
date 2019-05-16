@@ -50,7 +50,6 @@ public:
   Symbol *addShared(const SharedSymbol &New);
   Symbol *addLazyArchive(const LazyArchive &New);
   Symbol *addLazyObject(const LazyObject &New);
-  Symbol *addBitcode(const Defined &New);
   Symbol *addCommon(const CommonSymbol &New);
 
   Symbol *insert(const Symbol &New);

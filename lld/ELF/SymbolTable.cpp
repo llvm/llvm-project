@@ -404,23 +404,6 @@ Symbol *SymbolTable::addShared(const SharedSymbol &New) {
   return Old;
 }
 
-Symbol *SymbolTable::addBitcode(const Defined &New) {
-  Symbol *Old = insert(New);
-  mergeProperties(Old, New);
-
-  if (Old->isPlaceholder()) {
-    replaceSymbol(Old, &New);
-    return Old;
-  }
-
-  int Cmp = compare(Old, &New);
-  if (Cmp > 0)
-    replaceSymbol(Old, &New);
-  else if (Cmp == 0)
-    reportDuplicate(Old, New.File, nullptr, 0);
-  return Old;
-}
-
 Symbol *SymbolTable::find(StringRef Name) {
   auto It = SymMap.find(CachedHashStringRef(Name));
   if (It == SymMap.end())
