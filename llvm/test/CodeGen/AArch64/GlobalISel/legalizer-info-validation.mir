@@ -294,6 +294,9 @@
 # DEBUG-NEXT: G_FABS (opcode {{[0-9]+}}): 1 type index
 # DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
+# DEBUG-NEXT: G_FCOPYSIGN (opcode {{[0-9]+}}): 2 type indices
+# DEBUG:      .. type index coverage check SKIPPED: no rules defined
+#
 # DEBUG-NEXT: G_FCANONICALIZE (opcode {{[0-9]+}}): 1 type index
 # DEBUG: .. type index coverage check SKIPPED: no rules defined
 #

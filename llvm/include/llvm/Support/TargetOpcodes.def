@@ -481,6 +481,12 @@ HANDLE_TARGET_OPCODE(G_UITOFP)
 /// Generic FP absolute value.
 HANDLE_TARGET_OPCODE(G_FABS)
 
+/// FCOPYSIGN(X, Y) - Return the value of X with the sign of Y.  NOTE: This does
+/// not require that X and Y have the same type, just that they are both
+/// floating point. X and the result must have the same type.  FCOPYSIGN(f32,
+/// f64) is allowed.
+HANDLE_TARGET_OPCODE(G_FCOPYSIGN)
+
 /// Generic FP canonicalize value.
 HANDLE_TARGET_OPCODE(G_FCANONICALIZE)
 
