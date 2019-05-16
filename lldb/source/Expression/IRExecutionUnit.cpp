@@ -1023,8 +1023,6 @@ IRExecutionUnit::MemoryManager::getSymbolAddress(const std::string &Name) {
 
 void *IRExecutionUnit::MemoryManager::getPointerToNamedFunction(
     const std::string &Name, bool AbortOnFailure) {
-  static_assert(sizeof(void *) == 8, "");
-
   return (void *)getSymbolAddress(Name);
 }
 
