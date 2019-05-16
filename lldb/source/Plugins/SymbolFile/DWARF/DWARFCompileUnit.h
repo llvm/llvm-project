@@ -34,6 +34,10 @@ public:
   ///     Byte size of the compile unit header
   uint32_t GetHeaderByteSize() const override;
 
+  DIERef::Section GetDebugSection() const override {
+    return DIERef::Section::DebugInfo;
+  }
+
 private:
   DWARFCompileUnit(SymbolFileDWARF *dwarf2Data, lldb::user_id_t uid);
   DISALLOW_COPY_AND_ASSIGN(DWARFCompileUnit);

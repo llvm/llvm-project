@@ -48,8 +48,7 @@ public:
   };
 
   struct DIEInfo {
-    dw_offset_t cu_offset;
-    dw_offset_t offset; // The DIE offset
+    DIERef die_ref;
     dw_tag_t tag;
     uint32_t type_flags;          // Any flags for this DIEInfo
     uint32_t qualified_name_hash; // A 32 bit hash of the fully qualified name
@@ -57,7 +56,7 @@ public:
     DIEInfo();
     DIEInfo(dw_offset_t c, dw_offset_t o, dw_tag_t t, uint32_t f, uint32_t h);
 
-    explicit operator DIERef() const { return {cu_offset, offset}; }
+    explicit operator DIERef() const { return die_ref; }
   };
 
   struct Atom {

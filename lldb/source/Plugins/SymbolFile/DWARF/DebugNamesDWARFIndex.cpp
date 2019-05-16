@@ -55,7 +55,7 @@ DIERef DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
   if (!cu_offset)
     return DIERef();
 
-  DWARFUnit *cu = m_debug_info.GetUnitAtOffset(*cu_offset);
+  DWARFUnit *cu = m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *cu_offset);
   if (!cu)
     return DIERef();
 
@@ -66,7 +66,7 @@ DIERef DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
   uint64_t die_bias = cu->GetDwoSymbolFile() ? 0 : *cu_offset;
 
   if (llvm::Optional<uint64_t> die_offset = entry.getDIEUnitOffset())
-    return DIERef(*cu_offset, die_bias + *die_offset);
+    return DIERef(DIERef::Section::DebugInfo, *cu_offset, die_bias + *die_offset);
 
   return DIERef();
 }
@@ -164,7 +164,8 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(ConstString class_name,
     if (!ref)
       continue;
 
-    DWARFUnit *cu = m_debug_info.GetUnitAtOffset(ref.cu_offset);
+    DWARFUnit *cu =
+        m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, ref.cu_offset);
     if (!cu || !cu->Supports_DW_AT_APPLE_objc_complete_type()) {
       incomplete_types.push_back(ref);
       continue;

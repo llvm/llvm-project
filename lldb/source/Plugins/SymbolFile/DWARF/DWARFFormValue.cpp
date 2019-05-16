@@ -567,7 +567,7 @@ DWARFDIE DWARFFormValue::Reference() const {
   case DW_FORM_ref_addr: {
     DWARFUnit *ref_cu =
         m_unit->GetSymbolFileDWARF()->DebugInfo()->GetUnitContainingDIEOffset(
-            value);
+            DIERef::Section::DebugInfo, value);
     if (!ref_cu) {
       m_unit->GetSymbolFileDWARF()->GetObjectFile()->GetModule()->ReportError(
           "DW_FORM_ref_addr DIE reference 0x%" PRIx64 " has no matching CU",

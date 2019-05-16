@@ -287,10 +287,13 @@ public:
   DWARFDIE GetDIE(lldb::user_id_t uid);
 
   lldb::user_id_t GetUID(const DWARFBaseDIE &die) {
-    return GetID() | die.GetOffset();
+    return GetUID(die.GetDIERef());
   }
 
-  lldb::user_id_t GetUID(const DIERef &ref) { return GetID() | ref.die_offset; }
+  lldb::user_id_t GetUID(const DIERef &ref) {
+    return GetID() | ref.die_offset |
+           (lldb::user_id_t(ref.section == DIERef::Section::DebugTypes) << 63);
+  }
 
   virtual std::unique_ptr<SymbolFileDWARFDwo>
   GetDwoSymbolFileForCompileUnit(DWARFUnit &dwarf_cu,

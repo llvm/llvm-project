@@ -160,5 +160,5 @@ DWARFDIE
 SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref) {
   lldbassert(die_ref.cu_offset == m_base_dwarf_cu->GetOffset() ||
              die_ref.cu_offset == DW_INVALID_OFFSET);
-  return DebugInfo()->GetDIEForDIEOffset(die_ref.die_offset);
+  return DebugInfo()->GetDIEForDIEOffset(die_ref.section, die_ref.die_offset);
 }

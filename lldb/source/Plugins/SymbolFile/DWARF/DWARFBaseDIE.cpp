@@ -24,7 +24,7 @@ DIERef DWARFBaseDIE::GetDIERef() const {
   dw_offset_t cu_offset = m_cu->GetOffset();
   if (m_cu->GetBaseObjOffset() != DW_INVALID_OFFSET)
     cu_offset = m_cu->GetBaseObjOffset();
-  return DIERef(cu_offset, m_die->GetOffset());
+  return DIERef(m_cu->GetDebugSection(), cu_offset, m_die->GetOffset());
 }
 
 dw_tag_t DWARFBaseDIE::Tag() const {

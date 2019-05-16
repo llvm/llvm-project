@@ -167,6 +167,8 @@ public:
     return die_iterator_range(m_die_array.begin(), m_die_array.end());
   }
 
+  virtual DIERef::Section GetDebugSection() const = 0;
+
 protected:
   DWARFUnit(SymbolFileDWARF *dwarf, lldb::user_id_t uid);
 

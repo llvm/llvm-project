@@ -116,26 +116,28 @@ DWARFUnit *DWARFDebugInfo::GetUnitAtIndex(user_id_t idx) {
   return cu;
 }
 
-bool DWARFDebugInfo::OffsetLessThanUnitOffset(dw_offset_t offset,
-                                              const DWARFUnitSP &cu_sp) {
-  return offset < cu_sp->GetOffset();
-}
-
-uint32_t DWARFDebugInfo::FindUnitIndex(dw_offset_t offset) {
+uint32_t DWARFDebugInfo::FindUnitIndex(DIERef::Section section,
+                                       dw_offset_t offset) {
   ParseUnitHeadersIfNeeded();
 
   // llvm::lower_bound is not used as for DIE offsets it would still return
   // index +1 and GetOffset() returning index itself would be a special case.
-  auto pos = llvm::upper_bound(m_units, offset, OffsetLessThanUnitOffset);
+  auto pos = llvm::upper_bound(
+      m_units, std::make_pair(section, offset),
+      [](const std::pair<DIERef::Section, dw_offset_t> &lhs,
+         const DWARFUnitSP &rhs) {
+        return lhs < std::make_pair(rhs->GetDebugSection(), rhs->GetOffset());
+      });
   uint32_t idx = std::distance(m_units.begin(), pos);
   if (idx == 0)
     return DW_INVALID_OFFSET;
   return idx - 1;
 }
 
-DWARFUnit *DWARFDebugInfo::GetUnitAtOffset(dw_offset_t cu_offset,
+DWARFUnit *DWARFDebugInfo::GetUnitAtOffset(DIERef::Section section,
+                                           dw_offset_t cu_offset,
                                            uint32_t *idx_ptr) {
-  uint32_t idx = FindUnitIndex(cu_offset);
+  uint32_t idx = FindUnitIndex(section, cu_offset);
   DWARFUnit *result = GetUnitAtIndex(idx);
   if (result && result->GetOffset() != cu_offset) {
     result = nullptr;
@@ -148,13 +150,15 @@ DWARFUnit *DWARFDebugInfo::GetUnitAtOffset(dw_offset_t cu_offset,
 
 DWARFUnit *DWARFDebugInfo::GetUnit(const DIERef &die_ref) {
   if (die_ref.cu_offset == DW_INVALID_OFFSET)
-    return GetUnitContainingDIEOffset(die_ref.die_offset);
+    return GetUnitContainingDIEOffset(die_ref.section, die_ref.die_offset);
   else
-    return GetUnitAtOffset(die_ref.cu_offset);
+    return GetUnitAtOffset(die_ref.section, die_ref.cu_offset);
 }
 
-DWARFUnit *DWARFDebugInfo::GetUnitContainingDIEOffset(dw_offset_t die_offset) {
-  uint32_t idx = FindUnitIndex(die_offset);
+DWARFUnit *
+DWARFDebugInfo::GetUnitContainingDIEOffset(DIERef::Section section,
+                                           dw_offset_t die_offset) {
+  uint32_t idx = FindUnitIndex(section, die_offset);
   DWARFUnit *result = GetUnitAtIndex(idx);
   if (result && !result->ContainsDIEOffset(die_offset))
     return nullptr;
@@ -162,8 +166,9 @@ DWARFUnit *DWARFDebugInfo::GetUnitContainingDIEOffset(dw_offset_t die_offset) {
 }
 
 DWARFDIE
-DWARFDebugInfo::GetDIEForDIEOffset(dw_offset_t die_offset) {
-  DWARFUnit *cu = GetUnitContainingDIEOffset(die_offset);
+DWARFDebugInfo::GetDIEForDIEOffset(DIERef::Section section,
+                                   dw_offset_t die_offset) {
+  DWARFUnit *cu = GetUnitContainingDIEOffset(section, die_offset);
   if (cu)
     return cu->GetDIE(die_offset);
   return DWARFDIE();
