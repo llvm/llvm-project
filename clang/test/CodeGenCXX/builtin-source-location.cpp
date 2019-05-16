@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -fblocks %s -triple %itanium_abi_triple -emit-llvm -o %t.ll
+// RUN: %clang_cc1 -std=c++2a -fblocks %s -triple x86_64-unknown-unknown -emit-llvm -o %t.ll
 
 #line 8 "builtin-source-location.cpp"
 

@@ -296,7 +296,7 @@ void f24() {
 // CHECK-LABEL: define
 void f25_a(int x = __builtin_LINE()) {}
 void f25() {
-  // CHECK: call void @_Z5f25_ai(i32 2700)
+  // CHECK: call void @_Z5f25_ai(i32 {{(signext )?}}2700)
 #line 2700
   f25_a();
 }
