@@ -1007,7 +1007,7 @@ NativeProcessLinux::SetupSoftwareSingleStepping(NativeThreadLinux &thread) {
       // Arm mode
       error = SetSoftwareBreakpoint(next_pc, 4);
     }
-  } else if (m_arch.IsMIPS() || m_arch.GetMachine() == llvm::Triple::ppc64le)
+  } else if (m_arch.IsMIPS() || m_arch.GetTriple().isPPC64())
     error = SetSoftwareBreakpoint(next_pc, 4);
   else {
     // No size hint is given for the next breakpoint

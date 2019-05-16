@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: llvm-as -o %t1.bc %s
 ; RUN: llvm-as -o %t2.bc %S/Inputs/irmover-warning.ll
 ; RUN: rm -f %t.a
