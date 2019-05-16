@@ -220,7 +220,9 @@ _mm_maskz_cvtneps_pbh(__mmask8 __U, __m128 __A) {
 /// \returns A 128-bit vector of [8 x bfloat] comes from conversion of __A.
 static __inline__ __m128bh __DEFAULT_FN_ATTRS256
 _mm256_cvtneps_pbh(__m256 __A) {
-  return (__m128bh)__builtin_ia32_cvtneps2bf16_256((__v8sf)__A);
+  return (__m128bh)__builtin_ia32_cvtneps2bf16_256_mask((__v8sf)__A,
+                                                  (__v8hi)_mm_undefined_si128(),
+                                                  (__mmask8)-1);
 }
 
 /// Convert Packed Single Data to Packed BF16 Data.
@@ -239,9 +241,9 @@ _mm256_cvtneps_pbh(__m256 __A) {
 /// \returns A 128-bit vector of [8 x bfloat] comes from conversion of __A.
 static __inline__ __m128bh __DEFAULT_FN_ATTRS256
 _mm256_mask_cvtneps_pbh(__m128bh __W, __mmask8 __U, __m256 __A) {
-  return (__m128bh)__builtin_ia32_selectw_128((__mmask8)__U,
-                                              (__v8hi)_mm256_cvtneps_pbh(__A),
-                                              (__v8hi)__W);
+  return (__m128bh)__builtin_ia32_cvtneps2bf16_256_mask((__v8sf)__A,
+                                                        (__v8hi)__W,
+                                                        (__mmask8)__U);
 }
 
 /// Convert Packed Single Data to Packed BF16 Data.
@@ -258,9 +260,9 @@ _mm256_mask_cvtneps_pbh(__m128bh __W, __mmask8 __U, __m256 __A) {
 /// \returns A 128-bit vector of [8 x bfloat] comes from conversion of __A.
 static __inline__ __m128bh __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtneps_pbh(__mmask8 __U, __m256 __A) {
-  return (__m128bh)__builtin_ia32_selectw_128((__mmask8)__U,
-                                              (__v8hi)_mm256_cvtneps_pbh(__A),
-                                              (__v8hi)_mm_setzero_si128());
+  return (__m128bh)__builtin_ia32_cvtneps2bf16_256_mask((__v8sf)__A,
+                                                    (__v8hi)_mm_setzero_si128(),
+                                                    (__mmask8)__U);
 }
 
 /// Dot Product of BF16 Pairs Accumulated into Packed Single Precision.

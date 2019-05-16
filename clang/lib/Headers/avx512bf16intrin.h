@@ -95,7 +95,9 @@ _mm512_maskz_cvtne2ps_pbh(__mmask32 __U, __m512 __A, __m512 __B) {
 /// \returns A 256-bit vector of [16 x bfloat] come from conversion of __A.
 static __inline__ __m256bh __DEFAULT_FN_ATTRS512
 _mm512_cvtneps_pbh(__m512 __A) {
-  return (__m256bh)__builtin_ia32_cvtneps2bf16_512((__v16sf) __A);
+  return (__m256bh)__builtin_ia32_cvtneps2bf16_512_mask((__v16sf)__A,
+                                              (__v16hi)_mm256_undefined_si256(),
+                                              (__mmask16)-1);
 }
 
 /// Convert Packed Single Data to Packed BF16 Data.
@@ -114,9 +116,9 @@ _mm512_cvtneps_pbh(__m512 __A) {
 /// \returns A 256-bit vector of [16 x bfloat] come from conversion of __A.
 static __inline__ __m256bh __DEFAULT_FN_ATTRS512
 _mm512_mask_cvtneps_pbh(__m256bh __W, __mmask16 __U, __m512 __A) {
-  return (__m256bh)__builtin_ia32_selectw_256((__mmask16)__U,
-                                              (__v16hi)_mm512_cvtneps_pbh(__A),
-                                              (__v16hi)__W);
+  return (__m256bh)__builtin_ia32_cvtneps2bf16_512_mask((__v16sf)__A,
+                                                        (__v16hi)__W,
+                                                        (__mmask16)__U);
 }
 
 /// Convert Packed Single Data to Packed BF16 Data.
@@ -133,9 +135,9 @@ _mm512_mask_cvtneps_pbh(__m256bh __W, __mmask16 __U, __m512 __A) {
 /// \returns A 256-bit vector of [16 x bfloat] come from conversion of __A.
 static __inline__ __m256bh __DEFAULT_FN_ATTRS512
 _mm512_maskz_cvtneps_pbh(__mmask16 __U, __m512 __A) {
-  return (__m256bh)__builtin_ia32_selectw_256((__mmask16)__U,
-                                              (__v16hi)_mm512_cvtneps_pbh(__A),
-                                              (__v16hi)_mm256_setzero_si256());
+  return (__m256bh)__builtin_ia32_cvtneps2bf16_512_mask((__v16sf)__A,
+                                                (__v16hi)_mm256_setzero_si256(),
+                                                (__mmask16)__U);
 }
 
 /// Dot Product of BF16 Pairs Accumulated into Packed Single Precision.
