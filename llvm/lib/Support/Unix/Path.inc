@@ -132,8 +132,6 @@ test_dir(char ret[PATH_MAX], const char *dir, const char *bin)
 static char *
 getprogpath(char ret[PATH_MAX], const char *bin)
 {
-  char *pv, *s, *t;
-
   /* First approach: absolute path. */
   if (bin[0] == '/') {
     if (test_dir(ret, "/", bin) == 0)
@@ -152,18 +150,21 @@ getprogpath(char ret[PATH_MAX], const char *bin)
   }
 
   /* Third approach: $PATH */
+  char *pv;
   if ((pv = getenv("PATH")) == nullptr)
     return nullptr;
-  s = pv = strdup(pv);
-  if (!pv)
+  char *s = strdup(pv);
+  if (!s)
     return nullptr;
-  while ((t = strsep(&s, ":")) != nullptr) {
+  char *state;
+  for (char *t = strtok_r(s, ":", &state); t != nullptr;
+       t = strtok_r(nullptr, ":", &state)) {
     if (test_dir(ret, t, bin) == 0) {
-      free(pv);
+      free(s);
       return ret;
     }
   }
-  free(pv);
+  free(s);
   return nullptr;
 }
 #endif // __FreeBSD__ || __NetBSD__ || __FreeBSD_kernel__
