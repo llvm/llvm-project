@@ -50,7 +50,8 @@
 //  L   -> long (e.g. Li for 'long int', Ld for 'long double')
 //  LL  -> long long (e.g. LLi for 'long long int', LLd for __float128)
 //  LLL -> __int128_t (e.g. LLLi)
-//  W   -> int64_t
+//  Z   -> int32_t (require a native 32-bit integer type on the target)
+//  W   -> int64_t (require a native 64-bit integer type on the target)
 //  N   -> 'int' size if target is LP64, 'L' otherwise.
 //  S   -> signed
 //  U   -> unsigned
@@ -418,25 +419,27 @@ BUILTIN(__builtin_clrsb  , "ii"  , "nc")
 BUILTIN(__builtin_clrsbl , "iLi" , "nc")
 BUILTIN(__builtin_clrsbll, "iLLi", "nc")
 
-// FIXME: These type signatures are not correct for targets with int != 32-bits
-// or with ULL != 64-bits.
+// The following builtins rely on that char == 8 bits, short == 16 bits and that
+// there exists native types on the target that are 32- and 64-bits wide, unless
+// these conditions are fulfilled these builtins will operate on a not intended
+// bitwidth.
 BUILTIN(__builtin_bswap16, "UsUs", "nc")
-BUILTIN(__builtin_bswap32, "UiUi", "nc")
-BUILTIN(__builtin_bswap64, "ULLiULLi", "nc")
+BUILTIN(__builtin_bswap32, "UZiUZi", "nc")
+BUILTIN(__builtin_bswap64, "UWiUWi", "nc")
 
 BUILTIN(__builtin_bitreverse8, "UcUc", "nc")
 BUILTIN(__builtin_bitreverse16, "UsUs", "nc")
-BUILTIN(__builtin_bitreverse32, "UiUi", "nc")
-BUILTIN(__builtin_bitreverse64, "ULLiULLi", "nc")
+BUILTIN(__builtin_bitreverse32, "UZiUZi", "nc")
+BUILTIN(__builtin_bitreverse64, "UWiUWi", "nc")
 
 BUILTIN(__builtin_rotateleft8, "UcUcUc", "nc")
 BUILTIN(__builtin_rotateleft16, "UsUsUs", "nc")
-BUILTIN(__builtin_rotateleft32, "UiUiUi", "nc")
-BUILTIN(__builtin_rotateleft64, "ULLiULLiULLi", "nc")
+BUILTIN(__builtin_rotateleft32, "UZiUZiUZi", "nc")
+BUILTIN(__builtin_rotateleft64, "UWiUWiUWi", "nc")
 BUILTIN(__builtin_rotateright8, "UcUcUc", "nc")
 BUILTIN(__builtin_rotateright16, "UsUsUs", "nc")
-BUILTIN(__builtin_rotateright32, "UiUiUi", "nc")
-BUILTIN(__builtin_rotateright64, "ULLiULLiULLi", "nc")
+BUILTIN(__builtin_rotateright32, "UZiUZiUZi", "nc")
+BUILTIN(__builtin_rotateright64, "UWiUWiWi", "nc")
 
 // Random GCC builtins
 BUILTIN(__builtin_constant_p, "i.", "nctu")
