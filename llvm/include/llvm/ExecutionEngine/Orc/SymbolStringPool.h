@@ -157,9 +157,8 @@ struct DenseMapInfo<orc::SymbolStringPtr> {
     return orc::SymbolStringPtr(&orc::SymbolStringPtr::Tombstone);
   }
 
-  static unsigned getHashValue(orc::SymbolStringPtr V) {
-    uintptr_t IV = reinterpret_cast<uintptr_t>(V.S);
-    return unsigned(IV) ^ unsigned(IV >> 9);
+  static unsigned getHashValue(const orc::SymbolStringPtr &V) {
+    return DenseMapInfo<const void *>::getHashValue(V.S);
   }
 
   static bool isEqual(const orc::SymbolStringPtr &LHS,

@@ -2071,8 +2071,10 @@ class LabelSDNode : public SDNode {
 
   MCSymbol *Label;
 
-  LabelSDNode(unsigned Order, const DebugLoc &dl, MCSymbol *L)
-      : SDNode(ISD::EH_LABEL, Order, dl, getSDVTList(MVT::Other)), Label(L) {}
+  LabelSDNode(unsigned Opcode, unsigned Order, const DebugLoc &dl, MCSymbol *L)
+      : SDNode(Opcode, Order, dl, getSDVTList(MVT::Other)), Label(L) {
+    assert(LabelSDNode::classof(this) && "not a label opcode");
+  }
 
 public:
   MCSymbol *getLabel() const { return Label; }

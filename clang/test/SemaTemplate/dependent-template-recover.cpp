@@ -7,7 +7,7 @@ struct X {
 
     t->operator+<U const, 1>(1); // expected-error{{use 'template' keyword to treat 'operator +' as a dependent template name}}
     t->f1<int const, 2>(1); // expected-error{{use 'template' keyword to treat 'f1' as a dependent template name}}
-    t->f1<3, int const>(1); // expected-error{{use 'template' keyword to treat 'f1' as a dependent template name}}
+    t->f1<3, int const>(1); // expected-error{{missing 'template' keyword prior to dependent template name 'f1'}}
 
     T::getAs<U>(); // expected-error{{use 'template' keyword to treat 'getAs' as a dependent template name}}
     t->T::getAs<U>(); // expected-error{{use 'template' keyword to treat 'getAs' as a dependent template name}}
@@ -15,7 +15,7 @@ struct X {
     (*t).f2<N>(); // expected-error{{missing 'template' keyword prior to dependent template name 'f2'}}
     (*t).f2<0>(); // expected-error{{missing 'template' keyword prior to dependent template name 'f2'}}
     T::f2<0>(); // expected-error{{missing 'template' keyword prior to dependent template name 'f2'}}
-    T::f2<0, int>(0); // expected-error{{use 'template' keyword to treat 'f2' as a dependent template name}}
+    T::f2<0, int>(0); // expected-error{{missing 'template' keyword prior to dependent template name 'f2'}}
 
     T::foo<N < 2 || N >= 4>(); // expected-error{{missing 'template' keyword prior to dependent template name 'foo'}}
 
@@ -83,12 +83,12 @@ template<int N, typename T> void f(T t) {
   T::g<mb>(0);
 
   // ... but this one must be a template-id.
-  T::g<mb, int>(0); // expected-error {{use 'template' keyword to treat 'g' as a dependent template name}} expected-error {{no matching function}}
+  T::g<mb, int>(0); // expected-error {{missing 'template' keyword prior to dependent template name 'g'}}
 }
 
 struct Y {
   template <int> void f(int);
-  template <int = 0> static void g(int); // expected-warning 0-1{{extension}} expected-note {{candidate}}
+  template <int = 0> static void g(int); // expected-warning 0-1{{extension}}
 };
 void q() { void (*p)(int) = Y::g; }
 template void f<0>(Y); // expected-note {{in instantiation of}}

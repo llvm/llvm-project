@@ -58,6 +58,11 @@ if (LLVM_ENABLE_SPHINX)
   if (SPHINX_FOUND)
     if (${SPHINX_OUTPUT_HTML})
       add_sphinx_target(html lldb)
+      # Sphinx does not reliably update the custom CSS files, so force
+      # a clean rebuild of the documentation every time.
+      add_custom_target(clean-lldb-html COMMAND "${CMAKE_COMMAND}" -E
+        remove_directory ${CMAKE_CURRENT_BINARY_DIR}/html)
+      add_dependencies(docs-lldb-html clean-lldb-html)
     endif()
   endif()
 endif()

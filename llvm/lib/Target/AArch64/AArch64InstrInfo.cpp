@@ -2959,7 +2959,7 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
                            unsigned DestReg, unsigned SrcReg, int Offset,
                            const TargetInstrInfo *TII,
                            MachineInstr::MIFlag Flag, bool SetNZCV,
-                           bool NeedsWinCFI) {
+                           bool NeedsWinCFI, bool *HasWinCFI) {
   if (DestReg == SrcReg && Offset == 0)
     return;
 
@@ -3004,10 +3004,13 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
         .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, ShiftSize))
         .setMIFlag(Flag);
 
-   if (NeedsWinCFI && SrcReg == AArch64::SP && DestReg == AArch64::SP)
-     BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_StackAlloc))
-         .addImm(ThisVal)
-         .setMIFlag(Flag);
+    if (NeedsWinCFI && SrcReg == AArch64::SP && DestReg == AArch64::SP) {
+      if (HasWinCFI)
+        *HasWinCFI = true;
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_StackAlloc))
+          .addImm(ThisVal)
+          .setMIFlag(Flag);
+    }
 
     SrcReg = DestReg;
     Offset -= ThisVal;
@@ -3023,6 +3026,8 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
   if (NeedsWinCFI) {
     if ((DestReg == AArch64::FP && SrcReg == AArch64::SP) ||
         (SrcReg == AArch64::FP && DestReg == AArch64::SP)) {
+      if (HasWinCFI)
+        *HasWinCFI = true;
       if (Offset == 0)
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_SetFP)).
                 setMIFlag(Flag);
@@ -3030,6 +3035,8 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_AddFP)).
                 addImm(Offset).setMIFlag(Flag);
     } else if (DestReg == AArch64::SP) {
+      if (HasWinCFI)
+        *HasWinCFI = true;
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_StackAlloc)).
               addImm(Offset).setMIFlag(Flag);
     }
