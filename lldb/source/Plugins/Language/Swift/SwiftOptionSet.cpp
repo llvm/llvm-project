@@ -36,7 +36,6 @@ bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
     return false;
 
   return clang_type.IsValid() &&
-         swift_ast_ctx->IsTrivialOptionSetType(clang_type) &&
          swift_ast_ctx->IsImportedType(clang_type, nullptr);
 }
 
@@ -87,33 +86,31 @@ void lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
   SwiftASTContext *swift_ast_ctx =
       llvm::dyn_cast_or_null<SwiftASTContext>(m_type.GetTypeSystem());
 
-  if (swift_ast_ctx && swift_ast_ctx->IsTrivialOptionSetType(m_type)) {
-    CompilerType original_type;
-    if (swift_ast_ctx->IsImportedType(m_type, &original_type)) {
-      clang::EnumDecl *enum_decl = GetAsEnumDecl(original_type);
-      if (enum_decl) {
-        ::swift::ClangImporter *clang_importer =
-            swift_ast_ctx->GetClangImporter();
-        auto iter = enum_decl->enumerator_begin(),
-             end = enum_decl->enumerator_end();
-        for (; iter != end; ++iter) {
-          clang::EnumConstantDecl *case_decl = *iter;
-          if (case_decl) {
-            llvm::APInt case_init_val(case_decl->getInitVal());
-            // extend all cases to 64 bits so that equality check is fast
-            // but if they are larger than 64, I am going to get out of that
-            // case
-            // and then pick it up again as unmatched data at the end
-            if (case_init_val.getBitWidth() < 64)
-              case_init_val = case_init_val.zext(64);
-            if (case_init_val.getBitWidth() > 64)
-              continue;
-            ConstString case_name(
-                GetDisplayCaseName(clang_importer, case_decl));
-            m_cases->push_back({case_init_val, case_name});
-          }
-        }
-      }
+  if (!swift_ast_ctx)
+    return;
+  CompilerType original_type;
+  if (!swift_ast_ctx->IsImportedType(m_type, &original_type))
+    return;
+  clang::EnumDecl *enum_decl = GetAsEnumDecl(original_type);
+  if (!enum_decl)
+    return;
+
+  ::swift::ClangImporter *clang_importer = swift_ast_ctx->GetClangImporter();
+  auto iter = enum_decl->enumerator_begin(), end = enum_decl->enumerator_end();
+  for (; iter != end; ++iter) {
+    clang::EnumConstantDecl *case_decl = *iter;
+    if (case_decl) {
+      llvm::APInt case_init_val(case_decl->getInitVal());
+      // extend all cases to 64 bits so that equality check is fast
+      // but if they are larger than 64, I am going to get out of that
+      // case
+      // and then pick it up again as unmatched data at the end
+      if (case_init_val.getBitWidth() < 64)
+        case_init_val = case_init_val.zext(64);
+      if (case_init_val.getBitWidth() > 64)
+        continue;
+      ConstString case_name(GetDisplayCaseName(clang_importer, case_decl));
+      m_cases->push_back({case_init_val, case_name});
     }
   }
 }
