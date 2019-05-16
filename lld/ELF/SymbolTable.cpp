@@ -87,13 +87,14 @@ static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
 }
 
 // Find an existing symbol or create and insert a new one.
-std::pair<Symbol *, bool> SymbolTable::insertName(StringRef Name) {
+Symbol *SymbolTable::insert(const Symbol &New) {
   // <name>@@<version> means the symbol is the default version. In that
   // case <name>@@<version> will be used to resolve references to <name>.
   //
   // Since this is a hot path, the following string search code is
   // optimized for speed. StringRef::find(char) is much faster than
   // StringRef::find(StringRef).
+  StringRef Name = New.getName();
   size_t Pos = Name.find('@');
   if (Pos != StringRef::npos && Pos + 1 < Name.size() && Name[Pos + 1] == '@')
     Name = Name.take_front(Pos);
@@ -109,70 +110,67 @@ std::pair<Symbol *, bool> SymbolTable::insertName(StringRef Name) {
     Traced = true;
   }
 
-  if (!IsNew)
-    return {SymVector[SymIndex], false};
+  Symbol *Old;
+  if (IsNew) {
+    Old = reinterpret_cast<Symbol *>(make<SymbolUnion>());
+    SymVector.push_back(Old);
 
-  auto *Sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
-  Sym->SymbolKind = Symbol::PlaceholderKind;
-  Sym->Visibility = STV_DEFAULT;
-  Sym->IsUsedInRegularObj = false;
-  Sym->ExportDynamic = false;
-  Sym->CanInline = true;
-  Sym->Traced = Traced;
-  Sym->VersionId = Config->DefaultSymbolVersion;
-  SymVector.push_back(Sym);
-  return {Sym, true};
+    Old->SymbolKind = Symbol::PlaceholderKind;
+    Old->VersionId = Config->DefaultSymbolVersion;
+    Old->Visibility = STV_DEFAULT;
+    Old->IsUsedInRegularObj = false;
+    Old->ExportDynamic = false;
+    Old->CanInline = true;
+    Old->Traced = Traced;
+    Old->ScriptDefined = false;
+  } else {
+    Old = SymVector[SymIndex];
+  }
+
+  return Old;
 }
 
-// Find an existing symbol or create and insert a new one, then apply the given
-// attributes.
-std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name,
-                                              uint8_t Visibility,
-                                              bool CanOmitFromDynSym,
-                                              InputFile *File) {
-  Symbol *S;
-  bool WasInserted;
-  std::tie(S, WasInserted) = insertName(Name);
+// Merge symbol properties.
+//
+// When we have many symbols of the same name, we choose one of them,
+// and that's the result of symbol resolution. However, symbols that
+// were not chosen still affect some symbol properteis.
+void SymbolTable::mergeProperties(Symbol *Old, const Symbol &New) {
+  // Merge symbol properties.
+  Old->ExportDynamic = Old->ExportDynamic || New.ExportDynamic;
+  Old->IsUsedInRegularObj = Old->IsUsedInRegularObj || New.IsUsedInRegularObj;
 
-  // Merge in the new symbol's visibility.
-  S->Visibility = getMinVisibility(S->Visibility, Visibility);
-
-  if (!CanOmitFromDynSym && (Config->Shared || Config->ExportDynamic))
-    S->ExportDynamic = true;
-
-  if (!File || File->kind() == InputFile::ObjKind)
-    S->IsUsedInRegularObj = true;
-
-  return {S, WasInserted};
+  // DSO symbols do not affect visibility in the output.
+  if (!isa<SharedSymbol>(New))
+    Old->Visibility = getMinVisibility(Old->Visibility, New.Visibility);
 }
 
-static uint8_t getVisibility(uint8_t StOther) { return StOther & 3; }
+Symbol *SymbolTable::addUndefined(const Undefined &New) {
+  Symbol *Old = insert(New);
+  mergeProperties(Old, New);
 
-template <class ELFT>
-Symbol *SymbolTable::addUndefined(StringRef Name, uint8_t Binding,
-                                  uint8_t StOther, uint8_t Type,
-                                  bool CanOmitFromDynSym, InputFile *File) {
-  Symbol *S;
-  bool WasInserted;
-  uint8_t Visibility = getVisibility(StOther);
-  std::tie(S, WasInserted) = insert(Name, Visibility, CanOmitFromDynSym, File);
+  if (Old->isPlaceholder()) {
+    replaceSymbol(Old, &New);
+    return Old;
+  }
 
   // An undefined symbol with non default visibility must be satisfied
   // in the same DSO.
-  if (WasInserted || (isa<SharedSymbol>(S) && Visibility != STV_DEFAULT)) {
-    replaceSymbol<Undefined>(S, File, Name, Binding, StOther, Type);
-    return S;
+  if (Old->isShared() && New.Visibility != STV_DEFAULT) {
+    replaceSymbol(Old, &New);
+    return Old;
   }
 
-  if (S->isShared() || S->isLazy() || (S->isUndefined() && Binding != STB_WEAK))
-    S->Binding = Binding;
+  if (Old->isShared() || Old->isLazy() ||
+      (Old->isUndefined() && New.Binding != STB_WEAK))
+    Old->Binding = New.Binding;
 
-  if (S->isLazy()) {
+  if (Old->isLazy()) {
     // An undefined weak will not fetch archive members. See comment on Lazy in
     // Symbols.h for the details.
-    if (Binding == STB_WEAK) {
-      S->Type = Type;
-      return S;
+    if (New.Binding == STB_WEAK) {
+      Old->Type = New.Type;
+      return Old;
     }
 
     // Do extra check for --warn-backrefs.
@@ -225,17 +223,17 @@ Symbol *SymbolTable::addUndefined(StringRef Name, uint8_t Binding,
     // A forms group 0. B form group 1. C and D (including their member object
     // files) form group 2. E forms group 3. I think that you can see how this
     // group assignment rule simulates the traditional linker's semantics.
-    bool Backref =
-        Config->WarnBackrefs && File && S->File->GroupId < File->GroupId;
-    fetchLazy<ELFT>(S);
+    bool Backref = Config->WarnBackrefs && New.File &&
+                   Old->File->GroupId < New.File->GroupId;
+    fetchLazy(Old);
 
     // We don't report backward references to weak symbols as they can be
     // overridden later.
-    if (Backref && !S->isWeak())
-      warn("backward reference detected: " + Name + " in " + toString(File) +
-           " refers to " + toString(S->File));
+    if (Backref && !Old->isWeak())
+      warn("backward reference detected: " + New.getName() + " in " +
+           toString(New.File) + " refers to " + toString(Old->File));
   }
-  return S;
+  return Old;
 }
 
 // Using .symver foo,foo@@VER unfortunately creates two symbols: foo and
@@ -244,96 +242,90 @@ Symbol *SymbolTable::addUndefined(StringRef Name, uint8_t Binding,
 // FIXME: If users can transition to using
 // .symver foo,foo@@@VER
 // we can delete this hack.
-static int compareVersion(Symbol *S, StringRef Name) {
-  bool A = Name.contains("@@");
-  bool B = S->getName().contains("@@");
-  if (A && !B)
-    return 1;
+static int compareVersion(StringRef OldName, StringRef NewName) {
+  bool A = OldName.contains("@@");
+  bool B = NewName.contains("@@");
   if (!A && B)
+    return 1;
+  if (A && !B)
     return -1;
   return 0;
 }
 
-// We have a new defined symbol with the specified binding. Return 1 if the new
-// symbol should win, -1 if the new symbol should lose, or 0 if both symbols are
-// strong defined symbols.
-static int compareDefined(Symbol *S, bool WasInserted, uint8_t Binding,
-                          StringRef Name) {
-  if (WasInserted)
-    return 1;
-  if (!S->isDefined())
-    return 1;
-  if (int R = compareVersion(S, Name))
-    return R;
-  if (Binding == STB_WEAK)
-    return -1;
-  if (S->isWeak())
-    return 1;
-  return 0;
-}
+// Compare two symbols. Return 1 if the new symbol should win, -1 if
+// the new symbol should lose, or 0 if there is a conflict.
+static int compare(const Symbol *Old, const Symbol *New) {
+  assert(New->isDefined() || New->isCommon());
 
-// We have a new non-common defined symbol with the specified binding. Return 1
-// if the new symbol should win, -1 if the new symbol should lose, or 0 if there
-// is a conflict. If the new symbol wins, also update the binding.
-static int compareDefinedNonCommon(Symbol *S, bool WasInserted, uint8_t Binding,
-                                   bool IsAbsolute, uint64_t Value,
-                                   StringRef Name) {
-  if (int Cmp = compareDefined(S, WasInserted, Binding, Name))
+  if (!Old->isDefined() && !Old->isCommon())
+    return 1;
+
+  if (int Cmp = compareVersion(Old->getName(), New->getName()))
     return Cmp;
-  if (auto *R = dyn_cast<Defined>(S)) {
-    if (R->Section && isa<BssSection>(R->Section)) {
-      // Non-common symbols take precedence over common symbols.
-      if (Config->WarnCommon)
-        warn("common " + S->getName() + " is overridden");
-      return 1;
-    }
-    if (R->Section == nullptr && Binding == STB_GLOBAL && IsAbsolute &&
-        R->Value == Value)
-      return -1;
+
+  if (New->isWeak())
+    return -1;
+
+  if (Old->isWeak())
+    return 1;
+
+  if (Old->isCommon() && New->isCommon()) {
+    if (Config->WarnCommon)
+      warn("multiple common of " + Old->getName());
+    return 0;
   }
+
+  if (Old->isCommon()) {
+    if (Config->WarnCommon)
+      warn("common " + Old->getName() + " is overridden");
+    return 1;
+  }
+
+  if (New->isCommon()) {
+    if (Config->WarnCommon)
+      warn("common " + Old->getName() + " is overridden");
+    return -1;
+  }
+
+  auto *OldSym = cast<Defined>(Old);
+  auto *NewSym = cast<Defined>(New);
+
+  if (New->File && isa<BitcodeFile>(New->File))
+    return 0;
+
+  if (!OldSym->Section && !NewSym->Section && OldSym->Value == NewSym->Value &&
+      NewSym->Binding == STB_GLOBAL)
+    return -1;
+
   return 0;
 }
 
-Symbol *SymbolTable::addCommon(StringRef N, uint64_t Size, uint32_t Alignment,
-                               uint8_t Binding, uint8_t StOther, uint8_t Type,
-                               InputFile &File) {
-  Symbol *S;
-  bool WasInserted;
-  std::tie(S, WasInserted) = insert(N, getVisibility(StOther),
-                                    /*CanOmitFromDynSym*/ false, &File);
+Symbol *SymbolTable::addCommon(const CommonSymbol &New) {
+  Symbol *Old = insert(New);
+  mergeProperties(Old, New);
 
-  int Cmp = compareDefined(S, WasInserted, Binding, N);
+  if (Old->isPlaceholder()) {
+    replaceSymbol(Old, &New);
+    return Old;
+  }
+
+  int Cmp = compare(Old, &New);
   if (Cmp < 0)
-    return S;
+    return Old;
 
   if (Cmp > 0) {
-    auto *Bss = make<BssSection>("COMMON", Size, Alignment);
-    Bss->File = &File;
-    Bss->Live = !Config->GcSections;
-    InputSections.push_back(Bss);
-
-    replaceSymbol<Defined>(S, &File, N, Binding, StOther, Type, 0, Size, Bss);
-    return S;
+    replaceSymbol(Old, &New);
+    return Old;
   }
 
-  auto *D = cast<Defined>(S);
-  auto *Bss = dyn_cast_or_null<BssSection>(D->Section);
-  if (!Bss) {
-    // Non-common symbols take precedence over common symbols.
-    if (Config->WarnCommon)
-      warn("common " + S->getName() + " is overridden");
-    return S;
-  }
+  CommonSymbol *OldSym = cast<CommonSymbol>(Old);
 
-  if (Config->WarnCommon)
-    warn("multiple common of " + D->getName());
-
-  Bss->Alignment = std::max(Bss->Alignment, Alignment);
-  if (Size > Bss->Size) {
-    D->File = Bss->File = &File;
-    D->Size = Bss->Size = Size;
+  OldSym->Alignment = std::max(OldSym->Alignment, New.Alignment);
+  if (OldSym->Size < New.Size) {
+    OldSym->File = New.File;
+    OldSym->Size = New.Size;
   }
-  return S;
+  return OldSym;
 }
 
 static void reportDuplicate(Symbol *Sym, InputFile *NewFile,
@@ -371,66 +363,45 @@ static void reportDuplicate(Symbol *Sym, InputFile *NewFile,
   error(Msg);
 }
 
-Defined *SymbolTable::addDefined(StringRef Name, uint8_t StOther, uint8_t Type,
-                                 uint64_t Value, uint64_t Size, uint8_t Binding,
-                                 SectionBase *Section, InputFile *File) {
-  Symbol *S;
-  bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name, getVisibility(StOther),
-                                    /*CanOmitFromDynSym*/ false, File);
-  int Cmp = compareDefinedNonCommon(S, WasInserted, Binding, Section == nullptr,
-                                    Value, Name);
+Symbol *SymbolTable::addDefined(const Defined &New) {
+  Symbol *Old = insert(New);
+  mergeProperties(Old, New);
+
+  if (Old->isPlaceholder()) {
+    replaceSymbol(Old, &New);
+    return Old;
+  }
+
+  int Cmp = compare(Old, &New);
   if (Cmp > 0)
-    replaceSymbol<Defined>(S, File, Name, Binding, StOther, Type, Value, Size,
-                           Section);
+    replaceSymbol(Old, &New);
   else if (Cmp == 0)
-    reportDuplicate(S, File, dyn_cast_or_null<InputSectionBase>(Section),
-                    Value);
-  return cast<Defined>(S);
+    reportDuplicate(Old, New.File,
+                    dyn_cast_or_null<InputSectionBase>(New.Section), New.Value);
+  return Old;
 }
 
-void SymbolTable::addShared(StringRef Name, uint8_t Binding, uint8_t StOther,
-                            uint8_t Type, uint64_t Value, uint64_t Size,
-                            uint32_t Alignment, uint32_t VerdefIndex,
-                            InputFile *File) {
-  // DSO symbols do not affect visibility in the output, so we pass STV_DEFAULT
-  // as the visibility, which will leave the visibility in the symbol table
-  // unchanged.
-  Symbol *S;
-  bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name, STV_DEFAULT,
-                                    /*CanOmitFromDynSym*/ true, File);
+Symbol *SymbolTable::addShared(const SharedSymbol &New) {
+  Symbol *Old = insert(New);
+  mergeProperties(Old, New);
+
   // Make sure we preempt DSO symbols with default visibility.
-  if (getVisibility(StOther) == STV_DEFAULT)
-    S->ExportDynamic = true;
+  if (New.Visibility == STV_DEFAULT)
+    Old->ExportDynamic = true;
 
-  // An undefined symbol with non default visibility must be satisfied
-  // in the same DSO.
-  auto Replace = [&](uint8_t Binding) {
-    replaceSymbol<SharedSymbol>(S, *File, Name, Binding, StOther, Type, Value,
-                                Size, Alignment, VerdefIndex);
-  };
+  if (Old->isPlaceholder()) {
+    replaceSymbol(Old, &New);
+    return Old;
+  }
 
-  if (WasInserted)
-    Replace(Binding);
-  else if (S->Visibility == STV_DEFAULT && (S->isUndefined() || S->isLazy()))
-    Replace(S->Binding);
-}
-
-Symbol *SymbolTable::addBitcode(StringRef Name, uint8_t Binding,
-                                uint8_t StOther, uint8_t Type,
-                                bool CanOmitFromDynSym, BitcodeFile &F) {
-  Symbol *S;
-  bool WasInserted;
-  std::tie(S, WasInserted) =
-      insert(Name, getVisibility(StOther), CanOmitFromDynSym, &F);
-  int Cmp = compareDefinedNonCommon(S, WasInserted, Binding,
-                                    /*IsAbs*/ false, /*Value*/ 0, Name);
-  if (Cmp > 0)
-    replaceSymbol<Defined>(S, &F, Name, Binding, StOther, Type, 0, 0, nullptr);
-  else if (Cmp == 0)
-    reportDuplicate(S, &F, nullptr, 0);
-  return S;
+  if (Old->Visibility == STV_DEFAULT && (Old->isUndefined() || Old->isLazy())) {
+    // An undefined symbol with non default visibility must be satisfied
+    // in the same DSO.
+    uint8_t Binding = Old->Binding;
+    replaceSymbol(Old, &New);
+    Old->Binding = Binding;
+  }
+  return Old;
 }
 
 Symbol *SymbolTable::find(StringRef Name) {
@@ -442,65 +413,51 @@ Symbol *SymbolTable::find(StringRef Name) {
   return SymVector[It->second];
 }
 
-template <class ELFT>
-void SymbolTable::addLazyArchive(StringRef Name, ArchiveFile &File,
-                                 const object::Archive::Symbol Sym) {
-  Symbol *S;
-  bool WasInserted;
-  std::tie(S, WasInserted) = insertName(Name);
-  if (WasInserted) {
-    replaceSymbol<LazyArchive>(S, File, STT_NOTYPE, Sym);
-    return;
+template <class LazyT> Symbol *SymbolTable::addLazy(const LazyT &New) {
+  Symbol *Old = insert(New);
+  mergeProperties(Old, New);
+
+  if (Old->isPlaceholder()) {
+    replaceSymbol(Old, &New);
+    return Old;
   }
-  if (!S->isUndefined())
-    return;
+
+  if (!Old->isUndefined())
+    return Old;
 
   // An undefined weak will not fetch archive members. See comment on Lazy in
   // Symbols.h for the details.
-  if (S->isWeak()) {
-    replaceSymbol<LazyArchive>(S, File, S->Type, Sym);
-    S->Binding = STB_WEAK;
-    return;
+  if (Old->isWeak()) {
+    uint8_t Type = Old->Type;
+    replaceSymbol(Old, &New);
+    Old->Type = Type;
+    Old->Binding = STB_WEAK;
+    return Old;
   }
 
-  if (InputFile *F = File.fetch(Sym))
-    parseFile<ELFT>(F);
+  if (InputFile *F = New.fetch())
+    parseFile(F);
+  return Old;
 }
 
-template <class ELFT>
-void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &File) {
-  Symbol *S;
-  bool WasInserted;
-  std::tie(S, WasInserted) = insertName(Name);
-  if (WasInserted) {
-    replaceSymbol<LazyObject>(S, File, STT_NOTYPE, Name);
-    return;
-  }
-  if (!S->isUndefined())
-    return;
-
-  // An undefined weak will not fetch archive members. See comment on Lazy in
-  // Symbols.h for the details.
-  if (S->isWeak()) {
-    replaceSymbol<LazyObject>(S, File, S->Type, Name);
-    S->Binding = STB_WEAK;
-    return;
-  }
-
-  if (InputFile *F = File.fetch())
-    parseFile<ELFT>(F);
+Symbol *SymbolTable::addLazyArchive(const LazyArchive &New) {
+  return addLazy(New);
 }
 
-template <class ELFT> void SymbolTable::fetchLazy(Symbol *Sym) {
+Symbol *SymbolTable::addLazyObject(const LazyObject &New) {
+  return addLazy(New);
+}
+
+void SymbolTable::fetchLazy(Symbol *Sym) {
   if (auto *S = dyn_cast<LazyArchive>(Sym)) {
     if (InputFile *File = S->fetch())
-      parseFile<ELFT>(File);
+      parseFile(File);
     return;
   }
 
   auto *S = cast<LazyObject>(Sym);
   if (InputFile *File = cast<LazyObjFile>(S->File)->fetch())
-    parseFile<ELFT>(File);
+    parseFile(File);
 }
 
 // Initialize DemangledSyms with a map from demangled symbols to symbol
@@ -520,7 +477,7 @@ StringMap<std::vector<Symbol *>> &SymbolTable::getDemangledSyms() {
   if (!DemangledSyms) {
     DemangledSyms.emplace();
     for (Symbol *Sym : SymVector) {
-      if (!Sym->isDefined())
+      if (!Sym->isDefined() && !Sym->isCommon())
         continue;
       if (Optional<std::string> S = demangleItanium(Sym->getName()))
         (*DemangledSyms)[*S].push_back(Sym);
@@ -535,7 +492,7 @@ std::vector<Symbol *> SymbolTable::findByVersion(SymbolVersion Ver) {
   if (Ver.IsExternCpp)
     return getDemangledSyms().lookup(Ver.Name);
   if (Symbol *B = find(Ver.Name))
-    if (B->isDefined())
+    if (B->isDefined() || B->isCommon())
       return {B};
   return {};
 }
@@ -552,7 +509,7 @@ std::vector<Symbol *> SymbolTable::findAllByVersion(SymbolVersion Ver) {
   }
 
   for (Symbol *Sym : SymVector)
-    if (Sym->isDefined() && M.match(Sym->getName()))
+    if ((Sym->isDefined() || Sym->isCommon()) && M.match(Sym->getName()))
       Res.push_back(Sym);
   return Res;
 }
@@ -664,39 +621,7 @@ void SymbolTable::scanVersionScript() {
     Sym->parseSymbolVersion();
 }
 
-template Symbol *SymbolTable::addUndefined<ELF32LE>(StringRef, uint8_t, uint8_t,
-                                                    uint8_t, bool, InputFile *);
-template Symbol *SymbolTable::addUndefined<ELF32BE>(StringRef, uint8_t, uint8_t,
-                                                    uint8_t, bool, InputFile *);
-template Symbol *SymbolTable::addUndefined<ELF64LE>(StringRef, uint8_t, uint8_t,
-                                                    uint8_t, bool, InputFile *);
-template Symbol *SymbolTable::addUndefined<ELF64BE>(StringRef, uint8_t, uint8_t,
-                                                    uint8_t, bool, InputFile *);
-
 template void SymbolTable::addCombinedLTOObject<ELF32LE>();
 template void SymbolTable::addCombinedLTOObject<ELF32BE>();
 template void SymbolTable::addCombinedLTOObject<ELF64LE>();
 template void SymbolTable::addCombinedLTOObject<ELF64BE>();
-
-template void
-SymbolTable::addLazyArchive<ELF32LE>(StringRef, ArchiveFile &,
-                                     const object::Archive::Symbol);
-template void
-SymbolTable::addLazyArchive<ELF32BE>(StringRef, ArchiveFile &,
-                                     const object::Archive::Symbol);
-template void
-SymbolTable::addLazyArchive<ELF64LE>(StringRef, ArchiveFile &,
-                                     const object::Archive::Symbol);
-template void
-SymbolTable::addLazyArchive<ELF64BE>(StringRef, ArchiveFile &,
-                                     const object::Archive::Symbol);
-
-template void SymbolTable::addLazyObject<ELF32LE>(StringRef, LazyObjFile &);
-template void SymbolTable::addLazyObject<ELF32BE>(StringRef, LazyObjFile &);
-template void SymbolTable::addLazyObject<ELF64LE>(StringRef, LazyObjFile &);
-template void SymbolTable::addLazyObject<ELF64BE>(StringRef, LazyObjFile &);
-
-template void SymbolTable::fetchLazy<ELF32LE>(Symbol *);
-template void SymbolTable::fetchLazy<ELF32BE>(Symbol *);
-template void SymbolTable::fetchLazy<ELF64LE>(Symbol *);
-template void SymbolTable::fetchLazy<ELF64BE>(Symbol *);

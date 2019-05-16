@@ -471,6 +471,18 @@ Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
   return Error::success();
 }
 
+Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
+                                            AnnotationSym &Annot) {
+
+  error(IO.mapInteger(Annot.CodeOffset));
+  error(IO.mapInteger(Annot.Segment));
+  error(IO.mapVectorN<uint16_t>(
+      Annot.Strings,
+      [](CodeViewRecordIO &IO, StringRef &S) { return IO.mapStringZ(S); }));
+
+  return Error::success();
+}
+
 RegisterId codeview::decodeFramePtrReg(EncodedFramePtrReg EncodedReg,
                                        CPUType CPU) {
   assert(unsigned(EncodedReg) < 4);

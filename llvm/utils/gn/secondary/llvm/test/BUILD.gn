@@ -65,6 +65,8 @@ write_lit_config("lit_site_cfg") {
     "TARGETS_TO_BUILD=$llvm_targets_to_build_string",
     "TARGET_TRIPLE=$llvm_target_triple",
 
+    "LLVM_LIBCXX_USED=0",
+
     # No bindings are implemented in the GN build.
     "LLVM_BINDINGS=",
 

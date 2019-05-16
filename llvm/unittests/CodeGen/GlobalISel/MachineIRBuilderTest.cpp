@@ -19,6 +19,10 @@ TEST_F(GISelMITest, TestBuildConstantFConstant) {
   B.buildConstant(LLT::vector(2, 32), 99);
   B.buildFConstant(LLT::vector(2, 32), 2.0);
 
+  // Test APFloat overload.
+  APFloat KVal(APFloat::IEEEdouble(), "4.0");
+  B.buildFConstant(LLT::scalar(64), KVal);
+
   auto CheckStr = R"(
   CHECK: [[CONST0:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
   CHECK: [[FCONST0:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
@@ -26,6 +30,7 @@ TEST_F(GISelMITest, TestBuildConstantFConstant) {
   CHECK: [[VEC0:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[CONST1]]:_(s32), [[CONST1]]:_(s32)
   CHECK: [[FCONST1:%[0-9]+]]:_(s32) = G_FCONSTANT float 2.000000e+00
   CHECK: [[VEC1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FCONST1]]:_(s32), [[FCONST1]]:_(s32)
+  CHECK: [[FCONST2:%[0-9]+]]:_(s64) = G_FCONSTANT double 4.000000e+00
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -106,6 +111,34 @@ TEST_F(GISelMITest, BuildUnmerge) {
   ; CHECK: [[UNMERGE32_0:%[0-9]+]]:_(s32), [[UNMERGE32_1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY0]]
   ; CHECK: [[UNMERGE16_0:%[0-9]+]]:_(s16), [[UNMERGE16_1:%[0-9]+]]:_(s16), [[UNMERGE16_2:%[0-9]+]]:_(s16), [[UNMERGE16_3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY1]]
 
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, TestBuildFPInsts) {
+  if (!TM)
+    return;
+
+  SmallVector<unsigned, 4> Copies;
+  collectCopies(Copies, MF);
+
+  LLT S64 = LLT::scalar(64);
+
+  B.buildFAdd(S64, Copies[0], Copies[1]);
+  B.buildFSub(S64, Copies[0], Copies[1]);
+  B.buildFNeg(S64, Copies[0]);
+  B.buildFAbs(S64, Copies[0]);
+  B.buildFCopysign(S64, Copies[0], Copies[1]);
+
+  auto CheckStr = R"(
+  ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[COPY0]]:_, [[COPY1]]:_
+  ; CHECK: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[COPY0]]:_, [[COPY1]]:_
+  ; CHECK: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[COPY0]]:_
+  ; CHECK: [[FABS:%[0-9]+]]:_(s64) = G_FABS [[COPY0]]:_
+  ; CHECK: [[FCOPYSIGN:%[0-9]+]]:_(s64) = G_FCOPYSIGN [[COPY0]]:_, [[COPY1]]:_
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;

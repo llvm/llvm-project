@@ -782,6 +782,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_FEXP2;
     case Intrinsic::fabs:
       return TargetOpcode::G_FABS;
+    case Intrinsic::copysign:
+      return TargetOpcode::G_FCOPYSIGN;
     case Intrinsic::canonicalize:
       return TargetOpcode::G_FCANONICALIZE;
     case Intrinsic::floor:

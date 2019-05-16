@@ -19,6 +19,7 @@ class DWARFUnit;
 class DWARFDebugInfoEntry;
 class DWARFDeclContext;
 class SymbolFileDWARF;
+class DWARFDIE;
 
 class DWARFBaseDIE {
 public:
@@ -112,9 +113,6 @@ public:
 
   uint64_t GetAttributeValueAsUnsigned(const dw_attr_t attr,
                                        uint64_t fail_value) const;
-
-  uint64_t GetAttributeValueAsReference(const dw_attr_t attr,
-                                        uint64_t fail_value) const;
 
   uint64_t GetAttributeValueAsAddress(const dw_attr_t attr,
                                       uint64_t fail_value) const;

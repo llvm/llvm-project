@@ -103,9 +103,8 @@ public:
       const dw_attr_t attr, uint64_t fail_value,
       bool check_specification_or_abstract_origin = false) const;
 
-  uint64_t GetAttributeValueAsReference(
-      SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu,
-      const dw_attr_t attr, uint64_t fail_value,
+  DWARFDIE GetAttributeValueAsReference(
+      SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu, const dw_attr_t attr,
       bool check_specification_or_abstract_origin = false) const;
 
   uint64_t GetAttributeValueAsAddress(

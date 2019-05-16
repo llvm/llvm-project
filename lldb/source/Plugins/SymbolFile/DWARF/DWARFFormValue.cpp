@@ -11,8 +11,9 @@
 #include "lldb/Core/dwarf.h"
 #include "lldb/Utility/Stream.h"
 
-#include "DWARFUnit.h"
+#include "DWARFDebugInfo.h"
 #include "DWARFFormValue.h"
+#include "DWARFUnit.h"
 
 class DWARFUnit;
 
@@ -544,7 +545,7 @@ dw_addr_t DWARFFormValue::Address() const {
   return symbol_file->get_debug_addr_data().GetMaxU64(&offset, index_size);
 }
 
-uint64_t DWARFFormValue::Reference() const {
+DWARFDIE DWARFFormValue::Reference() const {
   uint64_t value = m_value.value.uval;
   switch (m_form) {
   case DW_FORM_ref1:
@@ -554,15 +555,30 @@ uint64_t DWARFFormValue::Reference() const {
   case DW_FORM_ref_udata:
     assert(m_unit); // Unit must be valid for DW_FORM_ref forms that are compile
                     // unit relative or we will get this wrong
-    return value + m_unit->GetOffset();
+    value += m_unit->GetOffset();
+    if (!m_unit->ContainsDIEOffset(value)) {
+      m_unit->GetSymbolFileDWARF()->GetObjectFile()->GetModule()->ReportError(
+          "DW_FORM_ref* DIE reference 0x%" PRIx64 " is outside of its CU",
+          value);
+      return {};
+    }
+    return const_cast<DWARFUnit *>(m_unit)->GetDIE(value);
 
-  case DW_FORM_ref_addr:
-  case DW_FORM_ref_sig8:
-  case DW_FORM_GNU_ref_alt:
-    return value;
+  case DW_FORM_ref_addr: {
+    DWARFUnit *ref_cu =
+        m_unit->GetSymbolFileDWARF()->DebugInfo()->GetUnitContainingDIEOffset(
+            value);
+    if (!ref_cu) {
+      m_unit->GetSymbolFileDWARF()->GetObjectFile()->GetModule()->ReportError(
+          "DW_FORM_ref_addr DIE reference 0x%" PRIx64 " has no matching CU",
+          value);
+      return {};
+    }
+    return ref_cu->GetDIE(value);
+  }
 
   default:
-    return DW_INVALID_OFFSET;
+    return {};
   }
 }
 
@@ -689,8 +705,8 @@ int DWARFFormValue::Compare(const DWARFFormValue &a_value,
   case DW_FORM_ref4:
   case DW_FORM_ref8:
   case DW_FORM_ref_udata: {
-    uint64_t a = a_value.Reference();
-    uint64_t b = b_value.Reference();
+    uint64_t a = a_value.m_value.value.uval;
+    uint64_t b = b_value.m_value.value.uval;
     if (a < b)
       return -1;
     if (a > b)
