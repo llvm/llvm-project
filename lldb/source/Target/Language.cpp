@@ -273,6 +273,24 @@ bool Language::LanguageIsC(LanguageType language) {
   }
 }
 
+bool Language::LanguageIsCFamily(LanguageType language) {
+  switch (language) {
+  case eLanguageTypeC:
+  case eLanguageTypeC89:
+  case eLanguageTypeC99:
+  case eLanguageTypeC11:
+  case eLanguageTypeC_plus_plus:
+  case eLanguageTypeC_plus_plus_03:
+  case eLanguageTypeC_plus_plus_11:
+  case eLanguageTypeC_plus_plus_14:
+  case eLanguageTypeObjC_plus_plus:
+  case eLanguageTypeObjC:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool Language::LanguageIsPascal(LanguageType language) {
   switch (language) {
   case eLanguageTypePascal83:

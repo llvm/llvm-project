@@ -1115,17 +1115,11 @@ const char *ValueObject::GetObjectDescription() {
   if (const char *desc = get_object_description(native_language))
     return desc;
 
-  switch (native_language) {
-  case eLanguageTypeC:
-  case eLanguageTypeC_plus_plus:
-  case eLanguageTypeObjC:
-  case eLanguageTypeObjC_plus_plus:
-    // Try the Objective-C language runtime. This fallback is necessary
-    // for Objective-C++ and mixed Objective-C / C++ programs.
+  // Try the Objective-C language runtime. This fallback is necessary
+  // for Objective-C++ and mixed Objective-C / C++ programs.
+  if (Language::LanguageIsCFamily(native_language))
     return get_object_description(eLanguageTypeObjC);
-  default:
-    return nullptr;
-  }
+  return nullptr;
 }
 
 bool ValueObject::GetValueAsCString(const lldb_private::TypeFormatImpl &format,
