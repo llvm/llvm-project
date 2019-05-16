@@ -216,7 +216,7 @@ unsigned PPCMCCodeEmitter::getTLSRegEncoding(const MCInst &MI, unsigned OpNo,
   Fixups.push_back(MCFixup::create(0, MO.getExpr(),
                                    (MCFixupKind)PPC::fixup_ppc_nofixup));
   const Triple &TT = STI.getTargetTriple();
-  bool isPPC64 = TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le;
+  bool isPPC64 = TT.isPPC64();
   return CTX.getRegisterInfo()->getEncodingValue(isPPC64 ? PPC::X13 : PPC::R2);
 }
 
