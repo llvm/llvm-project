@@ -403,14 +403,7 @@ MmapArgList PlatformLinux::GetMmapArgumentList(const ArchSpec &arch,
                                                unsigned prot, unsigned flags,
                                                addr_t fd, addr_t offset) {
   uint64_t flags_platform = 0;
-  uint64_t map_anon = MAP_ANON;
-
-  // To get correct flags for MIPS Architecture
-  if (arch.GetTriple().getArch() == llvm::Triple::mips64 ||
-      arch.GetTriple().getArch() == llvm::Triple::mips64el ||
-      arch.GetTriple().getArch() == llvm::Triple::mips ||
-      arch.GetTriple().getArch() == llvm::Triple::mipsel)
-    map_anon = 0x800;
+  uint64_t map_anon = arch.IsMIPS() ? 0x800 : MAP_ANON;
 
   if (flags & eMmapFlagsPrivate)
     flags_platform |= MAP_PRIVATE;

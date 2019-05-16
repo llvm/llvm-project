@@ -23,18 +23,18 @@ define zeroext i1 @opeq1(
 ; X86-NEXT:    [[TMP3:%.*]] = load i32, i32* [[SECOND2_I]], align 4
 ; X86-NEXT:    call void (...) @foo()
 ; X86-NEXT:    [[CMP2_I:%.*]] = icmp eq i32 [[TMP2]], [[TMP3]]
-; X86-NEXT:    br i1 [[CMP2_I]], label [[LAND_RHS_I_2:%.*]], label [[OPEQ1_EXIT]]
-; X86:       land.rhs.i.2:
-; X86-NEXT:    [[THIRD_I:%.*]] = getelementptr inbounds [[S]], %S* [[A]], i64 0, i32 2
-; X86-NEXT:    [[THIRD2_I:%.*]] = getelementptr inbounds [[S]], %S* [[B]], i64 0, i32 2
-; X86-NEXT:    [[CSTR:%.*]] = bitcast i32* [[THIRD_I]] to i8*
-; X86-NEXT:    [[CSTR1:%.*]] = bitcast i32* [[THIRD2_I]] to i8*
+; X86-NEXT:    br i1 [[CMP2_I]], label %"land.rhs.i.2+land.rhs.i.3", label [[OPEQ1_EXIT]]
+; X86:       "land.rhs.i.2+land.rhs.i.3":
+; X86-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[S]], %S* [[A]], i64 0, i32 2
+; X86-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[S]], %S* [[B]], i64 0, i32 2
+; X86-NEXT:    [[CSTR:%.*]] = bitcast i32* [[TMP4]] to i8*
+; X86-NEXT:    [[CSTR1:%.*]] = bitcast i32* [[TMP5]] to i8*
 ; X86-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* [[CSTR]], i8* [[CSTR1]], i64 8)
-; X86-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[MEMCMP]], 0
+; X86-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; X86-NEXT:    br label [[OPEQ1_EXIT]]
 ; X86:       opeq1.exit:
-; X86-NEXT:    [[TMP5:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ false, [[LAND_RHS_I]] ], [ [[TMP4]], [[LAND_RHS_I_2]] ]
-; X86-NEXT:    ret i1 [[TMP5]]
+; X86-NEXT:    [[TMP7:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ false, [[LAND_RHS_I]] ], [ [[TMP6]], %"land.rhs.i.2+land.rhs.i.3" ]
+; X86-NEXT:    ret i1 [[TMP7]]
 ;
   %S* nocapture readonly dereferenceable(16) %a,
   %S* nocapture readonly dereferenceable(16) %b) local_unnamed_addr #0 {

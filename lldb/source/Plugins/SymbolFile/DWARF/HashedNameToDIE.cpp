@@ -78,8 +78,7 @@ void DWARFMappedHash::ExtractClassOrStructDIEArray(
           return;
         } else {
           // Put the one true definition as the first entry so it matches first
-          die_offsets.emplace(die_offsets.begin(), die_info_array[i].cu_offset,
-                              die_info_array[i].offset);
+          die_offsets.emplace(die_offsets.begin(), die_info_array[i]);
         }
       } else {
         die_offsets.emplace_back(die_info_array[i]);
@@ -119,12 +118,12 @@ const char *DWARFMappedHash::GetAtomTypeName(uint16_t atom) {
 }
 
 DWARFMappedHash::DIEInfo::DIEInfo()
-    : cu_offset(DW_INVALID_OFFSET), offset(DW_INVALID_OFFSET), tag(0),
-      type_flags(0), qualified_name_hash(0) {}
+    : tag(0), type_flags(0), qualified_name_hash(0) {}
 
 DWARFMappedHash::DIEInfo::DIEInfo(dw_offset_t c, dw_offset_t o, dw_tag_t t,
                                   uint32_t f, uint32_t h)
-    : cu_offset(c), offset(o), tag(t), type_flags(f), qualified_name_hash(h) {}
+    : die_ref(DIERef::Section::DebugInfo, c, o), tag(t), type_flags(f),
+      qualified_name_hash(h) {}
 
 DWARFMappedHash::Prologue::Prologue(dw_offset_t _die_base_offset)
     : die_base_offset(_die_base_offset), atoms(), atom_mask(0),
@@ -272,7 +271,7 @@ bool DWARFMappedHash::Header::Read(const lldb_private::DWARFDataExtractor &data,
 
     switch (header_data.atoms[i].type) {
     case eAtomTypeDIEOffset: // DIE offset, check form for encoding
-      hash_data.offset =
+      hash_data.die_ref.die_offset =
           DWARFFormValue::IsDataForm(form_value.Form())
               ? form_value.Unsigned()
               : form_value.Reference(header_data.die_base_offset);
@@ -507,10 +506,10 @@ size_t DWARFMappedHash::MemoryTable::AppendAllDIEsInRange(
       for (uint32_t i = 0; i < count; ++i) {
         DIEInfo die_info;
         if (m_header.Read(m_data, &hash_data_offset, die_info)) {
-          if (die_info.offset == 0)
+          if (die_info.die_ref.die_offset == 0)
             done = true;
-          if (die_offset_start <= die_info.offset &&
-              die_info.offset < die_offset_end)
+          if (die_offset_start <= die_info.die_ref.die_offset &&
+              die_info.die_ref.die_offset < die_offset_end)
             die_info_array.push_back(die_info);
         }
       }

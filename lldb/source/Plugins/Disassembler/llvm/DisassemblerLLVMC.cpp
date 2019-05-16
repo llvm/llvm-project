@@ -1178,10 +1178,7 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
     break;
   }
 
-  if (triple.getArch() == llvm::Triple::mips ||
-      triple.getArch() == llvm::Triple::mipsel ||
-      triple.getArch() == llvm::Triple::mips64 ||
-      triple.getArch() == llvm::Triple::mips64el) {
+  if (arch.IsMIPS()) {
     uint32_t arch_flags = arch.GetFlags();
     if (arch_flags & ArchSpec::eMIPSAse_msa)
       features_str += "+msa,";
@@ -1219,10 +1216,7 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
     if (!m_alternate_disasm_up)
       m_disasm_up.reset();
 
-  } else if (llvm_arch == llvm::Triple::mips ||
-             llvm_arch == llvm::Triple::mipsel ||
-             llvm_arch == llvm::Triple::mips64 ||
-             llvm_arch == llvm::Triple::mips64el) {
+  } else if (arch.IsMIPS()) {
     /* Create alternate disassembler for MIPS16 and microMIPS */
     uint32_t arch_flags = arch.GetFlags();
     if (arch_flags & ArchSpec::eMIPSAse_mips16)

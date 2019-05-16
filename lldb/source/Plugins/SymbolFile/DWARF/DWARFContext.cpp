@@ -13,31 +13,32 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static const DWARFDataExtractor *
-LoadOrGetSection(Module &module, SectionType section_type,
-                 llvm::Optional<DWARFDataExtractor> &extractor) {
-  if (extractor.hasValue())
-    return extractor->GetByteSize() > 0 ? extractor.getPointer() : nullptr;
-
-  // Initialize to an empty extractor so that we always take the fast path going
-  // forward.
-  extractor.emplace();
-
-  const SectionList *section_list = module.GetSectionList();
+static DWARFDataExtractor LoadSection(Module &module,
+                                      SectionType section_type) {
+  SectionList *section_list = module.GetSectionList();
   if (!section_list)
-    return nullptr;
+    return DWARFDataExtractor();
 
   auto section_sp = section_list->FindSectionByType(section_type, true);
   if (!section_sp)
-    return nullptr;
+    return DWARFDataExtractor();
 
-  section_sp->GetSectionData(*extractor);
-  return extractor.getPointer();
+  DWARFDataExtractor data;
+  section_sp->GetSectionData(data);
+  return data;
+}
+
+static const DWARFDataExtractor &
+LoadOrGetSection(Module &module, SectionType section_type,
+                 llvm::Optional<DWARFDataExtractor> &extractor) {
+  if (!extractor)
+    extractor = LoadSection(module, section_type);
+  return *extractor;
 }
 
 DWARFContext::DWARFContext(Module &module) : m_module(module) {}
 
-const DWARFDataExtractor *DWARFContext::getOrLoadArangesData() {
+const DWARFDataExtractor &DWARFContext::getOrLoadArangesData() {
   return LoadOrGetSection(m_module, eSectionTypeDWARFDebugAranges,
                           m_data_debug_aranges);
 }
