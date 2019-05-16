@@ -603,8 +603,11 @@ public:
     assert(CurBundle != TripleToBundleInfo.end() &&
            "all bundles have been read already");
     // Read content of the section representing the bundle
-    StringRef Content;
-    CurBundle->second->BundleSection->getContents(Content);
+    Expected<StringRef> Content = CurrentSection->getContents();
+    if (!Content) {
+      consumeError(Content.takeError());
+      return;
+    }
     const char *ObjData = Content.data();
     // Determine the number of "device objects" (or individual bundles
     // concatenated by partial linkage) in the bundle:
