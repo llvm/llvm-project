@@ -51,21 +51,19 @@ class SymbolStringPtr {
   friend class SymbolStringPool;
   friend struct DenseMapInfo<SymbolStringPtr>;
 
-  static SymbolStringPool::PoolMapEntry Tombstone;
-
 public:
   SymbolStringPtr() = default;
   SymbolStringPtr(const SymbolStringPtr &Other)
     : S(Other.S) {
-    if (S)
+    if (isRealPoolEntry(S))
       ++S->getValue();
   }
 
   SymbolStringPtr& operator=(const SymbolStringPtr &Other) {
-    if (S)
+    if (isRealPoolEntry(S))
       --S->getValue();
     S = Other.S;
-    if (S)
+    if (isRealPoolEntry(S))
       ++S->getValue();
     return *this;
   }
@@ -75,7 +73,7 @@ public:
   }
 
   SymbolStringPtr& operator=(SymbolStringPtr &&Other) {
-    if (S)
+    if (isRealPoolEntry(S))
       --S->getValue();
     S = nullptr;
     std::swap(S, Other.S);
@@ -83,7 +81,7 @@ public:
   }
 
   ~SymbolStringPtr() {
-    if (S)
+    if (isRealPoolEntry(S))
       --S->getValue();
   }
 
@@ -105,14 +103,41 @@ public:
   }
 
 private:
+  using PoolEntryPtr = SymbolStringPool::PoolMapEntry *;
 
   SymbolStringPtr(SymbolStringPool::PoolMapEntry *S)
       : S(S) {
-    if (S)
+    if (isRealPoolEntry(S))
       ++S->getValue();
   }
 
-  SymbolStringPool::PoolMapEntry *S = nullptr;
+  // Returns false for null, empty, and tombstone values, true otherwise.
+  bool isRealPoolEntry(PoolEntryPtr P) {
+    return ((reinterpret_cast<uintptr_t>(P) - 1) & InvalidPtrMask) !=
+           InvalidPtrMask;
+  }
+
+  static SymbolStringPtr getEmptyVal() {
+    return SymbolStringPtr(reinterpret_cast<PoolEntryPtr>(EmptyBitPattern));
+  }
+
+  static SymbolStringPtr getTombstoneVal() {
+    return SymbolStringPtr(reinterpret_cast<PoolEntryPtr>(TombstoneBitPattern));
+  }
+
+  constexpr static uintptr_t EmptyBitPattern =
+      std::numeric_limits<uintptr_t>::max()
+      << PointerLikeTypeTraits<PoolEntryPtr>::NumLowBitsAvailable;
+
+  constexpr static uintptr_t TombstoneBitPattern =
+      (std::numeric_limits<uintptr_t>::max() - 1)
+      << PointerLikeTypeTraits<PoolEntryPtr>::NumLowBitsAvailable;
+
+  constexpr static uintptr_t InvalidPtrMask =
+      (std::numeric_limits<uintptr_t>::max() - 3)
+      << PointerLikeTypeTraits<PoolEntryPtr>::NumLowBitsAvailable;
+
+  PoolEntryPtr S = nullptr;
 };
 
 inline SymbolStringPool::~SymbolStringPool() {
@@ -150,15 +175,15 @@ template <>
 struct DenseMapInfo<orc::SymbolStringPtr> {
 
   static orc::SymbolStringPtr getEmptyKey() {
-    return orc::SymbolStringPtr();
+    return orc::SymbolStringPtr::getEmptyVal();
   }
 
   static orc::SymbolStringPtr getTombstoneKey() {
-    return orc::SymbolStringPtr(&orc::SymbolStringPtr::Tombstone);
+    return orc::SymbolStringPtr::getTombstoneVal();
   }
 
   static unsigned getHashValue(const orc::SymbolStringPtr &V) {
-    return DenseMapInfo<const void *>::getHashValue(V.S);
+    return DenseMapInfo<orc::SymbolStringPtr::PoolEntryPtr>::getHashValue(V.S);
   }
 
   static bool isEqual(const orc::SymbolStringPtr &LHS,
