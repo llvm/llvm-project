@@ -1066,7 +1066,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
 
   case TargetOpcode::G_SHL:
-      Observer.changingInstr(MI);
+    Observer.changingInstr(MI);
 
     if (TypeIdx == 0) {
       widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);

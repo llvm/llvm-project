@@ -2,6 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux-gnu | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=x86_64-pc-linux-gnux32 | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=i686-pc-linux | FileCheck %s --check-prefix=X86
+; At least one of the test cases in here crashed when linearizing the DAG.
+; RUN: llc < %s -mtriple=x86_64-pc-linux-gnu -pre-RA-sched=linearize | FileCheck %s --check-prefix=X64
 
 define i32 @mul4_32(i32 %A) {
 ; X64-LABEL: mul4_32:

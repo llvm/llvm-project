@@ -973,7 +973,7 @@ class UsingNamespaceSym : public SymbolRecord {
 public:
   explicit UsingNamespaceSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit UsingNamespaceSym(uint32_t RecordOffset)
-      : SymbolRecord(SymbolRecordKind::RegRelativeSym),
+      : SymbolRecord(SymbolRecordKind::UsingNamespaceSym),
         RecordOffset(RecordOffset) {}
 
   StringRef Name;
@@ -982,6 +982,19 @@ public:
 };
 
 // S_ANNOTATION
+class AnnotationSym : public SymbolRecord {
+public:
+  explicit AnnotationSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
+  explicit AnnotationSym(uint32_t RecordOffset)
+      : SymbolRecord(SymbolRecordKind::AnnotationSym),
+        RecordOffset(RecordOffset) {}
+
+  uint32_t CodeOffset = 0;
+  uint16_t Segment = 0;
+  std::vector<StringRef> Strings;
+
+  uint32_t RecordOffset;
+};
 
 using CVSymbol = CVRecord<SymbolKind>;
 using CVSymbolArray = VarStreamArray<CVSymbol>;

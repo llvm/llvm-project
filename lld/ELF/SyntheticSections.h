@@ -17,8 +17,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_ELF_SYNTHETIC_SECTION_H
-#define LLD_ELF_SYNTHETIC_SECTION_H
+#ifndef LLD_ELF_SYNTHETIC_SECTIONS_H
+#define LLD_ELF_SYNTHETIC_SECTIONS_H
 
 #include "DWARF.h"
 #include "EhFrame.h"

@@ -41,19 +41,18 @@ bool DWARFAttributes::ExtractFormValueAtIndex(
   return form_value.ExtractValue(cu->GetData(), &offset);
 }
 
-uint64_t DWARFAttributes::FormValueAsUnsigned(dw_attr_t attr,
-                                              uint64_t fail_value) const {
+DWARFDIE
+DWARFAttributes::FormValueAsReference(dw_attr_t attr) const {
   const uint32_t attr_idx = FindAttributeIndex(attr);
   if (attr_idx != UINT32_MAX)
-    return FormValueAsUnsignedAtIndex(attr_idx, fail_value);
-  return fail_value;
+    return FormValueAsReferenceAtIndex(attr_idx);
+  return {};
 }
 
-uint64_t
-DWARFAttributes::FormValueAsUnsignedAtIndex(uint32_t i,
-                                            uint64_t fail_value) const {
+DWARFDIE
+DWARFAttributes::FormValueAsReferenceAtIndex(uint32_t i) const {
   DWARFFormValue form_value;
   if (ExtractFormValueAtIndex(i, form_value))
     return form_value.Reference();
-  return fail_value;
+  return {};
 }

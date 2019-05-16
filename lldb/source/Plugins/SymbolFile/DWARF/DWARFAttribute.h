@@ -65,8 +65,8 @@ public:
   }
   dw_attr_t FormAtIndex(uint32_t i) const { return m_infos[i].attr.get_form(); }
   bool ExtractFormValueAtIndex(uint32_t i, DWARFFormValue &form_value) const;
-  uint64_t FormValueAsUnsignedAtIndex(uint32_t i, uint64_t fail_value) const;
-  uint64_t FormValueAsUnsigned(dw_attr_t attr, uint64_t fail_value) const;
+  DWARFDIE FormValueAsReferenceAtIndex(uint32_t i) const;
+  DWARFDIE FormValueAsReference(dw_attr_t attr) const;
   uint32_t FindAttributeIndex(dw_attr_t attr) const;
   void Clear() { m_infos.clear(); }
   size_t Size() const { return m_infos.size(); }
