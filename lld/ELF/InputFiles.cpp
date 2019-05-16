@@ -1241,10 +1241,11 @@ BitcodeFile::BitcodeFile(MemoryBufferRef MB, StringRef ArchiveName,
   // into consideration at LTO time (which very likely causes undefined
   // symbols later in the link stage). So we append file offset to make
   // filename unique.
-  MemoryBufferRef MBRef(
-      MB.getBuffer(),
-      Saver.save(ArchiveName + Path +
-                 (ArchiveName.empty() ? "" : utostr(OffsetInArchive))));
+  StringRef Name = ArchiveName.empty()
+                       ? Saver.save(Path)
+                       : Saver.save(ArchiveName + "(" + Path + " at " +
+                                    utostr(OffsetInArchive) + ")");
+  MemoryBufferRef MBRef(MB.getBuffer(), Name);
 
   Obj = CHECK(lto::InputFile::create(MBRef), this);
 

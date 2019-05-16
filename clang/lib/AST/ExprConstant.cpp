@@ -1337,10 +1337,26 @@ enum AccessKinds {
   AK_Increment,
   AK_Decrement,
   AK_MemberCall,
+  AK_DynamicCast,
 };
 
 static bool isModification(AccessKinds AK) {
-  return AK != AK_Read && AK != AK_MemberCall;
+  switch (AK) {
+  case AK_Read:
+  case AK_MemberCall:
+  case AK_DynamicCast:
+    return false;
+  case AK_Assign:
+  case AK_Increment:
+  case AK_Decrement:
+    return true;
+  }
+  llvm_unreachable("unknown access kind");
+}
+
+/// Is this an access per the C++ definition?
+static bool isFormalAccess(AccessKinds AK) {
+  return AK == AK_Read || isModification(AK);
 }
 
 namespace {
@@ -2961,8 +2977,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
     // If this is our last pass, check that the final object type is OK.
     if (I == N || (I == N - 1 && ObjType->isAnyComplexType())) {
       // Accesses to volatile objects are prohibited.
-      if (ObjType.isVolatileQualified() &&
-          handler.AccessKind != AK_MemberCall) {
+      if (ObjType.isVolatileQualified() && isFormalAccess(handler.AccessKind)) {
         if (Info.getLangOpts().CPlusPlus) {
           int DiagKind;
           SourceLocation Loc;
@@ -3272,11 +3287,13 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     }
   }
 
+  bool IsAccess = isFormalAccess(AK);
+
   // C++11 DR1311: An lvalue-to-rvalue conversion on a volatile-qualified type
   // is not a constant expression (even if the object is non-volatile). We also
   // apply this rule to C++98, in order to conform to the expected 'volatile'
   // semantics.
-  if (AK != AK_MemberCall && LValType.isVolatileQualified()) {
+  if (IsAccess && LValType.isVolatileQualified()) {
     if (Info.getLangOpts().CPlusPlus)
       Info.FFDiag(E, diag::note_constexpr_access_volatile_type)
         << AK << LValType;
@@ -3284,13 +3301,6 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       Info.FFDiag(E);
     return CompleteObject();
   }
-
-  // The wording is unclear on this, but for the purpose of determining the
-  // validity of a member function call, we assume that all objects whose
-  // lifetimes did not start within the constant evaluation are in fact within
-  // their lifetimes, so member calls on them are valid. (This simultaneously
-  // includes all members of a union!)
-  bool NeedValue = AK != AK_MemberCall;
 
   // Compute value storage location and type of base object.
   APValue *BaseVal = nullptr;
@@ -3335,7 +3345,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         if (!(BaseType.isConstQualified() ||
               (Info.getLangOpts().OpenCL &&
                BaseType.getAddressSpace() == LangAS::opencl_constant))) {
-          if (!NeedValue)
+          if (!IsAccess)
             return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
           if (Info.getLangOpts().CPlusPlus) {
             Info.FFDiag(E, diag::note_constexpr_ltor_non_const_int, 1) << VD;
@@ -3345,7 +3355,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
           }
           return CompleteObject();
         }
-      } else if (!NeedValue) {
+      } else if (!IsAccess) {
         return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
       } else if (BaseType->isFloatingType() && BaseType.isConstQualified()) {
         // We support folding of const floating-point types, in order to make
@@ -3406,7 +3416,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         if (!(BaseType.isConstQualified() &&
               BaseType->isIntegralOrEnumerationType()) &&
             !(VD && VD->getCanonicalDecl() == ED->getCanonicalDecl())) {
-          if (!NeedValue)
+          if (!IsAccess)
             return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
           Info.FFDiag(E, diag::note_constexpr_access_static_temporary, 1) << AK;
           Info.Note(MTE->getExprLoc(), diag::note_constexpr_temporary_here);
@@ -3416,7 +3426,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         BaseVal = Info.Ctx.getMaterializedTemporaryValue(MTE, false);
         assert(BaseVal && "got reference to unevaluated temporary");
       } else {
-        if (!NeedValue)
+        if (!IsAccess)
           return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
         Info.FFDiag(E);
         return CompleteObject();
@@ -4521,8 +4531,8 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
 }
 
 namespace {
-struct CheckMemberCallThisPointerHandler {
-  static const AccessKinds AccessKind = AK_MemberCall;
+struct CheckDynamicTypeHandler {
+  AccessKinds AccessKind;
   typedef bool result_type;
   bool failed() { return false; }
   bool found(APValue &Subobj, QualType SubobjType) { return true; }
@@ -4531,17 +4541,14 @@ struct CheckMemberCallThisPointerHandler {
 };
 } // end anonymous namespace
 
-const AccessKinds CheckMemberCallThisPointerHandler::AccessKind;
-
-/// Check that the pointee of the 'this' pointer in a member function call is
-/// either within its lifetime or in its period of construction or destruction.
-static bool checkMemberCallThisPointer(EvalInfo &Info, const Expr *E,
-                                       const LValue &This, bool IsVirtual) {
+/// Check that we can access the notional vptr of an object / determine its
+/// dynamic type.
+static bool checkDynamicType(EvalInfo &Info, const Expr *E, const LValue &This,
+                             AccessKinds AK, bool Polymorphic) {
   if (This.Designator.Invalid)
     return false;
 
-  CompleteObject Obj =
-      findCompleteObject(Info, E, AK_MemberCall, This, QualType());
+  CompleteObject Obj = findCompleteObject(Info, E, AK, This, QualType());
 
   if (!Obj)
     return false;
@@ -4555,24 +4562,31 @@ static bool checkMemberCallThisPointer(EvalInfo &Info, const Expr *E,
       Info.FFDiag(E, This.Designator.isOnePastTheEnd()
                          ? diag::note_constexpr_access_past_end
                          : diag::note_constexpr_access_unsized_array)
-          << AK_MemberCall;
+          << AK;
       return false;
-    } else if (IsVirtual) {
-      // Conservatively refuse to perform a virtual function call if we would
+    } else if (Polymorphic) {
+      // Conservatively refuse to perform a polymorphic operation if we would
       // not be able to read a notional 'vptr' value.
       APValue Val;
       This.moveInto(Val);
       QualType StarThisType =
           Info.Ctx.getLValueReferenceType(This.Designator.getType(Info.Ctx));
-      Info.FFDiag(E, diag::note_constexpr_virtual_out_of_lifetime)
-          << Val.getAsString(Info.Ctx, StarThisType);
+      Info.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
+          << AK << Val.getAsString(Info.Ctx, StarThisType);
       return false;
     }
     return true;
   }
 
-  CheckMemberCallThisPointerHandler Handler;
+  CheckDynamicTypeHandler Handler{AK};
   return Obj && findSubobject(Info, E, Obj, This.Designator, Handler);
+}
+
+/// Check that the pointee of the 'this' pointer in a member function call is
+/// either within its lifetime or in its period of construction or destruction.
+static bool checkNonVirtualMemberCallThisPointer(EvalInfo &Info, const Expr *E,
+                                                 const LValue &This) {
+  return checkDynamicType(Info, E, This, AK_MemberCall, false);
 }
 
 struct DynamicType {
@@ -4592,13 +4606,26 @@ static const CXXRecordDecl *getBaseClassType(SubobjectDesignator &Designator,
 }
 
 /// Determine the dynamic type of an object.
-static Optional<DynamicType> ComputeDynamicType(EvalInfo &Info, LValue &This) {
+static Optional<DynamicType> ComputeDynamicType(EvalInfo &Info, const Expr *E,
+                                                LValue &This, AccessKinds AK) {
   // If we don't have an lvalue denoting an object of class type, there is no
   // meaningful dynamic type. (We consider objects of non-class type to have no
   // dynamic type.)
-  if (This.Designator.IsOnePastTheEnd || This.Designator.Invalid ||
-      !This.Designator.MostDerivedType->getAsCXXRecordDecl())
+  if (!checkDynamicType(Info, E, This, AK, true))
     return None;
+
+  // Refuse to compute a dynamic type in the presence of virtual bases. This
+  // shouldn't happen other than in constant-folding situations, since literal
+  // types can't have virtual bases.
+  //
+  // Note that consumers of DynamicType assume that the type has no virtual
+  // bases, and will need modifications if this restriction is relaxed.
+  const CXXRecordDecl *Class =
+      This.Designator.MostDerivedType->getAsCXXRecordDecl();
+  if (!Class || Class->getNumVBases()) {
+    Info.FFDiag(E);
+    return None;
+  }
 
   // FIXME: For very deep class hierarchies, it might be beneficial to use a
   // binary search here instead. But the overwhelmingly common case is that
@@ -4625,6 +4652,7 @@ static Optional<DynamicType> ComputeDynamicType(EvalInfo &Info, LValue &This) {
   // CWG issue 1517: we're constructing a base class of the object described by
   // 'This', so that object has not yet begun its period of construction and
   // any polymorphic operation on it results in undefined behavior.
+  Info.FFDiag(E);
   return None;
 }
 
@@ -4632,11 +4660,10 @@ static Optional<DynamicType> ComputeDynamicType(EvalInfo &Info, LValue &This) {
 static const CXXMethodDecl *HandleVirtualDispatch(
     EvalInfo &Info, const Expr *E, LValue &This, const CXXMethodDecl *Found,
     llvm::SmallVectorImpl<QualType> &CovariantAdjustmentPath) {
-  Optional<DynamicType> DynType = ComputeDynamicType(Info, This);
-  if (!DynType) {
-    Info.FFDiag(E);
+  Optional<DynamicType> DynType =
+      ComputeDynamicType(Info, E, This, AK_MemberCall);
+  if (!DynType)
     return nullptr;
-  }
 
   // Find the final overrider. It must be declared in one of the classes on the
   // path from the dynamic type to the static type.
@@ -4646,11 +4673,6 @@ static const CXXMethodDecl *HandleVirtualDispatch(
   unsigned PathLength = DynType->PathLength;
   for (/**/; PathLength <= This.Designator.Entries.size(); ++PathLength) {
     const CXXRecordDecl *Class = getBaseClassType(This.Designator, PathLength);
-    if (Class->getNumVBases()) {
-      Info.FFDiag(E);
-      return nullptr;
-    }
-
     const CXXMethodDecl *Overrider =
         Found->getCorrespondingMethodDeclaredInClass(Class, false);
     if (Overrider) {
@@ -4722,6 +4744,117 @@ static bool HandleCovariantReturnAdjustment(EvalInfo &Info, const Expr *E,
 
   LVal.moveInto(Result);
   return true;
+}
+
+/// Determine whether \p Base, which is known to be a direct base class of
+/// \p Derived, is a public base class.
+static bool isBaseClassPublic(const CXXRecordDecl *Derived,
+                              const CXXRecordDecl *Base) {
+  for (const CXXBaseSpecifier &BaseSpec : Derived->bases()) {
+    auto *BaseClass = BaseSpec.getType()->getAsCXXRecordDecl();
+    if (BaseClass && declaresSameEntity(BaseClass, Base))
+      return BaseSpec.getAccessSpecifier() == AS_public;
+  }
+  llvm_unreachable("Base is not a direct base of Derived");
+}
+
+/// Apply the given dynamic cast operation on the provided lvalue.
+///
+/// This implements the hard case of dynamic_cast, requiring a "runtime check"
+/// to find a suitable target subobject.
+static bool HandleDynamicCast(EvalInfo &Info, const ExplicitCastExpr *E,
+                              LValue &Ptr) {
+  // We can't do anything with a non-symbolic pointer value.
+  SubobjectDesignator &D = Ptr.Designator;
+  if (D.Invalid)
+    return false;
+
+  // C++ [expr.dynamic.cast]p6:
+  //   If v is a null pointer value, the result is a null pointer value.
+  if (Ptr.isNullPointer() && !E->isGLValue())
+    return true;
+
+  // For all the other cases, we need the pointer to point to an object within
+  // its lifetime / period of construction / destruction, and we need to know
+  // its dynamic type.
+  Optional<DynamicType> DynType =
+      ComputeDynamicType(Info, E, Ptr, AK_DynamicCast);
+  if (!DynType)
+    return false;
+
+  // C++ [expr.dynamic.cast]p7:
+  //   If T is "pointer to cv void", then the result is a pointer to the most
+  //   derived object
+  if (E->getType()->isVoidPointerType())
+    return CastToDerivedClass(Info, E, Ptr, DynType->Type, DynType->PathLength);
+
+  const CXXRecordDecl *C = E->getTypeAsWritten()->getPointeeCXXRecordDecl();
+  assert(C && "dynamic_cast target is not void pointer nor class");
+  CanQualType CQT = Info.Ctx.getCanonicalType(Info.Ctx.getRecordType(C));
+
+  auto RuntimeCheckFailed = [&] (CXXBasePaths *Paths) {
+    // C++ [expr.dynamic.cast]p9:
+    if (!E->isGLValue()) {
+      //   The value of a failed cast to pointer type is the null pointer value
+      //   of the required result type.
+      auto TargetVal = Info.Ctx.getTargetNullPointerValue(E->getType());
+      Ptr.setNull(E->getType(), TargetVal);
+      return true;
+    }
+
+    //   A failed cast to reference type throws [...] std::bad_cast.
+    unsigned DiagKind;
+    if (!Paths && (declaresSameEntity(DynType->Type, C) ||
+                   DynType->Type->isDerivedFrom(C)))
+      DiagKind = 0;
+    else if (!Paths || Paths->begin() == Paths->end())
+      DiagKind = 1;
+    else if (Paths->isAmbiguous(CQT))
+      DiagKind = 2;
+    else {
+      assert(Paths->front().Access != AS_public && "why did the cast fail?");
+      DiagKind = 3;
+    }
+    Info.FFDiag(E, diag::note_constexpr_dynamic_cast_to_reference_failed)
+        << DiagKind << Ptr.Designator.getType(Info.Ctx)
+        << Info.Ctx.getRecordType(DynType->Type)
+        << E->getType().getUnqualifiedType();
+    return false;
+  };
+
+  // Runtime check, phase 1:
+  //   Walk from the base subobject towards the derived object looking for the
+  //   target type.
+  for (int PathLength = Ptr.Designator.Entries.size();
+       PathLength >= (int)DynType->PathLength; --PathLength) {
+    const CXXRecordDecl *Class = getBaseClassType(Ptr.Designator, PathLength);
+    if (declaresSameEntity(Class, C))
+      return CastToDerivedClass(Info, E, Ptr, Class, PathLength);
+    // We can only walk across public inheritance edges.
+    if (PathLength > (int)DynType->PathLength &&
+        !isBaseClassPublic(getBaseClassType(Ptr.Designator, PathLength - 1),
+                           Class))
+      return RuntimeCheckFailed(nullptr);
+  }
+
+  // Runtime check, phase 2:
+  //   Search the dynamic type for an unambiguous public base of type C.
+  CXXBasePaths Paths(/*FindAmbiguities=*/true,
+                     /*RecordPaths=*/true, /*DetectVirtual=*/false);
+  if (DynType->Type->isDerivedFrom(C, Paths) && !Paths.isAmbiguous(CQT) &&
+      Paths.front().Access == AS_public) {
+    // Downcast to the dynamic type...
+    if (!CastToDerivedClass(Info, E, Ptr, DynType->Type, DynType->PathLength))
+      return false;
+    // ... then upcast to the chosen base class subobject.
+    for (CXXBasePathElement &Elem : Paths.front())
+      if (!HandleLValueBase(Info, E, Ptr, Elem.Class, Elem.Base))
+        return false;
+    return true;
+  }
+
+  // Otherwise, the runtime check fails.
+  return RuntimeCheckFailed(&Paths);
 }
 
 /// Determine if a class has any fields that might need to be copied by a
@@ -5128,7 +5261,8 @@ public:
     return static_cast<Derived*>(this)->VisitCastExpr(E);
   }
   bool VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E) {
-    CCEDiag(E, diag::note_constexpr_invalid_cast) << 1;
+    if (!Info.Ctx.getLangOpts().CPlusPlus2a)
+      CCEDiag(E, diag::note_constexpr_invalid_cast) << 1;
     return static_cast<Derived*>(this)->VisitCastExpr(E);
   }
 
@@ -5314,16 +5448,17 @@ public:
     SmallVector<QualType, 4> CovariantAdjustmentPath;
     if (This) {
       auto *NamedMember = dyn_cast<CXXMethodDecl>(FD);
-      bool IsVirtual = NamedMember && NamedMember->isVirtual() && !HasQualifier;
-
-      // Check that the 'this' pointer points to an object of the right type.
-      if (!checkMemberCallThisPointer(Info, E, *This, IsVirtual))
-        return false;
-
-      // Perform virtual dispatch, if necessary.
-      if (IsVirtual && !(FD = HandleVirtualDispatch(Info, E, *This, NamedMember,
-                                                    CovariantAdjustmentPath)))
-        return true;
+      if (NamedMember && NamedMember->isVirtual() && !HasQualifier) {
+        // Perform virtual dispatch, if necessary.
+        FD = HandleVirtualDispatch(Info, E, *This, NamedMember,
+                                   CovariantAdjustmentPath);
+        if (!FD)
+          return false;
+      } else {
+        // Check that the 'this' pointer points to an object of the right type.
+        if (!checkNonVirtualMemberCallThisPointer(Info, E, *This))
+          return false;
+      }
     }
 
     const FunctionDecl *Definition = nullptr;
@@ -5691,6 +5826,11 @@ public:
       if (!Visit(E->getSubExpr()))
         return false;
       return HandleBaseToDerivedCast(Info, E, Result);
+
+    case CK_Dynamic:
+      if (!Visit(E->getSubExpr()))
+        return false;
+      return HandleDynamicCast(Info, cast<ExplicitCastExpr>(E), Result);
     }
   }
 };
@@ -6274,6 +6414,11 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (!Result.Base && Result.Offset.isZero())
       return true;
     return HandleBaseToDerivedCast(Info, E, Result);
+
+  case CK_Dynamic:
+    if (!Visit(E->getSubExpr()))
+      return false;
+    return HandleDynamicCast(Info, cast<ExplicitCastExpr>(E), Result);
 
   case CK_NullToPointer:
     VisitIgnoredValue(E->getSubExpr());

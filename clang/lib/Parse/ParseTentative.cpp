@@ -2065,33 +2065,31 @@ Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip) {
   if (!TryConsumeToken(tok::less))
     return TPResult::False;
 
+  // We can't do much to tell an expression apart from a template-argument,
+  // but one good distinguishing factor is that a "decl-specifier" not
+  // followed by '(' or '{' can't appear in an expression.
   bool InvalidAsTemplateArgumentList = false;
-  while (true) {
-    // We can't do much to tell an expression apart from a template-argument,
-    // but one good distinguishing factor is that a "decl-specifier" not
-    // followed by '(' or '{' can't appear in an expression.
-    if (isCXXDeclarationSpecifier(
-            TPResult::False, &InvalidAsTemplateArgumentList) == TPResult::True)
-      return TPResult::True;
+  if (isCXXDeclarationSpecifier(TPResult::False,
+                                       &InvalidAsTemplateArgumentList) ==
+             TPResult::True)
+    return TPResult::True;
+  if (InvalidAsTemplateArgumentList)
+    return TPResult::False;
 
-    // That didn't help, try the next template-argument.
-    SkipUntil({tok::comma, tok::greater, tok::greatergreater,
-               tok::greatergreatergreater},
-              StopAtSemi | StopBeforeMatch);
-    switch (Tok.getKind()) {
-    case tok::comma:
-      ConsumeToken();
-      break;
+  // FIXME: In many contexts, X<thing1, Type> can only be a
+  // template-argument-list. But that's not true in general:
+  //
+  // using b = int;
+  // void f() {
+  //   int a = A<B, b, c = C>D; // OK, declares b, not a template-id.
+  //
+  // X<Y<0, int> // ', int>' might be end of X's template argument list
+  //
+  // We might be able to disambiguate a few more cases if we're careful.
 
-    case tok::greater:
-    case tok::greatergreater:
-    case tok::greatergreatergreater:
-      if (InvalidAsTemplateArgumentList)
-        return TPResult::False;
-      return TPResult::Ambiguous;
-
-    default:
-      return TPResult::False;
-    }
-  }
+  // A template-argument-list must be terminated by a '>'.
+  if (SkipUntil({tok::greater, tok::greatergreater, tok::greatergreatergreater},
+                StopAtSemi | StopBeforeMatch))
+    return TPResult::Ambiguous;
+  return TPResult::False;
 }
