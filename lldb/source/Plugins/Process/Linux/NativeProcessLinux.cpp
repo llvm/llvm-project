@@ -1007,11 +1007,7 @@ NativeProcessLinux::SetupSoftwareSingleStepping(NativeThreadLinux &thread) {
       // Arm mode
       error = SetSoftwareBreakpoint(next_pc, 4);
     }
-  } else if (m_arch.GetMachine() == llvm::Triple::mips64 ||
-             m_arch.GetMachine() == llvm::Triple::mips64el ||
-             m_arch.GetMachine() == llvm::Triple::mips ||
-             m_arch.GetMachine() == llvm::Triple::mipsel ||
-             m_arch.GetMachine() == llvm::Triple::ppc64le)
+  } else if (m_arch.IsMIPS() || m_arch.GetMachine() == llvm::Triple::ppc64le)
     error = SetSoftwareBreakpoint(next_pc, 4);
   else {
     // No size hint is given for the next breakpoint
@@ -1031,11 +1027,7 @@ NativeProcessLinux::SetupSoftwareSingleStepping(NativeThreadLinux &thread) {
 }
 
 bool NativeProcessLinux::SupportHardwareSingleStepping() const {
-  if (m_arch.GetMachine() == llvm::Triple::arm ||
-      m_arch.GetMachine() == llvm::Triple::mips64 ||
-      m_arch.GetMachine() == llvm::Triple::mips64el ||
-      m_arch.GetMachine() == llvm::Triple::mips ||
-      m_arch.GetMachine() == llvm::Triple::mipsel)
+  if (m_arch.GetMachine() == llvm::Triple::arm || m_arch.IsMIPS())
     return false;
   return true;
 }
