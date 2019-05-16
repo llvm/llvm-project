@@ -127,6 +127,7 @@ TEST_F(GISelMITest, TestBuildFPInsts) {
 
   B.buildFAdd(S64, Copies[0], Copies[1]);
   B.buildFSub(S64, Copies[0], Copies[1]);
+  B.buildFMA(S64, Copies[0], Copies[1], Copies[2]);
   B.buildFNeg(S64, Copies[0]);
   B.buildFAbs(S64, Copies[0]);
   B.buildFCopysign(S64, Copies[0], Copies[1]);
@@ -134,8 +135,10 @@ TEST_F(GISelMITest, TestBuildFPInsts) {
   auto CheckStr = R"(
   ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
   ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
   ; CHECK: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[COPY0]]:_, [[COPY1]]:_
   ; CHECK: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[COPY0]]:_, [[COPY1]]:_
+  ; CHECK: [[FMA:%[0-9]+]]:_(s64) = G_FMA [[COPY0]]:_, [[COPY1]]:_, [[COPY2]]:_
   ; CHECK: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[COPY0]]:_
   ; CHECK: [[FABS:%[0-9]+]]:_(s64) = G_FABS [[COPY0]]:_
   ; CHECK: [[FCOPYSIGN:%[0-9]+]]:_(s64) = G_FCOPYSIGN [[COPY0]]:_, [[COPY1]]:_
