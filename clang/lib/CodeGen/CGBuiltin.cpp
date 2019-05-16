@@ -11885,6 +11885,22 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
   }
 
+  case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
+  case X86::BI__builtin_ia32_cvtneps2bf16_512_mask: {
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
+    default: llvm_unreachable("Unsupported intrinsic!");
+    case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
+      IID = Intrinsic::x86_avx512bf16_cvtneps2bf16_256;
+      break;
+    case X86::BI__builtin_ia32_cvtneps2bf16_512_mask:
+      IID = Intrinsic::x86_avx512bf16_cvtneps2bf16_512;
+      break;
+    }
+    Value *Res = Builder.CreateCall(CGM.getIntrinsic(IID), Ops[0]);
+    return EmitX86Select(*this, Ops[2], Res, Ops[1]);
+  }
+
   case X86::BI__emul:
   case X86::BI__emulu: {
     llvm::Type *Int64Ty = llvm::IntegerType::get(getLLVMContext(), 64);

@@ -76,7 +76,7 @@ AST_POLYMORPHIC_MATCHER_P(polymorphicHas,
                           internal::Matcher<Decl>, AMatcher) {
   return Finder->matchesChildOf(
       Node, AMatcher, Builder,
-      ASTMatchFinder::TK_IgnoreImplicitCastsAndParentheses,
+      ast_type_traits::TraversalKind::TK_IgnoreImplicitCastsAndParentheses,
       ASTMatchFinder::BK_First);
 }
 
