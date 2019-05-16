@@ -24,7 +24,7 @@
 ; This function tests that RISCVRegisterInfo::getCalleeSavedRegs returns
 ; something appropriate.
 
-define void @callee() {
+define void @callee() nounwind {
 ; RV32I-LABEL: callee:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -80
@@ -108,7 +108,7 @@ define void @callee() {
 ; This function tests that RISCVRegisterInfo::getCallPreservedMask returns
 ; something appropriate.
 
-define void @caller() {
+define void @caller() nounwind {
 ; RV32I-LABEL: caller:
 ; RV32I:         lui a0, %hi(var)
 ; RV32I-NEXT:    addi s1, a0, %lo(var)
