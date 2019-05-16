@@ -868,6 +868,8 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         } else if (valobj_sp->GetCompilerType().IsArrayType(
                        nullptr, nullptr, &is_incomplete_array)) {
           // BEGIN SWIFT MOD
+          // This is a workaround for value-providing synthetic
+          // children like the one used for Swift.Int.
           if (!no_synth_child) {
             ValueObjectSP synthetic = valobj_sp->GetSyntheticValue();
             if (synthetic)
