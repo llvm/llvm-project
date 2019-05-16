@@ -377,20 +377,6 @@ public:
 
   Status GetFatalErrors();
 
-  union ExtraTypeInformation {
-    uint64_t m_intValue;
-    struct ExtraTypeInformationFlags {
-      ExtraTypeInformationFlags(bool is_trivial_option_set)
-          : m_is_trivial_option_set(is_trivial_option_set) {}
-
-      bool m_is_trivial_option_set : 1;
-    } m_flags;
-
-    ExtraTypeInformation();
-
-    ExtraTypeInformation(swift::CanType);
-  };
-
   const swift::irgen::TypeInfo *GetSwiftTypeInfo(void *type);
 
   const swift::irgen::FixedTypeInfo *GetSwiftFixedTypeInfo(void *type);
@@ -471,8 +457,6 @@ public:
   bool IsVoidType(void *type) override;
 
   static bool IsGenericType(const CompilerType &compiler_type);
-
-  bool IsTrivialOptionSetType(const CompilerType &compiler_type);
 
   bool IsErrorType(const CompilerType &compiler_type);
 
@@ -876,18 +860,12 @@ protected:
   typedef ThreadSafeDenseSet<const char *> SwiftMangledNameSet;
   SwiftMangledNameSet m_negative_type_cache;
 
-  typedef ThreadSafeDenseMap<void *, ExtraTypeInformation>
-      ExtraTypeInformationMap;
-  ExtraTypeInformationMap m_extra_type_info_cache;
-
   typedef ThreadSafeDenseMap<const char *, lldb::TypeSP> SwiftTypeMap;
   SwiftTypeMap m_swift_type_map;
 
   /// Used in the logs.
   std::string m_description;
   /// @}
-
-  ExtraTypeInformation GetExtraTypeInformation(void *type);
 
   /// Record the set of stored properties for each nominal type declaration
   /// for which we've asked this question.
