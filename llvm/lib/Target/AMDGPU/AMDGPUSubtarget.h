@@ -294,6 +294,7 @@ protected:
   bool UnalignedBufferAccess;
   bool HasApertureRegs;
   bool EnableXNACK;
+  bool DoesNotSupportXNACK;
   bool EnableCuMode;
   bool TrapHandler;
 
