@@ -1,0 +1,84 @@
+## Test that --section works correctly for -d with -r.
+## FIXME: Inline relocations are only printed if the relocation section itself is
+##        specified with --section. This test just characterizes the existing behavior.
+##        See https://bugs.llvm.org/show_bug.cgi?id=41886
+# RUN: yaml2obj %s -o %t.o
+
+## Show non-executable sections are not disassembled even if specified,
+## and that only the specified executable sections are disassembled.
+## Also show that no relocation sections are dumped because none are
+## specified.
+## FIXME: This is different behaviour to GNU objdump, which dumps the non-
+##        executable sections if requested explicitly.
+##        See https://bugs.llvm.org/show_bug.cgi?id=41897.
+# RUN: llvm-objdump -d -r %t.o --section=.text --section=.rodata \
+# RUN:   | FileCheck %s --check-prefix=DISASM --implicit-check-not=.text2 \
+# RUN:           --implicit-check-not=.rodata --implicit-check-not=R_X86_64
+
+## Show that only the specified relocation sections that patch the
+## disassembled sections are dumped.
+# RUN: llvm-objdump -d -r %t.o --section=.text \
+# RUN:                         --section=.rela.text --section=.rela.text2 \
+# RUN:   | FileCheck %s --check-prefixes=DISASM,RELOC --implicit-check-not=.text2 \
+# RUN:           --implicit-check-not=R_X86_64
+
+# DISASM:       Disassembly of section .text:
+# DISASM-EMPTY:
+# DISASM-NEXT:  0000000000000400 .text:
+# DISASM-NEXT:  400: e8 00 00 00 00                callq   0 <.text+0x5>
+# RELOC-NEXT:                      00000401:  R_X86_64_PC32        foo+1
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [SHF_ALLOC, SHF_EXECINSTR]
+    Address:      0x400
+    AddressAlign: 0x10
+    Content:      'e800000000'
+  - Name:         .text2
+    Type:         SHT_PROGBITS
+    Flags:        [SHF_ALLOC, SHF_EXECINSTR]
+    Address:      0x401
+    Content:      '90e800000000'
+  - Name:         .rela.text
+    Type:         SHT_RELA
+    Info:         .text
+    Relocations:
+      - Offset: 1
+        Symbol: foo
+        Addend: 1
+        Type:   R_X86_64_PC32
+  - Name:         .another.rela.text
+    Type:         SHT_RELA
+    Info:         .text
+    Relocations:
+      - Offset: 1
+        Symbol: foo
+        Type:   R_X86_64_GOT32
+  - Name:         .rela.text2
+    Type:         SHT_RELA
+    Info:         .text2
+    Relocations:
+      - Offset: 1
+        Symbol: foo
+        Addend: 2
+        Type:   R_X86_64_PLT32
+  - Name:       .rodata
+    Type:       SHT_PROGBITS
+    Flags:      [SHF_ALLOC]
+    Size:       4
+  - Name:       .rela.rodata
+    Type:       SHT_RELA
+    Info:       .rodata
+    Relocations:
+      - Offset: 0
+        Symbol: foo
+        Type: R_X86_64_NONE
+Symbols:
+  - Name: foo
