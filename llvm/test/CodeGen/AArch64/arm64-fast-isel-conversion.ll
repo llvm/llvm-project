@@ -10,12 +10,12 @@ entry:
 ; CHECK: str w2, [sp, #8]
 ; CHECK: str x3, [sp]
 ; CHECK: ldr x8, [sp]
-; CHECK: mov x9, x8
-; CHECK: str w9, [sp, #8]
-; CHECK: ldr w9, [sp, #8]
-; CHECK: strh w9, [sp, #12]
-; CHECK: ldrh w9, [sp, #12]
-; CHECK: strb w9, [sp, #15]
+; CHECK: ; kill: def $w8 killed $w8 killed $x8
+; CHECK: str w8, [sp, #8]
+; CHECK: ldr w8, [sp, #8]
+; CHECK: strh w8, [sp, #12]
+; CHECK: ldrh w8, [sp, #12]
+; CHECK: strb w8, [sp, #15]
 ; CHECK: ldrb w0, [sp, #15]
 ; CHECK: add sp, sp, #16
 ; CHECK: ret
@@ -365,7 +365,8 @@ entry:
 define i32 @i64_trunc_i32(i64 %a) nounwind ssp {
 entry:
 ; CHECK-LABEL: i64_trunc_i32
-; CHECK: mov x1, x0
+; CHECK-NOT: mov
+; CHECK: ret
   %conv = trunc i64 %a to i32
   ret i32 %conv
 }
@@ -373,8 +374,7 @@ entry:
 define zeroext i16 @i64_trunc_i16(i64 %a) nounwind ssp {
 entry:
 ; CHECK-LABEL: i64_trunc_i16
-; CHECK: mov x[[REG:[0-9]+]], x0
-; CHECK: and [[REG2:w[0-9]+]], w[[REG]], #0xffff
+; CHECK: and [[REG2:w[0-9]+]], w0, #0xffff
 ; CHECK: uxth w0, [[REG2]]
   %conv = trunc i64 %a to i16
   ret i16 %conv
@@ -383,8 +383,7 @@ entry:
 define zeroext i8 @i64_trunc_i8(i64 %a) nounwind ssp {
 entry:
 ; CHECK-LABEL: i64_trunc_i8
-; CHECK: mov x[[REG:[0-9]+]], x0
-; CHECK: and [[REG2:w[0-9]+]], w[[REG]], #0xff
+; CHECK: and [[REG2:w[0-9]+]], w0, #0xff
 ; CHECK: uxtb w0, [[REG2]]
   %conv = trunc i64 %a to i8
   ret i8 %conv
@@ -393,8 +392,7 @@ entry:
 define zeroext i1 @i64_trunc_i1(i64 %a) nounwind ssp {
 entry:
 ; CHECK-LABEL: i64_trunc_i1
-; CHECK: mov x[[REG:[0-9]+]], x0
-; CHECK: and [[REG2:w[0-9]+]], w[[REG]], #0x1
+; CHECK: and [[REG2:w[0-9]+]], w0, #0x1
 ; CHECK: and w0, [[REG2]], #0x1
   %conv = trunc i64 %a to i1
   ret i1 %conv
@@ -404,9 +402,8 @@ entry:
 define void @stack_trunc() nounwind {
 ; CHECK-LABEL: stack_trunc
 ; CHECK: sub  sp, sp, #16
-; CHECK: ldr  [[REG:x[0-9]+]], [sp]
-; CHECK: mov  x[[REG2:[0-9]+]], [[REG]]
-; CHECK: and  [[REG3:w[0-9]+]], w[[REG2]], #0xff
+; CHECK: ldr  x[[REG:[0-9]+]], [sp]
+; CHECK: and  [[REG3:w[0-9]+]], w[[REG]], #0xff
 ; CHECK: strb [[REG3]], [sp, #15]
 ; CHECK: add  sp, sp, #16
   %a = alloca i8, align 1
