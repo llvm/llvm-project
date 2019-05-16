@@ -1051,4 +1051,10 @@ let Predicates = [HasSVE2] in {
   defm SMULH_ZZZ  : sve2_int_mul<0b010, "smulh">;
   defm UMULH_ZZZ  : sve2_int_mul<0b011, "umulh">;
   def  PMUL_ZZZ_B : sve2_int_mul<0b00, 0b001, "pmul", ZPR8>;
+
+  // SVE2 complex integer dot product (indexed)
+  defm CDOT_ZZZI : sve2_cintx_dot_by_indexed_elem<"cdot">;
+
+  // SVE2 complex integer dot product
+  defm CDOT_ZZZ : sve2_cintx_dot<"cdot">;
 }
