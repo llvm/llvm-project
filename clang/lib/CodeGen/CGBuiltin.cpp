@@ -1721,6 +1721,27 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_truncl:
       return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::trunc));
 
+    case Builtin::BIlround:
+    case Builtin::BIlroundf:
+    case Builtin::BIlroundl:
+    case Builtin::BI__builtin_lround:
+    case Builtin::BI__builtin_lroundf:
+    case Builtin::BI__builtin_lroundl: {
+      llvm::Type *ResultType = ConvertType(E->getType());
+      int Width = ResultType->getPrimitiveSizeInBits();
+      return RValue::get(emitUnaryBuiltin(*this, E,
+                                          Width == 32 ? Intrinsic::lround_i32
+                                                      : Intrinsic::lround_i64));
+    }
+
+    case Builtin::BIllround:
+    case Builtin::BIllroundf:
+    case Builtin::BIllroundl:
+    case Builtin::BI__builtin_llround:
+    case Builtin::BI__builtin_llroundf:
+    case Builtin::BI__builtin_llroundl:
+      return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::llround));
+
     default:
       break;
     }
