@@ -1838,6 +1838,75 @@ multiclass sve_intx_dot_by_indexed_elem<bit opc, string asm> {
 }
 
 //===----------------------------------------------------------------------===//
+// SVE2 Integer Multiply - Unpredicated Group
+//===----------------------------------------------------------------------===//
+
+class sve2_int_mul<bits<2> sz, bits<3> opc, string asm, ZPRRegOp zprty>
+: I<(outs zprty:$Zd), (ins zprty:$Zn, zprty:$Zm),
+  asm, "\t$Zd, $Zn, $Zm", "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zm;
+  bits<5> Zn;
+  let Inst{31-24} = 0b00000100;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Zm;
+  let Inst{15-13} = 0b011;
+  let Inst{12-10} = opc;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve2_int_mul<bits<3> opc, string asm> {
+  def _B : sve2_int_mul<0b00, opc, asm, ZPR8>;
+  def _H : sve2_int_mul<0b01, opc, asm, ZPR16>;
+  def _S : sve2_int_mul<0b10, opc, asm, ZPR32>;
+  def _D : sve2_int_mul<0b11, opc, asm, ZPR64>;
+}
+
+//===----------------------------------------------------------------------===//
+// SVE2 Integer Multiply - Indexed Group
+//===----------------------------------------------------------------------===//
+
+class sve2_int_mul_by_indexed_elem<bits<2> sz, bits<4> opc, string asm,
+                                   ZPRRegOp zprty1, ZPRRegOp zprty2,
+                                   ZPRRegOp zprty3, Operand itype>
+: I<(outs zprty1:$Zd), (ins zprty2:$Zn, zprty3:$Zm, itype:$iop),
+  asm, "\t$Zd, $Zn, $Zm$iop", "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  let Inst{31-24} = 0b01000100;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b1;
+  let Inst{15-14} = 0b11;
+  let Inst{13-10} = opc;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve2_int_mul_by_indexed_elem<bits<4> opc, string asm> {
+  def _H : sve2_int_mul_by_indexed_elem<{0, ?}, opc, asm, ZPR16, ZPR16, ZPR3b16, VectorIndexH> {
+    bits<3> Zm;
+    bits<3> iop;
+    let Inst{22} = iop{2};
+    let Inst{20-19} = iop{1-0};
+    let Inst{18-16} = Zm;
+  }
+  def _S : sve2_int_mul_by_indexed_elem<0b10, opc, asm, ZPR32, ZPR32, ZPR3b32, VectorIndexS> {
+    bits<3> Zm;
+    bits<2> iop;
+    let Inst{20-19} = iop;
+    let Inst{18-16} = Zm;
+  }
+  def _D : sve2_int_mul_by_indexed_elem<0b11, opc, asm, ZPR64, ZPR64, ZPR4b64, VectorIndexD> {
+    bits<4> Zm;
+    bit iop;
+    let Inst{20} = iop;
+    let Inst{19-16} = Zm;
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // SVE Integer Arithmetic - Unary Predicated Group
 //===----------------------------------------------------------------------===//
 
