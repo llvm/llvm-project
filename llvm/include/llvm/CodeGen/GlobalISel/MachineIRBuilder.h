@@ -1239,6 +1239,34 @@ public:
     return buildInstr(TargetOpcode::G_OR, {Dst}, {Src0, Src1});
   }
 
+  /// Build and insert \p Res = G_FADD \p Op0, \p Op1
+  MachineInstrBuilder buildFAdd(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_FADD, {Dst}, {Src0, Src1});
+  }
+
+  /// Build and insert \p Res = G_FSUB \p Op0, \p Op1
+  MachineInstrBuilder buildFSub(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_FSUB, {Dst}, {Src0, Src1});
+  }
+
+  /// Build and insert \p Res = G_FNEG \p Op0
+  MachineInstrBuilder buildFNeg(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_FNEG, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_FABS \p Op0
+  MachineInstrBuilder buildFAbs(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_FABS, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_FCOPYSIGN \p Op0, \p Op1
+  MachineInstrBuilder buildFCopysign(const DstOp &Dst, const SrcOp &Src0,
+                                     const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_FCOPYSIGN, {Dst}, {Src0, Src1});
+  }
+
   virtual MachineInstrBuilder buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
                                          ArrayRef<SrcOp> SrcOps,
                                          Optional<unsigned> Flags = None);

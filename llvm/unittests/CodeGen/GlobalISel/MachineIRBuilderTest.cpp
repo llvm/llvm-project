@@ -110,3 +110,31 @@ TEST_F(GISelMITest, BuildUnmerge) {
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
+
+TEST_F(GISelMITest, TestBuildFPInsts) {
+  if (!TM)
+    return;
+
+  SmallVector<unsigned, 4> Copies;
+  collectCopies(Copies, MF);
+
+  LLT S64 = LLT::scalar(64);
+
+  B.buildFAdd(S64, Copies[0], Copies[1]);
+  B.buildFSub(S64, Copies[0], Copies[1]);
+  B.buildFNeg(S64, Copies[0]);
+  B.buildFAbs(S64, Copies[0]);
+  B.buildFCopysign(S64, Copies[0], Copies[1]);
+
+  auto CheckStr = R"(
+  ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[COPY0]]:_, [[COPY1]]:_
+  ; CHECK: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[COPY0]]:_, [[COPY1]]:_
+  ; CHECK: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[COPY0]]:_
+  ; CHECK: [[FABS:%[0-9]+]]:_(s64) = G_FABS [[COPY0]]:_
+  ; CHECK: [[FCOPYSIGN:%[0-9]+]]:_(s64) = G_FCOPYSIGN [[COPY0]]:_, [[COPY1]]:_
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
