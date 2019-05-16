@@ -17,7 +17,6 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/Timer.h"
@@ -97,8 +96,6 @@ llvm::Error SystemInitializerCommon::Initialize() {
   process_gdb_remote::ProcessGDBRemoteLog::Initialize();
 
   // Initialize plug-ins
-  ClangASTContext::Initialize();
-
   ObjectContainerBSDArchive::Initialize();
 
   EmulateInstructionARM::Initialize();
@@ -125,7 +122,6 @@ void SystemInitializerCommon::Terminate() {
   Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
   ObjectContainerBSDArchive::Terminate();
 
-  ClangASTContext::Terminate();
 
   EmulateInstructionARM::Terminate();
   EmulateInstructionMIPS::Terminate();
