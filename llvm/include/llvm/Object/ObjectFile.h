@@ -98,7 +98,7 @@ public:
   uint64_t getAddress() const;
   uint64_t getIndex() const;
   uint64_t getSize() const;
-  std::error_code getContents(StringRef &Result) const;
+  Expected<StringRef> getContents() const;
 
   /// Get the alignment of this section as the actual value (not log 2).
   uint64_t getAlignment() const;
@@ -454,13 +454,12 @@ inline uint64_t SectionRef::getSize() const {
   return OwningObject->getSectionSize(SectionPimpl);
 }
 
-inline std::error_code SectionRef::getContents(StringRef &Result) const {
+inline Expected<StringRef> SectionRef::getContents() const {
   Expected<ArrayRef<uint8_t>> Res =
       OwningObject->getSectionContents(SectionPimpl);
   if (!Res)
-    return errorToErrorCode(Res.takeError());
-  Result = StringRef(reinterpret_cast<const char *>(Res->data()), Res->size());
-  return std::error_code();
+    return Res.takeError();
+  return StringRef(reinterpret_cast<const char *>(Res->data()), Res->size());
 }
 
 inline uint64_t SectionRef::getAlignment() const {
