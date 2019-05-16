@@ -248,7 +248,7 @@ if(COMPILER_RT_LIBCXX_PATH AND
     set(LIBCXX_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/libcxx_tsan_${arch})
     add_custom_libcxx(libcxx_tsan_${arch} ${LIBCXX_PREFIX}
       DEPS ${TSAN_RUNTIME_LIBRARIES}
-      CFLAGS ${TARGET_CFLAGS} -fsanitize=thread
+      CFLAGS ${TARGET_CFLAGS} -fsanitize=thread ${COMPILER_RT_TEST_LIBDISPATCH_CFLAGS}
       USE_TOOLCHAIN)
     list(APPEND libcxx_tsan_deps libcxx_tsan_${arch}-build)
   endforeach()
