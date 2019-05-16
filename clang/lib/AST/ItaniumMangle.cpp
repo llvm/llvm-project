@@ -3589,6 +3589,7 @@ recurse:
   case Expr::AsTypeExprClass:
   case Expr::PseudoObjectExprClass:
   case Expr::AtomicExprClass:
+  case Expr::SourceLocExprClass:
   case Expr::FixedPointLiteralClass:
   {
     if (!NullOut) {

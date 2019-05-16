@@ -165,10 +165,11 @@ public:
   void VisitImplicitValueInitExpr(ImplicitValueInitExpr *E);
   void VisitNoInitExpr(NoInitExpr *E) { } // Do nothing.
   void VisitCXXDefaultArgExpr(CXXDefaultArgExpr *DAE) {
+    CodeGenFunction::CXXDefaultArgExprScope Scope(CGF, DAE);
     Visit(DAE->getExpr());
   }
   void VisitCXXDefaultInitExpr(CXXDefaultInitExpr *DIE) {
-    CodeGenFunction::CXXDefaultInitExprScope Scope(CGF);
+    CodeGenFunction::CXXDefaultInitExprScope Scope(CGF, DIE);
     Visit(DIE->getExpr());
   }
   void VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E);

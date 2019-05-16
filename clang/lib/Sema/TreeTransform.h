@@ -2713,9 +2713,9 @@ public:
   /// By default, builds a new default-argument expression, which does not
   /// require any semantic analysis. Subclasses may override this routine to
   /// provide different behavior.
-  ExprResult RebuildCXXDefaultArgExpr(SourceLocation Loc,
-                                            ParmVarDecl *Param) {
-    return CXXDefaultArgExpr::Create(getSema().Context, Loc, Param);
+  ExprResult RebuildCXXDefaultArgExpr(SourceLocation Loc, ParmVarDecl *Param) {
+    return CXXDefaultArgExpr::Create(getSema().Context, Loc, Param,
+                                     getSema().CurContext);
   }
 
   /// Build a new C++11 default-initialization expression.
@@ -2725,7 +2725,8 @@ public:
   /// routine to provide different behavior.
   ExprResult RebuildCXXDefaultInitExpr(SourceLocation Loc,
                                        FieldDecl *Field) {
-    return CXXDefaultInitExpr::Create(getSema().Context, Loc, Field);
+    return CXXDefaultInitExpr::Create(getSema().Context, Loc, Field,
+                                      getSema().CurContext);
   }
 
   /// Build a new C++ zero-initialization expression.
@@ -2977,6 +2978,18 @@ public:
                                    ArrayRef<TemplateArgument> PartialArgs) {
     return SizeOfPackExpr::Create(SemaRef.Context, OperatorLoc, Pack, PackLoc,
                                   RParenLoc, Length, PartialArgs);
+  }
+
+  /// Build a new expression representing a call to a source location
+  ///  builtin.
+  ///
+  /// By default, performs semantic analysis to build the new expression.
+  /// Subclasses may override this routine to provide different behavior.
+  ExprResult RebuildSourceLocExpr(SourceLocExpr::IdentKind Kind,
+                                  SourceLocation BuiltinLoc,
+                                  SourceLocation RPLoc,
+                                  DeclContext *ParentContext) {
+    return getSema().BuildSourceLocExpr(Kind, BuiltinLoc, RPLoc, ParentContext);
   }
 
   /// Build a new Objective-C boxed expression.
@@ -10132,6 +10145,19 @@ TreeTransform<Derived>::TransformCXXMemberCallExpr(CXXMemberCallExpr *E) {
   return getDerived().TransformCallExpr(E);
 }
 
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformSourceLocExpr(SourceLocExpr *E) {
+  bool NeedRebuildFunc = E->getIdentKind() == SourceLocExpr::Function &&
+                         getSema().CurContext != E->getParentContext();
+
+  if (!getDerived().AlwaysRebuild() && !NeedRebuildFunc)
+    return E;
+
+  return getDerived().RebuildSourceLocExpr(E->getIdentKind(), E->getBeginLoc(),
+                                           E->getEndLoc(),
+                                           getSema().CurContext);
+}
+
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformCUDAKernelCallExpr(CUDAKernelCallExpr *E) {
@@ -10358,8 +10384,8 @@ TreeTransform<Derived>::TransformCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
   if (!Param)
     return ExprError();
 
-  if (!getDerived().AlwaysRebuild() &&
-      Param == E->getParam())
+  if (!getDerived().AlwaysRebuild() && Param == E->getParam() &&
+      E->getUsedContext() == SemaRef.CurContext)
     return E;
 
   return getDerived().RebuildCXXDefaultArgExpr(E->getUsedLocation(), Param);
@@ -10373,7 +10399,8 @@ TreeTransform<Derived>::TransformCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
   if (!Field)
     return ExprError();
 
-  if (!getDerived().AlwaysRebuild() && Field == E->getField())
+  if (!getDerived().AlwaysRebuild() && Field == E->getField() &&
+      E->getUsedContext() == SemaRef.CurContext)
     return E;
 
   return getDerived().RebuildCXXDefaultInitExpr(E->getExprLoc(), Field);

@@ -884,10 +884,6 @@ public:
     llvm_unreachable("Invalid CastKind");
   }
 
-  llvm::Constant *VisitCXXDefaultArgExpr(CXXDefaultArgExpr *DAE, QualType T) {
-    return Visit(DAE->getExpr(), T);
-  }
-
   llvm::Constant *VisitCXXDefaultInitExpr(CXXDefaultInitExpr *DIE, QualType T) {
     // No need for a DefaultInitExprScope: we don't handle 'this' in a
     // constant expression.

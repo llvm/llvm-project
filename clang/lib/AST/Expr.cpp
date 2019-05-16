@@ -10,13 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/Expr.h"
+#include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
-#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
@@ -1992,6 +1993,91 @@ bool BinaryOperator::isNullPointerArithmeticExtension(ASTContext &Ctx,
 
   return true;
 }
+
+static QualType getDecayedSourceLocExprType(const ASTContext &Ctx,
+                                            SourceLocExpr::IdentKind Kind) {
+  switch (Kind) {
+  case SourceLocExpr::File:
+  case SourceLocExpr::Function: {
+    QualType ArrTy = Ctx.getStringLiteralArrayType(Ctx.CharTy, 0);
+    return Ctx.getPointerType(ArrTy->getAsArrayTypeUnsafe()->getElementType());
+  }
+  case SourceLocExpr::Line:
+  case SourceLocExpr::Column:
+    return Ctx.UnsignedIntTy;
+  }
+  llvm_unreachable("unhandled case");
+}
+
+SourceLocExpr::SourceLocExpr(const ASTContext &Ctx, IdentKind Kind,
+                             SourceLocation BLoc, SourceLocation RParenLoc,
+                             DeclContext *ParentContext)
+    : Expr(SourceLocExprClass, getDecayedSourceLocExprType(Ctx, Kind),
+           VK_RValue, OK_Ordinary, false, false, false, false),
+      BuiltinLoc(BLoc), RParenLoc(RParenLoc), ParentContext(ParentContext) {
+  SourceLocExprBits.Kind = Kind;
+}
+
+StringRef SourceLocExpr::getBuiltinStr() const {
+  switch (getIdentKind()) {
+  case File:
+    return "__builtin_FILE";
+  case Function:
+    return "__builtin_FUNCTION";
+  case Line:
+    return "__builtin_LINE";
+  case Column:
+    return "__builtin_COLUMN";
+  }
+  llvm_unreachable("unexpected IdentKind!");
+}
+
+APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
+                                         const Expr *DefaultExpr) const {
+  SourceLocation Loc;
+  const DeclContext *Context;
+
+  std::tie(Loc,
+           Context) = [&]() -> std::pair<SourceLocation, const DeclContext *> {
+    if (auto *DIE = dyn_cast_or_null<CXXDefaultInitExpr>(DefaultExpr))
+      return {DIE->getUsedLocation(), DIE->getUsedContext()};
+    if (auto *DAE = dyn_cast_or_null<CXXDefaultArgExpr>(DefaultExpr))
+      return {DAE->getUsedLocation(), DAE->getUsedContext()};
+    return {this->getLocation(), this->getParentContext()};
+  }();
+
+  PresumedLoc PLoc = Ctx.getSourceManager().getPresumedLoc(
+      Ctx.getSourceManager().getExpansionRange(Loc).getEnd());
+
+  auto MakeStringLiteral = [&](StringRef Tmp) {
+    using LValuePathEntry = APValue::LValuePathEntry;
+    StringLiteral *Res = Ctx.getPredefinedStringLiteralFromCache(Tmp);
+    // Decay the string to a pointer to the first character.
+    LValuePathEntry Path[1] = {LValuePathEntry::ArrayIndex(0)};
+    return APValue(Res, CharUnits::Zero(), Path, /*OnePastTheEnd=*/false);
+  };
+
+  switch (getIdentKind()) {
+  case SourceLocExpr::File:
+    return MakeStringLiteral(PLoc.getFilename());
+  case SourceLocExpr::Function: {
+    const Decl *CurDecl = dyn_cast_or_null<Decl>(Context);
+    return MakeStringLiteral(
+        CurDecl ? PredefinedExpr::ComputeName(PredefinedExpr::Function, CurDecl)
+                : std::string(""));
+  }
+  case SourceLocExpr::Line:
+  case SourceLocExpr::Column: {
+    llvm::APSInt IntVal(Ctx.getIntWidth(Ctx.UnsignedIntTy),
+                        /*IsUnsigned=*/true);
+    IntVal = getIdentKind() == SourceLocExpr::Line ? PLoc.getLine()
+                                                   : PLoc.getColumn();
+    return APValue(IntVal);
+  }
+  }
+  llvm_unreachable("unhandled case");
+}
+
 InitListExpr::InitListExpr(const ASTContext &C, SourceLocation lbraceloc,
                            ArrayRef<Expr*> initExprs, SourceLocation rbraceloc)
   : Expr(InitListExprClass, QualType(), VK_RValue, OK_Ordinary, false, false,
@@ -3156,6 +3242,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ObjCAvailabilityCheckExprClass:
   case CXXUuidofExprClass:
   case OpaqueValueExprClass:
+  case SourceLocExprClass:
     // These never have a side-effect.
     return false;
 

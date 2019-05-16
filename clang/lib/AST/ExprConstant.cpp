@@ -37,6 +37,7 @@
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/CurrentSourceLocExprScope.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/OSLog.h"
@@ -63,6 +64,9 @@ namespace {
   struct LValue;
   struct CallStackFrame;
   struct EvalInfo;
+
+  using SourceLocExprScopeGuard =
+      CurrentSourceLocExprScope::SourceLocExprScopeGuard;
 
   static QualType getType(APValue::LValueBase B) {
     if (!B) return QualType();
@@ -106,12 +110,12 @@ namespace {
   /// Get an LValue path entry, which is known to not be an array index, as a
   /// field declaration.
   static const FieldDecl *getAsField(APValue::LValuePathEntry E) {
-    return dyn_cast<FieldDecl>(E.getAsBaseOrMember().getPointer());
+    return dyn_cast_or_null<FieldDecl>(E.getAsBaseOrMember().getPointer());
   }
   /// Get an LValue path entry, which is known to not be an array index, as a
   /// base class declaration.
   static const CXXRecordDecl *getAsBaseClass(APValue::LValuePathEntry E) {
-    return dyn_cast<CXXRecordDecl>(E.getAsBaseOrMember().getPointer());
+    return dyn_cast_or_null<CXXRecordDecl>(E.getAsBaseOrMember().getPointer());
   }
   /// Determine whether this LValue path entry for a base class names a virtual
   /// base class.
@@ -463,6 +467,10 @@ namespace {
     /// Arguments - Parameter bindings for this function call, indexed by
     /// parameters' function scope indices.
     APValue *Arguments;
+
+    /// Source location information about the default argument or default
+    /// initializer expression we're evaluating, if any.
+    CurrentSourceLocExprScope CurSourceLocExprScope;
 
     // Note that we intentionally use std::map here so that references to
     // values are stable.
@@ -2732,6 +2740,9 @@ static unsigned getBaseIndex(const CXXRecordDecl *Derived,
 /// Extract the value of a character from a string literal.
 static APSInt extractStringLiteralCharacter(EvalInfo &Info, const Expr *Lit,
                                             uint64_t Index) {
+  assert(!isa<SourceLocExpr>(Lit) &&
+         "SourceLocExpr should have already been converted to a StringLiteral");
+
   // FIXME: Support MakeStringConstant
   if (const auto *ObjCEnc = dyn_cast<ObjCEncodeExpr>(Lit)) {
     std::string Str;
@@ -3469,6 +3480,7 @@ static bool handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv,
 
   // Check for special cases where there is no existing APValue to look at.
   const Expr *Base = LVal.Base.dyn_cast<const Expr*>();
+
   if (Base && !LVal.getLValueCallIndex() && !Type.isVolatileQualified()) {
     if (const CompoundLiteralExpr *CLE = dyn_cast<CompoundLiteralExpr>(Base)) {
       // In C99, a CompoundLiteralExpr is an lvalue, and we defer evaluating the
@@ -5242,6 +5254,7 @@ public:
     { return StmtVisitorTy::Visit(E->getReplacement()); }
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
     TempVersionRAII RAII(*Info.CurrentCall);
+    SourceLocExprScopeGuard Guard(E, Info.CurrentCall->CurSourceLocExprScope);
     return StmtVisitorTy::Visit(E->getExpr());
   }
   bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E) {
@@ -5249,8 +5262,10 @@ public:
     // The initializer may not have been parsed yet, or might be erroneous.
     if (!E->getExpr())
       return Error(E);
+    SourceLocExprScopeGuard Guard(E, Info.CurrentCall->CurSourceLocExprScope);
     return StmtVisitorTy::Visit(E->getExpr());
   }
+
   // We cannot create any objects for which cleanups are required, so there is
   // nothing to do here; all cleanups must come from unevaluated subexpressions.
   bool VisitExprWithCleanups(const ExprWithCleanups *E)
@@ -6324,6 +6339,14 @@ public:
         Result.setFrom(Info.Ctx, RVal);
       }
     }
+    return true;
+  }
+
+  bool VisitSourceLocExpr(const SourceLocExpr *E) {
+    assert(E->isStringType() && "SourceLocExpr isn't a pointer type?");
+    APValue LValResult = E->EvaluateInContext(
+        Info.Ctx, Info.CurrentCall->CurSourceLocExprScope.getDefaultExpr());
+    Result.setFrom(Info.Ctx, LValResult);
     return true;
   }
 
@@ -7982,7 +8005,7 @@ public:
 
   bool VisitCXXNoexceptExpr(const CXXNoexceptExpr *E);
   bool VisitSizeOfPackExpr(const SizeOfPackExpr *E);
-
+  bool VisitSourceLocExpr(const SourceLocExpr *E);
   // FIXME: Missing: array subscript of vector, member of vector
 };
 
@@ -8056,6 +8079,12 @@ static bool EvaluateInteger(const Expr *E, APSInt &Result, EvalInfo &Info) {
   }
   Result = Val.getInt();
   return true;
+}
+
+bool IntExprEvaluator::VisitSourceLocExpr(const SourceLocExpr *E) {
+  APValue Evaluated = E->EvaluateInContext(
+      Info.Ctx, Info.CurrentCall->CurSourceLocExprScope.getDefaultExpr());
+  return Success(Evaluated, E);
 }
 
 static bool EvaluateFixedPoint(const Expr *E, APFixedPoint &Result,
@@ -11899,7 +11928,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
 
   case Expr::SizeOfPackExprClass:
   case Expr::GNUNullExprClass:
-    // GCC considers the GNU __null value to be an integral constant expression.
+  case Expr::SourceLocExprClass:
     return NoDiag();
 
   case Expr::SubstNonTypeTemplateParmExprClass:

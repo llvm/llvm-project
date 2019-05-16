@@ -271,6 +271,12 @@ private:
   llvm::DenseMap<const MaterializeTemporaryExpr *, APValue *>
     MaterializedTemporaryValues;
 
+  /// A cache mapping a string value to a StringLiteral object with the same
+  /// value.
+  ///
+  /// This is lazily created.  This is intentionally not serialized.
+  mutable llvm::StringMap<StringLiteral *> StringLiteralCache;
+
   /// Representation of a "canonical" template template parameter that
   /// is used in canonical template names.
   class CanonicalTemplateTemplateParm : public llvm::FoldingSetNode {
@@ -1322,6 +1328,10 @@ public:
   QualType getConstantArrayType(QualType EltTy, const llvm::APInt &ArySize,
                                 ArrayType::ArraySizeModifier ASM,
                                 unsigned IndexTypeQuals) const;
+
+  /// Return a type for a constant array for a string literal of the
+  /// specified element type and length.
+  QualType getStringLiteralArrayType(QualType EltTy, unsigned Length) const;
 
   /// Returns a vla type where known sizes are replaced with [*].
   QualType getVariableArrayDecayedType(QualType Ty) const;
@@ -2804,6 +2814,11 @@ public:
   /// of static storage duration.
   APValue *getMaterializedTemporaryValue(const MaterializeTemporaryExpr *E,
                                          bool MayCreate);
+
+  /// Return a string representing the human readable name for the specified
+  /// function declaration or file name. Used by SourceLocExpr and
+  /// PredefinedExpr to cache evaluated results.
+  StringLiteral *getPredefinedStringLiteralFromCache(StringRef Key) const;
 
   //===--------------------------------------------------------------------===//
   //                    Statistics

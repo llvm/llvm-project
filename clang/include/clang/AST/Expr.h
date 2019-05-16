@@ -4171,6 +4171,70 @@ public:
   }
 };
 
+/// Represents a function call to one of __builtin_LINE(), __builtin_COLUMN(),
+/// __builtin_FUNCTION(), or __builtin_FILE().
+class SourceLocExpr final : public Expr {
+  SourceLocation BuiltinLoc, RParenLoc;
+  DeclContext *ParentContext;
+
+public:
+  enum IdentKind { Function, File, Line, Column };
+
+  SourceLocExpr(const ASTContext &Ctx, IdentKind Type, SourceLocation BLoc,
+                SourceLocation RParenLoc, DeclContext *Context);
+
+  /// Build an empty call expression.
+  explicit SourceLocExpr(EmptyShell Empty) : Expr(SourceLocExprClass, Empty) {}
+
+  /// Return the result of evaluating this SourceLocExpr in the specified
+  /// (and possibly null) default argument or initialization context.
+  APValue EvaluateInContext(const ASTContext &Ctx,
+                            const Expr *DefaultExpr) const;
+
+  /// Return a string representing the name of the specific builtin function.
+  StringRef getBuiltinStr() const;
+
+  IdentKind getIdentKind() const {
+    return static_cast<IdentKind>(SourceLocExprBits.Kind);
+  }
+
+  bool isStringType() const {
+    switch (getIdentKind()) {
+    case File:
+    case Function:
+      return true;
+    case Line:
+    case Column:
+      return false;
+    }
+  }
+  bool isIntType() const LLVM_READONLY { return !isStringType(); }
+
+  /// If the SourceLocExpr has been resolved return the subexpression
+  /// representing the resolved value. Otherwise return null.
+  const DeclContext *getParentContext() const { return ParentContext; }
+  DeclContext *getParentContext() { return ParentContext; }
+
+  SourceLocation getLocation() const { return BuiltinLoc; }
+  SourceLocation getBeginLoc() const { return BuiltinLoc; }
+  SourceLocation getEndLoc() const { return RParenLoc; }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(child_iterator(), child_iterator());
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == SourceLocExprClass;
+  }
+
+private:
+  friend class ASTStmtReader;
+};
+
 /// Describes an C or C++ initializer list.
 ///
 /// InitListExpr describes an initializer list, which can be used to

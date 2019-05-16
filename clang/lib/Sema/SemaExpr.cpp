@@ -1683,20 +1683,8 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
     Diag(RemovalDiagLoc, RemovalDiag);
   }
 
-
-  QualType CharTyConst = CharTy;
-  // A C++ string literal has a const-qualified element type (C++ 2.13.4p1).
-  if (getLangOpts().CPlusPlus || getLangOpts().ConstStrings)
-    CharTyConst.addConst();
-
-  CharTyConst = Context.adjustStringLiteralBaseType(CharTyConst);
-
-  // Get an array type for the string, according to C99 6.4.5.  This includes
-  // the nul terminator character as well as the string length for pascal
-  // strings.
-  QualType StrTy = Context.getConstantArrayType(
-      CharTyConst, llvm::APInt(32, Literal.GetNumStringChars() + 1),
-      ArrayType::Normal, 0);
+  QualType StrTy =
+      Context.getStringLiteralArrayType(CharTy, Literal.GetNumStringChars());
 
   // Pass &StringTokLocs[0], StringTokLocs.size() to factory!
   StringLiteral *Lit = StringLiteral::Create(Context, Literal.GetString(),
@@ -4873,7 +4861,7 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
                                         FunctionDecl *FD, ParmVarDecl *Param) {
   if (CheckCXXDefaultArgExpr(CallLoc, FD, Param))
     return ExprError();
-  return CXXDefaultArgExpr::Create(Context, CallLoc, Param);
+  return CXXDefaultArgExpr::Create(Context, CallLoc, Param, CurContext);
 }
 
 Sema::VariadicCallType
@@ -5138,8 +5126,7 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
     } else {
       assert(Param && "can't use default arguments without a known callee");
 
-      ExprResult ArgExpr =
-        BuildCXXDefaultArgExpr(CallLoc, FDecl, Param);
+      ExprResult ArgExpr = BuildCXXDefaultArgExpr(CallLoc, FDecl, Param);
       if (ArgExpr.isInvalid())
         return true;
 
@@ -14095,6 +14082,20 @@ ExprResult Sema::ActOnGNUNullExpr(SourceLocation TokenLoc) {
   }
 
   return new (Context) GNUNullExpr(Ty, TokenLoc);
+}
+
+ExprResult Sema::ActOnSourceLocExpr(SourceLocExpr::IdentKind Kind,
+                                    SourceLocation BuiltinLoc,
+                                    SourceLocation RPLoc) {
+  return BuildSourceLocExpr(Kind, BuiltinLoc, RPLoc, CurContext);
+}
+
+ExprResult Sema::BuildSourceLocExpr(SourceLocExpr::IdentKind Kind,
+                                    SourceLocation BuiltinLoc,
+                                    SourceLocation RPLoc,
+                                    DeclContext *ParentContext) {
+  return new (Context)
+      SourceLocExpr(Context, Kind, BuiltinLoc, RPLoc, ParentContext);
 }
 
 bool Sema::ConversionToObjCStringLiteralCheck(QualType DstType, Expr *&Exp,

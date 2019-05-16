@@ -905,6 +905,10 @@ void StmtPrinter::VisitOMPTargetTeamsDistributeSimdDirective(
 //  Expr printing methods.
 //===----------------------------------------------------------------------===//
 
+void StmtPrinter::VisitSourceLocExpr(SourceLocExpr *Node) {
+  OS << Node->getBuiltinStr() << "()";
+}
+
 void StmtPrinter::VisitConstantExpr(ConstantExpr *Node) {
   PrintExpr(Node->getSubExpr());
 }

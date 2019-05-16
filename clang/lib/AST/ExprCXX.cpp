@@ -907,13 +907,14 @@ const IdentifierInfo *UserDefinedLiteral::getUDSuffix() const {
 }
 
 CXXDefaultInitExpr::CXXDefaultInitExpr(const ASTContext &Ctx, SourceLocation Loc,
-                                       FieldDecl *Field, QualType Ty)
+                                       FieldDecl *Field, QualType Ty,
+                                       DeclContext *UsedContext)
     : Expr(CXXDefaultInitExprClass, Ty.getNonLValueExprType(Ctx),
            Ty->isLValueReferenceType() ? VK_LValue : Ty->isRValueReferenceType()
                                                         ? VK_XValue
                                                         : VK_RValue,
            /*FIXME*/ OK_Ordinary, false, false, false, false),
-      Field(Field) {
+      Field(Field), UsedContext(UsedContext) {
   CXXDefaultInitExprBits.Loc = Loc;
   assert(Field->hasInClassInitializer());
 }

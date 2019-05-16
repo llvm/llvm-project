@@ -6801,8 +6801,12 @@ ExpectedStmt ASTNodeImporter::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
   if (!ToParamOrErr)
     return ToParamOrErr.takeError();
 
+  auto UsedContextOrErr = Importer.ImportContext(E->getUsedContext());
+  if (!UsedContextOrErr)
+    return UsedContextOrErr.takeError();
+
   return CXXDefaultArgExpr::Create(
-      Importer.getToContext(), *ToUsedLocOrErr, *ToParamOrErr);
+      Importer.getToContext(), *ToUsedLocOrErr, *ToParamOrErr, *UsedContextOrErr);
 }
 
 ExpectedStmt
@@ -7525,8 +7529,12 @@ ExpectedStmt ASTNodeImporter::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
   if (!ToFieldOrErr)
     return ToFieldOrErr.takeError();
 
+  auto UsedContextOrErr = Importer.ImportContext(E->getUsedContext());
+  if (!UsedContextOrErr)
+    return UsedContextOrErr.takeError();
+
   return CXXDefaultInitExpr::Create(
-      Importer.getToContext(), *ToBeginLocOrErr, *ToFieldOrErr);
+      Importer.getToContext(), *ToBeginLocOrErr, *ToFieldOrErr, *UsedContextOrErr);
 }
 
 ExpectedStmt ASTNodeImporter::VisitCXXNamedCastExpr(CXXNamedCastExpr *E) {

@@ -293,6 +293,13 @@ void f24() {
   f24_a();
 }
 
+// CHECK-LABEL: define
+void f25_a(int x = __builtin_LINE()) {}
+void f25() {
+  // CHECK: call void @_Z5f25_ai(i32 2700)
+#line 2700
+  f25_a();
+}
 // CHECK: [[DBG_F1]] = !DILocation(line: 100,
 // CHECK: [[DBG_FOO_VALUE]] = !DILocation(line: 200,
 // CHECK: [[DBG_FOO_REF]] = !DILocation(line: 202,
