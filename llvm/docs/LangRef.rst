@@ -12344,6 +12344,81 @@ Semantics:
 This function returns the same values as the libm ``round``
 functions would, and handles error conditions in the same way.
 
+'``llvm.lround.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.lround`` on any
+floating-point type. Not all targets support all types however.
+
+::
+
+      declare i32 @llvm.lround.i32.f32(float %Val)
+      declare i32 @llvm.lround.i32.f64(double %Val)
+      declare i32 @llvm.lround.i32.f80(float %Val)
+      declare i32 @llvm.lround.i32.f128(double %Val)
+      declare i32 @llvm.lround.i32.ppcf128(double %Val)
+
+      declare i64 @llvm.lround.i64.f32(float %Val)
+      declare i64 @llvm.lround.i64.f64(double %Val)
+      declare i64 @llvm.lround.i64.f80(float %Val)
+      declare i64 @llvm.lround.i64.f128(double %Val)
+      declare i64 @llvm.lround.i64.ppcf128(double %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.lround.*``' intrinsics returns the operand rounded to the
+nearest integer.
+
+Arguments:
+""""""""""
+
+The argument is a floating-point number and return is i32 for
+``llvm.lround.i32`` and i64 for ``llvm.lround.i64``.
+
+Semantics:
+""""""""""
+
+This function returns the same values as the libm ``lround``
+functions would, but without setting errno.
+
+'``llvm.llround.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.llround`` on any
+floating-point type. Not all targets support all types however.
+
+::
+
+      declare i64 @llvm.lround.f32(float %Val)
+      declare i64 @llvm.lround.f64(double %Val)
+      declare i64 @llvm.lround.f80(float %Val)
+      declare i64 @llvm.lround.f128(double %Val)
+      declare i64 @llvm.lround.ppcf128(double %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.llround.*``' intrinsics returns the operand rounded to the
+nearest integer.
+
+Arguments:
+""""""""""
+
+The argument is a floating-point number and return is i64.
+
+Semantics:
+""""""""""
+
+This function returns the same values as the libm ``llround``
+functions would, but without setting errno.
+
 Bit Manipulation Intrinsics
 ---------------------------
 

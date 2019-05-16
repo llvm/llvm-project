@@ -168,6 +168,8 @@ Stream::~Stream() = default;
 
 Stream::StreamKind Stream::getKind(StreamType Type) {
   switch (Type) {
+  case StreamType::MemoryList:
+    return StreamKind::MemoryList;
   case StreamType::ModuleList:
     return StreamKind::ModuleList;
   case StreamType::SystemInfo:
@@ -190,6 +192,8 @@ Stream::StreamKind Stream::getKind(StreamType Type) {
 std::unique_ptr<Stream> Stream::create(StreamType Type) {
   StreamKind Kind = getKind(Type);
   switch (Kind) {
+  case StreamKind::MemoryList:
+    return llvm::make_unique<MemoryListStream>();
   case StreamKind::ModuleList:
     return llvm::make_unique<ModuleListStream>();
   case StreamKind::RawContent:
@@ -353,6 +357,16 @@ static StringRef streamValidate(RawContentStream &Stream) {
   return "";
 }
 
+void yaml::MappingTraits<MemoryListStream::entry_type>::mapping(
+    IO &IO, MemoryListStream::entry_type &Range) {
+  MappingContextTraits<MemoryDescriptor, yaml::BinaryRef>::mapping(
+      IO, Range.Entry, Range.Content);
+}
+
+static void streamMapping(yaml::IO &IO, MemoryListStream &Stream) {
+  IO.mapRequired("Memory Ranges", Stream.Entries);
+}
+
 static void streamMapping(yaml::IO &IO, ModuleListStream &Stream) {
   IO.mapRequired("Modules", Stream.Entries);
 }
@@ -421,6 +435,9 @@ void yaml::MappingTraits<std::unique_ptr<Stream>>::mapping(
   if (!IO.outputting())
     S = MinidumpYAML::Stream::create(Type);
   switch (S->Kind) {
+  case MinidumpYAML::Stream::StreamKind::MemoryList:
+    streamMapping(IO, llvm::cast<MemoryListStream>(*S));
+    break;
   case MinidumpYAML::Stream::StreamKind::ModuleList:
     streamMapping(IO, llvm::cast<ModuleListStream>(*S));
     break;
@@ -444,6 +461,7 @@ StringRef yaml::MappingTraits<std::unique_ptr<Stream>>::validate(
   switch (S->Kind) {
   case MinidumpYAML::Stream::StreamKind::RawContent:
     return streamValidate(cast<RawContentStream>(*S));
+  case MinidumpYAML::Stream::StreamKind::MemoryList:
   case MinidumpYAML::Stream::StreamKind::ModuleList:
   case MinidumpYAML::Stream::StreamKind::SystemInfo:
   case MinidumpYAML::Stream::StreamKind::TextContent:
@@ -464,6 +482,10 @@ void yaml::MappingTraits<Object>::mapping(IO &IO, Object &O) {
 static LocationDescriptor layout(BlobAllocator &File, yaml::BinaryRef Data) {
   return {support::ulittle32_t(Data.binary_size()),
           support::ulittle32_t(File.allocateBytes(Data))};
+}
+
+static void layout(BlobAllocator &File, MemoryListStream::entry_type &Range) {
+  Range.Entry.Memory = layout(File, Range.Content);
 }
 
 static void layout(BlobAllocator &File, ModuleListStream::entry_type &M) {
@@ -502,6 +524,9 @@ static Directory layout(BlobAllocator &File, Stream &S) {
   Result.Location.RVA = File.tell();
   Optional<size_t> DataEnd;
   switch (S.Kind) {
+  case Stream::StreamKind::MemoryList:
+    DataEnd = layout(File, cast<MemoryListStream>(S));
+    break;
   case Stream::StreamKind::ModuleList:
     DataEnd = layout(File, cast<ModuleListStream>(S));
     break;
@@ -566,6 +591,19 @@ Expected<std::unique_ptr<Stream>>
 Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
   StreamKind Kind = getKind(StreamDesc.Type);
   switch (Kind) {
+  case StreamKind::MemoryList: {
+    auto ExpectedList = File.getMemoryList();
+    if (!ExpectedList)
+      return ExpectedList.takeError();
+    std::vector<MemoryListStream::entry_type> Ranges;
+    for (const MemoryDescriptor &MD : *ExpectedList) {
+      auto ExpectedContent = File.getRawData(MD.Memory);
+      if (!ExpectedContent)
+        return ExpectedContent.takeError();
+      Ranges.push_back({MD, *ExpectedContent});
+    }
+    return llvm::make_unique<MemoryListStream>(std::move(Ranges));
+  }
   case StreamKind::ModuleList: {
     auto ExpectedList = File.getModuleList();
     if (!ExpectedList)

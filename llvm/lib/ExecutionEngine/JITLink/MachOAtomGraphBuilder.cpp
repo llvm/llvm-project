@@ -136,14 +136,14 @@ Error MachOAtomGraphBuilder::parseSections() {
 
     if (!SecRef.isVirtual()) {
       // If this section has content then record it.
-      StringRef Content;
-      if (auto EC = SecRef.getContents(Content))
-        return errorCodeToError(EC);
-      if (Content.size() != SecRef.getSize())
+      Expected<StringRef> Content = SecRef.getContents();
+      if (!Content)
+        return Content.takeError();
+      if (Content->size() != SecRef.getSize())
         return make_error<JITLinkError>("Section content size does not match "
                                         "declared size for " +
                                         Name);
-      MachOSec.setContent(Content);
+      MachOSec.setContent(*Content);
     } else {
       // If this is a zero-fill section then just record the size.
       MachOSec.setZeroFill(SecRef.getSize());

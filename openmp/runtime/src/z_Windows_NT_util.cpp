@@ -310,22 +310,32 @@ void __kmp_suspend_initialize(void) { /* do nothing */
 }
 
 void __kmp_suspend_initialize_thread(kmp_info_t *th) {
-  if (!TCR_4(th->th.th_suspend_init)) {
-    /* this means we haven't initialized the suspension pthread objects for this
-       thread in this instance of the process */
+  int old_value = KMP_ATOMIC_LD_RLX(&th->th.th_suspend_init);
+  int new_value = TRUE;
+  // Return if already initialized
+  if (old_value == new_value)
+    return;
+  // Wait, then return if being initialized
+  if (old_value == -1 ||
+      !__kmp_atomic_compare_store(&th->th.th_suspend_init, old_value, -1)) {
+    while (KMP_ATOMIC_LD_ACQ(&th->th.th_suspend_init) != new_value) {
+      KMP_CPU_PAUSE();
+    }
+  } else {
+    // Claim to be the initializer and do initializations
     __kmp_win32_cond_init(&th->th.th_suspend_cv);
     __kmp_win32_mutex_init(&th->th.th_suspend_mx);
-    TCW_4(th->th.th_suspend_init, TRUE);
+    KMP_ATOMIC_ST_REL(&th->th.th_suspend_init, new_value);
   }
 }
 
 void __kmp_suspend_uninitialize_thread(kmp_info_t *th) {
-  if (TCR_4(th->th.th_suspend_init)) {
+  if (KMP_ATOMIC_LD_ACQ(&th->th.th_suspend_init)) {
     /* this means we have initialize the suspension pthread objects for this
        thread in this instance of the process */
     __kmp_win32_cond_destroy(&th->th.th_suspend_cv);
     __kmp_win32_mutex_destroy(&th->th.th_suspend_mx);
-    TCW_4(th->th.th_suspend_init, FALSE);
+    KMP_ATOMIC_ST_REL(&th->th.th_suspend_init, FALSE);
   }
 }
 
