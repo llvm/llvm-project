@@ -1501,8 +1501,14 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
       // the last part of __FILE__.
       if (II == Ident__FILE_NAME__) {
         // Try to get the last path component.
-        StringRef PLFileName = PLoc.getFilename(); 
-        size_t LastSep = PLFileName.find_last_of('/');        
+        StringRef PLFileName = PLoc.getFilename();
+        size_t LastSep = PLFileName.find_last_of('/');
+#ifdef _WIN32
+        // On Windows targets, absolute paths can be normalized to use
+        // backslashes instead - handle this potential case here.
+        if (LastSep == StringRef::npos)
+          LastSep = PLFileName.find_last_of('\\');
+#endif
         // Skip the separator and get the last part, otherwise fall back on
         // returning the original full filename.
         if (LastSep != StringRef::npos)
