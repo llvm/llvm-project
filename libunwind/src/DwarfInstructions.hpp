@@ -232,6 +232,31 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
       }
 #endif
 
+#if defined(_LIBUNWIND_TARGET_PPC64)
+#define PPC64_ELFV1_R2_LOAD_INST_ENCODING 0xe8410028u // ld r2,40(r1)
+#define PPC64_ELFV1_R2_OFFSET 40
+#define PPC64_ELFV2_R2_LOAD_INST_ENCODING 0xe8410018u // ld r2,24(r1)
+#define PPC64_ELFV2_R2_OFFSET 24
+      // If the instruction at return address is a TOC (r2) restore,
+      // then r2 was saved and needs to be restored.
+      // ELFv2 ABI specifies that the TOC Pointer must be saved at SP + 24,
+      // while in ELFv1 ABI it is saved at SP + 40.
+      if (R::getArch() == REGISTERS_PPC64 && returnAddress != 0) {
+        pint_t sp = newRegisters.getRegister(UNW_REG_SP);
+        pint_t r2 = 0;
+        switch (addressSpace.get32(returnAddress)) {
+        case PPC64_ELFV1_R2_LOAD_INST_ENCODING:
+          r2 = addressSpace.get64(sp + PPC64_ELFV1_R2_OFFSET);
+          break;
+        case PPC64_ELFV2_R2_LOAD_INST_ENCODING:
+          r2 = addressSpace.get64(sp + PPC64_ELFV2_R2_OFFSET);
+          break;
+        }
+        if (r2)
+          newRegisters.setRegister(UNW_PPC64_R2, r2);
+      }
+#endif
+
       // Return address is address after call site instruction, so setting IP to
       // that does simualates a return.
       newRegisters.setIP(returnAddress);
