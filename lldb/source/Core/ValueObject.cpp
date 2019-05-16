@@ -1086,44 +1086,46 @@ std::pair<TypeValidatorResult, std::string> ValueObject::GetValidationStatus() {
 }
 
 const char *ValueObject::GetObjectDescription() {
-
   if (!UpdateValueIfNeeded(true))
-    return NULL;
+    return nullptr;
 
+  // Return cached value.
   if (!m_object_desc_str.empty())
     return m_object_desc_str.c_str();
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
   Process *process = exe_ctx.GetProcessPtr();
-  if (process == NULL)
-    return NULL;
+  if (!process)
+    return nullptr;
 
-  StreamString s;
-
-  LanguageType language = GetObjectRuntimeLanguage();
-  LanguageRuntime *runtime = process->GetLanguageRuntime(language);
-
-  if (runtime == NULL) {
-    // Aw, hell, if the things a pointer, or even just an integer, let's try
-    // ObjC anyway...
-    CompilerType compiler_type = GetCompilerType();
-    if (compiler_type) {
-      bool is_signed;
-      if (compiler_type.IsIntegerType(is_signed) ||
-          compiler_type.IsPointerType()) {
-        runtime = process->GetLanguageRuntime(eLanguageTypeObjC);
+  // Returns the object description produced by one language runtime.
+  auto get_object_description = [&](LanguageType language) -> const char * {
+    if (LanguageRuntime *runtime = process->GetLanguageRuntime(language)) {
+      StreamString s;
+      if (runtime->GetObjectDescription(s, *this)) {
+        m_object_desc_str.append(s.GetString());
+        return m_object_desc_str.c_str();
       }
     }
-  }
+    return nullptr;
+  };
 
-  if (runtime && runtime->GetObjectDescription(s, *this)) {
-    m_object_desc_str.append(s.GetString());
-  }
+  // Try the native language runtime first.
+  LanguageType native_language = GetObjectRuntimeLanguage();
+  if (const char *desc = get_object_description(native_language))
+    return desc;
 
-  if (m_object_desc_str.empty())
-    return NULL;
-  else
-    return m_object_desc_str.c_str();
+  switch (native_language) {
+  case eLanguageTypeC:
+  case eLanguageTypeC_plus_plus:
+  case eLanguageTypeObjC:
+  case eLanguageTypeObjC_plus_plus:
+    // Try the Objective-C language runtime. This fallback is necessary
+    // for Objective-C++ and mixed Objective-C / C++ programs.
+    return get_object_description(eLanguageTypeObjC);
+  default:
+    return nullptr;
+  }
 }
 
 bool ValueObject::GetValueAsCString(const lldb_private::TypeFormatImpl &format,
