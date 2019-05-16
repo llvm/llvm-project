@@ -57,30 +57,11 @@ ProgramHeaders:
     Sections:
       - Section: .bss
 
-## Test that --section works when dumping relocation sections.
-# RUN: llvm-objdump -r %t.o --section=.another.rela.text --section=.rela.rodata \
-# RUN:   | FileCheck %s --check-prefix=DUMP-RELOCS --implicit-check-not=R_X86_64 \
-# RUN:                  --implicit-check-not="RELOCATION RECORDS"
-
-# DUMP-RELOCS: RELOCATION RECORDS FOR [.text]:
-# DUMP-RELOCS: 00000001 R_X86_64_GOT32 foo
-# DUMP-RELOCS: RELOCATION RECORDS FOR [.rodata]:
-# DUMP-RELOCS: 00000000 R_X86_64_NONE foo
-
-## Test that --section works with --full-contents.
-# RUN: llvm-objdump -s %t.o --section=.text --section=.rela.text2 \
-# RUN:   | FileCheck %s --check-prefix=CONTENTS \
-# RUN:                  --implicit-check-not=.text \
-# RUN:                  --implicit-check-not=.rodata
-
-# CONTENTS: Contents of section .text:
-# CONTENTS: Contents of section .rela.text2:
-
 ## Test that --section works with --fault-map-section.
-# RUN: yaml2obj %s --docnum=2 -o %t2.o
-# RUN: llvm-objdump %t2.o --fault-map-section -j __clangast \
+# RUN: yaml2obj %s --docnum=2 -o %t.o
+# RUN: llvm-objdump %t.o --fault-map-section -j __clangast \
 # RUN:   | FileCheck %s --check-prefixes=FAULTMAP,NO-FAULTMAP
-# RUN: llvm-objdump %t2.o --fault-map-section -j .llvm_faultmaps \
+# RUN: llvm-objdump %t.o --fault-map-section -j .llvm_faultmaps \
 # RUN:   | FileCheck %s --check-prefixes=FAULTMAP,WITH-FAULTMAP
 
 # FAULTMAP:           FaultMap table:
@@ -89,9 +70,9 @@ ProgramHeaders:
 # WITH-FAULTMAP-NEXT: NumFunctions: 0
 
 ## Test that --section works with --raw-clang-ast.
-# RUN: llvm-objdump %t2.o --raw-clang-ast -j .llvm_faultmaps \
+# RUN: llvm-objdump %t.o --raw-clang-ast -j .llvm_faultmaps \
 # RUN:   | FileCheck %s --check-prefix=NO-AST --allow-empty
-# RUN: llvm-objdump %t2.o --raw-clang-ast -j __clangast \
+# RUN: llvm-objdump %t.o --raw-clang-ast -j __clangast \
 # RUN:   | FileCheck %s --check-prefix=CLANG-AST
 
 # NO-AST-NOT: {{.}}
