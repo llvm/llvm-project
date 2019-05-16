@@ -171,3 +171,31 @@ TEST_F(GISelMITest, BuildIntrinsic) {
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
+
+TEST_F(GISelMITest, BuildXor) {
+  if (!TM)
+    return;
+
+  LLT S64 = LLT::scalar(64);
+  LLT S128 = LLT::scalar(128);
+  SmallVector<unsigned, 4> Copies;
+  collectCopies(Copies, MF);
+  B.buildXor(S64, Copies[0], Copies[1]);
+  B.buildNot(S64, Copies[0]);
+
+  // Make sure this works with > 64-bit types
+  auto Merge = B.buildMerge(S128, {Copies[0], Copies[1]});
+  B.buildNot(S128, Merge);
+  auto CheckStr = R"(
+  ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK: [[XOR0:%[0-9]+]]:_(s64) = G_XOR [[COPY0]]:_, [[COPY1]]:_
+  ; CHECK: [[NEGONE64:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+  ; CHECK: [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[COPY0]]:_, [[NEGONE64]]:_
+  ; CHECK: [[MERGE:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY0]]:_(s64), [[COPY1]]:_(s64)
+  ; CHECK: [[NEGONE128:%[0-9]+]]:_(s128) = G_CONSTANT i128 -1
+  ; CHECK: [[XOR2:%[0-9]+]]:_(s128) = G_XOR [[MERGE]]:_, [[NEGONE128]]:_
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
