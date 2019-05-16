@@ -4,10 +4,11 @@ Status
 macOS
 -----
 
-LLDB has matured a lot in the last year and can be used for C, C++ and
-Objective-C development for x86_64, i386 and ARM debugging. The entire public
-API is exposed though a framework on macOS which is used by Xcode, the lldb
-command line tool, and can also be used by Python. The entire public API is
+LLDB is the system debugger on macOS, iOS, tvOS, and watchOS and
+can be used for C, C++, Objective-C and Swift development for x86_64,
+i386, ARM, and AArch64 debugging. The entire public API is exposed
+through a macOS framework which is used by Xcode and the `lldb`
+command line tool. It can also be imported from Python. The entire public API is
 exposed through script bridging which allows LLDB to use an embedded Python
 script interpreter, as well as having a Python module named "lldb" which can be
 used from Python on the command line. This allows debug sessions to be
