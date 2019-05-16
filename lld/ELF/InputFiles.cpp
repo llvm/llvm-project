@@ -864,13 +864,12 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
 }
 
 template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
-  int Binding = Sym->getBinding();
-
   uint32_t SecIdx = getSectionIndex(*Sym);
   if (SecIdx >= this->Sections.size())
     fatal(toString(this) + ": invalid section index: " + Twine(SecIdx));
 
   InputSectionBase *Sec = this->Sections[SecIdx];
+  uint8_t Binding = Sym->getBinding();
   uint8_t StOther = Sym->st_other;
   uint8_t Type = Sym->getType();
   uint64_t Value = Sym->st_value;
@@ -886,7 +885,6 @@ template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
     StringRefZ Name = this->StringTable.data() + Sym->st_name;
     if (Sym->st_shndx == SHN_UNDEF)
       return make<Undefined>(this, Name, Binding, StOther, Type);
-
     return make<Defined>(this, Name, Binding, StOther, Type, Value, Size, Sec);
   }
 
@@ -894,26 +892,27 @@ template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
 
   switch (Sym->st_shndx) {
   case SHN_UNDEF:
-    return Symtab->addUndefined<ELFT>(Name, Binding, StOther, Type,
-                                      /*CanOmitFromDynSym=*/false, this);
+    return Symtab->addUndefined<ELFT>(
+        Undefined{this, Name, Binding, StOther, Type});
   case SHN_COMMON:
     if (Value == 0 || Value >= UINT32_MAX)
       fatal(toString(this) + ": common symbol '" + Name +
             "' has invalid alignment: " + Twine(Value));
-    return Symtab->addCommon(Name, Size, Value, Binding, StOther, Type, *this);
+    return Symtab->addCommon(
+        Defined{this, Name, Binding, StOther, Type, Value, Size, nullptr});
   }
 
   switch (Binding) {
   default:
-    fatal(toString(this) + ": unexpected binding: " + Twine(Binding));
+    fatal(toString(this) + ": unexpected binding: " + Twine((int)Binding));
   case STB_GLOBAL:
   case STB_WEAK:
   case STB_GNU_UNIQUE:
     if (Sec == &InputSection::Discarded)
-      return Symtab->addUndefined<ELFT>(Name, Binding, StOther, Type,
-                                        /*CanOmitFromDynSym=*/false, this);
-    return Symtab->addDefined(Name, StOther, Type, Value, Size, Binding, Sec,
-                              this);
+      return Symtab->addUndefined<ELFT>(
+          Undefined{this, Name, Binding, StOther, Type});
+    return Symtab->addDefined(
+        Defined{this, Name, Binding, StOther, Type, Value, Size, Sec});
   }
 }
 
@@ -923,7 +922,7 @@ ArchiveFile::ArchiveFile(std::unique_ptr<Archive> &&File)
 
 template <class ELFT> void ArchiveFile::parse() {
   for (const Archive::Symbol &Sym : File->symbols())
-    Symtab->addLazyArchive<ELFT>(Sym.getName(), *this, Sym);
+    Symtab->addLazyArchive<ELFT>(LazyArchive{*this, Sym});
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -1124,9 +1123,8 @@ template <class ELFT> void SharedFile::parse() {
     }
 
     if (Sym.isUndefined()) {
-      Symbol *S = Symtab->addUndefined<ELFT>(Name, Sym.getBinding(),
-                                             Sym.st_other, Sym.getType(),
-                                             /*CanOmitFromDynSym=*/false, this);
+      Symbol *S = Symtab->addUndefined<ELFT>(
+          Undefined{this, Name, Sym.getBinding(), Sym.st_other, Sym.getType()});
       S->ExportDynamic = true;
       continue;
     }
@@ -1139,10 +1137,12 @@ template <class ELFT> void SharedFile::parse() {
         Name == "_gp_disp")
       continue;
 
-    uint64_t Alignment = getAlignment<ELFT>(Sections, Sym);
-    if (!(Versyms[I] & VERSYM_HIDDEN))
-      Symtab->addShared(Name, Sym.getBinding(), Sym.st_other, Sym.getType(),
-                        Sym.st_value, Sym.st_size, Alignment, Idx, this);
+    uint32_t Alignment = getAlignment<ELFT>(Sections, Sym);
+    if (!(Versyms[I] & VERSYM_HIDDEN)) {
+      Symtab->addShared(SharedSymbol{*this, Name, Sym.getBinding(),
+                                     Sym.st_other, Sym.getType(), Sym.st_value,
+                                     Sym.st_size, Alignment, Idx});
+    }
 
     // Also add the symbol with the versioned name to handle undefined symbols
     // with explicit versions.
@@ -1161,9 +1161,9 @@ template <class ELFT> void SharedFile::parse() {
         reinterpret_cast<const Elf_Verdef *>(Verdefs[Idx])->getAux()->vda_name;
     VersionedNameBuffer.clear();
     Name = (Name + "@" + VerName).toStringRef(VersionedNameBuffer);
-    Symtab->addShared(Saver.save(Name), Sym.getBinding(), Sym.st_other,
-                      Sym.getType(), Sym.st_value, Sym.st_size, Alignment, Idx,
-                      this);
+    Symtab->addShared(SharedSymbol{*this, Saver.save(Name), Sym.getBinding(),
+                                   Sym.st_other, Sym.getType(), Sym.st_value,
+                                   Sym.st_size, Alignment, Idx});
   }
 }
 
@@ -1252,28 +1252,28 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
                                    const lto::InputFile::Symbol &ObjSym,
                                    BitcodeFile &F) {
   StringRef Name = Saver.save(ObjSym.getName());
-  uint32_t Binding = ObjSym.isWeak() ? STB_WEAK : STB_GLOBAL;
-
+  uint8_t Binding = ObjSym.isWeak() ? STB_WEAK : STB_GLOBAL;
   uint8_t Type = ObjSym.isTLS() ? STT_TLS : STT_NOTYPE;
   uint8_t Visibility = mapVisibility(ObjSym.getVisibility());
   bool CanOmitFromDynSym = ObjSym.canBeOmittedFromSymbolTable();
 
   int C = ObjSym.getComdatIndex();
-  if (C != -1 && !KeptComdats[C])
-    return Symtab->addUndefined<ELFT>(Name, Binding, Visibility, Type,
-                                      CanOmitFromDynSym, &F);
-
-  if (ObjSym.isUndefined())
-    return Symtab->addUndefined<ELFT>(Name, Binding, Visibility, Type,
-                                      CanOmitFromDynSym, &F);
+  if (ObjSym.isUndefined() || (C != -1 && !KeptComdats[C])) {
+    Undefined New(&F, Name, Binding, Visibility, Type);
+    if (CanOmitFromDynSym)
+      New.ExportDynamic = false;
+    return Symtab->addUndefined<ELFT>(New);
+  }
 
   if (ObjSym.isCommon())
-    return Symtab->addCommon(Name, ObjSym.getCommonSize(),
-                             ObjSym.getCommonAlignment(), Binding, Visibility,
-                             STT_OBJECT, F);
+    return Symtab->addCommon(Defined{&F, Name, Binding, Visibility, STT_OBJECT,
+                                     ObjSym.getCommonAlignment(),
+                                     ObjSym.getCommonSize(), nullptr});
 
-  return Symtab->addBitcode(Name, Binding, Visibility, Type, CanOmitFromDynSym,
-                            F);
+  Defined New(&F, Name, Binding, Visibility, Type, 0, 0, nullptr);
+  if (CanOmitFromDynSym)
+    New.ExportDynamic = false;
+  return Symtab->addBitcode(New);
 }
 
 template <class ELFT>
@@ -1331,12 +1331,12 @@ void BinaryFile::parse() {
     if (!isAlnum(S[I]))
       S[I] = '_';
 
-  Symtab->addDefined(Saver.save(S + "_start"), STV_DEFAULT, STT_OBJECT, 0, 0,
-                     STB_GLOBAL, Section, nullptr);
-  Symtab->addDefined(Saver.save(S + "_end"), STV_DEFAULT, STT_OBJECT,
-                     Data.size(), 0, STB_GLOBAL, Section, nullptr);
-  Symtab->addDefined(Saver.save(S + "_size"), STV_DEFAULT, STT_OBJECT,
-                     Data.size(), 0, STB_GLOBAL, nullptr, nullptr);
+  Symtab->addDefined(Defined{nullptr, Saver.save(S + "_start"), STB_GLOBAL,
+                             STV_DEFAULT, STT_OBJECT, 0, 0, Section});
+  Symtab->addDefined(Defined{nullptr, Saver.save(S + "_end"), STB_GLOBAL,
+                             STV_DEFAULT, STT_OBJECT, Data.size(), 0, Section});
+  Symtab->addDefined(Defined{nullptr, Saver.save(S + "_size"), STB_GLOBAL,
+                             STV_DEFAULT, STT_OBJECT, Data.size(), 0, nullptr});
 }
 
 InputFile *elf::createObjectFile(MemoryBufferRef MB, StringRef ArchiveName,
@@ -1401,9 +1401,11 @@ template <class ELFT> void LazyObjFile::parse() {
   if (isBitcode(this->MB)) {
     std::unique_ptr<lto::InputFile> Obj =
         CHECK(lto::InputFile::create(this->MB), this);
-    for (const lto::InputFile::Symbol &Sym : Obj->symbols())
-      if (!Sym.isUndefined())
-        Symtab->addLazyObject<ELFT>(Saver.save(Sym.getName()), *this);
+    for (const lto::InputFile::Symbol &Sym : Obj->symbols()) {
+      if (Sym.isUndefined())
+        continue;
+      Symtab->addLazyObject<ELFT>(LazyObject{*this, Saver.save(Sym.getName())});
+    }
     return;
   }
 
@@ -1424,10 +1426,12 @@ template <class ELFT> void LazyObjFile::parse() {
     StringRef StringTable =
         CHECK(Obj.getStringTableForSymtab(Sec, Sections), this);
 
-    for (const typename ELFT::Sym &Sym : Syms.slice(FirstGlobal))
-      if (Sym.st_shndx != SHN_UNDEF)
-        Symtab->addLazyObject<ELFT>(CHECK(Sym.getName(StringTable), this),
-                                    *this);
+    for (const typename ELFT::Sym &Sym : Syms.slice(FirstGlobal)) {
+      if (Sym.st_shndx == SHN_UNDEF)
+        continue;
+      Symtab->addLazyObject<ELFT>(
+          LazyObject{*this, CHECK(Sym.getName(StringTable), this)});
+    }
     return;
   }
 }

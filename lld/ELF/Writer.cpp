@@ -179,14 +179,15 @@ static Defined *addOptionalRegular(StringRef Name, SectionBase *Sec,
   Symbol *S = Symtab->find(Name);
   if (!S || S->isDefined())
     return nullptr;
-  return Symtab->addDefined(Name, StOther, STT_NOTYPE, Val,
-                            /*Size=*/0, Binding, Sec,
-                            /*File=*/nullptr);
+
+  return Symtab->addDefined(Defined{/*File=*/nullptr, Name, Binding, StOther,
+                                    STT_NOTYPE, Val,
+                                    /*Size=*/0, Sec});
 }
 
 static Defined *addAbsolute(StringRef Name) {
-  return Symtab->addDefined(Name, STV_HIDDEN, STT_NOTYPE, 0, 0, STB_GLOBAL,
-                            nullptr, nullptr);
+  return Symtab->addDefined(Defined{nullptr, Name, STB_GLOBAL, STV_HIDDEN,
+                                    STT_NOTYPE, 0, 0, nullptr});
 }
 
 // The linker is expected to define some symbols depending on
@@ -236,9 +237,9 @@ void elf::addReservedSymbols() {
       GotOff = 0x8000;
 
     ElfSym::GlobalOffsetTable =
-        Symtab->addDefined(GotSymName, STV_HIDDEN, STT_NOTYPE, GotOff,
-                           /*Size=*/0, STB_GLOBAL, Out::ElfHeader,
-                           /*File=*/nullptr);
+        Symtab->addDefined(Defined{/*File=*/nullptr, GotSymName, STB_GLOBAL,
+                                   STV_HIDDEN, STT_NOTYPE, GotOff,
+                                   /*Size=*/0, Out::ElfHeader});
   }
 
   // __ehdr_start is the location of ELF file headers. Note that we define
@@ -1588,9 +1589,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Even the author of gold doesn't remember why gold behaves that way.
   // https://sourceware.org/ml/binutils/2002-03/msg00360.html
   if (In.Dynamic->Parent)
-    Symtab->addDefined("_DYNAMIC", STV_HIDDEN, STT_NOTYPE, 0 /*Value*/,
-                       /*Size=*/0, STB_WEAK, In.Dynamic,
-                       /*File=*/nullptr);
+    Symtab->addDefined(Defined{/*File=*/nullptr, "_DYNAMIC", STB_WEAK,
+                               STV_HIDDEN, STT_NOTYPE,
+                               /*Value=*/0, /*Size=*/0, In.Dynamic});
 
   // Define __rel[a]_iplt_{start,end} symbols if needed.
   addRelIpltSymbols();

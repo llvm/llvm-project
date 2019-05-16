@@ -529,8 +529,11 @@ static SmallSet<SharedSymbol *, 4> getSymbolsAt(SharedSymbol &SS) {
 static void replaceWithDefined(Symbol &Sym, SectionBase *Sec, uint64_t Value,
                                uint64_t Size) {
   Symbol Old = Sym;
-  replaceSymbol<Defined>(&Sym, Sym.File, Sym.getName(), Sym.Binding,
-                         Sym.StOther, Sym.Type, Value, Size, Sec);
+
+  Defined New(Sym.File, Sym.getName(), Sym.Binding, Sym.StOther, Sym.Type,
+              Value, Size, Sec);
+  replaceSymbol(&Sym, &New);
+
   Sym.PltIndex = Old.PltIndex;
   Sym.GotIndex = Old.GotIndex;
   Sym.VerdefIndex = Old.VerdefIndex;

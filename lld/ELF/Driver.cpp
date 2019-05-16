@@ -1329,14 +1329,14 @@ template <class ELFT> static void handleLibcall(StringRef Name) {
 // that point to a non-existent DSO.
 static void demoteSharedSymbols() {
   for (Symbol *Sym : Symtab->getSymbols()) {
-    if (auto *S = dyn_cast<SharedSymbol>(Sym)) {
-      if (!S->getFile().IsNeeded) {
-        bool Used = S->Used;
-        replaceSymbol<Undefined>(S, nullptr, S->getName(), STB_WEAK, S->StOther,
-                                 S->Type);
-        S->Used = Used;
-      }
-    }
+    auto *S = dyn_cast<SharedSymbol>(Sym);
+    if (!S || S->getFile().IsNeeded)
+      continue;
+
+    bool Used = S->Used;
+    Undefined New(nullptr, S->getName(), STB_WEAK, S->StOther, S->Type);
+    replaceSymbol(S, &New);
+    S->Used = Used;
   }
 }
 
@@ -1405,8 +1405,8 @@ static void findKeepUniqueSections(opt::InputArgList &Args) {
 }
 
 template <class ELFT> static Symbol *addUndefined(StringRef Name) {
-  return Symtab->addUndefined<ELFT>(Name, STB_GLOBAL, STV_DEFAULT, 0, false,
-                                    nullptr);
+  return Symtab->addUndefined<ELFT>(
+      Undefined{nullptr, Name, STB_GLOBAL, STV_DEFAULT, 0});
 }
 
 // The --wrap option is a feature to rename symbols so that you can write

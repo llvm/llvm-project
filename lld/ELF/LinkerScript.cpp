@@ -166,13 +166,9 @@ void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
     return;
 
   // Define a symbol.
-  Symbol *Sym;
-  uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
-  std::tie(Sym, std::ignore) = Symtab->insert(Cmd->Name, Visibility,
-                                              /*CanOmitFromDynSym*/ false,
-                                              /*File*/ nullptr);
   ExprValue Value = Cmd->Expression();
   SectionBase *Sec = Value.isAbsolute() ? nullptr : Value.Sec;
+  uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
 
   // When this function is called, section addresses have not been
   // fixed yet. So, we may or may not know the value of the RHS
@@ -187,8 +183,12 @@ void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
   // write expressions like this: `alignment = 16; . = ALIGN(., alignment)`.
   uint64_t SymValue = Value.Sec ? 0 : Value.getValue();
 
-  replaceSymbol<Defined>(Sym, nullptr, Cmd->Name, STB_GLOBAL, Visibility,
-                         STT_NOTYPE, SymValue, 0, Sec);
+  Defined New(nullptr, Cmd->Name, STB_GLOBAL, Visibility, STT_NOTYPE, SymValue,
+              0, Sec);
+
+  Symbol *Sym;
+  std::tie(Sym, std::ignore) = Symtab->insert(New);
+  replaceSymbol(Sym, &New);
   Cmd->Sym = cast<Defined>(Sym);
 }
 
@@ -198,14 +198,15 @@ static void declareSymbol(SymbolAssignment *Cmd) {
   if (!shouldDefineSym(Cmd))
     return;
 
+  uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
+  Defined New(nullptr, Cmd->Name, STB_GLOBAL, Visibility, STT_NOTYPE, 0, 0,
+              nullptr);
+
   // We can't calculate final value right now.
   Symbol *Sym;
-  uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
-  std::tie(Sym, std::ignore) = Symtab->insert(Cmd->Name, Visibility,
-                                              /*CanOmitFromDynSym*/ false,
-                                              /*File*/ nullptr);
-  replaceSymbol<Defined>(Sym, nullptr, Cmd->Name, STB_GLOBAL, Visibility,
-                         STT_NOTYPE, 0, 0, nullptr);
+  std::tie(Sym, std::ignore) = Symtab->insert(New);
+  replaceSymbol(Sym, &New);
+
   Cmd->Sym = cast<Defined>(Sym);
   Cmd->Provide = false;
   Sym->ScriptDefined = true;
