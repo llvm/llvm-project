@@ -234,6 +234,8 @@ void Writer::createImportSection() {
 }
 
 void Writer::createTypeSection() {
+  if (!Types.size())
+    return;
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_TYPE);
   raw_ostream &OS = Section->getStream();
   writeUleb128(OS, Types.size(), "type count");
