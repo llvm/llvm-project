@@ -19,6 +19,10 @@ TEST_F(GISelMITest, TestBuildConstantFConstant) {
   B.buildConstant(LLT::vector(2, 32), 99);
   B.buildFConstant(LLT::vector(2, 32), 2.0);
 
+  // Test APFloat overload.
+  APFloat KVal(APFloat::IEEEdouble(), "4.0");
+  B.buildFConstant(LLT::scalar(64), KVal);
+
   auto CheckStr = R"(
   CHECK: [[CONST0:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
   CHECK: [[FCONST0:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
@@ -26,6 +30,7 @@ TEST_F(GISelMITest, TestBuildConstantFConstant) {
   CHECK: [[VEC0:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[CONST1]]:_(s32), [[CONST1]]:_(s32)
   CHECK: [[FCONST1:%[0-9]+]]:_(s32) = G_FCONSTANT float 2.000000e+00
   CHECK: [[VEC1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FCONST1]]:_(s32), [[FCONST1]]:_(s32)
+  CHECK: [[FCONST2:%[0-9]+]]:_(s64) = G_FCONSTANT double 4.000000e+00
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;

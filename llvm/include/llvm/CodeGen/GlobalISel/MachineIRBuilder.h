@@ -632,6 +632,7 @@ public:
                                              const ConstantFP &Val);
 
   MachineInstrBuilder buildFConstant(const DstOp &Res, double Val);
+  MachineInstrBuilder buildFConstant(const DstOp &Res, const APFloat &Val);
 
   /// Build and insert \p Res = COPY Op
   ///
