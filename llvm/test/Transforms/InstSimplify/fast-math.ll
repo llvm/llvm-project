@@ -219,12 +219,12 @@ define float @fsub_0_0_x(float %a) {
 ; fsub nsz 0.0, (fneg X) ==> X
 define float @fneg_x(float %a) {
 ; CHECK-LABEL: @fneg_x(
-; CHECK-NEXT:    [[T1:%.*]] = fsub float 0.000000e+00, [[A:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = fneg nsz float [[T1]]
+; CHECK-NEXT:    [[T1:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = fsub nsz float 0.000000e+00, [[T1]]
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %t1 = fsub float 0.0, %a
-  %ret = fneg nsz float %t1
+  %t1 = fneg float %a
+  %ret = fsub nsz float 0.0, %t1
   ret float %ret
 }
 
@@ -239,12 +239,12 @@ define <2 x float> @fsub_0_0_x_vec_undef1(<2 x float> %a) {
 
 define <2 x float> @fneg_x_vec_undef1(<2 x float> %a) {
 ; CHECK-LABEL: @fneg_x_vec_undef1(
-; CHECK-NEXT:    [[T1:%.*]] = fsub <2 x float> <float 0.000000e+00, float undef>, [[A:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = fneg nsz <2 x float> [[T1]]
+; CHECK-NEXT:    [[T1:%.*]] = fneg <2 x float> [[A:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = fsub nsz <2 x float> <float 0.000000e+00, float undef>, [[T1]]
 ; CHECK-NEXT:    ret <2 x float> [[RET]]
 ;
-  %t1 = fsub <2 x float> <float 0.0, float undef>, %a
-  %ret = fneg nsz <2 x float> %t1
+  %t1 = fneg <2 x float> %a
+  %ret = fsub nsz <2 x float> <float 0.0, float undef>, %t1
   ret <2 x float> %ret
 }
 
