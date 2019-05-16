@@ -368,7 +368,13 @@ void WasmObjectWriter::startCustomSection(SectionBookkeeping &Section,
 // Now that the section is complete and we know how big it is, patch up the
 // section size field at the start of the section.
 void WasmObjectWriter::endSection(SectionBookkeeping &Section) {
-  uint64_t Size = W.OS.tell() - Section.PayloadOffset;
+  uint64_t Size = W.OS.tell();
+  // /dev/null doesn't support seek/tell and can report offset of 0.
+  // Simply skip this patching in that case.
+  if (!Size)
+    return;
+
+  Size -= Section.PayloadOffset;
   if (uint32_t(Size) != Size)
     report_fatal_error("section size does not fit in a uint32_t");
 
