@@ -79,10 +79,7 @@ void OutputSection::createHeader(size_t BodySize) {
       " total=" + Twine(getSize()));
 }
 
-CodeSection::CodeSection(ArrayRef<InputFunction *> Functions)
-    : OutputSection(WASM_SEC_CODE), Functions(Functions) {
-  assert(Functions.size() > 0);
-
+void CodeSection::finalizeContents() {
   raw_string_ostream OS(CodeSectionHeader);
   writeUleb128(OS, Functions.size(), "function count");
   OS.flush();
@@ -128,8 +125,7 @@ void CodeSection::writeRelocations(raw_ostream &OS) const {
     C->writeRelocations(OS);
 }
 
-DataSection::DataSection(ArrayRef<OutputSegment *> Segments)
-    : OutputSection(WASM_SEC_DATA), Segments(Segments) {
+void DataSection::finalizeContents() {
   raw_string_ostream OS(DataSectionHeader);
 
   writeUleb128(OS, Segments.size(), "data segment count");
@@ -202,10 +198,7 @@ void DataSection::writeRelocations(raw_ostream &OS) const {
       C->writeRelocations(OS);
 }
 
-CustomSection::CustomSection(std::string Name,
-                             ArrayRef<InputSection *> InputSections)
-    : OutputSection(WASM_SEC_CUSTOM, Name), PayloadSize(0),
-      InputSections(InputSections) {
+void CustomSection::finalizeContents() {
   raw_string_ostream OS(NameData);
   encodeULEB128(Name.size(), OS);
   OS << Name;
@@ -247,4 +240,10 @@ uint32_t CustomSection::numRelocations() const {
 void CustomSection::writeRelocations(raw_ostream &OS) const {
   for (const InputSection *S : InputSections)
     S->writeRelocations(OS);
+}
+
+void RelocSection::writeBody() {
+  writeUleb128(BodyOutputStream, SectionIndex, "reloc section");
+  writeUleb128(BodyOutputStream, Sec->numRelocations(), "reloc count");
+  Sec->writeRelocations(BodyOutputStream);
 }
