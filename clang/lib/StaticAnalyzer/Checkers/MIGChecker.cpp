@@ -123,7 +123,7 @@ public:
 REGISTER_TRAIT_WITH_PROGRAMSTATE(ReleasedParameter, const void *)
 // A set of parameters for which the check is suppressed because
 // reference counting is being performed.
-REGISTER_SET_WITH_PROGRAMSTATE(RefCountedParameters, const ParmVarDecl *);
+REGISTER_SET_WITH_PROGRAMSTATE(RefCountedParameters, const ParmVarDecl *)
 
 std::shared_ptr<PathDiagnosticPiece>
 MIGChecker::Visitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
