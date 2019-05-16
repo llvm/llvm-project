@@ -20,7 +20,6 @@ add_lldb_library(lldbInitialization
     lldbPluginObjectContainerBSDArchive
     lldbPluginObjectContainerMachOArchive
     lldbPluginProcessGDBRemote
-    lldbPluginExpressionParserSwift
     ${EXTRA_PLUGINS}
     ${LLDB_SYSTEM_LIBS}
   LINK_COMPONENTS
