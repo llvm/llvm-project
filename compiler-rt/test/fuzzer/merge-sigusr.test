@@ -18,6 +18,7 @@ RUN: echo g > %t/C2/g
 RUN: %run %t/LFSIGUSR -merge=1 -merge_control_file=%t/MCF %t/C1 %t/C2 2>%t/log & export PID=$!
 RUN: sleep 3
 RUN: pkill -SIGUSR2 -P $PID
+RUN: kill -SIGUSR2 $PID
 RUN: sleep 3
 RUN: cat %t/log | FileCheck %s
 RUN: grep C2/g %t/MCF
