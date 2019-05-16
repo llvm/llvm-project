@@ -2374,7 +2374,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       PatchedName != "setb" && PatchedName != "setnb")
     PatchedName = PatchedName.substr(0, Name.size()-1);
 
-  unsigned ComparisonCode = ~0U;
+  unsigned ComparisonPredicate = ~0U;
 
   // FIXME: Hack to recognize cmp<comparison code>{ss,sd,ps,pd}.
   if ((PatchedName.startswith("cmp") || PatchedName.startswith("vcmp")) &&
@@ -2442,9 +2442,9 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       else if (PatchedName.endswith("pd"))
         PatchedName = IsVCMP ? "vcmppd" : "cmppd";
       else
-        llvm_unreachable("Unexpecte suffix!");
+        llvm_unreachable("Unexpected suffix!");
 
-      ComparisonCode = CC;
+      ComparisonPredicate = CC;
     }
   }
 
@@ -2473,7 +2473,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       case 'q': PatchedName = SuffixSize == 2 ? "vpcmpuq" : "vpcmpq"; break;
       }
       // Set up the immediate to push into the operands later.
-      ComparisonCode = CC;
+      ComparisonPredicate = CC;
     }
   }
 
@@ -2502,7 +2502,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       case 'q': PatchedName = SuffixSize == 2 ? "vpcomuq" : "vpcomq"; break;
       }
       // Set up the immediate to push into the operands later.
-      ComparisonCode = CC;
+      ComparisonPredicate = CC;
     }
   }
 
@@ -2578,8 +2578,8 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   Operands.push_back(X86Operand::CreateToken(PatchedName, NameLoc));
 
   // Push the immediate if we extracted one from the mnemonic.
-  if (ComparisonCode != ~0U && !isParsingIntelSyntax()) {
-    const MCExpr *ImmOp = MCConstantExpr::create(ComparisonCode,
+  if (ComparisonPredicate != ~0U && !isParsingIntelSyntax()) {
+    const MCExpr *ImmOp = MCConstantExpr::create(ComparisonPredicate,
                                                  getParser().getContext());
     Operands.push_back(X86Operand::CreateImm(ImmOp, NameLoc, NameLoc));
   }
@@ -2619,8 +2619,8 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   }
 
   // Push the immediate if we extracted one from the mnemonic.
-  if (ComparisonCode != ~0U && isParsingIntelSyntax()) {
-    const MCExpr *ImmOp = MCConstantExpr::create(ComparisonCode,
+  if (ComparisonPredicate != ~0U && isParsingIntelSyntax()) {
+    const MCExpr *ImmOp = MCConstantExpr::create(ComparisonPredicate,
                                                  getParser().getContext());
     Operands.push_back(X86Operand::CreateImm(ImmOp, NameLoc, NameLoc));
   }
