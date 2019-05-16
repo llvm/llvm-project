@@ -69,10 +69,8 @@ lldb::ByteOrder ABISysV_ppc64::GetByteOrder() const {
 ABISP
 ABISysV_ppc64::CreateInstance(lldb::ProcessSP process_sp,
                               const ArchSpec &arch) {
-  if (arch.GetTriple().getArch() == llvm::Triple::ppc64 ||
-      arch.GetTriple().getArch() == llvm::Triple::ppc64le) {
+  if (arch.GetTriple().isPPC64())
     return ABISP(new ABISysV_ppc64(process_sp));
-  }
   return ABISP();
 }
 
