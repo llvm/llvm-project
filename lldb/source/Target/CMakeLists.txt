@@ -78,7 +78,6 @@ add_lldb_library(lldbTarget
     lldbUtility
     lldbPluginExpressionParserClang
     lldbPluginExpressionParserSwift
-    lldbPluginObjCLanguage
     lldbPluginSwiftLanguage
     lldbPluginProcessUtility
 
