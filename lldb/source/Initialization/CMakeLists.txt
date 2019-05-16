@@ -15,7 +15,6 @@ add_lldb_library(lldbInitialization
     lldbCore
     lldbHost
     lldbPluginProcessGDBRemote
-    lldbPluginExpressionParserSwift
     ${EXTRA_PLUGINS}
     ${LLDB_SYSTEM_LIBS}
   LINK_COMPONENTS
