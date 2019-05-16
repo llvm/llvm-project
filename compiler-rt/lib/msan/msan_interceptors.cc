@@ -1246,17 +1246,17 @@ int OnExit() {
       CHECK_UNPOISONED_0(x, n);                                 \
   } while (0)
 
-#define MSAN_INTERCEPT_FUNC(name)                                       \
-  do {                                                                  \
-    if (!INTERCEPT_FUNCTION(name))                                      \
-      VReport(1, "MemorySanitizer: failed to intercept '" #name "'\n"); \
+#define MSAN_INTERCEPT_FUNC(name)                                        \
+  do {                                                                   \
+    if (!INTERCEPT_FUNCTION(name))                                       \
+      VReport(1, "MemorySanitizer: failed to intercept '%s'\n'", #name); \
   } while (0)
 
-#define MSAN_INTERCEPT_FUNC_VER(name, ver)                                    \
-  do {                                                                        \
-    if (!INTERCEPT_FUNCTION_VER(name, ver))                                   \
-      VReport(                                                                \
-          1, "MemorySanitizer: failed to intercept '" #name "@@" #ver "'\n"); \
+#define MSAN_INTERCEPT_FUNC_VER(name, ver)                                 \
+  do {                                                                     \
+    if (!INTERCEPT_FUNCTION_VER(name, ver))                                \
+      VReport(1, "MemorySanitizer: failed to intercept '%s@@%s'\n", #name, \
+              #ver);                                                       \
   } while (0)
 
 #define COMMON_INTERCEPT_FUNCTION(name) MSAN_INTERCEPT_FUNC(name)
