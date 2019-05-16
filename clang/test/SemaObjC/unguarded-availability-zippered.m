@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.14 -darwin-target-variant-triple x86_64-apple-ios12-macabi -fblocks -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple x86_64-apple-ios12-macabi -darwin-target-variant-triple x86_64-apple-macos10.14 -fblocks -fsyntax-only -verify -D INVERTED %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.14 -darwin-target-variant-triple x86_64-apple-ios12-macabi -fblocks -fsyntax-only -ftarget-variant-availability-checks -verify %s
+// RUN: %clang_cc1 -triple x86_64-apple-ios12-macabi -darwin-target-variant-triple x86_64-apple-macos10.14 -fblocks -fsyntax-only -ftarget-variant-availability-checks -verify -D INVERTED %s
 
 
 // XFAIL: *

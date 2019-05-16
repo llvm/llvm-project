@@ -791,6 +791,13 @@ AvailabilityResult Decl::getAvailability(StringRef Platform,
     return FTD->getTemplatedDecl()->getAvailability(
         Platform, PlatformMinVersion, Message, RealizedPlatform);
 
+  const auto &Ctx = getASTContext();
+  if (!Ctx.getLangOpts().ZipperedAvailabilityChecks &&
+      Ctx.getTargetInfo().hasTargetVariantPlatform() &&
+      Ctx.getTargetInfo().getTargetVariantPlatform() == Platform) {
+    return AR_Available;
+  }
+
   AvailabilityResult Result = AR_Available;
   std::string ResultMessage;
 
@@ -856,7 +863,8 @@ bool Decl::isDeprecatedInAnyTargetPlatform(std::string *Message) const {
   const TargetInfo &TI = getASTContext().getTargetInfo();
   return getAvailability(TI.getPlatformName(), TI.getPlatformMinVersion()) ==
              AR_Deprecated ||
-         (TI.hasTargetVariantPlatform() &&
+         (getASTContext().getLangOpts().ZipperedAvailabilityChecks &&
+          TI.hasTargetVariantPlatform() &&
           getAvailability(TI.getTargetVariantPlatform(),
                           TI.getTargetVariantPlatformMinVersion()) ==
               AR_Deprecated);
@@ -866,7 +874,8 @@ bool Decl::isUnavailableForAllTargetPlatforms() const {
   const TargetInfo &TI = getASTContext().getTargetInfo();
   return getAvailability(TI.getPlatformName(), TI.getPlatformMinVersion()) ==
              AR_Unavailable &&
-         (!getASTContext().getTargetInfo().hasTargetVariantPlatform() ||
+         (!(getASTContext().getLangOpts().ZipperedAvailabilityChecks &&
+            getASTContext().getTargetInfo().hasTargetVariantPlatform()) ||
           getAvailability(TI.getTargetVariantPlatform(),
                           TI.getTargetVariantPlatformMinVersion()) ==
               AR_Unavailable);

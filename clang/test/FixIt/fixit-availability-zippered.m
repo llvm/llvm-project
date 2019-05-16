@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wunguarded-availability -fdiagnostics-parseable-fixits -triple x86_64-apple-macos10.14 -darwin-target-variant-triple x86_64-apple-ios12-macabi %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -ftarget-variant-availability-checks -fsyntax-only -Wunguarded-availability -fdiagnostics-parseable-fixits -triple x86_64-apple-macos10.14 -darwin-target-variant-triple x86_64-apple-ios12-macabi %s 2>&1 | FileCheck %s
 
 // XFAIL: *
 __attribute__((availability(macOS, introduced=10.15))) __attribute__((availability(ios, introduced=13)))
