@@ -26,14 +26,8 @@
 
 namespace lldb_private {
 class Broadcaster;
-}
-namespace lldb_private {
 class EventData;
-}
-namespace lldb_private {
 class Listener;
-}
-namespace lldb_private {
 class Stream;
 }
 
@@ -47,8 +41,6 @@ class BroadcastEventSpec {
 public:
   BroadcastEventSpec(ConstString broadcaster_class, uint32_t event_bits)
       : m_broadcaster_class(broadcaster_class), m_event_bits(event_bits) {}
-
-  BroadcastEventSpec(const BroadcastEventSpec &rhs);
 
   ~BroadcastEventSpec() = default;
 

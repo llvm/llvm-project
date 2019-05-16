@@ -17,8 +17,14 @@
 
 namespace lld {
 namespace elf {
+
+class CommonSymbol;
 class Defined;
+class LazyArchive;
+class LazyObject;
 class SectionBase;
+class SharedSymbol;
+class Undefined;
 
 // SymbolTable is a bucket of all known symbols, including defined,
 // undefined, or lazy symbols (the last one is symbols in archive
@@ -39,35 +45,17 @@ public:
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
 
-  template <class ELFT>
-  Symbol *addUndefined(StringRef Name, uint8_t Binding, uint8_t StOther,
-                       uint8_t Type, bool CanOmitFromDynSym, InputFile *File);
+  Symbol *addUndefined(const Undefined &New);
+  Symbol *addDefined(const Defined &New);
+  Symbol *addShared(const SharedSymbol &New);
+  Symbol *addLazyArchive(const LazyArchive &New);
+  Symbol *addLazyObject(const LazyObject &New);
+  Symbol *addCommon(const CommonSymbol &New);
 
-  Defined *addDefined(StringRef Name, uint8_t StOther, uint8_t Type,
-                      uint64_t Value, uint64_t Size, uint8_t Binding,
-                      SectionBase *Section, InputFile *File);
+  Symbol *insert(const Symbol &New);
+  void mergeProperties(Symbol *Old, const Symbol &New);
 
-  void addShared(StringRef Name, uint8_t Binding, uint8_t StOther, uint8_t Type,
-                 uint64_t Value, uint64_t Size, uint32_t Alignment,
-                 uint32_t VerdefIndex, InputFile *File);
-
-  template <class ELFT>
-  void addLazyArchive(StringRef Name, ArchiveFile &F,
-                      const llvm::object::Archive::Symbol S);
-
-  template <class ELFT> void addLazyObject(StringRef Name, LazyObjFile &Obj);
-
-  Symbol *addBitcode(StringRef Name, uint8_t Binding, uint8_t StOther,
-                     uint8_t Type, bool CanOmitFromDynSym, BitcodeFile &File);
-
-  Symbol *addCommon(StringRef Name, uint64_t Size, uint32_t Alignment,
-                    uint8_t Binding, uint8_t StOther, uint8_t Type,
-                    InputFile &File);
-
-  std::pair<Symbol *, bool> insert(StringRef Name, uint8_t Visibility,
-                                   bool CanOmitFromDynSym, InputFile *File);
-
-  template <class ELFT> void fetchLazy(Symbol *Sym);
+  void fetchLazy(Symbol *Sym);
 
   void scanVersionScript();
 
@@ -81,7 +69,7 @@ public:
   llvm::DenseMap<StringRef, SharedFile *> SoNames;
 
 private:
-  std::pair<Symbol *, bool> insertName(StringRef Name);
+  template <class LazyT> Symbol *addLazy(const LazyT &New);
 
   std::vector<Symbol *> findByVersion(SymbolVersion Ver);
   std::vector<Symbol *> findAllByVersion(SymbolVersion Ver);
