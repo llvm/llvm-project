@@ -3433,7 +3433,37 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
         break;
       }
     }
+
+    // Check comparison of constant with minnum with smaller constant.
+    // TODO: Add the related transform for maxnum.
+    const APFloat *MinC;
+    if (match(LHS,
+              m_Intrinsic<Intrinsic::minnum>(m_Value(), m_APFloat(MinC))) &&
+        MinC->compare(*C) == APFloat::cmpLessThan) {
+      // The 'less-than' relationship and minnum guarantee that we do not have
+      // NaN constants, so ordered and unordered preds are handled the same.
+      switch (Pred) {
+      case FCmpInst::FCMP_OEQ: case FCmpInst::FCMP_UEQ:
+      case FCmpInst::FCMP_OGE: case FCmpInst::FCMP_UGE:
+      case FCmpInst::FCMP_OGT: case FCmpInst::FCMP_UGT:
+        // minnum(X, LesserC) == C --> false
+        // minnum(X, LesserC) >= C --> false
+        // minnum(X, LesserC) >  C --> false
+        return getFalse(RetTy);
+      case FCmpInst::FCMP_ONE: case FCmpInst::FCMP_UNE:
+      case FCmpInst::FCMP_OLE: case FCmpInst::FCMP_ULE:
+      case FCmpInst::FCMP_OLT: case FCmpInst::FCMP_ULT:
+        // minnum(X, LesserC) != C --> true
+        // minnum(X, LesserC) <= C --> true
+        // minnum(X, LesserC) <  C --> true
+        return getTrue(RetTy);
+      default:
+        // TRUE/FALSE/ORD/UNO should be handled before this.
+        llvm_unreachable("Unexpected fcmp predicate");
+      }
+    }
   }
+
   if (match(RHS, m_AnyZeroFP())) {
     switch (Pred) {
     case FCmpInst::FCMP_OGE:
