@@ -9003,8 +9003,9 @@ Sema::AddArgumentDependentLookupCandidates(DeclarationName Name,
 
       AddOverloadCandidate(FD, FoundDecl, Args, CandidateSet,
                            /*SupressUserConversions=*/false, PartialOverloading,
+                           /*AllowExplicit*/ true,
                            /*AllowExplicitConversions*/ false,
-                           /*AllowExplicit*/ true, ADLCallKind::UsesADL);
+                           ADLCallKind::UsesADL);
     } else {
       AddTemplateOverloadCandidate(
           cast<FunctionTemplateDecl>(*I), FoundDecl, ExplicitTemplateArgs, Args,
