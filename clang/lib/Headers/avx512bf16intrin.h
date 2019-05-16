@@ -31,7 +31,7 @@ typedef short __m256bh __attribute__((__vector_size__(32), __aligned__(32)));
 /// \param __B
 ///    A 512-bit vector of [16 x float].
 /// \returns A 512-bit vector of [32 x bfloat] whose lower 256 bits come from
-///    convertion of src2, and higher 256 bits come from conversion of src1.
+///    conversion of __B, and higher 256 bits come from conversion of __A.
 static __inline__ __m512bh __DEFAULT_FN_ATTRS512
 _mm512_cvtne2ps_pbh(__m512 __A, __m512 __B) {
   return (__m512bh)__builtin_ia32_cvtne2ps2bf16_512((__v16sf) __A,
@@ -51,10 +51,10 @@ _mm512_cvtne2ps_pbh(__m512 __A, __m512 __B) {
 /// \param __W
 ///    A 512-bit vector of [32 x bfloat].
 /// \param __U
-///    An immediate value containing an 32-bit value specifying which element
-///    is choosed. 1 means __A or __B, 0 means __W.
+///    A 32-bit mask value specifying what is chosen for each element.
+///    A 1 means conversion of __A or __B. A 0 means element from __W.
 /// \returns A 512-bit vector of [32 x bfloat] whose lower 256 bits come from
-///    convertion of src2, and higher 256 bits come from conversion of src1.
+///    conversion of __B, and higher 256 bits come from conversion of __A.
 static __inline__ __m512bh __DEFAULT_FN_ATTRS512
 _mm512_mask_cvtne2ps_pbh(__m512bh __W, __mmask32 __U, __m512 __A, __m512 __B) {
   return (__m512bh)__builtin_ia32_selectw_512((__mmask32)__U,
@@ -73,10 +73,10 @@ _mm512_mask_cvtne2ps_pbh(__m512bh __W, __mmask32 __U, __m512 __A, __m512 __B) {
 /// \param __B
 ///    A 512-bit vector of [16 x float].
 /// \param __U
-///    An immediate value containing an 32-bit value specifying which element
-///    is choosed. 1 means __A or __B, 0 means zero.
+///    A 32-bit mask value specifying what is chosen for each element.
+///    A 1 means conversion of __A or __B. A 0 means element is zero.
 /// \returns A 512-bit vector of [32 x bfloat] whose lower 256 bits come from
-///    convertion of src2, and higher 256 bits come from conversion of src1.
+///    conversion of __B, and higher 256 bits come from conversion of __A.
 static __inline__ __m512bh __DEFAULT_FN_ATTRS512
 _mm512_maskz_cvtne2ps_pbh(__mmask32 __U, __m512 __A, __m512 __B) {
   return (__m512bh)__builtin_ia32_selectw_512((__mmask32)__U,
@@ -92,7 +92,7 @@ _mm512_maskz_cvtne2ps_pbh(__mmask32 __U, __m512 __A, __m512 __B) {
 ///
 /// \param __A
 ///    A 512-bit vector of [16 x float].
-/// \returns A 256-bit vector of [16 x bfloat] come from convertion of src
+/// \returns A 256-bit vector of [16 x bfloat] come from conversion of __A.
 static __inline__ __m256bh __DEFAULT_FN_ATTRS512
 _mm512_cvtneps_pbh(__m512 __A) {
   return (__m256bh)__builtin_ia32_cvtneps2bf16_512((__v16sf) __A);
@@ -109,9 +109,9 @@ _mm512_cvtneps_pbh(__m512 __A) {
 /// \param __W
 ///    A 256-bit vector of [16 x bfloat].
 /// \param __U
-///    An immediate value containing an 16-bit value specifying which element
-///    is choosed. 1 means __A, 0 means __W.
-/// \returns A 256-bit vector of [16 x bfloat] come from convertion of src
+///    A 16-bit mask value specifying what is chosen for each element.
+///    A 1 means conversion of __A. A 0 means element from __W.
+/// \returns A 256-bit vector of [16 x bfloat] come from conversion of __A.
 static __inline__ __m256bh __DEFAULT_FN_ATTRS512
 _mm512_mask_cvtneps_pbh(__m256bh __W, __mmask16 __U, __m512 __A) {
   return (__m256bh)__builtin_ia32_selectw_256((__mmask16)__U,
@@ -128,9 +128,9 @@ _mm512_mask_cvtneps_pbh(__m256bh __W, __mmask16 __U, __m512 __A) {
 /// \param __A
 ///    A 512-bit vector of [16 x float].
 /// \param __U
-///    An immediate value containing an 16-bit value specifying which element
-///    is choosed. 1 means __A, 0 means zero.
-/// \returns A 256-bit vector of [16 x bfloat] come from convertion of src
+///    A 16-bit mask value specifying what is chosen for each element.
+///    A 1 means conversion of __A. A 0 means element is zero.
+/// \returns A 256-bit vector of [16 x bfloat] come from conversion of __A.
 static __inline__ __m256bh __DEFAULT_FN_ATTRS512
 _mm512_maskz_cvtneps_pbh(__mmask16 __U, __m512 __A) {
   return (__m256bh)__builtin_ia32_selectw_256((__mmask16)__U,
@@ -172,8 +172,8 @@ _mm512_dpbf16_ps(__m512 __D, __m512bh __A, __m512bh __B) {
 /// \param __D
 ///    A 512-bit vector of [16 x float].
 /// \param __U
-///    An immediate value containing an 16-bit value specifying which element
-///    is choosed. 1 means __A and __B's dot product, 0 means __D.
+///    A 16-bit mask value specifying what is chosen for each element.
+///    A 1 means __A and __B's dot product accumulated with __D. A 0 means __D.
 /// \returns A 512-bit vector of [16 x float] comes from  Dot Product of
 ///  __A, __B and __D
 static __inline__ __m512 __DEFAULT_FN_ATTRS512
@@ -196,8 +196,8 @@ _mm512_mask_dpbf16_ps(__m512 __D, __mmask16 __U, __m512bh __A, __m512bh __B) {
 /// \param __D
 ///    A 512-bit vector of [16 x float].
 /// \param __U
-///    An immediate value containing an 16-bit value specifying which element
-///    is choosed. 1 means __A and __B's dot product, 0 means 0.
+///    A 16-bit mask value specifying what is chosen for each element.
+///    A 1 means __A and __B's dot product accumulated with __D. A 0 means 0.
 /// \returns A 512-bit vector of [16 x float] comes from  Dot Product of
 ///  __A, __B and __D
 static __inline__ __m512 __DEFAULT_FN_ATTRS512

@@ -33,7 +33,7 @@ typedef short __m128bh __attribute__((__vector_size__(16), __aligned__(16)));
 /// \param __B
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [8 x bfloat] whose lower 64 bits come from
-///    convertion of src2, and higher 64 bits come from conversion of src1.
+///    conversion of __B, and higher 64 bits come from conversion of __A.
 static __inline__ __m128bh __DEFAULT_FN_ATTRS128
 _mm_cvtne2ps_pbh(__m128 __A, __m128 __B) {
   return (__m128bh)__builtin_ia32_cvtne2ps2bf16_128((__v4sf) __A,
@@ -53,10 +53,10 @@ _mm_cvtne2ps_pbh(__m128 __A, __m128 __B) {
 /// \param __W
 ///    A 128-bit vector of [8 x bfloat].
 /// \param __U
-///    An immediate value containing an 8-bit value specifying which element
-///    is choosed. 1 means __A or __B, 0 means __W.
+///    A 8-bit mask value specifying what is chosen for each element.
+///    A 1 means conversion of __A or __B. A 0 means element from __W.
 /// \returns A 128-bit vector of [8 x bfloat] whose lower 64 bits come from
-///    convertion of src2, and higher 64 bits come from conversion of src1.
+///    conversion of __B, and higher 64 bits come from conversion of __A.
 static __inline__ __m128bh __DEFAULT_FN_ATTRS128
 _mm_mask_cvtne2ps_pbh(__m128bh __W, __mmask8 __U, __m128 __A, __m128 __B) {
   return (__m128bh)__builtin_ia32_selectw_128((__mmask8)__U,
@@ -75,10 +75,10 @@ _mm_mask_cvtne2ps_pbh(__m128bh __W, __mmask8 __U, __m128 __A, __m128 __B) {
 /// \param __B
 ///    A 128-bit vector of [4 x float].
 /// \param __U
-///    An immediate value containing an 8-bit value specifying which element
-///    is choosed. 1 means __A or __B, 0 means zero.
+///    A 8-bit mask value specifying what is chosen for each element.
+///    A 1 means conversion of __A or __B. A 0 means element is zero.
 /// \returns A 128-bit vector of [8 x bfloat] whose lower 64 bits come from
-///    convertion of src2, and higher 64 bits come from conversion of src1.
+///    conversion of __B, and higher 64 bits come from conversion of __A.
 static __inline__ __m128bh __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtne2ps_pbh(__mmask8 __U, __m128 __A, __m128 __B) {
   return (__m128bh)__builtin_ia32_selectw_128((__mmask8)__U,
@@ -97,7 +97,7 @@ _mm_maskz_cvtne2ps_pbh(__mmask8 __U, __m128 __A, __m128 __B) {
 /// \param __B
 ///    A 256-bit vector of [8 x float].
 /// \returns A 256-bit vector of [16 x bfloat] whose lower 128 bits come from
-///    convertion of src2, and higher 128 bits come from conversion of src1.
+///    conversion of __B, and higher 128 bits come from conversion of __A.
 static __inline__ __m256bh __DEFAULT_FN_ATTRS256
 _mm256_cvtne2ps_pbh(__m256 __A, __m256 __B) {
   return (__m256bh)__builtin_ia32_cvtne2ps2bf16_256((__v8sf) __A,
@@ -117,10 +117,10 @@ _mm256_cvtne2ps_pbh(__m256 __A, __m256 __B) {
 /// \param __W
 ///    A 256-bit vector of [16 x bfloat].
 /// \param __U
-///    An immediate value containing an 16-bit value specifying which element
-///    is choosed. 1 means __A or __B, 0 means __W.
+///    A 16-bit mask value specifying what is chosen for each element.
+///    A 1 means conversion of __A or __B. A 0 means element from __W.
 /// \returns A 256-bit vector of [16 x bfloat] whose lower 128 bits come from
-///    convertion of src2, and higher 128 bits come from conversion of src1.
+///    conversion of __B, and higher 128 bits come from conversion of __A.
 static __inline__ __m256bh __DEFAULT_FN_ATTRS256
 _mm256_mask_cvtne2ps_pbh(__m256bh __W, __mmask16 __U, __m256 __A, __m256 __B) {
   return (__m256bh)__builtin_ia32_selectw_256((__mmask16)__U,
@@ -139,10 +139,10 @@ _mm256_mask_cvtne2ps_pbh(__m256bh __W, __mmask16 __U, __m256 __A, __m256 __B) {
 /// \param __B
 ///    A 256-bit vector of [8 x float].
 /// \param __U
-///    An immediate value containing an 16-bit value specifying which element
-///    is choosed. 1 means __A or __B, 0 means zero.
+///    A 16-bit mask value specifying what is chosen for each element.
+///    A 1 means conversion of __A or __B. A 0 means element is zero.
 /// \returns A 256-bit vector of [16 x bfloat] whose lower 128 bits come from
-///    convertion of src2, and higher 128 bits come from conversion of src1.
+///    conversion of __B, and higher 128 bits come from conversion of __A.
 static __inline__ __m256bh __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtne2ps_pbh(__mmask16 __U, __m256 __A, __m256 __B) {
   return (__m256bh)__builtin_ia32_selectw_256((__mmask16)__U,
@@ -159,7 +159,7 @@ _mm256_maskz_cvtne2ps_pbh(__mmask16 __U, __m256 __A, __m256 __B) {
 /// \param __A
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [8 x bfloat] whose lower 64 bits come from
-///    convertion of src, and higher 64 bits are 0.
+///    conversion of __A, and higher 64 bits are 0.
 static __inline__ __m128bh __DEFAULT_FN_ATTRS128
 _mm_cvtneps_pbh(__m128 __A) {
   return (__m128bh)__builtin_ia32_cvtneps2bf16_128_mask((__v4sf) __A,
@@ -178,10 +178,10 @@ _mm_cvtneps_pbh(__m128 __A) {
 /// \param __W
 ///    A 128-bit vector of [8 x bfloat].
 /// \param __U
-///    An immediate value containing an 8-bit value specifying which element
-///    is choosed. 1 means __A, 0 means __W.
+///    A 4-bit mask value specifying what is chosen for each element.
+///    A 1 means conversion of __A. A 0 means element from __W.
 /// \returns A 128-bit vector of [8 x bfloat] whose lower 64 bits come from
-///    convertion of src, and higher 64 bits are 0.
+///    conversion of __A, and higher 64 bits are 0.
 static __inline__ __m128bh __DEFAULT_FN_ATTRS128
 _mm_mask_cvtneps_pbh(__m128bh __W, __mmask8 __U, __m128 __A) {
   return (__m128bh)__builtin_ia32_cvtneps2bf16_128_mask((__v4sf) __A,
@@ -198,10 +198,10 @@ _mm_mask_cvtneps_pbh(__m128bh __W, __mmask8 __U, __m128 __A) {
 /// \param __A
 ///    A 128-bit vector of [4 x float].
 /// \param __U
-///    An immediate value containing an 8-bit value specifying which element
-///    is choosed. 1 means __A, 0 means 0.
+///    A 4-bit mask value specifying what is chosen for each element.
+///    A 1 means conversion of __A. A 0 means element is zero.
 /// \returns A 128-bit vector of [8 x bfloat] whose lower 64 bits come from
-///    convertion of src, and higher 64 bits are 0.
+///    conversion of __A, and higher 64 bits are 0.
 static __inline__ __m128bh __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtneps_pbh(__mmask8 __U, __m128 __A) {
   return (__m128bh)__builtin_ia32_cvtneps2bf16_128_mask((__v4sf) __A,
@@ -217,7 +217,7 @@ _mm_maskz_cvtneps_pbh(__mmask8 __U, __m128 __A) {
 ///
 /// \param __A
 ///    A 256-bit vector of [8 x float].
-/// \returns A 128-bit vector of [8 x bfloat] comes from convertion of src.
+/// \returns A 128-bit vector of [8 x bfloat] comes from conversion of __A.
 static __inline__ __m128bh __DEFAULT_FN_ATTRS256
 _mm256_cvtneps_pbh(__m256 __A) {
   return (__m128bh)__builtin_ia32_cvtneps2bf16_256((__v8sf)__A);
@@ -234,9 +234,9 @@ _mm256_cvtneps_pbh(__m256 __A) {
 /// \param __W
 ///    A 256-bit vector of [8 x bfloat].
 /// \param __U
-///    An immediate value containing an 8-bit value specifying which element
-///    is choosed. 1 means __A, 0 means __W.
-/// \returns A 128-bit vector of [8 x bfloat] comes from convertion of src.
+///    A 8-bit mask value specifying what is chosen for each element.
+///    A 1 means conversion of __A. A 0 means element from __W.
+/// \returns A 128-bit vector of [8 x bfloat] comes from conversion of __A.
 static __inline__ __m128bh __DEFAULT_FN_ATTRS256
 _mm256_mask_cvtneps_pbh(__m128bh __W, __mmask8 __U, __m256 __A) {
   return (__m128bh)__builtin_ia32_selectw_128((__mmask8)__U,
@@ -253,9 +253,9 @@ _mm256_mask_cvtneps_pbh(__m128bh __W, __mmask8 __U, __m256 __A) {
 /// \param __A
 ///    A 256-bit vector of [8 x float].
 /// \param __U
-///    An immediate value containing an 8-bit value specifying which element
-///    is choosed. 1 means __A, 0 means __W.
-/// \returns A 128-bit vector of [8 x bfloat] comes from convertion of src.
+///    A 8-bit mask value specifying what is chosen for each element.
+///    A 1 means conversion of __A. A 0 means element is zero.
+/// \returns A 128-bit vector of [8 x bfloat] comes from conversion of __A.
 static __inline__ __m128bh __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtneps_pbh(__mmask8 __U, __m256 __A) {
   return (__m128bh)__builtin_ia32_selectw_128((__mmask8)__U,
@@ -297,8 +297,8 @@ _mm_dpbf16_ps(__m128 __D, __m128bh __A, __m128bh __B) {
 /// \param __D
 ///    A 128-bit vector of [4 x float].
 /// \param __U
-///    An immediate value containing an 8-bit value specifying which element
-///    is choosed. 1 means __A and __B's dot product, 0 means __D.
+///    A 8-bit mask value specifying what is chosen for each element.
+///    A 1 means __A and __B's dot product accumulated with __D. A 0 means __D.
 /// \returns A 128-bit vector of [4 x float] comes from  Dot Product of
 ///  __A, __B and __D
 static __inline__ __m128 __DEFAULT_FN_ATTRS128
@@ -321,8 +321,8 @@ _mm_mask_dpbf16_ps(__m128 __D, __mmask8 __U, __m128bh __A, __m128bh __B) {
 /// \param __D
 ///    A 128-bit vector of [4 x float].
 /// \param __U
-///    An immediate value containing an 8-bit value specifying which element
-///    is choosed. 1 means __A and __B's dot product, 0 means 0.
+///    A 8-bit mask value specifying what is chosen for each element.
+///    A 1 means __A and __B's dot product accumulated with __D. A 0 means 0.
 /// \returns A 128-bit vector of [4 x float] comes from  Dot Product of
 ///  __A, __B and __D
 static __inline__ __m128 __DEFAULT_FN_ATTRS128
@@ -366,8 +366,8 @@ _mm256_dpbf16_ps(__m256 __D, __m256bh __A, __m256bh __B) {
 /// \param __D
 ///    A 256-bit vector of [8 x float].
 /// \param __U
-///    An immediate value containing an 8-bit value specifying which element
-///    is choosed. 1 means __A and __B's dot product, 0 means __D.
+///    A 16-bit mask value specifying what is chosen for each element.
+///    A 1 means __A and __B's dot product accumulated with __D. A 0 means __D.
 /// \returns A 256-bit vector of [8 x float] comes from  Dot Product of
 ///  __A, __B and __D
 static __inline__ __m256 __DEFAULT_FN_ATTRS256
@@ -390,8 +390,8 @@ _mm256_mask_dpbf16_ps(__m256 __D, __mmask8 __U, __m256bh __A, __m256bh __B) {
 /// \param __D
 ///    A 256-bit vector of [8 x float].
 /// \param __U
-///    An immediate value containing an 8-bit value specifying which element
-///    is choosed. 1 means __A and __B's dot product, 0 means 0.
+///    A 8-bit mask value specifying what is chosen for each element.
+///    A 1 means __A and __B's dot product accumulated with __D. A 0 means 0.
 /// \returns A 256-bit vector of [8 x float] comes from  Dot Product of
 ///  __A, __B and __D
 static __inline__ __m256 __DEFAULT_FN_ATTRS256
@@ -400,6 +400,7 @@ _mm256_maskz_dpbf16_ps(__mmask8 __U, __m256 __D, __m256bh __A, __m256bh __B) {
                                         (__v8sf)_mm256_dpbf16_ps(__D, __A, __B),
                                         (__v8sf)_mm256_setzero_si256());
 }
+
 #undef __DEFAULT_FN_ATTRS128
 #undef __DEFAULT_FN_ATTRS256
 
