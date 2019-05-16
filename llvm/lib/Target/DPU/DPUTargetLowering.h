@@ -65,15 +65,6 @@ public:
                              Instruction *I = nullptr) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-  // The DPU requires 32/64 bits accesses to be aligned on the transfer size.
-  // Despite the machine clearly states that allowsMisalignedMemoryAccesses is
-  // false, we must override this method to prevent from misaligned 64-bits
-  // accesses.
-  EVT getOptimalMemOpType(uint64_t /*Size*/, unsigned /*DstAlign*/,
-                          unsigned /*SrcAlign*/, bool /*IsMemset*/,
-                          bool /*ZeroMemset*/, bool /*MemcpyStrSrc*/,
-                          MachineFunction & /*MF*/) const override;
-
   bool isSelectSupported(SelectSupportKind kind) const override {
     // Whatever the kind is, we want to very strongly discourage using select...
     // It's VERY expensive in most of the cases, so the compiler should try

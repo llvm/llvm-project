@@ -1068,13 +1068,6 @@ bool DPUTargetLowering::isOffsetFoldingLegal(
   return false;
 }
 
-EVT DPUTargetLowering::getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
-                                           unsigned SrcAlign, bool IsMemset,
-                                           bool ZeroMemset, bool MemcpyStrSrc,
-                                           MachineFunction &MF) const {
-  return MVT::i32;
-}
-
 static bool isArgumentExtended(SDValue Op, MVT::SimpleValueType initialType,
                                bool &isSigned, SDValue &realArgument) {
   bool argCouldWork = false;
