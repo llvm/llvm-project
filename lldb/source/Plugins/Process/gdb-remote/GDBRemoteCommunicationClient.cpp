@@ -1711,21 +1711,21 @@ lldb_private::Status
 GDBRemoteCommunicationClient::GetWatchpointsTriggerAfterInstruction(
     bool &after, const ArchSpec &arch) {
   Status error;
-  llvm::Triple::ArchType atype = arch.GetMachine();
+  llvm::Triple triple = arch.GetTriple();
 
   // we assume watchpoints will happen after running the relevant opcode and we
   // only want to override this behavior if we have explicitly received a
   // qHostInfo telling us otherwise
   if (m_qHostInfo_is_valid != eLazyBoolYes) {
-    // On targets like MIPS and ppc64le, watchpoint exceptions are always
+    // On targets like MIPS and ppc64, watchpoint exceptions are always
     // generated before the instruction is executed. The connected target may
     // not support qHostInfo or qWatchpointSupportInfo packets.
-    after = !(arch.IsMIPS() || atype == llvm::Triple::ppc64le);
+    after = !(triple.isMIPS() || triple.isPPC64());
   } else {
-    // For MIPS and ppc64le, set m_watchpoints_trigger_after_instruction to
+    // For MIPS and ppc64, set m_watchpoints_trigger_after_instruction to
     // eLazyBoolNo if it is not calculated before.
     if (m_watchpoints_trigger_after_instruction == eLazyBoolCalculate &&
-        (arch.IsMIPS() || atype == llvm::Triple::ppc64le))
+        (triple.isMIPS() || triple.isPPC64()))
       m_watchpoints_trigger_after_instruction = eLazyBoolNo;
 
     after = (m_watchpoints_trigger_after_instruction != eLazyBoolNo);

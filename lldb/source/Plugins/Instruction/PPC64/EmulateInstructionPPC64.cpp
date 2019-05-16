@@ -55,23 +55,15 @@ EmulateInstruction *
 EmulateInstructionPPC64::CreateInstance(const ArchSpec &arch,
                                         InstructionType inst_type) {
   if (EmulateInstructionPPC64::SupportsEmulatingInstructionsOfTypeStatic(
-          inst_type)) {
-    if (arch.GetTriple().getArch() == llvm::Triple::ppc64 ||
-        arch.GetTriple().getArch() == llvm::Triple::ppc64le) {
+          inst_type))
+    if (arch.GetTriple().isPPC64())
       return new EmulateInstructionPPC64(arch);
-    }
-  }
 
   return nullptr;
 }
 
 bool EmulateInstructionPPC64::SetTargetTriple(const ArchSpec &arch) {
-  if (arch.GetTriple().getArch() == llvm::Triple::ppc64)
-    return true;
-  else if (arch.GetTriple().getArch() == llvm::Triple::ppc64le)
-    return true;
-
-  return false;
+  return arch.GetTriple().isPPC64();
 }
 
 static bool LLDBTableGetRegisterInfo(uint32_t reg_num, RegisterInfo &reg_info) {
