@@ -8,10 +8,10 @@ constexpr const char *test_default_arg(const char *f = __builtin_FUNCTION()) {
 }
 // CHECK: @[[EMPTY_STR:.+]] = private unnamed_addr constant [1 x i8] zeroinitializer, align 1
 
-// CHECK: @_ZN9test_func6globalE = {{(dso_local )?}}global i8* getelementptr inbounds ([1 x i8], [1 x i8]* @[[EMPTY_STR]], i32 0, i32 0), align 8
+// CHECK: @_ZN9test_func6globalE = {{(dso_local )?}}global i8* getelementptr inbounds ([1 x i8], [1 x i8]* @[[EMPTY_STR]], i32 0, i32 0)
 const char *global = test_default_arg();
 
-// CHECK: @_ZN9test_func10global_twoE = {{(dso_local )?}}global i8* getelementptr inbounds ([1 x i8], [1 x i8]* @[[EMPTY_STR]], i32 0, i32 0), align 8
+// CHECK: @_ZN9test_func10global_twoE = {{(dso_local )?}}global i8* getelementptr inbounds ([1 x i8], [1 x i8]* @[[EMPTY_STR]], i32 0, i32 0)
 const char *global_two = __builtin_FUNCTION();
 
 const char * const global_three = test_default_arg();
