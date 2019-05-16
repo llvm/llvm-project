@@ -44,7 +44,7 @@ const char IfAssignVariableId[] = "if-assign-lvalue";
 const char IfAssignLocId[] = "if-assign-loc";
 const char IfAssignBoolId[] = "if-assign";
 const char IfAssignNotBoolId[] = "if-assign-not";
-const char IfAssignObjId[] = "if-assign-obj";
+const char IfAssignVarId[] = "if-assign-var";
 const char CompoundReturnId[] = "compound-return";
 const char CompoundBoolId[] = "compound-bool";
 const char CompoundNotBoolId[] = "compound-bool-not";
@@ -360,7 +360,7 @@ void SimplifyBooleanExprCheck::reportBinOp(
   const auto *LHS = Op->getLHS()->IgnoreParenImpCasts();
   const auto *RHS = Op->getRHS()->IgnoreParenImpCasts();
 
-  const CXXBoolLiteralExpr *Bool = nullptr;
+  const CXXBoolLiteralExpr *Bool;
   const Expr *Other = nullptr;
   if ((Bool = dyn_cast<CXXBoolLiteralExpr>(LHS)))
     Other = RHS;
@@ -459,29 +459,28 @@ void SimplifyBooleanExprCheck::matchIfReturnsBool(MatchFinder *Finder,
 
 void SimplifyBooleanExprCheck::matchIfAssignsBool(MatchFinder *Finder,
                                                   bool Value, StringRef Id) {
-  auto SimpleThen = binaryOperator(
-      hasOperatorName("="),
-      hasLHS(declRefExpr(hasDeclaration(decl().bind(IfAssignObjId)))),
-      hasLHS(expr().bind(IfAssignVariableId)),
-      hasRHS(cxxBoolLiteral(equals(Value)).bind(IfAssignLocId)));
+  auto VarAssign = declRefExpr(hasDeclaration(decl().bind(IfAssignVarId)));
+  auto VarRef = declRefExpr(hasDeclaration(equalsBoundNode(IfAssignVarId)));
+  auto MemAssign = memberExpr(hasDeclaration(decl().bind(IfAssignVarId)));
+  auto MemRef = memberExpr(hasDeclaration(equalsBoundNode(IfAssignVarId)));
+  auto SimpleThen =
+      binaryOperator(hasOperatorName("="), hasLHS(anyOf(VarAssign, MemAssign)),
+                     hasLHS(expr().bind(IfAssignVariableId)),
+                     hasRHS(cxxBoolLiteral(equals(Value)).bind(IfAssignLocId)));
   auto Then = anyOf(SimpleThen, compoundStmt(statementCountIs(1),
                                              hasAnySubstatement(SimpleThen)));
-  auto SimpleElse = binaryOperator(
-      hasOperatorName("="),
-      hasLHS(declRefExpr(hasDeclaration(equalsBoundNode(IfAssignObjId)))),
-      hasRHS(cxxBoolLiteral(equals(!Value))));
+  auto SimpleElse =
+      binaryOperator(hasOperatorName("="), hasLHS(anyOf(VarRef, MemRef)),
+                     hasRHS(cxxBoolLiteral(equals(!Value))));
   auto Else = anyOf(SimpleElse, compoundStmt(statementCountIs(1),
                                              hasAnySubstatement(SimpleElse)));
   if (ChainedConditionalAssignment)
-    Finder->addMatcher(
-        ifStmt(isExpansionInMainFile(), hasThen(Then), hasElse(Else)).bind(Id),
-        this);
+    Finder->addMatcher(ifStmt(hasThen(Then), hasElse(Else)).bind(Id), this);
   else
-    Finder->addMatcher(ifStmt(isExpansionInMainFile(),
-                              unless(hasParent(ifStmt())), hasThen(Then),
-                              hasElse(Else))
-                           .bind(Id),
-                       this);
+    Finder->addMatcher(
+        ifStmt(unless(hasParent(ifStmt())), hasThen(Then), hasElse(Else))
+            .bind(Id),
+        this);
 }
 
 void SimplifyBooleanExprCheck::matchCompoundIfReturnsBool(MatchFinder *Finder,
