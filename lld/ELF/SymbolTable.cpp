@@ -145,7 +145,7 @@ void SymbolTable::mergeProperties(Symbol *Old, const Symbol &New) {
     Old->Visibility = getMinVisibility(Old->Visibility, New.Visibility);
 }
 
-template <class ELFT> Symbol *SymbolTable::addUndefined(const Undefined &New) {
+Symbol *SymbolTable::addUndefined(const Undefined &New) {
   Symbol *Old = insert(New);
   mergeProperties(Old, New);
 
@@ -225,7 +225,7 @@ template <class ELFT> Symbol *SymbolTable::addUndefined(const Undefined &New) {
     // group assignment rule simulates the traditional linker's semantics.
     bool Backref = Config->WarnBackrefs && New.File &&
                    Old->File->GroupId < New.File->GroupId;
-    fetchLazy<ELFT>(Old);
+    fetchLazy(Old);
 
     // We don't report backward references to weak symbols as they can be
     // overridden later.
@@ -429,7 +429,7 @@ Symbol *SymbolTable::find(StringRef Name) {
   return SymVector[It->second];
 }
 
-template <class ELFT, class LazyT> void SymbolTable::addLazy(const LazyT &New) {
+template <class LazyT> void SymbolTable::addLazy(const LazyT &New) {
   Symbol *Old = insert(New);
   mergeProperties(Old, New);
 
@@ -452,27 +452,23 @@ template <class ELFT, class LazyT> void SymbolTable::addLazy(const LazyT &New) {
   }
 
   if (InputFile *F = New.fetch())
-    parseFile<ELFT>(F);
+    parseFile(F);
 }
 
-template <class ELFT> void SymbolTable::addLazyArchive(const LazyArchive &New) {
-  addLazy<ELFT>(New);
-}
+void SymbolTable::addLazyArchive(const LazyArchive &New) { addLazy(New); }
 
-template <class ELFT> void SymbolTable::addLazyObject(const LazyObject &New) {
-  addLazy<ELFT>(New);
-}
+void SymbolTable::addLazyObject(const LazyObject &New) { addLazy(New); }
 
-template <class ELFT> void SymbolTable::fetchLazy(Symbol *Sym) {
+void SymbolTable::fetchLazy(Symbol *Sym) {
   if (auto *S = dyn_cast<LazyArchive>(Sym)) {
     if (InputFile *File = S->fetch())
-      parseFile<ELFT>(File);
+      parseFile(File);
     return;
   }
 
   auto *S = cast<LazyObject>(Sym);
   if (InputFile *File = cast<LazyObjFile>(S->File)->fetch())
-    parseFile<ELFT>(File);
+    parseFile(File);
 }
 
 // Initialize DemangledSyms with a map from demangled symbols to symbol
@@ -636,27 +632,7 @@ void SymbolTable::scanVersionScript() {
     Sym->parseSymbolVersion();
 }
 
-template Symbol *SymbolTable::addUndefined<ELF32LE>(const Undefined &);
-template Symbol *SymbolTable::addUndefined<ELF32BE>(const Undefined &);
-template Symbol *SymbolTable::addUndefined<ELF64LE>(const Undefined &);
-template Symbol *SymbolTable::addUndefined<ELF64BE>(const Undefined &);
-
 template void SymbolTable::addCombinedLTOObject<ELF32LE>();
 template void SymbolTable::addCombinedLTOObject<ELF32BE>();
 template void SymbolTable::addCombinedLTOObject<ELF64LE>();
 template void SymbolTable::addCombinedLTOObject<ELF64BE>();
-
-template void SymbolTable::addLazyArchive<ELF32LE>(const LazyArchive &);
-template void SymbolTable::addLazyArchive<ELF32BE>(const LazyArchive &);
-template void SymbolTable::addLazyArchive<ELF64LE>(const LazyArchive &);
-template void SymbolTable::addLazyArchive<ELF64BE>(const LazyArchive &);
-
-template void SymbolTable::addLazyObject<ELF32LE>(const LazyObject &);
-template void SymbolTable::addLazyObject<ELF32BE>(const LazyObject &);
-template void SymbolTable::addLazyObject<ELF64LE>(const LazyObject &);
-template void SymbolTable::addLazyObject<ELF64BE>(const LazyObject &);
-
-template void SymbolTable::fetchLazy<ELF32LE>(Symbol *);
-template void SymbolTable::fetchLazy<ELF32BE>(Symbol *);
-template void SymbolTable::fetchLazy<ELF64LE>(Symbol *);
-template void SymbolTable::fetchLazy<ELF64BE>(Symbol *);

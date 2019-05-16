@@ -109,8 +109,7 @@ static bool isCompatible(InputFile *File) {
   return false;
 }
 
-// Add symbols in File to the symbol table.
-template <class ELFT> void elf::parseFile(InputFile *File) {
+template <class ELFT> static void doParseFile(InputFile *File) {
   // Comdat groups define "link once" sections. If two comdat groups have the
   // same name, only one of them is linked, and the other is ignored. This set
   // is used to uniquify them.
@@ -128,7 +127,7 @@ template <class ELFT> void elf::parseFile(InputFile *File) {
 
   // .a file
   if (auto *F = dyn_cast<ArchiveFile>(File)) {
-    F->parse<ELFT>();
+    F->parse();
     return;
   }
 
@@ -158,6 +157,26 @@ template <class ELFT> void elf::parseFile(InputFile *File) {
   // Regular object file
   ObjectFiles.push_back(File);
   cast<ObjFile<ELFT>>(File)->parse(ComdatGroups);
+}
+
+// Add symbols in File to the symbol table.
+void elf::parseFile(InputFile *File) {
+  switch (Config->EKind) {
+  case ELF32LEKind:
+    doParseFile<ELF32LE>(File);
+    return;
+  case ELF32BEKind:
+    doParseFile<ELF32BE>(File);
+    return;
+  case ELF64LEKind:
+    doParseFile<ELF64LE>(File);
+    return;
+  case ELF64BEKind:
+    doParseFile<ELF64BE>(File);
+    return;
+  default:
+    llvm_unreachable("unknown ELFT");
+  }
 }
 
 // Concatenates arguments to construct a string representing an error location.
@@ -892,8 +911,7 @@ template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
 
   switch (Sym->st_shndx) {
   case SHN_UNDEF:
-    return Symtab->addUndefined<ELFT>(
-        Undefined{this, Name, Binding, StOther, Type});
+    return Symtab->addUndefined(Undefined{this, Name, Binding, StOther, Type});
   case SHN_COMMON:
     if (Value == 0 || Value >= UINT32_MAX)
       fatal(toString(this) + ": common symbol '" + Name +
@@ -909,7 +927,7 @@ template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
   case STB_WEAK:
   case STB_GNU_UNIQUE:
     if (Sec == &InputSection::Discarded)
-      return Symtab->addUndefined<ELFT>(
+      return Symtab->addUndefined(
           Undefined{this, Name, Binding, StOther, Type});
     return Symtab->addDefined(
         Defined{this, Name, Binding, StOther, Type, Value, Size, Sec});
@@ -920,9 +938,9 @@ ArchiveFile::ArchiveFile(std::unique_ptr<Archive> &&File)
     : InputFile(ArchiveKind, File->getMemoryBufferRef()),
       File(std::move(File)) {}
 
-template <class ELFT> void ArchiveFile::parse() {
+void ArchiveFile::parse() {
   for (const Archive::Symbol &Sym : File->symbols())
-    Symtab->addLazyArchive<ELFT>(LazyArchive{*this, Sym});
+    Symtab->addLazyArchive(LazyArchive{*this, Sym});
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -1123,7 +1141,7 @@ template <class ELFT> void SharedFile::parse() {
     }
 
     if (Sym.isUndefined()) {
-      Symbol *S = Symtab->addUndefined<ELFT>(
+      Symbol *S = Symtab->addUndefined(
           Undefined{this, Name, Sym.getBinding(), Sym.st_other, Sym.getType()});
       S->ExportDynamic = true;
       continue;
@@ -1262,7 +1280,7 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
     Undefined New(&F, Name, Binding, Visibility, Type);
     if (CanOmitFromDynSym)
       New.ExportDynamic = false;
-    return Symtab->addUndefined<ELFT>(New);
+    return Symtab->addUndefined(New);
   }
 
   if (ObjSym.isCommon())
@@ -1404,7 +1422,7 @@ template <class ELFT> void LazyObjFile::parse() {
     for (const lto::InputFile::Symbol &Sym : Obj->symbols()) {
       if (Sym.isUndefined())
         continue;
-      Symtab->addLazyObject<ELFT>(LazyObject{*this, Saver.save(Sym.getName())});
+      Symtab->addLazyObject(LazyObject{*this, Saver.save(Sym.getName())});
     }
     return;
   }
@@ -1429,7 +1447,7 @@ template <class ELFT> void LazyObjFile::parse() {
     for (const typename ELFT::Sym &Sym : Syms.slice(FirstGlobal)) {
       if (Sym.st_shndx == SHN_UNDEF)
         continue;
-      Symtab->addLazyObject<ELFT>(
+      Symtab->addLazyObject(
           LazyObject{*this, CHECK(Sym.getName(StringTable), this)});
     }
     return;
@@ -1444,16 +1462,6 @@ std::string elf::replaceThinLTOSuffix(StringRef Path) {
     return (Path + Repl).str();
   return Path;
 }
-
-template void elf::parseFile<ELF32LE>(InputFile *);
-template void elf::parseFile<ELF32BE>(InputFile *);
-template void elf::parseFile<ELF64LE>(InputFile *);
-template void elf::parseFile<ELF64BE>(InputFile *);
-
-template void ArchiveFile::parse<ELF32LE>();
-template void ArchiveFile::parse<ELF32BE>();
-template void ArchiveFile::parse<ELF64LE>();
-template void ArchiveFile::parse<ELF64BE>();
 
 template void BitcodeFile::parse<ELF32LE>(DenseSet<CachedHashStringRef> &);
 template void BitcodeFile::parse<ELF32BE>(DenseSet<CachedHashStringRef> &);

@@ -55,7 +55,7 @@ extern std::unique_ptr<llvm::TarWriter> Tar;
 llvm::Optional<MemoryBufferRef> readFile(StringRef Path);
 
 // Add symbols in File to the symbol table.
-template <class ELFT> void parseFile(InputFile *File);
+void parseFile(InputFile *File);
 
 // The root class of input files.
 class InputFile {
@@ -323,7 +323,7 @@ class ArchiveFile : public InputFile {
 public:
   explicit ArchiveFile(std::unique_ptr<Archive> &&File);
   static bool classof(const InputFile *F) { return F->kind() == ArchiveKind; }
-  template <class ELFT> void parse();
+  void parse();
 
   // Pulls out an object file that contains a definition for Sym and
   // returns it. If the same file was instantiated before, this

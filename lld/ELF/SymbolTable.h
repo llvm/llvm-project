@@ -45,22 +45,18 @@ public:
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
 
-  template <class ELFT> Symbol *addUndefined(const Undefined &New);
-
+  Symbol *addUndefined(const Undefined &New);
   Symbol *addDefined(const Defined &New);
-
   void addShared(const SharedSymbol &New);
-
-  template <class ELFT> void addLazyArchive(const LazyArchive &New);
-  template <class ELFT> void addLazyObject(const LazyObject &New);
-
+  void addLazyArchive(const LazyArchive &New);
+  void addLazyObject(const LazyObject &New);
   Symbol *addBitcode(const Defined &New);
   Symbol *addCommon(const CommonSymbol &New);
 
   Symbol *insert(const Symbol &New);
   void mergeProperties(Symbol *Old, const Symbol &New);
 
-  template <class ELFT> void fetchLazy(Symbol *Sym);
+  void fetchLazy(Symbol *Sym);
 
   void scanVersionScript();
 
@@ -74,7 +70,7 @@ public:
   llvm::DenseMap<StringRef, SharedFile *> SoNames;
 
 private:
-  template <class ELFT, class LazyT> void addLazy(const LazyT &New);
+  template <class LazyT> void addLazy(const LazyT &New);
 
   std::vector<Symbol *> findByVersion(SymbolVersion Ver);
   std::vector<Symbol *> findAllByVersion(SymbolVersion Ver);
