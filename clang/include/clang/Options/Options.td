@@ -2071,6 +2071,12 @@ def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   MetaVarName<"<version>">,
   HelpText<"Specify the Swift version to use when filtering API notes">;
 
+defm target_variant_availability_checks : BoolOption<"f", "target-variant-availability-checks",
+  LangOpts<"ZipperedAvailabilityChecks">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enable availability checks for the target variant platform">,
+  NegFlag<SetFalse>>, Group<f_clang_Group>;
+
 defm bounds_safety : BoolFOption<
   "experimental-bounds-safety",
   LangOpts<"BoundsSafety">, DefaultFalse,

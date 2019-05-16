@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 "-triple" "x86_64-apple-macos10.14" -darwin-target-variant-triple x86_64-apple-ios12-macabi -fsyntax-only -verify %s
-// RUN: %clang_cc1 "-triple" x86_64-apple-ios12-macabi -darwin-target-variant-triple "x86_64-apple-macos10.14"  -fsyntax-only -verify -D INVERTED %s
+// RUN: %clang_cc1 -ftarget-variant-availability-checks "-triple" "x86_64-apple-macos10.14" -darwin-target-variant-triple x86_64-apple-ios12-macabi -fsyntax-only -verify %s
+// RUN: %clang_cc1 -ftarget-variant-availability-checks "-triple" x86_64-apple-ios12-macabi -darwin-target-variant-triple "x86_64-apple-macos10.14"  -fsyntax-only -verify -D INVERTED %s
 
 // XFAIL: *
 __attribute__((availability(macos, introduced=10.10, deprecated=10.14), availability(ios, introduced=9, deprecated=12)))

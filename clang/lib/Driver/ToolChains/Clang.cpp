@@ -6905,6 +6905,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       A->render(Args, CmdArgs);
   }
 
+  if (Args.hasFlag(options::OPT_ftarget_variant_availability_checks,
+                   options::OPT_fno_target_variant_availability_checks,
+                   /*Default=*/false))
+    CmdArgs.push_back("-ftarget-variant-availability-checks");
+
   if (Arg *A = Args.getLastArg(options::OPT_fconstant_string_class_EQ)) {
     CmdArgs.push_back("-fconstant-string-class");
     CmdArgs.push_back(A->getValue());
