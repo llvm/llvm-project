@@ -245,7 +245,12 @@ def main():
     if args.checks:
       invocation.append('-checks=' + args.checks)
     invocation.append('-')
-    subprocess.check_call(invocation)
+    if args.quiet:
+      # Even with -quiet we still want to check if we can call clang-tidy.
+      with open(os.devnull, 'w') as dev_null:
+        subprocess.check_call(invocation, stdout=dev_null)
+    else:
+      subprocess.check_call(invocation)
   except:
     print("Unable to run clang-tidy.", file=sys.stderr)
     sys.exit(1)
