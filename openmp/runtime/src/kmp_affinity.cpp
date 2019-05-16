@@ -530,7 +530,7 @@ static int __kmp_hwloc_process_obj_core_pu(AddrUnsPair *addrPair,
 static int __kmp_hwloc_check_numa() {
   hwloc_topology_t &tp = __kmp_hwloc_topology;
   hwloc_obj_t hT, hC, hL, hN, hS; // hwloc objects (pointers to)
-  int depth;
+  int depth, l2cache_depth, package_depth;
 
   // Get some PU
   hT = hwloc_get_obj_by_type(tp, HWLOC_OBJ_PU, 0);
@@ -548,8 +548,10 @@ static int __kmp_hwloc_check_numa() {
     }
   }
 
+  package_depth = hwloc_get_type_depth(tp, HWLOC_OBJ_PACKAGE);
+  l2cache_depth = hwloc_get_cache_type_depth(tp, 2, HWLOC_OBJ_CACHE_UNIFIED);
   // check tile, get object by depth because of multiple caches possible
-  depth = hwloc_get_cache_type_depth(tp, 2, HWLOC_OBJ_CACHE_UNIFIED);
+  depth = (l2cache_depth < package_depth) ? package_depth : l2cache_depth;
   hL = hwloc_get_ancestor_obj_by_depth(tp, depth, hT);
   hC = NULL; // not used, but reset it here just in case
   if (hL != NULL &&
