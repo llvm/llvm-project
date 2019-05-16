@@ -8,19 +8,10 @@
 
 #include "lldb/Initialization/SystemInitializerCommon.h"
 
-#include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOSXDYLD.h"
-#include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
-#include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
-#include "Plugins/Instruction/ARM/EmulateInstructionARM.h"
-#include "Plugins/Instruction/MIPS/EmulateInstructionMIPS.h"
-#include "Plugins/Instruction/MIPS64/EmulateInstructionMIPS64.h"
-#include "Plugins/ObjectContainer/BSD-Archive/ObjectContainerBSDArchive.h"
-#include "Plugins/ObjectContainer/Universal-Mach-O/ObjectContainerUniversalMachO.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/Timer.h"
@@ -29,7 +20,7 @@
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #endif
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #include "Plugins/Process/Windows/Common/ProcessWindowsLog.h"
 #include "lldb/Host/windows/windows.h"
 #endif
@@ -46,7 +37,7 @@ SystemInitializerCommon::SystemInitializerCommon() {}
 SystemInitializerCommon::~SystemInitializerCommon() {}
 
 llvm::Error SystemInitializerCommon::Initialize() {
-#if defined(_MSC_VER)
+#if defined(_WIN32)
   const char *disable_crash_dialog_var = getenv("LLDB_DISABLE_CRASH_DIALOG");
   if (disable_crash_dialog_var &&
       llvm::StringRef(disable_crash_dialog_var).equals_lower("true")) {
@@ -99,24 +90,10 @@ llvm::Error SystemInitializerCommon::Initialize() {
 
   process_gdb_remote::ProcessGDBRemoteLog::Initialize();
 
-  // Initialize plug-ins
-  ClangASTContext::Initialize();
-
-  ObjectContainerBSDArchive::Initialize();
-
-  EmulateInstructionARM::Initialize();
-  EmulateInstructionMIPS::Initialize();
-  EmulateInstructionMIPS64::Initialize();
-
-  //----------------------------------------------------------------------
-  // Apple/Darwin hosted plugins
-  //----------------------------------------------------------------------
-  ObjectContainerUniversalMachO::Initialize();
-
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)
   ProcessPOSIXLog::Initialize();
 #endif
-#if defined(_MSC_VER)
+#if defined(_WIN32)
   ProcessWindowsLog::Initialize();
 #endif
 
@@ -126,17 +103,8 @@ llvm::Error SystemInitializerCommon::Initialize() {
 void SystemInitializerCommon::Terminate() {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
-  ObjectContainerBSDArchive::Terminate();
 
-  ClangASTContext::Terminate();
-
-  EmulateInstructionARM::Terminate();
-  EmulateInstructionMIPS::Terminate();
-  EmulateInstructionMIPS64::Terminate();
-
-  ObjectContainerUniversalMachO::Terminate();
-
-#if defined(_MSC_VER)
+#if defined(_WIN32)
   ProcessWindowsLog::Terminate();
 #endif
 
