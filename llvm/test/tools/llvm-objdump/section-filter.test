@@ -1,3 +1,4 @@
+# REQUIRES: x86-registered-target
 ## Test that --section works correctly for -h.
 ## We test the LMA here too, because the code at the time of writing uses the 
 ## value of --section when looking up section LMAs.
