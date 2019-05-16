@@ -41,10 +41,11 @@ namespace ast_type_traits {
 /// Defines how we descend a level in the AST when we pass
 /// through expressions.
 enum TraversalKind {
-  /// Will traverse any child nodes.
+  /// Will traverse all child nodes.
   TK_AsIs,
 
   /// Will not traverse implicit casts and parentheses.
+  /// Corresponds to Expr::IgnoreParenImpCasts()
   TK_IgnoreImplicitCastsAndParentheses
 };
 
