@@ -48,6 +48,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include <algorithm>
 #include <numeric>
@@ -406,13 +407,6 @@ class BCECmpChain {
            First.Rhs().Offset + First.SizeBits() / 8 == Second.Rhs().Offset;
   }
 
-  // Merges the given comparison blocks into one memcmp block and update
-  // branches. Comparisons are assumed to be continguous. If NextBBInChain is
-  // null, the merged block will link to the phi block.
-  void mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
-                        BasicBlock *const NextBBInChain, PHINode &Phi,
-                        const TargetLibraryInfo *const TLI, AliasAnalysis *AA);
-
   PHINode &Phi_;
   std::vector<BCECmpBlock> Comparisons_;
   // The original entry block (before sorting);
@@ -452,7 +446,7 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
         // chain before sorting. Unless we can abort the chain at this point
         // and start anew.
         //
-        // NOTE: we only handle block with single predecessor for now.
+        // NOTE: we only handle blocks a with single predecessor for now.
         if (Comparison.canSplit(AA)) {
           LLVM_DEBUG(dbgs()
                      << "Split initial block '" << Comparison.BB->getName()
@@ -540,162 +534,173 @@ void BCECmpChain::dump() const {
 }
 #endif  // MERGEICMPS_DOT_ON
 
-bool BCECmpChain::simplify(const TargetLibraryInfo *const TLI,
-                           AliasAnalysis *AA) {
-  // First pass to check if there is at least one merge. If not, we don't do
-  // anything and we keep analysis passes intact.
-  {
-    bool AtLeastOneMerged = false;
-    for (size_t I = 1; I < Comparisons_.size(); ++I) {
-      if (IsContiguous(Comparisons_[I - 1], Comparisons_[I])) {
-        AtLeastOneMerged = true;
-        break;
+namespace {
+
+// A class to compute the name of a set of merged basic blocks.
+// This is optimized for the common case of no block names.
+class MergedBlockName {
+  // Storage for the uncommon case of several named blocks.
+  SmallString<16> Scratch;
+
+public:
+  explicit MergedBlockName(ArrayRef<BCECmpBlock> Comparisons)
+      : Name(makeName(Comparisons)) {}
+  const StringRef Name;
+
+private:
+  StringRef makeName(ArrayRef<BCECmpBlock> Comparisons) {
+    assert(!Comparisons.empty() && "no basic block");
+    // Fast path: only one block, or no names at all.
+    if (Comparisons.size() == 1)
+      return Comparisons[0].BB->getName();
+    const int size = std::accumulate(Comparisons.begin(), Comparisons.end(), 0,
+                                     [](int i, const BCECmpBlock &Cmp) {
+                                       return i + Cmp.BB->getName().size();
+                                     });
+    if (size == 0)
+      return StringRef("", 0);
+
+    // Slow path: at least two blocks, at least one block with a name.
+    Scratch.clear();
+    // We'll have `size` bytes for name and `Comparisons.size() - 1` bytes for
+    // separators.
+    Scratch.reserve(size + Comparisons.size() - 1);
+    const auto append = [this](StringRef str) {
+      Scratch.append(str.begin(), str.end());
+    };
+    append(Comparisons[0].BB->getName());
+    for (int I = 1, E = Comparisons.size(); I < E; ++I) {
+      const BasicBlock *const BB = Comparisons[I].BB;
+      if (!BB->getName().empty()) {
+        append("+");
+        append(BB->getName());
       }
     }
-    if (!AtLeastOneMerged) return false;
+    return StringRef(Scratch);
   }
+};
+} // namespace
 
-  // Remove phi references to comparison blocks, they will be rebuilt as we
-  // merge the blocks.
-  for (const auto &Comparison : Comparisons_) {
-    Phi_.removeIncomingValue(Comparison.BB, false);
-  }
+// Merges the given contiguous comparison blocks into one memcmp block.
+static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
+                                    BasicBlock *const NextCmpBlock,
+                                    PHINode &Phi,
+                                    const TargetLibraryInfo *const TLI,
+                                    AliasAnalysis *AA) {
+  assert(!Comparisons.empty() && "merging zero comparisons");
+  LLVMContext &Context = NextCmpBlock->getContext();
+  const BCECmpBlock &FirstCmp = Comparisons[0];
 
-  // If entry block is part of the chain, we need to make the first block
-  // of the chain the new entry block of the function.
-  BasicBlock *Entry = &Comparisons_[0].BB->getParent()->getEntryBlock();
-  for (size_t I = 1; I < Comparisons_.size(); ++I) {
-    if (Entry == Comparisons_[I].BB) {
-      BasicBlock *NEntryBB = BasicBlock::Create(Entry->getContext(), "",
-                                                Entry->getParent(), Entry);
-      BranchInst::Create(Entry, NEntryBB);
-      break;
-    }
-  }
+  // Create a new cmp block before next cmp block.
+  BasicBlock *const BB =
+      BasicBlock::Create(Context, MergedBlockName(Comparisons).Name,
+                         NextCmpBlock->getParent(), NextCmpBlock);
+  IRBuilder<> Builder(BB);
+  // Add the GEPs from the first BCECmpBlock.
+  Value *const Lhs = Builder.Insert(FirstCmp.Lhs().GEP->clone());
+  Value *const Rhs = Builder.Insert(FirstCmp.Rhs().GEP->clone());
 
-  // Point the predecessors of the chain to the first comparison block (which is
-  // the new entry point) and update the entry block of the chain.
-  if (EntryBlock_ != Comparisons_[0].BB) {
-    EntryBlock_->replaceAllUsesWith(Comparisons_[0].BB);
-    EntryBlock_ = Comparisons_[0].BB;
-  }
+  Value *IsEqual = nullptr;
+  if (Comparisons.size() == 1) {
+    LLVM_DEBUG(dbgs() << "Only one comparison, updating branches\n");
+    Value *const LhsLoad =
+        Builder.CreateLoad(FirstCmp.Lhs().LoadI->getType(), Lhs);
+    Value *const RhsLoad =
+        Builder.CreateLoad(FirstCmp.Rhs().LoadI->getType(), Rhs);
+    // There are no blocks to merge, just do the comparison.
+    IsEqual = Builder.CreateICmpEQ(LhsLoad, RhsLoad);
+  } else {
+    LLVM_DEBUG(dbgs() << "Merging " << Comparisons.size() << " comparisons\n");
 
-  // Effectively merge blocks.
-  int NumMerged = 1;
-  for (size_t I = 1; I < Comparisons_.size(); ++I) {
-    if (IsContiguous(Comparisons_[I - 1], Comparisons_[I])) {
-      ++NumMerged;
-    } else {
-      // Merge all previous comparisons and start a new merge block.
-      mergeComparisons(
-          makeArrayRef(Comparisons_).slice(I - NumMerged, NumMerged),
-          Comparisons_[I].BB, Phi_, TLI, AA);
-      NumMerged = 1;
-    }
-  }
-  mergeComparisons(makeArrayRef(Comparisons_)
-                       .slice(Comparisons_.size() - NumMerged, NumMerged),
-                   nullptr, Phi_, TLI, AA);
-
-  return true;
-}
-
-void BCECmpChain::mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
-                                   BasicBlock *const NextBBInChain,
-                                   PHINode &Phi,
-                                   const TargetLibraryInfo *const TLI,
-                                   AliasAnalysis *AA) {
-  assert(!Comparisons.empty());
-  const auto &FirstComparison = *Comparisons.begin();
-  BasicBlock *const BB = FirstComparison.BB;
-  LLVMContext &Context = BB->getContext();
-
-  if (Comparisons.size() >= 2) {
     // If there is one block that requires splitting, we do it now, i.e.
     // just before we know we will collapse the chain. The instructions
     // can be executed before any of the instructions in the chain.
-    auto C = std::find_if(Comparisons.begin(), Comparisons.end(),
-                          [](const BCECmpBlock &B) { return B.RequireSplit; });
-    if (C != Comparisons.end())
-      C->split(EntryBlock_, AA);
+    const auto ToSplit =
+        std::find_if(Comparisons.begin(), Comparisons.end(),
+                     [](const BCECmpBlock &B) { return B.RequireSplit; });
+    if (ToSplit != Comparisons.end()) {
+      LLVM_DEBUG(dbgs() << "Splitting non_BCE work to header\n");
+      ToSplit->split(BB, AA);
+    }
 
-    LLVM_DEBUG(dbgs() << "Merging " << Comparisons.size() << " comparisons\n");
-    const auto TotalSize =
-        std::accumulate(Comparisons.begin(), Comparisons.end(), 0,
-                        [](int Size, const BCECmpBlock &C) {
-                          return Size + C.SizeBits();
-                        }) /
-        8;
+    const unsigned TotalSizeBits = std::accumulate(
+        Comparisons.begin(), Comparisons.end(), 0u,
+        [](int Size, const BCECmpBlock &C) { return Size + C.SizeBits(); });
 
-    // Incoming edges do not need to be updated, and both GEPs are already
-    // computing the right address, we just need to:
-    //   - replace the two loads and the icmp with the memcmp
-    //   - update the branch
-    //   - update the incoming values in the phi.
-    FirstComparison.BranchI->eraseFromParent();
-    FirstComparison.CmpI->eraseFromParent();
-    FirstComparison.Lhs().LoadI->eraseFromParent();
-    FirstComparison.Rhs().LoadI->eraseFromParent();
-
-    IRBuilder<> Builder(BB);
+    // Create memcmp() == 0.
     const auto &DL = Phi.getModule()->getDataLayout();
     Value *const MemCmpCall = emitMemCmp(
-        FirstComparison.Lhs().GEP, FirstComparison.Rhs().GEP,
-        ConstantInt::get(DL.getIntPtrType(Context), TotalSize),
-        Builder, DL, TLI);
-    Value *const MemCmpIsZero = Builder.CreateICmpEQ(
+        Lhs, Rhs,
+        ConstantInt::get(DL.getIntPtrType(Context), TotalSizeBits / 8), Builder,
+        DL, TLI);
+    IsEqual = Builder.CreateICmpEQ(
         MemCmpCall, ConstantInt::get(Type::getInt32Ty(Context), 0));
+  }
 
-    // Add a branch to the next basic block in the chain.
-    if (NextBBInChain) {
-      Builder.CreateCondBr(MemCmpIsZero, NextBBInChain, Phi.getParent());
-      Phi.addIncoming(ConstantInt::getFalse(Context), BB);
-    } else {
-      Builder.CreateBr(Phi.getParent());
-      Phi.addIncoming(MemCmpIsZero, BB);
-    }
-
-    // Delete merged blocks.
-    for (size_t I = 1; I < Comparisons.size(); ++I) {
-      BasicBlock *CBB = Comparisons[I].BB;
-      CBB->replaceAllUsesWith(BB);
-      CBB->eraseFromParent();
-    }
+  BasicBlock *const PhiBB = Phi.getParent();
+  // Add a branch to the next basic block in the chain.
+  if (NextCmpBlock == PhiBB) {
+    // Continue to phi, passing it the comparison result.
+    Builder.CreateBr(Phi.getParent());
+    Phi.addIncoming(IsEqual, BB);
   } else {
-    assert(Comparisons.size() == 1);
-    // There are no blocks to merge, but we still need to update the branches.
-    LLVM_DEBUG(dbgs() << "Only one comparison, updating branches\n");
-    if (NextBBInChain) {
-      if (FirstComparison.BranchI->isConditional()) {
-        LLVM_DEBUG(dbgs() << "conditional -> conditional\n");
-        // Just update the "true" target, the "false" target should already be
-        // the phi block.
-        assert(FirstComparison.BranchI->getSuccessor(1) == Phi.getParent());
-        FirstComparison.BranchI->setSuccessor(0, NextBBInChain);
-        Phi.addIncoming(ConstantInt::getFalse(Context), BB);
-      } else {
-        LLVM_DEBUG(dbgs() << "unconditional -> conditional\n");
-        // Replace the unconditional branch by a conditional one.
-        FirstComparison.BranchI->eraseFromParent();
-        IRBuilder<> Builder(BB);
-        Builder.CreateCondBr(FirstComparison.CmpI, NextBBInChain,
-                             Phi.getParent());
-        Phi.addIncoming(FirstComparison.CmpI, BB);
-      }
+    // Continue to next block if equal, exit to phi else.
+    Builder.CreateCondBr(IsEqual, NextCmpBlock, PhiBB);
+    Phi.addIncoming(ConstantInt::getFalse(Context), BB);
+  }
+  return BB;
+}
+
+bool BCECmpChain::simplify(const TargetLibraryInfo *const TLI,
+                           AliasAnalysis *AA) {
+  assert(Comparisons_.size() >= 2 && "simplifying trivial BCECmpChain");
+  // First pass to check if there is at least one merge. If not, we don't do
+  // anything and we keep analysis passes intact.
+  const auto AtLeastOneMerged = [this]() {
+    for (size_t I = 1; I < Comparisons_.size(); ++I) {
+      if (IsContiguous(Comparisons_[I - 1], Comparisons_[I]))
+        return true;
+    }
+    return false;
+  };
+  if (!AtLeastOneMerged())
+    return false;
+
+  // Effectively merge blocks. We go in the reverse direction from the phi block
+  // so that the next block is always available to branch to.
+  const auto mergeRange = [this, TLI, AA](int I, int Num, BasicBlock *Next) {
+    return mergeComparisons(makeArrayRef(Comparisons_).slice(I, Num), Next,
+                            Phi_, TLI, AA);
+  };
+  int NumMerged = 1;
+  BasicBlock *NextCmpBlock = Phi_.getParent();
+  for (int I = static_cast<int>(Comparisons_.size()) - 2; I >= 0; --I) {
+    if (IsContiguous(Comparisons_[I], Comparisons_[I + 1])) {
+      ++NumMerged;
     } else {
-      if (FirstComparison.BranchI->isConditional()) {
-        LLVM_DEBUG(dbgs() << "conditional -> unconditional\n");
-        // Replace the conditional branch by an unconditional one.
-        FirstComparison.BranchI->eraseFromParent();
-        IRBuilder<> Builder(BB);
-        Builder.CreateBr(Phi.getParent());
-        Phi.addIncoming(FirstComparison.CmpI, BB);
-      } else {
-        LLVM_DEBUG(dbgs() << "unconditional -> unconditional\n");
-        Phi.addIncoming(FirstComparison.CmpI, BB);
-      }
+      NextCmpBlock = mergeRange(I + 1, NumMerged, NextCmpBlock);
+      NumMerged = 1;
     }
   }
+  NextCmpBlock = mergeRange(0, NumMerged, NextCmpBlock);
+
+  // Replace the original cmp chain with the new cmp chain by pointing all
+  // predecessors of EntryBlock_ to NextCmpBlock instead. This makes all cmp
+  // blocks in the old chain unreachable.
+  for (BasicBlock *Pred : predecessors(EntryBlock_)) {
+    Pred->getTerminator()->replaceUsesOfWith(EntryBlock_, NextCmpBlock);
+  }
+  EntryBlock_ = nullptr;
+
+  // Delete merged blocks. This also removes incoming values in phi.
+  SmallVector<BasicBlock *, 16> DeadBlocks;
+  for (auto &Cmp : Comparisons_) {
+    DeadBlocks.push_back(Cmp.BB);
+  }
+  DeleteDeadBlocks(DeadBlocks);
+
+  Comparisons_.clear();
+  return true;
 }
 
 std::vector<BasicBlock *> getOrderedBlocks(PHINode &Phi,
