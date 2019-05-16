@@ -84,6 +84,8 @@ class MIGChecker : public Checker<check::PostCall, check::PreStmt<ReturnStmt>,
 #undef CALL
   };
 
+  CallDescription OsRefRetain{"os_ref_retain", 1};
+
   void checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const;
 
 public:
@@ -115,9 +117,13 @@ public:
 };
 } // end anonymous namespace
 
+// The last parameter that was deallocated on the current execution path.
 // FIXME: It's a 'const ParmVarDecl *' but there's no ready-made GDM traits
 // specialization for this sort of types.
 REGISTER_TRAIT_WITH_PROGRAMSTATE(ReleasedParameter, const void *)
+// A set of parameters for which the check is suppressed because
+// reference counting is being performed.
+REGISTER_SET_WITH_PROGRAMSTATE(RefCountedParameters, const ParmVarDecl *);
 
 std::shared_ptr<PathDiagnosticPiece>
 MIGChecker::Visitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
@@ -140,8 +146,10 @@ MIGChecker::Visitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   return std::make_shared<PathDiagnosticEventPiece>(Loc, OS.str());
 }
 
-static const ParmVarDecl *getOriginParam(SVal V, CheckerContext &C) {
-  SymbolRef Sym = V.getAsSymbol();
+static const ParmVarDecl *getOriginParam(SVal V, CheckerContext &C,
+                                         bool IncludeBaseRegions = false) {
+  // TODO: We should most likely always include base regions here.
+  SymbolRef Sym = V.getAsSymbol(IncludeBaseRegions);
   if (!Sym)
     return nullptr;
 
@@ -201,6 +209,19 @@ static bool isInMIGCall(CheckerContext &C) {
 }
 
 void MIGChecker::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
+  if (Call.isCalled(OsRefRetain)) {
+    // If the code is doing reference counting over the parameter,
+    // it opens up an opportunity for safely calling a destructor function.
+    // TODO: We should still check for over-releases.
+    if (const ParmVarDecl *PVD =
+            getOriginParam(Call.getArgSVal(0), C, /*IncludeBaseRegions=*/true)) {
+      // We never need to clean up the program state because these are
+      // top-level parameters anyway, so they're always live.
+      C.addTransition(C.getState()->add<RefCountedParameters>(PVD));
+    }
+    return;
+  }
+
   if (!isInMIGCall(C))
     return;
 
@@ -211,13 +232,14 @@ void MIGChecker::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
   if (I == Deallocators.end())
     return;
 
+  ProgramStateRef State = C.getState();
   unsigned ArgIdx = I->second;
   SVal Arg = Call.getArgSVal(ArgIdx);
   const ParmVarDecl *PVD = getOriginParam(Arg, C);
-  if (!PVD)
+  if (!PVD || State->contains<RefCountedParameters>(PVD))
     return;
 
-  C.addTransition(C.getState()->set<ReleasedParameter>(PVD));
+  C.addTransition(State->set<ReleasedParameter>(PVD));
 }
 
 // Returns true if V can potentially represent a "successful" kern_return_t.
