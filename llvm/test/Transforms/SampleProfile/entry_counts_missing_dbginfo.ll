@@ -176,4 +176,4 @@ attributes #4 = { nounwind }
 !55 = !DILocation(line: 21, column: 8, scope: !48)
 !56 = !DILocation(line: 22, column: 10, scope: !48)
 !57 = !DILocation(line: 22, column: 3, scope: !48)
-!100 = !{!"branch_weights", i32 5, i32 10}
+!100 = !{!"branch_weights", i32 5}
