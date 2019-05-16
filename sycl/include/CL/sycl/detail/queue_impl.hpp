@@ -151,19 +151,12 @@ public:
     return Queue;
   }
 
-   // Warning. Returned reference will be invalid if queue_impl was destroyed.
-  cl_command_queue &getHandleRef() {
-    if (!m_Device.is_accelerator()) {
-      return m_CommandQueue;
-    }
-
+  // Warning. Returned reference will be invalid if queue_impl was destroyed.
+  cl_command_queue &getExclusiveQueueHandleRef() {
     // To achive parallelism for FPGA with in order execution model with
     // possibility of two kernels to share data with each other we shall
     // create a queue for every kernel enqueued.
-    if (m_Queues.empty()) {
-      m_Queues.push_back(m_CommandQueue);
-      return m_CommandQueue;
-    } else if (m_Queues.size() < MaxNumQueues) {
+    if (m_Queues.size() < MaxNumQueues) {
       m_Queues.push_back(createQueue());
       return m_Queues.back();
     }
@@ -175,6 +168,19 @@ public:
 
     CHECK_OCL_CODE(clFinish(m_Queues[FreeQueueNum]));
     return m_Queues[FreeQueueNum];
+  }
+
+  cl_command_queue &getHandleRef() {
+    if (!m_Device.is_accelerator()) {
+      return m_CommandQueue;
+    }
+
+    if (m_Queues.empty()) {
+      m_Queues.push_back(m_CommandQueue);
+      return m_CommandQueue;
+    }
+
+    return getExclusiveQueueHandleRef();
   }
 
   template <typename propertyT> bool has_property() const {

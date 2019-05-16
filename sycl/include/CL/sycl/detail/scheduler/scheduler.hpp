@@ -140,7 +140,8 @@ private:
     // The method inserts memory copy operation from the context where the
     // memory current lives to the context bound to Queue.
     MemCpyCommand *insertMemCpyCmd(MemObjRecord *Record, Requirement *Req,
-                                   const QueueImplPtr &Queue);
+                                   const QueueImplPtr &Queue,
+                                   bool UseExclusiveQueue = false);
 
     std::set<Command *> findDepsForReq(MemObjRecord *Record, Requirement *Req,
                                        QueueImplPtr Context);

@@ -55,16 +55,9 @@ template <typename T, int N> void check(queue &Queue) {
           sgsizeacc[0] = SG.get_max_local_range()[0];
       });
     });
-
-    // Temporary workaround to avoid waiting for the task while still blocked
-    // task is located in the same queue.
-    size_t sg_size = 0;
-    {
-      auto sgsizeacc = sgsizebuf.get_access<access::mode::read_write>();
-      sg_size = sgsizeacc[0];
-    }
-
     auto acc = syclbuf.template get_access<access::mode::read_write>();
+    auto sgsizeacc = sgsizebuf.get_access<access::mode::read_write>();
+    size_t sg_size = sgsizeacc[0];
     int WGid = -1, SGid = 0;
     for (int j = 0; j < (G - (sg_size * N)); j++) {
       if (j % L % sg_size == 0) {
@@ -127,14 +120,9 @@ template <typename T> void check(queue &Queue) {
         SG.store<T>(mp, s);
       });
     });
-    // Temporary workaround to avoid waiting for the task while still blocked
-    // task is located in the same queue.
-    size_t sg_size = 0;
-    {
-      auto sgsizeacc = sgsizebuf.get_access<access::mode::read_write>();
-      sg_size = sgsizeacc[0];
-    }
     auto acc = syclbuf.template get_access<access::mode::read_write>();
+    auto sgsizeacc = sgsizebuf.get_access<access::mode::read_write>();
+    size_t sg_size = sgsizeacc[0];
     int WGid = -1, SGid = 0;
     for (int j = 0; j < G; j++) {
       if (j % L % sg_size == 0) {

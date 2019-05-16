@@ -68,7 +68,8 @@ public:
                    QueueImplPtr TgtQueue, unsigned int DimDst,
                    sycl::range<3> DstSize, sycl::range<3> DstAccessRange,
                    sycl::id<3> DstOffset, unsigned int DstElemSize,
-                   std::vector<cl_event> DepEvents, cl_event &OutEvent);
+                   std::vector<cl_event> DepEvents, bool UseExclusiveQueue,
+                   cl_event &OutEvent);
 
   static void fill(SYCLMemObjT *SYCLMemObj, void *Mem, QueueImplPtr Queue,
                    size_t PatternSize, const char *Pattern, unsigned int Dim,
@@ -84,7 +85,7 @@ public:
 
   static void unmap(SYCLMemObjT *SYCLMemObj, void *Mem, QueueImplPtr Queue,
                     void *MappedPtr, std::vector<cl_event> DepEvents,
-                    cl_event &OutEvent);
+                    bool UseExclusiveQueue, cl_event &OutEvent);
 };
 } // namespace detail
 } // namespace sycl

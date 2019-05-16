@@ -99,7 +99,8 @@ void Scheduler::GraphBuilder::AddNodeToLeafs(
 
 MemCpyCommand *
 Scheduler::GraphBuilder::insertMemCpyCmd(MemObjRecord *Record, Requirement *Req,
-                                         const QueueImplPtr &Queue) {
+                                         const QueueImplPtr &Queue,
+                                         bool UseExclusiveQueue) {
 
   Requirement FullReq(/*Offset*/ {0, 0, 0}, Req->MMemoryRange,
                       Req->MMemoryRange, access::mode::read_write,
@@ -125,7 +126,7 @@ Scheduler::GraphBuilder::insertMemCpyCmd(MemObjRecord *Record, Requirement *Req,
 
   MemCpyCommand *MemCpyCmd = new MemCpyCommand(
       *AllocaCmdSrc->getAllocationReq(), AllocaCmdSrc, *Req, AllocaCmdDst,
-      AllocaCmdSrc->getQueue(), AllocaCmdDst->getQueue());
+      AllocaCmdSrc->getQueue(), AllocaCmdDst->getQueue(), UseExclusiveQueue);
 
   for (Command *Dep : Deps) {
     MemCpyCmd->addDep(DepDesc{Dep, &MemCpyCmd->MDstReq, AllocaCmdDst});
@@ -211,8 +212,135 @@ Command *Scheduler::GraphBuilder::addHostAccessor(Requirement *Req,
 
     std::unique_ptr<MapMemObject> MapCmdUniquePtr(
         new MapMemObject(*SrcReq, SrcAllocaCmd, Req, SrcQueue));
-    std::unique_ptr<UnMapMemObject> UnMapCmdUniquePtr(
-        new UnMapMemObject(*SrcReq, SrcAllocaCmd, Req, SrcQueue));
+
+    /*
+    [SYCL] Use exclusive queues for blocked commands.
+
+    SYCL host accessor must wait in c'tor until the memory it provides
+    access to is available on the host and should write memory back on
+    destruction. No operations with the memory object are allowed
+    during lifetime of the host accessor.
+
+    In order to implement host accessor logic SYCL RT enqueues two tasks:
+    read from device to host/map and write from host to device/unmap.
+    The read/map operation should be completed during host accessor
+    construction while write/unmap should be blocked until host accessor
+    is destructed.
+
+    To achieve blocking of write/unmap operation SYCL RT blocks it on
+    user event then unblock during host accessor destruction.
+
+    For the code:
+    {
+      ...
+      Q.submit(...); // <== 1 Kernel
+      auto HostAcc = Buf.get_access<...>(); // <== Host acc creation
+      Q.submit(...); // <== 2 Kernel
+    } // <== Host acc desctruction
+
+    We generate the following graph(arrows represent dependencies)
+
+              +-------------+
+              |  1 Kernel   |
+              +-------------+
+                    ^
+                    |
+              +-------------+
+              |  Read/Map   |  <== This task should be completed
+              +-------------+      during host acc creation
+                    ^
+                    |
+              +-------------+
+              | Write/Unmap |  <== This is blocked by user event
+              +-------------+      Can be completed after host acc
+                    ^              desctruction
+                    |
+              +-------------+
+              |  2 Kernel   |
+              +-------------+
+
+    And the following content in OpenCL command queue:
+
+        +----------------------------------------------+
+    Q1: | 1 Kernel | Read/Map | Write/Unmap | 2 Kernel |
+        +----------------------------------------------+
+                                      ^
+                                      |
+       This is blocked by user event -+
+
+    This works fine, but for example below problems can happen:
+
+    For the code:
+    {
+      ...
+      Q.submit(...); // <== 1 Kernel
+      auto HostAcc1 = Buf1.get_access<...>(); // <== Host acc 1 creation
+      auto HostAcc2 = Buf2.get_access<...>(); // <== Host acc 2 creation
+      Q.submit(...); // <== 2 Kernel
+    } // <== Host acc 1 and 2 desctruction
+
+    We generate the following graph(arrows represent dependencies)
+
+                      +-------------+
+                      |  1 Kernel   |
+                      +-------------+
+                            ^
+            +---------------+---------------+
+      +-------------+                +-------------+
+      |  Read/Map 1 |                |  Read/Map 2 |  <== This task should be
+      +-------------+                +-------------+       completed during host
+            ^                               ^              acc creation
+            |                               |
+      +-------------+                +-------------+
+      |Write/Unmap 1|                |Write/Unmap 2|  <== This is blocked by
+      +-------------+                +-------------+      user event. Can be
+            ^                               ^             completed after host
+            +---------------+---------------+             accdesctruction
+                      +-------------+
+                      |  2 Kernel   |
+                      +-------------+
+
+    And the following content in OpenCL command queue:
+
+        +-------------------------------------------------------------------+
+    Q1: | 1K | Read/Map 1 | Write/Unmap 1 | Read/Map 2 | Write/Unmap 2 | 2K |
+        +-------------------------------------------------------------------+
+                                      ^                       ^
+                                      |                       |
+       This is blocked by user event -+-----------------------+
+
+    In the situation above there is "Write/Unmap 1" command already in
+    command queue which is blocked by user event and cannot be executed
+    and "Read/Map 2" command which is enqueued after "Write/Unmap 1" but
+    we should wait for the completion of this command before exiting
+    construction of the second host accessor.
+
+    Such cases is not supported in some OpenCL implementations. They
+    assume that the commands the are submitted before one user waits on
+    eventually completes.
+
+    This patch workarounds problem by using separate(exclusive) queues for
+    such tasks while still using one(common) queue for all other tasks.
+
+    So, for the second example SYCL RT creates 3 OpenCL queues, where
+    second and third queues are used for "Write/Unmap 1" and "Write/Unmap 2"
+    command respectively:
+
+        +-----------------------------------------------+
+    Q1: | 1 Kernel | Read/Map 1 | Read/Map 2 | 2 Kernel |
+        +-----------------------------------------------+
+
+        +---------------+
+    Q2: | Write/Unmap 1 |<----+
+        +---------------+     |
+                              |-----This is blocked by user event
+        +---------------+     |
+    Q3: | Write/Unmap 2 |<----+
+        +---------------+
+    */
+
+    std::unique_ptr<UnMapMemObject> UnMapCmdUniquePtr(new UnMapMemObject(
+        *SrcReq, SrcAllocaCmd, Req, SrcQueue, /*UseExclusiveQueue*/ true));
 
     if (!MapCmdUniquePtr || !UnMapCmdUniquePtr)
       throw runtime_error("Out of host memory");
@@ -239,7 +367,8 @@ Command *Scheduler::GraphBuilder::addHostAccessor(Requirement *Req,
   // In other cases insert two mem copy operations.
   MemCpyCommand *DevToHostCmd = insertMemCpyCmd(Record, Req, HostQueue);
   DevToHostCmd->setAccessorToUpdate(Req);
-  Command *HostToDevCmd = insertMemCpyCmd(Record, Req, SrcQueue);
+  Command *HostToDevCmd =
+      insertMemCpyCmd(Record, Req, SrcQueue, /*UseExclusiveQueue*/ true);
   HostToDevCmd->addDep(Req->BlockingEvent);
 
   RetEvent = DevToHostCmd->getEvent();

@@ -66,7 +66,7 @@ public:
     UNMAP_MEM_OBJ
   };
 
-  Command(CommandType Type, QueueImplPtr Queue);
+  Command(CommandType Type, QueueImplPtr Queue, bool UseExclusiveQueue = false);
 
   void addDep(DepDesc NewDep) {
     if (NewDep.MDepCommand)
@@ -99,6 +99,8 @@ protected:
   std::vector<EventImplPtr> MDepsEvents;
 
   std::vector<cl_event> prepareEvents(ContextImplPtr Context);
+
+  bool MUseExclusiveQueue = false;
 
   // Private interface. Derived classes should implement this method.
   virtual cl_int enqueueImp() = 0;
@@ -169,7 +171,8 @@ private:
 class UnMapMemObject : public Command {
 public:
   UnMapMemObject(Requirement SrcReq, AllocaCommand *SrcAlloca,
-                 Requirement *DstAcc, QueueImplPtr Queue);
+                 Requirement *DstAcc, QueueImplPtr Queue,
+                 bool UseExclusiveQueue = false);
 
 private:
   cl_int enqueueImp() override;
@@ -184,7 +187,8 @@ class MemCpyCommand : public Command {
 public:
   MemCpyCommand(Requirement SrcReq, AllocaCommand *SrcAlloca,
                 Requirement DstReq, AllocaCommand *DstAlloca,
-                QueueImplPtr SrcQueue, QueueImplPtr DstQueue);
+                QueueImplPtr SrcQueue, QueueImplPtr DstQueue,
+                bool UseExclusiveQueue = false);
 
   QueueImplPtr MSrcQueue;
   Requirement MSrcReq;

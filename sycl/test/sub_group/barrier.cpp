@@ -44,16 +44,10 @@ template <typename T> void check(queue &Queue, size_t G = 240, size_t L = 60) {
           sgsizeacc[0] = SG.get_max_local_range()[0];
       });
     });
-
-    // Temporary workaround to avoid waiting for the task while still blocked
-    // task is located in the same queue.
-    size_t sg_size = 0;
-    {
-      auto sgsizeacc = sgsizebuf.get_access<access::mode::read_write>();
-      sg_size = sgsizeacc[0];
-    }
-
     auto addacc = addbuf.template get_access<access::mode::read_write>();
+    auto sgsizeacc = sgsizebuf.get_access<access::mode::read_write>();
+
+    size_t sg_size = sgsizeacc[0];
     int WGid = -1, SGid = 0;
     T add = 0;
     for (int j = 0; j < G; j++) {

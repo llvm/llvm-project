@@ -3,7 +3,7 @@
 // RUN: %clang -std=c++11 -fsycl %s -o %t.out -lstdc++ -lOpenCL -lsycl
 // RUN: env SYCL_DEVICE_TYPE=HOST %t.out
 // RUN: %CPU_RUN_PLACEHOLDER %t.out %T/kernel_ocl.spv
-// RUNx: %GPU_RUN_PLACEHOLDER %t.out %T/kernel_ocl.spv
+// RUN: %GPU_RUN_PLACEHOLDER %t.out %T/kernel_ocl.spv
 // RUN: %ACC_RUN_PLACEHOLDER %t.out %T/kernel_ocl.spv
 //==--- common_ocl.cpp - basic SG methods in SYCL vs OpenCL  ---*- C++ -*---==//
 //
