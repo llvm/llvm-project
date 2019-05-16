@@ -180,14 +180,17 @@ static Defined *addOptionalRegular(StringRef Name, SectionBase *Sec,
   if (!S || S->isDefined())
     return nullptr;
 
-  return Symtab->addDefined(Defined{/*File=*/nullptr, Name, Binding, StOther,
-                                    STT_NOTYPE, Val,
-                                    /*Size=*/0, Sec});
+  return cast<Defined>(Symtab->addDefined(
+      Defined{/*File=*/nullptr, Name, Binding, StOther, STT_NOTYPE, Val,
+              /*Size=*/0, Sec}));
 }
 
 static Defined *addAbsolute(StringRef Name) {
-  return Symtab->addDefined(Defined{nullptr, Name, STB_GLOBAL, STV_HIDDEN,
-                                    STT_NOTYPE, 0, 0, nullptr});
+  Defined New(nullptr, Name, STB_GLOBAL, STV_HIDDEN, STT_NOTYPE, 0, 0, nullptr);
+  Symbol *Sym = Symtab->addDefined(New);
+  if (!Sym->isDefined())
+    error("duplicate symbol: " + toString(*Sym));
+  return cast<Defined>(Sym);
 }
 
 // The linker is expected to define some symbols depending on
@@ -236,10 +239,10 @@ void elf::addReservedSymbols() {
     if (Config->EMachine == EM_PPC || Config->EMachine == EM_PPC64)
       GotOff = 0x8000;
 
-    ElfSym::GlobalOffsetTable =
-        Symtab->addDefined(Defined{/*File=*/nullptr, GotSymName, STB_GLOBAL,
-                                   STV_HIDDEN, STT_NOTYPE, GotOff,
-                                   /*Size=*/0, Out::ElfHeader});
+    Symtab->addDefined(Defined{/*File=*/nullptr, GotSymName, STB_GLOBAL,
+                               STV_HIDDEN, STT_NOTYPE, GotOff, /*Size=*/0,
+                               Out::ElfHeader});
+    ElfSym::GlobalOffsetTable = cast<Defined>(S);
   }
 
   // __ehdr_start is the location of ELF file headers. Note that we define

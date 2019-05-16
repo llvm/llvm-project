@@ -86,11 +86,8 @@ static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
   return std::min(VA, VB);
 }
 
-// Find an existing symbol or create and insert a new one, then apply the given
-// attributes.
-std::pair<Symbol *, bool> SymbolTable::insert(const Symbol &New) {
-  // Find an existing symbol or create and insert a new one.
-
+// Find an existing symbol or create and insert a new one.
+Symbol *SymbolTable::insert(const Symbol &New) {
   // <name>@@<version> means the symbol is the default version. In that
   // case <name>@@<version> will be used to resolve references to <name>.
   //
@@ -130,26 +127,36 @@ std::pair<Symbol *, bool> SymbolTable::insert(const Symbol &New) {
     Old = SymVector[SymIndex];
   }
 
+  return Old;
+}
+
+// Merge symbol properties.
+//
+// When we have many symbols of the same name, we choose one of them,
+// and that's the result of symbol resolution. However, symbols that
+// were not chosen still affect some symbol properteis.
+void SymbolTable::mergeProperties(Symbol *Old, const Symbol &New) {
   // Merge symbol properties.
   Old->ExportDynamic = Old->ExportDynamic || New.ExportDynamic;
   Old->IsUsedInRegularObj = Old->IsUsedInRegularObj || New.IsUsedInRegularObj;
 
   // DSO symbols do not affect visibility in the output.
-  if (!isa<SharedSymbol>(&New))
+  if (!isa<SharedSymbol>(New))
     Old->Visibility = getMinVisibility(Old->Visibility, New.Visibility);
-
-  return {Old, IsNew};
 }
 
 template <class ELFT> Symbol *SymbolTable::addUndefined(const Undefined &New) {
-  Symbol *Old;
-  bool WasInserted;
-  std::tie(Old, WasInserted) = insert(New);
+  Symbol *Old = insert(New);
+  mergeProperties(Old, New);
+
+  if (Old->isPlaceholder()) {
+    replaceSymbol(Old, &New);
+    return Old;
+  }
 
   // An undefined symbol with non default visibility must be satisfied
   // in the same DSO.
-  if (WasInserted ||
-      (isa<SharedSymbol>(Old) && New.Visibility != STV_DEFAULT)) {
+  if (Old->isShared() && New.Visibility != STV_DEFAULT) {
     replaceSymbol(Old, &New);
     return Old;
   }
@@ -245,95 +252,80 @@ static int compareVersion(StringRef OldName, StringRef NewName) {
   return 0;
 }
 
-// We have a new defined symbol with the specified binding. Return 1 if the new
-// symbol should win, -1 if the new symbol should lose, or 0 if both symbols are
-// strong defined symbols.
-static int compareDefined(const Symbol *Old, const Symbol *New) {
-  if (!Old->isDefined())
+// Compare two symbols. Return 1 if the new symbol should win, -1 if
+// the new symbol should lose, or 0 if there is a conflict.
+static int compare(const Symbol *Old, const Symbol *New) {
+  assert(New->isDefined() || New->isCommon());
+
+  if (!Old->isDefined() && !Old->isCommon())
     return 1;
+
   if (int Cmp = compareVersion(Old->getName(), New->getName()))
     return Cmp;
-  if (New->Binding == STB_WEAK)
+
+  if (New->isWeak())
     return -1;
+
   if (Old->isWeak())
     return 1;
-  return 0;
-}
 
-// We have a new non-common defined symbol with the specified binding. Return 1
-// if the new symbol should win, -1 if the new symbol should lose, or 0 if there
-// is a conflict. If the new symbol wins, also update the binding.
-static int compareDefinedNonCommon(const Symbol *OldSym, const Defined *New) {
-  if (int Cmp = compareDefined(OldSym, New))
-    return Cmp;
-
-  if (auto *Old = dyn_cast<Defined>(OldSym)) {
-    if (Old->Section && isa<BssSection>(Old->Section)) {
-      // Non-common symbols take precedence over common symbols.
-      if (Config->WarnCommon)
-        warn("common " + Old->getName() + " is overridden");
-      return 1;
-    }
-
-    if (New->File && isa<BitcodeFile>(New->File))
-      return 0;
-
-    if (Old->Section == nullptr && New->Section == nullptr &&
-        Old->Value == New->Value && New->Binding == STB_GLOBAL)
-      return -1;
+  if (Old->isCommon() && New->isCommon()) {
+    if (Config->WarnCommon)
+      warn("multiple common of " + Old->getName());
+    return 0;
   }
+
+  if (Old->isCommon()) {
+    if (Config->WarnCommon)
+      warn("common " + Old->getName() + " is overridden");
+    return 1;
+  }
+
+  if (New->isCommon()) {
+    if (Config->WarnCommon)
+      warn("common " + Old->getName() + " is overridden");
+    return -1;
+  }
+
+  auto *OldSym = cast<Defined>(Old);
+  auto *NewSym = cast<Defined>(New);
+
+  if (New->File && isa<BitcodeFile>(New->File))
+    return 0;
+
+  if (!OldSym->Section && !NewSym->Section && OldSym->Value == NewSym->Value &&
+      NewSym->Binding == STB_GLOBAL)
+    return -1;
+
   return 0;
 }
 
-Symbol *SymbolTable::addCommon(const Defined &New) {
-  Symbol *Old;
-  bool WasInserted;
-  std::tie(Old, WasInserted) = insert(New);
+Symbol *SymbolTable::addCommon(const CommonSymbol &New) {
+  Symbol *Old = insert(New);
+  mergeProperties(Old, New);
 
-  auto Replace = [&] {
-    auto *Bss = make<BssSection>("COMMON", New.Size, New.Value);
-    Bss->File = New.File;
-    Bss->Live = !Config->GcSections;
-    InputSections.push_back(Bss);
-
-    Defined Sym = New;
-    Sym.Value = 0;
-    Sym.Section = Bss;
-    replaceSymbol(Old, &Sym);
-  };
-
-  if (WasInserted) {
-    Replace();
+  if (Old->isPlaceholder()) {
+    replaceSymbol(Old, &New);
     return Old;
   }
 
-  int Cmp = compareDefined(Old, &New);
+  int Cmp = compare(Old, &New);
   if (Cmp < 0)
     return Old;
 
   if (Cmp > 0) {
-    Replace();
+    replaceSymbol(Old, &New);
     return Old;
   }
 
-  auto *D = cast<Defined>(Old);
-  auto *Bss = dyn_cast_or_null<BssSection>(D->Section);
-  if (!Bss) {
-    // Non-common symbols take precedence over common symbols.
-    if (Config->WarnCommon)
-      warn("common " + Old->getName() + " is overridden");
-    return Old;
-  }
+  CommonSymbol *OldSym = cast<CommonSymbol>(Old);
 
-  if (Config->WarnCommon)
-    warn("multiple common of " + D->getName());
-
-  Bss->Alignment = std::max<uint32_t>(Bss->Alignment, New.Value);
-  if (New.Size > Bss->Size) {
-    D->File = Bss->File = New.File;
-    D->Size = Bss->Size = New.Size;
+  OldSym->Alignment = std::max(OldSym->Alignment, New.Alignment);
+  if (OldSym->Size < New.Size) {
+    OldSym->File = New.File;
+    OldSym->Size = New.Size;
   }
-  return Old;
+  return OldSym;
 }
 
 static void reportDuplicate(Symbol *Sym, InputFile *NewFile,
@@ -371,38 +363,38 @@ static void reportDuplicate(Symbol *Sym, InputFile *NewFile,
   error(Msg);
 }
 
-Defined *SymbolTable::addDefined(const Defined &New) {
-  Symbol *Old;
-  bool WasInserted;
-  std::tie(Old, WasInserted) = insert(New);
+Symbol *SymbolTable::addDefined(const Defined &New) {
+  Symbol *Old = insert(New);
+  mergeProperties(Old, New);
 
-  if (WasInserted) {
+  if (Old->isPlaceholder()) {
     replaceSymbol(Old, &New);
-    return cast<Defined>(Old);
+    return Old;
   }
 
-  int Cmp = compareDefinedNonCommon(Old, &New);
+  int Cmp = compare(Old, &New);
   if (Cmp > 0)
     replaceSymbol(Old, &New);
   else if (Cmp == 0)
     reportDuplicate(Old, New.File,
                     dyn_cast_or_null<InputSectionBase>(New.Section), New.Value);
-  return cast<Defined>(Old);
+  return Old;
 }
 
 void SymbolTable::addShared(const SharedSymbol &New) {
-  Symbol *Old;
-  bool WasInserted;
-  std::tie(Old, WasInserted) = insert(New);
+  Symbol *Old = insert(New);
+  mergeProperties(Old, New);
 
   // Make sure we preempt DSO symbols with default visibility.
   if (New.Visibility == STV_DEFAULT)
     Old->ExportDynamic = true;
 
-  if (WasInserted) {
+  if (Old->isPlaceholder()) {
     replaceSymbol(Old, &New);
-  } else if (Old->Visibility == STV_DEFAULT &&
-             (Old->isUndefined() || Old->isLazy())) {
+    return;
+  }
+
+  if (Old->Visibility == STV_DEFAULT && (Old->isUndefined() || Old->isLazy())) {
     // An undefined symbol with non default visibility must be satisfied
     // in the same DSO.
     uint8_t Binding = Old->Binding;
@@ -412,16 +404,15 @@ void SymbolTable::addShared(const SharedSymbol &New) {
 }
 
 Symbol *SymbolTable::addBitcode(const Defined &New) {
-  Symbol *Old;
-  bool WasInserted;
-  std::tie(Old, WasInserted) = insert(New);
+  Symbol *Old = insert(New);
+  mergeProperties(Old, New);
 
-  if (WasInserted) {
+  if (Old->isPlaceholder()) {
     replaceSymbol(Old, &New);
     return Old;
   }
 
-  int Cmp = compareDefinedNonCommon(Old, &New);
+  int Cmp = compare(Old, &New);
   if (Cmp > 0)
     replaceSymbol(Old, &New);
   else if (Cmp == 0)
@@ -439,11 +430,10 @@ Symbol *SymbolTable::find(StringRef Name) {
 }
 
 template <class ELFT, class LazyT> void SymbolTable::addLazy(const LazyT &New) {
-  Symbol *Old;
-  bool WasInserted;
-  std::tie(Old, WasInserted) = insert(New);
+  Symbol *Old = insert(New);
+  mergeProperties(Old, New);
 
-  if (WasInserted) {
+  if (Old->isPlaceholder()) {
     replaceSymbol(Old, &New);
     return;
   }
@@ -502,7 +492,7 @@ StringMap<std::vector<Symbol *>> &SymbolTable::getDemangledSyms() {
   if (!DemangledSyms) {
     DemangledSyms.emplace();
     for (Symbol *Sym : SymVector) {
-      if (!Sym->isDefined())
+      if (!Sym->isDefined() && !Sym->isCommon())
         continue;
       if (Optional<std::string> S = demangleItanium(Sym->getName()))
         (*DemangledSyms)[*S].push_back(Sym);
@@ -517,7 +507,7 @@ std::vector<Symbol *> SymbolTable::findByVersion(SymbolVersion Ver) {
   if (Ver.IsExternCpp)
     return getDemangledSyms().lookup(Ver.Name);
   if (Symbol *B = find(Ver.Name))
-    if (B->isDefined())
+    if (B->isDefined() || B->isCommon())
       return {B};
   return {};
 }
@@ -534,7 +524,7 @@ std::vector<Symbol *> SymbolTable::findAllByVersion(SymbolVersion Ver) {
   }
 
   for (Symbol *Sym : SymVector)
-    if (Sym->isDefined() && M.match(Sym->getName()))
+    if ((Sym->isDefined() || Sym->isCommon()) && M.match(Sym->getName()))
       Res.push_back(Sym);
   return Res;
 }

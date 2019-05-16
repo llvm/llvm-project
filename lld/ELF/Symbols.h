@@ -51,6 +51,7 @@ public:
   enum Kind {
     PlaceholderKind,
     DefinedKind,
+    CommonKind,
     SharedKind,
     UndefinedKind,
     LazyArchiveKind,
@@ -124,8 +125,11 @@ public:
   bool isWeak() const { return Binding == llvm::ELF::STB_WEAK; }
 
   bool isUndefined() const { return SymbolKind == UndefinedKind; }
+  bool isCommon() const { return SymbolKind == CommonKind; }
   bool isDefined() const { return SymbolKind == DefinedKind; }
   bool isShared() const { return SymbolKind == SharedKind; }
+  bool isPlaceholder() const { return SymbolKind == PlaceholderKind; }
+
   bool isLocal() const { return Binding == llvm::ELF::STB_LOCAL; }
 
   bool isLazy() const {
@@ -227,6 +231,40 @@ public:
   uint64_t Value;
   uint64_t Size;
   SectionBase *Section;
+};
+
+// Represents a common symbol.
+//
+// On Unix, it is traditionally allowed to write variable definitions
+// without initialization expressions (such as "int foo;") to header
+// files. Such definition is called "tentative definition".
+//
+// Using tentative definition is usually considered a bad practice
+// because you should write only declarations (such as "extern int
+// foo;") to header files. Nevertheless, the linker and the compiler
+// have to do something to support bad code by allowing duplicate
+// definitions for this particular case.
+//
+// Common symbols represent variable definitions without initializations.
+// The compiler creates common symbols when it sees varaible definitions
+// without initialization (you can suppress this behavior and let the
+// compiler create a regular defined symbol by -fno-common).
+//
+// The linker allows common symbols to be replaced by regular defined
+// symbols. If there are remaining common symbols after name resolution is
+// complete, they are converted to regular defined symbols in a .bss
+// section. (Therefore, the later passes don't see any CommonSymbols.)
+class CommonSymbol : public Symbol {
+public:
+  CommonSymbol(InputFile *File, StringRefZ Name, uint8_t Binding,
+               uint8_t StOther, uint8_t Type, uint64_t Alignment, uint64_t Size)
+      : Symbol(CommonKind, File, Name, Binding, StOther, Type),
+        Alignment(Alignment), Size(Size) {}
+
+  static bool classof(const Symbol *S) { return S->isCommon(); }
+
+  uint32_t Alignment;
+  uint64_t Size;
 };
 
 class Undefined : public Symbol {

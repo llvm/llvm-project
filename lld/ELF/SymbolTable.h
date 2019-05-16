@@ -18,6 +18,7 @@
 namespace lld {
 namespace elf {
 
+class CommonSymbol;
 class Defined;
 class LazyArchive;
 class LazyObject;
@@ -46,7 +47,7 @@ public:
 
   template <class ELFT> Symbol *addUndefined(const Undefined &New);
 
-  Defined *addDefined(const Defined &New);
+  Symbol *addDefined(const Defined &New);
 
   void addShared(const SharedSymbol &New);
 
@@ -54,9 +55,10 @@ public:
   template <class ELFT> void addLazyObject(const LazyObject &New);
 
   Symbol *addBitcode(const Defined &New);
-  Symbol *addCommon(const Defined &New);
+  Symbol *addCommon(const CommonSymbol &New);
 
-  std::pair<Symbol *, bool> insert(const Symbol &New);
+  Symbol *insert(const Symbol &New);
+  void mergeProperties(Symbol *Old, const Symbol &New);
 
   template <class ELFT> void fetchLazy(Symbol *Sym);
 

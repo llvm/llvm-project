@@ -122,6 +122,8 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
   case Symbol::LazyObjectKind:
     assert(Sym.IsUsedInRegularObj && "lazy symbol reached writer");
     return 0;
+  case Symbol::CommonKind:
+    llvm_unreachable("common symbol reached writer");
   case Symbol::PlaceholderKind:
     llvm_unreachable("placeholder symbol reached writer");
   }
@@ -291,7 +293,7 @@ void elf::printTraceSymbol(Symbol *Sym) {
     S = ": lazy definition of ";
   else if (Sym->isShared())
     S = ": shared definition of ";
-  else if (dyn_cast_or_null<BssSection>(cast<Defined>(Sym)->Section))
+  else if (Sym->isCommon())
     S = ": common definition of ";
   else
     S = ": definition of ";
