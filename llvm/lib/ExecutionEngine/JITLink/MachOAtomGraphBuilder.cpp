@@ -256,7 +256,7 @@ Error MachOAtomGraphBuilder::addNonCustomAtoms() {
     {
       uint16_t NDesc = 0;
       if (Obj.is64Bit())
-        NDesc = Obj.getSymbolTableEntry(SymI->getRawDataRefImpl()).n_desc;
+        NDesc = Obj.getSymbol64TableEntry(SymI->getRawDataRefImpl()).n_desc;
       else
         NDesc = Obj.getSymbolTableEntry(SymI->getRawDataRefImpl()).n_desc;
 
