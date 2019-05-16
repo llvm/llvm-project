@@ -30,3 +30,18 @@ void caller() {
 
 // CHECK-IMPLICITLY-DISABLED-NOT: example.Dependency
 // CHECK-IMPLICITLY-DISABLED-NOT: example.DependendentChecker
+
+// RUN: %clang_analyze_cc1 %s \
+// RUN:   -load %llvmshlibdir/CheckerOptionHandlingAnalyzerPlugin%pluginext\
+// RUN:   -analyzer-checker=example.MyChecker \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-CHECKER-OPTION-OUTPUT
+
+// CHECK-CHECKER-OPTION-OUTPUT: Example option is set to false
+
+// RUN: %clang_analyze_cc1 %s \
+// RUN:   -load %llvmshlibdir/CheckerOptionHandlingAnalyzerPlugin%pluginext\
+// RUN:   -analyzer-checker=example.MyChecker \
+// RUN:   -analyzer-config example.MyChecker:ExampleOption=true \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-CHECKER-OPTION-OUTPUT-TRUE
+
+// CHECK-CHECKER-OPTION-OUTPUT-TRUE: Example option is set to true
