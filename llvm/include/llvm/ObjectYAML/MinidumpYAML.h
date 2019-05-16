@@ -26,6 +26,7 @@ namespace MinidumpYAML {
 /// from Types to Kinds is fixed and given by the static getKind function.
 struct Stream {
   enum class StreamKind {
+    MemoryList,
     ModuleList,
     RawContent,
     SystemInfo,
@@ -86,10 +87,20 @@ struct ParsedThread {
   yaml::BinaryRef Stack;
   yaml::BinaryRef Context;
 };
+
+/// A structure containing all data describing a single memory region.
+struct ParsedMemoryDescriptor {
+  static constexpr Stream::StreamKind Kind = Stream::StreamKind::MemoryList;
+  static constexpr minidump::StreamType Type = minidump::StreamType::MemoryList;
+
+  minidump::MemoryDescriptor Entry;
+  yaml::BinaryRef Content;
+};
 } // namespace detail
 
 using ModuleListStream = detail::ListStream<detail::ParsedModule>;
 using ThreadListStream = detail::ListStream<detail::ParsedThread>;
+using MemoryListStream = detail::ListStream<detail::ParsedMemoryDescriptor>;
 
 /// A minidump stream represented as a sequence of hex bytes. This is used as a
 /// fallback when no other stream kind is suitable.
@@ -212,11 +223,14 @@ LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::minidump::CPUInfo::X86Info)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::minidump::VSFixedFileInfo)
 
 LLVM_YAML_DECLARE_MAPPING_TRAITS(
+    llvm::MinidumpYAML::MemoryListStream::entry_type)
+LLVM_YAML_DECLARE_MAPPING_TRAITS(
     llvm::MinidumpYAML::ModuleListStream::entry_type)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(
     llvm::MinidumpYAML::ThreadListStream::entry_type)
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<llvm::MinidumpYAML::Stream>)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MinidumpYAML::MemoryListStream::entry_type)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MinidumpYAML::ModuleListStream::entry_type)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MinidumpYAML::ThreadListStream::entry_type)
 

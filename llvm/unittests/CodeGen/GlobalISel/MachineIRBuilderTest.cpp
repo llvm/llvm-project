@@ -19,6 +19,10 @@ TEST_F(GISelMITest, TestBuildConstantFConstant) {
   B.buildConstant(LLT::vector(2, 32), 99);
   B.buildFConstant(LLT::vector(2, 32), 2.0);
 
+  // Test APFloat overload.
+  APFloat KVal(APFloat::IEEEdouble(), "4.0");
+  B.buildFConstant(LLT::scalar(64), KVal);
+
   auto CheckStr = R"(
   CHECK: [[CONST0:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
   CHECK: [[FCONST0:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
@@ -26,6 +30,7 @@ TEST_F(GISelMITest, TestBuildConstantFConstant) {
   CHECK: [[VEC0:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[CONST1]]:_(s32), [[CONST1]]:_(s32)
   CHECK: [[FCONST1:%[0-9]+]]:_(s32) = G_FCONSTANT float 2.000000e+00
   CHECK: [[VEC1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FCONST1]]:_(s32), [[FCONST1]]:_(s32)
+  CHECK: [[FCONST2:%[0-9]+]]:_(s64) = G_FCONSTANT double 4.000000e+00
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -106,6 +111,93 @@ TEST_F(GISelMITest, BuildUnmerge) {
   ; CHECK: [[UNMERGE32_0:%[0-9]+]]:_(s32), [[UNMERGE32_1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY0]]
   ; CHECK: [[UNMERGE16_0:%[0-9]+]]:_(s16), [[UNMERGE16_1:%[0-9]+]]:_(s16), [[UNMERGE16_2:%[0-9]+]]:_(s16), [[UNMERGE16_3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY1]]
 
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, TestBuildFPInsts) {
+  if (!TM)
+    return;
+
+  SmallVector<unsigned, 4> Copies;
+  collectCopies(Copies, MF);
+
+  LLT S64 = LLT::scalar(64);
+
+  B.buildFAdd(S64, Copies[0], Copies[1]);
+  B.buildFSub(S64, Copies[0], Copies[1]);
+  B.buildFMA(S64, Copies[0], Copies[1], Copies[2]);
+  B.buildFNeg(S64, Copies[0]);
+  B.buildFAbs(S64, Copies[0]);
+  B.buildFCopysign(S64, Copies[0], Copies[1]);
+
+  auto CheckStr = R"(
+  ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+  ; CHECK: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[COPY0]]:_, [[COPY1]]:_
+  ; CHECK: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[COPY0]]:_, [[COPY1]]:_
+  ; CHECK: [[FMA:%[0-9]+]]:_(s64) = G_FMA [[COPY0]]:_, [[COPY1]]:_, [[COPY2]]:_
+  ; CHECK: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[COPY0]]:_
+  ; CHECK: [[FABS:%[0-9]+]]:_(s64) = G_FABS [[COPY0]]:_
+  ; CHECK: [[FCOPYSIGN:%[0-9]+]]:_(s64) = G_FCOPYSIGN [[COPY0]]:_, [[COPY1]]:_
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, BuildIntrinsic) {
+  if (!TM)
+    return;
+
+  LLT S64 = LLT::scalar(64);
+  SmallVector<unsigned, 4> Copies;
+  collectCopies(Copies, MF);
+
+  // Make sure DstOp version works. sqrt is just a placeholder intrinsic.
+  B.buildIntrinsic(Intrinsic::sqrt, {S64}, false)
+    .addUse(Copies[0]);
+
+  // Make sure register version works
+  SmallVector<unsigned, 1> Results;
+  Results.push_back(MRI->createGenericVirtualRegister(S64));
+  B.buildIntrinsic(Intrinsic::sqrt, Results, false)
+    .addUse(Copies[1]);
+
+  auto CheckStr = R"(
+  ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK: [[SQRT0:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.sqrt), [[COPY0]]:_
+  ; CHECK: [[SQRT1:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.sqrt), [[COPY1]]:_
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, BuildXor) {
+  if (!TM)
+    return;
+
+  LLT S64 = LLT::scalar(64);
+  LLT S128 = LLT::scalar(128);
+  SmallVector<unsigned, 4> Copies;
+  collectCopies(Copies, MF);
+  B.buildXor(S64, Copies[0], Copies[1]);
+  B.buildNot(S64, Copies[0]);
+
+  // Make sure this works with > 64-bit types
+  auto Merge = B.buildMerge(S128, {Copies[0], Copies[1]});
+  B.buildNot(S128, Merge);
+  auto CheckStr = R"(
+  ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK: [[XOR0:%[0-9]+]]:_(s64) = G_XOR [[COPY0]]:_, [[COPY1]]:_
+  ; CHECK: [[NEGONE64:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+  ; CHECK: [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[COPY0]]:_, [[NEGONE64]]:_
+  ; CHECK: [[MERGE:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY0]]:_(s64), [[COPY1]]:_(s64)
+  ; CHECK: [[NEGONE128:%[0-9]+]]:_(s128) = G_CONSTANT i128 -1
+  ; CHECK: [[XOR2:%[0-9]+]]:_(s128) = G_XOR [[MERGE]]:_, [[NEGONE128]]:_
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;

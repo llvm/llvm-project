@@ -483,15 +483,8 @@ void MachODumper::printSectionHeaders(const MachOObjectFile *Obj) {
       }
     }
 
-    if (opts::SectionData) {
-      bool IsBSS = Section.isBSS();
-      if (!IsBSS) {
-        StringRef Data;
-        error(Section.getContents(Data));
-
-        W.printBinaryBlock("SectionData", Data);
-      }
-    }
+    if (opts::SectionData && !Section.isBSS())
+      W.printBinaryBlock("SectionData", unwrapOrError(Section.getContents()));
   }
 }
 
@@ -660,8 +653,7 @@ void MachODumper::printStackMap() const {
   if (StackMapSection == object::SectionRef())
     return;
 
-  StringRef StackMapContents;
-  StackMapSection.getContents(StackMapContents);
+  StringRef StackMapContents = unwrapOrError(StackMapSection.getContents());
   ArrayRef<uint8_t> StackMapContentsArray =
       arrayRefFromStringRef(StackMapContents);
 

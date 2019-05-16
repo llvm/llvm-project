@@ -1034,4 +1034,36 @@ let Predicates = [HasSVE2] in {
   // SVE2 saturating multiply-add high (vectors, unpredicated)
   defm SQRDMLAH_ZZZ : sve2_int_mla<0b0, "sqrdmlah">;
   defm SQRDMLSH_ZZZ : sve2_int_mla<0b1, "sqrdmlsh">;
+
+  // SVE2 integer multiply (indexed)
+  defm MUL_ZZZI : sve2_int_mul_by_indexed_elem<0b1110, "mul">;
+
+  // SVE2 saturating multiply high (indexed)
+  defm SQDMULH_ZZZI  : sve2_int_mul_by_indexed_elem<0b1100, "sqdmulh">;
+  defm SQRDMULH_ZZZI : sve2_int_mul_by_indexed_elem<0b1101, "sqrdmulh">;
+
+  // SVE2 signed saturating doubling multiply high (unpredicated)
+  defm SQDMULH_ZZZ  : sve2_int_mul<0b100, "sqdmulh">;
+  defm SQRDMULH_ZZZ : sve2_int_mul<0b101, "sqrdmulh">;
+
+  // SVE2 integer multiply vectors (unpredicated)
+  defm MUL_ZZZ    : sve2_int_mul<0b000, "mul">;
+  defm SMULH_ZZZ  : sve2_int_mul<0b010, "smulh">;
+  defm UMULH_ZZZ  : sve2_int_mul<0b011, "umulh">;
+  def  PMUL_ZZZ_B : sve2_int_mul<0b00, 0b001, "pmul", ZPR8>;
+
+  // SVE2 complex integer dot product (indexed)
+  defm CDOT_ZZZI : sve2_cintx_dot_by_indexed_elem<"cdot">;
+
+  // SVE2 complex integer dot product
+  defm CDOT_ZZZ : sve2_cintx_dot<"cdot">;
+
+  // SVE2 complex integer multiply-add (indexed)
+  defm CMLA_ZZZI      : sve2_cmla_by_indexed_elem<0b0, "cmla">;
+  // SVE2 complex saturating multiply-add (indexed)
+  defm SQRDCMLAH_ZZZI : sve2_cmla_by_indexed_elem<0b1, "sqrdcmlah">;
+
+  // SVE2 complex integer multiply-add
+  defm CMLA_ZZZ      : sve2_int_cmla<0b0, "cmla">;
+  defm SQRDCMLAH_ZZZ : sve2_int_cmla<0b1, "sqrdcmlah">;
 }

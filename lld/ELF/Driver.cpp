@@ -1295,7 +1295,7 @@ static void excludeLibs(opt::InputArgList &Args) {
 }
 
 // Force Sym to be entered in the output. Used for -u or equivalent.
-template <class ELFT> static void handleUndefined(StringRef Name) {
+static void handleUndefined(StringRef Name) {
   Symbol *Sym = Symtab->find(Name);
   if (!Sym)
     return;
@@ -1305,10 +1305,10 @@ template <class ELFT> static void handleUndefined(StringRef Name) {
   Sym->IsUsedInRegularObj = true;
 
   if (Sym->isLazy())
-    Symtab->fetchLazy<ELFT>(Sym);
+    Symtab->fetchLazy(Sym);
 }
 
-template <class ELFT> static void handleLibcall(StringRef Name) {
+static void handleLibcall(StringRef Name) {
   Symbol *Sym = Symtab->find(Name);
   if (!Sym || !Sym->isLazy())
     return;
@@ -1320,7 +1320,7 @@ template <class ELFT> static void handleLibcall(StringRef Name) {
     MB = cast<LazyArchive>(Sym)->getMemberBuffer();
 
   if (isBitcode(MB))
-    Symtab->fetchLazy<ELFT>(Sym);
+    Symtab->fetchLazy(Sym);
 }
 
 // Replaces common symbols with defined symbols reside in .bss sections.
@@ -1426,7 +1426,7 @@ static void findKeepUniqueSections(opt::InputArgList &Args) {
 }
 
 template <class ELFT> static Symbol *addUndefined(StringRef Name) {
-  return Symtab->addUndefined<ELFT>(
+  return Symtab->addUndefined(
       Undefined{nullptr, Name, STB_GLOBAL, STV_DEFAULT, 0});
 }
 
@@ -1551,7 +1551,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // Add all files to the symbol table. This will add almost all
   // symbols that we need to the symbol table.
   for (InputFile *F : Files)
-    parseFile<ELFT>(F);
+    parseFile(F);
 
   // Now that we have every file, we can decide if we will need a
   // dynamic symbol table.
@@ -1569,10 +1569,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Handle the `--undefined <sym>` options.
   for (StringRef S : Config->Undefined)
-    handleUndefined<ELFT>(S);
+    handleUndefined(S);
 
   // If an entry symbol is in a static archive, pull out that file now.
-  handleUndefined<ELFT>(Config->Entry);
+  handleUndefined(Config->Entry);
 
   // If any of our inputs are bitcode files, the LTO code generator may create
   // references to certain library functions that might not be explicit in the
@@ -1593,7 +1593,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // object file to the link.
   if (!BitcodeFiles.empty())
     for (const char *S : LibcallRoutineNames)
-      handleLibcall<ELFT>(S);
+      handleLibcall(S);
 
   // Return if there were name resolution errors.
   if (errorCount())

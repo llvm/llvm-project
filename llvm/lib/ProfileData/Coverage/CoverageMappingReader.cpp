@@ -348,8 +348,10 @@ Expected<bool> RawCoverageMappingDummyChecker::isDummy() {
 }
 
 Error InstrProfSymtab::create(SectionRef &Section) {
-  if (auto EC = Section.getContents(Data))
-    return errorCodeToError(EC);
+  Expected<StringRef> DataOrErr = Section.getContents();
+  if (!DataOrErr)
+    return DataOrErr.takeError();
+  Data = *DataOrErr;
   Address = Section.getAddress();
 
   // If this is a linked PE/COFF file, then we have to skip over the null byte
@@ -687,8 +689,11 @@ static Error loadBinaryFormat(MemoryBufferRef ObjectBuffer,
     return E;
 
   // Get the contents of the given sections.
-  if (auto EC = CoverageSection->getContents(CoverageMapping))
-    return errorCodeToError(EC);
+  if (Expected<StringRef> E = CoverageSection->getContents())
+    CoverageMapping = *E;
+  else
+    return E.takeError();
+
   if (Error E = ProfileNames.create(*NamesSection))
     return E;
 

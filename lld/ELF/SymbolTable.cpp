@@ -145,7 +145,7 @@ void SymbolTable::mergeProperties(Symbol *Old, const Symbol &New) {
     Old->Visibility = getMinVisibility(Old->Visibility, New.Visibility);
 }
 
-template <class ELFT> Symbol *SymbolTable::addUndefined(const Undefined &New) {
+Symbol *SymbolTable::addUndefined(const Undefined &New) {
   Symbol *Old = insert(New);
   mergeProperties(Old, New);
 
@@ -225,7 +225,7 @@ template <class ELFT> Symbol *SymbolTable::addUndefined(const Undefined &New) {
     // group assignment rule simulates the traditional linker's semantics.
     bool Backref = Config->WarnBackrefs && New.File &&
                    Old->File->GroupId < New.File->GroupId;
-    fetchLazy<ELFT>(Old);
+    fetchLazy(Old);
 
     // We don't report backward references to weak symbols as they can be
     // overridden later.
@@ -381,7 +381,7 @@ Symbol *SymbolTable::addDefined(const Defined &New) {
   return Old;
 }
 
-void SymbolTable::addShared(const SharedSymbol &New) {
+Symbol *SymbolTable::addShared(const SharedSymbol &New) {
   Symbol *Old = insert(New);
   mergeProperties(Old, New);
 
@@ -391,7 +391,7 @@ void SymbolTable::addShared(const SharedSymbol &New) {
 
   if (Old->isPlaceholder()) {
     replaceSymbol(Old, &New);
-    return;
+    return Old;
   }
 
   if (Old->Visibility == STV_DEFAULT && (Old->isUndefined() || Old->isLazy())) {
@@ -401,22 +401,6 @@ void SymbolTable::addShared(const SharedSymbol &New) {
     replaceSymbol(Old, &New);
     Old->Binding = Binding;
   }
-}
-
-Symbol *SymbolTable::addBitcode(const Defined &New) {
-  Symbol *Old = insert(New);
-  mergeProperties(Old, New);
-
-  if (Old->isPlaceholder()) {
-    replaceSymbol(Old, &New);
-    return Old;
-  }
-
-  int Cmp = compare(Old, &New);
-  if (Cmp > 0)
-    replaceSymbol(Old, &New);
-  else if (Cmp == 0)
-    reportDuplicate(Old, New.File, nullptr, 0);
   return Old;
 }
 
@@ -429,17 +413,17 @@ Symbol *SymbolTable::find(StringRef Name) {
   return SymVector[It->second];
 }
 
-template <class ELFT, class LazyT> void SymbolTable::addLazy(const LazyT &New) {
+template <class LazyT> Symbol *SymbolTable::addLazy(const LazyT &New) {
   Symbol *Old = insert(New);
   mergeProperties(Old, New);
 
   if (Old->isPlaceholder()) {
     replaceSymbol(Old, &New);
-    return;
+    return Old;
   }
 
   if (!Old->isUndefined())
-    return;
+    return Old;
 
   // An undefined weak will not fetch archive members. See comment on Lazy in
   // Symbols.h for the details.
@@ -448,31 +432,32 @@ template <class ELFT, class LazyT> void SymbolTable::addLazy(const LazyT &New) {
     replaceSymbol(Old, &New);
     Old->Type = Type;
     Old->Binding = STB_WEAK;
-    return;
+    return Old;
   }
 
   if (InputFile *F = New.fetch())
-    parseFile<ELFT>(F);
+    parseFile(F);
+  return Old;
 }
 
-template <class ELFT> void SymbolTable::addLazyArchive(const LazyArchive &New) {
-  addLazy<ELFT>(New);
+Symbol *SymbolTable::addLazyArchive(const LazyArchive &New) {
+  return addLazy(New);
 }
 
-template <class ELFT> void SymbolTable::addLazyObject(const LazyObject &New) {
-  addLazy<ELFT>(New);
+Symbol *SymbolTable::addLazyObject(const LazyObject &New) {
+  return addLazy(New);
 }
 
-template <class ELFT> void SymbolTable::fetchLazy(Symbol *Sym) {
+void SymbolTable::fetchLazy(Symbol *Sym) {
   if (auto *S = dyn_cast<LazyArchive>(Sym)) {
     if (InputFile *File = S->fetch())
-      parseFile<ELFT>(File);
+      parseFile(File);
     return;
   }
 
   auto *S = cast<LazyObject>(Sym);
   if (InputFile *File = cast<LazyObjFile>(S->File)->fetch())
-    parseFile<ELFT>(File);
+    parseFile(File);
 }
 
 // Initialize DemangledSyms with a map from demangled symbols to symbol
@@ -636,27 +621,7 @@ void SymbolTable::scanVersionScript() {
     Sym->parseSymbolVersion();
 }
 
-template Symbol *SymbolTable::addUndefined<ELF32LE>(const Undefined &);
-template Symbol *SymbolTable::addUndefined<ELF32BE>(const Undefined &);
-template Symbol *SymbolTable::addUndefined<ELF64LE>(const Undefined &);
-template Symbol *SymbolTable::addUndefined<ELF64BE>(const Undefined &);
-
 template void SymbolTable::addCombinedLTOObject<ELF32LE>();
 template void SymbolTable::addCombinedLTOObject<ELF32BE>();
 template void SymbolTable::addCombinedLTOObject<ELF64LE>();
 template void SymbolTable::addCombinedLTOObject<ELF64BE>();
-
-template void SymbolTable::addLazyArchive<ELF32LE>(const LazyArchive &);
-template void SymbolTable::addLazyArchive<ELF32BE>(const LazyArchive &);
-template void SymbolTable::addLazyArchive<ELF64LE>(const LazyArchive &);
-template void SymbolTable::addLazyArchive<ELF64BE>(const LazyArchive &);
-
-template void SymbolTable::addLazyObject<ELF32LE>(const LazyObject &);
-template void SymbolTable::addLazyObject<ELF32BE>(const LazyObject &);
-template void SymbolTable::addLazyObject<ELF64LE>(const LazyObject &);
-template void SymbolTable::addLazyObject<ELF64BE>(const LazyObject &);
-
-template void SymbolTable::fetchLazy<ELF32LE>(Symbol *);
-template void SymbolTable::fetchLazy<ELF32BE>(Symbol *);
-template void SymbolTable::fetchLazy<ELF64LE>(Symbol *);
-template void SymbolTable::fetchLazy<ELF64BE>(Symbol *);

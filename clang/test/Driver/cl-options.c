@@ -638,6 +638,7 @@
 // RUN:     -fno-profile-instr-use \
 // RUN:     -fcs-profile-generate \
 // RUN:     -fcs-profile-generate=dir \
+// RUN:     -ftime-trace \
 // RUN:     --version \
 // RUN:     -Werror /Zs -- %s 2>&1
 

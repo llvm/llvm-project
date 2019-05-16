@@ -80,6 +80,16 @@ public:
     return getListStream<minidump::Thread>(minidump::StreamType::ThreadList);
   }
 
+  /// Returns the list of memory ranges embedded in the MemoryList stream. An
+  /// error is returned if the file does not contain this stream, or if the
+  /// stream is not large enough to contain the number of memory descriptors
+  /// declared in the stream header. The consistency of the MemoryDescriptor
+  /// entries themselves is not checked in any way.
+  Expected<ArrayRef<minidump::MemoryDescriptor>> getMemoryList() const {
+    return getListStream<minidump::MemoryDescriptor>(
+        minidump::StreamType::MemoryList);
+  }
+
 private:
   static Error createError(StringRef Str) {
     return make_error<GenericBinaryError>(Str, object_error::parse_failed);

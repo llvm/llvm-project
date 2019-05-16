@@ -312,6 +312,13 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
   return buildFConstant(Res, *CFP);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
+                                                     const APFloat &Val) {
+  auto &Ctx = getMF().getFunction().getContext();
+  auto *CFP = ConstantFP::get(Ctx, Val);
+  return buildFConstant(Res, *CFP);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildBrCond(unsigned Tst,
                                                   MachineBasicBlock &Dest) {
   assert(getMRI()->getType(Tst).isScalar() && "invalid operand type");
@@ -623,6 +630,18 @@ MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
                                 : TargetOpcode::G_INTRINSIC);
   for (unsigned ResultReg : ResultRegs)
     MIB.addDef(ResultReg);
+  MIB.addIntrinsicID(ID);
+  return MIB;
+}
+
+MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
+                                                     ArrayRef<DstOp> Results,
+                                                     bool HasSideEffects) {
+  auto MIB =
+      buildInstr(HasSideEffects ? TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS
+                                : TargetOpcode::G_INTRINSIC);
+  for (DstOp Result : Results)
+    Result.addDefToMIB(*getMRI(), MIB);
   MIB.addIntrinsicID(ID);
   return MIB;
 }
