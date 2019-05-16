@@ -143,3 +143,31 @@ TEST_F(GISelMITest, TestBuildFPInsts) {
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
+
+TEST_F(GISelMITest, BuildIntrinsic) {
+  if (!TM)
+    return;
+
+  LLT S64 = LLT::scalar(64);
+  SmallVector<unsigned, 4> Copies;
+  collectCopies(Copies, MF);
+
+  // Make sure DstOp version works. sqrt is just a placeholder intrinsic.
+  B.buildIntrinsic(Intrinsic::sqrt, {S64}, false)
+    .addUse(Copies[0]);
+
+  // Make sure register version works
+  SmallVector<unsigned, 1> Results;
+  Results.push_back(MRI->createGenericVirtualRegister(S64));
+  B.buildIntrinsic(Intrinsic::sqrt, Results, false)
+    .addUse(Copies[1]);
+
+  auto CheckStr = R"(
+  ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK: [[SQRT0:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.sqrt), [[COPY0]]:_
+  ; CHECK: [[SQRT1:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.sqrt), [[COPY1]]:_
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}

@@ -797,6 +797,8 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildIntrinsic(Intrinsic::ID ID, ArrayRef<unsigned> Res,
                                      bool HasSideEffects);
+  MachineInstrBuilder buildIntrinsic(Intrinsic::ID ID, ArrayRef<DstOp> Res,
+                                     bool HasSideEffects);
 
   /// Build and insert \p Res = G_FPTRUNC \p Op
   ///

@@ -634,6 +634,18 @@ MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
   return MIB;
 }
 
+MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
+                                                     ArrayRef<DstOp> Results,
+                                                     bool HasSideEffects) {
+  auto MIB =
+      buildInstr(HasSideEffects ? TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS
+                                : TargetOpcode::G_INTRINSIC);
+  for (DstOp Result : Results)
+    Result.addDefToMIB(*getMRI(), MIB);
+  MIB.addIntrinsicID(ID);
+  return MIB;
+}
+
 MachineInstrBuilder MachineIRBuilder::buildTrunc(const DstOp &Res,
                                                  const SrcOp &Op) {
   return buildInstr(TargetOpcode::G_TRUNC, Res, Op);
