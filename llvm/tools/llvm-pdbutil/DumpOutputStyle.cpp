@@ -1376,12 +1376,12 @@ Error DumpOutputStyle::dumpTypesFromObjectFile() {
     else
       continue;
 
-    Expected<StringRef> ContentsOrErr = S.getContents();
-    if (!ContentsOrErr)
-      return ContentsOrErr.takeError();
+    StringRef Contents;
+    if (auto EC = S.getContents(Contents))
+      return errorCodeToError(EC);
 
     uint32_t Magic;
-    BinaryStreamReader Reader(*ContentsOrErr, llvm::support::little);
+    BinaryStreamReader Reader(Contents, llvm::support::little);
     if (auto EC = Reader.readInteger(Magic))
       return EC;
     if (Magic != COFF::DEBUG_SECTION_MAGIC)

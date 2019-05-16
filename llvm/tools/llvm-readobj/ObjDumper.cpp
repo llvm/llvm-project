@@ -73,7 +73,8 @@ void ObjDumper::printSectionAsString(const object::ObjectFile *Obj,
     error(E);
   W.startLine() << "String dump of section '" << SectionName << "':\n";
 
-  StringRef SectionContent = unwrapOrError(Section.getContents());
+  StringRef SectionContent;
+  Section.getContents(SectionContent);
 
   const uint8_t *SecContent = SectionContent.bytes_begin();
   const uint8_t *CurrentWord = SecContent;
@@ -106,7 +107,8 @@ void ObjDumper::printSectionAsHex(const object::ObjectFile *Obj,
     error(E);
   W.startLine() << "Hex dump of section '" << SectionName << "':\n";
 
-  StringRef SectionContent = unwrapOrError(Section.getContents());
+  StringRef SectionContent;
+  Section.getContents(SectionContent);
   const uint8_t *SecContent = SectionContent.bytes_begin();
   const uint8_t *SecEnd = SecContent + SectionContent.size();
 

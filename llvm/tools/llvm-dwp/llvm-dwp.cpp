@@ -410,10 +410,9 @@ static Error handleSection(
   if (std::error_code Err = Section.getName(Name))
     return errorCodeToError(Err);
 
-  Expected<StringRef> ContentsOrErr = Section.getContents();
-  if (!ContentsOrErr)
-    return ContentsOrErr.takeError();
-  StringRef Contents = *ContentsOrErr;
+  StringRef Contents;
+  if (auto Err = Section.getContents(Contents))
+    return errorCodeToError(Err);
 
   if (auto Err = handleCompressedSection(UncompressedSections, Name, Contents))
     return Err;

@@ -1410,14 +1410,8 @@ public:
       // Try to obtain an already relocated version of this section.
       // Else use the unrelocated section from the object file. We'll have to
       // apply relocations ourselves later.
-      if (!L || !L->getLoadedSectionContents(*RelocatedSection, Data)) {
-        Expected<StringRef> E = Section.getContents();
-        if (E)
-          Data = *E;
-        else
-          // maybeDecompress below will error.
-          consumeError(E.takeError());
-      }
+      if (!L || !L->getLoadedSectionContents(*RelocatedSection, Data))
+        Section.getContents(Data);
 
       if (auto Err = maybeDecompress(Section, Name, Data)) {
         ErrorPolicy EP = HandleError(createError(

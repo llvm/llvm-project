@@ -66,20 +66,17 @@ getModuleDebugStream(PDBFile &File, StringRef &ModuleName, uint32_t Index) {
 static inline bool isCodeViewDebugSubsection(object::SectionRef Section,
                                              StringRef Name,
                                              BinaryStreamReader &Reader) {
-  StringRef SectionName;
+  StringRef SectionName, Contents;
   if (Section.getName(SectionName))
     return false;
 
   if (SectionName != Name)
     return false;
 
-  Expected<StringRef> ContentsOrErr = Section.getContents();
-  if (!ContentsOrErr) {
-    consumeError(ContentsOrErr.takeError());
+  if (Section.getContents(Contents))
     return false;
-  }
 
-  Reader = BinaryStreamReader(*ContentsOrErr, support::little);
+  Reader = BinaryStreamReader(Contents, support::little);
   uint32_t Magic;
   if (Reader.bytesRemaining() < sizeof(uint32_t))
     return false;

@@ -1482,8 +1482,8 @@ static void DumpLiteralPointerSection(MachOObjectFile *O,
       section_type = Sec.flags & MachO::SECTION_TYPE;
     }
 
-    StringRef BytesStr = unwrapOrError(Sect->getContents(), O->getFileName());
-
+    StringRef BytesStr;
+    Sect->getContents(BytesStr);
     const char *Contents = reinterpret_cast<const char *>(BytesStr.data());
 
     switch (section_type) {
@@ -1697,8 +1697,8 @@ static void DumpSectionContents(StringRef Filename, MachOObjectFile *O,
         }
         uint32_t section_type = section_flags & MachO::SECTION_TYPE;
 
-        StringRef BytesStr =
-            unwrapOrError(Section.getContents(), O->getFileName());
+        StringRef BytesStr;
+        Section.getContents(BytesStr);
         const char *sect = reinterpret_cast<const char *>(BytesStr.data());
         uint32_t sect_size = BytesStr.size();
         uint64_t sect_addr = Section.getAddress();
@@ -1782,8 +1782,8 @@ static void DumpInfoPlistSectionContents(StringRef Filename,
     if (SegName == "__TEXT" && SectName == "__info_plist") {
       if (!NoLeadingHeaders)
         outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
-      StringRef BytesStr =
-          unwrapOrError(Section.getContents(), O->getFileName());
+      StringRef BytesStr;
+      Section.getContents(BytesStr);
       const char *sect = reinterpret_cast<const char *>(BytesStr.data());
       outs() << format("%.*s", BytesStr.size(), sect) << "\n";
       return;
@@ -3194,8 +3194,8 @@ static const char *get_pointer_64(uint64_t Address, uint32_t &offset,
       S = (*(info->Sections))[SectIdx];
       offset = Address - SectAddress;
       left = SectSize - offset;
-      StringRef SectContents = unwrapOrError(
-          ((*(info->Sections))[SectIdx]).getContents(), info->O->getFileName());
+      StringRef SectContents;
+      ((*(info->Sections))[SectIdx]).getContents(SectContents);
       return SectContents.data() + offset;
     }
   }
@@ -3998,7 +3998,8 @@ walk_pointer_list_64(const char *listname, const SectionRef S,
   StringRef SegName = O->getSectionFinalSegmentName(Ref);
   outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
 
-  StringRef BytesStr = unwrapOrError(S.getContents(), O->getFileName());
+  StringRef BytesStr;
+  S.getContents(BytesStr);
   const char *Contents = reinterpret_cast<const char *>(BytesStr.data());
 
   for (uint32_t i = 0; i < S.getSize(); i += sizeof(uint64_t)) {
@@ -4048,7 +4049,8 @@ walk_pointer_list_32(const char *listname, const SectionRef S,
   StringRef SegName = O->getSectionFinalSegmentName(Ref);
   outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
 
-  StringRef BytesStr = unwrapOrError(S.getContents(), O->getFileName());
+  StringRef BytesStr;
+  S.getContents(BytesStr);
   const char *Contents = reinterpret_cast<const char *>(BytesStr.data());
 
   for (uint32_t i = 0; i < S.getSize(); i += sizeof(uint32_t)) {
@@ -7240,8 +7242,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     if (SegmentName != DisSegName)
       continue;
 
-    StringRef BytesStr =
-        unwrapOrError(Sections[SectIdx].getContents(), Filename);
+    StringRef BytesStr;
+    Sections[SectIdx].getContents(BytesStr);
     ArrayRef<uint8_t> Bytes = arrayRefFromStringRef(BytesStr);
     uint64_t SectAddress = Sections[SectIdx].getAddress();
 
@@ -7694,8 +7696,9 @@ printMachOCompactUnwindSection(const MachOObjectFile *Obj,
   uint32_t PointerSize = Is64 ? sizeof(uint64_t) : sizeof(uint32_t);
   uint32_t EntrySize = 3 * PointerSize + 2 * sizeof(uint32_t);
 
-  StringRef Contents =
-      unwrapOrError(CompactUnwind.getContents(), Obj->getFileName());
+  StringRef Contents;
+  CompactUnwind.getContents(Contents);
+
   SmallVector<CompactUnwindEntry, 4> CompactUnwinds;
 
   // First populate the initial raw offsets, encodings and so on from the entry.
@@ -7836,8 +7839,8 @@ static void printMachOUnwindInfoSection(const MachOObjectFile *Obj,
 
   outs() << "Contents of __unwind_info section:\n";
 
-  StringRef Contents =
-      unwrapOrError(UnwindInfo.getContents(), Obj->getFileName());
+  StringRef Contents;
+  UnwindInfo.getContents(Contents);
   ptrdiff_t Pos = 0;
 
   //===----------------------------------

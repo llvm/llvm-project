@@ -933,7 +933,8 @@ void COFFDumper::initializeFileAndStringTables(BinaryStreamReader &Reader) {
 
 void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
                                             const SectionRef &Section) {
-  StringRef SectionContents = unwrapOrError(Section.getContents());
+  StringRef SectionContents;
+  error(Section.getContents(SectionContents));
   StringRef Data = SectionContents;
 
   SmallVector<StringRef, 10> FunctionNames;
@@ -1217,7 +1218,8 @@ void COFFDumper::mergeCodeViewTypes(MergingTypeTableBuilder &CVIDs,
     StringRef SectionName;
     error(S.getName(SectionName));
     if (SectionName == ".debug$T") {
-      StringRef Data = unwrapOrError(S.getContents());
+      StringRef Data;
+      error(S.getContents(Data));
       uint32_t Magic;
       error(consume(Data, Magic));
       if (Magic != 4)
@@ -1253,7 +1255,8 @@ void COFFDumper::printCodeViewTypeSection(StringRef SectionName,
   ListScope D(W, "CodeViewTypes");
   W.printNumber("Section", SectionName, Obj->getSectionID(Section));
 
-  StringRef Data = unwrapOrError(Section.getContents());
+  StringRef Data;
+  error(Section.getContents(Data));
   if (opts::CodeViewSubsectionBytes)
     W.printBinaryBlock("Data", Data);
 
@@ -1313,7 +1316,9 @@ void COFFDumper::printSectionHeaders() {
 
     if (opts::SectionData &&
         !(Section->Characteristics & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA)) {
-      StringRef Data = unwrapOrError(Sec.getContents());
+      StringRef Data;
+      error(Sec.getContents(Data));
+
       W.printBinaryBlock("SectionData", Data);
     }
   }
@@ -1655,13 +1660,15 @@ void COFFDumper::printCOFFExports() {
 
 void COFFDumper::printCOFFDirectives() {
   for (const SectionRef &Section : Obj->sections()) {
+    StringRef Contents;
     StringRef Name;
 
     error(Section.getName(Name));
     if (Name != ".drectve")
       continue;
 
-    StringRef Contents = unwrapOrError(Section.getContents());
+    error(Section.getContents(Contents));
+
     W.printString("Directive(s)", Contents);
   }
 }
@@ -1700,7 +1707,8 @@ void COFFDumper::printCOFFResources() {
     if (!Name.startswith(".rsrc"))
       continue;
 
-    StringRef Ref = unwrapOrError(S.getContents());
+    StringRef Ref;
+    error(S.getContents(Ref));
 
     if ((Name == ".rsrc") || (Name == ".rsrc$01")) {
       ResourceSectionRef RSF(Ref);
@@ -1826,7 +1834,8 @@ void COFFDumper::printStackMap() const {
   if (StackMapSection == object::SectionRef())
     return;
 
-  StringRef StackMapContents = unwrapOrError(StackMapSection.getContents());
+  StringRef StackMapContents;
+  StackMapSection.getContents(StackMapContents);
   ArrayRef<uint8_t> StackMapContentsArray =
       arrayRefFromStringRef(StackMapContents);
 
@@ -1852,7 +1861,8 @@ void COFFDumper::printAddrsig() {
   if (AddrsigSection == object::SectionRef())
     return;
 
-  StringRef AddrsigContents = unwrapOrError(AddrsigSection.getContents());
+  StringRef AddrsigContents;
+  AddrsigSection.getContents(AddrsigContents);
   ArrayRef<uint8_t> AddrsigContentsArray(AddrsigContents.bytes_begin(),
                                          AddrsigContents.size());
 

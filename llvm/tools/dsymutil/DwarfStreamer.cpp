@@ -667,12 +667,10 @@ void DwarfStreamer::translateLineTable(DataExtractor Data, uint32_t Offset,
 
 static void emitSectionContents(const object::ObjectFile &Obj,
                                 StringRef SecName, MCStreamer *MS) {
-  if (auto Sec = getSectionByName(Obj, SecName)) {
-    if (Expected<StringRef> E = Sec->getContents())
-      MS->EmitBytes(*E);
-    else
-      consumeError(E.takeError());
-  }
+  StringRef Contents;
+  if (auto Sec = getSectionByName(Obj, SecName))
+    if (!Sec->getContents(Contents))
+      MS->EmitBytes(Contents);
 }
 
 void DwarfStreamer::copyInvariantDebugSection(const object::ObjectFile &Obj) {

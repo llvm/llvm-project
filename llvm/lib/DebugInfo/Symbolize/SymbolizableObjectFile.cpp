@@ -53,13 +53,13 @@ SymbolizableObjectFile::create(object::ObjectFile *Obj,
   if (Obj->getArch() == Triple::ppc64) {
     for (section_iterator Section : Obj->sections()) {
       StringRef Name;
+      StringRef Data;
       if (auto EC = Section->getName(Name))
         return EC;
       if (Name == ".opd") {
-        Expected<StringRef> E = Section->getContents();
-        if (!E)
-          return errorToErrorCode(E.takeError());
-        OpdExtractor.reset(new DataExtractor(*E, Obj->isLittleEndian(),
+        if (auto EC = Section->getContents(Data))
+          return EC;
+        OpdExtractor.reset(new DataExtractor(Data, Obj->isLittleEndian(),
                                              Obj->getBytesInAddress()));
         OpdAddress = Section->getAddress();
         break;

@@ -69,18 +69,9 @@ int convertForTestingMain(int argc, const char *argv[]) {
   uint64_t ProfileNamesAddress = ProfileNames.getAddress();
   StringRef CoverageMappingData;
   StringRef ProfileNamesData;
-  if (Expected<StringRef> E = CoverageMapping.getContents())
-    CoverageMappingData = *E;
-  else {
-    consumeError(E.takeError());
+  if (CoverageMapping.getContents(CoverageMappingData) ||
+      ProfileNames.getContents(ProfileNamesData))
     return 1;
-  }
-  if (Expected<StringRef> E = ProfileNames.getContents())
-    ProfileNamesData = *E;
-  else {
-    consumeError(E.takeError());
-    return 1;
-  }
 
   int FD;
   if (auto Err = sys::fs::openFileForWrite(OutputFilename, FD)) {

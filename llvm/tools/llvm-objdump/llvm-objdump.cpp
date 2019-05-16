@@ -1126,8 +1126,9 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
     SmallString<40> Comments;
     raw_svector_ostream CommentStream(Comments);
 
-    ArrayRef<uint8_t> Bytes = arrayRefFromStringRef(
-        unwrapOrError(Section.getContents(), Obj->getFileName()));
+    StringRef BytesStr;
+    error(Section.getContents(BytesStr));
+    ArrayRef<uint8_t> Bytes = arrayRefFromStringRef(BytesStr);
 
     uint64_t VMAAdjustment = 0;
     if (shouldAdjustVA(Section))
@@ -1560,6 +1561,7 @@ void printSectionHeaders(const ObjectFile *Obj) {
 void printSectionContents(const ObjectFile *Obj) {
   for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
     StringRef Name;
+    StringRef Contents;
     error(Section.getName(Name));
     uint64_t BaseAddr = Section.getAddress();
     uint64_t Size = Section.getSize();
@@ -1574,7 +1576,7 @@ void printSectionContents(const ObjectFile *Obj) {
       continue;
     }
 
-    StringRef Contents = unwrapOrError(Section.getContents(), Obj->getFileName());
+    error(Section.getContents(Contents));
 
     // Dump out the content as hex and printable ascii characters.
     for (std::size_t Addr = 0, End = Contents.size(); Addr < End; Addr += 16) {
@@ -1762,8 +1764,8 @@ void printRawClangAST(const ObjectFile *Obj) {
   if (!ClangASTSection)
     return;
 
-  StringRef ClangASTContents = unwrapOrError(
-      ClangASTSection.getValue().getContents(), Obj->getFileName());
+  StringRef ClangASTContents;
+  error(ClangASTSection.getValue().getContents(ClangASTContents));
   outs().write(ClangASTContents.data(), ClangASTContents.size());
 }
 
@@ -1799,8 +1801,9 @@ static void printFaultMaps(const ObjectFile *Obj) {
     return;
   }
 
-  StringRef FaultMapContents =
-      unwrapOrError(FaultMapSection.getValue().getContents(), Obj->getFileName());
+  StringRef FaultMapContents;
+  error(FaultMapSection.getValue().getContents(FaultMapContents));
+
   FaultMapParser FMP(FaultMapContents.bytes_begin(),
                      FaultMapContents.bytes_end());
 

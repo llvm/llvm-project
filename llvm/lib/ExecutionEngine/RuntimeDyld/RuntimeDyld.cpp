@@ -792,10 +792,8 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
   if (!IsVirtual && !IsZeroInit) {
     // In either case, set the location of the unrelocated section in memory,
     // since we still process relocations for it even if we're not applying them.
-    if (Expected<StringRef> E = Section.getContents())
-      data = *E;
-    else
-      return E.takeError();
+    if (auto EC = Section.getContents(data))
+      return errorCodeToError(EC);
     pData = data.data();
   }
 

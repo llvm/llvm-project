@@ -48,18 +48,13 @@ static void error(std::error_code EC) {
   exit(1);
 }
 
-LLVM_ATTRIBUTE_NORETURN static void error(Error Err) {
+static void error(Error Err) {
+  if (!Err)
+    return;
   logAllUnhandledErrors(std::move(Err), WithColor::error(outs()),
                         "reading file: ");
   outs().flush();
   exit(1);
-}
-
-template <typename T>
-T unwrapOrError(Expected<T> EO) {
-  if (!EO)
-    error(EO.takeError());
-  return std::move(*EO);
 }
 
 } // namespace llvm
@@ -200,7 +195,8 @@ static void dumpCXXData(const ObjectFile *Obj) {
     // Skip virtual or BSS sections.
     if (Sec.isBSS() || Sec.isVirtual())
       continue;
-    StringRef SecContents = unwrapOrError(Sec.getContents());
+    StringRef SecContents;
+    error(Sec.getContents(SecContents));
     Expected<uint64_t> SymAddressOrErr = Sym.getAddress();
     error(errorToErrorCode(SymAddressOrErr.takeError()));
     uint64_t SymAddress = *SymAddressOrErr;
@@ -514,8 +510,7 @@ static void dumpArchive(const Archive *Arc) {
     else
       reportError(Arc->getFileName(), cxxdump_error::unrecognized_file_format);
   }
-  if (Err)
-    error(std::move(Err));
+  error(std::move(Err));
 }
 
 static void dumpInput(StringRef File) {

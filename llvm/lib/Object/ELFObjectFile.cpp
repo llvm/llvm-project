@@ -377,13 +377,12 @@ ELFObjectFileBase::getPltAddresses() const {
   }
   if (!Plt || !RelaPlt || !GotPlt)
     return {};
-  Expected<StringRef> PltContents = Plt->getContents();
-  if (!PltContents) {
-    consumeError(PltContents.takeError());
+  StringRef PltContents;
+  if (Plt->getContents(PltContents))
     return {};
-  }
-  auto PltEntries = MIA->findPltEntries(Plt->getAddress(),
-                                        arrayRefFromStringRef(*PltContents),
+  ArrayRef<uint8_t> PltBytes((const uint8_t *)PltContents.data(),
+                             Plt->getSize());
+  auto PltEntries = MIA->findPltEntries(Plt->getAddress(), PltBytes,
                                         GotPlt->getAddress(), Triple);
   // Build a map from GOT entry virtual address to PLT entry virtual address.
   DenseMap<uint64_t, uint64_t> GotToPlt;
