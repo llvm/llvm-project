@@ -381,7 +381,7 @@ Symbol *SymbolTable::addDefined(const Defined &New) {
   return Old;
 }
 
-void SymbolTable::addShared(const SharedSymbol &New) {
+Symbol *SymbolTable::addShared(const SharedSymbol &New) {
   Symbol *Old = insert(New);
   mergeProperties(Old, New);
 
@@ -391,7 +391,7 @@ void SymbolTable::addShared(const SharedSymbol &New) {
 
   if (Old->isPlaceholder()) {
     replaceSymbol(Old, &New);
-    return;
+    return Old;
   }
 
   if (Old->Visibility == STV_DEFAULT && (Old->isUndefined() || Old->isLazy())) {
@@ -401,6 +401,7 @@ void SymbolTable::addShared(const SharedSymbol &New) {
     replaceSymbol(Old, &New);
     Old->Binding = Binding;
   }
+  return Old;
 }
 
 Symbol *SymbolTable::addBitcode(const Defined &New) {
@@ -429,17 +430,17 @@ Symbol *SymbolTable::find(StringRef Name) {
   return SymVector[It->second];
 }
 
-template <class LazyT> void SymbolTable::addLazy(const LazyT &New) {
+template <class LazyT> Symbol *SymbolTable::addLazy(const LazyT &New) {
   Symbol *Old = insert(New);
   mergeProperties(Old, New);
 
   if (Old->isPlaceholder()) {
     replaceSymbol(Old, &New);
-    return;
+    return Old;
   }
 
   if (!Old->isUndefined())
-    return;
+    return Old;
 
   // An undefined weak will not fetch archive members. See comment on Lazy in
   // Symbols.h for the details.
@@ -448,16 +449,21 @@ template <class LazyT> void SymbolTable::addLazy(const LazyT &New) {
     replaceSymbol(Old, &New);
     Old->Type = Type;
     Old->Binding = STB_WEAK;
-    return;
+    return Old;
   }
 
   if (InputFile *F = New.fetch())
     parseFile(F);
+  return Old;
 }
 
-void SymbolTable::addLazyArchive(const LazyArchive &New) { addLazy(New); }
+Symbol *SymbolTable::addLazyArchive(const LazyArchive &New) {
+  return addLazy(New);
+}
 
-void SymbolTable::addLazyObject(const LazyObject &New) { addLazy(New); }
+Symbol *SymbolTable::addLazyObject(const LazyObject &New) {
+  return addLazy(New);
+}
 
 void SymbolTable::fetchLazy(Symbol *Sym) {
   if (auto *S = dyn_cast<LazyArchive>(Sym)) {

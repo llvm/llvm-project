@@ -47,9 +47,9 @@ public:
 
   Symbol *addUndefined(const Undefined &New);
   Symbol *addDefined(const Defined &New);
-  void addShared(const SharedSymbol &New);
-  void addLazyArchive(const LazyArchive &New);
-  void addLazyObject(const LazyObject &New);
+  Symbol *addShared(const SharedSymbol &New);
+  Symbol *addLazyArchive(const LazyArchive &New);
+  Symbol *addLazyObject(const LazyObject &New);
   Symbol *addBitcode(const Defined &New);
   Symbol *addCommon(const CommonSymbol &New);
 
@@ -70,7 +70,7 @@ public:
   llvm::DenseMap<StringRef, SharedFile *> SoNames;
 
 private:
-  template <class LazyT> void addLazy(const LazyT &New);
+  template <class LazyT> Symbol *addLazy(const LazyT &New);
 
   std::vector<Symbol *> findByVersion(SymbolVersion Ver);
   std::vector<Symbol *> findAllByVersion(SymbolVersion Ver);
