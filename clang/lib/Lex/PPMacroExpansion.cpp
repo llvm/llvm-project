@@ -363,6 +363,7 @@ void Preprocessor::RegisterBuiltinMacros() {
   }
 
   // Clang Extensions.
+  Ident__FILE_NAME__      = RegisterBuiltinMacro(*this, "__FILE_NAME__");
   Ident__has_feature      = RegisterBuiltinMacro(*this, "__has_feature");
   Ident__has_extension    = RegisterBuiltinMacro(*this, "__has_extension");
   Ident__has_builtin      = RegisterBuiltinMacro(*this, "__has_builtin");
@@ -1474,7 +1475,8 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     // __LINE__ expands to a simple numeric value.
     OS << (PLoc.isValid()? PLoc.getLine() : 1);
     Tok.setKind(tok::numeric_constant);
-  } else if (II == Ident__FILE__ || II == Ident__BASE_FILE__) {
+  } else if (II == Ident__FILE__ || II == Ident__BASE_FILE__ ||
+             II == Ident__FILE_NAME__) {
     // C99 6.10.8: "__FILE__: The presumed name of the current source file (a
     // character string literal)". This can be affected by #line.
     PresumedLoc PLoc = SourceMgr.getPresumedLoc(Tok.getLocation());
@@ -1495,7 +1497,21 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     // Escape this filename.  Turn '\' -> '\\' '"' -> '\"'
     SmallString<128> FN;
     if (PLoc.isValid()) {
-      FN += PLoc.getFilename();
+      // __FILE_NAME__ is a Clang-specific extension that expands to the
+      // the last part of __FILE__.
+      if (II == Ident__FILE_NAME__) {
+        // Try to get the last path component.
+        StringRef PLFileName = PLoc.getFilename(); 
+        size_t LastSep = PLFileName.find_last_of('/');        
+        // Skip the separator and get the last part, otherwise fall back on
+        // returning the original full filename.
+        if (LastSep != StringRef::npos)
+          FN += PLFileName.substr(LastSep+1);
+        else
+          FN += PLFileName;
+      } else {
+        FN += PLoc.getFilename();
+      }
       Lexer::Stringify(FN);
       OS << '"' << FN << '"';
     }
