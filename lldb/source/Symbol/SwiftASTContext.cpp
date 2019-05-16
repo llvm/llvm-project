@@ -4785,7 +4785,6 @@ void SwiftASTContext::ModulesDidLoad(ModuleList &module_list) {
 
 void SwiftASTContext::ClearModuleDependentCaches() {
   m_negative_type_cache.Clear();
-  m_extra_type_info_cache.Clear();
 }
 
 void SwiftASTContext::LogConfiguration() {
@@ -4876,64 +4875,6 @@ void SwiftASTContext::AddDebuggerClient(
     swift::DebuggerClient *debugger_client) {
   m_debugger_clients.push_back(
       std::unique_ptr<swift::DebuggerClient>(debugger_client));
-}
-
-SwiftASTContext::ExtraTypeInformation::ExtraTypeInformation()
-    : m_flags(false) {}
-
-SwiftASTContext::ExtraTypeInformation::ExtraTypeInformation(
-    swift::CanType swift_can_type)
-    : m_flags(false) {
-  static ConstString g_rawValue("rawValue");
-
-  swift::ASTContext &ast_ctx = swift_can_type->getASTContext();
-  SwiftASTContext *swift_ast = SwiftASTContext::GetSwiftASTContext(&ast_ctx);
-  if (swift_ast) {
-    swift::ProtocolDecl *option_set =
-        ast_ctx.getProtocol(swift::KnownProtocolKind::OptionSet);
-    if (option_set) {
-      if (auto nominal_decl =
-              swift_can_type.getNominalOrBoundGenericNominal()) {
-        for (swift::ProtocolDecl *protocol_decl :
-             nominal_decl->getAllProtocols()) {
-          if (protocol_decl == option_set) {
-            for (swift::VarDecl *stored_property :
-                 nominal_decl->getStoredProperties()) {
-              swift::Identifier name = stored_property->getName();
-              if (name.str() == g_rawValue.GetStringRef()) {
-                m_flags.m_is_trivial_option_set = true;
-                break;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-SwiftASTContext::ExtraTypeInformation
-SwiftASTContext::GetExtraTypeInformation(void *type) {
-  if (!type)
-    return ExtraTypeInformation();
-
-  swift::CanType swift_can_type;
-  void *swift_can_type_ptr = nullptr;
-  if (auto swift_type = GetSwiftType(type)) {
-    swift_can_type = swift_type->getCanonicalType();
-    swift_can_type_ptr = swift_can_type.getPointer();
-  }
-  if (!swift_can_type_ptr)
-    return ExtraTypeInformation();
-
-  ExtraTypeInformation eti;
-  if (!m_extra_type_info_cache.Lookup(swift_can_type_ptr, eti)) {
-    ExtraTypeInformation extra_info(swift_can_type);
-    m_extra_type_info_cache.Insert(swift_can_type_ptr, extra_info);
-    return extra_info;
-  } else {
-    return eti;
-  }
 }
 
 bool SwiftASTContext::DeclContextIsStructUnionOrClass(void *opaque_decl_ctx) {
@@ -5260,15 +5201,6 @@ SwiftASTContext::GetReferentType(const CompilerType &compiler_type) {
   }
 
   return {};
-}
-
-bool SwiftASTContext::IsTrivialOptionSetType(
-    const CompilerType &compiler_type) {
-  if (compiler_type.IsValid() &&
-      llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem()))
-    return GetExtraTypeInformation(compiler_type.GetOpaqueQualType())
-        .m_flags.m_is_trivial_option_set;
-  return false;
 }
 
 bool SwiftASTContext::IsFullyRealized(const CompilerType &compiler_type) {
