@@ -1,8 +1,8 @@
+// REQUIRES: plugins
+
 // RUN: %clang_analyze_cc1 -verify %s \
 // RUN:   -load %llvmshlibdir/SampleAnalyzerPlugin%pluginext \
 // RUN:   -analyzer-checker='example.MainCallChecker'
-
-// REQUIRES: plugins
 
 // Test that the MainCallChecker example analyzer plugin loads and runs.
 
