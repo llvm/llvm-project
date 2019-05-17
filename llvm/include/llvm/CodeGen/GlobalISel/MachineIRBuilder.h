@@ -1315,6 +1315,26 @@ public:
     return buildInstr(TargetOpcode::G_FCOPYSIGN, {Dst}, {Src0, Src1});
   }
 
+  /// Build and insert \p Res = G_UITOFP \p Src0
+  MachineInstrBuilder buildUITOFP(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_UITOFP, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_SITOFP \p Src0
+  MachineInstrBuilder buildSITOFP(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_SITOFP, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_FPTOUI \p Src0
+  MachineInstrBuilder buildFPTOUI(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_FPTOUI, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_FPTOSI \p Src0
+  MachineInstrBuilder buildFPTOSI(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_FPTOSI, {Dst}, {Src0});
+  }
+
   virtual MachineInstrBuilder buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
                                          ArrayRef<SrcOp> SrcOps,
                                          Optional<unsigned> Flags = None);

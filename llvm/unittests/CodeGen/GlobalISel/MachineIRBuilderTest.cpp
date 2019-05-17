@@ -229,3 +229,27 @@ TEST_F(GISelMITest, BuildBitCounts) {
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
+
+TEST_F(GISelMITest, BuildCasts) {
+  if (!TM)
+    return;
+
+  LLT S32 = LLT::scalar(32);
+  SmallVector<unsigned, 4> Copies;
+  collectCopies(Copies, MF);
+
+  B.buildUITOFP(S32, Copies[0]);
+  B.buildSITOFP(S32, Copies[0]);
+  B.buildFPTOUI(S32, Copies[0]);
+  B.buildFPTOSI(S32, Copies[0]);
+
+  auto CheckStr = R"(
+  ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[COPY0]]:_
+  ; CHECK: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[COPY0]]:_
+  ; CHECK: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY0]]:_
+  ; CHECK: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY0]]:_
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
