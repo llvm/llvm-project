@@ -76,7 +76,7 @@ def: Joined<["-"], "O">;
 def: F<"build-id">;
 def: F<"disable-auto-image-base">;
 def: F<"enable-auto-image-base">;
-def: F<"enable-auto-import">;
+def: F<"enable-auto-import">, HelpText<"Ignored; listed for libtool compatibility">;
 def: F<"end-group">;
 def: Flag<["--"], "full-shutdown">;
 def: F<"high-entropy-va">;
