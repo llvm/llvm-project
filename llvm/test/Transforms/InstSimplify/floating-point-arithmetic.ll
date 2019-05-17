@@ -46,9 +46,9 @@ define <2 x float> @fsub_-0_-0_x_vec_undef_elts(<2 x float> %a) {
   ret <2 x float> %ret
 }
 
-; fsub 0.0, (fsub -0.0, X) != X
-define float @fsub_0_-0_x(float %a) {
-; CHECK-LABEL: @fsub_0_-0_x(
+; fsub -0.0, (fsub 0.0, X) != X
+define float @fsub_-0_0_x(float %a) {
+; CHECK-LABEL: @fsub_-0_0_x(
 ; CHECK-NEXT:    [[T1:%.*]] = fsub float 0.000000e+00, [[A:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = fsub float -0.000000e+00, [[T1]]
 ; CHECK-NEXT:    ret float [[RET]]
@@ -58,9 +58,9 @@ define float @fsub_0_-0_x(float %a) {
   ret float %ret
 }
 
-; fsub -0.0, (fsub 0.0, X) != X
-define float @fsub_-0_0_x(float %a) {
-; CHECK-LABEL: @fsub_-0_0_x(
+; fsub 0.0, (fsub -0.0, X) != X
+define float @fsub_0_-0_x(float %a) {
+; CHECK-LABEL: @fsub_0_-0_x(
 ; CHECK-NEXT:    [[T1:%.*]] = fsub float -0.000000e+00, [[A:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = fsub float 0.000000e+00, [[T1]]
 ; CHECK-NEXT:    ret float [[RET]]
