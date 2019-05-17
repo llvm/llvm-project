@@ -687,7 +687,8 @@ bool BCECmpChain::simplify(const TargetLibraryInfo *const TLI,
   // Replace the original cmp chain with the new cmp chain by pointing all
   // predecessors of EntryBlock_ to NextCmpBlock instead. This makes all cmp
   // blocks in the old chain unreachable.
-  for (BasicBlock *Pred : predecessors(EntryBlock_)) {
+  while (!pred_empty(EntryBlock_)) {
+    BasicBlock* const Pred = *pred_begin(EntryBlock_);
     Pred->getTerminator()->replaceUsesOfWith(EntryBlock_, NextCmpBlock);
   }
   EntryBlock_ = nullptr;

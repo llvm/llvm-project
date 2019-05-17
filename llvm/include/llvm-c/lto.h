@@ -44,7 +44,7 @@ typedef bool lto_bool_t;
  * @{
  */
 
-#define LTO_API_VERSION 23
+#define LTO_API_VERSION 24
 
 /**
  * \since prior to LTO_API_VERSION=3
@@ -296,6 +296,14 @@ lto_module_get_symbol_attribute(lto_module_t mod, unsigned int index);
  */
 extern const char*
 lto_module_get_linkeropts(lto_module_t mod);
+
+/**
+* Returns the module's dependent library specifiers.
+*
+* \since LTO_API_VERSION=24
+*/
+extern const char*
+lto_module_get_dependent_libraries(lto_module_t mod);
 
 /**
  * Diagnostic severity.

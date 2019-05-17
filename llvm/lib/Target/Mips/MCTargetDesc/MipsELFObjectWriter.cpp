@@ -222,7 +222,7 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
   unsigned Kind = (unsigned)Fixup.getKind();
 
   switch (Kind) {
-  case Mips::fixup_Mips_NONE:
+  case FK_NONE:
     return ELF::R_MIPS_NONE;
   case FK_Data_1:
     Ctx.reportError(Fixup.getLoc(),
