@@ -1031,24 +1031,13 @@ protected:
 
 } // end anonymous namespace
 
-/// Perform a quick domtree based check for loop invariance assuming that V is
-/// used within the loop. LoopInfo::isLoopInvariant() seems gratuitous for this
-/// purpose.
-static bool isLoopInvariant(Value *V, const Loop *L, const DominatorTree *DT) {
-  Instruction *Inst = dyn_cast<Instruction>(V);
-  if (!Inst)
-    return true;
-
-  return DT->properlyDominates(Inst->getParent(), L->getHeader());
-}
-
 Value *WidenIV::createExtendInst(Value *NarrowOper, Type *WideType,
                                  bool IsSigned, Instruction *Use) {
   // Set the debug location and conservative insertion point.
   IRBuilder<> Builder(Use);
   // Hoist the insertion point into loop preheaders as far as possible.
   for (const Loop *L = LI->getLoopFor(Use->getParent());
-       L && L->getLoopPreheader() && isLoopInvariant(NarrowOper, L, DT);
+       L && L->getLoopPreheader() && L->isLoopInvariant(NarrowOper);
        L = L->getParentLoop())
     Builder.SetInsertPoint(L->getLoopPreheader()->getTerminator());
 
@@ -1993,23 +1982,17 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
 /// Return true if this loop's backedge taken count expression can be safely and
 /// cheaply expanded into an instruction sequence that can be used by
 /// linearFunctionTestReplace.
-///
-/// TODO: This fails for pointer-type loop counters with greater than one byte
-/// strides, consequently preventing LFTR from running. For the purpose of LFTR
-/// we could skip this check in the case that the LFTR loop counter (chosen by
-/// FindLoopCounter) is also pointer type. Instead, we could directly convert
-/// the loop test to an inequality test by checking the target data's alignment
-/// of element types (given that the initial pointer value originates from or is
-/// used by ABI constrained operation, as opposed to inttoptr/ptrtoint).
-/// However, we don't yet have a strong motivation for converting loop tests
-/// into inequality tests.
 static bool canExpandBackedgeTakenCount(Loop *L, ScalarEvolution *SE,
                                         SCEVExpander &Rewriter) {
   const SCEV *BackedgeTakenCount = SE->getBackedgeTakenCount(L);
-  if (isa<SCEVCouldNotCompute>(BackedgeTakenCount) ||
-      BackedgeTakenCount->isZero())
+  if (isa<SCEVCouldNotCompute>(BackedgeTakenCount))
     return false;
 
+  // Better to break the backedge
+  if (BackedgeTakenCount->isZero())
+    return false;
+
+  // Loops with multiple exits are not currently suported by lftr
   if (!L->getExitingBlock())
     return false;
 
@@ -2023,8 +2006,10 @@ static bool canExpandBackedgeTakenCount(Loop *L, ScalarEvolution *SE,
   return true;
 }
 
-/// Return the loop header phi IFF IncV adds a loop invariant value to the phi.
-static PHINode *getLoopPhiForCounter(Value *IncV, Loop *L, DominatorTree *DT) {
+/// Given an Value which is hoped to be part of an add recurance in the given
+/// loop, return the associated Phi node if so.  Otherwise, return null.  Note
+/// that this is less general than SCEVs AddRec checking.  
+static PHINode *getLoopPhiForCounter(Value *IncV, Loop *L) {
   Instruction *IncI = dyn_cast<Instruction>(IncV);
   if (!IncI)
     return nullptr;
@@ -2044,7 +2029,7 @@ static PHINode *getLoopPhiForCounter(Value *IncV, Loop *L, DominatorTree *DT) {
 
   PHINode *Phi = dyn_cast<PHINode>(IncI->getOperand(0));
   if (Phi && Phi->getParent() == L->getHeader()) {
-    if (isLoopInvariant(IncI->getOperand(1), L, DT))
+    if (L->isLoopInvariant(IncI->getOperand(1)))
       return Phi;
     return nullptr;
   }
@@ -2054,13 +2039,15 @@ static PHINode *getLoopPhiForCounter(Value *IncV, Loop *L, DominatorTree *DT) {
   // Allow add/sub to be commuted.
   Phi = dyn_cast<PHINode>(IncI->getOperand(1));
   if (Phi && Phi->getParent() == L->getHeader()) {
-    if (isLoopInvariant(IncI->getOperand(0), L, DT))
+    if (L->isLoopInvariant(IncI->getOperand(0)))
       return Phi;
   }
   return nullptr;
 }
 
-/// Return the compare guarding the loop latch, or NULL for unrecognized tests.
+/// Given a loop with one backedge and one exit, return the ICmpInst
+/// controlling the sole loop exit.  There is no guarantee that the exiting
+/// block is also the latch.
 static ICmpInst *getLoopTest(Loop *L) {
   assert(L->getExitingBlock() && "expected loop exit");
 
@@ -2077,7 +2064,7 @@ static ICmpInst *getLoopTest(Loop *L) {
 
 /// linearFunctionTestReplace policy. Return true unless we can show that the
 /// current exit test is already sufficiently canonical.
-static bool needsLFTR(Loop *L, DominatorTree *DT) {
+static bool needsLFTR(Loop *L) {
   // Do LFTR to simplify the exit condition to an ICMP.
   ICmpInst *Cond = getLoopTest(L);
   if (!Cond)
@@ -2091,15 +2078,15 @@ static bool needsLFTR(Loop *L, DominatorTree *DT) {
   // Look for a loop invariant RHS
   Value *LHS = Cond->getOperand(0);
   Value *RHS = Cond->getOperand(1);
-  if (!isLoopInvariant(RHS, L, DT)) {
-    if (!isLoopInvariant(LHS, L, DT))
+  if (!L->isLoopInvariant(RHS)) {
+    if (!L->isLoopInvariant(LHS))
       return true;
     std::swap(LHS, RHS);
   }
   // Look for a simple IV counter LHS
   PHINode *Phi = dyn_cast<PHINode>(LHS);
   if (!Phi)
-    Phi = getLoopPhiForCounter(LHS, L, DT);
+    Phi = getLoopPhiForCounter(LHS, L);
 
   if (!Phi)
     return true;
@@ -2111,7 +2098,7 @@ static bool needsLFTR(Loop *L, DominatorTree *DT) {
 
   // Do LFTR if the exit condition's IV is *not* a simple counter.
   Value *IncV = Phi->getIncomingValue(Idx);
-  return Phi != getLoopPhiForCounter(IncV, L, DT);
+  return Phi != getLoopPhiForCounter(IncV, L);
 }
 
 /// Recursive helper for hasConcreteDef(). Unfortunately, this currently boils
@@ -2170,21 +2157,39 @@ static bool AlmostDeadIV(PHINode *Phi, BasicBlock *LatchBlock, Value *Cond) {
   return true;
 }
 
-/// Find an affine IV in canonical form.
+/// Return true if the given phi is a "counter" in L.  A counter is an
+/// add recurance (of integer or pointer type) with an arbitrary start, and a
+/// step of 1.  Note that L must have exactly one latch.
+static bool isLoopCounter(PHINode* Phi, Loop *L,
+                          ScalarEvolution *SE) {
+  assert(Phi->getParent() == L->getHeader());
+  assert(L->getLoopLatch());
+  
+  if (!SE->isSCEVable(Phi->getType()))
+    return false;
+
+  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Phi));
+  if (!AR || AR->getLoop() != L || !AR->isAffine())
+    return false;
+
+  const SCEV *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*SE));
+  if (!Step || !Step->isOne())
+    return false;
+
+  int LatchIdx = Phi->getBasicBlockIndex(L->getLoopLatch());
+  Value *IncV = Phi->getIncomingValue(LatchIdx);
+  return (getLoopPhiForCounter(IncV, L) == Phi);
+}
+
+/// Search the loop header for a loop counter (anadd rec w/step of one)
+/// suitable for use by LFTR.  If multiple counters are available, select the
+/// "best" one based profitable heuristics.
 ///
 /// BECount may be an i8* pointer type. The pointer difference is already
 /// valid count without scaling the address stride, so it remains a pointer
 /// expression as far as SCEV is concerned.
-///
-/// Currently only valid for LFTR. See the comments on hasConcreteDef below.
-///
-/// FIXME: Accept -1 stride and set IVLimit = IVInit - BECount
-///
-/// FIXME: Accept non-unit stride as long as SCEV can reduce BECount * Stride.
-/// This is difficult in general for SCEV because of potential overflow. But we
-/// could at least handle constant BECounts.
 static PHINode *FindLoopCounter(Loop *L, const SCEV *BECount,
-                                ScalarEvolution *SE, DominatorTree *DT) {
+                                ScalarEvolution *SE) {
   uint64_t BCWidth = SE->getTypeSizeInBits(BECount->getType());
 
   Value *Cond =
@@ -2199,31 +2204,20 @@ static PHINode *FindLoopCounter(Loop *L, const SCEV *BECount,
 
   for (BasicBlock::iterator I = L->getHeader()->begin(); isa<PHINode>(I); ++I) {
     PHINode *Phi = cast<PHINode>(I);
-    if (!SE->isSCEVable(Phi->getType()))
+    if (!isLoopCounter(Phi, L, SE))
       continue;
 
     // Avoid comparing an integer IV against a pointer Limit.
     if (BECount->getType()->isPointerTy() && !Phi->getType()->isPointerTy())
       continue;
 
-    const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Phi));
-    if (!AR || AR->getLoop() != L || !AR->isAffine())
-      continue;
-
+    const auto *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Phi));
+    
     // AR may be a pointer type, while BECount is an integer type.
     // AR may be wider than BECount. With eq/ne tests overflow is immaterial.
     // AR may not be a narrower type, or we may never exit.
     uint64_t PhiWidth = SE->getTypeSizeInBits(AR->getType());
     if (PhiWidth < BCWidth || !DL.isLegalInteger(PhiWidth))
-      continue;
-
-    const SCEV *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*SE));
-    if (!Step || !Step->isOne())
-      continue;
-
-    int LatchIdx = Phi->getBasicBlockIndex(LatchBlock);
-    Value *IncV = Phi->getIncomingValue(LatchIdx);
-    if (getLoopPhiForCounter(IncV, L, DT) != Phi)
       continue;
 
     // Avoid reusing a potentially undef value to compute other values that may
@@ -2233,8 +2227,8 @@ static PHINode *FindLoopCounter(Loop *L, const SCEV *BECount,
       // the loop test. In this case we assume that performing LFTR could not
       // increase the number of undef users.
       if (ICmpInst *Cond = getLoopTest(L)) {
-        if (Phi != getLoopPhiForCounter(Cond->getOperand(0), L, DT) &&
-            Phi != getLoopPhiForCounter(Cond->getOperand(1), L, DT)) {
+        if (Phi != getLoopPhiForCounter(Cond->getOperand(0), L) &&
+            Phi != getLoopPhiForCounter(Cond->getOperand(1), L)) {
           continue;
         }
       }
@@ -2264,12 +2258,13 @@ static PHINode *FindLoopCounter(Loop *L, const SCEV *BECount,
   return BestPhi;
 }
 
-/// Help linearFunctionTestReplace by generating a value that holds the RHS of
-/// the new loop test.
+/// Insert an IR expression which computes the value held by the IV IndVar
+/// (which must be an loop counter w/unit stride) after the backedge of loop L
+/// is taken IVCount times.  
 static Value *genLoopLimit(PHINode *IndVar, const SCEV *IVCount, Loop *L,
                            SCEVExpander &Rewriter, ScalarEvolution *SE) {
-  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(IndVar));
-  assert(AR && AR->getLoop() == L && AR->isAffine() && "bad loop counter");
+  assert(isLoopCounter(IndVar, L, SE));
+  const SCEVAddRecExpr *AR = cast<SCEVAddRecExpr>(SE->getSCEV(IndVar));
   const SCEV *IVInit = AR->getStart();
 
   // IVInit may be a pointer while IVCount is an integer when FindLoopCounter
@@ -2316,13 +2311,13 @@ static Value *genLoopLimit(PHINode *IndVar, const SCEV *IVCount, Loop *L,
     // IVInit integer and IVCount pointer would only occur if a canonical IV
     // were generated on top of case #2, which is not expected.
 
+    assert(AR->getStepRecurrence(*SE)->isOne() && "only handles unit stride");
     const SCEV *IVLimit = nullptr;
     // For unit stride, IVCount = Start + BECount with 2's complement overflow.
     // For non-zero Start, compute IVCount here.
     if (AR->getStart()->isZero())
       IVLimit = IVCount;
     else {
-      assert(AR->getStepRecurrence(*SE)->isOne() && "only handles unit stride");
       const SCEV *IVInit = AR->getStart();
 
       // For integer IVs, truncate the IV before computing IVInit + BECount.
@@ -2631,8 +2626,8 @@ bool IndVarSimplify::run(Loop *L) {
   // If we have a trip count expression, rewrite the loop's exit condition
   // using it.  We can currently only handle loops with a single exit.
   if (!DisableLFTR && canExpandBackedgeTakenCount(L, SE, Rewriter) &&
-      needsLFTR(L, DT)) {
-    PHINode *IndVar = FindLoopCounter(L, BackedgeTakenCount, SE, DT);
+      needsLFTR(L)) {
+    PHINode *IndVar = FindLoopCounter(L, BackedgeTakenCount, SE);
     if (IndVar) {
       // Check preconditions for proper SCEVExpander operation. SCEV does not
       // express SCEVExpander's dependencies, such as LoopSimplify. Instead any

@@ -96,6 +96,7 @@ def ParenListExpr : DStmt<Expr>;
 def VAArgExpr : DStmt<Expr>;
 def GenericSelectionExpr : DStmt<Expr>;
 def PseudoObjectExpr : DStmt<Expr>;
+def SourceLocExpr : DStmt<Expr>;
 
 // Wrapper expressions
 def FullExpr : DStmt<Expr, 1>;

@@ -550,6 +550,17 @@ protected:
     unsigned ResultIndex : 32 - 8 - NumExprBits;
   };
 
+  class SourceLocExprBitfields {
+    friend class ASTStmtReader;
+    friend class SourceLocExpr;
+
+    unsigned : NumExprBits;
+
+    /// The kind of source location builtin represented by the SourceLocExpr.
+    /// Ex. __builtin_LINE, __builtin_FUNCTION, ect.
+    unsigned Kind : 2;
+  };
+
   //===--- C++ Expression bitfields classes ---===//
 
   class CXXOperatorCallExprBitfields {
@@ -935,6 +946,7 @@ protected:
     ParenListExprBitfields ParenListExprBits;
     GenericSelectionExprBitfields GenericSelectionExprBits;
     PseudoObjectExprBitfields PseudoObjectExprBits;
+    SourceLocExprBitfields SourceLocExprBits;
 
     // C++ Expressions
     CXXOperatorCallExprBitfields CXXOperatorCallExprBits;

@@ -646,5 +646,9 @@ void LTOModule::parseMetadata() {
     emitLinkerFlagsForGlobalCOFF(OS, Sym.symbol, TT, M);
   }
 
-  // Add other interesting metadata here.
+  // Dependent Libraries
+  raw_string_ostream OSD(DependentLibraries);
+  if (NamedMDNode *DependentLibraries = getModule().getNamedMetadata("llvm.dependent-libraries"))
+    for (MDNode *N : DependentLibraries->operands())
+      OSD << " " << cast<MDString>(N->getOperand(0))->getString();
 }

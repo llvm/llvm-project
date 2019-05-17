@@ -37,6 +37,8 @@ public:
   // different.
   bool hasNOP() const { return STI.getFeatureBits()[ARM::HasV6T2Ops]; }
 
+  Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
+
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,

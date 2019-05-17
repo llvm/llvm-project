@@ -107,6 +107,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-as
     llvm-bcanalyzer
     llvm-cat
+    llvm-cxxfilt
     llvm-dis
     llvm-lto2
     llvm-modextract

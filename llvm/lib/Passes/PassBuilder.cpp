@@ -944,7 +944,7 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
 
   // Optimize PHIs by speculating around them when profitable. Note that this
   // pass needs to be run after any PRE or similar pass as it is essentially
-  // inserting redudnancies into the progrem. This even includes SimplifyCFG.
+  // inserting redundancies into the program. This even includes SimplifyCFG.
   OptimizePM.addPass(SpeculateAroundPHIsPass());
 
   for (auto &C : OptimizerLastEPCallbacks)

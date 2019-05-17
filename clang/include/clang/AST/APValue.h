@@ -24,14 +24,52 @@ namespace clang {
   class AddrLabelExpr;
   class ASTContext;
   class CharUnits;
+  class CXXRecordDecl;
+  class Decl;
   class DiagnosticBuilder;
   class Expr;
   class FieldDecl;
-  class Decl;
+  struct PrintingPolicy;
+  class Type;
   class ValueDecl;
-  class CXXRecordDecl;
-  class QualType;
 
+/// Symbolic representation of typeid(T) for some type T.
+class TypeInfoLValue {
+  const Type *T;
+
+public:
+  TypeInfoLValue() : T() {}
+  explicit TypeInfoLValue(const Type *T);
+
+  const Type *getType() const { return T; }
+  explicit operator bool() const { return T; }
+
+  void *getOpaqueValue() { return const_cast<Type*>(T); }
+  static TypeInfoLValue getFromOpaqueValue(void *Value) {
+    TypeInfoLValue V;
+    V.T = reinterpret_cast<const Type*>(Value);
+    return V;
+  }
+
+  void print(llvm::raw_ostream &Out, const PrintingPolicy &Policy) const;
+};
+}
+
+namespace llvm {
+template<> struct PointerLikeTypeTraits<clang::TypeInfoLValue> {
+  static void *getAsVoidPointer(clang::TypeInfoLValue V) {
+    return V.getOpaqueValue();
+  }
+  static clang::TypeInfoLValue getFromVoidPointer(void *P) {
+    return clang::TypeInfoLValue::getFromOpaqueValue(P);
+  }
+  // Validated by static_assert in APValue.cpp; hardcoded to avoid needing
+  // to include Type.h.
+  static constexpr int NumLowBitsAvailable = 3;
+};
+}
+
+namespace clang {
 /// APValue - This class implements a discriminated union of [uninitialized]
 /// [APSInt] [APFloat], [Complex APSInt] [Complex APFloat], [Expr + Offset],
 /// [Vector: N * APValue], [Array: N * APValue]
@@ -57,13 +95,18 @@ public:
 
   class LValueBase {
   public:
-    typedef llvm::PointerUnion<const ValueDecl *, const Expr *> PtrTy;
+    typedef llvm::PointerUnion<const ValueDecl *, const Expr *, TypeInfoLValue>
+        PtrTy;
 
-    LValueBase() : CallIndex(0), Version(0) {}
+    LValueBase() : Local{} {}
 
     template <class T>
-    LValueBase(T P, unsigned I = 0, unsigned V = 0)
-        : Ptr(P), CallIndex(I), Version(V) {}
+    LValueBase(T P, unsigned I = 0, unsigned V = 0) : Ptr(P), Local{I, V} {
+      assert(!is<TypeInfoLValue>() &&
+             "don't use this constructor to form a type_info lvalue");
+    }
+
+    static LValueBase getTypeInfo(TypeInfoLValue LV, QualType TypeInfo);
 
     template <class T>
     bool is() const { return Ptr.is<T>(); }
@@ -78,28 +121,15 @@ public:
 
     bool isNull() const;
 
-    explicit operator bool () const;
+    explicit operator bool() const;
 
-    PtrTy getPointer() const {
-      return Ptr;
-    }
+    PtrTy getPointer() const { return Ptr; }
 
-    unsigned getCallIndex() const {
-      return CallIndex;
-    }
+    unsigned getCallIndex() const;
+    unsigned getVersion() const;
+    QualType getTypeInfoType() const;
 
-    void setCallIndex(unsigned Index) {
-      CallIndex = Index;
-    }
-
-    unsigned getVersion() const {
-      return Version;
-    }
-
-    friend bool operator==(const LValueBase &LHS, const LValueBase &RHS) {
-      return LHS.Ptr == RHS.Ptr && LHS.CallIndex == RHS.CallIndex &&
-             LHS.Version == RHS.Version;
-    }
+    friend bool operator==(const LValueBase &LHS, const LValueBase &RHS);
     friend bool operator!=(const LValueBase &LHS, const LValueBase &RHS) {
       return !(LHS == RHS);
     }
@@ -107,7 +137,14 @@ public:
 
   private:
     PtrTy Ptr;
-    unsigned CallIndex, Version;
+    struct LocalState {
+      unsigned CallIndex, Version;
+    };
+    union {
+      LocalState Local;
+      /// The type std::type_info, if this is a TypeInfoLValue.
+      void *TypeInfoType;
+    };
   };
 
   /// A FieldDecl or CXXRecordDecl, along with a flag indicating whether we
