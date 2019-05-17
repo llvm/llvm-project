@@ -54,6 +54,8 @@ class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
       X86::FeatureFastPartialYMMorZMMWrite,
       X86::FeatureFastScalarFSQRT,
       X86::FeatureFastSHLDRotate,
+      X86::FeatureFastScalarShiftMasks,
+      X86::FeatureFastVectorShiftMasks,
       X86::FeatureFastVariableShuffle,
       X86::FeatureFastVectorFSQRT,
       X86::FeatureLEAForSP,
