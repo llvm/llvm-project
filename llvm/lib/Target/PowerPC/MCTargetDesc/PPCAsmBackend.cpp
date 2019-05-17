@@ -28,6 +28,7 @@ static uint64_t adjustFixupValue(unsigned Kind, uint64_t Value) {
   switch (Kind) {
   default:
     llvm_unreachable("Unknown fixup kind!");
+  case FK_NONE:
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
@@ -51,6 +52,8 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   switch (Kind) {
   default:
     llvm_unreachable("Unknown fixup kind!");
+  case FK_NONE:
+    return 0;
   case FK_Data_1:
     return 1;
   case FK_Data_2:
@@ -137,9 +140,11 @@ public:
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                              const MCValue &Target) override {
-    switch ((PPC::Fixups)Fixup.getKind()) {
+    switch ((unsigned)Fixup.getKind()) {
     default:
       return false;
+    case FK_NONE:
+      return true;
     case PPC::fixup_ppc_br24:
     case PPC::fixup_ppc_br24abs:
       // If the target symbol has a local entry point we must not attempt
@@ -194,35 +199,48 @@ public:
 
 // FIXME: This should be in a separate file.
 namespace {
-  class DarwinPPCAsmBackend : public PPCAsmBackend {
-  public:
-    DarwinPPCAsmBackend(const Target &T, const Triple &TT)
-        : PPCAsmBackend(T, TT) {}
 
-    std::unique_ptr<MCObjectTargetWriter>
-    createObjectTargetWriter() const override {
-      bool Is64 = TT.isPPC64();
-      return createPPCMachObjectWriter(
-          /*Is64Bit=*/Is64,
-          (Is64 ? MachO::CPU_TYPE_POWERPC64 : MachO::CPU_TYPE_POWERPC),
-          MachO::CPU_SUBTYPE_POWERPC_ALL);
-    }
-  };
+class DarwinPPCAsmBackend : public PPCAsmBackend {
+public:
+  DarwinPPCAsmBackend(const Target &T, const Triple &TT)
+      : PPCAsmBackend(T, TT) {}
 
-  class ELFPPCAsmBackend : public PPCAsmBackend {
-  public:
-    ELFPPCAsmBackend(const Target &T, const Triple &TT)
-        : PPCAsmBackend(T, TT) {}
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    bool Is64 = TT.isPPC64();
+    return createPPCMachObjectWriter(
+        /*Is64Bit=*/Is64,
+        (Is64 ? MachO::CPU_TYPE_POWERPC64 : MachO::CPU_TYPE_POWERPC),
+        MachO::CPU_SUBTYPE_POWERPC_ALL);
+  }
+};
 
-    std::unique_ptr<MCObjectTargetWriter>
-    createObjectTargetWriter() const override {
-      uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
-      bool Is64 = TT.isPPC64();
-      return createPPCELFObjectWriter(Is64, OSABI);
-    }
-  };
+class ELFPPCAsmBackend : public PPCAsmBackend {
+public:
+  ELFPPCAsmBackend(const Target &T, const Triple &TT) : PPCAsmBackend(T, TT) {}
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
+    bool Is64 = TT.isPPC64();
+    return createPPCELFObjectWriter(Is64, OSABI);
+  }
+
+  Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
+};
 
 } // end anonymous namespace
+
+Optional<MCFixupKind> ELFPPCAsmBackend::getFixupKind(StringRef Name) const {
+  if (TT.isPPC64()) {
+    if (Name == "R_PPC64_NONE")
+      return FK_NONE;
+  } else {
+    if (Name == "R_PPC_NONE")
+      return FK_NONE;
+  }
+  return MCAsmBackend::getFixupKind(Name);
+}
 
 MCAsmBackend *llvm::createPPCAsmBackend(const Target &T,
                                         const MCSubtargetInfo &STI,
