@@ -221,9 +221,9 @@ define i32 @and_signbit_select_ashr(i32 %x, i1 %cond) {
 }
 define i32 @and_nosignbit_select_ashr(i32 %x, i1 %cond) {
 ; CHECK-LABEL: @and_nosignbit_select_ashr(
-; CHECK-NEXT:    [[T0:%.*]] = and i32 [[X:%.*]], 2147418112
-; CHECK-NEXT:    [[T1:%.*]] = select i1 [[COND:%.*]], i32 [[T0]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[T1]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 8388352
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND:%.*]], i32 [[TMP2]], i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t0 = and i32 %x, 2147418112 ; 0x7FFF0000
@@ -234,9 +234,9 @@ define i32 @and_nosignbit_select_ashr(i32 %x, i1 %cond) {
 
 define i32 @or_signbit_select_ashr(i32 %x, i1 %cond) {
 ; CHECK-LABEL: @or_signbit_select_ashr(
-; CHECK-NEXT:    [[T0:%.*]] = or i32 [[X:%.*]], -65536
-; CHECK-NEXT:    [[T1:%.*]] = select i1 [[COND:%.*]], i32 [[T0]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[T1]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], -256
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND:%.*]], i32 [[TMP2]], i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t0 = or i32 %x, 4294901760 ; 0xFFFF0000
@@ -259,9 +259,9 @@ define i32 @or_nosignbit_select_ashr(i32 %x, i1 %cond) {
 
 define i32 @xor_signbit_select_ashr(i32 %x, i1 %cond) {
 ; CHECK-LABEL: @xor_signbit_select_ashr(
-; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[X:%.*]], -65536
-; CHECK-NEXT:    [[T1:%.*]] = select i1 [[COND:%.*]], i32 [[T0]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[T1]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -256
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND:%.*]], i32 [[TMP2]], i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t0 = xor i32 %x, 4294901760 ; 0xFFFF0000
