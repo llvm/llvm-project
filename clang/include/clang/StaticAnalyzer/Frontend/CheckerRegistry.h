@@ -107,6 +107,17 @@ public:
       assert((OptionType == "bool" || OptionType == "string" ||
               OptionType == "int") &&
              "Unknown command line option type!");
+
+      assert((OptionType != "bool" ||
+              (DefaultValStr == "true" || DefaultValStr == "false")) &&
+             "Invalid value for boolean command line option! Maybe incorrect "
+             "parameters to the addCheckerOption or addPackageOption method?");
+
+      int Tmp;
+      assert((OptionType != "int" || !DefaultValStr.getAsInteger(0, Tmp)) &&
+             "Invalid value for integer command line option! Maybe incorrect "
+             "parameters to the addCheckerOption or addPackageOption method?");
+      (void)Tmp;
     }
   };
 
@@ -148,6 +159,12 @@ public:
 
     bool isDisabled(const LangOptions &LO) const {
       return State == StateFromCmdLine::State_Disabled && ShouldRegister(LO);
+    }
+
+    // Since each checker must have a different full name, we can identify
+    // CheckerInfo objects by them.
+    bool operator==(const CheckerInfo &Rhs) const {
+      return FullName == Rhs.FullName;
     }
 
     CheckerInfo(InitializationFunction Fn, ShouldRegisterFunction sfn,

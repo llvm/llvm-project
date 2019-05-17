@@ -330,6 +330,11 @@ Builtin Macros
 ``__BASE_FILE__``
   Defined to a string that contains the name of the main input file passed to
   Clang.
+  
+``__FILE_NAME__``
+  Clang-specific extension that functions similar to ``__FILE__`` but only
+  renders the last path component (the filename) instead of an invocation
+  dependent full path to that file. 
 
 ``__COUNTER__``
   Defined to an integer value that starts at zero and is incremented each time
@@ -2299,6 +2304,61 @@ Note that there is no builtin matching the `llvm.coro.save` intrinsic. LLVM
 automatically will insert one if the first argument to `llvm.coro.suspend` is
 token `none`. If a user calls `__builin_suspend`, clang will insert `token none`
 as the first argument to the intrinsic.
+
+Source location builtins
+------------------------
+
+Clang provides experimental builtins to support C++ standard library implementation
+of ``std::experimental::source_location`` as specified in  http://wg21.link/N4600.
+With the exception of ``__builtin_COLUMN``, these builtins are also implemented by
+GCC.
+
+**Syntax**:
+
+.. code-block:: c
+
+  const char *__builtin_FILE();
+  const char *__builtin_FUNCTION();
+  unsigned    __builtin_LINE();
+  unsigned    __builtin_COLUMN(); // Clang only
+
+**Example of use**:
+
+.. code-block:: c++
+
+  void my_assert(bool pred, int line = __builtin_LINE(), // Captures line of caller
+                 const char* file = __builtin_FILE(),
+                 const char* function = __builtin_FUNCTION()) {
+    if (pred) return;
+    printf("%s:%d assertion failed in function %s\n", file, line, function);
+    std::abort();
+  }
+
+  struct MyAggregateType {
+    int x;
+    int line = __builtin_LINE(); // captures line where aggregate initialization occurs
+  };
+  static_assert(MyAggregateType{42}.line == __LINE__);
+
+  struct MyClassType {
+    int line = __builtin_LINE(); // captures line of the constructor used during initialization
+    constexpr MyClassType(int) { assert(line == __LINE__); }
+  };
+
+**Description**:
+
+The builtins ``__builtin_LINE``, ``__builtin_FUNCTION``, and ``__builtin_FILE`` return
+the values, at the "invocation point", for ``__LINE__``, ``__FUNCTION__``, and
+``__FILE__`` respectively. These builtins are constant expressions.
+
+When the builtins appear as part of a default function argument the invocation
+point is the location of the caller. When the builtins appear as part of a
+default member initializer, the invocation point is the location of the
+constructor or aggregate initialization used to create the object. Otherwise
+the invocation point is the same as the location of the builtin.
+
+When the invocation point of ``__builtin_FUNCTION`` is not a function scope the
+empty string is returned.
 
 Non-standard C++11 Attributes
 =============================

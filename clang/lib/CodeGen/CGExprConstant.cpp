@@ -884,10 +884,6 @@ public:
     llvm_unreachable("Invalid CastKind");
   }
 
-  llvm::Constant *VisitCXXDefaultArgExpr(CXXDefaultArgExpr *DAE, QualType T) {
-    return Visit(DAE->getExpr(), T);
-  }
-
   llvm::Constant *VisitCXXDefaultInitExpr(CXXDefaultInitExpr *DIE, QualType T) {
     // No need for a DefaultInitExprScope: we don't handle 'this' in a
     // constant expression.
@@ -1737,6 +1733,17 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     }
 
     return nullptr;
+  }
+
+  // Handle typeid(T).
+  if (TypeInfoLValue TI = base.dyn_cast<TypeInfoLValue>()) {
+    llvm::Type *StdTypeInfoPtrTy =
+        CGM.getTypes().ConvertType(base.getTypeInfoType())->getPointerTo();
+    llvm::Constant *TypeInfo =
+        CGM.GetAddrOfRTTIDescriptor(QualType(TI.getType(), 0));
+    if (TypeInfo->getType() != StdTypeInfoPtrTy)
+      TypeInfo = llvm::ConstantExpr::getBitCast(TypeInfo, StdTypeInfoPtrTy);
+    return TypeInfo;
   }
 
   // Otherwise, it must be an expression.

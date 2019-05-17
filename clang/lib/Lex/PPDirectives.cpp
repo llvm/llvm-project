@@ -1033,7 +1033,7 @@ void Preprocessor::HandleDirective(Token &Result) {
     // Enter this token stream so that we re-lex the tokens.  Make sure to
     // enable macro expansion, in case the token after the # is an identifier
     // that is expanded.
-    EnterTokenStream(std::move(Toks), 2, false);
+    EnterTokenStream(std::move(Toks), 2, false, /*IsReinject*/false);
     return;
   }
 
@@ -1516,7 +1516,7 @@ void Preprocessor::EnterAnnotationToken(SourceRange Range,
   Tok[0].setLocation(Range.getBegin());
   Tok[0].setAnnotationEndLoc(Range.getEnd());
   Tok[0].setAnnotationValue(AnnotationVal);
-  EnterTokenStream(std::move(Tok), 1, true);
+  EnterTokenStream(std::move(Tok), 1, true, /*IsReinject*/ false);
 }
 
 /// Produce a diagnostic informing the user that a #include or similar

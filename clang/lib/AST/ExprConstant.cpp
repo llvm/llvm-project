@@ -37,6 +37,7 @@
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/CurrentSourceLocExprScope.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/OSLog.h"
@@ -64,6 +65,9 @@ namespace {
   struct CallStackFrame;
   struct EvalInfo;
 
+  using SourceLocExprScopeGuard =
+      CurrentSourceLocExprScope::SourceLocExprScopeGuard;
+
   static QualType getType(APValue::LValueBase B) {
     if (!B) return QualType();
     if (const ValueDecl *D = B.dyn_cast<const ValueDecl*>()) {
@@ -82,6 +86,9 @@ namespace {
       }
       return D->getType();
     }
+
+    if (TypeInfoLValue TI = B.dyn_cast<TypeInfoLValue>())
+      return B.getTypeInfoType();
 
     const Expr *Base = B.get<const Expr*>();
 
@@ -106,12 +113,12 @@ namespace {
   /// Get an LValue path entry, which is known to not be an array index, as a
   /// field declaration.
   static const FieldDecl *getAsField(APValue::LValuePathEntry E) {
-    return dyn_cast<FieldDecl>(E.getAsBaseOrMember().getPointer());
+    return dyn_cast_or_null<FieldDecl>(E.getAsBaseOrMember().getPointer());
   }
   /// Get an LValue path entry, which is known to not be an array index, as a
   /// base class declaration.
   static const CXXRecordDecl *getAsBaseClass(APValue::LValuePathEntry E) {
-    return dyn_cast<CXXRecordDecl>(E.getAsBaseOrMember().getPointer());
+    return dyn_cast_or_null<CXXRecordDecl>(E.getAsBaseOrMember().getPointer());
   }
   /// Determine whether this LValue path entry for a base class names a virtual
   /// base class.
@@ -463,6 +470,10 @@ namespace {
     /// Arguments - Parameter bindings for this function call, indexed by
     /// parameters' function scope indices.
     APValue *Arguments;
+
+    /// Source location information about the default argument or default
+    /// initializer expression we're evaluating, if any.
+    CurrentSourceLocExprScope CurSourceLocExprScope;
 
     // Note that we intentionally use std::map here so that references to
     // values are stable.
@@ -1775,6 +1786,9 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
     return isa<FunctionDecl>(D);
   }
 
+  if (B.is<TypeInfoLValue>())
+    return true;
+
   const Expr *E = B.get<const Expr*>();
   switch (E->getStmtClass()) {
   default:
@@ -1792,7 +1806,6 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
   case Expr::PredefinedExprClass:
   case Expr::ObjCStringLiteralClass:
   case Expr::ObjCEncodeExprClass:
-  case Expr::CXXTypeidExprClass:
   case Expr::CXXUuidofExprClass:
     return true;
   case Expr::ObjCBoxedExprClass:
@@ -1870,9 +1883,9 @@ static void NoteLValueLocation(EvalInfo &Info, APValue::LValueBase Base) {
   const ValueDecl *VD = Base.dyn_cast<const ValueDecl*>();
   if (VD)
     Info.Note(VD->getLocation(), diag::note_declared_at);
-  else
-    Info.Note(Base.get<const Expr*>()->getExprLoc(),
-              diag::note_constexpr_temporary_here);
+  else if (const Expr *E = Base.dyn_cast<const Expr*>())
+    Info.Note(E->getExprLoc(), diag::note_constexpr_temporary_here);
+  // We have no information to show for a typeid(T) object.
 }
 
 /// Check that this reference or pointer core constant expression is a valid
@@ -2732,6 +2745,9 @@ static unsigned getBaseIndex(const CXXRecordDecl *Derived,
 /// Extract the value of a character from a string literal.
 static APSInt extractStringLiteralCharacter(EvalInfo &Info, const Expr *Lit,
                                             uint64_t Index) {
+  assert(!isa<SourceLocExpr>(Lit) &&
+         "SourceLocExpr should have already been converted to a StringLiteral");
+
   // FIXME: Support MakeStringConstant
   if (const auto *ObjCEnc = dyn_cast<ObjCEncodeExpr>(Lit)) {
     std::string Str;
@@ -3269,6 +3285,11 @@ static bool AreElementsOfSameArray(QualType ObjType,
 static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
                                          AccessKinds AK, const LValue &LVal,
                                          QualType LValType) {
+  if (LVal.InvalidBase) {
+    Info.FFDiag(E);
+    return CompleteObject();
+  }
+
   if (!LVal.Base) {
     Info.FFDiag(E, diag::note_constexpr_access_null) << AK;
     return CompleteObject();
@@ -3393,7 +3414,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
 
     if (!Frame) {
       if (const MaterializeTemporaryExpr *MTE =
-              dyn_cast<MaterializeTemporaryExpr>(Base)) {
+              dyn_cast_or_null<MaterializeTemporaryExpr>(Base)) {
         assert(MTE->getStorageDuration() == SD_Static &&
                "should have a frame for a non-global materialized temporary");
 
@@ -3428,7 +3449,13 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       } else {
         if (!IsAccess)
           return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
-        Info.FFDiag(E);
+        APValue Val;
+        LVal.moveInto(Val);
+        Info.FFDiag(E, diag::note_constexpr_access_unreadable_object)
+            << AK
+            << Val.getAsString(Info.Ctx,
+                               Info.Ctx.getLValueReferenceType(LValType));
+        NoteLValueLocation(Info, LVal.Base);
         return CompleteObject();
       }
     } else {
@@ -3469,6 +3496,7 @@ static bool handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv,
 
   // Check for special cases where there is no existing APValue to look at.
   const Expr *Base = LVal.Base.dyn_cast<const Expr*>();
+
   if (Base && !LVal.getLValueCallIndex() && !Type.isVolatileQualified()) {
     if (const CompoundLiteralExpr *CLE = dyn_cast<CompoundLiteralExpr>(Base)) {
       // In C99, a CompoundLiteralExpr is an lvalue, and we defer evaluating the
@@ -5242,6 +5270,7 @@ public:
     { return StmtVisitorTy::Visit(E->getReplacement()); }
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
     TempVersionRAII RAII(*Info.CurrentCall);
+    SourceLocExprScopeGuard Guard(E, Info.CurrentCall->CurSourceLocExprScope);
     return StmtVisitorTy::Visit(E->getExpr());
   }
   bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E) {
@@ -5249,8 +5278,10 @@ public:
     // The initializer may not have been parsed yet, or might be erroneous.
     if (!E->getExpr())
       return Error(E);
+    SourceLocExprScopeGuard Guard(E, Info.CurrentCall->CurSourceLocExprScope);
     return StmtVisitorTy::Visit(E->getExpr());
   }
+
   // We cannot create any objects for which cleanups are required, so there is
   // nothing to do here; all cleanups must come from unevaluated subexpressions.
   bool VisitExprWithCleanups(const ExprWithCleanups *E)
@@ -5762,13 +5793,13 @@ public:
 // - Literals
 //  * CompoundLiteralExpr in C (and in global scope in C++)
 //  * StringLiteral
-//  * CXXTypeidExpr
 //  * PredefinedExpr
 //  * ObjCStringLiteralExpr
 //  * ObjCEncodeExpr
 //  * AddrLabelExpr
 //  * BlockExpr
 //  * CallExpr for a MakeStringConstant builtin
+// - typeid(T) expressions, as TypeInfoLValues
 // - Locals and temporaries
 //  * MaterializeTemporaryExpr
 //  * Any Expr, with a CallIndex indicating the function in which the temporary
@@ -6003,8 +6034,14 @@ LValueExprEvaluator::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
 }
 
 bool LValueExprEvaluator::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
-  if (!E->isPotentiallyEvaluated())
-    return Success(E);
+  if (!E->isPotentiallyEvaluated()) {
+    TypeInfoLValue TypeInfo;
+    if (E->isTypeOperand())
+      TypeInfo = TypeInfoLValue(E->getTypeOperand(Info.Ctx).getTypePtr());
+    else
+      TypeInfo = TypeInfoLValue(E->getExprOperand()->getType().getTypePtr());
+    return Success(APValue::LValueBase::getTypeInfo(TypeInfo, E->getType()));
+  }
 
   Info.FFDiag(E, diag::note_constexpr_typeid_polymorphic)
     << E->getExprOperand()->getType()
@@ -6327,6 +6364,14 @@ public:
     return true;
   }
 
+  bool VisitSourceLocExpr(const SourceLocExpr *E) {
+    assert(E->isStringType() && "SourceLocExpr isn't a pointer type?");
+    APValue LValResult = E->EvaluateInContext(
+        Info.Ctx, Info.CurrentCall->CurSourceLocExprScope.getDefaultExpr());
+    Result.setFrom(Info.Ctx, LValResult);
+    return true;
+  }
+
   // FIXME: Missing: @protocol, @selector
 };
 } // end anonymous namespace
@@ -6592,9 +6637,11 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       if (const ValueDecl *VD =
           OffsetResult.Base.dyn_cast<const ValueDecl*>()) {
         BaseAlignment = Info.Ctx.getDeclAlign(VD);
+      } else if (const Expr *E = OffsetResult.Base.dyn_cast<const Expr *>()) {
+        BaseAlignment = GetAlignOfExpr(Info, E, UETT_AlignOf);
       } else {
-        BaseAlignment = GetAlignOfExpr(
-            Info, OffsetResult.Base.get<const Expr *>(), UETT_AlignOf);
+        BaseAlignment = GetAlignOfType(
+            Info, OffsetResult.Base.getTypeInfoType(), UETT_AlignOf);
       }
 
       if (BaseAlignment < Align) {
@@ -7982,7 +8029,7 @@ public:
 
   bool VisitCXXNoexceptExpr(const CXXNoexceptExpr *E);
   bool VisitSizeOfPackExpr(const SizeOfPackExpr *E);
-
+  bool VisitSourceLocExpr(const SourceLocExpr *E);
   // FIXME: Missing: array subscript of vector, member of vector
 };
 
@@ -8056,6 +8103,12 @@ static bool EvaluateInteger(const Expr *E, APSInt &Result, EvalInfo &Info) {
   }
   Result = Val.getInt();
   return true;
+}
+
+bool IntExprEvaluator::VisitSourceLocExpr(const SourceLocExpr *E) {
+  APValue Evaluated = E->EvaluateInContext(
+      Info.Ctx, Info.CurrentCall->CurSourceLocExprScope.getDefaultExpr());
+  return Success(Evaluated, E);
 }
 
 static bool EvaluateFixedPoint(const Expr *E, APFixedPoint &Result,
@@ -8306,6 +8359,10 @@ static bool EvaluateBuiltinConstantPForLValue(const APValue &LV) {
     if (!isa<StringLiteral>(E))
       return false;
     return LV.getLValueOffset().isZero();
+  } else if (Base.is<TypeInfoLValue>()) {
+    // Surprisingly, GCC considers __builtin_constant_p(&typeid(int)) to
+    // evaluate to true.
+    return true;
   } else {
     // Any other base is not constant enough for GCC.
     return false;
@@ -8370,6 +8427,8 @@ static QualType getObjectType(APValue::LValueBase B) {
   } else if (const Expr *E = B.get<const Expr*>()) {
     if (isa<CompoundLiteralExpr>(E))
       return E->getType();
+  } else if (B.is<TypeInfoLValue>()) {
+    return B.getTypeInfoType();
   }
 
   return QualType();
@@ -11899,7 +11958,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
 
   case Expr::SizeOfPackExprClass:
   case Expr::GNUNullExprClass:
-    // GCC considers the GNU __null value to be an integral constant expression.
+  case Expr::SourceLocExprClass:
     return NoDiag();
 
   case Expr::SubstNonTypeTemplateParmExprClass:

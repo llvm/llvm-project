@@ -160,6 +160,9 @@ def note_constexpr_access_static_temporary : Note<
   "dynamic_cast of}0 temporary "
   "is not allowed in a constant expression outside the expression that "
   "created the temporary">;
+def note_constexpr_access_unreadable_object : Note<
+  "%select{read of|assignment to|increment of|decrement of|member call on|"
+  "dynamic_cast of}0 object '%1' whose value is not known">;
 def note_constexpr_modify_global : Note<
   "a constant expression cannot modify an object that is visible outside "
   "that expression">;

@@ -1553,7 +1553,7 @@ void Parser::AnnotateScopeToken(CXXScopeSpec &SS, bool IsNewAnnotation) {
   if (PP.isBacktrackEnabled())
     PP.RevertCachedTokens(1);
   else
-    PP.EnterToken(Tok);
+    PP.EnterToken(Tok, /*IsReinject=*/true);
   Tok.setKind(tok::annot_cxxscope);
   Tok.setAnnotationValue(Actions.SaveNestedNameSpecifierAnnotation(SS));
   Tok.setAnnotationRange(SS.getRange());
@@ -1772,7 +1772,7 @@ bool Parser::TryAnnotateTypeOrScopeToken() {
       Token TypedefToken;
       PP.Lex(TypedefToken);
       bool Result = TryAnnotateTypeOrScopeToken();
-      PP.EnterToken(Tok);
+      PP.EnterToken(Tok, /*IsReinject=*/true);
       Tok = TypedefToken;
       if (!Result)
         Diag(Tok.getLocation(), diag::warn_expected_qualified_after_typename);

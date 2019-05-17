@@ -69,9 +69,9 @@ static void FixDigraph(Parser &P, Preprocessor &PP, Token &DigraphToken,
   DigraphToken.setLength(1);
 
   // Push new tokens back to token stream.
-  PP.EnterToken(ColonToken);
+  PP.EnterToken(ColonToken, /*IsReinject*/ true);
   if (!AtDigraph)
-    PP.EnterToken(DigraphToken);
+    PP.EnterToken(DigraphToken, /*IsReinject*/ true);
 }
 
 // Check for '<::' which should be '< ::' instead of '[:' when following
@@ -434,7 +434,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
           Token ColonColon;
           PP.Lex(ColonColon);
           ColonColon.setKind(tok::colon);
-          PP.EnterToken(ColonColon);
+          PP.EnterToken(ColonColon, /*IsReinject*/ true);
           break;
         }
       }
@@ -460,8 +460,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
         // mistyped '::' instead of ':'.
         if (CorrectionFlagPtr && IsCorrectedToColon) {
           ColonColon.setKind(tok::colon);
-          PP.EnterToken(Tok);
-          PP.EnterToken(ColonColon);
+          PP.EnterToken(Tok, /*IsReinject*/ true);
+          PP.EnterToken(ColonColon, /*IsReinject*/ true);
           Tok = Identifier;
           break;
         }
@@ -3300,7 +3300,8 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
   Toks.push_back(Tok);
   // Re-enter the stored parenthesized tokens into the token stream, so we may
   // parse them now.
-  PP.EnterTokenStream(Toks, true /*DisableMacroExpansion*/);
+  PP.EnterTokenStream(Toks, /*DisableMacroExpansion*/ true,
+                      /*IsReinject*/ true);
   // Drop the current token and bring the first cached one. It's the same token
   // as when we entered this function.
   ConsumeAnyToken();

@@ -97,3 +97,10 @@ void tooSmallBuf() {
   copy5CharsIntoStrict(small.buf); // expected-error{{no matching function for call}}
 }
 }
+
+namespace InvalidBase {
+  // Ensure this doesn't crash.
+  struct S { const char *name; };
+  S invalid_base();
+  constexpr long bos_name = __builtin_object_size(invalid_base().name, 1);
+}

@@ -14,6 +14,9 @@ add_clang_subdirectory(IndexStore)
 
 add_clang_subdirectory(clang-rename)
 add_clang_subdirectory(clang-refactor)
+if(UNIX)
+  add_clang_subdirectory(clang-shlib)
+endif()
 
 if(CLANG_ENABLE_ARCMT)
   add_clang_subdirectory(arcmt-test)

@@ -24,7 +24,8 @@ llvm_canonicalize_cmake_booleans(
   CLANG_ENABLE_STATIC_ANALYZER
   ENABLE_BACKTRACES
   HAVE_LIBZ
-  LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+  LLVM_ENABLE_PER_TARGET_RUNTIME_DIR
+  LLVM_ENABLE_PLUGINS)
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
@@ -108,6 +109,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-as
     llvm-bcanalyzer
     llvm-cat
+    llvm-cxxfilt
     llvm-dis
     llvm-lto2
     llvm-modextract
