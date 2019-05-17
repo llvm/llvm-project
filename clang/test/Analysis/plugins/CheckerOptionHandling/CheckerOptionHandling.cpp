@@ -15,7 +15,7 @@ void registerMyChecker(CheckerManager &Mgr) {
   MyChecker *Checker = Mgr.registerChecker<MyChecker>();
   llvm::outs() << "Example option is set to "
                << (Mgr.getAnalyzerOptions().getCheckerBooleanOption(
-                       Checker, "ExampleOption", false)
+                       Checker, "ExampleOption")
                        ? "true"
                        : "false")
                << '\n';

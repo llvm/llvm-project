@@ -15,6 +15,27 @@
 // CHECK-NON-EXISTENT-CHECKER-SAME: are associated with 'RetainOneTwoThree'
 
 
+// RUN: %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=debug.ConfigDumper \
+// RUN:   -analyzer-checker=debug.AnalysisOrder \
+// RUN:   -analyzer-config-compatibility-mode=true \
+// RUN:   -analyzer-config debug.AnalysisOrder:*=yesplease \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-CORRECTED-BOOL-VALUE
+
+// CHECK-CORRECTED-BOOL-VALUE: debug.AnalysisOrder:* = false
+//
+// RUN: %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=debug.ConfigDumper \
+// RUN:   -analyzer-checker=optin.performance.Padding \
+// RUN:   -analyzer-config-compatibility-mode=true \
+// RUN:   -analyzer-config optin.performance.Padding:AllowedPad=surpriseme \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-CORRECTED-INT-VALUE
+
+// CHECK-CORRECTED-INT-VALUE: optin.performance.Padding:AllowedPad = 24
+
+
 // Every other error should be avoidable in compatiblity mode.
 
 
