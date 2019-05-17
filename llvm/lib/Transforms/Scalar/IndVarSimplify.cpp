@@ -2168,19 +2168,37 @@ static bool AlmostDeadIV(PHINode *Phi, BasicBlock *LatchBlock, Value *Cond) {
   return true;
 }
 
-/// Find an affine IV in canonical form.
+/// Return true if the given phi is a "counter" in L.  A counter is an
+/// add recurance (of integer or pointer type) with an arbitrary start, and a
+/// step of 1.  Note that L must have exactly one latch.
+static bool isLoopCounter(PHINode* Phi, Loop *L,
+                          ScalarEvolution *SE, DominatorTree *DT) {
+  assert(Phi->getParent() == L->getHeader());
+  assert(L->getLoopLatch());
+  
+  if (!SE->isSCEVable(Phi->getType()))
+    return false;
+
+  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Phi));
+  if (!AR || AR->getLoop() != L || !AR->isAffine())
+    return false;
+
+  const SCEV *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*SE));
+  if (!Step || !Step->isOne())
+    return false;
+
+  int LatchIdx = Phi->getBasicBlockIndex(L->getLoopLatch());
+  Value *IncV = Phi->getIncomingValue(LatchIdx);
+  return (getLoopPhiForCounter(IncV, L, DT) == Phi);
+}
+
+/// Search the loop header for a loop counter (anadd rec w/step of one)
+/// suitable for use by LFTR.  If multiple counters are available, select the
+/// "best" one based profitable heuristics.
 ///
 /// BECount may be an i8* pointer type. The pointer difference is already
 /// valid count without scaling the address stride, so it remains a pointer
 /// expression as far as SCEV is concerned.
-///
-/// Currently only valid for LFTR. See the comments on hasConcreteDef below.
-///
-/// FIXME: Accept -1 stride and set IVLimit = IVInit - BECount
-///
-/// FIXME: Accept non-unit stride as long as SCEV can reduce BECount * Stride.
-/// This is difficult in general for SCEV because of potential overflow. But we
-/// could at least handle constant BECounts.
 static PHINode *FindLoopCounter(Loop *L, const SCEV *BECount,
                                 ScalarEvolution *SE, DominatorTree *DT) {
   uint64_t BCWidth = SE->getTypeSizeInBits(BECount->getType());
@@ -2197,31 +2215,20 @@ static PHINode *FindLoopCounter(Loop *L, const SCEV *BECount,
 
   for (BasicBlock::iterator I = L->getHeader()->begin(); isa<PHINode>(I); ++I) {
     PHINode *Phi = cast<PHINode>(I);
-    if (!SE->isSCEVable(Phi->getType()))
+    if (!isLoopCounter(Phi, L, SE, DT))
       continue;
 
     // Avoid comparing an integer IV against a pointer Limit.
     if (BECount->getType()->isPointerTy() && !Phi->getType()->isPointerTy())
       continue;
 
-    const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Phi));
-    if (!AR || AR->getLoop() != L || !AR->isAffine())
-      continue;
-
+    const auto *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Phi));
+    
     // AR may be a pointer type, while BECount is an integer type.
     // AR may be wider than BECount. With eq/ne tests overflow is immaterial.
     // AR may not be a narrower type, or we may never exit.
     uint64_t PhiWidth = SE->getTypeSizeInBits(AR->getType());
     if (PhiWidth < BCWidth || !DL.isLegalInteger(PhiWidth))
-      continue;
-
-    const SCEV *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*SE));
-    if (!Step || !Step->isOne())
-      continue;
-
-    int LatchIdx = Phi->getBasicBlockIndex(LatchBlock);
-    Value *IncV = Phi->getIncomingValue(LatchIdx);
-    if (getLoopPhiForCounter(IncV, L, DT) != Phi)
       continue;
 
     // Avoid reusing a potentially undef value to compute other values that may
@@ -2263,7 +2270,7 @@ static PHINode *FindLoopCounter(Loop *L, const SCEV *BECount,
 }
 
 /// Insert an IR expression which computes the value held by the IV IndVar
-/// (which must be an simple addrec w/unit stride) after the backedge of loop L
+/// (which must be an loop counter w/unit stride) after the backedge of loop L
 /// is taken IVCount times.  
 static Value *genLoopLimit(PHINode *IndVar, const SCEV *IVCount, Loop *L,
                            SCEVExpander &Rewriter, ScalarEvolution *SE) {
