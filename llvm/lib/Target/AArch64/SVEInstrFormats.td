@@ -1722,6 +1722,12 @@ multiclass sve2_int_mla<bit S, string asm> {
   def _D : sve2_int_mla<0b11, { 0b1110, S }, asm, ZPR64, ZPR64>;
 }
 
+multiclass sve2_int_mla_long<bits<5> opc, string asm> {
+  def _H : sve2_int_mla<0b01, opc, asm, ZPR16, ZPR8>;
+  def _S : sve2_int_mla<0b10, opc, asm, ZPR32, ZPR16>;
+  def _D : sve2_int_mla<0b11, opc, asm, ZPR64, ZPR32>;
+}
+
 //===----------------------------------------------------------------------===//
 // SVE2 Integer Multiply-Add - Indexed Group
 //===----------------------------------------------------------------------===//
@@ -1764,6 +1770,29 @@ multiclass sve2_int_mla_by_indexed_elem<bits<2> opc, bit S, string asm> {
     bit iop;
     let Inst{20} = iop;
     let Inst{19-16} = Zm;
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// SVE2 Integer Multiply-Add Long - Indexed Group
+//===----------------------------------------------------------------------===//
+
+multiclass sve2_int_mla_long_by_indexed_elem<bits<4> opc, string asm> {
+  def _S : sve2_int_mla_by_indexed_elem<0b10, { opc{3}, 0b0, opc{2-1}, ?, opc{0} },
+                                        asm, ZPR32, ZPR16, ZPR3b16, VectorIndexH> {
+    bits<3> Zm;
+    bits<3> iop;
+    let Inst{20-19} = iop{2-1};
+    let Inst{18-16} = Zm;
+    let Inst{11} = iop{0};
+  }
+  def _D : sve2_int_mla_by_indexed_elem<0b11, { opc{3}, 0b0, opc{2-1}, ?, opc{0} },
+                                        asm, ZPR64, ZPR32, ZPR4b32, VectorIndexS> {
+    bits<4> Zm;
+    bits<2> iop;
+    let Inst{20} = iop{1};
+    let Inst{19-16} = Zm;
+    let Inst{11} = iop{0};
   }
 }
 
