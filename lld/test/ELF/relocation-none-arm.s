@@ -8,6 +8,13 @@
 # CHECK: .data
 # CHECK: There are no relocations in this file.
 
+# RUN: ld.lld -r %t.o -o %t
+# RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
+
+# RELOC:      Section ({{.*}}) .rel.text {
+# RELOC-NEXT:   0x0 R_ARM_NONE .data 0x0
+# RELOC-NEXT: }
+
 .globl _start
 _start:
   nop
