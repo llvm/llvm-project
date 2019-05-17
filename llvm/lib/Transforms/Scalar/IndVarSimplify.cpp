@@ -2263,8 +2263,8 @@ static PHINode *FindLoopCounter(Loop *L, const SCEV *BECount,
 /// is taken IVCount times.  
 static Value *genLoopLimit(PHINode *IndVar, const SCEV *IVCount, Loop *L,
                            SCEVExpander &Rewriter, ScalarEvolution *SE) {
-  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(IndVar));
-  assert(AR && AR->getLoop() == L && AR->isAffine() && "bad loop counter");
+  assert(isLoopCounter(IndVar, L, SE));
+  const SCEVAddRecExpr *AR = cast<SCEVAddRecExpr>(SE->getSCEV(IndVar));
   const SCEV *IVInit = AR->getStart();
 
   // IVInit may be a pointer while IVCount is an integer when FindLoopCounter
@@ -2311,13 +2311,13 @@ static Value *genLoopLimit(PHINode *IndVar, const SCEV *IVCount, Loop *L,
     // IVInit integer and IVCount pointer would only occur if a canonical IV
     // were generated on top of case #2, which is not expected.
 
+    assert(AR->getStepRecurrence(*SE)->isOne() && "only handles unit stride");
     const SCEV *IVLimit = nullptr;
     // For unit stride, IVCount = Start + BECount with 2's complement overflow.
     // For non-zero Start, compute IVCount here.
     if (AR->getStart()->isZero())
       IVLimit = IVCount;
     else {
-      assert(AR->getStepRecurrence(*SE)->isOne() && "only handles unit stride");
       const SCEV *IVInit = AR->getStart();
 
       // For integer IVs, truncate the IV before computing IVInit + BECount.
