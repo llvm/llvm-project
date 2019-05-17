@@ -202,3 +202,30 @@ TEST_F(GISelMITest, BuildXor) {
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
+
+TEST_F(GISelMITest, BuildBitCounts) {
+  if (!TM)
+    return;
+
+  LLT S32 = LLT::scalar(32);
+  SmallVector<unsigned, 4> Copies;
+  collectCopies(Copies, MF);
+
+  B.buildCTPOP(S32, Copies[0]);
+  B.buildCTLZ(S32, Copies[0]);
+  B.buildCTLZ_ZERO_UNDEF(S32, Copies[1]);
+  B.buildCTTZ(S32, Copies[0]);
+  B.buildCTTZ_ZERO_UNDEF(S32, Copies[1]);
+
+  auto CheckStr = R"(
+  ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK: [[CTPOP:%[0-9]+]]:_(s32) = G_CTPOP [[COPY0]]:_
+  ; CHECK: [[CTLZ0:%[0-9]+]]:_(s32) = G_CTLZ [[COPY0]]:_
+  ; CHECK: [[CTLZ_UNDEF0:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[COPY1]]:_
+  ; CHECK: [[CTTZ:%[0-9]+]]:_(s32) = G_CTTZ [[COPY0]]:_
+  ; CHECK: [[CTTZ_UNDEF0:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[COPY1]]:_
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}

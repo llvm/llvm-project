@@ -1256,6 +1256,31 @@ public:
     return buildInstr(TargetOpcode::G_XOR, {Dst}, {Src0, NegOne});
   }
 
+  /// Build and insert \p Res = G_CTPOP \p Op0, \p Src0
+  MachineInstrBuilder buildCTPOP(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTPOP, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_CTLZ \p Op0, \p Src0
+  MachineInstrBuilder buildCTLZ(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTLZ, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_CTLZ_ZERO_UNDEF \p Op0, \p Src0
+  MachineInstrBuilder buildCTLZ_ZERO_UNDEF(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_CTTZ \p Op0, \p Src0
+  MachineInstrBuilder buildCTTZ(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTTZ, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_CTTZ_ZERO_UNDEF \p Op0, \p Src0
+  MachineInstrBuilder buildCTTZ_ZERO_UNDEF(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTTZ_ZERO_UNDEF, {Dst}, {Src0});
+  }
+
   /// Build and insert \p Res = G_FADD \p Op0, \p Op1
   MachineInstrBuilder buildFAdd(const DstOp &Dst, const SrcOp &Src0,
                                 const SrcOp &Src1) {
