@@ -6376,7 +6376,8 @@ EnableIfAttr *Sema::CheckEnableIf(FunctionDecl *Function, ArrayRef<Expr *> Args,
     APValue Result;
     // FIXME: This doesn't consider value-dependent cases, because doing so is
     // very difficult. Ideally, we should handle them more gracefully.
-    if (!EIA->getCond()->EvaluateWithSubstitution(
+    if (EIA->getCond()->isValueDependent() ||
+        !EIA->getCond()->EvaluateWithSubstitution(
             Result, Context, Function, llvm::makeArrayRef(ConvertedArgs)))
       return EIA;
 
@@ -9562,7 +9563,8 @@ static bool isFunctionAlwaysEnabled(const ASTContext &Ctx,
                                     const FunctionDecl *FD) {
   for (auto *EnableIf : FD->specific_attrs<EnableIfAttr>()) {
     bool AlwaysTrue;
-    if (!EnableIf->getCond()->EvaluateAsBooleanCondition(AlwaysTrue, Ctx))
+    if (EnableIf->getCond()->isValueDependent() ||
+        !EnableIf->getCond()->EvaluateAsBooleanCondition(AlwaysTrue, Ctx))
       return false;
     if (!AlwaysTrue)
       return false;
