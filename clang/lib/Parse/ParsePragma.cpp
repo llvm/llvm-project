@@ -117,7 +117,8 @@ struct PragmaSTDC_FENV_ACCESSHandler : public PragmaHandler {
     Toks[0].setAnnotationEndLoc(Tok.getLocation());
     Toks[0].setAnnotationValue(reinterpret_cast<void*>(
                                static_cast<uintptr_t>(OOS)));
-    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
+    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
+                        /*IsReinject=*/false);
   }
 };
 
@@ -739,7 +740,8 @@ void Parser::HandlePragmaMSPragma() {
   // Grab the tokens out of the annotation and enter them into the stream.
   auto TheTokens =
       (std::pair<std::unique_ptr<Token[]>, size_t> *)Tok.getAnnotationValue();
-  PP.EnterTokenStream(std::move(TheTokens->first), TheTokens->second, true);
+  PP.EnterTokenStream(std::move(TheTokens->first), TheTokens->second, true,
+                      /*IsReinject=*/true);
   SourceLocation PragmaLocation = ConsumeAnnotationToken();
   assert(Tok.isAnyIdentifier());
   StringRef PragmaName = Tok.getIdentifierInfo()->getName();
@@ -1111,7 +1113,8 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
     Hint.StateLoc = IdentifierLoc::create(Actions.Context, StateLoc, StateInfo);
   } else {
     // Enter constant expression including eof terminator into token stream.
-    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/false);
+    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/false,
+                        /*IsReinject=*/false);
     ConsumeAnnotationToken();
 
     ExprResult R = ParseConstantExpression();
@@ -1414,7 +1417,8 @@ void Parser::HandlePragmaAttribute() {
     return;
   }
 
-  PP.EnterTokenStream(Info->Tokens, /*DisableMacroExpansion=*/false);
+  PP.EnterTokenStream(Info->Tokens, /*DisableMacroExpansion=*/false,
+                      /*IsReinject=*/false);
   ConsumeAnnotationToken();
 
   ParsedAttributes &Attrs = Info->Attributes;
@@ -1623,8 +1627,9 @@ void PragmaGCCVisibilityHandler::HandlePragma(Preprocessor &PP,
   Toks[0].setLocation(VisLoc);
   Toks[0].setAnnotationEndLoc(EndLoc);
   Toks[0].setAnnotationValue(
-                          const_cast<void*>(static_cast<const void*>(VisType)));
-  PP.EnterTokenStream(std::move(Toks), 1, /*DisableMacroExpansion=*/true);
+      const_cast<void *>(static_cast<const void *>(VisType)));
+  PP.EnterTokenStream(std::move(Toks), 1, /*DisableMacroExpansion=*/true,
+                      /*IsReinject=*/false);
 }
 
 // #pragma pack(...) comes in the following delicious flavors:
@@ -1737,7 +1742,8 @@ void PragmaPackHandler::HandlePragma(Preprocessor &PP,
   Toks[0].setLocation(PackLoc);
   Toks[0].setAnnotationEndLoc(RParenLoc);
   Toks[0].setAnnotationValue(static_cast<void*>(Info));
-  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
+  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
+                      /*IsReinject=*/false);
 }
 
 // #pragma ms_struct on
@@ -1780,7 +1786,8 @@ void PragmaMSStructHandler::HandlePragma(Preprocessor &PP,
   Toks[0].setAnnotationEndLoc(EndLoc);
   Toks[0].setAnnotationValue(reinterpret_cast<void*>(
                              static_cast<uintptr_t>(Kind)));
-  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
+  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
+                      /*IsReinject=*/false);
 }
 
 // #pragma clang section bss="abc" data="" rodata="def" text=""
@@ -1893,7 +1900,8 @@ static void ParseAlignPragma(Preprocessor &PP, Token &FirstTok,
   Toks[0].setAnnotationEndLoc(EndLoc);
   Toks[0].setAnnotationValue(reinterpret_cast<void*>(
                              static_cast<uintptr_t>(Kind)));
-  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
+  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
+                      /*IsReinject=*/false);
 }
 
 void PragmaAlignHandler::HandlePragma(Preprocessor &PP,
@@ -1985,7 +1993,8 @@ void PragmaUnusedHandler::HandlePragma(Preprocessor &PP,
     pragmaUnusedTok.setLocation(UnusedLoc);
     idTok = Identifiers[i];
   }
-  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
+  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
+                      /*IsReinject=*/false);
 }
 
 // #pragma weak identifier
@@ -2034,7 +2043,8 @@ void PragmaWeakHandler::HandlePragma(Preprocessor &PP,
     pragmaUnusedTok.setAnnotationEndLoc(AliasName.getLocation());
     Toks[1] = WeakName;
     Toks[2] = AliasName;
-    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
+    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
+                        /*IsReinject=*/false);
   } else {
     MutableArrayRef<Token> Toks(
         PP.getPreprocessorAllocator().Allocate<Token>(2), 2);
@@ -2044,7 +2054,8 @@ void PragmaWeakHandler::HandlePragma(Preprocessor &PP,
     pragmaUnusedTok.setLocation(WeakLoc);
     pragmaUnusedTok.setAnnotationEndLoc(WeakLoc);
     Toks[1] = WeakName;
-    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
+    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
+                        /*IsReinject=*/false);
   }
 }
 
@@ -2089,7 +2100,8 @@ void PragmaRedefineExtnameHandler::HandlePragma(Preprocessor &PP,
   pragmaRedefTok.setAnnotationEndLoc(AliasName.getLocation());
   Toks[1] = RedefName;
   Toks[2] = AliasName;
-  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
+  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
+                      /*IsReinject=*/false);
 }
 
 
@@ -2109,7 +2121,8 @@ PragmaFPContractHandler::HandlePragma(Preprocessor &PP,
   Toks[0].setAnnotationEndLoc(Tok.getLocation());
   Toks[0].setAnnotationValue(reinterpret_cast<void*>(
                              static_cast<uintptr_t>(OOS)));
-  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
+  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
+                      /*IsReinject=*/false);
 }
 
 void
@@ -2171,7 +2184,8 @@ PragmaOpenCLExtensionHandler::HandlePragma(Preprocessor &PP,
   Toks[0].setLocation(NameLoc);
   Toks[0].setAnnotationValue(static_cast<void*>(Info));
   Toks[0].setAnnotationEndLoc(StateLoc);
-  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
+  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
+                      /*IsReinject=*/false);
 
   if (PP.getPPCallbacks())
     PP.getPPCallbacks()->PragmaOpenCLExtension(NameLoc, Ext,
@@ -2230,7 +2244,7 @@ PragmaOpenMPHandler::HandlePragma(Preprocessor &PP,
   auto Toks = llvm::make_unique<Token[]>(Pragma.size());
   std::copy(Pragma.begin(), Pragma.end(), Toks.get());
   PP.EnterTokenStream(std::move(Toks), Pragma.size(),
-                      /*DisableMacroExpansion=*/false);
+                      /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
 }
 
 /// Handle '#pragma pointers_to_members'
@@ -2328,7 +2342,7 @@ void PragmaMSPointersToMembers::HandlePragma(Preprocessor &PP,
   AnnotTok.setAnnotationEndLoc(EndLoc);
   AnnotTok.setAnnotationValue(
       reinterpret_cast<void *>(static_cast<uintptr_t>(RepresentationMethod)));
-  PP.EnterToken(AnnotTok);
+  PP.EnterToken(AnnotTok, /*IsReinject=*/true);
 }
 
 /// Handle '#pragma vtordisp'
@@ -2421,7 +2435,7 @@ void PragmaMSVtorDisp::HandlePragma(Preprocessor &PP,
   AnnotTok.setAnnotationEndLoc(EndLoc);
   AnnotTok.setAnnotationValue(reinterpret_cast<void *>(
       static_cast<uintptr_t>((Action << 16) | (Value & 0xFFFF))));
-  PP.EnterToken(AnnotTok);
+  PP.EnterToken(AnnotTok, /*IsReinject=*/false);
 }
 
 /// Handle all MS pragmas.  Simply forwards the tokens after inserting
@@ -2452,7 +2466,7 @@ void PragmaMSPragma::HandlePragma(Preprocessor &PP,
       std::pair<std::unique_ptr<Token[]>, size_t>(std::move(TokenArray),
                                                   TokenVector.size());
   AnnotTok.setAnnotationValue(Value);
-  PP.EnterToken(AnnotTok);
+  PP.EnterToken(AnnotTok, /*IsReinject*/ false);
 }
 
 /// Handle the Microsoft \#pragma detect_mismatch extension.
@@ -2736,7 +2750,7 @@ void PragmaFPHandler::HandlePragma(Preprocessor &PP,
   std::copy(TokenList.begin(), TokenList.end(), TokenArray.get());
 
   PP.EnterTokenStream(std::move(TokenArray), TokenList.size(),
-                      /*DisableMacroExpansion=*/false);
+                      /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
 }
 
 void Parser::HandlePragmaFP() {
@@ -2919,7 +2933,7 @@ void PragmaLoopHintHandler::HandlePragma(Preprocessor &PP,
   std::copy(TokenList.begin(), TokenList.end(), TokenArray.get());
 
   PP.EnterTokenStream(std::move(TokenArray), TokenList.size(),
-                      /*DisableMacroExpansion=*/false);
+                      /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
 }
 
 /// Handle the loop unroll optimization pragmas.
@@ -2994,7 +3008,7 @@ void PragmaUnrollHintHandler::HandlePragma(Preprocessor &PP,
   TokenArray[0].setAnnotationEndLoc(PragmaName.getLocation());
   TokenArray[0].setAnnotationValue(static_cast<void *>(Info));
   PP.EnterTokenStream(std::move(TokenArray), 1,
-                      /*DisableMacroExpansion=*/false);
+                      /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
 }
 
 /// Handle the Microsoft \#pragma intrinsic extension.
@@ -3266,5 +3280,5 @@ void PragmaAttributeHandler::HandlePragma(Preprocessor &PP,
   TokenArray[0].setAnnotationEndLoc(FirstToken.getLocation());
   TokenArray[0].setAnnotationValue(static_cast<void *>(Info));
   PP.EnterTokenStream(std::move(TokenArray), 1,
-                      /*DisableMacroExpansion=*/false);
+                      /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
 }

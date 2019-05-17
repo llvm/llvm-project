@@ -154,10 +154,11 @@ void Preprocessor::EnterMacro(Token &Tok, SourceLocation ILEnd,
 /// must be freed.
 ///
 void Preprocessor::EnterTokenStream(const Token *Toks, unsigned NumToks,
-                                    bool DisableMacroExpansion,
-                                    bool OwnsTokens) {
+                                    bool DisableMacroExpansion, bool OwnsTokens,
+                                    bool IsReinject) {
   if (CurLexerKind == CLK_CachingLexer) {
     if (CachedLexPos < CachedTokens.size()) {
+      assert(IsReinject && "new tokens in the middle of cached stream");
       // We're entering tokens into the middle of our cached token stream. We
       // can't represent that, so just insert the tokens into the buffer.
       CachedTokens.insert(CachedTokens.begin() + CachedLexPos,
@@ -170,7 +171,8 @@ void Preprocessor::EnterTokenStream(const Token *Toks, unsigned NumToks,
     // New tokens are at the end of the cached token sequnece; insert the
     // token stream underneath the caching lexer.
     ExitCachingLexMode();
-    EnterTokenStream(Toks, NumToks, DisableMacroExpansion, OwnsTokens);
+    EnterTokenStream(Toks, NumToks, DisableMacroExpansion, OwnsTokens,
+                     IsReinject);
     EnterCachingLexMode();
     return;
   }
@@ -179,10 +181,11 @@ void Preprocessor::EnterTokenStream(const Token *Toks, unsigned NumToks,
   std::unique_ptr<TokenLexer> TokLexer;
   if (NumCachedTokenLexers == 0) {
     TokLexer = llvm::make_unique<TokenLexer>(
-        Toks, NumToks, DisableMacroExpansion, OwnsTokens, *this);
+        Toks, NumToks, DisableMacroExpansion, OwnsTokens, IsReinject, *this);
   } else {
     TokLexer = std::move(TokenLexerCache[--NumCachedTokenLexers]);
-    TokLexer->Init(Toks, NumToks, DisableMacroExpansion, OwnsTokens);
+    TokLexer->Init(Toks, NumToks, DisableMacroExpansion, OwnsTokens,
+                   IsReinject);
   }
 
   // Save our current state.
