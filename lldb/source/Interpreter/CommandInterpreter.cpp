@@ -758,12 +758,12 @@ void CommandInterpreter::LoadCommandDictionary() {
     // command if you wanted to backtrace three frames you would do "bt -c 3"
     // but the intention is to have this emulate the gdb "bt" command and so
     // now "bt 3" is the preferred form, in line with gdb.
-    if (bt_regex_cmd_up->AddRegexCommand("^([[:digit:]]+)\\s*$",
+    if (bt_regex_cmd_up->AddRegexCommand("^([[:digit:]]+)[[:space:]]*$",
                                          "thread backtrace -c %1") &&
-        bt_regex_cmd_up->AddRegexCommand("^-c ([[:digit:]]+)\\s*$",
+        bt_regex_cmd_up->AddRegexCommand("^-c ([[:digit:]]+)[[:space:]]*$",
                                          "thread backtrace -c %1") &&
-        bt_regex_cmd_up->AddRegexCommand("^all\\s*$", "thread backtrace all") &&
-        bt_regex_cmd_up->AddRegexCommand("^\\s*$", "thread backtrace")) {
+        bt_regex_cmd_up->AddRegexCommand("^all[[:space:]]*$", "thread backtrace all") &&
+        bt_regex_cmd_up->AddRegexCommand("^[[:space:]]*$", "thread backtrace")) {
       CommandObjectSP command_sp(bt_regex_cmd_up.release());
       m_command_dict[command_sp->GetCommandName()] = command_sp;
     }
