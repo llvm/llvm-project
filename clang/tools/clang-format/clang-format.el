@@ -45,14 +45,14 @@ A string containing the name or the full path of the executable."
   :type '(file :must-match t)
   :risky t)
 
-(defcustom clang-format-style "file"
+(defcustom clang-format-style nil
   "Style argument to pass to clang-format.
 
 By default clang-format will load the style configuration from
 a file named .clang-format located in one of the parent directories
 of the buffer."
   :group 'clang-format
-  :type 'string
+  :type '(choice (string) (const nil))
   :safe #'stringp)
 (make-variable-buffer-local 'clang-format-style)
 
@@ -160,7 +160,7 @@ uses the function `buffer-file-name'."
                                ;; https://bugs.llvm.org/show_bug.cgi?id=34667
                                ,@(and assume-file-name
                                       (list "-assume-filename" assume-file-name))
-                               "-style" ,style
+                               ,@(and style (list "-style" style))
                                "-offset" ,(number-to-string file-start)
                                "-length" ,(number-to-string (- file-end file-start))
                                "-cursor" ,(number-to-string cursor))))

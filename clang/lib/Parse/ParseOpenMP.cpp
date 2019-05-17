@@ -747,8 +747,9 @@ static bool parseDeclareSimdClauses(
 Parser::DeclGroupPtrTy
 Parser::ParseOMPDeclareSimdClauses(Parser::DeclGroupPtrTy Ptr,
                                    CachedTokens &Toks, SourceLocation Loc) {
-  PP.EnterToken(Tok);
-  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
+  PP.EnterToken(Tok, /*IsReinject*/ true);
+  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
+                      /*IsReinject*/ true);
   // Consume the previously pushed token.
   ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
 
@@ -1319,7 +1320,7 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
       FlushHasClause = true;
       // Push copy of the current token back to stream to properly parse
       // pseudo-clause OMPFlushClause.
-      PP.EnterToken(Tok);
+      PP.EnterToken(Tok, /*IsReinject*/ true);
     }
     LLVM_FALLTHROUGH;
   case OMPD_taskyield:

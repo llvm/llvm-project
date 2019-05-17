@@ -34,8 +34,13 @@ void TypeInfoLValue::print(llvm::raw_ostream &Out,
 
 static_assert(
     1 << llvm::PointerLikeTypeTraits<TypeInfoLValue>::NumLowBitsAvailable <=
-        alignof(const Type *),
+        alignof(Type),
     "Type is insufficiently aligned");
+
+APValue::LValueBase::LValueBase(const ValueDecl *P, unsigned I, unsigned V)
+    : Ptr(P), Local{I, V} {}
+APValue::LValueBase::LValueBase(const Expr *P, unsigned I, unsigned V)
+    : Ptr(P), Local{I, V} {}
 
 APValue::LValueBase APValue::LValueBase::getTypeInfo(TypeInfoLValue LV,
                                                      QualType TypeInfo) {
@@ -95,17 +100,13 @@ APValue::LValueBase::operator bool () const {
 clang::APValue::LValueBase
 llvm::DenseMapInfo<clang::APValue::LValueBase>::getEmptyKey() {
   return clang::APValue::LValueBase(
-      DenseMapInfo<clang::APValue::LValueBase::PtrTy>::getEmptyKey(),
-      DenseMapInfo<unsigned>::getEmptyKey(),
-      DenseMapInfo<unsigned>::getEmptyKey());
+      DenseMapInfo<const ValueDecl*>::getEmptyKey());
 }
 
 clang::APValue::LValueBase
 llvm::DenseMapInfo<clang::APValue::LValueBase>::getTombstoneKey() {
   return clang::APValue::LValueBase(
-      DenseMapInfo<clang::APValue::LValueBase::PtrTy>::getTombstoneKey(),
-      DenseMapInfo<unsigned>::getTombstoneKey(),
-      DenseMapInfo<unsigned>::getTombstoneKey());
+      DenseMapInfo<const ValueDecl*>::getTombstoneKey());
 }
 
 namespace clang {

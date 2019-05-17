@@ -189,7 +189,8 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
       std::copy(Tokens.begin() + 1, Tokens.end(), Toks.get());
       Toks[Tokens.size() - 1] = Tok;
       Self.EnterTokenStream(std::move(Toks), Tokens.size(),
-                            /*DisableMacroExpansion*/ true);
+                            /*DisableMacroExpansion*/ true,
+                            /*IsReinject*/ true);
 
       // ... and return the _Pragma token unchanged.
       Tok = *Tokens.begin();
@@ -366,7 +367,8 @@ void Preprocessor::HandleMicrosoft__pragma(Token &Tok) {
   std::copy(PragmaToks.begin(), PragmaToks.end(), TokArray);
 
   // Push the tokens onto the stack.
-  EnterTokenStream(TokArray, PragmaToks.size(), true, true);
+  EnterTokenStream(TokArray, PragmaToks.size(), true, true,
+                   /*IsReinject*/ false);
 
   // With everything set up, lex this as a #pragma directive.
   HandlePragmaDirective(PragmaLoc, PIK___pragma);
@@ -1028,7 +1030,7 @@ struct PragmaDebugHandler : public PragmaHandler {
       Crasher.startToken();
       Crasher.setKind(tok::annot_pragma_parser_crash);
       Crasher.setAnnotationRange(SourceRange(Tok.getLocation()));
-      PP.EnterToken(Crasher);
+      PP.EnterToken(Crasher, /*IsReinject*/false);
     } else if (II->isStr("dump")) {
       Token Identifier;
       PP.LexUnexpandedToken(Identifier);
@@ -1040,7 +1042,7 @@ struct PragmaDebugHandler : public PragmaHandler {
             SourceRange(Tok.getLocation(), Identifier.getLocation()));
         DumpAnnot.setAnnotationValue(DumpII);
         PP.DiscardUntilEndOfDirective();
-        PP.EnterToken(DumpAnnot);
+        PP.EnterToken(DumpAnnot, /*IsReinject*/false);
       } else {
         PP.Diag(Identifier, diag::warn_pragma_debug_missing_argument)
             << II->getName();
@@ -1123,7 +1125,8 @@ struct PragmaDebugHandler : public PragmaHandler {
     Toks[0].setKind(tok::annot_pragma_captured);
     Toks[0].setLocation(NameLoc);
 
-    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
+    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
+                        /*IsReinject=*/false);
   }
 
 // Disable MSVC warning about runtime stack overflow.

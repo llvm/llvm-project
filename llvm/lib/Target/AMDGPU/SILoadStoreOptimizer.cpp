@@ -281,6 +281,7 @@ static bool addToListsIfDependent(MachineInstr &MI, DenseSet<unsigned> &RegDefs,
     // registers are in SSA form.
     if (Use.isReg() &&
         ((Use.readsReg() && RegDefs.count(Use.getReg())) ||
+         (Use.isDef() && RegDefs.count(Use.getReg())) ||
          (Use.isDef() && TargetRegisterInfo::isPhysicalRegister(Use.getReg()) &&
           PhysRegUses.count(Use.getReg())))) {
       Insts.push_back(&MI);

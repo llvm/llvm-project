@@ -678,7 +678,8 @@ struct UnknownPragmaHandler : public PragmaHandler {
       auto Toks = llvm::make_unique<Token[]>(1);
       Toks[0] = PragmaTok;
       PP.EnterTokenStream(std::move(Toks), /*NumToks=*/1,
-                          /*DisableMacroExpansion=*/false);
+                          /*DisableMacroExpansion=*/false,
+                          /*IsReinject=*/false);
       PP.Lex(PragmaTok);
     }
     Token PrevToken;

@@ -303,7 +303,7 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
     // We can't do this before consuming the comma, because
     // isNotExpressionStart() looks at the token stream.
     if (OpToken.is(tok::comma) && isNotExpressionStart()) {
-      PP.EnterToken(Tok);
+      PP.EnterToken(Tok, /*IsReinject*/true);
       Tok = OpToken;
       return LHS;
     }
@@ -313,7 +313,7 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
     if (isFoldOperator(NextTokPrec) && Tok.is(tok::ellipsis)) {
       // FIXME: We can't check this via lookahead before we consume the token
       // because that tickles a lexer bug.
-      PP.EnterToken(Tok);
+      PP.EnterToken(Tok, /*IsReinject*/true);
       Tok = OpToken;
       return LHS;
     }
@@ -326,7 +326,7 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
     if (getLangOpts().ObjC && getLangOpts().CPlusPlus &&
         Tok.isOneOf(tok::colon, tok::r_square) &&
         OpToken.getIdentifierInfo() != nullptr) {
-      PP.EnterToken(Tok);
+      PP.EnterToken(Tok, /*IsReinject*/true);
       Tok = OpToken;
       return LHS;
     }

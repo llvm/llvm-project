@@ -330,6 +330,11 @@ Builtin Macros
 ``__BASE_FILE__``
   Defined to a string that contains the name of the main input file passed to
   Clang.
+  
+``__FILE_NAME__``
+  Clang-specific extension that functions similar to ``__FILE__`` but only
+  renders the last path component (the filename) instead of an invocation
+  dependent full path to that file. 
 
 ``__COUNTER__``
   Defined to an integer value that starts at zero and is incremented each time
