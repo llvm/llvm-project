@@ -34,7 +34,7 @@ void TypeInfoLValue::print(llvm::raw_ostream &Out,
 
 static_assert(
     1 << llvm::PointerLikeTypeTraits<TypeInfoLValue>::NumLowBitsAvailable <=
-        alignof(const Type *),
+        alignof(Type),
     "Type is insufficiently aligned");
 
 APValue::LValueBase::LValueBase(const ValueDecl *P, unsigned I, unsigned V)
