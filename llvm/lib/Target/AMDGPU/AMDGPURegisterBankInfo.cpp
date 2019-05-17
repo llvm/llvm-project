@@ -589,21 +589,15 @@ void AMDGPURegisterBankInfo::executeInWaterfallLoop(
             MRI.setRegClass(CurrentLaneOpRegLo, &AMDGPU::SReg_32_XM0RegClass);
             MRI.setRegClass(CurrentLaneOpRegHi, &AMDGPU::SReg_32_XM0RegClass);
 
-            // FIXME: Should be able to just use a subreg index here.
-            auto Unmerge32 = B.buildUnmerge(S32, UnmergePiece);
-
-            MRI.setRegClass(Unmerge32.getReg(0), &AMDGPU::VGPR_32RegClass);
-            MRI.setRegClass(Unmerge32.getReg(1), &AMDGPU::VGPR_32RegClass);
-
             // Read the next variant <- also loop target.
             BuildMI(*LoopBB, I, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
                     CurrentLaneOpRegLo)
-                .addReg(Unmerge32.getReg(0));
+              .addReg(UnmergePiece, 0, AMDGPU::sub0);
 
             // Read the next variant <- also loop target.
             BuildMI(*LoopBB, I, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
                     CurrentLaneOpRegHi)
-                .addReg(Unmerge32.getReg(1));
+              .addReg(UnmergePiece, 0, AMDGPU::sub1);
 
             CurrentLaneOpReg =
                 B.buildMerge(LLT::scalar(64),
