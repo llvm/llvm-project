@@ -158,7 +158,7 @@ public:
 
   size_t get_count() const { return Range.size(); }
 
-  size_t get_size() const { return impl->get_size(); }
+  size_t get_size() const { return get_count() * sizeof(T); }
 
   AllocatorT get_allocator() const { return impl->get_allocator(); }
 

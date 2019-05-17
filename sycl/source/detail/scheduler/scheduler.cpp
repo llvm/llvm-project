@@ -50,24 +50,31 @@ void Scheduler::waitForRecordToFinish(GraphBuilder::MemObjRecord *Record) {
 
 EventImplPtr Scheduler::addCG(std::unique_ptr<detail::CG> CommandGroup,
                               QueueImplPtr Queue) {
-  std::lock_guard<std::mutex> lock(MGraphLock);
-
   Command *NewCmd = nullptr;
-  switch (CommandGroup->getType()) {
-  case CG::UPDATE_HOST:
-    NewCmd = MGraphBuilder.addCGUpdateHost(std::move(CommandGroup),
-                                           DefaultHostQueue);
-    break;
-  default:
-    NewCmd = MGraphBuilder.addCG(std::move(CommandGroup), std::move(Queue));
+  const bool IsKernel = CommandGroup->getType() == CG::KERNEL;
+  {
+    std::lock_guard<std::mutex> Lock(MGraphLock);
+
+    switch (CommandGroup->getType()) {
+    case CG::UPDATE_HOST:
+      NewCmd = MGraphBuilder.addCGUpdateHost(std::move(CommandGroup),
+                                             DefaultHostQueue);
+      break;
+    default:
+      NewCmd = MGraphBuilder.addCG(std::move(CommandGroup), std::move(Queue));
+    }
+
+    // TODO: Check if lazy mode.
+    Command *FailedCommand = GraphProcessor::enqueueCommand(NewCmd);
+    MGraphBuilder.cleanupCommands();
+    if (FailedCommand)
+      // TODO: Reschedule commands.
+      throw runtime_error("Enqueue process failed.");
   }
 
-  // TODO: Check if lazy mode.
-  Command *FailedCommand = GraphProcessor::enqueueCommand(NewCmd);
-  MGraphBuilder.cleanupCommands();
-  if (FailedCommand)
-    // TODO: Reschedule commands.
-    throw runtime_error("Enqueue process failed.");
+  if (IsKernel)
+    ((ExecCGCommand *)NewCmd)->flushStreams();
+
   return NewCmd->getEvent();
 }
 

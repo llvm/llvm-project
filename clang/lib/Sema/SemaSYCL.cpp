@@ -67,9 +67,6 @@ public:
   /// sampler class.
   static bool isSyclSamplerType(const QualType &Ty);
 
-  /// Checks whether given clang type is the SYCL stream class.
-  static bool isSyclStreamType(const QualType &Ty);
-
   /// Checks whether given clang type is declared in the given hierarchy of
   /// declaration contexts.
   /// \param Ty         the clang type being checked
@@ -814,9 +811,6 @@ static void buildArgTys(ASTContext &Context, CXXRecordDecl *KernelObj,
       assert(SamplerArg && "sampler __init method must have sampler parameter");
 
       CreateAndAddPrmDsc(Fld, SamplerArg->getType());
-    } else if (Util::isSyclStreamType(ArgTy)) {
-      // the parameter is a SYCL stream object
-      llvm_unreachable("streams not supported yet");
     } else if (ArgTy->isStructureOrClassType()) {
       if (!ArgTy->isStandardLayoutType()) {
         const DeclaratorDecl *V =
@@ -917,9 +911,6 @@ static void populateIntHeader(SYCLIntegrationHeader &H, const StringRef Name,
       uint64_t Sz = Ctx.getTypeSizeInChars(SamplerArg->getType()).getQuantity();
       H.addParamDesc(SYCLIntegrationHeader::kind_sampler,
                      static_cast<unsigned>(Sz), static_cast<unsigned>(Offset));
-    } else if (Util::isSyclStreamType(ArgTy)) {
-      // the parameter is a SYCL stream object
-      llvm_unreachable("streams not supported yet");
     } else if (ArgTy->isStructureOrClassType() || ArgTy->isScalarType()) {
       // the parameter is an object of standard layout type or scalar;
       // the check for standard layout is done elsewhere
@@ -1366,14 +1357,6 @@ bool Util::isSyclSamplerType(const QualType &Ty) {
       Util::DeclContextDesc{clang::Decl::Kind::Namespace, "cl"},
       Util::DeclContextDesc{clang::Decl::Kind::Namespace, "sycl"},
       Util::DeclContextDesc{clang::Decl::Kind::CXXRecord, "sampler"}};
-  return matchQualifiedTypeName(Ty, Scopes);
-}
-
-bool Util::isSyclStreamType(const QualType &Ty) {
-  static std::array<DeclContextDesc, 3> Scopes = {
-      Util::DeclContextDesc{clang::Decl::Kind::Namespace, "cl"},
-      Util::DeclContextDesc{clang::Decl::Kind::Namespace, "sycl"},
-      Util::DeclContextDesc{clang::Decl::Kind::CXXRecord, "stream"}};
   return matchQualifiedTypeName(Ty, Scopes);
 }
 

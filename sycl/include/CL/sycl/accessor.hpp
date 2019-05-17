@@ -514,28 +514,28 @@ public:
     return getQualifiedPtr()[LinearIndex];
   }
 
-  template <
-      int Dims = Dimensions,
-      typename = enable_if_t<AccessMode == access::mode::atomic && Dims == 0>>
-  operator atomic<DataT, AS>() const {
+  template <int Dims = Dimensions>
+  operator typename std::enable_if<AccessMode == access::mode::atomic &&
+                                       Dims == 0,
+                                   atomic<DataT, AS>>::type() const {
     const size_t LinearIndex = getLinearIndex(id<AdjustedDim>());
     return atomic<DataT, AS>(
         multi_ptr<DataT, AS>(getQualifiedPtr() + LinearIndex));
   }
 
-  template <
-      int Dims = Dimensions,
-      typename = enable_if_t<AccessMode == access::mode::atomic && (Dims > 0)>>
-  atomic<DataT, AS> operator[](id<Dimensions> Index) const {
+  template <int Dims = Dimensions>
+  typename std::enable_if<AccessMode == access::mode::atomic && (Dims > 0),
+                          atomic<DataT, AS>>::type
+  operator[](id<Dimensions> Index) const {
     const size_t LinearIndex = getLinearIndex(Index);
     return atomic<DataT, AS>(
         multi_ptr<DataT, AS>(getQualifiedPtr() + LinearIndex));
   }
 
-  template <
-      int Dims = Dimensions,
-      typename = enable_if_t<AccessMode == access::mode::atomic && Dims == 1>>
-  atomic<DataT, AS> operator[](size_t Index) const {
+  template <int Dims = Dimensions>
+  typename enable_if_t<AccessMode == access::mode::atomic && Dims == 1,
+                       atomic<DataT, AS>>::type
+  operator[](size_t Index) const {
     const size_t LinearIndex = getLinearIndex(id<AdjustedDim>(Index));
     return atomic<DataT, AS>(
         multi_ptr<DataT, AS>(getQualifiedPtr() + LinearIndex));

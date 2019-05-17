@@ -15,6 +15,7 @@
 #include <CL/sycl/detail/queue_impl.hpp>
 #include <CL/sycl/detail/scheduler/commands.hpp>
 #include <CL/sycl/detail/scheduler/scheduler.hpp>
+#include <CL/sycl/detail/stream_impl.hpp>
 #include <CL/sycl/sampler.hpp>
 
 #include <vector>
@@ -200,6 +201,14 @@ AllocaCommand *ExecCGCommand::getAllocaForReq(Requirement *Req) {
       return Dep.MAllocaCmd;
   }
   throw runtime_error("Alloca for command not found");
+}
+
+void ExecCGCommand::flushStreams() {
+  assert(CommandGroup->getType() == CG::KERNEL && "Expected kernel");
+  for (auto StreamImplPtr :
+       ((CGExecKernel *)MCommandGroup.get())->getStreams()) {
+    StreamImplPtr->flush();
+  }
 }
 
 MemCpyCommandHost::MemCpyCommandHost(Requirement SrcReq,

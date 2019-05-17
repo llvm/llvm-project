@@ -109,6 +109,7 @@ DEFINE_INIT_SIZES(GlobalOffset)
 #endif //__SYCL_DEVICE_ONLY__
 
 class queue_impl;
+class stream_impl;
 template <typename RetType, typename Func, typename Arg>
 static Arg member_ptr_helper(RetType (Func::*)(Arg) const);
 
@@ -163,6 +164,7 @@ class handler {
   // we exit the method they are passed in.
   std::vector<std::vector<char>> MArgsStorage;
   std::vector<detail::AccessorImplPtr> MAccStorage;
+  std::vector<std::shared_ptr<detail::stream_impl>> MStreamStorage;
   std::vector<std::shared_ptr<void>> MSharedPtrStorage;
   // The list of arguments for the kernel.
   std::vector<detail::ArgDesc> MArgs;
@@ -360,8 +362,8 @@ private:
           std::move(MNDRDesc), std::move(MHostKernel), std::move(MSyclKernel),
           std::move(MArgsStorage), std::move(MAccStorage),
           std::move(MSharedPtrStorage), std::move(MRequirements),
-          std::move(MArgs), std::move(MKernelName),
-          std::move(MOSModuleHandle)));
+          std::move(MArgs), std::move(MKernelName), std::move(MOSModuleHandle),
+          std::move(MStreamStorage)));
       break;
     case detail::CG::COPY_ACC_TO_PTR:
     case detail::CG::COPY_PTR_TO_ACC:
@@ -391,6 +393,12 @@ private:
 
     EventRet = detail::createSyclObjFromImpl<event>(Event);
     return EventRet;
+  }
+
+  // Save streams associated with this handler. Streams are then forwarded to
+  // command group and flushed in the scheduler.
+  void addStream(std::shared_ptr<detail::stream_impl> s) {
+    MStreamStorage.push_back(std::move(s));
   }
 
   ~handler() = default;
@@ -485,6 +493,8 @@ private:
   template <typename DataT, int Dims, access::mode AccMode,
             access::target AccTarget, access::placeholder isPlaceholder>
   friend class accessor;
+  // Make stream class friend to be able to keep the list of associated streams
+  friend class stream;
 
 public:
   handler(const handler &) = delete;

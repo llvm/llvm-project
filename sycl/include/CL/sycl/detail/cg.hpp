@@ -220,6 +220,7 @@ public:
   ~HostKernel() = default;
 };
 
+class stream_impl;
 // The base class for all types of command groups.
 class CG {
 public:
@@ -272,6 +273,7 @@ public:
   std::vector<ArgDesc> MArgs;
   std::string MKernelName;
   detail::OSModuleHandle MOSModuleHandle;
+  std::vector<std::shared_ptr<detail::stream_impl>> MStreams;
 
   CGExecKernel(NDRDescT NDRDesc, std::unique_ptr<HostKernelBase> HKernel,
                std::shared_ptr<detail::kernel_impl> SyclKernel,
@@ -280,15 +282,20 @@ public:
                std::vector<std::shared_ptr<void>> SharedPtrStorage,
                std::vector<Requirement *> Requirements,
                std::vector<ArgDesc> Args, std::string KernelName,
-               detail::OSModuleHandle OSModuleHandle)
+               detail::OSModuleHandle OSModuleHandle,
+               std::vector<std::shared_ptr<detail::stream_impl>> Streams)
       : CG(KERNEL, std::move(ArgsStorage), std::move(AccStorage),
            std::move(SharedPtrStorage), std::move(Requirements)),
         MNDRDesc(std::move(NDRDesc)), MHostKernel(std::move(HKernel)),
         MSyclKernel(std::move(SyclKernel)), MArgs(std::move(Args)),
-        MKernelName(std::move(KernelName)), MOSModuleHandle(OSModuleHandle) {}
+        MKernelName(std::move(KernelName)), MOSModuleHandle(OSModuleHandle),
+        MStreams(std::move(Streams)) {}
 
   std::vector<ArgDesc> getArguments() const { return MArgs; }
   std::string getKernelName() const { return MKernelName; }
+  std::vector<std::shared_ptr<detail::stream_impl>> getStreams() const {
+    return MStreams;
+  }
 };
 
 // The class which represents "copy" command group.

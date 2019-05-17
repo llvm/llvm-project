@@ -229,6 +229,8 @@ public:
       : Command(CommandType::RUN_CG, std::move(Queue)),
         MCommandGroup(std::move(CommandGroup)) {}
 
+  void flushStreams();
+
 private:
   // Implementation of enqueueing of ExecCGCommand.
   cl_int enqueueImp() override;
