@@ -1097,6 +1097,18 @@ let Predicates = [HasSVE2] in {
   defm UMLSLB_ZZZ : sve2_int_mla_long<0b10110, "umlslb">;
   defm UMLSLT_ZZZ : sve2_int_mla_long<0b10111, "umlslt">;
 
+  // SVE2 saturating multiply-add long (indexed)
+  defm SQDMLALB_ZZZI : sve2_int_mla_long_by_indexed_elem<0b0100, "sqdmlalb">;
+  defm SQDMLALT_ZZZI : sve2_int_mla_long_by_indexed_elem<0b0101, "sqdmlalt">;
+  defm SQDMLSLB_ZZZI : sve2_int_mla_long_by_indexed_elem<0b0110, "sqdmlslb">;
+  defm SQDMLSLT_ZZZI : sve2_int_mla_long_by_indexed_elem<0b0111, "sqdmlslt">;
+
+  // SVE2 saturating multiply-add long (vectors, unpredicated)
+  defm SQDMLALB_ZZZ : sve2_int_mla_long<0b11000, "sqdmlalb">;
+  defm SQDMLALT_ZZZ : sve2_int_mla_long<0b11001, "sqdmlalt">;
+  defm SQDMLSLB_ZZZ : sve2_int_mla_long<0b11010, "sqdmlslb">;
+  defm SQDMLSLT_ZZZ : sve2_int_mla_long<0b11011, "sqdmlslt">;
+
   // SVE2 integer multiply long
   defm SQDMULLB_ZZZ : sve2_wide_int_arith_long<0b11000, "sqdmullb">;
   defm SQDMULLT_ZZZ : sve2_wide_int_arith_long<0b11001, "sqdmullt">;
