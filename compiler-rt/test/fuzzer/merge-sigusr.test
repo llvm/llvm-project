@@ -21,7 +21,7 @@ RUN: sleep 3
 RUN: pkill -SIGUSR2 -P $PID
 RUN: kill -SIGUSR2 $PID
 RUN: sleep 6
-RUN: cat %t/log | FileCheck %s
+RUN: cat %t/log | FileCheck %s --dump-input=fail
 RUN: grep C2/g %t/MCF
 RUN: grep STARTED %t/MCF
 RUN: tail -n 2 %t/MCF | grep FT

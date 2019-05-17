@@ -9,6 +9,6 @@ RUN: %run %t/ForkSIGUSR -fork=3 -ignore_crashes=1 2>%t/log & export PID=$!
 RUN: sleep 3
 RUN: kill -SIGUSR2 $PID
 RUN: sleep 6
-RUN: cat %t/log | FileCheck %s
+RUN: cat %t/log | FileCheck %s --dump-input=fail
 
 CHECK: libFuzzer: {{.*}}exiting
