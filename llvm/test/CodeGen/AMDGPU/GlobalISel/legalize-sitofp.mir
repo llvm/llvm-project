@@ -122,3 +122,23 @@ body: |
     %1:_(s32) = G_SITOFP %0
     $vgpr0 = COPY %1
 ...
+
+---
+name: test_sitofp_s64_to_s64
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_sitofp_s64_to_s64
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[UV1]](s32)
+    ; CHECK: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[UV]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; CHECK: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[SITOFP]](s64), [[C]](s32)
+    ; CHECK: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[INT]], [[UITOFP]]
+    ; CHECK: $vgpr0_vgpr1 = COPY [[FADD]](s64)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s64) = G_SITOFP %0
+    $vgpr0_vgpr1 = COPY %1
+...

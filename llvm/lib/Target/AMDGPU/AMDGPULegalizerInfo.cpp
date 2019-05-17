@@ -284,6 +284,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
     .legalFor({{S32, S32}, {S64, S32}})
     .lowerFor({{S32, S64}})
+    .customFor({{S64, S64}})
     .scalarize(0);
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
@@ -694,6 +695,10 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
     return legalizeFceil(MI, MRI, MIRBuilder);
   case TargetOpcode::G_INTRINSIC_TRUNC:
     return legalizeIntrinsicTrunc(MI, MRI, MIRBuilder);
+  case TargetOpcode::G_SITOFP:
+    return legalizeITOFP(MI, MRI, MIRBuilder, true);
+  case TargetOpcode::G_UITOFP:
+    return legalizeITOFP(MI, MRI, MIRBuilder, false);
   default:
     return false;
   }
@@ -966,5 +971,37 @@ bool AMDGPULegalizerInfo::legalizeIntrinsicTrunc(
 
   auto Tmp1 = B.buildSelect(S64, ExpLt0, SignBit64, Tmp0);
   B.buildSelect(MI.getOperand(0).getReg(), ExpGt51, Src, Tmp1);
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeITOFP(
+  MachineInstr &MI, MachineRegisterInfo &MRI,
+  MachineIRBuilder &B, bool Signed) const {
+  B.setInstr(MI);
+
+  unsigned Dst = MI.getOperand(0).getReg();
+  unsigned Src = MI.getOperand(1).getReg();
+
+  const LLT S64 = LLT::scalar(64);
+  const LLT S32 = LLT::scalar(32);
+
+  assert(MRI.getType(Src) == S64 && MRI.getType(Dst) == S64);
+
+  auto Unmerge = B.buildUnmerge({S32, S32}, Src);
+
+  auto CvtHi = Signed ?
+    B.buildSITOFP(S64, Unmerge.getReg(1)) :
+    B.buildUITOFP(S64, Unmerge.getReg(1));
+
+  auto CvtLo = B.buildUITOFP(S64, Unmerge.getReg(0));
+
+  auto ThirtyTwo = B.buildConstant(S32, 32);
+  auto LdExp = B.buildIntrinsic(Intrinsic::amdgcn_ldexp, {S64}, false)
+    .addUse(CvtHi.getReg(0))
+    .addUse(ThirtyTwo.getReg(0));
+
+  // TODO: Should this propagate fast-math-flags?
+  B.buildFAdd(Dst, LdExp, CvtLo);
+  MI.eraseFromParent();
   return true;
 }

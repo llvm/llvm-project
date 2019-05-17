@@ -44,6 +44,8 @@ public:
                      MachineIRBuilder &MIRBuilder) const;
   bool legalizeIntrinsicTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &MIRBuilder) const;
+  bool legalizeITOFP(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     MachineIRBuilder &MIRBuilder, bool Signed) const;
 };
 } // End llvm namespace.
 #endif
