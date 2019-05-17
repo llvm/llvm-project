@@ -439,7 +439,13 @@ uint64_t SIMCCodeEmitter::getMachineOpValue(const MCInst &MI,
       Kind = FK_PCRel_4;
     else
       Kind = FK_Data_4;
-    Fixups.push_back(MCFixup::create(4, MO.getExpr(), Kind, MI.getLoc()));
+
+    const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+    uint32_t Offset = Desc.getSize();
+    assert(Offset == 4 || Offset == 8);
+
+    Fixups.push_back(
+      MCFixup::create(Offset, MO.getExpr(), Kind, MI.getLoc()));
   }
 
   // Figure out the operand number, needed for isSrcOperand check
