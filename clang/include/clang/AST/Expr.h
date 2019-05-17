@@ -4207,6 +4207,7 @@ public:
     case Column:
       return false;
     }
+    llvm_unreachable("unknown source location expression kind");
   }
   bool isIntType() const LLVM_READONLY { return !isStringType(); }
 
