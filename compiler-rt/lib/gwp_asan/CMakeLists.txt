@@ -15,6 +15,9 @@ set(GWP_ASAN_HEADERS
 # parts of the C++ standard library.
 set(GWP_ASAN_CFLAGS -fno-rtti -fno-exceptions -nostdinc++)
 
+# Remove -stdlib= which is unused when passing -nostdinc++.
+string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+
 if (COMPILER_RT_HAS_GWP_ASAN)
   foreach(arch ${GWP_ASAN_SUPPORTED_ARCH})
     add_compiler_rt_runtime(
