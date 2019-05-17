@@ -51,6 +51,11 @@ __DEVICE__ long abs(long __n) { return ::labs(__n); }
 __DEVICE__ float abs(float __x) { return ::fabsf(__x); }
 __DEVICE__ double abs(double __x) { return ::fabs(__x); }
 #endif
+// TODO: remove once variat is supported.
+#if defined(_OPENMP) && defined(__cplusplus)
+__DEVICE__ const float abs(const float __x) { return ::fabsf((float)__x); }
+__DEVICE__ const double abs(const double __x) { return ::fabs((double)__x); }
+#endif
 __DEVICE__ float acos(float __x) { return ::acosf(__x); }
 __DEVICE__ float asin(float __x) { return ::asinf(__x); }
 __DEVICE__ float atan(float __x) { return ::atanf(__x); }
