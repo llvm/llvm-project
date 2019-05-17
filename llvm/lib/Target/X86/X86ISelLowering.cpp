@@ -37447,6 +37447,15 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Match (xor X, -1) -> X.
+static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
+  V = peekThroughBitcasts(V);
+  if (V.getOpcode() == ISD::XOR &&
+      ISD::isBuildVectorAllOnes(V.getOperand(1).getNode()))
+    return V.getOperand(0);
+  return SDValue();
+}
+
 /// Try to fold: (and (xor X, -1), Y) -> (andnp X, Y).
 static SDValue combineANDXORWithAllOnesIntoANDNP(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::AND);
@@ -37456,15 +37465,14 @@ static SDValue combineANDXORWithAllOnesIntoANDNP(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   SDValue X, Y;
-  SDValue N0 = peekThroughBitcasts(N->getOperand(0));
-  SDValue N1 = peekThroughBitcasts(N->getOperand(1));
-  if (N0.getOpcode() == ISD::XOR &&
-      ISD::isBuildVectorAllOnes(N0.getOperand(1).getNode())) {
-    X = N0.getOperand(0);
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  if (SDValue Not = IsNOT(N0, DAG)) {
+    X = Not;
     Y = N1;
-  } else if (N1.getOpcode() == ISD::XOR &&
-             ISD::isBuildVectorAllOnes(N1.getOperand(1).getNode())) {
-    X = N1.getOperand(0);
+  } else if (SDValue Not = IsNOT(N1, DAG)) {
+    X = Not;
     Y = N0;
   } else
     return SDValue();
