@@ -8,7 +8,7 @@
 
 define zeroext i1 @opeq1(
 ; X86-LABEL: opeq1:
-; X86:       # %bb.0: # %"entry+land.rhs.i"
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl (%ecx), %edx
@@ -20,7 +20,7 @@ define zeroext i1 @opeq1(
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: opeq1:
-; X64:       # %bb.0: # %"entry+land.rhs.i"
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq (%rdi), %rax
 ; X64-NEXT:    cmpq (%rsi), %rax
 ; X64-NEXT:    sete %al

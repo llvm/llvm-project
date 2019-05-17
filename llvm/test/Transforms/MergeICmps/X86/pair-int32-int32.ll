@@ -6,16 +6,17 @@
 
 define zeroext i1 @opeq1(
 ; X86-LABEL: @opeq1(
-; X86-NEXT:  "entry+land.rhs.i":
-; X86-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[S:%.*]], %S* [[A:%.*]], i64 0, i32 0
-; X86-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[S]], %S* [[B:%.*]], i64 0, i32 0
-; X86-NEXT:    [[CSTR:%.*]] = bitcast i32* [[TMP0]] to i8*
-; X86-NEXT:    [[CSTR1:%.*]] = bitcast i32* [[TMP1]] to i8*
+; X86-NEXT:  entry:
+; X86-NEXT:    [[FIRST_I:%.*]] = getelementptr inbounds [[S:%.*]], %S* [[A:%.*]], i64 0, i32 0
+; X86-NEXT:    [[FIRST1_I:%.*]] = getelementptr inbounds [[S]], %S* [[B:%.*]], i64 0, i32 0
+; X86-NEXT:    [[CSTR:%.*]] = bitcast i32* [[FIRST_I]] to i8*
+; X86-NEXT:    [[CSTR1:%.*]] = bitcast i32* [[FIRST1_I]] to i8*
 ; X86-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* [[CSTR]], i8* [[CSTR1]], i64 8)
-; X86-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[MEMCMP]], 0
+; X86-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; X86-NEXT:    br label [[OPEQ1_EXIT:%.*]]
 ; X86:       opeq1.exit:
-; X86-NEXT:    ret i1 [[TMP2]]
+; X86-NEXT:    [[TMP1:%.*]] = phi i1 [ [[TMP0]], [[ENTRY:%.*]] ]
+; X86-NEXT:    ret i1 [[TMP1]]
 ;
 ; X86-NOBUILTIN-LABEL: @opeq1(
 ; X86-NOBUILTIN-NEXT:  entry:
@@ -66,15 +67,17 @@ opeq1.exit:
 ; Same as above, but the two blocks are in inverse order.
 define zeroext i1 @opeq1_inverse(
 ; X86-LABEL: @opeq1_inverse(
-; X86-NEXT:  "land.rhs.i+entry":
-; X86-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[S:%.*]], %S* [[A:%.*]], i64 0, i32 0
-; X86-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[S]], %S* [[B:%.*]], i64 0, i32 0
-; X86-NEXT:    [[CSTR:%.*]] = bitcast i32* [[TMP0]] to i8*
-; X86-NEXT:    [[CSTR1:%.*]] = bitcast i32* [[TMP1]] to i8*
+; X86-NEXT:    br label [[LAND_RHS_I:%.*]]
+; X86:       land.rhs.i:
+; X86-NEXT:    [[SECOND_I:%.*]] = getelementptr inbounds [[S:%.*]], %S* [[A:%.*]], i64 0, i32 0
+; X86-NEXT:    [[SECOND2_I:%.*]] = getelementptr inbounds [[S]], %S* [[B:%.*]], i64 0, i32 0
+; X86-NEXT:    [[CSTR:%.*]] = bitcast i32* [[SECOND_I]] to i8*
+; X86-NEXT:    [[CSTR1:%.*]] = bitcast i32* [[SECOND2_I]] to i8*
 ; X86-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* [[CSTR]], i8* [[CSTR1]], i64 8)
-; X86-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[MEMCMP]], 0
+; X86-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; X86-NEXT:    br label [[OPEQ1_EXIT:%.*]]
 ; X86:       opeq1.exit:
+; X86-NEXT:    [[TMP2:%.*]] = phi i1 [ [[TMP1]], [[LAND_RHS_I]] ]
 ; X86-NEXT:    ret i1 [[TMP2]]
 ;
 ; X86-NOBUILTIN-LABEL: @opeq1_inverse(

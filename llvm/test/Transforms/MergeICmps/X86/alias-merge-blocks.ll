@@ -5,18 +5,19 @@
 
 define zeroext i1 @opeq1(
 ; X86-LABEL: @opeq1(
-; X86-NEXT:  "entry+land.rhs.i+land.rhs.i.2+land.rhs.i.3":
+; X86-NEXT:  entry:
 ; X86-NEXT:    [[PTR:%.*]] = alloca i32
 ; X86-NEXT:    store i32 42, i32* [[PTR]]
-; X86-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[S:%.*]], %S* [[A:%.*]], i64 0, i32 0
-; X86-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[S]], %S* [[B:%.*]], i64 0, i32 0
-; X86-NEXT:    [[CSTR:%.*]] = bitcast i32* [[TMP0]] to i8*
-; X86-NEXT:    [[CSTR1:%.*]] = bitcast i32* [[TMP1]] to i8*
+; X86-NEXT:    [[FIRST_I:%.*]] = getelementptr inbounds [[S:%.*]], %S* [[A:%.*]], i64 0, i32 0
+; X86-NEXT:    [[FIRST1_I:%.*]] = getelementptr inbounds [[S]], %S* [[B:%.*]], i64 0, i32 0
+; X86-NEXT:    [[CSTR:%.*]] = bitcast i32* [[FIRST_I]] to i8*
+; X86-NEXT:    [[CSTR1:%.*]] = bitcast i32* [[FIRST1_I]] to i8*
 ; X86-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* [[CSTR]], i8* [[CSTR1]], i64 16)
-; X86-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[MEMCMP]], 0
+; X86-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; X86-NEXT:    br label [[OPEQ1_EXIT:%.*]]
 ; X86:       opeq1.exit:
-; X86-NEXT:    ret i1 [[TMP2]]
+; X86-NEXT:    [[TMP1:%.*]] = phi i1 [ [[TMP0]], [[ENTRY:%.*]] ]
+; X86-NEXT:    ret i1 [[TMP1]]
 ;
   %S* nocapture readonly dereferenceable(16) %a,
   %S* nocapture readonly dereferenceable(16) %b) local_unnamed_addr #0 {
