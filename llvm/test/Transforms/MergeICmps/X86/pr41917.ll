@@ -11,21 +11,20 @@ define dso_local zeroext i1 @pr41917(%class.a* byval nocapture readonly align 4 
 ; CHECK-LABEL: @pr41917(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call zeroext i1 @f2() #3
-; CHECK-NEXT:    br i1 [[CALL]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
+; CHECK-NEXT:    br i1 [[CALL]], label [[LAND_RHS:%.*]], label %"land.end+land.rhs3"
 ; CHECK:       land.rhs:
 ; CHECK-NEXT:    [[CALL1:%.*]] = tail call zeroext i1 @f2() #3
-; CHECK-NEXT:    br label [[LAND_END]]
-; CHECK:       land.end:
-; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[CLASS_A:%.*]], %class.a* [[G:%.*]], i32 0, i32 1
-; CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds [[CLASS_A]], %class.a* [[P2:%.*]], i32 0, i32 1
-; CHECK-NEXT:    [[CSTR:%.*]] = bitcast i32* [[C]] to i8*
-; CHECK-NEXT:    [[CSTR1:%.*]] = bitcast i32* [[C2]] to i8*
+; CHECK-NEXT:    br label %"land.end+land.rhs3"
+; CHECK:       "land.end+land.rhs3":
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[CLASS_A:%.*]], %class.a* [[G:%.*]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[CLASS_A]], %class.a* [[P2:%.*]], i32 0, i32 1
+; CHECK-NEXT:    [[CSTR:%.*]] = bitcast i32* [[TMP0]] to i8*
+; CHECK-NEXT:    [[CSTR1:%.*]] = bitcast i32* [[TMP1]] to i8*
 ; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* [[CSTR]], i8* [[CSTR1]], i32 8)
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[MEMCMP]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    br label [[LAND_END6:%.*]]
 ; CHECK:       land.end6:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ [[TMP0]], [[LAND_END]] ]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
 entry:
   %call = tail call zeroext i1 @f2() #2
