@@ -1993,23 +1993,17 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
 /// Return true if this loop's backedge taken count expression can be safely and
 /// cheaply expanded into an instruction sequence that can be used by
 /// linearFunctionTestReplace.
-///
-/// TODO: This fails for pointer-type loop counters with greater than one byte
-/// strides, consequently preventing LFTR from running. For the purpose of LFTR
-/// we could skip this check in the case that the LFTR loop counter (chosen by
-/// FindLoopCounter) is also pointer type. Instead, we could directly convert
-/// the loop test to an inequality test by checking the target data's alignment
-/// of element types (given that the initial pointer value originates from or is
-/// used by ABI constrained operation, as opposed to inttoptr/ptrtoint).
-/// However, we don't yet have a strong motivation for converting loop tests
-/// into inequality tests.
 static bool canExpandBackedgeTakenCount(Loop *L, ScalarEvolution *SE,
                                         SCEVExpander &Rewriter) {
   const SCEV *BackedgeTakenCount = SE->getBackedgeTakenCount(L);
-  if (isa<SCEVCouldNotCompute>(BackedgeTakenCount) ||
-      BackedgeTakenCount->isZero())
+  if (isa<SCEVCouldNotCompute>(BackedgeTakenCount))
     return false;
 
+  // Better to break the backedge
+  if (BackedgeTakenCount->isZero())
+    return false;
+
+  // Loops with multiple exits are not currently suported by lftr
   if (!L->getExitingBlock())
     return false;
 
@@ -2023,7 +2017,9 @@ static bool canExpandBackedgeTakenCount(Loop *L, ScalarEvolution *SE,
   return true;
 }
 
-/// Return the loop header phi IFF IncV adds a loop invariant value to the phi.
+/// Given an Value which is hoped to be part of an add recurance in the given
+/// loop, return the associated Phi node if so.  Otherwise, return null.  Note
+/// that this is less general than SCEVs AddRec checking.  
 static PHINode *getLoopPhiForCounter(Value *IncV, Loop *L, DominatorTree *DT) {
   Instruction *IncI = dyn_cast<Instruction>(IncV);
   if (!IncI)
@@ -2060,7 +2056,9 @@ static PHINode *getLoopPhiForCounter(Value *IncV, Loop *L, DominatorTree *DT) {
   return nullptr;
 }
 
-/// Return the compare guarding the loop latch, or NULL for unrecognized tests.
+/// Given a loop with one backedge and one exit, return the ICmpInst
+/// controlling the sole loop exit.  There is no guarantee that the exiting
+/// block is also the latch.
 static ICmpInst *getLoopTest(Loop *L) {
   assert(L->getExitingBlock() && "expected loop exit");
 
@@ -2264,8 +2262,9 @@ static PHINode *FindLoopCounter(Loop *L, const SCEV *BECount,
   return BestPhi;
 }
 
-/// Help linearFunctionTestReplace by generating a value that holds the RHS of
-/// the new loop test.
+/// Insert an IR expression which computes the value held by the IV IndVar
+/// (which must be an simple addrec w/unit stride) after the backedge of loop L
+/// is taken IVCount times.  
 static Value *genLoopLimit(PHINode *IndVar, const SCEV *IVCount, Loop *L,
                            SCEVExpander &Rewriter, ScalarEvolution *SE) {
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(IndVar));
