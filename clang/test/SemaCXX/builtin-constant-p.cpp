@@ -130,3 +130,8 @@ constexpr int mutate6(bool mutate) {
 static_assert(mutate6(false) == 11);
 // Mutation of state outside __builtin_constant_p: evaluates to false.
 static_assert(mutate6(true) == 10);
+
+// GCC strangely returns true for the address of a type_info object, despite it
+// not being a pointer to the start of a string literal.
+namespace std { struct type_info; }
+static_assert(__builtin_constant_p(&typeid(int)));

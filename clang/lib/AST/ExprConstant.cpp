@@ -87,6 +87,9 @@ namespace {
       return D->getType();
     }
 
+    if (TypeInfoLValue TI = B.dyn_cast<TypeInfoLValue>())
+      return B.getTypeInfoType();
+
     const Expr *Base = B.get<const Expr*>();
 
     // For a materialized temporary, the type of the temporary we materialized
@@ -1783,6 +1786,9 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
     return isa<FunctionDecl>(D);
   }
 
+  if (B.is<TypeInfoLValue>())
+    return true;
+
   const Expr *E = B.get<const Expr*>();
   switch (E->getStmtClass()) {
   default:
@@ -1800,7 +1806,6 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
   case Expr::PredefinedExprClass:
   case Expr::ObjCStringLiteralClass:
   case Expr::ObjCEncodeExprClass:
-  case Expr::CXXTypeidExprClass:
   case Expr::CXXUuidofExprClass:
     return true;
   case Expr::ObjCBoxedExprClass:
@@ -1878,9 +1883,9 @@ static void NoteLValueLocation(EvalInfo &Info, APValue::LValueBase Base) {
   const ValueDecl *VD = Base.dyn_cast<const ValueDecl*>();
   if (VD)
     Info.Note(VD->getLocation(), diag::note_declared_at);
-  else
-    Info.Note(Base.get<const Expr*>()->getExprLoc(),
-              diag::note_constexpr_temporary_here);
+  else if (const Expr *E = Base.dyn_cast<const Expr*>())
+    Info.Note(E->getExprLoc(), diag::note_constexpr_temporary_here);
+  // We have no information to show for a typeid(T) object.
 }
 
 /// Check that this reference or pointer core constant expression is a valid
@@ -3404,7 +3409,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
 
     if (!Frame) {
       if (const MaterializeTemporaryExpr *MTE =
-              dyn_cast<MaterializeTemporaryExpr>(Base)) {
+              dyn_cast_or_null<MaterializeTemporaryExpr>(Base)) {
         assert(MTE->getStorageDuration() == SD_Static &&
                "should have a frame for a non-global materialized temporary");
 
@@ -3439,7 +3444,13 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       } else {
         if (!IsAccess)
           return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
-        Info.FFDiag(E);
+        APValue Val;
+        LVal.moveInto(Val);
+        Info.FFDiag(E, diag::note_constexpr_access_unreadable_object)
+            << AK
+            << Val.getAsString(Info.Ctx,
+                               Info.Ctx.getLValueReferenceType(LValType));
+        NoteLValueLocation(Info, LVal.Base);
         return CompleteObject();
       }
     } else {
@@ -5777,13 +5788,13 @@ public:
 // - Literals
 //  * CompoundLiteralExpr in C (and in global scope in C++)
 //  * StringLiteral
-//  * CXXTypeidExpr
 //  * PredefinedExpr
 //  * ObjCStringLiteralExpr
 //  * ObjCEncodeExpr
 //  * AddrLabelExpr
 //  * BlockExpr
 //  * CallExpr for a MakeStringConstant builtin
+// - typeid(T) expressions, as TypeInfoLValues
 // - Locals and temporaries
 //  * MaterializeTemporaryExpr
 //  * Any Expr, with a CallIndex indicating the function in which the temporary
@@ -6018,8 +6029,14 @@ LValueExprEvaluator::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
 }
 
 bool LValueExprEvaluator::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
-  if (!E->isPotentiallyEvaluated())
-    return Success(E);
+  if (!E->isPotentiallyEvaluated()) {
+    TypeInfoLValue TypeInfo;
+    if (E->isTypeOperand())
+      TypeInfo = TypeInfoLValue(E->getTypeOperand(Info.Ctx).getTypePtr());
+    else
+      TypeInfo = TypeInfoLValue(E->getExprOperand()->getType().getTypePtr());
+    return Success(APValue::LValueBase::getTypeInfo(TypeInfo, E->getType()));
+  }
 
   Info.FFDiag(E, diag::note_constexpr_typeid_polymorphic)
     << E->getExprOperand()->getType()
@@ -6615,9 +6632,11 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       if (const ValueDecl *VD =
           OffsetResult.Base.dyn_cast<const ValueDecl*>()) {
         BaseAlignment = Info.Ctx.getDeclAlign(VD);
+      } else if (const Expr *E = OffsetResult.Base.dyn_cast<const Expr *>()) {
+        BaseAlignment = GetAlignOfExpr(Info, E, UETT_AlignOf);
       } else {
-        BaseAlignment = GetAlignOfExpr(
-            Info, OffsetResult.Base.get<const Expr *>(), UETT_AlignOf);
+        BaseAlignment = GetAlignOfType(
+            Info, OffsetResult.Base.getTypeInfoType(), UETT_AlignOf);
       }
 
       if (BaseAlignment < Align) {
@@ -8335,6 +8354,10 @@ static bool EvaluateBuiltinConstantPForLValue(const APValue &LV) {
     if (!isa<StringLiteral>(E))
       return false;
     return LV.getLValueOffset().isZero();
+  } else if (Base.is<TypeInfoLValue>()) {
+    // Surprisingly, GCC considers __builtin_constant_p(&typeid(int)) to
+    // evaluate to true.
+    return true;
   } else {
     // Any other base is not constant enough for GCC.
     return false;
@@ -8399,6 +8422,8 @@ static QualType getObjectType(APValue::LValueBase B) {
   } else if (const Expr *E = B.get<const Expr*>()) {
     if (isa<CompoundLiteralExpr>(E))
       return E->getType();
+  } else if (B.is<TypeInfoLValue>()) {
+    return B.getTypeInfoType();
   }
 
   return QualType();
