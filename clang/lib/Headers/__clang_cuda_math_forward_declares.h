@@ -42,6 +42,14 @@ __DEVICE__ long long abs(long long);
 __DEVICE__ double abs(double);
 __DEVICE__ float abs(float);
 #endif
+// While providing the CUDA declarations and definitions for math functions,
+// we may manually define additional functions.
+// TODO: Once variant is supported the additional functions will have
+// to be removed.
+#if defined(_OPENMP) && defined(__cplusplus)
+__DEVICE__ const double abs(const double);
+__DEVICE__ const float abs(const float);
+#endif
 __DEVICE__ int abs(int) __NOEXCEPT;
 __DEVICE__ double acos(double);
 __DEVICE__ float acos(float);
@@ -144,6 +152,9 @@ __DEVICE__ double log2(double);
 __DEVICE__ float log2(float);
 __DEVICE__ double logb(double);
 __DEVICE__ float logb(float);
+#if defined(_OPENMP) && defined(__cplusplus)
+__DEVICE__ long double log(long double);
+#endif
 __DEVICE__ double log(double);
 __DEVICE__ float log(float);
 __DEVICE__ long lrint(double);
