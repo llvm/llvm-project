@@ -790,6 +790,7 @@ static void readConfigs(opt::InputArgList &Args) {
   Config->DefineCommon = Args.hasFlag(OPT_define_common, OPT_no_define_common,
                                       !Args.hasArg(OPT_relocatable));
   Config->Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, true);
+  Config->DependentLibraries = Args.hasFlag(OPT_dependent_libraries, OPT_no_dependent_libraries, true);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->Discard = getDiscard(Args);
   Config->DwoDir = Args.getLastArgValue(OPT_plugin_opt_dwo_dir_eq);
@@ -1337,10 +1338,9 @@ static void replaceCommonSymbols() {
     Bss->File = S->File;
     Bss->Live = !Config->GcSections;
     InputSections.push_back(Bss);
-
-    Defined New(S->File, S->getName(), S->Binding, S->StOther, S->Type,
-                /*Value=*/0, S->Size, Bss);
-    replaceSymbol(S, &New);
+    replaceSymbol(S, Defined{S->File, S->getName(), S->Binding, S->StOther,
+                             S->Type,
+                             /*Value=*/0, S->Size, Bss});
   }
 }
 
@@ -1355,8 +1355,8 @@ static void demoteSharedSymbols() {
       continue;
 
     bool Used = S->Used;
-    Undefined New(nullptr, S->getName(), STB_WEAK, S->StOther, S->Type);
-    replaceSymbol(S, &New);
+    replaceSymbol(
+        S, Undefined{nullptr, S->getName(), STB_WEAK, S->StOther, S->Type});
     S->Used = Used;
   }
 }
@@ -1426,7 +1426,7 @@ static void findKeepUniqueSections(opt::InputArgList &Args) {
 }
 
 template <class ELFT> static Symbol *addUndefined(StringRef Name) {
-  return Symtab->addUndefined(
+  return Symtab->addSymbol(
       Undefined{nullptr, Name, STB_GLOBAL, STV_DEFAULT, 0});
 }
 
@@ -1549,9 +1549,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     Symtab->trace(Arg->getValue());
 
   // Add all files to the symbol table. This will add almost all
-  // symbols that we need to the symbol table.
-  for (InputFile *F : Files)
-    parseFile(F);
+  // symbols that we need to the symbol table. This process might
+  // add files to the link, via autolinking, these files are always
+  // appended to the Files vector.
+  for (size_t I = 0; I < Files.size(); ++I)
+    parseFile(Files[I]);
 
   // Now that we have every file, we can decide if we will need a
   // dynamic symbol table.
@@ -1670,8 +1672,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // We do not want to emit debug sections if --strip-all
   // or -strip-debug are given.
-  if (Config->Strip != StripPolicy::None)
-    llvm::erase_if(InputSections, [](InputSectionBase *S) { return S->Debug; });
+  if (Config->Strip != StripPolicy::None) {
+    llvm::erase_if(InputSections, [](InputSectionBase *S) {
+      return S->Name.startswith(".debug") || S->Name.startswith(".zdebug");
+    });
+  }
 
   Config->EFlags = Target->calcEFlags();
   // MaxPageSize (sometimes called abi page size) is the maximum page size that

@@ -51,7 +51,7 @@ public:
 
   unsigned SectionKind : 3;
 
-  // The next four bit fields are only used by InputSectionBase, but we
+  // The next three bit fields are only used by InputSectionBase, but we
   // put them here so the struct packs better.
 
   // The garbage collector sets sections' Live bits.
@@ -72,9 +72,6 @@ public:
   unsigned Assigned : 1;
 
   unsigned Bss : 1;
-
-  // True if this is a debuginfo section.
-  unsigned Debug : 1;
 
   // Set for sections that should not be folded by ICF.
   unsigned KeepUnique : 1;
@@ -103,9 +100,8 @@ protected:
               uint64_t Entsize, uint64_t Alignment, uint32_t Type,
               uint32_t Info, uint32_t Link)
       : Name(Name), Repl(this), SectionKind(SectionKind), Live(false),
-        Assigned(false), Bss(false), Debug(false), KeepUnique(false),
-        Alignment(Alignment), Flags(Flags), Entsize(Entsize), Type(Type),
-        Link(Link), Info(Info) {}
+        Assigned(false), Bss(false), KeepUnique(false), Alignment(Alignment),
+        Flags(Flags), Entsize(Entsize), Type(Type), Link(Link), Info(Info) {}
 };
 
 // This corresponds to a section of an input file.

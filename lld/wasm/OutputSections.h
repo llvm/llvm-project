@@ -40,7 +40,7 @@ public:
   void createHeader(size_t BodySize);
   virtual size_t getSize() const = 0;
   virtual void writeTo(uint8_t *Buf) = 0;
-  virtual void finalizeContents() {}
+  virtual void finalizeContents() = 0;
   virtual uint32_t numRelocations() const { return 0; }
   virtual void writeRelocations(raw_ostream &OS) const {}
 
@@ -69,7 +69,10 @@ public:
 
   size_t getSize() const override { return Header.size() + Body.size(); }
 
+  virtual void writeBody() {}
+
   void finalizeContents() override {
+    writeBody();
     BodyOutputStream.flush();
     createHeader(Body.size());
   }
@@ -84,11 +87,14 @@ protected:
 
 class CodeSection : public OutputSection {
 public:
-  explicit CodeSection(ArrayRef<InputFunction *> Functions);
-  size_t getSize() const override { return Header.size() + BodySize; }
+  explicit CodeSection(ArrayRef<InputFunction *> Functions)
+      : OutputSection(llvm::wasm::WASM_SEC_CODE), Functions(Functions) {}
+
+  size_t getSize() const override { assert(BodySize); return Header.size() + BodySize; }
   void writeTo(uint8_t *Buf) override;
   uint32_t numRelocations() const override;
   void writeRelocations(raw_ostream &OS) const override;
+  void finalizeContents() override;
 
 protected:
   ArrayRef<InputFunction *> Functions;
@@ -98,11 +104,14 @@ protected:
 
 class DataSection : public OutputSection {
 public:
-  explicit DataSection(ArrayRef<OutputSegment *> Segments);
+  explicit DataSection(ArrayRef<OutputSegment *> Segments)
+      : OutputSection(llvm::wasm::WASM_SEC_DATA), Segments(Segments) {}
+
   size_t getSize() const override { return Header.size() + BodySize; }
   void writeTo(uint8_t *Buf) override;
   uint32_t numRelocations() const override;
   void writeRelocations(raw_ostream &OS) const override;
+  void finalizeContents() override;
 
 protected:
   ArrayRef<OutputSegment *> Segments;
@@ -119,19 +128,35 @@ protected:
 // separately and are instead synthesized by the linker.
 class CustomSection : public OutputSection {
 public:
-  CustomSection(std::string Name, ArrayRef<InputSection *> InputSections);
+  CustomSection(std::string Name, ArrayRef<InputSection *> InputSections)
+      : OutputSection(llvm::wasm::WASM_SEC_CUSTOM, Name),
+        InputSections(InputSections) {}
   size_t getSize() const override {
     return Header.size() + NameData.size() + PayloadSize;
   }
   void writeTo(uint8_t *Buf) override;
   uint32_t numRelocations() const override;
   void writeRelocations(raw_ostream &OS) const override;
+  void finalizeContents() override;
 
 protected:
-  size_t PayloadSize;
+  size_t PayloadSize = 0;
   ArrayRef<InputSection *> InputSections;
   std::string NameData;
 };
+
+class RelocSection : public SyntheticSection {
+public:
+  RelocSection(StringRef Name, OutputSection *Sec, uint32_t SectionIndex)
+      : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, Name), Sec(Sec),
+        SectionIndex(SectionIndex) {}
+  void writeBody() override;
+
+protected:
+  OutputSection* Sec;
+  uint32_t SectionIndex;
+};
+
 
 } // namespace wasm
 } // namespace lld

@@ -75,8 +75,6 @@ Status consumeObject(llvm::ArrayRef<uint8_t> &Buffer, const T *&Object) {
   return error;
 }
 
-llvm::ArrayRef<MemoryDescriptor> ParseMemoryList(llvm::ArrayRef<uint8_t> &data);
-
 struct MinidumpMemoryDescriptor64 {
   llvm::support::ulittle64_t start_of_memory_range;
   llvm::support::ulittle64_t data_size;
