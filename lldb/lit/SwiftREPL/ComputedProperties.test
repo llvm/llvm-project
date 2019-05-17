@@ -2,16 +2,16 @@
 
 // RUN: %lldb --repl < %s | FileCheck %s
 
-var x : Int { 
-  get { 
-    return 0 
-  } 
-  set { 
-    0 
-  } 
+var x : Int {
+  get {
+    return 0
+  }
+  set {
+    0
+  }
 }
 
-// CHECK: Welcome to {{.*}} Swift
+// CHECK: Welcome to {{.*}}Swift
 // CHECK: Type :help
 // CHECK: {{x}}: Int
 
