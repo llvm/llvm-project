@@ -167,14 +167,9 @@ namespace dr1959 { // dr1959: 3.9
 #endif
 }
 
-namespace dr1968 { // dr1968: no
+namespace dr1968 { // dr1968: yes
 #if __cplusplus >= 201103L
-  // FIXME: According to DR1968, both of these should be considered
-  // non-constant.
-  static_assert(&typeid(int) == &typeid(int), "");
-
-  constexpr const std::type_info *f() { return &typeid(int); }
-  static_assert(f() == f(), "");
+  static_assert(&typeid(int) == &typeid(int), ""); // expected-error{{not an integral constant expression}}
 #endif
 }
 

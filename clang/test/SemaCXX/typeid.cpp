@@ -6,7 +6,7 @@ void f()
 }
 
 namespace std {
-  struct type_info { const char *name; };
+  class type_info;
 }
 
 void g()
@@ -27,6 +27,3 @@ void h(int i) {
   typeid(V);        // expected-error{{'typeid' of variably modified type 'char [i]'}}
   typeid(char [i]); // expected-error{{'typeid' of variably modified type 'char [i]'}}
 }
-
-// expected-note@+1 {{read of object 'typeid(int).name' whose value is not known}}
-constexpr const char *name = typeid(int).name; // expected-error {{constant expression}}
