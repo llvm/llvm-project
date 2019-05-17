@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
+#include "Driver.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
 #include "SymbolTable.h"
@@ -499,6 +500,27 @@ template <class ELFT> void ObjFile<ELFT>::initializeJustSymbols() {
   }
 }
 
+// An ELF object file may contain a `.deplibs` section. If it exists, the
+// section contains a list of library specifiers such as `m` for libm. This
+// function resolves a given name by finding the first matching library checking
+// the various ways that a library can be specified to LLD. This ELF extension
+// is a form of autolinking and is called `dependent libraries`. It is currently
+// unique to LLVM and lld.
+static void addDependentLibrary(StringRef Specifier, const InputFile *F) {
+  if (!Config->DependentLibraries)
+    return;
+  if (fs::exists(Specifier))
+    Driver->addFile(Specifier, /*WithLOption=*/false);
+  else if (Optional<std::string> S = findFromSearchPaths(Specifier))
+    Driver->addFile(*S, /*WithLOption=*/true);
+  else if (Optional<std::string> S = searchLibraryBaseName(Specifier))
+    Driver->addFile(*S, /*WithLOption=*/true);
+  else
+    error(toString(F) +
+          ": unable to find library from dependent library specifier: " +
+          Specifier);
+}
+
 template <class ELFT>
 void ObjFile<ELFT>::initializeSections(
     DenseSet<CachedHashStringRef> &ComdatGroups) {
@@ -737,6 +759,24 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     if (In.ARMAttributes == nullptr) {
       In.ARMAttributes = make<InputSection>(*this, Sec, Name);
       return In.ARMAttributes;
+    }
+    return &InputSection::Discarded;
+  }
+  case SHT_LLVM_DEPENDENT_LIBRARIES: {
+    if (Config->Relocatable)
+      break;
+    ArrayRef<char> Data =
+        CHECK(this->getObj().template getSectionContentsAsArray<char>(&Sec), this);
+    if (!Data.empty() && Data.back() != '\0') {
+      error(toString(this) +
+            ": corrupted dependent libraries section (unterminated string): " +
+            Name);
+      return &InputSection::Discarded;
+    }
+    for (const char *D = Data.begin(), *E = Data.end(); D < E;) {
+      StringRef S(D);
+      addDependentLibrary(S, this);
+      D += S.size() + 1;
     }
     return &InputSection::Discarded;
   }
@@ -1302,6 +1342,9 @@ void BitcodeFile::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
 
   for (const lto::InputFile::Symbol &ObjSym : Obj->symbols())
     Symbols.push_back(createBitcodeSymbol<ELFT>(KeptComdats, ObjSym, *this));
+
+  for (auto L : Obj->getDependentLibraries())
+    addDependentLibrary(L, this);
 }
 
 static ELFKind getELFKind(MemoryBufferRef MB, StringRef ArchiveName) {

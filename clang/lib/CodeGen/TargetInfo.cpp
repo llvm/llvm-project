@@ -2348,22 +2348,6 @@ public:
   }
 };
 
-class PS4TargetCodeGenInfo : public X86_64TargetCodeGenInfo {
-public:
-  PS4TargetCodeGenInfo(CodeGen::CodeGenTypes &CGT, X86AVXABILevel AVXLevel)
-    : X86_64TargetCodeGenInfo(CGT, AVXLevel) {}
-
-  void getDependentLibraryOption(llvm::StringRef Lib,
-                                 llvm::SmallString<24> &Opt) const override {
-    Opt = "\01";
-    // If the argument contains a space, enclose it in quotes.
-    if (Lib.find(" ") != StringRef::npos)
-      Opt += "\"" + Lib.str() + "\"";
-    else
-      Opt += Lib;
-  }
-};
-
 static std::string qualifyWindowsLibrary(llvm::StringRef Lib) {
   // If the argument does not end in .lib, automatically add the suffix.
   // If the argument contains a space, enclose it in quotes.
@@ -9493,8 +9477,6 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
     switch (Triple.getOS()) {
     case llvm::Triple::Win32:
       return SetCGInfo(new WinX86_64TargetCodeGenInfo(Types, AVXLevel));
-    case llvm::Triple::PS4:
-      return SetCGInfo(new PS4TargetCodeGenInfo(Types, AVXLevel));
     default:
       return SetCGInfo(new X86_64TargetCodeGenInfo(Types, AVXLevel));
     }

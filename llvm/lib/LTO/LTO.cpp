@@ -425,6 +425,7 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
   File->TargetTriple = FOrErr->TheReader.getTargetTriple();
   File->SourceFileName = FOrErr->TheReader.getSourceFileName();
   File->COFFLinkerOpts = FOrErr->TheReader.getCOFFLinkerOpts();
+  File->DependentLibraries = FOrErr->TheReader.getDependentLibraries();
   File->ComdatTable = FOrErr->TheReader.getComdatTable();
 
   for (unsigned I = 0; I != FOrErr->Mods.size(); ++I) {

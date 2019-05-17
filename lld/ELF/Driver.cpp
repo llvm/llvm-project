@@ -790,6 +790,7 @@ static void readConfigs(opt::InputArgList &Args) {
   Config->DefineCommon = Args.hasFlag(OPT_define_common, OPT_no_define_common,
                                       !Args.hasArg(OPT_relocatable));
   Config->Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, true);
+  Config->DependentLibraries = Args.hasFlag(OPT_dependent_libraries, OPT_no_dependent_libraries, true);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->Discard = getDiscard(Args);
   Config->DwoDir = Args.getLastArgValue(OPT_plugin_opt_dwo_dir_eq);
@@ -1548,9 +1549,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     Symtab->trace(Arg->getValue());
 
   // Add all files to the symbol table. This will add almost all
-  // symbols that we need to the symbol table.
-  for (InputFile *F : Files)
-    parseFile(F);
+  // symbols that we need to the symbol table. This process might
+  // add files to the link, via autolinking, these files are always
+  // appended to the Files vector.
+  for (size_t I = 0; I < Files.size(); ++I)
+    parseFile(Files[I]);
 
   // Now that we have every file, we can decide if we will need a
   // dynamic symbol table.

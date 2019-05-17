@@ -47,6 +47,8 @@ private:
 
   std::string LinkerOpts;
 
+  std::string DependentLibraries;
+
   std::unique_ptr<Module> Mod;
   MemoryBufferRef MBRef;
   ModuleSymbolTable SymTab;
@@ -152,6 +154,8 @@ public:
   }
 
   StringRef getLinkerOpts() { return LinkerOpts; }
+
+  StringRef getDependentLibraries() { return DependentLibraries; }
 
   const std::vector<StringRef> &getAsmUndefinedRefs() { return _asm_undefines; }
 
