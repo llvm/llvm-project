@@ -37448,11 +37448,20 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
 }
 
 // Match (xor X, -1) -> X.
+// Match extract_subvector(xor X, -1) -> extract_subvector(X).
 static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
   V = peekThroughBitcasts(V);
   if (V.getOpcode() == ISD::XOR &&
       ISD::isBuildVectorAllOnes(V.getOperand(1).getNode()))
     return V.getOperand(0);
+  if (V.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      (isNullConstant(V.getOperand(1)) || V.getOperand(0).hasOneUse())) {
+    if (SDValue Not = IsNOT(V.getOperand(0), DAG)) {
+      Not = DAG.getBitcast(V.getOperand(0).getValueType(), Not);
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(Not), V.getValueType(),
+                         Not, V.getOperand(1));
+    }
+  }
   return SDValue();
 }
 
