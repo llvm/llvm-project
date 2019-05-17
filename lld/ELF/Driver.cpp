@@ -1337,10 +1337,9 @@ static void replaceCommonSymbols() {
     Bss->File = S->File;
     Bss->Live = !Config->GcSections;
     InputSections.push_back(Bss);
-
-    Defined New(S->File, S->getName(), S->Binding, S->StOther, S->Type,
-                /*Value=*/0, S->Size, Bss);
-    replaceSymbol(S, &New);
+    replaceSymbol(S, Defined{S->File, S->getName(), S->Binding, S->StOther,
+                             S->Type,
+                             /*Value=*/0, S->Size, Bss});
   }
 }
 
@@ -1355,8 +1354,8 @@ static void demoteSharedSymbols() {
       continue;
 
     bool Used = S->Used;
-    Undefined New(nullptr, S->getName(), STB_WEAK, S->StOther, S->Type);
-    replaceSymbol(S, &New);
+    replaceSymbol(
+        S, Undefined{nullptr, S->getName(), STB_WEAK, S->StOther, S->Type});
     S->Used = Used;
   }
 }
@@ -1426,7 +1425,7 @@ static void findKeepUniqueSections(opt::InputArgList &Args) {
 }
 
 template <class ELFT> static Symbol *addUndefined(StringRef Name) {
-  return Symtab->addUndefined(
+  return Symtab->addSymbol(
       Undefined{nullptr, Name, STB_GLOBAL, STV_DEFAULT, 0});
 }
 

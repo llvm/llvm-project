@@ -152,11 +152,6 @@ BitcodeCompiler::BitcodeCompiler() {
 
 BitcodeCompiler::~BitcodeCompiler() = default;
 
-static void undefine(Symbol *S) {
-  Undefined New(nullptr, S->getName(), STB_GLOBAL, STV_DEFAULT, S->Type);
-  replaceSymbol(S, &New);
-}
-
 void BitcodeCompiler::add(BitcodeFile &F) {
   lto::InputFile &Obj = *F.Obj;
   bool IsExec = !Config->Shared && !Config->Relocatable;
@@ -201,7 +196,8 @@ void BitcodeCompiler::add(BitcodeFile &F) {
         !(DR->Section == nullptr && (!Sym->File || Sym->File->isElf()));
 
     if (R.Prevailing)
-      undefine(Sym);
+      replaceSymbol(Sym, Undefined{nullptr, Sym->getName(), STB_GLOBAL,
+                                   STV_DEFAULT, Sym->Type});
 
     // We tell LTO to not apply interprocedural optimization for wrapped
     // (with --wrap) symbols because otherwise LTO would inline them while

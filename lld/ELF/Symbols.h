@@ -172,17 +172,23 @@ public:
   uint64_t getSize() const;
   OutputSection *getOutputSection() const;
 
+private:
+  static bool isExportDynamic(Kind K, uint8_t Visibility) {
+    if (K == SharedKind)
+      return Visibility == llvm::ELF::STV_DEFAULT;
+    return Config->Shared || Config->ExportDynamic;
+  }
+
 protected:
   Symbol(Kind K, InputFile *File, StringRefZ Name, uint8_t Binding,
          uint8_t StOther, uint8_t Type)
       : File(File), NameData(Name.Data), NameSize(Name.Size), Binding(Binding),
         Type(Type), StOther(StOther), SymbolKind(K), Visibility(StOther & 3),
         IsUsedInRegularObj(!File || File->kind() == InputFile::ObjKind),
-        ExportDynamic(K != SharedKind &&
-                      (Config->Shared || Config->ExportDynamic)),
-        CanInline(false), Traced(false), NeedsPltAddr(false), IsInIplt(false),
-        GotInIgot(false), IsPreemptible(false), Used(!Config->GcSections),
-        NeedsTocRestore(false), ScriptDefined(false) {}
+        ExportDynamic(isExportDynamic(K, Visibility)), CanInline(false),
+        Traced(false), NeedsPltAddr(false), IsInIplt(false), GotInIgot(false),
+        IsPreemptible(false), Used(!Config->GcSections), NeedsTocRestore(false),
+        ScriptDefined(false) {}
 
 public:
   // True the symbol should point to its PLT entry.
@@ -395,24 +401,53 @@ struct ElfSym {
 // using the placement new.
 union SymbolUnion {
   alignas(Defined) char A[sizeof(Defined)];
+  alignas(CommonSymbol) char B[sizeof(CommonSymbol)];
   alignas(Undefined) char C[sizeof(Undefined)];
   alignas(SharedSymbol) char D[sizeof(SharedSymbol)];
   alignas(LazyArchive) char E[sizeof(LazyArchive)];
   alignas(LazyObject) char F[sizeof(LazyObject)];
 };
 
-void printTraceSymbol(Symbol *Sym);
-
-template <typename T> void replaceSymbol(Symbol *Sym, const T *New) {
-  using llvm::ELF::STT_TLS;
-
+template <typename T> struct AssertSymbol {
   static_assert(std::is_trivially_destructible<T>(),
                 "Symbol types must be trivially destructible");
   static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");
   static_assert(alignof(T) <= alignof(SymbolUnion),
                 "SymbolUnion not aligned enough");
-  assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&
-         "Not a Symbol");
+};
+
+static inline void assertSymbols() {
+  AssertSymbol<Defined>();
+  AssertSymbol<CommonSymbol>();
+  AssertSymbol<Undefined>();
+  AssertSymbol<SharedSymbol>();
+  AssertSymbol<LazyArchive>();
+  AssertSymbol<LazyObject>();
+}
+
+void printTraceSymbol(Symbol *Sym);
+
+static size_t getSymbolSize(const Symbol &Sym) {
+  switch (Sym.kind()) {
+  case Symbol::CommonKind:
+    return sizeof(CommonSymbol);
+  case Symbol::DefinedKind:
+    return sizeof(Defined);
+  case Symbol::LazyArchiveKind:
+    return sizeof(LazyArchive);
+  case Symbol::LazyObjectKind:
+    return sizeof(LazyObject);
+  case Symbol::SharedKind:
+    return sizeof(SharedSymbol);
+  case Symbol::UndefinedKind:
+    return sizeof(Undefined);
+  case Symbol::PlaceholderKind:
+    return sizeof(Symbol);
+  }
+}
+
+inline void replaceSymbol(Symbol *Sym, const Symbol &New) {
+  using llvm::ELF::STT_TLS;
 
   // Symbols representing thread-local variables must be referenced by
   // TLS-aware relocations, and non-TLS symbols must be reference by
@@ -420,16 +455,16 @@ template <typename T> void replaceSymbol(Symbol *Sym, const T *New) {
   // and non-TLS symbols. It is an error if the same symbol is defined
   // as a TLS symbol in one file and as a non-TLS symbol in other file.
   if (Sym->SymbolKind != Symbol::PlaceholderKind && !Sym->isLazy() &&
-      !New->isLazy()) {
-    bool TlsMismatch = (Sym->Type == STT_TLS && New->Type != STT_TLS) ||
-                       (Sym->Type != STT_TLS && New->Type == STT_TLS);
+      !New.isLazy()) {
+    bool TlsMismatch = (Sym->Type == STT_TLS && New.Type != STT_TLS) ||
+                       (Sym->Type != STT_TLS && New.Type == STT_TLS);
     if (TlsMismatch)
       error("TLS attribute mismatch: " + toString(*Sym) + "\n>>> defined in " +
-            toString(New->File) + "\n>>> defined in " + toString(Sym->File));
+            toString(New.File) + "\n>>> defined in " + toString(Sym->File));
   }
 
   Symbol Old = *Sym;
-  memcpy(Sym, New, sizeof(T));
+  memcpy(Sym, &New, getSymbolSize(New));
 
   Sym->VersionId = Old.VersionId;
   Sym->Visibility = Old.Visibility;

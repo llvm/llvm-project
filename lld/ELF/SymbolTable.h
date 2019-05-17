@@ -45,15 +45,9 @@ public:
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
 
-  Symbol *addUndefined(const Undefined &New);
-  Symbol *addDefined(const Defined &New);
-  Symbol *addShared(const SharedSymbol &New);
-  Symbol *addLazyArchive(const LazyArchive &New);
-  Symbol *addLazyObject(const LazyObject &New);
-  Symbol *addCommon(const CommonSymbol &New);
+  Symbol *insert(StringRef Name);
 
-  Symbol *insert(const Symbol &New);
-  void mergeProperties(Symbol *Old, const Symbol &New);
+  Symbol *addSymbol(const Symbol &New);
 
   void fetchLazy(Symbol *Sym);
 
@@ -69,8 +63,6 @@ public:
   llvm::DenseMap<StringRef, SharedFile *> SoNames;
 
 private:
-  template <class LazyT> Symbol *addLazy(const LazyT &New);
-
   std::vector<Symbol *> findByVersion(SymbolVersion Ver);
   std::vector<Symbol *> findAllByVersion(SymbolVersion Ver);
 
@@ -106,6 +98,10 @@ private:
 };
 
 extern SymbolTable *Symtab;
+
+void mergeSymbolProperties(Symbol *Old, const Symbol &New);
+void resolveSymbol(Symbol *Old, const Symbol &New);
+
 } // namespace elf
 } // namespace lld
 

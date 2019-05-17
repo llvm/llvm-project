@@ -186,9 +186,9 @@ void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
   Defined New(nullptr, Cmd->Name, STB_GLOBAL, Visibility, STT_NOTYPE, SymValue,
               0, Sec);
 
-  Symbol *Sym = Symtab->insert(New);
-  Symtab->mergeProperties(Sym, New);
-  replaceSymbol(Sym, &New);
+  Symbol *Sym = Symtab->insert(Cmd->Name);
+  mergeSymbolProperties(Sym, New);
+  replaceSymbol(Sym, New);
   Cmd->Sym = cast<Defined>(Sym);
 }
 
@@ -203,9 +203,9 @@ static void declareSymbol(SymbolAssignment *Cmd) {
               nullptr);
 
   // We can't calculate final value right now.
-  Symbol *Sym = Symtab->insert(New);
-  Symtab->mergeProperties(Sym, New);
-  replaceSymbol(Sym, &New);
+  Symbol *Sym = Symtab->insert(Cmd->Name);
+  mergeSymbolProperties(Sym, New);
+  replaceSymbol(Sym, New);
 
   Cmd->Sym = cast<Defined>(Sym);
   Cmd->Provide = false;
