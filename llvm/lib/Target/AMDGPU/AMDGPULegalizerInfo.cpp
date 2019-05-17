@@ -294,12 +294,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .scalarize(0);
 
   if (ST.getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS) {
-    getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_FRINT})
+    getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_FCEIL, G_FRINT})
       .legalFor({S32, S64})
       .clampScalar(0, S32, S64)
       .scalarize(0);
   } else {
-    getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_FRINT})
+    getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_FCEIL, G_FRINT})
       .legalFor({S32})
       .customFor({S64})
       .clampScalar(0, S32, S64)
@@ -689,6 +689,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
     return legalizeAddrSpaceCast(MI, MRI, MIRBuilder);
   case TargetOpcode::G_FRINT:
     return legalizeFrint(MI, MRI, MIRBuilder);
+  case TargetOpcode::G_FCEIL:
+    return legalizeFceil(MI, MRI, MIRBuilder);
   case TargetOpcode::G_INTRINSIC_TRUNC:
     return legalizeIntrinsicTrunc(MI, MRI, MIRBuilder);
   default:
@@ -872,6 +874,37 @@ bool AMDGPULegalizerInfo::legalizeFrint(
 
   auto Cond = MIRBuilder.buildFCmp(CmpInst::FCMP_OGT, LLT::scalar(1), Fabs, C2);
   MIRBuilder.buildSelect(MI.getOperand(0).getReg(), Cond, Src, Tmp2);
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeFceil(
+  MachineInstr &MI, MachineRegisterInfo &MRI,
+  MachineIRBuilder &B) const {
+  B.setInstr(MI);
+
+  unsigned Src = MI.getOperand(1).getReg();
+  LLT Ty = MRI.getType(Src);
+  assert(Ty.isScalar() && Ty.getSizeInBits() == 64);
+
+  // result = trunc(src)
+  // if (src > 0.0 && src != result)
+  //   result += 1.0
+
+  LLT S1 = LLT::scalar(1);
+  LLT S64 = LLT::scalar(64);
+
+  auto Trunc = B.buildInstr(TargetOpcode::G_INTRINSIC_TRUNC, {S64}, {Src});
+
+
+  const auto Zero = B.buildFConstant(S64, 0.0);
+  const auto One = B.buildFConstant(S64, 1.0);
+  auto Lt0 = B.buildFCmp(CmpInst::FCMP_OGT, S1, Src, Zero);
+  auto NeTrunc = B.buildFCmp(CmpInst::FCMP_ONE, S1, Src, Trunc);
+  auto And = B.buildAnd(S1, Lt0, NeTrunc);
+  auto Add = B.buildSelect(S64, And, One, Zero);
+
+  // TODO: Should this propagate fast-math-flags?
+  B.buildFAdd(MI.getOperand(0).getReg(), Trunc, Add);
   return true;
 }
 
