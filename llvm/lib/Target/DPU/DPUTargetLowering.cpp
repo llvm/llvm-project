@@ -2335,25 +2335,28 @@ EmitUnalignedStoreWramDoubleRegisterWithCustomInserter(MachineInstr &MI,
   DebugLoc dl = MI.getDebugLoc();
   MachineFunction *F = BB->getParent();
   MachineRegisterInfo &RI = F->getRegInfo();
-  unsigned int Alignment = 8;
+  int Alignment = -1;
+  int offset = MI.getOperand(2).getImm();
 
   auto MemOp = MI.memoperands_begin();
   auto MemOpEnd = MI.memoperands_end();
   for (; MemOp!= MemOpEnd; MemOp++) {
-    unsigned int MemOpAlignment = (*MemOp)->getAlignment();
-    if (Alignment > MemOpAlignment)
+    int MemOpAlignment = (*MemOp)->getAlignment();
+    if ((Alignment == -1) || (Alignment > MemOpAlignment))
       Alignment = MemOpAlignment;
   }
   if (Alignment == 0)
     Alignment = 1;
+  else if (Alignment == -1)
+    Alignment = 4;
 
-  if (Alignment == 8) {
+  if ((Alignment % 8) == 0 && (offset % 8) == 0) {
     BuildMI(*BB, MI, dl, TII.get(DPU::SDrir))
       .add(MI.getOperand(1))
       .add(MI.getOperand(2))
       .add(MI.getOperand(0));
   } else {
-    if (Alignment == 4) {
+    if ((Alignment % 4) == 0 && (offset % 4) == 0) {
 
       BuildMI(*BB, MI, dl, TII.get(DPU::SWrir))
         .add(MI.getOperand(1))
@@ -2364,7 +2367,7 @@ EmitUnalignedStoreWramDoubleRegisterWithCustomInserter(MachineInstr &MI,
         .add(MI.getOperand(1))
         .addImm(MI.getOperand(2).getImm() + 4)
         .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit_hi);
-    } else if (Alignment == 2) {
+    } else if ((Alignment % 2) == 0 && (offset % 2) == 0) {
       unsigned TmpReg1 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
       unsigned TmpReg2 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
       BuildMI(*BB, MI, dl, TII.get(DPU::SHrir))
@@ -2477,21 +2480,24 @@ EmitUnalignedLoadWramDoubleRegisterWithCustomInserter(MachineInstr &MI,
                                                       MachineBasicBlock *BB) {
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
   DebugLoc dl = MI.getDebugLoc();
-  unsigned int Alignment = 8;
+  int Alignment = -1;
+  int offset = MI.getOperand(2).getImm();
   MachineFunction *F = BB->getParent();
   MachineRegisterInfo &RI = F->getRegInfo();
 
   auto MemOp = MI.memoperands_begin();
   auto MemOpEnd = MI.memoperands_end();
   for (; MemOp!= MemOpEnd; MemOp++) {
-    unsigned int MemOpAlignment = (*MemOp)->getAlignment();
-    if (Alignment > MemOpAlignment)
+    int MemOpAlignment = (*MemOp)->getAlignment();
+    if ((Alignment == -1) || (Alignment > MemOpAlignment))
       Alignment = MemOpAlignment;
   }
   if (Alignment == 0)
     Alignment = 1;
+  else if (Alignment == -1)
+    Alignment = 4;
 
-  if (Alignment == 8) {
+  if ((Alignment % 8) == 0 && (offset % 8) == 0) {
       BuildMI(*BB, MI, dl, TII.get(DPU::LDrri))
       .add(MI.getOperand(0))
       .add(MI.getOperand(1))
@@ -2502,7 +2508,7 @@ EmitUnalignedLoadWramDoubleRegisterWithCustomInserter(MachineInstr &MI,
     unsigned UndefReg = RI.createVirtualRegister(&DPU::GP64_REGRegClass);
     unsigned DestPart = RI.createVirtualRegister(&DPU::GP64_REGRegClass);
 
-    if (Alignment == 4) {
+    if ((Alignment % 4) == 0 && (offset % 4) == 0) {
       BuildMI(*BB, MI, dl, TII.get(DPU::LWrri), DestLsb)
         .add(MI.getOperand(1))
         .add(MI.getOperand(2));
@@ -2510,7 +2516,7 @@ EmitUnalignedLoadWramDoubleRegisterWithCustomInserter(MachineInstr &MI,
       BuildMI(*BB, MI, dl, TII.get(DPU::LWrri), DestMsb)
         .add(MI.getOperand(1))
         .addImm(MI.getOperand(2).getImm() + 4);
-    } else if (Alignment == 2) {
+    } else if ((Alignment % 2) == 0 && (offset % 2) == 0) {
       unsigned TmpReg1 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
       unsigned TmpReg2 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
       unsigned TmpReg3 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
