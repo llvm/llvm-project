@@ -289,17 +289,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .legalFor({{S32, S32}, {S32, S64}})
     .scalarize(0);
 
-  getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND})
+  getActionDefinitionsBuilder(G_INTRINSIC_ROUND)
     .legalFor({S32, S64})
     .scalarize(0);
 
   if (ST.getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS) {
-    getActionDefinitionsBuilder(G_FRINT)
+    getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_FRINT})
       .legalFor({S32, S64})
       .clampScalar(0, S32, S64)
       .scalarize(0);
   } else {
-    getActionDefinitionsBuilder(G_FRINT)
+    getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_FRINT})
       .legalFor({S32})
       .customFor({S64})
       .clampScalar(0, S32, S64)
@@ -689,6 +689,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
     return legalizeAddrSpaceCast(MI, MRI, MIRBuilder);
   case TargetOpcode::G_FRINT:
     return legalizeFrint(MI, MRI, MIRBuilder);
+  case TargetOpcode::G_INTRINSIC_TRUNC:
+    return legalizeIntrinsicTrunc(MI, MRI, MIRBuilder);
   default:
     return false;
   }
@@ -870,5 +872,68 @@ bool AMDGPULegalizerInfo::legalizeFrint(
 
   auto Cond = MIRBuilder.buildFCmp(CmpInst::FCMP_OGT, LLT::scalar(1), Fabs, C2);
   MIRBuilder.buildSelect(MI.getOperand(0).getReg(), Cond, Src, Tmp2);
+  return true;
+}
+
+static MachineInstrBuilder extractF64Exponent(unsigned Hi,
+                                              MachineIRBuilder &B) {
+  const unsigned FractBits = 52;
+  const unsigned ExpBits = 11;
+  LLT S32 = LLT::scalar(32);
+
+  auto Const0 = B.buildConstant(S32, FractBits - 32);
+  auto Const1 = B.buildConstant(S32, ExpBits);
+
+  auto ExpPart = B.buildIntrinsic(Intrinsic::amdgcn_ubfe, {S32}, false)
+    .addUse(Const0.getReg(0))
+    .addUse(Const1.getReg(0));
+
+  return B.buildSub(S32, ExpPart, B.buildConstant(S32, 1023));
+}
+
+bool AMDGPULegalizerInfo::legalizeIntrinsicTrunc(
+  MachineInstr &MI, MachineRegisterInfo &MRI,
+  MachineIRBuilder &B) const {
+  B.setInstr(MI);
+
+  unsigned Src = MI.getOperand(1).getReg();
+  LLT Ty = MRI.getType(Src);
+  assert(Ty.isScalar() && Ty.getSizeInBits() == 64);
+
+  LLT S1 = LLT::scalar(1);
+  LLT S32 = LLT::scalar(32);
+  LLT S64 = LLT::scalar(64);
+
+  // TODO: Should this use extract since the low half is unused?
+  auto Unmerge = B.buildUnmerge({S32, S32}, Src);
+  unsigned Hi = Unmerge.getReg(1);
+
+  // Extract the upper half, since this is where we will find the sign and
+  // exponent.
+  auto Exp = extractF64Exponent(Hi, B);
+
+  const unsigned FractBits = 52;
+
+  // Extract the sign bit.
+  const auto SignBitMask = B.buildConstant(S32, UINT32_C(1) << 31);
+  auto SignBit = B.buildAnd(S32, Hi, SignBitMask);
+
+  const auto FractMask = B.buildConstant(S64, (UINT64_C(1) << FractBits) - 1);
+
+  const auto Zero32 = B.buildConstant(S32, 0);
+
+  // Extend back to 64-bits.
+  auto SignBit64 = B.buildMerge(S64, {Zero32.getReg(0), SignBit.getReg(0)});
+
+  auto Shr = B.buildAShr(S64, FractMask, Exp);
+  auto Not = B.buildNot(S64, Shr);
+  auto Tmp0 = B.buildAnd(S64, Src, Not);
+  auto FiftyOne = B.buildConstant(S32, FractBits - 1);
+
+  auto ExpLt0 = B.buildICmp(CmpInst::ICMP_SLT, S1, Exp, Zero32);
+  auto ExpGt51 = B.buildICmp(CmpInst::ICMP_SGT, S1, Exp, FiftyOne);
+
+  auto Tmp1 = B.buildSelect(S64, ExpLt0, SignBit64, Tmp0);
+  B.buildSelect(MI.getOperand(0).getReg(), ExpGt51, Src, Tmp1);
   return true;
 }
