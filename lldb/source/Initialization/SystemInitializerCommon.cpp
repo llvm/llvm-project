@@ -8,19 +8,10 @@
 
 #include "lldb/Initialization/SystemInitializerCommon.h"
 
-#include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOSXDYLD.h"
-#include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
-#include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
-#include "Plugins/Instruction/ARM/EmulateInstructionARM.h"
-#include "Plugins/Instruction/MIPS/EmulateInstructionMIPS.h"
-#include "Plugins/Instruction/MIPS64/EmulateInstructionMIPS64.h"
-#include "Plugins/ObjectContainer/BSD-Archive/ObjectContainerBSDArchive.h"
-#include "Plugins/ObjectContainer/Universal-Mach-O/ObjectContainerUniversalMachO.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Reproducer.h"
@@ -106,8 +97,6 @@ llvm::Error SystemInitializerCommon::Initialize() {
   process_gdb_remote::ProcessGDBRemoteLog::Initialize();
 
   // Initialize plug-ins
-  ClangASTContext::Initialize();
-
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)
   ProcessPOSIXLog::Initialize();
 #endif
@@ -121,8 +110,6 @@ llvm::Error SystemInitializerCommon::Initialize() {
 void SystemInitializerCommon::Terminate() {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
-
-  ClangASTContext::Terminate();
 
 #if defined(_WIN32)
   ProcessWindowsLog::Terminate();
