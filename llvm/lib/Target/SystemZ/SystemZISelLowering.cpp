@@ -5841,7 +5841,7 @@ SDValue SystemZTargetLowering::combineIntDIVREM(
   // since it is not Legal but Custom it can only happen before
   // legalization. Therefore we must scalarize this early before Combine
   // 1. For widened vectors, this is already the result of type legalization.
-  if (VT.isVector() && isTypeLegal(VT) &&
+  if (DCI.Level == BeforeLegalizeTypes && VT.isVector() && isTypeLegal(VT) &&
       DAG.isConstantIntBuildVectorOrConstantInt(N->getOperand(1)))
     return DAG.UnrollVectorOp(N);
   return SDValue();
