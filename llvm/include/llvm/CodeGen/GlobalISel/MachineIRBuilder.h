@@ -1335,6 +1335,30 @@ public:
     return buildInstr(TargetOpcode::G_FPTOSI, {Dst}, {Src0});
   }
 
+  /// Build and insert \p Res = G_SMIN \p Op0, \p Op1
+  MachineInstrBuilder buildSMin(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_SMIN, {Dst}, {Src0, Src1});
+  }
+
+  /// Build and insert \p Res = G_SMAX \p Op0, \p Op1
+  MachineInstrBuilder buildSMax(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_SMAX, {Dst}, {Src0, Src1});
+  }
+
+  /// Build and insert \p Res = G_UMIN \p Op0, \p Op1
+  MachineInstrBuilder buildUMin(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_UMIN, {Dst}, {Src0, Src1});
+  }
+
+  /// Build and insert \p Res = G_UMAX \p Op0, \p Op1
+  MachineInstrBuilder buildUMax(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_UMAX, {Dst}, {Src0, Src1});
+  }
+
   virtual MachineInstrBuilder buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
                                          ArrayRef<SrcOp> SrcOps,
                                          Optional<unsigned> Flags = None);
