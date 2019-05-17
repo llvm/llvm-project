@@ -116,7 +116,8 @@ protected:
     };
   }
 
-  void testRule(RewriteRule Rule, StringRef Input, StringRef Expected) {
+  template <typename R>
+  void testRule(R Rule, StringRef Input, StringRef Expected) {
     Transformer T(std::move(Rule), consumer());
     T.registerMatchers(&MatchFinder);
     compareSnippets(Expected, rewrite(Input));
@@ -147,7 +148,7 @@ static RewriteRule ruleStrlenSize() {
                                          .bind(StringExpr)),
                                   callee(cxxMethodDecl(hasName("c_str")))))),
       change<clang::Expr>("REPLACED"));
-  R.Explanation = text("Use size() method directly on string.");
+  R.Cases[0].Explanation = text("Use size() method directly on string.");
   return R;
 }
 
@@ -373,6 +374,92 @@ TEST_F(TransformerTest, MultiChange) {
                     {change<Expr>(C, "true"), change<Stmt>(T, "{ /* then */ }"),
                      change<Stmt>(E, "{ /* else */ }")}),
            Input, Expected);
+}
+
+TEST_F(TransformerTest, OrderedRuleUnrelated) {
+  StringRef Flag = "flag";
+  RewriteRule FlagRule = makeRule(
+      cxxMemberCallExpr(on(expr(hasType(cxxRecordDecl(
+                                    hasName("proto::ProtoCommandLineFlag"))))
+                               .bind(Flag)),
+                        unless(callee(cxxMethodDecl(hasName("GetProto"))))),
+      change<clang::Expr>(Flag, "PROTO"));
+
+  std::string Input = R"cc(
+    proto::ProtoCommandLineFlag flag;
+    int x = flag.foo();
+    int y = flag.GetProto().foo();
+    int f(string s) { return strlen(s.c_str()); }
+  )cc";
+  std::string Expected = R"cc(
+    proto::ProtoCommandLineFlag flag;
+    int x = PROTO.foo();
+    int y = flag.GetProto().foo();
+    int f(string s) { return REPLACED; }
+  )cc";
+
+  testRule(applyFirst({ruleStrlenSize(), FlagRule}), Input, Expected);
+}
+
+// Version of ruleStrlenSizeAny that inserts a method with a different name than
+// ruleStrlenSize, so we can tell their effect apart.
+RewriteRule ruleStrlenSizeDistinct() {
+  StringRef S;
+  return makeRule(
+      callExpr(callee(functionDecl(hasName("strlen"))),
+               hasArgument(0, cxxMemberCallExpr(
+                                  on(expr().bind(S)),
+                                  callee(cxxMethodDecl(hasName("c_str")))))),
+      change<clang::Expr>("DISTINCT"));
+}
+
+TEST_F(TransformerTest, OrderedRuleRelated) {
+  std::string Input = R"cc(
+    namespace foo {
+    struct mystring {
+      char* c_str();
+    };
+    int f(mystring s) { return strlen(s.c_str()); }
+    }  // namespace foo
+    int g(string s) { return strlen(s.c_str()); }
+  )cc";
+  std::string Expected = R"cc(
+    namespace foo {
+    struct mystring {
+      char* c_str();
+    };
+    int f(mystring s) { return DISTINCT; }
+    }  // namespace foo
+    int g(string s) { return REPLACED; }
+  )cc";
+
+  testRule(applyFirst({ruleStrlenSize(), ruleStrlenSizeDistinct()}), Input,
+           Expected);
+}
+
+// Change the order of the rules to get a different result.
+TEST_F(TransformerTest, OrderedRuleRelatedSwapped) {
+  std::string Input = R"cc(
+    namespace foo {
+    struct mystring {
+      char* c_str();
+    };
+    int f(mystring s) { return strlen(s.c_str()); }
+    }  // namespace foo
+    int g(string s) { return strlen(s.c_str()); }
+  )cc";
+  std::string Expected = R"cc(
+    namespace foo {
+    struct mystring {
+      char* c_str();
+    };
+    int f(mystring s) { return DISTINCT; }
+    }  // namespace foo
+    int g(string s) { return DISTINCT; }
+  )cc";
+
+  testRule(applyFirst({ruleStrlenSizeDistinct(), ruleStrlenSize()}), Input,
+           Expected);
 }
 
 //
