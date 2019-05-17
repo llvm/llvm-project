@@ -94,18 +94,13 @@ public:
   };
 
   class LValueBase {
-  public:
     typedef llvm::PointerUnion<const ValueDecl *, const Expr *, TypeInfoLValue>
         PtrTy;
 
+  public:
     LValueBase() : Local{} {}
-
-    template <class T>
-    LValueBase(T P, unsigned I = 0, unsigned V = 0) : Ptr(P), Local{I, V} {
-      assert(!is<TypeInfoLValue>() &&
-             "don't use this constructor to form a type_info lvalue");
-    }
-
+    LValueBase(const ValueDecl *P, unsigned I = 0, unsigned V = 0);
+    LValueBase(const Expr *P, unsigned I = 0, unsigned V = 0);
     static LValueBase getTypeInfo(TypeInfoLValue LV, QualType TypeInfo);
 
     template <class T>
@@ -122,8 +117,6 @@ public:
     bool isNull() const;
 
     explicit operator bool() const;
-
-    PtrTy getPointer() const { return Ptr; }
 
     unsigned getCallIndex() const;
     unsigned getVersion() const;

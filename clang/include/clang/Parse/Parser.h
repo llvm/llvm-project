@@ -254,7 +254,7 @@ class Parser : public CodeCompletionHandler {
       Depth = Depth - AddedLevels + D;
       AddedLevels = D;
     }
-  
+
     unsigned getDepth() const { return Depth; }
     unsigned getOriginalDepth() const { return Depth - AddedLevels; }
   };
@@ -536,9 +536,9 @@ private:
   /// token the current token.
   void UnconsumeToken(Token &Consumed) {
       Token Next = Tok;
-      PP.EnterToken(Consumed);
+      PP.EnterToken(Consumed, /*IsReinject*/true);
       PP.Lex(Tok);
-      PP.EnterToken(Next);
+      PP.EnterToken(Next, /*IsReinject*/true);
   }
 
   SourceLocation ConsumeAnnotationToken() {

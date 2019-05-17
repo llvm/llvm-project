@@ -198,8 +198,8 @@ define i32 @and_nosignbit_ashr(i32 %x) {
 
 define i32 @or_signbit_ashr(i32 %x) {
 ; CHECK-LABEL: @or_signbit_ashr(
-; CHECK-NEXT:    [[T0:%.*]] = or i32 [[X:%.*]], -65536
-; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[T0]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[TMP1]], -256
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t0 = or i32 %x, 4294901760 ; 0xFFFF0000
@@ -219,8 +219,8 @@ define i32 @or_nosignbit_ashr(i32 %x) {
 
 define i32 @xor_signbit_ashr(i32 %x) {
 ; CHECK-LABEL: @xor_signbit_ashr(
-; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[X:%.*]], -65536
-; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[T0]], 8
+; CHECK-NEXT:    [[T0:%.*]] = ashr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[T0]], -256
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t0 = xor i32 %x, 4294901760 ; 0xFFFF0000

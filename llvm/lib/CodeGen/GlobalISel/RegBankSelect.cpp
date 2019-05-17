@@ -136,7 +136,8 @@ bool RegBankSelect::repairReg(
     RegBankSelect::RepairingPlacement &RepairPt,
     const iterator_range<SmallVectorImpl<unsigned>::const_iterator> &NewVRegs) {
 
-  assert(ValMapping.NumBreakDowns == size(NewVRegs) && "need new vreg for each breakdown");
+  assert(ValMapping.NumBreakDowns == (unsigned)size(NewVRegs) &&
+         "need new vreg for each breakdown");
 
   // An empty range of new register means no repairing.
   assert(!empty(NewVRegs) && "We should not have to repair");

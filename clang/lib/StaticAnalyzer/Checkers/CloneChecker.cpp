@@ -195,17 +195,17 @@ void ento::registerCloneChecker(CheckerManager &Mgr) {
   auto *Checker = Mgr.registerChecker<CloneChecker>();
 
   Checker->MinComplexity = Mgr.getAnalyzerOptions().getCheckerIntegerOption(
-      Checker, "MinimumCloneComplexity", 50);
+      Checker, "MinimumCloneComplexity");
 
   if (Checker->MinComplexity < 0)
     Mgr.reportInvalidCheckerOptionValue(
         Checker, "MinimumCloneComplexity", "a non-negative value");
 
   Checker->ReportNormalClones = Mgr.getAnalyzerOptions().getCheckerBooleanOption(
-      Checker, "ReportNormalClones", true);
+      Checker, "ReportNormalClones");
 
   Checker->IgnoredFilesPattern = Mgr.getAnalyzerOptions()
-    .getCheckerStringOption(Checker, "IgnoredFilesPattern", "");
+    .getCheckerStringOption(Checker, "IgnoredFilesPattern");
 }
 
 bool ento::shouldRegisterCloneChecker(const LangOptions &LO) {

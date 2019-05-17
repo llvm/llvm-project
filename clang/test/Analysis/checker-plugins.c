@@ -1,8 +1,8 @@
+// REQUIRES: plugins
+
 // RUN: %clang_analyze_cc1 -verify %s \
 // RUN:   -load %llvmshlibdir/SampleAnalyzerPlugin%pluginext \
 // RUN:   -analyzer-checker='example.MainCallChecker'
-
-// REQUIRES: plugins
 
 // Test that the MainCallChecker example analyzer plugin loads and runs.
 
@@ -45,3 +45,62 @@ void caller() {
 // RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-CHECKER-OPTION-OUTPUT-TRUE
 
 // CHECK-CHECKER-OPTION-OUTPUT-TRUE: Example option is set to true
+
+// RUN: %clang_analyze_cc1 %s \
+// RUN:   -load %llvmshlibdir/CheckerOptionHandlingAnalyzerPlugin%pluginext\
+// RUN:   -analyzer-checker=example.MyChecker \
+// RUN:   -analyzer-checker=debug.ConfigDumper \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-CHECKER-OPTION
+
+// CHECK-CHECKER-OPTION: example.MyChecker:ExampleOption = false
+
+// RUN: %clang_analyze_cc1 %s \
+// RUN:   -load %llvmshlibdir/CheckerOptionHandlingAnalyzerPlugin%pluginext\
+// RUN:   -analyzer-checker=example.MyChecker \
+// RUN:   -analyzer-checker=debug.ConfigDumper \
+// RUN:   -analyzer-config example.MyChecker:ExampleOption=true \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-CHECKER-OPTION-TRUE
+
+// CHECK-CHECKER-OPTION-TRUE: example.MyChecker:ExampleOption = true
+
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -load %llvmshlibdir/CheckerOptionHandlingAnalyzerPlugin%pluginext\
+// RUN:   -analyzer-checker=example.MyChecker \
+// RUN:   -analyzer-config example.MyChecker:Example=true \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-NON-EXISTENT-CHECKER-OPTION
+
+// CHECK-NON-EXISTENT-CHECKER-OPTION: (frontend): checker 'example.MyChecker'
+// CHECK-NON-EXISTENT-CHECKER-OPTION-SAME: has no option called 'Example'
+
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -load %llvmshlibdir/CheckerOptionHandlingAnalyzerPlugin%pluginext\
+// RUN:   -analyzer-checker=example.MyChecker \
+// RUN:   -analyzer-config-compatibility-mode=true \
+// RUN:   -analyzer-config example.MyChecker:Example=true
+
+
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -load %llvmshlibdir/CheckerOptionHandlingAnalyzerPlugin%pluginext\
+// RUN:   -analyzer-checker=example.MyChecker \
+// RUN:   -analyzer-config example.MyChecker:ExampleOption=example \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-BOOL-VALUE
+
+// CHECK-INVALID-BOOL-VALUE: (frontend): invalid input for checker option
+// CHECK-INVALID-BOOL-VALUE-SAME: 'example.MyChecker:ExampleOption', that
+// CHECK-INVALID-BOOL-VALUE-SAME: expects a boolean value
+
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -load %llvmshlibdir/CheckerOptionHandlingAnalyzerPlugin%pluginext\
+// RUN:   -analyzer-checker=example.MyChecker \
+// RUN:   -analyzer-config-compatibility-mode=true \
+// RUN:   -analyzer-config example.MyChecker:ExampleOption=example
+
+// RUN: %clang_analyze_cc1 %s \
+// RUN:   -load %llvmshlibdir/CheckerOptionHandlingAnalyzerPlugin%pluginext\
+// RUN:   -analyzer-checker=example.MyChecker \
+// RUN:   -analyzer-checker=debug.ConfigDumper \
+// RUN:   -analyzer-config-compatibility-mode=true \
+// RUN:   -analyzer-config example.MyChecker:ExampleOption=example \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-CORRECTED-BOOL-VALUE
+
+// CHECK-CORRECTED-BOOL-VALUE: example.MyChecker:ExampleOption = false
