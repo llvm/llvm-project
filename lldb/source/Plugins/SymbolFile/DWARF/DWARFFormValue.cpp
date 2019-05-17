@@ -8,7 +8,9 @@
 
 #include <assert.h>
 
+#include "lldb/Core/Module.h"
 #include "lldb/Core/dwarf.h"
+#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/Stream.h"
 
 #include "DWARFDebugInfo.h"

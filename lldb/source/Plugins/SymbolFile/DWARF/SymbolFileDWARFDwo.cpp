@@ -21,8 +21,9 @@ using namespace lldb_private;
 
 SymbolFileDWARFDwo::SymbolFileDWARFDwo(ObjectFileSP objfile,
                                        DWARFUnit *dwarf_cu)
-    : SymbolFileDWARF(objfile.get()), m_obj_file_sp(objfile),
-      m_base_dwarf_cu(dwarf_cu) {
+    : SymbolFileDWARF(objfile.get(), objfile->GetSectionList(
+                                         /*update_module_section_list*/ false)),
+      m_obj_file_sp(objfile), m_base_dwarf_cu(dwarf_cu) {
   SetID(((lldb::user_id_t)dwarf_cu->GetID()) << 32);
 }
 
@@ -127,10 +128,6 @@ const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_addr_data() {
                                      std::ref(m_data_debug_addr.m_data));
   });
   return m_data_debug_addr.m_data;
-}
-
-const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_info_data() {
-  return GetCachedSectionData(eSectionTypeDWARFDebugInfoDwo, m_data_debug_info);
 }
 
 const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_str_data() {
