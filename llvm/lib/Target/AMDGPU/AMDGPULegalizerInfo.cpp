@@ -882,19 +882,17 @@ bool AMDGPULegalizerInfo::legalizeFceil(
   MachineIRBuilder &B) const {
   B.setInstr(MI);
 
+  const LLT S1 = LLT::scalar(1);
+  const LLT S64 = LLT::scalar(64);
+
   unsigned Src = MI.getOperand(1).getReg();
-  LLT Ty = MRI.getType(Src);
-  assert(Ty.isScalar() && Ty.getSizeInBits() == 64);
+  assert(MRI.getType(Src) == S64);
 
   // result = trunc(src)
   // if (src > 0.0 && src != result)
   //   result += 1.0
 
-  LLT S1 = LLT::scalar(1);
-  LLT S64 = LLT::scalar(64);
-
   auto Trunc = B.buildInstr(TargetOpcode::G_INTRINSIC_TRUNC, {S64}, {Src});
-
 
   const auto Zero = B.buildFConstant(S64, 0.0);
   const auto One = B.buildFConstant(S64, 1.0);
@@ -929,13 +927,12 @@ bool AMDGPULegalizerInfo::legalizeIntrinsicTrunc(
   MachineIRBuilder &B) const {
   B.setInstr(MI);
 
-  unsigned Src = MI.getOperand(1).getReg();
-  LLT Ty = MRI.getType(Src);
-  assert(Ty.isScalar() && Ty.getSizeInBits() == 64);
+  const LLT S1 = LLT::scalar(1);
+  const LLT S32 = LLT::scalar(32);
+  const LLT S64 = LLT::scalar(64);
 
-  LLT S1 = LLT::scalar(1);
-  LLT S32 = LLT::scalar(32);
-  LLT S64 = LLT::scalar(64);
+  unsigned Src = MI.getOperand(1).getReg();
+  assert(MRI.getType(Src) == S64);
 
   // TODO: Should this use extract since the low half is unused?
   auto Unmerge = B.buildUnmerge({S32, S32}, Src);
