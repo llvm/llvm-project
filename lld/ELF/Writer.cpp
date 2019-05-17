@@ -180,14 +180,14 @@ static Defined *addOptionalRegular(StringRef Name, SectionBase *Sec,
   if (!S || S->isDefined())
     return nullptr;
 
-  return cast<Defined>(Symtab->addDefined(
+  return cast<Defined>(Symtab->addSymbol(
       Defined{/*File=*/nullptr, Name, Binding, StOther, STT_NOTYPE, Val,
               /*Size=*/0, Sec}));
 }
 
 static Defined *addAbsolute(StringRef Name) {
-  Defined New(nullptr, Name, STB_GLOBAL, STV_HIDDEN, STT_NOTYPE, 0, 0, nullptr);
-  Symbol *Sym = Symtab->addDefined(New);
+  Symbol *Sym = Symtab->addSymbol(Defined{nullptr, Name, STB_GLOBAL, STV_HIDDEN,
+                                          STT_NOTYPE, 0, 0, nullptr});
   if (!Sym->isDefined())
     error("duplicate symbol: " + toString(*Sym));
   return cast<Defined>(Sym);
@@ -239,9 +239,9 @@ void elf::addReservedSymbols() {
     if (Config->EMachine == EM_PPC || Config->EMachine == EM_PPC64)
       GotOff = 0x8000;
 
-    Symtab->addDefined(Defined{/*File=*/nullptr, GotSymName, STB_GLOBAL,
-                               STV_HIDDEN, STT_NOTYPE, GotOff, /*Size=*/0,
-                               Out::ElfHeader});
+    Symtab->addSymbol(Defined{/*File=*/nullptr, GotSymName, STB_GLOBAL,
+                              STV_HIDDEN, STT_NOTYPE, GotOff, /*Size=*/0,
+                              Out::ElfHeader});
     ElfSym::GlobalOffsetTable = cast<Defined>(S);
   }
 
@@ -1592,9 +1592,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Even the author of gold doesn't remember why gold behaves that way.
   // https://sourceware.org/ml/binutils/2002-03/msg00360.html
   if (In.Dynamic->Parent)
-    Symtab->addDefined(Defined{/*File=*/nullptr, "_DYNAMIC", STB_WEAK,
-                               STV_HIDDEN, STT_NOTYPE,
-                               /*Value=*/0, /*Size=*/0, In.Dynamic});
+    Symtab->addSymbol(Defined{/*File=*/nullptr, "_DYNAMIC", STB_WEAK,
+                              STV_HIDDEN, STT_NOTYPE,
+                              /*Value=*/0, /*Size=*/0, In.Dynamic});
 
   // Define __rel[a]_iplt_{start,end} symbols if needed.
   addRelIpltSymbols();

@@ -67,7 +67,6 @@ add_lldb_library(lldbTarget
     lldbSymbol
     lldbUtility
     lldbPluginExpressionParserClang
-    lldbPluginObjCLanguage
     lldbPluginProcessUtility
 
   LINK_COMPONENTS
