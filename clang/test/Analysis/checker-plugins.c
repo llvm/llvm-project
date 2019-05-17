@@ -62,3 +62,35 @@ void caller() {
 // RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-CHECKER-OPTION-TRUE
 
 // CHECK-CHECKER-OPTION-TRUE: example.MyChecker:ExampleOption = true
+
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -load %llvmshlibdir/CheckerOptionHandlingAnalyzerPlugin%pluginext\
+// RUN:   -analyzer-checker=example.MyChecker \
+// RUN:   -analyzer-config example.MyChecker:Example=true \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-NON-EXISTENT-CHECKER-OPTION
+
+// CHECK-NON-EXISTENT-CHECKER-OPTION: (frontend): checker 'example.MyChecker'
+// CHECK-NON-EXISTENT-CHECKER-OPTION-SAME: has no option called 'Example'
+
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -load %llvmshlibdir/CheckerOptionHandlingAnalyzerPlugin%pluginext\
+// RUN:   -analyzer-checker=example.MyChecker \
+// RUN:   -analyzer-config-compatibility-mode=true \
+// RUN:   -analyzer-config example.MyChecker:Example=true
+
+
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -load %llvmshlibdir/CheckerOptionHandlingAnalyzerPlugin%pluginext\
+// RUN:   -analyzer-checker=example.MyChecker \
+// RUN:   -analyzer-config example.MyChecker:ExampleOption=example \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-BOOL-VALUE
+
+// CHECK-INVALID-BOOL-VALUE: (frontend): invalid input for checker option
+// CHECK-INVALID-BOOL-VALUE-SAME: 'example.MyChecker:ExampleOption', that
+// CHECK-INVALID-BOOL-VALUE-SAME: expects a boolean value
+
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -load %llvmshlibdir/CheckerOptionHandlingAnalyzerPlugin%pluginext\
+// RUN:   -analyzer-checker=example.MyChecker \
+// RUN:   -analyzer-config-compatibility-mode=true \
+// RUN:   -analyzer-config example.MyChecker:ExampleOption=example
