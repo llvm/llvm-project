@@ -666,6 +666,9 @@ bool BCECmpChain::simplify(const TargetLibraryInfo *const TLI,
   if (!AtLeastOneMerged())
     return false;
 
+  LLVM_DEBUG(dbgs() << "Simplifying comparison chain starting at block "
+                    << EntryBlock_->getName() << "\n");
+
   // Effectively merge blocks. We go in the reverse direction from the phi block
   // so that the next block is always available to branch to.
   const auto mergeRange = [this, TLI, AA](int I, int Num, BasicBlock *Next) {
@@ -676,6 +679,9 @@ bool BCECmpChain::simplify(const TargetLibraryInfo *const TLI,
   BasicBlock *NextCmpBlock = Phi_.getParent();
   for (int I = static_cast<int>(Comparisons_.size()) - 2; I >= 0; --I) {
     if (IsContiguous(Comparisons_[I], Comparisons_[I + 1])) {
+      LLVM_DEBUG(dbgs() << "Merging block " << Comparisons_[I].BB->getName()
+                        << " into " << Comparisons_[I + 1].BB->getName()
+                        << "\n");
       ++NumMerged;
     } else {
       NextCmpBlock = mergeRange(I + 1, NumMerged, NextCmpBlock);
@@ -689,6 +695,8 @@ bool BCECmpChain::simplify(const TargetLibraryInfo *const TLI,
   // blocks in the old chain unreachable.
   while (!pred_empty(EntryBlock_)) {
     BasicBlock* const Pred = *pred_begin(EntryBlock_);
+    LLVM_DEBUG(dbgs() << "Updating jump into old chain from " << Pred->getName()
+                      << "\n");
     Pred->getTerminator()->replaceUsesOfWith(EntryBlock_, NextCmpBlock);
   }
   EntryBlock_ = nullptr;
@@ -696,6 +704,7 @@ bool BCECmpChain::simplify(const TargetLibraryInfo *const TLI,
   // Delete merged blocks. This also removes incoming values in phi.
   SmallVector<BasicBlock *, 16> DeadBlocks;
   for (auto &Cmp : Comparisons_) {
+    LLVM_DEBUG(dbgs() << "Deleting merged block " << Cmp.BB->getName() << "\n");
     DeadBlocks.push_back(Cmp.BB);
   }
   DeleteDeadBlocks(DeadBlocks);
