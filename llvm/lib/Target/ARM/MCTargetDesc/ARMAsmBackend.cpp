@@ -46,6 +46,13 @@ public:
 };
 } // end anonymous namespace
 
+Optional<MCFixupKind> ARMAsmBackend::getFixupKind(StringRef Name) const {
+  if (STI.getTargetTriple().isOSBinFormatELF() && Name == "R_ARM_NONE")
+    return FK_NONE;
+
+  return MCAsmBackend::getFixupKind(Name);
+}
+
 const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo InfosLE[ARM::NumTargetFixupKinds] = {
       // This table *must* be in the order that the fixup_* kinds are defined in
@@ -383,6 +390,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   default:
     Ctx.reportError(Fixup.getLoc(), "bad relocation fixup type");
     return 0;
+  case FK_NONE:
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
@@ -761,7 +769,9 @@ bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   const MCSymbolRefExpr *A = Target.getSymA();
   const MCSymbol *Sym = A ? &A->getSymbol() : nullptr;
   const unsigned FixupKind = Fixup.getKind() ;
-  if ((unsigned)Fixup.getKind() == ARM::fixup_arm_thumb_bl) {
+  if (FixupKind == FK_NONE)
+    return true;
+  if (FixupKind == ARM::fixup_arm_thumb_bl) {
     assert(Sym && "How did we resolve this?");
 
     // If the symbol is external the linker will handle it.
@@ -802,6 +812,9 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   switch (Kind) {
   default:
     llvm_unreachable("Unknown fixup kind!");
+
+  case FK_NONE:
+    return 0;
 
   case FK_Data_1:
   case ARM::fixup_arm_thumb_bcc:
@@ -856,6 +869,9 @@ static unsigned getFixupKindContainerSizeBytes(unsigned Kind) {
   switch (Kind) {
   default:
     llvm_unreachable("Unknown fixup kind!");
+
+  case FK_NONE:
+    return 0;
 
   case FK_Data_1:
     return 1;
