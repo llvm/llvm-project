@@ -48,7 +48,9 @@ def strip_debug: F<"strip-debug">,
     HelpText<"Omit all debug information, but keep symbol information">;
 def whole_archive: F<"whole-archive">,
     HelpText<"Include all object files for following archives">;
+def v: Flag<["-"], "v">, HelpText<"Display the version number">;
 def verbose: F<"verbose">, HelpText<"Verbose mode">;
+def version: F<"version">, HelpText<"Display the version number and exit">;
 def require_defined: S<"require-defined">,
     HelpText<"Force symbol to be added to symbol table as an undefined one">;
 def require_defined_eq: J<"require-defined=">, Alias<require_defined>;
@@ -90,5 +92,3 @@ def: J<"plugin-opt=">;
 def: J<"sysroot">;
 def: F<"start-group">;
 def: F<"tsaware">;
-def: Flag<["-"], "v">;
-def: F<"version">;
