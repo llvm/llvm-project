@@ -9,6 +9,8 @@ set (FILES
   SocketAddressTest.cpp
   SocketTest.cpp
   TaskPoolTest.cpp
+  SocketTestUtilities.cpp
+  ConnectionFileDescriptorTest.cpp
 )
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
