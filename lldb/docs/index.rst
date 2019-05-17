@@ -67,11 +67,11 @@ Platform Support
 LLDB is known to work on the following platforms, but ports to new platforms
 are welcome:
 
-* macOS desktop user space debugging for i386 and x86-64
-* iOS simulator debugging on i386
-* iOS device debugging on ARM
-* Linux local user-space debugging for i386, x86-64 and PPC64le
-* FreeBSD local user-space debugging for i386 and x86-64
+* macOS desktop user space debugging for i386 and x86_64
+* iOS simulator debugging on i386 and x86_64
+* iOS device debugging on ARM and AArch64
+* Linux local user-space debugging for i386, x86_64 and PPC64le
+* FreeBSD local user-space debugging for i386 and x86_64
 * Windows local user-space debugging for i386 (*)
 
 (*) Support for Windows is under active development. Basic functionality is
