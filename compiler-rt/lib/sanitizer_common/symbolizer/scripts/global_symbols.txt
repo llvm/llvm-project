@@ -129,6 +129,7 @@ strrchr U
 strsep U
 strtod_l U
 strtof_l U
+strtok_r U
 strtol U
 strtold_l U
 strtoll_l U
