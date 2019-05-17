@@ -7117,7 +7117,8 @@ TypeResult Parser::parseTypeFromString(StringRef typeStr, StringRef context,
   tokens.push_back(Tok);
 
   // Enter the tokens into the token stream.
-  PP.EnterTokenStream(tokens, /*DisableMacroExpansion=*/false);
+  PP.EnterTokenStream(tokens, /*DisableMacroExpansion=*/false,
+                      /*IsReinject=*/false);
 
   // Consume the current token so that we'll start parsing the tokens we
   // added to the stream.
