@@ -3,9 +3,9 @@
 UNSUPPORTED: darwin, windows
 RUN: rm -rf %t
 RUN: mkdir -p %t
-RUN: %cpp_compiler %S/ShallowOOMDeepCrash.cpp -o %t/ForkSIGUSR
+RUN: %cpp_compiler %S/SleepOneSecondTest.cpp -o %t/ForkSIGUSR
 
-RUN: %run %t/ForkSIGUSR -fork=3 -rss_limit_mb=128 -ignore_crashes=1 2>%t/log & export PID=$!
+RUN: %run %t/ForkSIGUSR -fork=3 -ignore_crashes=1 2>%t/log & export PID=$!
 RUN: sleep 3
 RUN: kill -SIGUSR2 $PID
 RUN: sleep 6
