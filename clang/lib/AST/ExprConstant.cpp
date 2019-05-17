@@ -3285,6 +3285,11 @@ static bool AreElementsOfSameArray(QualType ObjType,
 static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
                                          AccessKinds AK, const LValue &LVal,
                                          QualType LValType) {
+  if (LVal.InvalidBase) {
+    Info.FFDiag(E);
+    return CompleteObject();
+  }
+
   if (!LVal.Base) {
     Info.FFDiag(E, diag::note_constexpr_access_null) << AK;
     return CompleteObject();
