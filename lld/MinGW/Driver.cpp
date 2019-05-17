@@ -78,6 +78,13 @@ public:
 };
 } // namespace
 
+static void printHelp(const char *Argv0) {
+  MinGWOptTable().PrintHelp(
+      outs(), (std::string(Argv0) + " [options] file...").c_str(), "lld",
+      false /*ShowHidden*/, true /*ShowAllAliases*/);
+  outs() << "\n";
+}
+
 opt::InputArgList MinGWOptTable::parse(ArrayRef<const char *> Argv) {
   unsigned MissingIndex;
   unsigned MissingCount;
@@ -89,8 +96,6 @@ opt::InputArgList MinGWOptTable::parse(ArrayRef<const char *> Argv) {
     fatal(StringRef(Args.getArgString(MissingIndex)) + ": missing argument");
   for (auto *Arg : Args.filtered(OPT_UNKNOWN))
     fatal("unknown argument: " + Arg->getSpelling());
-  if (!Args.hasArg(OPT_INPUT) && !Args.hasArg(OPT_l))
-    fatal("no input files");
   return Args;
 }
 
@@ -128,6 +133,14 @@ searchLibrary(StringRef Name, ArrayRef<StringRef> SearchPaths, bool BStatic) {
 bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
   MinGWOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
+
+  if (Args.hasArg(OPT_help)) {
+    printHelp(ArgsArr[0]);
+    return true;
+  }
+
+  if (!Args.hasArg(OPT_INPUT) && !Args.hasArg(OPT_l))
+    fatal("no input files");
 
   std::vector<std::string> LinkArgs;
   auto Add = [&](const Twine &S) { LinkArgs.push_back(S.str()); };

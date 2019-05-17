@@ -16,6 +16,7 @@ def exclude_all_symbols: F<"exclude-all-symbols">,
 def export_all_symbols: F<"export-all-symbols">,
     HelpText<"Export all symbols even if a def file or dllexport attributes are used">;
 def gc_sections: F<"gc-sections">, HelpText<"Remove unused sections">;
+def help: F<"help">, HelpText<"Print option help">;
 def icf: J<"icf=">, HelpText<"Identical code folding">;
 def image_base: S<"image-base">, HelpText<"Base address of the program">;
 def insert_timestamp: F<"insert-timestamp">,
