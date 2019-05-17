@@ -4618,11 +4618,7 @@ public:
                                 SourceLocation BuiltinLoc,
                                 SourceLocation RPLoc);
 
-  /// Build a potentially resolved SourceLocExpr.
-  ///
-  /// \param SubExpr - null when the SourceLocExpr is unresolved, otherwise
-  /// SubExpr will be a literal expression representing the value of the
-  /// builtin call.
+  // Build a potentially resolved SourceLocExpr.
   ExprResult BuildSourceLocExpr(SourceLocExpr::IdentKind Kind,
                                 SourceLocation BuiltinLoc, SourceLocation RPLoc,
                                 DeclContext *ParentContext);

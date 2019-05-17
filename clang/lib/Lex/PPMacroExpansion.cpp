@@ -806,7 +806,7 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
         // Do not lose the EOF/EOD.
         auto Toks = llvm::make_unique<Token[]>(1);
         Toks[0] = Tok;
-        EnterTokenStream(std::move(Toks), 1, true);
+        EnterTokenStream(std::move(Toks), 1, true, /*IsReinject*/ false);
         break;
       } else if (Tok.is(tok::r_paren)) {
         // If we found the ) token, the macro arg list is done.

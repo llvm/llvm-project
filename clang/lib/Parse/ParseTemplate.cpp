@@ -919,7 +919,7 @@ bool Parser::ParseGreaterThanInTemplateList(SourceLocation &RAngleLoc,
     PrevTokLocation = RAngleLoc;
   } else {
     PrevTokLocation = TokBeforeGreaterLoc;
-    PP.EnterToken(Tok);
+    PP.EnterToken(Tok, /*IsReinject=*/true);
     Tok = Greater;
   }
 
@@ -1402,7 +1402,7 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
   // Append the current token at the end of the new token stream so that it
   // doesn't get lost.
   LPT.Toks.push_back(Tok);
-  PP.EnterTokenStream(LPT.Toks, true);
+  PP.EnterTokenStream(LPT.Toks, true, /*IsReinject*/true);
 
   // Consume the previously pushed token.
   ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);

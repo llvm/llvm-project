@@ -1066,4 +1066,54 @@ let Predicates = [HasSVE2] in {
   // SVE2 complex integer multiply-add
   defm CMLA_ZZZ      : sve2_int_cmla<0b0, "cmla">;
   defm SQRDCMLAH_ZZZ : sve2_int_cmla<0b1, "sqrdcmlah">;
+
+  // SVE2 integer multiply long (indexed)
+  defm SMULLB_ZZZI : sve2_int_mul_long_by_indexed_elem<0b000, "smullb">;
+  defm SMULLT_ZZZI : sve2_int_mul_long_by_indexed_elem<0b001, "smullt">;
+  defm UMULLB_ZZZI : sve2_int_mul_long_by_indexed_elem<0b010, "umullb">;
+  defm UMULLT_ZZZI : sve2_int_mul_long_by_indexed_elem<0b011, "umullt">;
+
+  // SVE2 saturating multiply (indexed)
+  defm SQDMULLB_ZZZI : sve2_int_mul_long_by_indexed_elem<0b100, "sqdmullb">;
+  defm SQDMULLT_ZZZI : sve2_int_mul_long_by_indexed_elem<0b101, "sqdmullt">;
+
+  // SVE2 integer multiply-add long (indexed)
+  defm SMLALB_ZZZI : sve2_int_mla_long_by_indexed_elem<0b1000, "smlalb">;
+  defm SMLALT_ZZZI : sve2_int_mla_long_by_indexed_elem<0b1001, "smlalt">;
+  defm UMLALB_ZZZI : sve2_int_mla_long_by_indexed_elem<0b1010, "umlalb">;
+  defm UMLALT_ZZZI : sve2_int_mla_long_by_indexed_elem<0b1011, "umlalt">;
+  defm SMLSLB_ZZZI : sve2_int_mla_long_by_indexed_elem<0b1100, "smlslb">;
+  defm SMLSLT_ZZZI : sve2_int_mla_long_by_indexed_elem<0b1101, "smlslt">;
+  defm UMLSLB_ZZZI : sve2_int_mla_long_by_indexed_elem<0b1110, "umlslb">;
+  defm UMLSLT_ZZZI : sve2_int_mla_long_by_indexed_elem<0b1111, "umlslt">;
+
+  // SVE2 integer multiply-add long (vectors, unpredicated)
+  defm SMLALB_ZZZ : sve2_int_mla_long<0b10000, "smlalb">;
+  defm SMLALT_ZZZ : sve2_int_mla_long<0b10001, "smlalt">;
+  defm UMLALB_ZZZ : sve2_int_mla_long<0b10010, "umlalb">;
+  defm UMLALT_ZZZ : sve2_int_mla_long<0b10011, "umlalt">;
+  defm SMLSLB_ZZZ : sve2_int_mla_long<0b10100, "smlslb">;
+  defm SMLSLT_ZZZ : sve2_int_mla_long<0b10101, "smlslt">;
+  defm UMLSLB_ZZZ : sve2_int_mla_long<0b10110, "umlslb">;
+  defm UMLSLT_ZZZ : sve2_int_mla_long<0b10111, "umlslt">;
+
+  // SVE2 saturating multiply-add long (indexed)
+  defm SQDMLALB_ZZZI : sve2_int_mla_long_by_indexed_elem<0b0100, "sqdmlalb">;
+  defm SQDMLALT_ZZZI : sve2_int_mla_long_by_indexed_elem<0b0101, "sqdmlalt">;
+  defm SQDMLSLB_ZZZI : sve2_int_mla_long_by_indexed_elem<0b0110, "sqdmlslb">;
+  defm SQDMLSLT_ZZZI : sve2_int_mla_long_by_indexed_elem<0b0111, "sqdmlslt">;
+
+  // SVE2 saturating multiply-add long (vectors, unpredicated)
+  defm SQDMLALB_ZZZ : sve2_int_mla_long<0b11000, "sqdmlalb">;
+  defm SQDMLALT_ZZZ : sve2_int_mla_long<0b11001, "sqdmlalt">;
+  defm SQDMLSLB_ZZZ : sve2_int_mla_long<0b11010, "sqdmlslb">;
+  defm SQDMLSLT_ZZZ : sve2_int_mla_long<0b11011, "sqdmlslt">;
+
+  // SVE2 integer multiply long
+  defm SQDMULLB_ZZZ : sve2_wide_int_arith_long<0b11000, "sqdmullb">;
+  defm SQDMULLT_ZZZ : sve2_wide_int_arith_long<0b11001, "sqdmullt">;
+  defm SMULLB_ZZZ   : sve2_wide_int_arith_long<0b11100, "smullb">;
+  defm SMULLT_ZZZ   : sve2_wide_int_arith_long<0b11101, "smullt">;
+  defm UMULLB_ZZZ   : sve2_wide_int_arith_long<0b11110, "umullb">;
+  defm UMULLT_ZZZ   : sve2_wide_int_arith_long<0b11111, "umullt">;
 }

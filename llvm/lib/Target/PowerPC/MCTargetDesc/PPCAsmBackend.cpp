@@ -28,6 +28,7 @@ static uint64_t adjustFixupValue(unsigned Kind, uint64_t Value) {
   switch (Kind) {
   default:
     llvm_unreachable("Unknown fixup kind!");
+  case FK_NONE:
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
@@ -51,6 +52,8 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   switch (Kind) {
   default:
     llvm_unreachable("Unknown fixup kind!");
+  case FK_NONE:
+    return 0;
   case FK_Data_1:
     return 1;
   case FK_Data_2:
@@ -73,10 +76,12 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
 namespace {
 
 class PPCAsmBackend : public MCAsmBackend {
-  const Target &TheTarget;
+protected:
+  Triple TT;
 public:
-  PPCAsmBackend(const Target &T, support::endianness Endian)
-      : MCAsmBackend(Endian), TheTarget(T) {}
+  PPCAsmBackend(const Target &T, const Triple &TT)
+      : MCAsmBackend(TT.isLittleEndian() ? support::little : support::big),
+        TT(TT) {}
 
   unsigned getNumFixupKinds() const override {
     return PPC::NumTargetFixupKinds;
@@ -135,9 +140,11 @@ public:
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                              const MCValue &Target) override {
-    switch ((PPC::Fixups)Fixup.getKind()) {
+    switch ((unsigned)Fixup.getKind()) {
     default:
       return false;
+    case FK_NONE:
+      return true;
     case PPC::fixup_ppc_br24:
     case PPC::fixup_ppc_br24abs:
       // If the target symbol has a local entry point we must not attempt
@@ -186,48 +193,54 @@ public:
 
     return true;
   }
-
-  unsigned getPointerSize() const {
-    StringRef Name = TheTarget.getName();
-    if (Name == "ppc64" || Name == "ppc64le") return 8;
-    assert(Name == "ppc32" && "Unknown target name!");
-    return 4;
-  }
 };
 } // end anonymous namespace
 
 
 // FIXME: This should be in a separate file.
 namespace {
-  class DarwinPPCAsmBackend : public PPCAsmBackend {
-  public:
-    DarwinPPCAsmBackend(const Target &T) : PPCAsmBackend(T, support::big) { }
 
-    std::unique_ptr<MCObjectTargetWriter>
-    createObjectTargetWriter() const override {
-      bool is64 = getPointerSize() == 8;
-      return createPPCMachObjectWriter(
-          /*Is64Bit=*/is64,
-          (is64 ? MachO::CPU_TYPE_POWERPC64 : MachO::CPU_TYPE_POWERPC),
-          MachO::CPU_SUBTYPE_POWERPC_ALL);
-    }
-  };
+class DarwinPPCAsmBackend : public PPCAsmBackend {
+public:
+  DarwinPPCAsmBackend(const Target &T, const Triple &TT)
+      : PPCAsmBackend(T, TT) {}
 
-  class ELFPPCAsmBackend : public PPCAsmBackend {
-    uint8_t OSABI;
-  public:
-    ELFPPCAsmBackend(const Target &T, support::endianness Endian,
-                     uint8_t OSABI)
-        : PPCAsmBackend(T, Endian), OSABI(OSABI) {}
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    bool Is64 = TT.isPPC64();
+    return createPPCMachObjectWriter(
+        /*Is64Bit=*/Is64,
+        (Is64 ? MachO::CPU_TYPE_POWERPC64 : MachO::CPU_TYPE_POWERPC),
+        MachO::CPU_SUBTYPE_POWERPC_ALL);
+  }
+};
 
-    std::unique_ptr<MCObjectTargetWriter>
-    createObjectTargetWriter() const override {
-      bool is64 = getPointerSize() == 8;
-      return createPPCELFObjectWriter(is64, OSABI);
-    }
-  };
+class ELFPPCAsmBackend : public PPCAsmBackend {
+public:
+  ELFPPCAsmBackend(const Target &T, const Triple &TT) : PPCAsmBackend(T, TT) {}
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
+    bool Is64 = TT.isPPC64();
+    return createPPCELFObjectWriter(Is64, OSABI);
+  }
+
+  Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
+};
 
 } // end anonymous namespace
+
+Optional<MCFixupKind> ELFPPCAsmBackend::getFixupKind(StringRef Name) const {
+  if (TT.isPPC64()) {
+    if (Name == "R_PPC64_NONE")
+      return FK_NONE;
+  } else {
+    if (Name == "R_PPC_NONE")
+      return FK_NONE;
+  }
+  return MCAsmBackend::getFixupKind(Name);
+}
 
 MCAsmBackend *llvm::createPPCAsmBackend(const Target &T,
                                         const MCSubtargetInfo &STI,
@@ -235,10 +248,7 @@ MCAsmBackend *llvm::createPPCAsmBackend(const Target &T,
                                         const MCTargetOptions &Options) {
   const Triple &TT = STI.getTargetTriple();
   if (TT.isOSDarwin())
-    return new DarwinPPCAsmBackend(T);
+    return new DarwinPPCAsmBackend(T, TT);
 
-  uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
-  bool IsLittleEndian = TT.getArch() == Triple::ppc64le;
-  return new ELFPPCAsmBackend(
-      T, IsLittleEndian ? support::little : support::big, OSABI);
+  return new ELFPPCAsmBackend(T, TT);
 }

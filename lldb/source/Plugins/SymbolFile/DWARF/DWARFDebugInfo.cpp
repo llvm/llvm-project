@@ -80,7 +80,7 @@ void DWARFDebugInfo::ParseUnitHeadersIfNeeded() {
     return;
 
   lldb::offset_t offset = 0;
-  const auto &debug_info_data = m_dwarf2Data->get_debug_info_data();
+  const auto &debug_info_data = m_context.getOrLoadDebugInfoData();
 
   while (debug_info_data.ValidOffset(offset)) {
     llvm::Expected<DWARFUnitSP> cu_sp = DWARFCompileUnit::extract(

@@ -58,7 +58,6 @@
        (should-not display)
        (should (equal args
                       '("-output-replacements-xml" "-assume-filename" "foo.cpp"
-                        "-style" "file"
                         ;; Beginning of buffer, no byte-order mark.
                         "-offset" "0"
                         ;; We have two lines with 2×2 bytes for the umlauts,
