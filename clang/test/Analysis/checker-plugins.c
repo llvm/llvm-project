@@ -45,3 +45,20 @@ void caller() {
 // RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-CHECKER-OPTION-OUTPUT-TRUE
 
 // CHECK-CHECKER-OPTION-OUTPUT-TRUE: Example option is set to true
+
+// RUN: %clang_analyze_cc1 %s \
+// RUN:   -load %llvmshlibdir/CheckerOptionHandlingAnalyzerPlugin%pluginext\
+// RUN:   -analyzer-checker=example.MyChecker \
+// RUN:   -analyzer-checker=debug.ConfigDumper \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-CHECKER-OPTION
+
+// CHECK-CHECKER-OPTION: example.MyChecker:ExampleOption = false
+
+// RUN: %clang_analyze_cc1 %s \
+// RUN:   -load %llvmshlibdir/CheckerOptionHandlingAnalyzerPlugin%pluginext\
+// RUN:   -analyzer-checker=example.MyChecker \
+// RUN:   -analyzer-checker=debug.ConfigDumper \
+// RUN:   -analyzer-config example.MyChecker:ExampleOption=true \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-CHECKER-OPTION-TRUE
+
+// CHECK-CHECKER-OPTION-TRUE: example.MyChecker:ExampleOption = true

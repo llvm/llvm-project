@@ -309,27 +309,31 @@ void CheckerRegistry::addDependency(StringRef FullName, StringRef Dependency) {
 template <class T>
 static void
 insertOptionToCollection(StringRef FullName, T &Collection,
-                         const CheckerRegistry::CmdLineOption &&Option) {
+                         const CheckerRegistry::CmdLineOption &Option,
+                         AnalyzerOptions &AnOpts) {
   auto It = binaryFind(Collection, FullName);
   assert(It != Collection.end() &&
          "Failed to find the checker while attempting to add a command line "
          "option to it!");
 
-  It->CmdLineOptions.emplace_back(std::move(Option));
+  AnOpts.Config.insert(
+      {(FullName + ":" + Option.OptionName).str(), Option.DefaultValStr});
+
+  It->CmdLineOptions.emplace_back(Option);
 }
 
 void CheckerRegistry::resolveCheckerAndPackageOptions() {
   for (const std::pair<StringRef, CmdLineOption> &CheckerOptEntry :
        CheckerOptions) {
     insertOptionToCollection(CheckerOptEntry.first, Checkers,
-                             std::move(CheckerOptEntry.second));
+                             CheckerOptEntry.second, AnOpts);
   }
   CheckerOptions.clear();
 
   for (const std::pair<StringRef, CmdLineOption> &PackageOptEntry :
        PackageOptions) {
     insertOptionToCollection(PackageOptEntry.first, Checkers,
-                             std::move(PackageOptEntry.second));
+                             PackageOptEntry.second, AnOpts);
   }
   PackageOptions.clear();
 }
