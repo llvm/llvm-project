@@ -20,6 +20,56 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
 
+/// The identity of a type_info object depends on the canonical unqualified
+/// type only.
+TypeInfoLValue::TypeInfoLValue(const Type *T)
+    : T(T->getCanonicalTypeUnqualified().getTypePtr()) {}
+
+void TypeInfoLValue::print(llvm::raw_ostream &Out,
+                           const PrintingPolicy &Policy) const {
+  Out << "typeid(";
+  QualType(getType(), 0).print(Out, Policy);
+  Out << ")";
+}
+
+static_assert(
+    1 << llvm::PointerLikeTypeTraits<TypeInfoLValue>::NumLowBitsAvailable <=
+        alignof(const Type *),
+    "Type is insufficiently aligned");
+
+APValue::LValueBase APValue::LValueBase::getTypeInfo(TypeInfoLValue LV,
+                                                     QualType TypeInfo) {
+  LValueBase Base;
+  Base.Ptr = LV;
+  Base.TypeInfoType = TypeInfo.getAsOpaquePtr();
+  return Base;
+}
+
+unsigned APValue::LValueBase::getCallIndex() const {
+  return is<TypeInfoLValue>() ? 0 : Local.CallIndex;
+}
+
+unsigned APValue::LValueBase::getVersion() const {
+  return is<TypeInfoLValue>() ? 0 : Local.Version;
+}
+
+QualType APValue::LValueBase::getTypeInfoType() const {
+  assert(is<TypeInfoLValue>() && "not a type_info lvalue");
+  return QualType::getFromOpaquePtr(TypeInfoType);
+}
+
+namespace clang {
+bool operator==(const APValue::LValueBase &LHS,
+                const APValue::LValueBase &RHS) {
+  if (LHS.Ptr != RHS.Ptr)
+    return false;
+  if (LHS.is<TypeInfoLValue>())
+    return true;
+  return LHS.Local.CallIndex == RHS.Local.CallIndex &&
+         LHS.Local.Version == RHS.Local.Version;
+}
+}
+
 namespace {
   struct LVBase {
     APValue::LValueBase Base;
@@ -60,6 +110,8 @@ llvm::DenseMapInfo<clang::APValue::LValueBase>::getTombstoneKey() {
 
 namespace clang {
 llvm::hash_code hash_value(const APValue::LValueBase &Base) {
+  if (Base.is<TypeInfoLValue>())
+    return llvm::hash_value(Base.getOpaqueValue());
   return llvm::hash_combine(Base.getOpaqueValue(), Base.getCallIndex(),
                             Base.getVersion());
 }
@@ -470,7 +522,9 @@ void APValue::printPretty(raw_ostream &Out, ASTContext &Ctx, QualType Ty) const{
 
       if (const ValueDecl *VD = Base.dyn_cast<const ValueDecl*>())
         Out << *VD;
-      else {
+      else if (TypeInfoLValue TI = Base.dyn_cast<TypeInfoLValue>()) {
+        TI.print(Out, Ctx.getPrintingPolicy());
+      } else {
         assert(Base.get<const Expr *>() != nullptr &&
                "Expecting non-null Expr");
         Base.get<const Expr*>()->printPretty(Out, nullptr,
@@ -495,6 +549,9 @@ void APValue::printPretty(raw_ostream &Out, ASTContext &Ctx, QualType Ty) const{
     if (const ValueDecl *VD = Base.dyn_cast<const ValueDecl*>()) {
       Out << *VD;
       ElemTy = VD->getType();
+    } else if (TypeInfoLValue TI = Base.dyn_cast<TypeInfoLValue>()) {
+      TI.print(Out, Ctx.getPrintingPolicy());
+      ElemTy = Base.getTypeInfoType();
     } else {
       const Expr *E = Base.get<const Expr*>();
       assert(E != nullptr && "Expecting non-null Expr");

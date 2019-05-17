@@ -449,6 +449,19 @@ void CodeGenModule::Release() {
     EmitModuleLinkOptions();
   }
 
+  // On ELF we pass the dependent library specifiers directly to the linker
+  // without manipulating them. This is in contrast to other platforms where
+  // they are mapped to a specific linker option by the compiler. This
+  // difference is a result of the greater variety of ELF linkers and the fact
+  // that ELF linkers tend to handle libraries in a more complicated fashion
+  // than on other platforms. This forces us to defer handling the dependent
+  // libs to the linker.
+  if (!ELFDependentLibraries.empty()) {
+    auto *NMD = getModule().getOrInsertNamedMetadata("llvm.dependent-libraries");
+    for (auto *MD : ELFDependentLibraries)
+      NMD->addOperand(MD);
+  }
+
   // Record mregparm value now so it is visible through rest of codegen.
   if (Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86)
     getModule().addModuleFlag(llvm::Module::Error, "NumRegisterParameters",
@@ -1906,17 +1919,18 @@ void CodeGenModule::AddDetectMismatch(StringRef Name, StringRef Value) {
   LinkerOptionsMetadata.push_back(llvm::MDNode::get(getLLVMContext(), MDOpts));
 }
 
-void CodeGenModule::AddELFLibDirective(StringRef Lib) {
-  auto &C = getLLVMContext();
-  LinkerOptionsMetadata.push_back(llvm::MDNode::get(
-      C, {llvm::MDString::get(C, "lib"), llvm::MDString::get(C, Lib)}));
-}
-
 void CodeGenModule::AddDependentLib(StringRef Lib) {
+  auto &C = getLLVMContext();
+  if (getTarget().getTriple().isOSBinFormatELF()) {
+      ELFDependentLibraries.push_back(
+        llvm::MDNode::get(C, llvm::MDString::get(C, Lib)));
+    return;
+  }
+
   llvm::SmallString<24> Opt;
   getTargetCodeGenInfo().getDependentLibraryOption(Lib, Opt);
   auto *MDOpts = llvm::MDString::get(getLLVMContext(), Opt);
-  LinkerOptionsMetadata.push_back(llvm::MDNode::get(getLLVMContext(), MDOpts));
+  LinkerOptionsMetadata.push_back(llvm::MDNode::get(C, MDOpts));
 }
 
 /// Add link options implied by the given module, including modules
@@ -1939,7 +1953,6 @@ static void addLinkOptionsPostorder(CodeGenModule &CGM, Module *Mod,
   // described by this module.
   llvm::LLVMContext &Context = CGM.getLLVMContext();
   bool IsELF = CGM.getTarget().getTriple().isOSBinFormatELF();
-  bool IsPS4 = CGM.getTarget().getTriple().isPS4();
 
   // For modules that use export_as for linking, use that module
   // name instead.
@@ -1959,7 +1972,7 @@ static void addLinkOptionsPostorder(CodeGenModule &CGM, Module *Mod,
     }
 
     // Link against a library.
-    if (IsELF && !IsPS4) {
+    if (IsELF) {
       llvm::Metadata *Args[2] = {
           llvm::MDString::get(Context, "lib"),
           llvm::MDString::get(Context, Mod->LinkLibraries[I - 1].Library),
@@ -5200,10 +5213,6 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
       AppendLinkerOptions(PCD->getArg());
       break;
     case PCK_Lib:
-      if (getTarget().getTriple().isOSBinFormatELF() &&
-          !getTarget().getTriple().isPS4())
-        AddELFLibDirective(PCD->getArg());
-      else
         AddDependentLib(PCD->getArg());
       break;
     case PCK_Compiler:

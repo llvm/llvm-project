@@ -41,6 +41,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/CodeViewRecordIO.h"
 #include "llvm/DebugInfo/CodeView/ContinuationRecordBuilder.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
@@ -66,6 +67,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -2940,10 +2942,19 @@ void CodeViewDebug::collectGlobalVariableInfo() {
   for (const MDNode *Node : CUs->operands()) {
     const auto *CU = cast<DICompileUnit>(Node);
     for (const auto *GVE : CU->getGlobalVariables()) {
+      const DIGlobalVariable *DIGV = GVE->getVariable();
+      const DIExpression *DIE = GVE->getExpression();
+
+      // Emit constant global variables in a global symbol section.
+      if (GlobalMap.count(GVE) == 0 && DIE->isConstant()) {
+        CVGlobalVariable CVGV = {DIGV, DIE};
+        GlobalVariables.emplace_back(std::move(CVGV));
+      }
+
       const auto *GV = GlobalMap.lookup(GVE);
       if (!GV || GV->isDeclarationForLinker())
         continue;
-      const DIGlobalVariable *DIGV = GVE->getVariable();
+
       DIScope *Scope = DIGV->getScope();
       SmallVector<CVGlobalVariable, 1> *VariableList;
       if (Scope && isa<DILocalScope>(Scope)) {
@@ -2958,7 +2969,7 @@ void CodeViewDebug::collectGlobalVariableInfo() {
         // Emit this global variable into a COMDAT section.
         VariableList = &ComdatVariables;
       else
-        // Emit this globla variable in a single global symbol section.
+        // Emit this global variable in a single global symbol section.
         VariableList = &GlobalVariables;
       CVGlobalVariable CVGV = {DIGV, GV};
       VariableList->emplace_back(std::move(CVGV));
@@ -2981,13 +2992,14 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
   // Second, emit each global that is in a comdat into its own .debug$S
   // section along with its own symbol substream.
   for (const CVGlobalVariable &CVGV : ComdatVariables) {
-    MCSymbol *GVSym = Asm->getSymbol(CVGV.GV);
+    const GlobalVariable *GV = CVGV.GVInfo.get<const GlobalVariable *>();
+    MCSymbol *GVSym = Asm->getSymbol(GV);
     OS.AddComment("Symbol subsection for " +
-            Twine(GlobalValue::dropLLVMManglingEscape(CVGV.GV->getName())));
+                  Twine(GlobalValue::dropLLVMManglingEscape(GV->getName())));
     switchToDebugSectionForSymbol(GVSym);
     MCSymbol *EndLabel = beginCVSubsection(DebugSubsectionKind::Symbols);
     // FIXME: emitDebugInfoForGlobal() doesn't handle DIExpressions.
-    emitDebugInfoForGlobal(CVGV.DIGV, CVGV.GV, GVSym);
+    emitDebugInfoForGlobal(CVGV);
     endCVSubsection(EndLabel);
   }
 }
@@ -3007,31 +3019,57 @@ void CodeViewDebug::emitDebugInfoForRetainedTypes() {
 // Emit each global variable in the specified array.
 void CodeViewDebug::emitGlobalVariableList(ArrayRef<CVGlobalVariable> Globals) {
   for (const CVGlobalVariable &CVGV : Globals) {
-    MCSymbol *GVSym = Asm->getSymbol(CVGV.GV);
     // FIXME: emitDebugInfoForGlobal() doesn't handle DIExpressions.
-    emitDebugInfoForGlobal(CVGV.DIGV, CVGV.GV, GVSym);
+    emitDebugInfoForGlobal(CVGV);
   }
 }
 
-void CodeViewDebug::emitDebugInfoForGlobal(const DIGlobalVariable *DIGV,
-                                           const GlobalVariable *GV,
-                                           MCSymbol *GVSym) {
-  // DataSym record, see SymbolRecord.h for more info. Thread local data
-  // happens to have the same format as global data.
-  SymbolKind DataSym = GV->isThreadLocal()
-                           ? (DIGV->isLocalToUnit() ? SymbolKind::S_LTHREAD32
-                                                    : SymbolKind::S_GTHREAD32)
-                           : (DIGV->isLocalToUnit() ? SymbolKind::S_LDATA32
-                                                    : SymbolKind::S_GDATA32);
-  MCSymbol *DataEnd = beginSymbolRecord(DataSym);
-  OS.AddComment("Type");
-  OS.EmitIntValue(getCompleteTypeIndex(DIGV->getType()).getIndex(), 4);
-  OS.AddComment("DataOffset");
-  OS.EmitCOFFSecRel32(GVSym, /*Offset=*/0);
-  OS.AddComment("Segment");
-  OS.EmitCOFFSectionIndex(GVSym);
-  OS.AddComment("Name");
-  const unsigned LengthOfDataRecord = 12;
-  emitNullTerminatedSymbolName(OS, DIGV->getName(), LengthOfDataRecord);
-  endSymbolRecord(DataEnd);
+void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
+  const DIGlobalVariable *DIGV = CVGV.DIGV;
+  if (const GlobalVariable *GV =
+          CVGV.GVInfo.dyn_cast<const GlobalVariable *>()) {
+    // DataSym record, see SymbolRecord.h for more info. Thread local data
+    // happens to have the same format as global data.
+    MCSymbol *GVSym = Asm->getSymbol(GV);
+    SymbolKind DataSym = GV->isThreadLocal()
+                             ? (DIGV->isLocalToUnit() ? SymbolKind::S_LTHREAD32
+                                                      : SymbolKind::S_GTHREAD32)
+                             : (DIGV->isLocalToUnit() ? SymbolKind::S_LDATA32
+                                                      : SymbolKind::S_GDATA32);
+    MCSymbol *DataEnd = beginSymbolRecord(DataSym);
+    OS.AddComment("Type");
+    OS.EmitIntValue(getCompleteTypeIndex(DIGV->getType()).getIndex(), 4);
+    OS.AddComment("DataOffset");
+    OS.EmitCOFFSecRel32(GVSym, /*Offset=*/0);
+    OS.AddComment("Segment");
+    OS.EmitCOFFSectionIndex(GVSym);
+    OS.AddComment("Name");
+    const unsigned LengthOfDataRecord = 12;
+    emitNullTerminatedSymbolName(OS, DIGV->getName(), LengthOfDataRecord);
+    endSymbolRecord(DataEnd);
+  } else {
+    // FIXME: Currently this only emits the global variables in the IR metadata.
+    // This should also emit enums and static data members.
+    const DIExpression *DIE = CVGV.GVInfo.get<const DIExpression *>();
+    assert(DIE->isConstant() &&
+           "Global constant variables must contain a constant expression.");
+    uint64_t Val = DIE->getElement(1);
+
+    MCSymbol *SConstantEnd = beginSymbolRecord(SymbolKind::S_CONSTANT);
+    OS.AddComment("Type");
+    OS.EmitIntValue(getTypeIndex(DIGV->getType()).getIndex(), 4);
+    OS.AddComment("Value");
+
+    // Encoded integers shouldn't need more than 10 bytes.
+    uint8_t data[10];
+    BinaryStreamWriter Writer(data, llvm::support::endianness::little);
+    CodeViewRecordIO IO(Writer);
+    cantFail(IO.mapEncodedInteger(Val));
+    StringRef SRef((char *)data, Writer.getOffset());
+    OS.EmitBinaryData(SRef);
+
+    OS.AddComment("Name");
+    emitNullTerminatedSymbolName(OS, DIGV->getDisplayName());
+    endSymbolRecord(SConstantEnd);
+  }
 }

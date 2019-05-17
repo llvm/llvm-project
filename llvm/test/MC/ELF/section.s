@@ -293,3 +293,16 @@ bar:
 // CHECK-NEXT:   ]
 // CHECK: }
 
+// Test SHT_LLVM_DEPENDENT_LIBRARIES
+
+.section .deplibs,"MS",@llvm_dependent_libraries,1
+// ASM: .section .deplibs,"MS",@llvm_dependent_libraries,1
+
+// CHECK: Section {
+// CHECK:   Name: .deplibs
+// CHECK-NEXT:   Type: SHT_LLVM_DEPENDENT_LIBRARIES
+// CHECK-NEXT:   Flags [
+// CHECK-NEXT:       SHF_MERGE
+// CHECK-NEXT:       SHF_STRINGS
+// CHECK-NEXT:   ]
+// CHECK: }

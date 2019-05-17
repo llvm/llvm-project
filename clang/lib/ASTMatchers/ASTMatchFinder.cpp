@@ -83,20 +83,12 @@ public:
   // descendants of a traversed node. max_depth is the maximum depth
   // to traverse: use 1 for matching the children and INT_MAX for
   // matching the descendants.
-  MatchChildASTVisitor(const DynTypedMatcher *Matcher,
-                       ASTMatchFinder *Finder,
-                       BoundNodesTreeBuilder *Builder,
-                       int MaxDepth,
-                       ASTMatchFinder::TraversalKind Traversal,
+  MatchChildASTVisitor(const DynTypedMatcher *Matcher, ASTMatchFinder *Finder,
+                       BoundNodesTreeBuilder *Builder, int MaxDepth,
+                       ast_type_traits::TraversalKind Traversal,
                        ASTMatchFinder::BindKind Bind)
-      : Matcher(Matcher),
-        Finder(Finder),
-        Builder(Builder),
-        CurrentDepth(0),
-        MaxDepth(MaxDepth),
-        Traversal(Traversal),
-        Bind(Bind),
-        Matches(false) {}
+      : Matcher(Matcher), Finder(Finder), Builder(Builder), CurrentDepth(0),
+        MaxDepth(MaxDepth), Traversal(Traversal), Bind(Bind), Matches(false) {}
 
   // Returns true if a match is found in the subtree rooted at the
   // given AST node. This is done via a set of mutually recursive
@@ -151,7 +143,8 @@ public:
 
     ScopedIncrement ScopedDepth(&CurrentDepth);
     Stmt *StmtToTraverse = StmtNode;
-    if (Traversal == ASTMatchFinder::TK_IgnoreImplicitCastsAndParentheses) {
+    if (Traversal ==
+        ast_type_traits::TraversalKind::TK_IgnoreImplicitCastsAndParentheses) {
       if (Expr *ExprNode = dyn_cast_or_null<Expr>(StmtNode))
         StmtToTraverse = ExprNode->IgnoreParenImpCasts();
     }
@@ -299,7 +292,7 @@ private:
   BoundNodesTreeBuilder ResultBindings;
   int CurrentDepth;
   const int MaxDepth;
-  const ASTMatchFinder::TraversalKind Traversal;
+  const ast_type_traits::TraversalKind Traversal;
   const ASTMatchFinder::BindKind Bind;
   bool Matches;
 };
@@ -393,7 +386,8 @@ public:
   bool memoizedMatchesRecursively(const ast_type_traits::DynTypedNode &Node,
                                   const DynTypedMatcher &Matcher,
                                   BoundNodesTreeBuilder *Builder, int MaxDepth,
-                                  TraversalKind Traversal, BindKind Bind) {
+                                  ast_type_traits::TraversalKind Traversal,
+                                  BindKind Bind) {
     // For AST-nodes that don't have an identity, we can't memoize.
     if (!Node.getMemoizationData() || !Builder->isComparable())
       return matchesRecursively(Node, Matcher, Builder, MaxDepth, Traversal,
@@ -427,7 +421,8 @@ public:
   bool matchesRecursively(const ast_type_traits::DynTypedNode &Node,
                           const DynTypedMatcher &Matcher,
                           BoundNodesTreeBuilder *Builder, int MaxDepth,
-                          TraversalKind Traversal, BindKind Bind) {
+                          ast_type_traits::TraversalKind Traversal,
+                          BindKind Bind) {
     MatchChildASTVisitor Visitor(
       &Matcher, this, Builder, MaxDepth, Traversal, Bind);
     return Visitor.findMatch(Node);
@@ -441,7 +436,7 @@ public:
   bool matchesChildOf(const ast_type_traits::DynTypedNode &Node,
                       const DynTypedMatcher &Matcher,
                       BoundNodesTreeBuilder *Builder,
-                      TraversalKind Traversal,
+                      ast_type_traits::TraversalKind Traversal,
                       BindKind Bind) override {
     if (ResultCache.size() > MaxMemoizationEntries)
       ResultCache.clear();
@@ -456,7 +451,8 @@ public:
     if (ResultCache.size() > MaxMemoizationEntries)
       ResultCache.clear();
     return memoizedMatchesRecursively(Node, Matcher, Builder, INT_MAX,
-                                      TK_AsIs, Bind);
+                                      ast_type_traits::TraversalKind::TK_AsIs,
+                                      Bind);
   }
   // Implements ASTMatchFinder::matchesAncestorOf.
   bool matchesAncestorOf(const ast_type_traits::DynTypedNode &Node,

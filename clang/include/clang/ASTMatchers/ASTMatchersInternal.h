@@ -950,15 +950,6 @@ const bool IsBaseType<T>::value;
 /// all nodes, as all nodes have ancestors.
 class ASTMatchFinder {
 public:
-  /// Defines how we descend a level in the AST when we pass
-  /// through expressions.
-  enum TraversalKind {
-    /// Will traverse any child nodes.
-    TK_AsIs,
-
-    /// Will not traverse implicit casts and parentheses.
-    TK_IgnoreImplicitCastsAndParentheses
-  };
 
   /// Defines how bindings are processed on recursive matches.
   enum BindKind {
@@ -989,11 +980,9 @@ public:
                                   BoundNodesTreeBuilder *Builder) = 0;
 
   template <typename T>
-  bool matchesChildOf(const T &Node,
-                      const DynTypedMatcher &Matcher,
+  bool matchesChildOf(const T &Node, const DynTypedMatcher &Matcher,
                       BoundNodesTreeBuilder *Builder,
-                      TraversalKind Traverse,
-                      BindKind Bind) {
+                      ast_type_traits::TraversalKind Traverse, BindKind Bind) {
     static_assert(std::is_base_of<Decl, T>::value ||
                   std::is_base_of<Stmt, T>::value ||
                   std::is_base_of<NestedNameSpecifier, T>::value ||
@@ -1042,7 +1031,7 @@ protected:
   virtual bool matchesChildOf(const ast_type_traits::DynTypedNode &Node,
                               const DynTypedMatcher &Matcher,
                               BoundNodesTreeBuilder *Builder,
-                              TraversalKind Traverse,
+                              ast_type_traits::TraversalKind Traverse,
                               BindKind Bind) = 0;
 
   virtual bool matchesDescendantOf(const ast_type_traits::DynTypedNode &Node,
@@ -1290,7 +1279,7 @@ public:
   bool matches(const T &Node, ASTMatchFinder *Finder,
                BoundNodesTreeBuilder *Builder) const override {
     return Finder->matchesChildOf(Node, this->InnerMatcher, Builder,
-                                  ASTMatchFinder::TK_AsIs,
+                                  ast_type_traits::TraversalKind::TK_AsIs,
                                   ASTMatchFinder::BK_First);
   }
 };
@@ -1313,7 +1302,7 @@ class ForEachMatcher : public WrapperMatcherInterface<T> {
                BoundNodesTreeBuilder* Builder) const override {
     return Finder->matchesChildOf(
         Node, this->InnerMatcher, Builder,
-        ASTMatchFinder::TK_IgnoreImplicitCastsAndParentheses,
+        ast_type_traits::TraversalKind::TK_IgnoreImplicitCastsAndParentheses,
         ASTMatchFinder::BK_All);
   }
 };

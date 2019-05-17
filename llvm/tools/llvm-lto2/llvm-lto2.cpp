@@ -360,6 +360,13 @@ static int dumpSymtab(int argc, char **argv) {
     if (TT.isOSBinFormatCOFF())
       outs() << "linker opts: " << Input->getCOFFLinkerOpts() << '\n';
 
+    if (TT.isOSBinFormatELF()) {
+      outs() << "dependent libraries:";
+      for (auto L : Input->getDependentLibraries())
+        outs() << " \"" << L << "\"";
+      outs() << '\n';
+    }
+
     std::vector<StringRef> ComdatTable = Input->getComdatTable();
     for (const InputFile::Symbol &Sym : Input->symbols()) {
       switch (Sym.getVisibility()) {

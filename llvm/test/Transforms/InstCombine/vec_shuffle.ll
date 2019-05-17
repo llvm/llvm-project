@@ -1140,3 +1140,75 @@ define <2 x i1> @PR40734(<1 x i1> %x, <4 x i1> %y) {
   ret <2 x i1> %r
 }
 
+define <7 x i8> @insert_subvector_shuffles(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @insert_subvector_shuffles(
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> undef, <7 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <3 x i8> [[Y:%.*]], <3 x i8> undef, <7 x i32> <i32 undef, i32 1, i32 2, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <7 x i8> [[S1]], <7 x i8> [[S2]], <7 x i32> <i32 0, i32 8, i32 1, i32 undef, i32 8, i32 1, i32 9>
+; CHECK-NEXT:    ret <7 x i8> [[S3]]
+;
+  %s1 = shufflevector <3 x i8> %x, <3 x i8> undef, <7 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %s2 = shufflevector <3 x i8> %y, <3 x i8> undef, <7 x i32> <i32 undef, i32 1, i32 2, i32 undef, i32 undef, i32 undef, i32 undef>
+  %s3 = shufflevector <7 x i8> %s1, <7 x i8> %s2, <7 x i32> <i32 0, i32 8, i32 1, i32 undef, i32 8, i32 1, i32 9>
+  ret <7 x i8> %s3
+}
+
+; The last shuffle may change the vector type.
+
+define <2 x i8> @insert_subvector_shuffles_narrowing(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @insert_subvector_shuffles_narrowing(
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> undef, <7 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <3 x i8> [[Y:%.*]], <3 x i8> undef, <7 x i32> <i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <7 x i8> [[S1]], <7 x i8> [[S2]], <2 x i32> <i32 0, i32 8>
+; CHECK-NEXT:    ret <2 x i8> [[S3]]
+;
+  %s1 = shufflevector <3 x i8> %x, <3 x i8> undef, <7 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %s2 = shufflevector <3 x i8> %y, <3 x i8> undef, <7 x i32> <i32 undef, i32 1, i32 2, i32 undef, i32 undef, i32 undef, i32 undef>
+  %s3 = shufflevector <7 x i8> %s1, <7 x i8> %s2, <2 x i32> <i32 0, i32 8>
+  ret <2 x i8> %s3
+}
+
+; Similar to above, but this reduces to a widen with undefs of 'x'.
+
+define <4 x double> @insert_subvector_shuffles_identity(<2 x double> %x) {
+; CHECK-LABEL: @insert_subvector_shuffles_identity(
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <2 x double> [[X:%.*]], <2 x double> undef, <4 x i32> <i32 undef, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <2 x double> [[X]], <2 x double> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <4 x double> [[S2]], <4 x double> [[S1]], <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>
+; CHECK-NEXT:    ret <4 x double> [[S3]]
+;
+  %s1 = shufflevector <2 x double> %x, <2 x double> undef, <4 x i32> <i32 undef, i32 1, i32 undef, i32 undef>
+  %s2 = shufflevector <2 x double> %x, <2 x double> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  %s3 = shufflevector <4 x double> %s2, <4 x double> %s1, <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>
+  ret <4 x double> %s3
+}
+
+; Negative test - not identity with padding (although this could be folded with better analysis).
+
+define <4 x double> @not_insert_subvector_shuffle(<2 x double> %x) {
+; CHECK-LABEL: @not_insert_subvector_shuffle(
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <2 x double> [[X:%.*]], <2 x double> undef, <4 x i32> <i32 undef, i32 1, i32 undef, i32 1>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <2 x double> [[X]], <2 x double> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <4 x double> [[S2]], <4 x double> [[S1]], <4 x i32> <i32 0, i32 5, i32 7, i32 undef>
+; CHECK-NEXT:    ret <4 x double> [[S3]]
+;
+  %s1 = shufflevector <2 x double> %x, <2 x double> undef, <4 x i32> <i32 undef, i32 1, i32 undef, i32 1>
+  %s2 = shufflevector <2 x double> %x, <2 x double> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  %s3 = shufflevector <4 x double> %s2, <4 x double> %s1, <4 x i32> <i32 0, i32 5, i32 7, i32 undef>
+  ret <4 x double> %s3
+}
+
+; Negative test - operands are not the same size (although this could be partly folded with better analysis).
+
+define <4 x double> @not_insert_subvector_shuffles_with_same_size(<2 x double> %x, <3 x double> %y) {
+; CHECK-LABEL: @not_insert_subvector_shuffles_with_same_size(
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <2 x double> [[X:%.*]], <2 x double> undef, <4 x i32> <i32 undef, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <3 x double> [[Y:%.*]], <3 x double> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <4 x double> [[S2]], <4 x double> [[S1]], <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>
+; CHECK-NEXT:    ret <4 x double> [[S3]]
+;
+  %s1 = shufflevector <2 x double> %x, <2 x double> undef, <4 x i32> <i32 undef, i32 1, i32 undef, i32 undef>
+  %s2 = shufflevector <3 x double> %y, <3 x double> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  %s3 = shufflevector <4 x double> %s2, <4 x double> %s1, <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>
+  ret <4 x double> %s3
+}

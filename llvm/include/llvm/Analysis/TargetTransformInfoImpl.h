@@ -826,15 +826,11 @@ public:
       return static_cast<T *>(this)->getCallCost(F, Arguments, U);
     }
 
-    if (const CastInst *CI = dyn_cast<CastInst>(U)) {
-      // Result of a cmp instruction is often extended (to be used by other
-      // cmp instructions, logical or return instructions). These are usually
-      // nop on most sane targets.
-      if (isa<CmpInst>(CI->getOperand(0)))
-        return TTI::TCC_Free;
-      if (isa<SExtInst>(CI) || isa<ZExtInst>(CI) || isa<FPExtInst>(CI))
-        return static_cast<T *>(this)->getExtCost(CI, Operands.back());
-    }
+    if (isa<SExtInst>(U) || isa<ZExtInst>(U) || isa<FPExtInst>(U))
+      // The old behaviour of generally treating extensions of icmp to be free
+      // has been removed. A target that needs it should override getUserCost().
+      return static_cast<T *>(this)->getExtCost(cast<Instruction>(U),
+                                                Operands.back());
 
     return static_cast<T *>(this)->getOperationCost(
         Operator::getOpcode(U), U->getType(),

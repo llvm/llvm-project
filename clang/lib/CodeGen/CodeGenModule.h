@@ -465,8 +465,11 @@ private:
   /// have been emitted.
   llvm::SmallPtrSet<clang::Module *, 16> EmittedModuleInitializers;
 
-  /// A vector of metadata strings.
+  /// A vector of metadata strings for linker options.
   SmallVector<llvm::MDNode *, 16> LinkerOptionsMetadata;
+
+  /// A vector of metadata strings for dependent libraries for ELF.
+  SmallVector<llvm::MDNode *, 16> ELFDependentLibraries;
 
   /// @name Cache for Objective-C runtime types
   /// @{
@@ -1152,11 +1155,9 @@ public:
   /// Appends a detect mismatch command to the linker options.
   void AddDetectMismatch(StringRef Name, StringRef Value);
 
-  /// Appends a dependent lib to the "llvm.linker.options" metadata
-  /// value.
+  /// Appends a dependent lib to the appropriate metadata value.
   void AddDependentLib(StringRef Lib);
 
-  void AddELFLibDirective(StringRef Lib);
 
   llvm::GlobalVariable::LinkageTypes getFunctionLinkage(GlobalDecl GD);
 
