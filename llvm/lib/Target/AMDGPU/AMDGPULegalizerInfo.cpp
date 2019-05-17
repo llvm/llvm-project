@@ -261,6 +261,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .lowerFor({{S64, S16}}) // FIXME: Implement
     .scalarize(0);
 
+  getActionDefinitionsBuilder(G_FCOPYSIGN)
+    .legalForCartesianProduct({S16, S32, S64}, {S16, S32, S64})
+    .scalarize(0);
+
   getActionDefinitionsBuilder(G_FSUB)
       // Use actual fsub instruction
       .legalFor({S32})
