@@ -163,6 +163,25 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappingsIntrinsicWSideEffects(
     const std::array<unsigned, 3> RegSrcOpIdx = { 2, 3, 4 };
     return addMappingFromTable<3>(MI, MRI, RegSrcOpIdx, makeArrayRef(Table));
   }
+  case Intrinsic::amdgcn_s_buffer_load: {
+    static const OpRegBankEntry<2> Table[4] = {
+      // Perfectly legal.
+      { { AMDGPU::SGPRRegBankID, AMDGPU::SGPRRegBankID }, 1 },
+
+      // Only need 1 register in loop
+      { { AMDGPU::SGPRRegBankID, AMDGPU::VGPRRegBankID }, 300 },
+
+      // Have to waterfall the resource.
+      { { AMDGPU::VGPRRegBankID, AMDGPU::SGPRRegBankID }, 1000 },
+
+      // Have to waterfall the resource, and the offset.
+      { { AMDGPU::VGPRRegBankID, AMDGPU::VGPRRegBankID }, 1500 }
+    };
+
+    // rsrc, offset
+    const std::array<unsigned, 2> RegSrcOpIdx = { 2, 3 };
+    return addMappingFromTable<2>(MI, MRI, RegSrcOpIdx, makeArrayRef(Table));
+  }
   default:
     return RegisterBankInfo::getInstrAlternativeMappings(MI);
   }
@@ -818,6 +837,10 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       executeInWaterfallLoop(MI, MRI, { 2 });
       return;
     }
+    case Intrinsic::amdgcn_s_buffer_load: {
+      executeInWaterfallLoop(MI, MRI, { 2, 3 });
+      return;
+    }
     default:
       break;
     }
@@ -1303,6 +1326,27 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[4] = AMDGPU::getValueMapping(OffsetBank, Size4);
       OpdsMapping[5] = nullptr;
       OpdsMapping[6] = nullptr;
+      break;
+    }
+    case Intrinsic::amdgcn_s_buffer_load: {
+      unsigned RSrc = MI.getOperand(2).getReg();   // SGPR
+      unsigned Offset = MI.getOperand(3).getReg(); // SGPR/imm
+
+      unsigned Size0 = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+      unsigned Size2 = MRI.getType(RSrc).getSizeInBits();
+      unsigned Size3 = MRI.getType(Offset).getSizeInBits();
+
+      unsigned RSrcBank = getRegBankID(RSrc, MRI, *TRI);
+      unsigned OffsetBank = getRegBankID(Offset, MRI, *TRI);
+
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size0);
+      OpdsMapping[1] = nullptr; // intrinsic id
+
+      // Lie and claim everything is legal, even though some need to be
+      // SGPRs. applyMapping will have to deal with it as a waterfall loop.
+      OpdsMapping[2] = AMDGPU::getValueMapping(RSrcBank, Size2); // rsrc
+      OpdsMapping[3] = AMDGPU::getValueMapping(OffsetBank, Size3);
+      OpdsMapping[4] = nullptr;
       break;
     }
     }
