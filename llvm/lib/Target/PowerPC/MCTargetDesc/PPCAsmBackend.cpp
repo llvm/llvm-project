@@ -73,10 +73,12 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
 namespace {
 
 class PPCAsmBackend : public MCAsmBackend {
-  const Target &TheTarget;
+protected:
+  Triple TT;
 public:
-  PPCAsmBackend(const Target &T, support::endianness Endian)
-      : MCAsmBackend(Endian), TheTarget(T) {}
+  PPCAsmBackend(const Target &T, const Triple &TT)
+      : MCAsmBackend(TT.isLittleEndian() ? support::little : support::big),
+        TT(TT) {}
 
   unsigned getNumFixupKinds() const override {
     return PPC::NumTargetFixupKinds;
@@ -186,13 +188,6 @@ public:
 
     return true;
   }
-
-  unsigned getPointerSize() const {
-    StringRef Name = TheTarget.getName();
-    if (Name == "ppc64" || Name == "ppc64le") return 8;
-    assert(Name == "ppc32" && "Unknown target name!");
-    return 4;
-  }
 };
 } // end anonymous namespace
 
@@ -201,29 +196,29 @@ public:
 namespace {
   class DarwinPPCAsmBackend : public PPCAsmBackend {
   public:
-    DarwinPPCAsmBackend(const Target &T) : PPCAsmBackend(T, support::big) { }
+    DarwinPPCAsmBackend(const Target &T, const Triple &TT)
+        : PPCAsmBackend(T, TT) {}
 
     std::unique_ptr<MCObjectTargetWriter>
     createObjectTargetWriter() const override {
-      bool is64 = getPointerSize() == 8;
+      bool Is64 = TT.isPPC64();
       return createPPCMachObjectWriter(
-          /*Is64Bit=*/is64,
-          (is64 ? MachO::CPU_TYPE_POWERPC64 : MachO::CPU_TYPE_POWERPC),
+          /*Is64Bit=*/Is64,
+          (Is64 ? MachO::CPU_TYPE_POWERPC64 : MachO::CPU_TYPE_POWERPC),
           MachO::CPU_SUBTYPE_POWERPC_ALL);
     }
   };
 
   class ELFPPCAsmBackend : public PPCAsmBackend {
-    uint8_t OSABI;
   public:
-    ELFPPCAsmBackend(const Target &T, support::endianness Endian,
-                     uint8_t OSABI)
-        : PPCAsmBackend(T, Endian), OSABI(OSABI) {}
+    ELFPPCAsmBackend(const Target &T, const Triple &TT)
+        : PPCAsmBackend(T, TT) {}
 
     std::unique_ptr<MCObjectTargetWriter>
     createObjectTargetWriter() const override {
-      bool is64 = getPointerSize() == 8;
-      return createPPCELFObjectWriter(is64, OSABI);
+      uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
+      bool Is64 = TT.isPPC64();
+      return createPPCELFObjectWriter(Is64, OSABI);
     }
   };
 
@@ -235,10 +230,7 @@ MCAsmBackend *llvm::createPPCAsmBackend(const Target &T,
                                         const MCTargetOptions &Options) {
   const Triple &TT = STI.getTargetTriple();
   if (TT.isOSDarwin())
-    return new DarwinPPCAsmBackend(T);
+    return new DarwinPPCAsmBackend(T, TT);
 
-  uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
-  bool IsLittleEndian = TT.getArch() == Triple::ppc64le;
-  return new ELFPPCAsmBackend(
-      T, IsLittleEndian ? support::little : support::big, OSABI);
+  return new ELFPPCAsmBackend(T, TT);
 }
