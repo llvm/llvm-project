@@ -47,6 +47,13 @@ v_cvt_u32_f32_e64 v0, v1 div:2
 // GCN: error: invalid operand for instruction
 
 //
+// mul
+//
+
+v_cvt_f64_i32 v[5:6], s1 mul:3
+// GCN: error: invalid mul value.
+
+//
 // v_interp*
 //
 
