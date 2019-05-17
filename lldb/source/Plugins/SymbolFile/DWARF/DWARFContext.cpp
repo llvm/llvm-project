@@ -13,9 +13,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static DWARFDataExtractor LoadSection(Module &module,
+static DWARFDataExtractor LoadSection(SectionList *section_list,
                                       SectionType section_type) {
-  SectionList *section_list = module.GetSectionList();
   if (!section_list)
     return DWARFDataExtractor();
 
@@ -29,16 +28,22 @@ static DWARFDataExtractor LoadSection(Module &module,
 }
 
 static const DWARFDataExtractor &
-LoadOrGetSection(Module &module, SectionType section_type,
+LoadOrGetSection(SectionList *section_list, SectionType section_type,
                  llvm::Optional<DWARFDataExtractor> &extractor) {
   if (!extractor)
-    extractor = LoadSection(module, section_type);
+    extractor = LoadSection(section_list, section_type);
   return *extractor;
 }
 
-DWARFContext::DWARFContext(Module &module) : m_module(module) {}
-
 const DWARFDataExtractor &DWARFContext::getOrLoadArangesData() {
-  return LoadOrGetSection(m_module, eSectionTypeDWARFDebugAranges,
+  return LoadOrGetSection(m_main_section_list, eSectionTypeDWARFDebugAranges,
                           m_data_debug_aranges);
+}
+
+const DWARFDataExtractor &DWARFContext::getOrLoadDebugInfoData() {
+  if (isDwo())
+    return LoadOrGetSection(m_dwo_section_list, eSectionTypeDWARFDebugInfoDwo,
+                            m_data_debug_info);
+  return LoadOrGetSection(m_main_section_list, eSectionTypeDWARFDebugInfo,
+                          m_data_debug_info);
 }

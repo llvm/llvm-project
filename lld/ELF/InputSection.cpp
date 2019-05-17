@@ -71,7 +71,6 @@ InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
 
   NumRelocations = 0;
   AreRelocsRela = false;
-  Debug = Name.startswith(".debug") || Name.startswith(".zdebug");
 
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.
@@ -471,7 +470,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
 
       if (RelTy::IsRela)
         P->r_addend = Sym.getVA(Addend) - Section->getOutputSection()->Addr;
-      else if (Config->Relocatable)
+      else if (Config->Relocatable && Type != Target->NoneRel)
         Sec->Relocations.push_back({R_ABS, Type, Rel.r_offset, Addend, &Sym});
     }
   }

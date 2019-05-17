@@ -234,6 +234,8 @@ void Writer::createImportSection() {
 }
 
 void Writer::createTypeSection() {
+  if (!Types.size())
+    return;
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_TYPE);
   raw_ostream &OS = Section->getStream();
   writeUleb128(OS, Types.size(), "type count");
@@ -467,11 +469,7 @@ void Writer::createRelocSections() {
       llvm_unreachable(
           "relocations only supported for code, data, or custom sections");
 
-    SyntheticSection *Section = createSyntheticSection(WASM_SEC_CUSTOM, Name);
-    raw_ostream &OS = Section->getStream();
-    writeUleb128(OS, I, "reloc section");
-    writeUleb128(OS, Count, "reloc count");
-    OSec->writeRelocations(OS);
+    OutputSections.push_back(make<RelocSection>(Name, OSec, I));
   }
 }
 

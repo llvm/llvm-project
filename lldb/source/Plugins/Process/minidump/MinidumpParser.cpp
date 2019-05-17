@@ -284,7 +284,7 @@ std::vector<const minidump::Module *> MinidumpParser::GetFilteredModuleList() {
     auto ExpectedName = m_file->getString(module.ModuleNameRVA);
     if (!ExpectedName) {
       LLDB_LOG_ERROR(log, ExpectedName.takeError(),
-                     "Failed to module name: {0}");
+                     "Failed to get module name: {0}");
       continue;
     }
 
@@ -324,19 +324,15 @@ const MinidumpExceptionStream *MinidumpParser::GetExceptionStream() {
 
 llvm::Optional<minidump::Range>
 MinidumpParser::FindMemoryRange(lldb::addr_t addr) {
-  llvm::ArrayRef<uint8_t> data = GetStream(StreamType::MemoryList);
   llvm::ArrayRef<uint8_t> data64 = GetStream(StreamType::Memory64List);
+  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES);
 
-  if (data.empty() && data64.empty())
-    return llvm::None;
-
-  if (!data.empty()) {
-    llvm::ArrayRef<MemoryDescriptor> memory_list = ParseMemoryList(data);
-
-    if (memory_list.empty())
-      return llvm::None;
-
-    for (const auto &memory_desc : memory_list) {
+  auto ExpectedMemory = GetMinidumpFile().getMemoryList();
+  if (!ExpectedMemory) {
+    LLDB_LOG_ERROR(log, ExpectedMemory.takeError(),
+                   "Failed to read memory list: {0}");
+  } else {
+    for (const auto &memory_desc : *ExpectedMemory) {
       const LocationDescriptor &loc_desc = memory_desc.Memory;
       const lldb::addr_t range_start = memory_desc.StartOfMemoryRange;
       const size_t range_size = loc_desc.DataSize;
@@ -345,8 +341,13 @@ MinidumpParser::FindMemoryRange(lldb::addr_t addr) {
         return llvm::None;
 
       if (range_start <= addr && addr < range_start + range_size) {
-        return minidump::Range(range_start,
-                               GetData().slice(loc_desc.RVA, range_size));
+        auto ExpectedSlice = GetMinidumpFile().getRawData(loc_desc);
+        if (!ExpectedSlice) {
+          LLDB_LOG_ERROR(log, ExpectedSlice.takeError(),
+                         "Failed to get memory slice: {0}");
+          return llvm::None;
+        }
+        return minidump::Range(range_start, *ExpectedSlice);
       }
     }
   }
@@ -450,14 +451,15 @@ CreateRegionsCacheFromMemoryInfoList(MinidumpParser &parser,
 static bool
 CreateRegionsCacheFromMemoryList(MinidumpParser &parser,
                                  std::vector<MemoryRegionInfo> &regions) {
-  auto data = parser.GetStream(StreamType::MemoryList);
-  if (data.empty())
+  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES);
+  auto ExpectedMemory = parser.GetMinidumpFile().getMemoryList();
+  if (!ExpectedMemory) {
+    LLDB_LOG_ERROR(log, ExpectedMemory.takeError(),
+                   "Failed to read memory list: {0}");
     return false;
-  auto memory_list = ParseMemoryList(data);
-  if (memory_list.empty())
-    return false;
-  regions.reserve(memory_list.size());
-  for (const auto &memory_desc : memory_list) {
+  }
+  regions.reserve(ExpectedMemory->size());
+  for (const MemoryDescriptor &memory_desc : *ExpectedMemory) {
     if (memory_desc.Memory.DataSize == 0)
       continue;
     MemoryRegionInfo region;

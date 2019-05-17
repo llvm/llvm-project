@@ -223,12 +223,9 @@ Optional<std::string> elf::findFromSearchPaths(StringRef Path) {
   return None;
 }
 
-// This is for -lfoo. We'll look for libfoo.so or libfoo.a from
+// This is for -l<basename>. We'll look for lib<basename>.so or lib<basename>.a from
 // search paths.
-Optional<std::string> elf::searchLibrary(StringRef Name) {
-  if (Name.startswith(":"))
-    return findFromSearchPaths(Name.substr(1));
-
+Optional<std::string> elf::searchLibraryBaseName(StringRef Name) {
   for (StringRef Dir : Config->SearchPaths) {
     if (!Config->Static)
       if (Optional<std::string> S = findFile(Dir, "lib" + Name + ".so"))
@@ -237,6 +234,13 @@ Optional<std::string> elf::searchLibrary(StringRef Name) {
       return S;
   }
   return None;
+}
+
+// This is for -l<namespec>.
+Optional<std::string> elf::searchLibrary(StringRef Name) {
+    if (Name.startswith(":"))
+        return findFromSearchPaths(Name.substr(1));
+    return searchLibraryBaseName (Name);
 }
 
 // If a linker/version script doesn't exist in the current directory, we also
