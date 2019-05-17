@@ -57,7 +57,9 @@ def _HASH_HASH_HASH : Flag<["-"], "###">,
     HelpText<"Print (but do not run) the commands to run for this compilation">;
 def appcontainer: F<"appcontainer">, HelpText<"Set the appcontainer flag in the executable">;
 def mllvm: S<"mllvm">;
-def pdb: S<"pdb">, HelpText<"Specify output PDB debug information file">;
+def pdb: S<"pdb">, HelpText<"Specify output PDB debug information file. "
+                            "Defaults to the output filename, with a pdb suffix, if given an empty argument">;
+def pdb_eq: J<"pdb=">, Alias<pdb>;
 def Xlink : J<"Xlink=">, MetaVarName<"<arg>">,
     HelpText<"Pass <arg> to the COFF linker">;
 

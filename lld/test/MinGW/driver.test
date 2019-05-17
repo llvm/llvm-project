@@ -99,8 +99,13 @@ STRIP-DEBUG: -debug:symtab
 STRIP-DEBUG-NOT: -debug:dwarf
 
 RUN: ld.lld -### -m i386pep foo.o -pdb out.pdb | FileCheck -check-prefix PDB %s
+RUN: ld.lld -### -m i386pep foo.o -pdb=out.pdb | FileCheck -check-prefix PDB %s
 PDB: -debug -pdb:out.pdb
 PDB-NOT: -debug:dwarf
+
+RUN: ld.lld -### -m i386pep foo.o -pdb= | FileCheck -check-prefix PDB-DEFAULT %s
+PDB-DEFAULT: -debug
+PDB-DEFAULT-NOT: -pdb:{{.*}}
 
 RUN: ld.lld -### -m i386pep foo.o --large-address-aware | FileCheck -check-prefix LARGE-ADDRESS-AWARE %s
 LARGE-ADDRESS-AWARE: -largeaddressaware

@@ -165,7 +165,9 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
 
   if (auto *A = Args.getLastArg(OPT_pdb)) {
     Add("-debug");
-    Add("-pdb:" + StringRef(A->getValue()));
+    StringRef V = A->getValue();
+    if (!V.empty())
+      Add("-pdb:" + V);
   } else if (Args.hasArg(OPT_strip_debug)) {
     Add("-debug:symtab");
   } else if (!Args.hasArg(OPT_strip_all)) {
