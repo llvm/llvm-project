@@ -38,6 +38,9 @@ public:
 
   bool legalizeAddrSpaceCast(MachineInstr &MI, MachineRegisterInfo &MRI,
                              MachineIRBuilder &MIRBuilder) const;
+  bool legalizeFrint(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     MachineIRBuilder &MIRBuilder) const;
+
 };
 } // End llvm namespace.
 #endif
