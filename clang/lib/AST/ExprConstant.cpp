@@ -1349,7 +1349,6 @@ enum AccessKinds {
   AK_Decrement,
   AK_MemberCall,
   AK_DynamicCast,
-  AK_TypeId,
 };
 
 static bool isModification(AccessKinds AK) {
@@ -1357,7 +1356,6 @@ static bool isModification(AccessKinds AK) {
   case AK_Read:
   case AK_MemberCall:
   case AK_DynamicCast:
-  case AK_TypeId:
     return false;
   case AK_Assign:
   case AK_Increment:
@@ -6031,33 +6029,19 @@ LValueExprEvaluator::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
 }
 
 bool LValueExprEvaluator::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
-  TypeInfoLValue TypeInfo;
-
   if (!E->isPotentiallyEvaluated()) {
+    TypeInfoLValue TypeInfo;
     if (E->isTypeOperand())
       TypeInfo = TypeInfoLValue(E->getTypeOperand(Info.Ctx).getTypePtr());
     else
       TypeInfo = TypeInfoLValue(E->getExprOperand()->getType().getTypePtr());
-  } else {
-    if (!Info.Ctx.getLangOpts().CPlusPlus2a) {
-      Info.CCEDiag(E, diag::note_constexpr_typeid_polymorphic)
-        << E->getExprOperand()->getType()
-        << E->getExprOperand()->getSourceRange();
-    }
-
-    if (!Visit(E->getExprOperand()))
-      return false;
-
-    Optional<DynamicType> DynType =
-        ComputeDynamicType(Info, E, Result, AK_TypeId);
-    if (!DynType)
-      return false;
-
-    TypeInfo =
-        TypeInfoLValue(Info.Ctx.getRecordType(DynType->Type).getTypePtr());
+    return Success(APValue::LValueBase::getTypeInfo(TypeInfo, E->getType()));
   }
 
-  return Success(APValue::LValueBase::getTypeInfo(TypeInfo, E->getType()));
+  Info.FFDiag(E, diag::note_constexpr_typeid_polymorphic)
+    << E->getExprOperand()->getType()
+    << E->getExprOperand()->getSourceRange();
+  return false;
 }
 
 bool LValueExprEvaluator::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
