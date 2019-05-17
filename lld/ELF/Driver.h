@@ -63,6 +63,7 @@ std::string createResponseFile(const llvm::opt::InputArgList &Args);
 
 llvm::Optional<std::string> findFromSearchPaths(StringRef Path);
 llvm::Optional<std::string> searchScript(StringRef Path);
+llvm::Optional<std::string> searchLibraryBaseName(StringRef Path);
 llvm::Optional<std::string> searchLibrary(StringRef Path);
 
 } // namespace elf

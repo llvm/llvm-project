@@ -9,6 +9,12 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 !0 = !{!"/include:foo"}
 !llvm.linker.options = !{ !0 }
 
+; CHECK: {{^dependent libraries: \"foo\" \"b a r\" \"baz\"$}}
+!1 = !{!"foo"}
+!2 = !{!"b a r"}
+!3 = !{!"baz"}
+!llvm.dependent-libraries = !{!1, !2, !3}
+
 @g1 = global i32 0
 
 ; CHECK-NOT: fallback g1

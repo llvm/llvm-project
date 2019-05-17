@@ -64,6 +64,10 @@ main:
   jmp FWORD ptr [rax]
 // CHECK: ljmpq *(%rax)
   ljmp [rax]
+// CHECK: jmp _foo
+  jmp short _foo
+// CHECK: jp _foo
+  jpe short _foo
 
 // CHECK:	movl	$257, -4(%rsp)
 	mov	DWORD PTR [RSP - 4], 257

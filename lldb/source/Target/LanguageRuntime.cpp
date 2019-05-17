@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/LanguageRuntime.h"
-#include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 
