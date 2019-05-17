@@ -339,7 +339,7 @@ public:
         }
 #else  // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
-    __hash_map_node_destructor(const __hash_node_destructor<allocator_type>& __x)
+    __hash_map_node_destructor(const std::__hash_node_destructor<allocator_type>& __x)
         : __na_(__x.__na_),
           __first_constructed(__x.__value_constructed),
           __second_constructed(__x.__value_constructed)
