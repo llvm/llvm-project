@@ -87,8 +87,8 @@ TEST_F(PointerUnionTest, ManyElements) {
   EXPECT_FALSE(a.is<Aligned<5>*>());
   EXPECT_FALSE(a.is<Aligned<6>*>());
   EXPECT_FALSE(a.is<Aligned<7>*>());
-  EXPECT_EQ(a.dyn_cast<Aligned<0>*>() == &a0);
-  EXPECT_EQ(*a.getAddrOfPtr1() == &a0);
+  EXPECT_EQ(a.dyn_cast<Aligned<0>*>(), &a0);
+  EXPECT_EQ(*a.getAddrOfPtr1(), &a0);
 
   a = &a7;
   EXPECT_FALSE(a.is<Aligned<0>*>());
@@ -99,7 +99,7 @@ TEST_F(PointerUnionTest, ManyElements) {
   EXPECT_FALSE(a.is<Aligned<5>*>());
   EXPECT_FALSE(a.is<Aligned<6>*>());
   EXPECT_TRUE(a.is<Aligned<7>*>());
-  EXPECT_EQ(a.dyn_cast<Aligned<7>*>() == &a7);
+  EXPECT_EQ(a.dyn_cast<Aligned<7>*>(), &a7);
 
   EXPECT_TRUE(a == PU8(&a7));
   EXPECT_TRUE(a != PU8(&a0));
