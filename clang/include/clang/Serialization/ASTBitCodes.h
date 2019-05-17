@@ -1732,6 +1732,9 @@ namespace serialization {
       /// A GNUNullExpr record.
       EXPR_GNU_NULL,
 
+      /// A SourceLocExpr record.
+      EXPR_SOURCE_LOC,
+
       /// A ShuffleVectorExpr record.
       EXPR_SHUFFLE_VECTOR,
 

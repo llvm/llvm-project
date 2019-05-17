@@ -9,8 +9,8 @@ define void @a() {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    kmovw %k6, %eax
-; CHECK-NEXT:    movw %ax, %cx
-; CHECK-NEXT:    movw %cx, (%esp)
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    movw %ax, (%esp)
 ; CHECK-NEXT:    addl $2, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl

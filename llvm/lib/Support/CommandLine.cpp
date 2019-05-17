@@ -450,7 +450,7 @@ void Option::addCategory(OptionCategory &C) {
   // must be explicitly added if you want multiple categories that include it.
   if (&C != &GeneralCategory && Categories[0] == &GeneralCategory)
     Categories[0] = &C;
-  else
+  else if (find(Categories, &C) == Categories.end())
     Categories.push_back(&C);
 }
 

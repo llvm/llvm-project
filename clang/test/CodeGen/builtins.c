@@ -256,6 +256,8 @@ void test_float_builtin_ops(float F, double D, long double LD) {
   volatile float resf;
   volatile double resd;
   volatile long double resld;
+  volatile long int resli;
+  volatile long long int reslli;
 
   resf = __builtin_fmodf(F,F);
   // CHECK: frem float
@@ -380,6 +382,14 @@ void test_float_builtin_ops(float F, double D, long double LD) {
   resld = __builtin_roundl(LD);
   // CHECK: call x86_fp80 @llvm.round.f80
 
+  resli = __builtin_lroundf (F);
+  // CHECK: call i64 @llvm.lround.i64.f32
+
+  resli = __builtin_lround (D);
+  // CHECK: call i64 @llvm.lround.i64.f64
+
+  resli = __builtin_lroundl (LD);
+  // CHECK: call i64 @llvm.lround.i64.f80
 }
 
 // __builtin_longjmp isn't supported on all platforms, so only test it on X86.

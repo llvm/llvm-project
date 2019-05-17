@@ -143,6 +143,8 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
   default:
     Ctx.reportFatalError(Fixup.getLoc(), "unsupported relocation on symbol");
     return ELF::R_ARM_NONE;
+  case FK_NONE:
+    return ELF::R_ARM_NONE;
   case FK_Data_1:
     switch (Modifier) {
     default:

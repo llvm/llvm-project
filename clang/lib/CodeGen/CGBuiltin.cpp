@@ -1721,6 +1721,27 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_truncl:
       return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::trunc));
 
+    case Builtin::BIlround:
+    case Builtin::BIlroundf:
+    case Builtin::BIlroundl:
+    case Builtin::BI__builtin_lround:
+    case Builtin::BI__builtin_lroundf:
+    case Builtin::BI__builtin_lroundl: {
+      llvm::Type *ResultType = ConvertType(E->getType());
+      int Width = ResultType->getPrimitiveSizeInBits();
+      return RValue::get(emitUnaryBuiltin(*this, E,
+                                          Width == 32 ? Intrinsic::lround_i32
+                                                      : Intrinsic::lround_i64));
+    }
+
+    case Builtin::BIllround:
+    case Builtin::BIllroundf:
+    case Builtin::BIllroundl:
+    case Builtin::BI__builtin_llround:
+    case Builtin::BI__builtin_llroundf:
+    case Builtin::BI__builtin_llroundl:
+      return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::llround));
+
     default:
       break;
     }
@@ -11862,6 +11883,22 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                              Ops[0]->getType()->getVectorNumElements());
     Intrinsic::ID IID = Intrinsic::x86_avx512bf16_mask_cvtneps2bf16_128;
     return Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
+  }
+
+  case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
+  case X86::BI__builtin_ia32_cvtneps2bf16_512_mask: {
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
+    default: llvm_unreachable("Unsupported intrinsic!");
+    case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
+      IID = Intrinsic::x86_avx512bf16_cvtneps2bf16_256;
+      break;
+    case X86::BI__builtin_ia32_cvtneps2bf16_512_mask:
+      IID = Intrinsic::x86_avx512bf16_cvtneps2bf16_512;
+      break;
+    }
+    Value *Res = Builder.CreateCall(CGM.getIntrinsic(IID), Ops[0]);
+    return EmitX86Select(*this, Ops[2], Res, Ops[1]);
   }
 
   case X86::BI__emul:

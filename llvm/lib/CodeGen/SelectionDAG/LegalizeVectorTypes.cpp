@@ -4219,6 +4219,24 @@ SDValue DAGTypeLegalizer::WidenVecOp_BITCAST(SDNode *N) {
     }
   }
 
+  // Handle a case like bitcast v12i8 -> v3i32. Normally that would get widened
+  // to v16i8 -> v4i32, but for a target where v3i32 is legal but v12i8 is not,
+  // we end up here. Handling the case here with EXTRACT_SUBVECTOR avoids
+  // having to copy via memory.
+  if (VT.isVector()) {
+    EVT EltVT = VT.getVectorElementType();
+    unsigned EltSize = EltVT.getSizeInBits();
+    if (InWidenSize % EltSize == 0) {
+      unsigned NewNumElts = InWidenSize / EltSize;
+      EVT NewVT = EVT::getVectorVT(*DAG.getContext(), EltVT, NewNumElts);
+      if (TLI.isTypeLegal(NewVT)) {
+        SDValue BitOp = DAG.getNode(ISD::BITCAST, dl, NewVT, InOp);
+        return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, BitOp,
+            DAG.getConstant(0, dl, TLI.getVectorIdxTy(DAG.getDataLayout())));
+      }
+    }
+  }
+
   return CreateStackStoreLoad(InOp, VT);
 }
 

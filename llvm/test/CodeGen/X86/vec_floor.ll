@@ -1374,7 +1374,7 @@ define <4 x float> @floor_mask_ss(<4 x float> %x, <4 x float> %y, <4 x float> %w
 ; AVX512-LABEL: floor_mask_ss:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vrndscaless $1, %xmm0, %xmm1, %xmm2 {%k1}
+; AVX512-NEXT:    vrndscaless $9, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %mask = and i8 %k, 1
@@ -1415,7 +1415,7 @@ define <4 x float> @floor_maskz_ss(<4 x float> %x, <4 x float> %y, i8 %k) nounwi
 ; AVX512-LABEL: floor_maskz_ss:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vrndscaless $1, %xmm0, %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vrndscaless $9, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %mask = and i8 %k, 1
   %nmask = icmp eq i8 %mask, 0
@@ -1452,7 +1452,7 @@ define <2 x double> @floor_mask_sd(<2 x double> %x, <2 x double> %y, <2 x double
 ; AVX512-LABEL: floor_mask_sd:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vrndscalesd $1, %xmm0, %xmm1, %xmm2 {%k1}
+; AVX512-NEXT:    vrndscalesd $9, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %mask = and i8 %k, 1
@@ -1493,7 +1493,7 @@ define <2 x double> @floor_maskz_sd(<2 x double> %x, <2 x double> %y, i8 %k) nou
 ; AVX512-LABEL: floor_maskz_sd:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vrndscalesd $1, %xmm0, %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vrndscalesd $9, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %mask = and i8 %k, 1
   %nmask = icmp eq i8 %mask, 0
@@ -1530,7 +1530,7 @@ define <4 x float> @floor_mask_ss_trunc(<4 x float> %x, <4 x float> %y, <4 x flo
 ; AVX512-LABEL: floor_mask_ss_trunc:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vrndscaless $1, %xmm0, %xmm1, %xmm2 {%k1}
+; AVX512-NEXT:    vrndscaless $9, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %mask = trunc i16 %k to i1
@@ -1573,7 +1573,7 @@ define <4 x float> @floor_maskz_ss_trunc(<4 x float> %x, <4 x float> %y, i16 %k)
 ; AVX512-LABEL: floor_maskz_ss_trunc:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vrndscaless $1, %xmm0, %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vrndscaless $9, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %mask = trunc i16 %k to i1
   %s = extractelement <4 x float> %x, i64 0
@@ -1609,7 +1609,7 @@ define <2 x double> @floor_mask_sd_trunc(<2 x double> %x, <2 x double> %y, <2 x 
 ; AVX512-LABEL: floor_mask_sd_trunc:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vrndscalesd $1, %xmm0, %xmm1, %xmm2 {%k1}
+; AVX512-NEXT:    vrndscalesd $9, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %mask = trunc i16 %k to i1
@@ -1652,7 +1652,7 @@ define <2 x double> @floor_maskz_sd_trunc(<2 x double> %x, <2 x double> %y, i16 
 ; AVX512-LABEL: floor_maskz_sd_trunc:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vrndscalesd $1, %xmm0, %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vrndscalesd $9, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %mask = trunc i16 %k to i1
   %s = extractelement <2 x double> %x, i64 0
@@ -1684,7 +1684,7 @@ define <4 x float> @floor_mask_ss_mask8(<4 x float> %x, <4 x float> %y, <4 x flo
 ; AVX512-LABEL: floor_mask_ss_mask8:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vcmpeqss %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vrndscaless $1, %xmm0, %xmm1, %xmm2 {%k1}
+; AVX512-NEXT:    vrndscaless $9, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %mask1 = fcmp oeq <4 x float> %x, %y
@@ -1717,7 +1717,7 @@ define <4 x float> @floor_maskz_ss_mask8(<4 x float> %x, <4 x float> %y) nounwin
 ; AVX512-LABEL: floor_maskz_ss_mask8:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vcmpeqss %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vrndscaless $1, %xmm0, %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vrndscaless $9, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %mask1 = fcmp oeq <4 x float> %x, %y
   %mask = extractelement <4 x i1> %mask1, i64 0
@@ -1750,7 +1750,7 @@ define <2 x double> @floor_mask_sd_mask8(<2 x double> %x, <2 x double> %y, <2 x 
 ; AVX512-LABEL: floor_mask_sd_mask8:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vcmpeqsd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vrndscalesd $1, %xmm0, %xmm1, %xmm2 {%k1}
+; AVX512-NEXT:    vrndscalesd $9, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %mask1 = fcmp oeq <2 x double> %x, %y
@@ -1783,7 +1783,7 @@ define <2 x double> @floor_maskz_sd_mask8(<2 x double> %x, <2 x double> %y) noun
 ; AVX512-LABEL: floor_maskz_sd_mask8:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vcmpeqsd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vrndscalesd $1, %xmm0, %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vrndscalesd $9, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %mask1 = fcmp oeq <2 x double> %x, %y
   %mask = extractelement <2 x i1> %mask1, i64 0
@@ -2350,7 +2350,7 @@ define <4 x float> @ceil_mask_ss(<4 x float> %x, <4 x float> %y, <4 x float> %w,
 ; AVX512-LABEL: ceil_mask_ss:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vrndscaless $2, %xmm0, %xmm1, %xmm2 {%k1}
+; AVX512-NEXT:    vrndscaless $10, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %mask = and i8 %k, 1
@@ -2391,7 +2391,7 @@ define <4 x float> @ceil_maskz_ss(<4 x float> %x, <4 x float> %y, i8 %k) nounwin
 ; AVX512-LABEL: ceil_maskz_ss:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vrndscaless $2, %xmm0, %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vrndscaless $10, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %mask = and i8 %k, 1
   %nmask = icmp eq i8 %mask, 0
@@ -2428,7 +2428,7 @@ define <2 x double> @ceil_mask_sd(<2 x double> %x, <2 x double> %y, <2 x double>
 ; AVX512-LABEL: ceil_mask_sd:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vrndscalesd $2, %xmm0, %xmm1, %xmm2 {%k1}
+; AVX512-NEXT:    vrndscalesd $10, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %mask = and i8 %k, 1
@@ -2469,7 +2469,7 @@ define <2 x double> @ceil_maskz_sd(<2 x double> %x, <2 x double> %y, i8 %k) noun
 ; AVX512-LABEL: ceil_maskz_sd:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vrndscalesd $2, %xmm0, %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vrndscalesd $10, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %mask = and i8 %k, 1
   %nmask = icmp eq i8 %mask, 0
@@ -2506,7 +2506,7 @@ define <4 x float> @ceil_mask_ss_trunc(<4 x float> %x, <4 x float> %y, <4 x floa
 ; AVX512-LABEL: ceil_mask_ss_trunc:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vrndscaless $2, %xmm0, %xmm1, %xmm2 {%k1}
+; AVX512-NEXT:    vrndscaless $10, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %mask = trunc i16 %k to i1
@@ -2549,7 +2549,7 @@ define <4 x float> @ceil_maskz_ss_trunc(<4 x float> %x, <4 x float> %y, i16 %k) 
 ; AVX512-LABEL: ceil_maskz_ss_trunc:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vrndscaless $2, %xmm0, %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vrndscaless $10, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %mask = trunc i16 %k to i1
   %s = extractelement <4 x float> %x, i64 0
@@ -2585,7 +2585,7 @@ define <2 x double> @ceil_mask_sd_trunc(<2 x double> %x, <2 x double> %y, <2 x d
 ; AVX512-LABEL: ceil_mask_sd_trunc:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vrndscalesd $2, %xmm0, %xmm1, %xmm2 {%k1}
+; AVX512-NEXT:    vrndscalesd $10, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %mask = trunc i16 %k to i1
@@ -2628,7 +2628,7 @@ define <2 x double> @ceil_maskz_sd_trunc(<2 x double> %x, <2 x double> %y, i16 %
 ; AVX512-LABEL: ceil_maskz_sd_trunc:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vrndscalesd $2, %xmm0, %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vrndscalesd $10, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %mask = trunc i16 %k to i1
   %s = extractelement <2 x double> %x, i64 0
@@ -2660,7 +2660,7 @@ define <4 x float> @ceil_mask_ss_mask8(<4 x float> %x, <4 x float> %y, <4 x floa
 ; AVX512-LABEL: ceil_mask_ss_mask8:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vcmpeqss %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vrndscaless $2, %xmm0, %xmm1, %xmm2 {%k1}
+; AVX512-NEXT:    vrndscaless $10, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %mask1 = fcmp oeq <4 x float> %x, %y
@@ -2693,7 +2693,7 @@ define <4 x float> @ceil_maskz_ss_mask8(<4 x float> %x, <4 x float> %y) nounwind
 ; AVX512-LABEL: ceil_maskz_ss_mask8:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vcmpeqss %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vrndscaless $2, %xmm0, %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vrndscaless $10, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %mask1 = fcmp oeq <4 x float> %x, %y
   %mask = extractelement <4 x i1> %mask1, i64 0
@@ -2726,7 +2726,7 @@ define <2 x double> @ceil_mask_sd_mask8(<2 x double> %x, <2 x double> %y, <2 x d
 ; AVX512-LABEL: ceil_mask_sd_mask8:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vcmpeqsd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vrndscalesd $2, %xmm0, %xmm1, %xmm2 {%k1}
+; AVX512-NEXT:    vrndscalesd $10, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %mask1 = fcmp oeq <2 x double> %x, %y
@@ -2759,7 +2759,7 @@ define <2 x double> @ceil_maskz_sd_mask8(<2 x double> %x, <2 x double> %y) nounw
 ; AVX512-LABEL: ceil_maskz_sd_mask8:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vcmpeqsd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vrndscalesd $2, %xmm0, %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vrndscalesd $10, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %mask1 = fcmp oeq <2 x double> %x, %y
   %mask = extractelement <2 x i1> %mask1, i64 0

@@ -86,15 +86,14 @@ static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
   return std::min(VA, VB);
 }
 
-// Find an existing symbol or create and insert a new one.
-Symbol *SymbolTable::insert(const Symbol &New) {
+// Find an existing symbol or create a new one.
+Symbol *SymbolTable::insert(StringRef Name) {
   // <name>@@<version> means the symbol is the default version. In that
   // case <name>@@<version> will be used to resolve references to <name>.
   //
   // Since this is a hot path, the following string search code is
   // optimized for speed. StringRef::find(char) is much faster than
   // StringRef::find(StringRef).
-  StringRef Name = New.getName();
   size_t Pos = Name.find('@');
   if (Pos != StringRef::npos && Pos + 1 < Name.size() && Name[Pos + 1] == '@')
     Name = Name.take_front(Pos);
@@ -110,55 +109,35 @@ Symbol *SymbolTable::insert(const Symbol &New) {
     Traced = true;
   }
 
-  Symbol *Old;
-  if (IsNew) {
-    Old = reinterpret_cast<Symbol *>(make<SymbolUnion>());
-    SymVector.push_back(Old);
+  if (!IsNew)
+    return SymVector[SymIndex];
 
-    Old->SymbolKind = Symbol::PlaceholderKind;
-    Old->VersionId = Config->DefaultSymbolVersion;
-    Old->Visibility = STV_DEFAULT;
-    Old->IsUsedInRegularObj = false;
-    Old->ExportDynamic = false;
-    Old->CanInline = true;
-    Old->Traced = Traced;
-    Old->ScriptDefined = false;
-  } else {
-    Old = SymVector[SymIndex];
-  }
+  Symbol *Sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
+  SymVector.push_back(Sym);
 
+  Sym->SymbolKind = Symbol::PlaceholderKind;
+  Sym->VersionId = Config->DefaultSymbolVersion;
+  Sym->Visibility = STV_DEFAULT;
+  Sym->IsUsedInRegularObj = false;
+  Sym->ExportDynamic = false;
+  Sym->CanInline = true;
+  Sym->Traced = Traced;
+  Sym->ScriptDefined = false;
+  return Sym;
+}
+
+Symbol *SymbolTable::addSymbol(const Symbol &New) {
+  Symbol *Old = Symtab->insert(New.getName());
+  resolveSymbol(Old, New);
   return Old;
 }
 
-// Merge symbol properties.
-//
-// When we have many symbols of the same name, we choose one of them,
-// and that's the result of symbol resolution. However, symbols that
-// were not chosen still affect some symbol properteis.
-void SymbolTable::mergeProperties(Symbol *Old, const Symbol &New) {
-  // Merge symbol properties.
-  Old->ExportDynamic = Old->ExportDynamic || New.ExportDynamic;
-  Old->IsUsedInRegularObj = Old->IsUsedInRegularObj || New.IsUsedInRegularObj;
-
-  // DSO symbols do not affect visibility in the output.
-  if (!isa<SharedSymbol>(New))
-    Old->Visibility = getMinVisibility(Old->Visibility, New.Visibility);
-}
-
-Symbol *SymbolTable::addUndefined(const Undefined &New) {
-  Symbol *Old = insert(New);
-  mergeProperties(Old, New);
-
-  if (Old->isPlaceholder()) {
-    replaceSymbol(Old, &New);
-    return Old;
-  }
-
+static void addUndefined(Symbol *Old, const Undefined &New) {
   // An undefined symbol with non default visibility must be satisfied
   // in the same DSO.
   if (Old->isShared() && New.Visibility != STV_DEFAULT) {
-    replaceSymbol(Old, &New);
-    return Old;
+    replaceSymbol(Old, New);
+    return;
   }
 
   if (Old->isShared() || Old->isLazy() ||
@@ -170,7 +149,7 @@ Symbol *SymbolTable::addUndefined(const Undefined &New) {
     // Symbols.h for the details.
     if (New.Binding == STB_WEAK) {
       Old->Type = New.Type;
-      return Old;
+      return;
     }
 
     // Do extra check for --warn-backrefs.
@@ -225,7 +204,7 @@ Symbol *SymbolTable::addUndefined(const Undefined &New) {
     // group assignment rule simulates the traditional linker's semantics.
     bool Backref = Config->WarnBackrefs && New.File &&
                    Old->File->GroupId < New.File->GroupId;
-    fetchLazy(Old);
+    Symtab->fetchLazy(Old);
 
     // We don't report backward references to weak symbols as they can be
     // overridden later.
@@ -233,7 +212,6 @@ Symbol *SymbolTable::addUndefined(const Undefined &New) {
       warn("backward reference detected: " + New.getName() + " in " +
            toString(New.File) + " refers to " + toString(Old->File));
   }
-  return Old;
 }
 
 // Using .symver foo,foo@@VER unfortunately creates two symbols: foo and
@@ -300,22 +278,14 @@ static int compare(const Symbol *Old, const Symbol *New) {
   return 0;
 }
 
-Symbol *SymbolTable::addCommon(const CommonSymbol &New) {
-  Symbol *Old = insert(New);
-  mergeProperties(Old, New);
-
-  if (Old->isPlaceholder()) {
-    replaceSymbol(Old, &New);
-    return Old;
-  }
-
+static void addCommon(Symbol *Old, const CommonSymbol &New) {
   int Cmp = compare(Old, &New);
   if (Cmp < 0)
-    return Old;
+    return;
 
   if (Cmp > 0) {
-    replaceSymbol(Old, &New);
-    return Old;
+    replaceSymbol(Old, New);
+    return;
   }
 
   CommonSymbol *OldSym = cast<CommonSymbol>(Old);
@@ -325,7 +295,6 @@ Symbol *SymbolTable::addCommon(const CommonSymbol &New) {
     OldSym->File = New.File;
     OldSym->Size = New.Size;
   }
-  return OldSym;
 }
 
 static void reportDuplicate(Symbol *Sym, InputFile *NewFile,
@@ -363,45 +332,23 @@ static void reportDuplicate(Symbol *Sym, InputFile *NewFile,
   error(Msg);
 }
 
-Symbol *SymbolTable::addDefined(const Defined &New) {
-  Symbol *Old = insert(New);
-  mergeProperties(Old, New);
-
-  if (Old->isPlaceholder()) {
-    replaceSymbol(Old, &New);
-    return Old;
-  }
-
+static void addDefined(Symbol *Old, const Defined &New) {
   int Cmp = compare(Old, &New);
   if (Cmp > 0)
-    replaceSymbol(Old, &New);
+    replaceSymbol(Old, New);
   else if (Cmp == 0)
     reportDuplicate(Old, New.File,
                     dyn_cast_or_null<InputSectionBase>(New.Section), New.Value);
-  return Old;
 }
 
-Symbol *SymbolTable::addShared(const SharedSymbol &New) {
-  Symbol *Old = insert(New);
-  mergeProperties(Old, New);
-
-  // Make sure we preempt DSO symbols with default visibility.
-  if (New.Visibility == STV_DEFAULT)
-    Old->ExportDynamic = true;
-
-  if (Old->isPlaceholder()) {
-    replaceSymbol(Old, &New);
-    return Old;
-  }
-
+static void addShared(Symbol *Old, const SharedSymbol &New) {
   if (Old->Visibility == STV_DEFAULT && (Old->isUndefined() || Old->isLazy())) {
     // An undefined symbol with non default visibility must be satisfied
     // in the same DSO.
     uint8_t Binding = Old->Binding;
-    replaceSymbol(Old, &New);
+    replaceSymbol(Old, New);
     Old->Binding = Binding;
   }
-  return Old;
 }
 
 Symbol *SymbolTable::find(StringRef Name) {
@@ -413,39 +360,30 @@ Symbol *SymbolTable::find(StringRef Name) {
   return SymVector[It->second];
 }
 
-template <class LazyT> Symbol *SymbolTable::addLazy(const LazyT &New) {
-  Symbol *Old = insert(New);
-  mergeProperties(Old, New);
-
-  if (Old->isPlaceholder()) {
-    replaceSymbol(Old, &New);
-    return Old;
-  }
-
+template <class LazyT> static void addLazy(Symbol *Old, const LazyT &New) {
   if (!Old->isUndefined())
-    return Old;
+    return;
 
   // An undefined weak will not fetch archive members. See comment on Lazy in
   // Symbols.h for the details.
   if (Old->isWeak()) {
     uint8_t Type = Old->Type;
-    replaceSymbol(Old, &New);
+    replaceSymbol(Old, New);
     Old->Type = Type;
     Old->Binding = STB_WEAK;
-    return Old;
+    return;
   }
 
   if (InputFile *F = New.fetch())
     parseFile(F);
-  return Old;
 }
 
-Symbol *SymbolTable::addLazyArchive(const LazyArchive &New) {
-  return addLazy(New);
+static void addLazyArchive(Symbol *Old, const LazyArchive &New) {
+  addLazy(Old, New);
 }
 
-Symbol *SymbolTable::addLazyObject(const LazyObject &New) {
-  return addLazy(New);
+static void addLazyObject(Symbol *Old, const LazyObject &New) {
+  addLazy(Old, New);
 }
 
 void SymbolTable::fetchLazy(Symbol *Sym) {
@@ -619,6 +557,53 @@ void SymbolTable::scanVersionScript() {
   // Let them parse and update their names to exclude version suffix.
   for (Symbol *Sym : SymVector)
     Sym->parseSymbolVersion();
+}
+
+// Merge symbol properties.
+//
+// When we have many symbols of the same name, we choose one of them,
+// and that's the result of symbol resolution. However, symbols that
+// were not chosen still affect some symbol properties.
+void elf::mergeSymbolProperties(Symbol *Old, const Symbol &New) {
+  // Merge symbol properties.
+  Old->ExportDynamic = Old->ExportDynamic || New.ExportDynamic;
+  Old->IsUsedInRegularObj = Old->IsUsedInRegularObj || New.IsUsedInRegularObj;
+
+  // DSO symbols do not affect visibility in the output.
+  if (!New.isShared())
+    Old->Visibility = getMinVisibility(Old->Visibility, New.Visibility);
+}
+
+void elf::resolveSymbol(Symbol *Old, const Symbol &New) {
+  mergeSymbolProperties(Old, New);
+
+  if (Old->isPlaceholder()) {
+    replaceSymbol(Old, New);
+    return;
+  }
+
+  switch (New.kind()) {
+  case Symbol::UndefinedKind:
+    addUndefined(Old, cast<Undefined>(New));
+    break;
+  case Symbol::CommonKind:
+    addCommon(Old, cast<CommonSymbol>(New));
+    break;
+  case Symbol::DefinedKind:
+    addDefined(Old, cast<Defined>(New));
+    break;
+  case Symbol::LazyArchiveKind:
+    addLazyArchive(Old, cast<LazyArchive>(New));
+    break;
+  case Symbol::LazyObjectKind:
+    addLazyObject(Old, cast<LazyObject>(New));
+    break;
+  case Symbol::SharedKind:
+    addShared(Old, cast<SharedSymbol>(New));
+    break;
+  case Symbol::PlaceholderKind:
+    llvm_unreachable("bad symbol kind");
+  }
 }
 
 template void SymbolTable::addCombinedLTOObject<ELF32LE>();

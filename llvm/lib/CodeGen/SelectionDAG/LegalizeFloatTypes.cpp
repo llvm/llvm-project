@@ -772,6 +772,8 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
   case ISD::FP_ROUND:    Res = SoftenFloatOp_FP_ROUND(N); break;
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:  Res = SoftenFloatOp_FP_TO_XINT(N); break;
+  case ISD::LROUND:      Res = SoftenFloatOp_LROUND(N); break;
+  case ISD::LLROUND:     Res = SoftenFloatOp_LLROUND(N); break;
   case ISD::SELECT:      Res = SoftenFloatOp_SELECT(N); break;
   case ISD::SELECT_CC:   Res = SoftenFloatOp_SELECT_CC(N); break;
   case ISD::SETCC:       Res = SoftenFloatOp_SETCC(N); break;
@@ -1038,6 +1040,33 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_STORE(SDNode *N, unsigned OpNo) {
                       ST->getMemOperand());
 }
 
+SDValue DAGTypeLegalizer::SoftenFloatOp_LROUND(SDNode *N) {
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+
+  SDValue Op = GetSoftenedFloat(N->getOperand(0));
+  EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
+  return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
+                                           RTLIB::LROUND_F32,
+                                           RTLIB::LROUND_F64,
+                                           RTLIB::LROUND_F80,
+                                           RTLIB::LROUND_F128,
+                                           RTLIB::LROUND_PPCF128),
+                         NVT, Op, false, SDLoc(N)).first;
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatOp_LLROUND(SDNode *N) {
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+
+  SDValue Op = GetSoftenedFloat(N->getOperand(0));
+  EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
+  return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
+                                           RTLIB::LLROUND_F32,
+                                           RTLIB::LLROUND_F64,
+                                           RTLIB::LLROUND_F80,
+                                           RTLIB::LLROUND_F128,
+                                           RTLIB::LLROUND_PPCF128),
+                         NVT, Op, false, SDLoc(N)).first;
+}
 
 //===----------------------------------------------------------------------===//
 //  Float Result Expansion
@@ -1571,6 +1600,8 @@ bool DAGTypeLegalizer::ExpandFloatOperand(SDNode *N, unsigned OpNo) {
   case ISD::FP_ROUND:   Res = ExpandFloatOp_FP_ROUND(N); break;
   case ISD::FP_TO_SINT: Res = ExpandFloatOp_FP_TO_SINT(N); break;
   case ISD::FP_TO_UINT: Res = ExpandFloatOp_FP_TO_UINT(N); break;
+  case ISD::LROUND:     Res = ExpandFloatOp_LROUND(N); break;
+  case ISD::LLROUND:    Res = ExpandFloatOp_LLROUND(N); break;
   case ISD::SELECT_CC:  Res = ExpandFloatOp_SELECT_CC(N); break;
   case ISD::SETCC:      Res = ExpandFloatOp_SETCC(N); break;
   case ISD::STORE:      Res = ExpandFloatOp_STORE(cast<StoreSDNode>(N),
@@ -1739,6 +1770,30 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_STORE(SDNode *N, unsigned OpNo) {
 
   return DAG.getTruncStore(Chain, SDLoc(N), Hi, Ptr,
                            ST->getMemoryVT(), ST->getMemOperand());
+}
+
+SDValue DAGTypeLegalizer::ExpandFloatOp_LROUND(SDNode *N) {
+  EVT RVT = N->getValueType(0);
+  EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
+  return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
+                                           RTLIB::LROUND_F32,
+                                           RTLIB::LROUND_F64,
+                                           RTLIB::LROUND_F80,
+                                           RTLIB::LROUND_F128,
+                                           RTLIB::LROUND_PPCF128),
+                         RVT, N->getOperand(0), false, SDLoc(N)).first;
+}
+
+SDValue DAGTypeLegalizer::ExpandFloatOp_LLROUND(SDNode *N) {
+  EVT RVT = N->getValueType(0);
+  EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
+  return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
+                                           RTLIB::LLROUND_F32,
+                                           RTLIB::LLROUND_F64,
+                                           RTLIB::LLROUND_F80,
+                                           RTLIB::LLROUND_F128,
+                                           RTLIB::LLROUND_PPCF128),
+                         RVT, N->getOperand(0), false, SDLoc(N)).first;
 }
 
 //===----------------------------------------------------------------------===//

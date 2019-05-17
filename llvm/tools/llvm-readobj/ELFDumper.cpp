@@ -2857,6 +2857,8 @@ static std::string getSectionTypeString(unsigned Arch, unsigned Type) {
     return "LLVM_CALL_GRAPH_PROFILE";
   case SHT_LLVM_ADDRSIG:
     return "LLVM_ADDRSIG";
+  case SHT_LLVM_DEPENDENT_LIBRARIES:
+    return "LLVM_DEPENDENT_LIBRARIES";
   // FIXME: Parse processor specific GNU attributes
   case SHT_GNU_ATTRIBUTES:
     return "ATTRIBUTES";

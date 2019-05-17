@@ -170,7 +170,11 @@ TEST(CommandLineTest, UseOptionCategory) {
 
 TEST(CommandLineTest, UseMultipleCategories) {
   StackOption<int> TestOption2("test-option2", cl::cat(TestCategory),
+                               cl::cat(cl::GeneralCategory),
                                cl::cat(cl::GeneralCategory));
+
+  // Make sure cl::GeneralCategory wasn't added twice.
+  ASSERT_EQ(TestOption2.Categories.size(), 2U);
 
   ASSERT_NE(TestOption2.Categories.end(),
             find_if(TestOption2.Categories,

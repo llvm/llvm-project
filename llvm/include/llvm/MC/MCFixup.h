@@ -20,7 +20,8 @@ class MCExpr;
 
 /// Extensible enumeration to represent the type of a fixup.
 enum MCFixupKind {
-  FK_Data_1 = 0, ///< A one-byte fixup.
+  FK_NONE = 0,   ///< A no-op fixup.
+  FK_Data_1,     ///< A one-byte fixup.
   FK_Data_2,     ///< A two-byte fixup.
   FK_Data_4,     ///< A four-byte fixup.
   FK_Data_8,     ///< A eight-byte fixup.

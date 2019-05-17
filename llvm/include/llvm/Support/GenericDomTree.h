@@ -669,14 +669,12 @@ protected:
 
     // The postdom tree can have a null root if there are no returns.
     if (getRootNode()) PrintDomTree<NodeT>(getRootNode(), O, 1);
-    if (IsPostDominator) {
-      O << "Roots: ";
-      for (const NodePtr Block : Roots) {
-        Block->printAsOperand(O, false);
-        O << " ";
-      }
-      O << "\n";
+    O << "Roots: ";
+    for (const NodePtr Block : Roots) {
+      Block->printAsOperand(O, false);
+      O << " ";
     }
+    O << "\n";
   }
 
 public:
