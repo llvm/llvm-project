@@ -3562,8 +3562,8 @@ GetLibrarySearchPaths(const swift::SearchPathOptions &search_path_opts) {
   // one sitting next to the stdlib we just built, and then fall back to the
   // one in the OS if that's not available.
   std::vector<std::string> paths;
-  if (!search_path_opts.RuntimeLibraryPath.empty())
-    paths.push_back(search_path_opts.RuntimeLibraryPath);
+  for (std::string path : search_path_opts.RuntimeLibraryPaths)
+    paths.push_back(path);
   for (std::string path : search_path_opts.LibrarySearchPaths)
     paths.push_back(path);
   return paths;
@@ -4819,8 +4819,15 @@ void SwiftASTContext::LogConfiguration() {
               m_ast_context_ap->SearchPathOpts.SDKPath.c_str());
   log->Printf("  Runtime resource path        : %s",
               m_ast_context_ap->SearchPathOpts.RuntimeResourcePath.c_str());
-  log->Printf("  Runtime library path         : %s",
-              m_ast_context_ap->SearchPathOpts.RuntimeLibraryPath.c_str());
+  log->Printf("  Runtime library paths        : (%llu items)",
+              (unsigned long long)m_ast_context_ap->SearchPathOpts
+                  .RuntimeLibraryPaths.size());
+
+  for (const auto &runtime_library_path :
+       m_ast_context_ap->SearchPathOpts.RuntimeLibraryPaths) {
+    log->Printf("    %s", runtime_library_path.c_str());
+  }
+
   log->Printf("  Runtime library import paths : (%llu items)",
               (unsigned long long)m_ast_context_ap->SearchPathOpts
                   .RuntimeLibraryImportPaths.size());
