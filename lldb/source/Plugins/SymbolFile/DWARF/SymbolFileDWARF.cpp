@@ -200,7 +200,8 @@ const char *SymbolFileDWARF::GetPluginDescriptionStatic() {
 }
 
 SymbolFile *SymbolFileDWARF::CreateInstance(ObjectFile *obj_file) {
-  return new SymbolFileDWARF(obj_file);
+  return new SymbolFileDWARF(obj_file,
+                             /*dwo_section_list*/ nullptr);
 }
 
 TypeList *SymbolFileDWARF::GetTypeList() {
@@ -348,18 +349,19 @@ SymbolFileDWARF::GetParentSymbolContextDIE(const DWARFDIE &child_die) {
   return DWARFDIE();
 }
 
-SymbolFileDWARF::SymbolFileDWARF(ObjectFile *objfile)
+SymbolFileDWARF::SymbolFileDWARF(ObjectFile *objfile,
+                                 SectionList *dwo_section_list)
     : SymbolFile(objfile),
       UserID(0x7fffffff00000000), // Used by SymbolFileDWARFDebugMap to
                                   // when this class parses .o files to
                                   // contain the .o file index/ID
       m_debug_map_module_wp(), m_debug_map_symfile(NULL),
-      m_context(*objfile->GetModule()), m_data_debug_abbrev(),
-      m_data_debug_frame(), m_data_debug_info(), m_data_debug_line(),
-      m_data_debug_macro(), m_data_debug_loc(), m_data_debug_ranges(),
-      m_data_debug_rnglists(), m_data_debug_str(), m_data_apple_names(),
-      m_data_apple_types(), m_data_apple_namespaces(), m_abbr(), m_info(),
-      m_line(), m_fetched_external_modules(false),
+      m_context(objfile->GetModule()->GetSectionList(), dwo_section_list),
+      m_data_debug_abbrev(), m_data_debug_frame(), m_data_debug_info(),
+      m_data_debug_line(), m_data_debug_macro(), m_data_debug_loc(),
+      m_data_debug_ranges(), m_data_debug_rnglists(), m_data_debug_str(),
+      m_data_apple_names(), m_data_apple_types(), m_data_apple_namespaces(),
+      m_abbr(), m_info(), m_line(), m_fetched_external_modules(false),
       m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate), m_ranges(),
       m_unique_ast_type_map() {}
 
@@ -563,10 +565,6 @@ const DWARFDataExtractor &SymbolFileDWARF::get_debug_frame_data() {
   return GetCachedSectionData(eSectionTypeDWARFDebugFrame, m_data_debug_frame);
 }
 
-const DWARFDataExtractor &SymbolFileDWARF::get_debug_info_data() {
-  return GetCachedSectionData(eSectionTypeDWARFDebugInfo, m_data_debug_info);
-}
-
 const DWARFDataExtractor &SymbolFileDWARF::get_debug_line_data() {
   return GetCachedSectionData(eSectionTypeDWARFDebugLine, m_data_debug_line);
 }
@@ -670,7 +668,7 @@ DWARFDebugInfo *SymbolFileDWARF::DebugInfo() {
     static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
     Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
                        static_cast<void *>(this));
-    if (get_debug_info_data().GetByteSize() > 0) {
+    if (m_context.getOrLoadDebugInfoData().GetByteSize() > 0) {
       m_info = llvm::make_unique<DWARFDebugInfo>(m_context);
       m_info->SetDwarfData(this);
     }

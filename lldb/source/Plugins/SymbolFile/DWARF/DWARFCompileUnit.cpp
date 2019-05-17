@@ -106,5 +106,5 @@ uint32_t DWARFCompileUnit::GetHeaderByteSize() const {
 }
 
 const lldb_private::DWARFDataExtractor &DWARFCompileUnit::GetData() const {
-  return m_dwarf->get_debug_info_data();
+  return m_dwarf->GetDWARFContext().getOrLoadDebugInfoData();
 }
