@@ -2202,11 +2202,6 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
         // done on other operating systems.
         P->p_align = std::max<uint64_t>(P->p_align, Config->Wordsize * 8);
       }
-
-      // The TLS pointer goes after PT_TLS for variant 2 targets. At least glibc
-      // will align it, so round up the size to make sure the offsets are
-      // correct.
-      P->p_memsz = alignTo(P->p_memsz, P->p_align);
     }
   }
 }
