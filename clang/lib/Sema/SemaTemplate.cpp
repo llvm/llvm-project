@@ -6424,8 +6424,11 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       // -- a string literal
       // -- the result of a typeid expression, or
       // -- a predefined __func__ variable
-      if (auto *E = Value.getLValueBase().dyn_cast<const Expr*>()) {
-        if (isa<CXXUuidofExpr>(E)) {
+      APValue::LValueBase Base = Value.getLValueBase();
+      auto *VD = const_cast<ValueDecl *>(Base.dyn_cast<const ValueDecl *>());
+      if (Base && !VD) {
+        auto *E = Base.dyn_cast<const Expr *>();
+        if (E && isa<CXXUuidofExpr>(E)) {
           Converted = TemplateArgument(ArgResult.get()->IgnoreImpCasts());
           break;
         }
@@ -6433,8 +6436,6 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
             << Arg->getSourceRange();
         return ExprError();
       }
-      auto *VD = const_cast<ValueDecl *>(
-          Value.getLValueBase().dyn_cast<const ValueDecl *>());
       // -- a subobject
       if (Value.hasLValuePath() && Value.getLValuePath().size() == 1 &&
           VD && VD->getType()->isArrayType() &&
