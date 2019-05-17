@@ -1,3 +1,5 @@
+# REQUIRES: aarch64
+
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-musl %s -o %t.o
 # RUN: ld.lld --gc-sections %t.o -o %t
 # RUN: llvm-readelf -S -r %t | FileCheck %s

@@ -1,3 +1,5 @@
+# REQUIRES: arm
+
 # RUN: llvm-mc -filetype=obj -triple=armv7-linux-musl %s -o %t.o
 # RUN: ld.lld --gc-sections %t.o -o %t
 # RUN: llvm-readelf -S -r %t | FileCheck %s
