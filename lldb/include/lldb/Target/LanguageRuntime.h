@@ -148,9 +148,6 @@ public:
 
   Process *GetProcess() { return m_process; }
 
-  static lldb::LanguageType
-  GuessLanguageForSymbolByName(Target &target, const char *symbol_name);
-
   Target &GetTargetRef() { return m_process->GetTarget(); }
 
   virtual lldb::BreakpointResolverSP
