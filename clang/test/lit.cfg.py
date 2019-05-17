@@ -85,13 +85,7 @@ config.substitutions.append(
                              os.path.join(config.clang_tools_dir, 'hmaptool'))))
 
 # Plugins (loadable modules)
-# TODO: This should be supplied by Makefile or autoconf.
-if sys.platform in ['win32', 'cygwin']:
-    has_plugins = config.enable_shared
-else:
-    has_plugins = True
-
-if has_plugins and config.llvm_plugin_ext:
+if config.has_plugins and config.llvm_plugin_ext:
     config.available_features.add('plugins')
 
 # Set available features we allow tests to conditionalize on.

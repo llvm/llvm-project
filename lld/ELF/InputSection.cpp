@@ -470,7 +470,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
 
       if (RelTy::IsRela)
         P->r_addend = Sym.getVA(Addend) - Section->getOutputSection()->Addr;
-      else if (Config->Relocatable)
+      else if (Config->Relocatable && Type != Target->NoneRel)
         Sec->Relocations.push_back({R_ABS, Type, Rel.r_offset, Addend, &Sym});
     }
   }

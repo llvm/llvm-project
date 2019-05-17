@@ -28,6 +28,7 @@ using namespace clang;
 using namespace tooling;
 
 using ast_matchers::MatchFinder;
+using ast_matchers::internal::DynTypedMatcher;
 using ast_type_traits::ASTNodeKind;
 using ast_type_traits::DynTypedNode;
 using llvm::Error;
@@ -144,9 +145,9 @@ getTargetRange(StringRef Target, const DynTypedNode &Node, ASTNodeKind Kind,
   llvm_unreachable("Unexpected case in NodePart type.");
 }
 
-Expected<SmallVector<Transformation, 1>>
-tooling::translateEdits(const MatchResult &Result,
-                        llvm::ArrayRef<ASTEdit> Edits) {
+Expected<SmallVector<tooling::detail::Transformation, 1>>
+tooling::detail::translateEdits(const MatchResult &Result,
+                                llvm::ArrayRef<ASTEdit> Edits) {
   SmallVector<Transformation, 1> Transformations;
   auto &NodesMap = Result.Nodes.getMap();
   for (const auto &Edit : Edits) {
@@ -171,18 +172,113 @@ tooling::translateEdits(const MatchResult &Result,
   return Transformations;
 }
 
-RewriteRule tooling::makeRule(ast_matchers::internal::DynTypedMatcher M,
+RewriteRule tooling::makeRule(DynTypedMatcher M,
                               SmallVector<ASTEdit, 1> Edits) {
+  return RewriteRule{
+      {RewriteRule::Case{std::move(M), std::move(Edits), nullptr}}};
+}
+
+// Determines whether A is a base type of B in the class hierarchy, including
+// the implicit relationship of Type and QualType.
+static bool isBaseOf(ASTNodeKind A, ASTNodeKind B) {
+  static auto TypeKind = ASTNodeKind::getFromNodeKind<Type>();
+  static auto QualKind = ASTNodeKind::getFromNodeKind<QualType>();
+  /// Mimic the implicit conversions of Matcher<>.
+  /// - From Matcher<Type> to Matcher<QualType>
+  /// - From Matcher<Base> to Matcher<Derived>
+  return (A.isSame(TypeKind) && B.isSame(QualKind)) || A.isBaseOf(B);
+}
+
+// Try to find a common kind to which all of the rule's matchers can be
+// converted.
+static ASTNodeKind
+findCommonKind(const SmallVectorImpl<RewriteRule::Case> &Cases) {
+  assert(!Cases.empty() && "Rule must have at least one case.");
+  ASTNodeKind JoinKind = Cases[0].Matcher.getSupportedKind();
+  // Find a (least) Kind K, for which M.canConvertTo(K) holds, for all matchers
+  // M in Rules.
+  for (const auto &Case : Cases) {
+    auto K = Case.Matcher.getSupportedKind();
+    if (isBaseOf(JoinKind, K)) {
+      JoinKind = K;
+      continue;
+    }
+    if (K.isSame(JoinKind) || isBaseOf(K, JoinKind))
+      // JoinKind is already the lowest.
+      continue;
+    // K and JoinKind are unrelated -- there is no least common kind.
+    return ASTNodeKind();
+  }
+  return JoinKind;
+}
+
+// Binds each rule's matcher to a unique (and deterministic) tag based on
+// `TagBase`.
+static std::vector<DynTypedMatcher>
+taggedMatchers(StringRef TagBase,
+               const SmallVectorImpl<RewriteRule::Case> &Cases) {
+  std::vector<DynTypedMatcher> Matchers;
+  Matchers.reserve(Cases.size());
+  size_t count = 0;
+  for (const auto &Case : Cases) {
+    std::string Tag = (TagBase + Twine(count)).str();
+    ++count;
+    auto M = Case.Matcher.tryBind(Tag);
+    assert(M && "RewriteRule matchers should be bindable.");
+    Matchers.push_back(*std::move(M));
+  }
+  return Matchers;
+}
+
+// Simply gathers the contents of the various rules into a single rule. The
+// actual work to combine these into an ordered choice is deferred to matcher
+// registration.
+RewriteRule tooling::applyFirst(ArrayRef<RewriteRule> Rules) {
+  RewriteRule R;
+  for (auto &Rule : Rules)
+    R.Cases.append(Rule.Cases.begin(), Rule.Cases.end());
+  return R;
+}
+
+static DynTypedMatcher joinCaseMatchers(const RewriteRule &Rule) {
+  assert(!Rule.Cases.empty() && "Rule must have at least one case.");
+  if (Rule.Cases.size() == 1)
+    return Rule.Cases[0].Matcher;
+
+  auto CommonKind = findCommonKind(Rule.Cases);
+  assert(!CommonKind.isNone() && "Cases must have compatible matchers.");
+  return DynTypedMatcher::constructVariadic(
+      DynTypedMatcher::VO_AnyOf, CommonKind, taggedMatchers("Tag", Rule.Cases));
+}
+
+DynTypedMatcher tooling::detail::buildMatcher(const RewriteRule &Rule) {
+  DynTypedMatcher M = joinCaseMatchers(Rule);
   M.setAllowBind(true);
   // `tryBind` is guaranteed to succeed, because `AllowBind` was set to true.
-  return RewriteRule{*M.tryBind(RewriteRule::RootId), std::move(Edits),
-                     nullptr};
+  return *M.tryBind(RewriteRule::RootId);
+}
+
+// Finds the case that was "selected" -- that is, whose matcher triggered the
+// `MatchResult`.
+const RewriteRule::Case &
+tooling::detail::findSelectedCase(const MatchResult &Result,
+                                  const RewriteRule &Rule) {
+  if (Rule.Cases.size() == 1)
+    return Rule.Cases[0];
+
+  auto &NodesMap = Result.Nodes.getMap();
+  for (size_t i = 0, N = Rule.Cases.size(); i < N; ++i) {
+    std::string Tag = ("Tag" + Twine(i)).str();
+    if (NodesMap.find(Tag) != NodesMap.end())
+      return Rule.Cases[i];
+  }
+  llvm_unreachable("No tag found for this rule.");
 }
 
 constexpr llvm::StringLiteral RewriteRule::RootId;
 
 void Transformer::registerMatchers(MatchFinder *MatchFinder) {
-  MatchFinder->addDynamicMatcher(Rule.Matcher, this);
+  MatchFinder->addDynamicMatcher(tooling::detail::buildMatcher(Rule), this);
 }
 
 void Transformer::run(const MatchResult &Result) {
@@ -197,7 +293,8 @@ void Transformer::run(const MatchResult &Result) {
       Root->second.getSourceRange().getBegin());
   assert(RootLoc.isValid() && "Invalid location for Root node of match.");
 
-  auto Transformations = translateEdits(Result, Rule.Edits);
+  auto Transformations = tooling::detail::translateEdits(
+      Result, tooling::detail::findSelectedCase(Result, Rule).Edits);
   if (!Transformations) {
     Consumer(Transformations.takeError());
     return;

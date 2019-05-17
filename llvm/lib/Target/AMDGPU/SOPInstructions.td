@@ -720,7 +720,7 @@ let Defs = [SCC], isCommutable = 1, DisableEncoding = "$src0",
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9 in
 def S_CBRANCH_I_FORK : SOPK_Pseudo <
   "s_cbranch_i_fork",
-  (outs), (ins SReg_64:$sdst, s16imm:$simm16),
+  (outs), (ins SReg_64:$sdst, sopp_brtarget:$simm16),
   "$sdst, $simm16"
 >;
 
@@ -771,7 +771,7 @@ let SubtargetPredicate = isGFX9Plus in {
   def S_CALL_B64 : SOPK_Pseudo<
       "s_call_b64",
       (outs SReg_64:$sdst),
-      (ins s16imm:$simm16),
+      (ins sopp_brtarget:$simm16),
       "$sdst, $simm16"> {
     let isCall = 1;
   }

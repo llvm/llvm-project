@@ -12,6 +12,7 @@ add_clang_unittest(ASTTests
   ASTImporterTest.cpp
   ASTImporterGenericRedeclTest.cpp
   ASTImporterVisibilityTest.cpp
+  ASTTraverserTest.cpp
   ASTTypeTraitsTest.cpp
   ASTVectorTest.cpp
   CommentLexer.cpp

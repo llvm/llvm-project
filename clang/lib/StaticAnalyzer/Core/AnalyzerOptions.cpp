@@ -163,7 +163,7 @@ int AnalyzerOptions::getCheckerIntegerOption(StringRef CheckerName,
   bool HasFailed = getCheckerStringOption(CheckerName, OptionName,
                                           std::to_string(DefaultVal),
                                           SearchInParents)
-                     .getAsInteger(10, Ret);
+                     .getAsInteger(0, Ret);
   assert(!HasFailed && "analyzer-config option should be numeric");
   (void)HasFailed;
   return Ret;

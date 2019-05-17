@@ -462,7 +462,7 @@ public:
   }
 
   bool isVSrcB32() const {
-    return isVCSrcF32() || isLiteralImm(MVT::i32);
+    return isVCSrcF32() || isLiteralImm(MVT::i32) || isExpr();
   }
 
   bool isVSrcB64() const {
@@ -478,7 +478,7 @@ public:
   }
 
   bool isVSrcF32() const {
-    return isVCSrcF32() || isLiteralImm(MVT::f32);
+    return isVCSrcF32() || isLiteralImm(MVT::f32) || isExpr();
   }
 
   bool isVSrcF64() const {
@@ -1097,7 +1097,11 @@ public:
   OperandMatchResultTy parseStringWithPrefix(StringRef Prefix,
                                              StringRef &Value);
 
-  bool parseAbsoluteExpr(int64_t &Val, bool HasSP3AbsModifier = false);
+  bool isModifier();
+  bool isOperandModifier(const AsmToken &Token, const AsmToken &NextToken) const;
+  bool isRegOrOperandModifier(const AsmToken &Token, const AsmToken &NextToken) const;
+  bool isNamedOperandModifier(const AsmToken &Token, const AsmToken &NextToken) const;
+  bool isOpcodeModifierWithVal(const AsmToken &Token, const AsmToken &NextToken) const;
   bool parseSP3NegModifier();
   OperandMatchResultTy parseImm(OperandVector &Operands, bool HasSP3AbsModifier = false);
   OperandMatchResultTy parseReg(OperandVector &Operands);
@@ -2039,42 +2043,17 @@ std::unique_ptr<AMDGPUOperand> AMDGPUAsmParser::parseRegister() {
   return AMDGPUOperand::CreateReg(this, Reg, StartLoc, EndLoc);
 }
 
-bool
-AMDGPUAsmParser::parseAbsoluteExpr(int64_t &Val, bool HasSP3AbsModifier) {
-  if (HasSP3AbsModifier) {
-    // This is a workaround for handling expressions
-    // as arguments of SP3 'abs' modifier, for example:
-    //     |1.0|
-    //     |-1|
-    //     |1+x|
-    // This syntax is not compatible with syntax of standard
-    // MC expressions (due to the trailing '|').
-
-    SMLoc EndLoc;
-    const MCExpr *Expr;
-    SMLoc StartLoc = getLoc();
-
-    if (getParser().parsePrimaryExpr(Expr, EndLoc)) {
-      return true;
-    }
-
-    if (!Expr->evaluateAsAbsolute(Val))
-      return Error(StartLoc, "expected absolute expression");
-
-    return false;
-  }
-
-  return getParser().parseAbsoluteExpression(Val);
-}
-
 OperandMatchResultTy
 AMDGPUAsmParser::parseImm(OperandVector &Operands, bool HasSP3AbsModifier) {
   // TODO: add syntactic sugar for 1/(2*PI)
 
+  assert(!isRegister());
+  assert(!isModifier());
+
   const auto& Tok = getToken();
   const auto& NextTok = peekToken();
   bool IsReal = Tok.is(AsmToken::Real);
-  SMLoc S = Tok.getLoc();
+  SMLoc S = getLoc();
   bool Negate = false;
 
   if (!IsReal && Tok.is(AsmToken::Minus) && NextTok.is(AsmToken::Real)) {
@@ -2105,15 +2084,33 @@ AMDGPUAsmParser::parseImm(OperandVector &Operands, bool HasSP3AbsModifier) {
 
     return MatchOperand_Success;
 
-    // FIXME: Should enable arbitrary expressions here
-  } else if (Tok.is(AsmToken::Integer) ||
-             (Tok.is(AsmToken::Minus) && NextTok.is(AsmToken::Integer))){
-
+  } else {
     int64_t IntVal;
-    if (parseAbsoluteExpr(IntVal, HasSP3AbsModifier))
-      return MatchOperand_ParseFail;
+    const MCExpr *Expr;
+    SMLoc S = getLoc();
 
-    Operands.push_back(AMDGPUOperand::CreateImm(this, IntVal, S));
+    if (HasSP3AbsModifier) {
+      // This is a workaround for handling expressions
+      // as arguments of SP3 'abs' modifier, for example:
+      //     |1.0|
+      //     |-1|
+      //     |1+x|
+      // This syntax is not compatible with syntax of standard
+      // MC expressions (due to the trailing '|').
+      SMLoc EndLoc;
+      if (getParser().parsePrimaryExpr(Expr, EndLoc))
+        return MatchOperand_ParseFail;
+    } else {
+      if (Parser.parseExpression(Expr))
+        return MatchOperand_ParseFail;
+    }
+
+    if (Expr->evaluateAsAbsolute(IntVal)) {
+      Operands.push_back(AMDGPUOperand::CreateImm(this, IntVal, S));
+    } else {
+      Operands.push_back(AMDGPUOperand::CreateExpr(this, Expr, S));
+    }
+
     return MatchOperand_Success;
   }
 
@@ -2136,9 +2133,64 @@ AMDGPUAsmParser::parseReg(OperandVector &Operands) {
 OperandMatchResultTy
 AMDGPUAsmParser::parseRegOrImm(OperandVector &Operands, bool HasSP3AbsMod) {
   auto res = parseReg(Operands);
-  return (res == MatchOperand_NoMatch)?
-         parseImm(Operands, HasSP3AbsMod) :
-         res;
+  if (res != MatchOperand_NoMatch) {
+    return res;
+  } else if (isModifier()) {
+    return MatchOperand_NoMatch;
+  } else {
+    return parseImm(Operands, HasSP3AbsMod);
+  }
+}
+
+bool
+AMDGPUAsmParser::isNamedOperandModifier(const AsmToken &Token, const AsmToken &NextToken) const {
+  if (Token.is(AsmToken::Identifier) && NextToken.is(AsmToken::LParen)) {
+    const auto &str = Token.getString();
+    return str == "abs" || str == "neg" || str == "sext";
+  }
+  return false;
+}
+
+bool
+AMDGPUAsmParser::isOpcodeModifierWithVal(const AsmToken &Token, const AsmToken &NextToken) const {
+  return Token.is(AsmToken::Identifier) && NextToken.is(AsmToken::Colon);
+}
+
+bool
+AMDGPUAsmParser::isOperandModifier(const AsmToken &Token, const AsmToken &NextToken) const {
+  return isNamedOperandModifier(Token, NextToken) || Token.is(AsmToken::Pipe);
+}
+
+bool
+AMDGPUAsmParser::isRegOrOperandModifier(const AsmToken &Token, const AsmToken &NextToken) const {
+  return isRegister(Token, NextToken) || isOperandModifier(Token, NextToken);
+}
+
+// Check if this is an operand modifier or an opcode modifier
+// which may look like an expression but it is not. We should
+// avoid parsing these modifiers as expressions. Currently
+// recognized sequences are:
+//   |...|
+//   abs(...)
+//   neg(...)
+//   sext(...)
+//   -reg
+//   -|...|
+//   -abs(...)
+//   name:...
+// Note that simple opcode modifiers like 'gds' may be parsed as
+// expressions; this is a special case. See getExpressionAsToken.
+//
+bool
+AMDGPUAsmParser::isModifier() {
+
+  AsmToken Tok = getToken();
+  AsmToken NextToken[2];
+  peekTokens(NextToken);
+
+  return isOperandModifier(Tok, NextToken[0]) ||
+         (Tok.is(AsmToken::Minus) && isRegOrOperandModifier(NextToken[0], NextToken[1])) ||
+         isOpcodeModifierWithVal(Tok, NextToken[0]);
 }
 
 // Check if the current token is an SP3 'neg' modifier.
@@ -2238,6 +2290,10 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
 
   if (Mods.hasFPModifiers()) {
     AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
+    if (Op.isExpr()) {
+      Error(Op.getStartLoc(), "expected an absolute expression");
+      return MatchOperand_ParseFail;
+    }
     Op.setModifiers(Mods);
   }
   return MatchOperand_Success;
@@ -2268,6 +2324,10 @@ AMDGPUAsmParser::parseRegOrImmWithIntInputMods(OperandVector &Operands,
 
   if (Mods.hasIntModifiers()) {
     AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
+    if (Op.isExpr()) {
+      Error(Op.getStartLoc(), "expected an absolute expression");
+      return MatchOperand_ParseFail;
+    }
     Op.setModifiers(Mods);
   }
 
@@ -3910,28 +3970,7 @@ AMDGPUAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic,
     return MatchOperand_Success;
   }
 
-  ResTy = parseRegOrImm(Operands);
-
-  if (ResTy == MatchOperand_Success || ResTy == MatchOperand_ParseFail)
-    return ResTy;
-
-  const auto &Tok = Parser.getTok();
-  SMLoc S = Tok.getLoc();
-
-  const MCExpr *Expr = nullptr;
-  if (!Parser.parseExpression(Expr)) {
-    Operands.push_back(AMDGPUOperand::CreateExpr(this, Expr, S));
-    return MatchOperand_Success;
-  }
-
-  // Possibly this is an instruction flag like 'gds'.
-  if (Tok.getKind() == AsmToken::Identifier) {
-    Operands.push_back(AMDGPUOperand::CreateToken(this, Tok.getString(), S));
-    Parser.Lex();
-    return MatchOperand_Success;
-  }
-
-  return MatchOperand_NoMatch;
+  return parseRegOrImm(Operands);
 }
 
 StringRef AMDGPUAsmParser::parseMnemonicSuffix(StringRef Name) {
