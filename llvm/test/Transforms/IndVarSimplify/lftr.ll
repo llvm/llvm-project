@@ -300,3 +300,302 @@ block9:                                           ; preds = %block9,%func_start
 exit:                                             ; preds = %block9
   ret i64 0
 }
+
+define void @extend_const() #0 {
+; CHECK-LABEL: @extend_const(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    call void @bar(i32 [[INDVARS_IV]]) #2
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i32 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INDVARS_IV_NEXT]], 512
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END:%.*]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.01 = phi i16 [ 0, %entry ], [ %inc, %for.body ]
+  %conv2 = sext i16 %i.01 to i32
+  call void @bar(i32 %conv2) #1
+  %inc = add i16 %i.01, 1
+  %cmp = icmp slt i16 %inc, 512
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+; Check that post-incrementing the backedge taken count does not overflow.
+define i32 @extend_const_postinc() #0 {
+; CHECK-LABEL: @extend_const_postinc(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[DO_BODY:%.*]]
+; CHECK:       do.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[DO_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    call void @bar(i32 [[INDVARS_IV]]) #2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[INDVARS_IV]], 255
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i32 [[INDVARS_IV]], 1
+; CHECK-NEXT:    br i1 [[CMP]], label [[DO_END:%.*]], label [[DO_BODY]]
+; CHECK:       do.end:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %do.body
+
+do.body:                                          ; preds = %do.body, %entry
+  %first.0 = phi i8 [ 0, %entry ], [ %inc, %do.body ]
+  %conv = zext i8 %first.0 to i32
+  call void  @bar(i32 %conv) #1
+  %inc = add i8 %first.0, 1
+  %cmp = icmp eq i8 %first.0, -1
+  br i1 %cmp, label %do.end, label %do.body
+
+do.end:                                           ; preds = %do.body
+  ret i32 0
+}
+
+declare void @bar(i32)
+
+attributes #0 = { nounwind uwtable }
+attributes #1 = { nounwind }
+
+; With the given initial value for IV, it is not legal to widen
+; trip count to IV size
+define void @wide_trip_count_test1(float* %autoc,
+; CHECK-LABEL: @wide_trip_count_test1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[DATA_LEN:%.*]], [[SAMPLE:%.*]]
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i32 [[DATA_LEN]], [[SAMPLE]]
+; CHECK-NEXT:    br i1 [[CMP4]], label [[FOR_END:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 68719476736, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[TEMP:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TEMP]], [[SAMPLE]]
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[ADD]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[DATA:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TEMP1:%.*]] = load float, float* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TEMP1]], [[D:%.*]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[AUTOC:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TEMP2:%.*]] = load float, float* [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ADD3:%.*]] = fadd float [[TEMP2]], [[MUL]]
+; CHECK-NEXT:    store float [[ADD3]], float* [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[LFTR_WIDEIV]], [[SUB]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    br label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+  float* %data,
+  float %d, i32 %data_len, i32 %sample) nounwind {
+entry:
+  %sub = sub i32 %data_len, %sample
+  %cmp4 = icmp eq i32 %data_len, %sample
+  br i1 %cmp4, label %for.end, label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 68719476736, %entry ]
+  %temp = trunc i64 %indvars.iv to i32
+  %add = add i32 %temp, %sample
+  %idxprom = zext i32 %add to i64
+  %arrayidx = getelementptr inbounds float, float* %data, i64 %idxprom
+  %temp1 = load float, float* %arrayidx, align 4
+  %mul = fmul float %temp1, %d
+  %arrayidx2 = getelementptr inbounds float, float* %autoc, i64 %indvars.iv
+  %temp2 = load float, float* %arrayidx2, align 4
+  %add3 = fadd float %temp2, %mul
+  store float %add3, float* %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %temp3 = trunc i64 %indvars.iv.next to i32
+  %cmp = icmp ult i32 %temp3, %sub
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+; Trip count should be widened and LFTR should canonicalize the condition
+define float @wide_trip_count_test2(float* %a,
+; CHECK-LABEL: @wide_trip_count_test2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[M:%.*]], 500
+; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 500, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[SUM_07:%.*]] = phi float [ [[ADD:%.*]], [[FOR_BODY]] ], [ 0.000000e+00, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TEMP:%.*]] = load float, float* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TEMP1:%.*]] = load float, float* [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TEMP]], [[TEMP1]]
+; CHECK-NEXT:    [[ADD]] = fadd float [[SUM_07]], [[MUL]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[M]] to i64
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi float [ [[ADD]], [[FOR_BODY]] ]
+; CHECK-NEXT:    br label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[ADD_LCSSA]], [[FOR_END_LOOPEXIT]] ]
+; CHECK-NEXT:    ret float [[SUM_0_LCSSA]]
+;
+  float* %b,
+  i32 zeroext %m) local_unnamed_addr #0 {
+entry:
+  %cmp5 = icmp ugt i32 %m, 500
+  br i1 %cmp5, label %for.body.preheader, label %for.end
+
+for.body.preheader:                               ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %sum.07 = phi float [ %add, %for.body ], [ 0.000000e+00, %for.body.preheader ]
+  %i.06 = phi i32 [ %inc, %for.body ], [ 500, %for.body.preheader ]
+  %idxprom = zext i32 %i.06 to i64
+  %arrayidx = getelementptr inbounds float, float* %b, i64 %idxprom
+  %temp = load float, float* %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds float, float* %a, i64 %idxprom
+  %temp1 = load float, float* %arrayidx2, align 4
+  %mul = fmul float %temp, %temp1
+  %add = fadd float %sum.07, %mul
+  %inc = add i32 %i.06, 1
+  %cmp = icmp ult i32 %inc, %m
+  br i1 %cmp, label %for.body, label %for.end.loopexit
+
+for.end.loopexit:                                 ; preds = %for.body
+  br label %for.end
+
+for.end:                                          ; preds = %for.end.loopexit, %entry
+  %sum.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %add, %for.end.loopexit ]
+  ret float %sum.0.lcssa
+}
+
+; Trip count should be widened and LFTR should canonicalize the condition
+define float @wide_trip_count_test3(float* %b,
+; CHECK-LABEL: @wide_trip_count_test3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[M:%.*]], -10
+; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ -10, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[SUM_07:%.*]] = phi float [ [[ADD1:%.*]], [[FOR_BODY]] ], [ 0.000000e+00, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[INDVARS_IV]], 20
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TEMP:%.*]] = load float, float* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP1]] to float
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[CONV]], [[TEMP]]
+; CHECK-NEXT:    [[ADD1]] = fadd float [[SUM_07]], [[MUL]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = sext i32 [[M]] to i64
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    [[ADD1_LCSSA:%.*]] = phi float [ [[ADD1]], [[FOR_BODY]] ]
+; CHECK-NEXT:    br label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[ADD1_LCSSA]], [[FOR_END_LOOPEXIT]] ]
+; CHECK-NEXT:    ret float [[SUM_0_LCSSA]]
+;
+  i32 signext %m) local_unnamed_addr #0 {
+entry:
+  %cmp5 = icmp sgt i32 %m, -10
+  br i1 %cmp5, label %for.body.preheader, label %for.end
+
+for.body.preheader:                               ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %sum.07 = phi float [ %add1, %for.body ], [ 0.000000e+00, %for.body.preheader ]
+  %i.06 = phi i32 [ %inc, %for.body ], [ -10, %for.body.preheader ]
+  %add = add nsw i32 %i.06, 20
+  %idxprom = sext i32 %add to i64
+  %arrayidx = getelementptr inbounds float, float* %b, i64 %idxprom
+  %temp = load float, float* %arrayidx, align 4
+  %conv = sitofp i32 %i.06 to float
+  %mul = fmul float %conv, %temp
+  %add1 = fadd float %sum.07, %mul
+  %inc = add nsw i32 %i.06, 1
+  %cmp = icmp slt i32 %inc, %m
+  br i1 %cmp, label %for.body, label %for.end.loopexit
+
+for.end.loopexit:                                 ; preds = %for.body
+  br label %for.end
+
+for.end:                                          ; preds = %for.end.loopexit, %entry
+  %sum.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %add1, %for.end.loopexit ]
+  ret float %sum.0.lcssa
+}
+
+; Trip count should be widened and LFTR should canonicalize the condition
+define float @wide_trip_count_test4(float* %b,
+; CHECK-LABEL: @wide_trip_count_test4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[M:%.*]], 10
+; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 10, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[SUM_07:%.*]] = phi float [ [[ADD1:%.*]], [[FOR_BODY]] ], [ 0.000000e+00, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 20
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TEMP:%.*]] = load float, float* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP1]] to float
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[CONV]], [[TEMP]]
+; CHECK-NEXT:    [[ADD1]] = fadd float [[SUM_07]], [[MUL]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[M]] to i64
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    [[ADD1_LCSSA:%.*]] = phi float [ [[ADD1]], [[FOR_BODY]] ]
+; CHECK-NEXT:    br label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[ADD1_LCSSA]], [[FOR_END_LOOPEXIT]] ]
+; CHECK-NEXT:    ret float [[SUM_0_LCSSA]]
+;
+  i32 signext %m) local_unnamed_addr #0 {
+entry:
+  %cmp5 = icmp sgt i32 %m, 10
+  br i1 %cmp5, label %for.body.preheader, label %for.end
+
+for.body.preheader:                               ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %sum.07 = phi float [ %add1, %for.body ], [ 0.000000e+00, %for.body.preheader ]
+  %i.06 = phi i32 [ %inc, %for.body ], [ 10, %for.body.preheader ]
+  %add = add nsw i32 %i.06, 20
+  %idxprom = sext i32 %add to i64
+  %arrayidx = getelementptr inbounds float, float* %b, i64 %idxprom
+  %temp = load float, float* %arrayidx, align 4
+  %conv = sitofp i32 %i.06 to float
+  %mul = fmul float %conv, %temp
+  %add1 = fadd float %sum.07, %mul
+  %inc = add nsw i32 %i.06, 1
+  %cmp = icmp slt i32 %inc, %m
+  br i1 %cmp, label %for.body, label %for.end.loopexit
+
+for.end.loopexit:                                 ; preds = %for.body
+  %add1.lcssa = phi float [ %add1, %for.body ]
+  br label %for.end
+
+for.end:                                          ; preds = %for.end.loopexit, %entry
+  %sum.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %add1.lcssa, %for.end.loopexit ]
+  ret float %sum.0.lcssa
+}
