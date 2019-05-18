@@ -215,6 +215,10 @@ private:
 
   LegalizeResult lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 
+  LegalizeResult lowerU64ToF32BitOps(MachineInstr &MI);
+  LegalizeResult lowerUITOFP(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LegalizeResult lowerSITOFP(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;
   /// To keep track of changes made by the LegalizerHelper.

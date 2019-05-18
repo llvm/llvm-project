@@ -540,7 +540,7 @@ void SBCommandInterpreter::SourceInitFileInHomeDirectory(
     std::unique_lock<std::recursive_mutex> lock;
     if (target_sp)
       lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
-    m_opaque_ptr->SourceInitFile(false, result.ref());
+    m_opaque_ptr->SourceInitFileHome(result.ref());
   } else {
     result->AppendError("SBCommandInterpreter is not valid");
     result->SetStatus(eReturnStatusFailed);
@@ -559,7 +559,7 @@ void SBCommandInterpreter::SourceInitFileInCurrentWorkingDirectory(
     std::unique_lock<std::recursive_mutex> lock;
     if (target_sp)
       lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
-    m_opaque_ptr->SourceInitFile(true, result.ref());
+    m_opaque_ptr->SourceInitFileCwd(result.ref());
   } else {
     result->AppendError("SBCommandInterpreter is not valid");
     result->SetStatus(eReturnStatusFailed);

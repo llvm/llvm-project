@@ -81,6 +81,17 @@ static constexpr bool NoGlobalSetting = true;
 static constexpr uintptr_t DefaultValueTrue = true;
 static constexpr uintptr_t DefaultValueFalse = false;
 static constexpr const char *NoCStrDefault = nullptr;
+static constexpr const char *InitFileWarning =
+    "There is a .lldbinit file in the current directory which is not being "
+    "read.\n"
+    "To silence this warning without sourcing in the local .lldbinit,\n"
+    "add the following to the lldbinit file in your home directory:\n"
+    "    settings set target.load-cwd-lldbinit false\n"
+    "To allow lldb to source .lldbinit files in the current working "
+    "directory,\n"
+    "set the value of this variable to true.  Only do so if you understand "
+    "and\n"
+    "accept the security risk.";
 
 static constexpr PropertyDefinition g_properties[] = {
     {"expand-regex-aliases", OptionValue::eTypeBoolean, NoGlobalSetting,
@@ -2091,100 +2102,114 @@ int CommandInterpreter::GetOptionArgumentPosition(const char *in_string) {
   return position;
 }
 
-void CommandInterpreter::SourceInitFile(bool in_cwd,
+static void GetHomeInitFile(llvm::SmallVectorImpl<char> &init_file,
+                            llvm::StringRef suffix = {}) {
+  std::string init_file_name = ".lldbinit";
+  if (!suffix.empty()) {
+    init_file_name.append("-");
+    init_file_name.append(suffix.str());
+  }
+
+  llvm::sys::path::home_directory(init_file);
+  llvm::sys::path::append(init_file, init_file_name);
+
+  FileSystem::Instance().Resolve(init_file);
+}
+
+static void GetCwdInitFile(llvm::SmallVectorImpl<char> &init_file) {
+  llvm::StringRef s = ".lldbinit";
+  init_file.assign(s.begin(), s.end());
+  FileSystem::Instance().Resolve(init_file);
+}
+
+static LoadCWDlldbinitFile ShouldLoadCwdInitFile() {
+  lldb::TargetPropertiesSP properties = Target::GetGlobalProperties();
+  if (!properties)
+    return eLoadCWDlldbinitFalse;
+  return properties->GetLoadCWDlldbinitFile();
+}
+
+void CommandInterpreter::SourceInitFile(FileSpec file,
                                         CommandReturnObject &result) {
-  FileSpec init_file;
-  if (in_cwd) {
-    lldb::TargetPropertiesSP properties = Target::GetGlobalProperties();
-    if (properties) {
-      // In the current working directory we don't load any program specific
-      // .lldbinit files, we only look for a ".lldbinit" file.
-      if (m_skip_lldbinit_files)
-        return;
+  assert(!m_skip_lldbinit_files);
 
-      LoadCWDlldbinitFile should_load = properties->GetLoadCWDlldbinitFile();
-      if (should_load == eLoadCWDlldbinitWarn) {
-        FileSpec dot_lldb(".lldbinit");
-        FileSystem::Instance().Resolve(dot_lldb);
-        llvm::SmallString<64> home_dir_path;
-        llvm::sys::path::home_directory(home_dir_path);
-        FileSpec homedir_dot_lldb(home_dir_path.c_str());
-        homedir_dot_lldb.AppendPathComponent(".lldbinit");
-        FileSystem::Instance().Resolve(homedir_dot_lldb);
-        if (FileSystem::Instance().Exists(dot_lldb) &&
-            dot_lldb.GetDirectory() != homedir_dot_lldb.GetDirectory()) {
-          result.AppendErrorWithFormat(
-              "There is a .lldbinit file in the current directory which is not "
-              "being read.\n"
-              "To silence this warning without sourcing in the local "
-              ".lldbinit,\n"
-              "add the following to the lldbinit file in your home directory:\n"
-              "    settings set target.load-cwd-lldbinit false\n"
-              "To allow lldb to source .lldbinit files in the current working "
-              "directory,\n"
-              "set the value of this variable to true.  Only do so if you "
-              "understand and\n"
-              "accept the security risk.");
-          result.SetStatus(eReturnStatusFailed);
-          return;
-        }
-      } else if (should_load == eLoadCWDlldbinitTrue) {
-        init_file.SetFile("./.lldbinit", FileSpec::Style::native);
-        FileSystem::Instance().Resolve(init_file);
-      }
-    }
-  } else {
-    // If we aren't looking in the current working directory we are looking in
-    // the home directory. We will first see if there is an application
-    // specific ".lldbinit" file whose name is "~/.lldbinit" followed by a "-"
-    // and the name of the program. If this file doesn't exist, we fall back to
-    // just the "~/.lldbinit" file. We also obey any requests to not load the
-    // init files.
-    llvm::SmallString<64> home_dir_path;
-    llvm::sys::path::home_directory(home_dir_path);
-    FileSpec profilePath(home_dir_path.c_str());
-    profilePath.AppendPathComponent(".lldbinit");
-    std::string init_file_path = profilePath.GetPath();
-
-    if (!m_skip_app_init_files) {
-      FileSpec program_file_spec(HostInfo::GetProgramFileSpec());
-      const char *program_name = program_file_spec.GetFilename().AsCString();
-
-      if (program_name) {
-        char program_init_file_name[PATH_MAX];
-        ::snprintf(program_init_file_name, sizeof(program_init_file_name),
-                   "%s-%s", init_file_path.c_str(), program_name);
-        init_file.SetFile(program_init_file_name, FileSpec::Style::native);
-        FileSystem::Instance().Resolve(init_file);
-        if (!FileSystem::Instance().Exists(init_file))
-          init_file.Clear();
-      }
-    }
-
-    if (!init_file && !m_skip_lldbinit_files)
-      init_file.SetFile(init_file_path, FileSpec::Style::native);
-  }
-
-  // If the file exists, tell HandleCommand to 'source' it; this will do the
-  // actual broadcasting of the commands back to any appropriate listener (see
-  // CommandObjectSource::Execute for more details).
-
-  if (FileSystem::Instance().Exists(init_file)) {
-    const bool saved_batch = SetBatchCommandMode(true);
-    CommandInterpreterRunOptions options;
-    options.SetSilent(true);
-    options.SetPrintErrors(true);
-    options.SetStopOnError(false);
-    options.SetStopOnContinue(true);
-
-    HandleCommandsFromFile(init_file,
-                           nullptr, // Execution context
-                           options, result);
-    SetBatchCommandMode(saved_batch);
-  } else {
-    // nothing to be done if the file doesn't exist
+  if (!FileSystem::Instance().Exists(file)) {
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    return;
   }
+
+  // Use HandleCommand to 'source' the given file; this will do the actual
+  // broadcasting of the commands back to any appropriate listener (see
+  // CommandObjectSource::Execute for more details).
+  const bool saved_batch = SetBatchCommandMode(true);
+  ExecutionContext *ctx = nullptr;
+  CommandInterpreterRunOptions options;
+  options.SetSilent(true);
+  options.SetPrintErrors(true);
+  options.SetStopOnError(false);
+  options.SetStopOnContinue(true);
+  HandleCommandsFromFile(file, ctx, options, result);
+  SetBatchCommandMode(saved_batch);
+}
+
+void CommandInterpreter::SourceInitFileCwd(CommandReturnObject &result) {
+  if (m_skip_lldbinit_files) {
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    return;
+  }
+
+  llvm::SmallString<128> init_file;
+  GetCwdInitFile(init_file);
+  if (!FileSystem::Instance().Exists(init_file)) {
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    return;
+  }
+
+  LoadCWDlldbinitFile should_load = ShouldLoadCwdInitFile();
+
+  switch (should_load) {
+  case eLoadCWDlldbinitFalse:
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    break;
+  case eLoadCWDlldbinitTrue:
+    SourceInitFile(FileSpec(init_file.str()), result);
+    break;
+  case eLoadCWDlldbinitWarn: {
+    llvm::SmallString<128> home_init_file;
+    GetHomeInitFile(home_init_file);
+    if (llvm::sys::path::parent_path(init_file) ==
+        llvm::sys::path::parent_path(home_init_file)) {
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    } else {
+      result.AppendErrorWithFormat(InitFileWarning);
+      result.SetStatus(eReturnStatusFailed);
+    }
+  }
+  }
+}
+
+/// We will first see if there is an application specific ".lldbinit" file
+/// whose name is "~/.lldbinit" followed by a "-" and the name of the program.
+/// If this file doesn't exist, we fall back to just the "~/.lldbinit" file.
+void CommandInterpreter::SourceInitFileHome(CommandReturnObject &result) {
+  if (m_skip_lldbinit_files) {
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    return;
+  }
+
+  llvm::SmallString<128> init_file;
+  GetHomeInitFile(init_file);
+
+  if (!m_skip_app_init_files) {
+    llvm::StringRef program_name =
+        HostInfo::GetProgramFileSpec().GetFilename().GetStringRef();
+    llvm::SmallString<128> program_init_file;
+    GetHomeInitFile(program_init_file, program_name);
+    if (FileSystem::Instance().Exists(program_init_file))
+      init_file = program_init_file;
+  }
+
+  SourceInitFile(FileSpec(init_file.str()), result);
 }
 
 const char *CommandInterpreter::GetCommandPrefix() {
