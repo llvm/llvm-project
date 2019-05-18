@@ -37841,6 +37841,24 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineParity(N, DAG, Subtarget))
     return V;
 
+  // Match all-of bool scalar reductions into a bitcast/movmsk + cmp.
+  // TODO: Support multiple SrcOps.
+  if (VT == MVT::i1) {
+    SmallVector<SDValue, 2> SrcOps;
+    if (matchBitOpReduction(SDValue(N, 0), ISD::AND, SrcOps) &&
+        SrcOps.size() == 1) {
+      SDLoc dl(N);
+      unsigned NumElts = SrcOps[0].getValueType().getVectorNumElements();
+      EVT MaskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
+      SDValue Mask = combineBitcastvxi1(DAG, MaskVT, SrcOps[0], dl, Subtarget);
+      if (Mask) {
+        APInt AllBits = APInt::getAllOnesValue(NumElts);
+        return DAG.getSetCC(dl, MVT::i1, Mask,
+                            DAG.getConstant(AllBits, dl, MaskVT), ISD::SETEQ);
+      }
+    }
+  }
+
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
@@ -41480,6 +41498,8 @@ static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
   SDValue Src = N->getOperand(0);
   MVT SrcVT = Src.getSimpleValueType();
   MVT VT = N->getSimpleValueType(0);
+  unsigned NumBits = VT.getScalarSizeInBits();
+  unsigned NumElts = SrcVT.getVectorNumElements();
 
   // Perform constant folding.
   if (ISD::isBuildVectorOfConstantSDNodes(Src.getNode())) {
@@ -41499,9 +41519,20 @@ static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
       Src.getOperand(0).getScalarValueSizeInBits() == EltWidth)
     return DAG.getNode(X86ISD::MOVMSK, SDLoc(N), VT, Src.getOperand(0));
 
+  // Fold movmsk(not(x)) -> not(movmsk) to improve folding of movmsk results
+  // with scalar comparisons.
+  if (SDValue NotSrc = IsNOT(Src, DAG)) {
+    SDLoc DL(N);
+    APInt NotMask = APInt::getLowBitsSet(NumBits, NumElts);
+    NotSrc = DAG.getBitcast(SrcVT, NotSrc);
+    return DAG.getNode(ISD::XOR, DL, VT,
+                       DAG.getNode(X86ISD::MOVMSK, DL, VT, NotSrc),
+                       DAG.getConstant(NotMask, DL, VT));
+  }
+
   // Simplify the inputs.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  APInt DemandedMask(APInt::getAllOnesValue(VT.getScalarSizeInBits()));
+  APInt DemandedMask(APInt::getAllOnesValue(NumBits));
   if (TLI.SimplifyDemandedBits(SDValue(N, 0), DemandedMask, DCI))
     return SDValue(N, 0);
 

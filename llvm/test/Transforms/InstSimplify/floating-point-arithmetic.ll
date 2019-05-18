@@ -28,11 +28,34 @@ define float @fsub_-0_-0_x(float %a) {
   ret float %ret
 }
 
+; fsub -0.0, (fneg X) ==> X
+define float @fneg_x(float %a) {
+; CHECK-LABEL: @fneg_x(
+; CHECK-NEXT:    %t1 = fneg float %a
+; CHECK-NEXT:    %ret = fsub float -0.000000e+00, %t1
+; CHECK-NEXT:    ret float %ret
+;
+  %t1 = fneg float %a
+  %ret = fsub float -0.0, %t1
+  ret float %ret
+}
+
 define <2 x float> @fsub_-0_-0_x_vec(<2 x float> %a) {
 ; CHECK-LABEL: @fsub_-0_-0_x_vec(
 ; CHECK-NEXT:    ret <2 x float> [[A:%.*]]
 ;
   %t1 = fsub <2 x float> <float -0.0, float -0.0>, %a
+  %ret = fsub <2 x float> <float -0.0, float -0.0>, %t1
+  ret <2 x float> %ret
+}
+
+define <2 x float> @fneg_x_vec(<2 x float> %a) {
+; CHECK-LABEL: @fneg_x_vec(
+; CHECK-NEXT:    %t1 = fneg <2 x float> %a
+; CHECK-NEXT:    %ret = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %t1
+; CHECK-NEXT:    ret <2 x float> %ret
+;
+  %t1 = fneg <2 x float> %a
   %ret = fsub <2 x float> <float -0.0, float -0.0>, %t1
   ret <2 x float> %ret
 }
@@ -46,9 +69,20 @@ define <2 x float> @fsub_-0_-0_x_vec_undef_elts(<2 x float> %a) {
   ret <2 x float> %ret
 }
 
-; fsub 0.0, (fsub -0.0, X) != X
-define float @fsub_0_-0_x(float %a) {
-; CHECK-LABEL: @fsub_0_-0_x(
+define <2 x float> @fneg_x_vec_undef_elts(<2 x float> %a) {
+; CHECK-LABEL: @fneg_x_vec_undef_elts(
+; CHECK-NEXT:    %t1 = fneg <2 x float> %a
+; CHECK-NEXT:    %ret = fsub <2 x float> <float -0.000000e+00, float undef>, %t1
+; CHECK-NEXT:    ret <2 x float> %ret
+;
+  %t1 = fneg <2 x float> %a
+  %ret = fsub <2 x float> <float -0.0, float undef>, %t1
+  ret <2 x float> %ret
+}
+
+; fsub -0.0, (fsub 0.0, X) != X
+define float @fsub_-0_0_x(float %a) {
+; CHECK-LABEL: @fsub_-0_0_x(
 ; CHECK-NEXT:    [[T1:%.*]] = fsub float 0.000000e+00, [[A:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = fsub float -0.000000e+00, [[T1]]
 ; CHECK-NEXT:    ret float [[RET]]
@@ -58,9 +92,9 @@ define float @fsub_0_-0_x(float %a) {
   ret float %ret
 }
 
-; fsub -0.0, (fsub 0.0, X) != X
-define float @fsub_-0_0_x(float %a) {
-; CHECK-LABEL: @fsub_-0_0_x(
+; fsub 0.0, (fsub -0.0, X) != X
+define float @fsub_0_-0_x(float %a) {
+; CHECK-LABEL: @fsub_0_-0_x(
 ; CHECK-NEXT:    [[T1:%.*]] = fsub float -0.000000e+00, [[A:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = fsub float 0.000000e+00, [[T1]]
 ; CHECK-NEXT:    ret float [[RET]]

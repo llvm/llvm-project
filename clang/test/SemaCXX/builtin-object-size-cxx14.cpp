@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++14 %s
 
+typedef __SIZE_TYPE__ size_t;
+
 namespace basic {
 // Ensuring that __bos can be used in constexpr functions without anything
 // sketchy going on...
@@ -102,5 +104,5 @@ namespace InvalidBase {
   // Ensure this doesn't crash.
   struct S { const char *name; };
   S invalid_base();
-  constexpr long bos_name = __builtin_object_size(invalid_base().name, 1);
+  constexpr size_t bos_name = __builtin_object_size(invalid_base().name, 1);
 }
