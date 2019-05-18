@@ -2984,7 +2984,7 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
 Value *ScalarExprEmitter::EmitCompoundAssign(const CompoundAssignOperator *E,
                       Value *(ScalarExprEmitter::*Func)(const BinOpInfo &)) {
   bool Ignore = TestAndClearIgnoreResultAssign();
-  Value *RHS;
+  Value *RHS = nullptr;
   LValue LHS = EmitCompoundAssignLValue(E, Func, RHS);
 
   // If the result is clearly ignored, return now.
