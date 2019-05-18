@@ -31,3 +31,82 @@ body: |
     $vgpr0_vgpr1 = COPY %1
 ...
 
+---
+name: test_uitofp_v2s32_to_v2s32
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_uitofp_v2s32_to_v2s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[UV]](s32)
+    ; CHECK: [[UITOFP1:%[0-9]+]]:_(s32) = G_UITOFP [[UV1]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[UITOFP]](s32), [[UITOFP1]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x s32>) = G_UITOFP %0
+    $vgpr0_vgpr1 = COPY %1
+...
+
+---
+name: test_uitofp_s64_to_s32
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_uitofp_s64_to_s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[COPY]](s64)
+    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 190
+    ; CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[CTLZ_ZERO_UNDEF]]
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](s64), [[C1]]
+    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[SUB]], [[C]]
+    ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 9223372036854775807
+    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[CTLZ_ZERO_UNDEF]](s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[SHL]], [[C3]]
+    ; CHECK: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 1099511627775
+    ; CHECK: [[AND1:%[0-9]+]]:_(s64) = G_AND [[AND]], [[C4]]
+    ; CHECK: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[C5]](s64)
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[TRUNC]](s32)
+    ; CHECK: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 23
+    ; CHECK: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[SELECT]], [[C6]](s32)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
+    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL1]], [[TRUNC1]]
+    ; CHECK: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 549755813888
+    ; CHECK: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ugt), [[AND1]](s64), [[C7]]
+    ; CHECK: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND1]](s64), [[C7]]
+    ; CHECK: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK: [[AND2:%[0-9]+]]:_(s32) = G_AND [[OR]], [[C8]]
+    ; CHECK: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[AND2]], [[C]]
+    ; CHECK: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[C8]], [[SELECT1]]
+    ; CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[OR]], [[SELECT2]]
+    ; CHECK: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[COPY]](s64)
+    ; CHECK: $vgpr0 = COPY [[UITOFP]](s32)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s32) = G_UITOFP %0
+    $vgpr0 = COPY %1
+...
+
+---
+name: test_uitofp_s64_to_s64
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_uitofp_s64_to_s64
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[UV1]](s32)
+    ; CHECK: [[UITOFP1:%[0-9]+]]:_(s64) = G_UITOFP [[UV]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; CHECK: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[UITOFP]](s64), [[C]](s32)
+    ; CHECK: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[INT]], [[UITOFP1]]
+    ; CHECK: $vgpr0_vgpr1 = COPY [[FADD]](s64)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s64) = G_UITOFP %0
+    $vgpr0_vgpr1 = COPY %1
+...

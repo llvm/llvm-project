@@ -414,8 +414,8 @@ define i32 @or_signbit_ashr(i32 %x, i32* %dst) {
 ; X64-LABEL: or_signbit_ashr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    orl $-65536, %eax # imm = 0xFFFF0000
-; X64-NEXT:    sarl $8, %eax
+; X64-NEXT:    shrl $8, %eax
+; X64-NEXT:    orl $-256, %eax
 ; X64-NEXT:    movl %eax, (%rsi)
 ; X64-NEXT:    retq
 ;
@@ -459,8 +459,8 @@ define i32 @xor_signbit_ashr(i32 %x, i32* %dst) {
 ; X64-LABEL: xor_signbit_ashr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    xorl $-65536, %eax # imm = 0xFFFF0000
 ; X64-NEXT:    sarl $8, %eax
+; X64-NEXT:    xorl $-256, %eax
 ; X64-NEXT:    movl %eax, (%rsi)
 ; X64-NEXT:    retq
 ;

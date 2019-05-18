@@ -591,8 +591,7 @@ v_cndmask_b32_sdwa v5, v1, v2, vcc dst_sel:BYTE_0 dst_unused:UNUSED_PAD src0_sel
 v_cndmask_b32_sdwa v5, -1, v2, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 
 // NOSICI: error
-// NOVI:   error
-// GFX9:   v_cndmask_b32_sdwa v5, v1, sext(v2), vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0x04,0x0a,0x00,0x01,0x06,0x06,0x0e]
+// GFX89:  v_cndmask_b32_sdwa v5, v1, sext(v2), vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0x04,0x0a,0x00,0x01,0x06,0x06,0x0e]
 v_cndmask_b32_sdwa v5, v1, sext(v2), vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 
 //===----------------------------------------------------------------------===//
@@ -1114,19 +1113,19 @@ v_add_f32 v0, s0, v[0:1] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src
 // NOGFX89: error: invalid operand for instruction
 v_add_f32 v0, s0, v[0:3] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
-// NOSICI: error: invalid operand for instruction
+// NOSICI: error: not a valid operand
 // NOGFX89: error: invalid operand for instruction
 v_add_f16 v1, v[2:3], v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
-// NOSICI: error: invalid operand for instruction
+// NOSICI: error: not a valid operand
 // NOGFX89: error: invalid operand for instruction
 v_add_f16 v1, s[2:3], v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
-// NOSICI: error: invalid operand for instruction
+// NOSICI: error: not a valid operand
 // NOGFX89: error: invalid operand for instruction
 v_add_f16 v1, v2, v[2:3] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
-// NOSICI: error: invalid operand for instruction
+// NOSICI: error: not a valid operand
 // NOGFX89: error: invalid operand for instruction
 v_add_f16 v1, v2, s[2:3] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 

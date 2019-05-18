@@ -10,7 +10,7 @@ v2, v4, v6
 # CHECK-NEXT: v2, v4, v6
 # CHECK-NEXT:   ^
 
-# CHECK:      error: not a valid operand.
+# CHECK:      error: failed parsing operand
 # CHECK-NEXT: v2, v4, v6
 # CHECK-NEXT:     ^
 
