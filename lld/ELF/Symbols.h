@@ -444,6 +444,7 @@ static size_t getSymbolSize(const Symbol &Sym) {
   case Symbol::PlaceholderKind:
     return sizeof(Symbol);
   }
+  llvm_unreachable("unknown symbol kind");
 }
 
 inline void replaceSymbol(Symbol *Sym, const Symbol &New) {
