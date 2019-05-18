@@ -38,31 +38,31 @@ Features
 ORC provides the following features:
 
 - JIT-linking: Allows relocatable object files (COFF, ELF, MachO)[1]_ to be
-added to a JIT session. The objects will be loaded, linked, and made executable
-in a target process, which may be the same process that contains the JIT session
-and linker, or may be another process (even one running on a different machine or
-architecture) that communicates with the JIT via RPC.
+  added to a JIT session. The objects will be loaded, linked, and made
+  executable in a target process, which may be the same process that contains
+  the JIT session and linker, or may be another process (even one running on a
+  different machine or architecture) that communicates with the JIT via RPC.
 
-- LLVM IR compilation: Off the shelf components (IRCompileLayer,
-SimpleCompiler, ConcurrentIRCompiler) allow LLVM IR to be added to a JIT session
-and made executable.
+- LLVM IR compilation: Off the shelf components (IRCompileLayer, SimpleCompiler,
+  ConcurrentIRCompiler) allow LLVM IR to be added to a JIT session and made
+  executable.
 
 - Lazy compilation: ORC provides lazy-compilation stubs that can be used to
-defer compilation of functions until they are called at runtime.
+  defer compilation of functions until they are called at runtime.
 
 - Custom compilers: Clients can supply custom compilers for each symbol that
-they define in their JIT session. ORC will run the user-supplied compiler when
-the a definition of a symbol is needed.
+  they define in their JIT session. ORC will run the user-supplied compiler when
+  the a definition of a symbol is needed.
 
 - Concurrent JIT'd code and concurrent compilation: Since most compilers are
-embarrassingly parallel ORC provides off-the-shelf infrastructure for running
-compilers concurrently and ensures that their work is done before allowing
-dependent threads of JIT'd code to proceed.
+  embarrassingly parallel ORC provides off-the-shelf infrastructure for running
+  compilers concurrently and ensures that their work is done before allowing
+  dependent threads of JIT'd code to proceed.
 
 - Orthogonality and composability: Each of the features above can be used (or
-not) independently. It is possible to put ORC components together to make a
-non-lazy, in-process, single threaded JIT or a lazy, out-of-process, concurrent
-JIT, or anything in between.
+  not) independently. It is possible to put ORC components together to make a
+  non-lazy, in-process, single threaded JIT or a lazy, out-of-process,
+  concurrent JIT, or anything in between.
 
 LLJIT and LLLazyJIT
 ===================
