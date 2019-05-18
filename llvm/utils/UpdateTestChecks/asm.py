@@ -1,3 +1,4 @@
+from __future__ import print_function
 import re
 import sys
 
@@ -199,6 +200,15 @@ def scrub_asm_systemz(asm, args):
   asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm
 
+def get_triple_from_march(march):
+  triples = {
+      'amdgcn': 'amdgcn',
+  }
+  for prefix, triple in triples.items():
+    if march.startswith(prefix):
+      return triple
+  print("Cannot find a triple. Assume 'x86'", file=sys.stderr)
+  return 'x86'
 
 def build_function_body_dictionary_for_triple(args, raw_tool_output, triple, prefixes, func_dict):
   target_handlers = {
