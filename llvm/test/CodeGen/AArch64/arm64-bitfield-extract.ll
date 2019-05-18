@@ -421,6 +421,39 @@ entry:
   store i32 %shr2, i32* %y, align 8
   ret void
 }
+define void @fct12_mask(i32* nocapture %y, i32 %x) nounwind optsize inlinehint ssp {
+; LLC-LABEL: fct12_mask:
+; LLC:       // %bb.0: // %entry
+; LLC-NEXT:    ldr w8, [x0]
+; LLC-NEXT:    and w8, w8, #0x3ffffff8
+; LLC-NEXT:    bfxil w8, w1, #16, #3
+; LLC-NEXT:    lsr w8, w8, #2
+; LLC-NEXT:    str w8, [x0]
+; LLC-NEXT:    ret
+; OPT-LABEL: @fct12_mask(
+; OPT-NEXT:  entry:
+; OPT-NEXT:    [[TMP0:%.*]] = load i32, i32* [[Y:%.*]], align 8
+; OPT-NEXT:    [[AND:%.*]] = and i32 [[TMP0]], -8
+; OPT-NEXT:    [[SHR:%.*]] = lshr i32 [[X:%.*]], 16
+; OPT-NEXT:    [[AND1:%.*]] = and i32 [[SHR]], 7
+; OPT-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[AND1]]
+; OPT-NEXT:    [[LSHR:%.*]] = lshr i32 [[OR]], 2
+; OPT-NEXT:    [[MASK:%.*]] = and i32 [[LSHR]], 268435455
+; OPT-NEXT:    store i32 [[MASK]], i32* [[Y]], align 8
+; OPT-NEXT:    ret void
+;
+entry:
+; lsr is an alias of ubfm
+  %0 = load i32, i32* %y, align 8
+  %and = and i32 %0, -8
+  %shr = lshr i32 %x, 16
+  %and1 = and i32 %shr, 7
+  %or = or i32 %and, %and1
+  %lshr = lshr i32 %or, 2
+  %mask = and i32 %lshr, 268435455
+  store i32 %mask, i32* %y, align 8
+  ret void
+}
 
 ; Check if we can still catch bfm instruction when we drop some high bits
 ; and some low bits
@@ -455,6 +488,39 @@ entry:
   %shl = shl i64 %or, 2
   %shr2 = lshr i64 %shl, 4
   store i64 %shr2, i64* %y, align 8
+  ret void
+}
+define void @fct13_mask(i64* nocapture %y, i64 %x) nounwind optsize inlinehint ssp {
+; LLC-LABEL: fct13_mask:
+; LLC:       // %bb.0: // %entry
+; LLC-NEXT:    ldr x8, [x0]
+; LLC-NEXT:    and x8, x8, #0x3ffffffffffffff8
+; LLC-NEXT:    bfxil x8, x1, #16, #3
+; LLC-NEXT:    lsr x8, x8, #2
+; LLC-NEXT:    str x8, [x0]
+; LLC-NEXT:    ret
+; OPT-LABEL: @fct13_mask(
+; OPT-NEXT:  entry:
+; OPT-NEXT:    [[TMP0:%.*]] = load i64, i64* [[Y:%.*]], align 8
+; OPT-NEXT:    [[AND:%.*]] = and i64 [[TMP0]], -8
+; OPT-NEXT:    [[SHR:%.*]] = lshr i64 [[X:%.*]], 16
+; OPT-NEXT:    [[AND1:%.*]] = and i64 [[SHR]], 7
+; OPT-NEXT:    [[OR:%.*]] = or i64 [[AND]], [[AND1]]
+; OPT-NEXT:    [[LSHR:%.*]] = lshr i64 [[OR]], 2
+; OPT-NEXT:    [[MASK:%.*]] = and i64 [[LSHR]], 1152921504606846975
+; OPT-NEXT:    store i64 [[MASK]], i64* [[Y]], align 8
+; OPT-NEXT:    ret void
+;
+entry:
+; lsr is an alias of ubfm
+  %0 = load i64, i64* %y, align 8
+  %and = and i64 %0, -8
+  %shr = lshr i64 %x, 16
+  %and1 = and i64 %shr, 7
+  %or = or i64 %and, %and1
+  %lshr = lshr i64 %or, 2
+  %mask = and i64 %lshr, 1152921504606846975
+  store i64 %mask, i64* %y, align 8
   ret void
 }
 
@@ -591,6 +657,43 @@ entry:
   store i32 %shr2, i32* %y, align 8
   ret void
 }
+define void @fct16_mask(i32* nocapture %y, i32 %x) nounwind optsize inlinehint ssp {
+; LLC-LABEL: fct16_mask:
+; LLC:       // %bb.0: // %entry
+; LLC-NEXT:    ldr w8, [x0]
+; LLC-NEXT:    mov w9, #33120
+; LLC-NEXT:    movk w9, #26, lsl #16
+; LLC-NEXT:    and w8, w8, w9
+; LLC-NEXT:    bfxil w8, w1, #16, #3
+; LLC-NEXT:    lsr w8, w8, #2
+; LLC-NEXT:    str w8, [x0]
+; LLC-NEXT:    ret
+; OPT-LABEL: @fct16_mask(
+; OPT-NEXT:  entry:
+; OPT-NEXT:    [[TMP0:%.*]] = load i32, i32* [[Y:%.*]], align 8
+; OPT-NEXT:    [[AND:%.*]] = and i32 [[TMP0]], 1737056
+; OPT-NEXT:    [[SHR:%.*]] = lshr i32 [[X:%.*]], 16
+; OPT-NEXT:    [[AND1:%.*]] = and i32 [[SHR]], 7
+; OPT-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[AND1]]
+; OPT-NEXT:    [[LSHR:%.*]] = lshr i32 [[OR]], 2
+; OPT-NEXT:    [[MASK:%.*]] = and i32 [[LSHR]], 268435455
+; OPT-NEXT:    store i32 [[MASK]], i32* [[Y]], align 8
+; OPT-NEXT:    ret void
+;
+entry:
+; Create the constant
+; Do the masking
+; lsr is an alias of ubfm
+  %0 = load i32, i32* %y, align 8
+  %and = and i32 %0, 1737056
+  %shr = lshr i32 %x, 16
+  %and1 = and i32 %shr, 7
+  %or = or i32 %and, %and1
+  %lshr = lshr i32 %or, 2
+  %mask = and i32 %lshr, 268435455
+  store i32 %mask, i32* %y, align 8
+  ret void
+}
 
 
 ; Check if we can still catch bfm instruction when we drop some high bits
@@ -633,6 +736,43 @@ entry:
   store i64 %shr2, i64* %y, align 8
   ret void
 }
+define void @fct17_mask(i64* nocapture %y, i64 %x) nounwind optsize inlinehint ssp {
+; LLC-LABEL: fct17_mask:
+; LLC:       // %bb.0: // %entry
+; LLC-NEXT:    ldr x8, [x0]
+; LLC-NEXT:    mov w9, #33120
+; LLC-NEXT:    movk w9, #26, lsl #16
+; LLC-NEXT:    and x8, x8, x9
+; LLC-NEXT:    bfxil x8, x1, #16, #3
+; LLC-NEXT:    lsr x8, x8, #2
+; LLC-NEXT:    str x8, [x0]
+; LLC-NEXT:    ret
+; OPT-LABEL: @fct17_mask(
+; OPT-NEXT:  entry:
+; OPT-NEXT:    [[TMP0:%.*]] = load i64, i64* [[Y:%.*]], align 8
+; OPT-NEXT:    [[AND:%.*]] = and i64 [[TMP0]], 1737056
+; OPT-NEXT:    [[SHR:%.*]] = lshr i64 [[X:%.*]], 16
+; OPT-NEXT:    [[AND1:%.*]] = and i64 [[SHR]], 7
+; OPT-NEXT:    [[OR:%.*]] = or i64 [[AND]], [[AND1]]
+; OPT-NEXT:    [[LSHR:%.*]] = lshr i64 [[OR]], 2
+; OPT-NEXT:    [[MASK:%.*]] = and i64 [[LSHR]], 1152921504606846975
+; OPT-NEXT:    store i64 [[MASK]], i64* [[Y]], align 8
+; OPT-NEXT:    ret void
+;
+entry:
+; Create the constant
+; Do the masking
+; lsr is an alias of ubfm
+  %0 = load i64, i64* %y, align 8
+  %and = and i64 %0, 1737056
+  %shr = lshr i64 %x, 16
+  %and1 = and i64 %shr, 7
+  %or = or i64 %and, %and1
+  %lshr = lshr i64 %or, 2
+  %mask = and i64 %lshr, 1152921504606846975
+  store i64 %mask, i64* %y, align 8
+  ret void
+}
 
 define i64 @fct18(i32 %xor72) nounwind ssp {
 ; LLC-LABEL: fct18:
@@ -660,31 +800,31 @@ define i32 @fct19(i64 %arg1) nounwind readonly ssp  {
 ; LLC-LABEL: fct19:
 ; LLC:       // %bb.0: // %entry
 ; LLC-NEXT:    lsr x8, x0, #48
-; LLC-NEXT:    cbz x8, .LBB22_2
+; LLC-NEXT:    cbz x8, .LBB26_2
 ; LLC-NEXT:  // %bb.1: // %if.then
 ; LLC-NEXT:    adrp x9, first_ones
 ; LLC-NEXT:    add x9, x9, :lo12:first_ones
 ; LLC-NEXT:    ldrb w0, [x9, x8]
 ; LLC-NEXT:    ret
-; LLC-NEXT:  .LBB22_2: // %if.end
+; LLC-NEXT:  .LBB26_2: // %if.end
 ; LLC-NEXT:    ubfx x8, x0, #32, #16
-; LLC-NEXT:    cbz w8, .LBB22_4
+; LLC-NEXT:    cbz w8, .LBB26_4
 ; LLC-NEXT:  // %bb.3: // %if.then7
 ; LLC-NEXT:    adrp x9, first_ones
 ; LLC-NEXT:    add x9, x9, :lo12:first_ones
 ; LLC-NEXT:    ldrb w8, [x9, x8]
 ; LLC-NEXT:    add w0, w8, #16 // =16
 ; LLC-NEXT:    ret
-; LLC-NEXT:  .LBB22_4: // %if.end13
+; LLC-NEXT:  .LBB26_4: // %if.end13
 ; LLC-NEXT:    ubfx x8, x0, #16, #16
-; LLC-NEXT:    cbz w8, .LBB22_6
+; LLC-NEXT:    cbz w8, .LBB26_6
 ; LLC-NEXT:  // %bb.5: // %if.then17
 ; LLC-NEXT:    adrp x9, first_ones
 ; LLC-NEXT:    add x9, x9, :lo12:first_ones
 ; LLC-NEXT:    ldrb w8, [x9, x8]
 ; LLC-NEXT:    add w0, w8, #32 // =32
 ; LLC-NEXT:    ret
-; LLC-NEXT:  .LBB22_6:
+; LLC-NEXT:  .LBB26_6:
 ; LLC-NEXT:    mov w0, #64
 ; LLC-NEXT:    ret
 ; OPT-LABEL: @fct19(
@@ -885,14 +1025,14 @@ define i16 @test_ignored_rightbits(i32 %dst, i32 %in) {
 define void @sameOperandBFI(i64 %src, i64 %src2, i16 *%ptr) {
 ; LLC-LABEL: sameOperandBFI:
 ; LLC:       // %bb.0: // %entry
-; LLC-NEXT:    cbnz wzr, .LBB26_2
+; LLC-NEXT:    cbnz wzr, .LBB30_2
 ; LLC-NEXT:  // %bb.1: // %if.else
 ; LLC-NEXT:    lsr x8, x0, #47
 ; LLC-NEXT:    and w9, w1, #0x3
 ; LLC-NEXT:    bfi w9, w8, #2, #2
 ; LLC-NEXT:    bfi w9, w9, #4, #4
 ; LLC-NEXT:    strh w9, [x2]
-; LLC-NEXT:  .LBB26_2: // %end
+; LLC-NEXT:  .LBB30_2: // %end
 ; LLC-NEXT:    ret
 ; OPT-LABEL: @sameOperandBFI(
 ; OPT-NEXT:  entry:
