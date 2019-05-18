@@ -752,7 +752,7 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
     return Sym.getVA(A) + getTlsTpOffset();
   case R_RELAX_TLS_GD_TO_LE_NEG:
   case R_NEG_TLS:
-    return Out::TlsPhdr->p_memsz - Sym.getVA(A);
+    return -(Sym.getVA(A) + getTlsTpOffset());
   case R_SIZE:
     return Sym.getSize() + A;
   case R_TLSDESC:
