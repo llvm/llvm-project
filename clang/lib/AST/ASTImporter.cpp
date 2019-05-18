@@ -5325,7 +5325,7 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
       return ImportedDefOrErr.takeError();
   }
 
-  VarTemplateDecl *VarTemplate;
+  VarTemplateDecl *VarTemplate = nullptr;
   if (Error Err = importInto(VarTemplate, D->getSpecializedTemplate()))
     return std::move(Err);
 
@@ -8010,7 +8010,7 @@ ASTImporter::Import(NestedNameSpecifierLoc FromNNS) {
 
   while (!NestedNames.empty()) {
     NNS = NestedNames.pop_back_val();
-    NestedNameSpecifier *Spec;
+    NestedNameSpecifier *Spec = nullptr;
     if (Error Err = importInto(Spec, NNS.getNestedNameSpecifier()))
       return std::move(Err);
 
