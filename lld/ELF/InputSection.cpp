@@ -598,7 +598,7 @@ static int64_t getTlsTpOffset() {
   case EM_386:
   case EM_X86_64:
     // Variant 2. The TLS segment is located just before the thread pointer.
-    return -Out::TlsPhdr->p_memsz;
+    return -alignTo(Out::TlsPhdr->p_memsz, Out::TlsPhdr->p_align);
   case EM_PPC64:
     // The thread pointer points to a fixed offset from the start of the
     // executable's TLS segment. An offset of 0x7000 allows a signed 16-bit
