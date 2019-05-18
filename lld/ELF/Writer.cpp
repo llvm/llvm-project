@@ -2190,19 +2190,6 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
       // rounds up.
       P->p_memsz = alignTo(P->p_memsz, Config->CommonPageSize);
     }
-
-    if (P->p_type == PT_TLS && P->p_memsz) {
-      if (!Config->Shared &&
-          (Config->EMachine == EM_ARM || Config->EMachine == EM_AARCH64)) {
-        // On ARM/AArch64, reserve extra space (8 words) between the thread
-        // pointer and an executable's TLS segment by overaligning the segment.
-        // This reservation is needed for backwards compatibility with Android's
-        // TCB, which allocates several slots after the thread pointer (e.g.
-        // TLS_SLOT_STACK_GUARD==5). For simplicity, this overalignment is also
-        // done on other operating systems.
-        P->p_align = std::max<uint64_t>(P->p_align, Config->Wordsize * 8);
-      }
-    }
   }
 }
 
