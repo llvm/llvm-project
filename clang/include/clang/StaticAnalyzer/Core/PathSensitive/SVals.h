@@ -303,7 +303,7 @@ public:
 
   static bool isCompoundType(QualType T) {
     return T->isArrayType() || T->isRecordType() ||
-           T->isComplexType() || T->isVectorType();
+           T->isAnyComplexType() || T->isVectorType();
   }
 
 private:
