@@ -1167,20 +1167,17 @@ struct ComplexUninitTest {
   __complex__ int y;
 };
 
-// FIXME: Currently this causes (unrelated to this checker) an assertion
-// failure.
-//
-//struct ComplexInitTest {
-//  ComplexInitTest() {
-//    x = {1.0f, 1.0f};
-//    y = {1, 1};
-//  }
-//  __complex__ float x;
-//  __complex__ int y;
-//};
+struct ComplexInitTest {
+  ComplexInitTest() {
+    x = {1.0f, 1.0f};
+    y = {1, 1};
+  }
+  __complex__ float x;
+  __complex__ int y;
+};
 
 void fComplexTest() {
-//  ComplexInitTest x;
+  ComplexInitTest x;
 
   // TODO: we should emit a warning for x2.x and x2.y.
   ComplexUninitTest x2;
