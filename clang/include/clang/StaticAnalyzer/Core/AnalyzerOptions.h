@@ -281,18 +281,14 @@ public:
   /// Checker options are retrieved in the following format:
   /// `-analyzer-config CheckerName:OptionName=Value.
   /// @param [in] OptionName Name for option to retrieve.
-  /// @param [in] DefaultVal Default value returned if no such option was
-  /// specified.
   /// @param [in] SearchInParents If set to true and the searched option was not
   /// specified for the given checker the options for the parent packages will
   /// be searched as well. The inner packages take precedence over the outer
   /// ones.
   bool getCheckerBooleanOption(StringRef CheckerName, StringRef OptionName,
-                               bool DefaultVal,
                                bool SearchInParents = false) const;
 
   bool getCheckerBooleanOption(const ento::CheckerBase *C, StringRef OptionName,
-                               bool DefaultVal,
                                bool SearchInParents = false) const;
 
   /// Interprets an option's string value as an integer value.
@@ -305,18 +301,14 @@ public:
   /// Checker options are retrieved in the following format:
   /// `-analyzer-config CheckerName:OptionName=Value.
   /// @param [in] OptionName Name for option to retrieve.
-  /// @param [in] DefaultVal Default value returned if no such option was
-  /// specified.
   /// @param [in] SearchInParents If set to true and the searched option was not
   /// specified for the given checker the options for the parent packages will
   /// be searched as well. The inner packages take precedence over the outer
   /// ones.
   int getCheckerIntegerOption(StringRef CheckerName, StringRef OptionName,
-                              int DefaultVal,
                               bool SearchInParents = false) const;
 
   int getCheckerIntegerOption(const ento::CheckerBase *C, StringRef OptionName,
-                              int DefaultVal,
                               bool SearchInParents = false) const;
 
   /// Query an option's string value.
@@ -329,18 +321,15 @@ public:
   /// Checker options are retrieved in the following format:
   /// `-analyzer-config CheckerName:OptionName=Value.
   /// @param [in] OptionName Name for option to retrieve.
-  /// @param [in] DefaultVal Default value returned if no such option was
-  /// specified.
   /// @param [in] SearchInParents If set to true and the searched option was not
   /// specified for the given checker the options for the parent packages will
   /// be searched as well. The inner packages take precedence over the outer
   /// ones.
   StringRef getCheckerStringOption(StringRef CheckerName, StringRef OptionName,
-                                   StringRef DefaultVal,
                                    bool SearchInParents = false) const;
 
   StringRef getCheckerStringOption(const ento::CheckerBase *C,
-                                   StringRef OptionName, StringRef DefaultVal,
+                                   StringRef OptionName,
                                    bool SearchInParents = false) const;
 
   /// Retrieves and sets the UserMode. This is a high-level option,

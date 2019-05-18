@@ -324,7 +324,9 @@ static void insertAndValidate(StringRef FullName,
     return;
 
   // Insertion failed, the user supplied this package/checker option on the
-  // command line. If the supplied value is invalid, we'll emit an error.
+  // command line. If the supplied value is invalid, we'll restore the option
+  // to it's default value, and if we're in non-compatibility mode, we'll also
+  // emit an error.
 
   StringRef SuppliedValue = It.first->getValue();
 
@@ -334,6 +336,8 @@ static void insertAndValidate(StringRef FullName,
         Diags.Report(diag::err_analyzer_checker_option_invalid_input)
             << FullOption << "a boolean value";
       }
+
+      It.first->setValue(Option.DefaultValStr);
     }
     return;
   }
@@ -346,6 +350,8 @@ static void insertAndValidate(StringRef FullName,
         Diags.Report(diag::err_analyzer_checker_option_invalid_input)
             << FullOption << "an integer value";
       }
+
+      It.first->setValue(Option.DefaultValStr);
     }
     return;
   }

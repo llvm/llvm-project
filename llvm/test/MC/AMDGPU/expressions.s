@@ -163,6 +163,22 @@ v_add_u16 v0, (i1+100)*2, v0
 // VI: v_add_u16_e32 v0, 0xca, v0      ; encoding: [0xff,0x00,0x00,0x4c,0xca,0x00,0x00,0x00]
 
 //===----------------------------------------------------------------------===//
+// Constant expressions may be used with Name:Value modifiers.
+//===----------------------------------------------------------------------===//
+
+buffer_load_dword v1, off, s[4:7], s1 offset:-1+1
+// VI: buffer_load_dword v1, off, s[4:7], s1 ; encoding: [0x00,0x00,0x50,0xe0,0x00,0x01,0x01,0x01]
+
+buffer_load_dword v1, off, s[4:7], s1 offset:i1+4
+// VI: buffer_load_dword v1, off, s[4:7], s1 offset:5 ; encoding: [0x05,0x00,0x50,0xe0,0x00,0x01,0x01,0x01]
+
+buffer_load_dword v1, off, s[4:7], s1 offset:4+i1
+// VI: buffer_load_dword v1, off, s[4:7], s1 offset:5 ; encoding: [0x05,0x00,0x50,0xe0,0x00,0x01,0x01,0x01]
+
+buffer_load_dword v1, off, s[4:7], s1 offset:-i1+4
+// VI: buffer_load_dword v1, off, s[4:7], s1 offset:3 ; encoding: [0x03,0x00,0x50,0xe0,0x00,0x01,0x01,0x01]
+
+//===----------------------------------------------------------------------===//
 // Relocatable expressions can be used with 32-bit instructions.
 //===----------------------------------------------------------------------===//
 

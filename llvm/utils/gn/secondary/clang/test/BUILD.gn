@@ -92,6 +92,12 @@ write_lit_config("lit_site_cfg") {
   } else {
     extra_values += [ "LLVM_PLUGIN_EXT=.so" ]
   }
+
+  if (host_os == "win") {
+    extra_values += [ "LLVM_ENABLE_PLUGINS=0" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_PLUGINS=1" ]
+  }
 }
 
 write_lit_config("lit_unit_site_cfg") {

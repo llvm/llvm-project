@@ -1157,6 +1157,7 @@ private:
   bool isId(const AsmToken &Token, const StringRef Id) const;
   bool isToken(const AsmToken::TokenKind Kind) const;
   bool trySkipId(const StringRef Id);
+  bool trySkipId(const StringRef Id, const AsmToken::TokenKind Kind);
   bool trySkipToken(const AsmToken::TokenKind Kind);
   bool skipToken(const AsmToken::TokenKind Kind, const StringRef ErrMsg);
   bool parseString(StringRef &Val, const StringRef ErrMsg = "expected a string");
@@ -4039,46 +4040,19 @@ bool AMDGPUAsmParser::ParseInstruction(ParseInstructionInfo &Info,
 //===----------------------------------------------------------------------===//
 
 OperandMatchResultTy
-AMDGPUAsmParser::parseIntWithPrefix(const char *Prefix, int64_t &Int) {
-  switch(getLexer().getKind()) {
-    default: return MatchOperand_NoMatch;
-    case AsmToken::Identifier: {
-      StringRef Name = Parser.getTok().getString();
-      if (!Name.equals(Prefix)) {
-        return MatchOperand_NoMatch;
-      }
+AMDGPUAsmParser::parseIntWithPrefix(const char *Prefix, int64_t &IntVal) {
 
-      Parser.Lex();
-      if (getLexer().isNot(AsmToken::Colon))
-        return MatchOperand_ParseFail;
+  if (!trySkipId(Prefix, AsmToken::Colon))
+    return MatchOperand_NoMatch;
 
-      Parser.Lex();
-
-      bool IsMinus = false;
-      if (getLexer().getKind() == AsmToken::Minus) {
-        Parser.Lex();
-        IsMinus = true;
-      }
-
-      if (getLexer().isNot(AsmToken::Integer))
-        return MatchOperand_ParseFail;
-
-      if (getParser().parseAbsoluteExpression(Int))
-        return MatchOperand_ParseFail;
-
-      if (IsMinus)
-        Int = -Int;
-      break;
-    }
-  }
-  return MatchOperand_Success;
+  return parseExpr(IntVal) ? MatchOperand_Success : MatchOperand_ParseFail;
 }
 
 OperandMatchResultTy
 AMDGPUAsmParser::parseIntWithPrefix(const char *Prefix, OperandVector &Operands,
                                     AMDGPUOperand::ImmTy ImmTy,
                                     bool (*ConvertResult)(int64_t&)) {
-  SMLoc S = Parser.getTok().getLoc();
+  SMLoc S = getLoc();
   int64_t Value = 0;
 
   OperandMatchResultTy Res = parseIntWithPrefix(Prefix, Value);
@@ -4086,7 +4060,7 @@ AMDGPUAsmParser::parseIntWithPrefix(const char *Prefix, OperandVector &Operands,
     return Res;
 
   if (ConvertResult && !ConvertResult(Value)) {
-    return MatchOperand_ParseFail;
+    Error(S, "invalid " + StringRef(Prefix) + " value.");
   }
 
   Operands.push_back(AMDGPUOperand::CreateImm(this, Value, S, ImmTy));
@@ -4962,6 +4936,16 @@ AMDGPUAsmParser::isToken(const AsmToken::TokenKind Kind) const {
 bool
 AMDGPUAsmParser::trySkipId(const StringRef Id) {
   if (isId(Id)) {
+    lex();
+    return true;
+  }
+  return false;
+}
+
+bool
+AMDGPUAsmParser::trySkipId(const StringRef Id, const AsmToken::TokenKind Kind) {
+  if (isId(Id) && peekToken().is(Kind)) {
+    lex();
     lex();
     return true;
   }

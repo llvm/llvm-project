@@ -183,12 +183,7 @@ cl::alias JustSymbolNames("j", cl::desc("Alias for --just-symbol-name"),
 cl::opt<bool> SpecialSyms("special-syms",
                           cl::desc("No-op. Used for GNU compatibility only"));
 
-// FIXME: This option takes exactly two strings and should be allowed anywhere
-// on the command line.  Such that "llvm-nm -s __TEXT __text foo.o" would work.
-// But that does not as the CommandLine Library does not have a way to make
-// this work.  For now the "-s __TEXT __text" has to be last on the command
-// line.
-cl::list<std::string> SegSect("s", cl::Positional, cl::ZeroOrMore,
+cl::list<std::string> SegSect("s", cl::multi_val(2), cl::ZeroOrMore,
                               cl::value_desc("segment section"), cl::Hidden,
                               cl::desc("Dump only symbols from this segment "
                                        "and section name, Mach-O only"),

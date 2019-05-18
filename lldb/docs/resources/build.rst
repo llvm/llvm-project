@@ -236,58 +236,7 @@ On NetBSD one might run:
 
   > pkgin install swig python27 cmake ninja-build
 
-
-**Building LLDB**
-
-We first need to checkout the source trees into the appropriate locations. Both
-Clang and LLDB build as subprojects of LLVM. This means we will be checking out
-the source for both Clang and LLDB into the tools subdirectory of LLVM. We will
-be setting up a directory hierarchy looking something like this:
-
-::
-
-                  llvm
-                  |
-                  `-- tools
-                      |
-                      +-- clang
-                      |
-                      `-- lldb
-
-For reference, we will call the root of the LLVM project tree $llvm, and the
-roots of the Clang and LLDB source trees $clang and $lldb respectively.
-
-Change to the directory where you want to do development work and checkout
-LLVM:
-
-::
-
-  > svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm
-
-
-Now switch to LLVM’s tools subdirectory and checkout both Clang and LLDB:
-
-::
-
-  > cd $llvm/tools
-  > svn co http://llvm.org/svn/llvm-project/cfe/trunk clang
-  > svn co http://llvm.org/svn/llvm-project/lldb/trunk lldb
-
-In general, building the LLDB trunk revision requires trunk revisions of both
-LLVM and Clang.
-
-It is highly recommended that you build the system out of tree. Create a second
-build directory and configure the LLVM project tree to your specifications as
-outlined in LLVM’s Getting Started Guide. A typical build procedure might be:
-
-::
-
-  > cd $llvm/..
-  > mkdir build
-  > cd build
-
 **To build with CMake**
-
 
 Using CMake is documented on the `Building LLVM with CMake
 <http://llvm.org/docs/CMake.html>`_ page. Building LLDB is possible using one

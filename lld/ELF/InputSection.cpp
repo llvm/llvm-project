@@ -590,15 +590,11 @@ static int64_t getTlsTpOffset() {
     // Variant 1. The thread pointer points to a TCB with a fixed 2-word size,
     // followed by a variable amount of alignment padding, followed by the TLS
     // segment.
-    //
-    // NB: While the ARM/AArch64 ABI formally has a 2-word TCB size, lld
-    // effectively increases the TCB size to 8 words for Android compatibility.
-    // It accomplishes this by increasing the segment's alignment.
     return alignTo(Config->Wordsize * 2, Out::TlsPhdr->p_align);
   case EM_386:
   case EM_X86_64:
     // Variant 2. The TLS segment is located just before the thread pointer.
-    return -Out::TlsPhdr->p_memsz;
+    return -alignTo(Out::TlsPhdr->p_memsz, Out::TlsPhdr->p_align);
   case EM_PPC64:
     // The thread pointer points to a fixed offset from the start of the
     // executable's TLS segment. An offset of 0x7000 allows a signed 16-bit
@@ -752,7 +748,7 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
     return Sym.getVA(A) + getTlsTpOffset();
   case R_RELAX_TLS_GD_TO_LE_NEG:
   case R_NEG_TLS:
-    return Out::TlsPhdr->p_memsz - Sym.getVA(A);
+    return -(Sym.getVA(A) + getTlsTpOffset());
   case R_SIZE:
     return Sym.getSize() + A;
   case R_TLSDESC:

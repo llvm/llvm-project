@@ -94,3 +94,13 @@ void caller() {
 // RUN:   -analyzer-checker=example.MyChecker \
 // RUN:   -analyzer-config-compatibility-mode=true \
 // RUN:   -analyzer-config example.MyChecker:ExampleOption=example
+
+// RUN: %clang_analyze_cc1 %s \
+// RUN:   -load %llvmshlibdir/CheckerOptionHandlingAnalyzerPlugin%pluginext\
+// RUN:   -analyzer-checker=example.MyChecker \
+// RUN:   -analyzer-checker=debug.ConfigDumper \
+// RUN:   -analyzer-config-compatibility-mode=true \
+// RUN:   -analyzer-config example.MyChecker:ExampleOption=example \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-CORRECTED-BOOL-VALUE
+
+// CHECK-CORRECTED-BOOL-VALUE: example.MyChecker:ExampleOption = false
