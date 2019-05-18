@@ -867,6 +867,20 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
   if (isa<UndefValue>(ScalarOp) || isa<UndefValue>(IdxOp))
     replaceInstUsesWith(IE, VecOp);
 
+  // If the vector and scalar are both bitcast from the same element type, do
+  // the insert in that source type followed by bitcast.
+  Value *VecSrc, *ScalarSrc;
+  if (match(VecOp, m_BitCast(m_Value(VecSrc))) &&
+      match(ScalarOp, m_BitCast(m_Value(ScalarSrc))) &&
+      (VecOp->hasOneUse() || ScalarOp->hasOneUse()) &&
+      VecSrc->getType()->isVectorTy() && !ScalarSrc->getType()->isVectorTy() &&
+      VecSrc->getType()->getVectorElementType() == ScalarSrc->getType()) {
+    // inselt (bitcast VecSrc), (bitcast ScalarSrc), IdxOp -->
+    //   bitcast (inselt VecSrc, ScalarSrc, IdxOp)
+    Value *NewInsElt = Builder.CreateInsertElement(VecSrc, ScalarSrc, IdxOp);
+    return new BitCastInst(NewInsElt, IE.getType());
+  }
+
   // If the inserted element was extracted from some other vector and both
   // indexes are constant, try to turn this into a shuffle.
   uint64_t InsertedIdx, ExtractedIdx;
