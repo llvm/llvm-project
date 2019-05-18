@@ -1384,7 +1384,12 @@ void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
     raw_svector_ostream CommentStream(Comments);
 
     StringRef BytesStr;
-    error(Section.getContents(BytesStr));
+    Expected<StringRef> ExpBytesStr = Section.getContents();
+    if (ExpBytesStr)
+      BytesStr = *ExpBytesStr;
+    else
+      consumeError(ExpBytesStr.takeError());
+
     ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(BytesStr.data()),
                             BytesStr.size());
 
@@ -1727,7 +1732,11 @@ void llvm::DisassemHelper::PrintSectionContents(const ObjectFile *Obj) {
       continue;
     }
 
-    error(Section.getContents(Contents));
+    Expected<StringRef> ExpContents = Section.getContents();
+    if (ExpContents)
+      Contents = *ExpContents;
+    else
+      consumeError(ExpContents.takeError());
 
     // Dump out the content as hex and printable ascii characters.
     for (std::size_t addr = 0, end = Contents.size(); addr < end; addr += 16) {
@@ -1978,7 +1987,13 @@ void llvm::DisassemHelper::printRawClangAST(const ObjectFile *Obj) {
     return;
 
   StringRef ClangASTContents;
-  error(ClangASTSection.getValue().getContents(ClangASTContents));
+  Expected<StringRef> ExpClangASTContents =
+      ClangASTSection.getValue().getContents();
+  if (ExpClangASTContents)
+    ClangASTContents = *ExpClangASTContents;
+  else
+    consumeError(ExpClangASTContents.takeError());
+
   OutS.write(ClangASTContents.data(), ClangASTContents.size());
 }
 
@@ -2014,7 +2029,12 @@ void llvm::DisassemHelper::printFaultMaps(const ObjectFile *Obj) {
   }
 
   StringRef FaultMapContents;
-  error(FaultMapSection.getValue().getContents(FaultMapContents));
+  Expected<StringRef> ExpFaultMapContents =
+      FaultMapSection.getValue().getContents();
+  if (ExpFaultMapContents)
+    FaultMapContents = *ExpFaultMapContents;
+  else
+    consumeError(ExpFaultMapContents.takeError());
 
   FaultMapParser FMP(FaultMapContents.bytes_begin(),
                      FaultMapContents.bytes_end());
