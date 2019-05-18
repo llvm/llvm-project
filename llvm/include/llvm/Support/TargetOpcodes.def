@@ -497,6 +497,18 @@ HANDLE_TARGET_OPCODE(G_GEP)
 /// *down* to the given alignment.
 HANDLE_TARGET_OPCODE(G_PTR_MASK)
 
+/// Generic signed integer minimum.
+HANDLE_TARGET_OPCODE(G_SMIN)
+
+/// Generic signed integer maximum.
+HANDLE_TARGET_OPCODE(G_SMAX)
+
+/// Generic unsigned integer maximum.
+HANDLE_TARGET_OPCODE(G_UMIN)
+
+/// Generic unsigned integer maximum.
+HANDLE_TARGET_OPCODE(G_UMAX)
+
 /// Generic BRANCH instruction. This is an unconditional branch.
 HANDLE_TARGET_OPCODE(G_BR)
 

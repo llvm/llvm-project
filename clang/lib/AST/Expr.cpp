@@ -2974,6 +2974,9 @@ bool Expr::hasAnyTypeDependentArguments(ArrayRef<Expr *> Exprs) {
 
 bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
                                  const Expr **Culprit) const {
+  assert(!isValueDependent() &&
+         "Expression evaluator can't be called on a dependent expression.");
+
   // This function is attempting whether an expression is an initializer
   // which can be evaluated at compile-time. It very closely parallels
   // ConstExprEmitter in CGExprConstant.cpp; if they don't match, it

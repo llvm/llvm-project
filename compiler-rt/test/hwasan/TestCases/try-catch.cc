@@ -1,6 +1,9 @@
 // RUN: %clangxx_hwasan %s -o %t && %run %t 2>&1 | FileCheck %s --check-prefix=GOOD
 // RUN: %clangxx_hwasan %s -mllvm -hwasan-instrument-landing-pads=0 -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=BAD
 
+// C++ tests on x86_64 require instrumented libc++/libstdc++.
+// REQUIRES: aarch64-target-arch
+
 #include <stdexcept>
 #include <cstdio>
 
