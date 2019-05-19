@@ -33,7 +33,7 @@ _xrstor(void *__p, unsigned long long __m) {
 
 #ifndef _MSC_VER
 #define _xgetbv(A) __builtin_ia32_xgetbv((long long)(A))
-#define _xsetbv(A, B) __builtin_ia32_xsetbv((unsigned int)(A), (unsigned long long)(B));
+#define _xsetbv(A, B) __builtin_ia32_xsetbv((unsigned int)(A), (unsigned long long)(B))
 #else
 #ifdef __cplusplus
 extern "C" {
