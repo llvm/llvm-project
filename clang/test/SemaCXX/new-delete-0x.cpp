@@ -34,6 +34,5 @@ void good_deletes()
 void bad_deletes()
 {
   // 'delete []' is always array delete, per [expr.delete]p1.
-  // FIXME: Give a better diagnostic.
-  delete []{ return (int*)0; }(); // expected-error {{expected expression}}
+  delete []{ return (int*)0; }(); // expected-error {{'[]' after delete interpreted as 'delete[]'}}
 }
