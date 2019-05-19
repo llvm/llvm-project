@@ -323,7 +323,7 @@ Value *MemCmpExpansion::getCompareLoadPairs(unsigned BlockIndex,
   assert(LoadIndex < getNumLoads() &&
          "getCompareLoadPairs() called with no remaining loads");
   std::vector<Value *> XorList, OrList;
-  Value *Diff;
+  Value *Diff = nullptr;
 
   const unsigned NumLoads =
       std::min(getNumLoads() - LoadIndex, NumLoadsPerBlockForZeroCmp);
@@ -400,6 +400,8 @@ Value *MemCmpExpansion::getCompareLoadPairs(unsigned BlockIndex,
     while (OrList.size() != 1) {
       OrList = pairWiseOr(OrList);
     }
+
+    assert(Diff && "Failed to find comparison diff");
     Cmp = Builder.CreateICmpNE(OrList[0], ConstantInt::get(Diff->getType(), 0));
   }
 
