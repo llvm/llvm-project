@@ -514,6 +514,12 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     // Handle the new main diagnostic.
     flushLastDiag();
 
+    if (SuppressionFilter && SuppressionFilter(DiagLevel, Info)) {
+      LastPrimaryDiagnosticWasSuppressed = true;
+      return;
+    }
+    LastPrimaryDiagnosticWasSuppressed = false;
+
     LastDiag = Diag();
     LastDiag->ID = Info.getID();
     FillDiagBase(*LastDiag);
@@ -528,6 +534,13 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     }
   } else {
     // Handle a note to an existing diagnostic.
+
+    // If a diagnostic was suppressed due to the suppression filter,
+    // also suppress notes associated with it.
+    if (LastPrimaryDiagnosticWasSuppressed) {
+      return;
+    }
+
     if (!LastDiag) {
       assert(false && "Adding a note without main diagnostic");
       IgnoreDiagnostics::log(DiagLevel, Info);

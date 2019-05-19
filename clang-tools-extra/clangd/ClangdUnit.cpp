@@ -113,12 +113,12 @@ public:
   }
 
   void EndOfMainFile() {
-    for (const auto& Entry : MainFileMacros)
+    for (const auto &Entry : MainFileMacros)
       Out->push_back(Entry.getKey());
     llvm::sort(*Out);
   }
 
- private:
+private:
   const SourceManager &SM;
   bool InMainFile = true;
   llvm::StringSet<> MainFileMacros;
@@ -332,6 +332,30 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(MainInput.getFile());
     CTFactories.createChecks(CTContext.getPointer(), CTChecks);
+    ASTDiags.suppressDiagnostics([&CTContext](
+                                     DiagnosticsEngine::Level DiagLevel,
+                                     const clang::Diagnostic &Info) {
+      if (CTContext) {
+        bool IsClangTidyDiag = !CTContext->getCheckName(Info.getID()).empty();
+        if (IsClangTidyDiag) {
+          // Skip the ShouldSuppressDiagnostic check for diagnostics not in
+          // the main file, because we don't want that function to query the
+          // source buffer for preamble files. For the same reason, we ask
+          // ShouldSuppressDiagnostic not to follow macro expansions, since
+          // those might take us into a preamble file as well.
+          bool IsInsideMainFile =
+              Info.hasSourceManager() &&
+              Info.getSourceManager().isWrittenInMainFile(
+                  Info.getSourceManager().getFileLoc(Info.getLocation()));
+          if (IsInsideMainFile && tidy::ShouldSuppressDiagnostic(
+                                      DiagLevel, Info, *CTContext,
+                                      /* CheckMacroExpansion = */ false)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    });
     Preprocessor *PP = &Clang->getPreprocessor();
     for (const auto &Check : CTChecks) {
       // FIXME: the PP callbacks skip the entire preamble.

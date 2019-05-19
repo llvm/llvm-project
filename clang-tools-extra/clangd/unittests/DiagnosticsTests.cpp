@@ -207,6 +207,26 @@ TEST(DiagnosticsTest, ClangTidy) {
                "multiple unsequenced modifications to 'y'")));
 }
 
+TEST(DiagnosticTest, ClangTidySuppressionComment) {
+  Annotations Main(R"cpp(
+    int main() {
+      int i = 3;
+      double d = 8 / i;  // NOLINT
+      // NOLINTNEXTLINE
+      double e = 8 / i;
+      double f = [[8]] / i;
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.ClangTidyChecks = "bugprone-integer-division";
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      UnorderedElementsAre(::testing::AllOf(
+          Diag(Main.range(), "result of integer division used in a floating "
+                             "point context; possible loss of precision"),
+          DiagSource(Diag::ClangTidy), DiagName("bugprone-integer-division"))));
+}
+
 TEST(DiagnosticsTest, Preprocessor) {
   // This looks like a preamble, but there's an #else in the middle!
   // Check that:
@@ -767,6 +787,7 @@ TEST(DiagsInHeaders, OnlyErrorOrFatal) {
                                      "a type specifier for all declarations"),
                   WithNote(Diag(Header.range(), "error occurred here")))));
 }
+
 } // namespace
 
 } // namespace clangd

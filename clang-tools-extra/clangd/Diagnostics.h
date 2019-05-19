@@ -128,17 +128,25 @@ public:
 
   using DiagFixer = std::function<std::vector<Fix>(DiagnosticsEngine::Level,
                                                    const clang::Diagnostic &)>;
+  using DiagFilter =
+      std::function<bool(DiagnosticsEngine::Level, const clang::Diagnostic &)>;
   /// If set, possibly adds fixes for diagnostics using \p Fixer.
   void contributeFixes(DiagFixer Fixer) { this->Fixer = Fixer; }
+  /// If set, ignore diagnostics for which \p SuppressionFilter returns true.
+  void suppressDiagnostics(DiagFilter SuppressionFilter) {
+    this->SuppressionFilter = SuppressionFilter;
+  }
 
 private:
   void flushLastDiag();
 
   DiagFixer Fixer = nullptr;
+  DiagFilter SuppressionFilter = nullptr;
   std::vector<Diag> Output;
   llvm::Optional<LangOptions> LangOpts;
   llvm::Optional<Diag> LastDiag;
   llvm::DenseSet<int> IncludeLinesWithErrors;
+  bool LastPrimaryDiagnosticWasSuppressed = false;
 };
 
 } // namespace clangd
