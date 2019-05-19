@@ -5,9 +5,22 @@
 
 # -alignTo(p_memsz, p_align) = -alignTo(4, 64) = -64
 
-# CHECK: movl %gs:0xffffffc0, %eax
-
+# CHECK:      movl %gs:0xffffffc0, %eax
   movl %gs:a@NTPOFF, %eax
+
+# CHECK-NEXT: subl $0x40, %edx
+  subl $a@tpoff, %edx
+
+# GD to LE relaxation.
+# CHECK-NEXT: movl %gs:0x0, %eax
+# CHECK-NEXT: subl $0x40, %eax
+  leal a@tlsgd(,%ebx,1), %eax
+  call ___tls_get_addr@plt
+  ret
+
+.globl ___tls_get_addr
+.type ___tls_get_addr,@function
+___tls_get_addr:
 
 .section .tbss,"awT"
 .align 64
