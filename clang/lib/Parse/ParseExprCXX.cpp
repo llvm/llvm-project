@@ -3034,8 +3034,58 @@ Parser::ParseCXXDeleteExpression(bool UseGlobal, SourceLocation Start) {
     //   [Footnote: A lambda expression with a lambda-introducer that consists
     //              of empty square brackets can follow the delete keyword if
     //              the lambda expression is enclosed in parentheses.]
-    // FIXME: Produce a better diagnostic if the '[]' is unambiguously a
-    //        lambda-introducer.
+
+    const Token Next = GetLookAheadToken(2);
+
+    // Basic lookahead to check if we have a lambda expression.
+    if (Next.isOneOf(tok::l_brace, tok::less) ||
+        (Next.is(tok::l_paren) &&
+         (GetLookAheadToken(3).is(tok::r_paren) ||
+          (GetLookAheadToken(3).is(tok::identifier) &&
+           GetLookAheadToken(4).is(tok::identifier))))) {
+      TentativeParsingAction TPA(*this);
+      SourceLocation LSquareLoc = Tok.getLocation();
+      SourceLocation RSquareLoc = NextToken().getLocation();
+
+      // SkipUntil can't skip pairs of </*...*/>; don't emit a FixIt in this
+      // case.
+      SkipUntil({tok::l_brace, tok::less}, StopBeforeMatch);
+      SourceLocation RBraceLoc;
+      bool EmitFixIt = false;
+      if (TryConsumeToken(tok::l_brace)) {
+        SkipUntil(tok::r_brace, StopBeforeMatch);
+        RBraceLoc = Tok.getLocation();
+        EmitFixIt = true;
+      }
+
+      TPA.Revert();
+
+      if (EmitFixIt)
+        Diag(Start, diag::err_lambda_after_delete)
+            << SourceRange(Start, RSquareLoc)
+            << FixItHint::CreateInsertion(LSquareLoc, "(")
+            << FixItHint::CreateInsertion(
+                   Lexer::getLocForEndOfToken(
+                       RBraceLoc, 0, Actions.getSourceManager(), getLangOpts()),
+                   ")");
+      else
+        Diag(Start, diag::err_lambda_after_delete)
+            << SourceRange(Start, RSquareLoc);
+
+      // Warn that the non-capturing lambda isn't surrounded by parentheses
+      // to disambiguate it from 'delete[]'.
+      ExprResult Lambda = ParseLambdaExpression();
+      if (Lambda.isInvalid())
+        return ExprError();
+
+      // Evaluate any postfix expressions used on the lambda.
+      Lambda = ParsePostfixExpressionSuffix(Lambda);
+      if (Lambda.isInvalid())
+        return ExprError();
+      return Actions.ActOnCXXDelete(Start, UseGlobal, /*ArrayForm=*/false,
+                                    Lambda.get());
+    }
+
     ArrayDelete = true;
     BalancedDelimiterTracker T(*this, tok::l_square);
 
