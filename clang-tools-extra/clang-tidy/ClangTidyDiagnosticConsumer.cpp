@@ -166,11 +166,13 @@ public:
 
   bool contains(StringRef S) {
     switch (auto &Result = Cache[S]) {
-      case Yes: return true;
-      case No: return false;
-      case None:
-        Result = Globs.contains(S) ? Yes : No;
-        return Result == Yes;
+    case Yes:
+      return true;
+    case No:
+      return false;
+    case None:
+      Result = Globs.contains(S) ? Yes : No;
+      return Result == Yes;
     }
     llvm_unreachable("invalid enum");
   }
@@ -387,16 +389,30 @@ static bool LineIsMarkedWithNOLINTinMacro(const SourceManager &SM,
   return false;
 }
 
+namespace clang {
+namespace tidy {
+
+bool ShouldSuppressDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                              const Diagnostic &Info, ClangTidyContext &Context,
+                              bool CheckMacroExpansion) {
+  return Info.getLocation().isValid() &&
+         DiagLevel != DiagnosticsEngine::Error &&
+         DiagLevel != DiagnosticsEngine::Fatal &&
+         (CheckMacroExpansion ? LineIsMarkedWithNOLINTinMacro
+                              : LineIsMarkedWithNOLINT)(Info.getSourceManager(),
+                                                        Info.getLocation(),
+                                                        Info.getID(), Context);
+}
+
+} // namespace tidy
+} // namespace clang
+
 void ClangTidyDiagnosticConsumer::HandleDiagnostic(
     DiagnosticsEngine::Level DiagLevel, const Diagnostic &Info) {
   if (LastErrorWasIgnored && DiagLevel == DiagnosticsEngine::Note)
     return;
 
-  if (Info.getLocation().isValid() && DiagLevel != DiagnosticsEngine::Error &&
-      DiagLevel != DiagnosticsEngine::Fatal &&
-      LineIsMarkedWithNOLINTinMacro(Info.getSourceManager(),
-                                    Info.getLocation(), Info.getID(),
-                                    Context)) {
+  if (ShouldSuppressDiagnostic(DiagLevel, Info, Context)) {
     ++Context.Stats.ErrorsIgnoredNOLINT;
     // Ignored a warning, should ignore related notes as well
     LastErrorWasIgnored = true;
