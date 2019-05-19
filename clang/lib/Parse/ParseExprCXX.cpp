@@ -3052,7 +3052,8 @@ Parser::ParseCXXDeleteExpression(bool UseGlobal, SourceLocation Start) {
       SkipUntil({tok::l_brace, tok::less}, StopBeforeMatch);
       SourceLocation RBraceLoc;
       bool EmitFixIt = false;
-      if (TryConsumeToken(tok::l_brace)) {
+      if (Tok.is(tok::l_brace)) {
+        ConsumeBrace();
         SkipUntil(tok::r_brace, StopBeforeMatch);
         RBraceLoc = Tok.getLocation();
         EmitFixIt = true;
