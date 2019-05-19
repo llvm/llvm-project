@@ -514,9 +514,12 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     // Handle the new main diagnostic.
     flushLastDiag();
 
-    if (SuppressionFilter && SuppressionFilter(DiagLevel, Info)) {
-      LastPrimaryDiagnosticWasSuppressed = true;
-      return;
+    if (Adjuster) {
+      DiagLevel = Adjuster(DiagLevel, Info);
+      if (DiagLevel == DiagnosticsEngine::Ignored) {
+        LastPrimaryDiagnosticWasSuppressed = true;
+        return;
+      }
     }
     LastPrimaryDiagnosticWasSuppressed = false;
 

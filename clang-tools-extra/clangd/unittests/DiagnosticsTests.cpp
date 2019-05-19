@@ -73,6 +73,7 @@ MATCHER_P(EqualToLSPDiag, LSPDiag,
 
 MATCHER_P(DiagSource, S, "") { return arg.Source == S; }
 MATCHER_P(DiagName, N, "") { return arg.Name == N; }
+MATCHER_P(DiagSeverity, S, "") { return arg.Severity == S; }
 
 MATCHER_P(EqualToFix, Fix, "LSP fix " + llvm::to_string(Fix)) {
   if (arg.Message != Fix.Message)
@@ -225,6 +226,44 @@ TEST(DiagnosticTest, ClangTidySuppressionComment) {
           Diag(Main.range(), "result of integer division used in a floating "
                              "point context; possible loss of precision"),
           DiagSource(Diag::ClangTidy), DiagName("bugprone-integer-division"))));
+}
+
+TEST(DiagnosticTest, ClangTidyWarningAsError) {
+  Annotations Main(R"cpp(
+    int main() {
+      int i = 3;
+      double f = [[8]] / i;
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.ClangTidyChecks = "bugprone-integer-division";
+  TU.ClangTidyWarningsAsErrors = "bugprone-integer-division";
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      UnorderedElementsAre(::testing::AllOf(
+          Diag(Main.range(), "result of integer division used in a floating "
+                             "point context; possible loss of precision"),
+          DiagSource(Diag::ClangTidy), DiagName("bugprone-integer-division"),
+          DiagSeverity(DiagnosticsEngine::Error))));
+}
+
+TEST(DiagnosticTest, ClangTidyWarningAsErrorTrumpsSuppressionComment) {
+  Annotations Main(R"cpp(
+    int main() {
+      int i = 3;
+      double f = [[8]] / i;  // NOLINT
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.ClangTidyChecks = "bugprone-integer-division";
+  TU.ClangTidyWarningsAsErrors = "bugprone-integer-division";
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      UnorderedElementsAre(::testing::AllOf(
+          Diag(Main.range(), "result of integer division used in a floating "
+                             "point context; possible loss of precision"),
+          DiagSource(Diag::ClangTidy), DiagName("bugprone-integer-division"),
+          DiagSeverity(DiagnosticsEngine::Error))));
 }
 
 TEST(DiagnosticsTest, Preprocessor) {
