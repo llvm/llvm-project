@@ -109,6 +109,8 @@ def warn_cxx98_compat_alignof : Warning<
   InGroup<CXX98Compat>, DefaultIgnore;
 def ext_alignof_expr : ExtWarn<
   "%0 applied to an expression is a GNU extension">, InGroup<GNUAlignofExpression>;
+def err_lambda_after_delete : Error<
+  "'[]' after delete interpreted as 'delete[]'; add parentheses to treat this as a lambda-expression">;
 
 def warn_microsoft_dependent_exists : Warning<
   "dependent %select{__if_not_exists|__if_exists}0 declarations are ignored">,
