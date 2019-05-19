@@ -485,6 +485,8 @@ namespace slpvectorizer {
 
 /// Bottom Up SLP Vectorizer.
 class BoUpSLP {
+  struct TreeEntry;
+
 public:
   using ValueList = SmallVector<Value *, 8>;
   using InstrList = SmallVector<Instruction *, 16>;
@@ -620,8 +622,10 @@ public:
   /// (ii) the index of the edge.
   struct EdgeInfo {
     EdgeInfo() = default;
-    /// The index of the user TreeEntry in VectorizableTree.
-    int Idx = -1;
+    EdgeInfo(TreeEntry *UserTE, unsigned EdgeIdx)
+        : UserTE(UserTE), EdgeIdx(EdgeIdx) {}
+    /// The user TreeEntry.
+    TreeEntry *UserTE = nullptr;
     /// The operand index of the use.
     unsigned EdgeIdx = UINT_MAX;
 #ifndef NDEBUG
@@ -632,7 +636,8 @@ public:
     }
     /// Debug print.
     void dump(raw_ostream &OS) const {
-      OS << "{User:" << Idx << " EdgeIdx:" << EdgeIdx << "}";
+      OS << "{User:" << (UserTE ? std::to_string(UserTE->Idx) : "null")
+         << " EdgeIdx:" << EdgeIdx << "}";
     }
     LLVM_DUMP_METHOD void dump() const { dump(dbgs()); }
 #endif
@@ -1083,8 +1088,6 @@ public:
   };
 
 private:
-  struct TreeEntry;
-
   /// Checks if all users of \p I are the part of the vectorization tree.
   bool areAllUsersVectorized(Instruction *I) const;
 
@@ -1092,7 +1095,8 @@ private:
   int getEntryCost(TreeEntry *E);
 
   /// This is the recursive part of buildTree.
-  void buildTree_rec(ArrayRef<Value *> Roots, unsigned Depth, EdgeInfo EI);
+  void buildTree_rec(ArrayRef<Value *> Roots, unsigned Depth,
+                     const EdgeInfo &EI);
 
   /// \returns true if the ExtractElement/ExtractValue instructions in \p VL can
   /// be vectorized to use the original vector (or aggregate "bitcast" to a
@@ -1177,6 +1181,9 @@ private:
     /// have multiple users so the data structure is not truly a tree.
     SmallVector<EdgeInfo, 1> UserTreeIndices;
 
+    /// The index of this treeEntry in VectorizableTree.
+    int Idx = -1;
+
   private:
     /// The operands of each instruction in each lane Operands[op_index][lane].
     /// Note: This helps avoid the replication of the code that performs the
@@ -1201,11 +1208,9 @@ private:
     void trySetUserTEOperand(const EdgeInfo &UserTreeIdx,
                              ArrayRef<Value *> OpVL,
                              ArrayRef<unsigned> ReuseShuffleIndices) {
-      if (UserTreeIdx.Idx >= 0) {
-        auto &VectorizableTree = Container;
-        VectorizableTree[UserTreeIdx.Idx]->setOperand(UserTreeIdx.EdgeIdx, OpVL,
-                                                      ReuseShuffleIndices);
-      }
+      if (UserTreeIdx.UserTE)
+        UserTreeIdx.UserTE->setOperand(UserTreeIdx.EdgeIdx, OpVL,
+                                       ReuseShuffleIndices);
     }
 
     /// \returns the \p OpIdx operand of this TreeEntry.
@@ -1224,6 +1229,7 @@ private:
 #ifndef NDEBUG
     /// Debug printer.
     LLVM_DUMP_METHOD void dump() const {
+      dbgs() << Idx << ".\n";
       for (unsigned OpI = 0, OpE = Operands.size(); OpI != OpE; ++OpI) {
         dbgs() << "Operand " << OpI << ":\n";
         for (const Value *V : Operands[OpI])
@@ -1260,12 +1266,12 @@ private:
 
   /// Create a new VectorizableTree entry.
   TreeEntry *newTreeEntry(ArrayRef<Value *> VL, bool Vectorized,
-                          EdgeInfo &UserTreeIdx,
+                          const EdgeInfo &UserTreeIdx,
                           ArrayRef<unsigned> ReuseShuffleIndices = None,
                           ArrayRef<unsigned> ReorderIndices = None) {
     VectorizableTree.push_back(llvm::make_unique<TreeEntry>(VectorizableTree));
     TreeEntry *Last = VectorizableTree.back().get();
-    int idx = VectorizableTree.size() - 1;
+    Last->Idx = VectorizableTree.size() - 1;
     Last->Scalars.insert(Last->Scalars.begin(), VL.begin(), VL.end());
     Last->NeedToGather = !Vectorized;
     Last->ReuseShuffleIndices.append(ReuseShuffleIndices.begin(),
@@ -1274,18 +1280,16 @@ private:
     if (Vectorized) {
       for (int i = 0, e = VL.size(); i != e; ++i) {
         assert(!getTreeEntry(VL[i]) && "Scalar already in tree!");
-        ScalarToTreeEntry[VL[i]] = idx;
+        ScalarToTreeEntry[VL[i]] = Last->Idx;
       }
     } else {
       MustGather.insert(VL.begin(), VL.end());
     }
 
-    if (UserTreeIdx.Idx >= 0)
+    if (UserTreeIdx.UserTE)
       Last->UserTreeIndices.push_back(UserTreeIdx);
 
     Last->trySetUserTEOperand(UserTreeIdx, VL, ReuseShuffleIndices);
-
-    UserTreeIdx.Idx = idx;
     return Last;
   }
 
@@ -1297,7 +1301,6 @@ private:
   /// Debug printer.
   LLVM_DUMP_METHOD void dumpVectorizableTree() const {
     for (unsigned Id = 0, IdE = VectorizableTree.size(); Id != IdE; ++Id) {
-      dbgs() << Id << ".\n";
       VectorizableTree[Id]->dump();
       dbgs() << "\n";
     }
@@ -1837,7 +1840,7 @@ template <> struct GraphTraits<BoUpSLP *> {
                       ContainerTy &VT)
         : ChildIteratorType::iterator_adaptor_base(W), VectorizableTree(VT) {}
 
-    NodeRef operator*() { return VectorizableTree[I->Idx].get(); }
+    NodeRef operator*() { return I->UserTE; }
   };
 
   static NodeRef getEntryNode(BoUpSLP &R) {
@@ -1987,7 +1990,7 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
 }
 
 void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
-                            EdgeInfo UserTreeIdx) {
+                            const EdgeInfo &UserTreeIdx) {
   assert((allConstant(VL) || allSameType(VL)) && "Invalid types!");
 
   InstructionsState S = getSameOpcode(VL);
@@ -2144,7 +2147,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           }
         }
 
-      newTreeEntry(VL, true, UserTreeIdx, ReuseShuffleIndicies);
+      auto *TE = newTreeEntry(VL, true, UserTreeIdx, ReuseShuffleIndicies);
       LLVM_DEBUG(dbgs() << "SLP: added a vector of PHINodes.\n");
 
       for (unsigned i = 0, e = PH->getNumIncomingValues(); i < e; ++i) {
@@ -2154,8 +2157,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           Operands.push_back(cast<PHINode>(j)->getIncomingValueForBlock(
               PH->getIncomingBlock(i)));
 
-        UserTreeIdx.EdgeIdx = i;
-        buildTree_rec(Operands, Depth + 1, UserTreeIdx);
+        buildTree_rec(Operands, Depth + 1, {TE, i});
       }
       return;
     }
@@ -2300,7 +2302,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           return;
         }
       }
-      newTreeEntry(VL, true, UserTreeIdx, ReuseShuffleIndicies);
+      auto *TE = newTreeEntry(VL, true, UserTreeIdx, ReuseShuffleIndicies);
       LLVM_DEBUG(dbgs() << "SLP: added a vector of casts.\n");
 
       for (unsigned i = 0, e = VL0->getNumOperands(); i < e; ++i) {
@@ -2309,8 +2311,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         for (Value *j : VL)
           Operands.push_back(cast<Instruction>(j)->getOperand(i));
 
-        UserTreeIdx.EdgeIdx = i;
-        buildTree_rec(Operands, Depth + 1, UserTreeIdx);
+        buildTree_rec(Operands, Depth + 1, {TE, i});
       }
       return;
     }
@@ -2332,7 +2333,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         }
       }
 
-      newTreeEntry(VL, true, UserTreeIdx, ReuseShuffleIndicies);
+      auto *TE = newTreeEntry(VL, true, UserTreeIdx, ReuseShuffleIndicies);
       LLVM_DEBUG(dbgs() << "SLP: added a vector of compares.\n");
 
       ValueList Left, Right;
@@ -2354,10 +2355,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         }
       }
 
-      UserTreeIdx.EdgeIdx = 0;
-      buildTree_rec(Left, Depth + 1, UserTreeIdx);
-      UserTreeIdx.EdgeIdx = 1;
-      buildTree_rec(Right, Depth + 1, UserTreeIdx);
+      buildTree_rec(Left, Depth + 1, {TE, 0});
+      buildTree_rec(Right, Depth + 1, {TE, 1});
       return;
     }
     case Instruction::Select:
@@ -2378,8 +2377,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     case Instruction::AShr:
     case Instruction::And:
     case Instruction::Or:
-    case Instruction::Xor:
-      newTreeEntry(VL, true, UserTreeIdx, ReuseShuffleIndicies);
+    case Instruction::Xor: {
+      auto *TE = newTreeEntry(VL, true, UserTreeIdx, ReuseShuffleIndicies);
       LLVM_DEBUG(dbgs() << "SLP: added a vector of bin op.\n");
 
       // Sort operands of the instructions so that each side is more likely to
@@ -2387,10 +2386,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       if (isa<BinaryOperator>(VL0) && VL0->isCommutative()) {
         ValueList Left, Right;
         reorderInputsAccordingToOpcode(VL, Left, Right, *DL, *SE);
-        UserTreeIdx.EdgeIdx = 0;
-        buildTree_rec(Left, Depth + 1, UserTreeIdx);
-        UserTreeIdx.EdgeIdx = 1;
-        buildTree_rec(Right, Depth + 1, UserTreeIdx);
+        buildTree_rec(Left, Depth + 1, {TE, 0});
+        buildTree_rec(Right, Depth + 1, {TE, 1});
         return;
       }
 
@@ -2400,11 +2397,10 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         for (Value *j : VL)
           Operands.push_back(cast<Instruction>(j)->getOperand(i));
 
-        UserTreeIdx.EdgeIdx = i;
-        buildTree_rec(Operands, Depth + 1, UserTreeIdx);
+        buildTree_rec(Operands, Depth + 1, {TE, i});
       }
       return;
-
+    }
     case Instruction::GetElementPtr: {
       // We don't combine GEPs with complicated (nested) indexing.
       for (unsigned j = 0; j < VL.size(); ++j) {
@@ -2442,7 +2438,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         }
       }
 
-      newTreeEntry(VL, true, UserTreeIdx, ReuseShuffleIndicies);
+      auto *TE = newTreeEntry(VL, true, UserTreeIdx, ReuseShuffleIndicies);
       LLVM_DEBUG(dbgs() << "SLP: added a vector of GEPs.\n");
       for (unsigned i = 0, e = 2; i < e; ++i) {
         ValueList Operands;
@@ -2450,8 +2446,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         for (Value *j : VL)
           Operands.push_back(cast<Instruction>(j)->getOperand(i));
 
-        UserTreeIdx.EdgeIdx = i;
-        buildTree_rec(Operands, Depth + 1, UserTreeIdx);
+        buildTree_rec(Operands, Depth + 1, {TE, i});
       }
       return;
     }
@@ -2465,15 +2460,14 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           return;
         }
 
-      newTreeEntry(VL, true, UserTreeIdx, ReuseShuffleIndicies);
+      auto *TE = newTreeEntry(VL, true, UserTreeIdx, ReuseShuffleIndicies);
       LLVM_DEBUG(dbgs() << "SLP: added a vector of stores.\n");
 
       ValueList Operands;
       for (Value *j : VL)
         Operands.push_back(cast<Instruction>(j)->getOperand(0));
 
-      UserTreeIdx.EdgeIdx = 0;
-      buildTree_rec(Operands, Depth + 1, UserTreeIdx);
+      buildTree_rec(Operands, Depth + 1, {TE, 0});
       return;
     }
     case Instruction::Call: {
@@ -2533,7 +2527,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         }
       }
 
-      newTreeEntry(VL, true, UserTreeIdx, ReuseShuffleIndicies);
+      auto *TE = newTreeEntry(VL, true, UserTreeIdx, ReuseShuffleIndicies);
       for (unsigned i = 0, e = CI->getNumArgOperands(); i != e; ++i) {
         ValueList Operands;
         // Prepare the operand vector.
@@ -2541,12 +2535,11 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           CallInst *CI2 = dyn_cast<CallInst>(j);
           Operands.push_back(CI2->getArgOperand(i));
         }
-        UserTreeIdx.EdgeIdx = i;
-        buildTree_rec(Operands, Depth + 1, UserTreeIdx);
+        buildTree_rec(Operands, Depth + 1, {TE, i});
       }
       return;
     }
-    case Instruction::ShuffleVector:
+    case Instruction::ShuffleVector: {
       // If this is not an alternate sequence of opcode like add-sub
       // then do not vectorize this instruction.
       if (!S.isAltShuffle()) {
@@ -2555,17 +2548,15 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         LLVM_DEBUG(dbgs() << "SLP: ShuffleVector are not vectorized.\n");
         return;
       }
-      newTreeEntry(VL, true, UserTreeIdx, ReuseShuffleIndicies);
+      auto *TE = newTreeEntry(VL, true, UserTreeIdx, ReuseShuffleIndicies);
       LLVM_DEBUG(dbgs() << "SLP: added a ShuffleVector op.\n");
 
       // Reorder operands if reordering would enable vectorization.
       if (isa<BinaryOperator>(VL0)) {
         ValueList Left, Right;
         reorderInputsAccordingToOpcode(VL, Left, Right, *DL, *SE);
-        UserTreeIdx.EdgeIdx = 0;
-        buildTree_rec(Left, Depth + 1, UserTreeIdx);
-        UserTreeIdx.EdgeIdx = 1;
-        buildTree_rec(Right, Depth + 1, UserTreeIdx);
+        buildTree_rec(Left, Depth + 1, {TE, 0});
+        buildTree_rec(Right, Depth + 1, {TE, 1});
         return;
       }
 
@@ -2575,11 +2566,10 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         for (Value *j : VL)
           Operands.push_back(cast<Instruction>(j)->getOperand(i));
 
-        UserTreeIdx.EdgeIdx = i;
-        buildTree_rec(Operands, Depth + 1, UserTreeIdx);
+        buildTree_rec(Operands, Depth + 1, {TE, i});
       }
       return;
-
+    }
     default:
       BS.cancelScheduling(VL, VL0);
       newTreeEntry(VL, false, UserTreeIdx, ReuseShuffleIndicies);
