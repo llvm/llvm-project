@@ -262,10 +262,11 @@ function(add_compiler_rt_runtime name type)
       string(REGEX MATCHALL "<[A-Za-z0-9_]*>" substitutions
              ${CMAKE_C_COMPILE_OBJECT})
       set(compile_command_${libname} "${CMAKE_C_COMPILE_OBJECT}")
+
       set(output_file_${libname} ${output_name_${libname}}${CMAKE_C_OUTPUT_EXTENSION})
       foreach(substitution ${substitutions})
         if(substitution STREQUAL "<CMAKE_C_COMPILER>")
-          string(REPLACE "<CMAKE_C_COMPILER>" "${CMAKE_C_COMPILER}"
+          string(REPLACE "<CMAKE_C_COMPILER>" "${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1}"
                  compile_command_${libname} ${compile_command_${libname}})
         elseif(substitution STREQUAL "<OBJECT>")
           string(REPLACE "<OBJECT>" "${output_dir_${libname}}/${output_file_${libname}}"
