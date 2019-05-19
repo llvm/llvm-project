@@ -29,7 +29,7 @@ int main() {
   assert((one_dim.get_group_range() == cl::sycl::range<1>{4}));
   assert(one_dim.get_group_range(0) == 4);
   assert(one_dim[0] == 1);
-  assert(one_dim.get_linear() == 1);
+  assert(one_dim.get_linear_id() == 1);
 
   // two dimension group
   cl::sycl::group<2> two_dim = Builder::createGroup<2>({8, 4}, {4, 2}, {1, 1});
@@ -47,7 +47,7 @@ int main() {
   assert(two_dim.get_group_range(1) == 2);
   assert(two_dim[0] == 1);
   assert(two_dim[1] == 1);
-  assert(two_dim.get_linear() == 3);
+  assert(two_dim.get_linear_id() == 3);
 
   // three dimension group
   cl::sycl::group<3> three_dim =
@@ -71,5 +71,5 @@ int main() {
   assert(three_dim[0] == 1);
   assert(three_dim[1] == 1);
   assert(three_dim[2] == 1);
-  assert(three_dim.get_linear() == 7);
+  assert(three_dim.get_linear_id() == 7);
 }

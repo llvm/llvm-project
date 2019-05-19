@@ -48,19 +48,19 @@ public:
   size_t operator[](int dimension) const { return index[dimension]; }
 
   template <int dims = dimensions>
-  typename std::enable_if<(dims == 1), size_t>::type get_linear() const {
+  typename std::enable_if<(dims == 1), size_t>::type get_linear_id() const {
     range<dimensions> groupNum = globalRange / localRange;
     return index[0];
   }
 
   template <int dims = dimensions>
-  typename std::enable_if<(dims == 2), size_t>::type get_linear() const {
+  typename std::enable_if<(dims == 2), size_t>::type get_linear_id() const {
     range<dimensions> groupNum = globalRange / localRange;
     return index[1] * groupNum[0] + index[0];
   }
 
   template <int dims = dimensions>
-  typename std::enable_if<(dims == 3), size_t>::type get_linear() const {
+  typename std::enable_if<(dims == 3), size_t>::type get_linear_id() const {
     range<dimensions> groupNum = globalRange / localRange;
     return (index[2] * groupNum[1] * groupNum[0]) + (index[1] * groupNum[0]) +
            index[0];

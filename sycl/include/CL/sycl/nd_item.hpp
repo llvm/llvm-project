@@ -52,7 +52,7 @@ template <int dimensions = 1> struct nd_item {
 
   size_t get_group(int dimension) const { return Group[dimension]; }
 
-  size_t get_group_linear_id() const { return Group.get_linear(); }
+  size_t get_group_linear_id() const { return Group.get_linear_id(); }
 
   range<dimensions> get_group_range() const {
     return Group.get_global_range() / Group.get_local_range();
