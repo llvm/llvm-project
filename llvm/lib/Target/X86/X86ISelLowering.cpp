@@ -37083,24 +37083,6 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue combineShift(SDNode* N, SelectionDAG &DAG,
-                            TargetLowering::DAGCombinerInfo &DCI,
-                            const X86Subtarget &Subtarget) {
-  if (N->getOpcode() == ISD::SHL)
-    if (SDValue V = combineShiftLeft(N, DAG))
-      return V;
-
-  if (N->getOpcode() == ISD::SRA)
-    if (SDValue V = combineShiftRightArithmetic(N, DAG))
-      return V;
-
-  if (N->getOpcode() == ISD::SRL)
-    if (SDValue V = combineShiftRightLogical(N, DAG, DCI))
-      return V;
-
-  return SDValue();
-}
-
 static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const X86Subtarget &Subtarget) {
@@ -43258,9 +43240,9 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::SBB:         return combineSBB(N, DAG);
   case X86ISD::ADC:         return combineADC(N, DAG, DCI);
   case ISD::MUL:            return combineMul(N, DAG, DCI, Subtarget);
-  case ISD::SHL:
-  case ISD::SRA:
-  case ISD::SRL:            return combineShift(N, DAG, DCI, Subtarget);
+  case ISD::SHL:            return combineShiftLeft(N, DAG);
+  case ISD::SRA:            return combineShiftRightArithmetic(N, DAG);
+  case ISD::SRL:            return combineShiftRightLogical(N, DAG, DCI);
   case ISD::AND:            return combineAnd(N, DAG, DCI, Subtarget);
   case ISD::OR:             return combineOr(N, DAG, DCI, Subtarget);
   case ISD::XOR:            return combineXor(N, DAG, DCI, Subtarget);
