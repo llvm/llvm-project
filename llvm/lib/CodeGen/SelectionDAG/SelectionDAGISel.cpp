@@ -1363,7 +1363,7 @@ static void processDbgDeclares(FunctionLoweringInfo *FuncInfo) {
 
       DIExpression *Expr = DI->getExpression();
       if (Offset.getBoolValue())
-        Expr = DIExpression::prepend(Expr, DIExpression::NoDeref,
+        Expr = DIExpression::prepend(Expr, DIExpression::ApplyOffset,
                                      Offset.getZExtValue());
       MF->setVariableDbgInfo(DI->getVariable(), Expr, FI, DI->getDebugLoc());
     }

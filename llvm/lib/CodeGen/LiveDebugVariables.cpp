@@ -1316,11 +1316,13 @@ void UserValue::insertDebugValue(MachineBasicBlock *MBB, SlotIndex StartIdx,
   // that the original virtual register was a pointer. Also, add the stack slot
   // offset for the spilled register to the expression.
   const DIExpression *Expr = Expression;
+  uint8_t DIExprFlags = DIExpression::ApplyOffset;
   bool IsIndirect = Loc.wasIndirect();
   if (Spilled) {
-    auto Deref = IsIndirect ? DIExpression::WithDeref : DIExpression::NoDeref;
+    if (IsIndirect)
+      DIExprFlags |= DIExpression::DerefAfter;
     Expr =
-        DIExpression::prepend(Expr, DIExpression::NoDeref, SpillOffset, Deref);
+        DIExpression::prepend(Expr, DIExprFlags, SpillOffset);
     IsIndirect = true;
   }
 

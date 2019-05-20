@@ -1187,11 +1187,13 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
         // to be direct.
         if (MI.isIndirectDebugValue() && DIExpr->isImplicit()) {
           SmallVector<uint64_t, 2> Ops = {dwarf::DW_OP_deref_size, Size};
-          DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, DIExpression::WithStackValue);
+          bool WithStackValue = true;
+          DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, WithStackValue);
           // Make the DBG_VALUE direct.
           MI.getOperand(1).ChangeToRegister(0, false);
         }
-        DIExpr = DIExpression::prepend(DIExpr, DIExpression::NoDeref, Offset);
+        DIExpr =
+            DIExpression::prepend(DIExpr, DIExpression::ApplyOffset, Offset);
         MI.getOperand(3).setMetadata(DIExpr);
         continue;
       }
