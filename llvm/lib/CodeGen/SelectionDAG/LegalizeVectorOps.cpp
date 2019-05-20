@@ -140,6 +140,8 @@ class VectorLegalizer {
   SDValue ExpandFunnelShift(SDValue Op);
   SDValue ExpandROT(SDValue Op);
   SDValue ExpandFMINNUM_FMAXNUM(SDValue Op);
+  SDValue ExpandUADDSUBO(SDValue Op);
+  SDValue ExpandSADDSUBO(SDValue Op);
   SDValue ExpandMULO(SDValue Op);
   SDValue ExpandAddSubSat(SDValue Op);
   SDValue ExpandFixedPointMul(SDValue Op);
@@ -422,6 +424,10 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::UMAX:
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI:
+  case ISD::SADDO:
+  case ISD::UADDO:
+  case ISD::SSUBO:
+  case ISD::USUBO:
   case ISD::SMULO:
   case ISD::UMULO:
   case ISD::FCANONICALIZE:
@@ -796,6 +802,12 @@ SDValue VectorLegalizer::Expand(SDValue Op) {
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
     return ExpandFMINNUM_FMAXNUM(Op);
+  case ISD::UADDO:
+  case ISD::USUBO:
+    return ExpandUADDSUBO(Op);
+  case ISD::SADDO:
+  case ISD::SSUBO:
+    return ExpandSADDSUBO(Op);
   case ISD::UMULO:
   case ISD::SMULO:
     return ExpandMULO(Op);
@@ -1248,6 +1260,32 @@ SDValue VectorLegalizer::ExpandFMINNUM_FMAXNUM(SDValue Op) {
   if (SDValue Expanded = TLI.expandFMINNUM_FMAXNUM(Op.getNode(), DAG))
     return Expanded;
   return DAG.UnrollVectorOp(Op.getNode());
+}
+
+SDValue VectorLegalizer::ExpandUADDSUBO(SDValue Op) {
+  SDValue Result, Overflow;
+  TLI.expandUADDSUBO(Op.getNode(), Result, Overflow, DAG);
+
+  if (Op.getResNo() == 0) {
+    AddLegalizedOperand(Op.getValue(1), LegalizeOp(Overflow));
+    return Result;
+  } else {
+    AddLegalizedOperand(Op.getValue(0), LegalizeOp(Result));
+    return Overflow;
+  }
+}
+
+SDValue VectorLegalizer::ExpandSADDSUBO(SDValue Op) {
+  SDValue Result, Overflow;
+  TLI.expandSADDSUBO(Op.getNode(), Result, Overflow, DAG);
+
+  if (Op.getResNo() == 0) {
+    AddLegalizedOperand(Op.getValue(1), LegalizeOp(Overflow));
+    return Result;
+  } else {
+    AddLegalizedOperand(Op.getValue(0), LegalizeOp(Result));
+    return Overflow;
+  }
 }
 
 SDValue VectorLegalizer::ExpandMULO(SDValue Op) {

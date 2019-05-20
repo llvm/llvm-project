@@ -72,8 +72,8 @@ bool NVPTXPrologEpilogPass::runOnMachineFunction(MachineFunction &MF) {
               TFI.getFrameIndexReference(MF, MI.getOperand(0).getIndex(), Reg);
           MI.getOperand(0).ChangeToRegister(Reg, /*isDef=*/false);
           MI.getOperand(0).setIsDebug();
-          auto *DIExpr = DIExpression::prepend(MI.getDebugExpression(),
-                                               DIExpression::NoDeref, Offset);
+          auto *DIExpr = DIExpression::prepend(
+              MI.getDebugExpression(), DIExpression::ApplyOffset, Offset);
           MI.getOperand(3).setMetadata(DIExpr);
           continue;
         }

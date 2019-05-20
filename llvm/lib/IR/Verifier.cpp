@@ -4620,6 +4620,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     }
     break;
   }
+  case Intrinsic::lround:
+  case Intrinsic::llround: {
+    Type *ValTy = Call.getArgOperand(0)->getType();
+    Type *ResultTy = Call.getType();
+    Assert(!ValTy->isVectorTy() && !ResultTy->isVectorTy(),
+           "Intrinsic does not support vectors", &Call);
+    break;
+  }
   };
 }
 
