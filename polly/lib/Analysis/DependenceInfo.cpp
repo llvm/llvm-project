@@ -384,8 +384,8 @@ static isl_union_map *buildWAR(isl_union_map *Write, isl_union_map *MustWrite,
   //     { [Read+Write -> MemAccess] -> Read+Write }
   // Reverse
   //     { Read+Write -> [Read+Write -> MemAccess] }
-  auto WARMemAccesses = isl_union_map_copy(WAROverestimated);
-  WARMemAccesses = isl_union_map_range_factor_range(WAROverestimated);
+  auto WARMemAccesses =
+      isl_union_map_range_factor_range(isl_union_map_copy(WAROverestimated));
   WARMemAccesses = isl_union_map_domain_map(WARMemAccesses);
   WARMemAccesses = isl_union_map_reverse(WARMemAccesses);
 
