@@ -71,3 +71,6 @@ target_link_libraries(ToolingTests
   clangToolingRefactor
   clangToolingRefactoring
   )
+
+
+add_subdirectory(Syntax)

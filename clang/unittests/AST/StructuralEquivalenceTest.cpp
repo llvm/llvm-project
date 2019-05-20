@@ -300,8 +300,7 @@ TEST_F(StructuralEquivalenceFunctionTest, ThrowVsNoexceptTrue) {
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
-TEST_F(StructuralEquivalenceFunctionTest, DISABLED_NoexceptNonMatch) {
-  // The expression is not checked yet.
+TEST_F(StructuralEquivalenceFunctionTest, NoexceptNonMatch) {
   auto t = makeNamedDecls("void foo() noexcept(false);",
                           "void foo() noexcept(true);", Lang_CXX11);
   EXPECT_FALSE(testStructuralMatch(t));

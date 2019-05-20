@@ -87,7 +87,7 @@ namespace {
       return D->getType();
     }
 
-    if (TypeInfoLValue TI = B.dyn_cast<TypeInfoLValue>())
+    if (B.is<TypeInfoLValue>())
       return B.getTypeInfoType();
 
     const Expr *Base = B.get<const Expr*>();
