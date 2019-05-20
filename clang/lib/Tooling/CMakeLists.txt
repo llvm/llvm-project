@@ -7,6 +7,7 @@ add_subdirectory(Core)
 add_subdirectory(Inclusions)
 add_subdirectory(Refactoring)
 add_subdirectory(ASTDiff)
+add_subdirectory(Syntax)
 
 add_clang_library(clangTooling
   AllTUsExecution.cpp
