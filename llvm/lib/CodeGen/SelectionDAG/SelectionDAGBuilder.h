@@ -947,7 +947,7 @@ private:
   void visitStoreToSwiftError(const StoreInst &I);
 
   void visitInlineAsm(ImmutableCallSite CS);
-  void visitIntrinsicCall(const CallInst &I, unsigned Intrinsic);
+  const char *visitIntrinsicCall(const CallInst &I, unsigned Intrinsic);
   void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
   void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
 
@@ -997,9 +997,6 @@ private:
   SDDbgValue *getDbgValue(SDValue N, DILocalVariable *Variable,
                           DIExpression *Expr, const DebugLoc &dl,
                           unsigned DbgSDNodeOrder);
-
-  /// Lowers CallInst to an external symbol.
-  void lowerCallToExternalSymbol(const CallInst &I, const char *FunctionName);
 };
 
 /// This struct represents the registers (physical or virtual)
