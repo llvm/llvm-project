@@ -4,7 +4,7 @@
 ; symbol generates a R_AVR_16_PM relocation, as the symbol
 ; will always be in program memory.
 
-; CHECK: RELOCATION RECORDS FOR [.rela.text]:
+; CHECK: RELOCATION RECORDS FOR [.text]:
 ; CHECK-NEXT: 00000002 R_AVR_16_PM .text
 
 foo:
