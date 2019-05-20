@@ -90,7 +90,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       DynamicIdx(Opts.BuildDynamicSymbolIndex
                      ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex)
                      : nullptr),
-      ClangTidyOptProvider(Opts.ClangTidyOptProvider),
+      GetClangTidyOptions(Opts.GetClangTidyOptions),
       SuggestMissingIncludes(Opts.SuggestMissingIncludes),
       WorkspaceRoot(Opts.WorkspaceRoot),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
@@ -126,15 +126,18 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
 
 void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
                                WantDiagnostics WantDiags) {
+  auto FS = FSProvider.getFileSystem();
+
   ParseOptions Opts;
   Opts.ClangTidyOpts = tidy::ClangTidyOptions::getDefaults();
-  if (ClangTidyOptProvider)
-    Opts.ClangTidyOpts = ClangTidyOptProvider->getOptions(File);
+  // FIXME: call tidy options builder on the worker thread, it can do IO.
+  if (GetClangTidyOptions)
+    Opts.ClangTidyOpts = GetClangTidyOptions(*FS, File);
   Opts.SuggestMissingIncludes = SuggestMissingIncludes;
 
   // Compile command is set asynchronously during update, as it can be slow.
   ParseInputs Inputs;
-  Inputs.FS = FSProvider.getFileSystem();
+  Inputs.FS = FS;
   Inputs.Contents = Contents;
   Inputs.Opts = std::move(Opts);
   Inputs.Index = Index;

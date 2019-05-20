@@ -18,6 +18,7 @@
 #include "clang/Basic/Version.h"
 #include "clang/Format/Format.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -27,6 +28,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <thread>
 
@@ -496,7 +498,9 @@ int main(int argc, char *argv[]) {
   }
 
   // Create an empty clang-tidy option.
-  std::unique_ptr<tidy::ClangTidyOptionsProvider> ClangTidyOptProvider;
+  std::mutex ClangTidyOptMu;
+  std::unique_ptr<tidy::ClangTidyOptionsProvider>
+      ClangTidyOptProvider; /*GUARDED_BY(ClangTidyOptMu)*/
   if (EnableClangTidy) {
     auto OverrideClangTidyOptions = tidy::ClangTidyOptions::getDefaults();
     OverrideClangTidyOptions.Checks = ClangTidyChecks;
@@ -505,7 +509,13 @@ int main(int argc, char *argv[]) {
         /* Default */ tidy::ClangTidyOptions::getDefaults(),
         /* Override */ OverrideClangTidyOptions, FSProvider.getFileSystem());
   }
-  Opts.ClangTidyOptProvider = ClangTidyOptProvider.get();
+  Opts.GetClangTidyOptions = [&](llvm::vfs::FileSystem &,
+                                 llvm::StringRef File) {
+    // This function must be thread-safe and tidy option providers are not.
+    std::lock_guard<std::mutex> Lock(ClangTidyOptMu);
+    // FIXME: use the FS provided to the function.
+    return ClangTidyOptProvider->getOptions(File);
+  };
   Opts.SuggestMissingIncludes = SuggestMissingIncludes;
   llvm::Optional<OffsetEncoding> OffsetEncodingFromFlag;
   if (ForceOffsetEncoding != OffsetEncoding::UnsupportedEncoding)

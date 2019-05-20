@@ -50,6 +50,12 @@ public:
   virtual void onFileUpdated(PathRef File, const TUStatus &Status){};
 };
 
+/// When set, used by ClangdServer to get clang-tidy options for each particular
+/// file. Must be thread-safe. We use this instead of ClangTidyOptionsProvider
+/// to allow reading tidy configs from the VFS used for parsing.
+using ClangTidyOptionsBuilder = std::function<tidy::ClangTidyOptions(
+    llvm::vfs::FileSystem &, llvm::StringRef /*File*/)>;
+
 /// Manages a collection of source files and derived data (ASTs, indexes),
 /// and provides language-aware features such as code completion.
 ///
@@ -94,12 +100,12 @@ public:
     /// If set, use this index to augment code completion results.
     SymbolIndex *StaticIndex = nullptr;
 
-    /// If set, enable clang-tidy in clangd, used to get clang-tidy
+    /// If set, enable clang-tidy in clangd and use to it get clang-tidy
     /// configurations for a particular file.
     /// Clangd supports only a small subset of ClangTidyOptions, these options
     /// (Checks, CheckOptions) are about which clang-tidy checks will be
     /// enabled.
-    tidy::ClangTidyOptionsProvider *ClangTidyOptProvider = nullptr;
+    ClangTidyOptionsBuilder GetClangTidyOptions;
 
     /// Clangd's workspace root. Relevant for "workspace" operations not bound
     /// to a particular file.
@@ -278,8 +284,8 @@ private:
   // Storage for merged views of the various indexes.
   std::vector<std::unique_ptr<SymbolIndex>> MergedIdx;
 
-  // The provider used to provide a clang-tidy option for a specific file.
-  tidy::ClangTidyOptionsProvider *ClangTidyOptProvider = nullptr;
+  // When set, provides clang-tidy options for a specific file.
+  ClangTidyOptionsBuilder GetClangTidyOptions;
 
   // If this is true, suggest include insertion fixes for diagnostic errors that
   // can be caused by missing includes (e.g. member access in incomplete type).
