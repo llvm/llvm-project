@@ -45,10 +45,7 @@ public:
 
   DWARFUnit *GetBaseCompileUnit() override;
 
-  const lldb_private::DWARFDataExtractor &get_debug_abbrev_data() override;
   const lldb_private::DWARFDataExtractor &get_debug_addr_data() override;
-  const lldb_private::DWARFDataExtractor &get_debug_str_data() override;
-  const lldb_private::DWARFDataExtractor &get_debug_str_offsets_data() override;
 
 protected:
   void LoadSectionData(lldb::SectionType sect_type,

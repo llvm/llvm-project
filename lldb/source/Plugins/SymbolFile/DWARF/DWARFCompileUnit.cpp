@@ -55,7 +55,8 @@ llvm::Expected<DWARFUnitSP> DWARFCompileUnit::extract(
   bool length_OK = debug_info.ValidOffset(cu_sp->GetNextUnitOffset() - 1);
   bool version_OK = SymbolFileDWARF::SupportedVersion(cu_sp->m_version);
   bool abbr_offset_OK =
-      dwarf2Data->get_debug_abbrev_data().ValidOffset(abbr_offset);
+      dwarf2Data->GetDWARFContext().getOrLoadAbbrevData().ValidOffset(
+          abbr_offset);
   bool addr_size_OK = (cu_sp->m_addr_size == 4) || (cu_sp->m_addr_size == 8);
 
   if (!length_OK)

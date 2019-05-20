@@ -35,6 +35,14 @@ LoadOrGetSection(SectionList *section_list, SectionType section_type,
   return *extractor;
 }
 
+const DWARFDataExtractor &DWARFContext::getOrLoadAbbrevData() {
+  if (isDwo())
+    return LoadOrGetSection(m_dwo_section_list, eSectionTypeDWARFDebugAbbrevDwo,
+                            m_data_debug_abbrev);
+  return LoadOrGetSection(m_main_section_list, eSectionTypeDWARFDebugAbbrev,
+                          m_data_debug_abbrev);
+}
+
 const DWARFDataExtractor &DWARFContext::getOrLoadArangesData() {
   return LoadOrGetSection(m_main_section_list, eSectionTypeDWARFDebugAranges,
                           m_data_debug_aranges);
@@ -46,4 +54,35 @@ const DWARFDataExtractor &DWARFContext::getOrLoadDebugInfoData() {
                             m_data_debug_info);
   return LoadOrGetSection(m_main_section_list, eSectionTypeDWARFDebugInfo,
                           m_data_debug_info);
+}
+
+const DWARFDataExtractor &DWARFContext::getOrLoadLineData() {
+  return LoadOrGetSection(m_main_section_list, eSectionTypeDWARFDebugLine,
+                          m_data_debug_line);
+}
+
+const DWARFDataExtractor &DWARFContext::getOrLoadLineStrData() {
+  return LoadOrGetSection(m_main_section_list, eSectionTypeDWARFDebugLineStr,
+                          m_data_debug_line_str);
+}
+
+const DWARFDataExtractor &DWARFContext::getOrLoadMacroData() {
+  return LoadOrGetSection(m_main_section_list, eSectionTypeDWARFDebugMacro,
+                          m_data_debug_macro);
+}
+
+const DWARFDataExtractor &DWARFContext::getOrLoadStrData() {
+  if (isDwo())
+    return LoadOrGetSection(m_dwo_section_list, eSectionTypeDWARFDebugStrDwo,
+                            m_data_debug_str);
+  return LoadOrGetSection(m_main_section_list, eSectionTypeDWARFDebugStr,
+                          m_data_debug_str);
+}
+
+const DWARFDataExtractor &DWARFContext::getOrLoadStrOffsetsData() {
+  if (isDwo())
+    return LoadOrGetSection(m_dwo_section_list, eSectionTypeDWARFDebugStrOffsetsDwo,
+                            m_data_debug_str_offsets);
+  return LoadOrGetSection(m_main_section_list, eSectionTypeDWARFDebugStrOffsets,
+                          m_data_debug_str_offsets);
 }
