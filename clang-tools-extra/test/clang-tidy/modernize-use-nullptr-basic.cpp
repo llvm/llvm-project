@@ -1,8 +1,9 @@
-// RUN: %check_clang_tidy %s modernize-use-nullptr %t -- -- \
-// RUN:   -std=c++98 -Wno-non-literal-null-conversion
+// RUN: %check_clang_tidy -std=c++98 %s modernize-use-nullptr %t -- -- -Wno-non-literal-null-conversion
 //
 // Some parts of the test (e.g. assignment of `const int` to `int *`) fail in
 // C++11, so we need to run the test in C++98 mode.
+//
+// FIXME: Make the test work in all language modes.
 
 const unsigned int g_null = 0;
 #define NULL 0
