@@ -13580,7 +13580,8 @@ Arguments:
 """"""""""
 The first argument to this intrinsic is a scalar accumulator value, which is
 only used when there are no fast-math flags attached. This argument may be undef
-when fast-math flags are used.
+when fast-math flags are used. The type of the accumulator matches the
+element-type of the vector input.
 
 The second argument must be a vector of floating-point values.
 
@@ -13643,7 +13644,8 @@ Arguments:
 """"""""""
 The first argument to this intrinsic is a scalar accumulator value, which is
 only used when there are no fast-math flags attached. This argument may be undef
-when fast-math flags are used.
+when fast-math flags are used. The type of the accumulator matches the
+element-type of the vector input.
 
 The second argument must be a vector of floating-point values.
 

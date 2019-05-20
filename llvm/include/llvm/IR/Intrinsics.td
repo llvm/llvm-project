@@ -1134,11 +1134,11 @@ def int_memset_element_unordered_atomic
 //===------------------------ Reduction Intrinsics ------------------------===//
 //
 def int_experimental_vector_reduce_fadd : Intrinsic<[llvm_anyfloat_ty],
-                                                    [llvm_anyfloat_ty,
+                                                    [LLVMMatchType<0>,
                                                      llvm_anyvector_ty],
                                                     [IntrNoMem]>;
 def int_experimental_vector_reduce_fmul : Intrinsic<[llvm_anyfloat_ty],
-                                                    [llvm_anyfloat_ty,
+                                                    [LLVMMatchType<0>,
                                                      llvm_anyvector_ty],
                                                     [IntrNoMem]>;
 def int_experimental_vector_reduce_add : Intrinsic<[llvm_anyint_ty],
