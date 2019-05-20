@@ -317,9 +317,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   llround(f);    llroundf(f);   llroundl(f);
 
-// NO__ERRNO: declare i64 @llvm.llround.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare i64 @llvm.llround.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare i64 @llvm.llround.f80(x86_fp80) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare i64 @llvm.llround.i64.f64(double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare i64 @llvm.llround.i64.f32(float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare i64 @llvm.llround.i64.f80(x86_fp80) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare i64 @llround(double) [[NOT_READNONE]]
 // HAS_ERRNO: declare i64 @llroundf(float) [[NOT_READNONE]]
 // HAS_ERRNO: declare i64 @llroundl(x86_fp80) [[NOT_READNONE]]
