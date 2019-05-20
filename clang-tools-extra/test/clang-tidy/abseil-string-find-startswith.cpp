@@ -1,6 +1,5 @@
 // RUN: %check_clang_tidy %s abseil-string-find-startswith %t -- \
-// RUN:   -config="{CheckOptions: [{key: 'abseil-string-find-startswith.StringLikeClasses', value: '::std::basic_string;::basic_string'}]}" \
-// RUN:   -- -std=c++11
+// RUN:   -config="{CheckOptions: [{key: 'abseil-string-find-startswith.StringLikeClasses', value: '::std::basic_string;::basic_string'}]}"
 
 namespace std {
 template <typename T> class allocator {};

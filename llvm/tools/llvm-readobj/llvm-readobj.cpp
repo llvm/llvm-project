@@ -373,6 +373,11 @@ LLVM_ATTRIBUTE_NORETURN void reportError(Twine Msg) {
   exit(1);
 }
 
+void reportWarning(Twine Msg) {
+  errs() << "\n";
+  WithColor::warning(errs()) << Msg << "\n";
+}
+
 void error(Error EC) {
   if (!EC)
     return;

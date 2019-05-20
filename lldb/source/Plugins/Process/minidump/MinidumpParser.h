@@ -41,6 +41,10 @@ struct Range {
 
   Range(lldb::addr_t start, llvm::ArrayRef<uint8_t> range_ref)
       : start(start), range_ref(range_ref) {}
+
+  friend bool operator==(const Range &lhs, const Range &rhs) {
+    return lhs.start == rhs.start && lhs.range_ref == rhs.range_ref;
+  }
 };
 
 class MinidumpParser {

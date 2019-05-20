@@ -203,7 +203,8 @@ private:
         {ObjF->getELFFile()->base() + S->sh_offset, S->sh_size, S->sh_entsize});
   }
 
-  void parseDynamicTable(ArrayRef<const Elf_Phdr *> LoadSegments);
+  void loadDynamicTable(const ELFFile<ELFT> *Obj);
+  void parseDynamicTable();
 
   void printValue(uint64_t Type, uint64_t Value);
 
@@ -1329,20 +1330,71 @@ static const char *getElfMipsOptionsOdkType(unsigned Odk) {
 }
 
 template <typename ELFT>
+void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
+  const Elf_Phdr *DynamicPhdr = nullptr;
+  for (const Elf_Phdr &Phdr : unwrapOrError(Obj->program_headers())) {
+    if (Phdr.p_type != ELF::PT_DYNAMIC)
+      continue;
+    DynamicPhdr = &Phdr;
+    break;
+  }
+
+  // We do not want to dump dynamic section if we have no PT_DYNAMIC header.
+  // This matches GNU's behavior.
+  if (!DynamicPhdr)
+    return;
+
+  // Try to locate the .dynamic section in the sections header table.
+  const Elf_Shdr *DynamicSec = nullptr;
+  for (const Elf_Shdr &Sec : unwrapOrError(Obj->sections())) {
+    if (Sec.sh_type != ELF::SHT_DYNAMIC)
+      continue;
+    DynamicSec = &Sec;
+    break;
+  }
+
+  // Information in the section header has priority over the information
+  // in a PT_DYNAMIC header.
+  // Ignore sh_entsize and use the expected value for entry size explicitly.
+  // This allows us to dump the dynamic sections with a broken sh_entsize
+  // field.
+  if (DynamicSec)
+    DynamicTable = checkDRI({ObjF->getELFFile()->base() + DynamicSec->sh_offset,
+                             DynamicSec->sh_size, sizeof(Elf_Dyn)});
+
+  if (DynamicPhdr->p_offset + DynamicPhdr->p_filesz >
+      ObjF->getMemoryBufferRef().getBufferSize())
+    reportError(
+        "PT_DYNAMIC segment offset + size exceeds the size of the file");
+
+  if (!DynamicSec) {
+    DynamicTable = createDRIFrom(DynamicPhdr, sizeof(Elf_Dyn));
+    parseDynamicTable();
+    return;
+  }
+
+  StringRef Name = unwrapOrError(Obj->getSectionName(DynamicSec));
+
+  if (DynamicSec->sh_addr + DynamicSec->sh_size >
+          DynamicPhdr->p_vaddr + DynamicPhdr->p_memsz ||
+      DynamicSec->sh_addr < DynamicPhdr->p_vaddr)
+    reportWarning("The SHT_DYNAMIC section '" + Name +
+                  "' is not contained within the "
+                  "PT_DYNAMIC segment");
+
+  if (DynamicSec->sh_addr != DynamicPhdr->p_vaddr)
+    reportWarning("The SHT_DYNAMIC section '" + Name +
+                  "' is not at the start of "
+                  "PT_DYNAMIC segment");
+
+  parseDynamicTable();
+}
+
+template <typename ELFT>
 ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> *ObjF,
     ScopedPrinter &Writer)
     : ObjDumper(Writer), ObjF(ObjF) {
-  SmallVector<const Elf_Phdr *, 4> LoadSegments;
   const ELFFile<ELFT> *Obj = ObjF->getELFFile();
-  for (const Elf_Phdr &Phdr : unwrapOrError(Obj->program_headers())) {
-    if (Phdr.p_type == ELF::PT_DYNAMIC) {
-      DynamicTable = createDRIFrom(&Phdr, sizeof(Elf_Dyn));
-      continue;
-    }
-    if (Phdr.p_type != ELF::PT_LOAD || Phdr.p_filesz == 0)
-      continue;
-    LoadSegments.push_back(&Phdr);
-  }
 
   for (const Elf_Shdr &Sec : unwrapOrError(Obj->sections())) {
     switch (Sec.sh_type) {
@@ -1390,7 +1442,7 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> *ObjF,
     }
   }
 
-  parseDynamicTable(LoadSegments);
+  loadDynamicTable(Obj);
 
   if (opts::Output == opts::GNU)
     ELFDumperStyle.reset(new GNUStyle<ELFT>(Writer, this));
@@ -1398,9 +1450,7 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> *ObjF,
     ELFDumperStyle.reset(new LLVMStyle<ELFT>(Writer, this));
 }
 
-template <typename ELFT>
-void ELFDumper<ELFT>::parseDynamicTable(
-    ArrayRef<const Elf_Phdr *> LoadSegments) {
+template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
   auto toMappedAddr = [&](uint64_t VAddr) -> const uint8_t * {
     auto MappedAddrOrError = ObjF->getELFFile()->toMappedAddr(VAddr);
     if (!MappedAddrOrError)

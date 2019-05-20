@@ -1,6 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-use-nodiscard %t -- \
-// RUN:   -config="{CheckOptions: [{key: modernize-use-nodiscard.ReplacementString, value: '__attribute__((warn_unused_result))'}]}" \
-// RUN: -- -std=c++11
+// RUN:   -config="{CheckOptions: [{key: modernize-use-nodiscard.ReplacementString, value: '__attribute__((warn_unused_result))'}]}"
 
 class Foo
 {

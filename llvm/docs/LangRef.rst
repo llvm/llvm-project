@@ -12398,8 +12398,7 @@ nearest integer.
 Arguments:
 """"""""""
 
-The argument is a floating-point number and return is i32 for
-``llvm.lround.i32`` and i64 for ``llvm.lround.i64``.
+The argument is a floating-point number and return is an integer type.
 
 Semantics:
 """"""""""
@@ -12418,11 +12417,11 @@ floating-point type. Not all targets support all types however.
 
 ::
 
-      declare i64 @llvm.lround.f32(float %Val)
-      declare i64 @llvm.lround.f64(double %Val)
-      declare i64 @llvm.lround.f80(float %Val)
-      declare i64 @llvm.lround.f128(double %Val)
-      declare i64 @llvm.lround.ppcf128(double %Val)
+      declare i64 @llvm.lround.i64.f32(float %Val)
+      declare i64 @llvm.lround.i64.f64(double %Val)
+      declare i64 @llvm.lround.i64.f80(float %Val)
+      declare i64 @llvm.lround.i64.f128(double %Val)
+      declare i64 @llvm.lround.i64.ppcf128(double %Val)
 
 Overview:
 """""""""
@@ -12433,7 +12432,7 @@ nearest integer.
 Arguments:
 """"""""""
 
-The argument is a floating-point number and return is i64.
+The argument is a floating-point number and return is an integer type.
 
 Semantics:
 """"""""""
@@ -13580,7 +13579,8 @@ Arguments:
 """"""""""
 The first argument to this intrinsic is a scalar accumulator value, which is
 only used when there are no fast-math flags attached. This argument may be undef
-when fast-math flags are used.
+when fast-math flags are used. The type of the accumulator matches the
+element-type of the vector input.
 
 The second argument must be a vector of floating-point values.
 
@@ -13643,7 +13643,8 @@ Arguments:
 """"""""""
 The first argument to this intrinsic is a scalar accumulator value, which is
 only used when there are no fast-math flags attached. This argument may be undef
-when fast-math flags are used.
+when fast-math flags are used. The type of the accumulator matches the
+element-type of the vector input.
 
 The second argument must be a vector of floating-point values.
 

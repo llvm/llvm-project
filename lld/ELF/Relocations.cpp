@@ -530,8 +530,8 @@ static void replaceWithDefined(Symbol &Sym, SectionBase *Sec, uint64_t Value,
                                uint64_t Size) {
   Symbol Old = Sym;
 
-  replaceSymbol(&Sym, Defined{Sym.File, Sym.getName(), Sym.Binding, Sym.StOther,
-                              Sym.Type, Value, Size, Sec});
+  Sym.replace(Defined{Sym.File, Sym.getName(), Sym.Binding, Sym.StOther,
+                      Sym.Type, Value, Size, Sec});
 
   Sym.PltIndex = Old.PltIndex;
   Sym.GotIndex = Old.GotIndex;

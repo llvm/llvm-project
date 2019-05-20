@@ -1,7 +1,6 @@
 // RUN: %check_clang_tidy %s performance-move-const-arg %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: performance-move-const-arg.CheckTriviallyCopyableMove, value: 0}]}' \
-// RUN: -- -std=c++14
+// RUN:  [{key: performance-move-const-arg.CheckTriviallyCopyableMove, value: 0}]}'
 
 namespace std {
 

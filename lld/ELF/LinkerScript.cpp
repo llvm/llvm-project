@@ -188,7 +188,7 @@ void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
 
   Symbol *Sym = Symtab->insert(Cmd->Name);
   mergeSymbolProperties(Sym, New);
-  replaceSymbol(Sym, New);
+  Sym->replace(New);
   Cmd->Sym = cast<Defined>(Sym);
 }
 
@@ -205,7 +205,7 @@ static void declareSymbol(SymbolAssignment *Cmd) {
   // We can't calculate final value right now.
   Symbol *Sym = Symtab->insert(Cmd->Name);
   mergeSymbolProperties(Sym, New);
-  replaceSymbol(Sym, New);
+  Sym->replace(New);
 
   Cmd->Sym = cast<Defined>(Sym);
   Cmd->Provide = false;

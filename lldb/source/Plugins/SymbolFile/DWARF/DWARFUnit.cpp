@@ -256,7 +256,7 @@ static void SetDwoStrOffsetsBase(DWARFUnit *dwo_cu) {
   lldb::offset_t baseOffset = 0;
 
   const DWARFDataExtractor &strOffsets =
-      dwo_cu->GetSymbolFileDWARF()->get_debug_str_offsets_data();
+      dwo_cu->GetSymbolFileDWARF()->GetDWARFContext().getOrLoadStrOffsetsData();
   uint64_t length = strOffsets.GetU32(&baseOffset);
   if (length == 0xffffffff)
     length = strOffsets.GetU64(&baseOffset);

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-pro-bounds-pointer-arithmetic %t -- -- -std=c++14
+// RUN: %check_clang_tidy -std=c++14-or-later %s cppcoreguidelines-pro-bounds-pointer-arithmetic %t
 
 // Fix PR36489 and detect auto-deduced value correctly.
 char *getPtr();

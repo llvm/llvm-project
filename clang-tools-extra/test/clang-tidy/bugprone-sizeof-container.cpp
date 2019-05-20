@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-sizeof-container %t -- -- -std=c++11 -target x86_64-unknown-unknown
+// RUN: %check_clang_tidy %s bugprone-sizeof-container %t -- -- -target x86_64-unknown-unknown
 
 namespace std {
 
