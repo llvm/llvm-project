@@ -473,6 +473,7 @@ inline void replaceSymbol(Symbol *Sym, const Symbol &New) {
   Sym->ExportDynamic = Old.ExportDynamic;
   Sym->CanInline = Old.CanInline;
   Sym->Traced = Old.Traced;
+  Sym->IsPreemptible = Old.IsPreemptible;
   Sym->ScriptDefined = Old.ScriptDefined;
 
   // Print out a log message if --trace-symbol was specified.
