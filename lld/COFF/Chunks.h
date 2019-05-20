@@ -44,6 +44,9 @@ const uint32_t PermMask = 0xFE000000;
 // Mask for section types (code, data, bss).
 const uint32_t TypeMask = 0x000000E0;
 
+// The log base 2 of the largest section alignment, which is log2(8192), or 13.
+enum : unsigned { Log2MaxSectionAlignment = 13 };
+
 // A Chunk represents a chunk of data that will occupy space in the
 // output (if the resolver chose that). It may or may not be backed by
 // a section of an input file. It could be linker-created data, or
@@ -56,6 +59,18 @@ public:
 
   // Returns the size of this chunk (even if this is a common or BSS.)
   virtual size_t getSize() const = 0;
+
+  // Returns chunk alignment in power of two form. Value values are powers of
+  // two from 1 to 8192.
+  uint32_t getAlignment() const { return 1U << P2Align; }
+  void setAlignment(uint32_t Align) {
+    // Treat zero byte alignment as 1 byte alignment.
+    Align = Align ? Align : 1;
+    assert(llvm::isPowerOf2_32(Align) && "alignment is not a power of 2");
+    P2Align = llvm::Log2_32(Align);
+    assert(P2Align <= Log2MaxSectionAlignment &&
+           "impossible requested alignment");
+  }
 
   // Write this chunk to a mmap'ed file, assuming Buf is pointing to
   // beginning of the file. Because this function may use RVA values
@@ -103,9 +118,6 @@ public:
   // bytes, so this is used only for logging or debugging.
   virtual StringRef getDebugName() { return ""; }
 
-  // The alignment of this chunk. The writer uses the value.
-  uint32_t Alignment = 1;
-
   virtual bool isHotPatchable() const { return false; }
 
 protected:
@@ -118,6 +130,10 @@ public:
   bool KeepUnique = false;
 
 protected:
+  // The alignment of this chunk, stored in log2 form. The writer uses the
+  // value.
+  uint8_t P2Align = 0;
+
   // The RVA of this chunk in the output. The writer sets a value.
   uint32_t RVA = 0;
 
@@ -313,7 +329,7 @@ public:
   size_t getSize() const override;
   void writeTo(uint8_t *Buf) const override;
 
-  static std::map<uint32_t, MergeChunk *> Instances;
+  static MergeChunk *Instances[Log2MaxSectionAlignment + 1];
   std::vector<SectionChunk *> Sections;
 
 private:
@@ -437,7 +453,7 @@ public:
 class LocalImportChunk : public Chunk {
 public:
   explicit LocalImportChunk(Defined *S) : Sym(S) {
-    Alignment = Config->Wordsize;
+    setAlignment(Config->Wordsize);
   }
   size_t getSize() const override;
   void getBaserels(std::vector<Baserel> *Res) override;
@@ -528,7 +544,7 @@ class PseudoRelocTableChunk : public Chunk {
 public:
   PseudoRelocTableChunk(std::vector<RuntimePseudoReloc> &Relocs)
       : Relocs(std::move(Relocs)) {
-    Alignment = 4;
+    setAlignment(4);
   }
   size_t getSize() const override;
   void writeTo(uint8_t *Buf) const override;
@@ -558,7 +574,7 @@ public:
 class AbsolutePointerChunk : public Chunk {
 public:
   AbsolutePointerChunk(uint64_t Value) : Value(Value) {
-    Alignment = getSize();
+    setAlignment(getSize());
   }
   size_t getSize() const override;
   void writeTo(uint8_t *Buf) const override;

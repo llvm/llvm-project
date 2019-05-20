@@ -192,6 +192,14 @@ uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
                                       const __llvm_profile_data *End);
 
 /*!
+ * \brief Set the flag that profile data has been dumped to the file.
+ * This is useful for users to disable dumping profile data to the file for
+ * certain processes in case the processes don't have permission to write to
+ * the disks, and trying to do so would result in side effects such as crashes.
+ */
+void __llvm_profile_set_dumped();
+
+/*!
  * This variable is defined in InstrProfilingRuntime.cc as a hidden
  * symbol. Its main purpose is to enable profile runtime user to
  * bypass runtime initialization code -- if the client code explicitly
