@@ -58,6 +58,9 @@ void S2::f(int i) {
   (void)[&, i, i]{ }; // expected-error{{'i' can appear only once in a capture list}}
   (void)[] mutable { }; // expected-error{{lambda requires '()' before 'mutable'}}
   (void)[] -> int { }; // expected-error{{lambda requires '()' before return type}}
+
+  delete []() { return new int; }(); // expected-error{{'[]' after delete interpreted as 'delete[]'}}
+  delete [] { return new int; }(); // expected-error{{'[]' after delete interpreted as 'delete[]'}}
 }
 
 #define bar "bar"
