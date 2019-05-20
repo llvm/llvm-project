@@ -95,11 +95,8 @@ public:
   std::vector<std::pair<Path, bool>> filesWithDiags() const {
     std::vector<std::pair<Path, bool>> Result;
     std::lock_guard<std::mutex> Lock(Mutex);
-
-    for (const auto &it : LastDiagsHadError) {
-      Result.emplace_back(it.first(), it.second);
-    }
-
+    for (const auto &It : LastDiagsHadError)
+      Result.emplace_back(It.first(), It.second);
     return Result;
   }
 

@@ -2,7 +2,7 @@
 // RUN: -config='{CheckOptions: \
 // RUN:  [{key: cppcoreguidelines-owning-memory.LegacyResourceProducers, value: "::malloc;::aligned_alloc;::realloc;::calloc;::fopen;::freopen;::tmpfile"}, \
 // RUN:   {key: cppcoreguidelines-owning-memory.LegacyResourceConsumers, value: "::free;::realloc;::freopen;::fclose"}]}' \
-// RUN: -- -std=c++11 -nostdlib -nostdinc++
+// RUN: -- -nostdlib -nostdinc++
 
 namespace gsl {
 template <class T>

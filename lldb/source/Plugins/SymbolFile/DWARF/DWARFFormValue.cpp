@@ -492,7 +492,8 @@ const char *DWARFFormValue::AsCString() const {
     if (!symbol_file)
       return nullptr;
 
-    return symbol_file->get_debug_str_data().PeekCStr(m_value.value.uval);
+    return symbol_file->GetDWARFContext().getOrLoadStrData().PeekCStr(
+        m_value.value.uval);
   } else if (m_form == DW_FORM_GNU_str_index) {
     if (!symbol_file)
       return nullptr;
@@ -500,9 +501,10 @@ const char *DWARFFormValue::AsCString() const {
     uint32_t index_size = 4;
     lldb::offset_t offset = m_value.value.uval * index_size;
     dw_offset_t str_offset =
-        symbol_file->get_debug_str_offsets_data().GetMaxU64(&offset,
-                                                            index_size);
-    return symbol_file->get_debug_str_data().PeekCStr(str_offset);
+        symbol_file->GetDWARFContext().getOrLoadStrOffsetsData().GetMaxU64(
+            &offset, index_size);
+    return symbol_file->GetDWARFContext().getOrLoadStrData().PeekCStr(
+        str_offset);
   }
 
   if (m_form == DW_FORM_strx || m_form == DW_FORM_strx1 ||
@@ -517,12 +519,15 @@ const char *DWARFFormValue::AsCString() const {
     lldb::offset_t offset =
         m_unit->GetStrOffsetsBase() + m_value.value.uval * indexSize;
     dw_offset_t strOffset =
-        symbol_file->get_debug_str_offsets_data().GetMaxU64(&offset, indexSize);
-    return symbol_file->get_debug_str_data().PeekCStr(strOffset);
+        symbol_file->GetDWARFContext().getOrLoadStrOffsetsData().GetMaxU64(
+            &offset, indexSize);
+    return symbol_file->GetDWARFContext().getOrLoadStrData().PeekCStr(
+        strOffset);
   }
 
   if (m_form == DW_FORM_line_strp)
-    return symbol_file->get_debug_line_str_data().PeekCStr(m_value.value.uval);
+    return symbol_file->GetDWARFContext().getOrLoadLineStrData().PeekCStr(
+        m_value.value.uval);
 
   return nullptr;
 }

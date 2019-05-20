@@ -1109,6 +1109,24 @@ let Predicates = [HasSVE2] in {
   defm SQDMLSLB_ZZZ : sve2_int_mla_long<0b11010, "sqdmlslb">;
   defm SQDMLSLT_ZZZ : sve2_int_mla_long<0b11011, "sqdmlslt">;
 
+  // SVE2 saturating multiply-add interleaved long
+  defm SQDMLALBT_ZZZ : sve2_int_mla_long<0b00010, "sqdmlalbt">;
+  defm SQDMLSLBT_ZZZ : sve2_int_mla_long<0b00011, "sqdmlslbt">;
+
+  // SVE2 integer halving add/subtract (predicated)
+  defm SHADD_ZPmZ  : sve2_int_arith_pred<0b100000, "shadd">;
+  defm UHADD_ZPmZ  : sve2_int_arith_pred<0b100010, "uhadd">;
+  defm SHSUB_ZPmZ  : sve2_int_arith_pred<0b100100, "shsub">;
+  defm UHSUB_ZPmZ  : sve2_int_arith_pred<0b100110, "uhsub">;
+  defm SRHADD_ZPmZ : sve2_int_arith_pred<0b101000, "srhadd">;
+  defm URHADD_ZPmZ : sve2_int_arith_pred<0b101010, "urhadd">;
+  defm SHSUBR_ZPmZ : sve2_int_arith_pred<0b101100, "shsubr">;
+  defm UHSUBR_ZPmZ : sve2_int_arith_pred<0b101110, "uhsubr">;
+
+  // SVE2 integer pairwise add and accumulate long
+  defm SADALP_ZPmZ : sve2_int_sadd_long_accum_pairwise<0, "sadalp">;
+  defm UADALP_ZPmZ : sve2_int_sadd_long_accum_pairwise<1, "uadalp">;
+
   // SVE2 integer multiply long
   defm SQDMULLB_ZZZ : sve2_wide_int_arith_long<0b11000, "sqdmullb">;
   defm SQDMULLT_ZZZ : sve2_wide_int_arith_long<0b11001, "sqdmullt">;

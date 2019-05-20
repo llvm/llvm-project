@@ -384,7 +384,7 @@ void VirtRegRewriter::handleIdentityCopy(MachineInstr &MI) const {
   // give us additional liveness information: The target (super-)register
   // must not be valid before this point. Replace the COPY with a KILL
   // instruction to maintain this information.
-  if (MI.getOperand(0).isUndef() || MI.getNumOperands() > 2) {
+  if (MI.getOperand(1).isUndef() || MI.getNumOperands() > 2) {
     MI.setDesc(TII->get(TargetOpcode::KILL));
     LLVM_DEBUG(dbgs() << "  replace by: " << MI);
     return;

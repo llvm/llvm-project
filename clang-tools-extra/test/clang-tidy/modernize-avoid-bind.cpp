@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-avoid-bind %t -- -- -std=c++14
+// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-avoid-bind %t
 
 namespace std {
 inline namespace impl {

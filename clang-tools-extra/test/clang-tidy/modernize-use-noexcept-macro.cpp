@@ -1,6 +1,8 @@
-// RUN: %check_clang_tidy %s modernize-use-noexcept %t -- \
+// RUN: %check_clang_tidy -std=c++11,c++14 %s modernize-use-noexcept %t -- \
 // RUN:   -config="{CheckOptions: [{key: modernize-use-noexcept.ReplacementString, value: 'NOEXCEPT'}]}" \
-// RUN:   -- -std=c++11 -fexceptions
+// RUN:   -- -fexceptions
+// This test is not run in C++17 or later because dynamic exception
+// specifications were removed in C++17.
 
 // Example definition of NOEXCEPT -- simplified test to see if noexcept is supported.
 #if (__has_feature(cxx_noexcept))
