@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-redundant-string-cstr %t -- -- -std=c++11
+// RUN: %check_clang_tidy %s readability-redundant-string-cstr %t
 
 typedef unsigned __INT16_TYPE__ char16;
 typedef unsigned __INT32_TYPE__ char32;

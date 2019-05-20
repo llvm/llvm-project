@@ -112,11 +112,6 @@ DWARFUnit *SymbolFileDWARFDwo::GetBaseCompileUnit() {
   return m_base_dwarf_cu;
 }
 
-const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_abbrev_data() {
-  return GetCachedSectionData(eSectionTypeDWARFDebugAbbrevDwo,
-                              m_data_debug_abbrev);
-}
-
 const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_addr_data() {
   // For single file split dwarf case (when we have .dwo sections in a .o),
   // we do not want to use the .debug_addr section from .o file,
@@ -128,15 +123,6 @@ const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_addr_data() {
                                      std::ref(m_data_debug_addr.m_data));
   });
   return m_data_debug_addr.m_data;
-}
-
-const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_str_data() {
-  return GetCachedSectionData(eSectionTypeDWARFDebugStrDwo, m_data_debug_str);
-}
-
-const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_str_offsets_data() {
-  return GetCachedSectionData(eSectionTypeDWARFDebugStrOffsetsDwo,
-                              m_data_debug_str_offsets);
 }
 
 SymbolFileDWARF *SymbolFileDWARFDwo::GetBaseSymbolFile() {

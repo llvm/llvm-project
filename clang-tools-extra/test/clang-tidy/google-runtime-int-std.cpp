@@ -3,7 +3,7 @@
 // RUN:     {key: google-runtime-int.UnsignedTypePrefix, value: "std::uint"}, \
 // RUN:     {key: google-runtime-int.SignedTypePrefix, value: "std::int"}, \
 // RUN:     {key: google-runtime-int.TypeSuffix, value: "_t"}, \
-// RUN:   ]}' -- -std=c++11
+// RUN:   ]}'
 
 long a();
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: consider replacing 'long' with 'std::int{{..}}_t'

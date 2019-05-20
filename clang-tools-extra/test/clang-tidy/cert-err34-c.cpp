@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cert-err34-c %t -- -- -std=c++11
+// RUN: %check_clang_tidy %s cert-err34-c %t
 
 typedef void *             FILE;
 

@@ -5,7 +5,7 @@
 // RUN:      {key: modernize-make-unique.MakeSmartPtrFunctionHeader, \
 // RUN:       value: 'make_unique_util.h'} \
 // RUN:     ]}" \
-// RUN:   -- -std=c++11 -I%S/Inputs/modernize-smart-ptr
+// RUN:   -- -I %S/Inputs/modernize-smart-ptr
 
 #include "unique_ptr.h"
 // CHECK-FIXES: #include "make_unique_util.h"

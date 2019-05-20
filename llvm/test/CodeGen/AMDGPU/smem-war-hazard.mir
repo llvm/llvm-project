@@ -29,13 +29,13 @@ body: |
     S_ENDPGM 0
 ...
 
-# GCN-LABEL: name: hazard_smem_war_related_clause
+# GCN-LABEL: name: hazard_smem_war_dependent_salu
 # GCN:      S_LOAD_DWORD_IMM
 # GCN-NEXT: S_WAITCNT
 # GCN-NEXT: S_ADD_U32
 # GCN-NEXT: V_CMP_EQ_F32
 ---
-name: hazard_smem_war_related_clause
+name: hazard_smem_war_dependent_salu
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr4, $vgpr0, $vgpr1
@@ -46,19 +46,128 @@ body: |
     S_ENDPGM 0
 ...
 
-# GCN-LABEL: name: hazard_smem_war_related_clause_vmcnt
+# GCN-LABEL: name: hazard_smem_war_independent_salu
 # GCN:      S_LOAD_DWORD_IMM
-# GCN-NEXT: S_WAITCNT 3952{{$}}
+# GCN-NEXT: S_WAITCNT
 # GCN-NEXT: S_ADD_U32
 # GCN-NEXT: V_CMP_EQ_F32
 ---
-name: hazard_smem_war_related_clause_vmcnt
+name: hazard_smem_war_independent_salu
 body: |
   bb.0:
-    liveins: $sgpr0, $sgpr1, $sgpr4, $vgpr0, $vgpr1
+    liveins: $sgpr0, $sgpr1, $sgpr4, $sgpr5, $vgpr0, $vgpr1
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    S_WAITCNT 0
+    $sgpr3 = S_ADD_U32 $sgpr5, $sgpr4, implicit-def $scc
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard_smem_war_only_smem
+# GCN:      S_LOAD_DWORD_IMM
+# GCN-NEXT: S_LOAD_DWORD_IMM
+# GCN-NEXT: $sgpr_null = S_MOV_B32 0
+# GCN-NEXT: V_CMP_EQ_F32
+---
+name: hazard_smem_war_only_smem
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr6, $sgpr7, $vgpr0, $vgpr1
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr5 = S_LOAD_DWORD_IMM $sgpr6_sgpr7, 0, 0, 0
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard_smem_war_only_waitcnt_0
+# GCN:      S_LOAD_DWORD_IMM
+# GCN-NEXT: S_WAITCNT
+# GCN-NEXT: V_CMP_EQ_F32
+---
+name: hazard_smem_war_only_waitcnt_0
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    S_WAITCNT 0
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard_smem_war_only_vmcnt_0
+# GCN:      S_LOAD_DWORD_IMM
+# GCN-NEXT: S_WAITCNT 3952{{$}}
+# GCN-NEXT: $sgpr_null = S_MOV_B32 0
+# GCN-NEXT: V_CMP_EQ_F32
+---
+name: hazard_smem_war_only_vmcnt_0
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
     S_WAITCNT 3952
-    $sgpr3 = S_ADD_U32 $sgpr2, $sgpr4, implicit-def $scc
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard_smem_war_only_expcnt_0
+# GCN:      S_LOAD_DWORD_IMM
+# GCN-NEXT: S_WAITCNT 53007{{$}}
+# GCN-NEXT: $sgpr_null = S_MOV_B32 0
+# GCN-NEXT: V_CMP_EQ_F32
+---
+name: hazard_smem_war_only_expcnt_0
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    S_WAITCNT 53007
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard_smem_war_only_lgkmcnt_0
+# GCN:      S_LOAD_DWORD_IMM
+# GCN-NEXT: S_WAITCNT 49279{{$}}
+# GCN-NEXT: V_CMP_EQ_F32
+---
+name: hazard_smem_war_only_lgkmcnt_0
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    S_WAITCNT 49279
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard_smem_war_only_waitcnt_lgkmcnt_0
+# GCN:      S_LOAD_DWORD_IMM
+# GCN-NEXT: S_WAITCNT_LGKMCNT
+# GCN-NEXT: V_CMP_EQ_F32
+---
+name: hazard_smem_war_only_waitcnt_lgkmcnt_0
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    S_WAITCNT_LGKMCNT $sgpr_null, 0
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard_smem_war_only_waitcnt_lgkmcnt_1
+# GCN:      S_LOAD_DWORD_IMM
+# GCN-NEXT: S_WAITCNT_LGKMCNT
+# GCN-NEXT: $sgpr_null = S_MOV_B32 0
+# GCN-NEXT: V_CMP_EQ_F32
+---
+name: hazard_smem_war_only_waitcnt_lgkmcnt_1
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    S_WAITCNT_LGKMCNT $sgpr_null, 1
     $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
     S_ENDPGM 0
 ...

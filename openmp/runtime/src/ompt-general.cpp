@@ -361,10 +361,11 @@ void ompt_post_init() {
           ompt_thread_initial, __ompt_get_thread_data_internal());
     }
     ompt_data_t *task_data;
-    __ompt_get_task_info_internal(0, NULL, &task_data, NULL, NULL, NULL);
-    if (ompt_enabled.ompt_callback_task_create) {
-      ompt_callbacks.ompt_callback(ompt_callback_task_create)(
-          NULL, NULL, task_data, ompt_task_initial, 0, NULL);
+    ompt_data_t *parallel_data;
+    __ompt_get_task_info_internal(0, NULL, &task_data, NULL, &parallel_data, NULL);
+    if (ompt_enabled.ompt_callback_implicit_task) {
+      ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
+          ompt_scope_begin, parallel_data, task_data, 1, 1, ompt_task_initial);
     }
 
     ompt_set_thread_state(root_thread, ompt_state_work_serial);

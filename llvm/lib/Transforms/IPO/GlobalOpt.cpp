@@ -1671,7 +1671,8 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
             dwarf::DW_OP_constu, ValMinus,
             dwarf::DW_OP_mul, dwarf::DW_OP_constu, ValInit,
             dwarf::DW_OP_plus};
-        E = DIExpression::prependOpcodes(E, Ops, DIExpression::WithStackValue);
+        bool WithStackValue = true;
+        E = DIExpression::prependOpcodes(E, Ops, WithStackValue);
         DIGlobalVariableExpression *DGVE =
           DIGlobalVariableExpression::get(NewGV->getContext(), DGV, E);
         NewGV->addDebugInfo(DGVE);

@@ -1,6 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-use-using %t -- \
-// RUN:   -config="{CheckOptions: [{key: modernize-use-using.IgnoreMacros, value: 0}]}" \
-// RUN:   -- -std=c++11
+// RUN:   -config="{CheckOptions: [{key: modernize-use-using.IgnoreMacros, value: 0}]}"
 
 #define CODE typedef int INT
 

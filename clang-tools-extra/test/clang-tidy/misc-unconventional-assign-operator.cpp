@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-unconventional-assign-operator %t -- -- -std=c++11 -isystem %S/Inputs/Headers -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s misc-unconventional-assign-operator %t -- -- -isystem %S/Inputs/Headers -fno-delayed-template-parsing
 
 namespace std {
 template <typename T>

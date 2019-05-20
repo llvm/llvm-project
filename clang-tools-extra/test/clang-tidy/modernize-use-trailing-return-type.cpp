@@ -1,4 +1,6 @@
-// RUN: %check_clang_tidy %s modernize-use-trailing-return-type %t -- -- --std=c++14 -fdeclspec -fexceptions
+// RUN: %check_clang_tidy -std=c++14,c++17 %s modernize-use-trailing-return-type %t -- -- -fdeclspec -fexceptions
+// FIXME: Fix the checker to work in C++2a mode, it is performing a
+// use-of-uninitialized-value.
 
 namespace std {
     template <typename T>

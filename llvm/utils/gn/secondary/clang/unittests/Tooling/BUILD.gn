@@ -29,6 +29,7 @@ unittest("ToolingTests") {
     "LexicallyOrderedRecursiveASTVisitorTest.cpp",
     "LookupTest.cpp",
     "QualTypeNamesTest.cpp",
+    "RangeSelectorTest.cpp",
     "RecursiveASTVisitorTestDeclVisitor.cpp",
     "RecursiveASTVisitorTestPostOrderVisitor.cpp",
     "RecursiveASTVisitorTestTypeLocVisitor.cpp",

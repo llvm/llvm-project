@@ -1,3 +1,5 @@
+# REQUIRES: x86
+
 # RUN: llvm-mc -filetype=obj -triple=x86_64-linux-musl %s -o %t.o
 # RUN: ld.lld --gc-sections %t.o -o %t
 # RUN: llvm-readelf -S -r %t | FileCheck %s
