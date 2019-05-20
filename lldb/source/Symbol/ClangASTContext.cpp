@@ -1437,8 +1437,13 @@ CompilerType ClangASTContext::CopyType(const CompilerType &src) {
           FileManager file_manager(file_system_options);
           ASTImporter importer(*dst_clang_ast, file_manager, *src_clang_ast,
                                file_manager, false);
-          QualType dst_qual_type(importer.Import(ClangUtil::GetQualType(src)));
-          return CompilerType(this, dst_qual_type.getAsOpaquePtr());
+          if (auto expected = importer.Import(ClangUtil::GetQualType(src))) {
+            QualType dst_qual_type(expected.get());
+            return CompilerType(this, dst_qual_type.getAsOpaquePtr());
+          } else {
+              Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+              LLDB_LOG_ERROR(log, expected.takeError(), "Couldn't import type: {0}");
+          }
         }
       }
     }
