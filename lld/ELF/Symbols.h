@@ -83,7 +83,7 @@ public:
   // An index into the .branch_lt section on PPC64.
   uint16_t PPC64BranchltIndex = -1;
 
-  // Symbol binding. This is not overwritten by replaceSymbol to track
+  // Symbol binding. This is not overwritten by replace() to track
   // changes during resolution. In particular:
   //  - An undefined weak is still weak when it resolves to a shared library.
   //  - An undefined weak will not fetch archive members, but we have to
@@ -119,6 +119,8 @@ public:
 
   // True if this symbol is specified by --trace-symbol option.
   unsigned Traced : 1;
+
+  inline void replace(const Symbol &New);
 
   bool includeInDynsym() const;
   uint8_t computeBinding() const;
@@ -178,6 +180,8 @@ private:
       return Visibility == llvm::ELF::STV_DEFAULT;
     return Config->Shared || Config->ExportDynamic;
   }
+
+  inline size_t getSymbolSize() const;
 
 protected:
   Symbol(Kind K, InputFile *File, StringRefZ Name, uint8_t Binding,
@@ -427,27 +431,30 @@ static inline void assertSymbols() {
 
 void printTraceSymbol(Symbol *Sym);
 
-static size_t getSymbolSize(const Symbol &Sym) {
-  switch (Sym.kind()) {
-  case Symbol::CommonKind:
+size_t Symbol::getSymbolSize() const {
+  switch (kind()) {
+  case CommonKind:
     return sizeof(CommonSymbol);
-  case Symbol::DefinedKind:
+  case DefinedKind:
     return sizeof(Defined);
-  case Symbol::LazyArchiveKind:
+  case LazyArchiveKind:
     return sizeof(LazyArchive);
-  case Symbol::LazyObjectKind:
+  case LazyObjectKind:
     return sizeof(LazyObject);
-  case Symbol::SharedKind:
+  case SharedKind:
     return sizeof(SharedSymbol);
-  case Symbol::UndefinedKind:
+  case UndefinedKind:
     return sizeof(Undefined);
-  case Symbol::PlaceholderKind:
+  case PlaceholderKind:
     return sizeof(Symbol);
   }
   llvm_unreachable("unknown symbol kind");
 }
 
-inline void replaceSymbol(Symbol *Sym, const Symbol &New) {
+// replace() replaces "this" object with a given symbol by memcpy'ing
+// it over to "this". This function is called as a result of name
+// resolution, e.g. to replace an undefind symbol with a defined symbol.
+void Symbol::replace(const Symbol &New) {
   using llvm::ELF::STT_TLS;
 
   // Symbols representing thread-local variables must be referenced by
@@ -455,31 +462,30 @@ inline void replaceSymbol(Symbol *Sym, const Symbol &New) {
   // non-TLS relocations, so there's a clear distinction between TLS
   // and non-TLS symbols. It is an error if the same symbol is defined
   // as a TLS symbol in one file and as a non-TLS symbol in other file.
-  if (Sym->SymbolKind != Symbol::PlaceholderKind && !Sym->isLazy() &&
-      !New.isLazy()) {
-    bool TlsMismatch = (Sym->Type == STT_TLS && New.Type != STT_TLS) ||
-                       (Sym->Type != STT_TLS && New.Type == STT_TLS);
+  if (SymbolKind != PlaceholderKind && !isLazy() && !New.isLazy()) {
+    bool TlsMismatch = (Type == STT_TLS && New.Type != STT_TLS) ||
+                       (Type != STT_TLS && New.Type == STT_TLS);
     if (TlsMismatch)
-      error("TLS attribute mismatch: " + toString(*Sym) + "\n>>> defined in " +
-            toString(New.File) + "\n>>> defined in " + toString(Sym->File));
+      error("TLS attribute mismatch: " + toString(*this) + "\n>>> defined in " +
+            toString(New.File) + "\n>>> defined in " + toString(File));
   }
 
-  Symbol Old = *Sym;
-  memcpy(Sym, &New, getSymbolSize(New));
+  Symbol Old = *this;
+  memcpy(this, &New, New.getSymbolSize());
 
-  Sym->VersionId = Old.VersionId;
-  Sym->Visibility = Old.Visibility;
-  Sym->IsUsedInRegularObj = Old.IsUsedInRegularObj;
-  Sym->ExportDynamic = Old.ExportDynamic;
-  Sym->CanInline = Old.CanInline;
-  Sym->Traced = Old.Traced;
-  Sym->IsPreemptible = Old.IsPreemptible;
-  Sym->ScriptDefined = Old.ScriptDefined;
+  VersionId = Old.VersionId;
+  Visibility = Old.Visibility;
+  IsUsedInRegularObj = Old.IsUsedInRegularObj;
+  ExportDynamic = Old.ExportDynamic;
+  CanInline = Old.CanInline;
+  Traced = Old.Traced;
+  IsPreemptible = Old.IsPreemptible;
+  ScriptDefined = Old.ScriptDefined;
 
   // Print out a log message if --trace-symbol was specified.
   // This is for debugging.
-  if (Sym->Traced)
-    printTraceSymbol(Sym);
+  if (Traced)
+    printTraceSymbol(this);
 }
 
 void maybeWarnUnorderableSymbol(const Symbol *Sym);

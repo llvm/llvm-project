@@ -1338,9 +1338,8 @@ static void replaceCommonSymbols() {
     Bss->File = S->File;
     Bss->Live = !Config->GcSections;
     InputSections.push_back(Bss);
-    replaceSymbol(S, Defined{S->File, S->getName(), S->Binding, S->StOther,
-                             S->Type,
-                             /*Value=*/0, S->Size, Bss});
+    S->replace(Defined{S->File, S->getName(), S->Binding, S->StOther, S->Type,
+                       /*Value=*/0, S->Size, Bss});
   }
 }
 
@@ -1355,8 +1354,7 @@ static void demoteSharedSymbols() {
       continue;
 
     bool Used = S->Used;
-    replaceSymbol(
-        S, Undefined{nullptr, S->getName(), STB_WEAK, S->StOther, S->Type});
+    S->replace(Undefined{nullptr, S->getName(), STB_WEAK, S->StOther, S->Type});
     S->Used = Used;
   }
 }
