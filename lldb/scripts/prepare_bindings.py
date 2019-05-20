@@ -256,13 +256,12 @@ def main(args):
     options = process_args(args)
     logging.debug("Processed args: options=%s", options)
 
-    # Clear the swig executable if we want to use the static bindings.
     if options.use_static_binding:
+        # Clear the swig executable if we want to use the static bindings.
         options.swig_executable = None
         options.find_swig = False
-
-    # Ensure we have a swig executable.
-    if not options.swig_executable or len(options.swig_executable) == 0:
+    elif not options.swig_executable or len(options.swig_executable) == 0:
+        # Ensure we have a swig executable.
         if options.find_swig:
             find_swig_executable(options)
         else:
