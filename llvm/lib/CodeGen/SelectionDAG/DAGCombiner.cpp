@@ -6618,19 +6618,20 @@ SDValue DAGCombiner::visitShiftByConstant(SDNode *N, ConstantSDNode *Amt) {
     return SDValue();
 
   // FIXME: disable this unless the input to the binop is a shift by a constant
-  // or is copy/select.Enable this in other cases when figure out it's exactly profitable.
-  SDNode *BinOpLHSVal = LHS->getOperand(0).getNode();
-  bool isShift = BinOpLHSVal->getOpcode() == ISD::SHL ||
-                 BinOpLHSVal->getOpcode() == ISD::SRA ||
-                 BinOpLHSVal->getOpcode() == ISD::SRL;
-  bool isCopyOrSelect = BinOpLHSVal->getOpcode() == ISD::CopyFromReg ||
-                        BinOpLHSVal->getOpcode() == ISD::SELECT;
+  // or is copy/select. Enable this in other cases when figure out it's exactly
+  // profitable.
+  SDValue BinOpLHSVal = LHS->getOperand(0);
+  bool IsShiftByConstant = (BinOpLHSVal.getOpcode() == ISD::SHL ||
+                            BinOpLHSVal.getOpcode() == ISD::SRA ||
+                            BinOpLHSVal.getOpcode() == ISD::SRL) &&
+                           isa<ConstantSDNode>(BinOpLHSVal.getOperand(1));
+  bool IsCopyOrSelect = BinOpLHSVal.getOpcode() == ISD::CopyFromReg ||
+                        BinOpLHSVal.getOpcode() == ISD::SELECT;
 
-  if ((!isShift || !isa<ConstantSDNode>(BinOpLHSVal->getOperand(1))) &&
-      !isCopyOrSelect)
+  if (!IsShiftByConstant && !IsCopyOrSelect)
     return SDValue();
 
-  if (isCopyOrSelect && N->hasOneUse())
+  if (IsCopyOrSelect && N->hasOneUse())
     return SDValue();
 
   EVT VT = N->getValueType(0);
