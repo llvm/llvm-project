@@ -1727,6 +1727,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     readCallGraphsFromObjectFiles<ELFT>();
   }
 
+
   // Write the result to the file.
   writeResult<ELFT>();
 }
