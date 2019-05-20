@@ -146,9 +146,9 @@ void JSONNodeDumper::Visit(const GenericSelectionExpr::ConstAssociation &A) {
   attributeOnlyIfTrue("selected", A.isSelected());
 }
 
-llvm::json::Object JSONNodeDumper::createSourceLocation(SourceLocation Loc) {
-  SourceLocation Spelling = SM.getSpellingLoc(Loc);
-  PresumedLoc Presumed = SM.getPresumedLoc(Spelling);
+llvm::json::Object
+JSONNodeDumper::createBareSourceLocation(SourceLocation Loc) {
+  PresumedLoc Presumed = SM.getPresumedLoc(Loc);
 
   if (Presumed.isInvalid())
     return llvm::json::Object{};
@@ -156,6 +156,28 @@ llvm::json::Object JSONNodeDumper::createSourceLocation(SourceLocation Loc) {
   return llvm::json::Object{{"file", Presumed.getFilename()},
                             {"line", Presumed.getLine()},
                             {"col", Presumed.getColumn()}};
+}
+
+llvm::json::Object JSONNodeDumper::createSourceLocation(SourceLocation Loc) {
+  SourceLocation Spelling = SM.getSpellingLoc(Loc);
+  SourceLocation Expansion = SM.getExpansionLoc(Loc);
+
+  llvm::json::Object SLoc = createBareSourceLocation(Spelling);
+  if (Expansion != Spelling) {
+    // If the expansion and the spelling are different, output subobjects
+    // describing both locations.
+    llvm::json::Object ELoc = createBareSourceLocation(Expansion);
+
+    // If there is a macro expansion, add extra information if the interesting
+    // bit is the macro arg expansion.
+    if (SM.isMacroArgExpansion(Loc))
+      ELoc["isMacroArgExpansion"] = true;
+
+    return llvm::json::Object{{"spellingLoc", std::move(SLoc)},
+                              {"expansionLoc", std::move(ELoc)}};
+  }
+
+  return SLoc;
 }
 
 llvm::json::Object JSONNodeDumper::createSourceRange(SourceRange R) {
