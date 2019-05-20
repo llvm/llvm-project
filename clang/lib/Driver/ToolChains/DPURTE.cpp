@@ -109,6 +109,9 @@ void Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  /* Pass -L options to the linker */
+  TCArgs.AddAllArgs(CmdArgs, options::OPT_L);
+
   C.addCommand(llvm::make_unique<Command>(
       JA, *this, TCArgs.MakeArgString(Linker), CmdArgs, Inputs));
 }
