@@ -3956,6 +3956,16 @@ public:
   /// integers as its arguments.
   SDValue expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const;
 
+  /// Method for building the DAG expansion of ISD::U(ADD|SUB)O. Expansion
+  /// always suceeds and populates the Result and Overflow arguments.
+  void expandUADDSUBO(SDNode *Node, SDValue &Result, SDValue &Overflow,
+                      SelectionDAG &DAG) const;
+
+  /// Method for building the DAG expansion of ISD::S(ADD|SUB)O. Expansion
+  /// always suceeds and populates the Result and Overflow arguments.
+  void expandSADDSUBO(SDNode *Node, SDValue &Result, SDValue &Overflow,
+                      SelectionDAG &DAG) const;
+
   /// Method for building the DAG expansion of ISD::[US]MULO. Returns whether
   /// expansion was successful and populates the Result and Overflow arguments.
   bool expandMULO(SDNode *Node, SDValue &Result, SDValue &Overflow,
