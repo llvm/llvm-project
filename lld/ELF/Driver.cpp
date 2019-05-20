@@ -975,9 +975,17 @@ static void readConfigs(opt::InputArgList &Args) {
   std::tie(Config->AndroidPackDynRelocs, Config->RelrPackDynRelocs) =
       getPackDynRelocs(Args);
 
-  if (auto *Arg = Args.getLastArg(OPT_symbol_ordering_file))
-    if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
+  if (auto *Arg = Args.getLastArg(OPT_symbol_ordering_file)){
+    if (Args.hasArg(OPT_call_graph_ordering_file))
+      error("--symbol-ordering-file and --call-graph-order-file "
+            "may not be used together");
+    if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue())){
       Config->SymbolOrderingFile = getSymbolOrderingFile(*Buffer);
+      // Also need to disable CallGraphProfileSort to prevent
+      // LLD order symbols with CGProfile
+      Config->CallGraphProfileSort = false;
+    }
+  }
 
   // If --retain-symbol-file is used, we'll keep only the symbols listed in
   // the file and discard all others.
@@ -1726,7 +1734,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
         readCallGraph(*Buffer);
     readCallGraphsFromObjectFiles<ELFT>();
   }
-
 
   // Write the result to the file.
   writeResult<ELFT>();
