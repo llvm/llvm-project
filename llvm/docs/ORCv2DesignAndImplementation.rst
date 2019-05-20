@@ -124,7 +124,7 @@ module ``M`` loaded on an ThreadSafeContext ``Ctx``:
 The builder clasess provide a number of configuration options that can be
 specified before the JIT instance is constructed. For example:
 
-.. code-blocks:: c++
+.. code-block:: c++
 
   // Build an LLLazyJIT instance that uses four worker threads for compilation,
   // and jumps to a specific error handler (rather than null) on lazy compile
