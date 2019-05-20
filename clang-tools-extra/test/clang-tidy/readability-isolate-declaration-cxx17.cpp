@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-isolate-declaration %t -- -- -std=c++17
+// RUN: %check_clang_tidy -std=c++17 %s readability-isolate-declaration %t
 
 template <typename T1, typename T2>
 struct pair {

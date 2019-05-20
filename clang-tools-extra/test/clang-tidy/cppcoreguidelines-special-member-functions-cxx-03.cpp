@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-special-member-functions %t -- -- -std=c++03
+// RUN: %check_clang_tidy -std=c++98 %s cppcoreguidelines-special-member-functions %t
 
 class DefinesDestructor {
   ~DefinesDestructor();

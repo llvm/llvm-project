@@ -5,7 +5,7 @@
 // RUN:      {key: modernize-make-shared.MakeSmartPtrFunctionHeader, \
 // RUN:       value: 'make_shared_util.h'} \
 // RUN:     ]}" \
-// RUN:   -- -std=c++11 -I%S/Inputs/modernize-smart-ptr
+// RUN:   -- -I %S/Inputs/modernize-smart-ptr
 
 #include "shared_ptr.h"
 // CHECK-FIXES: #include "make_shared_util.h"

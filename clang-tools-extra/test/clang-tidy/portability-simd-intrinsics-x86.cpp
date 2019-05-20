@@ -1,7 +1,8 @@
-// RUN: %check_clang_tidy %s portability-simd-intrinsics %t -- \
+// RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s portability-simd-intrinsics %t -- \
 // RUN:  -config='{CheckOptions: [ \
 // RUN:    {key: portability-simd-intrinsics.Suggest, value: 1} \
-// RUN:  ]}' -- -target x86_64 -std=c++11
+// RUN:  ]}' -- -target x86_64
+// FIXME: Fix the checker to work in C++2a mode.
 
 typedef long long __m128i __attribute__((vector_size(16)));
 typedef double __m256 __attribute__((vector_size(32)));

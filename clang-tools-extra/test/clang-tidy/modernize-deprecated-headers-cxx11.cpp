@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-deprecated-headers %t -- -extra-arg-before=-isystem%S/Inputs/modernize-deprecated-headers -- -std=c++11 -v
+// RUN: %check_clang_tidy -std=c++11-or-later %s modernize-deprecated-headers %t -- -extra-arg-before=-isystem%S/Inputs/modernize-deprecated-headers
 
 #include <assert.h>
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: inclusion of deprecated C++ header 'assert.h'; consider using 'cassert' instead [modernize-deprecated-headers]

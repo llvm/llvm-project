@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-replace-random-shuffle %t -- -- -std=c++11
+// RUN: %check_clang_tidy %s modernize-replace-random-shuffle %t
 
 //CHECK-FIXES: #include <random>
 

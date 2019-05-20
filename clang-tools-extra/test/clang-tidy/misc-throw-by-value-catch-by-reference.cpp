@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-throw-by-value-catch-by-reference %t -- -- -std=c++11 -fcxx-exceptions
+// RUN: %check_clang_tidy %s misc-throw-by-value-catch-by-reference %t -- -- -fcxx-exceptions
 
 
 class logic_error {

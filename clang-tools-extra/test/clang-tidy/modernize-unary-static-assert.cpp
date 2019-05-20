@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-unary-static-assert %t -- -- -std=c++1z
+// RUN: %check_clang_tidy -std=c++17-or-later %s modernize-unary-static-assert %t
 
 #define FOO static_assert(sizeof(a) <= 15, "");
 #define MSG ""

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cert-err52-cpp %t -- -- -std=c++11
+// RUN: %check_clang_tidy %s cert-err52-cpp %t
 
 typedef void *jmp_buf;
 extern int __setjmpimpl(jmp_buf);

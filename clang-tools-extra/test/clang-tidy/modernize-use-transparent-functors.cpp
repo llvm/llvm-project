@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-transparent-functors %t -- -- -std=c++14
+// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-use-transparent-functors %t
 
 namespace std {
 template<class T>

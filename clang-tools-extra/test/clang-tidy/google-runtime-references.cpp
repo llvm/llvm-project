@@ -1,8 +1,7 @@
 // RUN: %check_clang_tidy %s google-runtime-references %t -- \
-// RUN:   -extra-arg="-std=c++11" \
 // RUN:   -config="{CheckOptions: \
 // RUN:             [{key: google-runtime-references.WhiteListTypes, \
-// RUN:               value: 'whitelist::A; whitelist::B'}]}" --
+// RUN:               value: 'whitelist::A; whitelist::B'}]}"
 
 int a;
 int &b = a;

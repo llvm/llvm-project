@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy %s modernize-make-unique %t -- -- -std=c++14 \
-// RUN:   -I%S/Inputs/modernize-smart-ptr
+// RUN: %check_clang_tidy -std=c++14 %s modernize-make-unique %t -- -- -I %S/Inputs/modernize-smart-ptr
+// FIXME: Fix the checker to work in C++17 mode.
 
 #include "unique_ptr.h"
 #include "initializer_list.h"
