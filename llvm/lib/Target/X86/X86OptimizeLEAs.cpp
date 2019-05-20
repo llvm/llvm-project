@@ -568,11 +568,8 @@ MachineInstr *OptimizeLEAPass::replaceDebugValue(MachineInstr &MI,
                                                  unsigned VReg,
                                                  int64_t AddrDispShift) {
   DIExpression *Expr = const_cast<DIExpression *>(MI.getDebugExpression());
-
   if (AddrDispShift != 0)
-    Expr = DIExpression::prepend(Expr, DIExpression::NoDeref, AddrDispShift,
-                                 DIExpression::NoDeref,
-                                 DIExpression::WithStackValue);
+    Expr = DIExpression::prepend(Expr, DIExpression::StackValue, AddrDispShift);
 
   // Replace DBG_VALUE instruction with modified version.
   MachineBasicBlock *MBB = MI.getParent();

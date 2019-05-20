@@ -1,7 +1,8 @@
 // RUN: echo "static void staticFunctionHeader(int i) {;}" > %T/header.h
 // RUN: echo "static void staticFunctionHeader(int  /*i*/) {;}" > %T/header-fixed.h
-// RUN: %check_clang_tidy %s misc-unused-parameters %t -- -header-filter='.*' -- -std=c++11 -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++11 %s misc-unused-parameters %t -- -header-filter='.*' -- -fno-delayed-template-parsing
 // RUN: diff %T/header.h %T/header-fixed.h
+// FIXME: Make the test work in all language modes.
 
 #include "header.h"
 // CHECK-MESSAGES: header.h:1:38: warning

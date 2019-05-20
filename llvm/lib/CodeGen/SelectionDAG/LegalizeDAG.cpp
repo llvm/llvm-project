@@ -3381,76 +3381,18 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
   case ISD::SADDO:
   case ISD::SSUBO: {
-    SDValue LHS = Node->getOperand(0);
-    SDValue RHS = Node->getOperand(1);
-    bool IsAdd = Node->getOpcode() == ISD::SADDO;
-
-    SDValue Sum = DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, dl,
-                              LHS.getValueType(), LHS, RHS);
-    Results.push_back(Sum);
-
-    EVT ResultType = Node->getValueType(1);
-    EVT OType = getSetCCResultType(Node->getValueType(0));
-
-    // If SADDSAT/SSUBSAT is legal, compare results to detect overflow.
-    unsigned OpcSat = IsAdd ? ISD::SADDSAT : ISD::SSUBSAT;
-    if (TLI.isOperationLegalOrCustom(OpcSat, LHS.getValueType())) {
-      SDValue Sat = DAG.getNode(OpcSat, dl, LHS.getValueType(), LHS, RHS);
-      SDValue SetCC = DAG.getSetCC(dl, OType, Sum, Sat, ISD::SETNE);
-      Results.push_back(
-          DAG.getBoolExtOrTrunc(SetCC, dl, ResultType, ResultType));
-      break;
-    }
-
-    SDValue Zero = DAG.getConstant(0, dl, LHS.getValueType());
-
-    //   LHSSign -> LHS >= 0
-    //   RHSSign -> RHS >= 0
-    //   SumSign -> Sum >= 0
-    //
-    //   Add:
-    //   Overflow -> (LHSSign == RHSSign) && (LHSSign != SumSign)
-    //   Sub:
-    //   Overflow -> (LHSSign != RHSSign) && (LHSSign != SumSign)
-    SDValue LHSSign = DAG.getSetCC(dl, OType, LHS, Zero, ISD::SETGE);
-    SDValue RHSSign = DAG.getSetCC(dl, OType, RHS, Zero, ISD::SETGE);
-    SDValue SignsMatch = DAG.getSetCC(dl, OType, LHSSign, RHSSign,
-                                      IsAdd ? ISD::SETEQ : ISD::SETNE);
-
-    SDValue SumSign = DAG.getSetCC(dl, OType, Sum, Zero, ISD::SETGE);
-    SDValue SumSignNE = DAG.getSetCC(dl, OType, LHSSign, SumSign, ISD::SETNE);
-
-    SDValue Cmp = DAG.getNode(ISD::AND, dl, OType, SignsMatch, SumSignNE);
-    Results.push_back(DAG.getBoolExtOrTrunc(Cmp, dl, ResultType, ResultType));
+    SDValue Result, Overflow;
+    TLI.expandSADDSUBO(Node, Result, Overflow, DAG);
+    Results.push_back(Result);
+    Results.push_back(Overflow);
     break;
   }
   case ISD::UADDO:
   case ISD::USUBO: {
-    SDValue LHS = Node->getOperand(0);
-    SDValue RHS = Node->getOperand(1);
-    bool IsAdd = Node->getOpcode() == ISD::UADDO;
-
-    // If ADD/SUBCARRY is legal, use that instead.
-    unsigned OpcCarry = IsAdd ? ISD::ADDCARRY : ISD::SUBCARRY;
-    if (TLI.isOperationLegalOrCustom(OpcCarry, Node->getValueType(0))) {
-      SDValue CarryIn = DAG.getConstant(0, dl, Node->getValueType(1));
-      SDValue NodeCarry = DAG.getNode(OpcCarry, dl, Node->getVTList(),
-                                      { LHS, RHS, CarryIn });
-      Results.push_back(SDValue(NodeCarry.getNode(), 0));
-      Results.push_back(SDValue(NodeCarry.getNode(), 1));
-      break;
-    }
-
-    SDValue Sum = DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, dl,
-                              LHS.getValueType(), LHS, RHS);
-    Results.push_back(Sum);
-
-    EVT ResultType = Node->getValueType(1);
-    EVT SetCCType = getSetCCResultType(Node->getValueType(0));
-    ISD::CondCode CC = IsAdd ? ISD::SETULT : ISD::SETUGT;
-    SDValue SetCC = DAG.getSetCC(dl, SetCCType, Sum, LHS, CC);
-
-    Results.push_back(DAG.getBoolExtOrTrunc(SetCC, dl, ResultType, ResultType));
+    SDValue Result, Overflow;
+    TLI.expandUADDSUBO(Node, Result, Overflow, DAG);
+    Results.push_back(Result);
+    Results.push_back(Overflow);
     break;
   }
   case ISD::UMULO:

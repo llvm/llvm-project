@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy %s openmp-use-default-none %t -- -- -x c++ -fopenmp=libomp -fopenmp-version=40
-// RUN: %check_clang_tidy %s openmp-use-default-none %t -- -- -x c   -fopenmp=libomp -fopenmp-version=40
+// RUN: %check_clang_tidy %s openmp-use-default-none %t -- -- -fopenmp=libomp -fopenmp-version=40
+// RUN: %check_clang_tidy -std=c11 %s openmp-use-default-none %t -- -- -x c -fopenmp=libomp -fopenmp-version=40
 
 //----------------------------------------------------------------------------//
 // Null cases.

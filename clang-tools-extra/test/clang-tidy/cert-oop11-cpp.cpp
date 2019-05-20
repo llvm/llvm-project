@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cert-oop11-cpp %t -- -- -std=c++11
+// RUN: %check_clang_tidy %s cert-oop11-cpp %t
 
 struct B {
   B(B&&) noexcept = default;

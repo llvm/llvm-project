@@ -160,7 +160,7 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappingsIntrinsicWSideEffects(
     };
 
     // rsrc, voffset, offset
-    const std::array<unsigned, 3> RegSrcOpIdx = { 2, 3, 4 };
+    const std::array<unsigned, 3> RegSrcOpIdx = { { 2, 3, 4 } };
     return addMappingFromTable<3>(MI, MRI, RegSrcOpIdx, makeArrayRef(Table));
   }
   case Intrinsic::amdgcn_s_buffer_load: {
@@ -179,7 +179,7 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappingsIntrinsicWSideEffects(
     };
 
     // rsrc, offset
-    const std::array<unsigned, 2> RegSrcOpIdx = { 2, 3 };
+    const std::array<unsigned, 2> RegSrcOpIdx = { { 2, 3 } };
     return addMappingFromTable<2>(MI, MRI, RegSrcOpIdx, makeArrayRef(Table));
   }
   default:

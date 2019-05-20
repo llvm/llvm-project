@@ -6,7 +6,7 @@
 // RUN:               value: '::std::pair; std::tuple; ::test::Single'}, \
 // RUN:              {key: modernize-use-emplace.TupleMakeFunctions, \
 // RUN:               value: '::std::make_pair; ::std::make_tuple; ::test::MakeSingle'}] \
-// RUN:             }" -- -std=c++11
+// RUN:             }"
 
 namespace std {
 template <typename>

@@ -391,6 +391,18 @@ static Value *emitFPIntBuiltin(CodeGenFunction &CGF,
   return CGF.Builder.CreateCall(F, {Src0, Src1});
 }
 
+// Emit an intrinsic that has overloaded integer result and fp operand.
+static Value *emitFPToIntRoundBuiltin(CodeGenFunction &CGF,
+                                      const CallExpr *E,
+                                      unsigned IntrinsicID) {
+   llvm::Type *ResultType = CGF.ConvertType(E->getType());
+   llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
+
+   Function *F = CGF.CGM.getIntrinsic(IntrinsicID,
+                                      {ResultType, Src0->getType()});
+   return CGF.Builder.CreateCall(F, Src0);
+}
+
 /// EmitFAbs - Emit a call to @llvm.fabs().
 static Value *EmitFAbs(CodeGenFunction &CGF, Value *V) {
   Function *F = CGF.CGM.getIntrinsic(Intrinsic::fabs, V->getType());
@@ -1726,13 +1738,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BIlroundl:
     case Builtin::BI__builtin_lround:
     case Builtin::BI__builtin_lroundf:
-    case Builtin::BI__builtin_lroundl: {
-      llvm::Type *ResultType = ConvertType(E->getType());
-      int Width = ResultType->getPrimitiveSizeInBits();
-      return RValue::get(emitUnaryBuiltin(*this, E,
-                                          Width == 32 ? Intrinsic::lround_i32
-                                                      : Intrinsic::lround_i64));
-    }
+    case Builtin::BI__builtin_lroundl:
+      return RValue::get(emitFPToIntRoundBuiltin(*this, E, Intrinsic::lround));
 
     case Builtin::BIllround:
     case Builtin::BIllroundf:
@@ -1740,7 +1747,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_llround:
     case Builtin::BI__builtin_llroundf:
     case Builtin::BI__builtin_llroundl:
-      return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::llround));
+      return RValue::get(emitFPToIntRoundBuiltin(*this, E, Intrinsic::llround));
 
     default:
       break;

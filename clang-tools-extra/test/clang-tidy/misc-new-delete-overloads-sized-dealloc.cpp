@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-new-delete-overloads %t -- -- -std=c++14 -fsized-deallocation
+// RUN: %check_clang_tidy %s misc-new-delete-overloads %t -- -- -fsized-deallocation
 
 typedef decltype(sizeof(int)) size_t;
 

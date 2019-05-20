@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-use-default-member-init %t -- \
-// RUN: -config="{CheckOptions: [{key: modernize-use-default-member-init.UseAssignment, value: 1}]}" -- -std=c++11
+// RUN: -config="{CheckOptions: [{key: modernize-use-default-member-init.UseAssignment, value: 1}]}"
 
 struct S {
 };

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-nodiscard %t -- -- -std=c++17 
+// RUN: %check_clang_tidy -std=c++17-or-later %s modernize-use-nodiscard %t
 
 class Foo
 {

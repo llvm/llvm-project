@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s modernize-use-uncaught-exceptions %t -- -- -std=c++1z
+// RUN: %check_clang_tidy -std=c++17-or-later %s modernize-use-uncaught-exceptions %t
+
 #define MACRO std::uncaught_exception
 // CHECK-FIXES: #define MACRO std::uncaught_exception
 

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-redundant-expression %t -- -- -std=c++11
+// RUN: %check_clang_tidy %s misc-redundant-expression %t
 
 typedef __INT64_TYPE__ I64;
 
