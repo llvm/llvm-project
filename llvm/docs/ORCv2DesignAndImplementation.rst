@@ -5,31 +5,33 @@ ORC Design and Implementation
 Introduction
 ============
 
-This document aims to provide a high-level overview of the ORC APIs and
-implementation. Except where otherwise stated, all discussion applies to
-the design of the APIs as of LLVM verison 9 (ORCv2).
+This document aims to provide a high-level overview of the design and
+implementation of the ORC JIT APIs. Except where otherwise stated, all
+discussion applies to the design of the APIs as of LLVM verison 9 (ORCv2).
+
+.. contents::
+   :local:
 
 Use-cases
 =========
 
-ORC aims to provide a modular API for building in-memory compilers,
-including JIT compilers. There are a wide range of use cases for such
-in-memory compilers. For example:
+ORC provides a modular API for building JIT compilers. There are a range
+of use cases for such an API:
 
-1. The LLVM tutorials use an in-memory compiler to execute expressions
+1. The LLVM tutorials use a simple ORC-based JIT class to execute expressions
 compiled from a toy languge: Kaleidoscope.
 
-2. The LLVM debugger, LLDB, uses a cross-compiling in-memory compiler for
-expression evaluation within the debugger. Here, cross compilation is used
-to allow expressions compiled within the debugger session to be executed on
-the debug target, which may be a different device/architecture.
+2. The LLVM debugger, LLDB, uses a cross-compiling JIT for expression
+evaluation. In this use case, cross compilation allows expressions compiled
+in the debugger process to be executed on the debug target process, which may
+be on a different device/architecture.
 
 3. In high-performance JITs (e.g. JVMs, Julia) that want to make use of LLVM's
 optimizations within an existing JIT infrastructure.
 
 4. In interpreters and REPLs, e.g. Cling (C++) and the Swift interpreter.
 
-By adoping a modular, library based design we aim to make ORC useful in as many
+By adoping a modular, library-based design we aim to make ORC useful in as many
 of these contexts as possible.
 
 Features
@@ -37,29 +39,38 @@ Features
 
 ORC provides the following features:
 
-- JIT-linking: Allows relocatable object files (COFF, ELF, MachO)[1]_ to be
-  added to a JIT session. The objects will be loaded, linked, and made
-  executable in a target process, which may be the same process that contains
-  the JIT session and linker, or may be another process (even one running on a
-  different machine or architecture) that communicates with the JIT via RPC.
+- *JIT-linking* links relocatable object files (COFF, ELF, MachO)[1]_ into a
+  target process an runtime. The target process may be the same process that
+  contains the JIT session object and jit-linker, or may be another process
+  (even one running on a different machine or architecture) that communicates
+  with the JIT via RPC.
 
-- LLVM IR compilation: Off the shelf components (IRCompileLayer, SimpleCompiler,
-  ConcurrentIRCompiler) allow LLVM IR to be added to a JIT session and made
-  executable.
+- *LLVM IR compilation*, which is provided by off the shelf components
+  (IRCompileLayer, SimpleCompiler, ConcurrentIRCompiler) that make it easy to
+  add LLVM IR to a JIT'd process.
 
-- Lazy compilation: ORC provides lazy-compilation stubs that can be used to
-  defer compilation of functions until they are called at runtime.
+- *Eager and lazy compilation*. By default, ORC will compile symbols as soon as
+  they are looked up in the JIT session object (``ExecutionSession``). Compiling
+  eagerly by default makes it easy to use ORC as a simple in-memory compiler for
+  an existing JIT. ORC also provides a simple mechanism, lazy-reexports, for
+  deferring compilation until first call.
 
-- Custom compilers: Clients can supply custom compilers for each symbol that
-  they define in their JIT session. ORC will run the user-supplied compiler when
-  the a definition of a symbol is needed.
+- *Support for custom compilers and program representations*. Clients can supply
+   custom compilers for each symbol that they define in their JIT session. ORC
+   will run the user-supplied compiler when the a definition of a symbol is
+   needed. ORC is actually fully language agnostic: LLVM IR is not treated
+   specially, and is supported via the same wrapper mechanism (the
+   ``MaterializationUnit`` class) that is used for custom compilers.
 
-- Concurrent JIT'd code and concurrent compilation: Since most compilers are
-  embarrassingly parallel ORC provides off-the-shelf infrastructure for running
-  compilers concurrently and ensures that their work is done before allowing
-  dependent threads of JIT'd code to proceed.
+- *Concurrent JIT'd code* and *concurrent compilation*. JIT'd code may spawn
+  multiple threads, and may re-enter the JIT (e.g. for lazy compilation)
+  concurrently from multiple threads. The ORC APIs also support running multiple
+  compilers concurrently, and provides off-the-shelf infrastructure to track
+  dependencies on running compiles (e.g. to ensure that we never call into code
+  until it is safe to do so, even if that involves waiting on multiple
+  compiles).
 
-- Orthogonality and composability: Each of the features above can be used (or
+- *Orthogonality* and *composability*: Each of the features above can be used (or
   not) independently. It is possible to put ORC components together to make a
   non-lazy, in-process, single threaded JIT or a lazy, out-of-process,
   concurrent JIT, or anything in between.
@@ -67,30 +78,84 @@ ORC provides the following features:
 LLJIT and LLLazyJIT
 ===================
 
-While ORC is a library for building JITs it also provides two basic JIT
-implementations off-the-shelf. These are useful both as replacements for
-earlier LLVM JIT APIs (e.g. MCJIT), and as examples of how to build a JIT
-class out of ORC components.
+ORC provides two basic JIT classes off-the-shelf. These are useful both as
+examples of how to assemble ORC components to make a JIT, and as replacements
+for earlier LLVM JIT APIs (e.g. MCJIT).
 
-The LLJIT class supports compilation of LLVM IR and linking of relocatable
-object files. All operations are performed eagerly on symbol lookup (i.e. a
-symbol's definition is compiled as soon as you attempt to look up its address).
+The LLJIT class uses an IRCompileLayer and RTDyldObjectLinkingLayer to support
+compilation of LLVM IR and linking of relocatable object files. All operations
+are performed eagerly on symbol lookup (i.e. a symbol's definition is compiled
+as soon as you attempt to look up its address). LLJIT is a suitable replacement
+for MCJIT in most cases (note: some more advanced features, e.g.
+JITEventListeners are not supported yet).
 
-The LLLazyJIT extends LLJIT to add lazy compilation of LLVM IR. When an LLVM
-IR module is added via the addLazyIRModule method, function bodies in that
-module will not be compiled until they are first called.
+The LLLazyJIT extends LLJIT and adds a CompileOnDemandLayer to enable lazy
+compilation of LLVM IR. When an LLVM IR module is added via the addLazyIRModule
+method, function bodies in that module will not be compiled until they are first
+called. LLLazyJIT aims to provide a replacement of LLVM's original (pre-MCJIT)
+JIT API.
+
+LLJIT and LLLazyJIT instances can be created using their respective builder
+classes: LLJITBuilder and LLazyJITBuilder. For example, assuming you have a
+module ``M`` loaded on an ThreadSafeContext ``Ctx``:
+
+.. code-block:: c++
+
+  // Try to detect the host arch and construct an LLJIT instance.
+  auto JIT = LLJITBuilder().create();
+
+  // If we could not construct an instance, return an error.
+  if (!JIT)
+    return JIT.takeError();
+
+  // Add the module.
+  if (auto Err = JIT->addIRModule(TheadSafeModule(std::move(M), Ctx)))
+    return Err;
+
+  // Look up the JIT'd code entry point.
+  auto EntrySym = JIT->lookup("entry");
+  if (!EntrySym)
+    return EntrySym.takeError();
+
+  auto *Entry = (void(*)())EntrySym.getAddress();
+
+  Entry();
+
+The builder clasess provide a number of configuration options that can be
+specified before the JIT instance is constructed. For example:
+
+.. code-blocks:: c++
+
+  // Build an LLLazyJIT instance that uses four worker threads for compilation,
+  // and jumps to a specific error handler (rather than null) on lazy compile
+  // failures.
+
+  void handleLazyCompileFailure() {
+    // JIT'd code will jump here if lazy compilation fails, giving us an
+    // opportunity to exit or throw an exception into JIT'd code.
+    throw JITFailed();
+  }
+
+  auto JIT = LLLazyJITBuilder()
+               .setNumCompileThreads(4)
+               .setLazyCompileFailureAddr(
+                   toJITTargetAddress(&handleLazyCompileFailure))
+               .create();
+
+  // ...
 
 Design Overview
 ===============
 
 ORC's JIT'd program model aims to emulate the linking and symbol resolution
-rules used by the static and dynamic linkers. This allows ORC to JIT LLVM
-IR (which was designed for static compilation) naturally, including support
-for linker-specific constructs like weak symbols, symbol linkage, and
-visibility. To see how this works, imagine a program ``foo`` which links
-against a pair of dynamic libraries: ``libA`` and ``libB``. On the command
-line building this system might look like:
+rules used by the static and dynamic linkers. This allows ORC to JIT
+arbitrary LLVM IR, including IR produced by an ordinary static compiler (e.g.
+clang) that uses constructs like symbol linkage and visibility, and weak and
+common symbol definitions.
 
+To see how this works, imagine a program ``foo`` which links against a pair
+of dynamic libraries: ``libA`` and ``libB``. On the command line, building this
+system might look like:
 
 .. code-block:: bash
 
@@ -99,8 +164,8 @@ line building this system might look like:
   $ clang++ -o myapp myapp.cpp -L. -lA -lB
   $ ./myapp
 
-This would translate into ORC API calls on a "CXXCompilingLayer"
-(with error-check omitted for brevity) as:
+In ORC, this would translate into API calls on a "CXXCompilingLayer" (with error
+checking omitted for brevity) as:
 
 .. code-block:: c++
 
@@ -131,15 +196,15 @@ This would translate into ORC API calls on a "CXXCompilingLayer"
   int Result = Main(...);
 
 
-How and when the JIT compilation in this example occurs would depend on the
-implementation of the hypothetical CXXCompilingLayer, but the linking rules
-should be the same regardless. For example, if a1.cpp and a2.cpp both define a
-function "foo" the API should generate a duplicate definition error. On the
-other hand, if a1.cpp and b1.cpp both define "foo" there is no error (different
-dynamic libraries may define the same symbol). If main.cpp refers to "foo", it
-should bind to the definition in LibA rather than the one in LibB, since
-main.cpp is part of the "main" dylib, and the main dylib links against LibA
-before LibB.
+This example tells us nothing about *how* or *when* compilation will happen.
+That will depend on the implementation of the hypothetical CXXCompilingLayer,
+but the linking rules will be the same regardless. For example, if a1.cpp and
+a2.cpp both define a function "foo" the API should generate a duplicate
+definition error. On the other hand, if a1.cpp and b1.cpp both define "foo"
+there is no error (different dynamic libraries may define the same symbol). If
+main.cpp refers to "foo", it should bind to the definition in LibA rather than
+the one in LibB, since main.cpp is part of the "main" dylib, and the main dylib
+links against LibA before LibB.
 
 Many JIT clients will have no need for this strict adherence to the usual
 ahead-of-time linking rules and should be able to get by just fine by putting
@@ -147,32 +212,41 @@ all of their code in a single JITDylib. However, clients who want to JIT code
 for languages/projects that traditionally rely on ahead-of-time linking (e.g.
 C++) will find that this feature makes life much easier.
 
-Symbol lookup in ORC serves two other important functions which we discuss in
-more detail below: (1) It triggers compilation of the symbol(s) searched for,
-and (2) it provides the synchronization mechanism for concurrent compilation.
+Symbol lookup in ORC serves two other important functions, beyond basic lookup:
+(1) It triggers compilation of the symbol(s) searched for, and (2) it provides
+the synchronization mechanism for concurrent compilation. The pseudo-code for
+the lookup process is:
 
-When a lookup call is made, it searches for a *set* of requested symbols
-(single symbol lookup is implemented as a convenience function on top of the
-bulk-lookup APIs). The *materializers* for these symbols (usually compilers,
-but in general anything that ultimately writes a usable definition into
-memory) are collected and passed to the ExecutionSession's
-dispatchMaterialization method. By performing lookups on multiple symbols at
-once we ensure that the JIT knows about all required work for that query
-up-front. By making the dispatchMaterialization function client configurable
-we make it possible to execute the materializers on multiple threads
-concurrently.
+.. code-block:: none
 
-Under the hood, lookup operations are implemented in terms of query objects.
-The first search for any given symbol triggers *materialization* of that symbol
-and appends the query to the symbol table entry. Any subsequent lookup for that
-symbol (lookups can be made from any thread at any time after the JIT is set up)
-will simply append its query object to the list of queries waiting on that
-symbol's definition. Once a definition has been materialized ORC will notify all
-queries that are waiting on it, and once all symbols for a query have been
-materialized the caller is notified (via a callback) that the query completed
-successfully (the successful result is a map of symbol names to addresses). If
-any symbol fails to materialize then all pending queries for that symbol are
-notified of the failure.
+  construct a query object from a query set and query handler
+  lock the session
+  lodge query against requested symbols, collect required materializers (if any)
+  unlock the session
+  dispatch materializers (if any)
+
+In this context a materializer is something that provides a working definition
+of a symbol upon request. Generally materializers wrap compilers, but they may
+also wrap a linker directly (if the program representation backing the
+definitions is an object file), or even just a class that writes bits directly
+into memory (if the definitions are stubs). Materialization is the blanket term
+for any actions (compiling, linking, splatting bits, registering with runtimes,
+etc.) that is requried to generate a symbol definition that is safe to call or
+access.
+
+As each materializer completes its work it notifies the JITDylib, which in turn
+notifies any query objects that are waiting on the newly materialized
+definitions. Each query object maintains a count of the number of symbols that
+it is still waiting on, and once this count reaches zero the query object calls
+the query handler with a *SymbolMap* (a map of symbol names to addresses)
+describing the result. If any symbol fails to materialize the query immediately
+calls the query handler with an error.
+
+The collected materialization units are sent to the ExecutionSession to be
+dispatched, and the dispatch behavior can be set by the client. By default each
+materializer is run on the calling thread. Clients are free to create new
+threads to run materializers, or to send the work to a work queue for a thread
+pool (this is what LLJIT/LLLazyJIT do).
 
 Top Level APIs
 ==============
