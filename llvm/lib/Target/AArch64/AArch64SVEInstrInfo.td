@@ -1123,6 +1123,10 @@ let Predicates = [HasSVE2] in {
   defm SHSUBR_ZPmZ : sve2_int_arith_pred<0b101100, "shsubr">;
   defm UHSUBR_ZPmZ : sve2_int_arith_pred<0b101110, "uhsubr">;
 
+  // SVE2 integer pairwise add and accumulate long
+  defm SADALP_ZPmZ : sve2_int_sadd_long_accum_pairwise<0, "sadalp">;
+  defm UADALP_ZPmZ : sve2_int_sadd_long_accum_pairwise<1, "uadalp">;
+
   // SVE2 integer multiply long
   defm SQDMULLB_ZZZ : sve2_wide_int_arith_long<0b11000, "sqdmullb">;
   defm SQDMULLT_ZZZ : sve2_wide_int_arith_long<0b11001, "sqdmullt">;

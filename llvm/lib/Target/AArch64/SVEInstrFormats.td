@@ -2090,6 +2090,33 @@ multiclass sve2_int_arith_pred<bits<6> opc, string asm> {
   def _D : sve2_int_arith_pred<0b11, opc, asm, ZPR64>;
 }
 
+class sve2_int_sadd_long_accum_pairwise<bits<2> sz, bit U, string asm,
+                                        ZPRRegOp zprty1, ZPRRegOp zprty2>
+: I<(outs zprty1:$Zda), (ins PPR3bAny:$Pg, zprty1:$_Zda, zprty2:$Zn),
+  asm, "\t$Zda, $Pg/m, $Zn", "", []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Zn;
+  bits<5> Zda;
+  let Inst{31-24} = 0b01000100;
+  let Inst{23-22} = sz;
+  let Inst{21-17} = 0b00010;
+  let Inst{16}    = U;
+  let Inst{15-13} = 0b101;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+
+  let Constraints = "$Zda = $_Zda";
+  let DestructiveInstType = Destructive;
+  let ElementSize = zprty1.ElementSize;
+}
+
+multiclass sve2_int_sadd_long_accum_pairwise<bit U, string asm> {
+  def _H : sve2_int_sadd_long_accum_pairwise<0b01, U, asm, ZPR16, ZPR8>;
+  def _S : sve2_int_sadd_long_accum_pairwise<0b10, U, asm, ZPR32, ZPR16>;
+  def _D : sve2_int_sadd_long_accum_pairwise<0b11, U, asm, ZPR64, ZPR32>;
+}
+
 //===----------------------------------------------------------------------===//
 // SVE2 Widening Integer Arithmetic Group
 //===----------------------------------------------------------------------===//
