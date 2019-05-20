@@ -1488,15 +1488,17 @@ RelocationSection<ELFT>::RelocationSection(StringRef Name, bool Sort)
   this->Entsize = Config->IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
 }
 
+static bool compRelocations(const DynamicReloc &A, const DynamicReloc &B) {
+  bool AIsRel = A.Type == Target->RelativeRel;
+  bool BIsRel = B.Type == Target->RelativeRel;
+  if (AIsRel != BIsRel)
+    return AIsRel;
+  return A.getSymIndex() < B.getSymIndex();
+}
+
 template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
-  // Sort symbol index then by r_offset. Because we only emit R_*_RELATIVE as
-  // dynamic relocations with symbol index 0, this essentially places
-  // R_*_RELATIVE first (required by DT_REL[A]COUNT).
   if (Sort)
-    llvm::stable_sort(Relocs, [](const DynamicReloc &A, const DynamicReloc &B) {
-      return std::make_tuple(A.getSymIndex(), A.getOffset()) <
-             std::make_tuple(B.getSymIndex(), B.getOffset());
-    });
+    llvm::stable_sort(Relocs, compRelocations);
 
   for (const DynamicReloc &Rel : Relocs) {
     encodeDynamicReloc<ELFT>(reinterpret_cast<Elf_Rela *>(Buf), Rel);
