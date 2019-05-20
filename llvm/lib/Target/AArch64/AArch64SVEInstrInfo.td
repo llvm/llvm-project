@@ -1109,6 +1109,10 @@ let Predicates = [HasSVE2] in {
   defm SQDMLSLB_ZZZ : sve2_int_mla_long<0b11010, "sqdmlslb">;
   defm SQDMLSLT_ZZZ : sve2_int_mla_long<0b11011, "sqdmlslt">;
 
+  // SVE2 saturating multiply-add interleaved long
+  defm SQDMLALBT_ZZZ : sve2_int_mla_long<0b00010, "sqdmlalbt">;
+  defm SQDMLSLBT_ZZZ : sve2_int_mla_long<0b00011, "sqdmlslbt">;
+
   // SVE2 integer multiply long
   defm SQDMULLB_ZZZ : sve2_wide_int_arith_long<0b11000, "sqdmullb">;
   defm SQDMULLT_ZZZ : sve2_wide_int_arith_long<0b11001, "sqdmullt">;
