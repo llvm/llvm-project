@@ -53,7 +53,7 @@ template <typename M> TestMatch matchCode(StringRef Code, M Matcher) {
 }
 
 // Applies \p Selector to \p Match and, on success, returns the selected source.
-Expected<StringRef> apply(RangeSelector Selector, const TestMatch &Match) {
+Expected<StringRef> select(RangeSelector Selector, const TestMatch &Match) {
   Expected<CharSourceRange> Range = Selector(Match.Result);
   if (!Range)
     return Range.takeError();
@@ -62,7 +62,7 @@ Expected<StringRef> apply(RangeSelector Selector, const TestMatch &Match) {
 
 // Applies \p Selector to a trivial match with only a single bound node with id
 // "bound_node_id".  For use in testing unbound-node errors.
-Expected<CharSourceRange> applyToTrivial(const RangeSelector &Selector) {
+Expected<CharSourceRange> selectFromTrivial(const RangeSelector &Selector) {
   // We need to bind the result to something, or the match will fail. Use a
   // binding that is not used in the unbound node tests.
   TestMatch Match =
@@ -81,7 +81,7 @@ testing::Matcher<StringError> withUnboundNodeMessage() {
 // binds each one: a statement ("stmt"), a (non-member) ctor-initializer
 // ("init"), an expression ("expr") and a (nameless) declaration ("decl").  Used
 // to test failures caused by applying selectors to nodes of the wrong type.
-Expected<CharSourceRange> applyToAssorted(RangeSelector Selector) {
+Expected<CharSourceRange> selectFromAssorted(RangeSelector Selector) {
   StringRef Code = R"cc(
       struct A {};
       class F : public A {
@@ -113,7 +113,7 @@ testing::Matcher<StringError> withTypeErrorMessage(StringRef NodeID) {
 }
 
 TEST(RangeSelectorTest, UnboundNode) {
-  EXPECT_THAT_EXPECTED(applyToTrivial(node("unbound_id")),
+  EXPECT_THAT_EXPECTED(selectFromTrivial(node("unbound_id")),
                        Failed<StringError>(withUnboundNodeMessage()));
 }
 
@@ -131,9 +131,9 @@ TEST(RangeSelectorTest, RangeOp) {
   TestMatch Match = matchCode(Code, Matcher);
 
   // Node-id specific version:
-  EXPECT_THAT_EXPECTED(apply(range(Arg0, Arg1), Match), HasValue("3, 7"));
+  EXPECT_THAT_EXPECTED(select(range(Arg0, Arg1), Match), HasValue("3, 7"));
   // General version:
-  EXPECT_THAT_EXPECTED(apply(range(node(Arg0), node(Arg1)), Match),
+  EXPECT_THAT_EXPECTED(select(range(node(Arg0), node(Arg1)), Match),
                        HasValue("3, 7"));
 }
 
@@ -141,21 +141,21 @@ TEST(RangeSelectorTest, NodeOpStatement) {
   StringRef Code = "int f() { return 3; }";
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, returnStmt().bind(ID));
-  EXPECT_THAT_EXPECTED(apply(node(ID), Match), HasValue("return 3;"));
+  EXPECT_THAT_EXPECTED(select(node(ID), Match), HasValue("return 3;"));
 }
 
 TEST(RangeSelectorTest, NodeOpExpression) {
   StringRef Code = "int f() { return 3; }";
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, expr().bind(ID));
-  EXPECT_THAT_EXPECTED(apply(node(ID), Match), HasValue("3"));
+  EXPECT_THAT_EXPECTED(select(node(ID), Match), HasValue("3"));
 }
 
 TEST(RangeSelectorTest, StatementOp) {
   StringRef Code = "int f() { return 3; }";
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, expr().bind(ID));
-  EXPECT_THAT_EXPECTED(apply(statement(ID), Match), HasValue("3;"));
+  EXPECT_THAT_EXPECTED(select(statement(ID), Match), HasValue("3;"));
 }
 
 TEST(RangeSelectorTest, MemberOp) {
@@ -170,7 +170,7 @@ TEST(RangeSelectorTest, MemberOp) {
   )cc";
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, memberExpr().bind(ID));
-  EXPECT_THAT_EXPECTED(apply(member(ID), Match), HasValue("member"));
+  EXPECT_THAT_EXPECTED(select(member(ID), Match), HasValue("member"));
 }
 
 // Tests that member does not select any qualifiers on the member name.
@@ -189,7 +189,7 @@ TEST(RangeSelectorTest, MemberOpQualified) {
   )cc";
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, memberExpr().bind(ID));
-  EXPECT_THAT_EXPECTED(apply(member(ID), Match), HasValue("member"));
+  EXPECT_THAT_EXPECTED(select(member(ID), Match), HasValue("member"));
 }
 
 TEST(RangeSelectorTest, MemberOpTemplate) {
@@ -205,7 +205,7 @@ TEST(RangeSelectorTest, MemberOpTemplate) {
 
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, memberExpr().bind(ID));
-  EXPECT_THAT_EXPECTED(apply(member(ID), Match), HasValue("foo"));
+  EXPECT_THAT_EXPECTED(select(member(ID), Match), HasValue("foo"));
 }
 
 TEST(RangeSelectorTest, MemberOpOperator) {
@@ -221,7 +221,7 @@ TEST(RangeSelectorTest, MemberOpOperator) {
 
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, memberExpr().bind(ID));
-  EXPECT_THAT_EXPECTED(apply(member(ID), Match), HasValue("operator *"));
+  EXPECT_THAT_EXPECTED(select(member(ID), Match), HasValue("operator *"));
 }
 
 TEST(RangeSelectorTest, NameOpNamedDecl) {
@@ -232,7 +232,7 @@ TEST(RangeSelectorTest, NameOpNamedDecl) {
   )cc";
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, functionDecl().bind(ID));
-  EXPECT_THAT_EXPECTED(apply(name(ID), Match), HasValue("myfun"));
+  EXPECT_THAT_EXPECTED(select(name(ID), Match), HasValue("myfun"));
 }
 
 TEST(RangeSelectorTest, NameOpDeclRef) {
@@ -244,7 +244,7 @@ TEST(RangeSelectorTest, NameOpDeclRef) {
   )cc";
   StringRef Ref = "ref";
   TestMatch Match = matchCode(Code, declRefExpr(to(functionDecl())).bind(Ref));
-  EXPECT_THAT_EXPECTED(apply(name(Ref), Match), HasValue("foo"));
+  EXPECT_THAT_EXPECTED(select(name(Ref), Match), HasValue("foo"));
 }
 
 TEST(RangeSelectorTest, NameOpCtorInitializer) {
@@ -257,13 +257,13 @@ TEST(RangeSelectorTest, NameOpCtorInitializer) {
   )cc";
   StringRef Init = "init";
   TestMatch Match = matchCode(Code, cxxCtorInitializer().bind(Init));
-  EXPECT_THAT_EXPECTED(apply(name(Init), Match), HasValue("field"));
+  EXPECT_THAT_EXPECTED(select(name(Init), Match), HasValue("field"));
 }
 
 TEST(RangeSelectorTest, NameOpErrors) {
-  EXPECT_THAT_EXPECTED(applyToTrivial(name("unbound_id")),
+  EXPECT_THAT_EXPECTED(selectFromTrivial(name("unbound_id")),
                        Failed<StringError>(withUnboundNodeMessage()));
-  EXPECT_THAT_EXPECTED(applyToAssorted(name("stmt")),
+  EXPECT_THAT_EXPECTED(selectFromAssorted(name("stmt")),
                        Failed<StringError>(withTypeErrorMessage("stmt")));
 }
 
@@ -298,7 +298,7 @@ TEST(RangeSelectorTest, CallArgsOp) {
   )cc";
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, callExpr().bind(ID));
-  EXPECT_THAT_EXPECTED(apply(callArgs(ID), Match), HasValue("3, 4"));
+  EXPECT_THAT_EXPECTED(select(callArgs(ID), Match), HasValue("3, 4"));
 }
 
 TEST(RangeSelectorTest, CallArgsOpNoArgs) {
@@ -313,7 +313,7 @@ TEST(RangeSelectorTest, CallArgsOpNoArgs) {
   )cc";
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, callExpr().bind(ID));
-  EXPECT_THAT_EXPECTED(apply(callArgs(ID), Match), HasValue(""));
+  EXPECT_THAT_EXPECTED(select(callArgs(ID), Match), HasValue(""));
 }
 
 TEST(RangeSelectorTest, CallArgsOpNoArgsWithComments) {
@@ -328,7 +328,7 @@ TEST(RangeSelectorTest, CallArgsOpNoArgsWithComments) {
   )cc";
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, callExpr().bind(ID));
-  EXPECT_THAT_EXPECTED(apply(callArgs(ID), Match), HasValue("/*empty*/"));
+  EXPECT_THAT_EXPECTED(select(callArgs(ID), Match), HasValue("/*empty*/"));
 }
 
 // Tests that arguments are extracted correctly when a temporary (with parens)
@@ -346,7 +346,7 @@ TEST(RangeSelectorTest, CallArgsOpWithParens) {
   StringRef ID = "id";
   TestMatch Match =
       matchCode(Code, callExpr(callee(functionDecl(hasName("bar")))).bind(ID));
-  EXPECT_THAT_EXPECTED(apply(callArgs(ID), Match), HasValue("3, 4"));
+  EXPECT_THAT_EXPECTED(select(callArgs(ID), Match), HasValue("3, 4"));
 }
 
 TEST(RangeSelectorTest, CallArgsOpLeadingComments) {
@@ -361,7 +361,7 @@ TEST(RangeSelectorTest, CallArgsOpLeadingComments) {
   )cc";
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, callExpr().bind(ID));
-  EXPECT_THAT_EXPECTED(apply(callArgs(ID), Match),
+  EXPECT_THAT_EXPECTED(select(callArgs(ID), Match),
                        HasValue("/*leading*/ 3, 4"));
 }
 
@@ -377,7 +377,7 @@ TEST(RangeSelectorTest, CallArgsOpTrailingComments) {
   )cc";
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, callExpr().bind(ID));
-  EXPECT_THAT_EXPECTED(apply(callArgs(ID), Match),
+  EXPECT_THAT_EXPECTED(select(callArgs(ID), Match),
                        HasValue("3 /*trailing*/, 4"));
 }
 
@@ -396,16 +396,16 @@ TEST(RangeSelectorTest, CallArgsOpEolComments) {
   )cc";
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, callExpr().bind(ID));
-  EXPECT_THAT_EXPECTED(apply(callArgs(ID), Match), HasValue(R"(  // Header
+  EXPECT_THAT_EXPECTED(select(callArgs(ID), Match), HasValue(R"(  // Header
           1,           // foo
           2            // bar
       )"));
 }
 
 TEST(RangeSelectorTest, CallArgsErrors) {
-  EXPECT_THAT_EXPECTED(applyToTrivial(callArgs("unbound_id")),
+  EXPECT_THAT_EXPECTED(selectFromTrivial(callArgs("unbound_id")),
                        Failed<StringError>(withUnboundNodeMessage()));
-  EXPECT_THAT_EXPECTED(applyToAssorted(callArgs("stmt")),
+  EXPECT_THAT_EXPECTED(selectFromAssorted(callArgs("stmt")),
                        Failed<StringError>(withTypeErrorMessage("stmt")));
 }
 
@@ -417,7 +417,7 @@ TEST(RangeSelectorTest, StatementsOp) {
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, compoundStmt().bind(ID));
   EXPECT_THAT_EXPECTED(
-      apply(statements(ID), Match),
+      select(statements(ID), Match),
       HasValue(" /* comment */ g(); /* comment */ g(); /* comment */ "));
 }
 
@@ -425,13 +425,13 @@ TEST(RangeSelectorTest, StatementsOpEmptyList) {
   StringRef Code = "void f() {}";
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, compoundStmt().bind(ID));
-  EXPECT_THAT_EXPECTED(apply(statements(ID), Match), HasValue(""));
+  EXPECT_THAT_EXPECTED(select(statements(ID), Match), HasValue(""));
 }
 
 TEST(RangeSelectorTest, StatementsOpErrors) {
-  EXPECT_THAT_EXPECTED(applyToTrivial(statements("unbound_id")),
+  EXPECT_THAT_EXPECTED(selectFromTrivial(statements("unbound_id")),
                        Failed<StringError>(withUnboundNodeMessage()));
-  EXPECT_THAT_EXPECTED(applyToAssorted(statements("decl")),
+  EXPECT_THAT_EXPECTED(selectFromAssorted(statements("decl")),
                        Failed<StringError>(withTypeErrorMessage("decl")));
 }
 
@@ -445,7 +445,7 @@ TEST(RangeSelectorTest, ElementsOp) {
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, initListExpr().bind(ID));
   EXPECT_THAT_EXPECTED(
-      apply(initListElements(ID), Match),
+      select(initListElements(ID), Match),
       HasValue("/* comment */ 3, /* comment*/ 4 /* comment */"));
 }
 
@@ -458,13 +458,13 @@ TEST(RangeSelectorTest, ElementsOpEmptyList) {
   )cc";
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, initListExpr().bind(ID));
-  EXPECT_THAT_EXPECTED(apply(initListElements(ID), Match), HasValue(""));
+  EXPECT_THAT_EXPECTED(select(initListElements(ID), Match), HasValue(""));
 }
 
 TEST(RangeSelectorTest, ElementsOpErrors) {
-  EXPECT_THAT_EXPECTED(applyToTrivial(initListElements("unbound_id")),
+  EXPECT_THAT_EXPECTED(selectFromTrivial(initListElements("unbound_id")),
                        Failed<StringError>(withUnboundNodeMessage()));
-  EXPECT_THAT_EXPECTED(applyToAssorted(initListElements("stmt")),
+  EXPECT_THAT_EXPECTED(selectFromAssorted(initListElements("stmt")),
                        Failed<StringError>(withTypeErrorMessage("stmt")));
 }
 
@@ -477,7 +477,7 @@ TEST(RangeSelectorTest, ExpansionOp) {
 
   StringRef Fun = "Fun";
   TestMatch Match = matchCode(Code, functionDecl(hasName("bad")).bind(Fun));
-  EXPECT_THAT_EXPECTED(apply(expansion(node(Fun)), Match),
+  EXPECT_THAT_EXPECTED(select(expansion(node(Fun)), Match),
                        HasValue("BADDECL(x * x)"));
 }
 
@@ -490,7 +490,7 @@ TEST(RangeSelectorTest, ExpansionOpPartial) {
 
   StringRef Ret = "Ret";
   TestMatch Match = matchCode(Code, returnStmt().bind(Ret));
-  EXPECT_THAT_EXPECTED(apply(expansion(node(Ret)), Match),
+  EXPECT_THAT_EXPECTED(select(expansion(node(Ret)), Match),
                        HasValue("BADDECL(x * x)"));
 }
 
