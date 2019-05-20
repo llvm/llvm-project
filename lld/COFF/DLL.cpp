@@ -46,9 +46,9 @@ public:
   }
 
   void writeTo(uint8_t *Buf) const override {
-    memset(Buf, 0, getSize());
-    write16le(Buf, Hint);
-    memcpy(Buf + 2, Name.data(), Name.size());
+    memset(Buf + OutputSectionOff, 0, getSize());
+    write16le(Buf + OutputSectionOff, Hint);
+    memcpy(Buf + OutputSectionOff + 2, Name.data(), Name.size());
   }
 
 private:
@@ -64,9 +64,9 @@ public:
 
   void writeTo(uint8_t *Buf) const override {
     if (Config->is64())
-      write64le(Buf, HintName->getRVA());
+      write64le(Buf + OutputSectionOff, HintName->getRVA());
     else
-      write32le(Buf, HintName->getRVA());
+      write32le(Buf + OutputSectionOff, HintName->getRVA());
   }
 
   Chunk *HintName;
@@ -86,9 +86,9 @@ public:
     // An import-by-ordinal slot has MSB 1 to indicate that
     // this is import-by-ordinal (and not import-by-name).
     if (Config->is64()) {
-      write64le(Buf, (1ULL << 63) | Ordinal);
+      write64le(Buf + OutputSectionOff, (1ULL << 63) | Ordinal);
     } else {
-      write32le(Buf, (1ULL << 31) | Ordinal);
+      write32le(Buf + OutputSectionOff, (1ULL << 31) | Ordinal);
     }
   }
 
@@ -102,9 +102,9 @@ public:
   size_t getSize() const override { return sizeof(ImportDirectoryTableEntry); }
 
   void writeTo(uint8_t *Buf) const override {
-    memset(Buf, 0, getSize());
+    memset(Buf + OutputSectionOff, 0, getSize());
 
-    auto *E = (coff_import_directory_table_entry *)(Buf);
+    auto *E = (coff_import_directory_table_entry *)(Buf + OutputSectionOff);
     E->ImportLookupTableRVA = LookupTab->getRVA();
     E->NameRVA = DLLName->getRVA();
     E->ImportAddressTableRVA = AddressTab->getRVA();
@@ -124,7 +124,7 @@ public:
   size_t getSize() const override { return Size; }
 
   void writeTo(uint8_t *Buf) const override {
-    memset(Buf, 0, Size);
+    memset(Buf + OutputSectionOff, 0, Size);
   }
 
 private:
@@ -169,9 +169,9 @@ public:
   }
 
   void writeTo(uint8_t *Buf) const override {
-    memset(Buf, 0, getSize());
+    memset(Buf + OutputSectionOff, 0, getSize());
 
-    auto *E = (delay_import_directory_table_entry *)(Buf);
+    auto *E = (delay_import_directory_table_entry *)(Buf + OutputSectionOff);
     E->Attributes = 1;
     E->Name = DLLName->getRVA();
     E->ModuleHandle = ModuleHandle->getRVA();
@@ -280,10 +280,10 @@ public:
   size_t getSize() const override { return sizeof(ThunkX64); }
 
   void writeTo(uint8_t *Buf) const override {
-    memcpy(Buf, ThunkX64, sizeof(ThunkX64));
-    write32le(Buf + 36, Imp->getRVA() - RVA - 40);
-    write32le(Buf + 43, Desc->getRVA() - RVA - 47);
-    write32le(Buf + 48, Helper->getRVA() - RVA - 52);
+    memcpy(Buf + OutputSectionOff, ThunkX64, sizeof(ThunkX64));
+    write32le(Buf + OutputSectionOff + 36, Imp->getRVA() - RVA - 40);
+    write32le(Buf + OutputSectionOff + 43, Desc->getRVA() - RVA - 47);
+    write32le(Buf + OutputSectionOff + 48, Helper->getRVA() - RVA - 52);
   }
 
   Defined *Imp = nullptr;
@@ -299,10 +299,10 @@ public:
   size_t getSize() const override { return sizeof(ThunkX86); }
 
   void writeTo(uint8_t *Buf) const override {
-    memcpy(Buf, ThunkX86, sizeof(ThunkX86));
-    write32le(Buf + 3, Imp->getRVA() + Config->ImageBase);
-    write32le(Buf + 8, Desc->getRVA() + Config->ImageBase);
-    write32le(Buf + 13, Helper->getRVA() - RVA - 17);
+    memcpy(Buf + OutputSectionOff, ThunkX86, sizeof(ThunkX86));
+    write32le(Buf + OutputSectionOff + 3, Imp->getRVA() + Config->ImageBase);
+    write32le(Buf + OutputSectionOff + 8, Desc->getRVA() + Config->ImageBase);
+    write32le(Buf + OutputSectionOff + 13, Helper->getRVA() - RVA - 17);
   }
 
   void getBaserels(std::vector<Baserel> *Res) override {
@@ -323,10 +323,10 @@ public:
   size_t getSize() const override { return sizeof(ThunkARM); }
 
   void writeTo(uint8_t *Buf) const override {
-    memcpy(Buf, ThunkARM, sizeof(ThunkARM));
-    applyMOV32T(Buf + 0, Imp->getRVA() + Config->ImageBase);
-    applyMOV32T(Buf + 22, Desc->getRVA() + Config->ImageBase);
-    applyBranch24T(Buf + 30, Helper->getRVA() - RVA - 34);
+    memcpy(Buf + OutputSectionOff, ThunkARM, sizeof(ThunkARM));
+    applyMOV32T(Buf + OutputSectionOff + 0, Imp->getRVA() + Config->ImageBase);
+    applyMOV32T(Buf + OutputSectionOff + 22, Desc->getRVA() + Config->ImageBase);
+    applyBranch24T(Buf + OutputSectionOff + 30, Helper->getRVA() - RVA - 34);
   }
 
   void getBaserels(std::vector<Baserel> *Res) override {
@@ -347,12 +347,13 @@ public:
   size_t getSize() const override { return sizeof(ThunkARM64); }
 
   void writeTo(uint8_t *Buf) const override {
-    memcpy(Buf, ThunkARM64, sizeof(ThunkARM64));
-    applyArm64Addr(Buf + 0, Imp->getRVA(), RVA + 0, 12);
-    applyArm64Imm(Buf + 4, Imp->getRVA() & 0xfff, 0);
-    applyArm64Addr(Buf + 52, Desc->getRVA(), RVA + 52, 12);
-    applyArm64Imm(Buf + 56, Desc->getRVA() & 0xfff, 0);
-    applyArm64Branch26(Buf + 60, Helper->getRVA() - RVA - 60);
+    memcpy(Buf + OutputSectionOff, ThunkARM64, sizeof(ThunkARM64));
+    applyArm64Addr(Buf + OutputSectionOff + 0, Imp->getRVA(), RVA + 0, 12);
+    applyArm64Imm(Buf + OutputSectionOff + 4, Imp->getRVA() & 0xfff, 0);
+    applyArm64Addr(Buf + OutputSectionOff + 52, Desc->getRVA(), RVA + 52, 12);
+    applyArm64Imm(Buf + OutputSectionOff + 56, Desc->getRVA() & 0xfff, 0);
+    applyArm64Branch26(Buf + OutputSectionOff + 60,
+                       Helper->getRVA() - RVA - 60);
   }
 
   Defined *Imp = nullptr;
@@ -370,13 +371,13 @@ public:
 
   void writeTo(uint8_t *Buf) const override {
     if (Config->is64()) {
-      write64le(Buf, Thunk->getRVA() + Config->ImageBase);
+      write64le(Buf + OutputSectionOff, Thunk->getRVA() + Config->ImageBase);
     } else {
       uint32_t Bit = 0;
       // Pointer to thumb code must have the LSB set, so adjust it.
       if (Config->Machine == ARMNT)
         Bit = 1;
-      write32le(Buf, (Thunk->getRVA() + Config->ImageBase) | Bit);
+      write32le(Buf + OutputSectionOff, (Thunk->getRVA() + Config->ImageBase) | Bit);
     }
   }
 
@@ -402,9 +403,9 @@ public:
   }
 
   void writeTo(uint8_t *Buf) const override {
-    memset(Buf, 0, getSize());
+    memset(Buf + OutputSectionOff, 0, getSize());
 
-    auto *E = (export_directory_table_entry *)(Buf);
+    auto *E = (export_directory_table_entry *)(Buf + OutputSectionOff);
     E->NameRVA = DLLName->getRVA();
     E->OrdinalBase = 0;
     E->AddressTableEntries = MaxOrdinal + 1;
@@ -428,10 +429,10 @@ public:
   size_t getSize() const override { return Size * 4; }
 
   void writeTo(uint8_t *Buf) const override {
-    memset(Buf, 0, getSize());
+    memset(Buf + OutputSectionOff, 0, getSize());
 
     for (const Export &E : Config->Exports) {
-      uint8_t *P = Buf + E.Ordinal * 4;
+      uint8_t *P = Buf + OutputSectionOff + E.Ordinal * 4;
       uint32_t Bit = 0;
       // Pointer to thumb code must have the LSB set, so adjust it.
       if (Config->Machine == ARMNT && !E.Data)
@@ -454,9 +455,10 @@ public:
   size_t getSize() const override { return Chunks.size() * 4; }
 
   void writeTo(uint8_t *Buf) const override {
+    uint8_t *P = Buf + OutputSectionOff;
     for (Chunk *C : Chunks) {
-      write32le(Buf, C->getRVA());
-      Buf += 4;
+      write32le(P, C->getRVA());
+      P += 4;
     }
   }
 
@@ -470,11 +472,12 @@ public:
   size_t getSize() const override { return Size * 2; }
 
   void writeTo(uint8_t *Buf) const override {
+    uint8_t *P = Buf + OutputSectionOff;
     for (Export &E : Config->Exports) {
       if (E.Noname)
         continue;
-      write16le(Buf, E.Ordinal);
-      Buf += 2;
+      write16le(P, E.Ordinal);
+      P += 2;
     }
   }
 

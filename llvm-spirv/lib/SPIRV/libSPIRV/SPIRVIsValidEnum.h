@@ -556,7 +556,6 @@ inline bool isValid(spv::Capability V) {
   case CapabilityNamedBarrier:
   case CapabilityPipeStorage:
   case CapabilityFPGAMemoryAttributesINTEL:
-  case CapabilityFPGALoopControlsINTEL:
     return true;
   default:
     return false;
@@ -1043,7 +1042,6 @@ inline bool isValidLoopControlMask(SPIRVWord Mask) {
   ValidMask |= LoopControlDontUnrollMask;
   ValidMask |= LoopControlDependencyInfiniteMask;
   ValidMask |= LoopControlDependencyLengthMask;
-  ValidMask |= LoopControlExtendedControlsMask;
 
   return (Mask & ~ValidMask) == 0;
 }

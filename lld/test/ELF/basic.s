@@ -234,7 +234,7 @@ _start:
 # NO_O_VAL: -o: missing argument
 
 # RUN: not ld.lld --foo 2>&1 | FileCheck --check-prefix=UNKNOWN %s
-# UNKNOWN: unknown argument '--foo'
+# UNKNOWN: unknown argument: --foo
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: not ld.lld %t %t -o %t2 2>&1 | FileCheck --check-prefix=DUP %s
@@ -252,6 +252,3 @@ _start:
 # RUN: not ld.lld %t --thinlto-jobs=0 2>&1 | FileCheck --check-prefix=NOTHREADSTHIN %s
 # RUN: not ld.lld %t --plugin-opt=jobs=0 2>&1 | FileCheck --check-prefix=NOTHREADSTHIN %s
 # NOTHREADSTHIN: --thinlto-jobs: number of threads must be > 0
-
-# RUN: not ld.lld %t -z ifunc-noplt -z text 2>&1 | FileCheck --check-prefix=NOIFUNCPLTNOTEXTREL %s
-# NOIFUNCPLTNOTEXTREL: -z text and -z ifunc-noplt may not be used together

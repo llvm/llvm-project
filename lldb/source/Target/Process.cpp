@@ -5832,8 +5832,7 @@ Process::AdvanceAddressToNextBranchInstruction(Address default_stop_addr,
   }
 
   uint32_t branch_index =
-      insn_list->GetIndexOfNextBranchInstruction(insn_offset, target,
-                                                 false /* ignore_calls*/);
+      insn_list->GetIndexOfNextBranchInstruction(insn_offset, target);
   if (branch_index == UINT32_MAX) {
     return retval;
   }

@@ -370,18 +370,6 @@ private:
       NewOps.push_back(visit(Op));
     return SE.getSMaxExpr(NewOps);
   }
-  const SCEV *visitUMinExpr(const SCEVUMinExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
-      NewOps.push_back(visit(Op));
-    return SE.getUMinExpr(NewOps);
-  }
-  const SCEV *visitSMinExpr(const SCEVSMinExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
-      NewOps.push_back(visit(Op));
-    return SE.getSMinExpr(NewOps);
-  }
   const SCEV *visitAddRecExpr(const SCEVAddRecExpr *E) {
     SmallVector<const SCEV *, 4> NewOps;
     for (const SCEV *Op : E->operands())

@@ -16,7 +16,6 @@
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "MCTargetDesc/HexagonShuffler.h"
-#include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -1684,8 +1683,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     int64_t Value;
     MCExpr const &Expr = *Imm.getExpr();
     bool Absolute = Expr.evaluateAsAbsolute(Value);
-    if (!Absolute)
-      return Match_InvalidOperand;
+    assert(Absolute);
+    (void)Absolute;
     if (!HexagonMCInstrInfo::mustExtend(Expr) &&
         ((Value <= -256) || Value >= 256))
       return Match_InvalidOperand;
@@ -1707,8 +1706,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     MCInst TmpInst;
     int64_t Value;
     bool Absolute = Imm.getExpr()->evaluateAsAbsolute(Value);
-    if (!Absolute)
-      return Match_InvalidOperand;
+    assert(Absolute);
+    (void)Absolute;
     if (Value == 0) { // convert to $Rd = $Rs
       TmpInst.setOpcode(Hexagon::A2_tfr);
       MCOperand &Rd = Inst.getOperand(0);
@@ -1737,8 +1736,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     MCOperand &Imm = Inst.getOperand(2);
     int64_t Value;
     bool Absolute = Imm.getExpr()->evaluateAsAbsolute(Value);
-    if (!Absolute)
-      return Match_InvalidOperand;
+    assert(Absolute);
+    (void)Absolute;
     if (Value == 0) { // convert to $Rdd = combine ($Rs[0], $Rs[1])
       MCInst TmpInst;
       unsigned int RegPairNum = RI->getEncodingValue(Rss.getReg());
@@ -1861,8 +1860,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     MCOperand &Imm = Inst.getOperand(2);
     int64_t Value;
     bool Absolute = Imm.getExpr()->evaluateAsAbsolute(Value);
-    if (!Absolute)
-      return Match_InvalidOperand;
+    assert(Absolute);
+    (void)Absolute;
     if (Value == 0)
       Inst.setOpcode(Hexagon::S2_vsathub);
     else {
@@ -1881,8 +1880,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     MCOperand &Imm = Inst.getOperand(2);
     int64_t Value;
     bool Absolute = Imm.getExpr()->evaluateAsAbsolute(Value);
-    if (!Absolute)
-      return Match_InvalidOperand;
+    assert(Absolute);
+    (void)Absolute;
     if (Value == 0) {
       MCInst TmpInst;
       unsigned int RegPairNum = RI->getEncodingValue(Rss.getReg());

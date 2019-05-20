@@ -59,6 +59,8 @@ public:
   /// Convenience method for defining an absolute symbol.
   Error defineAbsolute(StringRef Name, JITEvaluatedSymbol Address);
 
+  /// Convenience method for defining an
+
   /// Adds an IR module to the given JITDylib.
   Error addIRModule(JITDylib &JD, ThreadSafeModule TSM);
 

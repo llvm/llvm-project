@@ -289,18 +289,7 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
                     const char *s = name;
                     uint32_t h = 5381;
                     for (unsigned char c = *s; c; c = *++s)
-                    {
-                        // class_getName demangles swift names and the hash must
-                        // be calculated on the mangled name.  hash==0 means lldb
-                        // will fetch the mangled name and compute the hash in
-                        // ParseClassInfoArray.
-                        if (c == '.')
-                        {
-                            h = 0;
-                            break;
-                        }
                         h = ((h << 5) + h) + c;
-                    }
                     class_infos[idx].hash = h;
                 }
                 else
@@ -332,18 +321,7 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
                     const char *s = name;
                     uint32_t h = 5381;
                     for (unsigned char c = *s; c; c = *++s)
-                    {
-                        // class_getName demangles swift names and the hash must
-                        // be calculated on the mangled name.  hash==0 means lldb
-                        // will fetch the mangled name and compute the hash in
-                        // ParseClassInfoArray.
-                        if (c == '.')
-                        {
-                            h = 0;
-                            break;
-                        } 
                         h = ((h << 5) + h) + c;
-                    }
                     class_infos[idx].hash = h;
                 }
                 ++idx;
@@ -1510,16 +1488,7 @@ uint32_t AppleObjCRuntimeV2::ParseClassInfoArray(const DataExtractor &data,
       // Read the 32 bit hash for the class name
       const uint32_t name_hash = data.GetU32(&offset);
       ClassDescriptorSP descriptor_sp(new ClassDescriptorV2(*this, isa, NULL));
-
-      // The code in g_get_shared_cache_class_info_body sets the value of the hash
-      // to 0 to signal a demangled symbol. We use class_getName() in that code to
-      // find the class name, but this returns a demangled name for Swift symbols.
-      // For those symbols, recompute the hash here by reading their name from the
-      // runtime.
-      if (name_hash)
-        AddClass(isa, descriptor_sp, name_hash);
-      else
-        AddClass(isa, descriptor_sp, descriptor_sp->GetClassName().AsCString(nullptr));
+      AddClass(isa, descriptor_sp, name_hash);
       num_parsed++;
       if (should_log)
         log->Printf("AppleObjCRuntimeV2 added isa=0x%" PRIx64
@@ -2659,8 +2628,7 @@ class ObjCExceptionRecognizedStackFrame : public RecognizedStackFrame {
 };
 
 class ObjCExceptionThrowFrameRecognizer : public StackFrameRecognizer {
-  lldb::RecognizedStackFrameSP
-  RecognizeFrame(lldb::StackFrameSP frame) override {
+  lldb::RecognizedStackFrameSP RecognizeFrame(lldb::StackFrameSP frame) {
     return lldb::RecognizedStackFrameSP(
         new ObjCExceptionRecognizedStackFrame(frame));
   };

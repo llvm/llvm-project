@@ -47,6 +47,11 @@ SymbolContext::SymbolContext(const TargetSP &t, const ModuleSP &m,
     line_entry = *le;
 }
 
+SymbolContext::SymbolContext(const SymbolContext &rhs)
+    : target_sp(rhs.target_sp), module_sp(rhs.module_sp),
+      comp_unit(rhs.comp_unit), function(rhs.function), block(rhs.block),
+      line_entry(rhs.line_entry), symbol(rhs.symbol), variable(rhs.variable) {}
+
 SymbolContext::SymbolContext(SymbolContextScope *sc_scope)
     : target_sp(), module_sp(), comp_unit(nullptr), function(nullptr),
       block(nullptr), line_entry(), symbol(nullptr), variable(nullptr) {

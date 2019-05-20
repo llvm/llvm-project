@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SparcTargetStreamer.h"
-#include "SparcInstPrinter.h"
+#include "InstPrinter/SparcInstPrinter.h"
 #include "llvm/Support/FormattedStream.h"
 
 using namespace llvm;

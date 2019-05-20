@@ -11,12 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/LanaiInstPrinter.h"
+#include "InstPrinter/LanaiInstPrinter.h"
 #include "Lanai.h"
 #include "LanaiInstrInfo.h"
 #include "LanaiMCInstLower.h"
 #include "LanaiTargetMachine.h"
-#include "TargetInfo/LanaiTargetInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"

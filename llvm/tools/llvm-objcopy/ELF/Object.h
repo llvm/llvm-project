@@ -18,6 +18,7 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/JamCRC.h"
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -521,7 +522,7 @@ public:
 
   void addSymbol(Twine Name, uint8_t Bind, uint8_t Type, SectionBase *DefinedIn,
                  uint64_t Value, uint8_t Visibility, uint16_t Shndx,
-                 uint64_t SymbolSize);
+                 uint64_t Size);
   void prepareForLayout();
   // An 'empty' symbol table still contains a null symbol.
   bool empty() const { return Symbols.size() == 1; }
@@ -702,11 +703,11 @@ private:
   StringRef FileName;
   uint32_t CRC32;
 
-  void init(StringRef File);
+  void init(StringRef File, StringRef Data);
 
 public:
   // If we add this section from an external source we can use this ctor.
-  explicit GnuDebugLinkSection(StringRef File, uint32_t PrecomputedCRC);
+  explicit GnuDebugLinkSection(StringRef File);
   void accept(SectionVisitor &Visitor) const override;
   void accept(MutableSectionVisitor &Visitor) override;
 };

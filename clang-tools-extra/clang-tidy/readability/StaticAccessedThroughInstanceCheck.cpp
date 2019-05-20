@@ -67,7 +67,6 @@ void StaticAccessedThroughInstanceCheck::check(
   const ASTContext *AstContext = Result.Context;
   PrintingPolicy PrintingPolicyWithSupressedTag(AstContext->getLangOpts());
   PrintingPolicyWithSupressedTag.SuppressTagKeyword = true;
-  PrintingPolicyWithSupressedTag.SuppressUnwrittenScope = true;
   std::string BaseTypeName =
       BaseType.getAsString(PrintingPolicyWithSupressedTag);
 

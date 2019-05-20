@@ -64,7 +64,7 @@ if (target_os == "linux" || target_os == "fuchsia") {
   cxxabi_sources += [
     # This comment prevents `gn format` from putting the file on the same line
     # as `sources +=`, for sync_source_lists_from_cmake.py.
-    "cxa_thread_atexit.cpp",
+    "cxa_thread_atexit.cpp"
   ]
 }
 
@@ -116,9 +116,7 @@ if (libcxxabi_enable_static) {
     public = cxxabi_headers
     if (libcxxabi_hermetic_static_library) {
       cflags = [ "-fvisibility=hidden" ]
-      if (libcxxabi_enable_new_delete_definitions) {
-        cflags_cc = [ "-fvisibility-global-new-delete-hidden" ]
-      }
+      cflags_cc = [ "-fvisibility-global-new-delete-hidden" ]
       defines = [
         "_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",

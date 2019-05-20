@@ -30,7 +30,7 @@ public:
                                     CompletionRequest &request,
                                     // A search filter to limit the search...
                                     lldb_private::SearchFilter *searcher);
-  enum CommonCompletionTypes {
+  typedef enum {
     eNoCompletion = 0u,
     eSourceFileCompletion = (1u << 0),
     eDiskFileCompletion = (1u << 1),
@@ -45,7 +45,7 @@ public:
     // you can add custom enums starting from here in your Option class. Also
     // if you & in this bit the base code will not process the option.
     eCustomCompletion = (1u << 9)
-  };
+  } CommonCompletionTypes;
 
   struct CommonCompletionElement {
     uint32_t type;

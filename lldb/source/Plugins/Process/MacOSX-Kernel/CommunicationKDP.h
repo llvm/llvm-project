@@ -26,7 +26,7 @@ public:
   const static uint32_t kMaxPacketSize = 1200;
   const static uint32_t kMaxDataSize = 1024;
   typedef lldb_private::StreamBuffer<1024> PacketStreamType;
-  enum CommandType {
+  typedef enum {
     KDP_CONNECT = 0u,
     KDP_DISCONNECT,
     KDP_HOSTINFO,
@@ -59,23 +59,23 @@ public:
     KDP_READMSR64,
     KDP_WRITEMSR64,
     KDP_DUMPINFO
-  };
+  } CommandType;
 
   enum { KDP_FEATURE_BP = (1u << 0) };
 
-  enum KDPError {
+  typedef enum {
     KDP_PROTERR_SUCCESS = 0,
     KDP_PROTERR_ALREADY_CONNECTED,
     KDP_PROTERR_BAD_NBYTES,
     KDP_PROTERR_BADFLAVOR
-  };
+  } KDPError;
 
-  enum PacketType {
+  typedef enum {
     ePacketTypeRequest = 0x00u,
     ePacketTypeReply = 0x80u,
     ePacketTypeMask = 0x80u,
     eCommandTypeMask = 0x7fu
-  };
+  } PacketType;
   // Constructors and Destructors
   CommunicationKDP(const char *comm_name);
 

@@ -13,7 +13,6 @@
 #include "BPFTargetMachine.h"
 #include "BPF.h"
 #include "MCTargetDesc/BPFMCAsmInfo.h"
-#include "TargetInfo/BPFTargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"

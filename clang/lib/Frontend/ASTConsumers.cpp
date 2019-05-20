@@ -34,12 +34,10 @@ namespace {
 
   public:
     enum Kind { DumpFull, Dump, Print, None };
-    ASTPrinter(std::unique_ptr<raw_ostream> Out, Kind K,
-               ASTDumpOutputFormat Format, StringRef FilterString,
+    ASTPrinter(std::unique_ptr<raw_ostream> Out, Kind K, StringRef FilterString,
                bool DumpLookups = false)
         : Out(Out ? *Out : llvm::outs()), OwnedOut(std::move(Out)),
-          OutputKind(K), OutputFormat(Format), FilterString(FilterString),
-          DumpLookups(DumpLookups) {}
+          OutputKind(K), FilterString(FilterString), DumpLookups(DumpLookups) {}
 
     void HandleTranslationUnit(ASTContext &Context) override {
       TranslationUnitDecl *D = Context.getTranslationUnitDecl();
@@ -92,7 +90,7 @@ namespace {
         PrintingPolicy Policy(D->getASTContext().getLangOpts());
         D->print(Out, Policy, /*Indentation=*/0, /*PrintInstantiation=*/true);
       } else if (OutputKind != None)
-        D->dump(Out, OutputKind == DumpFull, OutputFormat);
+        D->dump(Out, OutputKind == DumpFull);
     }
 
     raw_ostream &Out;
@@ -100,9 +98,6 @@ namespace {
 
     /// How to output individual declarations.
     Kind OutputKind;
-
-    /// What format should the output take?
-    ASTDumpOutputFormat OutputFormat;
 
     /// Which declarations or DeclContexts to display.
     std::string FilterString;
@@ -140,18 +135,20 @@ std::unique_ptr<ASTConsumer>
 clang::CreateASTPrinter(std::unique_ptr<raw_ostream> Out,
                         StringRef FilterString) {
   return llvm::make_unique<ASTPrinter>(std::move(Out), ASTPrinter::Print,
-                                       ADOF_Default, FilterString);
+                                       FilterString);
 }
 
 std::unique_ptr<ASTConsumer>
-clang::CreateASTDumper(std::unique_ptr<raw_ostream> Out, StringRef FilterString,
-                       bool DumpDecls, bool Deserialize, bool DumpLookups,
-                       ASTDumpOutputFormat Format) {
+clang::CreateASTDumper(std::unique_ptr<raw_ostream> Out,
+                       StringRef FilterString,
+                       bool DumpDecls,
+                       bool Deserialize,
+                       bool DumpLookups) {
   assert((DumpDecls || Deserialize || DumpLookups) && "nothing to dump");
   return llvm::make_unique<ASTPrinter>(std::move(Out),
                                        Deserialize ? ASTPrinter::DumpFull :
                                        DumpDecls ? ASTPrinter::Dump :
-                                       ASTPrinter::None, Format,
+                                       ASTPrinter::None,
                                        FilterString, DumpLookups);
 }
 

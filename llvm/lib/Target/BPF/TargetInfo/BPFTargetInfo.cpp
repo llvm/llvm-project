@@ -6,23 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TargetInfo/BPFTargetInfo.h"
+#include "BPF.h"
 #include "llvm/Support/TargetRegistry.h"
-
 using namespace llvm;
 
-Target &llvm::getTheBPFleTarget() {
+namespace llvm {
+Target &getTheBPFleTarget() {
   static Target TheBPFleTarget;
   return TheBPFleTarget;
 }
-Target &llvm::getTheBPFbeTarget() {
+Target &getTheBPFbeTarget() {
   static Target TheBPFbeTarget;
   return TheBPFbeTarget;
 }
-Target &llvm::getTheBPFTarget() {
+Target &getTheBPFTarget() {
   static Target TheBPFTarget;
   return TheBPFTarget;
 }
+} // namespace llvm
 
 extern "C" void LLVMInitializeBPFTargetInfo() {
   TargetRegistry::RegisterTarget(getTheBPFTarget(), "bpf", "BPF (host endian)",

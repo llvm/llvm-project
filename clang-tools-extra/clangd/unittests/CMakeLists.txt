@@ -38,7 +38,6 @@ add_unittest(ClangdUnitTests ClangdTests
   FileDistanceTests.cpp
   FileIndexTests.cpp
   FindSymbolsTests.cpp
-  FormattedStringTests.cpp
   FSTests.cpp
   FunctionTests.cpp
   FuzzyMatchTests.cpp
@@ -49,7 +48,6 @@ add_unittest(ClangdUnitTests ClangdTests
   JSONTransportTests.cpp
   PrintASTTests.cpp
   QualityTests.cpp
-  RenameTests.cpp
   RIFFTests.cpp
   SelectionTests.cpp
   SerializationTests.cpp

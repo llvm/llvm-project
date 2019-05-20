@@ -50,8 +50,7 @@ void thinLTOResolvePrevailingInIndex(
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
     function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
-        recordNewLinkage,
-    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols);
+        recordNewLinkage);
 
 /// Update the linkages in the given \p Index to mark exported values
 /// as external and non-exported values as internal. The ThinLTO backends
@@ -406,8 +405,7 @@ private:
                    const SymbolResolution *&ResI, const SymbolResolution *ResE);
 
   Error runRegularLTO(AddStreamFn AddStream);
-  Error runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
-                   const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols);
+  Error runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache);
 
   Error checkPartiallySplit();
 

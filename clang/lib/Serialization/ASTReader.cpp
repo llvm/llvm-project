@@ -8745,11 +8745,6 @@ ASTReader::ReadTemplateName(ModuleFile &F, const RecordData &Record,
     return Context.getOverloadedTemplateName(Decls.begin(), Decls.end());
   }
 
-  case TemplateName::AssumedTemplate: {
-    DeclarationName Name = ReadDeclarationName(F, Record, Idx);
-    return Context.getAssumedTemplateName(Name);
-  }
-
   case TemplateName::QualifiedTemplate: {
     NestedNameSpecifier *NNS = ReadNestedNameSpecifier(F, Record, Idx);
     bool hasTemplKeyword = Record[Idx++];

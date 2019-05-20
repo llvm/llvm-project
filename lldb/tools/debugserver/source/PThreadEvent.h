@@ -54,8 +54,8 @@ protected:
   uint32_t m_reset_ack_mask;
 
 private:
-  PThreadEvent(const PThreadEvent &) = delete;
-  PThreadEvent &operator=(const PThreadEvent &rhs) = delete;
+  PThreadEvent(const PThreadEvent &); // Outlaw copy constructor
+  PThreadEvent &operator=(const PThreadEvent &rhs);
 };
 
 #endif // #ifndef __PThreadEvent_h__

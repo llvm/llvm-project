@@ -170,31 +170,31 @@ void JITLinkerBase::layOutAtoms() {
     auto &SL = KV.second;
     for (auto *SIList : {&SL.ContentSections, &SL.ZeroFillSections}) {
       for (auto &SI : *SIList) {
-        // First build the set of layout-heads (i.e. "heads" of layout-next
-        // chains) by copying the section atoms, then eliminating any that
-        // appear as layout-next targets.
-        DenseSet<DefinedAtom *> LayoutHeads;
-        for (auto *DA : SI.S->atoms())
-          LayoutHeads.insert(DA);
+        std::vector<DefinedAtom *> LayoutHeads;
+        LayoutHeads.reserve(SI.S->atoms_size());
 
-        for (auto *DA : SI.S->atoms())
-          if (DA->hasLayoutNext())
-            LayoutHeads.erase(&DA->getLayoutNext());
-
-        // Next, sort the layout heads by address order.
-        std::vector<DefinedAtom *> OrderedLayoutHeads;
-        OrderedLayoutHeads.reserve(LayoutHeads.size());
-        for (auto *DA : LayoutHeads)
-          OrderedLayoutHeads.push_back(DA);
+        // First build the list of layout-heads (i.e. "heads" of layout-next
+        // chains).
+        DenseSet<DefinedAtom *> AlreadyLayedOut;
+        for (auto *DA : SI.S->atoms()) {
+          if (AlreadyLayedOut.count(DA))
+            continue;
+          LayoutHeads.push_back(DA);
+          while (DA->hasLayoutNext()) {
+            auto &Next = DA->getLayoutNext();
+            AlreadyLayedOut.insert(&Next);
+            DA = &Next;
+          }
+        }
 
         // Now sort the list of layout heads by address.
-        std::sort(OrderedLayoutHeads.begin(), OrderedLayoutHeads.end(),
+        std::sort(LayoutHeads.begin(), LayoutHeads.end(),
                   [](const DefinedAtom *LHS, const DefinedAtom *RHS) {
                     return LHS->getAddress() < RHS->getAddress();
                   });
 
         // Now populate the SI.Atoms field by appending each of the chains.
-        for (auto *DA : OrderedLayoutHeads) {
+        for (auto *DA : LayoutHeads) {
           SI.Atoms.push_back(DA);
           while (DA->hasLayoutNext()) {
             auto &Next = DA->getLayoutNext();
@@ -241,10 +241,6 @@ Error JITLinkerBase::allocateSegments(const SegmentLayoutMap &Layout) {
     for (auto &SI : SegLayout.ContentSections) {
       assert(!SI.S->atoms_empty() && "Sections in layout must not be empty");
       assert(!SI.Atoms.empty() && "Section layouts must not be empty");
-
-      // Bump to section alignment before processing atoms.
-      SegContentSize = alignTo(SegContentSize, SI.S->getAlignment());
-
       for (auto *DA : SI.Atoms) {
         SegContentSize = alignTo(SegContentSize, DA->getAlignment());
         SegContentSize += DA->getSize();
@@ -253,22 +249,15 @@ Error JITLinkerBase::allocateSegments(const SegmentLayoutMap &Layout) {
 
     // Get segment content alignment.
     unsigned SegContentAlign = 1;
-    if (!SegLayout.ContentSections.empty()) {
-      auto &FirstContentSection = SegLayout.ContentSections.front();
+    if (!SegLayout.ContentSections.empty())
       SegContentAlign =
-          std::max(FirstContentSection.S->getAlignment(),
-                   FirstContentSection.Atoms.front()->getAlignment());
-    }
+          SegLayout.ContentSections.front().Atoms.front()->getAlignment();
 
     // Calculate segment zero-fill size.
     uint64_t SegZeroFillSize = 0;
     for (auto &SI : SegLayout.ZeroFillSections) {
       assert(!SI.S->atoms_empty() && "Sections in layout must not be empty");
       assert(!SI.Atoms.empty() && "Section layouts must not be empty");
-
-      // Bump to section alignment before processing atoms.
-      SegZeroFillSize = alignTo(SegZeroFillSize, SI.S->getAlignment());
-
       for (auto *DA : SI.Atoms) {
         SegZeroFillSize = alignTo(SegZeroFillSize, DA->getAlignment());
         SegZeroFillSize += DA->getSize();
@@ -277,13 +266,9 @@ Error JITLinkerBase::allocateSegments(const SegmentLayoutMap &Layout) {
 
     // Calculate segment zero-fill alignment.
     uint32_t SegZeroFillAlign = 1;
-
-    if (!SegLayout.ZeroFillSections.empty()) {
-      auto &FirstZeroFillSection = SegLayout.ZeroFillSections.front();
+    if (!SegLayout.ZeroFillSections.empty())
       SegZeroFillAlign =
-          std::max(FirstZeroFillSection.S->getAlignment(),
-                   FirstZeroFillSection.Atoms.front()->getAlignment());
-    }
+          SegLayout.ZeroFillSections.front().Atoms.front()->getAlignment();
 
     if (SegContentSize == 0)
       SegContentAlign = SegZeroFillAlign;
@@ -329,14 +314,12 @@ Error JITLinkerBase::allocateSegments(const SegmentLayoutMap &Layout) {
         Alloc->getTargetMemory(static_cast<sys::Memory::ProtectionFlags>(Prot));
 
     for (auto *SIList : {&SL.ContentSections, &SL.ZeroFillSections})
-      for (auto &SI : *SIList) {
-        AtomTargetAddr = alignTo(AtomTargetAddr, SI.S->getAlignment());
+      for (auto &SI : *SIList)
         for (auto *DA : SI.Atoms) {
           AtomTargetAddr = alignTo(AtomTargetAddr, DA->getAlignment());
           DA->setAddress(AtomTargetAddr);
           AtomTargetAddr += DA->getSize();
         }
-      }
   }
 
   return Error::success();
@@ -450,16 +433,28 @@ void prune(AtomGraph &G) {
     //
     // We replace if all of the following hold:
     //   (1) The atom is marked should-discard,
-    //   (2) it has live edges (i.e. edges from live atoms) pointing to it.
+    //   (2) it is live, and
+    //   (3) it has edges pointing to it.
     //
     // Otherwise we simply delete the atom.
+    bool ReplaceWithExternal = DA->isLive() && DA->shouldDiscard();
+    std::vector<Edge *> *EdgesToUpdateForDA = nullptr;
+    if (ReplaceWithExternal) {
+      auto ETUItr = EdgesToUpdate.find(DA);
+      if (ETUItr == EdgesToUpdate.end())
+        ReplaceWithExternal = false;
+      else
+        EdgesToUpdateForDA = &ETUItr->second;
+    }
 
     G.removeDefinedAtom(*DA);
 
-    auto EdgesToUpdateItr = EdgesToUpdate.find(DA);
-    if (EdgesToUpdateItr != EdgesToUpdate.end()) {
+    if (ReplaceWithExternal) {
+      assert(EdgesToUpdateForDA &&
+             "Replacing atom: There should be edges to update");
+
       auto &ExternalReplacement = G.addExternalAtom(DA->getName());
-      for (auto *EdgeToUpdate : EdgesToUpdateItr->second)
+      for (auto *EdgeToUpdate : *EdgesToUpdateForDA)
         EdgeToUpdate->setTarget(ExternalReplacement);
       LLVM_DEBUG(dbgs() << "replaced with " << ExternalReplacement << "\n");
     } else

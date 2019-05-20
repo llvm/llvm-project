@@ -20,6 +20,8 @@
 
 namespace lldb_private {
 
+class ClangExpressionVariable;
+
 class ExpressionVariable
     : public std::enable_shared_from_this<ExpressionVariable> {
 public:

@@ -59,7 +59,7 @@ void SymbolTable::addCombinedLTOObject() {
 
   for (StringRef Filename : LTO->compile()) {
     auto *Obj = make<ObjFile>(MemoryBufferRef(Filename, "lto.tmp"), "");
-    Obj->parse(true);
+    Obj->parse();
     ObjectFiles.push_back(Obj);
   }
 }
@@ -476,7 +476,7 @@ void SymbolTable::addLazy(ArchiveFile *File, const Archive::Symbol *Sym) {
 }
 
 bool SymbolTable::addComdat(StringRef Name) {
-  return ComdatGroups.insert(CachedHashStringRef(Name)).second;
+  return Comdats.insert(CachedHashStringRef(Name)).second;
 }
 
 // The new signature doesn't match.  Create a variant to the symbol with the

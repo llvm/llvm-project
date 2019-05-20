@@ -9,7 +9,6 @@
 #include "lldb/Symbol/CxxModuleHandler.h"
 
 #include "lldb/Symbol/ClangASTContext.h"
-#include "lldb/Utility/Log.h"
 #include "clang/Sema/Lookup.h"
 #include "llvm/Support/Error.h"
 
@@ -215,15 +214,13 @@ llvm::Optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
   // Import the foreign template arguments.
   llvm::SmallVector<TemplateArgument, 4> imported_args;
 
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
-
   // If this logic is changed, also update templateArgsAreSupported.
   for (const TemplateArgument &arg : foreign_args.asArray()) {
     switch (arg.getKind()) {
     case TemplateArgument::Type: {
-      llvm::Expected<QualType> type = m_importer->Import(arg.getAsType());
+      llvm::Expected<QualType> type = m_importer->Import_New(arg.getAsType());
       if (!type) {
-        LLDB_LOG_ERROR(log, type.takeError(), "Couldn't import type: {0}");
+        llvm::consumeError(type.takeError());
         return {};
       }
       imported_args.push_back(TemplateArgument(*type));
@@ -232,9 +229,9 @@ llvm::Optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
     case TemplateArgument::Integral: {
       llvm::APSInt integral = arg.getAsIntegral();
       llvm::Expected<QualType> type =
-          m_importer->Import(arg.getIntegralType());
+          m_importer->Import_New(arg.getIntegralType());
       if (!type) {
-        LLDB_LOG_ERROR(log, type.takeError(), "Couldn't import type: {0}");
+        llvm::consumeError(type.takeError());
         return {};
       }
       imported_args.push_back(

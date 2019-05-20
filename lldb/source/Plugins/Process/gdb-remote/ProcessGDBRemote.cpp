@@ -135,7 +135,7 @@ public:
     m_collection_sp->Initialize(g_properties);
   }
 
-  ~PluginProperties() override {}
+  virtual ~PluginProperties() {}
 
   uint64_t GetPacketTimeout() {
     const uint32_t idx = ePropertyPacketTimeout;
@@ -5158,7 +5158,7 @@ public:
     m_option_group.Finalize();
   }
 
-  ~CommandObjectProcessGDBRemoteSpeedTest() override {}
+  ~CommandObjectProcessGDBRemoteSpeedTest() {}
 
   Options *GetOptions() override { return &m_option_group; }
 
@@ -5209,7 +5209,7 @@ public:
       : CommandObjectParsed(interpreter, "process plugin packet history",
                             "Dumps the packet history buffer. ", NULL) {}
 
-  ~CommandObjectProcessGDBRemotePacketHistory() override {}
+  ~CommandObjectProcessGDBRemotePacketHistory() {}
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
@@ -5240,7 +5240,7 @@ public:
             "Maximum size that lldb will try to read/write one one chunk.",
             NULL) {}
 
-  ~CommandObjectProcessGDBRemotePacketXferSize() override {}
+  ~CommandObjectProcessGDBRemotePacketXferSize() {}
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
@@ -5282,7 +5282,7 @@ public:
                             "stripped from the result.",
                             NULL) {}
 
-  ~CommandObjectProcessGDBRemotePacketSend() override {}
+  ~CommandObjectProcessGDBRemotePacketSend() {}
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
@@ -5333,7 +5333,7 @@ public:
                          "encoded into a valid 'qRcmd' packet, sent and the "
                          "response will be printed.") {}
 
-  ~CommandObjectProcessGDBRemotePacketMonitor() override {}
+  ~CommandObjectProcessGDBRemotePacketMonitor() {}
 
   bool DoExecute(llvm::StringRef command,
                  CommandReturnObject &result) override {
@@ -5397,7 +5397,7 @@ public:
                        interpreter)));
   }
 
-  ~CommandObjectProcessGDBRemotePacket() override {}
+  ~CommandObjectProcessGDBRemotePacket() {}
 };
 
 class CommandObjectMultiwordProcessGDBRemote : public CommandObjectMultiword {
@@ -5412,7 +5412,7 @@ public:
         CommandObjectSP(new CommandObjectProcessGDBRemotePacket(interpreter)));
   }
 
-  ~CommandObjectMultiwordProcessGDBRemote() override {}
+  ~CommandObjectMultiwordProcessGDBRemote() {}
 };
 
 CommandObject *ProcessGDBRemote::GetPluginCommandObject() {

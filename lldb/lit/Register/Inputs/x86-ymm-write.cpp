@@ -37,31 +37,33 @@ int main() {
     "\n\t"
     "int3\n\t"
     "\n\t"
-    "vmovaps %%ymm0,  0x000(%0)\n\t"
-    "vmovaps %%ymm1,  0x020(%0)\n\t"
-    "vmovaps %%ymm2,  0x040(%0)\n\t"
-    "vmovaps %%ymm3,  0x060(%0)\n\t"
-    "vmovaps %%ymm4,  0x080(%0)\n\t"
-    "vmovaps %%ymm5,  0x0A0(%0)\n\t"
-    "vmovaps %%ymm6,  0x0C0(%0)\n\t"
-    "vmovaps %%ymm7,  0x0E0(%0)\n\t"
+    "lea     %0, %%rbx\n\t"
+    "vmovaps %%ymm0,  0x000(%%rbx)\n\t"
+    "vmovaps %%ymm1,  0x020(%%rbx)\n\t"
+    "vmovaps %%ymm2,  0x040(%%rbx)\n\t"
+    "vmovaps %%ymm3,  0x060(%%rbx)\n\t"
+    "vmovaps %%ymm4,  0x080(%%rbx)\n\t"
+    "vmovaps %%ymm5,  0x0A0(%%rbx)\n\t"
+    "vmovaps %%ymm6,  0x0C0(%%rbx)\n\t"
+    "vmovaps %%ymm7,  0x0E0(%%rbx)\n\t"
 #if defined(__x86_64__) || defined(_M_X64)
-    "vmovaps %%ymm8,  0x100(%0)\n\t"
-    "vmovaps %%ymm9,  0x120(%0)\n\t"
-    "vmovaps %%ymm10, 0x140(%0)\n\t"
-    "vmovaps %%ymm11, 0x160(%0)\n\t"
-    "vmovaps %%ymm12, 0x180(%0)\n\t"
-    "vmovaps %%ymm13, 0x1A0(%0)\n\t"
-    "vmovaps %%ymm14, 0x1C0(%0)\n\t"
-    "vmovaps %%ymm15, 0x1E0(%0)\n\t"
+    "vmovaps %%ymm8,  0x100(%%rbx)\n\t"
+    "vmovaps %%ymm9,  0x120(%%rbx)\n\t"
+    "vmovaps %%ymm10, 0x140(%%rbx)\n\t"
+    "vmovaps %%ymm11, 0x160(%%rbx)\n\t"
+    "vmovaps %%ymm12, 0x180(%%rbx)\n\t"
+    "vmovaps %%ymm13, 0x1A0(%%rbx)\n\t"
+    "vmovaps %%ymm14, 0x1C0(%%rbx)\n\t"
+    "vmovaps %%ymm15, 0x1E0(%%rbx)\n\t"
 #endif
-    :
-    : "b"(ymm), "m"(ymm_fill)
-    : "%ymm0", "%ymm1", "%ymm2", "%ymm3", "%ymm4", "%ymm5", "%ymm6", "%ymm7"
+    : "=m"(ymm)
+    : "m"(ymm_fill)
+    : "%ymm0", "%ymm1", "%ymm2", "%ymm3", "%ymm4", "%ymm5", "%ymm6", "%ymm7",
 #if defined(__x86_64__) || defined(_M_X64)
-    , "%ymm8", "%ymm9", "%ymm10", "%ymm11", "%ymm12", "%ymm13", "%ymm14",
-      "%ymm15"
+      "%ymm8", "%ymm9", "%ymm10", "%ymm11", "%ymm12", "%ymm13", "%ymm14",
+      "%ymm15",
 #endif
+      "%rbx"
   );
 
   for (int i = 0; i < 16; ++i) {

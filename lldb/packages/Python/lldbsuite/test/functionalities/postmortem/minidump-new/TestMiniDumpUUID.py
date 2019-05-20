@@ -34,7 +34,7 @@ class MiniDumpUUIDTestCase(TestBase):
         self.assertEqual(verify_uuid, uuid)
 
     def get_minidump_modules(self, yaml_file):
-        minidump_path = self.getBuildArtifact(os.path.basename(yaml_file) + ".dmp")
+        minidump_path = self.getBuildArtifact(yaml_file + ".dmp")
         self.yaml2obj(yaml_file, minidump_path)
         self.target = self.dbg.CreateTarget(None)
         self.process = self.target.LoadCore(minidump_path)
@@ -166,14 +166,3 @@ class MiniDumpUUIDTestCase(TestBase):
         self.verify_module(modules[0],
                            "/invalid/path/on/current/system/libuuidmismatch.so", 
                            "7295E17C-6668-9E05-CBB5-DEE5003865D5")
-
-    def test_relative_module_name(self):
-        old_cwd = os.getcwd()
-        self.addTearDownHook(lambda: os.chdir(old_cwd))
-        os.chdir(self.getBuildDir())
-        name = "file-with-a-name-unlikely-to-exist-in-the-current-directory.so"
-        open(name, "a").close()
-        modules = self.get_minidump_modules(
-                self.getSourcePath("relative_module_name.yaml"))
-        self.assertEqual(1, len(modules))
-        self.verify_module(modules[0], name, None)

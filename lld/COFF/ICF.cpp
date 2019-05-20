@@ -130,8 +130,8 @@ bool ICF::assocEquals(const SectionChunk *A, const SectionChunk *B) {
   auto ChildClasses = [&](const SectionChunk *SC) {
     std::vector<uint32_t> Classes;
     for (const SectionChunk &C : SC->children())
-      if (!C.getSectionName().startswith(".debug") &&
-          C.getSectionName() != ".gfids$y" && C.getSectionName() != ".gljmp$y")
+      if (!C.SectionName.startswith(".debug") &&
+          C.SectionName != ".gfids$y" && C.SectionName != ".gljmp$y")
         Classes.push_back(C.Class[Cnt % 2]);
     return Classes;
   };
@@ -141,7 +141,7 @@ bool ICF::assocEquals(const SectionChunk *A, const SectionChunk *B) {
 // Compare "non-moving" part of two sections, namely everything
 // except relocation targets.
 bool ICF::equalsConstant(const SectionChunk *A, const SectionChunk *B) {
-  if (A->RelocsSize != B->RelocsSize)
+  if (A->Relocs.size() != B->Relocs.size())
     return false;
 
   // Compare relocations.
@@ -160,13 +160,12 @@ bool ICF::equalsConstant(const SectionChunk *A, const SectionChunk *B) {
                D1->getChunk()->Class[Cnt % 2] == D2->getChunk()->Class[Cnt % 2];
     return false;
   };
-  if (!std::equal(A->getRelocs().begin(), A->getRelocs().end(),
-                  B->getRelocs().begin(), Eq))
+  if (!std::equal(A->Relocs.begin(), A->Relocs.end(), B->Relocs.begin(), Eq))
     return false;
 
   // Compare section attributes and contents.
   return A->getOutputCharacteristics() == B->getOutputCharacteristics() &&
-         A->getSectionName() == B->getSectionName() &&
+         A->SectionName == B->SectionName &&
          A->Header->SizeOfRawData == B->Header->SizeOfRawData &&
          A->Checksum == B->Checksum && A->getContents() == B->getContents() &&
          assocEquals(A, B);
@@ -185,8 +184,8 @@ bool ICF::equalsVariable(const SectionChunk *A, const SectionChunk *B) {
         return D1->getChunk()->Class[Cnt % 2] == D2->getChunk()->Class[Cnt % 2];
     return false;
   };
-  return std::equal(A->getRelocs().begin(), A->getRelocs().end(),
-                    B->getRelocs().begin(), Eq) &&
+  return std::equal(A->Relocs.begin(), A->Relocs.end(), B->Relocs.begin(),
+                    Eq) &&
          assocEquals(A, B);
 }
 

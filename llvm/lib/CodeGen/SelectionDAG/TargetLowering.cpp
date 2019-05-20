@@ -448,6 +448,7 @@ TargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
 /// return true.
 bool TargetLowering::ShrinkDemandedConstant(SDValue Op, const APInt &Demanded,
                                             TargetLoweringOpt &TLO) const {
+  SelectionDAG &DAG = TLO.DAG;
   SDLoc DL(Op);
   unsigned Opcode = Op.getOpcode();
 
@@ -473,8 +474,8 @@ bool TargetLowering::ShrinkDemandedConstant(SDValue Op, const APInt &Demanded,
 
     if (!C.isSubsetOf(Demanded)) {
       EVT VT = Op.getValueType();
-      SDValue NewC = TLO.DAG.getConstant(Demanded & C, DL, VT);
-      SDValue NewOp = TLO.DAG.getNode(Opcode, DL, VT, Op.getOperand(0), NewC);
+      SDValue NewC = DAG.getConstant(Demanded & C, DL, VT);
+      SDValue NewOp = DAG.getNode(Opcode, DL, VT, Op.getOperand(0), NewC);
       return TLO.CombineTo(Op, NewOp);
     }
 
@@ -588,10 +589,6 @@ bool TargetLowering::SimplifyDemandedBits(
   // Don't know anything.
   Known = KnownBits(BitWidth);
 
-  // Undef operand.
-  if (Op.isUndef())
-    return false;
-
   if (Op.getOpcode() == ISD::Constant) {
     // We know all of the bits for a constant!
     Known.One = cast<ConstantSDNode>(Op)->getAPIntValue();
@@ -614,7 +611,9 @@ bool TargetLowering::SimplifyDemandedBits(
     DemandedElts = APInt::getAllOnesValue(NumElts);
   } else if (OriginalDemandedBits == 0 || OriginalDemandedElts == 0) {
     // Not demanding any bits/elts from Op.
-    return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
+    if (!Op.isUndef())
+      return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
+    return false;
   } else if (Depth == 6) { // Limit search depth.
     return false;
   }
@@ -1270,16 +1269,6 @@ bool TargetLowering::SimplifyDemandedBits(
     }
     break;
   }
-  case ISD::BITREVERSE: {
-    SDValue Src = Op.getOperand(0);
-    APInt DemandedSrcBits = DemandedBits.reverseBits();
-    if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedElts, Known2, TLO,
-                             Depth + 1))
-      return true;
-    Known.One = Known2.One.reverseBits();
-    Known.Zero = Known2.Zero.reverseBits();
-    break;
-  }
   case ISD::SIGN_EXTEND_INREG: {
     SDValue Op0 = Op.getOperand(0);
     EVT ExVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
@@ -1369,30 +1358,6 @@ bool TargetLowering::SimplifyDemandedBits(
 
     APInt InDemandedBits = DemandedBits.trunc(InBits);
     if (SimplifyDemandedBits(Src, InDemandedBits, Known, TLO, Depth + 1))
-      return true;
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-    assert(Known.getBitWidth() == InBits && "Src width has changed?");
-    Known = Known.zext(BitWidth, true /* ExtendedBitsAreKnownZero */);
-    break;
-  }
-  case ISD::ZERO_EXTEND_VECTOR_INREG: {
-    // TODO - merge this with ZERO_EXTEND above?
-    SDValue Src = Op.getOperand(0);
-    EVT SrcVT = Src.getValueType();
-    unsigned InBits = SrcVT.getScalarSizeInBits();
-    unsigned InElts = SrcVT.getVectorNumElements();
-
-    // If we only need the non-extended bits of the bottom element
-    // then we can just bitcast to the result.
-    if (DemandedBits.getActiveBits() <= InBits && DemandedElts == 1 &&
-        VT.getSizeInBits() == SrcVT.getSizeInBits() &&
-        TLO.DAG.getDataLayout().isLittleEndian())
-      return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Src));
-
-    APInt InDemandedBits = DemandedBits.trunc(InBits);
-    APInt InDemandedElts = DemandedElts.zextOrSelf(InElts);
-    if (SimplifyDemandedBits(Src, InDemandedBits, InDemandedElts, Known, TLO,
-                             Depth + 1))
       return true;
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     assert(Known.getBitWidth() == InBits && "Src width has changed?");
@@ -1748,8 +1713,7 @@ static APInt getKnownUndefForVectorBinop(SDValue BO, SelectionDAG &DAG,
                                          const APInt &UndefOp0,
                                          const APInt &UndefOp1) {
   EVT VT = BO.getValueType();
-  assert(DAG.getTargetLoweringInfo().isBinOp(BO.getOpcode()) && VT.isVector() &&
-         "Vector binop only");
+  assert(ISD::isBinaryOp(BO.getNode()) && VT.isVector() && "Vector binop only");
 
   EVT EltVT = VT.getVectorElementType();
   unsigned NumElts = VT.getVectorNumElements();
@@ -3367,8 +3331,9 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
   }
 
   // Fold away ALL boolean setcc's.
+  SDValue Temp;
   if (N0.getValueType().getScalarType() == MVT::i1 && foldBooleans) {
-    SDValue Temp;
+    EVT OpVT = N0.getValueType();
     switch (Cond) {
     default: llvm_unreachable("Unknown integer setcc!");
     case ISD::SETEQ:  // X == Y  -> ~(X^Y)
@@ -3543,41 +3508,46 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   case 'i':    // Simple Integer or Relocatable Constant
   case 'n':    // Simple Integer
   case 's': {  // Relocatable Constant
+    // These operands are interested in values of the form (GV+C), where C may
+    // be folded in as an offset of GV, or it may be explicitly added.  Also, it
+    // is possible and fine if either GV or C are missing.
+    ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op);
+    GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Op);
 
-    GlobalAddressSDNode *GA;
-    ConstantSDNode *C;
-    uint64_t Offset = 0;
+    // If we have "(add GV, C)", pull out GV/C
+    if (Op.getOpcode() == ISD::ADD) {
+      C = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+      GA = dyn_cast<GlobalAddressSDNode>(Op.getOperand(0));
+      if (!C || !GA) {
+        C = dyn_cast<ConstantSDNode>(Op.getOperand(0));
+        GA = dyn_cast<GlobalAddressSDNode>(Op.getOperand(1));
+      }
+      if (!C || !GA) {
+        C = nullptr;
+        GA = nullptr;
+      }
+    }
 
-    // Match (GA) or (C) or (GA+C) or (GA-C) or ((GA+C)+C) or (((GA+C)+C)+C),
-    // etc., since getelementpointer is variadic. We can't use
-    // SelectionDAG::FoldSymbolOffset because it expects the GA to be accessible
-    // while in this case the GA may be furthest from the root node which is
-    // likely an ISD::ADD.
-    while (1) {
-      if ((GA = dyn_cast<GlobalAddressSDNode>(Op)) && ConstraintLetter != 'n') {
-        Ops.push_back(DAG.getTargetGlobalAddress(GA->getGlobal(), SDLoc(Op),
-                                                 GA->getValueType(0),
-                                                 Offset + GA->getOffset()));
-        return;
-      } else if ((C = dyn_cast<ConstantSDNode>(Op)) &&
-                 ConstraintLetter != 's') {
-        Ops.push_back(DAG.getTargetConstant(Offset + C->getSExtValue(),
+    // If we find a valid operand, map to the TargetXXX version so that the
+    // value itself doesn't get selected.
+    if (GA) {   // Either &GV   or   &GV+C
+      if (ConstraintLetter != 'n') {
+        int64_t Offs = GA->getOffset();
+        if (C) Offs += C->getZExtValue();
+        Ops.push_back(DAG.getTargetGlobalAddress(GA->getGlobal(),
+                                                 C ? SDLoc(C) : SDLoc(),
+                                                 Op.getValueType(), Offs));
+      }
+      return;
+    }
+    if (C) {   // just C, no GV.
+      // Simple constants are not allowed for 's'.
+      if (ConstraintLetter != 's') {
+        // gcc prints these as sign extended.  Sign extend value to 64 bits
+        // now; without this it would get ZExt'd later in
+        // ScheduleDAGSDNodes::EmitNode, which is very generic.
+        Ops.push_back(DAG.getTargetConstant(C->getSExtValue(),
                                             SDLoc(C), MVT::i64));
-        return;
-      } else {
-        const unsigned OpCode = Op.getOpcode();
-        if (OpCode == ISD::ADD || OpCode == ISD::SUB) {
-          if ((C = dyn_cast<ConstantSDNode>(Op.getOperand(0))))
-            Op = Op.getOperand(1);
-          // Subtraction is not commutative.
-          else if (OpCode == ISD::ADD &&
-                   (C = dyn_cast<ConstantSDNode>(Op.getOperand(1))))
-            Op = Op.getOperand(0);
-          else
-            return;
-          Offset += (OpCode == ISD::ADD ? 1 : -1) * C->getSExtValue();
-          continue;
-        }
       }
       return;
     }
@@ -5355,16 +5325,17 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
   EVT VT = Val.getValueType();
   int Alignment = ST->getAlignment();
   auto &MF = DAG.getMachineFunction();
-  EVT StoreMemVT = ST->getMemoryVT();
+  EVT MemVT = ST->getMemoryVT();
 
   SDLoc dl(ST);
-  if (StoreMemVT.isFloatingPoint() || StoreMemVT.isVector()) {
+  if (MemVT.isFloatingPoint() || MemVT.isVector()) {
     EVT intVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
     if (isTypeLegal(intVT)) {
       if (!isOperationLegalOrCustom(ISD::STORE, intVT) &&
-          StoreMemVT.isVector()) {
+          MemVT.isVector()) {
         // Scalarize the store and let the individual components be handled.
         SDValue Result = scalarizeVectorStore(ST, DAG);
+
         return Result;
       }
       // Expand to a bitconvert of the value to the integer type of the
@@ -5377,22 +5348,24 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
     }
     // Do a (aligned) store to a stack slot, then copy from the stack slot
     // to the final destination using (unaligned) integer loads and stores.
-    MVT RegVT = getRegisterType(
-        *DAG.getContext(),
-        EVT::getIntegerVT(*DAG.getContext(), StoreMemVT.getSizeInBits()));
+    EVT StoredVT = ST->getMemoryVT();
+    MVT RegVT =
+      getRegisterType(*DAG.getContext(),
+                      EVT::getIntegerVT(*DAG.getContext(),
+                                        StoredVT.getSizeInBits()));
     EVT PtrVT = Ptr.getValueType();
-    unsigned StoredBytes = StoreMemVT.getStoreSize();
+    unsigned StoredBytes = StoredVT.getStoreSize();
     unsigned RegBytes = RegVT.getSizeInBits() / 8;
     unsigned NumRegs = (StoredBytes + RegBytes - 1) / RegBytes;
 
     // Make sure the stack slot is also aligned for the register type.
-    SDValue StackPtr = DAG.CreateStackTemporary(StoreMemVT, RegVT);
+    SDValue StackPtr = DAG.CreateStackTemporary(StoredVT, RegVT);
     auto FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
 
     // Perform the original store, only redirected to the stack slot.
     SDValue Store = DAG.getTruncStore(
         Chain, dl, Val, StackPtr,
-        MachinePointerInfo::getFixedStack(MF, FrameIndex, 0), StoreMemVT);
+        MachinePointerInfo::getFixedStack(MF, FrameIndex, 0), StoredVT);
 
     EVT StackPtrVT = StackPtr.getValueType();
 
@@ -5421,17 +5394,17 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
     // The last store may be partial.  Do a truncating store.  On big-endian
     // machines this requires an extending load from the stack slot to ensure
     // that the bits are in the right place.
-    EVT LoadMemVT =
-        EVT::getIntegerVT(*DAG.getContext(), 8 * (StoredBytes - Offset));
+    EVT MemVT = EVT::getIntegerVT(*DAG.getContext(),
+                                  8 * (StoredBytes - Offset));
 
     // Load from the stack slot.
     SDValue Load = DAG.getExtLoad(
         ISD::EXTLOAD, dl, RegVT, Store, StackPtr,
-        MachinePointerInfo::getFixedStack(MF, FrameIndex, Offset), LoadMemVT);
+        MachinePointerInfo::getFixedStack(MF, FrameIndex, Offset), MemVT);
 
     Stores.push_back(
         DAG.getTruncStore(Load.getValue(1), dl, Load, Ptr,
-                          ST->getPointerInfo().getWithOffset(Offset), LoadMemVT,
+                          ST->getPointerInfo().getWithOffset(Offset), MemVT,
                           MinAlign(ST->getAlignment(), Offset),
                           ST->getMemOperand()->getFlags(), ST->getAAInfo()));
     // The order of the stores doesn't matter - say it with a TokenFactor.
@@ -5439,16 +5412,18 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
     return Result;
   }
 
-  assert(StoreMemVT.isInteger() && !StoreMemVT.isVector() &&
+  assert(ST->getMemoryVT().isInteger() &&
+         !ST->getMemoryVT().isVector() &&
          "Unaligned store of unknown type.");
   // Get the half-size VT
-  EVT NewStoredVT = StoreMemVT.getHalfSizedIntegerVT(*DAG.getContext());
+  EVT NewStoredVT = ST->getMemoryVT().getHalfSizedIntegerVT(*DAG.getContext());
   int NumBits = NewStoredVT.getSizeInBits();
   int IncrementSize = NumBits / 8;
 
   // Divide the stored value in two parts.
-  SDValue ShiftAmount = DAG.getConstant(
-      NumBits, dl, getShiftAmountTy(Val.getValueType(), DAG.getDataLayout()));
+  SDValue ShiftAmount =
+      DAG.getConstant(NumBits, dl, getShiftAmountTy(Val.getValueType(),
+                                                    DAG.getDataLayout()));
   SDValue Lo = Val;
   SDValue Hi = DAG.getNode(ISD::SRL, dl, VT, Val, ShiftAmount);
 
@@ -5467,7 +5442,7 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
       ST->getMemOperand()->getFlags(), ST->getAAInfo());
 
   SDValue Result =
-      DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store1, Store2);
+    DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store1, Store2);
   return Result;
 }
 

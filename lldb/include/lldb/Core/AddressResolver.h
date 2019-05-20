@@ -18,7 +18,11 @@
 
 namespace lldb_private {
 class ModuleList;
+}
+namespace lldb_private {
 class Stream;
+}
+namespace lldb_private {
 
 /// \class AddressResolver AddressResolver.h "lldb/Core/AddressResolver.h"
 /// This class works with SearchFilter to resolve function names and source
@@ -32,7 +36,7 @@ class Stream;
 
 class AddressResolver : public Searcher {
 public:
-  enum MatchType { Exact, Regexp, Glob };
+  typedef enum { Exact, Regexp, Glob } MatchType;
 
   AddressResolver();
 

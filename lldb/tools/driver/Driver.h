@@ -26,11 +26,11 @@
 
 class Driver : public lldb::SBBroadcaster {
 public:
-  enum CommandPlacement {
+  typedef enum CommandPlacement {
     eCommandPlacementBeforeFile,
     eCommandPlacementAfterFile,
     eCommandPlacementAfterCrash,
-  };
+  } CommandPlacement;
 
   Driver();
 
@@ -47,18 +47,24 @@ public:
                                 lldb::SBStream &strm);
 
   struct OptionData {
+    void AddLocalLLDBInit();
     void AddInitialCommand(std::string command, CommandPlacement placement,
                            bool is_file, lldb::SBError &error);
 
     struct InitialCmdEntry {
       InitialCmdEntry(std::string contents, bool in_is_file,
-                      bool in_quiet = false)
+                      bool is_cwd_lldbinit_file_read, bool in_quiet = false)
           : contents(std::move(contents)), is_file(in_is_file),
-            source_quietly(in_quiet) {}
+            source_quietly(in_quiet),
+            is_cwd_lldbinit_file_read(is_cwd_lldbinit_file_read) {}
 
       std::string contents;
       bool is_file;
       bool source_quietly;
+
+      /// Remember if this is reading the local lldbinit file so we can skip it
+      /// if not permitted.
+      bool is_cwd_lldbinit_file_read;
     };
 
     std::vector<std::string> m_args;

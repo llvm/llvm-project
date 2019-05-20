@@ -63,7 +63,7 @@ EXTERN void __kmpc_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime) {
 
   // init team context
   omptarget_nvptx_TeamDescr &currTeamDescr = getMyTeamDescriptor();
-  currTeamDescr.InitTeamDescr();
+  currTeamDescr.InitTeamDescr(/*isSPMDExecutionMode=*/false);
   // this thread will start execution... has to update its task ICV
   // to point to the level zero task ICV. That ICV was init in
   // InitTeamDescr()
@@ -73,8 +73,8 @@ EXTERN void __kmpc_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime) {
   // set number of threads and thread limit in team to started value
   omptarget_nvptx_TaskDescr *currTaskDescr =
       omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(threadId);
-  nThreads = GetNumberOfWorkersInTeam();
-  threadLimit = ThreadLimit;
+  currTaskDescr->NThreads() = GetNumberOfWorkersInTeam();
+  currTaskDescr->ThreadLimit() = ThreadLimit;
 }
 
 EXTERN void __kmpc_kernel_deinit(int16_t IsOMPRuntimeInitialized) {
@@ -123,7 +123,7 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
     omptarget_nvptx_TeamDescr &currTeamDescr = getMyTeamDescriptor();
     omptarget_nvptx_WorkDescr &workDescr = getMyWorkDescriptor();
     // init team context
-    currTeamDescr.InitTeamDescr();
+    currTeamDescr.InitTeamDescr(/*isSPMDExecutionMode=*/true);
   }
   // FIXME: use __syncthreads instead when the function copy is fixed in LLVM.
   __SYNCTHREADS();
@@ -137,7 +137,9 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
   omptarget_nvptx_TaskDescr *newTaskDescr =
       omptarget_nvptx_threadPrivateContext->Level1TaskDescr(threadId);
   ASSERT0(LT_FUSSY, newTaskDescr, "expected a task descr");
-  newTaskDescr->InitLevelOneTaskDescr(currTeamDescr.LevelZeroTaskDescr());
+  newTaskDescr->InitLevelOneTaskDescr(ThreadLimit,
+                                      currTeamDescr.LevelZeroTaskDescr());
+  newTaskDescr->ThreadLimit() = ThreadLimit;
   // install new top descriptor
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(threadId,
                                                              newTaskDescr);
@@ -146,7 +148,7 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
   PRINT(LD_PAR,
         "thread will execute parallel region with id %d in a team of "
         "%d threads\n",
-        (int)newTaskDescr->ThreadId(), (int)ThreadLimit);
+        (int)newTaskDescr->ThreadId(), (int)newTaskDescr->ThreadsInTeam());
 
   if (RequiresDataSharing && GetLaneId() == 0) {
     // Warp master innitializes data sharing environment.

@@ -2723,8 +2723,6 @@ bool HexagonConstEvaluator::evaluateHexExt(const MachineInstr &MI,
     case Hexagon::A2_sxtw:
       Bits = 32;
       break;
-    default:
-      llvm_unreachable("Unhandled extension opcode");
   }
 
   bool Signed = false;

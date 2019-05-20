@@ -19,7 +19,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
-#include "MCTargetDesc/AMDGPUInstPrinter.h"
+#include "InstPrinter/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "R600AsmPrinter.h"
@@ -30,12 +30,10 @@
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
-#include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
@@ -206,18 +204,6 @@ void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
 
   if (STM.isAmdHsaOS())
     HSAMetadataStream->emitKernel(*MF, CurrentProgramInfo);
-
-  DumpCodeInstEmitter = nullptr;
-  if (STM.dumpCode()) {
-    // For -dumpcode, get the assembler out of the streamer, even if it does
-    // not really want to let us have it. This only works with -filetype=obj.
-    bool SaveFlag = OutStreamer->getUseAssemblerInfoForParsing();
-    OutStreamer->setUseAssemblerInfoForParsing(true);
-    MCAssembler *Assembler = OutStreamer->getAssemblerPtr();
-    OutStreamer->setUseAssemblerInfoForParsing(SaveFlag);
-    if (Assembler)
-      DumpCodeInstEmitter = Assembler->getEmitterPtr();
-  }
 }
 
 void AMDGPUAsmPrinter::EmitFunctionBodyEnd() {
@@ -275,7 +261,7 @@ void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
     getTargetStreamer()->EmitAMDGPUSymbolType(
         SymbolName, ELF::STT_AMDGPU_HSA_KERNEL);
   }
-  if (DumpCodeInstEmitter) {
+  if (STM.dumpCode()) {
     // Disassemble function name label to text.
     DisasmLines.push_back(MF->getName().str() + ":");
     DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLines.back().size());
@@ -286,7 +272,8 @@ void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
 }
 
 void AMDGPUAsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) const {
-  if (DumpCodeInstEmitter && !isBlockOnlyReachableByFallthrough(&MBB)) {
+  const GCNSubtarget &STI = MBB.getParent()->getSubtarget<GCNSubtarget>();
+  if (STI.dumpCode() && !isBlockOnlyReachableByFallthrough(&MBB)) {
     // Write a line for the basic block label if it is not only fallthrough.
     DisasmLines.push_back(
         (Twine("BB") + Twine(getFunctionNumber())
@@ -308,12 +295,6 @@ void AMDGPUAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
 
 bool AMDGPUAsmPrinter::doFinalization(Module &M) {
   CallGraphResourceInfo.clear();
-
-  if (AMDGPU::isGFX10(*getGlobalSTI())) {
-    OutStreamer->SwitchSection(getObjFileLowering().getTextSection());
-    getTargetStreamer()->EmitCodeEnd();
-  }
-
   return AsmPrinter::doFinalization(M);
 }
 
@@ -492,7 +473,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       false);
   }
 
-  if (DumpCodeInstEmitter) {
+  if (STM.dumpCode()) {
 
     OutStreamer->SwitchSection(
         Context.getELFSection(".AMDGPU.disasm", ELF::SHT_NOTE, 0));
@@ -947,11 +928,6 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
               1ULL << ScratchAlignShift) >>
       ScratchAlignShift;
 
-  if (getIsaVersion(getGlobalSTI()->getCPU()).Major >= 10) {
-    ProgInfo.WgpMode = STM.isCuModeEnabled() ? 0 : 1;
-    ProgInfo.MemOrdered = 1;
-  }
-
   ProgInfo.ComputePGMRSrc1 =
       S_00B848_VGPRS(ProgInfo.VGPRBlocks) |
       S_00B848_SGPRS(ProgInfo.SGPRBlocks) |
@@ -960,9 +936,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       S_00B848_PRIV(ProgInfo.Priv) |
       S_00B848_DX10_CLAMP(ProgInfo.DX10Clamp) |
       S_00B848_DEBUG_MODE(ProgInfo.DebugMode) |
-      S_00B848_IEEE_MODE(ProgInfo.IEEEMode) |
-      S_00B848_WGP_MODE(ProgInfo.WgpMode) |
-      S_00B848_MEM_ORDERED(ProgInfo.MemOrdered);
+      S_00B848_IEEE_MODE(ProgInfo.IEEEMode);
 
   // 0 = X, 1 = XY, 2 = XYZ
   unsigned TIDIGCompCnt = 0;
@@ -1103,7 +1077,7 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
   Out.compute_pgm_resource_registers =
       CurrentProgramInfo.ComputePGMRSrc1 |
       (CurrentProgramInfo.ComputePGMRSrc2 << 32);
-  Out.code_properties |= AMD_CODE_PROPERTY_IS_PTR64;
+  Out.code_properties = AMD_CODE_PROPERTY_IS_PTR64;
 
   if (CurrentProgramInfo.DynamicCallStack)
     Out.code_properties |= AMD_CODE_PROPERTY_IS_DYNAMIC_CALLSTACK;

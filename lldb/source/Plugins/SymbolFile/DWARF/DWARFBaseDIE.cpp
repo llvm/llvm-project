@@ -75,9 +75,7 @@ uint64_t DWARFBaseDIE::GetAttributeValueAsAddress(const dw_attr_t attr,
 }
 
 lldb::user_id_t DWARFBaseDIE::GetID() const {
-  if (IsValid())
-    return GetDWARF()->GetUID(*this);
-  return LLDB_INVALID_UID;
+  return GetDIERef().GetUID(GetDWARF());
 }
 
 const char *DWARFBaseDIE::GetName() const {

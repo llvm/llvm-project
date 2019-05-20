@@ -240,7 +240,6 @@ static unsigned ComputeSpeculationCost(const Instruction *I,
     case Instruction::FMul:
     case Instruction::FDiv:
     case Instruction::FRem:
-    case Instruction::FNeg:
     case Instruction::ICmp:
     case Instruction::FCmp:
       return TTI.getUserCost(I);

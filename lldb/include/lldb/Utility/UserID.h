@@ -11,9 +11,11 @@
 
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
-
 namespace lldb_private {
 class Stream;
+}
+
+namespace lldb_private {
 
 /// \class UserID UserID.h "lldb/Core/UserID.h"
 /// A mix in class that contains a generic user ID.

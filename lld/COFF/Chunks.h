@@ -67,14 +67,9 @@ public:
   // getSize().
   virtual void finalizeContents() {}
 
-  // The writer sets and uses the addresses. In practice, PE images cannot be
-  // larger than 2GB. Chunks are always laid as part of the image, so Chunk RVAs
-  // can be stored with 32 bits.
-  uint32_t getRVA() const { return RVA; }
-  void setRVA(uint64_t V) {
-    RVA = (uint32_t)V;
-    assert(RVA == V && "RVA truncated");
-  }
+  // The writer sets and uses the addresses.
+  uint64_t getRVA() const { return RVA; }
+  void setRVA(uint64_t V) { RVA = V; }
 
   // Returns true if this has non-zero data. BSS chunks return
   // false. If false is returned, the space occupied by this chunk
@@ -119,11 +114,14 @@ public:
 
 protected:
   // The RVA of this chunk in the output. The writer sets a value.
-  uint32_t RVA = 0;
+  uint64_t RVA = 0;
 
-protected:
   // The output section for this chunk.
   OutputSection *Out = nullptr;
+
+public:
+  // The offset from beginning of the output section. The writer sets a value.
+  uint64_t OutputSectionOff = 0;
 };
 
 // A chunk corresponding a section of an input file.
@@ -155,9 +153,7 @@ public:
   void writeTo(uint8_t *Buf) const override;
   bool hasData() const override;
   uint32_t getOutputCharacteristics() const override;
-  StringRef getSectionName() const override {
-    return StringRef(SectionNameData, SectionNameSize);
-  }
+  StringRef getSectionName() const override { return SectionName; }
   void getBaserels(std::vector<Baserel> *Res) override;
   bool isCOMDAT() const;
   void applyRelX64(uint8_t *Off, uint16_t Type, OutputSection *OS, uint64_t S,
@@ -184,29 +180,18 @@ public:
   // True if this is a codeview debug info chunk. These will not be laid out in
   // the image. Instead they will end up in the PDB, if one is requested.
   bool isCodeView() const {
-    return getSectionName() == ".debug" || getSectionName().startswith(".debug$");
+    return SectionName == ".debug" || SectionName.startswith(".debug$");
   }
 
   // True if this is a DWARF debug info or exception handling chunk.
   bool isDWARF() const {
-    return getSectionName().startswith(".debug_") || getSectionName() == ".eh_frame";
+    return SectionName.startswith(".debug_") || SectionName == ".eh_frame";
   }
 
   // Allow iteration over the bodies of this chunk's relocated symbols.
   llvm::iterator_range<symbol_iterator> symbols() const {
-    return llvm::make_range(symbol_iterator(File, RelocsData),
-                            symbol_iterator(File, RelocsData + RelocsSize));
-  }
-
-  ArrayRef<coff_relocation> getRelocs() const {
-    return llvm::makeArrayRef(RelocsData, RelocsSize);
-  }
-
-  // Reloc setter used by ARM range extension thunk insertion.
-  void setRelocs(ArrayRef<coff_relocation> NewRelocs) {
-    RelocsData = NewRelocs.data();
-    RelocsSize = NewRelocs.size();
-    assert(RelocsSize == NewRelocs.size() && "reloc size truncation");
+    return llvm::make_range(symbol_iterator(File, Relocs.begin()),
+                            symbol_iterator(File, Relocs.end()));
   }
 
   // Single linked list iterator for associated comdat children.
@@ -260,6 +245,9 @@ public:
   // The COMDAT leader symbol if this is a COMDAT chunk.
   DefinedRegular *Sym = nullptr;
 
+  // Relocations for this section.
+  ArrayRef<coff_relocation> Relocs;
+
   // The CRC of the contents as described in the COFF spec 4.5.5.
   // Auxiliary Format 5: Section Definitions. Used for ICF.
   uint32_t Checksum = 0;
@@ -277,20 +265,12 @@ public:
   SectionChunk *Repl;
 
 private:
+  StringRef SectionName;
   SectionChunk *AssocChildren = nullptr;
 
   // Used for ICF (Identical COMDAT Folding)
   void replace(SectionChunk *Other);
   uint32_t Class[2] = {0, 0};
-
-  // Relocations for this section. Size is stored below.
-  const coff_relocation *RelocsData;
-
-  // Section name string. Size is stored below.
-  const char *SectionNameData;
-
-  uint32_t RelocsSize = 0;
-  uint32_t SectionNameSize = 0;
 };
 
 // This class is used to implement an lld-specific feature (not implemented in

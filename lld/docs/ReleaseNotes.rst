@@ -34,7 +34,6 @@ COFF Improvements
 
 * lld-link now correctly reports duplicate symbol errors when several res
   input files define resources with the same type, name, and language.
-  This can be demoted to a warning using ``/force:multipleres``.
 
 * Having more than two ``/natvis:`` now works correctly; it used to not
   work for larger binaries before.

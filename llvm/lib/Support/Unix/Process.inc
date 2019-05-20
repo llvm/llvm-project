@@ -69,7 +69,7 @@ static std::pair<std::chrono::microseconds, std::chrono::microseconds> getRUsage
 
 // On Cygwin, getpagesize() returns 64k(AllocationGranularity) and
 // offset in mmap(3) should be aligned to the AllocationGranularity.
-Expected<unsigned> Process::getPageSize() {
+unsigned Process::getPageSize() {
 #if defined(HAVE_GETPAGESIZE)
   static const int page_size = ::getpagesize();
 #elif defined(HAVE_SYSCONF)
@@ -77,9 +77,6 @@ Expected<unsigned> Process::getPageSize() {
 #else
 #error Cannot get the page size on this machine
 #endif
-  if (page_size == -1)
-    return errorCodeToError(std::error_code(errno, std::generic_category()));
-
   return static_cast<unsigned>(page_size);
 }
 

@@ -54,9 +54,6 @@ extern std::unique_ptr<llvm::TarWriter> Tar;
 // Opens a given file.
 llvm::Optional<MemoryBufferRef> readFile(StringRef Path);
 
-// Add symbols in File to the symbol table.
-template <class ELFT> void parseFile(InputFile *File);
-
 // The root class of input files.
 class InputFile {
 public:

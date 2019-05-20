@@ -56,7 +56,7 @@ static unsigned computePageSize() {
   return static_cast<unsigned>(info.dwPageSize);
 }
 
-Expected<unsigned> Process::getPageSize() {
+unsigned Process::getPageSize() {
   static unsigned Ret = computePageSize();
   return Ret;
 }

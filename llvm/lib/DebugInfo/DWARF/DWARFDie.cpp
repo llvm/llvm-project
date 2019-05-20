@@ -429,11 +429,9 @@ DWARFDie::getAttributeValueAsReferencedDie(dwarf::Attribute Attr) const {
 
 DWARFDie
 DWARFDie::getAttributeValueAsReferencedDie(const DWARFFormValue &V) const {
-  if (auto SpecRef = V.getAsRelativeReference()) {
-    if (SpecRef->Unit)
-      return SpecRef->Unit->getDIEForOffset(SpecRef->Unit->getOffset() + SpecRef->Offset);
-    if (auto SpecUnit = U->getUnitVector().getUnitForOffset(SpecRef->Offset))
-      return SpecUnit->getDIEForOffset(SpecRef->Offset);
+  if (auto SpecRef = toReference(V)) {
+    if (auto SpecUnit = U->getUnitVector().getUnitForOffset(*SpecRef))
+      return SpecUnit->getDIEForOffset(*SpecRef);
   }
   return DWARFDie();
 }

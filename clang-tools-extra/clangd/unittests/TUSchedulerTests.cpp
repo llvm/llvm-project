@@ -673,14 +673,10 @@ TEST_F(TUSchedulerTests, TUStatus) {
       AllStatus.push_back(Status);
     }
 
-    std::vector<TUStatus> allStatus() {
-      std::lock_guard<std::mutex> Lock(Mutex);
-      return AllStatus;
-    }
+    std::vector<TUStatus> AllStatus;
 
   private:
     std::mutex Mutex;
-    std::vector<TUStatus> AllStatus;
   } CaptureTUStatus;
   MockFSProvider FS;
   MockCompilationDatabase CDB;
@@ -697,7 +693,7 @@ TEST_F(TUSchedulerTests, TUStatus) {
 
   ASSERT_TRUE(Server.blockUntilIdleForTest());
 
-  EXPECT_THAT(CaptureTUStatus.allStatus(),
+  EXPECT_THAT(CaptureTUStatus.AllStatus,
               ElementsAre(
                   // Statuses of "Update" action.
                   TUState(TUAction::RunningAction, "Update"),

@@ -45,21 +45,34 @@
 #include <stddef.h>
 #include <stdio.h>
 
+namespace lldb_private {
+class Address;
+}
+namespace lldb_private {
+class CommandInterpreter;
+}
+namespace lldb_private {
+class Process;
+}
+namespace lldb_private {
+class Stream;
+}
+namespace lldb_private {
+class SymbolContext;
+}
+namespace lldb_private {
+class Target;
+}
+namespace lldb_private {
+namespace repro {
+class DataRecorder;
+}
+} // namespace lldb_private
 namespace llvm {
 class raw_ostream;
 }
 
 namespace lldb_private {
-class Address;
-class CommandInterpreter;
-class Process;
-class Stream;
-class SymbolContext;
-class Target;
-
-namespace repro {
-class DataRecorder;
-}
 
 /// \class Debugger Debugger.h "lldb/Core/Debugger.h"
 /// A class to manage flag bits.

@@ -66,8 +66,6 @@ TemplateName::TemplateName(void *Ptr) {
 TemplateName::TemplateName(TemplateDecl *Template) : Storage(Template) {}
 TemplateName::TemplateName(OverloadedTemplateStorage *Storage)
     : Storage(Storage) {}
-TemplateName::TemplateName(AssumedTemplateStorage *Storage)
-    : Storage(Storage) {}
 TemplateName::TemplateName(SubstTemplateTemplateParmStorage *Storage)
     : Storage(Storage) {}
 TemplateName::TemplateName(SubstTemplateTemplateParmPackStorage *Storage)
@@ -89,8 +87,6 @@ TemplateName::NameKind TemplateName::getKind() const {
     = Storage.get<UncommonTemplateNameStorage*>();
   if (uncommon->getAsOverloadedStorage())
     return OverloadedTemplate;
-  if (uncommon->getAsAssumedTemplateName())
-    return AssumedTemplate;
   if (uncommon->getAsSubstTemplateTemplateParm())
     return SubstTemplateTemplateParm;
   return SubstTemplateTemplateParmPack;
@@ -113,14 +109,6 @@ OverloadedTemplateStorage *TemplateName::getAsOverloadedTemplate() const {
   if (UncommonTemplateNameStorage *Uncommon =
           Storage.dyn_cast<UncommonTemplateNameStorage *>())
     return Uncommon->getAsOverloadedStorage();
-
-  return nullptr;
-}
-
-AssumedTemplateStorage *TemplateName::getAsAssumedTemplateName() const {
-  if (UncommonTemplateNameStorage *Uncommon =
-          Storage.dyn_cast<UncommonTemplateNameStorage *>())
-    return Uncommon->getAsAssumedTemplateName();
 
   return nullptr;
 }
@@ -242,9 +230,7 @@ TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
   } else if (SubstTemplateTemplateParmPackStorage *SubstPack
                                         = getAsSubstTemplateTemplateParmPack())
     OS << *SubstPack->getParameterPack();
-  else if (AssumedTemplateStorage *Assumed = getAsAssumedTemplateName()) {
-    Assumed->getDeclName().print(OS, Policy);
-  } else {
+  else {
     OverloadedTemplateStorage *OTS = getAsOverloadedTemplate();
     (*OTS->begin())->printName(OS);
   }
@@ -262,20 +248,6 @@ const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
   OS << '\'';
   OS.flush();
   return DB << NameStr;
-}
-
-const PartialDiagnostic&clang::operator<<(const PartialDiagnostic &PD,
-                                           TemplateName N) {
-  std::string NameStr;
-  llvm::raw_string_ostream OS(NameStr);
-  LangOptions LO;
-  LO.CPlusPlus = true;
-  LO.Bool = true;
-  OS << '\'';
-  N.print(OS, PrintingPolicy(LO));
-  OS << '\'';
-  OS.flush();
-  return PD << NameStr;
 }
 
 void TemplateName::dump(raw_ostream &OS) const {

@@ -8,5 +8,5 @@
 bogus
 p 10+1
 
-# CONTINUE: $0 = 11
-# STOP-NOT: $0 = 11
+# CONTINUE: 11
+# STOP-NOT: 11

@@ -1087,16 +1087,13 @@ void InstructionList::Append(lldb::InstructionSP &inst_sp) {
 
 uint32_t
 InstructionList::GetIndexOfNextBranchInstruction(uint32_t start,
-                                                 Target &target,
-                                                 bool ignore_calls) const {
+                                                 Target &target) const {
   size_t num_instructions = m_instructions.size();
 
   uint32_t next_branch = UINT32_MAX;
   size_t i;
   for (i = start; i < num_instructions; i++) {
     if (m_instructions[i]->DoesBranch()) {
-      if (ignore_calls && m_instructions[i]->IsCall())
-        continue;
       next_branch = i;
       break;
     }

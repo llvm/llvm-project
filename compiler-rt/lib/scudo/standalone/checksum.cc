@@ -22,7 +22,7 @@
 
 namespace scudo {
 
-Checksum HashAlgorithm = {Checksum::BSD};
+atomic_u8 HashAlgorithm = {BSDChecksum};
 
 #if defined(__x86_64__) || defined(__i386__)
 // i386 and x86_64 specific code to detect CRC32 hardware support via CPUID.

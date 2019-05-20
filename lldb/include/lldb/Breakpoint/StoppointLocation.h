@@ -78,7 +78,7 @@ protected:
 private:
   // For StoppointLocation only
   DISALLOW_COPY_AND_ASSIGN(StoppointLocation);
-  StoppointLocation() = delete;
+  StoppointLocation(); // Disallow default constructor
 };
 
 } // namespace lldb_private

@@ -5,69 +5,74 @@ struct alignas(32) ymm_t {
 };
 
 int main() {
-  constexpr ymm_t ymm[] = {
-    { 0x0706050403020100, 0x0F0E0D0C0B0A0908,
-      0x1716151413121110, 0x1F1E1D1C1B1A1918, },
-    { 0x0807060504030201, 0x100F0E0D0C0B0A09,
-      0x1817161514131211, 0x201F1E1D1C1B1A19, },
-    { 0x0908070605040302, 0x11100F0E0D0C0B0A,
-      0x1918171615141312, 0x21201F1E1D1C1B1A, },
-    { 0x0A09080706050403, 0x1211100F0E0D0C0B,
-      0x1A19181716151413, 0x2221201F1E1D1C1B, },
-    { 0x0B0A090807060504, 0x131211100F0E0D0C,
-      0x1B1A191817161514, 0x232221201F1E1D1C, },
-    { 0x0C0B0A0908070605, 0x14131211100F0E0D,
-      0x1C1B1A1918171615, 0x24232221201F1E1D, },
-    { 0x0D0C0B0A09080706, 0x1514131211100F0E,
-      0x1D1C1B1A19181716, 0x2524232221201F1E, },
-    { 0x0E0D0C0B0A090807, 0x161514131211100F,
-      0x1E1D1C1B1A191817, 0x262524232221201F, },
+  constexpr ymm_t ymm0 = { 0x020406080A0C0E01, 0x030507090B0D0F00,
+                           0x838587898B8D8F80, 0x828486888A8C8E81 };
+  constexpr ymm_t ymm1 = { 0x121416181A1C1E11, 0x131517191B1D1F10,
+                           0x939597999B9D9F90, 0x929496989A9C9E91 };
+  constexpr ymm_t ymm2 = { 0x222426282A2C2E21, 0x232527292B2D2F20,
+                           0xA3A5A7A9ABADAFA0, 0xA2A4A6A8AAACAEA1 };
+  constexpr ymm_t ymm3 = { 0x323436383A3C3E31, 0x333537393B3D3F30,
+                           0xB3B5B7B9BBBDBFB0, 0xB2B4B6B8BABCBEB1 };
+  constexpr ymm_t ymm4 = { 0x424446484A4C4E41, 0x434547494B4D4F40,
+                           0xC3C5C7C9CBCDCFC0, 0xC2C4C6C8CACCCEC1 };
+  constexpr ymm_t ymm5 = { 0x525456585A5C5E51, 0x535557595B5D5F50,
+                           0xD3D5D7D9DBDDDFD0, 0xD2D4D6D8DADCDED1 };
+  constexpr ymm_t ymm6 = { 0x626466686A6C6E61, 0x636567696B6D6F60,
+                           0xE3E5E7E9EBEDEFE0, 0xE2E4E6E8EAECEEE1 };
+  constexpr ymm_t ymm7 = { 0x727476787A7C7E71, 0x737577797B7D7F70,
+                           0xF3F5F7F9FBFDFFF0, 0xF2F4F6F8FAFCFEF1 };
 #if defined(__x86_64__) || defined(_M_X64)
-    { 0x0F0E0D0C0B0A0908, 0x1716151413121110,
-      0x1F1E1D1C1B1A1918, 0x2726252423222120, },
-    { 0x100F0E0D0C0B0A09, 0x1817161514131211,
-      0x201F1E1D1C1B1A19, 0x2827262524232221, },
-    { 0x11100F0E0D0C0B0A, 0x1918171615141312,
-      0x21201F1E1D1C1B1A, 0x2928272625242322, },
-    { 0x1211100F0E0D0C0B, 0x1A19181716151413,
-      0x2221201F1E1D1C1B, 0x2A29282726252423, },
-    { 0x131211100F0E0D0C, 0x1B1A191817161514,
-      0x232221201F1E1D1C, 0x2B2A292827262524, },
-    { 0x14131211100F0E0D, 0x1C1B1A1918171615,
-      0x24232221201F1E1D, 0x2C2B2A2928272625, },
-    { 0x1514131211100F0E, 0x1D1C1B1A19181716,
-      0x2524232221201F1E, 0x2D2C2B2A29282726, },
-    { 0x161514131211100F, 0x1E1D1C1B1A191817,
-      0x262524232221201F, 0x2E2D2C2B2A292827, },
+  constexpr ymm_t ymm8 = { 0x838587898B8D8F80, 0x828486888A8C8E81,
+                           0x020406080A0C0E01, 0x030507090B0D0F00 };
+  constexpr ymm_t ymm9 = { 0x939597999B9D9F90, 0x929496989A9C9E91,
+                           0x121416181A1C1E11, 0x131517191B1D1F10 };
+  constexpr ymm_t ymm10 = { 0xA3A5A7A9ABADAFA0, 0xA2A4A6A8AAACAEA1,
+                            0x222426282A2C2E21, 0x232527292B2D2F20 };
+  constexpr ymm_t ymm11 = { 0xB3B5B7B9BBBDBFB0, 0xB2B4B6B8BABCBEB1,
+                            0x323436383A3C3E31, 0x333537393B3D3F30 };
+  constexpr ymm_t ymm12 = { 0xC3C5C7C9CBCDCFC0, 0xC2C4C6C8CACCCEC1,
+                            0x424446484A4C4E41, 0x434547494B4D4F40 };
+  constexpr ymm_t ymm13 = { 0xD3D5D7D9DBDDDFD0, 0xD2D4D6D8DADCDED1,
+                            0x525456585A5C5E51, 0x535557595B5D5F50 };
+  constexpr ymm_t ymm14 = { 0xE3E5E7E9EBEDEFE0, 0xE2E4E6E8EAECEEE1,
+                            0x626466686A6C6E61, 0x636567696B6D6F60 };
+  constexpr ymm_t ymm15 = { 0xF3F5F7F9FBFDFFF0, 0xF2F4F6F8FAFCFEF1,
+                            0x727476787A7C7E71, 0x737577797B7D7F70 };
 #endif
-  };
 
   asm volatile(
-    "vmovaps  0x000(%0), %%ymm0\n\t"
-    "vmovaps  0x020(%0), %%ymm1\n\t"
-    "vmovaps  0x040(%0), %%ymm2\n\t"
-    "vmovaps  0x060(%0), %%ymm3\n\t"
-    "vmovaps  0x080(%0), %%ymm4\n\t"
-    "vmovaps  0x0A0(%0), %%ymm5\n\t"
-    "vmovaps  0x0C0(%0), %%ymm6\n\t"
-    "vmovaps  0x0E0(%0), %%ymm7\n\t"
+    "vmovaps  %0, %%ymm0\n\t"
+    "vmovaps  %1, %%ymm1\n\t"
+    "vmovaps  %2, %%ymm2\n\t"
+    "vmovaps  %3, %%ymm3\n\t"
+    "vmovaps  %4, %%ymm4\n\t"
+    "vmovaps  %5, %%ymm5\n\t"
+    "vmovaps  %6, %%ymm6\n\t"
+    "vmovaps  %7, %%ymm7\n\t"
 #if defined(__x86_64__) || defined(_M_X64)
-    "vmovaps  0x100(%0), %%ymm8\n\t"
-    "vmovaps  0x120(%0), %%ymm9\n\t"
-    "vmovaps  0x140(%0), %%ymm10\n\t"
-    "vmovaps  0x160(%0), %%ymm11\n\t"
-    "vmovaps  0x180(%0), %%ymm12\n\t"
-    "vmovaps  0x1A0(%0), %%ymm13\n\t"
-    "vmovaps  0x1C0(%0), %%ymm14\n\t"
-    "vmovaps  0x1E0(%0), %%ymm15\n\t"
+    "vmovaps  %8, %%ymm8\n\t"
+    "vmovaps  %9, %%ymm9\n\t"
+    "vmovaps  %10, %%ymm10\n\t"
+    "vmovaps  %11, %%ymm11\n\t"
+    "vmovaps  %12, %%ymm12\n\t"
+    "vmovaps  %13, %%ymm13\n\t"
+    "vmovaps  %14, %%ymm14\n\t"
+    "vmovaps  %15, %%ymm15\n\t"
 #endif
     "\n\t"
-    "int3\n\t"
+    "int3"
     :
-    : "b"(ymm)
+    : "m"(ymm0), "m"(ymm1), "m"(ymm2), "m"(ymm3), "m"(ymm4), "m"(ymm5),
+      "m"(ymm6), "m"(ymm7)
+#if defined(__x86_64__) || defined(_M_X64)
+      ,
+      "m"(ymm8), "m"(ymm9), "m"(ymm10), "m"(ymm11),
+      "m"(ymm12), "m"(ymm13), "m"(ymm14), "m"(ymm15)
+#endif
     : "%ymm0", "%ymm1", "%ymm2", "%ymm3", "%ymm4", "%ymm5", "%ymm6", "%ymm7"
 #if defined(__x86_64__) || defined(_M_X64)
-    , "%ymm8", "%ymm9", "%ymm10", "%ymm11", "%ymm12", "%ymm13", "%ymm14",
+      ,
+      "%ymm8", "%ymm9", "%ymm10", "%ymm11", "%ymm12", "%ymm13", "%ymm14",
       "%ymm15"
 #endif
   );

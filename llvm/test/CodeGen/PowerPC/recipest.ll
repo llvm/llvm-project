@@ -14,14 +14,13 @@ define double @foo(double %a, double %b) nounwind {
   ret double %r
 
 ; CHECK: @foo
-; CHECK: frsqrte
+; CHECK-DAG: frsqrte
+; CHECK-DAG: fnmsub
 ; CHECK: fmul
 ; CHECK-NEXT: fmadd
 ; CHECK-NEXT: fmul
 ; CHECK-NEXT: fmul
-; CHECK-NEXT: fmul
 ; CHECK-NEXT: fmadd
-; CHECK-NEXT: fmul
 ; CHECK-NEXT: fmul
 ; CHECK-NEXT: fmul
 ; CHECK: blr
@@ -54,9 +53,9 @@ define double @foof(double %a, float %b) nounwind {
 
 ; CHECK: @foof
 ; CHECK-DAG: frsqrtes
+; CHECK-DAG: fnmsubs
 ; CHECK: fmuls
 ; CHECK-NEXT: fmadds
-; CHECK-NEXT: fmuls
 ; CHECK-NEXT: fmuls
 ; CHECK-NEXT: fmul
 ; CHECK-NEXT: blr
@@ -75,13 +74,12 @@ define float @food(float %a, double %b) nounwind {
 
 ; CHECK: @foo
 ; CHECK-DAG: frsqrte
+; CHECK-DAG: fnmsub
 ; CHECK: fmul
 ; CHECK-NEXT: fmadd
 ; CHECK-NEXT: fmul
 ; CHECK-NEXT: fmul
-; CHECK-NEXT: fmul
 ; CHECK-NEXT: fmadd
-; CHECK-NEXT: fmul
 ; CHECK-NEXT: fmul
 ; CHECK-NEXT: frsp
 ; CHECK-NEXT: fmuls
@@ -100,9 +98,9 @@ define float @goo(float %a, float %b) nounwind {
 
 ; CHECK: @goo
 ; CHECK-DAG: frsqrtes
+; CHECK-DAG: fnmsubs
 ; CHECK: fmuls
 ; CHECK-NEXT: fmadds
-; CHECK-NEXT: fmuls
 ; CHECK-NEXT: fmuls
 ; CHECK-NEXT: fmuls
 ; CHECK-NEXT: blr
@@ -140,6 +138,7 @@ define float @rsqrt_fmul(float %a, float %b, float %c) {
 ; CHECK-DAG: fres
 ; CHECK-DAG: fnmsubs
 ; CHECK-DAG: fmuls
+; CHECK-DAG: fnmsubs
 ; CHECK-DAG: fmadds
 ; CHECK-DAG: fmadds
 ; CHECK: fmuls
@@ -220,9 +219,9 @@ define double @foo3(double %a) nounwind {
 ; CHECK: @foo3
 ; CHECK: fcmpu
 ; CHECK-DAG: frsqrte
+; CHECK-DAG: fnmsub
 ; CHECK: fmul
 ; CHECK-NEXT: fmadd
-; CHECK-NEXT: fmul
 ; CHECK-NEXT: fmul
 ; CHECK-NEXT: fmul
 ; CHECK-NEXT: fmadd
@@ -242,6 +241,7 @@ define float @goo3(float %a) nounwind {
 ; CHECK: @goo3
 ; CHECK: fcmpu
 ; CHECK-DAG: frsqrtes
+; CHECK-DAG: fnmsubs
 ; CHECK: fmuls
 ; CHECK-NEXT: fmadds
 ; CHECK-NEXT: fmuls

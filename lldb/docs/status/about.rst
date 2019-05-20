@@ -37,7 +37,7 @@ Reusability
 
 The LLDB debugger APIs are exposed as a C++ object oriented interface in a
 shared library. The lldb command line tool links to, and uses this public API.
-On macOS the shared library is exposed as a framework named LLDB.framework,
+On Mac OS X the shared library is exposed as a framework named LLDB.framework,
 and unix systems expose it as lldb.so. The entire API is also then exposed
 through Python script bindings which allow the API to be used within the LLDB
 embedded script interpreter, and also in any python script that loads the
@@ -54,7 +54,7 @@ Platform Support
 LLDB is known to work on the following platforms, but ports to new platforms
 are welcome:
 
-* macOS desktop user space debugging for i386 and x86-64
+* Mac OS X desktop user space debugging for i386 and x86-64
 * iOS simulator debugging on i386
 * iOS device debugging on ARM
 * Linux local user-space debugging for i386, x86-64 and PPC64le

@@ -560,9 +560,7 @@ class ThreeOpFrag<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
       if (!Operands[i]->isDivergent() &&
           !isInlineImmediate(Operands[i].getNode())) {
         ConstantBusUses++;
-        // This uses AMDGPU::V_ADD3_U32, but all three operand instructions
-        // have the same constant bus limit.
-        if (ConstantBusUses > Subtarget->getConstantBusLimit(AMDGPU::V_ADD3_U32))
+        if (ConstantBusUses >= 2)
           return false;
       }
     }
@@ -627,7 +625,6 @@ def : ThreeOp_i32_Pats<xor, add, V_XAD_U32>;
 
 let SubtargetPredicate = isGFX10Plus in {
   def V_XOR3_B32 : VOP3Inst <"v_xor3_b32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
-  def : ThreeOp_i32_Pats<xor, xor, V_XOR3_B32>;
 } // End SubtargetPredicate = isGFX10Plus
 
 //===----------------------------------------------------------------------===//

@@ -14,6 +14,33 @@
 using namespace lldb_private;
 using namespace minidump;
 
+// MinidumpThread
+const MinidumpThread *MinidumpThread::Parse(llvm::ArrayRef<uint8_t> &data) {
+  const MinidumpThread *thread = nullptr;
+  Status error = consumeObject(data, thread);
+  if (error.Fail())
+    return nullptr;
+
+  return thread;
+}
+
+llvm::ArrayRef<MinidumpThread>
+MinidumpThread::ParseThreadList(llvm::ArrayRef<uint8_t> &data) {
+  const auto orig_size = data.size();
+  const llvm::support::ulittle32_t *thread_count;
+  Status error = consumeObject(data, thread_count);
+  if (error.Fail() || *thread_count * sizeof(MinidumpThread) > data.size())
+    return {};
+
+  // Compilers might end up padding an extra 4 bytes depending on how the
+  // structure is padded by the compiler and the #pragma pack settings.
+  if (4 + *thread_count * sizeof(MinidumpThread) < orig_size)
+    data = data.drop_front(4);
+
+  return llvm::ArrayRef<MinidumpThread>(
+      reinterpret_cast<const MinidumpThread *>(data.data()), *thread_count);
+}
+
 // MinidumpMiscInfo
 const MinidumpMiscInfo *MinidumpMiscInfo::Parse(llvm::ArrayRef<uint8_t> &data) {
   const MinidumpMiscInfo *misc_info;
@@ -68,22 +95,22 @@ MinidumpExceptionStream::Parse(llvm::ArrayRef<uint8_t> &data) {
   return exception_stream;
 }
 
-llvm::ArrayRef<MemoryDescriptor>
-minidump::ParseMemoryList(llvm::ArrayRef<uint8_t> &data) {
+llvm::ArrayRef<MinidumpMemoryDescriptor>
+MinidumpMemoryDescriptor::ParseMemoryList(llvm::ArrayRef<uint8_t> &data) {
   const auto orig_size = data.size();
   const llvm::support::ulittle32_t *mem_ranges_count;
   Status error = consumeObject(data, mem_ranges_count);
   if (error.Fail() ||
-      *mem_ranges_count * sizeof(MemoryDescriptor) > data.size())
+      *mem_ranges_count * sizeof(MinidumpMemoryDescriptor) > data.size())
     return {};
   
   // Compilers might end up padding an extra 4 bytes depending on how the
   // structure is padded by the compiler and the #pragma pack settings.
-  if (4 + *mem_ranges_count * sizeof(MemoryDescriptor) < orig_size)
+  if (4 + *mem_ranges_count * sizeof(MinidumpMemoryDescriptor) < orig_size)
     data = data.drop_front(4);
 
   return llvm::makeArrayRef(
-      reinterpret_cast<const MemoryDescriptor *>(data.data()),
+      reinterpret_cast<const MinidumpMemoryDescriptor *>(data.data()),
       *mem_ranges_count);
 }
 

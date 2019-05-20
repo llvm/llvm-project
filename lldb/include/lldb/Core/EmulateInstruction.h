@@ -23,14 +23,26 @@
 
 #include <stddef.h>
 #include <stdint.h>
-
 namespace lldb_private {
 class OptionValueDictionary;
+}
+namespace lldb_private {
 class RegisterContext;
+}
+namespace lldb_private {
 class RegisterValue;
+}
+namespace lldb_private {
 class Stream;
+}
+namespace lldb_private {
 class Target;
+}
+namespace lldb_private {
 class UnwindPlan;
+}
+
+namespace lldb_private {
 
 /// \class EmulateInstruction EmulateInstruction.h
 /// "lldb/Core/EmulateInstruction.h"

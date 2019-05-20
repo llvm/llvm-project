@@ -63,6 +63,7 @@ class StringRef;
 class raw_ostream;
 class raw_pwrite_stream;
 
+Target &getTheHexagonTarget();
 extern cl::opt<bool> HexagonDisableCompound;
 extern cl::opt<bool> HexagonDisableDuplex;
 extern const InstrStage HexagonStages[];

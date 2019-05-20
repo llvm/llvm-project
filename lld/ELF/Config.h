@@ -159,7 +159,6 @@ struct Configuration {
   bool LTONewPassManager;
   bool MergeArmExidx;
   bool MipsN32Abi = false;
-  bool Nmagic;
   bool NoinhibitExec;
   bool Nostdlib;
   bool OFormatBinary;
@@ -194,7 +193,6 @@ struct Configuration {
   bool ZExecstack;
   bool ZGlobal;
   bool ZHazardplt;
-  bool ZIfuncNoplt;
   bool ZInitfirst;
   bool ZInterpose;
   bool ZKeepTextSectionPrefix;
@@ -221,7 +219,6 @@ struct Configuration {
   uint16_t DefaultSymbolVersion = llvm::ELF::VER_NDX_GLOBAL;
   uint16_t EMachine = llvm::ELF::EM_NONE;
   llvm::Optional<uint64_t> ImageBase;
-  uint64_t CommonPageSize;
   uint64_t MaxPageSize;
   uint64_t MipsGotSize;
   uint64_t ZStackSize;

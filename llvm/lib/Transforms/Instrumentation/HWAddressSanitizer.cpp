@@ -11,7 +11,6 @@
 /// based on tagged addressing.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -165,19 +164,22 @@ namespace {
 
 /// An instrumentation pass implementing detection of addressability bugs
 /// using tagged pointers.
-class HWAddressSanitizer {
+class HWAddressSanitizer : public FunctionPass {
 public:
-  explicit HWAddressSanitizer(Module &M, bool CompileKernel = false,
-                              bool Recover = false) {
+  // Pass identification, replacement for typeid.
+  static char ID;
+
+  explicit HWAddressSanitizer(bool CompileKernel = false, bool Recover = false)
+      : FunctionPass(ID) {
     this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
     this->CompileKernel = ClEnableKhwasan.getNumOccurrences() > 0 ?
         ClEnableKhwasan : CompileKernel;
-
-    initializeModule(M);
   }
 
-  bool sanitizeFunction(Function &F);
-  void initializeModule(Module &M);
+  StringRef getPassName() const override { return "HWAddressSanitizer"; }
+
+  bool runOnFunction(Function &F) override;
+  bool doInitialization(Module &M) override;
 
   void initializeCallbacks(Module &M);
 
@@ -277,61 +279,29 @@ private:
   GlobalValue *ThreadPtrGlobal = nullptr;
 };
 
-class HWAddressSanitizerLegacyPass : public FunctionPass {
-public:
-  // Pass identification, replacement for typeid.
-  static char ID;
-
-  explicit HWAddressSanitizerLegacyPass(bool CompileKernel = false,
-                                        bool Recover = false)
-      : FunctionPass(ID), CompileKernel(CompileKernel), Recover(Recover) {}
-
-  StringRef getPassName() const override { return "HWAddressSanitizer"; }
-
-  bool runOnFunction(Function &F) override {
-    HWAddressSanitizer HWASan(*F.getParent(), CompileKernel, Recover);
-    return HWASan.sanitizeFunction(F);
-  }
-
-private:
-  bool CompileKernel;
-  bool Recover;
-};
-
 } // end anonymous namespace
 
-char HWAddressSanitizerLegacyPass::ID = 0;
+char HWAddressSanitizer::ID = 0;
 
 INITIALIZE_PASS_BEGIN(
-    HWAddressSanitizerLegacyPass, "hwasan",
+    HWAddressSanitizer, "hwasan",
     "HWAddressSanitizer: detect memory bugs using tagged addressing.", false,
     false)
 INITIALIZE_PASS_END(
-    HWAddressSanitizerLegacyPass, "hwasan",
+    HWAddressSanitizer, "hwasan",
     "HWAddressSanitizer: detect memory bugs using tagged addressing.", false,
     false)
 
-FunctionPass *llvm::createHWAddressSanitizerLegacyPassPass(bool CompileKernel,
-                                                           bool Recover) {
+FunctionPass *llvm::createHWAddressSanitizerPass(bool CompileKernel,
+                                                 bool Recover) {
   assert(!CompileKernel || Recover);
-  return new HWAddressSanitizerLegacyPass(CompileKernel, Recover);
-}
-
-HWAddressSanitizerPass::HWAddressSanitizerPass(bool CompileKernel, bool Recover)
-    : CompileKernel(CompileKernel), Recover(Recover) {}
-
-PreservedAnalyses HWAddressSanitizerPass::run(Function &F,
-                                              FunctionAnalysisManager &FAM) {
-  HWAddressSanitizer HWASan(*F.getParent(), CompileKernel, Recover);
-  if (HWASan.sanitizeFunction(F))
-    return PreservedAnalyses::none();
-  return PreservedAnalyses::all();
+  return new HWAddressSanitizer(CompileKernel, Recover);
 }
 
 /// Module-level initialization.
 ///
 /// inserts a call to __hwasan_init to the module's constructor list.
-void HWAddressSanitizer::initializeModule(Module &M) {
+bool HWAddressSanitizer::doInitialization(Module &M) {
   LLVM_DEBUG(dbgs() << "Init " << M.getName() << "\n");
   auto &DL = M.getDataLayout();
 
@@ -350,24 +320,13 @@ void HWAddressSanitizer::initializeModule(Module &M) {
   HwasanCtorFunction = nullptr;
   if (!CompileKernel) {
     std::tie(HwasanCtorFunction, std::ignore) =
-        getOrCreateSanitizerCtorAndInitFunctions(
-            M, kHwasanModuleCtorName, kHwasanInitName,
-            /*InitArgTypes=*/{},
-            /*InitArgs=*/{},
-            // This callback is invoked when the functions are created the first
-            // time. Hook them into the global ctors list in that case:
-            [&](Function *Ctor, FunctionCallee) {
-              Comdat *CtorComdat = M.getOrInsertComdat(kHwasanModuleCtorName);
-              Ctor->setComdat(CtorComdat);
-              appendToGlobalCtors(M, Ctor, 0, Ctor);
-
-              IRBuilder<> IRBCtor(Ctor->getEntryBlock().getTerminator());
-              IRBCtor.CreateCall(
-                  declareSanitizerInitFunction(M, "__hwasan_init_frames",
-                                               {Int8PtrTy, Int8PtrTy}),
-                  {createFrameSectionBound(M, Int8Ty, getFrameSectionBeg()),
-                   createFrameSectionBound(M, Int8Ty, getFrameSectionEnd())});
-            });
+        createSanitizerCtorAndInitFunctions(M, kHwasanModuleCtorName,
+                                            kHwasanInitName,
+                                            /*InitArgTypes=*/{},
+                                            /*InitArgs=*/{});
+    Comdat *CtorComdat = M.getOrInsertComdat(kHwasanModuleCtorName);
+    HwasanCtorFunction->setComdat(CtorComdat);
+    appendToGlobalCtors(M, HwasanCtorFunction, 0, HwasanCtorFunction);
 
     // Create a zero-length global in __hwasan_frame so that the linker will
     // always create start and stop symbols.
@@ -375,29 +334,29 @@ void HWAddressSanitizer::initializeModule(Module &M) {
     // N.B. If we ever start creating associated metadata in this pass this
     // global will need to be associated with the ctor.
     Type *Int8Arr0Ty = ArrayType::get(Int8Ty, 0);
-    M.getOrInsertGlobal("__hwasan", Int8Arr0Ty, [&] {
-      auto *GV = new GlobalVariable(
-          M, Int8Arr0Ty, /*isConstantGlobal=*/true, GlobalValue::PrivateLinkage,
-          Constant::getNullValue(Int8Arr0Ty), "__hwasan");
-      GV->setSection(getFrameSection());
-      Comdat *CtorComdat = M.getOrInsertComdat(kHwasanModuleCtorName);
-      GV->setComdat(CtorComdat);
-      appendToCompilerUsed(M, GV);
-      return GV;
-    });
+    auto GV =
+        new GlobalVariable(M, Int8Arr0Ty, /*isConstantGlobal*/ true,
+                           GlobalVariable::PrivateLinkage,
+                           Constant::getNullValue(Int8Arr0Ty), "__hwasan");
+    GV->setSection(getFrameSection());
+    GV->setComdat(CtorComdat);
+    appendToCompilerUsed(M, GV);
+
+    IRBuilder<> IRBCtor(HwasanCtorFunction->getEntryBlock().getTerminator());
+    IRBCtor.CreateCall(
+        declareSanitizerInitFunction(M, "__hwasan_init_frames",
+                                     {Int8PtrTy, Int8PtrTy}),
+        {createFrameSectionBound(M, Int8Ty, getFrameSectionBeg()),
+         createFrameSectionBound(M, Int8Ty, getFrameSectionEnd())});
   }
 
-  if (!TargetTriple.isAndroid()) {
-    Constant *C = M.getOrInsertGlobal("__hwasan_tls", IntptrTy, [&] {
-      auto *GV = new GlobalVariable(M, IntptrTy, /*isConstantGlobal=*/false,
-                                    GlobalValue::ExternalLinkage, nullptr,
-                                    "__hwasan_tls", nullptr,
-                                    GlobalVariable::InitialExecTLSModel);
-      appendToCompilerUsed(M, GV);
-      return GV;
-    });
-    ThreadPtrGlobal = cast<GlobalVariable>(C);
-  }
+  if (!TargetTriple.isAndroid())
+    appendToCompilerUsed(
+        M, ThreadPtrGlobal = new GlobalVariable(
+               M, IntptrTy, false, GlobalVariable::ExternalLinkage, nullptr,
+               "__hwasan_tls", nullptr, GlobalVariable::InitialExecTLSModel));
+
+  return true;
 }
 
 void HWAddressSanitizer::initializeCallbacks(Module &M) {
@@ -1011,7 +970,7 @@ bool HWAddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
           !AI.isSwiftError());
 }
 
-bool HWAddressSanitizer::sanitizeFunction(Function &F) {
+bool HWAddressSanitizer::runOnFunction(Function &F) {
   if (&F == HwasanCtorFunction)
     return false;
 

@@ -56,12 +56,13 @@ uint64_t ObjectFile::getSymbolValue(DataRefImpl Ref) const {
   return getSymbolValueImpl(Ref);
 }
 
-Error ObjectFile::printSymbolName(raw_ostream &OS, DataRefImpl Symb) const {
+std::error_code ObjectFile::printSymbolName(raw_ostream &OS,
+                                            DataRefImpl Symb) const {
   Expected<StringRef> Name = getSymbolName(Symb);
   if (!Name)
-    return Name.takeError();
+    return errorToErrorCode(Name.takeError());
   OS << *Name;
-  return Error::success();
+  return std::error_code();
 }
 
 uint32_t ObjectFile::getSymbolAlignment(DataRefImpl DRI) const { return 0; }

@@ -1,4 +1,4 @@
-//===-- ValueObjectCast.h ---------------------------------------*- C++ -*-===//
+//===-- ValueObjectDynamicValue.h -------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,6 +20,9 @@
 
 namespace lldb_private {
 class ConstString;
+}
+
+namespace lldb_private {
 
 // A ValueObject that represents a given value represented as a different type.
 class ValueObjectCast : public ValueObject {

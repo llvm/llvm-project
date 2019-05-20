@@ -171,10 +171,6 @@ public:
 
   unsigned getInitialCFARegister(const MachineFunction &MF) const override;
 
-  /// Return true if the function has a redzone (accessible bytes past the
-  /// frame of the top of stack function) as part of it's ABI.  
-  bool has128ByteRedZone(const MachineFunction& MF) const;
-
 private:
   uint64_t calculateMaxStackAlign(const MachineFunction &MF) const;
 

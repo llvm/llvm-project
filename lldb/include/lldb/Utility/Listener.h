@@ -28,6 +28,8 @@
 
 namespace lldb_private {
 class ConstString;
+}
+namespace lldb_private {
 class Event;
 }
 

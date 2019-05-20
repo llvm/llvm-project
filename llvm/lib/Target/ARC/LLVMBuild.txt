@@ -15,7 +15,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = Disassembler MCTargetDesc TargetInfo
+subdirectories = Disassembler InstPrinter MCTargetDesc TargetInfo
 
 [component_0]
 type = TargetGroup
@@ -38,6 +38,7 @@ required_libraries =
  Support
  Target
  TransformUtils
+ ARCAsmPrinter
  ARCDesc
  ARCInfo
 add_to_library_groups = ARC

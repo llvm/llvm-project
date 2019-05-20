@@ -259,8 +259,7 @@ static bool layoutCOFF(COFFParser &CP) {
             S.Header.NumberOfRelocations * COFF::RelocationSize;
       }
     } else {
-      // Leave SizeOfRawData unaltered. For .bss sections in object files, it
-      // carries the section size.
+      S.Header.SizeOfRawData = 0;
       S.Header.PointerToRawData = 0;
     }
   }
@@ -497,7 +496,7 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
 
   // Output section data.
   for (const COFFYAML::Section &S : CP.Obj.Sections) {
-    if (S.Header.SizeOfRawData == 0 || S.Header.PointerToRawData == 0)
+    if (!S.Header.SizeOfRawData)
       continue;
     assert(S.Header.PointerToRawData >= OS.tell());
     OS.write_zeros(S.Header.PointerToRawData - OS.tell());

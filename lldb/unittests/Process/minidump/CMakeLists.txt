@@ -18,6 +18,7 @@ add_lldb_unittest(LLDBMinidumpTests
 set(test_inputs
    fizzbuzz_no_heap.dmp
    fizzbuzz_wow64.dmp
+   linux-i386.dmp
    linux-x86_64.dmp
    linux-x86_64_not_crashed.dmp
    memory-list-not-padded.dmp
@@ -25,6 +26,8 @@ set(test_inputs
    regions-linux-map.dmp
    regions-memlist.dmp
    regions-memlist64.dmp
+   thread-list-not-padded.dmp
+   thread-list-padded.dmp
    )
 
 add_unittest_inputs(LLDBMinidumpTests "${test_inputs}")

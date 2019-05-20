@@ -38,7 +38,6 @@ Clang-Tidy Checks
    bugprone-argument-comment
    bugprone-assert-side-effect
    bugprone-bool-pointer-implicit-conversion
-   bugprone-branch-clone
    bugprone-copy-constructor-init
    bugprone-dangling-handle
    bugprone-exception-escape
@@ -72,7 +71,6 @@ Clang-Tidy Checks
    bugprone-too-small-loop-variable
    bugprone-undefined-memory-manipulation
    bugprone-undelegated-constructor
-   bugprone-unhandled-self-assignment
    bugprone-unused-raii
    bugprone-unused-return-value
    bugprone-use-after-move
@@ -221,7 +219,6 @@ Clang-Tidy Checks
    modernize-use-noexcept
    modernize-use-nullptr
    modernize-use-override
-   modernize-use-trailing-return-type
    modernize-use-transparent-functors
    modernize-use-uncaught-exceptions
    modernize-use-using

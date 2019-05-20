@@ -521,8 +521,15 @@ createEHFrameRecorderPass(const Triple &TT,
     // Search for a non-empty eh-frame and record the address of the first atom
     // in it.
     JITTargetAddress Addr = 0;
-    if (auto *S = G.findSectionByName(EHFrameSectionName))
-      Addr = S->getRange().getStart();
+    for (auto &S : G.sections())
+      if (S.getName() == EHFrameSectionName && !S.atoms_empty()) {
+        Addr = (*S.atoms().begin())->getAddress();
+        for (auto *DA : S.atoms())
+          if (DA->getAddress() < Addr)
+            Addr = DA->getAddress();
+        break;
+      }
+
     StoreFrameAddress(Addr);
     return Error::success();
   };

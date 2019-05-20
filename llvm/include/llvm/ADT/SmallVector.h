@@ -41,8 +41,8 @@ protected:
   unsigned Size = 0, Capacity;
 
   SmallVectorBase() = delete;
-  SmallVectorBase(void *FirstEl, size_t TotalCapacity)
-      : BeginX(FirstEl), Capacity(TotalCapacity) {}
+  SmallVectorBase(void *FirstEl, size_t Capacity)
+      : BeginX(FirstEl), Capacity(Capacity) {}
 
   /// This is an implementation of the grow() method which only works
   /// on POD-like data types and is out of line to reduce code duplication.
@@ -63,9 +63,9 @@ public:
   /// of the buffer when they know that more elements are available, and only
   /// update the size later. This avoids the cost of value initializing elements
   /// which will only be overwritten.
-  void set_size(size_t N) {
-    assert(N <= capacity());
-    Size = N;
+  void set_size(size_t Size) {
+    assert(Size <= capacity());
+    this->Size = Size;
   }
 };
 

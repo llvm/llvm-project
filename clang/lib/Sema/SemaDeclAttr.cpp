@@ -2615,6 +2615,14 @@ static void handleVisibilityAttr(Sema &S, Decl *D, const ParsedAttr &AL,
     return;
   }
 
+  // Visibility attributes have no effect on symbols with internal linkage.
+  if (const auto *ND = dyn_cast<NamedDecl>(D)) {
+    if (!ND->isExternallyVisible())
+      S.Diag(AL.getRange().getBegin(),
+             diag::warn_attribute_ignored_on_non_external)
+          << AL;
+  }
+
   // Check that the argument is a string literal.
   StringRef TypeStr;
   SourceLocation LiteralLoc;

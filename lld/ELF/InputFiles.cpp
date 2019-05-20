@@ -78,88 +78,6 @@ Optional<MemoryBufferRef> elf::readFile(StringRef Path) {
   return MBRef;
 }
 
-// All input object files must be for the same architecture
-// (e.g. it does not make sense to link x86 object files with
-// MIPS object files.) This function checks for that error.
-static bool isCompatible(InputFile *File) {
-  if (!File->isElf() && !isa<BitcodeFile>(File))
-    return true;
-
-  if (File->EKind == Config->EKind && File->EMachine == Config->EMachine) {
-    if (Config->EMachine != EM_MIPS)
-      return true;
-    if (isMipsN32Abi(File) == Config->MipsN32Abi)
-      return true;
-  }
-
-  if (!Config->Emulation.empty()) {
-    error(toString(File) + " is incompatible with " + Config->Emulation);
-  } else {
-    InputFile *Existing;
-    if (!ObjectFiles.empty())
-      Existing = ObjectFiles[0];
-    else if (!SharedFiles.empty())
-      Existing = SharedFiles[0];
-    else
-      Existing = BitcodeFiles[0];
-
-    error(toString(File) + " is incompatible with " + toString(Existing));
-  }
-
-  return false;
-}
-
-// Add symbols in File to the symbol table.
-template <class ELFT> void elf::parseFile(InputFile *File) {
-  // Comdat groups define "link once" sections. If two comdat groups have the
-  // same name, only one of them is linked, and the other is ignored. This set
-  // is used to uniquify them.
-  static llvm::DenseSet<llvm::CachedHashStringRef> ComdatGroups;
-
-  if (!isCompatible(File))
-    return;
-
-  // Binary file
-  if (auto *F = dyn_cast<BinaryFile>(File)) {
-    BinaryFiles.push_back(F);
-    F->parse();
-    return;
-  }
-
-  // .a file
-  if (auto *F = dyn_cast<ArchiveFile>(File)) {
-    F->parse<ELFT>();
-    return;
-  }
-
-  // Lazy object file
-  if (auto *F = dyn_cast<LazyObjFile>(File)) {
-    LazyObjFiles.push_back(F);
-    F->parse<ELFT>();
-    return;
-  }
-
-  if (Config->Trace)
-    message(toString(File));
-
-  // .so file
-  if (auto *F = dyn_cast<SharedFile>(File)) {
-    F->parse<ELFT>();
-    return;
-  }
-
-  // LLVM bitcode file
-  if (auto *F = dyn_cast<BitcodeFile>(File)) {
-    BitcodeFiles.push_back(F);
-    F->parse<ELFT>(ComdatGroups);
-    return;
-  }
-
-  // Regular object file
-  ObjectFiles.push_back(File);
-  cast<ObjFile<ELFT>>(File)->parse(ComdatGroups);
-}
-
 // Concatenates arguments to construct a string representing an error location.
 static std::string createFileLineMsg(StringRef Path, unsigned Line) {
   std::string Filename = path::filename(Path);
@@ -1440,11 +1358,6 @@ std::string elf::replaceThinLTOSuffix(StringRef Path) {
     return (Path + Repl).str();
   return Path;
 }
-
-template void elf::parseFile<ELF32LE>(InputFile *);
-template void elf::parseFile<ELF32BE>(InputFile *);
-template void elf::parseFile<ELF64LE>(InputFile *);
-template void elf::parseFile<ELF64BE>(InputFile *);
 
 template void ArchiveFile::parse<ELF32LE>();
 template void ArchiveFile::parse<ELF32BE>();

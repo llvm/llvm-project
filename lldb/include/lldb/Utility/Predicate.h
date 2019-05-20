@@ -23,12 +23,12 @@
 /// Enumerations for broadcasting.
 namespace lldb_private {
 
-enum PredicateBroadcastType {
+typedef enum {
   eBroadcastNever,   ///< No broadcast will be sent when the value is modified.
   eBroadcastAlways,  ///< Always send a broadcast when the value is modified.
   eBroadcastOnChange ///< Only broadcast if the value changes when the value is
                      /// modified.
-};
+} PredicateBroadcastType;
 
 /// \class Predicate Predicate.h "lldb/Utility/Predicate.h"
 /// A C++ wrapper class for providing threaded access to a value of

@@ -966,6 +966,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   // incompatible declarations.
   assert(DelayedOverridingExceptionSpecChecks.empty());
   assert(DelayedEquivalentExceptionSpecChecks.empty());
+  assert(DelayedDefaultedMemberExceptionSpecs.empty());
 
   // All dllexport classes should have been processed already.
   assert(DelayedDllExportClasses.empty());
@@ -1800,7 +1801,7 @@ LambdaScopeInfo *Sema::getCurLambda(bool IgnoreNonLambdaCapturingScope) {
 // an associated template parameter list.
 LambdaScopeInfo *Sema::getCurGenericLambda() {
   if (LambdaScopeInfo *LSI =  getCurLambda()) {
-    return (LSI->TemplateParams.size() ||
+    return (LSI->AutoTemplateParams.size() ||
                     LSI->GLTemplateParameterList) ? LSI : nullptr;
   }
   return nullptr;
@@ -2068,7 +2069,7 @@ bool Sema::tryToRecoverWithCall(ExprResult &E, const PartialDiagnostic &PD,
 
     // FIXME: Try this before emitting the fixit, and suppress diagnostics
     // while doing so.
-    E = BuildCallExpr(nullptr, E.get(), Range.getEnd(), None,
+    E = ActOnCallExpr(nullptr, E.get(), Range.getEnd(), None,
                       Range.getEnd().getLocWithOffset(1));
     return true;
   }

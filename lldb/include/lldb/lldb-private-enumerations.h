@@ -16,7 +16,7 @@
 namespace lldb_private {
 
 // Thread Step Types
-enum StepType {
+typedef enum StepType {
   eStepTypeNone,
   eStepTypeTrace,     ///< Single step one instruction.
   eStepTypeTraceOver, ///< Single step one instruction, stepping over.
@@ -24,18 +24,18 @@ enum StepType {
   eStepTypeOver,      ///< Single step over a specified context.
   eStepTypeOut,       ///< Single step out a specified context.
   eStepTypeScripted   ///< A step type implemented by the script interpreter.
-};
+} StepType;
 
 // Address Types
-enum AddressType {
+typedef enum AddressType {
   eAddressTypeInvalid = 0,
   eAddressTypeFile, ///< Address is an address as found in an object or symbol
-                    /// file
+                    ///file
   eAddressTypeLoad, ///< Address is an address as in the current target inferior
-                    /// process
+                    ///process
   eAddressTypeHost  ///< Address is an address in the process that is running
-                    /// this code
-};
+                    ///this code
+} AddressType;
 
 // Address Class
 //
@@ -56,15 +56,15 @@ enum class AddressClass {
 };
 
 // Votes - Need a tri-state, yes, no, no opinion...
-enum Vote { eVoteNo = -1, eVoteNoOpinion = 0, eVoteYes = 1 };
+typedef enum Vote { eVoteNo = -1, eVoteNoOpinion = 0, eVoteYes = 1 } Vote;
 
-enum ArchitectureType {
+typedef enum ArchitectureType {
   eArchTypeInvalid,
   eArchTypeMachO,
   eArchTypeELF,
   eArchTypeCOFF,
   kNumArchTypes
-};
+} ArchitectureType;
 
 /// Settable state variable types.
 ///
@@ -80,7 +80,7 @@ enum ArchitectureType {
 //    eSetVarTypeNone
 //} SettableVariableType;
 
-enum VarSetOperationType {
+typedef enum VarSetOperationType {
   eVarSetOperationReplace,
   eVarSetOperationInsertBefore,
   eVarSetOperationInsertAfter,
@@ -89,9 +89,9 @@ enum VarSetOperationType {
   eVarSetOperationClear,
   eVarSetOperationAssign,
   eVarSetOperationInvalid
-};
+} VarSetOperationType;
 
-enum ArgumentRepetitionType {
+typedef enum ArgumentRepetitionType {
   eArgRepeatPlain,        // Exactly one occurrence
   eArgRepeatOptional,     // At most one occurrence, but it's optional
   eArgRepeatPlus,         // One or more occurrences
@@ -105,17 +105,25 @@ enum ArgumentRepetitionType {
   eArgRepeatPairRange,    // A pair that repeats from 1 to n
   eArgRepeatPairRangeOptional // A pair that repeats from 1 to n, but is
                               // optional
-};
+} ArgumentRepetitionType;
 
-enum SortOrder { eSortOrderNone, eSortOrderByAddress, eSortOrderByName };
+typedef enum SortOrder {
+  eSortOrderNone,
+  eSortOrderByAddress,
+  eSortOrderByName
+} SortOrder;
 
 // LazyBool is for boolean values that need to be calculated lazily. Values
 // start off set to eLazyBoolCalculate, and then they can be calculated once
 // and set to eLazyBoolNo or eLazyBoolYes.
-enum LazyBool { eLazyBoolCalculate = -1, eLazyBoolNo = 0, eLazyBoolYes = 1 };
+typedef enum LazyBool {
+  eLazyBoolCalculate = -1,
+  eLazyBoolNo = 0,
+  eLazyBoolYes = 1
+} LazyBool;
 
 /// Instruction types
-enum InstructionType {
+typedef enum InstructionType {
   eInstructionTypeAny, // Support for any instructions at all (at least one)
   eInstructionTypePrologueEpilogue, // All prologue and epilogue instructions
                                     // that push and pop register values and
@@ -124,10 +132,10 @@ enum InstructionType {
                                     // counter/instruction pointer
   eInstructionTypeAll               // All instructions of any kind
 
-};
+} InstructionType;
 
 /// Format category entry types
-enum FormatCategoryItem {
+typedef enum FormatCategoryItem {
   eFormatCategoryItemSummary = 0x0001,
   eFormatCategoryItemRegexSummary = 0x0002,
   eFormatCategoryItemFilter = 0x0004,
@@ -138,18 +146,18 @@ enum FormatCategoryItem {
   eFormatCategoryItemRegexValue = 0x0080,
   eFormatCategoryItemValidator = 0x0100,
   eFormatCategoryItemRegexValidator = 0x0200
-};
+} FormatCategoryItem;
 
 /// Expression execution policies
-enum ExecutionPolicy {
+typedef enum {
   eExecutionPolicyOnlyWhenNeeded,
   eExecutionPolicyNever,
   eExecutionPolicyAlways,
   eExecutionPolicyTopLevel // used for top-level code
-};
+} ExecutionPolicy;
 
 // Ways that the FormatManager picks a particular format for a type
-enum FormatterChoiceCriterion {
+typedef enum FormatterChoiceCriterion {
   eFormatterChoiceCriterionDirectChoice = 0x00000000,
   eFormatterChoiceCriterionStrippedPointerReference = 0x00000001,
   eFormatterChoiceCriterionNavigatedTypedefs = 0x00000002,
@@ -158,31 +166,31 @@ enum FormatterChoiceCriterion {
   eFormatterChoiceCriterionLanguagePlugin = 0x00000008,
   eFormatterChoiceCriterionStrippedBitField = 0x00000010,
   eFormatterChoiceCriterionWentToStaticValue = 0x00000020
-};
+} FormatterChoiceCriterion;
 
 // Synchronicity behavior of scripted commands
-enum ScriptedCommandSynchronicity {
+typedef enum ScriptedCommandSynchronicity {
   eScriptedCommandSynchronicitySynchronous,
   eScriptedCommandSynchronicityAsynchronous,
   eScriptedCommandSynchronicityCurrentValue // use whatever the current
                                             // synchronicity is
-};
+} ScriptedCommandSynchronicity;
 
 // Verbosity mode of "po" output
-enum LanguageRuntimeDescriptionDisplayVerbosity {
+typedef enum LanguageRuntimeDescriptionDisplayVerbosity {
   eLanguageRuntimeDescriptionDisplayVerbosityCompact, // only print the
                                                       // description string, if
                                                       // any
   eLanguageRuntimeDescriptionDisplayVerbosityFull,    // print the full-blown
                                                       // output
-};
+} LanguageRuntimeDescriptionDisplayVerbosity;
 
 // Loading modules from memory
-enum MemoryModuleLoadLevel {
+typedef enum MemoryModuleLoadLevel {
   eMemoryModuleLoadLevelMinimal,  // Load sections only
   eMemoryModuleLoadLevelPartial,  // Load function bounds but no symbols
   eMemoryModuleLoadLevelComplete, // Load sections and all symbols
-};
+} MemoryModuleLoadLevel;
 
 // Result enums for when reading multiple lines from IOHandlers
 enum class LineStatus {

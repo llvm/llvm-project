@@ -126,7 +126,6 @@ public:
     m_os << t;
     if (newline)
       m_os << '\n';
-    m_os.flush();
   }
 
   const FileSpec &GetFilename() { return m_filename; }

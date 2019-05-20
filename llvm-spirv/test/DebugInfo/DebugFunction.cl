@@ -25,4 +25,4 @@ void kernel k() {
 // CHECK-LLVM: define spir_func float @_Z3fooi(i32 %i) #{{[0-9]+}} !dbg !{{[0-9]+}} {
 
 // CHECK-SPIRV: Function {{[0-9]+}} [[k_id]]
-// CHECK-LLVM: define spir_kernel void @k() #{{[0-9]+}} !dbg !{{[0-9]+}}
+// CHECK-LLVM: define spir_kernel void @_Z1kv() #{{[0-9]+}} !dbg !{{[0-9]+}}

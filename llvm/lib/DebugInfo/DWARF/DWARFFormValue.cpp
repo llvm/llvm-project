@@ -639,12 +639,6 @@ DWARFFormValue::getAsSectionedAddress() const {
 }
 
 Optional<uint64_t> DWARFFormValue::getAsReference() const {
-  if (auto R = getAsRelativeReference())
-    return R->Unit ? R->Unit->getOffset() + R->Offset : R->Offset;
-  return None;
-}
-  
-Optional<DWARFFormValue::UnitOffset> DWARFFormValue::getAsRelativeReference() const {
   if (!isFormClass(FC_Reference))
     return None;
   switch (Form) {
@@ -655,11 +649,11 @@ Optional<DWARFFormValue::UnitOffset> DWARFFormValue::getAsRelativeReference() co
   case DW_FORM_ref_udata:
     if (!U)
       return None;
-    return UnitOffset{const_cast<DWARFUnit*>(U), Value.uval};
+    return Value.uval + U->getOffset();
   case DW_FORM_ref_addr:
   case DW_FORM_ref_sig8:
   case DW_FORM_GNU_ref_alt:
-    return UnitOffset{nullptr, Value.uval};
+    return Value.uval;
   default:
     return None;
   }

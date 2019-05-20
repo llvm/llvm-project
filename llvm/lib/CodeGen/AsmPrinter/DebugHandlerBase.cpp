@@ -140,9 +140,10 @@ DebugHandlerBase::getFunctionLocalOffsetAfterInsn(const MachineInstr *MI) {
 }
 
 /// If this type is derived from a base type then return base type size.
-uint64_t DebugHandlerBase::getBaseTypeSize(const DIType *Ty) {
+uint64_t DebugHandlerBase::getBaseTypeSize(const DITypeRef TyRef) {
+  DIType *Ty = TyRef.resolve();
   assert(Ty);
-  const DIDerivedType *DDTy = dyn_cast<DIDerivedType>(Ty);
+  DIDerivedType *DDTy = dyn_cast<DIDerivedType>(Ty);
   if (!DDTy)
     return Ty->getSizeInBits();
 
@@ -153,7 +154,7 @@ uint64_t DebugHandlerBase::getBaseTypeSize(const DIType *Ty) {
       Tag != dwarf::DW_TAG_restrict_type && Tag != dwarf::DW_TAG_atomic_type)
     return DDTy->getSizeInBits();
 
-  DIType *BaseType = DDTy->getBaseType();
+  DIType *BaseType = DDTy->getBaseType().resolve();
 
   if (!BaseType)
     return 0;

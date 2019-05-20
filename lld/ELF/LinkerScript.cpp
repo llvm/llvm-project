@@ -993,10 +993,8 @@ void LinkerScript::allocateHeaders(std::vector<PhdrEntry *> &Phdrs) {
       llvm::any_of(PhdrsCommands, [](const PhdrsCommand &Cmd) {
         return Cmd.HasPhdrs || Cmd.HasFilehdr;
       });
-  bool Paged = !Config->Omagic && !Config->Nmagic;
   uint64_t HeaderSize = getHeaderSize();
-  if ((Paged || HasExplicitHeaders) &&
-      HeaderSize <= Min - computeBase(Min, HasExplicitHeaders)) {
+  if (HeaderSize <= Min - computeBase(Min, HasExplicitHeaders)) {
     Min = alignDown(Min - HeaderSize, Config->MaxPageSize);
     Out::ElfHeader->Addr = Min;
     Out::ProgramHeaders->Addr = Min + Out::ElfHeader->Size;

@@ -180,9 +180,6 @@ private:
   lldb::TypeSP CreateArrayType(PdbTypeSymId type_id,
                                const llvm::codeview::ArrayRecord &ar,
                                CompilerType ct);
-  lldb::TypeSP CreateFunctionType(PdbTypeSymId type_id,
-                                  const llvm::codeview::MemberFunctionRecord &pr,
-                                  CompilerType ct);
   lldb::TypeSP CreateProcedureType(PdbTypeSymId type_id,
                                    const llvm::codeview::ProcedureRecord &pr,
                                    CompilerType ct);

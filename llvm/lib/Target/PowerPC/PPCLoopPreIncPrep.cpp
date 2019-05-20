@@ -331,7 +331,7 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
   // iteration space), insert a new preheader for the loop.
   if (!LoopPredecessor ||
       !LoopPredecessor->getTerminator()->getType()->isVoidTy()) {
-    LoopPredecessor = InsertPreheaderForLoop(L, DT, LI, nullptr, PreserveLCSSA);
+    LoopPredecessor = InsertPreheaderForLoop(L, DT, LI, PreserveLCSSA);
     if (LoopPredecessor)
       MadeChange = true;
   }

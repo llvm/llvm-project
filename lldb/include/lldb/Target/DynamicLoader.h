@@ -22,11 +22,23 @@
 #include <stdint.h>
 namespace lldb_private {
 class ModuleList;
+}
+namespace lldb_private {
 class Process;
+}
+namespace lldb_private {
 class SectionList;
+}
+namespace lldb_private {
 class Symbol;
+}
+namespace lldb_private {
 class SymbolContext;
+}
+namespace lldb_private {
 class SymbolContextList;
+}
+namespace lldb_private {
 class Thread;
 }
 
@@ -72,7 +84,7 @@ public:
   ///
   /// The destructor is virtual since this class is designed to be inherited
   /// from by the plug-in instance.
-  ~DynamicLoader() override;
+  virtual ~DynamicLoader() override;
 
   /// Called after attaching a process.
   ///

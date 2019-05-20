@@ -35,7 +35,7 @@ void DWARFAttributes::Append(const DWARFUnit *cu, dw_offset_t attr_die_offset,
 bool DWARFAttributes::ExtractFormValueAtIndex(
     uint32_t i, DWARFFormValue &form_value) const {
   const DWARFUnit *cu = CompileUnitAtIndex(i);
-  form_value.SetUnit(cu);
+  form_value.SetCompileUnit(cu);
   form_value.SetForm(FormAtIndex(i));
   lldb::offset_t offset = DIEOffsetAtIndex(i);
   return form_value.ExtractValue(cu->GetData(), &offset);

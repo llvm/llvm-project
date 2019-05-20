@@ -716,6 +716,8 @@ bool IndVarSimplify::rewriteFirstIterationLoopExitValues(Loop *L) {
 
   SmallVector<BasicBlock *, 8> ExitBlocks;
   L->getUniqueExitBlocks(ExitBlocks);
+  auto *LoopHeader = L->getHeader();
+  assert(LoopHeader && "Invalid loop");
 
   bool MadeAnyChanges = false;
   for (auto *ExitBB : ExitBlocks) {
@@ -726,13 +728,11 @@ bool IndVarSimplify::rewriteFirstIterationLoopExitValues(Loop *L) {
            IncomingValIdx != E; ++IncomingValIdx) {
         auto *IncomingBB = PN.getIncomingBlock(IncomingValIdx);
 
-        // Can we prove that the exit must run on the first iteration if it
-        // runs at all?  (i.e. early exits are fine for our purposes, but
-        // traces which lead to this exit being taken on the 2nd iteration
-        // aren't.)  Note that this is about whether the exit branch is
-        // executed, not about whether it is taken.
-        if (!L->getLoopLatch() ||
-            !DT->dominates(IncomingBB, L->getLoopLatch()))
+        // We currently only support loop exits from loop header. If the
+        // incoming block is not loop header, we need to recursively check
+        // all conditions starting from loop header are loop invariants.
+        // Additional support might be added in the future.
+        if (IncomingBB != LoopHeader)
           continue;
 
         // Get condition that leads to the exit path.
@@ -753,8 +753,8 @@ bool IndVarSimplify::rewriteFirstIterationLoopExitValues(Loop *L) {
 
         auto *ExitVal = dyn_cast<PHINode>(PN.getIncomingValue(IncomingValIdx));
 
-        // Only deal with PHIs in the loop header.
-        if (!ExitVal || ExitVal->getParent() != L->getHeader())
+        // Only deal with PHIs.
+        if (!ExitVal)
           continue;
 
         // If ExitVal is a PHI on the loop header, then we know its
@@ -764,7 +764,7 @@ bool IndVarSimplify::rewriteFirstIterationLoopExitValues(Loop *L) {
         assert(LoopPreheader && "Invalid loop");
         int PreheaderIdx = ExitVal->getBasicBlockIndex(LoopPreheader);
         if (PreheaderIdx != -1) {
-          assert(ExitVal->getParent() == L->getHeader() &&
+          assert(ExitVal->getParent() == LoopHeader &&
                  "ExitVal must be in loop header");
           MadeAnyChanges = true;
           PN.setIncomingValue(IncomingValIdx,

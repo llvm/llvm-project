@@ -344,20 +344,20 @@ void zif::nab(int) {
 
 namespace TemplateFunction {
 template <class T>
-void fnA(T) { }  // expected-note {{'::TemplateFunction::fnA' declared here}}
+void A(T) { }  // expected-note {{'::TemplateFunction::A' declared here}}
 
 template <class T>
-void fnB(T) { }  // expected-note {{'::TemplateFunction::fnB' declared here}}
+void B(T) { }  // expected-note {{'::TemplateFunction::B' declared here}}
 
 class Foo {
  public:
-  void fnA(int, int) {}
-  void fnB() {}
+  void A(int, int) {}
+  void B() {}
 };
 
 void test(Foo F, int num) {
-  F.fnA(num);  // expected-error {{too few arguments to function call, expected 2, have 1; did you mean '::TemplateFunction::fnA'?}}
-  F.fnB(num);  // expected-error {{too many arguments to function call, expected 0, have 1; did you mean '::TemplateFunction::fnB'?}}
+  F.A(num);  // expected-error {{too few arguments to function call, expected 2, have 1; did you mean '::TemplateFunction::A'?}}
+  F.B(num);  // expected-error {{too many arguments to function call, expected 0, have 1; did you mean '::TemplateFunction::B'?}}
 }
 }
 namespace using_suggestion_val_dropped_specifier {
@@ -438,7 +438,7 @@ namespace PR17394 {
     long zzzzzzzzzz;
   };
   class B : private A {};
-  B zzzzzzzzzy<>; // expected-error {{template specialization requires 'template<>'}} expected-error {{no variable template matches specialization}}
+  B zzzzzzzzzy<>; // expected-error {{expected ';' after top level declarator}}{}
 }
 
 namespace correct_fields_in_member_funcs {
@@ -537,9 +537,9 @@ namespace no_correct_template_id_to_non_template {
 namespace PR18852 {
 void func() {
   struct foo {
-    void barberry() {}
+    void bar() {}
   };
-  barberry();  // expected-error-re {{use of undeclared identifier 'barberry'{{$}}}}
+  bar();  // expected-error-re {{use of undeclared identifier 'bar'{{$}}}}
 }
 
 class Thread {

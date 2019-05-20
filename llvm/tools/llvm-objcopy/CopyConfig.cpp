@@ -16,7 +16,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Errc.h"
-#include "llvm/Support/JamCRC.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/StringSaver.h"
 #include <memory>
@@ -491,22 +490,6 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   }
 
   Config.AddGnuDebugLink = InputArgs.getLastArgValue(OBJCOPY_add_gnu_debuglink);
-  // The gnu_debuglink's target is expected to not change or else its CRC would
-  // become invalidated and get rejected. We can avoid recalculating the
-  // checksum for every target file inside an archive by precomputing the CRC
-  // here. This prevents a significant amount of I/O.
-  if (!Config.AddGnuDebugLink.empty()) {
-    auto DebugOrErr = MemoryBuffer::getFile(Config.AddGnuDebugLink);
-    if (!DebugOrErr)
-      return createFileError(Config.AddGnuDebugLink, DebugOrErr.getError());
-    auto Debug = std::move(*DebugOrErr);
-    JamCRC CRC;
-    CRC.update(
-        ArrayRef<char>(Debug->getBuffer().data(), Debug->getBuffer().size()));
-    // The CRC32 value needs to be complemented because the JamCRC doesn't
-    // finalize the CRC32 value.
-    Config.GnuDebugLinkCRC32 = ~CRC.getCRC();
-  }
   Config.BuildIdLinkDir = InputArgs.getLastArgValue(OBJCOPY_build_id_link_dir);
   if (InputArgs.hasArg(OBJCOPY_build_id_link_input))
     Config.BuildIdLinkInput =
@@ -516,8 +499,6 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
         InputArgs.getLastArgValue(OBJCOPY_build_id_link_output);
   Config.SplitDWO = InputArgs.getLastArgValue(OBJCOPY_split_dwo);
   Config.SymbolsPrefix = InputArgs.getLastArgValue(OBJCOPY_prefix_symbols);
-  Config.AllocSectionsPrefix =
-      InputArgs.getLastArgValue(OBJCOPY_prefix_alloc_sections);
 
   for (auto Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {
     if (!StringRef(Arg->getValue()).contains('='))
@@ -603,8 +584,6 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   Config.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);
   Config.DecompressDebugSections =
       InputArgs.hasArg(OBJCOPY_decompress_debug_sections);
-  if (Config.DiscardMode == DiscardType::All)
-    Config.StripDebug = true;
   for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbol))
     Config.SymbolsToLocalize.emplace_back(Arg->getValue(), UseRegex);
   for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbols))
@@ -773,9 +752,6 @@ Expected<DriverConfig> parseStripOptions(ArrayRef<const char *> ArgsArr) {
       !Config.StripUnneeded && Config.DiscardMode == DiscardType::None &&
       !Config.StripAllGNU && Config.SymbolsToRemove.empty())
     Config.StripAll = true;
-
-  if (Config.DiscardMode == DiscardType::All)
-    Config.StripDebug = true;
 
   Config.DeterministicArchives =
       InputArgs.hasFlag(STRIP_enable_deterministic_archives,

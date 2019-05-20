@@ -61,6 +61,9 @@ public:
                   DWARFUnit *dwarf_cu, lldb::offset_t data_offset,
                   lldb::offset_t data_length);
 
+  /// Copy constructor
+  DWARFExpression(const DWARFExpression &rhs);
+
   /// Destructor
   virtual ~DWARFExpression();
 

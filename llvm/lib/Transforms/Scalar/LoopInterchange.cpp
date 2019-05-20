@@ -1279,6 +1279,17 @@ static void moveBBContents(BasicBlock *FromBB, Instruction *InsertBefore) {
                 FromBB->getTerminator()->getIterator());
 }
 
+static void updateIncomingBlock(BasicBlock *CurrBlock, BasicBlock *OldPred,
+                                BasicBlock *NewPred) {
+  for (PHINode &PHI : CurrBlock->phis()) {
+    unsigned Num = PHI.getNumIncomingValues();
+    for (unsigned i = 0; i < Num; ++i) {
+      if (PHI.getIncomingBlock(i) == OldPred)
+        PHI.setIncomingBlock(i, NewPred);
+    }
+  }
+}
+
 /// Update BI to jump to NewBB instead of OldBB. Records updates to
 /// the dominator tree in DTUpdates, if DT should be preserved.
 static void updateSuccessor(BranchInst *BI, BasicBlock *OldBB,
@@ -1343,7 +1354,7 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerLatch,
   // Now adjust the incoming blocks for the LCSSA PHIs.
   // For PHIs moved from Inner's exit block, we need to replace Inner's latch
   // with the new latch.
-  InnerLatch->replacePhiUsesWith(InnerLatch, OuterLatch);
+  updateIncomingBlock(InnerLatch, InnerLatch, OuterLatch);
 }
 
 bool LoopInterchangeTransform::adjustLoopBranches() {
@@ -1362,11 +1373,9 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   // preheaders do not satisfy those conditions.
   if (isa<PHINode>(OuterLoopPreHeader->begin()) ||
       !OuterLoopPreHeader->getUniquePredecessor())
-    OuterLoopPreHeader =
-        InsertPreheaderForLoop(OuterLoop, DT, LI, nullptr, true);
+    OuterLoopPreHeader = InsertPreheaderForLoop(OuterLoop, DT, LI, true);
   if (InnerLoopPreHeader == OuterLoop->getHeader())
-    InnerLoopPreHeader =
-        InsertPreheaderForLoop(InnerLoop, DT, LI, nullptr, true);
+    InnerLoopPreHeader = InsertPreheaderForLoop(InnerLoop, DT, LI, true);
 
   // Adjust the loop preheader
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
@@ -1412,8 +1421,8 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
                   InnerLoopHeaderSuccessor, DTUpdates);
 
   // Adjust reduction PHI's now that the incoming block has changed.
-  InnerLoopHeaderSuccessor->replacePhiUsesWith(InnerLoopHeader,
-                                               OuterLoopHeader);
+  updateIncomingBlock(InnerLoopHeaderSuccessor, InnerLoopHeader,
+                      OuterLoopHeader);
 
   updateSuccessor(InnerLoopHeaderBI, InnerLoopHeaderSuccessor,
                   OuterLoopPreHeader, DTUpdates);
@@ -1445,7 +1454,7 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   moveLCSSAPhis(InnerLoopLatchSuccessor, InnerLoopLatch, OuterLoopLatch);
   // For PHIs in the exit block of the outer loop, outer's latch has been
   // replaced by Inners'.
-  OuterLoopLatchSuccessor->replacePhiUsesWith(OuterLoopLatch, InnerLoopLatch);
+  updateIncomingBlock(OuterLoopLatchSuccessor, OuterLoopLatch, InnerLoopLatch);
 
   // Now update the reduction PHIs in the inner and outer loop headers.
   SmallVector<PHINode *, 4> InnerLoopPHIs, OuterLoopPHIs;
@@ -1472,10 +1481,10 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   }
 
   // Update the incoming blocks for moved PHI nodes.
-  OuterLoopHeader->replacePhiUsesWith(InnerLoopPreHeader, OuterLoopPreHeader);
-  OuterLoopHeader->replacePhiUsesWith(InnerLoopLatch, OuterLoopLatch);
-  InnerLoopHeader->replacePhiUsesWith(OuterLoopPreHeader, InnerLoopPreHeader);
-  InnerLoopHeader->replacePhiUsesWith(OuterLoopLatch, InnerLoopLatch);
+  updateIncomingBlock(OuterLoopHeader, InnerLoopPreHeader, OuterLoopPreHeader);
+  updateIncomingBlock(OuterLoopHeader, InnerLoopLatch, OuterLoopLatch);
+  updateIncomingBlock(InnerLoopHeader, OuterLoopPreHeader, InnerLoopPreHeader);
+  updateIncomingBlock(InnerLoopHeader, OuterLoopLatch, InnerLoopLatch);
 
   return true;
 }

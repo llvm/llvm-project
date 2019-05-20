@@ -43,10 +43,7 @@
 #include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
 #include "Plugins/DynamicLoader/Static/DynamicLoaderStatic.h"
 #include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
-#include "Plugins/Instruction/ARM/EmulateInstructionARM.h"
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
-#include "Plugins/Instruction/MIPS/EmulateInstructionMIPS.h"
-#include "Plugins/Instruction/MIPS64/EmulateInstructionMIPS64.h"
 #include "Plugins/Instruction/PPC64/EmulateInstructionPPC64.h"
 #include "Plugins/InstrumentationRuntime/ASan/ASanRuntime.h"
 #include "Plugins/InstrumentationRuntime/MainThreadChecker/MainThreadCheckerRuntime.h"
@@ -116,11 +113,6 @@
 #endif
 
 #include "llvm/Support/TargetSelect.h"
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wglobal-constructors"
-#include "llvm/ExecutionEngine/MCJIT.h"
-#pragma clang diagnostic pop
 
 #include <string>
 
@@ -210,13 +202,8 @@ llvm::Error SystemInitializerFull::Initialize() {
   SymbolFileSymtab::Initialize();
   UnwindAssemblyInstEmulation::Initialize();
   UnwindAssembly_x86::Initialize();
-
-  EmulateInstructionARM::Initialize();
   EmulateInstructionARM64::Initialize();
-  EmulateInstructionMIPS::Initialize();
-  EmulateInstructionMIPS64::Initialize();
   EmulateInstructionPPC64::Initialize();
-
   SymbolFileDWARFDebugMap::Initialize();
   ItaniumABILanguageRuntime::Initialize();
   AppleObjCRuntimeV2::Initialize();
@@ -317,13 +304,8 @@ void SystemInitializerFull::Terminate() {
   SymbolFileSymtab::Terminate();
   UnwindAssembly_x86::Terminate();
   UnwindAssemblyInstEmulation::Terminate();
-
-  EmulateInstructionARM::Terminate();
   EmulateInstructionARM64::Terminate();
-  EmulateInstructionMIPS::Terminate();
-  EmulateInstructionMIPS64::Terminate();
   EmulateInstructionPPC64::Terminate();
-
   SymbolFileDWARFDebugMap::Terminate();
   ItaniumABILanguageRuntime::Terminate();
   AppleObjCRuntimeV2::Terminate();

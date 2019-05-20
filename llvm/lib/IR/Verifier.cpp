@@ -641,18 +641,18 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
       PointerType *FuncPtrTy =
           FunctionType::get(Type::getVoidTy(Context), false)->
           getPointerTo(DL.getProgramAddressSpace());
+      // FIXME: Reject the 2-field form in LLVM 4.0.
       Assert(STy &&
                  (STy->getNumElements() == 2 || STy->getNumElements() == 3) &&
                  STy->getTypeAtIndex(0u)->isIntegerTy(32) &&
                  STy->getTypeAtIndex(1) == FuncPtrTy,
              "wrong type for intrinsic global variable", &GV);
-      Assert(STy->getNumElements() == 3,
-             "the third field of the element type is mandatory, "
-             "specify i8* null to migrate from the obsoleted 2-field form");
-      Type *ETy = STy->getTypeAtIndex(2);
-      Assert(ETy->isPointerTy() &&
-                 cast<PointerType>(ETy)->getElementType()->isIntegerTy(8),
-             "wrong type for intrinsic global variable", &GV);
+      if (STy->getNumElements() == 3) {
+        Type *ETy = STy->getTypeAtIndex(2);
+        Assert(ETy->isPointerTy() &&
+                   cast<PointerType>(ETy)->getElementType()->isIntegerTy(8),
+               "wrong type for intrinsic global variable", &GV);
+      }
     }
   }
 
@@ -926,8 +926,7 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
 
   if (N.getDWARFAddressSpace()) {
     AssertDI(N.getTag() == dwarf::DW_TAG_pointer_type ||
-                 N.getTag() == dwarf::DW_TAG_reference_type ||
-                 N.getTag() == dwarf::DW_TAG_rvalue_reference_type,
+                 N.getTag() == dwarf::DW_TAG_reference_type,
              "DWARF address space only applies to pointer or reference types",
              &N);
   }
@@ -4209,8 +4208,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::experimental_constrained_fdiv:
   case Intrinsic::experimental_constrained_frem:
   case Intrinsic::experimental_constrained_fma:
-  case Intrinsic::experimental_constrained_fptrunc:
-  case Intrinsic::experimental_constrained_fpext:
   case Intrinsic::experimental_constrained_sqrt:
   case Intrinsic::experimental_constrained_pow:
   case Intrinsic::experimental_constrained_powi:
@@ -4687,47 +4684,6 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
            &FPI);
     HasExceptionMD = true;
     HasRoundingMD = true;
-    break;
-
-  case Intrinsic::experimental_constrained_fptrunc:
-  case Intrinsic::experimental_constrained_fpext: {
-    if (FPI.getIntrinsicID() == Intrinsic::experimental_constrained_fptrunc) {
-      Assert((NumOperands == 3),
-             "invalid arguments for constrained FP intrinsic", &FPI);
-      HasRoundingMD = true;
-    } else {
-      Assert((NumOperands == 2),
-             "invalid arguments for constrained FP intrinsic", &FPI);
-    }
-    HasExceptionMD = true;
-
-    Value *Operand = FPI.getArgOperand(0);
-    Type *OperandTy = Operand->getType();
-    Value *Result = &FPI;
-    Type *ResultTy = Result->getType();
-    Assert(OperandTy->isFPOrFPVectorTy(),
-           "Intrinsic first argument must be FP or FP vector", &FPI);
-    Assert(ResultTy->isFPOrFPVectorTy(),
-           "Intrinsic result must be FP or FP vector", &FPI);
-    Assert(OperandTy->isVectorTy() == ResultTy->isVectorTy(),
-           "Intrinsic first argument and result disagree on vector use", &FPI);
-    if (OperandTy->isVectorTy()) {
-      auto *OperandVecTy = cast<VectorType>(OperandTy);
-      auto *ResultVecTy = cast<VectorType>(ResultTy);
-      Assert(OperandVecTy->getNumElements() == ResultVecTy->getNumElements(),
-             "Intrinsic first argument and result vector lengths must be equal",
-             &FPI);
-    }
-    if (FPI.getIntrinsicID() == Intrinsic::experimental_constrained_fptrunc) {
-      Assert(OperandTy->getScalarSizeInBits() > ResultTy->getScalarSizeInBits(),
-             "Intrinsic first argument's type must be larger than result type",
-             &FPI);
-    } else {
-      Assert(OperandTy->getScalarSizeInBits() < ResultTy->getScalarSizeInBits(),
-             "Intrinsic first argument's type must be smaller than result type",
-             &FPI);
-    }
-  } 
     break;
 
   default:

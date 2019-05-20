@@ -539,7 +539,8 @@ void CodeGenModule::Release() {
   if (LangOpts.OpenCL) {
     EmitOpenCLMetadata();
     // Emit SPIR version.
-    if (getTriple().isSPIR()) {
+    if (getTriple().getArch() == llvm::Triple::spir ||
+        getTriple().getArch() == llvm::Triple::spir64) {
       // SPIR v2.0 s2.12 - The SPIR version used by the module is stored in the
       // opencl.spir.version named metadata.
       llvm::Metadata *SPIRVerElts[] = {
@@ -781,13 +782,6 @@ static bool shouldAssumeDSOLocal(const CodeGenModule &CGM,
         !GV->isThreadLocal())
       return false;
   }
-
-  // On COFF, don't mark 'extern_weak' symbols as DSO local. If these symbols
-  // remain unresolved in the link, they can be resolved to zero, which is
-  // outside the current DSO.
-  if (TT.isOSBinFormatCOFF() && GV->hasExternalWeakLinkage())
-    return false;
-
   // Every other GV is local on COFF.
   // Make an exception for windows OS in the triple: Some firmware builds use
   // *-win32-macho triples. This (accidentally?) produced windows relocations
@@ -1210,212 +1204,6 @@ void CodeGenModule::SetLLVMFunctionAttributes(GlobalDecl GD,
   ConstructAttributeList(F->getName(), Info, GD, PAL, CallingConv, false);
   F->setAttributes(PAL);
   F->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
-}
-
-static void removeImageAccessQualifier(std::string& TyName) {
-  std::string ReadOnlyQual("__read_only");
-  std::string::size_type ReadOnlyPos = TyName.find(ReadOnlyQual);
-  if (ReadOnlyPos != std::string::npos)
-    // "+ 1" for the space after access qualifier.
-    TyName.erase(ReadOnlyPos, ReadOnlyQual.size() + 1);
-  else {
-    std::string WriteOnlyQual("__write_only");
-    std::string::size_type WriteOnlyPos = TyName.find(WriteOnlyQual);
-    if (WriteOnlyPos != std::string::npos)
-      TyName.erase(WriteOnlyPos, WriteOnlyQual.size() + 1);
-    else {
-      std::string ReadWriteQual("__read_write");
-      std::string::size_type ReadWritePos = TyName.find(ReadWriteQual);
-      if (ReadWritePos != std::string::npos)
-        TyName.erase(ReadWritePos, ReadWriteQual.size() + 1);
-    }
-  }
-}
-
-// Returns the address space id that should be produced to the
-// kernel_arg_addr_space metadata. This is always fixed to the ids
-// as specified in the SPIR 2.0 specification in order to differentiate
-// for example in clGetKernelArgInfo() implementation between the address
-// spaces with targets without unique mapping to the OpenCL address spaces
-// (basically all single AS CPUs).
-static unsigned ArgInfoAddressSpace(LangAS AS) {
-  switch (AS) {
-  case LangAS::opencl_global:   return 1;
-  case LangAS::opencl_constant: return 2;
-  case LangAS::opencl_local:    return 3;
-  case LangAS::opencl_generic:  return 4; // Not in SPIR 2.0 specs.
-  default:
-    return 0; // Assume private.
-  }
-}
-
-void CodeGenModule::GenOpenCLArgMetadata(llvm::Function *Fn,
-                                         const FunctionDecl *FD,
-                                         CodeGenFunction *CGF) {
-  assert(((FD && CGF) || (!FD && !CGF)) &&
-         "Incorrect use - FD and CGF should either be both null or not!");
-  // Create MDNodes that represent the kernel arg metadata.
-  // Each MDNode is a list in the form of "key", N number of values which is
-  // the same number of values as their are kernel arguments.
-
-  const PrintingPolicy &Policy = Context.getPrintingPolicy();
-
-  // MDNode for the kernel argument address space qualifiers.
-  SmallVector<llvm::Metadata *, 8> addressQuals;
-
-  // MDNode for the kernel argument access qualifiers (images only).
-  SmallVector<llvm::Metadata *, 8> accessQuals;
-
-  // MDNode for the kernel argument type names.
-  SmallVector<llvm::Metadata *, 8> argTypeNames;
-
-  // MDNode for the kernel argument base type names.
-  SmallVector<llvm::Metadata *, 8> argBaseTypeNames;
-
-  // MDNode for the kernel argument type qualifiers.
-  SmallVector<llvm::Metadata *, 8> argTypeQuals;
-
-  // MDNode for the kernel argument names.
-  SmallVector<llvm::Metadata *, 8> argNames;
-
-  if (FD && CGF)
-    for (unsigned i = 0, e = FD->getNumParams(); i != e; ++i) {
-      const ParmVarDecl *parm = FD->getParamDecl(i);
-      QualType ty = parm->getType();
-      std::string typeQuals;
-
-      if (ty->isPointerType()) {
-        QualType pointeeTy = ty->getPointeeType();
-
-        // Get address qualifier.
-        addressQuals.push_back(
-            llvm::ConstantAsMetadata::get(CGF->Builder.getInt32(
-                ArgInfoAddressSpace(pointeeTy.getAddressSpace()))));
-
-        // Get argument type name.
-        std::string typeName =
-            pointeeTy.getUnqualifiedType().getAsString(Policy) + "*";
-
-        // Turn "unsigned type" to "utype"
-        std::string::size_type pos = typeName.find("unsigned");
-        if (pointeeTy.isCanonical() && pos != std::string::npos)
-          typeName.erase(pos + 1, 8);
-
-        argTypeNames.push_back(llvm::MDString::get(VMContext, typeName));
-
-        std::string baseTypeName =
-            pointeeTy.getUnqualifiedType().getCanonicalType().getAsString(
-                Policy) +
-            "*";
-
-        // Turn "unsigned type" to "utype"
-        pos = baseTypeName.find("unsigned");
-        if (pos != std::string::npos)
-          baseTypeName.erase(pos + 1, 8);
-
-        argBaseTypeNames.push_back(
-            llvm::MDString::get(VMContext, baseTypeName));
-
-        // Get argument type qualifiers:
-        if (ty.isRestrictQualified())
-          typeQuals = "restrict";
-        if (pointeeTy.isConstQualified() ||
-            (pointeeTy.getAddressSpace() == LangAS::opencl_constant))
-          typeQuals += typeQuals.empty() ? "const" : " const";
-        if (pointeeTy.isVolatileQualified())
-          typeQuals += typeQuals.empty() ? "volatile" : " volatile";
-      } else {
-        uint32_t AddrSpc = 0;
-        bool isPipe = ty->isPipeType();
-        if (ty->isImageType() || isPipe)
-          AddrSpc = ArgInfoAddressSpace(LangAS::opencl_global);
-
-        addressQuals.push_back(
-            llvm::ConstantAsMetadata::get(CGF->Builder.getInt32(AddrSpc)));
-
-        // Get argument type name.
-        std::string typeName;
-        if (isPipe)
-          typeName = ty.getCanonicalType()
-                         ->getAs<PipeType>()
-                         ->getElementType()
-                         .getAsString(Policy);
-        else
-          typeName = ty.getUnqualifiedType().getAsString(Policy);
-
-        // Turn "unsigned type" to "utype"
-        std::string::size_type pos = typeName.find("unsigned");
-        if (ty.isCanonical() && pos != std::string::npos)
-          typeName.erase(pos + 1, 8);
-
-        std::string baseTypeName;
-        if (isPipe)
-          baseTypeName = ty.getCanonicalType()
-                             ->getAs<PipeType>()
-                             ->getElementType()
-                             .getCanonicalType()
-                             .getAsString(Policy);
-        else
-          baseTypeName =
-              ty.getUnqualifiedType().getCanonicalType().getAsString(Policy);
-
-        // Remove access qualifiers on images
-        // (as they are inseparable from type in clang implementation,
-        // but OpenCL spec provides a special query to get access qualifier
-        // via clGetKernelArgInfo with CL_KERNEL_ARG_ACCESS_QUALIFIER):
-        if (ty->isImageType()) {
-          removeImageAccessQualifier(typeName);
-          removeImageAccessQualifier(baseTypeName);
-        }
-
-        argTypeNames.push_back(llvm::MDString::get(VMContext, typeName));
-
-        // Turn "unsigned type" to "utype"
-        pos = baseTypeName.find("unsigned");
-        if (pos != std::string::npos)
-          baseTypeName.erase(pos + 1, 8);
-
-        argBaseTypeNames.push_back(
-            llvm::MDString::get(VMContext, baseTypeName));
-
-        if (isPipe)
-          typeQuals = "pipe";
-      }
-
-      argTypeQuals.push_back(llvm::MDString::get(VMContext, typeQuals));
-
-      // Get image and pipe access qualifier:
-      if (ty->isImageType() || ty->isPipeType()) {
-        const Decl *PDecl = parm;
-        if (auto *TD = dyn_cast<TypedefType>(ty))
-          PDecl = TD->getDecl();
-        const OpenCLAccessAttr *A = PDecl->getAttr<OpenCLAccessAttr>();
-        if (A && A->isWriteOnly())
-          accessQuals.push_back(llvm::MDString::get(VMContext, "write_only"));
-        else if (A && A->isReadWrite())
-          accessQuals.push_back(llvm::MDString::get(VMContext, "read_write"));
-        else
-          accessQuals.push_back(llvm::MDString::get(VMContext, "read_only"));
-      } else
-        accessQuals.push_back(llvm::MDString::get(VMContext, "none"));
-
-      // Get argument name.
-      argNames.push_back(llvm::MDString::get(VMContext, parm->getName()));
-    }
-
-  Fn->setMetadata("kernel_arg_addr_space",
-                  llvm::MDNode::get(VMContext, addressQuals));
-  Fn->setMetadata("kernel_arg_access_qual",
-                  llvm::MDNode::get(VMContext, accessQuals));
-  Fn->setMetadata("kernel_arg_type",
-                  llvm::MDNode::get(VMContext, argTypeNames));
-  Fn->setMetadata("kernel_arg_base_type",
-                  llvm::MDNode::get(VMContext, argBaseTypeNames));
-  Fn->setMetadata("kernel_arg_type_qual",
-                  llvm::MDNode::get(VMContext, argTypeQuals));
-  if (getCodeGenOpts().EmitOpenCLArgMetadata)
-    Fn->setMetadata("kernel_arg_name",
-                    llvm::MDNode::get(VMContext, argNames));
 }
 
 /// Determines whether the language options require us to model
@@ -2719,13 +2507,8 @@ void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
     if (!shouldEmitFunction(GD))
       return;
 
-    llvm::TimeTraceScope TimeScope("CodeGen Function", [&]() {
-      std::string Name;
-      llvm::raw_string_ostream OS(Name);
-      FD->getNameForDiagnostic(OS, getContext().getPrintingPolicy(),
-                               /*Qualified=*/true);
-      return Name;
-    });
+    llvm::TimeTraceScope TimeScope(
+        "CodeGen Function", [&]() { return FD->getQualifiedNameAsString(); });
 
     if (const auto *Method = dyn_cast<CXXMethodDecl>(D)) {
       // Make sure to emit the definition(s) before we emit the thunks.

@@ -198,7 +198,9 @@ getSectionContents(const COFFObjectFile *Obj,
   const coff_section *Section;
   if (Error E = resolveSectionAndAddress(Obj, Sym, Section, Addr))
     return E;
-  return Obj->getSectionContents(Section, Contents);
+  if (std::error_code EC = Obj->getSectionContents(Section, Contents))
+    return errorCodeToError(EC);
+  return Error::success();
 }
 
 // Given a vector of relocations for a section and an offset into this section
@@ -632,7 +634,7 @@ void printCOFFSymbolTable(const object::COFFImportFile *i) {
     std::string Name;
     raw_string_ostream NS(Name);
 
-    cantFail(Sym.printName(NS));
+    Sym.printName(NS);
     NS.flush();
 
     outs() << "[" << format("%2d", Index) << "]"

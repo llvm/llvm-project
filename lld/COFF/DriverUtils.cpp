@@ -745,16 +745,8 @@ MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> MBs) {
     object::WindowsResource *RF = dyn_cast<object::WindowsResource>(Bin.get());
     if (!RF)
       fatal("cannot compile non-resource file as resource");
-
-    std::vector<std::string> Duplicates;
-    if (auto EC = Parser.parse(RF, Duplicates))
+    if (auto EC = Parser.parse(RF))
       fatal(toString(std::move(EC)));
-
-    for (const auto &DupeDiag : Duplicates)
-      if (Config->ForceMultipleRes)
-        warn(DupeDiag);
-      else
-        error(DupeDiag);
   }
 
   Expected<std::unique_ptr<MemoryBuffer>> E =
@@ -858,14 +850,8 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> Argv) {
 
   handleColorDiagnostics(Args);
 
-  for (auto *Arg : Args.filtered(OPT_UNKNOWN)) {
-    std::string Nearest;
-    if (Table.findNearest(Arg->getAsString(Args), Nearest) > 1)
-      warn("ignoring unknown argument '" + Arg->getSpelling() + "'");
-    else
-      warn("ignoring unknown argument '" + Arg->getSpelling() +
-           "', did you mean '" + Nearest + "'");
-  }
+  for (auto *Arg : Args.filtered(OPT_UNKNOWN))
+    warn("ignoring unknown argument: " + Arg->getSpelling());
 
   if (Args.hasArg(OPT_lib))
     warn("ignoring /lib since it's not the first argument");

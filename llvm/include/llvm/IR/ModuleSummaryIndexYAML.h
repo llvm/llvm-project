@@ -136,7 +136,7 @@ template <> struct MappingTraits<TypeIdSummary> {
 
 struct FunctionSummaryYaml {
   unsigned Linkage;
-  bool NotEligibleToImport, Live, IsLocal, CanAutoHide;
+  bool NotEligibleToImport, Live, IsLocal;
   std::vector<uint64_t> Refs;
   std::vector<uint64_t> TypeTests;
   std::vector<FunctionSummary::VFuncId> TypeTestAssumeVCalls,
@@ -180,7 +180,6 @@ template <> struct MappingTraits<FunctionSummaryYaml> {
     io.mapOptional("NotEligibleToImport", summary.NotEligibleToImport);
     io.mapOptional("Live", summary.Live);
     io.mapOptional("Local", summary.IsLocal);
-    io.mapOptional("CanAutoHide", summary.CanAutoHide);
     io.mapOptional("Refs", summary.Refs);
     io.mapOptional("TypeTests", summary.TypeTests);
     io.mapOptional("TypeTestAssumeVCalls", summary.TypeTestAssumeVCalls);
@@ -223,7 +222,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
       Elem.SummaryList.push_back(llvm::make_unique<FunctionSummary>(
           GlobalValueSummary::GVFlags(
               static_cast<GlobalValue::LinkageTypes>(FSum.Linkage),
-              FSum.NotEligibleToImport, FSum.Live, FSum.IsLocal, FSum.CanAutoHide),
+              FSum.NotEligibleToImport, FSum.Live, FSum.IsLocal),
           /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0, Refs,
           ArrayRef<FunctionSummary::EdgeTy>{}, std::move(FSum.TypeTests),
           std::move(FSum.TypeTestAssumeVCalls),
@@ -244,8 +243,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
               FSum->flags().Linkage,
               static_cast<bool>(FSum->flags().NotEligibleToImport),
               static_cast<bool>(FSum->flags().Live),
-              static_cast<bool>(FSum->flags().DSOLocal),
-              static_cast<bool>(FSum->flags().CanAutoHide), Refs,
+              static_cast<bool>(FSum->flags().DSOLocal), Refs,
               FSum->type_tests(), FSum->type_test_assume_vcalls(),
               FSum->type_checked_load_vcalls(),
               FSum->type_test_assume_const_vcalls(),

@@ -47,11 +47,11 @@ __attribute__((section(".init_array"),
                used)) static void (*__init)(void) = __do_init;
 #else  // CRT_HAS_INITFINI_ARRAY
 #if defined(__i386__) || defined(__x86_64__)
-__asm__(".pushsection .init,\"ax\",@progbits\n\t"
+asm(".pushsection .init,\"ax\",@progbits\n\t"
     "call " __USER_LABEL_PREFIX__ "__do_init\n\t"
     ".popsection");
 #elif defined(__arm__)
-__asm__(".pushsection .init,\"ax\",%progbits\n\t"
+asm(".pushsection .init,\"ax\",%progbits\n\t"
     "bl " __USER_LABEL_PREFIX__ "__do_init\n\t"
     ".popsection");
 #endif  // CRT_HAS_INITFINI_ARRAY
@@ -77,7 +77,7 @@ static void __attribute__((used)) __do_fini() {
     __deregister_frame_info(__EH_FRAME_LIST__);
 
   const size_t n = __DTOR_LIST_END__ - __DTOR_LIST__ - 1;
-  for (size_t i = 1; i <= n; i++) __DTOR_LIST__[i]();
+  for (size_t i = 1; i < n; i++) __DTOR_LIST__[i]();
 #endif
 }
 
@@ -86,11 +86,11 @@ __attribute__((section(".fini_array"),
                used)) static void (*__fini)(void) = __do_fini;
 #else  // CRT_HAS_INITFINI_ARRAY
 #if defined(__i386__) || defined(__x86_64__)
-__asm__(".pushsection .fini,\"ax\",@progbits\n\t"
+asm(".pushsection .fini,\"ax\",@progbits\n\t"
     "call " __USER_LABEL_PREFIX__ "__do_fini\n\t"
     ".popsection");
 #elif defined(__arm__)
-__asm__(".pushsection .fini,\"ax\",%progbits\n\t"
+asm(".pushsection .fini,\"ax\",%progbits\n\t"
     "bl " __USER_LABEL_PREFIX__ "__do_fini\n\t"
     ".popsection");
 #endif

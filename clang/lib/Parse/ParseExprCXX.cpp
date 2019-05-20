@@ -487,14 +487,6 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
                                                         EnteringContext,
                                                         Template,
                                               MemberOfUnknownSpecialization)) {
-        // If lookup didn't find anything, we treat the name as a template-name
-        // anyway. C++20 requires this, and in prior language modes it improves
-        // error recovery. But before we commit to this, check that we actually
-        // have something that looks like a template-argument-list next.
-        if (!IsTypename && TNK == TNK_Undeclared_template &&
-            isTemplateArgumentList(1) == TPResult::False)
-          break;
-
         // We have found a template name, so annotate this token
         // with a template-id annotation. We do not permit the
         // template-id to be translated into a type annotation,
@@ -509,7 +501,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
       }
 
       if (MemberOfUnknownSpecialization && (ObjectType || SS.isSet()) &&
-          (IsTypename || isTemplateArgumentList(1) == TPResult::True)) {
+          (IsTypename || IsTemplateArgumentList(1))) {
         // We have something like t::getAs<T>, where getAs is a
         // member of an unknown specialization. However, this will only
         // parse correctly as a template, so suggest the keyword 'template'
@@ -646,8 +638,6 @@ ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
 ///
 ///       lambda-expression:
 ///         lambda-introducer lambda-declarator[opt] compound-statement
-///         lambda-introducer '<' template-parameter-list '>'
-///             lambda-declarator[opt] compound-statement
 ///
 ///       lambda-introducer:
 ///         '[' lambda-capture[opt] ']'
@@ -1131,33 +1121,6 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
               << A.getName()->getName();
   };
 
-  // FIXME: Consider allowing this as an extension for GCC compatibiblity.
-  const bool HasExplicitTemplateParams = Tok.is(tok::less);
-  ParseScope TemplateParamScope(this, Scope::TemplateParamScope,
-                                /*EnteredScope=*/HasExplicitTemplateParams);
-  if (HasExplicitTemplateParams) {
-    Diag(Tok, getLangOpts().CPlusPlus2a
-                  ? diag::warn_cxx17_compat_lambda_template_parameter_list
-                  : diag::ext_lambda_template_parameter_list);
-
-    SmallVector<NamedDecl*, 4> TemplateParams;
-    SourceLocation LAngleLoc, RAngleLoc;
-    if (ParseTemplateParameters(CurTemplateDepthTracker.getDepth(),
-                                TemplateParams, LAngleLoc, RAngleLoc)) {
-      Actions.ActOnLambdaError(LambdaBeginLoc, getCurScope());
-      return ExprError();
-    }
-
-    if (TemplateParams.empty()) {
-      Diag(RAngleLoc,
-           diag::err_lambda_template_parameter_list_empty);
-    } else {
-      Actions.ActOnLambdaExplicitTemplateParameterList(
-          LAngleLoc, TemplateParams, RAngleLoc);
-      ++CurTemplateDepthTracker;
-    }
-  }
-
   TypeResult TrailingReturnType;
   if (Tok.is(tok::l_paren)) {
     ParseScope PrototypeScope(this,
@@ -1174,20 +1137,13 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     SourceLocation EllipsisLoc;
 
     if (Tok.isNot(tok::r_paren)) {
-      Actions.RecordParsingTemplateParameterDepth(
-          CurTemplateDepthTracker.getOriginalDepth());
-
+      Actions.RecordParsingTemplateParameterDepth(TemplateParameterDepth);
       ParseParameterDeclarationClause(D, Attr, ParamInfo, EllipsisLoc);
-
       // For a generic lambda, each 'auto' within the parameter declaration
       // clause creates a template type parameter, so increment the depth.
-      // If we've parsed any explicit template parameters, then the depth will
-      // have already been incremented. So we make sure that at most a single
-      // depth level is added.
       if (Actions.getCurGenericLambda())
-        CurTemplateDepthTracker.setAddedDepth(1);
+        ++CurTemplateDepthTracker;
     }
-
     T.consumeClose();
     SourceLocation RParenLoc = T.getCloseLocation();
     SourceLocation DeclEndLoc = RParenLoc;
@@ -1342,7 +1298,6 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
   StmtResult Stmt(ParseCompoundStatementBody());
   BodyScope.Exit();
-  TemplateParamScope.Exit();
 
   if (!Stmt.isInvalid() && !TrailingReturnType.isInvalid())
     return Actions.ActOnLambdaExpr(LambdaBeginLoc, Stmt.get(), getCurScope());
@@ -2146,15 +2101,9 @@ bool Parser::ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
                                    TemplateKWLoc.isValid(), Id,
                                    ObjectType, EnteringContext, Template,
                                    MemberOfUnknownSpecialization);
-      // If lookup found nothing but we're assuming that this is a template
-      // name, double-check that makes sense syntactically before committing
-      // to it.
-      if (TNK == TNK_Undeclared_template &&
-          isTemplateArgumentList(0) == TPResult::False)
-        return false;
 
       if (TNK == TNK_Non_template && MemberOfUnknownSpecialization &&
-          ObjectType && isTemplateArgumentList(0) == TPResult::True) {
+          ObjectType && IsTemplateArgumentList()) {
         // We have something like t->getAs<T>(), where getAs is a
         // member of an unknown specialization. However, this will only
         // parse correctly as a template, so suggest the keyword 'template'
@@ -2258,9 +2207,11 @@ bool Parser::ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
   ASTTemplateArgsPtr TemplateArgsPtr(TemplateArgs);
 
   // Constructor and destructor names.
-  TypeResult Type = Actions.ActOnTemplateIdType(
-      getCurScope(), SS, TemplateKWLoc, Template, Name, NameLoc, LAngleLoc,
-      TemplateArgsPtr, RAngleLoc, /*IsCtorOrDtorName=*/true);
+  TypeResult Type
+    = Actions.ActOnTemplateIdType(SS, TemplateKWLoc,
+                                  Template, Name, NameLoc,
+                                  LAngleLoc, TemplateArgsPtr, RAngleLoc,
+                                  /*IsCtorOrDtorName=*/true);
   if (Type.isInvalid())
     return true;
 
@@ -2941,12 +2892,12 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
 /// passed to ParseDeclaratorInternal.
 ///
 ///        direct-new-declarator:
-///                   '[' expression[opt] ']'
+///                   '[' expression ']'
 ///                   direct-new-declarator '[' constant-expression ']'
 ///
 void Parser::ParseDirectNewDeclarator(Declarator &D) {
   // Parse the array dimensions.
-  bool First = true;
+  bool first = true;
   while (Tok.is(tok::l_square)) {
     // An array-size expression can't start with a lambda.
     if (CheckProhibitedCXX11Attribute())
@@ -2955,15 +2906,14 @@ void Parser::ParseDirectNewDeclarator(Declarator &D) {
     BalancedDelimiterTracker T(*this, tok::l_square);
     T.consumeOpen();
 
-    ExprResult Size =
-        First ? (Tok.is(tok::r_square) ? ExprResult() : ParseExpression())
-              : ParseConstantExpression();
+    ExprResult Size(first ? ParseExpression()
+                                : ParseConstantExpression());
     if (Size.isInvalid()) {
       // Recover
       SkipUntil(tok::r_square, StopAtSemi);
       return;
     }
-    First = false;
+    first = false;
 
     T.consumeClose();
 

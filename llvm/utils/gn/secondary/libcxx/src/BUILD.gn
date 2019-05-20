@@ -84,9 +84,6 @@ config("cxx_config") {
       "_CRT_STDIO_ISO_WIDE_SPECIFIERS",
     ]
   }
-  if (!libcxx_enable_new_delete_definitions) {
-    defines += [ "_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS" ]
-  }
   if (libcxx_enable_exceptions) {
     if (current_os == "win") {
       cflags_cc += [ "/EHsc" ]
@@ -100,7 +97,7 @@ config("cxx_config") {
     } else {
       cflags_cc += [ "-fno-exceptions" ]
     }
-    defines += [ "_LIBCPP_NO_EXCEPTIONS" ]
+    defines += [ "-D_LIBCPP_NO_EXCEPTIONS" ]
   }
   if (!libcxx_enable_rtti) {
     if (current_os == "win") {
@@ -108,7 +105,7 @@ config("cxx_config") {
     } else {
       cflags_cc += [ "-fno-rtti" ]
     }
-    defines += [ "_LIBCPP_NO_RTTI" ]
+    defines += [ "-D_LIBCPP_NO_RTTI" ]
   }
 }
 
@@ -254,9 +251,7 @@ if (libcxx_enable_static) {
     sources = cxx_sources
     if (libcxx_hermetic_static_library) {
       cflags = [ "-fvisibility=hidden" ]
-      if (libcxx_enable_new_delete_definitions) {
-        cflags_cc = [ "-fvisibility-global-new-delete-hidden" ]
-      }
+      cflags_cc = [ "-fvisibility-global-new-delete-hidden" ]
       defines = [ "_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS" ]
     }
     deps = [

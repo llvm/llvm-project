@@ -1427,12 +1427,14 @@ uint64_t WasmObjectFile::getSectionSize(DataRefImpl Sec) const {
   return S.Content.size();
 }
 
-Expected<ArrayRef<uint8_t>>
-WasmObjectFile::getSectionContents(DataRefImpl Sec) const {
+std::error_code WasmObjectFile::getSectionContents(DataRefImpl Sec,
+                                                   StringRef &Res) const {
   const WasmSection &S = Sections[Sec.d.a];
   // This will never fail since wasm sections can never be empty (user-sections
   // must have a name and non-user sections each have a defined structure).
-  return S.Content;
+  Res = StringRef(reinterpret_cast<const char *>(S.Content.data()),
+                  S.Content.size());
+  return std::error_code();
 }
 
 uint64_t WasmObjectFile::getSectionAlignment(DataRefImpl Sec) const {

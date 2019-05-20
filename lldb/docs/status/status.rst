@@ -6,7 +6,7 @@ macOS
 
 LLDB has matured a lot in the last year and can be used for C, C++ and
 Objective-C development for x86_64, i386 and ARM debugging. The entire public
-API is exposed though a framework on macOS which is used by Xcode, the lldb
+API is exposed though a framework on Mac OS X which is used by Xcode, the lldb
 command line tool, and can also be used by Python. The entire public API is
 exposed through script bridging which allows LLDB to use an embedded Python
 script interpreter, as well as having a Python module named "lldb" which can be
@@ -40,7 +40,7 @@ section below.
 Features Matrix
 ---------------
 +--------------------------------+------------+-------------------------+--------------------------------------+----------------------+
-| Feature                        | FreeBSD    | Linux                   | macOS    (i386/x86_64 and ARM/Thumb) | Windows (i386)       |
+| Feature                        | FreeBSD    | Linux                   | Mac OS X (i386/x86_64 and ARM/Thumb) | Windows (i386)       |
 |                                | (x86_64)   | (x86_64 and PPC64le)    |                                      |                      |
 +================================+============+=========================+======================================+======================+
 | Backtracing                    | OK         | OK                      | OK                                   | OK                   |

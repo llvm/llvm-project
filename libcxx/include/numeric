@@ -556,7 +556,7 @@ midpoint(_TPtr __a, _TPtr __b) noexcept
 
 
 template <typename _Tp>
-constexpr int __sign(_Tp __val) {
+int __sign(_Tp __val) {
     return (_Tp(0) < __val) - (__val < _Tp(0));
 }
 

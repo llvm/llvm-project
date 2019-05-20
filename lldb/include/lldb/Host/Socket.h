@@ -39,12 +39,12 @@ typedef int NativeSocket;
 
 class Socket : public IOObject {
 public:
-  enum SocketProtocol {
+  typedef enum {
     ProtocolTcp,
     ProtocolUdp,
     ProtocolUnixDomain,
     ProtocolUnixAbstract
-  };
+  } SocketProtocol;
 
   static const NativeSocket kInvalidSocketValue;
 

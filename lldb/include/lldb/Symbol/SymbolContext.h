@@ -82,6 +82,14 @@ public:
                          LineEntry *line_entry = nullptr,
                          Symbol *symbol = nullptr);
 
+  /// Copy constructor
+  ///
+  /// Makes a copy of the another SymbolContext object \a rhs.
+  ///
+  /// \param[in] rhs
+  ///     A const SymbolContext object reference to copy.
+  SymbolContext(const SymbolContext &rhs);
+
   ~SymbolContext();
 
   /// Assignment operator.
@@ -343,7 +351,7 @@ public:
 
 class SymbolContextSpecifier {
 public:
-  enum SpecificationType {
+  typedef enum SpecificationType {
     eNothingSpecified = 0,
     eModuleSpecified = 1 << 0,
     eFileSpecified = 1 << 1,
@@ -352,7 +360,7 @@ public:
     eFunctionSpecified = 1 << 4,
     eClassOrNamespaceSpecified = 1 << 5,
     eAddressRangeSpecified = 1 << 6
-  };
+  } SpecificationType;
 
   // This one produces a specifier that matches everything...
   SymbolContextSpecifier(const lldb::TargetSP &target_sp);

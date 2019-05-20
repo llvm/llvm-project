@@ -148,20 +148,19 @@ BackgroundIndex::BackgroundIndex(
           })) {
   assert(ThreadPoolSize > 0 && "Thread pool size can't be zero.");
   assert(this->IndexStorageFactory && "Storage factory can not be null!");
-  for (unsigned I = 0; I < ThreadPoolSize; ++I) {
-    ThreadPool.runAsync("background-worker-" + llvm::Twine(I + 1),
-                        [this] { run(); });
-  }
+  while (ThreadPoolSize--)
+    ThreadPool.emplace_back([this] { run(); });
   if (BuildIndexPeriodMs > 0) {
     log("BackgroundIndex: build symbol index periodically every {0} ms.",
         BuildIndexPeriodMs);
-    ThreadPool.runAsync("background-index-builder", [this] { buildIndex(); });
+    ThreadPool.emplace_back([this] { buildIndex(); });
   }
 }
 
 BackgroundIndex::~BackgroundIndex() {
   stop();
-  ThreadPool.wait();
+  for (auto &Thread : ThreadPool)
+    Thread.join();
 }
 
 void BackgroundIndex::stop() {
@@ -356,8 +355,7 @@ void BackgroundIndex::update(llvm::StringRef MainFile, IndexFileIn Index,
       // This can override a newer version that is added in another thread, if
       // this thread sees the older version but finishes later. This should be
       // rare in practice.
-      IndexedSymbols.update(Path, std::move(SS), std::move(RS),
-                            Path == MainFile);
+      IndexedSymbols.update(Path, std::move(SS), std::move(RS));
     }
   }
 }
@@ -479,8 +477,7 @@ BackgroundIndex::loadShard(const tooling::CompileCommand &Cmd,
   struct ShardInfo {
     std::string AbsolutePath;
     std::unique_ptr<IndexFileIn> Shard;
-    FileDigest Digest = {};
-    bool CountReferences = false;
+    FileDigest Digest;
   };
   std::vector<ShardInfo> IntermediateSymbols;
   // Make sure we don't have duplicate elements in the queue. Keys are absolute
@@ -541,7 +538,6 @@ BackgroundIndex::loadShard(const tooling::CompileCommand &Cmd,
       SI.AbsolutePath = CurDependency.Path;
       SI.Shard = std::move(Shard);
       SI.Digest = I.getValue().Digest;
-      SI.CountReferences = I.getValue().IsTU;
       IntermediateSymbols.push_back(std::move(SI));
       // Check if the source needs re-indexing.
       // Get the digest, skip it if file doesn't exist.
@@ -571,8 +567,7 @@ BackgroundIndex::loadShard(const tooling::CompileCommand &Cmd,
                     ? llvm::make_unique<RefSlab>(std::move(*SI.Shard->Refs))
                     : nullptr;
       IndexedFileDigests[SI.AbsolutePath] = SI.Digest;
-      IndexedSymbols.update(SI.AbsolutePath, std::move(SS), std::move(RS),
-                            SI.CountReferences);
+      IndexedSymbols.update(SI.AbsolutePath, std::move(SS), std::move(RS));
     }
   }
 

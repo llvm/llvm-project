@@ -46,7 +46,7 @@ extern "C" int proc_set_wakemon_params(pid_t, int,
 nub_process_t g_pid = INVALID_NUB_PROCESS;
 
 // Run loop modes which determine which run loop function will be called
-enum RNBRunLoopMode {
+typedef enum {
   eRNBRunLoopModeInvalid = 0,
   eRNBRunLoopModeGetStartModeFromRemoteProtocol,
   eRNBRunLoopModeInferiorAttaching,
@@ -54,7 +54,7 @@ enum RNBRunLoopMode {
   eRNBRunLoopModeInferiorExecuting,
   eRNBRunLoopModePlatformMode,
   eRNBRunLoopModeExit
-};
+} RNBRunLoopMode;
 
 // Global Variables
 RNBRemoteSP g_remoteSP;

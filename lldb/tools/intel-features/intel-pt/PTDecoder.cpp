@@ -13,6 +13,11 @@ using namespace ptdecoder;
 using namespace ptdecoder_private;
 
 // PTInstruction class member functions definitions
+PTInstruction::PTInstruction() : m_opaque_sp() {}
+
+PTInstruction::PTInstruction(const PTInstruction &insn)
+    : m_opaque_sp(insn.m_opaque_sp) {}
+
 PTInstruction::PTInstruction(
     const std::shared_ptr<ptdecoder_private::Instruction> &ptr)
     : m_opaque_sp(ptr) {}
@@ -36,6 +41,13 @@ bool PTInstruction::GetSpeculative() const {
 }
 
 // PTInstructionList class member functions definitions
+PTInstructionList::PTInstructionList() : m_opaque_sp() {}
+
+PTInstructionList::PTInstructionList(const PTInstructionList &insn_list)
+    : m_opaque_sp(insn_list.m_opaque_sp) {}
+
+PTInstructionList::~PTInstructionList() {}
+
 size_t PTInstructionList::GetSize() const {
   return (m_opaque_sp ? m_opaque_sp->GetSize() : 0);
 }

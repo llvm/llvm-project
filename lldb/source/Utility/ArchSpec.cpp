@@ -859,7 +859,7 @@ bool ArchSpec::ContainsOnlyArch(const llvm::Triple &normalized_triple) {
 void ArchSpec::MergeFrom(const ArchSpec &other) {
   if (!TripleVendorWasSpecified() && other.TripleVendorWasSpecified())
     GetTriple().setVendor(other.GetTriple().getVendor());
-  if (!TripleOSWasSpecified() && other.TripleOSWasSpecified())
+  if (!TripleOSWasSpecified() && other.TripleVendorWasSpecified())
     GetTriple().setOS(other.GetTriple().getOS());
   if (GetTriple().getArch() == llvm::Triple::UnknownArch) {
     GetTriple().setArch(other.GetTriple().getArch());

@@ -67,9 +67,6 @@ add_lldb_tool(lldb-server
       lldbHost
       lldbInitialization
       ${LLDB_PLUGINS}
-      lldbPluginInstructionARM
-      lldbPluginInstructionMIPS
-      lldbPluginInstructionMIPS64
       ${LLDB_SYSTEM_LIBS}
 
     LINK_COMPONENTS

@@ -140,7 +140,6 @@ void ODRHash::AddTemplateName(TemplateName Name) {
     break;
   // TODO: Support these cases.
   case TemplateName::OverloadedTemplate:
-  case TemplateName::AssumedTemplate:
   case TemplateName::QualifiedTemplate:
   case TemplateName::DependentTemplate:
   case TemplateName::SubstTemplateTemplateParm:
@@ -704,36 +703,14 @@ public:
   void VisitType(const Type *T) {}
 
   void VisitAdjustedType(const AdjustedType *T) {
-    QualType Original = T->getOriginalType();
-    QualType Adjusted = T->getAdjustedType();
-
-    // The original type and pointee type can be the same, as in the case of
-    // function pointers decaying to themselves.  Set a bool and only process
-    // the type once, to prevent doubling the work.
-    SplitQualType split = Adjusted.split();
-    if (auto Pointer = dyn_cast<PointerType>(split.Ty)) {
-      if (Pointer->getPointeeType() == Original) {
-        Hash.AddBoolean(true);
-        ID.AddInteger(split.Quals.getAsOpaqueValue());
-        AddQualType(Original);
-        VisitType(T);
-        return;
-      }
-    }
-
-    // The original type and pointee type are different, such as in the case
-    // of a array decaying to an element pointer.  Set a bool to false and
-    // process both types.
-    Hash.AddBoolean(false);
-    AddQualType(Original);
-    AddQualType(Adjusted);
-
+    AddQualType(T->getOriginalType());
+    AddQualType(T->getAdjustedType());
     VisitType(T);
   }
 
   void VisitDecayedType(const DecayedType *T) {
-    // getDecayedType and getPointeeType are derived from getAdjustedType
-    // and don't need to be separately processed.
+    AddQualType(T->getDecayedType());
+    AddQualType(T->getPointeeType());
     VisitAdjustedType(T);
   }
 

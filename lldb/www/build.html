@@ -1,0 +1,493 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link href="style.css" rel="stylesheet" type="text/css" />
+  <title>Building LLDB</title>
+</head>
+<body>
+  <div class="www_title">
+    The <strong>LLDB</strong> Debugger
+  </div>
+
+  <div id="container">
+    <div id="content">
+
+      <!--#include virtual="sidebar.incl"-->
+
+      <div id="middle">
+        <h1 class="postheader">Continuous Integration</h1>
+        <div class="postcontent">
+          <p>
+            The following LLVM buildbots build and test LLDB trunk:
+            <ul>
+              <li> <a href="http://lab.llvm.org:8011/builders/lldb-x86_64-ubuntu-14.04-cmake">LLDB Ubuntu 14.04 x86_64 (CMake, clang-3.5+/gcc-4.8, i386/x86_64)</a>
+              </li>
+              <li> <a href="http://lab.llvm.org:8011/builders/lldb-x86_64-ubuntu-14.04-android">LLDB Ubuntu 14.04 x86_64->Android (CMake, gcc-4.9 arm/arm64/x86)</a>
+              </li>
+              <li> <a href="http://lab.llvm.org:8011/builders/lldb-x86_64-darwin-13.4">LLDB Mac OS X 10.9.5 x86_64 (Xcode)</a>
+              </li>
+              <li> <a href="http://lab.llvm.org:8011/builders/lldb-x86-windows-msvc">LLDB Windows Server 2008 x86 (CMake, MSVS 2013, Windows SDK 8.1, no tests)</a>
+              </li>
+              <li> <a href="http://lab.llvm.org:8011/builders/lldb-x86-win7-msvc">LLDB Windows 7 x86 (CMake, MSVS 2013, Windows SDK 8.1, no tests)</a>
+              </li>
+              <li> <a href="http://lab.llvm.org:8011/builders/lldb-x86_64-debian-clang">LLDB Ubuntu 14.04 x86_64 build (automake, Clang 3.4, VMware Workstation)</a>
+              </li>
+              <li> <a href="http://lab.llvm.org:8011/builders/lldb-x86_64-freebsd">LLDB FreeBSD x86_64 (CMake)</a>
+              </li>
+              <li> <a href="http://lab.llvm.org:8011/builders/lldb-amd64-ninja-netbsd7">LLDB NetBSD-7.0 amd64 (GCC 4.8.5, Ninja)</a>
+              </li>
+            </ul>
+          </p>
+        </div>
+        <div class="postfooter"></div>
+        <div class="post">
+          <h1 class="postheader">Building LLDB</h1>
+          <ul>
+            <li><a href="#BuildingLldbOnWindows">Building LLDB on Windows</a></li>
+            <li><a href="#BuildingLldbOnMacOSX">Building LLDB on Mac OSX</a></li>
+            <li><a href="#BuildingLldbOnLinux">Building LLDB on Linux, FreeBSD and NetBSD</a></li>
+          </ul>
+        </div>
+        <div class="postfooter"></div>
+        <div class="post" id="BuildingLldbOnWindows">
+          <h1 class="postheader">Building LLDB on Windows</h1>
+          <div class="postcontent">
+            <h2>Required Dependencies</h2>
+            <ul>
+              <li>Visual Studio 2015 or greater</li>
+              <li>Windows SDK 8.0 or higher.  In general it is best to use the latest available version.</li>
+              <li>
+                <a href="https://www.python.org/downloads/windows/">Python 3.5 or higher</a> or higher.  Earlier
+                versions of Python can be made to work by compiling your own distribution from source,
+                but this workflow is unsupported and you are own your own.
+              </li>
+              <li><a href="https://ninja-build.org/">Ninja build tool</a> (strongly recommended)</li>
+              <li><a href="http://gnuwin32.sourceforge.net/">GnuWin32</a></li>
+              <li><a href="http://www.swig.org/download.html">SWIG for Windows (version 3+)</a></li>
+            </ul>
+            <h2>Optional Dependencies</h2>
+            <ul>
+              <li><a href="https://github.com/Microsoft/PTVS/releases">Python Tools for Visual Studio</a>.  If you
+              plan to debug test failures or even write new tests at all, PTVS is an indispensable debugging extension
+              to VS that enables full editing and debugging support for Python (including mixed native/managed debugging)</li>
+            </ul>
+            <h2 id="WindowsPreliminaries">Preliminaries</h2>
+            <p>
+              This section describes how to set up your system and install the required dependencies such that
+              they can be found when needed during the build process.  The steps outlined here only need to
+              be performed once.
+            </p>
+            <ol>
+              <li><p>Install Visual Studio and the Windows SDK.</p></li>
+              <li><p>Install GnuWin32, making sure <code>&lt;GnuWin32 install dir&gt;\bin</code> is added to your <code>PATH</code> environment variable.</p></li>
+              <li><p>Install SWIG for Windows, making sure <code>&lt;SWIG install dir&gt;</code> is added to your <code>PATH</code> environment variable.</p></li>
+            </ol>
+            <h2>Building LLDB</h2>
+            <p>
+              Any command prompt from which you build LLDB should have a valid Visual Studio environment setup.
+              This means you should run <code>vcvarsall.bat</code> or open an appropriate Visual Studio Command Prompt
+              corresponding to the version you wish to use.
+            </p>
+            <p>Finally, when you are ready to build LLDB, generate CMake with the following command line:</p>
+            <code>cmake -G Ninja &lt;cmake variables&gt; &lt;path to root of llvm src tree&gt;</code>
+            <p>and run <code>ninja</code> to build LLDB. Information about running the LLDB test suite can be found on the <a href="test.html">test</a> page.</p>
+            <p>
+              Following is a description of some of the most important CMake variables which you are likely to encounter.
+              A variable <code>FOO</code> is set by adding <code>-DFOO=value</code> to the CMake command line.
+            </p>
+            <ul>
+              <li>
+                <b>LLDB_TEST_DEBUG_TEST_CRASHES</b> (Default=0): If set to 1, will cause Windows to generate a crash
+                dialog whenever lldb.exe or the python extension module crashes while running the test suite.  If set to
+                0, LLDB will silently crash.  Setting to 1 allows a developer to attach a JIT debugger at the time of
+                a crash, rather than having to reproduce a failure or use a crash dump.
+              </li>
+              <li>
+                <b>PYTHON_HOME</b> (Required): Path to the folder where the Python distribution is installed.  For example,
+                C:\Python35
+              </li>
+              <li>
+                <b>LLDB_RELOCATABLE_PYTHON</b> (Default=0): When this is 0, LLDB will bind statically to the location specified
+                in the PYTHON_HOME CMake variable, ignoring any value of PYTHONHOME set in the environment.  This is most useful for
+                developers who simply want to run LLDB after they build it.  If you wish to move a build of LLDB to a different
+                machine where Python will be in a different location, setting LLDB_RELOCATABLE_PYTHON to 1 will cause Python to
+                use its default mechanism for finding the python installation at runtime (looking for installed Pythons, or using
+                the PYTHONHOME environment variable if it is specified).
+              </li>
+              <li>
+                <b>LLDB_TEST_C_COMPILER</b> or <b>LLDB_TEST_CXX_COMPILER</b>: The test suite needs to be able to find a copy of clang.exe
+                that it can use to compile inferior programs.  Note that MSVC is not supported here, it <strong>must</strong> be a path to a
+                clang executable.  Note that using a release clang.exe is strongly recommended here, as it will make the test suite run much faster.
+                This can be a path to any recent clang.exe, including one you built yourself.  These variables are ignored unless the respective
+                <strong>LLDB_TEST_USE_CUSTOM_C_COMPILER</strong> and <strong>LLDB_TEST_USE_CUSTOM_CXX_COMPILER</strong> are set to ON.
+              </li>
+            </ul>
+            Sample command line:<br/>
+            <code>cmake -G Ninja -DLLDB_TEST_DEBUG_TEST_CRASHES=1 -DPYTHON_HOME=C:\Python35 -DLLDB_TEST_USE_CUSTOM_C_COMPILER=ON -DLLDB_TEST_C_COMPILER=d:\src\llvmbuild\ninja_release\bin\clang.exe ..\..\llvm</code>
+            <h2>Working with both Ninja and MSVC</h2>
+            <p>
+              Compiling with <code>ninja</code> is both faster and simpler than compiling with MSVC, but chances are you still want
+              to debug LLDB with MSVC (at least until we can debug LLDB on Windows with LLDB!).  One solution to this is to run 
+              <code>cmake</code> twice and generate the output into two different folders.  One for compiling (the <code>ninja</code>
+              folder), and one for editing / browsing / debugging (the MSVC folder).
+            </p>
+            <p>
+              To do this, simply run <code>`cmake -G Ninja &lt;arguments&gt;`</code> from one folder, and 
+              <code>`cmake -G "Visual Studio 14 2015" &lt;arguments&gt;`</code> in another folder.  Then you can open the .sln file
+              in Visual Studio, set <code>lldb</code> as the startup project, and use F5 to run it.  You need only edit the project
+              settings to set the executable and the working directory to point to binaries inside of the <code>ninja</code> tree.
+            </p>
+          </div>
+        </div>
+        <div class="post" id="BuildingLldbOnMacOSX">
+          <h1 class="postheader">Building LLDB on Mac OS X</h1>
+          <div class="postcontent">
+            <p> There are two ways to build LLDB on Mac OS X: Using Xcode and using CMake
+          </div>
+          <div class="postcontent">
+            <h2>Preliminaries</h2>
+            <ul>
+              <li>XCode 4.3 or newer requires the "Command Line Tools" component (XCode->Preferences->Downloads->Components).</li>
+              <li>Mac OS X Lion or newer requires installing <a href="http://swig.org">Swig</a>.</li>
+            </ul>
+            <h2>Building LLDB with Xcode</h2>
+            <p>Building on Mac OS X with Xcode is as easy as downloading the code and building the Xcode project or workspace:</p>
+            <ul>
+              <li><a href="download.html">Download</a> the lldb sources.</li>
+              <li>Follow the code signing instructions in <b>lldb/docs/code-signing.txt</b></li>
+              <li>In Xcode 3.x: <b>lldb/lldb.xcodeproj</b>, select the <b>lldb-tool</b> target, and build.</li>
+              <li>In Xcode 4.x: <b>lldb/lldb.xcworkspace</b>, select the <b>lldb-tool</b> scheme, and build.</li>
+            </ul>
+            <h2>Building LLDB with CMake</h2>
+            <p> First download the LLVM, Clang, libc++ and LLDB sources. Refer to <a href="source.html">this page</a> for precise instructions on this step.</p>
+            <p> Refer to the code signing instructions in <b>lldb/docs/code-signing.txt</b> for info on codesigning debugserver during the build.</p>
+            <p> Using CMake is documented on the <a href="http://llvm.org/docs/CMake.html">Building LLVM with CMake</a> page.
+            Ninja is the recommended generator to use when building LLDB with CMake.</p>
+            <code>
+              &gt; cmake $PATH_TO_LLVM -G Ninja
+              <br />&gt; ninja lldb
+            </code>
+            <p>
+               As noted in the "Building LLVM with CMake" page mentioned above, you can pass
+               variables to cmake to change build behavior. If LLDB is built as a part of LLVM,
+               then you can pass LLVM-specific CMake variables to cmake when building LLDB.
+            </p>
+            <p>Here are some commonly used LLDB-specific CMake variables:</p>
+            <ul>
+              <li><code><b>LLDB_EXPORT_ALL_SYMBOLS</b>:BOOL </code>: Exports all symbols. Useful in conjunction with CMAKE_BUILD_TYPE=Debug.</li>
+              <li><code><b>LLDB_BUILD_FRAMEWORK</b>:BOOL </code>: Builds LLDB.framework as Xcode would</li>
+              <li><code><b>LLDB_CODESIGN_IDENTITY</b>:STRING </code>: Determines the codesign identity to use. An empty string means skip building debugserver to avoid codesigning.</li>
+            </ul>
+          </div>
+          <div class="postfooter"></div>
+        </div>
+        <div class="post" id="BuildingLldbOnLinux">
+          <h1 class="postheader">Building LLDB on Linux, FreeBSD and NetBSD</h1>
+          <div class="postcontent">
+            <p>This document describes the steps needed to compile LLDB on most Linux systems, FreeBSD and NetBSD.</a></p>
+          </div>
+          <div class="postcontent">
+            <h2>Preliminaries</h2>
+            <p>
+              LLDB relies on many of the technologies developed by the larger LLVM project.
+              In particular, it requires both Clang and LLVM itself in order to build.  Due to
+              this tight integration the <em>Getting Started</em> guides for both of these projects
+              come as prerequisite reading:
+            </p>
+            <ul>
+              <li><a href="http://llvm.org/docs/GettingStarted.html">LLVM</a></li>
+              <li><a href="http://clang.llvm.org/get_started.html">Clang</a></li>
+            </ul>
+            <p>Supported compilers for building LLDB on Linux include:</p>
+            <ul>
+              <li>Clang 3.2</li>
+              <li><a href="http://gcc.gnu.org">GCC</a> 4.6.2 (later versions should work as well)</li>
+            </ul>
+            <p>It is recommended to use libstdc++ 4.6 (or higher) to build LLDB on Linux, but using libc++ is also known to work.</p>
+            <p>
+              On FreeBSD the base system Clang and libc++ may be used to build LLDB,
+              or the GCC port or package.
+            </p>
+            <p>
+              On NetBSD the base system GCC and libstdc++ are used to build LLDB,
+              Clang/LLVM and libc++ should also work.
+            </p>
+            <p>
+              In addition to any dependencies required by LLVM and Clang, LLDB needs a few
+              development packages that may also need to be installed depending on your
+              system.  The current list of dependencies are:
+            </p>
+            <ul>
+              <li><a href="http://swig.org">Swig</a></li>
+              <li><a href="http://www.thrysoee.dk/editline">libedit</a> (Linux only)</li>
+              <li><a href="http://www.python.org">Python</a></li>
+            </ul>
+            <p>So for example, on a Fedora system one might run:</p>
+            <code>&gt; yum install libedit-devel libxml2-devel ncurses-devel python-devel swig</code>
+            <p>On a Debian or Ubuntu system one might run:</p>
+            <code>&gt; sudo apt-get install build-essential subversion swig python2.7-dev libedit-dev libncurses5-dev </code>
+            <p>or</p>
+            <code>&gt; sudo apt-get build-dep lldb-3.3 # or lldb-3.4</code>
+            <p>On FreeBSD one might run:</p>
+            <code>&gt; pkg install swig python</code>
+            <p>On NetBSD one might run:</p>
+            <code>&gt; pkgin install swig python27 cmake ninja-build</code>
+            <p>If you wish to build the optional reference documentation, additional dependencies are required:</p>
+            <ul>
+              <li> Graphviz (for the 'dot' tool).
+              </li>
+              <li> doxygen (only if you wish to build the C++ API reference)
+              </li>
+              <li> epydoc (only if you wish to build the Python API reference)
+              </li>
+            </ul>
+            <p>To install the prerequisites for building the documentation (on Debian/Ubuntu) do:</p>
+            <code>
+              <br />&gt; sudo apt-get install doxygen graphviz
+              <br />&gt; sudo pip install epydoc # or install package python-epydoc
+            </code>
+            <h2>Building LLDB</h2>
+            <p>
+              LLDB requires both LLVM and Clang to build. We first need to checkout the source tree,
+              which contains all three. Change to the directory where you want to do development
+              work and clone the repository:</p>
+            <code>&gt; git clone https://github.com/llvm/llvm-project.git
+              <br />&gt; cd llvm-project
+              <br />&gt; mkdir build
+              <br />&gt; cd build
+            </code>
+            <h2>To build with CMake</h2>
+            <p>
+              Using CMake is documented on the <a href="http://llvm.org/docs/CMake.html">Building LLVM with CMake</a>
+              page. Building LLDB is possible using one of the following generators:
+            </p>
+            <ul>
+              <li> Ninja </li>
+              <li> Unix Makefiles </li>
+            </ul>
+            <h3>Using CMake + Ninja</h3>
+            <p>
+              Ninja is the fastest way to build LLDB! In order to use ninja, you need to have recent versions of CMake and
+              ninja on your system. To build using ninja:
+            </p>
+            <code>
+              &gt; cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS='clang;lldb'
+              <br />&gt; ninja lldb
+              <br />&gt; ninja check-lldb
+            </code>
+            <p>
+              If you want to debug the lldb that you're building -- that is, build it with debug info enabled -- pass
+              two additional arguments to cmake before running ninja:
+            </p>
+            <code>
+              &gt; cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS='clang;lldb' -DLLDB_EXPORT_ALL_SYMBOLS=1 -DCMAKE_BUILD_TYPE=Debug
+            </code>
+            <h3>Using CMake + Unix Makefiles</h3>
+            <p>If you do not have Ninja, you can still use CMake to generate Unix Makefiles that build LLDB:</p>
+            <code>
+              &gt; cmake ..
+              <br />&gt; make
+              <br />&gt; make check-lldb
+            </code>
+            <h2>Building API reference documentation</h2>
+            <p>
+              LLDB exposes a C++ as well as a Python API. To build the reference documentation for these two APIs, ensure you have
+              the required dependencies installed, and build the <tt>lldb-python-doc</tt> and <tt>lldb-cpp-doc</tt> CMake targets.
+            </p>
+            <p> The output HTML reference documentation can be found in <tt>&lt;build-dir&gt;/tools/lldb/docs/</tt>.</p><p>
+              <h2>Additional Notes</h2>
+            </p>
+            <p>
+              LLDB has a Python scripting capability and supplies its own Python module named <tt>lldb</tt>.
+              If a script is run inside the command line <tt>lldb</tt> application, the Python module
+              is made available automatically.  However, if a script is to be run by a Python interpreter
+              outside the command line application, the <tt>PYTHONPATH</tt> environment variable can be used
+              to let the Python interpreter find the <tt>lldb</tt> module.
+            </p>
+            <p>
+              Current stable NetBSD release doesn't ship with libpanel(3), therefore it's required to disable curses(3) support with
+              the <tt>-DLLDB_DISABLE_CURSES:BOOL=TRUE</tt> option. To make sure check if <tt>/usr/include/panel.h</tt> exists in your
+              system.
+            </p>
+            <p>The correct path can be obtained by invoking the command line <tt>lldb</tt> tool with the -P flag:</p>
+            <code>&gt; export PYTHONPATH=`$llvm/build/Debug+Asserts/bin/lldb -P`</code>
+            <p>
+              If you used a different build directory or made a release build, you may need to adjust the
+              above to suit your needs. To test that the lldb Python module
+              is built correctly and is available to the default Python interpreter, run:
+            </p>
+            <code>&gt; python -c 'import lldb'</code></p>
+
+            <h2 id="cross-compilation">Cross-compiling LLDB</h2>
+            <p>
+              In order to debug remote targets running different architectures than your host, you
+              will need to compile LLDB (or at least the server component) for the target. While
+              the easiest solution is to just compile it locally on the target, this is often not
+              feasible, and in these cases you will need to cross-compile LLDB on your host.
+            </p>
+
+            <p>
+              Cross-compilation is often a daunting task and has a lot of quirks which depend on
+              the exact host and target architectures, so it is not possible to give a universal
+              guide which will work on all platforms. However, here we try to provide an overview
+              of the cross-compilation process along with the main things you should look out for.
+            </p>
+
+            <p>
+              First, you will need a working toolchain which is capable of producing binaries for
+              the target architecture. Since you already have a checkout of clang and lldb, you
+              can compile a host version of clang in a separate folder and use that.
+              Alternatively you can use system clang or even cross-gcc if your distribution
+              provides such packages (e.g., <code>g++-aarch64-linux-gnu</code>
+              on Ubuntu).
+            </p>
+
+            <p>
+              Next, you will need a copy of the required target headers and libraries on your
+              host. The libraries can be usually obtained by copying from the target machine,
+              however the headers are often not found there, especially in case of embedded
+              platforms. In this case, you will need to obtain them from another source, either
+              a cross-package if one is available, or cross-compiling the respective library from
+              source. Fortunately the list of LLDB dependencies is not big and if you are only
+              interested in the server component, you can reduce this even further by passing the
+              appropriate cmake options, such as:
+            </p>
+            <code>
+              -DLLDB_DISABLE_LIBEDIT=1<br/>
+              -DLLDB_DISABLE_CURSES=1<br/>
+              -DLLDB_DISABLE_PYTHON=1<br/>
+              -DLLVM_ENABLE_TERMINFO=0
+            </code>
+            <p>
+              In this case you, will often not need anything other than the standard C and C++
+              libraries.
+            </p>
+
+            <p>
+              Once all of the dependencies are in place, it's just a matter of configuring the
+              build system with the locations and arguments of all the necessary tools. The most
+              important cmake options here are:
+            </p>
+            <dl>
+                <dt>CMAKE_CROSSCOMPILING</dt>
+                <dd>Set to 1 to enable cross-compilation.</dd>
+
+                <dt>CMAKE_LIBRARY_ARCHITECTURE</dt>
+                <dd>Affects the cmake search path when looking for libraries. You may need to set
+                this to your architecture triple if you do not specify all your include and
+                library paths explicitly.</dd>
+
+                <dt>CMAKE_C_COMPILER, CMAKE_CXX_COMPILER</dt>
+                <dd>C and C++ compilers for the target architecture</dd>
+
+                <dt>CMAKE_C_FLAGS, CMAKE_CXX_FLAGS</dt>
+                <dd>The flags for the C and C++ target compilers. You may need to specify the
+                exact target cpu and abi besides the include paths for the target headers.</dd>
+
+                <dt>CMAKE_EXE_LINKER_FLAGS</dt>
+                <dd>The flags to be passed to the linker. Usually just a list of library search
+                paths referencing the target libraries.</dd>
+
+                <dt>LLVM_TABLEGEN, CLANG_TABLEGEN</dt>
+                <dd>Paths to llvm-tblgen and clang-tblgen for the <em>host</em> architecture. If
+                you already have built clang for the host, you can point these variables to the
+                executables in your build directory. If not, you will need to build the
+                llvm-tblgen and clang-tblgen host targets at least.<dd>
+
+                <dt>LLVM_HOST_TRIPLE</dt>
+                <dd>The triple of the system that lldb (or lldb-server) will run on. Not setting
+                this (or setting it incorrectly) can cause a lot of issues with remote debugging
+                as a lot of the choices lldb makes depend on the triple reported by the remote
+                platform.</dd>
+            </dl>
+            <p>
+              You can of course also specify the usual cmake options like CMAKE_BUILD_TYPE, etc.
+            </p>
+
+            <h3>Example 1: Cross-compiling for linux arm64 on Ubuntu host</h3>
+
+            <p>
+              Ubuntu already provides the packages necessary to cross-compile LLDB for arm64. It
+              is sufficient to install packages gcc-aarch64-linux-gnu, g++-aarch64-linux-gnu,
+              binutils-aarch64-linux-gnu. Then it is possible to prepare the cmake build with the
+              following parameters:
+            </p>
+            <code>
+              -DCMAKE_CROSSCOMPILING=1 \<br/>
+              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \<br/>
+              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \<br/>
+              -DLLVM_HOST_TRIPLE=aarch64-unknown-linux-gnu \<br/>
+              -DLLVM_TABLEGEN=&lt;path-to-host&gt;/bin/llvm-tblgen \<br/>
+              -DCLANG_TABLEGEN=&lt;path-to-host&gt;/bin/clang-tblgen \<br/>
+              -DLLDB_DISABLE_PYTHON=1 \<br/>
+              -DLLDB_DISABLE_LIBEDIT=1 \<br/>
+              -DLLDB_DISABLE_CURSES=1
+            </code>
+
+            <p>
+              An alternative (and recommended) way to compile LLDB is with clang. Unfortunately,
+              clang is not able to find all the include paths necessary for a successful
+              cross-compile, so we need to help it with a couple of CFLAGS options. In my case it
+              was sufficient to add the following arguments to CMAKE_C_FLAGS and CMAKE_CXX_FLAGS
+              (in addition to changing CMAKE_C(XX)_COMPILER to point to clang compilers):
+            </p>
+            <code>
+              -target aarch64-linux-gnu \<br/>
+              -I /usr/aarch64-linux-gnu/include/c++/4.8.2/aarch64-linux-gnu \<br/>
+              -I /usr/aarch64-linux-gnu/include
+            </code>
+
+            <p>
+              If you wanted to build a full version of LLDB and avoid passing
+              -DLLDB_DISABLE_PYTHON and other options, you would need to obtain the target
+              versions of the respective libraries. The easiest way to achieve this is to use the
+              <code>qemu-debootstrap</code> utility, which can prepare a system image using qemu
+              and chroot to simulate the target environment. Then you can install the necessary
+              packages in this environment (python-dev, libedit-dev, etc.) and point your
+              compiler to use them using the correct -I and -L arguments.
+            </p>
+
+            <h3>Example 2: Cross-compiling for Android on Linux</h3>
+
+            <p>
+              In the case of Android, the toolchain and all required headers and
+              libraries are available in the Android NDK.
+            </p>
+
+            <p>
+              The NDK also contains a cmake toolchain file, which makes
+              configuring the build much simpler.  The compiler, include and
+              library paths will be configured by the toolchain file and all you
+              need to do is to select the architecture (ANDROID_ABI) and
+              platform level (ANDROID_PLATFORM, should be at least 21). You will
+              also need to set ANDROID_ALLOW_UNDEFINED_SYMBOLS=On, as the
+              toolchain file defaults to "no undefined symbols in shared
+              libraries", which is not compatible with some llvm libraries. The
+              first version of NDK which supports this approach is r14.
+            </p>
+            <p>
+              For example, the following arguments are sufficient to configure
+              an android arm64 build:
+            </p>
+            <code>
+              -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \<br/>
+              -DANDROID_ABI=arm64-v8a \<br/>
+              -DANDROID_PLATFORM=android-21 \<br/>
+              -DANDROID_ALLOW_UNDEFINED_SYMBOLS=On \<br/>
+              -DLLVM_HOST_TRIPLE=aarch64-unknown-linux-android \<br/>
+              -DCROSS_TOOLCHAIN_FLAGS_NATIVE='-DCMAKE_C_COMPILER=cc;-DCMAKE_CXX_COMPILER=c++' <br/>
+            </code>
+
+            <p>
+              Note that currently only lldb-server is functional on android. The
+              lldb client is not supported and unlikely to work.
+            </p>
+          </div>
+          <div class="postfooter"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

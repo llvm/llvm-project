@@ -18,8 +18,15 @@
 
 namespace lldb_private {
 class Address;
+}
+namespace lldb_private {
 class Stream;
+}
+namespace lldb_private {
 class SymbolContext;
+}
+
+namespace lldb_private {
 
 /// \class AddressResolverFileLine AddressResolverFileLine.h
 /// "lldb/Core/AddressResolverFileLine.h" This class finds address for source

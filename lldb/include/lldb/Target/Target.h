@@ -38,29 +38,29 @@ namespace lldb_private {
 
 OptionEnumValues GetDynamicValueTypes();
 
-enum InlineStrategy {
+typedef enum InlineStrategy {
   eInlineBreakpointsNever = 0,
   eInlineBreakpointsHeaders,
   eInlineBreakpointsAlways
-};
+} InlineStrategy;
 
-enum LoadScriptFromSymFile {
+typedef enum LoadScriptFromSymFile {
   eLoadScriptFromSymFileTrue,
   eLoadScriptFromSymFileFalse,
   eLoadScriptFromSymFileWarn
-};
+} LoadScriptFromSymFile;
 
-enum LoadCWDlldbinitFile {
+typedef enum LoadCWDlldbinitFile {
   eLoadCWDlldbinitTrue,
   eLoadCWDlldbinitFalse,
   eLoadCWDlldbinitWarn
-};
+} LoadCWDlldbinitFile;
 
-enum LoadDependentFiles {
+typedef enum LoadDependentFiles {
   eLoadDependentsDefault,
   eLoadDependentsYes,
   eLoadDependentsNo,
-};
+} LoadDependentFiles;
 
 // TargetProperties
 class TargetExperimentalProperties : public Properties {

@@ -44,7 +44,7 @@ public:
 class UntypedBaton : public Baton {
 public:
   UntypedBaton(void *Data) : m_data(Data) {}
-  ~UntypedBaton() override {
+  virtual ~UntypedBaton() {
     // The default destructor for an untyped baton does NOT attempt to clean up
     // anything in m_data.
   }
@@ -63,7 +63,8 @@ public:
   const T *getItem() const { return Item.get(); }
 
   void *data() override { return Item.get(); }
-  void GetDescription(Stream *s, lldb::DescriptionLevel level) const override {}
+  virtual void GetDescription(Stream *s,
+                              lldb::DescriptionLevel level) const override {}
 
 protected:
   std::unique_ptr<T> Item;

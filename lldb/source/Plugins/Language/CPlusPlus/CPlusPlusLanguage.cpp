@@ -914,7 +914,7 @@ static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 std::unique_ptr<Language::TypeScavenger> CPlusPlusLanguage::GetTypeScavenger() {
   class CPlusPlusTypeScavenger : public Language::ImageListTypeScavenger {
   public:
-    CompilerType AdjustForInclusion(CompilerType &candidate) override {
+    virtual CompilerType AdjustForInclusion(CompilerType &candidate) override {
       LanguageType lang_type(candidate.GetMinimumLanguage());
       if (!Language::LanguageIsC(lang_type) &&
           !Language::LanguageIsCPlusPlus(lang_type))

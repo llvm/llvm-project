@@ -149,8 +149,9 @@ protected:
   static void *ThreadFunctionProcessStatus(void *arg);
 
 private:
-  RNBContext(const RNBContext &rhs) = delete;
-  RNBContext &operator=(const RNBContext &rhs) = delete;
+  // Outlaw copy and assignment operators
+  RNBContext(const RNBContext &rhs);
+  RNBContext &operator=(const RNBContext &rhs);
 };
 
 #endif // #ifndef __RNBContext_h__

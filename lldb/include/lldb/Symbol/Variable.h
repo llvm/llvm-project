@@ -128,8 +128,8 @@ protected:
       m_static_member : 1; // Non-zero if variable is static member of a class
                            // or struct.
 private:
-  Variable(const Variable &rhs) = delete;
-  Variable &operator=(const Variable &rhs) = delete;
+  Variable(const Variable &rhs);
+  Variable &operator=(const Variable &rhs);
 };
 
 } // namespace lldb_private

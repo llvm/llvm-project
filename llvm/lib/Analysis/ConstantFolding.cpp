@@ -999,9 +999,7 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
                                        const TargetLibraryInfo *TLI) {
   Type *DestTy = InstOrCE->getType();
 
-  if (Instruction::isUnaryOp(Opcode))
-    return ConstantFoldUnaryOpOperand(Opcode, Ops[0], DL);
-
+  // Handle easy binops first.
   if (Instruction::isBinaryOp(Opcode))
     return ConstantFoldBinaryOpOperands(Opcode, Ops[0], Ops[1], DL);
 
@@ -1262,13 +1260,6 @@ Constant *llvm::ConstantFoldCompareInstOperands(unsigned Predicate,
   }
 
   return ConstantExpr::getCompare(Predicate, Ops0, Ops1);
-}
-
-Constant *llvm::ConstantFoldUnaryOpOperand(unsigned Opcode, Constant *Op,
-                                           const DataLayout &DL) {
-  assert(Instruction::isUnaryOp(Opcode));
-
-  return ConstantExpr::get(Opcode, Op);
 }
 
 Constant *llvm::ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,

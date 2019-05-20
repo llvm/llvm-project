@@ -23,6 +23,9 @@
 
 namespace lldb_private {
 class ExecutionContextScope;
+}
+
+namespace lldb_private {
 
 // A ValueObject that represents memory at a given address, viewed as some
 // set lldb type.

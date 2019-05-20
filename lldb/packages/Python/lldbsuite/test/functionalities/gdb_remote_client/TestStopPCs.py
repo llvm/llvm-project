@@ -35,8 +35,6 @@ class TestStopPCs(GDBRemoteTestBase):
         target = self.dbg.CreateTarget('')
         if self.TraceOn():
           self.runCmd("log enable gdb-remote packets")
-          self.addTearDownHook(
-                lambda: self.runCmd("log disable gdb-remote packets"))
         process = self.connect(target)
 
         self.assertEqual(process.GetNumThreads(), 2)

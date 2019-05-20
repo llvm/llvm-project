@@ -66,7 +66,6 @@ static_library("AST") {
     "InheritViz.cpp",
     "ItaniumCXXABI.cpp",
     "ItaniumMangle.cpp",
-    "JSONNodeDumper.cpp",
     "Mangle.cpp",
     "MicrosoftCXXABI.cpp",
     "MicrosoftMangle.cpp",

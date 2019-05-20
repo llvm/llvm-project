@@ -183,10 +183,7 @@ int main(int Argc, const char **Argv) {
       outs() << "Number of resources: " << EntryNumber << "\n";
     }
 
-    std::vector<std::string> Duplicates;
-    error(Parser.parse(RF, Duplicates));
-    for (const auto& DupeDiag : Duplicates)
-      reportError(DupeDiag);
+    error(Parser.parse(RF));
   }
 
   if (Verbose) {

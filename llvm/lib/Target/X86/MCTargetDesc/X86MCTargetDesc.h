@@ -34,6 +34,9 @@ class StringRef;
 class raw_ostream;
 class raw_pwrite_stream;
 
+Target &getTheX86_32Target();
+Target &getTheX86_64Target();
+
 /// Flavour of dwarf regnumbers
 ///
 namespace DWARFFlavour {

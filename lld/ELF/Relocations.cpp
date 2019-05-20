@@ -383,7 +383,7 @@ static bool needsGot(RelExpr Expr) {
 // file (PC, or GOT for example).
 static bool isRelExpr(RelExpr Expr) {
   return oneof<R_PC, R_GOTREL, R_GOTPLTREL, R_MIPS_GOTREL, R_PPC_CALL,
-               R_PPC64_RELAX_TOC, R_PPC_CALL_PLT, R_AARCH64_PAGE_PC, R_RELAX_GOT_PC>(Expr);
+               R_PPC_CALL_PLT, R_AARCH64_PAGE_PC, R_RELAX_GOT_PC>(Expr);
 }
 
 // Returns true if a given relocation can be computed at link-time.
@@ -403,7 +403,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
             R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC, R_MIPS_TLSGD,
             R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,
             R_PLT_PC, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC, R_PPC_CALL_PLT,
-            R_PPC64_RELAX_TOC, R_TLSDESC_CALL, R_AARCH64_TLSDESC_PAGE, R_HINT, R_TLSLD_HINT,
+            R_TLSDESC_CALL, R_AARCH64_TLSDESC_PAGE, R_HINT, R_TLSLD_HINT,
             R_TLSIE_HINT>(E))
     return true;
 
@@ -1066,7 +1066,7 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
   // be resolved within the executable will actually be resolved that way at
   // runtime, because the main exectuable is always at the beginning of a search
   // list. We can leverage that fact.
-  if (!Sym.IsPreemptible && (!Sym.isGnuIFunc() || Config->ZIfuncNoplt)) {
+  if (!Sym.IsPreemptible && !Sym.isGnuIFunc()) {
     if (Expr == R_GOT_PC && !isAbsoluteValue(Sym))
       Expr = Target->adjustRelaxExpr(Type, RelocatedAddr, Expr);
     else
@@ -1079,7 +1079,7 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
   // The 4 types that relative GOTPLT are all x86 and x86-64 specific.
   if (oneof<R_GOTPLTONLY_PC, R_GOTPLTREL, R_GOTPLT, R_TLSGD_GOTPLT>(Expr)) {
     In.GotPlt->HasGotPltOffRel = true;
-  } else if (oneof<R_GOTONLY_PC, R_GOTREL, R_PPC_TOC, R_PPC64_RELAX_TOC>(Expr)) {
+  } else if (oneof<R_GOTONLY_PC, R_GOTREL, R_PPC_TOC>(Expr)) {
     In.Got->HasGotOffRel = true;
   }
 
@@ -1091,14 +1091,6 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
   if (unsigned Processed =
           handleTlsRelocation<ELFT>(Type, Sym, Sec, Offset, Addend, Expr)) {
     I += (Processed - 1);
-    return;
-  }
-
-  // We were asked not to generate PLT entries for ifuncs. Instead, pass the
-  // direct relocation on through.
-  if (Sym.isGnuIFunc() && Config->ZIfuncNoplt) {
-    Sym.ExportDynamic = true;
-    In.RelaDyn->addReloc(Type, &Sec, Offset, &Sym, Addend, R_ADDEND, Type);
     return;
   }
 
@@ -1248,10 +1240,8 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
   for (auto I = Rels.begin(), End = Rels.end(); I != End;)
     scanReloc<ELFT>(Sec, GetOffset, I, End);
 
-  // Sort relocations by offset for more efficient searching for
-  // R_RISCV_PCREL_HI20 and R_PPC64_ADDR64.
-  if (Config->EMachine == EM_RISCV ||
-      (Config->EMachine == EM_PPC64 && Sec.Name == ".toc"))
+  // Sort relocations by offset to binary search for R_RISCV_PCREL_HI20
+  if (Config->EMachine == EM_RISCV)
     llvm::stable_sort(Sec.Relocations,
                       [](const Relocation &LHS, const Relocation &RHS) {
                         return LHS.Offset < RHS.Offset;

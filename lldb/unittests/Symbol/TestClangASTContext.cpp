@@ -34,12 +34,12 @@ public:
     FileSystem::Terminate();
   }
 
-  void SetUp() override {
+  virtual void SetUp() override {
     std::string triple = HostInfo::GetTargetTriple();
     m_ast.reset(new ClangASTContext(triple.c_str()));
   }
 
-  void TearDown() override { m_ast.reset(); }
+  virtual void TearDown() override { m_ast.reset(); }
 
 protected:
   std::unique_ptr<ClangASTContext> m_ast;

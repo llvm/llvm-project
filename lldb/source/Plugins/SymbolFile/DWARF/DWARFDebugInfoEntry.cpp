@@ -209,7 +209,7 @@ bool DWARFDebugInfoEntry::Extract(const DWARFUnit *cu,
   const DWARFDataExtractor &debug_info_data = cu->GetData();
   //    const DWARFDataExtractor& debug_str_data =
   //    dwarf2Data->get_debug_str_data();
-  const uint32_t cu_end_offset = cu->GetNextUnitOffset();
+  const uint32_t cu_end_offset = cu->GetNextCompileUnitOffset();
   lldb::offset_t offset = *offset_ptr;
   //  if (offset >= cu_end_offset)
   //      Log::Status("DIE at offset 0x%8.8x is beyond the end of the current
@@ -833,7 +833,7 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
                                   debug_info_data, &offset, cu);
 
       const dw_offset_t attr_offset = offset;
-      form_value.SetUnit(cu);
+      form_value.SetCompileUnit(cu);
       form_value.SetForm(abbrevDecl->GetFormByIndex(idx));
       if (form_value.ExtractValue(debug_info_data, &offset)) {
         if (end_attr_offset_ptr)

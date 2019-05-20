@@ -272,15 +272,9 @@ static clang::QualType ExportAllDeclaredTypes(
   merger.AddSources(importer_source);
   clang::ASTImporter &exporter = merger.ImporterForOrigin(source);
   CompleteAllDeclContexts(exporter, file, root);
-  llvm::Expected<clang::QualType> ret_or_error = exporter.Import(root);
+  clang::QualType ret = exporter.Import(root);
   merger.RemoveSources(importer_source);
-  if (ret_or_error) {
-    return *ret_or_error;
-  } else {
-    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
-    LLDB_LOG_ERROR(log, ret_or_error.takeError(), "Couldn't import type: {0}");
-    return clang::QualType();
-  }
+  return ret;
 }
 
 TypeFromUser ClangExpressionDeclMap::DeportType(ClangASTContext &target,

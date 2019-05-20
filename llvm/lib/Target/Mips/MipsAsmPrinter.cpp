@@ -12,9 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsAsmPrinter.h"
+#include "InstPrinter/MipsInstPrinter.h"
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
-#include "MCTargetDesc/MipsInstPrinter.h"
 #include "MCTargetDesc/MipsMCNaCl.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "Mips.h"
@@ -23,7 +23,6 @@
 #include "MipsSubtarget.h"
 #include "MipsTargetMachine.h"
 #include "MipsTargetStreamer.h"
-#include "TargetInfo/MipsTargetInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"

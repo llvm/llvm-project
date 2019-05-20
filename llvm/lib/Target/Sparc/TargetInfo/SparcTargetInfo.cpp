@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TargetInfo/SparcTargetInfo.h"
+#include "Sparc.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 

@@ -1039,7 +1039,7 @@ Expr ScriptParser::getPageSize() {
   std::string Location = getCurrentLocation();
   return [=]() -> uint64_t {
     if (Target)
-      return Config->CommonPageSize;
+      return Target->PageSize;
     error(Location + ": unable to calculate page size");
     return 4096; // Return a dummy value.
   };

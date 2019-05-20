@@ -43,7 +43,7 @@ static void initialize() {
     llvm::consumeError(std::move(e));
 }
 
-static void terminate_debugger() { g_debugger_lifetime->Terminate(); }
+static void terminate() { g_debugger_lifetime->Terminate(); }
 } // namespace llgs
 
 // main
@@ -63,12 +63,12 @@ int main(int argc, char *argv[]) {
   case 'g':
     llgs::initialize();
     main_gdbserver(argc, argv);
-    llgs::terminate_debugger();
+    llgs::terminate();
     break;
   case 'p':
     llgs::initialize();
     main_platform(argc, argv);
-    llgs::terminate_debugger();
+    llgs::terminate();
     break;
   case 'v':
     fprintf(stderr, "%s\n", lldb_private::GetVersion());

@@ -37,7 +37,6 @@
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CharUnits.h"
-#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/RecordLayout.h"
@@ -104,19 +103,28 @@ namespace {
   }
 
   /// Get an LValue path entry, which is known to not be an array index, as a
+  /// field or base class.
+  static
+  APValue::BaseOrMemberType getAsBaseOrMember(APValue::LValuePathEntry E) {
+    APValue::BaseOrMemberType Value;
+    Value.setFromOpaqueValue(E.BaseOrMember);
+    return Value;
+  }
+
+  /// Get an LValue path entry, which is known to not be an array index, as a
   /// field declaration.
   static const FieldDecl *getAsField(APValue::LValuePathEntry E) {
-    return dyn_cast<FieldDecl>(E.getAsBaseOrMember().getPointer());
+    return dyn_cast<FieldDecl>(getAsBaseOrMember(E).getPointer());
   }
   /// Get an LValue path entry, which is known to not be an array index, as a
   /// base class declaration.
   static const CXXRecordDecl *getAsBaseClass(APValue::LValuePathEntry E) {
-    return dyn_cast<CXXRecordDecl>(E.getAsBaseOrMember().getPointer());
+    return dyn_cast<CXXRecordDecl>(getAsBaseOrMember(E).getPointer());
   }
   /// Determine whether this LValue path entry for a base class names a virtual
   /// base class.
   static bool isVirtualBaseClass(APValue::LValuePathEntry E) {
-    return E.getAsBaseOrMember().getInt();
+    return getAsBaseOrMember(E).getInt();
   }
 
   /// Given a CallExpr, try to get the alloc_size attribute. May return null.
@@ -214,7 +222,7 @@ namespace {
   // The order of this enum is important for diagnostics.
   enum CheckSubobjectKind {
     CSK_Base, CSK_Derived, CSK_Field, CSK_ArrayToPointer, CSK_ArrayIndex,
-    CSK_Real, CSK_Imag
+    CSK_This, CSK_Real, CSK_Imag
   };
 
   /// A path from a glvalue to a subobject of that glvalue.
@@ -308,8 +316,7 @@ namespace {
       if (IsOnePastTheEnd)
         return true;
       if (!isMostDerivedAnUnsizedArray() && MostDerivedIsArrayElement &&
-          Entries[MostDerivedPathLength - 1].getAsArrayIndex() ==
-              MostDerivedArraySize)
+          Entries[MostDerivedPathLength - 1].ArrayIndex == MostDerivedArraySize)
         return true;
       return false;
     }
@@ -326,8 +333,8 @@ namespace {
       // an array of length one with the type of the object as its element type.
       bool IsArray = MostDerivedPathLength == Entries.size() &&
                      MostDerivedIsArrayElement;
-      uint64_t ArrayIndex = IsArray ? Entries.back().getAsArrayIndex()
-                                    : (uint64_t)IsOnePastTheEnd;
+      uint64_t ArrayIndex =
+          IsArray ? Entries.back().ArrayIndex : (uint64_t)IsOnePastTheEnd;
       uint64_t ArraySize =
           IsArray ? getMostDerivedArraySize() : (uint64_t)1;
       return {ArrayIndex, ArraySize - ArrayIndex};
@@ -353,7 +360,9 @@ namespace {
 
     /// Update this designator to refer to the first element within this array.
     void addArrayUnchecked(const ConstantArrayType *CAT) {
-      Entries.push_back(PathEntry::ArrayIndex(0));
+      PathEntry Entry;
+      Entry.ArrayIndex = 0;
+      Entries.push_back(Entry);
 
       // This is a most-derived object.
       MostDerivedType = CAT->getElementType();
@@ -364,7 +373,9 @@ namespace {
     /// Update this designator to refer to the first element within the array of
     /// elements of type T. This is an array of unknown size.
     void addUnsizedArrayUnchecked(QualType ElemTy) {
-      Entries.push_back(PathEntry::ArrayIndex(0));
+      PathEntry Entry;
+      Entry.ArrayIndex = 0;
+      Entries.push_back(Entry);
 
       MostDerivedType = ElemTy;
       MostDerivedIsArrayElement = true;
@@ -377,7 +388,10 @@ namespace {
     /// Update this designator to refer to the given base or member of this
     /// object.
     void addDeclUnchecked(const Decl *D, bool Virtual = false) {
-      Entries.push_back(APValue::BaseOrMemberType(D, Virtual));
+      PathEntry Entry;
+      APValue::BaseOrMemberType Value(D, Virtual);
+      Entry.BaseOrMember = Value.getOpaqueValue();
+      Entries.push_back(Entry);
 
       // If this isn't a base class, it's a new most-derived object.
       if (const FieldDecl *FD = dyn_cast<FieldDecl>(D)) {
@@ -389,7 +403,9 @@ namespace {
     }
     /// Update this designator to refer to the given complex component.
     void addComplexUnchecked(QualType EltTy, bool Imag) {
-      Entries.push_back(PathEntry::ArrayIndex(Imag));
+      PathEntry Entry;
+      Entry.ArrayIndex = Imag;
+      Entries.push_back(Entry);
 
       // This is technically a most-derived object, though in practice this
       // is unlikely to matter.
@@ -410,8 +426,7 @@ namespace {
         // Can't verify -- trust that the user is doing the right thing (or if
         // not, trust that the caller will catch the bad behavior).
         // FIXME: Should we reject if this overflows, at least?
-        Entries.back() = PathEntry::ArrayIndex(
-            Entries.back().getAsArrayIndex() + TruncatedN);
+        Entries.back().ArrayIndex += TruncatedN;
         return;
       }
 
@@ -420,8 +435,8 @@ namespace {
       // an array of length one with the type of the object as its element type.
       bool IsArray = MostDerivedPathLength == Entries.size() &&
                      MostDerivedIsArrayElement;
-      uint64_t ArrayIndex = IsArray ? Entries.back().getAsArrayIndex()
-                                    : (uint64_t)IsOnePastTheEnd;
+      uint64_t ArrayIndex =
+          IsArray ? Entries.back().ArrayIndex : (uint64_t)IsOnePastTheEnd;
       uint64_t ArraySize =
           IsArray ? getMostDerivedArraySize() : (uint64_t)1;
 
@@ -441,7 +456,7 @@ namespace {
              "bounds check succeeded for out-of-bounds index");
 
       if (IsArray)
-        Entries.back() = PathEntry::ArrayIndex(ArrayIndex);
+        Entries.back().ArrayIndex = ArrayIndex;
       else
         IsOnePastTheEnd = (ArrayIndex != 0);
     }
@@ -623,40 +638,6 @@ namespace {
     }
   };
 
-  /// A reference to an object whose construction we are currently evaluating.
-  struct ObjectUnderConstruction {
-    APValue::LValueBase Base;
-    ArrayRef<APValue::LValuePathEntry> Path;
-    friend bool operator==(const ObjectUnderConstruction &LHS,
-                           const ObjectUnderConstruction &RHS) {
-      return LHS.Base == RHS.Base && LHS.Path == RHS.Path;
-    }
-    friend llvm::hash_code hash_value(const ObjectUnderConstruction &Obj) {
-      return llvm::hash_combine(Obj.Base, Obj.Path);
-    }
-  };
-  enum class ConstructionPhase { None, Bases, AfterBases };
-}
-
-namespace llvm {
-template<> struct DenseMapInfo<ObjectUnderConstruction> {
-  using Base = DenseMapInfo<APValue::LValueBase>;
-  static ObjectUnderConstruction getEmptyKey() {
-    return {Base::getEmptyKey(), {}}; }
-  static ObjectUnderConstruction getTombstoneKey() {
-    return {Base::getTombstoneKey(), {}};
-  }
-  static unsigned getHashValue(const ObjectUnderConstruction &Object) {
-    return hash_value(Object);
-  }
-  static bool isEqual(const ObjectUnderConstruction &LHS,
-                      const ObjectUnderConstruction &RHS) {
-    return LHS == RHS;
-  }
-};
-}
-
-namespace {
   /// EvalInfo - This is a private struct used by the evaluator to capture
   /// information about a subexpression as it is folded.  It retains information
   /// about the AST context, but also maintains information about the folded
@@ -707,40 +688,33 @@ namespace {
     /// declaration whose initializer is being evaluated, if any.
     APValue *EvaluatingDeclValue;
 
-    /// Set of objects that are currently being constructed.
-    llvm::DenseMap<ObjectUnderConstruction, ConstructionPhase>
-        ObjectsUnderConstruction;
+    /// EvaluatingObject - Pair of the AST node that an lvalue represents and
+    /// the call index that that lvalue was allocated in.
+    typedef std::pair<APValue::LValueBase, std::pair<unsigned, unsigned>>
+        EvaluatingObject;
+
+    /// EvaluatingConstructors - Set of objects that are currently being
+    /// constructed.
+    llvm::DenseSet<EvaluatingObject> EvaluatingConstructors;
 
     struct EvaluatingConstructorRAII {
       EvalInfo &EI;
-      ObjectUnderConstruction Object;
+      EvaluatingObject Object;
       bool DidInsert;
-      EvaluatingConstructorRAII(EvalInfo &EI, ObjectUnderConstruction Object,
-                                bool HasBases)
+      EvaluatingConstructorRAII(EvalInfo &EI, EvaluatingObject Object)
           : EI(EI), Object(Object) {
-        DidInsert =
-            EI.ObjectsUnderConstruction
-                .insert({Object, HasBases ? ConstructionPhase::Bases
-                                          : ConstructionPhase::AfterBases})
-                .second;
-      }
-      void finishedConstructingBases() {
-        EI.ObjectsUnderConstruction[Object] = ConstructionPhase::AfterBases;
+        DidInsert = EI.EvaluatingConstructors.insert(Object).second;
       }
       ~EvaluatingConstructorRAII() {
-        if (DidInsert) EI.ObjectsUnderConstruction.erase(Object);
+        if (DidInsert) EI.EvaluatingConstructors.erase(Object);
       }
     };
 
-    ConstructionPhase
-    isEvaluatingConstructor(APValue::LValueBase Base,
-                            ArrayRef<APValue::LValuePathEntry> Path) {
-      return ObjectsUnderConstruction.lookup({Base, Path});
+    bool isEvaluatingConstructor(APValue::LValueBase Decl, unsigned CallIndex,
+                                 unsigned Version) {
+      return EvaluatingConstructors.count(
+          EvaluatingObject(Decl, {CallIndex, Version}));
     }
-
-    /// If we're currently speculatively evaluating, the outermost call stack
-    /// depth at which we can mutate state, otherwise 0.
-    unsigned SpeculativeEvaluationDepth = 0;
 
     /// The current array initialization index, if we're performing array
     /// initialization.
@@ -753,6 +727,9 @@ namespace {
     /// Have we emitted a diagnostic explaining why we couldn't constant
     /// fold (not just why it's not strictly a constant expression)?
     bool HasFoldFailureDiagnostic;
+
+    /// Whether or not we're currently speculatively evaluating.
+    bool IsSpeculativelyEvaluating;
 
     /// Whether or not we're in a context where the front end requires a
     /// constant value.
@@ -818,12 +795,13 @@ namespace {
         BottomFrame(*this, SourceLocation(), nullptr, nullptr, nullptr),
         EvaluatingDecl((const ValueDecl *)nullptr),
         EvaluatingDeclValue(nullptr), HasActiveDiagnostic(false),
-        HasFoldFailureDiagnostic(false),
+        HasFoldFailureDiagnostic(false), IsSpeculativelyEvaluating(false),
         InConstantContext(false), EvalMode(Mode) {}
 
     void setEvaluatingDecl(APValue::LValueBase Base, APValue &Value) {
       EvaluatingDecl = Base;
       EvaluatingDeclValue = &Value;
+      EvaluatingConstructors.insert({Base, {0, 0}});
     }
 
     const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
@@ -845,20 +823,14 @@ namespace {
       return false;
     }
 
-    std::pair<CallStackFrame *, unsigned>
-    getCallFrameAndDepth(unsigned CallIndex) {
-      assert(CallIndex && "no call index in getCallFrameAndDepth");
+    CallStackFrame *getCallFrame(unsigned CallIndex) {
+      assert(CallIndex && "no call index in getCallFrame");
       // We will eventually hit BottomFrame, which has Index 1, so Frame can't
       // be null in this loop.
-      unsigned Depth = CallStackDepth;
       CallStackFrame *Frame = CurrentCall;
-      while (Frame->Index > CallIndex) {
+      while (Frame->Index > CallIndex)
         Frame = Frame->Caller;
-        --Depth;
-      }
-      if (Frame->Index == CallIndex)
-        return {Frame, Depth};
-      return {nullptr, 0};
+      return (Frame->Index == CallIndex) ? Frame : nullptr;
     }
 
     bool nextStep(const Stmt *S) {
@@ -1139,12 +1111,12 @@ namespace {
   class SpeculativeEvaluationRAII {
     EvalInfo *Info = nullptr;
     Expr::EvalStatus OldStatus;
-    unsigned OldSpeculativeEvaluationDepth;
+    bool OldIsSpeculativelyEvaluating;
 
     void moveFromAndCancel(SpeculativeEvaluationRAII &&Other) {
       Info = Other.Info;
       OldStatus = Other.OldStatus;
-      OldSpeculativeEvaluationDepth = Other.OldSpeculativeEvaluationDepth;
+      OldIsSpeculativelyEvaluating = Other.OldIsSpeculativelyEvaluating;
       Other.Info = nullptr;
     }
 
@@ -1153,7 +1125,7 @@ namespace {
         return;
 
       Info->EvalStatus = OldStatus;
-      Info->SpeculativeEvaluationDepth = OldSpeculativeEvaluationDepth;
+      Info->IsSpeculativelyEvaluating = OldIsSpeculativelyEvaluating;
     }
 
   public:
@@ -1162,9 +1134,9 @@ namespace {
     SpeculativeEvaluationRAII(
         EvalInfo &Info, SmallVectorImpl<PartialDiagnosticAt> *NewDiag = nullptr)
         : Info(&Info), OldStatus(Info.EvalStatus),
-          OldSpeculativeEvaluationDepth(Info.SpeculativeEvaluationDepth) {
+          OldIsSpeculativelyEvaluating(Info.IsSpeculativelyEvaluating) {
       Info.EvalStatus.Diag = NewDiag;
-      Info.SpeculativeEvaluationDepth = Info.CallStackDepth + 1;
+      Info.IsSpeculativelyEvaluating = true;
     }
 
     SpeculativeEvaluationRAII(const SpeculativeEvaluationRAII &Other) = delete;
@@ -1327,21 +1299,13 @@ void EvalInfo::addCallStack(unsigned Limit) {
   }
 }
 
-/// Kinds of access we can perform on an object, for diagnostics. Note that
-/// we consider a member function call to be a kind of access, even though
-/// it is not formally an access of the object, because it has (largely) the
-/// same set of semantic restrictions.
+/// Kinds of access we can perform on an object, for diagnostics.
 enum AccessKinds {
   AK_Read,
   AK_Assign,
   AK_Increment,
-  AK_Decrement,
-  AK_MemberCall,
+  AK_Decrement
 };
-
-static bool isModification(AccessKinds AK) {
-  return AK != AK_Read && AK != AK_MemberCall;
-}
 
 namespace {
   struct ComplexValue {
@@ -2486,21 +2450,6 @@ static bool HandleLValueBasePath(EvalInfo &Info, const CastExpr *E,
   return true;
 }
 
-/// Cast an lvalue referring to a derived class to a known base subobject.
-static bool CastToBaseClass(EvalInfo &Info, const Expr *E, LValue &Result,
-                            const CXXRecordDecl *DerivedRD,
-                            const CXXRecordDecl *BaseRD) {
-  CXXBasePaths Paths(/*FindAmbiguities=*/false,
-                     /*RecordPaths=*/true, /*DetectVirtual=*/false);
-  if (!DerivedRD->isDerivedFrom(BaseRD, Paths))
-    llvm_unreachable("Class must be derived from the passed in base class!");
-
-  for (CXXBasePathElement &Elem : Paths.front())
-    if (!HandleLValueBase(Info, E, Result, Elem.Class, Elem.Base))
-      return false;
-  return true;
-}
-
 /// Update LVal to refer to the given field, which must be a member of the type
 /// currently described by LVal.
 static bool HandleLValueMember(EvalInfo &Info, const Expr *E, LValue &LVal,
@@ -2844,72 +2793,27 @@ static bool diagnoseUnreadableFields(EvalInfo &Info, const Expr *E,
   return false;
 }
 
-static bool lifetimeStartedInEvaluation(EvalInfo &Info,
-                                        APValue::LValueBase Base) {
-  // A temporary we created.
-  if (Base.getCallIndex())
-    return true;
-
-  auto *Evaluating = Info.EvaluatingDecl.dyn_cast<const ValueDecl*>();
-  if (!Evaluating)
-    return false;
-
-  // The variable whose initializer we're evaluating.
-  if (auto *BaseD = Base.dyn_cast<const ValueDecl*>())
-    if (declaresSameEntity(Evaluating, BaseD))
-      return true;
-
-  // A temporary lifetime-extended by the variable whose initializer we're
-  // evaluating.
-  if (auto *BaseE = Base.dyn_cast<const Expr *>())
-    if (auto *BaseMTE = dyn_cast<MaterializeTemporaryExpr>(BaseE))
-      if (declaresSameEntity(BaseMTE->getExtendingDecl(), Evaluating))
-        return true;
-
-  return false;
-}
-
 namespace {
 /// A handle to a complete object (an object that is not a subobject of
 /// another object).
 struct CompleteObject {
-  /// The identity of the object.
-  APValue::LValueBase Base;
   /// The value of the complete object.
   APValue *Value;
   /// The type of the complete object.
   QualType Type;
+  bool LifetimeStartedInEvaluation;
 
   CompleteObject() : Value(nullptr) {}
-  CompleteObject(APValue::LValueBase Base, APValue *Value, QualType Type)
-      : Base(Base), Value(Value), Type(Type) {}
-
-  bool mayReadMutableMembers(EvalInfo &Info) const {
-    // In C++14 onwards, it is permitted to read a mutable member whose
-    // lifetime began within the evaluation.
-    // FIXME: Should we also allow this in C++11?
-    if (!Info.getLangOpts().CPlusPlus14)
-      return false;
-    return lifetimeStartedInEvaluation(Info, Base);
+  CompleteObject(APValue *Value, QualType Type,
+                 bool LifetimeStartedInEvaluation)
+      : Value(Value), Type(Type),
+        LifetimeStartedInEvaluation(LifetimeStartedInEvaluation) {
+    assert(Value && "missing value for complete object");
   }
 
-  explicit operator bool() const { return !Type.isNull(); }
+  explicit operator bool() const { return Value; }
 };
 } // end anonymous namespace
-
-static QualType getSubobjectType(QualType ObjType, QualType SubobjType,
-                                 bool IsMutable = false) {
-  // C++ [basic.type.qualifier]p1:
-  // - A const object is an object of type const T or a non-mutable subobject
-  //   of a const object.
-  if (ObjType.isConstQualified() && !IsMutable)
-    SubobjType.addConst();
-  // - A volatile object is an object of type const T or a subobject of a
-  //   volatile object.
-  if (ObjType.isVolatileQualified())
-    SubobjType.addVolatile();
-  return SubobjType;
-}
 
 /// Find the designated sub-object of an rvalue.
 template<typename SubobjectHandler>
@@ -2933,78 +2837,31 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
   APValue *O = Obj.Value;
   QualType ObjType = Obj.Type;
   const FieldDecl *LastField = nullptr;
-  const FieldDecl *VolatileField = nullptr;
+  const bool MayReadMutableMembers =
+      Obj.LifetimeStartedInEvaluation && Info.getLangOpts().CPlusPlus14;
 
   // Walk the designator's path to find the subobject.
   for (unsigned I = 0, N = Sub.Entries.size(); /**/; ++I) {
     if (O->isUninit()) {
       if (!Info.checkingPotentialConstantExpression())
-        Info.FFDiag(E, diag::note_constexpr_access_uninit)
-            << handler.AccessKind;
+        Info.FFDiag(E, diag::note_constexpr_access_uninit) << handler.AccessKind;
       return handler.failed();
     }
 
-    // C++ [class.ctor]p5:
-    //    const and volatile semantics are not applied on an object under
-    //    construction.
-    if ((ObjType.isConstQualified() || ObjType.isVolatileQualified()) &&
-        ObjType->isRecordType() &&
-        Info.isEvaluatingConstructor(
-            Obj.Base, llvm::makeArrayRef(Sub.Entries.begin(),
-                                         Sub.Entries.begin() + I)) !=
-                          ConstructionPhase::None) {
-      ObjType = Info.Ctx.getCanonicalType(ObjType);
-      ObjType.removeLocalConst();
-      ObjType.removeLocalVolatile();
-    }
-
-    // If this is our last pass, check that the final object type is OK.
-    if (I == N || (I == N - 1 && ObjType->isAnyComplexType())) {
-      // Accesses to volatile objects are prohibited.
-      if (ObjType.isVolatileQualified() &&
-          handler.AccessKind != AK_MemberCall) {
-        if (Info.getLangOpts().CPlusPlus) {
-          int DiagKind;
-          SourceLocation Loc;
-          const NamedDecl *Decl = nullptr;
-          if (VolatileField) {
-            DiagKind = 2;
-            Loc = VolatileField->getLocation();
-            Decl = VolatileField;
-          } else if (auto *VD = Obj.Base.dyn_cast<const ValueDecl*>()) {
-            DiagKind = 1;
-            Loc = VD->getLocation();
-            Decl = VD;
-          } else {
-            DiagKind = 0;
-            if (auto *E = Obj.Base.dyn_cast<const Expr *>())
-              Loc = E->getExprLoc();
-          }
-          Info.FFDiag(E, diag::note_constexpr_access_volatile_obj, 1)
-              << handler.AccessKind << DiagKind << Decl;
-          Info.Note(Loc, diag::note_constexpr_volatile_here) << DiagKind;
-        } else {
-          Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
-        }
-        return handler.failed();
-      }
-
+    if (I == N) {
       // If we are reading an object of class type, there may still be more
       // things we need to check: if there are any mutable subobjects, we
       // cannot perform this read. (This only happens when performing a trivial
       // copy or assignment.)
       if (ObjType->isRecordType() && handler.AccessKind == AK_Read &&
-          !Obj.mayReadMutableMembers(Info) &&
-          diagnoseUnreadableFields(Info, E, ObjType))
+          !MayReadMutableMembers && diagnoseUnreadableFields(Info, E, ObjType))
         return handler.failed();
-    }
 
-    if (I == N) {
       if (!handler.found(*O, ObjType))
         return false;
 
       // If we modified a bit-field, truncate it to the right width.
-      if (isModification(handler.AccessKind) &&
+      if (handler.AccessKind != AK_Read &&
           LastField && LastField->isBitField() &&
           !truncateBitfieldValue(Info, E, *O, LastField))
         return false;
@@ -3017,7 +2874,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       // Next subobject is an array element.
       const ConstantArrayType *CAT = Info.Ctx.getAsConstantArrayType(ObjType);
       assert(CAT && "vla in literal type?");
-      uint64_t Index = Sub.Entries[I].getAsArrayIndex();
+      uint64_t Index = Sub.Entries[I].ArrayIndex;
       if (CAT->getSize().ule(Index)) {
         // Note, it should not be possible to form a pointer with a valid
         // designator which points more than one past the end of the array.
@@ -3040,7 +2897,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
         O = &O->getArrayFiller();
     } else if (ObjType->isAnyComplexType()) {
       // Next subobject is a complex number.
-      uint64_t Index = Sub.Entries[I].getAsArrayIndex();
+      uint64_t Index = Sub.Entries[I].ArrayIndex;
       if (Index > 1) {
         if (Info.getLangOpts().CPlusPlus11)
           Info.FFDiag(E, diag::note_constexpr_access_past_end)
@@ -3050,8 +2907,10 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
         return handler.failed();
       }
 
-      ObjType = getSubobjectType(
-          ObjType, ObjType->castAs<ComplexType>()->getElementType());
+      bool WasConstQualified = ObjType.isConstQualified();
+      ObjType = ObjType->castAs<ComplexType>()->getElementType();
+      if (WasConstQualified)
+        ObjType.addConst();
 
       assert(I == N - 1 && "extracting subobject of scalar?");
       if (O->isComplexInt()) {
@@ -3063,8 +2922,11 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
                                    : O->getComplexFloatReal(), ObjType);
       }
     } else if (const FieldDecl *Field = getAsField(Sub.Entries[I])) {
+      // In C++14 onwards, it is permitted to read a mutable member whose
+      // lifetime began within the evaluation.
+      // FIXME: Should we also allow this in C++11?
       if (Field->isMutable() && handler.AccessKind == AK_Read &&
-          !Obj.mayReadMutableMembers(Info)) {
+          !MayReadMutableMembers) {
         Info.FFDiag(E, diag::note_constexpr_ltor_mutable, 1)
           << Field;
         Info.Note(Field->getLocation(), diag::note_declared_at);
@@ -3085,17 +2947,34 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       } else
         O = &O->getStructField(Field->getFieldIndex());
 
-      ObjType = getSubobjectType(ObjType, Field->getType(), Field->isMutable());
+      bool WasConstQualified = ObjType.isConstQualified();
+      ObjType = Field->getType();
+      if (WasConstQualified && !Field->isMutable())
+        ObjType.addConst();
+
+      if (ObjType.isVolatileQualified()) {
+        if (Info.getLangOpts().CPlusPlus) {
+          // FIXME: Include a description of the path to the volatile subobject.
+          Info.FFDiag(E, diag::note_constexpr_access_volatile_obj, 1)
+            << handler.AccessKind << 2 << Field;
+          Info.Note(Field->getLocation(), diag::note_declared_at);
+        } else {
+          Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
+        }
+        return handler.failed();
+      }
+
       LastField = Field;
-      if (Field->getType().isVolatileQualified())
-        VolatileField = Field;
     } else {
       // Next subobject is a base class.
       const CXXRecordDecl *Derived = ObjType->getAsCXXRecordDecl();
       const CXXRecordDecl *Base = getAsBaseClass(Sub.Entries[I]);
       O = &O->getStructBase(getBaseIndex(Derived, Base));
 
-      ObjType = getSubobjectType(ObjType, Info.Ctx.getRecordType(Base));
+      bool WasConstQualified = ObjType.isConstQualified();
+      ObjType = Info.Ctx.getRecordType(Base);
+      if (WasConstQualified)
+        ObjType.addConst();
     }
   }
 }
@@ -3203,7 +3082,7 @@ static unsigned FindDesignatorMismatch(QualType ObjType,
     if (!ObjType.isNull() &&
         (ObjType->isArrayType() || ObjType->isAnyComplexType())) {
       // Next subobject is an array element.
-      if (A.Entries[I].getAsArrayIndex() != B.Entries[I].getAsArrayIndex()) {
+      if (A.Entries[I].ArrayIndex != B.Entries[I].ArrayIndex) {
         WasArrayIndex = true;
         return I;
       }
@@ -3212,8 +3091,7 @@ static unsigned FindDesignatorMismatch(QualType ObjType,
       else
         ObjType = ObjType->castAsArrayTypeUnsafe()->getElementType();
     } else {
-      if (A.Entries[I].getAsBaseOrMember() !=
-          B.Entries[I].getAsBaseOrMember()) {
+      if (A.Entries[I].BaseOrMember != B.Entries[I].BaseOrMember) {
         WasArrayIndex = false;
         return I;
       }
@@ -3260,10 +3138,8 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   }
 
   CallStackFrame *Frame = nullptr;
-  unsigned Depth = 0;
   if (LVal.getLValueCallIndex()) {
-    std::tie(Frame, Depth) =
-        Info.getCallFrameAndDepth(LVal.getLValueCallIndex());
+    Frame = Info.getCallFrame(LVal.getLValueCallIndex());
     if (!Frame) {
       Info.FFDiag(E, diag::note_constexpr_lifetime_ended, 1)
         << AK << LVal.Base.is<const ValueDecl*>();
@@ -3276,7 +3152,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   // is not a constant expression (even if the object is non-volatile). We also
   // apply this rule to C++98, in order to conform to the expected 'volatile'
   // semantics.
-  if (AK != AK_MemberCall && LValType.isVolatileQualified()) {
+  if (LValType.isVolatileQualified()) {
     if (Info.getLangOpts().CPlusPlus)
       Info.FFDiag(E, diag::note_constexpr_access_volatile_type)
         << AK << LValType;
@@ -3285,16 +3161,10 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     return CompleteObject();
   }
 
-  // The wording is unclear on this, but for the purpose of determining the
-  // validity of a member function call, we assume that all objects whose
-  // lifetimes did not start within the constant evaluation are in fact within
-  // their lifetimes, so member calls on them are valid. (This simultaneously
-  // includes all members of a union!)
-  bool NeedValue = AK != AK_MemberCall;
-
   // Compute value storage location and type of base object.
   APValue *BaseVal = nullptr;
   QualType BaseType = getType(LVal.Base);
+  bool LifetimeStartedInEvaluation = Frame;
 
   if (const ValueDecl *D = LVal.Base.dyn_cast<const ValueDecl*>()) {
     // In C++98, const, non-volatile integers initialized with ICEs are ICEs.
@@ -3314,29 +3184,37 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       return CompleteObject();
     }
 
+    // Accesses of volatile-qualified objects are not allowed.
+    if (BaseType.isVolatileQualified()) {
+      if (Info.getLangOpts().CPlusPlus) {
+        Info.FFDiag(E, diag::note_constexpr_access_volatile_obj, 1)
+          << AK << 1 << VD;
+        Info.Note(VD->getLocation(), diag::note_declared_at);
+      } else {
+        Info.FFDiag(E);
+      }
+      return CompleteObject();
+    }
+
     // Unless we're looking at a local variable or argument in a constexpr call,
     // the variable we're reading must be const.
     if (!Frame) {
       if (Info.getLangOpts().CPlusPlus14 &&
-          declaresSameEntity(
-              VD, Info.EvaluatingDecl.dyn_cast<const ValueDecl *>())) {
+          VD == Info.EvaluatingDecl.dyn_cast<const ValueDecl *>()) {
         // OK, we can read and modify an object if we're in the process of
         // evaluating its initializer, because its lifetime began in this
         // evaluation.
-      } else if (isModification(AK)) {
-        // All the remaining cases do not permit modification of the object.
+      } else if (AK != AK_Read) {
+        // All the remaining cases only permit reading.
         Info.FFDiag(E, diag::note_constexpr_modify_global);
         return CompleteObject();
       } else if (VD->isConstexpr()) {
         // OK, we can read this variable.
       } else if (BaseType->isIntegralOrEnumerationType()) {
-        // In OpenCL if a variable is in constant address space it is a const
-        // value.
+        // In OpenCL if a variable is in constant address space it is a const value.
         if (!(BaseType.isConstQualified() ||
               (Info.getLangOpts().OpenCL &&
                BaseType.getAddressSpace() == LangAS::opencl_constant))) {
-          if (!NeedValue)
-            return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
           if (Info.getLangOpts().CPlusPlus) {
             Info.FFDiag(E, diag::note_constexpr_ltor_non_const_int, 1) << VD;
             Info.Note(VD->getLocation(), diag::note_declared_at);
@@ -3345,8 +3223,6 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
           }
           return CompleteObject();
         }
-      } else if (!NeedValue) {
-        return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
       } else if (BaseType->isFloatingType() && BaseType.isConstQualified()) {
         // We support folding of const floating-point types, in order to make
         // static const data members of such types (supported as an extension)
@@ -3406,8 +3282,6 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         if (!(BaseType.isConstQualified() &&
               BaseType->isIntegralOrEnumerationType()) &&
             !(VD && VD->getCanonicalDecl() == ED->getCanonicalDecl())) {
-          if (!NeedValue)
-            return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
           Info.FFDiag(E, diag::note_constexpr_access_static_temporary, 1) << AK;
           Info.Note(MTE->getExprLoc(), diag::note_constexpr_temporary_here);
           return CompleteObject();
@@ -3415,9 +3289,8 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
 
         BaseVal = Info.Ctx.getMaterializedTemporaryValue(MTE, false);
         assert(BaseVal && "got reference to unevaluated temporary");
+        LifetimeStartedInEvaluation = true;
       } else {
-        if (!NeedValue)
-          return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
         Info.FFDiag(E);
         return CompleteObject();
       }
@@ -3425,6 +3298,29 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       BaseVal = Frame->getTemporary(Base, LVal.Base.getVersion());
       assert(BaseVal && "missing value for temporary");
     }
+
+    // Volatile temporary objects cannot be accessed in constant expressions.
+    if (BaseType.isVolatileQualified()) {
+      if (Info.getLangOpts().CPlusPlus) {
+        Info.FFDiag(E, diag::note_constexpr_access_volatile_obj, 1)
+          << AK << 0;
+        Info.Note(Base->getExprLoc(), diag::note_constexpr_temporary_here);
+      } else {
+        Info.FFDiag(E);
+      }
+      return CompleteObject();
+    }
+  }
+
+  // During the construction of an object, it is not yet 'const'.
+  // FIXME: This doesn't do quite the right thing for const subobjects of the
+  // object under construction.
+  if (Info.isEvaluatingConstructor(LVal.getLValueBase(),
+                                   LVal.getLValueCallIndex(),
+                                   LVal.getLValueVersion())) {
+    BaseType = Info.Ctx.getCanonicalType(BaseType);
+    BaseType.removeLocalConst();
+    LifetimeStartedInEvaluation = true;
   }
 
   // In C++14, we can't safely access any mutable state when we might be
@@ -3434,10 +3330,10 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   // to be read here (but take care with 'mutable' fields).
   if ((Frame && Info.getLangOpts().CPlusPlus14 &&
        Info.EvalStatus.HasSideEffects) ||
-      (isModification(AK) && Depth < Info.SpeculativeEvaluationDepth))
+      (AK != AK_Read && Info.IsSpeculativelyEvaluating))
     return CompleteObject();
 
-  return CompleteObject(LVal.getLValueBase(), BaseVal, BaseType);
+  return CompleteObject(BaseVal, BaseType, LifetimeStartedInEvaluation);
 }
 
 /// Perform an lvalue-to-rvalue conversion on the given glvalue. This
@@ -3471,7 +3367,7 @@ static bool handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv,
       APValue Lit;
       if (!Evaluate(Lit, Info, CLE->getInitializer()))
         return false;
-      CompleteObject LitObj(LVal.Base, &Lit, Base->getType());
+      CompleteObject LitObj(&Lit, Base->getType(), false);
       return extractSubobject(Info, Conv, LitObj, LVal.Designator, RVal);
     } else if (isa<StringLiteral>(Base) || isa<PredefinedExpr>(Base)) {
       // Special-case character extraction so we don't have to construct an
@@ -3492,7 +3388,7 @@ static bool handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv,
           Info.FFDiag(Conv);
         return false;
       }
-      uint64_t CharIndex = LVal.Designator.Entries[0].getAsArrayIndex();
+      uint64_t CharIndex = LVal.Designator.Entries[0].ArrayIndex;
       RVal = APValue(extractStringLiteralCharacter(Info, Base, CharIndex));
       return true;
     }
@@ -4476,20 +4372,9 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
     return false;
   }
 
-  // DR1872: An instantiated virtual constexpr function can't be called in a
-  // constant expression (prior to C++20). We can still constant-fold such a
-  // call.
-  if (!Info.Ctx.getLangOpts().CPlusPlus2a && isa<CXXMethodDecl>(Declaration) &&
-      cast<CXXMethodDecl>(Declaration)->isVirtual())
-    Info.CCEDiag(CallLoc, diag::note_constexpr_virtual_call);
-
-  if (Definition && Definition->isInvalidDecl()) {
-    Info.FFDiag(CallLoc, diag::note_invalid_subexpr_in_const_expr);
-    return false;
-  }
-
   // Can we evaluate this function call?
-  if (Definition && Definition->isConstexpr() && Body)
+  if (Definition && Definition->isConstexpr() &&
+      !Definition->isInvalidDecl() && Body)
     return true;
 
   if (Info.getLangOpts().CPlusPlus11) {
@@ -4518,210 +4403,6 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
     Info.FFDiag(CallLoc, diag::note_invalid_subexpr_in_const_expr);
   }
   return false;
-}
-
-namespace {
-struct CheckMemberCallThisPointerHandler {
-  static const AccessKinds AccessKind = AK_MemberCall;
-  typedef bool result_type;
-  bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) { return true; }
-  bool found(APSInt &Value, QualType SubobjType) { return true; }
-  bool found(APFloat &Value, QualType SubobjType) { return true; }
-};
-} // end anonymous namespace
-
-const AccessKinds CheckMemberCallThisPointerHandler::AccessKind;
-
-/// Check that the pointee of the 'this' pointer in a member function call is
-/// either within its lifetime or in its period of construction or destruction.
-static bool checkMemberCallThisPointer(EvalInfo &Info, const Expr *E,
-                                       const LValue &This, bool IsVirtual) {
-  if (This.Designator.Invalid)
-    return false;
-
-  CompleteObject Obj =
-      findCompleteObject(Info, E, AK_MemberCall, This, QualType());
-
-  if (!Obj)
-    return false;
-
-  if (!Obj.Value) {
-    // The object is not usable in constant expressions, so we can't inspect
-    // its value to see if it's in-lifetime or what the active union members
-    // are. We can still check for a one-past-the-end lvalue.
-    if (This.Designator.isOnePastTheEnd() ||
-        This.Designator.isMostDerivedAnUnsizedArray()) {
-      Info.FFDiag(E, This.Designator.isOnePastTheEnd()
-                         ? diag::note_constexpr_access_past_end
-                         : diag::note_constexpr_access_unsized_array)
-          << AK_MemberCall;
-      return false;
-    } else if (IsVirtual) {
-      // Conservatively refuse to perform a virtual function call if we would
-      // not be able to read a notional 'vptr' value.
-      APValue Val;
-      This.moveInto(Val);
-      QualType StarThisType =
-          Info.Ctx.getLValueReferenceType(This.Designator.getType(Info.Ctx));
-      Info.FFDiag(E, diag::note_constexpr_virtual_out_of_lifetime)
-          << Val.getAsString(Info.Ctx, StarThisType);
-      return false;
-    }
-    return true;
-  }
-
-  CheckMemberCallThisPointerHandler Handler;
-  return Obj && findSubobject(Info, E, Obj, This.Designator, Handler);
-}
-
-struct DynamicType {
-  /// The dynamic class type of the object.
-  const CXXRecordDecl *Type;
-  /// The corresponding path length in the lvalue.
-  unsigned PathLength;
-};
-
-static const CXXRecordDecl *getBaseClassType(SubobjectDesignator &Designator,
-                                             unsigned PathLength) {
-  assert(PathLength >= Designator.MostDerivedPathLength && PathLength <=
-      Designator.Entries.size() && "invalid path length");
-  return (PathLength == Designator.MostDerivedPathLength)
-             ? Designator.MostDerivedType->getAsCXXRecordDecl()
-             : getAsBaseClass(Designator.Entries[PathLength - 1]);
-}
-
-/// Determine the dynamic type of an object.
-static Optional<DynamicType> ComputeDynamicType(EvalInfo &Info, LValue &This) {
-  // If we don't have an lvalue denoting an object of class type, there is no
-  // meaningful dynamic type. (We consider objects of non-class type to have no
-  // dynamic type.)
-  if (This.Designator.IsOnePastTheEnd || This.Designator.Invalid ||
-      !This.Designator.MostDerivedType->getAsCXXRecordDecl())
-    return None;
-
-  // FIXME: For very deep class hierarchies, it might be beneficial to use a
-  // binary search here instead. But the overwhelmingly common case is that
-  // we're not in the middle of a constructor, so it probably doesn't matter
-  // in practice.
-  ArrayRef<APValue::LValuePathEntry> Path = This.Designator.Entries;
-  for (unsigned PathLength = This.Designator.MostDerivedPathLength;
-       PathLength <= Path.size(); ++PathLength) {
-    switch (Info.isEvaluatingConstructor(This.getLValueBase(),
-                                         Path.slice(0, PathLength))) {
-    case ConstructionPhase::Bases:
-      // We're constructing a base class. This is not the dynamic type.
-      break;
-
-    case ConstructionPhase::None:
-    case ConstructionPhase::AfterBases:
-      // We've finished constructing the base classes, so this is the dynamic
-      // type.
-      return DynamicType{getBaseClassType(This.Designator, PathLength),
-                         PathLength};
-    }
-  }
-
-  // CWG issue 1517: we're constructing a base class of the object described by
-  // 'This', so that object has not yet begun its period of construction and
-  // any polymorphic operation on it results in undefined behavior.
-  return None;
-}
-
-/// Perform virtual dispatch.
-static const CXXMethodDecl *HandleVirtualDispatch(
-    EvalInfo &Info, const Expr *E, LValue &This, const CXXMethodDecl *Found,
-    llvm::SmallVectorImpl<QualType> &CovariantAdjustmentPath) {
-  Optional<DynamicType> DynType = ComputeDynamicType(Info, This);
-  if (!DynType) {
-    Info.FFDiag(E);
-    return nullptr;
-  }
-
-  // Find the final overrider. It must be declared in one of the classes on the
-  // path from the dynamic type to the static type.
-  // FIXME: If we ever allow literal types to have virtual base classes, that
-  // won't be true.
-  const CXXMethodDecl *Callee = Found;
-  unsigned PathLength = DynType->PathLength;
-  for (/**/; PathLength <= This.Designator.Entries.size(); ++PathLength) {
-    const CXXRecordDecl *Class = getBaseClassType(This.Designator, PathLength);
-    if (Class->getNumVBases()) {
-      Info.FFDiag(E);
-      return nullptr;
-    }
-
-    const CXXMethodDecl *Overrider =
-        Found->getCorrespondingMethodDeclaredInClass(Class, false);
-    if (Overrider) {
-      Callee = Overrider;
-      break;
-    }
-  }
-
-  // C++2a [class.abstract]p6:
-  //   the effect of making a virtual call to a pure virtual function [...] is
-  //   undefined
-  if (Callee->isPure()) {
-    Info.FFDiag(E, diag::note_constexpr_pure_virtual_call, 1) << Callee;
-    Info.Note(Callee->getLocation(), diag::note_declared_at);
-    return nullptr;
-  }
-
-  // If necessary, walk the rest of the path to determine the sequence of
-  // covariant adjustment steps to apply.
-  if (!Info.Ctx.hasSameUnqualifiedType(Callee->getReturnType(),
-                                       Found->getReturnType())) {
-    CovariantAdjustmentPath.push_back(Callee->getReturnType());
-    for (unsigned CovariantPathLength = PathLength + 1;
-         CovariantPathLength != This.Designator.Entries.size();
-         ++CovariantPathLength) {
-      const CXXRecordDecl *NextClass =
-          getBaseClassType(This.Designator, CovariantPathLength);
-      const CXXMethodDecl *Next =
-          Found->getCorrespondingMethodDeclaredInClass(NextClass, false);
-      if (Next && !Info.Ctx.hasSameUnqualifiedType(
-                      Next->getReturnType(), CovariantAdjustmentPath.back()))
-        CovariantAdjustmentPath.push_back(Next->getReturnType());
-    }
-    if (!Info.Ctx.hasSameUnqualifiedType(Found->getReturnType(),
-                                         CovariantAdjustmentPath.back()))
-      CovariantAdjustmentPath.push_back(Found->getReturnType());
-  }
-
-  // Perform 'this' adjustment.
-  if (!CastToDerivedClass(Info, E, This, Callee->getParent(), PathLength))
-    return nullptr;
-
-  return Callee;
-}
-
-/// Perform the adjustment from a value returned by a virtual function to
-/// a value of the statically expected type, which may be a pointer or
-/// reference to a base class of the returned type.
-static bool HandleCovariantReturnAdjustment(EvalInfo &Info, const Expr *E,
-                                            APValue &Result,
-                                            ArrayRef<QualType> Path) {
-  assert(Result.isLValue() &&
-         "unexpected kind of APValue for covariant return");
-  if (Result.isNullPointer())
-    return true;
-
-  LValue LVal;
-  LVal.setFrom(Info.Ctx, Result);
-
-  const CXXRecordDecl *OldClass = Path[0]->getPointeeCXXRecordDecl();
-  for (unsigned I = 1; I != Path.size(); ++I) {
-    const CXXRecordDecl *NewClass = Path[I]->getPointeeCXXRecordDecl();
-    assert(OldClass && NewClass && "unexpected kind of covariant return");
-    if (OldClass != NewClass &&
-        !CastToBaseClass(Info, E, LVal, OldClass, NewClass))
-      return false;
-    OldClass = NewClass;
-  }
-
-  LVal.moveInto(Result);
-  return true;
 }
 
 /// Determine if a class has any fields that might need to be copied by a
@@ -4837,9 +4518,8 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
   }
 
   EvalInfo::EvaluatingConstructorRAII EvalObj(
-      Info,
-      ObjectUnderConstruction{This.getLValueBase(), This.Designator.Entries},
-      RD->getNumBases());
+      Info, {This.getLValueBase(),
+             {This.getLValueCallIndex(), This.getLValueVersion()}});
   CallStackFrame Frame(Info, CallLoc, Definition, &This, ArgValues);
 
   // FIXME: Creating an APValue just to hold a nonexistent return value is
@@ -4973,11 +4653,6 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
         return false;
       Success = false;
     }
-
-    // This is the point at which the dynamic type of the object becomes this
-    // class type.
-    if (I->isBaseInitializer() && BasesSeen == RD->getNumBases())
-      EvalObj.finishedConstructingBases();
   }
 
   return Success &&
@@ -5222,26 +4897,25 @@ public:
 
     // Extract function decl and 'this' pointer from the callee.
     if (CalleeType->isSpecificBuiltinType(BuiltinType::BoundMember)) {
-      const CXXMethodDecl *Member = nullptr;
+      const ValueDecl *Member = nullptr;
       if (const MemberExpr *ME = dyn_cast<MemberExpr>(Callee)) {
         // Explicit bound member calls, such as x.f() or p->g();
         if (!EvaluateObjectArgument(Info, ME->getBase(), ThisVal))
           return false;
-        Member = dyn_cast<CXXMethodDecl>(ME->getMemberDecl());
-        if (!Member)
-          return Error(Callee);
+        Member = ME->getMemberDecl();
         This = &ThisVal;
         HasQualifier = ME->hasQualifier();
       } else if (const BinaryOperator *BE = dyn_cast<BinaryOperator>(Callee)) {
         // Indirect bound member calls ('.*' or '->*').
-        Member = dyn_cast_or_null<CXXMethodDecl>(
-            HandleMemberPointerAccess(Info, BE, ThisVal, false));
-        if (!Member)
-          return Error(Callee);
+        Member = HandleMemberPointerAccess(Info, BE, ThisVal, false);
+        if (!Member) return false;
         This = &ThisVal;
       } else
         return Error(Callee);
-      FD = Member;
+
+      FD = dyn_cast<FunctionDecl>(Member);
+      if (!FD)
+        return Error(Callee);
     } else if (CalleeType->isFunctionPointerType()) {
       LValue Call;
       if (!EvaluatePointer(Callee, Call, Info))
@@ -5308,23 +4982,19 @@ public:
         } else
           FD = LambdaCallOp;
       }
+
+
     } else
       return Error(E);
 
-    SmallVector<QualType, 4> CovariantAdjustmentPath;
-    if (This) {
-      auto *NamedMember = dyn_cast<CXXMethodDecl>(FD);
-      bool IsVirtual = NamedMember && NamedMember->isVirtual() && !HasQualifier;
+    if (This && !This->checkSubobject(Info, E, CSK_This))
+      return false;
 
-      // Check that the 'this' pointer points to an object of the right type.
-      if (!checkMemberCallThisPointer(Info, E, *This, IsVirtual))
-        return false;
-
-      // Perform virtual dispatch, if necessary.
-      if (IsVirtual && !(FD = HandleVirtualDispatch(Info, E, *This, NamedMember,
-                                                    CovariantAdjustmentPath)))
-        return true;
-    }
+    // DR1358 allows virtual constexpr functions in some cases. Don't allow
+    // calls to such functions in constant expressions.
+    if (This && !HasQualifier &&
+        isa<CXXMethodDecl>(FD) && cast<CXXMethodDecl>(FD)->isVirtual())
+      return Error(E, diag::note_constexpr_virtual_call);
 
     const FunctionDecl *Definition = nullptr;
     Stmt *Body = FD->getBody(Definition);
@@ -5332,11 +5002,6 @@ public:
     if (!CheckConstexprFunction(Info, E->getExprLoc(), FD, Definition, Body) ||
         !HandleFunctionCall(E->getExprLoc(), Definition, This, Args, Body, Info,
                             Result, ResultSlot))
-      return false;
-
-    if (!CovariantAdjustmentPath.empty() &&
-        !HandleCovariantReturnAdjustment(Info, E, Result,
-                                         CovariantAdjustmentPath))
       return false;
 
     return true;
@@ -5364,8 +5029,6 @@ public:
 
   /// A member expression where the object is a prvalue is itself a prvalue.
   bool VisitMemberExpr(const MemberExpr *E) {
-    assert(!Info.Ctx.getLangOpts().CPlusPlus11 &&
-           "missing temporary materialization conversion");
     assert(!E->isArrow() && "missing call to bound member function?");
 
     APValue Val;
@@ -5380,10 +5043,7 @@ public:
     assert(BaseTy->castAs<RecordType>()->getDecl()->getCanonicalDecl() ==
            FD->getParent()->getCanonicalDecl() && "record / field mismatch");
 
-    // Note: there is no lvalue base here. But this case should only ever
-    // happen in C or in C++98, where we cannot be evaluating a constexpr
-    // constructor, which is the only case the base matters.
-    CompleteObject Obj(APValue::LValueBase(), &Val, BaseTy);
+    CompleteObject Obj(&Val, BaseTy, true);
     SubobjectDesignator Designator(BaseTy);
     Designator.addDeclUnchecked(FD);
 
@@ -6977,12 +6637,6 @@ bool RecordExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
   const RecordDecl *RD = E->getType()->castAs<RecordType>()->getDecl();
   if (RD->isInvalidDecl()) return false;
   const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(RD);
-  auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
-
-  EvalInfo::EvaluatingConstructorRAII EvalObj(
-      Info,
-      ObjectUnderConstruction{This.getLValueBase(), This.Designator.Entries},
-      CXXRD && CXXRD->getNumBases());
 
   if (RD->isUnion()) {
     const FieldDecl *Field = E->getInitializedFieldInUnion();
@@ -7009,6 +6663,7 @@ bool RecordExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
     return EvaluateInPlace(Result.getUnionValue(), Info, Subobject, InitExpr);
   }
 
+  auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
   if (Result.isUninit())
     Result = APValue(APValue::UninitStruct(), CXXRD ? CXXRD->getNumBases() : 0,
                      std::distance(RD->field_begin(), RD->field_end()));
@@ -7016,7 +6671,7 @@ bool RecordExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
   bool Success = true;
 
   // Initialize base classes.
-  if (CXXRD && CXXRD->getNumBases()) {
+  if (CXXRD) {
     for (const auto &Base : CXXRD->bases()) {
       assert(ElementNo < E->getNumInits() && "missing init for base class");
       const Expr *Init = E->getInit(ElementNo);
@@ -7033,8 +6688,6 @@ bool RecordExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
       }
       ++ElementNo;
     }
-
-    EvalObj.finishedConstructingBases();
   }
 
   // Initialize members.
@@ -8170,10 +7823,6 @@ static bool EvaluateBuiltinConstantPForLValue(const APValue &LV) {
 /// EvaluateBuiltinConstantP - Evaluate __builtin_constant_p as similarly to
 /// GCC as we can manage.
 static bool EvaluateBuiltinConstantP(EvalInfo &Info, const Expr *Arg) {
-  // This evaluation is not permitted to have side-effects, so evaluate it in
-  // a speculative evaluation context.
-  SpeculativeEvaluationRAII SpeculativeEval(Info);
-
   // Constant-folding is always enabled for the operand of __builtin_constant_p
   // (even when the enclosing evaluation context otherwise requires a strict
   // language-specific constant expression).
@@ -8319,13 +7968,13 @@ static bool isDesignatorAtObjectEnd(const ASTContext &Ctx, const LValue &LVal) {
       if (I + 1 == E)
         return true;
       const auto *CAT = cast<ConstantArrayType>(Ctx.getAsArrayType(BaseType));
-      uint64_t Index = Entry.getAsArrayIndex();
+      uint64_t Index = Entry.ArrayIndex;
       if (Index + 1 != CAT->getSize())
         return false;
       BaseType = CAT->getElementType();
     } else if (BaseType->isAnyComplexType()) {
       const auto *CT = BaseType->castAs<ComplexType>();
-      uint64_t Index = Entry.getAsArrayIndex();
+      uint64_t Index = Entry.ArrayIndex;
       if (Index != 1)
         return false;
       BaseType = CT->getElementType();
@@ -8467,7 +8116,7 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
   if (Designator.MostDerivedIsArrayElement &&
       Designator.Entries.size() == Designator.MostDerivedPathLength) {
     uint64_t ArraySize = Designator.getMostDerivedArraySize();
-    uint64_t ArrayIndex = Designator.Entries.back().getAsArrayIndex();
+    uint64_t ArrayIndex = Designator.Entries.back().ArrayIndex;
     ElemsRemaining = ArraySize <= ArrayIndex ? 0 : ArraySize - ArrayIndex;
   } else {
     ElemsRemaining = Designator.isOnePastTheEnd() ? 0 : 1;
@@ -8622,14 +8271,12 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     const Expr *Arg = E->getArg(0);
     if (EvaluateBuiltinConstantP(Info, Arg))
       return Success(true, E);
-    if (Info.InConstantContext || Arg->HasSideEffects(Info.Ctx)) {
-      // Outside a constant context, eagerly evaluate to false in the presence
-      // of side-effects in order to avoid -Wunsequenced false-positives in
-      // a branch on __builtin_constant_p(expr).
+    else if (Info.InConstantContext)
       return Success(false, E);
+    else {
+      Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
+      return false;
     }
-    Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
-    return false;
   }
 
   case Builtin::BI__builtin_is_constant_evaluated:

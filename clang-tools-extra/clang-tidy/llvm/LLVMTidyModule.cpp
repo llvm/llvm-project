@@ -17,7 +17,7 @@
 
 namespace clang {
 namespace tidy {
-namespace llvm_check {
+namespace llvm {
 
 class LLVMModule : public ClangTidyModule {
 public:
@@ -36,7 +36,7 @@ public:
 static ClangTidyModuleRegistry::Add<LLVMModule> X("llvm-module",
                                                   "Adds LLVM lint checks.");
 
-} // namespace llvm_check
+} // namespace llvm
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the LLVMModule.

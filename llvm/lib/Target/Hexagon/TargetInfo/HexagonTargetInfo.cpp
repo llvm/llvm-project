@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TargetInfo/HexagonTargetInfo.h"
+#include "Hexagon.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 

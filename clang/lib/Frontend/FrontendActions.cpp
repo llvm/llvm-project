@@ -73,10 +73,11 @@ ASTPrintAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
 std::unique_ptr<ASTConsumer>
 ASTDumpAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
-  const FrontendOptions &Opts = CI.getFrontendOpts();
-  return CreateASTDumper(nullptr /*Dump to stdout.*/, Opts.ASTDumpFilter,
-                         Opts.ASTDumpDecls, Opts.ASTDumpAll,
-                         Opts.ASTDumpLookups, Opts.ASTDumpFormat);
+  return CreateASTDumper(nullptr /*Dump to stdout.*/,
+                         CI.getFrontendOpts().ASTDumpFilter,
+                         CI.getFrontendOpts().ASTDumpDecls,
+                         CI.getFrontendOpts().ASTDumpAll,
+                         CI.getFrontendOpts().ASTDumpLookups);
 }
 
 std::unique_ptr<ASTConsumer>

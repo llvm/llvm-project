@@ -13,7 +13,6 @@
 #include "ArgumentCommentCheck.h"
 #include "AssertSideEffectCheck.h"
 #include "BoolPointerImplicitConversionCheck.h"
-#include "BranchCloneCheck.h"
 #include "CopyConstructorInitCheck.h"
 #include "DanglingHandleCheck.h"
 #include "ExceptionEscapeCheck.h"
@@ -47,7 +46,6 @@
 #include "TooSmallLoopVariableCheck.h"
 #include "UndefinedMemoryManipulationCheck.h"
 #include "UndelegatedConstructorCheck.h"
-#include "UnhandledSelfAssignmentCheck.h"
 #include "UnusedRaiiCheck.h"
 #include "UnusedReturnValueCheck.h"
 #include "UseAfterMoveCheck.h"
@@ -66,8 +64,6 @@ public:
         "bugprone-assert-side-effect");
     CheckFactories.registerCheck<BoolPointerImplicitConversionCheck>(
         "bugprone-bool-pointer-implicit-conversion");
-    CheckFactories.registerCheck<BranchCloneCheck>(
-        "bugprone-branch-clone");
     CheckFactories.registerCheck<CopyConstructorInitCheck>(
         "bugprone-copy-constructor-init");
     CheckFactories.registerCheck<DanglingHandleCheck>(
@@ -136,8 +132,6 @@ public:
         "bugprone-undefined-memory-manipulation");
     CheckFactories.registerCheck<UndelegatedConstructorCheck>(
         "bugprone-undelegated-constructor");
-    CheckFactories.registerCheck<UnhandledSelfAssignmentCheck>(
-        "bugprone-unhandled-self-assignment");
     CheckFactories.registerCheck<UnusedRaiiCheck>(
         "bugprone-unused-raii");
     CheckFactories.registerCheck<UnusedReturnValueCheck>(

@@ -16,7 +16,7 @@ namespace lldb_private {
 class Architecture : public PluginInterface {
 public:
   Architecture() = default;
-  ~Architecture() override = default;
+  virtual ~Architecture() = default;
 
   /// This is currently intended to handle cases where a
   /// program stops at an instruction that won't get executed and it

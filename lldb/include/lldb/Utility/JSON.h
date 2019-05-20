@@ -21,6 +21,8 @@
 
 namespace lldb_private {
 class Stream;
+}
+namespace lldb_private {
 
 class JSONValue {
 public:

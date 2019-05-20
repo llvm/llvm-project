@@ -191,9 +191,6 @@ SystemZRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   Reserved.set(SystemZ::A0);
   Reserved.set(SystemZ::A1);
 
-  // FPC is the floating-point control register.
-  Reserved.set(SystemZ::FPC);
-
   return Reserved;
 }
 

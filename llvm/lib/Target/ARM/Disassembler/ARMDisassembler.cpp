@@ -9,7 +9,6 @@
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
-#include "TargetInfo/ARMTargetInfo.h"
 #include "Utils/ARMBaseInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"

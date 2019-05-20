@@ -32,23 +32,17 @@
 
 using namespace llvm;
 
-cl::OptionCategory CatCategory("llvm-cat Options");
-
 static cl::opt<bool>
-    BinaryCat("b", cl::desc("Whether to perform binary concatenation"),
-              cl::cat(CatCategory));
+    BinaryCat("b", cl::desc("Whether to perform binary concatenation"));
 
 static cl::opt<std::string> OutputFilename("o", cl::Required,
                                            cl::desc("Output filename"),
-                                           cl::value_desc("filename"),
-                                           cl::cat(CatCategory));
+                                           cl::value_desc("filename"));
 
 static cl::list<std::string> InputFilenames(cl::Positional, cl::ZeroOrMore,
-                                            cl::desc("<input  files>"),
-                                            cl::cat(CatCategory));
+                                            cl::desc("<input  files>"));
 
 int main(int argc, char **argv) {
-  cl::HideUnrelatedOptions(CatCategory);
   cl::ParseCommandLineOptions(argc, argv, "Module concatenation");
 
   ExitOnError ExitOnErr("llvm-cat: ");

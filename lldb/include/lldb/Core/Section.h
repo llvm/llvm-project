@@ -26,11 +26,24 @@
 
 namespace lldb_private {
 class Address;
+}
+namespace lldb_private {
 class DataExtractor;
+}
+namespace lldb_private {
 class ObjectFile;
+}
+namespace lldb_private {
 class Section;
+}
+namespace lldb_private {
 class Stream;
+}
+namespace lldb_private {
 class Target;
+}
+
+namespace lldb_private {
 
 class SectionList {
 public:

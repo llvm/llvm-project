@@ -1,4 +1,3 @@
 ; RUN: llvm-go test llvm.org/llvm/bindings/go/llvm
 
-; REQUIRES: shell
-; UNSUPPORTED: asan, ubsan, msan
+; REQUIRES: shell, not_asan, not_ubsan, not_msan

@@ -82,7 +82,7 @@ public:
 
   /// An enum specifying the match style for breakpoint settings.  At present
   /// only used for function name style breakpoints.
-  enum MatchType { Exact, Regexp, Glob };
+  typedef enum { Exact, Regexp, Glob } MatchType;
 
 private:
   enum class OptionNames : uint32_t { Names = 0, Hardware, LastOptionName };

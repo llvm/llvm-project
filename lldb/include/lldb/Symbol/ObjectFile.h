@@ -61,7 +61,7 @@ class ObjectFile : public std::enable_shared_from_this<ObjectFile>,
   friend class lldb_private::Module;
 
 public:
-  enum Type {
+  typedef enum {
     eTypeInvalid = 0,
     eTypeCoreFile,      /// A core file that has a checkpoint of a program's
                         /// execution state
@@ -74,16 +74,16 @@ public:
                       /// execution
     eTypeJIT, /// JIT code that has symbols, sections and possibly debug info
     eTypeUnknown
-  };
+  } Type;
 
-  enum Strata {
+  typedef enum {
     eStrataInvalid = 0,
     eStrataUnknown,
     eStrataUser,
     eStrataKernel,
     eStrataRawImage,
     eStrataJIT
-  };
+  } Strata;
 
   struct LoadableData {
     lldb::addr_t Dest;

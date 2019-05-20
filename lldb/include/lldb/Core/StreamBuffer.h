@@ -23,9 +23,9 @@ public:
   StreamBuffer(uint32_t flags, uint32_t addr_size, lldb::ByteOrder byte_order)
       : Stream(flags, addr_size, byte_order), m_packet() {}
 
-  ~StreamBuffer() override {}
+  virtual ~StreamBuffer() {}
 
-  void Flush() override {
+  virtual void Flush() {
     // Nothing to do when flushing a buffer based stream...
   }
 
@@ -42,7 +42,7 @@ public:
 protected:
   llvm::SmallVector<char, N> m_packet;
 
-  size_t WriteImpl(const void *s, size_t length) override {
+  virtual size_t WriteImpl(const void *s, size_t length) {
     if (s && length)
       m_packet.append((const char *)s, ((const char *)s) + length);
     return length;

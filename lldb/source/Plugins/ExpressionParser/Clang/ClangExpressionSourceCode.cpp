@@ -200,29 +200,15 @@ static bool ExprBodyContainsVar(llvm::StringRef body, llvm::StringRef var) {
 
 static void AddLocalVariableDecls(const lldb::VariableListSP &var_list_sp,
                                   StreamString &stream,
-                                  const std::string &expr,
-                                  lldb::LanguageType wrapping_language) {
+                                  const std::string &expr) {
   for (size_t i = 0; i < var_list_sp->GetSize(); i++) {
     lldb::VariableSP var_sp = var_list_sp->GetVariableAtIndex(i);
 
     ConstString var_name = var_sp->GetName();
-
-
-    // We can check for .block_descriptor w/o checking for langauge since this
-    // is not a valid identifier in either C or C++.
-    if (!var_name || var_name == ".block_descriptor")
+    if (!var_name || var_name == "this" || var_name == ".block_descriptor")
       continue;
 
     if (!expr.empty() && !ExprBodyContainsVar(expr, var_name.GetStringRef()))
-      continue;
-
-    if ((var_name == "self" || var_name == "_cmd") &&
-        (wrapping_language == lldb::eLanguageTypeObjC ||
-         wrapping_language == lldb::eLanguageTypeObjC_plus_plus))
-      continue;
-
-    if (var_name == "this" &&
-        wrapping_language == lldb::eLanguageTypeC_plus_plus)
       continue;
 
     stream.Printf("using $__lldb_local_vars::%s;\n", var_name.AsCString());
@@ -305,14 +291,16 @@ bool ClangExpressionSourceCode::GetText(
       }
     }
 
-    if (add_locals)
-      if (target->GetInjectLocalVariables(&exe_ctx)) {
-        lldb::VariableListSP var_list_sp =
-            frame->GetInScopeVariableList(false, true);
-        AddLocalVariableDecls(var_list_sp, lldb_local_var_decls,
-                              force_add_all_locals ? "" : m_body,
-                              wrapping_language);
+    if (add_locals) {
+      if (Language::LanguageIsCPlusPlus(frame->GetLanguage())) {
+        if (target->GetInjectLocalVariables(&exe_ctx)) {
+          lldb::VariableListSP var_list_sp =
+              frame->GetInScopeVariableList(false, true);
+          AddLocalVariableDecls(var_list_sp, lldb_local_var_decls,
+                                force_add_all_locals ? "" : m_body);
+        }
       }
+    }
   }
 
   if (m_wrap) {
@@ -390,12 +378,11 @@ bool ClangExpressionSourceCode::GetText(
             "@implementation $__lldb_objc_class ($__lldb_category)   \n"
             "+(void)%s:(void *)$__lldb_arg                           \n"
             "{                                                       \n"
-            "    %s;                                                 \n"
             "%s"
             "}                                                       \n"
             "@end                                                    \n",
             module_imports.c_str(), m_name.c_str(), m_name.c_str(),
-            lldb_local_var_decls.GetData(), tagged_body.c_str());
+            tagged_body.c_str());
       } else {
         wrap_stream.Printf(
             "%s"
@@ -405,12 +392,11 @@ bool ClangExpressionSourceCode::GetText(
             "@implementation $__lldb_objc_class ($__lldb_category)  \n"
             "-(void)%s:(void *)$__lldb_arg                          \n"
             "{                                                      \n"
-            "    %s;                                                \n"
             "%s"
             "}                                                      \n"
             "@end                                                   \n",
             module_imports.c_str(), m_name.c_str(), m_name.c_str(),
-            lldb_local_var_decls.GetData(), tagged_body.c_str());
+            tagged_body.c_str());
       }
       break;
     }

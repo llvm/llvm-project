@@ -563,11 +563,6 @@ isl::union_map ZoneAlgorithm::computePerPHI(const ScopArrayInfo *SAI) {
 
   // { DomainPHIRead[] -> Scatter[] }
   isl::map PHIWriteTimes = BeforeRead.intersect_range(WriteTimes);
-
-  // Remove instances outside the context.
-  PHIWriteTimes = PHIWriteTimes.intersect_params(S->getAssumedContext());
-  PHIWriteTimes = subtractParams(PHIWriteTimes, S->getInvalidContext());
-
   isl::map LastPerPHIWrites = PHIWriteTimes.lexmax();
 
   // { DomainPHIRead[] -> DomainPHIWrite[] }

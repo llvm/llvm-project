@@ -484,8 +484,7 @@ void MappingTraits<WasmYAML::SymbolInfo>::mapping(IO &IO,
                                                   WasmYAML::SymbolInfo &Info) {
   IO.mapRequired("Index", Info.Index);
   IO.mapRequired("Kind", Info.Kind);
-  if (Info.Kind != wasm::WASM_SYMBOL_TYPE_SECTION)
-    IO.mapRequired("Name", Info.Name);
+  IO.mapRequired("Name", Info.Name);
   IO.mapRequired("Flags", Info.Flags);
   if (Info.Kind == wasm::WASM_SYMBOL_TYPE_FUNCTION) {
     IO.mapRequired("Function", Info.ElementIndex);

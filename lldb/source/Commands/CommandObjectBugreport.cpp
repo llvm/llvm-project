@@ -94,7 +94,6 @@ protected:
     options.SetStopOnError(false);
     options.SetEchoCommands(true);
     options.SetPrintResults(true);
-    options.SetPrintErrors(true);
     options.SetAddToHistory(false);
     m_interpreter.HandleCommands(commands, &m_exe_ctx, options, result);
 

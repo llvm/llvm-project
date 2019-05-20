@@ -6,7 +6,6 @@ set(files
   armintr.h
   arm64intr.h
   avx2intrin.h
-  avx512bf16intrin.h
   avx512bwintrin.h
   avx512bitalgintrin.h
   avx512vlbitalgintrin.h
@@ -22,7 +21,6 @@ set(files
   avx512vbmivlintrin.h
   avx512vbmi2intrin.h
   avx512vlvbmi2intrin.h
-  avx512vlbf16intrin.h
   avx512vlbwintrin.h
   avx512vlcdintrin.h
   avx512vldqintrin.h
@@ -162,7 +160,7 @@ endfunction(clang_generate_header)
 
 
 # Copy header files from the source directory to the build directory
-foreach( f ${files} ${cuda_wrapper_files} ${ppc_wrapper_files} ${openmp_wrapper_files})
+foreach( f ${files} ${cuda_wrapper_files} ${ppc_wrapper_files} )
   copy_header_to_output_dir(${CMAKE_CURRENT_SOURCE_DIR} ${f})
 endforeach( f )
 

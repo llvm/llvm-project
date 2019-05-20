@@ -91,7 +91,7 @@ public:
   }
 
   void writeTo(uint8_t *B) const override {
-    auto *D = reinterpret_cast<debug_directory *>(B);
+    auto *D = reinterpret_cast<debug_directory *>(B + OutputSectionOff);
 
     for (const Chunk *Record : Records) {
       OutputSection *OS = Record->getOutputSection();
@@ -145,10 +145,10 @@ public:
   void writeTo(uint8_t *B) const override {
     // Save off the DebugInfo entry to backfill the file signature (build id)
     // in Writer::writeBuildId
-    BuildId = reinterpret_cast<codeview::DebugInfo *>(B);
+    BuildId = reinterpret_cast<codeview::DebugInfo *>(B + OutputSectionOff);
 
     // variable sized field (PDB Path)
-    char *P = reinterpret_cast<char *>(B + sizeof(*BuildId));
+    char *P = reinterpret_cast<char *>(B + OutputSectionOff + sizeof(*BuildId));
     if (!Config->PDBAltPath.empty())
       memcpy(P, Config->PDBAltPath.data(), Config->PDBAltPath.size());
     P[Config->PDBAltPath.size()] = '\0';
@@ -467,15 +467,14 @@ static bool createThunks(OutputSection *OS, int Margin) {
     // modified. If the relocations point into the object file, allocate new
     // memory. Otherwise, this must be previously allocated memory that can be
     // modified in place.
-    ArrayRef<coff_relocation> CurRelocs = SC->getRelocs();
     MutableArrayRef<coff_relocation> NewRelocs;
-    if (OriginalRelocs.data() == CurRelocs.data()) {
+    if (OriginalRelocs.data() == SC->Relocs.data()) {
       NewRelocs = makeMutableArrayRef(
           BAlloc.Allocate<coff_relocation>(OriginalRelocs.size()),
           OriginalRelocs.size());
     } else {
       NewRelocs = makeMutableArrayRef(
-          const_cast<coff_relocation *>(CurRelocs.data()), CurRelocs.size());
+          const_cast<coff_relocation *>(SC->Relocs.data()), SC->Relocs.size());
     }
 
     // Copy each relocation, but replace the symbol table indices which need
@@ -490,7 +489,7 @@ static bool createThunks(OutputSection *OS, int Margin) {
       }
     }
 
-    SC->setRelocs(NewRelocs);
+    SC->Relocs = makeArrayRef(NewRelocs.data(), NewRelocs.size());
   }
   return AddressesChanged;
 }
@@ -502,9 +501,8 @@ static bool verifyRanges(const std::vector<Chunk *> Chunks) {
     if (!SC)
       continue;
 
-    ArrayRef<coff_relocation> Relocs = SC->getRelocs();
-    for (size_t J = 0, E = Relocs.size(); J < E; ++J) {
-      const coff_relocation &Rel = Relocs[J];
+    for (size_t J = 0, E = SC->Relocs.size(); J < E; ++J) {
+      const coff_relocation &Rel = SC->Relocs[J];
       Symbol *RelocTarget = SC->File->getSymbol(Rel.SymbolTableIndex);
 
       Defined *Sym = dyn_cast_or_null<Defined>(RelocTarget);
@@ -1161,6 +1159,7 @@ void Writer::assignAddresses() {
         VirtualSize += Padding;
       VirtualSize = alignTo(VirtualSize, C->Alignment);
       C->setRVA(RVA + VirtualSize);
+      C->OutputSectionOff = VirtualSize;
       C->finalizeContents();
       VirtualSize += C->getSize();
       if (C->hasData())
@@ -1477,7 +1476,7 @@ static void markSymbolsWithRelocations(ObjFile *File,
     if (!SC || !SC->Live)
       continue;
 
-    for (const coff_relocation &Reloc : SC->getRelocs()) {
+    for (const coff_relocation &Reloc : SC->Relocs) {
       if (Config->Machine == I386 && Reloc.Type == COFF::IMAGE_REL_I386_REL32)
         // Ignore relative relocations on x86. On x86_64 they can't be ignored
         // since they're also used to compute absolute addresses.
@@ -1674,9 +1673,7 @@ void Writer::writeSections() {
     // ADD instructions).
     if (Sec->Header.Characteristics & IMAGE_SCN_CNT_CODE)
       memset(SecBuf, 0xCC, Sec->getRawSize());
-    parallelForEach(Sec->Chunks, [&](Chunk *C) {
-      C->writeTo(SecBuf + C->getRVA() - Sec->getRVA());
-    });
+    parallelForEach(Sec->Chunks, [&](Chunk *C) { C->writeTo(SecBuf); });
   }
 }
 

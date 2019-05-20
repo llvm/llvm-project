@@ -204,13 +204,10 @@ public:
     /// This is a deep copy: underlying strings will be owned by the slab.
     void insert(const Symbol &S);
 
-    /// Removes the symbol with an ID, if it exists.
-    void erase(const SymbolID &ID) { Symbols.erase(ID); }
-
-    /// Returns the symbol with an ID, if it exists. Valid until insert/remove.
+    /// Returns the symbol with an ID, if it exists. Valid until next insert().
     const Symbol *find(const SymbolID &ID) {
-      auto I = Symbols.find(ID);
-      return I == Symbols.end() ? nullptr : &I->second;
+      auto I = SymbolIndex.find(ID);
+      return I == SymbolIndex.end() ? nullptr : &Symbols[I->second];
     }
 
     /// Consumes the builder to finalize the slab.
@@ -220,8 +217,9 @@ public:
     llvm::BumpPtrAllocator Arena;
     /// Intern table for strings. Contents are on the arena.
     llvm::UniqueStringSaver UniqueStrings;
+    std::vector<Symbol> Symbols;
     /// Values are indices into Symbols vector.
-    llvm::DenseMap<SymbolID, Symbol> Symbols;
+    llvm::DenseMap<SymbolID, size_t> SymbolIndex;
   };
 
 private:

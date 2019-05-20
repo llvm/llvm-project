@@ -68,13 +68,3 @@ DEFINE(test);
 // CHECK-FIXES: {{^}}DEFINE(test);{{$}}
 
 } // namespace macros
-
-inline void g() {}
-
-inline void g(); // g
-// CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant 'g' declaration
-// CHECK-FIXES: {{^}}// g{{$}}
-
-extern inline void g(); // extern g
-// CHECK-MESSAGES: :[[@LINE-1]]:20: warning: redundant 'g' declaration
-// CHECK-FIXES: {{^}}// extern g{{$}}

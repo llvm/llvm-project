@@ -504,8 +504,7 @@ static void printExtendedName(raw_ostream &OS, const DINode *Node,
 
   if (!Res.empty())
     OS << Res << "," << Line;
-  auto *InlinedAt = DL ? DL->getInlinedAt() : nullptr;
-  if (InlinedAt) {
+  if (auto *InlinedAt = DL->getInlinedAt()) {
     if (DebugLoc InlinedAtDL = InlinedAt) {
       OS << " @[";
       printDebugLoc(InlinedAtDL, OS, Ctx);

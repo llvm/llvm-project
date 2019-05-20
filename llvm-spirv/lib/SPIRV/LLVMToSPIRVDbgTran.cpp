@@ -84,9 +84,12 @@ void LLVMToSPIRVDbgTran::transDebugMetadata() {
 SPIRVValue *
 LLVMToSPIRVDbgTran::createDebugDeclarePlaceholder(const DbgDeclareInst *DbgDecl,
                                                   SPIRVBasicBlock *BB) {
+  if (!DbgDecl->getAddress())
+    return nullptr; // The variable is dead.
+
   DbgDeclareIntrinsics.push_back(DbgDecl);
   using namespace SPIRVDebug::Operand::DebugDeclare;
-  SPIRVWordVec Ops(OperandCount, getDebugInfoNoneId());
+  SPIRVWordVec Ops(OperandCount, getDebugInfoNone()->getId());
   SPIRVId ExtSetId = BM->getExtInstSetId(SPIRVEIS_Debug);
   return BM->addExtInst(getVoidTy(), ExtSetId, SPIRVDebug::Declare, Ops, BB);
 }
@@ -105,8 +108,7 @@ void LLVMToSPIRVDbgTran::finalizeDebugDeclare(const DbgDeclareInst *DbgDecl) {
   using namespace SPIRVDebug::Operand::DebugDeclare;
   SPIRVWordVec Ops(OperandCount);
   Ops[DebugLocalVarIdx] = transDbgEntry(DbgDecl->getVariable())->getId();
-  Ops[VariableIdx] = Alloca ? SPIRVWriter->transValue(Alloca, BB)->getId()
-                            : getDebugInfoNoneId();
+  Ops[VariableIdx] = SPIRVWriter->transValue(Alloca, BB)->getId();
   Ops[ExpressionIdx] = transDbgEntry(DbgDecl->getExpression())->getId();
   DD->setArguments(Ops);
 }
@@ -206,6 +208,15 @@ SPIRVEntry *LLVMToSPIRVDbgTran::transDbgEntry(const MDNode *DIEntry) {
   assert(Res && "Translation failure");
   MDMap[DIEntry] = Res;
   return Res;
+}
+
+template <typename T>
+SPIRVEntry *LLVMToSPIRVDbgTran::transDbgEntryRef(const TypedDINodeRef<T> &Ref,
+                                                 SPIRVEntry *Alternate) {
+  T *Resolved = Ref.resolve();
+  if (!Resolved && Alternate)
+    return Alternate;
+  return transDbgEntry(Resolved);
 }
 
 // Dispatcher implementation
@@ -321,6 +332,15 @@ SPIRVType *LLVMToSPIRVDbgTran::getVoidTy() {
     VoidT = SPIRVWriter->transType(Type::getVoidTy(M->getContext()));
   }
   return VoidT;
+}
+
+SPIRVEntry *LLVMToSPIRVDbgTran::getScope(DIScopeRef SR) {
+  if (DIScope *S = SR.resolve())
+    return transDbgEntry(S);
+  else {
+    assert(SPIRVCU && "Compilation unit must already be translated!");
+    return SPIRVCU;
+  }
 }
 
 SPIRVEntry *LLVMToSPIRVDbgTran::getScope(DIScope *S) {
@@ -452,7 +472,7 @@ SPIRVEntry *LLVMToSPIRVDbgTran::transDbgBaseType(const DIBasicType *BT) {
 SPIRVEntry *LLVMToSPIRVDbgTran::transDbgPointerType(const DIDerivedType *PT) {
   using namespace SPIRVDebug::Operand::TypePointer;
   SPIRVWordVec Ops(OperandCount);
-  SPIRVEntry *Base = transDbgEntry(PT->getBaseType());
+  SPIRVEntry *Base = transDbgEntryRef(PT->getBaseType(), getVoidTy());
   Ops[BaseTypeIdx] = Base->getId();
   Ops[StorageClassIdx] = ~0U; // all ones denote no address space
   Optional<unsigned> AS = PT->getDWARFAddressSpace();
@@ -468,7 +488,7 @@ SPIRVEntry *LLVMToSPIRVDbgTran::transDbgPointerType(const DIDerivedType *PT) {
 SPIRVEntry *LLVMToSPIRVDbgTran::transDbgQualifiedType(const DIDerivedType *QT) {
   using namespace SPIRVDebug::Operand::TypeQualifier;
   SPIRVWordVec Ops(OperandCount);
-  SPIRVEntry *Base = transDbgEntry(QT->getBaseType());
+  SPIRVEntry *Base = transDbgEntryRef(QT->getBaseType());
   Ops[BaseTypeIdx] = Base->getId();
   Ops[QualifierIdx] = SPIRV::DbgTypeQulifierMap::map(
       static_cast<llvm::dwarf::Tag>(QT->getTag()));
@@ -478,7 +498,7 @@ SPIRVEntry *LLVMToSPIRVDbgTran::transDbgQualifiedType(const DIDerivedType *QT) {
 SPIRVEntry *LLVMToSPIRVDbgTran::transDbgArrayType(const DICompositeType *AT) {
   using namespace SPIRVDebug::Operand::TypeArray;
   SPIRVWordVec Ops(MinOperandCount);
-  SPIRVEntry *Base = transDbgEntry(AT->getBaseType());
+  SPIRVEntry *Base = transDbgEntryRef(AT->getBaseType());
   Ops[BaseTypeIdx] = Base->getId();
 
   DINodeArray AR(AT->getElements());
@@ -503,7 +523,7 @@ SPIRVEntry *LLVMToSPIRVDbgTran::transDbgTypeDef(const DIDerivedType *DT) {
   using namespace SPIRVDebug::Operand::Typedef;
   SPIRVWordVec Ops(OperandCount);
   Ops[NameIdx] = BM->getString(DT->getName())->getId();
-  SPIRVEntry *BaseTy = transDbgEntry(DT->getBaseType());
+  SPIRVEntry *BaseTy = transDbgEntryRef(DT->getBaseType());
   assert(BaseTy && "Couldn't translate base type!");
   Ops[BaseTypeIdx] = BaseTy->getId();
   Ops[SourceIdx] = getSource(DT)->getId();
@@ -529,7 +549,7 @@ LLVMToSPIRVDbgTran::transDbgSubroutineType(const DISubroutineType *FT) {
     // followed by types of the function arguments' types.
     // The same order is preserved in SPIRV.
     for (unsigned I = 0; I < NumElements; ++I)
-      Ops[ReturnTypeIdx + I] = transDbgEntry(Types[I])->getId();
+      Ops[ReturnTypeIdx + I] = transDbgEntryRef(Types[I], getVoidTy())->getId();
   } else { // void foo();
     Ops[ReturnTypeIdx] = getVoidTy()->getId();
   }
@@ -542,8 +562,8 @@ SPIRVEntry *LLVMToSPIRVDbgTran::transDbgEnumType(const DICompositeType *ET) {
   SPIRVWordVec Ops(MinOperandCount);
 
   SPIRVEntry *UnderlyingType = getVoidTy();
-  if (DIType *DerivedFrom = ET->getBaseType())
-    UnderlyingType = transDbgEntry(DerivedFrom);
+  if (DITypeRef DerivedFrom = ET->getBaseType())
+    UnderlyingType = transDbgEntryRef(DerivedFrom);
   ConstantInt *Size = getUInt(M, ET->getSizeInBits());
 
   Ops[NameIdx] = BM->getString(ET->getName())->getId();
@@ -622,11 +642,11 @@ SPIRVEntry *LLVMToSPIRVDbgTran::transDbgMemberType(const DIDerivedType *MT) {
   SPIRVWordVec Ops(MinOperandCount);
 
   Ops[NameIdx] = BM->getString(MT->getName())->getId();
-  Ops[TypeIdx] = transDbgEntry(MT->getBaseType())->getId();
+  Ops[TypeIdx] = transDbgEntryRef(MT->getBaseType())->getId();
   Ops[SourceIdx] = getSource(MT)->getId();
   Ops[LineIdx] = MT->getLine();
   Ops[ColumnIdx] = 0; // This version of DIDerivedType has no column number
-  Ops[ParentIdx] = transDbgEntry(MT->getScope())->getId();
+  Ops[ParentIdx] = transDbgEntryRef(MT->getScope())->getId();
   ConstantInt *Offset = getUInt(M, MT->getOffsetInBits());
   Ops[OffsetIdx] = SPIRVWriter->transValue(Offset, nullptr)->getId();
   ConstantInt *Size = getUInt(M, MT->getSizeInBits());
@@ -646,8 +666,8 @@ SPIRVEntry *LLVMToSPIRVDbgTran::transDbgMemberType(const DIDerivedType *MT) {
 SPIRVEntry *LLVMToSPIRVDbgTran::transDbgInheritance(const DIDerivedType *DT) {
   using namespace SPIRVDebug::Operand::TypeInheritance;
   SPIRVWordVec Ops(OperandCount);
-  Ops[ChildIdx] = transDbgEntry(DT->getScope())->getId();
-  Ops[ParentIdx] = transDbgEntry(DT->getBaseType())->getId();
+  Ops[ChildIdx] = transDbgEntryRef(DT->getScope())->getId();
+  Ops[ParentIdx] = transDbgEntryRef(DT->getBaseType())->getId();
   ConstantInt *Offset = getUInt(M, DT->getOffsetInBits());
   Ops[OffsetIdx] = SPIRVWriter->transValue(Offset, nullptr)->getId();
   ConstantInt *Size = getUInt(M, DT->getSizeInBits());
@@ -659,8 +679,8 @@ SPIRVEntry *LLVMToSPIRVDbgTran::transDbgInheritance(const DIDerivedType *DT) {
 SPIRVEntry *LLVMToSPIRVDbgTran::transDbgPtrToMember(const DIDerivedType *DT) {
   using namespace SPIRVDebug::Operand::PtrToMember;
   SPIRVWordVec Ops(OperandCount);
-  Ops[MemberTypeIdx] = transDbgEntry(DT->getBaseType())->getId();
-  Ops[ParentIdx] = transDbgEntry(DT->getClassType())->getId();
+  Ops[MemberTypeIdx] = transDbgEntryRef(DT->getBaseType())->getId();
+  Ops[ParentIdx] = transDbgEntryRef(DT->getClassType())->getId();
   return BM->addDebugInfo(SPIRVDebug::TypePtrToMember, getVoidTy(), Ops);
 }
 
@@ -682,7 +702,7 @@ LLVMToSPIRVDbgTran::transDbgTemplateParameter(const DITemplateParameter *TP) {
   using namespace SPIRVDebug::Operand::TemplateParameter;
   SPIRVWordVec Ops(OperandCount);
   Ops[NameIdx] = BM->getString(TP->getName())->getId();
-  Ops[TypeIdx] = transDbgEntry(TP->getType())->getId();
+  Ops[TypeIdx] = transDbgEntryRef(TP->getType(), getVoidTy())->getId();
   Ops[ValueIdx] = getDebugInfoNoneId();
   if (TP->getTag() == dwarf::DW_TAG_template_value_parameter) {
     const DITemplateValueParameter *TVP = cast<DITemplateValueParameter>(TP);
@@ -737,7 +757,7 @@ LLVMToSPIRVDbgTran::transDbgGlobalVariable(const DIGlobalVariable *GV) {
   using namespace SPIRVDebug::Operand::GlobalVariable;
   SPIRVWordVec Ops(MinOperandCount);
   Ops[NameIdx] = BM->getString(GV->getName())->getId();
-  Ops[TypeIdx] = transDbgEntry(GV->getType())->getId();
+  Ops[TypeIdx] = transDbgEntryRef(GV->getType())->getId();
   Ops[SourceIdx] = getSource(GV)->getId();
   Ops[LineIdx] = GV->getLine();
   Ops[ColumnIdx] = 0; // This version of DIGlobalVariable has no column number
@@ -907,7 +927,7 @@ LLVMToSPIRVDbgTran::transDbgLocalVariable(const DILocalVariable *Var) {
   SPIRVWordVec Ops(MinOperandCount);
 
   Ops[NameIdx] = BM->getString(Var->getName())->getId();
-  Ops[TypeIdx] = transDbgEntry(Var->getType())->getId();
+  Ops[TypeIdx] = transDbgEntryRef(Var->getType())->getId();
   Ops[SourceIdx] = getSource(Var->getFile())->getId();
   Ops[LineIdx] = Var->getLine();
   Ops[ColumnIdx] = 0; // This version of DILocalVariable has no column number
@@ -950,7 +970,7 @@ LLVMToSPIRVDbgTran::transDbgImportedEntry(const DIImportedEntity *IE) {
   Ops[NameIdx] = BM->getString(IE->getName())->getId();
   Ops[TagIdx] = SPIRV::DbgImportedEntityMap::map(Tag);
   Ops[SourceIdx] = getSource(IE->getFile())->getId();
-  Ops[EntityIdx] = transDbgEntry(IE->getEntity())->getId();
+  Ops[EntityIdx] = transDbgEntryRef(IE->getEntity())->getId();
   Ops[LineIdx] = IE->getLine();
   Ops[ColumnIdx] = 0; // This version of DIImportedEntity has no column number
   Ops[ParentIdx] = getScope(IE->getScope())->getId();

@@ -97,7 +97,6 @@ struct Configuration {
   bool TailMerge;
   bool Relocatable = true;
   bool ForceMultiple = false;
-  bool ForceMultipleRes = false;
   bool ForceUnresolved = false;
   bool Debug = false;
   bool DebugDwarf = false;

@@ -187,8 +187,7 @@ class RegisterCommandsTestCase(TestBase):
         elif not value.IsValid():
             return  # If register doesn't exist, skip this test
 
-        # Also test the 're' alias.
-        self.runCmd("re write " + register + " \'" + new_value + "\'")
+        self.runCmd("register write " + register + " \'" + new_value + "\'")
         self.expect(
             "register read " +
             register,

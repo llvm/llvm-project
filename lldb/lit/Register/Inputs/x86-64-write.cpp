@@ -36,27 +36,29 @@ int main() {
     "\n\t"
     "int3\n\t"
     "\n\t"
-    "movq    %%r8, 0x00(%0)\n\t"
-    "movq    %%r9, 0x08(%0)\n\t"
-    "movq    %%r10, 0x10(%0)\n\t"
-    "movq    %%r11, 0x18(%0)\n\t"
-    "movq    %%r12, 0x20(%0)\n\t"
-    "movq    %%r13, 0x28(%0)\n\t"
-    "movq    %%r14, 0x30(%0)\n\t"
-    "movq    %%r15, 0x38(%0)\n\t"
+    "lea     %0, %%rbx\n\t"
+    "movq    %%r8, 0x00(%%rbx)\n\t"
+    "movq    %%r9, 0x08(%%rbx)\n\t"
+    "movq    %%r10, 0x10(%%rbx)\n\t"
+    "movq    %%r11, 0x18(%%rbx)\n\t"
+    "movq    %%r12, 0x20(%%rbx)\n\t"
+    "movq    %%r13, 0x28(%%rbx)\n\t"
+    "movq    %%r14, 0x30(%%rbx)\n\t"
+    "movq    %%r15, 0x38(%%rbx)\n\t"
     "\n\t"
-    "movaps  %%xmm8, 0x00(%1)\n\t"
-    "movaps  %%xmm9, 0x10(%1)\n\t"
-    "movaps  %%xmm10, 0x20(%1)\n\t"
-    "movaps  %%xmm11, 0x30(%1)\n\t"
-    "movaps  %%xmm12, 0x40(%1)\n\t"
-    "movaps  %%xmm13, 0x50(%1)\n\t"
-    "movaps  %%xmm14, 0x60(%1)\n\t"
-    "movaps  %%xmm15, 0x70(%1)\n\t"
-    :
-    : "a"(r64), "b"(xmm), "m"(xmm_fill)
-    : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15", "%xmm8",
-      "%xmm9", "%xmm10", "%xmm11", "%xmm12", "%xmm13", "%xmm14", "%xmm15"
+    "lea     %1, %%rbx\n\t"
+    "movaps  %%xmm8, 0x00(%%rbx)\n\t"
+    "movaps  %%xmm9, 0x10(%%rbx)\n\t"
+    "movaps  %%xmm10, 0x20(%%rbx)\n\t"
+    "movaps  %%xmm11, 0x30(%%rbx)\n\t"
+    "movaps  %%xmm12, 0x40(%%rbx)\n\t"
+    "movaps  %%xmm13, 0x50(%%rbx)\n\t"
+    "movaps  %%xmm14, 0x60(%%rbx)\n\t"
+    "movaps  %%xmm15, 0x70(%%rbx)\n\t"
+    : "=m"(r64), "=m"(xmm)
+    : "m"(xmm_fill)
+    : "%rbx", "%mm0", "%mm1", "%mm2", "%mm3", "%mm4", "%mm5", "%mm6", "%mm7",
+      "%xmm0", "%xmm1", "%xmm2", "%xmm3", "%xmm4", "%xmm5", "%xmm6", "%xmm7"
   );
 
   for (int i = 0; i < 8; ++i)

@@ -22,9 +22,17 @@
 
 namespace lldb_private {
 class CommandInterpreter;
+}
+namespace lldb_private {
 class ConstString;
+}
+namespace lldb_private {
 class Debugger;
+}
+namespace lldb_private {
 class StringList;
+}
+namespace lldb_private {
 
 class PluginManager {
 public:

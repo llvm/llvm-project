@@ -132,14 +132,8 @@ opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> Argv) {
   if (MissingCount)
     error(Twine(Args.getArgString(MissingIndex)) + ": missing argument");
 
-  for (auto *Arg : Args.filtered(OPT_UNKNOWN)) {
-    std::string Nearest;
-    if (findNearest(Arg->getAsString(Args), Nearest) > 1)
-      error("unknown argument '" + Arg->getSpelling() + "'");
-    else
-      error("unknown argument '" + Arg->getSpelling() + "', did you mean '" +
-            Nearest + "'");
-  }
+  for (auto *Arg : Args.filtered(OPT_UNKNOWN))
+    error("unknown argument: " + Arg->getSpelling());
   return Args;
 }
 

@@ -41,7 +41,7 @@
 ; Ensure LLD generates an empty index for each bitcode file even if all bitcode files are lazy.
 ; RUN: rm -f %t1.o.thinlto.bc
 ; RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux-gnu /dev/null -o %tdummy.o
-; RUN: ld.lld --plugin-opt=thinlto-index-only -shared %tdummy.o --start-lib %t1.o --end-lib -o /dev/null
+; RUN: ld.lld --plugin-opt=thinlto-index-only -shared %tdummy.o --start-lib %t1.o --end-lib
 ; RUN: ls %t1.o.thinlto.bc
 
 ; NM: T f

@@ -486,7 +486,6 @@ private:
                        const AbiTagList *AdditionalAbiTags);
   void mangleBlockForPrefix(const BlockDecl *Block);
   void mangleUnqualifiedBlock(const BlockDecl *Block);
-  void mangleTemplateParamDecl(const NamedDecl *Decl);
   void mangleLambda(const CXXRecordDecl *Lambda);
   void mangleNestedName(const NamedDecl *ND, const DeclContext *DC,
                         const AbiTagList *AdditionalAbiTags,
@@ -1373,8 +1372,7 @@ void CXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
     // <unnamed-type-name> ::= <closure-type-name>
     //
     // <closure-type-name> ::= Ul <lambda-sig> E [ <nonnegative number> ] _
-    // <lambda-sig> ::= <template-param-decl>* <parameter-type>+
-    //     # Parameter types or 'v' for 'void'.
+    // <lambda-sig> ::= <parameter-type>+   # Parameter types or 'v' for 'void'.
     if (const CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(TD)) {
       if (Record->isLambda() && Record->getLambdaManglingNumber()) {
         assert(!AdditionalAbiTags &&
@@ -1680,24 +1678,6 @@ void CXXNameMangler::mangleUnqualifiedBlock(const BlockDecl *Block) {
   Out << '_';
 }
 
-// <template-param-decl>
-//   ::= Ty                              # template type parameter
-//   ::= Tn <type>                       # template non-type parameter
-//   ::= Tt <template-param-decl>* E     # template template parameter
-void CXXNameMangler::mangleTemplateParamDecl(const NamedDecl *Decl) {
-  if (isa<TemplateTypeParmDecl>(Decl)) {
-    Out << "Ty";
-  } else if (auto *Tn = dyn_cast<NonTypeTemplateParmDecl>(Decl)) {
-    Out << "Tn";
-    mangleType(Tn->getType());
-  } else if (auto *Tt = dyn_cast<TemplateTemplateParmDecl>(Decl)) {
-    Out << "Tt";
-    for (auto *Param : *Tt->getTemplateParameters())
-      mangleTemplateParamDecl(Param);
-    Out << "E";
-  }
-}
-
 void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   // If the context of a closure type is an initializer for a class member
   // (static or nonstatic), it is encoded in a qualified name with a final
@@ -1725,8 +1705,6 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   }
 
   Out << "Ul";
-  for (auto *D : Lambda->getLambdaExplicitTemplateParameters())
-    mangleTemplateParamDecl(D);
   const FunctionProtoType *Proto = Lambda->getLambdaTypeInfo()->getType()->
                                    getAs<FunctionProtoType>();
   mangleBareFunctionType(Proto, /*MangleReturnType=*/false,
@@ -1891,7 +1869,6 @@ void CXXNameMangler::mangleType(TemplateName TN) {
     break;
 
   case TemplateName::OverloadedTemplate:
-  case TemplateName::AssumedTemplate:
     llvm_unreachable("can't mangle an overloaded template name as a <type>");
 
   case TemplateName::DependentTemplate: {
@@ -2031,7 +2008,6 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
     }
 
     case TemplateName::OverloadedTemplate:
-    case TemplateName::AssumedTemplate:
     case TemplateName::DependentTemplate:
       llvm_unreachable("invalid base for a template specialization type");
 

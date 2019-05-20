@@ -89,15 +89,13 @@ UUID MinidumpParser::GetModuleUUID(const minidump::Module *module) {
   return UUID();
 }
 
-llvm::ArrayRef<minidump::Thread> MinidumpParser::GetThreads() {
-  auto ExpectedThreads = GetMinidumpFile().getThreadList();
-  if (ExpectedThreads)
-    return *ExpectedThreads;
+llvm::ArrayRef<MinidumpThread> MinidumpParser::GetThreads() {
+  llvm::ArrayRef<uint8_t> data = GetStream(StreamType::ThreadList);
 
-  LLDB_LOG_ERROR(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_THREAD),
-                 ExpectedThreads.takeError(),
-                 "Failed to read thread list: {0}");
-  return {};
+  if (data.size() == 0)
+    return llvm::None;
+
+  return MinidumpThread::ParseThreadList(data);
 }
 
 llvm::ArrayRef<uint8_t>
@@ -108,19 +106,19 @@ MinidumpParser::GetThreadContext(const LocationDescriptor &location) {
 }
 
 llvm::ArrayRef<uint8_t>
-MinidumpParser::GetThreadContext(const minidump::Thread &td) {
-  return GetThreadContext(td.Context);
+MinidumpParser::GetThreadContext(const MinidumpThread &td) {
+  return GetThreadContext(td.thread_context);
 }
 
 llvm::ArrayRef<uint8_t>
-MinidumpParser::GetThreadContextWow64(const minidump::Thread &td) {
+MinidumpParser::GetThreadContextWow64(const MinidumpThread &td) {
   // On Windows, a 32-bit process can run on a 64-bit machine under WOW64. If
   // the minidump was captured with a 64-bit debugger, then the CONTEXT we just
   // grabbed from the mini_dump_thread is the one for the 64-bit "native"
   // process rather than the 32-bit "guest" process we care about.  In this
   // case, we can get the 32-bit CONTEXT from the TEB (Thread Environment
   // Block) of the 64-bit process.
-  auto teb_mem = GetMemory(td.EnvironmentBlock, sizeof(TEB64));
+  auto teb_mem = GetMemory(td.teb, sizeof(TEB64));
   if (teb_mem.empty())
     return {};
 
@@ -331,14 +329,15 @@ MinidumpParser::FindMemoryRange(lldb::addr_t addr) {
     return llvm::None;
 
   if (!data.empty()) {
-    llvm::ArrayRef<MemoryDescriptor> memory_list = ParseMemoryList(data);
+    llvm::ArrayRef<MinidumpMemoryDescriptor> memory_list =
+        MinidumpMemoryDescriptor::ParseMemoryList(data);
 
     if (memory_list.empty())
       return llvm::None;
 
     for (const auto &memory_desc : memory_list) {
-      const LocationDescriptor &loc_desc = memory_desc.Memory;
-      const lldb::addr_t range_start = memory_desc.StartOfMemoryRange;
+      const LocationDescriptor &loc_desc = memory_desc.memory;
+      const lldb::addr_t range_start = memory_desc.start_of_memory_range;
       const size_t range_size = loc_desc.DataSize;
 
       if (loc_desc.RVA + loc_desc.DataSize > GetData().size())
@@ -453,16 +452,16 @@ CreateRegionsCacheFromMemoryList(MinidumpParser &parser,
   auto data = parser.GetStream(StreamType::MemoryList);
   if (data.empty())
     return false;
-  auto memory_list = ParseMemoryList(data);
+  auto memory_list = MinidumpMemoryDescriptor::ParseMemoryList(data);
   if (memory_list.empty())
     return false;
   regions.reserve(memory_list.size());
   for (const auto &memory_desc : memory_list) {
-    if (memory_desc.Memory.DataSize == 0)
+    if (memory_desc.memory.DataSize == 0)
       continue;
     MemoryRegionInfo region;
-    region.GetRange().SetRangeBase(memory_desc.StartOfMemoryRange);
-    region.GetRange().SetByteSize(memory_desc.Memory.DataSize);
+    region.GetRange().SetRangeBase(memory_desc.start_of_memory_range);
+    region.GetRange().SetByteSize(memory_desc.memory.DataSize);
     region.SetReadable(MemoryRegionInfo::eYes);
     region.SetMapped(MemoryRegionInfo::eYes);
     regions.push_back(region);

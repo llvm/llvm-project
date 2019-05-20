@@ -1972,8 +1972,8 @@ bool RenderScriptRuntime::JITTypePacked(AllocationDetails *alloc,
 
   // We want 4 elements from packed data
   const uint32_t num_exprs = 4;
-  static_assert(num_exprs == (eExprTypeElemPtr - eExprTypeDimX + 1),
-                "Invalid number of expressions");
+  assert(num_exprs == (eExprTypeElemPtr - eExprTypeDimX + 1) &&
+         "Invalid number of expressions");
 
   char expr_bufs[num_exprs][jit_max_expr_size];
   uint64_t results[num_exprs];
@@ -2031,8 +2031,8 @@ bool RenderScriptRuntime::JITElementPacked(Element &elem,
 
   // We want 4 elements from packed data
   const uint32_t num_exprs = 4;
-  static_assert(num_exprs == (eExprElementFieldCount - eExprElementType + 1),
-                "Invalid number of expressions");
+  assert(num_exprs == (eExprElementFieldCount - eExprElementType + 1) &&
+         "Invalid number of expressions");
 
   char expr_bufs[num_exprs][jit_max_expr_size];
   uint64_t results[num_exprs];
@@ -2090,8 +2090,8 @@ bool RenderScriptRuntime::JITSubelements(Element &elem,
   }
 
   const short num_exprs = 3;
-  static_assert(num_exprs == (eExprSubelementsArrSize - eExprSubelementsId + 1),
-                "Invalid number of expressions");
+  assert(num_exprs == (eExprSubelementsArrSize - eExprSubelementsId + 1) &&
+         "Invalid number of expressions");
 
   char expr_buffer[jit_max_expr_size];
   uint64_t results;

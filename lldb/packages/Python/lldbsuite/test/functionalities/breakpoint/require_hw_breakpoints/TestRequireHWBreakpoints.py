@@ -79,11 +79,12 @@ class BreakpointLocationsTestCase(TestBase):
         self.runCmd("settings set target.require-hardware-breakpoint true")
 
         # Step over doesn't fail immediately but fails later on.
+        self.expect("thread step-over")
         self.expect(
-            "thread step-over",
-            error=True,
+            "process status",
             substrs=[
-                'error: Could not create hardware breakpoint for thread plan.'
+                'step over failed',
+                'Could not create hardware breakpoint for thread plan'
             ])
 
     @skipIfWindows

@@ -102,8 +102,8 @@ protected:
   allocation_collection m_allocations;
 
 private:
-  MachTask(const MachTask &) = delete;
-  MachTask &operator=(const MachTask &rhs) = delete;
+  MachTask(const MachTask &);               // Outlaw
+  MachTask &operator=(const MachTask &rhs); // Outlaw
 };
 
 #endif // __MachTask_h__

@@ -292,13 +292,13 @@ uint64_t COFFObjectFile::getSectionSize(DataRefImpl Ref) const {
   return getSectionSize(toSec(Ref));
 }
 
-Expected<ArrayRef<uint8_t>>
-COFFObjectFile::getSectionContents(DataRefImpl Ref) const {
+std::error_code COFFObjectFile::getSectionContents(DataRefImpl Ref,
+                                                   StringRef &Result) const {
   const coff_section *Sec = toSec(Ref);
   ArrayRef<uint8_t> Res;
-  if (Error E = getSectionContents(Sec, Res))
-    return std::move(E);
-  return Res;
+  std::error_code EC = getSectionContents(Sec, Res);
+  Result = StringRef(reinterpret_cast<const char*>(Res.data()), Res.size());
+  return EC;
 }
 
 uint64_t COFFObjectFile::getSectionAlignment(DataRefImpl Ref) const {
@@ -1118,21 +1118,22 @@ uint64_t COFFObjectFile::getSectionSize(const coff_section *Sec) const {
   return Sec->SizeOfRawData;
 }
 
-Error COFFObjectFile::getSectionContents(const coff_section *Sec,
-                                         ArrayRef<uint8_t> &Res) const {
+std::error_code
+COFFObjectFile::getSectionContents(const coff_section *Sec,
+                                   ArrayRef<uint8_t> &Res) const {
   // In COFF, a virtual section won't have any in-file
   // content, so the file pointer to the content will be zero.
   if (Sec->PointerToRawData == 0)
-    return Error::success();
+    return std::error_code();
   // The only thing that we need to verify is that the contents is contained
   // within the file bounds. We don't need to make sure it doesn't cover other
   // data, as there's nothing that says that is not allowed.
   uintptr_t ConStart = uintptr_t(base()) + Sec->PointerToRawData;
   uint32_t SectionSize = getSectionSize(Sec);
   if (checkOffset(Data, ConStart, SectionSize))
-    return make_error<BinaryError>();
+    return object_error::parse_failed;
   Res = makeArrayRef(reinterpret_cast<const uint8_t *>(ConStart), SectionSize);
-  return Error::success();
+  return std::error_code();
 }
 
 const coff_relocation *COFFObjectFile::toRel(DataRefImpl Rel) const {

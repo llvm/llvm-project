@@ -17,12 +17,6 @@
 
 namespace clang {
 
-/// Used to specify the format for printing AST dump information.
-enum ASTDumpOutputFormat {
-  ADOF_Default,
-  ADOF_JSON
-};
-
 // Colors used for various parts of the AST dump
 // Do not use bold yellow for any text.  It is hard to read on white screens.
 

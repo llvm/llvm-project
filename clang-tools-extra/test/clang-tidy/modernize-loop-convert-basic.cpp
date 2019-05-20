@@ -369,7 +369,7 @@ void f() {
     // CHECK-FIXES: for (auto Val_int_ptr : Val_int_ptrs)
   }
 
-  // This container uses an iterator where the dereference type is a typedef of
+  // This container uses an iterator where the derefence type is a typedef of
   // a reference type. Make sure non-const auto & is still used. A failure here
   // means canonical types aren't being tested.
   {
@@ -431,22 +431,19 @@ void different_type() {
   // CHECK-FIXES: for (auto P : *Ps)
   // CHECK-FIXES-NEXT: printf("s has value %d\n", P.X);
 
+  // V.begin() returns a user-defined type 'iterator' which, since it's
+  // different from const_iterator, disqualifies these loops from
+  // transformation.
   dependent<int> V;
   for (dependent<int>::const_iterator It = V.begin(), E = V.end();
        It != E; ++It) {
     printf("Fibonacci number is %d\n", *It);
   }
-  // CHECK-MESSAGES: :[[@LINE-4]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES: for (int It : V)
-  // CHECK-FIXES-NEXT: printf("Fibonacci number is %d\n", It);
 
   for (dependent<int>::const_iterator It(V.begin()), E = V.end();
        It != E; ++It) {
     printf("Fibonacci number is %d\n", *It);
   }
-  // CHECK-MESSAGES: :[[@LINE-4]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES: for (int It : V)
-  // CHECK-FIXES-NEXT: printf("Fibonacci number is %d\n", It);
 }
 
 // Tests to ensure that an implicit 'this' is picked up as the container.

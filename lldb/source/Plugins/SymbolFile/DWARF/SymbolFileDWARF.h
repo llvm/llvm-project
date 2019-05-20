@@ -134,6 +134,11 @@ public:
                                   bool assert_not_being_parsed = true,
                                   bool resolve_function_context = false);
 
+  SymbolFileDWARF *GetDWARFForUID(lldb::user_id_t uid);
+
+  DWARFDIE
+  GetDIEFromUID(lldb::user_id_t uid);
+
   lldb_private::CompilerDecl GetDeclForUID(lldb::user_id_t uid) override;
 
   lldb_private::CompilerDeclContext
@@ -283,14 +288,6 @@ public:
   }
 
   virtual DWARFDIE GetDIE(const DIERef &die_ref);
-
-  DWARFDIE GetDIE(lldb::user_id_t uid);
-
-  lldb::user_id_t GetUID(const DWARFBaseDIE &die) {
-    return GetID() | die.GetOffset();
-  }
-
-  lldb::user_id_t GetUID(const DIERef &ref) { return GetID() | ref.die_offset; }
 
   virtual std::unique_ptr<SymbolFileDWARFDwo>
   GetDwoSymbolFileForCompileUnit(DWARFUnit &dwarf_cu,
@@ -442,12 +439,6 @@ protected:
   virtual ClangTypeToDIE &GetForwardDeclClangTypeToDie() {
     return m_forward_decl_clang_type_to_die;
   }
-
-  struct DecodedUID {
-    SymbolFileDWARF *dwarf;
-    DIERef ref;
-  };
-  DecodedUID DecodeUID(lldb::user_id_t uid);
 
   SymbolFileDWARFDwp *GetDwpSymbolFile();
 

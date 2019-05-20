@@ -31,9 +31,9 @@ public:
 
 private:
   // Disallow copy and assignment constructors
-  CFCBundle(const CFCBundle &) = delete;
+  CFCBundle(const CFCBundle &);
 
-  const CFCBundle &operator=(const CFCBundle &) = delete;
+  const CFCBundle &operator=(const CFCBundle &);
 };
 
 #endif // #ifndef CoreFoundationCPP_CFBundle_h_

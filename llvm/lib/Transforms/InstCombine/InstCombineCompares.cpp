@@ -3822,6 +3822,7 @@ Instruction *InstCombiner::foldICmpWithCastAndCast(ICmpInst &ICmp) {
   Value *LHSCIOp        = LHSCI->getOperand(0);
   Type *SrcTy     = LHSCIOp->getType();
   Type *DestTy    = LHSCI->getType();
+  Value *RHSCIOp;
 
   // Turn icmp (ptrtoint x), (ptrtoint/c) into a compare of the input if the
   // integer type is the same size as the pointer type.
@@ -3863,7 +3864,7 @@ Instruction *InstCombiner::foldICmpWithCastAndCast(ICmpInst &ICmp) {
 
   if (auto *CI = dyn_cast<CastInst>(ICmp.getOperand(1))) {
     // Not an extension from the same type?
-    Value *RHSCIOp = CI->getOperand(0);
+    RHSCIOp = CI->getOperand(0);
     if (RHSCIOp->getType() != LHSCIOp->getType())
       return nullptr;
 
@@ -5518,11 +5519,6 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
     }
   }
 
-  // fcmp pred (fneg X), (fneg Y) -> fcmp swap(pred) X, Y
-  Value *X, *Y;
-  if (match(Op0, m_FNeg(m_Value(X))) && match(Op1, m_FNeg(m_Value(Y))))
-    return new FCmpInst(I.getSwappedPredicate(), X, Y, "", &I);
-
   // Test if the FCmpInst instruction is used exclusively by a select as
   // part of a minimum or maximum operation. If so, refrain from doing
   // any other folding. This helps out other analyses which understand
@@ -5581,7 +5577,12 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
   if (Instruction *R = foldFabsWithFcmpZero(I))
     return R;
 
+  Value *X, *Y;
   if (match(Op0, m_FNeg(m_Value(X)))) {
+    // fcmp pred (fneg X), (fneg Y) -> fcmp swap(pred) X, Y
+    if (match(Op1, m_FNeg(m_Value(Y))))
+      return new FCmpInst(I.getSwappedPredicate(), X, Y, "", &I);
+
     // fcmp pred (fneg X), C --> fcmp swap(pred) X, -C
     Constant *C;
     if (match(Op1, m_Constant(C))) {

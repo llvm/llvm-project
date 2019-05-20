@@ -30,28 +30,14 @@ b:
   ret void
 }
 
-; CHECK-LABEL: @ifThen_binary_fneg(
+; CHECK-LABEL: @ifThen_fneg(
 ; CHECK: fsub float -0.0
 ; CHECK: br i1 true
-define void @ifThen_binary_fneg() {
+define void @ifThen_fneg() {
   br i1 true, label %a, label %b
 
 a:
   %x = fsub float -0.0, undef
-  br label %b
-
-b:
-  ret void
-}
-
-; CHECK-LABEL: @ifThen_unary_fneg(
-; CHECK: fneg float
-; CHECK: br i1 true
-define void @ifThen_unary_fneg() {
-  br i1 true, label %a, label %b
-
-a:
-  %x = fneg float undef
   br label %b
 
 b:

@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InstPrinter/X86IntelInstPrinter.h"
 #include "MCTargetDesc/X86BaseInfo.h"
-#include "MCTargetDesc/X86IntelInstPrinter.h"
 #include "MCTargetDesc/X86MCExpr.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
-#include "TargetInfo/X86TargetInfo.h"
 #include "X86AsmParserCommon.h"
 #include "X86Operand.h"
 #include "llvm/ADT/STLExtras.h"

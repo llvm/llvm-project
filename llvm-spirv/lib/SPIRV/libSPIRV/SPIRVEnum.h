@@ -124,7 +124,7 @@ template <> inline void SPIRVMap<SPIRVExtensionKind, std::string>::init() {
   add(SPV_INTEL_device_side_avc_motion_estimation,
       "SPV_INTEL_device_side_avc_motion_estimation");
   add(SPV_KHR_no_integer_wrap_decoration, "SPV_KHR_no_integer_wrap_decoration");
-}
+};
 
 template <> inline void SPIRVMap<SPIRVExtInstSetKind, std::string>::init() {
   add(SPIRVEIS_OpenCL, "OpenCL.std");

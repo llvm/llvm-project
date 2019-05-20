@@ -164,20 +164,25 @@ public:
   }
   INLINE int IsTaskConstruct() const { return !IsParallelConstruct(); }
   // methods for other fields
+  INLINE uint16_t &NThreads() { return items.nthreads; }
+  INLINE uint16_t &ThreadLimit() { return items.threadlimit; }
   INLINE uint16_t &ThreadId() { return items.threadId; }
+  INLINE uint16_t &ThreadsInTeam() { return items.threadsInTeam; }
   INLINE uint64_t &RuntimeChunkSize() { return items.runtimeChunkSize; }
   INLINE omptarget_nvptx_TaskDescr *GetPrevTaskDescr() const { return prev; }
   INLINE void SetPrevTaskDescr(omptarget_nvptx_TaskDescr *taskDescr) {
     prev = taskDescr;
   }
   // init & copy
-  INLINE void InitLevelZeroTaskDescr();
-  INLINE void InitLevelOneTaskDescr(omptarget_nvptx_TaskDescr *parentTaskDescr);
+  INLINE void InitLevelZeroTaskDescr(bool isSPMDExecutionMode);
+  INLINE void InitLevelOneTaskDescr(uint16_t tnum,
+                                    omptarget_nvptx_TaskDescr *parentTaskDescr);
   INLINE void Copy(omptarget_nvptx_TaskDescr *sourceTaskDescr);
   INLINE void CopyData(omptarget_nvptx_TaskDescr *sourceTaskDescr);
   INLINE void CopyParent(omptarget_nvptx_TaskDescr *parentTaskDescr);
   INLINE void CopyForExplicitTask(omptarget_nvptx_TaskDescr *parentTaskDescr);
-  INLINE void CopyToWorkDescr(omptarget_nvptx_TaskDescr *masterTaskDescr);
+  INLINE void CopyToWorkDescr(omptarget_nvptx_TaskDescr *masterTaskDescr,
+                              uint16_t tnum);
   INLINE void CopyFromWorkDescr(omptarget_nvptx_TaskDescr *workTaskDescr);
   INLINE void CopyConvergentParent(omptarget_nvptx_TaskDescr *parentTaskDescr,
                                    uint16_t tid, uint16_t tnum);
@@ -207,7 +212,10 @@ private:
   struct TaskDescr_items {
     uint8_t flags; // 6 bit used (see flag above)
     uint8_t unused;
+    uint16_t nthreads;         // thread num for subsequent parallel regions
+    uint16_t threadlimit;      // thread limit ICV
     uint16_t threadId;         // thread id
+    uint16_t threadsInTeam;    // threads in current team
     uint64_t runtimeChunkSize; // runtime chunk size
   } items;
   omptarget_nvptx_TaskDescr *prev;
@@ -247,7 +255,7 @@ public:
   INLINE uint64_t *getLastprivateIterBuffer() { return &lastprivateIterBuffer; }
 
   // init
-  INLINE void InitTeamDescr();
+  INLINE void InitTeamDescr(bool isSPMDExecutionMode);
 
   INLINE __kmpc_data_sharing_slot *RootS(int wid, bool IsMasterThread) {
     // If this is invoked by the master thread of the master warp then intialize
@@ -400,9 +408,6 @@ extern __device__ __shared__ uint32_t usedMemIdx;
 extern __device__ __shared__ uint32_t usedSlotIdx;
 extern __device__ __shared__ uint8_t
     parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
-extern __device__ __shared__ uint16_t threadLimit;
-extern __device__ __shared__ uint16_t threadsInTeam;
-extern __device__ __shared__ uint16_t nThreads;
 extern __device__ __shared__
     omptarget_nvptx_ThreadPrivateContext *omptarget_nvptx_threadPrivateContext;
 

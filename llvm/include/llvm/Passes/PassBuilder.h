@@ -81,10 +81,6 @@ public:
   /// that of the flag: `-vectorize-loops`.
   bool LoopVectorization;
 
-  /// Tuning option to enable/disable slp loop vectorization. Its default value
-  /// is that of the flag: `vectorize-slp`.
-  bool SLPVectorization;
-
   /// Tuning option to cap the number of calls to retrive clobbering accesses in
   /// MemorySSA, in LICM.
   unsigned LicmMssaOptCap;

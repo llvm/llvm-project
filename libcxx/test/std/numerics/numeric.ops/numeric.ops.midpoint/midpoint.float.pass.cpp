@@ -76,8 +76,8 @@ void fp_test()
 
 //  Check two values "close to each other"
     T d1 = 3.14;
-    T d0 = std::nextafter(d1, T(2));
-    T d2 = std::nextafter(d1, T(5));
+    T d0 = std::nexttoward(d1, T(2));
+    T d2 = std::nexttoward(d1, T(5));
     assert(d0 < d1);  // sanity checking
     assert(d1 < d2);  // sanity checking
 

@@ -786,7 +786,7 @@ const char *mapped_file_region::const_data() const {
 }
 
 int mapped_file_region::alignment() {
-  return Process::getPageSizeEstimate();
+  return Process::getPageSize();
 }
 
 std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
@@ -1137,7 +1137,6 @@ namespace fs {
 /// implementation.
 std::error_code copy_file(const Twine &From, const Twine &To) {
   uint32_t Flag = COPYFILE_DATA;
-#if __has_builtin(__builtin_available)
   if (__builtin_available(macos 10.12, *)) {
     bool IsSymlink;
     if (std::error_code Error = is_symlink_file(From, IsSymlink))
@@ -1147,7 +1146,7 @@ std::error_code copy_file(const Twine &From, const Twine &To) {
     if (!IsSymlink && !exists(To))
       Flag = COPYFILE_CLONE;
   }
-#endif
+
   int Status =
       copyfile(From.str().c_str(), To.str().c_str(), /* State */ NULL, Flag);
 

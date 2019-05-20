@@ -509,19 +509,6 @@ namespace llvm {
       MCVTP2SI, MCVTP2UI, MCVTTP2SI, MCVTTP2UI,
       MCVTSI2P, MCVTUI2P,
 
-      // Vector float to bfloat16.
-      // Convert TWO packed single data to one packed BF16 data
-      CVTNE2PS2BF16, 
-      // Convert packed single data to packed BF16 data
-      CVTNEPS2BF16,
-      // Masked version of above.
-      // SRC, PASSTHRU, MASK
-      MCVTNEPS2BF16,
-
-      // Dot product of BF16 pairs to accumulated into
-      // packed single precision.
-      DPBF16PS,
-
       // Save xmm argument registers to the stack, according to %al. An operator
       // is needed so that this can be expanded with control flow.
       VASTART_SAVE_XMM_REGS,
@@ -987,9 +974,6 @@ namespace llvm {
                              unsigned AS) const override;
 
     bool isVectorShiftByScalarCheap(Type *Ty) const override;
-
-    /// Add x86-specific opcodes to the default list.
-    bool isBinOp(unsigned Opcode) const override;
 
     /// Returns true if the opcode is a commutative binary operation.
     bool isCommutativeBinOp(unsigned Opcode) const override;

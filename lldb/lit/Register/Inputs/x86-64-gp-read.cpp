@@ -15,8 +15,14 @@ int main() {
     "movq    %%rsp, %%r8\n\t"
     "movq    %%rbp, %%r9\n\t"
     "\n\t"
+    "movq    %0, %%rax\n\t"
+    "movq    %1, %%rbx\n\t"
+    "movq    %2, %%rcx\n\t"
+    "movq    %3, %%rdx\n\t"
     "movq    %4, %%rsp\n\t"
     "movq    %5, %%rbp\n\t"
+    "movq    %6, %%rsi\n\t"
+    "movq    %7, %%rdi\n\t"
     "\n\t"
     "int3\n\t"
     "\n\t"
@@ -24,9 +30,10 @@ int main() {
     "movq    %%r8, %%rsp\n\t"
     "movq    %%r9, %%rbp"
     :
-    : "a"(rax), "b"(rbx), "c"(rcx), "d"(rdx), "i"(rsp), "i"(rbp), "S"(rsi),
-      "D"(rdi)
-    : "%r8", "%r9"
+    : "i"(rax), "i"(rbx), "i"(rcx), "i"(rdx), "i"(rsp), "i"(rbp), "i"(rsi),
+      "i"(rdi)
+    : "%rax", "%rbx", "%rcx", "%rdx", "%rsp", "%rbp", "%rsi", "%rdi", "%r8",
+      "%r9"
   );
 
   return 0;

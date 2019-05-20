@@ -1434,12 +1434,6 @@ public:
   /// template specialization or instantiation this is.
   TemplateSpecializationKind getTemplateSpecializationKind() const;
 
-  /// Get the template specialization kind of this variable for the purposes of
-  /// template instantiation. This differs from getTemplateSpecializationKind()
-  /// for an instantiation of a class-scope explicit specialization.
-  TemplateSpecializationKind
-  getTemplateSpecializationKindForInstantiation() const;
-
   /// If this variable is an instantiation of a variable template or a
   /// static data member of a class template, determine its point of
   /// instantiation.
@@ -2368,6 +2362,16 @@ public:
   /// either marked "inline" or "constexpr" or is a member function of a class
   /// that was defined in the class body.
   bool isInlined() const { return FunctionDeclBits.IsInline; }
+
+  /// Whether this function is marked as explicit explicitly.
+  bool isExplicitSpecified() const {
+    return FunctionDeclBits.IsExplicitSpecified;
+  }
+
+  /// State that this function is marked as explicit explicitly.
+  void setExplicitSpecified(bool ExpSpec = true) {
+    FunctionDeclBits.IsExplicitSpecified = ExpSpec;
+  }
 
   bool isInlineDefinitionExternallyVisible() const;
 

@@ -12,7 +12,6 @@
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "SIDefines.h"
 #include "SIInstrInfo.h"
-#include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUAsmUtils.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDKernelCodeTUtils.h"
@@ -4765,15 +4764,10 @@ OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
     if (Str.getAsInteger(10, Val))
       return MatchOperand_ParseFail;
 
-    if (Val > 4 || (Val == 4 && !isGFX10()))
+    if (Val > 3)
       errorExpTgt();
 
     Val += 12;
-    return MatchOperand_Success;
-  }
-
-  if (isGFX10() && Str == "prim") {
-    Val = 20;
     return MatchOperand_Success;
   }
 

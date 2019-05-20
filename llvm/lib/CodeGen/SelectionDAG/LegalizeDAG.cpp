@@ -154,8 +154,6 @@ private:
 
   SDValue EmitStackConvert(SDValue SrcOp, EVT SlotVT, EVT DestVT,
                            const SDLoc &dl);
-  SDValue EmitStackConvert(SDValue SrcOp, EVT SlotVT, EVT DestVT,
-                           const SDLoc &dl, SDValue ChainIn);
   SDValue ExpandBUILD_VECTOR(SDNode *Node);
   SDValue ExpandSCALAR_TO_VECTOR(SDNode *Node);
   void ExpandDYNAMIC_STACKALLOC(SDNode *Node,
@@ -541,9 +539,7 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
   } else if (StWidth & (StWidth - 1)) {
     // If not storing a power-of-2 number of bits, expand as two stores.
     assert(!StVT.isVector() && "Unsupported truncstore!");
-    unsigned LogStWidth = Log2_32(StWidth);
-    assert(LogStWidth < 32);
-    unsigned RoundWidth = 1 << LogStWidth;
+    unsigned RoundWidth = 1 << Log2_32(StWidth);
     assert(RoundWidth < StWidth);
     unsigned ExtraWidth = StWidth - RoundWidth;
     assert(ExtraWidth < RoundWidth);
@@ -757,9 +753,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
   } else if (SrcWidth & (SrcWidth - 1)) {
     // If not loading a power-of-2 number of bits, expand as two loads.
     assert(!SrcVT.isVector() && "Unsupported extload!");
-    unsigned LogSrcWidth = Log2_32(SrcWidth);
-    assert(LogSrcWidth < 32);
-    unsigned RoundWidth = 1 << LogSrcWidth;
+    unsigned RoundWidth = 1 << Log2_32(SrcWidth);
     assert(RoundWidth < SrcWidth);
     unsigned ExtraWidth = SrcWidth - RoundWidth;
     assert(ExtraWidth < RoundWidth);
@@ -1117,8 +1111,6 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::STRICT_FFLOOR:
   case ISD::STRICT_FROUND:
   case ISD::STRICT_FTRUNC:
-  case ISD::STRICT_FP_ROUND:
-  case ISD::STRICT_FP_EXTEND:
     // These pseudo-ops get legalized as if they were their non-strict
     // equivalent.  For instance, if ISD::FSQRT is legal then ISD::STRICT_FSQRT
     // is also legal, but if ISD::FSQRT requires expansion then so does
@@ -1745,12 +1737,6 @@ bool SelectionDAGLegalize::LegalizeSetCCCondCode(EVT VT, SDValue &LHS,
 /// The resultant code need not be legal.
 SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
                                                EVT DestVT, const SDLoc &dl) {
-  return EmitStackConvert(SrcOp, SlotVT, DestVT, dl, DAG.getEntryNode());
-}
-
-SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
-                                               EVT DestVT, const SDLoc &dl,
-                                               SDValue Chain) {
   // Create the stack frame object.
   unsigned SrcAlign = DAG.getDataLayout().getPrefTypeAlignment(
       SrcOp.getValueType().getTypeForEVT(*DAG.getContext()));
@@ -1771,19 +1757,19 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
   // later than DestVT.
   SDValue Store;
 
-  if (SrcSize > SlotSize) 
-    Store = DAG.getTruncStore(Chain, dl, SrcOp, FIPtr, PtrInfo,
+  if (SrcSize > SlotSize)
+    Store = DAG.getTruncStore(DAG.getEntryNode(), dl, SrcOp, FIPtr, PtrInfo,
                               SlotVT, SrcAlign);
   else {
     assert(SrcSize == SlotSize && "Invalid store");
     Store =
-        DAG.getStore(Chain, dl, SrcOp, FIPtr, PtrInfo, SrcAlign);
+        DAG.getStore(DAG.getEntryNode(), dl, SrcOp, FIPtr, PtrInfo, SrcAlign);
   }
 
   // Result is a load from the stack slot.
   if (SlotSize == DestSize)
     return DAG.getLoad(DestVT, dl, Store, FIPtr, PtrInfo, DestAlign);
-    
+
   assert(SlotSize < DestSize && "Unknown extension!");
   return DAG.getExtLoad(ISD::EXTLOAD, dl, DestVT, Store, FIPtr, PtrInfo, SlotVT,
                         DestAlign);
@@ -2787,27 +2773,12 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
     break;
   }
-  case ISD::STRICT_FP_ROUND:
-    Tmp1 = EmitStackConvert(Node->getOperand(1), 
-                            Node->getValueType(0),
-                            Node->getValueType(0), dl, Node->getOperand(0));
-    ReplaceNode(Node, Tmp1.getNode());
-    LLVM_DEBUG(dbgs() << "Successfully expanded STRICT_FP_ROUND node\n");
-    return true;
   case ISD::FP_ROUND:
   case ISD::BITCAST:
-    Tmp1 = EmitStackConvert(Node->getOperand(0), 
-                            Node->getValueType(0),
+    Tmp1 = EmitStackConvert(Node->getOperand(0), Node->getValueType(0),
                             Node->getValueType(0), dl);
     Results.push_back(Tmp1);
     break;
-  case ISD::STRICT_FP_EXTEND:
-    Tmp1 = EmitStackConvert(Node->getOperand(1),
-                            Node->getOperand(1).getValueType(),
-                            Node->getValueType(0), dl, Node->getOperand(0));
-    ReplaceNode(Node, Tmp1.getNode());
-    LLVM_DEBUG(dbgs() << "Successfully expanded STRICT_FP_EXTEND node\n");
-    return true;
   case ISD::FP_EXTEND:
     Tmp1 = EmitStackConvert(Node->getOperand(0),
                             Node->getOperand(0).getValueType(),
@@ -3298,48 +3269,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::UMULFIX:
     Results.push_back(TLI.expandFixedPointMul(Node, DAG));
     break;
-  case ISD::ADDCARRY:
-  case ISD::SUBCARRY: {
-    SDValue LHS = Node->getOperand(0);
-    SDValue RHS = Node->getOperand(1);
-    SDValue Carry = Node->getOperand(2);
-
-    bool IsAdd = Node->getOpcode() == ISD::ADDCARRY;
-
-    // Initial add of the 2 operands.
-    unsigned Op = IsAdd ? ISD::ADD : ISD::SUB;
-    EVT VT = LHS.getValueType();
-    SDValue Sum = DAG.getNode(Op, dl, VT, LHS, RHS);
-
-    // Initial check for overflow.
-    EVT CarryType = Node->getValueType(1);
-    EVT SetCCType = getSetCCResultType(Node->getValueType(0));
-    ISD::CondCode CC = IsAdd ? ISD::SETULT : ISD::SETUGT;
-    SDValue Overflow = DAG.getSetCC(dl, SetCCType, Sum, LHS, CC);
-
-    // Add of the sum and the carry.
-    SDValue CarryExt =
-        DAG.getZeroExtendInReg(DAG.getZExtOrTrunc(Carry, dl, VT), dl, MVT::i1);
-    SDValue Sum2 = DAG.getNode(Op, dl, VT, Sum, CarryExt);
-
-    // Second check for overflow. If we are adding, we can only overflow if the
-    // initial sum is all 1s ang the carry is set, resulting in a new sum of 0.
-    // If we are subtracting, we can only overflow if the initial sum is 0 and
-    // the carry is set, resulting in a new sum of all 1s.
-    SDValue Zero = DAG.getConstant(0, dl, VT);
-    SDValue Overflow2 =
-        IsAdd ? DAG.getSetCC(dl, SetCCType, Sum2, Zero, ISD::SETEQ)
-              : DAG.getSetCC(dl, SetCCType, Sum, Zero, ISD::SETEQ);
-    Overflow2 = DAG.getNode(ISD::AND, dl, SetCCType, Overflow2,
-                            DAG.getZExtOrTrunc(Carry, dl, SetCCType));
-
-    SDValue ResultCarry =
-        DAG.getNode(ISD::OR, dl, SetCCType, Overflow, Overflow2);
-
-    Results.push_back(Sum2);
-    Results.push_back(DAG.getBoolExtOrTrunc(ResultCarry, dl, CarryType, VT));
-    break;
-  }
   case ISD::SADDO:
   case ISD::SSUBO: {
     SDValue LHS = Node->getOperand(0);

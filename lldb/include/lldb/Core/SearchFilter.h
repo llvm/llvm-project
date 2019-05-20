@@ -19,14 +19,32 @@
 
 namespace lldb_private {
 class Address;
+}
+namespace lldb_private {
 class Breakpoint;
+}
+namespace lldb_private {
 class CompileUnit;
+}
+namespace lldb_private {
 class Status;
+}
+namespace lldb_private {
 class Function;
+}
+namespace lldb_private {
 class ModuleList;
+}
+namespace lldb_private {
 class SearchFilter;
+}
+namespace lldb_private {
 class Stream;
+}
+namespace lldb_private {
 class SymbolContext;
+}
+namespace lldb_private {
 class Target;
 }
 
@@ -41,11 +59,11 @@ namespace lldb_private {
 
 class Searcher {
 public:
-  enum CallbackReturn {
+  typedef enum {
     eCallbackReturnStop = 0, // Stop the iteration
     eCallbackReturnContinue, // Continue the iteration
     eCallbackReturnPop       // Pop one level up and continue iterating
-  };
+  } CallbackReturn;
 
   Searcher();
 
@@ -88,9 +106,13 @@ public:
   ///    The Target that provides the module list to search.
   SearchFilter(const lldb::TargetSP &target_sp);
 
+  SearchFilter(const SearchFilter &rhs);
+
   SearchFilter(const lldb::TargetSP &target_sp, unsigned char filterType);
 
   virtual ~SearchFilter();
+
+  SearchFilter &operator=(const SearchFilter &rhs);
 
   /// Call this method with a file spec to see if that spec passes the filter.
   ///
@@ -313,7 +335,11 @@ public:
   ///    The Module that limits the search.
   SearchFilterByModule(const lldb::TargetSP &targetSP, const FileSpec &module);
 
+  SearchFilterByModule(const SearchFilterByModule &rhs);
+
   ~SearchFilterByModule() override;
+
+  SearchFilterByModule &operator=(const SearchFilterByModule &rhs);
 
   bool ModulePasses(const lldb::ModuleSP &module_sp) override;
 

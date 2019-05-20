@@ -110,9 +110,8 @@ ThreadPlanStepOut::ThreadPlanStepOut(
       return_address_decr_pc.CalculateSymbolContext(
           &return_address_sc, lldb::eSymbolContextLineEntry);
       if (return_address_sc.line_entry.IsValid()) {
-        const bool include_inlined_functions = false;
-        range = return_address_sc.line_entry.GetSameLineContiguousAddressRange(
-            include_inlined_functions);
+        range =
+            return_address_sc.line_entry.GetSameLineContiguousAddressRange();
         if (range.GetByteSize() > 0) {
           return_address =
               m_thread.GetProcess()->AdvanceAddressToNextBranchInstruction(

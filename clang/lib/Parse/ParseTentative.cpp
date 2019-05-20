@@ -590,11 +590,9 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
     } else if (Context == TypeIdAsTemplateArgument &&
                (Tok.isOneOf(tok::greater, tok::comma) ||
                 (getLangOpts().CPlusPlus11 &&
-                 (Tok.isOneOf(tok::greatergreater,
-                              tok::greatergreatergreater) ||
+                 (Tok.is(tok::greatergreater) ||
                   (Tok.is(tok::ellipsis) &&
                    NextToken().isOneOf(tok::greater, tok::greatergreater,
-                                       tok::greatergreatergreater,
                                        tok::comma)))))) {
       TPR = TPResult::True;
       isAmbiguous = true;
@@ -1178,17 +1176,12 @@ public:
 /// be either a decl-specifier or a function-style cast, and TPResult::Error
 /// if a parsing error was found and reported.
 ///
-/// If InvalidAsDeclSpec is not null, some cases that would be ill-formed as
-/// declaration specifiers but possibly valid as some other kind of construct
-/// return TPResult::Ambiguous instead of TPResult::False. When this happens,
-/// the intent is to keep trying to disambiguate, on the basis that we might
-/// find a better reason to treat this construct as a declaration later on.
-/// When this happens and the name could possibly be valid in some other
-/// syntactic context, *InvalidAsDeclSpec is set to 'true'. The current cases
-/// that trigger this are:
-///
-///   * When parsing X::Y (with no 'typename') where X is dependent
-///   * When parsing X<Y> where X is undeclared
+/// If HasMissingTypename is provided, a name with a dependent scope specifier
+/// will be treated as ambiguous if the 'typename' keyword is missing. If this
+/// happens, *HasMissingTypename will be set to 'true'. This will also be used
+/// as an indicator that undeclared identifiers (which will trigger a later
+/// parse error) should be treated as types. Returns TPResult::Ambiguous in
+/// such cases.
 ///
 ///         decl-specifier:
 ///           storage-class-specifier
@@ -1286,7 +1279,7 @@ public:
 ///
 Parser::TPResult
 Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
-                                  bool *InvalidAsDeclSpec) {
+                                  bool *HasMissingTypename) {
   switch (Tok.getKind()) {
   case tok::identifier: {
     // Check for need to substitute AltiVec __vector keyword
@@ -1326,7 +1319,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
         // argument is an error, and was probably intended to be a type.
         return GreaterThanIsOperator ? TPResult::True : TPResult::False;
       case ANK_Unresolved:
-        return InvalidAsDeclSpec ? TPResult::Ambiguous : TPResult::False;
+        return HasMissingTypename ? TPResult::Ambiguous : TPResult::False;
       case ANK_Success:
         break;
       }
@@ -1347,7 +1340,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
     }
 
     // We annotated this token as something. Recurse to handle whatever we got.
-    return isCXXDeclarationSpecifier(BracedCastResult, InvalidAsDeclSpec);
+    return isCXXDeclarationSpecifier(BracedCastResult, HasMissingTypename);
   }
 
   case tok::kw_typename:  // typename T::type
@@ -1355,7 +1348,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
     // recurse to handle whatever we get.
     if (TryAnnotateTypeOrScopeToken())
       return TPResult::Error;
-    return isCXXDeclarationSpecifier(BracedCastResult, InvalidAsDeclSpec);
+    return isCXXDeclarationSpecifier(BracedCastResult, HasMissingTypename);
 
   case tok::coloncolon: {    // ::foo::bar
     const Token &Next = NextToken();
@@ -1370,7 +1363,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
     // recurse to handle whatever we get.
     if (TryAnnotateTypeOrScopeToken())
       return TPResult::Error;
-    return isCXXDeclarationSpecifier(BracedCastResult, InvalidAsDeclSpec);
+    return isCXXDeclarationSpecifier(BracedCastResult, HasMissingTypename);
 
     // decl-specifier:
     //   storage-class-specifier
@@ -1476,16 +1469,6 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
 
   case tok::annot_template_id: {
     TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
-    // If lookup for the template-name found nothing, don't assume we have a
-    // definitive disambiguation result yet.
-    if (TemplateId->Kind == TNK_Undeclared_template && InvalidAsDeclSpec) {
-      // 'template-id(' can be a valid expression but not a valid decl spec if
-      // the template-name is not declared, but we don't consider this to be a
-      // definitive disambiguation. In any other context, it's an error either
-      // way.
-      *InvalidAsDeclSpec = NextToken().is(tok::l_paren);
-      return TPResult::Ambiguous;
-    }
     if (TemplateId->Kind != TNK_Type_template)
       return TPResult::False;
     CXXScopeSpec SS;
@@ -1514,19 +1497,19 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
           TPResult TPR = TPResult::False;
           if (!isIdentifier)
             TPR = isCXXDeclarationSpecifier(BracedCastResult,
-                                            InvalidAsDeclSpec);
+                                            HasMissingTypename);
 
           if (isIdentifier ||
               TPR == TPResult::True || TPR == TPResult::Error)
             return TPResult::Error;
 
-          if (InvalidAsDeclSpec) {
+          if (HasMissingTypename) {
             // We can't tell whether this is a missing 'typename' or a valid
             // expression.
-            *InvalidAsDeclSpec = true;
+            *HasMissingTypename = true;
             return TPResult::Ambiguous;
           } else {
-            // In MS mode, if InvalidAsDeclSpec is not provided, and the tokens
+            // In MS mode, if HasMissingTypename is not provided, and the tokens
             // are or the form *) or &) *> or &> &&>, this can't be an expression.
             // The typename must be missing.
             if (getLangOpts().MSVCCompat) {
@@ -1562,7 +1545,8 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
                        ? TPResult::True
                        : TPResult::False;
           case ANK_Unresolved:
-            return InvalidAsDeclSpec ? TPResult::Ambiguous : TPResult::False;
+            return HasMissingTypename ? TPResult::Ambiguous
+                                      : TPResult::False;
           case ANK_Success:
             break;
           }
@@ -1570,7 +1554,8 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
           // Annotated it, check again.
           assert(Tok.isNot(tok::annot_cxxscope) ||
                  NextToken().isNot(tok::identifier));
-          return isCXXDeclarationSpecifier(BracedCastResult, InvalidAsDeclSpec);
+          return isCXXDeclarationSpecifier(BracedCastResult,
+                                           HasMissingTypename);
         }
       }
       return TPResult::False;
@@ -1899,31 +1884,31 @@ Parser::TryParseParameterDeclarationClause(bool *InvalidAsDeclaration,
     // decl-specifier-seq '{' is not a parameter in C++11.
     TPResult TPR = isCXXDeclarationSpecifier(TPResult::False,
                                              InvalidAsDeclaration);
-    // A declaration-specifier (not followed by '(' or '{') means this can't be
-    // an expression, but it could still be a template argument.
-    if (TPR != TPResult::Ambiguous &&
-        !(VersusTemplateArgument && TPR == TPResult::True))
-      return TPR;
 
-    bool SeenType = false;
-    do {
-      SeenType |= isCXXDeclarationSpecifierAType();
+    if (VersusTemplateArgument && TPR == TPResult::True) {
+      // Consume the decl-specifier-seq. We have to look past it, since a
+      // type-id might appear here in a template argument.
+      bool SeenType = false;
+      do {
+        SeenType |= isCXXDeclarationSpecifierAType();
+        if (TryConsumeDeclarationSpecifier() == TPResult::Error)
+          return TPResult::Error;
+
+        // If we see a parameter name, this can't be a template argument.
+        if (SeenType && Tok.is(tok::identifier))
+          return TPResult::True;
+
+        TPR = isCXXDeclarationSpecifier(TPResult::False,
+                                        InvalidAsDeclaration);
+        if (TPR == TPResult::Error)
+          return TPR;
+      } while (TPR != TPResult::False);
+    } else if (TPR == TPResult::Ambiguous) {
+      // Disambiguate what follows the decl-specifier.
       if (TryConsumeDeclarationSpecifier() == TPResult::Error)
         return TPResult::Error;
-
-      // If we see a parameter name, this can't be a template argument.
-      if (SeenType && Tok.is(tok::identifier))
-        return TPResult::True;
-
-      TPR = isCXXDeclarationSpecifier(TPResult::False,
-                                      InvalidAsDeclaration);
-      if (TPR == TPResult::Error)
-        return TPR;
-
-      // Two declaration-specifiers means this can't be an expression.
-      if (TPR == TPResult::True && !VersusTemplateArgument)
-        return TPR;
-    } while (TPR != TPResult::False);
+    } else
+      return TPR;
 
     // declarator
     // abstract-declarator[opt]
@@ -2041,57 +2026,4 @@ Parser::TPResult Parser::TryParseBracketDeclarator() {
     return TPResult::Error;
 
   return TPResult::Ambiguous;
-}
-
-/// Determine whether we might be looking at the '<' template-argument-list '>'
-/// of a template-id or simple-template-id, rather than a less-than comparison.
-/// This will often fail and produce an ambiguity, but should never be wrong
-/// if it returns True or False.
-Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip) {
-  if (!TokensToSkip) {
-    if (Tok.isNot(tok::less))
-      return TPResult::False;
-    if (NextToken().is(tok::greater))
-      return TPResult::True;
-  }
-
-  RevertingTentativeParsingAction PA(*this);
-
-  while (TokensToSkip) {
-    ConsumeAnyToken();
-    --TokensToSkip;
-  }
-
-  if (!TryConsumeToken(tok::less))
-    return TPResult::False;
-
-  bool InvalidAsTemplateArgumentList = false;
-  while (true) {
-    // We can't do much to tell an expression apart from a template-argument,
-    // but one good distinguishing factor is that a "decl-specifier" not
-    // followed by '(' or '{' can't appear in an expression.
-    if (isCXXDeclarationSpecifier(
-            TPResult::False, &InvalidAsTemplateArgumentList) == TPResult::True)
-      return TPResult::True;
-
-    // That didn't help, try the next template-argument.
-    SkipUntil({tok::comma, tok::greater, tok::greatergreater,
-               tok::greatergreatergreater},
-              StopAtSemi | StopBeforeMatch);
-    switch (Tok.getKind()) {
-    case tok::comma:
-      ConsumeToken();
-      break;
-
-    case tok::greater:
-    case tok::greatergreater:
-    case tok::greatergreatergreater:
-      if (InvalidAsTemplateArgumentList)
-        return TPResult::False;
-      return TPResult::Ambiguous;
-
-    default:
-      return TPResult::False;
-    }
-  }
 }

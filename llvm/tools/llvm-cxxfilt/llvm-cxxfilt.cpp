@@ -55,23 +55,22 @@ Decorated(cl::Positional, cl::desc("<mangled>"), cl::ZeroOrMore);
 static std::string demangle(llvm::raw_ostream &OS, const std::string &Mangled) {
   int Status;
 
-  const char *DecoratedStr = Mangled.c_str();
+  const char *Decorated = Mangled.c_str();
   if (StripUnderscore)
-    if (DecoratedStr[0] == '_')
-      ++DecoratedStr;
-  size_t DecoratedLength = strlen(DecoratedStr);
+    if (Decorated[0] == '_')
+      ++Decorated;
+  size_t DecoratedLength = strlen(Decorated);
 
   char *Undecorated = nullptr;
 
-  if (Types ||
-      ((DecoratedLength >= 2 && strncmp(DecoratedStr, "_Z", 2) == 0) ||
-       (DecoratedLength >= 4 && strncmp(DecoratedStr, "___Z", 4) == 0)))
-    Undecorated = itaniumDemangle(DecoratedStr, nullptr, nullptr, &Status);
+  if (Types || ((DecoratedLength >= 2 && strncmp(Decorated, "_Z", 2) == 0) ||
+                (DecoratedLength >= 4 && strncmp(Decorated, "___Z", 4) == 0)))
+    Undecorated = itaniumDemangle(Decorated, nullptr, nullptr, &Status);
 
   if (!Undecorated &&
-      (DecoratedLength > 6 && strncmp(DecoratedStr, "__imp_", 6) == 0)) {
+      (DecoratedLength > 6 && strncmp(Decorated, "__imp_", 6) == 0)) {
     OS << "import thunk for ";
-    Undecorated = itaniumDemangle(DecoratedStr + 6, nullptr, nullptr, &Status);
+    Undecorated = itaniumDemangle(Decorated + 6, nullptr, nullptr, &Status);
   }
 
   std::string Result(Undecorated ? Undecorated : Mangled);

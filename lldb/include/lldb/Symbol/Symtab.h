@@ -23,13 +23,17 @@ public:
   typedef std::vector<uint32_t> IndexCollection;
   typedef UniqueCStringMap<uint32_t> NameToIndexMap;
 
-  enum Debug {
+  typedef enum Debug {
     eDebugNo,  // Not a debug symbol
     eDebugYes, // A debug symbol
     eDebugAny
-  };
+  } Debug;
 
-  enum Visibility { eVisibilityAny, eVisibilityExtern, eVisibilityPrivate };
+  typedef enum Visibility {
+    eVisibilityAny,
+    eVisibilityExtern,
+    eVisibilityPrivate
+  } Visibility;
 
   Symtab(ObjectFile *objfile);
   ~Symtab();

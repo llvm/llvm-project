@@ -113,7 +113,7 @@ and the working directory to point to binaries inside of the ninja tree.
 Building LLDB on macOS
 ----------------------
 
-There are two ways to build LLDB on macOS: Using Xcode and using CMake
+There are two ways to build LLDB on Mac OS X: Using Xcode and using CMake
 
 **Preliminaries**
 
@@ -122,12 +122,13 @@ There are two ways to build LLDB on macOS: Using Xcode and using CMake
 
 **Building LLDB with Xcode**
 
-Building on macOS with Xcode is as easy as downloading the code and building
+Building on Mac OS X with Xcode is as easy as downloading the code and building
 the Xcode project or workspace:
 
 * Download the lldb sources.
 * Follow the code signing instructions in ``lldb/docs/code-signing.txt``.
-* In Xcode, open ``lldb/lldb.xcworkspace``, select the lldb-tool scheme, and build.
+* In Xcode 3.x: ``lldb/lldb.xcodeproj``, select the lldb-tool target, and build.
+* In Xcode 4.x: ``lldb/lldb.xcworkspace``, select the lldb-tool scheme, and build.
 
 **Building LLDB with CMake**
 
@@ -151,12 +152,6 @@ variables to cmake to change build behavior. If LLDB is built as a part of
 LLVM, then you can pass LLVM-specific CMake variables to cmake when building
 LLDB.
 
-If you are building both Clang and LLDB together, be sure to also add libc++,
-which is currently required for testing on macOS:
-
-::
-
-  > cmake -D LLVM_ENABLE_PROJECTS='clang;lldb;libcxx' $PATH_TO_LLVM -G Ninja
 
 Here are some commonly used LLDB-specific CMake variables:
 

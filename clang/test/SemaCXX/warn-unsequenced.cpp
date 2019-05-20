@@ -486,8 +486,8 @@ int Foo<X>::Run() {
   // cxx17-warning@-2 {{unsequenced modification and access to 'num'}}
 
   foo(num++, num++);
-  // cxx11-warning@-1 {{multiple unsequenced modifications to 'num'}}
-  // cxx17-warning@-2 {{multiple unsequenced modifications to 'num'}}
+  // cxx11-warning@-1 2{{multiple unsequenced modifications to 'num'}}
+  // cxx17-warning@-2 2{{multiple unsequenced modifications to 'num'}}
   return 1;
 }
 

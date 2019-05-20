@@ -295,7 +295,6 @@ are no syntax errors may indicate that a function was declared but never called.
         options.SetStopOnError(data->stop_on_error);
         options.SetEchoCommands(false);
         options.SetPrintResults(true);
-        options.SetPrintErrors(true);
         options.SetAddToHistory(false);
 
         debugger.GetCommandInterpreter().HandleCommands(commands, &exe_ctx,

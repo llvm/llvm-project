@@ -1899,10 +1899,6 @@ public:
   /// parameter list associated with it, or else return null.
   TemplateParameterList *getTemplateParameterList() const;
 
-  /// Get the template parameters were explicitly specified (as opposed to being
-  /// invented by use of an auto parameter).
-  ArrayRef<NamedDecl *> getExplicitTemplateParameters() const;
-
   /// Whether this is a generic lambda.
   bool isGenericLambda() const { return getTemplateParameterList(); }
 
@@ -2058,7 +2054,7 @@ private:
   CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
              FunctionDecl *OperatorDelete, bool ShouldPassAlignment,
              bool UsualArrayDeleteWantsSize, ArrayRef<Expr *> PlacementArgs,
-             SourceRange TypeIdParens, Optional<Expr *> ArraySize,
+             SourceRange TypeIdParens, Expr *ArraySize,
              InitializationStyle InitializationStyle, Expr *Initializer,
              QualType Ty, TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
              SourceRange DirectInitRange);
@@ -2073,7 +2069,7 @@ public:
   Create(const ASTContext &Ctx, bool IsGlobalNew, FunctionDecl *OperatorNew,
          FunctionDecl *OperatorDelete, bool ShouldPassAlignment,
          bool UsualArrayDeleteWantsSize, ArrayRef<Expr *> PlacementArgs,
-         SourceRange TypeIdParens, Optional<Expr *> ArraySize,
+         SourceRange TypeIdParens, Expr *ArraySize,
          InitializationStyle InitializationStyle, Expr *Initializer,
          QualType Ty, TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
          SourceRange DirectInitRange);
@@ -2116,15 +2112,15 @@ public:
 
   bool isArray() const { return CXXNewExprBits.IsArray; }
 
-  Optional<Expr *> getArraySize() {
-    if (!isArray())
-      return None;
-    return cast_or_null<Expr>(getTrailingObjects<Stmt *>()[arraySizeOffset()]);
+  Expr *getArraySize() {
+    return isArray()
+               ? cast<Expr>(getTrailingObjects<Stmt *>()[arraySizeOffset()])
+               : nullptr;
   }
-  Optional<const Expr *> getArraySize() const {
-    if (!isArray())
-      return None;
-    return cast_or_null<Expr>(getTrailingObjects<Stmt *>()[arraySizeOffset()]);
+  const Expr *getArraySize() const {
+    return isArray()
+               ? cast<Expr>(getTrailingObjects<Stmt *>()[arraySizeOffset()])
+               : nullptr;
   }
 
   unsigned getNumPlacementArgs() const {
@@ -4436,21 +4432,18 @@ class CXXFoldExpr : public Expr {
   SourceLocation LParenLoc;
   SourceLocation EllipsisLoc;
   SourceLocation RParenLoc;
-  // When 0, the number of expansions is not known. Otherwise, this is one more
-  // than the number of expansions.
-  unsigned NumExpansions;
   Stmt *SubExprs[2];
   BinaryOperatorKind Opcode;
 
 public:
   CXXFoldExpr(QualType T, SourceLocation LParenLoc, Expr *LHS,
               BinaryOperatorKind Opcode, SourceLocation EllipsisLoc, Expr *RHS,
-              SourceLocation RParenLoc, Optional<unsigned> NumExpansions)
+              SourceLocation RParenLoc)
       : Expr(CXXFoldExprClass, T, VK_RValue, OK_Ordinary,
              /*Dependent*/ true, true, true,
              /*ContainsUnexpandedParameterPack*/ false),
         LParenLoc(LParenLoc), EllipsisLoc(EllipsisLoc), RParenLoc(RParenLoc),
-        NumExpansions(NumExpansions ? *NumExpansions + 1 : 0), Opcode(Opcode) {
+        Opcode(Opcode) {
     SubExprs[0] = LHS;
     SubExprs[1] = RHS;
   }
@@ -4476,12 +4469,6 @@ public:
 
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
   BinaryOperatorKind getOperator() const { return Opcode; }
-
-  Optional<unsigned> getNumExpansions() const {
-    if (NumExpansions)
-      return NumExpansions - 1;
-    return None;
-  }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return LParenLoc; }
 

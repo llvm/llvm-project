@@ -7695,7 +7695,7 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				$BUILT_PRODUCTS_DIR/include/Options.inc,
+				$BUILT_PRODUCTS_DIR/Options.inc,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;

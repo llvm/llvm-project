@@ -138,6 +138,15 @@ Type::Type()
   m_flags.is_complete_objc_class = false;
 }
 
+Type::Type(const Type &rhs)
+    : std::enable_shared_from_this<Type>(rhs), UserID(rhs), m_name(rhs.m_name),
+      m_symbol_file(rhs.m_symbol_file), m_context(rhs.m_context),
+      m_encoding_type(rhs.m_encoding_type), m_encoding_uid(rhs.m_encoding_uid),
+      m_encoding_uid_type(rhs.m_encoding_uid_type),
+      m_byte_size(rhs.m_byte_size),
+      m_byte_size_has_value(rhs.m_byte_size_has_value), m_decl(rhs.m_decl),
+      m_compiler_type(rhs.m_compiler_type), m_flags(rhs.m_flags) {}
+
 void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
                           bool show_name) {
   *s << "id = " << (const UserID &)*this;
@@ -751,6 +760,12 @@ bool TypeAndOrName::HasCompilerType() const {
   return m_compiler_type.IsValid();
 }
 
+TypeImpl::TypeImpl() : m_module_wp(), m_static_type(), m_dynamic_type() {}
+
+TypeImpl::TypeImpl(const TypeImpl &rhs)
+    : m_module_wp(rhs.m_module_wp), m_static_type(rhs.m_static_type),
+      m_dynamic_type(rhs.m_dynamic_type) {}
+
 TypeImpl::TypeImpl(const lldb::TypeSP &type_sp)
     : m_module_wp(), m_static_type(), m_dynamic_type() {
   SetType(type_sp);
@@ -798,6 +813,15 @@ void TypeImpl::SetType(const CompilerType &compiler_type,
   m_module_wp = lldb::ModuleWP();
   m_static_type = compiler_type;
   m_dynamic_type = dynamic;
+}
+
+TypeImpl &TypeImpl::operator=(const TypeImpl &rhs) {
+  if (rhs != *this) {
+    m_module_wp = rhs.m_module_wp;
+    m_static_type = rhs.m_static_type;
+    m_dynamic_type = rhs.m_dynamic_type;
+  }
+  return *this;
 }
 
 bool TypeImpl::CheckModule(lldb::ModuleSP &module_sp) const {

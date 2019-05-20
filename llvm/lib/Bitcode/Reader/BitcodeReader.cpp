@@ -893,9 +893,8 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
   // values as live.
   bool Live = (RawFlags & 0x2) || Version < 3;
   bool Local = (RawFlags & 0x4);
-  bool AutoHide = (RawFlags & 0x8);
 
-  return GlobalValueSummary::GVFlags(Linkage, NotEligibleToImport, Live, Local, AutoHide);
+  return GlobalValueSummary::GVFlags(Linkage, NotEligibleToImport, Live, Local);
 }
 
 // Decode the flags for GlobalVariable in the summary
@@ -2794,14 +2793,8 @@ Error BitcodeReader::globalCleanup() {
   }
 
   // Look for global variables which need to be renamed.
-  std::vector<std::pair<GlobalVariable *, GlobalVariable *>> UpgradedVariables;
   for (GlobalVariable &GV : TheModule->globals())
-    if (GlobalVariable *Upgraded = UpgradeGlobalVariable(&GV))
-      UpgradedVariables.emplace_back(&GV, Upgraded);
-  for (auto &Pair : UpgradedVariables) {
-    Pair.first->eraseFromParent();
-    TheModule->getGlobalList().push_back(Pair.second);
-  }
+    UpgradeGlobalVariable(&GV);
 
   // Force deallocation of memory for these vectors to favor the client that
   // want lazy deserialization.

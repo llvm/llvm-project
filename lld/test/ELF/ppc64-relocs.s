@@ -1,14 +1,14 @@
 # REQUIRES: ppc
 
-# RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
-# RUN: ld.lld --no-toc-optimize %t.o -o %t
-# RUN: llvm-readelf -x .rodata -x .eh_frame %t | FileCheck %s --check-prefix=DATALE
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t
+# RUN: ld.lld %t -o %t2
+# RUN: llvm-readelf -x .rodata -x .eh_frame %t2 | FileCheck %s --check-prefix=DATALE
+# RUN: llvm-objdump -d --no-show-raw-insn %t2 | FileCheck %s
 
-# RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
-# RUN: ld.lld --no-toc-optimize %t.o -o %t
-# RUN: llvm-readelf -x .rodata -x .eh_frame %t | FileCheck %s --check-prefix=DATABE
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t
+# RUN: ld.lld %t -o %t2
+# RUN: llvm-readelf -x .rodata -x .eh_frame %t2 | FileCheck %s --check-prefix=DATABE
+# RUN: llvm-objdump -d --no-show-raw-insn %t2 | FileCheck %s
 
 .text
 .global _start
@@ -67,7 +67,7 @@ _start:
 # CHECK: Disassembly of section .R_PPC64_TOC16_HA:
 # CHECK-EMPTY:
 # CHECK: .FR_PPC64_TOC16_HA:
-# CHECK: 10010018:       addis 1, 2, 0
+# CHECK: 10010018:       nop
 
 .section .R_PPC64_REL24,"ax",@progbits
 .globl .FR_PPC64_REL24
@@ -183,8 +183,8 @@ _start:
 # CHECK: Disassembly of section .R_PPC64_REL32:
 # CHECK-EMPTY:
 # CHECK: .FR_PPC64_REL32:
-# CHECK: 10010040:       addis 5, 2, 0
-# CHECK: 10010044:       ld 5, -32736(5)
+# CHECK: 10010040:       nop
+# CHECK: 10010044:       ld 5, -32736(2)
 # CHECK: 10010048:       add 3, 3, 4
 
 .section .R_PPC64_REL64, "ax",@progbits

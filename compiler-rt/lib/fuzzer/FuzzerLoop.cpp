@@ -157,9 +157,8 @@ Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
   AllocateCurrentUnitData();
   CurrentUnitSize = 0;
   memset(BaseSha1, 0, sizeof(BaseSha1));
-  auto FocusFunctionOrAuto = Options.FocusFunction;
-  DFT.Init(Options.DataFlowTrace, &FocusFunctionOrAuto , MD.GetRand());
-  TPC.SetFocusFunction(FocusFunctionOrAuto);
+  TPC.SetFocusFunction(Options.FocusFunction);
+  DFT.Init(Options.DataFlowTrace, Options.FocusFunction);
 }
 
 Fuzzer::~Fuzzer() {}
@@ -542,8 +541,6 @@ void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   memcpy(DataCopy, Data, Size);
   if (EF->__msan_unpoison)
     EF->__msan_unpoison(DataCopy, Size);
-  if (EF->__msan_unpoison_param)
-    EF->__msan_unpoison_param(2);
   if (CurrentUnitData && CurrentUnitData != Data)
     memcpy(CurrentUnitData, Data, Size);
   CurrentUnitSize = Size;
@@ -704,7 +701,7 @@ void Fuzzer::MutateAndTestOne() {
       break;  // We will mutate this input more in the next rounds.
     }
     if (Options.ReduceDepth && !FoundUniqFeatures)
-      break;
+        break;
   }
 }
 
@@ -723,13 +720,28 @@ void Fuzzer::PurgeAllocator() {
   LastAllocatorPurgeAttemptTime = system_clock::now();
 }
 
-void Fuzzer::ReadAndExecuteSeedCorpora(Vector<SizedFile> &CorporaFiles) {
+void Fuzzer::ReadAndExecuteSeedCorpora(
+    const Vector<std::string> &CorpusDirs,
+    const Vector<std::string> &ExtraSeedFiles) {
   const size_t kMaxSaneLen = 1 << 20;
   const size_t kMinDefaultLen = 4096;
+  Vector<SizedFile> SizedFiles;
   size_t MaxSize = 0;
   size_t MinSize = -1;
   size_t TotalSize = 0;
-  for (auto &File : CorporaFiles) {
+  size_t LastNumFiles = 0;
+  for (auto &Dir : CorpusDirs) {
+    GetSizedFilesFromDir(Dir, &SizedFiles);
+    Printf("INFO: % 8zd files found in %s\n", SizedFiles.size() - LastNumFiles,
+           Dir.c_str());
+    LastNumFiles = SizedFiles.size();
+  }
+  // Add files from -seed_inputs.
+  for (auto &File : ExtraSeedFiles)
+    if (auto Size = FileSize(File))
+      SizedFiles.push_back({File, Size});
+
+  for (auto &File : SizedFiles) {
     MaxSize = Max(File.Size, MaxSize);
     MinSize = Min(File.Size, MinSize);
     TotalSize += File.Size;
@@ -746,24 +758,24 @@ void Fuzzer::ReadAndExecuteSeedCorpora(Vector<SizedFile> &CorporaFiles) {
   if (Options.LazyCounters)
     TPC.ProtectLazyCounters();
 
-  if (CorporaFiles.empty()) {
+  if (SizedFiles.empty()) {
     Printf("INFO: A corpus is not provided, starting from an empty corpus\n");
     Unit U({'\n'}); // Valid ASCII input.
     RunOne(U.data(), U.size());
   } else {
     Printf("INFO: seed corpus: files: %zd min: %zdb max: %zdb total: %zdb"
            " rss: %zdMb\n",
-           CorporaFiles.size(), MinSize, MaxSize, TotalSize, GetPeakRSSMb());
+           SizedFiles.size(), MinSize, MaxSize, TotalSize, GetPeakRSSMb());
     if (Options.ShuffleAtStartUp)
-      std::shuffle(CorporaFiles.begin(), CorporaFiles.end(), MD.GetRand());
+      std::shuffle(SizedFiles.begin(), SizedFiles.end(), MD.GetRand());
 
     if (Options.PreferSmall) {
-      std::stable_sort(CorporaFiles.begin(), CorporaFiles.end());
-      assert(CorporaFiles.front().Size <= CorporaFiles.back().Size);
+      std::stable_sort(SizedFiles.begin(), SizedFiles.end());
+      assert(SizedFiles.front().Size <= SizedFiles.back().Size);
     }
 
     // Load and execute inputs one by one.
-    for (auto &SF : CorporaFiles) {
+    for (auto &SF : SizedFiles) {
       auto U = FileToVector(SF.File, MaxInputLen, /*ExitOnError=*/false);
       assert(U.size() <= MaxInputLen);
       RunOne(U.data(), U.size());
@@ -788,8 +800,9 @@ void Fuzzer::ReadAndExecuteSeedCorpora(Vector<SizedFile> &CorporaFiles) {
   }
 }
 
-void Fuzzer::Loop(Vector<SizedFile> &CorporaFiles) {
-  ReadAndExecuteSeedCorpora(CorporaFiles);
+void Fuzzer::Loop(const Vector<std::string> &CorpusDirs,
+                  const Vector<std::string> &ExtraSeedFiles) {
+  ReadAndExecuteSeedCorpora(CorpusDirs, ExtraSeedFiles);
   DFT.Clear();  // No need for DFT any more.
   TPC.SetPrintNewPCs(Options.PrintNewCovPcs);
   TPC.SetPrintNewFuncs(Options.PrintNewCovFuncs);

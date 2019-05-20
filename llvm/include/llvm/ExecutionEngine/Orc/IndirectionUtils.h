@@ -146,13 +146,13 @@ private:
     std::error_code EC;
     auto TrampolineBlock =
         sys::OwningMemoryBlock(sys::Memory::allocateMappedMemory(
-            sys::Process::getPageSizeEstimate(), nullptr,
+            sys::Process::getPageSize(), nullptr,
             sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC));
     if (EC)
       return errorCodeToError(EC);
 
     unsigned NumTrampolines =
-        (sys::Process::getPageSizeEstimate() - ORCABI::PointerSize) /
+        (sys::Process::getPageSize() - ORCABI::PointerSize) /
         ORCABI::TrampolineSize;
 
     uint8_t *TrampolineMem = static_cast<uint8_t *>(TrampolineBlock.base());

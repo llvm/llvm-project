@@ -33,10 +33,6 @@ def err_asm_goto_not_supported_yet : Error<
 
 let CategoryName = "Parse Issue" in {
 
-def warn_cxx2a_compat_explicit_bool : Warning<
-  "this expression will be parsed as explicit(bool) in C++2a">,
-  InGroup<CXX2aCompat>, DefaultIgnore;
-
 def ext_empty_translation_unit : Extension<
   "ISO C requires a translation unit to contain at least one declaration">,
   InGroup<DiagGroup<"empty-translation-unit">>;
@@ -748,8 +744,7 @@ def err_typename_refers_to_non_type_template : Error<
 def err_expected_type_name_after_typename : Error<
   "expected an identifier or template-id after '::'">;
 def err_explicit_spec_non_template : Error<
-  "explicit %select{specialization|instantiation}0 of "
-  "%select{non-|undeclared }3template %1 %2">;
+  "explicit %select{specialization|instantiation}0 of non-template %1 %2">;
 
 def err_default_template_template_parameter_not_template : Error<
   "default template argument for a template template parameter must be a class "
@@ -886,16 +881,6 @@ def warn_cxx14_compat_constexpr_on_lambda : Warning<
   InGroup<CXXPre17Compat>, DefaultIgnore;
 def ext_constexpr_on_lambda_cxx17 : ExtWarn<
   "'constexpr' on lambda expressions is a C++17 extension">, InGroup<CXX17>;
-
- // C++2a template lambdas
- def ext_lambda_template_parameter_list: ExtWarn<
-  "explicit template parameter list for lambdas is a C++2a extension">,
-  InGroup<CXX2a>;
-def warn_cxx17_compat_lambda_template_parameter_list: Warning<
-  "explicit template parameter list for lambdas is incompatible with "
-  "C++ standards before C++2a">, InGroup<CXXPre2aCompat>, DefaultIgnore;
- def err_lambda_template_parameter_list_empty : Error<
-   "lambda template parameter list cannot be empty">;
 
 // Availability attribute
 def err_expected_version : Error<

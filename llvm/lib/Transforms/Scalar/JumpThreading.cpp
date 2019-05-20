@@ -1174,8 +1174,7 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
   }
 
   if (SwitchInst *SI = dyn_cast<SwitchInst>(BB->getTerminator()))
-    if (TryToUnfoldSelect(SI, BB))
-      return true;
+    TryToUnfoldSelect(SI, BB);
 
   // Check for some cases that are worth simplifying.  Right now we want to look
   // for loads that are used by a switch or by the condition for the branch.  If

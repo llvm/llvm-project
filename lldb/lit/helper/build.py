@@ -207,16 +207,16 @@ def find_toolchain(compiler, tools_dir):
     file = os.path.basename(compiler)
     name, ext = os.path.splitext(file)
     if file.lower() == 'cl.exe':
-        return ('msvc', compiler)
+        return 'msvc'
     if name == 'clang-cl':
-        return ('clang-cl', compiler)
+        return 'clang-cl'
     if name.startswith('clang'):
-        return ('clang', compiler)
+        return 'clang'
     if name.startswith('gcc') or name.startswith('g++'):
-        return ('gcc', compiler)
+        return 'gcc'
     if name == 'cc' or name == 'c++':
-        return ('generic', compiler)
-    return ('unknown', compiler)
+        return 'generic'
+    return 'unknown'
 
 class Builder(object):
     def __init__(self, toolchain_type, args, obj_ext):

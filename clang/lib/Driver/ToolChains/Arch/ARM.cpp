@@ -88,7 +88,6 @@ static bool DecodeARMFeatures(const Driver &D, StringRef text,
 
 static void DecodeARMFeaturesFromCPU(const Driver &D, StringRef CPU,
                                      std::vector<StringRef> &Features) {
-  CPU = CPU.split("+").first;
   if (CPU != "generic") {
     llvm::ARM::ArchKind ArchKind = llvm::ARM::parseCPUArch(CPU);
     unsigned Extension = llvm::ARM::getDefaultExtensions(CPU, ArchKind);
@@ -351,9 +350,11 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
       D.Diag(clang::diag::warn_drv_unused_argument)
           << CPUArg->getAsString(Args);
     CPUName = StringRef(WaCPU->getValue()).substr(6);
-    CPUArg = WaCPU;
-  } else if (CPUArg)
+    checkARMCPUName(D, WaCPU, Args, CPUName, ArchName, Features, Triple);
+  } else if (CPUArg) {
     CPUName = CPUArg->getValue();
+    checkARMCPUName(D, CPUArg, Args, CPUName, ArchName, Features, Triple);
+  }
 
   // Add CPU features for generic CPUs
   if (CPUName == "native") {
@@ -366,8 +367,6 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
     DecodeARMFeaturesFromCPU(D, CPUName, Features);
   }
 
-  if (CPUArg)
-    checkARMCPUName(D, CPUArg, Args, CPUName, ArchName, Features, Triple);
   // Honor -mfpu=. ClangAs gives preference to -Wa,-mfpu=.
   const Arg *FPUArg = Args.getLastArg(options::OPT_mfpu_EQ);
   if (WaFPU) {

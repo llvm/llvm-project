@@ -218,6 +218,11 @@ public:
   static bool classof(const DbgEntity *N) {
     return N->getDbgEntityID() == DbgVariableKind;
   }
+
+private:
+  template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {
+    return Ref.resolve();
+  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -247,6 +252,11 @@ public:
 
   static bool classof(const DbgEntity *N) {
     return N->getDbgEntityID() == DbgLabelKind;
+  }
+
+private:
+  template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {
+    return Ref.resolve();
   }
 };
 
@@ -691,6 +701,11 @@ public:
   /// Emit the location for a debug loc entry, including the size header.
   void emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry,
                                  const DwarfCompileUnit *CU);
+
+  /// Find the MDNode for the given reference.
+  template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {
+    return Ref.resolve();
+  }
 
   void addSubprogramNames(const DICompileUnit &CU, const DISubprogram *SP,
                           DIE &Die);

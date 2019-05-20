@@ -1769,6 +1769,7 @@ X86InstrInfo::findThreeSrcCommutedOpIndices(const MachineInstr &MI,
   // regardless of the FMA opcode. The FMA opcode is adjusted later.
   if (SrcOpIdx1 == CommuteAnyOperandIndex ||
       SrcOpIdx2 == CommuteAnyOperandIndex) {
+    unsigned CommutableOpIdx1 = SrcOpIdx1;
     unsigned CommutableOpIdx2 = SrcOpIdx2;
 
     // At least one of operands to be commuted is not specified and
@@ -1784,8 +1785,6 @@ X86InstrInfo::findThreeSrcCommutedOpIndices(const MachineInstr &MI,
     // CommutableOpIdx2 is well defined now. Let's choose another commutable
     // operand and assign its index to CommutableOpIdx1.
     unsigned Op2Reg = MI.getOperand(CommutableOpIdx2).getReg();
-
-    unsigned CommutableOpIdx1;
     for (CommutableOpIdx1 = LastCommutableVecOp;
          CommutableOpIdx1 >= FirstCommutableVecOp; CommutableOpIdx1--) {
       // Just ignore and skip the k-mask operand.
@@ -3342,6 +3341,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
                                         int CmpValue,
                                         const MachineRegisterInfo *MRI) const {
   // Check whether we can replace SUB with CMP.
+  unsigned NewOpcode = 0;
   switch (CmpInstr.getOpcode()) {
   default: break;
   case X86::SUB64ri32:
@@ -3362,7 +3362,6 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
     if (!MRI->use_nodbg_empty(CmpInstr.getOperand(0).getReg()))
       return false;
     // There is no use of the destination register, we can replace SUB with CMP.
-    unsigned NewOpcode = 0;
     switch (CmpInstr.getOpcode()) {
     default: llvm_unreachable("Unreachable!");
     case X86::SUB64rm:   NewOpcode = X86::CMP64rm;   break;
@@ -7464,7 +7463,7 @@ bool X86InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF,
 
   // Does the function use a red zone? If it does, then we can't risk messing
   // with the stack.
-  if (Subtarget.getFrameLowering()->has128ByteRedZone(MF)) {
+  if (!F.hasFnAttribute(Attribute::NoRedZone)) {
     // It could have a red zone. If it does, then we don't want to touch it.
     const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
     if (!X86FI || X86FI->getUsesRedZone())

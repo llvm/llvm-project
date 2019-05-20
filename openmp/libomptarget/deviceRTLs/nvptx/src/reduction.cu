@@ -20,7 +20,8 @@
 EXTERN
 int32_t __gpu_block_reduce() {
   bool isSPMDExecutionMode = isSPMDMode();
-  int nt = GetNumberOfOmpThreads(isSPMDExecutionMode);
+  int tid = GetLogicalThreadIdInBlock(isSPMDExecutionMode);
+  int nt = GetNumberOfOmpThreads(tid, isSPMDExecutionMode);
   if (nt != blockDim.x)
     return 0;
   unsigned tnum = __ACTIVEMASK();
@@ -38,7 +39,7 @@ int32_t __kmpc_reduce_gpu(kmp_Ident *loc, int32_t global_tid, int32_t num_vars,
   omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(threadId);
   int numthread;
   if (currTaskDescr->IsParallelConstruct()) {
-    numthread = GetNumberOfOmpThreads(checkSPMDMode(loc));
+    numthread = GetNumberOfOmpThreads(threadId, checkSPMDMode(loc));
   } else {
     numthread = GetNumberOfOmpTeams();
   }
@@ -146,7 +147,8 @@ static int32_t nvptx_parallel_reduce_nowait(
     kmp_ShuffleReductFctPtr shflFct, kmp_InterWarpCopyFctPtr cpyFct,
     bool isSPMDExecutionMode, bool isRuntimeUninitialized) {
   uint32_t BlockThreadId = GetLogicalThreadIdInBlock(isSPMDExecutionMode);
-  uint32_t NumThreads = GetNumberOfOmpThreads(isSPMDExecutionMode);
+  uint32_t NumThreads =
+      GetNumberOfOmpThreads(BlockThreadId, isSPMDExecutionMode);
   if (NumThreads == 1)
     return 1;
   /*
@@ -277,8 +279,9 @@ static int32_t nvptx_teams_reduce_nowait(int32_t global_tid, int32_t num_vars,
   // In generic mode only the team master participates in the teams
   // reduction because the workers are waiting for parallel work.
   uint32_t NumThreads =
-      isSPMDExecutionMode ? GetNumberOfOmpThreads(/*isSPMDExecutionMode=*/true)
-                          : /*Master thread only*/ 1;
+      isSPMDExecutionMode
+          ? GetNumberOfOmpThreads(ThreadId, /*isSPMDExecutionMode=*/true)
+          : /*Master thread only*/ 1;
   uint32_t TeamId = GetBlockIdInKernel();
   uint32_t NumTeams = GetNumberOfBlocksInKernel();
   __shared__ volatile bool IsLastTeam;
@@ -470,8 +473,9 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   // In generic mode only the team master participates in the teams
   // reduction because the workers are waiting for parallel work.
   uint32_t NumThreads =
-      checkSPMDMode(loc) ? GetNumberOfOmpThreads(/*isSPMDExecutionMode=*/true)
-                         : /*Master thread only*/ 1;
+      checkSPMDMode(loc)
+          ? GetNumberOfOmpThreads(ThreadId, /*isSPMDExecutionMode=*/true)
+          : /*Master thread only*/ 1;
   uint32_t TeamId = GetBlockIdInKernel();
   uint32_t NumTeams = GetNumberOfBlocksInKernel();
   __shared__ unsigned Bound;

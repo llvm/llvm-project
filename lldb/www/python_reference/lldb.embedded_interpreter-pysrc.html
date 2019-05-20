@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>lldb.embedded_interpreter</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a class="navbar" target="_top" href="http://lldb.llvm.org">LLDB python API</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="lldb-module.html">Package&nbsp;lldb</a> ::
+        Module&nbsp;embedded_interpreter
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+        <tr><td align="right"><span class="options"
+            >[<a href="frames.html" target="_top">frames</a
+            >]&nbsp;|&nbsp;<a href="lldb.embedded_interpreter-pysrc.html"
+            target="_top">no&nbsp;frames</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<h1 class="epydoc">Source Code for <a href="lldb.embedded_interpreter-module.html">Module lldb.embedded_interpreter</a></h1>
+<pre class="py-src">
+&#239;&#187;&#191;import sys
+if sys.version_info[0] < 3:
+    import __builtin__ as builtins
+else:
+    import builtins
+import code
+import lldb
+import traceback
+
+try:
+    import readline
+    import rlcompleter
+except ImportError:
+    have_readline = False
+except AttributeError:
+    # This exception gets hit by the rlcompleter when Linux is using
+    # the readline suppression import.
+    have_readline = False
+else:
+    have_readline = True
+    if 'libedit' in readline.__doc__:
+        readline.parse_and_bind('bind ^I rl_complete')
+    else:
+        readline.parse_and_bind('tab: complete')
+
+g_builtin_override_called = False
+
+
+class LLDBQuitter(object):
+
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        self()
+
+    def __call__(self, code=None):
+        global g_builtin_override_called
+        g_builtin_override_called = True
+        raise SystemExit(-1)
+
+
+def setquit():
+    '''Redefine builtin functions 'quit()' and 'exit()' to print a message and raise an EOFError exception.'''
+    # This function will be called prior to each interactive
+    # interpreter loop or each single line, so we set the global
+    # g_builtin_override_called to False so we know if a SystemExit
+    # is thrown, we can catch it and tell the difference between
+    # a call to "quit()" or "exit()" and something like
+    # "sys.exit(123)"
+    global g_builtin_override_called
+    g_builtin_override_called = False
+    builtins.quit = LLDBQuitter('quit')
+    builtins.exit = LLDBQuitter('exit')
+
+# When running one line, we might place the string to run in this string
+# in case it would be hard to correctly escape a string's contents
+
+g_run_one_line_str = None
+
+
+def get_terminal_size(fd):
+    try:
+        import fcntl
+        import termios
+        import struct
+        hw = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
+    except:
+        hw = (0, 0)
+    return hw
+
+
+def readfunc_stdio(prompt):
+    sys.stdout.write(prompt)
+    return sys.stdin.readline().rstrip()
+
+
+def run_python_interpreter(local_dict):
+    # Pass in the dictionary, for continuity from one session to the next.
+    setquit()
+    try:
+        fd = sys.stdin.fileno()
+        interacted = False
+        if get_terminal_size(fd)[1] == 0:
+            try:
+                import termios
+                old = termios.tcgetattr(fd)
+                if old[3] & termios.ECHO:
+                    # Need to turn off echoing and restore
+                    new = termios.tcgetattr(fd)
+                    new[3] = new[3] & ~termios.ECHO
+                    try:
+                        termios.tcsetattr(fd, termios.TCSADRAIN, new)
+                        interacted = True
+                        code.interact(
+                            banner="Python Interactive Interpreter. To exit, type 'quit()', 'exit()'.",
+                            readfunc=readfunc_stdio,
+                            local=local_dict)
+                    finally:
+                        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+            except:
+                pass
+            # Don't need to turn off echoing
+            if not interacted:
+                code.interact(
+                    banner="Python Interactive Interpreter. To exit, type 'quit()', 'exit()' or Ctrl-D.",
+                    readfunc=readfunc_stdio,
+                    local=local_dict)
+        else:
+            # We have a real interactive terminal
+            code.interact(
+                banner="Python Interactive Interpreter. To exit, type 'quit()', 'exit()' or Ctrl-D.",
+                local=local_dict)
+    except SystemExit as e:
+        global g_builtin_override_called
+        if not g_builtin_override_called:
+            print('Script exited with %s' % (e))
+
+
+def run_one_line(local_dict, input_string):
+    global g_run_one_line_str
+    setquit()
+    try:
+        repl = code.InteractiveConsole(local_dict)
+        if input_string:
+            repl.runsource(input_string)
+        elif g_run_one_line_str:
+            repl.runsource(g_run_one_line_str)
+
+    except SystemExit as e:
+        global g_builtin_override_called
+        if not g_builtin_override_called:
+            print('Script exited with %s' % (e))
+<script type="text/javascript">
+<!--
+expandto(location.href);
+// -->
+</script>
+</pre>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a class="navbar" target="_top" href="http://lldb.llvm.org">LLDB python API</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Fri Oct 14 13:55:30 2016
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

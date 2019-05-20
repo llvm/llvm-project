@@ -13,13 +13,11 @@
 #include "lldb/Symbol/CompactUnwindInfo.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Symbol/UnwindTable.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/RegisterNumber.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -44,8 +42,7 @@ FuncUnwinders::FuncUnwinders(UnwindTable &unwind_table, AddressRange range)
       m_tried_unwind_plan_eh_frame_augmented(false),
       m_tried_unwind_plan_debug_frame_augmented(false),
       m_tried_unwind_plan_compact_unwind(false),
-      m_tried_unwind_plan_arm_unwind(false),
-      m_tried_unwind_plan_symbol_file(false), m_tried_unwind_fast(false),
+      m_tried_unwind_plan_arm_unwind(false), m_tried_unwind_fast(false),
       m_tried_unwind_arch_default(false),
       m_tried_unwind_arch_default_at_func_entry(false),
       m_first_non_prologue_insn() {}
@@ -148,38 +145,6 @@ UnwindPlanSP FuncUnwinders::GetArmUnwindUnwindPlan(Target &target) {
     }
   }
   return m_unwind_plan_arm_unwind_sp;
-}
-
-namespace {
-class RegisterContextToInfo: public SymbolFile::RegisterInfoResolver {
-public:
-  RegisterContextToInfo(RegisterContext &ctx) : m_ctx(ctx) {}
-
-  const RegisterInfo *ResolveName(llvm::StringRef name) const {
-    return m_ctx.GetRegisterInfoByName(name);
-  }
-  const RegisterInfo *ResolveNumber(lldb::RegisterKind kind,
-                                    uint32_t number) const {
-    return m_ctx.GetRegisterInfo(kind, number);
-  }
-
-private:
-  RegisterContext &m_ctx;
-};
-} // namespace
-
-UnwindPlanSP FuncUnwinders::GetSymbolFileUnwindPlan(Thread &thread) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  if (m_unwind_plan_symbol_file_sp.get() || m_tried_unwind_plan_symbol_file)
-    return m_unwind_plan_symbol_file_sp;
-
-  m_tried_unwind_plan_symbol_file = true;
-  if (SymbolFile *symfile = m_unwind_table.GetSymbolFile()) {
-    m_unwind_plan_symbol_file_sp = symfile->GetUnwindPlan(
-        m_range.GetBaseAddress(),
-        RegisterContextToInfo(*thread.GetRegisterContext()));
-  }
-  return m_unwind_plan_symbol_file_sp;
 }
 
 UnwindPlanSP FuncUnwinders::GetEHFrameAugmentedUnwindPlan(Target &target,

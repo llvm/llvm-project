@@ -149,9 +149,8 @@ define float @minnum_f32_val_nan(float %x) {
 
 define float @minnum_f32_1_minnum_val_p0(float %x) {
 ; CHECK-LABEL: @minnum_f32_1_minnum_val_p0(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 0.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
-;
+; CHECK-NEXT: [[RES:%.*]] = call float @llvm.minnum.f32(float %x, float 0.000000e+00)
+; CHECK-NEXT: ret float [[RES]]
   %y = call float @llvm.minnum.f32(float %x, float 0.0)
   %z = call float @llvm.minnum.f32(float %y, float 1.0)
   ret float %z
@@ -159,9 +158,8 @@ define float @minnum_f32_1_minnum_val_p0(float %x) {
 
 define float @minnum_f32_1_minnum_p0_val_fast(float %x) {
 ; CHECK-LABEL: @minnum_f32_1_minnum_p0_val_fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.minnum.f32(float [[X:%.*]], float 0.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
-;
+; CHECK-NEXT: [[RES:%.*]] = call fast float @llvm.minnum.f32(float %x, float 0.000000e+00)
+; CHECK-NEXT: ret float [[RES]]
   %y = call float @llvm.minnum.f32(float 0.0, float %x)
   %z = call fast float @llvm.minnum.f32(float %y, float 1.0)
   ret float %z
@@ -169,9 +167,8 @@ define float @minnum_f32_1_minnum_p0_val_fast(float %x) {
 
 define float @minnum_f32_1_minnum_p0_val_nnan_ninf(float %x) {
 ; CHECK-LABEL: @minnum_f32_1_minnum_p0_val_nnan_ninf(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf float @llvm.minnum.f32(float [[X:%.*]], float 0.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
-;
+; CHECK-NEXT: [[RES:%.*]] = call nnan ninf float @llvm.minnum.f32(float %x, float 0.000000e+00)
+; CHECK-NEXT: ret float [[RES]]
   %y = call float @llvm.minnum.f32(float 0.0, float %x)
   %z = call nnan ninf float @llvm.minnum.f32(float %y, float 1.0)
   ret float %z
@@ -179,9 +176,8 @@ define float @minnum_f32_1_minnum_p0_val_nnan_ninf(float %x) {
 
 define float @minnum_f32_p0_minnum_val_n0(float %x) {
 ; CHECK-LABEL: @minnum_f32_p0_minnum_val_n0(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 0.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
-;
+; CHECK-NEXT: [[RES:%.*]] = call float @llvm.minnum.f32(float %x, float 0.000000e+00)
+; CHECK-NEXT: ret float [[RES]]
   %y = call float @llvm.minnum.f32(float %x, float -0.0)
   %z = call float @llvm.minnum.f32(float %y, float 0.0)
   ret float %z
@@ -189,9 +185,8 @@ define float @minnum_f32_p0_minnum_val_n0(float %x) {
 
 define float @minnum_f32_1_minnum_p0_val(float %x) {
 ; CHECK-LABEL: @minnum_f32_1_minnum_p0_val(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 0.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
-;
+; CHECK-NEXT: [[RES:%.*]] = call float @llvm.minnum.f32(float %x, float 0.000000e+00)
+; CHECK-NEXT: ret float [[RES]]
   %y = call float @llvm.minnum.f32(float 0.0, float %x)
   %z = call float @llvm.minnum.f32(float %y, float 1.0)
   ret float %z
@@ -199,9 +194,8 @@ define float @minnum_f32_1_minnum_p0_val(float %x) {
 
 define <2 x float> @minnum_f32_1_minnum_val_p0_val_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @minnum_f32_1_minnum_val_p0_val_v2f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.minnum.v2f32(<2 x float> [[X:%.*]], <2 x float> zeroinitializer)
-; CHECK-NEXT:    ret <2 x float> [[TMP1]]
-;
+; CHECK-NEXT: [[RES:%.*]] = call <2 x float> @llvm.minnum.v2f32(<2 x float> %x, <2 x float> zeroinitializer)
+; CHECK-NEXT: ret <2 x float> [[RES]]
   %y = call <2 x float> @llvm.minnum.v2f32(<2 x float> %x, <2 x float> zeroinitializer)
   %z = call <2 x float> @llvm.minnum.v2f32(<2 x float> %y, <2 x float><float 1.0, float 1.0>)
   ret <2 x float> %z

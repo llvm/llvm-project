@@ -705,11 +705,6 @@ class Sema;
     /// attribute disabled it.
     ovl_fail_enable_if,
 
-    /// This candidate constructor or conversion fonction
-    /// is used implicitly but the explicit(bool) specifier
-    /// was resolved to true
-    ovl_fail_explicit_resolved,
-
     /// This candidate was not viable because its address could not be taken.
     ovl_fail_addr_not_available,
 
@@ -966,23 +961,13 @@ class Sema;
     OverloadingResult BestViableFunction(Sema &S, SourceLocation Loc,
                                          OverloadCandidateSet::iterator& Best);
 
-    SmallVector<OverloadCandidate *, 32> CompleteCandidates(
-        Sema &S, OverloadCandidateDisplayKind OCD, ArrayRef<Expr *> Args,
-        SourceLocation OpLoc = SourceLocation(),
-        llvm::function_ref<bool(OverloadCandidate &)> Filter =
-            [](OverloadCandidate &) { return true; });
-
-    void NoteCandidates(
-        PartialDiagnosticAt PA, Sema &S, OverloadCandidateDisplayKind OCD,
-        ArrayRef<Expr *> Args, StringRef Opc = "",
-        SourceLocation Loc = SourceLocation(),
-        llvm::function_ref<bool(OverloadCandidate &)> Filter =
-            [](OverloadCandidate &) { return true; });
-
-    void NoteCandidates(Sema &S, ArrayRef<Expr *> Args,
-                        ArrayRef<OverloadCandidate *> Cands,
+    void NoteCandidates(Sema &S,
+                        OverloadCandidateDisplayKind OCD,
+                        ArrayRef<Expr *> Args,
                         StringRef Opc = "",
-                        SourceLocation OpLoc = SourceLocation());
+                        SourceLocation Loc = SourceLocation(),
+                        llvm::function_ref<bool(OverloadCandidate&)> Filter =
+                          [](OverloadCandidate&) { return true; });
   };
 
   bool isBetterOverloadCandidate(Sema &S,

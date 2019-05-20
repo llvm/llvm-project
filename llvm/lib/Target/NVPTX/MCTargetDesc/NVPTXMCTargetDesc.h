@@ -18,6 +18,9 @@
 namespace llvm {
 class Target;
 
+Target &getTheNVPTXTarget32();
+Target &getTheNVPTXTarget64();
+
 } // End llvm namespace
 
 // Defines symbolic names for PTX registers.

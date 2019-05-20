@@ -23,13 +23,13 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using ::testing::_;
-using ::testing::AllOf;
-using ::testing::Contains;
-using ::testing::ElementsAre;
-using ::testing::IsEmpty;
-using ::testing::Pair;
-using ::testing::UnorderedElementsAre;
+using testing::_;
+using testing::AllOf;
+using testing::Contains;
+using testing::ElementsAre;
+using testing::IsEmpty;
+using testing::Pair;
+using testing::UnorderedElementsAre;
 
 MATCHER_P(RefRange, Range, "") {
   return std::make_tuple(arg.Location.Start.line(), arg.Location.Start.column(),
@@ -45,14 +45,13 @@ MATCHER_P(DefURI, U, "") {
   return llvm::StringRef(arg.Definition.FileURI) == U;
 }
 MATCHER_P(QName, N, "") { return (arg.Scope + arg.Name).str() == N; }
-MATCHER_P(NumReferences, N, "") { return arg.References == N; }
 
 namespace clang {
 namespace clangd {
 namespace {
-::testing::Matcher<const RefSlab &>
-RefsAre(std::vector<::testing::Matcher<Ref>> Matchers) {
-  return ElementsAre(::testing::Pair(_, UnorderedElementsAreArray(Matchers)));
+testing::Matcher<const RefSlab &>
+RefsAre(std::vector<testing::Matcher<Ref>> Matchers) {
+  return ElementsAre(testing::Pair(_, UnorderedElementsAreArray(Matchers)));
 }
 
 Symbol symbol(llvm::StringRef ID) {
@@ -82,7 +81,7 @@ TEST(FileSymbolsTest, UpdateAndGet) {
   FileSymbols FS;
   EXPECT_THAT(runFuzzyFind(*FS.buildIndex(IndexType::Light), ""), IsEmpty());
 
-  FS.update("f1", numSlab(1, 3), refSlab(SymbolID("1"), "f1.cc"), false);
+  FS.update("f1", numSlab(1, 3), refSlab(SymbolID("1"), "f1.cc"));
   EXPECT_THAT(runFuzzyFind(*FS.buildIndex(IndexType::Light), ""),
               UnorderedElementsAre(QName("1"), QName("2"), QName("3")));
   EXPECT_THAT(getRefs(*FS.buildIndex(IndexType::Light), SymbolID("1")),
@@ -91,8 +90,8 @@ TEST(FileSymbolsTest, UpdateAndGet) {
 
 TEST(FileSymbolsTest, Overlap) {
   FileSymbols FS;
-  FS.update("f1", numSlab(1, 3), nullptr, false);
-  FS.update("f2", numSlab(3, 5), nullptr, false);
+  FS.update("f1", numSlab(1, 3), nullptr);
+  FS.update("f2", numSlab(3, 5), nullptr);
   for (auto Type : {IndexType::Light, IndexType::Heavy})
     EXPECT_THAT(runFuzzyFind(*FS.buildIndex(Type), ""),
                 UnorderedElementsAre(QName("1"), QName("2"), QName("3"),
@@ -111,8 +110,8 @@ TEST(FileSymbolsTest, MergeOverlap) {
   auto X2 = symbol("x");
   X2.Definition.FileURI = "file:///x2";
 
-  FS.update("f1", OneSymboSlab(X1), nullptr, false);
-  FS.update("f2", OneSymboSlab(X2), nullptr, false);
+  FS.update("f1", OneSymboSlab(X1), nullptr);
+  FS.update("f2", OneSymboSlab(X2), nullptr);
   for (auto Type : {IndexType::Light, IndexType::Heavy})
     EXPECT_THAT(
         runFuzzyFind(*FS.buildIndex(Type, DuplicateHandling::Merge), "x"),
@@ -124,14 +123,14 @@ TEST(FileSymbolsTest, SnapshotAliveAfterRemove) {
   FileSymbols FS;
 
   SymbolID ID("1");
-  FS.update("f1", numSlab(1, 3), refSlab(ID, "f1.cc"), false);
+  FS.update("f1", numSlab(1, 3), refSlab(ID, "f1.cc"));
 
   auto Symbols = FS.buildIndex(IndexType::Light);
   EXPECT_THAT(runFuzzyFind(*Symbols, ""),
               UnorderedElementsAre(QName("1"), QName("2"), QName("3")));
   EXPECT_THAT(getRefs(*Symbols, ID), RefsAre({FileURI("f1.cc")}));
 
-  FS.update("f1", nullptr, nullptr, false);
+  FS.update("f1", nullptr, nullptr);
   auto Empty = FS.buildIndex(IndexType::Light);
   EXPECT_THAT(runFuzzyFind(*Empty, ""), IsEmpty());
   EXPECT_THAT(getRefs(*Empty, ID), ElementsAre());
@@ -367,33 +366,6 @@ TEST(FileIndexTest, ReferencesInMainFileWithPreamble) {
               RefsAre({RefRange(Main.range())}));
 }
 
-TEST(FileSymbolsTest, CountReferencesNoRefSlabs) {
-  FileSymbols FS;
-  FS.update("f1", numSlab(1, 3), nullptr, true);
-  FS.update("f2", numSlab(1, 3), nullptr, false);
-  EXPECT_THAT(
-      runFuzzyFind(*FS.buildIndex(IndexType::Light, DuplicateHandling::Merge),
-                   ""),
-      UnorderedElementsAre(AllOf(QName("1"), NumReferences(0u)),
-                           AllOf(QName("2"), NumReferences(0u)),
-                           AllOf(QName("3"), NumReferences(0u))));
-}
-
-TEST(FileSymbolsTest, CountReferencesWithRefSlabs) {
-  FileSymbols FS;
-  FS.update("f1cpp", numSlab(1, 3), refSlab(SymbolID("1"), "f1.cpp"), true);
-  FS.update("f1h", numSlab(1, 3), refSlab(SymbolID("1"), "f1.h"), false);
-  FS.update("f2cpp", numSlab(1, 3), refSlab(SymbolID("2"), "f2.cpp"), true);
-  FS.update("f2h", numSlab(1, 3), refSlab(SymbolID("2"), "f2.h"), false);
-  FS.update("f3cpp", numSlab(1, 3), refSlab(SymbolID("3"), "f3.cpp"), true);
-  FS.update("f3h", numSlab(1, 3), refSlab(SymbolID("3"), "f3.h"), false);
-  EXPECT_THAT(
-      runFuzzyFind(*FS.buildIndex(IndexType::Light, DuplicateHandling::Merge),
-                   ""),
-      UnorderedElementsAre(AllOf(QName("1"), NumReferences(1u)),
-                           AllOf(QName("2"), NumReferences(1u)),
-                           AllOf(QName("3"), NumReferences(1u))));
-}
 } // namespace
 } // namespace clangd
 } // namespace clang

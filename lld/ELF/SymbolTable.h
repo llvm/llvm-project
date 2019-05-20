@@ -34,6 +34,7 @@ class SectionBase;
 // is one add* function per symbol type.
 class SymbolTable {
 public:
+  template <class ELFT> void addFile(InputFile *File);
   template <class ELFT> void addCombinedLTOObject();
   void wrap(Symbol *Sym, Symbol *Real, Symbol *Wrap);
 

@@ -264,3 +264,13 @@ copy("include") {
     "$clang_resource_dir/include/c++/v1/{{source_target_relative}}",
   ]
 }
+
+copy("cxxabi_include") {
+  sources = [
+    "//libcxxabi/include/__cxxabi_config.h",  # ignore for sync script
+    "//libcxxabi/include/cxxabi.h",  # ignore for sync script
+  ]
+  outputs = [
+    "$clang_resource_dir/include/c++/v1/{{source_target_relative}}",
+  ]
+}

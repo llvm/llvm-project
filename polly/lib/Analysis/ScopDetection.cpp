@@ -913,9 +913,7 @@ bool ScopDetection::hasValidArraySizes(DetectionContext &Context,
   Value *BaseValue = BasePointer->getValue();
   Region &CurRegion = Context.CurRegion;
   for (const SCEV *DelinearizedSize : Sizes) {
-    // Don't pass down the scope to isAfffine; array dimensions must be
-    // invariant across the entire scop.
-    if (!isAffine(DelinearizedSize, nullptr, Context)) {
+    if (!isAffine(DelinearizedSize, Scope, Context)) {
       Sizes.clear();
       break;
     }

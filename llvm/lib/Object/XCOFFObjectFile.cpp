@@ -69,6 +69,10 @@ size_t XCOFFObjectFile::getSectionHeaderSize() const {
   return sizeof(XCOFFSectionHeader);
 }
 
+uint16_t XCOFFObjectFile::getNumberOfSections() const {
+  return FileHdrPtr->NumberOfSections;
+}
+
 void XCOFFObjectFile::moveSymbolNext(DataRefImpl &Symb) const {
   llvm_unreachable("Not yet implemented!");
   return;
@@ -137,9 +141,10 @@ uint64_t XCOFFObjectFile::getSectionSize(DataRefImpl Sec) const {
   return toSection(Sec)->SectionSize;
 }
 
-Expected<ArrayRef<uint8_t>>
-XCOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
+std::error_code XCOFFObjectFile::getSectionContents(DataRefImpl Sec,
+                                                    StringRef &Res) const {
   llvm_unreachable("Not yet implemented!");
+  return std::error_code();
 }
 
 uint64_t XCOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {
@@ -242,9 +247,9 @@ section_iterator XCOFFObjectFile::section_end() const {
 }
 
 uint8_t XCOFFObjectFile::getBytesInAddress() const {
-  // Only support 32-bit object files for now ...
-  assert(getFileHeaderSize() ==  XCOFF32FileHeaderSize);
-  return 4;
+  uint8_t Result = 0;
+  llvm_unreachable("Not yet implemented!");
+  return Result;
 }
 
 StringRef XCOFFObjectFile::getFileFormatName() const {
@@ -293,37 +298,6 @@ XCOFFObjectFile::XCOFFObjectFile(MemoryBufferRef Object, std::error_code &EC)
                         getNumberOfSections() * getSectionHeaderSize())))
       return;
   }
-}
-
-uint16_t XCOFFObjectFile::getMagic() const {
-  return FileHdrPtr->Magic;
-}
-
-uint16_t XCOFFObjectFile::getNumberOfSections() const {
-  return FileHdrPtr->NumberOfSections;
-}
-
-int32_t XCOFFObjectFile::getTimeStamp() const {
-  return FileHdrPtr->TimeStamp;
-}
-
-uint32_t XCOFFObjectFile::getSymbolTableOffset() const {
-  return FileHdrPtr->SymbolTableOffset;
-}
-
-int32_t XCOFFObjectFile::getNumberOfSymbolTableEntries() const {
-  // As far as symbol table size is concerned, if this field is negative it is
-  // to be treated as a 0. However since this field is also used for printing we
-  // don't want to truncate any negative values.
-  return FileHdrPtr->NumberOfSymTableEntries;
-}
-
-uint16_t XCOFFObjectFile::getOptionalHeaderSize() const {
-  return FileHdrPtr->AuxHeaderSize;
-}
-
-uint16_t XCOFFObjectFile::getFlags() const {
-  return FileHdrPtr->Flags;
 }
 
 Expected<std::unique_ptr<ObjectFile>>

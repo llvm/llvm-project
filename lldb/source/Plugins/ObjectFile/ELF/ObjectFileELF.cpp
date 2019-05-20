@@ -1865,7 +1865,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     return;
 
   m_sections_up = llvm::make_unique<SectionList>();
-  VMAddressProvider address_provider(GetType());
+  VMAddressProvider address_provider(CalculateType());
 
   size_t LoadID = 0;
   for (const auto &EnumPHdr : llvm::enumerate(ProgramHeaders())) {

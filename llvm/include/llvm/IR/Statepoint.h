@@ -76,11 +76,14 @@ class StatepointBase {
 
 protected:
   explicit StatepointBase(InstructionTy *I) {
-    StatepointCall = isStatepoint(I) ? cast<CallBaseTy>(I) : nullptr;
+    if (isStatepoint(I)) {
+      StatepointCall = cast<CallBaseTy>(I);
+    }
   }
 
   explicit StatepointBase(CallBaseTy *Call) {
-    StatepointCall = isStatepoint(Call) ? Call : nullptr;
+    if (isStatepoint(Call))
+      StatepointCall = Call;
   }
 
 public:

@@ -27,12 +27,12 @@
 #include "SysSignal.h"
 
 // Run loop modes which determine which run loop function will be called
-enum RNBRunLoopMode {
+typedef enum {
   eRNBRunLoopModeInvalid = 0,
   eRNBRunLoopModeGetStartModeFromRemoteProtocol,
   eRNBRunLoopModeInferiorExecuting,
   eRNBRunLoopModeExit
-};
+} RNBRunLoopMode;
 
 // Global Variables
 RNBRemoteSP g_remoteSP;

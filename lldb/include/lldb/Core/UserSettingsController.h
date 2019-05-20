@@ -22,9 +22,17 @@
 
 namespace lldb_private {
 class CommandInterpreter;
+}
+namespace lldb_private {
 class ConstString;
+}
+namespace lldb_private {
 class ExecutionContext;
+}
+namespace lldb_private {
 class Property;
+}
+namespace lldb_private {
 class Stream;
 }
 

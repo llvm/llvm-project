@@ -87,14 +87,14 @@ public:
 /// A node representing an integer literal.
 class IntegerNode : public Node {
 public:
-  IntegerNode(int64_t value) : Node(Integer), m_value(value) {}
+  IntegerNode(uint32_t value) : Node(Integer), m_value(value) {}
 
-  int64_t GetValue() const { return m_value; }
+  uint32_t GetValue() const { return m_value; }
 
   static bool classof(const Node *node) { return node->GetKind() == Integer; }
 
 private:
-  int64_t m_value;
+  uint32_t m_value;
 };
 
 /// A node representing the value of a register with the given register number.

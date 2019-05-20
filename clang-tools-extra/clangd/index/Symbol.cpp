@@ -48,23 +48,27 @@ static void own(Symbol &S, llvm::UniqueStringSaver &Strings) {
 }
 
 void SymbolSlab::Builder::insert(const Symbol &S) {
-  own(Symbols[S.ID] = S, UniqueStrings);
+  auto R = SymbolIndex.try_emplace(S.ID, Symbols.size());
+  if (R.second) {
+    Symbols.push_back(S);
+    own(Symbols.back(), UniqueStrings);
+  } else {
+    auto &Copy = Symbols[R.first->second] = S;
+    own(Copy, UniqueStrings);
+  }
 }
 
 SymbolSlab SymbolSlab::Builder::build() && {
-  // Sort symbols into vector so the slab can binary search over them.
-  std::vector<Symbol> SortedSymbols;
-  SortedSymbols.reserve(Symbols.size());
-  for (auto &Entry : Symbols)
-    SortedSymbols.push_back(std::move(Entry.second));
-  llvm::sort(SortedSymbols,
+  Symbols = {Symbols.begin(), Symbols.end()}; // Force shrink-to-fit.
+  // Sort symbols so the slab can binary search over them.
+  llvm::sort(Symbols,
              [](const Symbol &L, const Symbol &R) { return L.ID < R.ID; });
   // We may have unused strings from overwritten symbols. Build a new arena.
   llvm::BumpPtrAllocator NewArena;
   llvm::UniqueStringSaver Strings(NewArena);
-  for (auto &S : SortedSymbols)
+  for (auto &S : Symbols)
     own(S, Strings);
-  return SymbolSlab(std::move(NewArena), std::move(SortedSymbols));
+  return SymbolSlab(std::move(NewArena), std::move(Symbols));
 }
 
 } // namespace clangd

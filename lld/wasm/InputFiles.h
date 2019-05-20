@@ -44,7 +44,7 @@ public:
   StringRef getName() const { return MB.getBufferIdentifier(); }
 
   // Reads a file (the constructor doesn't do that).
-  virtual void parse(bool IgnoreComdats = false) = 0;
+  virtual void parse() = 0;
 
   Kind kind() const { return FileKind; }
 
@@ -72,7 +72,7 @@ public:
 
   void addMember(const llvm::object::Archive::Symbol *Sym);
 
-  void parse(bool IgnoreComdats) override;
+  void parse() override;
 
 private:
   std::unique_ptr<llvm::object::Archive> File;
@@ -88,7 +88,7 @@ public:
   }
   static bool classof(const InputFile *F) { return F->kind() == ObjectKind; }
 
-  void parse(bool IgnoreComdats) override;
+  void parse() override;
 
   // Returns the underlying wasm file.
   const WasmObjectFile *getWasmObj() const { return WasmObj.get(); }
@@ -111,7 +111,7 @@ public:
   std::vector<bool> TypeIsUsed;
   // Maps function indices to table indices
   std::vector<uint32_t> TableEntries;
-  std::vector<bool> KeptComdats;
+  std::vector<bool> UsedComdats;
   std::vector<InputSegment *> Segments;
   std::vector<InputFunction *> Functions;
   std::vector<InputGlobal *> Globals;
@@ -141,7 +141,7 @@ public:
   explicit SharedFile(MemoryBufferRef M) : InputFile(SharedKind, M) {}
   static bool classof(const InputFile *F) { return F->kind() == SharedKind; }
 
-  void parse(bool IgnoreComdats) override {}
+  void parse() override {}
 };
 
 // .bc file
@@ -153,7 +153,7 @@ public:
   }
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
 
-  void parse(bool IgnoreComdats) override;
+  void parse() override;
   std::unique_ptr<llvm::lto::InputFile> Obj;
 };
 

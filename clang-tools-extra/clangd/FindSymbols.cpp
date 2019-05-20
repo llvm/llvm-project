@@ -100,7 +100,6 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
     SymbolQualitySignals Quality;
     Quality.merge(Sym);
     SymbolRelevanceSignals Relevance;
-    Relevance.Name = Sym.Name;
     Relevance.Query = SymbolRelevanceSignals::Generic;
     if (auto NameMatch = Filter.match(Sym.Name))
       Relevance.NameMatch = *NameMatch;

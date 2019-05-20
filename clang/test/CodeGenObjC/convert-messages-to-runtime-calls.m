@@ -175,14 +175,3 @@ float test_cannot_message_return_float(C *c) {
 
 @end
 
-@class Ety;
-
-// CHECK-LABEL: define {{.*}}void @testException
-void testException(NSObject *a) {
-  // MSGS: {{invoke.*@objc_msgSend}}
-  // CALLS: invoke{{.*}}void @objc_release(i8* %
-  @try {
-    [a release];
-  } @catch (Ety *e) {
-  }
-}

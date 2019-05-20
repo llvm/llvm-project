@@ -23,10 +23,21 @@
 
 namespace lldb_private {
 class DataExtractor;
+}
+namespace lldb_private {
 class Status;
+}
+namespace lldb_private {
 class ExecutionContextScope;
+}
+namespace lldb_private {
 class Scalar;
+}
+namespace lldb_private {
 class Stream;
+}
+
+namespace lldb_private {
 
 // A ValueObject that contains a root variable that may or may not
 // have children.

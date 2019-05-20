@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TargetInfo/MipsTargetInfo.h"
+#include "Mips.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 

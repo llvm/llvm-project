@@ -41,7 +41,7 @@ class StructuredDataPlugin
     : public PluginInterface,
       public std::enable_shared_from_this<StructuredDataPlugin> {
 public:
-  ~StructuredDataPlugin() override;
+  virtual ~StructuredDataPlugin();
 
   lldb::ProcessSP GetProcess() const;
 

@@ -10,8 +10,7 @@
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   const char *S = (const char*)Data;
-  const char *Needle = "Some long string";
-  if (Size >= strlen(Needle) && !memcmp(S, Needle, strlen(Needle))) {
+  if (Size >= 6 && !memcmp(S, "qwerty", 6)) {
     fprintf(stderr, "BINGO\n");
     exit(1);
   }

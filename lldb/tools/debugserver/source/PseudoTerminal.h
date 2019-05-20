@@ -72,8 +72,9 @@ protected:
   int m_slave_fd;
 
 private:
-  PseudoTerminal(const PseudoTerminal &rhs) = delete;
-  PseudoTerminal &operator=(const PseudoTerminal &rhs) = delete;
+  // Outlaw copy and assignment constructors
+  PseudoTerminal(const PseudoTerminal &rhs);
+  PseudoTerminal &operator=(const PseudoTerminal &rhs);
 };
 
 #endif // #ifndef __PseudoTerminal_h__

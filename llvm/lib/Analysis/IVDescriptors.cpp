@@ -1053,13 +1053,6 @@ bool InductionDescriptor::isInductionPHI(
 
   Value *StartValue =
       Phi->getIncomingValueForBlock(AR->getLoop()->getLoopPreheader());
-
-  BasicBlock *Latch = AR->getLoop()->getLoopLatch();
-  if (!Latch)
-    return false;
-  BinaryOperator *BOp =
-      dyn_cast<BinaryOperator>(Phi->getIncomingValueForBlock(Latch));
-
   const SCEV *Step = AR->getStepRecurrence(*SE);
   // Calculate the pointer stride and check if it is consecutive.
   // The stride may be a constant or a loop invariant integer value.
@@ -1068,7 +1061,7 @@ bool InductionDescriptor::isInductionPHI(
     return false;
 
   if (PhiTy->isIntegerTy()) {
-    D = InductionDescriptor(StartValue, IK_IntInduction, Step, BOp,
+    D = InductionDescriptor(StartValue, IK_IntInduction, Step, /*BOp=*/nullptr,
                             CastsToIgnore);
     return true;
   }
@@ -1095,6 +1088,6 @@ bool InductionDescriptor::isInductionPHI(
     return false;
   auto *StepValue =
       SE->getConstant(CV->getType(), CVSize / Size, true /* signed */);
-  D = InductionDescriptor(StartValue, IK_PtrInduction, StepValue, BOp);
+  D = InductionDescriptor(StartValue, IK_PtrInduction, StepValue);
   return true;
 }

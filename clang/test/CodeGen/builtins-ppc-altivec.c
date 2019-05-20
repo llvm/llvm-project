@@ -37,7 +37,6 @@ vector unsigned int res_vui;
 vector float res_vf;
 
 // CHECK-NOALTIVEC: error: unknown type name 'vector'
-// CHECK-NOALTIVEC-NOT: '(error)'
 
 signed char param_sc;
 unsigned char param_uc;
@@ -87,6 +86,8 @@ void test1() {
 // CHECK-LE: and <4 x i32> {{.*}}, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
 // CHECK-LE: bitcast <4 x i32> %{{.*}} to <4 x float>
 // CHECK-LE: store <4 x float> %{{.*}}, <4 x float>* @vf
+// CHECK-NOALTIVEC: error: use of undeclared identifier 'vf'
+// CHECK-NOALTIVEC: vf = vec_abs(vf) 
 
   vsc = vec_nabs(vsc);
 // CHECK: sub <16 x i8> zeroinitializer
@@ -109,14 +110,20 @@ void test1() {
   res_vi = vec_neg(vi);
 // CHECK: sub <4 x i32> zeroinitializer, {{%[0-9]+}}
 // CHECK-LE: sub <4 x i32> zeroinitializer, {{%[0-9]+}}
+// CHECK-NOALTIVEC: error: use of undeclared identifier 'vi'
+// CHECK-NOALTIVEC: vi = vec_neg(vi);
 
   res_vs = vec_neg(vs);
 // CHECK: sub <8 x i16> zeroinitializer, {{%[0-9]+}}
 // CHECK-LE: sub <8 x i16> zeroinitializer, {{%[0-9]+}}
+// CHECK-NOALTIVEC: error: use of undeclared identifier 'vs'
+// CHECK-NOALTIVEC: res_vs = vec_neg(vs);
 
   res_vsc = vec_neg(vsc);
 // CHECK: sub <16 x i8> zeroinitializer, {{%[0-9]+}}
 // CHECK-LE: sub <16 x i8> zeroinitializer, {{%[0-9]+}}
+// CHECK-NOALTIVEC: error: use of undeclared identifier 'vsc'
+// CHECK-NOALTIVEC: res_vsc = vec_neg(vsc);
 
 
   /* vec_abs */

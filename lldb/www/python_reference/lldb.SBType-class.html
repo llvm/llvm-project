@@ -1,0 +1,1862 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>lldb.SBType</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a class="navbar" target="_top" href="http://lldb.llvm.org">LLDB python API</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="lldb-module.html">Package&nbsp;lldb</a> ::
+        Class&nbsp;SBType
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+        <tr><td align="right"><span class="options"
+            >[<a href="frames.html" target="_top">frames</a
+            >]&nbsp;|&nbsp;<a href="lldb.SBType-class.html"
+            target="_top">no&nbsp;frames</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS DESCRIPTION ==================== -->
+<h1 class="epydoc">Class SBType</h1><p class="nomargin-top"><span class="codelink"><a href="lldb-pysrc.html#SBType">source&nbsp;code</a></span></p>
+<center>
+<center>  <map id="uml_class_diagram_for_lldb_sbt_7" name="uml_class_diagram_for_lldb_sbt_7">
+<area shape="rect" id="node1_28" href="lldb.SBType-class.html#__swig_setmethods__" title="lldb.SBType.__swig_setmethods__" alt="" coords="17,31,197,51"/>
+<area shape="rect" id="node1_29" href="lldb.SBType-class.html#__swig_getmethods__" title="lldb.SBType.__swig_getmethods__" alt="" coords="17,51,197,71"/>
+<area shape="rect" id="node1_30" href="lldb.SBType-class.html#bases" title="A read only property that returns a list() of lldb.SBTypeMember objects &#160;that represent all of the direct base classes for this type." alt="" coords="17,71,197,91"/>
+<area shape="rect" id="node1_31" href="lldb.SBType-class.html#enum_members" title="A read only property that returns a list() of all lldb.SBTypeEnumMember &#160;objects that represent the enum members for this type." alt="" coords="17,91,197,111"/>
+<area shape="rect" id="node1_32" href="lldb.SBType-class.html#fields" title="A read only property that returns a list() of lldb.SBTypeMember objects &#160;that represent all of the fields for this type." alt="" coords="17,111,197,131"/>
+<area shape="rect" id="node1_33" href="lldb.SBType-class.html#is_complete" title="A read only property that returns a boolean value that indicates if this &#160;type is a complete type (True) or a forward declaration (False)." alt="" coords="17,131,197,151"/>
+<area shape="rect" id="node1_34" href="lldb.SBType-class.html#is_pointer" title="A read only property that returns a boolean value that indicates if this &#160;type is a pointer type." alt="" coords="17,151,197,171"/>
+<area shape="rect" id="node1_35" href="lldb.SBType-class.html#is_reference" title="A read only property that returns a boolean value that indicates if this &#160;type is a function type." alt="" coords="17,171,197,191"/>
+<area shape="rect" id="node1_36" href="lldb.SBType-class.html#members" title="A read only property that returns a list() of all lldb.SBTypeMember objects that represent all of the base classes, virtual base classes and fields for this type in ascending bit offset order." alt="" coords="17,191,197,211"/>
+<area shape="rect" id="node1_37" href="lldb.SBType-class.html#name" title="A read only property that returns the name for this type as a string." alt="" coords="17,211,197,231"/>
+<area shape="rect" id="node1_38" href="lldb.SBType-class.html#num_bases" title="A read only property that returns number of direct base classes in this &#160;type as an integer." alt="" coords="17,231,197,251"/>
+<area shape="rect" id="node1_39" href="lldb.SBType-class.html#num_fields" title="A read only property that returns number of fields in this type as an &#160;integer." alt="" coords="17,251,197,271"/>
+<area shape="rect" id="node1_40" href="lldb.SBType-class.html#num_template_args" title="A read only property that returns number of template arguments in this type as an integer." alt="" coords="17,271,197,291"/>
+<area shape="rect" id="node1_41" href="lldb.SBType-class.html#vbases" title="A read only property that returns a list() of lldb.SBTypeMember objects &#160;that represent all of the virtual base classes for this type." alt="" coords="17,311,197,331"/>
+<area shape="rect" id="node1_42" href="lldb.SBType-class.html#__setattr__" title="x.__setattr__(&#39;name&#39;, value) &lt;==&gt; x.name = value" alt="" coords="17,333,197,353"/>
+<area shape="rect" id="node1_43" href="lldb.SBType-class.html#__getattr__" title="lldb.SBType.__getattr__" alt="" coords="17,353,197,373"/>
+<area shape="rect" id="node1_44" href="lldb.SBType-class.html#__repr__" title="repr(x)" alt="" coords="17,373,197,393"/>
+<area shape="rect" id="node1_45" href="lldb.SBType-class.html#__iter__" title="lldb.SBType.__iter__" alt="" coords="17,393,197,413"/>
+<area shape="rect" id="node1_46" href="lldb.SBType-class.html#__len__" title="lldb.SBType.__len__" alt="" coords="17,413,197,433"/>
+<area shape="rect" id="node1_47" href="lldb.SBType-class.html#__eq__" title="lldb.SBType.__eq__" alt="" coords="17,433,197,453"/>
+<area shape="rect" id="node1_48" href="lldb.SBType-class.html#__ne__" title="lldb.SBType.__ne__" alt="" coords="17,453,197,473"/>
+<area shape="rect" id="node1_49" href="lldb.SBType-class.html#__init__" title="__init__(lldb::SBType self) &#45;&gt; SBType __init__(lldb::SBType self, SBType &#160;rhs) &#45;&gt; SBType" alt="" coords="17,473,197,493"/>
+<area shape="rect" id="node1_50" href="lldb.SBType-class.html#__swig_destroy__" title="delete_SBType(SBType self)" alt="" coords="17,493,197,513"/>
+<area shape="rect" id="node1_51" href="lldb.SBType-class.html#__del__" title="lldb.SBType.__del__" alt="" coords="17,513,197,533"/>
+<area shape="rect" id="node1_52" href="lldb.SBType-class.html#__nonzero__" title="lldb.SBType.__nonzero__" alt="" coords="17,533,197,553"/>
+<area shape="rect" id="node1_53" href="lldb.SBType-class.html#IsValid" title="IsValid(SBType self) &#45;&gt; bool" alt="" coords="17,553,197,573"/>
+<area shape="rect" id="node1_54" href="lldb.SBType-class.html#GetByteSize" title="GetByteSize(SBType self) &#45;&gt; uint64_t" alt="" coords="17,573,197,593"/>
+<area shape="rect" id="node1_55" href="lldb.SBType-class.html#__str__" title="__str__(SBType self) &#45;&gt; PyObject *" alt="" coords="17,613,197,633"/>
+<area shape="rect" id="node1" href="lldb.SBType-class.html" title="Represents a data type in lldb." alt="" coords="5,5,209,640"/>
+</map>
+  <img src="uml_class_diagram_for_lldb_sbt_7.gif" alt='' usemap="#uml_class_diagram_for_lldb_sbt_7" ismap="ismap" class="graph-without-title" />
+</center>
+</center>
+<hr />
+<pre class="literalblock">
+
+    Represents a data type in lldb.  The FindFirstType() method of SBTarget/SBModule
+    returns a SBType.
+
+    SBType supports the eq/ne operator. For example,
+
+    main.cpp:
+
+    class Task {
+    public:
+        int id;
+        Task *next;
+        Task(int i, Task *n):
+            id(i),
+            next(n)
+        {}
+    };
+
+    int main (int argc, char const *argv[])
+    {
+        Task *task_head = new Task(-1, NULL);
+        Task *task1 = new Task(1, NULL);
+        Task *task2 = new Task(2, NULL);
+        Task *task3 = new Task(3, NULL); // Orphaned.
+        Task *task4 = new Task(4, NULL);
+        Task *task5 = new Task(5, NULL);
+
+        task_head-&gt;next = task1;
+        task1-&gt;next = task2;
+        task2-&gt;next = task4;
+        task4-&gt;next = task5;
+
+        int total = 0;
+        Task *t = task_head;
+        while (t != NULL) {
+            if (t-&gt;id &gt;= 0)
+                ++total;
+            t = t-&gt;next;
+        }
+        printf('We have a total number of %d tasks
+', total);
+
+        // This corresponds to an empty task list.
+        Task *empty_task_head = new Task(-1, NULL);
+
+        return 0; // Break at this line
+    }
+
+    find_type.py:
+
+            # Get the type 'Task'.
+            task_type = target.FindFirstType('Task')
+            self.assertTrue(task_type)
+
+            # Get the variable 'task_head'.
+            frame0.FindVariable('task_head')
+            task_head_type = task_head.GetType()
+            self.assertTrue(task_head_type.IsPointerType())
+
+            # task_head_type is 'Task *'.
+            task_pointer_type = task_type.GetPointerType()
+            self.assertTrue(task_head_type == task_pointer_type)
+
+            # Get the child mmember 'id' from 'task_head'.
+            id = task_head.GetChildMemberWithName('id')
+            id_type = id.GetType()
+
+            # SBType.GetBasicType() takes an enum 'BasicType' (lldb-enumerations.h).
+            int_type = id_type.GetBasicType(lldb.eBasicTypeInt)
+            # id_type and int_type should be the same type!
+            self.assertTrue(id_type == int_type)
+
+    ...
+
+    
+
+</pre>
+
+<!-- ==================== INSTANCE METHODS ==================== -->
+<a name="section-InstanceMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Instance Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-InstanceMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBType-class.html#__setattr__" class="summary-sig-name">__setattr__</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">name</span>,
+        <span class="summary-sig-arg">value</span>)</span><br />
+      x.__setattr__('name', value) &lt;==&gt; x.name = value</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.__setattr__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__getattr__"></a><span class="summary-sig-name">__getattr__</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">name</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.__getattr__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBType-class.html#__repr__" class="summary-sig-name">__repr__</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      repr(x)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#_swig_repr">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__iter__"></a><span class="summary-sig-name">__iter__</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.__iter__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__len__"></a><span class="summary-sig-name">__len__</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.__len__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__eq__"></a><span class="summary-sig-name">__eq__</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">other</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.__eq__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__ne__"></a><span class="summary-sig-name">__ne__</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">other</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.__ne__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBType-class.html#__init__" class="summary-sig-name">__init__</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      __init__(lldb::SBType self) -&gt; SBType __init__(lldb::SBType self, 
+      SBType rhs) -&gt; SBType</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.__init__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__swig_destroy__"></a><span class="summary-sig-name">__swig_destroy__</span>(<span class="summary-sig-arg">...</span>)</span><br />
+      delete_SBType(SBType self)</td>
+          <td align="right" valign="top">
+            
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__del__"></a><span class="summary-sig-name">__del__</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.__del__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__nonzero__"></a><span class="summary-sig-name">__nonzero__</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.__nonzero__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="IsValid"></a><span class="summary-sig-name">IsValid</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      IsValid(SBType self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.IsValid">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetByteSize"></a><span class="summary-sig-name">GetByteSize</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetByteSize(SBType self) -&gt; uint64_t</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetByteSize">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="IsPointerType"></a><span class="summary-sig-name">IsPointerType</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      IsPointerType(SBType self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.IsPointerType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="IsReferenceType"></a><span class="summary-sig-name">IsReferenceType</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      IsReferenceType(SBType self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.IsReferenceType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="IsFunctionType"></a><span class="summary-sig-name">IsFunctionType</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      IsFunctionType(SBType self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.IsFunctionType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="IsPolymorphicClass"></a><span class="summary-sig-name">IsPolymorphicClass</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      IsPolymorphicClass(SBType self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.IsPolymorphicClass">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="IsArrayType"></a><span class="summary-sig-name">IsArrayType</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      IsArrayType(SBType self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.IsArrayType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="IsVectorType"></a><span class="summary-sig-name">IsVectorType</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      IsVectorType(SBType self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.IsVectorType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="IsTypedefType"></a><span class="summary-sig-name">IsTypedefType</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      IsTypedefType(SBType self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.IsTypedefType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="IsAnonymousType"></a><span class="summary-sig-name">IsAnonymousType</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      IsAnonymousType(SBType self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.IsAnonymousType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetPointerType"></a><span class="summary-sig-name">GetPointerType</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetPointerType(SBType self) -&gt; SBType</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetPointerType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetPointeeType"></a><span class="summary-sig-name">GetPointeeType</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetPointeeType(SBType self) -&gt; SBType</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetPointeeType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetReferenceType"></a><span class="summary-sig-name">GetReferenceType</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetReferenceType(SBType self) -&gt; SBType</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetReferenceType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetTypedefedType"></a><span class="summary-sig-name">GetTypedefedType</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetTypedefedType(SBType self) -&gt; SBType</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetTypedefedType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetDereferencedType"></a><span class="summary-sig-name">GetDereferencedType</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetDereferencedType(SBType self) -&gt; SBType</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetDereferencedType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetUnqualifiedType"></a><span class="summary-sig-name">GetUnqualifiedType</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetUnqualifiedType(SBType self) -&gt; SBType</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetUnqualifiedType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetCanonicalType"></a><span class="summary-sig-name">GetCanonicalType</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetCanonicalType(SBType self) -&gt; SBType</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetCanonicalType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetArrayElementType"></a><span class="summary-sig-name">GetArrayElementType</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetArrayElementType(SBType self) -&gt; SBType</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetArrayElementType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetArrayType"></a><span class="summary-sig-name">GetArrayType</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      GetArrayType(SBType self, uint64_t size) -&gt; SBType</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetArrayType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetVectorElementType"></a><span class="summary-sig-name">GetVectorElementType</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetVectorElementType(SBType self) -&gt; SBType</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetVectorElementType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetBasicType"></a><span class="summary-sig-name">GetBasicType</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      GetBasicType(SBType self) -&gt; lldb::BasicType GetBasicType(SBType 
+      self, lldb::BasicType type) -&gt; SBType</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetBasicType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetNumberOfFields"></a><span class="summary-sig-name">GetNumberOfFields</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetNumberOfFields(SBType self) -&gt; uint32_t</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetNumberOfFields">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetNumberOfDirectBaseClasses"></a><span class="summary-sig-name">GetNumberOfDirectBaseClasses</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetNumberOfDirectBaseClasses(SBType self) -&gt; uint32_t</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetNumberOfDirectBaseClasses">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetNumberOfVirtualBaseClasses"></a><span class="summary-sig-name">GetNumberOfVirtualBaseClasses</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetNumberOfVirtualBaseClasses(SBType self) -&gt; uint32_t</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetNumberOfVirtualBaseClasses">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetFieldAtIndex"></a><span class="summary-sig-name">GetFieldAtIndex</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      GetFieldAtIndex(SBType self, uint32_t idx) -&gt; SBTypeMember</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetFieldAtIndex">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetDirectBaseClassAtIndex"></a><span class="summary-sig-name">GetDirectBaseClassAtIndex</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      GetDirectBaseClassAtIndex(SBType self, uint32_t idx) -&gt; 
+      SBTypeMember</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetDirectBaseClassAtIndex">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetVirtualBaseClassAtIndex"></a><span class="summary-sig-name">GetVirtualBaseClassAtIndex</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      GetVirtualBaseClassAtIndex(SBType self, uint32_t idx) -&gt; 
+      SBTypeMember</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetVirtualBaseClassAtIndex">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetEnumMembers"></a><span class="summary-sig-name">GetEnumMembers</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetEnumMembers(SBType self) -&gt; SBTypeEnumMemberList</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetEnumMembers">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetName"></a><span class="summary-sig-name">GetName</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetName(SBType self) -&gt; str const *</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetName">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetDisplayTypeName"></a><span class="summary-sig-name">GetDisplayTypeName</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetDisplayTypeName(SBType self) -&gt; str const *</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetDisplayTypeName">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetTypeClass"></a><span class="summary-sig-name">GetTypeClass</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetTypeClass(SBType self) -&gt; lldb::TypeClass</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetTypeClass">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetNumberOfTemplateArguments"></a><span class="summary-sig-name">GetNumberOfTemplateArguments</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetNumberOfTemplateArguments(SBType self) -&gt; uint32_t</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetNumberOfTemplateArguments">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetTemplateArgumentType"></a><span class="summary-sig-name">GetTemplateArgumentType</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      GetTemplateArgumentType(SBType self, uint32_t idx) -&gt; SBType</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetTemplateArgumentType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetTemplateArgumentKind"></a><span class="summary-sig-name">GetTemplateArgumentKind</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      GetTemplateArgumentKind(SBType self, uint32_t idx) -&gt; 
+      lldb::TemplateArgumentKind</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetTemplateArgumentKind">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetFunctionReturnType"></a><span class="summary-sig-name">GetFunctionReturnType</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetFunctionReturnType(SBType self) -&gt; SBType</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetFunctionReturnType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetFunctionArgumentTypes"></a><span class="summary-sig-name">GetFunctionArgumentTypes</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetFunctionArgumentTypes(SBType self) -&gt; SBTypeList</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetFunctionArgumentTypes">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetNumberOfMemberFunctions"></a><span class="summary-sig-name">GetNumberOfMemberFunctions</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetNumberOfMemberFunctions(SBType self) -&gt; uint32_t</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetNumberOfMemberFunctions">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetMemberFunctionAtIndex"></a><span class="summary-sig-name">GetMemberFunctionAtIndex</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      GetMemberFunctionAtIndex(SBType self, uint32_t idx) -&gt; 
+      SBTypeMemberFunction</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetMemberFunctionAtIndex">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="IsTypeComplete"></a><span class="summary-sig-name">IsTypeComplete</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      IsTypeComplete(SBType self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.IsTypeComplete">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetTypeFlags"></a><span class="summary-sig-name">GetTypeFlags</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetTypeFlags(SBType self) -&gt; uint32_t</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.GetTypeFlags">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="template_arg_array"></a><span class="summary-sig-name">template_arg_array</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.template_arg_array">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="get_bases_array"></a><span class="summary-sig-name">get_bases_array</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      An accessor function that returns a list() that contains all direct 
+      base classes in a lldb.SBType object.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.get_bases_array">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="get_vbases_array"></a><span class="summary-sig-name">get_vbases_array</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      An accessor function that returns a list() that contains all fields 
+      in a lldb.SBType object.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.get_vbases_array">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="get_fields_array"></a><span class="summary-sig-name">get_fields_array</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      An accessor function that returns a list() that contains all fields 
+      in a lldb.SBType object.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.get_fields_array">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="get_members_array"></a><span class="summary-sig-name">get_members_array</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      An accessor function that returns a list() that contains all members 
+      (base classes and fields) in a lldb.SBType object in ascending bit 
+      offset order.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.get_members_array">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="get_enum_members_array"></a><span class="summary-sig-name">get_enum_members_array</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      An accessor function that returns a list() that contains all enum 
+      members in an lldb.SBType object.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.get_enum_members_array">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBType-class.html#__str__" class="summary-sig-name">__str__</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      __str__(SBType self) -&gt; PyObject *</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBType.__str__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>object</code></b>:
+      <code>__delattr__</code>,
+      <code>__format__</code>,
+      <code>__getattribute__</code>,
+      <code>__hash__</code>,
+      <code>__new__</code>,
+      <code>__reduce__</code>,
+      <code>__reduce_ex__</code>,
+      <code>__sizeof__</code>,
+      <code>__subclasshook__</code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS VARIABLES ==================== -->
+<a name="section-ClassVariables"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Class Variables</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-ClassVariables"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="__swig_setmethods__"></a><span class="summary-name">__swig_setmethods__</span> = <code title="{}"><code class="variable-group">{</code><code class="variable-group">}</code></code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="__swig_getmethods__"></a><span class="summary-name">__swig_getmethods__</span> = <code title="{}">{}</code>
+    </td>
+  </tr>
+</table>
+<!-- ==================== PROPERTIES ==================== -->
+<a name="section-Properties"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Properties</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Properties"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBType-class.html#bases" class="summary-name">bases</a><br />
+      A read only property that returns a list() of lldb.SBTypeMember 
+      objects that represent all of the direct base classes for this type.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBType-class.html#enum_members" class="summary-name">enum_members</a><br />
+      A read only property that returns a list() of all 
+      lldb.SBTypeEnumMember objects that represent the enum members for 
+      this type.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBType-class.html#fields" class="summary-name">fields</a><br />
+      A read only property that returns a list() of lldb.SBTypeMember 
+      objects that represent all of the fields for this type.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBType-class.html#is_complete" class="summary-name">is_complete</a><br />
+      A read only property that returns a boolean value that indicates if 
+      this type is a complete type (True) or a forward declaration (False).
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBType-class.html#is_pointer" class="summary-name">is_pointer</a><br />
+      A read only property that returns a boolean value that indicates if 
+      this type is a pointer type.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBType-class.html#is_reference" class="summary-name">is_reference</a><br />
+      A read only property that returns a boolean value that indicates if 
+      this type is a function type.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBType-class.html#members" class="summary-name">members</a><br />
+      A read only property that returns a list() of all lldb.SBTypeMember 
+      objects that represent all of the base classes, virtual base classes 
+      and fields for this type in ascending bit offset order.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBType-class.html#name" class="summary-name">name</a><br />
+      A read only property that returns the name for this type as a string.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBType-class.html#num_bases" class="summary-name">num_bases</a><br />
+      A read only property that returns number of direct base classes in 
+      this type as an integer.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBType-class.html#num_fields" class="summary-name">num_fields</a><br />
+      A read only property that returns number of fields in this type as an
+      integer.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBType-class.html#num_template_args" class="summary-name">num_template_args</a><br />
+      A read only property that returns number of template arguments in 
+      this type as an integer.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBType-class.html#num_vbases" class="summary-name">num_vbases</a><br />
+      A read only property that returns number of virtual base classes in 
+      this type as an integer.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBType-class.html#size" class="summary-name">size</a><br />
+      A read only property that returns size in bytes for this type as an 
+      integer.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBType-class.html#template_args" class="summary-name">template_args</a><br />
+      A read only property that returns a list() of lldb.SBType objects 
+      that represent all template arguments in this type.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBType-class.html#type" class="summary-name">type</a><br />
+      A read only property that returns an lldb enumeration value (see 
+      enumerations that start with &quot;lldb.eTypeClass&quot;) that 
+      represents a classification for this type.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBType-class.html#vbases" class="summary-name">vbases</a><br />
+      A read only property that returns a list() of lldb.SBTypeMember 
+      objects that represent all of the virtual base classes for this type.
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>object</code></b>:
+      <code>__class__</code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== METHOD DETAILS ==================== -->
+<a name="section-MethodDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Method Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-MethodDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="__setattr__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__setattr__</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">name</span>,
+        <span class="sig-arg">value</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBType.__setattr__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>x.__setattr__('name', value) &lt;==&gt; x.name = value</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__setattr__
+        <dd><em class="note">(inherited documentation)</em></dd>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="__repr__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__repr__</span>(<span class="sig-arg">self</span>)</span>
+    <br /><em class="fname">(Representation operator)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#_swig_repr">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>repr(x)</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__repr__
+        <dd><em class="note">(inherited documentation)</em></dd>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="__init__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__init__</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">*args</span>)</span>
+    <br /><em class="fname">(Constructor)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBType.__init__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>__init__(lldb::SBType self) -&gt; SBType __init__(lldb::SBType self, 
+  SBType rhs) -&gt; SBType</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__init__
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="__str__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__str__</span>(<span class="sig-arg">self</span>)</span>
+    <br /><em class="fname">(Informal representation operator)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBType.__str__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>__str__(SBType self) -&gt; PyObject *</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__str__
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== PROPERTY DETAILS ==================== -->
+<a name="section-PropertyDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Property Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-PropertyDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="bases"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">bases</h3>
+  <p>A read only property that returns a list() of lldb.SBTypeMember 
+  objects that represent all of the direct base classes for this type.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBType-class.html#get_bases_array" class="summary-sig-name">get_bases_array</a>(<span class="summary-sig-arg">self</span>)</span>
+        - An accessor function that returns a list() that contains all direct 
+      base classes in a lldb.SBType object.
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="enum_members"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">enum_members</h3>
+  <p>A read only property that returns a list() of all 
+  lldb.SBTypeEnumMember objects that represent the enum members for this 
+  type.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBType-class.html#get_enum_members_array" class="summary-sig-name">get_enum_members_array</a>(<span class="summary-sig-arg">self</span>)</span>
+        - An accessor function that returns a list() that contains all enum 
+      members in an lldb.SBType object.
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="fields"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">fields</h3>
+  <p>A read only property that returns a list() of lldb.SBTypeMember 
+  objects that represent all of the fields for this type.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBType-class.html#get_fields_array" class="summary-sig-name">get_fields_array</a>(<span class="summary-sig-arg">self</span>)</span>
+        - An accessor function that returns a list() that contains all fields 
+      in a lldb.SBType object.
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="is_complete"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">is_complete</h3>
+  <p>A read only property that returns a boolean value that indicates if 
+  this type is a complete type (True) or a forward declaration (False).</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBType-class.html#IsTypeComplete" class="summary-sig-name">IsTypeComplete</a>(<span class="summary-sig-arg">self</span>)</span>
+        - IsTypeComplete(SBType self) -&gt; bool
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="is_pointer"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">is_pointer</h3>
+  <p>A read only property that returns a boolean value that indicates if 
+  this type is a pointer type.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBType-class.html#IsPointerType" class="summary-sig-name">IsPointerType</a>(<span class="summary-sig-arg">self</span>)</span>
+        - IsPointerType(SBType self) -&gt; bool
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="is_reference"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">is_reference</h3>
+  <p>A read only property that returns a boolean value that indicates if 
+  this type is a function type.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBType-class.html#IsReferenceType" class="summary-sig-name">IsReferenceType</a>(<span class="summary-sig-arg">self</span>)</span>
+        - IsReferenceType(SBType self) -&gt; bool
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="members"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">members</h3>
+  <p>A read only property that returns a list() of all lldb.SBTypeMember 
+  objects that represent all of the base classes, virtual base classes and 
+  fields for this type in ascending bit offset order.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBType-class.html#get_members_array" class="summary-sig-name">get_members_array</a>(<span class="summary-sig-arg">self</span>)</span>
+        - An accessor function that returns a list() that contains all members 
+      (base classes and fields) in a lldb.SBType object in ascending bit 
+      offset order.
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="name"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">name</h3>
+  <p>A read only property that returns the name for this type as a 
+  string.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBType-class.html#GetName" class="summary-sig-name">GetName</a>(<span class="summary-sig-arg">self</span>)</span>
+        - GetName(SBType self) -&gt; str const *
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="num_bases"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">num_bases</h3>
+  <p>A read only property that returns number of direct base classes in 
+  this type as an integer.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBType-class.html#GetNumberOfDirectBaseClasses" class="summary-sig-name">GetNumberOfDirectBaseClasses</a>(<span class="summary-sig-arg">self</span>)</span>
+        - GetNumberOfDirectBaseClasses(SBType self) -&gt; uint32_t
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="num_fields"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">num_fields</h3>
+  <p>A read only property that returns number of fields in this type as an 
+  integer.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBType-class.html#GetNumberOfFields" class="summary-sig-name">GetNumberOfFields</a>(<span class="summary-sig-arg">self</span>)</span>
+        - GetNumberOfFields(SBType self) -&gt; uint32_t
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="num_template_args"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">num_template_args</h3>
+  <p>A read only property that returns number of template arguments in this
+  type as an integer.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBType-class.html#GetNumberOfTemplateArguments" class="summary-sig-name">GetNumberOfTemplateArguments</a>(<span class="summary-sig-arg">self</span>)</span>
+        - GetNumberOfTemplateArguments(SBType self) -&gt; uint32_t
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="num_vbases"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">num_vbases</h3>
+  <p>A read only property that returns number of virtual base classes in 
+  this type as an integer.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBType-class.html#GetNumberOfVirtualBaseClasses" class="summary-sig-name">GetNumberOfVirtualBaseClasses</a>(<span class="summary-sig-arg">self</span>)</span>
+        - GetNumberOfVirtualBaseClasses(SBType self) -&gt; uint32_t
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="size"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">size</h3>
+  <p>A read only property that returns size in bytes for this type as an 
+  integer.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBType-class.html#GetByteSize" class="summary-sig-name">GetByteSize</a>(<span class="summary-sig-arg">self</span>)</span>
+        - GetByteSize(SBType self) -&gt; uint64_t
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="template_args"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">template_args</h3>
+  <p>A read only property that returns a list() of lldb.SBType objects that
+  represent all template arguments in this type.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBType-class.html#template_arg_array" class="summary-sig-name">template_arg_array</a>(<span class="summary-sig-arg">self</span>)</span>
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="type"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">type</h3>
+  <p>A read only property that returns an lldb enumeration value (see 
+  enumerations that start with &quot;lldb.eTypeClass&quot;) that represents
+  a classification for this type.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBType-class.html#GetTypeClass" class="summary-sig-name">GetTypeClass</a>(<span class="summary-sig-arg">self</span>)</span>
+        - GetTypeClass(SBType self) -&gt; lldb::TypeClass
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="vbases"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">vbases</h3>
+  <p>A read only property that returns a list() of lldb.SBTypeMember 
+  objects that represent all of the virtual base classes for this type.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBType-class.html#get_vbases_array" class="summary-sig-name">get_vbases_array</a>(<span class="summary-sig-arg">self</span>)</span>
+        - An accessor function that returns a list() that contains all fields 
+      in a lldb.SBType object.
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a class="navbar" target="_top" href="http://lldb.llvm.org">LLDB python API</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Fri Oct 14 13:55:28 2016
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

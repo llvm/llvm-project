@@ -1430,10 +1430,6 @@ bool CursorVisitor::VisitTemplateName(TemplateName Name, SourceLocation Loc) {
 
     return false;
 
-  case TemplateName::AssumedTemplate:
-    // FIXME: Visit DeclarationName?
-    return false;
-
   case TemplateName::DependentTemplate:
     // FIXME: Visit nested-name-specifier.
     return false;
@@ -2487,7 +2483,7 @@ void EnqueueVisitor::VisitCXXNewExpr(const CXXNewExpr *E) {
   // Enqueue the initializer , if any.
   AddStmt(E->getInitializer());
   // Enqueue the array size, if any.
-  AddStmt(E->getArraySize().getValueOr(nullptr));
+  AddStmt(E->getArraySize());
   // Enqueue the allocated type.
   AddTypeLoc(E->getAllocatedTypeSourceInfo());
   // Enqueue the placement arguments.
@@ -7253,14 +7249,15 @@ void AnnotateTokensWorker::HandlePostPonedChildCursors(
 
 void AnnotateTokensWorker::HandlePostPonedChildCursor(
     CXCursor Cursor, unsigned StartTokenIndex) {
+  const auto flags = CXNameRange_WantQualifier | CXNameRange_WantQualifier;
   unsigned I = StartTokenIndex;
 
   // The bracket tokens of a Call or Subscript operator are mapped to
   // CallExpr/CXXOperatorCallExpr because we skipped visiting the corresponding
   // DeclRefExpr. Remap these tokens to the DeclRefExpr cursors.
   for (unsigned RefNameRangeNr = 0; I < NumTokens; RefNameRangeNr++) {
-    const CXSourceRange CXRefNameRange = clang_getCursorReferenceNameRange(
-        Cursor, CXNameRange_WantQualifier, RefNameRangeNr);
+    const CXSourceRange CXRefNameRange =
+        clang_getCursorReferenceNameRange(Cursor, flags, RefNameRangeNr);
     if (clang_Range_isNull(CXRefNameRange))
       break; // All ranges handled.
 

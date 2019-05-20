@@ -631,7 +631,6 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_GOTPLTONLY_PC:
     return In.GotPlt->getVA() + A - P;
   case R_GOTREL:
-  case R_PPC64_RELAX_TOC:
     return Sym.getVA(A) - In.Got->getVA();
   case R_GOTPLTREL:
     return Sym.getVA(A) - In.GotPlt->getVA();
@@ -895,11 +894,7 @@ void InputSectionBase::relocateAlloc(uint8_t *Buf, uint8_t *BufEnd) {
     switch (Expr) {
     case R_RELAX_GOT_PC:
     case R_RELAX_GOT_PC_NOPIC:
-      Target->relaxGot(BufLoc, Type, TargetVA);
-      break;
-    case R_PPC64_RELAX_TOC:
-      if (!tryRelaxPPC64TocIndirection(Type, Rel, BufLoc))
-        Target->relocateOne(BufLoc, Type, TargetVA);
+      Target->relaxGot(BufLoc, TargetVA);
       break;
     case R_RELAX_TLS_IE_TO_LE:
       Target->relaxTlsIeToLe(BufLoc, Type, TargetVA);

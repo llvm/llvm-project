@@ -545,8 +545,7 @@ class VarDecl;
     Decl *VisitVarTemplateSpecializationDecl(
         VarTemplateDecl *VarTemplate, VarDecl *FromVar, void *InsertPos,
         const TemplateArgumentListInfo &TemplateArgsInfo,
-        ArrayRef<TemplateArgument> Converted,
-        VarTemplateSpecializationDecl *PrevDecl = nullptr);
+        ArrayRef<TemplateArgument> Converted);
 
     Decl *InstantiateTypedefNameDecl(TypedefNameDecl *D, bool IsTypeAlias);
     ClassTemplatePartialSpecializationDecl *

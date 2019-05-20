@@ -54,13 +54,13 @@ public:
 
   UUID GetModuleUUID(const minidump::Module *module);
 
-  llvm::ArrayRef<minidump::Thread> GetThreads();
+  llvm::ArrayRef<MinidumpThread> GetThreads();
 
   llvm::ArrayRef<uint8_t> GetThreadContext(const LocationDescriptor &location);
 
-  llvm::ArrayRef<uint8_t> GetThreadContext(const minidump::Thread &td);
+  llvm::ArrayRef<uint8_t> GetThreadContext(const MinidumpThread &td);
 
-  llvm::ArrayRef<uint8_t> GetThreadContextWow64(const minidump::Thread &td);
+  llvm::ArrayRef<uint8_t> GetThreadContextWow64(const MinidumpThread &td);
 
   ArchSpec GetArchitecture();
 

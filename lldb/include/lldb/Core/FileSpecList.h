@@ -18,6 +18,9 @@
 
 namespace lldb_private {
 class Stream;
+}
+
+namespace lldb_private {
 
 /// \class FileSpecList FileSpecList.h "lldb/Core/FileSpecList.h"
 /// A file collection class.

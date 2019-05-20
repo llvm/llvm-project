@@ -15,7 +15,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = AsmParser Disassembler MCTargetDesc TargetInfo
+subdirectories = AsmParser Disassembler InstPrinter MCTargetDesc TargetInfo
 
 [component_0]
 type = TargetGroup
@@ -35,6 +35,7 @@ required_libraries =
  LanaiAsmParser
  LanaiDesc
  LanaiInfo
+ LanaiAsmPrinter
  MC
  SelectionDAG
  Support

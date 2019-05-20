@@ -738,9 +738,8 @@ static void appendUserToPath(SmallVectorImpl<char> &Result) {
   Result.append(UID.begin(), UID.end());
 }
 
-static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
-                                   const Driver &D, const InputInfo &Output,
-                                   const ArgList &Args,
+static void addPGOAndCoverageFlags(Compilation &C, const Driver &D,
+                                   const InputInfo &Output, const ArgList &Args,
                                    ArgStringList &CmdArgs) {
 
   auto *PGOGenerateArg = Args.getLastArg(options::OPT_fprofile_generate,
@@ -791,11 +790,6 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
                                            ProfileGenerateArg->getValue()));
     // The default is to use Clang Instrumentation.
     CmdArgs.push_back("-fprofile-instrument=clang");
-    if (TC.getTriple().isWindowsMSVCEnvironment()) {
-      // Add dependent lib for clang_rt.profile
-      CmdArgs.push_back(Args.MakeArgString("--dependent-lib=" +
-                                           TC.getCompilerRT(Args, "profile")));
-    }
   }
 
   Arg *PGOGenArg = nullptr;
@@ -1020,7 +1014,7 @@ static void RenderDebugInfoCompressionArgs(const ArgList &Args,
   if (checkDebugInfoOption(A, Args, D, TC)) {
     if (A->getOption().getID() == options::OPT_gz) {
       if (llvm::zlib::isAvailable())
-        CmdArgs.push_back("--compress-debug-sections");
+        CmdArgs.push_back("-compress-debug-sections");
       else
         D.Diag(diag::warn_debug_compression_unavailable);
       return;
@@ -1028,11 +1022,11 @@ static void RenderDebugInfoCompressionArgs(const ArgList &Args,
 
     StringRef Value = A->getValue();
     if (Value == "none") {
-      CmdArgs.push_back("--compress-debug-sections=none");
+      CmdArgs.push_back("-compress-debug-sections=none");
     } else if (Value == "zlib" || Value == "zlib-gnu") {
       if (llvm::zlib::isAvailable()) {
         CmdArgs.push_back(
-            Args.MakeArgString("--compress-debug-sections=" + Twine(Value)));
+            Args.MakeArgString("-compress-debug-sections=" + Twine(Value)));
       } else {
         D.Diag(diag::warn_debug_compression_unavailable);
       }
@@ -4210,7 +4204,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // sampling, overhead of call arc collection is way too high and there's no
   // way to collect the output.
   if (!Triple.isNVPTX())
-    addPGOAndCoverageFlags(TC, C, D, Output, Args, CmdArgs);
+    addPGOAndCoverageFlags(C, D, Output, Args, CmdArgs);
 
   if (auto *ABICompatArg = Args.getLastArg(options::OPT_fclang_abi_compat_EQ))
     ABICompatArg->render(Args, CmdArgs);

@@ -28,6 +28,8 @@
 
 namespace lldb_private {
 class Status;
+}
+namespace lldb_private {
 class Stream;
 }
 

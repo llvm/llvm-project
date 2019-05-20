@@ -51,7 +51,7 @@ struct CheckExcSpec {
   int n = 0;
 };
 struct CheckExcSpecFail {
-  CheckExcSpecFail() noexcept(true) = default; // ok, but calls terminate() on exception
+  CheckExcSpecFail() noexcept(true) = default; // expected-error {{exception specification of explicitly defaulted default constructor does not match the calculated one}}
   ThrowCtor tc = 123;
 };
 

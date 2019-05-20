@@ -75,7 +75,6 @@
 
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
-#include "TargetInfo/X86TargetInfo.h"
 #include "X86DisassemblerDecoder.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"

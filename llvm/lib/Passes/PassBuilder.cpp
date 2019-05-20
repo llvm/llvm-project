@@ -94,7 +94,6 @@
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
-#include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/InstrOrderFile.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
@@ -215,7 +214,6 @@ static cl::opt<bool>
 PipelineTuningOptions::PipelineTuningOptions() {
   LoopInterleaving = EnableLoopInterleaving;
   LoopVectorization = EnableLoopVectorization;
-  SLPVectorization = RunSLPVectorization;
   LicmMssaOptCap = SetLicmMssaOptCap;
   LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
 }
@@ -890,8 +888,7 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
                                      sinkCommonInsts(true)));
 
   // Optimize parallel scalar instruction chains into SIMD instructions.
-  if (PTO.SLPVectorization)
-    OptimizePM.addPass(SLPVectorizerPass());
+  OptimizePM.addPass(SLPVectorizerPass());
 
   OptimizePM.addPass(InstCombinePass());
 
@@ -1238,6 +1235,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
 
   // FIXME: once we fix LoopPass Manager, add LICM here.
   // FIXME: once we provide support for enabling MLSM, add it here.
+  // FIXME: once we provide support for enabling NewGVN, add it here.
   if (RunNewGVN)
     MainFPM.addPass(NewGVNPass());
   else
@@ -1250,7 +1248,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
   MainFPM.addPass(DSEPass());
 
   // FIXME: at this point, we run a bunch of loop passes:
-  // indVarSimplify, loopDeletion, loopInterchange, loopUnroll,
+  // indVarSimplify, loopDeletion, loopInterchange, loopUnrool,
   // loopVectorize. Enable them once the remaining issue with LPM
   // are sorted out.
 
@@ -1300,7 +1298,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
   // Now that we have optimized the program, discard unreachable functions.
   MPM.addPass(GlobalDCEPass());
 
-  // FIXME: Maybe enable MergeFuncs conditionally after it's ported.
+  // FIXME: Enable MergeFuncs, conditionally, after ported, maybe.
   return MPM;
 }
 

@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TargetInfo/MSP430TargetInfo.h"
+#include "MSP430.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 

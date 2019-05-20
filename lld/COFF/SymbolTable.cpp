@@ -89,7 +89,7 @@ std::string getSymbolLocations(ObjFile *File, uint32_t SymIndex) {
     auto *SC = dyn_cast<SectionChunk>(C);
     if (!SC)
       continue;
-    for (const coff_relocation &R : SC->getRelocs()) {
+    for (const coff_relocation &R : SC->Relocs) {
       if (R.SymbolTableIndex != SymIndex)
         continue;
       std::pair<StringRef, uint32_t> FileLine =
@@ -183,7 +183,7 @@ bool SymbolTable::handleMinGWAutomaticImport(Symbol *Sym, StringRef Name) {
       dyn_cast_or_null<DefinedRegular>(find((".refptr." + Name).str()));
   if (Refptr && Refptr->getChunk()->getSize() == Config->Wordsize) {
     SectionChunk *SC = dyn_cast_or_null<SectionChunk>(Refptr->getChunk());
-    if (SC && SC->getRelocs().size() == 1 && *SC->symbols().begin() == Sym) {
+    if (SC && SC->Relocs.size() == 1 && *SC->symbols().begin() == Sym) {
       log("Replacing .refptr." + Name + " with " + Imp->getName());
       Refptr->getChunk()->Live = false;
       Refptr->replaceKeepingName(Imp, ImpSize);

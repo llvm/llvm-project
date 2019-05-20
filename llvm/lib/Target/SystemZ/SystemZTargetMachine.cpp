@@ -11,7 +11,6 @@
 #include "SystemZ.h"
 #include "SystemZMachineScheduler.h"
 #include "SystemZTargetTransformInfo.h"
-#include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"

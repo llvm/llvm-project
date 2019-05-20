@@ -11,7 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "TargetInfo/WebAssemblyTargetInfo.h"
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 

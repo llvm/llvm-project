@@ -25,7 +25,7 @@ namespace lldb_private {
 class FileSystem;
 class DataBufferLLVM : public DataBuffer {
 public:
-  ~DataBufferLLVM() override;
+  ~DataBufferLLVM();
 
   uint8_t *GetBytes() override;
   const uint8_t *GetBytes() const override;

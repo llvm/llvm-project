@@ -33,7 +33,7 @@ public:
 
   PlatformRemoteGDBServer();
 
-  ~PlatformRemoteGDBServer() override;
+  virtual ~PlatformRemoteGDBServer();
 
   // lldb_private::PluginInterface functions
   ConstString GetPluginName() override { return GetPluginNameStatic(); }

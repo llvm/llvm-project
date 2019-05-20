@@ -31,7 +31,6 @@
 #include "lldb/Symbol/Declaration.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Type.h"
-#include "lldb/Symbol/Variable.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
@@ -1705,9 +1704,6 @@ bool ValueObject::IsRuntimeSupportValue() {
       runtime = process->GetObjCLanguageRuntime();
     if (runtime)
       return runtime->IsRuntimeSupportValue(*this);
-    // If there is no language runtime, trust the compiler to mark all
-    // runtime support variables as artificial.
-    return GetVariable() && GetVariable()->IsArtificial();
   }
   return false;
 }

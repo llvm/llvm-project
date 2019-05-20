@@ -23,7 +23,11 @@ public:
   StringExtractor();
   StringExtractor(llvm::StringRef packet_str);
   StringExtractor(const char *packet_cstr);
+  StringExtractor(const StringExtractor &rhs);
   virtual ~StringExtractor();
+
+  // Operators
+  const StringExtractor &operator=(const StringExtractor &rhs);
 
   void Reset(llvm::StringRef str) {
     m_packet = str;

@@ -28,11 +28,17 @@ _start:
   bl foo
   nop
   bl bar_local
-// CHECK-LABEL: _start:
-// CHECK-NEXT:  10010008:       bl .+64
-// CHECK-NEXT:  1001000c:       ld 2, 24(1)
-// CHECK-NEXT:  10010010:       bl .-16
+
+
+// CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
+// CHECK: _start:
+// CHECK:     1001001c:       bl .-28
+// CHECK-NOT: 10010020:       nop
+// CHECK:     10010020:       ld 2, 24(1)
+// CHECK:     10010024:       bl .-16
+// CHECK-NOT: 10010028:       nop
+// CHECK-NOT: 10010028:       ld 2, 24(1)
 
 # Calling a function in another object file which will have same
 # TOC base does not need a nop. If nop present, do not rewrite to
@@ -42,24 +48,26 @@ _diff_object:
   bl foo_not_shared
   bl foo_not_shared
   nop
-// CHECK-LABEL: _diff_object:
-// CHECK-NEXT:  10010014:       bl .+28
-// CHECK-NEXT:  10010018:       bl .+24
-// CHECK-NEXT:  1001001c:       nop
+
+// CHECK: _diff_object:
+// CHECK-NEXT: 10010028:       bl .+24
+// CHECK-NEXT: 1001002c:       bl .+20
+// CHECK-NEXT: 10010030:       nop
 
 # Branching to a local function does not need a nop
 .global noretbranch
 noretbranch:
   b bar_local
-// CHECK-LABEL: noretbranch:
-// CHECK:       10010020:        b .+67108832
-// CHECK-EMPTY:
+// CHECK: noretbranch:
+// CHECK:     10010034:        b .+67108832
+// CHECK-NOT: 10010038:        nop
+// CHECK-NOT: 1001003c:        ld 2, 24(1)
 
 // This should come last to check the end-of-buffer condition.
 .global last
 last:
   bl foo
   nop
-// CHECK-LABEL: last:
-// CHECK-NEXT:  10010024:       bl .+36
-// CHECK-NEXT:  10010028:       ld 2, 24(1)
+// CHECK: last:
+// CHECK:      10010038:       bl .-56
+// CHECK-NEXT: 1001003c:       ld 2, 24(1)

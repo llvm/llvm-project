@@ -38,6 +38,19 @@ StringExtractor::StringExtractor(const char *packet_cstr)
     m_packet.assign(packet_cstr);
 }
 
+// StringExtractor copy constructor
+StringExtractor::StringExtractor(const StringExtractor &rhs)
+    : m_packet(rhs.m_packet), m_index(rhs.m_index) {}
+
+// StringExtractor assignment operator
+const StringExtractor &StringExtractor::operator=(const StringExtractor &rhs) {
+  if (this != &rhs) {
+    m_packet = rhs.m_packet;
+    m_index = rhs.m_index;
+  }
+  return *this;
+}
+
 // Destructor
 StringExtractor::~StringExtractor() {}
 

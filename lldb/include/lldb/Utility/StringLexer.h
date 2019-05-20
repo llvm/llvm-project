@@ -24,6 +24,8 @@ public:
 
   StringLexer(std::string s);
 
+  StringLexer(const StringLexer &rhs);
+
   // These APIs are not bounds-checked.  Use HasAtLeast() if you're not sure.
   Character Peek();
 

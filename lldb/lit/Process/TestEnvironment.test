@@ -1,9 +1,0 @@
-UNSUPPORTED: system-windows
-
-The double quotes around "BAR" ensure we don't match the command.
-
-RUN: %clangxx -std=c++11 %p/Inputs/env.cpp -o %t
-RUN: %lldb %t -o 'process launch --environment FOO="BAR"' | FileCheck %s
-RUN: %lldb %t -o 'env FOO="BAR"' -o 'process launch' | FileCheck %s
-
-CHECK: FOO=BAR

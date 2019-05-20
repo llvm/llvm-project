@@ -1253,8 +1253,6 @@ def fno_fine_grained_bitfield_accesses : Flag<["-"],
 def flat__namespace : Flag<["-"], "flat_namespace">;
 def flax_vector_conversions : Flag<["-"], "flax-vector-conversions">, Group<f_Group>;
 def flimited_precision_EQ : Joined<["-"], "flimited-precision=">, Group<f_Group>;
-def fapple_link_rtlib : Flag<["-"], "fapple-link-rtlib">, Group<f_Group>,
-  HelpText<"Force linking the clang builtins runtime library">;
 def flto_EQ : Joined<["-"], "flto=">, Flags<[CoreOption, CC1Option]>, Group<f_Group>,
   HelpText<"Set LTO mode to either 'full' or 'thin'">, Values<"thin,full">;
 def flto : Flag<["-"], "flto">, Flags<[CoreOption, CC1Option]>, Group<f_Group>,
@@ -2221,11 +2219,6 @@ def msram_ecc : Flag<["-"], "msram-ecc">, Group<m_amdgpu_Features_Group>,
 def mno_sram_ecc : Flag<["-"], "mno-sram-ecc">, Group<m_amdgpu_Features_Group>,
   HelpText<"Disable SRAM ECC (AMDGPU only)">;
 
-def mcumode : Flag<["-"], "mcumode">, Group<m_amdgpu_Features_Group>,
-  HelpText<"CU wavefront execution mode is used (AMDGPU only)">;
-def mno_cumode : Flag<["-"], "mno-cumode">, Group<m_amdgpu_Features_Group>,
-  HelpText<"WGP wavefront execution mode is used (AMDGPU only)">;
-
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>, Flags<[DriverOption]>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>, Flags<[DriverOption]>;
 def maltivec : Flag<["-"], "maltivec">, Group<m_ppc_Features_Group>;
@@ -2880,8 +2873,6 @@ def mavx2 : Flag<["-"], "mavx2">, Group<m_x86_Features_Group>;
 def mno_avx2 : Flag<["-"], "mno-avx2">, Group<m_x86_Features_Group>;
 def mavx512f : Flag<["-"], "mavx512f">, Group<m_x86_Features_Group>;
 def mno_avx512f : Flag<["-"], "mno-avx512f">, Group<m_x86_Features_Group>;
-def mavx512bf16 : Flag<["-"], "mavx512bf16">, Group<m_x86_Features_Group>;
-def mno_avx512bf16 : Flag<["-"], "mno-avx512bf16">, Group<m_x86_Features_Group>;
 def mavx512bitalg : Flag<["-"], "mavx512bitalg">, Group<m_x86_Features_Group>;
 def mno_avx512bitalg : Flag<["-"], "mno-avx512bitalg">, Group<m_x86_Features_Group>;
 def mavx512bw : Flag<["-"], "mavx512bw">, Group<m_x86_Features_Group>;

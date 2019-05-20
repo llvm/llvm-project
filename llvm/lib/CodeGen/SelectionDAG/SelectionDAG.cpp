@@ -262,7 +262,12 @@ bool ISD::allOperandsUndef(const SDNode *N) {
   // is probably the desired behavior.
   if (N->getNumOperands() == 0)
     return false;
-  return all_of(N->op_values(), [](SDValue Op) { return Op.isUndef(); });
+
+  for (const SDValue &Op : N->op_values())
+    if (!Op.isUndef())
+      return false;
+
+  return true;
 }
 
 bool ISD::matchUnaryPredicate(SDValue Op,
@@ -3054,20 +3059,21 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::EXTRACT_ELEMENT: {
     Known = computeKnownBits(Op.getOperand(0), Depth+1);
     const unsigned Index = Op.getConstantOperandVal(1);
-    const unsigned EltBitWidth = Op.getValueSizeInBits();
+    const unsigned BitWidth = Op.getValueSizeInBits();
 
     // Remove low part of known bits mask
-    Known.Zero = Known.Zero.getHiBits(Known.getBitWidth() - Index * EltBitWidth);
-    Known.One = Known.One.getHiBits(Known.getBitWidth() - Index * EltBitWidth);
+    Known.Zero = Known.Zero.getHiBits(Known.Zero.getBitWidth() - Index * BitWidth);
+    Known.One = Known.One.getHiBits(Known.One.getBitWidth() - Index * BitWidth);
 
     // Remove high part of known bit mask
-    Known = Known.trunc(EltBitWidth);
+    Known = Known.trunc(BitWidth);
     break;
   }
   case ISD::EXTRACT_VECTOR_ELT: {
     SDValue InVec = Op.getOperand(0);
     SDValue EltNo = Op.getOperand(1);
     EVT VecVT = InVec.getValueType();
+    const unsigned BitWidth = Op.getValueSizeInBits();
     const unsigned EltBitWidth = VecVT.getScalarSizeInBits();
     const unsigned NumSrcElts = VecVT.getVectorNumElements();
     // If BitWidth > EltBitWidth the value is anyext:ed. So we do not know
@@ -3664,6 +3670,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     SDValue InVec = Op.getOperand(0);
     SDValue InVal = Op.getOperand(1);
     SDValue EltNo = Op.getOperand(2);
+    unsigned NumElts = InVec.getValueType().getVectorNumElements();
 
     ConstantSDNode *CEltNo = dyn_cast<ConstantSDNode>(EltNo);
     if (CEltNo && CEltNo->getAPIntValue().ult(NumElts)) {
@@ -4332,9 +4339,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::SIGN_EXTEND:
     assert(VT.isInteger() && Operand.getValueType().isInteger() &&
            "Invalid SIGN_EXTEND!");
-    assert(VT.isVector() == Operand.getValueType().isVector() &&
-           "SIGN_EXTEND result type type should be vector iff the operand "
-           "type is vector!");
     if (Operand.getValueType() == VT) return Operand;   // noop extension
     assert((!VT.isVector() ||
             VT.getVectorNumElements() ==
@@ -4351,9 +4355,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::ZERO_EXTEND:
     assert(VT.isInteger() && Operand.getValueType().isInteger() &&
            "Invalid ZERO_EXTEND!");
-    assert(VT.isVector() == Operand.getValueType().isVector() &&
-           "ZERO_EXTEND result type type should be vector iff the operand "
-           "type is vector!");
     if (Operand.getValueType() == VT) return Operand;   // noop extension
     assert((!VT.isVector() ||
             VT.getVectorNumElements() ==
@@ -4370,9 +4371,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::ANY_EXTEND:
     assert(VT.isInteger() && Operand.getValueType().isInteger() &&
            "Invalid ANY_EXTEND!");
-    assert(VT.isVector() == Operand.getValueType().isVector() &&
-           "ANY_EXTEND result type type should be vector iff the operand "
-           "type is vector!");
     if (Operand.getValueType() == VT) return Operand;   // noop extension
     assert((!VT.isVector() ||
             VT.getVectorNumElements() ==
@@ -4400,9 +4398,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::TRUNCATE:
     assert(VT.isInteger() && Operand.getValueType().isInteger() &&
            "Invalid TRUNCATE!");
-    assert(VT.isVector() == Operand.getValueType().isVector() &&
-           "TRUNCATE result type type should be vector iff the operand "
-           "type is vector!");
     if (Operand.getValueType() == VT) return Operand;   // noop truncate
     assert((!VT.isVector() ||
             VT.getVectorNumElements() ==
@@ -4482,10 +4477,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return Operand.getOperand(0);
     break;
   case ISD::FNEG:
-    // Negation of an unknown bag of bits is still completely undefined.
-    if (OpOpcode == ISD::UNDEF)
-      return getUNDEF(VT);
-
     // -(X-Y) -> (Y-X) is unsafe because when X==Y, -0.0 != +0.0
     if ((getTarget().Options.UnsafeFPMath || Flags.hasNoSignedZeros()) &&
         OpOpcode == ISD::FSUB)
@@ -7611,10 +7602,6 @@ SDNode* SelectionDAG::mutateStrictFPToFP(SDNode *Node) {
   case ISD::STRICT_FFLOOR: NewOpc = ISD::FFLOOR; IsUnary = true; break;
   case ISD::STRICT_FROUND: NewOpc = ISD::FROUND; IsUnary = true; break;
   case ISD::STRICT_FTRUNC: NewOpc = ISD::FTRUNC; IsUnary = true; break;
-  // STRICT_FP_ROUND takes an extra argument describing whether or not
-  // the value will be changed by this node. See ISDOpcodes.h for details.
-  case ISD::STRICT_FP_ROUND: NewOpc = ISD::FP_ROUND; break;
-  case ISD::STRICT_FP_EXTEND: NewOpc = ISD::FP_EXTEND; IsUnary = true; break;
   }
 
   // We're taking this node out of the chain, so we need to re-link things.
@@ -7622,19 +7609,8 @@ SDNode* SelectionDAG::mutateStrictFPToFP(SDNode *Node) {
   SDValue OutputChain = SDValue(Node, 1);
   ReplaceAllUsesOfValueWith(OutputChain, InputChain);
 
-  SDVTList VTs;
+  SDVTList VTs = getVTList(Node->getOperand(1).getValueType());
   SDNode *Res = nullptr;
-
-  switch (OrigOpc) {
-  default:
-    VTs = getVTList(Node->getOperand(1).getValueType());
-    break;
-  case ISD::STRICT_FP_ROUND:
-  case ISD::STRICT_FP_EXTEND:
-    VTs = getVTList(Node->getValueType(0));
-    break;
-  }
-
   if (IsUnary)
     Res = MorphNodeTo(Node, NewOpc, VTs, { Node->getOperand(1) });
   else if (IsTernary)
@@ -8253,17 +8229,19 @@ void SelectionDAG::updateDivergence(SDNode * N)
   }
 }
 
-void SelectionDAG::CreateTopologicalOrder(std::vector<SDNode *> &Order) {
+
+void SelectionDAG::CreateTopologicalOrder(std::vector<SDNode*>& Order) {
   DenseMap<SDNode *, unsigned> Degree;
   Order.reserve(AllNodes.size());
-  for (auto &N : allnodes()) {
+  for (auto & N : allnodes()) {
     unsigned NOps = N.getNumOperands();
     Degree[&N] = NOps;
     if (0 == NOps)
       Order.push_back(&N);
   }
-  for (size_t I = 0; I != Order.size(); ++I) {
-    SDNode *N = Order[I];
+  for (std::vector<SDNode *>::iterator I = Order.begin();
+  I!=Order.end();++I) {
+    SDNode * N = *I;
     for (auto U : N->uses()) {
       unsigned &UnsortedOps = Degree[U];
       if (0 == --UnsortedOps)
@@ -8273,8 +8251,9 @@ void SelectionDAG::CreateTopologicalOrder(std::vector<SDNode *> &Order) {
 }
 
 #ifndef NDEBUG
-void SelectionDAG::VerifyDAGDiverence() {
-  std::vector<SDNode *> TopoOrder;
+void SelectionDAG::VerifyDAGDiverence()
+{
+  std::vector<SDNode*> TopoOrder;
   CreateTopologicalOrder(TopoOrder);
   const TargetLowering &TLI = getTargetLoweringInfo();
   DenseMap<const SDNode *, bool> DivergenceMap;
@@ -8299,6 +8278,7 @@ void SelectionDAG::VerifyDAGDiverence() {
   }
 }
 #endif
+
 
 /// ReplaceAllUsesOfValuesWith - Replace any uses of From with To, leaving
 /// uses of other values produced by From.getNode() alone.  The same value
@@ -8775,12 +8755,17 @@ bool SDNode::areOnlyUsersOf(ArrayRef<const SDNode *> Nodes, const SDNode *N) {
 
 /// isOperand - Return true if this node is an operand of N.
 bool SDValue::isOperandOf(const SDNode *N) const {
-  return any_of(N->op_values(), [this](SDValue Op) { return *this == Op; });
+  for (const SDValue &Op : N->op_values())
+    if (*this == Op)
+      return true;
+  return false;
 }
 
 bool SDNode::isOperandOf(const SDNode *N) const {
-  return any_of(N->op_values(),
-                [this](SDValue Op) { return this == Op.getNode(); });
+  for (const SDValue &Op : N->op_values())
+    if (this == Op.getNode())
+      return true;
+  return false;
 }
 
 /// reachesChainWithoutSideEffects - Return true if this operand (which must
@@ -9061,7 +9046,7 @@ unsigned SelectionDAG::InferPtrAlignment(SDValue Ptr) const {
 
   // If this is a direct reference to a stack slot, use information about the
   // stack slot's alignment.
-  int FrameIdx = INT_MIN;
+  int FrameIdx = 1 << 31;
   int64_t FrameOffset = 0;
   if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Ptr)) {
     FrameIdx = FI->getIndex();
@@ -9072,7 +9057,7 @@ unsigned SelectionDAG::InferPtrAlignment(SDValue Ptr) const {
     FrameOffset = Ptr.getConstantOperandVal(1);
   }
 
-  if (FrameIdx != INT_MIN) {
+  if (FrameIdx != (1 << 31)) {
     const MachineFrameInfo &MFI = getMachineFunction().getFrameInfo();
     unsigned FIInfoAlign = MinAlign(MFI.getObjectAlignment(FrameIdx),
                                     FrameOffset);

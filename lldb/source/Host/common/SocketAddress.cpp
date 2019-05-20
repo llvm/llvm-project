@@ -92,6 +92,10 @@ SocketAddress::SocketAddress(const struct addrinfo *addr_info) {
   *this = addr_info;
 }
 
+// SocketAddress copy constructor
+SocketAddress::SocketAddress(const SocketAddress &rhs)
+    : m_socket_addr(rhs.m_socket_addr) {}
+
 // Destructor
 SocketAddress::~SocketAddress() {}
 

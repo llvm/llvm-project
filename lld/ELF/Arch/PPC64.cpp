@@ -103,88 +103,6 @@ bool elf::isPPC64SmallCodeModelTocReloc(RelType Type) {
   return Type == R_PPC64_TOC16 || Type == R_PPC64_TOC16_DS;
 }
 
-// Find the R_PPC64_ADDR64 in .rela.toc with matching offset.
-template <typename ELFT>
-static std::pair<Defined *, int64_t>
-getRelaTocSymAndAddend(InputSectionBase *TocSec, uint64_t Offset) {
-  if (TocSec->NumRelocations == 0)
-    return {};
-
-  // .rela.toc contains exclusively R_PPC64_ADDR64 relocations sorted by
-  // r_offset: 0, 8, 16, etc. For a given Offset, Offset / 8 gives us the
-  // relocation index in most cases.
-  //
-  // In rare cases a TOC entry may store a constant that doesn't need an
-  // R_PPC64_ADDR64, the corresponding r_offset is therefore missing. Offset / 8
-  // points to a relocation with larger r_offset. Do a linear probe then.
-  // Constants are extremely uncommon in .toc and the extra number of array
-  // accesses can be seen as a small constant.
-  ArrayRef<typename ELFT::Rela> Relas = TocSec->template relas<ELFT>();
-  uint64_t Index = std::min<uint64_t>(Offset / 8, Relas.size() - 1);
-  for (;;) {
-    if (Relas[Index].r_offset == Offset) {
-      Symbol &Sym = TocSec->getFile<ELFT>()->getRelocTargetSym(Relas[Index]);
-      return {dyn_cast<Defined>(&Sym), getAddend<ELFT>(Relas[Index])};
-    }
-    if (Relas[Index].r_offset < Offset || Index == 0)
-      break;
-    --Index;
-  }
-  return {};
-}
-
-// When accessing a symbol defined in another translation unit, compilers
-// reserve a .toc entry, allocate a local label and generate toc-indirect
-// instuctions:
-//
-//   addis 3, 2, .LC0@toc@ha  # R_PPC64_TOC16_HA
-//   ld    3, .LC0@toc@l(3)   # R_PPC64_TOC16_LO_DS, load the address from a .toc entry
-//   ld/lwa 3, 0(3)           # load the value from the address
-//
-//   .section .toc,"aw",@progbits
-//   .LC0: .tc var[TC],var
-//
-// If var is defined, non-preemptable and addressable with a 32-bit signed
-// offset from the toc base, the address of var can be computed by adding an
-// offset to the toc base, saving a load.
-//
-//   addis 3,2,var@toc@ha     # this may be relaxed to a nop,
-//   addi  3,3,var@toc@l      # then this becomes addi 3,2,var@toc
-//   ld/lwa 3, 0(3)           # load the value from the address
-//
-// Returns true if the relaxation is performed.
-bool elf::tryRelaxPPC64TocIndirection(RelType Type, const Relocation &Rel,
-                                      uint8_t *BufLoc) {
-  assert(Config->TocOptimize);
-  if (Rel.Addend < 0)
-    return false;
-
-  // If the symbol is not the .toc section, this isn't a toc-indirection.
-  Defined *DefSym = dyn_cast<Defined>(Rel.Sym);
-  if (!DefSym || !DefSym->isSection() || DefSym->Section->Name != ".toc")
-    return false;
-
-  Defined *D;
-  int64_t Addend;
-  auto *TocISB = cast<InputSectionBase>(DefSym->Section);
-  std::tie(D, Addend) =
-      Config->IsLE ? getRelaTocSymAndAddend<ELF64LE>(TocISB, Rel.Addend)
-                   : getRelaTocSymAndAddend<ELF64BE>(TocISB, Rel.Addend);
-
-  // Only non-preemptable defined symbols can be relaxed.
-  if (!D || D->IsPreemptible)
-    return false;
-
-  // Two instructions can materialize a 32-bit signed offset from the toc base.
-  uint64_t TocRelative = D->getVA(Addend) - getPPC64TocBase();
-  if (!isInt<32>(TocRelative))
-    return false;
-
-  // Add PPC64TocOffset that will be subtracted by relocateOne().
-  Target->relaxGot(BufLoc, Type, TocRelative + PPC64TocOffset);
-  return true;
-}
-
 namespace {
 class PPC64 final : public TargetInfo {
 public:
@@ -200,11 +118,9 @@ public:
   void writeGotHeader(uint8_t *Buf) const override;
   bool needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
                   uint64_t BranchAddr, const Symbol &S) const override;
-  uint32_t getThunkSectionSpacing() const override;
   bool inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const override;
   RelExpr adjustRelaxExpr(RelType Type, const uint8_t *Data,
                           RelExpr Expr) const override;
-  void relaxGot(uint8_t *Loc, RelType Type, uint64_t Val) const override;
   void relaxTlsGdToIe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
   void relaxTlsGdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
   void relaxTlsLdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
@@ -352,27 +268,6 @@ uint32_t PPC64::calcEFlags() const {
       error(toString(F) + ": unrecognized e_flags: " + Twine(Flag));
   }
   return 2;
-}
-
-void PPC64::relaxGot(uint8_t *Loc, RelType Type, uint64_t Val) const {
-  switch (Type) {
-  case R_PPC64_TOC16_HA:
-    // Convert "addis reg, 2, .LC0@toc@h" to "addis reg, 2, var@toc@h" or "nop".
-    relocateOne(Loc, Type, Val);
-    break;
-  case R_PPC64_TOC16_LO_DS: {
-    // Convert "ld reg, .LC0@toc@l(reg)" to "addi reg, reg, var@toc@l" or
-    // "addi reg, 2, var@toc".
-    uint32_t Instr = readInstrFromHalf16(Loc);
-    if (getPrimaryOpCode(Instr) != LD)
-      error("expected a 'ld' for got-indirect to toc-relative relaxing");
-    writeInstrFromHalf16(Loc, (Instr & 0x03FFFFFF) | 0x38000000);
-    relocateOne(Loc, R_PPC64_TOC16_LO, Val);
-    break;
-  }
-  default:
-    llvm_unreachable("unexpected relocation type");
-  }
 }
 
 void PPC64::relaxTlsGdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
@@ -544,12 +439,11 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
     return R_GOT_OFF;
   case R_PPC64_TOC16:
   case R_PPC64_TOC16_DS:
+  case R_PPC64_TOC16_HA:
   case R_PPC64_TOC16_HI:
   case R_PPC64_TOC16_LO:
-    return R_GOTREL;
-  case R_PPC64_TOC16_HA:
   case R_PPC64_TOC16_LO_DS:
-    return Config->TocOptimize ? R_PPC64_RELAX_TOC : R_GOTREL;
+    return R_GOTREL;
   case R_PPC64_TOC:
     return R_PPC_TOC;
   case R_PPC64_REL14:
@@ -884,14 +778,6 @@ bool PPC64::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
   return !inBranchRange(Type, BranchAddr,
                         S.getVA() +
                             getPPC64GlobalEntryToLocalEntryOffset(S.StOther));
-}
-
-uint32_t PPC64::getThunkSectionSpacing() const {
-  // See comment in Arch/ARM.cpp for a more detailed explanation of
-  // getThunkSectionSpacing(). For PPC64 we pick the constant here based on
-  // R_PPC64_REL24, which is used by unconditional branch instructions.
-  // 0x2000000 = (1 << 24-1) * 4
-  return 0x2000000;
 }
 
 bool PPC64::inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const {

@@ -55,7 +55,6 @@ class DominatorTree;
 class LoopInfo;
 class Loop;
 class MDNode;
-class MemorySSAUpdater;
 class PHINode;
 class raw_ostream;
 template <class N, bool IsPostDom> class DominatorTreeBase;
@@ -471,7 +470,7 @@ public:
 
   public:
     LocRange() {}
-    LocRange(DebugLoc Start) : Start(Start), End(Start) {}
+    LocRange(DebugLoc Start) : Start(std::move(Start)), End(std::move(Start)) {}
     LocRange(DebugLoc Start, DebugLoc End)
         : Start(std::move(Start)), End(std::move(End)) {}
 
@@ -499,8 +498,7 @@ public:
   /// If InsertPt is specified, it is the point to hoist instructions to.
   /// If null, the terminator of the loop preheader is used.
   bool makeLoopInvariant(Value *V, bool &Changed,
-                         Instruction *InsertPt = nullptr,
-                         MemorySSAUpdater *MSSAU = nullptr) const;
+                         Instruction *InsertPt = nullptr) const;
 
   /// If the given instruction is inside of the loop and it can be hoisted, do
   /// so to make it trivially loop-invariant.
@@ -512,8 +510,7 @@ public:
   /// If null, the terminator of the loop preheader is used.
   ///
   bool makeLoopInvariant(Instruction *I, bool &Changed,
-                         Instruction *InsertPt = nullptr,
-                         MemorySSAUpdater *MSSAU = nullptr) const;
+                         Instruction *InsertPt = nullptr) const;
 
   /// Check to see if the loop has a canonical induction variable: an integer
   /// recurrence that starts at 0 and increments by one each time through the

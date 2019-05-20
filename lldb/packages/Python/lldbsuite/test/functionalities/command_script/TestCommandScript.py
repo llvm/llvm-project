@@ -17,6 +17,7 @@ class CmdPythonTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
     def test(self):
         self.build()
         self.pycmd_tests()

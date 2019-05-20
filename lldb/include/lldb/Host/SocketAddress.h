@@ -45,6 +45,7 @@ public:
   SocketAddress(const struct sockaddr_in &s);
   SocketAddress(const struct sockaddr_in6 &s);
   SocketAddress(const struct sockaddr_storage &s);
+  SocketAddress(const SocketAddress &rhs);
   ~SocketAddress();
 
   // Operators

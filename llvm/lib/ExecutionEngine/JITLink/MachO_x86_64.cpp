@@ -157,9 +157,9 @@ private:
     // Read the current fixup value.
     uint64_t FixupValue = 0;
     if (SubRI.r_length == 3)
-      FixupValue = *(const little64_t *)FixupContent;
+      FixupValue = *(const ulittle64_t *)FixupContent;
     else
-      FixupValue = *(const little32_t *)FixupContent;
+      FixupValue = *(const ulittle32_t *)FixupContent;
 
     // Find 'ToAtom' using symbol number or address, depending on whether the
     // paired UNSIGNED relocation is extern.
@@ -181,20 +181,19 @@ private:
     MachOX86RelocationKind DeltaKind;
     Atom *TargetAtom;
     uint64_t Addend;
-    if (areLayoutLocked(AtomToFix, *FromAtom)) {
+    if (&AtomToFix == &*FromAtom) {
       TargetAtom = ToAtom;
       DeltaKind = (SubRI.r_length == 3) ? Delta64 : Delta32;
       Addend = FixupValue + (FixupAddress - FromAtom->getAddress());
       // FIXME: handle extern 'from'.
-    } else if (areLayoutLocked(AtomToFix, *ToAtom)) {
+    } else if (&AtomToFix == ToAtom) {
       TargetAtom = &*FromAtom;
       DeltaKind = (SubRI.r_length == 3) ? NegDelta64 : NegDelta32;
       Addend = FixupValue - (FixupAddress - ToAtom->getAddress());
     } else {
       // AtomToFix was neither FromAtom nor ToAtom.
       return make_error<JITLinkError>("SUBTRACTOR relocation must fix up "
-                                      "either 'A' or 'B' (or an atom in one "
-                                      "of their alt-entry groups)");
+                                      "either 'A' or 'B'");
     }
 
     return PairRelocInfo(DeltaKind, TargetAtom, Addend);
@@ -399,7 +398,7 @@ public:
 private:
   Section &getGOTSection() {
     if (!GOTSection)
-      GOTSection = &G.createSection("$__GOT", 8, sys::Memory::MF_READ, false);
+      GOTSection = &G.createSection("$__GOT", sys::Memory::MF_READ, false);
     return *GOTSection;
   }
 
@@ -407,7 +406,7 @@ private:
     if (!StubsSection) {
       auto StubsProt = static_cast<sys::Memory::ProtectionFlags>(
           sys::Memory::MF_READ | sys::Memory::MF_EXEC);
-      StubsSection = &G.createSection("$__STUBS", 8, StubsProt, false);
+      StubsSection = &G.createSection("$__STUBS", StubsProt, false);
     }
     return *StubsSection;
   }
@@ -448,13 +447,11 @@ private:
     return MachOAtomGraphBuilder_x86_64(**MachOObj).buildGraph();
   }
 
-  static Error targetOutOfRangeError(const Atom &A, const Edge &E) {
+  static Error targetOutOfRangeError(const Edge &E) {
     std::string ErrMsg;
     {
       raw_string_ostream ErrStream(ErrMsg);
-      ErrStream << "Relocation target out of range: ";
-      printEdge(ErrStream, A, E, getMachOX86RelocationKindName(E.getKind()));
-      ErrStream << "\n";
+      ErrStream << "Target \"" << E.getTarget() << "\" out of range";
     }
     return make_error<JITLinkError>(std::move(ErrMsg));
   }
@@ -473,7 +470,7 @@ private:
           E.getTarget().getAddress() - (FixupAddress + 4) + E.getAddend();
       if (Value < std::numeric_limits<int32_t>::min() ||
           Value > std::numeric_limits<int32_t>::max())
-        return targetOutOfRangeError(A, E);
+        return targetOutOfRangeError(E);
       *(little32_t *)FixupPtr = Value;
       break;
     }
@@ -491,7 +488,7 @@ private:
           E.getTarget().getAddress() - (FixupAddress + Delta) + E.getAddend();
       if (Value < std::numeric_limits<int32_t>::min() ||
           Value > std::numeric_limits<int32_t>::max())
-        return targetOutOfRangeError(A, E);
+        return targetOutOfRangeError(E);
       *(little32_t *)FixupPtr = Value;
       break;
     }
@@ -503,7 +500,7 @@ private:
           E.getTarget().getAddress() - (FixupAddress + Delta) + E.getAddend();
       if (Value < std::numeric_limits<int32_t>::min() ||
           Value > std::numeric_limits<int32_t>::max())
-        return targetOutOfRangeError(A, E);
+        return targetOutOfRangeError(E);
       *(little32_t *)FixupPtr = Value;
       break;
     }
@@ -520,7 +517,7 @@ private:
       if (E.getKind() == Delta32 || E.getKind() == NegDelta32) {
         if (Value < std::numeric_limits<int32_t>::min() ||
             Value > std::numeric_limits<int32_t>::max())
-          return targetOutOfRangeError(A, E);
+          return targetOutOfRangeError(E);
         *(little32_t *)FixupPtr = Value;
       } else
         *(little64_t *)FixupPtr = Value;

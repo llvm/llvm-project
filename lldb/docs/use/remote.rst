@@ -76,14 +76,14 @@ system. A list of available plug-ins can be obtained through platform list.
    local% lldb
    (lldb) platform list
    Available platforms:
-   host: Local macOS user platform plug-in.
+   host: Local Mac OS X user platform plug-in.
    remote-freebsd: Remote FreeBSD user platform plug-in.
    remote-linux: Remote Linux user platform plug-in.
    remote-netbsd: Remote NetBSD user platform plug-in.
    remote-windows: Remote Windows user platform plug-in.
    remote-android: Remote Android user platform plug-in.
    remote-ios: Remote iOS platform plug-in.
-   remote-macosx: Remote macOS user platform plug-in.
+   remote-macosx: Remote Mac OS X user platform plug-in.
    ios-simulator: iOS simulator platform plug-in.
    darwin-kernel: Darwin Kernel platform plug-in.
    tvos-simulator: Apple TV simulator platform plug-in.

@@ -423,32 +423,6 @@ public:
     lldb::SBTypeSynthetic
     GetSyntheticForType (lldb::SBTypeNameSpecifier);
 
-    %feature("docstring",
-"Launch a command interpreter session. Commands are read from standard input or
-from the input handle specified for the debugger object. Output/errors are
-similarly redirected to standard output/error or the configured handles.
-
-@param[in] auto_handle_events If true, automatically handle resulting events.
-@param[in] spawn_thread If true, start a new thread for IO handling.
-@param[in] options Parameter collection of type SBCommandInterpreterRunOptions.
-@param[in] num_errors Initial error counter.
-@param[in] quit_requested Initial quit request flag.
-@param[in] stopped_for_crash Initial crash flag.
-
-@return
-A tuple with the number of errors encountered by the interpreter, a boolean
-indicating whether quitting the interpreter was requested and another boolean
-set to True in case of a crash.
-
-Example:
-
-# Start an interactive lldb session from a script (with a valid debugger object
-# created beforehand):
-n_errors, quit_requested, has_crashed = debugger.RunCommandInterpreter(True,
-    False, lldb.SBCommandInterpreterRunOptions(), 0, False, False)") RunCommandInterpreter;
-    %apply int& INOUT { int& num_errors };
-    %apply bool& INOUT { bool& quit_requested };
-    %apply bool& INOUT { bool& stopped_for_crash };
     void
     RunCommandInterpreter (bool auto_handle_events,
                            bool spawn_thread,

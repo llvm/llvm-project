@@ -2509,11 +2509,11 @@ protected:
   // RequestResume, don't call Resume directly.
   class NextEventAction {
   public:
-    enum EventActionResult {
+    typedef enum EventActionResult {
       eEventActionSuccess,
       eEventActionRetry,
       eEventActionExit
-    };
+    } EventActionResult;
 
     NextEventAction(Process *process) : m_process(process) {}
 

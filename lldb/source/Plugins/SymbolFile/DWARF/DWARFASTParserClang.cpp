@@ -524,7 +524,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
         type_sp = std::make_shared<Type>(
             die.GetID(), dwarf, type_name_const_str, byte_size, nullptr,
-            dwarf->GetUID(DIERef(encoding_uid)), encoding_data_type, &decl,
+            DIERef(encoding_uid).GetUID(dwarf), encoding_data_type, &decl,
             clang_type, resolve_state);
 
         dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
@@ -763,7 +763,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
             // it and cache the fact that we found a complete type for this die
             dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
             clang::DeclContext *defn_decl_ctx = GetCachedClangDeclContextForDIE(
-                dwarf->GetDIE(type_sp->GetID()));
+                dwarf->DebugInfo()->GetDIE(DIERef(type_sp->GetID(), dwarf)));
             if (defn_decl_ctx)
               LinkDeclContextToDIE(defn_decl_ctx, die);
             return type_sp;
@@ -1067,8 +1067,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
               // die
               dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
               clang::DeclContext *defn_decl_ctx =
-                  GetCachedClangDeclContextForDIE(
-                      dwarf->GetDIE(type_sp->GetID()));
+                  GetCachedClangDeclContextForDIE(dwarf->DebugInfo()->GetDIE(
+                      DIERef(type_sp->GetID(), dwarf)));
               if (defn_decl_ctx)
                 LinkDeclContextToDIE(defn_decl_ctx, die);
               return type_sp;
@@ -1112,7 +1112,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
           type_sp = std::make_shared<Type>(
               die.GetID(), dwarf, type_name_const_str, byte_size, nullptr,
-              dwarf->GetUID(DIERef(encoding_form)), Type::eEncodingIsUID, &decl,
+              DIERef(encoding_form).GetUID(dwarf), Type::eEncodingIsUID, &decl,
               clang_type, Type::eResolveStateForward);
 
           if (ClangASTContext::StartTagDeclarationDefinition(clang_type)) {
@@ -1383,8 +1383,22 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                   // We uniqued the parent class of this function to another
                   // class so we now need to associate all dies under
                   // "decl_ctx_die" to DIEs in the DIE for "class_type"...
-                  DWARFDIE class_type_die = dwarf->GetDIE(class_type->GetID());
+                  SymbolFileDWARF *class_symfile = NULL;
+                  DWARFDIE class_type_die;
 
+                  SymbolFileDWARFDebugMap *debug_map_symfile =
+                      dwarf->GetDebugMapSymfile();
+                  if (debug_map_symfile) {
+                    class_symfile = debug_map_symfile->GetSymbolFileByOSOIndex(
+                        SymbolFileDWARFDebugMap::GetOSOIndexFromUserID(
+                            class_type->GetID()));
+                    class_type_die = class_symfile->DebugInfo()->GetDIE(
+                        DIERef(class_type->GetID(), dwarf));
+                  } else {
+                    class_symfile = dwarf;
+                    class_type_die = dwarf->DebugInfo()->GetDIE(
+                        DIERef(class_type->GetID(), dwarf));
+                  }
                   if (class_type_die) {
                     std::vector<DWARFDIE> failures;
 
@@ -1808,7 +1822,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
             ConstString empty_name;
             type_sp = std::make_shared<Type>(
                 die.GetID(), dwarf, empty_name, array_element_bit_stride / 8,
-                nullptr, dwarf->GetUID(DIERef(type_die_form)),
+                nullptr, DIERef(type_die_form).GetUID(dwarf),
                 Type::eEncodingIsUID, &decl, clang_type,
                 Type::eResolveStateFull);
             type_sp->SetEncodingType(element_type);

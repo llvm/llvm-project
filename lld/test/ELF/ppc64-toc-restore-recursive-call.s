@@ -14,11 +14,12 @@
 # for recursive calls as well as keeps the logic for recursive calls consistent
 # with non-recursive calls.
 
-# CHECK-LABEL: 0000000000010000 recursive_func:
-# CHECK:       10028:       bl .+32
-# CHECK-NEXT:               ld 2, 24(1)
-
-# CHECK-LABEL: 0000000000010048 __plt_recursive_func:
+# CHECK-LABEL: __plt_recursive_func:
+# CHECK-NEXT: 10000:
+# CHECK-LABEL: recursive_func
+# CHECK-NEXT:  10014:
+# CHECK:       1003c:       bl .-60
+# CHECK-NEXT:  10040:       ld 2, 24(1)
 
         .abiversion 2
         .section ".text"

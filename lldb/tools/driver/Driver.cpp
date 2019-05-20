@@ -113,6 +113,24 @@ Driver::Driver()
 
 Driver::~Driver() { g_driver = nullptr; }
 
+void Driver::OptionData::AddLocalLLDBInit() {
+  // If there is a local .lldbinit, add that to the list of things to be
+  // sourced, if the settings permit it.
+  SBFileSpec local_lldbinit(".lldbinit", true);
+  SBFileSpec homedir_dot_lldb = SBHostOS::GetUserHomeDirectory();
+  homedir_dot_lldb.AppendPathComponent(".lldbinit");
+
+  // Only read .lldbinit in the current working directory if it's not the same
+  // as the .lldbinit in the home directory (which is already being read in).
+  if (local_lldbinit.Exists() && strcmp(local_lldbinit.GetDirectory(),
+                                        homedir_dot_lldb.GetDirectory()) != 0) {
+    char path[PATH_MAX];
+    local_lldbinit.GetPath(path, sizeof(path));
+    InitialCmdEntry entry(path, true, true, true);
+    m_after_file_commands.push_back(entry);
+  }
+}
+
 void Driver::OptionData::AddInitialCommand(std::string command,
                                            CommandPlacement placement,
                                            bool is_file, SBError &error) {
@@ -132,17 +150,17 @@ void Driver::OptionData::AddInitialCommand(std::string command,
   if (is_file) {
     SBFileSpec file(command.c_str());
     if (file.Exists())
-      command_set->push_back(InitialCmdEntry(command, is_file));
+      command_set->push_back(InitialCmdEntry(command, is_file, false));
     else if (file.ResolveExecutableLocation()) {
       char final_path[PATH_MAX];
       file.GetPath(final_path, sizeof(final_path));
-      command_set->push_back(InitialCmdEntry(final_path, is_file));
+      command_set->push_back(InitialCmdEntry(final_path, is_file, false));
     } else
       error.SetErrorStringWithFormat(
           "file specified in --source (-s) option doesn't exist: '%s'",
           command.c_str());
   } else
-    command_set->push_back(InitialCmdEntry(command, is_file));
+    command_set->push_back(InitialCmdEntry(command, is_file, false));
 }
 
 void Driver::WriteCommandsForSourcing(CommandPlacement placement,
@@ -163,6 +181,36 @@ void Driver::WriteCommandsForSourcing(CommandPlacement placement,
   for (const auto &command_entry : *command_set) {
     const char *command = command_entry.contents.c_str();
     if (command_entry.is_file) {
+      // If this command_entry is a file to be sourced, and it's the ./.lldbinit
+      // file (the .lldbinit
+      // file in the current working directory), only read it if
+      // target.load-cwd-lldbinit is 'true'.
+      if (command_entry.is_cwd_lldbinit_file_read) {
+        SBStringList strlist = lldb::SBDebugger::GetInternalVariableValue(
+            "target.load-cwd-lldbinit", m_debugger.GetInstanceName());
+        if (strlist.GetSize() == 1 &&
+            strcmp(strlist.GetStringAtIndex(0), "warn") == 0) {
+          FILE *output = m_debugger.GetOutputFileHandle();
+          ::fprintf(
+              output,
+              "There is a .lldbinit file in the current directory which is not "
+              "being read.\n"
+              "To silence this warning without sourcing in the local "
+              ".lldbinit,\n"
+              "add the following to the lldbinit file in your home directory:\n"
+              "    settings set target.load-cwd-lldbinit false\n"
+              "To allow lldb to source .lldbinit files in the current working "
+              "directory,\n"
+              "set the value of this variable to true.  Only do so if you "
+              "understand and\n"
+              "accept the security risk.\n");
+          return;
+        }
+        if (strlist.GetSize() == 1 &&
+            strcmp(strlist.GetStringAtIndex(0), "false") == 0) {
+          return;
+        }
+      }
       bool source_quietly =
           m_option_data.m_source_quietly || command_entry.source_quietly;
       strm.Printf("command source -s %i '%s'\n",
@@ -179,6 +227,7 @@ void Driver::WriteCommandsForSourcing(CommandPlacement placement,
 // user only wanted help or version information.
 SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   SBError error;
+  m_option_data.AddLocalLLDBInit();
 
   // This is kind of a pain, but since we make the debugger in the Driver's
   // constructor, we can't know at that point whether we should read in init
@@ -220,11 +269,6 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   if (args.hasArg(OPT_no_lldbinit)) {
     m_debugger.SkipLLDBInitFiles(true);
     m_debugger.SkipAppInitFiles(true);
-  }
-
-  if (args.hasArg(OPT_local_lldbinit)) {
-    lldb::SBDebugger::SetInternalVariable("target.load-cwd-lldbinit", "true",
-                                          m_debugger.GetInstanceName());
   }
 
   if (args.hasArg(OPT_no_use_colors)) {
@@ -509,13 +553,6 @@ int Driver::MainLoop() {
     result.PutError(m_debugger.GetErrorFileHandle());
     result.PutOutput(m_debugger.GetOutputFileHandle());
   }
-
-  // Source the local .lldbinit file if it exists and we're allowed to source.
-  // Here we want to always print the return object because it contains the
-  // warning and instructions to load local lldbinit files.
-  sb_interpreter.SourceInitFileInCurrentWorkingDirectory(result);
-  result.PutError(m_debugger.GetErrorFileHandle());
-  result.PutOutput(m_debugger.GetOutputFileHandle());
 
   // We allow the user to specify an exit code when calling quit which we will
   // return when exiting.

@@ -23,6 +23,7 @@ static_library("LLVMPowerPCCodeGen") {
     ":PPCGenCallingConv",
     ":PPCGenDAGISel",
     ":PPCGenFastISel",
+    "InstPrinter",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -85,6 +86,7 @@ group("PowerPC") {
     ":LLVMPowerPCCodeGen",
     "AsmParser",
     "Disassembler",
+    "InstPrinter",
     "MCTargetDesc",
     "TargetInfo",
   ]

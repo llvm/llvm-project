@@ -1142,48 +1142,41 @@ void Writer::calculateTypes() {
     registerType(E->Signature);
 }
 
-static bool requiresGOTAccess(const Symbol* Sym) {
-  return Config->Pic && !Sym->isHidden() && !Sym->isLocal();
-}
-
 void Writer::processRelocations(InputChunk *Chunk) {
   if (!Chunk->Live)
     return;
   ObjFile *File = Chunk->File;
   ArrayRef<WasmSignature> Types = File->getWasmObj()->types();
   for (const WasmRelocation &Reloc : Chunk->getRelocations()) {
-    if (Reloc.Type == R_WASM_TYPE_INDEX_LEB) {
-      // Mark target type as live
-      File->TypeMap[Reloc.Index] = registerType(Types[Reloc.Index]);
-      File->TypeIsUsed[Reloc.Index] = true;
-      continue;
-    }
-
-    // Other relocation types all have a corresponding symbol
-    auto *Sym = File->getSymbols()[Reloc.Index];
     switch (Reloc.Type) {
     case R_WASM_TABLE_INDEX_I32:
     case R_WASM_TABLE_INDEX_SLEB:
     case R_WASM_TABLE_INDEX_REL_SLEB: {
-      auto *F = cast<FunctionSymbol>(Sym);
-      if (F->hasTableIndex() || !F->hasFunctionIndex() || requiresGOTAccess(F))
-        break;
-      F->setTableIndex(TableBase + IndirectFunctions.size());
-      IndirectFunctions.emplace_back(F);
+      FunctionSymbol *Sym = File->getFunctionSymbol(Reloc.Index);
+      if (Sym->hasTableIndex() || !Sym->hasFunctionIndex())
+        continue;
+      Sym->setTableIndex(TableBase + IndirectFunctions.size());
+      IndirectFunctions.emplace_back(Sym);
       break;
     }
     case R_WASM_TYPE_INDEX_LEB:
+      // Mark target type as live
+      File->TypeMap[Reloc.Index] = registerType(Types[Reloc.Index]);
+      File->TypeIsUsed[Reloc.Index] = true;
       break;
-    case R_WASM_GLOBAL_INDEX_LEB:
+    case R_WASM_GLOBAL_INDEX_LEB: {
+      auto* Sym = File->getSymbols()[Reloc.Index];
       if (!isa<GlobalSymbol>(Sym) && !Sym->isInGOT()) {
         Sym->setGOTIndex(NumImportedGlobals++);
         GOTSymbols.push_back(Sym);
       }
       break;
+    }
     case R_WASM_MEMORY_ADDR_SLEB:
     case R_WASM_MEMORY_ADDR_LEB:
-    case R_WASM_MEMORY_ADDR_REL_SLEB:
+    case R_WASM_MEMORY_ADDR_REL_SLEB: {
       if (!Config->Relocatable) {
+        auto* Sym = File->getSymbols()[Reloc.Index];
         if (Sym->isUndefined() && !Sym->isWeak()) {
           error(toString(File) + ": cannot resolve relocation of type " +
                 relocTypeToString(Reloc.Type) +
@@ -1192,28 +1185,33 @@ void Writer::processRelocations(InputChunk *Chunk) {
       }
       break;
     }
+    }
 
     if (Config->Pic) {
       switch (Reloc.Type) {
       case R_WASM_TABLE_INDEX_SLEB:
       case R_WASM_MEMORY_ADDR_SLEB:
-      case R_WASM_MEMORY_ADDR_LEB:
+      case R_WASM_MEMORY_ADDR_LEB: {
         // Certain relocation types can't be used when building PIC output, since
         // they would require absolute symbol addresses at link time.
+        Symbol *Sym = File->getSymbols()[Reloc.Index];
         error(toString(File) + ": relocation " +
               relocTypeToString(Reloc.Type) + " cannot be used againt symbol " +
               toString(*Sym) + "; recompile with -fPIC");
         break;
+      }
       case R_WASM_TABLE_INDEX_I32:
-      case R_WASM_MEMORY_ADDR_I32:
+      case R_WASM_MEMORY_ADDR_I32: {
         // These relocation types are only present in the data section and
         // will be converted into code by `generateRelocationCode`.  This code
         // requires the symbols to have GOT entires.
-        if (requiresGOTAccess(Sym) && !Sym->isInGOT()) {
+        auto* Sym = File->getSymbols()[Reloc.Index];
+        if (!Sym->isHidden() && !Sym->isLocal() && !Sym->isInGOT()) {
           Sym->setGOTIndex(NumImportedGlobals++);
           GOTSymbols.push_back(Sym);
         }
         break;
+      }
       }
     }
   }

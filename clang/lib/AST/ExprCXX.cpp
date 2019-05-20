@@ -97,8 +97,7 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
                        FunctionDecl *OperatorDelete, bool ShouldPassAlignment,
                        bool UsualArrayDeleteWantsSize,
                        ArrayRef<Expr *> PlacementArgs, SourceRange TypeIdParens,
-                       Optional<Expr *> ArraySize,
-                       InitializationStyle InitializationStyle,
+                       Expr *ArraySize, InitializationStyle InitializationStyle,
                        Expr *Initializer, QualType Ty,
                        TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
                        SourceRange DirectInitRange)
@@ -113,7 +112,7 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
          "Only NoInit can have no initializer!");
 
   CXXNewExprBits.IsGlobalNew = IsGlobalNew;
-  CXXNewExprBits.IsArray = ArraySize.hasValue();
+  CXXNewExprBits.IsArray = ArraySize != nullptr;
   CXXNewExprBits.ShouldPassAlignment = ShouldPassAlignment;
   CXXNewExprBits.UsualArrayDeleteWantsSize = UsualArrayDeleteWantsSize;
   CXXNewExprBits.StoredInitializationStyle =
@@ -123,14 +122,12 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
   CXXNewExprBits.NumPlacementArgs = PlacementArgs.size();
 
   if (ArraySize) {
-    if (Expr *SizeExpr = *ArraySize) {
-      if (SizeExpr->isInstantiationDependent())
-        ExprBits.InstantiationDependent = true;
-      if (SizeExpr->containsUnexpandedParameterPack())
-        ExprBits.ContainsUnexpandedParameterPack = true;
-    }
+    if (ArraySize->isInstantiationDependent())
+      ExprBits.InstantiationDependent = true;
+    if (ArraySize->containsUnexpandedParameterPack())
+      ExprBits.ContainsUnexpandedParameterPack = true;
 
-    getTrailingObjects<Stmt *>()[arraySizeOffset()] = *ArraySize;
+    getTrailingObjects<Stmt *>()[arraySizeOffset()] = ArraySize;
   }
 
   if (Initializer) {
@@ -182,11 +179,11 @@ CXXNewExpr::Create(const ASTContext &Ctx, bool IsGlobalNew,
                    FunctionDecl *OperatorNew, FunctionDecl *OperatorDelete,
                    bool ShouldPassAlignment, bool UsualArrayDeleteWantsSize,
                    ArrayRef<Expr *> PlacementArgs, SourceRange TypeIdParens,
-                   Optional<Expr *> ArraySize,
-                   InitializationStyle InitializationStyle, Expr *Initializer,
-                   QualType Ty, TypeSourceInfo *AllocatedTypeInfo,
-                   SourceRange Range, SourceRange DirectInitRange) {
-  bool IsArray = ArraySize.hasValue();
+                   Expr *ArraySize, InitializationStyle InitializationStyle,
+                   Expr *Initializer, QualType Ty,
+                   TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
+                   SourceRange DirectInitRange) {
+  bool IsArray = ArraySize != nullptr;
   bool HasInit = Initializer != nullptr;
   unsigned NumPlacementArgs = PlacementArgs.size();
   bool IsParenTypeId = TypeIdParens.isValid();
@@ -1207,11 +1204,7 @@ CXXMethodDecl *LambdaExpr::getCallOperator() const {
 TemplateParameterList *LambdaExpr::getTemplateParameterList() const {
   CXXRecordDecl *Record = getLambdaClass();
   return Record->getGenericLambdaTemplateParameterList();
-}
 
-ArrayRef<NamedDecl *> LambdaExpr::getExplicitTemplateParameters() const {
-  const CXXRecordDecl *Record = getLambdaClass();
-  return Record->getLambdaExplicitTemplateParameters();
 }
 
 CompoundStmt *LambdaExpr::getBody() const {

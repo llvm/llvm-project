@@ -750,8 +750,7 @@ bool isImplicitTaskingRegion(OpenMPDirectiveKind DKind) {
 }
 
 bool isImplicitOrExplicitTaskingRegion(OpenMPDirectiveKind DKind) {
-  return isImplicitTaskingRegion(DKind) || isOpenMPTaskingDirective(DKind) ||
-         DKind == OMPD_unknown;
+  return isImplicitTaskingRegion(DKind) || isOpenMPTaskingDirective(DKind) || DKind == OMPD_unknown;
 }
 
 } // namespace
@@ -1696,8 +1695,7 @@ bool Sema::isInOpenMPTargetExecutionDirective() const {
              false);
 }
 
-VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
-                                    unsigned StopAt) {
+VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D) {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
   D = getCanonicalDecl(D);
 
@@ -1766,22 +1764,6 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
     }
   }
 
-  if (CheckScopeInfo) {
-    bool OpenMPFound = false;
-    for (unsigned I = StopAt + 1; I > 0; --I) {
-      FunctionScopeInfo *FSI = FunctionScopes[I - 1];
-      if(!isa<CapturingScopeInfo>(FSI))
-        return nullptr;
-      if (auto *RSI = dyn_cast<CapturedRegionScopeInfo>(FSI))
-        if (RSI->CapRegionKind == CR_OpenMP) {
-          OpenMPFound = true;
-          break;
-        }
-    }
-    if (!OpenMPFound)
-      return nullptr;
-  }
-
   if (DSAStack->getCurrentDirective() != OMPD_unknown &&
       (!DSAStack->isClauseParsingMode() ||
        DSAStack->getParentDirective() != OMPD_unknown)) {
@@ -1798,10 +1780,7 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
     DVarPrivate = DSAStack->hasDSA(D, isOpenMPPrivate,
                                    [](OpenMPDirectiveKind) { return true; },
                                    DSAStack->isClauseParsingMode());
-    // The variable is not private or it is the variable in the directive with
-    // default(none) clause and not used in any clause.
-    if (DVarPrivate.CKind != OMPC_unknown ||
-        (VD && DSAStack->getDefaultDSA() == DSA_none))
+    if (DVarPrivate.CKind != OMPC_unknown)
       return VD ? VD : cast<VarDecl>(DVarPrivate.PrivateCopy->getDecl());
   }
   return nullptr;
@@ -2576,17 +2555,9 @@ public:
         E->containsUnexpandedParameterPack() || E->isInstantiationDependent())
       return;
     if (auto *VD = dyn_cast<VarDecl>(E->getDecl())) {
-      // Check the datasharing rules for the expressions in the clauses.
-      if (!CS) {
-        if (auto *CED = dyn_cast<OMPCapturedExprDecl>(VD))
-          if (!CED->hasAttr<OMPCaptureNoInitAttr>()) {
-            Visit(CED->getInit());
-            return;
-          }
-      }
       VD = VD->getCanonicalDecl();
       // Skip internally declared variables.
-      if (VD->hasLocalStorage() && CS && !CS->capturesVariable(VD))
+      if (VD->hasLocalStorage() && !CS->capturesVariable(VD))
         return;
 
       DSAStackTy::DSAVarData DVar = Stack->getTopDSA(VD, /*FromParent=*/false);
@@ -2597,7 +2568,7 @@ public:
       // Skip internally declared static variables.
       llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
           OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
-      if (VD->hasGlobalStorage() && CS && !CS->capturesVariable(VD) &&
+      if (VD->hasGlobalStorage() && !CS->capturesVariable(VD) &&
           (!Res || *Res != OMPDeclareTargetDeclAttr::MT_Link))
         return;
 
@@ -4210,93 +4181,9 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
 
   ErrorFound = Res.isInvalid() || ErrorFound;
 
-  // Check variables in the clauses if default(none) was specified.
-  if (DSAStack->getDefaultDSA() == DSA_none) {
-    DSAAttrChecker DSAChecker(DSAStack, *this, nullptr);
-    for (OMPClause *C : Clauses) {
-      switch (C->getClauseKind()) {
-      case OMPC_num_threads:
-      case OMPC_dist_schedule:
-        // Do not analyse if no parent teams directive.
-        if (isOpenMPTeamsDirective(DSAStack->getCurrentDirective()))
-          break;
-        continue;
-      case OMPC_if:
-        if (isOpenMPTeamsDirective(DSAStack->getCurrentDirective()) &&
-            cast<OMPIfClause>(C)->getNameModifier() != OMPD_target)
-          break;
-        continue;
-      case OMPC_schedule:
-        break;
-      case OMPC_ordered:
-      case OMPC_device:
-      case OMPC_num_teams:
-      case OMPC_thread_limit:
-      case OMPC_priority:
-      case OMPC_grainsize:
-      case OMPC_num_tasks:
-      case OMPC_hint:
-      case OMPC_collapse:
-      case OMPC_safelen:
-      case OMPC_simdlen:
-      case OMPC_final:
-      case OMPC_default:
-      case OMPC_proc_bind:
-      case OMPC_private:
-      case OMPC_firstprivate:
-      case OMPC_lastprivate:
-      case OMPC_shared:
-      case OMPC_reduction:
-      case OMPC_task_reduction:
-      case OMPC_in_reduction:
-      case OMPC_linear:
-      case OMPC_aligned:
-      case OMPC_copyin:
-      case OMPC_copyprivate:
-      case OMPC_nowait:
-      case OMPC_untied:
-      case OMPC_mergeable:
-      case OMPC_allocate:
-      case OMPC_read:
-      case OMPC_write:
-      case OMPC_update:
-      case OMPC_capture:
-      case OMPC_seq_cst:
-      case OMPC_depend:
-      case OMPC_threads:
-      case OMPC_simd:
-      case OMPC_map:
-      case OMPC_nogroup:
-      case OMPC_defaultmap:
-      case OMPC_to:
-      case OMPC_from:
-      case OMPC_use_device_ptr:
-      case OMPC_is_device_ptr:
-        continue;
-      case OMPC_allocator:
-      case OMPC_flush:
-      case OMPC_threadprivate:
-      case OMPC_uniform:
-      case OMPC_unknown:
-      case OMPC_unified_address:
-      case OMPC_unified_shared_memory:
-      case OMPC_reverse_offload:
-      case OMPC_dynamic_allocators:
-      case OMPC_atomic_default_mem_order:
-        llvm_unreachable("Unexpected clause");
-      }
-      for (Stmt *CC : C->children()) {
-        if (CC)
-          DSAChecker.Visit(CC);
-      }
-    }
-    for (auto &P : DSAChecker.getVarsWithInheritedDSA())
-      VarsWithInheritedDSA[P.getFirst()] = P.getSecond();
-  }
   for (const auto &P : VarsWithInheritedDSA) {
     Diag(P.second->getExprLoc(), diag::err_omp_no_dsa_for_variable)
         << P.first << P.second->getSourceRange();
-    Diag(DSAStack->getDefaultDSALocation(), diag::note_omp_default_dsa_none);
   }
   ErrorFound = !VarsWithInheritedDSA.empty() || ErrorFound;
 

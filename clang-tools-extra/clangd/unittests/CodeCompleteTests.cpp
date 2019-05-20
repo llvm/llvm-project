@@ -174,7 +174,6 @@ struct ClassWithMembers {
   int BBB();
   int CCC();
 };
-
 int main() { ClassWithMembers().^ }
       )cpp",
                              /*IndexSymbols=*/{}, Opts);
@@ -235,7 +234,6 @@ void TestAfterDotCompletion(clangd::CodeCompleteOptions Opts) {
       )cpp",
       {cls("IndexClass"), var("index_var"), func("index_func")}, Opts);
 
-  EXPECT_TRUE(Results.RanParser);
   // Class members. The only items that must be present in after-dot
   // completion.
   EXPECT_THAT(Results.Completions,
@@ -285,7 +283,6 @@ void TestGlobalScopeCompletion(clangd::CodeCompleteOptions Opts) {
       )cpp",
       {cls("IndexClass"), var("index_var"), func("index_func")}, Opts);
 
-  EXPECT_TRUE(Results.RanParser);
   // Class members. Should never be present in global completions.
   EXPECT_THAT(Results.Completions,
               Not(AnyOf(Has("method"), Has("method()"), Has("field"))));
@@ -327,7 +324,7 @@ TEST(CompletionTest, CompletionOptions) {
   }
 }
 
-TEST(CompletionTest, Accessible) {
+TEST(CompletionTest, Priorities) {
   auto Internal = completions(R"cpp(
       class Foo {
         public: void pub();
@@ -337,7 +334,7 @@ TEST(CompletionTest, Accessible) {
       void Foo::pub() { this->^ }
   )cpp");
   EXPECT_THAT(Internal.Completions,
-              AllOf(Has("priv"), Has("prot"), Has("pub")));
+              HasSubsequence(Named("priv"), Named("prot"), Named("pub")));
 
   auto External = completions(R"cpp(
       class Foo {
@@ -503,21 +500,6 @@ TEST(CompletionTest, ReferencesAffectRanking) {
                         {withReferences(10000, ns("absl")), func("absb")});
   EXPECT_THAT(Results.Completions,
               HasSubsequence(Named("absl"), Named("absb")));
-}
-
-TEST(CompletionTest, ContextWords) {
-  auto Results = completions(R"cpp(
-  enum class Color { RED, YELLOW, BLUE };
-
-  // (blank lines so the definition above isn't "context")
-
-  // "It was a yellow car," he said. "Big yellow car, new."
-  auto Finish = Color::^
-  )cpp");
-  // Yellow would normally sort last (alphabetic).
-  // But the recent mention shuold bump it up.
-  ASSERT_THAT(Results.Completions,
-              HasSubsequence(Named("YELLOW"), Named("BLUE")));
 }
 
 TEST(CompletionTest, GlobalQualified) {
@@ -2461,7 +2443,6 @@ TEST(NoCompileCompletionTest, Basic) {
       ^
     }
   )cpp");
-  EXPECT_FALSE(Results.RanParser);
   EXPECT_THAT(Results.Completions,
               UnorderedElementsAre(Named("void"), Named("func"), Named("int"),
                                    Named("xyz"), Named("abc")));

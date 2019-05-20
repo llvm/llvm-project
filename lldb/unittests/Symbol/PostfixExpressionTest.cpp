@@ -88,7 +88,6 @@ TEST(PostfixExpression, Parse) {
   EXPECT_EQ("^(^(int(1)))", ParseAndStringify("1 ^ ^"));
   EXPECT_EQ("^(+(int(1), ^(int(2))))", ParseAndStringify("1 2 ^ + ^"));
   EXPECT_EQ("-($foo, int(47))", ParseAndStringify("$foo 47 -"));
-  EXPECT_EQ("+(int(47), int(-42))", ParseAndStringify("47 -42 +"));
 
   EXPECT_EQ("nullptr", ParseAndStringify("+"));
   EXPECT_EQ("nullptr", ParseAndStringify("^"));
@@ -138,7 +137,7 @@ static std::string ParseAndGenerateDWARF(llvm::StringRef expr) {
 }
 
 TEST(PostfixExpression, ToDWARF) {
-  EXPECT_EQ("DW_OP_consts +0", ParseAndGenerateDWARF("0"));
+  EXPECT_EQ("DW_OP_constu 0x0", ParseAndGenerateDWARF("0"));
 
   EXPECT_EQ("DW_OP_breg1 +0", ParseAndGenerateDWARF("R1"));
 
@@ -152,18 +151,18 @@ TEST(PostfixExpression, ToDWARF) {
   EXPECT_EQ("DW_OP_breg1 +0, DW_OP_pick 0x01, DW_OP_plus ",
             ParseAndGenerateDWARF("R1 INIT +"));
 
-  EXPECT_EQ("DW_OP_consts +1, DW_OP_pick 0x01, DW_OP_deref , DW_OP_plus ",
+  EXPECT_EQ("DW_OP_constu 0x1, DW_OP_pick 0x01, DW_OP_deref , DW_OP_plus ",
             ParseAndGenerateDWARF("1 INIT ^ +"));
 
-  EXPECT_EQ("DW_OP_consts +4, DW_OP_consts +5, DW_OP_plus ",
+  EXPECT_EQ("DW_OP_constu 0x4, DW_OP_constu 0x5, DW_OP_plus ",
             ParseAndGenerateDWARF("4 5 +"));
 
-  EXPECT_EQ("DW_OP_consts +4, DW_OP_consts +5, DW_OP_minus ",
+  EXPECT_EQ("DW_OP_constu 0x4, DW_OP_constu 0x5, DW_OP_minus ",
             ParseAndGenerateDWARF("4 5 -"));
 
-  EXPECT_EQ("DW_OP_consts +4, DW_OP_deref ", ParseAndGenerateDWARF("4 ^"));
+  EXPECT_EQ("DW_OP_constu 0x4, DW_OP_deref ", ParseAndGenerateDWARF("4 ^"));
 
-  EXPECT_EQ("DW_OP_breg6 +0, DW_OP_consts +128, DW_OP_lit1 "
+  EXPECT_EQ("DW_OP_breg6 +0, DW_OP_constu 0x80, DW_OP_lit1 "
             ", DW_OP_minus , DW_OP_not , DW_OP_and ",
             ParseAndGenerateDWARF("R6 128 @"));
 }

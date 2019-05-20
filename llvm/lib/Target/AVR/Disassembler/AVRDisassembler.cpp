@@ -14,7 +14,6 @@
 #include "AVRRegisterInfo.h"
 #include "AVRSubtarget.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
-#include "TargetInfo/AVRTargetInfo.h"
 
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"

@@ -6171,9 +6171,6 @@ AST_MATCHER(CXXConstructorDecl, isDelegatingConstructor) {
 AST_POLYMORPHIC_MATCHER(isExplicit,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(CXXConstructorDecl,
                                                         CXXConversionDecl)) {
-  // FIXME : it's not clear whether this should match a dependent
-  //         explicit(....). this matcher should also be able to match
-  //         CXXDeductionGuideDecl with explicit specifier.
   return Node.isExplicit();
 }
 
@@ -6214,29 +6211,6 @@ AST_POLYMORPHIC_MATCHER(isInline,
 AST_MATCHER(NamespaceDecl, isAnonymous) {
   return Node.isAnonymousNamespace();
 }
-
-/// Matches declarations in the namespace `std`, but not in nested namespaces.
-///
-/// Given
-/// \code
-///   class vector {};
-///   namespace foo {
-///     class vector {};
-///     namespace std {
-///       class vector {};
-///     }
-///   }
-///   namespace std {
-///     inline namespace __1 {
-///       class vector {}; // #1
-///       namespace experimental {
-///         class vector {};
-///       }
-///     }
-///   }
-/// \endcode
-/// cxxRecordDecl(hasName("vector"), isInStdNamespace()) will match only #1.
-AST_MATCHER(Decl, isInStdNamespace) { return Node.isInStdNamespace(); }
 
 /// If the given case statement does not use the GNU case range
 /// extension, matches the constant given in the statement.
@@ -6413,8 +6387,8 @@ AST_MATCHER(CXXNewExpr, isArray) {
 /// cxxNewExpr(hasArraySize(intgerLiteral(equals(10))))
 ///   matches the expression 'new MyClass[10]'.
 AST_MATCHER_P(CXXNewExpr, hasArraySize, internal::Matcher<Expr>, InnerMatcher) {
-  return Node.isArray() && *Node.getArraySize() &&
-         InnerMatcher.matches(**Node.getArraySize(), Finder, Builder);
+  return Node.isArray() &&
+    InnerMatcher.matches(*Node.getArraySize(), Finder, Builder);
 }
 
 /// Matches a class declaration that is defined.

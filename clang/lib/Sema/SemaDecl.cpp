@@ -917,16 +917,6 @@ Corrected:
       }
     }
 
-    if (getLangOpts().CPlusPlus2a && !SS.isSet() && NextToken.is(tok::less)) {
-      // In C++20 onwards, this could be an ADL-only call to a function
-      // template, and we're required to assume that this is a template name.
-      //
-      // FIXME: Find a way to still do typo correction in this case.
-      TemplateName Template =
-          Context.getAssumedTemplateName(NameInfo.getName());
-      return NameClassification::UndeclaredTemplate(Template);
-    }
-
     // In C, we first see whether there is a tag type by the same name, in
     // which case it's likely that the user just forgot to write "enum",
     // "struct", or "union".
@@ -1055,62 +1045,52 @@ Corrected:
 
   if (getLangOpts().CPlusPlus && NextToken.is(tok::less) &&
       (IsFilteredTemplateName ||
-       hasAnyAcceptableTemplateNames(
-           Result, /*AllowFunctionTemplates=*/true,
-           /*AllowDependent=*/false,
-           /*AllowNonTemplateFunctions*/ !SS.isSet() &&
-               getLangOpts().CPlusPlus2a))) {
+       hasAnyAcceptableTemplateNames(Result, /*AllowFunctionTemplates=*/true,
+                                     /*AllowDependent=*/false))) {
     // C++ [temp.names]p3:
     //   After name lookup (3.4) finds that a name is a template-name or that
     //   an operator-function-id or a literal- operator-id refers to a set of
     //   overloaded functions any member of which is a function template if
     //   this is followed by a <, the < is always taken as the delimiter of a
     //   template-argument-list and never as the less-than operator.
-    // C++2a [temp.names]p2:
-    //   A name is also considered to refer to a template if it is an
-    //   unqualified-id followed by a < and name lookup finds either one
-    //   or more functions or finds nothing.
     if (!IsFilteredTemplateName)
       FilterAcceptableTemplateNames(Result);
 
-    bool IsFunctionTemplate;
-    bool IsVarTemplate;
-    TemplateName Template;
-    if (Result.end() - Result.begin() > 1) {
-      IsFunctionTemplate = true;
-      Template = Context.getOverloadedTemplateName(Result.begin(),
-                                                   Result.end());
-    } else if (!Result.empty()) {
-      auto *TD = cast<TemplateDecl>(getAsTemplateNameDecl(
-          *Result.begin(), /*AllowFunctionTemplates=*/true,
-          /*AllowDependent=*/false));
-      IsFunctionTemplate = isa<FunctionTemplateDecl>(TD);
-      IsVarTemplate = isa<VarTemplateDecl>(TD);
+    if (!Result.empty()) {
+      bool IsFunctionTemplate;
+      bool IsVarTemplate;
+      TemplateName Template;
+      if (Result.end() - Result.begin() > 1) {
+        IsFunctionTemplate = true;
+        Template = Context.getOverloadedTemplateName(Result.begin(),
+                                                     Result.end());
+      } else {
+        auto *TD = cast<TemplateDecl>(getAsTemplateNameDecl(
+            *Result.begin(), /*AllowFunctionTemplates=*/true,
+            /*AllowDependent=*/false));
+        IsFunctionTemplate = isa<FunctionTemplateDecl>(TD);
+        IsVarTemplate = isa<VarTemplateDecl>(TD);
 
-      if (SS.isSet() && !SS.isInvalid())
-        Template =
-            Context.getQualifiedTemplateName(SS.getScopeRep(),
-                                             /*TemplateKeyword=*/false, TD);
-      else
-        Template = TemplateName(TD);
-    } else {
-      // All results were non-template functions. This is a function template
-      // name.
-      IsFunctionTemplate = true;
-      Template = Context.getAssumedTemplateName(NameInfo.getName());
+        if (SS.isSet() && !SS.isInvalid())
+          Template =
+              Context.getQualifiedTemplateName(SS.getScopeRep(),
+                                               /*TemplateKeyword=*/false, TD);
+        else
+          Template = TemplateName(TD);
+      }
+
+      if (IsFunctionTemplate) {
+        // Function templates always go through overload resolution, at which
+        // point we'll perform the various checks (e.g., accessibility) we need
+        // to based on which function we selected.
+        Result.suppressDiagnostics();
+
+        return NameClassification::FunctionTemplate(Template);
+      }
+
+      return IsVarTemplate ? NameClassification::VarTemplate(Template)
+                           : NameClassification::TypeTemplate(Template);
     }
-
-    if (IsFunctionTemplate) {
-      // Function templates always go through overload resolution, at which
-      // point we'll perform the various checks (e.g., accessibility) we need
-      // to based on which function we selected.
-      Result.suppressDiagnostics();
-
-      return NameClassification::FunctionTemplate(Template);
-    }
-
-    return IsVarTemplate ? NameClassification::VarTemplate(Template)
-                         : NameClassification::TypeTemplate(Template);
   }
 
   NamedDecl *FirstDecl = (*Result.begin())->getUnderlyingDecl();
@@ -5725,7 +5705,7 @@ void Sema::DiagnoseFunctionSpecifiers(const DeclSpec &DS) {
     Diag(DS.getVirtualSpecLoc(),
          diag::err_virtual_non_function);
 
-  if (DS.hasExplicitSpecifier())
+  if (DS.isExplicitSpecified())
     Diag(DS.getExplicitSpecLoc(),
          diag::err_explicit_non_function);
 
@@ -7989,7 +7969,7 @@ static FunctionDecl* CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
     return NewFD;
   }
 
-  ExplicitSpecifier ExplicitSpecifier = D.getDeclSpec().getExplicitSpecifier();
+  bool isExplicit = D.getDeclSpec().isExplicitSpecified();
   bool isConstexpr = D.getDeclSpec().isConstexprSpecified();
 
   // Check that the return type is not an abstract class type.
@@ -8009,7 +7989,7 @@ static FunctionDecl* CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
     R = SemaRef.CheckConstructorDeclarator(D, R, SC);
     return CXXConstructorDecl::Create(
         SemaRef.Context, cast<CXXRecordDecl>(DC), D.getBeginLoc(), NameInfo, R,
-        TInfo, ExplicitSpecifier, isInline,
+        TInfo, isExplicit, isInline,
         /*isImplicitlyDeclared=*/false, isConstexpr);
 
   } else if (Name.getNameKind() == DeclarationName::CXXDestructorName) {
@@ -8054,13 +8034,13 @@ static FunctionDecl* CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
     IsVirtualOkay = true;
     return CXXConversionDecl::Create(
         SemaRef.Context, cast<CXXRecordDecl>(DC), D.getBeginLoc(), NameInfo, R,
-        TInfo, isInline, ExplicitSpecifier, isConstexpr, SourceLocation());
+        TInfo, isInline, isExplicit, isConstexpr, SourceLocation());
 
   } else if (Name.getNameKind() == DeclarationName::CXXDeductionGuideName) {
     SemaRef.CheckDeductionGuideDeclarator(D, R, SC);
 
     return CXXDeductionGuideDecl::Create(SemaRef.Context, DC, D.getBeginLoc(),
-                                         ExplicitSpecifier, NameInfo, R, TInfo,
+                                         isExplicit, NameInfo, R, TInfo,
                                          D.getEndLoc());
   } else if (DC->isRecord()) {
     // If the name of the function is the same as the name of the record,
@@ -8421,7 +8401,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   if (getLangOpts().CPlusPlus) {
     bool isInline = D.getDeclSpec().isInlineSpecified();
     bool isVirtual = D.getDeclSpec().isVirtualSpecified();
-    bool hasExplicit = D.getDeclSpec().hasExplicitSpecifier();
+    bool isExplicit = D.getDeclSpec().isExplicitSpecified();
     bool isConstexpr = D.getDeclSpec().isConstexprSpecified();
     isFriend = D.getDeclSpec().isFriendSpecified();
     if (isFriend && !isInline && D.isFunctionDefinition()) {
@@ -8604,20 +8584,20 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     //  The explicit specifier shall be used only in the declaration of a
     //  constructor or conversion function within its class definition;
     //  see 12.3.1 and 12.3.2.
-    if (hasExplicit && !NewFD->isInvalidDecl() &&
+    if (isExplicit && !NewFD->isInvalidDecl() &&
         !isa<CXXDeductionGuideDecl>(NewFD)) {
       if (!CurContext->isRecord()) {
         // 'explicit' was specified outside of the class.
         Diag(D.getDeclSpec().getExplicitSpecLoc(),
              diag::err_explicit_out_of_class)
-            << FixItHint::CreateRemoval(D.getDeclSpec().getExplicitSpecRange());
+          << FixItHint::CreateRemoval(D.getDeclSpec().getExplicitSpecLoc());
       } else if (!isa<CXXConstructorDecl>(NewFD) &&
                  !isa<CXXConversionDecl>(NewFD)) {
         // 'explicit' was specified on a function that wasn't a constructor
         // or conversion function.
         Diag(D.getDeclSpec().getExplicitSpecLoc(),
              diag::err_explicit_non_ctor_or_conv_function)
-            << FixItHint::CreateRemoval(D.getDeclSpec().getExplicitSpecRange());
+          << FixItHint::CreateRemoval(D.getDeclSpec().getExplicitSpecLoc());
       }
     }
 
@@ -8693,12 +8673,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       // member function definition.
 
       // MSVC permits the use of a 'static' storage specifier on an out-of-line
-      // member function template declaration and class member template
-      // declaration (MSVC versions before 2015), warn about this.
+      // member function template declaration, warn about this.
       Diag(D.getDeclSpec().getStorageClassSpecLoc(),
-           ((!getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2015) &&
-             cast<CXXRecordDecl>(DC)->getDescribedClassTemplate()) ||
-           (getLangOpts().MSVCCompat && NewFD->getDescribedFunctionTemplate()))
+           NewFD->getDescribedFunctionTemplate() && getLangOpts().MSVCCompat
            ? diag::ext_static_out_of_line : diag::err_static_out_of_line)
         << FixItHint::CreateRemoval(D.getDeclSpec().getStorageClassSpecLoc());
     }
@@ -9237,9 +9214,18 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   MarkUnusedFileScopedDecl(NewFD);
 
+  if (getLangOpts().CPlusPlus) {
+    if (FunctionTemplate) {
+      if (NewFD->isInvalidDecl())
+        FunctionTemplate->setInvalidDecl();
+      return FunctionTemplate;
+    }
 
+    if (isMemberSpecialization && !NewFD->isInvalidDecl())
+      CompleteMemberSpecialization(NewFD, Previous);
+  }
 
-  if (getLangOpts().OpenCL && NewFD->hasAttr<OpenCLKernelAttr>()) {
+  if (NewFD->hasAttr<OpenCLKernelAttr>()) {
     // OpenCL v1.2 s6.8 static is invalid for kernel functions.
     if ((getLangOpts().OpenCLVersion >= 120)
         && (SC == SC_Static)) {
@@ -9259,30 +9245,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     llvm::SmallPtrSet<const Type *, 16> ValidTypes;
     for (auto Param : NewFD->parameters())
       checkIsValidOpenCLKernelParameter(*this, D, Param, ValidTypes);
-
-    if (getLangOpts().OpenCLCPlusPlus) {
-      if (DC->isRecord()) {
-        Diag(D.getIdentifierLoc(), diag::err_method_kernel);
-        D.setInvalidType();
-      }
-      if (FunctionTemplate) {
-        Diag(D.getIdentifierLoc(), diag::err_template_kernel);
-        D.setInvalidType();
-      }
-    }
   }
-
-  if (getLangOpts().CPlusPlus) {
-    if (FunctionTemplate) {
-      if (NewFD->isInvalidDecl())
-        FunctionTemplate->setInvalidDecl();
-      return FunctionTemplate;
-    }
-
-    if (isMemberSpecialization && !NewFD->isInvalidDecl())
-      CompleteMemberSpecialization(NewFD, Previous);
-  }
-
   for (const ParmVarDecl *Param : NewFD->parameters()) {
     QualType PT = Param->getType();
 
@@ -13390,6 +13353,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     assert(MD == getCurMethodDecl() && "Method parsing confused");
     MD->setBody(Body);
     if (!MD->isInvalidDecl()) {
+      if (!MD->hasSkippedBody())
+        DiagnoseUnusedParameters(MD->parameters());
       DiagnoseSizeOfParametersAndReturnValue(MD->parameters(),
                                              MD->getReturnType(), MD);
 

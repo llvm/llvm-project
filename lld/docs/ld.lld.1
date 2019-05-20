@@ -4,7 +4,7 @@
 .\"
 .\" This man page documents only lld's ELF linking support, obtained originally
 .\" from FreeBSD.
-.Dd May 12, 2019
+.Dd February 26, 2019
 .Dt LD.LLD 1
 .Os
 .Sh NAME
@@ -254,8 +254,6 @@ Set target emulation.
 .It Fl -Map Ns = Ns Ar file , Fl M Ar file
 Print a link map to
 .Ar file .
-.It Fl -nmagic , Fl n
-Do not page align sections, link against static libraries.
 .It Fl -no-allow-shlib-undefined
 Do not allow unresolved references in shared libraries.
 This option is enabled by default when linking an executable.
@@ -279,10 +277,6 @@ Disable garbage collection of unused sections.
 Disable STB_GNU_UNIQUE symbol binding.
 .It Fl -no-merge-exidx-entries
 Disable merging .ARM.exidx entries.
-.It F1 -no-nmagic
-Page align sections.
-.It F1 -no-omagic
-Do not set the text data sections to be writable, page align sections.
 .It Fl -no-rosegment
 Do not put read-only non-executable sections in their own segment.
 .It Fl -no-threads
@@ -331,7 +325,7 @@ is
 .Cm binary ,
 which produces output with no ELF header.
 .It Fl -omagic , Fl N
-Set the text and data sections to be readable and writable, do not page align sections, link against static libraries.
+Set the text and data sections to be readable and writable.
 .It Fl -opt-remarks-filename Ar file
 Write optimization remarks in YAML format to
 .Ar file .
@@ -552,14 +546,6 @@ Sets the
 .Dv DYNAMIC
 section.
 Different loaders can decide how to handle this flag on their own.
-.It Cm ifunc-noplt
-Do not emit PLT entries for ifunc symbols.
-Instead, emit text relocations referencing the resolver.
-This is an experimental optimization and only suitable for standalone
-environments where text relocations do not have the usual drawbacks.
-This option must be combined with the
-.Fl z Li notext
-option.
 .It Cm initfirst
 Sets the
 .Dv DF_1_INITFIRST

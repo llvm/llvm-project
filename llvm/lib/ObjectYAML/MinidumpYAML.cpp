@@ -180,8 +180,6 @@ Stream::StreamKind Stream::getKind(StreamType Type) {
   case StreamType::LinuxProcStat:
   case StreamType::LinuxProcUptime:
     return StreamKind::TextContent;
-  case StreamType::ThreadList:
-    return StreamKind::ThreadList;
   default:
     return StreamKind::RawContent;
   }
@@ -198,8 +196,6 @@ std::unique_ptr<Stream> Stream::create(StreamType Type) {
     return llvm::make_unique<SystemInfoStream>();
   case StreamKind::TextContent:
     return llvm::make_unique<TextContentStream>(Type);
-  case StreamKind::ThreadList:
-    return llvm::make_unique<ThreadListStream>();
   }
   llvm_unreachable("Unhandled stream kind!");
 }
@@ -327,19 +323,19 @@ void yaml::MappingTraits<VSFixedFileInfo>::mapping(IO &IO,
   mapOptionalHex(IO, "File Date Low", Info.FileDateLow, 0);
 }
 
-void yaml::MappingTraits<ModuleListStream::entry_type>::mapping(
-    IO &IO, ModuleListStream::entry_type &M) {
-  mapRequiredHex(IO, "Base of Image", M.Entry.BaseOfImage);
-  mapRequiredHex(IO, "Size of Image", M.Entry.SizeOfImage);
-  mapOptionalHex(IO, "Checksum", M.Entry.Checksum, 0);
-  IO.mapOptional("Time Date Stamp", M.Entry.TimeDateStamp,
+void yaml::MappingTraits<ModuleListStream::ParsedModule>::mapping(
+    IO &IO, ModuleListStream::ParsedModule &M) {
+  mapRequiredHex(IO, "Base of Image", M.Module.BaseOfImage);
+  mapRequiredHex(IO, "Size of Image", M.Module.SizeOfImage);
+  mapOptionalHex(IO, "Checksum", M.Module.Checksum, 0);
+  IO.mapOptional("Time Date Stamp", M.Module.TimeDateStamp,
                  support::ulittle32_t(0));
   IO.mapRequired("Module Name", M.Name);
-  IO.mapOptional("Version Info", M.Entry.VersionInfo, VSFixedFileInfo());
+  IO.mapOptional("Version Info", M.Module.VersionInfo, VSFixedFileInfo());
   IO.mapRequired("CodeView Record", M.CvRecord);
   IO.mapOptional("Misc Record", M.MiscRecord, yaml::BinaryRef());
-  mapOptionalHex(IO, "Reserved0", M.Entry.Reserved0, 0);
-  mapOptionalHex(IO, "Reserved1", M.Entry.Reserved1, 0);
+  mapOptionalHex(IO, "Reserved0", M.Module.Reserved0, 0);
+  mapOptionalHex(IO, "Reserved1", M.Module.Reserved1, 0);
 }
 
 static void streamMapping(yaml::IO &IO, RawContentStream &Stream) {
@@ -354,7 +350,7 @@ static StringRef streamValidate(RawContentStream &Stream) {
 }
 
 static void streamMapping(yaml::IO &IO, ModuleListStream &Stream) {
-  IO.mapRequired("Modules", Stream.Entries);
+  IO.mapRequired("Modules", Stream.Modules);
 }
 
 static void streamMapping(yaml::IO &IO, SystemInfoStream &Stream) {
@@ -390,27 +386,6 @@ static void streamMapping(yaml::IO &IO, TextContentStream &Stream) {
   IO.mapOptional("Text", Stream.Text);
 }
 
-void yaml::MappingContextTraits<MemoryDescriptor, yaml::BinaryRef>::mapping(
-    IO &IO, MemoryDescriptor &Memory, BinaryRef &Content) {
-  mapRequiredHex(IO, "Start of Memory Range", Memory.StartOfMemoryRange);
-  IO.mapRequired("Content", Content);
-}
-
-void yaml::MappingTraits<ThreadListStream::entry_type>::mapping(
-    IO &IO, ThreadListStream::entry_type &T) {
-  mapRequiredHex(IO, "Thread Id", T.Entry.ThreadId);
-  mapOptionalHex(IO, "Suspend Count", T.Entry.SuspendCount, 0);
-  mapOptionalHex(IO, "Priority Class", T.Entry.PriorityClass, 0);
-  mapOptionalHex(IO, "Priority", T.Entry.Priority, 0);
-  mapOptionalHex(IO, "Environment Block", T.Entry.EnvironmentBlock, 0);
-  IO.mapRequired("Context", T.Context);
-  IO.mapRequired("Stack", T.Entry.Stack, T.Stack);
-}
-
-static void streamMapping(yaml::IO &IO, ThreadListStream &Stream) {
-  IO.mapRequired("Threads", Stream.Entries);
-}
-
 void yaml::MappingTraits<std::unique_ptr<Stream>>::mapping(
     yaml::IO &IO, std::unique_ptr<MinidumpYAML::Stream> &S) {
   StreamType Type;
@@ -433,9 +408,6 @@ void yaml::MappingTraits<std::unique_ptr<Stream>>::mapping(
   case MinidumpYAML::Stream::StreamKind::TextContent:
     streamMapping(IO, llvm::cast<TextContentStream>(*S));
     break;
-  case MinidumpYAML::Stream::StreamKind::ThreadList:
-    streamMapping(IO, llvm::cast<ThreadListStream>(*S));
-    break;
   }
 }
 
@@ -447,7 +419,6 @@ StringRef yaml::MappingTraits<std::unique_ptr<Stream>>::validate(
   case MinidumpYAML::Stream::StreamKind::ModuleList:
   case MinidumpYAML::Stream::StreamKind::SystemInfo:
   case MinidumpYAML::Stream::StreamKind::TextContent:
-  case MinidumpYAML::Stream::StreamKind::ThreadList:
     return "";
   }
   llvm_unreachable("Fully covered switch above!");
@@ -461,50 +432,32 @@ void yaml::MappingTraits<Object>::mapping(IO &IO, Object &O) {
   IO.mapRequired("Streams", O.Streams);
 }
 
-static LocationDescriptor layout(BlobAllocator &File, yaml::BinaryRef Data) {
-  return {support::ulittle32_t(Data.binary_size()),
-          support::ulittle32_t(File.allocateBytes(Data))};
-}
-
-static void layout(BlobAllocator &File, ModuleListStream::entry_type &M) {
-  M.Entry.ModuleNameRVA = File.allocateString(M.Name);
-
-  M.Entry.CvRecord = layout(File, M.CvRecord);
-  M.Entry.MiscRecord = layout(File, M.MiscRecord);
-}
-
-static void layout(BlobAllocator &File, ThreadListStream::entry_type &T) {
-  T.Entry.Stack.Memory = layout(File, T.Stack);
-  T.Entry.Context = layout(File, T.Context);
-}
-
-template <typename EntryT>
-static size_t layout(BlobAllocator &File,
-                     MinidumpYAML::detail::ListStream<EntryT> &S) {
-
-  File.allocateNewObject<support::ulittle32_t>(S.Entries.size());
-  for (auto &E : S.Entries)
-    File.allocateObject(E.Entry);
-
-  size_t DataEnd = File.tell();
-
-  // Lay out the auxiliary data, (which is not a part of the stream).
-  DataEnd = File.tell();
-  for (auto &E : S.Entries)
-    layout(File, E);
-
-  return DataEnd;
-}
-
 static Directory layout(BlobAllocator &File, Stream &S) {
   Directory Result;
   Result.Type = S.Type;
   Result.Location.RVA = File.tell();
   Optional<size_t> DataEnd;
   switch (S.Kind) {
-  case Stream::StreamKind::ModuleList:
-    DataEnd = layout(File, cast<ModuleListStream>(S));
+  case Stream::StreamKind::ModuleList: {
+    ModuleListStream &List = cast<ModuleListStream>(S);
+
+    File.allocateNewObject<support::ulittle32_t>(List.Modules.size());
+    for (ModuleListStream::ParsedModule &M : List.Modules)
+      File.allocateObject(M.Module);
+
+    // Module names and CodeView/Misc records are not a part of the stream.
+    DataEnd = File.tell();
+    for (ModuleListStream::ParsedModule &M : List.Modules) {
+      M.Module.ModuleNameRVA = File.allocateString(M.Name);
+
+      M.Module.CvRecord.RVA = File.allocateBytes(M.CvRecord);
+      M.Module.CvRecord.DataSize = M.CvRecord.binary_size();
+
+      M.Module.MiscRecord.RVA = File.allocateBytes(M.MiscRecord);
+      M.Module.MiscRecord.DataSize = M.MiscRecord.binary_size();
+    }
     break;
+  }
   case Stream::StreamKind::RawContent: {
     RawContentStream &Raw = cast<RawContentStream>(S);
     File.allocateCallback(Raw.Size, [&Raw](raw_ostream &OS) {
@@ -524,9 +477,6 @@ static Directory layout(BlobAllocator &File, Stream &S) {
   }
   case Stream::StreamKind::TextContent:
     File.allocateArray(arrayRefFromStringRef(cast<TextContentStream>(S).Text));
-    break;
-  case Stream::StreamKind::ThreadList:
-    DataEnd = layout(File, cast<ThreadListStream>(S));
     break;
   }
   // If DataEnd is not set, we assume everything we generated is a part of the
@@ -570,7 +520,7 @@ Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
     auto ExpectedList = File.getModuleList();
     if (!ExpectedList)
       return ExpectedList.takeError();
-    std::vector<ModuleListStream::entry_type> Modules;
+    std::vector<ModuleListStream::ParsedModule> Modules;
     for (const Module &M : *ExpectedList) {
       auto ExpectedName = File.getString(M.ModuleNameRVA);
       if (!ExpectedName)
@@ -602,22 +552,6 @@ Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
   case StreamKind::TextContent:
     return llvm::make_unique<TextContentStream>(
         StreamDesc.Type, toStringRef(File.getRawStream(StreamDesc)));
-  case StreamKind::ThreadList: {
-    auto ExpectedList = File.getThreadList();
-    if (!ExpectedList)
-      return ExpectedList.takeError();
-    std::vector<ThreadListStream::entry_type> Threads;
-    for (const Thread &T : *ExpectedList) {
-      auto ExpectedStack = File.getRawData(T.Stack.Memory);
-      if (!ExpectedStack)
-        return ExpectedStack.takeError();
-      auto ExpectedContext = File.getRawData(T.Context);
-      if (!ExpectedContext)
-        return ExpectedContext.takeError();
-      Threads.push_back({T, *ExpectedStack, *ExpectedContext});
-    }
-    return llvm::make_unique<ThreadListStream>(std::move(Threads));
-  }
   }
   llvm_unreachable("Unhandled stream kind!");
 }

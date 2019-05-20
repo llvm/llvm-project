@@ -2,8 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=amdgcn--amdhsa -mcpu=fiji %s -o %t.o
 # RUN: ld.lld --hash-style=sysv -shared %t.o -o %t.so
 # RUN: llvm-readobj -r %t.so | FileCheck %s
-# RUN: llvm-nm %t.so | FileCheck %s --check-prefix=NM
-# RUN: llvm-readelf -x .rodata -x nonalloc %t.so | FileCheck %s --check-prefix=HEX
+# RUN: llvm-objdump -s %t.so | FileCheck %s --check-prefix=OBJDUMP
 
 .text
 
@@ -49,9 +48,6 @@ kernel0:
   .local   local_var0
   .local   local_var1
   .local   local_var2
-  local_var0:
-  local_var1:
-  local_var2:
 
 # R_AMDGPU_ABS32:
 .section nonalloc, "w", @progbits
@@ -72,7 +68,6 @@ ptr:
   .type temp2, @object
   .local temp2
   .size temp2, 4
-  temp2:
 
   .type ptr2, @object
   .globl ptr2
@@ -94,7 +89,7 @@ foo:
 # linker.
 # CHECK: Relocations [
 # CHECK: .rela.dyn {
-# CHECK-NEXT: R_AMDGPU_RELATIVE64 - 0x3008
+# CHECK-NEXT: R_AMDGPU_RELATIVE64 - 0x0
 # CHECK-NEXT: R_AMDGPU_ABS64 common_var0 0x0
 # CHECK-NEXT: R_AMDGPU_ABS64 common_var1 0x0
 # CHECK-NEXT: R_AMDGPU_ABS64 common_var2 0x0
@@ -114,16 +109,9 @@ foo:
 # CHECK-NEXT: }
 # CHECK-NEXT: ]
 
-# NM: 0000000000003010 B common_var0
-# NM: 0000000000003410 B common_var1
-# NM: 0000000000003810 B common_var2
-# NM: 0000000000003008 d temp2
+# OBJDUMP: Contents of section .rodata:
+# OBJDUMP: 98f8ffff ffffffff
 
-# temp2 - foo = 0x3008-0x768 = 0x28a0
-# HEX:      section '.rodata':
-# HEX-NEXT: 0x00000768 a0280000 00000000
-
-# common_var2+4, common_var1+8, and common_var0+12.
-# HEX:      section 'nonalloc':
-# HEX-NEXT: 0x00000000 00000000 14380000 00000000 18340000
-# HEX-NEXT: 0x00000010 00000000 1c300000
+# OBJDUMP: Contents of section nonalloc:
+# OBJDUMP-NEXT: 0000 00000000 14380000 00000000 18340000
+# OBJDUMP-NEXT: 00000000 1c300000

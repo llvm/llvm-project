@@ -36,7 +36,6 @@ struct {
   const char *Word;
 } PreprocessorDirs[] = {
   { tgtok::Ifdef, "ifdef" },
-  { tgtok::Ifndef, "ifndef" },
   { tgtok::Else, "else" },
   { tgtok::Endif, "endif" },
   { tgtok::Define, "define" }
@@ -677,19 +676,12 @@ tgtok::TokKind TGLexer::lexPreprocessor(
     PrintFatalError("lexPreprocessor() called for unknown "
                     "preprocessor directive");
 
-  if (Kind == tgtok::Ifdef || Kind == tgtok::Ifndef) {
+  if (Kind == tgtok::Ifdef) {
     StringRef MacroName = prepLexMacroName();
-    StringRef IfTokName = Kind == tgtok::Ifdef ? "#ifdef" : "#ifndef";
     if (MacroName.empty())
-      return ReturnError(TokStart, "Expected macro name after " + IfTokName);
+      return ReturnError(TokStart, "Expected macro name after #ifdef");
 
     bool MacroIsDefined = DefinedMacros.count(MacroName) != 0;
-
-    // Canonicalize ifndef to ifdef equivalent
-    if (Kind == tgtok::Ifndef) {
-      MacroIsDefined = !MacroIsDefined;
-      Kind = tgtok::Ifdef;
-    }
 
     // Regardless of whether we are processing tokens or not,
     // we put the #ifdef control on stack.
@@ -697,8 +689,8 @@ tgtok::TokKind TGLexer::lexPreprocessor(
         {Kind, MacroIsDefined, SMLoc::getFromPointer(TokStart)});
 
     if (!prepSkipDirectiveEnd())
-      return ReturnError(CurPtr, "Only comments are supported after " +
-                                     IfTokName + " NAME");
+      return ReturnError(CurPtr,
+                         "Only comments are supported after #ifdef NAME");
 
     // If we were not processing tokens before this #ifdef,
     // then just return back to the lines skipping code.
@@ -722,7 +714,7 @@ tgtok::TokKind TGLexer::lexPreprocessor(
     // Check if this #else is correct before calling prepSkipDirectiveEnd(),
     // which will move CurPtr away from the beginning of #else.
     if (PrepIncludeStack.back()->empty())
-      return ReturnError(TokStart, "#else without #ifdef or #ifndef");
+      return ReturnError(TokStart, "#else without #ifdef");
 
     PreprocessorControlDesc IfdefEntry = PrepIncludeStack.back()->back();
 

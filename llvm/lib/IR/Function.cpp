@@ -145,10 +145,6 @@ bool Argument::hasStructRetAttr() const {
   return hasAttribute(Attribute::StructRet);
 }
 
-bool Argument::hasInRegAttr() const {
-  return hasAttribute(Attribute::InReg);
-}
-
 bool Argument::hasReturnedAttr() const {
   return hasAttribute(Attribute::Returned);
 }

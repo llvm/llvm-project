@@ -376,8 +376,8 @@ getSymbols(MemoryBufferRef Buf, raw_ostream &SymNames, bool &HasObject) {
     if (!isArchiveSymbol(S))
       continue;
     Ret.push_back(SymNames.tell());
-    if (Error E = S.printName(SymNames))
-      return std::move(E);
+    if (auto EC = S.printName(SymNames))
+      return errorCodeToError(EC);
     SymNames << '\0';
   }
   return Ret;

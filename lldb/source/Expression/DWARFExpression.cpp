@@ -55,6 +55,11 @@ DWARFExpression::DWARFExpression(DWARFUnit *dwarf_cu)
     : m_module_wp(), m_data(), m_dwarf_cu(dwarf_cu),
       m_reg_kind(eRegisterKindDWARF), m_loclist_slide(LLDB_INVALID_ADDRESS) {}
 
+DWARFExpression::DWARFExpression(const DWARFExpression &rhs)
+    : m_module_wp(rhs.m_module_wp), m_data(rhs.m_data),
+      m_dwarf_cu(rhs.m_dwarf_cu), m_reg_kind(rhs.m_reg_kind),
+      m_loclist_slide(rhs.m_loclist_slide) {}
+
 DWARFExpression::DWARFExpression(lldb::ModuleSP module_sp,
                                  const DataExtractor &data,
                                  DWARFUnit *dwarf_cu,

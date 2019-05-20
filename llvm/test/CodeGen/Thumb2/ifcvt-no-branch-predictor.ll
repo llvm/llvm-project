@@ -100,10 +100,10 @@ if.end:
 ; CHECK-BP: str
 ; CHECK-BP: b
 ; CHECK-BP: str
-; CHECK-BP: add
+; CHECK-BP: ldr
 ; CHECK-NOBP: ittee
 ; CHECK-NOBP: streq
-; CHECK-NOBP: addeq
+; CHECK-NOBP: ldreq
 ; CHECK-NOBP: strne
 ; CHECK-NOBP: strne
 define i32 @diamond2(i32 %n, i32* %p, i32* %q) {
@@ -119,7 +119,7 @@ if.then:
 
 if.else:
   store i32 %n, i32* %q, align 4
-  %0 = add i32 %n, 10
+  %0 = load i32, i32* %p, align 4
   br label %if.end
 
 if.end:

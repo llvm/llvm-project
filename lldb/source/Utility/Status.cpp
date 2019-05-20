@@ -47,6 +47,8 @@ Status::Status(std::error_code EC)
     : m_code(EC.value()), m_type(ErrorType::eErrorTypeGeneric),
       m_string(EC.message()) {}
 
+Status::Status(const Status &rhs) = default;
+
 Status::Status(const char *format, ...)
     : m_code(0), m_type(eErrorTypeInvalid), m_string() {
   va_list args;

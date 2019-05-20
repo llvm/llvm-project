@@ -9,6 +9,3 @@ add_lldb_library(lldbUtilityHelpers
   LINK_COMPONENTS
     Support
   )
-
-add_dependencies(lldbUtilityHelpers yaml2obj)
-add_definitions(-DYAML2OBJ="$<TARGET_FILE:yaml2obj>")

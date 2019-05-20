@@ -142,8 +142,6 @@ bool ConstrainedFPIntrinsic::isUnaryOp() const {
   switch (getIntrinsicID()) {
     default:
       return false;
-    case Intrinsic::experimental_constrained_fptrunc:
-    case Intrinsic::experimental_constrained_fpext:
     case Intrinsic::experimental_constrained_sqrt:
     case Intrinsic::experimental_constrained_sin:
     case Intrinsic::experimental_constrained_cos:

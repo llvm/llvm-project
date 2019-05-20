@@ -65,7 +65,7 @@ namespace tgtok {
 
     // Preprocessing tokens for internal usage by the lexer.
     // They are never returned as a result of Lex().
-    Ifdef, Ifndef, Else, Endif, Define
+    Ifdef, Else, Endif, Define
   };
 }
 

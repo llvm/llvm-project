@@ -218,9 +218,6 @@ defm merge_exidx_entries: B<"merge-exidx-entries",
     "Enable merging .ARM.exidx entries (default)",
     "Disable merging .ARM.exidx entries">;
 
-def nmagic: F<"nmagic">, MetaVarName<"<magic>">,
-  HelpText<"Do not page align sections, link against static libraries.">;
-
 def nostdlib: F<"nostdlib">,
   HelpText<"Only search directories specified on the command line">;
 
@@ -233,11 +230,8 @@ def no_dynamic_linker: F<"no-dynamic-linker">,
 def noinhibit_exec: F<"noinhibit-exec">,
   HelpText<"Retain the executable output file whenever it is still usable">;
 
-def no_nmagic: F<"no-nmagic">, MetaVarName<"<magic>">,
-  HelpText<"Page align sections (default)">;
-
 def no_omagic: F<"no-omagic">, MetaVarName<"<magic>">,
-  HelpText<"Do not set the text data sections to be writable, page align sections (default)">;
+  HelpText<"Do not set the text data sections to be writable">;
 
 def no_rosegment: F<"no-rosegment">,
   HelpText<"Do not put read-only non-executable sections in their own segment">;
@@ -252,7 +246,7 @@ def oformat: Separate<["--"], "oformat">, MetaVarName<"<format>">,
   HelpText<"Specify the binary format for the output object file">;
 
 def omagic: Flag<["--"], "omagic">, MetaVarName<"<magic>">,
-  HelpText<"Set the text and data sections to be readable and writable, do not page align sections, link against static libraries">;
+  HelpText<"Set the text and data sections to be readable and writable">;
 
 defm orphan_handling:
   Eq<"orphan-handling", "Control how orphan sections are handled when linker script used">;
@@ -420,7 +414,6 @@ def: Separate<["-"], "b">, Alias<format>, HelpText<"Alias for --format">;
 def: JoinedOrSeparate<["-"], "l">, Alias<library>, HelpText<"Alias for --library">;
 def: JoinedOrSeparate<["-"], "L">, Alias<library_path>, HelpText<"Alias for --library-path">;
 def: F<"no-pic-executable">, Alias<no_pie>, HelpText<"Alias for --no-pie">;
-def: Flag<["-"], "n">, Alias<nmagic>, HelpText<"Alias for --nmagic">;
 def: Flag<["-"], "N">, Alias<omagic>, HelpText<"Alias for --omagic">;
 def: Joined<["--"], "output=">, Alias<o>, HelpText<"Alias for -o">;
 def: Separate<["--"], "output">, Alias<o>, HelpText<"Alias for -o">;

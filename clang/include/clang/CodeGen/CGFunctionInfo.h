@@ -95,6 +95,7 @@ private:
   bool InReg : 1;           // isDirect() || isExtend() || isIndirect()
   bool CanBeFlattened: 1;   // isDirect()
   bool SignExt : 1;         // isExtend()
+  bool SuppressSRet : 1;    // isIndirect()
 
   bool canHavePaddingType() const {
     return isDirect() || isExtend() || isIndirect() || isExpand();
@@ -110,13 +111,14 @@ private:
   }
 
   ABIArgInfo(Kind K)
-      : TheKind(K), PaddingInReg(false), InReg(false) {
+      : TheKind(K), PaddingInReg(false), InReg(false), SuppressSRet(false) {
   }
 
 public:
   ABIArgInfo()
       : TypeData(nullptr), PaddingType(nullptr), DirectOffset(0),
-        TheKind(Direct), PaddingInReg(false), InReg(false) {}
+        TheKind(Direct), PaddingInReg(false), InReg(false),
+        SuppressSRet(false) {}
 
   static ABIArgInfo getDirect(llvm::Type *T = nullptr, unsigned Offset = 0,
                               llvm::Type *Padding = nullptr,
@@ -403,6 +405,16 @@ public:
   void setCanBeFlattened(bool Flatten) {
     assert(isDirect() && "Invalid kind!");
     CanBeFlattened = Flatten;
+  }
+
+  bool getSuppressSRet() const {
+    assert(isIndirect() && "Invalid kind!");
+    return SuppressSRet;
+  }
+
+  void setSuppressSRet(bool Suppress) {
+    assert(isIndirect() && "Invalid kind!");
+    SuppressSRet = Suppress;
   }
 
   void dump() const;

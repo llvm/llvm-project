@@ -11,7 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "TargetInfo/XCoreTargetInfo.h"
 #include "XCore.h"
 #include "XCoreRegisterInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -766,6 +765,10 @@ MCDisassembler::DecodeStatus XCoreDisassembler::getInstruction(
   }
 
   return Fail;
+}
+
+namespace llvm {
+  Target &getTheXCoreTarget();
 }
 
 static MCDisassembler *createXCoreDisassembler(const Target &T,

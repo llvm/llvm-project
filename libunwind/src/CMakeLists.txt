@@ -67,7 +67,6 @@ endif()
 unwind_append_if(libraries LIBUNWIND_HAS_DL_LIB dl)
 if (LIBUNWIND_ENABLE_THREADS)
   unwind_append_if(libraries LIBUNWIND_HAS_PTHREAD_LIB pthread)
-  unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_WEAK_PTHREAD_LIB -DLIBUNWIND_USE_WEAK_PTHREAD=1)
 endif()
 
 # Setup flags.

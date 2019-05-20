@@ -22,8 +22,8 @@ class HostInfoMacOSX : public HostInfoPosix {
 
 private:
   // Static class, unconstructable.
-  HostInfoMacOSX() = delete;
-  ~HostInfoMacOSX() = delete;
+  HostInfoMacOSX();
+  ~HostInfoMacOSX();
 
 public:
   static llvm::VersionTuple GetOSVersion();

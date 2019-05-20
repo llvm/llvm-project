@@ -9,8 +9,8 @@ int main() {
 
   asm volatile(
     // save rsp & rbp
-    "movq    %%rsp, %4\n\t"
-    "movq    %%rbp, %5\n\t"
+    "movq    %%rsp, %%mm0\n\t"
+    "movq    %%rbp, %%mm1\n\t"
     "\n\t"
     "movq    %8, %%rax\n\t"
     "movq    %8, %%rbx\n\t"
@@ -23,13 +23,23 @@ int main() {
     "\n\t"
     "int3\n\t"
     "\n\t"
-    // swap saved & current rsp & rbp
-    "xchgq    %%rsp, %4\n\t"
-    "xchgq    %%rbp, %5\n\t"
-    : "=a"(rax), "=b"(rbx), "=c"(rcx), "=d"(rdx), "=r"(rsp), "=r"(rbp),
-      "=S"(rsi), "=D"(rdi)
+    "movq    %%rax, %0\n\t"
+    "movq    %%rbx, %1\n\t"
+    "movq    %%rcx, %2\n\t"
+    "movq    %%rdx, %3\n\t"
+    "movq    %%rsp, %4\n\t"
+    "movq    %%rbp, %5\n\t"
+    "movq    %%rsi, %6\n\t"
+    "movq    %%rdi, %7\n\t"
+    "\n\t"
+    // restore rsp & rbp
+    "movq    %%mm0, %%rsp\n\t"
+    "movq    %%mm1, %%rbp\n\t"
+    : "=r"(rax), "=r"(rbx), "=r"(rcx), "=r"(rdx), "=r"(rsp), "=r"(rbp),
+      "=r"(rsi), "=r"(rdi)
     : "g"(fill)
-    :
+    : "%rax", "%rbx", "%rcx", "%rdx", "%rsp", "%rbp", "%rsi", "%rdi", "%mm0",
+      "%mm1"
   );
 
   printf("rax = 0x%016" PRIx64 "\n", rax);

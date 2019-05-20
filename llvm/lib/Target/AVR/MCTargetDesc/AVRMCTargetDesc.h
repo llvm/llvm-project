@@ -32,6 +32,8 @@ class Target;
 class Triple;
 class raw_pwrite_stream;
 
+Target &getTheAVRTarget();
+
 MCInstrInfo *createAVRMCInstrInfo();
 
 /// Creates a machine code emitter for AVR.

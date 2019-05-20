@@ -1395,12 +1395,10 @@ ThreadPlanSP Thread::QueueThreadPlanForStepOverRange(
     bool abort_other_plans, const LineEntry &line_entry,
     const SymbolContext &addr_context, lldb::RunMode stop_other_threads,
     Status &status, LazyBool step_out_avoids_code_withoug_debug_info) {
-  const bool include_inlined_functions = true;
-  auto address_range =
-      line_entry.GetSameLineContiguousAddressRange(include_inlined_functions);
   return QueueThreadPlanForStepOverRange(
-      abort_other_plans, address_range, addr_context, stop_other_threads,
-      status, step_out_avoids_code_withoug_debug_info);
+      abort_other_plans, line_entry.GetSameLineContiguousAddressRange(),
+      addr_context, stop_other_threads, status,
+      step_out_avoids_code_withoug_debug_info);
 }
 
 ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
@@ -1430,10 +1428,8 @@ ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
     lldb::RunMode stop_other_threads, Status &status,
     LazyBool step_in_avoids_code_without_debug_info,
     LazyBool step_out_avoids_code_without_debug_info) {
-  const bool include_inlined_functions = false;
   return QueueThreadPlanForStepInRange(
-      abort_other_plans,
-      line_entry.GetSameLineContiguousAddressRange(include_inlined_functions),
+      abort_other_plans, line_entry.GetSameLineContiguousAddressRange(),
       addr_context, step_in_target, stop_other_threads, status,
       step_in_avoids_code_without_debug_info,
       step_out_avoids_code_without_debug_info);
@@ -2209,31 +2205,25 @@ ValueObjectSP Thread::GetCurrentException() {
       if (auto e = recognized_frame->GetExceptionObject())
         return e;
 
-  // NOTE: Even though this behavior is generalized, only ObjC is actually
-  // supported at the moment.
-  for (unsigned lang = eLanguageTypeUnknown; lang < eNumLanguageTypes; lang++) {
-    if (auto runtime = GetProcess()->GetLanguageRuntime(
-            static_cast<lldb::LanguageType>(lang)))
-      if (auto e = runtime->GetExceptionObjectForThread(shared_from_this()))
-        return e;
-  }
+  // FIXME: For now, only ObjC exceptions are supported. This should really
+  // iterate over all language runtimes and ask them all to give us the current
+  // exception.
+  if (auto runtime = GetProcess()->GetObjCLanguageRuntime())
+    if (auto e = runtime->GetExceptionObjectForThread(shared_from_this()))
+      return e;
 
   return ValueObjectSP();
 }
 
 ThreadSP Thread::GetCurrentExceptionBacktrace() {
   ValueObjectSP exception = GetCurrentException();
-  if (!exception)
-    return ThreadSP();
+  if (!exception) return ThreadSP();
 
-  // NOTE: Even though this behavior is generalized, only ObjC is actually
-  // supported at the moment.
-  for (unsigned lang = eLanguageTypeUnknown; lang < eNumLanguageTypes; lang++) {
-    if (auto runtime = GetProcess()->GetLanguageRuntime(
-            static_cast<lldb::LanguageType>(lang)))
-      if (auto bt = runtime->GetBacktraceThreadFromException(exception))
-        return bt;
-  }
+  // FIXME: For now, only ObjC exceptions are supported. This should really
+  // iterate over all language runtimes and ask them all to give us the current
+  // exception.
+  auto runtime = GetProcess()->GetObjCLanguageRuntime();
+  if (!runtime) return ThreadSP();
 
-  return ThreadSP();
+  return runtime->GetBacktraceThreadFromException(exception);
 }

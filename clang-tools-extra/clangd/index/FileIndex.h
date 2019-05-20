@@ -60,29 +60,21 @@ class FileSymbols {
 public:
   /// Updates all symbols and refs in a file.
   /// If either is nullptr, corresponding data for \p Path will be removed.
-  /// If CountReferences is true, \p Refs will be used for counting References
-  /// during merging.
   void update(PathRef Path, std::unique_ptr<SymbolSlab> Slab,
-              std::unique_ptr<RefSlab> Refs, bool CountReferences);
+              std::unique_ptr<RefSlab> Refs);
 
-  /// The index keeps the symbols alive.
-  /// Will count Symbol::References based on number of references in the main
-  /// files, while building the index with DuplicateHandling::Merge option.
+  // The index keeps the symbols alive.
   std::unique_ptr<SymbolIndex>
   buildIndex(IndexType,
              DuplicateHandling DuplicateHandle = DuplicateHandling::PickOne);
 
 private:
-  struct RefSlabAndCountReferences {
-    std::shared_ptr<RefSlab> Slab;
-    bool CountReferences = false;
-  };
   mutable std::mutex Mutex;
 
   /// Stores the latest symbol snapshots for all active files.
   llvm::StringMap<std::shared_ptr<SymbolSlab>> FileToSymbols;
   /// Stores the latest ref snapshots for all active files.
-  llvm::StringMap<RefSlabAndCountReferences> FileToRefs;
+  llvm::StringMap<std::shared_ptr<RefSlab>> FileToRefs;
 };
 
 /// This manages symbols from files and an in-memory index on all symbols.

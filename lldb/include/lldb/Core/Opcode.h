@@ -18,13 +18,18 @@
 #include <stdint.h>
 #include <string.h>
 
+namespace lldb_private {
+class DataExtractor;
+}
+namespace lldb_private {
+class Stream;
+}
+
 namespace lldb {
 class SBInstruction;
 }
 
 namespace lldb_private {
-class DataExtractor;
-class Stream;
 
 class Opcode {
 public:

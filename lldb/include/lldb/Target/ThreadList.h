@@ -151,7 +151,7 @@ protected:
   std::vector<lldb::tid_t> m_expression_tid_stack;
 
 private:
-  ThreadList() = delete;
+  ThreadList();
 };
 
 } // namespace lldb_private

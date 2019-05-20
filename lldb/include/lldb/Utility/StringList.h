@@ -17,6 +17,8 @@
 
 namespace lldb_private {
 class Log;
+}
+namespace lldb_private {
 class Stream;
 }
 

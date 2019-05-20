@@ -331,11 +331,11 @@ namespace lldb_private {
 class ThreadPlan : public std::enable_shared_from_this<ThreadPlan>,
                    public UserID {
 public:
-  enum ThreadScope { eAllThreads, eSomeThreads, eThisThread };
+  typedef enum { eAllThreads, eSomeThreads, eThisThread } ThreadScope;
 
   // We use these enums so that we can cast a base thread plan to it's real
   // type without having to resort to dynamic casting.
-  enum ThreadPlanKind {
+  typedef enum {
     eKindGeneric,
     eKindNull,
     eKindBase,
@@ -351,7 +351,7 @@ public:
     eKindStepUntil,
     eKindTestCondition
 
-  };
+  } ThreadPlanKind;
 
   // Constructors and Destructors
   ThreadPlan(ThreadPlanKind kind, const char *name, Thread &thread,

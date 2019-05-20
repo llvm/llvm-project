@@ -112,10 +112,9 @@ signed4anon:
 Lanon_data:
         .quad   0x1111111111111111
 
-# Check X86_64_RELOC_SUBTRACTOR Quad/Long in anonymous storage with anonymous
-# minuend: "LA: .quad LA - B + C". The anonymous subtrahend form
-# "LA: .quad B - LA + C" is not tested as subtrahends are not permitted to be
-# anonymous.
+# Check X86_64_RELOC_SUBTRACTOR Quad/Long in anonymous storage with anonymous minuend
+# Only the form "LA: .quad LA - B + C" is tested. The form "LA: .quad B - LA + C" is
+# invalid because the minuend can not be local.
 #
 # Note: +8 offset in expression below to accounts for sizeof(Lanon_data).
 # jitlink-check: *{8}(section_addr(macho_reloc.o, __data) + 8) = (section_addr(macho_reloc.o, __data) + 8) - named_data + 2
@@ -129,18 +128,12 @@ Lanon_minuend_quad:
 Lanon_minuend_long:
         .long Lanon_minuend_long - named_data + 2
 
+
 # Named quad storage target (first named atom in __data).
         .globl named_data
         .p2align  3
 named_data:
         .quad   0x2222222222222222
-
-# An alt-entry point for named_data
-        .globl named_data_alt_entry
-        .p2align  3
-        .alt_entry named_data_alt_entry
-named_data_alt_entry:
-        .quad   0
 
 # Check X86_64_RELOC_UNSIGNED / extern handling by putting the address of a
 # local named function in a pointer variable.
@@ -162,148 +155,49 @@ anon_func_addr:
 
 # X86_64_RELOC_SUBTRACTOR Quad/Long in named storage with anonymous minuend
 #
-# jitlink-check: *{8}anon_minuend_quad1 = section_addr(macho_reloc.o, __data) - anon_minuend_quad1 + 2
+# jitlink-check: *{8}minuend_quad1 = section_addr(macho_reloc.o, __data) - minuend_quad1 + 2
 # Only the form "B: .quad LA - B + C" is tested. The form "B: .quad B - LA + C" is
-# invalid because the subtrahend can not be local.
-        .globl  anon_minuend_quad1
+# invalid because the minuend can not be local.
+        .globl  minuend_quad1
         .p2align  3
-anon_minuend_quad1:
-        .quad Lanon_data - anon_minuend_quad1 + 2
+minuend_quad1:
+        .quad Lanon_data - minuend_quad1 + 2
 
-# jitlink-check: *{4}anon_minuend_long1 = (section_addr(macho_reloc.o, __data) - anon_minuend_long1 + 2)[31:0]
-        .globl  anon_minuend_long1
+# jitlink-check: *{4}minuend_long1 = (section_addr(macho_reloc.o, __data) - minuend_long1 + 2)[31:0]
+        .globl  minuend_long1
         .p2align  2
-anon_minuend_long1:
-        .long Lanon_data - anon_minuend_long1 + 2
+minuend_long1:
+        .long Lanon_data - minuend_long1 + 2
 
 # Check X86_64_RELOC_SUBTRACTOR Quad/Long in named storage with minuend and subtrahend.
 # Both forms "A: .quad A - B + C" and "A: .quad B - A + C" are tested.
 #
 # Check "A: .quad B - A + C".
-# jitlink-check: *{8}subtrahend_quad2 = (named_data - subtrahend_quad2 - 2)
-        .globl  subtrahend_quad2
+# jitlink-check: *{8}minuend_quad2 = (named_data - minuend_quad2 + 2)
+        .globl  minuend_quad2
         .p2align  3
-subtrahend_quad2:
-        .quad named_data - subtrahend_quad2 - 2
+minuend_quad2:
+        .quad named_data - minuend_quad2 + 2
 
 # Check "A: .long B - A + C".
-# jitlink-check: *{4}subtrahend_long2 = (named_data - subtrahend_long2 - 2)[31:0]
-        .globl  subtrahend_long2
+# jitlink-check: *{4}minuend_long2 = (named_data - minuend_long2 + 2)[31:0]
+        .globl  minuend_long2
         .p2align  2
-subtrahend_long2:
-        .long named_data - subtrahend_long2 - 2
+minuend_long2:
+        .long named_data - minuend_long2 + 2
 
 # Check "A: .quad A - B + C".
-# jitlink-check: *{8}minuend_quad3 = (minuend_quad3 - named_data - 2)
+# jitlink-check: *{8}minuend_quad3 = (minuend_quad3 - named_data + 2)
         .globl  minuend_quad3
         .p2align  3
 minuend_quad3:
-        .quad minuend_quad3 - named_data - 2
+        .quad minuend_quad3 - named_data + 2
 
 # Check "A: .long B - A + C".
-# jitlink-check: *{4}minuend_long3 = (minuend_long3 - named_data - 2)[31:0]
+# jitlink-check: *{4}minuend_long3 = (minuend_long3 - named_data + 2)[31:0]
         .globl  minuend_long3
         .p2align  2
 minuend_long3:
-        .long minuend_long3 - named_data - 2
-
-# Check X86_64_RELOC_SUBTRACTOR handling for exprs of the form
-# "A: .quad/long B - C + D", where 'B' or 'C' is at a fixed offset from 'A'
-# (i.e. is part of an alt_entry chain that includes 'A').
-#
-# Check "A: .long B - C + D" where 'B' is an alt_entry for 'A'.
-# jitlink-check: *{4}subtractor_with_alt_entry_minuend_long = (subtractor_with_alt_entry_minuend_long_B - named_data + 2)[31:0]
-        .globl  subtractor_with_alt_entry_minuend_long
-        .p2align  2
-subtractor_with_alt_entry_minuend_long:
-        .long subtractor_with_alt_entry_minuend_long_B - named_data + 2
-
-        .globl  subtractor_with_alt_entry_minuend_long_B
-        .p2align  2
-        .alt_entry subtractor_with_alt_entry_minuend_long_B
-subtractor_with_alt_entry_minuend_long_B:
-        .long 0
-
-# Check "A: .quad B - C + D" where 'B' is an alt_entry for 'A'.
-# jitlink-check: *{8}subtractor_with_alt_entry_minuend_quad = (subtractor_with_alt_entry_minuend_quad_B - named_data + 2)
-        .globl  subtractor_with_alt_entry_minuend_quad
-        .p2align  3
-subtractor_with_alt_entry_minuend_quad:
-        .quad subtractor_with_alt_entry_minuend_quad_B - named_data + 2
-
-        .globl  subtractor_with_alt_entry_minuend_quad_B
-        .p2align  3
-        .alt_entry subtractor_with_alt_entry_minuend_quad_B
-subtractor_with_alt_entry_minuend_quad_B:
-        .quad 0
-
-# Check "A: .long B - C + D" where 'C' is an alt_entry for 'A'.
-# jitlink-check: *{4}subtractor_with_alt_entry_subtrahend_long = (named_data - subtractor_with_alt_entry_subtrahend_long_B + 2)[31:0]
-        .globl  subtractor_with_alt_entry_subtrahend_long
-        .p2align  2
-subtractor_with_alt_entry_subtrahend_long:
-        .long named_data - subtractor_with_alt_entry_subtrahend_long_B + 2
-
-        .globl  subtractor_with_alt_entry_subtrahend_long_B
-        .p2align  2
-        .alt_entry subtractor_with_alt_entry_subtrahend_long_B
-subtractor_with_alt_entry_subtrahend_long_B:
-        .long 0
-
-# Check "A: .quad B - C + D" where 'B' is an alt_entry for 'A'.
-# jitlink-check: *{8}subtractor_with_alt_entry_subtrahend_quad = (named_data - subtractor_with_alt_entry_subtrahend_quad_B + 2)
-        .globl  subtractor_with_alt_entry_subtrahend_quad
-        .p2align  3
-subtractor_with_alt_entry_subtrahend_quad:
-        .quad named_data - subtractor_with_alt_entry_subtrahend_quad_B + 2
-
-        .globl  subtractor_with_alt_entry_subtrahend_quad_B
-        .p2align  3
-        .alt_entry subtractor_with_alt_entry_subtrahend_quad_B
-subtractor_with_alt_entry_subtrahend_quad_B:
-        .quad 0
-
-# Check that unreferenced atoms in no-dead-strip sections are not dead stripped.
-# We need to use a local symbol for this as any named symbol will end up in the
-# ORC responsibility set, which is automatically marked live and would couse
-# spurious passes.
-#
-# jitlink-check: *{8}section_addr(macho_reloc.o, __nds_test_sect) = 0
-        .section        __DATA,__nds_test_sect,regular,no_dead_strip
-        .quad 0
-
-# Check that unreferenced local symbols that have been marked no-dead-strip are
-# not dead-striped.
-#
-# jitlink-check: *{8}section_addr(macho_reloc.o, __nds_test_nlst) = 0
-        .section       __DATA,__nds_test_nlst,regular
-        .no_dead_strip no_dead_strip_test_symbol
-no_dead_strip_test_symbol:
-        .quad 0
-
-# Check that explicit zero-fill symbols are supported
-# jitlink-check: *{8}zero_fill_test = 0
-        .globl zero_fill_test
-.zerofill __DATA,__zero_fill_test,zero_fill_test,8,3
-
-# Check that section alignments are respected.
-# We test this by introducing two segments with alignment 8, each containing one
-# byte of data. We require both symbols to have an aligned address.
-#
-# jitlink-check: section_alignment_check1[2:0] = 0
-# jitlink-check: section_alignment_check2[2:0] = 0
-        .section        __DATA,__sec_align_chk1
-        .p2align 3
-
-        .globl section_alignment_check1
-section_alignment_check1:
-        .byte 0
-
-        .section        __DATA,__sec_align_chk2
-        .p2align 3
-
-        .globl section_alignment_check2
-section_alignment_check2:
-        .byte 0
+        .long minuend_long3 - named_data + 2
 
 .subsections_via_symbols

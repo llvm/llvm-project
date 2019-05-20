@@ -646,7 +646,6 @@ bool BreakpointOptions::BreakpointOptionsCallbackFunction(
       options.SetStopOnError(data->stop_on_error);
       options.SetEchoCommands(true);
       options.SetPrintResults(true);
-      options.SetPrintErrors(true);
       options.SetAddToHistory(false);
 
       debugger.GetCommandInterpreter().HandleCommands(commands, &exe_ctx,

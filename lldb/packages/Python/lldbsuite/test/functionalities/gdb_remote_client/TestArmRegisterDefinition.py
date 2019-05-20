@@ -109,10 +109,9 @@ class TestArmRegisterDefinition(GDBRemoteTestBase):
 
         self.server.responder = MyResponder()
         if self.TraceOn():
-            self.runCmd("log enable gdb-remote packets")
-            self.addTearDownHook(
-                    lambda: self.runCmd("log disable gdb-remote packets"))
-
+            interp = self.dbg.GetCommandInterpreter()
+            result = lldb.SBCommandReturnObject()
+            interp.HandleCommand("log enable gdb-remote packets", result)
         self.dbg.SetDefaultArchitecture("armv7em")
         target = self.dbg.CreateTargetWithFileAndArch(None, None)
 

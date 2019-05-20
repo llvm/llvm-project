@@ -15,19 +15,17 @@
 using namespace lldb;
 using namespace lldb_private;
 
-DWARFCompileUnit::DWARFCompileUnit(SymbolFileDWARF *dwarf2Data,
-                                   lldb::user_id_t uid)
-    : DWARFUnit(dwarf2Data, uid) {}
+DWARFCompileUnit::DWARFCompileUnit(SymbolFileDWARF *dwarf2Data)
+    : DWARFUnit(dwarf2Data) {}
 
-
-llvm::Expected<DWARFUnitSP> DWARFCompileUnit::extract(
-    SymbolFileDWARF *dwarf2Data, user_id_t uid,
-    const DWARFDataExtractor &debug_info, lldb::offset_t *offset_ptr) {
+llvm::Expected<DWARFUnitSP>
+DWARFCompileUnit::extract(SymbolFileDWARF *dwarf2Data,
+                          const DWARFDataExtractor &debug_info,
+                          lldb::offset_t *offset_ptr) {
   assert(debug_info.ValidOffset(*offset_ptr));
 
   // std::make_shared would require the ctor to be public.
-  std::shared_ptr<DWARFCompileUnit> cu_sp(
-      new DWARFCompileUnit(dwarf2Data, uid));
+  std::shared_ptr<DWARFCompileUnit> cu_sp(new DWARFCompileUnit(dwarf2Data));
 
   cu_sp->m_offset = *offset_ptr;
 
@@ -52,7 +50,8 @@ llvm::Expected<DWARFUnitSP> DWARFCompileUnit::extract(
     cu_sp->m_addr_size = debug_info.GetU8(offset_ptr);
   }
 
-  bool length_OK = debug_info.ValidOffset(cu_sp->GetNextUnitOffset() - 1);
+  bool length_OK =
+      debug_info.ValidOffset(cu_sp->GetNextCompileUnitOffset() - 1);
   bool version_OK = SymbolFileDWARF::SupportedVersion(cu_sp->m_version);
   bool abbr_offset_OK =
       dwarf2Data->get_debug_abbrev_data().ValidOffset(abbr_offset);
@@ -84,7 +83,7 @@ void DWARFCompileUnit::Dump(Stream *s) const {
             "abbr_offset = 0x%8.8x, addr_size = 0x%2.2x (next CU at "
             "{0x%8.8x})\n",
             m_offset, m_length, m_version, GetAbbrevOffset(), m_addr_size,
-            GetNextUnitOffset());
+            GetNextCompileUnitOffset());
 }
 
 uint32_t DWARFCompileUnit::GetHeaderByteSize() const {

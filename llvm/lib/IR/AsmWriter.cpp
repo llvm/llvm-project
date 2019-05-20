@@ -3041,7 +3041,6 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
   Out << ", notEligibleToImport: " << GVFlags.NotEligibleToImport;
   Out << ", live: " << GVFlags.Live;
   Out << ", dsoLocal: " << GVFlags.DSOLocal;
-  Out << ", canAutoHide: " << GVFlags.CanAutoHide;
   Out << ")";
 
   if (Summary.getSummaryKind() == GlobalValueSummary::AliasKind)

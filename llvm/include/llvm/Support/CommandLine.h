@@ -66,8 +66,7 @@ namespace cl {
 bool ParseCommandLineOptions(int argc, const char *const *argv,
                              StringRef Overview = "",
                              raw_ostream *Errs = nullptr,
-                             const char *EnvVar = nullptr,
-                             bool LongOptionsUseDoubleDash = false);
+                             const char *EnvVar = nullptr);
 
 //===----------------------------------------------------------------------===//
 // ParseEnvironmentOptions - Environment variable option processing alternate
@@ -282,8 +281,7 @@ public:
   StringRef ArgStr;   // The argument string itself (ex: "help", "o")
   StringRef HelpStr;  // The descriptive text message for -help
   StringRef ValueStr; // String describing what the value of this option is
-  SmallVector<OptionCategory *, 2>
-      Categories;                    // The Categories this option belongs to
+  OptionCategory *Category; // The Category this option belongs to
   SmallPtrSet<SubCommand *, 4> Subs; // The subcommands this option belongs to.
   bool FullyInitialized = false; // Has addArgument been called?
 
@@ -335,16 +333,14 @@ public:
   void setFormattingFlag(enum FormattingFlags V) { Formatting = V; }
   void setMiscFlag(enum MiscFlags M) { Misc |= M; }
   void setPosition(unsigned pos) { Position = pos; }
-  void addCategory(OptionCategory &C);
+  void setCategory(OptionCategory &C) { Category = &C; }
   void addSubCommand(SubCommand &S) { Subs.insert(&S); }
 
 protected:
   explicit Option(enum NumOccurrencesFlag OccurrencesFlag,
                   enum OptionHidden Hidden)
       : Occurrences(OccurrencesFlag), Value(0), HiddenFlag(Hidden),
-        Formatting(NormalFormatting), Misc(0) {
-    Categories.push_back(&GeneralCategory);
-  }
+        Formatting(NormalFormatting), Misc(0), Category(&GeneralCategory) {}
 
   inline void setNumAdditionalVals(unsigned n) { AdditionalVals = n; }
 
@@ -455,7 +451,7 @@ struct cat {
 
   cat(OptionCategory &c) : Category(c) {}
 
-  template <class Opt> void apply(Opt &O) const { O.addCategory(Category); }
+  template <class Opt> void apply(Opt &O) const { O.setCategory(Category); }
 };
 
 // sub - Specify the subcommand that this option belongs to.
@@ -831,8 +827,6 @@ class basic_parser_impl { // non-template implementation of basic_parser<t>
 public:
   basic_parser_impl(Option &) {}
 
-  virtual ~basic_parser_impl() {}
-
   enum ValueExpected getValueExpectedFlagDefault() const {
     return ValueRequired;
   }
@@ -860,6 +854,8 @@ public:
   virtual void anchor();
 
 protected:
+  ~basic_parser_impl() = default;
+
   // A helper for basic_parser::printOptionDiff.
   void printOptionName(const Option &O, size_t GlobalWidth) const;
 };
@@ -873,12 +869,15 @@ public:
   using OptVal = OptionValue<DataType>;
 
   basic_parser(Option &O) : basic_parser_impl(O) {}
+
+protected:
+  ~basic_parser() = default;
 };
 
 //--------------------------------------------------
 // parser<bool>
 //
-template <> class parser<bool> : public basic_parser<bool> {
+template <> class parser<bool> final : public basic_parser<bool> {
 public:
   parser(Option &O) : basic_parser(O) {}
 
@@ -905,7 +904,8 @@ extern template class basic_parser<bool>;
 
 //--------------------------------------------------
 // parser<boolOrDefault>
-template <> class parser<boolOrDefault> : public basic_parser<boolOrDefault> {
+template <>
+class parser<boolOrDefault> final : public basic_parser<boolOrDefault> {
 public:
   parser(Option &O) : basic_parser(O) {}
 
@@ -931,7 +931,7 @@ extern template class basic_parser<boolOrDefault>;
 //--------------------------------------------------
 // parser<int>
 //
-template <> class parser<int> : public basic_parser<int> {
+template <> class parser<int> final : public basic_parser<int> {
 public:
   parser(Option &O) : basic_parser(O) {}
 
@@ -953,7 +953,7 @@ extern template class basic_parser<int>;
 //--------------------------------------------------
 // parser<unsigned>
 //
-template <> class parser<unsigned> : public basic_parser<unsigned> {
+template <> class parser<unsigned> final : public basic_parser<unsigned> {
 public:
   parser(Option &O) : basic_parser(O) {}
 
@@ -999,7 +999,8 @@ extern template class basic_parser<unsigned long>;
 // parser<unsigned long long>
 //
 template <>
-class parser<unsigned long long> : public basic_parser<unsigned long long> {
+class parser<unsigned long long> final
+    : public basic_parser<unsigned long long> {
 public:
   parser(Option &O) : basic_parser(O) {}
 
@@ -1022,7 +1023,7 @@ extern template class basic_parser<unsigned long long>;
 //--------------------------------------------------
 // parser<double>
 //
-template <> class parser<double> : public basic_parser<double> {
+template <> class parser<double> final : public basic_parser<double> {
 public:
   parser(Option &O) : basic_parser(O) {}
 
@@ -1044,7 +1045,7 @@ extern template class basic_parser<double>;
 //--------------------------------------------------
 // parser<float>
 //
-template <> class parser<float> : public basic_parser<float> {
+template <> class parser<float> final : public basic_parser<float> {
 public:
   parser(Option &O) : basic_parser(O) {}
 
@@ -1066,7 +1067,7 @@ extern template class basic_parser<float>;
 //--------------------------------------------------
 // parser<std::string>
 //
-template <> class parser<std::string> : public basic_parser<std::string> {
+template <> class parser<std::string> final : public basic_parser<std::string> {
 public:
   parser(Option &O) : basic_parser(O) {}
 
@@ -1091,7 +1092,7 @@ extern template class basic_parser<std::string>;
 //--------------------------------------------------
 // parser<char>
 //
-template <> class parser<char> : public basic_parser<char> {
+template <> class parser<char> final : public basic_parser<char> {
 public:
   parser(Option &O) : basic_parser(O) {}
 
@@ -1204,11 +1205,7 @@ template <> struct applicator<FormattingFlags> {
 };
 
 template <> struct applicator<MiscFlags> {
-  static void opt(MiscFlags MF, Option &O) {
-    assert((MF != Grouping || O.ArgStr.size() == 1) &&
-           "cl::Grouping can only apply to single charater Options.");
-    O.setMiscFlag(MF);
-  }
+  static void opt(MiscFlags MF, Option &O) { O.setMiscFlag(MF); }
 };
 
 // apply method - Apply modifiers to an option in a type safe way.
@@ -1774,7 +1771,7 @@ class alias : public Option {
     if (!Subs.empty())
       error("cl::alias must not have cl::sub(), aliased option's cl::sub() will be used!");
     Subs = AliasFor->Subs;
-    Categories = AliasFor->Categories;
+    Category = AliasFor->Category;
     addArgument();
   }
 

@@ -96,55 +96,23 @@ public:
       return Version;
     }
 
-    friend bool operator==(const LValueBase &LHS, const LValueBase &RHS) {
-      return LHS.Ptr == RHS.Ptr && LHS.CallIndex == RHS.CallIndex &&
-             LHS.Version == RHS.Version;
+    bool operator==(const LValueBase &Other) const {
+      return Ptr == Other.Ptr && CallIndex == Other.CallIndex &&
+             Version == Other.Version;
     }
-    friend bool operator!=(const LValueBase &LHS, const LValueBase &RHS) {
-      return !(LHS == RHS);
-    }
-    friend llvm::hash_code hash_value(const LValueBase &Base);
 
   private:
     PtrTy Ptr;
     unsigned CallIndex, Version;
   };
 
-  /// A FieldDecl or CXXRecordDecl, along with a flag indicating whether we
-  /// mean a virtual or non-virtual base class subobject.
   typedef llvm::PointerIntPair<const Decl *, 1, bool> BaseOrMemberType;
-
-  /// A non-discriminated union of a base, field, or array index.
-  class LValuePathEntry {
-    static_assert(sizeof(uintptr_t) <= sizeof(uint64_t),
-                  "pointer doesn't fit in 64 bits?");
-    uint64_t Value;
-
-  public:
-    LValuePathEntry() : Value() {}
-    LValuePathEntry(BaseOrMemberType BaseOrMember)
-        : Value{reinterpret_cast<uintptr_t>(BaseOrMember.getOpaqueValue())} {}
-    static LValuePathEntry ArrayIndex(uint64_t Index) {
-      LValuePathEntry Result;
-      Result.Value = Index;
-      return Result;
-    }
-
-    BaseOrMemberType getAsBaseOrMember() const {
-      return BaseOrMemberType::getFromOpaqueValue(
-          reinterpret_cast<void *>(Value));
-    }
-    uint64_t getAsArrayIndex() const { return Value; }
-
-    friend bool operator==(LValuePathEntry A, LValuePathEntry B) {
-      return A.Value == B.Value;
-    }
-    friend bool operator!=(LValuePathEntry A, LValuePathEntry B) {
-      return A.Value != B.Value;
-    }
-    friend llvm::hash_code hash_value(LValuePathEntry A) {
-      return llvm::hash_value(A.Value);
-    }
+  union LValuePathEntry {
+    /// BaseOrMember - The FieldDecl or CXXRecordDecl indicating the next item
+    /// in the path. An opaque value of type BaseOrMemberType.
+    void *BaseOrMember;
+    /// ArrayIndex - The array index of the next item in the path.
+    uint64_t ArrayIndex;
   };
   struct NoLValuePath {};
   struct UninitArray {};

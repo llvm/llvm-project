@@ -1,0 +1,234 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link href="style.css" rel="stylesheet" type="text/css" />
+  <title>Testing LLDB</title>
+</head>
+<body>
+  <div class="www_title">
+    The <strong>LLDB</strong> Debugger
+  </div>
+
+  <div id="container">
+    <div id="content">
+
+      <!--#include virtual="sidebar.incl"-->
+
+      <div id="middle">
+        <div class="post">
+          <h1 class="postheader">Testing LLDB</h1>
+          <div class="postcontent">
+            <p>
+              The LLDB test suite consists of Python scripts located under the
+              <tt>test</tt> directory. Each script contains a number of test cases and is usually
+              accompanied by a C (C++, ObjC, etc.) source file. Each test first compiles the
+              source file and then uses LLDB to debug the resulting executable. The tests verify
+              both the LLDB command line interface and the scripting API.
+            </p>
+          </div>
+          <h1 class="postheader">Running tests</h1>
+          <div class="postcontent">
+            <h2>Running the full test suite</h2>
+            <p>
+              <strong>Windows Note</strong>: In the examples that follow, any invocations of <code>python</code>
+              should be replaced with <code>python_d</code>, the debug interpreter, when running the test
+              suite against a debug version of LLDB.
+            </p>
+            <p>
+              The easiest way to run the LLDB test suite is to use the <tt>check-lldb</tt> build
+              target. By default, the <tt>check-lldb</tt> target builds the test programs with
+              the same compiler that was used to build LLDB. To build the tests with a different
+              compiler, you can set the <strong>LLDB_TEST_C_COMPILER</strong> or the <strong>LLDB_TEST_CXX_COMPILER</strong> CMake variables.
+              These variables are ignored unless the respective <strong>LLDB_TEST_USE_CUSTOM_C_COMPILER</strong> and
+              <strong>LLDB_TEST_USE_CUSTOM_CXX_COMPILER</strong> are set to ON.
+              It is possible to customize the architecture of the test binaries and compiler used by appending -A
+              and -C options respectively to the CMake variable <strong>LLDB_TEST_USER_ARGS</strong>. For
+              example, to test LLDB against 32-bit binaries
+              built with a custom version of clang, do:
+            </p>
+            <code>
+              <br />&gt; cmake -DLLDB_TEST_USER_ARGS="-A i386 -C /path/to/custom/clang" -G Ninja
+              <br />&gt; ninja check-lldb
+            </code>
+            <p>Note that multiple -A and -C flags can be specified to <tt>LLDB_TEST_USER_ARGS</tt>.</p>
+            <p>Note that on NetBSD you must export <tt>LD_LIBRARY_PATH=$PWD/lib</tt> in your environment. This is due to lack of
+               the <tt>$ORIGIN</tt> linker feature.</p>
+            <h2>Running a specific test or set of tests</h2>
+            <p>
+              In addition to running all the LLDB test suites with the "check-lldb" CMake target above, it is possible to
+              run individual LLDB tests. For example, to run the test cases defined in TestInferiorCrashing.py, run:
+            </p>
+            <code>
+              <br />&gt; cd $lldb/test
+              <br />&gt; python dotest.py --executable &lt;path-to-lldb&gt;  -p TestInferiorCrashing.py ../packages/Python/lldbsuite/test
+            </code>
+            <p>
+              If the test is not specified by name (e.g. if you leave the <code>-p</code> argument off), LLDB will run all tests in
+              that directory:
+            </p>
+            <code>
+              <br />&gt; python dotest.py --executable &lt;path-to-lldb&gt; functionalities/data-formatter
+            </code>
+            <p>
+              Many more options that are available. To see a list of all of them, run:
+            </p>
+            <code>
+              &gt; python dotest.py -h
+            </code>
+
+            <p>
+              The dotest.py script runs tests in parallel by default.
+              To disable the parallel test running feature, use the
+              <code>--no-multiprocess</code> flag. The number of
+              concurrent tests is controlled by
+              the <code>LLDB_TEST_THREADS</code> environment variable
+              or the <code>--threads</code> command line parameter.
+              The default value is the number of CPU cores on your
+              system.
+            </p>
+            <p>
+              The parallel test running feature will handle an
+              additional <code>--test-subdir SUBDIR</code> arg.  When
+              specified, SUBDIR is relative to the root test directory
+              and will limit all parallel test running to that
+              subdirectory's tree of tests.
+            </p>
+            <p>
+              The parallel test runner will run all tests within a
+              given directory serially, but will run multiple
+              directories concurrently.  Thus, as a test writer, we
+              provide serialized test run semantics within a
+              directory.  Note child directories are considered
+              entirely separate, so two child directories could be
+              running in parallel with a parent directory.
+            </p>
+
+            <h2>Running the test-suite remotely</h2>
+
+            <p>
+              Running the test-suite remotely is similar to the process of running a local test
+              suite, but there are two things to have in mind:
+            </p>
+            <ul>
+              <li>
+                You must have the <code>lldb-server</code> running on the remote system, ready to
+                accept multiple connections. For more information on how to setup remote
+                debugging see the <a href="remote.html">Remote debugging</a> page.
+              </li>
+              <li>
+                You must tell the test-suite how to connect to the remote system. This is
+                achieved using the <code>--platform-name</code>, <code>--platform-url</code> and
+                <code>--platform-working-dir</code> parameters to <code>dotest.py</code>. These
+                parameters correspond to the <code>platform select</code> and <code>platform
+                connect</code> LLDB commands. You will usually also need to specify the compiler and
+                architecture for the remote system.
+              </li>
+            </ul>
+            <p>
+              Currently, running the remote test suite is supported only with
+              <code>dotest.py</code> (or <code>dosep.py</code> with a single thread), but we
+              expect this issue to be addressed in the near future.
+            </p>
+
+          </div>
+          <div class="postfooter"></div>
+          <h1 class="postheader">Debugging test failures</h1>
+          <div class="postcontent">
+            <h2>Non-Windows platforms</h2>
+            <p>
+              On non-Windows platforms, you can use the <code>-d</code> option to <code>dotest.py</code> which will cause the script to wait
+              for a while until a debugger is attached.
+            </p>
+            <h2>Windows</h2>
+            <p>
+              On Windows, it is strongly recommended to use <a href="https://github.com/Microsoft/PTVS/releases">Python Tools for Visual Studio</a>
+              for debugging test failures.  It can seamlessly step between native and managed code, which is very helpful when you need to step
+              through the test itself, and then into the LLDB code that backs the operations the test is performing.  A quick guide to getting
+              started with PTVS is as follows:
+              <ul>
+                <li>Install PTVS</li>
+                <li>
+                  Create a Visual Studio Project for the Python code.
+                  <ul>
+                    <li>Go to File -> New -> Project -> Python -> From Existing Python Code.</li>
+                    <li>Choose <code>llvm/tools/lldb</code> as the directory containing the Python code.</li>
+                    <li>
+                      When asked where to save the <code>.pyproj</code> file, choose the folder <code>llvm/tools/lldb/pyproj</code>.
+                      This is a special folder that is ignored by the <code>.gitignore</code> file, since it is not checked in.
+                    </li>
+                  </ul>
+                </li>
+                <li>Set <code>test/dotest.py</code> as the startup file</li>
+                <li>
+                  Make sure there is a Python Environment installed for your distribution.  For example, if you installed Python to
+                  <code>C:\Python35</code>, PTVS needs to know that this is the interpreter you want to use for running the test suite.
+                  <ul>
+                    <li>Go to Tools -> Options -> Python Tools -> Environment Options</li>
+                    <li>Click Add Environment, and enter <code>Python 3.5 Debug</code> for the name.  Fill out the values correctly.</li>
+                  </ul>
+                </li>
+                <li>
+                  Configure the project to use this debug interpreter.
+                  <ul>
+                    <li>Right click the Project node in Solution Explorer</li>
+                    <li>In the <code>General</code> tab, Make sure <code>Python 3.5 Debug</code> is the selected Interpreter.</li>
+                    <li>In <code>Debug/Search Paths</code>, enter the path to your <code>ninja/lib/site-packages</code> directory.</li>
+                    <li>
+                      In <code>Debug/Environment Variables</code>, enter<br/>
+                      <code>VCINSTALLDIR=C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\</code>
+                    </li>
+                    <li>
+                      If you want to enabled mixed mode debugging, check <code>Enable native code debugging</code> (this slows down debugging,
+                      so enable it only on an as-needed basis.)
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  Set the command line for the test suite to run.
+                  <ul>
+                    <li>Right click the project in solution explorer and choose the <code>Debug</code> tab.</li>
+                    <li>Enter the arguments to <code>dotest.py</code>.  Note you must add <code>--no-multiprocess</code></li>
+                    <li>
+                      Example command options:
+                      <code>
+                        <br/># quiet mode
+                        <br/>-q 
+                        <br />--arch=i686
+                        <br /># Path to debug lldb.exe
+                        <br />--executable D:/src/llvmbuild/ninja/bin/lldb.exe 
+                        <br /># Directory to store log files
+                        <br />-s D:/src/llvmbuild/ninja/lldb-test-traces 
+                        <br />-u CXXFLAGS -u CFLAGS
+                        <br /># If a test crashes, show JIT debugging dialog.
+                        <br />--enable-crash-dialog  
+                        <br /># Path to release clang.exe
+                        <br />-C d:\src\llvmbuild\ninja_release\bin\clang.exe  
+                        <br /># Path to the particular test you want to debug.
+                        <br />-p TestPaths.py   
+                        <br /># Root of test tree
+                        <br />D:\src\llvm\tools\lldb\packages\Python\lldbsuite\test 
+                        <br /># Required in order to be able to debug the test.
+                        <br />--no-multiprocess 
+                      </code>
+                    </li>
+                    <li>
+                      As copy-pastable command line:<br/>
+                      <code>
+                        -q --arch=i686 --executable D:/src/llvmbuild/ninja/bin/lldb.exe -s D:/src/llvmbuild/ninja/lldb-test-traces 
+                        -u CXXFLAGS -u CFLAGS --enable-crash-dialog -C d:\src\llvmbuild\ninja_release\bin\clang.exe 
+                        -p TestPaths.py D:\src\llvm\tools\lldb\packages\Python\lldbsuite\test --no-multiprocess
+                      </code>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </p>
+          </div>
+          <div class="postfooter"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

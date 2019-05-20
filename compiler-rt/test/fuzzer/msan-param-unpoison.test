@@ -1,5 +1,0 @@
-REQUIRES: msan
-RUN: %msan_compiler %S/MsanParamUnpoison.cpp -o %t
-RUN: %run %t -seed=1 -runs=1000 2>&1 | FileCheck %s
-
-CHECK-NOT: MemorySanitizer: use-of-uninitialized-value

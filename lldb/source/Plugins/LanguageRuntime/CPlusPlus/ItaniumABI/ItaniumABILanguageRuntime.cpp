@@ -594,10 +594,6 @@ ValueObjectSP ItaniumABILanguageRuntime::GetExceptionObjectForThread(
   addr_t exception_addr =
       m_process->ReadPointerFromMemory(result_ptr - ptr_size, error);
 
-  if (!error.Success()) {
-    return ValueObjectSP();
-  }
-
   lldb_private::formatters::InferiorSizedWord exception_isw(exception_addr,
                                                             *m_process);
   ValueObjectSP exception = ValueObject::CreateValueObjectFromData(

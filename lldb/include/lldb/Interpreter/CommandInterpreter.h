@@ -53,23 +53,19 @@ public:
   ///    \b false, print no ouput in this case. This setting has an effect only
   ///    if \param echo_commands is \b true.
   /// \param[in] print_results
-  ///    If \b true and the command succeeds, print the results of the command
-  ///    after executing it. If \b false, execute silently.
-  /// \param[in] print_errors
-  ///    If \b true and the command fails, print the results of the command
-  ///    after executing it. If \b false, execute silently.
+  ///    If \b true print the results of the command after executing it. If
+  ///    \b false, execute silently.
   /// \param[in] add_to_history
   ///    If \b true add the commands to the command history. If \b false, don't
   ///    add them.
   CommandInterpreterRunOptions(LazyBool stop_on_continue,
                                LazyBool stop_on_error, LazyBool stop_on_crash,
                                LazyBool echo_commands, LazyBool echo_comments,
-                               LazyBool print_results, LazyBool print_errors,
-                               LazyBool add_to_history)
+                               LazyBool print_results, LazyBool add_to_history)
       : m_stop_on_continue(stop_on_continue), m_stop_on_error(stop_on_error),
         m_stop_on_crash(stop_on_crash), m_echo_commands(echo_commands),
         m_echo_comment_commands(echo_comments), m_print_results(print_results),
-        m_print_errors(print_errors), m_add_to_history(add_to_history) {}
+        m_add_to_history(add_to_history) {}
 
   CommandInterpreterRunOptions()
       : m_stop_on_continue(eLazyBoolCalculate),
@@ -77,14 +73,13 @@ public:
         m_stop_on_crash(eLazyBoolCalculate),
         m_echo_commands(eLazyBoolCalculate),
         m_echo_comment_commands(eLazyBoolCalculate),
-        m_print_results(eLazyBoolCalculate), m_print_errors(eLazyBoolCalculate),
+        m_print_results(eLazyBoolCalculate),
         m_add_to_history(eLazyBoolCalculate) {}
 
   void SetSilent(bool silent) {
     LazyBool value = silent ? eLazyBoolNo : eLazyBoolYes;
 
     m_print_results = value;
-    m_print_errors = value;
     m_echo_commands = value;
     m_echo_comment_commands = value;
     m_add_to_history = value;
@@ -132,12 +127,6 @@ public:
     m_print_results = print_results ? eLazyBoolYes : eLazyBoolNo;
   }
 
-  bool GetPrintErrors() const { return DefaultToYes(m_print_errors); }
-
-  void SetPrintErrors(bool print_errors) {
-    m_print_errors = print_errors ? eLazyBoolYes : eLazyBoolNo;
-  }
-
   bool GetAddToHistory() const { return DefaultToYes(m_add_to_history); }
 
   void SetAddToHistory(bool add_to_history) {
@@ -150,7 +139,6 @@ public:
   LazyBool m_echo_commands;
   LazyBool m_echo_comment_commands;
   LazyBool m_print_results;
-  LazyBool m_print_errors;
   LazyBool m_add_to_history;
 
 private:

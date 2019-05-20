@@ -916,9 +916,7 @@ static Value *optimizeMemCmpConstantSize(CallInst *CI, Value *LHS, Value *RHS,
   return nullptr;
 }
 
-// Most simplifications for memcmp also apply to bcmp.
-Value *LibCallSimplifier::optimizeMemCmpBCmpCommon(CallInst *CI,
-                                                   IRBuilder<> &B) {
+Value *LibCallSimplifier::optimizeMemCmp(CallInst *CI, IRBuilder<> &B) {
   Value *LHS = CI->getArgOperand(0), *RHS = CI->getArgOperand(1);
   Value *Size = CI->getArgOperand(2);
 
@@ -931,28 +929,14 @@ Value *LibCallSimplifier::optimizeMemCmpBCmpCommon(CallInst *CI,
                                                 LenC->getZExtValue(), B, DL))
       return Res;
 
-  return nullptr;
-}
-
-Value *LibCallSimplifier::optimizeMemCmp(CallInst *CI, IRBuilder<> &B) {
-  if (Value *V = optimizeMemCmpBCmpCommon(CI, B))
-    return V;
-
   // memcmp(x, y, Len) == 0 -> bcmp(x, y, Len) == 0
   // `bcmp` can be more efficient than memcmp because it only has to know that
   // there is a difference, not where it is.
   if (isOnlyUsedInZeroEqualityComparison(CI) && TLI->has(LibFunc_bcmp)) {
-    Value *LHS = CI->getArgOperand(0);
-    Value *RHS = CI->getArgOperand(1);
-    Value *Size = CI->getArgOperand(2);
     return emitBCmp(LHS, RHS, Size, B, DL, TLI);
   }
 
   return nullptr;
-}
-
-Value *LibCallSimplifier::optimizeBCmp(CallInst *CI, IRBuilder<> &B) {
-  return optimizeMemCmpBCmpCommon(CI, B);
 }
 
 Value *LibCallSimplifier::optimizeMemCpy(CallInst *CI, IRBuilder<> &B) {
@@ -1075,8 +1059,7 @@ static Value *valueHasFloatPrecision(Value *Val) {
 /// Shrink double -> float functions.
 static Value *optimizeDoubleFP(CallInst *CI, IRBuilder<> &B,
                                bool isBinary, bool isPrecise = false) {
-  Function *CalleeFn = CI->getCalledFunction();
-  if (!CI->getType()->isDoubleTy() || !CalleeFn)
+  if (!CI->getType()->isDoubleTy() || !CI->getCalledFunction())
     return nullptr;
 
   // If not all the uses of the function are converted to float, then bail out.
@@ -1096,6 +1079,7 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilder<> &B,
   if (!V[0] || (isBinary && !V[1]))
     return nullptr;
 
+  Function *CalleeFn = CI->getCalledFunction();
   StringRef CalleeNm = CalleeFn->getName();
   AttributeList CalleeAt = CalleeFn->getAttributes();
   bool CalleeIn = CalleeFn->isIntrinsic();
@@ -2528,8 +2512,6 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
       return optimizeStrStr(CI, Builder);
     case LibFunc_memchr:
       return optimizeMemChr(CI, Builder);
-    case LibFunc_bcmp:
-      return optimizeBCmp(CI, Builder);
     case LibFunc_memcmp:
       return optimizeMemCmp(CI, Builder);
     case LibFunc_memcpy:

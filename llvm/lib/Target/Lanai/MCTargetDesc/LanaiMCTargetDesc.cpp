@@ -11,9 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "LanaiMCTargetDesc.h"
-#include "LanaiInstPrinter.h"
+#include "InstPrinter/LanaiInstPrinter.h"
 #include "LanaiMCAsmInfo.h"
-#include "TargetInfo/LanaiTargetInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCInst.h"

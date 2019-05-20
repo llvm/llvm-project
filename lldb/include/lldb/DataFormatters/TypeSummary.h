@@ -26,8 +26,11 @@ namespace lldb_private {
 class TypeSummaryOptions {
 public:
   TypeSummaryOptions();
+  TypeSummaryOptions(const TypeSummaryOptions &rhs);
 
   ~TypeSummaryOptions() = default;
+
+  TypeSummaryOptions &operator=(const TypeSummaryOptions &rhs);
 
   lldb::LanguageType GetLanguage() const;
 

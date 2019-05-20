@@ -361,13 +361,6 @@ public:
   decl_type &operator*() { return *Ptr; }
   const decl_type &operator*() const { return *Ptr; }
 
-  friend bool operator==(CanonicalDeclPtr LHS, CanonicalDeclPtr RHS) {
-    return LHS.Ptr == RHS.Ptr;
-  }
-  friend bool operator!=(CanonicalDeclPtr LHS, CanonicalDeclPtr RHS) {
-    return LHS.Ptr != RHS.Ptr;
-  }
-
 private:
   friend struct llvm::DenseMapInfo<CanonicalDeclPtr<decl_type>>;
 

@@ -88,46 +88,7 @@ void parser<char>::anchor() {}
 
 //===----------------------------------------------------------------------===//
 
-static StringRef ArgPrefix = "  -";
-static StringRef ArgPrefixLong = "  --";
-static StringRef ArgHelpPrefix = " - ";
-
-static size_t argPlusPrefixesSize(StringRef ArgName) {
-  size_t Len = ArgName.size();
-  if (Len == 1)
-    return Len + ArgPrefix.size() + ArgHelpPrefix.size();
-  return Len + ArgPrefixLong.size() + ArgHelpPrefix.size();
-}
-
-static StringRef argPrefix(StringRef ArgName) {
-  if (ArgName.size() == 1)
-    return ArgPrefix;
-  return ArgPrefixLong;
-}
-
-// Option predicates...
-static inline bool isGrouping(const Option *O) {
-  return O->getMiscFlags() & cl::Grouping;
-}
-static inline bool isPrefixedOrGrouping(const Option *O) {
-  return isGrouping(O) || O->getFormattingFlag() == cl::Prefix ||
-         O->getFormattingFlag() == cl::AlwaysPrefix;
-}
-
-
 namespace {
-
-class PrintArg {
-  StringRef ArgName;
-public:
-  PrintArg(StringRef ArgName) : ArgName(ArgName) {}
-  friend raw_ostream &operator<<(raw_ostream &OS, const PrintArg&);
-};
-
-raw_ostream &operator<<(raw_ostream &OS, const PrintArg& Arg) {
-  OS << argPrefix(Arg.ArgName) << Arg.ArgName;
-  return OS;
-}
 
 class CommandLineParser {
 public:
@@ -158,8 +119,7 @@ public:
   void ResetAllOptionOccurrences();
 
   bool ParseCommandLineOptions(int argc, const char *const *argv,
-                               StringRef Overview, raw_ostream *Errs = nullptr,
-                               bool LongOptionsUseDoubleDash = false);
+                               StringRef Overview, raw_ostream *Errs = nullptr);
 
   void addLiteralOption(Option &Opt, SubCommand *SC, StringRef Name) {
     if (Opt.hasArgStr())
@@ -405,13 +365,6 @@ private:
   SubCommand *ActiveSubCommand;
 
   Option *LookupOption(SubCommand &Sub, StringRef &Arg, StringRef &Value);
-  Option *LookupLongOption(SubCommand &Sub, StringRef &Arg, StringRef &Value,
-                           bool LongOptionsUseDoubleDash, bool HaveDoubleDash) {
-    Option *Opt = LookupOption(Sub, Arg, Value);
-    if (Opt && LongOptionsUseDoubleDash && !HaveDoubleDash && !isGrouping(Opt))
-      return nullptr;
-    return Opt;
-  }
   SubCommand *LookupSubCommand(StringRef Name);
 };
 
@@ -439,19 +392,6 @@ void Option::setArgStr(StringRef S) {
     GlobalParser->updateArgStr(this, S);
   assert((S.empty() || S[0] != '-') && "Option can't start with '-");
   ArgStr = S;
-  if (ArgStr.size() == 1)
-    setMiscFlag(Grouping);
-}
-
-void Option::addCategory(OptionCategory &C) {
-  assert(!Categories.empty() && "Categories cannot be empty.");
-  // Maintain backward compatibility by replacing the default GeneralCategory
-  // if it's still set.  Otherwise, just add the new one.  The GeneralCategory
-  // must be explicitly added if you want multiple categories that include it.
-  if (&C != &GeneralCategory && Categories[0] == &GeneralCategory)
-    Categories[0] = &C;
-  else
-    Categories.push_back(&C);
 }
 
 void Option::reset() {
@@ -697,6 +637,15 @@ static bool ProvidePositionalOption(Option *Handler, StringRef Arg, int i) {
   return ProvideOption(Handler, Handler->ArgStr, Arg, 0, nullptr, Dummy);
 }
 
+// Option predicates...
+static inline bool isGrouping(const Option *O) {
+  return O->getMiscFlags() & cl::Grouping;
+}
+static inline bool isPrefixedOrGrouping(const Option *O) {
+  return isGrouping(O) || O->getFormattingFlag() == cl::Prefix ||
+         O->getFormattingFlag() == cl::AlwaysPrefix;
+}
+
 // getOptionPred - Check to see if there are any options that satisfy the
 // specified predicate with names that are the prefixes in Name.  This is
 // checked by progressively stripping characters off of the name, checking to
@@ -706,9 +655,8 @@ static bool ProvidePositionalOption(Option *Handler, StringRef Arg, int i) {
 static Option *getOptionPred(StringRef Name, size_t &Length,
                              bool (*Pred)(const Option *),
                              const StringMap<Option *> &OptionsMap) {
+
   StringMap<Option *>::const_iterator OMI = OptionsMap.find(Name);
-  if (OMI != OptionsMap.end() && !Pred(OMI->getValue()))
-    OMI = OptionsMap.end();
 
   // Loop while we haven't found an option and Name still has at least two
   // characters in it (so that the next iteration will not be the empty
@@ -716,8 +664,6 @@ static Option *getOptionPred(StringRef Name, size_t &Length,
   while (OMI == OptionsMap.end() && Name.size() > 1) {
     Name = Name.substr(0, Name.size() - 1); // Chop off the last character.
     OMI = OptionsMap.find(Name);
-    if (OMI != OptionsMap.end() && !Pred(OMI->getValue()))
-      OMI = OptionsMap.end();
   }
 
   if (OMI != OptionsMap.end() && Pred(OMI->second)) {
@@ -1178,8 +1124,7 @@ void cl::ParseEnvironmentOptions(const char *progName, const char *envVar,
 
 bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
                                  StringRef Overview, raw_ostream *Errs,
-                                 const char *EnvVar,
-                                 bool LongOptionsUseDoubleDash) {
+                                 const char *EnvVar) {
   SmallVector<const char *, 20> NewArgv;
   BumpPtrAllocator A;
   StringSaver Saver(A);
@@ -1199,7 +1144,7 @@ bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
 
   // Parse all options.
   return GlobalParser->ParseCommandLineOptions(NewArgc, &NewArgv[0], Overview,
-                                               Errs, LongOptionsUseDoubleDash);
+                                               Errs);
 }
 
 void CommandLineParser::ResetAllOptionOccurrences() {
@@ -1214,8 +1159,7 @@ void CommandLineParser::ResetAllOptionOccurrences() {
 bool CommandLineParser::ParseCommandLineOptions(int argc,
                                                 const char *const *argv,
                                                 StringRef Overview,
-                                                raw_ostream *Errs,
-                                                bool LongOptionsUseDoubleDash) {
+                                                raw_ostream *Errs) {
   assert(hasOptions() && "No options specified!");
 
   // Expand response files.
@@ -1325,7 +1269,6 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
     std::string NearestHandlerString;
     StringRef Value;
     StringRef ArgName = "";
-    bool HaveDoubleDash = false;
 
     // Check to see if this is a positional argument.  This argument is
     // considered to be positional if it doesn't start with '-', if it is "-"
@@ -1364,30 +1307,25 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
       // otherwise feed it to the eating positional.
       ArgName = StringRef(argv[i] + 1);
       // Eat second dash.
-      if (!ArgName.empty() && ArgName[0] == '-') {
-        HaveDoubleDash = true;
+      if (!ArgName.empty() && ArgName[0] == '-')
         ArgName = ArgName.substr(1);
-      }
 
-      Handler = LookupLongOption(*ChosenSubCommand, ArgName, Value,
-                                 LongOptionsUseDoubleDash, HaveDoubleDash);
+      Handler = LookupOption(*ChosenSubCommand, ArgName, Value);
       if (!Handler || Handler->getFormattingFlag() != cl::Positional) {
         ProvidePositionalOption(ActivePositionalArg, StringRef(argv[i]), i);
         continue; // We are done!
       }
+
     } else { // We start with a '-', must be an argument.
       ArgName = StringRef(argv[i] + 1);
       // Eat second dash.
-      if (!ArgName.empty() && ArgName[0] == '-') {
-        HaveDoubleDash = true;
+      if (!ArgName.empty() && ArgName[0] == '-')
         ArgName = ArgName.substr(1);
-      }
 
-      Handler = LookupLongOption(*ChosenSubCommand, ArgName, Value,
-                                 LongOptionsUseDoubleDash, HaveDoubleDash);
+      Handler = LookupOption(*ChosenSubCommand, ArgName, Value);
 
       // Check to see if this "option" is really a prefixed or grouped argument.
-      if (!Handler && !(LongOptionsUseDoubleDash && HaveDoubleDash))
+      if (!Handler)
         Handler = HandlePrefixedOrGroupedOption(ArgName, Value, ErrorParsing,
                                                 OptionsMap);
 
@@ -1401,12 +1339,12 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
     if (!Handler) {
       if (SinkOpts.empty()) {
         *Errs << ProgramName << ": Unknown command line argument '" << argv[i]
-              << "'.  Try: '" << argv[0] << " --help'\n";
+              << "'.  Try: '" << argv[0] << " -help'\n";
 
         if (NearestHandler) {
           // If we know a near match, report it as well.
-          *Errs << ProgramName << ": Did you mean '"
-                << PrintArg(NearestHandlerString) << "'?\n";
+          *Errs << ProgramName << ": Did you mean '-" << NearestHandlerString
+                 << "'?\n";
         }
 
         ErrorParsing = true;
@@ -1440,14 +1378,14 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
              << ": Not enough positional command line arguments specified!\n"
              << "Must specify at least " << NumPositionalRequired
              << " positional argument" << (NumPositionalRequired > 1 ? "s" : "")
-             << ": See: " << argv[0] << " --help\n";
+             << ": See: " << argv[0] << " -help\n";
 
     ErrorParsing = true;
   } else if (!HasUnlimitedPositionals &&
              PositionalVals.size() > PositionalOpts.size()) {
     *Errs << ProgramName << ": Too many positional arguments specified!\n"
           << "Can specify at most " << PositionalOpts.size()
-          << " positional arguments: See: " << argv[0] << " --help\n";
+          << " positional arguments: See: " << argv[0] << " -help\n";
     ErrorParsing = true;
 
   } else if (!ConsumeAfterOpt) {
@@ -1560,7 +1498,7 @@ bool Option::error(const Twine &Message, StringRef ArgName, raw_ostream &Errs) {
   if (ArgName.empty())
     Errs << HelpStr; // Be nice for positional arguments
   else
-    Errs << GlobalParser->ProgramName << ": for the " << PrintArg(ArgName);
+    Errs << GlobalParser->ProgramName << ": for the -" << ArgName;
 
   Errs << " option: " << Message << "\n";
   return true;
@@ -1598,14 +1536,16 @@ static StringRef getValueStr(const Option &O, StringRef DefaultMsg) {
   return O.ValueStr;
 }
 
+static StringRef ArgPrefix = "  -";
+static StringRef ArgHelpPrefix = " - ";
+static size_t ArgPrefixesSize = ArgPrefix.size() + ArgHelpPrefix.size();
+
 //===----------------------------------------------------------------------===//
 // cl::alias class implementation
 //
 
 // Return the width of the option tag for printing...
-size_t alias::getOptionWidth() const {
-  return argPlusPrefixesSize(ArgStr);
-}
+size_t alias::getOptionWidth() const { return ArgStr.size() + ArgPrefixesSize; }
 
 void Option::printHelpStr(StringRef HelpStr, size_t Indent,
                           size_t FirstLineIndentedBy) {
@@ -1621,8 +1561,8 @@ void Option::printHelpStr(StringRef HelpStr, size_t Indent,
 
 // Print out the option for the alias.
 void alias::printOptionInfo(size_t GlobalWidth) const {
-  outs() << PrintArg(ArgStr);
-  printHelpStr(HelpStr, GlobalWidth, argPlusPrefixesSize(ArgStr));
+  outs() << ArgPrefix << ArgStr;
+  printHelpStr(HelpStr, GlobalWidth, ArgStr.size() + ArgPrefixesSize);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1634,7 +1574,7 @@ void alias::printOptionInfo(size_t GlobalWidth) const {
 
 // Return the width of the option tag for printing...
 size_t basic_parser_impl::getOptionWidth(const Option &O) const {
-  size_t Len = argPlusPrefixesSize(O.ArgStr);
+  size_t Len = O.ArgStr.size();
   auto ValName = getValueName();
   if (!ValName.empty()) {
     size_t FormattingLen = 3;
@@ -1643,7 +1583,7 @@ size_t basic_parser_impl::getOptionWidth(const Option &O) const {
     Len += getValueStr(O, ValName).size() + FormattingLen;
   }
 
-  return Len;
+  return Len + ArgPrefixesSize;
 }
 
 // printOptionInfo - Print out information about this option.  The
@@ -1651,7 +1591,7 @@ size_t basic_parser_impl::getOptionWidth(const Option &O) const {
 //
 void basic_parser_impl::printOptionInfo(const Option &O,
                                         size_t GlobalWidth) const {
-  outs() << PrintArg(O.ArgStr);
+  outs() << ArgPrefix << O.ArgStr;
 
   auto ValName = getValueName();
   if (!ValName.empty()) {
@@ -1667,7 +1607,7 @@ void basic_parser_impl::printOptionInfo(const Option &O,
 
 void basic_parser_impl::printOptionName(const Option &O,
                                         size_t GlobalWidth) const {
-  outs() << PrintArg(O.ArgStr);
+  outs() << ArgPrefix << O.ArgStr;
   outs().indent(GlobalWidth - O.ArgStr.size());
 }
 
@@ -1799,8 +1739,7 @@ static bool shouldPrintOption(StringRef Name, StringRef Description,
 // Return the width of the option tag for printing...
 size_t generic_parser_base::getOptionWidth(const Option &O) const {
   if (O.hasArgStr()) {
-    size_t Size =
-        argPlusPrefixesSize(O.ArgStr) + EqValue.size();
+    size_t Size = O.ArgStr.size() + ArgPrefixesSize + EqValue.size();
     for (unsigned i = 0, e = getNumOptions(); i != e; ++i) {
       StringRef Name = getOption(i);
       if (!shouldPrintOption(Name, getDescription(i), O))
@@ -1828,18 +1767,17 @@ void generic_parser_base::printOptionInfo(const Option &O,
     if (O.getValueExpectedFlag() == ValueOptional) {
       for (unsigned i = 0, e = getNumOptions(); i != e; ++i) {
         if (getOption(i).empty()) {
-          outs() << PrintArg(O.ArgStr);
+          outs() << ArgPrefix << O.ArgStr;
           Option::printHelpStr(O.HelpStr, GlobalWidth,
-                               argPlusPrefixesSize(O.ArgStr));
+                               O.ArgStr.size() + ArgPrefixesSize);
           break;
         }
       }
     }
 
-    outs() << PrintArg(O.ArgStr) << EqValue;
+    outs() << ArgPrefix << O.ArgStr << EqValue;
     Option::printHelpStr(O.HelpStr, GlobalWidth,
-                         EqValue.size() +
-                             argPlusPrefixesSize(O.ArgStr));
+                         O.ArgStr.size() + EqValue.size() + ArgPrefixesSize);
     for (unsigned i = 0, e = getNumOptions(); i != e; ++i) {
       StringRef OptionName = getOption(i);
       StringRef Description = getDescription(i);
@@ -1861,8 +1799,8 @@ void generic_parser_base::printOptionInfo(const Option &O,
     if (!O.HelpStr.empty())
       outs() << "  " << O.HelpStr << '\n';
     for (unsigned i = 0, e = getNumOptions(); i != e; ++i) {
-      StringRef Option = getOption(i);
-      outs() << "    " << PrintArg(Option);
+      auto Option = getOption(i);
+      outs() << "    -" << Option;
       Option::printHelpStr(getDescription(i), GlobalWidth, Option.size() + 8);
     }
   }
@@ -1876,7 +1814,7 @@ static const size_t MaxOptWidth = 8; // arbitrary spacing for printOptionDiff
 void generic_parser_base::printGenericOptionDiff(
     const Option &O, const GenericOptionValue &Value,
     const GenericOptionValue &Default, size_t GlobalWidth) const {
-  outs() << "  " << PrintArg(O.ArgStr);
+  outs() << "  -" << O.ArgStr;
   outs().indent(GlobalWidth - O.ArgStr.size());
 
   unsigned NumOpts = getNumOptions();
@@ -2096,7 +2034,7 @@ public:
       printSubCommands(Subs, MaxSubLen);
       outs() << "\n";
       outs() << "  Type \"" << GlobalParser->ProgramName
-             << " <subcommand> --help\" to get more help on a specific "
+             << " <subcommand> -help\" to get more help on a specific "
                 "subcommand";
     }
 
@@ -2163,11 +2101,9 @@ protected:
     // options within categories will also be alphabetically sorted.
     for (size_t I = 0, E = Opts.size(); I != E; ++I) {
       Option *Opt = Opts[I].second;
-      for (auto &Cat : Opt->Categories) {
-        assert(CategorizedOptions.count(Cat) > 0 &&
-               "Option has an unregistered category");
-        CategorizedOptions[Cat].push_back(Opt);
-      }
+      assert(CategorizedOptions.count(Opt->Category) > 0 &&
+             "Option has an unregistered category");
+      CategorizedOptions[Opt->Category].push_back(Opt);
     }
 
     // Now do printing.
@@ -2175,7 +2111,7 @@ protected:
              Category = SortedCategories.begin(),
              E = SortedCategories.end();
          Category != E; ++Category) {
-      // Hide empty categories for --help, but show for --help-hidden.
+      // Hide empty categories for -help, but show for -help-hidden.
       const auto &CategoryOptions = CategorizedOptions[*Category];
       bool IsEmptyCategory = CategoryOptions.empty();
       if (!ShowHidden && IsEmptyCategory)
@@ -2191,7 +2127,7 @@ protected:
       else
         outs() << "\n";
 
-      // When using --help-hidden explicitly state if the category has no
+      // When using -help-hidden explicitly state if the category has no
       // options associated with it.
       if (IsEmptyCategory) {
         outs() << "  This option category has no options.\n";
@@ -2241,11 +2177,11 @@ static HelpPrinterWrapper WrappedHiddenPrinter(UncategorizedHiddenPrinter,
 static cl::OptionCategory GenericCategory("Generic Options");
 
 // Define uncategorized help printers.
-// --help-list is hidden by default because if Option categories are being used
-// then --help behaves the same as --help-list.
+// -help-list is hidden by default because if Option categories are being used
+// then -help behaves the same as -help-list.
 static cl::opt<HelpPrinter, true, parser<bool>> HLOp(
     "help-list",
-    cl::desc("Display list of available options (--help-list-hidden for more)"),
+    cl::desc("Display list of available options (-help-list-hidden for more)"),
     cl::location(UncategorizedNormalPrinter), cl::Hidden, cl::ValueDisallowed,
     cl::cat(GenericCategory), cl::sub(*AllSubCommands));
 
@@ -2259,11 +2195,11 @@ static cl::opt<HelpPrinter, true, parser<bool>>
 // behaviour at runtime depending on whether one or more Option categories have
 // been declared.
 static cl::opt<HelpPrinterWrapper, true, parser<bool>>
-    HOp("help", cl::desc("Display available options (--help-hidden for more)"),
+    HOp("help", cl::desc("Display available options (-help-hidden for more)"),
         cl::location(WrappedNormalPrinter), cl::ValueDisallowed,
         cl::cat(GenericCategory), cl::sub(*AllSubCommands));
 
-static cl::alias HOpA("h", cl::desc("Alias for --help"), cl::aliasopt(HOp),
+static cl::alias HOpA("h", cl::desc("Alias for -help"), cl::aliasopt(HOp),
                       cl::DefaultOption);
 
 static cl::opt<HelpPrinterWrapper, true, parser<bool>>
@@ -2290,7 +2226,7 @@ void HelpPrinterWrapper::operator=(bool Value) {
   // registered then it is useful to show the categorized help instead of
   // uncategorized help.
   if (GlobalParser->RegisteredOptionCategories.size() > 1) {
-    // unhide --help-list option so user can have uncategorized output if they
+    // unhide -help-list option so user can have uncategorized output if they
     // want it.
     HLOp.setHiddenFlag(NotHidden);
 
@@ -2424,21 +2360,21 @@ cl::getRegisteredSubcommands() {
 
 void cl::HideUnrelatedOptions(cl::OptionCategory &Category, SubCommand &Sub) {
   for (auto &I : Sub.OptionsMap) {
-    for (auto &Cat : I.second->Categories) {
-      if (Cat != &Category &&
-          Cat != &GenericCategory)
-        I.second->setHiddenFlag(cl::ReallyHidden);
-    }
+    if (I.second->Category != &Category &&
+        I.second->Category != &GenericCategory)
+      I.second->setHiddenFlag(cl::ReallyHidden);
   }
 }
 
 void cl::HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *> Categories,
                               SubCommand &Sub) {
+  auto CategoriesBegin = Categories.begin();
+  auto CategoriesEnd = Categories.end();
   for (auto &I : Sub.OptionsMap) {
-    for (auto &Cat : I.second->Categories) {
-      if (find(Categories, Cat) == Categories.end() && Cat != &GenericCategory)
-        I.second->setHiddenFlag(cl::ReallyHidden);
-    }
+    if (std::find(CategoriesBegin, CategoriesEnd, I.second->Category) ==
+            CategoriesEnd &&
+        I.second->Category != &GenericCategory)
+      I.second->setHiddenFlag(cl::ReallyHidden);
   }
 }
 

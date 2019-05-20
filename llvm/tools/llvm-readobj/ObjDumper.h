@@ -133,10 +133,6 @@ std::error_code createWasmDumper(const object::ObjectFile *Obj,
                                  ScopedPrinter &Writer,
                                  std::unique_ptr<ObjDumper> &Result);
 
-std::error_code createXCOFFDumper(const object::ObjectFile *Obj,
-                                  ScopedPrinter &Writer,
-                                  std::unique_ptr<ObjDumper> &Result);
-
 void dumpCOFFImportFile(const object::COFFImportFile *File,
                         ScopedPrinter &Writer);
 

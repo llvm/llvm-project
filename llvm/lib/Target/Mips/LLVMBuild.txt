@@ -15,7 +15,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = AsmParser Disassembler MCTargetDesc TargetInfo
+subdirectories = AsmParser Disassembler InstPrinter MCTargetDesc TargetInfo
 
 [component_0]
 type = TargetGroup
@@ -36,6 +36,7 @@ required_libraries =
  CodeGen
  Core
  MC
+ MipsAsmPrinter
  MipsDesc
  MipsInfo
  SelectionDAG

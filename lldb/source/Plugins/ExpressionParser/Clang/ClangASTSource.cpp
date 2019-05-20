@@ -1968,14 +1968,7 @@ clang::QualType ClangASTSource::CopyTypeWithMerger(
     return QualType();
   }
 
-  if (llvm::Expected<QualType> type_or_error =
-          merger.ImporterForOrigin(from_context).Import(type)) {
-    return *type_or_error;
-  } else {
-    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
-    LLDB_LOG_ERROR(log, type_or_error.takeError(), "Couldn't import type: {0}");
-    return QualType();
-  }
+  return merger.ImporterForOrigin(from_context).Import(type);
 }
 
 clang::Decl *ClangASTSource::CopyDecl(Decl *src_decl) {
@@ -1988,16 +1981,7 @@ clang::Decl *ClangASTSource::CopyDecl(Decl *src_decl) {
       return nullptr;
     }
 
-    if (llvm::Expected<Decl *> decl_or_error =
-            m_merger_up->ImporterForOrigin(from_context).Import(src_decl)) {
-      return *decl_or_error;
-    } else {
-      Log *log =
-          lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
-      LLDB_LOG_ERROR(log, decl_or_error.takeError(),
-                     "Couldn't import decl: {0}");
-      return nullptr;
-    }
+    return m_merger_up->ImporterForOrigin(from_context).Import(src_decl);
   } else {
     lldbassert(0 && "No mechanism for copying a decl!");
     return nullptr;

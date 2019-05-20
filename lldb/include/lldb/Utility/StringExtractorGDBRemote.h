@@ -34,7 +34,7 @@ public:
   StringExtractorGDBRemote(const StringExtractorGDBRemote &rhs)
       : StringExtractor(rhs), m_validator(rhs.m_validator) {}
 
-  ~StringExtractorGDBRemote() override {}
+  virtual ~StringExtractorGDBRemote() {}
 
   bool ValidateResponse() const;
 

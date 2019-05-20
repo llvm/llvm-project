@@ -2367,8 +2367,6 @@ readAddressAreas(DWARFContext &Dwarf, InputSection *Sec) {
 
     ArrayRef<InputSectionBase *> Sections = Sec->File->getSections();
     for (DWARFAddressRange &R : *Ranges) {
-      if (R.SectionIndex == -1ULL)
-        continue;
       InputSectionBase *S = Sections[R.SectionIndex];
       if (!S || S == &InputSection::Discarded || !S->Live)
         continue;

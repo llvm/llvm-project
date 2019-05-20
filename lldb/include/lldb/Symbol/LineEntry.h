@@ -123,21 +123,13 @@ struct LineEntry {
   /// LineEntry (and it will include the range of the following LineEntries
   /// that match either 32 or 0.)
   ///
-  /// When \b include_inlined_functions is \b true inlined functions with
-  /// a call site at this LineEntry will also be included in the complete
-  /// range.
-  ///
   /// If the initial LineEntry this method is called on is a line #0, only the
   /// range of contiuous LineEntries with line #0 will be included in the
   /// complete range.
   ///
-  /// @param[in] include_inlined_functions
-  ///     Whether to include inlined functions at the same line or not.
-  ///
   /// \return
   ///     The contiguous AddressRange for this source line.
-  AddressRange
-  GetSameLineContiguousAddressRange(bool include_inlined_functions) const;
+  AddressRange GetSameLineContiguousAddressRange() const;
 
   /// Apply file mappings from target.source-map to the LineEntry's file.
   ///

@@ -44,7 +44,6 @@ executable("llvm-readobj") {
     "WasmDumper.cpp",
     "Win64EHDumper.cpp",
     "WindowsResourceDumper.cpp",
-    "XCOFFDumper.cpp",
     "llvm-readobj.cpp",
   ]
 }

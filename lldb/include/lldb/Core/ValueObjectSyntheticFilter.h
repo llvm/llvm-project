@@ -26,8 +26,14 @@
 
 namespace lldb_private {
 class Declaration;
+}
+namespace lldb_private {
 class Status;
+}
+namespace lldb_private {
 class SyntheticChildrenFrontEnd;
+}
+namespace lldb_private {
 
 // A ValueObject that obtains its children from some source other than
 // real information

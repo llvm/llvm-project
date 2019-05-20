@@ -21,7 +21,6 @@
 #include "AVR.h"
 #include "AVRTargetObjectFile.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
-#include "TargetInfo/AVRTargetInfo.h"
 
 namespace llvm {
 

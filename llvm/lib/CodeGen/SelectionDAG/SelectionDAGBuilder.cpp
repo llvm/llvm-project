@@ -215,8 +215,8 @@ static SDValue getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL,
       unsigned ValueBits = ValueVT.getSizeInBits();
 
       // Assemble the power of 2 part.
-      unsigned RoundParts =
-          (NumParts & (NumParts - 1)) ? 1 << Log2_32(NumParts) : NumParts;
+      unsigned RoundParts = NumParts & (NumParts - 1) ?
+        1 << Log2_32(NumParts) : NumParts;
       unsigned RoundBits = PartBits * RoundParts;
       EVT RoundVT = RoundBits == ValueBits ?
         ValueVT : EVT::getIntegerVT(*DAG.getContext(), RoundBits);
@@ -322,15 +322,7 @@ static SDValue getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL,
     return DAG.getNode(ISD::FP_EXTEND, DL, ValueVT, Val);
   }
 
-  // Handle MMX to a narrower integer type by bitcasting MMX to integer and
-  // then truncating.
-  if (PartEVT == MVT::x86mmx && ValueVT.isInteger() &&
-      ValueVT.bitsLT(PartEVT)) {
-    Val = DAG.getNode(ISD::BITCAST, DL, MVT::i64, Val);
-    return DAG.getNode(ISD::TRUNCATE, DL, ValueVT, Val);
-  }
-
-  report_fatal_error("Unknown mismatch in getCopyFromParts!");
+  llvm_unreachable("Unknown mismatch!");
 }
 
 static void diagnosePossiblyInvalidConstraint(LLVMContext &Ctx, const Value *V,
@@ -4717,10 +4709,7 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
                             MemVT.getStoreSize(), I.getAlignment(), AAMDNodes(),
                             nullptr, SSID, Ordering);
 
-  SDValue Val = getValue(I.getValueOperand());
-  if (Val.getValueType() != MemVT)
-    Val = DAG.getPtrExtOrTrunc(Val, dl, MemVT);
-
+  SDValue Val = DAG.getPtrExtOrTrunc(getValue(I.getValueOperand()), dl, MemVT);
   SDValue OutChain = DAG.getAtomic(ISD::ATOMIC_STORE, dl, MemVT, InChain,
                                    getValue(I.getPointerOperand()), Val, MMO);
 
@@ -6078,8 +6067,6 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   case Intrinsic::experimental_constrained_fdiv:
   case Intrinsic::experimental_constrained_frem:
   case Intrinsic::experimental_constrained_fma:
-  case Intrinsic::experimental_constrained_fptrunc:
-  case Intrinsic::experimental_constrained_fpext:
   case Intrinsic::experimental_constrained_sqrt:
   case Intrinsic::experimental_constrained_pow:
   case Intrinsic::experimental_constrained_powi:
@@ -6836,12 +6823,6 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   case Intrinsic::experimental_constrained_fma:
     Opcode = ISD::STRICT_FMA;
     break;
-  case Intrinsic::experimental_constrained_fptrunc:
-    Opcode = ISD::STRICT_FP_ROUND;
-    break;
-  case Intrinsic::experimental_constrained_fpext:
-    Opcode = ISD::STRICT_FP_EXTEND;
-    break;
   case Intrinsic::experimental_constrained_sqrt:
     Opcode = ISD::STRICT_FSQRT;
     break;
@@ -6905,12 +6886,7 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
 
   SDVTList VTs = DAG.getVTList(ValueVTs);
   SDValue Result;
-  if (Opcode == ISD::STRICT_FP_ROUND)
-    Result = DAG.getNode(Opcode, sdl, VTs, 
-                          { Chain, getValue(FPI.getArgOperand(0)), 
-                               DAG.getTargetConstant(0, sdl,
-                               TLI.getPointerTy(DAG.getDataLayout())) });
-  else if (FPI.isUnaryOp())
+  if (FPI.isUnaryOp())
     Result = DAG.getNode(Opcode, sdl, VTs,
                          { Chain, getValue(FPI.getArgOperand(0)) });
   else if (FPI.isTernaryOp())
@@ -8874,11 +8850,8 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
 
   if (CLI.IsPostTypeLegalization) {
     // If we are lowering a libcall after legalization, split the return type.
-    SmallVector<EVT, 4> OldRetTys;
-    SmallVector<uint64_t, 4> OldOffsets;
-    RetTys.swap(OldRetTys);
-    Offsets.swap(OldOffsets);
-
+    SmallVector<EVT, 4> OldRetTys = std::move(RetTys);
+    SmallVector<uint64_t, 4> OldOffsets = std::move(Offsets);
     for (size_t i = 0, e = OldRetTys.size(); i != e; ++i) {
       EVT RetVT = OldRetTys[i];
       uint64_t Offset = OldOffsets[i];

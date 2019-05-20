@@ -457,8 +457,7 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
 static void resolvePrevailingInIndex(
     ModuleSummaryIndex &Index,
     StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>>
-        &ResolvedODR,
-    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
+        &ResolvedODR) {
 
   DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
   computePrevailingCopies(Index, PrevailingCopy);
@@ -477,8 +476,7 @@ static void resolvePrevailingInIndex(
     ResolvedODR[ModuleIdentifier][GUID] = NewLinkage;
   };
 
-  thinLTOResolvePrevailingInIndex(Index, isPrevailing, recordNewLinkage,
-                                  GUIDPreservedSymbols);
+  thinLTOResolvePrevailingInIndex(Index, isPrevailing, recordNewLinkage);
 }
 
 // Initialize the TargetMachine builder for a given Triple
@@ -632,7 +630,7 @@ void ThinLTOCodeGenerator::promote(Module &TheModule, ModuleSummaryIndex &Index,
 
   // Resolve prevailing symbols
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
-  resolvePrevailingInIndex(Index, ResolvedODR, GUIDPreservedSymbols);
+  resolvePrevailingInIndex(Index, ResolvedODR);
 
   thinLTOResolvePrevailingInModule(
       TheModule, ModuleToDefinedGVSummaries[ModuleIdentifier]);
@@ -788,7 +786,7 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
 
   // Resolve prevailing symbols
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
-  resolvePrevailingInIndex(Index, ResolvedODR, GUIDPreservedSymbols);
+  resolvePrevailingInIndex(Index, ResolvedODR);
 
   // Promote the exported values in the index, so that they are promoted
   // in the module.
@@ -947,7 +945,7 @@ void ThinLTOCodeGenerator::run() {
 
   // Resolve prevailing symbols, this has to be computed early because it
   // impacts the caching.
-  resolvePrevailingInIndex(*Index, ResolvedODR, GUIDPreservedSymbols);
+  resolvePrevailingInIndex(*Index, ResolvedODR);
 
   // Use global summary-based analysis to identify symbols that can be
   // internalized (because they aren't exported or preserved as per callback).

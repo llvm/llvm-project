@@ -58,16 +58,13 @@ llvm::DenseMapInfo<clang::APValue::LValueBase>::getTombstoneKey() {
       DenseMapInfo<unsigned>::getTombstoneKey());
 }
 
-namespace clang {
-llvm::hash_code hash_value(const APValue::LValueBase &Base) {
-  return llvm::hash_combine(Base.getOpaqueValue(), Base.getCallIndex(),
-                            Base.getVersion());
-}
-}
-
 unsigned llvm::DenseMapInfo<clang::APValue::LValueBase>::getHashValue(
     const clang::APValue::LValueBase &Base) {
-  return hash_value(Base);
+  llvm::FoldingSetNodeID ID;
+  ID.AddPointer(Base.getOpaqueValue());
+  ID.AddInteger(Base.getCallIndex());
+  ID.AddInteger(Base.getVersion());
+  return ID.ComputeHash();
 }
 
 bool llvm::DenseMapInfo<clang::APValue::LValueBase>::isEqual(
@@ -508,7 +505,8 @@ void APValue::printPretty(raw_ostream &Out, ASTContext &Ctx, QualType Ty) const{
       if (ElemTy->getAs<RecordType>()) {
         // The lvalue refers to a class type, so the next path entry is a base
         // or member.
-        const Decl *BaseOrMember = Path[I].getAsBaseOrMember().getPointer();
+        const Decl *BaseOrMember =
+        BaseOrMemberType::getFromOpaqueValue(Path[I].BaseOrMember).getPointer();
         if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(BaseOrMember)) {
           CastToBase = RD;
           ElemTy = Ctx.getRecordType(RD);
@@ -522,7 +520,7 @@ void APValue::printPretty(raw_ostream &Out, ASTContext &Ctx, QualType Ty) const{
         }
       } else {
         // The lvalue must refer to an array.
-        Out << '[' << Path[I].getAsArrayIndex() << ']';
+        Out << '[' << Path[I].ArrayIndex << ']';
         ElemTy = Ctx.getAsArrayType(ElemTy)->getElementType();
       }
     }

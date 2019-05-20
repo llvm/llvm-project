@@ -33,7 +33,7 @@ enum class compression_types { zlib_deflate, lz4, lzma, lzfse, none };
 
 class RNBRemote {
 public:
-  enum PacketEnum {
+  typedef enum {
     invalid_packet = 0,
     ack,                           // '+'
     nack,                          // '-'
@@ -138,7 +138,7 @@ public:
     query_supported_async_json_packets, // 'QSupportedAsyncJSONPackets'
     configure_darwin_log,               // 'ConfigureDarwinLog:'
     unknown_type
-  };
+  } PacketEnum;
 
   typedef rnb_err_t (RNBRemote::*HandlePacketCallback)(const char *p);
 
@@ -264,7 +264,8 @@ public:
   RNBSocket &Comm() { return m_comm; }
 
 private:
-  RNBRemote(const RNBRemote &) = delete;
+  // Outlaw some constructors
+  RNBRemote(const RNBRemote &);
 
 protected:
   rnb_err_t GetCommData();

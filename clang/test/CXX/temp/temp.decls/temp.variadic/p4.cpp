@@ -213,10 +213,8 @@ namespace PackExpansionWithinLambda {
       };
 #endif
 
-#if __cplusplus > 201703L
       //    - in a template parameter pack that is a pack expansion
-      swallow([]<T *...v, template<T *> typename ...W>(W<v> ...wv) { });
-#endif
+      // FIXME: We do not support any way to reach this case yet.
 
       //    - in an initializer-list
       int arr[] = {T().x...};
@@ -280,6 +278,11 @@ namespace PackExpansionWithinLambda {
 
   struct T { int x; using U = int; };
   void g() { f<T>(1, 2, 3); }
+
+  template<typename ...T, typename ...U> void pack_in_lambda(U ...u) { // expected-note {{here}}
+    // FIXME: Move this test into 'f' above once we support this syntax.
+    []<T *...v, template<T *> typename ...U>(U<v> ...uv) {}; // expected-error {{expected body of lambda}} expected-error {{does not refer to a value}}
+  }
 
   template<typename ...T> void pack_expand_attr() {
     // FIXME: Move this test into 'f' above once we support this.

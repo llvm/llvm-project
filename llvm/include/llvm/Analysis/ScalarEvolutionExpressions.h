@@ -39,7 +39,7 @@ class Type;
     // These should be ordered in terms of increasing complexity to make the
     // folders simpler.
     scConstant, scTruncate, scZeroExtend, scSignExtend, scAddExpr, scMulExpr,
-    scUDivExpr, scAddRecExpr, scUMaxExpr, scSMaxExpr, scUMinExpr, scSMinExpr,
+    scUDivExpr, scAddRecExpr, scUMaxExpr, scSMaxExpr,
     scUnknown, scCouldNotCompute
   };
 
@@ -190,9 +190,10 @@ class Type;
 
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
     static bool classof(const SCEV *S) {
-      return S->getSCEVType() == scAddExpr || S->getSCEVType() == scMulExpr ||
-             S->getSCEVType() == scSMaxExpr || S->getSCEVType() == scUMaxExpr ||
-             S->getSCEVType() == scSMinExpr || S->getSCEVType() == scUMinExpr ||
+      return S->getSCEVType() == scAddExpr ||
+             S->getSCEVType() == scMulExpr ||
+             S->getSCEVType() == scSMaxExpr ||
+             S->getSCEVType() == scUMaxExpr ||
              S->getSCEVType() == scAddRecExpr;
     }
   };
@@ -207,9 +208,10 @@ class Type;
   public:
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
     static bool classof(const SCEV *S) {
-      return S->getSCEVType() == scAddExpr || S->getSCEVType() == scMulExpr ||
-             S->getSCEVType() == scSMaxExpr || S->getSCEVType() == scUMaxExpr ||
-             S->getSCEVType() == scSMinExpr || S->getSCEVType() == scUMinExpr;
+      return S->getSCEVType() == scAddExpr ||
+             S->getSCEVType() == scMulExpr ||
+             S->getSCEVType() == scSMaxExpr ||
+             S->getSCEVType() == scUMaxExpr;
     }
 
     /// Set flags for a non-recurrence without clearing previously set flags.
@@ -364,52 +366,16 @@ class Type;
     }
   };
 
-  /// This node is the base class min/max selections.
-  class SCEVMinMaxExpr : public SCEVCommutativeExpr {
+  /// This class represents a signed maximum selection.
+  class SCEVSMaxExpr : public SCEVCommutativeExpr {
     friend class ScalarEvolution;
 
-    static bool isMinMaxType(enum SCEVTypes T) {
-      return T == scSMaxExpr || T == scUMaxExpr || T == scSMinExpr ||
-             T == scUMinExpr;
-    }
-
-  protected:
-    /// Note: Constructing subclasses via this constructor is allowed
-    SCEVMinMaxExpr(const FoldingSetNodeIDRef ID, enum SCEVTypes T,
-                   const SCEV *const *O, size_t N)
-        : SCEVCommutativeExpr(ID, T, O, N) {
-      assert(isMinMaxType(T));
-      // Min and max never overflow
+    SCEVSMaxExpr(const FoldingSetNodeIDRef ID,
+                 const SCEV *const *O, size_t N)
+      : SCEVCommutativeExpr(ID, scSMaxExpr, O, N) {
+      // Max never overflows.
       setNoWrapFlags((NoWrapFlags)(FlagNUW | FlagNSW));
     }
-
-  public:
-    static bool classof(const SCEV *S) {
-      return isMinMaxType(static_cast<SCEVTypes>(S->getSCEVType()));
-    }
-
-    static enum SCEVTypes negate(enum SCEVTypes T) {
-      switch (T) {
-      case scSMaxExpr:
-        return scSMinExpr;
-      case scSMinExpr:
-        return scSMaxExpr;
-      case scUMaxExpr:
-        return scUMinExpr;
-      case scUMinExpr:
-        return scUMaxExpr;
-      default:
-        llvm_unreachable("Not a min or max SCEV type!");
-      }
-    }
-  };
-
-  /// This class represents a signed maximum selection.
-  class SCEVSMaxExpr : public SCEVMinMaxExpr {
-    friend class ScalarEvolution;
-
-    SCEVSMaxExpr(const FoldingSetNodeIDRef ID, const SCEV *const *O, size_t N)
-        : SCEVMinMaxExpr(ID, scSMaxExpr, O, N) {}
 
   public:
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -419,44 +385,20 @@ class Type;
   };
 
   /// This class represents an unsigned maximum selection.
-  class SCEVUMaxExpr : public SCEVMinMaxExpr {
+  class SCEVUMaxExpr : public SCEVCommutativeExpr {
     friend class ScalarEvolution;
 
-    SCEVUMaxExpr(const FoldingSetNodeIDRef ID, const SCEV *const *O, size_t N)
-        : SCEVMinMaxExpr(ID, scUMaxExpr, O, N) {}
+    SCEVUMaxExpr(const FoldingSetNodeIDRef ID,
+                 const SCEV *const *O, size_t N)
+      : SCEVCommutativeExpr(ID, scUMaxExpr, O, N) {
+      // Max never overflows.
+      setNoWrapFlags((NoWrapFlags)(FlagNUW | FlagNSW));
+    }
 
   public:
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
     static bool classof(const SCEV *S) {
       return S->getSCEVType() == scUMaxExpr;
-    }
-  };
-
-  /// This class represents a signed minimum selection.
-  class SCEVSMinExpr : public SCEVMinMaxExpr {
-    friend class ScalarEvolution;
-
-    SCEVSMinExpr(const FoldingSetNodeIDRef ID, const SCEV *const *O, size_t N)
-        : SCEVMinMaxExpr(ID, scSMinExpr, O, N) {}
-
-  public:
-    /// Methods for support type inquiry through isa, cast, and dyn_cast:
-    static bool classof(const SCEV *S) {
-      return S->getSCEVType() == scSMinExpr;
-    }
-  };
-
-  /// This class represents an unsigned minimum selection.
-  class SCEVUMinExpr : public SCEVMinMaxExpr {
-    friend class ScalarEvolution;
-
-    SCEVUMinExpr(const FoldingSetNodeIDRef ID, const SCEV *const *O, size_t N)
-        : SCEVMinMaxExpr(ID, scUMinExpr, O, N) {}
-
-  public:
-    /// Methods for support type inquiry through isa, cast, and dyn_cast:
-    static bool classof(const SCEV *S) {
-      return S->getSCEVType() == scUMinExpr;
     }
   };
 
@@ -532,10 +474,6 @@ class Type;
         return ((SC*)this)->visitSMaxExpr((const SCEVSMaxExpr*)S);
       case scUMaxExpr:
         return ((SC*)this)->visitUMaxExpr((const SCEVUMaxExpr*)S);
-      case scSMinExpr:
-        return ((SC *)this)->visitSMinExpr((const SCEVSMinExpr *)S);
-      case scUMinExpr:
-        return ((SC *)this)->visitUMinExpr((const SCEVUMinExpr *)S);
       case scUnknown:
         return ((SC*)this)->visitUnknown((const SCEVUnknown*)S);
       case scCouldNotCompute:
@@ -589,8 +527,6 @@ class Type;
         case scMulExpr:
         case scSMaxExpr:
         case scUMaxExpr:
-        case scSMinExpr:
-        case scUMinExpr:
         case scAddRecExpr:
           for (const auto *Op : cast<SCEVNAryExpr>(S)->operands())
             push(Op);
@@ -751,26 +687,6 @@ class Type;
         Changed |= Op != Operands.back();
       }
       return !Changed ? Expr : SE.getUMaxExpr(Operands);
-    }
-
-    const SCEV *visitSMinExpr(const SCEVSMinExpr *Expr) {
-      SmallVector<const SCEV *, 2> Operands;
-      bool Changed = false;
-      for (auto *Op : Expr->operands()) {
-        Operands.push_back(((SC *)this)->visit(Op));
-        Changed |= Op != Operands.back();
-      }
-      return !Changed ? Expr : SE.getSMinExpr(Operands);
-    }
-
-    const SCEV *visitUMinExpr(const SCEVUMinExpr *Expr) {
-      SmallVector<const SCEV *, 2> Operands;
-      bool Changed = false;
-      for (auto *Op : Expr->operands()) {
-        Operands.push_back(((SC *)this)->visit(Op));
-        Changed |= Op != Operands.back();
-      }
-      return !Changed ? Expr : SE.getUMinExpr(Operands);
     }
 
     const SCEV *visitUnknown(const SCEVUnknown *Expr) {

@@ -1,5 +1,0 @@
-# RUN: cp %p/Inputs/dwarf.dwo %t
-# RUN: llvm-strip --keep-symbol=.L.str --discard-all %t -o %t1
-# RUN: llvm-readobj --file-headers --sections %t1 | FileCheck --implicit-check-not=.debug_ %s
-# RUN: llvm-objcopy --keep-symbol=.L.str --discard-all %t %t2
-# RUN: llvm-readobj --file-headers --sections %t2 | FileCheck --implicit-check-not=.debug_ %s

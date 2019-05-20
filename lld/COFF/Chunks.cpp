@@ -30,16 +30,11 @@ namespace lld {
 namespace coff {
 
 SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
-    : Chunk(SectionKind), File(F), Header(H), Repl(this) {
-  // Initialize Relocs.
-  setRelocs(File->getCOFFObj()->getRelocations(Header));
-
+    : Chunk(SectionKind), File(F), Header(H),
+      Relocs(File->getCOFFObj()->getRelocations(Header)), Repl(this) {
   // Initialize SectionName.
-  StringRef SectionName;
   if (Expected<StringRef> E = File->getCOFFObj()->getSectionName(Header))
     SectionName = *E;
-  SectionNameData = SectionName.data();
-  SectionNameSize = SectionName.size();
 
   Alignment = Header->getAlignment();
 
@@ -53,7 +48,7 @@ SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
 // SectionChunk is one of the most frequently allocated classes, so it is
 // important to keep it as compact as possible. As of this writing, the number
 // below is the size of this class on x64 platforms.
-static_assert(sizeof(SectionChunk) <= 112, "SectionChunk grew unexpectedly");
+static_assert(sizeof(SectionChunk) <= 128, "SectionChunk grew unexpectedly");
 
 static void add16(uint8_t *P, int16_t V) { write16le(P, read16le(P) + V); }
 static void add32(uint8_t *P, int32_t V) { write32le(P, read32le(P) + V); }
@@ -344,12 +339,12 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
   // Copy section contents from source object file to output file.
   ArrayRef<uint8_t> A = getContents();
   if (!A.empty())
-    memcpy(Buf, A.data(), A.size());
+    memcpy(Buf + OutputSectionOff, A.data(), A.size());
 
   // Apply relocations.
   size_t InputSize = getSize();
-  for (size_t I = 0, E = RelocsSize; I < E; I++) {
-    const coff_relocation &Rel = RelocsData[I];
+  for (size_t I = 0, E = Relocs.size(); I < E; I++) {
+    const coff_relocation &Rel = Relocs[I];
 
     // Check for an invalid relocation offset. This check isn't perfect, because
     // we don't have the relocation size, which is only known after checking the
@@ -360,7 +355,7 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
       continue;
     }
 
-    uint8_t *Off = Buf + Rel.VirtualAddress;
+    uint8_t *Off = Buf + OutputSectionOff + Rel.VirtualAddress;
 
     auto *Sym =
         dyn_cast_or_null<Defined>(File->getSymbol(Rel.SymbolTableIndex));
@@ -442,8 +437,8 @@ static uint8_t getBaserelType(const coff_relocation &Rel) {
 // fixed by the loader if load-time relocation is needed.
 // Only called when base relocation is enabled.
 void SectionChunk::getBaserels(std::vector<Baserel> *Res) {
-  for (size_t I = 0, E = RelocsSize; I < E; I++) {
-    const coff_relocation &Rel = RelocsData[I];
+  for (size_t I = 0, E = Relocs.size(); I < E; I++) {
+    const coff_relocation &Rel = Relocs[I];
     uint8_t Ty = getBaserelType(Rel);
     if (Ty == IMAGE_REL_BASED_ABSOLUTE)
       continue;
@@ -539,7 +534,7 @@ static int getRuntimePseudoRelocSize(uint16_t Type) {
 // imported from another DLL).
 void SectionChunk::getRuntimePseudoRelocs(
     std::vector<RuntimePseudoReloc> &Res) {
-  for (const coff_relocation &Rel : getRelocs()) {
+  for (const coff_relocation &Rel : Relocs) {
     auto *Target =
         dyn_cast_or_null<Defined>(File->getSymbol(Rel.SymbolTableIndex));
     if (!Target || !Target->IsRuntimePseudoReloc)
@@ -586,13 +581,13 @@ StringRef SectionChunk::getDebugName() {
 
 ArrayRef<uint8_t> SectionChunk::getContents() const {
   ArrayRef<uint8_t> A;
-  cantFail(File->getCOFFObj()->getSectionContents(Header, A));
+  File->getCOFFObj()->getSectionContents(Header, A);
   return A;
 }
 
 ArrayRef<uint8_t> SectionChunk::consumeDebugMagic() {
   assert(isCodeView());
-  return consumeDebugMagic(getContents(), getSectionName());
+  return consumeDebugMagic(getContents(), SectionName);
 }
 
 ArrayRef<uint8_t> SectionChunk::consumeDebugMagic(ArrayRef<uint8_t> Data,
@@ -649,8 +644,8 @@ uint32_t CommonChunk::getOutputCharacteristics() const {
 }
 
 void StringChunk::writeTo(uint8_t *Buf) const {
-  memcpy(Buf, Str.data(), Str.size());
-  Buf[Str.size()] = '\0';
+  memcpy(Buf + OutputSectionOff, Str.data(), Str.size());
+  Buf[OutputSectionOff + Str.size()] = '\0';
 }
 
 ImportThunkChunkX64::ImportThunkChunkX64(Defined *S) : ImpSymbol(S) {
@@ -660,9 +655,9 @@ ImportThunkChunkX64::ImportThunkChunkX64(Defined *S) : ImpSymbol(S) {
 }
 
 void ImportThunkChunkX64::writeTo(uint8_t *Buf) const {
-  memcpy(Buf, ImportThunkX86, sizeof(ImportThunkX86));
+  memcpy(Buf + OutputSectionOff, ImportThunkX86, sizeof(ImportThunkX86));
   // The first two bytes is a JMP instruction. Fill its operand.
-  write32le(Buf + 2, ImpSymbol->getRVA() - RVA - getSize());
+  write32le(Buf + OutputSectionOff + 2, ImpSymbol->getRVA() - RVA - getSize());
 }
 
 void ImportThunkChunkX86::getBaserels(std::vector<Baserel> *Res) {
@@ -670,9 +665,9 @@ void ImportThunkChunkX86::getBaserels(std::vector<Baserel> *Res) {
 }
 
 void ImportThunkChunkX86::writeTo(uint8_t *Buf) const {
-  memcpy(Buf, ImportThunkX86, sizeof(ImportThunkX86));
+  memcpy(Buf + OutputSectionOff, ImportThunkX86, sizeof(ImportThunkX86));
   // The first two bytes is a JMP instruction. Fill its operand.
-  write32le(Buf + 2,
+  write32le(Buf + OutputSectionOff + 2,
             ImpSymbol->getRVA() + Config->ImageBase);
 }
 
@@ -681,16 +676,16 @@ void ImportThunkChunkARM::getBaserels(std::vector<Baserel> *Res) {
 }
 
 void ImportThunkChunkARM::writeTo(uint8_t *Buf) const {
-  memcpy(Buf, ImportThunkARM, sizeof(ImportThunkARM));
+  memcpy(Buf + OutputSectionOff, ImportThunkARM, sizeof(ImportThunkARM));
   // Fix mov.w and mov.t operands.
-  applyMOV32T(Buf, ImpSymbol->getRVA() + Config->ImageBase);
+  applyMOV32T(Buf + OutputSectionOff, ImpSymbol->getRVA() + Config->ImageBase);
 }
 
 void ImportThunkChunkARM64::writeTo(uint8_t *Buf) const {
   int64_t Off = ImpSymbol->getRVA() & 0xfff;
-  memcpy(Buf, ImportThunkARM64, sizeof(ImportThunkARM64));
-  applyArm64Addr(Buf, ImpSymbol->getRVA(), RVA, 12);
-  applyArm64Ldr(Buf + 4, Off);
+  memcpy(Buf + OutputSectionOff, ImportThunkARM64, sizeof(ImportThunkARM64));
+  applyArm64Addr(Buf + OutputSectionOff, ImpSymbol->getRVA(), RVA, 12);
+  applyArm64Ldr(Buf + OutputSectionOff + 4, Off);
 }
 
 // A Thumb2, PIC, non-interworking range extension thunk.
@@ -708,8 +703,8 @@ size_t RangeExtensionThunkARM::getSize() const {
 void RangeExtensionThunkARM::writeTo(uint8_t *Buf) const {
   assert(Config->Machine == ARMNT);
   uint64_t Offset = Target->getRVA() - RVA - 12;
-  memcpy(Buf, ArmThunk, sizeof(ArmThunk));
-  applyMOV32T(Buf, uint32_t(Offset));
+  memcpy(Buf + OutputSectionOff, ArmThunk, sizeof(ArmThunk));
+  applyMOV32T(Buf + OutputSectionOff, uint32_t(Offset));
 }
 
 // A position independent ARM64 adrp+add thunk, with a maximum range of
@@ -727,9 +722,9 @@ size_t RangeExtensionThunkARM64::getSize() const {
 
 void RangeExtensionThunkARM64::writeTo(uint8_t *Buf) const {
   assert(Config->Machine == ARM64);
-  memcpy(Buf, Arm64Thunk, sizeof(Arm64Thunk));
-  applyArm64Addr(Buf + 0, Target->getRVA(), RVA, 12);
-  applyArm64Imm(Buf + 4, Target->getRVA() & 0xfff, 0);
+  memcpy(Buf + OutputSectionOff, Arm64Thunk, sizeof(Arm64Thunk));
+  applyArm64Addr(Buf + OutputSectionOff + 0, Target->getRVA(), RVA, 12);
+  applyArm64Imm(Buf + OutputSectionOff + 4, Target->getRVA() & 0xfff, 0);
 }
 
 void LocalImportChunk::getBaserels(std::vector<Baserel> *Res) {
@@ -740,14 +735,14 @@ size_t LocalImportChunk::getSize() const { return Config->Wordsize; }
 
 void LocalImportChunk::writeTo(uint8_t *Buf) const {
   if (Config->is64()) {
-    write64le(Buf, Sym->getRVA() + Config->ImageBase);
+    write64le(Buf + OutputSectionOff, Sym->getRVA() + Config->ImageBase);
   } else {
-    write32le(Buf, Sym->getRVA() + Config->ImageBase);
+    write32le(Buf + OutputSectionOff, Sym->getRVA() + Config->ImageBase);
   }
 }
 
 void RVATableChunk::writeTo(uint8_t *Buf) const {
-  ulittle32_t *Begin = reinterpret_cast<ulittle32_t *>(Buf);
+  ulittle32_t *Begin = reinterpret_cast<ulittle32_t *>(Buf + OutputSectionOff);
   size_t Cnt = 0;
   for (const ChunkAndOffset &CO : Syms)
     Begin[Cnt++] = CO.InputChunk->getRVA() + CO.Offset;
@@ -768,7 +763,7 @@ void PseudoRelocTableChunk::writeTo(uint8_t *Buf) const {
   if (Relocs.empty())
     return;
 
-  ulittle32_t *Table = reinterpret_cast<ulittle32_t *>(Buf);
+  ulittle32_t *Table = reinterpret_cast<ulittle32_t *>(Buf + OutputSectionOff);
   // This is the list header, to signal the runtime pseudo relocation v2
   // format.
   Table[0] = 0;
@@ -838,7 +833,7 @@ BaserelChunk::BaserelChunk(uint32_t Page, Baserel *Begin, Baserel *End) {
 }
 
 void BaserelChunk::writeTo(uint8_t *Buf) const {
-  memcpy(Buf, Data.data(), Data.size());
+  memcpy(Buf + OutputSectionOff, Data.data(), Data.size());
 }
 
 uint8_t Baserel::getDefaultType() {
@@ -883,6 +878,7 @@ void MergeChunk::finalizeContents() {
     size_t Off = Builder.getOffset(toStringRef(C->getContents()));
     C->setOutputSection(Out);
     C->setRVA(RVA + Off);
+    C->OutputSectionOff = OutputSectionOff + Off;
   }
 }
 
@@ -895,7 +891,7 @@ size_t MergeChunk::getSize() const {
 }
 
 void MergeChunk::writeTo(uint8_t *Buf) const {
-  Builder.write(Buf);
+  Builder.write(Buf + OutputSectionOff);
 }
 
 // MinGW specific.
@@ -903,9 +899,9 @@ size_t AbsolutePointerChunk::getSize() const { return Config->Wordsize; }
 
 void AbsolutePointerChunk::writeTo(uint8_t *Buf) const {
   if (Config->is64()) {
-    write64le(Buf, Value);
+    write64le(Buf + OutputSectionOff, Value);
   } else {
-    write32le(Buf, Value);
+    write32le(Buf + OutputSectionOff, Value);
   }
 }
 

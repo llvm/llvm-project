@@ -6482,12 +6482,12 @@ The '``llvm.global_ctors``' Global Variable
     @llvm.global_ctors = appending global [1 x %0] [%0 { i32 65535, void ()* @ctor, i8* @data }]
 
 The ``@llvm.global_ctors`` array contains a list of constructor
-functions, priorities, and an associated global or function.
+functions, priorities, and an optional associated global or function.
 The functions referenced by this array will be called in ascending order
 of priority (i.e. lowest first) when the module is loaded. The order of
 functions with the same priority is not defined.
 
-If the third field is non-null, and points to a global variable
+If the third field is present, non-null, and points to a global variable
 or function, the initializer function will only run if the associated
 data from the current module is not discarded.
 
@@ -6502,12 +6502,12 @@ The '``llvm.global_dtors``' Global Variable
     @llvm.global_dtors = appending global [1 x %0] [%0 { i32 65535, void ()* @dtor, i8* @data }]
 
 The ``@llvm.global_dtors`` array contains a list of destructor
-functions, priorities, and an associated global or function.
+functions, priorities, and an optional associated global or function.
 The functions referenced by this array will be called in descending
 order of priority (i.e. highest first) when the module is unloaded. The
 order of functions with the same priority is not defined.
 
-If the third field is non-null, and points to a global variable
+If the third field is present, non-null, and points to a global variable
 or function, the destructor function will only run if the associated
 data from the current module is not discarded.
 
@@ -14822,77 +14822,6 @@ Semantics:
 The result produced is the product of the first two operands added to the third
 operand computed with infinite precision, and then rounded to the target
 precision.
-
-'``llvm.experimental.constrained.fptrunc``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <ty2>
-      @llvm.experimental.constrained.fptrunc(<type> <value>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.fptrunc``' intrinsic truncates ``value``
-to type ``ty2``.
-
-Arguments:
-""""""""""
-
-The first argument to the '``llvm.experimental.constrained.fptrunc``'
-intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector
-<t_vector>` of floating point values. This argument must be larger in size
-than the result.
-
-The second and third arguments specify the rounding mode and exception 
-behavior as described above.
-
-Semantics:
-""""""""""
-
-The result produced is a floating point value truncated to be smaller in size
-than the operand.
-
-'``llvm.experimental.constrained.fpext``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <ty2>
-      @llvm.experimental.constrained.fpext(<type> <value>,
-                                          metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.fpext``' intrinsic extends a 
-floating-point ``value`` to a larger floating-point value.
-
-Arguments:
-""""""""""
-
-The first argument to the '``llvm.experimental.constrained.fpext``'
-intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector
-<t_vector>` of floating point values. This argument must be smaller in size
-than the result.
-
-The second argument specifies the exception behavior as described above.
-
-Semantics:
-""""""""""
-
-The result produced is a floating point value extended to be larger in size
-than the operand. All restrictions that apply to the fpext instruction also
-apply to this intrinsic.
 
 Constrained libm-equivalent Intrinsics
 --------------------------------------

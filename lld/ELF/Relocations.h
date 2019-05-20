@@ -93,7 +93,6 @@ enum RelExpr {
   R_PPC_CALL,
   R_PPC_CALL_PLT,
   R_PPC_TOC,
-  R_PPC64_RELAX_TOC,
   R_RISCV_PC_INDIRECT,
 };
 

@@ -501,7 +501,6 @@ protected:
     options.SetAddToHistory(false);
     options.SetEchoCommands(false);
     options.SetPrintResults(true);
-    options.SetPrintErrors(true);
     options.SetStopOnError(false);
     m_interpreter.HandleCommandsFromFile(file, &clean_ctx, options, result);
     return result.Succeeded();

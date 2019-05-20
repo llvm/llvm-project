@@ -15,7 +15,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -106,8 +105,7 @@ namespace {
     void VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D);
     void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
 
-    void printTemplateParameters(const TemplateParameterList *Params,
-                                 bool OmitTemplateKW = false);
+    void printTemplateParameters(const TemplateParameterList *Params);
     void printTemplateArguments(const TemplateArgumentList &Args,
                                 const TemplateParameterList *Params = nullptr);
     void prettyPrintAttributes(Decl *D);
@@ -126,18 +124,6 @@ void Decl::print(raw_ostream &Out, const PrintingPolicy &Policy,
   DeclPrinter Printer(Out, Policy, getASTContext(), Indentation,
                       PrintInstantiation);
   Printer.Visit(const_cast<Decl*>(this));
-}
-
-void TemplateParameterList::print(raw_ostream &Out, const ASTContext &Context,
-                                  bool OmitTemplateKW) const {
-  print(Out, Context, Context.getPrintingPolicy(), OmitTemplateKW);
-}
-
-void TemplateParameterList::print(raw_ostream &Out, const ASTContext &Context,
-                                  const PrintingPolicy &Policy,
-                                  bool OmitTemplateKW) const {
-  DeclPrinter Printer(Out, Policy, Context);
-  Printer.printTemplateParameters(this, OmitTemplateKW);
 }
 
 static QualType GetBaseType(QualType T) {
@@ -572,21 +558,6 @@ void DeclPrinter::VisitEnumConstantDecl(EnumConstantDecl *D) {
   }
 }
 
-static void printExplicitSpecifier(ExplicitSpecifier ES, llvm::raw_ostream &Out,
-                                   PrintingPolicy &Policy,
-                                   unsigned Indentation) {
-  std::string Proto = "explicit";
-  llvm::raw_string_ostream EOut(Proto);
-  if (ES.getExpr()) {
-    EOut << "(";
-    ES.getExpr()->printPretty(EOut, nullptr, Policy, Indentation);
-    EOut << ")";
-  }
-  EOut << " ";
-  EOut.flush();
-  Out << EOut.str();
-}
-
 void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
   if (!D->getDescribedFunctionTemplate() &&
       !D->isFunctionTemplateSpecialization())
@@ -617,9 +588,10 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     if (D->isVirtualAsWritten()) Out << "virtual ";
     if (D->isModulePrivate())    Out << "__module_private__ ";
     if (D->isConstexpr() && !D->isExplicitlyDefaulted()) Out << "constexpr ";
-    ExplicitSpecifier ExplicitSpec = ExplicitSpecifier::getFromDecl(D);
-    if (ExplicitSpec.isSpecified())
-      printExplicitSpecifier(ExplicitSpec, Out, Policy, Indentation);
+    if ((CDecl && CDecl->isExplicitSpecified()) ||
+        (ConversionDecl && ConversionDecl->isExplicitSpecified()) ||
+        (GuideDecl && GuideDecl->isExplicitSpecified()))
+      Out << "explicit ";
   }
 
   PrintingPolicy SubPolicy(Policy);
@@ -1022,35 +994,25 @@ void DeclPrinter::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
     Visit(*D->decls_begin());
 }
 
-void DeclPrinter::printTemplateParameters(const TemplateParameterList *Params,
-                                          bool OmitTemplateKW) {
+void DeclPrinter::printTemplateParameters(const TemplateParameterList *Params) {
   assert(Params);
 
-  if (!OmitTemplateKW)
-    Out << "template ";
-  Out << '<';
+  Out << "template <";
 
-  bool NeedComma = false;
-  for (const Decl *Param : *Params) {
-    if (Param->isImplicit())
-      continue;
-
-    if (NeedComma)
+  for (unsigned i = 0, e = Params->size(); i != e; ++i) {
+    if (i != 0)
       Out << ", ";
-    else
-      NeedComma = true;
 
+    const Decl *Param = Params->getParam(i);
     if (auto TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
 
       if (TTP->wasDeclaredWithTypename())
-        Out << "typename";
+        Out << "typename ";
       else
-        Out << "class";
+        Out << "class ";
 
       if (TTP->isParameterPack())
-        Out << " ...";
-      else if (!TTP->getName().empty())
-        Out << ' ';
+        Out << "...";
 
       Out << *TTP;
 
@@ -1077,9 +1039,7 @@ void DeclPrinter::printTemplateParameters(const TemplateParameterList *Params,
     }
   }
 
-  Out << '>';
-  if (!OmitTemplateKW)
-    Out << ' ';
+  Out << "> ";
 }
 
 void DeclPrinter::printTemplateArguments(const TemplateArgumentList &Args,

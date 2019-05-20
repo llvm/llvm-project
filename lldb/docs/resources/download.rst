@@ -1,4 +1,4 @@
-Releases
+Download
 ========
 
 Nightly Builds

@@ -95,20 +95,12 @@ TEST(CommandLineTest, ModifyExisitingOption) {
   cl::Option *Retrieved = Map["test-option"];
   ASSERT_EQ(&TestOption, Retrieved) << "Retrieved wrong option.";
 
-  ASSERT_NE(Retrieved->Categories.end(),
-            find_if(Retrieved->Categories,
-                    [&](const llvm::cl::OptionCategory *Cat) {
-                      return Cat == &cl::GeneralCategory;
-                    }))
-      << "Incorrect default option category.";
+  ASSERT_EQ(&cl::GeneralCategory,Retrieved->Category) <<
+    "Incorrect default option category.";
 
-  Retrieved->addCategory(TestCategory);
-  ASSERT_NE(Retrieved->Categories.end(),
-            find_if(Retrieved->Categories,
-                    [&](const llvm::cl::OptionCategory *Cat) {
-                      return Cat == &TestCategory;
-                    }))
-      << "Failed to modify option's option category.";
+  Retrieved->setCategory(TestCategory);
+  ASSERT_EQ(&TestCategory,Retrieved->Category) <<
+    "Failed to modify option's option category.";
 
   Retrieved->setDescription(Description);
   ASSERT_STREQ(Retrieved->HelpStr.data(), Description)
@@ -160,52 +152,8 @@ TEST(CommandLineTest, ParseEnvironmentToLocalVar) {
 TEST(CommandLineTest, UseOptionCategory) {
   StackOption<int> TestOption2("test-option", cl::cat(TestCategory));
 
-  ASSERT_NE(TestOption2.Categories.end(),
-            find_if(TestOption2.Categories,
-                         [&](const llvm::cl::OptionCategory *Cat) {
-                           return Cat == &TestCategory;
-                         }))
-      << "Failed to assign Option Category.";
-}
-
-TEST(CommandLineTest, UseMultipleCategories) {
-  StackOption<int> TestOption2("test-option2", cl::cat(TestCategory),
-                               cl::cat(cl::GeneralCategory));
-
-  ASSERT_NE(TestOption2.Categories.end(),
-            find_if(TestOption2.Categories,
-                         [&](const llvm::cl::OptionCategory *Cat) {
-                           return Cat == &TestCategory;
-                         }))
-      << "Failed to assign Option Category.";
-  ASSERT_NE(TestOption2.Categories.end(),
-            find_if(TestOption2.Categories,
-                         [&](const llvm::cl::OptionCategory *Cat) {
-                           return Cat == &cl::GeneralCategory;
-                         }))
-      << "Failed to assign General Category.";
-
-  cl::OptionCategory AnotherCategory("Additional test Options", "Description");
-  StackOption<int> TestOption("test-option", cl::cat(TestCategory),
-                              cl::cat(AnotherCategory));
-  ASSERT_EQ(TestOption.Categories.end(),
-            find_if(TestOption.Categories,
-                         [&](const llvm::cl::OptionCategory *Cat) {
-                           return Cat == &cl::GeneralCategory;
-                         }))
-      << "Failed to remove General Category.";
-  ASSERT_NE(TestOption.Categories.end(),
-            find_if(TestOption.Categories,
-                         [&](const llvm::cl::OptionCategory *Cat) {
-                           return Cat == &TestCategory;
-                         }))
-      << "Failed to assign Option Category.";
-  ASSERT_NE(TestOption.Categories.end(),
-            find_if(TestOption.Categories,
-                         [&](const llvm::cl::OptionCategory *Cat) {
-                           return Cat == &AnotherCategory;
-                         }))
-      << "Failed to assign Another Category.";
+  ASSERT_EQ(&TestCategory,TestOption2.Category) << "Failed to assign Option "
+                                                  "Category.";
 }
 
 typedef void ParserFunction(StringRef Source, StringSaver &Saver,
@@ -1085,7 +1033,6 @@ public:
   // Return std::string because the output of a failing EXPECT check is
   // unreadable for StringRef. It also avoids any lifetime issues.
   template <typename... Ts> std::string runTest(Ts... OptionAttributes) {
-    outs().flush();  // flush any output from previous tests
     AutoDeleteFile File;
     {
       OutputRedirector Stdout(fileno(stdout));
@@ -1095,7 +1042,7 @@ public:
 
       StackOption<OptionValue> TestOption(Opt, cl::desc(HelpText),
                                           OptionAttributes...);
-      printOptionInfo(TestOption, 26);
+      printOptionInfo(TestOption, 25);
       outs().flush();
     }
     auto Buffer = MemoryBuffer::getFile(File.FilePath);
@@ -1122,8 +1069,8 @@ TEST_F(PrintOptionInfoTest, PrintOptionInfoValueOptionalWithoutSentinel) {
               cl::values(clEnumValN(OptionValue::Val, "v1", "desc1")));
 
   // clang-format off
-  EXPECT_EQ(Output, ("  --" + Opt + "=<value> - " + HelpText + "\n"
-                     "    =v1                 -   desc1\n")
+  EXPECT_EQ(Output, ("  -" + Opt + "=<value> - " + HelpText + "\n"
+                     "    =v1                -   desc1\n")
                         .str());
   // clang-format on
 }
@@ -1135,9 +1082,9 @@ TEST_F(PrintOptionInfoTest, PrintOptionInfoValueOptionalWithSentinel) {
 
   // clang-format off
   EXPECT_EQ(Output,
-            ("  --" + Opt + "         - " + HelpText + "\n"
-             "  --" + Opt + "=<value> - " + HelpText + "\n"
-             "    =v1                 -   desc1\n")
+            ("  -" + Opt + "         - " + HelpText + "\n"
+             "  -" + Opt + "=<value> - " + HelpText + "\n"
+             "    =v1                -   desc1\n")
                 .str());
   // clang-format on
 }
@@ -1148,10 +1095,10 @@ TEST_F(PrintOptionInfoTest, PrintOptionInfoValueOptionalWithSentinelWithHelp) {
                                     clEnumValN(OptionValue::Val, "", "desc2")));
 
   // clang-format off
-  EXPECT_EQ(Output, ("  --" + Opt + "         - " + HelpText + "\n"
-                     "  --" + Opt + "=<value> - " + HelpText + "\n"
-                     "    =v1                 -   desc1\n"
-                     "    =<empty>            -   desc2\n")
+  EXPECT_EQ(Output, ("  -" + Opt + "         - " + HelpText + "\n"
+                     "  -" + Opt + "=<value> - " + HelpText + "\n"
+                     "    =v1                -   desc1\n"
+                     "    =<empty>           -   desc2\n")
                         .str());
   // clang-format on
 }
@@ -1162,8 +1109,8 @@ TEST_F(PrintOptionInfoTest, PrintOptionInfoValueRequiredWithEmptyValueName) {
                                     clEnumValN(OptionValue::Val, "", "")));
 
   // clang-format off
-  EXPECT_EQ(Output, ("  --" + Opt + "=<value> - " + HelpText + "\n"
-                     "    =v1                 -   desc1\n"
+  EXPECT_EQ(Output, ("  -" + Opt + "=<value> - " + HelpText + "\n"
+                     "    =v1                -   desc1\n"
                      "    =<empty>\n")
                         .str());
   // clang-format on
@@ -1175,7 +1122,7 @@ TEST_F(PrintOptionInfoTest, PrintOptionInfoEmptyValueDescription) {
 
   // clang-format off
   EXPECT_EQ(Output,
-            ("  --" + Opt + "=<value> - " + HelpText + "\n"
+            ("  -" + Opt + "=<value> - " + HelpText + "\n"
              "    =v1\n").str());
   // clang-format on
 }
@@ -1200,7 +1147,7 @@ private:
 
 TEST_F(GetOptionWidthTest, GetOptionWidthArgNameLonger) {
   StringRef ArgName("a-long-argument-name");
-  size_t ExpectedStrSize = ("  --" + ArgName + "=<value> - ").str().size();
+  size_t ExpectedStrSize = ("  -" + ArgName + "=<value> - ").str().size();
   EXPECT_EQ(
       runTest(ArgName, cl::values(clEnumValN(OptionValue::Val, "v", "help"))),
       ExpectedStrSize);
@@ -1528,77 +1475,4 @@ TEST(CommandLineTest, GroupingAndPrefix) {
   cl::ResetAllOptionOccurrences();
 }
 
-TEST(CommandLineTest, LongOptions) {
-  cl::ResetCommandLineParser();
-
-  StackOption<bool> OptA("a", cl::desc("Some flag"));
-  StackOption<bool> OptBLong("long-flag", cl::desc("Some long flag"));
-  StackOption<bool, cl::alias> OptB("b", cl::desc("Alias to --long-flag"),
-                                    cl::aliasopt(OptBLong));
-  StackOption<std::string> OptAB("ab", cl::desc("Another long option"));
-
-  std::string Errs;
-  raw_string_ostream OS(Errs);
-
-  const char *args1[] = {"prog", "-a", "-ab", "val1"};
-  const char *args2[] = {"prog", "-a", "--ab", "val1"};
-  const char *args3[] = {"prog", "-ab", "--ab", "val1"};
-
-  //
-  // The following tests treat `-` and `--` the same, and always match the
-  // longest string.
-  //
-
-  EXPECT_TRUE(
-      cl::ParseCommandLineOptions(4, args1, StringRef(), &OS)); OS.flush();
-  EXPECT_TRUE(OptA);
-  EXPECT_FALSE(OptBLong);
-  EXPECT_STREQ("val1", OptAB.c_str());
-  EXPECT_TRUE(Errs.empty()); Errs.clear();
-  cl::ResetAllOptionOccurrences();
-
-  EXPECT_TRUE(
-      cl::ParseCommandLineOptions(4, args2, StringRef(), &OS)); OS.flush();
-  EXPECT_TRUE(OptA);
-  EXPECT_FALSE(OptBLong);
-  EXPECT_STREQ("val1", OptAB.c_str());
-  EXPECT_TRUE(Errs.empty()); Errs.clear();
-  cl::ResetAllOptionOccurrences();
-
-  // Fails because `-ab` and `--ab` are treated the same and appear more than
-  // once.  Also, `val1` is unexpected.
-  EXPECT_FALSE(
-      cl::ParseCommandLineOptions(4, args3, StringRef(), &OS)); OS.flush();
-  outs()<< Errs << "\n";
-  EXPECT_FALSE(Errs.empty()); Errs.clear();
-  cl::ResetAllOptionOccurrences();
-
-  //
-  // The following tests treat `-` and `--` differently, with `-` for short, and
-  // `--` for long options.
-  //
-
-  // Fails because `-ab` is treated as `-a -b`, so `-a` is seen twice, and
-  // `val1` is unexpected.
-  EXPECT_FALSE(cl::ParseCommandLineOptions(4, args1, StringRef(),
-                                           &OS, nullptr, true)); OS.flush();
-  EXPECT_FALSE(Errs.empty()); Errs.clear();
-  cl::ResetAllOptionOccurrences();
-
-  // Works because `-a` is treated differently than `--ab`.
-  EXPECT_TRUE(cl::ParseCommandLineOptions(4, args2, StringRef(),
-                                           &OS, nullptr, true)); OS.flush();
-  EXPECT_TRUE(Errs.empty()); Errs.clear();
-  cl::ResetAllOptionOccurrences();
-
-  // Works because `-ab` is treated as `-a -b`, and `--ab` is a long option.
-  EXPECT_TRUE(cl::ParseCommandLineOptions(4, args3, StringRef(),
-                                           &OS, nullptr, true));
-  EXPECT_TRUE(OptA);
-  EXPECT_TRUE(OptBLong);
-  EXPECT_STREQ("val1", OptAB.c_str());
-  OS.flush();
-  EXPECT_TRUE(Errs.empty()); Errs.clear();
-  cl::ResetAllOptionOccurrences();
-}
 }  // anonymous namespace

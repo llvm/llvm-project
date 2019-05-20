@@ -9,12 +9,9 @@
 ; CHECK-AA-INVALIDATE: Running analysis: DominatorTreeAnalysis
 ; CHECK-AA-INVALIDATE: Running analysis: AAManager
 ; CHECK-AA-INVALIDATE: Running analysis: BasicAA
-; CHECK-AA-INVALIDATE: Running pass: InvalidateAnalysisPass<{{.*}}AAManager
-; CHECK-AA-INVALIDATE: Invalidating analysis: AAManager
-; CHECK-AA-INVALIDATE: Invalidating analysis: MemorySSAAnalysis
+; CHECK-NOT-AA-INVALIDATE: Invalidating analysis: MemorySSAAnalysis
 ; CHECK-AA-INVALIDATE: Running pass: EarlyCSEPass
-; CHECK-AA-INVALIDATE: Running analysis: MemorySSAAnalysis
-; CHECK-AA-INVALIDATE: Running analysis: AAManager
+; CHECK-NOT-AA-INVALIDATE: Running analysis: MemorySSAAnalysis
 
 ; CHECK-DT-INVALIDATE: Running analysis: MemorySSAAnalysis
 ; CHECK-DT-INVALIDATE: Running analysis: DominatorTreeAnalysis

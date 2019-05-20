@@ -691,8 +691,6 @@ public:
       case ISD::STRICT_FFLOOR:
       case ISD::STRICT_FROUND:
       case ISD::STRICT_FTRUNC:
-      case ISD::STRICT_FP_ROUND:
-      case ISD::STRICT_FP_EXTEND:
         return true;
     }
   }
@@ -2588,6 +2586,20 @@ namespace ISD {
   inline bool isUNINDEXEDStore(const SDNode *N) {
     return isa<StoreSDNode>(N) &&
       cast<StoreSDNode>(N)->getAddressingMode() == ISD::UNINDEXED;
+  }
+
+  /// Return true if the node is a math/logic binary operator.
+  inline bool isBinaryOp(const SDNode *N) {
+    auto Op = N->getOpcode();
+    return (Op == ISD::ADD || Op == ISD::SUB || Op == ISD::MUL ||
+            Op == ISD::AND || Op == ISD::OR || Op == ISD::XOR ||
+            Op == ISD::SHL || Op == ISD::SRL || Op == ISD::SRA ||
+            Op == ISD::SDIV || Op == ISD::UDIV || Op == ISD::SREM ||
+            Op == ISD::UREM || Op == ISD::FADD || Op == ISD::FSUB ||
+            Op == ISD::FMUL || Op == ISD::FDIV || Op == ISD::FREM ||
+            Op == ISD::FMINNUM || Op == ISD::FMAXNUM ||
+            Op == ISD::FMINNUM_IEEE || Op == ISD::FMAXNUM_IEEE ||
+            Op == ISD::FMAXIMUM || Op == ISD::FMINIMUM);
   }
 
   /// Attempt to match a unary predicate against a scalar/splat constant or

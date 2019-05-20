@@ -1,4 +1,4 @@
-//===-- EmulateInstructionARM.h ---------------------------------*- C++ -*-===//
+//===-- lldb_EmulateInstructionARM.h ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -45,7 +45,7 @@ private:
 
 class EmulateInstructionARM : public EmulateInstruction {
 public:
-  enum ARMEncoding {
+  typedef enum {
     eEncodingA1,
     eEncodingA2,
     eEncodingA3,
@@ -56,7 +56,7 @@ public:
     eEncodingT3,
     eEncodingT4,
     eEncodingT5
-  };
+  } ARMEncoding;
 
   static void Initialize();
 
@@ -291,7 +291,7 @@ public:
 protected:
   // Typedef for the callback function used during the emulation.
   // Pass along (ARMEncoding)encoding as the callback data.
-  enum ARMInstrSize { eSize16, eSize32 };
+  typedef enum { eSize16, eSize32 } ARMInstrSize;
 
   typedef struct {
     uint32_t mask;

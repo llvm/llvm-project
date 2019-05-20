@@ -31,6 +31,8 @@ class Triple;
 class StringRef;
 class raw_pwrite_stream;
 
+Target &getTheLanaiTarget();
+
 MCCodeEmitter *createLanaiMCCodeEmitter(const MCInstrInfo &MCII,
                                         const MCRegisterInfo &MRI,
                                         MCContext &Ctx);

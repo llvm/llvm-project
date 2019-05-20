@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only --std=c2x
+// RUN: %clang_cc1 %s -verify -fsyntax-only -fdouble-square-bracket-attributes
 
 int f() [[deprecated]]; // expected-note 2 {{'f' has been explicitly marked deprecated here}}
 void g() [[deprecated]];// expected-note {{'g' has been explicitly marked deprecated here}}

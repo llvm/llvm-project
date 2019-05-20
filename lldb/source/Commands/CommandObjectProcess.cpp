@@ -193,10 +193,7 @@ protected:
     if (target->GetDisableSTDIO())
       m_options.launch_info.GetFlags().Set(eLaunchFlagDisableSTDIO);
 
-    // Merge the launch info environment with the target environment.
-    Environment target_env = target->GetEnvironment();
-    m_options.launch_info.GetEnvironment().insert(target_env.begin(),
-                                                  target_env.end());
+    m_options.launch_info.GetEnvironment() = target->GetEnvironment();
 
     if (!target_settings_argv0.empty()) {
       m_options.launch_info.GetArguments().AppendArgument(
@@ -254,6 +251,49 @@ protected:
 protected:
   ProcessLaunchCommandOptions m_options;
 };
+
+//#define SET1 LLDB_OPT_SET_1
+//#define SET2 LLDB_OPT_SET_2
+//#define SET3 LLDB_OPT_SET_3
+//
+// OptionDefinition
+// CommandObjectProcessLaunch::CommandOptions::g_option_table[] =
+//{
+//  // clang-format off
+//  {SET1 | SET2 | SET3, false, "stop-at-entry", 's', OptionParser::eNoArgument,
+//  nullptr, 0, eArgTypeNone,          "Stop at the entry point of the program
+//  when launching a process."},
+//  {SET1,               false, "stdin",         'i',
+//  OptionParser::eRequiredArgument, nullptr, 0, eArgTypeDirectoryName,
+//  "Redirect stdin for the process to <path>."},
+//  {SET1,               false, "stdout",        'o',
+//  OptionParser::eRequiredArgument, nullptr, 0, eArgTypeDirectoryName,
+//  "Redirect stdout for the process to <path>."},
+//  {SET1,               false, "stderr",        'e',
+//  OptionParser::eRequiredArgument, nullptr, 0, eArgTypeDirectoryName,
+//  "Redirect stderr for the process to <path>."},
+//  {SET1 | SET2 | SET3, false, "plugin",        'p',
+//  OptionParser::eRequiredArgument, nullptr, 0, eArgTypePlugin,        "Name of
+//  the process plugin you want to use."},
+//  {       SET2,        false, "tty",           't',
+//  OptionParser::eOptionalArgument, nullptr, 0, eArgTypeDirectoryName, "Start
+//  the process in a terminal. If <path> is specified, look for a terminal whose
+//  name contains <path>, else start the process in a new terminal."},
+//  {              SET3, false, "no-stdio",      'n', OptionParser::eNoArgument,
+//  nullptr, 0, eArgTypeNone,          "Do not set up for terminal I/O to go to
+//  running process."},
+//  {SET1 | SET2 | SET3, false, "working-dir",   'w',
+//  OptionParser::eRequiredArgument, nullptr, 0, eArgTypeDirectoryName, "Set the
+//  current working directory to <path> when running the inferior."},
+//  {0, false, nullptr, 0, 0, nullptr, 0, eArgTypeNone, nullptr}
+//  // clang-format on
+//};
+//
+//#undef SET1
+//#undef SET2
+//#undef SET3
+
+// CommandObjectProcessAttach
 
 static constexpr OptionDefinition g_process_attach_options[] = {
     // clang-format off

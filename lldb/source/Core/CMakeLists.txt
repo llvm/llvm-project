@@ -67,11 +67,13 @@ add_lldb_library(lldbCore
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbPluginProcessUtility
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
     ${LLDB_CURSES_LIBS}
 
   LINK_COMPONENTS
+    BinaryFormat
     Support
     Demangle
   )

@@ -34,7 +34,7 @@ private:
 
 class ScriptInterpreter : public PluginInterface {
 public:
-  enum ScriptReturnType {
+  typedef enum {
     eScriptReturnTypeCharPtr,
     eScriptReturnTypeBool,
     eScriptReturnTypeShortInt,
@@ -50,7 +50,7 @@ public:
     eScriptReturnTypeChar,
     eScriptReturnTypeCharStrOrNone,
     eScriptReturnTypeOpaqueObject
-  };
+  } ScriptReturnType;
 
   ScriptInterpreter(Debugger &debugger, lldb::ScriptLanguage script_lang);
 

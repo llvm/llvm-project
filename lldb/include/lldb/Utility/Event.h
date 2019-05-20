@@ -27,6 +27,8 @@
 
 namespace lldb_private {
 class Event;
+}
+namespace lldb_private {
 class Stream;
 }
 
@@ -243,7 +245,7 @@ private:
   lldb::EventDataSP m_data_sp; // User specific data for this event
 
   DISALLOW_COPY_AND_ASSIGN(Event);
-  Event() = delete;
+  Event(); // Disallow default constructor
 };
 
 } // namespace lldb_private

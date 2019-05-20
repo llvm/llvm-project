@@ -24,9 +24,18 @@
 
 namespace lldb_private {
 class RegularExpression;
+}
+namespace lldb_private {
 class Stream;
+}
+namespace lldb_private {
 class SymbolContextList;
+}
+namespace lldb_private {
 class Target;
+}
+
+namespace lldb_private {
 
 class SourceManager {
 public:

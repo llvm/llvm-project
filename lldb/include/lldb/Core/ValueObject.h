@@ -39,19 +39,40 @@
 
 #include <stddef.h>
 #include <stdint.h>
-
 namespace lldb_private {
 class Declaration;
+}
+namespace lldb_private {
 class DumpValueObjectOptions;
+}
+namespace lldb_private {
 class EvaluateExpressionOptions;
+}
+namespace lldb_private {
 class ExecutionContextScope;
+}
+namespace lldb_private {
 class Log;
+}
+namespace lldb_private {
 class Scalar;
+}
+namespace lldb_private {
 class Stream;
+}
+namespace lldb_private {
 class SymbolContextScope;
+}
+namespace lldb_private {
 class TypeFormatImpl;
+}
+namespace lldb_private {
 class TypeSummaryImpl;
+}
+namespace lldb_private {
 class TypeSummaryOptions;
+}
+namespace lldb_private {
 
 /// ValueObject:
 ///

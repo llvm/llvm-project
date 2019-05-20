@@ -1,0 +1,1220 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>lldb.SBExpressionOptions</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a class="navbar" target="_top" href="http://lldb.llvm.org">LLDB python API</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="lldb-module.html">Package&nbsp;lldb</a> ::
+        Class&nbsp;SBExpressionOptions
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+        <tr><td align="right"><span class="options"
+            >[<a href="frames.html" target="_top">frames</a
+            >]&nbsp;|&nbsp;<a href="lldb.SBExpressionOptions-class.html"
+            target="_top">no&nbsp;frames</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS DESCRIPTION ==================== -->
+<h1 class="epydoc">Class SBExpressionOptions</h1><p class="nomargin-top"><span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions">source&nbsp;code</a></span></p>
+<center>
+<center>  <map id="uml_class_diagram_for_lldb_sbe_4" name="uml_class_diagram_for_lldb_sbe_4">
+<area shape="rect" id="node1_16" href="lldb.SBExpressionOptions-class.html#__swig_setmethods__" title="lldb.SBExpressionOptions.__swig_setmethods__" alt="" coords="17,32,261,52"/>
+<area shape="rect" id="node1_17" href="lldb.SBExpressionOptions-class.html#__swig_getmethods__" title="lldb.SBExpressionOptions.__swig_getmethods__" alt="" coords="17,52,261,72"/>
+<area shape="rect" id="node1_18" href="lldb.SBExpressionOptions-class.html#__setattr__" title="x.__setattr__(&#39;name&#39;, value) &lt;==&gt; x.name = value" alt="" coords="17,75,261,95"/>
+<area shape="rect" id="node1_19" href="lldb.SBExpressionOptions-class.html#__getattr__" title="lldb.SBExpressionOptions.__getattr__" alt="" coords="17,95,261,115"/>
+<area shape="rect" id="node1_20" href="lldb.SBExpressionOptions-class.html#__repr__" title="repr(x)" alt="" coords="17,115,261,135"/>
+<area shape="rect" id="node1_21" href="lldb.SBExpressionOptions-class.html#__init__" title="__init__(lldb::SBExpressionOptions self) &#45;&gt; SBExpressionOptions &#160;__init__(lldb::SBExpressionOptions self, SBExpressionOptions rhs) &#45;&gt; &#160;SBExpressionOptions" alt="" coords="17,135,261,155"/>
+<area shape="rect" id="node1_22" href="lldb.SBExpressionOptions-class.html#__swig_destroy__" title="delete_SBExpressionOptions(SBExpressionOptions self)" alt="" coords="17,155,261,175"/>
+<area shape="rect" id="node1_23" href="lldb.SBExpressionOptions-class.html#__del__" title="lldb.SBExpressionOptions.__del__" alt="" coords="17,175,261,195"/>
+<area shape="rect" id="node1_24" href="lldb.SBExpressionOptions-class.html#GetCoerceResultToId" title="GetCoerceResultToId(SBExpressionOptions self) &#45;&gt; bool" alt="" coords="17,195,261,215"/>
+<area shape="rect" id="node1_25" href="lldb.SBExpressionOptions-class.html#SetCoerceResultToId" title="SetCoerceResultToId(SBExpressionOptions self, bool coerce=True) &#160;SetCoerceResultToId(SBExpressionOptions self)" alt="" coords="17,215,261,235"/>
+<area shape="rect" id="node1_26" href="lldb.SBExpressionOptions-class.html#GetUnwindOnError" title="GetUnwindOnError(SBExpressionOptions self) &#45;&gt; bool" alt="" coords="17,235,261,255"/>
+<area shape="rect" id="node1_27" href="lldb.SBExpressionOptions-class.html#SetUnwindOnError" title="SetUnwindOnError(SBExpressionOptions self, bool unwind=True) &#160;SetUnwindOnError(SBExpressionOptions self)" alt="" coords="17,255,261,275"/>
+<area shape="rect" id="node1_28" href="lldb.SBExpressionOptions-class.html#GetIgnoreBreakpoints" title="GetIgnoreBreakpoints(SBExpressionOptions self) &#45;&gt; bool" alt="" coords="17,275,261,295"/>
+<area shape="rect" id="node1_29" href="lldb.SBExpressionOptions-class.html#SetIgnoreBreakpoints" title="SetIgnoreBreakpoints(SBExpressionOptions self, bool ignore=True) &#160;SetIgnoreBreakpoints(SBExpressionOptions self)" alt="" coords="17,295,261,315"/>
+<area shape="rect" id="node1_30" href="lldb.SBExpressionOptions-class.html#GetFetchDynamicValue" title="GetFetchDynamicValue(SBExpressionOptions self) &#45;&gt; lldb::DynamicValueType" alt="" coords="17,315,261,335"/>
+<area shape="rect" id="node1_31" href="lldb.SBExpressionOptions-class.html#SetTopLevel" title="SetTopLevel(SBExpressionOptions self, bool b=True) &#160;SetTopLevel(SBExpressionOptions self)" alt="" coords="17,355,261,375"/>
+<area shape="rect" id="node1" href="lldb.SBExpressionOptions-class.html" title="A container for options to use when evaluating expressions." alt="" coords="5,6,273,381"/>
+</map>
+  <img src="uml_class_diagram_for_lldb_sbe_4.gif" alt='' usemap="#uml_class_diagram_for_lldb_sbe_4" ismap="ismap" class="graph-without-title" />
+</center>
+</center>
+<hr />
+<p>A container for options to use when evaluating expressions.</p>
+
+<!-- ==================== INSTANCE METHODS ==================== -->
+<a name="section-InstanceMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Instance Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-InstanceMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBExpressionOptions-class.html#__setattr__" class="summary-sig-name">__setattr__</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">name</span>,
+        <span class="summary-sig-arg">value</span>)</span><br />
+      x.__setattr__('name', value) &lt;==&gt; x.name = value</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.__setattr__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__getattr__"></a><span class="summary-sig-name">__getattr__</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">name</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.__getattr__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBExpressionOptions-class.html#__repr__" class="summary-sig-name">__repr__</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      repr(x)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#_swig_repr">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBExpressionOptions-class.html#__init__" class="summary-sig-name">__init__</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      __init__(lldb::SBExpressionOptions self) -&gt; SBExpressionOptions 
+      __init__(lldb::SBExpressionOptions self, SBExpressionOptions rhs) 
+      -&gt; SBExpressionOptions</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.__init__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__swig_destroy__"></a><span class="summary-sig-name">__swig_destroy__</span>(<span class="summary-sig-arg">...</span>)</span><br />
+      delete_SBExpressionOptions(SBExpressionOptions self)</td>
+          <td align="right" valign="top">
+            
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__del__"></a><span class="summary-sig-name">__del__</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.__del__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetCoerceResultToId"></a><span class="summary-sig-name">GetCoerceResultToId</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetCoerceResultToId(SBExpressionOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.GetCoerceResultToId">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBExpressionOptions-class.html#SetCoerceResultToId" class="summary-sig-name">SetCoerceResultToId</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">coerce</span>=<span class="summary-sig-default">True</span>)</span><br />
+      SetCoerceResultToId(SBExpressionOptions self, bool coerce=True) 
+      SetCoerceResultToId(SBExpressionOptions self)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetCoerceResultToId">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetUnwindOnError"></a><span class="summary-sig-name">GetUnwindOnError</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetUnwindOnError(SBExpressionOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.GetUnwindOnError">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBExpressionOptions-class.html#SetUnwindOnError" class="summary-sig-name">SetUnwindOnError</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">unwind</span>=<span class="summary-sig-default">True</span>)</span><br />
+      SetUnwindOnError(SBExpressionOptions self, bool unwind=True) 
+      SetUnwindOnError(SBExpressionOptions self)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetUnwindOnError">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetIgnoreBreakpoints"></a><span class="summary-sig-name">GetIgnoreBreakpoints</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetIgnoreBreakpoints(SBExpressionOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.GetIgnoreBreakpoints">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetIgnoreBreakpoints"></a><span class="summary-sig-name">SetIgnoreBreakpoints</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">ignore</span>=<span class="summary-sig-default">True</span>)</span><br />
+      SetIgnoreBreakpoints(SBExpressionOptions self, bool ignore=True) 
+      SetIgnoreBreakpoints(SBExpressionOptions self)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetIgnoreBreakpoints">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetFetchDynamicValue"></a><span class="summary-sig-name">GetFetchDynamicValue</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetFetchDynamicValue(SBExpressionOptions self) -&gt; 
+      lldb::DynamicValueType</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.GetFetchDynamicValue">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBExpressionOptions-class.html#SetFetchDynamicValue" class="summary-sig-name">SetFetchDynamicValue</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      SetFetchDynamicValue(SBExpressionOptions self, lldb::DynamicValueType
+      dynamic=eDynamicCanRunTarget) 
+      SetFetchDynamicValue(SBExpressionOptions self)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetFetchDynamicValue">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetTimeoutInMicroSeconds"></a><span class="summary-sig-name">GetTimeoutInMicroSeconds</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetTimeoutInMicroSeconds(SBExpressionOptions self) -&gt; uint32_t</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.GetTimeoutInMicroSeconds">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBExpressionOptions-class.html#SetTimeoutInMicroSeconds" class="summary-sig-name">SetTimeoutInMicroSeconds</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">timeout</span>=<span class="summary-sig-default">0</span>)</span><br />
+      SetTimeoutInMicroSeconds(SBExpressionOptions self, uint32_t 
+      timeout=0) SetTimeoutInMicroSeconds(SBExpressionOptions self)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetTimeoutInMicroSeconds">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetOneThreadTimeoutInMicroSeconds"></a><span class="summary-sig-name">GetOneThreadTimeoutInMicroSeconds</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetOneThreadTimeoutInMicroSeconds(SBExpressionOptions self) -&gt; 
+      uint32_t</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.GetOneThreadTimeoutInMicroSeconds">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetOneThreadTimeoutInMicroSeconds"></a><span class="summary-sig-name">SetOneThreadTimeoutInMicroSeconds</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">timeout</span>=<span class="summary-sig-default">0</span>)</span><br />
+      SetOneThreadTimeoutInMicroSeconds(SBExpressionOptions self, uint32_t 
+      timeout=0) SetOneThreadTimeoutInMicroSeconds(SBExpressionOptions 
+      self)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetOneThreadTimeoutInMicroSeconds">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetTryAllThreads"></a><span class="summary-sig-name">GetTryAllThreads</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetTryAllThreads(SBExpressionOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.GetTryAllThreads">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBExpressionOptions-class.html#SetTryAllThreads" class="summary-sig-name">SetTryAllThreads</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">run_others</span>=<span class="summary-sig-default">True</span>)</span><br />
+      SetTryAllThreads(SBExpressionOptions self, bool run_others=True) 
+      SetTryAllThreads(SBExpressionOptions self)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetTryAllThreads">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetStopOthers"></a><span class="summary-sig-name">GetStopOthers</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetStopOthers(SBExpressionOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.GetStopOthers">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetStopOthers"></a><span class="summary-sig-name">SetStopOthers</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">stop_others</span>=<span class="summary-sig-default">True</span>)</span><br />
+      SetStopOthers(SBExpressionOptions self, bool stop_others=True) 
+      SetStopOthers(SBExpressionOptions self)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetStopOthers">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetTrapExceptions"></a><span class="summary-sig-name">GetTrapExceptions</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetTrapExceptions(SBExpressionOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.GetTrapExceptions">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetTrapExceptions"></a><span class="summary-sig-name">SetTrapExceptions</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">trap_exceptions</span>=<span class="summary-sig-default">True</span>)</span><br />
+      SetTrapExceptions(SBExpressionOptions self, bool 
+      trap_exceptions=True) SetTrapExceptions(SBExpressionOptions self)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetTrapExceptions">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBExpressionOptions-class.html#SetLanguage" class="summary-sig-name">SetLanguage</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      SetLanguage(SBExpressionOptions self, lldb::LanguageType language)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetLanguage">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetGenerateDebugInfo"></a><span class="summary-sig-name">GetGenerateDebugInfo</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetGenerateDebugInfo(SBExpressionOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.GetGenerateDebugInfo">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBExpressionOptions-class.html#SetGenerateDebugInfo" class="summary-sig-name">SetGenerateDebugInfo</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">b</span>=<span class="summary-sig-default">True</span>)</span><br />
+      SetGenerateDebugInfo(SBExpressionOptions self, bool b=True) 
+      SetGenerateDebugInfo(SBExpressionOptions self)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetGenerateDebugInfo">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetSuppressPersistentResult"></a><span class="summary-sig-name">GetSuppressPersistentResult</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetSuppressPersistentResult(SBExpressionOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.GetSuppressPersistentResult">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBExpressionOptions-class.html#SetSuppressPersistentResult" class="summary-sig-name">SetSuppressPersistentResult</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">b</span>=<span class="summary-sig-default">False</span>)</span><br />
+      SetSuppressPersistentResult(SBExpressionOptions self, bool b=False) 
+      SetSuppressPersistentResult(SBExpressionOptions self)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetSuppressPersistentResult">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBExpressionOptions-class.html#GetPrefix" class="summary-sig-name">GetPrefix</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetPrefix(SBExpressionOptions self) -&gt; str const *</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.GetPrefix">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBExpressionOptions-class.html#SetPrefix" class="summary-sig-name">SetPrefix</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      SetPrefix(SBExpressionOptions self, str const * prefix)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetPrefix">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBExpressionOptions-class.html#SetAutoApplyFixIts" class="summary-sig-name">SetAutoApplyFixIts</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">b</span>=<span class="summary-sig-default">True</span>)</span><br />
+      SetAutoApplyFixIts(SBExpressionOptions self, bool b=True) 
+      SetAutoApplyFixIts(SBExpressionOptions self)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetAutoApplyFixIts">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBExpressionOptions-class.html#GetAutoApplyFixIts" class="summary-sig-name">GetAutoApplyFixIts</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetAutoApplyFixIts(SBExpressionOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.GetAutoApplyFixIts">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetTopLevel"></a><span class="summary-sig-name">GetTopLevel</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetTopLevel(SBExpressionOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.GetTopLevel">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetTopLevel"></a><span class="summary-sig-name">SetTopLevel</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">b</span>=<span class="summary-sig-default">True</span>)</span><br />
+      SetTopLevel(SBExpressionOptions self, bool b=True) 
+      SetTopLevel(SBExpressionOptions self)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetTopLevel">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>object</code></b>:
+      <code>__delattr__</code>,
+      <code>__format__</code>,
+      <code>__getattribute__</code>,
+      <code>__hash__</code>,
+      <code>__new__</code>,
+      <code>__reduce__</code>,
+      <code>__reduce_ex__</code>,
+      <code>__sizeof__</code>,
+      <code>__str__</code>,
+      <code>__subclasshook__</code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS VARIABLES ==================== -->
+<a name="section-ClassVariables"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Class Variables</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-ClassVariables"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="__swig_setmethods__"></a><span class="summary-name">__swig_setmethods__</span> = <code title="{}"><code class="variable-group">{</code><code class="variable-group">}</code></code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="__swig_getmethods__"></a><span class="summary-name">__swig_getmethods__</span> = <code title="{}"><code class="variable-group">{</code><code class="variable-group">}</code></code>
+    </td>
+  </tr>
+</table>
+<!-- ==================== PROPERTIES ==================== -->
+<a name="section-Properties"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Properties</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Properties"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>object</code></b>:
+      <code>__class__</code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== METHOD DETAILS ==================== -->
+<a name="section-MethodDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Method Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-MethodDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="__setattr__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__setattr__</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">name</span>,
+        <span class="sig-arg">value</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.__setattr__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>x.__setattr__('name', value) &lt;==&gt; x.name = value</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__setattr__
+        <dd><em class="note">(inherited documentation)</em></dd>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="__repr__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__repr__</span>(<span class="sig-arg">self</span>)</span>
+    <br /><em class="fname">(Representation operator)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#_swig_repr">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>repr(x)</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__repr__
+        <dd><em class="note">(inherited documentation)</em></dd>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="__init__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__init__</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">*args</span>)</span>
+    <br /><em class="fname">(Constructor)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.__init__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>__init__(lldb::SBExpressionOptions self) -&gt; SBExpressionOptions 
+  __init__(lldb::SBExpressionOptions self, SBExpressionOptions rhs) -&gt; 
+  SBExpressionOptions</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__init__
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="SetCoerceResultToId"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">SetCoerceResultToId</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">coerce</span>=<span class="sig-default">True</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetCoerceResultToId">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>SetCoerceResultToId(SBExpressionOptions self, bool coerce=True) 
+  SetCoerceResultToId(SBExpressionOptions self)</p>
+  <p>Sets whether to coerce the expression result to ObjC id type after 
+  evaluation.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="SetUnwindOnError"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">SetUnwindOnError</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">unwind</span>=<span class="sig-default">True</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetUnwindOnError">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>SetUnwindOnError(SBExpressionOptions self, bool unwind=True) 
+  SetUnwindOnError(SBExpressionOptions self)</p>
+  <p>Sets whether to unwind the expression stack on error.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="SetFetchDynamicValue"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">SetFetchDynamicValue</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">*args</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetFetchDynamicValue">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>SetFetchDynamicValue(SBExpressionOptions self, lldb::DynamicValueType 
+  dynamic=eDynamicCanRunTarget) SetFetchDynamicValue(SBExpressionOptions 
+  self)</p>
+  <p>Sets whether to cast the expression result to its dynamic type.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="SetTimeoutInMicroSeconds"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">SetTimeoutInMicroSeconds</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">timeout</span>=<span class="sig-default">0</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetTimeoutInMicroSeconds">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>SetTimeoutInMicroSeconds(SBExpressionOptions self, uint32_t timeout=0)
+  SetTimeoutInMicroSeconds(SBExpressionOptions self)</p>
+  <p>Sets the timeout in microseconds to run the expression for. If try all
+  threads is set to true and the expression doesn't complete within the 
+  specified timeout, all threads will be resumed for the same timeout to 
+  see if the expresson will finish.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="SetTryAllThreads"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">SetTryAllThreads</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">run_others</span>=<span class="sig-default">True</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetTryAllThreads">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>SetTryAllThreads(SBExpressionOptions self, bool run_others=True) 
+  SetTryAllThreads(SBExpressionOptions self)</p>
+  <p>Sets whether to run all threads if the expression does not complete on
+  one thread.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="SetLanguage"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">SetLanguage</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">*args</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetLanguage">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>SetLanguage(SBExpressionOptions self, lldb::LanguageType language)</p>
+  <p>Sets the language that LLDB should assume the expression is written 
+  in</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="SetGenerateDebugInfo"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">SetGenerateDebugInfo</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">b</span>=<span class="sig-default">True</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetGenerateDebugInfo">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>SetGenerateDebugInfo(SBExpressionOptions self, bool b=True) 
+  SetGenerateDebugInfo(SBExpressionOptions self)</p>
+  <p>Sets whether to generate debug information for the expression and also
+  controls if a SBModule is generated.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="SetSuppressPersistentResult"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">SetSuppressPersistentResult</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">b</span>=<span class="sig-default">False</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetSuppressPersistentResult">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>SetSuppressPersistentResult(SBExpressionOptions self, bool b=False) 
+  SetSuppressPersistentResult(SBExpressionOptions self)</p>
+  <p>Sets whether to produce a persistent result that can be used in future
+  expressions.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="GetPrefix"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">GetPrefix</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.GetPrefix">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>GetPrefix(SBExpressionOptions self) -&gt; str const *</p>
+  <p>Gets the prefix to use for this expression.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="SetPrefix"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">SetPrefix</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">*args</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetPrefix">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>SetPrefix(SBExpressionOptions self, str const * prefix)</p>
+  <p>Sets the prefix to use for this expression. This prefix gets inserted 
+  after the 'target.expr-prefix' prefix contents, but before the wrapped 
+  expression function body.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="SetAutoApplyFixIts"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">SetAutoApplyFixIts</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">b</span>=<span class="sig-default">True</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.SetAutoApplyFixIts">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>SetAutoApplyFixIts(SBExpressionOptions self, bool b=True) 
+  SetAutoApplyFixIts(SBExpressionOptions self)</p>
+  <p>Sets whether to auto-apply fix-it hints to the expression being 
+  evaluated.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="GetAutoApplyFixIts"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">GetAutoApplyFixIts</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBExpressionOptions.GetAutoApplyFixIts">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>GetAutoApplyFixIts(SBExpressionOptions self) -&gt; bool</p>
+  <p>Gets whether to auto-apply fix-it hints to an expression.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a class="navbar" target="_top" href="http://lldb.llvm.org">LLDB python API</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Fri Oct 14 13:55:26 2016
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

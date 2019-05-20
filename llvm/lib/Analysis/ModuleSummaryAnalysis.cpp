@@ -391,8 +391,7 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
   bool NotEligibleForImport =
       NonRenamableLocal || HasInlineAsmMaybeReferencingInternal;
   GlobalValueSummary::GVFlags Flags(F.getLinkage(), NotEligibleForImport,
-                                    /* Live = */ false, F.isDSOLocal(),
-                                    F.hasLinkOnceODRLinkage() && F.hasGlobalUnnamedAddr());
+                                    /* Live = */ false, F.isDSOLocal());
   FunctionSummary::FFlags FunFlags{
       F.hasFnAttribute(Attribute::ReadNone),
       F.hasFnAttribute(Attribute::ReadOnly),
@@ -419,8 +418,7 @@ computeVariableSummary(ModuleSummaryIndex &Index, const GlobalVariable &V,
   bool HasBlockAddress = findRefEdges(Index, &V, RefEdges, Visited);
   bool NonRenamableLocal = isNonRenamableLocal(V);
   GlobalValueSummary::GVFlags Flags(V.getLinkage(), NonRenamableLocal,
-                                    /* Live = */ false, V.isDSOLocal(),
-                                    V.hasLinkOnceODRLinkage() && V.hasGlobalUnnamedAddr());
+                                    /* Live = */ false, V.isDSOLocal());
 
   // Don't mark variables we won't be able to internalize as read-only.
   GlobalVarSummary::GVarFlags VarFlags(
@@ -440,8 +438,7 @@ computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
                     DenseSet<GlobalValue::GUID> &CantBePromoted) {
   bool NonRenamableLocal = isNonRenamableLocal(A);
   GlobalValueSummary::GVFlags Flags(A.getLinkage(), NonRenamableLocal,
-                                    /* Live = */ false, A.isDSOLocal(),
-                                    A.hasLinkOnceODRLinkage() && A.hasGlobalUnnamedAddr());
+                                    /* Live = */ false, A.isDSOLocal());
   auto AS = llvm::make_unique<AliasSummary>(Flags);
   auto *Aliasee = A.getBaseObject();
   auto AliaseeVI = Index.getValueInfo(Aliasee->getGUID());
@@ -516,8 +513,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
           GlobalValueSummary::GVFlags GVFlags(GlobalValue::InternalLinkage,
                                               /* NotEligibleToImport = */ true,
                                               /* Live = */ true,
-                                              /* Local */ GV->isDSOLocal(),
-                                              GV->hasLinkOnceODRLinkage() && GV->hasGlobalUnnamedAddr());
+                                              /* Local */ GV->isDSOLocal());
           CantBePromoted.insert(GV->getGUID());
           // Create the appropriate summary type.
           if (Function *F = dyn_cast<Function>(GV)) {

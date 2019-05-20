@@ -36,7 +36,7 @@ public:
 
   struct DispatchFunction {
   public:
-    enum FixUpState { eFixUpNone, eFixUpFixed, eFixUpToFix };
+    typedef enum { eFixUpNone, eFixUpFixed, eFixUpToFix } FixUpState;
 
     const char *name;
     bool stret_return;

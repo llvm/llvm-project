@@ -561,45 +561,6 @@ int AnalyzeDictionary(Fuzzer *F, const Vector<Unit>& Dict,
   return 0;
 }
 
-Vector<std::string> ParseSeedInuts(const char *seed_inputs) {
-  // Parse -seed_inputs=file1,file2,... or -seed_inputs=@seed_inputs_file
-  Vector<std::string> Files;
-  if (!seed_inputs) return Files;
-  std::string SeedInputs;
-  if (Flags.seed_inputs[0] == '@')
-    SeedInputs = FileToString(Flags.seed_inputs + 1); // File contains list.
-  else
-    SeedInputs = Flags.seed_inputs; // seed_inputs contains the list.
-  if (SeedInputs.empty()) {
-    Printf("seed_inputs is empty or @file does not exist.\n");
-    exit(1);
-  }
-  // Parse SeedInputs.
-  size_t comma_pos = 0;
-  while ((comma_pos = SeedInputs.find_last_of(',')) != std::string::npos) {
-    Files.push_back(SeedInputs.substr(comma_pos + 1));
-    SeedInputs = SeedInputs.substr(0, comma_pos);
-  }
-  Files.push_back(SeedInputs);
-  return Files;
-}
-
-static Vector<SizedFile> ReadCorpora(const Vector<std::string> &CorpusDirs,
-    const Vector<std::string> &ExtraSeedFiles) {
-  Vector<SizedFile> SizedFiles;
-  size_t LastNumFiles = 0;
-  for (auto &Dir : CorpusDirs) {
-    GetSizedFilesFromDir(Dir, &SizedFiles);
-    Printf("INFO: % 8zd files found in %s\n", SizedFiles.size() - LastNumFiles,
-           Dir.c_str());
-    LastNumFiles = SizedFiles.size();
-  }
-  for (auto &File : ExtraSeedFiles)
-    if (auto Size = FileSize(File))
-      SizedFiles.push_back({File, Size});
-  return SizedFiles;
-}
-
 int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   using namespace fuzzer;
   assert(argc && argv && "Argument pointers cannot be nullptr");
@@ -682,9 +643,9 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
       return 1;
   if (Flags.verbosity > 0 && !Dictionary.empty())
     Printf("Dictionary: %zd entries\n", Dictionary.size());
-  bool RunIndividualFiles = AllInputsAreFiles();
+  bool DoPlainRun = AllInputsAreFiles();
   Options.SaveArtifacts =
-      !RunIndividualFiles || Flags.minimize_crash_internal_step;
+      !DoPlainRun || Flags.minimize_crash_internal_step;
   Options.PrintNewCovPcs = Flags.print_pcs;
   Options.PrintNewCovFuncs = Flags.print_funcs;
   Options.PrintFinalStats = Flags.print_final_stats;
@@ -709,15 +670,6 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
         std::chrono::system_clock::now().time_since_epoch().count() + GetPid();
   if (Flags.verbosity)
     Printf("INFO: Seed: %u\n", Seed);
-
-  if (Flags.collect_data_flow) {
-    if (RunIndividualFiles)
-      return CollectDataFlow(Flags.collect_data_flow, Flags.data_flow_trace,
-                        ReadCorpora({}, *Inputs));
-    else
-      return CollectDataFlow(Flags.collect_data_flow, Flags.data_flow_trace,
-                        ReadCorpora(*Inputs, {}));
-  }
 
   Random Rand(Seed);
   auto *MD = new MutationDispatcher(Rand, Options);
@@ -753,7 +705,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   if (Flags.cleanse_crash)
     return CleanseCrashInput(Args, Options);
 
-  if (RunIndividualFiles) {
+  if (DoPlainRun) {
     Options.SaveArtifacts = false;
     int Runs = std::max(1, Flags.runs);
     Printf("%s: Running %zd inputs %d time(s) each.\n", ProgName->c_str(),
@@ -811,8 +763,28 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     exit(0);
   }
 
-  auto CorporaFiles = ReadCorpora(*Inputs, ParseSeedInuts(Flags.seed_inputs));
-  F->Loop(CorporaFiles);
+  // Parse -seed_inputs=file1,file2,... or -seed_inputs=@seed_inputs_file
+  Vector<std::string> ExtraSeedFiles;
+  if (Flags.seed_inputs) {
+    std::string SeedInputs;
+    if (Flags.seed_inputs[0] == '@')
+      SeedInputs = FileToString(Flags.seed_inputs + 1); // File contains list.
+    else
+      SeedInputs = Flags.seed_inputs; // seed_inputs contains the list.
+    if (SeedInputs.empty()) {
+      Printf("seed_inputs is empty or @file does not exist.\n");
+      exit(1);
+    }
+    // Parse SeedInputs.
+    size_t comma_pos = 0;
+    while ((comma_pos = SeedInputs.find_last_of(',')) != std::string::npos) {
+      ExtraSeedFiles.push_back(SeedInputs.substr(comma_pos + 1));
+      SeedInputs = SeedInputs.substr(0, comma_pos);
+    }
+    ExtraSeedFiles.push_back(SeedInputs);
+  }
+
+  F->Loop(*Inputs, ExtraSeedFiles);
 
   if (Flags.verbosity)
     Printf("Done %zd runs in %zd second(s)\n", F->getTotalNumberOfRuns(),

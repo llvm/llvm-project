@@ -88,7 +88,7 @@ const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
   DILocation *L = LocA->getInlinedAt();
   while (S) {
     Locations.insert(std::make_pair(S, L));
-    S = S->getScope();
+    S = S->getScope().resolve();
     if (!S && L) {
       S = L->getScope();
       L = L->getInlinedAt();
@@ -100,7 +100,7 @@ const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
   while (S) {
     if (Locations.count(std::make_pair(S, L)))
       break;
-    S = S->getScope();
+    S = S->getScope().resolve();
     if (!S && L) {
       S = L->getScope();
       L = L->getInlinedAt();
@@ -209,7 +209,7 @@ DINode::DIFlags DINode::splitFlags(DIFlags Flags,
   return Flags;
 }
 
-DIScope *DIScope::getScope() const {
+DIScopeRef DIScope::getScope() const {
   if (auto *T = dyn_cast<DIType>(this))
     return T->getScope();
 

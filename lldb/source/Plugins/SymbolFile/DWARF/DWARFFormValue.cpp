@@ -104,8 +104,16 @@ DWARFFormValue::GetFixedFormSizesForAddressSize(uint8_t addr_size) {
   return FixedFormSizes();
 }
 
+DWARFFormValue::DWARFFormValue() : m_cu(NULL), m_form(0), m_value() {}
+
+DWARFFormValue::DWARFFormValue(const DWARFUnit *cu)
+    : m_cu(cu), m_form(0), m_value() {}
+
+DWARFFormValue::DWARFFormValue(const DWARFUnit *cu, dw_form_t form)
+    : m_cu(cu), m_form(form), m_value() {}
+
 void DWARFFormValue::Clear() {
-  m_unit = nullptr;
+  m_cu = nullptr;
   m_form = 0;
   m_value = ValueTypeTag();
 }
@@ -125,9 +133,9 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
     indirect = false;
     switch (m_form) {
     case DW_FORM_addr:
-      assert(m_unit);
+      assert(m_cu);
       m_value.value.uval =
-          data.GetMaxU64(offset_ptr, DWARFUnit::GetAddressByteSize(m_unit));
+          data.GetMaxU64(offset_ptr, DWARFUnit::GetAddressByteSize(m_cu));
       break;
     case DW_FORM_block1:
       m_value.value.uval = data.GetU8(offset_ptr);
@@ -199,9 +207,9 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
       m_value.value.uval = data.GetULEB128(offset_ptr);
       break;
     case DW_FORM_ref_addr:
-      assert(m_unit);
-      if (m_unit->GetVersion() <= 2)
-        ref_addr_size = m_unit->GetAddressByteSize();
+      assert(m_cu);
+      if (m_cu->GetVersion() <= 2)
+        ref_addr_size = m_cu->GetAddressByteSize();
       else
         ref_addr_size = 4;
       m_value.value.uval = data.GetMaxU64(offset_ptr, ref_addr_size);
@@ -230,13 +238,13 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
 
 bool DWARFFormValue::SkipValue(const DWARFDataExtractor &debug_info_data,
                                lldb::offset_t *offset_ptr) const {
-  return DWARFFormValue::SkipValue(m_form, debug_info_data, offset_ptr, m_unit);
+  return DWARFFormValue::SkipValue(m_form, debug_info_data, offset_ptr, m_cu);
 }
 
 bool DWARFFormValue::SkipValue(dw_form_t form,
                                const DWARFDataExtractor &debug_info_data,
                                lldb::offset_t *offset_ptr,
-                               const DWARFUnit *unit) {
+                               const DWARFUnit *cu) {
   uint8_t ref_addr_size;
   switch (form) {
   // Blocks if inlined data that have a length field and the data bytes inlined
@@ -270,15 +278,15 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
 
   // Compile unit address sized values
   case DW_FORM_addr:
-    *offset_ptr += DWARFUnit::GetAddressByteSize(unit);
+    *offset_ptr += DWARFUnit::GetAddressByteSize(cu);
     return true;
 
   case DW_FORM_ref_addr:
     ref_addr_size = 4;
-    assert(unit); // Unit must be valid for DW_FORM_ref_addr objects or we will
-                  // get this wrong
-    if (unit->GetVersion() <= 2)
-      ref_addr_size = unit->GetAddressByteSize();
+    assert(cu); // CU must be valid for DW_FORM_ref_addr objects or we will get
+                // this wrong
+    if (cu->GetVersion() <= 2)
+      ref_addr_size = cu->GetAddressByteSize();
     else
       ref_addr_size = 4;
     *offset_ptr += ref_addr_size;
@@ -348,7 +356,7 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
   case DW_FORM_indirect: {
     dw_form_t indirect_form = debug_info_data.GetULEB128(offset_ptr);
     return DWARFFormValue::SkipValue(indirect_form, debug_info_data, offset_ptr,
-                                     unit);
+                                     cu);
   }
 
   default:
@@ -359,7 +367,7 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
 
 void DWARFFormValue::Dump(Stream &s) const {
   uint64_t uvalue = Unsigned();
-  bool unit_relative_offset = false;
+  bool cu_relative_offset = false;
 
   switch (m_form) {
   case DW_FORM_addr:
@@ -436,9 +444,9 @@ void DWARFFormValue::Dump(Stream &s) const {
   } break;
 
   case DW_FORM_ref_addr: {
-    assert(m_unit); // Unit must be valid for DW_FORM_ref_addr objects or we
-                    // will get this wrong
-    if (m_unit->GetVersion() <= 2)
+    assert(m_cu); // CU must be valid for DW_FORM_ref_addr objects or we will
+                  // get this wrong
+    if (m_cu->GetVersion() <= 2)
       s.Address(uvalue, sizeof(uint64_t) * 2);
     else
       s.Address(uvalue, 4 * 2); // 4 for DWARF32, 8 for DWARF64, but we don't
@@ -446,19 +454,19 @@ void DWARFFormValue::Dump(Stream &s) const {
     break;
   }
   case DW_FORM_ref1:
-    unit_relative_offset = true;
+    cu_relative_offset = true;
     break;
   case DW_FORM_ref2:
-    unit_relative_offset = true;
+    cu_relative_offset = true;
     break;
   case DW_FORM_ref4:
-    unit_relative_offset = true;
+    cu_relative_offset = true;
     break;
   case DW_FORM_ref8:
-    unit_relative_offset = true;
+    cu_relative_offset = true;
     break;
   case DW_FORM_ref_udata:
-    unit_relative_offset = true;
+    cu_relative_offset = true;
     break;
 
   // All DW_FORM_indirect attributes should be resolved prior to calling this
@@ -473,15 +481,15 @@ void DWARFFormValue::Dump(Stream &s) const {
     break;
   }
 
-  if (unit_relative_offset) {
-    assert(m_unit); // Unit must be valid for DW_FORM_ref forms that are compile
-                    // unit relative or we will get this wrong
-    s.Printf("{0x%8.8" PRIx64 "}", uvalue + m_unit->GetOffset());
+  if (cu_relative_offset) {
+    assert(m_cu); // CU must be valid for DW_FORM_ref forms that are compile
+                  // unit relative or we will get this wrong
+    s.Printf("{0x%8.8" PRIx64 "}", uvalue + m_cu->GetOffset());
   }
 }
 
 const char *DWARFFormValue::AsCString() const {
-  SymbolFileDWARF *symbol_file = m_unit->GetSymbolFileDWARF();
+  SymbolFileDWARF *symbol_file = m_cu->GetSymbolFileDWARF();
 
   if (m_form == DW_FORM_string) {
     return m_value.value.cstr;
@@ -512,7 +520,7 @@ const char *DWARFFormValue::AsCString() const {
 
     uint32_t indexSize = 4;
     lldb::offset_t offset =
-        m_unit->GetStrOffsetsBase() + m_value.value.uval * indexSize;
+        m_cu->GetStrOffsetsBase() + m_value.value.uval * indexSize;
     dw_offset_t strOffset =
         symbol_file->get_debug_str_offsets_data().GetMaxU64(&offset, indexSize);
     return symbol_file->get_debug_str_data().PeekCStr(strOffset);
@@ -525,12 +533,12 @@ const char *DWARFFormValue::AsCString() const {
 }
 
 dw_addr_t DWARFFormValue::Address() const {
-  SymbolFileDWARF *symbol_file = m_unit->GetSymbolFileDWARF();
+  SymbolFileDWARF *symbol_file = m_cu->GetSymbolFileDWARF();
 
   if (m_form == DW_FORM_addr)
     return Unsigned();
 
-  assert(m_unit);
+  assert(m_cu);
   assert(m_form == DW_FORM_GNU_addr_index || m_form == DW_FORM_addrx ||
          m_form == DW_FORM_addrx1 || m_form == DW_FORM_addrx2 ||
          m_form == DW_FORM_addrx3 || m_form == DW_FORM_addrx4);
@@ -538,8 +546,8 @@ dw_addr_t DWARFFormValue::Address() const {
   if (!symbol_file)
     return 0;
 
-  uint32_t index_size = m_unit->GetAddressByteSize();
-  dw_offset_t addr_base = m_unit->GetAddrBase();
+  uint32_t index_size = m_cu->GetAddressByteSize();
+  dw_offset_t addr_base = m_cu->GetAddrBase();
   lldb::offset_t offset = addr_base + m_value.value.uval * index_size;
   return symbol_file->get_debug_addr_data().GetMaxU64(&offset, index_size);
 }
@@ -552,9 +560,9 @@ uint64_t DWARFFormValue::Reference() const {
   case DW_FORM_ref4:
   case DW_FORM_ref8:
   case DW_FORM_ref_udata:
-    assert(m_unit); // Unit must be valid for DW_FORM_ref forms that are compile
-                    // unit relative or we will get this wrong
-    return value + m_unit->GetOffset();
+    assert(m_cu); // CU must be valid for DW_FORM_ref forms that are compile
+                  // unit relative or we will get this wrong
+    return value + m_cu->GetOffset();
 
   case DW_FORM_ref_addr:
   case DW_FORM_ref_sig8:

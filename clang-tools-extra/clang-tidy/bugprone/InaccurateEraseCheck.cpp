@@ -17,6 +17,10 @@ namespace clang {
 namespace tidy {
 namespace bugprone {
 
+namespace {
+AST_MATCHER(Decl, isInStdNamespace) { return Node.isInStdNamespace(); }
+}
+
 void InaccurateEraseCheck::registerMatchers(MatchFinder *Finder) {
   // Only register the matchers for C++; the functionality currently does not
   // provide any benefit to other languages, despite being benign.

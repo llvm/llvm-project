@@ -44,6 +44,7 @@ static_library("LLVMWebAssemblyCodeGen") {
     ":WebAssemblyGenGlobalISel",
     ":WebAssemblyGenMCPseudoLowering",
     ":WebAssemblyGenRegisterBank",
+    "InstPrinter",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -113,6 +114,7 @@ group("WebAssembly") {
     ":LLVMWebAssemblyCodeGen",
     "AsmParser",
     "Disassembler",
+    "InstPrinter",
     "MCTargetDesc",
     "TargetInfo",
   ]

@@ -107,17 +107,6 @@ public:
   ///     \li 1 if lhs > rhs
   static int Compare(const Declaration &lhs, const Declaration &rhs);
 
-  /// Checks if this object has the same file and line as another declaration
-  /// object.
-  ///
-  /// \param[in] declaration
-  ///     The const Declaration object to compare with.
-  ///
-  /// \return
-  ///     Returns \b true if \b declaration is at the same file and
-  ///     line, \b false otherwise.
-  bool FileAndLineEqual(const Declaration &declaration) const;
-
   /// Dump a description of this object to a Stream.
   ///
   /// Dump a description of the contents of this object to the supplied stream

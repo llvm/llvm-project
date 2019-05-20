@@ -316,6 +316,8 @@ ConstString &Broadcaster::GetBroadcasterClass() const {
   return class_name;
 }
 
+BroadcastEventSpec::BroadcastEventSpec(const BroadcastEventSpec &rhs) = default;
+
 bool BroadcastEventSpec::operator<(const BroadcastEventSpec &rhs) const {
   if (GetBroadcasterClass() == rhs.GetBroadcasterClass()) {
     return GetEventBits() < rhs.GetEventBits();

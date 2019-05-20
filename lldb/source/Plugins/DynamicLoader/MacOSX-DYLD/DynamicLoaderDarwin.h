@@ -28,7 +28,7 @@ class DynamicLoaderDarwin : public lldb_private::DynamicLoader {
 public:
   DynamicLoaderDarwin(lldb_private::Process *process);
 
-  ~DynamicLoaderDarwin() override;
+  virtual ~DynamicLoaderDarwin() override;
 
   /// Called after attaching a process.
   ///

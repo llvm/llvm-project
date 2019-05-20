@@ -29,12 +29,13 @@ using namespace std;
 
 // Constructor
 DWARFDebugInfo::DWARFDebugInfo(lldb_private::DWARFContext &context)
-    : m_dwarf2Data(NULL), m_context(context), m_units(), m_cu_aranges_up() {}
+    : m_dwarf2Data(NULL), m_context(context), m_compile_units(),
+      m_cu_aranges_up() {}
 
 // SetDwarfData
 void DWARFDebugInfo::SetDwarfData(SymbolFileDWARF *dwarf2Data) {
   m_dwarf2Data = dwarf2Data;
-  m_units.clear();
+  m_compile_units.clear();
 }
 
 llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
@@ -62,9 +63,9 @@ llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
 
   // Manually build arange data for everything that wasn't in the
   // .debug_aranges table.
-  const size_t num_units = GetNumUnits();
-  for (size_t idx = 0; idx < num_units; ++idx) {
-    DWARFUnit *cu = GetUnitAtIndex(idx);
+  const size_t num_compile_units = GetNumCompileUnits();
+  for (size_t idx = 0; idx < num_compile_units; ++idx) {
+    DWARFUnit *cu = GetCompileUnitAtIndex(idx);
 
     dw_offset_t offset = cu->GetOffset();
     if (cus_with_data.find(offset) == cus_with_data.end())
@@ -76,8 +77,8 @@ llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
   return *m_cu_aranges_up;
 }
 
-void DWARFDebugInfo::ParseUnitHeadersIfNeeded() {
-  if (!m_units.empty())
+void DWARFDebugInfo::ParseCompileUnitHeadersIfNeeded() {
+  if (!m_compile_units.empty())
     return;
   if (!m_dwarf2Data)
     return;
@@ -86,8 +87,8 @@ void DWARFDebugInfo::ParseUnitHeadersIfNeeded() {
   const auto &debug_info_data = m_dwarf2Data->get_debug_info_data();
 
   while (debug_info_data.ValidOffset(offset)) {
-    llvm::Expected<DWARFUnitSP> cu_sp = DWARFCompileUnit::extract(
-        m_dwarf2Data, m_units.size(), debug_info_data, &offset);
+    llvm::Expected<DWARFUnitSP> cu_sp =
+        DWARFCompileUnit::extract(m_dwarf2Data, debug_info_data, &offset);
 
     if (!cu_sp) {
       // FIXME: Propagate this error up.
@@ -95,75 +96,102 @@ void DWARFDebugInfo::ParseUnitHeadersIfNeeded() {
       return;
     }
 
-    // If it didn't return an error, then it should be returning a valid Unit.
+    // If it didn't return an error, then it should be returning a valid
+    // CompileUnit.
     assert(*cu_sp);
 
-    m_units.push_back(*cu_sp);
+    m_compile_units.push_back(*cu_sp);
 
-    offset = (*cu_sp)->GetNextUnitOffset();
+    offset = (*cu_sp)->GetNextCompileUnitOffset();
   }
 }
 
-size_t DWARFDebugInfo::GetNumUnits() {
-  ParseUnitHeadersIfNeeded();
-  return m_units.size();
+size_t DWARFDebugInfo::GetNumCompileUnits() {
+  ParseCompileUnitHeadersIfNeeded();
+  return m_compile_units.size();
 }
 
-DWARFUnit *DWARFDebugInfo::GetUnitAtIndex(user_id_t idx) {
+DWARFUnit *DWARFDebugInfo::GetCompileUnitAtIndex(uint32_t idx) {
   DWARFUnit *cu = NULL;
-  if (idx < GetNumUnits())
-    cu = m_units[idx].get();
+  if (idx < GetNumCompileUnits())
+    cu = m_compile_units[idx].get();
   return cu;
 }
 
-bool DWARFDebugInfo::OffsetLessThanUnitOffset(dw_offset_t offset,
-                                              const DWARFUnitSP &cu_sp) {
+bool DWARFDebugInfo::OffsetLessThanCompileUnitOffset(
+    dw_offset_t offset, const DWARFUnitSP &cu_sp) {
   return offset < cu_sp->GetOffset();
 }
 
-uint32_t DWARFDebugInfo::FindUnitIndex(dw_offset_t offset) {
-  ParseUnitHeadersIfNeeded();
+DWARFUnit *DWARFDebugInfo::GetCompileUnit(dw_offset_t cu_offset,
+                                                 uint32_t *idx_ptr) {
+  DWARFUnitSP cu_sp;
+  uint32_t cu_idx = DW_INVALID_INDEX;
+  if (cu_offset != DW_INVALID_OFFSET) {
+    ParseCompileUnitHeadersIfNeeded();
 
-  // llvm::lower_bound is not used as for DIE offsets it would still return
-  // index +1 and GetOffset() returning index itself would be a special case.
-  auto pos = llvm::upper_bound(m_units, offset, OffsetLessThanUnitOffset);
-  uint32_t idx = std::distance(m_units.begin(), pos);
-  if (idx == 0)
-    return DW_INVALID_OFFSET;
-  return idx - 1;
-}
-
-DWARFUnit *DWARFDebugInfo::GetUnitAtOffset(dw_offset_t cu_offset,
-                                           uint32_t *idx_ptr) {
-  uint32_t idx = FindUnitIndex(cu_offset);
-  DWARFUnit *result = GetUnitAtIndex(idx);
-  if (result && result->GetOffset() != cu_offset) {
-    result = nullptr;
-    idx = DW_INVALID_INDEX;
+    // Watch out for single compile unit executable as they are pretty common
+    const size_t num_cus = m_compile_units.size();
+    if (num_cus == 1) {
+      if (m_compile_units[0]->GetOffset() == cu_offset) {
+        cu_sp = m_compile_units[0];
+        cu_idx = 0;
+      }
+    } else if (num_cus) {
+      CompileUnitColl::const_iterator end_pos = m_compile_units.end();
+      CompileUnitColl::const_iterator begin_pos = m_compile_units.begin();
+      CompileUnitColl::const_iterator pos = std::upper_bound(
+          begin_pos, end_pos, cu_offset, OffsetLessThanCompileUnitOffset);
+      if (pos != begin_pos) {
+        --pos;
+        if ((*pos)->GetOffset() == cu_offset) {
+          cu_sp = *pos;
+          cu_idx = std::distance(begin_pos, pos);
+        }
+      }
+    }
   }
   if (idx_ptr)
-    *idx_ptr = idx;
-  return result;
+    *idx_ptr = cu_idx;
+  return cu_sp.get();
 }
 
-DWARFUnit *DWARFDebugInfo::GetUnit(const DIERef &die_ref) {
+DWARFUnit *DWARFDebugInfo::GetCompileUnit(const DIERef &die_ref) {
   if (die_ref.cu_offset == DW_INVALID_OFFSET)
-    return GetUnitContainingDIEOffset(die_ref.die_offset);
+    return GetCompileUnitContainingDIEOffset(die_ref.die_offset);
   else
-    return GetUnitAtOffset(die_ref.cu_offset);
+    return GetCompileUnit(die_ref.cu_offset);
 }
 
-DWARFUnit *DWARFDebugInfo::GetUnitContainingDIEOffset(dw_offset_t die_offset) {
-  uint32_t idx = FindUnitIndex(die_offset);
-  DWARFUnit *result = GetUnitAtIndex(idx);
-  if (result && !result->ContainsDIEOffset(die_offset))
-    return nullptr;
-  return result;
+DWARFUnit *
+DWARFDebugInfo::GetCompileUnitContainingDIEOffset(dw_offset_t die_offset) {
+  ParseCompileUnitHeadersIfNeeded();
+
+  DWARFUnitSP cu_sp;
+
+  // Watch out for single compile unit executable as they are pretty common
+  const size_t num_cus = m_compile_units.size();
+  if (num_cus == 1) {
+    if (m_compile_units[0]->ContainsDIEOffset(die_offset))
+      return m_compile_units[0].get();
+  } else if (num_cus) {
+    CompileUnitColl::const_iterator end_pos = m_compile_units.end();
+    CompileUnitColl::const_iterator begin_pos = m_compile_units.begin();
+    CompileUnitColl::const_iterator pos = std::upper_bound(
+        begin_pos, end_pos, die_offset, OffsetLessThanCompileUnitOffset);
+    if (pos != begin_pos) {
+      --pos;
+      if ((*pos)->ContainsDIEOffset(die_offset))
+        return (*pos).get();
+    }
+  }
+
+  return nullptr;
 }
 
 DWARFDIE
 DWARFDebugInfo::GetDIEForDIEOffset(dw_offset_t die_offset) {
-  DWARFUnit *cu = GetUnitContainingDIEOffset(die_offset);
+  DWARFUnit *cu = GetCompileUnitContainingDIEOffset(die_offset);
   if (cu)
     return cu->GetDIE(die_offset);
   return DWARFDIE();
@@ -174,7 +202,7 @@ DWARFDebugInfo::GetDIEForDIEOffset(dw_offset_t die_offset) {
 // Get the DIE (Debug Information Entry) with the specified offset.
 DWARFDIE
 DWARFDebugInfo::GetDIE(const DIERef &die_ref) {
-  DWARFUnit *cu = GetUnit(die_ref);
+  DWARFUnit *cu = GetCompileUnit(die_ref);
   if (cu)
     return cu->GetDIE(die_ref.die_offset);
   return DWARFDIE(); // Not found

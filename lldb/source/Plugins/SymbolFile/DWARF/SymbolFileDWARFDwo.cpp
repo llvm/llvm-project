@@ -23,7 +23,7 @@ SymbolFileDWARFDwo::SymbolFileDWARFDwo(ObjectFileSP objfile,
                                        DWARFUnit *dwarf_cu)
     : SymbolFileDWARF(objfile.get()), m_obj_file_sp(objfile),
       m_base_dwarf_cu(dwarf_cu) {
-  SetID(((lldb::user_id_t)dwarf_cu->GetID()) << 32);
+  SetID(((lldb::user_id_t)dwarf_cu->GetOffset()) << 32);
 }
 
 void SymbolFileDWARFDwo::LoadSectionData(lldb::SectionType sect_type,
@@ -56,7 +56,7 @@ SymbolFileDWARFDwo::ParseCompileUnit(DWARFUnit *dwarf_cu,
 DWARFUnit *SymbolFileDWARFDwo::GetCompileUnit() {
   // Only dwo files with 1 compile unit is supported
   if (GetNumCompileUnits() == 1)
-    return DebugInfo()->GetUnitAtIndex(0);
+    return DebugInfo()->GetCompileUnitAtIndex(0);
   else
     return nullptr;
 }
@@ -158,7 +158,6 @@ SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language) {
 
 DWARFDIE
 SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref) {
-  lldbassert(die_ref.cu_offset == m_base_dwarf_cu->GetOffset() ||
-             die_ref.cu_offset == DW_INVALID_OFFSET);
+  lldbassert(m_base_dwarf_cu->GetOffset() == die_ref.cu_offset);
   return DebugInfo()->GetDIEForDIEOffset(die_ref.die_offset);
 }

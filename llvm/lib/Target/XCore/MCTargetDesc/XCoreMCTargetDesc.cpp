@@ -11,9 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/XCoreMCTargetDesc.h"
-#include "MCTargetDesc/XCoreInstPrinter.h"
+#include "InstPrinter/XCoreInstPrinter.h"
 #include "MCTargetDesc/XCoreMCAsmInfo.h"
-#include "TargetInfo/XCoreTargetInfo.h"
 #include "XCoreTargetStreamer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDwarf.h"

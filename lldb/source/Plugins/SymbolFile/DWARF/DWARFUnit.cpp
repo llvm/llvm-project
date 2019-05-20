@@ -29,8 +29,8 @@ using namespace std;
 
 extern int g_verbose;
 
-DWARFUnit::DWARFUnit(SymbolFileDWARF *dwarf, user_id_t uid)
-    : UserID(uid), m_dwarf(dwarf), m_cancel_scopes(false) {}
+DWARFUnit::DWARFUnit(SymbolFileDWARF *dwarf)
+    : m_dwarf(dwarf), m_cancel_scopes(false) {}
 
 DWARFUnit::~DWARFUnit() {}
 
@@ -58,7 +58,7 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
   const DWARFDataExtractor &data = GetData();
   DWARFFormValue::FixedFormSizes fixed_form_sizes =
       DWARFFormValue::GetFixedFormSizesForAddressSize(GetAddressByteSize());
-  if (offset < GetNextUnitOffset() &&
+  if (offset < GetNextCompileUnitOffset() &&
       m_first_die.FastExtract(data, this, fixed_form_sizes, &offset)) {
     AddUnitDIE(m_first_die);
     return;
@@ -151,7 +151,7 @@ void DWARFUnit::ExtractDIEsRWLocked() {
   // Set the offset to that of the first DIE and calculate the start of the
   // next compilation unit header.
   lldb::offset_t offset = GetFirstDIEOffset();
-  lldb::offset_t next_cu_offset = GetNextUnitOffset();
+  lldb::offset_t next_cu_offset = GetNextCompileUnitOffset();
 
   DWARFDebugInfoEntry die;
 
@@ -366,7 +366,16 @@ size_t DWARFUnit::AppendDIEsWithTag(const dw_tag_t tag,
   return dies.size() - old_size;
 }
 
-dw_offset_t DWARFUnit::GetNextUnitOffset() const {
+lldb::user_id_t DWARFUnit::GetID() const {
+  dw_offset_t local_id =
+      m_base_obj_offset != DW_INVALID_OFFSET ? m_base_obj_offset : m_offset;
+  if (m_dwarf)
+    return DIERef(local_id, local_id).GetUID(m_dwarf);
+  else
+    return local_id;
+}
+
+dw_offset_t DWARFUnit::GetNextCompileUnitOffset() const {
   return m_offset + GetLengthByteSize() + GetLength();
 }
 

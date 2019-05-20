@@ -31,7 +31,7 @@
 class DNBDataRef {
 public:
   // For use with Dump
-  enum Type {
+  typedef enum {
     TypeUInt8 = 0,
     TypeChar,
     TypeUInt16,
@@ -40,7 +40,7 @@ public:
     TypePointer,
     TypeULEB128,
     TypeSLEB128
-  };
+  } Type;
   typedef uint32_t offset_t;
   typedef nub_addr_t addr_t;
 

@@ -3591,14 +3591,6 @@ protected:
         result.GetOutputStream().Printf("\n");
       }
 
-      if (UnwindPlanSP symfile_plan_sp =
-              func_unwinders_sp->GetSymbolFileUnwindPlan(*thread)) {
-        result.GetOutputStream().Printf("Symbol file UnwindPlan:\n");
-        symfile_plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                              LLDB_INVALID_ADDRESS);
-        result.GetOutputStream().Printf("\n");
-      }
-
       UnwindPlanSP compact_unwind_sp =
           func_unwinders_sp->GetCompactUnwindUnwindPlan(*target);
       if (compact_unwind_sp) {

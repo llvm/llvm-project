@@ -31,19 +31,48 @@
 
 namespace lldb_private {
 class ConstString;
+}
+namespace lldb_private {
 class FileSpecList;
+}
+namespace lldb_private {
 class Function;
+}
+namespace lldb_private {
 class Log;
+}
+namespace lldb_private {
 class Module;
+}
+namespace lldb_private {
 class RegularExpression;
+}
+namespace lldb_private {
 class Stream;
+}
+namespace lldb_private {
 class SymbolContext;
+}
+namespace lldb_private {
 class SymbolContextList;
+}
+namespace lldb_private {
 class SymbolFile;
+}
+namespace lldb_private {
 class Target;
+}
+namespace lldb_private {
 class TypeList;
+}
+namespace lldb_private {
 class UUID;
+}
+namespace lldb_private {
 class VariableList;
+}
+
+namespace lldb_private {
 
 class ModuleListProperties : public Properties {
 public:

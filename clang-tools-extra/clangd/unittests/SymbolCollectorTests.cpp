@@ -20,7 +20,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "gmock/gmock-matchers.h"
 #include "gmock/gmock-more-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -32,16 +31,16 @@ namespace clang {
 namespace clangd {
 namespace {
 
-using ::testing::_;
-using ::testing::AllOf;
-using ::testing::Contains;
-using ::testing::Each;
-using ::testing::ElementsAre;
-using ::testing::Field;
-using ::testing::Not;
-using ::testing::Pair;
-using ::testing::UnorderedElementsAre;
-using ::testing::UnorderedElementsAreArray;
+using testing::_;
+using testing::AllOf;
+using testing::Contains;
+using testing::ElementsAre;
+using testing::Field;
+using testing::IsEmpty;
+using testing::Not;
+using testing::Pair;
+using testing::UnorderedElementsAre;
+using testing::UnorderedElementsAreArray;
 
 // GMock helpers for matching Symbol.
 MATCHER_P(Labeled, Label, "") {
@@ -96,16 +95,16 @@ MATCHER(VisibleOutsideFile, "") {
   return static_cast<bool>(arg.Flags & Symbol::VisibleOutsideFile);
 }
 MATCHER(RefRange, "") {
-  const Ref &Pos = ::testing::get<0>(arg);
-  const Range &Range = ::testing::get<1>(arg);
+  const Ref &Pos = testing::get<0>(arg);
+  const Range &Range = testing::get<1>(arg);
   return std::make_tuple(Pos.Location.Start.line(), Pos.Location.Start.column(),
                          Pos.Location.End.line(), Pos.Location.End.column()) ==
          std::make_tuple(Range.start.line, Range.start.character,
                          Range.end.line, Range.end.character);
 }
-::testing::Matcher<const std::vector<Ref> &>
+testing::Matcher<const std::vector<Ref> &>
 HaveRanges(const std::vector<Range> Ranges) {
-  return ::testing::UnorderedPointwise(RefRange(), Ranges);
+  return testing::UnorderedPointwise(RefRange(), Ranges);
 }
 
 class ShouldCollectSymbolTest : public ::testing::Test {
@@ -121,8 +120,8 @@ public:
   // build() must have been called.
   bool shouldCollect(llvm::StringRef Name, bool Qualified = true) {
     assert(AST.hasValue());
-    const NamedDecl &ND =
-        Qualified ? findDecl(*AST, Name) : findUnqualifiedDecl(*AST, Name);
+    const NamedDecl& ND = Qualified ? findDecl(*AST, Name) 
+                                    : findUnqualifiedDecl(*AST, Name);
     ASTContext& Ctx = AST->getASTContext();
     const SourceManager& SM = Ctx.getSourceManager();
     bool MainFile = SM.isWrittenInMainFile(SM.getExpansionLoc(ND.getBeginLoc()));
@@ -655,15 +654,19 @@ TEST_F(SymbolCollectorTest, References) {
   )";
   CollectorOpts.CountReferences = true;
   runSymbolCollector(Header, Main);
-  EXPECT_THAT(
-      Symbols,
-      UnorderedElementsAreArray(
-          {AllOf(QName("W"), RefCount(1)), AllOf(QName("X"), RefCount(1)),
-           AllOf(QName("Y"), RefCount(0)), AllOf(QName("Z"), RefCount(0)),
-           AllOf(QName("y"), RefCount(0)), AllOf(QName("z"), RefCount(0)),
-           AllOf(QName("x"), RefCount(0)), AllOf(QName("w"), RefCount(0)),
-           AllOf(QName("w2"), RefCount(0)), AllOf(QName("V"), RefCount(1)),
-           AllOf(QName("v"), RefCount(0))}));
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAreArray(
+                {AllOf(QName("W"), RefCount(1)),
+                 AllOf(QName("X"), RefCount(1)),
+                 AllOf(QName("Y"), RefCount(0)),
+                 AllOf(QName("Z"), RefCount(0)), 
+                 AllOf(QName("y"), RefCount(0)),
+                 AllOf(QName("z"), RefCount(0)),
+                 AllOf(QName("x"), RefCount(0)),
+                 AllOf(QName("w"), RefCount(0)),
+                 AllOf(QName("w2"), RefCount(0)),
+                 AllOf(QName("V"), RefCount(1)),
+                 AllOf(QName("v"), RefCount(0))}));
 }
 
 TEST_F(SymbolCollectorTest, SymbolRelativeNoFallback) {
@@ -1023,26 +1026,6 @@ TEST_F(SymbolCollectorTest, IncFileInNonHeader) {
                      /*ExtraArgs=*/{"-I", testRoot()});
   EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(QName("X"), DeclURI(IncURI),
                                                   Not(IncludeHeader()))));
-}
-
-// Features that depend on header-guards are fragile. Header guards are only
-// recognized when the file ends, so we have to defer checking for them.
-TEST_F(SymbolCollectorTest, HeaderGuardDetected) {
-  CollectorOpts.CollectIncludePath = true;
-  CollectorOpts.CollectMacro = true;
-  runSymbolCollector(R"cpp(
-    #ifndef HEADER_GUARD_
-    #define HEADER_GUARD_
-
-    // Symbols are seen before the header guard is complete.
-    #define MACRO
-    int decl();
-
-    #endif // Header guard is recognized here.
-  )cpp",
-                     "");
-  EXPECT_THAT(Symbols, Not(Contains(QName("HEADER_GUARD_"))));
-  EXPECT_THAT(Symbols, Each(IncludeHeader()));
 }
 
 TEST_F(SymbolCollectorTest, NonModularHeader) {

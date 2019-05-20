@@ -184,7 +184,7 @@ for.body87:
 ; CHECK: for.body:
 ; CHECK: %b.03 = phi i32 [ 0, %entry ], [ %add, %for.cond ]
 ; CHECK: return:
-; CHECK: %b.03.lcssa = phi i32 [ %b.03, %for.body ], [ 0, %for.cond ]
+; CHECK: %b.03.lcssa = phi i32 [ %b.03, %for.body ], [ %b.03, %for.cond ]
 define void @nsw_latch(i32* %a) nounwind {
 entry:
   br label %for.body

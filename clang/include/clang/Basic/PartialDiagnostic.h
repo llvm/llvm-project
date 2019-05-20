@@ -16,7 +16,6 @@
 #define LLVM_CLANG_BASIC_PARTIALDIAGNOSTIC_H
 
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/SmallVector.h"

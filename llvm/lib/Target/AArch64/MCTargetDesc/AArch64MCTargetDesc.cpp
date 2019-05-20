@@ -14,9 +14,8 @@
 #include "AArch64ELFStreamer.h"
 #include "AArch64MCAsmInfo.h"
 #include "AArch64WinCOFFStreamer.h"
+#include "InstPrinter/AArch64InstPrinter.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
-#include "MCTargetDesc/AArch64InstPrinter.h"
-#include "TargetInfo/AArch64TargetInfo.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -192,8 +191,7 @@ static MCInstrAnalysis *createAArch64InstrAnalysis(const MCInstrInfo *Info) {
 // Force static initialization.
 extern "C" void LLVMInitializeAArch64TargetMC() {
   for (Target *T : {&getTheAArch64leTarget(), &getTheAArch64beTarget(),
-                    &getTheAArch64_32Target(), &getTheARM64Target(),
-                    &getTheARM64_32Target()}) {
+                    &getTheARM64Target()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createAArch64MCAsmInfo);
 
@@ -229,8 +227,7 @@ extern "C" void LLVMInitializeAArch64TargetMC() {
   }
 
   // Register the asm backend.
-  for (Target *T : {&getTheAArch64leTarget(), &getTheAArch64_32Target(),
-                    &getTheARM64Target(), &getTheARM64_32Target()})
+  for (Target *T : {&getTheAArch64leTarget(), &getTheARM64Target()})
     TargetRegistry::RegisterMCAsmBackend(*T, createAArch64leAsmBackend);
   TargetRegistry::RegisterMCAsmBackend(getTheAArch64beTarget(),
                                        createAArch64beAsmBackend);

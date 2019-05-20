@@ -33,7 +33,7 @@ public:
                   uint32_t compiler_id)
       : Diagnostic(message, severity, eDiagnosticOriginClang, compiler_id) {}
 
-  ~ClangDiagnostic() override = default;
+  virtual ~ClangDiagnostic() = default;
 
   bool HasFixIts() const override { return !m_fixit_vec.empty(); }
 

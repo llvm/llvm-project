@@ -86,9 +86,13 @@ private:
   // Dispatcher
   SPIRVEntry *transDbgEntry(const MDNode *DIEntry);
   SPIRVEntry *transDbgEntryImpl(const MDNode *MDN);
+  template <typename T>
+  SPIRVEntry *transDbgEntryRef(const TypedDINodeRef<T> &Ref,
+                               SPIRVEntry *Alternate = nullptr);
 
   // Helper methods
   SPIRVType *getVoidTy();
+  SPIRVEntry *getScope(DIScopeRef SR);
   SPIRVEntry *getScope(DIScope *SR);
   SPIRVEntry *getGlobalVariable(const DIGlobalVariable *GV);
 

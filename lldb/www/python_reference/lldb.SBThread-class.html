@@ -1,0 +1,2289 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>lldb.SBThread</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a class="navbar" target="_top" href="http://lldb.llvm.org">LLDB python API</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="lldb-module.html">Package&nbsp;lldb</a> ::
+        Class&nbsp;SBThread
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+        <tr><td align="right"><span class="options"
+            >[<a href="frames.html" target="_top">frames</a
+            >]&nbsp;|&nbsp;<a href="lldb.SBThread-class.html"
+            target="_top">no&nbsp;frames</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS DESCRIPTION ==================== -->
+<h1 class="epydoc">Class SBThread</h1><p class="nomargin-top"><span class="codelink"><a href="lldb-pysrc.html#SBThread">source&nbsp;code</a></span></p>
+<center>
+<center>  <map id="uml_class_diagram_for_lldb_sbt_3" name="uml_class_diagram_for_lldb_sbt_3">
+<area shape="rect" id="node1_28" href="lldb.SBThread-class.html#__swig_setmethods__" title="lldb.SBThread.__swig_setmethods__" alt="" coords="17,31,247,51"/>
+<area shape="rect" id="node1_29" href="lldb.SBThread-class.html#__swig_getmethods__" title="lldb.SBThread.__swig_getmethods__" alt="" coords="17,51,247,71"/>
+<area shape="rect" id="node1_30" href="lldb.SBThread-class.html#eBroadcastBitStackChanged" title="lldb.SBThread.eBroadcastBitStackChanged" alt="" coords="17,71,247,91"/>
+<area shape="rect" id="node1_31" href="lldb.SBThread-class.html#eBroadcastBitThreadSuspended" title="lldb.SBThread.eBroadcastBitThreadSuspended" alt="" coords="17,91,247,111"/>
+<area shape="rect" id="node1_32" href="lldb.SBThread-class.html#eBroadcastBitThreadResumed" title="lldb.SBThread.eBroadcastBitThreadResumed" alt="" coords="17,111,247,131"/>
+<area shape="rect" id="node1_33" href="lldb.SBThread-class.html#eBroadcastBitSelectedFrameChanged" title="lldb.SBThread.eBroadcastBitSelectedFrameChanged" alt="" coords="17,131,247,151"/>
+<area shape="rect" id="node1_34" href="lldb.SBThread-class.html#eBroadcastBitThreadSelected" title="lldb.SBThread.eBroadcastBitThreadSelected" alt="" coords="17,151,247,171"/>
+<area shape="rect" id="node1_35" href="lldb.SBThread.frames_access-class.html" title="A helper object that will lazily hand out frames for a thread when supplied an index." alt="" coords="17,171,247,191"/>
+<area shape="rect" id="node1_36" href="lldb.SBThread-class.html#frame" title="A read only property that returns an object that can be used to access &#160;frames as an array (&quot;frame_12 = lldb.thread.frame[12]&quot;)." alt="" coords="17,191,247,211"/>
+<area shape="rect" id="node1_37" href="lldb.SBThread-class.html#frames" title="A read only property that returns a list() of lldb.SBFrame objects for all &#160;frames in this thread." alt="" coords="17,211,247,231"/>
+<area shape="rect" id="node1_38" href="lldb.SBThread-class.html#id" title="A read only property that returns the thread ID as an integer." alt="" coords="17,231,247,251"/>
+<area shape="rect" id="node1_39" href="lldb.SBThread-class.html#idx" title="A read only property that returns the thread index ID as an integer." alt="" coords="17,251,247,271"/>
+<area shape="rect" id="node1_40" href="lldb.SBThread-class.html#is_stopped" title="A read only property that returns a boolean value that indicates if this &#160;thread is stopped but not exited." alt="" coords="17,271,247,291"/>
+<area shape="rect" id="node1_41" href="lldb.SBThread-class.html#stop_reason" title="A read only property that returns an lldb enumeration value (see &#160;enumerations that start with &quot;lldb.eStopReason&quot;) that represents the reason this thread stopped." alt="" coords="17,311,247,331"/>
+<area shape="rect" id="node1_42" href="lldb.SBThread-class.html#__setattr__" title="x.__setattr__(&#39;name&#39;, value) &lt;==&gt; x.name = value" alt="" coords="17,333,247,353"/>
+<area shape="rect" id="node1_43" href="lldb.SBThread-class.html#__getattr__" title="lldb.SBThread.__getattr__" alt="" coords="17,353,247,373"/>
+<area shape="rect" id="node1_44" href="lldb.SBThread-class.html#__repr__" title="repr(x)" alt="" coords="17,373,247,393"/>
+<area shape="rect" id="node1_45" href="lldb.SBThread-class.html#__iter__" title="lldb.SBThread.__iter__" alt="" coords="17,393,247,413"/>
+<area shape="rect" id="node1_46" href="lldb.SBThread-class.html#__len__" title="lldb.SBThread.__len__" alt="" coords="17,413,247,433"/>
+<area shape="rect" id="node1_47" href="lldb.SBThread-class.html#__init__" title="__init__(lldb::SBThread self) &#45;&gt; SBThread __init__(lldb::SBThread self, &#160;SBThread thread) &#45;&gt; SBThread" alt="" coords="17,433,247,453"/>
+<area shape="rect" id="node1_48" href="lldb.SBThread-class.html#__swig_destroy__" title="delete_SBThread(SBThread self)" alt="" coords="17,453,247,473"/>
+<area shape="rect" id="node1_49" href="lldb.SBThread-class.html#__del__" title="lldb.SBThread.__del__" alt="" coords="17,473,247,493"/>
+<area shape="rect" id="node1_50" href="lldb.SBThread-class.html#GetBroadcasterClassName" title="lldb.SBThread.GetBroadcasterClassName" alt="" coords="17,493,247,513"/>
+<area shape="rect" id="node1_51" href="lldb.SBThread-class.html#EventIsThreadEvent" title="EventIsThreadEvent(SBEvent event) &#45;&gt; bool" alt="" coords="17,513,247,533"/>
+<area shape="rect" id="node1_52" href="lldb.SBThread-class.html#GetStackFrameFromEvent" title="GetStackFrameFromEvent(SBEvent event) &#45;&gt; SBFrame" alt="" coords="17,533,247,553"/>
+<area shape="rect" id="node1_53" href="lldb.SBThread-class.html#GetThreadFromEvent" title="GetThreadFromEvent(SBEvent event) &#45;&gt; SBThread" alt="" coords="17,553,247,573"/>
+<area shape="rect" id="node1_54" href="lldb.SBThread-class.html#__nonzero__" title="lldb.SBThread.__nonzero__" alt="" coords="17,573,247,593"/>
+<area shape="rect" id="node1_55" href="lldb.SBThread-class.html#__ne__" title="lldb.SBThread.__ne__" alt="" coords="17,613,247,633"/>
+<area shape="rect" id="node1" href="lldb.SBThread-class.html" title="Represents a thread of execution." alt="" coords="5,5,259,640"/>
+</map>
+  <img src="uml_class_diagram_for_lldb_sbt_3.gif" alt='' usemap="#uml_class_diagram_for_lldb_sbt_3" ismap="ismap" class="graph-without-title" />
+</center>
+</center>
+<hr />
+<pre class="literalblock">
+
+Represents a thread of execution. SBProcess contains SBThread(s).
+
+SBThreads can be referred to by their ID, which maps to the system specific thread
+identifier, or by IndexID.  The ID may or may not be unique depending on whether the
+system reuses its thread identifiers.  The IndexID is a monotonically increasing identifier
+that will always uniquely reference a particular thread, and when that thread goes
+away it will not be reused.
+
+SBThread supports frame iteration. For example (from test/python_api/
+lldbutil/iter/TestLLDBIterator.py),
+
+        from lldbutil import print_stacktrace
+        stopped_due_to_breakpoint = False
+        for thread in process:
+            if self.TraceOn():
+                print_stacktrace(thread)
+            ID = thread.GetThreadID()
+            if thread.GetStopReason() == lldb.eStopReasonBreakpoint:
+                stopped_due_to_breakpoint = True
+            for frame in thread:
+                self.assertTrue(frame.GetThread().GetThreadID() == ID)
+                if self.TraceOn():
+                    print frame
+
+        self.assertTrue(stopped_due_to_breakpoint)
+
+See also SBProcess and SBFrame.
+
+</pre>
+
+<!-- ==================== NESTED CLASSES ==================== -->
+<a name="section-NestedClasses"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Nested Classes</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-NestedClasses"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBThread.frames_access-class.html" class="summary-name">frames_access</a><br />
+      A helper object that will lazily hand out frames for a thread when 
+        supplied an index.
+    </td>
+  </tr>
+</table>
+<!-- ==================== INSTANCE METHODS ==================== -->
+<a name="section-InstanceMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Instance Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-InstanceMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#__setattr__" class="summary-sig-name">__setattr__</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">name</span>,
+        <span class="summary-sig-arg">value</span>)</span><br />
+      x.__setattr__('name', value) &lt;==&gt; x.name = value</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.__setattr__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__getattr__"></a><span class="summary-sig-name">__getattr__</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">name</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.__getattr__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#__repr__" class="summary-sig-name">__repr__</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      repr(x)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#_swig_repr">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__iter__"></a><span class="summary-sig-name">__iter__</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.__iter__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__len__"></a><span class="summary-sig-name">__len__</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.__len__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#__init__" class="summary-sig-name">__init__</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      __init__(lldb::SBThread self) -&gt; SBThread __init__(lldb::SBThread 
+      self, SBThread thread) -&gt; SBThread</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.__init__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__swig_destroy__"></a><span class="summary-sig-name">__swig_destroy__</span>(<span class="summary-sig-arg">...</span>)</span><br />
+      delete_SBThread(SBThread self)</td>
+          <td align="right" valign="top">
+            
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__del__"></a><span class="summary-sig-name">__del__</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.__del__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__nonzero__"></a><span class="summary-sig-name">__nonzero__</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.__nonzero__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="IsValid"></a><span class="summary-sig-name">IsValid</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      IsValid(SBThread self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.IsValid">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="Clear"></a><span class="summary-sig-name">Clear</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      Clear(SBThread self)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.Clear">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetStopReason"></a><span class="summary-sig-name">GetStopReason</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetStopReason(SBThread self) -&gt; lldb::StopReason</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetStopReason">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#GetStopReasonDataCount" class="summary-sig-name">GetStopReasonDataCount</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetStopReasonDataCount(SBThread self) -&gt; size_t</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetStopReasonDataCount">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#GetStopReasonDataAtIndex" class="summary-sig-name">GetStopReasonDataAtIndex</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      GetStopReasonDataAtIndex(SBThread self, uint32_t idx) -&gt; uint64_t</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetStopReasonDataAtIndex">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#GetStopReasonExtendedInfoAsJSON" class="summary-sig-name">GetStopReasonExtendedInfoAsJSON</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      Collects a thread's stop reason extended information dictionary and 
+      prints it into the SBStream in a JSON format.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetStopReasonExtendedInfoAsJSON">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#GetStopReasonExtendedBacktraces" class="summary-sig-name">GetStopReasonExtendedBacktraces</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      Returns a collection of historical stack traces that are significant 
+      to the current stop reason.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetStopReasonExtendedBacktraces">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetStopDescription"></a><span class="summary-sig-name">GetStopDescription</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      Pass only an (int)length and expect to get a Python string describing
+      the stop reason.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetStopDescription">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetStopReturnValue"></a><span class="summary-sig-name">GetStopReturnValue</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetStopReturnValue(SBThread self) -&gt; SBValue</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetStopReturnValue">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#GetThreadID" class="summary-sig-name">GetThreadID</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Returns a unique thread identifier (type lldb::tid_t, typically a 
+      64-bit type) for the current SBThread that will remain constant 
+      throughout the thread's lifetime in this process and will not be 
+      reused by another thread during this process lifetime.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetThreadID">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#GetIndexID" class="summary-sig-name">GetIndexID</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Return the index number for this SBThread.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetIndexID">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetName"></a><span class="summary-sig-name">GetName</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetName(SBThread self) -&gt; str const *</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetName">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#GetQueueName" class="summary-sig-name">GetQueueName</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Return the queue name associated with this thread, if any, as a str.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetQueueName">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#GetQueueID" class="summary-sig-name">GetQueueID</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Return the dispatch_queue_id for this thread, if any, as a 
+      lldb::queue_id_t.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetQueueID">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#GetInfoItemByPathAsString" class="summary-sig-name">GetInfoItemByPathAsString</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      Takes a path string and a SBStream reference as parameters, returns a
+      bool.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetInfoItemByPathAsString">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#GetQueue" class="summary-sig-name">GetQueue</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Return the SBQueue for this thread.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetQueue">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="StepOver"></a><span class="summary-sig-name">StepOver</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      StepOver(SBThread self, lldb::RunMode 
+      stop_other_threads=eOnlyDuringStepping) StepOver(SBThread self)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.StepOver">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#StepInto" class="summary-sig-name">StepInto</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      StepInto(SBThread self, lldb::RunMode stop_other_threads=eOnlyDuringStepping)
+StepInto(SBThread self)
+StepInto(SBThread self, str const * target_name, lldb::RunMode stop_other_threads=eOnlyDuringStepping)
+StepInto(SBThread self, str const * target_name)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.StepInto">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="StepOut"></a><span class="summary-sig-name">StepOut</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      StepOut(SBThread self)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.StepOut">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="StepOutOfFrame"></a><span class="summary-sig-name">StepOutOfFrame</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      StepOutOfFrame(SBThread self, SBFrame frame)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.StepOutOfFrame">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="StepInstruction"></a><span class="summary-sig-name">StepInstruction</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      StepInstruction(SBThread self, bool step_over)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.StepInstruction">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="StepOverUntil"></a><span class="summary-sig-name">StepOverUntil</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      StepOverUntil(SBThread self, SBFrame frame, SBFileSpec file_spec, 
+      uint32_t line) -&gt; SBError</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.StepOverUntil">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="StepUsingScriptedThreadPlan"></a><span class="summary-sig-name">StepUsingScriptedThreadPlan</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      StepUsingScriptedThreadPlan(SBThread self, str const * 
+      script_class_name) -&gt; SBError StepUsingScriptedThreadPlan(SBThread
+      self, str const * script_class_name, bool resume_immediately) -&gt; 
+      SBError</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.StepUsingScriptedThreadPlan">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="JumpToLine"></a><span class="summary-sig-name">JumpToLine</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      JumpToLine(SBThread self, SBFileSpec file_spec, uint32_t line) -&gt; 
+      SBError</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.JumpToLine">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="RunToAddress"></a><span class="summary-sig-name">RunToAddress</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      RunToAddress(SBThread self, lldb::addr_t addr)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.RunToAddress">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#ReturnFromFrame" class="summary-sig-name">ReturnFromFrame</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      Force a return from the frame passed in (and any frames younger than 
+      it) without executing any more code in those frames.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.ReturnFromFrame">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#UnwindInnermostExpression" class="summary-sig-name">UnwindInnermostExpression</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Unwind the stack frames from the innermost expression evaluation.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.UnwindInnermostExpression">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#Suspend" class="summary-sig-name">Suspend</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Suspend(SBThread self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.Suspend">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="Resume"></a><span class="summary-sig-name">Resume</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      Resume(SBThread self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.Resume">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="IsSuspended"></a><span class="summary-sig-name">IsSuspended</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      IsSuspended(SBThread self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.IsSuspended">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="IsStopped"></a><span class="summary-sig-name">IsStopped</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      IsStopped(SBThread self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.IsStopped">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetNumFrames"></a><span class="summary-sig-name">GetNumFrames</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetNumFrames(SBThread self) -&gt; uint32_t</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetNumFrames">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetFrameAtIndex"></a><span class="summary-sig-name">GetFrameAtIndex</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      GetFrameAtIndex(SBThread self, uint32_t idx) -&gt; SBFrame</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetFrameAtIndex">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetSelectedFrame"></a><span class="summary-sig-name">GetSelectedFrame</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetSelectedFrame(SBThread self) -&gt; SBFrame</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetSelectedFrame">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetSelectedFrame"></a><span class="summary-sig-name">SetSelectedFrame</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      SetSelectedFrame(SBThread self, uint32_t frame_idx) -&gt; SBFrame</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.SetSelectedFrame">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetProcess"></a><span class="summary-sig-name">GetProcess</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetProcess(SBThread self) -&gt; SBProcess</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetProcess">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetDescription"></a><span class="summary-sig-name">GetDescription</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      GetDescription(SBThread self, SBStream description) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetDescription">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetStatus"></a><span class="summary-sig-name">GetStatus</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      GetStatus(SBThread self, SBStream status) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetStatus">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#GetExtendedBacktraceThread" class="summary-sig-name">GetExtendedBacktraceThread</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      Given an argument of str to specify the type of thread-origin 
+      extended backtrace to retrieve, query whether the origin of this 
+      thread is available.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetExtendedBacktraceThread">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#GetExtendedBacktraceOriginatingIndexID" class="summary-sig-name">GetExtendedBacktraceOriginatingIndexID</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Takes no arguments, returns a uint32_t.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetExtendedBacktraceOriginatingIndexID">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#SafeToCallFunctions" class="summary-sig-name">SafeToCallFunctions</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Takes no arguments, returns a bool.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.SafeToCallFunctions">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="get_frames_access_object"></a><span class="summary-sig-name">get_frames_access_object</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      An accessor function that returns a frames_access() object which 
+      allows lazy frame access from a lldb.SBThread object.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.get_frames_access_object">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="get_thread_frames"></a><span class="summary-sig-name">get_thread_frames</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      An accessor function that returns a list() that contains all frames 
+      in a lldb.SBThread object.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.get_thread_frames">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBThread-class.html#__str__" class="summary-sig-name">__str__</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      __str__(SBThread self) -&gt; PyObject *</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.__str__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__eq__"></a><span class="summary-sig-name">__eq__</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">rhs</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.__eq__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__ne__"></a><span class="summary-sig-name">__ne__</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">rhs</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.__ne__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>object</code></b>:
+      <code>__delattr__</code>,
+      <code>__format__</code>,
+      <code>__getattribute__</code>,
+      <code>__hash__</code>,
+      <code>__new__</code>,
+      <code>__reduce__</code>,
+      <code>__reduce_ex__</code>,
+      <code>__sizeof__</code>,
+      <code>__subclasshook__</code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== STATIC METHODS ==================== -->
+<a name="section-StaticMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Static Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-StaticMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">str const *</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetBroadcasterClassName"></a><span class="summary-sig-name">GetBroadcasterClassName</span>()</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetBroadcasterClassName">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="EventIsThreadEvent"></a><span class="summary-sig-name">EventIsThreadEvent</span>(<span class="summary-sig-arg">*args</span>)</span><br />
+      EventIsThreadEvent(SBEvent event) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.EventIsThreadEvent">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetStackFrameFromEvent"></a><span class="summary-sig-name">GetStackFrameFromEvent</span>(<span class="summary-sig-arg">*args</span>)</span><br />
+      GetStackFrameFromEvent(SBEvent event) -&gt; SBFrame</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetStackFrameFromEvent">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetThreadFromEvent"></a><span class="summary-sig-name">GetThreadFromEvent</span>(<span class="summary-sig-arg">*args</span>)</span><br />
+      GetThreadFromEvent(SBEvent event) -&gt; SBThread</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread.GetThreadFromEvent">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS VARIABLES ==================== -->
+<a name="section-ClassVariables"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Class Variables</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-ClassVariables"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="__swig_setmethods__"></a><span class="summary-name">__swig_setmethods__</span> = <code title="{}"><code class="variable-group">{</code><code class="variable-group">}</code></code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="__swig_getmethods__"></a><span class="summary-name">__swig_getmethods__</span> = <code title="{}">{}</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eBroadcastBitStackChanged"></a><span class="summary-name">eBroadcastBitStackChanged</span> = <code title="1">1</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eBroadcastBitThreadSuspended"></a><span class="summary-name">eBroadcastBitThreadSuspended</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eBroadcastBitThreadResumed"></a><span class="summary-name">eBroadcastBitThreadResumed</span> = <code title="4">4</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eBroadcastBitSelectedFrameChanged"></a><span class="summary-name">eBroadcastBitSelectedFrameChanged</span> = <code title="8">8</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eBroadcastBitThreadSelected"></a><span class="summary-name">eBroadcastBitThreadSelected</span> = <code title="16">16</code>
+    </td>
+  </tr>
+</table>
+<!-- ==================== PROPERTIES ==================== -->
+<a name="section-Properties"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Properties</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Properties"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBThread-class.html#frame" class="summary-name">frame</a><br />
+      A read only property that returns an object that can be used to 
+      access frames as an array (&quot;frame_12 = 
+      lldb.thread.frame[12]&quot;).
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBThread-class.html#frames" class="summary-name">frames</a><br />
+      A read only property that returns a list() of lldb.SBFrame objects 
+      for all frames in this thread.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBThread-class.html#id" class="summary-name">id</a><br />
+      A read only property that returns the thread ID as an integer.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBThread-class.html#idx" class="summary-name">idx</a><br />
+      A read only property that returns the thread index ID as an integer.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBThread-class.html#is_stopped" class="summary-name">is_stopped</a><br />
+      A read only property that returns a boolean value that indicates if 
+      this thread is stopped but not exited.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBThread-class.html#is_suspended" class="summary-name">is_suspended</a><br />
+      A read only property that returns a boolean value that indicates if 
+      this thread is suspended.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBThread-class.html#name" class="summary-name">name</a><br />
+      A read only property that returns the name of this thread as a 
+      string.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBThread-class.html#num_frames" class="summary-name">num_frames</a><br />
+      A read only property that returns the number of stack frames in this 
+      thread as an integer.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBThread-class.html#process" class="summary-name">process</a><br />
+      A read only property that returns an lldb object that represents the 
+      process (lldb.SBProcess) that owns this thread.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBThread-class.html#queue" class="summary-name">queue</a><br />
+      A read only property that returns the dispatch queue name of this 
+      thread as a string.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBThread-class.html#queue_id" class="summary-name">queue_id</a><br />
+      A read only property that returns the dispatch queue id of this 
+      thread as an integer.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBThread-class.html#return_value" class="summary-name">return_value</a><br />
+      A read only property that returns an lldb object that represents the 
+      return value from the last stop (lldb.SBValue) if we just stopped due
+      to stepping out of a function.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBThread-class.html#stop_reason" class="summary-name">stop_reason</a><br />
+      A read only property that returns an lldb enumeration value (see 
+      enumerations that start with &quot;lldb.eStopReason&quot;) that 
+      represents the reason this thread stopped.
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>object</code></b>:
+      <code>__class__</code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== METHOD DETAILS ==================== -->
+<a name="section-MethodDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Method Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-MethodDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="__setattr__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__setattr__</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">name</span>,
+        <span class="sig-arg">value</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.__setattr__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>x.__setattr__('name', value) &lt;==&gt; x.name = value</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__setattr__
+        <dd><em class="note">(inherited documentation)</em></dd>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="__repr__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__repr__</span>(<span class="sig-arg">self</span>)</span>
+    <br /><em class="fname">(Representation operator)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#_swig_repr">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>repr(x)</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__repr__
+        <dd><em class="note">(inherited documentation)</em></dd>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="__init__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__init__</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">*args</span>)</span>
+    <br /><em class="fname">(Constructor)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.__init__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>__init__(lldb::SBThread self) -&gt; SBThread __init__(lldb::SBThread 
+  self, SBThread thread) -&gt; SBThread</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__init__
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="GetStopReasonDataCount"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">GetStopReasonDataCount</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.GetStopReasonDataCount">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>GetStopReasonDataCount(SBThread self) -&gt; size_t</p>
+  <p>Get the number of words associated with the stop reason. See also 
+  GetStopReasonDataAtIndex().</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="GetStopReasonDataAtIndex"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">GetStopReasonDataAtIndex</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">*args</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.GetStopReasonDataAtIndex">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>GetStopReasonDataAtIndex(SBThread self, uint32_t idx) -&gt; 
+  uint64_t</p>
+  <p>Get information associated with a stop reason.</p>
+  <p>Breakpoint stop reasons will have data that consists of pairs of 
+  breakpoint IDs followed by the breakpoint location IDs (they always come 
+  in pairs).</p>
+  <p>Stop Reason              Count Data Type ======================== 
+  ===== ========================================= eStopReasonNone          
+  0 eStopReasonTrace         0 eStopReasonBreakpoint    N     duple: 
+  {breakpoint id, location id} eStopReasonWatchpoint    1     watchpoint id
+  eStopReasonSignal        1     unix signal number eStopReasonException
+  N     exception data eStopReasonExec          0 eStopReasonPlanComplete  
+  0</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="GetStopReasonExtendedInfoAsJSON"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">GetStopReasonExtendedInfoAsJSON</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">*args</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.GetStopReasonExtendedInfoAsJSON">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Collects a thread's stop reason extended information dictionary and 
+  prints it into the SBStream in a JSON format. The format of this JSON 
+  dictionary depends on the stop reason and is currently used only for 
+  instrumentation plugins.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="GetStopReasonExtendedBacktraces"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">GetStopReasonExtendedBacktraces</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">*args</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.GetStopReasonExtendedBacktraces">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns a collection of historical stack traces that are significant 
+  to the current stop reason. Used by ThreadSanitizer, where we provide 
+  various stack traces that were involved in a data race or other type of 
+  detected issue.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="GetThreadID"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">GetThreadID</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.GetThreadID">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns a unique thread identifier (type lldb::tid_t, typically a 
+  64-bit type) for the current SBThread that will remain constant 
+  throughout the thread's lifetime in this process and will not be reused 
+  by another thread during this process lifetime.  On Mac OS X systems, 
+  this is a system-wide unique thread identifier; this identifier is also 
+  used by other tools like sample which helps to associate data from those 
+  tools with lldb.  See related GetIndexID.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="GetIndexID"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">GetIndexID</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.GetIndexID">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Return the index number for this SBThread.  The index number is the 
+  same thing that a user gives as an argument to 'thread select' in the 
+  command line lldb. These numbers start at 1 (for the first thread lldb 
+  sees in a debug session) and increments up throughout the process 
+  lifetime.  An index number will not be reused for a different thread 
+  later in a process - thread 1 will always be associated with the same 
+  thread.  See related GetThreadID. This method returns a uint32_t index 
+  number, takes no arguments.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="GetQueueName"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">GetQueueName</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.GetQueueName">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Return the queue name associated with this thread, if any, as a str. 
+  For example, with a libdispatch (aka Grand Central Dispatch) queue.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="GetQueueID"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">GetQueueID</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.GetQueueID">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Return the dispatch_queue_id for this thread, if any, as a 
+  lldb::queue_id_t. For example, with a libdispatch (aka Grand Central 
+  Dispatch) queue.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="GetInfoItemByPathAsString"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">GetInfoItemByPathAsString</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">*args</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.GetInfoItemByPathAsString">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Takes a path string and a SBStream reference as parameters, returns a 
+  bool. Collects the thread's 'info' dictionary from the remote system, 
+  uses the path argument to descend into the dictionary to an item of 
+  interest, and prints it into the SBStream in a natural format.  Return 
+  bool is to indicate if anything was printed into the stream (true) or not
+  (false).</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="GetQueue"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">GetQueue</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.GetQueue">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Return the SBQueue for this thread.  If this thread is not currently 
+  associated with a libdispatch queue, the SBQueue object's IsValid() 
+  method will return false. If this SBThread is actually a HistoryThread, 
+  we may be able to provide QueueID and QueueName, but not provide an 
+  SBQueue.  Those individual attributes may have been saved for the 
+  HistoryThread without enough information to reconstitute the entire 
+  SBQueue at that time. This method takes no arguments, returns an 
+  SBQueue.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="StepInto"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">StepInto</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">*args</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.StepInto">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <pre class="literalblock">
+
+StepInto(SBThread self, lldb::RunMode stop_other_threads=eOnlyDuringStepping)
+StepInto(SBThread self)
+StepInto(SBThread self, str const * target_name, lldb::RunMode stop_other_threads=eOnlyDuringStepping)
+StepInto(SBThread self, str const * target_name)
+
+    Step  the current thread from the current source line to the line given by end_line, stopping if
+    the thread steps into the function given by target_name.  If target_name is None, then stepping will stop
+    in any of the places we would normally stop.
+    
+
+    Step  the current thread from the current source line to the line given by end_line, stopping if
+    the thread steps into the function given by target_name.  If target_name is None, then stepping will stop
+    in any of the places we would normally stop.
+
+</pre>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="ReturnFromFrame"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">ReturnFromFrame</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">*args</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.ReturnFromFrame">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Force a return from the frame passed in (and any frames younger than 
+  it) without executing any more code in those frames.  If return_value 
+  contains a valid SBValue, that will be set as the return value from 
+  frame.  Note, at present only scalar return values are supported.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="UnwindInnermostExpression"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">UnwindInnermostExpression</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.UnwindInnermostExpression">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Unwind the stack frames from the innermost expression evaluation. This
+  API is equivalent to 'thread return -x'.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="Suspend"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">Suspend</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.Suspend">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Suspend(SBThread self) -&gt; bool</p>
+  <p>LLDB currently supports process centric debugging which means when any
+  thread in a process stops, all other threads are stopped. The Suspend() 
+  call here tells our process to suspend a thread and not let it run when 
+  the other threads in a process are allowed to run. So when 
+  SBProcess::Continue() is called, any threads that aren't suspended will 
+  be allowed to run. If any of the SBThread functions for stepping are 
+  called (StepOver, StepInto, StepOut, StepInstruction, RunToAddres), the 
+  thread will now be allowed to run and these functions will simply 
+  return.</p>
+  <p>Eventually we plan to add support for thread centric debugging where 
+  each thread is controlled individually and each thread would broadcast 
+  its state, but we haven't implemented this yet.</p>
+  <p>Likewise the SBThread::Resume() call will again allow the thread to 
+  run when the process is continued.</p>
+  <p>Suspend() and Resume() functions are not currently reference counted, 
+  if anyone has the need for them to be reference counted, please let us 
+  know.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="GetExtendedBacktraceThread"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">GetExtendedBacktraceThread</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">*args</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.GetExtendedBacktraceThread">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Given an argument of str to specify the type of thread-origin extended
+  backtrace to retrieve, query whether the origin of this thread is 
+  available.  An SBThread is retured; SBThread.IsValid will return true if 
+  an extended backtrace was available.  The returned SBThread is not a part
+  of the SBProcess' thread list and it cannot be manipulated like normal 
+  threads -- you cannot step or resume it, for instance -- it is intended 
+  to used primarily for generating a backtrace.  You may request the 
+  returned thread's own thread origin in turn.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="GetExtendedBacktraceOriginatingIndexID"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">GetExtendedBacktraceOriginatingIndexID</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.GetExtendedBacktraceOriginatingIndexID">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Takes no arguments, returns a uint32_t. If this SBThread is an 
+  ExtendedBacktrace thread, get the IndexID of the original thread that 
+  this ExtendedBacktrace thread represents, if available.  The thread that 
+  was running this backtrace in the past may not have been registered with 
+  lldb's thread index (if it was created, did its work, and was destroyed 
+  without lldb ever stopping execution). In that case, this 
+  ExtendedBacktrace thread's IndexID will be returned.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="SafeToCallFunctions"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">SafeToCallFunctions</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.SafeToCallFunctions">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Takes no arguments, returns a bool. lldb may be able to detect that 
+  function calls should not be executed on a given thread at a particular 
+  point in time.  It is recommended that this is checked before performing 
+  an inferior function call on a given thread.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="__str__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__str__</span>(<span class="sig-arg">self</span>)</span>
+    <br /><em class="fname">(Informal representation operator)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBThread.__str__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>__str__(SBThread self) -&gt; PyObject *</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__str__
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== PROPERTY DETAILS ==================== -->
+<a name="section-PropertyDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Property Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-PropertyDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="frame"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">frame</h3>
+  <p>A read only property that returns an object that can be used to access
+  frames as an array (&quot;frame_12 = lldb.thread.frame[12]&quot;).</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBThread-class.html#get_frames_access_object" class="summary-sig-name">get_frames_access_object</a>(<span class="summary-sig-arg">self</span>)</span>
+        - An accessor function that returns a frames_access() object which 
+      allows lazy frame access from a lldb.SBThread object.
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="frames"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">frames</h3>
+  <p>A read only property that returns a list() of lldb.SBFrame objects for
+  all frames in this thread.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBThread-class.html#get_thread_frames" class="summary-sig-name">get_thread_frames</a>(<span class="summary-sig-arg">self</span>)</span>
+        - An accessor function that returns a list() that contains all frames 
+      in a lldb.SBThread object.
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="id"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">id</h3>
+  <p>A read only property that returns the thread ID as an integer.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBThread-class.html#GetThreadID" class="summary-sig-name">GetThreadID</a>(<span class="summary-sig-arg">self</span>)</span>
+        - Returns a unique thread identifier (type lldb::tid_t, typically a 
+      64-bit type) for the current SBThread that will remain constant 
+      throughout the thread's lifetime in this process and will not be 
+      reused by another thread during this process lifetime.
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="idx"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">idx</h3>
+  <p>A read only property that returns the thread index ID as an integer. 
+  Thread index ID values start at 1 and increment as threads come and go 
+  and can be used to uniquely identify threads.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBThread-class.html#GetIndexID" class="summary-sig-name">GetIndexID</a>(<span class="summary-sig-arg">self</span>)</span>
+        - Return the index number for this SBThread.
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="is_stopped"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">is_stopped</h3>
+  <p>A read only property that returns a boolean value that indicates if 
+  this thread is stopped but not exited.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBThread-class.html#IsStopped" class="summary-sig-name">IsStopped</a>(<span class="summary-sig-arg">self</span>)</span>
+        - IsStopped(SBThread self) -&gt; bool
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="is_suspended"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">is_suspended</h3>
+  <p>A read only property that returns a boolean value that indicates if 
+  this thread is suspended.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBThread-class.html#IsSuspended" class="summary-sig-name">IsSuspended</a>(<span class="summary-sig-arg">self</span>)</span>
+        - IsSuspended(SBThread self) -&gt; bool
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="name"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">name</h3>
+  <p>A read only property that returns the name of this thread as a 
+  string.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBThread-class.html#GetName" class="summary-sig-name">GetName</a>(<span class="summary-sig-arg">self</span>)</span>
+        - GetName(SBThread self) -&gt; str const *
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="num_frames"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">num_frames</h3>
+  <p>A read only property that returns the number of stack frames in this 
+  thread as an integer.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBThread-class.html#GetNumFrames" class="summary-sig-name">GetNumFrames</a>(<span class="summary-sig-arg">self</span>)</span>
+        - GetNumFrames(SBThread self) -&gt; uint32_t
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="process"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">process</h3>
+  <p>A read only property that returns an lldb object that represents the 
+  process (lldb.SBProcess) that owns this thread.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBThread-class.html#GetProcess" class="summary-sig-name">GetProcess</a>(<span class="summary-sig-arg">self</span>)</span>
+        - GetProcess(SBThread self) -&gt; SBProcess
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="queue"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">queue</h3>
+  <p>A read only property that returns the dispatch queue name of this 
+  thread as a string.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBThread-class.html#GetQueueName" class="summary-sig-name">GetQueueName</a>(<span class="summary-sig-arg">self</span>)</span>
+        - Return the queue name associated with this thread, if any, as a str.
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="queue_id"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">queue_id</h3>
+  <p>A read only property that returns the dispatch queue id of this thread
+  as an integer.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBThread-class.html#GetQueueID" class="summary-sig-name">GetQueueID</a>(<span class="summary-sig-arg">self</span>)</span>
+        - Return the dispatch_queue_id for this thread, if any, as a 
+      lldb::queue_id_t.
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="return_value"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">return_value</h3>
+  <p>A read only property that returns an lldb object that represents the 
+  return value from the last stop (lldb.SBValue) if we just stopped due to 
+  stepping out of a function.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBThread-class.html#GetStopReturnValue" class="summary-sig-name">GetStopReturnValue</a>(<span class="summary-sig-arg">self</span>)</span>
+        - GetStopReturnValue(SBThread self) -&gt; SBValue
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="stop_reason"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">stop_reason</h3>
+  <p>A read only property that returns an lldb enumeration value (see 
+  enumerations that start with &quot;lldb.eStopReason&quot;) that 
+  represents the reason this thread stopped.</p>
+  <dl class="fields">
+    <dt>Get Method:</dt>
+    <dd class="value"><span class="summary-sig"><a href="lldb.SBThread-class.html#GetStopReason" class="summary-sig-name">GetStopReason</a>(<span class="summary-sig-arg">self</span>)</span>
+        - GetStopReason(SBThread self) -&gt; lldb::StopReason
+    </dd>
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a class="navbar" target="_top" href="http://lldb.llvm.org">LLDB python API</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Fri Oct 14 13:55:28 2016
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

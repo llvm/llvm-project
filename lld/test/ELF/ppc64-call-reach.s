@@ -65,23 +65,26 @@ test:
 # NEGOFFSET:  10010014:       bl .-33554432
 # NEGOFFSET:  10010024:       b  .+33554432
 
-# THUNK-LABEL: test:
-# THUNK: 10010014:       bl .+20
-# THUNK: 10010024:       b .+20
-
 # .branch_lt[0]
 # THUNK-LABEL: __long_branch_callee:
-# THUNK-NEXT: 10010028:       addis 12, 2, 1
+# THUNK-NEXT: 10010000:       addis 12, 2, 1
 # THUNK-NEXT:                 ld 12, -32768(12)
 # THUNK-NEXT:                 mtctr 12
 # THUNK-NEXT:                 bctr
 
 # .branch_lt[1]
 # THUNK-LABEL: __long_branch_tail_callee:
-# THUNK-NEXT: 10010038:       addis 12, 2, 1
+# THUNK-NEXT: 10010010:       addis 12, 2, 1
 # THUNK-NEXT:                 ld 12, -32760(12)
 # THUNK-NEXT:                 mtctr 12
 # THUNK-NEXT:                 bctr
+
+# Each call now branches to a thunk, and although it is printed as positive
+# the offset is interpreted as a signed 26 bit value so 67108812 is actually
+# -52.
+# THUNK-LABEL: test:
+# THUNK: 10010034:       bl .-52
+# THUNK: 10010044:       b .+67108812
 
 # The offset from the TOC to the .branch_lt section  is (-1 << 16) - 32768.
 #                Name             Type            Address          Off    Size

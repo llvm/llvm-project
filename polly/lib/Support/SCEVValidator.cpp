@@ -294,21 +294,6 @@ public:
     return Return;
   }
 
-  class ValidatorResult visitSMinExpr(const SCEVSMinExpr *Expr) {
-    ValidatorResult Return(SCEVType::INT);
-
-    for (int i = 0, e = Expr->getNumOperands(); i < e; ++i) {
-      ValidatorResult Op = visit(Expr->getOperand(i));
-
-      if (!Op.isValid())
-        return Op;
-
-      Return.merge(Op);
-    }
-
-    return Return;
-  }
-
   class ValidatorResult visitUMaxExpr(const SCEVUMaxExpr *Expr) {
     // We do not support unsigned max operations. If 'Expr' is constant during
     // Scop execution we treat this as a parameter, otherwise we bail out.
@@ -317,21 +302,6 @@ public:
 
       if (!Op.isConstant()) {
         LLVM_DEBUG(dbgs() << "INVALID: UMaxExpr has a non-constant operand");
-        return ValidatorResult(SCEVType::INVALID);
-      }
-    }
-
-    return ValidatorResult(SCEVType::PARAM, Expr);
-  }
-
-  class ValidatorResult visitUMinExpr(const SCEVUMinExpr *Expr) {
-    // We do not support unsigned min operations. If 'Expr' is constant during
-    // Scop execution we treat this as a parameter, otherwise we bail out.
-    for (int i = 0, e = Expr->getNumOperands(); i < e; ++i) {
-      ValidatorResult Op = visit(Expr->getOperand(i));
-
-      if (!Op.isConstant()) {
-        LLVM_DEBUG(dbgs() << "INVALID: UMinExpr has a non-constant operand");
         return ValidatorResult(SCEVType::INVALID);
       }
     }

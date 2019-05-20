@@ -573,9 +573,9 @@ namespace llvm {
     bool ParseCallBr(Instruction *&Inst, PerFunctionState &PFS);
 
     bool ParseUnaryOp(Instruction *&Inst, PerFunctionState &PFS, unsigned Opc,
-                      bool IsFP);
+                      unsigned OperandType);
     bool ParseArithmetic(Instruction *&Inst, PerFunctionState &PFS, unsigned Opc,
-                         bool IsFP);
+                         unsigned OperandType);
     bool ParseLogical(Instruction *&Inst, PerFunctionState &PFS, unsigned Opc);
     bool ParseCompare(Instruction *&Inst, PerFunctionState &PFS, unsigned Opc);
     bool ParseCast(Instruction *&Inst, PerFunctionState &PFS, unsigned Opc);

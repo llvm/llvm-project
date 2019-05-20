@@ -19,7 +19,6 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfDarwin
-    @skipIfLinux
     def test_lldbmi_executable_option_file(self):
         """Test that 'lldb-mi --interpreter %s' loads executable file."""
 
@@ -68,7 +67,6 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfDarwin
-    @skipIfLinux
     def test_lldbmi_executable_option_absolute_path(self):
         """Test that 'lldb-mi --interpreter %s' loads executable which is specified via absolute path."""
 

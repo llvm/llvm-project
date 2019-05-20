@@ -75,7 +75,17 @@ Status consumeObject(llvm::ArrayRef<uint8_t> &Buffer, const T *&Object) {
   return error;
 }
 
-llvm::ArrayRef<MemoryDescriptor> ParseMemoryList(llvm::ArrayRef<uint8_t> &data);
+// Reference:
+// https://msdn.microsoft.com/en-us/library/windows/desktop/ms680384(v=vs.85).aspx
+struct MinidumpMemoryDescriptor {
+  llvm::support::ulittle64_t start_of_memory_range;
+  LocationDescriptor memory;
+
+  static llvm::ArrayRef<MinidumpMemoryDescriptor>
+  ParseMemoryList(llvm::ArrayRef<uint8_t> &data);
+};
+static_assert(sizeof(MinidumpMemoryDescriptor) == 16,
+              "sizeof MinidumpMemoryDescriptor is not correct!");
 
 struct MinidumpMemoryDescriptor64 {
   llvm::support::ulittle64_t start_of_memory_range;
@@ -170,6 +180,25 @@ struct MinidumpMemoryInfo {
 
 static_assert(sizeof(MinidumpMemoryInfo) == 48,
               "sizeof MinidumpMemoryInfo is not correct!");
+
+// Reference:
+// https://msdn.microsoft.com/en-us/library/windows/desktop/ms680517(v=vs.85).aspx
+struct MinidumpThread {
+  llvm::support::ulittle32_t thread_id;
+  llvm::support::ulittle32_t suspend_count;
+  llvm::support::ulittle32_t priority_class;
+  llvm::support::ulittle32_t priority;
+  llvm::support::ulittle64_t teb;
+  MinidumpMemoryDescriptor stack;
+  LocationDescriptor thread_context;
+
+  static const MinidumpThread *Parse(llvm::ArrayRef<uint8_t> &data);
+
+  static llvm::ArrayRef<MinidumpThread>
+  ParseThreadList(llvm::ArrayRef<uint8_t> &data);
+};
+static_assert(sizeof(MinidumpThread) == 48,
+              "sizeof MinidumpThread is not correct!");
 
 // TODO misc2, misc3 ?
 // Reference:

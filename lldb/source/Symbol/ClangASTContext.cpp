@@ -951,7 +951,7 @@ public:
   }
 
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                        const clang::Diagnostic &info) override {
+                        const clang::Diagnostic &info) {
     if (m_log) {
       llvm::SmallVector<char, 32> diag_str(10);
       info.FormatDiagnostic(diag_str);
@@ -1415,14 +1415,7 @@ clang::Decl *ClangASTContext::CopyDecl(ASTContext *dst_ast, ASTContext *src_ast,
   FileManager file_manager(file_system_options);
   ASTImporter importer(*dst_ast, file_manager, *src_ast, file_manager, false);
 
-  if (llvm::Expected<clang::Decl *> ret_or_error =
-          importer.Import(source_decl)) {
-    return *ret_or_error;
-  } else {
-    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
-    LLDB_LOG_ERROR(log, ret_or_error.takeError(), "Couldn't import decl: {0}");
-    return nullptr;
-  }
+  return importer.Import(source_decl);
 }
 
 bool ClangASTContext::AreTypesSame(CompilerType type1, CompilerType type2,
@@ -4264,11 +4257,9 @@ ClangASTContext::GetMinimumLanguage(lldb::opaque_compiler_type_t type) {
   if (qual_type->isAnyPointerType()) {
     if (qual_type->isObjCObjectPointerType())
       return lldb::eLanguageTypeObjC;
-    if (qual_type->getPointeeCXXRecordDecl())
-      return lldb::eLanguageTypeC_plus_plus;
 
     clang::QualType pointee_type(qual_type->getPointeeType());
-    if (pointee_type->getPointeeCXXRecordDecl())
+    if (pointee_type->getPointeeCXXRecordDecl() != nullptr)
       return lldb::eLanguageTypeC_plus_plus;
     if (pointee_type->isObjCObjectOrInterfaceType())
       return lldb::eLanguageTypeObjC;
@@ -4475,8 +4466,6 @@ ClangASTContext::GetTypeClass(lldb::opaque_compiler_type_t type) {
     break;
 
   case clang::Type::DependentAddressSpace:
-    break;
-  case clang::Type::MacroQualified:
     break;
   }
   // We don't know hot to display this type...
@@ -5346,8 +5335,6 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
 
   case clang::Type::DependentAddressSpace:
     break;
-  case clang::Type::MacroQualified:
-    break;
   }
   count = 0;
   return lldb::eEncodingInvalid;
@@ -5514,8 +5501,6 @@ lldb::Format ClangASTContext::GetFormat(lldb::opaque_compiler_type_t type) {
     break;
 
   case clang::Type::DependentAddressSpace:
-    break;
-  case clang::Type::MacroQualified:
     break;
   }
   // We don't know hot to display this type...
@@ -8180,10 +8165,6 @@ clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
   if (is_artificial)
     return nullptr; // skip everything artificial
 
-  const clang::ExplicitSpecifier explicit_spec(
-      nullptr /*expr*/, is_explicit
-                            ? clang::ExplicitSpecKind::ResolvedTrue
-                            : clang::ExplicitSpecKind::ResolvedFalse);
   if (name[0] == '~') {
     cxx_dtor_decl = clang::CXXDestructorDecl::Create(
         *getASTContext(), cxx_record_decl, clang::SourceLocation(),
@@ -8202,7 +8183,7 @@ clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
             clang::SourceLocation()),
         method_qual_type,
         nullptr, // TypeSourceInfo *
-        explicit_spec, is_inline, is_artificial, false /*is_constexpr*/);
+        is_explicit, is_inline, is_artificial, false /*is_constexpr*/);
     cxx_method_decl = cxx_ctor_decl;
   } else {
     clang::StorageClass SC = is_static ? clang::SC_Static : clang::SC_None;
@@ -8237,7 +8218,7 @@ clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
                 clang::SourceLocation()),
             method_qual_type,
             nullptr, // TypeSourceInfo *
-            is_inline, explicit_spec, false /*is_constexpr*/,
+            is_inline, is_explicit, false /*is_constexpr*/,
             clang::SourceLocation());
       }
     }
