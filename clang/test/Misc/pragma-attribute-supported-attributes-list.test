@@ -111,7 +111,7 @@
 // CHECK-NEXT: ObjCRuntimeName (SubjectMatchRule_objc_interface, SubjectMatchRule_objc_protocol)
 // CHECK-NEXT: ObjCRuntimeVisible (SubjectMatchRule_objc_interface)
 // CHECK-NEXT: ObjCSubclassingRestricted (SubjectMatchRule_objc_interface)
-// CHECK-NEXT: OpenCLIntelReqdSubGroupSize (SubjectMatchRule_function)
+// CHECK-NEXT: OpenCLIntelReqdSubGroupSize (SubjectMatchRule_function, SubjectMatchRule_function_is_member)
 // CHECK-NEXT: OpenCLNoSVM (SubjectMatchRule_variable)
 // CHECK-NEXT: OptimizeNone (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: Overloadable (SubjectMatchRule_function)

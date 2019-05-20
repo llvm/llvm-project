@@ -299,6 +299,41 @@ public:
     }
   }
 
+  // Traverses over CallGraph to collect list of attributes applied to
+  // functions called by SYCLKernel (either directly and indirectly) which needs
+  // to be propagated down to callers and applied to SYCL kernels.
+  // For example, reqd_work_group_size, vec_len_hint, reqd_sub_group_size
+  // Attributes applied to SYCLKernel are also included
+  void CollectPossibleKernelAttributes(FunctionDecl *SYCLKernel,
+                                       llvm::SmallPtrSet<Attr *, 4> &Attrs) {
+    llvm::SmallPtrSet<FunctionDecl *, 16> Visited;
+    llvm::SmallVector<FunctionDecl *, 16> WorkList;
+    WorkList.push_back(SYCLKernel);
+
+    while (!WorkList.empty()) {
+      FunctionDecl *FD = WorkList.back();
+      WorkList.pop_back();
+      if (!Visited.insert(FD).second)
+        continue; // We've already seen this Decl
+
+      if (auto *A = FD->getAttr<OpenCLIntelReqdSubGroupSizeAttr>())
+        Attrs.insert(A);
+      // TODO: reqd_work_group_size, vec_len_hint should be handled here
+
+      CallGraphNode *N = SYCLCG.getNode(FD);
+      if (!N)
+        continue;
+
+      for (const CallGraphNode *CI : *N) {
+        if (auto *Callee = dyn_cast<FunctionDecl>(CI->getDecl())) {
+          Callee = Callee->getCanonicalDecl();
+          if (!Visited.count(Callee))
+            WorkList.push_back(Callee);
+        }
+      }
+    }
+  }
+
 private:
   bool CheckSYCLType(QualType Ty, SourceRange Loc) {
     if (Ty->isVariableArrayType()) {
@@ -951,6 +986,10 @@ void Sema::ConstructSYCLKernel(FunctionDecl *KernelCallerFunc) {
   populateIntHeader(getSyclIntegrationHeader(), Name, KernelNameType, LE);
   FunctionDecl *SYCLKernel =
       CreateSYCLKernelFunction(getASTContext(), Name, ParamDescs);
+
+  // Let's copy source location of a functor/lambda to emit nicer diagnostics
+  SYCLKernel->setLocation(LE->getLocation());
+
   CompoundStmt *SYCLKernelBody =
       CreateSYCLKernelBody(*this, KernelCallerFunc, SYCLKernel);
   SYCLKernel->setBody(SYCLKernelBody);
@@ -968,6 +1007,39 @@ void Sema::MarkDevice(void) {
     if (auto SYCLKernel = dyn_cast<FunctionDecl>(D)) {
       llvm::SmallPtrSet<FunctionDecl *, 10> VisitedSet;
       Marker.CollectKernelSet(SYCLKernel, SYCLKernel, VisitedSet);
+
+      // Let's propagate attributes from device functions to a SYCL kernels
+      llvm::SmallPtrSet<Attr *, 4> Attrs;
+      // This function collects all kernel attributes which might be applied to
+      // a device functions, but need to be propageted down to callers, i.e.
+      // SYCL kernels
+      Marker.CollectPossibleKernelAttributes(SYCLKernel, Attrs);
+      for (auto *A : Attrs) {
+        switch (A->getKind()) {
+          case attr::Kind::OpenCLIntelReqdSubGroupSize: {
+            auto *Attr = cast<OpenCLIntelReqdSubGroupSizeAttr>(A);
+            if (auto *Existing =
+                    SYCLKernel->getAttr<OpenCLIntelReqdSubGroupSizeAttr>()) {
+              if (Existing->getSubGroupSize() != Attr->getSubGroupSize()) {
+                Diag(SYCLKernel->getLocation(),
+                     diag::err_conflicting_sycl_kernel_attributes);
+                Diag(Existing->getLocation(), diag::note_conflicting_attribute);
+                Diag(Attr->getLocation(), diag::note_conflicting_attribute);
+                SYCLKernel->setInvalidDecl();
+              }
+            } else {
+              SYCLKernel->addAttr(A);
+            }
+            break;
+          }
+          // TODO: reqd_work_group_size, vec_len_hint should be handled here
+          default:
+            // Seeing this means that CollectPossibleKernelAttributes was
+            // updated while this switch wasn't...or something went wrong
+            llvm_unreachable("Unexpected attribute was collected by "
+                             "CollectPossibleKernelAttributes");
+        }
+      }
     }
   }
   for (const auto &elt : Marker.KernelSet) {

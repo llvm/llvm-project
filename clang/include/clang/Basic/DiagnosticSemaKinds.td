@@ -9730,4 +9730,6 @@ def note_sycl_used_here : Note<"used here">;
 def note_sycl_recursive_function_declared_here: Note<"function implemented using recursion declared here">;
 def err_sycl_non_std_layout_type : Error<
   "kernel parameter has non-standard layout class/struct type">;
+def err_conflicting_sycl_kernel_attributes : Error<
+  "conflicting attributes applied to a SYCL kernel">;
 } // end of sema component.
