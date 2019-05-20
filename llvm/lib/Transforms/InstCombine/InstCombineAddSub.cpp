@@ -1830,6 +1830,8 @@ static Instruction *foldFNegIntoConstant(Instruction &I) {
   // Fold negation into constant operand. This is limited with one-use because
   // fneg is assumed better for analysis and cheaper in codegen than fmul/fdiv.
   // -(X * C) --> X * (-C)
+  // FIXME: It's arguable whether these should be m_OneUse or not. The current
+  // belief is that the FNeg allows for better reassociation opportunities.
   if (match(&I, m_FNeg(m_OneUse(m_FMul(m_Value(X), m_Constant(C))))))
     return BinaryOperator::CreateFMulFMF(X, ConstantExpr::getFNeg(C), &I);
   // -(X / C) --> X / (-C)
