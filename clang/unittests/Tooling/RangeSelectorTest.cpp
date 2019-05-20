@@ -8,6 +8,7 @@
 
 #include "clang/Tooling/Refactoring/RangeSelector.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Frontend/ASTUnit.h"
 #include "clang/Tooling/FixIt.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Error.h"
@@ -31,7 +32,7 @@ using ::llvm::StringError;
 struct TestMatch {
   // The AST unit from which `result` is built. We bundle it because it backs
   // the result. Users are not expected to access it.
-  std::unique_ptr<ASTUnit> ASTUnit;
+  std::unique_ptr<clang::ASTUnit> ASTUnit;
   // The result to use in the test. References `ast_unit`.
   MatchResult Result;
 };
