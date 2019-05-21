@@ -37,6 +37,7 @@ class CanType;
 class DWARFImporter;
 class IRGenOptions;
 class NominalTypeDecl;
+class SearchPathOptions;
 class SILModule;
 class VarDecl;
 class ModuleDecl;
@@ -167,6 +168,10 @@ public:
 
   swift::SearchPathOptions &GetSearchPathOptions();
 
+  void InitializeSearchPathOptions(
+      llvm::ArrayRef<std::string> module_search_paths,
+      llvm::ArrayRef<std::pair<std::string, bool>> framework_search_paths);
+
   swift::ClangImporterOptions &GetClangImporterOptions();
 
   swift::CompilerInvocation &GetCompilerInvocation();
@@ -183,8 +188,6 @@ public:
   void SetGenerateDebugInfo(swift::IRGenDebugInfoLevel b);
 
   bool AddModuleSearchPath(llvm::StringRef path);
-
-  bool AddFrameworkSearchPath(llvm::StringRef path);
 
   bool AddClangArgument(std::string arg, bool unique = true);
 
@@ -206,13 +209,7 @@ public:
     m_platform_sdk_path = path;
   }
 
-  size_t GetNumModuleSearchPaths() const;
-
-  const char *GetModuleSearchPathAtIndex(size_t idx) const;
-
-  size_t GetNumFrameworkSearchPaths() const;
-
-  const char *GetFrameworkSearchPathAtIndex(size_t idx) const;
+  const swift::SearchPathOptions *GetSearchPathOptions() const;
 
   /// \return the ExtraArgs of the ClangImporterOptions.
   const std::vector<std::string> &GetClangArguments();
