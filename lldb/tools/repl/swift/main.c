@@ -50,7 +50,11 @@ REPL_MAIN() {
 }
 
 SWIFT_REPL_NOOPT
+#if defined(_WIN32)
+int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd) {
+#else
 int main() {
+#endif
 #ifdef __APPLE__
   // Force loading of libswiftCore.dylib, which is not linked at build time.
   dlopen("@rpath/libswiftCore.dylib", RTLD_LAZY);
