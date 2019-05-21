@@ -38,6 +38,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1082,12 +1083,26 @@ public:
         continue;
       }
 
+      // The blockaddress constant expression is a weird special case, we can't
+      // generically walk its operands the way we do for all other constants.
       if (BlockAddress *BA = dyn_cast<BlockAddress>(C)) {
-        // The blockaddress constant expression is a weird special case, we
-        // can't generically walk its operands the way we do for all other
-        // constants.
-        if (Visited.insert(BA->getFunction()).second)
-          Worklist.push_back(BA->getFunction());
+        // If we've already visited the function referred to by the block
+        // address, we don't need to revisit it.
+        if (Visited.count(BA->getFunction()))
+          continue;
+
+        // If all of the blockaddress' users are instructions within the
+        // referred to function, we don't need to insert a cycle.
+        if (llvm::all_of(BA->users(), [&](User *U) {
+              if (Instruction *I = dyn_cast<Instruction>(U))
+                return I->getFunction() == BA->getFunction();
+              return false;
+            }))
+          continue;
+
+        // Otherwise we should go visit the referred to function.
+        Visited.insert(BA->getFunction());
+        Worklist.push_back(BA->getFunction());
         continue;
       }
 

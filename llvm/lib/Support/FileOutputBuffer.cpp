@@ -75,20 +75,22 @@ private:
 // output file on commit(). This is used only when we cannot use OnDiskBuffer.
 class InMemoryBuffer : public FileOutputBuffer {
 public:
-  InMemoryBuffer(StringRef Path, MemoryBlock Buf, unsigned Mode)
-      : FileOutputBuffer(Path), Buffer(Buf), Mode(Mode) {}
+  InMemoryBuffer(StringRef Path, MemoryBlock Buf, std::size_t BufSize,
+                 unsigned Mode)
+      : FileOutputBuffer(Path), Buffer(Buf), BufferSize(BufSize),
+        Mode(Mode) {}
 
   uint8_t *getBufferStart() const override { return (uint8_t *)Buffer.base(); }
 
   uint8_t *getBufferEnd() const override {
-    return (uint8_t *)Buffer.base() + Buffer.size();
+    return (uint8_t *)Buffer.base() + BufferSize;
   }
 
-  size_t getBufferSize() const override { return Buffer.size(); }
+  size_t getBufferSize() const override { return BufferSize; }
 
   Error commit() override {
     if (FinalPath == "-") {
-      llvm::outs() << StringRef((const char *)Buffer.base(), Buffer.size());
+      llvm::outs() << StringRef((const char *)Buffer.base(), BufferSize);
       llvm::outs().flush();
       return Error::success();
     }
@@ -100,12 +102,14 @@ public:
             openFileForWrite(FinalPath, FD, CD_CreateAlways, OF_None, Mode))
       return errorCodeToError(EC);
     raw_fd_ostream OS(FD, /*shouldClose=*/true, /*unbuffered=*/true);
-    OS << StringRef((const char *)Buffer.base(), Buffer.size());
+    OS << StringRef((const char *)Buffer.base(), BufferSize);
     return Error::success();
   }
 
 private:
+  // Buffer may actually contain a larger memory block than BufferSize
   OwningMemoryBlock Buffer;
+  size_t BufferSize;
   unsigned Mode;
 };
 } // namespace
@@ -117,7 +121,7 @@ createInMemoryBuffer(StringRef Path, size_t Size, unsigned Mode) {
       Size, nullptr, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
   if (EC)
     return errorCodeToError(EC);
-  return llvm::make_unique<InMemoryBuffer>(Path, MB, Mode);
+  return llvm::make_unique<InMemoryBuffer>(Path, MB, Size, Mode);
 }
 
 static Expected<std::unique_ptr<FileOutputBuffer>>

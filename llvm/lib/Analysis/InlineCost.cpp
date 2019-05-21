@@ -1830,14 +1830,18 @@ InlineResult CallAnalyzer::analyzeCall(CallBase &Call) {
     if (BB->empty())
       continue;
 
-    // Disallow inlining a blockaddress. A blockaddress only has defined
-    // behavior for an indirect branch in the same function, and we do not
-    // currently support inlining indirect branches. But, the inliner may not
-    // see an indirect branch that ends up being dead code at a particular call
-    // site. If the blockaddress escapes the function, e.g., via a global
-    // variable, inlining may lead to an invalid cross-function reference.
+    // Disallow inlining a blockaddress with uses other than strictly callbr.
+    // A blockaddress only has defined behavior for an indirect branch in the
+    // same function, and we do not currently support inlining indirect
+    // branches.  But, the inliner may not see an indirect branch that ends up
+    // being dead code at a particular call site. If the blockaddress escapes
+    // the function, e.g., via a global variable, inlining may lead to an
+    // invalid cross-function reference.
+    // FIXME: pr/39560: continue relaxing this overt restriction.
     if (BB->hasAddressTaken())
-      return "blockaddress";
+      for (User *U : BlockAddress::get(&*BB)->users())
+        if (!isa<CallBrInst>(*U))
+          return "blockaddress used outside of callbr";
 
     // Analyze the cost of this block. If we blow through the threshold, this
     // returns false, and we can bail on out.
@@ -2081,13 +2085,16 @@ InlineCost llvm::getInlineCost(
 InlineResult llvm::isInlineViable(Function &F) {
   bool ReturnsTwice = F.hasFnAttribute(Attribute::ReturnsTwice);
   for (Function::iterator BI = F.begin(), BE = F.end(); BI != BE; ++BI) {
-    // Disallow inlining of functions which contain indirect branches or
-    // blockaddresses.
+    // Disallow inlining of functions which contain indirect branches.
     if (isa<IndirectBrInst>(BI->getTerminator()))
       return "contains indirect branches";
 
+    // Disallow inlining of blockaddresses which are used by non-callbr
+    // instructions.
     if (BI->hasAddressTaken())
-      return "uses block address";
+      for (User *U : BlockAddress::get(&*BI)->users())
+        if (!isa<CallBrInst>(*U))
+          return "blockaddress used outside of callbr";
 
     for (auto &II : *BI) {
       CallBase *Call = dyn_cast<CallBase>(&II);

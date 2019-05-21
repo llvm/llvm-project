@@ -8040,9 +8040,18 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     ExtraInfo.update(T);
   }
 
+
   // We won't need to flush pending loads if this asm doesn't touch
   // memory and is nonvolatile.
   SDValue Flag, Chain = (HasSideEffect) ? getRoot() : DAG.getRoot();
+
+  bool IsCallBr = isa<CallBrInst>(CS.getInstruction());
+  if (IsCallBr) {
+    // If this is a callbr we need to flush pending exports since inlineasm_br
+    // is a terminator. We need to do this before nodes are glued to
+    // the inlineasm_br node.
+    Chain = getControlRoot();
+  }
 
   // Second pass over the constraints: compute which constraint option to use.
   for (SDISelAsmOperandInfo &OpInfo : ConstraintOperands) {
@@ -8300,8 +8309,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
   AsmNodeOperands[InlineAsm::Op_InputChain] = Chain;
   if (Flag.getNode()) AsmNodeOperands.push_back(Flag);
 
-  unsigned ISDOpc = isa<CallBrInst>(CS.getInstruction()) ? ISD::INLINEASM_BR
-                                                         : ISD::INLINEASM;
+  unsigned ISDOpc = IsCallBr ? ISD::INLINEASM_BR : ISD::INLINEASM;
   Chain = DAG.getNode(ISDOpc, getCurSDLoc(),
                       DAG.getVTList(MVT::Other, MVT::Glue), AsmNodeOperands);
   Flag = Chain.getValue(1);
@@ -8410,7 +8418,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     Chain = DAG.getNode(ISD::TokenFactor, getCurSDLoc(), MVT::Other, OutChains);
 
   // Only Update Root if inline assembly has a memory effect.
-  if (ResultValues.empty() || HasSideEffect || !OutChains.empty())
+  if (ResultValues.empty() || HasSideEffect || !OutChains.empty() || IsCallBr)
     DAG.setRoot(Chain);
 }
 

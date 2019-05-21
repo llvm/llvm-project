@@ -3434,7 +3434,7 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       }
     }
 
-    // Check comparison of constant with minnum with smaller constant.
+    // Check comparison of [minnum/maxnum with constant] with other constant.
     const APFloat *C2;
     if ((match(LHS, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_APFloat(C2))) &&
          C2->compare(*C) == APFloat::cmpLessThan) ||
