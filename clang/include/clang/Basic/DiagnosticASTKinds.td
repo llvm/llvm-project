@@ -115,7 +115,8 @@ def note_constexpr_lifetime_ended : Note<
 def note_constexpr_access_uninit : Note<
   "%select{read of|assignment to|increment of|decrement of|member call on|"
   "dynamic_cast of|typeid applied to}0 "
-  "object outside its lifetime is not allowed in a constant expression">;
+  "%select{object outside its lifetime|uninitialized object}1 "
+  "is not allowed in a constant expression">;
 def note_constexpr_use_uninit_reference : Note<
   "use of reference outside its lifetime "
   "is not allowed in a constant expression">;

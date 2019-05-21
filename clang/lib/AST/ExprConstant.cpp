@@ -1291,7 +1291,7 @@ APValue &CallStackFrame::createTemporary(const void *Key,
                                          bool IsLifetimeExtended) {
   unsigned Version = Info.CurrentCall->getTempVersion();
   APValue &Result = Temporaries[MapKeyTy(Key, Version)];
-  assert(Result.isUninit() && "temporary created multiple times");
+  assert(Result.isAbsent() && "temporary created multiple times");
   Info.CleanupStack.push_back(Cleanup(&Result, IsLifetimeExtended));
   return Result;
 }
@@ -2025,7 +2025,7 @@ static bool
 CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc, QualType Type,
                         const APValue &Value,
                         Expr::ConstExprUsage Usage = Expr::EvaluateForCodeGen) {
-  if (Value.isUninit()) {
+  if (!Value.hasValue()) {
     Info.FFDiag(DiagLoc, diag::note_constexpr_uninitialized)
       << true << Type;
     return false;
@@ -2108,7 +2108,8 @@ static bool EvalPointerValueAsBool(const APValue &Value, bool &Result) {
 
 static bool HandleConversionToBool(const APValue &Val, bool &Result) {
   switch (Val.getKind()) {
-  case APValue::Uninitialized:
+  case APValue::None:
+  case APValue::Indeterminate:
     return false;
   case APValue::Int:
     Result = Val.getInt().getBoolValue();
@@ -2971,10 +2972,10 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
 
   // Walk the designator's path to find the subobject.
   for (unsigned I = 0, N = Sub.Entries.size(); /**/; ++I) {
-    if (O->isUninit()) {
+    if (!O->hasValue()) {
       if (!Info.checkingPotentialConstantExpression())
         Info.FFDiag(E, diag::note_constexpr_access_uninit)
-            << handler.AccessKind;
+            << handler.AccessKind << O->isIndeterminate();
       return handler.failed();
     }
 
@@ -5040,7 +5041,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
   }
 
   // Reserve space for the struct members.
-  if (!RD->isUnion() && Result.isUninit())
+  if (!RD->isUnion() && !Result.hasValue())
     Result = APValue(APValue::UninitStruct(), RD->getNumBases(),
                      std::distance(RD->field_begin(), RD->field_end()));
 
@@ -5097,7 +5098,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
         // subobject other than the first.
         // FIXME: In this case, the values of the other subobjects are
         // specified, since zero-initialization sets all padding bits to zero.
-        if (Value->isUninit() ||
+        if (!Value->hasValue() ||
             (Value->isUnion() && Value->getUnionField() != FD)) {
           if (CD->isUnion())
             *Value = APValue(FD);
@@ -5953,7 +5954,9 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
   APValue *V;
   if (!evaluateVarDeclInit(Info, E, VD, Frame, V, nullptr))
     return false;
-  if (V->isUninit()) {
+  if (!V->hasValue()) {
+    // FIXME: Is it possible for V to be indeterminate here? If so, we should
+    // adjust the diagnostic to say that.
     if (!Info.checkingPotentialConstantExpression())
       Info.FFDiag(E, diag::note_constexpr_use_uninit_reference);
     return false;
@@ -7217,7 +7220,7 @@ bool RecordExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
     return EvaluateInPlace(Result.getUnionValue(), Info, Subobject, InitExpr);
   }
 
-  if (Result.isUninit())
+  if (!Result.hasValue())
     Result = APValue(APValue::UninitStruct(), CXXRD ? CXXRD->getNumBases() : 0,
                      std::distance(RD->field_begin(), RD->field_end()));
   unsigned ElementNo = 0;
@@ -7294,7 +7297,7 @@ bool RecordExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
   bool ZeroInit = E->requiresZeroInitialization();
   if (CheckTrivialDefaultConstructor(Info, E->getExprLoc(), FD, ZeroInit)) {
     // If we've already performed zero-initialization, we're already done.
-    if (!Result.isUninit())
+    if (Result.hasValue())
       return true;
 
     // We can get here in two different ways:
@@ -7794,7 +7797,7 @@ bool ArrayExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
 
   // If the array was previously zero-initialized, preserve the
   // zero-initialized values.
-  if (!Filler.isUninit()) {
+  if (Filler.hasValue()) {
     for (unsigned I = 0, E = Result.getArrayInitializedElts(); I != E; ++I)
       Result.getArrayInitializedElt(I) = Filler;
     if (Result.hasArrayFiller())
@@ -7863,7 +7866,7 @@ bool ArrayExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
                                                const LValue &Subobject,
                                                APValue *Value,
                                                QualType Type) {
-  bool HadZeroInit = !Value->isUninit();
+  bool HadZeroInit = Value->hasValue();
 
   if (const ConstantArrayType *CAT = Info.Ctx.getAsConstantArrayType(Type)) {
     unsigned N = CAT->getSize().getZExtValue();
@@ -8427,7 +8430,7 @@ static bool EvaluateBuiltinConstantP(EvalInfo &Info, const Expr *Arg) {
       return EvaluateBuiltinConstantPForLValue(V);
 
     // Otherwise, any constant value is good enough.
-    return V.getKind() != APValue::Uninitialized;
+    return V.hasValue();
   }
 
   // Anything else isn't considered to be sufficiently constant.
