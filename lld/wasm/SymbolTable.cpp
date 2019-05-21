@@ -198,17 +198,6 @@ DefinedFunction *SymbolTable::addSyntheticFunction(StringRef Name,
                                         Flags, nullptr, Function);
 }
 
-DefinedData *SymbolTable::addOptionalDataSymbol(StringRef Name, uint32_t Value,
-                                                uint32_t Flags) {
-  Symbol *S = find(Name);
-  if (!S || S->isDefined())
-    return nullptr;
-  LLVM_DEBUG(dbgs() << "addOptionalDataSymbol: " << Name << "\n");
-  auto *rtn = replaceSymbol<DefinedData>(S, Name, Flags);
-  rtn->setVirtualAddress(Value);
-  return rtn;
-}
-
 DefinedData *SymbolTable::addSyntheticDataSymbol(StringRef Name,
                                                  uint32_t Flags) {
   LLVM_DEBUG(dbgs() << "addSyntheticDataSymbol: " << Name << "\n");
