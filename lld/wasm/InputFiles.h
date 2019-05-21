@@ -19,6 +19,10 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include <vector>
 
+namespace llvm {
+class TarWriter;
+}
+
 namespace lld {
 namespace wasm {
 
@@ -28,6 +32,10 @@ class InputSegment;
 class InputGlobal;
 class InputEvent;
 class InputSection;
+
+// If --reproduce option is given, all input files are written
+// to this tar archive.
+extern std::unique_ptr<llvm::TarWriter> Tar;
 
 class InputFile {
 public:
