@@ -4233,8 +4233,8 @@ public:
   }
 };
 
-/// Represents a reference to a function parameter pack that has been
-/// substituted but not yet expanded.
+/// Represents a reference to a function parameter pack or init-capture pack
+/// that has been substituted but not yet expanded.
 ///
 /// When a pack expansion contains multiple parameter packs at different levels,
 /// this node is used to represent a function parameter pack at an outer level
@@ -4249,13 +4249,13 @@ public:
 /// \endcode
 class FunctionParmPackExpr final
     : public Expr,
-      private llvm::TrailingObjects<FunctionParmPackExpr, ParmVarDecl *> {
+      private llvm::TrailingObjects<FunctionParmPackExpr, VarDecl *> {
   friend class ASTReader;
   friend class ASTStmtReader;
   friend TrailingObjects;
 
   /// The function parameter pack which was referenced.
-  ParmVarDecl *ParamPack;
+  VarDecl *ParamPack;
 
   /// The location of the function parameter pack reference.
   SourceLocation NameLoc;
@@ -4263,35 +4263,35 @@ class FunctionParmPackExpr final
   /// The number of expansions of this pack.
   unsigned NumParameters;
 
-  FunctionParmPackExpr(QualType T, ParmVarDecl *ParamPack,
+  FunctionParmPackExpr(QualType T, VarDecl *ParamPack,
                        SourceLocation NameLoc, unsigned NumParams,
-                       ParmVarDecl *const *Params);
+                       VarDecl *const *Params);
 
 public:
   static FunctionParmPackExpr *Create(const ASTContext &Context, QualType T,
-                                      ParmVarDecl *ParamPack,
+                                      VarDecl *ParamPack,
                                       SourceLocation NameLoc,
-                                      ArrayRef<ParmVarDecl *> Params);
+                                      ArrayRef<VarDecl *> Params);
   static FunctionParmPackExpr *CreateEmpty(const ASTContext &Context,
                                            unsigned NumParams);
 
   /// Get the parameter pack which this expression refers to.
-  ParmVarDecl *getParameterPack() const { return ParamPack; }
+  VarDecl *getParameterPack() const { return ParamPack; }
 
   /// Get the location of the parameter pack.
   SourceLocation getParameterPackLocation() const { return NameLoc; }
 
   /// Iterators over the parameters which the parameter pack expanded
   /// into.
-  using iterator = ParmVarDecl * const *;
-  iterator begin() const { return getTrailingObjects<ParmVarDecl *>(); }
+  using iterator = VarDecl * const *;
+  iterator begin() const { return getTrailingObjects<VarDecl *>(); }
   iterator end() const { return begin() + NumParameters; }
 
   /// Get the number of parameters in this parameter pack.
   unsigned getNumExpansions() const { return NumParameters; }
 
   /// Get an expansion of the parameter pack by index.
-  ParmVarDecl *getExpansion(unsigned I) const { return begin()[I]; }
+  VarDecl *getExpansion(unsigned I) const { return begin()[I]; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return NameLoc; }
   SourceLocation getEndLoc() const LLVM_READONLY { return NameLoc; }

@@ -1395,6 +1395,10 @@ public:
     NonParmVarDeclBits.IsInitCapture = IC;
   }
 
+  /// Determine whether this variable is actually a function parameter pack or
+  /// init-capture pack.
+  bool isParameterPack() const;
+
   /// Whether this local extern variable declaration's previous declaration
   /// was declared in the same block scope. Only correct in C++.
   bool isPreviousDeclInSameBlockScope() const {
@@ -1687,10 +1691,6 @@ public:
   }
 
   QualType getOriginalType() const;
-
-  /// Determine whether this parameter is actually a function
-  /// parameter pack.
-  bool isParameterPack() const;
 
   /// Sets the function declaration that owns this
   /// ParmVarDecl. Since ParmVarDecls are often created before the

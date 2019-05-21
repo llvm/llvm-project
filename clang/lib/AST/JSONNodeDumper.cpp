@@ -539,6 +539,7 @@ void JSONNodeDumper::VisitVarDecl(const VarDecl *VD) {
     case VarDecl::ListInit: JOS.attribute("init", "list"); break;
     }
   }
+  attributeOnlyIfTrue("isParameterPack", VD->isParameterPack());
 }
 
 void JSONNodeDumper::VisitFieldDecl(const FieldDecl *FD) {
