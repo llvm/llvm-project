@@ -278,6 +278,11 @@ namespace ISD {
     /// multiplication on 2 integers.
     SMULFIX, UMULFIX,
 
+    /// Same as the corresponding unsaturated fixed point instructions, but the
+    /// result is clamped between the min and max values representable by the
+    /// bits of the first 2 operands.
+    SMULFIXSAT,
+
     /// Simple binary floating point operators.
     FADD, FSUB, FMUL, FDIV, FREM,
 
