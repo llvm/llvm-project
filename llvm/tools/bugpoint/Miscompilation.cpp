@@ -591,9 +591,6 @@ ExtractBlocks(BugDriver &BD,
   if (Linker::linkModules(*ProgClone, std::move(Extracted)))
     exit(1);
 
-  // Set the new program and delete the old one.
-  BD.setNewProgram(std::move(ProgClone));
-
   // Update the list of miscompiled functions.
   MiscompiledFunctions.clear();
 
@@ -602,6 +599,9 @@ ExtractBlocks(BugDriver &BD,
     assert(NewF && "Function not found??");
     MiscompiledFunctions.push_back(NewF);
   }
+
+  // Set the new program and delete the old one.
+  BD.setNewProgram(std::move(ProgClone));
 
   return true;
 }
