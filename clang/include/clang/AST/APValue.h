@@ -283,6 +283,11 @@ public:
       : Kind(None) {
     MakeAddrLabelDiff(); setAddrLabelDiff(LHSExpr, RHSExpr);
   }
+  static APValue IndeterminateValue() {
+    APValue Result;
+    Result.Kind = Indeterminate;
+    return Result;
+  }
 
   ~APValue() {
     if (Kind != None && Kind != Indeterminate)
