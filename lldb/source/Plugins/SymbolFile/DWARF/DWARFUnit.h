@@ -31,11 +31,46 @@ enum DWARFProducer {
   eProcucerOther
 };
 
+/// Base class describing the header of any kind of "unit."  Some information
+/// is specific to certain unit types.  We separate this class out so we can
+/// parse the header before deciding what specific kind of unit to construct.
+class DWARFUnitHeader {
+  dw_offset_t m_offset = 0;
+  dw_offset_t m_length = 0;
+  uint16_t m_version = 0;
+  dw_offset_t m_abbr_offset = 0;
+  uint8_t m_unit_type = 0;
+  uint8_t m_addr_size = 0;
+  uint64_t m_dwo_id = 0;
+
+  DWARFUnitHeader() = default;
+
+public:
+  dw_offset_t GetOffset() const { return m_offset; }
+  uint16_t GetVersion() const { return m_version; }
+  uint16_t GetAddressByteSize() const { return m_addr_size; }
+  dw_offset_t GetLength() const { return m_length; }
+  dw_offset_t GetAbbrOffset() const { return m_abbr_offset; }
+  uint8_t GetUnitType() const { return m_unit_type; }
+  bool IsTypeUnit() const {
+    return m_unit_type == DW_UT_type || m_unit_type == DW_UT_split_type;
+  }
+  uint32_t GetNextUnitOffset() const { return m_offset + m_length + 4; }
+
+  static llvm::Expected<DWARFUnitHeader>
+  extract(const lldb_private::DWARFDataExtractor &data,
+          lldb::offset_t *offset_ptr);
+};
+
 class DWARFUnit : public lldb_private::UserID {
   using die_iterator_range =
       llvm::iterator_range<DWARFDebugInfoEntry::collection::iterator>;
 
 public:
+  static llvm::Expected<DWARFUnitSP>
+  extract(SymbolFileDWARF *dwarf2Data, lldb::user_id_t uid,
+          const lldb_private::DWARFDataExtractor &debug_info,
+          lldb::offset_t *offset_ptr);
   virtual ~DWARFUnit();
 
   void ExtractUnitDIEIfNeeded();
@@ -66,14 +101,16 @@ public:
   ///
   /// \return
   ///   The correct data for the DIE information in this unit.
-  virtual const lldb_private::DWARFDataExtractor &GetData() const = 0;
-  /// Get the size in bytes of the compile unit header.
+  const lldb_private::DWARFDataExtractor &GetData() const;
+
+  /// Get the size in bytes of the unit header.
   ///
   /// \return
-  ///     Byte size of the compile unit header
-  virtual uint32_t GetHeaderByteSize() const = 0;
+  ///     Byte size of the unit header
+  uint32_t GetHeaderByteSize() const;
+
   // Offset of the initial length field.
-  dw_offset_t GetOffset() const { return m_offset; }
+  dw_offset_t GetOffset() const { return m_header.GetOffset(); }
   /// Get the size in bytes of the length field in the header.
   ///
   /// In DWARF32 this is just 4 bytes
@@ -87,17 +124,17 @@ public:
            die_offset < GetNextUnitOffset();
   }
   dw_offset_t GetFirstDIEOffset() const {
-    return m_offset + GetHeaderByteSize();
+    return GetOffset() + GetHeaderByteSize();
   }
-  dw_offset_t GetNextUnitOffset() const;
+  dw_offset_t GetNextUnitOffset() const { return m_header.GetNextUnitOffset(); }
   // Size of the CU data (without initial length and without header).
   size_t GetDebugInfoSize() const;
   // Size of the CU data incl. header but without initial length.
-  uint32_t GetLength() const { return m_length; }
-  uint16_t GetVersion() const { return m_version; }
+  uint32_t GetLength() const { return m_header.GetLength(); }
+  uint16_t GetVersion() const { return m_header.GetVersion(); }
   const DWARFAbbreviationDeclarationSet *GetAbbreviations() const;
   dw_offset_t GetAbbrevOffset() const;
-  uint8_t GetAddressByteSize() const { return m_addr_size; }
+  uint8_t GetAddressByteSize() const { return m_header.GetAddressByteSize(); }
   dw_addr_t GetBaseAddress() const { return m_base_addr; }
   dw_addr_t GetAddrBase() const { return m_addr_base; }
   dw_addr_t GetRangesBase() const { return m_ranges_base; }
@@ -170,10 +207,13 @@ public:
   virtual DIERef::Section GetDebugSection() const = 0;
 
 protected:
-  DWARFUnit(SymbolFileDWARF *dwarf, lldb::user_id_t uid);
+  DWARFUnit(SymbolFileDWARF *dwarf, lldb::user_id_t uid,
+            const DWARFUnitHeader &header,
+            const DWARFAbbreviationDeclarationSet &abbrevs);
 
   SymbolFileDWARF *m_dwarf = nullptr;
   std::unique_ptr<SymbolFileDWARFDwo> m_dwo_symbol_file;
+  DWARFUnitHeader m_header;
   const DWARFAbbreviationDeclarationSet *m_abbrevs = nullptr;
   void *m_user_data = nullptr;
   // The compile unit debug information entry item
@@ -193,11 +233,6 @@ protected:
   // exact DW_TAG_subprogram DIEs
   std::unique_ptr<DWARFDebugAranges> m_func_aranges_up;
   dw_addr_t m_base_addr = 0;
-  dw_offset_t m_length = 0;
-  uint16_t m_version = 0;
-  uint8_t m_addr_size = 0;
-  uint8_t m_unit_type = 0;
-  uint64_t m_dwo_id = 0;
   DWARFProducer m_producer = eProducerInvalid;
   uint32_t m_producer_version_major = 0;
   uint32_t m_producer_version_minor = 0;
@@ -211,8 +246,6 @@ protected:
   // in the main object file
   dw_offset_t m_base_obj_offset = DW_INVALID_OFFSET;
   dw_offset_t m_str_offsets_base = 0; // Value of DW_AT_str_offsets_base.
-  // Offset of the initial length field.
-  dw_offset_t m_offset;
 
 private:
   void ParseProducerInfo();
