@@ -115,11 +115,18 @@ struct CodeCompleteOptions {
   /// Such completions can insert scope qualifiers.
   bool AllScopes = false;
 
-  /// Whether to allow falling back to code completion without compiling files
-  /// (using identifiers in the current file and symbol indexes), when file
-  /// cannot be built (e.g. missing compile command), or the build is not ready
-  /// (e.g. preamble is still being built).
-  bool AllowFallback = false;
+  /// Whether to use the clang parser, or fallback to text-based completion
+  /// (using identifiers in the current file and symbol indexes).
+  enum CodeCompletionParse {
+    /// Block until we can run the parser (e.g. preamble is built).
+    /// Return an error if this fails.
+    AlwaysParse,
+    /// Run the parser if inputs (preamble) are ready.
+    /// Otherwise, use text-based completion.
+    ParseIfReady,
+    /// Always use text-based completion.
+    NeverParse,
+  } RunParser = ParseIfReady;
 };
 
 // Semi-structured representation of a code-complete suggestion for our C++ API.
