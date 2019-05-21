@@ -12,11 +12,11 @@
 // RUN: llvm-dwarfdump -debug-info %t2.o | \
 // RUN:     FileCheck %s --check-prefixes=CHECK,RENAME
 // RUN: llvm-mc -triple=x86_64-linux-unknown -filetype=obj -dwarf-version=4 \
-// RUN:     -g Inputs\subdir.s -o %t3.o
+// RUN:     -g Inputs/subdir.s -o %t3.o
 // RUN: llvm-dwarfdump -debug-info %t3.o | \
 // RUN:     FileCheck %s --check-prefixes=CHECK,SUBDIR
 // RUN: llvm-mc -triple=x86_64-linux-unknown -filetype=obj -dwarf-version=4 \
-// RUN:     -g Inputs\subdir.s -main-file-name sub-rename.s -o %t4.o
+// RUN:     -g Inputs/subdir.s -main-file-name sub-rename.s -o %t4.o
 // RUN: llvm-dwarfdump -debug-info %t4.o | \
 // RUN:     FileCheck %s --check-prefixes=CHECK,SUB-RENAME
 
