@@ -1046,3 +1046,511 @@ define i64 @reg64_lshr_by_add_of_negated_amts(i64 %val, i64 %a, i64 %b) nounwind
   %shifted = lshr i64 %val, %negasubnegb
   ret i64 %shifted
 }
+
+;==============================================================================;
+; and patterns with an actual negation+addition
+
+define i32 @reg32_lshr_by_negated_unfolded(i32 %val, i32 %shamt) nounwind {
+; X32-LABEL: reg32_lshr_by_negated_unfolded:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    xorl %ecx, %ecx
+; X32-NEXT:    subb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X32-NEXT:    shrl %cl, %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: reg32_lshr_by_negated_unfolded:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    negb %cl
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrl %cl, %eax
+; X64-NEXT:    retq
+  %negshamt = sub i32 0, %shamt
+  %negaaddbitwidth = add i32 %negshamt, 32
+  %shifted = lshr i32 %val, %negaaddbitwidth
+  ret i32 %shifted
+}
+define i64 @reg64_lshr_by_negated_unfolded(i64 %val, i64 %shamt) nounwind {
+; X32-LABEL: reg64_lshr_by_negated_unfolded:
+; X32:       # %bb.0:
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movb $64, %cl
+; X32-NEXT:    subb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    movl %esi, %edx
+; X32-NEXT:    shrl %cl, %edx
+; X32-NEXT:    shrdl %cl, %esi, %eax
+; X32-NEXT:    testb $32, %cl
+; X32-NEXT:    je .LBB35_2
+; X32-NEXT:  # %bb.1:
+; X32-NEXT:    movl %edx, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:  .LBB35_2:
+; X32-NEXT:    popl %esi
+; X32-NEXT:    retl
+;
+; X64-LABEL: reg64_lshr_by_negated_unfolded:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rsi, %rcx
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    negb %cl
+; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
+; X64-NEXT:    shrq %cl, %rax
+; X64-NEXT:    retq
+  %negshamt = sub i64 0, %shamt
+  %negaaddbitwidth = add i64 %negshamt, 64
+  %shifted = lshr i64 %val, %negaaddbitwidth
+  ret i64 %shifted
+}
+
+define i32 @reg32_lshr_by_negated_unfolded_sub_b(i32 %val, i32 %a, i32 %b) nounwind {
+; X32-LABEL: reg32_lshr_by_negated_unfolded_sub_b:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl $32, %ecx
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X32-NEXT:    shrl %cl, %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: reg32_lshr_by_negated_unfolded_sub_b:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl $32, %ecx
+; X64-NEXT:    subl %esi, %ecx
+; X64-NEXT:    subl %edx, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrl %cl, %eax
+; X64-NEXT:    retq
+  %nega = sub i32 0, %a
+  %negaaddbitwidth = add i32 %nega, 32
+  %negaaddbitwidthsubb = sub i32 %negaaddbitwidth, %b
+  %shifted = lshr i32 %val, %negaaddbitwidthsubb
+  ret i32 %shifted
+}
+define i64 @reg64_lshr_by_negated_unfolded_sub_b(i64 %val, i64 %a, i64 %b) nounwind {
+; X32-LABEL: reg64_lshr_by_negated_unfolded_sub_b:
+; X32:       # %bb.0:
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl $64, %ecx
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl %esi, %edx
+; X32-NEXT:    shrl %cl, %edx
+; X32-NEXT:    shrdl %cl, %esi, %eax
+; X32-NEXT:    testb $32, %cl
+; X32-NEXT:    je .LBB37_2
+; X32-NEXT:  # %bb.1:
+; X32-NEXT:    movl %edx, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:  .LBB37_2:
+; X32-NEXT:    popl %esi
+; X32-NEXT:    retl
+;
+; X64-LABEL: reg64_lshr_by_negated_unfolded_sub_b:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movl $64, %ecx
+; X64-NEXT:    subl %esi, %ecx
+; X64-NEXT:    subl %edx, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrq %cl, %rax
+; X64-NEXT:    retq
+  %nega = sub i64 0, %a
+  %negaaddbitwidth = add i64 %nega, 64
+  %negaaddbitwidthsubb = sub i64 %negaaddbitwidth, %b
+  %shifted = lshr i64 %val, %negaaddbitwidthsubb
+  ret i64 %shifted
+}
+
+define i32 @reg32_lshr_by_b_sub_negated_unfolded(i32 %val, i32 %a, i32 %b) nounwind {
+; X32-LABEL: reg32_lshr_by_b_sub_negated_unfolded:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X32-NEXT:    shrl %cl, %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: reg32_lshr_by_b_sub_negated_unfolded:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edx killed $edx def $rdx
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    leal (%rsi,%rdx), %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrl %cl, %eax
+; X64-NEXT:    retq
+  %nega = sub i32 0, %a
+  %negaaddbitwidth = add i32 %nega, 32
+  %negaaddbitwidthsubb = sub i32 %b, %negaaddbitwidth
+  %shifted = lshr i32 %val, %negaaddbitwidthsubb
+  ret i32 %shifted
+}
+define i64 @reg64_lshr_by_b_sub_negated_unfolded(i64 %val, i64 %a, i64 %b) nounwind {
+; X32-LABEL: reg64_lshr_by_b_sub_negated_unfolded:
+; X32:       # %bb.0:
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    addb $-64, %cl
+; X32-NEXT:    movl %esi, %edx
+; X32-NEXT:    shrl %cl, %edx
+; X32-NEXT:    shrdl %cl, %esi, %eax
+; X32-NEXT:    testb $32, %cl
+; X32-NEXT:    je .LBB39_2
+; X32-NEXT:  # %bb.1:
+; X32-NEXT:    movl %edx, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:  .LBB39_2:
+; X32-NEXT:    popl %esi
+; X32-NEXT:    retl
+;
+; X64-LABEL: reg64_lshr_by_b_sub_negated_unfolded:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    leal (%rdx,%rsi), %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrq %cl, %rax
+; X64-NEXT:    retq
+  %nega = sub i64 0, %a
+  %negaaddbitwidth = add i64 %nega, 64
+  %negaaddbitwidthsubb = sub i64 %b, %negaaddbitwidth
+  %shifted = lshr i64 %val, %negaaddbitwidthsubb
+  ret i64 %shifted
+}
+
+define i32 @reg32_lshr_by_negated_unfolded_add_b(i32 %val, i32 %a, i32 %b) nounwind {
+; X32-LABEL: reg32_lshr_by_negated_unfolded_add_b:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X32-NEXT:    shrl %cl, %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: reg32_lshr_by_negated_unfolded_add_b:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edx, %ecx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    subl %esi, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrl %cl, %eax
+; X64-NEXT:    retq
+  %nega = sub i32 0, %a
+  %negaaddbitwidth = add i32 %nega, 32
+  %negaaddbitwidthaddb = add i32 %negaaddbitwidth, %b
+  %shifted = lshr i32 %val, %negaaddbitwidthaddb
+  ret i32 %shifted
+}
+define i64 @reg64_lshr_by_negated_unfolded_add_b(i64 %val, i64 %a, i64 %b) nounwind {
+; X32-LABEL: reg64_lshr_by_negated_unfolded_add_b:
+; X32:       # %bb.0:
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    addb $64, %cl
+; X32-NEXT:    movl %esi, %edx
+; X32-NEXT:    shrl %cl, %edx
+; X32-NEXT:    shrdl %cl, %esi, %eax
+; X32-NEXT:    testb $32, %cl
+; X32-NEXT:    je .LBB41_2
+; X32-NEXT:  # %bb.1:
+; X32-NEXT:    movl %edx, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:  .LBB41_2:
+; X32-NEXT:    popl %esi
+; X32-NEXT:    retl
+;
+; X64-LABEL: reg64_lshr_by_negated_unfolded_add_b:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movl $64, %ecx
+; X64-NEXT:    subl %esi, %ecx
+; X64-NEXT:    addl %edx, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrq %cl, %rax
+; X64-NEXT:    retq
+  %nega = sub i64 0, %a
+  %negaaddbitwidth = add i64 %nega, 64
+  %negaaddbitwidthaddb = add i64 %negaaddbitwidth, %b
+  %shifted = lshr i64 %val, %negaaddbitwidthaddb
+  ret i64 %shifted
+}
+
+;==============================================================================;
+; and patterns with an actual negation+mask
+
+define i32 @reg32_lshr_by_masked_negated_unfolded(i32 %val, i32 %shamt) nounwind {
+; X32-LABEL: reg32_lshr_by_masked_negated_unfolded:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    xorl %ecx, %ecx
+; X32-NEXT:    subb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X32-NEXT:    shrl %cl, %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: reg32_lshr_by_masked_negated_unfolded:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    negb %cl
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrl %cl, %eax
+; X64-NEXT:    retq
+  %negshamt = sub i32 0, %shamt
+  %negaaddbitwidth = and i32 %negshamt, 31
+  %shifted = lshr i32 %val, %negaaddbitwidth
+  ret i32 %shifted
+}
+define i64 @reg64_lshr_by_masked_negated_unfolded(i64 %val, i64 %shamt) nounwind {
+; X32-LABEL: reg64_lshr_by_masked_negated_unfolded:
+; X32:       # %bb.0:
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    xorl %ecx, %ecx
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X32-NEXT:    subb %dl, %cl
+; X32-NEXT:    movl %esi, %edx
+; X32-NEXT:    shrl %cl, %edx
+; X32-NEXT:    shrdl %cl, %esi, %eax
+; X32-NEXT:    testb $32, %cl
+; X32-NEXT:    je .LBB43_2
+; X32-NEXT:  # %bb.1:
+; X32-NEXT:    movl %edx, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:  .LBB43_2:
+; X32-NEXT:    popl %esi
+; X32-NEXT:    retl
+;
+; X64-LABEL: reg64_lshr_by_masked_negated_unfolded:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rsi, %rcx
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    negb %cl
+; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
+; X64-NEXT:    shrq %cl, %rax
+; X64-NEXT:    retq
+  %negshamt = sub i64 0, %shamt
+  %negaaddbitwidth = and i64 %negshamt, 63
+  %shifted = lshr i64 %val, %negaaddbitwidth
+  ret i64 %shifted
+}
+
+define i32 @reg32_lshr_by_masked_negated_unfolded_sub_b(i32 %val, i32 %a, i32 %b) nounwind {
+; X32-LABEL: reg32_lshr_by_masked_negated_unfolded_sub_b:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    xorl %ecx, %ecx
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    andl $31, %ecx
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X32-NEXT:    shrl %cl, %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: reg32_lshr_by_masked_negated_unfolded_sub_b:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    negl %ecx
+; X64-NEXT:    andl $31, %ecx
+; X64-NEXT:    subl %edx, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrl %cl, %eax
+; X64-NEXT:    retq
+  %nega = sub i32 0, %a
+  %negaaddbitwidth = and i32 %nega, 31
+  %negaaddbitwidthsubb = sub i32 %negaaddbitwidth, %b
+  %shifted = lshr i32 %val, %negaaddbitwidthsubb
+  ret i32 %shifted
+}
+define i64 @reg64_lshr_by_masked_negated_unfolded_sub_b(i64 %val, i64 %a, i64 %b) nounwind {
+; X32-LABEL: reg64_lshr_by_masked_negated_unfolded_sub_b:
+; X32:       # %bb.0:
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    xorl %ecx, %ecx
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    andl $63, %ecx
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl %esi, %edx
+; X32-NEXT:    shrl %cl, %edx
+; X32-NEXT:    shrdl %cl, %esi, %eax
+; X32-NEXT:    testb $32, %cl
+; X32-NEXT:    je .LBB45_2
+; X32-NEXT:  # %bb.1:
+; X32-NEXT:    movl %edx, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:  .LBB45_2:
+; X32-NEXT:    popl %esi
+; X32-NEXT:    retl
+;
+; X64-LABEL: reg64_lshr_by_masked_negated_unfolded_sub_b:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rsi, %rcx
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    negl %ecx
+; X64-NEXT:    andl $63, %ecx
+; X64-NEXT:    subl %edx, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
+; X64-NEXT:    shrq %cl, %rax
+; X64-NEXT:    retq
+  %nega = sub i64 0, %a
+  %negaaddbitwidth = and i64 %nega, 63
+  %negaaddbitwidthsubb = sub i64 %negaaddbitwidth, %b
+  %shifted = lshr i64 %val, %negaaddbitwidthsubb
+  ret i64 %shifted
+}
+
+define i32 @reg32_lshr_by_masked_b_sub_negated_unfolded(i32 %val, i32 %a, i32 %b) nounwind {
+; X32-LABEL: reg32_lshr_by_masked_b_sub_negated_unfolded:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    andl $31, %edx
+; X32-NEXT:    subl %edx, %ecx
+; X32-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X32-NEXT:    shrl %cl, %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: reg32_lshr_by_masked_b_sub_negated_unfolded:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edx, %ecx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    negl %esi
+; X64-NEXT:    andl $31, %esi
+; X64-NEXT:    subl %esi, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrl %cl, %eax
+; X64-NEXT:    retq
+  %nega = sub i32 0, %a
+  %negaaddbitwidth = and i32 %nega, 31
+  %negaaddbitwidthsubb = sub i32 %b, %negaaddbitwidth
+  %shifted = lshr i32 %val, %negaaddbitwidthsubb
+  ret i32 %shifted
+}
+define i64 @reg64_lshr_by_masked_b_sub_negated_unfolded(i64 %val, i64 %a, i64 %b) nounwind {
+; X32-LABEL: reg64_lshr_by_masked_b_sub_negated_unfolded:
+; X32:       # %bb.0:
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    andl $63, %edx
+; X32-NEXT:    subl %edx, %ecx
+; X32-NEXT:    movl %esi, %edx
+; X32-NEXT:    shrl %cl, %edx
+; X32-NEXT:    shrdl %cl, %esi, %eax
+; X32-NEXT:    testb $32, %cl
+; X32-NEXT:    je .LBB47_2
+; X32-NEXT:  # %bb.1:
+; X32-NEXT:    movl %edx, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:  .LBB47_2:
+; X32-NEXT:    popl %esi
+; X32-NEXT:    retl
+;
+; X64-LABEL: reg64_lshr_by_masked_b_sub_negated_unfolded:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdx, %rcx
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    negl %esi
+; X64-NEXT:    andl $63, %esi
+; X64-NEXT:    subl %esi, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
+; X64-NEXT:    shrq %cl, %rax
+; X64-NEXT:    retq
+  %nega = sub i64 0, %a
+  %negaaddbitwidth = and i64 %nega, 63
+  %negaaddbitwidthsubb = sub i64 %b, %negaaddbitwidth
+  %shifted = lshr i64 %val, %negaaddbitwidthsubb
+  ret i64 %shifted
+}
+
+define i32 @reg32_lshr_by_masked_negated_unfolded_add_b(i32 %val, i32 %a, i32 %b) nounwind {
+; X32-LABEL: reg32_lshr_by_masked_negated_unfolded_add_b:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    xorl %ecx, %ecx
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    andl $31, %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X32-NEXT:    shrl %cl, %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: reg32_lshr_by_masked_negated_unfolded_add_b:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edx killed $edx def $rdx
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    negl %esi
+; X64-NEXT:    andl $31, %esi
+; X64-NEXT:    leal (%rsi,%rdx), %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrl %cl, %eax
+; X64-NEXT:    retq
+  %nega = sub i32 0, %a
+  %negaaddbitwidth = and i32 %nega, 31
+  %negaaddbitwidthaddb = add i32 %negaaddbitwidth, %b
+  %shifted = lshr i32 %val, %negaaddbitwidthaddb
+  ret i32 %shifted
+}
+define i64 @reg64_lshr_by_masked_negated_unfolded_add_b(i64 %val, i64 %a, i64 %b) nounwind {
+; X32-LABEL: reg64_lshr_by_masked_negated_unfolded_add_b:
+; X32:       # %bb.0:
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    xorl %ecx, %ecx
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    andl $63, %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl %esi, %edx
+; X32-NEXT:    shrl %cl, %edx
+; X32-NEXT:    shrdl %cl, %esi, %eax
+; X32-NEXT:    testb $32, %cl
+; X32-NEXT:    je .LBB49_2
+; X32-NEXT:  # %bb.1:
+; X32-NEXT:    movl %edx, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:  .LBB49_2:
+; X32-NEXT:    popl %esi
+; X32-NEXT:    retl
+;
+; X64-LABEL: reg64_lshr_by_masked_negated_unfolded_add_b:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    negl %esi
+; X64-NEXT:    andl $63, %esi
+; X64-NEXT:    leal (%rdx,%rsi), %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrq %cl, %rax
+; X64-NEXT:    retq
+  %nega = sub i64 0, %a
+  %negaaddbitwidth = and i64 %nega, 63
+  %negaaddbitwidthaddb = add i64 %negaaddbitwidth, %b
+  %shifted = lshr i64 %val, %negaaddbitwidthaddb
+  ret i64 %shifted
+}

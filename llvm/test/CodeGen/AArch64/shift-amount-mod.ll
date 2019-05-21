@@ -456,3 +456,221 @@ define i64 @reg64_lshr_by_add_of_negated_amts(i64 %val, i64 %a, i64 %b) nounwind
   %shifted = lshr i64 %val, %negasubnegb
   ret i64 %shifted
 }
+
+;==============================================================================;
+; and patterns with an actual negation+addition
+
+define i32 @reg32_lshr_by_negated_unfolded(i32 %val, i32 %shamt) nounwind {
+; CHECK-LABEL: reg32_lshr_by_negated_unfolded:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    lsr w0, w0, w8
+; CHECK-NEXT:    ret
+  %negshamt = sub i32 0, %shamt
+  %negaaddbitwidth = add i32 %negshamt, 32
+  %shifted = lshr i32 %val, %negaaddbitwidth
+  ret i32 %shifted
+}
+define i64 @reg64_lshr_by_negated_unfolded(i64 %val, i64 %shamt) nounwind {
+; CHECK-LABEL: reg64_lshr_by_negated_unfolded:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg x8, x1
+; CHECK-NEXT:    lsr x0, x0, x8
+; CHECK-NEXT:    ret
+  %negshamt = sub i64 0, %shamt
+  %negaaddbitwidth = add i64 %negshamt, 64
+  %shifted = lshr i64 %val, %negaaddbitwidth
+  ret i64 %shifted
+}
+
+define i32 @reg32_lshr_by_negated_unfolded_sub_b(i32 %val, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: reg32_lshr_by_negated_unfolded_sub_b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #32
+; CHECK-NEXT:    sub w8, w8, w1
+; CHECK-NEXT:    sub w8, w8, w2
+; CHECK-NEXT:    lsr w0, w0, w8
+; CHECK-NEXT:    ret
+  %nega = sub i32 0, %a
+  %negaaddbitwidth = add i32 %nega, 32
+  %negaaddbitwidthsubb = sub i32 %negaaddbitwidth, %b
+  %shifted = lshr i32 %val, %negaaddbitwidthsubb
+  ret i32 %shifted
+}
+define i64 @reg64_lshr_by_negated_unfolded_sub_b(i64 %val, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: reg64_lshr_by_negated_unfolded_sub_b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #64
+; CHECK-NEXT:    sub x8, x8, x1
+; CHECK-NEXT:    sub x8, x8, x2
+; CHECK-NEXT:    lsr x0, x0, x8
+; CHECK-NEXT:    ret
+  %nega = sub i64 0, %a
+  %negaaddbitwidth = add i64 %nega, 64
+  %negaaddbitwidthsubb = sub i64 %negaaddbitwidth, %b
+  %shifted = lshr i64 %val, %negaaddbitwidthsubb
+  ret i64 %shifted
+}
+
+define i32 @reg32_lshr_by_b_sub_negated_unfolded(i32 %val, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: reg32_lshr_by_b_sub_negated_unfolded:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add w8, w1, w2
+; CHECK-NEXT:    lsr w0, w0, w8
+; CHECK-NEXT:    ret
+  %nega = sub i32 0, %a
+  %negaaddbitwidth = add i32 %nega, 32
+  %negaaddbitwidthsubb = sub i32 %b, %negaaddbitwidth
+  %shifted = lshr i32 %val, %negaaddbitwidthsubb
+  ret i32 %shifted
+}
+define i64 @reg64_lshr_by_b_sub_negated_unfolded(i64 %val, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: reg64_lshr_by_b_sub_negated_unfolded:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add x8, x1, x2
+; CHECK-NEXT:    lsr x0, x0, x8
+; CHECK-NEXT:    ret
+  %nega = sub i64 0, %a
+  %negaaddbitwidth = add i64 %nega, 64
+  %negaaddbitwidthsubb = sub i64 %b, %negaaddbitwidth
+  %shifted = lshr i64 %val, %negaaddbitwidthsubb
+  ret i64 %shifted
+}
+
+define i32 @reg32_lshr_by_negated_unfolded_add_b(i32 %val, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: reg32_lshr_by_negated_unfolded_add_b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub w8, w2, w1
+; CHECK-NEXT:    lsr w0, w0, w8
+; CHECK-NEXT:    ret
+  %nega = sub i32 0, %a
+  %negaaddbitwidth = add i32 %nega, 32
+  %negaaddbitwidthaddb = add i32 %negaaddbitwidth, %b
+  %shifted = lshr i32 %val, %negaaddbitwidthaddb
+  ret i32 %shifted
+}
+define i64 @reg64_lshr_by_negated_unfolded_add_b(i64 %val, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: reg64_lshr_by_negated_unfolded_add_b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub x8, x2, x1
+; CHECK-NEXT:    lsr x0, x0, x8
+; CHECK-NEXT:    ret
+  %nega = sub i64 0, %a
+  %negaaddbitwidth = add i64 %nega, 64
+  %negaaddbitwidthaddb = add i64 %negaaddbitwidth, %b
+  %shifted = lshr i64 %val, %negaaddbitwidthaddb
+  ret i64 %shifted
+}
+
+;==============================================================================;
+; and patterns with an actual negation+mask
+
+define i32 @reg32_lshr_by_masked_negated_unfolded(i32 %val, i32 %shamt) nounwind {
+; CHECK-LABEL: reg32_lshr_by_masked_negated_unfolded:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    lsr w0, w0, w8
+; CHECK-NEXT:    ret
+  %negshamt = sub i32 0, %shamt
+  %negaaddbitwidth = and i32 %negshamt, 31
+  %shifted = lshr i32 %val, %negaaddbitwidth
+  ret i32 %shifted
+}
+define i64 @reg64_lshr_by_masked_negated_unfolded(i64 %val, i64 %shamt) nounwind {
+; CHECK-LABEL: reg64_lshr_by_masked_negated_unfolded:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    lsr x0, x0, x8
+; CHECK-NEXT:    ret
+  %negshamt = sub i64 0, %shamt
+  %negaaddbitwidth = and i64 %negshamt, 63
+  %shifted = lshr i64 %val, %negaaddbitwidth
+  ret i64 %shifted
+}
+
+define i32 @reg32_lshr_by_masked_negated_unfolded_sub_b(i32 %val, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: reg32_lshr_by_masked_negated_unfolded_sub_b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    and w8, w8, #0x1f
+; CHECK-NEXT:    sub w8, w8, w2
+; CHECK-NEXT:    lsr w0, w0, w8
+; CHECK-NEXT:    ret
+  %nega = sub i32 0, %a
+  %negaaddbitwidth = and i32 %nega, 31
+  %negaaddbitwidthsubb = sub i32 %negaaddbitwidth, %b
+  %shifted = lshr i32 %val, %negaaddbitwidthsubb
+  ret i32 %shifted
+}
+define i64 @reg64_lshr_by_masked_negated_unfolded_sub_b(i64 %val, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: reg64_lshr_by_masked_negated_unfolded_sub_b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    and x8, x8, #0x3f
+; CHECK-NEXT:    sub x8, x8, x2
+; CHECK-NEXT:    lsr x0, x0, x8
+; CHECK-NEXT:    ret
+  %nega = sub i64 0, %a
+  %negaaddbitwidth = and i64 %nega, 63
+  %negaaddbitwidthsubb = sub i64 %negaaddbitwidth, %b
+  %shifted = lshr i64 %val, %negaaddbitwidthsubb
+  ret i64 %shifted
+}
+
+define i32 @reg32_lshr_by_masked_b_sub_negated_unfolded(i32 %val, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: reg32_lshr_by_masked_b_sub_negated_unfolded:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    and w8, w8, #0x1f
+; CHECK-NEXT:    sub w8, w2, w8
+; CHECK-NEXT:    lsr w0, w0, w8
+; CHECK-NEXT:    ret
+  %nega = sub i32 0, %a
+  %negaaddbitwidth = and i32 %nega, 31
+  %negaaddbitwidthsubb = sub i32 %b, %negaaddbitwidth
+  %shifted = lshr i32 %val, %negaaddbitwidthsubb
+  ret i32 %shifted
+}
+define i64 @reg64_lshr_by_masked_b_sub_negated_unfolded(i64 %val, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: reg64_lshr_by_masked_b_sub_negated_unfolded:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    and x8, x8, #0x3f
+; CHECK-NEXT:    sub x8, x2, x8
+; CHECK-NEXT:    lsr x0, x0, x8
+; CHECK-NEXT:    ret
+  %nega = sub i64 0, %a
+  %negaaddbitwidth = and i64 %nega, 63
+  %negaaddbitwidthsubb = sub i64 %b, %negaaddbitwidth
+  %shifted = lshr i64 %val, %negaaddbitwidthsubb
+  ret i64 %shifted
+}
+
+define i32 @reg32_lshr_by_masked_negated_unfolded_add_b(i32 %val, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: reg32_lshr_by_masked_negated_unfolded_add_b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    and w8, w8, #0x1f
+; CHECK-NEXT:    add w8, w8, w2
+; CHECK-NEXT:    lsr w0, w0, w8
+; CHECK-NEXT:    ret
+  %nega = sub i32 0, %a
+  %negaaddbitwidth = and i32 %nega, 31
+  %negaaddbitwidthaddb = add i32 %negaaddbitwidth, %b
+  %shifted = lshr i32 %val, %negaaddbitwidthaddb
+  ret i32 %shifted
+}
+define i64 @reg64_lshr_by_masked_negated_unfolded_add_b(i64 %val, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: reg64_lshr_by_masked_negated_unfolded_add_b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    and x8, x8, #0x3f
+; CHECK-NEXT:    add x8, x8, x2
+; CHECK-NEXT:    lsr x0, x0, x8
+; CHECK-NEXT:    ret
+  %nega = sub i64 0, %a
+  %negaaddbitwidth = and i64 %nega, 63
+  %negaaddbitwidthaddb = add i64 %negaaddbitwidth, %b
+  %shifted = lshr i64 %val, %negaaddbitwidthaddb
+  ret i64 %shifted
+}
