@@ -6347,6 +6347,26 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     return nullptr;
   }
 
+  if (R->isSamplerT()) {
+    // OpenCL v1.2 s6.9.b p4:
+    // The sampler type cannot be used with the __local and __global address
+    // space qualifiers.
+    if (R.getAddressSpace() == LangAS::opencl_local ||
+        R.getAddressSpace() == LangAS::opencl_global) {
+      Diag(D.getIdentifierLoc(), diag::err_wrong_sampler_addressspace);
+    }
+
+    // OpenCL v1.2 s6.12.14.1:
+    // A global sampler must be declared with either the constant address
+    // space qualifier or with the const qualifier.
+    if (DC->isTranslationUnit() &&
+        !(R.getAddressSpace() == LangAS::opencl_constant ||
+          R.isConstQualified())) {
+      Diag(D.getIdentifierLoc(), diag::err_opencl_nonconst_global_sampler);
+      D.setInvalidType();
+    }
+  }
+
   if (getLangOpts().OpenCL) {
     // OpenCL v2.0 s6.9.b - Image type can only be used as a function argument.
     // OpenCL v2.0 s6.13.16.1 - Pipe type can only be used as a function
@@ -6388,26 +6408,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       // half array type (unless the cl_khr_fp16 extension is enabled).
       if (Context.getBaseElementType(R)->isHalfType()) {
         Diag(D.getIdentifierLoc(), diag::err_opencl_half_declaration) << R;
-        D.setInvalidType();
-      }
-    }
-
-    if (R->isSamplerT()) {
-      // OpenCL v1.2 s6.9.b p4:
-      // The sampler type cannot be used with the __local and __global address
-      // space qualifiers.
-      if (R.getAddressSpace() == LangAS::opencl_local ||
-          R.getAddressSpace() == LangAS::opencl_global) {
-        Diag(D.getIdentifierLoc(), diag::err_wrong_sampler_addressspace);
-      }
-
-      // OpenCL v1.2 s6.12.14.1:
-      // A global sampler must be declared with either the constant address
-      // space qualifier or with the const qualifier.
-      if (DC->isTranslationUnit() &&
-          !(R.getAddressSpace() == LangAS::opencl_constant ||
-          R.isConstQualified())) {
-        Diag(D.getIdentifierLoc(), diag::err_opencl_nonconst_global_sampler);
         D.setInvalidType();
       }
     }
