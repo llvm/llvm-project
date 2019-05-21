@@ -182,11 +182,10 @@ add_custom_target( sycl-toolchain
 
 set_target_properties("${SYCLLibrary}" PROPERTIES LINKER_LANGUAGE CXX)
 
-# Workaround for bug in GCC version 5.
+# Workaround for bug in GCC version 5 and higher.
 # More information https://bugs.launchpad.net/ubuntu/+source/gcc-5/+bug/1568899
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
-    CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5.0 AND
-    CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0)
+    CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5.0)
   target_link_libraries("${SYCLLibrary}" gcc_s gcc)
 endif()
 
