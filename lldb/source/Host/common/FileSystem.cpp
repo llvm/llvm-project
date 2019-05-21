@@ -241,17 +241,21 @@ void FileSystem::Resolve(SmallVectorImpl<char> &path) {
   if (path.empty())
     return;
 
-  // Resolve tilde.
-  SmallString<128> original_path(path.begin(), path.end());
+  // Resolve tilde in path.
+  SmallString<128> resolved(path.begin(), path.end());
   StandardTildeExpressionResolver Resolver;
-  Resolver.ResolveFullPath(original_path, path);
+  Resolver.ResolveFullPath(llvm::StringRef(path.begin(), path.size()),
+                           resolved);
 
   // Try making the path absolute if it exists.
-  SmallString<128> absolute_path(path.begin(), path.end());
-  MakeAbsolute(path);
-  if (!Exists(path)) {
-    path.clear();
-    path.append(original_path.begin(), original_path.end());
+  SmallString<128> absolute(resolved.begin(), resolved.end());
+  MakeAbsolute(absolute);
+
+  path.clear();
+  if (Exists(absolute)) {
+    path.append(absolute.begin(), absolute.end());
+  } else {
+    path.append(resolved.begin(), resolved.end());
   }
 }
 
