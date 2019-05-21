@@ -404,9 +404,9 @@ struct ErrorGeneric : ErrorBase {
 
 #define ASAN_DEFINE_ERROR_KIND(name) kErrorKind##name,
 #define ASAN_ERROR_DESCRIPTION_MEMBER(name) Error##name name;
-#define ASAN_ERROR_DESCRIPTION_CONSTRUCTOR(name)                               \
-  ErrorDescription(Error##name const &e) : kind(kErrorKind##name) {            \
-    internal_memcpy(&name, &e, sizeof(name));                                  \
+#define ASAN_ERROR_DESCRIPTION_CONSTRUCTOR(name)                    \
+  ErrorDescription(Error##name const &e) : kind(kErrorKind##name) { \
+    internal_memcpy(&name, &e, sizeof(name));                       \
   }
 #define ASAN_ERROR_DESCRIPTION_PRINT(name) \
   case kErrorKind##name:                   \
