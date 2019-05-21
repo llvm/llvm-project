@@ -1153,6 +1153,19 @@ define <7 x i8> @insert_subvector_shuffles(<3 x i8> %x, <3 x i8> %y) {
   ret <7 x i8> %s3
 }
 
+define <8 x i8> @insert_subvector_shuffles_pow2elts(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @insert_subvector_shuffles_pow2elts(
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <2 x i8> [[Y:%.*]], <2 x i8> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <8 x i8> [[S1]], <8 x i8> [[S2]], <8 x i32> <i32 0, i32 8, i32 1, i32 undef, i32 8, i32 1, i32 9, i32 0>
+; CHECK-NEXT:    ret <8 x i8> [[S3]]
+;
+  %s1 = shufflevector <2 x i8> %x, <2 x i8> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %s2 = shufflevector <2 x i8> %y, <2 x i8> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %s3 = shufflevector <8 x i8> %s1, <8 x i8> %s2, <8 x i32> <i32 0, i32 8, i32 1, i32 undef, i32 8, i32 1, i32 9, i32 0>
+  ret <8 x i8> %s3
+}
+
 ; The last shuffle may change the vector type.
 
 define <2 x i8> @insert_subvector_shuffles_narrowing(<3 x i8> %x, <3 x i8> %y) {
@@ -1165,6 +1178,19 @@ define <2 x i8> @insert_subvector_shuffles_narrowing(<3 x i8> %x, <3 x i8> %y) {
   %s1 = shufflevector <3 x i8> %x, <3 x i8> undef, <7 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %s2 = shufflevector <3 x i8> %y, <3 x i8> undef, <7 x i32> <i32 undef, i32 1, i32 2, i32 undef, i32 undef, i32 undef, i32 undef>
   %s3 = shufflevector <7 x i8> %s1, <7 x i8> %s2, <2 x i32> <i32 0, i32 8>
+  ret <2 x i8> %s3
+}
+
+define <2 x i8> @insert_subvector_shuffles_narrowing_pow2elts(<4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: @insert_subvector_shuffles_narrowing_pow2elts(
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> undef, <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <4 x i8> [[Y:%.*]], <4 x i8> undef, <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <8 x i8> [[S1]], <8 x i8> [[S2]], <2 x i32> <i32 0, i32 8>
+; CHECK-NEXT:    ret <2 x i8> [[S3]]
+;
+  %s1 = shufflevector <4 x i8> %x, <4 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %s2 = shufflevector <4 x i8> %y, <4 x i8> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  %s3 = shufflevector <8 x i8> %s1, <8 x i8> %s2, <2 x i32> <i32 0, i32 8>
   ret <2 x i8> %s3
 }
 
