@@ -16,7 +16,7 @@ L1:	leave
 // We check that the source name "t.s" is picked up
 // CHECK: include_directories[  1] = "inc"
 // CHECK: file_names[  1]:
-/ CHECK-NEXT: name: "t.s"
+// CHECK-NEXT: name: "t.s"
 // CHECK-NEXT: dir_index: 0
 // CHECK: file_names[  2]:
 // CHECK-NEXT: name: "g.s"
