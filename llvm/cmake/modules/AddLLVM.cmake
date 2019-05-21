@@ -682,10 +682,9 @@ macro(add_llvm_library name)
 
       install(TARGETS ${name}
               ${export_to_llvmexports}
-              LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-              ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-              RUNTIME DESTINATION bin
-              COMPONENT ${name})
+              LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT ${name}
+              ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT ${name}
+              RUNTIME DESTINATION bin COMPONENT ${name})
 
       if (NOT LLVM_ENABLE_IDE)
         add_llvm_install_targets(install-${name}

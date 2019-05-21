@@ -644,7 +644,7 @@ static void remapSectionsAndSymbols(const llvm::Triple &TargetTriple,
       // reason (e.g. zero byte COFF sections). Don't include those sections in
       // the allocation map.
       if (LoadAddr != 0)
-        AlreadyAllocated[LoadAddr] = (*Tmp)->MB.size();
+        AlreadyAllocated[LoadAddr] = (*Tmp)->MB.allocatedSize();
       Worklist.erase(Tmp);
     }
   }
@@ -668,13 +668,14 @@ static void remapSectionsAndSymbols(const llvm::Triple &TargetTriple,
     uint64_t NextSectionAddr = TargetAddrStart;
 
     for (const auto &Alloc : AlreadyAllocated)
-      if (NextSectionAddr + CurEntry->MB.size() + TargetSectionSep <= Alloc.first)
+      if (NextSectionAddr + CurEntry->MB.allocatedSize() + TargetSectionSep <=
+          Alloc.first)
         break;
       else
         NextSectionAddr = Alloc.first + Alloc.second + TargetSectionSep;
 
     Dyld.mapSectionAddress(CurEntry->MB.base(), NextSectionAddr);
-    AlreadyAllocated[NextSectionAddr] = CurEntry->MB.size();
+    AlreadyAllocated[NextSectionAddr] = CurEntry->MB.allocatedSize();
   }
 
   // Add dummy symbols to the memory manager.

@@ -135,8 +135,6 @@ void LinkerScript::setDot(Expr E, const Twine &Loc, bool InSec) {
   // Update to location counter means update to section size.
   if (InSec)
     expandOutputSection(Val - Dot);
-  else if (Val > Dot)
-    expandMemoryRegions(Val - Dot);
 
   Dot = Val;
 }
