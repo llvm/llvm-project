@@ -12,6 +12,7 @@ source_set("tweaks") {
   ]
   include_dirs = [ "../.." ]
   sources = [
+    "RawStringLiteral.cpp",
     "SwapIfBranches.cpp",
   ]
 }
