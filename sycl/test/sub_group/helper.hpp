@@ -112,7 +112,9 @@ template <typename T> void exit_if_not_equal(T val, T ref, const char *name) {
 }
 
 template <> void exit_if_not_equal(half val, half ref, const char *name) {
-  if (std::fabs((float)val - (float)ref) > 0.01) {
+  int16_t cmp_val = reinterpret_cast<int16_t&>(val);
+  int16_t cmp_ref = reinterpret_cast<int16_t&>(ref);
+  if (std::abs(cmp_val - cmp_ref) > 1) {
     std::cout << "Unexpected result for " << name << ": " << (float)val
               << " expected value: " << (float)ref << std::endl;
     exit(1);

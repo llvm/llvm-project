@@ -11,8 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: gpu
-
 #include "helper.hpp"
 #include <CL/sycl.hpp>
 template <typename T, int N> class sycl_subgr;
