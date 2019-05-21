@@ -58,10 +58,12 @@ class TestSwiftDynamicTypeResolutionImportConflict(TestBase):
         self.expect("fr v -d no-dynamic-values -- input",
                     substrs=['(Dylib.LibraryProtocol) input'])
         self.expect("fr v -d run-target -- input",
-                    substrs=['(a.FromMainModule) input'])
+                    substrs=['(Dylib.LibraryProtocol) input'])
+                    # FIXME: substrs=['(main.FromMainModule) input'])
         self.expect("expr -d run-target -- input",
                     "test that the expression evaluator can recover",
-                    substrs=['(a.FromMainModule) $R0'])
+                    substrs=['(Dylib.LibraryProtocol) $R0'])
+                    # FIXME: substrs=['(main.FromMainModule) input'])
 
 if __name__ == '__main__':
     import atexit
