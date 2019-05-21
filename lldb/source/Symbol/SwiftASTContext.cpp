@@ -1589,6 +1589,9 @@ static llvm::Optional<StringRef> GetDSYMBundle(Module &module) {
 lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                                                    Module &module,
                                                    Target *target) {
+  std::vector<std::string> module_search_paths;
+  std::vector<std::pair<std::string, bool>> framework_search_paths;
+  
   if (!SwiftASTContextSupportsLanguage(language))
     return lldb::TypeSystemSP();
 
@@ -1726,16 +1729,12 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
     if (!got_serialized_options) {
 
-      std::vector<std::string> framework_search_paths;
-
-      if (sym_vendor->GetCompileOptions("-F", framework_search_paths)) {
-        for (std::string &search_path : framework_search_paths) {
-          swift_ast_sp->AddFrameworkSearchPath(search_path.c_str());
-        }
-      }
+      std::vector<std::string> fw_paths;
+      if (sym_vendor->GetCompileOptions("-F", fw_paths))
+        for (std::string &fw_path : fw_paths)
+          framework_search_paths.push_back({fw_path, /*is_system*/ false});
 
       std::vector<std::string> include_paths;
-
       if (sym_vendor->GetCompileOptions("-I", include_paths)) {
         for (std::string &search_path : include_paths) {
           const FileSpec path_spec(search_path.c_str());
@@ -1744,7 +1743,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
             static const ConstString s_hmap_extension("hmap");
 
             if (IsDirectory(path_spec)) {
-              swift_ast_sp->AddModuleSearchPath(search_path.c_str());
+              module_search_paths.push_back(search_path);
             } else if (IsRegularFile(path_spec) &&
                        path_spec.GetFileNameExtension() == s_hmap_extension) {
               std::string argument("-I");
@@ -1756,7 +1755,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       }
 
       std::vector<std::string> cc_options;
-
       if (sym_vendor->GetCompileOptions("-Xcc", cc_options)) {
         for (size_t i = 0; i < cc_options.size(); ++i) {
           if (!cc_options[i].compare("-iquote") && i + 1 < cc_options.size()) {
@@ -1811,9 +1809,11 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     bool exists = false;
     llvm::sys::fs::is_directory(path, exists);
     if (exists)
-      swift_ast_sp->AddModuleSearchPath(path.c_str());
+      module_search_paths.push_back(path.str());
   }
-  
+
+  swift_ast_sp->InitializeSearchPathOptions(module_search_paths,
+                                            framework_search_paths);
   if (!swift_ast_sp->GetClangImporter()) {
     LOG_PRINTF(LIBLLDB_LOG_TYPES,
                "(\"%s\") returning NULL - couldn't create a ClangImporter",
@@ -1839,6 +1839,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                                                    Target &target,
                                                    const char *extra_options) {
+  std::vector<std::string> module_search_paths;
+  std::vector<std::pair<std::string, bool>> framework_search_paths;
+
   if (!SwiftASTContextSupportsLanguage(language))
     return lldb::TypeSystemSP();
 
@@ -2075,11 +2078,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                 std::string parent_path =
                     module_path.substr(0, framework_offset);
 
-                if (strncmp(parent_path.c_str(), "/System/Library",
-                            strlen("/System/Library")) &&
-                    !IsDeviceSupport(parent_path.c_str())) {
-                  swift_ast_sp->AddFrameworkSearchPath(parent_path.c_str());
-                }
+                if (!StringRef(parent_path).equals("/System/Library") &&
+                    !IsDeviceSupport(parent_path.c_str()))
+                  framework_search_paths.push_back(
+                      {std::move(parent_path), /*system*/ false});
               }
             }
           }
@@ -2093,7 +2095,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
         if (!sym_vendor)
           return;
 
-        std::vector<std::string> module_names;
         SymbolFile *sym_file = sym_vendor->GetSymbolFile();
         if (!sym_file)
           return;
@@ -2104,24 +2105,16 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
         if (ast_context && !ast_context->HasErrors()) {
           if (use_all_compiler_flags ||
               target.GetExecutableModulePointer() == module_sp.get()) {
-            for (size_t msi = 0, mse = ast_context->GetNumModuleSearchPaths();
-                 msi < mse; ++msi) {
-              const char *search_path =
-                  ast_context->GetModuleSearchPathAtIndex(msi);
-              swift_ast_sp->AddModuleSearchPath(search_path);
-            }
 
-            for (size_t fsi = 0,
-                        fse = ast_context->GetNumFrameworkSearchPaths();
-                 fsi < fse; ++fsi) {
-              const char *search_path =
-                  ast_context->GetFrameworkSearchPathAtIndex(fsi);
-              swift_ast_sp->AddFrameworkSearchPath(search_path);
-            }
+            const auto &opts = ast_context->GetSearchPathOptions();
+            module_search_paths.insert(module_search_paths.end(),
+                                       opts.ImportSearchPaths.begin(),
+                                       opts.ImportSearchPaths.end());
+            for (const auto &fwsp : opts.FrameworkSearchPaths)
+              framework_search_paths.push_back({fwsp.Path, fwsp.IsSystem});
+
             swift_ast_sp->AddExtraClangArgs(ast_context->GetClangArguments());
           }
-
-          swift_ast_sp->RegisterSectionModules(*module_sp, module_names);
         }
       };
 
@@ -2129,18 +2122,16 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     process_one_module(target.GetImages().GetModuleAtIndex(mi));
   }
 
-  FileSpecList framework_search_paths = target.GetSwiftFrameworkSearchPaths();
-  FileSpecList module_search_paths = target.GetSwiftModuleSearchPaths();
+  FileSpecList target_module_paths = target.GetSwiftModuleSearchPaths();
+  for (size_t mi = 0, me = target_module_paths.GetSize(); mi != me; ++mi)
+    module_search_paths.push_back(
+        target_module_paths.GetFileSpecAtIndex(mi).GetPath());
 
-  for (size_t fi = 0, fe = framework_search_paths.GetSize(); fi != fe; ++fi) {
-    swift_ast_sp->AddFrameworkSearchPath(
-        framework_search_paths.GetFileSpecAtIndex(fi).GetPath().c_str());
-  }
-
-  for (size_t mi = 0, me = module_search_paths.GetSize(); mi != me; ++mi) {
-    swift_ast_sp->AddModuleSearchPath(
-        module_search_paths.GetFileSpecAtIndex(mi).GetPath().c_str());
-  }
+  FileSpecList target_framework_paths = target.GetSwiftFrameworkSearchPaths();
+  for (size_t fi = 0, fe = target_framework_paths.GetSize(); fi != fe; ++fi)
+    framework_search_paths.push_back(
+        {target_framework_paths.GetFileSpecAtIndex(fi).GetPath(),
+         /*is_system*/ false});
 
   // Now fold any extra options we were passed. This has to be done
   // BEFORE the ClangImporter is made by calling GetClangImporter or
@@ -2161,9 +2152,17 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
   // This needs to happen once all the import paths are set, or
   // otherwise no modules will be found.
+  swift_ast_sp->InitializeSearchPathOptions(module_search_paths,
+                                            framework_search_paths);
   if (!swift_ast_sp->GetClangImporter()) {
     logError("couldn't create a ClangImporter");
     return TypeSystemSP();
+  }
+
+  for (size_t mi = 0; mi != num_images; ++mi) {
+    std::vector<std::string> module_names;
+    auto module_sp = target.GetImages().GetModuleAtIndex(mi);
+    swift_ast_sp->RegisterSectionModules(*module_sp, module_names);
   }
 
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "((Target*)%p) = %p",
@@ -2666,54 +2665,85 @@ swift::ClangImporterOptions &SwiftASTContext::GetClangImporterOptions() {
 }
 
 swift::SearchPathOptions &SwiftASTContext::GetSearchPathOptions() {
+  assert(m_initialized_search_path_options);
+  return GetCompilerInvocation().getSearchPathOptions();
+}
+
+void SwiftASTContext::InitializeSearchPathOptions(
+    llvm::ArrayRef<std::string> module_search_paths,
+    llvm::ArrayRef<std::pair<std::string, bool>> framework_search_paths) {
   swift::SearchPathOptions &search_path_opts =
       GetCompilerInvocation().getSearchPathOptions();
 
-  if (!m_initialized_search_path_options) {
-    m_initialized_search_path_options = true;
+  assert(!m_initialized_search_path_options);
+  m_initialized_search_path_options = true;
 
-    bool set_sdk = false;
-    if (!search_path_opts.SDKPath.empty()) {
-      FileSpec provided_sdk_path(search_path_opts.SDKPath);
-      if (FileSystem::Instance().Exists(provided_sdk_path)) {
-        // We don't check whether the SDK supports swift because we figure if
-        // someone is passing this to us on the command line (e.g., for the
-        // REPL), they probably know what they're doing.
+  bool set_sdk = false;
+  if (!search_path_opts.SDKPath.empty()) {
+    FileSpec provided_sdk_path(search_path_opts.SDKPath);
+    if (FileSystem::Instance().Exists(provided_sdk_path)) {
+      // We don't check whether the SDK supports swift because we figure if
+      // someone is passing this to us on the command line (e.g., for the
+      // REPL), they probably know what they're doing.
 
-        set_sdk = true;
-      }
-    } else if (!m_platform_sdk_path.empty()) {
-      FileSpec platform_sdk(m_platform_sdk_path.c_str());
-
-      if (FileSystem::Instance().Exists(platform_sdk) &&
-          SDKSupportsSwift(platform_sdk, SDKType::unknown)) {
-        search_path_opts.SDKPath = m_platform_sdk_path.c_str();
-        set_sdk = true;
-      }
+      set_sdk = true;
     }
+  } else if (!m_platform_sdk_path.empty()) {
+    FileSpec platform_sdk(m_platform_sdk_path.c_str());
 
-    llvm::Triple triple(GetTriple());
-    StringRef resource_dir = GetResourceDir(triple);
-    ConfigureResourceDirs(GetCompilerInvocation(), FileSpec(resource_dir),
-                          triple);
-
-    auto is_simulator = [&]() -> bool {
-      return triple.getEnvironment() == llvm::Triple::Simulator ||
-             !triple.getArchName().startswith("arm");
-    };
-
-    if (!set_sdk) {
-      auto sdk = GetSDKType(triple, HostInfo::GetArchitecture().GetTriple());
-      // Explicitly leave the SDKPath blank on other platforms.
-      if (sdk.sdk_type != SDKType::unknown) {
-        auto dir = GetSDKDirectory(sdk.sdk_type, sdk.min_version_major,
-                                   sdk.min_version_minor);
-        search_path_opts.SDKPath = dir.AsCString("");
-      }
+    if (FileSystem::Instance().Exists(platform_sdk) &&
+        SDKSupportsSwift(platform_sdk, SDKType::unknown)) {
+      search_path_opts.SDKPath = m_platform_sdk_path.c_str();
+      set_sdk = true;
     }
   }
 
-  return search_path_opts;
+  llvm::Triple triple(GetTriple());
+  StringRef resource_dir = GetResourceDir(triple);
+  ConfigureResourceDirs(GetCompilerInvocation(), FileSpec(resource_dir),
+                        triple);
+
+  auto is_simulator = [&]() -> bool {
+    return triple.getEnvironment() == llvm::Triple::Simulator ||
+           !triple.getArchName().startswith("arm");
+  };
+
+  if (!set_sdk) {
+    auto sdk = GetSDKType(triple, HostInfo::GetArchitecture().GetTriple());
+    // Explicitly leave the SDKPath blank on other platforms.
+    if (sdk.sdk_type != SDKType::unknown) {
+      auto dir = GetSDKDirectory(sdk.sdk_type, sdk.min_version_major,
+                                 sdk.min_version_minor);
+      search_path_opts.SDKPath = dir.AsCString("");
+    }
+  }
+
+  llvm::StringMap<bool> processed;
+  // Add all deserialized paths to the map.
+  for (const auto &path : search_path_opts.ImportSearchPaths)
+    processed.insert({path, false});
+
+  // Add/unique all extra paths.
+  for (const auto &path : module_search_paths) {
+    search_path_opts.ImportSearchPaths.push_back(path);
+    auto it_notseen = processed.insert({path, false});
+    if (it_notseen.second)
+      search_path_opts.ImportSearchPaths.push_back(path);
+  }
+
+  // This preserves the IsSystem bit, but deduplicates entries ignoring it.
+  processed.clear();
+  // Add all deserialized paths to the map.
+  for (const auto &path : search_path_opts.FrameworkSearchPaths)
+    processed.insert({path.Path, path.IsSystem});
+
+  // Add/unique all extra paths.
+  for (const auto &path : framework_search_paths) {
+    auto it_notseen = processed.insert(path);
+    if (it_notseen.second)
+      search_path_opts.FrameworkSearchPaths.push_back(
+          {path.first, path.second});
+  }
 }
 
 namespace lldb_private {
@@ -3045,6 +3075,10 @@ private:
 } // namespace lldb_private
 
 swift::ASTContext *SwiftASTContext::GetASTContext() {
+  assert(m_initialized_search_path_options &&
+         m_initialized_clang_importer_options &&
+         "search path options must be initialized before ClangImporter");
+
   swift::DependencyTracker *tracker = nullptr;
   if (m_ast_context_ap.get())
     return m_ast_context_ap.get();
@@ -3185,35 +3219,6 @@ swift::ClangImporter *SwiftASTContext::GetClangImporter() {
   return m_clang_importer;
 }
 
-bool SwiftASTContext::AddModuleSearchPath(StringRef path) {
-  VALID_OR_RETURN(false);
-  if (path.empty())
-    return false;
-
-  swift::ASTContext *ast = GetASTContext();
-  for (auto p : ast->SearchPathOpts.ImportSearchPaths)
-    if (path.equals(p))
-      return false;
-
-  ast->SearchPathOpts.ImportSearchPaths.push_back(path);
-  return true;
-}
-
-bool SwiftASTContext::AddFrameworkSearchPath(StringRef path) {
-  VALID_OR_RETURN(false);
-  if (path.empty())
-    return false;
-
-  swift::ASTContext *ast = GetASTContext();
-  for (const auto &p : ast->SearchPathOpts.FrameworkSearchPaths)
-    if (path.equals(p.Path))
-      return false;
-
-  ast->SearchPathOpts.FrameworkSearchPaths.push_back(
-      {path, /*isSystem=*/false});
-  return true;
-}
-
 bool SwiftASTContext::AddClangArgument(std::string clang_arg, bool unique) {
   if (clang_arg.empty())
     return false;
@@ -3249,41 +3254,13 @@ bool SwiftASTContext::AddClangArgumentPair(StringRef clang_arg_1,
   return true;
 }
 
-size_t SwiftASTContext::GetNumModuleSearchPaths() const {
+const swift::SearchPathOptions *
+SwiftASTContext::GetSearchPathOptions() const {
   VALID_OR_RETURN(0);
 
-  if (m_ast_context_ap.get())
-    return m_ast_context_ap->SearchPathOpts.ImportSearchPaths.size();
-  return 0;
-}
-
-const char *SwiftASTContext::GetModuleSearchPathAtIndex(size_t idx) const {
-  VALID_OR_RETURN(nullptr);
-
-  if (m_ast_context_ap.get()) {
-    if (idx < m_ast_context_ap->SearchPathOpts.ImportSearchPaths.size())
-      return m_ast_context_ap->SearchPathOpts.ImportSearchPaths[idx].c_str();
-  }
-  return NULL;
-}
-
-size_t SwiftASTContext::GetNumFrameworkSearchPaths() const {
-  VALID_OR_RETURN(0);
-
-  if (m_ast_context_ap.get())
-    return m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths.size();
-  return 0;
-}
-
-const char *SwiftASTContext::GetFrameworkSearchPathAtIndex(size_t idx) const {
-  VALID_OR_RETURN(nullptr);
-
-  if (m_ast_context_ap.get()) {
-    if (idx < m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths.size())
-      return m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths[idx]
-          .Path.c_str();
-  }
-  return NULL;
+  if (!m_ast_context_ap)
+    return nullptr;
+  return &m_ast_context_ap->SearchPathOpts;
 }
 
 const std::vector<std::string> &SwiftASTContext::GetClangArguments() {
@@ -3882,6 +3859,13 @@ void SwiftASTContext::LoadExtraDylibs(Process &process, Status &error) {
   }
 }
 
+static std::string GetBriefModuleName(Module &module) {
+  StreamString ss;
+  module.GetDescription(&ss, eDescriptionLevelBrief);
+  ss.Flush();
+  return ss.GetString().str();
+}
+
 bool SwiftASTContext::RegisterSectionModules(
     Module &module, std::vector<std::string> &module_names) {
   VALID_OR_RETURN(false);
@@ -3919,9 +3903,10 @@ bool SwiftASTContext::RegisterSectionModules(
     if (sym_vendor) {
       // Grab all the AST blobs from the symbol vendor.
       auto ast_file_datas = sym_vendor->GetASTData(eLanguageTypeSwift);
-      LOG_PRINTF(LIBLLDB_LOG_TYPES,
-                 "retrieved %zu AST Data blobs from the symbol vendor.",
-                 ast_file_datas.size());
+      LOG_PRINTF(
+          LIBLLDB_LOG_TYPES,
+          "(\"%s\") retrieved %zu AST Data blobs from the symbol vendor.",
+          GetBriefModuleName(module).c_str(), ast_file_datas.size());
 
       // Add each of the AST blobs to the vector of AST blobs for
       // the module.
