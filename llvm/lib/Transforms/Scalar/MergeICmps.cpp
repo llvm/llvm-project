@@ -81,20 +81,6 @@ struct BCEAtom {
   BCEAtom(GetElementPtrInst *GEP, LoadInst *LoadI, int BaseId, APInt Offset)
       : GEP(GEP), LoadI(LoadI), BaseId(BaseId), Offset(Offset) {}
 
-  BCEAtom(const BCEAtom &) = delete;
-  BCEAtom &operator=(const BCEAtom &) = delete;
-
-  BCEAtom(BCEAtom &&that) = default;
-  BCEAtom &operator=(BCEAtom &&that) {
-    if (this == &that)
-      return *this;
-    GEP = that.GEP;
-    LoadI = that.LoadI;
-    BaseId = that.BaseId;
-    Offset = std::move(that.Offset);
-    return *this;
-  }
-
   // We want to order BCEAtoms by (Base, Offset). However we cannot use
   // the pointer values for Base because these are non-deterministic.
   // To make sure that the sort order is stable, we first assign to each atom
@@ -189,7 +175,7 @@ class BCECmpBlock {
   BCECmpBlock() {}
 
   BCECmpBlock(BCEAtom L, BCEAtom R, int SizeBits)
-      : Lhs_(std::move(L)), Rhs_(std::move(R)), SizeBits_(SizeBits) {
+      : Lhs_(L), Rhs_(R), SizeBits_(SizeBits) {
     if (Rhs_ < Lhs_) std::swap(Rhs_, Lhs_);
   }
 
@@ -390,7 +376,7 @@ BCECmpBlock visitCmpBlock(Value *const Val, BasicBlock *const Block,
 }
 
 static inline void enqueueBlock(std::vector<BCECmpBlock> &Comparisons,
-                                BCECmpBlock &&Comparison) {
+                                BCECmpBlock &Comparison) {
   LLVM_DEBUG(dbgs() << "Block '" << Comparison.BB->getName()
                     << "': Found cmp of " << Comparison.SizeBits()
                     << " bits between " << Comparison.Lhs().BaseId << " + "
@@ -398,7 +384,7 @@ static inline void enqueueBlock(std::vector<BCECmpBlock> &Comparisons,
                     << Comparison.Rhs().BaseId << " + "
                     << Comparison.Rhs().Offset << "\n");
   LLVM_DEBUG(dbgs() << "\n");
-  Comparisons.push_back(std::move(Comparison));
+  Comparisons.push_back(Comparison);
 }
 
 // A chain of comparisons.
@@ -470,7 +456,7 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
                      << "Split initial block '" << Comparison.BB->getName()
                      << "' that does extra work besides compare\n");
           Comparison.RequireSplit = true;
-          enqueueBlock(Comparisons, std::move(Comparison));
+          enqueueBlock(Comparisons, Comparison);
         } else {
           LLVM_DEBUG(dbgs()
                      << "ignoring initial block '" << Comparison.BB->getName()
@@ -503,7 +489,7 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
       // We could still merge bb1 and bb2 though.
       return;
     }
-    enqueueBlock(Comparisons, std::move(Comparison));
+    enqueueBlock(Comparisons, Comparison);
   }
 
   // It is possible we have no suitable comparison to merge.
@@ -521,7 +507,7 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
   // semantics because we are only accessing dereferencable memory.
   llvm::sort(Comparisons_,
              [](const BCECmpBlock &LhsBlock, const BCECmpBlock &RhsBlock) {
-               return LhsBlock.Rhs() < RhsBlock.Lhs();
+               return LhsBlock.Lhs() < RhsBlock.Lhs();
              });
 #ifdef MERGEICMPS_DOT_ON
   errs() << "AFTER REORDERING:\n\n";
