@@ -139,13 +139,10 @@ Error CtorDtorRunner::run() {
         CtorDtor();
       }
     }
+    CtorDtorsByPriority.clear();
     return Error::success();
   } else
     return CtorDtorMap.takeError();
-
-  CtorDtorsByPriority.clear();
-
-  return Error::success();
 }
 
 void LocalCXXRuntimeOverridesBase::runDestructors() {

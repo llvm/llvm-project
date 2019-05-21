@@ -3083,6 +3083,10 @@ defm : FPToIntegerPats<fp_to_uint, ftrunc, "FCVTZU">;
 defm : FPToIntegerPats<fp_to_sint, fround, "FCVTAS">;
 defm : FPToIntegerPats<fp_to_uint, fround, "FCVTAU">;
 
+def : Pat<(i32 (lround f32:$Rn)),
+          (!cast<Instruction>(FCVTASUWSr) f32:$Rn)>;
+def : Pat<(i32 (lround f64:$Rn)),
+          (!cast<Instruction>(FCVTASUWDr) f64:$Rn)>;
 def : Pat<(i64 (lround f32:$Rn)),
           (!cast<Instruction>(FCVTASUXSr) f32:$Rn)>;
 def : Pat<(i64 (lround f64:$Rn)),

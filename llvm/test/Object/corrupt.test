@@ -62,11 +62,11 @@ RUN: not llvm-readobj --dyn-relocations \
 RUN:   %p/Inputs/corrupt-invalid-dynamic-table-offset.elf.x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=DYN-TABLE-OFFSET %s
 
-DYN-TABLE-OFFSET: error: Invalid data was encountered while parsing the file
+DYN-TABLE-OFFSET: error: PT_DYNAMIC segment offset + size exceeds the size of the file
 
 
 RUN: not llvm-readobj --dyn-relocations \
 RUN:   %p/Inputs/corrupt-invalid-dynamic-table-too-large.elf.x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=DYN-TABLE-TOO-LARGE %s
 
-DYN-TABLE-TOO-LARGE: error: Invalid data was encountered while parsing the file
+DYN-TABLE-TOO-LARGE: error: PT_DYNAMIC segment offset + size exceeds the size of the file

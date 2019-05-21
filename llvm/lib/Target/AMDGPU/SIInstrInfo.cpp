@@ -2486,7 +2486,7 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
       Opcode == AMDGPU::DS_ORDERED_COUNT)
     return true;
 
-  if (MI.isInlineAsm())
+  if (MI.isCall() || MI.isInlineAsm())
     return true; // conservative assumption
 
   // These are like SALU instructions in terms of effects, so it's questionable

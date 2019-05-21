@@ -154,7 +154,7 @@ InProcessMemoryManager::allocate(const SegmentsRequestMap &Request) {
     MutableArrayRef<char> getWorkingMemory(ProtectionFlags Seg) override {
       assert(SegBlocks.count(Seg) && "No allocation for segment");
       return {static_cast<char *>(SegBlocks[Seg].base()),
-              SegBlocks[Seg].size()};
+              SegBlocks[Seg].allocatedSize()};
     }
     JITTargetAddress getTargetMemory(ProtectionFlags Seg) override {
       assert(SegBlocks.count(Seg) && "No allocation for segment");
@@ -178,7 +178,8 @@ InProcessMemoryManager::allocate(const SegmentsRequestMap &Request) {
         if (auto EC = sys::Memory::protectMappedMemory(Block, Prot))
           return errorCodeToError(EC);
         if (Prot & sys::Memory::MF_EXEC)
-          sys::Memory::InvalidateInstructionCache(Block.base(), Block.size());
+          sys::Memory::InvalidateInstructionCache(Block.base(),
+                                                  Block.allocatedSize());
       }
       return Error::success();
     }

@@ -132,6 +132,12 @@ class JSONNodeDumper
       JOS.attribute(Key, Value);
   }
 
+  // Creates a single SourceLocation JSON representation of the given location.
+  llvm::json::Object createBareSourceLocation(SourceLocation Loc);
+  // Creates a JSON representation of a SourceLocation based on its presumed
+  // spelling location. If the given location represents a macro invocation,
+  // this outputs two sub-objects: one for the spelling and one for the
+  // expansion location.
   llvm::json::Object createSourceLocation(SourceLocation Loc);
   llvm::json::Object createSourceRange(SourceRange R);
   std::string createPointerRepresentation(const void *Ptr);

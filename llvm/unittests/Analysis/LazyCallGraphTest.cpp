@@ -1977,6 +1977,35 @@ TEST(LazyCallGraphTest, HandleBlockAddress) {
   EXPECT_TRUE(GRC.isParentOf(FRC));
 }
 
+// Test that a blockaddress that refers to itself creates no new RefSCC
+// connections. https://bugs.llvm.org/show_bug.cgi?id=40722
+TEST(LazyCallGraphTest, HandleBlockAddress2) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M =
+      parseAssembly(Context, "define void @f() {\n"
+                             "  ret void\n"
+                             "}\n"
+                             "define void @g(i8** %ptr) {\n"
+                             "bb:\n"
+                             "  store i8* blockaddress(@g, %bb), i8** %ptr\n"
+                             "  ret void\n"
+                             "}\n");
+  LazyCallGraph CG = buildCG(*M);
+
+  CG.buildRefSCCs();
+  auto I = CG.postorder_ref_scc_begin();
+  LazyCallGraph::RefSCC &GRC = *I++;
+  LazyCallGraph::RefSCC &FRC = *I++;
+  EXPECT_EQ(CG.postorder_ref_scc_end(), I);
+
+  LazyCallGraph::Node &F = *CG.lookup(lookupFunction(*M, "f"));
+  LazyCallGraph::Node &G = *CG.lookup(lookupFunction(*M, "g"));
+  EXPECT_EQ(&FRC, CG.lookupRefSCC(F));
+  EXPECT_EQ(&GRC, CG.lookupRefSCC(G));
+  EXPECT_FALSE(GRC.isParentOf(FRC));
+  EXPECT_FALSE(FRC.isParentOf(GRC));
+}
+
 TEST(LazyCallGraphTest, ReplaceNodeFunction) {
   LLVMContext Context;
   // A graph with several different kinds of edges pointing at a particular

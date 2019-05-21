@@ -675,11 +675,11 @@ static int64_t computeAddend(const RelTy &Rel, const RelTy *End,
 // Returns true if this function printed out an error message.
 static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
                                  uint64_t Offset) {
-  if (Sym.isLocal() || !Sym.isUndefined() || Sym.isWeak())
+  if (!Sym.isUndefined() || Sym.isWeak())
     return false;
 
-  bool CanBeExternal =
-      Sym.computeBinding() != STB_LOCAL && Sym.Visibility == STV_DEFAULT;
+  bool CanBeExternal = !Sym.isLocal() && Sym.computeBinding() != STB_LOCAL &&
+                       Sym.Visibility == STV_DEFAULT;
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore && CanBeExternal)
     return false;
 
@@ -1012,7 +1012,8 @@ template <class ELFT, class RelTy>
 static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
                       RelTy *End) {
   const RelTy &Rel = *I;
-  Symbol &Sym = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
+  uint32_t SymIndex = Rel.getSymbol(Config->IsMips64EL);
+  Symbol &Sym = Sec.getFile<ELFT>()->getSymbol(SymIndex);
   RelType Type;
 
   // Deal with MIPS oddity.
@@ -1028,8 +1029,9 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
   if (Offset == uint64_t(-1))
     return;
 
-  // Skip if the target symbol is an erroneous undefined symbol.
-  if (maybeReportUndefined(Sym, Sec, Rel.r_offset))
+  // Error if the target symbol is undefined. Symbol index 0 may be used by
+  // marker relocations, e.g. R_*_NONE and R_ARM_V4BX. Don't error on them.
+  if (SymIndex != 0 && maybeReportUndefined(Sym, Sec, Rel.r_offset))
     return;
 
   const uint8_t *RelocatedAddr = Sec.data().begin() + Rel.r_offset;

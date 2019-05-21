@@ -539,9 +539,8 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
   def int_canonicalize : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
                                    [IntrNoMem]>;
 
-  def int_lround_i32 : Intrinsic<[llvm_i32_ty], [llvm_anyfloat_ty]>;
-  def int_lround_i64 : Intrinsic<[llvm_i64_ty], [llvm_anyfloat_ty]>;
-  def int_llround    : Intrinsic<[llvm_i64_ty], [llvm_anyfloat_ty]>;
+  def int_lround : Intrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
+  def int_llround : Intrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
 }
 
 def int_minnum : Intrinsic<[llvm_anyfloat_ty],
