@@ -75,7 +75,10 @@ uint32_t ObjFile::calcNewIndex(const WasmRelocation &Reloc) const {
     assert(TypeIsUsed[Reloc.Index]);
     return TypeMap[Reloc.Index];
   }
-  return Symbols[Reloc.Index]->getOutputSymbolIndex();
+  const Symbol *Sym = Symbols[Reloc.Index];
+  if (auto *SS = dyn_cast<SectionSymbol>(Sym))
+    Sym = SS->getOutputSectionSymbol();
+  return Sym->getOutputSymbolIndex();
 }
 
 // Relocations can contain addend for combined sections. This function takes a
@@ -395,7 +398,7 @@ Symbol *ObjFile::createDefined(const WasmSymbol &Sym) {
   case WASM_SYMBOL_TYPE_SECTION: {
     InputSection *Section = CustomSectionsByIndex[Sym.Info.ElementIndex];
     assert(Sym.isBindingLocal());
-    return make<SectionSymbol>(Name, Flags, Section, this);
+    return make<SectionSymbol>(Flags, Section, this);
   }
   case WASM_SYMBOL_TYPE_EVENT: {
     InputEvent *Event =

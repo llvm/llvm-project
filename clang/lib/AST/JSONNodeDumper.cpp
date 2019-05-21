@@ -755,7 +755,9 @@ void JSONNodeDumper::VisitIntegerLiteral(const IntegerLiteral *IL) {
 }
 void JSONNodeDumper::VisitCharacterLiteral(const CharacterLiteral *CL) {
   // FIXME: This should probably print the character literal as a string,
-  // rather than as a numerical value.
+  // rather than as a numerical value. It would be nice if the behavior matched
+  // what we do to print a string literal; right now, it is impossible to tell
+  // the difference between 'a' and L'a' in C from the JSON output.
   JOS.attribute("value", CL->getValue());
 }
 void JSONNodeDumper::VisitFixedPointLiteral(const FixedPointLiteral *FPL) {

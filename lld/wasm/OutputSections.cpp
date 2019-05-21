@@ -206,6 +206,7 @@ void CustomSection::finalizeContents() {
 
   for (InputSection *Section : InputSections) {
     Section->OutputOffset = PayloadSize;
+    Section->OutputSec = this;
     PayloadSize += Section->getSize();
   }
 
@@ -240,10 +241,4 @@ uint32_t CustomSection::numRelocations() const {
 void CustomSection::writeRelocations(raw_ostream &OS) const {
   for (const InputSection *S : InputSections)
     S->writeRelocations(OS);
-}
-
-void RelocSection::writeBody() {
-  writeUleb128(BodyOutputStream, SectionIndex, "reloc section");
-  writeUleb128(BodyOutputStream, Sec->numRelocations(), "reloc count");
-  Sec->writeRelocations(BodyOutputStream);
 }
