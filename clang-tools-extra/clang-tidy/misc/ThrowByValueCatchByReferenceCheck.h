@@ -41,6 +41,8 @@ private:
   bool isCatchVariable(const DeclRefExpr *declRefExpr);
   bool isFunctionOrCatchVar(const DeclRefExpr *declRefExpr);
   const bool CheckAnonymousTemporaries;
+  const bool WarnOnLargeObject;
+  uint64_t MaxSize; // No `const` because we have to set it in two steps.
 };
 
 } // namespace misc

@@ -57,7 +57,6 @@ add_lldb_library(lldbSymbol
     lldbPluginExpressionParserClang
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFilePDB
-    lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
 
   LINK_COMPONENTS

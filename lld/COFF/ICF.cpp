@@ -256,10 +256,9 @@ void ICF::run(ArrayRef<Chunk *> Vec) {
 
   // Make sure that ICF doesn't merge sections that are being handled by string
   // tail merging.
-  for (MergeChunk *MC : MergeChunk::Instances)
-    if (MC)
-      for (SectionChunk *SC : MC->Sections)
-        SC->Class[0] = NextId++;
+  for (auto &P : MergeChunk::Instances)
+    for (SectionChunk *SC : P.second->Sections)
+      SC->Class[0] = NextId++;
 
   // Initially, we use hash values to partition sections.
   parallelForEach(Chunks, [&](SectionChunk *SC) {

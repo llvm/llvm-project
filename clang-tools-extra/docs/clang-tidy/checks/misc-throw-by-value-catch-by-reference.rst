@@ -32,3 +32,18 @@ Options
    <https://www.securecoding.cert.org/confluence/display/cplusplus/ERR09-CPP.+Throw+anonymous+temporaries>`_.
    Default is `1`.
 
+.. option:: WarnOnLargeObject
+
+   Also warns for any large, trivial object caught by value. Catching a large
+   object by value is not dangerous but affects the performance negatively. The
+   maximum size of an object allowed to be caught without warning can be set
+   using the `MaxSize` option.
+   Default is `0`.
+
+.. option:: MaxSize
+
+   Determines the maximum size of an object allowed to be caught without
+   warning. Only applicable if `WarnOnLargeObject` is set to `1`. If option is
+   set by the user to `std::numeric_limits<uint64_t>::max()` then it reverts to
+   the default value.
+   Default is the size of `size_t`.

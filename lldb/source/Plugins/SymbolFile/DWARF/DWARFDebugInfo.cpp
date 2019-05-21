@@ -81,23 +81,22 @@ void DWARFDebugInfo::ParseUnitHeadersIfNeeded() {
 
   lldb::offset_t offset = 0;
   const auto &debug_info_data = m_context.getOrLoadDebugInfoData();
-
   while (debug_info_data.ValidOffset(offset)) {
-    llvm::Expected<DWARFUnitSP> cu_sp = DWARFCompileUnit::extract(
+    llvm::Expected<DWARFUnitSP> unit_sp = DWARFUnit::extract(
         m_dwarf2Data, m_units.size(), debug_info_data, &offset);
 
-    if (!cu_sp) {
+    if (!unit_sp) {
       // FIXME: Propagate this error up.
-      llvm::consumeError(cu_sp.takeError());
+      llvm::consumeError(unit_sp.takeError());
       return;
     }
 
     // If it didn't return an error, then it should be returning a valid Unit.
-    assert(*cu_sp);
+    assert(*unit_sp);
 
-    m_units.push_back(*cu_sp);
+    m_units.push_back(*unit_sp);
 
-    offset = (*cu_sp)->GetNextUnitOffset();
+    offset = (*unit_sp)->GetNextUnitOffset();
   }
 }
 

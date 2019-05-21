@@ -16,7 +16,9 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
+#include "llvm/Object/Error.h"
 
+#include "DWARFCompileUnit.h"
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
 #include "LogChannelDWARF.h"
@@ -29,10 +31,13 @@ using namespace std;
 
 extern int g_verbose;
 
-DWARFUnit::DWARFUnit(SymbolFileDWARF *dwarf, user_id_t uid)
-    : UserID(uid), m_dwarf(dwarf), m_cancel_scopes(false) {}
+DWARFUnit::DWARFUnit(SymbolFileDWARF *dwarf, lldb::user_id_t uid,
+                     const DWARFUnitHeader &header,
+                     const DWARFAbbreviationDeclarationSet &abbrevs)
+    : UserID(uid), m_dwarf(dwarf), m_header(header), m_abbrevs(&abbrevs),
+      m_cancel_scopes(false) {}
 
-DWARFUnit::~DWARFUnit() {}
+DWARFUnit::~DWARFUnit() = default;
 
 // Parses first DIE of a compile unit.
 void DWARFUnit::ExtractUnitDIEIfNeeded() {
@@ -46,8 +51,8 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
     return; // Already parsed
 
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(
-      func_cat, "%8.8x: DWARFUnit::ExtractUnitDIEIfNeeded()", m_offset);
+  Timer scoped_timer(func_cat, "%8.8x: DWARFUnit::ExtractUnitDIEIfNeeded()",
+                     GetOffset());
 
   // Set the offset to that of the first DIE and calculate the start of the
   // next compilation unit header.
@@ -145,8 +150,8 @@ void DWARFUnit::ExtractDIEsRWLocked() {
   llvm::sys::ScopedWriter first_die_lock(m_first_die_mutex);
 
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(
-      func_cat, "%8.8x: DWARFUnit::ExtractDIEsIfNeeded()", m_offset);
+  Timer scoped_timer(func_cat, "%8.8x: DWARFUnit::ExtractDIEsIfNeeded()",
+                     GetOffset());
 
   // Set the offset to that of the first DIE and calculate the start of the
   // next compilation unit header.
@@ -332,7 +337,7 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
                                                      DW_AT_GNU_ranges_base, 0);
   dwo_cu->SetRangesBase(ranges_base);
 
-  dwo_cu->SetBaseObjOffset(m_offset);
+  dwo_cu->SetBaseObjOffset(GetOffset());
 
   SetDwoStrOffsetsBase(dwo_cu);
 }
@@ -364,10 +369,6 @@ size_t DWARFUnit::AppendDIEsWithTag(const dw_tag_t tag,
 
   // Return the number of DIEs added to the collection
   return dies.size() - old_size;
-}
-
-dw_offset_t DWARFUnit::GetNextUnitOffset() const {
-  return m_offset + GetLengthByteSize() + GetLength();
 }
 
 size_t DWARFUnit::GetDebugInfoSize() const {
@@ -790,3 +791,92 @@ const DWARFDebugAranges &DWARFUnit::GetFunctionAranges() {
   return *m_func_aranges_up;
 }
 
+llvm::Expected<DWARFUnitHeader>
+DWARFUnitHeader::extract(const DWARFDataExtractor &data,
+                         lldb::offset_t *offset_ptr) {
+  DWARFUnitHeader header;
+  header.m_offset = *offset_ptr;
+  header.m_length = data.GetDWARFInitialLength(offset_ptr);
+  header.m_version = data.GetU16(offset_ptr);
+  if (header.m_version == 5) {
+    header.m_unit_type = data.GetU8(offset_ptr);
+    header.m_addr_size = data.GetU8(offset_ptr);
+    header.m_abbr_offset = data.GetDWARFOffset(offset_ptr);
+    if (header.m_unit_type == llvm::dwarf::DW_UT_skeleton)
+      header.m_dwo_id = data.GetU64(offset_ptr);
+  } else {
+    header.m_abbr_offset = data.GetDWARFOffset(offset_ptr);
+    header.m_addr_size = data.GetU8(offset_ptr);
+    // Only compile units supported so far.
+    header.m_unit_type = DW_UT_compile;
+  }
+
+  bool length_OK = data.ValidOffset(header.GetNextUnitOffset() - 1);
+  bool version_OK = SymbolFileDWARF::SupportedVersion(header.m_version);
+  bool addr_size_OK = (header.m_addr_size == 4) || (header.m_addr_size == 8);
+
+  if (!length_OK)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "Invalid unit length");
+  if (!version_OK)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "Unsupported unit version");
+  if (!addr_size_OK)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "Invalid unit address size");
+
+  return header;
+}
+
+llvm::Expected<DWARFUnitSP>
+DWARFUnit::extract(SymbolFileDWARF *dwarf, user_id_t uid,
+                   const DWARFDataExtractor &debug_info,
+                   lldb::offset_t *offset_ptr) {
+  assert(debug_info.ValidOffset(*offset_ptr));
+
+  auto expected_header = DWARFUnitHeader::extract(debug_info, offset_ptr);
+  if (!expected_header)
+    return expected_header.takeError();
+
+  const DWARFDebugAbbrev *abbr = dwarf->DebugAbbrev();
+  if (!abbr)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "No debug_abbrev data");
+
+  bool abbr_offset_OK =
+      dwarf->GetDWARFContext().getOrLoadAbbrevData().ValidOffset(
+          expected_header->GetAbbrOffset());
+  if (!abbr_offset_OK)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "Abbreviation offset for unit is not valid");
+
+  const DWARFAbbreviationDeclarationSet *abbrevs =
+      abbr->GetAbbreviationDeclarationSet(expected_header->GetAbbrOffset());
+  if (!abbrevs)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "No abbrev exists at the specified offset.");
+
+  DWARFUnitSP unit_sp(
+      new DWARFCompileUnit(dwarf, uid, *expected_header, *abbrevs));
+
+  return unit_sp;
+}
+
+const lldb_private::DWARFDataExtractor &DWARFUnit::GetData() const {
+  return m_dwarf->GetDWARFContext().getOrLoadDebugInfoData();
+}
+
+uint32_t DWARFUnit::GetHeaderByteSize() const {
+  switch (m_header.GetUnitType()) {
+  case llvm::dwarf::DW_UT_compile:
+  case llvm::dwarf::DW_UT_partial:
+    return GetVersion() < 5 ? 11 : 12;
+  case llvm::dwarf::DW_UT_skeleton:
+  case llvm::dwarf::DW_UT_split_compile:
+    return 20;
+  case llvm::dwarf::DW_UT_type:
+  case llvm::dwarf::DW_UT_split_type:
+    return GetVersion() < 5 ? 23 : 24;
+  }
+  llvm_unreachable("invalid UnitType.");
+}
