@@ -484,6 +484,12 @@ enum LoopControlMask {
     LoopControlDontUnrollMask = 0x00000002,
     LoopControlDependencyInfiniteMask = 0x00000004,
     LoopControlDependencyLengthMask = 0x00000008,
+    LoopControlExtendedControlsMask = 0x80000000,
+};
+
+enum ExtendedControls {
+    InitiationIntervalINTEL = 5889,
+    MaxConcurrencyINTEL = 5890,
 };
 
 enum FunctionControlShift {
@@ -664,6 +670,7 @@ enum Capability {
   CapabilitySubgroupAvcMotionEstimationIntraINTEL = 5697,
   CapabilitySubgroupAvcMotionEstimationChromaINTEL = 5698,
   CapabilityFPGAMemoryAttributesINTEL = 5824,
+  CapabilityFPGALoopControlsINTEL = 5888,
   CapabilityMax = 0x7fffffff,
 };
 

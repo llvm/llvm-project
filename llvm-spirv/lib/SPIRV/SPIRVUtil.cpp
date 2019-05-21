@@ -1492,17 +1492,38 @@ spv::LoopControlMask getLoopControl(const BranchInst *Branch,
   MDNode *LoopMD = Branch->getMetadata("llvm.loop");
   if (!LoopMD)
     return spv::LoopControlMaskNone;
+
+  size_t LoopControl = spv::LoopControlMaskNone;
   for (const MDOperand &MDOp : LoopMD->operands()) {
     if (MDNode *Node = dyn_cast<MDNode>(MDOp)) {
       std::string S = getMDOperandAsString(Node, 0);
       if (S == "llvm.loop.unroll.disable")
-        return spv::LoopControlDontUnrollMask;
+        LoopControl |= spv::LoopControlDontUnrollMask;
       // TODO Express partial unrolling in SPIRV.
-      if (S == "llvm.loop.unroll.count" || S == "llvm.loop.unroll.full")
-        return spv::LoopControlUnrollMask;
+      else if (S == "llvm.loop.unroll.count" || S == "llvm.loop.unroll.full")
+        LoopControl |= spv::LoopControlUnrollMask;
+      if (S == "llvm.loop.ivdep.enable")
+        LoopControl |= spv::LoopControlDependencyInfiniteMask;
+      if (S == "llvm.loop.ivdep.safelen") {
+        size_t I = getMDOperandAsInt(Node, 1);
+        Parameters.push_back(I);
+        LoopControl |= spv::LoopControlDependencyLengthMask;
+      }
+      if (S == "llvm.loop.ii.count") {
+        Parameters.push_back(InitiationIntervalINTEL);
+        size_t I = getMDOperandAsInt(Node, 1);
+        Parameters.push_back(I);
+        LoopControl |= spv::LoopControlExtendedControlsMask;
+      }
+      if (S == "llvm.loop.max_concurrency.count") {
+        Parameters.push_back(MaxConcurrencyINTEL);
+        size_t I = getMDOperandAsInt(Node, 1);
+        Parameters.push_back(I);
+        LoopControl |= spv::LoopControlExtendedControlsMask;
+      }
     }
   }
-  return spv::LoopControlMaskNone;
+  return static_cast<spv::LoopControlMask>(LoopControl);
 }
 
 } // namespace SPIRV
