@@ -75,7 +75,7 @@ __global__ void work_group_size_hint_2_2_2() {}
 __attribute__((vec_type_hint(int)))
 __global__ void vec_type_hint_int() {}
 
-// expected-error@+2{{attribute 'intel_reqd_sub_group_size' can only be applied to an OpenCL kernel function}}
+// expected-warning@+1{{'intel_reqd_sub_group_size' attribute ignored}}
 __attribute__((intel_reqd_sub_group_size(64)))
 __global__ void intel_reqd_sub_group_size_64() {}
 

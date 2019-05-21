@@ -1044,11 +1044,12 @@ def OpenCLUnrollHint : InheritableAttr {
   let Documentation = [OpenCLUnrollHintDocs];
 }
 
-def OpenCLIntelReqdSubGroupSize: InheritableAttr {
+def IntelReqdSubGroupSize: InheritableAttr {
   let Spellings = [GNU<"intel_reqd_sub_group_size">, CXX11<"cl", "intel_reqd_sub_group_size">];
   let Args = [UnsignedArgument<"SubGroupSize">];
   let Subjects = SubjectList<[Function, CXXMethod], ErrorDiag>;
-  let Documentation = [OpenCLIntelReqdSubGroupSizeDocs];
+  let Documentation = [IntelReqdSubGroupSizeDocs];
+  let LangOpts = [OpenCL, SYCL];
 }
 
 // This attribute is both a type attribute, and a declaration attribute (for

@@ -316,7 +316,7 @@ public:
       if (!Visited.insert(FD).second)
         continue; // We've already seen this Decl
 
-      if (auto *A = FD->getAttr<OpenCLIntelReqdSubGroupSizeAttr>())
+      if (auto *A = FD->getAttr<IntelReqdSubGroupSizeAttr>())
         Attrs.insert(A);
       // TODO: reqd_work_group_size, vec_len_hint should be handled here
 
@@ -1016,10 +1016,10 @@ void Sema::MarkDevice(void) {
       Marker.CollectPossibleKernelAttributes(SYCLKernel, Attrs);
       for (auto *A : Attrs) {
         switch (A->getKind()) {
-          case attr::Kind::OpenCLIntelReqdSubGroupSize: {
-            auto *Attr = cast<OpenCLIntelReqdSubGroupSizeAttr>(A);
+          case attr::Kind::IntelReqdSubGroupSize: {
+            auto *Attr = cast<IntelReqdSubGroupSizeAttr>(A);
             if (auto *Existing =
-                    SYCLKernel->getAttr<OpenCLIntelReqdSubGroupSizeAttr>()) {
+                    SYCLKernel->getAttr<IntelReqdSubGroupSizeAttr>()) {
               if (Existing->getSubGroupSize() != Attr->getSubGroupSize()) {
                 Diag(SYCLKernel->getLocation(),
                      diag::err_conflicting_sycl_kernel_attributes);

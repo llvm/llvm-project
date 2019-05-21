@@ -577,8 +577,8 @@ void CodeGenFunction::EmitOpenCLKernelMetadata(const FunctionDecl *FD,
     Fn->setMetadata("reqd_work_group_size", llvm::MDNode::get(Context, AttrMDArgs));
   }
 
-  if (const OpenCLIntelReqdSubGroupSizeAttr *A =
-          FD->getAttr<OpenCLIntelReqdSubGroupSizeAttr>()) {
+  if (const IntelReqdSubGroupSizeAttr *A =
+          FD->getAttr<IntelReqdSubGroupSizeAttr>()) {
     llvm::Metadata *AttrMDArgs[] = {
         llvm::ConstantAsMetadata::get(Builder.getInt32(A->getSubGroupSize()))};
     Fn->setMetadata("intel_reqd_sub_group_size",

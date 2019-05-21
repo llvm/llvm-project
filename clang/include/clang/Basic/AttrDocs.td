@@ -2890,9 +2890,12 @@ s6.11.5 for details.
   }];
 }
 
-def OpenCLIntelReqdSubGroupSizeDocs : Documentation {
+def IntelReqdSubGroupSizeDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{
+This attribute can be used in both OpenCL and SYCL.
+
+OpenCL documentation:
 The optional attribute intel_reqd_sub_group_size can be used to indicate that
 the kernel must be compiled and executed with the specified subgroup size. When
 this attribute is present, get_max_sub_group_size() is guaranteed to return the
@@ -2901,6 +2904,26 @@ algorithms, and in some cases may be used by the compiler to generate more optim
 code. See `cl_intel_required_subgroup_size
 <https://www.khronos.org/registry/OpenCL/extensions/intel/cl_intel_required_subgroup_size.txt>`
 for details.
+
+SYCL documentation:
+The [[cl::intel_reqd_sub_group_size(n)]] attribute indicates that the kernel
+must be compiled and executed with a sub-group of size n. The value of n must be
+set to a sub-group size supported by the device, or device compilation will fail.
+
+In addition to device functions, the required sub-group size attribute may also
+be specified in the definition of a named functor object, as in the example below:
+
+.. code-block:: c++
+
+  class Functor
+  {
+      void operator()(item<1> item) [[cl::intel_reqd_sub_group_size(16)]]
+      {
+          /* kernel code */
+      }
+  }
+
+See Sub-groups for NDRange Parallelism proposal in sycl/doc/extensions/sub_group_ndrange/sub_group_ndrange.md
   }];
 }
 

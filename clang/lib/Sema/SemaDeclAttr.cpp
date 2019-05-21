@@ -2914,12 +2914,12 @@ static void handleSubGroupSize(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  OpenCLIntelReqdSubGroupSizeAttr *Existing =
-      D->getAttr<OpenCLIntelReqdSubGroupSizeAttr>();
+  IntelReqdSubGroupSizeAttr *Existing =
+      D->getAttr<IntelReqdSubGroupSizeAttr>();
   if (Existing && Existing->getSubGroupSize() != SGSize)
     S.Diag(AL.getLoc(), diag::warn_duplicate_attribute) << AL;
 
-  D->addAttr(::new (S.Context) OpenCLIntelReqdSubGroupSizeAttr(
+  D->addAttr(::new (S.Context) IntelReqdSubGroupSizeAttr(
       AL.getRange(), S.Context, SGSize,
       AL.getAttributeSpellingListIndex()));
 }
@@ -7154,7 +7154,7 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_ReqdWorkGroupSize:
     handleWorkGroupSize<ReqdWorkGroupSizeAttr>(S, D, AL);
     break;
-  case ParsedAttr::AT_OpenCLIntelReqdSubGroupSize:
+  case ParsedAttr::AT_IntelReqdSubGroupSize:
     handleSubGroupSize(S, D, AL);
     break;
   case ParsedAttr::AT_VecTypeHint:
@@ -7591,7 +7591,7 @@ void Sema::ProcessDeclAttributeList(Scope *S, Decl *D,
     } else if (const auto *A = D->getAttr<VecTypeHintAttr>()) {
       Diag(D->getLocation(), diag::err_opencl_kernel_attr) << A;
       D->setInvalidDecl();
-    } else if (const auto *A = D->getAttr<OpenCLIntelReqdSubGroupSizeAttr>()) {
+    } else if (const auto *A = D->getAttr<IntelReqdSubGroupSizeAttr>()) {
       if (!getLangOpts().SYCLIsDevice) {
         Diag(D->getLocation(), diag::err_opencl_kernel_attr) << A;
         D->setInvalidDecl();
