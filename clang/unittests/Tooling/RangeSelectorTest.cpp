@@ -396,10 +396,11 @@ TEST(RangeSelectorTest, CallArgsOpEolComments) {
   )cc";
   StringRef ID = "id";
   TestMatch Match = matchCode(Code, callExpr().bind(ID));
-  EXPECT_THAT_EXPECTED(select(callArgs(ID), Match), HasValue(R"(  // Header
+  std::string ExpectedString = R"(  // Header
           1,           // foo
           2            // bar
-      )"));
+      )";
+  EXPECT_THAT_EXPECTED(select(callArgs(ID), Match), HasValue(ExpectedString));
 }
 
 TEST(RangeSelectorTest, CallArgsErrors) {
