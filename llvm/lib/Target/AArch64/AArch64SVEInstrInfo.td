@@ -1127,6 +1127,13 @@ let Predicates = [HasSVE2] in {
   defm SADALP_ZPmZ : sve2_int_sadd_long_accum_pairwise<0, "sadalp">;
   defm UADALP_ZPmZ : sve2_int_sadd_long_accum_pairwise<1, "uadalp">;
 
+  // SVE2 integer pairwise arithmetic
+  defm ADDP_ZPmZ  : sve2_int_arith_pred<0b100011, "addp">;
+  defm SMAXP_ZPmZ : sve2_int_arith_pred<0b101001, "smaxp">;
+  defm UMAXP_ZPmZ : sve2_int_arith_pred<0b101011, "umaxp">;
+  defm SMINP_ZPmZ : sve2_int_arith_pred<0b101101, "sminp">;
+  defm UMINP_ZPmZ : sve2_int_arith_pred<0b101111, "uminp">;
+
   // SVE2 integer multiply long
   defm SQDMULLB_ZZZ : sve2_wide_int_arith_long<0b11000, "sqdmullb">;
   defm SQDMULLT_ZZZ : sve2_wide_int_arith_long<0b11001, "sqdmullt">;
