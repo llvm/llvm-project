@@ -186,6 +186,46 @@ static void RegisterGlobalCtorsDtorsForImage(__tgt_bin_desc *desc,
   }
 }
 
+void RTLsTy::RegisterRequires(int64_t flags) {
+  // TODO: add more elaborate check.
+  // Minimal check: only set requires flags if previous value
+  // is undefined. This ensures that only the first call to this
+  // function will set the requires flags. All subsequent calls
+  // will be checked for compatibility.
+  assert(flags != OMP_REQ_UNDEFINED &&
+         "illegal undefined flag for requires directive!");
+  if (RequiresFlags == OMP_REQ_UNDEFINED) {
+    RequiresFlags = flags;
+    return;
+  }
+
+  // If multiple compilation units are present enforce
+  // consistency across all of them for require clauses:
+  //  - reverse_offload
+  //  - unified_address
+  //  - unified_shared_memory
+  if ((RequiresFlags & OMP_REQ_REVERSE_OFFLOAD) !=
+      (flags & OMP_REQ_REVERSE_OFFLOAD)) {
+    FATAL_MESSAGE0(1,
+        "'#pragma omp requires reverse_offload' not used consistently!");
+  }
+  if ((RequiresFlags & OMP_REQ_UNIFIED_ADDRESS) !=
+          (flags & OMP_REQ_UNIFIED_ADDRESS)) {
+    FATAL_MESSAGE0(1,
+        "'#pragma omp requires unified_address' not used consistently!");
+  }
+  if ((RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) !=
+          (flags & OMP_REQ_UNIFIED_SHARED_MEMORY)) {
+    FATAL_MESSAGE0(1,
+        "'#pragma omp requires unified_shared_memory' not used consistently!");
+  }
+
+  // TODO: insert any other missing checks
+
+  DP("New requires flags %ld compatible with existing %ld!\n",
+     flags, RequiresFlags);
+}
+
 void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
   // Attempt to load all plugins available in the system.
   std::call_once(initFlag, &RTLsTy::LoadRTLs, this);
@@ -222,6 +262,8 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
           Devices[start + device_id].DeviceID = start + device_id;
           // RTL local device ID
           Devices[start + device_id].RTLDeviceID = device_id;
+          // RTL requires flags
+          Devices[start + device_id].RTLRequiresFlags = RequiresFlags;
         }
 
         // Initialize the index of this RTL and save it in the used RTLs.
