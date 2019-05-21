@@ -59,9 +59,7 @@ private:
 // A chunk for the import descriptor table.
 class LookupChunk : public Chunk {
 public:
-  explicit LookupChunk(Chunk *C) : HintName(C) {
-    setAlignment(Config->Wordsize);
-  }
+  explicit LookupChunk(Chunk *C) : HintName(C) { Alignment = Config->Wordsize; }
   size_t getSize() const override { return Config->Wordsize; }
 
   void writeTo(uint8_t *Buf) const override {
@@ -80,7 +78,7 @@ public:
 class OrdinalOnlyChunk : public Chunk {
 public:
   explicit OrdinalOnlyChunk(uint16_t V) : Ordinal(V) {
-    setAlignment(Config->Wordsize);
+    Alignment = Config->Wordsize;
   }
   size_t getSize() const override { return Config->Wordsize; }
 
@@ -366,7 +364,7 @@ public:
 class DelayAddressChunk : public Chunk {
 public:
   explicit DelayAddressChunk(Chunk *C) : Thunk(C) {
-    setAlignment(Config->Wordsize);
+    Alignment = Config->Wordsize;
   }
   size_t getSize() const override { return Config->Wordsize; }
 
@@ -578,7 +576,7 @@ void DelayLoadContents::create(Defined *H) {
     for (int I = 0, E = Syms.size(); I < E; ++I)
       Syms[I]->setLocation(Addresses[Base + I]);
     auto *MH = make<NullChunk>(8);
-    MH->setAlignment(8);
+    MH->Alignment = 8;
     ModuleHandles.push_back(MH);
 
     // Fill the delay import table header fields.
