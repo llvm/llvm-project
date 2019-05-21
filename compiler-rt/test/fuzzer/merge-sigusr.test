@@ -27,7 +27,7 @@ RUN: %run %t/LFSIGUSR -merge=1 -merge_control_file=%t/MCF %t/C1 %t/C2 2>%t/log &
 RUN: sleep 3
 RUN: pkill -SIGUSR2 -P $PID
 RUN: kill -SIGUSR2 $PID
-RUN: wait $PID
+RUN: wait $PID || true
 RUN: cat %t/log | FileCheck %s --dump-input=fail
 RUN: grep C2/g %t/MCF
 RUN: grep STARTED %t/MCF
