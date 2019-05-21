@@ -8,8 +8,8 @@
 # RUN: ld.lld -shared %t.o %t1.o -o %t.so -z combreloc
 # RUN: llvm-readobj -r --dynamic-table %t.so | FileCheck %s
 
-# -z combreloc is the default: sort relocations by (SymIndex, r_offset), and
-# emit DT_RELACOUNT (except on MIPS) to indicate the number of relative
+# -z combreloc is the default: sort relocations by (!IsRelative,SymIndex,r_offset),
+# and emit DT_RELACOUNT (except on MIPS) to indicate the number of relative
 # relocations.
 
 # CHECK:      Relocations [

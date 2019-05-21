@@ -738,17 +738,18 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_RELAX_TLS_IE_TO_LE:
   case R_RELAX_TLS_LD_TO_LE:
   case R_TLS:
-    // A weak undefined TLS symbol resolves to the base of the TLS
-    // block, i.e. gets a value of zero. If we pass --gc-sections to
-    // lld and .tbss is not referenced, it gets reclaimed and we don't
-    // create a TLS program header. Therefore, we resolve this
-    // statically to zero.
-    if (Sym.isTls() && Sym.isUndefWeak())
-      return 0;
+    // It is not very clear what to return if the symbol is undefined. With
+    // --noinhibit-exec, even a non-weak undefined reference may reach here.
+    // Just return A, which matches R_ABS, and the behavior of some dynamic
+    // loaders.
+    if (Sym.isUndefined())
+      return A;
     return Sym.getVA(A) + getTlsTpOffset();
   case R_RELAX_TLS_GD_TO_LE_NEG:
   case R_NEG_TLS:
-    return -(Sym.getVA(A) + getTlsTpOffset());
+    if (Sym.isUndefined())
+      return A;
+    return -Sym.getVA(0) - getTlsTpOffset() + A;
   case R_SIZE:
     return Sym.getSize() + A;
   case R_TLSDESC:

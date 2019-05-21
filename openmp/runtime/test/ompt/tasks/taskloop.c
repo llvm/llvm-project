@@ -64,8 +64,7 @@ int main() {
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_parallel_end:
   // CHECK-SAME: parallel_id=[[PARALLEL_ID]]
 
-  // TASKS: ompt_event_task_create:{{.*}} new_task_id={{[0-9]+}}
-  // TASKS-SAME: task_type=ompt_task_initial
+  // TASKS: ompt_event_initial_task_begin:{{.*}} task_id={{[0-9]+}}
   // TASKS: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_taskloop_begin:
   // TASKS: ompt_event_task_create:{{.*}} new_task_id=[[TASK_ID1:[0-9]+]]
   // TASKS-SAME: task_type=ompt_task_explicit

@@ -1489,13 +1489,15 @@ RelocationSection<ELFT>::RelocationSection(StringRef Name, bool Sort)
 }
 
 template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
-  // Sort symbol index then by r_offset. Because we only emit R_*_RELATIVE as
-  // dynamic relocations with symbol index 0, this essentially places
-  // R_*_RELATIVE first (required by DT_REL[A]COUNT).
+  // Sort by (!IsRelative,SymIndex,r_offset). DT_REL[A]COUNT requires us to
+  // place R_*_RELATIVE first. SymIndex is to improve locality, while r_offset
+  // is to make results easier to read.
   if (Sort)
     llvm::stable_sort(Relocs, [](const DynamicReloc &A, const DynamicReloc &B) {
-      return std::make_tuple(A.getSymIndex(), A.getOffset()) <
-             std::make_tuple(B.getSymIndex(), B.getOffset());
+      return std::make_tuple(A.Type != Target->RelativeRel, A.getSymIndex(),
+                             A.getOffset()) <
+             std::make_tuple(B.Type != Target->RelativeRel, B.getSymIndex(),
+                             B.getOffset());
     });
 
   for (const DynamicReloc &Rel : Relocs) {
