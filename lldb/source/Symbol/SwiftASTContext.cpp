@@ -588,14 +588,15 @@ public:
       return nullptr;
     }
 
+    // FIXME: this assumes the tag bits should be gathered in
+    // little-endian byte order.
     size_t discriminator = 0;
     size_t power_of_2 = 1;
-    auto enumerator = m_tag_bits.enumerateSetBits();
-    for (llvm::Optional<size_t> next = enumerator.findNext(); next.hasValue();
-         next = enumerator.findNext()) {
-      discriminator =
-          discriminator + (current_payload[next.getValue()] ? power_of_2 : 0);
-      power_of_2 <<= 1;
+    for (size_t i = 0; i < m_tag_bits.size(); ++i) {
+      if (m_tag_bits[i]) {
+        discriminator |= current_payload[i] ? power_of_2 : 0;
+        power_of_2 <<= 1;
+      }
     }
 
     // The discriminator is too large?
