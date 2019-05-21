@@ -60,6 +60,21 @@ enum OpenMPOffloadingDeclareTargetFlags {
   OMP_DECLARE_TARGET_DTOR = 0x04
 };
 
+enum OpenMPOffloadingRequiresDirFlags {
+  /// flag undefined.
+  OMP_REQ_UNDEFINED               = 0x000,
+  /// no requires directive present.
+  OMP_REQ_NONE                    = 0x001,
+  /// reverse_offload clause.
+  OMP_REQ_REVERSE_OFFLOAD         = 0x002,
+  /// unified_address clause.
+  OMP_REQ_UNIFIED_ADDRESS         = 0x004,
+  /// unified_shared_memory clause.
+  OMP_REQ_UNIFIED_SHARED_MEMORY   = 0x008,
+  /// dynamic_allocators clause.
+  OMP_REQ_DYNAMIC_ALLOCATORS      = 0x010
+};
+
 /// This struct is a record of an entry point or global. For a function
 /// entry point the size is expected to be zero
 struct __tgt_offload_entry {
@@ -112,6 +127,9 @@ int omp_target_memcpy_rect(void *dst, void *src, size_t element_size,
 int omp_target_associate_ptr(void *host_ptr, void *device_ptr, size_t size,
     size_t device_offset, int device_num);
 int omp_target_disassociate_ptr(void *host_ptr, int device_num);
+
+/// add the clauses of the requires directives in a given file
+void __tgt_register_requires(int64_t flags);
 
 /// adds a target shared library to the target execution image
 void __tgt_register_lib(__tgt_bin_desc *desc);

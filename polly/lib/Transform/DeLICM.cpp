@@ -900,8 +900,9 @@ private:
     }
 
     //  { DomainRead[] -> Scatter[] }
-    auto PerPHIWriteScatter =
-        isl::map::from_union_map(PerPHIWrites.apply_range(Schedule));
+    isl::union_map PerPHIWriteScatterUmap = PerPHIWrites.apply_range(Schedule);
+    isl::map PerPHIWriteScatter =
+        singleton(PerPHIWriteScatterUmap, PHISched.get_space());
 
     // { DomainRead[] -> Zone[] }
     auto Lifetime = betweenScatter(PerPHIWriteScatter, PHISched, false, true);

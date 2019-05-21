@@ -14,8 +14,10 @@
 #include "SymbolTable.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Reproduce.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/Wasm.h"
+#include "llvm/Support/TarWriter.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "lld"
@@ -26,6 +28,8 @@ using namespace lld::wasm;
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::wasm;
+
+std::unique_ptr<llvm::TarWriter> lld::wasm::Tar;
 
 Optional<MemoryBufferRef> lld::wasm::readFile(StringRef Path) {
   log("Loading: " + Path);
@@ -39,6 +43,8 @@ Optional<MemoryBufferRef> lld::wasm::readFile(StringRef Path) {
   MemoryBufferRef MBRef = MB->getMemBufferRef();
   make<std::unique_ptr<MemoryBuffer>>(std::move(MB)); // take MB ownership
 
+  if (Tar)
+    Tar->append(relativeToRoot(Path), MBRef.getBuffer());
   return MBRef;
 }
 

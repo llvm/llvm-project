@@ -143,8 +143,7 @@ public:
   void SetRangesBase(dw_addr_t ranges_base);
   void SetBaseObjOffset(dw_offset_t base_obj_offset);
   void SetStrOffsetsBase(dw_offset_t str_offsets_base);
-  void BuildAddressRangeTable(SymbolFileDWARF *dwarf,
-                              DWARFDebugAranges *debug_aranges);
+  void BuildAddressRangeTable(DWARFDebugAranges *debug_aranges);
 
   lldb::ByteOrder GetByteOrder() const;
 
