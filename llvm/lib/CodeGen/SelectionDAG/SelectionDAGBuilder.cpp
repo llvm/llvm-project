@@ -3637,12 +3637,8 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
     MOps1[0] = Src1;
     MOps2[0] = Src2;
 
-    Src1 = Src1.isUndef()
-               ? DAG.getUNDEF(PaddedVT)
-               : DAG.getNode(ISD::CONCAT_VECTORS, DL, PaddedVT, MOps1);
-    Src2 = Src2.isUndef()
-               ? DAG.getUNDEF(PaddedVT)
-               : DAG.getNode(ISD::CONCAT_VECTORS, DL, PaddedVT, MOps2);
+    Src1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, PaddedVT, MOps1);
+    Src2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, PaddedVT, MOps2);
 
     // Readjust mask for new input vector length.
     SmallVector<int, 8> MappedOps(PaddedMaskNumElts, -1);
