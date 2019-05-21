@@ -170,6 +170,11 @@ Improvements to clang-tidy
 
   Rewrites function signatures to use a trailing return type.
 
+- The :doc:`misc-throw-by-value-catch-by-reference
+  <clang-tidy/misc-throw-by-value-catch-by-reference.rst>` now supports
+  `WarnOnLargeObject` and `MaxSize` options to warn on any large trivial
+  object caught by value.
+
 Improvements to include-fixer
 -----------------------------
 
