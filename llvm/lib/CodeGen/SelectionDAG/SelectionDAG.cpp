@@ -5367,6 +5367,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   }
   case ISD::INSERT_SUBVECTOR: {
+    // Inserting undef into undef is still undef.
+    if (N1.isUndef() && N2.isUndef())
+      return getUNDEF(VT);
     SDValue Index = N3;
     if (VT.isSimple() && N1.getValueType().isSimple()
         && N2.getValueType().isSimple()) {
