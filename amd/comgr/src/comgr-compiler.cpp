@@ -574,6 +574,17 @@ InProcessDriver::InProcessDriver(raw_ostream &DiagOS)
   TheDriver->setCheckInputsExist(false);
 }
 
+static void logArgv(raw_ostream &OS, StringRef ProgramName,
+                    ArrayRef<const char *> Argv) {
+  OS << "COMGR::InProcessDriver::Execute argv: " << ProgramName;
+  for (size_t I = 0; I < Argv.size(); ++I)
+    // Skip the first argument, which we replace with ProgramName, and the last
+    // argument, which is a null terminator.
+    if (I && Argv[I])
+      OS << " \"" << Argv[I] << '\"';
+  OS << '\n';
+}
+
 amd_comgr_status_t InProcessDriver::execute(ArrayRef<const char *> Args) {
   std::unique_ptr<Compilation> C(TheDriver->BuildCompilation(Args));
   if (!C)
@@ -593,13 +604,8 @@ amd_comgr_status_t InProcessDriver::execute(ArrayRef<const char *> Args) {
 
     clearLLVMOptions();
 
-    DiagOS << "COMGR::InProcessDriver::Execute argv:";
-    for (auto &Arg : Argv)
-      if (Arg)
-        DiagOS << " \"" << Arg << '\"';
-    DiagOS << '\n';
-
     if (Argv[1] == StringRef("-cc1")) {
+      logArgv(DiagOS, "clang", Argv);
       std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
       Clang->createDiagnostics(DiagClient, /* ShouldOwnClient */ false);
       if (!Clang->hasDiagnostics())
@@ -611,6 +617,7 @@ amd_comgr_status_t InProcessDriver::execute(ArrayRef<const char *> Args) {
       if (!ExecuteCompilerInvocation(Clang.get()))
         return AMD_COMGR_STATUS_ERROR;
     } else if (Argv[1] == StringRef("-cc1as")) {
+      logArgv(DiagOS, "clang", Argv);
       Argv.erase(Argv.begin() + 1);
       AssemblerInvocation Asm;
       if (!AssemblerInvocation::CreateFromArgs(Asm, Argv, Diags))
@@ -620,6 +627,7 @@ amd_comgr_status_t InProcessDriver::execute(ArrayRef<const char *> Args) {
       if (ExecuteAssembler(Asm, Diags, DiagOS))
         return AMD_COMGR_STATUS_ERROR;
     } else if (Job.getCreator().getName() == LinkerJobName) {
+      logArgv(DiagOS, "lld", Argv);
       if (auto Status = linkWithLLD(Arguments, DiagOS))
         return Status;
     } else {
@@ -1041,6 +1049,10 @@ AMDGPUCompiler::AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet,
   parseOptions();
 }
 
-AMDGPUCompiler::~AMDGPUCompiler() { removeTmpDirs(); }
+AMDGPUCompiler::~AMDGPUCompiler() {
+  const char *SaveTemps = getenv("AMD_COMGR_SAVE_TEMPS");
+  if (!SaveTemps || StringRef(SaveTemps) == "0")
+    removeTmpDirs();
+}
 
 } // namespace COMGR

@@ -230,6 +230,21 @@ static StringRef getLanguageName(amd_comgr_language_t Language) {
   }
 }
 
+static StringRef getStatusName(amd_comgr_status_t Status) {
+  switch (Status) {
+  case AMD_COMGR_STATUS_SUCCESS:
+    return "AMD_COMGR_STATUS_SUCCESS";
+  case AMD_COMGR_STATUS_ERROR:
+    return "AMD_COMGR_STATUS_ERROR";
+  case AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT:
+    return "AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT";
+  case AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES:
+    return "AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES";
+  default:
+    return "UNKNOWN_STATUS";
+  }
+}
+
 bool COMGR::isDataKindValid(amd_comgr_data_kind_t DataKind) {
   return DataKind > AMD_COMGR_DATA_KIND_UNDEF &&
          DataKind <= AMD_COMGR_DATA_KIND_LAST;
@@ -912,16 +927,41 @@ amd_comgr_status_t AMD_API
 
   ensureLLVMInitialized();
 
-  std::string Log;
-  raw_string_ostream LogS(Log);
+  // The normal log stream, used to return via a AMD_COMGR_DATA_KIND_LOG object.
+  std::string LogStr;
+  raw_string_ostream LogS(LogStr);
 
-  if (ActionInfoP->Logging)
-    LogS << "amd_comgr_do_action:\n"
-         << "\tActionKind: " << getActionKindName(ActionKind) << '\n'
-         << "\t   IsaName: " << ActionInfoP->IsaName << '\n'
-         << "\t   Options: " << ActionInfoP->Options << '\n'
-         << "\t      Path: " << ActionInfoP->Path << '\n'
-         << "\t  Language: " << getLanguageName(ActionInfoP->Language) << '\n';
+  // The log stream when redirecting to a file.
+  std::unique_ptr<raw_fd_ostream> LogF;
+
+  // Pointer to the currently selected log stream.
+  raw_ostream *LogP = &LogS;
+
+  if (const char *ComgrRedirectLog = getenv("AMD_COMGR_REDIRECT_LOGS")) {
+    StringRef RedirectLog = ComgrRedirectLog;
+    if (RedirectLog == "stdout")
+      LogP = &outs();
+    else if (RedirectLog == "stderr")
+      LogP = &errs();
+    else if (RedirectLog != "0") {
+      std::error_code EC;
+      LogF.reset(new (std::nothrow) raw_fd_ostream(
+          RedirectLog, EC, sys::fs::OF_Text | sys::fs::OF_Append));
+      if (EC) {
+        LogF.reset();
+        *LogP << "Comgr unable to redirect log to file '" << RedirectLog
+              << "': " << EC.message() << "\n";
+      } else
+        LogP = LogF.get();
+    }
+  }
+
+  *LogP << "amd_comgr_do_action:\n"
+        << "\t  ActionKind: " << getActionKindName(ActionKind) << '\n'
+        << "\t     IsaName: " << ActionInfoP->IsaName << '\n'
+        << "\t     Options: " << ActionInfoP->Options << '\n'
+        << "\t        Path: " << ActionInfoP->Path << '\n'
+        << "\t    Language: " << getLanguageName(ActionInfoP->Language) << '\n';
 
   amd_comgr_status_t ActionStatus;
   switch (ActionKind) {
@@ -929,7 +969,7 @@ amd_comgr_status_t AMD_API
   case AMD_COMGR_ACTION_DISASSEMBLE_EXECUTABLE_TO_SOURCE:
   case AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE:
     ActionStatus = dispatchDisassembleAction(ActionKind, ActionInfoP, InputSetP,
-                                             ResultSetP, LogS);
+                                             ResultSetP, *LogP);
     break;
   case AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR:
   case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC:
@@ -940,7 +980,7 @@ amd_comgr_status_t AMD_API
   case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_RELOCATABLE:
   case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE:
     ActionStatus = dispatchCompilerAction(ActionKind, ActionInfoP, InputSetP,
-                                          ResultSetP, LogS);
+                                          ResultSetP, *LogP);
     break;
   case AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS:
   case AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES:
@@ -950,6 +990,8 @@ amd_comgr_status_t AMD_API
   default:
     ActionStatus = AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
+
+  *LogP << "\tReturnStatus: " << getStatusName(ActionStatus) << "\n\n";
 
   if (ActionInfoP->Logging) {
     amd_comgr_data_t LogT;

@@ -79,6 +79,19 @@ build or install tree can be supplied to CMake via `CMAKE_PREFIX_PATH`:
 
     cmake -DCMAKE_PREFIX_PATH=path/to/comgr/build/or/install
 
+Debug the Code Object Manager
+-----------------------------
+
+Comgr supports some environment variables to aid in debugging. These include:
+
+* `AMD_COMGR_SAVE_TEMPS`: If this is set, and is not "0", Comgr will not delete
+  temporary files generated during compilation.
+* `AMD_COMGR_REDIRECT_LOGS`: If this is not set, or is set to "0", logs are
+  returned to the caller as normal. If this is set to "stdout" or "stderr",
+  logs are instead redirected to the standard output or error stream,
+  respectively. If this is set to any other value, it is interpreted as a
+  filename which logs should be appended to.
+
 Versioning
 ----------
 

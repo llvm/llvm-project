@@ -61,13 +61,14 @@ const char *expectedOut = "\n"
 
 const char *expectedLog =
     "amd_comgr_do_action:\n"
-    "\tActionKind: AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE\n"
-    "\t   IsaName: amdgcn-amd-amdhsa--gfx803\n"
-    "\t   Options: -file-headers -invalid-option\n"
-    "\t      Path: \n"
-    "\t  Language: AMD_COMGR_LANGUAGE_NONE\n"
+    "\t  ActionKind: AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE\n"
+    "\t     IsaName: amdgcn-amd-amdhsa--gfx803\n"
+    "\t     Options: -file-headers -invalid-option\n"
+    "\t        Path: \n"
+    "\t    Language: AMD_COMGR_LANGUAGE_NONE\n"
     ": Unknown command line argument '-invalid-option'.  Try: ' --help'\n"
-    ": Did you mean '  --print-all-options'?\n";
+    ": Did you mean '  --print-all-options'?\n"
+    "\tReturnStatus: AMD_COMGR_STATUS_SUCCESS\n\n";
 
 void printChars(const char *bytes, size_t count) {
   for (size_t i = 0; i < count; i++)
