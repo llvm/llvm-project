@@ -71,7 +71,6 @@ InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
 
   NumRelocations = 0;
   AreRelocsRela = false;
-  Debug = Name.startswith(".debug") || Name.startswith(".zdebug");
 
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.
@@ -471,7 +470,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
 
       if (RelTy::IsRela)
         P->r_addend = Sym.getVA(Addend) - Section->getOutputSection()->Addr;
-      else if (Config->Relocatable)
+      else if (Config->Relocatable && Type != Target->NoneRel)
         Sec->Relocations.push_back({R_ABS, Type, Rel.r_offset, Addend, &Sym});
     }
   }
@@ -591,15 +590,11 @@ static int64_t getTlsTpOffset() {
     // Variant 1. The thread pointer points to a TCB with a fixed 2-word size,
     // followed by a variable amount of alignment padding, followed by the TLS
     // segment.
-    //
-    // NB: While the ARM/AArch64 ABI formally has a 2-word TCB size, lld
-    // effectively increases the TCB size to 8 words for Android compatibility.
-    // It accomplishes this by increasing the segment's alignment.
     return alignTo(Config->Wordsize * 2, Out::TlsPhdr->p_align);
   case EM_386:
   case EM_X86_64:
     // Variant 2. The TLS segment is located just before the thread pointer.
-    return -Out::TlsPhdr->p_memsz;
+    return -alignTo(Out::TlsPhdr->p_memsz, Out::TlsPhdr->p_align);
   case EM_PPC64:
     // The thread pointer points to a fixed offset from the start of the
     // executable's TLS segment. An offset of 0x7000 allows a signed 16-bit
@@ -631,6 +626,7 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_GOTPLTONLY_PC:
     return In.GotPlt->getVA() + A - P;
   case R_GOTREL:
+  case R_PPC64_RELAX_TOC:
     return Sym.getVA(A) - In.Got->getVA();
   case R_GOTPLTREL:
     return Sym.getVA(A) - In.GotPlt->getVA();
@@ -742,17 +738,18 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_RELAX_TLS_IE_TO_LE:
   case R_RELAX_TLS_LD_TO_LE:
   case R_TLS:
-    // A weak undefined TLS symbol resolves to the base of the TLS
-    // block, i.e. gets a value of zero. If we pass --gc-sections to
-    // lld and .tbss is not referenced, it gets reclaimed and we don't
-    // create a TLS program header. Therefore, we resolve this
-    // statically to zero.
-    if (Sym.isTls() && Sym.isUndefWeak())
-      return 0;
+    // It is not very clear what to return if the symbol is undefined. With
+    // --noinhibit-exec, even a non-weak undefined reference may reach here.
+    // Just return A, which matches R_ABS, and the behavior of some dynamic
+    // loaders.
+    if (Sym.isUndefined())
+      return A;
     return Sym.getVA(A) + getTlsTpOffset();
   case R_RELAX_TLS_GD_TO_LE_NEG:
   case R_NEG_TLS:
-    return Out::TlsPhdr->p_memsz - Sym.getVA(A);
+    if (Sym.isUndefined())
+      return A;
+    return -Sym.getVA(0) - getTlsTpOffset() + A;
   case R_SIZE:
     return Sym.getSize() + A;
   case R_TLSDESC:
@@ -894,7 +891,11 @@ void InputSectionBase::relocateAlloc(uint8_t *Buf, uint8_t *BufEnd) {
     switch (Expr) {
     case R_RELAX_GOT_PC:
     case R_RELAX_GOT_PC_NOPIC:
-      Target->relaxGot(BufLoc, TargetVA);
+      Target->relaxGot(BufLoc, Type, TargetVA);
+      break;
+    case R_PPC64_RELAX_TOC:
+      if (!tryRelaxPPC64TocIndirection(Type, Rel, BufLoc))
+        Target->relocateOne(BufLoc, Type, TargetVA);
       break;
     case R_RELAX_TLS_IE_TO_LE:
       Target->relaxTlsIeToLe(BufLoc, Type, TargetVA);

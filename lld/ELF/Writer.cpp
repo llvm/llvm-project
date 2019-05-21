@@ -179,14 +179,18 @@ static Defined *addOptionalRegular(StringRef Name, SectionBase *Sec,
   Symbol *S = Symtab->find(Name);
   if (!S || S->isDefined())
     return nullptr;
-  return Symtab->addDefined(Name, StOther, STT_NOTYPE, Val,
-                            /*Size=*/0, Binding, Sec,
-                            /*File=*/nullptr);
+
+  return cast<Defined>(Symtab->addSymbol(
+      Defined{/*File=*/nullptr, Name, Binding, StOther, STT_NOTYPE, Val,
+              /*Size=*/0, Sec}));
 }
 
 static Defined *addAbsolute(StringRef Name) {
-  return Symtab->addDefined(Name, STV_HIDDEN, STT_NOTYPE, 0, 0, STB_GLOBAL,
-                            nullptr, nullptr);
+  Symbol *Sym = Symtab->addSymbol(Defined{nullptr, Name, STB_GLOBAL, STV_HIDDEN,
+                                          STT_NOTYPE, 0, 0, nullptr});
+  if (!Sym->isDefined())
+    error("duplicate symbol: " + toString(*Sym));
+  return cast<Defined>(Sym);
 }
 
 // The linker is expected to define some symbols depending on
@@ -235,10 +239,10 @@ void elf::addReservedSymbols() {
     if (Config->EMachine == EM_PPC || Config->EMachine == EM_PPC64)
       GotOff = 0x8000;
 
-    ElfSym::GlobalOffsetTable =
-        Symtab->addDefined(GotSymName, STV_HIDDEN, STT_NOTYPE, GotOff,
-                           /*Size=*/0, STB_GLOBAL, Out::ElfHeader,
-                           /*File=*/nullptr);
+    Symtab->addSymbol(Defined{/*File=*/nullptr, GotSymName, STB_GLOBAL,
+                              STV_HIDDEN, STT_NOTYPE, GotOff, /*Size=*/0,
+                              Out::ElfHeader});
+    ElfSym::GlobalOffsetTable = cast<Defined>(S);
   }
 
   // __ehdr_start is the location of ELF file headers. Note that we define
@@ -1588,9 +1592,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Even the author of gold doesn't remember why gold behaves that way.
   // https://sourceware.org/ml/binutils/2002-03/msg00360.html
   if (In.Dynamic->Parent)
-    Symtab->addDefined("_DYNAMIC", STV_HIDDEN, STT_NOTYPE, 0 /*Value*/,
-                       /*Size=*/0, STB_WEAK, In.Dynamic,
-                       /*File=*/nullptr);
+    Symtab->addSymbol(Defined{/*File=*/nullptr, "_DYNAMIC", STB_WEAK,
+                              STV_HIDDEN, STT_NOTYPE,
+                              /*Value=*/0, /*Size=*/0, In.Dynamic});
 
   // Define __rel[a]_iplt_{start,end} symbols if needed.
   addRelIpltSymbols();
@@ -2132,7 +2136,7 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
     // segment is the last loadable segment, align the offset of the
     // following section to avoid loading non-segments parts of the file.
     if (LastRX && LastRX->LastSec == Sec)
-      Off = alignTo(Off, Target->PageSize);
+      Off = alignTo(Off, Config->CommonPageSize);
   }
 
   SectionHeaderOff = alignTo(Off, Config->Wordsize);
@@ -2184,25 +2188,7 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
       // The glibc dynamic loader rounds the size down, so we need to round up
       // to protect the last page. This is a no-op on FreeBSD which always
       // rounds up.
-      P->p_memsz = alignTo(P->p_memsz, Target->PageSize);
-    }
-
-    if (P->p_type == PT_TLS && P->p_memsz) {
-      if (!Config->Shared &&
-          (Config->EMachine == EM_ARM || Config->EMachine == EM_AARCH64)) {
-        // On ARM/AArch64, reserve extra space (8 words) between the thread
-        // pointer and an executable's TLS segment by overaligning the segment.
-        // This reservation is needed for backwards compatibility with Android's
-        // TCB, which allocates several slots after the thread pointer (e.g.
-        // TLS_SLOT_STACK_GUARD==5). For simplicity, this overalignment is also
-        // done on other operating systems.
-        P->p_align = std::max<uint64_t>(P->p_align, Config->Wordsize * 8);
-      }
-
-      // The TLS pointer goes after PT_TLS for variant 2 targets. At least glibc
-      // will align it, so round up the size to make sure the offsets are
-      // correct.
-      P->p_memsz = alignTo(P->p_memsz, P->p_align);
+      P->p_memsz = alignTo(P->p_memsz, Config->CommonPageSize);
     }
   }
 }
@@ -2477,10 +2463,10 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
   // Fill the last page.
   for (PhdrEntry *P : Phdrs)
     if (P->p_type == PT_LOAD && (P->p_flags & PF_X))
-      fillTrap(Out::BufferStart +
-                   alignDown(P->p_offset + P->p_filesz, Target->PageSize),
+      fillTrap(Out::BufferStart + alignDown(P->p_offset + P->p_filesz,
+                                            Config->CommonPageSize),
                Out::BufferStart +
-                   alignTo(P->p_offset + P->p_filesz, Target->PageSize));
+                   alignTo(P->p_offset + P->p_filesz, Config->CommonPageSize));
 
   // Round up the file size of the last segment to the page boundary iff it is
   // an executable segment to ensure that other tools don't accidentally
@@ -2491,7 +2477,8 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
       Last = P;
 
   if (Last && (Last->p_flags & PF_X))
-    Last->p_memsz = Last->p_filesz = alignTo(Last->p_filesz, Target->PageSize);
+    Last->p_memsz = Last->p_filesz =
+        alignTo(Last->p_filesz, Config->CommonPageSize);
 }
 
 // Write section contents to a mmap'ed file.
@@ -2541,48 +2528,42 @@ computeHash(llvm::MutableArrayRef<uint8_t> HashBuf,
   HashFn(HashBuf.data(), Hashes);
 }
 
-static std::vector<uint8_t> computeBuildId(llvm::ArrayRef<uint8_t> Buf) {
-  std::vector<uint8_t> BuildId;
+template <class ELFT> void Writer<ELFT>::writeBuildId() {
+  if (!In.BuildId || !In.BuildId->getParent())
+    return;
+
+  if (Config->BuildId == BuildIdKind::Hexstring) {
+    In.BuildId->writeBuildId(Config->BuildIdVector);
+    return;
+  }
+
+  // Compute a hash of all sections of the output file.
+  std::vector<uint8_t> BuildId(In.BuildId->HashSize);
+  llvm::ArrayRef<uint8_t> Buf{Out::BufferStart, size_t(FileSize)};
+
   switch (Config->BuildId) {
   case BuildIdKind::Fast:
-    BuildId.resize(8);
     computeHash(BuildId, Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
       write64le(Dest, xxHash64(Arr));
     });
     break;
   case BuildIdKind::Md5:
-    BuildId.resize(16);
-    computeHash(BuildId, Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
-      memcpy(Dest, MD5::hash(Arr).data(), 16);
+    computeHash(BuildId, Buf, [&](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
+      memcpy(Dest, MD5::hash(Arr).data(), In.BuildId->HashSize);
     });
     break;
   case BuildIdKind::Sha1:
-    BuildId.resize(20);
-    computeHash(BuildId, Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
-      memcpy(Dest, SHA1::hash(Arr).data(), 20);
+    computeHash(BuildId, Buf, [&](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
+      memcpy(Dest, SHA1::hash(Arr).data(), In.BuildId->HashSize);
     });
     break;
   case BuildIdKind::Uuid:
-    BuildId.resize(16);
-    if (auto EC = llvm::getRandomBytes(BuildId.data(), 16))
+    if (auto EC = llvm::getRandomBytes(BuildId.data(), In.BuildId->HashSize))
       error("entropy source failure: " + EC.message());
-    break;
-  case BuildIdKind::Hexstring:
-    BuildId = Config->BuildIdVector;
     break;
   default:
     llvm_unreachable("unknown BuildIdKind");
   }
-  return BuildId;
-}
-
-template <class ELFT> void Writer<ELFT>::writeBuildId() {
-  if (!In.BuildId || !In.BuildId->getParent())
-    return;
-
-  // Compute a hash of all sections of the output file.
-  std::vector<uint8_t> BuildId =
-      computeBuildId({Out::BufferStart, size_t(FileSize)});
   In.BuildId->writeBuildId(BuildId);
 }
 

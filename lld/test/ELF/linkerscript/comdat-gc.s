@@ -8,9 +8,6 @@
 
 # GC1:     Name: .debug_line
 
-# Add .ctors section so all debuginfo isn't GCed
-.section  .ctors,"ax",@progbits
-
 .file 1 "test/ELF/linkerscript/comdat_gc.s"
 .section  .text._Z3fooIiEvv,"axG",@progbits,_Z3fooIiEvv,comdat
 .loc 1 14

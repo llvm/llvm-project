@@ -19,6 +19,10 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include <vector>
 
+namespace llvm {
+class TarWriter;
+}
+
 namespace lld {
 namespace wasm {
 
@@ -28,6 +32,10 @@ class InputSegment;
 class InputGlobal;
 class InputEvent;
 class InputSection;
+
+// If --reproduce option is given, all input files are written
+// to this tar archive.
+extern std::unique_ptr<llvm::TarWriter> Tar;
 
 class InputFile {
 public:
@@ -44,7 +52,7 @@ public:
   StringRef getName() const { return MB.getBufferIdentifier(); }
 
   // Reads a file (the constructor doesn't do that).
-  virtual void parse() = 0;
+  virtual void parse(bool IgnoreComdats = false) = 0;
 
   Kind kind() const { return FileKind; }
 
@@ -72,7 +80,7 @@ public:
 
   void addMember(const llvm::object::Archive::Symbol *Sym);
 
-  void parse() override;
+  void parse(bool IgnoreComdats) override;
 
 private:
   std::unique_ptr<llvm::object::Archive> File;
@@ -88,7 +96,7 @@ public:
   }
   static bool classof(const InputFile *F) { return F->kind() == ObjectKind; }
 
-  void parse() override;
+  void parse(bool IgnoreComdats) override;
 
   // Returns the underlying wasm file.
   const WasmObjectFile *getWasmObj() const { return WasmObj.get(); }
@@ -111,7 +119,7 @@ public:
   std::vector<bool> TypeIsUsed;
   // Maps function indices to table indices
   std::vector<uint32_t> TableEntries;
-  std::vector<bool> UsedComdats;
+  std::vector<bool> KeptComdats;
   std::vector<InputSegment *> Segments;
   std::vector<InputFunction *> Functions;
   std::vector<InputGlobal *> Globals;
@@ -141,7 +149,7 @@ public:
   explicit SharedFile(MemoryBufferRef M) : InputFile(SharedKind, M) {}
   static bool classof(const InputFile *F) { return F->kind() == SharedKind; }
 
-  void parse() override {}
+  void parse(bool IgnoreComdats) override {}
 };
 
 // .bc file
@@ -153,7 +161,7 @@ public:
   }
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
 
-  void parse() override;
+  void parse(bool IgnoreComdats) override;
   std::unique_ptr<llvm::lto::InputFile> Obj;
 };
 

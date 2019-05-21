@@ -30,7 +30,6 @@ public:
   void addLibrary(StringRef Name);
 
 private:
-  void readConfigs(llvm::opt::InputArgList &Args);
   void createFiles(llvm::opt::InputArgList &Args);
   void inferMachineType();
   template <class ELFT> void link(llvm::opt::InputArgList &Args);
@@ -64,6 +63,7 @@ std::string createResponseFile(const llvm::opt::InputArgList &Args);
 
 llvm::Optional<std::string> findFromSearchPaths(StringRef Path);
 llvm::Optional<std::string> searchScript(StringRef Path);
+llvm::Optional<std::string> searchLibraryBaseName(StringRef Path);
 llvm::Optional<std::string> searchLibrary(StringRef Path);
 
 } // namespace elf

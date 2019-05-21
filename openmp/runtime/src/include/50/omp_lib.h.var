@@ -48,6 +48,8 @@
       parameter(omp_alloctrait_val_kind=int_ptr_kind())
       integer omp_pause_resource_kind
       parameter(omp_pause_resource_kind=omp_integer_kind)
+      integer omp_depend_kind
+      parameter(omp_depend_kind=int_ptr_kind())
 
       integer(kind=omp_integer_kind)openmp_version
       parameter(openmp_version=@LIBOMP_OMP_YEAR_MONTH@)

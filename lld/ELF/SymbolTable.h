@@ -17,8 +17,14 @@
 
 namespace lld {
 namespace elf {
+
+class CommonSymbol;
 class Defined;
+class LazyArchive;
+class LazyObject;
 class SectionBase;
+class SharedSymbol;
+class Undefined;
 
 // SymbolTable is a bucket of all known symbols, including defined,
 // undefined, or lazy symbols (the last one is symbols in archive
@@ -34,41 +40,16 @@ class SectionBase;
 // is one add* function per symbol type.
 class SymbolTable {
 public:
-  template <class ELFT> void addFile(InputFile *File);
   template <class ELFT> void addCombinedLTOObject();
   void wrap(Symbol *Sym, Symbol *Real, Symbol *Wrap);
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
 
-  template <class ELFT>
-  Symbol *addUndefined(StringRef Name, uint8_t Binding, uint8_t StOther,
-                       uint8_t Type, bool CanOmitFromDynSym, InputFile *File);
+  Symbol *insert(StringRef Name);
 
-  Defined *addDefined(StringRef Name, uint8_t StOther, uint8_t Type,
-                      uint64_t Value, uint64_t Size, uint8_t Binding,
-                      SectionBase *Section, InputFile *File);
+  Symbol *addSymbol(const Symbol &New);
 
-  void addShared(StringRef Name, uint8_t Binding, uint8_t StOther, uint8_t Type,
-                 uint64_t Value, uint64_t Size, uint32_t Alignment,
-                 uint32_t VerdefIndex, InputFile *File);
-
-  template <class ELFT>
-  void addLazyArchive(StringRef Name, ArchiveFile &F,
-                      const llvm::object::Archive::Symbol S);
-
-  template <class ELFT> void addLazyObject(StringRef Name, LazyObjFile &Obj);
-
-  Symbol *addBitcode(StringRef Name, uint8_t Binding, uint8_t StOther,
-                     uint8_t Type, bool CanOmitFromDynSym, BitcodeFile &File);
-
-  Symbol *addCommon(StringRef Name, uint64_t Size, uint32_t Alignment,
-                    uint8_t Binding, uint8_t StOther, uint8_t Type,
-                    InputFile &File);
-
-  std::pair<Symbol *, bool> insert(StringRef Name, uint8_t Visibility,
-                                   bool CanOmitFromDynSym, InputFile *File);
-
-  template <class ELFT> void fetchLazy(Symbol *Sym);
+  void fetchLazy(Symbol *Sym);
 
   void scanVersionScript();
 
@@ -82,8 +63,6 @@ public:
   llvm::DenseMap<StringRef, SharedFile *> SoNames;
 
 private:
-  std::pair<Symbol *, bool> insertName(StringRef Name);
-
   std::vector<Symbol *> findByVersion(SymbolVersion Ver);
   std::vector<Symbol *> findAllByVersion(SymbolVersion Ver);
 
@@ -103,11 +82,6 @@ private:
   llvm::DenseMap<llvm::CachedHashStringRef, int> SymMap;
   std::vector<Symbol *> SymVector;
 
-  // Comdat groups define "link once" sections. If two comdat groups have the
-  // same name, only one of them is linked, and the other is ignored. This set
-  // is used to uniquify them.
-  llvm::DenseSet<llvm::CachedHashStringRef> ComdatGroups;
-
   // A map from demangled symbol names to their symbol objects.
   // This mapping is 1:N because two symbols with different versions
   // can have the same name. We use this map to handle "extern C++ {}"
@@ -119,6 +93,10 @@ private:
 };
 
 extern SymbolTable *Symtab;
+
+void mergeSymbolProperties(Symbol *Old, const Symbol &New);
+void resolveSymbol(Symbol *Old, const Symbol &New);
+
 } // namespace elf
 } // namespace lld
 

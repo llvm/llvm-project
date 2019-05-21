@@ -54,6 +54,9 @@ extern std::unique_ptr<llvm::TarWriter> Tar;
 // Opens a given file.
 llvm::Optional<MemoryBufferRef> readFile(StringRef Path);
 
+// Add symbols in File to the symbol table.
+void parseFile(InputFile *File);
+
 // The root class of input files.
 class InputFile {
 public:
@@ -234,10 +237,6 @@ public:
   // but had one or more functions with the no_split_stack attribute.
   bool SomeNoSplitStack = false;
 
-  // True if the file has any live Regular or Merge sections that aren't
-  // the LDSA section.
-  bool HasLiveCodeOrData = false;
-
   // Pointer to this input file's .llvm_addrsig section, if it has one.
   const Elf_Shdr *AddrsigSec = nullptr;
 
@@ -320,7 +319,7 @@ class ArchiveFile : public InputFile {
 public:
   explicit ArchiveFile(std::unique_ptr<Archive> &&File);
   static bool classof(const InputFile *F) { return F->kind() == ArchiveKind; }
-  template <class ELFT> void parse();
+  void parse();
 
   // Pulls out an object file that contains a definition for Sym and
   // returns it. If the same file was instantiated before, this

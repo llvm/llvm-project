@@ -22,4 +22,4 @@ for.end:
 
 ; We check that there are only two parameters, but not a third one that
 ; represents the smax() expression. This test case comes from PR 18155.
-; CHECK: [w, x_pos]
+; CHECK: [x_pos, w]

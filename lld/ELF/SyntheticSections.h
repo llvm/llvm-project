@@ -17,8 +17,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_ELF_SYNTHETIC_SECTION_H
-#define LLD_ELF_SYNTHETIC_SECTION_H
+#ifndef LLD_ELF_SYNTHETIC_SECTIONS_H
+#define LLD_ELF_SYNTHETIC_SECTIONS_H
 
 #include "DWARF.h"
 #include "EhFrame.h"
@@ -148,13 +148,13 @@ class BuildIdSection : public SyntheticSection {
   static const unsigned HeaderSize = 16;
 
 public:
+  const size_t HashSize;
   BuildIdSection();
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override { return HeaderSize + HashSize; }
   void writeBuildId(llvm::ArrayRef<uint8_t> Buf);
 
 private:
-  size_t HashSize;
   uint8_t *HashBuf;
 };
 

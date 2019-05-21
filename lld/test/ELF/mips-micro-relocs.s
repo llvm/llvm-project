@@ -53,9 +53,9 @@
 # EL:      Contents of section .debug_info
 # EL-NEXT:  0000 11000200
 
-# SYM: 00038000         .got            00000000 .hidden _gp
-# SYM: 00020000 g F     .text           00000000 foo
-# SYM: 00020010         .text           00000000 __start
+# SYM: 00038000         .got   00000000 .hidden _gp
+# SYM: 00020000 g F     .text  00000000 0x80 foo
+# SYM: 00020010         .text  00000000 0x80 __start
 
 # ELF: ElfHeader {
 # ELF:   Entry: 0x20011

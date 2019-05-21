@@ -31,7 +31,7 @@ INLINE void omptarget_nvptx_TaskDescr::SetRuntimeSched(omp_sched_t sched) {
 }
 
 INLINE void
-omptarget_nvptx_TaskDescr::InitLevelZeroTaskDescr(bool isSPMDExecutionMode) {
+omptarget_nvptx_TaskDescr::InitLevelZeroTaskDescr() {
   // slow method
   // flag:
   //   default sched is static,
@@ -39,17 +39,14 @@ omptarget_nvptx_TaskDescr::InitLevelZeroTaskDescr(bool isSPMDExecutionMode) {
   //   not in parallel
 
   items.flags = 0;
-  items.nthreads = GetNumberOfProcsInTeam(isSPMDExecutionMode);
-  ;                                // threads: whatever was alloc by kernel
   items.threadId = 0;         // is master
-  items.threadsInTeam = 1;    // sequential
   items.runtimeChunkSize = 1; // prefered chunking statik with chunk 1
 }
 
 // This is called when all threads are started together in SPMD mode.
 // OMP directives include target parallel, target distribute parallel for, etc.
 INLINE void omptarget_nvptx_TaskDescr::InitLevelOneTaskDescr(
-    uint16_t tnum, omptarget_nvptx_TaskDescr *parentTaskDescr) {
+    omptarget_nvptx_TaskDescr *parentTaskDescr) {
   // slow method
   // flag:
   //   default sched is static,
@@ -58,10 +55,8 @@ INLINE void omptarget_nvptx_TaskDescr::InitLevelOneTaskDescr(
 
   items.flags =
       TaskDescr_InPar | TaskDescr_IsParConstr; // set flag to parallel
-  items.nthreads = 0; // # threads for subsequent parallel region
   items.threadId =
       GetThreadIdInBlock(); // get ids from cuda (only called for 1st level)
-  items.threadsInTeam = tnum;
   items.runtimeChunkSize = 1; // prefered chunking statik with chunk 1
   prev = parentTaskDescr;
 }
@@ -91,12 +86,11 @@ INLINE void omptarget_nvptx_TaskDescr::CopyForExplicitTask(
 }
 
 INLINE void omptarget_nvptx_TaskDescr::CopyToWorkDescr(
-    omptarget_nvptx_TaskDescr *masterTaskDescr, uint16_t tnum) {
+    omptarget_nvptx_TaskDescr *masterTaskDescr) {
   CopyParent(masterTaskDescr);
   // overrwrite specific items;
   items.flags |=
       TaskDescr_InPar | TaskDescr_IsParConstr; // set flag to parallel
-  items.threadsInTeam = tnum;             // set number of threads
 }
 
 INLINE void omptarget_nvptx_TaskDescr::CopyFromWorkDescr(
@@ -121,7 +115,6 @@ INLINE void omptarget_nvptx_TaskDescr::CopyConvergentParent(
     omptarget_nvptx_TaskDescr *parentTaskDescr, uint16_t tid, uint16_t tnum) {
   CopyParent(parentTaskDescr);
   items.flags |= TaskDescr_InParL2P; // In L2+ parallelism
-  items.threadsInTeam = tnum;        // set number of threads
   items.threadId = tid;
 }
 
@@ -177,8 +170,8 @@ omptarget_nvptx_ThreadPrivateContext::InitThreadPrivateContext(int tid) {
 // Team Descriptor
 ////////////////////////////////////////////////////////////////////////////////
 
-INLINE void omptarget_nvptx_TeamDescr::InitTeamDescr(bool isSPMDExecutionMode) {
-  levelZeroTaskDescr.InitLevelZeroTaskDescr(isSPMDExecutionMode);
+INLINE void omptarget_nvptx_TeamDescr::InitTeamDescr() {
+  levelZeroTaskDescr.InitLevelZeroTaskDescr();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

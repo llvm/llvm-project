@@ -71,6 +71,7 @@ Configuration *elf::Config;
 LinkerDriver *elf::Driver;
 
 static void setConfigs(opt::InputArgList &Args);
+static void readConfigs(opt::InputArgList &Args);
 
 bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
                raw_ostream &Error) {
@@ -308,6 +309,9 @@ static void checkOptions() {
   if (!Config->Relocatable && !Config->DefineCommon)
     error("-no-define-common not supported in non relocatable output");
 
+  if (Config->ZText && Config->ZIfuncNoplt)
+    error("-z text and -z ifunc-noplt may not be used together");
+
   if (Config->Relocatable) {
     if (Config->Shared)
       error("-r and -shared may not be used together");
@@ -357,14 +361,15 @@ static bool getZFlag(opt::InputArgList &Args, StringRef K1, StringRef K2,
 static bool isKnownZFlag(StringRef S) {
   return S == "combreloc" || S == "copyreloc" || S == "defs" ||
          S == "execstack" || S == "global" || S == "hazardplt" ||
-         S == "initfirst" || S == "interpose" ||
+         S == "ifunc-noplt" || S == "initfirst" || S == "interpose" ||
          S == "keep-text-section-prefix" || S == "lazy" || S == "muldefs" ||
          S == "nocombreloc" || S == "nocopyreloc" || S == "nodefaultlib" ||
          S == "nodelete" || S == "nodlopen" || S == "noexecstack" ||
          S == "nokeep-text-section-prefix" || S == "norelro" || S == "notext" ||
          S == "now" || S == "origin" || S == "relro" || S == "retpolineplt" ||
          S == "rodynamic" || S == "text" || S == "wxneeded" ||
-         S.startswith("max-page-size=") || S.startswith("stack-size=");
+         S.startswith("common-page-size") || S.startswith("max-page-size=") ||
+         S.startswith("stack-size=");
 }
 
 // Report an error for an unknown -z option.
@@ -439,6 +444,11 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   checkOptions();
   if (errorCount())
     return;
+
+  // The Target instance handles target-specific stuff, such as applying
+  // relocations or writing a PLT section. It also contains target-dependent
+  // values such as a default image base address.
+  Target = getTarget();
 
   switch (Config->EKind) {
   case ELF32LEKind:
@@ -756,7 +766,7 @@ static void parseClangOption(StringRef Opt, const Twine &Msg) {
 }
 
 // Initializes Config members by the command line options.
-void LinkerDriver::readConfigs(opt::InputArgList &Args) {
+static void readConfigs(opt::InputArgList &Args) {
   errorHandler().Verbose = Args.hasArg(OPT_verbose);
   errorHandler().FatalWarnings =
       Args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
@@ -780,6 +790,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->DefineCommon = Args.hasFlag(OPT_define_common, OPT_no_define_common,
                                       !Args.hasArg(OPT_relocatable));
   Config->Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, true);
+  Config->DependentLibraries = Args.hasFlag(OPT_dependent_libraries, OPT_no_dependent_libraries, true);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->Discard = getDiscard(Args);
   Config->DwoDir = Args.getLastArgValue(OPT_plugin_opt_dwo_dir_eq);
@@ -823,6 +834,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->MipsGotSize = args::getInteger(Args, OPT_mips_got_size, 0xfff0);
   Config->MergeArmExidx =
       Args.hasFlag(OPT_merge_exidx_entries, OPT_no_merge_exidx_entries, true);
+  Config->Nmagic = Args.hasFlag(OPT_nmagic, OPT_no_nmagic, false);
   Config->NoinhibitExec = Args.hasArg(OPT_noinhibit_exec);
   Config->Nostdlib = Args.hasArg(OPT_nostdlib);
   Config->OFormatBinary = isOutputFormatBinary(Args);
@@ -888,6 +900,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZExecstack = getZFlag(Args, "execstack", "noexecstack", false);
   Config->ZGlobal = hasZOption(Args, "global");
   Config->ZHazardplt = hasZOption(Args, "hazardplt");
+  Config->ZIfuncNoplt = hasZOption(Args, "ifunc-noplt");
   Config->ZInitfirst = hasZOption(Args, "initfirst");
   Config->ZInterpose = hasZOption(Args, "interpose");
   Config->ZKeepTextSectionPrefix = getZFlag(
@@ -951,11 +964,10 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   if (Args.hasArg(OPT_print_map))
     Config->MapFile = "-";
 
-  // --omagic is an option to create old-fashioned executables in which
-  // .text segments are writable. Today, the option is still in use to
-  // create special-purpose programs such as boot loaders. It doesn't
-  // make sense to create PT_GNU_RELRO for such executables.
-  if (Config->Omagic)
+  // Page alignment can be disabled by the -n (--nmagic) and -N (--omagic).
+  // As PT_GNU_RELRO relies on Paging, do not create it when we have disabled
+  // it.
+  if (Config->Nmagic || Config->Omagic)
     Config->ZRelro = false;
 
   std::tie(Config->BuildId, Config->BuildIdVector) = getBuildId(Args);
@@ -963,9 +975,17 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   std::tie(Config->AndroidPackDynRelocs, Config->RelrPackDynRelocs) =
       getPackDynRelocs(Args);
 
-  if (auto *Arg = Args.getLastArg(OPT_symbol_ordering_file))
-    if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
+  if (auto *Arg = Args.getLastArg(OPT_symbol_ordering_file)){
+    if (Args.hasArg(OPT_call_graph_ordering_file))
+      error("--symbol-ordering-file and --call-graph-order-file "
+            "may not be used together");
+    if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue())){
       Config->SymbolOrderingFile = getSymbolOrderingFile(*Buffer);
+      // Also need to disable CallGraphProfileSort to prevent
+      // LLD order symbols with CGProfile
+      Config->CallGraphProfileSort = false;
+    }
+  }
 
   // If --retain-symbol-file is used, we'll keep only the symbols listed in
   // the file and discard all others.
@@ -1108,6 +1128,8 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       Config->AsNeeded = false;
       break;
     case OPT_Bstatic:
+    case OPT_omagic:
+    case OPT_nmagic:
       Config->Static = true;
       break;
     case OPT_Bdynamic:
@@ -1193,6 +1215,29 @@ static uint64_t getMaxPageSize(opt::InputArgList &Args) {
                                        Target->DefaultMaxPageSize);
   if (!isPowerOf2_64(Val))
     error("max-page-size: value isn't a power of 2");
+  if (Config->Nmagic || Config->Omagic) {
+    if (Val != Target->DefaultMaxPageSize)
+      warn("-z max-page-size set, but paging disabled by omagic or nmagic");
+    return 1;
+  }
+  return Val;
+}
+
+// Parse -z common-page-size=<value>. The default value is defined by
+// each target.
+static uint64_t getCommonPageSize(opt::InputArgList &Args) {
+  uint64_t Val = args::getZOptionValue(Args, OPT_z, "common-page-size",
+                                       Target->DefaultCommonPageSize);
+  if (!isPowerOf2_64(Val))
+    error("common-page-size: value isn't a power of 2");
+  if (Config->Nmagic || Config->Omagic) {
+    if (Val != Target->DefaultCommonPageSize)
+      warn("-z common-page-size set, but paging disabled by omagic or nmagic");
+    return 1;
+  }
+  // CommonPageSize can't be larger than MaxPageSize.
+  if (Val > Config->MaxPageSize)
+    Val = Config->MaxPageSize;
   return Val;
 }
 
@@ -1259,7 +1304,7 @@ static void excludeLibs(opt::InputArgList &Args) {
 }
 
 // Force Sym to be entered in the output. Used for -u or equivalent.
-template <class ELFT> static void handleUndefined(StringRef Name) {
+static void handleUndefined(StringRef Name) {
   Symbol *Sym = Symtab->find(Name);
   if (!Sym)
     return;
@@ -1269,10 +1314,10 @@ template <class ELFT> static void handleUndefined(StringRef Name) {
   Sym->IsUsedInRegularObj = true;
 
   if (Sym->isLazy())
-    Symtab->fetchLazy<ELFT>(Sym);
+    Symtab->fetchLazy(Sym);
 }
 
-template <class ELFT> static void handleLibcall(StringRef Name) {
+static void handleLibcall(StringRef Name) {
   Symbol *Sym = Symtab->find(Name);
   if (!Sym || !Sym->isLazy())
     return;
@@ -1284,7 +1329,26 @@ template <class ELFT> static void handleLibcall(StringRef Name) {
     MB = cast<LazyArchive>(Sym)->getMemberBuffer();
 
   if (isBitcode(MB))
-    Symtab->fetchLazy<ELFT>(Sym);
+    Symtab->fetchLazy(Sym);
+}
+
+// Replaces common symbols with defined symbols reside in .bss sections.
+// This function is called after all symbol names are resolved. As a
+// result, the passes after the symbol resolution won't see any
+// symbols of type CommonSymbol.
+static void replaceCommonSymbols() {
+  for (Symbol *Sym : Symtab->getSymbols()) {
+    auto *S = dyn_cast<CommonSymbol>(Sym);
+    if (!S)
+      continue;
+
+    auto *Bss = make<BssSection>("COMMON", S->Size, S->Alignment);
+    Bss->File = S->File;
+    Bss->Live = !Config->GcSections;
+    InputSections.push_back(Bss);
+    S->replace(Defined{S->File, S->getName(), S->Binding, S->StOther, S->Type,
+                       /*Value=*/0, S->Size, Bss});
+  }
 }
 
 // If all references to a DSO happen to be weak, the DSO is not added
@@ -1293,14 +1357,13 @@ template <class ELFT> static void handleLibcall(StringRef Name) {
 // that point to a non-existent DSO.
 static void demoteSharedSymbols() {
   for (Symbol *Sym : Symtab->getSymbols()) {
-    if (auto *S = dyn_cast<SharedSymbol>(Sym)) {
-      if (!S->getFile().IsNeeded) {
-        bool Used = S->Used;
-        replaceSymbol<Undefined>(S, nullptr, S->getName(), STB_WEAK, S->StOther,
-                                 S->Type);
-        S->Used = Used;
-      }
-    }
+    auto *S = dyn_cast<SharedSymbol>(Sym);
+    if (!S || S->getFile().IsNeeded)
+      continue;
+
+    bool Used = S->Used;
+    S->replace(Undefined{nullptr, S->getName(), STB_WEAK, S->StOther, S->Type});
+    S->Used = Used;
   }
 }
 
@@ -1369,8 +1432,8 @@ static void findKeepUniqueSections(opt::InputArgList &Args) {
 }
 
 template <class ELFT> static Symbol *addUndefined(StringRef Name) {
-  return Symtab->addUndefined<ELFT>(Name, STB_GLOBAL, STV_DEFAULT, 0, false,
-                                    nullptr);
+  return Symtab->addSymbol(
+      Undefined{nullptr, Name, STB_GLOBAL, STV_DEFAULT, 0});
 }
 
 // The --wrap option is a feature to rename symbols so that you can write
@@ -1492,9 +1555,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     Symtab->trace(Arg->getValue());
 
   // Add all files to the symbol table. This will add almost all
-  // symbols that we need to the symbol table.
-  for (InputFile *F : Files)
-    Symtab->addFile<ELFT>(F);
+  // symbols that we need to the symbol table. This process might
+  // add files to the link, via autolinking, these files are always
+  // appended to the Files vector.
+  for (size_t I = 0; I < Files.size(); ++I)
+    parseFile(Files[I]);
 
   // Now that we have every file, we can decide if we will need a
   // dynamic symbol table.
@@ -1512,10 +1577,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Handle the `--undefined <sym>` options.
   for (StringRef S : Config->Undefined)
-    handleUndefined<ELFT>(S);
+    handleUndefined(S);
 
   // If an entry symbol is in a static archive, pull out that file now.
-  handleUndefined<ELFT>(Config->Entry);
+  handleUndefined(Config->Entry);
 
   // If any of our inputs are bitcode files, the LTO code generator may create
   // references to certain library functions that might not be explicit in the
@@ -1536,7 +1601,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // object file to the link.
   if (!BitcodeFiles.empty())
     for (const char *S : LibcallRoutineNames)
-      handleLibcall<ELFT>(S);
+      handleLibcall(S);
 
   // Return if there were name resolution errors.
   if (errorCount())
@@ -1613,16 +1678,25 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // We do not want to emit debug sections if --strip-all
   // or -strip-debug are given.
-  if (Config->Strip != StripPolicy::None)
-    llvm::erase_if(InputSections, [](InputSectionBase *S) { return S->Debug; });
-
-  // The Target instance handles target-specific stuff, such as applying
-  // relocations or writing a PLT section. It also contains target-dependent
-  // values such as a default image base address.
-  Target = getTarget();
+  if (Config->Strip != StripPolicy::None) {
+    llvm::erase_if(InputSections, [](InputSectionBase *S) {
+      return S->Name.startswith(".debug") || S->Name.startswith(".zdebug");
+    });
+  }
 
   Config->EFlags = Target->calcEFlags();
+  // MaxPageSize (sometimes called abi page size) is the maximum page size that
+  // the output can be run on. For example if the OS can use 4k or 64k page
+  // sizes then MaxPageSize must be 64 for the output to be useable on both.
+  // All important alignment decisions must use this value.
   Config->MaxPageSize = getMaxPageSize(Args);
+  // CommonPageSize is the most common page size that the output will be run on.
+  // For example if an OS can use 4k or 64k page sizes and 4k is more common
+  // than 64k then CommonPageSize is set to 4k. CommonPageSize can be used for
+  // optimizations such as DATA_SEGMENT_ALIGN in linker scripts. LLD's use of it
+  // is limited to writing trap instructions on the last executable segment.
+  Config->CommonPageSize = getCommonPageSize(Args);
+
   Config->ImageBase = getImageBase(Args);
 
   if (Config->EMachine == EM_ARM) {
@@ -1638,6 +1712,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // before mergeSections because the .comment section is a mergeable section.
   if (!Config->Relocatable)
     InputSections.push_back(createCommentSection());
+
+  // Replace common symbols with regular symbols.
+  replaceCommonSymbols();
 
   // Do size optimizations: garbage collection, merging of SHF_MERGE sections
   // and identical code folding.

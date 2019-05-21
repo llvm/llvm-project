@@ -165,18 +165,16 @@ INLINE int GetOmpThreadId(int threadId, bool isSPMDExecutionMode) {
   return rc;
 }
 
-INLINE int GetNumberOfOmpThreads(int threadId, bool isSPMDExecutionMode) {
+INLINE int GetNumberOfOmpThreads(bool isSPMDExecutionMode) {
   // omp_num_threads
   int rc;
-  if ((parallelLevel[GetWarpId()] & (OMP_ACTIVE_PARALLEL_LEVEL - 1)) > 1) {
+  int Level = parallelLevel[GetWarpId()];
+  if (Level != OMP_ACTIVE_PARALLEL_LEVEL + 1) {
     rc = 1;
   } else if (isSPMDExecutionMode) {
     rc = GetNumberOfThreadsInBlock();
   } else {
-    omptarget_nvptx_TaskDescr *currTaskDescr =
-        omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(threadId);
-    ASSERT0(LT_FUSSY, currTaskDescr, "expected a top task descr");
-    rc = currTaskDescr->ThreadsInTeam();
+    rc = threadsInTeam;
   }
 
   return rc;

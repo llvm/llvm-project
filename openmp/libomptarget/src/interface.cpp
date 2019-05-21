@@ -57,7 +57,7 @@ static void HandleTargetOutcome(bool success) {
       }
       break;
     case tgt_default:
-        FATAL_MESSAGE0(1, "default offloading policy must switched to " 
+        FATAL_MESSAGE0(1, "default offloading policy must switched to "
             "mandatory or disabled");
       break;
     case tgt_mandatory:
@@ -66,6 +66,12 @@ static void HandleTargetOutcome(bool success) {
       }
       break;
   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// adds requires flags
+EXTERN void __tgt_register_requires(int64_t flags) {
+  RTLs.RegisterRequires(flags);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

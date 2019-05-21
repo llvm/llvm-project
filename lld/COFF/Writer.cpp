@@ -91,7 +91,7 @@ public:
   }
 
   void writeTo(uint8_t *B) const override {
-    auto *D = reinterpret_cast<debug_directory *>(B + OutputSectionOff);
+    auto *D = reinterpret_cast<debug_directory *>(B);
 
     for (const Chunk *Record : Records) {
       OutputSection *OS = Record->getOutputSection();
@@ -145,10 +145,10 @@ public:
   void writeTo(uint8_t *B) const override {
     // Save off the DebugInfo entry to backfill the file signature (build id)
     // in Writer::writeBuildId
-    BuildId = reinterpret_cast<codeview::DebugInfo *>(B + OutputSectionOff);
+    BuildId = reinterpret_cast<codeview::DebugInfo *>(B);
 
     // variable sized field (PDB Path)
-    char *P = reinterpret_cast<char *>(B + OutputSectionOff + sizeof(*BuildId));
+    char *P = reinterpret_cast<char *>(B + sizeof(*BuildId));
     if (!Config->PDBAltPath.empty())
       memcpy(P, Config->PDBAltPath.data(), Config->PDBAltPath.size());
     P[Config->PDBAltPath.size()] = '\0';
@@ -1161,7 +1161,6 @@ void Writer::assignAddresses() {
         VirtualSize += Padding;
       VirtualSize = alignTo(VirtualSize, C->Alignment);
       C->setRVA(RVA + VirtualSize);
-      C->OutputSectionOff = VirtualSize;
       C->finalizeContents();
       VirtualSize += C->getSize();
       if (C->hasData())
@@ -1675,7 +1674,9 @@ void Writer::writeSections() {
     // ADD instructions).
     if (Sec->Header.Characteristics & IMAGE_SCN_CNT_CODE)
       memset(SecBuf, 0xCC, Sec->getRawSize());
-    parallelForEach(Sec->Chunks, [&](Chunk *C) { C->writeTo(SecBuf); });
+    parallelForEach(Sec->Chunks, [&](Chunk *C) {
+      C->writeTo(SecBuf + C->getRVA() - Sec->getRVA());
+    });
   }
 }
 

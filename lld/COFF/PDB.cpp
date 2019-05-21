@@ -1030,7 +1030,7 @@ void PDBLinker::mergeSymbolRecords(ObjFile *File, const CVIndexMap &IndexMap,
 static ArrayRef<uint8_t> relocateDebugChunk(BumpPtrAllocator &Alloc,
                                             SectionChunk &DebugChunk) {
   uint8_t *Buffer = Alloc.Allocate<uint8_t>(DebugChunk.getSize());
-  assert(DebugChunk.OutputSectionOff == 0 &&
+  assert(DebugChunk.getOutputSection() == nullptr &&
          "debug sections should not be in output sections");
   DebugChunk.writeTo(Buffer);
   return makeArrayRef(Buffer, DebugChunk.getSize());
@@ -1557,6 +1557,8 @@ void PDBLinker::addImportFilesToPDB(ArrayRef<OutputSection *> OutputSections) {
     }
 
     DefinedImportThunk *Thunk = cast<DefinedImportThunk>(File->ThunkSym);
+    Chunk *ThunkChunk = Thunk->getChunk();
+    OutputSection *ThunkOS = ThunkChunk->getOutputSection();
 
     ObjNameSym ONS(SymbolRecordKind::ObjNameSym);
     Compile3Sym CS(SymbolRecordKind::Compile3Sym);
@@ -1573,9 +1575,9 @@ void PDBLinker::addImportFilesToPDB(ArrayRef<OutputSection *> OutputSections) {
     TS.End = 0;
     TS.Next = 0;
     TS.Thunk = ThunkOrdinal::Standard;
-    TS.Length = Thunk->getChunk()->getSize();
-    TS.Segment = Thunk->getChunk()->getOutputSection()->SectionIndex;
-    TS.Offset = Thunk->getChunk()->OutputSectionOff;
+    TS.Length = ThunkChunk->getSize();
+    TS.Segment = ThunkOS->SectionIndex;
+    TS.Offset = ThunkChunk->getRVA() - ThunkOS->getRVA();
 
     Mod->addSymbol(codeview::SymbolSerializer::writeOneSymbol(
         ONS, Alloc, CodeViewContainer::Pdb));

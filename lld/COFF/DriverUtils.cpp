@@ -858,8 +858,14 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> Argv) {
 
   handleColorDiagnostics(Args);
 
-  for (auto *Arg : Args.filtered(OPT_UNKNOWN))
-    warn("ignoring unknown argument: " + Arg->getSpelling());
+  for (auto *Arg : Args.filtered(OPT_UNKNOWN)) {
+    std::string Nearest;
+    if (Table.findNearest(Arg->getAsString(Args), Nearest) > 1)
+      warn("ignoring unknown argument '" + Arg->getSpelling() + "'");
+    else
+      warn("ignoring unknown argument '" + Arg->getSpelling() +
+           "', did you mean '" + Nearest + "'");
+  }
 
   if (Args.hasArg(OPT_lib))
     warn("ignoring /lib since it's not the first argument");

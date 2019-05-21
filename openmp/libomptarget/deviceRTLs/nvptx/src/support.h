@@ -54,8 +54,7 @@ INLINE int GetOmpThreadId(int threadId,
 INLINE int GetOmpTeamId();                              // omp_team_num
 
 // get OpenMP number of threads and team
-INLINE int GetNumberOfOmpThreads(int threadId,
-                                 bool isSPMDExecutionMode); // omp_num_threads
+INLINE int GetNumberOfOmpThreads(bool isSPMDExecutionMode); // omp_num_threads
 INLINE int GetNumberOfOmpTeams();                           // omp_num_teams
 
 // get OpenMP number of procs
