@@ -1,8 +1,8 @@
 # RUN: yaml2obj %s > %t
 # RUN: llvm-objdump --all-headers %t | FileCheck %s
 
-## Check we print file format, architecture and start address before
-## anything else when using --all-headers.
+## Check we print file format, architecture and start address followed by the
+## other data when using --all-headers.
 
 # CHECK:       file format ELF64-x86-64
 # CHECK-EMPTY:
@@ -10,6 +10,9 @@
 # CHECK-NEXT:  start address: 0x0000000000000000
 # CHECK-EMPTY:
 # CHECK-NEXT:  Sections:
+# CHECK: SYMBOL TABLE:
+# CHECK: Program Header:
+# CHECK: Dynamic Section:
 
 ## Check how we dump the archives.
 ## Check we dump the appropriate headers for each file in the archive.

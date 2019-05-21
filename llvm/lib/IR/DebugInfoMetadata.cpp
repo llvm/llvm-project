@@ -979,16 +979,17 @@ const DIExpression *DIExpression::extractAddressClass(const DIExpression *Expr,
   return Expr;
 }
 
-DIExpression *DIExpression::prepend(const DIExpression *Expr, bool DerefBefore,
-                                    int64_t Offset, bool DerefAfter,
-                                    bool StackValue) {
+DIExpression *DIExpression::prepend(const DIExpression *Expr, uint8_t Flags,
+                                    int64_t Offset) {
   SmallVector<uint64_t, 8> Ops;
-  if (DerefBefore)
+  if (Flags & DIExpression::DerefBefore)
     Ops.push_back(dwarf::DW_OP_deref);
 
   appendOffset(Ops, Offset);
-  if (DerefAfter)
+  if (Flags & DIExpression::DerefAfter)
     Ops.push_back(dwarf::DW_OP_deref);
+
+  bool StackValue = Flags & DIExpression::StackValue;
 
   return prependOpcodes(Expr, Ops, StackValue);
 }

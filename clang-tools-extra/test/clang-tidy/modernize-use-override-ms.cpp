@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-override %t -- -- -fms-extensions -std=c++11
+// RUN: %check_clang_tidy %s modernize-use-override %t -- -- -fms-extensions
 
 // This test is designed to test ms-extension __declspec(dllexport) attributes.
 #define EXPORT __declspec(dllexport)

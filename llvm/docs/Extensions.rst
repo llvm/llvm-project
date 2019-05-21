@@ -285,6 +285,26 @@ The following directives are specified:
     The paramter identifies an additional library search path to be considered
     when looking up libraries after the inclusion of this option.
 
+``SHT_LLVM_DEPENDENT_LIBRARIES`` Section (Dependent Libraries)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This section contains strings specifying libraries to be added to the link by
+the linker.
+
+The section should be consumed by the linker and not written to the output.
+
+The strings are encoded as standard null-terminated UTF-8 strings.
+
+For example:
+
+.. code-block:: gas
+
+  .section ".deplibs","MS",@llvm_dependent_libraries,1
+  .asciz "library specifier 1"
+  .asciz "library specifier 2"
+
+The interpretation of the library specifiers is defined by the consuming linker.
+
 ``SHT_LLVM_CALL_GRAPH_PROFILE`` Section (Call Graph Profile)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

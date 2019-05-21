@@ -185,6 +185,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
     if (IsILP32 && isNonILP32reloc(Fixup, RefKind, Ctx))
       return ELF::R_AARCH64_NONE;
     switch ((unsigned)Fixup.getKind()) {
+    case FK_NONE:
+      return ELF::R_AARCH64_NONE;
     case FK_Data_1:
       Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
       return ELF::R_AARCH64_NONE;

@@ -1420,7 +1420,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY bool __invariants() const;
 
     _LIBCPP_INLINE_VISIBILITY void __clear_and_shrink() _NOEXCEPT;
-    
+
     _LIBCPP_INLINE_VISIBILITY
     bool __is_long() const _NOEXCEPT
         {return bool(__r_.first().__s.__size_ & __short_mask);}
@@ -1682,7 +1682,7 @@ basic_string(basic_string_view<_CharT, _Traits>, _Sz, _Sz, const _Allocator& = _
   -> basic_string<_CharT, _Traits, _Allocator>;
 #endif
 
-                  
+
 template <class _CharT, class _Traits, class _Allocator>
 inline
 void
@@ -4227,21 +4227,17 @@ template<class _CharT, class _Traits, class _Allocator>
     const typename basic_string<_CharT, _Traits, _Allocator>::size_type
                    basic_string<_CharT, _Traits, _Allocator>::npos;
 
-template<class _CharT, class _Traits, class _Allocator>
-struct _LIBCPP_TEMPLATE_VIS hash<basic_string<_CharT, _Traits, _Allocator> >
-    : public unary_function<basic_string<_CharT, _Traits, _Allocator>, size_t>
+template <class _CharT, class _Allocator>
+struct _LIBCPP_TEMPLATE_VIS
+    hash<basic_string<_CharT, char_traits<_CharT>, _Allocator> >
+    : public unary_function<
+          basic_string<_CharT, char_traits<_CharT>, _Allocator>, size_t>
 {
     size_t
-        operator()(const basic_string<_CharT, _Traits, _Allocator>& __val) const _NOEXCEPT;
+    operator()(const basic_string<_CharT, char_traits<_CharT>, _Allocator>& __val) const _NOEXCEPT
+    { return __do_string_hash(__val.data(), __val.data() + __val.size()); }
 };
 
-template<class _CharT, class _Traits, class _Allocator>
-size_t
-hash<basic_string<_CharT, _Traits, _Allocator> >::operator()(
-        const basic_string<_CharT, _Traits, _Allocator>& __val) const _NOEXCEPT
-{
-    return __do_string_hash(__val.data(), __val.data() + __val.size());
-}
 
 template<class _CharT, class _Traits, class _Allocator>
 basic_ostream<_CharT, _Traits>&

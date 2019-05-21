@@ -27,6 +27,25 @@ def err_drv_invalid_riscv_arch_name : Error<
   "invalid arch name '%0', %1">;
 def err_drv_invalid_riscv_ext_arch_name : Error<
   "invalid arch name '%0', %1 '%2'">;
+def warn_drv_avr_mcu_not_specified : Warning<
+  "no target microcontroller specified on command line, cannot "
+  "link standard libraries, please pass -mmcu=<mcu name>">,
+  InGroup<AVRRtlibLinkingQuirks>;
+def warn_drv_avr_gcc_not_found: Warning<
+  "no avr-gcc installation can be found on the system, "
+  "cannot link standard libraries">,
+  InGroup<AVRRtlibLinkingQuirks>;
+def warn_drv_avr_libc_not_found: Warning<
+  "no avr-libc installation can be found on the system, "
+  "cannot link standard libraries">,
+  InGroup<AVRRtlibLinkingQuirks>;
+def warn_drv_avr_family_linking_stdlibs_not_implemented: Warning<
+  "support for linking stdlibs for microcontroller '%0' is not implemented">,
+  InGroup<AVRRtlibLinkingQuirks>;
+def warn_drv_avr_stdlib_not_linked: Warning<
+  "standard library not linked and so no interrupt vector table or "
+  "compiler runtime routines will be linked">,
+  InGroup<AVRRtlibLinkingQuirks>;
 def err_drv_cuda_bad_gpu_arch : Error<"Unsupported CUDA gpu architecture: %0">;
 def err_drv_no_cuda_installation : Error<
   "cannot find CUDA installation.  Provide its path via --cuda-path, or pass "
@@ -307,6 +326,8 @@ def err_analyzer_config_multiple_values : Error<
 def err_analyzer_config_invalid_input : Error<
   "invalid input for analyzer-config option '%0', that expects %1 value">;
 def err_analyzer_config_unknown : Error<"unknown analyzer-config '%0'">;
+def err_analyzer_checker_option_unknown : Error<
+  "checker '%0' has no option called '%1'">;
 def err_analyzer_checker_option_invalid_input : Error<
   "invalid input for checker option '%0', that expects %1">;
 

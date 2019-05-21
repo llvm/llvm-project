@@ -10,10 +10,13 @@ set(GWP_ASAN_HEADERS
   random.h
 )
 
-# Disable RTTI and exception support, as we want these libraries to be
-# C-compatible. Regular C source files can be linked against the generated
-# GwpAsan libraries using the Clang C compiler.
-set(GWP_ASAN_CFLAGS -fno-rtti -fno-exceptions)
+# Ensure that GWP-ASan meets the delegated requirements of some supporting
+# allocators. Some supporting allocators (e.g. scudo standalone) cannot use any
+# parts of the C++ standard library.
+set(GWP_ASAN_CFLAGS -fno-rtti -fno-exceptions -nostdinc++)
+
+# Remove -stdlib= which is unused when passing -nostdinc++.
+string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 
 if (COMPILER_RT_HAS_GWP_ASAN)
   foreach(arch ${GWP_ASAN_SUPPORTED_ARCH})

@@ -1821,14 +1821,39 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
   return Changed ? &I : nullptr;
 }
 
+/// This eliminates floating-point negation in either 'fneg(X)' or
+/// 'fsub(-0.0, X)' form by combining into a constant operand.
+static Instruction *foldFNegIntoConstant(Instruction &I) {
+  Value *X;
+  Constant *C;
+
+  // Fold negation into constant operand. This is limited with one-use because
+  // fneg is assumed better for analysis and cheaper in codegen than fmul/fdiv.
+  // -(X * C) --> X * (-C)
+  // FIXME: It's arguable whether these should be m_OneUse or not. The current
+  // belief is that the FNeg allows for better reassociation opportunities.
+  if (match(&I, m_FNeg(m_OneUse(m_FMul(m_Value(X), m_Constant(C))))))
+    return BinaryOperator::CreateFMulFMF(X, ConstantExpr::getFNeg(C), &I);
+  // -(X / C) --> X / (-C)
+  if (match(&I, m_FNeg(m_OneUse(m_FDiv(m_Value(X), m_Constant(C))))))
+    return BinaryOperator::CreateFDivFMF(X, ConstantExpr::getFNeg(C), &I);
+  // -(C / X) --> (-C) / X
+  if (match(&I, m_FNeg(m_OneUse(m_FDiv(m_Constant(C), m_Value(X))))))
+    return BinaryOperator::CreateFDivFMF(ConstantExpr::getFNeg(C), X, &I);
+
+  return nullptr;
+}
+
 Instruction *InstCombiner::visitFNeg(UnaryOperator &I) {
   if (Value *V = SimplifyFNegInst(I.getOperand(0), I.getFastMathFlags(),
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
+  if (Instruction *X = foldFNegIntoConstant(I))
+    return X;
+
   return nullptr;
 }
-
 
 Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
   if (Value *V = SimplifyFSubInst(I.getOperand(0), I.getOperand(1),
@@ -1845,20 +1870,11 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
   if (I.hasNoSignedZeros() && match(Op0, m_PosZeroFP()))
     return BinaryOperator::CreateFNegFMF(Op1, &I);
 
+  if (Instruction *X = foldFNegIntoConstant(I))
+    return X;
+
   Value *X, *Y;
   Constant *C;
-
-  // Fold negation into constant operand. This is limited with one-use because
-  // fneg is assumed better for analysis and cheaper in codegen than fmul/fdiv.
-  // -(X * C) --> X * (-C)
-  if (match(&I, m_FNeg(m_OneUse(m_FMul(m_Value(X), m_Constant(C))))))
-    return BinaryOperator::CreateFMulFMF(X, ConstantExpr::getFNeg(C), &I);
-  // -(X / C) --> X / (-C)
-  if (match(&I, m_FNeg(m_OneUse(m_FDiv(m_Value(X), m_Constant(C))))))
-    return BinaryOperator::CreateFDivFMF(X, ConstantExpr::getFNeg(C), &I);
-  // -(C / X) --> (-C) / X
-  if (match(&I, m_FNeg(m_OneUse(m_FDiv(m_Constant(C), m_Value(X))))))
-    return BinaryOperator::CreateFDivFMF(ConstantExpr::getFNeg(C), X, &I);
 
   // If Op0 is not -0.0 or we can ignore -0.0: Z - (X - Y) --> Z + (Y - X)
   // Canonicalize to fadd to make analysis easier.

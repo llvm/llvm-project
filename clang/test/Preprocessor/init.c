@@ -7243,6 +7243,129 @@
 // PPC-AIX:#define __powerpc__ 1
 // PPC-AIX:#define __ppc__ 1
 //
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-ibm-aix7.2.0.0 < /dev/null | FileCheck -match-full-lines -check-prefix PPC-AIX72 %s
+//
+// PPC-AIX72:#define _AIX32 1
+// PPC-AIX72:#define _AIX41 1
+// PPC-AIX72:#define _AIX43 1
+// PPC-AIX72:#define _AIX50 1
+// PPC-AIX72:#define _AIX51 1
+// PPC-AIX72:#define _AIX52 1
+// PPC-AIX72:#define _AIX53 1
+// PPC-AIX72:#define _AIX61 1
+// PPC-AIX72:#define _AIX71 1
+// PPC-AIX72:#define _AIX72 1
+//
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-ibm-aix7.1.0.0 < /dev/null | FileCheck -match-full-lines -check-prefix PPC-AIX71 %s
+//
+// PPC-AIX71:#define _AIX32 1
+// PPC-AIX71:#define _AIX41 1
+// PPC-AIX71:#define _AIX43 1
+// PPC-AIX71:#define _AIX50 1
+// PPC-AIX71:#define _AIX51 1
+// PPC-AIX71:#define _AIX52 1
+// PPC-AIX71:#define _AIX53 1
+// PPC-AIX71:#define _AIX61 1
+// PPC-AIX71:#define _AIX71 1
+// PPC-AIX71-NOT:#define _AIX72 1
+//
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-ibm-aix6.1.0.0 < /dev/null | FileCheck -match-full-lines -check-prefix PPC-AIX61 %s
+//
+// PPC-AIX61:#define _AIX32 1
+// PPC-AIX61:#define _AIX41 1
+// PPC-AIX61:#define _AIX43 1
+// PPC-AIX61:#define _AIX50 1
+// PPC-AIX61:#define _AIX51 1
+// PPC-AIX61:#define _AIX52 1
+// PPC-AIX61:#define _AIX53 1
+// PPC-AIX61:#define _AIX61 1
+// PPC-AIX61-NOT:#define _AIX71 1
+// PPC-AIX61-NOT:#define _AIX72 1
+//
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-ibm-aix5.3.0.0 < /dev/null | FileCheck -match-full-lines -check-prefix PPC-AIX53 %s
+// PPC-AIX53:#define _AIX32 1
+// PPC-AIX53:#define _AIX41 1
+// PPC-AIX53:#define _AIX43 1
+// PPC-AIX53:#define _AIX50 1
+// PPC-AIX53:#define _AIX51 1
+// PPC-AIX53:#define _AIX52 1
+// PPC-AIX53:#define _AIX53 1
+// PPC-AIX53-NOT:#define _AIX61 1
+// PPC-AIX53-NOT:#define _AIX71 1
+// PPC-AIX53-NOT:#define _AIX72 1
+//
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-ibm-aix5.2.0.0 < /dev/null | FileCheck -match-full-lines -check-prefix PPC-AIX52 %s
+// PPC-AIX52:#define _AIX32 1
+// PPC-AIX52:#define _AIX41 1
+// PPC-AIX52:#define _AIX43 1
+// PPC-AIX52:#define _AIX50 1
+// PPC-AIX52:#define _AIX51 1
+// PPC-AIX52:#define _AIX52 1
+// PPC-AIX52-NOT:#define _AIX53 1
+// PPC-AIX52-NOT:#define _AIX61 1
+// PPC-AIX52-NOT:#define _AIX71 1
+// PPC-AIX52-NOT:#define _AIX72 1
+//
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-ibm-aix5.1.0.0 < /dev/null | FileCheck -match-full-lines -check-prefix PPC-AIX51 %s
+// PPC-AIX51:#define _AIX32 1
+// PPC-AIX51:#define _AIX41 1
+// PPC-AIX51:#define _AIX43 1
+// PPC-AIX51:#define _AIX50 1
+// PPC-AIX51:#define _AIX51 1
+// PPC-AIX51-NOT:#define _AIX52 1
+// PPC-AIX51-NOT:#define _AIX53 1
+// PPC-AIX51-NOT:#define _AIX61 1
+// PPC-AIX51-NOT:#define _AIX71 1
+// PPC-AIX51-NOT:#define _AIX72 1
+//
+//RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-ibm-aix5.0.0.0 < /dev/null | FileCheck -match-full-lines -check-prefix PPC-AIX50 %s
+// PPC-AIX50:#define _AIX32 1
+// PPC-AIX50:#define _AIX41 1
+// PPC-AIX50:#define _AIX43 1
+// PPC-AIX50:#define _AIX50 1
+// PPC-AIX50-NOT:#define _AIX51 1
+// PPC-AIX50-NOT:#define _AIX52 1
+// PPC-AIX50-NOT:#define _AIX53 1
+// PPC-AIX50-NOT:#define _AIX61 1
+// PPC-AIX50-NOT:#define _AIX71 1
+// PPC-AIX50-NOT:#define _AIX72 1
+//
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-ibm-aix4.3.0.0 < /dev/null | FileCheck -match-full-lines -check-prefix PPC-AIX43 %s
+// PPC-AIX43:#define _AIX32 1
+// PPC-AIX43:#define _AIX41 1
+// PPC-AIX43:#define _AIX43 1
+// PPC-AIX43-NOT:#define _AIX50 1
+// PPC-AIX43-NOT:#define _AIX51 1
+// PPC-AIX43-NOT:#define _AIX52 1
+// PPC-AIX43-NOT:#define _AIX53 1
+// PPC-AIX43-NOT:#define _AIX61 1
+// PPC-AIX43-NOT:#define _AIX71 1
+// PPC-AIX43-NOT:#define _AIX72 1
+//
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-ibm-aix4.1.0.0 < /dev/null | FileCheck -match-full-lines -check-prefix PPC-AIX41 %s
+// PPC-AIX41:#define _AIX32 1
+// PPC-AIX41:#define _AIX41 1
+// PPC-AIX41-NOT:#define _AIX43 1
+// PPC-AIX41-NOT:#define _AIX50 1
+// PPC-AIX41-NOT:#define _AIX51 1
+// PPC-AIX41-NOT:#define _AIX52 1
+// PPC-AIX41-NOT:#define _AIX53 1
+// PPC-AIX41-NOT:#define _AIX61 1
+// PPC-AIX41-NOT:#define _AIX71 1
+// PPC-AIX41-NOT:#define _AIX72 1
+//
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-ibm-aix3.2.0.0 < /dev/null | FileCheck -match-full-lines -check-prefix PPC-AIX32 %s
+// PPC-AIX32:#define _AIX32 1
+// PPC-AIX32-NOT:#define _AIX41 1
+// PPC-AIX32-NOT:#define _AIX43 1
+// PPC-AIX32-NOT:#define _AIX50 1
+// PPC-AIX32-NOT:#define _AIX51 1
+// PPC-AIX32-NOT:#define _AIX52 1
+// PPC-AIX32-NOT:#define _AIX53 1
+// PPC-AIX32-NOT:#define _AIX61 1
+// PPC-AIX32-NOT:#define _AIX71 1
+// PPC-AIX32-NOT:#define _AIX72 1
+//
 // RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=powerpc-ibm-aix7.1.0.0 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPC-AIX-CXX %s
 //
 // PPC-AIX-CXX:#define _WCHAR_T 1

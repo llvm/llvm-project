@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-concat-nested-namespaces %t -- -- -std=c++17
+// RUN: %check_clang_tidy -std=c++17-or-later %s modernize-concat-nested-namespaces %t
 
 namespace n1 {}
 

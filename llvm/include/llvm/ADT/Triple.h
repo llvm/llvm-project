@@ -712,6 +712,11 @@ public:
     return isMIPS32() || isMIPS64();
   }
 
+  /// Tests whether the target is 64-bit PowerPC (little and big endian).
+  bool isPPC64() const {
+    return getArch() == Triple::ppc64 || getArch() == Triple::ppc64le;
+  }
+
   /// Tests whether the target supports comdat
   bool supportsCOMDAT() const {
     return !isOSBinFormatMachO();

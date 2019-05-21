@@ -33,6 +33,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -48,8 +49,8 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 #include <map>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -124,6 +125,7 @@ class Preprocessor {
   friend class VAOptDefinitionContext;
   friend class VariadicMacroScopeGuard;
 
+  llvm::unique_function<void(const clang::Token &)> OnToken;
   std::shared_ptr<PreprocessorOptions> PPOpts;
   DiagnosticsEngine        *Diags;
   LangOptions       &LangOpts;
@@ -147,6 +149,7 @@ class Preprocessor {
   IdentifierInfo *Ident__DATE__, *Ident__TIME__;   // __DATE__, __TIME__
   IdentifierInfo *Ident__INCLUDE_LEVEL__;          // __INCLUDE_LEVEL__
   IdentifierInfo *Ident__BASE_FILE__;              // __BASE_FILE__
+  IdentifierInfo *Ident__FILE_NAME__;              // __FILE_NAME__
   IdentifierInfo *Ident__TIMESTAMP__;              // __TIMESTAMP__
   IdentifierInfo *Ident__COUNTER__;                // __COUNTER__
   IdentifierInfo *Ident_Pragma, *Ident__pragma;    // _Pragma, __pragma
@@ -997,6 +1000,13 @@ public:
   }
   /// \}
 
+  /// Register a function that would be called on each token in the final
+  /// expanded token stream.
+  /// This also reports annotation tokens produced by the parser.
+  void setTokenWatcher(llvm::unique_function<void(const clang::Token &)> F) {
+    OnToken = std::move(F);
+  }
+
   bool isMacroDefined(StringRef Id) {
     return isMacroDefined(&Identifiers.get(Id));
   }
@@ -1281,6 +1291,7 @@ public:
   void EnterMacro(Token &Tok, SourceLocation ILEnd, MacroInfo *Macro,
                   MacroArgs *Args);
 
+private:
   /// Add a "macro" context to the top of the include stack,
   /// which will cause the lexer to start returning the specified tokens.
   ///
@@ -1292,18 +1303,24 @@ public:
   /// of tokens has a permanent owner somewhere, so they do not need to be
   /// copied. If it is true, it assumes the array of tokens is allocated with
   /// \c new[] and the Preprocessor will delete[] it.
-private:
+  ///
+  /// If \p IsReinject the resulting tokens will have Token::IsReinjected flag
+  /// set, see the flag documentation for details.
   void EnterTokenStream(const Token *Toks, unsigned NumToks,
-                        bool DisableMacroExpansion, bool OwnsTokens);
+                        bool DisableMacroExpansion, bool OwnsTokens,
+                        bool IsReinject);
 
 public:
   void EnterTokenStream(std::unique_ptr<Token[]> Toks, unsigned NumToks,
-                        bool DisableMacroExpansion) {
-    EnterTokenStream(Toks.release(), NumToks, DisableMacroExpansion, true);
+                        bool DisableMacroExpansion, bool IsReinject) {
+    EnterTokenStream(Toks.release(), NumToks, DisableMacroExpansion, true,
+                     IsReinject);
   }
 
-  void EnterTokenStream(ArrayRef<Token> Toks, bool DisableMacroExpansion) {
-    EnterTokenStream(Toks.data(), Toks.size(), DisableMacroExpansion, false);
+  void EnterTokenStream(ArrayRef<Token> Toks, bool DisableMacroExpansion,
+                        bool IsReinject) {
+    EnterTokenStream(Toks.data(), Toks.size(), DisableMacroExpansion, false,
+                     IsReinject);
   }
 
   /// Pop the current lexer/macro exp off the top of the lexer stack.
@@ -1448,15 +1465,18 @@ public:
   ///
   /// If BackTrack() is called afterwards, the token will remain at the
   /// insertion point.
-  void EnterToken(const Token &Tok) {
+  /// If \p IsReinject is true, resulting token will have Token::IsReinjected
+  /// flag set. See the flag documentation for details.
+  void EnterToken(const Token &Tok, bool IsReinject) {
     if (LexLevel) {
       // It's not correct in general to enter caching lex mode while in the
       // middle of a nested lexing action.
       auto TokCopy = llvm::make_unique<Token[]>(1);
       TokCopy[0] = Tok;
-      EnterTokenStream(std::move(TokCopy), 1, true);
+      EnterTokenStream(std::move(TokCopy), 1, true, IsReinject);
     } else {
       EnterCachingLexMode();
+      assert(IsReinject && "new tokens in the middle of cached stream");
       CachedTokens.insert(CachedTokens.begin()+CachedLexPos, Tok);
     }
   }
@@ -2135,7 +2155,7 @@ private:
 
   //===--------------------------------------------------------------------===//
   // Caching stuff.
-  void CachingLex(Token &Result, bool &IsNewToken);
+  void CachingLex(Token &Result);
 
   bool InCachingLexMode() const {
     // If the Lexer pointers are 0 and IncludeMacroStack is empty, it means

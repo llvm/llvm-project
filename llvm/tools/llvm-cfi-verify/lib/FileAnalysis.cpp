@@ -453,13 +453,11 @@ Error FileAnalysis::parseCodeSections() {
     if (!Section.getName(SectionName) && SectionName == ".plt")
       continue;
 
-    StringRef SectionContents;
-    if (Section.getContents(SectionContents))
-      return make_error<StringError>("Failed to retrieve section contents",
-                                     inconvertibleErrorCode());
+    Expected<StringRef> Contents = Section.getContents();
+    if (!Contents)
+      return Contents.takeError();
+    ArrayRef<uint8_t> SectionBytes = arrayRefFromStringRef(*Contents);
 
-    ArrayRef<uint8_t> SectionBytes((const uint8_t *)SectionContents.data(),
-                                   Section.getSize());
     parseSectionContents(SectionBytes,
                          {Section.getAddress(), Section.getIndex()});
   }

@@ -80,7 +80,7 @@
 // RUN:     {key: readability-identifier-naming.LocalPointerPrefix, value: 'l_'}, \
 // RUN:     {key: readability-identifier-naming.LocalConstantPointerCase, value: CamelCase}, \
 // RUN:     {key: readability-identifier-naming.LocalConstantPointerPrefix, value: 'lc_'}, \
-// RUN:   ]}' -- -std=c++11 -fno-delayed-template-parsing \
+// RUN:   ]}' -- -fno-delayed-template-parsing \
 // RUN:   -I%S/Inputs/readability-identifier-naming \
 // RUN:   -isystem %S/Inputs/readability-identifier-naming/system
 

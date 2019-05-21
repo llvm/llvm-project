@@ -1,4 +1,4 @@
-; REQUIRES: loadable_module
+; REQUIRES: plugins
 ; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crashcalls -silence-passes -disable-namedmd-remove -disable-strip-debuginfo -disable-strip-debug-types > /dev/null
 ; RUN: llvm-dis %t-reduced-simplified.bc -o - | FileCheck %s
 ;

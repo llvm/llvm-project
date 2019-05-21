@@ -553,6 +553,12 @@ template <> void SymbolRecordImpl<UsingNamespaceSym>::map(IO &IO) {
   IO.mapRequired("Namespace", Symbol.Name);
 }
 
+template <> void SymbolRecordImpl<AnnotationSym>::map(IO &IO) {
+  IO.mapOptional("Offset", Symbol.CodeOffset, 0U);
+  IO.mapOptional("Segment", Symbol.Segment, uint16_t(0));
+  IO.mapRequired("Strings", Symbol.Strings);
+}
+
 } // end namespace detail
 } // end namespace CodeViewYAML
 } // end namespace llvm

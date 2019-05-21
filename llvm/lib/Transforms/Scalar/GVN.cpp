@@ -523,6 +523,7 @@ uint32_t GVN::ValueTable::lookupOrAdd(Value *V) {
     case Instruction::FPExt:
     case Instruction::PtrToInt:
     case Instruction::IntToPtr:
+    case Instruction::AddrSpaceCast:
     case Instruction::BitCast:
     case Instruction::Select:
     case Instruction::ExtractElement:

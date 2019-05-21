@@ -113,12 +113,12 @@ public:
   }
 
   void EndOfMainFile() {
-    for (const auto& Entry : MainFileMacros)
+    for (const auto &Entry : MainFileMacros)
       Out->push_back(Entry.getKey());
     llvm::sort(*Out);
   }
 
- private:
+private:
   const SourceManager &SM;
   bool InMainFile = true;
   llvm::StringSet<> MainFileMacros;
@@ -332,6 +332,38 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(MainInput.getFile());
     CTFactories.createChecks(CTContext.getPointer(), CTChecks);
+    ASTDiags.setLevelAdjuster([&CTContext](DiagnosticsEngine::Level DiagLevel,
+                                           const clang::Diagnostic &Info) {
+      if (CTContext) {
+        std::string CheckName = CTContext->getCheckName(Info.getID());
+        bool IsClangTidyDiag = !CheckName.empty();
+        if (IsClangTidyDiag) {
+          // Check for warning-as-error.
+          // We deliberately let this take precedence over suppression comments
+          // to match clang-tidy's behaviour.
+          if (DiagLevel == DiagnosticsEngine::Warning &&
+              CTContext->treatAsError(CheckName)) {
+            return DiagnosticsEngine::Error;
+          }
+
+          // Check for suppression comment. Skip the check for diagnostics not
+          // in the main file, because we don't want that function to query the
+          // source buffer for preamble files. For the same reason, we ask
+          // ShouldSuppressDiagnostic not to follow macro expansions, since
+          // those might take us into a preamble file as well.
+          bool IsInsideMainFile =
+              Info.hasSourceManager() &&
+              Info.getSourceManager().isWrittenInMainFile(
+                  Info.getSourceManager().getFileLoc(Info.getLocation()));
+          if (IsInsideMainFile && tidy::ShouldSuppressDiagnostic(
+                                      DiagLevel, Info, *CTContext,
+                                      /* CheckMacroExpansion = */ false)) {
+            return DiagnosticsEngine::Ignored;
+          }
+        }
+      }
+      return DiagLevel;
+    });
     Preprocessor *PP = &Clang->getPreprocessor();
     for (const auto &Check : CTChecks) {
       // FIXME: the PP callbacks skip the entire preamble.

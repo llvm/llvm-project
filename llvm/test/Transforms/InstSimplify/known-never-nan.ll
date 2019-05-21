@@ -255,8 +255,8 @@ define i1 @nnan_fsub(double %arg0, double %arg1) {
   ret i1 %tmp
 }
 
-define i1 @nnan_fneg() {
-; CHECK-LABEL: @nnan_fneg(
+define i1 @nnan_binary_fneg() {
+; CHECK-LABEL: @nnan_binary_fneg(
 ; CHECK-NEXT:    [[NNAN:%.*]] = call nnan double @func()
 ; CHECK-NEXT:    [[OP:%.*]] = fsub double -0.000000e+00, [[NNAN]]
 ; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP]], [[OP]]
@@ -264,6 +264,19 @@ define i1 @nnan_fneg() {
 ;
   %nnan = call nnan double @func()
   %op = fsub double -0.0, %nnan
+  %tmp = fcmp ord double %op, %op
+  ret i1 %tmp
+}
+
+define i1 @nnan_unary_fneg() {
+; CHECK-LABEL: @nnan_unary_fneg(
+; CHECK-NEXT:    [[NNAN:%.*]] = call nnan double @func()
+; CHECK-NEXT:    [[OP:%.*]] = fneg double [[NNAN]]
+; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP]], [[OP]]
+; CHECK-NEXT:    ret i1 [[TMP]]
+;
+  %nnan = call nnan double @func()
+  %op = fneg double %nnan
   %tmp = fcmp ord double %op, %op
   ret i1 %tmp
 }

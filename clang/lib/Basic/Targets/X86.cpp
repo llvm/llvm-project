@@ -661,14 +661,12 @@ void X86TargetInfo::setFeatureEnabledImpl(llvm::StringMap<bool> &Features,
     if ((Name.startswith("avx512vbmi") || Name == "avx512bitalg") && Enabled)
       Features["avx512bw"] = true;
     if (Name == "avx512bf16" && Enabled)
-      Features["avx512bw"] = Features["avx512vl"] = true;
+      Features["avx512bw"] = true;
     // Also disable VBMI/VBMI2/BITALG if BWI is being disabled.
     if (Name == "avx512bw" && !Enabled)
       Features["avx512vbmi"] = Features["avx512vbmi2"] =
       Features["avx512bf16"] =
       Features["avx512bitalg"] = false;
-    if (Name == "avx512vl" && !Enabled)
-      Features["avx512bf16"] = false;
   } else if (Name == "fma") {
     if (Enabled)
       setSSELevel(Features, AVX, Enabled);

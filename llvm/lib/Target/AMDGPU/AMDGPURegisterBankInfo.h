@@ -58,6 +58,22 @@ class AMDGPURegisterBankInfo : public AMDGPUGenRegisterBankInfo {
                                  LLT HalfTy,
                                  unsigned Reg) const;
 
+  template <unsigned NumOps>
+  struct OpRegBankEntry {
+    int8_t RegBanks[NumOps];
+    int16_t Cost;
+  };
+
+  template <unsigned NumOps>
+  InstructionMappings
+  addMappingFromTable(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                      const std::array<unsigned, NumOps> RegSrcOpIdx,
+                      ArrayRef<OpRegBankEntry<NumOps>> Table) const;
+
+  RegisterBankInfo::InstructionMappings
+  getInstrAlternativeMappingsIntrinsicWSideEffects(
+      const MachineInstr &MI, const MachineRegisterInfo &MRI) const;
+
   bool isSALUMapping(const MachineInstr &MI) const;
   const InstructionMapping &getDefaultMappingSOP(const MachineInstr &MI) const;
   const InstructionMapping &getDefaultMappingVOP(const MachineInstr &MI) const;

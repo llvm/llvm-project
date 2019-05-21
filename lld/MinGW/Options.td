@@ -16,6 +16,7 @@ def exclude_all_symbols: F<"exclude-all-symbols">,
 def export_all_symbols: F<"export-all-symbols">,
     HelpText<"Export all symbols even if a def file or dllexport attributes are used">;
 def gc_sections: F<"gc-sections">, HelpText<"Remove unused sections">;
+def help: F<"help">, HelpText<"Print option help">;
 def icf: J<"icf=">, HelpText<"Identical code folding">;
 def image_base: S<"image-base">, HelpText<"Base address of the program">;
 def insert_timestamp: F<"insert-timestamp">,
@@ -47,7 +48,9 @@ def strip_debug: F<"strip-debug">,
     HelpText<"Omit all debug information, but keep symbol information">;
 def whole_archive: F<"whole-archive">,
     HelpText<"Include all object files for following archives">;
+def v: Flag<["-"], "v">, HelpText<"Display the version number">;
 def verbose: F<"verbose">, HelpText<"Verbose mode">;
+def version: F<"version">, HelpText<"Display the version number and exit">;
 def require_defined: S<"require-defined">,
     HelpText<"Force symbol to be added to symbol table as an undefined one">;
 def require_defined_eq: J<"require-defined=">, Alias<require_defined>;
@@ -57,7 +60,8 @@ def _HASH_HASH_HASH : Flag<["-"], "###">,
     HelpText<"Print (but do not run) the commands to run for this compilation">;
 def appcontainer: F<"appcontainer">, HelpText<"Set the appcontainer flag in the executable">;
 def mllvm: S<"mllvm">;
-def pdb: S<"pdb">, HelpText<"Specify output PDB debug information file">;
+def pdb: S<"pdb">, HelpText<"Output PDB debug info file, chosen implicitly if the argument is empty">;
+def pdb_eq: J<"pdb=">, Alias<pdb>;
 def Xlink : J<"Xlink=">, MetaVarName<"<arg>">,
     HelpText<"Pass <arg> to the COFF linker">;
 
@@ -71,7 +75,7 @@ def: Joined<["-"], "O">;
 def: F<"build-id">;
 def: F<"disable-auto-image-base">;
 def: F<"enable-auto-image-base">;
-def: F<"enable-auto-import">;
+def: F<"enable-auto-import">, HelpText<"Ignored; listed for libtool compatibility">;
 def: F<"end-group">;
 def: Flag<["--"], "full-shutdown">;
 def: F<"high-entropy-va">;
@@ -87,5 +91,3 @@ def: J<"plugin-opt=">;
 def: J<"sysroot">;
 def: F<"start-group">;
 def: F<"tsaware">;
-def: Flag<["-"], "v">;
-def: F<"version">;

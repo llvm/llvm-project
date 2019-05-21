@@ -144,6 +144,8 @@ static const ParmVarDecl *getOriginParam(SVal V, CheckerContext &C,
 
 static bool isInMIGCall(CheckerContext &C) {
   const LocationContext *LC = C.getLocationContext();
+  assert(LC && "Unknown location context");
+
   const StackFrameContext *SFC;
   // Find the top frame.
   while (LC) {

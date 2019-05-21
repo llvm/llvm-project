@@ -901,6 +901,7 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
 
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const AMDGPU::IsaVersion IV = AMDGPU::getIsaVersion(ST.getCPU());
   const MachineOperand *SDST = TII->getNamedOperand(*MI, SDSTName);
   if (!SDST) {
     for (const auto &MO : MI->implicit_operands()) {
@@ -919,22 +920,37 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
     return SIInstrInfo::isSMRD(*I) && I->readsRegister(SDSTReg, TRI);
   };
 
-  // This assumes that there will be s_waitcnt lgkmcnt(0) or equivalent
-  // between any at risk SMEM and any SALU dependent on the SMEM results.
-  auto IsExpiredFn = [TII] (MachineInstr *MI, int) {
+  auto IsExpiredFn = [TII, IV] (MachineInstr *MI, int) {
     if (MI) {
       if (TII->isSALU(*MI)) {
-        if (TII->isSOPP(*MI))
-          return false;
         switch (MI->getOpcode()) {
         case AMDGPU::S_SETVSKIP:
         case AMDGPU::S_VERSION:
         case AMDGPU::S_WAITCNT_VSCNT:
         case AMDGPU::S_WAITCNT_VMCNT:
         case AMDGPU::S_WAITCNT_EXPCNT:
-        case AMDGPU::S_WAITCNT_LGKMCNT:
+          // These instructions cannot not mitigate the hazard.
           return false;
+        case AMDGPU::S_WAITCNT_LGKMCNT:
+          // Reducing lgkmcnt count to 0 always mitigates the hazard.
+          return (MI->getOperand(1).getImm() == 0) &&
+                 (MI->getOperand(0).getReg() == AMDGPU::SGPR_NULL);
+        case AMDGPU::S_WAITCNT: {
+          const int64_t Imm = MI->getOperand(0).getImm();
+          AMDGPU::Waitcnt Decoded = AMDGPU::decodeWaitcnt(IV, Imm);
+          return (Decoded.LgkmCnt == 0);
+        }
         default:
+          // SOPP instructions cannot mitigate the hazard.
+          if (TII->isSOPP(*MI))
+            return false;
+          // At this point the SALU can be assumed to mitigate the hazard
+          // because either:
+          // (a) it is independent of the at risk SMEM (breaking chain),
+          // or
+          // (b) it is dependent on the SMEM, in which case an appropriate
+          //     s_waitcnt lgkmcnt _must_ exist between it and the at risk
+          //     SMEM instruction.
           return true;
         }
       }

@@ -2616,12 +2616,12 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
 #if KMP_OS_WINDOWS
   kmp_win32_cond_t th_suspend_cv;
   kmp_win32_mutex_t th_suspend_mx;
-  int th_suspend_init;
+  std::atomic<int> th_suspend_init;
 #endif
 #if KMP_OS_UNIX
   kmp_cond_align_t th_suspend_cv;
   kmp_mutex_align_t th_suspend_mx;
-  int th_suspend_init_count;
+  std::atomic<int> th_suspend_init_count;
 #endif
 
 #if USE_ITT_BUILD

@@ -108,6 +108,12 @@ def FeatureFmaMixInsts : SubtargetFeature<"fma-mix-insts",
   "Has v_fma_mix_f32, v_fma_mixlo_f16, v_fma_mixhi_f16 instructions"
 >;
 
+def FeatureDoesNotSupportXNACK : SubtargetFeature<"no-xnack-support",
+  "DoesNotSupportXNACK",
+  "true",
+  "Hardware does not support XNACK"
+>;
+
 // XNACK is disabled if SH_MEM_CONFIG.ADDRESS_MODE = GPUVM on chips that support
 // XNACK. The current default kernel driver setting is:
 // - graphics ring: XNACK disabled
@@ -560,7 +566,7 @@ def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize32768, FeatureMIMG_R128,
   FeatureWavefrontSize64,
   FeatureLDSBankCount32, FeatureMovrel, FeatureTrigReducedRange,
-  FeatureDoesNotSupportSRAMECC]
+  FeatureDoesNotSupportSRAMECC, FeatureDoesNotSupportXNACK]
 >;
 
 def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
@@ -624,16 +630,19 @@ def FeatureISAVersion6_0_0 : FeatureSet<[FeatureSouthernIslands,
    FeatureFastFMAF32,
    HalfRate64Ops,
    FeatureLDSBankCount32,
+   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion6_0_1 : FeatureSet<
   [FeatureSouthernIslands,
    FeatureLDSBankCount32,
+   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion7_0_0 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount32,
+   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion7_0_1 : FeatureSet<
@@ -641,22 +650,26 @@ def FeatureISAVersion7_0_1 : FeatureSet<
    HalfRate64Ops,
    FeatureLDSBankCount32,
    FeatureFastFMAF32,
+   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion7_0_2 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount16,
    FeatureFastFMAF32,
+   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion7_0_3 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount16,
+   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion7_0_4 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount32,
+   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion8_0_1 : FeatureSet<
@@ -673,12 +686,14 @@ def FeatureISAVersion8_0_2 : FeatureSet<
    FeatureLDSBankCount32,
    FeatureSGPRInitBug,
    FeatureUnpackedD16VMem,
+   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion8_0_3 : FeatureSet<
   [FeatureVolcanicIslands,
    FeatureLDSBankCount32,
    FeatureUnpackedD16VMem,
+   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion8_1_0 : FeatureSet<
@@ -692,6 +707,7 @@ def FeatureISAVersion9_0_0 : FeatureSet<
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
    FeatureCodeObjectV3,
+   FeatureDoesNotSupportXNACK,
    FeatureDoesNotSupportSRAMECC]>;
 
 def FeatureISAVersion9_0_2 : FeatureSet<
@@ -706,6 +722,7 @@ def FeatureISAVersion9_0_4 : FeatureSet<
   [FeatureGFX9,
    FeatureLDSBankCount32,
    FeatureFmaMixInsts,
+   FeatureDoesNotSupportXNACK,
    FeatureDoesNotSupportSRAMECC,
    FeatureCodeObjectV3]>;
 
@@ -717,6 +734,7 @@ def FeatureISAVersion9_0_6 : FeatureSet<
    FeatureDLInsts,
    FeatureDot1Insts,
    FeatureDot2Insts,
+   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion9_0_9 : FeatureSet<
@@ -752,6 +770,7 @@ def FeatureISAVersion10_1_0 : FeatureSet<
      FeatureScalarAtomics,
      FeatureScalarFlatScratchInsts,
      FeatureLdsMisalignedBug,
+     FeatureDoesNotSupportXNACK,
      FeatureCodeObjectV3])>;
 
 //===----------------------------------------------------------------------===//

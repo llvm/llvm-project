@@ -365,11 +365,23 @@ def X86Movddup  : SDNode<"X86ISD::MOVDDUP", SDTShuff1Op>;
 def X86Movshdup : SDNode<"X86ISD::MOVSHDUP", SDTShuff1Op>;
 def X86Movsldup : SDNode<"X86ISD::MOVSLDUP", SDTShuff1Op>;
 
-def X86Movsd : SDNode<"X86ISD::MOVSD", SDTShuff2OpFP>;
-def X86Movss : SDNode<"X86ISD::MOVSS", SDTShuff2OpFP>;
+def X86Movsd : SDNode<"X86ISD::MOVSD",
+                      SDTypeProfile<1, 2, [SDTCisVT<0, v2f64>,
+                                           SDTCisVT<1, v2f64>,
+                                           SDTCisVT<2, v2f64>]>>;
+def X86Movss : SDNode<"X86ISD::MOVSS",
+                      SDTypeProfile<1, 2, [SDTCisVT<0, v4f32>,
+                                           SDTCisVT<1, v4f32>,
+                                           SDTCisVT<2, v4f32>]>>;
 
-def X86Movlhps : SDNode<"X86ISD::MOVLHPS", SDTShuff2OpFP>;
-def X86Movhlps : SDNode<"X86ISD::MOVHLPS", SDTShuff2OpFP>;
+def X86Movlhps : SDNode<"X86ISD::MOVLHPS",
+                        SDTypeProfile<1, 2, [SDTCisVT<0, v4f32>,
+                                             SDTCisVT<1, v4f32>,
+                                             SDTCisVT<2, v4f32>]>>;
+def X86Movhlps : SDNode<"X86ISD::MOVHLPS",
+                        SDTypeProfile<1, 2, [SDTCisVT<0, v4f32>,
+                                             SDTCisVT<1, v4f32>,
+                                             SDTCisVT<2, v4f32>]>>;
 
 def SDTPack : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<0>,
                                    SDTCisVec<1>, SDTCisInt<1>,

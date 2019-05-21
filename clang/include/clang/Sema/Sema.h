@@ -4612,6 +4612,17 @@ public:
   ExprResult BuildVAArgExpr(SourceLocation BuiltinLoc, Expr *E,
                             TypeSourceInfo *TInfo, SourceLocation RPLoc);
 
+  // __builtin_LINE(), __builtin_FUNCTION(), __builtin_FILE(),
+  // __builtin_COLUMN()
+  ExprResult ActOnSourceLocExpr(SourceLocExpr::IdentKind Kind,
+                                SourceLocation BuiltinLoc,
+                                SourceLocation RPLoc);
+
+  // Build a potentially resolved SourceLocExpr.
+  ExprResult BuildSourceLocExpr(SourceLocExpr::IdentKind Kind,
+                                SourceLocation BuiltinLoc, SourceLocation RPLoc,
+                                DeclContext *ParentContext);
+
   // __null
   ExprResult ActOnGNUNullExpr(SourceLocation TokenLoc);
 

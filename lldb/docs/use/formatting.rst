@@ -1,5 +1,5 @@
-Stack Frame and Thread Format
-=============================
+Frame and Thread Format
+=======================
 
 .. contents::
    :local:

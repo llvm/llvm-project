@@ -56,17 +56,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "vec-merger"
 
-static bool
-isImplicitlyDef(MachineRegisterInfo &MRI, unsigned Reg) {
-  for (MachineRegisterInfo::def_instr_iterator It = MRI.def_instr_begin(Reg),
-      E = MRI.def_instr_end(); It != E; ++It) {
-    return (*It).isImplicitDef();
-  }
-  if (MRI.isReserved(Reg)) {
+static bool isImplicitlyDef(MachineRegisterInfo &MRI, unsigned Reg) {
+  assert(MRI.isSSA());
+  if (TargetRegisterInfo::isPhysicalRegister(Reg))
     return false;
-  }
-  llvm_unreachable("Reg without a def");
-  return false;
+  const MachineInstr *MI = MRI.getUniqueVRegDef(Reg);
+  return MI && MI->isImplicitDef();
 }
 
 namespace {

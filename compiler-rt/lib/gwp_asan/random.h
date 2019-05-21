@@ -9,7 +9,7 @@
 #ifndef GWP_ASAN_RANDOM_H_
 #define GWP_ASAN_RANDOM_H_
 
-#include <cstdint>
+#include <stdint.h>
 
 namespace gwp_asan {
 // xorshift (32-bit output), extremely fast PRNG that uses arithmetic operations

@@ -611,18 +611,15 @@ void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
   AnalyzerOptions &AnOpts = Mgr.getAnalyzerOptions();
   UninitObjCheckerOptions &ChOpts = Chk->Opts;
 
-  ChOpts.IsPedantic =
-      AnOpts.getCheckerBooleanOption(Chk, "Pedantic", /*DefaultVal*/ false);
+  ChOpts.IsPedantic = AnOpts.getCheckerBooleanOption(Chk, "Pedantic");
   ChOpts.ShouldConvertNotesToWarnings = AnOpts.getCheckerBooleanOption(
-      Chk, "NotesAsWarnings", /*DefaultVal*/ false);
+      Chk, "NotesAsWarnings");
   ChOpts.CheckPointeeInitialization = AnOpts.getCheckerBooleanOption(
-      Chk, "CheckPointeeInitialization", /*DefaultVal*/ false);
+      Chk, "CheckPointeeInitialization");
   ChOpts.IgnoredRecordsWithFieldPattern =
-      AnOpts.getCheckerStringOption(Chk, "IgnoreRecordsWithField",
-                                    /*DefaultVal*/ "\"\"");
+      AnOpts.getCheckerStringOption(Chk, "IgnoreRecordsWithField");
   ChOpts.IgnoreGuardedFields =
-      AnOpts.getCheckerBooleanOption(Chk, "IgnoreGuardedFields",
-                                     /*DefaultVal*/ false);
+      AnOpts.getCheckerBooleanOption(Chk, "IgnoreGuardedFields");
 
   std::string ErrorMsg;
   if (!llvm::Regex(ChOpts.IgnoredRecordsWithFieldPattern).isValid(ErrorMsg))

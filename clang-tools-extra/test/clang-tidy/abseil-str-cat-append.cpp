@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s abseil-str-cat-append %t -- -- -I%S -std=c++11
+// RUN: %check_clang_tidy %s abseil-str-cat-append %t
 
 typedef unsigned __INT16_TYPE__ char16;
 typedef unsigned __INT32_TYPE__ char32;

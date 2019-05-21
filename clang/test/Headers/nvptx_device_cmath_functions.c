@@ -17,5 +17,9 @@ void test_sqrt(double a1) {
     double l2 = pow(a1, a1);
     // CHECK-YES: call double @__nv_modf(double
     double l3 = modf(a1 + 3.5, &a1);
+    // CHECK-YES: call double @__nv_fabs(double
+    double l4 = fabs(a1);
+    // CHECK-YES: call i32 @__nv_abs(i32
+    double l5 = abs((int)a1);
   }
 }

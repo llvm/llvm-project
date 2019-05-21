@@ -870,10 +870,11 @@ static void PrintCompletion(FILE *output_file, size_t start, size_t end,
     const char *completion_str = completions.GetStringAtIndex(i);
     const char *description_str = descriptions.GetStringAtIndex(i);
 
-    fprintf(output_file, "\n\t%-*s", max_len, completion_str);
+    if (completion_str)
+      fprintf(output_file, "\n\t%-*s", max_len, completion_str);
 
     // Print the description if we got one.
-    if (strlen(description_str))
+    if (description_str && strlen(description_str))
       fprintf(output_file, " -- %s", description_str);
   }
 }

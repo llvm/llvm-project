@@ -9,8 +9,8 @@
 # RUN: ld.lld %t.o -o %t
 # RUN: lldb-test symbols %t | FileCheck %s
 
-# CHECK: Variable{0xffffffff0000001e}, name = "X"
-# CHECK-SAME: type = {ffffffff00000033} 0x{{[0-9a-f]*}} (char [56])
+# CHECK: Variable{0x7fffffff0000001e}, name = "X"
+# CHECK-SAME: type = {7fffffff00000033} 0x{{[0-9a-f]*}} (char [56])
 
 
 # Generated from "char X[47];"

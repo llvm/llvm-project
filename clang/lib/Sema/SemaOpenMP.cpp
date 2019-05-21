@@ -5894,14 +5894,21 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   if (CollapseLoopCountExpr) {
     // Found 'collapse' clause - calculate collapse number.
     Expr::EvalResult Result;
-    if (CollapseLoopCountExpr->EvaluateAsInt(Result, SemaRef.getASTContext()))
+    if (!CollapseLoopCountExpr->isValueDependent() &&
+        CollapseLoopCountExpr->EvaluateAsInt(Result, SemaRef.getASTContext())) {
       NestedLoopCount = Result.Val.getInt().getLimitedValue();
+    } else {
+      Built.clear(/*size=*/1);
+      return 1;
+    }
   }
   unsigned OrderedLoopCount = 1;
   if (OrderedLoopCountExpr) {
     // Found 'ordered' clause - calculate collapse number.
     Expr::EvalResult EVResult;
-    if (OrderedLoopCountExpr->EvaluateAsInt(EVResult, SemaRef.getASTContext())) {
+    if (!OrderedLoopCountExpr->isValueDependent() &&
+        OrderedLoopCountExpr->EvaluateAsInt(EVResult,
+                                            SemaRef.getASTContext())) {
       llvm::APSInt Result = EVResult.Val.getInt();
       if (Result.getLimitedValue() < NestedLoopCount) {
         SemaRef.Diag(OrderedLoopCountExpr->getExprLoc(),
@@ -5912,6 +5919,9 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
             << CollapseLoopCountExpr->getSourceRange();
       }
       OrderedLoopCount = Result.getLimitedValue();
+    } else {
+      Built.clear(/*size=*/1);
+      return 1;
     }
   }
   // This is helper routine for loop directives (e.g., 'for', 'simd',

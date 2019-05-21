@@ -53,6 +53,7 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
   Tokens = &*Macro->tokens_begin();
   OwnsTokens = false;
   DisableMacroExpansion = false;
+  IsReinject = false;
   NumTokens = Macro->tokens_end()-Macro->tokens_begin();
   MacroExpansionStart = SourceLocation();
 
@@ -91,7 +92,9 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
 /// Create a TokenLexer for the specified token stream.  This does not
 /// take ownership of the specified token vector.
 void TokenLexer::Init(const Token *TokArray, unsigned NumToks,
-                      bool disableMacroExpansion, bool ownsTokens) {
+                      bool disableMacroExpansion, bool ownsTokens,
+                      bool isReinject) {
+  assert(!isReinject || disableMacroExpansion);
   // If the client is reusing a TokenLexer, make sure to free any memory
   // associated with it.
   destroy();
@@ -101,6 +104,7 @@ void TokenLexer::Init(const Token *TokArray, unsigned NumToks,
   Tokens = TokArray;
   OwnsTokens = ownsTokens;
   DisableMacroExpansion = disableMacroExpansion;
+  IsReinject = isReinject;
   NumTokens = NumToks;
   CurTokenIdx = 0;
   ExpandLocStart = ExpandLocEnd = SourceLocation();
@@ -647,6 +651,8 @@ bool TokenLexer::Lex(Token &Tok) {
 
   // Get the next token to return.
   Tok = Tokens[CurTokenIdx++];
+  if (IsReinject)
+    Tok.setFlag(Token::IsReinjected);
 
   bool TokenIsFromPaste = false;
 

@@ -157,6 +157,11 @@ static cl::opt<bool>
                               cl::desc("instrument memory intrinsics"),
                               cl::Hidden, cl::init(true));
 
+static cl::opt<bool>
+    ClInstrumentLandingPads("hwasan-instrument-landing-pads",
+                              cl::desc("instrument landing pads"), cl::Hidden,
+                              cl::init(true));
+
 static cl::opt<bool> ClInlineAllChecks("hwasan-inline-all-checks",
                                        cl::desc("inline all checks"),
                                        cl::Hidden, cl::init(false));
@@ -202,6 +207,7 @@ public:
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
   bool instrumentStack(SmallVectorImpl<AllocaInst *> &Allocas,
                        SmallVectorImpl<Instruction *> &RetVec, Value *StackTag);
+  bool instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
   Value *getNextTagWithCall(IRBuilder<> &IRB);
   Value *getStackBaseTag(IRBuilder<> &IRB);
   Value *getAllocaTag(IRBuilder<> &IRB, Value *StackTag, AllocaInst *AI,
@@ -216,6 +222,7 @@ private:
   std::string CurModuleUniqueId;
   Triple TargetTriple;
   FunctionCallee HWAsanMemmove, HWAsanMemcpy, HWAsanMemset;
+  FunctionCallee HWAsanHandleVfork;
 
   // Frame description is a way to pass names/sizes of local variables
   // to the run-time w/o adding extra executable code in every function.
@@ -439,6 +446,9 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
   HWAsanMemset = M.getOrInsertFunction(MemIntrinCallbackPrefix + "memset",
                                        IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
                                        IRB.getInt32Ty(), IntptrTy);
+
+  HWAsanHandleVfork =
+      M.getOrInsertFunction("__hwasan_handle_vfork", IRB.getVoidTy(), IntptrTy);
 
   HwasanThreadEnterFunc =
       M.getOrInsertFunction("__hwasan_thread_enter", IRB.getVoidTy());
@@ -955,6 +965,23 @@ Value *HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB,
   return ShadowBase;
 }
 
+bool HWAddressSanitizer::instrumentLandingPads(
+    SmallVectorImpl<Instruction *> &LandingPadVec) {
+  Module *M = LandingPadVec[0]->getModule();
+  Function *ReadRegister =
+      Intrinsic::getDeclaration(M, Intrinsic::read_register, IntptrTy);
+  const char *RegName =
+      (TargetTriple.getArch() == Triple::x86_64) ? "rsp" : "sp";
+  MDNode *MD = MDNode::get(*C, {MDString::get(*C, RegName)});
+  Value *Args[] = {MetadataAsValue::get(*C, MD)};
+
+  for (auto *LP : LandingPadVec) {
+    IRBuilder<> IRB(LP->getNextNode());
+    IRB.CreateCall(HWAsanHandleVfork, {IRB.CreateCall(ReadRegister, Args)});
+  }
+  return true;
+}
+
 bool HWAddressSanitizer::instrumentStack(
     SmallVectorImpl<AllocaInst *> &Allocas,
     SmallVectorImpl<Instruction *> &RetVec, Value *StackTag) {
@@ -1023,6 +1050,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
   SmallVector<Instruction*, 16> ToInstrument;
   SmallVector<AllocaInst*, 8> AllocasToInstrument;
   SmallVector<Instruction*, 8> RetVec;
+  SmallVector<Instruction*, 8> LandingPadVec;
   for (auto &BB : F) {
     for (auto &Inst : BB) {
       if (ClInstrumentStack)
@@ -1041,6 +1069,9 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
           isa<CleanupReturnInst>(Inst))
         RetVec.push_back(&Inst);
 
+      if (ClInstrumentLandingPads && isa<LandingPadInst>(Inst))
+        LandingPadVec.push_back(&Inst);
+
       Value *MaybeMask = nullptr;
       bool IsWrite;
       unsigned Alignment;
@@ -1052,13 +1083,17 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
     }
   }
 
+  initializeCallbacks(*F.getParent());
+
+  if (!LandingPadVec.empty())
+    instrumentLandingPads(LandingPadVec);
+
   if (AllocasToInstrument.empty() && ToInstrument.empty())
     return false;
 
   if (ClCreateFrameDescriptions && !AllocasToInstrument.empty())
     createFrameGlobal(F, createFrameString(AllocasToInstrument));
 
-  initializeCallbacks(*F.getParent());
 
   assert(!LocalDynamicShadow);
 

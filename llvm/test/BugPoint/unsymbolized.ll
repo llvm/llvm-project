@@ -1,4 +1,4 @@
-; REQUIRES: loadable_module
+; REQUIRES: plugins
 ; RUN: echo "import sys" > %t.py
 ; RUN: echo "print('args = ' + str(sys.argv))" >> %t.py
 ; RUN: echo "exit(1)" >> %t.py

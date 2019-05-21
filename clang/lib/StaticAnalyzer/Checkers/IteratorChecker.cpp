@@ -300,10 +300,13 @@ bool backModifiable(ProgramStateRef State, const MemRegion *Reg);
 SymbolRef getContainerBegin(ProgramStateRef State, const MemRegion *Cont);
 SymbolRef getContainerEnd(ProgramStateRef State, const MemRegion *Cont);
 ProgramStateRef createContainerBegin(ProgramStateRef State,
-                                     const MemRegion *Cont,
-                                     const SymbolRef Sym);
+                                     const MemRegion *Cont, const Expr *E,
+                                     QualType T, const LocationContext *LCtx,
+                                     unsigned BlockCount);
 ProgramStateRef createContainerEnd(ProgramStateRef State, const MemRegion *Cont,
-                                   const SymbolRef Sym);
+                                   const Expr *E, QualType T,
+                                   const LocationContext *LCtx,
+                                   unsigned BlockCount);
 const IteratorPosition *getIteratorPosition(ProgramStateRef State,
                                             const SVal &Val);
 ProgramStateRef setIteratorPosition(ProgramStateRef State, const SVal &Val,
@@ -1142,11 +1145,9 @@ void IteratorChecker::handleBegin(CheckerContext &C, const Expr *CE,
   auto State = C.getState();
   auto BeginSym = getContainerBegin(State, ContReg);
   if (!BeginSym) {
-    auto &SymMgr = C.getSymbolManager();
-    BeginSym = SymMgr.conjureSymbol(CE, C.getLocationContext(),
-                                    C.getASTContext().LongTy, C.blockCount());
-    State = assumeNoOverflow(State, BeginSym, 4);
-    State = createContainerBegin(State, ContReg, BeginSym);
+    State = createContainerBegin(State, ContReg, CE, C.getASTContext().LongTy,
+                                 C.getLocationContext(), C.blockCount());
+    BeginSym = getContainerBegin(State, ContReg);
   }
   State = setIteratorPosition(State, RetVal,
                               IteratorPosition::getPosition(ContReg, BeginSym));
@@ -1166,11 +1167,9 @@ void IteratorChecker::handleEnd(CheckerContext &C, const Expr *CE,
   auto State = C.getState();
   auto EndSym = getContainerEnd(State, ContReg);
   if (!EndSym) {
-    auto &SymMgr = C.getSymbolManager();
-    EndSym = SymMgr.conjureSymbol(CE, C.getLocationContext(),
-                                  C.getASTContext().LongTy, C.blockCount());
-    State = assumeNoOverflow(State, EndSym, 4);
-    State = createContainerEnd(State, ContReg, EndSym);
+    State = createContainerEnd(State, ContReg, CE, C.getASTContext().LongTy,
+                               C.getLocationContext(), C.blockCount());
+    EndSym = getContainerEnd(State, ContReg);
   }
   State = setIteratorPosition(State, RetVal,
                               IteratorPosition::getPosition(ContReg, EndSym));
@@ -1934,32 +1933,47 @@ SymbolRef getContainerEnd(ProgramStateRef State, const MemRegion *Cont) {
 }
 
 ProgramStateRef createContainerBegin(ProgramStateRef State,
-                                     const MemRegion *Cont,
-                                     const SymbolRef Sym) {
+                                     const MemRegion *Cont, const Expr *E,
+                                     QualType T, const LocationContext *LCtx,
+                                     unsigned BlockCount) {
   // Only create if it does not exist
   const auto *CDataPtr = getContainerData(State, Cont);
+  if (CDataPtr && CDataPtr->getBegin())
+    return State;
+
+  auto &SymMgr = State->getSymbolManager();
+  const SymbolConjured *Sym = SymMgr.conjureSymbol(E, LCtx, T, BlockCount,
+                                                   "begin");
+  State = assumeNoOverflow(State, Sym, 4);
+
   if (CDataPtr) {
-    if (CDataPtr->getBegin()) {
-      return State;
-    }
     const auto CData = CDataPtr->newBegin(Sym);
     return setContainerData(State, Cont, CData);
   }
+
   const auto CData = ContainerData::fromBegin(Sym);
   return setContainerData(State, Cont, CData);
 }
 
 ProgramStateRef createContainerEnd(ProgramStateRef State, const MemRegion *Cont,
-                                   const SymbolRef Sym) {
+                                   const Expr *E, QualType T,
+                                   const LocationContext *LCtx,
+                                   unsigned BlockCount) {
   // Only create if it does not exist
   const auto *CDataPtr = getContainerData(State, Cont);
+  if (CDataPtr && CDataPtr->getEnd())
+    return State;
+
+  auto &SymMgr = State->getSymbolManager();
+  const SymbolConjured *Sym = SymMgr.conjureSymbol(E, LCtx, T, BlockCount,
+                                                  "end");
+  State = assumeNoOverflow(State, Sym, 4);
+
   if (CDataPtr) {
-    if (CDataPtr->getEnd()) {
-      return State;
-    }
     const auto CData = CDataPtr->newEnd(Sym);
     return setContainerData(State, Cont, CData);
   }
+
   const auto CData = ContainerData::fromEnd(Sym);
   return setContainerData(State, Cont, CData);
 }

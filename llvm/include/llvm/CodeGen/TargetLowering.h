@@ -3538,6 +3538,15 @@ public:
     return false;
   }
 
+  /// For most targets, an LLVM type must be broken down into multiple
+  /// smaller types. Usually the halves are ordered according to the endianness
+  /// but for some platform that would break. So this method will default to
+  /// matching the endianness but can be overridden.
+  virtual bool
+  shouldSplitFunctionArgumentsAsLittleEndian(const DataLayout &DL) const {
+    return DL.isLittleEndian();
+  }
+
   /// Returns a 0 terminated array of registers that can be safely used as
   /// scratch registers.
   virtual const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const {
@@ -3955,6 +3964,16 @@ public:
   /// Method for building the DAG expansion of ISD::SMULFIX. This method accepts
   /// integers as its arguments.
   SDValue expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Method for building the DAG expansion of ISD::U(ADD|SUB)O. Expansion
+  /// always suceeds and populates the Result and Overflow arguments.
+  void expandUADDSUBO(SDNode *Node, SDValue &Result, SDValue &Overflow,
+                      SelectionDAG &DAG) const;
+
+  /// Method for building the DAG expansion of ISD::S(ADD|SUB)O. Expansion
+  /// always suceeds and populates the Result and Overflow arguments.
+  void expandSADDSUBO(SDNode *Node, SDValue &Result, SDValue &Overflow,
+                      SelectionDAG &DAG) const;
 
   /// Method for building the DAG expansion of ISD::[US]MULO. Returns whether
   /// expansion was successful and populates the Result and Overflow arguments.

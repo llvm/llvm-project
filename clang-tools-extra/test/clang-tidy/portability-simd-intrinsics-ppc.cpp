@@ -1,7 +1,8 @@
-// RUN: %check_clang_tidy %s portability-simd-intrinsics %t -- \
+// RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s portability-simd-intrinsics %t -- \
 // RUN:  -config='{CheckOptions: [ \
 // RUN:    {key: portability-simd-intrinsics.Suggest, value: 1} \
-// RUN:  ]}' -- -target ppc64le -maltivec -std=c++11
+// RUN:  ]}' -- -target ppc64le -maltivec
+// FIXME: Fix the checker to work in C++2a mode.
 
 vector int vec_add(vector int, vector int);
 

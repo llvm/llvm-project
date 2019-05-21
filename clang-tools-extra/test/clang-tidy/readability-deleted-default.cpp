@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-deleted-default %t -- -- -std=c++11 -fno-ms-compatibility
+// RUN: %check_clang_tidy %s readability-deleted-default %t -- -- -fno-ms-compatibility
 
 class NoDefault {
 public:

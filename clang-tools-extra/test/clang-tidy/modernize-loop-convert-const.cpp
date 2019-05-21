@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-loop-convert %t -- -- -std=c++11
+// RUN: %check_clang_tidy %s modernize-loop-convert %t
 
 struct Str {
   Str() = default;

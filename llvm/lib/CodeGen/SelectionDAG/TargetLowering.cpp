@@ -5750,6 +5750,80 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
                      DAG.getConstant(Scale, dl, ShiftTy));
 }
 
+void TargetLowering::expandUADDSUBO(
+    SDNode *Node, SDValue &Result, SDValue &Overflow, SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+  bool IsAdd = Node->getOpcode() == ISD::UADDO;
+
+  // If ADD/SUBCARRY is legal, use that instead.
+  unsigned OpcCarry = IsAdd ? ISD::ADDCARRY : ISD::SUBCARRY;
+  if (isOperationLegalOrCustom(OpcCarry, Node->getValueType(0))) {
+    SDValue CarryIn = DAG.getConstant(0, dl, Node->getValueType(1));
+    SDValue NodeCarry = DAG.getNode(OpcCarry, dl, Node->getVTList(),
+                                    { LHS, RHS, CarryIn });
+    Result = SDValue(NodeCarry.getNode(), 0);
+    Overflow = SDValue(NodeCarry.getNode(), 1);
+    return;
+  }
+
+  Result = DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, dl,
+                            LHS.getValueType(), LHS, RHS);
+
+  EVT ResultType = Node->getValueType(1);
+  EVT SetCCType = getSetCCResultType(
+      DAG.getDataLayout(), *DAG.getContext(), Node->getValueType(0));
+  ISD::CondCode CC = IsAdd ? ISD::SETULT : ISD::SETUGT;
+  SDValue SetCC = DAG.getSetCC(dl, SetCCType, Result, LHS, CC);
+  Overflow = DAG.getBoolExtOrTrunc(SetCC, dl, ResultType, ResultType);
+}
+
+void TargetLowering::expandSADDSUBO(
+    SDNode *Node, SDValue &Result, SDValue &Overflow, SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+  bool IsAdd = Node->getOpcode() == ISD::SADDO;
+
+  Result = DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, dl,
+                            LHS.getValueType(), LHS, RHS);
+
+  EVT ResultType = Node->getValueType(1);
+  EVT OType = getSetCCResultType(
+      DAG.getDataLayout(), *DAG.getContext(), Node->getValueType(0));
+
+  // If SADDSAT/SSUBSAT is legal, compare results to detect overflow.
+  unsigned OpcSat = IsAdd ? ISD::SADDSAT : ISD::SSUBSAT;
+  if (isOperationLegalOrCustom(OpcSat, LHS.getValueType())) {
+    SDValue Sat = DAG.getNode(OpcSat, dl, LHS.getValueType(), LHS, RHS);
+    SDValue SetCC = DAG.getSetCC(dl, OType, Result, Sat, ISD::SETNE);
+    Overflow = DAG.getBoolExtOrTrunc(SetCC, dl, ResultType, ResultType);
+    return;
+  }
+
+  SDValue Zero = DAG.getConstant(0, dl, LHS.getValueType());
+
+  //   LHSSign -> LHS >= 0
+  //   RHSSign -> RHS >= 0
+  //   SumSign -> Result >= 0
+  //
+  //   Add:
+  //   Overflow -> (LHSSign == RHSSign) && (LHSSign != SumSign)
+  //   Sub:
+  //   Overflow -> (LHSSign != RHSSign) && (LHSSign != SumSign)
+  SDValue LHSSign = DAG.getSetCC(dl, OType, LHS, Zero, ISD::SETGE);
+  SDValue RHSSign = DAG.getSetCC(dl, OType, RHS, Zero, ISD::SETGE);
+  SDValue SignsMatch = DAG.getSetCC(dl, OType, LHSSign, RHSSign,
+                                    IsAdd ? ISD::SETEQ : ISD::SETNE);
+
+  SDValue SumSign = DAG.getSetCC(dl, OType, Result, Zero, ISD::SETGE);
+  SDValue SumSignNE = DAG.getSetCC(dl, OType, LHSSign, SumSign, ISD::SETNE);
+
+  SDValue Cmp = DAG.getNode(ISD::AND, dl, OType, SignsMatch, SumSignNE);
+  Overflow = DAG.getBoolExtOrTrunc(Cmp, dl, ResultType, ResultType);
+}
+
 bool TargetLowering::expandMULO(SDNode *Node, SDValue &Result,
                                 SDValue &Overflow, SelectionDAG &DAG) const {
   SDLoc dl(Node);
@@ -5846,7 +5920,7 @@ bool TargetLowering::expandMULO(SDNode *Node, SDValue &Result,
     // being a legal type for the architecture and thus has to be split to
     // two arguments.
     SDValue Ret;
-    if (DAG.getDataLayout().isLittleEndian()) {
+    if (shouldSplitFunctionArgumentsAsLittleEndian(DAG.getDataLayout())) {
       // Halves of WideVT are packed into registers in different order
       // depending on platform endianness. This is usually handled by
       // the C calling convention, but we can't defer to it in

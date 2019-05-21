@@ -1693,6 +1693,22 @@ void RegionGenerator::generateScalarStores(
          "Block statements need to use the generateScalarStores() "
          "function in the BlockGenerator");
 
+  // Get the exit scalar values before generating the writes.
+  // This is necessary because RegionGenerator::getExitScalar may insert
+  // PHINodes that depend on the region's exiting blocks. But
+  // BlockGenerator::generateConditionalExecution may insert a new basic block
+  // such that the current basic block is not a direct successor of the exiting
+  // blocks anymore. Hence, build the PHINodes while the current block is still
+  // the direct successor.
+  SmallDenseMap<MemoryAccess *, Value *> NewExitScalars;
+  for (MemoryAccess *MA : Stmt) {
+    if (MA->isOriginalArrayKind() || MA->isRead())
+      continue;
+
+    Value *NewVal = getExitScalar(MA, LTS, BBMap);
+    NewExitScalars[MA] = NewVal;
+  }
+
   for (MemoryAccess *MA : Stmt) {
     if (MA->isOriginalArrayKind() || MA->isRead())
       continue;
@@ -1701,7 +1717,8 @@ void RegionGenerator::generateScalarStores(
     std::string Subject = MA->getId().get_name();
     generateConditionalExecution(
         Stmt, AccDom, Subject.c_str(), [&, this, MA]() {
-          Value *NewVal = getExitScalar(MA, LTS, BBMap);
+          Value *NewVal = NewExitScalars.lookup(MA);
+          assert(NewVal && "The exit scalar must be determined before");
           Value *Address = getImplicitAddress(*MA, getLoopForStmt(Stmt), LTS,
                                               BBMap, NewAccesses);
           assert((!isa<Instruction>(NewVal) ||

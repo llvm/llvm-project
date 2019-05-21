@@ -462,9 +462,9 @@ void LiveDebugValues::insertTransferDebugPair(
     // Create a DBG_VALUE instruction to describe the Var in its spilled
     // location.
     VarLoc::SpillLoc SpillLocation = extractSpillBaseRegAndOffset(MI);
-    auto *SpillExpr =
-        DIExpression::prepend(DMI->getDebugExpression(), DIExpression::NoDeref,
-                              SpillLocation.SpillOffset);
+    auto *SpillExpr = DIExpression::prepend(DMI->getDebugExpression(),
+                                            DIExpression::ApplyOffset,
+                                            SpillLocation.SpillOffset);
     NewDMI =
         BuildMI(*MF, DMI->getDebugLoc(), DMI->getDesc(), true,
                 SpillLocation.SpillBase, DMI->getDebugVariable(), SpillExpr);

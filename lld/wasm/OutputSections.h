@@ -38,57 +38,34 @@ public:
     Offset = NewOffset;
   }
   void createHeader(size_t BodySize);
+  virtual bool isNeeded() const { return true; }
   virtual size_t getSize() const = 0;
   virtual void writeTo(uint8_t *Buf) = 0;
-  virtual void finalizeContents() {}
+  virtual void finalizeContents() = 0;
   virtual uint32_t numRelocations() const { return 0; }
   virtual void writeRelocations(raw_ostream &OS) const {}
 
   std::string Header;
   uint32_t Type;
+  uint32_t SectionIndex = UINT32_MAX;
   std::string Name;
+  OutputSectionSymbol *SectionSym = nullptr;
 
 protected:
   size_t Offset = 0;
 };
 
-class SyntheticSection : public OutputSection {
-public:
-  SyntheticSection(uint32_t Type, std::string Name = "")
-      : OutputSection(Type, Name), BodyOutputStream(Body) {
-    if (!Name.empty())
-      writeStr(BodyOutputStream, Name, "section name");
-  }
-
-  void writeTo(uint8_t *Buf) override {
-    assert(Offset);
-    log("writing " + toString(*this));
-    memcpy(Buf + Offset, Header.data(), Header.size());
-    memcpy(Buf + Offset + Header.size(), Body.data(), Body.size());
-  }
-
-  size_t getSize() const override { return Header.size() + Body.size(); }
-
-  void finalizeContents() override {
-    BodyOutputStream.flush();
-    createHeader(Body.size());
-  }
-
-  raw_ostream &getStream() { return BodyOutputStream; }
-
-  std::string Body;
-
-protected:
-  llvm::raw_string_ostream BodyOutputStream;
-};
-
 class CodeSection : public OutputSection {
 public:
-  explicit CodeSection(ArrayRef<InputFunction *> Functions);
+  explicit CodeSection(ArrayRef<InputFunction *> Functions)
+      : OutputSection(llvm::wasm::WASM_SEC_CODE), Functions(Functions) {}
+
   size_t getSize() const override { return Header.size() + BodySize; }
   void writeTo(uint8_t *Buf) override;
   uint32_t numRelocations() const override;
   void writeRelocations(raw_ostream &OS) const override;
+  bool isNeeded() const override { return Functions.size() > 0; }
+  void finalizeContents() override;
 
 protected:
   ArrayRef<InputFunction *> Functions;
@@ -98,11 +75,15 @@ protected:
 
 class DataSection : public OutputSection {
 public:
-  explicit DataSection(ArrayRef<OutputSegment *> Segments);
+  explicit DataSection(ArrayRef<OutputSegment *> Segments)
+      : OutputSection(llvm::wasm::WASM_SEC_DATA), Segments(Segments) {}
+
   size_t getSize() const override { return Header.size() + BodySize; }
   void writeTo(uint8_t *Buf) override;
   uint32_t numRelocations() const override;
   void writeRelocations(raw_ostream &OS) const override;
+  bool isNeeded() const override { return Segments.size() > 0; }
+  void finalizeContents() override;
 
 protected:
   ArrayRef<OutputSegment *> Segments;
@@ -119,16 +100,19 @@ protected:
 // separately and are instead synthesized by the linker.
 class CustomSection : public OutputSection {
 public:
-  CustomSection(std::string Name, ArrayRef<InputSection *> InputSections);
+  CustomSection(std::string Name, ArrayRef<InputSection *> InputSections)
+      : OutputSection(llvm::wasm::WASM_SEC_CUSTOM, Name),
+        InputSections(InputSections) {}
   size_t getSize() const override {
     return Header.size() + NameData.size() + PayloadSize;
   }
   void writeTo(uint8_t *Buf) override;
   uint32_t numRelocations() const override;
   void writeRelocations(raw_ostream &OS) const override;
+  void finalizeContents() override;
 
 protected:
-  size_t PayloadSize;
+  size_t PayloadSize = 0;
   ArrayRef<InputSection *> InputSections;
   std::string NameData;
 };

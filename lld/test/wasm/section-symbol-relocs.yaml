@@ -49,3 +49,13 @@ Sections:
 # RELOC-NEXT:         Offset:          0x0000000B
 # RELOC-NEXT:         Addend:          3
 # RELOC-NEXT:    Name:            green
+#
+# RELOC:        SymbolTable:
+# RELOC-NEXT:     - Index:           0
+# RELOC-NEXT:       Kind:            SECTION
+# RELOC-NEXT:       Flags:           [ BINDING_LOCAL ]
+# RELOC-NEXT:       Section:         2
+# RELOC-NEXT:     - Index:           1
+# RELOC-NEXT:       Kind:            SECTION
+# RELOC-NEXT:       Flags:           [ BINDING_LOCAL ]
+# RELOC-NEXT:       Section:         3

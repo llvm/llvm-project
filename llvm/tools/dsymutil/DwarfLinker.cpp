@@ -436,9 +436,13 @@ static bool isMachOPairedReloc(uint64_t RelocType, uint64_t Arch) {
 void DwarfLinker::RelocationManager::findValidRelocsMachO(
     const object::SectionRef &Section, const object::MachOObjectFile &Obj,
     const DebugMapObject &DMO) {
-  StringRef Contents;
-  Section.getContents(Contents);
-  DataExtractor Data(Contents, Obj.isLittleEndian(), 0);
+  Expected<StringRef> ContentsOrErr = Section.getContents();
+  if (!ContentsOrErr) {
+    consumeError(ContentsOrErr.takeError());
+    Linker.reportWarning("error reading section", DMO);
+    return;
+  }
+  DataExtractor Data(*ContentsOrErr, Obj.isLittleEndian(), 0);
   bool SkipNext = false;
 
   for (const object::RelocationRef &Reloc : Section.relocations()) {

@@ -43,6 +43,12 @@ import sys
 import time
 import uuid
 
+def read_plist(s):
+    if sys.version_info.major == 3:
+        return plistlib.loads(s)
+    else:
+        return plistlib.readPlistFromString(s)
+
 try:
     # Just try for LLDB in case PYTHONPATH is already correctly setup
     import lldb
@@ -282,7 +288,7 @@ class CrashLog(symbolication.Symbolicator):
                 s = subprocess.check_output(dsym_for_uuid_command, shell=True)
                 if s:
                     try:
-                        plist_root = plistlib.readPlistFromString(s)
+                        plist_root = read_plist(s)
                     except:
                         print(("Got exception: ", sys.exc_info()[1], " handling dsymForUUID output: \n", s))
                         raise

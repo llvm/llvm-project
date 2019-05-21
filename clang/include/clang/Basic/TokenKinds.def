@@ -404,6 +404,11 @@ KEYWORD(__alignof                   , KEYALL)
 KEYWORD(__attribute                 , KEYALL)
 KEYWORD(__builtin_choose_expr       , KEYALL)
 KEYWORD(__builtin_offsetof          , KEYALL)
+KEYWORD(__builtin_FILE              , KEYALL)
+KEYWORD(__builtin_FUNCTION          , KEYALL)
+KEYWORD(__builtin_LINE              , KEYALL)
+KEYWORD(__builtin_COLUMN            , KEYALL)
+
 // __builtin_types_compatible_p is a GNU C extension that we handle like a C++
 // type trait.
 TYPE_TRAIT_2(__builtin_types_compatible_p, TypeCompatible, KEYNOCXX)

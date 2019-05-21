@@ -125,8 +125,8 @@ define i16 @ashr_mul(i8 %X, i8 %Y) {
 
 define i32 @trunc_ashr(i32 %X) {
 ; CHECK-LABEL: @trunc_ashr(
-; CHECK-NEXT:    [[B:%.*]] = or i32 [[X:%.*]], -2147483648
-; CHECK-NEXT:    [[C:%.*]] = ashr i32 [[B]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[C:%.*]] = or i32 [[TMP1]], -8388608
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = zext i32 %X to i36
@@ -138,8 +138,8 @@ define i32 @trunc_ashr(i32 %X) {
 
 define <2 x i32> @trunc_ashr_vec(<2 x i32> %X) {
 ; CHECK-LABEL: @trunc_ashr_vec(
-; CHECK-NEXT:    [[B:%.*]] = or <2 x i32> [[X:%.*]], <i32 -2147483648, i32 -2147483648>
-; CHECK-NEXT:    [[C:%.*]] = ashr <2 x i32> [[B]], <i32 8, i32 8>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 8, i32 8>
+; CHECK-NEXT:    [[C:%.*]] = or <2 x i32> [[TMP1]], <i32 -8388608, i32 -8388608>
 ; CHECK-NEXT:    ret <2 x i32> [[C]]
 ;
   %A = zext <2 x i32> %X to <2 x i36>

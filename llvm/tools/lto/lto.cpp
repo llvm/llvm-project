@@ -325,6 +325,10 @@ const char* lto_module_get_linkeropts(lto_module_t mod) {
   return unwrap(mod)->getLinkerOpts().data();
 }
 
+const char* lto_module_get_dependent_libraries(lto_module_t mod) {
+    return unwrap(mod)->getDependentLibraries().data();
+}
+
 void lto_codegen_set_diagnostic_handler(lto_code_gen_t cg,
                                         lto_diagnostic_handler_t diag_handler,
                                         void *ctxt) {

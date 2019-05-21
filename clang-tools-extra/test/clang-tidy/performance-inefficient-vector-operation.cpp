@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-inefficient-vector-operation %t -- -format-style=llvm -- --std=c++11
+// RUN: %check_clang_tidy %s performance-inefficient-vector-operation %t -- -format-style=llvm
 
 namespace std {
 

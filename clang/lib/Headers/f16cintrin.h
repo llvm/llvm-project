@@ -38,9 +38,9 @@
 static __inline float __DEFAULT_FN_ATTRS128
 _cvtsh_ss(unsigned short __a)
 {
-  __v8hi v = {(short)__a, 0, 0, 0, 0, 0, 0, 0};
-  __v4sf r = __builtin_ia32_vcvtph2ps(v);
-  return r[0];
+  __v8hi __v = {(short)__a, 0, 0, 0, 0, 0, 0, 0};
+  __v4sf __r = __builtin_ia32_vcvtph2ps(__v);
+  return __r[0];
 }
 
 /// Converts a 32-bit single-precision float value to a 16-bit

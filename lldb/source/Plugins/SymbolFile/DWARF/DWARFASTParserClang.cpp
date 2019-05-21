@@ -348,7 +348,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
           // will have a hard time tracking down an unnammed structure type in
           // the module DWO file, so we make sure we don't get into this
           // situation by always resolving typedefs from the DWO file.
-          const DWARFDIE encoding_die = dwarf->GetDIE(DIERef(encoding_uid));
+          const DWARFDIE encoding_die = encoding_uid.Reference();
 
           // First make sure that the die that this is typedef'ed to _is_ just
           // a declaration (DW_AT_declaration == 1), not a full definition
@@ -499,7 +499,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
               // Clang sometimes erroneously emits id as objc_object*.  In that
               // case we fix up the type to "id".
 
-              const DWARFDIE encoding_die = dwarf->GetDIE(DIERef(encoding_uid));
+              const DWARFDIE encoding_die = encoding_uid.Reference();
 
               if (encoding_die && encoding_die.Tag() == DW_TAG_structure_type) {
                 if (const char *struct_name = encoding_die.GetName()) {
@@ -1150,7 +1150,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         bool has_template_params = false;
         DWARFFormValue specification_die_form;
         DWARFFormValue abstract_origin_die_form;
-        dw_offset_t object_pointer_die_offset = DW_INVALID_OFFSET;
+        DWARFDIE object_pointer_die;
 
         unsigned type_quals = 0;
         clang::StorageClass storage =
@@ -1221,7 +1221,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                 break;
 
               case DW_AT_object_pointer:
-                object_pointer_die_offset = form_value.Reference();
+                object_pointer_die = form_value.Reference();
                 break;
 
               case DW_AT_allocated:
@@ -1254,13 +1254,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         }
 
         std::string object_pointer_name;
-        if (object_pointer_die_offset != DW_INVALID_OFFSET) {
-          DWARFDIE object_pointer_die = die.GetDIE(object_pointer_die_offset);
-          if (object_pointer_die) {
-            const char *object_pointer_name_cstr = object_pointer_die.GetName();
-            if (object_pointer_name_cstr)
-              object_pointer_name = object_pointer_name_cstr;
-          }
+        if (object_pointer_die) {
+          const char *object_pointer_name_cstr = object_pointer_die.GetName();
+          if (object_pointer_name_cstr)
+            object_pointer_name = object_pointer_name_cstr;
         }
 
         DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
@@ -1422,9 +1419,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                     LinkDeclContextToDIE(spec_clang_decl_ctx, die);
                   } else {
                     dwarf->GetObjectFile()->GetModule()->ReportWarning(
-                        "0x%8.8" PRIx64 ": DW_AT_specification(0x%8.8" PRIx64
+                        "0x%8.8" PRIx64 ": DW_AT_specification(0x%8.8x"
                         ") has no decl\n",
-                        die.GetID(), specification_die_form.Reference());
+                        die.GetID(),
+                        specification_die_form.Reference().GetOffset());
                   }
                   type_handled = true;
                 } else if (abstract_origin_die_form.IsValid()) {
@@ -1442,9 +1440,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                     LinkDeclContextToDIE(abs_clang_decl_ctx, die);
                   } else {
                     dwarf->GetObjectFile()->GetModule()->ReportWarning(
-                        "0x%8.8" PRIx64 ": DW_AT_abstract_origin(0x%8.8" PRIx64
+                        "0x%8.8" PRIx64 ": DW_AT_abstract_origin(0x%8.8x"
                         ") has no decl\n",
-                        die.GetID(), abstract_origin_die_form.Reference());
+                        die.GetID(),
+                        abstract_origin_die_form.Reference().GetOffset());
                   }
                   type_handled = true;
                 } else {
@@ -1587,8 +1586,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
             clang::FunctionDecl *template_function_decl = nullptr;
 
             if (abstract_origin_die_form.IsValid()) {
-              DWARFDIE abs_die =
-                  dwarf->DebugInfo()->GetDIE(DIERef(abstract_origin_die_form));
+              DWARFDIE abs_die = abstract_origin_die_form.Reference();
 
               SymbolContext sc;
 
@@ -3070,9 +3068,10 @@ bool DWARFASTParserClang::ParseChildMembers(
                          member_byte_offset > parent_byte_size)) {
                       module_sp->ReportError(
                           "0x%8.8" PRIx64
-                          ": DW_TAG_member '%s' refers to type 0x%8.8" PRIx64
+                          ": DW_TAG_member '%s' refers to type 0x%8.8x"
                           " which extends beyond the bounds of 0x%8.8" PRIx64,
-                          die.GetID(), name, encoding_form.Reference(),
+                          die.GetID(), name,
+                          encoding_form.Reference().GetOffset(),
                           parent_die.GetID());
                     }
 
@@ -3135,15 +3134,14 @@ bool DWARFASTParserClang::ParseChildMembers(
               if (name)
                 module_sp->ReportError(
                     "0x%8.8" PRIx64
-                    ": DW_TAG_member '%s' refers to type 0x%8.8" PRIx64
+                    ": DW_TAG_member '%s' refers to type 0x%8.8x"
                     " which was unable to be parsed",
-                    die.GetID(), name, encoding_form.Reference());
+                    die.GetID(), name, encoding_form.Reference().GetOffset());
               else
                 module_sp->ReportError(
-                    "0x%8.8" PRIx64
-                    ": DW_TAG_member refers to type 0x%8.8" PRIx64
+                    "0x%8.8" PRIx64 ": DW_TAG_member refers to type 0x%8.8x"
                     " which was unable to be parsed",
-                    die.GetID(), encoding_form.Reference());
+                    die.GetID(), encoding_form.Reference().GetOffset());
             }
           }
 
@@ -3253,11 +3251,12 @@ bool DWARFASTParserClang::ParseChildMembers(
         Type *base_class_type = die.ResolveTypeUID(DIERef(encoding_form));
         if (base_class_type == NULL) {
           module_sp->ReportError("0x%8.8x: DW_TAG_inheritance failed to "
-                                 "resolve the base class at 0x%8.8" PRIx64
+                                 "resolve the base class at 0x%8.8x"
                                  " from enclosing type 0x%8.8x. \nPlease file "
                                  "a bug and attach the file at the start of "
                                  "this error message",
-                                 die.GetOffset(), encoding_form.Reference(),
+                                 die.GetOffset(),
+                                 encoding_form.Reference().GetOffset(),
                                  parent_die.GetOffset());
           break;
         }
@@ -3550,7 +3549,7 @@ Type *DWARFASTParserClang::GetTypeForDIE(const DWARFDIE &die) {
 
         if (attr == DW_AT_type &&
             attributes.ExtractFormValueAtIndex(i, form_value))
-          return dwarf->ResolveTypeUID(dwarf->GetDIE(DIERef(form_value)), true);
+          return dwarf->ResolveTypeUID(form_value.Reference(), true);
       }
     }
   }

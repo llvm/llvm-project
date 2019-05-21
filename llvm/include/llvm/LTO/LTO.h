@@ -115,6 +115,7 @@ private:
   std::vector<std::pair<size_t, size_t>> ModuleSymIndices;
 
   StringRef TargetTriple, SourceFileName, COFFLinkerOpts;
+  std::vector<StringRef> DependentLibraries;
   std::vector<StringRef> ComdatTable;
 
 public:
@@ -154,6 +155,9 @@ public:
 
   /// Returns linker options specified in the input file.
   StringRef getCOFFLinkerOpts() const { return COFFLinkerOpts; }
+
+  /// Returns dependent library specifiers from the input file.
+  ArrayRef<StringRef> getDependentLibraries() const { return DependentLibraries; }
 
   /// Returns the path to the InputFile.
   StringRef getName() const;

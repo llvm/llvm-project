@@ -8,7 +8,7 @@
 
 #include "gwp_asan/random.h"
 
-#include <ctime>
+#include <time.h>
 
 namespace gwp_asan {
 uint32_t getRandomUnsigned32() {

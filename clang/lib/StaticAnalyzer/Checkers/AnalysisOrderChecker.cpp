@@ -44,8 +44,8 @@ class AnalysisOrderChecker
                      check::LiveSymbols> {
 
   bool isCallbackEnabled(AnalyzerOptions &Opts, StringRef CallbackName) const {
-    return Opts.getCheckerBooleanOption(this, "*", false) ||
-        Opts.getCheckerBooleanOption(this, CallbackName, false);
+    return Opts.getCheckerBooleanOption(this, "*") ||
+           Opts.getCheckerBooleanOption(this, CallbackName);
   }
 
   bool isCallbackEnabled(CheckerContext &C, StringRef CallbackName) const {

@@ -112,12 +112,10 @@ DWARFDIE::GetSibling() const {
 
 DWARFDIE
 DWARFDIE::GetReferencedDIE(const dw_attr_t attr) const {
-  const dw_offset_t die_offset =
-      GetAttributeValueAsReference(attr, DW_INVALID_OFFSET);
-  if (die_offset != DW_INVALID_OFFSET)
-    return GetDIE(die_offset);
+  if (IsValid())
+    return m_die->GetAttributeValueAsReference(GetDWARF(), GetCU(), attr);
   else
-    return DWARFDIE();
+    return {};
 }
 
 DWARFDIE
@@ -137,7 +135,7 @@ DWARFDIE::GetAttributeValueAsReferenceDIE(const dw_attr_t attr) const {
     DWARFFormValue form_value;
     if (m_die->GetAttributeValue(dwarf, cu, attr, form_value, nullptr,
                                  check_specification_or_abstract_origin))
-      return dwarf->GetDIE(DIERef(form_value));
+      return form_value.Reference();
   }
   return DWARFDIE();
 }
@@ -155,7 +153,8 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t file_addr) const {
           return DWARFDIE(cu, block_die);
         else
           return DWARFDIE(dwarf->DebugInfo()->GetUnit(
-                              DIERef(cu->GetOffset(), block_die->GetOffset())),
+                              DIERef(cu->GetDebugSection(), cu->GetOffset(),
+                                     block_die->GetOffset())),
                           block_die);
       }
     }

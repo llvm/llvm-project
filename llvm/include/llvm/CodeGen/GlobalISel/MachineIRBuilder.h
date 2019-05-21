@@ -632,6 +632,7 @@ public:
                                              const ConstantFP &Val);
 
   MachineInstrBuilder buildFConstant(const DstOp &Res, double Val);
+  MachineInstrBuilder buildFConstant(const DstOp &Res, const APFloat &Val);
 
   /// Build and insert \p Res = COPY Op
   ///
@@ -795,6 +796,8 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildIntrinsic(Intrinsic::ID ID, ArrayRef<unsigned> Res,
+                                     bool HasSideEffects);
+  MachineInstrBuilder buildIntrinsic(Intrinsic::ID ID, ArrayRef<DstOp> Res,
                                      bool HasSideEffects);
 
   /// Build and insert \p Res = G_FPTRUNC \p Op
@@ -1237,6 +1240,123 @@ public:
   MachineInstrBuilder buildOr(const DstOp &Dst, const SrcOp &Src0,
                               const SrcOp &Src1) {
     return buildInstr(TargetOpcode::G_OR, {Dst}, {Src0, Src1});
+  }
+
+  /// Build and insert \p Res = G_XOR \p Op0, \p Op1
+  MachineInstrBuilder buildXor(const DstOp &Dst, const SrcOp &Src0,
+                               const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_XOR, {Dst}, {Src0, Src1});
+  }
+
+  /// Build and insert a bitwise not,
+  /// \p NegOne = G_CONSTANT -1
+  /// \p Res = G_OR \p Op0, NegOne
+  MachineInstrBuilder buildNot(const DstOp &Dst, const SrcOp &Src0) {
+    auto NegOne = buildConstant(Dst.getLLTTy(*getMRI()), -1);
+    return buildInstr(TargetOpcode::G_XOR, {Dst}, {Src0, NegOne});
+  }
+
+  /// Build and insert \p Res = G_CTPOP \p Op0, \p Src0
+  MachineInstrBuilder buildCTPOP(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTPOP, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_CTLZ \p Op0, \p Src0
+  MachineInstrBuilder buildCTLZ(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTLZ, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_CTLZ_ZERO_UNDEF \p Op0, \p Src0
+  MachineInstrBuilder buildCTLZ_ZERO_UNDEF(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_CTTZ \p Op0, \p Src0
+  MachineInstrBuilder buildCTTZ(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTTZ, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_CTTZ_ZERO_UNDEF \p Op0, \p Src0
+  MachineInstrBuilder buildCTTZ_ZERO_UNDEF(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTTZ_ZERO_UNDEF, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_FADD \p Op0, \p Op1
+  MachineInstrBuilder buildFAdd(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_FADD, {Dst}, {Src0, Src1});
+  }
+
+  /// Build and insert \p Res = G_FSUB \p Op0, \p Op1
+  MachineInstrBuilder buildFSub(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_FSUB, {Dst}, {Src0, Src1});
+  }
+
+  /// Build and insert \p Res = G_FMA \p Op0, \p Op1, \p Op2
+  MachineInstrBuilder buildFMA(const DstOp &Dst, const SrcOp &Src0,
+                               const SrcOp &Src1, const SrcOp &Src2) {
+    return buildInstr(TargetOpcode::G_FMA, {Dst}, {Src0, Src1, Src2});
+  }
+
+  /// Build and insert \p Res = G_FNEG \p Op0
+  MachineInstrBuilder buildFNeg(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_FNEG, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_FABS \p Op0
+  MachineInstrBuilder buildFAbs(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_FABS, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_FCOPYSIGN \p Op0, \p Op1
+  MachineInstrBuilder buildFCopysign(const DstOp &Dst, const SrcOp &Src0,
+                                     const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_FCOPYSIGN, {Dst}, {Src0, Src1});
+  }
+
+  /// Build and insert \p Res = G_UITOFP \p Src0
+  MachineInstrBuilder buildUITOFP(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_UITOFP, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_SITOFP \p Src0
+  MachineInstrBuilder buildSITOFP(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_SITOFP, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_FPTOUI \p Src0
+  MachineInstrBuilder buildFPTOUI(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_FPTOUI, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_FPTOSI \p Src0
+  MachineInstrBuilder buildFPTOSI(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_FPTOSI, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_SMIN \p Op0, \p Op1
+  MachineInstrBuilder buildSMin(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_SMIN, {Dst}, {Src0, Src1});
+  }
+
+  /// Build and insert \p Res = G_SMAX \p Op0, \p Op1
+  MachineInstrBuilder buildSMax(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_SMAX, {Dst}, {Src0, Src1});
+  }
+
+  /// Build and insert \p Res = G_UMIN \p Op0, \p Op1
+  MachineInstrBuilder buildUMin(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_UMIN, {Dst}, {Src0, Src1});
+  }
+
+  /// Build and insert \p Res = G_UMAX \p Op0, \p Op1
+  MachineInstrBuilder buildUMax(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_UMAX, {Dst}, {Src0, Src1});
   }
 
   virtual MachineInstrBuilder buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,

@@ -245,7 +245,7 @@ void ManualDWARFIndex::IndexUnitImpl(
       }
     }
 
-    DIERef ref(cu_offset, die.GetOffset());
+    DIERef ref(unit.GetDebugSection(), cu_offset, die.GetOffset());
     switch (tag) {
     case DW_TAG_inlined_subroutine:
     case DW_TAG_subprogram:

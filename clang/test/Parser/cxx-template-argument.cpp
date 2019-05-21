@@ -127,3 +127,14 @@ namespace PR18793 {
   template<typename T, T> struct S {};
   template<typename T> int g(S<T, (T())> *);
 }
+
+namespace r360308_regression {
+  template<typename> struct S1 { static int const n = 0; };
+  template<int, typename> struct S2 { typedef int t; };
+  template<typename T> struct S3 { typename S2<S1<T>::n < 0, int>::t n; };
+
+  template<typename FT> bool f(FT p) {
+    const bool a = p.first<FT(0), b = p.second>FT(0);
+    return a == b;
+  }
+}

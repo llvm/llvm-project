@@ -181,7 +181,7 @@ const std::vector<Token> &MacroArgs::getPreExpArgument(unsigned Arg,
   // list.  With this installed, we lex expanded tokens until we hit the EOF
   // token at the end of the unexp list.
   PP.EnterTokenStream(AT, NumToks, false /*disable expand*/,
-                      false /*owns tokens*/);
+                      false /*owns tokens*/, false /*is reinject*/);
 
   // Lex all of the macro-expanded tokens into Result.
   do {

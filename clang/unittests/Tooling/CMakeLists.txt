@@ -22,6 +22,7 @@ add_clang_unittest(ToolingTests
   LexicallyOrderedRecursiveASTVisitorTest.cpp
   LookupTest.cpp
   QualTypeNamesTest.cpp
+  RangeSelectorTest.cpp
   RecursiveASTVisitorTests/Attr.cpp
   RecursiveASTVisitorTests/Class.cpp
   RecursiveASTVisitorTests/ConstructExpr.cpp
@@ -69,4 +70,9 @@ target_link_libraries(ToolingTests
   clangToolingCore
   clangToolingInclusions
   clangToolingRefactor
+  LLVMSupport
+  LLVMTestingSupport
   )
+
+
+add_subdirectory(Syntax)

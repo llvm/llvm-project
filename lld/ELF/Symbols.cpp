@@ -122,6 +122,8 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
   case Symbol::LazyObjectKind:
     assert(Sym.IsUsedInRegularObj && "lazy symbol reached writer");
     return 0;
+  case Symbol::CommonKind:
+    llvm_unreachable("common symbol reached writer");
   case Symbol::PlaceholderKind:
     llvm_unreachable("placeholder symbol reached writer");
   }
@@ -239,7 +241,9 @@ void Symbol::parseSymbolVersion() {
           Verstr);
 }
 
-InputFile *LazyArchive::fetch() { return cast<ArchiveFile>(File)->fetch(Sym); }
+InputFile *LazyArchive::fetch() const {
+  return cast<ArchiveFile>(File)->fetch(Sym);
+}
 
 MemoryBufferRef LazyArchive::getMemberBuffer() {
   Archive::Child C = CHECK(
@@ -248,6 +252,10 @@ MemoryBufferRef LazyArchive::getMemberBuffer() {
   return CHECK(C.getMemoryBufferRef(),
                "could not get the buffer for the member defining symbol " +
                    Sym.getName());
+}
+
+InputFile *LazyObject::fetch() const {
+  return cast<LazyObjFile>(File)->fetch();
 }
 
 uint8_t Symbol::computeBinding() const {
@@ -285,7 +293,7 @@ void elf::printTraceSymbol(Symbol *Sym) {
     S = ": lazy definition of ";
   else if (Sym->isShared())
     S = ": shared definition of ";
-  else if (dyn_cast_or_null<BssSection>(cast<Defined>(Sym)->Section))
+  else if (Sym->isCommon())
     S = ": common definition of ";
   else
     S = ": definition of ";

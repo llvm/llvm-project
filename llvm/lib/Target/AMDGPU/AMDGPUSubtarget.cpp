@@ -78,7 +78,7 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // unset everything else if it is disabled
 
   // Assuming ECC is enabled is the conservative default.
-  SmallString<256> FullFS("+promote-alloca,+load-store-opt,+sram-ecc,");
+  SmallString<256> FullFS("+promote-alloca,+load-store-opt,+sram-ecc,+xnack,");
 
   if (isAmdHsaOS()) // Turn on FlatForGlobal for HSA.
     FullFS += "+flat-for-global,+unaligned-buffer-access,+trap-handler,";
@@ -129,6 +129,11 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
     WavefrontSize = 64;
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
+
+  if (DoesNotSupportXNACK && EnableXNACK) {
+    ToggleFeature(AMDGPU::FeatureXNACK);
+    EnableXNACK = false;
+  }
 
   // ECC is on by default, but turn it off if the hardware doesn't support it
   // anyway. This matters for the gfx9 targets with d16 loads, but don't support
@@ -181,6 +186,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
 
     HasApertureRegs(false),
     EnableXNACK(false),
+    DoesNotSupportXNACK(false),
     EnableCuMode(false),
     TrapHandler(false),
 

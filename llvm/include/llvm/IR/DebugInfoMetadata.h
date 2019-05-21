@@ -2477,14 +2477,18 @@ public:
   static const DIExpression *extractAddressClass(const DIExpression *Expr,
                                                  unsigned &AddrClass);
 
-  /// Constants for DIExpression::prepend.
-  enum { NoDeref = false, WithDeref = true, WithStackValue = true };
+  /// Used for DIExpression::prepend.
+  enum PrependOps : uint8_t {
+    ApplyOffset = 0,
+    DerefBefore = 1 << 0,
+    DerefAfter = 1 << 1,
+    StackValue = 1 << 2
+  };
 
   /// Prepend \p DIExpr with a deref and offset operation and optionally turn it
   /// into a stack value.
-  static DIExpression *prepend(const DIExpression *Expr, bool DerefBefore,
-                               int64_t Offset = 0, bool DerefAfter = false,
-                               bool StackValue = false);
+  static DIExpression *prepend(const DIExpression *Expr, uint8_t Flags,
+                               int64_t Offset = 0);
 
   /// Prepend \p DIExpr with the given opcodes and optionally turn it into a
   /// stack value.

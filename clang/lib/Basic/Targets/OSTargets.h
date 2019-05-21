@@ -654,8 +654,24 @@ protected:
     Builder.defineMacro("_IBMR2");
     Builder.defineMacro("_POWER");
 
-    // FIXME: Define AIX OS-Version Macros.
     Builder.defineMacro("_AIX");
+
+    unsigned Major, Minor, Micro;
+    Triple.getOSVersion(Major, Minor, Micro);
+
+    // Define AIX OS-Version Macros.
+    // Includes logic for legacy versions of AIX; no specific intent to support.
+    std::pair<int, int> OsVersion = {Major, Minor};
+    if (OsVersion >= std::make_pair(3, 2)) Builder.defineMacro("_AIX32");
+    if (OsVersion >= std::make_pair(4, 1)) Builder.defineMacro("_AIX41");
+    if (OsVersion >= std::make_pair(4, 3)) Builder.defineMacro("_AIX43");
+    if (OsVersion >= std::make_pair(5, 0)) Builder.defineMacro("_AIX50");
+    if (OsVersion >= std::make_pair(5, 1)) Builder.defineMacro("_AIX51");
+    if (OsVersion >= std::make_pair(5, 2)) Builder.defineMacro("_AIX52");
+    if (OsVersion >= std::make_pair(5, 3)) Builder.defineMacro("_AIX53");
+    if (OsVersion >= std::make_pair(6, 1)) Builder.defineMacro("_AIX61");
+    if (OsVersion >= std::make_pair(7, 1)) Builder.defineMacro("_AIX71");
+    if (OsVersion >= std::make_pair(7, 2)) Builder.defineMacro("_AIX72");
 
     // FIXME: Do not define _LONG_LONG when -fno-long-long is specified.
     Builder.defineMacro("_LONG_LONG");

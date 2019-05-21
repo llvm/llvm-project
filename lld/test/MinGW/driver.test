@@ -99,8 +99,13 @@ STRIP-DEBUG: -debug:symtab
 STRIP-DEBUG-NOT: -debug:dwarf
 
 RUN: ld.lld -### -m i386pep foo.o -pdb out.pdb | FileCheck -check-prefix PDB %s
+RUN: ld.lld -### -m i386pep foo.o -pdb=out.pdb | FileCheck -check-prefix PDB %s
 PDB: -debug -pdb:out.pdb
 PDB-NOT: -debug:dwarf
+
+RUN: ld.lld -### -m i386pep foo.o -pdb= | FileCheck -check-prefix PDB-DEFAULT %s
+PDB-DEFAULT: -debug
+PDB-DEFAULT-NOT: -pdb:{{.*}}
 
 RUN: ld.lld -### -m i386pep foo.o --large-address-aware | FileCheck -check-prefix LARGE-ADDRESS-AWARE %s
 LARGE-ADDRESS-AWARE: -largeaddressaware
@@ -164,3 +169,12 @@ TIMESTAMP-NOT: -timestamp:0
 RUN: ld.lld -### -m i386pep foo.o -appcontainer | FileCheck -check-prefix APPCONTAINER %s
 RUN: ld.lld -### -m i386pep foo.o --appcontainer | FileCheck -check-prefix APPCONTAINER %s
 APPCONTAINER: -appcontainer
+
+# RUN: ld.lld -m i386pep --version 2>&1 | FileCheck -check-prefix=VERSION %s
+# RUN: ld.lld -m i386pep -v 2>&1 | FileCheck -check-prefix=VERSION %s
+# RUN: not ld.lld -m i386pep -v xyz 2>&1 | FileCheck -check-prefix=VERSION %s
+# VERSION: LLD {{.*}} (compatible with GNU linkers)
+
+# RUN: ld.lld -m i386pep --help 2>&1 | FileCheck -check-prefix=HELP %s
+# HELP: USAGE:
+# HELP: --enable-auto-import

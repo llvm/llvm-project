@@ -38,7 +38,7 @@ TEST(ScudoSecondaryTest, SecondaryBasic) {
   L->deallocate(P);
 
   std::vector<void *> V;
-  for (scudo::u8 I = 0; I < 32; I++)
+  for (scudo::uptr I = 0; I < 32U; I++)
     V.push_back(L->allocate(Size));
   std::random_shuffle(V.begin(), V.end());
   while (!V.empty()) {
@@ -84,7 +84,7 @@ TEST(ScudoSecondaryTest, SecondaryIterate) {
   L->init(nullptr);
   std::vector<void *> V;
   const scudo::uptr PageSize = scudo::getPageSizeCached();
-  for (scudo::u8 I = 0; I < 32; I++)
+  for (scudo::uptr I = 0; I < 32U; I++)
     V.push_back(L->allocate((std::rand() % 16) * PageSize));
   auto Lambda = [V](scudo::uptr Block) {
     EXPECT_NE(std::find(V.begin(), V.end(), reinterpret_cast<void *>(Block)),
@@ -100,19 +100,19 @@ TEST(ScudoSecondaryTest, SecondaryIterate) {
   L->printStats();
 }
 
-std::mutex Mutex;
-std::condition_variable Cv;
-bool Ready = false;
+static std::mutex Mutex;
+static std::condition_variable Cv;
+static bool Ready = false;
 
 static void performAllocations(scudo::MapAllocator *L) {
+  std::vector<void *> V;
+  const scudo::uptr PageSize = scudo::getPageSizeCached();
   {
     std::unique_lock<std::mutex> Lock(Mutex);
     while (!Ready)
       Cv.wait(Lock);
   }
-  std::vector<void *> V;
-  const scudo::uptr PageSize = scudo::getPageSizeCached();
-  for (scudo::u8 I = 0; I < 32; I++)
+  for (scudo::uptr I = 0; I < 32U; I++)
     V.push_back(L->allocate((std::rand() % 16) * PageSize));
   while (!V.empty()) {
     L->deallocate(V.back());
@@ -124,7 +124,7 @@ TEST(ScudoSecondaryTest, SecondaryThreadsRace) {
   scudo::MapAllocator *L = new scudo::MapAllocator;
   L->init(nullptr);
   std::thread Threads[10];
-  for (scudo::uptr I = 0; I < 10; I++)
+  for (scudo::uptr I = 0; I < 10U; I++)
     Threads[I] = std::thread(performAllocations, L);
   {
     std::unique_lock<std::mutex> Lock(Mutex);

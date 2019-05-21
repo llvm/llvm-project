@@ -175,7 +175,9 @@ classifyToken(const FunctionDecl &F, Preprocessor &PP, Token Tok) {
   Token End;
   End.setKind(tok::eof);
   SmallVector<Token, 2> Stream{Tok, End};
-  PP.EnterTokenStream(Stream, false);
+
+  // FIXME: do not report these token to Preprocessor.TokenWatcher.
+  PP.EnterTokenStream(Stream, false, /*IsReinject=*/false);
   while (true) {
     Token T;
     PP.Lex(T);

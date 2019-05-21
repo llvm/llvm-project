@@ -1943,7 +1943,7 @@ void Parser::ParseObjCClassInstanceVariables(Decl *interfaceDecl,
         Tok.setLocation(Tok.getLocation().getLocWithOffset(-1));
         Tok.setKind(tok::at);
         Tok.setLength(1);
-        PP.EnterToken(Tok);
+        PP.EnterToken(Tok, /*IsReinject*/true);
         HelperActionsForIvarDeclarations(interfaceDecl, atLoc,
                                          T, AllIvarDecls, true);
         return;
@@ -3654,7 +3654,7 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
   // Append the current token at the end of the new token stream so that it
   // doesn't get lost.
   LM.Toks.push_back(Tok);
-  PP.EnterTokenStream(LM.Toks, true);
+  PP.EnterTokenStream(LM.Toks, true, /*IsReinject*/true);
 
   // Consume the previously pushed token.
   ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);

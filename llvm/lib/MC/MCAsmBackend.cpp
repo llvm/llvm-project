@@ -64,6 +64,7 @@ Optional<MCFixupKind> MCAsmBackend::getFixupKind(StringRef Name) const {
 
 const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   static const MCFixupKindInfo Builtins[] = {
+      {"FK_NONE", 0, 0, 0},
       {"FK_Data_1", 0, 8, 0},
       {"FK_Data_2", 0, 16, 0},
       {"FK_Data_4", 0, 32, 0},

@@ -36,12 +36,26 @@
 #define __DEVICE__ static __device__ __inline__ __attribute__((always_inline))
 #endif
 
+// For C++ 17 we need to include noexcept attribute to be compatible
+// with the header-defined version. This may be removed once
+// variant is supported.
+#if defined(_OPENMP) && defined(__cplusplus) && __cplusplus >= 201703L
+#define __NOEXCEPT noexcept
+#else
+#define __NOEXCEPT
+#endif
+
 #if !(defined(_OPENMP) && defined(__cplusplus))
 __DEVICE__ long long abs(long long __n) { return ::llabs(__n); }
 __DEVICE__ long abs(long __n) { return ::labs(__n); }
-#endif
 __DEVICE__ float abs(float __x) { return ::fabsf(__x); }
 __DEVICE__ double abs(double __x) { return ::fabs(__x); }
+#endif
+// TODO: remove once variat is supported.
+#if defined(_OPENMP) && defined(__cplusplus)
+__DEVICE__ const float abs(const float __x) { return ::fabsf((float)__x); }
+__DEVICE__ const double abs(const double __x) { return ::fabs((double)__x); }
+#endif
 __DEVICE__ float acos(float __x) { return ::acosf(__x); }
 __DEVICE__ float asin(float __x) { return ::asinf(__x); }
 __DEVICE__ float atan(float __x) { return ::atanf(__x); }
@@ -50,7 +64,7 @@ __DEVICE__ float ceil(float __x) { return ::ceilf(__x); }
 __DEVICE__ float cos(float __x) { return ::cosf(__x); }
 __DEVICE__ float cosh(float __x) { return ::coshf(__x); }
 __DEVICE__ float exp(float __x) { return ::expf(__x); }
-__DEVICE__ float fabs(float __x) { return ::fabsf(__x); }
+__DEVICE__ float fabs(float __x) __NOEXCEPT { return ::fabsf(__x); }
 __DEVICE__ float floor(float __x) { return ::floorf(__x); }
 __DEVICE__ float fmod(float __x, float __y) { return ::fmodf(__x, __y); }
 // TODO: remove when variant is supported
@@ -465,6 +479,7 @@ _GLIBCXX_END_NAMESPACE_VERSION
 } // namespace std
 #endif
 
+#undef __NOEXCEPT
 #undef __DEVICE__
 
 #endif

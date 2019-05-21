@@ -47,7 +47,7 @@ public:
   void run();
 
 private:
-  void enqueue(InputSectionBase *Sec, uint64_t Offset, bool IsLSDA);
+  void enqueue(InputSectionBase *Sec, uint64_t Offset);
   void markSymbol(Symbol *Sym);
 
   template <class RelTy>
@@ -97,7 +97,7 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &Sec, RelTy &Rel,
       Offset += getAddend<ELFT>(Sec, Rel);
 
     if (!IsLSDA || !(RelSec->Flags & SHF_EXECINSTR))
-      enqueue(RelSec, Offset, IsLSDA);
+      enqueue(RelSec, Offset);
     return;
   }
 
@@ -106,7 +106,7 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &Sec, RelTy &Rel,
       SS->getFile().IsNeeded = true;
 
   for (InputSectionBase *Sec : CNamedSections.lookup(Sym.getName()))
-    enqueue(Sec, 0, IsLSDA);
+    enqueue(Sec, 0);
 }
 
 // The .eh_frame section is an unfortunate special case.
@@ -169,8 +169,7 @@ static bool isReserved(InputSectionBase *Sec) {
 }
 
 template <class ELFT>
-void MarkLive<ELFT>::enqueue(InputSectionBase *Sec, uint64_t Offset,
-                             bool IsLSDA) {
+void MarkLive<ELFT>::enqueue(InputSectionBase *Sec, uint64_t Offset) {
   // Skip over discarded sections. This in theory shouldn't happen, because
   // the ELF spec doesn't allow a relocation to point to a deduplicated
   // COMDAT section directly. Unfortunately this happens in practice (e.g.
@@ -184,26 +183,19 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *Sec, uint64_t Offset,
   if (auto *MS = dyn_cast<MergeInputSection>(Sec))
     MS->getSectionPiece(Offset)->Live = true;
 
-  InputSection *S = dyn_cast<InputSection>(Sec);
-  // LSDA does not count as "live code or data" in the object file.
-  // The section may already have been marked live for LSDA in which
-  // case we still need to mark the file.
-  if (S && !IsLSDA && Sec->File)
-    Sec->getFile<ELFT>()->HasLiveCodeOrData = true;
-
   if (Sec->Live)
     return;
-
   Sec->Live = true;
+
   // Add input section to the queue.
-  if (S)
+  if (InputSection *S = dyn_cast<InputSection>(Sec))
     Queue.push_back(S);
 }
 
 template <class ELFT> void MarkLive<ELFT>::markSymbol(Symbol *Sym) {
   if (auto *D = dyn_cast_or_null<Defined>(Sym))
     if (auto *IS = dyn_cast_or_null<InputSectionBase>(D->Section))
-      enqueue(IS, D->Value, false);
+      enqueue(IS, D->Value);
 }
 
 // This is the main function of the garbage collector.
@@ -247,7 +239,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
       continue;
 
     if (isReserved(Sec) || Script->shouldKeep(Sec)) {
-      enqueue(Sec, 0, false);
+      enqueue(Sec, 0);
     } else if (isValidCIdentifier(Sec->Name)) {
       CNamedSections[Saver.save("__start_" + Sec->Name)].push_back(Sec);
       CNamedSections[Saver.save("__stop_" + Sec->Name)].push_back(Sec);
@@ -267,7 +259,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     }
 
     for (InputSectionBase *IS : Sec.DependentSections)
-      enqueue(IS, 0, false);
+      enqueue(IS, 0);
   }
 }
 
@@ -293,7 +285,7 @@ template <class ELFT> void elf::markLive() {
   // The -gc-sections option works only for SHF_ALLOC sections
   // (sections that are memory-mapped at runtime). So we can
   // unconditionally make non-SHF_ALLOC sections alive except
-  // SHF_LINK_ORDER and SHT_REL/SHT_RELA sections and .debug sections.
+  // SHF_LINK_ORDER and SHT_REL/SHT_RELA sections.
   //
   // Usually, SHF_ALLOC sections are not removed even if they are
   // unreachable through relocations because reachability is not
@@ -314,18 +306,12 @@ template <class ELFT> void elf::markLive() {
     bool IsLinkOrder = (Sec->Flags & SHF_LINK_ORDER);
     bool IsRel = (Sec->Type == SHT_REL || Sec->Type == SHT_RELA);
 
-    if (!IsAlloc && !IsLinkOrder && !IsRel && !Sec->Debug)
+    if (!IsAlloc && !IsLinkOrder && !IsRel)
       Sec->Live = true;
   }
 
   // Follow the graph to mark all live sections.
   MarkLive<ELFT>().run();
-
-  // Mark debug sections as live in any object file that has a live
-  // Regular or Merge section.
-  for (InputSectionBase *Sec : InputSections)
-    if (Sec->Debug && Sec->getFile<ELFT>()->HasLiveCodeOrData)
-      Sec->Live = true;
 
   // Report garbage-collected sections.
   if (Config->PrintGcSections)

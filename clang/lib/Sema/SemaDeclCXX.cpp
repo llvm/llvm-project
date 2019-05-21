@@ -62,7 +62,7 @@ namespace {
 
   public:
     CheckDefaultArgumentVisitor(Expr *defarg, Sema *s)
-      : DefaultArg(defarg), S(s) {}
+        : DefaultArg(defarg), S(s) {}
 
     bool VisitExpr(Expr *Node);
     bool VisitDeclRefExpr(DeclRefExpr *DRE);
@@ -13025,7 +13025,7 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
 
   // If we already have the in-class initializer nothing needs to be done.
   if (Field->getInClassInitializer())
-    return CXXDefaultInitExpr::Create(Context, Loc, Field);
+    return CXXDefaultInitExpr::Create(Context, Loc, Field, CurContext);
 
   // If we might have already tried and failed to instantiate, don't try again.
   if (Field->isInvalidDecl())
@@ -13066,7 +13066,7 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
       Field->setInvalidDecl();
       return ExprError();
     }
-    return CXXDefaultInitExpr::Create(Context, Loc, Field);
+    return CXXDefaultInitExpr::Create(Context, Loc, Field, CurContext);
   }
 
   // DR1351:

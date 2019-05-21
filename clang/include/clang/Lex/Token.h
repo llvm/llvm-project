@@ -70,20 +70,23 @@ class Token {
 public:
   // Various flags set per token:
   enum TokenFlags {
-    StartOfLine   = 0x01,  // At start of line or only after whitespace
-                           // (considering the line after macro expansion).
-    LeadingSpace  = 0x02,  // Whitespace exists before this token (considering
-                           // whitespace after macro expansion).
-    DisableExpand = 0x04,  // This identifier may never be macro expanded.
-    NeedsCleaning = 0x08,  // Contained an escaped newline or trigraph.
+    StartOfLine = 0x01,   // At start of line or only after whitespace
+                          // (considering the line after macro expansion).
+    LeadingSpace = 0x02,  // Whitespace exists before this token (considering
+                          // whitespace after macro expansion).
+    DisableExpand = 0x04, // This identifier may never be macro expanded.
+    NeedsCleaning = 0x08, // Contained an escaped newline or trigraph.
     LeadingEmptyMacro = 0x10, // Empty macro exists before this token.
-    HasUDSuffix = 0x20,    // This string or character literal has a ud-suffix.
-    HasUCN = 0x40,         // This identifier contains a UCN.
-    IgnoredComma = 0x80,   // This comma is not a macro argument separator (MS).
+    HasUDSuffix = 0x20,  // This string or character literal has a ud-suffix.
+    HasUCN = 0x40,       // This identifier contains a UCN.
+    IgnoredComma = 0x80, // This comma is not a macro argument separator (MS).
     StringifiedInMacro = 0x100, // This string or character literal is formed by
                                 // macro stringizing or charizing operator.
     CommaAfterElided = 0x200, // The comma following this token was elided (MS).
     IsEditorPlaceholder = 0x400, // This identifier is a placeholder.
+    IsReinjected = 0x800, // A phase 4 token that was produced before and
+                          // re-added, e.g. via EnterTokenStream. Annotation
+                          // tokens are *not* reinjected.
   };
 
   tok::TokenKind getKind() const { return Kind; }

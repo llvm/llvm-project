@@ -1,6 +1,6 @@
 ; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crashcalls -silence-passes
 ; RUN: llvm-dis %t-reduced-simplified.bc -o - | FileCheck %s
-; REQUIRES: loadable_module
+; REQUIRES: plugins
 
 ; Test to make sure that arguments are removed from the function if they are
 ; unnecessary. And clean up any types that frees up too.

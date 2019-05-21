@@ -1,5 +1,5 @@
 // RUN: %clang_tsan %s -o %t
-// RUN: %run %t 2>&1 | FileCheck %s
+// RUN: %run %t 2>&1 | FileCheck %s --implicit-check-not='ThreadSanitizer'
 
 #include "dispatch/dispatch.h"
 
@@ -39,4 +39,3 @@ int main(int argc, const char *argv[]) {
 
 // CHECK: start
 // CHECK: done
-// CHECK-NOT: WARNING: ThreadSanitizer

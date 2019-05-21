@@ -4078,6 +4078,36 @@ struct Sema::CodeCompleteExpressionData {
   SmallVector<Decl *, 4> IgnoreDecls;
 };
 
+namespace {
+/// Information that allows to avoid completing redundant enumerators.
+struct CoveredEnumerators {
+  llvm::SmallPtrSet<EnumConstantDecl *, 8> Seen;
+  NestedNameSpecifier *SuggestedQualifier = nullptr;
+};
+} // namespace
+
+static void AddEnumerators(ResultBuilder &Results, ASTContext &Context,
+                           EnumDecl *Enum, DeclContext *CurContext,
+                           const CoveredEnumerators &Enumerators) {
+  NestedNameSpecifier *Qualifier = Enumerators.SuggestedQualifier;
+  if (Context.getLangOpts().CPlusPlus && !Qualifier && Enumerators.Seen.empty()) {
+    // If there are no prior enumerators in C++, check whether we have to
+    // qualify the names of the enumerators that we suggest, because they
+    // may not be visible in this scope.
+    Qualifier = getRequiredQualification(Context, CurContext, Enum);
+  }
+
+  Results.EnterNewScope();
+  for (auto *E : Enum->enumerators()) {
+    if (Enumerators.Seen.count(E))
+      continue;
+
+    CodeCompletionResult R(E, CCP_EnumInCase, Qualifier);
+    Results.AddResult(R, CurContext, nullptr, false);
+  }
+  Results.ExitScope();
+}
+
 /// Perform code-completion in an expression context when we know what
 /// type we're looking for.
 void Sema::CodeCompleteExpression(Scope *S,
@@ -4118,10 +4148,19 @@ void Sema::CodeCompleteExpression(Scope *S,
   Results.ExitScope();
 
   bool PreferredTypeIsPointer = false;
-  if (!Data.PreferredType.isNull())
+  if (!Data.PreferredType.isNull()) {
     PreferredTypeIsPointer = Data.PreferredType->isAnyPointerType() ||
                              Data.PreferredType->isMemberPointerType() ||
                              Data.PreferredType->isBlockPointerType();
+    if (Data.PreferredType->isEnumeralType()) {
+      EnumDecl *Enum = Data.PreferredType->castAs<EnumType>()->getDecl();
+      if (auto *Def = Enum->getDefinition())
+        Enum = Def;
+      // FIXME: collect covered enumerators in cases like:
+      //        if (x == my_enum::one) { ... } else if (x == ^) {}
+      AddEnumerators(Results, Context, Enum, CurContext, CoveredEnumerators());
+    }
+  }
 
   if (S->getFnParent() && !Data.ObjCCollection &&
       !Data.IntegralConstantExpression)
@@ -4719,8 +4758,7 @@ void Sema::CodeCompleteCase(Scope *S) {
   // FIXME: Ideally, we would also be able to look *past* the code-completion
   // token, in case we are code-completing in the middle of the switch and not
   // at the end. However, we aren't able to do so at the moment.
-  llvm::SmallPtrSet<EnumConstantDecl *, 8> EnumeratorsSeen;
-  NestedNameSpecifier *Qualifier = nullptr;
+  CoveredEnumerators Enumerators;
   for (SwitchCase *SC = Switch->getSwitchCaseList(); SC;
        SC = SC->getNextSwitchCase()) {
     CaseStmt *Case = dyn_cast<CaseStmt>(SC);
@@ -4737,7 +4775,7 @@ void Sema::CodeCompleteCase(Scope *S) {
         // values of each enumerator. However, value-based approach would not
         // work as well with C++ templates where enumerators declared within a
         // template are type- and value-dependent.
-        EnumeratorsSeen.insert(Enumerator);
+        Enumerators.Seen.insert(Enumerator);
 
         // If this is a qualified-id, keep track of the nested-name-specifier
         // so that we can reproduce it as part of code completion, e.g.,
@@ -4750,30 +4788,15 @@ void Sema::CodeCompleteCase(Scope *S) {
         // At the XXX, our completions are TagDecl::TK_union,
         // TagDecl::TK_struct, and TagDecl::TK_class, rather than TK_union,
         // TK_struct, and TK_class.
-        Qualifier = DRE->getQualifier();
+        Enumerators.SuggestedQualifier = DRE->getQualifier();
       }
-  }
-
-  if (getLangOpts().CPlusPlus && !Qualifier && EnumeratorsSeen.empty()) {
-    // If there are no prior enumerators in C++, check whether we have to
-    // qualify the names of the enumerators that we suggest, because they
-    // may not be visible in this scope.
-    Qualifier = getRequiredQualification(Context, CurContext, Enum);
   }
 
   // Add any enumerators that have not yet been mentioned.
   ResultBuilder Results(*this, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
                         CodeCompletionContext::CCC_Expression);
-  Results.EnterNewScope();
-  for (auto *E : Enum->enumerators()) {
-    if (EnumeratorsSeen.count(E))
-      continue;
-
-    CodeCompletionResult R(E, CCP_EnumInCase, Qualifier);
-    Results.AddResult(R, CurContext, nullptr, false);
-  }
-  Results.ExitScope();
+  AddEnumerators(Results, Context, Enum, CurContext, Enumerators);
 
   if (CodeCompleter->includeMacros()) {
     AddMacroResults(PP, Results, CodeCompleter->loadExternal(), false);

@@ -55,7 +55,7 @@ v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[0,-1]
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[-1,0]
 // GFX906: error: failed parsing operand
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[-1,-1]
-// GFX906: error: not a valid operand
+// GFX906: error: failed parsing operand
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[0,0,0,0,0]
 // GFX906: error: failed parsing operand
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi
@@ -83,7 +83,7 @@ v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[0,-1]
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[-1,0]
 // GFX906: error: failed parsing operand
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[-1,-1]
-// GFX906: error: not a valid operand
+// GFX906: error: failed parsing operand
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[0,0,0,0,0]
 // GFX906: error: failed parsing operand
 v_dot2_f32_f16 v0, v1, v2, v3 neg_lo
@@ -111,7 +111,7 @@ v_dot2_f32_f16 v0, v1, v2, v3 neg_lo:[0,-1]
 v_dot2_f32_f16 v0, v1, v2, v3 neg_lo:[-1,0]
 // GFX906: error: failed parsing operand
 v_dot2_f32_f16 v0, v1, v2, v3 neg_lo:[-1,-1]
-// GFX906: error: not a valid operand
+// GFX906: error: failed parsing operand
 v_dot2_f32_f16 v0, v1, v2, v3 neg_lo:[0,0,0,0,0]
 // GFX906: error: failed parsing operand
 v_dot2_f32_f16 v0, v1, v2, v3 neg_hi
@@ -139,7 +139,7 @@ v_dot2_f32_f16 v0, v1, v2, v3 neg_hi:[0,-1]
 v_dot2_f32_f16 v0, v1, v2, v3 neg_hi:[-1,0]
 // GFX906: error: failed parsing operand
 v_dot2_f32_f16 v0, v1, v2, v3 neg_hi:[-1,-1]
-// GFX906: error: not a valid operand
+// GFX906: error: failed parsing operand
 v_dot2_f32_f16 v0, v1, v2, v3 neg_hi:[0,0,0,0,0]
 // GFX906: error: failed parsing operand
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel
@@ -167,7 +167,7 @@ v_dot2_i32_i16 v0, v1, v2, v3 op_sel:[0,-1]
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel:[-1,0]
 // GFX906: error: failed parsing operand
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel:[-1,-1]
-// GFX906: error: not a valid operand
+// GFX906: error: failed parsing operand
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel:[0,0,0,0,0]
 // GFX906: error: failed parsing operand
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel_hi
@@ -195,7 +195,7 @@ v_dot2_i32_i16 v0, v1, v2, v3 op_sel_hi:[0,-1]
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel_hi:[-1,0]
 // GFX906: error: failed parsing operand
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel_hi:[-1,-1]
-// GFX906: error: not a valid operand
+// GFX906: error: failed parsing operand
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel_hi:[0,0,0,0,0]
 // FIXME-GFX906: error: invalid operand for instruction
 v_dot2_i32_i16 v0, v1, v2, v3 neg_lo:[0,0]
@@ -227,7 +227,7 @@ v_dot2_u32_u16 v0, v1, v2, v3 op_sel:[0,-1]
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel:[-1,0]
 // GFX906: error: failed parsing operand
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel:[-1,-1]
-// GFX906: error: not a valid operand
+// GFX906: error: failed parsing operand
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel:[0,0,0,0,0]
 // GFX906: error: failed parsing operand
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel_hi
@@ -255,7 +255,7 @@ v_dot2_u32_u16 v0, v1, v2, v3 op_sel_hi:[0,-1]
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel_hi:[-1,0]
 // GFX906: error: failed parsing operand
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel_hi:[-1,-1]
-// GFX906: error: not a valid operand
+// GFX906: error: failed parsing operand
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel_hi:[0,0,0,0,0]
 // FIXME-GFX906: error: invalid operand for instruction
 v_dot2_u32_u16 v0, v1, v2, v3 neg_lo:[0,0]
@@ -278,29 +278,29 @@ v_dot2_f32_f16 v0, |v1|, |v2|, v3
 v_dot2_f32_f16 v0, |v1|, v2, |v3|
 // GFX906: error: not a valid operand
 v_dot2_f32_f16 v0, |v1|, |v2|, |v3|
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_f32_f16 v0, abs(v1), v2, v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_f32_f16 v0, v1, abs(v2), v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_f32_f16 v0, v1, v2, abs(v3)
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_f32_f16 v0, abs(v1), abs(v2), v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_f32_f16 v0, abs(v1), v2, abs(v3)
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_f32_f16 v0, abs(v1), abs(v2), abs(v3)
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_f32_f16 v0, -v1, v2, v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_f32_f16 v0, v1, -v2, v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_f32_f16 v0, v1, v2, -v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_f32_f16 v0, -v1, -v2, v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_f32_f16 v0, -v1, v2, -v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_f32_f16 v0, -v1, -v2, -v3
 // GFX906: error: not a valid operand
 v_dot2_i32_i16 v0, |v1|, v2, v3
@@ -314,29 +314,29 @@ v_dot2_i32_i16 v0, |v1|, |v2|, v3
 v_dot2_i32_i16 v0, |v1|, v2, |v3|
 // GFX906: error: not a valid operand
 v_dot2_i32_i16 v0, |v1|, |v2|, |v3|
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_i32_i16 v0, abs(v1), v2, v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_i32_i16 v0, v1, abs(v2), v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_i32_i16 v0, v1, v2, abs(v3)
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_i32_i16 v0, abs(v1), abs(v2), v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_i32_i16 v0, abs(v1), v2, abs(v3)
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_i32_i16 v0, abs(v1), abs(v2), abs(v3)
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_i32_i16 v0, -v1, v2, v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_i32_i16 v0, v1, -v2, v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_i32_i16 v0, v1, v2, -v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_i32_i16 v0, -v1, -v2, v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_i32_i16 v0, -v1, v2, -v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_i32_i16 v0, -v1, -v2, -v3
 // GFX906: error: not a valid operand
 v_dot2_u32_u16 v0, |v1|, v2, v3
@@ -350,29 +350,29 @@ v_dot2_u32_u16 v0, |v1|, |v2|, v3
 v_dot2_u32_u16 v0, |v1|, v2, |v3|
 // GFX906: error: not a valid operand
 v_dot2_u32_u16 v0, |v1|, |v2|, |v3|
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_u32_u16 v0, abs(v1), v2, v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_u32_u16 v0, v1, abs(v2), v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_u32_u16 v0, v1, v2, abs(v3)
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_u32_u16 v0, abs(v1), abs(v2), v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_u32_u16 v0, abs(v1), v2, abs(v3)
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_u32_u16 v0, abs(v1), abs(v2), abs(v3)
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_u32_u16 v0, -v1, v2, v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_u32_u16 v0, v1, -v2, v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_u32_u16 v0, v1, v2, -v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_u32_u16 v0, -v1, -v2, v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_u32_u16 v0, -v1, v2, -v3
-// GFX906: error: invalid operand for instruction
+// GFX906: error: not a valid operand
 v_dot2_u32_u16 v0, -v1, -v2, -v3
 
 //

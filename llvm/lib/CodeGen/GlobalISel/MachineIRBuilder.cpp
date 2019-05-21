@@ -312,6 +312,13 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
   return buildFConstant(Res, *CFP);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
+                                                     const APFloat &Val) {
+  auto &Ctx = getMF().getFunction().getContext();
+  auto *CFP = ConstantFP::get(Ctx, Val);
+  return buildFConstant(Res, *CFP);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildBrCond(unsigned Tst,
                                                   MachineBasicBlock &Dest) {
   assert(getMRI()->getType(Tst).isScalar() && "invalid operand type");
@@ -627,6 +634,18 @@ MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
   return MIB;
 }
 
+MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
+                                                     ArrayRef<DstOp> Results,
+                                                     bool HasSideEffects) {
+  auto MIB =
+      buildInstr(HasSideEffects ? TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS
+                                : TargetOpcode::G_INTRINSIC);
+  for (DstOp Result : Results)
+    Result.addDefToMIB(*getMRI(), MIB);
+  MIB.addIntrinsicID(ID);
+  return MIB;
+}
+
 MachineInstrBuilder MachineIRBuilder::buildTrunc(const DstOp &Res,
                                                  const SrcOp &Op) {
   return buildInstr(TargetOpcode::G_TRUNC, Res, Op);
@@ -882,7 +901,11 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_SDIV:
   case TargetOpcode::G_UREM:
-  case TargetOpcode::G_SREM: {
+  case TargetOpcode::G_SREM:
+  case TargetOpcode::G_SMIN:
+  case TargetOpcode::G_SMAX:
+  case TargetOpcode::G_UMIN:
+  case TargetOpcode::G_UMAX: {
     // All these are binary ops.
     assert(DstOps.size() == 1 && "Invalid Dst");
     assert(SrcOps.size() == 2 && "Invalid Srcs");

@@ -217,6 +217,23 @@ private:
   bool AllowEnablingAnalyzerAlphaCheckers;
 };
 
+/// Check whether a given diagnostic should be suppressed due to the presence
+/// of a "NOLINT" suppression comment.
+/// This is exposed so that other tools that present clang-tidy diagnostics
+/// (such as clangd) can respect the same suppression rules as clang-tidy.
+/// This does not handle suppression of notes following a suppressed diagnostic;
+/// that is left to the caller is it requires maintaining state in between calls
+/// to this function.
+/// The `CheckMacroExpansion` parameter determines whether the function should
+/// handle the case where the diagnostic is inside a macro expansion. A degree
+/// of control over this is needed because handling this case can require
+/// examining source files other than the one in which the diagnostic is
+/// located, and in some use cases we cannot rely on such other files being
+/// mapped in the SourceMapper.
+bool ShouldSuppressDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                              const Diagnostic &Info, ClangTidyContext &Context,
+                              bool CheckMacroExpansion = true);
+
 /// \brief A diagnostic consumer that turns each \c Diagnostic into a
 /// \c SourceManager-independent \c ClangTidyError.
 //
@@ -246,7 +263,7 @@ private:
 
   /// \brief Updates \c LastErrorRelatesToUserCode and LastErrorPassesLineFilter
   /// according to the diagnostic \p Location.
-  void checkFilters(SourceLocation Location, const SourceManager& Sources);
+  void checkFilters(SourceLocation Location, const SourceManager &Sources);
   bool passesLineFilter(StringRef FileName, unsigned LineNumber) const;
 
   ClangTidyContext &Context;

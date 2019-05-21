@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s fuchsia-restrict-system-includes %t \
-// RUN:		-- -config="{CheckOptions: [{key: fuchsia-restrict-system-includes.Includes, value: 's.h'}]}" \
-// RUN:   -- -std=c++11 -I %S/Inputs/fuchsia-restrict-system-includes -isystem %S/Inputs/fuchsia-restrict-system-includes/system
+// RUN:     -- -config="{CheckOptions: [{key: fuchsia-restrict-system-includes.Includes, value: 's.h'}]}" \
+// RUN:     -- -I %S/Inputs/fuchsia-restrict-system-includes -isystem %S/Inputs/fuchsia-restrict-system-includes/system
 
 #include "a.h"
 
