@@ -1610,8 +1610,18 @@ JITDylib &ExecutionSession::getMainJITDylib() {
   return runSessionLocked([this]() -> JITDylib & { return *JDs.front(); });
 }
 
+JITDylib *ExecutionSession::getJITDylibByName(StringRef Name) {
+  return runSessionLocked([&, this]() -> JITDylib * {
+    for (auto &JD : JDs)
+      if (JD->getName() == Name)
+        return JD.get();
+    return nullptr;
+  });
+}
+
 JITDylib &ExecutionSession::createJITDylib(std::string Name,
                                            bool AddToMainDylibSearchOrder) {
+  assert(!getJITDylibByName(Name) && "JITDylib with that name already exists");
   return runSessionLocked([&, this]() -> JITDylib & {
     JDs.push_back(
         std::unique_ptr<JITDylib>(new JITDylib(*this, std::move(Name))));

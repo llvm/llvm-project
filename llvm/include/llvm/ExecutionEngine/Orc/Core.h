@@ -726,6 +726,10 @@ public:
   /// the ExecutionSession.
   JITDylib &getMainJITDylib();
 
+  /// Return a pointer to the "name" JITDylib.
+  /// Ownership of JITDylib remains within Execution Session
+  JITDylib *getJITDylibByName(StringRef Name);
+
   /// Add a new JITDylib to this ExecutionSession.
   JITDylib &createJITDylib(std::string Name,
                            bool AddToMainDylibSearchOrder = true);
