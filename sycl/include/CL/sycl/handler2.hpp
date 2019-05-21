@@ -284,8 +284,6 @@ private:
         break;
       }
       case detail::kernel_param_kind_t::kind_sampler: {
-
-        sampler *SamplerPtr = (sampler *)Ptr;
         MArgs.emplace_back(
             detail::ArgDesc(detail::kernel_param_kind_t::kind_sampler, Ptr,
                             sizeof(sampler), NextArgId));
