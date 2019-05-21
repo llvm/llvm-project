@@ -1,8 +1,7 @@
 # Check that libFuzzer honors SIGUSR1/SIGUSR2
 # FIXME: Disabled on Windows for now because of reliance on posix only features
 # (eg: export, "&", pkill).
-# TODO(morehouse): rethink test and reenable for linux.
-UNSUPPORTED: darwin, windows, linux
+UNSUPPORTED: darwin, windows
 RUN: rm -rf %t
 RUN: mkdir -p %t
 RUN: %cpp_compiler %S/SleepOneSecondTest.cpp -o %t/LFSIGUSR
@@ -15,12 +14,20 @@ RUN: echo d > %t/C2/d
 RUN: echo e > %t/C2/e
 RUN: echo f > %t/C2/f
 RUN: echo g > %t/C2/g
+RUN: echo h > %t/C2/g
+RUN: echo i > %t/C2/g
+RUN: echo j > %t/C2/g
+RUN: echo k > %t/C2/g
+RUN: echo l > %t/C2/g
+RUN: echo m > %t/C2/g
+RUN: echo n > %t/C2/g
+RUN: echo o > %t/C2/g
 
 RUN: %run %t/LFSIGUSR -merge=1 -merge_control_file=%t/MCF %t/C1 %t/C2 2>%t/log & export PID=$!
 RUN: sleep 3
 RUN: pkill -SIGUSR2 -P $PID
 RUN: kill -SIGUSR2 $PID
-RUN: sleep 6
+RUN: wait $PID
 RUN: cat %t/log | FileCheck %s --dump-input=fail
 RUN: grep C2/g %t/MCF
 RUN: grep STARTED %t/MCF
