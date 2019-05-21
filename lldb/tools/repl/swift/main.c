@@ -26,6 +26,7 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #define REPL_MAIN _TF10repl_swift9repl_mainFT_Si
 
@@ -58,7 +59,7 @@ int main() {
 #elif defined(_WIN32)
   HMODULE hModule = LoadLibraryW(L"swiftCore.dll");
   if (hModule == NULL)
-    fprintf(stderr, "unable to load standard library: %lu\n", GetLastError());
+    return EXIT_FAILURE;
 #endif
 
 #ifdef __APPLE__
