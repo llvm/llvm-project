@@ -434,6 +434,11 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       DSP = 1;
     } else if (Feature == "+fp-only-sp") {
       HW_FP_remove |= HW_FP_DP;
+    } else if (Feature == "+8msecext") {
+      if (CPUProfile != "M" || ArchVersion != 8) {
+        Diags.Report(diag::err_target_unsupported_mcmse) << CPU;
+        return false;
+      }
     } else if (Feature == "+strict-align") {
       Unaligned = 0;
     } else if (Feature == "+fp16") {
@@ -712,6 +717,10 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
                       Twine(Opts.WCharSize ? Opts.WCharSize : 4));
 
   Builder.defineMacro("__ARM_SIZEOF_MINIMAL_ENUM", Opts.ShortEnums ? "1" : "4");
+
+  // CMSE
+  if (ArchVersion == 8 && ArchProfile == llvm::ARM::ProfileKind::M)
+    Builder.defineMacro("__ARM_FEATURE_CMSE", Opts.Cmse ? "3" : "1");
 
   if (ArchVersion >= 6 && CPUAttr != "6M" && CPUAttr != "8M_BASE") {
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");

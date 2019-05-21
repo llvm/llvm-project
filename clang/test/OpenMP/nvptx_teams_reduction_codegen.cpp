@@ -77,6 +77,7 @@ int bar(int n){
   // CHECK: {{call|invoke}} void [[T1]]_worker()
   //
   // CHECK: call void @__kmpc_kernel_init(
+  // CHECK: call void @__kmpc_kernel_deinit(
   //
   // CHECK: store double {{[0\.e\+]+}}, double* [[E:%.+]], align
   // CHECK: [[EV:%.+]] = load double, double* [[E]], align
@@ -86,7 +87,8 @@ int bar(int n){
   // CHECK: [[BC:%.+]] = bitcast double* [[E]] to i8*
   // CHECK: store i8* [[BC]], i8** [[GEP1]],
   // CHECK: [[BC_RED_LIST:%.+]] = bitcast [1 x i8*]* [[RED_LIST]] to i8*
-  // CHECK: [[RET:%.+]] = call i32 @__kmpc_nvptx_teams_reduce_nowait_v2(%struct.ident_t* [[LOC:@.+]], i32 [[GTID:%.+]], i8* bitcast ([[TEAMS_REDUCE_UNION_TY]]* [[TEAMS_RED_BUFFER]] to i8*), i32 {{1024|2048}}, i8* [[BC_RED_LIST]], void (i8*, i16, i16, i16)* [[SHUFFLE_AND_REDUCE:@.+]], void (i8*, i32)* [[INTER_WARP_COPY:@.+]], void (i8*, i32, i8*)* [[RED_LIST_TO_GLOBAL_COPY:@.+]], void (i8*, i32, i8*)* [[RED_LIST_TO_GLOBAL_RED:@.+]], void (i8*, i32, i8*)* [[GLOBAL_TO_RED_LIST_COPY:@.+]], void (i8*, i32, i8*)* [[GLOBAL_TO_RED_LIST_RED:@.+]])
+  // CHECK: [[BUF:%.+]] = load i8*, i8** @
+  // CHECK: [[RET:%.+]] = call i32 @__kmpc_nvptx_teams_reduce_nowait_v2(%struct.ident_t* [[LOC:@.+]], i32 [[GTID:%.+]], i8* [[BUF]], i32 {{1024|2048}}, i8* [[BC_RED_LIST]], void (i8*, i16, i16, i16)* [[SHUFFLE_AND_REDUCE:@.+]], void (i8*, i32)* [[INTER_WARP_COPY:@.+]], void (i8*, i32, i8*)* [[RED_LIST_TO_GLOBAL_COPY:@.+]], void (i8*, i32, i8*)* [[RED_LIST_TO_GLOBAL_RED:@.+]], void (i8*, i32, i8*)* [[GLOBAL_TO_RED_LIST_COPY:@.+]], void (i8*, i32, i8*)* [[GLOBAL_TO_RED_LIST_RED:@.+]])
   // CHECK: [[COND:%.+]] = icmp eq i32 [[RET]], 1
   // CHECK: br i1 [[COND]], label {{%?}}[[IFLABEL:.+]], label {{%?}}[[EXIT:.+]]
   //
@@ -99,7 +101,6 @@ int bar(int n){
   // CHECK: br label %[[EXIT]]
   //
   // CHECK: [[EXIT]]
-  // CHECK: call void @__kmpc_kernel_deinit(
 
   //
   // Reduction function
@@ -344,6 +345,7 @@ int bar(int n){
 
   //
   // CHECK: call void @__kmpc_kernel_init(
+  // CHECK: call void @__kmpc_kernel_deinit(
   //
   // CHECK: store float {{1\.[0e\+]+}}, float* [[D:%.+]], align
   // CHECK: [[C_VAL:%.+]] = load i8, i8* [[C:%.+]], align
@@ -360,7 +362,8 @@ int bar(int n){
   // CHECK: [[BC:%.+]] = bitcast float* [[D]] to i8*
   // CHECK: store i8* [[BC]], i8** [[GEP2]],
   // CHECK: [[BC_RED_LIST:%.+]] = bitcast [2 x i8*]* [[RED_LIST]] to i8*
-  // CHECK: [[RET:%.+]] = call i32 @__kmpc_nvptx_teams_reduce_nowait_v2(%struct.ident_t* [[LOC:@.+]], i32 [[GTID:%.+]], i8* bitcast ([[TEAMS_REDUCE_UNION_TY]]* [[TEAMS_RED_BUFFER]] to i8*), i32 {{1024|2048}}, i8* [[BC_RED_LIST]], void (i8*, i16, i16, i16)* [[SHUFFLE_AND_REDUCE:@.+]], void (i8*, i32)* [[INTER_WARP_COPY:@.+]], void (i8*, i32, i8*)* [[RED_LIST_TO_GLOBAL_COPY:@.+]], void (i8*, i32, i8*)* [[RED_LIST_TO_GLOBAL_RED:@.+]], void (i8*, i32, i8*)* [[GLOBAL_TO_RED_LIST_COPY:@.+]], void (i8*, i32, i8*)* [[GLOBAL_TO_RED_LIST_RED:@.+]])
+  // CHECK: [[BUF:%.+]] = load i8*, i8** @
+  // CHECK: [[RET:%.+]] = call i32 @__kmpc_nvptx_teams_reduce_nowait_v2(%struct.ident_t* [[LOC:@.+]], i32 [[GTID:%.+]], i8* [[BUF]], i32 {{1024|2048}}, i8* [[BC_RED_LIST]], void (i8*, i16, i16, i16)* [[SHUFFLE_AND_REDUCE:@.+]], void (i8*, i32)* [[INTER_WARP_COPY:@.+]], void (i8*, i32, i8*)* [[RED_LIST_TO_GLOBAL_COPY:@.+]], void (i8*, i32, i8*)* [[RED_LIST_TO_GLOBAL_RED:@.+]], void (i8*, i32, i8*)* [[GLOBAL_TO_RED_LIST_COPY:@.+]], void (i8*, i32, i8*)* [[GLOBAL_TO_RED_LIST_RED:@.+]])
   // CHECK: [[COND:%.+]] = icmp eq i32 [[RET]], 1
   // CHECK: br i1 [[COND]], label {{%?}}[[IFLABEL:.+]], label {{%?}}[[EXIT:.+]]
   //
@@ -380,7 +383,6 @@ int bar(int n){
   // CHECK: br label %[[EXIT]]
   //
   // CHECK: [[EXIT]]
-  // CHECK: call void @__kmpc_kernel_deinit(
 
   //
   // Reduction function
@@ -706,6 +708,8 @@ int bar(int n){
   //
   // CHECK: call void @__kmpc_spmd_kernel_init(
   // CHECK: call void @__kmpc_data_sharing_init_stack_spmd()
+  // CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 1)
+
   // CHECK-NOT: call void @__kmpc_get_team_static_memory
   // CHECK: store i32 0,
   // CHECK: store i32 0, i32* [[A_ADDR:%.+]], align
@@ -718,7 +722,8 @@ int bar(int n){
   // CHECK: [[BC:%.+]] = bitcast i16* [[B_ADDR]] to i8*
   // CHECK: store i8* [[BC]], i8** [[GEP2]],
   // CHECK: [[BC_RED_LIST:%.+]] = bitcast [2 x i8*]* [[RED_LIST]] to i8*
-  // CHECK: [[RET:%.+]] = call i32 @__kmpc_nvptx_teams_reduce_nowait_v2(%struct.ident_t* [[LOC:@.+]], i32 [[GTID:%.+]], i8* bitcast ([[TEAMS_REDUCE_UNION_TY]]* [[TEAMS_RED_BUFFER]] to i8*), i32 {{1024|2048}}, i8* [[BC_RED_LIST]], void (i8*, i16, i16, i16)* [[SHUFFLE_AND_REDUCE:@.+]], void (i8*, i32)* [[INTER_WARP_COPY:@.+]], void (i8*, i32, i8*)* [[RED_LIST_TO_GLOBAL_COPY:@.+]], void (i8*, i32, i8*)* [[RED_LIST_TO_GLOBAL_RED:@.+]], void (i8*, i32, i8*)* [[GLOBAL_TO_RED_LIST_COPY:@.+]], void (i8*, i32, i8*)* [[GLOBAL_TO_RED_LIST_RED:@.+]])
+  // CHECK: [[BUF:%.+]] = load i8*, i8** @
+  // CHECK: [[RET:%.+]] = call i32 @__kmpc_nvptx_teams_reduce_nowait_v2(%struct.ident_t* [[LOC:@.+]], i32 [[GTID:%.+]], i8* [[BUF]], i32 {{1024|2048}}, i8* [[BC_RED_LIST]], void (i8*, i16, i16, i16)* [[SHUFFLE_AND_REDUCE:@.+]], void (i8*, i32)* [[INTER_WARP_COPY:@.+]], void (i8*, i32, i8*)* [[RED_LIST_TO_GLOBAL_COPY:@.+]], void (i8*, i32, i8*)* [[RED_LIST_TO_GLOBAL_RED:@.+]], void (i8*, i32, i8*)* [[GLOBAL_TO_RED_LIST_COPY:@.+]], void (i8*, i32, i8*)* [[GLOBAL_TO_RED_LIST_RED:@.+]])
   // CHECK: [[COND:%.+]] = icmp eq i32 [[RET]], 1
   // CHECK: br i1 [[COND]], label {{%?}}[[IFLABEL:.+]], label {{%?}}[[EXIT:.+]]
   //
@@ -749,7 +754,6 @@ int bar(int n){
   // CHECK: br label %[[EXIT]]
   //
   // CHECK: [[EXIT]]
-  // CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 1)
 
   // CHECK: define internal void [[OUTLINED]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable{{.+}}, i16* dereferenceable{{.+}})
   //

@@ -21,6 +21,7 @@ private:
   SectionList *m_dwo_section_list;
 
   llvm::Optional<DWARFDataExtractor> m_data_debug_abbrev;
+  llvm::Optional<DWARFDataExtractor> m_data_debug_addr;
   llvm::Optional<DWARFDataExtractor> m_data_debug_aranges;
   llvm::Optional<DWARFDataExtractor> m_data_debug_info;
   llvm::Optional<DWARFDataExtractor> m_data_debug_line;
@@ -38,6 +39,7 @@ public:
         m_dwo_section_list(dwo_section_list) {}
 
   const DWARFDataExtractor &getOrLoadAbbrevData();
+  const DWARFDataExtractor &getOrLoadAddrData();
   const DWARFDataExtractor &getOrLoadArangesData();
   const DWARFDataExtractor &getOrLoadDebugInfoData();
   const DWARFDataExtractor &getOrLoadLineData();

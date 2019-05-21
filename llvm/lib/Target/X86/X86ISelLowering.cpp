@@ -31026,6 +31026,15 @@ unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
     // Vector compares return zero/all-bits result values.
     return VTBits;
 
+  case X86ISD::ANDNP: {
+    unsigned Tmp0 =
+        DAG.ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    if (Tmp0 == 1) return 1; // Early out.
+    unsigned Tmp1 =
+        DAG.ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    return std::min(Tmp0, Tmp1);
+  }
+
   case X86ISD::CMOV: {
     unsigned Tmp0 = DAG.ComputeNumSignBits(Op.getOperand(0), Depth+1);
     if (Tmp0 == 1) return 1;  // Early out.

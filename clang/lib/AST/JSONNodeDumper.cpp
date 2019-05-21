@@ -111,7 +111,17 @@ void JSONNodeDumper::Visit(const Decl *D) {
 }
 
 void JSONNodeDumper::Visit(const comments::Comment *C,
-                           const comments::FullComment *FC) {}
+                           const comments::FullComment *FC) {
+  if (!C)
+    return;
+
+  JOS.attribute("id", createPointerRepresentation(C));
+  JOS.attribute("kind", C->getCommentKindName());
+  JOS.attribute("loc", createSourceLocation(C->getLocation()));
+  JOS.attribute("range", createSourceRange(C->getSourceRange()));
+
+  InnerCommentVisitor::visit(C, FC);
+}
 
 void JSONNodeDumper::Visit(const TemplateArgument &TA, SourceRange R,
                            const Decl *From, StringRef Label) {
@@ -802,4 +812,132 @@ void JSONNodeDumper::VisitGotoStmt(const GotoStmt *GS) {
 
 void JSONNodeDumper::VisitWhileStmt(const WhileStmt *WS) {
   attributeOnlyIfTrue("hasVar", WS->hasVarStorage());
+}
+
+StringRef JSONNodeDumper::getCommentCommandName(unsigned CommandID) const {
+  if (Traits)
+    return Traits->getCommandInfo(CommandID)->Name;
+  if (const comments::CommandInfo *Info =
+          comments::CommandTraits::getBuiltinCommandInfo(CommandID))
+    return Info->Name;
+  return "<invalid>";
+}
+
+void JSONNodeDumper::visitTextComment(const comments::TextComment *C,
+                                      const comments::FullComment *) {
+  JOS.attribute("text", C->getText());
+}
+
+void JSONNodeDumper::visitInlineCommandComment(
+    const comments::InlineCommandComment *C, const comments::FullComment *) {
+  JOS.attribute("name", getCommentCommandName(C->getCommandID()));
+
+  switch (C->getRenderKind()) {
+  case comments::InlineCommandComment::RenderNormal:
+    JOS.attribute("renderKind", "normal");
+    break;
+  case comments::InlineCommandComment::RenderBold:
+    JOS.attribute("renderKind", "bold");
+    break;
+  case comments::InlineCommandComment::RenderEmphasized:
+    JOS.attribute("renderKind", "emphasized");
+    break;
+  case comments::InlineCommandComment::RenderMonospaced:
+    JOS.attribute("renderKind", "monospaced");
+    break;
+  }
+
+  llvm::json::Array Args;
+  for (unsigned I = 0, E = C->getNumArgs(); I < E; ++I)
+    Args.push_back(C->getArgText(I));
+
+  if (!Args.empty())
+    JOS.attribute("args", std::move(Args));
+}
+
+void JSONNodeDumper::visitHTMLStartTagComment(
+    const comments::HTMLStartTagComment *C, const comments::FullComment *) {
+  JOS.attribute("name", C->getTagName());
+  attributeOnlyIfTrue("selfClosing", C->isSelfClosing());
+  attributeOnlyIfTrue("malformed", C->isMalformed());
+
+  llvm::json::Array Attrs;
+  for (unsigned I = 0, E = C->getNumAttrs(); I < E; ++I)
+    Attrs.push_back(
+        {{"name", C->getAttr(I).Name}, {"value", C->getAttr(I).Value}});
+
+  if (!Attrs.empty())
+    JOS.attribute("attrs", std::move(Attrs));
+}
+
+void JSONNodeDumper::visitHTMLEndTagComment(
+    const comments::HTMLEndTagComment *C, const comments::FullComment *) {
+  JOS.attribute("name", C->getTagName());
+}
+
+void JSONNodeDumper::visitBlockCommandComment(
+    const comments::BlockCommandComment *C, const comments::FullComment *) {
+  JOS.attribute("name", getCommentCommandName(C->getCommandID()));
+
+  llvm::json::Array Args;
+  for (unsigned I = 0, E = C->getNumArgs(); I < E; ++I)
+    Args.push_back(C->getArgText(I));
+
+  if (!Args.empty())
+    JOS.attribute("args", std::move(Args));
+}
+
+void JSONNodeDumper::visitParamCommandComment(
+    const comments::ParamCommandComment *C, const comments::FullComment *FC) {
+  switch (C->getDirection()) {
+  case comments::ParamCommandComment::In:
+    JOS.attribute("direction", "in");
+    break;
+  case comments::ParamCommandComment::Out:
+    JOS.attribute("direction", "out");
+    break;
+  case comments::ParamCommandComment::InOut:
+    JOS.attribute("direction", "in,out");
+    break;
+  }
+  attributeOnlyIfTrue("explicit", C->isDirectionExplicit());
+
+  if (C->hasParamName())
+    JOS.attribute("param", C->isParamIndexValid() ? C->getParamName(FC)
+                                                  : C->getParamNameAsWritten());
+
+  if (C->isParamIndexValid() && !C->isVarArgParam())
+    JOS.attribute("paramIdx", C->getParamIndex());
+}
+
+void JSONNodeDumper::visitTParamCommandComment(
+    const comments::TParamCommandComment *C, const comments::FullComment *FC) {
+  if (C->hasParamName())
+    JOS.attribute("param", C->isPositionValid() ? C->getParamName(FC)
+                                                : C->getParamNameAsWritten());
+  if (C->isPositionValid()) {
+    llvm::json::Array Positions;
+    for (unsigned I = 0, E = C->getDepth(); I < E; ++I)
+      Positions.push_back(C->getIndex(I));
+
+    if (!Positions.empty())
+      JOS.attribute("positions", std::move(Positions));
+  }
+}
+
+void JSONNodeDumper::visitVerbatimBlockComment(
+    const comments::VerbatimBlockComment *C, const comments::FullComment *) {
+  JOS.attribute("name", getCommentCommandName(C->getCommandID()));
+  JOS.attribute("closeName", C->getCloseName());
+}
+
+void JSONNodeDumper::visitVerbatimBlockLineComment(
+    const comments::VerbatimBlockLineComment *C,
+    const comments::FullComment *) {
+  JOS.attribute("text", C->getText());
+}
+
+void JSONNodeDumper::visitVerbatimLineComment(
+    const comments::VerbatimLineComment *C, const comments::FullComment *) {
+  JOS.attribute("text", C->getText());
 }

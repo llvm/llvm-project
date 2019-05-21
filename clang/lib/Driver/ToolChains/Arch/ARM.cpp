@@ -469,6 +469,10 @@ fp16_fml_fallthrough:
     }
   }
 
+  // CMSE: Check for target 8M (for -mcmse to be applicable) is performed later.
+  if (Args.getLastArg(options::OPT_mcmse))
+    Features.push_back("+8msecext");
+
   // Look for the last occurrence of -mlong-calls or -mno-long-calls. If
   // neither options are specified, see if we are compiling for kernel/kext and
   // decide whether to pass "+long-calls" based on the OS and its version.

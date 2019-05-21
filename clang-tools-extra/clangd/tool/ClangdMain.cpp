@@ -256,13 +256,18 @@ static llvm::cl::opt<OffsetEncoding> ForceOffsetEncoding(
                                 "Offsets are in UTF-16 code units")),
     llvm::cl::init(OffsetEncoding::UnsupportedEncoding));
 
-static llvm::cl::opt<bool> AllowFallbackCompletion(
-    "allow-fallback-completion",
-    llvm::cl::desc(
-        "Allow falling back to code completion without compiling files (using "
-        "identifiers and symbol indexes), when file cannot be built or the "
-        "build is not ready."),
-    llvm::cl::init(false));
+static llvm::cl::opt<CodeCompleteOptions::CodeCompletionParse>
+    CodeCompletionParse(
+        "completion-parse",
+        llvm::cl::desc("Whether the clang-parser is used for code-completion"),
+        llvm::cl::values(clEnumValN(CodeCompleteOptions::AlwaysParse, "always",
+                                    "Block until the parser can be used"),
+                         clEnumValN(CodeCompleteOptions::ParseIfReady, "auto",
+                                    "Use text-based completion if the parser "
+                                    "is not ready"),
+                         clEnumValN(CodeCompleteOptions::NeverParse, "never",
+                                    "Always used text-based completion")),
+        llvm::cl::init(CodeCompleteOptions().RunParser), llvm::cl::Hidden);
 
 namespace {
 
@@ -475,7 +480,7 @@ int main(int argc, char *argv[]) {
   CCOpts.SpeculativeIndexRequest = Opts.StaticIndex;
   CCOpts.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
   CCOpts.AllScopes = AllScopesCompletion;
-  CCOpts.AllowFallback = AllowFallbackCompletion;
+  CCOpts.RunParser = CodeCompletionParse;
 
   RealFileSystemProvider FSProvider;
   // Initialize and run ClangdLSPServer.

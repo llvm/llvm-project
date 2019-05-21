@@ -549,10 +549,6 @@ void SymbolFileDWARF::LoadSectionData(lldb::SectionType sect_type,
   m_obj_file->ReadSectionData(section_sp.get(), data);
 }
 
-const DWARFDataExtractor &SymbolFileDWARF::get_debug_addr_data() {
-  return GetCachedSectionData(eSectionTypeDWARFDebugAddr, m_data_debug_addr);
-}
-
 const DWARFDataExtractor &SymbolFileDWARF::DebugLocData() {
   const DWARFDataExtractor &debugLocData = get_debug_loc_data();
   if (debugLocData.GetByteSize() > 0)
