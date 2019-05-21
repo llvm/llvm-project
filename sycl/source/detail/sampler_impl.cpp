@@ -46,7 +46,7 @@ cl_sampler sampler_impl::getOrCreateSampler(const context &Context) {
   if (m_contextToSampler[Context])
     return m_contextToSampler[Context];
 
-#ifdef CL_TARGET_OPENCL_VERSION > 120
+#if CL_TARGET_OPENCL_VERSION > 120
   const cl_sampler_properties sprops[] = {
       CL_SAMPLER_NORMALIZED_COORDS,
       static_cast<cl_sampler_properties>(m_CoordNormMode),
