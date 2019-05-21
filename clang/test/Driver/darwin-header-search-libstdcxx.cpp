@@ -112,7 +112,7 @@
 // RUN:    | FileCheck -allow-empty --check-prefix=CHECK-LIBSTDCXX-MISSING-1 %s
 // CHECK-LIBSTDCXX-MISSING-1-NOT: warning
 //
-// RUN: %clang %s -target x86_64-apple-darwin -fsyntax-only 2>&1 \
-// RUN:           -isysroot %S/Inputs/basic_darwin_sdk_no_libstdcxx \
+// RUN: %clang %s -target x86_64-apple-darwin16 -fsyntax-only 2>&1 \
+// RUN:           -isysroot %S/Inputs/basic_darwin_sdk_no_libstdcxx -stdlib=platform \
 // RUN:    | FileCheck -allow-empty --check-prefix=CHECK-LIBSTDCXX-MISSING-2 %s
 // CHECK-LIBSTDCXX-MISSING-2-NOT: warning

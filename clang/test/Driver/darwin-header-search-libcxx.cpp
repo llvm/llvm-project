@@ -52,10 +52,11 @@
 // C++ library include paths (so all except <toolchain>/usr/bin/../include/c++/v1).
 //
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target x86_64-apple-darwin \
+// RUN:     -target x86_64-apple-darwin16 \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain/usr/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr \
+// RUN:     -stdlib=platform \
 // RUN:     -nostdinc \
 // RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr \
 // RUN:               -DTOOLCHAIN=%S/Inputs/basic_darwin_toolchain \
@@ -65,10 +66,11 @@
 // CHECK-LIBCXX-NOSTDINC-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target x86_64-apple-darwin \
+// RUN:     -target x86_64-apple-darwin16 \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain/usr/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr \
+// RUN:     -stdlib=platform \
 // RUN:     -nostdinc \
 // RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr \
 // RUN:               -DTOOLCHAIN=%S/Inputs/basic_darwin_toolchain \
