@@ -84,7 +84,7 @@ char *strcasestr(const char *s, const char *find) {
     } while (strncasecmp(s, find, len) != 0);
     s--;
   }
-  return ((char *)s);
+  return const_cast<char *>(s);
 }
 
 char *realpath(const char *name, char *resolved) {
