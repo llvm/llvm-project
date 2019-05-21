@@ -104,6 +104,21 @@ define float @fneg(float %x) {
   ret float %r
 }
 
+define float @unary_fneg(float %x) {
+; CHECK-LABEL: @unary_fneg(
+; CHECK-NEXT:    [[BO:%.*]] = fdiv float [[X:%.*]], 4.200000e+01
+; CHECK-NEXT:    [[FNEGX:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[R:%.*]] = fmul float [[BO]], [[FNEGX]]
+; CHECK-NEXT:    call void @use(float [[FNEGX]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %bo = fdiv float %x, 42.0
+  %fnegx = fneg float %x
+  %r = fmul float %fnegx, %bo
+  call void @use(float %fnegx)
+  ret float %r
+}
+
 define <2 x float> @fneg_vec(<2 x float> %x) {
 ; CHECK-LABEL: @fneg_vec(
 ; CHECK-NEXT:    [[BO:%.*]] = fdiv <2 x float> [[X:%.*]], <float 4.200000e+01, float -4.200000e+01>
@@ -129,6 +144,21 @@ define <2 x float> @fneg_vec_undef(<2 x float> %x) {
 ;
   %bo = fdiv <2 x float> %x, <float 42.0, float -42.0>
   %fnegx = fsub <2 x float> <float -0.0, float undef>, %x
+  %r = fmul <2 x float> %fnegx, %bo
+  call void @use_vec(<2 x float> %fnegx)
+  ret <2 x float> %r
+}
+
+define <2 x float> @unary_fneg_vec(<2 x float> %x) {
+; CHECK-LABEL: @unary_fneg_vec(
+; CHECK-NEXT:    [[BO:%.*]] = fdiv <2 x float> [[X:%.*]], <float 4.200000e+01, float -4.200000e+01>
+; CHECK-NEXT:    [[FNEGX:%.*]] = fneg <2 x float> [[X]]
+; CHECK-NEXT:    [[R:%.*]] = fmul <2 x float> [[BO]], [[FNEGX]]
+; CHECK-NEXT:    call void @use_vec(<2 x float> [[FNEGX]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %bo = fdiv <2 x float> %x, <float 42.0, float -42.0>
+  %fnegx = fneg <2 x float> %x
   %r = fmul <2 x float> %fnegx, %bo
   call void @use_vec(<2 x float> %fnegx)
   ret <2 x float> %r
