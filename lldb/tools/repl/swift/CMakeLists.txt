@@ -28,8 +28,7 @@ if(MSVC)
   # disable inline function expansion so that we have a function that we can
   # break upon
   target_compile_options(repl_swift PRIVATE /Ob0)
-endif()
-if(NOT MSVC)
+else()
   set_target_properties(repl_swift PROPERTIES
       COMPILE_FLAGS "-g0")
 endif()
