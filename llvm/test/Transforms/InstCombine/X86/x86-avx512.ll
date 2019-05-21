@@ -1631,6 +1631,27 @@ define float @test_mask3_vfmsub_ss_1(<4 x float> %a, <4 x float> %b, <4 x float>
   ret float %14
 }
 
+define float @test_mask3_vfmsub_ss_1_unary_fneg(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+; CHECK-LABEL: @test_mask3_vfmsub_ss_1_unary_fneg(
+; CHECK-NEXT:    ret float 1.000000e+00
+;
+  %1 = insertelement <4 x float> %c, float 1.000000e+00, i32 1
+  %2 = insertelement <4 x float> %1, float 2.000000e+00, i32 2
+  %3 = insertelement <4 x float> %2, float 3.000000e+00, i32 3
+  %4 = fneg <4 x float> %3
+  %5 = extractelement <4 x float> %a, i64 0
+  %6 = extractelement <4 x float> %b, i64 0
+  %7 = extractelement <4 x float> %4, i64 0
+  %8 = call float @llvm.fma.f32(float %5, float %6, float %7)
+  %9 = extractelement <4 x float> %3, i64 0
+  %10 = bitcast i8 %mask to <8 x i1>
+  %11 = extractelement <8 x i1> %10, i64 0
+  %12 = select i1 %11, float %8, float %9
+  %13 = insertelement <4 x float> %3, float %12, i64 0
+  %14 = extractelement <4 x float> %13, i32 1
+  ret float %14
+}
+
 define <2 x double> @test_mask3_vfmsub_sd(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
 ; CHECK-LABEL: @test_mask3_vfmsub_sd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
@@ -1694,6 +1715,25 @@ define double @test_mask3_vfmsub_sd_1(<2 x double> %a, <2 x double> %b, <2 x dou
 ;
   %1 = insertelement <2 x double> %c, double 1.000000e+00, i32 1
   %2 = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %1
+  %3 = extractelement <2 x double> %a, i64 0
+  %4 = extractelement <2 x double> %b, i64 0
+  %5 = extractelement <2 x double> %2, i64 0
+  %6 = call double @llvm.fma.f64(double %3, double %4, double %5)
+  %7 = extractelement <2 x double> %1, i64 0
+  %8 = bitcast i8 %mask to <8 x i1>
+  %9 = extractelement <8 x i1> %8, i64 0
+  %10 = select i1 %9, double %6, double %7
+  %11 = insertelement <2 x double> %1, double %10, i64 0
+  %12 = extractelement <2 x double> %11, i32 1
+  ret double %12
+}
+
+define double @test_mask3_vfmsub_sd_1_unary_fneg(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+; CHECK-LABEL: @test_mask3_vfmsub_sd_1_unary_fneg(
+; CHECK-NEXT:    ret double 1.000000e+00
+;
+  %1 = insertelement <2 x double> %c, double 1.000000e+00, i32 1
+  %2 = fneg <2 x double> %1
   %3 = extractelement <2 x double> %a, i64 0
   %4 = extractelement <2 x double> %b, i64 0
   %5 = extractelement <2 x double> %2, i64 0
@@ -1796,6 +1836,28 @@ define float @test_mask3_vfnmsub_ss_1(<4 x float> %a, <4 x float> %b, <4 x float
   ret float %15
 }
 
+define float @test_mask3_vfnmsub_ss_1_unary_fneg(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+; CHECK-LABEL: @test_mask3_vfnmsub_ss_1_unary_fneg(
+; CHECK-NEXT:    ret float 1.000000e+00
+;
+  %1 = insertelement <4 x float> %c, float 1.000000e+00, i32 1
+  %2 = insertelement <4 x float> %1, float 2.000000e+00, i32 2
+  %3 = insertelement <4 x float> %2, float 3.000000e+00, i32 3
+  %4 = fneg <4 x float> %a
+  %5 = fneg <4 x float> %3
+  %6 = extractelement <4 x float> %4, i64 0
+  %7 = extractelement <4 x float> %b, i64 0
+  %8 = extractelement <4 x float> %5, i64 0
+  %9 = call float @llvm.fma.f32(float %6, float %7, float %8)
+  %10 = extractelement <4 x float> %3, i64 0
+  %11 = bitcast i8 %mask to <8 x i1>
+  %12 = extractelement <8 x i1> %11, i64 0
+  %13 = select i1 %12, float %9, float %10
+  %14 = insertelement <4 x float> %3, float %13, i64 0
+  %15 = extractelement <4 x float> %14, i32 1
+  ret float %15
+}
+
 define <2 x double> @test_mask3_vfnmsub_sd(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
 ; CHECK-LABEL: @test_mask3_vfnmsub_sd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
@@ -1864,6 +1926,26 @@ define double @test_mask3_vfnmsub_sd_1(<2 x double> %a, <2 x double> %b, <2 x do
   %1 = insertelement <2 x double> %c, double 1.000000e+00, i32 1
   %2 = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %a
   %3 = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %1
+  %4 = extractelement <2 x double> %2, i64 0
+  %5 = extractelement <2 x double> %b, i64 0
+  %6 = extractelement <2 x double> %3, i64 0
+  %7 = call double @llvm.fma.f64(double %4, double %5, double %6)
+  %8 = extractelement <2 x double> %1, i64 0
+  %9 = bitcast i8 %mask to <8 x i1>
+  %10 = extractelement <8 x i1> %9, i64 0
+  %11 = select i1 %10, double %7, double %8
+  %12 = insertelement <2 x double> %1, double %11, i64 0
+  %13 = extractelement <2 x double> %12, i32 1
+  ret double %13
+}
+
+define double @test_mask3_vfnmsub_sd_1_unary_fneg(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+; CHECK-LABEL: @test_mask3_vfnmsub_sd_1_unary_fneg(
+; CHECK-NEXT:    ret double 1.000000e+00
+;
+  %1 = insertelement <2 x double> %c, double 1.000000e+00, i32 1
+  %2 = fneg <2 x double> %a
+  %3 = fneg <2 x double> %1
   %4 = extractelement <2 x double> %2, i64 0
   %5 = extractelement <2 x double> %b, i64 0
   %6 = extractelement <2 x double> %3, i64 0
