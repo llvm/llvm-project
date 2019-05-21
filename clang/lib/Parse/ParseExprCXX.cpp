@@ -686,9 +686,7 @@ ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
 ExprResult Parser::ParseLambdaExpression() {
   // Parse lambda-introducer.
   LambdaIntroducer Intro;
-  Optional<unsigned> DiagID = ParseLambdaIntroducer(Intro);
-  if (DiagID) {
-    Diag(Tok, DiagID.getValue());
+  if (ParseLambdaIntroducer(Intro)) {
     SkipUntil(tok::r_square, StopAtSemi);
     SkipUntil(tok::l_brace, StopAtSemi);
     SkipUntil(tok::r_brace, StopAtSemi);
@@ -698,9 +696,8 @@ ExprResult Parser::ParseLambdaExpression() {
   return ParseLambdaExpressionAfterIntroducer(Intro);
 }
 
-/// TryParseLambdaExpression - Use lookahead and potentially tentative
-/// parsing to determine if we are looking at a C++0x lambda expression, and parse
-/// it if we are.
+/// Use lookahead and potentially tentative parsing to determine if we are
+/// looking at a C++11 lambda expression, and parse it if we are.
 ///
 /// If we are not looking at a lambda expression, returns ExprError().
 ExprResult Parser::TryParseLambdaExpression() {
@@ -726,19 +723,44 @@ ExprResult Parser::TryParseLambdaExpression() {
 
   // If lookahead indicates an ObjC message send...
   // [identifier identifier
-  if (Next.is(tok::identifier) && After.is(tok::identifier)) {
+  if (Next.is(tok::identifier) && After.is(tok::identifier))
     return ExprEmpty();
-  }
 
   // Here, we're stuck: lambda introducers and Objective-C message sends are
   // unambiguous, but it requires arbitrary lookhead.  [a,b,c,d,e,f,g] is a
   // lambda, and [a,b,c,d,e,f,g h] is a Objective-C message send.  Instead of
   // writing two routines to parse a lambda introducer, just try to parse
   // a lambda introducer first, and fall back if that fails.
-  // (TryParseLambdaIntroducer never produces any diagnostic output.)
   LambdaIntroducer Intro;
-  if (TryParseLambdaIntroducer(Intro))
-    return ExprEmpty();
+  {
+    TentativeParsingAction TPA(*this);
+    LambdaIntroducerTentativeParse Tentative;
+    if (ParseLambdaIntroducer(Intro, &Tentative)) {
+      TPA.Commit();
+      return ExprError();
+    }
+
+    switch (Tentative) {
+    case LambdaIntroducerTentativeParse::Success:
+      TPA.Commit();
+      break;
+
+    case LambdaIntroducerTentativeParse::Incomplete:
+      // Didn't fully parse the lambda-introducer, try again with a
+      // non-tentative parse.
+      TPA.Revert();
+      Intro = LambdaIntroducer();
+      if (ParseLambdaIntroducer(Intro))
+        return ExprError();
+      break;
+
+    case LambdaIntroducerTentativeParse::MessageSend:
+    case LambdaIntroducerTentativeParse::Invalid:
+      // Not a lambda-introducer, might be a message send.
+      TPA.Revert();
+      return ExprEmpty();
+    }
+  }
 
   return ParseLambdaExpressionAfterIntroducer(Intro);
 }
@@ -746,15 +768,16 @@ ExprResult Parser::TryParseLambdaExpression() {
 /// Parse a lambda introducer.
 /// \param Intro A LambdaIntroducer filled in with information about the
 ///        contents of the lambda-introducer.
-/// \param SkippedInits If non-null, we are disambiguating between an Obj-C
-///        message send and a lambda expression. In this mode, we will
-///        sometimes skip the initializers for init-captures and not fully
-///        populate \p Intro. This flag will be set to \c true if we do so.
-/// \return A DiagnosticID if it hit something unexpected. The location for
-///         the diagnostic is that of the current token.
-Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
-                                                 bool *SkippedInits) {
-  typedef Optional<unsigned> DiagResult;
+/// \param Tentative If non-null, we are disambiguating between a
+///        lambda-introducer and some other construct. In this mode, we do not
+///        produce any diagnostics or take any other irreversible action unless
+///        we're sure that this is a lambda-expression.
+/// \return \c true if parsing (or disambiguation) failed with a diagnostic and
+///         the caller should bail out / recover.
+bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
+                                   LambdaIntroducerTentativeParse *Tentative) {
+  if (Tentative)
+    *Tentative = LambdaIntroducerTentativeParse::Success;
 
   assert(Tok.is(tok::l_square) && "Lambda expressions begin with '['.");
   BalancedDelimiterTracker T(*this, tok::l_square);
@@ -762,37 +785,55 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
 
   Intro.Range.setBegin(T.getOpenLocation());
 
-  bool first = true;
+  bool First = true;
+
+  // Produce a diagnostic if we're not tentatively parsing; otherwise track
+  // that our parse has failed.
+  auto Invalid = [&](llvm::function_ref<void()> Action) {
+    if (Tentative) {
+      *Tentative = LambdaIntroducerTentativeParse::Invalid;
+      return false;
+    }
+    Action();
+    return true;
+  };
 
   // Parse capture-default.
   if (Tok.is(tok::amp) &&
       (NextToken().is(tok::comma) || NextToken().is(tok::r_square))) {
     Intro.Default = LCD_ByRef;
     Intro.DefaultLoc = ConsumeToken();
-    first = false;
+    First = false;
+    if (!Tok.getIdentifierInfo()) {
+      // This can only be a lambda; no need for tentative parsing any more.
+      // '[[and]]' can still be an attribute, though.
+      Tentative = nullptr;
+    }
   } else if (Tok.is(tok::equal)) {
     Intro.Default = LCD_ByCopy;
     Intro.DefaultLoc = ConsumeToken();
-    first = false;
+    First = false;
+    Tentative = nullptr;
   }
 
   while (Tok.isNot(tok::r_square)) {
-    if (!first) {
+    if (!First) {
       if (Tok.isNot(tok::comma)) {
         // Provide a completion for a lambda introducer here. Except
         // in Objective-C, where this is Almost Surely meant to be a message
         // send. In that case, fail here and let the ObjC message
         // expression parser perform the completion.
         if (Tok.is(tok::code_completion) &&
-            !(getLangOpts().ObjC && Intro.Default == LCD_None &&
-              !Intro.Captures.empty())) {
+            !(getLangOpts().ObjC && Tentative)) {
           Actions.CodeCompleteLambdaIntroducer(getCurScope(), Intro,
                                                /*AfterAmpersand=*/false);
           cutOffParsing();
           break;
         }
 
-        return DiagResult(diag::err_expected_comma_or_rsquare);
+        return Invalid([&] {
+          Diag(Tok.getLocation(), diag::err_expected_comma_or_rsquare);
+        });
       }
       ConsumeToken();
     }
@@ -800,7 +841,7 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
     if (Tok.is(tok::code_completion)) {
       // If we're in Objective-C++ and we have a bare '[', then this is more
       // likely to be a message receiver.
-      if (getLangOpts().ObjC && first)
+      if (getLangOpts().ObjC && Tentative && First)
         Actions.CodeCompleteObjCMessageReceiver(getCurScope());
       else
         Actions.CodeCompleteLambdaIntroducer(getCurScope(), Intro,
@@ -809,7 +850,7 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
       break;
     }
 
-    first = false;
+    First = false;
 
     // Parse capture.
     LambdaCaptureKind Kind = LCK_ByCopy;
@@ -826,7 +867,9 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         ConsumeToken();
         Kind = LCK_StarThis;
       } else {
-        return DiagResult(diag::err_expected_star_this_capture);
+        return Invalid([&] {
+          Diag(Tok.getLocation(), diag::err_expected_star_this_capture);
+        });
       }
     } else if (Tok.is(tok::kw_this)) {
       Kind = LCK_This;
@@ -848,12 +891,14 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         Id = Tok.getIdentifierInfo();
         Loc = ConsumeToken();
       } else if (Tok.is(tok::kw_this)) {
-        // FIXME: If we want to suggest a fixit here, will need to return more
-        // than just DiagnosticID. Perhaps full DiagnosticBuilder that can be
-        // Clear()ed to prevent emission in case of tentative parsing?
-        return DiagResult(diag::err_this_captured_by_reference);
+        return Invalid([&] {
+          // FIXME: Suggest a fixit here.
+          Diag(Tok.getLocation(), diag::err_this_captured_by_reference);
+        });
       } else {
-        return DiagResult(diag::err_expected_capture);
+        return Invalid([&] {
+          Diag(Tok.getLocation(), diag::err_expected_capture);
+        });
       }
 
       if (Tok.is(tok::l_paren)) {
@@ -864,9 +909,9 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
 
         ExprVector Exprs;
         CommaLocsTy Commas;
-        if (SkippedInits) {
+        if (Tentative) {
           Parens.skipToEnd();
-          *SkippedInits = true;
+          *Tentative = LambdaIntroducerTentativeParse::Incomplete;
         } else if (ParseExpressionList(Exprs, Commas)) {
           Parens.skipToEnd();
           Init = ExprError();
@@ -888,13 +933,13 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         else
           InitKind = LambdaCaptureInitKind::ListInit;
 
-        if (!SkippedInits) {
+        if (!Tentative) {
           Init = ParseInitializer();
         } else if (Tok.is(tok::l_brace)) {
           BalancedDelimiterTracker Braces(*this, tok::l_brace);
           Braces.consumeOpen();
           Braces.skipToEnd();
-          *SkippedInits = true;
+          *Tentative = LambdaIntroducerTentativeParse::Incomplete;
         } else {
           // We're disambiguating this:
           //
@@ -937,9 +982,19 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
             ConsumeAnnotationToken();
           }
         }
-      } else
+      } else {
         TryConsumeToken(tok::ellipsis, EllipsisLoc);
+      }
     }
+
+    // Check if this is a message send before we act on a possible init-capture.
+    if (Tentative && Tok.is(tok::identifier) &&
+        NextToken().isOneOf(tok::colon, tok::r_square)) {
+      // This can only be a message send. We're done with disambiguation.
+      *Tentative = LambdaIntroducerTentativeParse::MessageSend;
+      return false;
+    }
+
     // If this is an init capture, process the initialization expression
     // right away.  For lambda init-captures such as the following:
     // const int x = 10;
@@ -980,17 +1035,20 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
     // that would be an error.
 
     ParsedType InitCaptureType;
-    if (!Init.isInvalid())
+    if (Tentative && Init.isUsable())
+      *Tentative = LambdaIntroducerTentativeParse::Incomplete;
+    else if (Init.isUsable()) {
       Init = Actions.CorrectDelayedTyposInExpr(Init.get());
-    if (Init.isUsable()) {
-      // Get the pointer and store it in an lvalue, so we can use it as an
-      // out argument.
-      Expr *InitExpr = Init.get();
-      // This performs any lvalue-to-rvalue conversions if necessary, which
-      // can affect what gets captured in the containing decl-context.
-      InitCaptureType = Actions.actOnLambdaInitCaptureInitialization(
-          Loc, Kind == LCK_ByRef, Id, InitKind, InitExpr);
-      Init = InitExpr;
+      if (Init.isUsable()) {
+        // Get the pointer and store it in an lvalue, so we can use it as an
+        // out argument.
+        Expr *InitExpr = Init.get();
+        // This performs any lvalue-to-rvalue conversions if necessary, which
+        // can affect what gets captured in the containing decl-context.
+        InitCaptureType = Actions.actOnLambdaInitCaptureInitialization(
+            Loc, Kind == LCK_ByRef, Id, InitKind, InitExpr);
+        Init = InitExpr;
+      }
     }
 
     SourceLocation LocEnd = PrevTokLocation;
@@ -1001,41 +1059,7 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
 
   T.consumeClose();
   Intro.Range.setEnd(T.getCloseLocation());
-  return DiagResult();
-}
-
-/// TryParseLambdaIntroducer - Tentatively parse a lambda introducer.
-///
-/// Returns true if it hit something unexpected.
-bool Parser::TryParseLambdaIntroducer(LambdaIntroducer &Intro) {
-  {
-    bool SkippedInits = false;
-    TentativeParsingAction PA1(*this);
-
-    if (ParseLambdaIntroducer(Intro, &SkippedInits)) {
-      PA1.Revert();
-      return true;
-    }
-
-    if (!SkippedInits) {
-      PA1.Commit();
-      return false;
-    }
-
-    PA1.Revert();
-  }
-
-  // Try to parse it again, but this time parse the init-captures too.
-  Intro = LambdaIntroducer();
-  TentativeParsingAction PA2(*this);
-
-  if (!ParseLambdaIntroducer(Intro)) {
-    PA2.Commit();
-    return false;
-  }
-
-  PA2.Revert();
-  return true;
+  return false;
 }
 
 static void

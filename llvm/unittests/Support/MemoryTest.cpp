@@ -76,9 +76,9 @@ protected:
       return true;
 
     if (M1.base() > M2.base())
-      return (unsigned char *)M2.base() + M2.size() > M1.base();
+      return (unsigned char *)M2.base() + M2.allocatedSize() > M1.base();
 
-    return (unsigned char *)M1.base() + M1.size() > M2.base();
+    return (unsigned char *)M1.base() + M1.allocatedSize() > M2.base();
   }
 
   unsigned Flags;
@@ -100,7 +100,7 @@ TEST_P(MappedMemoryTest, AllocAndRelease) {
   EXPECT_EQ(std::error_code(), EC);
 
   EXPECT_NE((void*)nullptr, M1.base());
-  EXPECT_LE(sizeof(int), M1.size());
+  EXPECT_LE(sizeof(int), M1.allocatedSize());
 
   EXPECT_FALSE(Memory::releaseMappedMemory(M1));
 }
@@ -116,7 +116,7 @@ TEST_P(MappedMemoryTest, AllocAndReleaseHuge) {
   // returned, if large pages aren't available.
 
   EXPECT_NE((void *)nullptr, M1.base());
-  EXPECT_LE(sizeof(int), M1.size());
+  EXPECT_LE(sizeof(int), M1.allocatedSize());
 
   EXPECT_FALSE(Memory::releaseMappedMemory(M1));
 }
@@ -132,11 +132,11 @@ TEST_P(MappedMemoryTest, MultipleAllocAndRelease) {
   EXPECT_EQ(std::error_code(), EC);
 
   EXPECT_NE((void*)nullptr, M1.base());
-  EXPECT_LE(16U, M1.size());
+  EXPECT_LE(16U, M1.allocatedSize());
   EXPECT_NE((void*)nullptr, M2.base());
-  EXPECT_LE(64U, M2.size());
+  EXPECT_LE(64U, M2.allocatedSize());
   EXPECT_NE((void*)nullptr, M3.base());
-  EXPECT_LE(32U, M3.size());
+  EXPECT_LE(32U, M3.allocatedSize());
 
   EXPECT_FALSE(doesOverlap(M1, M2));
   EXPECT_FALSE(doesOverlap(M2, M3));
@@ -147,7 +147,7 @@ TEST_P(MappedMemoryTest, MultipleAllocAndRelease) {
   MemoryBlock M4 = Memory::allocateMappedMemory(16, nullptr, Flags, EC);
   EXPECT_EQ(std::error_code(), EC);
   EXPECT_NE((void*)nullptr, M4.base());
-  EXPECT_LE(16U, M4.size());
+  EXPECT_LE(16U, M4.allocatedSize());
   EXPECT_FALSE(Memory::releaseMappedMemory(M4));
   EXPECT_FALSE(Memory::releaseMappedMemory(M2));
 }
@@ -164,7 +164,7 @@ TEST_P(MappedMemoryTest, BasicWrite) {
   EXPECT_EQ(std::error_code(), EC);
 
   EXPECT_NE((void*)nullptr, M1.base());
-  EXPECT_LE(sizeof(int), M1.size());
+  EXPECT_LE(sizeof(int), M1.allocatedSize());
 
   int *a = (int*)M1.base();
   *a = 1;
@@ -196,11 +196,11 @@ TEST_P(MappedMemoryTest, MultipleWrite) {
   EXPECT_FALSE(doesOverlap(M1, M3));
 
   EXPECT_NE((void*)nullptr, M1.base());
-  EXPECT_LE(1U * sizeof(int), M1.size());
+  EXPECT_LE(1U * sizeof(int), M1.allocatedSize());
   EXPECT_NE((void*)nullptr, M2.base());
-  EXPECT_LE(8U * sizeof(int), M2.size());
+  EXPECT_LE(8U * sizeof(int), M2.allocatedSize());
   EXPECT_NE((void*)nullptr, M3.base());
-  EXPECT_LE(4U * sizeof(int), M3.size());
+  EXPECT_LE(4U * sizeof(int), M3.allocatedSize());
 
   int *x = (int*)M1.base();
   *x = 1;
@@ -224,7 +224,7 @@ TEST_P(MappedMemoryTest, MultipleWrite) {
                                                 Flags, EC);
   EXPECT_EQ(std::error_code(), EC);
   EXPECT_NE((void*)nullptr, M4.base());
-  EXPECT_LE(64U * sizeof(int), M4.size());
+  EXPECT_LE(64U * sizeof(int), M4.allocatedSize());
   x = (int*)M4.base();
   *x = 4;
   EXPECT_EQ(4, *x);
@@ -255,11 +255,11 @@ TEST_P(MappedMemoryTest, EnabledWrite) {
   EXPECT_EQ(std::error_code(), EC);
 
   EXPECT_NE((void*)nullptr, M1.base());
-  EXPECT_LE(2U * sizeof(int), M1.size());
+  EXPECT_LE(2U * sizeof(int), M1.allocatedSize());
   EXPECT_NE((void*)nullptr, M2.base());
-  EXPECT_LE(8U * sizeof(int), M2.size());
+  EXPECT_LE(8U * sizeof(int), M2.allocatedSize());
   EXPECT_NE((void*)nullptr, M3.base());
-  EXPECT_LE(4U * sizeof(int), M3.size());
+  EXPECT_LE(4U * sizeof(int), M3.allocatedSize());
 
   EXPECT_FALSE(Memory::protectMappedMemory(M1, getTestableEquivalent(Flags)));
   EXPECT_FALSE(Memory::protectMappedMemory(M2, getTestableEquivalent(Flags)));
@@ -289,7 +289,7 @@ TEST_P(MappedMemoryTest, EnabledWrite) {
   MemoryBlock M4 = Memory::allocateMappedMemory(16, nullptr, Flags, EC);
   EXPECT_EQ(std::error_code(), EC);
   EXPECT_NE((void*)nullptr, M4.base());
-  EXPECT_LE(16U, M4.size());
+  EXPECT_LE(16U, M4.allocatedSize());
   EXPECT_EQ(std::error_code(),
             Memory::protectMappedMemory(M4, getTestableEquivalent(Flags)));
   x = (int*)M4.base();
@@ -310,11 +310,11 @@ TEST_P(MappedMemoryTest, SuccessiveNear) {
   EXPECT_EQ(std::error_code(), EC);
 
   EXPECT_NE((void*)nullptr, M1.base());
-  EXPECT_LE(16U, M1.size());
+  EXPECT_LE(16U, M1.allocatedSize());
   EXPECT_NE((void*)nullptr, M2.base());
-  EXPECT_LE(64U, M2.size());
+  EXPECT_LE(64U, M2.allocatedSize());
   EXPECT_NE((void*)nullptr, M3.base());
-  EXPECT_LE(32U, M3.size());
+  EXPECT_LE(32U, M3.allocatedSize());
 
   EXPECT_FALSE(doesOverlap(M1, M2));
   EXPECT_FALSE(doesOverlap(M2, M3));
@@ -337,11 +337,11 @@ TEST_P(MappedMemoryTest, DuplicateNear) {
   EXPECT_EQ(std::error_code(), EC);
 
   EXPECT_NE((void*)nullptr, M1.base());
-  EXPECT_LE(16U, M1.size());
+  EXPECT_LE(16U, M1.allocatedSize());
   EXPECT_NE((void*)nullptr, M2.base());
-  EXPECT_LE(64U, M2.size());
+  EXPECT_LE(64U, M2.allocatedSize());
   EXPECT_NE((void*)nullptr, M3.base());
-  EXPECT_LE(32U, M3.size());
+  EXPECT_LE(32U, M3.allocatedSize());
 
   EXPECT_FALSE(Memory::releaseMappedMemory(M1));
   EXPECT_FALSE(Memory::releaseMappedMemory(M3));
@@ -360,11 +360,11 @@ TEST_P(MappedMemoryTest, ZeroNear) {
   EXPECT_EQ(std::error_code(), EC);
 
   EXPECT_NE((void*)nullptr, M1.base());
-  EXPECT_LE(16U, M1.size());
+  EXPECT_LE(16U, M1.allocatedSize());
   EXPECT_NE((void*)nullptr, M2.base());
-  EXPECT_LE(64U, M2.size());
+  EXPECT_LE(64U, M2.allocatedSize());
   EXPECT_NE((void*)nullptr, M3.base());
-  EXPECT_LE(32U, M3.size());
+  EXPECT_LE(32U, M3.allocatedSize());
 
   EXPECT_FALSE(doesOverlap(M1, M2));
   EXPECT_FALSE(doesOverlap(M2, M3));
@@ -387,11 +387,11 @@ TEST_P(MappedMemoryTest, ZeroSizeNear) {
   EXPECT_EQ(std::error_code(), EC);
 
   EXPECT_NE((void*)nullptr, M1.base());
-  EXPECT_LE(16U, M1.size());
+  EXPECT_LE(16U, M1.allocatedSize());
   EXPECT_NE((void*)nullptr, M2.base());
-  EXPECT_LE(64U, M2.size());
+  EXPECT_LE(64U, M2.allocatedSize());
   EXPECT_NE((void*)nullptr, M3.base());
-  EXPECT_LE(32U, M3.size());
+  EXPECT_LE(32U, M3.allocatedSize());
 
   EXPECT_FALSE(doesOverlap(M1, M2));
   EXPECT_FALSE(doesOverlap(M2, M3));
@@ -410,7 +410,7 @@ TEST_P(MappedMemoryTest, UnalignedNear) {
   EXPECT_EQ(std::error_code(), EC);
 
   EXPECT_NE((void*)nullptr, M1.base());
-  EXPECT_LE(sizeof(int), M1.size());
+  EXPECT_LE(sizeof(int), M1.allocatedSize());
 
   EXPECT_FALSE(Memory::releaseMappedMemory(M1));
 }

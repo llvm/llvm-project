@@ -87,17 +87,15 @@ void BasicIRLayerMaterializationUnit::materialize(
 
 #ifndef NDEBUG
   auto &ES = R.getTargetJITDylib().getExecutionSession();
+  auto &N = R.getTargetJITDylib().getName();
 #endif // NDEBUG
 
   auto Lock = TSM.getContextLock();
-  LLVM_DEBUG(ES.runSessionLocked([&]() {
-    dbgs() << "Emitting, for " << R.getTargetJITDylib().getName() << ", "
-           << *this << "\n";
-  }););
+  LLVM_DEBUG(ES.runSessionLocked(
+      [&]() { dbgs() << "Emitting, for " << N << ", " << *this << "\n"; }););
   L.emit(std::move(R), std::move(TSM));
   LLVM_DEBUG(ES.runSessionLocked([&]() {
-    dbgs() << "Finished emitting, for " << R.getTargetJITDylib().getName()
-           << ", " << *this << "\n";
+    dbgs() << "Finished emitting, for " << N << ", " << *this << "\n";
   }););
 }
 
