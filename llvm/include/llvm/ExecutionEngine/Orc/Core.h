@@ -681,6 +681,10 @@ private:
 
   void emit(const SymbolFlagsMap &Emitted);
 
+  // Removes the given symbols from the symbol table, returning the set of
+  // pending queries.
+  AsynchronousSymbolQuery removeSymbols(const SymbolNameSet &Symbols);
+
   void notifyFailed(const SymbolNameSet &FailedSymbols);
 
   ExecutionSession &ES;
@@ -731,6 +735,10 @@ public:
   JITDylib *getJITDylibByName(StringRef Name);
 
   /// Add a new JITDylib to this ExecutionSession.
+  ///
+  /// The JITDylib Name is required to be unique. Clients should verify that
+  /// names are not being re-used (e.g. by calling getJITDylibByName) if names
+  /// are based on user input.
   JITDylib &createJITDylib(std::string Name,
                            bool AddToMainDylibSearchOrder = true);
 
