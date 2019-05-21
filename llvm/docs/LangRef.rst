@@ -13284,7 +13284,8 @@ multplication can be represented as
 
 ::
         %result = call i4 @llvm.smul.fix.i4(i4 %a, i4 %b, i32 %scale)
-          =>
+
+        ; Expands to
         %a2 = sext i4 %a to i8
         %b2 = sext i4 %b to i8
         %mul = mul nsw nuw i8 %a, %b
