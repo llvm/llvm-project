@@ -16,6 +16,7 @@
 #include "lld/Common/Args.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Reproduce.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/Threads.h"
 #include "lld/Common/Version.h"
@@ -26,6 +27,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
 
 #define DEBUG_TYPE "lld"
@@ -504,6 +506,34 @@ static void createSyntheticSymbols() {
       "__dso_handle", WASM_SYMBOL_VISIBILITY_HIDDEN);
 }
 
+// Reconstructs command line arguments so that so that you can re-run
+// the same command with the same inputs. This is for --reproduce.
+static std::string createResponseFile(const opt::InputArgList &Args) {
+  SmallString<0> Data;
+  raw_svector_ostream OS(Data);
+
+  // Copy the command line to the output while rewriting paths.
+  for (auto *Arg : Args) {
+    switch (Arg->getOption().getUnaliasedOption().getID()) {
+    case OPT_reproduce:
+      break;
+    case OPT_INPUT:
+      OS << quote(relativeToRoot(Arg->getValue())) << "\n";
+      break;
+    case OPT_o:
+      // If -o path contains directories, "lld @response.txt" will likely
+      // fail because the archive we are creating doesn't contain empty
+      // directories for the output path (-o doesn't create directories).
+      // Strip directories to prevent the issue.
+      OS << "-o " << quote(sys::path::filename(Arg->getValue())) << "\n";
+      break;
+    default:
+      OS << toString(*Arg) << "\n";
+    }
+  }
+  return Data.str();
+}
+
 void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   WasmOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
@@ -520,6 +550,20 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (Args.hasArg(OPT_version) || Args.hasArg(OPT_v)) {
     outs() << getLLDVersion() << "\n";
     return;
+  }
+
+  // Handle --reproduce
+  if (auto *Arg = Args.getLastArg(OPT_reproduce)) {
+    StringRef Path = Arg->getValue();
+    Expected<std::unique_ptr<TarWriter>> ErrOrWriter =
+        TarWriter::create(Path, path::stem(Path));
+    if (ErrOrWriter) {
+      Tar = std::move(*ErrOrWriter);
+      Tar->append("response.txt", createResponseFile(Args));
+      Tar->append("version.txt", getLLDVersion() + "\n");
+    } else {
+      error("--reproduce: " + toString(ErrOrWriter.takeError()));
+    }
   }
 
   // Parse and evaluate -mllvm options.
