@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-apple-darwin10 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-apple-darwin10 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
 #ifndef HEADER
@@ -52,9 +52,8 @@ void init_plus(BaseS1&, const BaseS1&);
 
 // CHECK-DAG: [[S_FLOAT_TY:%.+]] = type { %{{[^,]+}}, %{{[^,]+}}, float }
 // CHECK-DAG: [[S_INT_TY:%.+]] = type { %{{[^,]+}}, %{{[^,]+}}, i{{[0-9]+}} }
-// CHECK-DAG: [[ATOMIC_REDUCE_BARRIER_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 18, i32 0, i32 0, i8*
-// CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 66, i32 0, i32 0, i8*
-// CHECK-DAG: [[REDUCTION_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 18, i32 0, i32 0, i8*
+// CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 66, i32 0, i32 0, i8*
+// CHECK-DAG: [[REDUCTION_LOC:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 18, i32 0, i32 0, i8*
 // CHECK-DAG: [[REDUCTION_LOCK:@.+]] = common global [8 x i32] zeroinitializer
 
 #pragma omp declare reduction(operator&& : int : omp_out = 111 & omp_in)
@@ -173,13 +172,13 @@ int main() {
 // CHECK: [[T_VAR1_REF:%.+]] = load float*, float** %
 
 // For + reduction operation initial value of private variable is -1.
-// CHECK: store float -1.0{{.+}}, float*
+// CHECK: call void [[RED_INIT1:@.+]](float* %{{.+}}, float* %{{.+}})
 
 // For & reduction operation initial value of private variable is defined by call of 'init()' function.
-// CHECK: call {{.*}}void @_Z4initR6BaseS1RKS_(
+// CHECK: call void [[RED_INIT2:@.+]](
 
 // For && reduction operation initial value of private variable is 1.0.
-// CHECK: call {{.*}}void @_Z5init1R6BaseS1RKS_(
+// CHECK: call void [[RED_INIT3:@.+]](
 
 // For min reduction operation initial value of private variable is largest repesentable value.
 // CHECK: [[INIT:%.+]] = load float, float* @
@@ -219,16 +218,16 @@ int main() {
 
 // case 1:
 // t_var += t_var_reduction;
-// CHECK: fsub float 2.220000e+02, %
+// CHECK: call void [[RED_COMB1:@.+]](float* %{{.+}}, float* %{{.+}})
 
 // var = var.operator &(var_reduction);
-// CHECK: call {{.*}}void @_Z3redR6BaseS1RKS_(
+// CHECK: call void [[RED_COMB2:@.+]](
 
 // var1 = var1.operator &&(var1_reduction);
-// CHECK: fmul float
+// CHECK: call void [[RED_COMB3:@.+]](
 
 // t_var1 = min(t_var1, t_var1_reduction);
-// CHECK: fadd float 5.550000e+02, %
+// CHECK: call void [[RED_COMB4:@.+]](
 
 // __kmpc_end_reduce(<loc>, <gtid>, &<lock>);
 // CHECK: call void @__kmpc_end_reduce(%{{.+}}* [[REDUCTION_LOC]], i32 [[GTID]], [8 x i32]* [[REDUCTION_LOCK]])
@@ -239,22 +238,22 @@ int main() {
 // case 2:
 // t_var += t_var_reduction;
 // CHECK: call void @__kmpc_critical(
-// CHECK: fsub float 2.220000e+02, %
+// CHECK: call void [[RED_COMB1]](float* %{{.+}}, float* %{{.+}})
 // CHECK: call void @__kmpc_end_critical(
 
 // var = var.operator &(var_reduction);
 // CHECK: call void @__kmpc_critical(
-// CHECK: call {{.*}}void @_Z3redR6BaseS1RKS_(
+// CHECK: call void [[RED_COMB2]]
 // CHECK: call void @__kmpc_end_critical(
 
 // var1 = var1.operator &&(var1_reduction);
 // CHECK: call void @__kmpc_critical(
-// CHECK: fmul float
+// CHECK: call void [[RED_COMB3]]
 // CHECK: call void @__kmpc_end_critical(
 
 // t_var1 = min(t_var1, t_var1_reduction);
 // CHECK: call void @__kmpc_critical(
-// CHECK: fadd float 5.550000e+02, %
+// CHECK: call void [[RED_COMB4]]
 // CHECK: call void @__kmpc_end_critical(
 
 // __kmpc_end_reduce(<loc>, <gtid>, &<lock>);
@@ -268,6 +267,24 @@ int main() {
 // CHECK: call void @__kmpc_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i{{[0-9]+}} [[GTID]])
 
 // CHECK: ret void
+
+// CHECK: define internal void [[RED_COMB1]](float* noalias, float* noalias)
+// CHECK: fsub float 2.220000e+02, %
+
+// CHECK: define internal void [[RED_INIT1]](float* noalias, float* noalias)
+// CHECK: store float -1.0{{.+}}, float*
+
+// CHECK: define internal void [[RED_COMB2]](
+// CHECK: call {{.*}}void @_Z3redR6BaseS1RKS_(
+
+// CHECK: define internal void [[RED_INIT2]](
+// CHECK: call {{.*}}void @_Z4initR6BaseS1RKS_(
+
+// CHECK: define internal void [[RED_COMB3]](
+// CHECK: fmul float
+
+// CHECK: define internal void [[RED_INIT3]](
+// CHECK: call {{.*}}void @_Z5init1R6BaseS1RKS_(
 
 // void reduce_func(void *lhs[<n>], void *rhs[<n>]) {
 //  *(Type0*)lhs[0] = ReductionOperation0(*(Type0*)lhs[0], *(Type0*)rhs[0]);
@@ -313,17 +330,20 @@ int main() {
 // CHECK: [[T_VAR1_LHS:%.+]] = bitcast i8* [[T_VAR1_LHS_VOID]] to float*
 
 // t_var_lhs += t_var_rhs;
-// CHECK: fsub float 2.220000e+02, %
+// CHECK: call void [[RED_COMB1]](float* %{{.+}}, float* %{{.+}})
 
 // var_lhs = var_lhs.operator &(var_rhs);
-// CHECK: call {{.*}}void @_Z3redR6BaseS1RKS_(
+// CHECK: call void [[RED_COMB2]](
 
 // var1_lhs = var1_lhs.operator &&(var1_rhs);
-// CHECK: fmul float
+// CHECK: call void [[RED_COMB3]](
 
 // t_var1_lhs = min(t_var1_lhs, t_var1_rhs);
-// CHECK: fadd float 5.550000e+02, %
+// CHECK: call void [[RED_COMB4]](
 // CHECK: ret void
+
+// CHECK: define internal void [[RED_COMB4]](
+// CHECK: fadd float 5.550000e+02, %
 
 // CHECK: define internal void [[MAIN_MICROTASK1]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i64 %{{.+}}, i64 %{{.+}}, i32* {{.+}} %{{.+}}, [2 x i32]* dereferenceable(8) %{{.+}}, [10 x [4 x [[S_FLOAT_TY]]]]* dereferenceable(480) %{{.+}})
 
@@ -348,7 +368,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq i32* [[ARR_PRIV]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi i32*
-// CHECK: store i32 888, i32* %
+// CHECK: call void [[RED_INIT5:@.+]](i32* %{{.+}}, i32* %{{.+}})
 // CHECK: [[DONE:%.+]] = icmp eq i32* %{{.+}}, [[END]]
 // CHECK: br i1 [[DONE]],
 
@@ -359,7 +379,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[ARRS_PRIV]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: call void @_Z4initR6BaseS1RKS_(%
+// CHECK: call void [[RED_INIT2]](
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[END]]
 // CHECK: br i1 [[DONE]],
 
@@ -405,8 +425,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq i32* [[LB1_0]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi i32*
-// CHECK: [[ADD:%.+]] = mul nsw i32 555, %
-// CHECK: store i32 [[ADD]], i32* %
+// CHECK: call void [[RED_COMB5:@.+]](i32* %{{.+}}, i32* %{{.+}})
 // CHECK: [[DONE:%.+]] = icmp eq i32* %{{.+}}, [[END]]
 // CHECK: br i1 [[DONE]],
 
@@ -415,7 +434,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[ARRS_LB]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: call void @_Z3redR6BaseS1RKS_(%
+// CHECK: call void [[RED_COMB2]](
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[END]]
 // CHECK: br i1 [[DONE]],
 
@@ -434,7 +453,7 @@ int main() {
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi i32*
 // CHECK: call void @__kmpc_critical(
-// CHECK: [[ADD:%.+]] = mul nsw i32 555, %
+// CHECK: call void [[RED_COMB5]](
 // CHECK: call void @__kmpc_end_critical(
 // CHECK: [[DONE:%.+]] = icmp eq i32* %{{.+}}, [[END]]
 // CHECK: br i1 [[DONE]],
@@ -445,7 +464,7 @@ int main() {
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
 // CHECK: call void @__kmpc_critical(
-// CHECK: call void @_Z3redR6BaseS1RKS_(%
+// CHECK: call void [[RED_COMB2]](
 // CHECK: call void @__kmpc_end_critical(
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[END]]
 // CHECK: br i1 [[DONE]],
@@ -465,6 +484,12 @@ int main() {
 // CHECK: call void @llvm.stackrestore(i8*
 
 // CHECK: ret void
+
+// CHECK: define internal void [[RED_COMB5]](i32* noalias, i32* noalias)
+// CHECK: mul nsw i32 555, %
+
+// CHECK: define internal void [[RED_INIT5]](i32* noalias, i32* noalias)
+// CHECK: store i32 888, i32* %
 
 // void reduce_func(void *lhs[<n>], void *rhs[<n>]) {
 //  *(Type0*)lhs[0] = ReductionOperation0(*(Type0*)lhs[0], *(Type0*)rhs[0]);
@@ -506,7 +531,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq i32* [[ARR_LHS]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi i32*
-// CHECK: [[ADD:%.+]] = mul nsw i32 555, %
+// CHECK: call void [[RED_COMB5]](
 // CHECK: [[DONE:%.+]] = icmp eq i32* %{{.+}}, [[END]]
 // CHECK: br i1 [[DONE]],
 
@@ -515,7 +540,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[ARRS_LB]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: call void @_Z3redR6BaseS1RKS_(%
+// CHECK: call void [[RED_COMB2]](
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[END]]
 // CHECK: br i1 [[DONE]],
 
@@ -539,7 +564,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq i32* [[ARR_PRIV]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi i32*
-// CHECK: store i32 888, i32* %
+// CHECK: call void [[RED_INIT5]](
 // CHECK: [[DONE:%.+]] = icmp eq i32* %{{.+}}, [[END]]
 // CHECK: br i1 [[DONE]],
 
@@ -550,7 +575,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[BEGIN]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: call void @_Z4initR6BaseS1RKS_(%
+// CHECK: call void [[RED_INIT2]](
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[END]]
 // CHECK: br i1 [[DONE]],
 // CHECK: [[LHS_BEGIN:%.+]] = bitcast [10 x [4 x [[S_FLOAT_TY]]]]* %{{.+}} to [[S_FLOAT_TY]]*
@@ -595,8 +620,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq i32* [[LB1_0]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi i32*
-// CHECK: [[ADD:%[^ ]+]] = mul nsw i32 555, %
-// CHECK: store i32 [[ADD]], i32* %
+// CHECK: call void [[RED_COMB5]](
 // CHECK: [[DONE:%.+]] = icmp eq i32* %{{.+}}, [[END]]
 // CHECK: br i1 [[DONE]],
 
@@ -605,7 +629,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[LHS_BEGIN]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: call void @_Z3redR6BaseS1RKS_(%
+// CHECK: call void [[RED_COMB2]](
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[END]]
 // CHECK: br i1 [[DONE]],
 
@@ -624,7 +648,7 @@ int main() {
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi i32*
 // CHECK: call void @__kmpc_critical(
-// CHECK: [[ADD:%.+]] = mul nsw i32 555, %
+// CHECK: call void [[RED_COMB5]](
 // CHECK: call void @__kmpc_end_critical(
 // CHECK: [[DONE:%.+]] = icmp eq i32* %{{.+}}, [[END]]
 // CHECK: br i1 [[DONE]],
@@ -635,7 +659,7 @@ int main() {
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
 // CHECK: call void @__kmpc_critical(
-// CHECK: call void @_Z3redR6BaseS1RKS_(%
+// CHECK: call void [[RED_COMB2]](
 // CHECK: call void @__kmpc_end_critical(
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[END]]
 // CHECK: br i1 [[DONE]],
@@ -692,8 +716,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq i32* [[ARR_LHS]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi i32*
-// CHECK: [[ADD:%.+]] = mul nsw i32 555, %
-// CHECK: store i32 [[ADD]], i32* %
+// CHECK: call void [[RED_COMB5]](
 // CHECK: [[DONE:%.+]] = icmp eq i32* %{{.+}}, [[END]]
 // CHECK: br i1 [[DONE]],
 
@@ -702,7 +725,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[ARRS_LB]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: call void @_Z3redR6BaseS1RKS_(%
+// CHECK: call void [[RED_COMB2]](
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[END]]
 // CHECK: br i1 [[DONE]],
 
@@ -843,16 +866,16 @@ int main() {
 // CHECK: [[T_VAR1_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** %
 
 // For + reduction operation initial value of private variable is 0.
-// CHECK: store i32 321, i32* %
+// CHECK: call void [[RED_INIT6:@.+]](
 
 // For & reduction operation initial value of private variable is ones in all bits.
-// CHECK: call void @_Z4initR6BaseS1RKS_(
+// CHECK: call void [[RED_INIT2:@.+]](
 
 // For && reduction operation initial value of private variable is 1.0.
-// CHECK: call void @_Z5init2R6BaseS1RKS_(
+// CHECK: call void [[RED_INIT7:@.+]](
 
 // For min reduction operation initial value of private variable is largest repesentable value.
-// CHECK: sdiv i32 432, %
+// CHECK: call void [[RED_INIT8:@.+]](
 
 // CHECK: [[GTID_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[GTID_ADDR_ADDR]]
 // CHECK: [[GTID:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[GTID_REF]]
@@ -888,16 +911,16 @@ int main() {
 
 // case 1:
 // t_var += t_var_reduction;
-// CHECK: add nsw i32 1513, %
+// CHECK: call void [[RED_COMB6:@.+]](
 
 // var = var.operator &(var_reduction);
-// CHECK: call void @_Z3redR6BaseS1RKS_(%
+// CHECK: call void [[RED_COMB2]](
 
 // var1 = var1.operator &&(var1_reduction);
-// CHECK: mul nsw i32 17, %
+// CHECK: call void [[RED_COMB7:@.+]](
 
 // t_var1 = min(t_var1, t_var1_reduction);
-// CHECK: sub nsw i32 47, %
+// CHECK: call void [[RED_COMB8:@.+]](
 
 // __kmpc_end_reduce_nowait(<loc>, <gtid>, &<lock>);
 // CHECK: call void @__kmpc_end_reduce_nowait(%{{.+}}* [[REDUCTION_LOC]], i32 [[GTID]], [8 x i32]* [[REDUCTION_LOCK]])
@@ -908,22 +931,22 @@ int main() {
 // case 2:
 // t_var += t_var_reduction;
 // CHECK: call void @__kmpc_critical(
-// CHECK: add nsw i32 1513, %
+// CHECK: call void [[RED_COMB6]](
 // CHECK: call void @__kmpc_end_critical(
 
 // var = var.operator &(var_reduction);
 // CHECK: call void @__kmpc_critical(
-// CHECK: call void @_Z3redR6BaseS1RKS_(%
+// CHECK: call void [[RED_COMB2]](
 // CHECK: call void @__kmpc_end_critical(
 
 // var1 = var1.operator &&(var1_reduction);
 // CHECK: call void @__kmpc_critical(
-// CHECK: mul nsw i32 17, %
+// CHECK: call void [[RED_COMB7]](
 // CHECK: call void @__kmpc_end_critical(
 
 // t_var1 = min(t_var1, t_var1_reduction);
 // CHECK: call void @__kmpc_critical(
-// CHECK: sub nsw i32 47, %
+// CHECK: call void [[RED_COMB8]](
 // CHECK: call void @__kmpc_end_critical(
 
 // break;
@@ -932,6 +955,24 @@ int main() {
 // CHECK-DAG: call {{.*}} [[S_INT_TY_DESTR]]([[S_INT_TY]]* [[VAR_PRIV]])
 // CHECK-DAG: call {{.*}} [[S_INT_TY_DESTR]]([[S_INT_TY]]*
 // CHECK: ret void
+
+// CHECK: define internal void [[RED_COMB6]](i32* noalias, i32* noalias)
+// CHECK: add nsw i32 1513, %
+
+// CHECK: define internal void [[RED_INIT6]](i32* noalias, i32* noalias)
+// CHECK: store i32 321, i32* %
+
+// CHECK: define internal void [[RED_COMB7]](
+// CHECK: mul nsw i32 17, %
+
+// CHECK: define internal void [[RED_INIT7]](
+// CHECK: call void @_Z5init2R6BaseS1RKS_(
+
+// CHECK: define internal void [[RED_COMB8]](i32* noalias, i32* noalias)
+// CHECK: sub nsw i32 47, %
+
+// CHECK: define internal void [[RED_INIT8]](i32* noalias, i32* noalias)
+// CHECK: sdiv i32 432, %
 
 // void reduce_func(void *lhs[<n>], void *rhs[<n>]) {
 //  *(Type0*)lhs[0] = ReductionOperation0(*(Type0*)lhs[0], *(Type0*)rhs[0]);
@@ -977,16 +1018,16 @@ int main() {
 // CHECK: [[T_VAR1_LHS:%.+]] = bitcast i8* [[T_VAR1_LHS_VOID]] to i{{[0-9]+}}*
 
 // t_var_lhs += t_var_rhs;
-// CHECK: add nsw i32 1513, %
+// CHECK: call void [[RED_COMB6]](
 
 // var_lhs = var_lhs.operator &(var_rhs);
-// CHECK: call void @_Z3redR6BaseS1RKS_(%
+// CHECK: call void [[RED_COMB2]](
 
 // var1_lhs = var1_lhs.operator &&(var1_rhs);
-// CHECK: mul nsw i32 17, %
+// CHECK: call void [[RED_COMB7]](
 
 // t_var1_lhs = min(t_var1_lhs, t_var1_rhs);
-// CHECK: sub nsw i32 47, %
+// CHECK: call void [[RED_COMB8]](
 // CHECK: ret void
 
 // CHECK: define internal void [[TMAIN_MICROTASK2]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [42 x [[S_INT_TY]]]* dereferenceable(504) %{{.*}}, [2 x i32]* dereferenceable(8) %{{.*}}, i32* dereferenceable(4) %{{.*}}, [2 x [[S_INT_TY]]]* dereferenceable(24) %{{.*}}, [[S_INT_TY]]* dereferenceable(12) %{{.*}})

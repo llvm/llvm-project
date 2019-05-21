@@ -64,7 +64,7 @@
 // CHECK: [[DESC:@.+]] = internal constant [[DSCTY]] { i32 1, [[DEVTY]]* getelementptr inbounds ([1 x [[DEVTY]]], [1 x [[DEVTY]]]* [[IMAGES]], i32 0, i32 0), [[ENTTY]]* [[ENTBEGIN]], [[ENTTY]]* [[ENTEND]] }, comdat($[[REGFN]])
 
 // Check target registration is registered as a Ctor.
-// CHECK: appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* @[[REGFN]], i8* bitcast (void ()* @[[REGFN]] to i8*) }]
+// CHECK: appending global [2 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* @.omp_offloading.requires_reg, i8* null }, { i32, void ()*, i8* } { i32 0, void ()* @[[REGFN]], i8* bitcast (void ()* @[[REGFN]] to i8*) }]
 
 
 template<typename tx, typename ty>
@@ -257,5 +257,8 @@ int foo(int n) {
 // CHECK:       call void [[HVT2]](i[[SZ]] [[BP1]])
 // CHECK:       ret i32 0
 
+// CHECK:     define internal void @.omp_offloading.requires_reg()
+// CHECK:     call void @__tgt_register_requires(i64 1)
+// CHECK:     ret void
 
 #endif

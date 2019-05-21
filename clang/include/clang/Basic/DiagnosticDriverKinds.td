@@ -453,4 +453,9 @@ def warn_drv_msp430_hwmult_no_device : Warning<"no MCU device specified, but "
   "specify a MSP430 device, or -mhwmult to set hardware multiply type "
   "explicitly.">, InGroup<InvalidCommandLineArgument>;
 
+def warn_drv_libstdcxx_not_found : Warning<
+  "include path for libstdc++ headers not found; pass '-stdlib=libc++' on the "
+  "command line to use the libc++ standard library instead">,
+  InGroup<DiagGroup<"stdlibcxx-not-found">>;
+
 }

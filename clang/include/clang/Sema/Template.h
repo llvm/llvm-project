@@ -227,7 +227,7 @@ class VarDecl;
   class LocalInstantiationScope {
   public:
     /// A set of declarations.
-    using DeclArgumentPack = SmallVector<ParmVarDecl *, 4>;
+    using DeclArgumentPack = SmallVector<VarDecl *, 4>;
 
   private:
     /// Reference to the semantic analysis that is performing
@@ -378,7 +378,7 @@ class VarDecl;
     findInstantiationOf(const Decl *D);
 
     void InstantiatedLocal(const Decl *D, Decl *Inst);
-    void InstantiatedLocalPackArg(const Decl *D, ParmVarDecl *Inst);
+    void InstantiatedLocalPackArg(const Decl *D, VarDecl *Inst);
     void MakeInstantiatedLocalArgPack(const Decl *D);
 
     /// Note that the given parameter pack has been partially substituted

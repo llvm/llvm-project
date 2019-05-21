@@ -1929,6 +1929,11 @@ llvm::Function *CGOpenMPRuntimeNVPTX::emitParallelOutlinedFunction(
   auto *OutlinedFun =
       cast<llvm::Function>(CGOpenMPRuntime::emitParallelOutlinedFunction(
           D, ThreadIDVar, InnermostKind, CodeGen));
+  if (CGM.getLangOpts().Optimize) {
+    OutlinedFun->removeFnAttr(llvm::Attribute::NoInline);
+    OutlinedFun->removeFnAttr(llvm::Attribute::OptimizeNone);
+    OutlinedFun->addFnAttr(llvm::Attribute::AlwaysInline);
+  }
   IsInTargetMasterThreadRegion = PrevIsInTargetMasterThreadRegion;
   IsInTTDRegion = PrevIsInTTDRegion;
   if (getExecutionMode() != CGOpenMPRuntimeNVPTX::EM_SPMD &&
@@ -2045,9 +2050,11 @@ llvm::Function *CGOpenMPRuntimeNVPTX::emitTeamsOutlinedFunction(
   CodeGen.setAction(Action);
   llvm::Function *OutlinedFun = CGOpenMPRuntime::emitTeamsOutlinedFunction(
       D, ThreadIDVar, InnermostKind, CodeGen);
-  OutlinedFun->removeFnAttr(llvm::Attribute::NoInline);
-  OutlinedFun->removeFnAttr(llvm::Attribute::OptimizeNone);
-  OutlinedFun->addFnAttr(llvm::Attribute::AlwaysInline);
+  if (CGM.getLangOpts().Optimize) {
+    OutlinedFun->removeFnAttr(llvm::Attribute::NoInline);
+    OutlinedFun->removeFnAttr(llvm::Attribute::OptimizeNone);
+    OutlinedFun->addFnAttr(llvm::Attribute::AlwaysInline);
+  }
 
   return OutlinedFun;
 }
@@ -3422,6 +3429,12 @@ static llvm::Function *emitShuffleAndReduceFunction(
       "_omp_reduction_shuffle_and_reduce_func", &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, CGFI);
   Fn->setDoesNotRecurse();
+  if (CGM.getLangOpts().Optimize) {
+    Fn->removeFnAttr(llvm::Attribute::NoInline);
+    Fn->removeFnAttr(llvm::Attribute::OptimizeNone);
+    Fn->addFnAttr(llvm::Attribute::AlwaysInline);
+  }
+
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, CGFI, Args, Loc, Loc);
 
@@ -4878,7 +4891,7 @@ static CudaArch getCudaArch(CodeGenModule &CGM) {
 /// Check to see if target architecture supports unified addressing which is
 /// a restriction for OpenMP requires clause "unified_shared_memory".
 void CGOpenMPRuntimeNVPTX::checkArchForUnifiedAddressing(
-    const OMPRequiresDecl *D) const {
+    const OMPRequiresDecl *D) {
   for (const OMPClause *Clause : D->clauselists()) {
     if (Clause->getClauseKind() == OMPC_unified_shared_memory) {
       switch (getCudaArch(CGM)) {
@@ -4923,6 +4936,7 @@ void CGOpenMPRuntimeNVPTX::checkArchForUnifiedAddressing(
       }
     }
   }
+  CGOpenMPRuntime::checkArchForUnifiedAddressing(D);
 }
 
 /// Get number of SMs and number of blocks per SM.

@@ -1738,6 +1738,10 @@ namespace {
     Type *VisitAdjustedType(const AdjustedType *T) {
       return Visit(T->getOriginalType());
     }
+
+    Type *VisitPackExpansionType(const PackExpansionType *T) {
+      return Visit(T->getPattern());
+    }
   };
 
 } // namespace

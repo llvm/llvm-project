@@ -1522,7 +1522,7 @@ public:
 
   /// C++11 deduced auto type.
   QualType getAutoType(QualType DeducedType, AutoTypeKeyword Keyword,
-                       bool IsDependent) const;
+                       bool IsDependent, bool IsPack = false) const;
 
   /// C++11 deduction pattern for 'auto' type.
   QualType getAutoDeductType() const;

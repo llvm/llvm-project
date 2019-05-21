@@ -96,7 +96,7 @@
 // CHECK: [[DESC:@.+]] = internal constant [[DSCTY]] { i32 1, [[DEVTY]]* getelementptr inbounds ([1 x [[DEVTY]]], [1 x [[DEVTY]]]* [[IMAGES]], i32 0, i32 0), [[ENTTY]]* [[ENTBEGIN]], [[ENTTY]]* [[ENTEND]] }, comdat($[[REGFN]])
 
 // Check target registration is registered as a Ctor.
-// CHECK: appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* @[[REGFN]], i8* bitcast (void ()* @[[REGFN]] to i8*) }]
+// CHECK: appending global [2 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* @.omp_offloading.requires_reg, i8* null }, { i32, void ()*, i8* } { i32 0, void ()* @[[REGFN]], i8* bitcast (void ()* @[[REGFN]] to i8*) }]
 
 
 template<typename tx, typename ty>
@@ -705,7 +705,7 @@ int bar(int n){
 // CHECK:       [[ARR_IDX:%.+]] = getelementptr inbounds [[S2]], [[S2]]* [[LOCAL_THIS1]], i[[SZ]] 0
 // CHECK:       [[ARR_IDX2:%.+]] = getelementptr inbounds [[S2]], [[S2]]* [[LOCAL_THIS1]], i[[SZ]] 0
 
-// CHECK-DAG:   [[BPADDR0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BP]], i32 0, i32 0    
+// CHECK-DAG:   [[BPADDR0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BP]], i32 0, i32 0
 // CHECK-DAG:   [[PADDR0:%.+]] =  getelementptr inbounds [1 x i8*], [1 x i8*]* [[P]], i32 0, i32 0
 // CHECK-DAG:   [[CBPADDR0:%.+]] = bitcast i8** [[BPADDR0]] to [[S2]]**
 // CHECK-DAG:   [[CPADDR0:%.+]] = bitcast i8** [[PADDR0]] to [[S2]]**
@@ -805,6 +805,10 @@ public:
       a++;
   }
 };
+
+// CHECK:     define internal void @.omp_offloading.requires_reg()
+// CHECK:     call void @__tgt_register_requires(i64 1)
+// CHECK:     ret void
 
 int main () {
   S2 bar;

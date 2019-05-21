@@ -3,11 +3,11 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_unittest(TokensTest
+add_clang_unittest(SyntaxTests
   TokensTest.cpp
 )
 
-target_link_libraries(TokensTest
+target_link_libraries(SyntaxTests
   PRIVATE
   clangAST
   clangBasic

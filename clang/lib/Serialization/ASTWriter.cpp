@@ -369,7 +369,8 @@ void ASTTypeWriter::VisitAutoType(const AutoType *T) {
   Record.AddTypeRef(T->getDeducedType());
   Record.push_back((unsigned)T->getKeyword());
   if (T->getDeducedType().isNull())
-    Record.push_back(T->isDependentType());
+    Record.push_back(T->containsUnexpandedParameterPack() ? 2 :
+                     T->isDependentType() ? 1 : 0);
   Code = TYPE_AUTO;
 }
 

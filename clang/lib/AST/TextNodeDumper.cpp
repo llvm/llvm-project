@@ -1366,6 +1366,8 @@ void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
       break;
     }
   }
+  if (D->isParameterPack())
+    OS << " pack";
 }
 
 void TextNodeDumper::VisitBindingDecl(const BindingDecl *D) {

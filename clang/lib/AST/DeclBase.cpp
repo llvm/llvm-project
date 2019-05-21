@@ -208,8 +208,8 @@ bool Decl::isTemplateParameterPack() const {
 }
 
 bool Decl::isParameterPack() const {
-  if (const auto *Parm = dyn_cast<ParmVarDecl>(this))
-    return Parm->isParameterPack();
+  if (const auto *Var = dyn_cast<VarDecl>(this))
+    return Var->isParameterPack();
 
   return isTemplateParameterPack();
 }

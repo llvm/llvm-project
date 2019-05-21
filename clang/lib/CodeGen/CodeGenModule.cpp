@@ -410,6 +410,10 @@ void CodeGenModule::Release() {
       AddGlobalCtor(CudaCtorFunction);
   }
   if (OpenMPRuntime) {
+    if (llvm::Function *OpenMPRequiresDirectiveRegFun =
+            OpenMPRuntime->emitRequiresDirectiveRegFun()) {
+      AddGlobalCtor(OpenMPRequiresDirectiveRegFun, 0);
+    }
     if (llvm::Function *OpenMPRegistrationFunction =
             OpenMPRuntime->emitRegistrationFunction()) {
       auto ComdatKey = OpenMPRegistrationFunction->hasComdat() ?
@@ -798,7 +802,7 @@ static bool shouldAssumeDSOLocal(const CodeGenModule &CGM,
   const auto &CGOpts = CGM.getCodeGenOpts();
   llvm::Reloc::Model RM = CGOpts.RelocationModel;
   const auto &LOpts = CGM.getLangOpts();
-  if (RM != llvm::Reloc::Static && !LOpts.PIE)
+  if (RM != llvm::Reloc::Static && !LOpts.PIE && !LOpts.OpenMPIsDevice)
     return false;
 
   // A definition cannot be preempted from an executable.

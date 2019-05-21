@@ -2397,6 +2397,10 @@ bool VarDecl::checkInitIsICE() const {
   return Eval->IsICE;
 }
 
+bool VarDecl::isParameterPack() const {
+  return isa<PackExpansionType>(getType());
+}
+
 template<typename DeclT>
 static DeclT *getDefinitionOrSelf(DeclT *D) {
   assert(D);
@@ -2681,10 +2685,6 @@ bool ParmVarDecl::hasDefaultArg() const {
   // were unable to even build an invalid expression.
   return hasUnparsedDefaultArg() || hasUninstantiatedDefaultArg() ||
          !Init.isNull();
-}
-
-bool ParmVarDecl::isParameterPack() const {
-  return isa<PackExpansionType>(getType());
 }
 
 void ParmVarDecl::setParameterIndexLarge(unsigned parameterIndex) {
