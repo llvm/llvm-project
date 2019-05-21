@@ -5,7 +5,7 @@
 ; RUN: wasm-ld --reproduce=%t.dir/repro.tar -o out.wasm %t.dir/foo.o
 
 ; RUN: cd %t.dir
-; RUN: tar tf repro.tar | FileCheck --check-prefix=TAR
+; RUN: tar tf repro.tar | FileCheck --check-prefix=TAR %s
 
 ; TAR: repro/response.txt
 ; TAR: repro/version.txt
