@@ -29,6 +29,7 @@ add_lldb_library(lldbExpression
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbPluginCPlusPlusLanguage
     lldbPluginObjectFileJIT
 
     # Begin Swift Mods
