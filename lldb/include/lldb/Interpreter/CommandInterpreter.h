@@ -404,7 +404,7 @@ public:
   }
 
   void SkipAppInitFiles(bool skip_app_init_files) {
-    m_skip_app_init_files = m_skip_lldbinit_files;
+    m_skip_app_init_files = skip_app_init_files;
   }
 
   bool GetSynchronous();
