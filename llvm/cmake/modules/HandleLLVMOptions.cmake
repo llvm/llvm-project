@@ -12,7 +12,7 @@ include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckSymbolExists)
 
-if(CMAKE_LINKER MATCHES "lld-link\\.exe" OR (WIN32 AND LLVM_USE_LINKER STREQUAL "lld") OR LLVM_ENABLE_LLD)
+if(CMAKE_LINKER MATCHES "lld-link" OR (WIN32 AND LLVM_USE_LINKER STREQUAL "lld") OR LLVM_ENABLE_LLD)
   set(LINKER_IS_LLD_LINK TRUE)
 else()
   set(LINKER_IS_LLD_LINK FALSE)
@@ -685,14 +685,8 @@ macro(append_common_sanitizer_flags)
   elseif (CLANG_CL)
     # Keep frame pointers around.
     append("/Oy-" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-    if (LINKER_IS_LLD_LINK)
-      # Use DWARF debug info with LLD.
-      append("-gdwarf" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-    else()
-      # Enable codeview otherwise.
-      append("/Z7" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-    endif()
     # Always ask the linker to produce symbols with asan.
+    append("/Z7" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
     append("-debug" CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   endif()
 endmacro()

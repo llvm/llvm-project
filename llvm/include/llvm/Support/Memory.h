@@ -31,14 +31,17 @@ namespace sys {
   /// Memory block abstraction.
   class MemoryBlock {
   public:
-    MemoryBlock() : Address(nullptr), Size(0) { }
-    MemoryBlock(void *addr, size_t size) : Address(addr), Size(size) { }
+    MemoryBlock() : Address(nullptr), AllocatedSize(0) {}
+    MemoryBlock(void *addr, size_t allocatedSize)
+        : Address(addr), AllocatedSize(allocatedSize) {}
     void *base() const { return Address; }
-    size_t size() const { return Size; }
-
+    /// The size as it was allocated. This is always greater or equal to the
+    /// size that was originally requested.
+    size_t allocatedSize() const { return AllocatedSize; }
+  
   private:
     void *Address;    ///< Address of first byte of memory area
-    size_t Size;      ///< Size, in bytes of the memory area
+    size_t AllocatedSize; ///< Size, in bytes of the memory area
     unsigned Flags = 0;
     friend class Memory;
   };
@@ -139,7 +142,9 @@ namespace sys {
       Memory::releaseMappedMemory(M);
     }
     void *base() const { return M.base(); }
-    size_t size() const { return M.size(); }
+    /// The size as it was allocated. This is always greater or equal to the
+    /// size that was originally requested.
+    size_t allocatedSize() const { return M.allocatedSize(); }
     MemoryBlock getMemoryBlock() const { return M; }
   private:
     MemoryBlock M;
