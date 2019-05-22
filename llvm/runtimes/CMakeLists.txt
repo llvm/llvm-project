@@ -553,6 +553,8 @@ else() # if this is included from LLVM's CMake
           obj2yaml
           sancov
           sanstats
+          gtest_main
+          gtest
         )
       foreach(target ${test_targets} ${SUB_CHECK_TARGETS})
         add_dependencies(${target} ${RUNTIMES_TEST_DEPENDS})
