@@ -26,6 +26,7 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #define REPL_MAIN _TF10repl_swift9repl_mainFT_Si
 
@@ -49,7 +50,11 @@ REPL_MAIN() {
 }
 
 SWIFT_REPL_NOOPT
+#if defined(_WIN32)
+int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd) {
+#else
 int main() {
+#endif
 #ifdef __APPLE__
   // Force loading of libswiftCore.dylib, which is not linked at build time.
   dlopen("@rpath/libswiftCore.dylib", RTLD_LAZY);
@@ -58,7 +63,7 @@ int main() {
 #elif defined(_WIN32)
   HMODULE hModule = LoadLibraryW(L"swiftCore.dll");
   if (hModule == NULL)
-    fprintf(stderr, "unable to load standard library: %lu\n", GetLastError());
+    return EXIT_FAILURE;
 #endif
 
 #ifdef __APPLE__
