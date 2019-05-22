@@ -921,7 +921,7 @@ if(WIN32 OR CYGWIN)
     set(LLVM_ENABLE_PLUGINS OFF)
   endif()
 else()
-  set(LLVM_ENABLE_PLUGINS ON)
+  set(LLVM_ENABLE_PLUGINS ${LLVM_ENABLE_PIC})
 endif()
 
 # By default we should enable LLVM_ENABLE_IDE only for multi-configuration
