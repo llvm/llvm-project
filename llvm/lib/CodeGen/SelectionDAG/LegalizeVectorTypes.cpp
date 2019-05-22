@@ -183,6 +183,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
     R = ScalarizeVecRes_OverflowOp(N, ResNo);
     break;
   case ISD::SMULFIX:
+  case ISD::SMULFIXSAT:
   case ISD::UMULFIX:
     R = ScalarizeVecRes_MULFIX(N);
     break;
@@ -971,6 +972,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     SplitVecRes_OverflowOp(N, ResNo, Lo, Hi);
     break;
   case ISD::SMULFIX:
+  case ISD::SMULFIXSAT:
   case ISD::UMULFIX:
     SplitVecRes_MULFIX(N, Lo, Hi);
     break;

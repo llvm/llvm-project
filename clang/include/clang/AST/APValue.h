@@ -78,7 +78,10 @@ class APValue {
   typedef llvm::APFloat APFloat;
 public:
   enum ValueKind {
-    Uninitialized,
+    /// There is no such object (it's outside its lifetime).
+    None,
+    /// This object has an indeterminate value (C++ [basic.indet]).
+    Indeterminate,
     Int,
     Float,
     FixedPoint,
@@ -231,58 +234,64 @@ private:
   DataType Data;
 
 public:
-  APValue() : Kind(Uninitialized) {}
-  explicit APValue(APSInt I) : Kind(Uninitialized) {
+  APValue() : Kind(None) {}
+  explicit APValue(APSInt I) : Kind(None) {
     MakeInt(); setInt(std::move(I));
   }
-  explicit APValue(APFloat F) : Kind(Uninitialized) {
+  explicit APValue(APFloat F) : Kind(None) {
     MakeFloat(); setFloat(std::move(F));
   }
-  explicit APValue(APFixedPoint FX) : Kind(Uninitialized) {
+  explicit APValue(APFixedPoint FX) : Kind(None) {
     MakeFixedPoint(std::move(FX));
   }
-  explicit APValue(const APValue *E, unsigned N) : Kind(Uninitialized) {
+  explicit APValue(const APValue *E, unsigned N) : Kind(None) {
     MakeVector(); setVector(E, N);
   }
-  APValue(APSInt R, APSInt I) : Kind(Uninitialized) {
+  APValue(APSInt R, APSInt I) : Kind(None) {
     MakeComplexInt(); setComplexInt(std::move(R), std::move(I));
   }
-  APValue(APFloat R, APFloat I) : Kind(Uninitialized) {
+  APValue(APFloat R, APFloat I) : Kind(None) {
     MakeComplexFloat(); setComplexFloat(std::move(R), std::move(I));
   }
   APValue(const APValue &RHS);
-  APValue(APValue &&RHS) : Kind(Uninitialized) { swap(RHS); }
+  APValue(APValue &&RHS) : Kind(None) { swap(RHS); }
   APValue(LValueBase B, const CharUnits &O, NoLValuePath N,
           bool IsNullPtr = false)
-      : Kind(Uninitialized) {
+      : Kind(None) {
     MakeLValue(); setLValue(B, O, N, IsNullPtr);
   }
   APValue(LValueBase B, const CharUnits &O, ArrayRef<LValuePathEntry> Path,
           bool OnePastTheEnd, bool IsNullPtr = false)
-      : Kind(Uninitialized) {
+      : Kind(None) {
     MakeLValue(); setLValue(B, O, Path, OnePastTheEnd, IsNullPtr);
   }
-  APValue(UninitArray, unsigned InitElts, unsigned Size) : Kind(Uninitialized) {
+  APValue(UninitArray, unsigned InitElts, unsigned Size) : Kind(None) {
     MakeArray(InitElts, Size);
   }
-  APValue(UninitStruct, unsigned B, unsigned M) : Kind(Uninitialized) {
+  APValue(UninitStruct, unsigned B, unsigned M) : Kind(None) {
     MakeStruct(B, M);
   }
   explicit APValue(const FieldDecl *D, const APValue &V = APValue())
-      : Kind(Uninitialized) {
+      : Kind(None) {
     MakeUnion(); setUnion(D, V);
   }
   APValue(const ValueDecl *Member, bool IsDerivedMember,
-          ArrayRef<const CXXRecordDecl*> Path) : Kind(Uninitialized) {
+          ArrayRef<const CXXRecordDecl*> Path) : Kind(None) {
     MakeMemberPointer(Member, IsDerivedMember, Path);
   }
   APValue(const AddrLabelExpr* LHSExpr, const AddrLabelExpr* RHSExpr)
-      : Kind(Uninitialized) {
+      : Kind(None) {
     MakeAddrLabelDiff(); setAddrLabelDiff(LHSExpr, RHSExpr);
+  }
+  static APValue IndeterminateValue() {
+    APValue Result;
+    Result.Kind = Indeterminate;
+    return Result;
   }
 
   ~APValue() {
-    MakeUninit();
+    if (Kind != None && Kind != Indeterminate)
+      DestroyDataAndMakeUninit();
   }
 
   /// Returns whether the object performed allocations.
@@ -296,7 +305,11 @@ public:
   void swap(APValue &RHS);
 
   ValueKind getKind() const { return Kind; }
-  bool isUninit() const { return Kind == Uninitialized; }
+
+  bool isAbsent() const { return Kind == None; }
+  bool isIndeterminate() const { return Kind == Indeterminate; }
+  bool hasValue() const { return Kind != None && Kind != Indeterminate; }
+
   bool isInt() const { return Kind == Int; }
   bool isFloat() const { return Kind == Float; }
   bool isFixedPoint() const { return Kind == FixedPoint; }
@@ -536,56 +549,52 @@ public:
 
 private:
   void DestroyDataAndMakeUninit();
-  void MakeUninit() {
-    if (Kind != Uninitialized)
-      DestroyDataAndMakeUninit();
-  }
   void MakeInt() {
-    assert(isUninit() && "Bad state change");
+    assert(isAbsent() && "Bad state change");
     new ((void*)Data.buffer) APSInt(1);
     Kind = Int;
   }
   void MakeFloat() {
-    assert(isUninit() && "Bad state change");
+    assert(isAbsent() && "Bad state change");
     new ((void*)(char*)Data.buffer) APFloat(0.0);
     Kind = Float;
   }
   void MakeFixedPoint(APFixedPoint &&FX) {
-    assert(isUninit() && "Bad state change");
+    assert(isAbsent() && "Bad state change");
     new ((void *)(char *)Data.buffer) APFixedPoint(std::move(FX));
     Kind = FixedPoint;
   }
   void MakeVector() {
-    assert(isUninit() && "Bad state change");
+    assert(isAbsent() && "Bad state change");
     new ((void*)(char*)Data.buffer) Vec();
     Kind = Vector;
   }
   void MakeComplexInt() {
-    assert(isUninit() && "Bad state change");
+    assert(isAbsent() && "Bad state change");
     new ((void*)(char*)Data.buffer) ComplexAPSInt();
     Kind = ComplexInt;
   }
   void MakeComplexFloat() {
-    assert(isUninit() && "Bad state change");
+    assert(isAbsent() && "Bad state change");
     new ((void*)(char*)Data.buffer) ComplexAPFloat();
     Kind = ComplexFloat;
   }
   void MakeLValue();
   void MakeArray(unsigned InitElts, unsigned Size);
   void MakeStruct(unsigned B, unsigned M) {
-    assert(isUninit() && "Bad state change");
+    assert(isAbsent() && "Bad state change");
     new ((void*)(char*)Data.buffer) StructData(B, M);
     Kind = Struct;
   }
   void MakeUnion() {
-    assert(isUninit() && "Bad state change");
+    assert(isAbsent() && "Bad state change");
     new ((void*)(char*)Data.buffer) UnionData();
     Kind = Union;
   }
   void MakeMemberPointer(const ValueDecl *Member, bool IsDerivedMember,
                          ArrayRef<const CXXRecordDecl*> Path);
   void MakeAddrLabelDiff() {
-    assert(isUninit() && "Bad state change");
+    assert(isAbsent() && "Bad state change");
     new ((void*)(char*)Data.buffer) AddrLabelDiffData();
     Kind = AddrLabelDiff;
   }

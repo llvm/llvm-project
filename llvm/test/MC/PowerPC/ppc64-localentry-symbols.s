@@ -4,6 +4,11 @@
 # CHECK: 0000000000000000 gw    F .text  00000000 0x60 __impl_foo
 # CHECK: 0000000000000000 g     F .text  00000000 0x60 foo
 # CHECK: 0000000000000000 gw    F .text  00000000 0x60 foo@FBSD_1.1
+# CHECK: 0000000000000008 g     F .text  00000000 0x60 func
+# CHECK: 0000000000000008 gw    F .text  00000000 0x60 weak_func
+
+.text
+.abiversion 2
 
 .globl foo
 .type foo,@function
@@ -15,3 +20,15 @@ foo:
 .symver __impl_foo, foo@FBSD_1.1
 .weak   __impl_foo
 .set    __impl_foo, foo
+
+.globl  func
+# Mimick FreeBSD weak function/reference
+.weak   weak_func
+.equ    weak_func, func
+
+.p2align 2
+.type    func,@function
+func:
+  nop
+  nop
+  .localentry func, 8

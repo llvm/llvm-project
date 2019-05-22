@@ -1400,8 +1400,6 @@ static llvm::Value *dumpRecord(CodeGenFunction &CGF, QualType RType,
   const auto *RT = RType->getAs<RecordType>();
   ASTContext &Context = CGF.getContext();
   RecordDecl *RD = RT->getDecl()->getDefinition();
-  ASTContext &Ctx = RD->getASTContext();
-  const ASTRecordLayout &RL = Ctx.getASTRecordLayout(RD);
   std::string Pad = std::string(Lvl * 4, ' ');
 
   Value *GString =
@@ -1431,9 +1429,6 @@ static llvm::Value *dumpRecord(CodeGenFunction &CGF, QualType RType,
   }
 
   for (const auto *FD : RD->fields()) {
-    uint64_t Off = RL.getFieldOffset(FD->getFieldIndex());
-    Off = Ctx.toCharUnitsFromBits(Off).getQuantity();
-
     Value *FieldPtr = RecordPtr;
     if (RD->isUnion())
       FieldPtr = CGF.Builder.CreatePointerCast(

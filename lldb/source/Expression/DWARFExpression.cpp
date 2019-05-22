@@ -46,8 +46,10 @@ ReadAddressFromDebugAddrSection(const DWARFUnit *dwarf_cu,
   uint32_t index_size = dwarf_cu->GetAddressByteSize();
   dw_offset_t addr_base = dwarf_cu->GetAddrBase();
   lldb::offset_t offset = addr_base + index * index_size;
-  return dwarf_cu->GetSymbolFileDWARF()->get_debug_addr_data().GetMaxU64(
-      &offset, index_size);
+  return dwarf_cu->GetSymbolFileDWARF()
+      ->GetDWARFContext()
+      .getOrLoadAddrData()
+      .GetMaxU64(&offset, index_size);
 }
 
 // DWARFExpression constructor
@@ -2813,12 +2815,7 @@ bool DWARFExpression::Evaluate(
         return false;
       }
       uint64_t index = opcodes.GetULEB128(&offset);
-      uint32_t index_size = dwarf_cu->GetAddressByteSize();
-      dw_offset_t addr_base = dwarf_cu->GetAddrBase();
-      lldb::offset_t offset = addr_base + index * index_size;
-      uint64_t value =
-          dwarf_cu->GetSymbolFileDWARF()->get_debug_addr_data().GetMaxU64(
-              &offset, index_size);
+      lldb::addr_t value = ReadAddressFromDebugAddrSection(dwarf_cu, index);
       stack.push_back(Scalar(value));
       stack.back().SetValueType(Value::eValueTypeFileAddress);
     } break;
@@ -2838,22 +2835,8 @@ bool DWARFExpression::Evaluate(
         return false;
       }
       uint64_t index = opcodes.GetULEB128(&offset);
-      uint32_t index_size = dwarf_cu->GetAddressByteSize();
-      dw_offset_t addr_base = dwarf_cu->GetAddrBase();
-      lldb::offset_t offset = addr_base + index * index_size;
-      const DWARFDataExtractor &debug_addr =
-          dwarf_cu->GetSymbolFileDWARF()->get_debug_addr_data();
-      switch (index_size) {
-      case 4:
-        stack.push_back(Scalar(debug_addr.GetU32(&offset)));
-        break;
-      case 8:
-        stack.push_back(Scalar(debug_addr.GetU64(&offset)));
-        break;
-      default:
-        assert(false && "Unhandled index size");
-        return false;
-      }
+      lldb::addr_t value = ReadAddressFromDebugAddrSection(dwarf_cu, index);
+      stack.push_back(Scalar(value));
     } break;
 
     default:

@@ -200,10 +200,12 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
   };
 
   // We use a potentially-stale preamble because latency is critical here.
-  WorkScheduler.runWithPreamble("CodeComplete", File,
-                                Opts.AllowFallback ? TUScheduler::StaleOrAbsent
-                                                   : TUScheduler::Stale,
-                                Bind(Task, File.str(), std::move(CB)));
+  WorkScheduler.runWithPreamble(
+      "CodeComplete", File,
+      (Opts.RunParser == CodeCompleteOptions::AlwaysParse)
+          ? TUScheduler::Stale
+          : TUScheduler::StaleOrAbsent,
+      Bind(Task, File.str(), std::move(CB)));
 }
 
 void ClangdServer::signatureHelp(PathRef File, Position Pos,

@@ -969,7 +969,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
   CurrentVRegDefs.clear();
   CurrentVRegUses.clear();
 
-  Topo.InitDAGTopologicalSorting();
+  Topo.MarkDirty();
 }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const PseudoSourceValue* PSV) {
@@ -1158,7 +1158,7 @@ bool ScheduleDAGInstrs::addEdge(SUnit *SuccSU, const SDep &PredDep) {
     // If Pred is reachable from Succ, then the edge creates a cycle.
     if (Topo.IsReachable(PredDep.getSUnit(), SuccSU))
       return false;
-    Topo.AddPred(SuccSU, PredDep.getSUnit());
+    Topo.AddPredQueued(SuccSU, PredDep.getSUnit());
   }
   SuccSU->addPred(PredDep, /*Required=*/!PredDep.isArtificial());
   // Return true regardless of whether a new edge needed to be inserted.

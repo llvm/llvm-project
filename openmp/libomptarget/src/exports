@@ -1,5 +1,6 @@
 VERS1.0 {
   global:
+    __tgt_register_requires;
     __tgt_register_lib;
     __tgt_unregister_lib;
     __tgt_target_data_begin;

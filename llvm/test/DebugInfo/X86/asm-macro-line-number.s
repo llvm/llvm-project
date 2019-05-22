@@ -18,17 +18,17 @@
 function:
  return 0
 
-# CHECK: .file 2 "reduced.S"
-# CHECK: .loc 2 8 0
+# CHECK: .file 1 "reduced.S"
+# CHECK: .loc 1 8 0
 # CHECK: movl %eax, 0
-# CHECK: .loc 2 8 0
+# CHECK: .loc 1 8 0
 # CHECK: retl
 
 # 42 "reduced.S"
 function2:
  return2 0
 
-# CHECK: .loc 2 43 0
+# CHECK: .loc 1 43 0
 # CHECK: movl %eax, 0
-# CHECK: .loc 2 43 0
+# CHECK: .loc 1 43 0
 # CHECK: retl

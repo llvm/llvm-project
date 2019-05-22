@@ -31,6 +31,7 @@ namespace wasm {
 
 class ObjFile;
 class OutputSegment;
+class OutputSection;
 
 class InputChunk {
 public:
@@ -206,6 +207,8 @@ public:
   StringRef getName() const override { return Section.Name; }
   StringRef getDebugName() const override { return StringRef(); }
   uint32_t getComdat() const override { return UINT32_MAX; }
+
+  OutputSection *OutputSec = nullptr;
 
 protected:
   ArrayRef<uint8_t> data() const override { return Section.Content; }

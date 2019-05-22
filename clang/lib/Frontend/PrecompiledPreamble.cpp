@@ -454,20 +454,33 @@ bool PrecompiledPreamble::CanReuse(const CompilerInvocation &Invocation,
         Status.getSize(), llvm::sys::toTimeT(Status.getLastModificationTime()));
   }
 
+  // OverridenFileBuffers tracks only the files not found in VFS.
+  llvm::StringMap<PreambleFileHash> OverridenFileBuffers;
   for (const auto &RB : PreprocessorOpts.RemappedFileBuffers) {
-    llvm::vfs::Status Status;
-    if (!moveOnNoError(VFS->status(RB.first), Status))
-      return false;
-
-    OverriddenFiles[Status.getUniqueID()] =
+    const PrecompiledPreamble::PreambleFileHash PreambleHash =
         PreambleFileHash::createForMemoryBuffer(RB.second);
+    llvm::vfs::Status Status;
+    if (moveOnNoError(VFS->status(RB.first), Status))
+      OverriddenFiles[Status.getUniqueID()] = PreambleHash;
+    else
+      OverridenFileBuffers[RB.first] = PreambleHash;
   }
 
   // Check whether anything has changed.
   for (const auto &F : FilesInPreamble) {
+    auto OverridenFileBuffer = OverridenFileBuffers.find(F.first());
+    if (OverridenFileBuffer != OverridenFileBuffers.end()) {
+      // The file's buffer was remapped and the file was not found in VFS.
+      // Check whether it matches up with the previous mapping.
+      if (OverridenFileBuffer->second != F.second)
+        return false;
+      continue;
+    }
+
     llvm::vfs::Status Status;
     if (!moveOnNoError(VFS->status(F.first()), Status)) {
-      // If we can't stat the file, assume that something horrible happened.
+      // If the file's buffer is not remapped and we can't stat it,
+      // assume that something horrible happened.
       return false;
     }
 
@@ -481,7 +494,8 @@ bool PrecompiledPreamble::CanReuse(const CompilerInvocation &Invocation,
       continue;
     }
 
-    // The file was not remapped; check whether it has changed on disk.
+    // Neither the file's buffer nor the file itself was remapped;
+    // check whether it has changed on disk.
     if (Status.getSize() != uint64_t(F.second.Size) ||
         llvm::sys::toTimeT(Status.getLastModificationTime()) !=
             F.second.ModTime)

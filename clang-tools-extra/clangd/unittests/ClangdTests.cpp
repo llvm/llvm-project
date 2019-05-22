@@ -9,6 +9,7 @@
 #include "Annotations.h"
 #include "ClangdLSPServer.h"
 #include "ClangdServer.h"
+#include "CodeComplete.h"
 #include "GlobalCompilationDatabase.h"
 #include "Matchers.h"
 #include "SyncAPI.h"
@@ -1072,7 +1073,7 @@ TEST_F(ClangdVFSTest, FallbackWhenPreambleIsNotReady) {
   FS.Files[FooCpp] = FooCpp;
 
   auto Opts = clangd::CodeCompleteOptions();
-  Opts.AllowFallback = true;
+  Opts.RunParser = CodeCompleteOptions::ParseIfReady;
 
   // This will make compile command broken and preamble absent.
   CDB.ExtraClangFlags = {"yolo.cc"};
@@ -1089,11 +1090,17 @@ TEST_F(ClangdVFSTest, FallbackWhenPreambleIsNotReady) {
   CDB.ExtraClangFlags = {"-std=c++11"};
   Server.addDocument(FooCpp, Code.code());
   ASSERT_TRUE(Server.blockUntilIdleForTest());
-  EXPECT_THAT(cantFail(runCodeComplete(Server, FooCpp, Code.point(),
-                                       clangd::CodeCompleteOptions()))
-                  .Completions,
-              ElementsAre(AllOf(Field(&CodeCompletion::Name, "xyz"),
-                                Field(&CodeCompletion::Scope, "ns::"))));
+  EXPECT_THAT(
+      cantFail(runCodeComplete(Server, FooCpp, Code.point(), Opts)).Completions,
+      ElementsAre(AllOf(Field(&CodeCompletion::Name, "xyz"),
+                        Field(&CodeCompletion::Scope, "ns::"))));
+
+  // Now force identifier-based completion.
+  Opts.RunParser = CodeCompleteOptions::NeverParse;
+  EXPECT_THAT(
+      cantFail(runCodeComplete(Server, FooCpp, Code.point(), Opts)).Completions,
+      ElementsAre(AllOf(Field(&CodeCompletion::Name, "xyz"),
+                        Field(&CodeCompletion::Scope, ""))));
 }
 
 TEST_F(ClangdVFSTest, FallbackWhenWaitingForCompileCommand) {
@@ -1140,7 +1147,7 @@ TEST_F(ClangdVFSTest, FallbackWhenWaitingForCompileCommand) {
   // hasn't been scheduled.
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
   auto Opts = clangd::CodeCompleteOptions();
-  Opts.AllowFallback = true;
+  Opts.RunParser = CodeCompleteOptions::ParseIfReady;
 
   auto Res = cantFail(runCodeComplete(Server, FooCpp, Code.point(), Opts));
   EXPECT_EQ(Res.Context, CodeCompletionContext::CCC_Recovery);

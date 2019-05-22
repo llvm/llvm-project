@@ -112,19 +112,6 @@ DWARFUnit *SymbolFileDWARFDwo::GetBaseCompileUnit() {
   return m_base_dwarf_cu;
 }
 
-const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_addr_data() {
-  // For single file split dwarf case (when we have .dwo sections in a .o),
-  // we do not want to use the .debug_addr section from .o file,
-  // but want to get one from the final executable.
-  // For regular split debug case, .dwo file does not contain the
-  // .debug_addr, so we would always fall back to such lookup anyways.
-  llvm::call_once(m_data_debug_addr.m_flag, [this] {
-    SymbolFileDWARF::LoadSectionData(eSectionTypeDWARFDebugAddr,
-                                     std::ref(m_data_debug_addr.m_data));
-  });
-  return m_data_debug_addr.m_data;
-}
-
 SymbolFileDWARF *SymbolFileDWARFDwo::GetBaseSymbolFile() {
   return m_base_dwarf_cu->GetSymbolFileDWARF();
 }

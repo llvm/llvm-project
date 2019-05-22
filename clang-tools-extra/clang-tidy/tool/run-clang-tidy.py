@@ -84,9 +84,6 @@ def get_tidy_invocation(f, clang_tidy_binary, checks, tmpdir, build_path,
   start = [clang_tidy_binary]
   if header_filter is not None:
     start.append('-header-filter=' + header_filter)
-  else:
-    # Show warnings in all in-project headers by default.
-    start.append('-header-filter=^' + build_path + '/.*')
   if checks:
     start.append('-checks=' + checks)
   if tmpdir is not None:

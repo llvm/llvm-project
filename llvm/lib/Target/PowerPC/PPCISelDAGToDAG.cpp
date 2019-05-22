@@ -218,13 +218,6 @@ namespace {
     SDValue SelectCC(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                      const SDLoc &dl);
 
-    /// SelectAddrImm - Returns true if the address N can be represented by
-    /// a base register plus a signed 16-bit displacement [r+imm].
-    bool SelectAddrImm(SDValue N, SDValue &Disp,
-                       SDValue &Base) {
-      return PPCLowering->SelectAddressRegImm(N, Disp, Base, *CurDAG, 0);
-    }
-
     /// SelectAddrImmOffs - Return true if the operand is valid for a preinc
     /// immediate field.  Note that the operand at this point is already the
     /// result of a prior SelectAddressRegImm call.
@@ -238,26 +231,61 @@ namespace {
       return false;
     }
 
-    /// SelectAddrIdx - Given the specified addressed, check to see if it can be
-    /// represented as an indexed [r+r] operation.  Returns false if it can
-    /// be represented by [r+imm], which are preferred.
+    /// SelectAddrIdx - Given the specified address, check to see if it can be
+    /// represented as an indexed [r+r] operation.
+    /// This is for xform instructions whose associated displacement form is D.
+    /// The last parameter \p 0 means associated D form has no requirment for 16
+    /// bit signed displacement.
+    /// Returns false if it can be represented by [r+imm], which are preferred.
     bool SelectAddrIdx(SDValue N, SDValue &Base, SDValue &Index) {
-      return PPCLowering->SelectAddressRegReg(N, Base, Index, *CurDAG);
+      return PPCLowering->SelectAddressRegReg(N, Base, Index, *CurDAG, 0);
     }
 
-    /// SelectAddrIdxOnly - Given the specified addressed, force it to be
+    /// SelectAddrIdx4 - Given the specified address, check to see if it can be
+    /// represented as an indexed [r+r] operation.
+    /// This is for xform instructions whose associated displacement form is DS.
+    /// The last parameter \p 4 means associated DS form 16 bit signed
+    /// displacement must be a multiple of 4.
+    /// Returns false if it can be represented by [r+imm], which are preferred.
+    bool SelectAddrIdxX4(SDValue N, SDValue &Base, SDValue &Index) {
+      return PPCLowering->SelectAddressRegReg(N, Base, Index, *CurDAG, 4);
+    }
+
+    /// SelectAddrIdx16 - Given the specified address, check to see if it can be
+    /// represented as an indexed [r+r] operation.
+    /// This is for xform instructions whose associated displacement form is DQ.
+    /// The last parameter \p 16 means associated DQ form 16 bit signed
+    /// displacement must be a multiple of 16.
+    /// Returns false if it can be represented by [r+imm], which are preferred.
+    bool SelectAddrIdxX16(SDValue N, SDValue &Base, SDValue &Index) {
+      return PPCLowering->SelectAddressRegReg(N, Base, Index, *CurDAG, 16);
+    }
+
+    /// SelectAddrIdxOnly - Given the specified address, force it to be
     /// represented as an indexed [r+r] operation.
     bool SelectAddrIdxOnly(SDValue N, SDValue &Base, SDValue &Index) {
       return PPCLowering->SelectAddressRegRegOnly(N, Base, Index, *CurDAG);
     }
+    
+    /// SelectAddrImm - Returns true if the address N can be represented by
+    /// a base register plus a signed 16-bit displacement [r+imm].
+    /// The last parameter \p 0 means D form has no requirment for 16 bit signed
+    /// displacement.
+    bool SelectAddrImm(SDValue N, SDValue &Disp,
+                       SDValue &Base) {
+      return PPCLowering->SelectAddressRegImm(N, Disp, Base, *CurDAG, 0);
+    }
 
     /// SelectAddrImmX4 - Returns true if the address N can be represented by
-    /// a base register plus a signed 16-bit displacement that is a multiple of 4.
-    /// Suitable for use by STD and friends.
+    /// a base register plus a signed 16-bit displacement that is a multiple of
+    /// 4 (last parameter). Suitable for use by STD and friends.
     bool SelectAddrImmX4(SDValue N, SDValue &Disp, SDValue &Base) {
       return PPCLowering->SelectAddressRegImm(N, Disp, Base, *CurDAG, 4);
     }
 
+    /// SelectAddrImmX16 - Returns true if the address N can be represented by
+    /// a base register plus a signed 16-bit displacement that is a multiple of
+    /// 16(last parameter). Suitable for use by STXV and friends.
     bool SelectAddrImmX16(SDValue N, SDValue &Disp, SDValue &Base) {
       return PPCLowering->SelectAddressRegImm(N, Disp, Base, *CurDAG, 16);
     }

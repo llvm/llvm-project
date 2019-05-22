@@ -56,6 +56,14 @@ class MiDataTestCase(lldbmi_testcase.MiTestCaseBase):
             "\^done,asm_insns=\[{address=\"0x0*%x\",func-name=\"main\",offset=\"0\",size=\"[1-9]+\",inst=\".+?\"}," %
             addr)
 
+        # Test -data-disassemble with source line information
+        self.runCmd("-data-disassemble -s %#x -e %#x -- 1" % (addr, addr + 0x10))
+        self.expect(
+            '\^done,asm_insns=\[src_and_asm_line={line="\d+",file="main.cpp",'
+            'line_asm_insn=\[{address="0x0*%x",func-name="main",offset="0",size="[1-9]+",inst=".+?"}\],'
+            'fullname="%s"}' %
+            (addr, os.path.abspath("main.cpp")) )
+
         # Run to hello_world
         self.runCmd("-break-insert -f hello_world")
         self.expect("\^done,bkpt={number=\"2\"")
