@@ -1591,7 +1591,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                                                    Target *target) {
   std::vector<std::string> module_search_paths;
   std::vector<std::pair<std::string, bool>> framework_search_paths;
-  
+
   if (!SwiftASTContextSupportsLanguage(language))
     return lldb::TypeSystemSP();
 
@@ -1994,9 +1994,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
           platform_sp->GetOSVersion(target.GetProcessSP().get());
       std::string buffer;
       llvm::raw_string_ostream(buffer)
-          << target_triple.getArchName() << '-'
-          << target_triple.getVendorName() << '-'
-          << llvm::Triple::getOSTypeName(target_triple.getOS())
+          << target_triple.getArchName() << '-' << target_triple.getVendorName()
+          << '-' << llvm::Triple::getOSTypeName(target_triple.getOS())
           << version.getAsString();
       swift_ast_sp->SetTriple(buffer.c_str());
       set_triple = true;
@@ -2318,8 +2317,9 @@ bool SwiftASTContext::SetTriple(std::string raw_triple, Module *module) {
       }
     }
   }
-  LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") setting to \"%s\"%s", raw_triple.c_str(),
-             triple.c_str(), m_target_wp.lock() ? " (target)" : "");
+  LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") setting to \"%s\"%s",
+             raw_triple.c_str(), triple.c_str(),
+             m_target_wp.lock() ? " (target)" : "");
 
   if (llvm::Triple(triple).getOS() == llvm::Triple::UnknownOS) {
     // This case triggers an llvm_unreachable() in the Swift compiler.
@@ -3101,8 +3101,8 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   auto &clang_importer_options = GetClangImporterOptions();
   if (!m_ast_context_ap->SearchPathOpts.SDKPath.empty() || TargetHasNoSDK()) {
     if (!clang_importer_options.OverrideResourceDir.empty()) {
-      clang_importer_ap = swift::ClangImporter::create(
-          *m_ast_context_ap, clang_importer_options);
+      clang_importer_ap = swift::ClangImporter::create(*m_ast_context_ap,
+                                                       clang_importer_options);
       moduleCachePath = swift::getModuleCachePathFromClang(
           clang_importer_ap->getClangInstance());
       LOG_PRINTF(LIBLLDB_LOG_TYPES, "Using clang module cache path: %s",
@@ -3254,8 +3254,7 @@ bool SwiftASTContext::AddClangArgumentPair(StringRef clang_arg_1,
   return true;
 }
 
-const swift::SearchPathOptions *
-SwiftASTContext::GetSearchPathOptions() const {
+const swift::SearchPathOptions *SwiftASTContext::GetSearchPathOptions() const {
   VALID_OR_RETURN(0);
 
   if (!m_ast_context_ap)
@@ -3396,8 +3395,9 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "failed with no error",
                module.path.front().GetCString());
 
-    error.SetErrorStringWithFormat("failed to get module \"%s\" from AST context",
-                                   module.path.front().GetCString());
+    error.SetErrorStringWithFormat(
+        "failed to get module \"%s\" from AST context",
+        module.path.front().GetCString());
     return nullptr;
   }
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") -- found %s",
@@ -5092,9 +5092,8 @@ bool SwiftASTContext::IsPossibleDynamicType(void *type,
         can_type->isAnyExistentialType())
       return true;
 
-    if (can_type->hasArchetype()
-        || can_type->hasOpaqueArchetype()
-        || can_type->hasTypeParameter())
+    if (can_type->hasArchetype() || can_type->hasOpaqueArchetype() ||
+        can_type->hasTypeParameter())
       return true;
 
     if (can_type == GetASTContext()->TheRawPointerType)
