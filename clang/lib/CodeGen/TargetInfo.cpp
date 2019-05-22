@@ -5278,13 +5278,13 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
   llvm::BasicBlock *OnStackBlock = CGF.createBasicBlock("vaarg.on_stack");
   llvm::BasicBlock *ContBlock = CGF.createBasicBlock("vaarg.end");
 
-  auto TyInfo = getContext().getTypeInfoInChars(Ty);
-  CharUnits TyAlign = TyInfo.second;
+  CharUnits TySize = getContext().getTypeSizeInChars(Ty);
+  CharUnits TyAlign = getContext().getTypeUnadjustedAlignInChars(Ty);
 
   Address reg_offs_p = Address::invalid();
   llvm::Value *reg_offs = nullptr;
   int reg_top_index;
-  int RegSize = IsIndirect ? 8 : TyInfo.first.getQuantity();
+  int RegSize = IsIndirect ? 8 : TySize.getQuantity();
   if (!IsFPR) {
     // 3 is the field number of __gr_offs
     reg_offs_p = CGF.Builder.CreateStructGEP(VAListAddr, 3, "gr_offs_p");
@@ -5412,8 +5412,8 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
     CharUnits SlotSize = BaseAddr.getAlignment();
     if (CGF.CGM.getDataLayout().isBigEndian() && !IsIndirect &&
         (IsHFA || !isAggregateTypeForABI(Ty)) &&
-        TyInfo.first < SlotSize) {
-      CharUnits Offset = SlotSize - TyInfo.first;
+        TySize < SlotSize) {
+      CharUnits Offset = SlotSize - TySize;
       BaseAddr = CGF.Builder.CreateConstInBoundsByteGEP(BaseAddr, Offset);
     }
 
@@ -5455,7 +5455,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
   if (IsIndirect)
     StackSize = StackSlotSize;
   else
-    StackSize = TyInfo.first.alignTo(StackSlotSize);
+    StackSize = TySize.alignTo(StackSlotSize);
 
   llvm::Value *StackSizeC = CGF.Builder.getSize(StackSize);
   llvm::Value *NewStack =
@@ -5465,8 +5465,8 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
   CGF.Builder.CreateStore(NewStack, stack_p);
 
   if (CGF.CGM.getDataLayout().isBigEndian() && !isAggregateTypeForABI(Ty) &&
-      TyInfo.first < StackSlotSize) {
-    CharUnits Offset = StackSlotSize - TyInfo.first;
+      TySize < StackSlotSize) {
+    CharUnits Offset = StackSlotSize - TySize;
     OnStackAddr = CGF.Builder.CreateConstInBoundsByteGEP(OnStackAddr, Offset);
   }
 
@@ -5484,7 +5484,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
 
   if (IsIndirect)
     return Address(CGF.Builder.CreateLoad(ResAddr, "vaarg.addr"),
-                   TyInfo.second);
+                   TyAlign);
 
   return ResAddr;
 }
@@ -6210,19 +6210,19 @@ Address ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     return Addr;
   }
 
-  auto TyInfo = getContext().getTypeInfoInChars(Ty);
-  CharUnits TyAlignForABI = TyInfo.second;
+  CharUnits TySize = getContext().getTypeSizeInChars(Ty);
+  CharUnits TyAlignForABI = getContext().getTypeUnadjustedAlignInChars(Ty);
 
   // Use indirect if size of the illegal vector is bigger than 16 bytes.
   bool IsIndirect = false;
   const Type *Base = nullptr;
   uint64_t Members = 0;
-  if (TyInfo.first > CharUnits::fromQuantity(16) && isIllegalVectorType(Ty)) {
+  if (TySize > CharUnits::fromQuantity(16) && isIllegalVectorType(Ty)) {
     IsIndirect = true;
 
   // ARMv7k passes structs bigger than 16 bytes indirectly, in space
   // allocated by the caller.
-  } else if (TyInfo.first > CharUnits::fromQuantity(16) &&
+  } else if (TySize > CharUnits::fromQuantity(16) &&
              getABIKind() == ARMABIInfo::AAPCS16_VFP &&
              !isHomogeneousAggregate(Ty, Base, Members)) {
     IsIndirect = true;
@@ -6242,8 +6242,8 @@ Address ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   } else {
     TyAlignForABI = CharUnits::fromQuantity(4);
   }
-  TyInfo.second = TyAlignForABI;
 
+  std::pair<CharUnits, CharUnits> TyInfo = { TySize, TyAlignForABI };
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect, TyInfo,
                           SlotSize, /*AllowHigherAlign*/ true);
 }

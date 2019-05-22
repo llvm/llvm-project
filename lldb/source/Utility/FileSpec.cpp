@@ -76,11 +76,6 @@ FileSpec::FileSpec(llvm::StringRef path, const llvm::Triple &Triple)
     : FileSpec{path, Triple.isOSWindows() ? Style::windows : Style::posix} {}
 
 // Copy constructor
-FileSpec::FileSpec(const FileSpec &rhs)
-    : m_directory(rhs.m_directory), m_filename(rhs.m_filename),
-      m_is_resolved(rhs.m_is_resolved), m_style(rhs.m_style) {}
-
-// Copy constructor
 FileSpec::FileSpec(const FileSpec *rhs) : m_directory(), m_filename() {
   if (rhs)
     *this = *rhs;

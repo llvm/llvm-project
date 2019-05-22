@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s > %t
 # RUN: not llvm-objcopy %t %t2 2>&1 | FileCheck %s
-# CHECK: error: Invalid alignment 1 of group section .group.
+# CHECK: error: invalid alignment 1 of group section '.group'
 
 # In this test, we check that llvm-objcopy reports an error
 # for SHT_GROUP section with invalid alignment (not a multiple of 4). 

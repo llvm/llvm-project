@@ -41349,9 +41349,14 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
   if (isNullConstant(Y) && !IsOrXorXorCCZero)
     return SDValue();
 
-  // Bail out if we know that this is not really just an oversized integer.
-  if (peekThroughBitcasts(X).getValueType() == MVT::f128 ||
-      peekThroughBitcasts(Y).getValueType() == MVT::f128)
+  // Don't perform this combine if constructing the vector will be expensive.
+  auto IsVectorBitCastCheap = [](SDValue X) {
+    X = peekThroughBitcasts(X);
+    return isa<ConstantSDNode>(X) || X.getValueType().isVector() ||
+           X.getOpcode() == ISD::LOAD;
+  };
+  if ((!IsVectorBitCastCheap(X) || !IsVectorBitCastCheap(Y)) &&
+      !IsOrXorXorCCZero)
     return SDValue();
 
   // TODO: Use PXOR + PTEST for SSE4.1 or later?

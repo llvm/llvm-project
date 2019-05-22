@@ -28,4 +28,4 @@ Symbols:
     Section: .text
     Binding: STB_WEAK
 
-#CHECK: Symbol foo cannot be removed because it is referenced by the section .group[1].
+# CHECK: symbol 'foo' cannot be removed because it is referenced by the section '.group[1]'

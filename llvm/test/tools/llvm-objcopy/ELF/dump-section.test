@@ -41,4 +41,4 @@ ProgramHeaders:
 
 #SIZE: 4
 
-#NOBITS: Can't dump section ".bar": it has no contents
+#NOBITS: cannot dump section '.bar': it has no contents

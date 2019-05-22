@@ -512,8 +512,8 @@ Fixed Point Facility:
                         "lxsdx $XT, $src", IIC_LdStLFD,
                         [(set f64:$XT, (load xoaddr:$src))]>;
 
-  . (set f64:$XT, (load ixaddr:$src))
-    (set f64:$XT, (store ixaddr:$dst))
+  . (set f64:$XT, (load iaddrX4:$src))
+    (set f64:$XT, (store iaddrX4:$dst))
 
 - Load/Store SP, with conversion from/to DP: lxssp stxssp
   . Similar to lxsspx/stxsspx:
@@ -521,8 +521,8 @@ Fixed Point Facility:
                          "lxsspx $XT, $src", IIC_LdStLFD,
                          [(set f32:$XT, (load xoaddr:$src))]>;
 
-  . (set f32:$XT, (load ixaddr:$src))
-    (set f32:$XT, (store ixaddr:$dst))
+  . (set f32:$XT, (load iaddrX4:$src))
+    (set f32:$XT, (store iaddrX4:$dst))
 
 - Load as Integer Byte/Halfword & Zero Indexed: lxsibzx lxsihzx
   . Similar to lxsiwzx:

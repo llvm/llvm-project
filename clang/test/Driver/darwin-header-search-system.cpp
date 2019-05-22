@@ -1,3 +1,5 @@
+// UNSUPPORTED: system-windows
+
 // General tests that the system header search paths detected by the driver
 // and passed to CC1 are correct on Darwin platforms.
 

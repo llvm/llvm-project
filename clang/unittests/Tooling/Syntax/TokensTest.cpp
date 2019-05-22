@@ -109,6 +109,8 @@ public:
     constexpr const char *FileName = "./input.cpp";
     FS->addFile(FileName, time_t(), llvm::MemoryBuffer::getMemBufferCopy(""));
     // Prepare to run a compiler.
+    if (!Diags->getClient())
+      Diags->setClient(new IgnoringDiagConsumer);
     std::vector<const char *> Args = {"tok-test", "-std=c++03", "-fsyntax-only",
                                       FileName};
     auto CI = createInvocationFromCommandLine(Args, Diags, FS);
@@ -118,8 +120,6 @@ public:
         FileName, llvm::MemoryBuffer::getMemBufferCopy(Code).release());
     CompilerInstance Compiler;
     Compiler.setInvocation(std::move(CI));
-    if (!Diags->getClient())
-      Diags->setClient(new IgnoringDiagConsumer);
     Compiler.setDiagnostics(Diags.get());
     Compiler.setFileManager(FileMgr.get());
     Compiler.setSourceManager(SourceMgr.get());

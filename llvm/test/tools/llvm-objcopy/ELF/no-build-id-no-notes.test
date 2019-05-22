@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s > %t
 # RUN: not llvm-objcopy --build-id-link-dir=%t-dir --build-id-link-input=.debug %t 2>&1 >/dev/null | FileCheck %s
 
-# CHECK: Could not find build ID.
+# CHECK: could not find build ID
 
 --- !ELF
 FileHeader:

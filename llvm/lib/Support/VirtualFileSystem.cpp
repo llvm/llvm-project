@@ -1279,7 +1279,7 @@ class llvm::vfs::RedirectingFileSystemParser {
         EntryArrayContents;
     std::string ExternalContentsPath;
     std::string Name;
-    yaml::Node *NameValueNode;
+    yaml::Node *NameValueNode = nullptr;
     auto UseExternalName =
         RedirectingFileSystem::RedirectingFileEntry::NK_NotSet;
     RedirectingFileSystem::EntryKind Kind;
