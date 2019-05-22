@@ -1,0 +1,14 @@
+; RUN: llvm-dlltool -k -m i386 --input-def %s --output-lib %t.a
+; RUN: llvm-readobj %t.a | FileCheck %s
+
+LIBRARY test.dll
+EXPORTS
+ByOrdinalFunction @ 1 NONAME
+ByNameFunction
+
+; CHECK: Name type: ordinal
+; CHECK: Symbol: __imp__ByOrdinalFunction
+; CHECK: Symbol: _ByOrdinalFunction
+; CHECK: Name type: noprefix
+; CHECK: Symbol: __imp__ByNameFunction
+; CHECK: Symbol: _ByNameFunction

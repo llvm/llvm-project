@@ -202,6 +202,8 @@ public:
     CODE16,
     EABI,
     EABIHF,
+    ELFv1,
+    ELFv2,
     Android,
     Musl,
     MuslEABI,

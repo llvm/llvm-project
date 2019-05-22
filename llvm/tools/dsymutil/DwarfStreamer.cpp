@@ -584,8 +584,7 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
 
 /// Copy the debug_line over to the updated binary while unobfuscating the file
 /// names and directories.
-void DwarfStreamer::translateLineTable(DataExtractor Data, uint32_t Offset,
-                                       LinkOptions &Options) {
+void DwarfStreamer::translateLineTable(DataExtractor Data, uint32_t Offset) {
   MS->SwitchSection(MC->getObjectFileInfo()->getDwarfLineSection());
   StringRef Contents = Data.getData();
 

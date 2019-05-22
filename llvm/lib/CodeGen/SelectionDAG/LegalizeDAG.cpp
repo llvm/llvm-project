@@ -1140,6 +1140,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     break;
   }
   case ISD::SMULFIX:
+  case ISD::SMULFIXSAT:
   case ISD::UMULFIX: {
     unsigned Scale = Node->getConstantOperandVal(2);
     Action = TLI.getFixedPointOperationAction(Node->getOpcode(),
@@ -3334,6 +3335,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(TLI.expandAddSubSat(Node, DAG));
     break;
   case ISD::SMULFIX:
+  case ISD::SMULFIXSAT:
   case ISD::UMULFIX:
     Results.push_back(TLI.expandFixedPointMul(Node, DAG));
     break;

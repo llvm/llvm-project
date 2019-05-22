@@ -596,6 +596,18 @@ function(llvm_add_library name)
     llvm_externalize_debuginfo(${name})
     llvm_codesign(${name} ENTITLEMENTS ${ARG_ENTITLEMENTS})
   endif()
+  # clang and newer versions of ninja use high-resolutions timestamps,
+  # but older versions of libtool on Darwin don't, so the archive will
+  # often get an older timestamp than the last object that was added
+  # or updated.  To fix this, we add a custom command to touch archive
+  # after it's been built so that ninja won't rebuild it unnecessarily
+  # the next time it's run.
+  if(ARG_STATIC AND LLVM_TOUCH_STATIC_LIBRARIES)
+    add_custom_command(TARGET ${name}
+      POST_BUILD
+      COMMAND touch ${LLVM_LIBRARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}${name}${CMAKE_STATIC_LIBRARY_SUFFIX}
+      )
+  endif()
 endfunction()
 
 function(add_llvm_install_targets target)

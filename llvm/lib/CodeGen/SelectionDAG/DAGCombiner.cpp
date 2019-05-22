@@ -1042,6 +1042,13 @@ SDValue DAGCombiner::reassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
   // Don't reassociate reductions.
   if (Flags.hasVectorReduction())
     return SDValue();
+
+  // Floating-point reassociation is not allowed without loose FP math.
+  if (N0.getValueType().isFloatingPoint() ||
+      N1.getValueType().isFloatingPoint())
+    if (!Flags.hasAllowReassociation() || !Flags.hasNoSignedZeros())
+      return SDValue();
+
   if (SDValue Combined = reassociateOpsCommutative(Opc, DL, N0, N1))
     return Combined;
   if (SDValue Combined = reassociateOpsCommutative(Opc, DL, N1, N0))
@@ -1728,7 +1735,7 @@ SDValue DAGCombiner::combine(SDNode *N) {
     }
   }
 
-  // If N is a commutative binary node, try eliminate it if the commuted
+  // If N is a commutative binary node, try to eliminate it if the commuted
   // version is already present in the DAG.
   if (!RV.getNode() && TLI.isCommutativeBinOp(N->getOpcode()) &&
       N->getNumValues() == 1) {

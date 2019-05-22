@@ -93,6 +93,12 @@ protected:
   bool HasPAN_RWV = false;
   bool HasCCPP = false;
 
+  // Armv8.2 Crypto extensions
+  bool HasSM4 = false;
+  bool HasSHA3 = false;
+  bool HasSHA2 = false;
+  bool HasAES = false;
+
   // ARMv8.3 extensions
   bool HasPA = false;
   bool HasJS = false;
@@ -110,12 +116,6 @@ protected:
   bool HasTLB_RMI = false;
   bool HasFMI = false;
   bool HasRCPC_IMMO = false;
-  // ARMv8.4 Crypto extensions
-  bool HasSM4 = true;
-  bool HasSHA3 = true;
-
-  bool HasSHA2 = true;
-  bool HasAES = true;
 
   bool HasLSLFast = false;
   bool HasSVE = false;
