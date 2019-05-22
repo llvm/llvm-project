@@ -124,23 +124,23 @@ template <class ELFT>
 void ELFSectionSizer<ELFT>::visit(DecompressedSection &Sec) {}
 
 void BinarySectionWriter::visit(const SectionIndexSection &Sec) {
-  error("Cannot write symbol section index table '" + Sec.Name + "' ");
+  error("cannot write symbol section index table '" + Sec.Name + "' ");
 }
 
 void BinarySectionWriter::visit(const SymbolTableSection &Sec) {
-  error("Cannot write symbol table '" + Sec.Name + "' out to binary");
+  error("cannot write symbol table '" + Sec.Name + "' out to binary");
 }
 
 void BinarySectionWriter::visit(const RelocationSection &Sec) {
-  error("Cannot write relocation section '" + Sec.Name + "' out to binary");
+  error("cannot write relocation section '" + Sec.Name + "' out to binary");
 }
 
 void BinarySectionWriter::visit(const GnuDebugLinkSection &Sec) {
-  error("Cannot write '" + Sec.Name + "' out to binary");
+  error("cannot write '" + Sec.Name + "' out to binary");
 }
 
 void BinarySectionWriter::visit(const GroupSection &Sec) {
-  error("Cannot write '" + Sec.Name + "' out to binary");
+  error("cannot write '" + Sec.Name + "' out to binary");
 }
 
 void SectionWriter::visit(const Section &Sec) {
@@ -202,7 +202,7 @@ void ELFSectionWriter<ELFT>::visit(const DecompressedSection &Sec) {
 }
 
 void BinarySectionWriter::visit(const DecompressedSection &Sec) {
-  error("Cannot write compressed section '" + Sec.Name + "' ");
+  error("cannot write compressed section '" + Sec.Name + "' ");
 }
 
 void DecompressedSection::accept(SectionVisitor &Visitor) const {
@@ -222,7 +222,7 @@ void OwnedDataSection::accept(MutableSectionVisitor &Visitor) {
 }
 
 void BinarySectionWriter::visit(const CompressedSection &Sec) {
-  error("Cannot write compressed section '" + Sec.Name + "' ");
+  error("cannot write compressed section '" + Sec.Name + "' ");
 }
 
 template <class ELFT>
@@ -433,8 +433,8 @@ Error SymbolTableSection::removeSectionReferences(
     if (!AllowBrokenLinks)
       return createStringError(
           llvm::errc::invalid_argument,
-          "String table %s cannot be removed because it is "
-          "referenced by the symbol table %s",
+          "string table '%s' cannot be removed because it is "
+          "referenced by the symbol table '%s'",
           SymbolNames->Name.data(), this->Name.data());
     SymbolNames = nullptr;
   }
@@ -523,7 +523,7 @@ void SymbolTableSection::fillShndxTable() {
 
 const Symbol *SymbolTableSection::getSymbolByIndex(uint32_t Index) const {
   if (Symbols.size() <= Index)
-    error("Invalid symbol index: " + Twine(Index));
+    error("invalid symbol index: " + Twine(Index));
   return Symbols[Index].get();
 }
 
@@ -565,8 +565,8 @@ Error RelocationSection::removeSectionReferences(
     if (!AllowBrokenLinks)
       return createStringError(
           llvm::errc::invalid_argument,
-          "Symbol table %s cannot be removed because it is "
-          "referenced by the relocation section %s.",
+          "symbol table '%s' cannot be removed because it is "
+          "referenced by the relocation section '%s'",
           Symbols->Name.data(), this->Name.data());
     Symbols = nullptr;
   }
@@ -575,7 +575,7 @@ Error RelocationSection::removeSectionReferences(
     if (!R.RelocSymbol->DefinedIn || !ToRemove(R.RelocSymbol->DefinedIn))
       continue;
     return createStringError(llvm::errc::invalid_argument,
-                             "Section %s can't be removed: (%s+0x%" PRIx64
+                             "section '%s' cannot be removed: (%s+0x%" PRIx64
                              ") has relocation against symbol '%s'",
                              R.RelocSymbol->DefinedIn->Name.data(),
                              SecToApplyRel->Name.data(), R.Offset,
@@ -653,7 +653,7 @@ Error RelocationSection::removeSymbols(
     if (ToRemove(*Reloc.RelocSymbol))
       return createStringError(
           llvm::errc::invalid_argument,
-          "not stripping symbol '%s' because it is named in a relocation.",
+          "not stripping symbol '%s' because it is named in a relocation",
           Reloc.RelocSymbol->Name.data());
   return Error::success();
 }
@@ -689,8 +689,8 @@ Error DynamicRelocationSection::removeSectionReferences(
     if (!AllowBrokenLinks)
       return createStringError(
           llvm::errc::invalid_argument,
-          "Symbol table %s cannot be removed because it is "
-          "referenced by the relocation section %s.",
+          "symbol table '%s' cannot be removed because it is "
+          "referenced by the relocation section '%s'",
           Symbols->Name.data(), this->Name.data());
     Symbols = nullptr;
   }
@@ -709,8 +709,8 @@ Error Section::removeSectionReferences(bool AllowBrokenDependency,
   if (ToRemove(LinkSection)) {
     if (!AllowBrokenDependency)
       return createStringError(llvm::errc::invalid_argument,
-                               "Section %s cannot be removed because it is "
-                               "referenced by the section %s",
+                               "section '%s' cannot be removed because it is "
+                               "referenced by the section '%s'",
                                LinkSection->Name.data(), this->Name.data());
     LinkSection = nullptr;
   }
@@ -725,8 +725,8 @@ void GroupSection::finalize() {
 Error GroupSection::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
   if (ToRemove(*Sym))
     return createStringError(llvm::errc::invalid_argument,
-                             "Symbol %s cannot be removed because it is "
-                             "referenced by the section %s[%d].",
+                             "symbol '%s' cannot be removed because it is "
+                             "referenced by the section '%s[%d]'",
                              Sym->Name.data(), this->Name.data(), this->Index);
   return Error::success();
 }
@@ -996,24 +996,24 @@ template <class ELFT> void ELFBuilder<ELFT>::readProgramHeaders() {
 template <class ELFT>
 void ELFBuilder<ELFT>::initGroupSection(GroupSection *GroupSec) {
   if (GroupSec->Align % sizeof(ELF::Elf32_Word) != 0)
-    error("Invalid alignment " + Twine(GroupSec->Align) + " of group section " +
-          GroupSec->Name);
+    error("invalid alignment " + Twine(GroupSec->Align) + " of group section '" +
+          GroupSec->Name + "'");
   auto SecTable = Obj.sections();
   auto SymTab = SecTable.template getSectionOfType<SymbolTableSection>(
       GroupSec->Link,
-      "Link field value " + Twine(GroupSec->Link) + " in section " +
-          GroupSec->Name + " is invalid",
-      "Link field value " + Twine(GroupSec->Link) + " in section " +
-          GroupSec->Name + " is not a symbol table");
+      "link field value '" + Twine(GroupSec->Link) + "' in section '" +
+          GroupSec->Name + "' is invalid",
+      "link field value '" + Twine(GroupSec->Link) + "' in section '" +
+          GroupSec->Name + "' is not a symbol table");
   auto Sym = SymTab->getSymbolByIndex(GroupSec->Info);
   if (!Sym)
-    error("Info field value " + Twine(GroupSec->Info) + " in section " +
-          GroupSec->Name + " is not a valid symbol index");
+    error("info field value '" + Twine(GroupSec->Info) + "' in section '" +
+          GroupSec->Name + "' is not a valid symbol index");
   GroupSec->setSymTab(SymTab);
   GroupSec->setSymbol(Sym);
   if (GroupSec->Contents.size() % sizeof(ELF::Elf32_Word) ||
       GroupSec->Contents.empty())
-    error("The content of the section " + GroupSec->Name + " is malformed");
+    error("the content of the section " + GroupSec->Name + " is malformed");
   const ELF::Elf32_Word *Word =
       reinterpret_cast<const ELF::Elf32_Word *>(GroupSec->Contents.data());
   const ELF::Elf32_Word *End =
@@ -1022,8 +1022,8 @@ void ELFBuilder<ELFT>::initGroupSection(GroupSection *GroupSec) {
   for (; Word != End; ++Word) {
     uint32_t Index = support::endian::read32<ELFT::TargetEndianness>(Word);
     GroupSec->addMember(SecTable.getSection(
-        Index, "Group member index " + Twine(Index) + " in section " +
-                   GroupSec->Name + " is invalid"));
+        Index, "group member index " + Twine(Index) + " in section '" +
+                   GroupSec->Name + "' is invalid"));
   }
 }
 
@@ -1040,31 +1040,31 @@ void ELFBuilder<ELFT>::initSymbolTable(SymbolTableSection *SymTab) {
 
     if (Sym.st_shndx == SHN_XINDEX) {
       if (SymTab->getShndxTable() == nullptr)
-        error("Symbol '" + Name +
-              "' has index SHN_XINDEX but no SHT_SYMTAB_SHNDX section exists.");
+        error("symbol '" + Name +
+              "' has index SHN_XINDEX but no SHT_SYMTAB_SHNDX section exists");
       if (ShndxData.data() == nullptr) {
         const Elf_Shdr &ShndxSec =
             *unwrapOrError(ElfFile.getSection(SymTab->getShndxTable()->Index));
         ShndxData = unwrapOrError(
             ElfFile.template getSectionContentsAsArray<Elf_Word>(&ShndxSec));
         if (ShndxData.size() != Symbols.size())
-          error("Symbol section index table does not have the same number of "
-                "entries as the symbol table.");
+          error("symbol section index table does not have the same number of "
+                "entries as the symbol table");
       }
       Elf_Word Index = ShndxData[&Sym - Symbols.begin()];
       DefSection = Obj.sections().getSection(
           Index,
-          "Symbol '" + Name + "' has invalid section index " + Twine(Index));
+          "symbol '" + Name + "' has invalid section index " + Twine(Index));
     } else if (Sym.st_shndx >= SHN_LORESERVE) {
       if (!isValidReservedSectionIndex(Sym.st_shndx, Obj.Machine)) {
         error(
-            "Symbol '" + Name +
+            "symbol '" + Name +
             "' has unsupported value greater than or equal to SHN_LORESERVE: " +
             Twine(Sym.st_shndx));
       }
     } else if (Sym.st_shndx != SHN_UNDEF) {
       DefSection = Obj.sections().getSection(
-          Sym.st_shndx, "Symbol '" + Name +
+          Sym.st_shndx, "symbol '" + Name +
                             "' is defined has invalid section index " +
                             Twine(Sym.st_shndx));
     }
@@ -1290,7 +1290,7 @@ std::unique_ptr<Object> ELFReader::create() const {
     Builder.build();
     return Obj;
   }
-  error("Invalid file type");
+  error("invalid file type");
 }
 
 template <class ELFT> void ELFWriter<ELFT>::writeEhdr() {
@@ -1625,8 +1625,8 @@ template <class ELFT> Error ELFWriter<ELFT>::finalize() {
   // to do that.
   if (Obj.SectionNames == nullptr && WriteSectionHeaders)
     return createStringError(llvm::errc::invalid_argument,
-                             "Cannot write section header table because "
-                             "section header string table was removed.");
+                             "cannot write section header table because "
+                             "section header string table was removed");
 
   Obj.sortSections();
 

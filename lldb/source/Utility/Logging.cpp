@@ -17,6 +17,7 @@ using namespace lldb_private;
 
 static constexpr Log::Category g_categories[] = {
   {{"api"}, {"log API calls and return values"}, LIBLLDB_LOG_API},
+  {{"ast"}, {"log AST"}, LIBLLDB_LOG_AST},
   {{"break"}, {"log breakpoints"}, LIBLLDB_LOG_BREAKPOINTS},
   {{"commands"}, {"log command argument parsing"}, LIBLLDB_LOG_COMMANDS},
   {{"comm"}, {"log communication activities"}, LIBLLDB_LOG_COMMUNICATION},

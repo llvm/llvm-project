@@ -28,6 +28,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCExpr.h"
@@ -55,6 +56,17 @@ using namespace llvm;
                             : AMDGPU::EncValues::SGPR_MAX_SI)
 
 using DecodeStatus = llvm::MCDisassembler::DecodeStatus;
+
+AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
+                                       MCContext &Ctx,
+                                       MCInstrInfo const *MCII) :
+  MCDisassembler(STI, Ctx), MCII(MCII), MRI(*Ctx.getRegisterInfo()),
+  TargetMaxInstBytes(Ctx.getAsmInfo()->getMaxInstLength(&STI)) {
+
+  // ToDo: AMDGPUDisassembler supports only VI ISA.
+  if (!STI.getFeatureBits()[AMDGPU::FeatureGCN3Encoding] && !isGFX10())
+    report_fatal_error("Disassembly not yet supported for subtarget");
+}
 
 inline static MCDisassembler::DecodeStatus
 addOperand(MCInst &Inst, const MCOperand& Opnd) {
@@ -182,14 +194,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   CommentStream = &CS;
   bool IsSDWA = false;
 
-  // ToDo: AMDGPUDisassembler supports only VI ISA.
-  if (!STI.getFeatureBits()[AMDGPU::FeatureGCN3Encoding] && !isGFX10())
-    report_fatal_error("Disassembly not yet supported for subtarget");
-
-  unsigned MaxInstBytesNum = (std::min)(
-    STI.getFeatureBits()[AMDGPU::FeatureGFX10] ? (size_t) 20 :
-    STI.getFeatureBits()[AMDGPU::FeatureVOP3Literal] ? (size_t) 12 : (size_t)8,
-    Bytes_.size());
+  unsigned MaxInstBytesNum = std::min((size_t)TargetMaxInstBytes, Bytes_.size());
   Bytes = Bytes_.slice(0, MaxInstBytesNum);
 
   DecodeStatus Res = MCDisassembler::Fail;

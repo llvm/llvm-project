@@ -21,11 +21,7 @@ public:
   // Constructors and Destructors
   StdStringExtractor();
   StdStringExtractor(const char *packet_cstr);
-  StdStringExtractor(const StdStringExtractor &rhs);
   virtual ~StdStringExtractor();
-
-  // Operators
-  const StdStringExtractor &operator=(const StdStringExtractor &rhs);
 
   // Returns true if the file position is still valid for the data
   // contained in this string extractor object.

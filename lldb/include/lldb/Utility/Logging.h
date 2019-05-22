@@ -42,6 +42,7 @@
 #define LIBLLDB_LOG_LANGUAGE (1u << 28)
 #define LIBLLDB_LOG_DATAFORMATTERS (1u << 29)
 #define LIBLLDB_LOG_DEMANGLE (1u << 30)
+#define LIBLLDB_LOG_AST (1u << 31)
 #define LIBLLDB_LOG_ALL (UINT32_MAX)
 #define LIBLLDB_LOG_DEFAULT                                                    \
   (LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_THREAD | LIBLLDB_LOG_DYNAMIC_LOADER |     \

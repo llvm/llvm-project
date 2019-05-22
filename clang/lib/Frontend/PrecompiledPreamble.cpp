@@ -299,14 +299,13 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
   // created. This complexity should be lifted elsewhere.
   Clang->getTarget().adjust(Clang->getLangOpts());
 
-  assert(Clang->getFrontendOpts().Inputs.size() == 1 &&
-         "Invocation must have exactly one source file!");
-  assert(Clang->getFrontendOpts().Inputs[0].getKind().getFormat() ==
-             InputKind::Source &&
-         "FIXME: AST inputs not yet supported here!");
-  assert(Clang->getFrontendOpts().Inputs[0].getKind().getLanguage() !=
-             InputKind::LLVM_IR &&
-         "IR inputs not support here!");
+  if (Clang->getFrontendOpts().Inputs.size() != 1 ||
+      Clang->getFrontendOpts().Inputs[0].getKind().getFormat() !=
+          InputKind::Source ||
+      Clang->getFrontendOpts().Inputs[0].getKind().getLanguage() ==
+          InputKind::LLVM_IR) {
+    return BuildPreambleError::BadInputs;
+  }
 
   // Clear out old caches and data.
   Diagnostics.Reset();
@@ -784,6 +783,8 @@ std::string BuildPreambleErrorCategory::message(int condition) const {
     return "BeginSourceFile() return an error";
   case BuildPreambleError::CouldntEmitPCH:
     return "Could not emit PCH";
+  case BuildPreambleError::BadInputs:
+    return "Command line arguments must contain exactly one source file";
   }
   llvm_unreachable("unexpected BuildPreambleError");
 }

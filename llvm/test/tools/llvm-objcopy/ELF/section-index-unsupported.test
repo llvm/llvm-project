@@ -12,4 +12,4 @@ Symbols:
     Index:    0xff05
     Binding:  STB_GLOBAL
 
-# CHECK: Symbol 'test' has unsupported value greater than or equal to SHN_LORESERVE: 65285
+# CHECK: symbol 'test' has unsupported value greater than or equal to SHN_LORESERVE: 65285

@@ -27,6 +27,7 @@ class AMDGPUMCAsmInfo : public MCAsmInfoELF {
 public:
   explicit AMDGPUMCAsmInfo(const Triple &TT);
   bool shouldOmitSectionDirective(StringRef SectionName) const override;
+  unsigned getMaxInstLength(const MCSubtargetInfo *STI) const override;
 };
 } // namespace llvm
 #endif

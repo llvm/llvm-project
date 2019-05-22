@@ -671,8 +671,36 @@ static int64_t computeAddend(const RelTy &Rel, const RelTy *End,
   return Addend;
 }
 
+// Custom error message if Sym is defined in a discarded section.
+template <class ELFT>
+static std::string maybeReportDiscarded(Undefined &Sym, InputSectionBase &Sec,
+                                        uint64_t Offset) {
+  auto *File = dyn_cast_or_null<ObjFile<ELFT>>(Sym.File);
+  if (!File || !Sym.DiscardedSecIdx ||
+      File->getSections()[Sym.DiscardedSecIdx] != &InputSection::Discarded)
+    return "";
+  ArrayRef<Elf_Shdr_Impl<ELFT>> ObjSections =
+      CHECK(File->getObj().sections(), File);
+  std::string Msg =
+      "relocation refers to a symbol in a discarded section: " + toString(Sym) +
+      "\n>>> defined in " + toString(File);
+
+  Elf_Shdr_Impl<ELFT> ELFSec = ObjSections[Sym.DiscardedSecIdx - 1];
+  if (ELFSec.sh_type != SHT_GROUP)
+    return Msg;
+
+  // If the discarded section is a COMDAT.
+  StringRef Signature = File->getShtGroupSignature(ObjSections, ELFSec);
+  if (const InputFile *Prevailing =
+          Symtab->ComdatGroups.lookup(CachedHashStringRef(Signature)))
+    Msg += "\n>>> section group signature: " + Signature.str() +
+           "\n>>> prevailing definition is in " + toString(Prevailing);
+  return Msg;
+}
+
 // Report an undefined symbol if necessary.
 // Returns true if this function printed out an error message.
+template <class ELFT>
 static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
                                  uint64_t Offset) {
   if (!Sym.isUndefined() || Sym.isWeak())
@@ -683,15 +711,25 @@ static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore && CanBeExternal)
     return false;
 
-  std::string Msg = "undefined ";
-  if (Sym.Visibility == STV_INTERNAL)
-    Msg += "internal ";
-  else if (Sym.Visibility == STV_HIDDEN)
-    Msg += "hidden ";
-  else if (Sym.Visibility == STV_PROTECTED)
-    Msg += "protected ";
-  Msg += "symbol: " + toString(Sym) + "\n>>> referenced by ";
+  auto Visibility = [&]() -> std::string {
+    switch (Sym.Visibility) {
+    case STV_INTERNAL:
+      return "internal ";
+    case STV_HIDDEN:
+      return "hidden ";
+    case STV_PROTECTED:
+      return "protected ";
+    default:
+      return "";
+    }
+  };
 
+  std::string Msg =
+      maybeReportDiscarded<ELFT>(cast<Undefined>(Sym), Sec, Offset);
+  if (Msg.empty())
+    Msg = "undefined " + Visibility() + "symbol: " + toString(Sym);
+
+  Msg += "\n>>> referenced by ";
   std::string Src = Sec.getSrcMsg(Sym, Offset);
   if (!Src.empty())
     Msg += Src + "\n>>>               ";
@@ -1031,7 +1069,7 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
 
   // Error if the target symbol is undefined. Symbol index 0 may be used by
   // marker relocations, e.g. R_*_NONE and R_ARM_V4BX. Don't error on them.
-  if (SymIndex != 0 && maybeReportUndefined(Sym, Sec, Rel.r_offset))
+  if (SymIndex != 0 && maybeReportUndefined<ELFT>(Sym, Sec, Rel.r_offset))
     return;
 
   const uint8_t *RelocatedAddr = Sec.data().begin() + Rel.r_offset;

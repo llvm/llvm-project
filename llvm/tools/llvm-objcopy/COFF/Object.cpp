@@ -53,7 +53,7 @@ Error Object::markSymbols() {
       auto It = SymbolMap.find(R.Target);
       if (It == SymbolMap.end())
         return createStringError(object_error::invalid_symbol_index,
-                                 "Relocation target %zu not found", R.Target);
+                                 "relocation target %zu not found", R.Target);
       It->second->Referenced = true;
     }
   }

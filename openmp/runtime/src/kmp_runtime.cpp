@@ -4302,11 +4302,6 @@ kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
       KMP_ATOMIC_DEC(&__kmp_thread_pool_active_nth);
       new_thr->th.th_active_in_pool = FALSE;
     }
-#if KMP_DEBUG
-    else {
-      KMP_DEBUG_ASSERT(new_thr->th.th_active == FALSE);
-    }
-#endif
     __kmp_unlock_suspend_mx(new_thr);
 
     KA_TRACE(20, ("__kmp_allocate_thread: T#%d using thread T#%d\n",

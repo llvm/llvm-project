@@ -59,6 +59,8 @@ using namespace llvm::object;
 
 namespace llvm {
 
+cl::OptionCategory MachOCat("llvm-objdump MachO Specific Options");
+
 extern cl::opt<bool> ArchiveHeaders;
 extern cl::opt<bool> Disassemble;
 extern cl::opt<bool> DisassembleAll;
@@ -80,91 +82,113 @@ extern cl::opt<bool> UnwindInfo;
 cl::opt<bool>
     FirstPrivateHeader("private-header",
                        cl::desc("Display only the first format specific file "
-                                "header"));
+                                "header"),
+                       cl::cat(MachOCat));
 
 cl::opt<bool> ExportsTrie("exports-trie",
-                                 cl::desc("Display mach-o exported symbols"));
+                          cl::desc("Display mach-o exported symbols"),
+                          cl::cat(MachOCat));
 
-cl::opt<bool> Rebase("rebase", cl::desc("Display mach-o rebasing info"));
+cl::opt<bool> Rebase("rebase", cl::desc("Display mach-o rebasing info"),
+                     cl::cat(MachOCat));
 
-cl::opt<bool> Bind("bind", cl::desc("Display mach-o binding info"));
+cl::opt<bool> Bind("bind", cl::desc("Display mach-o binding info"),
+                   cl::cat(MachOCat));
 
 cl::opt<bool> LazyBind("lazy-bind",
-                              cl::desc("Display mach-o lazy binding info"));
+                       cl::desc("Display mach-o lazy binding info"),
+                       cl::cat(MachOCat));
 
 cl::opt<bool> WeakBind("weak-bind",
-                              cl::desc("Display mach-o weak binding info"));
+                       cl::desc("Display mach-o weak binding info"),
+                       cl::cat(MachOCat));
 
 static cl::opt<bool>
     UseDbg("g", cl::Grouping,
-           cl::desc("Print line information from debug info if available"));
+           cl::desc("Print line information from debug info if available"),
+           cl::cat(MachOCat));
 
 static cl::opt<std::string> DSYMFile("dsym",
-                                     cl::desc("Use .dSYM file for debug info"));
+                                     cl::desc("Use .dSYM file for debug info"),
+                                     cl::cat(MachOCat));
 
 static cl::opt<bool> FullLeadingAddr("full-leading-addr",
-                                     cl::desc("Print full leading address"));
+                                     cl::desc("Print full leading address"),
+                                     cl::cat(MachOCat));
 
 static cl::opt<bool> NoLeadingHeaders("no-leading-headers",
-                                      cl::desc("Print no leading headers"));
+                                      cl::desc("Print no leading headers"),
+                                      cl::cat(MachOCat));
 
 cl::opt<bool> UniversalHeaders("universal-headers",
                                cl::desc("Print Mach-O universal headers "
-                                        "(requires -macho)"));
+                                        "(requires -macho)"),
+                               cl::cat(MachOCat));
 
 cl::opt<bool>
     ArchiveMemberOffsets("archive-member-offsets",
                          cl::desc("Print the offset to each archive member for "
                                   "Mach-O archives (requires -macho and "
-                                  "-archive-headers)"));
+                                  "-archive-headers)"),
+                         cl::cat(MachOCat));
 
 cl::opt<bool> IndirectSymbols("indirect-symbols",
                               cl::desc("Print indirect symbol table for Mach-O "
-                                       "objects (requires -macho)"));
+                                       "objects (requires -macho)"),
+                              cl::cat(MachOCat));
 
 cl::opt<bool>
     DataInCode("data-in-code",
                cl::desc("Print the data in code table for Mach-O objects "
-                        "(requires -macho)"));
+                        "(requires -macho)"),
+               cl::cat(MachOCat));
 
 cl::opt<bool> LinkOptHints("link-opt-hints",
                            cl::desc("Print the linker optimization hints for "
-                                    "Mach-O objects (requires -macho)"));
+                                    "Mach-O objects (requires -macho)"),
+                           cl::cat(MachOCat));
 
 cl::opt<bool> InfoPlist("info-plist",
                         cl::desc("Print the info plist section as strings for "
-                                 "Mach-O objects (requires -macho)"));
+                                 "Mach-O objects (requires -macho)"),
+                        cl::cat(MachOCat));
 
 cl::opt<bool> DylibsUsed("dylibs-used",
                          cl::desc("Print the shared libraries used for linked "
-                                  "Mach-O files (requires -macho)"));
+                                  "Mach-O files (requires -macho)"),
+                         cl::cat(MachOCat));
 
 cl::opt<bool>
     DylibId("dylib-id",
             cl::desc("Print the shared library's id for the dylib Mach-O "
-                     "file (requires -macho)"));
+                     "file (requires -macho)"),
+            cl::cat(MachOCat));
 
 cl::opt<bool>
     NonVerbose("non-verbose",
                cl::desc("Print the info for Mach-O objects in "
-                        "non-verbose or numeric form (requires -macho)"));
+                        "non-verbose or numeric form (requires -macho)"),
+               cl::cat(MachOCat));
 
 cl::opt<bool>
     ObjcMetaData("objc-meta-data",
                  cl::desc("Print the Objective-C runtime meta data for "
-                          "Mach-O files (requires -macho)"));
+                          "Mach-O files (requires -macho)"),
+                 cl::cat(MachOCat));
 
 cl::opt<std::string> DisSymName(
     "dis-symname",
-    cl::desc("disassemble just this symbol's instructions (requires -macho)"));
+    cl::desc("disassemble just this symbol's instructions (requires -macho)"),
+    cl::cat(MachOCat));
 
 static cl::opt<bool> NoSymbolicOperands(
     "no-symbolic-operands",
-    cl::desc("do not symbolic operands when disassembling (requires -macho)"));
+    cl::desc("do not symbolic operands when disassembling (requires -macho)"),
+    cl::cat(MachOCat));
 
 static cl::list<std::string>
     ArchFlags("arch", cl::desc("architecture(s) from a Mach-O file to dump"),
-              cl::ZeroOrMore);
+              cl::ZeroOrMore, cl::cat(MachOCat));
 
 bool ArchAll = false;
 
