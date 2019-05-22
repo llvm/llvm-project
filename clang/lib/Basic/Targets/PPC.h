@@ -382,6 +382,7 @@ public:
     } else {
       resetDataLayout("E-m:e-i64:64-n32:64");
     }
+    ABI = Triple.getEnvironment() == llvm::Triple::ELFv1 ? "elfv1" : "elfv2";
 
     switch (Triple.getOS()) {
     case llvm::Triple::FreeBSD:
