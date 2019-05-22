@@ -16,6 +16,8 @@ namespace sycl {
 template <int dimensions> struct id;
 template <int dimensions = 1>
 class range : public detail::array<dimensions> {
+  static_assert(dimensions >= 1 && dimensions <= 3,
+                "range can only be 1, 2, or 3 dimentional.");
   using base = detail::array<dimensions>;
 public:
   /* The following constructor is only available in the range class

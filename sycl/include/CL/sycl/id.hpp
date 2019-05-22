@@ -18,6 +18,8 @@ template <int dimensions> class range;
 template <int dimensions = 1> struct id : public detail::array<dimensions> {
 private:
   using base = detail::array<dimensions>;
+  static_assert(dimensions >= 1 && dimensions <= 3,
+                "id can only be 1, 2, or 3 dimentional.");
 public:
   id() = default;
 

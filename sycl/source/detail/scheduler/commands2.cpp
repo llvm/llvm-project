@@ -120,8 +120,9 @@ cl_int MapMemObject::enqueueImp() {
   cl_event &Event = MEvent->getHandleRef();
   void *MappedPtr = MemoryManager::map(
       MSrcAlloca->getSYCLMemObj(), MSrcAlloca->getMemAllocation(), MQueue,
-      MDstReq.MAccessMode, MDstReq.MDims, MDstReq.MOrigRange, MDstReq.MRange,
-      MDstReq.MOffset, MDstReq.MElemSize, std::move(RawEvents), Event);
+      MDstReq.MAccessMode, MDstReq.MDims, MDstReq.MMemoryRange,
+      MDstReq.MAccessRange, MDstReq.MOffset, MDstReq.MElemSize,
+      std::move(RawEvents), Event);
   MDstAcc->MData = MappedPtr;
   return CL_SUCCESS;
 }
@@ -178,10 +179,10 @@ cl_int MemCpyCommand::enqueueImp() {
   } else {
     MemoryManager::copy(
         MSrcAlloca->getSYCLMemObj(), MSrcAlloca->getMemAllocation(), MSrcQueue,
-        MSrcReq.MDims, MSrcReq.MOrigRange, MSrcReq.MRange, MSrcReq.MOffset,
-        MSrcReq.MElemSize, MDstAlloca->getMemAllocation(), MQueue,
-        MDstReq.MDims, MDstReq.MOrigRange, MDstReq.MRange, MDstReq.MOffset,
-        MDstReq.MElemSize, std::move(RawEvents), Event);
+        MSrcReq.MDims, MSrcReq.MMemoryRange, MSrcReq.MAccessRange,
+        MSrcReq.MOffset, MSrcReq.MElemSize, MDstAlloca->getMemAllocation(),
+        MQueue, MDstReq.MDims, MDstReq.MMemoryRange, MDstReq.MAccessRange,
+        MDstReq.MOffset, MDstReq.MElemSize, std::move(RawEvents), Event);
   }
 
   if (MAccToUpdate)
@@ -233,10 +234,11 @@ cl_int MemCpyCommandHost::enqueueImp() {
 
   MemoryManager::copy(MSrcAlloca->getSYCLMemObj(),
                       MSrcAlloca->getMemAllocation(), MSrcQueue, MSrcReq.MDims,
-                      MSrcReq.MOrigRange, MSrcReq.MRange, MSrcReq.MOffset,
-                      MSrcReq.MElemSize, MDstAcc->MData, MQueue, MDstReq.MDims,
-                      MDstReq.MOrigRange, MDstReq.MRange, MDstReq.MOffset,
-                      MDstReq.MElemSize, std::move(RawEvents), Event);
+                      MSrcReq.MMemoryRange, MSrcReq.MAccessRange,
+                      MSrcReq.MOffset, MSrcReq.MElemSize, MDstAcc->MData,
+                      MQueue, MDstReq.MDims, MDstReq.MMemoryRange,
+                      MDstReq.MAccessRange, MDstReq.MOffset, MDstReq.MElemSize,
+                      std::move(RawEvents), Event);
   return CL_SUCCESS;
 }
 
@@ -259,10 +261,11 @@ cl_int ExecCGCommand::enqueueImp() {
 
     MemoryManager::copy(
         AllocaCmd->getSYCLMemObj(), AllocaCmd->getMemAllocation(), MQueue,
-        Req->MDims, Req->MOrigRange, Req->MRange, Req->MOffset, Req->MElemSize,
-        Copy->getDst(), Scheduler::getInstance().getDefaultHostQueue(),
-        Req->MDims, Req->MRange, Req->MRange,
-        /*DstOffset=*/{0, 0, 0}, Req->MElemSize, std::move(RawEvents), Event);
+        Req->MDims, Req->MMemoryRange, Req->MAccessRange, Req->MOffset,
+        Req->MElemSize, Copy->getDst(),
+        Scheduler::getInstance().getDefaultHostQueue(), Req->MDims,
+        Req->MAccessRange, Req->MAccessRange, /*DstOffset=*/{0, 0, 0},
+        Req->MElemSize, std::move(RawEvents), Event);
     return CL_SUCCESS;
   }
   case CG::CGTYPE::COPY_PTR_TO_ACC: {
@@ -274,10 +277,11 @@ cl_int ExecCGCommand::enqueueImp() {
 
     MemoryManager::copy(
         AllocaCmd->getSYCLMemObj(), Copy->getSrc(),
-        Scheduler::getInstance().getDefaultHostQueue(), Req->MDims, Req->MRange,
-        Req->MRange, /*SrcOffset*/ {0, 0, 0}, Req->MElemSize,
-        AllocaCmd->getMemAllocation(), MQueue, Req->MDims, Req->MOrigRange,
-        Req->MRange, Req->MOffset, Req->MElemSize, std::move(RawEvents), Event);
+        Scheduler::getInstance().getDefaultHostQueue(), Req->MDims,
+        Req->MAccessRange, Req->MAccessRange, /*SrcOffset*/ {0, 0, 0},
+        Req->MElemSize, AllocaCmd->getMemAllocation(), MQueue, Req->MDims,
+        Req->MMemoryRange, Req->MAccessRange, Req->MOffset, Req->MElemSize,
+        std::move(RawEvents), Event);
 
     return CL_SUCCESS;
   }
@@ -291,10 +295,10 @@ cl_int ExecCGCommand::enqueueImp() {
 
     MemoryManager::copy(
         AllocaCmdSrc->getSYCLMemObj(), AllocaCmdSrc->getMemAllocation(), MQueue,
-        ReqSrc->MDims, ReqSrc->MOrigRange, ReqSrc->MRange, ReqSrc->MOffset,
-        ReqSrc->MElemSize, AllocaCmdDst->getMemAllocation(), MQueue,
-        ReqDst->MDims, ReqDst->MOrigRange, ReqDst->MRange, ReqDst->MOffset,
-        ReqDst->MElemSize, std::move(RawEvents), Event);
+        ReqSrc->MDims, ReqSrc->MMemoryRange, ReqSrc->MAccessRange,
+        ReqSrc->MOffset, ReqSrc->MElemSize, AllocaCmdDst->getMemAllocation(),
+        MQueue, ReqDst->MDims, ReqDst->MMemoryRange, ReqDst->MAccessRange,
+        ReqDst->MOffset, ReqDst->MElemSize, std::move(RawEvents), Event);
     return CL_SUCCESS;
   }
   case CG::CGTYPE::FILL: {
@@ -305,8 +309,9 @@ cl_int ExecCGCommand::enqueueImp() {
     MemoryManager::fill(AllocaCmd->getSYCLMemObj(),
                         AllocaCmd->getMemAllocation(), MQueue,
                         Fill->MPattern.size(), Fill->MPattern.data(),
-                        Req->MDims, Req->MOrigRange, Req->MRange, Req->MOffset,
-                        Req->MElemSize, std::move(RawEvents), Event);
+                        Req->MDims, Req->MMemoryRange, Req->MAccessRange,
+                        Req->MOffset, Req->MElemSize, std::move(RawEvents),
+                        Event);
     return CL_SUCCESS;
   }
   case CG::CGTYPE::KERNEL: {

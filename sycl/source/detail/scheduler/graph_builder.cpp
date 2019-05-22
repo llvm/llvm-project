@@ -53,9 +53,9 @@ Scheduler::GraphBuilder::getOrInsertMemObjRecord(const QueueImplPtr &Queue,
 
   // Construct requirement which describes full buffer because we allocate
   // only full-sized memory objects.
-  Requirement AllocaReq(/*Offset*/ {0, 0, 0}, Req->MOrigRange, Req->MOrigRange,
-                        access::mode::discard_write, MemObject, Req->MDims,
-                        Req->MElemSize);
+  Requirement AllocaReq(/*Offset*/ {0, 0, 0}, Req->MMemoryRange,
+                        Req->MMemoryRange, access::mode::discard_write,
+                        MemObject, Req->MDims, Req->MElemSize);
 
   AllocaCommand *AllocaCmd = new AllocaCommand(Queue, std::move(AllocaReq));
   MemObjRecord NewRecord{MemObject,
@@ -101,9 +101,9 @@ MemCpyCommand *
 Scheduler::GraphBuilder::insertMemCpyCmd(MemObjRecord *Record, Requirement *Req,
                                          const QueueImplPtr &Queue) {
 
-  Requirement FullReq(/*Offset*/ {0, 0, 0}, Req->MOrigRange, Req->MOrigRange,
-                      access::mode::read_write, Req->MSYCLMemObj, Req->MDims,
-                      Req->MElemSize);
+  Requirement FullReq(/*Offset*/ {0, 0, 0}, Req->MMemoryRange,
+                      Req->MMemoryRange, access::mode::read_write,
+                      Req->MSYCLMemObj, Req->MDims, Req->MElemSize);
 
   std::set<Command *> Deps = findDepsForReq(Record, &FullReq, Queue);
   QueueImplPtr SrcQueue = (*Deps.begin())->getQueue();
@@ -207,7 +207,7 @@ Command *Scheduler::GraphBuilder::addHostAccessor(Requirement *Req,
   // In case of memory is 1 dimensional and located on OpenCL device we
   // can use map/unmap operation.
   if (!SrcQueue->is_host() && Req->MDims == 1 &&
-      Req->MRange == Req->MOrigRange) {
+      Req->MAccessRange == Req->MMemoryRange) {
 
     std::unique_ptr<MapMemObject> MapCmdUniquePtr(
         new MapMemObject(*SrcReq, SrcAllocaCmd, Req, SrcQueue));

@@ -212,7 +212,7 @@ protected:
       MIDs[0] = Index;
     }
 
-    template <int CurDims = SubDims, typename = enable_if_t<CurDims != 1>>
+    template <int CurDims = SubDims, typename = enable_if_t<(CurDims > 1)>>
     AccessorSubscript<CurDims - 1> operator[](size_t Index) {
       MIDs[Dims - CurDims] = Index;
       return AccessorSubscript<CurDims - 1>(MAccessor, MIDs);
@@ -282,19 +282,19 @@ class accessor :
 
     size_t Result = 0;
     for (int I = 0; I < Dims; ++I)
-      Result = Result * getOrigRange()[I] + getOffset()[I] + Id[I];
+      Result = Result * getMemoryRange()[I] + getOffset()[I] + Id[I];
     return Result;
   }
 
 #ifdef __SYCL_DEVICE_ONLY__
 
   id<AdjustedDim> &getOffset() { return impl.Offset; }
-  range<AdjustedDim> &getRange() { return impl.AccessRange; }
-  range<AdjustedDim> &getOrigRange() { return impl.MemRange; }
+  range<AdjustedDim> &getAccessRange() { return impl.AccessRange; }
+  range<AdjustedDim> &getMemoryRange() { return impl.MemRange; }
 
   const id<AdjustedDim> &getOffset() const { return impl.Offset; }
-  const range<AdjustedDim> &getRange() const { return impl.AccessRange; }
-  const range<AdjustedDim> &getOrigRange() const { return impl.MemRange; }
+  const range<AdjustedDim> &getAccessRange() const { return impl.AccessRange; }
+  const range<AdjustedDim> &getMemoryRange() const { return impl.MemRange; }
 
   detail::AccessorImplDevice<AdjustedDim> impl;
 
@@ -305,8 +305,8 @@ class accessor :
     MData = Ptr;
     for (int I = 0; I < AdjustedDim; ++I) {
       getOffset()[I] = Offset[I];
-      getRange()[I] = AccessRange[I];
-      getOrigRange()[I] = MemRange[I];
+      getAccessRange()[I] = AccessRange[I];
+      getMemoryRange()[I] = MemRange[I];
     }
     // In case of 1D buffer, adjust pointer during initialization rather
     // then each time in operator[] or get_pointer functions.
@@ -317,9 +317,9 @@ class accessor :
   PtrType getQualifiedPtr() const { return MData; }
 #else
 
-  using AccessorBaseHost::getRange;
+  using AccessorBaseHost::getAccessRange;
   using AccessorBaseHost::getOffset;
-  using AccessorBaseHost::getOrigRange;
+  using AccessorBaseHost::getMemoryRange;
 
   char padding[sizeof(detail::AccessorImplDevice<AdjustedDim>) +
                sizeof(PtrType) - sizeof(detail::AccessorBaseHost)];
@@ -332,17 +332,15 @@ class accessor :
 
 public:
   using value_type = DataT;
-  using reference = typename detail::PtrValueType<DataT, AS>::type &;
+  using reference = DataT &;
   using const_reference = const reference;
 
   template <int Dims = Dimensions>
-  accessor(buffer<DataT, 1> &BufferRef,
-           enable_if_t<((!IsPlaceH && IsHostBuf) ||
+  accessor(enable_if_t<((!IsPlaceH && IsHostBuf) ||
                         (IsPlaceH && (IsGlobalBuf || IsConstantBuf))) &&
-                       Dims == 0>)
+                       Dims == 0, buffer<DataT, 1> > &BufferRef)
 #ifdef __SYCL_DEVICE_ONLY__
-      : impl(id<AdjustedDim>(), BufferRef.get_range(), BufferRef.MemRange)
-      {
+      : impl(id<AdjustedDim>(), BufferRef.get_range(), BufferRef.MemRange) {
 #else
       : AccessorBaseHost(
             /*Offset=*/{0, 0, 0},
@@ -351,15 +349,17 @@ public:
             detail::getSyclObjImpl(BufferRef).get(), AdjustedDim,
             sizeof(DataT)) {
     detail::EventImplPtr Event =
-        detail::Scheduler::getInstance().addHostAccessor(this);
+        detail::Scheduler::getInstance().addHostAccessor(
+            AccessorBaseHost::impl.get());
     Event->wait(Event);
 #endif
   }
 
   template <int Dims = Dimensions>
   accessor(
-      buffer<DataT, 1> &BufferRef, handler &CommandGroupHandler,
-      enable_if_t<(!IsPlaceH && (IsGlobalBuf || IsConstantBuf)) && Dims == 0>)
+      buffer<DataT, 1> &BufferRef,
+      enable_if_t<(!IsPlaceH && (IsGlobalBuf || IsConstantBuf)) && Dims == 0,
+                   handler> &CommandGroupHandler)
 #ifdef __SYCL_DEVICE_ONLY__
       : impl(id<AdjustedDim>(), BufferRef.get_range(), BufferRef.MemRange) {
   }
@@ -458,13 +458,13 @@ public:
 
   constexpr bool is_placeholder() const { return IsPlaceH; }
 
-  size_t get_size() const { return getRange().size() * sizeof(DataT); }
+  size_t get_size() const { return getMemoryRange().size() * sizeof(DataT); }
 
-  size_t get_count() const { return getRange().size(); }
+  size_t get_count() const { return getMemoryRange().size(); }
 
   template <int Dims = Dimensions, typename = enable_if_t<(Dims > 0)>>
   range<Dimensions> get_range() const {
-    return detail::convertToArrayOfN<Dimensions, 1>(getRange());
+    return detail::convertToArrayOfN<Dimensions, 1>(getAccessRange());
   }
 
   template <int Dims = Dimensions, typename = enable_if_t<(Dims > 0)>>
@@ -475,7 +475,7 @@ public:
   template <int Dims = Dimensions,
             typename = enable_if_t<IsAccessAnyWrite && Dims == 0>>
   operator RefType() const {
-    const size_t LinearIndex = getLinearIndex(id<Dimensions>());
+    const size_t LinearIndex = getLinearIndex(id<AdjustedDim>());
     return *(getQualifiedPtr() + LinearIndex);
   }
 
@@ -570,6 +570,9 @@ public:
     const size_t LinearIndex = getLinearIndex(id<AdjustedDim>());
     return constant_ptr<DataT>(getQualifiedPtr() + LinearIndex);
   }
+
+  bool operator==(const accessor &Rhs) const { return impl == Rhs.impl; }
+  bool operator!=(const accessor &Rhs) const { return !(*this == Rhs); }
 };
 
 // Local accessor
@@ -604,8 +607,8 @@ class accessor<DataT, Dimensions, AccessMode, access::target::local,
 #ifdef __SYCL_DEVICE_ONLY__
   detail::LocalAccessorBaseDevice<AdjustedDim> impl;
 
-  sycl::range<AdjustedDim> &getSize() { return impl.AccessRange; }
-  const sycl::range<AdjustedDim> &getSize() const { return impl.AccessRange; }
+  sycl::range<AdjustedDim> &getSize() { return impl.MemRange; }
+  const sycl::range<AdjustedDim> &getSize() const { return impl.MemRange; }
 
   void __init(PtrType Ptr, range<AdjustedDim> AccessRange,
               range<AdjustedDim> MemRange, id<AdjustedDim> Offset) {
@@ -719,6 +722,9 @@ public:
   local_ptr<DataT> get_pointer() const {
     return local_ptr<DataT>(getQualifiedPtr());
   }
+
+  bool operator==(const accessor &Rhs) const { return impl == Rhs.impl; }
+  bool operator!=(const accessor &Rhs) const { return !(*this == Rhs); }
 };
 
 // Image accessor
@@ -815,9 +821,10 @@ struct hash<cl::sycl::accessor<DataT, Dimensions, AccessMode, AccessTarget,
     // Hash is not supported on DEVICE. Just return 0 here.
     return 0;
 #else
-    std::shared_ptr<cl::sycl::detail::AccessorBaseHost> AccBaseImplPtr =
-        cl::sycl::detail::getSyclObjImpl(A);
-    return hash<decltype(AccBaseImplPtr)>()(AccBaseImplPtr);
+    // getSyclObjImpl() here returns a pointer to either AccessorImplHost
+    // or LocalAccessorImplHost depending on the AccessTarget.
+    auto AccImplPtr = cl::sycl::detail::getSyclObjImpl(A);
+    return hash<decltype(AccImplPtr)>()(AccImplPtr);
 #endif
   }
 };

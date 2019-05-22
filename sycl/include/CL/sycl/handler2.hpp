@@ -234,11 +234,11 @@ private:
 
           MArgs.emplace_back(
               detail::ArgDesc(detail::kernel_param_kind_t::kind_std_layout,
-                              &(AccImpl->MRange[0]),
+                              &(AccImpl->MAccessRange[0]),
                               sizeof(size_t) * AccImpl->MDims, NextArgId + 1));
           MArgs.emplace_back(
               detail::ArgDesc(detail::kernel_param_kind_t::kind_std_layout,
-                              &AccImpl->MOrigRange[0],
+                              &AccImpl->MMemoryRange[0],
                               sizeof(size_t) * AccImpl->MDims, NextArgId + 2));
           MArgs.emplace_back(
               detail::ArgDesc(detail::kernel_param_kind_t::kind_std_layout,

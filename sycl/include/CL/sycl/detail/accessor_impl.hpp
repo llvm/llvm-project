@@ -27,12 +27,19 @@ namespace detail {
 
 template <int Dims> class AccessorImplDevice {
 public:
-  AccessorImplDevice(id<Dims> Offset, range<Dims> Range, range<Dims> OrigRange)
-      : Offset(Offset), AccessRange(Range), MemRange(OrigRange) {}
+  AccessorImplDevice(id<Dims> Offset, range<Dims> AccessRange,
+                     range<Dims> MemoryRange)
+      : Offset(Offset), AccessRange(AccessRange), MemRange(MemoryRange) {}
 
   id<Dims> Offset;
   range<Dims> AccessRange;
   range<Dims> MemRange;
+
+  bool operator==(const AccessorImplDevice &Rhs) const {
+    return (Offset == Rhs.Offset &&
+            AccessRange == Rhs.AccessRange &&
+            MemRange == Rhs.MemRange);
+  }
 };
 
 template <int Dims> class LocalAccessorBaseDevice {
@@ -43,14 +50,18 @@ public:
   range<Dims> AccessRange;
   range<Dims> MemRange;
   id<Dims> Offset;
+
+  bool operator==(const LocalAccessorBaseDevice &Rhs) const {
+    return (AccessRange == Rhs.AccessRange);
+  }
 };
 
 class AccessorImplHost {
 public:
-  AccessorImplHost(id<3> Offset, range<3> Range, range<3> OrigRange,
+  AccessorImplHost(id<3> Offset, range<3> AccessRange, range<3> MemoryRange,
                    access::mode AccessMode, detail::SYCLMemObjT *SYCLMemObject,
                    int Dims, int ElemSize)
-      : MOffset(Offset), MRange(Range), MOrigRange(OrigRange),
+      : MOffset(Offset), MAccessRange(AccessRange), MMemoryRange(MemoryRange),
         MAccessMode(AccessMode), MSYCLMemObj(SYCLMemObject), MDims(Dims),
         MElemSize(ElemSize) {}
 
@@ -59,16 +70,16 @@ public:
       BlockingEvent->setComplete();
   }
   AccessorImplHost(const AccessorImplHost &Other)
-      : MOffset(Other.MOffset), MRange(Other.MRange),
-        MOrigRange(Other.MOrigRange), MAccessMode(Other.MAccessMode),
+      : MOffset(Other.MOffset), MAccessRange(Other.MAccessRange),
+        MMemoryRange(Other.MMemoryRange), MAccessMode(Other.MAccessMode),
         MSYCLMemObj(Other.MSYCLMemObj), MDims(Other.MDims),
         MElemSize(Other.MElemSize) {}
 
   id<3> MOffset;
   // The size of accessing region.
-  range<3> MRange;
+  range<3> MAccessRange;
   // The size of memory object this requirement is created for.
-  range<3> MOrigRange;
+  range<3> MMemoryRange;
   access::mode MAccessMode;
 
   detail::SYCLMemObjT *MSYCLMemObj;
@@ -85,22 +96,23 @@ using AccessorImplPtr = std::shared_ptr<AccessorImplHost>;
 
 class AccessorBaseHost {
 public:
-  AccessorBaseHost(id<3> Offset, range<3> Range, range<3> OrigRange,
+  AccessorBaseHost(id<3> Offset, range<3> AccessRange, range<3> MemoryRange,
                    access::mode AccessMode, detail::SYCLMemObjT *SYCLMemObject,
                    int Dims, int ElemSize) {
-    impl = std::make_shared<AccessorImplHost>(
-        Offset, Range, OrigRange, AccessMode, SYCLMemObject, Dims, ElemSize);
+    impl = std::make_shared<AccessorImplHost>(Offset, AccessRange, MemoryRange,
+                                              AccessMode, SYCLMemObject,
+                                              Dims, ElemSize);
   }
 
 protected:
   id<3> &getOffset() { return impl->MOffset; }
-  range<3> &getRange() { return impl->MRange; }
-  range<3> &getOrigRange() { return impl->MOrigRange; }
+  range<3> &getAccessRange() { return impl->MAccessRange; }
+  range<3> &getMemoryRange() { return impl->MMemoryRange; }
   void *getPtr() { return impl->MData; }
 
   const id<3> &getOffset() const { return impl->MOffset; }
-  const range<3> &getRange() const { return impl->MRange; }
-  const range<3> &getOrigRange() const { return impl->MOrigRange; }
+  const range<3> &getAccessRange() const { return impl->MAccessRange; }
+  const range<3> &getMemoryRange() const { return impl->MMemoryRange; }
   void *getPtr() const { return const_cast<void *>(impl->MData); }
 
   template <class Obj>
@@ -135,7 +147,10 @@ public:
 
   int getNumOfDims() { return impl->MDims; }
   int getElementSize() { return impl->MElemSize; }
+
 protected:
+  template <class Obj>
+  friend decltype(Obj::impl) detail::getSyclObjImpl(const Obj &SyclObject);
 
   std::shared_ptr<LocalAccessorImplHost> impl;
 };

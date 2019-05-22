@@ -19,6 +19,7 @@ template <int dimensions> class range;
 namespace detail {
 
 template <int dimensions = 1> class array {
+  static_assert(dimensions >= 1, "Array cannot be 0-dimensional.");
 public:
   array() : common_array{0} {}
 
