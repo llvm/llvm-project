@@ -187,9 +187,6 @@ template <class ELFT> class ObjFile : public ELFFileBase {
   using Elf_Word = typename ELFT::Word;
   using Elf_CGProfile = typename ELFT::CGProfile;
 
-  StringRef getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
-                                 const Elf_Shdr &Sec);
-
 public:
   static bool classof(const InputFile *F) { return F->kind() == ObjKind; }
 
@@ -201,7 +198,11 @@ public:
   ArrayRef<Symbol *> getGlobalSymbols();
 
   ObjFile(MemoryBufferRef M, StringRef ArchiveName);
-  void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
+  void parse(llvm::DenseMap<llvm::CachedHashStringRef, const InputFile *>
+                 &ComdatGroups);
+
+  StringRef getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
+                                 const Elf_Shdr &Sec);
 
   Symbol &getSymbol(uint32_t SymbolIndex) const {
     if (SymbolIndex >= this->Symbols.size())
@@ -244,8 +245,8 @@ public:
   ArrayRef<Elf_CGProfile> CGProfile;
 
 private:
-  void
-  initializeSections(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
+  void initializeSections(llvm::DenseMap<llvm::CachedHashStringRef,
+                                         const InputFile *> &ComdatGroups);
   void initializeSymbols();
   void initializeJustSymbols();
   void initializeDwarf();
@@ -338,7 +339,8 @@ public:
               uint64_t OffsetInArchive);
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
   template <class ELFT>
-  void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
+  void parse(llvm::DenseMap<llvm::CachedHashStringRef, const InputFile *>
+                 &ComdatGroups);
   std::unique_ptr<llvm::lto::InputFile> Obj;
 };
 

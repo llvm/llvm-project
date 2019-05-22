@@ -62,6 +62,11 @@ public:
   // Set of .so files to not link the same shared object file more than once.
   llvm::DenseMap<StringRef, SharedFile *> SoNames;
 
+  // Comdat groups define "link once" sections. If two comdat groups have the
+  // same name, only one of them is linked, and the other is ignored. This map
+  // is used to uniquify them.
+  llvm::DenseMap<llvm::CachedHashStringRef, const InputFile *> ComdatGroups;
+
 private:
   std::vector<Symbol *> findByVersion(SymbolVersion Ver);
   std::vector<Symbol *> findAllByVersion(SymbolVersion Ver);
