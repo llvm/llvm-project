@@ -2,10 +2,10 @@
 ; RUN: llc -O2 -mtriple armv7a < %s | FileCheck --check-prefixes=ARM,ARMV7A %s
 
 ; RUN: llc -O2 -mtriple thumbv6m < %s | FileCheck --check-prefixes=THUMB1,THUMBV6M %s
-; RUN: llc -O2 -mtriple thumbv8m.base < %s | FileCheck --check-prefixes=THUMB1,THUMBV8M.BASE %s
+; RUN: llc -O2 -mtriple thumbv8m.base < %s | FileCheck --check-prefixes=THUMB1,THUMBV8M-BASE %s
 
 ; RUN: llc -O2 -mtriple thumbv7a < %s | FileCheck --check-prefixes=THUMB,THUMBV7A %s
-; RUN: llc -O2 -mtriple thumbv8m.main < %s | FileCheck --check-prefixes=THUMB,THUMBV8M.MAIN %s
+; RUN: llc -O2 -mtriple thumbv8m.main < %s | FileCheck --check-prefixes=THUMB,THUMBV8M-MAIN %s
 
 define void @fn1(i32 %a, i32 %b, i32 %c) local_unnamed_addr #0 {
 ; ARM-LABEL: fn1:
