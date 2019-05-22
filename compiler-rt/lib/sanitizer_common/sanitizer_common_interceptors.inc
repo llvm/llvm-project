@@ -6734,6 +6734,23 @@ INTERCEPTOR(wchar_t *, wcsncat, wchar_t *dst, const wchar_t *src, SIZE_T n) {
 #define INIT_WCSCAT
 #endif
 
+#if SANITIZER_INTERCEPT_WCSDUP
+INTERCEPTOR(wchar_t *, wcsdup, wchar_t *s) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, wcsdup, s);
+  SIZE_T len = REAL(wcslen)(s);
+  COMMON_INTERCEPTOR_READ_RANGE(ctx, s, sizeof(wchar_t) * (len + 1));
+  wchar_t *result = REAL(wcsdup)(s);
+  if (result)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, result, sizeof(wchar_t) * (len + 1));
+  return result;
+}
+
+#define INIT_WCSDUP COMMON_INTERCEPT_FUNCTION(wcsdup);
+#else
+#define INIT_WCSDUP
+#endif
+
 #if SANITIZER_INTERCEPT_STRXFRM
 static SIZE_T RealStrLen(const char *str) { return REAL(strlen)(str); }
 
@@ -9765,6 +9782,7 @@ static void InitializeCommonInterceptors() {
   INIT_GETLOADAVG;
   INIT_WCSLEN;
   INIT_WCSCAT;
+  INIT_WCSDUP;
   INIT_WCSXFRM;
   INIT___WCSXFRM_L;
   INIT_ACCT;
