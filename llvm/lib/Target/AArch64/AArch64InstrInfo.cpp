@@ -5512,5 +5512,30 @@ bool AArch64InstrInfo::shouldOutlineFromFunctionByDefault(
   return MF.getFunction().hasMinSize();
 }
 
+bool AArch64InstrInfo::isCopyInstrImpl(
+    const MachineInstr &MI, const MachineOperand *&Source,
+    const MachineOperand *&Destination) const {
+
+  // AArch64::ORRWrs and AArch64::ORRXrs with WZR/XZR reg
+  // and zero immediate operands used as an alias for mov instruction.
+  if (MI.getOpcode() == AArch64::ORRWrs &&
+      MI.getOperand(1).getReg() == AArch64::WZR &&
+      MI.getOperand(3).getImm() == 0x0) {
+    Destination = &MI.getOperand(0);
+    Source = &MI.getOperand(2);
+    return true;
+  }
+
+  if (MI.getOpcode() == AArch64::ORRXrs &&
+      MI.getOperand(1).getReg() == AArch64::XZR &&
+      MI.getOperand(3).getImm() == 0x0) {
+    Destination = &MI.getOperand(0);
+    Source = &MI.getOperand(2);
+    return true;
+  }
+
+  return false;
+}
+
 #define GET_INSTRINFO_HELPERS
 #include "AArch64GenInstrInfo.inc"
