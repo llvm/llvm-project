@@ -1990,7 +1990,7 @@ Address CodeGenFunction::EmitMSVAListRef(const Expr *E) {
 
 void CodeGenFunction::EmitDeclRefExprDbgValue(const DeclRefExpr *E,
                                               const APValue &Init) {
-  assert(!Init.isUninit() && "Invalid DeclRefExpr initializer!");
+  assert(Init.hasValue() && "Invalid DeclRefExpr initializer!");
   if (CGDebugInfo *Dbg = getDebugInfo())
     if (CGM.getCodeGenOpts().getDebugInfo() >= codegenoptions::LimitedDebugInfo)
       Dbg->EmitGlobalVariable(E->getDecl(), Init);

@@ -364,8 +364,6 @@ public:
                            const FileSpecList &module_list,
                            enum FilterTy filter_ty);
 
-  SearchFilterByModuleList(const SearchFilterByModuleList &rhs);
-
   ~SearchFilterByModuleList() override;
 
   SearchFilterByModuleList &operator=(const SearchFilterByModuleList &rhs);

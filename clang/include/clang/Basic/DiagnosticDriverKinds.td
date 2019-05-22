@@ -458,4 +458,5 @@ def warn_drv_libstdcxx_not_found : Warning<
   "command line to use the libc++ standard library instead">,
   InGroup<DiagGroup<"stdlibcxx-not-found">>;
 
+def err_drv_cannot_mix_options : Error<"cannot specify '%1' along with '%0'">;
 }

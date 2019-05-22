@@ -215,8 +215,6 @@ PythonBytes::PythonBytes(PyRefType type, PyObject *py_obj) : PythonObject() {
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a string
 }
 
-PythonBytes::PythonBytes(const PythonBytes &object) : PythonObject(object) {}
-
 PythonBytes::~PythonBytes() {}
 
 bool PythonBytes::Check(PyObject *py_obj) {
@@ -340,8 +338,6 @@ PythonString::PythonString(PyRefType type, PyObject *py_obj) : PythonObject() {
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a string
 }
 
-PythonString::PythonString(const PythonString &object) : PythonObject(object) {}
-
 PythonString::PythonString(llvm::StringRef string) : PythonObject() {
   SetString(string);
 }
@@ -441,9 +437,6 @@ PythonInteger::PythonInteger(PyRefType type, PyObject *py_obj)
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a integer type
 }
 
-PythonInteger::PythonInteger(const PythonInteger &object)
-    : PythonObject(object) {}
-
 PythonInteger::PythonInteger(int64_t value) : PythonObject() {
   SetInteger(value);
 }
@@ -529,9 +522,6 @@ PythonBoolean::PythonBoolean(PyRefType type, PyObject *py_obj)
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a boolean type
 }
 
-PythonBoolean::PythonBoolean(const PythonBoolean &object)
-    : PythonObject(object) {}
-
 PythonBoolean::PythonBoolean(bool value) {
   SetValue(value);
 }
@@ -583,8 +573,6 @@ PythonList::PythonList(int list_size) : PythonObject() {
 PythonList::PythonList(PyRefType type, PyObject *py_obj) : PythonObject() {
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a list
 }
-
-PythonList::PythonList(const PythonList &list) : PythonObject(list) {}
 
 PythonList::~PythonList() {}
 
@@ -662,8 +650,6 @@ PythonTuple::PythonTuple(int tuple_size) : PythonObject() {
 PythonTuple::PythonTuple(PyRefType type, PyObject *py_obj) : PythonObject() {
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a tuple
 }
-
-PythonTuple::PythonTuple(const PythonTuple &tuple) : PythonObject(tuple) {}
 
 PythonTuple::PythonTuple(std::initializer_list<PythonObject> objects) {
   m_py_obj = PyTuple_New(objects.size());
@@ -754,9 +740,6 @@ PythonDictionary::PythonDictionary(PyRefType type, PyObject *py_obj)
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a dictionary
 }
 
-PythonDictionary::PythonDictionary(const PythonDictionary &object)
-    : PythonObject(object) {}
-
 PythonDictionary::~PythonDictionary() {}
 
 bool PythonDictionary::Check(PyObject *py_obj) {
@@ -826,8 +809,6 @@ PythonModule::PythonModule(PyRefType type, PyObject *py_obj) {
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a module
 }
 
-PythonModule::PythonModule(const PythonModule &dict) : PythonObject(dict) {}
-
 PythonModule::~PythonModule() {}
 
 PythonModule PythonModule::BuiltinsModule() {
@@ -881,9 +862,6 @@ PythonCallable::PythonCallable() : PythonObject() {}
 PythonCallable::PythonCallable(PyRefType type, PyObject *py_obj) {
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a callable
 }
-
-PythonCallable::PythonCallable(const PythonCallable &callable)
-    : PythonObject(callable) {}
 
 PythonCallable::~PythonCallable() {}
 

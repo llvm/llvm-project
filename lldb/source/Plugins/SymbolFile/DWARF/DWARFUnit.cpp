@@ -21,6 +21,7 @@
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
+#include "DWARFTypeUnit.h"
 #include "LogChannelDWARF.h"
 #include "SymbolFileDWARFDebugMap.h"
 #include "SymbolFileDWARFDwo.h"
@@ -33,9 +34,10 @@ extern int g_verbose;
 
 DWARFUnit::DWARFUnit(SymbolFileDWARF *dwarf, lldb::user_id_t uid,
                      const DWARFUnitHeader &header,
-                     const DWARFAbbreviationDeclarationSet &abbrevs)
+                     const DWARFAbbreviationDeclarationSet &abbrevs,
+                     DIERef::Section section)
     : UserID(uid), m_dwarf(dwarf), m_header(header), m_abbrevs(&abbrevs),
-      m_cancel_scopes(false) {}
+      m_cancel_scopes(false), m_section(section) {}
 
 DWARFUnit::~DWARFUnit() = default;
 
@@ -788,7 +790,7 @@ const DWARFDebugAranges &DWARFUnit::GetFunctionAranges() {
 }
 
 llvm::Expected<DWARFUnitHeader>
-DWARFUnitHeader::extract(const DWARFDataExtractor &data,
+DWARFUnitHeader::extract(const DWARFDataExtractor &data, DIERef::Section section,
                          lldb::offset_t *offset_ptr) {
   DWARFUnitHeader header;
   header.m_offset = *offset_ptr;
@@ -803,8 +805,8 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data,
   } else {
     header.m_abbr_offset = data.GetDWARFOffset(offset_ptr);
     header.m_addr_size = data.GetU8(offset_ptr);
-    // Only compile units supported so far.
-    header.m_unit_type = DW_UT_compile;
+    header.m_unit_type =
+        section == DIERef::Section::DebugTypes ? DW_UT_type : DW_UT_compile;
   }
 
   bool length_OK = data.ValidOffset(header.GetNextUnitOffset() - 1);
@@ -826,11 +828,12 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data,
 
 llvm::Expected<DWARFUnitSP>
 DWARFUnit::extract(SymbolFileDWARF *dwarf, user_id_t uid,
-                   const DWARFDataExtractor &debug_info,
+                   const DWARFDataExtractor &debug_info, DIERef::Section section,
                    lldb::offset_t *offset_ptr) {
   assert(debug_info.ValidOffset(*offset_ptr));
 
-  auto expected_header = DWARFUnitHeader::extract(debug_info, offset_ptr);
+  auto expected_header =
+      DWARFUnitHeader::extract(debug_info, section, offset_ptr);
   if (!expected_header)
     return expected_header.takeError();
 
@@ -852,14 +855,17 @@ DWARFUnit::extract(SymbolFileDWARF *dwarf, user_id_t uid,
     return llvm::make_error<llvm::object::GenericBinaryError>(
         "No abbrev exists at the specified offset.");
 
-  DWARFUnitSP unit_sp(
-      new DWARFCompileUnit(dwarf, uid, *expected_header, *abbrevs));
-
-  return unit_sp;
+  if (expected_header->IsTypeUnit())
+    return DWARFUnitSP(
+        new DWARFTypeUnit(dwarf, uid, *expected_header, *abbrevs, section));
+  return DWARFUnitSP(
+      new DWARFCompileUnit(dwarf, uid, *expected_header, *abbrevs, section));
 }
 
 const lldb_private::DWARFDataExtractor &DWARFUnit::GetData() const {
-  return m_dwarf->GetDWARFContext().getOrLoadDebugInfoData();
+  return m_section == DIERef::Section::DebugTypes
+             ? m_dwarf->GetDWARFContext().getOrLoadDebugTypesData()
+             : m_dwarf->GetDWARFContext().getOrLoadDebugInfoData();
 }
 
 uint32_t DWARFUnit::GetHeaderByteSize() const {

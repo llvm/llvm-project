@@ -328,7 +328,7 @@ namespace PR14503 {
       int n;
       struct {
         int x,
-            y;
+            y; // expected-note {{subobject declared here}}
       };
     };
     constexpr V() : x(0) {}

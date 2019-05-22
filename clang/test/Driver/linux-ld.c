@@ -194,6 +194,39 @@
 // CHECK-CLANG-LD-STATIC-PIE: "{{.*}}rcrt1.o"
 // CHECK-CLANG-LD-STATIC-PIE: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
 //
+// RUN: %clang -static-pie -pie -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE-PIE %s
+// CHECK-CLANG-LD-STATIC-PIE-PIE: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-CLANG-LD-STATIC-PIE-PIE: "-static"
+// CHECK-CLANG-LD-STATIC-PIE-PIE: "-pie"
+// CHECK-CLANG-LD-STATIC-PIE-PIE: "--no-dynamic-linker"
+// CHECK-CLANG-LD-STATIC-PIE-PIE: "-m" "elf_x86_64"
+// CHECK-CLANG-LD-STATIC-PIE-PIE: "{{.*}}rcrt1.o"
+// CHECK-CLANG-LD-STATIC-PIE-PIE: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
+//
+// RUN: %clang -static-pie -static -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE-STATIC %s
+// CHECK-CLANG-LD-STATIC-PIE-STATIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-CLANG-LD-STATIC-PIE-STATIC: "-static"
+// CHECK-CLANG-LD-STATIC-PIE-STATIC: "-pie"
+// CHECK-CLANG-LD-STATIC-PIE-STATIC: "--no-dynamic-linker"
+// CHECK-CLANG-LD-STATIC-PIE-STATIC: "-m" "elf_x86_64"
+// CHECK-CLANG-LD-STATIC-PIE-STATIC: "{{.*}}rcrt1.o"
+// CHECK-CLANG-LD-STATIC-PIE-STATIC: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
+//
+// RUN: %clang -static-pie -nopie -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE-NOPIE %s
+// CHECK-CLANG-LD-STATIC-PIE-NOPIE: error: cannot specify 'nopie' along with 'static-pie'
+//
 // RUN: %clang -dynamic -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
