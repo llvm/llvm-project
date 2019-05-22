@@ -486,6 +486,11 @@ void Symbol::replace(const Symbol &New) {
   IsPreemptible = Old.IsPreemptible;
   ScriptDefined = Old.ScriptDefined;
 
+  // Symbol length is computed lazily. If we already know a symbol length,
+  // propagate it.
+  if (NameData == Old.NameData && NameSize == 0 && Old.NameSize != 0)
+    NameSize = Old.NameSize;
+
   // Print out a log message if --trace-symbol was specified.
   // This is for debugging.
   if (Traced)
