@@ -219,6 +219,7 @@ def scrub_asm_wasm32(asm, args):
 def get_triple_from_march(march):
   triples = {
       'amdgcn': 'amdgcn',
+      'sparc': 'sparc',
   }
   for prefix, triple in triples.items():
     if march.startswith(prefix):

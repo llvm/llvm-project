@@ -31,7 +31,7 @@ Symbols:
     Size:     4
     Binding:  STB_GLOBAL
 
-# ERR: Symbol table .symtab cannot be removed because it is referenced by the relocation section .rel.text.
+# ERR: symbol table '.symtab' cannot be removed because it is referenced by the relocation section '.rel.text'
 
 # RUN: llvm-objcopy --allow-broken-links -R .symtab %t %t4
 # RUN: llvm-readobj --sections %t4 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.symtab

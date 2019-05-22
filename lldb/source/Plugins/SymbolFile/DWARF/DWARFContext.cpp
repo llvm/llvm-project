@@ -91,3 +91,8 @@ const DWARFDataExtractor &DWARFContext::getOrLoadStrOffsetsData() {
   return LoadOrGetSection(m_main_section_list, eSectionTypeDWARFDebugStrOffsets,
                           m_data_debug_str_offsets);
 }
+
+const DWARFDataExtractor &DWARFContext::getOrLoadDebugTypesData() {
+  return LoadOrGetSection(m_main_section_list, eSectionTypeDWARFDebugTypes,
+                          m_data_debug_types);
+}

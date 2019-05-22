@@ -115,7 +115,6 @@ public:
     }
     lldbassert(false && "unsupported bitwidth");
   }
-  Scalar(const Scalar &rhs);
   // Scalar(const RegisterValue& reg_value);
   virtual ~Scalar();
 

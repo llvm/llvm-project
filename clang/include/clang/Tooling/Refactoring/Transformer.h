@@ -19,6 +19,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/Tooling/Refactoring/AtomicChange.h"
+#include "clang/Tooling/Refactoring/RangeSelector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
@@ -30,19 +31,6 @@
 
 namespace clang {
 namespace tooling {
-/// Determines the part of the AST node to replace.  We support this to work
-/// around the fact that the AST does not differentiate various syntactic
-/// elements into their own nodes, so users can specify them relative to a node,
-/// instead.
-enum class NodePart {
-  /// The node itself.
-  Node,
-  /// Given a \c MemberExpr, selects the member's token.
-  Member,
-  /// Given a \c NamedDecl or \c CxxCtorInitializer, selects that token of the
-  /// relevant name, not including qualifiers.
-  Name,
-};
 
 // Note that \p TextGenerator is allowed to fail, e.g. when trying to access a
 // matched node that was not bound.  Allowing this to fail simplifies error
@@ -76,72 +64,27 @@ inline TextGenerator text(std::string M) {
 //   (`RewriteRule::Explanation`) instead.  Notes serve the rare cases wherein
 //   edit-specific diagnostics are required.
 //
-// `ASTEdit` should be built using the `change` convenience fucntions. For
+// `ASTEdit` should be built using the `change` convenience functions. For
 // example,
 // \code
-//   change<FunctionDecl>(fun, NodePart::Name, "Frodo")
+//   change(name(fun), text("Frodo"))
 // \endcode
 // Or, if we use Stencil for the TextGenerator:
 // \code
-//   change<Stmt>(thenNode, stencil::cat("{", thenNode, "}"))
-//   change<Expr>(call, NodePart::Args, stencil::cat(x, ",", y))
-//     .note("argument order changed.")
+//   using stencil::cat;
+//   change(statement(thenNode), cat("{", thenNode, "}"))
+//   change(callArgs(call), cat(x, ",", y))
 // \endcode
 // Or, if you are changing the node corresponding to the rule's matcher, you can
 // use the single-argument override of \c change:
 // \code
-//   change<Expr>("different_expr")
+//   change(cat("different_expr"))
 // \endcode
 struct ASTEdit {
-  // The (bound) id of the node whose source will be replaced.  This id should
-  // never be the empty string.
-  std::string Target;
-  ast_type_traits::ASTNodeKind Kind;
-  NodePart Part;
+  RangeSelector TargetRange;
   TextGenerator Replacement;
   TextGenerator Note;
 };
-
-// Convenience functions for creating \c ASTEdits.  They all must be explicitly
-// instantiated with the desired AST type.  Each overload includes both \c
-// std::string and \c TextGenerator versions.
-
-// FIXME: For overloads taking a \c NodePart, constrain the valid values of \c
-// Part based on the type \c T.
-template <typename T>
-ASTEdit change(StringRef Target, NodePart Part, TextGenerator Replacement) {
-  ASTEdit E;
-  E.Target = Target.str();
-  E.Kind = ast_type_traits::ASTNodeKind::getFromNodeKind<T>();
-  E.Part = Part;
-  E.Replacement = std::move(Replacement);
-  return E;
-}
-
-template <typename T>
-ASTEdit change(StringRef Target, NodePart Part, std::string Replacement) {
-  return change<T>(Target, Part, text(std::move(Replacement)));
-}
-
-/// Variant of \c change for which the NodePart defaults to the whole node.
-template <typename T>
-ASTEdit change(StringRef Target, TextGenerator Replacement) {
-  return change<T>(Target, NodePart::Node, std::move(Replacement));
-}
-
-/// Variant of \c change for which the NodePart defaults to the whole node.
-template <typename T>
-ASTEdit change(StringRef Target, std::string Replacement) {
-  return change<T>(Target, text(std::move(Replacement)));
-}
-
-/// Variant of \c change that selects the node of the entire match.
-template <typename T> ASTEdit change(TextGenerator Replacement);
-
-/// Variant of \c change that selects the node of the entire match.
-template <typename T> ASTEdit change(std::string Replacement) {
-  return change<T>(text(std::move(Replacement)));
-}
 
 /// Description of a source-code transformation.
 //
@@ -175,9 +118,9 @@ struct RewriteRule {
   // We expect RewriteRules will most commonly include only one case.
   SmallVector<Case, 1> Cases;
 
-  // Id used as the default target of each match. The node described by the
+  // ID used as the default target of each match. The node described by the
   // matcher is should always be bound to this id.
-  static constexpr llvm::StringLiteral RootId = "___root___";
+  static constexpr llvm::StringLiteral RootID = "___root___";
 };
 
 /// Convenience function for constructing a simple \c RewriteRule.
@@ -235,10 +178,17 @@ inline RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
 // ```
 RewriteRule applyFirst(ArrayRef<RewriteRule> Rules);
 
-// Define this overload of `change` here because RewriteRule::RootId is not in
-// scope at the declaration point above.
-template <typename T> ASTEdit change(TextGenerator Replacement) {
-  return change<T>(RewriteRule::RootId, NodePart::Node, std::move(Replacement));
+/// Replaces a portion of the source text with \p Replacement.
+ASTEdit change(RangeSelector Target, TextGenerator Replacement);
+
+/// Replaces the entirety of a RewriteRule's match with \p Replacement.  For
+/// example, to replace a function call, one could write:
+/// \code
+///   makeRule(callExpr(callee(functionDecl(hasName("foo")))),
+///            change(text("bar()")))
+/// \endcode
+inline ASTEdit change(TextGenerator Replacement) {
+  return change(node(RewriteRule::RootID), std::move(Replacement));
 }
 
 /// The following three functions are a low-level part of the RewriteRule

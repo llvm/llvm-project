@@ -1,0 +1,28 @@
+# UNSUPPORTED: system-darwin, system-windows
+
+# Make sure DWARF v4 type units work.
+# RUN: %clangxx %S/Inputs/debug-types-expressions.cpp \
+# RUN:   -g -fdebug-types-section -o %t
+# RUN: %lldb %t -s %s -o exit | FileCheck %s
+
+# Now do the same for DWARF v5.
+# RUN: %clangxx %S/Inputs/debug-types-expressions.cpp \
+# RUN:   -g -gdwarf-5 -fdebug-types-section -o %t
+# RUN: %lldb %t -s %s -o exit | FileCheck %s
+
+breakpoint set -n foo
+process launch
+
+# CHECK: Process {{.*}} stopped
+
+frame variable a
+# CHECK-LABEL: frame variable a
+# CHECK: (B *) a =
+
+print a->f()
+# CHECK-LABEL: print a->f()
+# CHECK: (int) $0 = 47
+
+print ns::A()
+# CHECK-LABEL: print ns::A()
+# CHECK: (ns::A) $1 = (i = 147)

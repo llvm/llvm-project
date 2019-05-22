@@ -46,7 +46,7 @@ template <class ELFT> void SymbolTable::addCombinedLTOObject() {
     LTO->add(*F);
 
   for (InputFile *File : LTO->compile()) {
-    DenseSet<CachedHashStringRef> DummyGroups;
+    DenseMap<CachedHashStringRef, const InputFile *> DummyGroups;
     auto *Obj = cast<ObjFile<ELFT>>(File);
     Obj->parse(DummyGroups);
     for (Symbol *Sym : Obj->getGlobalSymbols())
@@ -135,7 +135,11 @@ Symbol *SymbolTable::addSymbol(const Symbol &New) {
 static void addUndefined(Symbol *Old, const Undefined &New) {
   // An undefined symbol with non default visibility must be satisfied
   // in the same DSO.
-  if (Old->isShared() && New.Visibility != STV_DEFAULT) {
+  //
+  // If this is a non-weak defined symbol in a discarded section, override the
+  // existing undefined symbol for better error message later.
+  if ((Old->isShared() && New.Visibility != STV_DEFAULT) ||
+      (Old->isUndefined() && New.Binding != STB_WEAK && New.DiscardedSecIdx)) {
     Old->replace(New);
     return;
   }

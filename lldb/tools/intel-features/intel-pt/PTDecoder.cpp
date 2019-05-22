@@ -60,13 +60,6 @@ void PTInstructionList::Clear() {
 }
 
 // PTTraceOptions class member functions definitions
-PTTraceOptions::PTTraceOptions() : m_opaque_sp() {}
-
-PTTraceOptions::PTTraceOptions(const PTTraceOptions &options)
-    : m_opaque_sp(options.m_opaque_sp) {}
-
-PTTraceOptions::~PTTraceOptions() {}
-
 lldb::TraceType PTTraceOptions::GetType() const {
   return (m_opaque_sp ? m_opaque_sp->getType()
                       : lldb::TraceType::eTraceTypeNone);
@@ -95,11 +88,6 @@ void PTTraceOptions::SetSP(
 // PTDecoder class member functions definitions
 PTDecoder::PTDecoder(lldb::SBDebugger &sbdebugger)
     : m_opaque_sp(new ptdecoder_private::Decoder(sbdebugger)) {}
-
-PTDecoder::PTDecoder(const PTDecoder &ptdecoder)
-    : m_opaque_sp(ptdecoder.m_opaque_sp) {}
-
-PTDecoder::~PTDecoder() {}
 
 void PTDecoder::StartProcessorTrace(lldb::SBProcess &sbprocess,
                                     lldb::SBTraceOptions &sbtraceoptions,

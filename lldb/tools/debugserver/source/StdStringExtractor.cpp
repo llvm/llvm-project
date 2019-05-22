@@ -30,20 +30,6 @@ StdStringExtractor::StdStringExtractor(const char *packet_cstr)
     m_packet.assign(packet_cstr);
 }
 
-// StdStringExtractor copy constructor
-StdStringExtractor::StdStringExtractor(const StdStringExtractor &rhs)
-    : m_packet(rhs.m_packet), m_index(rhs.m_index) {}
-
-// StdStringExtractor assignment operator
-const StdStringExtractor &StdStringExtractor::
-operator=(const StdStringExtractor &rhs) {
-  if (this != &rhs) {
-    m_packet = rhs.m_packet;
-    m_index = rhs.m_index;
-  }
-  return *this;
-}
-
 // Destructor
 StdStringExtractor::~StdStringExtractor() {}
 

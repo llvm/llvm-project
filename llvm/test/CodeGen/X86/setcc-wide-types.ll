@@ -913,870 +913,183 @@ define i32 @eq_i512_pair(i512* %a, i512* %b) {
 
 ; PR41971: Comparison using vector types is not favorable here.
 define i1 @eq_i128_args(i128 %a, i128 %b) {
-; SSE2-LABEL: eq_i128_args:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq %rcx, %xmm0
-; SSE2-NEXT:    movq %rdx, %xmm1
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    movq %rsi, %xmm0
-; SSE2-NEXT:    movq %rdi, %xmm2
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
-; SSE2-NEXT:    pcmpeqb %xmm1, %xmm2
-; SSE2-NEXT:    pmovmskb %xmm2, %eax
-; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    retq
-;
-; AVXANY-LABEL: eq_i128_args:
-; AVXANY:       # %bb.0:
-; AVXANY-NEXT:    vmovq %rcx, %xmm0
-; AVXANY-NEXT:    vmovq %rdx, %xmm1
-; AVXANY-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVXANY-NEXT:    vmovq %rsi, %xmm1
-; AVXANY-NEXT:    vmovq %rdi, %xmm2
-; AVXANY-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVXANY-NEXT:    vpcmpeqb %xmm0, %xmm1, %xmm0
-; AVXANY-NEXT:    vpmovmskb %xmm0, %eax
-; AVXANY-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
-; AVXANY-NEXT:    sete %al
-; AVXANY-NEXT:    retq
+; ANY-LABEL: eq_i128_args:
+; ANY:       # %bb.0:
+; ANY-NEXT:    xorq %rcx, %rsi
+; ANY-NEXT:    xorq %rdx, %rdi
+; ANY-NEXT:    orq %rsi, %rdi
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
   %r = icmp eq i128 %a, %b
   ret i1 %r
 }
 
 define i1 @eq_i256_args(i256 %a, i256 %b) {
-; SSE2-LABEL: eq_i256_args:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorq %r9, %rsi
-; SSE2-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
-; SSE2-NEXT:    orq %rsi, %rcx
-; SSE2-NEXT:    xorq %r8, %rdi
-; SSE2-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
-; SSE2-NEXT:    orq %rdi, %rdx
-; SSE2-NEXT:    orq %rcx, %rdx
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    retq
-;
-; AVX1-LABEL: eq_i256_args:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    xorq %r9, %rsi
-; AVX1-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
-; AVX1-NEXT:    orq %rsi, %rcx
-; AVX1-NEXT:    xorq %r8, %rdi
-; AVX1-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
-; AVX1-NEXT:    orq %rdi, %rdx
-; AVX1-NEXT:    orq %rcx, %rdx
-; AVX1-NEXT:    sete %al
-; AVX1-NEXT:    retq
-;
-; AVX256-LABEL: eq_i256_args:
-; AVX256:       # %bb.0:
-; AVX256-NEXT:    pushq %rbx
-; AVX256-NEXT:    .cfi_def_cfa_offset 16
-; AVX256-NEXT:    .cfi_offset %rbx, -16
-; AVX256-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
-; AVX256-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX256-NEXT:    movl %ebx, %r11d
-; AVX256-NEXT:    shrl $8, %r11d
-; AVX256-NEXT:    vmovd %ebx, %xmm0
-; AVX256-NEXT:    vpinsrb $1, %r11d, %xmm0, %xmm0
-; AVX256-NEXT:    movl %ebx, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movl %ebx, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $3, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movq %rbx, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movq %rbx, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movq %rbx, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    shrq $56, %rbx
-; AVX256-NEXT:    vpinsrb $7, %ebx, %xmm0, %xmm0
-; AVX256-NEXT:    vpinsrb $8, %r10d, %xmm0, %xmm0
-; AVX256-NEXT:    movl %r10d, %eax
-; AVX256-NEXT:    shrl $8, %eax
-; AVX256-NEXT:    vpinsrb $9, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movl %r10d, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movl %r10d, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $11, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movq %r10, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movq %r10, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $13, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movq %r10, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    shrq $56, %r10
-; AVX256-NEXT:    vpinsrb $15, %r10d, %xmm0, %xmm0
-; AVX256-NEXT:    movl %r8d, %eax
-; AVX256-NEXT:    shrl $8, %eax
-; AVX256-NEXT:    vmovd %r8d, %xmm1
-; AVX256-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %r8d, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %r8d, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %r8, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %r8, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %r8, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    shrq $56, %r8
-; AVX256-NEXT:    vpinsrb $7, %r8d, %xmm1, %xmm1
-; AVX256-NEXT:    vpinsrb $8, %r9d, %xmm1, %xmm1
-; AVX256-NEXT:    movl %r9d, %eax
-; AVX256-NEXT:    shrl $8, %eax
-; AVX256-NEXT:    vpinsrb $9, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %r9d, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $10, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %r9d, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $11, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %r9, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %r9, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $13, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %r9, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $14, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    shrq $56, %r9
-; AVX256-NEXT:    vpinsrb $15, %r9d, %xmm1, %xmm1
-; AVX256-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX256-NEXT:    movl %edx, %eax
-; AVX256-NEXT:    shrl $8, %eax
-; AVX256-NEXT:    vmovd %edx, %xmm1
-; AVX256-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %edx, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %edx, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %rdx, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %rdx, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %rdx, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    shrq $56, %rdx
-; AVX256-NEXT:    vpinsrb $7, %edx, %xmm1, %xmm1
-; AVX256-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
-; AVX256-NEXT:    movl %ecx, %eax
-; AVX256-NEXT:    shrl $8, %eax
-; AVX256-NEXT:    vpinsrb $9, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %ecx, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $10, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %ecx, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $11, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %rcx, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %rcx, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $13, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %rcx, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $14, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    shrq $56, %rcx
-; AVX256-NEXT:    vpinsrb $15, %ecx, %xmm1, %xmm1
-; AVX256-NEXT:    movl %edi, %eax
-; AVX256-NEXT:    shrl $8, %eax
-; AVX256-NEXT:    vmovd %edi, %xmm2
-; AVX256-NEXT:    vpinsrb $1, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movl %edi, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $2, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movl %edi, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $3, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movq %rdi, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $4, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movq %rdi, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $5, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movq %rdi, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $6, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    shrq $56, %rdi
-; AVX256-NEXT:    vpinsrb $7, %edi, %xmm2, %xmm2
-; AVX256-NEXT:    vpinsrb $8, %esi, %xmm2, %xmm2
-; AVX256-NEXT:    movl %esi, %eax
-; AVX256-NEXT:    shrl $8, %eax
-; AVX256-NEXT:    vpinsrb $9, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movl %esi, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $10, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movl %esi, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $11, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movq %rsi, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $12, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movq %rsi, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $13, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movq %rsi, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $14, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    shrq $56, %rsi
-; AVX256-NEXT:    vpinsrb $15, %esi, %xmm2, %xmm2
-; AVX256-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX256-NEXT:    vpcmpeqb %ymm0, %ymm1, %ymm0
-; AVX256-NEXT:    vpmovmskb %ymm0, %eax
-; AVX256-NEXT:    cmpl $-1, %eax
-; AVX256-NEXT:    sete %al
-; AVX256-NEXT:    popq %rbx
-; AVX256-NEXT:    .cfi_def_cfa_offset 8
-; AVX256-NEXT:    vzeroupper
-; AVX256-NEXT:    retq
+; ANY-LABEL: eq_i256_args:
+; ANY:       # %bb.0:
+; ANY-NEXT:    xorq %r9, %rsi
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
+; ANY-NEXT:    orq %rsi, %rcx
+; ANY-NEXT:    xorq %r8, %rdi
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
+; ANY-NEXT:    orq %rdi, %rdx
+; ANY-NEXT:    orq %rcx, %rdx
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
   %r = icmp eq i256 %a, %b
   ret i1 %r
 }
 
 define i1 @eq_i512_args(i512 %a, i512 %b) {
-; NO512-LABEL: eq_i512_args:
-; NO512:       # %bb.0:
-; NO512-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; NO512-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
-; NO512-NEXT:    orq %rax, %rcx
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %r9
-; NO512-NEXT:    orq %rcx, %r9
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %rsi
-; NO512-NEXT:    orq %r9, %rsi
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
-; NO512-NEXT:    orq %r10, %rdx
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %r8
-; NO512-NEXT:    orq %rdx, %r8
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %rdi
-; NO512-NEXT:    orq %r8, %rdi
-; NO512-NEXT:    orq %rsi, %rdi
-; NO512-NEXT:    sete %al
-; NO512-NEXT:    retq
-;
-; AVX512-LABEL: eq_i512_args:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512-NEXT:    vmovd %r10d, %xmm0
-; AVX512-NEXT:    shrq $32, %r10
-; AVX512-NEXT:    vpinsrd $1, %r10d, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    shrq $32, %rax
-; AVX512-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %r8d, %xmm1
-; AVX512-NEXT:    shrq $32, %r8
-; AVX512-NEXT:    vpinsrd $1, %r8d, %xmm1, %xmm1
-; AVX512-NEXT:    vpinsrd $2, %r9d, %xmm1, %xmm1
-; AVX512-NEXT:    shrq $32, %r9
-; AVX512-NEXT:    vpinsrd $3, %r9d, %xmm1, %xmm1
-; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX512-NEXT:    vmovd %edx, %xmm1
-; AVX512-NEXT:    shrq $32, %rdx
-; AVX512-NEXT:    vpinsrd $1, %edx, %xmm1, %xmm1
-; AVX512-NEXT:    vpinsrd $2, %ecx, %xmm1, %xmm1
-; AVX512-NEXT:    shrq $32, %rcx
-; AVX512-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm1
-; AVX512-NEXT:    vmovd %edi, %xmm2
-; AVX512-NEXT:    shrq $32, %rdi
-; AVX512-NEXT:    vpinsrd $1, %edi, %xmm2, %xmm2
-; AVX512-NEXT:    vpinsrd $2, %esi, %xmm2, %xmm2
-; AVX512-NEXT:    shrq $32, %rsi
-; AVX512-NEXT:    vpinsrd $3, %esi, %xmm2, %xmm2
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; AVX512-NEXT:    vpcmpeqd {{[0-9]+}}(%rsp), %zmm0, %k0
-; AVX512-NEXT:    kortestw %k0, %k0
-; AVX512-NEXT:    setb %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; ANY-LABEL: eq_i512_args:
+; ANY:       # %bb.0:
+; ANY-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; ANY-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
+; ANY-NEXT:    orq %rax, %rcx
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r9
+; ANY-NEXT:    orq %rcx, %r9
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rsi
+; ANY-NEXT:    orq %r9, %rsi
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
+; ANY-NEXT:    orq %r10, %rdx
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r8
+; ANY-NEXT:    orq %rdx, %r8
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rdi
+; ANY-NEXT:    orq %r8, %rdi
+; ANY-NEXT:    orq %rsi, %rdi
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
   %r = icmp eq i512 %a, %b
   ret i1 %r
 }
 
 define i1 @eq_i128_op(i128 %a, i128 %b) {
-; SSE2-LABEL: eq_i128_op:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq %rcx, %xmm0
-; SSE2-NEXT:    movq %rdx, %xmm1
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    addq $1, %rdi
-; SSE2-NEXT:    adcq $0, %rsi
-; SSE2-NEXT:    movq %rsi, %xmm0
-; SSE2-NEXT:    movq %rdi, %xmm2
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
-; SSE2-NEXT:    pcmpeqb %xmm1, %xmm2
-; SSE2-NEXT:    pmovmskb %xmm2, %eax
-; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    retq
-;
-; AVXANY-LABEL: eq_i128_op:
-; AVXANY:       # %bb.0:
-; AVXANY-NEXT:    vmovq %rcx, %xmm0
-; AVXANY-NEXT:    vmovq %rdx, %xmm1
-; AVXANY-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVXANY-NEXT:    addq $1, %rdi
-; AVXANY-NEXT:    adcq $0, %rsi
-; AVXANY-NEXT:    vmovq %rsi, %xmm1
-; AVXANY-NEXT:    vmovq %rdi, %xmm2
-; AVXANY-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVXANY-NEXT:    vpcmpeqb %xmm0, %xmm1, %xmm0
-; AVXANY-NEXT:    vpmovmskb %xmm0, %eax
-; AVXANY-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
-; AVXANY-NEXT:    sete %al
-; AVXANY-NEXT:    retq
+; ANY-LABEL: eq_i128_op:
+; ANY:       # %bb.0:
+; ANY-NEXT:    addq $1, %rdi
+; ANY-NEXT:    adcq $0, %rsi
+; ANY-NEXT:    xorq %rdx, %rdi
+; ANY-NEXT:    xorq %rcx, %rsi
+; ANY-NEXT:    orq %rdi, %rsi
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
   %a2 = add i128 %a, 1
   %r = icmp eq i128 %a2, %b
   ret i1 %r
 }
 
 define i1 @eq_i256_op(i256 %a, i256 %b) {
-; SSE2-LABEL: eq_i256_op:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    addq $1, %rdi
-; SSE2-NEXT:    adcq $0, %rsi
-; SSE2-NEXT:    adcq $0, %rdx
-; SSE2-NEXT:    adcq $0, %rcx
-; SSE2-NEXT:    xorq %r8, %rdi
-; SSE2-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
-; SSE2-NEXT:    orq %rdi, %rdx
-; SSE2-NEXT:    xorq %r9, %rsi
-; SSE2-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
-; SSE2-NEXT:    orq %rsi, %rcx
-; SSE2-NEXT:    orq %rdx, %rcx
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    retq
-;
-; AVX1-LABEL: eq_i256_op:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    addq $1, %rdi
-; AVX1-NEXT:    adcq $0, %rsi
-; AVX1-NEXT:    adcq $0, %rdx
-; AVX1-NEXT:    adcq $0, %rcx
-; AVX1-NEXT:    xorq %r8, %rdi
-; AVX1-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
-; AVX1-NEXT:    orq %rdi, %rdx
-; AVX1-NEXT:    xorq %r9, %rsi
-; AVX1-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
-; AVX1-NEXT:    orq %rsi, %rcx
-; AVX1-NEXT:    orq %rdx, %rcx
-; AVX1-NEXT:    sete %al
-; AVX1-NEXT:    retq
-;
-; AVX256-LABEL: eq_i256_op:
-; AVX256:       # %bb.0:
-; AVX256-NEXT:    pushq %rbx
-; AVX256-NEXT:    .cfi_def_cfa_offset 16
-; AVX256-NEXT:    .cfi_offset %rbx, -16
-; AVX256-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
-; AVX256-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX256-NEXT:    movl %ebx, %r11d
-; AVX256-NEXT:    shrl $8, %r11d
-; AVX256-NEXT:    vmovd %ebx, %xmm0
-; AVX256-NEXT:    vpinsrb $1, %r11d, %xmm0, %xmm0
-; AVX256-NEXT:    movl %ebx, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movl %ebx, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $3, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movq %rbx, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movq %rbx, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movq %rbx, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    shrq $56, %rbx
-; AVX256-NEXT:    vpinsrb $7, %ebx, %xmm0, %xmm0
-; AVX256-NEXT:    vpinsrb $8, %r10d, %xmm0, %xmm0
-; AVX256-NEXT:    movl %r10d, %eax
-; AVX256-NEXT:    shrl $8, %eax
-; AVX256-NEXT:    vpinsrb $9, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movl %r10d, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movl %r10d, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $11, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movq %r10, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movq %r10, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $13, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movq %r10, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    shrq $56, %r10
-; AVX256-NEXT:    vpinsrb $15, %r10d, %xmm0, %xmm0
-; AVX256-NEXT:    movl %r8d, %eax
-; AVX256-NEXT:    shrl $8, %eax
-; AVX256-NEXT:    vmovd %r8d, %xmm1
-; AVX256-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %r8d, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %r8d, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %r8, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %r8, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %r8, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    shrq $56, %r8
-; AVX256-NEXT:    vpinsrb $7, %r8d, %xmm1, %xmm1
-; AVX256-NEXT:    vpinsrb $8, %r9d, %xmm1, %xmm1
-; AVX256-NEXT:    movl %r9d, %eax
-; AVX256-NEXT:    shrl $8, %eax
-; AVX256-NEXT:    vpinsrb $9, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %r9d, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $10, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %r9d, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $11, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %r9, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %r9, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $13, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %r9, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $14, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    shrq $56, %r9
-; AVX256-NEXT:    vpinsrb $15, %r9d, %xmm1, %xmm1
-; AVX256-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX256-NEXT:    addq $1, %rdi
-; AVX256-NEXT:    adcq $0, %rsi
-; AVX256-NEXT:    adcq $0, %rdx
-; AVX256-NEXT:    adcq $0, %rcx
-; AVX256-NEXT:    movl %edi, %eax
-; AVX256-NEXT:    shrl $8, %eax
-; AVX256-NEXT:    vmovd %edi, %xmm1
-; AVX256-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %edi, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %edi, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %rdi, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %rdi, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %rdi, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    shrq $56, %rdi
-; AVX256-NEXT:    vpinsrb $7, %edi, %xmm1, %xmm1
-; AVX256-NEXT:    vpinsrb $8, %esi, %xmm1, %xmm1
-; AVX256-NEXT:    movl %esi, %eax
-; AVX256-NEXT:    shrl $8, %eax
-; AVX256-NEXT:    vpinsrb $9, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %esi, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $10, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %esi, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $11, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %rsi, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %rsi, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $13, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %rsi, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $14, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    shrq $56, %rsi
-; AVX256-NEXT:    vpinsrb $15, %esi, %xmm1, %xmm1
-; AVX256-NEXT:    movl %edx, %eax
-; AVX256-NEXT:    shrl $8, %eax
-; AVX256-NEXT:    vmovd %edx, %xmm2
-; AVX256-NEXT:    vpinsrb $1, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movl %edx, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $2, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movl %edx, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $3, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movq %rdx, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $4, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movq %rdx, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $5, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movq %rdx, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $6, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    shrq $56, %rdx
-; AVX256-NEXT:    vpinsrb $7, %edx, %xmm2, %xmm2
-; AVX256-NEXT:    vpinsrb $8, %ecx, %xmm2, %xmm2
-; AVX256-NEXT:    movl %ecx, %eax
-; AVX256-NEXT:    shrl $8, %eax
-; AVX256-NEXT:    vpinsrb $9, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movl %ecx, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $10, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movl %ecx, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $11, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movq %rcx, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $12, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movq %rcx, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $13, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    movq %rcx, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $14, %eax, %xmm2, %xmm2
-; AVX256-NEXT:    shrq $56, %rcx
-; AVX256-NEXT:    vpinsrb $15, %ecx, %xmm2, %xmm2
-; AVX256-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; AVX256-NEXT:    vpcmpeqb %ymm0, %ymm1, %ymm0
-; AVX256-NEXT:    vpmovmskb %ymm0, %eax
-; AVX256-NEXT:    cmpl $-1, %eax
-; AVX256-NEXT:    sete %al
-; AVX256-NEXT:    popq %rbx
-; AVX256-NEXT:    .cfi_def_cfa_offset 8
-; AVX256-NEXT:    vzeroupper
-; AVX256-NEXT:    retq
+; ANY-LABEL: eq_i256_op:
+; ANY:       # %bb.0:
+; ANY-NEXT:    addq $1, %rdi
+; ANY-NEXT:    adcq $0, %rsi
+; ANY-NEXT:    adcq $0, %rdx
+; ANY-NEXT:    adcq $0, %rcx
+; ANY-NEXT:    xorq %r8, %rdi
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
+; ANY-NEXT:    orq %rdi, %rdx
+; ANY-NEXT:    xorq %r9, %rsi
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
+; ANY-NEXT:    orq %rsi, %rcx
+; ANY-NEXT:    orq %rdx, %rcx
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
   %a2 = add i256 %a, 1
   %r = icmp eq i256 %a2, %b
   ret i1 %r
 }
 
 define i1 @eq_i512_op(i512 %a, i512 %b) {
-; NO512-LABEL: eq_i512_op:
-; NO512:       # %bb.0:
-; NO512-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; NO512-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; NO512-NEXT:    addq $1, %rdi
-; NO512-NEXT:    adcq $0, %rsi
-; NO512-NEXT:    adcq $0, %rdx
-; NO512-NEXT:    adcq $0, %rcx
-; NO512-NEXT:    adcq $0, %r8
-; NO512-NEXT:    adcq $0, %r9
-; NO512-NEXT:    adcq $0, %r10
-; NO512-NEXT:    adcq $0, %rax
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %rsi
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %r9
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
-; NO512-NEXT:    orq %rcx, %rax
-; NO512-NEXT:    orq %r9, %rax
-; NO512-NEXT:    orq %rsi, %rax
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
-; NO512-NEXT:    orq %rdx, %r10
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %r8
-; NO512-NEXT:    orq %r10, %r8
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %rdi
-; NO512-NEXT:    orq %r8, %rdi
-; NO512-NEXT:    orq %rax, %rdi
-; NO512-NEXT:    sete %al
-; NO512-NEXT:    retq
-;
-; AVX512-LABEL: eq_i512_op:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512-NEXT:    addq $1, %rdi
-; AVX512-NEXT:    adcq $0, %rsi
-; AVX512-NEXT:    adcq $0, %rdx
-; AVX512-NEXT:    adcq $0, %rcx
-; AVX512-NEXT:    adcq $0, %r8
-; AVX512-NEXT:    adcq $0, %r9
-; AVX512-NEXT:    adcq $0, %r10
-; AVX512-NEXT:    adcq $0, %rax
-; AVX512-NEXT:    vmovd %edi, %xmm0
-; AVX512-NEXT:    shrq $32, %rdi
-; AVX512-NEXT:    vpinsrd $1, %edi, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrd $2, %esi, %xmm0, %xmm0
-; AVX512-NEXT:    shrq $32, %rsi
-; AVX512-NEXT:    vpinsrd $3, %esi, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %edx, %xmm1
-; AVX512-NEXT:    shrq $32, %rdx
-; AVX512-NEXT:    vpinsrd $1, %edx, %xmm1, %xmm1
-; AVX512-NEXT:    vpinsrd $2, %ecx, %xmm1, %xmm1
-; AVX512-NEXT:    shrq $32, %rcx
-; AVX512-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm1
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512-NEXT:    vmovd %r8d, %xmm1
-; AVX512-NEXT:    shrq $32, %r8
-; AVX512-NEXT:    vpinsrd $1, %r8d, %xmm1, %xmm1
-; AVX512-NEXT:    vpinsrd $2, %r9d, %xmm1, %xmm1
-; AVX512-NEXT:    shrq $32, %r9
-; AVX512-NEXT:    vpinsrd $3, %r9d, %xmm1, %xmm1
-; AVX512-NEXT:    vmovd %r10d, %xmm2
-; AVX512-NEXT:    shrq $32, %r10
-; AVX512-NEXT:    vpinsrd $1, %r10d, %xmm2, %xmm2
-; AVX512-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; AVX512-NEXT:    shrq $32, %rax
-; AVX512-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
-; AVX512-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpcmpeqd {{[0-9]+}}(%rsp), %zmm0, %k0
-; AVX512-NEXT:    kortestw %k0, %k0
-; AVX512-NEXT:    setb %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; ANY-LABEL: eq_i512_op:
+; ANY:       # %bb.0:
+; ANY-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; ANY-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; ANY-NEXT:    addq $1, %rdi
+; ANY-NEXT:    adcq $0, %rsi
+; ANY-NEXT:    adcq $0, %rdx
+; ANY-NEXT:    adcq $0, %rcx
+; ANY-NEXT:    adcq $0, %r8
+; ANY-NEXT:    adcq $0, %r9
+; ANY-NEXT:    adcq $0, %r10
+; ANY-NEXT:    adcq $0, %rax
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rsi
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r9
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
+; ANY-NEXT:    orq %rcx, %rax
+; ANY-NEXT:    orq %r9, %rax
+; ANY-NEXT:    orq %rsi, %rax
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
+; ANY-NEXT:    orq %rdx, %r10
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r8
+; ANY-NEXT:    orq %r10, %r8
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rdi
+; ANY-NEXT:    orq %r8, %rdi
+; ANY-NEXT:    orq %rax, %rdi
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
   %a2 = add i512 %a, 1
   %r = icmp eq i512 %a2, %b
   ret i1 %r
 }
 
 define i1 @eq_i128_load_arg(i128 *%p, i128 %b) {
-; SSE2-LABEL: eq_i128_load_arg:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq %rdx, %xmm0
-; SSE2-NEXT:    movq %rsi, %xmm1
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    movdqu (%rdi), %xmm0
-; SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
-; SSE2-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    retq
-;
-; AVXANY-LABEL: eq_i128_load_arg:
-; AVXANY:       # %bb.0:
-; AVXANY-NEXT:    vmovq %rdx, %xmm0
-; AVXANY-NEXT:    vmovq %rsi, %xmm1
-; AVXANY-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVXANY-NEXT:    vpcmpeqb (%rdi), %xmm0, %xmm0
-; AVXANY-NEXT:    vpmovmskb %xmm0, %eax
-; AVXANY-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
-; AVXANY-NEXT:    sete %al
-; AVXANY-NEXT:    retq
+; ANY-LABEL: eq_i128_load_arg:
+; ANY:       # %bb.0:
+; ANY-NEXT:    xorq 8(%rdi), %rdx
+; ANY-NEXT:    xorq (%rdi), %rsi
+; ANY-NEXT:    orq %rdx, %rsi
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
   %a = load i128, i128* %p
   %r = icmp eq i128 %a, %b
   ret i1 %r
 }
 
 define i1 @eq_i256_load_arg(i256 *%p, i256 %b) {
-; SSE2-LABEL: eq_i256_load_arg:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorq 24(%rdi), %r8
-; SSE2-NEXT:    xorq 8(%rdi), %rdx
-; SSE2-NEXT:    orq %r8, %rdx
-; SSE2-NEXT:    xorq 16(%rdi), %rcx
-; SSE2-NEXT:    xorq (%rdi), %rsi
-; SSE2-NEXT:    orq %rcx, %rsi
-; SSE2-NEXT:    orq %rdx, %rsi
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    retq
-;
-; AVX1-LABEL: eq_i256_load_arg:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    xorq 24(%rdi), %r8
-; AVX1-NEXT:    xorq 8(%rdi), %rdx
-; AVX1-NEXT:    orq %r8, %rdx
-; AVX1-NEXT:    xorq 16(%rdi), %rcx
-; AVX1-NEXT:    xorq (%rdi), %rsi
-; AVX1-NEXT:    orq %rcx, %rsi
-; AVX1-NEXT:    orq %rdx, %rsi
-; AVX1-NEXT:    sete %al
-; AVX1-NEXT:    retq
-;
-; AVX256-LABEL: eq_i256_load_arg:
-; AVX256:       # %bb.0:
-; AVX256-NEXT:    movl %ecx, %eax
-; AVX256-NEXT:    shrl $8, %eax
-; AVX256-NEXT:    vmovd %ecx, %xmm0
-; AVX256-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movl %ecx, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movl %ecx, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $3, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movq %rcx, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movq %rcx, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movq %rcx, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    shrq $56, %rcx
-; AVX256-NEXT:    vpinsrb $7, %ecx, %xmm0, %xmm0
-; AVX256-NEXT:    vpinsrb $8, %r8d, %xmm0, %xmm0
-; AVX256-NEXT:    movl %r8d, %eax
-; AVX256-NEXT:    shrl $8, %eax
-; AVX256-NEXT:    vpinsrb $9, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movl %r8d, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movl %r8d, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $11, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movq %r8, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movq %r8, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $13, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    movq %r8, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0
-; AVX256-NEXT:    shrq $56, %r8
-; AVX256-NEXT:    vpinsrb $15, %r8d, %xmm0, %xmm0
-; AVX256-NEXT:    movl %esi, %eax
-; AVX256-NEXT:    shrl $8, %eax
-; AVX256-NEXT:    vmovd %esi, %xmm1
-; AVX256-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %esi, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %esi, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %rsi, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %rsi, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %rsi, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    shrq $56, %rsi
-; AVX256-NEXT:    vpinsrb $7, %esi, %xmm1, %xmm1
-; AVX256-NEXT:    vpinsrb $8, %edx, %xmm1, %xmm1
-; AVX256-NEXT:    movl %edx, %eax
-; AVX256-NEXT:    shrl $8, %eax
-; AVX256-NEXT:    vpinsrb $9, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %edx, %eax
-; AVX256-NEXT:    shrl $16, %eax
-; AVX256-NEXT:    vpinsrb $10, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movl %edx, %eax
-; AVX256-NEXT:    shrl $24, %eax
-; AVX256-NEXT:    vpinsrb $11, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %rdx, %rax
-; AVX256-NEXT:    shrq $32, %rax
-; AVX256-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %rdx, %rax
-; AVX256-NEXT:    shrq $40, %rax
-; AVX256-NEXT:    vpinsrb $13, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    movq %rdx, %rax
-; AVX256-NEXT:    shrq $48, %rax
-; AVX256-NEXT:    vpinsrb $14, %eax, %xmm1, %xmm1
-; AVX256-NEXT:    shrq $56, %rdx
-; AVX256-NEXT:    vpinsrb $15, %edx, %xmm1, %xmm1
-; AVX256-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX256-NEXT:    vpcmpeqb (%rdi), %ymm0, %ymm0
-; AVX256-NEXT:    vpmovmskb %ymm0, %eax
-; AVX256-NEXT:    cmpl $-1, %eax
-; AVX256-NEXT:    sete %al
-; AVX256-NEXT:    vzeroupper
-; AVX256-NEXT:    retq
+; ANY-LABEL: eq_i256_load_arg:
+; ANY:       # %bb.0:
+; ANY-NEXT:    xorq 24(%rdi), %r8
+; ANY-NEXT:    xorq 8(%rdi), %rdx
+; ANY-NEXT:    orq %r8, %rdx
+; ANY-NEXT:    xorq 16(%rdi), %rcx
+; ANY-NEXT:    xorq (%rdi), %rsi
+; ANY-NEXT:    orq %rcx, %rsi
+; ANY-NEXT:    orq %rdx, %rsi
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
   %a = load i256, i256* %p
   %r = icmp eq i256 %a, %b
   ret i1 %r
 }
 
 define i1 @eq_i512_load_arg(i512 *%p, i512 %b) {
-; NO512-LABEL: eq_i512_load_arg:
-; NO512:       # %bb.0:
-; NO512-NEXT:    movq 40(%rdi), %r10
-; NO512-NEXT:    movq 48(%rdi), %rax
-; NO512-NEXT:    movq 56(%rdi), %r11
-; NO512-NEXT:    xorq 24(%rdi), %r8
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %r11
-; NO512-NEXT:    orq %r8, %r11
-; NO512-NEXT:    xorq 8(%rdi), %rdx
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
-; NO512-NEXT:    orq %r11, %r10
-; NO512-NEXT:    orq %rdx, %r10
-; NO512-NEXT:    xorq 32(%rdi), %r9
-; NO512-NEXT:    xorq (%rdi), %rsi
-; NO512-NEXT:    xorq 16(%rdi), %rcx
-; NO512-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
-; NO512-NEXT:    orq %rcx, %rax
-; NO512-NEXT:    orq %r9, %rax
-; NO512-NEXT:    orq %rsi, %rax
-; NO512-NEXT:    orq %r10, %rax
-; NO512-NEXT:    sete %al
-; NO512-NEXT:    retq
-;
-; AVX512-LABEL: eq_i512_load_arg:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512-NEXT:    vmovd %r10d, %xmm0
-; AVX512-NEXT:    shrq $32, %r10
-; AVX512-NEXT:    vpinsrd $1, %r10d, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    shrq $32, %rax
-; AVX512-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %r9d, %xmm1
-; AVX512-NEXT:    shrq $32, %r9
-; AVX512-NEXT:    vpinsrd $1, %r9d, %xmm1, %xmm1
-; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    shrq $32, %rax
-; AVX512-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX512-NEXT:    vmovd %ecx, %xmm1
-; AVX512-NEXT:    shrq $32, %rcx
-; AVX512-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
-; AVX512-NEXT:    vpinsrd $2, %r8d, %xmm1, %xmm1
-; AVX512-NEXT:    shrq $32, %r8
-; AVX512-NEXT:    vpinsrd $3, %r8d, %xmm1, %xmm1
-; AVX512-NEXT:    vmovd %esi, %xmm2
-; AVX512-NEXT:    shrq $32, %rsi
-; AVX512-NEXT:    vpinsrd $1, %esi, %xmm2, %xmm2
-; AVX512-NEXT:    vpinsrd $2, %edx, %xmm2, %xmm2
-; AVX512-NEXT:    shrq $32, %rdx
-; AVX512-NEXT:    vpinsrd $3, %edx, %xmm2, %xmm2
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; AVX512-NEXT:    vpcmpeqd (%rdi), %zmm0, %k0
-; AVX512-NEXT:    kortestw %k0, %k0
-; AVX512-NEXT:    setb %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; ANY-LABEL: eq_i512_load_arg:
+; ANY:       # %bb.0:
+; ANY-NEXT:    movq 40(%rdi), %r10
+; ANY-NEXT:    movq 48(%rdi), %rax
+; ANY-NEXT:    movq 56(%rdi), %r11
+; ANY-NEXT:    xorq 24(%rdi), %r8
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r11
+; ANY-NEXT:    orq %r8, %r11
+; ANY-NEXT:    xorq 8(%rdi), %rdx
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
+; ANY-NEXT:    orq %r11, %r10
+; ANY-NEXT:    orq %rdx, %r10
+; ANY-NEXT:    xorq 32(%rdi), %r9
+; ANY-NEXT:    xorq (%rdi), %rsi
+; ANY-NEXT:    xorq 16(%rdi), %rcx
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
+; ANY-NEXT:    orq %rcx, %rax
+; ANY-NEXT:    orq %r9, %rax
+; ANY-NEXT:    orq %rsi, %rax
+; ANY-NEXT:    orq %r10, %rax
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
   %a = load i512, i512* %p
   %r = icmp eq i512 %a, %b
   ret i1 %r

@@ -1368,6 +1368,7 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
       case BuildPreambleError::CouldntCreateTargetInfo:
       case BuildPreambleError::BeginSourceFileFailed:
       case BuildPreambleError::CouldntEmitPCH:
+      case BuildPreambleError::BadInputs:
         // These erros are more likely to repeat, retry after some period.
         PreambleRebuildCountdown = DefaultPreambleRebuildInterval;
         return nullptr;

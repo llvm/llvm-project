@@ -58,7 +58,7 @@ public:
   uint32_t GetNextUnitOffset() const { return m_offset + m_length + 4; }
 
   static llvm::Expected<DWARFUnitHeader>
-  extract(const lldb_private::DWARFDataExtractor &data,
+  extract(const lldb_private::DWARFDataExtractor &data, DIERef::Section section,
           lldb::offset_t *offset_ptr);
 };
 
@@ -70,7 +70,7 @@ public:
   static llvm::Expected<DWARFUnitSP>
   extract(SymbolFileDWARF *dwarf2Data, lldb::user_id_t uid,
           const lldb_private::DWARFDataExtractor &debug_info,
-          lldb::offset_t *offset_ptr);
+          DIERef::Section section, lldb::offset_t *offset_ptr);
   virtual ~DWARFUnit();
 
   void ExtractUnitDIEIfNeeded();
@@ -203,12 +203,17 @@ public:
     return die_iterator_range(m_die_array.begin(), m_die_array.end());
   }
 
-  virtual DIERef::Section GetDebugSection() const = 0;
+  DIERef::Section GetDebugSection() const { return m_section; }
 
 protected:
   DWARFUnit(SymbolFileDWARF *dwarf, lldb::user_id_t uid,
             const DWARFUnitHeader &header,
-            const DWARFAbbreviationDeclarationSet &abbrevs);
+            const DWARFAbbreviationDeclarationSet &abbrevs,
+            DIERef::Section section);
+
+  llvm::Error ExtractHeader(SymbolFileDWARF *dwarf,
+                            const lldb_private::DWARFDataExtractor &data,
+                            lldb::offset_t *offset_ptr);
 
   SymbolFileDWARF *m_dwarf = nullptr;
   std::unique_ptr<SymbolFileDWARFDwo> m_dwo_symbol_file;
@@ -245,6 +250,7 @@ protected:
   // in the main object file
   dw_offset_t m_base_obj_offset = DW_INVALID_OFFSET;
   dw_offset_t m_str_offsets_base = 0; // Value of DW_AT_str_offsets_base.
+  const DIERef::Section m_section;
 
 private:
   void ParseProducerInfo();

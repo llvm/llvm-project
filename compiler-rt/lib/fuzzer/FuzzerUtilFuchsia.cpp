@@ -13,6 +13,7 @@
 
 #include "FuzzerInternal.h"
 #include "FuzzerUtil.h"
+#include <cassert>
 #include <cerrno>
 #include <cinttypes>
 #include <cstdint>
@@ -232,57 +233,72 @@ void CrashHandler(zx_handle_t *Event) {
   ExitOnErr(_zx_object_signal(*Event, 0, ZX_USER_SIGNAL_0),
             "_zx_object_signal");
 
-  zx_port_packet_t Packet;
-  ExitOnErr(_zx_port_wait(Port.Handle, ZX_TIME_INFINITE, &Packet),
-            "_zx_port_wait");
+  // This thread lives as long as the process in order to keep handling
+  // crashes.  In practice, the first crashed thread to reach the end of the
+  // StaticCrashHandler will end the process.
+  while (true) {
+    zx_port_packet_t Packet;
+    ExitOnErr(_zx_port_wait(Port.Handle, ZX_TIME_INFINITE, &Packet),
+              "_zx_port_wait");
 
-  // At this point, we want to get the state of the crashing thread, but
-  // libFuzzer and the sanitizers assume this will happen from that same thread
-  // via a POSIX signal handler. "Resurrecting" the thread in the middle of the
-  // appropriate callback is as simple as forcibly setting the instruction
-  // pointer/program counter, provided we NEVER EVER return from that function
-  // (since otherwise our stack will not be valid).
-  ScopedHandle Thread;
-  ExitOnErr(_zx_object_get_child(Self, Packet.exception.tid,
-                                 ZX_RIGHT_SAME_RIGHTS, &Thread.Handle),
-            "_zx_object_get_child");
+    // Ignore informational synthetic exceptions.
+    assert(ZX_PKT_IS_EXCEPTION(Packet.type));
+    if (ZX_EXCP_THREAD_STARTING == Packet.type ||
+        ZX_EXCP_THREAD_EXITING == Packet.type ||
+        ZX_EXCP_PROCESS_STARTING == Packet.type) {
+      continue;
+    }
 
-  zx_thread_state_general_regs_t GeneralRegisters;
-  ExitOnErr(_zx_thread_read_state(Thread.Handle, ZX_THREAD_STATE_GENERAL_REGS,
-                                  &GeneralRegisters, sizeof(GeneralRegisters)),
-            "_zx_thread_read_state");
+    // At this point, we want to get the state of the crashing thread, but
+    // libFuzzer and the sanitizers assume this will happen from that same
+    // thread via a POSIX signal handler. "Resurrecting" the thread in the
+    // middle of the appropriate callback is as simple as forcibly setting the
+    // instruction pointer/program counter, provided we NEVER EVER return from
+    // that function (since otherwise our stack will not be valid).
+    ScopedHandle Thread;
+    ExitOnErr(_zx_object_get_child(Self, Packet.exception.tid,
+                                   ZX_RIGHT_SAME_RIGHTS, &Thread.Handle),
+              "_zx_object_get_child");
 
-  // To unwind properly, we need to push the crashing thread's register state
-  // onto the stack and jump into a trampoline with CFI instructions on how
-  // to restore it.
+    zx_thread_state_general_regs_t GeneralRegisters;
+    ExitOnErr(_zx_thread_read_state(Thread.Handle, ZX_THREAD_STATE_GENERAL_REGS,
+                                    &GeneralRegisters,
+                                    sizeof(GeneralRegisters)),
+              "_zx_thread_read_state");
+
+    // To unwind properly, we need to push the crashing thread's register state
+    // onto the stack and jump into a trampoline with CFI instructions on how
+    // to restore it.
 #if defined(__x86_64__)
-  uintptr_t StackPtr =
-      (GeneralRegisters.rsp - (128 + sizeof(GeneralRegisters))) &
-      -(uintptr_t)16;
-  __unsanitized_memcpy(reinterpret_cast<void *>(StackPtr), &GeneralRegisters,
-         sizeof(GeneralRegisters));
-  GeneralRegisters.rsp = StackPtr;
-  GeneralRegisters.rip = reinterpret_cast<zx_vaddr_t>(CrashTrampolineAsm);
+    uintptr_t StackPtr =
+        (GeneralRegisters.rsp - (128 + sizeof(GeneralRegisters))) &
+        -(uintptr_t)16;
+    __unsanitized_memcpy(reinterpret_cast<void *>(StackPtr), &GeneralRegisters,
+                         sizeof(GeneralRegisters));
+    GeneralRegisters.rsp = StackPtr;
+    GeneralRegisters.rip = reinterpret_cast<zx_vaddr_t>(CrashTrampolineAsm);
 
 #elif defined(__aarch64__)
-  uintptr_t StackPtr =
-      (GeneralRegisters.sp - sizeof(GeneralRegisters)) & -(uintptr_t)16;
-  __unsanitized_memcpy(reinterpret_cast<void *>(StackPtr), &GeneralRegisters,
-                       sizeof(GeneralRegisters));
-  GeneralRegisters.sp = StackPtr;
-  GeneralRegisters.pc = reinterpret_cast<zx_vaddr_t>(CrashTrampolineAsm);
+    uintptr_t StackPtr =
+        (GeneralRegisters.sp - sizeof(GeneralRegisters)) & -(uintptr_t)16;
+    __unsanitized_memcpy(reinterpret_cast<void *>(StackPtr), &GeneralRegisters,
+                         sizeof(GeneralRegisters));
+    GeneralRegisters.sp = StackPtr;
+    GeneralRegisters.pc = reinterpret_cast<zx_vaddr_t>(CrashTrampolineAsm);
 
 #else
 #error "Unsupported architecture for fuzzing on Fuchsia"
 #endif
 
-  // Now force the crashing thread's state.
-  ExitOnErr(_zx_thread_write_state(Thread.Handle, ZX_THREAD_STATE_GENERAL_REGS,
-                                   &GeneralRegisters, sizeof(GeneralRegisters)),
-            "_zx_thread_write_state");
+    // Now force the crashing thread's state.
+    ExitOnErr(
+        _zx_thread_write_state(Thread.Handle, ZX_THREAD_STATE_GENERAL_REGS,
+                               &GeneralRegisters, sizeof(GeneralRegisters)),
+        "_zx_thread_write_state");
 
-  ExitOnErr(_zx_task_resume_from_exception(Thread.Handle, Port.Handle, 0),
-            "_zx_task_resume_from_exception");
+    ExitOnErr(_zx_task_resume_from_exception(Thread.Handle, Port.Handle, 0),
+              "_zx_task_resume_from_exception");
+  }
 }
 
 } // namespace
