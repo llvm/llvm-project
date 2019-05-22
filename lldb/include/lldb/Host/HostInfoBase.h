@@ -92,8 +92,6 @@ public:
   /// FileSpec is filled in.
   static FileSpec GetGlobalTempDir();
 
-  static FileSpec GetSwiftDir();
-
   //---------------------------------------------------------------------------
   /// If the triple does not specify the vendor, os, and environment parts, we
   /// "augment" these using information from the host and return the resulting
@@ -112,7 +110,6 @@ protected:
   static bool ComputeTempFileBaseDirectory(FileSpec &file_spec);
   static bool ComputeHeaderDirectory(FileSpec &file_spec);
   static bool ComputeSystemPluginsDirectory(FileSpec &file_spec);
-  static bool ComputeSwiftDirectory(FileSpec &file_spec);
   static bool ComputeUserPluginsDirectory(FileSpec &file_spec);
 
   static void ComputeHostArchitectureSupport(ArchSpec &arch_32,

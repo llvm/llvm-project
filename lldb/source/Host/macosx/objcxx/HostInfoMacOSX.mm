@@ -282,24 +282,3 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
     }
   }
 }
-
-// Swift additions.
-
-bool HostInfoMacOSX::ComputeSwiftDirectory(FileSpec &file_spec) {
-  FileSpec lldb_file_spec = GetShlibDir();
-  if (!lldb_file_spec)
-    return false;
-
-  std::string raw_path = lldb_file_spec.GetPath();
-  size_t framework_pos = raw_path.find("LLDB.framework");
-  if (framework_pos == std::string::npos)
-    return HostInfoPosix::ComputeSwiftDirectory(file_spec);
-
-  if (framework_pos != std::string::npos) {
-    framework_pos += strlen("LLDB.framework");
-    raw_path.resize(framework_pos);
-    raw_path.append("/Resources/Swift");
-  }
-  file_spec.SetFile(raw_path.c_str(), FileSpec::Style::native);
-  return true;
-}

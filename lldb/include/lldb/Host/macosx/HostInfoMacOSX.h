@@ -39,11 +39,6 @@ protected:
   static bool ComputeHeaderDirectory(FileSpec &file_spec);
   static bool ComputeSystemPluginsDirectory(FileSpec &file_spec);
   static bool ComputeUserPluginsDirectory(FileSpec &file_spec);
-
-  /// Swift additions.
-  /// @{
-  static bool ComputeSwiftDirectory(FileSpec &file_spec);
-  /// @}
 };
 }
 

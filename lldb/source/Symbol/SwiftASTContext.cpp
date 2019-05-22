@@ -85,6 +85,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangHost.h"
 #include "Plugins/ExpressionParser/Swift/SwiftDiagnostic.h"
+#include "Plugins/ExpressionParser/Swift/SwiftHost.h"
 #include "Plugins/ExpressionParser/Swift/SwiftUserExpression.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpDataExtractor.h"
@@ -1070,7 +1071,7 @@ StringRef SwiftASTContext::GetResourceDir(const llvm::Triple &triple) {
 
   auto value =
       GetResourceDir(platform_sdk_path, swift_stdlib_os_dir,
-                     HostInfo::GetSwiftDir().GetPath(), GetXcodeContentsPath(),
+                     GetSwiftResourceDir().GetPath(), GetXcodeContentsPath(),
                      GetCurrentToolchainPath(), GetCurrentCLToolsPath());
   g_resource_dir_cache.insert({key, value});
   return g_resource_dir_cache[key];

@@ -116,6 +116,7 @@
 		492E8B021BA37DC80034B4D7 /* SwiftExpressionVariable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 492E8B001BA37DC80034B4D7 /* SwiftExpressionVariable.cpp */; };
 		948C86D41B97764D00F3CAC3 /* SwiftFormatters.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 948C86C31B97763200F3CAC3 /* SwiftFormatters.cpp */; };
 		948C86D51B97764D00F3CAC3 /* SwiftHashedContainer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 948C86C51B97763200F3CAC3 /* SwiftHashedContainer.cpp */; };
+		AE0D16AD2273EC0E00533A74 /* SwiftHost.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AE0D16A92273EBEA00533A74 /* SwiftHost.cpp */; };
 		942612F01B94D33200EF842E /* SwiftLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 942612EE1B94D32900EF842E /* SwiftLanguage.cpp */; };
 		4C848E0B18D28C0C00EC6DD0 /* SwiftLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C848E0A18D28C0C00EC6DD0 /* SwiftLanguageRuntime.cpp */; };
 		948C86D61B97764D00F3CAC3 /* SwiftMetatype.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 948C86C91B97763200F3CAC3 /* SwiftMetatype.cpp */; };
@@ -1506,6 +1507,8 @@
 		495D98F31C18F52500B9774B /* SwiftForward.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftForward.h; path = include/lldb/Core/SwiftForward.h; sourceTree = "<group>"; };
 		948C86C51B97763200F3CAC3 /* SwiftHashedContainer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SwiftHashedContainer.cpp; path = Language/Swift/SwiftHashedContainer.cpp; sourceTree = "<group>"; };
 		948C86C61B97763200F3CAC3 /* SwiftHashedContainer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftHashedContainer.h; path = Language/Swift/SwiftHashedContainer.h; sourceTree = "<group>"; };
+		AE0D16A92273EBEA00533A74 /* SwiftHost.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SwiftHost.cpp; path = ExpressionParser/Swift/SwiftHost.cpp; sourceTree = "<group>"; };
+		AE0D16AA2273EBEA00533A74 /* SwiftHost.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SwiftHost.h; path = ExpressionParser/Swift/SwiftHost.h; sourceTree = "<group>"; };
 		942612EE1B94D32900EF842E /* SwiftLanguage.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SwiftLanguage.cpp; path = Language/Swift/SwiftLanguage.cpp; sourceTree = "<group>"; };
 		942612EF1B94D32900EF842E /* SwiftLanguage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftLanguage.h; path = Language/Swift/SwiftLanguage.h; sourceTree = "<group>"; };
 		4C848E0A18D28C0C00EC6DD0 /* SwiftLanguageRuntime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = SwiftLanguageRuntime.cpp; path = source/Target/SwiftLanguageRuntime.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -6323,6 +6326,8 @@
 				4C848DFC18D2873500EC6DD0 /* SwiftASTManipulator.cpp */,
 				4C848DFA18D2871600EC6DD0 /* SwiftExpressionParser.h */,
 				4C848DFD18D2873500EC6DD0 /* SwiftExpressionParser.cpp */,
+				AE0D16A92273EBEA00533A74 /* SwiftHost.cpp */,
+				AE0D16AA2273EBEA00533A74 /* SwiftHost.h */,
 				4C848DFB18D2871600EC6DD0 /* SwiftSILManipulator.h */,
 				4C848DFE18D2873500EC6DD0 /* SwiftSILManipulator.cpp */,
 				492E8B011BA37DC80034B4D7 /* SwiftExpressionVariable.h */,
@@ -8627,6 +8632,7 @@
 				949EEDA31BA76577008C63CF /* Cocoa.cpp in Sources */,
 				AFD966BB217140B6006714AC /* SymbolFileNativePDB.cpp in Sources */,
 				AFCB1D59219CD4FD00730AD5 /* GDBRemoteCommunicationReplayServer.cpp in Sources */,
+				AE0D16AD2273EC0E00533A74 /* SwiftHost.cpp in Sources */,
 				3FDFE56C19AF9C44009756A7 /* HostProcessPosix.cpp in Sources */,
 				268900B413353E5000698AC0 /* RegisterContextMacOSXFrameBackchain.cpp in Sources */,
 				6B74D89B200696BB0074051B /* Environment.cpp in Sources */,
