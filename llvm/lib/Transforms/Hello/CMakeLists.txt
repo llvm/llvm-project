@@ -10,6 +10,7 @@ if(WIN32 OR CYGWIN)
   set(LLVM_LINK_COMPONENTS Core Support)
 endif()
 
+set(LLVM_ENABLE_PLUGINS ON)
 add_llvm_library( LLVMHello MODULE BUILDTREE_ONLY
   Hello.cpp
 
