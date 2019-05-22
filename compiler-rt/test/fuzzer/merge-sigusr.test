@@ -28,6 +28,7 @@ RUN: setsid %run %t/LFSIGUSR -merge=1 -merge_control_file=%t/MCF %t/C1 %t/C2 2>%
 RUN: sleep 3
 RUN: kill -SIGUSR2 -$(ps -o sess= $PID | grep -o '[0-9]*')
 RUN: wait $PID || true
+RUN: sleep 3
 RUN: cat %t/log | FileCheck %s --dump-input=fail
 RUN: grep C2/g %t/MCF
 RUN: grep STARTED %t/MCF
