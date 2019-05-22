@@ -23,4 +23,4 @@ Symbols:
     Type:     STT_FUNC
     Section:  .text
 
-# CHECK: not stripping symbol '.L.rel' because it is named in a relocation.
+# CHECK: not stripping symbol '.L.rel' because it is named in a relocation
