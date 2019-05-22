@@ -16,10 +16,12 @@
 
 #include <unordered_map>
 #include <string>
+#include <set>
 #include <cassert>
 #include <cstddef>
 
 #include "test_macros.h"
+#include "../../../check_consecutive.h"
 #include "../../../test_compare.h"
 #include "../../../test_hash.h"
 #include "test_allocator.h"
@@ -134,10 +136,13 @@ int main(int, char**)
 
         assert(c2.bucket_count() >= 6);
         assert(c2.size() == 6);
-        assert(c2.find(1)->second == "one");
-        assert(next(c2.find(1))->second == "four");
-        assert(c2.find(2)->second == "two");
-        assert(next(c2.find(2))->second == "four");
+        std::multiset<std::string> s;
+        s.insert("one");
+        s.insert("four");
+        CheckConsecutiveKeys<C::const_iterator>(c2.find(1), c2.end(), 1, s);
+        s.insert("two");
+        s.insert("four");
+        CheckConsecutiveKeys<C::const_iterator>(c2.find(2), c2.end(), 2, s);
         assert(c2.find(3)->second == "three");
         assert(c2.find(4)->second == "four");
         assert(c2.hash_function() == Hash(1));
@@ -197,10 +202,13 @@ int main(int, char**)
 
         assert(c2.bucket_count() >= 6);
         assert(c2.size() == 6);
-        assert(c2.find(1)->second == "one");
-        assert(next(c2.find(1))->second == "four");
-        assert(c2.find(2)->second == "two");
-        assert(next(c2.find(2))->second == "four");
+        std::multiset<std::string> s;
+        s.insert("one");
+        s.insert("four");
+        CheckConsecutiveKeys<C::const_iterator>(c2.find(1), c2.end(), 1, s);
+        s.insert("two");
+        s.insert("four");
+        CheckConsecutiveKeys<C::const_iterator>(c2.find(2), c2.end(), 2, s);
         assert(c2.find(3)->second == "three");
         assert(c2.find(4)->second == "four");
         assert(c2.hash_function() == Hash(1));
@@ -318,10 +326,13 @@ int main(int, char**)
 
         assert(c2.bucket_count() >= 6);
         assert(c2.size() == 6);
-        assert(c2.find(1)->second == "one");
-        assert(next(c2.find(1))->second == "four");
-        assert(c2.find(2)->second == "two");
-        assert(next(c2.find(2))->second == "four");
+        std::multiset<std::string> s;
+        s.insert("one");
+        s.insert("four");
+        CheckConsecutiveKeys<C::const_iterator>(c2.find(1), c2.end(), 1, s);
+        s.insert("two");
+        s.insert("four");
+        CheckConsecutiveKeys<C::const_iterator>(c2.find(2), c2.end(), 2, s);
         assert(c2.find(3)->second == "three");
         assert(c2.find(4)->second == "four");
         assert(c2.hash_function() == Hash(1));
@@ -381,10 +392,13 @@ int main(int, char**)
 
         assert(c2.bucket_count() >= 6);
         assert(c2.size() == 6);
-        assert(c2.find(1)->second == "one");
-        assert(next(c2.find(1))->second == "four");
-        assert(c2.find(2)->second == "two");
-        assert(next(c2.find(2))->second == "four");
+        std::multiset<std::string> s;
+        s.insert("one");
+        s.insert("four");
+        CheckConsecutiveKeys<C::const_iterator>(c2.find(1), c2.end(), 1, s);
+        s.insert("two");
+        s.insert("four");
+        CheckConsecutiveKeys<C::const_iterator>(c2.find(2), c2.end(), 2, s);
         assert(c2.find(3)->second == "three");
         assert(c2.find(4)->second == "four");
         assert(c2.hash_function() == Hash(1));
@@ -502,10 +516,13 @@ int main(int, char**)
 
         assert(c2.bucket_count() >= 6);
         assert(c2.size() == 6);
-        assert(c2.find(1)->second == "one");
-        assert(next(c2.find(1))->second == "four");
-        assert(c2.find(2)->second == "two");
-        assert(next(c2.find(2))->second == "four");
+        std::multiset<std::string> s;
+        s.insert("one");
+        s.insert("four");
+        CheckConsecutiveKeys<C::const_iterator>(c2.find(1), c2.end(), 1, s);
+        s.insert("two");
+        s.insert("four");
+        CheckConsecutiveKeys<C::const_iterator>(c2.find(2), c2.end(), 2, s);
         assert(c2.find(3)->second == "three");
         assert(c2.find(4)->second == "four");
         assert(c2.hash_function() == Hash(1));
@@ -565,10 +582,13 @@ int main(int, char**)
 
         assert(c2.bucket_count() >= 6);
         assert(c2.size() == 6);
-        assert(c2.find(1)->second == "one");
-        assert(next(c2.find(1))->second == "four");
-        assert(c2.find(2)->second == "two");
-        assert(next(c2.find(2))->second == "four");
+        std::multiset<std::string> s;
+        s.insert("one");
+        s.insert("four");
+        CheckConsecutiveKeys<C::const_iterator>(c2.find(1), c2.end(), 1, s);
+        s.insert("two");
+        s.insert("four");
+        CheckConsecutiveKeys<C::const_iterator>(c2.find(2), c2.end(), 2, s);
         assert(c2.find(3)->second == "three");
         assert(c2.find(4)->second == "four");
         assert(c2.hash_function() == Hash(1));
