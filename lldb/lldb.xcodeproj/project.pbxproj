@@ -269,6 +269,7 @@
 		268900C613353E5F00698AC0 /* DWARFFormValue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C89D310F57C5600BB2B04 /* DWARFFormValue.cpp */; };
 		4CD44CFB20B37C440003557C /* DWARFIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44CF820B37C440003557C /* DWARFIndex.cpp */; };
 		4C38996421B9AECD002BAEF4 /* DWARFLocationExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C38996221B9AECC002BAEF4 /* DWARFLocationExpression.cpp */; };
+		4C645D042295D3B600D3C034 /* DWARFTypeUnit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C645D022295D3B500D3C034 /* DWARFTypeUnit.cpp */; };
 		AFE228832060699D0042D0C8 /* DWARFUnit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7F2AAA5920601BE000A422D8 /* DWARFUnit.cpp */; };
 		26FFC19B14FC072100087D58 /* DYLDRendezvous.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26FFC19514FC072100087D58 /* DYLDRendezvous.cpp */; };
 		49CA96FC1E6AACC900C03FEE /* DataBufferHeap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49CA96E61E6AAC6600C03FEE /* DataBufferHeap.cpp */; };
@@ -1794,6 +1795,8 @@
 		4CD44CFE20B37C570003557C /* DWARFIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DWARFIndex.h; sourceTree = "<group>"; };
 		4C38996221B9AECC002BAEF4 /* DWARFLocationExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DWARFLocationExpression.cpp; path = source/Plugins/SymbolFile/NativePDB/DWARFLocationExpression.cpp; sourceTree = SOURCE_ROOT; };
 		4C38996321B9AECC002BAEF4 /* DWARFLocationExpression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DWARFLocationExpression.h; path = source/Plugins/SymbolFile/NativePDB/DWARFLocationExpression.h; sourceTree = SOURCE_ROOT; };
+		4C645D022295D3B500D3C034 /* DWARFTypeUnit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFTypeUnit.cpp; sourceTree = "<group>"; };
+		4C645D032295D3B600D3C034 /* DWARFTypeUnit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFTypeUnit.h; sourceTree = "<group>"; };
 		7F2AAA5920601BE000A422D8 /* DWARFUnit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFUnit.cpp; sourceTree = "<group>"; };
 		7F2AAA5820601BDF00A422D8 /* DWARFUnit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFUnit.h; sourceTree = "<group>"; };
 		26FFC19514FC072100087D58 /* DYLDRendezvous.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DYLDRendezvous.cpp; sourceTree = "<group>"; };
@@ -4160,6 +4163,8 @@
 				260C89D410F57C5600BB2B04 /* DWARFFormValue.h */,
 				4CD44CF820B37C440003557C /* DWARFIndex.cpp */,
 				4CD44CFE20B37C570003557C /* DWARFIndex.h */,
+				4C645D022295D3B500D3C034 /* DWARFTypeUnit.cpp */,
+				4C645D032295D3B600D3C034 /* DWARFTypeUnit.h */,
 				7F2AAA5920601BE000A422D8 /* DWARFUnit.cpp */,
 				7F2AAA5820601BDF00A422D8 /* DWARFUnit.h */,
 				26A0DA4D140F721D006DA411 /* HashedNameToDIE.h */,
@@ -7898,6 +7903,7 @@
 				26680337116005F1008E1FE4 /* SBBreakpoint.cpp in Sources */,
 				26DE204511618ADA00A093E2 /* SBAddress.cpp in Sources */,
 				26DE204711618AED00A093E2 /* SBSymbolContext.cpp in Sources */,
+				4C645D042295D3B600D3C034 /* DWARFTypeUnit.cpp in Sources */,
 				26DE204D11618E7A00A093E2 /* SBModule.cpp in Sources */,
 				26DE205D1161901400A093E2 /* SBFunction.cpp in Sources */,
 				26DE205F1161901B00A093E2 /* SBCompileUnit.cpp in Sources */,

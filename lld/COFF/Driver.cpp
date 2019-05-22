@@ -1743,7 +1743,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       continue;
 
     CommonChunk *C = DC->getChunk();
-    C->Alignment = std::max(C->Alignment, Alignment);
+    C->setAlignment(std::max(C->getAlignment(), Alignment));
   }
 
   // Windows specific -- Create a side-by-side manifest file.
