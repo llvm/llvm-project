@@ -122,6 +122,20 @@ extern "C" {
  *
  * The default device library that satisfies the requirements of the
  * compiler action can be obtained.
+ *
+ * The library inspects some environment variables to aid in debugging. These
+ * include:
+ * - @p AMD_COMGR_SAVE_TEMPS: If this is set, and is not "0", the library does
+ *   not delete temporary files generated while executing compilation actions.
+ *   These files do not appear in the current working directory, but are
+ *   instead left in a platform-specific temporary directory (/tmp on Linux and
+ *   C:\Temp or the path found in the TEMP environment variable on Windows).
+ * - @p AMD_COMGR_REDIRECT_LOGS: If this is not set, or is set to "0", logs are
+ *   returned to the caller as normal. If this is set to "stdout"/"-" or
+ *   "stderr", logs are instead redirected to the standard output or error
+ *   stream, respectively. If this is set to any other value, it is interpreted
+ *   as a filename which logs should be appended to. Logs may be redirected
+ *   irrespective of whether logging is enabled.
  */
 
 /**
