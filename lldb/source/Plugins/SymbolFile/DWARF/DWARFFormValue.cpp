@@ -549,7 +549,8 @@ dw_addr_t DWARFFormValue::Address() const {
   uint32_t index_size = m_unit->GetAddressByteSize();
   dw_offset_t addr_base = m_unit->GetAddrBase();
   lldb::offset_t offset = addr_base + m_value.value.uval * index_size;
-  return symbol_file->get_debug_addr_data().GetMaxU64(&offset, index_size);
+  return symbol_file->GetDWARFContext().getOrLoadAddrData().GetMaxU64(
+      &offset, index_size);
 }
 
 DWARFDIE DWARFFormValue::Reference() const {

@@ -6663,6 +6663,11 @@ let CategoryName = "Lambda Issue" in {
     "cannot deduce type for lambda capture %0 from initializer of type %2">;
   def err_init_capture_deduction_failure_from_init_list : Error<
     "cannot deduce type for lambda capture %0 from initializer list">;
+  def warn_cxx17_compat_init_capture_pack : Warning<
+    "initialized lambda capture packs are incompatible with C++ standards "
+    "before C++2a">, InGroup<CXXPre2aCompat>, DefaultIgnore;
+  def ext_init_capture_pack : ExtWarn<
+    "initialized lambda pack captures are a C++2a extension">, InGroup<CXX2a>;
 
   // C++14 generic lambdas.
   def warn_cxx11_compat_generic_lambda : Warning<

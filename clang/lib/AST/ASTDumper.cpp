@@ -184,7 +184,8 @@ LLVM_DUMP_METHOD void Decl::dump(raw_ostream &OS, bool Deserialize,
   const SourceManager &SM = Ctx.getSourceManager();
 
   if (ADOF_JSON == Format) {
-    JSONDumper P(OS, SM, Ctx.getPrintingPolicy());
+    JSONDumper P(OS, SM, Ctx.getPrintingPolicy(),
+                 &Ctx.getCommentCommandTraits());
     (void)Deserialize; // FIXME?
     P.Visit(this);
   } else {

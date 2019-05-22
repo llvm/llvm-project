@@ -107,8 +107,7 @@ public:
 
   /// Copy the debug_line over to the updated binary while unobfuscating the
   /// file names and directories.
-  void translateLineTable(DataExtractor LineData, uint32_t Offset,
-                          LinkOptions &Options);
+  void translateLineTable(DataExtractor LineData, uint32_t Offset);
 
   /// Copy over the debug sections that are not modified when updating.
   void copyInvariantDebugSection(const object::ObjectFile &Obj);

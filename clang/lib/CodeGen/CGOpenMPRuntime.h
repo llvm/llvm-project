@@ -636,6 +636,17 @@ private:
   /// must be emitted.
   llvm::SmallDenseSet<const VarDecl *> DeferredGlobalVariables;
 
+  /// Flag for keeping track of weather a requires unified_shared_memory
+  /// directive is present.
+  bool HasRequiresUnifiedSharedMemory = false;
+
+  /// Flag for keeping track of weather a target region has been emitted.
+  bool HasEmittedTargetRegion = false;
+
+  /// Flag for keeping track of weather a device routine has been emitted.
+  /// Device routines are specific to the
+  bool HasEmittedDeclareTargetRegion = false;
+
   /// Creates and registers offloading binary descriptor for the current
   /// compilation unit. The function that does the registration is returned.
   llvm::Function *createOffloadingBinaryDescriptorRegistration();
@@ -1434,6 +1445,10 @@ public:
   /// \param GD Global to scan.
   virtual bool emitTargetGlobal(GlobalDecl GD);
 
+  /// Creates and returns a registration function for when at least one
+  /// requires directives was used in the current module.
+  llvm::Function *emitRequiresDirectiveRegFun();
+
   /// Creates the offloading descriptor in the event any target region
   /// was emitted in the current module and return the function that registers
   /// it.
@@ -1581,7 +1596,7 @@ public:
 
   /// Emits OpenMP-specific function prolog.
   /// Required for device constructs.
-  virtual void emitFunctionProlog(CodeGenFunction &CGF, const Decl *D) {}
+  virtual void emitFunctionProlog(CodeGenFunction &CGF, const Decl *D);
 
   /// Gets the OpenMP-specific address of the local variable.
   virtual Address getAddressOfLocalVariable(CodeGenFunction &CGF,
@@ -1602,7 +1617,7 @@ public:
 
   /// Perform check on requires decl to ensure that target architecture
   /// supports unified addressing
-  virtual void checkArchForUnifiedAddressing(const OMPRequiresDecl *D) const {}
+  virtual void checkArchForUnifiedAddressing(const OMPRequiresDecl *D);
 
   /// Checks if the variable has associated OMPAllocateDeclAttr attribute with
   /// the predefined allocator and translates it into the corresponding address

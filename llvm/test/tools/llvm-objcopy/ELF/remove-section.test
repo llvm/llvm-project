@@ -14,7 +14,6 @@
 # RUN: llvm-objcopy --regex --remove-section='.test[0-9]+' %t %t4
 # RUN: llvm-readobj --file-headers --sections %t4 | FileCheck %s --check-prefix=REGEX
 
-
 !ELF
 FileHeader:
   Class:           ELFCLASS64

@@ -401,8 +401,12 @@ bool CMICmdCmdDataDisassemble::Execute() {
       const MIuint nLine = lineEntry.GetLine();
       const char *pFileName = lineEntry.GetFileSpec().GetFilename();
       pFileName = (pFileName != nullptr) ? pFileName : pUnknown;
+      // Get a full path to the file.
+      char pathBuffer[PATH_MAX];
+      lineEntry.GetFileSpec().GetPath(pathBuffer, PATH_MAX);
 
-      // MI "src_and_asm_line={line=\"%u\",file=\"%s\",line_asm_insn=[ ]}"
+      // MI "src_and_asm_line={line=\"%u\",file=\"%s\",line_asm_insn=[ ],
+      // fullname=\"%s\"}"
       const CMICmnMIValueConst miValueConst(
           CMIUtilString::Format("%u", nLine));
       const CMICmnMIValueResult miValueResult("line", miValueConst);
@@ -413,6 +417,9 @@ bool CMICmdCmdDataDisassemble::Execute() {
       const CMICmnMIValueList miValueList(miValueTuple);
       const CMICmnMIValueResult miValueResult3("line_asm_insn", miValueList);
       miValueTuple2.Add(miValueResult3);
+      const CMICmnMIValueConst miValueConst5(pathBuffer);
+      const CMICmnMIValueResult miValueResult5("fullname", miValueConst5);
+      miValueTuple2.Add(miValueResult5);
       const CMICmnMIValueResult miValueResult4("src_and_asm_line",
                                                miValueTuple2);
       m_miValueList.Add(miValueResult4);

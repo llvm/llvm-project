@@ -324,7 +324,7 @@ static void replaceDebugSections(
 static bool isUnneededSymbol(const Symbol &Sym) {
   return !Sym.Referenced &&
          (Sym.Binding == STB_LOCAL || Sym.getShndx() == SHN_UNDEF) &&
-         Sym.Type != STT_FILE && Sym.Type != STT_SECTION;
+         Sym.Type != STT_SECTION;
 }
 
 static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {

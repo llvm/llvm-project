@@ -105,9 +105,10 @@ llvm::Expected<std::string> apply(StringRef ID, llvm::StringRef Input) {
 }
 
 void checkTransform(llvm::StringRef ID, llvm::StringRef Input,
-                    llvm::StringRef Output) {
-  EXPECT_THAT_EXPECTED(apply(ID, Input), HasValue(Output))
-      << "action id is" << ID;
+                    std::string Output) {
+  auto Result = apply(ID, Input);
+  ASSERT_TRUE(bool(Result)) << llvm::toString(Result.takeError()) << Input;
+  EXPECT_EQ(Output, std::string(*Result)) << Input;
 }
 
 TEST(TweakTest, SwapIfBranches) {
@@ -183,6 +184,37 @@ TEST(TweakTest, SwapIfBranches) {
   checkNotAvailable(ID, R"cpp(
     [[if(1){}else{}if(2){}else{}]]
   )cpp");
+}
+
+TEST(TweakTest, RawStringLiteral) {
+  llvm::StringLiteral ID = "RawStringLiteral";
+
+  checkAvailable(ID, R"cpp(
+    const char *A = ^"^f^o^o^\^n^";
+    const char *B = R"(multi )" ^"token " "str\ning";
+  )cpp");
+
+  checkNotAvailable(ID, R"cpp(
+    const char *A = ^"f^o^o^o^"; // no chars need escaping
+    const char *B = R"(multi )" ^"token " u8"str\ning"; // not all ascii
+    const char *C = ^R^"^(^multi )" "token " "str\ning"; // chunk is raw
+    const char *D = ^"token\n" __FILE__; // chunk is macro expansion
+    const char *E = ^"a\r\n"; // contains forbidden escape character
+  )cpp");
+
+  const char *Input = R"cpp(
+    const char *X = R"(multi
+token)" "\nst^ring\n" "literal";
+    }
+  )cpp";
+  const char *Output = R"cpp(
+    const char *X = R"(multi
+token
+string
+literal)";
+    }
+  )cpp";
+  checkTransform(ID, Input, Output);
 }
 
 } // namespace

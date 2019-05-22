@@ -205,7 +205,10 @@ private:
   /// we'll attempt to rebuild the precompiled header. This way, if
   /// building the precompiled preamble fails, we won't try again for
   /// some number of calls.
-  unsigned PreambleRebuildCounter = 0;
+  unsigned PreambleRebuildCountdown = 0;
+
+  /// Counter indicating how often the preamble was build in total.
+  unsigned PreambleCounter = 0;
 
   /// Cache pairs "filename - source location"
   ///
@@ -573,6 +576,8 @@ public:
     return SourceRange(mapLocationToPreamble(R.getBegin()),
                        mapLocationToPreamble(R.getEnd()));
   }
+
+  unsigned getPreambleCounterForTests() const { return PreambleCounter; }
 
   // Retrieve the diagnostics associated with this AST
   using stored_diag_iterator = StoredDiagnostic *;

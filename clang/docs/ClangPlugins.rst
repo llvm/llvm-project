@@ -55,7 +55,7 @@ registering it using ``PragmaHandlerRegistry::Add<>``:
   class ExamplePragmaHandler : public PragmaHandler {
   public:
     ExamplePragmaHandler() : PragmaHandler("example_pragma") { }
-    void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
+    void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                       Token &PragmaTok) {
       // Handle the pragma
     }

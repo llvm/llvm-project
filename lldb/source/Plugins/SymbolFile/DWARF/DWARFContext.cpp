@@ -48,6 +48,11 @@ const DWARFDataExtractor &DWARFContext::getOrLoadArangesData() {
                           m_data_debug_aranges);
 }
 
+const DWARFDataExtractor &DWARFContext::getOrLoadAddrData() {
+  return LoadOrGetSection(m_main_section_list, eSectionTypeDWARFDebugAddr,
+                          m_data_debug_addr);
+}
+
 const DWARFDataExtractor &DWARFContext::getOrLoadDebugInfoData() {
   if (isDwo())
     return LoadOrGetSection(m_dwo_section_list, eSectionTypeDWARFDebugInfoDwo,

@@ -299,6 +299,9 @@ def ObjC : LangOpt<"ObjC">;
 def BlocksSupported : LangOpt<"Blocks">;
 def ObjCAutoRefCount : LangOpt<"ObjCAutoRefCount">;
 
+// Language option for CMSE extensions
+def Cmse : LangOpt<"Cmse">;
+
 // Defines targets for target-specific attributes. Empty lists are unchecked.
 class TargetSpec {
   // Specifies Architectures for which the target applies, based off the

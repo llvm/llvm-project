@@ -1860,8 +1860,10 @@ ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
 llvm::Constant *ConstantEmitter::tryEmitPrivate(const APValue &Value,
                                                 QualType DestType) {
   switch (Value.getKind()) {
-  case APValue::Uninitialized:
-    llvm_unreachable("Constant expressions should be initialized.");
+  case APValue::None:
+  case APValue::Indeterminate:
+    // Out-of-lifetime and indeterminate values can be modeled as 'undef'.
+    return llvm::UndefValue::get(CGM.getTypes().ConvertType(DestType));
   case APValue::LValue:
     return ConstantLValueEmitter(*this, Value, DestType).tryEmit();
   case APValue::Int:

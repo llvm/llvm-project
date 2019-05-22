@@ -999,61 +999,6 @@ bool DWARFCallFrameInfo::HandleCommonDwarfOpcode(uint8_t primary_opcode,
       uint32_t block_len = (uint32_t)m_cfi_data.GetULEB128(&offset);
       const uint8_t *block_data =
           (const uint8_t *)m_cfi_data.GetData(&offset, block_len);
-      //#if defined(__i386__) || defined(__x86_64__)
-      //              // The EH frame info for EIP and RIP contains code that
-      //              looks for traps to
-      //              // be a specific type and increments the PC.
-      //              // For i386:
-      //              // DW_CFA_val_expression where:
-      //              // eip = DW_OP_breg6(+28), DW_OP_deref, DW_OP_dup,
-      //              DW_OP_plus_uconst(0x34),
-      //              //       DW_OP_deref, DW_OP_swap, DW_OP_plus_uconst(0),
-      //              DW_OP_deref,
-      //              //       DW_OP_dup, DW_OP_lit3, DW_OP_ne, DW_OP_swap,
-      //              DW_OP_lit4, DW_OP_ne,
-      //              //       DW_OP_and, DW_OP_plus
-      //              // This basically does a:
-      //              // eip = ucontenxt.mcontext32->gpr.eip;
-      //              // if (ucontenxt.mcontext32->exc.trapno != 3 &&
-      //              ucontenxt.mcontext32->exc.trapno != 4)
-      //              //   eip++;
-      //              //
-      //              // For x86_64:
-      //              // DW_CFA_val_expression where:
-      //              // rip =  DW_OP_breg3(+48), DW_OP_deref, DW_OP_dup,
-      //              DW_OP_plus_uconst(0x90), DW_OP_deref,
-      //              //          DW_OP_swap, DW_OP_plus_uconst(0),
-      //              DW_OP_deref_size(4), DW_OP_dup, DW_OP_lit3,
-      //              //          DW_OP_ne, DW_OP_swap, DW_OP_lit4, DW_OP_ne,
-      //              DW_OP_and, DW_OP_plus
-      //              // This basically does a:
-      //              // rip = ucontenxt.mcontext64->gpr.rip;
-      //              // if (ucontenxt.mcontext64->exc.trapno != 3 &&
-      //              ucontenxt.mcontext64->exc.trapno != 4)
-      //              //   rip++;
-      //              // The trap comparisons and increments are not needed as
-      //              it hoses up the unwound PC which
-      //              // is expected to point at least past the instruction that
-      //              causes the fault/trap. So we
-      //              // take it out by trimming the expression right at the
-      //              first "DW_OP_swap" opcodes
-      //              if (block_data != NULL && thread->GetPCRegNum(Thread::GCC)
-      //              == reg_num)
-      //              {
-      //                  if (thread->Is64Bit())
-      //                  {
-      //                      if (block_len > 9 && block_data[8] == DW_OP_swap
-      //                      && block_data[9] == DW_OP_plus_uconst)
-      //                          block_len = 8;
-      //                  }
-      //                  else
-      //                  {
-      //                      if (block_len > 8 && block_data[7] == DW_OP_swap
-      //                      && block_data[8] == DW_OP_plus_uconst)
-      //                          block_len = 7;
-      //                  }
-      //              }
-      //#endif
       reg_location.SetIsDWARFExpression(block_data, block_len);
       row.SetRegisterInfo(reg_num, reg_location);
       return true;

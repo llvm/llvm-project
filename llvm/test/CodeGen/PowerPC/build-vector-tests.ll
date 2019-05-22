@@ -4226,8 +4226,8 @@ define <2 x i64> @fromDiffMemVarDll(i64* nocapture readonly %arr, i32 signext %e
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 3
 ; P9BE-NEXT:    add r3, r3, r4
-; P9BE-NEXT:    addi r3, r3, -8
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    li r4, -8
+; P9BE-NEXT:    lxvx v2, r3, r4
 ; P9BE-NEXT:    xxswapd v2, v2
 ; P9BE-NEXT:    blr
 ;
@@ -4235,8 +4235,8 @@ define <2 x i64> @fromDiffMemVarDll(i64* nocapture readonly %arr, i32 signext %e
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    sldi r4, r4, 3
 ; P9LE-NEXT:    add r3, r3, r4
-; P9LE-NEXT:    addi r3, r3, -8
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    li r4, -8
+; P9LE-NEXT:    lxvx v2, r3, r4
 ; P9LE-NEXT:    xxswapd v2, v2
 ; P9LE-NEXT:    blr
 ;
@@ -5030,8 +5030,8 @@ define <2 x i64> @fromDiffMemVarDConvdtoll(double* nocapture readonly %arr, i32 
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 3
 ; P9BE-NEXT:    add r3, r3, r4
-; P9BE-NEXT:    addi r3, r3, -8
-; P9BE-NEXT:    lxvx vs0, 0, r3
+; P9BE-NEXT:    li r4, -8
+; P9BE-NEXT:    lxvx vs0, r3, r4
 ; P9BE-NEXT:    xxswapd vs0, vs0
 ; P9BE-NEXT:    xvcvdpsxds v2, vs0
 ; P9BE-NEXT:    blr
@@ -5040,8 +5040,8 @@ define <2 x i64> @fromDiffMemVarDConvdtoll(double* nocapture readonly %arr, i32 
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    sldi r4, r4, 3
 ; P9LE-NEXT:    add r3, r3, r4
-; P9LE-NEXT:    addi r3, r3, -8
-; P9LE-NEXT:    lxvx vs0, 0, r3
+; P9LE-NEXT:    li r4, -8
+; P9LE-NEXT:    lxvx vs0, r3, r4
 ; P9LE-NEXT:    xxswapd vs0, vs0
 ; P9LE-NEXT:    xvcvdpsxds v2, vs0
 ; P9LE-NEXT:    blr
@@ -5473,8 +5473,8 @@ define <2 x i64> @fromDiffMemVarDull(i64* nocapture readonly %arr, i32 signext %
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 3
 ; P9BE-NEXT:    add r3, r3, r4
-; P9BE-NEXT:    addi r3, r3, -8
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    li r4, -8
+; P9BE-NEXT:    lxvx v2, r3, r4
 ; P9BE-NEXT:    xxswapd v2, v2
 ; P9BE-NEXT:    blr
 ;
@@ -5482,8 +5482,8 @@ define <2 x i64> @fromDiffMemVarDull(i64* nocapture readonly %arr, i32 signext %
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    sldi r4, r4, 3
 ; P9LE-NEXT:    add r3, r3, r4
-; P9LE-NEXT:    addi r3, r3, -8
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    li r4, -8
+; P9LE-NEXT:    lxvx v2, r3, r4
 ; P9LE-NEXT:    xxswapd v2, v2
 ; P9LE-NEXT:    blr
 ;
@@ -6277,8 +6277,8 @@ define <2 x i64> @fromDiffMemVarDConvdtoull(double* nocapture readonly %arr, i32
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 3
 ; P9BE-NEXT:    add r3, r3, r4
-; P9BE-NEXT:    addi r3, r3, -8
-; P9BE-NEXT:    lxvx vs0, 0, r3
+; P9BE-NEXT:    li r4, -8
+; P9BE-NEXT:    lxvx vs0, r3, r4
 ; P9BE-NEXT:    xxswapd vs0, vs0
 ; P9BE-NEXT:    xvcvdpuxds v2, vs0
 ; P9BE-NEXT:    blr
@@ -6287,8 +6287,8 @@ define <2 x i64> @fromDiffMemVarDConvdtoull(double* nocapture readonly %arr, i32
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    sldi r4, r4, 3
 ; P9LE-NEXT:    add r3, r3, r4
-; P9LE-NEXT:    addi r3, r3, -8
-; P9LE-NEXT:    lxvx vs0, 0, r3
+; P9LE-NEXT:    li r4, -8
+; P9LE-NEXT:    lxvx vs0, r3, r4
 ; P9LE-NEXT:    xxswapd vs0, vs0
 ; P9LE-NEXT:    xvcvdpuxds v2, vs0
 ; P9LE-NEXT:    blr
