@@ -71,9 +71,6 @@ static Scalar::Type PromoteToMaxType(
 
 Scalar::Scalar() : m_type(e_void), m_float((float)0) {}
 
-Scalar::Scalar(const Scalar &rhs)
-    : m_type(rhs.m_type), m_integer(rhs.m_integer), m_float(rhs.m_float) {}
-
 bool Scalar::GetData(DataExtractor &data, size_t limit_byte_size) const {
   size_t byte_size = GetByteSize();
   if (byte_size > 0) {

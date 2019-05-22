@@ -77,14 +77,6 @@ public:
 
   /// Copy constructor
   ///
-  /// Makes a copy of the uniqued directory and filename strings from \a rhs.
-  ///
-  /// \param[in] rhs
-  ///     A const FileSpec object reference to copy.
-  FileSpec(const FileSpec &rhs);
-
-  /// Copy constructor
-  ///
   /// Makes a copy of the uniqued directory and filename strings from \a rhs
   /// if it is not nullptr.
   ///

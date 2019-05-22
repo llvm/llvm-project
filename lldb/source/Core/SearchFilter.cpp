@@ -524,9 +524,6 @@ SearchFilterByModuleList::SearchFilterByModuleList(
     enum FilterTy filter_ty)
     : SearchFilter(target_sp, filter_ty), m_module_spec_list(module_list) {}
 
-SearchFilterByModuleList::SearchFilterByModuleList(
-    const SearchFilterByModuleList &rhs) = default;
-
 SearchFilterByModuleList &SearchFilterByModuleList::
 operator=(const SearchFilterByModuleList &rhs) {
   m_target_sp = rhs.m_target_sp;
