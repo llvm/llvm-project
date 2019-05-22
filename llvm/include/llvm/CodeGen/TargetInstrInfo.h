@@ -1260,8 +1260,9 @@ public:
 
   /// Measure the specified inline asm to determine an approximation of its
   /// length.
-  virtual unsigned getInlineAsmLength(const char *Str,
-                                      const MCAsmInfo &MAI) const;
+  virtual unsigned getInlineAsmLength(
+    const char *Str, const MCAsmInfo &MAI,
+    const TargetSubtargetInfo *STI = nullptr) const;
 
   /// Allocate and return a hazard recognizer to use for this target when
   /// scheduling the machine instructions before register allocation.
