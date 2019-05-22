@@ -2219,14 +2219,18 @@ bool llvm::isIntS16Immediate(SDValue Op, int16_t &Imm) {
 
 /// SelectAddressRegReg - Given the specified addressed, check to see if it
 /// can be represented as an indexed [r+r] operation.  Returns false if it
-/// can be more efficiently represented with [r+imm].
+/// can be more efficiently represented as [r+imm]. If \p EncodingAlignment is
+/// non-zero and N can be represented by a base register plus a signed 16-bit
+/// displacement, make a more precise judgement by checking (displacement % \p
+/// EncodingAlignment).
 bool PPCTargetLowering::SelectAddressRegReg(SDValue N, SDValue &Base,
-                                            SDValue &Index,
-                                            SelectionDAG &DAG) const {
+                                            SDValue &Index, SelectionDAG &DAG,
+                                            unsigned EncodingAlignment) const {
   int16_t imm = 0;
   if (N.getOpcode() == ISD::ADD) {
-    if (isIntS16Immediate(N.getOperand(1), imm))
-      return false;    // r+i
+    if (isIntS16Immediate(N.getOperand(1), imm) &&
+        (!EncodingAlignment || !(imm % EncodingAlignment)))
+      return false; // r+i
     if (N.getOperand(1).getOpcode() == PPCISD::Lo)
       return false;    // r+i
 
@@ -2234,8 +2238,9 @@ bool PPCTargetLowering::SelectAddressRegReg(SDValue N, SDValue &Base,
     Index = N.getOperand(1);
     return true;
   } else if (N.getOpcode() == ISD::OR) {
-    if (isIntS16Immediate(N.getOperand(1), imm))
-      return false;    // r+i can fold it if we can.
+    if (isIntS16Immediate(N.getOperand(1), imm) &&
+        (!EncodingAlignment || !(imm % EncodingAlignment)))
+      return false; // r+i can fold it if we can.
 
     // If this is an or of disjoint bitfields, we can codegen this as an add
     // (for better address arithmetic) if the LHS and RHS of the OR are provably
@@ -2308,7 +2313,7 @@ bool PPCTargetLowering::SelectAddressRegImm(SDValue N, SDValue &Disp,
   // FIXME dl should come from parent load or store, not from address
   SDLoc dl(N);
   // If this can be more profitably realized as r+r, fail.
-  if (SelectAddressRegReg(N, Disp, Base, DAG))
+  if (SelectAddressRegReg(N, Disp, Base, DAG, EncodingAlignment))
     return false;
 
   if (N.getOpcode() == ISD::ADD) {

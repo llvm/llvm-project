@@ -927,7 +927,7 @@ def LHAX8: XForm_1_memOp<31, 343, (outs g8rc:$rD), (ins memrr:$src),
                         PPC970_DGroup_Cracked;
 def LWAX : XForm_1_memOp<31, 341, (outs g8rc:$rD), (ins memrr:$src),
                         "lwax $rD, $src", IIC_LdStLHA,
-                        [(set i64:$rD, (sextloadi32 xaddr:$src))]>, isPPC64,
+                        [(set i64:$rD, (sextloadi32 xaddrX4:$src))]>, isPPC64,
                         PPC970_DGroup_Cracked;
 // For fast-isel:
 let isCodeGenOnly = 1, mayLoad = 1 in {
@@ -1052,7 +1052,7 @@ def LDtocBA: PPCEmitTimePseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc:$reg),
 
 def LDX  : XForm_1_memOp<31,  21, (outs g8rc:$rD), (ins memrr:$src),
                         "ldx $rD, $src", IIC_LdStLD,
-                        [(set i64:$rD, (load xaddr:$src))]>, isPPC64;
+                        [(set i64:$rD, (load xaddrX4:$src))]>, isPPC64;
 def LDBRX : XForm_1_memOp<31,  532, (outs g8rc:$rD), (ins memrr:$src),
                           "ldbrx $rD, $src", IIC_LdStLoad,
                           [(set i64:$rD, (PPClbrx xoaddr:$src, i64))]>, isPPC64;
@@ -1224,7 +1224,7 @@ def STD  : DSForm_1<62, 0, (outs), (ins g8rc:$rS, memrix:$dst),
                     [(aligned4store i64:$rS, ixaddr:$dst)]>, isPPC64;
 def STDX  : XForm_8_memOp<31, 149, (outs), (ins g8rc:$rS, memrr:$dst),
                           "stdx $rS, $dst", IIC_LdStSTD,
-                          [(store i64:$rS, xaddr:$dst)]>, isPPC64,
+                          [(store i64:$rS, xaddrX4:$dst)]>, isPPC64,
                           PPC970_DGroup_Cracked;
 def STDBRX: XForm_8_memOp<31, 660, (outs), (ins g8rc:$rS, memrr:$dst),
                           "stdbrx $rS, $dst", IIC_LdStStore,
@@ -1441,10 +1441,10 @@ def : Pat<(unaligned4store i64:$rS, xoaddr:$dst),
 
 // 64-bits atomic loads and stores
 def : Pat<(atomic_load_64 ixaddr:$src), (LD  memrix:$src)>;
-def : Pat<(atomic_load_64 xaddr:$src),  (LDX memrr:$src)>;
+def : Pat<(atomic_load_64 xaddrX4:$src),  (LDX memrr:$src)>;
 
 def : Pat<(atomic_store_64 ixaddr:$ptr, i64:$val), (STD  g8rc:$val, memrix:$ptr)>;
-def : Pat<(atomic_store_64 xaddr:$ptr,  i64:$val), (STDX g8rc:$val, memrr:$ptr)>;
+def : Pat<(atomic_store_64 xaddrX4:$ptr,  i64:$val), (STDX g8rc:$val, memrr:$ptr)>;
 
 let Predicates = [IsISA3_0] in {
 

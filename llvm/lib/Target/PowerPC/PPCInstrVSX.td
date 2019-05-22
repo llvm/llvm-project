@@ -2857,7 +2857,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
 
   // Load Vector Indexed
   def LXVX    : X_XT6_RA5_RB5<31, 268, "lxvx"   , vsrc,
-                [(set v2f64:$XT, (load xaddr:$src))]>;
+                [(set v2f64:$XT, (load xaddrX16:$src))]>;
   // Load Vector (Left-justified) with Length
   def LXVL : XX1Form_memOp<31, 269, (outs vsrc:$XT), (ins memr:$src, g8rc:$rB),
                    "lxvl $XT, $src, $rB", IIC_LdStLoad,
@@ -2905,7 +2905,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
 
   // Store Vector Indexed
   def STXVX    : X_XS6_RA5_RB5<31,  396, "stxvx"   , vsrc,
-                 [(store v2f64:$XT, xaddr:$dst)]>;
+                 [(store v2f64:$XT, xaddrX16:$dst)]>;
 
   // Store Vector (Left-justified) with Length
   def STXVL : XX1Form_memOp<31, 397, (outs),
@@ -3293,26 +3293,26 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
       def : Pat<(v2i64 (scalar_to_vector (i64 (load ixaddr:$src)))),
                 (v2i64 (XXPERMDIs
                 (COPY_TO_REGCLASS (DFLOADf64 ixaddr:$src), VSRC), 2))>;
-      def : Pat<(v2i64 (scalar_to_vector (i64 (load xaddr:$src)))),
+      def : Pat<(v2i64 (scalar_to_vector (i64 (load xaddrX4:$src)))),
                 (v2i64 (XXPERMDIs
-		(COPY_TO_REGCLASS (XFLOADf64 xaddr:$src), VSRC), 2))>;
+		(COPY_TO_REGCLASS (XFLOADf64 xaddrX4:$src), VSRC), 2))>;
 
       def : Pat<(v2f64 (scalar_to_vector (f64 (load ixaddr:$src)))),
                 (v2f64 (XXPERMDIs
                 (COPY_TO_REGCLASS (DFLOADf64 ixaddr:$src), VSRC), 2))>;
-      def : Pat<(v2f64 (scalar_to_vector (f64 (load xaddr:$src)))),
+      def : Pat<(v2f64 (scalar_to_vector (f64 (load xaddrX4:$src)))),
                 (v2f64 (XXPERMDIs
-                (COPY_TO_REGCLASS (XFLOADf64 xaddr:$src), VSRC), 2))>;
-      def : Pat<(store (i64 (extractelt v2i64:$A, 0)), xaddr:$src),
+                (COPY_TO_REGCLASS (XFLOADf64 xaddrX4:$src), VSRC), 2))>;
+      def : Pat<(store (i64 (extractelt v2i64:$A, 0)), xaddrX4:$src),
                 (XFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2),
-                             sub_64), xaddr:$src)>;
-      def : Pat<(store (f64 (extractelt v2f64:$A, 0)), xaddr:$src),
+                             sub_64), xaddrX4:$src)>;
+      def : Pat<(store (f64 (extractelt v2f64:$A, 0)), xaddrX4:$src),
                 (XFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2),
-                             sub_64), xaddr:$src)>;
-      def : Pat<(store (i64 (extractelt v2i64:$A, 1)), xaddr:$src),
-                (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), xaddr:$src)>;
-      def : Pat<(store (f64 (extractelt v2f64:$A, 1)), xaddr:$src),
-                (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), xaddr:$src)>;
+                             sub_64), xaddrX4:$src)>;
+      def : Pat<(store (i64 (extractelt v2i64:$A, 1)), xaddrX4:$src),
+                (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), xaddrX4:$src)>;
+      def : Pat<(store (f64 (extractelt v2f64:$A, 1)), xaddrX4:$src),
+                (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), xaddrX4:$src)>;
       def : Pat<(store (i64 (extractelt v2i64:$A, 0)), ixaddr:$src),
                 (DFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2),
                              sub_64), ixaddr:$src)>;
@@ -3328,23 +3328,23 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
     let Predicates = [IsBigEndian, HasP9Vector] in {
       def : Pat<(v2i64 (scalar_to_vector (i64 (load ixaddr:$src)))),
                 (v2i64 (COPY_TO_REGCLASS (DFLOADf64 ixaddr:$src), VSRC))>;
-      def : Pat<(v2i64 (scalar_to_vector (i64 (load xaddr:$src)))),
-                (v2i64 (COPY_TO_REGCLASS (XFLOADf64 xaddr:$src), VSRC))>;
+      def : Pat<(v2i64 (scalar_to_vector (i64 (load xaddrX4:$src)))),
+                (v2i64 (COPY_TO_REGCLASS (XFLOADf64 xaddrX4:$src), VSRC))>;
 
       def : Pat<(v2f64 (scalar_to_vector (f64 (load ixaddr:$src)))),
                 (v2f64 (COPY_TO_REGCLASS (DFLOADf64 ixaddr:$src), VSRC))>;
-      def : Pat<(v2f64 (scalar_to_vector (f64 (load xaddr:$src)))),
-                (v2f64 (COPY_TO_REGCLASS (XFLOADf64 xaddr:$src), VSRC))>;
-      def : Pat<(store (i64 (extractelt v2i64:$A, 1)), xaddr:$src),
+      def : Pat<(v2f64 (scalar_to_vector (f64 (load xaddrX4:$src)))),
+                (v2f64 (COPY_TO_REGCLASS (XFLOADf64 xaddrX4:$src), VSRC))>;
+      def : Pat<(store (i64 (extractelt v2i64:$A, 1)), xaddrX4:$src),
                 (XFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2),
-                             sub_64), xaddr:$src)>;
-      def : Pat<(store (f64 (extractelt v2f64:$A, 1)), xaddr:$src),
+                             sub_64), xaddrX4:$src)>;
+      def : Pat<(store (f64 (extractelt v2f64:$A, 1)), xaddrX4:$src),
                 (XFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2),
-                             sub_64), xaddr:$src)>;
-      def : Pat<(store (i64 (extractelt v2i64:$A, 0)), xaddr:$src),
-                (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), xaddr:$src)>;
-      def : Pat<(store (f64 (extractelt v2f64:$A, 0)), xaddr:$src),
-                (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), xaddr:$src)>;
+                             sub_64), xaddrX4:$src)>;
+      def : Pat<(store (i64 (extractelt v2i64:$A, 0)), xaddrX4:$src),
+                (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), xaddrX4:$src)>;
+      def : Pat<(store (f64 (extractelt v2f64:$A, 0)), xaddrX4:$src),
+                (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), xaddrX4:$src)>;
       def : Pat<(store (i64 (extractelt v2i64:$A, 1)), ixaddr:$src),
                 (DFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2),
                              sub_64), ixaddr:$src)>;
@@ -3491,12 +3491,12 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   } // IsLittleEndian, HasP9Vector
 
   // Convert (Un)Signed DWord in memory -> QP
-  def : Pat<(f128 (sint_to_fp (i64 (load xaddr:$src)))),
-            (f128 (XSCVSDQP (LXSDX xaddr:$src)))>;
+  def : Pat<(f128 (sint_to_fp (i64 (load xaddrX4:$src)))),
+            (f128 (XSCVSDQP (LXSDX xaddrX4:$src)))>;
   def : Pat<(f128 (sint_to_fp (i64 (load ixaddr:$src)))),
             (f128 (XSCVSDQP (LXSD ixaddr:$src)))>;
-  def : Pat<(f128 (uint_to_fp (i64 (load xaddr:$src)))),
-            (f128 (XSCVUDQP (LXSDX xaddr:$src)))>;
+  def : Pat<(f128 (uint_to_fp (i64 (load xaddrX4:$src)))),
+            (f128 (XSCVUDQP (LXSDX xaddrX4:$src)))>;
   def : Pat<(f128 (uint_to_fp (i64 (load ixaddr:$src)))),
             (f128 (XSCVUDQP (LXSD ixaddr:$src)))>;
 
@@ -3519,9 +3519,9 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   // Instructions for store(fptosi).
   // The 8-byte version is repeated here due to availability of D-Form STXSD.
   def : Pat<(PPCstore_scal_int_from_vsr
-              (f64 (PPCcv_fp_to_sint_in_vsr f128:$src)), xaddr:$dst, 8),
+              (f64 (PPCcv_fp_to_sint_in_vsr f128:$src)), xaddrX4:$dst, 8),
             (STXSDX (COPY_TO_REGCLASS (XSCVQPSDZ f128:$src), VFRC),
-                    xaddr:$dst)>;
+                    xaddrX4:$dst)>;
   def : Pat<(PPCstore_scal_int_from_vsr
               (f64 (PPCcv_fp_to_sint_in_vsr f128:$src)), ixaddr:$dst, 8),
             (STXSD (COPY_TO_REGCLASS (XSCVQPSDZ f128:$src), VFRC),
@@ -3536,8 +3536,8 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
               (f64 (PPCcv_fp_to_sint_in_vsr f128:$src)), xoaddr:$dst, 1),
             (STXSIBX (COPY_TO_REGCLASS (XSCVQPSWZ $src), VFRC), xoaddr:$dst)>;
   def : Pat<(PPCstore_scal_int_from_vsr
-              (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)), xaddr:$dst, 8),
-            (STXSDX (XSCVDPSXDS f64:$src), xaddr:$dst)>;
+              (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)), xaddrX4:$dst, 8),
+            (STXSDX (XSCVDPSXDS f64:$src), xaddrX4:$dst)>;
   def : Pat<(PPCstore_scal_int_from_vsr
               (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)), ixaddr:$dst, 8),
             (STXSD (XSCVDPSXDS f64:$src), ixaddr:$dst)>;
@@ -3550,9 +3550,9 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
 
   // Instructions for store(fptoui).
   def : Pat<(PPCstore_scal_int_from_vsr
-              (f64 (PPCcv_fp_to_uint_in_vsr f128:$src)), xaddr:$dst, 8),
+              (f64 (PPCcv_fp_to_uint_in_vsr f128:$src)), xaddrX4:$dst, 8),
             (STXSDX (COPY_TO_REGCLASS (XSCVQPUDZ f128:$src), VFRC),
-                    xaddr:$dst)>;
+                    xaddrX4:$dst)>;
   def : Pat<(PPCstore_scal_int_from_vsr
               (f64 (PPCcv_fp_to_uint_in_vsr f128:$src)), ixaddr:$dst, 8),
             (STXSD (COPY_TO_REGCLASS (XSCVQPUDZ f128:$src), VFRC),
@@ -3567,8 +3567,8 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
               (f64 (PPCcv_fp_to_uint_in_vsr f128:$src)), xoaddr:$dst, 1),
             (STXSIBX (COPY_TO_REGCLASS (XSCVQPUWZ $src), VFRC), xoaddr:$dst)>;
   def : Pat<(PPCstore_scal_int_from_vsr
-              (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), xaddr:$dst, 8),
-            (STXSDX (XSCVDPUXDS f64:$src), xaddr:$dst)>;
+              (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), xaddrX4:$dst, 8),
+            (STXSDX (XSCVDPUXDS f64:$src), xaddrX4:$dst)>;
   def : Pat<(PPCstore_scal_int_from_vsr
               (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), ixaddr:$dst, 8),
             (STXSD (XSCVDPUXDS f64:$src), ixaddr:$dst)>;
