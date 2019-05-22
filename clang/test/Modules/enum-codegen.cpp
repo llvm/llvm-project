@@ -1,5 +1,5 @@
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -fmodules -fmodules-cache-path=%t %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -fmodules -fmodules-cache-path=%t %s -emit-llvm -o - | FileCheck %s
 
 // CHECK: @_Z3varIiE = {{.*}} %union.union_type { i8 1 },
 
