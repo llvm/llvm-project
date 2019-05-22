@@ -41,7 +41,7 @@ SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
   SectionNameData = SectionName.data();
   SectionNameSize = SectionName.size();
 
-  Alignment = Header->getAlignment();
+  setAlignment(Header->getAlignment());
 
   // If linker GC is disabled, every chunk starts out alive.  If linker GC is
   // enabled, treat non-comdat sections as roots. Generally optimized object
@@ -53,7 +53,7 @@ SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
 // SectionChunk is one of the most frequently allocated classes, so it is
 // important to keep it as compact as possible. As of this writing, the number
 // below is the size of this class on x64 platforms.
-static_assert(sizeof(SectionChunk) <= 112, "SectionChunk grew unexpectedly");
+static_assert(sizeof(SectionChunk) <= 104, "SectionChunk grew unexpectedly");
 
 static void add16(uint8_t *P, int16_t V) { write16le(P, read16le(P) + V); }
 static void add32(uint8_t *P, int32_t V) { write32le(P, read32le(P) + V); }
@@ -625,7 +625,7 @@ SectionChunk *SectionChunk::findByName(ArrayRef<SectionChunk *> Sections,
 }
 
 void SectionChunk::replace(SectionChunk *Other) {
-  Alignment = std::max(Alignment, Other->Alignment);
+  P2Align = std::max(P2Align, Other->P2Align);
   Other->Repl = Repl;
   Other->Live = false;
 }
@@ -638,9 +638,10 @@ uint32_t SectionChunk::getSectionNumber() const {
 }
 
 CommonChunk::CommonChunk(const COFFSymbolRef S) : Sym(S) {
-  // Common symbols are aligned on natural boundaries up to 32 bytes.
+  // The value of a common symbol is its size. Align all common symbols smaller
+  // than 32 bytes naturally, i.e. round the size up to the next power of two.
   // This is what MSVC link.exe does.
-  Alignment = std::min(uint64_t(32), PowerOf2Ceil(Sym.getValue()));
+  setAlignment(std::min(32U, uint32_t(PowerOf2Ceil(Sym.getValue()))));
 }
 
 uint32_t CommonChunk::getOutputCharacteristics() const {
@@ -656,7 +657,7 @@ void StringChunk::writeTo(uint8_t *Buf) const {
 ImportThunkChunkX64::ImportThunkChunkX64(Defined *S) : ImpSymbol(S) {
   // Intel Optimization Manual says that all branch targets
   // should be 16-byte aligned. MSVC linker does this too.
-  Alignment = 16;
+  setAlignment(16);
 }
 
 void ImportThunkChunkX64::writeTo(uint8_t *Buf) const {
@@ -854,17 +855,20 @@ uint8_t Baserel::getDefaultType() {
   }
 }
 
-std::map<uint32_t, MergeChunk *> MergeChunk::Instances;
+MergeChunk *MergeChunk::Instances[Log2MaxSectionAlignment + 1] = {};
 
 MergeChunk::MergeChunk(uint32_t Alignment)
     : Builder(StringTableBuilder::RAW, Alignment) {
-  this->Alignment = Alignment;
+  setAlignment(Alignment);
 }
 
 void MergeChunk::addSection(SectionChunk *C) {
-  auto *&MC = Instances[C->Alignment];
+  assert(isPowerOf2_32(C->getAlignment()));
+  uint8_t P2Align = llvm::Log2_32(C->getAlignment());
+  assert(P2Align >= 0 && P2Align < array_lengthof(Instances));
+  auto *&MC = Instances[P2Align];
   if (!MC)
-    MC = make<MergeChunk>(C->Alignment);
+    MC = make<MergeChunk>(C->getAlignment());
   MC->Sections.push_back(C);
 }
 
