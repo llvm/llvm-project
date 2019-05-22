@@ -244,9 +244,9 @@ static CodeModel::Model getEffectivePPCCodeModel(const Triple &TT,
                                                  bool JIT) {
   if (CM) {
     if (*CM == CodeModel::Tiny)
-      report_fatal_error("Target does not support the tiny CodeModel");
+      report_fatal_error("Target does not support the tiny CodeModel", false);
     if (*CM == CodeModel::Kernel)
-      report_fatal_error("Target does not support the kernel CodeModel");
+      report_fatal_error("Target does not support the kernel CodeModel", false);
     return *CM;
   }
   if (!TT.isOSDarwin() && !JIT &&
