@@ -16,7 +16,7 @@ Sections:
     Type:            SHT_PROGBITS
     Link:            .foo
 
-# ERR: Section .foo cannot be removed because it is referenced by the section .bar
+# ERR: section '.foo' cannot be removed because it is referenced by the section '.bar'
 
 # RUN: llvm-objcopy --allow-broken-links -R .foo %t.o %t3
 # RUN: llvm-readobj --sections %t3 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.foo

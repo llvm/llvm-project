@@ -12,4 +12,4 @@ Symbols:
     Index:    SHN_HEXAGON_SCOMMON
     Binding:  STB_GLOBAL
 
-# CHECK: Symbol 'test' has unsupported value greater than or equal to SHN_LORESERVE: 65280
+# CHECK: symbol 'test' has unsupported value greater than or equal to SHN_LORESERVE: 65280

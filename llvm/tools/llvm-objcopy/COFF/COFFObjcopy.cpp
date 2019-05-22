@@ -143,7 +143,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
         reportError(Config.OutputFilename,
                     createStringError(llvm::errc::invalid_argument,
                                       "not stripping symbol '%s' because it is "
-                                      "named in a relocation.",
+                                      "named in a relocation",
                                       Sym.Name.str().c_str()));
       return true;
     }
@@ -189,7 +189,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       Config.DiscardMode == DiscardType::Locals ||
       !Config.SymbolsToAdd.empty() || Config.EntryExpr) {
     return createStringError(llvm::errc::invalid_argument,
-                             "Option not supported by llvm-objcopy for COFF");
+                             "option not supported by llvm-objcopy for COFF");
   }
 
   return Error::success();

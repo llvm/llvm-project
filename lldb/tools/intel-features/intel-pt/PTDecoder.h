@@ -102,12 +102,6 @@ private:
 ///     specific options.
 class PTTraceOptions {
 public:
-  PTTraceOptions();
-
-  PTTraceOptions(const PTTraceOptions &options);
-
-  ~PTTraceOptions();
-
   lldb::TraceType GetType() const;
 
   uint64_t GetTraceBufferSize() const;
@@ -147,10 +141,6 @@ private:
 class PTDecoder {
 public:
   PTDecoder(lldb::SBDebugger &sbdebugger);
-
-  PTDecoder(const PTDecoder &ptdecoder);
-
-  ~PTDecoder();
 
   /// Start Intel(R) Processor Trace on a thread or complete process with
   /// Intel(R) Processor Trace specific configuration options

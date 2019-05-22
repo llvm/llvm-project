@@ -1461,6 +1461,8 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
   case tok::kw___read_only:
   case tok::kw___write_only:
   case tok::kw___read_write:
+    // OpenCL pipe
+  case tok::kw_pipe:
 
     // GNU
   case tok::kw_restrict:

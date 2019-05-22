@@ -1,2 +1,2 @@
 # RUN: not llvm-objcopy -O binary %p/Inputs/alloc-symtab.o %t2 2>&1 >/dev/null | FileCheck %s --check-prefix=SYMTAB
-# SYMTAB: Cannot write symbol table '.symtab' out to binary
+# SYMTAB: cannot write symbol table '.symtab' out to binary
