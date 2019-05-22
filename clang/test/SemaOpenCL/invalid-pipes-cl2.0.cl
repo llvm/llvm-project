@@ -1,9 +1,10 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL2.0
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=c++
 
 global pipe int gp;            // expected-error {{type '__global read_only pipe int' can only be used as a function parameter in OpenCL}}
 global reserve_id_t rid;          // expected-error {{the '__global reserve_id_t' type cannot be used to declare a program scope variable}}
 
-extern pipe write_only int get_pipe(); // expected-error {{type '__global write_only pipe int (void)' can only be used as a function parameter in OpenCL}}
+extern pipe write_only int get_pipe(); // expected-error-re{{type '__global write_only pipe int ({{(void)?}})' can only be used as a function parameter in OpenCL}}
 
 kernel void test_invalid_reserved_id(reserve_id_t ID) { // expected-error {{'reserve_id_t' cannot be used as the type of a kernel parameter}}
 }
@@ -35,6 +36,7 @@ bool test_id_comprision(void) {
 }
 
 // Tests ASTContext::mergeTypes rejects this.
+#ifndef __OPENCL_CPP_VERSION__
 int f(pipe int x, int y); // expected-note {{previous declaration is here}}
 int f(x, y) // expected-error {{conflicting types for 'f}}
 pipe short x;
@@ -42,3 +44,4 @@ int y;
 {
     return y;
 }
+#endif
