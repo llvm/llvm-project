@@ -1,7 +1,7 @@
 LEVEL = ../../../../make
 SWIFT_SOURCES = main.swift
 SWIFT_OBJC_INTEROP := 1
-LD_EXTRAS = -ldylib -L$(shell pwd)
+LD_EXTRAS = -ldylib -L$(BUILDDIR)
 
 # This test builds a .dylib whose .swiftmodule imports a Clang module
 # which uses a header file "Foo.h". The main swift program also
