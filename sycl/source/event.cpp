@@ -70,16 +70,19 @@ event::get_info<info::event::command_execution_status>() const {
 template <>
 cl_ulong
 event::get_profiling_info<info::event_profiling::command_submit>() const {
+  impl->wait(impl);
   return impl->get_profiling_info<info::event_profiling::command_submit>();
 }
 template <>
 cl_ulong
 event::get_profiling_info<info::event_profiling::command_start>() const {
+  impl->wait(impl);
   return impl->get_profiling_info<info::event_profiling::command_start>();
 }
 
 template <>
 cl_ulong event::get_profiling_info<info::event_profiling::command_end>() const {
+  impl->wait(impl);
   return impl->get_profiling_info<info::event_profiling::command_end>();
 }
 
