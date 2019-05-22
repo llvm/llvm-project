@@ -416,7 +416,7 @@ for.end:
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast ogt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select fast <2 x i1>
 
 define float @max_red_float(float %max) #0 {
 entry:
@@ -442,7 +442,7 @@ for.end:
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast ogt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select fast <2 x i1>
 
 define float @max_red_float_ge(float %max) #0 {
 entry:
@@ -468,7 +468,7 @@ for.end:
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast ogt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select fast <2 x i1>
 
 define float @inverted_max_red_float(float %max) #0 {
 entry:
@@ -494,7 +494,7 @@ for.end:
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast ogt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select fast <2 x i1>
 
 define float @inverted_max_red_float_le(float %max) #0 {
 entry:
@@ -520,7 +520,7 @@ for.end:
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast ogt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select fast <2 x i1>
 
 define float @unordered_max_red_float(float %max) #0 {
 entry:
@@ -546,7 +546,7 @@ for.end:
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast ogt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select fast <2 x i1>
 
 define float @unordered_max_red_float_ge(float %max) #0 {
 entry:
@@ -572,7 +572,7 @@ for.end:
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast ogt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select fast <2 x i1>
 
 define float @inverted_unordered_max_red_float(float %max) #0 {
 entry:
@@ -598,7 +598,7 @@ for.end:
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast ogt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select fast <2 x i1>
 
 define float @inverted_unordered_max_red_float_le(float %max) #0 {
 entry:
@@ -627,7 +627,7 @@ for.end:
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast olt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select fast <2 x i1>
 
 define float @min_red_float(float %min) #0 {
 entry:
@@ -653,7 +653,7 @@ for.end:
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast olt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select fast <2 x i1>
 
 define float @min_red_float_le(float %min) #0 {
 entry:
@@ -679,7 +679,7 @@ for.end:
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast olt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select fast <2 x i1>
 
 define float @inverted_min_red_float(float %min) #0 {
 entry:
@@ -705,7 +705,7 @@ for.end:
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast olt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select fast <2 x i1>
 
 define float @inverted_min_red_float_ge(float %min) #0 {
 entry:
@@ -731,7 +731,7 @@ for.end:
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast olt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select fast <2 x i1>
 
 define float @unordered_min_red_float(float %min) #0 {
 entry:
@@ -757,7 +757,7 @@ for.end:
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast olt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select fast <2 x i1>
 
 define float @unordered_min_red_float_le(float %min) #0 {
 entry:
@@ -783,7 +783,7 @@ for.end:
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast olt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select fast <2 x i1>
 
 define float @inverted_unordered_min_red_float(float %min) #0 {
 entry:
@@ -809,7 +809,7 @@ for.end:
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast olt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select fast <2 x i1>
 
 define float @inverted_unordered_min_red_float_ge(float %min) #0 {
 entry:
@@ -836,7 +836,7 @@ for.end:
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast olt <2 x double>
-; CHECK: select <2 x i1>
+; CHECK: select fast <2 x i1>
 
 define double @min_red_double(double %min) #0 {
 entry:
