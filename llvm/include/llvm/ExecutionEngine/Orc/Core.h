@@ -681,10 +681,6 @@ private:
 
   void emit(const SymbolFlagsMap &Emitted);
 
-  // Removes the given symbols from the symbol table, returning the set of
-  // pending queries.
-  AsynchronousSymbolQuery removeSymbols(const SymbolNameSet &Symbols);
-
   void notifyFailed(const SymbolNameSet &FailedSymbols);
 
   ExecutionSession &ES;
