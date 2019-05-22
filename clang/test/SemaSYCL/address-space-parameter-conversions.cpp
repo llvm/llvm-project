@@ -57,8 +57,7 @@ void usages() {
   __attribute__((address_space(6))) int *TooHigh;
   // expected-error@+1{{address space is outside the valid range of values}}
   __attribute__((address_space(4))) int *TriedGeneric;
-  // expected-error@+2{{unknown type name '__generic'}}
-  // expected-error@+1{{expected unqualified-id}}
+  // expected-error@+1{{unknown type name '__generic'}}
   __generic int *IsGeneric;
 
 }

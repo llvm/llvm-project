@@ -554,16 +554,15 @@ public:
       // Test if current section is an offload bundle size section
       if (matchSectionName(SIZE_SECTION_PREFIX, *Sec, OffloadTriple)) {
         // yes, it is - parse object sizes
-        StringRef Content;
-        Sec->getContents(Content);
+        Expected<StringRef> Content = Sec->getContents();
         unsigned int ElemSize =
             getSectionSizeTy(VMContext)->getPrimitiveSizeInBits() / 8;
 
         // the size of the size section must be a multiple of ElemSize
-        if (Content.size() % ElemSize != 0)
+        if (Content->size() % ElemSize != 0)
           report_fatal_error(
               Twine("invalid size of the bundle size section for triple ") +
-              Twine(OffloadTriple) + Twine(": ") + Twine(Content.size()));
+              Twine(OffloadTriple) + Twine(": ") + Twine(Content->size()));
         // read sizes
         llvm::support::endianness E = Obj->isLittleEndian()
                                           ? llvm::support::endianness::little
@@ -574,8 +573,8 @@ public:
         if (!BI.get()) {
           BI.reset(new BundleInfo(Obj->section_end()));
         }
-        for (const char *Ptr = Content.data();
-             Ptr < Content.data() + Content.size(); Ptr += ElemSize) {
+        for (const char *Ptr = Content->data();
+             Ptr < Content->data() + Content->size(); Ptr += ElemSize) {
           uint64_t Size = support::endian::read64(Ptr, E);
           BI->ObjectSizes.push_back(Size);
         }
@@ -603,12 +602,13 @@ public:
     assert(CurBundle != TripleToBundleInfo.end() &&
            "all bundles have been read already");
     // Read content of the section representing the bundle
-    Expected<StringRef> Content = CurrentSection->getContents();
+    Expected<StringRef> Content =
+      CurBundle->second->BundleSection->getContents();
     if (!Content) {
       consumeError(Content.takeError());
       return;
     }
-    const char *ObjData = Content.data();
+    const char *ObjData = Content->data();
     // Determine the number of "device objects" (or individual bundles
     // concatenated by partial linkage) in the bundle:
     const auto &SizeVec = CurBundle->second->ObjectSizes;
@@ -663,10 +663,10 @@ public:
           if (SizeVec[II] != 1)
             report_fatal_error("inconsistent host triple bundle");
         }
-        if (!HostTriple && Content.size() != static_cast<size_t>(ObjSize))
+        if (!HostTriple && Content->size() != static_cast<size_t>(ObjSize))
           report_fatal_error("real object size and the size found in the "
                                    "size section mismatch: " +
-                                   Twine(Content.size()) + Twine(" != ") +
+                                   Twine(Content->size()) + Twine(" != ") +
                                    Twine(ObjSize));
         ObjData = Input.getBufferStart();
         ObjSize = static_cast<decltype(ObjSize)>(Input.getBufferSize());
