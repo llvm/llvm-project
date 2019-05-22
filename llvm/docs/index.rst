@@ -95,6 +95,7 @@ intermediate LLVM representation.
    ReportingGuide
    Benchmarking
    Docker
+   BuildingADistribution
 
 :doc:`GettingStarted`
    Discusses how to get up and running quickly with the LLVM infrastructure.
@@ -176,6 +177,10 @@ intermediate LLVM representation.
 
 :doc:`Docker`
    A reference for using Dockerfiles provided with LLVM.
+
+:doc:`BuildingADistribution`
+  A best-practices guide for using LLVM's CMake build system to package and
+  distribute LLVM-based tools.
 
 
 Programming Documentation

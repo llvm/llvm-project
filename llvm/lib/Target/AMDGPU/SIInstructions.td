@@ -383,6 +383,8 @@ def SI_CALL_ISEL : SPseudoInstSI <
   let isCall = 1;
   let SchedRW = [WriteBranch];
   let usesCustomInserter = 1;
+  // TODO: Should really base this on the call target
+  let isConvergent = 1;
 }
 
 // Wrapper around s_swappc_b64 with extra $callee parameter to track
@@ -393,6 +395,8 @@ def SI_CALL : SPseudoInstSI <
   let isCall = 1;
   let UseNamedOperandTable = 1;
   let SchedRW = [WriteBranch];
+  // TODO: Should really base this on the call target
+  let isConvergent = 1;
 }
 
 // Tail call handling pseudo
@@ -406,6 +410,8 @@ def SI_TCRETURN : SPseudoInstSI <(outs),
   let isBarrier = 1;
   let UseNamedOperandTable = 1;
   let SchedRW = [WriteBranch];
+  // TODO: Should really base this on the call target
+  let isConvergent = 1;
 }
 
 

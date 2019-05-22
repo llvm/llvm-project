@@ -17,7 +17,7 @@ group("unittests") {
     "Sema:SemaTests",
     "Serialization:SerializationTests",
     "Tooling:ToolingTests",
-    "Tooling/Syntax:TokensTest",
+    "Tooling/Syntax:SyntaxTests",
   ]
   if (clang_enable_static_analyzer) {
     deps += [

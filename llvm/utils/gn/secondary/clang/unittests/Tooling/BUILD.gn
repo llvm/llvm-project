@@ -14,9 +14,9 @@ unittest("ToolingTests") {
     "//clang/lib/Tooling",
     "//clang/lib/Tooling/Core",
     "//clang/lib/Tooling/Refactoring",
-    "//llvm/lib/Testing/Support",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/Testing/Support",
   ]
   sources = [
     "ASTSelectionTest.cpp",

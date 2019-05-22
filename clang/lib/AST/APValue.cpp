@@ -219,9 +219,11 @@ APValue::UnionData::~UnionData () {
   delete Value;
 }
 
-APValue::APValue(const APValue &RHS) : Kind(Uninitialized) {
+APValue::APValue(const APValue &RHS) : Kind(None) {
   switch (RHS.getKind()) {
-  case Uninitialized:
+  case None:
+  case Indeterminate:
+    Kind = RHS.getKind();
     break;
   case Int:
     MakeInt();
@@ -313,12 +315,13 @@ void APValue::DestroyDataAndMakeUninit() {
     ((MemberPointerData*)(char*)Data.buffer)->~MemberPointerData();
   else if (Kind == AddrLabelDiff)
     ((AddrLabelDiffData*)(char*)Data.buffer)->~AddrLabelDiffData();
-  Kind = Uninitialized;
+  Kind = None;
 }
 
 bool APValue::needsCleanup() const {
   switch (getKind()) {
-  case Uninitialized:
+  case None:
+  case Indeterminate:
   case AddrLabelDiff:
     return false;
   case Struct:
@@ -376,8 +379,11 @@ static double GetApproxValue(const llvm::APFloat &F) {
 
 void APValue::dump(raw_ostream &OS) const {
   switch (getKind()) {
-  case Uninitialized:
-    OS << "Uninitialized";
+  case None:
+    OS << "None";
+    return;
+  case Indeterminate:
+    OS << "Indeterminate";
     return;
   case Int:
     OS << "Int: " << getInt();
@@ -452,7 +458,10 @@ void APValue::dump(raw_ostream &OS) const {
 
 void APValue::printPretty(raw_ostream &Out, ASTContext &Ctx, QualType Ty) const{
   switch (getKind()) {
-  case APValue::Uninitialized:
+  case APValue::None:
+    Out << "<out of lifetime>";
+    return;
+  case APValue::Indeterminate:
     Out << "<uninitialized>";
     return;
   case APValue::Int:
@@ -781,21 +790,21 @@ ArrayRef<const CXXRecordDecl*> APValue::getMemberPointerPath() const {
 }
 
 void APValue::MakeLValue() {
-  assert(isUninit() && "Bad state change");
+  assert(isAbsent() && "Bad state change");
   static_assert(sizeof(LV) <= DataSize, "LV too big");
   new ((void*)(char*)Data.buffer) LV();
   Kind = LValue;
 }
 
 void APValue::MakeArray(unsigned InitElts, unsigned Size) {
-  assert(isUninit() && "Bad state change");
+  assert(isAbsent() && "Bad state change");
   new ((void*)(char*)Data.buffer) Arr(InitElts, Size);
   Kind = Array;
 }
 
 void APValue::MakeMemberPointer(const ValueDecl *Member, bool IsDerivedMember,
                                 ArrayRef<const CXXRecordDecl*> Path) {
-  assert(isUninit() && "Bad state change");
+  assert(isAbsent() && "Bad state change");
   MemberPointerData *MPD = new ((void*)(char*)Data.buffer) MemberPointerData;
   Kind = MemberPointer;
   MPD->MemberAndIsDerivedMember.setPointer(Member);

@@ -23230,8 +23230,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
           DAG.getNode(Opcode, dl, VTs, Chain, Op->getOperand(2),
                       Op->getOperand(3), Op->getOperand(4));
       SDValue SetCC = getSETCC(X86::COND_B, Operation.getValue(0), dl, DAG);
-      SDValue Result = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i8, SetCC);
-      return DAG.getNode(ISD::MERGE_VALUES, dl, Op->getVTList(), Result,
+      return DAG.getNode(ISD::MERGE_VALUES, dl, Op->getVTList(), SetCC,
                          Operation.getValue(1));
     }
     }
@@ -31025,6 +31024,15 @@ unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
   case X86ISD::VPCOMU:
     // Vector compares return zero/all-bits result values.
     return VTBits;
+
+  case X86ISD::ANDNP: {
+    unsigned Tmp0 =
+        DAG.ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    if (Tmp0 == 1) return 1; // Early out.
+    unsigned Tmp1 =
+        DAG.ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    return std::min(Tmp0, Tmp1);
+  }
 
   case X86ISD::CMOV: {
     unsigned Tmp0 = DAG.ComputeNumSignBits(Op.getOperand(0), Depth+1);

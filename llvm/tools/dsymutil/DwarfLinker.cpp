@@ -626,7 +626,7 @@ unsigned DwarfLinker::shouldKeepVariableDIE(RelocationManager &RelocMgr,
     MyInfo.InDebugMap = true;
     return Flags | TF_Keep;
   }
-  
+
   Optional<uint32_t> LocationIdx =
       Abbrev->findAttributeIndex(dwarf::DW_AT_location);
   if (!LocationIdx)
@@ -1820,7 +1820,7 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
       OrigDwarf.getDWARFObj(), OrigDwarf.getDWARFObj().getLineSection(),
       OrigDwarf.isLittleEndian(), Unit.getOrigUnit().getAddressByteSize());
   if (Options.Translator)
-    return Streamer->translateLineTable(LineExtractor, StmtOffset, Options);
+    return Streamer->translateLineTable(LineExtractor, StmtOffset);
 
   Error Err = LineTable.parse(LineExtractor, &StmtOffset, OrigDwarf,
                               &Unit.getOrigUnit(), DWARFContext::dumpWarning);
@@ -2845,7 +2845,7 @@ bool DwarfLinker::link(const DebugMap &Map) {
             copySwiftInterfaces(ParseableSwiftInterfaces, ArchName, Options))
       return error(toString(std::move(E)));
   }
-  
+
   return Streamer->finish(Map, Options.Translator);
 } // namespace dsymutil
 

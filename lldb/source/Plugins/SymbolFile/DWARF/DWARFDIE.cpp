@@ -113,7 +113,7 @@ DWARFDIE::GetSibling() const {
 DWARFDIE
 DWARFDIE::GetReferencedDIE(const dw_attr_t attr) const {
   if (IsValid())
-    return m_die->GetAttributeValueAsReference(GetDWARF(), GetCU(), attr);
+    return m_die->GetAttributeValueAsReference(GetCU(), attr);
   else
     return {};
 }
@@ -130,10 +130,9 @@ DWARFDIE
 DWARFDIE::GetAttributeValueAsReferenceDIE(const dw_attr_t attr) const {
   if (IsValid()) {
     DWARFUnit *cu = GetCU();
-    SymbolFileDWARF *dwarf = cu->GetSymbolFileDWARF();
     const bool check_specification_or_abstract_origin = true;
     DWARFFormValue form_value;
-    if (m_die->GetAttributeValue(dwarf, cu, attr, form_value, nullptr,
+    if (m_die->GetAttributeValue(cu, attr, form_value, nullptr,
                                  check_specification_or_abstract_origin))
       return form_value.Reference();
   }
@@ -147,7 +146,7 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t file_addr) const {
     DWARFUnit *cu = GetCU();
     DWARFDebugInfoEntry *function_die = nullptr;
     DWARFDebugInfoEntry *block_die = nullptr;
-    if (m_die->LookupAddress(file_addr, dwarf, cu, &function_die, &block_die)) {
+    if (m_die->LookupAddress(file_addr, cu, &function_die, &block_die)) {
       if (block_die && block_die != function_die) {
         if (cu->ContainsDIEOffset(block_die->GetOffset()))
           return DWARFDIE(cu, block_die);
@@ -164,21 +163,21 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t file_addr) const {
 
 const char *DWARFDIE::GetMangledName() const {
   if (IsValid())
-    return m_die->GetMangledName(GetDWARF(), m_cu);
+    return m_die->GetMangledName(m_cu);
   else
     return nullptr;
 }
 
 const char *DWARFDIE::GetPubname() const {
   if (IsValid())
-    return m_die->GetPubname(GetDWARF(), m_cu);
+    return m_die->GetPubname(m_cu);
   else
     return nullptr;
 }
 
 const char *DWARFDIE::GetQualifiedName(std::string &storage) const {
   if (IsValid())
-    return m_die->GetQualifiedName(GetDWARF(), m_cu, storage);
+    return m_die->GetQualifiedName(m_cu, storage);
   else
     return nullptr;
 }
@@ -215,7 +214,7 @@ std::vector<DWARFDIE> DWARFDIE::GetDeclContextDIEs() const {
 void DWARFDIE::GetDWARFDeclContext(DWARFDeclContext &dwarf_decl_ctx) const {
   if (IsValid()) {
     dwarf_decl_ctx.SetLanguage(GetLanguage());
-    m_die->GetDWARFDeclContext(GetDWARF(), GetCU(), dwarf_decl_ctx);
+    m_die->GetDWARFDeclContext(GetCU(), dwarf_decl_ctx);
   } else {
     dwarf_decl_ctx.Clear();
   }
@@ -273,7 +272,7 @@ void DWARFDIE::GetDeclContext(std::vector<CompilerContext> &context) const {
 DWARFDIE
 DWARFDIE::GetParentDeclContextDIE() const {
   if (IsValid())
-    return m_die->GetParentDeclContextDIE(GetDWARF(), m_cu);
+    return m_die->GetParentDeclContextDIE(m_cu);
   else
     return DWARFDIE();
 }
@@ -331,8 +330,8 @@ bool DWARFDIE::GetDIENamesAndRanges(
     lldb_private::DWARFExpression *frame_base) const {
   if (IsValid()) {
     return m_die->GetDIENamesAndRanges(
-        GetDWARF(), GetCU(), name, mangled, ranges, decl_file, decl_line,
-        decl_column, call_file, call_line, call_column, frame_base);
+        GetCU(), name, mangled, ranges, decl_file, decl_line, decl_column,
+        call_file, call_line, call_column, frame_base);
   } else
     return false;
 }

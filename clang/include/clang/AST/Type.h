@@ -4797,9 +4797,9 @@ class AutoType : public DeducedType, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
   AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
-           bool IsDeducedAsDependent)
+           bool IsDeducedAsDependent, bool IsDeducedAsPack)
       : DeducedType(Auto, DeducedAsType, IsDeducedAsDependent,
-                    IsDeducedAsDependent, /*ContainsPack=*/false) {
+                    IsDeducedAsDependent, IsDeducedAsPack) {
     AutoTypeBits.Keyword = (unsigned)Keyword;
   }
 
@@ -4813,14 +4813,16 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getDeducedType(), getKeyword(), isDependentType());
+    Profile(ID, getDeducedType(), getKeyword(), isDependentType(),
+            containsUnexpandedParameterPack());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Deduced,
-                      AutoTypeKeyword Keyword, bool IsDependent) {
+                      AutoTypeKeyword Keyword, bool IsDependent, bool IsPack) {
     ID.AddPointer(Deduced.getAsOpaquePtr());
     ID.AddInteger((unsigned)Keyword);
     ID.AddBoolean(IsDependent);
+    ID.AddBoolean(IsPack);
   }
 
   static bool classof(const Type *T) {

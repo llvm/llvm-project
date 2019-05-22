@@ -83,6 +83,7 @@ TargetThreadWindows::CreateRegisterContextForFrame(StackFrame *frame) {
 #else
         LLDB_LOG(log, "LLDB is 32-bit, but the target process is 64-bit.");
 #endif
+        LLVM_FALLTHROUGH;
       default:
         break;
       }

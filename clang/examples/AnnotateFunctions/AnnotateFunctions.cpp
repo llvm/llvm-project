@@ -58,7 +58,7 @@ class PragmaAnnotateHandler : public PragmaHandler {
 public:
   PragmaAnnotateHandler() : PragmaHandler("enable_annotate") { }
 
-  void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                     Token &PragmaTok) override {
 
     Token Tok;

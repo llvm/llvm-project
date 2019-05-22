@@ -865,9 +865,8 @@ void Writer::createSections() {
 }
 
 void Writer::createMiscChunks() {
-  for (MergeChunk *P : MergeChunk::Instances)
-    if (P)
-      RdataSec->addChunk(P);
+  for (auto &P : MergeChunk::Instances)
+    RdataSec->addChunk(P.second);
 
   // Create thunks for locally-dllimported symbols.
   if (!Symtab->LocalImportChunks.empty()) {
@@ -1160,7 +1159,7 @@ void Writer::assignAddresses() {
     for (Chunk *C : Sec->Chunks) {
       if (Padding && C->isHotPatchable())
         VirtualSize += Padding;
-      VirtualSize = alignTo(VirtualSize, C->getAlignment());
+      VirtualSize = alignTo(VirtualSize, C->Alignment);
       C->setRVA(RVA + VirtualSize);
       C->finalizeContents();
       VirtualSize += C->getSize();
@@ -1520,8 +1519,8 @@ void Writer::createGuardCFTables() {
 
   // Ensure sections referenced in the gfid table are 16-byte aligned.
   for (const ChunkAndOffset &C : AddressTakenSyms)
-    if (C.InputChunk->getAlignment() < 16)
-      C.InputChunk->setAlignment(16);
+    if (C.InputChunk->Alignment < 16)
+      C.InputChunk->Alignment = 16;
 
   maybeAddRVATable(std::move(AddressTakenSyms), "__guard_fids_table",
                    "__guard_fids_count");

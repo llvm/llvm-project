@@ -1738,9 +1738,10 @@ codeComplete(PathRef FileName, const tooling::CompileCommand &Command,
   auto Flow = CodeCompleteFlow(
       FileName, Preamble ? Preamble->Includes : IncludeStructure(),
       SpecFuzzyFind, Opts);
-  return Preamble ? std::move(Flow).run(
-                        {FileName, Command, Preamble, Contents, *Offset, VFS})
-                  : std::move(Flow).runWithoutSema(Contents, *Offset, VFS);
+  return (!Preamble || Opts.RunParser == CodeCompleteOptions::NeverParse)
+             ? std::move(Flow).runWithoutSema(Contents, *Offset, VFS)
+             : std::move(Flow).run(
+                   {FileName, Command, Preamble, Contents, *Offset, VFS});
 }
 
 SignatureHelp signatureHelp(PathRef FileName,

@@ -6390,9 +6390,12 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
 
     // Convert the APValue to a TemplateArgument.
     switch (Value.getKind()) {
-    case APValue::Uninitialized:
+    case APValue::None:
       assert(ParamType->isNullPtrType());
       Converted = TemplateArgument(CanonParamType, /*isNullPtr*/true);
+      break;
+    case APValue::Indeterminate:
+      llvm_unreachable("result of constant evaluation should be initialized");
       break;
     case APValue::Int:
       assert(ParamType->isIntegralOrEnumerationType());

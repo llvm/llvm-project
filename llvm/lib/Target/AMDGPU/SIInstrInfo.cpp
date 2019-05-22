@@ -2514,6 +2514,10 @@ bool SIInstrInfo::mayReadEXEC(const MachineRegisterInfo &MRI,
     return MI.readsRegister(AMDGPU::EXEC, &RI);
   }
 
+  // Make a conservative assumption about the callee.
+  if (MI.isCall())
+    return true;
+
   // Be conservative with any unhandled generic opcodes.
   if (!isTargetSpecificOpcode(MI.getOpcode()))
     return true;

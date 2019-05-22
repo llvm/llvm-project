@@ -3134,18 +3134,22 @@ bool CursorVisitor::RunVisitorWorkList(VisitorWorkList &WL) {
       }
         
       case VisitorJob::LambdaExprPartsKind: {
-        // Visit captures.
+        // Visit non-init captures.
         const LambdaExpr *E = cast<LambdaExprParts>(&LI)->get();
         for (LambdaExpr::capture_iterator C = E->explicit_capture_begin(),
                                        CEnd = E->explicit_capture_end();
              C != CEnd; ++C) {
-          // FIXME: Lambda init-captures.
           if (!C->capturesVariable())
             continue;
 
           if (Visit(MakeCursorVariableRef(C->getCapturedVar(),
                                           C->getLocation(),
                                           TU)))
+            return true;
+        }
+        // Visit init captures
+        for (auto InitExpr : E->capture_inits()) {
+          if (Visit(InitExpr))
             return true;
         }
         

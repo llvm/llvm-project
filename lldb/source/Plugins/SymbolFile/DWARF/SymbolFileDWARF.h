@@ -212,7 +212,6 @@ public:
 
   uint32_t GetPluginVersion() override;
 
-  virtual const lldb_private::DWARFDataExtractor &get_debug_addr_data();
   const lldb_private::DWARFDataExtractor &get_debug_loc_data();
   const lldb_private::DWARFDataExtractor &get_debug_loclists_data();
   const lldb_private::DWARFDataExtractor &get_debug_ranges_data();
@@ -451,7 +450,6 @@ protected:
 
   lldb_private::DWARFContext m_context;
 
-  DWARFDataSegment m_data_debug_addr;
   DWARFDataSegment m_data_debug_loc;
   DWARFDataSegment m_data_debug_loclists;
   DWARFDataSegment m_data_debug_ranges;

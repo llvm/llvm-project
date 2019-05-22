@@ -549,10 +549,6 @@ void SymbolFileDWARF::LoadSectionData(lldb::SectionType sect_type,
   m_obj_file->ReadSectionData(section_sp.get(), data);
 }
 
-const DWARFDataExtractor &SymbolFileDWARF::get_debug_addr_data() {
-  return GetCachedSectionData(eSectionTypeDWARFDebugAddr, m_data_debug_addr);
-}
-
 const DWARFDataExtractor &SymbolFileDWARF::DebugLocData() {
   const DWARFDataExtractor &debugLocData = get_debug_loc_data();
   if (debugLocData.GetByteSize() > 0)
@@ -1489,15 +1485,15 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   if (GetDebugMapSymfile())
     return nullptr;
 
-  const char *dwo_name = cu_die.GetAttributeValueAsString(
-      this, &dwarf_cu, DW_AT_GNU_dwo_name, nullptr);
+  const char *dwo_name =
+      cu_die.GetAttributeValueAsString(&dwarf_cu, DW_AT_GNU_dwo_name, nullptr);
   if (!dwo_name)
     return nullptr;
 
   SymbolFileDWARFDwp *dwp_symfile = GetDwpSymbolFile();
   if (dwp_symfile) {
-    uint64_t dwo_id = cu_die.GetAttributeValueAsUnsigned(this, &dwarf_cu,
-                                                         DW_AT_GNU_dwo_id, 0);
+    uint64_t dwo_id =
+        cu_die.GetAttributeValueAsUnsigned(&dwarf_cu, DW_AT_GNU_dwo_id, 0);
     std::unique_ptr<SymbolFileDWARFDwo> dwo_symfile =
         dwp_symfile->GetSymbolFileForDwoId(&dwarf_cu, dwo_id);
     if (dwo_symfile)
@@ -1507,8 +1503,8 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   FileSpec dwo_file(dwo_name);
   FileSystem::Instance().Resolve(dwo_file);
   if (dwo_file.IsRelative()) {
-    const char *comp_dir = cu_die.GetAttributeValueAsString(
-        this, &dwarf_cu, DW_AT_comp_dir, nullptr);
+    const char *comp_dir =
+        cu_die.GetAttributeValueAsString(&dwarf_cu, DW_AT_comp_dir, nullptr);
     if (!comp_dir)
       return nullptr;
 
