@@ -14,6 +14,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
+#include "clang/Basic/VirtualFileSystem.h"
 
 using namespace llvm::opt;
 
@@ -31,16 +32,22 @@ void DPURTE::AddClangSystemIncludeArgs(
   addSystemInclude(DriverArgs, CC1Args, StringRef(PathToSyslibIncludes));
 }
 
-char *DPURTE::GetUpmemSdkPath(const char *Path) const {
-  char *UpmemHome = getenv("UPMEM_HOME");
-  if (UpmemHome == nullptr) {
-    // Assume that the toolchain is installed at system root
-    return strdup(Path);
-  } else {
-    char *result;
-    asprintf(&result, "%s%s", UpmemHome, Path);
+char *DPURTE::GetUpmemSdkPath(const char *Path) {
+  char *result;
+  if (PathToSDK != NULL) {
+    asprintf(&result, "%s%s", PathToSDK, Path);
     return result;
   }
+  const std::string InstalledDir(getDriver().getInstalledDir());
+  const std::string UpmemDir(InstalledDir + "/../share/upmem");
+  if (getVFS().exists(UpmemDir)) {
+    PathToSDK = strdup((InstalledDir + "/../..").c_str());
+    asprintf(&result, "%s%s", PathToSDK, Path);
+    return result;
+  }
+  PathToSDK = strdup(getenv("UPMEM_HOME"));
+  asprintf(&result, "%s%s", PathToSDK, Path);
+  return result;
 }
 
 Tool *DPURTE::buildLinker() const {

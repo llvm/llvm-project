@@ -70,8 +70,9 @@ protected:
   Tool *buildLinker() const override;
 
 private:
-  char *GetUpmemSdkPath(const char *Path) const;
+  char *GetUpmemSdkPath(const char *Path);
 
+  char *PathToSDK = NULL;
   char *PathToSyslibIncludes;
   char *PathToStdlibIncludes;
   char *PathToLinkScript;
