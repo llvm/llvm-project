@@ -19,6 +19,10 @@ add_lldb_tool(repl_swift
   main.c
   )
 target_link_libraries(repl_swift PRIVATE ${CMAKE_DL_LIBS})
+if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+  set_target_properties(repl_swift PROPERTIES
+    WIN32_EXECUTABLE TRUE)
+endif()
 
 # The dummy repl executable is a C program, but we always look for a mangled
 # swift symbol (corresponding to main). If we build the repl with debug info,
