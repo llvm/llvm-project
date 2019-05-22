@@ -76,5 +76,8 @@ else
 fi
 
 cd ${BUILD_DIR}/OpenCL-ICD-Loader
+mkdir build
+cd build
+cmake ..
 make C_INCLUDE_PATH=${OPENCL_HEADERS}
 exit_if_err $? "failed to build OpenCL-ICD-Loader"

@@ -60,15 +60,16 @@ endif()
 if( NOT OpenCL_LIBRARIES )
   message("OpenCL_LIBRARIES is missed. Try to build from GitHub sources.")
   set(OpenCL_LIBRARIES "${LLVM_LIBRARY_OUTPUT_INTDIR}/libOpenCL.so")
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/icd_build)
   ExternalProject_Add(ocl-icd
     GIT_REPOSITORY    https://github.com/KhronosGroup/OpenCL-ICD-Loader.git
     GIT_TAG           origin/master
     SOURCE_DIR        "${CMAKE_CURRENT_BINARY_DIR}/OpenCL/icd"
-    CONFIGURE_COMMAND ""
-    BUILD_IN_SOURCE   TRUE
+    BINARY_DIR        "${CMAKE_CURRENT_BINARY_DIR}/icd_build"
+    CONFIGURE_COMMAND ${CMAKE_COMMAND} "${CMAKE_CURRENT_BINARY_DIR}/OpenCL/icd" -DCMAKE_INSTALL_PREFIX=${LLVM_BINARY_DIR}
     BUILD_COMMAND     make C_INCLUDE_PATH=${CMAKE_CURRENT_BINARY_DIR}/OpenCL/inc
-    INSTALL_COMMAND   ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/OpenCL/icd/build ${LLVM_LIBRARY_OUTPUT_INTDIR}
-    STEP_TARGETS      build,install
+    INSTALL_COMMAND   make install 
+    STEP_TARGETS      configure,build,install
     DEPENDS           ocl-headers
   )
 else()
