@@ -1739,6 +1739,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(SDValue Op,
     DCI.AddToWorklist(Op.getNode());
     DCI.CommitTargetLoweringOpt(TLO);
   }
+
   return Simplified;
 }
 
