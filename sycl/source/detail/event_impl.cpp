@@ -84,13 +84,23 @@ void event_impl::wait(
     // go via the slow path event waiting in the scheduler
     waitInternal();
   else
+#ifdef SCHEDULER_20
+    detail::Scheduler::getInstance().waitForEvent(std::move(Self));
+#else
     simple_scheduler::Scheduler::getInstance().waitForEvent(Self);
+#endif
 }
 
 void event_impl::wait_and_throw(
     std::shared_ptr<cl::sycl::detail::event_impl> Self) {
   wait(Self);
+#ifdef SCHEDULER_20
+  for (auto &EventImpl :
+       detail::Scheduler::getInstance().getWaitList(std::move(Self)))
+    EventImpl->getQueue()->throw_asynchronous();
+#else
   cl::sycl::simple_scheduler::Scheduler::getInstance().throwForEvent(Self);
+#endif
 }
 
 template <>
