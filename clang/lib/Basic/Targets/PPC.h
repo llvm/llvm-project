@@ -379,13 +379,11 @@ public:
 
     if ((Triple.getArch() == llvm::Triple::ppc64le)) {
       resetDataLayout("e-m:e-i64:64-n32:64");
-      ABI = "elfv2";
     } else {
       resetDataLayout("E-m:e-i64:64-n32:64");
-      ABI = "elfv1";
     }
 
-    switch (getTriple().getOS()) {
+    switch (Triple.getOS()) {
     case llvm::Triple::FreeBSD:
       LongDoubleWidth = LongDoubleAlign = 64;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
