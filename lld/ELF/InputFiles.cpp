@@ -111,11 +111,6 @@ static bool isCompatible(InputFile *File) {
 }
 
 template <class ELFT> static void doParseFile(InputFile *File) {
-  // Comdat groups define "link once" sections. If two comdat groups have the
-  // same name, only one of them is linked, and the other is ignored. This set
-  // is used to uniquify them.
-  static llvm::DenseSet<llvm::CachedHashStringRef> ComdatGroups;
-
   if (!isCompatible(File))
     return;
 
@@ -151,13 +146,13 @@ template <class ELFT> static void doParseFile(InputFile *File) {
   // LLVM bitcode file
   if (auto *F = dyn_cast<BitcodeFile>(File)) {
     BitcodeFiles.push_back(F);
-    F->parse<ELFT>(ComdatGroups);
+    F->parse<ELFT>(Symtab->ComdatGroups);
     return;
   }
 
   // Regular object file
   ObjectFiles.push_back(File);
-  cast<ObjFile<ELFT>>(File)->parse(ComdatGroups);
+  cast<ObjFile<ELFT>>(File)->parse(Symtab->ComdatGroups);
 }
 
 // Add symbols in File to the symbol table.
@@ -396,7 +391,8 @@ template <class ELFT> ArrayRef<Symbol *> ObjFile<ELFT>::getGlobalSymbols() {
 }
 
 template <class ELFT>
-void ObjFile<ELFT>::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
+void ObjFile<ELFT>::parse(
+    DenseMap<CachedHashStringRef, const InputFile *> &ComdatGroups) {
   // Read a section table. JustSymbols is usually false.
   if (this->JustSymbols)
     initializeJustSymbols();
@@ -523,7 +519,7 @@ static void addDependentLibrary(StringRef Specifier, const InputFile *F) {
 
 template <class ELFT>
 void ObjFile<ELFT>::initializeSections(
-    DenseSet<CachedHashStringRef> &ComdatGroups) {
+    DenseMap<CachedHashStringRef, const InputFile *> &ComdatGroups) {
   const ELFFile<ELFT> &Obj = this->getObj();
 
   ArrayRef<Elf_Shdr> ObjSections = CHECK(Obj.sections(), this);
@@ -582,7 +578,8 @@ void ObjFile<ELFT>::initializeSections(
       if (Entries[0] != GRP_COMDAT)
         fatal(toString(this) + ": unsupported SHT_GROUP format");
 
-      bool IsNew = ComdatGroups.insert(CachedHashStringRef(Signature)).second;
+      bool IsNew =
+          ComdatGroups.try_emplace(CachedHashStringRef(Signature), this).second;
       if (IsNew) {
         if (Config->Relocatable)
           this->Sections[I] = createInputSection(Sec);
@@ -949,8 +946,12 @@ template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
 
   StringRef Name = CHECK(Sym->getName(this->StringTable), this);
 
-  if (Sym->st_shndx == SHN_UNDEF || Sec == &InputSection::Discarded)
+  if (Sym->st_shndx == SHN_UNDEF)
     return Symtab->addSymbol(Undefined{this, Name, Binding, StOther, Type});
+
+  if (Sec == &InputSection::Discarded)
+    return Symtab->addSymbol(Undefined{this, Name, Binding, StOther, Type,
+                                       /*DiscardedSecIdx=*/SecIdx});
 
   if (Sym->st_shndx == SHN_COMMON) {
     if (Value == 0 || Value >= UINT32_MAX)
@@ -1333,10 +1334,12 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
 }
 
 template <class ELFT>
-void BitcodeFile::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
+void BitcodeFile::parse(
+    DenseMap<CachedHashStringRef, const InputFile *> &ComdatGroups) {
   std::vector<bool> KeptComdats;
   for (StringRef S : Obj->getComdatTable())
-    KeptComdats.push_back(ComdatGroups.insert(CachedHashStringRef(S)).second);
+    KeptComdats.push_back(
+        ComdatGroups.try_emplace(CachedHashStringRef(S), this).second);
 
   for (const lto::InputFile::Symbol &ObjSym : Obj->symbols())
     Symbols.push_back(createBitcodeSymbol<ELFT>(KeptComdats, ObjSym, *this));
@@ -1504,10 +1507,14 @@ std::string elf::replaceThinLTOSuffix(StringRef Path) {
   return Path;
 }
 
-template void BitcodeFile::parse<ELF32LE>(DenseSet<CachedHashStringRef> &);
-template void BitcodeFile::parse<ELF32BE>(DenseSet<CachedHashStringRef> &);
-template void BitcodeFile::parse<ELF64LE>(DenseSet<CachedHashStringRef> &);
-template void BitcodeFile::parse<ELF64BE>(DenseSet<CachedHashStringRef> &);
+template void
+BitcodeFile::parse<ELF32LE>(DenseMap<CachedHashStringRef, const InputFile *> &);
+template void
+BitcodeFile::parse<ELF32BE>(DenseMap<CachedHashStringRef, const InputFile *> &);
+template void
+BitcodeFile::parse<ELF64LE>(DenseMap<CachedHashStringRef, const InputFile *> &);
+template void
+BitcodeFile::parse<ELF64BE>(DenseMap<CachedHashStringRef, const InputFile *> &);
 
 template void LazyObjFile::parse<ELF32LE>();
 template void LazyObjFile::parse<ELF32BE>();

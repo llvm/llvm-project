@@ -29,6 +29,7 @@ private:
   llvm::Optional<DWARFDataExtractor> m_data_debug_macro;
   llvm::Optional<DWARFDataExtractor> m_data_debug_str;
   llvm::Optional<DWARFDataExtractor> m_data_debug_str_offsets;
+  llvm::Optional<DWARFDataExtractor> m_data_debug_types;
 
   bool isDwo() { return m_dwo_section_list != nullptr; }
 
@@ -47,6 +48,7 @@ public:
   const DWARFDataExtractor &getOrLoadMacroData();
   const DWARFDataExtractor &getOrLoadStrData();
   const DWARFDataExtractor &getOrLoadStrOffsetsData();
+  const DWARFDataExtractor &getOrLoadDebugTypesData();
 };
 } // namespace lldb_private
 
