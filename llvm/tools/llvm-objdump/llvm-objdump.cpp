@@ -71,7 +71,10 @@ using namespace llvm::object;
 
 namespace llvm {
 
+cl::OptionCategory ObjdumpCat("llvm-objdump Options");
+
 // MachO specific
+extern cl::OptionCategory MachOCat;
 extern cl::opt<bool> Bind;
 extern cl::opt<bool> DataInCode;
 extern cl::opt<bool> DylibsUsed;
@@ -90,55 +93,62 @@ extern cl::opt<bool> WeakBind;
 static cl::opt<uint64_t> AdjustVMA(
     "adjust-vma",
     cl::desc("Increase the displayed address by the specified offset"),
-    cl::value_desc("offset"), cl::init(0));
+    cl::value_desc("offset"), cl::init(0), cl::cat(ObjdumpCat));
 
 static cl::opt<bool>
     AllHeaders("all-headers",
-               cl::desc("Display all available header information"));
+               cl::desc("Display all available header information"),
+               cl::cat(ObjdumpCat));
 static cl::alias AllHeadersShort("x", cl::desc("Alias for --all-headers"),
                                  cl::NotHidden, cl::Grouping,
                                  cl::aliasopt(AllHeaders));
 
 static cl::opt<std::string>
-    ArchName("arch-name", cl::desc("Target arch to disassemble for, "
-                                   "see -version for available targets"));
+    ArchName("arch-name",
+             cl::desc("Target arch to disassemble for, "
+                      "see -version for available targets"),
+             cl::cat(ObjdumpCat));
 
 cl::opt<bool> ArchiveHeaders("archive-headers",
-                             cl::desc("Display archive header information"));
+                             cl::desc("Display archive header information"),
+                             cl::cat(ObjdumpCat));
 static cl::alias ArchiveHeadersShort("a",
                                      cl::desc("Alias for --archive-headers"),
                                      cl::NotHidden, cl::Grouping,
                                      cl::aliasopt(ArchiveHeaders));
 
 cl::opt<bool> Demangle("demangle", cl::desc("Demangle symbols names"),
-                       cl::init(false));
+                       cl::init(false), cl::cat(ObjdumpCat));
 static cl::alias DemangleShort("C", cl::desc("Alias for --demangle"),
                                cl::NotHidden, cl::Grouping,
                                cl::aliasopt(Demangle));
 
 cl::opt<bool> Disassemble(
     "disassemble",
-    cl::desc("Display assembler mnemonics for the machine instructions"));
+    cl::desc("Display assembler mnemonics for the machine instructions"),
+    cl::cat(ObjdumpCat));
 static cl::alias DisassembleShort("d", cl::desc("Alias for --disassemble"),
                                   cl::NotHidden, cl::Grouping,
                                   cl::aliasopt(Disassemble));
 
 cl::opt<bool> DisassembleAll(
     "disassemble-all",
-    cl::desc("Display assembler mnemonics for the machine instructions"));
+    cl::desc("Display assembler mnemonics for the machine instructions"),
+    cl::cat(ObjdumpCat));
 static cl::alias DisassembleAllShort("D",
                                      cl::desc("Alias for --disassemble-all"),
                                      cl::NotHidden, cl::Grouping,
                                      cl::aliasopt(DisassembleAll));
 
 static cl::list<std::string>
-DisassembleFunctions("disassemble-functions",
-                     cl::CommaSeparated,
-                     cl::desc("List of functions to disassemble"));
+    DisassembleFunctions("disassemble-functions", cl::CommaSeparated,
+                         cl::desc("List of functions to disassemble"),
+                         cl::cat(ObjdumpCat));
 
 static cl::opt<bool> DisassembleZeroes(
     "disassemble-zeroes",
-    cl::desc("Do not skip blocks of zeroes when disassembling"));
+    cl::desc("Do not skip blocks of zeroes when disassembling"),
+    cl::cat(ObjdumpCat));
 static cl::alias
     DisassembleZeroesShort("z", cl::desc("Alias for --disassemble-zeroes"),
                            cl::NotHidden, cl::Grouping,
@@ -147,7 +157,8 @@ static cl::alias
 static cl::list<std::string>
     DisassemblerOptions("disassembler-options",
                         cl::desc("Pass target specific disassembler options"),
-                        cl::value_desc("options"), cl::CommaSeparated);
+                        cl::value_desc("options"), cl::CommaSeparated,
+                        cl::cat(ObjdumpCat));
 static cl::alias
     DisassemblerOptionsShort("M", cl::desc("Alias for --disassembler-options"),
                              cl::NotHidden, cl::Grouping, cl::Prefix,
@@ -156,11 +167,13 @@ static cl::alias
 
 cl::opt<DIDumpType> DwarfDumpType(
     "dwarf", cl::init(DIDT_Null), cl::desc("Dump of dwarf debug sections:"),
-    cl::values(clEnumValN(DIDT_DebugFrame, "frames", ".debug_frame")));
+    cl::values(clEnumValN(DIDT_DebugFrame, "frames", ".debug_frame")),
+    cl::cat(ObjdumpCat));
 
 static cl::opt<bool> DynamicRelocations(
     "dynamic-reloc",
-    cl::desc("Display the dynamic relocation entries in the file"));
+    cl::desc("Display the dynamic relocation entries in the file"),
+    cl::cat(ObjdumpCat));
 static cl::alias DynamicRelocationShort("R",
                                         cl::desc("Alias for --dynamic-reloc"),
                                         cl::NotHidden, cl::Grouping,
@@ -168,72 +181,83 @@ static cl::alias DynamicRelocationShort("R",
 
 static cl::opt<bool>
     FaultMapSection("fault-map-section",
-                   cl::desc("Display contents of faultmap section"));
+                    cl::desc("Display contents of faultmap section"),
+                    cl::cat(ObjdumpCat));
 
 static cl::opt<bool>
     FileHeaders("file-headers",
-                cl::desc("Display the contents of the overall file header"));
+                cl::desc("Display the contents of the overall file header"),
+                cl::cat(ObjdumpCat));
 static cl::alias FileHeadersShort("f", cl::desc("Alias for --file-headers"),
                                   cl::NotHidden, cl::Grouping,
                                   cl::aliasopt(FileHeaders));
 
 cl::opt<bool> SectionContents("full-contents",
-                              cl::desc("Display the content of each section"));
+                              cl::desc("Display the content of each section"),
+                              cl::cat(ObjdumpCat));
 static cl::alias SectionContentsShort("s",
                                       cl::desc("Alias for --full-contents"),
                                       cl::NotHidden, cl::Grouping,
                                       cl::aliasopt(SectionContents));
 
-static cl::list<std::string>
-InputFilenames(cl::Positional, cl::desc("<input object files>"),cl::ZeroOrMore);
+static cl::list<std::string> InputFilenames(cl::Positional,
+                                            cl::desc("<input object files>"),
+                                            cl::ZeroOrMore,
+                                            cl::cat(ObjdumpCat));
 
 static cl::opt<bool>
     PrintLines("line-numbers",
                cl::desc("Display source line numbers with "
-                        "disassembly. Implies disassemble object"));
+                        "disassembly. Implies disassemble object"),
+               cl::cat(ObjdumpCat));
 static cl::alias PrintLinesShort("l", cl::desc("Alias for --line-numbers"),
                                  cl::NotHidden, cl::Grouping,
                                  cl::aliasopt(PrintLines));
 
-static cl::opt<bool>
-MachOOpt("macho", cl::desc("Use MachO specific object file parser"));
+static cl::opt<bool> MachOOpt("macho",
+                              cl::desc("Use MachO specific object file parser"),
+                              cl::cat(ObjdumpCat));
 static cl::alias MachOm("m", cl::desc("Alias for --macho"), cl::NotHidden,
                         cl::Grouping, cl::aliasopt(MachOOpt));
 
 cl::opt<std::string>
     MCPU("mcpu",
          cl::desc("Target a specific cpu type (-mcpu=help for details)"),
-         cl::value_desc("cpu-name"), cl::init(""));
+         cl::value_desc("cpu-name"), cl::init(""), cl::cat(ObjdumpCat));
 
 cl::list<std::string> MAttrs("mattr", cl::CommaSeparated,
                              cl::desc("Target specific attributes"),
-                             cl::value_desc("a1,+a2,-a3,..."));
+                             cl::value_desc("a1,+a2,-a3,..."),
+                             cl::cat(ObjdumpCat));
 
 cl::opt<bool> NoShowRawInsn("no-show-raw-insn",
                             cl::desc("When disassembling "
                                      "instructions, do not print "
-                                     "the instruction bytes."));
+                                     "the instruction bytes."),
+                            cl::cat(ObjdumpCat));
 cl::opt<bool> NoLeadingAddr("no-leading-addr",
-                                   cl::desc("Print no leading address"));
+                            cl::desc("Print no leading address"),
+                            cl::cat(ObjdumpCat));
 
 static cl::opt<bool> RawClangAST(
     "raw-clang-ast",
-    cl::desc("Dump the raw binary contents of the clang AST section"));
+    cl::desc("Dump the raw binary contents of the clang AST section"),
+    cl::cat(ObjdumpCat));
 
 cl::opt<bool>
-    Relocations("reloc",
-                cl::desc("Display the relocation entries in the file"));
+    Relocations("reloc", cl::desc("Display the relocation entries in the file"),
+                cl::cat(ObjdumpCat));
 static cl::alias RelocationsShort("r", cl::desc("Alias for --reloc"),
                                   cl::NotHidden, cl::Grouping,
                                   cl::aliasopt(Relocations));
 
-cl::opt<bool>
-    PrintImmHex("print-imm-hex",
-                cl::desc("Use hex format for immediate values"));
+cl::opt<bool> PrintImmHex("print-imm-hex",
+                          cl::desc("Use hex format for immediate values"),
+                          cl::cat(ObjdumpCat));
 
-cl::opt<bool>
-    PrivateHeaders("private-headers",
-                   cl::desc("Display format specific file headers"));
+cl::opt<bool> PrivateHeaders("private-headers",
+                             cl::desc("Display format specific file headers"),
+                             cl::cat(ObjdumpCat));
 static cl::alias PrivateHeadersShort("p",
                                      cl::desc("Alias for --private-headers"),
                                      cl::NotHidden, cl::Grouping,
@@ -242,14 +266,16 @@ static cl::alias PrivateHeadersShort("p",
 cl::list<std::string>
     FilterSections("section",
                    cl::desc("Operate on the specified sections only. "
-                            "With -macho dump segment,section"));
+                            "With -macho dump segment,section"),
+                   cl::cat(ObjdumpCat));
 static cl::alias FilterSectionsj("j", cl::desc("Alias for --section"),
                                  cl::NotHidden, cl::Grouping, cl::Prefix,
                                  cl::aliasopt(FilterSections));
 
 cl::opt<bool> SectionHeaders("section-headers",
                              cl::desc("Display summaries of the "
-                                      "headers for each section."));
+                                      "headers for each section."),
+                             cl::cat(ObjdumpCat));
 static cl::alias SectionHeadersShort("headers",
                                      cl::desc("Alias for --section-headers"),
                                      cl::NotHidden,
@@ -261,42 +287,46 @@ static cl::alias SectionHeadersShorter("h",
 
 static cl::opt<bool>
     ShowLMA("show-lma",
-            cl::desc("Display LMA column when dumping ELF section headers"));
+            cl::desc("Display LMA column when dumping ELF section headers"),
+            cl::cat(ObjdumpCat));
 
 static cl::opt<bool> PrintSource(
     "source",
     cl::desc(
-        "Display source inlined with disassembly. Implies disassemble object"));
+        "Display source inlined with disassembly. Implies disassemble object"),
+    cl::cat(ObjdumpCat));
 static cl::alias PrintSourceShort("S", cl::desc("Alias for -source"),
                                   cl::NotHidden, cl::Grouping,
                                   cl::aliasopt(PrintSource));
 
 static cl::opt<uint64_t>
     StartAddress("start-address", cl::desc("Disassemble beginning at address"),
-                 cl::value_desc("address"), cl::init(0));
+                 cl::value_desc("address"), cl::init(0), cl::cat(ObjdumpCat));
 static cl::opt<uint64_t> StopAddress("stop-address",
                                      cl::desc("Stop disassembly at address"),
                                      cl::value_desc("address"),
-                                     cl::init(UINT64_MAX));
+                                     cl::init(UINT64_MAX), cl::cat(ObjdumpCat));
 
-cl::opt<bool> SymbolTable("syms", cl::desc("Display the symbol table"));
+cl::opt<bool> SymbolTable("syms", cl::desc("Display the symbol table"),
+                          cl::cat(ObjdumpCat));
 static cl::alias SymbolTableShort("t", cl::desc("Alias for --syms"),
                                   cl::NotHidden, cl::Grouping,
                                   cl::aliasopt(SymbolTable));
 
 cl::opt<std::string> TripleName("triple",
                                 cl::desc("Target triple to disassemble for, "
-                                         "see -version for available targets"));
+                                         "see -version for available targets"),
+                                cl::cat(ObjdumpCat));
 
-cl::opt<bool> UnwindInfo("unwind-info",
-                                cl::desc("Display unwind information"));
+cl::opt<bool> UnwindInfo("unwind-info", cl::desc("Display unwind information"),
+                         cl::cat(ObjdumpCat));
 static cl::alias UnwindInfoShort("u", cl::desc("Alias for --unwind-info"),
                                  cl::NotHidden, cl::Grouping,
                                  cl::aliasopt(UnwindInfo));
 
-
 static cl::opt<bool>
-    Wide("wide", cl::desc("Ignored for compatibility with GNU objdump"));
+    Wide("wide", cl::desc("Ignored for compatibility with GNU objdump"),
+         cl::cat(ObjdumpCat));
 static cl::alias WideShort("w", cl::Grouping, cl::aliasopt(Wide));
 
 static StringSet<> DisasmFuncsSet;
@@ -2011,6 +2041,8 @@ static void dumpInput(StringRef file) {
 int main(int argc, char **argv) {
   using namespace llvm;
   InitLLVM X(argc, argv);
+  const cl::OptionCategory *OptionFilters[] = {&ObjdumpCat, &MachOCat};
+  cl::HideUnrelatedOptions(OptionFilters);
 
   // Initialize targets and assembly printers/parsers.
   InitializeAllTargetInfos();
