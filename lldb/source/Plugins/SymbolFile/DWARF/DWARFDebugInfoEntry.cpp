@@ -725,13 +725,10 @@ void DWARFDebugInfoEntry::DumpAttribute(
 size_t DWARFDebugInfoEntry::GetAttributes(
     const DWARFUnit *cu, DWARFFormValue::FixedFormSizes fixed_form_sizes,
     DWARFAttributes &attributes, uint32_t curr_depth) const {
-  SymbolFileDWARF *dwarf2Data = nullptr;
   const DWARFAbbreviationDeclaration *abbrevDecl = nullptr;
   lldb::offset_t offset = 0;
-  if (cu) {
-    dwarf2Data = cu->GetSymbolFileDWARF();
+  if (cu)
     abbrevDecl = GetAbbreviationDeclarationPtr(cu, offset);
-  }
 
   if (abbrevDecl) {
     const DWARFDataExtractor &debug_info_data = cu->GetData();
