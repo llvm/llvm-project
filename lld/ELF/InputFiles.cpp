@@ -949,10 +949,10 @@ template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
 
   StringRef Name = CHECK(Sym->getName(this->StringTable), this);
 
-  switch (Sym->st_shndx) {
-  case SHN_UNDEF:
+  if (Sym->st_shndx == SHN_UNDEF || Sec == &InputSection::Discarded)
     return Symtab->addSymbol(Undefined{this, Name, Binding, StOther, Type});
-  case SHN_COMMON:
+
+  if (Sym->st_shndx == SHN_COMMON) {
     if (Value == 0 || Value >= UINT32_MAX)
       fatal(toString(this) + ": common symbol '" + Name +
             "' has invalid alignment: " + Twine(Value));
@@ -966,8 +966,6 @@ template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
   case STB_GLOBAL:
   case STB_WEAK:
   case STB_GNU_UNIQUE:
-    if (Sec == &InputSection::Discarded)
-      return Symtab->addSymbol(Undefined{this, Name, Binding, StOther, Type});
     return Symtab->addSymbol(
         Defined{this, Name, Binding, StOther, Type, Value, Size, Sec});
   }
