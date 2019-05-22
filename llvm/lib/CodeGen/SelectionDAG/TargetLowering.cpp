@@ -3562,7 +3562,16 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
         return;
       } else if ((C = dyn_cast<ConstantSDNode>(Op)) &&
                  ConstraintLetter != 's') {
-        Ops.push_back(DAG.getTargetConstant(Offset + C->getSExtValue(),
+        // gcc prints these as sign extended.  Sign extend value to 64 bits
+        // now; without this it would get ZExt'd later in
+        // ScheduleDAGSDNodes::EmitNode, which is very generic.
+        bool IsBool = C->getConstantIntValue()->getBitWidth() == 1;
+        BooleanContent BCont = getBooleanContents(MVT::i64);
+        ISD::NodeType ExtOpc = IsBool ? getExtendForContent(BCont)
+                                      : ISD::SIGN_EXTEND;
+        int64_t ExtVal = ExtOpc == ISD::ZERO_EXTEND ? C->getZExtValue()
+                                                    : C->getSExtValue();
+        Ops.push_back(DAG.getTargetConstant(Offset + ExtVal,
                                             SDLoc(C), MVT::i64));
         return;
       } else {
