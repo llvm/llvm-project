@@ -1085,11 +1085,11 @@ public:
                      AMDGPUOperand::ImmTy ImmTy = AMDGPUOperand::ImmTyNone,
                      bool (*ConvertResult)(int64_t &) = nullptr);
 
-  OperandMatchResultTy parseOperandArrayWithPrefix(
-    const char *Prefix,
-    OperandVector &Operands,
-    AMDGPUOperand::ImmTy ImmTy = AMDGPUOperand::ImmTyNone,
-    bool (*ConvertResult)(int64_t&) = nullptr);
+  OperandMatchResultTy
+  parseOperandArrayWithPrefix(const char *Prefix,
+                              OperandVector &Operands,
+                              AMDGPUOperand::ImmTy ImmTy = AMDGPUOperand::ImmTyNone,
+                              bool (*ConvertResult)(int64_t&) = nullptr);
 
   OperandMatchResultTy
   parseNamedBit(const char *Name, OperandVector &Operands,
@@ -4018,12 +4018,14 @@ bool AMDGPUAsmParser::ParseInstruction(ParseInstructionInfo &Info,
     switch (Res) {
       case MatchOperand_Success: break;
       case MatchOperand_ParseFail:
+        // FIXME: use real operand location rather than the current location.
         Error(getLexer().getLoc(), "failed parsing operand.");
         while (!getLexer().is(AsmToken::EndOfStatement)) {
           Parser.Lex();
         }
         return true;
       case MatchOperand_NoMatch:
+        // FIXME: use real operand location rather than the current location.
         Error(getLexer().getLoc(), "not a valid operand.");
         while (!getLexer().is(AsmToken::EndOfStatement)) {
           Parser.Lex();
@@ -4067,52 +4069,48 @@ AMDGPUAsmParser::parseIntWithPrefix(const char *Prefix, OperandVector &Operands,
   return MatchOperand_Success;
 }
 
-OperandMatchResultTy AMDGPUAsmParser::parseOperandArrayWithPrefix(
-  const char *Prefix,
-  OperandVector &Operands,
-  AMDGPUOperand::ImmTy ImmTy,
-  bool (*ConvertResult)(int64_t&)) {
-  StringRef Name = Parser.getTok().getString();
-  if (!Name.equals(Prefix))
+OperandMatchResultTy
+AMDGPUAsmParser::parseOperandArrayWithPrefix(const char *Prefix,
+                                             OperandVector &Operands,
+                                             AMDGPUOperand::ImmTy ImmTy,
+                                             bool (*ConvertResult)(int64_t&)) {
+  SMLoc S = getLoc();
+  if (!trySkipId(Prefix, AsmToken::Colon))
     return MatchOperand_NoMatch;
 
-  Parser.Lex();
-  if (getLexer().isNot(AsmToken::Colon))
+  if (!skipToken(AsmToken::LBrac, "expected a left square bracket"))
     return MatchOperand_ParseFail;
-
-  Parser.Lex();
-  if (getLexer().isNot(AsmToken::LBrac))
-    return MatchOperand_ParseFail;
-  Parser.Lex();
 
   unsigned Val = 0;
-  SMLoc S = Parser.getTok().getLoc();
+  const unsigned MaxSize = 4;
 
   // FIXME: How to verify the number of elements matches the number of src
   // operands?
-  for (int I = 0; I < 4; ++I) {
-    if (I != 0) {
-      if (getLexer().is(AsmToken::RBrac))
-        break;
+  for (int I = 0; ; ++I) {
+    int64_t Op;
+    SMLoc Loc = getLoc();
+    if (!parseExpr(Op))
+      return MatchOperand_ParseFail;
 
-      if (getLexer().isNot(AsmToken::Comma))
-        return MatchOperand_ParseFail;
-      Parser.Lex();
+    if (Op != 0 && Op != 1) {
+      Error(Loc, "invalid " + StringRef(Prefix) + " value.");
+      return MatchOperand_ParseFail;
     }
 
-    if (getLexer().isNot(AsmToken::Integer))
-      return MatchOperand_ParseFail;
-
-    int64_t Op;
-    if (getParser().parseAbsoluteExpression(Op))
-      return MatchOperand_ParseFail;
-
-    if (Op != 0 && Op != 1)
-      return MatchOperand_ParseFail;
     Val |= (Op << I);
+
+    if (trySkipToken(AsmToken::RBrac))
+      break;
+
+    if (I + 1 == MaxSize) {
+      Error(getLoc(), "expected a closing square bracket");
+      return MatchOperand_ParseFail;
+    }
+
+    if (!skipToken(AsmToken::Comma, "expected a comma"))
+      return MatchOperand_ParseFail;
   }
 
-  Parser.Lex();
   Operands.push_back(AMDGPUOperand::CreateImm(this, Val, S, ImmTy));
   return MatchOperand_Success;
 }
