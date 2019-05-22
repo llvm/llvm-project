@@ -190,7 +190,8 @@ private:  // Parser methods.
   bool ParseOptionalRangeList(SmallVectorImpl<unsigned> &Ranges);
   bool ParseOptionalBitList(SmallVectorImpl<unsigned> &Ranges);
   void ParseRangeList(SmallVectorImpl<unsigned> &Result);
-  bool ParseRangePiece(SmallVectorImpl<unsigned> &Ranges);
+  bool ParseRangePiece(SmallVectorImpl<unsigned> &Ranges,
+                       TypedInit *FirstItem = nullptr);
   RecTy *ParseType();
   Init *ParseOperation(Record *CurRec, RecTy *ItemType);
   Init *ParseOperationCond(Record *CurRec, RecTy *ItemType);
