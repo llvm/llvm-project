@@ -660,17 +660,21 @@ namespace llvm {
                                    SelectionDAG &DAG) const override;
 
     /// SelectAddressRegReg - Given the specified addressed, check to see if it
-    /// can be represented as an indexed [r+r] operation.  Returns false if it
-    /// can be more efficiently represented with [r+imm].
+    /// can be more efficiently represented as [r+imm]. If \p EncodingAlignment
+    /// is non-zero, only accept displacement which is not suitable for [r+imm].
+    /// Returns false if it can be represented by [r+imm], which are preferred.
     bool SelectAddressRegReg(SDValue N, SDValue &Base, SDValue &Index,
-                             SelectionDAG &DAG) const;
+                             SelectionDAG &DAG,
+                             unsigned EncodingAlignment = 0) const;
 
     /// SelectAddressRegImm - Returns true if the address N can be represented
     /// by a base register plus a signed 16-bit displacement [r+imm], and if it
-    /// is not better represented as reg+reg.  If Aligned is true, only accept
-    /// displacements suitable for STD and friends, i.e. multiples of 4.
+    /// is not better represented as reg+reg. If \p EncodingAlignment is
+    /// non-zero, only accept displacements suitable for instruction encoding
+    /// requirement, i.e. multiples of 4 for DS form.
     bool SelectAddressRegImm(SDValue N, SDValue &Disp, SDValue &Base,
-                             SelectionDAG &DAG, unsigned Alignment) const;
+                             SelectionDAG &DAG,
+                             unsigned EncodingAlignment) const;
 
     /// SelectAddressRegRegOnly - Given the specified addressed, force it to be
     /// represented as an indexed [r+r] operation.

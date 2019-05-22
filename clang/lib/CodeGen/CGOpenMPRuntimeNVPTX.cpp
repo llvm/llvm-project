@@ -4891,7 +4891,7 @@ static CudaArch getCudaArch(CodeGenModule &CGM) {
 /// Check to see if target architecture supports unified addressing which is
 /// a restriction for OpenMP requires clause "unified_shared_memory".
 void CGOpenMPRuntimeNVPTX::checkArchForUnifiedAddressing(
-    const OMPRequiresDecl *D) const {
+    const OMPRequiresDecl *D) {
   for (const OMPClause *Clause : D->clauselists()) {
     if (Clause->getClauseKind() == OMPC_unified_shared_memory) {
       switch (getCudaArch(CGM)) {
@@ -4936,6 +4936,7 @@ void CGOpenMPRuntimeNVPTX::checkArchForUnifiedAddressing(
       }
     }
   }
+  CGOpenMPRuntime::checkArchForUnifiedAddressing(D);
 }
 
 /// Get number of SMs and number of blocks per SM.

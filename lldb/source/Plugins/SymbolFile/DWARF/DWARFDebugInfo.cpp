@@ -65,7 +65,7 @@ llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
 
     dw_offset_t offset = cu->GetOffset();
     if (cus_with_data.find(offset) == cus_with_data.end())
-      cu->BuildAddressRangeTable(m_dwarf2Data, m_cu_aranges_up.get());
+      cu->BuildAddressRangeTable(m_cu_aranges_up.get());
   }
 
   const bool minimize = true;

@@ -524,8 +524,7 @@ OMPT_API_ROUTINE int ompt_get_task_info(int ancestor_level, int *type,
 
 OMPT_API_ROUTINE int ompt_get_task_memory(void **addr, size_t *size,
                                           int block) {
-  // stub
-  return 0;
+  return __ompt_get_task_memory_internal(addr, size, block);
 }
 
 /*****************************************************************************
@@ -700,9 +699,7 @@ OMPT_API_ROUTINE uint64_t ompt_get_unique_id(void) {
   return __ompt_get_unique_id_internal();
 }
 
-OMPT_API_ROUTINE void ompt_finalize_tool(void) {
-  // stub
-}
+OMPT_API_ROUTINE void ompt_finalize_tool(void) { __kmp_internal_end_atexit(); }
 
 /*****************************************************************************
  * Target

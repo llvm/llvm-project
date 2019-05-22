@@ -98,11 +98,13 @@ struct DeviceTy {
 
   uint64_t loopTripCnt;
 
+  int64_t RTLRequiresFlags;
+
   DeviceTy(RTLInfoTy *RTL)
       : DeviceID(-1), RTL(RTL), RTLDeviceID(-1), IsInit(false), InitFlag(),
         HasPendingGlobals(false), HostDataToTargetMap(),
         PendingCtorsDtors(), ShadowPtrMap(), DataMapMtx(), PendingGlobalsMtx(),
-        ShadowMtx(), loopTripCnt(0) {}
+        ShadowMtx(), loopTripCnt(0), RTLRequiresFlags(0) {}
 
   // The existence of mutexes makes DeviceTy non-copyable. We need to
   // provide a copy constructor and an assignment operator explicitly.
@@ -112,7 +114,8 @@ struct DeviceTy {
         HostDataToTargetMap(d.HostDataToTargetMap),
         PendingCtorsDtors(d.PendingCtorsDtors), ShadowPtrMap(d.ShadowPtrMap),
         DataMapMtx(), PendingGlobalsMtx(),
-        ShadowMtx(), loopTripCnt(d.loopTripCnt) {}
+        ShadowMtx(), loopTripCnt(d.loopTripCnt),
+        RTLRequiresFlags(d.RTLRequiresFlags) {}
 
   DeviceTy& operator=(const DeviceTy &d) {
     DeviceID = d.DeviceID;
@@ -124,6 +127,7 @@ struct DeviceTy {
     PendingCtorsDtors = d.PendingCtorsDtors;
     ShadowPtrMap = d.ShadowPtrMap;
     loopTripCnt = d.loopTripCnt;
+    RTLRequiresFlags = d.RTLRequiresFlags;
 
     return *this;
   }

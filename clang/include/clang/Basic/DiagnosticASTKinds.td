@@ -55,6 +55,8 @@ def note_constexpr_non_global : Note<
   "%select{temporary|%3}2 is not a constant expression">;
 def note_constexpr_uninitialized : Note<
   "%select{|sub}0object of type %1 is not initialized">;
+def note_constexpr_subobject_declared_here : Note<
+  "subobject declared here">;
 def note_constexpr_array_index : Note<"cannot refer to element %0 of "
   "%select{array of %2 element%plural{1:|:s}2|non-array object}1 "
   "in a constant expression">;
@@ -115,7 +117,8 @@ def note_constexpr_lifetime_ended : Note<
 def note_constexpr_access_uninit : Note<
   "%select{read of|assignment to|increment of|decrement of|member call on|"
   "dynamic_cast of|typeid applied to}0 "
-  "object outside its lifetime is not allowed in a constant expression">;
+  "%select{object outside its lifetime|uninitialized object}1 "
+  "is not allowed in a constant expression">;
 def note_constexpr_use_uninit_reference : Note<
   "use of reference outside its lifetime "
   "is not allowed in a constant expression">;

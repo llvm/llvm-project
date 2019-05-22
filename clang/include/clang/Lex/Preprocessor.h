@@ -2291,8 +2291,7 @@ private:
   void HandleElifDirective(Token &ElifToken, const Token &HashToken);
 
   // Pragmas.
-  void HandlePragmaDirective(SourceLocation IntroducerLoc,
-                             PragmaIntroducerKind Introducer);
+  void HandlePragmaDirective(PragmaIntroducer Introducer);
 
 public:
   void HandlePragmaOnce(Token &OnceTok);

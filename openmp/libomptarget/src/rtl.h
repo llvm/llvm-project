@@ -118,7 +118,12 @@ public:
   // binaries.
   std::vector<RTLInfoTy *> UsedRTLs;
 
+  int64_t RequiresFlags;
+
   explicit RTLsTy() {}
+
+  // Register the clauses of the requires directive.
+  void RegisterRequires(int64_t flags);
 
   // Register a shared library with all (compatible) RTLs.
   void RegisterLib(__tgt_bin_desc *desc);

@@ -16,9 +16,9 @@
 // SIMD-ONLY-NOT: {{__kmpc|__tgt}}
 
 // DEVICE-DAG: [[C_ADDR:.+]] = internal global i32 0,
-// DEVICE-DAG: [[CD_ADDR:@.+]] = global %struct.S zeroinitializer,
+// DEVICE-DAG: [[CD_ADDR:@.+]] ={{ dso_local | }}global %struct.S zeroinitializer,
 // HOST-DAG: @[[C_ADDR:.+]] = internal global i32 0,
-// HOST-DAG: @[[CD_ADDR:.+]] = global %struct.S zeroinitializer,
+// HOST-DAG: @[[CD_ADDR:.+]] ={{ dso_local | }}global %struct.S zeroinitializer,
 
 #pragma omp declare target
 int foo() { return 0; }
@@ -34,12 +34,12 @@ int car() { return 0; }
 #pragma omp declare target (bar)
 int caz() { return 0; }
 
-// DEVICE-DAG: define i32 [[FOO:@.*foo.*]]()
-// DEVICE-DAG: define i32 [[BAR:@.*bar.*]]()
-// DEVICE-DAG: define i32 [[BAZ:@.*baz.*]]()
-// DEVICE-DAG: define i32 [[DOO:@.*doo.*]]()
-// DEVICE-DAG: define i32 [[CAR:@.*car.*]]()
-// DEVICE-DAG: define i32 [[CAZ:@.*caz.*]]()
+// DEVICE-DAG: define{{ dso_local | }}i32 [[FOO:@.*foo.*]]()
+// DEVICE-DAG: define{{ dso_local | }}i32 [[BAR:@.*bar.*]]()
+// DEVICE-DAG: define{{ dso_local | }}i32 [[BAZ:@.*baz.*]]()
+// DEVICE-DAG: define{{ dso_local | }}i32 [[DOO:@.*doo.*]]()
+// DEVICE-DAG: define{{ dso_local | }}i32 [[CAR:@.*car.*]]()
+// DEVICE-DAG: define{{ dso_local | }}i32 [[CAZ:@.*caz.*]]()
 
 static int c = foo() + bar() + baz();
 #pragma omp declare target (c)

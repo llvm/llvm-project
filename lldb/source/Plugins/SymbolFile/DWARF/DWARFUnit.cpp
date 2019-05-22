@@ -279,23 +279,22 @@ static void SetDwoStrOffsetsBase(DWARFUnit *dwo_cu) {
 // m_die_array_mutex must be already held as read/write.
 void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
   dw_addr_t addr_base = cu_die.GetAttributeValueAsUnsigned(
-      m_dwarf, this, DW_AT_addr_base, LLDB_INVALID_ADDRESS);
+      this, DW_AT_addr_base, LLDB_INVALID_ADDRESS);
   if (addr_base != LLDB_INVALID_ADDRESS)
     SetAddrBase(addr_base);
 
   dw_addr_t ranges_base = cu_die.GetAttributeValueAsUnsigned(
-      m_dwarf, this, DW_AT_rnglists_base, LLDB_INVALID_ADDRESS);
+      this, DW_AT_rnglists_base, LLDB_INVALID_ADDRESS);
   if (ranges_base != LLDB_INVALID_ADDRESS)
     SetRangesBase(ranges_base);
 
-  SetStrOffsetsBase(cu_die.GetAttributeValueAsUnsigned(
-      m_dwarf, this, DW_AT_str_offsets_base, 0));
+  SetStrOffsetsBase(
+      cu_die.GetAttributeValueAsUnsigned(this, DW_AT_str_offsets_base, 0));
 
-  uint64_t base_addr = cu_die.GetAttributeValueAsAddress(
-      m_dwarf, this, DW_AT_low_pc, LLDB_INVALID_ADDRESS);
+  uint64_t base_addr = cu_die.GetAttributeValueAsAddress(this, DW_AT_low_pc,
+                                                         LLDB_INVALID_ADDRESS);
   if (base_addr == LLDB_INVALID_ADDRESS)
-    base_addr = cu_die.GetAttributeValueAsAddress(
-        m_dwarf, this, DW_AT_entry_pc, 0);
+    base_addr = cu_die.GetAttributeValueAsAddress(this, DW_AT_entry_pc, 0);
   SetBaseAddress(base_addr);
 
   std::unique_ptr<SymbolFileDWARFDwo> dwo_symbol_file =
@@ -312,7 +311,7 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
     return; // Can't fetch the compile unit DIE from the dwo file.
 
   uint64_t main_dwo_id =
-      cu_die.GetAttributeValueAsUnsigned(m_dwarf, this, DW_AT_GNU_dwo_id, 0);
+      cu_die.GetAttributeValueAsUnsigned(this, DW_AT_GNU_dwo_id, 0);
   uint64_t sub_dwo_id =
       dwo_cu_die.GetAttributeValueAsUnsigned(DW_AT_GNU_dwo_id, 0);
   if (main_dwo_id != sub_dwo_id)
@@ -328,13 +327,13 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
   // DW_AT_* attributes standardized in DWARF v5 are also applicable to the main
   // unit in contrast.
   if (addr_base == LLDB_INVALID_ADDRESS)
-    addr_base = cu_die.GetAttributeValueAsUnsigned(m_dwarf, this,
-                                                   DW_AT_GNU_addr_base, 0);
+    addr_base =
+        cu_die.GetAttributeValueAsUnsigned(this, DW_AT_GNU_addr_base, 0);
   dwo_cu->SetAddrBase(addr_base);
 
   if (ranges_base == LLDB_INVALID_ADDRESS)
-    ranges_base = cu_die.GetAttributeValueAsUnsigned(m_dwarf, this,
-                                                     DW_AT_GNU_ranges_base, 0);
+    ranges_base =
+        cu_die.GetAttributeValueAsUnsigned(this, DW_AT_GNU_ranges_base, 0);
   dwo_cu->SetRangesBase(ranges_base);
 
   dwo_cu->SetBaseObjOffset(GetOffset());
@@ -406,8 +405,7 @@ void DWARFUnit::ClearDIEsRWLocked() {
     m_dwo_symbol_file->GetCompileUnit()->ClearDIEsRWLocked();
 }
 
-void DWARFUnit::BuildAddressRangeTable(SymbolFileDWARF *dwarf,
-                                       DWARFDebugAranges *debug_aranges) {
+void DWARFUnit::BuildAddressRangeTable(DWARFDebugAranges *debug_aranges) {
   // This function is usually called if there in no .debug_aranges section in
   // order to produce a compile unit level set of address ranges that is
   // accurate.
@@ -421,7 +419,7 @@ void DWARFUnit::BuildAddressRangeTable(SymbolFileDWARF *dwarf,
   if (die) {
     DWARFRangeList ranges;
     const size_t num_ranges =
-        die->GetAttributeAddressRanges(dwarf, this, ranges, false);
+        die->GetAttributeAddressRanges(this, ranges, false);
     if (num_ranges > 0) {
       // This compile unit has DW_AT_ranges, assume this is correct if it is
       // present since clang no longer makes .debug_aranges by default and it
@@ -445,13 +443,13 @@ void DWARFUnit::BuildAddressRangeTable(SymbolFileDWARF *dwarf,
 
   die = DIEPtr();
   if (die)
-    die->BuildAddressRangeTable(dwarf, this, debug_aranges);
+    die->BuildAddressRangeTable(this, debug_aranges);
 
   if (debug_aranges->GetNumRanges() == num_debug_aranges) {
     // We got nothing from the functions, maybe we have a line tables only
     // situation. Check the line tables and build the arange table from this.
     SymbolContext sc;
-    sc.comp_unit = dwarf->GetCompUnitForDWARFCompUnit(this);
+    sc.comp_unit = m_dwarf->GetCompUnitForDWARFCompUnit(this);
     if (sc.comp_unit) {
       SymbolFileDWARFDebugMap *debug_map_sym_file =
           m_dwarf->GetDebugMapSymfile();
@@ -471,7 +469,7 @@ void DWARFUnit::BuildAddressRangeTable(SymbolFileDWARF *dwarf,
           }
         }
       } else
-        debug_map_sym_file->AddOSOARanges(dwarf, debug_aranges);
+        debug_map_sym_file->AddOSOARanges(m_dwarf, debug_aranges);
     }
   }
 
@@ -479,7 +477,7 @@ void DWARFUnit::BuildAddressRangeTable(SymbolFileDWARF *dwarf,
     // We got nothing from the functions, maybe we have a line tables only
     // situation. Check the line tables and build the arange table from this.
     SymbolContext sc;
-    sc.comp_unit = dwarf->GetCompUnitForDWARFCompUnit(this);
+    sc.comp_unit = m_dwarf->GetCompUnitForDWARFCompUnit(this);
     if (sc.comp_unit) {
       LineTable *line_table = sc.comp_unit->GetLineTable();
 
@@ -597,7 +595,7 @@ void DWARFUnit::ParseProducerInfo() {
   if (die) {
 
     const char *producer_cstr =
-        die->GetAttributeValueAsString(m_dwarf, this, DW_AT_producer, NULL);
+        die->GetAttributeValueAsString(this, DW_AT_producer, NULL);
     if (producer_cstr) {
       RegularExpression llvm_gcc_regex(
           llvm::StringRef("^4\\.[012]\\.[01] \\(Based on Apple "
@@ -674,7 +672,7 @@ LanguageType DWARFUnit::GetLanguageType() {
   const DWARFDebugInfoEntry *die = GetUnitDIEPtrOnly();
   if (die)
     m_language_type = LanguageTypeFromDWARF(
-        die->GetAttributeValueAsUnsigned(m_dwarf, this, DW_AT_language, 0));
+        die->GetAttributeValueAsUnsigned(this, DW_AT_language, 0));
   return m_language_type;
 }
 
@@ -683,8 +681,8 @@ bool DWARFUnit::GetIsOptimized() {
     const DWARFDebugInfoEntry *die = GetUnitDIEPtrOnly();
     if (die) {
       m_is_optimized = eLazyBoolNo;
-      if (die->GetAttributeValueAsUnsigned(m_dwarf, this, DW_AT_APPLE_optimized,
-                                           0) == 1) {
+      if (die->GetAttributeValueAsUnsigned(this, DW_AT_APPLE_optimized, 0) ==
+          1) {
         m_is_optimized = eLazyBoolYes;
       }
     }
@@ -748,7 +746,7 @@ void DWARFUnit::ComputeCompDirAndGuessPathStyle() {
     return;
 
   llvm::StringRef comp_dir = removeHostnameFromPathname(
-      die->GetAttributeValueAsString(m_dwarf, this, DW_AT_comp_dir, NULL));
+      die->GetAttributeValueAsString(this, DW_AT_comp_dir, NULL));
   if (!comp_dir.empty()) {
     FileSpec::Style comp_dir_style =
         FileSpec::GuessPathStyle(comp_dir).getValueOr(FileSpec::Style::native);
@@ -756,8 +754,7 @@ void DWARFUnit::ComputeCompDirAndGuessPathStyle() {
   } else {
     // Try to detect the style based on the DW_AT_name attribute, but just store
     // the detected style in the m_comp_dir field.
-    const char *name =
-        die->GetAttributeValueAsString(m_dwarf, this, DW_AT_name, NULL);
+    const char *name = die->GetAttributeValueAsString(this, DW_AT_name, NULL);
     m_comp_dir = FileSpec(
         "", FileSpec::GuessPathStyle(name).getValueOr(FileSpec::Style::native));
   }
@@ -774,14 +771,13 @@ const DWARFDebugAranges &DWARFUnit::GetFunctionAranges() {
     m_func_aranges_up.reset(new DWARFDebugAranges());
     const DWARFDebugInfoEntry *die = DIEPtr();
     if (die)
-      die->BuildFunctionAddressRangeTable(m_dwarf, this,
-                                          m_func_aranges_up.get());
+      die->BuildFunctionAddressRangeTable(this, m_func_aranges_up.get());
 
     if (m_dwo_symbol_file) {
       DWARFUnit *dwo_cu = m_dwo_symbol_file->GetCompileUnit();
       const DWARFDebugInfoEntry *dwo_die = dwo_cu->DIEPtr();
       if (dwo_die)
-        dwo_die->BuildFunctionAddressRangeTable(m_dwo_symbol_file.get(), dwo_cu,
+        dwo_die->BuildFunctionAddressRangeTable(dwo_cu,
                                                 m_func_aranges_up.get());
     }
 

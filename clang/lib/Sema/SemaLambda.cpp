@@ -753,11 +753,10 @@ void Sema::deduceClosureReturnType(CapturingScopeInfo &CSI) {
   }
 }
 
-QualType Sema::buildLambdaInitCaptureInitialization(SourceLocation Loc,
-                                                    bool ByRef,
-                                                    IdentifierInfo *Id,
-                                                    bool IsDirectInit,
-                                                    Expr *&Init) {
+QualType Sema::buildLambdaInitCaptureInitialization(
+    SourceLocation Loc, bool ByRef, SourceLocation EllipsisLoc,
+    Optional<unsigned> NumExpansions, IdentifierInfo *Id, bool IsDirectInit,
+    Expr *&Init) {
   // Create an 'auto' or 'auto&' TypeSourceInfo that we can use to
   // deduce against.
   QualType DeductType = Context.getAutoDeductType();
@@ -767,6 +766,18 @@ QualType Sema::buildLambdaInitCaptureInitialization(SourceLocation Loc,
     DeductType = BuildReferenceType(DeductType, true, Loc, Id);
     assert(!DeductType.isNull() && "can't build reference to auto");
     TLB.push<ReferenceTypeLoc>(DeductType).setSigilLoc(Loc);
+  }
+  if (EllipsisLoc.isValid()) {
+    if (Init->containsUnexpandedParameterPack()) {
+      Diag(EllipsisLoc, getLangOpts().CPlusPlus2a
+                            ? diag::warn_cxx17_compat_init_capture_pack
+                            : diag::ext_init_capture_pack);
+      DeductType = Context.getPackExpansionType(DeductType, NumExpansions);
+      TLB.push<PackExpansionTypeLoc>(DeductType).setEllipsisLoc(EllipsisLoc);
+    } else {
+      // Just ignore the ellipsis for now and form a non-pack variable. We'll
+      // diagnose this later when we try to capture it.
+    }
   }
   TypeSourceInfo *TSI = TLB.getTypeSourceInfo(Context, DeductType);
 
@@ -808,10 +819,15 @@ QualType Sema::buildLambdaInitCaptureInitialization(SourceLocation Loc,
 
 VarDecl *Sema::createLambdaInitCaptureVarDecl(SourceLocation Loc,
                                               QualType InitCaptureType,
+                                              SourceLocation EllipsisLoc,
                                               IdentifierInfo *Id,
                                               unsigned InitStyle, Expr *Init) {
-  TypeSourceInfo *TSI = Context.getTrivialTypeSourceInfo(InitCaptureType,
-      Loc);
+  // FIXME: Retain the TypeSourceInfo from buildLambdaInitCaptureInitialization
+  // rather than reconstructing it here.
+  TypeSourceInfo *TSI = Context.getTrivialTypeSourceInfo(InitCaptureType, Loc);
+  if (auto PETL = TSI->getTypeLoc().getAs<PackExpansionTypeLoc>())
+    PETL.setEllipsisLoc(EllipsisLoc);
+
   // Create a dummy variable representing the init-capture. This is not actually
   // used as a variable, and only exists as a way to name and refer to the
   // init-capture.
@@ -1036,8 +1052,6 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
                        ? diag::warn_cxx11_compat_init_capture
                        : diag::ext_init_capture);
 
-      if (C->Init.get()->containsUnexpandedParameterPack())
-        ContainsUnexpandedParameterPack = true;
       // If the initializer expression is usable, but the InitCaptureType
       // is not, then an error has occurred - so ignore the capture for now.
       // for e.g., [n{0}] { }; <-- if no <initializer_list> is included.
@@ -1045,6 +1059,10 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
       // in this case.
       if (C->InitCaptureType.get().isNull())
         continue;
+
+      if (C->Init.get()->containsUnexpandedParameterPack() &&
+          !C->InitCaptureType.get()->getAs<PackExpansionType>())
+        ContainsUnexpandedParameterPack = true;
 
       unsigned InitStyle;
       switch (C->InitKind) {
@@ -1061,7 +1079,8 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
         break;
       }
       Var = createLambdaInitCaptureVarDecl(C->Loc, C->InitCaptureType.get(),
-                                           C->Id, InitStyle, C->Init.get());
+                                           C->EllipsisLoc, C->Id, InitStyle,
+                                           C->Init.get());
       // C++1y [expr.prim.lambda]p11:
       //   An init-capture behaves as if it declares and explicitly
       //   captures a variable [...] whose declarative region is the
@@ -1153,7 +1172,8 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
         EllipsisLoc = C->EllipsisLoc;
       } else {
         Diag(C->EllipsisLoc, diag::err_pack_expansion_without_parameter_packs)
-          << SourceRange(C->Loc);
+            << (C->Init.isUsable() ? C->Init.get()->getSourceRange()
+                                   : SourceRange(C->Loc));
 
         // Just ignore the ellipsis.
       }
