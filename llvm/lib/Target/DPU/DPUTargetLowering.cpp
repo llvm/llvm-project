@@ -241,6 +241,8 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
   setOperationAction(ISD::VAEND, MVT::Other, Expand);
   setOperationAction(ISD::VACOPY, MVT::Other, Expand);
 
+  setOperationAction(ISD::ADDRSPACECAST, MVT::i32, Custom);
+
   for (MVT VT : MVT::integer_valuetypes()) {
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::i1, Promote);
     setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1, Promote);
@@ -260,6 +262,9 @@ SDValue DPUTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     dbgs() << "\n";
   });
   switch (Op.getOpcode()) {
+  case ISD::ADDRSPACECAST:
+    return LowerAddrSpaceCast(Op, DAG);
+
   case ISD::MUL:
     return LowerMultiplication(Op, DAG);
 
@@ -590,6 +595,16 @@ const char *DPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case DPUISD::TEST_NODE:
     return "DPUISD::TEST_NODE";
   }
+}
+
+SDValue DPUTargetLowering::LowerAddrSpaceCast(SDValue Op, SelectionDAG &DAG) const {
+  const Function & Func = DAG.getMachineFunction().getFunction();
+  DiagnosticInfoUnsupported Diag(Func,
+                                 "Cast between addresses of different address space is not supported",
+                                 Op.getDebugLoc());
+  Func.getContext().diagnose(Diag);
+  report_fatal_error("Cast between addresses of different address space is not supported", false);
+  return Op;
 }
 
 SDValue DPUTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {

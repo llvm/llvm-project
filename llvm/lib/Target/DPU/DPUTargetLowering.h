@@ -107,6 +107,8 @@ private:
   SDValue LowerIntrinsic(SDValue Op, SelectionDAG &DAG,
                          int IntrinsicType) const;
 
+  SDValue LowerAddrSpaceCast(SDValue Op, SelectionDAG &DAG) const;
+
   // Analysis and mute for 64 bits emulation.
   // Shifts: third parameter stands for Left (0), Right (1) or Arithmetic (2)
   SDValue LowerShift(SDValue Op, SelectionDAG &DAG, int LRA) const;
