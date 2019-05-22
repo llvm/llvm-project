@@ -1622,6 +1622,55 @@ static Instruction *foldShuffleWithInsert(ShuffleVectorInst &Shuf) {
   return nullptr;
 }
 
+static Instruction *foldIdentityPaddedShuffles(ShuffleVectorInst &Shuf) {
+  // Match the operands as identity with padding (also known as concatenation
+  // with undef) shuffles of the same source type. The backend is expected to
+  // recreate these concatenations from a shuffle of narrow operands.
+  auto *Shuffle0 = dyn_cast<ShuffleVectorInst>(Shuf.getOperand(0));
+  auto *Shuffle1 = dyn_cast<ShuffleVectorInst>(Shuf.getOperand(1));
+  if (!Shuffle0 || !Shuffle0->isIdentityWithPadding() ||
+      !Shuffle1 || !Shuffle1->isIdentityWithPadding())
+    return nullptr;
+
+  // We limit this transform to power-of-2 types because we expect that the
+  // backend can convert the simplified IR patterns to identical nodes as the
+  // original IR.
+  // TODO: If we can verify that behavior for arbitrary types, the power-of-2
+  // checks can be removed.
+  Value *X = Shuffle0->getOperand(0);
+  Value *Y = Shuffle1->getOperand(0);
+  if (X->getType() != Y->getType() ||
+      !isPowerOf2_32(Shuf.getType()->getVectorNumElements()) ||
+      !isPowerOf2_32(Shuffle0->getType()->getVectorNumElements()) ||
+      !isPowerOf2_32(X->getType()->getVectorNumElements()) ||
+      isa<UndefValue>(X) || isa<UndefValue>(Y))
+    return nullptr;
+  assert(isa<UndefValue>(Shuffle0->getOperand(1)) &&
+         isa<UndefValue>(Shuffle1->getOperand(1)) &&
+         "Unexpected operand for identity shuffle");
+
+  // This is a shuffle of 2 widening shuffles. We can shuffle the narrow source
+  // operands directly by adjusting the shuffle mask to account for the narrower
+  // types:
+  // shuf (widen X), (widen Y), Mask --> shuf X, Y, Mask'
+  int NarrowElts = X->getType()->getVectorNumElements();
+  int WideElts = Shuffle0->getType()->getVectorNumElements();
+  assert(WideElts > NarrowElts && "Unexpected types for identity with padding");
+
+  Type *I32Ty = IntegerType::getInt32Ty(Shuf.getContext());
+  SmallVector<int, 16> Mask = Shuf.getShuffleMask();
+  SmallVector<Constant *, 16> NewMask(Mask.size(), UndefValue::get(I32Ty));
+  for (int i = 0, e = Mask.size(); i != e; ++i) {
+    if (Mask[i] == -1)
+      continue;
+    if (Mask[i] < WideElts)
+      NewMask[i] = ConstantInt::get(I32Ty, Mask[i]);
+    else
+      NewMask[i] = ConstantInt::get(I32Ty, Mask[i] - (WideElts - NarrowElts));
+  }
+  return new ShuffleVectorInst(X, Y, ConstantVector::get(NewMask));
+}
+
 Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   Value *LHS = SVI.getOperand(0);
   Value *RHS = SVI.getOperand(1);
@@ -1676,9 +1725,11 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (Instruction *I = foldIdentityExtractShuffle(SVI))
     return I;
 
-  // This transform has the potential to lose undef knowledge, so it is
+  // These transforms have the potential to lose undef knowledge, so they are
   // intentionally placed after SimplifyDemandedVectorElts().
   if (Instruction *I = foldShuffleWithInsert(SVI))
+    return I;
+  if (Instruction *I = foldIdentityPaddedShuffles(SVI))
     return I;
 
   if (VWidth == LHSWidth) {
