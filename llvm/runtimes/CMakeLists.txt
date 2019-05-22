@@ -124,8 +124,8 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     string(REPLACE "-" "_" canon_name ${projName})
     string(TOUPPER ${canon_name} canon_name)
 
-    if(LLVM_RUNTIMES_LIBDIR_SUFFIX)
-      set(${canon_name}_LIBDIR_SUFFIX "${LLVM_RUNTIMES_LIBDIR_SUFFIX}" CACHE STRING "" FORCE)
+    if(LLVM_RUNTIMES_LIBDIR_SUBDIR)
+      set(${canon_name}_LIBDIR_SUBDIR "${LLVM_RUNTIMES_LIBDIR_SUBDIR}" CACHE STRING "" FORCE)
     endif()
 
     # Setting a variable to let sub-projects detect which other projects
@@ -358,6 +358,7 @@ else() # if this is included from LLVM's CMake
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
+                                        -DLLVM_BINARY_DIR=${LLVM_BINARY_DIR}
                                         -DLLVM_LIBRARY_DIR=${LLVM_LIBRARY_DIR}
                                         -DLLVM_DEFAULT_TARGET_TRIPLE=${TARGET_TRIPLE}
                                         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
@@ -448,6 +449,7 @@ else() # if this is included from LLVM's CMake
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
+                                        -DLLVM_BINARY_DIR=${LLVM_BINARY_DIR}
                                         -DLLVM_LIBRARY_DIR=${LLVM_LIBRARY_DIR}
                                         -DLLVM_DEFAULT_TARGET_TRIPLE=${target}
                                         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
@@ -519,7 +521,7 @@ else() # if this is included from LLVM's CMake
           runtime_register_target(${name}+${multilib} ${name}
             DEPENDS runtimes-${name}
             CMAKE_ARGS -DLLVM_RUNTIMES_PREFIX=${name}/
-                       -DLLVM_RUNTIMES_LIBDIR_SUFFIX=/${multilib})
+                       -DLLVM_RUNTIMES_LIBDIR_SUBDIR=${multilib})
           add_dependencies(runtimes runtimes-${name}+${multilib})
           add_dependencies(runtimes-configure runtimes-${name}+${multilib}-configure)
           add_dependencies(install-runtimes install-runtimes-${name}+${multilib})
