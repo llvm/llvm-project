@@ -69,10 +69,6 @@ RUN:rm -f %t-merge-*
 RUN:%t-ThreeFunctionsTestDF 0 2 %t/IN/FUZZMU > %t-merge-1
 RUN:%t-ThreeFunctionsTestDF 2 4 %t/IN/FUZZMU > %t-merge-2
 RUN:%t-ThreeFunctionsTestDF 4 6 %t/IN/FUZZMU > %t-merge-3
-RUN:%libfuzzer_src/scripts/merge_data_flow.py  %t-merge-* | sort | FileCheck %s --check-prefix=IN_FUZZMU
-
-# Test collect_data_flow
-RUN: %libfuzzer_src/scripts/collect_data_flow.py %t-ThreeFunctionsTestDF %t/IN/FUZZMU | sort | FileCheck %s --check-prefix=IN_FUZZMU
 
 # Test libFuzzer's built in DFT collection.
 RUN: rm -rf %t-DFT
@@ -90,17 +86,10 @@ OUT_OF_LABELS: ==FATAL: DataFlowSanitizer: out of labels
 RUN: %t-ExplodeDFSanLabelsTestDF 0 2  %t/IN/1234567890123456
 RUN: %t-ExplodeDFSanLabelsTestDF 2 4  %t/IN/1234567890123456
 RUN: %t-ExplodeDFSanLabelsTestDF 4 6  %t/IN/1234567890123456
-# Or we can use collect_data_flow
-RUN: %libfuzzer_src/scripts/collect_data_flow.py %t-ExplodeDFSanLabelsTestDF %t/IN/1234567890123456
-
 # Test libFuzzer's builtin collect_data_flow.
 RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t-DFT %t/IN/1234567890123456
 
 # Test that we can run collect_data_flow on the entire corpus dir
-RUN: rm -rf %t/OUT
-RUN: %libfuzzer_src/scripts/collect_data_flow.py %t-ThreeFunctionsTestDF %t/IN %t/OUT
-RUN: %t-ThreeFunctionsTest -data_flow_trace=%t/OUT -runs=0 -focus_function=Func2 2>&1 | FileCheck %s --check-prefix=USE_DATA_FLOW_TRACE
-
 RUN: rm -rf %t/OUT
 RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t/OUT %t/IN
 RUN: %t-ThreeFunctionsTest -data_flow_trace=%t/OUT -runs=0 -focus_function=Func2 2>&1 | FileCheck %s --check-prefix=USE_DATA_FLOW_TRACE
@@ -114,8 +103,6 @@ USE_DATA_FLOW_TRACE: INFO: Focus function is set to 'Func2'
 
 # Test that we can run collect_data_flow on a long input (>2**16 bytes)
 RUN: printf "%0.sA" {1..150001} > %t/IN/very_long_input
-RUN: rm -rf %t/OUT
-RUN: %libfuzzer_src/scripts/collect_data_flow.py %t-ThreeFunctionsTestDF %t/IN/very_long_input %t/OUT | FileCheck %s --check-prefix=COLLECT_TRACE_FOR_LONG_INPUT
 RUN: rm -rf %t/OUT
 RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t/OUT %t/IN/very_long_input 2>&1 | FileCheck %s --check-prefix=COLLECT_TRACE_FOR_LONG_INPUT
 RUN: rm %t/IN/very_long_input

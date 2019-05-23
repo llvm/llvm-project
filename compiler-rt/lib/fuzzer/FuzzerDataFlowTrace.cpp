@@ -310,11 +310,14 @@ int CollectDataFlow(const std::string &DFTBinary, const std::string &DirPath,
       OF << C << std::endl;
   }
   RemoveFile(Temp);
-  // Write functions.txt.
-  Command Cmd;
-  Cmd.addArgument(DFTBinary);
-  Cmd.setOutputFile(DirPlusFile(DirPath, "functions.txt"));
-  ExecuteCommand(Cmd);
+  // Write functions.txt if it's currently empty or doesn't exist.
+  auto FunctionsTxtPath = DirPlusFile(DirPath, "functions.txt");
+  if (FileToString(FunctionsTxtPath).empty()) {
+    Command Cmd;
+    Cmd.addArgument(DFTBinary);
+    Cmd.setOutputFile(FunctionsTxtPath);
+    ExecuteCommand(Cmd);
+  }
   return 0;
 }
 
