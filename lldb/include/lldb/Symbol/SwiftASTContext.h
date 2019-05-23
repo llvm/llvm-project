@@ -116,7 +116,8 @@ public:
   //------------------------------------------------------------------
   // Constructors and destructors
   //------------------------------------------------------------------
-  SwiftASTContext(const char *triple = NULL, Target *target = NULL);
+  SwiftASTContext(std::string description, llvm::Triple triple,
+                  Target *target = nullptr);
 
   SwiftASTContext(const SwiftASTContext &rhs);
 
@@ -132,12 +133,14 @@ public:
   static ConstString GetPluginNameStatic();
 
   /// Create a SwiftASTContext from a Module.  This context is used
-  /// for frame variable ans uses ClangImporter options specific to
-  /// this lldb::Module.  The optional target is to create a
-  /// module-specific scract context.
+  /// for frame variable and uses ClangImporter options specific to
+  /// this lldb::Module.  The optional target is necessary when
+  /// creating a module-specific scratch context.  If \p fallback is
+  /// true, then a SwiftASTContextForExpressions is created.
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
                                            Module &module,
-                                           Target *target = nullptr);
+                                           Target *target = nullptr,
+                                           bool fallback = false);
   /// Create a SwiftASTContext from a Target.  This context is global
   /// and used for the expression evaluator.
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
@@ -151,10 +154,6 @@ public:
   static void Initialize();
 
   static void Terminate();
-
-  void SetDescription(const std::string &description) {
-    m_description = description;
-  }
 
   bool SupportsLanguage(lldb::LanguageType language) override;
 
@@ -296,9 +295,10 @@ public:
 
   swift::irgen::IRGenModule &GetIRGenModule();
 
-  std::string GetTriple() const;
+  llvm::Triple GetTriple() const;
 
-  bool SetTriple(std::string triple, lldb_private::Module *module = nullptr);
+  bool SetTriple(const llvm::Triple triple,
+                 lldb_private::Module *module = nullptr);
 
   uint32_t GetPointerBitAlignment();
 
@@ -904,7 +904,7 @@ protected:
 
 class SwiftASTContextForExpressions : public SwiftASTContext {
 public:
-  SwiftASTContextForExpressions(Target &target);
+  SwiftASTContextForExpressions(std::string description, Target &target);
 
   virtual ~SwiftASTContextForExpressions() {}
 

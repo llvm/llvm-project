@@ -819,9 +819,11 @@ static bool IsDeviceSupport(const char *path) {
 }
 } // namespace
 
-SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
+SwiftASTContext::SwiftASTContext(std::string description, llvm::Triple triple,
+                                 Target *target)
     : TypeSystem(TypeSystem::eKindSwift),
-      m_compiler_invocation_ap(new swift::CompilerInvocation()) {
+      m_compiler_invocation_ap(new swift::CompilerInvocation()),
+      m_description(description) {
   // Set the clang modules cache path.
   llvm::SmallString<128> path;
   auto props = ModuleList::GetGlobalModuleListProperties();
@@ -831,8 +833,7 @@ SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
   if (target)
     m_target_wp = target->shared_from_this();
 
-  if (triple)
-    SetTriple(triple);
+  SetTriple(triple);
   swift::IRGenOptions &ir_gen_opts =
       m_compiler_invocation_ap->getIRGenOptions();
   ir_gen_opts.OutputKind = swift::IRGenOutputKind::Module;
@@ -842,12 +843,10 @@ SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
 
 SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
     : TypeSystem(rhs.getKind()),
-      m_compiler_invocation_ap(new swift::CompilerInvocation()) {
+      m_compiler_invocation_ap(new swift::CompilerInvocation()),
+      m_description(rhs.m_description) {
   if (rhs.m_compiler_invocation_ap) {
-    std::string rhs_triple = rhs.GetTriple();
-    if (!rhs_triple.empty()) {
-      SetTriple(rhs_triple.c_str());
-    }
+    SetTriple(rhs.GetTriple());
     llvm::StringRef module_cache_path =
         rhs.m_compiler_invocation_ap->getClangModuleCachePath();
     m_compiler_invocation_ap->setClangModuleCachePath(module_cache_path);
@@ -1593,7 +1592,8 @@ static llvm::Optional<StringRef> GetDSYMBundle(Module &module) {
 
 lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                                                    Module &module,
-                                                   Target *target) {
+                                                   Target *target,
+                                                   bool fallback) {
   std::vector<std::string> module_search_paths;
   std::vector<std::pair<std::string, bool>> framework_search_paths;
 
@@ -1601,7 +1601,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     return lldb::TypeSystemSP();
 
   StreamString ss;
-  ss << "SwiftASTContext(" << '"';
+  ss << "SwiftASTContext";
+  if (fallback)
+    ss << "ForExpressions";
+  ss << '(' << '"';
   module.GetDescription(&ss, eDescriptionLevelBrief);
   ss << '"' << ')';
   ss.Flush();
@@ -1627,21 +1630,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                "is unlikely to succeed",
                main_compile_unit_sp->GetCString());
   }
-
-  std::shared_ptr<SwiftASTContext> swift_ast_sp(
-      target ? (new SwiftASTContextForExpressions(*target))
-             : new SwiftASTContext());
-
-  // This is a module AST context, mark it as such.
-  swift_ast_sp->m_is_scratch_context = false;
-
-  swift_ast_sp->SetDescription(m_description);
-  swift_ast_sp->GetLanguageOptions().DebuggerSupport = true;
-  swift_ast_sp->GetLanguageOptions().EnableAccessControl = false;
-  swift_ast_sp->GetLanguageOptions().EnableTargetOSChecking = false;
-
-  if (!arch.IsValid())
-    return TypeSystemSP();
 
   llvm::Triple triple = arch.GetTriple();
 
@@ -1670,7 +1658,25 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 #endif
   }
 
-  swift_ast_sp->SetTriple(triple.getTriple().c_str(), &module);
+  // If there is a target this may be a fallback scratch context.
+  assert((!fallback || target) && "fallback context must specify a target");
+  std::shared_ptr<SwiftASTContext> swift_ast_sp(
+      fallback ? (new SwiftASTContextForExpressions(m_description, *target))
+               : (new SwiftASTContext(
+                     m_description,
+                     target ? target->GetArchitecture().GetTriple() : triple,
+                     target)));
+
+  // This is a module AST context, mark it as such.
+  swift_ast_sp->m_is_scratch_context = false;
+  swift_ast_sp->GetLanguageOptions().DebuggerSupport = true;
+  swift_ast_sp->GetLanguageOptions().EnableAccessControl = false;
+  swift_ast_sp->GetLanguageOptions().EnableTargetOSChecking = false;
+
+  if (!arch.IsValid())
+    return TypeSystemSP();
+
+  swift_ast_sp->SetTriple(triple, &module);
 
   bool set_triple = false;
 
@@ -1698,8 +1704,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       LOG_PRINTF(LIBLLDB_LOG_TYPES, "Serialized triple was empty.");
     } else {
       LOG_PRINTF(LIBLLDB_LOG_TYPES, "Found serialized triple %s.",
-                 serialized_triple.data());
-      swift_ast_sp->SetTriple(serialized_triple.data(), &module);
+                 serialized_triple.str().c_str());
+      swift_ast_sp->SetTriple(llvm::Triple(serialized_triple), &module);
       set_triple = true;
     }
 
@@ -1725,9 +1731,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
         }
 
         if (sym_vendor->GetCompileOption("-target", target_triple)) {
-          llvm::StringRef parsed_triple(target_triple);
-
-          swift_ast_sp->SetTriple(target_triple.c_str(), &module);
+          swift_ast_sp->SetTriple(llvm::Triple(target_triple), &module);
           set_triple = true;
         }
       }
@@ -1772,7 +1776,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   }
 
   if (!set_triple) {
-    llvm::Triple llvm_triple(swift_ast_sp->GetTriple());
+    llvm::Triple llvm_triple = swift_ast_sp->GetTriple();
 
     // LLVM wants this to be set to iOS or MacOSX; if we're working on
     // a bare-boards type image, change the triple for LLVM's benefit.
@@ -1784,7 +1788,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       } else {
         llvm_triple.setOS(llvm::Triple::MacOSX);
       }
-      swift_ast_sp->SetTriple(llvm_triple.str().c_str(), &module);
+      swift_ast_sp->SetTriple(llvm_triple, &module);
     }
   }
 
@@ -1845,21 +1849,18 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                                                    Target &target,
                                                    const char *extra_options) {
-  std::vector<std::string> module_search_paths;
-  std::vector<std::pair<std::string, bool>> framework_search_paths;
-
   if (!SwiftASTContextSupportsLanguage(language))
     return lldb::TypeSystemSP();
 
-  ArchSpec arch = target.GetArchitecture();
+  std::string m_description = "SwiftASTContextForExpressions";
+  std::vector<std::string> module_search_paths;
+  std::vector<std::pair<std::string, bool>> framework_search_paths;
 
   // Make an AST but don't set the triple yet. We need to try and
   // detect if we have a iOS simulator.
   std::shared_ptr<SwiftASTContextForExpressions> swift_ast_sp(
-      new SwiftASTContextForExpressions(target));
+      new SwiftASTContextForExpressions(m_description, target));
 
-  std::string m_description = "SwiftASTContextForExpressions";
-  swift_ast_sp->SetDescription(m_description);
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "(Target)");
 
   auto logError = [&](const char *message) {
@@ -1867,6 +1868,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                message);
   };
 
+  ArchSpec arch = target.GetArchitecture();
   if (!arch.IsValid()) {
     logError("invalid target architecture");
     return TypeSystemSP();
@@ -1989,7 +1991,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   // Now if the user fully specified the triple, let that override the one
   // we got from executable's options:
   if (target.GetArchitecture().IsFullySpecifiedTriple()) {
-    swift_ast_sp->SetTriple(target.GetArchitecture().GetTriple().str().c_str());
+    swift_ast_sp->SetTriple(target.GetArchitecture().GetTriple());
   } else {
     // Always run using the Host OS triple...
     bool set_triple = false;
@@ -2003,24 +2005,17 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
           << target_triple.getArchName() << '-' << target_triple.getVendorName()
           << '-' << llvm::Triple::getOSTypeName(target_triple.getOS())
           << version.getAsString();
-      swift_ast_sp->SetTriple(buffer.c_str());
+      swift_ast_sp->SetTriple(llvm::Triple(buffer));
       set_triple = true;
     }
 
-    if (!set_triple) {
-      ModuleSP exe_module_sp(target.GetExecutableModule());
-      if (exe_module_sp) {
-        Status exe_error;
-        SwiftASTContext *exe_swift_ctx =
-            llvm::dyn_cast_or_null<SwiftASTContext>(
-                exe_module_sp->GetTypeSystemForLanguage(
-                    lldb::eLanguageTypeSwift));
-        if (exe_swift_ctx) {
-          swift_ast_sp->SetTriple(
-              exe_swift_ctx->GetLanguageOptions().Target.str().c_str());
-        }
+    if (!set_triple)
+      if (ModuleSP exe_module_sp = target.GetExecutableModule()) {
+        auto *exe_swift_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(
+            exe_module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
+        if (exe_swift_ctx)
+          swift_ast_sp->SetTriple(exe_swift_ctx->GetLanguageOptions().Target);
       }
-    }
   }
 
   llvm::Triple triple(swift_ast_sp->GetTriple());
@@ -2258,8 +2253,8 @@ swift::IRGenOptions &SwiftASTContext::GetIRGenOptions() {
   return m_compiler_invocation_ap->getIRGenOptions();
 }
 
-std::string SwiftASTContext::GetTriple() const {
-  return m_compiler_invocation_ap->getTargetTriple();
+llvm::Triple SwiftASTContext::GetTriple() const {
+  return llvm::Triple(m_compiler_invocation_ap->getTargetTriple());
 }
 
 /// Conditions a triple string to be safe for use with Swift.  Right
@@ -2272,31 +2267,31 @@ static std::string GetSwiftFriendlyTriple(StringRef triple) {
   return triple.str();
 }
 
-bool SwiftASTContext::SetTriple(std::string raw_triple, Module *module) {
-  if (raw_triple.empty())
+bool SwiftASTContext::SetTriple(const llvm::Triple triple, Module *module) {
+  if (triple.str().empty())
     return false;
-  // We can change our triple up until we create the
-  // swift::irgen::IRGenModule.
+
+  // The triple may change up until a swift::irgen::IRGenModule is created.
   if (m_ir_gen_module_ap.get()) {
     LOG_PRINTF(LIBLLDB_LOG_TYPES,
                "(\"%s\") ignoring triple "
                "since the IRGenModule has already been created",
-               raw_triple.c_str());
+               triple.str().c_str());
     return false;
   }
 
-  std::string triple = GetSwiftFriendlyTriple(raw_triple);
-  llvm::Triple llvm_triple(triple);
   const unsigned unspecified = 0;
+  std::string adjusted_triple = GetSwiftFriendlyTriple(triple.str());
   // If the OS version is unspecified, do fancy things.
-  if (llvm_triple.getOSMajorVersion() == unspecified) {
+  if (triple.getOSMajorVersion() == unspecified) {
     // If a triple is "<arch>-apple-darwin" change it to be
     // "<arch>-apple-macosx" otherwise the major and minor OS
     // version we append below would be wrong.
-    if (llvm_triple.getVendor() == llvm::Triple::VendorType::Apple &&
-        llvm_triple.getOS() == llvm::Triple::OSType::Darwin) {
-      llvm_triple.setOS(llvm::Triple::OSType::MacOSX);
-      triple = llvm_triple.str();
+    if (triple.getVendor() == llvm::Triple::VendorType::Apple &&
+        triple.getOS() == llvm::Triple::OSType::Darwin) {
+      llvm::Triple mac_triple(adjusted_triple);
+      mac_triple.setOS(llvm::Triple::OSType::MacOSX);
+      adjusted_triple = mac_triple.str();
     }
 
     // Append the min OS to the triple if we have a target
@@ -2311,34 +2306,35 @@ bool SwiftASTContext::SetTriple(std::string raw_triple, Module *module) {
     }
 
     if (module) {
-      ObjectFile *objfile = module->GetObjectFile();
-      if (objfile) {
-        StreamString strm;
+      if (ObjectFile *objfile = module->GetObjectFile())
         if (llvm::VersionTuple version = objfile->GetMinimumOSVersion()) {
-          strm.PutCString(llvm_triple.getOSName().str());
-          strm.PutCString(version.getAsString());
-          llvm_triple.setOSName(strm.GetString());
-          triple = llvm_triple.str();
+          llvm::Triple vers_triple(adjusted_triple);
+          vers_triple.setOSName(vers_triple.getOSName().str() +
+                                version.getAsString());
+          adjusted_triple = vers_triple.str();
         }
-      }
     }
   }
-  LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") setting to \"%s\"%s",
-             raw_triple.c_str(), triple.c_str(),
-             m_target_wp.lock() ? " (target)" : "");
-
   if (llvm::Triple(triple).getOS() == llvm::Triple::UnknownOS) {
     // This case triggers an llvm_unreachable() in the Swift compiler.
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "Cannot initialize Swift with an unknown OS");
     return false;
   }
-  m_compiler_invocation_ap->setTargetTriple(triple);
+  LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") setting to \"%s\"",
+             triple.str().c_str(), adjusted_triple.c_str());
+
+  llvm::Triple adjusted_llvm_triple(adjusted_triple);
+  m_compiler_invocation_ap->setTargetTriple(adjusted_llvm_triple);
+
+  assert(GetTriple() == adjusted_llvm_triple);
+  assert(!m_ast_context_ap ||
+         (llvm::Triple(m_ast_context_ap->LangOpts.Target.getTriple()) ==
+          adjusted_llvm_triple));
 
   // Every time the triple is changed the LangOpts must be updated
   // too, because Swift default-initializes the EnableObjCInterop
   // flag based on the triple.
-  GetLanguageOptions().EnableObjCInterop = llvm_triple.isOSDarwin();
-
+  GetLanguageOptions().EnableObjCInterop = triple.isOSDarwin();
   return true;
 }
 
@@ -4538,7 +4534,7 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
     swift::IRGenOptions &ir_gen_opts = GetIRGenOptions();
 
     std::string error_str;
-    std::string triple = GetTriple();
+    const std::string &triple = GetTriple().str();
     const llvm::Target *llvm_target =
         llvm::TargetRegistry::lookupTarget(triple, error_str);
 
@@ -8059,9 +8055,10 @@ SwiftASTContext::GetASTVectorForModule(const Module *module) {
   return m_ast_file_data_map[const_cast<Module *>(module)];
 }
 
-SwiftASTContextForExpressions::SwiftASTContextForExpressions(Target &target)
-    : SwiftASTContext(target.GetArchitecture().GetTriple().getTriple().c_str(),
-                      &target),
+SwiftASTContextForExpressions::SwiftASTContextForExpressions(
+    std::string description, Target &target)
+    : SwiftASTContext(std::move(description),
+                      target.GetArchitecture().GetTriple(), &target),
       m_persistent_state_up(new SwiftPersistentExpressionState) {}
 
 UserExpression *SwiftASTContextForExpressions::GetUserExpression(

@@ -1609,7 +1609,7 @@ bool Module::SetArchitecture(const ArchSpec &new_arch) {
     if (SwiftASTContext *swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(
             m_type_system_map.GetTypeSystemForLanguage(eLanguageTypeSwift, this,
                                                        false)))
-      swift_ast->SetTriple(new_arch.GetTriple().str().c_str());
+      swift_ast->SetTriple(new_arch.GetTriple());
     return true;
   }
   return m_arch.IsCompatibleMatch(new_arch);
