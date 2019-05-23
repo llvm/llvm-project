@@ -215,7 +215,8 @@ public:
     return GetStaticBroadcasterClass();
   }
 
-  void SourceInitFile(bool in_cwd, CommandReturnObject &result);
+  void SourceInitFileCwd(CommandReturnObject &result);
+  void SourceInitFileHome(CommandReturnObject &result);
 
   bool AddCommand(llvm::StringRef name, const lldb::CommandObjectSP &cmd_sp,
                   bool can_replace);
@@ -551,6 +552,8 @@ protected:
 
 private:
   Status PreprocessCommand(std::string &command);
+
+  void SourceInitFile(FileSpec file, CommandReturnObject &result);
 
   // Completely resolves aliases and abbreviations, returning a pointer to the
   // final command object and updating command_line to the fully substituted
