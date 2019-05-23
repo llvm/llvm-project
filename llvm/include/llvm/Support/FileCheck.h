@@ -37,7 +37,7 @@ struct FileCheckRequest {
 };
 
 //===----------------------------------------------------------------------===//
-// Numeric expression handling code.
+// Numeric substitution handling code.
 //===----------------------------------------------------------------------===//
 
 /// Class representing a numeric variable with a given value in a numeric
@@ -105,25 +105,28 @@ public:
 
 class FileCheckPatternContext;
 
-/// Class representing a substitution to perform in the string to match.
-class FileCheckPatternSubstitution {
-private:
-  /// Pointer to a class instance holding the table with the values of live
-  /// pattern variables at the start of any given CHECK line. Used for
-  /// substituting pattern variables (numeric variables have their value in the
-  /// FileCheckNumExpr class instance pointed to by NumExpr).
+/// Class representing a substitution to perform in the RegExStr string.
+class FileCheckSubstitution {
+protected:
+  /// Pointer to a class instance holding, among other things, the table with
+  /// the values of live string variables at the start of any given CHECK line.
+  /// Used for substituting string variables with the text they were defined
+  /// as. Numeric expressions are linked to the numeric variables they use at
+  /// parse time and directly access the value of the numeric variable to
+  /// evaluate their value.
   FileCheckPatternContext *Context;
 
   /// Whether this represents a numeric expression substitution.
-  bool IsNumExpr;
+  bool IsNumSubst;
 
   /// The string that needs to be substituted for something else. For a
-  /// pattern variable this is its name, otherwise this is the whole numeric
+  /// string variable this is its name, otherwise this is the whole numeric
   /// expression.
   StringRef FromStr;
 
   /// If this is a numeric expression substitution, this is the pointer to the
-  /// class representing that numeric expression.
+  /// class representing the numeric expression whose value is to be
+  /// substituted.
   FileCheckNumExpr *NumExpr = nullptr;
 
   // Index in RegExStr of where to do the substitution.
@@ -131,29 +134,29 @@ private:
 
 public:
   /// Constructor for a pattern variable substitution.
-  FileCheckPatternSubstitution(FileCheckPatternContext *Context,
-                               StringRef VarName, size_t InsertIdx)
-      : Context(Context), IsNumExpr(false), FromStr(VarName),
+  FileCheckSubstitution(FileCheckPatternContext *Context,
+                        StringRef VarName, size_t InsertIdx)
+      : Context(Context), IsNumSubst(false), FromStr(VarName),
         InsertIdx(InsertIdx) {}
 
   /// Constructor for a numeric expression substitution.
-  FileCheckPatternSubstitution(FileCheckPatternContext *Context, StringRef Expr,
-                               FileCheckNumExpr *NumExpr, size_t InsertIdx)
-      : Context(Context), IsNumExpr(true), FromStr(Expr), NumExpr(NumExpr),
+  FileCheckSubstitution(FileCheckPatternContext *Context, StringRef Expr,
+                        FileCheckNumExpr *NumExpr, size_t InsertIdx)
+      : Context(Context), IsNumSubst(true), FromStr(Expr), NumExpr(NumExpr),
         InsertIdx(InsertIdx) {}
 
   /// \returns whether this is a numeric expression substitution.
-  bool isNumExpr() const { return IsNumExpr; }
+  bool isNumSubst() const { return IsNumSubst; }
 
-  /// \returns the string to be substituted.
+  /// \returns the string to be substituted for something else.
   StringRef getFromString() const { return FromStr; }
 
-  /// \returns the index where the substitution is to be performed.
+  /// \returns the index where the substitution is to be performed in RegExStr.
   size_t getIndex() const { return InsertIdx; }
 
   /// \returns the result of the substitution represented by this class
   /// instance or None if substitution failed. Numeric expressions are
-  /// substituted by their values. Pattern variables are simply replaced by the
+  /// substituted by their values. String variables are simply replaced by the
   /// text their definition matched.
   llvm::Optional<std::string> getResult() const;
 
@@ -216,14 +219,14 @@ class FileCheckPatternContext {
   friend class FileCheckPattern;
 
 private:
-  /// When matching a given pattern, this holds the value of all the FileCheck
-  /// pattern variables defined in previous patterns. In a pattern, only the
-  /// last definition for a given variable is recorded in this table.
+  /// When matching a given pattern, this holds the value of all the string
+  /// variables defined in previous patterns. In a pattern, only the last
+  /// definition for a given variable is recorded in this table.
   /// Back-references are used for uses after any the other definition.
   StringMap<StringRef> GlobalVariableTable;
 
-  /// Map of all pattern variables defined so far. Used at parse time to detect
-  /// a name conflict between a numeric variable and a pattern variable when
+  /// Map of all string variables defined so far. Used at parse time to detect
+  /// a name conflict between a numeric variable and a string variable when
   /// the former is defined on a later line than the latter.
   StringMap<bool> DefinedVariableTable;
 
@@ -243,11 +246,11 @@ private:
   std::vector<std::unique_ptr<FileCheckNumericVariable>> NumericVariables;
 
 public:
-  /// \returns the value of pattern variable \p VarName or None if no such
+  /// \returns the value of string variable \p VarName or None if no such
   /// variable has been defined.
   llvm::Optional<StringRef> getPatternVarValue(StringRef VarName);
 
-  /// Defines pattern and numeric variables from definitions given on the
+  /// Defines string and numeric variables from definitions given on the
   /// command line, passed as a vector of [#]VAR=VAL strings in
   /// \p CmdlineDefines. Reports any error to \p SM and \returns whether an
   /// error occured.
@@ -255,7 +258,9 @@ public:
                               SourceMgr &SM);
 
   /// Undefines local variables (variables whose name does not start with a '$'
-  /// sign), i.e. removes them from GlobalVariableTable.
+  /// sign), i.e. removes them from GlobalVariableTable and from
+  /// GlobalNumericVariableTable and also clears the value of numeric
+  /// variables.
   void clearLocalVars();
 
 private:
@@ -281,17 +286,15 @@ class FileCheckPattern {
   /// a fixed string to match.
   std::string RegExStr;
 
-  /// Entries in this vector represent uses of a pattern variable or a numeric
-  /// expression in the pattern that need to be substituted in the regexp
-  /// pattern at match time, e.g. "foo[[bar]]baz[[#N+1]]". In this case, the
+  /// Entries in this vector represent a substitution of a string variable or a
+  /// numeric expression in the RegExStr regex at match time. For example, in
+  /// the case of a CHECK directive with the pattern "foo[[bar]]baz[[#N+1]]",
   /// RegExStr will contain "foobaz" and we'll get two entries in this vector
-  /// that tells us to insert the value of pattern variable "bar" at offset 3
-  /// and the value of numeric expression "N+1" at offset 6. Uses are
-  /// represented by a FileCheckPatternSubstitution class to abstract whether
-  /// it is a pattern variable or a numeric expression.
-  std::vector<FileCheckPatternSubstitution> Substitutions;
+  /// that tells us to insert the value of string variable "bar" at offset 3
+  /// and the value of numeric expression "N+1" at offset 6.
+  std::vector<FileCheckSubstitution> Substitutions;
 
-  /// Maps names of pattern variables defined in a pattern to the parenthesized
+  /// Maps names of string variables defined in a pattern to the parenthesized
   /// capture numbers of their last definition.
   ///
   /// E.g. for the pattern "foo[[bar:.*]]baz[[bar]]quux[[bar:.*]]",
@@ -304,9 +307,9 @@ class FileCheckPattern {
 
   /// Pointer to a class instance holding the global state shared by all
   /// patterns:
-  /// - separate tables with the values of live pattern and numeric variables
+  /// - separate tables with the values of live string and numeric variables
   ///   respectively at the start of any given CHECK line;
-  /// - table holding whether a pattern variable has been defined at any given
+  /// - table holding whether a string variable has been defined at any given
   ///   point during the parsing phase.
   FileCheckPatternContext *Context;
 
@@ -335,14 +338,14 @@ public:
   /// character that is part of the variable name. Otherwise, only
   /// \returns true.
   static bool parseVariable(StringRef Str, bool &IsPseudo, unsigned &TrailIdx);
-  /// Parses a numeric expression involving (pseudo if \p IsPseudo is true)
+  /// Parses a numeric substitution involving (pseudo if \p IsPseudo is true)
   /// variable \p Name with the string corresponding to the operation being
   /// performed in \p Trailer. \returns the class representing the numeric
-  /// expression or nullptr if parsing fails in which case errors are reported
-  /// on \p SM.
-  FileCheckNumExpr *parseNumericExpression(StringRef Name, bool IsPseudo,
-                                           StringRef Trailer,
-                                           const SourceMgr &SM) const;
+  /// expression being substituted or nullptr if parsing fails, in which case
+  /// errors are reported on \p SM.
+  FileCheckNumExpr *parseNumericSubstitution(StringRef Name, bool IsPseudo,
+                                             StringRef Trailer,
+                                             const SourceMgr &SM) const;
   /// Parses the pattern in \p PatternStr and initializes this FileCheckPattern
   /// instance accordingly.
   ///
@@ -361,11 +364,11 @@ public:
   /// string.
   ///
   /// The GlobalVariableTable StringMap in the FileCheckPatternContext class
-  /// instance provides the current values of FileCheck pattern variables and
+  /// instance provides the current values of FileCheck string variables and
   /// is updated if this match defines new values.
   size_t match(StringRef Buffer, size_t &MatchLen) const;
   /// Prints the value of successful substitutions or the name of the undefined
-  /// pattern or numeric variable preventing such a successful substitution.
+  /// string or numeric variable preventing a successful substitution.
   void printSubstitutions(const SourceMgr &SM, StringRef Buffer,
                           SMRange MatchRange = None) const;
   void printFuzzyMatch(const SourceMgr &SM, StringRef Buffer,
