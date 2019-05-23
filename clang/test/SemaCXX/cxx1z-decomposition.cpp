@@ -78,7 +78,7 @@ template <class T> void dependent_foreach(T t) {
 
 struct PR37352 {
   int n;
-  void f() { static auto [a] = *this; } // expected-error {{cannot be declared 'static'}}
+  void f() { static auto [a] = *this; } // expected-warning {{C++2a extension}}
 };
 
 namespace instantiate_template {

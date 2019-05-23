@@ -2701,6 +2701,7 @@ protected:
   bool m_should_detach; /// Should we detach if the process object goes away
                         /// with an explicit call to Kill or Detach?
   LanguageRuntimeCollection m_language_runtimes;
+  std::recursive_mutex m_language_runtimes_mutex;
   InstrumentationRuntimeCollection m_instrumentation_runtimes;
   std::unique_ptr<NextEventAction> m_next_event_action_up;
   std::vector<PreResumeCallbackAndBaton> m_pre_resume_actions;

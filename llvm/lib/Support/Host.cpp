@@ -682,9 +682,17 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       break;
 
     // Icelake:
+    case 0x7d:
     case 0x7e:
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_ICELAKE_CLIENT; // "icelake-client"
+      break;
+
+    // Icelake Xeon:
+    case 0x6a:
+    case 0x6c:
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_ICELAKE_SERVER; // "icelake-server"
       break;
 
     case 0x1c: // Most 45 nm Intel Atom processors

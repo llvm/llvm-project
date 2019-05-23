@@ -158,8 +158,10 @@ void JITLinkerBase::layOutAtoms() {
     };
     for (auto &KV : Layout) {
       auto &SL = KV.second;
-      llvm::sort(SL.ContentSections, CompareByOrdinal);
-      llvm::sort(SL.ZeroFillSections, CompareByOrdinal);
+      std::sort(SL.ContentSections.begin(), SL.ContentSections.end(),
+                CompareByOrdinal);
+      std::sort(SL.ZeroFillSections.begin(), SL.ZeroFillSections.end(),
+                CompareByOrdinal);
     }
   }
 
@@ -186,10 +188,10 @@ void JITLinkerBase::layOutAtoms() {
           OrderedLayoutHeads.push_back(DA);
 
         // Now sort the list of layout heads by address.
-        llvm::sort(OrderedLayoutHeads,
-                   [](const DefinedAtom *LHS, const DefinedAtom *RHS) {
-                     return LHS->getAddress() < RHS->getAddress();
-                   });
+        std::sort(OrderedLayoutHeads.begin(), OrderedLayoutHeads.end(),
+                  [](const DefinedAtom *LHS, const DefinedAtom *RHS) {
+                    return LHS->getAddress() < RHS->getAddress();
+                  });
 
         // Now populate the SI.Atoms field by appending each of the chains.
         for (auto *DA : OrderedLayoutHeads) {

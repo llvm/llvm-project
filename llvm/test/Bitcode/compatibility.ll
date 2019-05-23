@@ -815,6 +815,34 @@ define void @fastmathflags_binops(float %op1, float %op2) {
   ret void
 }
 
+define void @fastmathflags_select(i1 %cond, float %op1, float %op2) {
+  %f.nnan = select nnan i1 %cond, float %op1, float %op2
+  ; CHECK: %f.nnan = select nnan i1 %cond, float %op1, float %op2
+  %f.ninf = select ninf i1 %cond, float %op1, float %op2
+  ; CHECK: %f.ninf = select ninf i1 %cond, float %op1, float %op2
+  %f.nsz = select nsz i1 %cond, float %op1, float %op2
+  ; CHECK: %f.nsz = select nsz i1 %cond, float %op1, float %op2
+  %f.arcp = select arcp i1 %cond, float %op1, float %op2
+  ; CHECK: %f.arcp = select arcp i1 %cond, float %op1, float %op2
+  %f.contract = select contract i1 %cond, float %op1, float %op2
+  ; CHECK: %f.contract = select contract i1 %cond, float %op1, float %op2
+  %f.afn = select afn i1 %cond, float %op1, float %op2
+  ; CHECK: %f.afn = select afn i1 %cond, float %op1, float %op2
+  %f.reassoc = select reassoc i1 %cond, float %op1, float %op2
+  ; CHECK: %f.reassoc = select reassoc i1 %cond, float %op1, float %op2
+  %f.fast = select fast i1 %cond, float %op1, float %op2
+  ; CHECK: %f.fast = select fast i1 %cond, float %op1, float %op2
+  ret void
+}
+
+define void @fastmathflags_vector_select(<2 x i1> %cond, <2 x double> %op1, <2 x double> %op2) {
+  %f.nnan.nsz = select nnan nsz <2 x i1> %cond, <2 x double> %op1, <2 x double> %op2
+  ; CHECK: %f.nnan.nsz = select nnan nsz <2 x i1> %cond, <2 x double> %op1, <2 x double> %op2
+  %f.fast = select fast <2 x i1> %cond, <2 x double> %op1, <2 x double> %op2
+  ; CHECK: %f.fast = select fast <2 x i1> %cond, <2 x double> %op1, <2 x double> %op2
+  ret void
+}
+
 ; Check various fast math flags and floating-point types on calls.
 
 declare float @fmf1()

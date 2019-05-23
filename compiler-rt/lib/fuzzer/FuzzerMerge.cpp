@@ -324,6 +324,7 @@ void CrashResistantMerge(const Vector<std::string> &Args,
   Command BaseCmd(Args);
   BaseCmd.removeFlag("merge");
   BaseCmd.removeFlag("fork");
+  BaseCmd.removeFlag("collect_data_flow");
   for (size_t Attempt = 1; Attempt <= NumAttempts; Attempt++) {
     Fuzzer::MaybeExitGracefully();
     VPrintf(V, "MERGE-OUTER: attempt %zd\n", Attempt);

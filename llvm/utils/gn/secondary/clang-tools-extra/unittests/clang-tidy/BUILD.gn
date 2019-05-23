@@ -31,6 +31,7 @@ unittest("ClangTidyTests") {
     "ObjCModuleTest.cpp",
     "OverlappingReplacementsTest.cpp",
     "ReadabilityModuleTest.cpp",
+    "TransformerClangTidyCheckTest.cpp",
     "UsingInserterTest.cpp",
   ]
 }

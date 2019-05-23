@@ -660,7 +660,10 @@ void Process::Finalize() {
   m_image_tokens.clear();
   m_memory_cache.Clear();
   m_allocated_memory_cache.Clear();
-  m_language_runtimes.clear();
+  {
+    std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
+    m_language_runtimes.clear();
+  }
   m_instrumentation_runtimes.clear();
   m_next_event_action_up.reset();
   // Clear the last natural stop ID since it has a strong reference to this
@@ -1549,6 +1552,7 @@ LanguageRuntime *Process::GetLanguageRuntime(lldb::LanguageType language,
   if (m_finalizing)
     return nullptr;
 
+  std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
   LanguageRuntimeCollection::iterator pos;
   pos = m_language_runtimes.find(language);
   if (pos == m_language_runtimes.end() || (retry_if_null && !(*pos).second)) {
@@ -1562,6 +1566,7 @@ LanguageRuntime *Process::GetLanguageRuntime(lldb::LanguageType language,
 }
 
 CPPLanguageRuntime *Process::GetCPPLanguageRuntime(bool retry_if_null) {
+  std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
   LanguageRuntime *runtime =
       GetLanguageRuntime(eLanguageTypeC_plus_plus, retry_if_null);
   if (runtime != nullptr &&
@@ -1571,6 +1576,7 @@ CPPLanguageRuntime *Process::GetCPPLanguageRuntime(bool retry_if_null) {
 }
 
 ObjCLanguageRuntime *Process::GetObjCLanguageRuntime(bool retry_if_null) {
+  std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
   LanguageRuntime *runtime =
       GetLanguageRuntime(eLanguageTypeObjC, retry_if_null);
   if (runtime != nullptr && runtime->GetLanguageType() == eLanguageTypeObjC)
@@ -5604,7 +5610,10 @@ void Process::DidExec() {
   m_jit_loaders_up.reset();
   m_image_tokens.clear();
   m_allocated_memory_cache.Clear();
-  m_language_runtimes.clear();
+  {
+    std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
+    m_language_runtimes.clear();
+  }
   m_instrumentation_runtimes.clear();
   m_thread_list.DiscardThreadPlans();
   m_memory_cache.Clear(true);
@@ -5673,14 +5682,17 @@ void Process::ModulesDidLoad(ModuleList &module_list) {
   // Iterate over a copy of this language runtime list in case the language
   // runtime ModulesDidLoad somehow causes the language runtime to be
   // unloaded.
-  LanguageRuntimeCollection language_runtimes(m_language_runtimes);
-  for (const auto &pair : language_runtimes) {
-    // We must check language_runtime_sp to make sure it is not nullptr as we
-    // might cache the fact that we didn't have a language runtime for a
-    // language.
-    LanguageRuntimeSP language_runtime_sp = pair.second;
-    if (language_runtime_sp)
-      language_runtime_sp->ModulesDidLoad(module_list);
+  {
+    std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
+    LanguageRuntimeCollection language_runtimes(m_language_runtimes);
+    for (const auto &pair : language_runtimes) {
+      // We must check language_runtime_sp to make sure it is not nullptr as we
+      // might cache the fact that we didn't have a language runtime for a
+      // language.
+      LanguageRuntimeSP language_runtime_sp = pair.second;
+      if (language_runtime_sp)
+        language_runtime_sp->ModulesDidLoad(module_list);
+    }
   }
 
   // If we don't have an operating system plug-in, try to load one since

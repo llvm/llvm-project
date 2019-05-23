@@ -325,6 +325,9 @@ struct RuntimeLibcallSignatureTable {
     // __stack_chk_fail
     Table[RTLIB::STACKPROTECTOR_CHECK_FAIL] = func;
 
+    // Return address handling
+    Table[RTLIB::RETURN_ADDRESS] = i32_func_i32;
+
     // Element-wise Atomic memory
     // TODO: Fix these when we implement atomic support
     Table[RTLIB::MEMCPY_ELEMENT_UNORDERED_ATOMIC_1] = unsupported;
@@ -499,6 +502,8 @@ struct StaticLibcallNameMap {
     // consistent with the f64 and f128 names.
     Map["__extendhfsf2"] = RTLIB::FPEXT_F16_F32;
     Map["__truncsfhf2"] = RTLIB::FPROUND_F32_F16;
+
+    Map["emscripten_return_address"] = RTLIB::RETURN_ADDRESS;
   }
 };
 
