@@ -20,8 +20,8 @@
 # STRIPSYM-NOT: bar
 # STRIPSYM-NOT: .rela.text
 
-# RUN: not llvm-objcopy --strip-symbol=bar %t %t2 2>&1 | FileCheck %s --check-prefix=ERR
-# ERR: not stripping symbol 'bar' because it is named in a relocation
+# RUN: not llvm-objcopy --strip-symbol=bar %t %t2 2>&1 | FileCheck %s --check-prefix=ERR -DINPUT=%t
+# ERR: error: '[[INPUT]]': not stripping symbol 'bar' because it is named in a relocation
 
 --- !ELF
 FileHeader:

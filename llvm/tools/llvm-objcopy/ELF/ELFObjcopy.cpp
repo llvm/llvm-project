@@ -156,8 +156,12 @@ static std::unique_ptr<Writer> createWriter(const CopyConfig &Config,
 
 template <class ELFT>
 static Expected<ArrayRef<uint8_t>>
-findBuildID(const object::ELFFile<ELFT> &In) {
-  for (const auto &Phdr : unwrapOrError(In.program_headers())) {
+findBuildID(const CopyConfig &Config, const object::ELFFile<ELFT> &In) {
+  auto PhdrsOrErr = In.program_headers();
+  if (auto Err = PhdrsOrErr.takeError())
+    return createFileError(Config.InputFilename, std::move(Err));
+
+  for (const auto &Phdr : *PhdrsOrErr) {
     if (Phdr.p_type != PT_NOTE)
       continue;
     Error Err = Error::success();
@@ -165,22 +169,25 @@ findBuildID(const object::ELFFile<ELFT> &In) {
       if (Note.getType() == NT_GNU_BUILD_ID && Note.getName() == ELF_NOTE_GNU)
         return Note.getDesc();
     if (Err)
-      return std::move(Err);
+      return createFileError(Config.InputFilename, std::move(Err));
   }
-  return createStringError(llvm::errc::invalid_argument,
-                           "could not find build ID");
+
+  return createFileError(
+      Config.InputFilename,
+      createStringError(llvm::errc::invalid_argument,
+                        "could not find build ID"));
 }
 
 static Expected<ArrayRef<uint8_t>>
-findBuildID(const object::ELFObjectFileBase &In) {
+findBuildID(const CopyConfig &Config, const object::ELFObjectFileBase &In) {
   if (auto *O = dyn_cast<ELFObjectFile<ELF32LE>>(&In))
-    return findBuildID(*O->getELFFile());
+    return findBuildID(Config, *O->getELFFile());
   else if (auto *O = dyn_cast<ELFObjectFile<ELF64LE>>(&In))
-    return findBuildID(*O->getELFFile());
+    return findBuildID(Config, *O->getELFFile());
   else if (auto *O = dyn_cast<ELFObjectFile<ELF32BE>>(&In))
-    return findBuildID(*O->getELFFile());
+    return findBuildID(Config, *O->getELFFile());
   else if (auto *O = dyn_cast<ELFObjectFile<ELF64BE>>(&In))
-    return findBuildID(*O->getELFFile());
+    return findBuildID(Config, *O->getELFFile());
 
   llvm_unreachable("Bad file format");
 }
@@ -681,7 +688,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
     StringRef SecName = SecPair.first;
     StringRef File = SecPair.second;
     if (Error E = dumpSectionToFile(SecName, File, Obj))
-      return createFileError(Config.InputFilename, std::move(E));
+      return E;
   }
 
   if (!Config.AddGnuDebugLink.empty())
@@ -730,7 +737,11 @@ Error executeObjcopyOnBinary(const CopyConfig &Config,
   ArrayRef<uint8_t> BuildIdBytes;
 
   if (!Config.BuildIdLinkDir.empty()) {
-    BuildIdBytes = unwrapOrError(findBuildID(In));
+    auto BuildIdBytesOrErr = findBuildID(Config, In);
+    if (auto E = BuildIdBytesOrErr.takeError())
+      return E;
+    BuildIdBytes = *BuildIdBytesOrErr;
+
     if (BuildIdBytes.size() < 2)
       return createFileError(
           Config.InputFilename,
@@ -745,18 +756,19 @@ Error executeObjcopyOnBinary(const CopyConfig &Config,
       return E;
 
   if (Error E = handleArgs(Config, *Obj, Reader, OutputElfType))
-    return E;
+    return createFileError(Config.InputFilename, std::move(E));
+
   std::unique_ptr<Writer> Writer =
       createWriter(Config, *Obj, Out, OutputElfType);
   if (Error E = Writer->finalize())
-    return E;
+    return createFileError(Config.InputFilename, std::move(E));
   if (Error E = Writer->write())
     return E;
   if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkOutput)
     if (Error E =
             linkToBuildIdDir(Config, Config.OutputFilename,
                              Config.BuildIdLinkOutput.getValue(), BuildIdBytes))
-      return E;
+      return createFileError(Config.OutputFilename, std::move(E));
 
   return Error::success();
 }
