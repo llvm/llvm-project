@@ -666,35 +666,47 @@ ParseSubMultiClassReference(MultiClass *CurMC) {
 ///   RangePiece ::= INTVAL
 ///   RangePiece ::= INTVAL '-' INTVAL
 ///   RangePiece ::= INTVAL INTVAL
-bool TGParser::ParseRangePiece(SmallVectorImpl<unsigned> &Ranges) {
-  if (Lex.getCode() != tgtok::IntVal) {
-    TokError("expected integer or bitrange");
-    return true;
-  }
-  int64_t Start = Lex.getCurIntVal();
+bool TGParser::ParseRangePiece(SmallVectorImpl<unsigned> &Ranges,
+                               TypedInit *FirstItem) {
+  Init *CurVal = FirstItem;
+  if (!CurVal)
+    CurVal = ParseValue(nullptr);
+
+  IntInit *II = dyn_cast_or_null<IntInit>(CurVal);
+  if (!II)
+    return TokError("expected integer or bitrange");
+
+  int64_t Start = II->getValue();
   int64_t End;
 
   if (Start < 0)
     return TokError("invalid range, cannot be negative");
 
-  switch (Lex.Lex()) {  // eat first character.
+  switch (Lex.getCode()) {
   default:
     Ranges.push_back(Start);
     return false;
-  case tgtok::minus:
-    if (Lex.Lex() != tgtok::IntVal) {
+  case tgtok::minus: {
+    Lex.Lex(); // eat
+
+    Init *I_End = ParseValue(nullptr);
+    IntInit *II_End = dyn_cast_or_null<IntInit>(I_End);
+    if (!II_End) {
       TokError("expected integer value as end of range");
       return true;
     }
-    End = Lex.getCurIntVal();
+
+    End = II_End->getValue();
     break;
-  case tgtok::IntVal:
+  }
+  case tgtok::IntVal: {
     End = -Lex.getCurIntVal();
+    Lex.Lex();
     break;
+  }
   }
   if (End < 0)
     return TokError("invalid range, cannot be negative");
-  Lex.Lex();
 
   // Add to the range.
   if (Start < End)
@@ -2439,12 +2451,6 @@ VarInit *TGParser::ParseForeachDeclaration(Init *&ForeachListValue) {
   SmallVector<unsigned, 16> Ranges;
 
   switch (Lex.getCode()) {
-  case tgtok::IntVal: { // RangePiece.
-    if (ParseRangePiece(Ranges))
-      return nullptr;
-    break;
-  }
-
   case tgtok::l_brace: { // '{' RangeList '}'
     Lex.Lex(); // eat the '{'
     ParseRangeList(Ranges);
@@ -2459,22 +2465,34 @@ VarInit *TGParser::ParseForeachDeclaration(Init *&ForeachListValue) {
   default: {
     SMLoc ValueLoc = Lex.getLoc();
     Init *I = ParseValue(nullptr);
-    TypedInit *TI = dyn_cast<TypedInit>(I);
-    if (!TI || !isa<ListRecTy>(TI->getType())) {
-      std::string Type;
-      if (TI)
-        Type = (Twine("' of type '") + TI->getType()->getAsString()).str();
-      Error(ValueLoc, "expected a list, got '" + I->getAsString() + Type + "'");
-      if (CurMultiClass)
-        PrintNote({}, "references to multiclass template arguments cannot be "
-                      "resolved at this time");
+    if (!I)
       return nullptr;
+
+    TypedInit *TI = dyn_cast<TypedInit>(I);
+    if (TI && isa<ListRecTy>(TI->getType())) {
+      ForeachListValue = I;
+      IterType = cast<ListRecTy>(TI->getType())->getElementType();
+      break;
     }
-    ForeachListValue = I;
-    IterType = cast<ListRecTy>(TI->getType())->getElementType();
-    break;
+
+    if (TI) {
+      if (ParseRangePiece(Ranges, TI))
+        return nullptr;
+      break;
+    }
+
+    std::string Type;
+    if (TI)
+      Type = (Twine("' of type '") + TI->getType()->getAsString()).str();
+    Error(ValueLoc, "expected a list, got '" + I->getAsString() + Type + "'");
+    if (CurMultiClass) {
+      PrintNote({}, "references to multiclass template arguments cannot be "
+                "resolved at this time");
+    }
+    return nullptr;
   }
   }
+
 
   if (!Ranges.empty()) {
     assert(!IterType && "Type already initialized?");

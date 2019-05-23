@@ -3,7 +3,8 @@
 // General tests that the system header search paths detected by the driver
 // and passed to CC1 are correct on Darwin platforms.
 
-// Check system headers (everything below <sysroot> and <resource-dir>)
+// Check system headers (everything below <sysroot> and <resource-dir>).  Ensure
+// that both sysroot and isysroot are checked, and that isysroot has precedence.
 //
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
 // RUN:     -target x86_64-apple-darwin \
@@ -13,6 +14,26 @@
 // RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_and_usr_local \
 // RUN:               -DRESOURCE=%S/Inputs/resource_dir \
 // RUN:               --check-prefix=CHECK-SYSTEM %s
+//
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target x86_64-apple-darwin \
+// RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot %S/Inputs/basic_darwin_sdk_usr_and_usr_local \
+// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_and_usr_local \
+// RUN:               -DRESOURCE=%S/Inputs/resource_dir \
+// RUN:               --check-prefix=CHECK-SYSTEM %s
+//
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target x86_64-apple-darwin \
+// RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_and_usr_local \
+// RUN:     --sysroot / \
+// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_and_usr_local \
+// RUN:               -DRESOURCE=%S/Inputs/resource_dir \
+// RUN:               --check-prefix=CHECK-SYSTEM %s
+//
 // CHECK-SYSTEM: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
 // CHECK-SYSTEM: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-SYSTEM: "-internal-isystem" "[[RESOURCE]]/include"

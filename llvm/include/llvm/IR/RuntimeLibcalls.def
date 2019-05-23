@@ -539,6 +539,9 @@ HANDLE_LIBCALL(STACKPROTECTOR_CHECK_FAIL, "__stack_chk_fail")
 // Deoptimization
 HANDLE_LIBCALL(DEOPTIMIZE, "__llvm_deoptimize")
 
+// Return address
+HANDLE_LIBCALL(RETURN_ADDRESS, nullptr)
+
 HANDLE_LIBCALL(UNKNOWN_LIBCALL, nullptr)
 
 #undef HANDLE_LIBCALL

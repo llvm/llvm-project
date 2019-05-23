@@ -51,6 +51,7 @@ struct FuzzingOptions {
   std::string ExitOnItem;
   std::string FocusFunction;
   std::string DataFlowTrace;
+  std::string CollectDataFlow;
   std::string FeaturesDir;
   bool SaveArtifacts = true;
   bool PrintNEW = true; // Print a status line when new units are found;

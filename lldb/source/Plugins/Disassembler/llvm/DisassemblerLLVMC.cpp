@@ -1188,10 +1188,10 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       features_str += "+dspr2,";
   }
 
-  // If any AArch64 variant, enable the ARMv8.2 ISA extensions so we can
-  // disassemble newer instructions.
+  // If any AArch64 variant, enable the ARMv8.5 ISA with SVE extensions so we
+  // can disassemble newer instructions.
   if (triple.getArch() == llvm::Triple::aarch64)
-    features_str += "+v8.2a";
+    features_str += "+v8.5a,+sve2";
 
   if (triple.getArch() == llvm::Triple::aarch64
       && triple.getVendor() == llvm::Triple::Apple) {

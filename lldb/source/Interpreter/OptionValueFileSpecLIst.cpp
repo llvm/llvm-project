@@ -17,6 +17,7 @@ using namespace lldb_private;
 
 void OptionValueFileSpecList::DumpValue(const ExecutionContext *exe_ctx,
                                         Stream &strm, uint32_t dump_mask) {
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (dump_mask & eDumpOptionType)
     strm.Printf("(%s)", GetTypeAsCString());
   if (dump_mask & eDumpOptionValue) {
@@ -43,6 +44,7 @@ void OptionValueFileSpecList::DumpValue(const ExecutionContext *exe_ctx,
 
 Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
                                                    VarSetOperationType op) {
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   Status error;
   Args args(value.str());
   const size_t argc = args.GetArgumentCount();
@@ -163,6 +165,6 @@ Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
 }
 
 lldb::OptionValueSP OptionValueFileSpecList::DeepCopy() const {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   return OptionValueSP(new OptionValueFileSpecList(m_current_value));
 }

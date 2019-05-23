@@ -18,6 +18,7 @@
 
 #include <unordered_map>
 #include <string>
+#include <set>
 #include <cassert>
 #include <cfloat>
 #include <cmath>
@@ -25,6 +26,7 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "../../../check_consecutive.h"
 #include "../../../NotConstructible.h"
 #include "../../../test_compare.h"
 #include "../../../test_hash.h"
@@ -58,24 +60,19 @@ int main(int, char**)
         typedef std::pair<C::const_iterator, C::const_iterator> Eq;
         Eq eq = c.equal_range(1);
         assert(std::distance(eq.first, eq.second) == 2);
-        C::const_iterator i = eq.first;
-        assert(i->first == 1);
-        assert(i->second == "one");
-        ++i;
-        assert(i->first == 1);
-        assert(i->second == "four");
+        std::multiset<std::string> s;
+        s.insert("one");
+        s.insert("four");
+        CheckConsecutiveKeys<C::const_iterator>(c.find(1), c.end(), 1, s);
         eq = c.equal_range(2);
         assert(std::distance(eq.first, eq.second) == 2);
-        i = eq.first;
-        assert(i->first == 2);
-        assert(i->second == "two");
-        ++i;
-        assert(i->first == 2);
-        assert(i->second == "four");
+        s.insert("two");
+        s.insert("four");
+        CheckConsecutiveKeys<C::const_iterator>(c.find(2), c.end(), 2, s);
 
         eq = c.equal_range(3);
         assert(std::distance(eq.first, eq.second) == 1);
-        i = eq.first;
+        C::const_iterator i = eq.first;
         assert(i->first == 3);
         assert(i->second == "three");
         eq = c.equal_range(4);
@@ -117,24 +114,19 @@ int main(int, char**)
         typedef std::pair<C::const_iterator, C::const_iterator> Eq;
         Eq eq = c.equal_range(1);
         assert(std::distance(eq.first, eq.second) == 2);
-        C::const_iterator i = eq.first;
-        assert(i->first == 1);
-        assert(i->second == "one");
-        ++i;
-        assert(i->first == 1);
-        assert(i->second == "four");
+        std::multiset<std::string> s;
+        s.insert("one");
+        s.insert("four");
+        CheckConsecutiveKeys<C::const_iterator>(c.find(1), c.end(), 1, s);
         eq = c.equal_range(2);
         assert(std::distance(eq.first, eq.second) == 2);
-        i = eq.first;
-        assert(i->first == 2);
-        assert(i->second == "two");
-        ++i;
-        assert(i->first == 2);
-        assert(i->second == "four");
+        s.insert("two");
+        s.insert("four");
+        CheckConsecutiveKeys<C::const_iterator>(c.find(2), c.end(), 2, s);
 
         eq = c.equal_range(3);
         assert(std::distance(eq.first, eq.second) == 1);
-        i = eq.first;
+        C::const_iterator i = eq.first;
         assert(i->first == 3);
         assert(i->second == "three");
         eq = c.equal_range(4);

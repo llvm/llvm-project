@@ -40,6 +40,7 @@ public:
                      VarSetOperationType = eVarSetOperationAssign) = delete;
 
   bool Clear() override {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     m_current_value.Clear();
     m_value_was_set = false;
     return true;
@@ -52,22 +53,22 @@ public:
   // Subclass specific functions
 
   FileSpecList GetCurrentValue() const {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     return m_current_value;
   }
 
   void SetCurrentValue(const FileSpecList &value) {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     m_current_value = value;
   }
 
   void AppendCurrentValue(const FileSpec &value) {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     m_current_value.Append(value);
   }
 
 protected:
-  mutable std::mutex m_mutex;
+  mutable std::recursive_mutex m_mutex;
   FileSpecList m_current_value;
 };
 
