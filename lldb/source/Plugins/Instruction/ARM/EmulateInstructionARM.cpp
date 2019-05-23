@@ -749,7 +749,7 @@ EmulateInstructionARM::CreateInstance(const ArchSpec &arch,
     }
   }
 
-  return NULL;
+  return nullptr;
 }
 
 bool EmulateInstructionARM::SetTargetTriple(const ArchSpec &arch) {
@@ -13213,7 +13213,7 @@ EmulateInstructionARM::GetARMOpcodeForInstruction(const uint32_t opcode,
         (g_arm_opcodes[i].variants & arm_isa) != 0)
       return &g_arm_opcodes[i];
   }
-  return NULL;
+  return nullptr;
 }
 
 EmulateInstructionARM::ARMOpcode *
@@ -13763,7 +13763,7 @@ EmulateInstructionARM::GetThumbOpcodeForInstruction(const uint32_t opcode,
         (g_thumb_opcodes[i].variants & arm_isa) != 0)
       return &g_thumb_opcodes[i];
   }
-  return NULL;
+  return nullptr;
 }
 
 bool EmulateInstructionARM::SetArchitecture(const ArchSpec &arch) {
@@ -14311,7 +14311,7 @@ bool EmulateInstructionARM::WriteFlags(Context &context, const uint32_t result,
 }
 
 bool EmulateInstructionARM::EvaluateInstruction(uint32_t evaluate_options) {
-  ARMOpcode *opcode_data = NULL;
+  ARMOpcode *opcode_data = nullptr;
 
   if (m_opcode_mode == eModeThumb)
     opcode_data =
@@ -14400,7 +14400,7 @@ bool EmulateInstructionARM::TestEmulation(Stream *out_stream, ArchSpec &arch,
   OptionValueSP value_sp = test_data->GetValueForKey(opcode_key);
 
   uint32_t test_opcode;
-  if ((value_sp.get() == NULL) ||
+  if ((value_sp.get() == nullptr) ||
       (value_sp->GetType() != OptionValue::eTypeUInt64)) {
     out_stream->Printf("TestEmulation: Error reading opcode from test file.\n");
     return false;
@@ -14426,7 +14426,7 @@ bool EmulateInstructionARM::TestEmulation(Stream *out_stream, ArchSpec &arch,
   EmulationStateARM after_state;
 
   value_sp = test_data->GetValueForKey(before_key);
-  if ((value_sp.get() == NULL) ||
+  if ((value_sp.get() == nullptr) ||
       (value_sp->GetType() != OptionValue::eTypeDictionary)) {
     out_stream->Printf("TestEmulation:  Failed to find 'before' state.\n");
     return false;
@@ -14439,7 +14439,7 @@ bool EmulateInstructionARM::TestEmulation(Stream *out_stream, ArchSpec &arch,
   }
 
   value_sp = test_data->GetValueForKey(after_key);
-  if ((value_sp.get() == NULL) ||
+  if ((value_sp.get() == nullptr) ||
       (value_sp->GetType() != OptionValue::eTypeDictionary)) {
     out_stream->Printf("TestEmulation:  Failed to find 'after' state.\n");
     return false;

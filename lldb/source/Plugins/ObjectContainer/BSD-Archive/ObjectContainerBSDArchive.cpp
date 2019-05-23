@@ -121,7 +121,7 @@ ObjectContainerBSDArchive::Object::Extract(const DataExtractor &data,
     if (ar_name_len > 0) {
       const void *ar_name_ptr = data.GetData(&offset, ar_name_len);
       // Make sure there was enough data for the string value and bail if not
-      if (ar_name_ptr == NULL)
+      if (ar_name_ptr == nullptr)
         return LLDB_INVALID_OFFSET;
       str.assign((const char *)ar_name_ptr, ar_name_len);
       ar_name.SetCString(str.c_str());
@@ -190,7 +190,7 @@ ObjectContainerBSDArchive::Archive::FindObject(
       return &m_objects[match->value];
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 ObjectContainerBSDArchive::Archive::shared_ptr
@@ -351,7 +351,7 @@ ObjectContainer *ObjectContainerBSDArchive::CreateInstance(
       }
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 bool ObjectContainerBSDArchive::MagicBytesMatch(const DataExtractor &data) {
@@ -378,7 +378,7 @@ void ObjectContainerBSDArchive::SetArchive(Archive::shared_ptr &archive_sp) {
 ObjectContainerBSDArchive::~ObjectContainerBSDArchive() {}
 
 bool ObjectContainerBSDArchive::ParseHeader() {
-  if (m_archive_sp.get() == NULL) {
+  if (m_archive_sp.get() == nullptr) {
     if (m_data.GetByteSize() > 0) {
       ModuleSP module_sp(GetModule());
       if (module_sp) {
@@ -391,7 +391,7 @@ bool ObjectContainerBSDArchive::ParseHeader() {
       m_data.Clear();
     }
   }
-  return m_archive_sp.get() != NULL;
+  return m_archive_sp.get() != nullptr;
 }
 
 void ObjectContainerBSDArchive::Dump(Stream *s) const {

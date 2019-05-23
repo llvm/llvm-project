@@ -17,9 +17,9 @@
 
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include <functional>
+#include <string>
 
 namespace clang {
 namespace tooling {
@@ -35,19 +35,19 @@ inline RangeSelector charRange(CharSourceRange R) {
 RangeSelector range(RangeSelector Begin, RangeSelector End);
 
 /// Convenience version of \c range where end-points are bound nodes.
-RangeSelector range(StringRef BeginID, StringRef EndID);
+RangeSelector range(std::string BeginID, std::string EndID);
 
 /// Selects a node, including trailing semicolon (for non-expression
 /// statements). \p ID is the node's binding in the match result.
-RangeSelector node(StringRef ID);
+RangeSelector node(std::string ID);
 
 /// Selects a node, including trailing semicolon (always). Useful for selecting
 /// expression statements. \p ID is the node's binding in the match result.
-RangeSelector statement(StringRef ID);
+RangeSelector statement(std::string ID);
 
 /// Given a \c MemberExpr, selects the member token. \p ID is the node's
 /// binding in the match result.
-RangeSelector member(StringRef ID);
+RangeSelector member(std::string ID);
 
 /// Given a node with a "name", (like \c NamedDecl, \c DeclRefExpr or \c
 /// CxxCtorInitializer) selects the name's token.  Only selects the final
@@ -56,19 +56,19 @@ RangeSelector member(StringRef ID);
 /// it selects only `baz`.
 ///
 /// \param ID is the node's binding in the match result.
-RangeSelector name(StringRef ID);
+RangeSelector name(std::string ID);
 
 // Given a \c CallExpr (bound to \p ID), selects the arguments' source text (all
 // source between the call's parentheses).
-RangeSelector callArgs(StringRef ID);
+RangeSelector callArgs(std::string ID);
 
 // Given a \c CompoundStmt (bound to \p ID), selects the source of the
 // statements (all source between the braces).
-RangeSelector statements(StringRef ID);
+RangeSelector statements(std::string ID);
 
 // Given a \c InitListExpr (bound to \p ID), selects the range of the elements
 // (all source between the braces).
-RangeSelector initListElements(StringRef ID);
+RangeSelector initListElements(std::string ID);
 
 /// Selects the range from which `S` was expanded (possibly along with other
 /// source), if `S` is an expansion, and `S` itself, otherwise.  Corresponds to

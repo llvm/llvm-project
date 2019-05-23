@@ -18,7 +18,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBSymbol::SBSymbol() : m_opaque_ptr(NULL) {
+SBSymbol::SBSymbol() : m_opaque_ptr(nullptr) {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBSymbol);
 }
 
@@ -37,7 +37,7 @@ const SBSymbol &SBSymbol::operator=(const SBSymbol &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBSymbol::~SBSymbol() { m_opaque_ptr = NULL; }
+SBSymbol::~SBSymbol() { m_opaque_ptr = nullptr; }
 
 void SBSymbol::SetSymbol(lldb_private::Symbol *lldb_object_ptr) {
   m_opaque_ptr = lldb_object_ptr;
@@ -50,13 +50,13 @@ bool SBSymbol::IsValid() const {
 SBSymbol::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBSymbol, operator bool);
 
-  return m_opaque_ptr != NULL;
+  return m_opaque_ptr != nullptr;
 }
 
 const char *SBSymbol::GetName() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBSymbol, GetName);
 
-  const char *name = NULL;
+  const char *name = nullptr;
   if (m_opaque_ptr)
     name = m_opaque_ptr->GetName().AsCString();
 
@@ -66,7 +66,7 @@ const char *SBSymbol::GetName() const {
 const char *SBSymbol::GetDisplayName() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBSymbol, GetDisplayName);
 
-  const char *name = NULL;
+  const char *name = nullptr;
   if (m_opaque_ptr)
     name = m_opaque_ptr->GetMangled()
                .GetDisplayDemangledName(m_opaque_ptr->GetLanguage())
@@ -78,7 +78,7 @@ const char *SBSymbol::GetDisplayName() const {
 const char *SBSymbol::GetMangledName() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBSymbol, GetMangledName);
 
-  const char *name = NULL;
+  const char *name = nullptr;
   if (m_opaque_ptr)
     name = m_opaque_ptr->GetMangled().GetMangledName().AsCString();
   return name;
@@ -105,7 +105,7 @@ bool SBSymbol::GetDescription(SBStream &description) {
   Stream &strm = description.ref();
 
   if (m_opaque_ptr) {
-    m_opaque_ptr->GetDescription(&strm, lldb::eDescriptionLevelFull, NULL);
+    m_opaque_ptr->GetDescription(&strm, lldb::eDescriptionLevelFull, nullptr);
   } else
     strm.PutCString("No value");
 
@@ -116,7 +116,7 @@ SBInstructionList SBSymbol::GetInstructions(SBTarget target) {
   LLDB_RECORD_METHOD(lldb::SBInstructionList, SBSymbol, GetInstructions,
                      (lldb::SBTarget), target);
 
-  return LLDB_RECORD_RESULT(GetInstructions(target, NULL));
+  return LLDB_RECORD_RESULT(GetInstructions(target, nullptr));
 }
 
 SBInstructionList SBSymbol::GetInstructions(SBTarget target,
@@ -141,7 +141,7 @@ SBInstructionList SBSymbol::GetInstructions(SBTarget target,
         AddressRange symbol_range(symbol_addr, m_opaque_ptr->GetByteSize());
         const bool prefer_file_cache = false;
         sb_instructions.SetDisassembler(Disassembler::DisassembleRange(
-            module_sp->GetArchitecture(), NULL, flavor_string, exe_ctx,
+            module_sp->GetArchitecture(), nullptr, flavor_string, exe_ctx,
             symbol_range, prefer_file_cache));
       }
     }

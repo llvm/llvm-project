@@ -1229,7 +1229,7 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
       type_system_helper->DeclMap(); // result can be NULL
 
   if (decl_map) {
-    Stream *error_stream = NULL;
+    Stream *error_stream = nullptr;
     Target *target = exe_ctx.GetTargetPtr();
     error_stream = target->GetDebugger().GetErrorFile().get();
 

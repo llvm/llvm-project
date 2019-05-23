@@ -49,7 +49,7 @@ HostThread ThreadLauncher::LaunchThread(llvm::StringRef name,
   }
 #endif
 
-  pthread_attr_t *thread_attr_ptr = NULL;
+  pthread_attr_t *thread_attr_ptr = nullptr;
   pthread_attr_t thread_attr;
   bool destroy_attr = false;
   if (min_stack_byte_size > 0) {

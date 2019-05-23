@@ -67,7 +67,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
     for (uint32_t i = 0; i < num_sets; ++i) {
       ConstString set_name;
       if (sets->GetItemAtIndexAsString(i, set_name) && !set_name.IsEmpty()) {
-        m_sets.push_back({ set_name.AsCString(), NULL, 0, NULL });
+        m_sets.push_back({set_name.AsCString(), nullptr, 0, nullptr});
       } else {
         Clear();
         printf("error: register sets must have valid names\n");
@@ -302,7 +302,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
     llvm::StringRef format_str;
     if (reg_info_dict->GetValueForKeyAsString("format", format_str, nullptr)) {
       if (OptionArgParser::ToFormat(format_str.str().c_str(), reg_info.format,
-                                    NULL)
+                                    nullptr)
               .Fail()) {
         Clear();
         printf("error: invalid 'format' value in register dictionary\n");
@@ -414,7 +414,7 @@ void DynamicRegisterInfo::AddRegister(RegisterInfo &reg_info,
   const uint32_t reg_num = m_regs.size();
   reg_info.name = reg_name.AsCString();
   assert(reg_info.name);
-  reg_info.alt_name = reg_alt_name.AsCString(NULL);
+  reg_info.alt_name = reg_alt_name.AsCString(nullptr);
   uint32_t i;
   if (reg_info.value_regs) {
     for (i = 0; reg_info.value_regs[i] != LLDB_INVALID_REGNUM; ++i)
@@ -480,7 +480,7 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
     if (m_value_regs_map.find(i) != m_value_regs_map.end())
       m_regs[i].value_regs = m_value_regs_map[i].data();
     else
-      m_regs[i].value_regs = NULL;
+      m_regs[i].value_regs = nullptr;
   }
 
   // Expand all invalidation dependencies
@@ -529,7 +529,7 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
     if (m_invalidate_regs_map.find(i) != m_invalidate_regs_map.end())
       m_regs[i].invalidate_regs = m_invalidate_regs_map[i].data();
     else
-      m_regs[i].invalidate_regs = NULL;
+      m_regs[i].invalidate_regs = nullptr;
   }
 
   // Check if we need to automatically set the generic registers in case they
@@ -639,19 +639,19 @@ const RegisterInfo *
 DynamicRegisterInfo::GetRegisterInfoAtIndex(uint32_t i) const {
   if (i < m_regs.size())
     return &m_regs[i];
-  return NULL;
+  return nullptr;
 }
 
 RegisterInfo *DynamicRegisterInfo::GetRegisterInfoAtIndex(uint32_t i) {
   if (i < m_regs.size())
     return &m_regs[i];
-  return NULL;
+  return nullptr;
 }
 
 const RegisterSet *DynamicRegisterInfo::GetRegisterSet(uint32_t i) const {
   if (i < m_sets.size())
     return &m_sets[i];
-  return NULL;
+  return nullptr;
 }
 
 uint32_t DynamicRegisterInfo::GetRegisterSetIndexByName(ConstString &set_name,
@@ -664,7 +664,7 @@ uint32_t DynamicRegisterInfo::GetRegisterSetIndexByName(ConstString &set_name,
 
   m_set_names.push_back(set_name);
   m_set_reg_nums.resize(m_set_reg_nums.size() + 1);
-  RegisterSet new_set = {set_name.AsCString(), NULL, 0, NULL};
+  RegisterSet new_set = {set_name.AsCString(), nullptr, 0, nullptr};
   m_sets.push_back(new_set);
   return m_sets.size() - 1;
 }
@@ -754,5 +754,5 @@ const lldb_private::RegisterInfo *DynamicRegisterInfo::GetRegisterInfo(
       return &reg_info;
     }
   }
-  return NULL;
+  return nullptr;
 }

@@ -5,7 +5,7 @@
 ; These IR sequences will generate ISD::ROTL and ISD::ROTR nodes, that the
 ; RISC-V backend must be able to select
 
-define i32 @rotl(i32 %x, i32 %y) {
+define i32 @rotl(i32 %x, i32 %y) nounwind {
 ; RV32I-LABEL: rotl:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a2, zero, 32
@@ -21,7 +21,7 @@ define i32 @rotl(i32 %x, i32 %y) {
   ret i32 %d
 }
 
-define i32 @rotr(i32 %x, i32 %y) {
+define i32 @rotr(i32 %x, i32 %y) nounwind {
 ; RV32I-LABEL: rotr:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a2, zero, 32

@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyGoogleModule
   AvoidCStyleCastsCheck.cpp
+  AvoidNSObjectNewCheck.cpp
   AvoidThrowingObjCExceptionCheck.cpp
   AvoidUnderscoreInGoogletestNameCheck.cpp
   DefaultArgumentsCheck.cpp

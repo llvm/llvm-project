@@ -72,7 +72,7 @@ class ClangFunctionCaller : public FunctionCaller {
 
     /// Return the object that the parser should use when resolving external
     /// values.  May be NULL if everything should be self-contained.
-    ClangExpressionDeclMap *DeclMap() override { return NULL; }
+    ClangExpressionDeclMap *DeclMap() override { return nullptr; }
 
     /// Return the object that the parser should allow to access ASTs. May be
     /// NULL if the ASTs do not need to be transformed.

@@ -9,6 +9,7 @@
 #ifndef LLD_ELF_DRIVER_H
 #define LLD_ELF_DRIVER_H
 
+#include "LTO.h"
 #include "SymbolTable.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Reproduce.h"
@@ -33,12 +34,16 @@ private:
   void createFiles(llvm::opt::InputArgList &Args);
   void inferMachineType();
   template <class ELFT> void link(llvm::opt::InputArgList &Args);
+  template <class ELFT> void compileBitcodeFiles();
 
   // True if we are in --whole-archive and --no-whole-archive.
   bool InWholeArchive = false;
 
   // True if we are in --start-lib and --end-lib.
   bool InLib = false;
+
+  // For LTO.
+  std::unique_ptr<BitcodeCompiler> LTO;
 
   std::vector<InputFile *> Files;
 };

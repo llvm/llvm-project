@@ -38,7 +38,7 @@ void DWARFDebugLine::Parse(const DWARFDataExtractor &debug_line_data) {
   while (debug_line_data.ValidOffset(offset)) {
     const lldb::offset_t debug_line_offset = offset;
 
-    if (line_table_sp.get() == NULL)
+    if (line_table_sp.get() == nullptr)
       break;
 
     if (ParseStatementTable(debug_line_data, &offset, line_table_sp.get(), nullptr)) {

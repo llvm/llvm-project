@@ -49,7 +49,7 @@ ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
     : ValueObject(exe_scope), m_address(address), m_type_sp(type_sp),
       m_compiler_type() {
   // Do not attempt to construct one of these objects with no variable!
-  assert(m_type_sp.get() != NULL);
+  assert(m_type_sp.get() != nullptr);
   SetName(ConstString(name));
   m_value.SetContext(Value::eContextTypeLLDBType, m_type_sp.get());
   TargetSP target_sp(GetTargetSP());

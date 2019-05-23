@@ -22,7 +22,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBFunction::SBFunction() : m_opaque_ptr(NULL) {
+SBFunction::SBFunction() : m_opaque_ptr(nullptr) {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBFunction);
 }
 
@@ -42,7 +42,7 @@ const SBFunction &SBFunction::operator=(const SBFunction &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBFunction::~SBFunction() { m_opaque_ptr = NULL; }
+SBFunction::~SBFunction() { m_opaque_ptr = nullptr; }
 
 bool SBFunction::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFunction, IsValid);
@@ -51,13 +51,13 @@ bool SBFunction::IsValid() const {
 SBFunction::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFunction, operator bool);
 
-  return m_opaque_ptr != NULL;
+  return m_opaque_ptr != nullptr;
 }
 
 const char *SBFunction::GetName() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBFunction, GetName);
 
-  const char *cstr = NULL;
+  const char *cstr = nullptr;
   if (m_opaque_ptr)
     cstr = m_opaque_ptr->GetName().AsCString();
 
@@ -67,7 +67,7 @@ const char *SBFunction::GetName() const {
 const char *SBFunction::GetDisplayName() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBFunction, GetDisplayName);
 
-  const char *cstr = NULL;
+  const char *cstr = nullptr;
   if (m_opaque_ptr)
     cstr = m_opaque_ptr->GetMangled()
                .GetDisplayDemangledName(m_opaque_ptr->GetLanguage())
@@ -79,7 +79,7 @@ const char *SBFunction::GetDisplayName() const {
 const char *SBFunction::GetMangledName() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBFunction, GetMangledName);
 
-  const char *cstr = NULL;
+  const char *cstr = nullptr;
   if (m_opaque_ptr)
     cstr = m_opaque_ptr->GetMangled().GetMangledName().AsCString();
   return cstr;
@@ -118,7 +118,7 @@ SBInstructionList SBFunction::GetInstructions(SBTarget target) {
   LLDB_RECORD_METHOD(lldb::SBInstructionList, SBFunction, GetInstructions,
                      (lldb::SBTarget), target);
 
-  return LLDB_RECORD_RESULT(GetInstructions(target, NULL));
+  return LLDB_RECORD_RESULT(GetInstructions(target, nullptr));
 }
 
 SBInstructionList SBFunction::GetInstructions(SBTarget target,
@@ -141,7 +141,7 @@ SBInstructionList SBFunction::GetInstructions(SBTarget target,
     if (module_sp) {
       const bool prefer_file_cache = false;
       sb_instructions.SetDisassembler(Disassembler::DisassembleRange(
-          module_sp->GetArchitecture(), NULL, flavor, exe_ctx,
+          module_sp->GetArchitecture(), nullptr, flavor, exe_ctx,
           m_opaque_ptr->GetAddressRange(), prefer_file_cache));
     }
   }

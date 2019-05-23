@@ -135,6 +135,7 @@ Clang-Tidy Checks
    google-default-arguments
    google-explicit-constructor
    google-global-names-in-headers
+   google-objc-avoid-nsobject-new
    google-objc-avoid-throwing-exception
    google-objc-function-naming
    google-objc-global-variable-declaration

@@ -80,6 +80,11 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
     llvm::sys::path::append(P, "..", "lib", D.getTargetTriple(), "c++");
     if (getVFS().exists(P))
       getLibraryPaths().push_back(P.str());
+
+    P.assign(D.Dir);
+    llvm::sys::path::append(P, "..", "lib", Triple.str(), "c++");
+    if (getVFS().exists(P))
+      getLibraryPaths().push_back(P.str());
   }
 
   P.assign(D.ResourceDir);

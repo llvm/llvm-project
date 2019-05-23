@@ -98,7 +98,7 @@ BreakpointResolverFileRegex::SearchCallback(SearchFilter &filter,
                                             SymbolContext &context,
                                             Address *addr, bool containing) {
 
-  assert(m_breakpoint != NULL);
+  assert(m_breakpoint != nullptr);
   if (!context.target_sp)
     return eCallbackReturnContinue;
 
@@ -145,7 +145,7 @@ BreakpointResolverFileRegex::SearchCallback(SearchFilter &filter,
     BreakpointResolver::SetSCMatchesByLine(filter, sc_list, skip_prologue,
                                            m_regex.GetText());
   }
-  assert(m_breakpoint != NULL);
+  assert(m_breakpoint != nullptr);
 
   return Searcher::eCallbackReturnContinue;
 }

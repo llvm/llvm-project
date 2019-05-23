@@ -69,7 +69,7 @@ void PPC::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     write32be(Loc, read32be(Loc) | (Val & 0x3FFFFFC));
     break;
   default:
-    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    error(getErrorLocation(Loc) + "unrecognized relocation " + toString(Type));
   }
 }
 

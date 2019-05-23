@@ -1,13 +1,6 @@
-;  RUN: sed -e "s,SRC_COMPDIR,%/p/Inputs,g" %s > %t.ll
-;  RUN: llc  -o %t.o -filetype=obj -mtriple=x86_64-pc-linux  %t.ll
-;  RUN: llvm-objdump -d -l %t.o >%t0
-;  RUN: llvm-objdump -dl %t.o >%t1
-;  RUN: llvm-objdump -d -S %t.o >%t2
-;  RUN: llvm-objdump -dS %t.o >%t3
-;  RUN: cmp %t0 %t1
-;  RUN: cmp %t2 %t3
-;  RUN: FileCheck --check-prefix=LINES %t.ll < %t0
-;  RUN: FileCheck --check-prefix=SOURCE --strict-whitespace %t.ll < %t2
+; NOTE: To be able to use this file as an input, the string SRC_CMPDIR needs
+;       replacing with a directory path by using sed or similar.
+
 ; ModuleID = 'source-interleave-x86_64.bc'
 source_filename = "source-interleave-x86_64.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -71,9 +64,3 @@ attributes #1 = { nounwind readnone }
 !21 = !DILocation(line: 8, column: 15, scope: !14)
 !22 = !DILocation(line: 8, column: 13, scope: !14)
 !23 = !DILocation(line: 8, column: 3, scope: !14)
-; LINES: main:
-; LINES-NEXT: ; {{[ -\(\)_A-Za-z0-9.\\/:]+}}source-interleave-x86_64.c:6
-
-; SOURCE: main:
-; SOURCE-NEXT: ; int main() {
-; SOURCE:      ;   int *b = &a;

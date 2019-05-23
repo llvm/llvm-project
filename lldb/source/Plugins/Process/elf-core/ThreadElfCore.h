@@ -149,7 +149,7 @@ public:
 
   const char *GetName() override {
     if (m_thread_name.empty())
-      return NULL;
+      return nullptr;
     return m_thread_name.c_str();
   }
 

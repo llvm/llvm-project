@@ -135,7 +135,7 @@ bool CMIDriverMgr::UnregisterDriverAll() {
   }
 
   m_mapDriverIdToDriver.clear();
-  m_pDriverCurrent = NULL;
+  m_pDriverCurrent = nullptr;
 
   return MIstatus::success;
 }

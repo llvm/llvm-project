@@ -23,6 +23,7 @@
 #include <cstddef>
 
 #include "test_macros.h"
+#include "../../../check_consecutive.h"
 #include "../../../test_compare.h"
 #include "../../../test_hash.h"
 #include "test_allocator.h"
@@ -56,18 +57,10 @@ int main(int, char**)
         C c(std::move(c0), A(12));
         assert(c.bucket_count() >= 7);
         assert(c.size() == 6);
-        C::const_iterator i = c.cbegin();
-        assert(*i == 1);
-        ++i;
-        assert(*i == 1);
-        ++i;
-        assert(*i == 2);
-        ++i;
-        assert(*i == 2);
-        ++i;
-        assert(*i == 3);
-        ++i;
-        assert(*i == 4);
+        CheckConsecutiveValues<C::const_iterator>(c.find(1), c.end(), 1, 2);
+        CheckConsecutiveValues<C::const_iterator>(c.find(2), c.end(), 2, 2);
+        CheckConsecutiveValues<C::const_iterator>(c.find(3), c.end(), 3, 1);
+        CheckConsecutiveValues<C::const_iterator>(c.find(4), c.end(), 4, 1);
         assert(c.hash_function() == test_hash<std::hash<int> >(8));
         assert(c.key_eq() == test_compare<std::equal_to<int> >(9));
         assert(c.get_allocator() == A(12));

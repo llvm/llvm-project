@@ -49,7 +49,7 @@ bool SBInstructionList::IsValid() const {
 SBInstructionList::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBInstructionList, operator bool);
 
-  return m_opaque_sp.get() != NULL;
+  return m_opaque_sp.get() != nullptr;
 }
 
 size_t SBInstructionList::GetSize() {
@@ -119,7 +119,7 @@ void SBInstructionList::SetDisassembler(const lldb::DisassemblerSP &opaque_sp) {
 void SBInstructionList::Print(FILE *out) {
   LLDB_RECORD_METHOD(void, SBInstructionList, Print, (FILE *), out);
 
-  if (out == NULL)
+  if (out == nullptr)
     return;
 }
 
@@ -142,7 +142,7 @@ bool SBInstructionList::GetDescription(lldb::SBStream &description) {
       for (size_t i = 0; i < num_instructions; ++i) {
         Instruction *inst =
             m_opaque_sp->GetInstructionList().GetInstructionAtIndex(i).get();
-        if (inst == NULL)
+        if (inst == nullptr)
           break;
 
         const Address &addr = inst->GetAddress();
@@ -153,7 +153,7 @@ bool SBInstructionList::GetDescription(lldb::SBStream &description) {
               addr, eSymbolContextEverything, sc);
         }
 
-        inst->Dump(&sref, max_opcode_byte_size, true, false, NULL, &sc,
+        inst->Dump(&sref, max_opcode_byte_size, true, false, nullptr, &sc,
                    &prev_sc, &format, 0);
         sref.EOL();
       }

@@ -92,7 +92,7 @@ SBType &SBType::operator=(const SBType &rhs) {
 SBType::~SBType() {}
 
 TypeImpl &SBType::ref() {
-  if (m_opaque_sp.get() == NULL)
+  if (m_opaque_sp.get() == nullptr)
     m_opaque_sp = std::make_shared<TypeImpl>();
   return *m_opaque_sp;
 }
@@ -112,7 +112,7 @@ bool SBType::IsValid() const {
 SBType::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBType, operator bool);
 
-  if (m_opaque_sp.get() == NULL)
+  if (m_opaque_sp.get() == nullptr)
     return false;
 
   return m_opaque_sp->IsValid();
@@ -579,7 +579,7 @@ bool SBTypeList::IsValid() {
 SBTypeList::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeList, operator bool);
 
-  return (m_opaque_up != NULL);
+  return (m_opaque_up != nullptr);
 }
 
 SBTypeList &SBTypeList::operator=(const SBTypeList &rhs) {
@@ -660,7 +660,7 @@ const char *SBTypeMember::GetName() {
 
   if (m_opaque_up)
     return m_opaque_up->GetName().GetCString();
-  return NULL;
+  return nullptr;
 }
 
 SBType SBTypeMember::GetType() {
@@ -743,7 +743,7 @@ void SBTypeMember::reset(TypeMemberImpl *type_member_impl) {
 }
 
 TypeMemberImpl &SBTypeMember::ref() {
-  if (m_opaque_up == NULL)
+  if (m_opaque_up == nullptr)
     m_opaque_up.reset(new TypeMemberImpl());
   return *m_opaque_up;
 }
@@ -789,7 +789,7 @@ const char *SBTypeMemberFunction::GetName() {
 
   if (m_opaque_sp)
     return m_opaque_sp->GetName().GetCString();
-  return NULL;
+  return nullptr;
 }
 
 const char *SBTypeMemberFunction::GetDemangledName() {
@@ -803,7 +803,7 @@ const char *SBTypeMemberFunction::GetDemangledName() {
       return mangled.GetDemangledName(mangled.GuessLanguage()).GetCString();
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 const char *SBTypeMemberFunction::GetMangledName() {
@@ -812,7 +812,7 @@ const char *SBTypeMemberFunction::GetMangledName() {
 
   if (m_opaque_sp)
     return m_opaque_sp->GetMangledName().GetCString();
-  return NULL;
+  return nullptr;
 }
 
 SBType SBTypeMemberFunction::GetType() {

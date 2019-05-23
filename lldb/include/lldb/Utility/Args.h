@@ -267,7 +267,9 @@ public:
     if (total_byte_size == 8)
       return true;
 
-    const uint64_t max = ((uint64_t)1 << (uint64_t)(total_byte_size * 8)) - 1;
+    const uint64_t max = (static_cast<uint64_t>(1)
+                          << static_cast<uint64_t>(total_byte_size * 8)) -
+                         1;
     return uval64 <= max;
   }
 
@@ -279,7 +281,9 @@ public:
     if (total_byte_size == 8)
       return true;
 
-    const int64_t max = ((int64_t)1 << (uint64_t)(total_byte_size * 8 - 1)) - 1;
+    const int64_t max = (static_cast<int64_t>(1)
+                         << static_cast<uint64_t>(total_byte_size * 8 - 1)) -
+                        1;
     const int64_t min = ~(max);
     return min <= sval64 && sval64 <= max;
   }

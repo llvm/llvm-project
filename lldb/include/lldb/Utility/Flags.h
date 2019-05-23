@@ -69,7 +69,7 @@ public:
   ///
   /// \return
   ///     The new flags after clearing all bits from \a mask.
-  ValueType Clear(ValueType mask = ~(ValueType)0) {
+  ValueType Clear(ValueType mask = ~static_cast<ValueType>(0)) {
     m_flags &= ~mask;
     return m_flags;
   }

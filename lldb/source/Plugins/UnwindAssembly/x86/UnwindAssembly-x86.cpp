@@ -239,7 +239,7 @@ UnwindAssembly *UnwindAssembly_x86::CreateInstance(const ArchSpec &arch) {
   const llvm::Triple::ArchType cpu = arch.GetMachine();
   if (cpu == llvm::Triple::x86 || cpu == llvm::Triple::x86_64)
     return new UnwindAssembly_x86(arch);
-  return NULL;
+  return nullptr;
 }
 
 // PluginInterface protocol in UnwindAssemblyParser_x86

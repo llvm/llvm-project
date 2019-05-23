@@ -62,7 +62,7 @@ public:
   friend class SymbolFileDWARFDwo;
   friend class DebugMapModule;
   friend struct DIERef;
-  friend class DWARFUnit;
+  friend class DWARFCompileUnit;
   friend class DWARFDIE;
   friend class DWARFASTParserClang;
 
@@ -364,7 +364,7 @@ protected:
                         const DWARFDIE &orig_die,
                         const lldb::addr_t func_low_pc, bool parse_siblings,
                         bool parse_children,
-                        lldb_private::VariableList *cc_variable_list = NULL);
+                        lldb_private::VariableList *cc_variable_list = nullptr);
 
   bool ClassOrStructIsVirtual(const DWARFDIE &die);
 

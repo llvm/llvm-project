@@ -6,7 +6,7 @@
 
 @gi = external global i32
 
-define i32 @constraint_r(i32 %a) {
+define i32 @constraint_r(i32 %a) nounwind {
 ; RV32I-LABEL: constraint_r:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a1, %hi(gi)
@@ -29,7 +29,7 @@ define i32 @constraint_r(i32 %a) {
   ret i32 %2
 }
 
-define i32 @constraint_i(i32 %a) {
+define i32 @constraint_i(i32 %a) nounwind {
 ; RV32I-LABEL: constraint_i:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    #APP
@@ -48,7 +48,7 @@ define i32 @constraint_i(i32 %a) {
   ret i32 %2
 }
 
-define void @constraint_m(i32* %a) {
+define void @constraint_m(i32* %a) nounwind {
 ; RV32I-LABEL: constraint_m:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    #APP
@@ -64,7 +64,7 @@ define void @constraint_m(i32* %a) {
   ret void
 }
 
-define i32 @constraint_m2(i32* %a) {
+define i32 @constraint_m2(i32* %a) nounwind {
 ; RV32I-LABEL: constraint_m2:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    #APP
