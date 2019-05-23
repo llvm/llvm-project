@@ -42,8 +42,7 @@ public:
   multi_ptr(multi_ptr &&) = default;
   multi_ptr(pointer_t pointer) : m_Pointer(pointer) {}
 #ifdef __SYCL_DEVICE_ONLY__
-  multi_ptr(ElementType *pointer)
-      : m_Pointer((pointer_t)(pointer)) {
+  multi_ptr(ElementType *pointer) : m_Pointer((pointer_t)(pointer)) {
     // TODO An implementation should reject an argument if the deduced
     // address space is not compatible with Space.
   }
@@ -62,7 +61,7 @@ public:
   multi_ptr &operator=(ElementType *pointer) {
     // TODO An implementation should reject an argument if the deduced
     // address space is not compatible with Space.
-    m_Pointer = reinterpret_cast<pointer_t>(pointer);
+    m_Pointer = (pointer_t)pointer;
     return *this;
   }
 #endif
@@ -93,7 +92,7 @@ public:
   multi_ptr(accessor<ElementType, dimensions, Mode,
                      access::target::global_buffer, isPlaceholder>
                 Accessor) {
-    m_Pointer = reinterpret_cast<pointer_t>(Accessor.get_pointer().m_Pointer);
+    m_Pointer = (pointer_t)(Accessor.get_pointer().m_Pointer);
   }
 
   // Only if Space == local_space
@@ -287,7 +286,7 @@ public:
   multi_ptr(multi_ptr &&) = default;
   multi_ptr(pointer_t pointer) : m_Pointer(pointer) {}
 #ifdef __SYCL_DEVICE_ONLY__
-  multi_ptr(void *pointer) : m_Pointer(reinterpret_cast<pointer_t>(pointer)) {
+  multi_ptr(void *pointer) : m_Pointer((pointer_t)pointer) {
     // TODO An implementation should reject an argument if the deduced
     // address space is not compatible with Space.
   }
@@ -313,7 +312,7 @@ public:
   multi_ptr &operator=(void *pointer) {
     // TODO An implementation should reject an argument if the deduced
     // address space is not compatible with Space.
-    m_Pointer = reinterpret_cast<pointer_t>(pointer);
+    m_Pointer = (pointer_t)pointer;
     return *this;
   }
 #endif
@@ -403,8 +402,7 @@ public:
   multi_ptr(multi_ptr &&) = default;
   multi_ptr(pointer_t pointer) : m_Pointer(pointer) {}
 #ifdef __SYCL_DEVICE_ONLY__
-  multi_ptr(const void *pointer)
-      : m_Pointer(reinterpret_cast<pointer_t>(pointer)) {
+  multi_ptr(const void *pointer) : m_Pointer((pointer_t)pointer) {
     // TODO An implementation should reject an argument if the deduced
     // address space is not compatible with Space.
   }
@@ -430,7 +428,7 @@ public:
   multi_ptr &operator=(const void *pointer) {
     // TODO An implementation should reject an argument if the deduced
     // address space is not compatible with Space.
-    m_Pointer = reinterpret_cast<pointer_t>(pointer);
+    m_Pointer = (pointer_t)pointer;
     return *this;
   }
 #endif

@@ -77,6 +77,16 @@ template <typename T> void testMultPtr() {
         auto local_ptr = make_ptr<T, access::address_space::local_space>(
           localAccessor.get_pointer());
 
+        T *RawPtr = nullptr;
+        global_ptr<T> ptr_4(RawPtr);
+        ptr_4 = RawPtr;
+
+        global_ptr<T> ptr_5(accessorData_1);
+
+        global_ptr<void> ptr_6((void *)RawPtr);
+
+        ptr_6 = (void *)RawPtr;
+
         innerFunc<T>(wiID.get(0), ptr_1, ptr_2, local_ptr);
       });
     });
