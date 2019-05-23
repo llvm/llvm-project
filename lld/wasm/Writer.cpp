@@ -439,7 +439,7 @@ void Writer::calculateExports() {
         WasmExport{FunctionTableName, WASM_EXTERNAL_TABLE, 0});
 
   unsigned FakeGlobalIndex =
-      Out.ImportSec->NumImportedGlobals + Out.GlobalSec->InputGlobals.size();
+      Out.ImportSec->numImportedGlobals() + Out.GlobalSec->InputGlobals.size();
 
   for (Symbol *Sym : Symtab->getSymbols()) {
     if (!Sym->isExported())
@@ -532,7 +532,9 @@ static void scanRelocations() {
 }
 
 void Writer::assignIndexes() {
-  assert(Out.FunctionSec->InputFunctions.empty());
+  // Seal the import section, since other index spaces such as function and
+  // global are effected by the number of imports.
+  Out.ImportSec->seal();
 
   for (InputFunction *Func : Symtab->SyntheticFunctions)
     Out.FunctionSec->addFunction(Func);
@@ -542,8 +544,6 @@ void Writer::assignIndexes() {
     for (InputFunction *Func : File->Functions)
       Out.FunctionSec->addFunction(Func);
   }
-
-  scanRelocations();
 
   for (InputGlobal *Global : Symtab->SyntheticGlobals)
     Out.GlobalSec->addGlobal(Global);
@@ -724,6 +724,8 @@ void Writer::run() {
   populateTargetFeatures();
   log("-- calculateImports");
   calculateImports();
+  log("-- scanRelocations");
+  scanRelocations();
   log("-- assignIndexes");
   assignIndexes();
   log("-- calculateInitFunctions");
@@ -750,9 +752,9 @@ void Writer::run() {
     log("Defined Functions: " + Twine(Out.FunctionSec->InputFunctions.size()));
     log("Defined Globals  : " + Twine(Out.GlobalSec->InputGlobals.size()));
     log("Defined Events   : " + Twine(Out.EventSec->InputEvents.size()));
-    log("Function Imports : " + Twine(Out.ImportSec->NumImportedFunctions));
-    log("Global Imports   : " + Twine(Out.ImportSec->NumImportedGlobals));
-    log("Event Imports    : " + Twine(Out.ImportSec->NumImportedEvents));
+    log("Function Imports : " + Twine(Out.ImportSec->numImportedFunctions()));
+    log("Global Imports   : " + Twine(Out.ImportSec->numImportedGlobals()));
+    log("Event Imports    : " + Twine(Out.ImportSec->numImportedEvents()));
     for (ObjFile *File : Symtab->ObjectFiles)
       File->dumpInfo();
   }

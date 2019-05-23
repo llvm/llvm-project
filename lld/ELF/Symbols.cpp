@@ -241,8 +241,20 @@ void Symbol::parseSymbolVersion() {
           Verstr);
 }
 
-InputFile *LazyArchive::fetch() const {
-  return cast<ArchiveFile>(File)->fetch(Sym);
+void Symbol::fetch() const {
+  if (auto *Sym = dyn_cast<LazyArchive>(this)) {
+    if (auto *F = cast<ArchiveFile>(Sym->File)->fetch(Sym->Sym))
+      parseFile(F);
+    return;
+  }
+
+  if (auto *Sym = dyn_cast<LazyObject>(this)) {
+    if (auto *F = dyn_cast<LazyObjFile>(Sym->File)->fetch())
+      parseFile(F);
+    return;
+  }
+
+  llvm_unreachable("Symbol::fetch() is called on a non-lazy symbol");
 }
 
 MemoryBufferRef LazyArchive::getMemberBuffer() {
@@ -252,10 +264,6 @@ MemoryBufferRef LazyArchive::getMemberBuffer() {
   return CHECK(C.getMemoryBufferRef(),
                "could not get the buffer for the member defining symbol " +
                    Sym.getName());
-}
-
-InputFile *LazyObject::fetch() const {
-  return cast<LazyObjFile>(File)->fetch();
 }
 
 uint8_t Symbol::computeBinding() const {
@@ -337,4 +345,300 @@ std::string lld::toString(const Symbol &B) {
     if (Optional<std::string> S = demangleItanium(B.getName()))
       return *S;
   return B.getName();
+}
+
+static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
+  if (VA == STV_DEFAULT)
+    return VB;
+  if (VB == STV_DEFAULT)
+    return VA;
+  return std::min(VA, VB);
+}
+
+// Merge symbol properties.
+//
+// When we have many symbols of the same name, we choose one of them,
+// and that's the result of symbol resolution. However, symbols that
+// were not chosen still affect some symbol properties.
+void Symbol::mergeProperties(const Symbol &Other) {
+  if (Other.ExportDynamic)
+    ExportDynamic = true;
+  if (Other.IsUsedInRegularObj)
+    IsUsedInRegularObj = true;
+
+  // DSO symbols do not affect visibility in the output.
+  if (!Other.isShared())
+    Visibility = getMinVisibility(Visibility, Other.Visibility);
+}
+
+void Symbol::resolve(const Symbol &Other) {
+  mergeProperties(Other);
+
+  if (isPlaceholder()) {
+    replace(Other);
+    return;
+  }
+
+  switch (Other.kind()) {
+  case Symbol::UndefinedKind:
+    resolveUndefined(cast<Undefined>(Other));
+    break;
+  case Symbol::CommonKind:
+    resolveCommon(cast<CommonSymbol>(Other));
+    break;
+  case Symbol::DefinedKind:
+    resolveDefined(cast<Defined>(Other));
+    break;
+  case Symbol::LazyArchiveKind:
+    resolveLazy(cast<LazyArchive>(Other));
+    break;
+  case Symbol::LazyObjectKind:
+    resolveLazy(cast<LazyObject>(Other));
+    break;
+  case Symbol::SharedKind:
+    resolveShared(cast<SharedSymbol>(Other));
+    break;
+  case Symbol::PlaceholderKind:
+    llvm_unreachable("bad symbol kind");
+  }
+}
+
+void Symbol::resolveUndefined(const Undefined &Other) {
+  // An undefined symbol with non default visibility must be satisfied
+  // in the same DSO.
+  //
+  // If this is a non-weak defined symbol in a discarded section, override the
+  // existing undefined symbol for better error message later.
+  if ((isShared() && Other.Visibility != STV_DEFAULT) ||
+      (isUndefined() && Other.Binding != STB_WEAK && Other.DiscardedSecIdx)) {
+    replace(Other);
+    return;
+  }
+
+  if (isShared() || isLazy() || (isUndefined() && Other.Binding != STB_WEAK))
+    Binding = Other.Binding;
+
+  if (isLazy()) {
+    // An undefined weak will not fetch archive members. See comment on Lazy in
+    // Symbols.h for the details.
+    if (Other.Binding == STB_WEAK) {
+      Type = Other.Type;
+      return;
+    }
+
+    // Do extra check for --warn-backrefs.
+    //
+    // --warn-backrefs is an option to prevent an undefined reference from
+    // fetching an archive member written earlier in the command line. It can be
+    // used to keep compatibility with GNU linkers to some degree.
+    // I'll explain the feature and why you may find it useful in this comment.
+    //
+    // lld's symbol resolution semantics is more relaxed than traditional Unix
+    // linkers. For example,
+    //
+    //   ld.lld foo.a bar.o
+    //
+    // succeeds even if bar.o contains an undefined symbol that has to be
+    // resolved by some object file in foo.a. Traditional Unix linkers don't
+    // allow this kind of backward reference, as they visit each file only once
+    // from left to right in the command line while resolving all undefined
+    // symbols at the moment of visiting.
+    //
+    // In the above case, since there's no undefined symbol when a linker visits
+    // foo.a, no files are pulled out from foo.a, and because the linker forgets
+    // about foo.a after visiting, it can't resolve undefined symbols in bar.o
+    // that could have been resolved otherwise.
+    //
+    // That lld accepts more relaxed form means that (besides it'd make more
+    // sense) you can accidentally write a command line or a build file that
+    // works only with lld, even if you have a plan to distribute it to wider
+    // users who may be using GNU linkers. With --warn-backrefs, you can detect
+    // a library order that doesn't work with other Unix linkers.
+    //
+    // The option is also useful to detect cyclic dependencies between static
+    // archives. Again, lld accepts
+    //
+    //   ld.lld foo.a bar.a
+    //
+    // even if foo.a and bar.a depend on each other. With --warn-backrefs, it is
+    // handled as an error.
+    //
+    // Here is how the option works. We assign a group ID to each file. A file
+    // with a smaller group ID can pull out object files from an archive file
+    // with an equal or greater group ID. Otherwise, it is a reverse dependency
+    // and an error.
+    //
+    // A file outside --{start,end}-group gets a fresh ID when instantiated. All
+    // files within the same --{start,end}-group get the same group ID. E.g.
+    //
+    //   ld.lld A B --start-group C D --end-group E
+    //
+    // A forms group 0. B form group 1. C and D (including their member object
+    // files) form group 2. E forms group 3. I think that you can see how this
+    // group assignment rule simulates the traditional linker's semantics.
+    bool Backref = Config->WarnBackrefs && Other.File &&
+                   File->GroupId < Other.File->GroupId;
+    fetch();
+
+    // We don't report backward references to weak symbols as they can be
+    // overridden later.
+    if (Backref && !isWeak())
+      warn("backward reference detected: " + Other.getName() + " in " +
+           toString(Other.File) + " refers to " + toString(File));
+  }
+}
+
+// Using .symver foo,foo@@VER unfortunately creates two symbols: foo and
+// foo@@VER. We want to effectively ignore foo, so give precedence to
+// foo@@VER.
+// FIXME: If users can transition to using
+// .symver foo,foo@@@VER
+// we can delete this hack.
+static int compareVersion(StringRef A, StringRef B) {
+  bool X = A.contains("@@");
+  bool Y = B.contains("@@");
+  if (!X && Y)
+    return 1;
+  if (X && !Y)
+    return -1;
+  return 0;
+}
+
+// Compare two symbols. Return 1 if the new symbol should win, -1 if
+// the new symbol should lose, or 0 if there is a conflict.
+int Symbol::compare(const Symbol *Other) const {
+  assert(Other->isDefined() || Other->isCommon());
+
+  if (!isDefined() && !isCommon())
+    return 1;
+
+  if (int Cmp = compareVersion(getName(), Other->getName()))
+    return Cmp;
+
+  if (Other->isWeak())
+    return -1;
+
+  if (isWeak())
+    return 1;
+
+  if (isCommon() && Other->isCommon()) {
+    if (Config->WarnCommon)
+      warn("multiple common of " + getName());
+    return 0;
+  }
+
+  if (isCommon()) {
+    if (Config->WarnCommon)
+      warn("common " + getName() + " is overridden");
+    return 1;
+  }
+
+  if (Other->isCommon()) {
+    if (Config->WarnCommon)
+      warn("common " + getName() + " is overridden");
+    return -1;
+  }
+
+  auto *OldSym = cast<Defined>(this);
+  auto *NewSym = cast<Defined>(Other);
+
+  if (Other->File && isa<BitcodeFile>(Other->File))
+    return 0;
+
+  if (!OldSym->Section && !NewSym->Section && OldSym->Value == NewSym->Value &&
+      NewSym->Binding == STB_GLOBAL)
+    return -1;
+
+  return 0;
+}
+
+static void reportDuplicate(Symbol *Sym, InputFile *NewFile,
+                            InputSectionBase *ErrSec, uint64_t ErrOffset) {
+  if (Config->AllowMultipleDefinition)
+    return;
+
+  Defined *D = cast<Defined>(Sym);
+  if (!D->Section || !ErrSec) {
+    error("duplicate symbol: " + toString(*Sym) + "\n>>> defined in " +
+          toString(Sym->File) + "\n>>> defined in " + toString(NewFile));
+    return;
+  }
+
+  // Construct and print an error message in the form of:
+  //
+  //   ld.lld: error: duplicate symbol: foo
+  //   >>> defined at bar.c:30
+  //   >>>            bar.o (/home/alice/src/bar.o)
+  //   >>> defined at baz.c:563
+  //   >>>            baz.o in archive libbaz.a
+  auto *Sec1 = cast<InputSectionBase>(D->Section);
+  std::string Src1 = Sec1->getSrcMsg(*Sym, D->Value);
+  std::string Obj1 = Sec1->getObjMsg(D->Value);
+  std::string Src2 = ErrSec->getSrcMsg(*Sym, ErrOffset);
+  std::string Obj2 = ErrSec->getObjMsg(ErrOffset);
+
+  std::string Msg = "duplicate symbol: " + toString(*Sym) + "\n>>> defined at ";
+  if (!Src1.empty())
+    Msg += Src1 + "\n>>>            ";
+  Msg += Obj1 + "\n>>> defined at ";
+  if (!Src2.empty())
+    Msg += Src2 + "\n>>>            ";
+  Msg += Obj2;
+  error(Msg);
+}
+
+void Symbol::resolveCommon(const CommonSymbol &Other) {
+  int Cmp = compare(&Other);
+  if (Cmp < 0)
+    return;
+
+  if (Cmp > 0) {
+    replace(Other);
+    return;
+  }
+
+  CommonSymbol *OldSym = cast<CommonSymbol>(this);
+
+  OldSym->Alignment = std::max(OldSym->Alignment, Other.Alignment);
+  if (OldSym->Size < Other.Size) {
+    OldSym->File = Other.File;
+    OldSym->Size = Other.Size;
+  }
+}
+
+void Symbol::resolveDefined(const Defined &Other) {
+  int Cmp = compare(&Other);
+  if (Cmp > 0)
+    replace(Other);
+  else if (Cmp == 0)
+    reportDuplicate(this, Other.File,
+                    dyn_cast_or_null<InputSectionBase>(Other.Section),
+                    Other.Value);
+}
+
+template <class LazyT> void Symbol::resolveLazy(const LazyT &Other) {
+  if (!isUndefined())
+    return;
+
+  // An undefined weak will not fetch archive members. See comment on Lazy in
+  // Symbols.h for the details.
+  if (isWeak()) {
+    uint8_t Ty = Type;
+    replace(Other);
+    Type = Ty;
+    Binding = STB_WEAK;
+    return;
+  }
+
+  Other.fetch();
+}
+
+void Symbol::resolveShared(const SharedSymbol &Other) {
+  if (Visibility == STV_DEFAULT && (isUndefined() || isLazy())) {
+    // An undefined symbol with non default visibility must be satisfied
+    // in the same DSO.
+    uint8_t Bind = Binding;
+    replace(Other);
+    Binding = Bind;
+  }
 }

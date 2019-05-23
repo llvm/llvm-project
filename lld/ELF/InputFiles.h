@@ -139,10 +139,11 @@ public:
   // Index of MIPS GOT built for this file.
   llvm::Optional<size_t> MipsGotIndex;
 
+  std::vector<Symbol *> Symbols;
+
 protected:
   InputFile(Kind K, MemoryBufferRef M);
   std::vector<InputSectionBase *> Sections;
-  std::vector<Symbol *> Symbols;
 
 private:
   const Kind FileKind;
@@ -255,7 +256,6 @@ private:
   StringRef getSectionName(const Elf_Shdr &Sec);
 
   bool shouldMerge(const Elf_Shdr &Sec);
-  Symbol *createSymbol(const Elf_Sym *Sym);
 
   // Each ELF symbol contains a section index which the symbol belongs to.
   // However, because the number of bits dedicated for that is limited, a

@@ -83,7 +83,7 @@ void MSP430::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   }
   default:
-    error(getErrorLocation(Loc) + "unrecognized reloc " + toString(Type));
+    error(getErrorLocation(Loc) + "unrecognized relocation " + toString(Type));
   }
 }
 

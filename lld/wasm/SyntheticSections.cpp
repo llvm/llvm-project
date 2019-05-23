@@ -92,6 +92,7 @@ void TypeSection::writeBody() {
 }
 
 uint32_t ImportSection::numImports() const {
+  assert(IsSealed);
   uint32_t NumImports = ImportedSymbols.size() + GOTSymbols.size();
   if (Config->ImportMemory)
     ++NumImports;
@@ -101,6 +102,7 @@ uint32_t ImportSection::numImports() const {
 }
 
 void ImportSection::addGOTEntry(Symbol *Sym) {
+  assert(!IsSealed);
   if (Sym->hasGOTIndex())
     return;
   Sym->setGOTIndex(NumImportedGlobals++);
@@ -108,6 +110,7 @@ void ImportSection::addGOTEntry(Symbol *Sym) {
 }
 
 void ImportSection::addImport(Symbol *Sym) {
+  assert(!IsSealed);
   ImportedSymbols.emplace_back(Sym);
   if (auto *F = dyn_cast<FunctionSymbol>(Sym))
     F->setFunctionIndex(NumImportedFunctions++);
@@ -202,7 +205,7 @@ void FunctionSection::addFunction(InputFunction *Func) {
   if (!Func->Live)
     return;
   uint32_t FunctionIndex =
-      Out.ImportSec->NumImportedFunctions + InputFunctions.size();
+      Out.ImportSec->numImportedFunctions() + InputFunctions.size();
   InputFunctions.emplace_back(Func);
   Func->setFunctionIndex(FunctionIndex);
 }
@@ -251,7 +254,7 @@ void GlobalSection::addGlobal(InputGlobal *Global) {
   if (!Global->Live)
     return;
   uint32_t GlobalIndex =
-      Out.ImportSec->NumImportedGlobals + InputGlobals.size();
+      Out.ImportSec->numImportedGlobals() + InputGlobals.size();
   LLVM_DEBUG(dbgs() << "addGlobal: " << GlobalIndex << "\n");
   Global->setGlobalIndex(GlobalIndex);
   Out.GlobalSec->InputGlobals.push_back(Global);
@@ -270,7 +273,7 @@ void EventSection::writeBody() {
 void EventSection::addEvent(InputEvent *Event) {
   if (!Event->Live)
     return;
-  uint32_t EventIndex = Out.ImportSec->NumImportedEvents + InputEvents.size();
+  uint32_t EventIndex = Out.ImportSec->numImportedEvents() + InputEvents.size();
   LLVM_DEBUG(dbgs() << "addEvent: " << EventIndex << "\n");
   Event->setEventIndex(EventIndex);
   InputEvents.push_back(Event);
@@ -457,7 +460,7 @@ void LinkingSection::addToSymtab(Symbol *Sym) {
 }
 
 unsigned NameSection::numNames() const {
-  unsigned NumNames = Out.ImportSec->NumImportedFunctions;
+  unsigned NumNames = Out.ImportSec->numImportedFunctions();
   for (const InputFunction *F : Out.FunctionSec->InputFunctions)
     if (!F->getName().empty() || !F->getDebugName().empty())
       ++NumNames;

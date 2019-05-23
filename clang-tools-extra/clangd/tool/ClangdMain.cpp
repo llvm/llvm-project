@@ -119,7 +119,7 @@ static llvm::cl::opt<PCHStorageFlag> PCHStorage(
 static llvm::cl::opt<int> LimitResults(
     "limit-results",
     llvm::cl::desc("Limit the number of results returned by clangd. "
-                   "0 means no limit."),
+                   "0 means no limit. (default=100)"),
     llvm::cl::init(100));
 
 static llvm::cl::opt<bool> RunSynchronously(
