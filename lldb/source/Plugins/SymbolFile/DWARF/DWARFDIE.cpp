@@ -182,6 +182,130 @@ const char *DWARFDIE::GetQualifiedName(std::string &storage) const {
     return nullptr;
 }
 
+// GetName
+//
+// Get value of the DW_AT_name attribute and place that value into the supplied
+// stream object. If the DIE is a NULL object "NULL" is placed into the stream,
+// and if no DW_AT_name attribute exists for the DIE then nothing is printed.
+void DWARFDIE::GetName(Stream &s) const {
+  if (!IsValid())
+    return;
+  if (GetDIE()->IsNULL()) {
+    s.PutCString("NULL");
+    return;
+  }
+  const char *name = GetDIE()->GetAttributeValueAsString(GetCU(), DW_AT_name, nullptr, true);
+  if (!name)
+    return;
+  s.PutCString(name);
+}
+
+// AppendTypeName
+//
+// Follows the type name definition down through all needed tags to end up with
+// a fully qualified type name and dump the results to the supplied stream.
+// This is used to show the name of types given a type identifier.
+void DWARFDIE::AppendTypeName(Stream &s) const {
+  if (!IsValid())
+    return;
+  if (GetDIE()->IsNULL()) {
+    s.PutCString("NULL");
+    return;
+  }
+  if (const char *name = GetPubname()) {
+    s.PutCString(name);
+    return;
+  }
+  switch (Tag()) {
+  case DW_TAG_array_type:
+    break; // print out a "[]" after printing the full type of the element
+           // below
+  case DW_TAG_base_type:
+    s.PutCString("base ");
+    break;
+  case DW_TAG_class_type:
+    s.PutCString("class ");
+    break;
+  case DW_TAG_const_type:
+    s.PutCString("const ");
+    break;
+  case DW_TAG_enumeration_type:
+    s.PutCString("enum ");
+    break;
+  case DW_TAG_file_type:
+    s.PutCString("file ");
+    break;
+  case DW_TAG_interface_type:
+    s.PutCString("interface ");
+    break;
+  case DW_TAG_packed_type:
+    s.PutCString("packed ");
+    break;
+  case DW_TAG_pointer_type:
+    break; // print out a '*' after printing the full type below
+  case DW_TAG_ptr_to_member_type:
+    break; // print out a '*' after printing the full type below
+  case DW_TAG_reference_type:
+    break; // print out a '&' after printing the full type below
+  case DW_TAG_restrict_type:
+    s.PutCString("restrict ");
+    break;
+  case DW_TAG_set_type:
+    s.PutCString("set ");
+    break;
+  case DW_TAG_shared_type:
+    s.PutCString("shared ");
+    break;
+  case DW_TAG_string_type:
+    s.PutCString("string ");
+    break;
+  case DW_TAG_structure_type:
+    s.PutCString("struct ");
+    break;
+  case DW_TAG_subrange_type:
+    s.PutCString("subrange ");
+    break;
+  case DW_TAG_subroutine_type:
+    s.PutCString("function ");
+    break;
+  case DW_TAG_thrown_type:
+    s.PutCString("thrown ");
+    break;
+  case DW_TAG_union_type:
+    s.PutCString("union ");
+    break;
+  case DW_TAG_unspecified_type:
+    s.PutCString("unspecified ");
+    break;
+  case DW_TAG_volatile_type:
+    s.PutCString("volatile ");
+    break;
+  default:
+    return;
+  }
+
+  // Follow the DW_AT_type if possible
+  if (DWARFDIE next_die = GetAttributeValueAsReferenceDIE(DW_AT_type))
+    next_die.AppendTypeName(s);
+
+  switch (Tag()) {
+  case DW_TAG_array_type:
+    s.PutCString("[]");
+    break;
+  case DW_TAG_pointer_type:
+    s.PutChar('*');
+    break;
+  case DW_TAG_ptr_to_member_type:
+    s.PutChar('*');
+    break;
+  case DW_TAG_reference_type:
+    s.PutChar('&');
+    break;
+  default:
+    break;
+  }
+}
+
 lldb_private::Type *DWARFDIE::ResolveType() const {
   if (IsValid())
     return GetDWARF()->ResolveType(*this, true);
