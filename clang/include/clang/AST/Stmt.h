@@ -1040,6 +1040,12 @@ protected:
   explicit Stmt(StmtClass SC, EmptyShell) : Stmt(SC) {}
 
 public:
+  Stmt() = delete;
+  Stmt(const Stmt &) = delete;
+  Stmt(Stmt &&) = delete;
+  Stmt &operator=(const Stmt &) = delete;
+  Stmt &operator=(Stmt &&) = delete;
+
   Stmt(StmtClass SC) {
     static_assert(sizeof(*this) <= 8,
                   "changing bitfields changed sizeof(Stmt)");
@@ -1053,11 +1059,6 @@ public:
   StmtClass getStmtClass() const {
     return static_cast<StmtClass>(StmtBits.sClass);
   }
-
-  Stmt(const Stmt &) = delete;
-  Stmt(Stmt &&) = delete;
-  Stmt &operator=(const Stmt &) = delete;
-  Stmt &operator=(Stmt &&) = delete;
 
   const char *getStmtClassName() const;
 
