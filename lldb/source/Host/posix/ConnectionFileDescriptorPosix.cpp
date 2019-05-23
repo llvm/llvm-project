@@ -111,7 +111,7 @@ ConnectionFileDescriptor::~ConnectionFileDescriptor() {
   if (log)
     log->Printf("%p ConnectionFileDescriptor::~ConnectionFileDescriptor ()",
                 static_cast<void *>(this));
-  Disconnect(NULL);
+  Disconnect(nullptr);
   CloseCommandPipe();
 }
 

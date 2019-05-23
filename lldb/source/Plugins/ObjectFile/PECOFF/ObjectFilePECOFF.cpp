@@ -596,7 +596,7 @@ Symtab *ObjectFilePECOFF::GetSymtab() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_symtab_up == NULL) {
+    if (m_symtab_up == nullptr) {
       SectionList *sect_list = GetSectionList();
       m_symtab_up.reset(new Symtab(this));
       std::lock_guard<std::recursive_mutex> guard(m_symtab_up->GetMutex());
@@ -627,7 +627,7 @@ Symtab *ObjectFilePECOFF::GetSymtab() {
           for (uint32_t i = 0; i < num_syms; ++i) {
             coff_symbol_t symbol;
             const uint32_t symbol_offset = offset;
-            const char *symbol_name_cstr = NULL;
+            const char *symbol_name_cstr = nullptr;
             // If the first 4 bytes of the symbol string are zero, then they
             // are followed by a 4-byte string table offset. Else these
             // 8 bytes contain the symbol name
@@ -642,7 +642,7 @@ Symtab *ObjectFilePECOFF::GetSymtab() {
               // bytes
               offset += sizeof(symbol.name) - 4; // Skip remaining
               symbol_name_cstr = symtab_data.PeekCStr(symbol_offset);
-              if (symbol_name_cstr == NULL)
+              if (symbol_name_cstr == nullptr)
                 break;
               symbol_name.assign(symbol_name_cstr, sizeof(symbol.name));
             }
@@ -1006,10 +1006,10 @@ void ObjectFilePECOFF::Dump(Stream *s) {
 
     SectionList *sections = GetSectionList();
     if (sections)
-      sections->Dump(s, NULL, true, UINT32_MAX);
+      sections->Dump(s, nullptr, true, UINT32_MAX);
 
     if (m_symtab_up)
-      m_symtab_up->Dump(s, NULL, eSortOrderNone);
+      m_symtab_up->Dump(s, nullptr, eSortOrderNone);
 
     if (m_dos_header.e_magic)
       DumpDOSHeader(s, m_dos_header);

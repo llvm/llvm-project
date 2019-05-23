@@ -346,7 +346,7 @@ bool ClangASTImporter::CanImport(const CompilerType &type) {
     const clang::CXXRecordDecl *cxx_record_decl =
         qual_type->getAsCXXRecordDecl();
     if (cxx_record_decl) {
-      if (ResolveDeclOrigin(cxx_record_decl, NULL, NULL))
+      if (ResolveDeclOrigin(cxx_record_decl, nullptr, nullptr))
         return true;
     }
   } break;
@@ -355,7 +355,7 @@ bool ClangASTImporter::CanImport(const CompilerType &type) {
     clang::EnumDecl *enum_decl =
         llvm::cast<clang::EnumType>(qual_type)->getDecl();
     if (enum_decl) {
-      if (ResolveDeclOrigin(enum_decl, NULL, NULL))
+      if (ResolveDeclOrigin(enum_decl, nullptr, nullptr))
         return true;
     }
   } break;
@@ -370,7 +370,7 @@ bool ClangASTImporter::CanImport(const CompilerType &type) {
       // We currently can't complete objective C types through the newly added
       // ASTContext because it only supports TagDecl objects right now...
       if (class_interface_decl) {
-        if (ResolveDeclOrigin(class_interface_decl, NULL, NULL))
+        if (ResolveDeclOrigin(class_interface_decl, nullptr, nullptr))
           return true;
       }
     }
@@ -422,7 +422,7 @@ bool ClangASTImporter::Import(const CompilerType &type) {
     const clang::CXXRecordDecl *cxx_record_decl =
         qual_type->getAsCXXRecordDecl();
     if (cxx_record_decl) {
-      if (ResolveDeclOrigin(cxx_record_decl, NULL, NULL))
+      if (ResolveDeclOrigin(cxx_record_decl, nullptr, nullptr))
         return CompleteAndFetchChildren(qual_type);
     }
   } break;
@@ -431,7 +431,7 @@ bool ClangASTImporter::Import(const CompilerType &type) {
     clang::EnumDecl *enum_decl =
         llvm::cast<clang::EnumType>(qual_type)->getDecl();
     if (enum_decl) {
-      if (ResolveDeclOrigin(enum_decl, NULL, NULL))
+      if (ResolveDeclOrigin(enum_decl, nullptr, nullptr))
         return CompleteAndFetchChildren(qual_type);
     }
   } break;
@@ -446,7 +446,7 @@ bool ClangASTImporter::Import(const CompilerType &type) {
       // We currently can't complete objective C types through the newly added
       // ASTContext because it only supports TagDecl objects right now...
       if (class_interface_decl) {
-        if (ResolveDeclOrigin(class_interface_decl, NULL, NULL))
+        if (ResolveDeclOrigin(class_interface_decl, nullptr, nullptr))
           return CompleteAndFetchChildren(qual_type);
       }
     }

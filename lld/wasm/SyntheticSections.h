@@ -101,14 +101,28 @@ public:
   void writeBody() override;
   void addImport(Symbol *Sym);
   void addGOTEntry(Symbol *Sym);
+  void seal() { IsSealed = true; }
   uint32_t numImports() const;
+  uint32_t numImportedGlobals() const {
+    assert(IsSealed);
+    return NumImportedGlobals;
+  }
+  uint32_t numImportedFunctions() const {
+    assert(IsSealed);
+    return NumImportedFunctions;
+  }
+  uint32_t numImportedEvents() const {
+    assert(IsSealed);
+    return NumImportedEvents;
+  }
 
-  unsigned NumImportedGlobals = 0;
-  unsigned NumImportedFunctions = 0;
-  unsigned NumImportedEvents = 0;
   std::vector<const Symbol *> ImportedSymbols;
 
 protected:
+  bool IsSealed = false;
+  unsigned NumImportedGlobals = 0;
+  unsigned NumImportedFunctions = 0;
+  unsigned NumImportedEvents = 0;
   std::vector<const Symbol *> GOTSymbols;
 };
 

@@ -102,7 +102,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   }
 
   StackFrame *frame = exe_ctx.GetFramePtr();
-  if (frame == NULL) {
+  if (frame == nullptr) {
     if (log)
       log->Printf("  [CUE::SC] Null stack frame");
     return;

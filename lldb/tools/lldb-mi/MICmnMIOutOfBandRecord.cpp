@@ -53,7 +53,7 @@ MapOutOfBandToText(CMICmnMIOutOfBandRecord::OutOfBand_e veType) {
     return "";
   }
   assert(false && "unknown CMICmnMIOutofBandRecord::OutOfBand_e");
-  return NULL;
+  return nullptr;
 }
 
 static const char *
@@ -95,7 +95,7 @@ MapOutOfBandToToken(CMICmnMIOutOfBandRecord::OutOfBand_e veType) {
     return "&";
   }
   assert(false && "unknown CMICmnMIOutofBandRecord::OutOfBand_e");
-  return NULL;
+  return nullptr;
 }
 
 //++

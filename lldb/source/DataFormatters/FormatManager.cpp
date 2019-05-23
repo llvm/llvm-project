@@ -146,7 +146,7 @@ char FormatManager::GetFormatAsFormatChar(lldb::Format format) {
 const char *FormatManager::GetFormatAsCString(Format format) {
   if (format >= eFormatDefault && format < kNumFormats)
     return g_format_infos[format].format_name;
-  return NULL;
+  return nullptr;
 }
 
 void FormatManager::EnableAllCategories() {
@@ -297,7 +297,7 @@ FormatManager::GetFormatForType(lldb::TypeNameSpecifierImplSP type_sp) {
     lldb::TypeFormatImplSP format_current_sp =
         category_sp->GetFormatForType(type_sp);
     if (format_current_sp &&
-        (format_chosen_sp.get() == NULL ||
+        (format_chosen_sp.get() == nullptr ||
          (prio_category > category_sp->GetEnabledPosition()))) {
       prio_category = category_sp->GetEnabledPosition();
       format_chosen_sp = format_current_sp;
@@ -321,7 +321,7 @@ FormatManager::GetSummaryForType(lldb::TypeNameSpecifierImplSP type_sp) {
     lldb::TypeSummaryImplSP summary_current_sp =
         category_sp->GetSummaryForType(type_sp);
     if (summary_current_sp &&
-        (summary_chosen_sp.get() == NULL ||
+        (summary_chosen_sp.get() == nullptr ||
          (prio_category > category_sp->GetEnabledPosition()))) {
       prio_category = category_sp->GetEnabledPosition();
       summary_chosen_sp = summary_current_sp;
@@ -345,7 +345,7 @@ FormatManager::GetFilterForType(lldb::TypeNameSpecifierImplSP type_sp) {
     lldb::TypeFilterImplSP filter_current_sp(
         (TypeFilterImpl *)category_sp->GetFilterForType(type_sp).get());
     if (filter_current_sp &&
-        (filter_chosen_sp.get() == NULL ||
+        (filter_chosen_sp.get() == nullptr ||
          (prio_category > category_sp->GetEnabledPosition()))) {
       prio_category = category_sp->GetEnabledPosition();
       filter_chosen_sp = filter_current_sp;
@@ -370,7 +370,7 @@ FormatManager::GetSyntheticForType(lldb::TypeNameSpecifierImplSP type_sp) {
         (ScriptedSyntheticChildren *)category_sp->GetSyntheticForType(type_sp)
             .get());
     if (synth_current_sp &&
-        (synth_chosen_sp.get() == NULL ||
+        (synth_chosen_sp.get() == nullptr ||
          (prio_category > category_sp->GetEnabledPosition()))) {
       prio_category = category_sp->GetEnabledPosition();
       synth_chosen_sp = synth_current_sp;
@@ -394,7 +394,7 @@ FormatManager::GetValidatorForType(lldb::TypeNameSpecifierImplSP type_sp) {
     lldb::TypeValidatorImplSP validator_current_sp(
         category_sp->GetValidatorForType(type_sp).get());
     if (validator_current_sp &&
-        (validator_chosen_sp.get() == NULL ||
+        (validator_chosen_sp.get() == nullptr ||
          (prio_category > category_sp->GetEnabledPosition()))) {
       prio_category = category_sp->GetEnabledPosition();
       validator_chosen_sp = validator_current_sp;

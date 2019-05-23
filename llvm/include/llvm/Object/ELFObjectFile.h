@@ -982,7 +982,9 @@ ELFObjectFile<ELFT>::ELFObjectFile(ELFObjectFile<ELFT> &&Other)
 
 template <class ELFT>
 basic_symbol_iterator ELFObjectFile<ELFT>::symbol_begin() const {
-  DataRefImpl Sym = toDRI(DotSymtabSec, 0);
+  DataRefImpl Sym =
+      toDRI(DotSymtabSec,
+            DotSymtabSec && DotSymtabSec->sh_size >= sizeof(Elf_Sym) ? 1 : 0);
   return basic_symbol_iterator(SymbolRef(Sym, this));
 }
 

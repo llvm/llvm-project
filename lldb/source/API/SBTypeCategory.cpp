@@ -49,7 +49,7 @@ bool SBTypeCategory::IsValid() const {
 SBTypeCategory::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeCategory, operator bool);
 
-  return (m_opaque_sp.get() != NULL);
+  return (m_opaque_sp.get() != nullptr);
 }
 
 bool SBTypeCategory::GetEnabled() {
@@ -75,7 +75,7 @@ const char *SBTypeCategory::GetName() {
   LLDB_RECORD_METHOD_NO_ARGS(const char *, SBTypeCategory, GetName);
 
   if (!IsValid())
-    return NULL;
+    return nullptr;
   return m_opaque_sp->GetName();
 }
 

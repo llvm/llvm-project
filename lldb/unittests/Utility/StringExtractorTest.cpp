@@ -318,7 +318,7 @@ TEST_F(StringExtractorTest, GetHexBytes_Underflow) {
   ASSERT_EQ(UINT64_MAX, ex.GetFilePos());
   ASSERT_EQ(false, ex.Empty());
   ASSERT_EQ(0u, ex.GetBytesLeft());
-  ASSERT_EQ(0, ex.Peek());
+  ASSERT_EQ(nullptr, ex.Peek());
 }
 
 TEST_F(StringExtractorTest, GetHexBytes_Partial) {

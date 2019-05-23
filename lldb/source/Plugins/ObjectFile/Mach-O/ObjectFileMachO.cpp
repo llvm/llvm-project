@@ -173,7 +173,7 @@ public:
                               const char *alt_name, size_t reg_byte_size,
                               Stream &data) {
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name);
-    if (reg_info == NULL)
+    if (reg_info == nullptr)
       reg_info = reg_ctx->GetRegisterInfoByName(alt_name);
     if (reg_info) {
       lldb_private::RegisterValue reg_value;
@@ -202,27 +202,27 @@ public:
 
       data.PutHex32(GPRRegSet); // Flavor
       data.PutHex32(GPRWordCount);
-      WriteRegister(reg_ctx, "rax", NULL, 8, data);
-      WriteRegister(reg_ctx, "rbx", NULL, 8, data);
-      WriteRegister(reg_ctx, "rcx", NULL, 8, data);
-      WriteRegister(reg_ctx, "rdx", NULL, 8, data);
-      WriteRegister(reg_ctx, "rdi", NULL, 8, data);
-      WriteRegister(reg_ctx, "rsi", NULL, 8, data);
-      WriteRegister(reg_ctx, "rbp", NULL, 8, data);
-      WriteRegister(reg_ctx, "rsp", NULL, 8, data);
-      WriteRegister(reg_ctx, "r8", NULL, 8, data);
-      WriteRegister(reg_ctx, "r9", NULL, 8, data);
-      WriteRegister(reg_ctx, "r10", NULL, 8, data);
-      WriteRegister(reg_ctx, "r11", NULL, 8, data);
-      WriteRegister(reg_ctx, "r12", NULL, 8, data);
-      WriteRegister(reg_ctx, "r13", NULL, 8, data);
-      WriteRegister(reg_ctx, "r14", NULL, 8, data);
-      WriteRegister(reg_ctx, "r15", NULL, 8, data);
-      WriteRegister(reg_ctx, "rip", NULL, 8, data);
-      WriteRegister(reg_ctx, "rflags", NULL, 8, data);
-      WriteRegister(reg_ctx, "cs", NULL, 8, data);
-      WriteRegister(reg_ctx, "fs", NULL, 8, data);
-      WriteRegister(reg_ctx, "gs", NULL, 8, data);
+      WriteRegister(reg_ctx, "rax", nullptr, 8, data);
+      WriteRegister(reg_ctx, "rbx", nullptr, 8, data);
+      WriteRegister(reg_ctx, "rcx", nullptr, 8, data);
+      WriteRegister(reg_ctx, "rdx", nullptr, 8, data);
+      WriteRegister(reg_ctx, "rdi", nullptr, 8, data);
+      WriteRegister(reg_ctx, "rsi", nullptr, 8, data);
+      WriteRegister(reg_ctx, "rbp", nullptr, 8, data);
+      WriteRegister(reg_ctx, "rsp", nullptr, 8, data);
+      WriteRegister(reg_ctx, "r8", nullptr, 8, data);
+      WriteRegister(reg_ctx, "r9", nullptr, 8, data);
+      WriteRegister(reg_ctx, "r10", nullptr, 8, data);
+      WriteRegister(reg_ctx, "r11", nullptr, 8, data);
+      WriteRegister(reg_ctx, "r12", nullptr, 8, data);
+      WriteRegister(reg_ctx, "r13", nullptr, 8, data);
+      WriteRegister(reg_ctx, "r14", nullptr, 8, data);
+      WriteRegister(reg_ctx, "r15", nullptr, 8, data);
+      WriteRegister(reg_ctx, "rip", nullptr, 8, data);
+      WriteRegister(reg_ctx, "rflags", nullptr, 8, data);
+      WriteRegister(reg_ctx, "cs", nullptr, 8, data);
+      WriteRegister(reg_ctx, "fs", nullptr, 8, data);
+      WriteRegister(reg_ctx, "gs", nullptr, 8, data);
 
       //            // Write out the FPU registers
       //            const size_t fpu_byte_size = sizeof(FPU);
@@ -311,9 +311,9 @@ public:
       // Write out the EXC registers
       data.PutHex32(EXCRegSet);
       data.PutHex32(EXCWordCount);
-      WriteRegister(reg_ctx, "trapno", NULL, 4, data);
-      WriteRegister(reg_ctx, "err", NULL, 4, data);
-      WriteRegister(reg_ctx, "faultvaddr", NULL, 8, data);
+      WriteRegister(reg_ctx, "trapno", nullptr, 4, data);
+      WriteRegister(reg_ctx, "err", nullptr, 4, data);
+      WriteRegister(reg_ctx, "faultvaddr", nullptr, 8, data);
       return true;
     }
     return false;
@@ -404,7 +404,7 @@ public:
                               const char *alt_name, size_t reg_byte_size,
                               Stream &data) {
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name);
-    if (reg_info == NULL)
+    if (reg_info == nullptr)
       reg_info = reg_ctx->GetRegisterInfoByName(alt_name);
     if (reg_info) {
       lldb_private::RegisterValue reg_value;
@@ -433,29 +433,29 @@ public:
 
       data.PutHex32(GPRRegSet); // Flavor
       data.PutHex32(GPRWordCount);
-      WriteRegister(reg_ctx, "eax", NULL, 4, data);
-      WriteRegister(reg_ctx, "ebx", NULL, 4, data);
-      WriteRegister(reg_ctx, "ecx", NULL, 4, data);
-      WriteRegister(reg_ctx, "edx", NULL, 4, data);
-      WriteRegister(reg_ctx, "edi", NULL, 4, data);
-      WriteRegister(reg_ctx, "esi", NULL, 4, data);
-      WriteRegister(reg_ctx, "ebp", NULL, 4, data);
-      WriteRegister(reg_ctx, "esp", NULL, 4, data);
-      WriteRegister(reg_ctx, "ss", NULL, 4, data);
-      WriteRegister(reg_ctx, "eflags", NULL, 4, data);
-      WriteRegister(reg_ctx, "eip", NULL, 4, data);
-      WriteRegister(reg_ctx, "cs", NULL, 4, data);
-      WriteRegister(reg_ctx, "ds", NULL, 4, data);
-      WriteRegister(reg_ctx, "es", NULL, 4, data);
-      WriteRegister(reg_ctx, "fs", NULL, 4, data);
-      WriteRegister(reg_ctx, "gs", NULL, 4, data);
+      WriteRegister(reg_ctx, "eax", nullptr, 4, data);
+      WriteRegister(reg_ctx, "ebx", nullptr, 4, data);
+      WriteRegister(reg_ctx, "ecx", nullptr, 4, data);
+      WriteRegister(reg_ctx, "edx", nullptr, 4, data);
+      WriteRegister(reg_ctx, "edi", nullptr, 4, data);
+      WriteRegister(reg_ctx, "esi", nullptr, 4, data);
+      WriteRegister(reg_ctx, "ebp", nullptr, 4, data);
+      WriteRegister(reg_ctx, "esp", nullptr, 4, data);
+      WriteRegister(reg_ctx, "ss", nullptr, 4, data);
+      WriteRegister(reg_ctx, "eflags", nullptr, 4, data);
+      WriteRegister(reg_ctx, "eip", nullptr, 4, data);
+      WriteRegister(reg_ctx, "cs", nullptr, 4, data);
+      WriteRegister(reg_ctx, "ds", nullptr, 4, data);
+      WriteRegister(reg_ctx, "es", nullptr, 4, data);
+      WriteRegister(reg_ctx, "fs", nullptr, 4, data);
+      WriteRegister(reg_ctx, "gs", nullptr, 4, data);
 
       // Write out the EXC registers
       data.PutHex32(EXCRegSet);
       data.PutHex32(EXCWordCount);
-      WriteRegister(reg_ctx, "trapno", NULL, 4, data);
-      WriteRegister(reg_ctx, "err", NULL, 4, data);
-      WriteRegister(reg_ctx, "faultvaddr", NULL, 4, data);
+      WriteRegister(reg_ctx, "trapno", nullptr, 4, data);
+      WriteRegister(reg_ctx, "err", nullptr, 4, data);
+      WriteRegister(reg_ctx, "faultvaddr", nullptr, 4, data);
       return true;
     }
     return false;
@@ -555,7 +555,7 @@ public:
                               const char *alt_name, size_t reg_byte_size,
                               Stream &data) {
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name);
-    if (reg_info == NULL)
+    if (reg_info == nullptr)
       reg_info = reg_ctx->GetRegisterInfoByName(alt_name);
     if (reg_info) {
       lldb_private::RegisterValue reg_value;
@@ -584,23 +584,23 @@ public:
 
       data.PutHex32(GPRRegSet); // Flavor
       data.PutHex32(GPRWordCount);
-      WriteRegister(reg_ctx, "r0", NULL, 4, data);
-      WriteRegister(reg_ctx, "r1", NULL, 4, data);
-      WriteRegister(reg_ctx, "r2", NULL, 4, data);
-      WriteRegister(reg_ctx, "r3", NULL, 4, data);
-      WriteRegister(reg_ctx, "r4", NULL, 4, data);
-      WriteRegister(reg_ctx, "r5", NULL, 4, data);
-      WriteRegister(reg_ctx, "r6", NULL, 4, data);
-      WriteRegister(reg_ctx, "r7", NULL, 4, data);
-      WriteRegister(reg_ctx, "r8", NULL, 4, data);
-      WriteRegister(reg_ctx, "r9", NULL, 4, data);
-      WriteRegister(reg_ctx, "r10", NULL, 4, data);
-      WriteRegister(reg_ctx, "r11", NULL, 4, data);
-      WriteRegister(reg_ctx, "r12", NULL, 4, data);
-      WriteRegister(reg_ctx, "sp", NULL, 4, data);
-      WriteRegister(reg_ctx, "lr", NULL, 4, data);
-      WriteRegister(reg_ctx, "pc", NULL, 4, data);
-      WriteRegister(reg_ctx, "cpsr", NULL, 4, data);
+      WriteRegister(reg_ctx, "r0", nullptr, 4, data);
+      WriteRegister(reg_ctx, "r1", nullptr, 4, data);
+      WriteRegister(reg_ctx, "r2", nullptr, 4, data);
+      WriteRegister(reg_ctx, "r3", nullptr, 4, data);
+      WriteRegister(reg_ctx, "r4", nullptr, 4, data);
+      WriteRegister(reg_ctx, "r5", nullptr, 4, data);
+      WriteRegister(reg_ctx, "r6", nullptr, 4, data);
+      WriteRegister(reg_ctx, "r7", nullptr, 4, data);
+      WriteRegister(reg_ctx, "r8", nullptr, 4, data);
+      WriteRegister(reg_ctx, "r9", nullptr, 4, data);
+      WriteRegister(reg_ctx, "r10", nullptr, 4, data);
+      WriteRegister(reg_ctx, "r11", nullptr, 4, data);
+      WriteRegister(reg_ctx, "r12", nullptr, 4, data);
+      WriteRegister(reg_ctx, "sp", nullptr, 4, data);
+      WriteRegister(reg_ctx, "lr", nullptr, 4, data);
+      WriteRegister(reg_ctx, "pc", nullptr, 4, data);
+      WriteRegister(reg_ctx, "cpsr", nullptr, 4, data);
 
       // Write out the EXC registers
       //            data.PutHex32 (EXCRegSet);
@@ -710,7 +710,7 @@ public:
                               const char *alt_name, size_t reg_byte_size,
                               Stream &data) {
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name);
-    if (reg_info == NULL)
+    if (reg_info == nullptr)
       reg_info = reg_ctx->GetRegisterInfoByName(alt_name);
     if (reg_info) {
       lldb_private::RegisterValue reg_value;
@@ -739,40 +739,40 @@ public:
 
       data.PutHex32(GPRRegSet); // Flavor
       data.PutHex32(GPRWordCount);
-      WriteRegister(reg_ctx, "x0", NULL, 8, data);
-      WriteRegister(reg_ctx, "x1", NULL, 8, data);
-      WriteRegister(reg_ctx, "x2", NULL, 8, data);
-      WriteRegister(reg_ctx, "x3", NULL, 8, data);
-      WriteRegister(reg_ctx, "x4", NULL, 8, data);
-      WriteRegister(reg_ctx, "x5", NULL, 8, data);
-      WriteRegister(reg_ctx, "x6", NULL, 8, data);
-      WriteRegister(reg_ctx, "x7", NULL, 8, data);
-      WriteRegister(reg_ctx, "x8", NULL, 8, data);
-      WriteRegister(reg_ctx, "x9", NULL, 8, data);
-      WriteRegister(reg_ctx, "x10", NULL, 8, data);
-      WriteRegister(reg_ctx, "x11", NULL, 8, data);
-      WriteRegister(reg_ctx, "x12", NULL, 8, data);
-      WriteRegister(reg_ctx, "x13", NULL, 8, data);
-      WriteRegister(reg_ctx, "x14", NULL, 8, data);
-      WriteRegister(reg_ctx, "x15", NULL, 8, data);
-      WriteRegister(reg_ctx, "x16", NULL, 8, data);
-      WriteRegister(reg_ctx, "x17", NULL, 8, data);
-      WriteRegister(reg_ctx, "x18", NULL, 8, data);
-      WriteRegister(reg_ctx, "x19", NULL, 8, data);
-      WriteRegister(reg_ctx, "x20", NULL, 8, data);
-      WriteRegister(reg_ctx, "x21", NULL, 8, data);
-      WriteRegister(reg_ctx, "x22", NULL, 8, data);
-      WriteRegister(reg_ctx, "x23", NULL, 8, data);
-      WriteRegister(reg_ctx, "x24", NULL, 8, data);
-      WriteRegister(reg_ctx, "x25", NULL, 8, data);
-      WriteRegister(reg_ctx, "x26", NULL, 8, data);
-      WriteRegister(reg_ctx, "x27", NULL, 8, data);
-      WriteRegister(reg_ctx, "x28", NULL, 8, data);
-      WriteRegister(reg_ctx, "fp", NULL, 8, data);
-      WriteRegister(reg_ctx, "lr", NULL, 8, data);
-      WriteRegister(reg_ctx, "sp", NULL, 8, data);
-      WriteRegister(reg_ctx, "pc", NULL, 8, data);
-      WriteRegister(reg_ctx, "cpsr", NULL, 4, data);
+      WriteRegister(reg_ctx, "x0", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x1", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x2", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x3", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x4", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x5", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x6", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x7", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x8", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x9", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x10", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x11", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x12", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x13", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x14", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x15", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x16", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x17", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x18", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x19", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x20", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x21", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x22", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x23", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x24", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x25", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x26", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x27", nullptr, 8, data);
+      WriteRegister(reg_ctx, "x28", nullptr, 8, data);
+      WriteRegister(reg_ctx, "fp", nullptr, 8, data);
+      WriteRegister(reg_ctx, "lr", nullptr, 8, data);
+      WriteRegister(reg_ctx, "sp", nullptr, 8, data);
+      WriteRegister(reg_ctx, "pc", nullptr, 8, data);
+      WriteRegister(reg_ctx, "cpsr", nullptr, 4, data);
 
       // Write out the EXC registers
       //            data.PutHex32 (EXCRegSet);
@@ -889,7 +889,7 @@ ObjectFile *ObjectFileMachO::CreateMemoryInstance(
     if (objfile_up.get() && objfile_up->ParseHeader())
       return objfile_up.release();
   }
-  return NULL;
+  return nullptr;
 }
 
 size_t ObjectFileMachO::GetModuleSpecifications(
@@ -1312,7 +1312,7 @@ Symtab *ObjectFileMachO::GetSymtab() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_symtab_up == NULL) {
+    if (m_symtab_up == nullptr) {
       m_symtab_up.reset(new Symtab(this));
       std::lock_guard<std::recursive_mutex> symtab_guard(
           m_symtab_up->GetMutex());
@@ -1332,14 +1332,14 @@ bool ObjectFileMachO::IsStripped() {
         const lldb::offset_t load_cmd_offset = offset;
 
         load_command lc;
-        if (m_data.GetU32(&offset, &lc.cmd, 2) == NULL)
+        if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
           break;
         if (lc.cmd == LC_DYSYMTAB) {
           m_dysymtab.cmd = lc.cmd;
           m_dysymtab.cmdsize = lc.cmdsize;
           if (m_data.GetU32(&offset, &m_dysymtab.ilocalsym,
                             (sizeof(m_dysymtab) / sizeof(uint32_t)) - 2) ==
-              NULL) {
+              nullptr) {
             // Clear m_dysymtab if we were unable to read all items from the
             // load command
             ::memset(&m_dysymtab, 0, sizeof(m_dysymtab));
@@ -1361,7 +1361,7 @@ ObjectFileMachO::EncryptedFileRanges ObjectFileMachO::GetEncryptedFileRanges() {
   encryption_info_command encryption_cmd;
   for (uint32_t i = 0; i < m_header.ncmds; ++i) {
     const lldb::offset_t load_cmd_offset = offset;
-    if (m_data.GetU32(&offset, &encryption_cmd, 2) == NULL)
+    if (m_data.GetU32(&offset, &encryption_cmd, 2) == nullptr)
       break;
 
     // LC_ENCRYPTION_INFO and LC_ENCRYPTION_INFO_64 have the same sizes for the
@@ -1713,15 +1713,15 @@ void ObjectFileMachO::ProcessSegmentCommand(const load_command &load_cmd_,
   for (segment_sect_idx = 0; segment_sect_idx < load_cmd.nsects;
        ++segment_sect_idx) {
     if (m_data.GetU8(&offset, (uint8_t *)sect64.sectname,
-                     sizeof(sect64.sectname)) == NULL)
+                     sizeof(sect64.sectname)) == nullptr)
       break;
     if (m_data.GetU8(&offset, (uint8_t *)sect64.segname,
-                     sizeof(sect64.segname)) == NULL)
+                     sizeof(sect64.segname)) == nullptr)
       break;
     sect64.addr = m_data.GetAddress(&offset);
     sect64.size = m_data.GetAddress(&offset);
 
-    if (m_data.GetU32(&offset, &sect64.offset, num_u32s) == NULL)
+    if (m_data.GetU32(&offset, &sect64.offset, num_u32s) == nullptr)
       break;
 
     // Keep a list of mach sections around in case we need to get at data that
@@ -1830,7 +1830,7 @@ void ObjectFileMachO::ProcessSegmentCommand(const load_command &load_cmd_,
       bool section_is_encrypted = false;
       if (!segment_is_encrypted && load_cmd.filesize != 0)
         section_is_encrypted = context.EncryptedRanges.FindEntryThatContains(
-                                   sect64.offset) != NULL;
+                                   sect64.offset) != nullptr;
 
       section_sp->SetIsEncrypted(segment_is_encrypted || section_is_encrypted);
       section_sp->SetPermissions(segment_permissions);
@@ -1856,7 +1856,7 @@ void ObjectFileMachO::ProcessSegmentCommand(const load_command &load_cmd_,
 
         if (curr_section_sp.get()) {
           if (curr_section_sp->GetByteSize() == 0) {
-            if (next_section_sp.get() != NULL)
+            if (next_section_sp.get() != nullptr)
               curr_section_sp->SetByteSize(next_section_sp->GetFileAddress() -
                                            curr_section_sp->GetFileAddress());
             else
@@ -1892,7 +1892,7 @@ void ObjectFileMachO::CreateSections(SectionList &unified_section_list) {
   struct load_command load_cmd;
   for (uint32_t i = 0; i < m_header.ncmds; ++i) {
     const lldb::offset_t load_cmd_offset = offset;
-    if (m_data.GetU32(&offset, &load_cmd, 2) == NULL)
+    if (m_data.GetU32(&offset, &load_cmd, 2) == nullptr)
       break;
 
     if (load_cmd.cmd == LC_SEGMENT || load_cmd.cmd == LC_SEGMENT_64)
@@ -2021,7 +2021,7 @@ static bool ParseTrieEntries(DataExtractor &data, lldb::offset_t offset,
   if (terminalSize != 0) {
     TrieEntryWithOffset e(offset);
     e.entry.flags = data.GetULEB128(&offset);
-    const char *import_name = NULL;
+    const char *import_name = nullptr;
     if (e.entry.flags & EXPORT_SYMBOL_FLAGS_REEXPORT) {
       e.entry.address = 0;
       e.entry.other = data.GetULEB128(&offset); // dylib ordinal
@@ -2129,7 +2129,7 @@ size_t ObjectFileMachO::ParseSymtab() {
     const lldb::offset_t cmd_offset = offset;
     // Read in the load command and load command size
     struct load_command lc;
-    if (m_data.GetU32(&offset, &lc, 2) == NULL)
+    if (m_data.GetU32(&offset, &lc, 2) == nullptr)
       break;
     // Watch for the symbol table load command
     switch (lc.cmd) {
@@ -2138,7 +2138,7 @@ size_t ObjectFileMachO::ParseSymtab() {
       symtab_load_command.cmdsize = lc.cmdsize;
       // Read in the rest of the symtab load command
       if (m_data.GetU32(&offset, &symtab_load_command.symoff, 4) ==
-          0) // fill in symoff, nsyms, stroff, strsize fields
+          nullptr) // fill in symoff, nsyms, stroff, strsize fields
         return 0;
       if (symtab_load_command.symoff == 0) {
         if (log)
@@ -2201,7 +2201,7 @@ size_t ObjectFileMachO::ParseSymtab() {
       function_starts_load_command.cmd = lc.cmd;
       function_starts_load_command.cmdsize = lc.cmdsize;
       if (m_data.GetU32(&offset, &function_starts_load_command.dataoff, 2) ==
-          NULL) // fill in symoff, nsyms, stroff, strsize fields
+          nullptr) // fill in symoff, nsyms, stroff, strsize fields
         memset(&function_starts_load_command, 0,
                sizeof(function_starts_load_command));
       break;
@@ -2215,7 +2215,7 @@ size_t ObjectFileMachO::ParseSymtab() {
   if (symtab_load_command.cmd) {
     Symtab *symtab = m_symtab_up.get();
     SectionList *section_list = GetSectionList();
-    if (section_list == NULL)
+    if (section_list == nullptr)
       return 0;
 
     const uint32_t addr_byte_size = m_data.GetAddressByteSize();
@@ -2224,12 +2224,12 @@ size_t ObjectFileMachO::ParseSymtab() {
     const size_t nlist_byte_size =
         bit_width_32 ? sizeof(struct nlist) : sizeof(struct nlist_64);
 
-    DataExtractor nlist_data(NULL, 0, byte_order, addr_byte_size);
-    DataExtractor strtab_data(NULL, 0, byte_order, addr_byte_size);
-    DataExtractor function_starts_data(NULL, 0, byte_order, addr_byte_size);
-    DataExtractor indirect_symbol_index_data(NULL, 0, byte_order,
+    DataExtractor nlist_data(nullptr, 0, byte_order, addr_byte_size);
+    DataExtractor strtab_data(nullptr, 0, byte_order, addr_byte_size);
+    DataExtractor function_starts_data(nullptr, 0, byte_order, addr_byte_size);
+    DataExtractor indirect_symbol_index_data(nullptr, 0, byte_order,
                                              addr_byte_size);
-    DataExtractor dyld_trie_data(NULL, 0, byte_order, addr_byte_size);
+    DataExtractor dyld_trie_data(nullptr, 0, byte_order, addr_byte_size);
 
     const addr_t nlist_data_byte_size =
         symtab_load_command.nsyms * nlist_byte_size;
@@ -2550,10 +2550,10 @@ size_t ObjectFileMachO::ParseSymtab() {
     // so we know
     NListIndexToSymbolIndexMap m_nlist_idx_to_sym_idx;
     uint32_t nlist_idx = 0;
-    Symbol *symbol_ptr = NULL;
+    Symbol *symbol_ptr = nullptr;
 
     uint32_t sym_idx = 0;
-    Symbol *sym = NULL;
+    Symbol *sym = nullptr;
     size_t num_syms = 0;
     std::string memory_symbol_name;
     uint32_t unmapped_local_symbols_found = 0;
@@ -3749,7 +3749,7 @@ size_t ObjectFileMachO::ParseSymtab() {
 
       // If the sym array was not created while parsing the DSC unmapped
       // symbols, create it now.
-      if (sym == NULL) {
+      if (sym == nullptr) {
         sym = symtab->Resize(symtab_load_command.nsyms +
                              m_dysymtab.nindirectsyms);
         num_syms = symtab->GetNumSymbols();
@@ -3780,12 +3780,12 @@ size_t ObjectFileMachO::ParseSymtab() {
         nlist.n_value = nlist_data.GetAddress_unchecked(&nlist_data_offset);
 
         SymbolType type = eSymbolTypeInvalid;
-        const char *symbol_name = NULL;
+        const char *symbol_name = nullptr;
 
         if (have_strtab_data) {
           symbol_name = strtab_data.PeekCStr(nlist.n_strx);
 
-          if (symbol_name == NULL) {
+          if (symbol_name == nullptr) {
             // No symbol should be NULL, even the symbols with no string values
             // should have an offset zero which points to an empty C-string
             Host::SystemLog(Host::eSystemLogError,
@@ -3796,7 +3796,7 @@ size_t ObjectFileMachO::ParseSymtab() {
             continue;
           }
           if (symbol_name[0] == '\0')
-            symbol_name = NULL;
+            symbol_name = nullptr;
         } else {
           const addr_t str_addr = strtab_addr + nlist.n_strx;
           Status str_error;
@@ -3804,7 +3804,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                                              str_error))
             symbol_name = memory_symbol_name.c_str();
         }
-        const char *symbol_name_non_abi_mangled = NULL;
+        const char *symbol_name_non_abi_mangled = nullptr;
 
         SectionSP symbol_section;
         lldb::addr_t symbol_byte_size = 0;
@@ -3957,7 +3957,7 @@ size_t ObjectFileMachO::ParseSymtab() {
           case N_SO:
             // source file name
             type = eSymbolTypeSourceFile;
-            if (symbol_name == NULL) {
+            if (symbol_name == nullptr) {
               add_nlist = false;
               if (N_SO_index != UINT32_MAX) {
                 // Set the size of the N_SO to the terminating index of this
@@ -4426,7 +4426,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                 if (func_start_entry->addr != symbol_lookup_file_addr &&
                     func_start_entry->addr != (symbol_lookup_file_addr + 1)) {
                   // Not the right entry, NULL it out...
-                  func_start_entry = NULL;
+                  func_start_entry = nullptr;
                 }
               }
               if (func_start_entry) {
@@ -4710,7 +4710,7 @@ size_t ObjectFileMachO::ParseSymtab() {
 
                 NListIndexToSymbolIndexMap::const_iterator index_pos =
                     m_nlist_idx_to_sym_idx.find(stub_sym_id);
-                Symbol *stub_symbol = NULL;
+                Symbol *stub_symbol = nullptr;
                 if (index_pos != end_index_pos) {
                   // We have a remapping from the original nlist index to a
                   // current symbol index, so just look this up by index
@@ -4742,7 +4742,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                     Mangled stub_symbol_mangled_name(stub_symbol->GetMangled());
                     if (sym_idx >= num_syms) {
                       sym = symtab->Resize(++num_syms);
-                      stub_symbol = NULL; // this pointer no longer valid
+                      stub_symbol = nullptr; // this pointer no longer valid
                     }
                     sym[sym_idx].SetID(synthetic_sym_id++);
                     sym[sym_idx].GetMangled() = stub_symbol_mangled_name;
@@ -4828,10 +4828,10 @@ void ObjectFileMachO::Dump(Stream *s) {
 
     SectionList *sections = GetSectionList();
     if (sections)
-      sections->Dump(s, NULL, true, UINT32_MAX);
+      sections->Dump(s, nullptr, true, UINT32_MAX);
 
     if (m_symtab_up)
-      m_symtab_up->Dump(s, NULL, eSortOrderNone);
+      m_symtab_up->Dump(s, nullptr, eSortOrderNone);
   }
 }
 
@@ -4844,7 +4844,7 @@ UUID ObjectFileMachO::GetUUID(const llvm::MachO::mach_header &header,
   lldb::offset_t offset = lc_offset;
   for (i = 0; i < header.ncmds; ++i) {
     const lldb::offset_t cmd_offset = offset;
-    if (data.GetU32(&offset, &load_cmd, 2) == NULL)
+    if (data.GetU32(&offset, &load_cmd, 2) == nullptr)
       break;
 
     if (load_cmd.cmd == LC_UUID) {
@@ -4982,7 +4982,7 @@ ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
       lldb::offset_t offset = lc_offset;
       for (uint32_t i = 0; i < header.ncmds; ++i) {
         const lldb::offset_t cmd_offset = offset;
-        if (data.GetU32(&offset, &load_cmd, 2) == NULL)
+        if (data.GetU32(&offset, &load_cmd, 2) == nullptr)
           break;
 
         struct version_min_command version_min;
@@ -5015,7 +5015,7 @@ ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
       offset = lc_offset;
       for (uint32_t i = 0; i < header.ncmds; ++i) {
         const lldb::offset_t cmd_offset = offset;
-        if (data.GetU32(&offset, &load_cmd, 2) == NULL)
+        if (data.GetU32(&offset, &load_cmd, 2) == nullptr)
           break;
         do {
           if (load_cmd.cmd == llvm::MachO::LC_BUILD_VERSION) {
@@ -5077,7 +5077,7 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
     uint32_t i;
     for (i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
-      if (m_data.GetU32(&offset, &load_cmd, 2) == NULL)
+      if (m_data.GetU32(&offset, &load_cmd, 2) == nullptr)
         break;
 
       switch (load_cmd.cmd) {
@@ -5211,7 +5211,7 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
 
     for (i = 0; i < m_header.ncmds; ++i) {
       const lldb::offset_t cmd_offset = offset;
-      if (m_data.GetU32(&offset, &load_cmd, 2) == NULL)
+      if (m_data.GetU32(&offset, &load_cmd, 2) == nullptr)
         break;
 
       switch (load_cmd.cmd) {
@@ -5350,7 +5350,7 @@ uint32_t ObjectFileMachO::GetNumThreadContexts() {
       thread_command thread_cmd;
       for (uint32_t i = 0; i < m_header.ncmds; ++i) {
         const uint32_t cmd_offset = offset;
-        if (m_data.GetU32(&offset, &thread_cmd, 2) == NULL)
+        if (m_data.GetU32(&offset, &thread_cmd, 2) == nullptr)
           break;
 
         if (thread_cmd.cmd == LC_THREAD) {
@@ -5377,8 +5377,8 @@ std::string ObjectFileMachO::GetIdentifierString() {
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
       load_command lc;
-      if (m_data.GetU32(&offset, &lc.cmd, 2) == NULL)
-          break;
+      if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
+        break;
       if (lc.cmd == LC_NOTE)
       {
           char data_owner[17];
@@ -5422,7 +5422,7 @@ std::string ObjectFileMachO::GetIdentifierString() {
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
       struct ident_command ident_command;
-      if (m_data.GetU32(&offset, &ident_command, 2) == NULL)
+      if (m_data.GetU32(&offset, &ident_command, 2) == nullptr)
         break;
       if (ident_command.cmd == LC_IDENT && ident_command.cmdsize != 0) {
         char *buf = (char *) malloc (ident_command.cmdsize);
@@ -5451,8 +5451,8 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo (addr_t &address, UUID &uuid) {
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
       load_command lc;
-      if (m_data.GetU32(&offset, &lc.cmd, 2) == NULL)
-          break;
+      if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
+        break;
       if (lc.cmd == LC_NOTE)
       {
           char data_owner[17];
@@ -5649,13 +5649,13 @@ llvm::VersionTuple ObjectFileMachO::GetVersion() {
     uint32_t i;
     for (i = 0; i < m_header.ncmds; ++i) {
       const lldb::offset_t cmd_offset = offset;
-      if (m_data.GetU32(&offset, &load_cmd, 2) == NULL)
+      if (m_data.GetU32(&offset, &load_cmd, 2) == nullptr)
         break;
 
       if (load_cmd.cmd == LC_ID_DYLIB) {
         if (version_cmd == 0) {
           version_cmd = load_cmd.cmd;
-          if (m_data.GetU32(&offset, &load_cmd.dylib, 4) == NULL)
+          if (m_data.GetU32(&offset, &load_cmd.dylib, 4) == nullptr)
             break;
           version = load_cmd.dylib.current_version;
         }
@@ -5795,7 +5795,7 @@ llvm::VersionTuple ObjectFileMachO::GetMinimumOSVersion() {
       const lldb::offset_t load_cmd_offset = offset;
 
       version_min_command lc;
-      if (m_data.GetU32(&offset, &lc.cmd, 2) == NULL)
+      if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
         break;
       if (lc.cmd == llvm::MachO::LC_VERSION_MIN_MACOSX ||
           lc.cmd == llvm::MachO::LC_VERSION_MIN_IPHONEOS ||
@@ -5855,7 +5855,7 @@ uint32_t ObjectFileMachO::GetSDKVersion(uint32_t *versions,
       const lldb::offset_t load_cmd_offset = offset;
 
       version_min_command lc;
-      if (m_data.GetU32(&offset, &lc.cmd, 2) == NULL)
+      if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
         break;
       if (lc.cmd == llvm::MachO::LC_VERSION_MIN_MACOSX ||
           lc.cmd == llvm::MachO::LC_VERSION_MIN_IPHONEOS ||
@@ -5886,7 +5886,7 @@ uint32_t ObjectFileMachO::GetSDKVersion(uint32_t *versions,
         const lldb::offset_t load_cmd_offset = offset;
 
         version_min_command lc;
-        if (m_data.GetU32(&offset, &lc.cmd, 2) == NULL)
+        if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
           break;
         if (lc.cmd == llvm::MachO::LC_BUILD_VERSION) {
           // struct build_version_command {
@@ -5932,7 +5932,7 @@ uint32_t ObjectFileMachO::GetSDKVersion(uint32_t *versions,
   // the sentinel value indicating that this object file
   // does not have a valid minimum os version #.
   if (m_sdk_versions.size() > 1) {
-    if (versions != NULL && num_versions > 0) {
+    if (versions != nullptr && num_versions > 0) {
       for (size_t i = 0; i < num_versions; ++i) {
         if (i < m_sdk_versions.size())
           versions[i] = m_sdk_versions[i];

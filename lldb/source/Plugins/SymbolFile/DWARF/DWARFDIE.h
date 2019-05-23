@@ -34,6 +34,11 @@ public:
 
   const char *GetQualifiedName(std::string &storage) const;
 
+  using DWARFBaseDIE::GetName;
+  void GetName(lldb_private::Stream &s) const;
+
+  void AppendTypeName(lldb_private::Stream &s) const;
+
   lldb_private::Type *ResolveType() const;
 
   // Resolve a type by UID using this DIE's DWARF file

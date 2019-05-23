@@ -646,7 +646,7 @@ void TargetPassConfig::addIRPasses() {
     // into optimally-sized loads and compares. The transforms are enabled by a
     // target lowering hook.
     if (!DisableMergeICmps)
-      addPass(createMergeICmpsPass());
+      addPass(createMergeICmpsLegacyPass());
     addPass(createExpandMemCmpPass());
   }
 

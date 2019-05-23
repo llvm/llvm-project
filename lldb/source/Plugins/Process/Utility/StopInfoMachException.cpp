@@ -37,11 +37,11 @@ const char *StopInfoMachException::GetDescription() {
         target ? target->GetArchitecture().GetMachine()
                : llvm::Triple::UnknownArch;
 
-    const char *exc_desc = NULL;
+    const char *exc_desc = nullptr;
     const char *code_label = "code";
-    const char *code_desc = NULL;
+    const char *code_desc = nullptr;
     const char *subcode_label = "subcode";
-    const char *subcode_desc = NULL;
+    const char *subcode_desc = nullptr;
 
 #if defined(__APPLE__)
     char code_desc_buf[32];
@@ -593,7 +593,7 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
           // the thread ID so we must always report the breakpoint regardless
           // of the thread.
           if (bp_site_sp->ValidForThisThread(&thread) ||
-              thread.GetProcess()->GetOperatingSystem() != NULL)
+              thread.GetProcess()->GetOperatingSystem() != nullptr)
             return StopInfo::CreateStopReasonWithBreakpointSiteID(
                 thread, bp_site_sp->GetID());
           else if (is_trace_if_actual_breakpoint_missing)

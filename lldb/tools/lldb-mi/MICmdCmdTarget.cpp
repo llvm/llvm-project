@@ -265,7 +265,7 @@ bool CMICmdCmdTargetAttach::Execute() {
   // If the current target is invalid, create one
   lldb::SBTarget target = rSessionInfo.GetTarget();
   if (!target.IsValid()) {
-    target = rSessionInfo.GetDebugger().CreateTarget(NULL);
+    target = rSessionInfo.GetDebugger().CreateTarget(nullptr);
     if (!target.IsValid()) {
       SetError(CMIUtilString::Format(MIRSRC(IDS_CMD_ERR_INVALID_TARGET_CURRENT),
                                      m_cmdData.strMiCmd.c_str()));

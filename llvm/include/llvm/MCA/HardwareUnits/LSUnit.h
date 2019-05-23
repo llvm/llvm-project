@@ -18,12 +18,82 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MCA/HardwareUnits/HardwareUnit.h"
+#include "llvm/MCA/Instruction.h"
 
 namespace llvm {
 namespace mca {
 
-class InstRef;
 class Scheduler;
+
+/// Abstract base interface for LS (load/store) units in llvm-mca.
+class LSUnitBase : public HardwareUnit {
+  /// Load queue size.
+  ///
+  /// A value of zero for this field means that the load queue is unbounded.
+  /// Processor models can declare the size of a load queue via tablegen (see
+  /// the definition of tablegen class LoadQueue in
+  /// llvm/Target/TargetSchedule.td).
+  unsigned LQSize;
+
+  /// Load queue size.
+  ///
+  /// A value of zero for this field means that the store queue is unbounded.
+  /// Processor models can declare the size of a store queue via tablegen (see
+  /// the definition of tablegen class StoreQueue in
+  /// llvm/Target/TargetSchedule.td).
+  unsigned SQSize;
+
+  /// True if loads don't alias with stores.
+  ///
+  /// By default, the LS unit assumes that loads and stores don't alias with
+  /// eachother. If this field is set to false, then loads are always assumed to
+  /// alias with stores.
+  const bool NoAlias;
+
+public:
+  LSUnitBase(const MCSchedModel &SM, unsigned LoadQueueSize,
+             unsigned StoreQueueSize, bool AssumeNoAlias);
+
+  virtual ~LSUnitBase();
+
+  /// Returns the total number of entries in the load queue.
+  unsigned getLoadQueueSize() const { return LQSize; }
+
+  /// Returns the total number of entries in the store queue.
+  unsigned getStoreQueueSize() const { return SQSize; }
+
+  bool assumeNoAlias() const { return NoAlias; }
+
+  enum Status {
+    LSU_AVAILABLE = 0,
+    LSU_LQUEUE_FULL, // Load Queue unavailable
+    LSU_SQUEUE_FULL  // Store Queue unavailable
+  };
+
+  /// This method checks the availability of the load/store buffers.
+  ///
+  /// Returns LSU_AVAILABLE if there are enough load/store queue entries to
+  /// accomodate instruction IR. By default, LSU_AVAILABLE is returned if IR is
+  /// not a memory operation.
+  virtual Status isAvailable(const InstRef &IR) const = 0;
+
+  /// Allocates LS resources for instruction IR.
+  ///
+  /// This method assumes that a previous call to `isAvailable(IR)` succeeded
+  /// with a LSUnitBase::Status value of LSU_AVAILABLE.
+  virtual void dispatch(const InstRef &IR) = 0;
+
+  /// Check if a peviously dispatched instruction IR is now ready for execution.
+  ///
+  /// Instruction IR is assumed to be a memory operation. If IR is still waiting
+  /// on another memory instruction M, then M is returned to the caller. If IR
+  /// depends on more than one memory operations, then this method returns one
+  /// of them.
+  ///
+  /// Derived classes can implement memory consistency rules for simulated
+  /// processor within this member function.
+  virtual const InstRef &isReady(const InstRef &IR) const = 0;
+};
 
 /// A Load/Store Unit implementing a load and store queues.
 ///
@@ -88,18 +158,7 @@ class Scheduler;
 /// A load/store barrier is "executed" when it becomes the oldest entry in
 /// the load/store queue(s). That also means, all the older loads/stores have
 /// already been executed.
-class LSUnit : public HardwareUnit {
-  // Load queue size.
-  // LQ_Size == 0 means that there are infinite slots in the load queue.
-  unsigned LQ_Size;
-
-  // Store queue size.
-  // SQ_Size == 0 means that there are infinite slots in the store queue.
-  unsigned SQ_Size;
-
-  // If true, loads will never alias with stores. This is the default.
-  bool NoAlias;
-
+class LSUnit : public LSUnitBase {
   // When a `MayLoad` instruction is dispatched to the schedulers for execution,
   // the LSUnit reserves an entry in the `LoadQueue` for it.
   //
@@ -138,68 +197,75 @@ class LSUnit : public HardwareUnit {
   // alternative approaches that let instructions specify the number of
   // load/store queue entries which they consume at dispatch stage (See
   // PR39830).
-  SmallSet<unsigned, 16> LoadQueue;
-  SmallSet<unsigned, 16> StoreQueue;
+  SmallSet<InstRef, 16> LoadQueue;
+  SmallSet<InstRef, 16> StoreQueue;
 
-  void assignLQSlot(unsigned Index);
-  void assignSQSlot(unsigned Index);
+  void assignLQSlot(const InstRef &IR);
+  void assignSQSlot(const InstRef &IR);
 
   // An instruction that both 'mayStore' and 'HasUnmodeledSideEffects' is
   // conservatively treated as a store barrier. It forces older store to be
   // executed before newer stores are issued.
-  SmallSet<unsigned, 8> StoreBarriers;
+  SmallSet<InstRef, 8> StoreBarriers;
 
   // An instruction that both 'MayLoad' and 'HasUnmodeledSideEffects' is
   // conservatively treated as a load barrier. It forces older loads to execute
   // before newer loads are issued.
-  SmallSet<unsigned, 8> LoadBarriers;
+  SmallSet<InstRef, 8> LoadBarriers;
 
   bool isSQEmpty() const { return StoreQueue.empty(); }
   bool isLQEmpty() const { return LoadQueue.empty(); }
-  bool isSQFull() const { return SQ_Size != 0 && StoreQueue.size() == SQ_Size; }
-  bool isLQFull() const { return LQ_Size != 0 && LoadQueue.size() == LQ_Size; }
+  bool isSQFull() const {
+    return getStoreQueueSize() != 0 && StoreQueue.size() == getStoreQueueSize();
+  }
+  bool isLQFull() const {
+    return getLoadQueueSize() != 0 && LoadQueue.size() == getLoadQueueSize();
+  }
 
 public:
-  LSUnit(const MCSchedModel &SM, unsigned LQ = 0, unsigned SQ = 0,
-         bool AssumeNoAlias = false);
+  LSUnit(const MCSchedModel &SM)
+      : LSUnit(SM, /* LQSize */ 0, /* SQSize */ 0, /* NoAlias */ false) {}
+  LSUnit(const MCSchedModel &SM, unsigned LQ, unsigned SQ)
+      : LSUnit(SM, LQ, SQ, /* NoAlias */ false) {}
+  LSUnit(const MCSchedModel &SM, unsigned LQ, unsigned SQ, bool AssumeNoAlias)
+      : LSUnitBase(SM, LQ, SQ, AssumeNoAlias) {}
 
 #ifndef NDEBUG
   void dump() const;
 #endif
 
-  enum Status { LSU_AVAILABLE = 0, LSU_LQUEUE_FULL, LSU_SQUEUE_FULL };
+  /// Returns LSU_AVAILABLE if there are enough load/store queue entries to
+  /// accomodate instruction IR.
+  Status isAvailable(const InstRef &IR) const override;
 
-  // Returns LSU_AVAILABLE if there are enough load/store queue entries to serve
-  // IR. It also returns LSU_AVAILABLE if IR is not a memory operation.
-  Status isAvailable(const InstRef &IR) const;
+  /// Allocates LS resources for instruction IR.
+  ///
+  /// This method assumes that a previous call to `isAvailable(IR)` succeeded
+  /// returning LSU_AVAILABLE.
+  void dispatch(const InstRef &IR) override;
 
-  // Allocates load/store queue resources for IR.
-  //
-  // This method assumes that a previous call to `isAvailable(IR)` returned
-  // LSU_AVAILABLE, and that IR is a memory operation.
-  void dispatch(const InstRef &IR);
+  /// Check if a peviously dispatched instruction IR is now ready for execution.
+  ///
+  /// Rules are:
+  /// By default, rules are:
+  /// 1. A store may not pass a previous store.
+  /// 2. A load may not pass a previous store unless flag 'NoAlias' is set.
+  /// 3. A load may pass a previous load.
+  /// 4. A store may not pass a previous load (regardless of flag 'NoAlias').
+  /// 5. A load has to wait until an older load barrier is fully executed.
+  /// 6. A store has to wait until an older store barrier is fully executed.
+  const InstRef &isReady(const InstRef &IR) const override;
 
-  // By default, rules are:
-  // 1. A store may not pass a previous store.
-  // 2. A load may not pass a previous store unless flag 'NoAlias' is set.
-  // 3. A load may pass a previous load.
-  // 4. A store may not pass a previous load (regardless of flag 'NoAlias').
-  // 5. A load has to wait until an older load barrier is fully executed.
-  // 6. A store has to wait until an older store barrier is fully executed.
-  //
-  // Returns an instruction identifier. If IR is ready, then this method returns
-  // `IR.getSourceIndex()`. Otherwise it returns the instruction ID of the
-  // dependent (i.e. conflicting) memory instruction.
-  virtual unsigned isReady(const InstRef &IR) const;
-
-  // Load and store instructions are tracked by their corresponding queues from
-  // dispatch until the "instruction executed" event.
-  // Only when a load instruction reaches the 'Executed' stage, its value
-  // becomes available to the users. At that point, the load no longer needs to
-  // be tracked by the load queue.
-  // FIXME: For simplicity, we optimistically assume a similar behavior for
-  // store instructions. In practice, store operations don't tend to leave the
-  // store queue until they reach the 'Retired' stage (See PR39830).
+  /// Instruction executed event handler.
+  ///
+  /// Load and store instructions are tracked by their corresponding queues from
+  /// dispatch until "instruction executed" event.
+  /// When a load instruction Ld reaches the 'Executed' stage, its value
+  /// is propagated to all the dependent users, and the LS unit stops tracking
+  /// Ld.
+  /// FIXME: For simplicity, we optimistically assume a similar behavior for
+  /// store instructions. In practice, store operations don't tend to leave the
+  /// store queue until they reach the 'Retired' stage (See PR39830).
   void onInstructionExecuted(const InstRef &IR);
 };
 

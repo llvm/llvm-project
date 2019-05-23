@@ -154,7 +154,7 @@ EmulateInstructionARM64::CreateInstance(const ArchSpec &arch,
     }
   }
 
-  return NULL;
+  return nullptr;
 }
 
 bool EmulateInstructionARM64::SetTargetTriple(const ArchSpec &arch) {
@@ -411,7 +411,7 @@ bool EmulateInstructionARM64::ReadInstruction() {
 bool EmulateInstructionARM64::EvaluateInstruction(uint32_t evaluate_options) {
   const uint32_t opcode = m_opcode.GetOpcode32();
   Opcode *opcode_data = GetOpcodeForInstruction(opcode);
-  if (opcode_data == NULL)
+  if (opcode_data == nullptr)
     return false;
 
   // printf ("opcode template for 0x%8.8x: %s\n", opcode, opcode_data->name);

@@ -112,7 +112,7 @@ HostThread Host::StartMonitoringChildProcess(
   ::snprintf(thread_name, sizeof(thread_name),
              "<lldb.host.wait4(pid=%" PRIu64 ")>", pid);
   return ThreadLauncher::LaunchThread(
-      thread_name, MonitorChildProcessThreadFunction, info_ptr, NULL);
+      thread_name, MonitorChildProcessThreadFunction, info_ptr, nullptr);
 }
 
 #ifndef __linux__
@@ -219,7 +219,7 @@ static thread_result_t MonitorChildProcessThreadFunction(void *arg) {
       bool exited = false;
       int signal = 0;
       int exit_status = 0;
-      const char *status_cstr = NULL;
+      const char *status_cstr = nullptr;
       if (WIFSTOPPED(status)) {
         signal = WSTOPSIG(status);
         status_cstr = "STOPPED";
@@ -282,7 +282,7 @@ static thread_result_t MonitorChildProcessThreadFunction(void *arg) {
   if (log)
     log->Printf("%s (arg = %p) thread exiting...", __FUNCTION__, arg);
 
-  return NULL;
+  return nullptr;
 }
 
 #endif // #if !defined (__APPLE__) && !defined (_WIN32)
@@ -393,7 +393,7 @@ const char *Host::GetSignalAsCString(int signo) {
   default:
     break;
   }
-  return NULL;
+  return nullptr;
 }
 
 #endif

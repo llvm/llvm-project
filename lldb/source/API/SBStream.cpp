@@ -34,7 +34,7 @@ bool SBStream::IsValid() const {
 SBStream::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStream, operator bool);
 
-  return (m_opaque_up != NULL);
+  return (m_opaque_up != nullptr);
 }
 
 // If this stream is not redirected to a file, it will maintain a local cache
@@ -42,8 +42,8 @@ SBStream::operator bool() const {
 const char *SBStream::GetData() {
   LLDB_RECORD_METHOD_NO_ARGS(const char *, SBStream, GetData);
 
-  if (m_is_file || m_opaque_up == NULL)
-    return NULL;
+  if (m_is_file || m_opaque_up == nullptr)
+    return nullptr;
 
   return static_cast<StreamString *>(m_opaque_up.get())->GetData();
 }
@@ -53,7 +53,7 @@ const char *SBStream::GetData() {
 size_t SBStream::GetSize() {
   LLDB_RECORD_METHOD_NO_ARGS(size_t, SBStream, GetSize);
 
-  if (m_is_file || m_opaque_up == NULL)
+  if (m_is_file || m_opaque_up == nullptr)
     return 0;
 
   return static_cast<StreamString *>(m_opaque_up.get())->GetSize();
@@ -160,7 +160,7 @@ lldb_private::Stream *SBStream::operator->() { return m_opaque_up.get(); }
 lldb_private::Stream *SBStream::get() { return m_opaque_up.get(); }
 
 lldb_private::Stream &SBStream::ref() {
-  if (m_opaque_up == NULL)
+  if (m_opaque_up == nullptr)
     m_opaque_up.reset(new StreamString());
   return *m_opaque_up;
 }

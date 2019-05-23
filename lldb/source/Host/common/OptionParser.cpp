@@ -55,11 +55,11 @@ std::string OptionParser::GetShortOptionString(struct option *long_options) {
   int i = 0;
   bool done = false;
   while (!done) {
-    if (long_options[i].name == 0 && long_options[i].has_arg == 0 &&
-        long_options[i].flag == 0 && long_options[i].val == 0) {
+    if (long_options[i].name == nullptr && long_options[i].has_arg == 0 &&
+        long_options[i].flag == nullptr && long_options[i].val == 0) {
       done = true;
     } else {
-      if (long_options[i].flag == NULL && isalpha(long_options[i].val)) {
+      if (long_options[i].flag == nullptr && isalpha(long_options[i].val)) {
         s.append(1, (char)long_options[i].val);
         switch (long_options[i].has_arg) {
         default:

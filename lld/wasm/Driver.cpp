@@ -652,10 +652,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     // Add synthetic dummies for weak undefined functions.  Must happen
     // after LTO otherwise functions may not yet have signatures.
     Symtab->handleWeakUndefines();
-
-    // Make sure we have resolved all symbols.
-    if (!Config->AllowUndefined)
-      Symtab->reportRemainingUndefines();
   }
 
   if (EntrySym)

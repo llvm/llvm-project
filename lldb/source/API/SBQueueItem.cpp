@@ -41,7 +41,7 @@ bool SBQueueItem::IsValid() const {
 SBQueueItem::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBQueueItem, operator bool);
 
-  return m_queue_item_sp.get() != NULL;
+  return m_queue_item_sp.get() != nullptr;
 }
 
 void SBQueueItem::Clear() {

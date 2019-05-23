@@ -85,7 +85,7 @@ void ASTDumper::ToLog(Log *log, const char *prefix) {
 
   memcpy(str, m_dump.c_str(), len);
 
-  char *end = NULL;
+  char *end = nullptr;
 
   end = strchr(str, '\n');
 

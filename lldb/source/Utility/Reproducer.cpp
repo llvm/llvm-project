@@ -221,7 +221,7 @@ bool Loader::HasFile(StringRef file) {
 }
 
 llvm::Expected<std::unique_ptr<DataRecorder>>
-DataRecorder::Create(FileSpec filename) {
+DataRecorder::Create(const FileSpec &filename) {
   std::error_code ec;
   auto recorder = llvm::make_unique<DataRecorder>(std::move(filename), ec);
   if (ec)

@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as vscodelc from 'vscode-languageclient';
-import { realpathSync } from 'fs';
 
 /**
  * Method to get workspace configuration option
@@ -87,17 +86,6 @@ export function activate(context: vscode.ExtensionContext) {
             fileEvents: vscode.workspace.createFileSystemWatcher(filePattern)
         },
         initializationOptions: { clangdFileStatus: true },
-        // Resolve symlinks for all files provided by clangd.
-        // This is a workaround for a bazel + clangd issue - bazel produces a symlink tree to build in,
-        // and when navigating to the included file, clangd passes its path inside the symlink tree
-        // rather than its filesystem path.
-        // FIXME: remove this once clangd knows enough about bazel to resolve the
-        // symlinks where needed (or if this causes problems for other workflows).
-        uriConverters: {
-            code2Protocol: (value: vscode.Uri) => value.toString(),
-            protocol2Code: (value: string) =>
-                vscode.Uri.file(realpathSync(vscode.Uri.parse(value).fsPath))
-        },
         // Do not switch to output window when clangd returns output
         revealOutputChannelOn: vscodelc.RevealOutputChannelOn.Never
     };

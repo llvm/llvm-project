@@ -356,7 +356,7 @@ public:
               return;
             else {
               const uint8_t *bytes = data.PeekData(offset, inst_size);
-              if (bytes == NULL)
+              if (bytes == nullptr)
                 return;
               m_opcode_name.assign(".byte");
               m_opcode.SetOpcodeBytes(bytes, inst_size);
@@ -956,7 +956,7 @@ DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple, const char *cpu,
     return Instance();
 
   std::unique_ptr<llvm::MCContext> context_up(
-      new llvm::MCContext(asm_info_up.get(), reg_info_up.get(), 0));
+      new llvm::MCContext(asm_info_up.get(), reg_info_up.get(), nullptr));
   if (!context_up)
     return Instance();
 
@@ -1079,7 +1079,7 @@ bool DisassemblerLLVMC::MCDisasmInstance::IsCall(llvm::MCInst &mc_inst) const {
 
 DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
                                      const char *flavor_string)
-    : Disassembler(arch, flavor_string), m_exe_ctx(NULL), m_inst(NULL),
+    : Disassembler(arch, flavor_string), m_exe_ctx(nullptr), m_inst(nullptr),
       m_data_from_file(false) {
   if (!FlavorValidForArchSpec(arch, m_flavor.c_str())) {
     m_flavor.assign("default");
@@ -1242,7 +1242,7 @@ Disassembler *DisassemblerLLVMC::CreateInstance(const ArchSpec &arch,
     if (disasm_up.get() && disasm_up->IsValid())
       return disasm_up.release();
   }
-  return NULL;
+  return nullptr;
 }
 
 size_t DisassemblerLLVMC::DecodeInstructions(const Address &base_addr,
@@ -1329,7 +1329,7 @@ const char *DisassemblerLLVMC::SymbolLookupCallback(void *disassembler,
 bool DisassemblerLLVMC::FlavorValidForArchSpec(
     const lldb_private::ArchSpec &arch, const char *flavor) {
   llvm::Triple triple = arch.GetTriple();
-  if (flavor == NULL || strcmp(flavor, "default") == 0)
+  if (flavor == nullptr || strcmp(flavor, "default") == 0)
     return true;
 
   if (triple.getArch() == llvm::Triple::x86 ||
@@ -1358,7 +1358,7 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
   if (*type_ptr) {
     if (m_exe_ctx && m_inst) {
       // std::string remove_this_prior_to_checkin;
-      Target *target = m_exe_ctx ? m_exe_ctx->GetTargetPtr() : NULL;
+      Target *target = m_exe_ctx ? m_exe_ctx->GetTargetPtr() : nullptr;
       Address value_so_addr;
       Address pc_so_addr;
       if (m_inst->UsingFileAddress()) {
@@ -1423,8 +1423,8 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
   }
 
   *type_ptr = LLVMDisassembler_ReferenceType_InOut_None;
-  *name = NULL;
-  return NULL;
+  *name = nullptr;
+  return nullptr;
 }
 
 // PluginInterface protocol

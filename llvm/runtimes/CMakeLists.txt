@@ -4,8 +4,12 @@
 # should be built with the LLVM toolchain from the build directory. This file is
 # a first step to formalizing runtime build interfaces.
 
-# In the current state this file only works with compiler-rt, other runtimes
-# will work as the runtime build interface standardizes.
+# Setting CMake minimum required version should be at the very top of the file
+# if this is the entry point.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  cmake_minimum_required(VERSION 3.4.3)
+  project(Runtimes C CXX ASM)
+endif()
 
 # Find all subdirectories containing CMake projects
 file(GLOB entries *)
@@ -205,6 +209,11 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 
 else() # if this is included from LLVM's CMake
   include(LLVMExternalProjectUtils)
+  if (LLVM_EXTERNAL_LIBCXX_SOURCE_DIR)
+    set(LIBCXX_HEADER_DIR ${LLVM_INCLUDE_DIR}/c++/v1/)
+    set(CXX_HEADER_TARGET runtime-libcxx-headers)
+    add_subdirectory(${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR}/include ${CXX_HEADER_TARGET})
+  endif()
 
   if(NOT LLVM_BUILD_RUNTIMES)
     set(EXTRA_ARGS EXCLUDE_FROM_ALL)
@@ -354,7 +363,7 @@ else() # if this is included from LLVM's CMake
 
     llvm_ExternalProject_Add(runtimes
                              ${CMAKE_CURRENT_SOURCE_DIR}
-                             DEPENDS ${ARG_DEPENDS}
+                             DEPENDS ${ARG_DEPENDS} runtime-libcxx-headers
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
@@ -445,7 +454,7 @@ else() # if this is included from LLVM's CMake
 
     llvm_ExternalProject_Add(runtimes-${name}
                              ${CMAKE_CURRENT_SOURCE_DIR}
-                             DEPENDS ${${name}_deps}
+                             DEPENDS ${${name}_deps} runtime-libcxx-headers
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}

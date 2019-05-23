@@ -12,7 +12,7 @@
 namespace lldb_private {
 
 ProcessRunLock::ProcessRunLock() : m_running(false) {
-  int err = ::pthread_rwlock_init(&m_rwlock, NULL);
+  int err = ::pthread_rwlock_init(&m_rwlock, nullptr);
   (void)err;
 }
 

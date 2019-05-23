@@ -374,7 +374,7 @@ Status PlatformDarwin::GetSharedModule(
           new_module_spec.GetFileSpec() = bundle_directory;
           if (Host::ResolveExecutableInBundle(new_module_spec.GetFileSpec())) {
             Status new_error(Platform::GetSharedModule(
-                new_module_spec, process, module_sp, NULL, old_module_sp_ptr,
+                new_module_spec, process, module_sp, nullptr, old_module_sp_ptr,
                 did_create_ptr));
 
             if (module_sp)
@@ -401,7 +401,7 @@ Status PlatformDarwin::GetSharedModule(
                 ModuleSpec new_module_spec(module_spec);
                 new_module_spec.GetFileSpec() = new_file_spec;
                 Status new_error(Platform::GetSharedModule(
-                    new_module_spec, process, module_sp, NULL,
+                    new_module_spec, process, module_sp, nullptr,
                     old_module_sp_ptr, did_create_ptr));
 
                 if (module_sp) {
@@ -1171,7 +1171,7 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
         std::string command_output;
         Status error =
             Host::RunShellCommand("/usr/bin/xcode-select --print-path",
-                                  NULL, // current working directory
+                                  nullptr, // current working directory
                                   &exit_status, &signo, &command_output,
                                   std::chrono::seconds(2), // short timeout
                                   false); // don't run in a shell
@@ -1212,7 +1212,7 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
   assert(m_developer_directory.empty() == false);
   if (m_developer_directory[0])
     return m_developer_directory.c_str();
-  return NULL;
+  return nullptr;
 }
 
 BreakpointSP PlatformDarwin::SetThreadCreationBreakpoint(Target &target) {
@@ -1233,7 +1233,7 @@ BreakpointSP PlatformDarwin::SetThreadCreationBreakpoint(Target &target) {
   bool internal = true;
   bool hardware = false;
   LazyBool skip_prologue = eLazyBoolNo;
-  bp_sp = target.CreateBreakpoint(&bp_modules, NULL, g_bp_names,
+  bp_sp = target.CreateBreakpoint(&bp_modules, nullptr, g_bp_names,
                                   llvm::array_lengthof(g_bp_names),
                                   eFunctionNameTypeFull, eLanguageTypeUnknown,
                                   0, skip_prologue, internal, hardware);
@@ -1250,7 +1250,7 @@ PlatformDarwin::GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) {
 
   std::string shell_string = shell.GetPath();
   const char *shell_name = strrchr(shell_string.c_str(), '/');
-  if (shell_name == NULL)
+  if (shell_name == nullptr)
     shell_name = shell_string.c_str();
   else
     shell_name++;
@@ -1341,7 +1341,7 @@ static FileSpec GetXcodeContentsPath() {
         const char *command = "/usr/bin/xcode-select -p";
         lldb_private::Status error = Host::RunShellCommand(
             command, // shell command to run
-            NULL,    // current working directory
+            nullptr, // current working directory
             &status, // Put the exit status of the process in here
             &signo,  // Put the signal that caused the process to exit in here
             &output, // Get the output from the command and place it in this
@@ -1742,7 +1742,7 @@ PlatformDarwin::FindBundleBinaryInExecSearchPaths (const ModuleSpec &module_spec
           ModuleSpec new_module_spec(module_spec);
           new_module_spec.GetFileSpec() = path_to_try;
           Status new_error(Platform::GetSharedModule(
-              new_module_spec, process, module_sp, NULL, old_module_sp_ptr,
+              new_module_spec, process, module_sp, nullptr, old_module_sp_ptr,
               did_create_ptr));
 
           if (module_sp) {

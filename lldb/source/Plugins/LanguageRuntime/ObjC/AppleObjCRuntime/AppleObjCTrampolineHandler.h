@@ -74,8 +74,9 @@ private:
     class VTableRegion {
     public:
       VTableRegion()
-          : m_valid(false), m_owner(NULL), m_header_addr(LLDB_INVALID_ADDRESS),
-            m_code_start_addr(0), m_code_end_addr(0), m_next_region(0) {}
+          : m_valid(false), m_owner(nullptr),
+            m_header_addr(LLDB_INVALID_ADDRESS), m_code_start_addr(0),
+            m_code_end_addr(0), m_next_region(0) {}
 
       VTableRegion(AppleObjCVTables *owner, lldb::addr_t header_addr);
 

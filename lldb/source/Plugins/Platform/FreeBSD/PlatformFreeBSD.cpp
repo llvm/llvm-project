@@ -262,7 +262,7 @@ lldb::ProcessSP PlatformFreeBSD::Attach(ProcessAttachInfo &attach_info,
                                         Status &error) {
   lldb::ProcessSP process_sp;
   if (IsHost()) {
-    if (target == NULL) {
+    if (target == nullptr) {
       TargetSP new_target_sp;
       ArchSpec emptyArchSpec;
 
@@ -279,7 +279,7 @@ lldb::ProcessSP PlatformFreeBSD::Attach(ProcessAttachInfo &attach_info,
       // even when debugging locally we are debugging remotely! Just like the
       // darwin plugin.
       process_sp = target->CreateProcess(
-          attach_info.GetListenerForProcess(debugger), "gdb-remote", NULL);
+          attach_info.GetListenerForProcess(debugger), "gdb-remote", nullptr);
 
       if (process_sp)
         error = process_sp->Attach(attach_info);

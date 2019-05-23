@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32I
 
-define void @jt(i32 %in, i32* %out) {
+define void @jt(i32 %in, i32* %out) nounwind {
 ; RV32I-LABEL: jt:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi a2, zero, 2

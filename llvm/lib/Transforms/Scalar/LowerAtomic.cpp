@@ -86,6 +86,12 @@ static bool LowerAtomicRMWInst(AtomicRMWInst *RMWI) {
     Res = Builder.CreateSelect(Builder.CreateICmpULT(Orig, Val),
                                Orig, Val);
     break;
+  case AtomicRMWInst::FAdd:
+    Res = Builder.CreateFAdd(Orig, Val);
+    break;
+  case AtomicRMWInst::FSub:
+    Res = Builder.CreateFSub(Orig, Val);
+    break;
   }
   Builder.CreateStore(Res, Ptr);
   RMWI->replaceAllUsesWith(Orig);
