@@ -273,6 +273,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
   setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
 
+  // Define the emscripten name for return address helper.
+  // TODO: when implementing other WASM backends, make this generic or only do
+  // this on emscripten depending on what they end up doing.
+  setLibcallName(RTLIB::RETURN_ADDRESS, "emscripten_return_address");
+
   // Always convert switches to br_tables unless there is only one case, which
   // is equivalent to a simple branch. This reduces code size for wasm, and we
   // defer possible jump table optimizations to the VM.
@@ -919,9 +924,8 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
   case ISD::BRIND:
     fail(DL, DAG, "WebAssembly hasn't implemented computed gotos");
     return SDValue();
-  case ISD::RETURNADDR: // Probably nothing meaningful can be returned here.
-    fail(DL, DAG, "WebAssembly hasn't implemented __builtin_return_address");
-    return SDValue();
+  case ISD::RETURNADDR:
+    return LowerRETURNADDR(Op, DAG);
   case ISD::FRAMEADDR:
     return LowerFRAMEADDR(Op, DAG);
   case ISD::CopyToReg:
@@ -976,6 +980,26 @@ SDValue WebAssemblyTargetLowering::LowerFrameIndex(SDValue Op,
                                                    SelectionDAG &DAG) const {
   int FI = cast<FrameIndexSDNode>(Op)->getIndex();
   return DAG.getTargetFrameIndex(FI, Op.getValueType());
+}
+
+SDValue WebAssemblyTargetLowering::LowerRETURNADDR(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+
+  if (!Subtarget->getTargetTriple().isOSEmscripten()) {
+    fail(DL, DAG,
+         "Non-Emscripten WebAssembly hasn't implemented "
+         "__builtin_return_address");
+    return SDValue();
+  }
+
+  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
+    return SDValue();
+
+  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  return makeLibCall(DAG, RTLIB::RETURN_ADDRESS, Op.getValueType(),
+                     {DAG.getConstant(Depth, DL, MVT::i32)}, false, DL)
+      .first;
 }
 
 SDValue WebAssemblyTargetLowering::LowerFRAMEADDR(SDValue Op,
