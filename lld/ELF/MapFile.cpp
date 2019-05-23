@@ -106,7 +106,7 @@ getSymbolStrings(ArrayRef<Defined *> Syms) {
 // .eh_frame tend to contain a lot of section pieces that are contiguous
 // both in input file and output file. Such pieces are squashed before
 // being displayed to make output compact.
-static void printEhFrame(raw_ostream &OS, OutputSection *OSec) {
+static void printEhFrame(raw_ostream &OS, const EhFrameSection *Sec) {
   std::vector<EhSectionPiece> Pieces;
 
   auto Add = [&](const EhSectionPiece &P) {
@@ -123,13 +123,14 @@ static void printEhFrame(raw_ostream &OS, OutputSection *OSec) {
   };
 
   // Gather section pieces.
-  for (const CieRecord *Rec : In.EhFrame->getCieRecords()) {
+  for (const CieRecord *Rec : Sec->getCieRecords()) {
     Add(*Rec->Cie);
     for (const EhSectionPiece *Fde : Rec->Fdes)
       Add(*Fde);
   }
 
   // Print out section pieces.
+  const OutputSection *OSec = Sec->getOutputSection();
   for (EhSectionPiece &P : Pieces) {
     writeHeader(OS, OSec->Addr + P.OutputOff, OSec->getLMA() + P.OutputOff,
                 P.Size, 1);
@@ -179,8 +180,8 @@ void elf::writeMapFile() {
     for (BaseCommand *Base : OSec->SectionCommands) {
       if (auto *ISD = dyn_cast<InputSectionDescription>(Base)) {
         for (InputSection *IS : ISD->Sections) {
-          if (IS == In.EhFrame) {
-            printEhFrame(OS, OSec);
+          if (auto *EhSec = dyn_cast<EhFrameSection>(IS)) {
+            printEhFrame(OS, EhSec);
             continue;
           }
 

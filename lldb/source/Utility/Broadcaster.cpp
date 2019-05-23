@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <memory>
 #include <type_traits>
+#include <utility>
 
 #include <assert.h>
 #include <stddef.h>
@@ -27,7 +28,7 @@ using namespace lldb_private;
 
 Broadcaster::Broadcaster(BroadcasterManagerSP manager_sp, const char *name)
     : m_broadcaster_sp(std::make_shared<BroadcasterImpl>(*this)),
-      m_manager_sp(manager_sp), m_broadcaster_name(name) {
+      m_manager_sp(std::move(manager_sp)), m_broadcaster_name(name) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
   if (log)
     log->Printf("%p Broadcaster::Broadcaster(\"%s\")",
@@ -334,7 +335,7 @@ lldb::BroadcasterManagerSP BroadcasterManager::MakeBroadcasterManager() {
 }
 
 uint32_t BroadcasterManager::RegisterListenerForEvents(
-    const lldb::ListenerSP &listener_sp, BroadcastEventSpec event_spec) {
+    const lldb::ListenerSP &listener_sp, const BroadcastEventSpec &event_spec) {
   std::lock_guard<std::recursive_mutex> guard(m_manager_mutex);
 
   collection::iterator iter = m_event_map.begin(), end_iter = m_event_map.end();
@@ -359,7 +360,7 @@ uint32_t BroadcasterManager::RegisterListenerForEvents(
 }
 
 bool BroadcasterManager::UnregisterListenerForEvents(
-    const lldb::ListenerSP &listener_sp, BroadcastEventSpec event_spec) {
+    const lldb::ListenerSP &listener_sp, const BroadcastEventSpec &event_spec) {
   std::lock_guard<std::recursive_mutex> guard(m_manager_mutex);
   bool removed_some = false;
 
@@ -399,7 +400,7 @@ bool BroadcasterManager::UnregisterListenerForEvents(
 }
 
 ListenerSP BroadcasterManager::GetListenerForEventSpec(
-    BroadcastEventSpec event_spec) const {
+    const BroadcastEventSpec &event_spec) const {
   std::lock_guard<std::recursive_mutex> guard(m_manager_mutex);
 
   collection::const_iterator iter, end_iter = m_event_map.end();

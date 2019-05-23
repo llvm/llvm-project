@@ -3638,7 +3638,7 @@ void Process::ControlPrivateStateThread(uint32_t signal) {
     }
 
     if (signal == eBroadcastInternalStateControlStop) {
-      thread_result_t result = nullptr;
+      thread_result_t result = {};
       m_private_state_thread.Join(&result);
       m_private_state_thread.Reset();
     }
@@ -3913,7 +3913,7 @@ thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
   // it was doing yet, so don't try to change it on the way out.
   if (!is_secondary_thread)
     m_public_run_lock.SetStopped();
-  return nullptr;
+  return {};
 }
 
 // Process Event Data
@@ -4072,15 +4072,15 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
         // public resume.
         process_sp->PrivateResume();
       } else {
-        bool hijacked = 
-          process_sp->IsHijackedForEvent(eBroadcastBitStateChanged)
-          && !process_sp->StateChangedIsHijackedForSynchronousResume();
+        bool hijacked =
+            process_sp->IsHijackedForEvent(eBroadcastBitStateChanged) &&
+            !process_sp->StateChangedIsHijackedForSynchronousResume();
 
         if (!hijacked) {
           // If we didn't restart, run the Stop Hooks here.
           // Don't do that if state changed events aren't hooked up to the
-          // public (or SyncResume) broadcasters.  StopHooks are just for 
-          // real public stops.  They might also restart the target, 
+          // public (or SyncResume) broadcasters.  StopHooks are just for
+          // real public stops.  They might also restart the target,
           // so watch for that.
           process_sp->GetTarget().RunStopHooks();
           if (process_sp->GetPrivateState() == eStateRunning)
