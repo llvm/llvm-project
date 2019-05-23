@@ -91,6 +91,8 @@ void SPIRVDecorate::encode(spv_ostream &O) const {
     SPIRVDecorateLinkageAttr::encodeLiterals(Encoder, Literals);
   else if (Dec == DecorationMemoryINTEL)
     SPIRVDecorateMemoryINTELAttr::encodeLiterals(Encoder, Literals);
+  else if (Dec == DecorationUserSemantic)
+    SPIRVDecorateUserSemanticAttr::encodeLiterals(Encoder, Literals);
   else
     Encoder << Literals;
 }
@@ -107,6 +109,8 @@ void SPIRVDecorate::decode(std::istream &I) {
     SPIRVDecorateLinkageAttr::decodeLiterals(Decoder, Literals);
   else if (Dec == DecorationMemoryINTEL)
     SPIRVDecorateMemoryINTELAttr::decodeLiterals(Decoder, Literals);
+  else if (Dec == DecorationUserSemantic)
+    SPIRVDecorateUserSemanticAttr::decodeLiterals(Decoder, Literals);
   else
     Decoder >> Literals;
   getOrCreateTarget()->addDecorate(this);
@@ -117,6 +121,8 @@ void SPIRVMemberDecorate::encode(spv_ostream &O) const {
   Encoder << Target << MemberNumber << Dec;
   if (Dec == DecorationMemoryINTEL)
     SPIRVDecorateMemoryINTELAttr::encodeLiterals(Encoder, Literals);
+  else if (Dec == DecorationUserSemantic)
+    SPIRVDecorateUserSemanticAttr::encodeLiterals(Encoder, Literals);
   else
     Encoder << Literals;
 }
@@ -131,6 +137,8 @@ void SPIRVMemberDecorate::decode(std::istream &I) {
   Decoder >> Target >> MemberNumber >> Dec;
   if (Dec == DecorationMemoryINTEL)
     SPIRVDecorateMemoryINTELAttr::decodeLiterals(Decoder, Literals);
+  else if (Dec == DecorationUserSemantic)
+    SPIRVDecorateUserSemanticAttr::decodeLiterals(Decoder, Literals);
   else
     Decoder >> Literals;
   getOrCreateTarget()->addMemberDecorate(this);

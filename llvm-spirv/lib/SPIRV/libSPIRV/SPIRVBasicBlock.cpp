@@ -66,7 +66,12 @@ SPIRVBasicBlock::addInstruction(SPIRVInstruction *I,
   Module->add(I);
   I->setParent(this);
   if (InsertBefore) {
-    auto Pos = std::find(InstVec.begin(), InstVec.end(), InsertBefore);
+    auto Pos = find(InsertBefore);
+    // If insertion of a new instruction before the one passed to the function
+    // is illegal, insertion before the returned instruction is guaranteed
+    // to retain correct instruction order in a block
+    if (Pos != InstVec.begin() && isa<OpLoopMerge>(*std::prev(Pos)))
+      --Pos;
     InstVec.insert(Pos, I);
   } else
     InstVec.push_back(I);

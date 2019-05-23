@@ -105,7 +105,7 @@ while.cond:                                       ; preds = %if.end, %if.then, %
   store i32 %dec, i32* %i, align 4
   %cmp = icmp sgt i32 %0, 0
 ; Per SPIRV spec p3.23 "Unroll" loop control = 0x1
-; CHECK-SPIRV: 4 LoopMerge [[MergeBlock:[0-9]+]] [[ContinueTarget:[0-9]+]] 1
+; CHECK-SPIRV: 5 LoopMerge [[MergeBlock:[0-9]+]] [[ContinueTarget:[0-9]+]] 256 8
 ; CHECK-SPIRV: BranchConditional {{[0-9]+}} {{[0-9]+}} [[MergeBlock]]
   br i1 %cmp, label %while.body, label %while.end
 
@@ -201,4 +201,4 @@ attributes #0 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 !7 = distinct !{!7, !8}
 !8 = !{!"llvm.loop.unroll.count", i32 8}
 !9 = distinct !{!9, !10}
-!10 = !{!"llvm.loop.unroll.full"}
+!10 = !{!"llvm.loop.unroll.enable"}

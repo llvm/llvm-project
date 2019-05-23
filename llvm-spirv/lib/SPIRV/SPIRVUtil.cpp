@@ -1497,10 +1497,15 @@ spv::LoopControlMask getLoopControl(const BranchInst *Branch,
   for (const MDOperand &MDOp : LoopMD->operands()) {
     if (MDNode *Node = dyn_cast<MDNode>(MDOp)) {
       std::string S = getMDOperandAsString(Node, 0);
+      // Set the loop control bits. Parameters are set in the order described
+      // in 3.23 SPIR-V Spec. rev. 1.4:
+      // Bits that are set can indicate whether an additional operand follows,
+      // as described by the table. If there are multiple following operands
+      // indicated, they are ordered: Those indicated by smaller-numbered bits
+      // appear first.
       if (S == "llvm.loop.unroll.disable")
         LoopControl |= spv::LoopControlDontUnrollMask;
-      // TODO Express partial unrolling in SPIRV.
-      else if (S == "llvm.loop.unroll.count" || S == "llvm.loop.unroll.full")
+      else if (S == "llvm.loop.unroll.full" || S == "llvm.loop.unroll.enable")
         LoopControl |= spv::LoopControlUnrollMask;
       if (S == "llvm.loop.ivdep.enable")
         LoopControl |= spv::LoopControlDependencyInfiniteMask;
@@ -1508,6 +1513,13 @@ spv::LoopControlMask getLoopControl(const BranchInst *Branch,
         size_t I = getMDOperandAsInt(Node, 1);
         Parameters.push_back(I);
         LoopControl |= spv::LoopControlDependencyLengthMask;
+      }
+      // PartialCount must not be used with the DontUnroll bit
+      if (S == "llvm.loop.unroll.count" &&
+          !(LoopControl & LoopControlDontUnrollMask)) {
+        size_t I = getMDOperandAsInt(Node, 1);
+        Parameters.push_back(I);
+        LoopControl |= spv::LoopControlPartialCountMask;
       }
       if (S == "llvm.loop.ii.count") {
         Parameters.push_back(InitiationIntervalINTEL);

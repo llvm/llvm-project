@@ -320,18 +320,17 @@ public:
   void decorateTargets() override;
 };
 
-class SPIRVDecorateMemoryINTELAttr : public SPIRVDecorate {
+template <Decoration D> class SPIRVDecorateStrAttrBase : public SPIRVDecorate {
 public:
-  // Complete constructor for MemoryINTEL decoration
-  SPIRVDecorateMemoryINTELAttr(SPIRVEntry *TheTarget,
-                               const std::string &MemoryType)
-      : SPIRVDecorate(DecorationMemoryINTEL, TheTarget) {
-    for (auto &I : getVec(MemoryType))
+  // Complete constructor for decoration with string literal
+  SPIRVDecorateStrAttrBase(SPIRVEntry *TheTarget, const std::string &Str)
+      : SPIRVDecorate(D, TheTarget) {
+    for (auto &I : getVec(Str))
       Literals.push_back(I);
     WordCount += Literals.size();
   }
   // Incomplete constructor
-  SPIRVDecorateMemoryINTELAttr() : SPIRVDecorate() {}
+  SPIRVDecorateStrAttrBase() : SPIRVDecorate() {}
 
   static void encodeLiterals(SPIRVEncoder &Encoder,
                              const std::vector<SPIRVWord> &Literals) {
@@ -347,29 +346,67 @@ public:
                              std::vector<SPIRVWord> &Literals) {
 #ifdef _SPIRV_SUPPORT_TEXT_FMT
     if (SPIRVUseTextFormat) {
-      std::string MemoryType;
-      Decoder >> MemoryType;
-      std::copy_n(getVec(MemoryType).begin(), Literals.size(),
-                  Literals.begin());
+      std::string Str;
+      Decoder >> Str;
+      std::copy_n(getVec(Str).begin(), Literals.size(), Literals.begin());
     } else
 #endif
       Decoder >> Literals;
   }
 };
 
-class SPIRVMemberDecorateMemoryINTELAttr : public SPIRVMemberDecorate {
+class SPIRVDecorateMemoryINTELAttr
+    : public SPIRVDecorateStrAttrBase<DecorationMemoryINTEL> {
+public:
+  // Complete constructor for MemoryINTEL decoration
+  SPIRVDecorateMemoryINTELAttr(SPIRVEntry *TheTarget,
+                               const std::string &MemoryType)
+      : SPIRVDecorateStrAttrBase(TheTarget, MemoryType) {}
+};
+
+class SPIRVDecorateUserSemanticAttr
+    : public SPIRVDecorateStrAttrBase<DecorationUserSemantic> {
+public:
+  //  Complete constructor for UserSemantic decoration
+  SPIRVDecorateUserSemanticAttr(SPIRVEntry *TheTarget,
+                                const std::string &AnnotateString)
+      : SPIRVDecorateStrAttrBase(TheTarget, AnnotateString) {}
+};
+
+template <Decoration D>
+class SPIRVMemberDecorateStrAttrBase : public SPIRVMemberDecorate {
+public:
+  // Complete constructor for decoration with string literal
+  SPIRVMemberDecorateStrAttrBase(SPIRVEntry *TheTarget, SPIRVWord MemberNumber,
+                                 const std::string &Str)
+      : SPIRVMemberDecorate(D, MemberNumber, TheTarget) {
+    for (auto &I : getVec(Str))
+      Literals.push_back(I);
+    WordCount += Literals.size();
+  }
+  // Incomplete constructor
+  SPIRVMemberDecorateStrAttrBase() : SPIRVMemberDecorate() {}
+};
+
+class SPIRVMemberDecorateMemoryINTELAttr
+    : public SPIRVMemberDecorateStrAttrBase<DecorationMemoryINTEL> {
 public:
   // Complete constructor for MemoryINTEL decoration
   SPIRVMemberDecorateMemoryINTELAttr(SPIRVEntry *TheTarget,
                                      SPIRVWord MemberNumber,
                                      const std::string &MemoryType)
-      : SPIRVMemberDecorate(DecorationMemoryINTEL, MemberNumber, TheTarget) {
-    for (auto &I : getVec(MemoryType))
-      Literals.push_back(I);
-    WordCount += Literals.size();
-  }
-  // Incomplete constructor
-  SPIRVMemberDecorateMemoryINTELAttr() : SPIRVMemberDecorate() {}
+      : SPIRVMemberDecorateStrAttrBase(TheTarget, MemberNumber, MemoryType) {}
+};
+
+class SPIRVMemberDecorateUserSemanticAttr
+    : public SPIRVMemberDecorateStrAttrBase<DecorationUserSemantic> {
+public:
+  // Complete constructor for UserSemantic decoration
+  SPIRVMemberDecorateUserSemanticAttr(SPIRVEntry *TheTarget,
+                                      SPIRVWord MemberNumber,
+                                      const std::string &AnnotateString)
+      : SPIRVMemberDecorateStrAttrBase(TheTarget, MemberNumber,
+                                       AnnotateString) {}
 };
 
 } // namespace SPIRV

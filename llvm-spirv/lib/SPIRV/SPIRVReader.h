@@ -45,6 +45,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/GlobalValue.h" // llvm::GlobalValue::LinkageTypes
+#include "llvm/IR/Metadata.h"    // llvm::Metadata
 
 namespace llvm {
 class Module;
@@ -246,6 +247,9 @@ private:
   Value *oclTransConstantPipeStorage(SPIRV::SPIRVConstantPipeStorage *BCPS);
   void setName(llvm::Value *V, SPIRVValue *BV);
   void setLLVMLoopMetadata(SPIRVLoopMerge *LM, BranchInst *BI);
+  inline llvm::Metadata *getMetadataFromName(std::string Name);
+  inline std::vector<llvm::Metadata *>
+  getMetadataFromNameAndParameter(std::string Name, SPIRVWord Parameter);
   void insertImageNameAccessQualifier(SPIRV::SPIRVTypeImage *ST,
                                       std::string &Name);
   template <class Source, class Func> bool foreachFuncCtlMask(Source, Func);

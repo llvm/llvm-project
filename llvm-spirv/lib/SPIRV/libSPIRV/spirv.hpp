@@ -388,6 +388,7 @@ enum Decoration {
     DecorationPassthroughNV = 5250,
     DecorationViewportRelativeNV = 5252,
     DecorationSecondaryViewportRelativeNV = 5256,
+    DecorationUserSemantic = 5635,
     DecorationRegisterINTEL = 5825,
     DecorationMemoryINTEL = 5826,
     DecorationNumbanksINTEL = 5827,
@@ -484,6 +485,11 @@ enum LoopControlMask {
     LoopControlDontUnrollMask = 0x00000002,
     LoopControlDependencyInfiniteMask = 0x00000004,
     LoopControlDependencyLengthMask = 0x00000008,
+    LoopControlMinIterationsMask = 0x00000010,
+    LoopControlMaxIterationsMask = 0x00000020,
+    LoopControlIterationMultipleMask = 0x00000040,
+    LoopControlPeelCountMask = 0x00000080,
+    LoopControlPartialCountMask = 0x00000100,
     LoopControlExtendedControlsMask = 0x80000000,
 };
 

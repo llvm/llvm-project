@@ -15,7 +15,8 @@ target triple = "spir-unknown-unknown"
 ; CHECK-LABEL:   entry
 ; CHECK:         [[PTR:%expected[0-9]*]] = alloca i32, align 4
 ; CHECK:         store i32 {{.*}}, i32* [[PTR]]
-; CHECK:         call spir_func i1 @_Z39atomic_compare_exchange_strong_explicit{{.*}}%object, i32* [[PTR]], i32 %desired, i32 5, i32 5, i32 2)
+; CHECK:         [[PTR]].as = addrspacecast i32* [[PTR]] to i32 addrspace(4)*
+; CHECK:         call spir_func i1 @_Z39atomic_compare_exchange_strong_explicit{{.*}}%object, i32 addrspace(4)* [[PTR]].as, i32 %desired, i32 5, i32 5, i32 2)
 ; CHECK-NEXT;         load i32* [[PTR]]
 define spir_func i32 @test(i32 addrspace(1)* %object, i32 %expected, i32 %desired) #0 {
 entry:

@@ -382,7 +382,11 @@ void SPIRVToOCL20::visitCallSPIRVAtomicBuiltin(CallInst *CI, Op OC) {
                                     .getFirstInsertionPt()));
           PExpected->setAlignment(CI->getType()->getScalarSizeInBits() / 8);
           new StoreInst(Args[1], PExpected, PInsertBefore);
-          Args[1] = PExpected;
+          unsigned AddrSpc = SPIRAS_Generic;
+          Type *PtrTyAS =
+              PExpected->getType()->getElementType()->getPointerTo(AddrSpc);
+          Args[1] = CastInst::CreatePointerBitCastOrAddrSpaceCast(
+              PExpected, PtrTyAS, PExpected->getName() + ".as", PInsertBefore);
           std::swap(Args[3], Args[4]);
           std::swap(Args[2], Args[3]);
           RetTy = Type::getInt1Ty(*Ctx);

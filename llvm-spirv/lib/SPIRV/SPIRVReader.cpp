@@ -547,6 +547,18 @@ void SPIRVToLLVM::setName(llvm::Value *V, SPIRVValue *BV) {
     V->setName(Name);
 }
 
+inline llvm::Metadata *SPIRVToLLVM::getMetadataFromName(std::string Name) {
+  return llvm::MDNode::get(*Context, llvm::MDString::get(*Context, Name));
+}
+
+inline std::vector<llvm::Metadata *>
+SPIRVToLLVM::getMetadataFromNameAndParameter(std::string Name,
+                                             SPIRVWord Parameter) {
+  return {MDString::get(*Context, Name),
+          ConstantAsMetadata::get(
+              ConstantInt::get(Type::getInt32Ty(*Context), Parameter))};
+}
+
 void SPIRVToLLVM::setLLVMLoopMetadata(SPIRVLoopMerge *LM, BranchInst *BI) {
   if (!LM)
     return;
@@ -559,54 +571,90 @@ void SPIRVToLLVM::setLLVMLoopMetadata(SPIRVLoopMerge *LM, BranchInst *BI) {
     return;
   }
 
+  unsigned NumParam = 0;
   std::vector<llvm::Metadata *> Metadata;
+  std::vector<SPIRVWord> LoopControlParameters = LM->getLoopControlParameters();
   Metadata.push_back(llvm::MDNode::get(*Context, Self));
-  std::vector<SPIRVWord> LoopControlParameters;
+
+  // To correctly decode loop control parameters, order of checks for loop
+  // control masks must match with the order given in the spec (see 3.23),
+  // i.e. check smaller-numbered bits first.
+  // Unroll and UnrollCount loop controls can't be applied simultaneously with
+  // DontUnroll loop control.
   if (LC & LoopControlUnrollMask)
-    Metadata.push_back(llvm::MDNode::get(
-        *Context, llvm::MDString::get(*Context, "llvm.loop.unroll.full")));
+    Metadata.push_back(getMetadataFromName("llvm.loop.unroll.enable"));
   else if (LC & LoopControlDontUnrollMask)
-    Metadata.push_back(llvm::MDNode::get(
-        *Context, llvm::MDString::get(*Context, "llvm.loop.unroll.disable")));
+    Metadata.push_back(getMetadataFromName("llvm.loop.unroll.disable"));
   if (LC & LoopControlDependencyInfiniteMask)
-    Metadata.push_back(llvm::MDNode::get(
-        *Context, llvm::MDString::get(*Context, "llvm.loop.ivdep.enable")));
+    Metadata.push_back(getMetadataFromName("llvm.loop.ivdep.enable"));
   if (LC & LoopControlDependencyLengthMask) {
-    LoopControlParameters = LM->getLoopControlParameters();
     if (!LoopControlParameters.empty()) {
-      llvm::Metadata *OpValues[] = {
-          MDString::get(*Context, "llvm.loop.ivdep.safelen"),
-          ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(*Context),
-                                                   LoopControlParameters[0]))};
-      Metadata.push_back(llvm::MDNode::get(*Context, OpValues));
+      Metadata.push_back(llvm::MDNode::get(
+          *Context,
+          getMetadataFromNameAndParameter("llvm.loop.ivdep.safelen",
+                                          LoopControlParameters[NumParam])));
+      ++NumParam;
+      assert(NumParam <= LoopControlParameters.size() &&
+             "Missing loop control parameter!");
     }
   }
+  // Placeholder for LoopControls added in SPIR-V 1.4 spec (see 3.23)
+  if (LC & LoopControlMinIterationsMask) {
+    ++NumParam;
+    assert(NumParam <= LoopControlParameters.size() &&
+           "Missing loop control parameter!");
+  }
+  if (LC & LoopControlMaxIterationsMask) {
+    ++NumParam;
+    assert(NumParam <= LoopControlParameters.size() &&
+           "Missing loop control parameter!");
+  }
+  if (LC & LoopControlIterationMultipleMask) {
+    ++NumParam;
+    assert(NumParam <= LoopControlParameters.size() &&
+           "Missing loop control parameter!");
+  }
+  if (LC & LoopControlPeelCountMask) {
+    ++NumParam;
+    assert(NumParam <= LoopControlParameters.size() &&
+           "Missing loop control parameter!");
+  }
+  if (LC & LoopControlPartialCountMask && !(LC & LoopControlDontUnrollMask)) {
+    // If unroll factor is set as '1' - disable loop unrolling
+    if (1 == LoopControlParameters[NumParam])
+      Metadata.push_back(getMetadataFromName("llvm.loop.unroll.disable"));
+    else
+      Metadata.push_back(llvm::MDNode::get(
+          *Context,
+          getMetadataFromNameAndParameter("llvm.loop.unroll.count",
+                                          LoopControlParameters[NumParam])));
+    ++NumParam;
+    assert(NumParam <= LoopControlParameters.size() &&
+           "Missing loop control parameter!");
+  }
   if (LC & LoopControlExtendedControlsMask) {
-    LoopControlParameters = LM->getLoopControlParameters();
-    for (auto LCP = LoopControlParameters.begin();
-         LCP != LoopControlParameters.end(); ++LCP) {
-      switch (*LCP) {
+    while (NumParam < LoopControlParameters.size()) {
+      switch (LoopControlParameters[NumParam]) {
       case InitiationIntervalINTEL: {
         // To generate a correct integer part of metadata we skip a parameter
         // that encodes name of the metadata and take the next one
-        llvm::Metadata *OpValues[] = {
-            MDString::get(*Context, "llvm.loop.ii.count"),
-            ConstantAsMetadata::get(
-                ConstantInt::get(Type::getInt32Ty(*Context), *(++LCP)))};
-        Metadata.push_back(llvm::MDNode::get(*Context, OpValues));
+        Metadata.push_back(llvm::MDNode::get(
+            *Context,
+            getMetadataFromNameAndParameter(
+                "llvm.loop.ii.count", LoopControlParameters[++NumParam])));
         break;
       }
       case MaxConcurrencyINTEL: {
-        llvm::Metadata *OpValues[] = {
-            MDString::get(*Context, "llvm.loop.max_concurrency.count"),
-            ConstantAsMetadata::get(
-                ConstantInt::get(Type::getInt32Ty(*Context), *(++LCP)))};
-        Metadata.push_back(llvm::MDNode::get(*Context, OpValues));
+        Metadata.push_back(llvm::MDNode::get(
+            *Context, getMetadataFromNameAndParameter(
+                          "llvm.loop.max_concurrency.count",
+                          LoopControlParameters[++NumParam])));
         break;
       }
       default:
         break;
       }
+      ++NumParam;
     }
   }
   llvm::MDNode *Node = llvm::MDNode::get(*Context, Metadata);
@@ -2247,6 +2295,8 @@ void generateIntelFPGAAnnotation(const SPIRVEntry *E,
     Out << "{pump:1}";
   if (E->hasDecorate(DecorationDoublepumpINTEL))
     Out << "{pump:2}";
+  if (E->hasDecorate(DecorationUserSemantic))
+    Out << E->getDecorationStringLiteral(DecorationUserSemantic);
 }
 
 void generateIntelFPGAAnnotationForStructMember(
@@ -2273,6 +2323,9 @@ void generateIntelFPGAAnnotationForStructMember(
     Out << "{pump:1}";
   if (E->hasMemberDecorate(DecorationDoublepumpINTEL, 0, MemberNumber))
     Out << "{pump:2}";
+  if (E->hasMemberDecorate(DecorationUserSemantic, 0, MemberNumber))
+    Out << E->getMemberDecorationStringLiteral(DecorationUserSemantic,
+                                               MemberNumber);
 }
 
 void SPIRVToLLVM::transIntelFPGADecorations(SPIRVValue *BV, Value *V) {
