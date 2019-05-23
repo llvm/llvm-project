@@ -72,6 +72,7 @@ target_link_libraries(ToolingTests
   clangToolingInclusions
   clangToolingRefactor
   clangToolingRefactoring
+  LLVMTestingSupport
   )
 
 

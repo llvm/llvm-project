@@ -10,7 +10,7 @@
 // CHECK-DISABLE-VECT: fmul double
 // CHECK-DISABLE-VECT-NOT: fmul <{{[0-9]+}} x double>
 
-#include <stdio.h>
+int printf(const char * restrict format, ...);
 
 void for_test() {
   double A[1000], B[1000];
