@@ -36,7 +36,7 @@ define double @pow_libcall_half_approx(double %x) {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call afn double @sqrt(double [[X:%.*]])
 ; CHECK-NEXT:    [[ABS:%.*]] = call afn double @llvm.fabs.f64(double [[SQRT]])
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp afn oeq double [[X]], 0xFFF0000000000000
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[ISINF]], double 0x7FF0000000000000, double [[ABS]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select afn i1 [[ISINF]], double 0x7FF0000000000000, double [[ABS]]
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
   %pow = call afn double @pow(double %x, double 5.0e-01)
@@ -48,7 +48,7 @@ define <2 x double> @pow_intrinsic_half_approx(<2 x double> %x) {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call afn <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X:%.*]])
 ; CHECK-NEXT:    [[ABS:%.*]] = call afn <2 x double> @llvm.fabs.v2f64(<2 x double> [[SQRT]])
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp afn oeq <2 x double> [[X]], <double 0xFFF0000000000000, double 0xFFF0000000000000>
-; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[ISINF]], <2 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000>, <2 x double> [[ABS]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select afn <2 x i1> [[ISINF]], <2 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000>, <2 x double> [[ABS]]
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %pow = call afn <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double 5.0e-01, double 5.0e-01>)
@@ -92,7 +92,7 @@ define double @pow_libcall_half_nsz(double %x) {
 ; CHECK-LABEL: @pow_libcall_half_nsz(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nsz double @sqrt(double [[X:%.*]])
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp nsz oeq double [[X]], 0xFFF0000000000000
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[ISINF]], double 0x7FF0000000000000, double [[SQRT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select nsz i1 [[ISINF]], double 0x7FF0000000000000, double [[SQRT]]
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
   %pow = call nsz double @pow(double %x, double 5.0e-01)
@@ -103,7 +103,7 @@ define double @pow_intrinsic_half_nsz(double %x) {
 ; CHECK-LABEL: @pow_intrinsic_half_nsz(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nsz double @llvm.sqrt.f64(double [[X:%.*]])
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp nsz oeq double [[X]], 0xFFF0000000000000
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[ISINF]], double 0x7FF0000000000000, double [[SQRT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select nsz i1 [[ISINF]], double 0x7FF0000000000000, double [[SQRT]]
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
   %pow = call nsz double @llvm.pow.f64(double %x, double 5.0e-01)

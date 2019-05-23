@@ -9392,32 +9392,6 @@ defm : avx512_masked_scalar<fsqrt, "SQRTSDZ", X86Movsd,
                             (v1i1 (scalar_to_vector (i8 (trunc (i32 GR32:$mask))))), v2f64x_info,
                             fp64imm0, (COPY_TO_REGCLASS  $mask, VK1WM), HasAVX512>;
 
-multiclass avx512_masked_scalar_imm<SDNode OpNode, string OpcPrefix, SDNode Move,
-                                    X86VectorVTInfo _, PatLeaf ZeroFP,
-                                    bits<8> ImmV, Predicate BasePredicate> {
-  let Predicates = [BasePredicate] in {
-    def : Pat<(Move _.VT:$src1, (scalar_to_vector (X86selects VK1WM:$mask,
-               (OpNode (extractelt _.VT:$src2, (iPTR 0))),
-               (extractelt _.VT:$dst, (iPTR 0))))),
-              (!cast<Instruction>("V"#OpcPrefix#Zr_Intk)
-               _.VT:$dst, VK1WM:$mask, _.VT:$src1, _.VT:$src2, (i32 ImmV))>;
-
-    def : Pat<(Move _.VT:$src1, (scalar_to_vector (X86selects VK1WM:$mask,
-               (OpNode (extractelt _.VT:$src2, (iPTR 0))), ZeroFP))),
-              (!cast<Instruction>("V"#OpcPrefix#Zr_Intkz)
-               VK1WM:$mask, _.VT:$src1, _.VT:$src2, (i32 ImmV))>;
-  }
-}
-
-defm : avx512_masked_scalar_imm<ffloor, "RNDSCALESS", X86Movss,
-                                v4f32x_info, fp32imm0, 0x09, HasAVX512>;
-defm : avx512_masked_scalar_imm<fceil, "RNDSCALESS", X86Movss,
-                                v4f32x_info, fp32imm0, 0x0A, HasAVX512>;
-defm : avx512_masked_scalar_imm<ffloor, "RNDSCALESD", X86Movsd,
-                                v2f64x_info, fp64imm0, 0x09, HasAVX512>;
-defm : avx512_masked_scalar_imm<fceil, "RNDSCALESD", X86Movsd,
-                                v2f64x_info, fp64imm0, 0x0A,  HasAVX512>;
-
 
 //-------------------------------------------------
 // Integer truncate and extend operations
@@ -12292,26 +12266,6 @@ multiclass AVX512_scalar_unary_math_patterns<SDNode OpNode, string OpcPrefix,
 
 defm : AVX512_scalar_unary_math_patterns<fsqrt, "SQRTSS", X86Movss, v4f32x_info>;
 defm : AVX512_scalar_unary_math_patterns<fsqrt, "SQRTSD", X86Movsd, v2f64x_info>;
-
-multiclass AVX512_scalar_unary_math_imm_patterns<SDNode OpNode, string OpcPrefix,
-                                                 SDNode Move, X86VectorVTInfo _,
-                                                 bits<8> ImmV> {
-  let Predicates = [HasAVX512] in {
-    def : Pat<(_.VT (Move _.VT:$dst,
-                     (scalar_to_vector (OpNode (extractelt _.VT:$src, 0))))),
-              (!cast<Instruction>("V"#OpcPrefix#Zr_Int) _.VT:$dst, _.VT:$src,
-                                                        (i32 ImmV))>;
-  }
-}
-
-defm : AVX512_scalar_unary_math_imm_patterns<ffloor, "RNDSCALESS", X86Movss,
-                                             v4f32x_info, 0x01>;
-defm : AVX512_scalar_unary_math_imm_patterns<fceil, "RNDSCALESS", X86Movss,
-                                             v4f32x_info, 0x02>;
-defm : AVX512_scalar_unary_math_imm_patterns<ffloor, "RNDSCALESD", X86Movsd,
-                                             v2f64x_info, 0x01>;
-defm : AVX512_scalar_unary_math_imm_patterns<fceil, "RNDSCALESD", X86Movsd,
-                                             v2f64x_info, 0x02>;
 
 //===----------------------------------------------------------------------===//
 // AES instructions
