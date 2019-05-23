@@ -144,6 +144,9 @@ specified before the JIT instance is constructed. For example:
 
   // ...
 
+For users wanting to get started with LLJIT a minimal example program can be
+found at ``llvm/examples/HowToUseLLJIT``.
+
 Design Overview
 ===============
 

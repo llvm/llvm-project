@@ -700,6 +700,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Options.DataFlowTrace = Flags.data_flow_trace;
   if (Flags.features_dir)
     Options.FeaturesDir = Flags.features_dir;
+  if (Flags.collect_data_flow)
+    Options.CollectDataFlow = Flags.collect_data_flow;
   Options.LazyCounters = Flags.lazy_counters;
 
   unsigned Seed = Flags.seed;
@@ -710,7 +712,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   if (Flags.verbosity)
     Printf("INFO: Seed: %u\n", Seed);
 
-  if (Flags.collect_data_flow) {
+  if (Flags.collect_data_flow && !Flags.fork && !Flags.merge) {
     if (RunIndividualFiles)
       return CollectDataFlow(Flags.collect_data_flow, Flags.data_flow_trace,
                         ReadCorpora({}, *Inputs));

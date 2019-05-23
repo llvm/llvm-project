@@ -22,6 +22,7 @@ static_library("utils") {
     "LexerUtils.cpp",
     "NamespaceAliaser.cpp",
     "OptionsUtils.cpp",
+    "TransformerClangTidyCheck.cpp",
     "TypeTraits.cpp",
     "UsingInserter.cpp",
   ]

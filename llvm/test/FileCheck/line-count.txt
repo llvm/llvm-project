@@ -23,7 +23,7 @@
 23 arst CHECK: [[@LINE]] {{a}}rst
 24
 25 BAD1: [[@LINE:cant-have-regex]]
-26 ERR1: line-count.txt:[[#@LINE-1]]:12: error: invalid name in pattern variable definition
+26 ERR1: line-count.txt:[[#@LINE-1]]:12: error: invalid name in string variable definition
 27
 28 BAD2: [[ @LINE]]
 29 ERR2: line-count.txt:[[#@LINE-1]]:12: error: unexpected whitespace

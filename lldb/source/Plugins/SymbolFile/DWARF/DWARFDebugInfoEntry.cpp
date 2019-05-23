@@ -693,13 +693,13 @@ void DWARFDebugInfoEntry::DumpAttribute(
     DWARFDIE abstract_die = form_value.Reference();
     form_value.Dump(s);
     //  *ostrm_ptr << HEX32 << abstract_die.GetOffset() << " ( ";
-    GetName(abstract_die.GetCU(), abstract_die.GetOffset(), s);
+    abstract_die.GetName(s);
   } break;
 
   case DW_AT_type: {
     DWARFDIE type_die = form_value.Reference();
     s.PutCString(" ( ");
-    AppendTypeName(type_die.GetCU(), type_die.GetOffset(), s);
+    type_die.AppendTypeName(s);
     s.PutCString(" )");
   } break;
 
@@ -1036,166 +1036,6 @@ const char *DWARFDebugInfoEntry::GetPubname(const DWARFUnit *cu) const {
 
   name = GetAttributeValueAsString(cu, DW_AT_name, nullptr, true);
   return name;
-}
-
-// GetName
-//
-// Get value of the DW_AT_name attribute for a debug information entry that
-// exists at offset "die_offset" and place that value into the supplied stream
-// object. If the DIE is a NULL object "NULL" is placed into the stream, and if
-// no DW_AT_name attribute exists for the DIE then nothing is printed.
-bool DWARFDebugInfoEntry::GetName(const DWARFUnit *cu,
-                                  const dw_offset_t die_offset, Stream &s) {
-  if (cu == NULL) {
-    s.PutCString("NULL");
-    return false;
-  }
-
-  DWARFDebugInfoEntry die;
-  lldb::offset_t offset = die_offset;
-  if (die.Extract(cu, &offset)) {
-    if (die.IsNULL()) {
-      s.PutCString("NULL");
-      return true;
-    } else {
-      const char *name =
-          die.GetAttributeValueAsString(cu, DW_AT_name, nullptr, true);
-      if (name) {
-        s.PutCString(name);
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-// AppendTypeName
-//
-// Follows the type name definition down through all needed tags to end up with
-// a fully qualified type name and dump the results to the supplied stream.
-// This is used to show the name of types given a type identifier.
-bool DWARFDebugInfoEntry::AppendTypeName(const DWARFUnit *cu,
-                                         const dw_offset_t die_offset,
-                                         Stream &s) {
-  if (cu == NULL) {
-    s.PutCString("NULL");
-    return false;
-  }
-
-  DWARFDebugInfoEntry die;
-  lldb::offset_t offset = die_offset;
-  if (die.Extract(cu, &offset)) {
-    if (die.IsNULL()) {
-      s.PutCString("NULL");
-      return true;
-    } else {
-      const char *name = die.GetPubname(cu);
-      if (name)
-        s.PutCString(name);
-      else {
-        bool result = true;
-        const DWARFAbbreviationDeclaration *abbrevDecl =
-            die.GetAbbreviationDeclarationPtr(cu, offset);
-
-        if (abbrevDecl == NULL)
-          return false;
-
-        switch (abbrevDecl->Tag()) {
-        case DW_TAG_array_type:
-          break; // print out a "[]" after printing the full type of the element
-                 // below
-        case DW_TAG_base_type:
-          s.PutCString("base ");
-          break;
-        case DW_TAG_class_type:
-          s.PutCString("class ");
-          break;
-        case DW_TAG_const_type:
-          s.PutCString("const ");
-          break;
-        case DW_TAG_enumeration_type:
-          s.PutCString("enum ");
-          break;
-        case DW_TAG_file_type:
-          s.PutCString("file ");
-          break;
-        case DW_TAG_interface_type:
-          s.PutCString("interface ");
-          break;
-        case DW_TAG_packed_type:
-          s.PutCString("packed ");
-          break;
-        case DW_TAG_pointer_type:
-          break; // print out a '*' after printing the full type below
-        case DW_TAG_ptr_to_member_type:
-          break; // print out a '*' after printing the full type below
-        case DW_TAG_reference_type:
-          break; // print out a '&' after printing the full type below
-        case DW_TAG_restrict_type:
-          s.PutCString("restrict ");
-          break;
-        case DW_TAG_set_type:
-          s.PutCString("set ");
-          break;
-        case DW_TAG_shared_type:
-          s.PutCString("shared ");
-          break;
-        case DW_TAG_string_type:
-          s.PutCString("string ");
-          break;
-        case DW_TAG_structure_type:
-          s.PutCString("struct ");
-          break;
-        case DW_TAG_subrange_type:
-          s.PutCString("subrange ");
-          break;
-        case DW_TAG_subroutine_type:
-          s.PutCString("function ");
-          break;
-        case DW_TAG_thrown_type:
-          s.PutCString("thrown ");
-          break;
-        case DW_TAG_union_type:
-          s.PutCString("union ");
-          break;
-        case DW_TAG_unspecified_type:
-          s.PutCString("unspecified ");
-          break;
-        case DW_TAG_volatile_type:
-          s.PutCString("volatile ");
-          break;
-        default:
-          return false;
-        }
-
-        // Follow the DW_AT_type if possible
-        DWARFFormValue form_value;
-        if (die.GetAttributeValue(cu, DW_AT_type, form_value)) {
-          DWARFDIE next_die = form_value.Reference();
-          result = AppendTypeName(next_die.GetCU(), next_die.GetOffset(), s);
-        }
-
-        switch (abbrevDecl->Tag()) {
-        case DW_TAG_array_type:
-          s.PutCString("[]");
-          break;
-        case DW_TAG_pointer_type:
-          s.PutChar('*');
-          break;
-        case DW_TAG_ptr_to_member_type:
-          s.PutChar('*');
-          break;
-        case DW_TAG_reference_type:
-          s.PutChar('&');
-          break;
-        default:
-          break;
-        }
-        return result;
-      }
-    }
-  }
-  return false;
 }
 
 // BuildAddressRangeTable

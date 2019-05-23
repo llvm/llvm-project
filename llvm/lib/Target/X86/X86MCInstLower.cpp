@@ -683,16 +683,9 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
 
 void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
                                  const MachineInstr &MI) {
-
-  bool is64Bits = MI.getOpcode() == X86::TLS_addr64 ||
+  bool Is64Bits = MI.getOpcode() == X86::TLS_addr64 ||
                   MI.getOpcode() == X86::TLS_base_addr64;
-
-  bool needsPadding = MI.getOpcode() == X86::TLS_addr64;
-
-  MCContext &context = OutStreamer->getContext();
-
-  if (needsPadding)
-    EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
+  MCContext &Ctx = OutStreamer->getContext();
 
   MCSymbolRefExpr::VariantKind SRVK;
   switch (MI.getOpcode()) {
@@ -710,51 +703,79 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
     llvm_unreachable("unexpected opcode");
   }
 
-  MCSymbol *sym = MCInstLowering.GetSymbolFromOperand(MI.getOperand(3));
-  const MCSymbolRefExpr *symRef = MCSymbolRefExpr::create(sym, SRVK, context);
+  const MCSymbolRefExpr *Sym = MCSymbolRefExpr::create(
+      MCInstLowering.GetSymbolFromOperand(MI.getOperand(3)), SRVK, Ctx);
+  bool UseGot = MMI->getModule()->getRtLibUseGOT();
 
-  MCInst LEA;
-  if (is64Bits) {
-    LEA.setOpcode(X86::LEA64r);
-    LEA.addOperand(MCOperand::createReg(X86::RDI)); // dest
-    LEA.addOperand(MCOperand::createReg(X86::RIP)); // base
-    LEA.addOperand(MCOperand::createImm(1));        // scale
-    LEA.addOperand(MCOperand::createReg(0));        // index
-    LEA.addOperand(MCOperand::createExpr(symRef));  // disp
-    LEA.addOperand(MCOperand::createReg(0));        // seg
-  } else if (SRVK == MCSymbolRefExpr::VK_TLSLDM) {
-    LEA.setOpcode(X86::LEA32r);
-    LEA.addOperand(MCOperand::createReg(X86::EAX)); // dest
-    LEA.addOperand(MCOperand::createReg(X86::EBX)); // base
-    LEA.addOperand(MCOperand::createImm(1));        // scale
-    LEA.addOperand(MCOperand::createReg(0));        // index
-    LEA.addOperand(MCOperand::createExpr(symRef));  // disp
-    LEA.addOperand(MCOperand::createReg(0));        // seg
+  if (Is64Bits) {
+    bool NeedsPadding = SRVK == MCSymbolRefExpr::VK_TLSGD;
+    if (NeedsPadding)
+      EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
+    EmitAndCountInstruction(MCInstBuilder(X86::LEA64r)
+                                .addReg(X86::RDI)
+                                .addReg(X86::RIP)
+                                .addImm(1)
+                                .addReg(0)
+                                .addExpr(Sym)
+                                .addReg(0));
+    const MCSymbol *TlsGetAddr = Ctx.getOrCreateSymbol("__tls_get_addr");
+    if (NeedsPadding) {
+      if (!UseGot)
+        EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
+      EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
+      EmitAndCountInstruction(MCInstBuilder(X86::REX64_PREFIX));
+    }
+    if (UseGot) {
+      const MCExpr *Expr = MCSymbolRefExpr::create(
+          TlsGetAddr, MCSymbolRefExpr::VK_GOTPCREL, Ctx);
+      EmitAndCountInstruction(MCInstBuilder(X86::CALL64m)
+                                  .addReg(X86::RIP)
+                                  .addImm(1)
+                                  .addReg(0)
+                                  .addExpr(Expr)
+                                  .addReg(0));
+    } else {
+      EmitAndCountInstruction(
+          MCInstBuilder(X86::CALL64pcrel32)
+              .addExpr(MCSymbolRefExpr::create(TlsGetAddr,
+                                               MCSymbolRefExpr::VK_PLT, Ctx)));
+    }
   } else {
-    LEA.setOpcode(X86::LEA32r);
-    LEA.addOperand(MCOperand::createReg(X86::EAX)); // dest
-    LEA.addOperand(MCOperand::createReg(0));        // base
-    LEA.addOperand(MCOperand::createImm(1));        // scale
-    LEA.addOperand(MCOperand::createReg(X86::EBX)); // index
-    LEA.addOperand(MCOperand::createExpr(symRef));  // disp
-    LEA.addOperand(MCOperand::createReg(0));        // seg
+    if (SRVK == MCSymbolRefExpr::VK_TLSGD && !UseGot) {
+      EmitAndCountInstruction(MCInstBuilder(X86::LEA32r)
+                                  .addReg(X86::EAX)
+                                  .addReg(0)
+                                  .addImm(1)
+                                  .addReg(X86::EBX)
+                                  .addExpr(Sym)
+                                  .addReg(0));
+    } else {
+      EmitAndCountInstruction(MCInstBuilder(X86::LEA32r)
+                                  .addReg(X86::EAX)
+                                  .addReg(X86::EBX)
+                                  .addImm(1)
+                                  .addReg(0)
+                                  .addExpr(Sym)
+                                  .addReg(0));
+    }
+
+    const MCSymbol *TlsGetAddr = Ctx.getOrCreateSymbol("___tls_get_addr");
+    if (UseGot) {
+      const MCExpr *Expr =
+          MCSymbolRefExpr::create(TlsGetAddr, MCSymbolRefExpr::VK_GOT, Ctx);
+      EmitAndCountInstruction(MCInstBuilder(X86::CALL32m)
+                                  .addReg(X86::EBX)
+                                  .addImm(1)
+                                  .addReg(0)
+                                  .addExpr(Expr)
+                                  .addReg(0));
+    } else {
+      EmitAndCountInstruction(
+          MCInstBuilder(X86::CALLpcrel32)
+              .addExpr(MCSymbolRefExpr::create(TlsGetAddr,
+                                               MCSymbolRefExpr::VK_PLT, Ctx)));
+    }
   }
-  EmitAndCountInstruction(LEA);
-
-  if (needsPadding) {
-    EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
-    EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
-    EmitAndCountInstruction(MCInstBuilder(X86::REX64_PREFIX));
-  }
-
-  StringRef name = is64Bits ? "__tls_get_addr" : "___tls_get_addr";
-  MCSymbol *tlsGetAddr = context.getOrCreateSymbol(name);
-  const MCSymbolRefExpr *tlsRef =
-      MCSymbolRefExpr::create(tlsGetAddr, MCSymbolRefExpr::VK_PLT, context);
-
-  EmitAndCountInstruction(
-      MCInstBuilder(is64Bits ? X86::CALL64pcrel32 : X86::CALLpcrel32)
-          .addExpr(tlsRef));
 }
 
 /// Emit the largest nop instruction smaller than or equal to \p NumBytes

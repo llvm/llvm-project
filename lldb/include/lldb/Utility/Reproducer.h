@@ -113,12 +113,12 @@ private:
 
 class DataRecorder {
 public:
-  DataRecorder(FileSpec filename, std::error_code &ec)
+  DataRecorder(const FileSpec &filename, std::error_code &ec)
       : m_filename(std::move(filename)),
         m_os(m_filename.GetPath(), ec, llvm::sys::fs::F_Text), m_record(true) {}
 
   static llvm::Expected<std::unique_ptr<DataRecorder>>
-  Create(FileSpec filename);
+  Create(const FileSpec &filename);
 
   template <typename T> void Record(const T &t, bool newline = false) {
     if (!m_record)

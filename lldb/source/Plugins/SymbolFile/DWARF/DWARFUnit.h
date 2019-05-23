@@ -143,7 +143,7 @@ public:
   void SetRangesBase(dw_addr_t ranges_base);
   void SetBaseObjOffset(dw_offset_t base_obj_offset);
   void SetStrOffsetsBase(dw_offset_t str_offsets_base);
-  void BuildAddressRangeTable(DWARFDebugAranges *debug_aranges);
+  virtual void BuildAddressRangeTable(DWARFDebugAranges *debug_aranges) = 0;
 
   lldb::ByteOrder GetByteOrder() const;
 
@@ -215,6 +215,24 @@ protected:
                             const lldb_private::DWARFDataExtractor &data,
                             lldb::offset_t *offset_ptr);
 
+  // Get the DWARF unit DWARF debug information entry. Parse the single DIE
+  // if needed.
+  const DWARFDebugInfoEntry *GetUnitDIEPtrOnly() {
+    ExtractUnitDIEIfNeeded();
+    // m_first_die_mutex is not required as m_first_die is never cleared.
+    if (!m_first_die)
+      return NULL;
+    return &m_first_die;
+  }
+
+  // Get all DWARF debug informration entries. Parse all DIEs if needed.
+  const DWARFDebugInfoEntry *DIEPtr() {
+    ExtractDIEsIfNeeded();
+    if (m_die_array.empty())
+      return NULL;
+    return &m_die_array[0];
+  }
+
   SymbolFileDWARF *m_dwarf = nullptr;
   std::unique_ptr<SymbolFileDWARFDwo> m_dwo_symbol_file;
   DWARFUnitHeader m_header;
@@ -256,24 +274,6 @@ private:
   void ParseProducerInfo();
   void ExtractDIEsRWLocked();
   void ClearDIEsRWLocked();
-
-  // Get the DWARF unit DWARF debug informration entry. Parse the single DIE
-  // if needed.
-  const DWARFDebugInfoEntry *GetUnitDIEPtrOnly() {
-    ExtractUnitDIEIfNeeded();
-    // m_first_die_mutex is not required as m_first_die is never cleared.
-    if (!m_first_die)
-      return NULL;
-    return &m_first_die;
-  }
-
-  // Get all DWARF debug informration entries. Parse all DIEs if needed.
-  const DWARFDebugInfoEntry *DIEPtr() {
-    ExtractDIEsIfNeeded();
-    if (m_die_array.empty())
-      return NULL;
-    return &m_die_array[0];
-  }
 
   void AddUnitDIE(const DWARFDebugInfoEntry &cu_die);
 
