@@ -86,6 +86,8 @@ struct GlobalEnv {
   Vector<std::string> CorpusDirs;
   std::string MainCorpusDir;
   std::string TempDir;
+  std::string DFTDir;
+  std::string DataFlowBinary;
   Set<uint32_t> Features, Cov;
   Vector<std::string> Files;
   Random *Rand;
@@ -109,13 +111,18 @@ struct GlobalEnv {
     Command Cmd(Args);
     Cmd.removeFlag("fork");
     Cmd.removeFlag("runs");
+    Cmd.removeFlag("collect_data_flow");
     for (auto &C : CorpusDirs) // Remove all corpora from the args.
       Cmd.removeArgument(C);
     Cmd.addFlag("reload", "0");  // working in an isolated dir, no reload.
     Cmd.addFlag("print_final_stats", "1");
     Cmd.addFlag("print_funcs", "0");  // no need to spend time symbolizing.
     Cmd.addFlag("max_total_time", std::to_string(std::min((size_t)300, JobId)));
-
+    if (!DataFlowBinary.empty()) {
+      Cmd.addFlag("data_flow_trace", DFTDir);
+      if (!Cmd.hasFlag("focus_function"))
+        Cmd.addFlag("focus_function", "auto");
+    }
     auto Job = new FuzzJob;
     std::string Seeds;
     if (size_t CorpusSubsetSize =
@@ -124,7 +131,8 @@ struct GlobalEnv {
         Seeds += (Seeds.empty() ? "" : ",") +
                  Files[Rand->SkewTowardsLast(Files.size())];
     if (!Seeds.empty()) {
-      Job->SeedListPath = std::to_string(JobId) + ".seeds";
+      Job->SeedListPath =
+          DirPlusFile(TempDir, std::to_string(JobId) + ".seeds");
       WriteToFile(Seeds, Job->SeedListPath);
       Cmd.addFlag("seed_inputs", "@" + Job->SeedListPath);
     }
@@ -188,6 +196,7 @@ struct GlobalEnv {
       auto NewPath = DirPlusFile(MainCorpusDir, Hash(U));
       WriteToFile(U, NewPath);
       Files.push_back(NewPath);
+      CollectDFT(NewPath);
     }
     Features.insert(NewFeatures.begin(), NewFeatures.end());
     Cov.insert(NewCov.begin(), NewCov.end());
@@ -204,6 +213,23 @@ struct GlobalEnv {
              Stats.average_exec_per_sec,
              NumOOMs, NumTimeouts, NumCrashes, secondsSinceProcessStartUp());
   }
+
+
+  void CollectDFT(const std::string &InputPath) {
+    if (DataFlowBinary.empty()) return;
+    Command Cmd(Args);
+    Cmd.removeFlag("fork");
+    Cmd.removeFlag("runs");
+    Cmd.addFlag("data_flow_trace", DFTDir);
+    Cmd.addArgument(InputPath);
+    for (auto &C : CorpusDirs) // Remove all corpora from the args.
+      Cmd.removeArgument(C);
+    Cmd.setOutputFile(DirPlusFile(TempDir, "dft.log"));
+    Cmd.combineOutAndErr();
+    // Printf("CollectDFT: %s %s\n", InputPath.c_str(), Cmd.toString().c_str());
+    ExecuteCommand(Cmd);
+  }
+
 };
 
 struct JobQueue {
@@ -248,14 +274,17 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
   Env.Rand = &Rand;
   Env.Verbosity = Options.Verbosity;
   Env.ProcessStartTime = std::chrono::system_clock::now();
+  Env.DataFlowBinary = Options.CollectDataFlow;
 
   Vector<SizedFile> SeedFiles;
   for (auto &Dir : CorpusDirs)
     GetSizedFilesFromDir(Dir, &SeedFiles);
   std::sort(SeedFiles.begin(), SeedFiles.end());
   Env.TempDir = TempPath(".dir");
+  Env.DFTDir = DirPlusFile(Env.TempDir, "DFT");
   RmDirRecursive(Env.TempDir);  // in case there is a leftover from old runs.
   MkDir(Env.TempDir);
+  MkDir(Env.DFTDir);
 
 
   if (CorpusDirs.empty())
@@ -267,6 +296,9 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
   CrashResistantMerge(Env.Args, {}, SeedFiles, &Env.Files, {}, &Env.Features,
                       {}, &Env.Cov,
                       CFPath, false);
+  for (auto &F : Env.Files)
+    Env.CollectDFT(F);
+
   RemoveFile(CFPath);
   Printf("INFO: -fork=%d: %zd seed inputs, starting to fuzz in %s\n", NumJobs,
          Env.Files.size(), Env.TempDir.c_str());

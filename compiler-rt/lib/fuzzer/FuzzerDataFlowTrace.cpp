@@ -174,6 +174,8 @@ bool DataFlowTrace::Init(const std::string &DirPath,
     if (*FocusFunction == L)
       FocusFuncIdx = NumFunctions - 1;
   }
+  if (!NumFunctions)
+    return false;
 
   if (*FocusFunction == "auto") {
     // AUTOFOCUS works like this:
