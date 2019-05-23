@@ -173,7 +173,6 @@ if (NOT LLDB_DISABLE_PYTHON)
     get_target_property(liblldb_build_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
 
     # Add a Post-Build Event to copy over Python files and create the symlink
-<<<<<<< HEAD
     # to liblldb.so for the Python API(hardlink on Windows)
     if (APPLE)
         # FIXME: This replicates the Xcode project. It was the original way of
@@ -198,9 +197,6 @@ if (NOT LLDB_DISABLE_PYTHON)
         DEPENDS ${lldb_scripts_dir}/lldb.py
         COMMENT "Python script sym-linking LLDB Python API")
     else()
-=======
-    # to liblldb.so for the Python API(hardlink on Windows).
->>>>>>> llvm/master
     add_custom_target(finish_swig ALL
         COMMAND
            ${PYTHON_EXECUTABLE} ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
