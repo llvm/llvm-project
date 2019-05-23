@@ -71,7 +71,7 @@ INVAL-OP-MSG: numeric-expression.txt:[[#@LINE-1]]:31: error: unsupported numeric
 INVAL-OP-MSG-NEXT: {{I}}NVAL-OP-NEXT: VAR1*2: {{\[\[#VAR1\*2\]\]}}
 INVAL-OP-MSG-NEXT: {{^                              \^$}}
 
-; Name conflict between Numeric variable definition and pattern variable
+; Name conflict between Numeric variable definition and string variable
 ; definition
 RUN: not FileCheck -D#VAR1=11 -D#NUMVAR=42 --check-prefixes CONFLICT,CONFLICT1 --input-file %s %s 2>&1 \
 RUN:   | FileCheck --strict-whitespace --check-prefix CLI-INPUT-PAT-CONFLICT %s
@@ -90,6 +90,6 @@ CLI-INPUT-PAT-CONFLICT-NEXT: {{^                  \^$}}
 CLI-CLI-PAT-CONFLICT: Global defines:3:19: error: numeric variable with name 'NUMVAR' already exists
 CLI-CLI-PAT-CONFLICT-NEXT: Global define #3: NUMVAR=foobar
 CLI-CLI-PAT-CONFLICT-NEXT: {{^                  \^$}}
-CLI-CLI-NUM-CONFLICT: Global defines:3:20: error: pattern variable with name 'PATVAR' already exists
+CLI-CLI-NUM-CONFLICT: Global defines:3:20: error: string variable with name 'PATVAR' already exists
 CLI-CLI-NUM-CONFLICT-NEXT: Global define #3: #PATVAR=42
 CLI-CLI-NUM-CONFLICT-NEXT: {{^                   \^$}}

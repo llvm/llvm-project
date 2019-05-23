@@ -1514,7 +1514,7 @@ define zeroext i8 @test_extractelement_varible_v2i1(<2 x i64> %a, <2 x i64> %b, 
 ; KNL-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
 ; KNL-NEXT:    vpcmpnleuq %zmm1, %zmm0, %k1
 ; KNL-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    vextracti32x4 $0, %zmm0, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; KNL-NEXT:    andl $1, %edi
 ; KNL-NEXT:    movzbl -24(%rsp,%rdi,8), %eax
 ; KNL-NEXT:    andl $1, %eax
@@ -1545,7 +1545,7 @@ define zeroext i8 @test_extractelement_varible_v4i1(<4 x i32> %a, <4 x i32> %b, 
 ; KNL-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
 ; KNL-NEXT:    vpcmpnleud %zmm1, %zmm0, %k1
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    vextracti32x4 $0, %zmm0, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; KNL-NEXT:    andl $3, %edi
 ; KNL-NEXT:    movzbl -24(%rsp,%rdi,4), %eax
 ; KNL-NEXT:    andl $1, %eax
