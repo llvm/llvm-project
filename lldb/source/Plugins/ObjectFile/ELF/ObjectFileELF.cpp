@@ -162,7 +162,7 @@ ELFRelocation::ELFRelocation(unsigned type) {
     reloc = new ELFRela();
   else {
     assert(false && "unexpected relocation type");
-    reloc = static_cast<ELFRel *>(NULL);
+    reloc = static_cast<ELFRel *>(nullptr);
   }
 }
 
@@ -243,7 +243,7 @@ static user_id_t SegmentID(size_t PHdrIndex) { return ~PHdrIndex; }
 
 bool ELFNote::Parse(const DataExtractor &data, lldb::offset_t *offset) {
   // Read all fields.
-  if (data.GetU32(offset, &n_namesz, 3) == NULL)
+  if (data.GetU32(offset, &n_namesz, 3) == nullptr)
     return false;
 
   // The name field is required to be nul-terminated, and n_namesz includes the
@@ -262,7 +262,7 @@ bool ELFNote::Parse(const DataExtractor &data, lldb::offset_t *offset) {
   }
 
   const char *cstr = data.GetCStr(offset, llvm::alignTo(n_namesz, 4));
-  if (cstr == NULL) {
+  if (cstr == nullptr) {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS));
     if (log)
       log->Printf("Failed to parse note name lacking nul terminator");
@@ -396,7 +396,7 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
       return objfile_up.release();
   }
 
-  return NULL;
+  return nullptr;
 }
 
 ObjectFile *ObjectFileELF::CreateMemoryInstance(
@@ -415,7 +415,7 @@ ObjectFile *ObjectFileELF::CreateMemoryInstance(
       }
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 bool ObjectFileELF::MagicBytesMatch(DataBufferSP &data_sp,
@@ -1656,12 +1656,12 @@ size_t ObjectFileELF::ParseSectionHeaders() {
 const ObjectFileELF::ELFSectionHeaderInfo *
 ObjectFileELF::GetSectionHeaderByIndex(lldb::user_id_t id) {
   if (!ParseSectionHeaders())
-    return NULL;
+    return nullptr;
 
   if (id < m_section_headers.size())
     return &m_section_headers[id];
 
-  return NULL;
+  return nullptr;
 }
 
 lldb::user_id_t ObjectFileELF::GetSectionIndexByName(const char *name) {
@@ -2376,7 +2376,7 @@ size_t ObjectFileELF::ParseDynamicSymbols() {
 
 const ELFDynamic *ObjectFileELF::FindDynamicSymbol(unsigned tag) {
   if (!ParseDynamicSymbols())
-    return NULL;
+    return nullptr;
 
   DynamicSymbolCollIter I = m_dynamic_symbols.begin();
   DynamicSymbolCollIter E = m_dynamic_symbols.end();
@@ -2387,7 +2387,7 @@ const ELFDynamic *ObjectFileELF::FindDynamicSymbol(unsigned tag) {
       return symbol;
   }
 
-  return NULL;
+  return nullptr;
 }
 
 unsigned ObjectFileELF::PLTRelocationType() {
@@ -2604,7 +2604,7 @@ unsigned ObjectFileELF::ApplyRelocations(
     if (!rel.Parse(rel_data, &offset))
       break;
 
-    Symbol *symbol = NULL;
+    Symbol *symbol = nullptr;
 
     if (hdr->Is32Bit()) {
       switch (reloc_type(rel)) {
@@ -2723,7 +2723,7 @@ unsigned ObjectFileELF::RelocateDebugSections(const ELFSectionHeader *rel_hdr,
 Symtab *ObjectFileELF::GetSymtab() {
   ModuleSP module_sp(GetModule());
   if (!module_sp)
-    return NULL;
+    return nullptr;
 
   // We always want to use the main object file so we (hopefully) only have one
   // cached copy of our symtab, dynamic sections, etc.
@@ -2731,10 +2731,10 @@ Symtab *ObjectFileELF::GetSymtab() {
   if (module_obj_file && module_obj_file != this)
     return module_obj_file->GetSymtab();
 
-  if (m_symtab_up == NULL) {
+  if (m_symtab_up == nullptr) {
     SectionList *section_list = module_sp->GetSectionList();
     if (!section_list)
-      return NULL;
+      return nullptr;
 
     uint64_t symbol_id = 0;
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
@@ -2934,10 +2934,10 @@ void ObjectFileELF::Dump(Stream *s) {
   s->EOL();
   SectionList *section_list = GetSectionList();
   if (section_list)
-    section_list->Dump(s, NULL, true, UINT32_MAX);
+    section_list->Dump(s, nullptr, true, UINT32_MAX);
   Symtab *symtab = GetSymtab();
   if (symtab)
-    symtab->Dump(s, NULL, eSortOrderNone);
+    symtab->Dump(s, nullptr, eSortOrderNone);
   s->EOL();
   DumpDependentModules(s);
   s->EOL();

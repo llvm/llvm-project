@@ -90,8 +90,8 @@ RegisterContextLinux_i386::RegisterContextLinux_i386(
     const ArchSpec &target_arch)
     : RegisterInfoInterface(target_arch) {
   RegisterInfo orig_ax = {"orig_eax",
-                          NULL,
-                          sizeof(((GPR *)NULL)->orig_eax),
+                          nullptr,
+                          sizeof(((GPR *)nullptr)->orig_eax),
                           (LLVM_EXTENSION offsetof(GPR, orig_eax)),
                           eEncodingUint,
                           eFormatHex,
@@ -114,7 +114,7 @@ const RegisterInfo *RegisterContextLinux_i386::GetRegisterInfo() const {
     return g_register_infos_i386;
   default:
     assert(false && "Unhandled target architecture.");
-    return NULL;
+    return nullptr;
   }
 }
 

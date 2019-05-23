@@ -49,7 +49,7 @@ public:
 
   ~QueueImpl() {}
 
-  bool IsValid() { return m_queue_wp.lock() != NULL; }
+  bool IsValid() { return m_queue_wp.lock() != nullptr; }
 
   void Clear() {
     m_queue_wp.reset();
@@ -83,7 +83,7 @@ public:
   }
 
   const char *GetName() const {
-    const char *name = NULL;
+    const char *name = nullptr;
     lldb::QueueSP queue_sp = m_queue_wp.lock();
     if (queue_sp.get()) {
       name = queue_sp->GetName();

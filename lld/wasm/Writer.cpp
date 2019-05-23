@@ -73,6 +73,8 @@ private:
   void addSection(OutputSection *Sec);
 
   void addSections();
+  void addStartStopSymbols(const InputSegment *Seg);
+
   void createCustomSections();
   void createSyntheticSections();
   void finalizeSections();
@@ -291,6 +293,22 @@ void Writer::addSection(OutputSection *Sec) {
   log("addSection: " + toString(*Sec));
   Sec->SectionIndex = OutputSections.size();
   OutputSections.push_back(Sec);
+}
+
+// If a section name is valid as a C identifier (which is rare because of
+// the leading '.'), linkers are expected to define __start_<secname> and
+// __stop_<secname> symbols. They are at beginning and end of the section,
+// respectively. This is not requested by the ELF standard, but GNU ld and
+// gold provide the feature, and used by many programs.
+void Writer::addStartStopSymbols(const InputSegment *Seg) {
+  StringRef S = Seg->getName();
+  LLVM_DEBUG(dbgs() << "addStartStopSymbols: " << S << "\n");
+  if (!isValidCIdentifier(S))
+    return;
+  uint32_t Start = Seg->OutputSeg->StartVA + Seg->OutputSegmentOffset;
+  uint32_t Stop = Start + Seg->getSize();
+  Symtab->addOptionalDataSymbol(Saver.save("__start_" + S), Start, 0);
+  Symtab->addOptionalDataSymbol(Saver.save("__stop_" + S), Stop, 0);
 }
 
 void Writer::addSections() {
@@ -724,21 +742,40 @@ void Writer::run() {
   populateTargetFeatures();
   log("-- calculateImports");
   calculateImports();
+  log("-- layoutMemory");
+  layoutMemory();
+
+  if (!Config->Relocatable) {
+    // Create linker synthesized __start_SECNAME/__stop_SECNAME symbols
+    // This has to be done after memory layout is performed.
+    for (const OutputSegment *Seg : Segments)
+      for (const InputSegment *S : Seg->InputSegments)
+        addStartStopSymbols(S);
+  }
+
   log("-- scanRelocations");
   scanRelocations();
   log("-- assignIndexes");
   assignIndexes();
   log("-- calculateInitFunctions");
   calculateInitFunctions();
-  log("-- calculateTypes");
-  calculateTypes();
-  log("-- layoutMemory");
-  layoutMemory();
+
   if (!Config->Relocatable) {
+    // Create linker synthesized functions
     if (Config->Pic)
       createApplyRelocationsFunction();
     createCallCtorsFunction();
+
+    // Make sure we have resolved all symbols.
+    if (!Config->AllowUndefined)
+      Symtab->reportRemainingUndefines();
+
+    if (errorCount())
+      return;
   }
+
+  log("-- calculateTypes");
+  calculateTypes();
   log("-- calculateExports");
   calculateExports();
   log("-- calculateCustomSections");

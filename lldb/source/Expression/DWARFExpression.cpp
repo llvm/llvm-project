@@ -649,7 +649,7 @@ static bool ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
                                       lldb::RegisterKind reg_kind,
                                       uint32_t reg_num, Status *error_ptr,
                                       Value &value) {
-  if (reg_ctx == NULL) {
+  if (reg_ctx == nullptr) {
     if (error_ptr)
       error_ptr->SetErrorStringWithFormat("No register context in frame.\n");
   } else {
@@ -1249,7 +1249,7 @@ bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
   if (IsLocationList()) {
     lldb::offset_t offset = 0;
     addr_t pc;
-    StackFrame *frame = NULL;
+    StackFrame *frame = nullptr;
     if (reg_ctx)
       pc = reg_ctx->GetPC();
     else {
@@ -1323,14 +1323,14 @@ bool DWARFExpression::Evaluate(
   }
   std::vector<Value> stack;
 
-  Process *process = NULL;
-  StackFrame *frame = NULL;
+  Process *process = nullptr;
+  StackFrame *frame = nullptr;
 
   if (exe_ctx) {
     process = exe_ctx->GetProcessPtr();
     frame = exe_ctx->GetFramePtr();
   }
-  if (reg_ctx == NULL && frame)
+  if (reg_ctx == nullptr && frame)
     reg_ctx = frame->GetRegisterContext().get();
 
   if (initial_value_ptr)
@@ -3166,7 +3166,7 @@ void DWARFExpression::PrintDWARFLocationList(
     s.Indent();
     if (cu)
       s.AddressRange(start_addr + base_addr, end_addr + base_addr,
-                     cu->GetAddressByteSize(), NULL, ": ");
+                     cu->GetAddressByteSize(), nullptr, ": ");
     uint32_t loc_length = debug_loc_data.GetU16(&offset);
 
     DataExtractor locationData(debug_loc_data, offset, loc_length);

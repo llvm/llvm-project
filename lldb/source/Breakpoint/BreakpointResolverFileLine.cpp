@@ -204,7 +204,7 @@ BreakpointResolverFileLine::SearchCallback(SearchFilter &filter,
                                            Address *addr, bool containing) {
   SymbolContextList sc_list;
 
-  assert(m_breakpoint != NULL);
+  assert(m_breakpoint != nullptr);
 
   // There is a tricky bit here.  You can have two compilation units that
   // #include the same file, and in one of them the function at m_line_number

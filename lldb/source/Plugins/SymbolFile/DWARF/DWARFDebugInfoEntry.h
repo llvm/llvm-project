@@ -143,12 +143,11 @@ public:
                 lldb::offset_t *offset_ptr, lldb_private::Stream &s,
                 dw_attr_t attr, DWARFFormValue &form_value);
 
-  bool
-  GetDIENamesAndRanges(const DWARFUnit *cu, const char *&name,
-                       const char *&mangled, DWARFRangeList &rangeList,
-                       int &decl_file, int &decl_line, int &decl_column,
-                       int &call_file, int &call_line, int &call_column,
-                       lldb_private::DWARFExpression *frame_base = NULL) const;
+  bool GetDIENamesAndRanges(
+      const DWARFUnit *cu, const char *&name, const char *&mangled,
+      DWARFRangeList &rangeList, int &decl_file, int &decl_line,
+      int &decl_column, int &call_file, int &call_line, int &call_column,
+      lldb_private::DWARFExpression *frame_base = nullptr) const;
 
   const DWARFAbbreviationDeclaration *
   GetAbbreviationDeclarationPtr(const DWARFUnit *cu,
@@ -167,27 +166,27 @@ public:
   // We know we are kept in a vector of contiguous entries, so we know
   // our parent will be some index behind "this".
   DWARFDebugInfoEntry *GetParent() {
-    return m_parent_idx > 0 ? this - m_parent_idx : NULL;
+    return m_parent_idx > 0 ? this - m_parent_idx : nullptr;
   }
   const DWARFDebugInfoEntry *GetParent() const {
-    return m_parent_idx > 0 ? this - m_parent_idx : NULL;
+    return m_parent_idx > 0 ? this - m_parent_idx : nullptr;
   }
   // We know we are kept in a vector of contiguous entries, so we know
   // our sibling will be some index after "this".
   DWARFDebugInfoEntry *GetSibling() {
-    return m_sibling_idx > 0 ? this + m_sibling_idx : NULL;
+    return m_sibling_idx > 0 ? this + m_sibling_idx : nullptr;
   }
   const DWARFDebugInfoEntry *GetSibling() const {
-    return m_sibling_idx > 0 ? this + m_sibling_idx : NULL;
+    return m_sibling_idx > 0 ? this + m_sibling_idx : nullptr;
   }
   // We know we are kept in a vector of contiguous entries, so we know
   // we don't need to store our child pointer, if we have a child it will
   // be the next entry in the list...
   DWARFDebugInfoEntry *GetFirstChild() {
-    return HasChildren() ? this + 1 : NULL;
+    return HasChildren() ? this + 1 : nullptr;
   }
   const DWARFDebugInfoEntry *GetFirstChild() const {
-    return HasChildren() ? this + 1 : NULL;
+    return HasChildren() ? this + 1 : nullptr;
   }
 
   std::vector<DWARFDIE> GetDeclContextDIEs(DWARFUnit *cu) const;

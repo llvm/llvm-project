@@ -73,7 +73,7 @@ RegisterContextThreadMemory::GetRegisterInfoAtIndex(size_t reg) {
   UpdateRegisterContext();
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->GetRegisterInfoAtIndex(reg);
-  return NULL;
+  return nullptr;
 }
 
 size_t RegisterContextThreadMemory::GetRegisterSetCount() {
@@ -87,7 +87,7 @@ const RegisterSet *RegisterContextThreadMemory::GetRegisterSet(size_t reg_set) {
   UpdateRegisterContext();
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->GetRegisterSet(reg_set);
-  return NULL;
+  return nullptr;
 }
 
 bool RegisterContextThreadMemory::ReadRegister(const RegisterInfo *reg_info,

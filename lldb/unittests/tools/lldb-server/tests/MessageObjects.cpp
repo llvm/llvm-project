@@ -154,10 +154,10 @@ Expected<RegisterInfo> RegisterInfoParser::create(StringRef Response) {
           LLDB_INVALID_REGNUM, // process plugin reg num
           LLDB_INVALID_REGNUM  // native register number
       },
-      NULL,
-      NULL,
-      NULL, // Dwarf expression opcode bytes pointer
-      0     // Dwarf expression opcode bytes length
+      nullptr,
+      nullptr,
+      nullptr, // Dwarf expression opcode bytes pointer
+      0        // Dwarf expression opcode bytes length
   };
   Info.name = ConstString(Elements["name"]).GetCString();
   if (!Info.name)

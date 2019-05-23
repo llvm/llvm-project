@@ -157,8 +157,8 @@ RegisterContextLinux_x86_64::RegisterContextLinux_x86_64(
       m_register_info_count(GetRegisterInfoCount(target_arch)),
       m_user_register_count(GetUserRegisterInfoCount(target_arch)) {
   RegisterInfo orig_ax = {"orig_rax",
-                          NULL,
-                          sizeof(((GPR *)NULL)->orig_rax),
+                          nullptr,
+                          sizeof(((GPR *)nullptr)->orig_rax),
                           (LLVM_EXTENSION offsetof(GPR, orig_rax)),
                           eEncodingUint,
                           eFormatHex,

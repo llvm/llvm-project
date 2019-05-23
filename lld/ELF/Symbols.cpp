@@ -243,14 +243,12 @@ void Symbol::parseSymbolVersion() {
 
 void Symbol::fetch() const {
   if (auto *Sym = dyn_cast<LazyArchive>(this)) {
-    if (auto *F = cast<ArchiveFile>(Sym->File)->fetch(Sym->Sym))
-      parseFile(F);
+    cast<ArchiveFile>(Sym->File)->fetch(Sym->Sym);
     return;
   }
 
   if (auto *Sym = dyn_cast<LazyObject>(this)) {
-    if (auto *F = dyn_cast<LazyObjFile>(Sym->File)->fetch())
-      parseFile(F);
+    dyn_cast<LazyObjFile>(Sym->File)->fetch();
     return;
   }
 

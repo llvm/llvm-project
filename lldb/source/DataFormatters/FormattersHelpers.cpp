@@ -123,7 +123,7 @@ size_t lldb_private::formatters::ExtractIndexFromString(const char *item_name) {
   if (*item_name != '[')
     return UINT32_MAX;
   item_name++;
-  char *endptr = NULL;
+  char *endptr = nullptr;
   unsigned long int idx = ::strtoul(item_name, &endptr, 0);
   if (idx == 0 && endptr == item_name)
     return UINT32_MAX;

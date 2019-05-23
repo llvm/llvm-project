@@ -165,8 +165,8 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
 
   ArchSpec arch(target->GetArchitecture());
 
-  const char *plugin_name = NULL;
-  const char *flavor_string = NULL;
+  const char *plugin_name = nullptr;
+  const char *flavor_string = nullptr;
   lldb::DisassemblerSP disassembler_sp =
       Disassembler::FindPlugin(arch, flavor_string, plugin_name);
 
@@ -251,7 +251,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
     std::string s;
     llvm::raw_string_ostream oss(s);
 
-    m_module->print(oss, NULL);
+    m_module->print(oss, nullptr);
 
     oss.flush();
 
@@ -839,7 +839,7 @@ lldb::addr_t IRExecutionUnit::FindInSymbols(
     };
 
     if (sc.module_sp) {
-      sc.module_sp->FindFunctions(spec.name, NULL, spec.mask,
+      sc.module_sp->FindFunctions(spec.name, nullptr, spec.mask,
                                   true,  // include_symbols
                                   false, // include_inlines
                                   true,  // append

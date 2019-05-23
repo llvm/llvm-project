@@ -162,7 +162,7 @@ const lldb_private::LineEntry *SBLineEntry::operator->() const {
 }
 
 lldb_private::LineEntry &SBLineEntry::ref() {
-  if (m_opaque_up == NULL)
+  if (m_opaque_up == nullptr)
     m_opaque_up.reset(new lldb_private::LineEntry());
   return *m_opaque_up;
 }

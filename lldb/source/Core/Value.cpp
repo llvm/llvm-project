@@ -39,17 +39,17 @@ using namespace lldb;
 using namespace lldb_private;
 
 Value::Value()
-    : m_value(), m_vector(), m_compiler_type(), m_context(NULL),
+    : m_value(), m_vector(), m_compiler_type(), m_context(nullptr),
       m_value_type(eValueTypeScalar), m_context_type(eContextTypeInvalid),
       m_data_buffer() {}
 
 Value::Value(const Scalar &scalar)
-    : m_value(scalar), m_vector(), m_compiler_type(), m_context(NULL),
+    : m_value(scalar), m_vector(), m_compiler_type(), m_context(nullptr),
       m_value_type(eValueTypeScalar), m_context_type(eContextTypeInvalid),
       m_data_buffer() {}
 
 Value::Value(const void *bytes, int len)
-    : m_value(), m_vector(), m_compiler_type(), m_context(NULL),
+    : m_value(), m_vector(), m_compiler_type(), m_context(nullptr),
       m_value_type(eValueTypeHostAddress), m_context_type(eContextTypeInvalid),
       m_data_buffer() {
   SetBytes(bytes, len);
@@ -131,13 +131,13 @@ AddressType Value::GetValueAddressType() const {
 RegisterInfo *Value::GetRegisterInfo() const {
   if (m_context_type == eContextTypeRegisterInfo)
     return static_cast<RegisterInfo *>(m_context);
-  return NULL;
+  return nullptr;
 }
 
 Type *Value::GetType() {
   if (m_context_type == eContextTypeLLDBType)
     return static_cast<Type *>(m_context);
-  return NULL;
+  return nullptr;
 }
 
 size_t Value::AppendDataToHostBuffer(const Value &rhs) {
@@ -353,11 +353,11 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     break;
   }
   case eValueTypeLoadAddress:
-    if (exe_ctx == NULL) {
+    if (exe_ctx == nullptr) {
       error.SetErrorString("can't read load address (no execution context)");
     } else {
       Process *process = exe_ctx->GetProcessPtr();
-      if (process == NULL || !process->IsAlive()) {
+      if (process == nullptr || !process->IsAlive()) {
         Target *target = exe_ctx->GetTargetPtr();
         if (target) {
           // Allow expressions to run and evaluate things when the target has
@@ -390,16 +390,16 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     break;
 
   case eValueTypeFileAddress:
-    if (exe_ctx == NULL) {
+    if (exe_ctx == nullptr) {
       error.SetErrorString("can't read file address (no execution context)");
-    } else if (exe_ctx->GetTargetPtr() == NULL) {
+    } else if (exe_ctx->GetTargetPtr() == nullptr) {
       error.SetErrorString("can't read file address (invalid target)");
     } else {
       address = m_value.ULongLong(LLDB_INVALID_ADDRESS);
       if (address == LLDB_INVALID_ADDRESS) {
         error.SetErrorString("invalid file address");
       } else {
-        if (module == NULL) {
+        if (module == nullptr) {
           // The only thing we can currently lock down to a module so that we
           // can resolve a file address, is a variable.
           Variable *variable = GetVariable();
@@ -527,7 +527,7 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
   }
 
   uint8_t *dst = const_cast<uint8_t *>(data.PeekData(data_offset, byte_size));
-  if (dst != NULL) {
+  if (dst != nullptr) {
     if (address_type == eAddressTypeHost) {
       // The address is an address in this process, so just copy it.
       if (address == 0) {
@@ -597,7 +597,7 @@ Scalar &Value::ResolveValue(ExecutionContext *exe_ctx) {
     {
       DataExtractor data;
       lldb::addr_t addr = m_value.ULongLong(LLDB_INVALID_ADDRESS);
-      Status error(GetValueAsData(exe_ctx, data, 0, NULL));
+      Status error(GetValueAsData(exe_ctx, data, 0, nullptr));
       if (error.Success()) {
         Scalar scalar;
         if (compiler_type.GetValueAsScalar(data, 0, data.GetByteSize(),
@@ -625,7 +625,7 @@ Scalar &Value::ResolveValue(ExecutionContext *exe_ctx) {
 Variable *Value::GetVariable() {
   if (m_context_type == eContextTypeVariable)
     return static_cast<Variable *>(m_context);
-  return NULL;
+  return nullptr;
 }
 
 void Value::Clear() {
@@ -633,7 +633,7 @@ void Value::Clear() {
   m_vector.Clear();
   m_compiler_type.Clear();
   m_value_type = eValueTypeScalar;
-  m_context = NULL;
+  m_context = nullptr;
   m_context_type = eContextTypeInvalid;
   m_data_buffer.Clear();
 }
@@ -702,7 +702,7 @@ Value *ValueList::GetValueAtIndex(size_t idx) {
   if (idx < GetSize()) {
     return &(m_values[idx]);
   } else
-    return NULL;
+    return nullptr;
 }
 
 void ValueList::Clear() { m_values.clear(); }

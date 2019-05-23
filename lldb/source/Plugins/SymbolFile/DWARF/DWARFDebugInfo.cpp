@@ -30,7 +30,7 @@ using namespace std;
 
 // Constructor
 DWARFDebugInfo::DWARFDebugInfo(lldb_private::DWARFContext &context)
-    : m_dwarf2Data(NULL), m_context(context), m_units(), m_cu_aranges_up() {}
+    : m_dwarf2Data(nullptr), m_context(context), m_units(), m_cu_aranges_up() {}
 
 // SetDwarfData
 void DWARFDebugInfo::SetDwarfData(SymbolFileDWARF *dwarf2Data) {
@@ -114,7 +114,7 @@ size_t DWARFDebugInfo::GetNumUnits() {
 }
 
 DWARFUnit *DWARFDebugInfo::GetUnitAtIndex(user_id_t idx) {
-  DWARFUnit *cu = NULL;
+  DWARFUnit *cu = nullptr;
   if (idx < GetNumUnits())
     cu = m_units[idx].get();
   return cu;

@@ -414,8 +414,9 @@ AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
       m_encoding_to_type_sp(), m_noclasses_warning_emitted(false),
       m_CFBoolean_values() {
   static const ConstString g_gdb_object_getClass("gdb_object_getClass");
-  m_has_object_getClass = (objc_module_sp->FindFirstSymbolWithNameAndType(
-                               g_gdb_object_getClass, eSymbolTypeCode) != NULL);
+  m_has_object_getClass =
+      (objc_module_sp->FindFirstSymbolWithNameAndType(
+           g_gdb_object_getClass, eSymbolTypeCode) != nullptr);
   RegisterObjCExceptionRecognizer();
 }
 
@@ -424,7 +425,7 @@ bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
     TypeAndOrName &class_type_or_name, Address &address,
     Value::ValueType &value_type) {
   // We should never get here with a null process...
-  assert(m_process != NULL);
+  assert(m_process != nullptr);
 
   // The Runtime is attached to a particular process, you shouldn't pass in a
   // value from another process. Note, however, the process might be NULL (e.g.
@@ -488,9 +489,9 @@ LanguageRuntime *AppleObjCRuntimeV2::CreateInstance(Process *process,
         ObjCRuntimeVersions::eAppleObjC_V2)
       return new AppleObjCRuntimeV2(process, objc_module_sp);
     else
-      return NULL;
+      return nullptr;
   } else
-    return NULL;
+    return nullptr;
 }
 
 static constexpr OptionDefinition g_objc_classtable_dump_options[] = {
@@ -938,7 +939,7 @@ class RemoteNXMapTable {
 public:
   RemoteNXMapTable()
       : m_count(0), m_num_buckets_minus_one(0),
-        m_buckets_ptr(LLDB_INVALID_ADDRESS), m_process(NULL),
+        m_buckets_ptr(LLDB_INVALID_ADDRESS), m_process(nullptr),
         m_end_iterator(*this, -1), m_load_addr(LLDB_INVALID_ADDRESS),
         m_map_pair_size(0), m_invalid_key(0) {}
 
@@ -1273,7 +1274,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
     RemoteNXMapTable &hash_table) {
   Process *process = GetProcess();
 
-  if (process == NULL)
+  if (process == nullptr)
     return DescriptorMapUpdateResult::Fail();
 
   uint32_t num_class_infos = 0;
@@ -1509,7 +1510,8 @@ uint32_t AppleObjCRuntimeV2::ParseClassInfoArray(const DataExtractor &data,
     } else {
       // Read the 32 bit hash for the class name
       const uint32_t name_hash = data.GetU32(&offset);
-      ClassDescriptorSP descriptor_sp(new ClassDescriptorV2(*this, isa, NULL));
+      ClassDescriptorSP descriptor_sp(
+          new ClassDescriptorV2(*this, isa, nullptr));
 
       // The code in g_get_shared_cache_class_info_body sets the value of the hash
       // to 0 to signal a demangled symbol. We use class_getName() in that code to
@@ -1538,7 +1540,7 @@ AppleObjCRuntimeV2::DescriptorMapUpdateResult
 AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
   Process *process = GetProcess();
 
-  if (process == NULL)
+  if (process == nullptr)
     return DescriptorMapUpdateResult::Fail();
 
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_TYPES));
@@ -1752,7 +1754,7 @@ bool AppleObjCRuntimeV2::UpdateISAToDescriptorMapFromMemory(
 
   Process *process = GetProcess();
 
-  if (process == NULL)
+  if (process == nullptr)
     return false;
 
   uint32_t num_map_table_isas = 0;
@@ -2037,18 +2039,18 @@ AppleObjCRuntimeV2::NonPointerISACache::CreateInstance(
   auto objc_debug_isa_magic_mask = ExtractRuntimeGlobalSymbol(
       process, ConstString("objc_debug_isa_magic_mask"), objc_module_sp, error);
   if (error.Fail())
-    return NULL;
+    return nullptr;
 
   auto objc_debug_isa_magic_value = ExtractRuntimeGlobalSymbol(
       process, ConstString("objc_debug_isa_magic_value"), objc_module_sp,
       error);
   if (error.Fail())
-    return NULL;
+    return nullptr;
 
   auto objc_debug_isa_class_mask = ExtractRuntimeGlobalSymbol(
       process, ConstString("objc_debug_isa_class_mask"), objc_module_sp, error);
   if (error.Fail())
-    return NULL;
+    return nullptr;
 
   if (log)
     log->PutCString("AOCRT::NPI: Found all the non-indexed ISA masks");

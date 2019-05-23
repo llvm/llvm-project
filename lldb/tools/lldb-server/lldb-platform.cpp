@@ -48,16 +48,16 @@ static int g_server = 0;
 static struct option g_long_options[] = {
     {"debug", no_argument, &g_debug, 1},
     {"verbose", no_argument, &g_verbose, 1},
-    {"log-file", required_argument, NULL, 'l'},
-    {"log-channels", required_argument, NULL, 'c'},
-    {"listen", required_argument, NULL, 'L'},
-    {"port-offset", required_argument, NULL, 'p'},
-    {"gdbserver-port", required_argument, NULL, 'P'},
-    {"min-gdbserver-port", required_argument, NULL, 'm'},
-    {"max-gdbserver-port", required_argument, NULL, 'M'},
-    {"socket-file", required_argument, NULL, 'f'},
+    {"log-file", required_argument, nullptr, 'l'},
+    {"log-channels", required_argument, nullptr, 'c'},
+    {"listen", required_argument, nullptr, 'L'},
+    {"port-offset", required_argument, nullptr, 'p'},
+    {"gdbserver-port", required_argument, nullptr, 'P'},
+    {"min-gdbserver-port", required_argument, nullptr, 'm'},
+    {"max-gdbserver-port", required_argument, nullptr, 'M'},
+    {"socket-file", required_argument, nullptr, 'f'},
     {"server", no_argument, &g_server, 1},
-    {NULL, 0, NULL, 0}};
+    {nullptr, 0, nullptr, 0}};
 
 #if defined(__APPLE__)
 #define LOW_PORT (IPPORT_RESERVED)

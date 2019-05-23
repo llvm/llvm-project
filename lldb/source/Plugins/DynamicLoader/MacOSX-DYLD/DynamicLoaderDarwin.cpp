@@ -84,7 +84,7 @@ void DynamicLoaderDarwin::DidLaunch() {
 void DynamicLoaderDarwin::Clear(bool clear_process) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (clear_process)
-    m_process = NULL;
+    m_process = nullptr;
   m_dyld_image_infos.clear();
   m_dyld_image_infos_stop_id = UINT32_MAX;
   m_dyld.Clear(false);
@@ -115,7 +115,7 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
       // We'll call Target::ModulesDidLoad after all the modules have been
       // added to the target, don't let it be called for every one.
       module_sp = target.GetOrCreateModule(module_spec, false /* notify */);
-      if (!module_sp || module_sp->GetObjectFile() == NULL)
+      if (!module_sp || module_sp->GetObjectFile() == nullptr)
         module_sp = m_process->ReadModuleFromMemory(image_info.file_spec,
                                                     image_info.address);
 
@@ -533,8 +533,8 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
 
   if (exe_idx != UINT32_MAX) {
     const bool can_create = true;
-    ModuleSP exe_module_sp(
-        FindTargetModuleForImageInfo(image_infos[exe_idx], can_create, NULL));
+    ModuleSP exe_module_sp(FindTargetModuleForImageInfo(image_infos[exe_idx],
+                                                        can_create, nullptr));
     if (exe_module_sp) {
       if (log)
         log->Printf("Found executable module: %s",
@@ -549,8 +549,8 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
 
   if (dyld_idx != UINT32_MAX) {
     const bool can_create = true;
-    ModuleSP dyld_sp =
-        FindTargetModuleForImageInfo(image_infos[dyld_idx], can_create, NULL);
+    ModuleSP dyld_sp = FindTargetModuleForImageInfo(image_infos[dyld_idx],
+                                                    can_create, nullptr);
     if (dyld_sp.get()) {
       if (log)
         log->Printf("Found dyld module: %s",
@@ -567,7 +567,7 @@ void DynamicLoaderDarwin::UpdateDYLDImageInfoFromNewImageInfo(
   if (image_info.header.filetype == llvm::MachO::MH_DYLINKER) {
     const bool can_create = true;
     ModuleSP dyld_sp =
-        FindTargetModuleForImageInfo(image_info, can_create, NULL);
+        FindTargetModuleForImageInfo(image_info, can_create, nullptr);
     if (dyld_sp.get()) {
       Target &target = m_process->GetTarget();
       target.GetImages().AppendIfNeeded(dyld_sp);
@@ -605,7 +605,7 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
     m_dyld_image_infos.push_back(image_infos[idx]);
 
     ModuleSP image_module_sp(
-        FindTargetModuleForImageInfo(image_infos[idx], true, NULL));
+        FindTargetModuleForImageInfo(image_infos[idx], true, nullptr));
 
     if (image_module_sp) {
       ObjectFile *objfile = image_module_sp->GetObjectFile();
@@ -628,7 +628,7 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
               commpage_image_module_sp = target.GetOrCreateModule(module_spec, 
                                                                true /* notify */);
               if (!commpage_image_module_sp ||
-                  commpage_image_module_sp->GetObjectFile() == NULL) {
+                  commpage_image_module_sp->GetObjectFile() == nullptr) {
                 commpage_image_module_sp = m_process->ReadModuleFromMemory(
                     image_infos[idx].file_spec, image_infos[idx].address);
                 // Always load a memory image right away in the target in case
@@ -686,15 +686,16 @@ bool DynamicLoaderDarwin::AlwaysRelyOnEHUnwindInfo(SymbolContext &sym_ctx) {
   if (sym_ctx.symbol) {
     module_sp = sym_ctx.symbol->GetAddressRef().GetModule();
   }
-  if (module_sp.get() == NULL && sym_ctx.function) {
+  if (module_sp.get() == nullptr && sym_ctx.function) {
     module_sp =
         sym_ctx.function->GetAddressRange().GetBaseAddress().GetModule();
   }
-  if (module_sp.get() == NULL)
+  if (module_sp.get() == nullptr)
     return false;
 
   ObjCLanguageRuntime *objc_runtime = m_process->GetObjCLanguageRuntime();
-  return objc_runtime != NULL && objc_runtime->IsModuleObjCLibrary(module_sp);
+  return objc_runtime != nullptr &&
+         objc_runtime->IsModuleObjCLibrary(module_sp);
 }
 
 // Dump a Segment to the file handle provided.
@@ -719,7 +720,7 @@ DynamicLoaderDarwin::ImageInfo::FindSegment(ConstString name) const {
     if (segments[i].name == name)
       return &segments[i];
   }
-  return NULL;
+  return nullptr;
 }
 
 // Dump an image info structure to the file handle provided.
@@ -791,7 +792,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
   TargetSP target_sp(thread.CalculateTarget());
 
-  if (current_symbol != NULL) {
+  if (current_symbol != nullptr) {
     std::vector<Address> addresses;
 
     if (current_symbol->IsTrampoline()) {

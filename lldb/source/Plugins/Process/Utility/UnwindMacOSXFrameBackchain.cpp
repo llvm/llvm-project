@@ -79,7 +79,7 @@ size_t UnwindMacOSXFrameBackchain::GetStackFrameData_i386(
   StackFrame *first_frame = exe_ctx.GetFramePtr();
 
   Process *process = exe_ctx.GetProcessPtr();
-  if (process == NULL)
+  if (process == nullptr)
     return 0;
 
   struct Frame_i386 {
@@ -121,7 +121,7 @@ size_t UnwindMacOSXFrameBackchain::GetStackFrameData_i386(
 
       SymbolContext first_frame_sc(
           first_frame->GetSymbolContext(resolve_scope));
-      const AddressRange *addr_range_ptr = NULL;
+      const AddressRange *addr_range_ptr = nullptr;
       AddressRange range;
       if (first_frame_sc.function)
         addr_range_ptr = &first_frame_sc.function->GetAddressRange();
@@ -169,7 +169,7 @@ size_t UnwindMacOSXFrameBackchain::GetStackFrameData_x86_64(
   m_cursors.clear();
 
   Process *process = exe_ctx.GetProcessPtr();
-  if (process == NULL)
+  if (process == nullptr)
     return 0;
 
   StackFrame *first_frame = exe_ctx.GetFramePtr();
@@ -212,7 +212,7 @@ size_t UnwindMacOSXFrameBackchain::GetStackFrameData_x86_64(
 
       SymbolContext first_frame_sc(
           first_frame->GetSymbolContext(resolve_scope));
-      const AddressRange *addr_range_ptr = NULL;
+      const AddressRange *addr_range_ptr = nullptr;
       AddressRange range;
       if (first_frame_sc.function)
         addr_range_ptr = &first_frame_sc.function->GetAddressRange();

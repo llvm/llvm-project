@@ -125,7 +125,7 @@ protected:
     const Object *GetObjectAtIndex(size_t idx) {
       if (idx < m_objects.size())
         return &m_objects[idx];
-      return NULL;
+      return nullptr;
     }
 
     size_t ParseObjects();
