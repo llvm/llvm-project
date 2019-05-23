@@ -122,6 +122,12 @@ Improvements to clang-tidy
   Checks whether there are underscores in googletest test and test case names in
   test macros, which is prohibited by the Googletest FAQ.
 
+- New :doc:`google-objc-avoid-nsobject-new
+  <clang-tidy/checks/google-objc-avoid-nsobject-new>` check.
+
+  Checks for calls to ``+new`` or overrides of it, which are prohibited by the
+  Google Objective-C style guide.
+
 - New :doc:`objc-super-self <clang-tidy/checks/objc-super-self>` check.
 
   Finds invocations of ``-self`` on super instances in initializers of

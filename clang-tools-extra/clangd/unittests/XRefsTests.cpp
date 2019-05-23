@@ -497,6 +497,17 @@ TEST(LocateSymbol, Ambiguous) {
               ElementsAre(Sym("Foo"), Sym("Foo")));
 }
 
+TEST(LocateSymbol, TemplateTypedefs) {
+  auto T = Annotations(R"cpp(
+    template <class T> struct function {};
+    template <class T> using callback = function<T()>;
+
+    c^allback<int> foo;
+  )cpp");
+  auto AST = TestTU::withCode(T.code()).build();
+  EXPECT_THAT(locateSymbolAt(AST, T.point()), ElementsAre(Sym("callback")));
+}
+
 TEST(LocateSymbol, RelPathsInCompileCommand) {
   // The source is in "/clangd-test/src".
   // We build in "/clangd-test/build".

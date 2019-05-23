@@ -13,6 +13,7 @@
 #include "../readability/FunctionSizeCheck.h"
 #include "../readability/NamespaceCommentCheck.h"
 #include "AvoidCStyleCastsCheck.h"
+#include "AvoidNSObjectNewCheck.h"
 #include "AvoidThrowingObjCExceptionCheck.h"
 #include "AvoidUnderscoreInGoogletestNameCheck.h"
 #include "DefaultArgumentsCheck.h"
@@ -49,6 +50,8 @@ class GoogleModule : public ClangTidyModule {
         "google-explicit-constructor");
     CheckFactories.registerCheck<readability::GlobalNamesInHeadersCheck>(
         "google-global-names-in-headers");
+    CheckFactories.registerCheck<objc::AvoidNSObjectNewCheck>(
+        "google-objc-avoid-nsobject-new");
     CheckFactories.registerCheck<objc::AvoidThrowingObjCExceptionCheck>(
         "google-objc-avoid-throwing-exception");
     CheckFactories.registerCheck<objc::FunctionNamingCheck>(
