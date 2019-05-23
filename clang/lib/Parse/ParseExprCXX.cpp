@@ -20,7 +20,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "llvm/Support/ErrorHandling.h"
-
+#include <numeric>
 
 using namespace clang;
 
@@ -714,10 +714,10 @@ ExprResult Parser::TryParseLambdaExpression() {
   if (Next.is(tok::r_square) ||     // []
       Next.is(tok::equal) ||        // [=
       (Next.is(tok::amp) &&         // [&] or [&,
-       (After.is(tok::r_square) ||
-        After.is(tok::comma))) ||
+       After.isOneOf(tok::r_square, tok::comma)) ||
       (Next.is(tok::identifier) &&  // [identifier]
-       After.is(tok::r_square))) {
+       After.is(tok::r_square)) ||
+      Next.is(tok::ellipsis)) {     // [...
     return ParseLambdaExpression();
   }
 
@@ -798,6 +798,15 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
     return true;
   };
 
+  // Perform some irreversible action if this is a non-tentative parse;
+  // otherwise note that our actions were incomplete.
+  auto NonTentativeAction = [&](llvm::function_ref<void()> Action) {
+    if (Tentative)
+      *Tentative = LambdaIntroducerTentativeParse::Incomplete;
+    else
+      Action();
+  };
+
   // Parse capture-default.
   if (Tok.is(tok::amp) &&
       (NextToken().is(tok::comma) || NextToken().is(tok::r_square))) {
@@ -857,7 +866,7 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
     LambdaCaptureInitKind InitKind = LambdaCaptureInitKind::NoInit;
     SourceLocation Loc;
     IdentifierInfo *Id = nullptr;
-    SourceLocation EllipsisLoc;
+    SourceLocation EllipsisLocs[4];
     ExprResult Init;
     SourceLocation LocStart = Tok.getLocation();
 
@@ -875,6 +884,8 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
       Kind = LCK_This;
       Loc = ConsumeToken();
     } else {
+      TryConsumeToken(tok::ellipsis, EllipsisLocs[0]);
+
       if (Tok.is(tok::amp)) {
         Kind = LCK_ByRef;
         ConsumeToken();
@@ -886,6 +897,8 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
           break;
         }
       }
+
+      TryConsumeToken(tok::ellipsis, EllipsisLocs[1]);
 
       if (Tok.is(tok::identifier)) {
         Id = Tok.getIdentifierInfo();
@@ -900,6 +913,8 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
           Diag(Tok.getLocation(), diag::err_expected_capture);
         });
       }
+
+      TryConsumeToken(tok::ellipsis, EllipsisLocs[2]);
 
       if (Tok.is(tok::l_paren)) {
         BalancedDelimiterTracker Parens(*this, tok::l_paren);
@@ -982,9 +997,9 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
             ConsumeAnnotationToken();
           }
         }
-      } else {
-        TryConsumeToken(tok::ellipsis, EllipsisLoc);
       }
+
+      TryConsumeToken(tok::ellipsis, EllipsisLocs[3]);
     }
 
     // Check if this is a message send before we act on a possible init-capture.
@@ -995,60 +1010,81 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
       return false;
     }
 
-    // If this is an init capture, process the initialization expression
-    // right away.  For lambda init-captures such as the following:
-    // const int x = 10;
-    //  auto L = [i = x+1](int a) {
-    //    return [j = x+2,
-    //           &k = x](char b) { };
-    //  };
-    // keep in mind that each lambda init-capture has to have:
-    //  - its initialization expression executed in the context
-    //    of the enclosing/parent decl-context.
-    //  - but the variable itself has to be 'injected' into the
-    //    decl-context of its lambda's call-operator (which has
-    //    not yet been created).
-    // Each init-expression is a full-expression that has to get
-    // Sema-analyzed (for capturing etc.) before its lambda's
-    // call-operator's decl-context, scope & scopeinfo are pushed on their
-    // respective stacks.  Thus if any variable is odr-used in the init-capture
-    // it will correctly get captured in the enclosing lambda, if one exists.
-    // The init-variables above are created later once the lambdascope and
-    // call-operators decl-context is pushed onto its respective stack.
+    // Ensure that any ellipsis was in the right place.
+    SourceLocation EllipsisLoc;
+    if (std::any_of(std::begin(EllipsisLocs), std::end(EllipsisLocs),
+                    [](SourceLocation Loc) { return Loc.isValid(); })) {
+      // The '...' should appear before the identifier in an init-capture, and
+      // after the identifier otherwise.
+      bool InitCapture = InitKind != LambdaCaptureInitKind::NoInit;
+      SourceLocation *ExpectedEllipsisLoc =
+          !InitCapture      ? &EllipsisLocs[2] :
+          Kind == LCK_ByRef ? &EllipsisLocs[1] :
+                              &EllipsisLocs[0];
+      EllipsisLoc = *ExpectedEllipsisLoc;
 
-    // Since the lambda init-capture's initializer expression occurs in the
-    // context of the enclosing function or lambda, therefore we can not wait
-    // till a lambda scope has been pushed on before deciding whether the
-    // variable needs to be captured.  We also need to process all
-    // lvalue-to-rvalue conversions and discarded-value conversions,
-    // so that we can avoid capturing certain constant variables.
-    // For e.g.,
-    //  void test() {
-    //   const int x = 10;
-    //   auto L = [&z = x](char a) { <-- don't capture by the current lambda
-    //     return [y = x](int i) { <-- don't capture by enclosing lambda
-    //          return y;
-    //     }
-    //   };
-    // }
-    // If x was not const, the second use would require 'L' to capture, and
-    // that would be an error.
+      unsigned DiagID = 0;
+      if (EllipsisLoc.isInvalid()) {
+        DiagID = diag::err_lambda_capture_misplaced_ellipsis;
+        for (SourceLocation Loc : EllipsisLocs) {
+          if (Loc.isValid())
+            EllipsisLoc = Loc;
+        }
+      } else {
+        unsigned NumEllipses = std::accumulate(
+            std::begin(EllipsisLocs), std::end(EllipsisLocs), 0,
+            [](int N, SourceLocation Loc) { return N + Loc.isValid(); });
+        if (NumEllipses > 1)
+          DiagID = diag::err_lambda_capture_multiple_ellipses;
+      }
+      if (DiagID) {
+        NonTentativeAction([&] {
+          // Point the diagnostic at the first misplaced ellipsis.
+          SourceLocation DiagLoc;
+          for (SourceLocation &Loc : EllipsisLocs) {
+            if (&Loc != ExpectedEllipsisLoc && Loc.isValid()) {
+              DiagLoc = Loc;
+              break;
+            }
+          }
+          assert(DiagLoc.isValid() && "no location for diagnostic");
 
+          // Issue the diagnostic and produce fixits showing where the ellipsis
+          // should have been written.
+          auto &&D = Diag(DiagLoc, DiagID);
+          if (DiagID == diag::err_lambda_capture_misplaced_ellipsis) {
+            SourceLocation ExpectedLoc =
+                InitCapture ? Loc
+                            : Lexer::getLocForEndOfToken(
+                                  Loc, 0, PP.getSourceManager(), getLangOpts());
+            D << InitCapture << FixItHint::CreateInsertion(ExpectedLoc, "...");
+          }
+          for (SourceLocation &Loc : EllipsisLocs) {
+            if (&Loc != ExpectedEllipsisLoc && Loc.isValid())
+              D << FixItHint::CreateRemoval(Loc);
+          }
+        });
+      }
+    }
+
+    // Process the init-capture initializers now rather than delaying until we
+    // form the lambda-expression so that they can be handled in the context
+    // enclosing the lambda-expression, rather than in the context of the
+    // lambda-expression itself.
     ParsedType InitCaptureType;
-    if (Tentative && Init.isUsable())
-      *Tentative = LambdaIntroducerTentativeParse::Incomplete;
-    else if (Init.isUsable()) {
+    if (Init.isUsable())
       Init = Actions.CorrectDelayedTyposInExpr(Init.get());
-      if (Init.isUsable()) {
+    if (Init.isUsable()) {
+      NonTentativeAction([&] {
         // Get the pointer and store it in an lvalue, so we can use it as an
         // out argument.
         Expr *InitExpr = Init.get();
         // This performs any lvalue-to-rvalue conversions if necessary, which
         // can affect what gets captured in the containing decl-context.
         InitCaptureType = Actions.actOnLambdaInitCaptureInitialization(
-            Loc, Kind == LCK_ByRef, Id, InitKind, InitExpr);
+            Loc, Kind == LCK_ByRef, EllipsisLoc, Id, InitKind, InitExpr);
         Init = InitExpr;
-      }
+      });
     }
 
     SourceLocation LocEnd = PrevTokLocation;

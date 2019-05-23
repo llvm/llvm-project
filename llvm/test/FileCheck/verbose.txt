@@ -41,7 +41,7 @@ V-NEXT: {{^       \^$}}
 V-NEXT: verbose.txt:[[#@LINE-9]]:1: note: found here
 V-NEXT: {{^}}NUMVAR:42{{$}}
 V-NEXT: {{^}}^~~~~~~~~{{$}}
-V-NEXT: verbose.txt:[[#@LINE-12]]:1: note: with numeric expression "NUMVAR" equal to "42"
+V-NEXT: verbose.txt:[[#@LINE-12]]:1: note: with "NUMVAR" equal to "42"
 V-NEXT: {{^}}NUMVAR:42{{$}}
 V-NEXT: {{^}}^~~~~~~~~{{$}}
 
@@ -51,7 +51,7 @@ V-NEXT: {{^            \^$}}
 V-NEXT: verbose.txt:[[#@LINE-18]]:1: note: found here
 V-NEXT: {{^}}NUMVAR - 1:41{{$}}
 V-NEXT: {{^}}^~~~~~~~~~~~~{{$}}
-V-NEXT: verbose.txt:[[#@LINE-21]]:1: note: with numeric expression "NUMVAR - 1" equal to "41"
+V-NEXT: verbose.txt:[[#@LINE-21]]:1: note: with "NUMVAR - 1" equal to "41"
 V-NEXT: {{^}}NUMVAR - 1:41{{$}}
 V-NEXT: {{^}}^~~~~~~~~~~~~{{$}}
 

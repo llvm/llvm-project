@@ -85,15 +85,22 @@ int bar(int n){
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}_l34(
 // CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0, i16 0)
-// CHECK: call void @__kmpc_get_team_static_memory(i16 1, i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} 4, i16 1, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
+// CHECK: call void [[PARALLEL:@.+]](
+// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
+
+// CHECK: define internal void [[PARALLEL]](
+// CHECK: [[SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
+// CHECK: [[SIZE:%.+]] = load i{{64|32}}, i{{64|32}}* [[KERNEL_SIZE]],
+// CHECK: call void @__kmpc_get_team_static_memory(i16 1, i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} [[SIZE]], i16 [[SHARED]], i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
 // CHECK: [[TEAM_ALLOC:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
-// CHECK: [[BC:%.+]] = bitcast i8* [[TEAM_ALLOC]] to [[REC:%.+]]*
+// CHECK: [[ADDR:%.+]] = getelementptr inbounds i8, i8* [[TEAM_ALLOC]], i{{64|32}} 0
+// CHECK: [[BC:%.+]] = bitcast i8* [[ADDR]] to [[REC:%.+]]*
 // CHECK: getelementptr inbounds [[REC]], [[REC]]* [[BC]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 91,
 // CHECK: {{call|invoke}} void [[OUTL1:@.+]](
 // CHECK: call void @__kmpc_for_static_fini(
-// CHECK: call void @__kmpc_restore_team_static_memory(i16 1, i16 1)
-// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
+// CHECK: [[SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
+// CHECK: call void @__kmpc_restore_team_static_memory(i16 1, i16 [[SHARED]])
 // CHECK: ret void
 
 // CHECK: define internal void [[OUTL1]](
@@ -104,11 +111,12 @@ int bar(int n){
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}(
 // CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0, i16 0)
+// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
+// CHECK: ret void
+
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 91,
 // CHECK: {{call|invoke}} void [[OUTL2:@.+]](
 // CHECK: call void @__kmpc_for_static_fini(
-// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
-// CHECK: ret void
 
 // CHECK: define internal void [[OUTL2]](
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 33,
@@ -118,11 +126,12 @@ int bar(int n){
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}(
 // CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0, i16 0)
+// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
+// CHECK: ret void
+
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 91,
 // CHECK: {{call|invoke}} void [[OUTL3:@.+]](
 // CHECK: call void @__kmpc_for_static_fini(
-// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
-// CHECK: ret void
 
 // CHECK: define internal void [[OUTL3]](
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 33,
@@ -131,6 +140,11 @@ int bar(int n){
 
 // Distribute with collapse(2)
 // CHECK: define {{.*}}void {{@__omp_offloading_.+}}({{.+}}, i{{32|64}} [[F_IN:%.+]])
+// CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0, i16 0)
+// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
+// CHECK: ret void
+
 // CHECK: alloca
 // CHECK: alloca
 // CHECK: alloca
@@ -142,8 +156,6 @@ int bar(int n){
 // CHECK: [[OMP_UB:%.+]] = alloca
 // CHECK: [[OMP_ST:%.+]] = alloca
 // CHECK: store {{.+}} [[F_IN]], {{.+}}* {{.+}},
-// CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0, i16 0)
 // CHECK: store {{.+}} 99, {{.+}}* [[COMB_UB:%.+]], align
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 91, {{.+}}, {{.+}}, {{.+}}* [[COMB_UB]],
 
@@ -213,8 +225,7 @@ int bar(int n){
 
 // CHECK: [[DIST_INNER_LOOP_END]]:
 // CHECK: call void @__kmpc_for_static_fini(
-// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
-// CHECK: ret void
+
 
 // CHECK-32: define internal void [[OUTL4]](
 // CHECK-64: define internal void [[OUTL4]](

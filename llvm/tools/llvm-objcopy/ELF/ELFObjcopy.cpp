@@ -156,8 +156,12 @@ static std::unique_ptr<Writer> createWriter(const CopyConfig &Config,
 
 template <class ELFT>
 static Expected<ArrayRef<uint8_t>>
-findBuildID(const object::ELFFile<ELFT> &In) {
-  for (const auto &Phdr : unwrapOrError(In.program_headers())) {
+findBuildID(const CopyConfig &Config, const object::ELFFile<ELFT> &In) {
+  auto PhdrsOrErr = In.program_headers();
+  if (auto Err = PhdrsOrErr.takeError())
+    return createFileError(Config.InputFilename, std::move(Err));
+
+  for (const auto &Phdr : *PhdrsOrErr) {
     if (Phdr.p_type != PT_NOTE)
       continue;
     Error Err = Error::success();
@@ -165,28 +169,31 @@ findBuildID(const object::ELFFile<ELFT> &In) {
       if (Note.getType() == NT_GNU_BUILD_ID && Note.getName() == ELF_NOTE_GNU)
         return Note.getDesc();
     if (Err)
-      return std::move(Err);
+      return createFileError(Config.InputFilename, std::move(Err));
   }
-  return createStringError(llvm::errc::invalid_argument,
-                           "Could not find build ID.");
+
+  return createFileError(
+      Config.InputFilename,
+      createStringError(llvm::errc::invalid_argument,
+                        "could not find build ID"));
 }
 
 static Expected<ArrayRef<uint8_t>>
-findBuildID(const object::ELFObjectFileBase &In) {
+findBuildID(const CopyConfig &Config, const object::ELFObjectFileBase &In) {
   if (auto *O = dyn_cast<ELFObjectFile<ELF32LE>>(&In))
-    return findBuildID(*O->getELFFile());
+    return findBuildID(Config, *O->getELFFile());
   else if (auto *O = dyn_cast<ELFObjectFile<ELF64LE>>(&In))
-    return findBuildID(*O->getELFFile());
+    return findBuildID(Config, *O->getELFFile());
   else if (auto *O = dyn_cast<ELFObjectFile<ELF32BE>>(&In))
-    return findBuildID(*O->getELFFile());
+    return findBuildID(Config, *O->getELFFile());
   else if (auto *O = dyn_cast<ELFObjectFile<ELF64BE>>(&In))
-    return findBuildID(*O->getELFFile());
+    return findBuildID(Config, *O->getELFFile());
 
   llvm_unreachable("Bad file format");
 }
 
 template <class... Ts>
-static Error makeStringError(std::error_code EC, const Twine &Msg, Ts&&... Args) {
+static Error makeStringError(std::error_code EC, const Twine &Msg, Ts &&... Args) {
   std::string FullMsg = (EC.message() + ": " + Msg).str();
   return createStringError(EC, FullMsg.c_str(), std::forward<Ts>(Args)...);
 }
@@ -222,16 +229,16 @@ static Error linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
                             /*MakeAbsolute*/ false);
   if (auto EC = sys::fs::create_hard_link(ToLink, TmpPath)) {
     Path.push_back('\0');
-    return makeStringError(EC, "cannot link %s to %s", ToLink.data(),
-                             Path.data());
+    return makeStringError(EC, "cannot link '%s' to '%s'", ToLink.data(),
+                           Path.data());
   }
   // We then atomically rename the link into place which will just move the
   // link. If rename fails something is more seriously wrong so just return
   // an error.
   if (auto EC = sys::fs::rename(TmpPath, Path)) {
     Path.push_back('\0');
-    return makeStringError(EC, "cannot link %s to %s", ToLink.data(),
-                             Path.data());
+    return makeStringError(EC, "cannot link '%s' to '%s'", ToLink.data(),
+                           Path.data());
   }
   // If `Path` was already a hard-link to the same underlying file then the
   // temp file will be left so we need to remove it. Remove will not cause
@@ -239,7 +246,7 @@ static Error linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
   // it rather than checking.
   if (auto EC = sys::fs::remove(TmpPath)) {
     TmpPath.push_back('\0');
-    return makeStringError(EC, "could not remove %s", TmpPath.data());
+    return makeStringError(EC, "could not remove '%s'", TmpPath.data());
   }
   return Error::success();
 }
@@ -250,7 +257,7 @@ static Error splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
   auto OnlyKeepDWOPred = [&DWOFile](const SectionBase &Sec) {
     return onlyKeepDWOPred(*DWOFile, Sec);
   };
-  if (Error E = DWOFile->removeSections(Config.AllowBrokenLinks,
+  if (Error E = DWOFile->removeSections(Config.AllowBrokenLinks, 
                                         OnlyKeepDWOPred))
     return E;
   if (Config.OutputArch) {
@@ -269,10 +276,9 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
   for (auto &Sec : Obj.sections()) {
     if (Sec.Name == SecName) {
       if (Sec.OriginalData.empty())
-        return createStringError(
-            object_error::parse_failed,
-            "Can't dump section \"%s\": it has no contents",
-            SecName.str().c_str());
+        return createStringError(object_error::parse_failed,
+                                 "cannot dump section '%s': it has no contents",
+                                 SecName.str().c_str());
       Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
           FileOutputBuffer::create(Filename, Sec.OriginalData.size());
       if (!BufferOrErr)
@@ -285,7 +291,8 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
       return Error::success();
     }
   }
-  return createStringError(object_error::parse_failed, "Section not found");
+  return createStringError(object_error::parse_failed, "section '%s' not found",
+                           SecName.str().c_str());
 }
 
 static bool isCompressable(const SectionBase &Section) {
@@ -534,11 +541,11 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
   }
 
   if (Config.CompressionType != DebugCompressionType::None)
-    replaceDebugSections(Obj, RemovePred, isCompressable,
+    replaceDebugSections(Obj, RemovePred, isCompressable, 
                          [&Config, &Obj](const SectionBase *S) {
                            return &Obj.addSection<CompressedSection>(
-                               *S, Config.CompressionType);
-                         });
+                                *S, Config.CompressionType);
+                        });
   else if (Config.DecompressDebugSections)
     replaceDebugSections(
         Obj, RemovePred,
@@ -600,13 +607,13 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
           Sec.Name = (Config.AllocSectionsPrefix + Sec.Name).str();
           PrefixedSections.insert(&Sec);
 
-        // Rename relocation sections associated to the allocated sections.
-        // For example, if we rename .text to .prefix.text, we also rename
-        // .rel.text to .rel.prefix.text.
-        //
-        // Dynamic relocation sections (SHT_REL[A] with SHF_ALLOC) are handled
-        // above, e.g., .rela.plt is renamed to .prefix.rela.plt, not
-        // .rela.prefix.plt since GNU objcopy does so.
+          // Rename relocation sections associated to the allocated sections.
+          // For example, if we rename .text to .prefix.text, we also rename
+          // .rel.text to .rel.prefix.text.
+          //
+          // Dynamic relocation sections (SHT_REL[A] with SHF_ALLOC) are handled
+          // above, e.g., .rela.plt is renamed to .prefix.rela.plt, not
+          // .rela.prefix.plt since GNU objcopy does so.
         } else if (auto *RelocSec = dyn_cast<RelocationSectionBase>(&Sec)) {
           auto *TargetSec = RelocSec->getSection();
           if (TargetSec && (TargetSec->Flags & SHF_ALLOC)) {
@@ -681,7 +688,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
     StringRef SecName = SecPair.first;
     StringRef File = SecPair.second;
     if (Error E = dumpSectionToFile(SecName, File, Obj))
-      return createFileError(Config.InputFilename, std::move(E));
+      return E;
   }
 
   if (!Config.AddGnuDebugLink.empty())
@@ -730,12 +737,16 @@ Error executeObjcopyOnBinary(const CopyConfig &Config,
   ArrayRef<uint8_t> BuildIdBytes;
 
   if (!Config.BuildIdLinkDir.empty()) {
-    BuildIdBytes = unwrapOrError(findBuildID(In));
+    auto BuildIdBytesOrErr = findBuildID(Config, In);
+    if (auto E = BuildIdBytesOrErr.takeError())
+      return E;
+    BuildIdBytes = *BuildIdBytesOrErr;
+
     if (BuildIdBytes.size() < 2)
       return createFileError(
           Config.InputFilename,
           createStringError(object_error::parse_failed,
-                            "build ID is smaller than two bytes."));
+                            "build ID is smaller than two bytes"));
   }
 
   if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkInput)
@@ -745,18 +756,19 @@ Error executeObjcopyOnBinary(const CopyConfig &Config,
       return E;
 
   if (Error E = handleArgs(Config, *Obj, Reader, OutputElfType))
-    return E;
+    return createFileError(Config.InputFilename, std::move(E));
+
   std::unique_ptr<Writer> Writer =
       createWriter(Config, *Obj, Out, OutputElfType);
   if (Error E = Writer->finalize())
-    return E;
+    return createFileError(Config.InputFilename, std::move(E));
   if (Error E = Writer->write())
     return E;
   if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkOutput)
     if (Error E =
             linkToBuildIdDir(Config, Config.OutputFilename,
                              Config.BuildIdLinkOutput.getValue(), BuildIdBytes))
-      return E;
+      return createFileError(Config.OutputFilename, std::move(E));
 
   return Error::success();
 }

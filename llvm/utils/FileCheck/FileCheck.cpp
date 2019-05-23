@@ -537,8 +537,8 @@ int main(int argc, char **argv) {
       continue;
     }
     if (EqIdx == 0) {
-      errs() << "Missing pattern variable name in command-line definition '-D"
-             << G << "'\n";
+      errs() << "Missing variable name in command-line definition '-D" << G
+             << "'\n";
       GlobalDefineError = true;
       continue;
     }

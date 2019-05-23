@@ -982,7 +982,7 @@ void Preprocessor::HandleDirective(Token &Result) {
 
     // C99 6.10.6 - Pragma Directive.
     case tok::pp_pragma:
-      return HandlePragmaDirective(SavedHash.getLocation(), PIK_HashPragma);
+      return HandlePragmaDirective({PIK_HashPragma, SavedHash.getLocation()});
 
     // GNU Extensions.
     case tok::pp_import:

@@ -3835,6 +3835,11 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
 
       I = SelectInst::Create(Cond, TrueVal, FalseVal);
       InstructionList.push_back(I);
+      if (OpNum < Record.size() && isa<FPMathOperator>(I)) {
+        FastMathFlags FMF = getDecodedFastMathFlags(Record[OpNum]);
+        if (FMF.any())
+          I->setFastMathFlags(FMF);
+      }
       break;
     }
 

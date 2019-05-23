@@ -96,7 +96,7 @@
 # Removing the .comdat section fails, since the .text section has relocations
 # against it.
 #
-# ERROR-RELOC: Relocation target 'foo' ({{.*}}) not found
+# ERROR-RELOC: relocation target 'foo' ({{.*}}) not found
 #
 #
 # Removing the .comdat section and .text (with a relocation against .comdat)

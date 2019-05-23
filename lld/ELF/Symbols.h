@@ -280,10 +280,14 @@ public:
 class Undefined : public Symbol {
 public:
   Undefined(InputFile *File, StringRefZ Name, uint8_t Binding, uint8_t StOther,
-            uint8_t Type)
-      : Symbol(UndefinedKind, File, Name, Binding, StOther, Type) {}
+            uint8_t Type, uint32_t DiscardedSecIdx = 0)
+      : Symbol(UndefinedKind, File, Name, Binding, StOther, Type),
+        DiscardedSecIdx(DiscardedSecIdx) {}
 
   static bool classof(const Symbol *S) { return S->kind() == UndefinedKind; }
+
+  // The section index if in a discarded section, 0 otherwise.
+  uint32_t DiscardedSecIdx;
 };
 
 class SharedSymbol : public Symbol {
@@ -481,6 +485,11 @@ void Symbol::replace(const Symbol &New) {
   Traced = Old.Traced;
   IsPreemptible = Old.IsPreemptible;
   ScriptDefined = Old.ScriptDefined;
+
+  // Symbol length is computed lazily. If we already know a symbol length,
+  // propagate it.
+  if (NameData == Old.NameData && NameSize == 0 && Old.NameSize != 0)
+    NameSize = Old.NameSize;
 
   // Print out a log message if --trace-symbol was specified.
   // This is for debugging.

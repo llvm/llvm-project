@@ -476,7 +476,7 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
   for (RecordDecl::field_iterator Field = RD->field_begin(),
        FieldEnd = RD->field_end(); Field != FieldEnd; ++Field, ++FieldNo) {
     // If this is a union, skip all the fields that aren't being initialized.
-    if (RD->isUnion() && Val.getUnionField() != *Field)
+    if (RD->isUnion() && !declaresSameEntity(Val.getUnionField(), *Field))
       continue;
 
     // Don't emit anonymous bitfields, they just affect layout.
@@ -1860,8 +1860,10 @@ ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
 llvm::Constant *ConstantEmitter::tryEmitPrivate(const APValue &Value,
                                                 QualType DestType) {
   switch (Value.getKind()) {
-  case APValue::Uninitialized:
-    llvm_unreachable("Constant expressions should be initialized.");
+  case APValue::None:
+  case APValue::Indeterminate:
+    // Out-of-lifetime and indeterminate values can be modeled as 'undef'.
+    return llvm::UndefValue::get(CGM.getTypes().ConvertType(DestType));
   case APValue::LValue:
     return ConstantLValueEmitter(*this, Value, DestType).tryEmit();
   case APValue::Int:

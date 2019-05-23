@@ -390,9 +390,9 @@ inline CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM,
   if (CM) {
     // By default, targets do not support the tiny and kernel models.
     if (*CM == CodeModel::Tiny)
-      report_fatal_error("Target does not support the tiny CodeModel");
+      report_fatal_error("Target does not support the tiny CodeModel", false);
     if (*CM == CodeModel::Kernel)
-      report_fatal_error("Target does not support the kernel CodeModel");
+      report_fatal_error("Target does not support the kernel CodeModel", false);
     return *CM;
   }
   return Default;

@@ -980,8 +980,10 @@ def INSERT_get_vinsert256_imm : SDNodeXForm<insert_subvector, [{
 
 def vextract128_extract : PatFrag<(ops node:$bigvec, node:$index),
                                    (extract_subvector node:$bigvec,
-                                                      node:$index), [{}],
-                                  EXTRACT_get_vextract128_imm>;
+                                                      node:$index), [{
+  // Index 0 can be handled via extract_subreg.
+  return !isNullConstant(N->getOperand(1));
+}], EXTRACT_get_vextract128_imm>;
 
 def vinsert128_insert : PatFrag<(ops node:$bigvec, node:$smallvec,
                                       node:$index),
@@ -991,8 +993,10 @@ def vinsert128_insert : PatFrag<(ops node:$bigvec, node:$smallvec,
 
 def vextract256_extract : PatFrag<(ops node:$bigvec, node:$index),
                                    (extract_subvector node:$bigvec,
-                                                      node:$index), [{}],
-                                  EXTRACT_get_vextract256_imm>;
+                                                      node:$index), [{
+  // Index 0 can be handled via extract_subreg.
+  return !isNullConstant(N->getOperand(1));
+}], EXTRACT_get_vextract256_imm>;
 
 def vinsert256_insert : PatFrag<(ops node:$bigvec, node:$smallvec,
                                       node:$index),

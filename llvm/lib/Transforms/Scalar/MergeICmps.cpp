@@ -521,7 +521,8 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
   // semantics because we are only accessing dereferencable memory.
   llvm::sort(Comparisons_,
              [](const BCECmpBlock &LhsBlock, const BCECmpBlock &RhsBlock) {
-               return LhsBlock.Rhs() < RhsBlock.Lhs();
+               return std::tie(LhsBlock.Lhs(), LhsBlock.Rhs()) <
+                      std::tie(RhsBlock.Lhs(), RhsBlock.Rhs());
              });
 #ifdef MERGEICMPS_DOT_ON
   errs() << "AFTER REORDERING:\n\n";

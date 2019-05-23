@@ -2,8 +2,8 @@
 ## referenced by relocations contained in the object.
 
 # RUN: yaml2obj %s > %t1
-# RUN: not llvm-objcopy -R .data %t1 2>&1 | FileCheck %s
-# CHECK: error: Section .data can't be removed: (.text+0x1) has relocation against symbol 'foo'
+# RUN: not llvm-objcopy -R .data %t1 2>&1 | FileCheck %s -DINPUT=%t1
+# CHECK: error: '[[INPUT]]': section '.data' cannot be removed: (.text+0x1) has relocation against symbol 'foo'
 
 ## Check the behavior when we also remove the relocation section.
 ## We have no reference in this case and hence no error should be emitted.

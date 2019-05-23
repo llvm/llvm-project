@@ -11,6 +11,7 @@
 #include "CommonArgs.h"
 #include "clang/Basic/AlignedAllocation.h"
 #include "clang/Basic/ObjCRuntime.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -1804,6 +1805,92 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   }
 }
 
+// Returns the effective header sysroot path to use. This comes either from
+// -isysroot or --sysroot.
+llvm::StringRef DarwinClang::GetHeaderSysroot(const llvm::opt::ArgList &DriverArgs) const {
+  if(DriverArgs.hasArg(options::OPT_isysroot))
+    return DriverArgs.getLastArgValue(options::OPT_isysroot);
+  if (!getDriver().SysRoot.empty())
+    return getDriver().SysRoot;
+  return "/";
+}
+
+void DarwinClang::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                                            llvm::opt::ArgStringList &CC1Args) const {
+  const Driver &D = getDriver();
+
+  llvm::StringRef Sysroot = GetHeaderSysroot(DriverArgs);
+
+  bool NoStdInc = DriverArgs.hasArg(options::OPT_nostdinc);
+  bool NoStdlibInc = DriverArgs.hasArg(options::OPT_nostdlibinc);
+  bool NoBuiltinInc = DriverArgs.hasArg(options::OPT_nobuiltininc);
+
+  // Add <sysroot>/usr/local/include
+  if (!NoStdInc && !NoStdlibInc) {
+      SmallString<128> P(Sysroot);
+      llvm::sys::path::append(P, "usr", "local", "include");
+      addSystemInclude(DriverArgs, CC1Args, P);
+  }
+
+  // Add the Clang builtin headers (<resource>/include)
+  if (!NoStdInc && !NoBuiltinInc) {
+    SmallString<128> P(D.ResourceDir);
+    llvm::sys::path::append(P, "include");
+    addSystemInclude(DriverArgs, CC1Args, P);
+  }
+
+  if (NoStdInc || NoStdlibInc)
+    return;
+
+  // Check for configure-time C include directories.
+  llvm::StringRef CIncludeDirs(C_INCLUDE_DIRS);
+  if (!CIncludeDirs.empty()) {
+    llvm::SmallVector<llvm::StringRef, 5> dirs;
+    CIncludeDirs.split(dirs, ":");
+    for (llvm::StringRef dir : dirs) {
+      llvm::StringRef Prefix =
+          llvm::sys::path::is_absolute(dir) ? llvm::StringRef(Sysroot) : "";
+      addExternCSystemInclude(DriverArgs, CC1Args, Prefix + dir);
+    }
+  } else {
+    // Otherwise, add <sysroot>/usr/include.
+    SmallString<128> P(Sysroot);
+    llvm::sys::path::append(P, "usr", "include");
+    addExternCSystemInclude(DriverArgs, CC1Args, P.str());
+  }
+}
+
+bool DarwinClang::AddGnuCPlusPlusIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                                              llvm::opt::ArgStringList &CC1Args,
+                                              llvm::SmallString<128> Base,
+                                              llvm::StringRef Version,
+                                              llvm::StringRef ArchDir,
+                                              llvm::StringRef BitDir) const {
+  llvm::sys::path::append(Base, Version);
+
+  // Add the base dir
+  addSystemInclude(DriverArgs, CC1Args, Base);
+
+  // Add the multilib dirs
+  {
+    llvm::SmallString<128> P = Base;
+    if (!ArchDir.empty())
+      llvm::sys::path::append(P, ArchDir);
+    if (!BitDir.empty())
+      llvm::sys::path::append(P, BitDir);
+    addSystemInclude(DriverArgs, CC1Args, P);
+  }
+
+  // Add the backward dir
+  {
+    llvm::SmallString<128> P = Base;
+    llvm::sys::path::append(P, "backward");
+    addSystemInclude(DriverArgs, CC1Args, P);
+  }
+
+  return getVFS().exists(Base);
+}
+
 void DarwinClang::AddClangCXXStdlibIncludeArgs(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
@@ -1811,29 +1898,90 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
   // CC1Args.
   // FIXME: this should not be necessary, remove usages in the frontend
   //        (e.g. HeaderSearchOptions::UseLibcxx) and don't pipe -stdlib.
+  //        Also check whether this is used for setting library search paths.
   ToolChain::AddClangCXXStdlibIncludeArgs(DriverArgs, CC1Args);
 
   if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
       DriverArgs.hasArg(options::OPT_nostdincxx))
     return;
 
+  llvm::StringRef Sysroot = GetHeaderSysroot(DriverArgs);
+
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
-    llvm::StringRef InstallDir = getDriver().getInstalledDir();
-    if (InstallDir.empty())
-      break;
-    // On Darwin, libc++ may be installed alongside the compiler in
-    // include/c++/v1.
-    // Get from 'foo/bin' to 'foo/include/c++/v1'.
-    SmallString<128> P = InstallDir;
-    // Note that InstallDir can be relative, so we have to '..' and not
-    // parent_path.
-    llvm::sys::path::append(P, "..", "include", "c++", "v1");
-    addSystemInclude(DriverArgs, CC1Args, P);
+    // On Darwin, libc++ is installed alongside the compiler in
+    // include/c++/v1, so get from '<install>/bin' to '<install>/include/c++/v1'.
+    {
+      llvm::SmallString<128> P = llvm::StringRef(getDriver().getInstalledDir());
+      // Note that P can be relative, so we have to '..' and not parent_path.
+      llvm::sys::path::append(P, "..", "include", "c++", "v1");
+      addSystemInclude(DriverArgs, CC1Args, P);
+    }
+    // Also add <sysroot>/usr/include/c++/v1 unless -nostdinc is used,
+    // to match the legacy behavior in CC1.
+    if (!DriverArgs.hasArg(options::OPT_nostdinc)) {
+      llvm::SmallString<128> P = Sysroot;
+      llvm::sys::path::append(P, "usr", "include", "c++", "v1");
+      addSystemInclude(DriverArgs, CC1Args, P);
+    }
     break;
   }
+
   case ToolChain::CST_Libstdcxx:
-    // FIXME: should we do something about it?
+    llvm::SmallString<128> UsrIncludeCxx = Sysroot;
+    llvm::sys::path::append(UsrIncludeCxx, "usr", "include", "c++");
+
+    llvm::Triple::ArchType arch = getTriple().getArch();
+    bool IsBaseFound = true;
+    switch (arch) {
+    default: break;
+
+    case llvm::Triple::ppc:
+    case llvm::Triple::ppc64:
+      IsBaseFound = AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
+                                                "4.2.1",
+                                                "powerpc-apple-darwin10",
+                                                arch == llvm::Triple::ppc64 ? "ppc64" : "");
+      IsBaseFound |= AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
+                                                "4.0.0", "powerpc-apple-darwin10",
+                                                 arch == llvm::Triple::ppc64 ? "ppc64" : "");
+      break;
+
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      IsBaseFound = AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
+                                                "4.2.1",
+                                                "i686-apple-darwin10",
+                                                arch == llvm::Triple::x86_64 ? "x86_64" : "");
+      IsBaseFound |= AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
+                                                "4.0.0", "i686-apple-darwin8",
+                                                 "");
+      break;
+
+    case llvm::Triple::arm:
+    case llvm::Triple::thumb:
+      IsBaseFound = AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
+                                                "4.2.1",
+                                                "arm-apple-darwin10",
+                                                "v7");
+      IsBaseFound |= AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
+                                                "4.2.1",
+                                                "arm-apple-darwin10",
+                                                 "v6");
+      break;
+
+    case llvm::Triple::aarch64:
+      IsBaseFound = AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
+                                                "4.2.1",
+                                                "arm64-apple-darwin10",
+                                                "");
+      break;
+    }
+
+    if (!IsBaseFound) {
+      getDriver().Diag(diag::warn_drv_libstdcxx_not_found);
+    }
+
     break;
   }
 }

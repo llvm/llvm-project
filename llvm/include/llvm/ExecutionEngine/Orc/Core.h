@@ -731,6 +731,10 @@ public:
   JITDylib *getJITDylibByName(StringRef Name);
 
   /// Add a new JITDylib to this ExecutionSession.
+  ///
+  /// The JITDylib Name is required to be unique. Clients should verify that
+  /// names are not being re-used (e.g. by calling getJITDylibByName) if names
+  /// are based on user input.
   JITDylib &createJITDylib(std::string Name,
                            bool AddToMainDylibSearchOrder = true);
 

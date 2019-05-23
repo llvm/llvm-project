@@ -546,19 +546,25 @@ static std::set<Value *> getBaseValues(Value *V,
 static bool
 checkHoistValue(Value *V, Instruction *InsertPoint, DominatorTree &DT,
                 DenseSet<Instruction *> &Unhoistables,
-                DenseSet<Instruction *> *HoistStops) {
+                DenseSet<Instruction *> *HoistStops,
+                DenseMap<Instruction *, bool> &Visited) {
   assert(InsertPoint && "Null InsertPoint");
   if (auto *I = dyn_cast<Instruction>(V)) {
+    if (Visited.count(I)) {
+      return Visited[I];
+    }
     assert(DT.getNode(I->getParent()) && "DT must contain I's parent block");
     assert(DT.getNode(InsertPoint->getParent()) && "DT must contain Destination");
     if (Unhoistables.count(I)) {
       // Don't hoist if they are not to be hoisted.
+      Visited[I] = false;
       return false;
     }
     if (DT.dominates(I, InsertPoint)) {
       // We are already above the insert point. Stop here.
       if (HoistStops)
         HoistStops->insert(I);
+      Visited[I] = true;
       return true;
     }
     // We aren't not above the insert point, check if we can hoist it above the
@@ -568,7 +574,8 @@ checkHoistValue(Value *V, Instruction *InsertPoint, DominatorTree &DT,
       DenseSet<Instruction *> OpsHoistStops;
       bool AllOpsHoisted = true;
       for (Value *Op : I->operands()) {
-        if (!checkHoistValue(Op, InsertPoint, DT, Unhoistables, &OpsHoistStops)) {
+        if (!checkHoistValue(Op, InsertPoint, DT, Unhoistables, &OpsHoistStops,
+                             Visited)) {
           AllOpsHoisted = false;
           break;
         }
@@ -577,9 +584,11 @@ checkHoistValue(Value *V, Instruction *InsertPoint, DominatorTree &DT,
         CHR_DEBUG(dbgs() << "checkHoistValue " << *I << "\n");
         if (HoistStops)
           HoistStops->insert(OpsHoistStops.begin(), OpsHoistStops.end());
+        Visited[I] = true;
         return true;
       }
     }
+    Visited[I] = false;
     return false;
   }
   // Non-instructions are considered hoistable.
@@ -892,8 +901,9 @@ void CHR::checkScopeHoistable(CHRScope *Scope) {
         ++it;
         continue;
       }
+      DenseMap<Instruction *, bool> Visited;
       bool IsHoistable = checkHoistValue(SI->getCondition(), InsertPoint,
-                                         DT, Unhoistables, nullptr);
+                                         DT, Unhoistables, nullptr, Visited);
       if (!IsHoistable) {
         CHR_DEBUG(dbgs() << "Dropping select " << *SI << "\n");
         ORE.emit([&]() {
@@ -912,8 +922,9 @@ void CHR::checkScopeHoistable(CHRScope *Scope) {
     InsertPoint = getBranchInsertPoint(RI);
     CHR_DEBUG(dbgs() << "InsertPoint " << *InsertPoint << "\n");
     if (RI.HasBranch && InsertPoint != Branch) {
+      DenseMap<Instruction *, bool> Visited;
       bool IsHoistable = checkHoistValue(Branch->getCondition(), InsertPoint,
-                                         DT, Unhoistables, nullptr);
+                                         DT, Unhoistables, nullptr, Visited);
       if (!IsHoistable) {
         // If the branch isn't hoistable, drop the selects in the entry
         // block, preferring the branch, which makes the branch the hoist
@@ -944,15 +955,17 @@ void CHR::checkScopeHoistable(CHRScope *Scope) {
     if (RI.HasBranch) {
       assert(!DT.dominates(Branch, InsertPoint) &&
              "Branch can't be already above the hoist point");
+      DenseMap<Instruction *, bool> Visited;
       assert(checkHoistValue(Branch->getCondition(), InsertPoint,
-                             DT, Unhoistables, nullptr) &&
+                             DT, Unhoistables, nullptr, Visited) &&
              "checkHoistValue for branch");
     }
     for (auto *SI : Selects) {
       assert(!DT.dominates(SI, InsertPoint) &&
              "SI can't be already above the hoist point");
+      DenseMap<Instruction *, bool> Visited;
       assert(checkHoistValue(SI->getCondition(), InsertPoint, DT,
-                             Unhoistables, nullptr) &&
+                             Unhoistables, nullptr, Visited) &&
              "checkHoistValue for selects");
     }
     CHR_DEBUG(dbgs() << "Result\n");
@@ -1053,7 +1066,8 @@ static bool shouldSplit(Instruction *InsertPoint,
   assert(InsertPoint && "Null InsertPoint");
   // If any of Bases isn't hoistable to the hoist point, split.
   for (Value *V : ConditionValues) {
-    if (!checkHoistValue(V, InsertPoint, DT, Unhoistables, nullptr)) {
+    DenseMap<Instruction *, bool> Visited;
+    if (!checkHoistValue(V, InsertPoint, DT, Unhoistables, nullptr, Visited)) {
       CHR_DEBUG(dbgs() << "Split. checkHoistValue false " << *V << "\n");
       return true; // Not hoistable, split.
     }
@@ -1382,8 +1396,9 @@ void CHR::setCHRRegions(CHRScope *Scope, CHRScope *OutermostScope) {
              "Must be truthy or falsy");
       auto *BI = cast<BranchInst>(R->getEntry()->getTerminator());
       // Note checkHoistValue fills in HoistStops.
+      DenseMap<Instruction *, bool> Visited;
       bool IsHoistable = checkHoistValue(BI->getCondition(), InsertPoint, DT,
-                                         Unhoistables, &HoistStops);
+                                         Unhoistables, &HoistStops, Visited);
       assert(IsHoistable && "Must be hoistable");
       (void)(IsHoistable);  // Unused in release build
       IsHoisted = true;
@@ -1393,8 +1408,9 @@ void CHR::setCHRRegions(CHRScope *Scope, CHRScope *OutermostScope) {
               OutermostScope->FalseBiasedSelects.count(SI) > 0) &&
              "Must be true or false biased");
       // Note checkHoistValue fills in HoistStops.
+      DenseMap<Instruction *, bool> Visited;
       bool IsHoistable = checkHoistValue(SI->getCondition(), InsertPoint, DT,
-                                         Unhoistables, &HoistStops);
+                                         Unhoistables, &HoistStops, Visited);
       assert(IsHoistable && "Must be hoistable");
       (void)(IsHoistable);  // Unused in release build
       IsHoisted = true;

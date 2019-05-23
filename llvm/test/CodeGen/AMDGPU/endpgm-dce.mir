@@ -313,3 +313,46 @@ body:             |
     S_ENDPGM 0, implicit %3
 
 ...
+
+---
+# GCN-LABEL: name: inlineasm_nosideeffect
+# GCN-NOT: S_OR_B64
+# GCN-NOT: INLINEASM
+# GCN: S_ENDPGM 0
+name: inlineasm_nosideeffect
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+body:             |
+  bb.0:
+    $vcc = IMPLICIT_DEF
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
+    %2:sreg_64 = IMPLICIT_DEF
+    INLINEASM &"", 0, 0
+    S_ENDPGM 0
+...
+
+---
+# GCN-LABEL: name: inlineasm_sideeffect
+# GCN:      $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: INLINEASM
+# GCN-NEXT: S_ENDPGM 0
+name: inlineasm_sideeffect
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+body:             |
+  bb.0:
+    $vcc = IMPLICIT_DEF
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
+    %2:sreg_64 = IMPLICIT_DEF
+    INLINEASM &"", 1, 0
+    S_ENDPGM 0
+...

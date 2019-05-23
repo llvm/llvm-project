@@ -610,7 +610,7 @@ int Driver::MainLoop() {
       // that run the target won't run in a sensible way.
       bool old_async = m_debugger.GetAsync();
       m_debugger.SetAsync(false);
-      int num_errors;
+      int num_errors = 0;
 
       SBCommandInterpreterRunOptions options;
       options.SetStopOnError(true);

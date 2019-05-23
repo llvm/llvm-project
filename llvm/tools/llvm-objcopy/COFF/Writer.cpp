@@ -29,7 +29,7 @@ Error COFFWriter::finalizeRelocTargets() {
       const Symbol *Sym = Obj.findSymbol(R.Target);
       if (Sym == nullptr)
         return createStringError(object_error::invalid_symbol_index,
-                                 "Relocation target '%s' (%zu) not found",
+                                 "relocation target '%s' (%zu) not found",
                                  R.TargetName.str().c_str(), R.Target);
       R.Reloc.SymbolTableIndex = Sym->RawIndex;
     }
@@ -47,7 +47,7 @@ Error COFFWriter::finalizeSymbolContents() {
       const Section *Sec = Obj.findSection(Sym.TargetSectionId);
       if (Sec == nullptr)
         return createStringError(object_error::invalid_symbol_index,
-                                 "Symbol '%s' points to a removed section",
+                                 "symbol '%s' points to a removed section",
                                  Sym.Name.str().c_str());
       Sym.Sym.SectionNumber = Sec->Index;
 
@@ -66,7 +66,7 @@ Error COFFWriter::finalizeSymbolContents() {
           if (Sec == nullptr)
             return createStringError(
                 object_error::invalid_symbol_index,
-                "Symbol '%s' is associative to a removed section",
+                "symbol '%s' is associative to a removed section",
                 Sym.Name.str().c_str());
           SDSectionNumber = Sec->Index;
         }
@@ -83,7 +83,7 @@ Error COFFWriter::finalizeSymbolContents() {
       const Symbol *Target = Obj.findSymbol(*Sym.WeakTargetSymbolId);
       if (Target == nullptr)
         return createStringError(object_error::invalid_symbol_index,
-                                 "Symbol '%s' is missing its weak target",
+                                 "symbol '%s' is missing its weak target",
                                  Sym.Name.str().c_str());
       WE->TagIndex = Target->RawIndex;
     }
@@ -383,7 +383,7 @@ Error COFFWriter::patchDebugDirectory() {
       if (Dir->RelativeVirtualAddress + Dir->Size >
           S.Header.VirtualAddress + S.Header.SizeOfRawData)
         return createStringError(object_error::parse_failed,
-                                 "Debug directory extends past end of section");
+                                 "debug directory extends past end of section");
 
       size_t Offset = Dir->RelativeVirtualAddress - S.Header.VirtualAddress;
       uint8_t *Ptr = Buf.getBufferStart() + S.Header.PointerToRawData + Offset;
@@ -400,14 +400,14 @@ Error COFFWriter::patchDebugDirectory() {
     }
   }
   return createStringError(object_error::parse_failed,
-                           "Debug directory not found");
+                           "debug directory not found");
 }
 
 Error COFFWriter::write() {
   bool IsBigObj = Obj.getSections().size() > MaxNumberOfSections16;
   if (IsBigObj && Obj.IsPE)
     return createStringError(object_error::parse_failed,
-                             "Too many sections for executable");
+                             "too many sections for executable");
   return write(IsBigObj);
 }
 

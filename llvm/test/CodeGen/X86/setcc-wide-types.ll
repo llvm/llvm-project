@@ -911,3 +911,186 @@ define i32 @eq_i512_pair(i512* %a, i512* %b) {
   ret i32 %z
 }
 
+; PR41971: Comparison using vector types is not favorable here.
+define i1 @eq_i128_args(i128 %a, i128 %b) {
+; ANY-LABEL: eq_i128_args:
+; ANY:       # %bb.0:
+; ANY-NEXT:    xorq %rcx, %rsi
+; ANY-NEXT:    xorq %rdx, %rdi
+; ANY-NEXT:    orq %rsi, %rdi
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
+  %r = icmp eq i128 %a, %b
+  ret i1 %r
+}
+
+define i1 @eq_i256_args(i256 %a, i256 %b) {
+; ANY-LABEL: eq_i256_args:
+; ANY:       # %bb.0:
+; ANY-NEXT:    xorq %r9, %rsi
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
+; ANY-NEXT:    orq %rsi, %rcx
+; ANY-NEXT:    xorq %r8, %rdi
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
+; ANY-NEXT:    orq %rdi, %rdx
+; ANY-NEXT:    orq %rcx, %rdx
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
+  %r = icmp eq i256 %a, %b
+  ret i1 %r
+}
+
+define i1 @eq_i512_args(i512 %a, i512 %b) {
+; ANY-LABEL: eq_i512_args:
+; ANY:       # %bb.0:
+; ANY-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; ANY-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
+; ANY-NEXT:    orq %rax, %rcx
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r9
+; ANY-NEXT:    orq %rcx, %r9
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rsi
+; ANY-NEXT:    orq %r9, %rsi
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
+; ANY-NEXT:    orq %r10, %rdx
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r8
+; ANY-NEXT:    orq %rdx, %r8
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rdi
+; ANY-NEXT:    orq %r8, %rdi
+; ANY-NEXT:    orq %rsi, %rdi
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
+  %r = icmp eq i512 %a, %b
+  ret i1 %r
+}
+
+define i1 @eq_i128_op(i128 %a, i128 %b) {
+; ANY-LABEL: eq_i128_op:
+; ANY:       # %bb.0:
+; ANY-NEXT:    addq $1, %rdi
+; ANY-NEXT:    adcq $0, %rsi
+; ANY-NEXT:    xorq %rdx, %rdi
+; ANY-NEXT:    xorq %rcx, %rsi
+; ANY-NEXT:    orq %rdi, %rsi
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
+  %a2 = add i128 %a, 1
+  %r = icmp eq i128 %a2, %b
+  ret i1 %r
+}
+
+define i1 @eq_i256_op(i256 %a, i256 %b) {
+; ANY-LABEL: eq_i256_op:
+; ANY:       # %bb.0:
+; ANY-NEXT:    addq $1, %rdi
+; ANY-NEXT:    adcq $0, %rsi
+; ANY-NEXT:    adcq $0, %rdx
+; ANY-NEXT:    adcq $0, %rcx
+; ANY-NEXT:    xorq %r8, %rdi
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
+; ANY-NEXT:    orq %rdi, %rdx
+; ANY-NEXT:    xorq %r9, %rsi
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
+; ANY-NEXT:    orq %rsi, %rcx
+; ANY-NEXT:    orq %rdx, %rcx
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
+  %a2 = add i256 %a, 1
+  %r = icmp eq i256 %a2, %b
+  ret i1 %r
+}
+
+define i1 @eq_i512_op(i512 %a, i512 %b) {
+; ANY-LABEL: eq_i512_op:
+; ANY:       # %bb.0:
+; ANY-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; ANY-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; ANY-NEXT:    addq $1, %rdi
+; ANY-NEXT:    adcq $0, %rsi
+; ANY-NEXT:    adcq $0, %rdx
+; ANY-NEXT:    adcq $0, %rcx
+; ANY-NEXT:    adcq $0, %r8
+; ANY-NEXT:    adcq $0, %r9
+; ANY-NEXT:    adcq $0, %r10
+; ANY-NEXT:    adcq $0, %rax
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rsi
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r9
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
+; ANY-NEXT:    orq %rcx, %rax
+; ANY-NEXT:    orq %r9, %rax
+; ANY-NEXT:    orq %rsi, %rax
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
+; ANY-NEXT:    orq %rdx, %r10
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r8
+; ANY-NEXT:    orq %r10, %r8
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rdi
+; ANY-NEXT:    orq %r8, %rdi
+; ANY-NEXT:    orq %rax, %rdi
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
+  %a2 = add i512 %a, 1
+  %r = icmp eq i512 %a2, %b
+  ret i1 %r
+}
+
+define i1 @eq_i128_load_arg(i128 *%p, i128 %b) {
+; ANY-LABEL: eq_i128_load_arg:
+; ANY:       # %bb.0:
+; ANY-NEXT:    xorq 8(%rdi), %rdx
+; ANY-NEXT:    xorq (%rdi), %rsi
+; ANY-NEXT:    orq %rdx, %rsi
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
+  %a = load i128, i128* %p
+  %r = icmp eq i128 %a, %b
+  ret i1 %r
+}
+
+define i1 @eq_i256_load_arg(i256 *%p, i256 %b) {
+; ANY-LABEL: eq_i256_load_arg:
+; ANY:       # %bb.0:
+; ANY-NEXT:    xorq 24(%rdi), %r8
+; ANY-NEXT:    xorq 8(%rdi), %rdx
+; ANY-NEXT:    orq %r8, %rdx
+; ANY-NEXT:    xorq 16(%rdi), %rcx
+; ANY-NEXT:    xorq (%rdi), %rsi
+; ANY-NEXT:    orq %rcx, %rsi
+; ANY-NEXT:    orq %rdx, %rsi
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
+  %a = load i256, i256* %p
+  %r = icmp eq i256 %a, %b
+  ret i1 %r
+}
+
+define i1 @eq_i512_load_arg(i512 *%p, i512 %b) {
+; ANY-LABEL: eq_i512_load_arg:
+; ANY:       # %bb.0:
+; ANY-NEXT:    movq 40(%rdi), %r10
+; ANY-NEXT:    movq 48(%rdi), %rax
+; ANY-NEXT:    movq 56(%rdi), %r11
+; ANY-NEXT:    xorq 24(%rdi), %r8
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r11
+; ANY-NEXT:    orq %r8, %r11
+; ANY-NEXT:    xorq 8(%rdi), %rdx
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
+; ANY-NEXT:    orq %r11, %r10
+; ANY-NEXT:    orq %rdx, %r10
+; ANY-NEXT:    xorq 32(%rdi), %r9
+; ANY-NEXT:    xorq (%rdi), %rsi
+; ANY-NEXT:    xorq 16(%rdi), %rcx
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
+; ANY-NEXT:    orq %rcx, %rax
+; ANY-NEXT:    orq %r9, %rax
+; ANY-NEXT:    orq %rsi, %rax
+; ANY-NEXT:    orq %r10, %rax
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
+  %a = load i512, i512* %p
+  %r = icmp eq i512 %a, %b
+  ret i1 %r
+}

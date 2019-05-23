@@ -410,6 +410,10 @@ void CodeGenModule::Release() {
       AddGlobalCtor(CudaCtorFunction);
   }
   if (OpenMPRuntime) {
+    if (llvm::Function *OpenMPRequiresDirectiveRegFun =
+            OpenMPRuntime->emitRequiresDirectiveRegFun()) {
+      AddGlobalCtor(OpenMPRequiresDirectiveRegFun, 0);
+    }
     if (llvm::Function *OpenMPRegistrationFunction =
             OpenMPRuntime->emitRegistrationFunction()) {
       auto ComdatKey = OpenMPRegistrationFunction->hasComdat() ?
@@ -798,7 +802,7 @@ static bool shouldAssumeDSOLocal(const CodeGenModule &CGM,
   const auto &CGOpts = CGM.getCodeGenOpts();
   llvm::Reloc::Model RM = CGOpts.RelocationModel;
   const auto &LOpts = CGM.getLangOpts();
-  if (RM != llvm::Reloc::Static && !LOpts.PIE)
+  if (RM != llvm::Reloc::Static && !LOpts.PIE && !LOpts.OpenMPIsDevice)
     return false;
 
   // A definition cannot be preempted from an executable.
@@ -4882,7 +4886,7 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
     // evaluating the initializer if the surrounding constant expression
     // modifies the temporary.
     Value = getContext().getMaterializedTemporaryValue(E, false);
-    if (Value && Value->isUninit())
+    if (Value && Value->isAbsent())
       Value = nullptr;
   }
 

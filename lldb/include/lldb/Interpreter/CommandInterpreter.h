@@ -404,7 +404,7 @@ public:
   }
 
   void SkipAppInitFiles(bool skip_app_init_files) {
-    m_skip_app_init_files = m_skip_lldbinit_files;
+    m_skip_app_init_files = skip_app_init_files;
   }
 
   bool GetSynchronous();
@@ -440,8 +440,6 @@ public:
            "--show-all-children option to %s or raise the limit by changing "
            "the target.max-children-count setting.\n";
   }
-
-  const CommandHistory &GetCommandHistory() const { return m_command_history; }
 
   CommandHistory &GetCommandHistory() { return m_command_history; }
 

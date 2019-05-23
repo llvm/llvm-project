@@ -23,9 +23,9 @@ entry:
 define i64 @test_xaddrX4(i8* %p) {
 ; CHECK-LABEL: test_xaddrX4:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li r4, 3
 ; CHECK-NEXT:    std r3, -8(r1)
-; CHECK-NEXT:    addi r3, r3, 3
-; CHECK-NEXT:    ld r3, 0(r3)
+; CHECK-NEXT:    ldx r3, r3, r4
 ; CHECK-NEXT:    blr
 entry:
   %p.addr = alloca i8*, align 8
@@ -41,8 +41,8 @@ entry:
 define <2 x double> @test_xaddrX16(double* %arr) {
 ; CHECK-LABEL: test_xaddrX16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi r3, r3, 40
-; CHECK-NEXT:    lxvx vs34, 0, r3
+; CHECK-NEXT:    li r4, 40
+; CHECK-NEXT:    lxvx vs34, r3, r4
 ; CHECK-NEXT:    blr
 entry:
   %arrayidx1 = getelementptr inbounds double, double* %arr, i64 5
@@ -79,12 +79,13 @@ define i64 @test_xaddrX4_loop(i8* %p) {
 ; CHECK-NEXT:    li r3, 8
 ; CHECK-NEXT:    mtctr r3
 ; CHECK-NEXT:    li r3, 0
-; CHECK-NEXT:    .p2align 5
+; CHECK-NEXT:    li r5, 3
+; loop instruction number is changed from 5 to 4, so its align is changed from 5 to 4.
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB4_1: # %for.body
-; CHECK:         ldu r5, 8(r4)
-; CHECK-NEXT:    addi r6, r4, 3
-; CHECK-NEXT:    ld r6, 0(r6)
-; CHECK-NEXT:    maddld r3, r6, r5, r3
+; CHECK:         ldu r6, 8(r4)
+; CHECK-NEXT:    ldx r7, r4, r5
+; CHECK-NEXT:    maddld r3, r7, r6, r3
 ; CHECK-NEXT:    bdnz .LBB4_1
 ; CHECK-NEXT:  # %bb.2: # %for.end
 ; CHECK-NEXT:    blr

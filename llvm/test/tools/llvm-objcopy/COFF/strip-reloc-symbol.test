@@ -2,4 +2,4 @@ RUN: yaml2obj %p/Inputs/strip-symbols.yaml > %t.o
 RUN: not llvm-objcopy -N foo %t.o 2>&1 | FileCheck %s --check-prefix=ERROR
 RUN: not llvm-objcopy --strip-symbol foo %t.o 2>&1 | FileCheck %s --check-prefix=ERROR
 
-ERROR: error: '{{.*}}{{/|\\}}strip-reloc-symbol.test.tmp.o': not stripping symbol 'foo' because it is named in a relocation.
+ERROR: error: '{{.*}}{{/|\\}}strip-reloc-symbol.test.tmp.o': not stripping symbol 'foo' because it is named in a relocation

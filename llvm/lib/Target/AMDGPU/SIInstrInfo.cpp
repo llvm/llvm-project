@@ -2514,6 +2514,10 @@ bool SIInstrInfo::mayReadEXEC(const MachineRegisterInfo &MRI,
     return MI.readsRegister(AMDGPU::EXEC, &RI);
   }
 
+  // Make a conservative assumption about the callee.
+  if (MI.isCall())
+    return true;
+
   // Be conservative with any unhandled generic opcodes.
   if (!isTargetSpecificOpcode(MI.getOpcode()))
     return true;
@@ -5574,7 +5578,8 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case TargetOpcode::INLINEASM_BR: {
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
-    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo(),
+                              &MF->getSubtarget());
   }
   default:
     return DescSize;

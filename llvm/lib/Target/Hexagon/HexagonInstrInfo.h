@@ -264,8 +264,10 @@ public:
 
   /// Measure the specified inline asm to determine an approximation of its
   /// length.
-  unsigned getInlineAsmLength(const char *Str,
-                              const MCAsmInfo &MAI) const override;
+  unsigned getInlineAsmLength(
+    const char *Str,
+    const MCAsmInfo &MAI,
+    const TargetSubtargetInfo *STI = nullptr) const override;
 
   /// Allocate and return a hazard recognizer to use for this target when
   /// scheduling the machine instructions after register allocation.

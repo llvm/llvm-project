@@ -878,6 +878,11 @@ def err_lambda_missing_parens : Error<
   "attribute specifier|'constexpr'}0">;
 def err_lambda_decl_specifier_repeated : Error<
   "%select{'mutable'|'constexpr'}0 cannot appear multiple times in a lambda declarator">;
+def err_lambda_capture_misplaced_ellipsis : Error<
+  "ellipsis in pack %select{|init-}0capture must appear %select{after|before}0 "
+  "the name of the capture">;
+def err_lambda_capture_multiple_ellipses : Error<
+  "multiple ellipses in pack capture">;
 // C++17 lambda expressions
 def err_expected_star_this_capture : Error<
   "expected 'this' following '*' in lambda capture list">;
@@ -889,15 +894,15 @@ def warn_cxx14_compat_constexpr_on_lambda : Warning<
 def ext_constexpr_on_lambda_cxx17 : ExtWarn<
   "'constexpr' on lambda expressions is a C++17 extension">, InGroup<CXX17>;
 
- // C++2a template lambdas
- def ext_lambda_template_parameter_list: ExtWarn<
+// C++2a template lambdas
+def ext_lambda_template_parameter_list: ExtWarn<
   "explicit template parameter list for lambdas is a C++2a extension">,
   InGroup<CXX2a>;
 def warn_cxx17_compat_lambda_template_parameter_list: Warning<
   "explicit template parameter list for lambdas is incompatible with "
   "C++ standards before C++2a">, InGroup<CXXPre2aCompat>, DefaultIgnore;
- def err_lambda_template_parameter_list_empty : Error<
-   "lambda template parameter list cannot be empty">;
+def err_lambda_template_parameter_list_empty : Error<
+  "lambda template parameter list cannot be empty">;
 
 // Availability attribute
 def err_expected_version : Error<

@@ -59,22 +59,23 @@ public:
 
   // Constructors and Destructors
   Scalar();
-  Scalar(int v) : m_type(e_sint), m_float((float)0) {
+  Scalar(int v) : m_type(e_sint), m_float(static_cast<float>(0)) {
     m_integer = llvm::APInt(sizeof(int) * 8, v, true);
   }
-  Scalar(unsigned int v) : m_type(e_uint), m_float((float)0) {
+  Scalar(unsigned int v) : m_type(e_uint), m_float(static_cast<float>(0)) {
     m_integer = llvm::APInt(sizeof(int) * 8, v);
   }
-  Scalar(long v) : m_type(e_slong), m_float((float)0) {
+  Scalar(long v) : m_type(e_slong), m_float(static_cast<float>(0)) {
     m_integer = llvm::APInt(sizeof(long) * 8, v, true);
   }
-  Scalar(unsigned long v) : m_type(e_ulong), m_float((float)0) {
+  Scalar(unsigned long v) : m_type(e_ulong), m_float(static_cast<float>(0)) {
     m_integer = llvm::APInt(sizeof(long) * 8, v);
   }
-  Scalar(long long v) : m_type(e_slonglong), m_float((float)0) {
+  Scalar(long long v) : m_type(e_slonglong), m_float(static_cast<float>(0)) {
     m_integer = llvm::APInt(sizeof(long long) * 8, v, true);
   }
-  Scalar(unsigned long long v) : m_type(e_ulonglong), m_float((float)0) {
+  Scalar(unsigned long long v)
+      : m_type(e_ulonglong), m_float(static_cast<float>(0)) {
     m_integer = llvm::APInt(sizeof(long long) * 8, v);
   }
   Scalar(float v) : m_type(e_float), m_float(v) { m_float = llvm::APFloat(v); }
@@ -82,17 +83,20 @@ public:
     m_float = llvm::APFloat(v);
   }
   Scalar(long double v, bool ieee_quad)
-      : m_type(e_long_double), m_float((float)0), m_ieee_quad(ieee_quad) {
+      : m_type(e_long_double), m_float(static_cast<float>(0)),
+        m_ieee_quad(ieee_quad) {
     if (ieee_quad)
-      m_float = llvm::APFloat(llvm::APFloat::IEEEquad(),
-                              llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
-                                          ((type128 *)&v)->x));
+      m_float =
+          llvm::APFloat(llvm::APFloat::IEEEquad(),
+                        llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
+                                    (reinterpret_cast<type128 *>(&v))->x));
     else
-      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
-                              llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
-                                          ((type128 *)&v)->x));
+      m_float =
+          llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
+                        llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
+                                    (reinterpret_cast<type128 *>(&v))->x));
   }
-  Scalar(llvm::APInt v) : m_type(), m_float((float)0) {
+  Scalar(llvm::APInt v) : m_type(), m_float(static_cast<float>(0)) {
     m_integer = llvm::APInt(v);
     switch (m_integer.getBitWidth()) {
     case 8:
@@ -115,7 +119,6 @@ public:
     }
     lldbassert(false && "unsupported bitwidth");
   }
-  Scalar(const Scalar &rhs);
   // Scalar(const RegisterValue& reg_value);
   virtual ~Scalar();
 
@@ -253,7 +256,9 @@ public:
     if (total_byte_size == 8)
       return true;
 
-    const uint64_t max = ((uint64_t)1 << (uint64_t)(total_byte_size * 8)) - 1;
+    const uint64_t max = (static_cast<uint64_t>(1)
+                          << static_cast<uint64_t>(total_byte_size * 8)) -
+                         1;
     return uval64 <= max;
   }
 
@@ -264,7 +269,9 @@ public:
     if (total_byte_size == 8)
       return true;
 
-    const int64_t max = ((int64_t)1 << (uint64_t)(total_byte_size * 8 - 1)) - 1;
+    const int64_t max = (static_cast<int64_t>(1)
+                         << static_cast<uint64_t>(total_byte_size * 8 - 1)) -
+                        1;
     const int64_t min = ~(max);
     return min <= sval64 && sval64 <= max;
   }

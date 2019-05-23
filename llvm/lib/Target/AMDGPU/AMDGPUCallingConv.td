@@ -110,12 +110,12 @@ def CSR_AMDGPU_VGPRs_32_255 : CalleeSavedRegs<
   (sequence "VGPR%u", 32, 255)
 >;
 
-def CSR_AMDGPU_SGPRs_32_103 : CalleeSavedRegs<
-  (sequence "SGPR%u", 32, 103)
+def CSR_AMDGPU_SGPRs_32_105 : CalleeSavedRegs<
+  (sequence "SGPR%u", 32, 105)
 >;
 
 def CSR_AMDGPU_HighRegs : CalleeSavedRegs<
-  (add CSR_AMDGPU_VGPRs_32_255, CSR_AMDGPU_SGPRs_32_103)
+  (add CSR_AMDGPU_VGPRs_32_255, CSR_AMDGPU_SGPRs_32_105)
 >;
 
 // Calling convention for leaf functions

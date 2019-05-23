@@ -29,7 +29,7 @@ void CloexecAcceptCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void CloexecAcceptCheck::check(const MatchFinder::MatchResult &Result) {
-  const std::string &ReplacementText =
+  std::string ReplacementText =
       (Twine("accept4(") + getSpellingArg(Result, 0) + ", " +
        getSpellingArg(Result, 1) + ", " + getSpellingArg(Result, 2) +
        ", SOCK_CLOEXEC)")

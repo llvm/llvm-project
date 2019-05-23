@@ -67,7 +67,7 @@ int StringExtractor::DecodeHexU8() {
     return -1;
   }
   m_index += 2;
-  return (uint8_t)((hi_nibble << 4) + lo_nibble);
+  return static_cast<uint8_t>((hi_nibble << 4) + lo_nibble);
 }
 
 // Extract an unsigned character from two hex ASCII chars in the packet string,
@@ -87,7 +87,7 @@ bool StringExtractor::GetHexU8Ex(uint8_t &ch, bool set_eof_on_fail) {
     // ch should not be changed in case of failure
     return false;
   }
-  ch = (uint8_t)byte;
+  ch = static_cast<uint8_t>(byte);
   return true;
 }
 
@@ -172,12 +172,12 @@ uint32_t StringExtractor::GetHexMaxU32(bool little_endian,
       if (m_index < m_packet.size() && ::isxdigit(m_packet[m_index])) {
         nibble_lo = xdigit_to_sint(m_packet[m_index]);
         ++m_index;
-        result |= ((uint32_t)nibble_hi << (shift_amount + 4));
-        result |= ((uint32_t)nibble_lo << shift_amount);
+        result |= (static_cast<uint32_t>(nibble_hi) << (shift_amount + 4));
+        result |= (static_cast<uint32_t>(nibble_lo) << shift_amount);
         nibble_count += 2;
         shift_amount += 8;
       } else {
-        result |= ((uint32_t)nibble_hi << shift_amount);
+        result |= (static_cast<uint32_t>(nibble_hi) << shift_amount);
         nibble_count += 1;
         shift_amount += 4;
       }
@@ -223,12 +223,12 @@ uint64_t StringExtractor::GetHexMaxU64(bool little_endian,
       if (m_index < m_packet.size() && ::isxdigit(m_packet[m_index])) {
         nibble_lo = xdigit_to_sint(m_packet[m_index]);
         ++m_index;
-        result |= ((uint64_t)nibble_hi << (shift_amount + 4));
-        result |= ((uint64_t)nibble_lo << shift_amount);
+        result |= (static_cast<uint64_t>(nibble_hi) << (shift_amount + 4));
+        result |= (static_cast<uint64_t>(nibble_lo) << shift_amount);
         nibble_count += 2;
         shift_amount += 8;
       } else {
-        result |= ((uint64_t)nibble_hi << shift_amount);
+        result |= (static_cast<uint64_t>(nibble_hi) << shift_amount);
         nibble_count += 1;
         shift_amount += 4;
       }
@@ -289,7 +289,7 @@ size_t StringExtractor::GetHexBytesAvail(llvm::MutableArrayRef<uint8_t> dest) {
     int decode = DecodeHexU8();
     if (decode == -1)
       break;
-    dest[0] = (uint8_t)decode;
+    dest[0] = static_cast<uint8_t>(decode);
     dest = dest.drop_front();
     ++bytes_extracted;
   }
@@ -310,7 +310,7 @@ uint64_t StringExtractor::GetHexWithFixedSize(uint32_t byte_size,
       uint32_t shift_amount;
       for (i = 0, shift_amount = 0; i < byte_size && IsGood();
            ++i, shift_amount += 8) {
-        result |= ((uint64_t)GetHexU8() << shift_amount);
+        result |= (static_cast<uint64_t>(GetHexU8()) << shift_amount);
       }
     } else {
       // Big Endian

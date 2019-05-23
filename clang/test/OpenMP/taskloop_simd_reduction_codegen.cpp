@@ -165,8 +165,14 @@ sum = 0.0;
 // CHECK: define internal void @[[RED_INIT2]](i8*)
 // CHECK: call i8* @__kmpc_threadprivate_cached(
 // CHECK: call i8* @__kmpc_threadprivate_cached(
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(
+// CHECK: call void [[OMP_INIT1:@.+]](
 // CHECK: ret void
+
+// CHECK: define internal void [[OMP_COMB1:@.+]](%struct.S* noalias, %struct.S* noalias)
+// CHECK: fadd float %
+
+// CHECK: define internal void [[OMP_INIT1]](%struct.S* noalias, %struct.S* noalias)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(
 
 // CHECK: define internal void @[[RED_FINI2]](i8*)
 // CHECK: call i8* @__kmpc_threadprivate_cached(
@@ -175,8 +181,7 @@ sum = 0.0;
 
 // CHECK: define internal void @[[RED_COMB2]](i8*, i8*)
 // CHECK: call i8* @__kmpc_threadprivate_cached(
-// CHECK: fadd float %
-// CHECK: store float %{{.+}}, float* %
+// CHECK: call void [[OMP_COMB1]](
 // CHECK: ret void
 
 // CHECK: define internal void @[[RED_INIT3]](i8*)

@@ -258,23 +258,17 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
     log->Printf("Module being sent to JIT: \n%s", s.c_str());
   }
 
-  llvm::Triple triple(m_module->getTargetTriple());
-  llvm::Reloc::Model relocModel;
-
-  if (triple.isOSBinFormatELF()) {
-    relocModel = llvm::Reloc::Static;
-  } else {
-    relocModel = llvm::Reloc::PIC_;
-  }
-
   m_module_up->getContext().setInlineAsmDiagnosticHandler(ReportInlineAsmError,
                                                           &error);
 
   llvm::EngineBuilder builder(std::move(m_module_up));
+  llvm::Triple triple(m_module->getTargetTriple());
 
   builder.setEngineKind(llvm::EngineKind::JIT)
       .setErrorStr(&error_string)
-      .setRelocationModel(relocModel)
+      .setRelocationModel(triple.isOSBinFormatMachO()
+                              ? llvm::Reloc::PIC_
+                              : llvm::Reloc::Static)
       .setMCJITMemoryManager(
           std::unique_ptr<MemoryManager>(new MemoryManager(*this)))
       .setOptLevel(llvm::CodeGenOpt::Less);
