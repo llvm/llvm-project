@@ -906,6 +906,7 @@ bool ARMCodeGenPrepare::TryToPromote(Value *V) {
     return false;
 
   SafeToPromote.clear();
+  SafeWrap.clear();
 
   if (!isSupportedValue(V) || !shouldPromote(V) || !isLegalToPromote(V))
     return false;
