@@ -22,8 +22,14 @@
 
 namespace lld {
 namespace elf {
-class Symbol;
+class CommonSymbol;
+class Defined;
 class InputFile;
+class LazyArchive;
+class LazyObject;
+class SharedSymbol;
+class Symbol;
+class Undefined;
 } // namespace elf
 
 std::string toString(const elf::Symbol &);
@@ -174,12 +180,41 @@ public:
   uint64_t getSize() const;
   OutputSection *getOutputSection() const;
 
+  // The following two functions are used for symbol resolution.
+  //
+  // You are expected to call mergeProperties for all symbols in input
+  // files so that attributes that are attached to names rather than
+  // indivisual symbol (such as visibility) are merged together.
+  //
+  // Every time you read a new symbol from an input, you are supposed
+  // to call resolve() with the new symbol. That function replaces
+  // "this" object as a result of name resolution if the new symbol is
+  // more appropriate to be included in the output.
+  //
+  // For example, if "this" is an undefined symbol and a new symbol is
+  // a defined symbol, "this" is replaced with the new symbol.
+  void mergeProperties(const Symbol &Other);
+  void resolve(const Symbol &Other);
+
+  // If this is a lazy symbol, fetch an input file and add the symbol
+  // in the file to the symbol table. Calling this function on
+  // non-lazy object causes a runtime error.
+  void fetch() const;
+
 private:
   static bool isExportDynamic(Kind K, uint8_t Visibility) {
     if (K == SharedKind)
       return Visibility == llvm::ELF::STV_DEFAULT;
     return Config->Shared || Config->ExportDynamic;
   }
+
+  void resolveUndefined(const Undefined &Other);
+  void resolveCommon(const CommonSymbol &Other);
+  void resolveDefined(const Defined &Other);
+  template <class LazyT> void resolveLazy(const LazyT &Other);
+  void resolveShared(const SharedSymbol &Other);
+
+  int compare(const Symbol *Other) const;
 
   inline size_t getSymbolSize() const;
 
@@ -351,10 +386,8 @@ public:
 
   static bool classof(const Symbol *S) { return S->kind() == LazyArchiveKind; }
 
-  InputFile *fetch() const;
   MemoryBufferRef getMemberBuffer();
 
-private:
   const llvm::object::Archive::Symbol Sym;
 };
 
@@ -367,8 +400,6 @@ public:
                llvm::ELF::STV_DEFAULT, llvm::ELF::STT_NOTYPE) {}
 
   static bool classof(const Symbol *S) { return S->kind() == LazyObjectKind; }
-
-  InputFile *fetch() const;
 };
 
 // Some linker-generated symbols need to be created as

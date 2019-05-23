@@ -16,7 +16,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBCommunication::SBCommunication() : m_opaque(NULL), m_opaque_owned(false) {
+SBCommunication::SBCommunication() : m_opaque(nullptr), m_opaque_owned(false) {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBCommunication);
 }
 
@@ -28,7 +28,7 @@ SBCommunication::SBCommunication(const char *broadcaster_name)
 SBCommunication::~SBCommunication() {
   if (m_opaque && m_opaque_owned)
     delete m_opaque;
-  m_opaque = NULL;
+  m_opaque = nullptr;
   m_opaque_owned = false;
 }
 
@@ -39,7 +39,7 @@ bool SBCommunication::IsValid() const {
 SBCommunication::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommunication, operator bool);
 
-  return m_opaque != NULL;
+  return m_opaque != nullptr;
 }
 
 bool SBCommunication::GetCloseOnEOF() {
@@ -64,7 +64,7 @@ ConnectionStatus SBCommunication::Connect(const char *url) {
   if (m_opaque) {
     if (!m_opaque->HasConnection())
       m_opaque->SetConnection(Host::CreateDefaultConnection(url).release());
-    return m_opaque->Connect(url, NULL);
+    return m_opaque->Connect(url, nullptr);
   }
   return eConnectionStatusNoConnection;
 }
@@ -115,7 +115,7 @@ size_t SBCommunication::Read(void *dst, size_t dst_len, uint32_t timeout_usec,
                                     ? Timeout<std::micro>(llvm::None)
                                     : std::chrono::microseconds(timeout_usec);
   if (m_opaque)
-    bytes_read = m_opaque->Read(dst, dst_len, timeout, status, NULL);
+    bytes_read = m_opaque->Read(dst, dst_len, timeout, status, nullptr);
   else
     status = eConnectionStatusNoConnection;
 
@@ -130,7 +130,7 @@ size_t SBCommunication::Write(const void *src, size_t src_len,
 
   size_t bytes_written = 0;
   if (m_opaque)
-    bytes_written = m_opaque->Write(src, src_len, status, NULL);
+    bytes_written = m_opaque->Write(src, src_len, status, nullptr);
   else
     status = eConnectionStatusNoConnection;
 

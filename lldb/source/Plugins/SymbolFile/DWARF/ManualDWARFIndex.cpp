@@ -141,8 +141,8 @@ void ManualDWARFIndex::IndexUnitImpl(
     }
 
     DWARFAttributes attributes;
-    const char *name = NULL;
-    const char *mangled_cstr = NULL;
+    const char *name = nullptr;
+    const char *mangled_cstr = nullptr;
     bool is_declaration = false;
     // bool is_artificial = false;
     bool has_address = false;
@@ -194,7 +194,7 @@ void ManualDWARFIndex::IndexUnitImpl(
           has_location_or_const_value = true;
           if (tag == DW_TAG_variable) {
             const DWARFDebugInfoEntry *parent_die = die.GetParent();
-            while (parent_die != NULL) {
+            while (parent_die != nullptr) {
               switch (parent_die->Tag()) {
               case DW_TAG_subprogram:
               case DW_TAG_lexical_block:
@@ -219,13 +219,13 @@ void ManualDWARFIndex::IndexUnitImpl(
                 //     }
                 //   }
                 // }
-                parent_die = NULL; // Terminate the while loop.
+                parent_die = nullptr; // Terminate the while loop.
                 break;
 
               case DW_TAG_compile_unit:
               case DW_TAG_partial_unit:
                 is_global_or_static_variable = true;
-                parent_die = NULL; // Terminate the while loop.
+                parent_die = nullptr; // Terminate the while loop.
                 break;
 
               default:

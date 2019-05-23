@@ -83,7 +83,7 @@ bool SBAddress::IsValid() const {
 SBAddress::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBAddress, operator bool);
 
-  return m_opaque_up != NULL && m_opaque_up->IsValid();
+  return m_opaque_up != nullptr && m_opaque_up->IsValid();
 }
 
 void SBAddress::Clear() {
@@ -186,7 +186,7 @@ Address *SBAddress::operator->() { return m_opaque_up.get(); }
 const Address *SBAddress::operator->() const { return m_opaque_up.get(); }
 
 Address &SBAddress::ref() {
-  if (m_opaque_up == NULL)
+  if (m_opaque_up == nullptr)
     m_opaque_up.reset(new Address());
   return *m_opaque_up;
 }
@@ -208,7 +208,7 @@ bool SBAddress::GetDescription(SBStream &description) {
   // case there isn't one already...
   Stream &strm = description.ref();
   if (m_opaque_up->IsValid()) {
-    m_opaque_up->Dump(&strm, NULL, Address::DumpStyleResolvedDescription,
+    m_opaque_up->Dump(&strm, nullptr, Address::DumpStyleResolvedDescription,
                       Address::DumpStyleModuleWithFileAddress, 4);
     StreamString sstrm;
     //        m_opaque_up->Dump (&sstrm, NULL,

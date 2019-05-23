@@ -555,14 +555,11 @@ set(LLVM_BINUTILS_INCDIR "" CACHE PATH
 	"PATH to binutils/include containing plugin-api.h for gold plugin.")
 
 if(CMAKE_GENERATOR STREQUAL "Ninja")
-  include(CMakeNinjaFindMake OPTIONAL)
-  if(CMAKE_MAKE_PROGRAM)
-    execute_process(COMMAND ${CMAKE_MAKE_PROGRAM} --version
-      OUTPUT_VARIABLE NINJA_VERSION
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-    set(NINJA_VERSION ${NINJA_VERSION} CACHE STRING "Ninja version number" FORCE)
-    message(STATUS "Ninja version: ${NINJA_VERSION}")
-  endif()
+  execute_process(COMMAND ${CMAKE_MAKE_PROGRAM} --version
+    OUTPUT_VARIABLE NINJA_VERSION
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(NINJA_VERSION ${NINJA_VERSION} CACHE STRING "Ninja version number" FORCE)
+  message(STATUS "Ninja version: ${NINJA_VERSION}")
 endif()
 
 if(CMAKE_GENERATOR STREQUAL "Ninja" AND

@@ -104,7 +104,7 @@ DynamicLoader *DynamicLoaderHexagonDYLD::CreateInstance(Process *process,
 
   if (create)
     return new DynamicLoaderHexagonDYLD(process);
-  return NULL;
+  return nullptr;
 }
 
 DynamicLoaderHexagonDYLD::DynamicLoaderHexagonDYLD(Process *process)
@@ -420,7 +420,7 @@ DynamicLoaderHexagonDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   const SymbolContext &context = frame->GetSymbolContext(eSymbolContextSymbol);
   Symbol *sym = context.symbol;
 
-  if (sym == NULL || !sym->IsTrampoline())
+  if (sym == nullptr || !sym->IsTrampoline())
     return thread_plan_sp;
 
   const ConstString sym_name = sym->GetMangled().GetName(

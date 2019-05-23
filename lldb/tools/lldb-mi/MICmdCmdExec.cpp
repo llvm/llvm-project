@@ -983,13 +983,13 @@ bool CMICmdCmdExecArguments::Execute() {
   }
 
   lldb::SBLaunchInfo sbLaunchInfo = sbTarget.GetLaunchInfo();
-  sbLaunchInfo.SetArguments(NULL, false);
+  sbLaunchInfo.SetArguments(nullptr, false);
 
   CMIUtilString strArg;
   size_t nArgIndex = 0;
   while (pArgArguments->GetExpectedOption<CMICmdArgValString, CMIUtilString>(
       strArg, nArgIndex)) {
-    const char *argv[2] = {strArg.c_str(), NULL};
+    const char *argv[2] = {strArg.c_str(), nullptr};
     sbLaunchInfo.SetArguments(argv, true);
     ++nArgIndex;
   }

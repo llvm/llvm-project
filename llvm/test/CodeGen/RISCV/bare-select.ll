@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32I
 
-define i32 @bare_select(i1 %a, i32 %b, i32 %c) {
+define i32 @bare_select(i1 %a, i32 %b, i32 %c) nounwind {
 ; RV32I-LABEL: bare_select:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    andi a0, a0, 1
@@ -16,7 +16,7 @@ define i32 @bare_select(i1 %a, i32 %b, i32 %c) {
   ret i32 %1
 }
 
-define float @bare_select_float(i1 %a, float %b, float %c) {
+define float @bare_select_float(i1 %a, float %b, float %c) nounwind {
 ; RV32I-LABEL: bare_select_float:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    andi a0, a0, 1

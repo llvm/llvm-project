@@ -122,7 +122,7 @@ RegisterContextDarwin_arm64::GetRegisterInfoAtIndex(size_t reg) {
   assert(k_num_register_infos == k_num_registers);
   if (reg < k_num_registers)
     return &g_register_infos_arm64_le[reg];
-  return NULL;
+  return nullptr;
 }
 
 size_t RegisterContextDarwin_arm64::GetRegisterInfosCount() {
@@ -157,7 +157,7 @@ size_t RegisterContextDarwin_arm64::GetRegisterSetCount() {
 const RegisterSet *RegisterContextDarwin_arm64::GetRegisterSet(size_t reg_set) {
   if (reg_set < k_num_regsets)
     return &g_reg_sets[reg_set];
-  return NULL;
+  return nullptr;
 }
 
 // Register information definitions for arm64

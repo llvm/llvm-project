@@ -60,7 +60,7 @@ GetRegisterInfoPtr(const lldb_private::ArchSpec &target_arch) {
     return g_register_infos_arm64_le;
   default:
     assert(false && "Unhandled target architecture.");
-    return NULL;
+    return nullptr;
   }
 }
 

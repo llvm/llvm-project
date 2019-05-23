@@ -1643,11 +1643,6 @@ void printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
 
   const StringRef FileName = O->getFileName();
   for (auto I = O->symbol_begin(), E = O->symbol_end(); I != E; ++I) {
-    // Skip printing the special zero symbol when dumping an ELF file.
-    // This makes the output consistent with the GNU objdump.
-    if (I == O->symbol_begin() && isa<ELFObjectFileBase>(O))
-      continue;
-
     const SymbolRef &Symbol = *I;
     uint64_t Address = unwrapOrError(Symbol.getAddress(), ArchiveName, FileName,
                                      ArchitectureName);

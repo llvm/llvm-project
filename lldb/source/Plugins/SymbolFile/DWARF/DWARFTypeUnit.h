@@ -14,6 +14,8 @@
 
 class DWARFTypeUnit : public DWARFUnit {
 public:
+  void BuildAddressRangeTable(DWARFDebugAranges *debug_aranges) override {}
+
   void Dump(lldb_private::Stream *s) const override;
 
 private:

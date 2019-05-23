@@ -10,8 +10,6 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Host/StringConvert.h"
-#include "lldb/Symbol/CompileUnit.h"
-#include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/StreamString.h"
@@ -23,7 +21,6 @@
 #include "DWARFDebugInfo.h"
 #include "DWARFTypeUnit.h"
 #include "LogChannelDWARF.h"
-#include "SymbolFileDWARFDebugMap.h"
 #include "SymbolFileDWARFDwo.h"
 
 using namespace lldb;
@@ -407,98 +404,6 @@ void DWARFUnit::ClearDIEsRWLocked() {
     m_dwo_symbol_file->GetCompileUnit()->ClearDIEsRWLocked();
 }
 
-void DWARFUnit::BuildAddressRangeTable(DWARFDebugAranges *debug_aranges) {
-  // This function is usually called if there in no .debug_aranges section in
-  // order to produce a compile unit level set of address ranges that is
-  // accurate.
-
-  size_t num_debug_aranges = debug_aranges->GetNumRanges();
-
-  // First get the compile unit DIE only and check if it has a DW_AT_ranges
-  const DWARFDebugInfoEntry *die = GetUnitDIEPtrOnly();
-
-  const dw_offset_t cu_offset = GetOffset();
-  if (die) {
-    DWARFRangeList ranges;
-    const size_t num_ranges =
-        die->GetAttributeAddressRanges(this, ranges, false);
-    if (num_ranges > 0) {
-      // This compile unit has DW_AT_ranges, assume this is correct if it is
-      // present since clang no longer makes .debug_aranges by default and it
-      // emits DW_AT_ranges for DW_TAG_compile_units. GCC also does this with
-      // recent GCC builds.
-      for (size_t i = 0; i < num_ranges; ++i) {
-        const DWARFRangeList::Entry &range = ranges.GetEntryRef(i);
-        debug_aranges->AppendRange(cu_offset, range.GetRangeBase(),
-                                   range.GetRangeEnd());
-      }
-
-      return; // We got all of our ranges from the DW_AT_ranges attribute
-    }
-  }
-  // We don't have a DW_AT_ranges attribute, so we need to parse the DWARF
-
-  // If the DIEs weren't parsed, then we don't want all dies for all compile
-  // units to stay loaded when they weren't needed. So we can end up parsing
-  // the DWARF and then throwing them all away to keep memory usage down.
-  ScopedExtractDIEs clear_dies(ExtractDIEsScoped());
-
-  die = DIEPtr();
-  if (die)
-    die->BuildAddressRangeTable(this, debug_aranges);
-
-  if (debug_aranges->GetNumRanges() == num_debug_aranges) {
-    // We got nothing from the functions, maybe we have a line tables only
-    // situation. Check the line tables and build the arange table from this.
-    SymbolContext sc;
-    sc.comp_unit = m_dwarf->GetCompUnitForDWARFCompUnit(this);
-    if (sc.comp_unit) {
-      SymbolFileDWARFDebugMap *debug_map_sym_file =
-          m_dwarf->GetDebugMapSymfile();
-      if (debug_map_sym_file == NULL) {
-        LineTable *line_table = sc.comp_unit->GetLineTable();
-
-        if (line_table) {
-          LineTable::FileAddressRanges file_ranges;
-          const bool append = true;
-          const size_t num_ranges =
-              line_table->GetContiguousFileAddressRanges(file_ranges, append);
-          for (uint32_t idx = 0; idx < num_ranges; ++idx) {
-            const LineTable::FileAddressRanges::Entry &range =
-                file_ranges.GetEntryRef(idx);
-            debug_aranges->AppendRange(cu_offset, range.GetRangeBase(),
-                                       range.GetRangeEnd());
-          }
-        }
-      } else
-        debug_map_sym_file->AddOSOARanges(m_dwarf, debug_aranges);
-    }
-  }
-
-  if (debug_aranges->GetNumRanges() == num_debug_aranges) {
-    // We got nothing from the functions, maybe we have a line tables only
-    // situation. Check the line tables and build the arange table from this.
-    SymbolContext sc;
-    sc.comp_unit = m_dwarf->GetCompUnitForDWARFCompUnit(this);
-    if (sc.comp_unit) {
-      LineTable *line_table = sc.comp_unit->GetLineTable();
-
-      if (line_table) {
-        LineTable::FileAddressRanges file_ranges;
-        const bool append = true;
-        const size_t num_ranges =
-            line_table->GetContiguousFileAddressRanges(file_ranges, append);
-        for (uint32_t idx = 0; idx < num_ranges; ++idx) {
-          const LineTable::FileAddressRanges::Entry &range =
-              file_ranges.GetEntryRef(idx);
-          debug_aranges->AppendRange(GetOffset(), range.GetRangeBase(),
-                                     range.GetRangeEnd());
-        }
-      }
-    }
-  }
-}
-
 lldb::ByteOrder DWARFUnit::GetByteOrder() const {
   return m_dwarf->GetObjectFile()->GetByteOrder();
 }
@@ -597,7 +502,7 @@ void DWARFUnit::ParseProducerInfo() {
   if (die) {
 
     const char *producer_cstr =
-        die->GetAttributeValueAsString(this, DW_AT_producer, NULL);
+        die->GetAttributeValueAsString(this, DW_AT_producer, nullptr);
     if (producer_cstr) {
       RegularExpression llvm_gcc_regex(
           llvm::StringRef("^4\\.[012]\\.[01] \\(Based on Apple "
@@ -748,7 +653,7 @@ void DWARFUnit::ComputeCompDirAndGuessPathStyle() {
     return;
 
   llvm::StringRef comp_dir = removeHostnameFromPathname(
-      die->GetAttributeValueAsString(this, DW_AT_comp_dir, NULL));
+      die->GetAttributeValueAsString(this, DW_AT_comp_dir, nullptr));
   if (!comp_dir.empty()) {
     FileSpec::Style comp_dir_style =
         FileSpec::GuessPathStyle(comp_dir).getValueOr(FileSpec::Style::native);
@@ -756,7 +661,8 @@ void DWARFUnit::ComputeCompDirAndGuessPathStyle() {
   } else {
     // Try to detect the style based on the DW_AT_name attribute, but just store
     // the detected style in the m_comp_dir field.
-    const char *name = die->GetAttributeValueAsString(this, DW_AT_name, NULL);
+    const char *name =
+        die->GetAttributeValueAsString(this, DW_AT_name, nullptr);
     m_comp_dir = FileSpec(
         "", FileSpec::GuessPathStyle(name).getValueOr(FileSpec::Style::native));
   }
@@ -769,7 +675,7 @@ SymbolFileDWARFDwo *DWARFUnit::GetDwoSymbolFile() const {
 dw_offset_t DWARFUnit::GetBaseObjOffset() const { return m_base_obj_offset; }
 
 const DWARFDebugAranges &DWARFUnit::GetFunctionAranges() {
-  if (m_func_aranges_up == NULL) {
+  if (m_func_aranges_up == nullptr) {
     m_func_aranges_up.reset(new DWARFDebugAranges());
     const DWARFDebugInfoEntry *die = DIEPtr();
     if (die)

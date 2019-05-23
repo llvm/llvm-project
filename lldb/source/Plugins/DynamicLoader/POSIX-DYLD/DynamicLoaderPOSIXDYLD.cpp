@@ -68,7 +68,7 @@ DynamicLoader *DynamicLoaderPOSIXDYLD::CreateInstance(Process *process,
 
   if (create)
     return new DynamicLoaderPOSIXDYLD(process);
-  return NULL;
+  return nullptr;
 }
 
 DynamicLoaderPOSIXDYLD::DynamicLoaderPOSIXDYLD(Process *process)
@@ -463,7 +463,7 @@ DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   const SymbolContext &context = frame->GetSymbolContext(eSymbolContextSymbol);
   Symbol *sym = context.symbol;
 
-  if (sym == NULL || !sym->IsTrampoline())
+  if (sym == nullptr || !sym->IsTrampoline())
     return thread_plan_sp;
 
   ConstString sym_name = sym->GetName();
@@ -638,7 +638,7 @@ addr_t DynamicLoaderPOSIXDYLD::GetEntryPoint() {
   if (m_entry_point != LLDB_INVALID_ADDRESS)
     return m_entry_point;
 
-  if (m_auxv == NULL)
+  if (m_auxv == nullptr)
     return LLDB_INVALID_ADDRESS;
 
   AuxVector::iterator I = m_auxv->FindEntry(AuxVector::AUXV_AT_ENTRY);

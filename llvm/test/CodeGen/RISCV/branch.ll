@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 
-define void @foo(i32 %a, i32 *%b, i1 %c) {
+define void @foo(i32 %a, i32 *%b, i1 %c) nounwind {
 ; RV32I-LABEL: foo:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lw a3, 0(a1)

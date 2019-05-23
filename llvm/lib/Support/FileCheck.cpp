@@ -34,15 +34,15 @@ bool FileCheckNumericVariable::setValue(uint64_t NewValue) {
 bool FileCheckNumericVariable::clearValue() {
   if (!Value)
     return true;
-  Value = llvm::None;
+  Value = None;
   return false;
 }
 
-llvm::Optional<uint64_t> FileCheckNumExpr::eval() const {
-  llvm::Optional<uint64_t> LeftOp = this->LeftOp->getValue();
+Optional<uint64_t> FileCheckNumExpr::eval() const {
+  Optional<uint64_t> LeftOp = this->LeftOp->getValue();
   // Variable is undefined.
   if (!LeftOp)
-    return llvm::None;
+    return None;
   return EvalBinop(*LeftOp, RightOp);
 }
 
@@ -52,18 +52,18 @@ StringRef FileCheckNumExpr::getUndefVarName() const {
   return StringRef();
 }
 
-llvm::Optional<std::string> FileCheckNumericSubstitution::getResult() const {
-  llvm::Optional<uint64_t> EvaluatedValue = NumExpr->eval();
+Optional<std::string> FileCheckNumericSubstitution::getResult() const {
+  Optional<uint64_t> EvaluatedValue = NumExpr->eval();
   if (!EvaluatedValue)
-    return llvm::None;
+    return None;
   return utostr(*EvaluatedValue);
 }
 
-llvm::Optional<std::string> FileCheckStringSubstitution::getResult() const {
+Optional<std::string> FileCheckStringSubstitution::getResult() const {
   // Look up the value and escape it so that we can put it into the regex.
-  llvm::Optional<StringRef> VarVal = Context->getPatternVarValue(FromStr);
+  Optional<StringRef> VarVal = Context->getPatternVarValue(FromStr);
   if (!VarVal)
-    return llvm::None;
+    return None;
   return Regex::escape(*VarVal);
 }
 
@@ -472,7 +472,7 @@ size_t FileCheckPattern::match(StringRef Buffer, size_t &MatchLen) const {
     // handled by back-references.
     for (const auto &Substitution : Substitutions) {
       // Substitute and check for failure (e.g. use of undefined variable).
-      llvm::Optional<std::string> Value = Substitution->getResult();
+      Optional<std::string> Value = Substitution->getResult();
       if (!Value)
         return StringRef::npos;
 
@@ -533,7 +533,7 @@ void FileCheckPattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
     for (const auto &Substitution : Substitutions) {
       SmallString<256> Msg;
       raw_svector_ostream OS(Msg);
-      llvm::Optional<std::string> MatchedValue = Substitution->getResult();
+      Optional<std::string> MatchedValue = Substitution->getResult();
 
       // Substitution failed or is not known at match time, print the undefined
       // variable it uses.
@@ -625,11 +625,11 @@ void FileCheckPattern::printFuzzyMatch(
   }
 }
 
-llvm::Optional<StringRef>
+Optional<StringRef>
 FileCheckPatternContext::getPatternVarValue(StringRef VarName) {
   auto VarIter = GlobalVariableTable.find(VarName);
   if (VarIter == GlobalVariableTable.end())
-    return llvm::None;
+    return None;
 
   return VarIter->second;
 }
@@ -703,9 +703,8 @@ size_t FileCheckPattern::FindRegexVarEnd(StringRef Str, SourceMgr &SM) {
   return StringRef::npos;
 }
 
-StringRef
-llvm::FileCheck::CanonicalizeFile(MemoryBuffer &MB,
-                                  SmallVectorImpl<char> &OutputBuffer) {
+StringRef FileCheck::CanonicalizeFile(MemoryBuffer &MB,
+                                      SmallVectorImpl<char> &OutputBuffer) {
   OutputBuffer.reserve(MB.getBufferSize());
 
   for (const char *Ptr = MB.getBufferStart(), *End = MB.getBufferEnd();
@@ -923,9 +922,8 @@ FindFirstMatchingPrefix(Regex &PrefixRE, StringRef &Buffer,
   return {StringRef(), StringRef()};
 }
 
-bool llvm::FileCheck::ReadCheckFile(
-    SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
-    std::vector<FileCheckString> &CheckStrings) {
+bool FileCheck::ReadCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
+                              std::vector<FileCheckString> &CheckStrings) {
   if (PatternContext.defineCmdlineVariables(Req.GlobalDefines, SM))
     return true;
 
@@ -1499,7 +1497,7 @@ static bool ValidateCheckPrefix(StringRef CheckPrefix) {
   return Validator.match(CheckPrefix);
 }
 
-bool llvm::FileCheck::ValidateCheckPrefixes() {
+bool FileCheck::ValidateCheckPrefixes() {
   StringSet<> PrefixSet;
 
   for (StringRef Prefix : Req.CheckPrefixes) {
@@ -1517,7 +1515,7 @@ bool llvm::FileCheck::ValidateCheckPrefixes() {
   return true;
 }
 
-Regex llvm::FileCheck::buildCheckPrefixRegex() {
+Regex FileCheck::buildCheckPrefixRegex() {
   // I don't think there's a way to specify an initial value for cl::list,
   // so if nothing was specified, add the default
   if (Req.CheckPrefixes.empty())
@@ -1682,9 +1680,9 @@ void FileCheckPatternContext::clearLocalVars() {
     GlobalNumericVariableTable.erase(Var);
 }
 
-bool llvm::FileCheck::CheckInput(SourceMgr &SM, StringRef Buffer,
-                                 ArrayRef<FileCheckString> CheckStrings,
-                                 std::vector<FileCheckDiag> *Diags) {
+bool FileCheck::CheckInput(SourceMgr &SM, StringRef Buffer,
+                           ArrayRef<FileCheckString> CheckStrings,
+                           std::vector<FileCheckDiag> *Diags) {
   bool ChecksFailed = false;
 
   unsigned i = 0, j = 0, e = CheckStrings.size();

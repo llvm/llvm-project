@@ -104,7 +104,7 @@ static SourceLocation findOpenParen(const CallExpr &E, const SourceManager &SM,
   return findPreviousTokenKind(EndLoc, SM, LangOpts, tok::TokenKind::l_paren);
 }
 
-RangeSelector tooling::node(StringRef ID) {
+RangeSelector tooling::node(std::string ID) {
   return [ID](const MatchResult &Result) -> Expected<CharSourceRange> {
     Expected<DynTypedNode> Node = getNode(Result.Nodes, ID);
     if (!Node)
@@ -115,7 +115,7 @@ RangeSelector tooling::node(StringRef ID) {
   };
 }
 
-RangeSelector tooling::statement(StringRef ID) {
+RangeSelector tooling::statement(std::string ID) {
   return [ID](const MatchResult &Result) -> Expected<CharSourceRange> {
     Expected<DynTypedNode> Node = getNode(Result.Nodes, ID);
     if (!Node)
@@ -143,11 +143,11 @@ RangeSelector tooling::range(RangeSelector Begin, RangeSelector End) {
   };
 }
 
-RangeSelector tooling::range(StringRef BeginID, StringRef EndID) {
-  return tooling::range(node(BeginID), node(EndID));
+RangeSelector tooling::range(std::string BeginID, std::string EndID) {
+  return tooling::range(node(std::move(BeginID)), node(std::move(EndID)));
 }
 
-RangeSelector tooling::member(StringRef ID) {
+RangeSelector tooling::member(std::string ID) {
   return [ID](const MatchResult &Result) -> Expected<CharSourceRange> {
     Expected<DynTypedNode> Node = getNode(Result.Nodes, ID);
     if (!Node)
@@ -159,7 +159,7 @@ RangeSelector tooling::member(StringRef ID) {
   };
 }
 
-RangeSelector tooling::name(StringRef ID) {
+RangeSelector tooling::name(std::string ID) {
   return [ID](const MatchResult &Result) -> Expected<CharSourceRange> {
     Expected<DynTypedNode> N = getNode(Result.Nodes, ID);
     if (!N)
@@ -205,7 +205,7 @@ class RelativeSelector {
   std::string ID;
 
 public:
-  RelativeSelector(StringRef ID) : ID(ID) {}
+  RelativeSelector(std::string ID) : ID(std::move(ID)) {}
 
   Expected<CharSourceRange> operator()(const MatchResult &Result) {
     Expected<DynTypedNode> N = getNode(Result.Nodes, ID);
@@ -218,40 +218,50 @@ public:
 };
 } // namespace
 
+// FIXME: Change the following functions from being in an anonymous namespace
+// to static functions, after the minimum Visual C++ has _MSC_VER >= 1915
+// (equivalent to Visual Studio 2017 v15.8 or higher). Using the anonymous
+// namespace works around a bug in earlier versions.
+namespace {
 // Returns the range of the statements (all source between the braces).
-static CharSourceRange getStatementsRange(const MatchResult &,
-                                          const CompoundStmt &CS) {
+CharSourceRange getStatementsRange(const MatchResult &,
+                                   const CompoundStmt &CS) {
   return CharSourceRange::getCharRange(CS.getLBracLoc().getLocWithOffset(1),
                                        CS.getRBracLoc());
 }
+} // namespace
 
-RangeSelector tooling::statements(StringRef ID) {
-  return RelativeSelector<CompoundStmt, getStatementsRange>(ID);
+RangeSelector tooling::statements(std::string ID) {
+  return RelativeSelector<CompoundStmt, getStatementsRange>(std::move(ID));
 }
 
+namespace {
 // Returns the range of the source between the call's parentheses.
-static CharSourceRange getCallArgumentsRange(const MatchResult &Result,
-                                             const CallExpr &CE) {
+CharSourceRange getCallArgumentsRange(const MatchResult &Result,
+                                      const CallExpr &CE) {
   return CharSourceRange::getCharRange(
       findOpenParen(CE, *Result.SourceManager, Result.Context->getLangOpts())
           .getLocWithOffset(1),
       CE.getRParenLoc());
 }
+} // namespace
 
-RangeSelector tooling::callArgs(StringRef ID) {
-  return RelativeSelector<CallExpr, getCallArgumentsRange>(ID);
+RangeSelector tooling::callArgs(std::string ID) {
+  return RelativeSelector<CallExpr, getCallArgumentsRange>(std::move(ID));
 }
 
+namespace {
 // Returns the range of the elements of the initializer list. Includes all
 // source between the braces.
-static CharSourceRange getElementsRange(const MatchResult &,
-                                        const InitListExpr &E) {
+CharSourceRange getElementsRange(const MatchResult &,
+                                 const InitListExpr &E) {
   return CharSourceRange::getCharRange(E.getLBraceLoc().getLocWithOffset(1),
                                        E.getRBraceLoc());
 }
+} // namespace
 
-RangeSelector tooling::initListElements(StringRef ID) {
-  return RelativeSelector<InitListExpr, getElementsRange>(ID);
+RangeSelector tooling::initListElements(std::string ID) {
+  return RelativeSelector<InitListExpr, getElementsRange>(std::move(ID));
 }
 
 RangeSelector tooling::expansion(RangeSelector S) {

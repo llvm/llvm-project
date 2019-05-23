@@ -18,6 +18,14 @@
 namespace llvm {
 namespace mca {
 
+void WriteState::writeStartEvent(unsigned IID, unsigned RegID, unsigned Cycles) {
+  CRD.IID = IID;
+  CRD.RegID = RegID;
+  CRD.Cycles = Cycles;
+  DependentWriteCyclesLeft = Cycles;
+  DependentWrite = nullptr;
+}
+
 void ReadState::writeStartEvent(unsigned IID, unsigned RegID, unsigned Cycles) {
   assert(DependentWrites);
   assert(CyclesLeft == UNKNOWN_CYCLES);
@@ -28,7 +36,12 @@ void ReadState::writeStartEvent(unsigned IID, unsigned RegID, unsigned Cycles) {
   // The HW is forced to do some extra bookkeeping to track of all the
   // dependent writes, and implement a merging scheme for the partial writes.
   --DependentWrites;
-  TotalCycles = std::max(TotalCycles, Cycles);
+  if (TotalCycles < Cycles) {
+    CRD.IID = IID;
+    CRD.RegID = RegID;
+    CRD.Cycles = Cycles;
+    TotalCycles = Cycles;
+  }
 
   if (!DependentWrites) {
     CyclesLeft = TotalCycles;
@@ -120,6 +133,25 @@ void WriteRef::dump() const {
     dbgs() << "(null)";
 }
 #endif
+
+const CriticalRegDep &InstructionBase::computeCriticalRegDep() {
+  if (CRD.Cycles || (Defs.empty() && Uses.empty()))
+    return CRD;
+  unsigned MaxLatency = 0;
+  for (const WriteState &WS : Defs) {
+    const CriticalRegDep &WriteCRD = WS.getCriticalRegDep();
+    if (WriteCRD.Cycles > MaxLatency)
+      CRD = WriteCRD;
+  }
+
+  for (const ReadState &RS : Uses) {
+    const CriticalRegDep &ReadCRD = RS.getCriticalRegDep();
+    if (ReadCRD.Cycles > MaxLatency)
+      CRD = ReadCRD;
+  }
+
+  return CRD;
+}
 
 void Instruction::dispatch(unsigned RCUToken) {
   assert(Stage == IS_INVALID);

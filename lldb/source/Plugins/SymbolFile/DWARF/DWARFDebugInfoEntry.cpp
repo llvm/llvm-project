@@ -51,7 +51,7 @@ bool DWARFDebugInfoEntry::FastExtract(
     const DWARFAbbreviationDeclaration *abbrevDecl =
         cu->GetAbbreviations()->GetAbbreviationDeclaration(m_abbr_idx);
 
-    if (abbrevDecl == NULL) {
+    if (abbrevDecl == nullptr) {
       cu->GetSymbolFileDWARF()->GetObjectFile()->GetModule()->ReportError(
           "{0x%8.8x}: invalid abbreviation code %u, please file a bug and "
           "attach the file at the start of this error message",
@@ -451,13 +451,13 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
         } break;
 
         case DW_AT_name:
-          if (name == NULL)
+          if (name == nullptr)
             name = form_value.AsCString();
           break;
 
         case DW_AT_MIPS_linkage_name:
         case DW_AT_linkage_name:
-          if (mangled == NULL)
+          if (mangled == nullptr)
             mangled = form_value.AsCString();
           break;
 
@@ -551,7 +551,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
     frame_base->SetLocationListSlide(lowest_range_pc - cu->GetBaseAddress());
   }
 
-  if (ranges.IsEmpty() || name == NULL || mangled == NULL) {
+  if (ranges.IsEmpty() || name == nullptr || mangled == nullptr) {
     for (const DIERef &die_ref : die_refs) {
       if (die_ref.die_offset != DW_INVALID_OFFSET) {
         DWARFDIE die = dwarf2Data->GetDIE(die_ref);
@@ -693,13 +693,13 @@ void DWARFDebugInfoEntry::DumpAttribute(
     DWARFDIE abstract_die = form_value.Reference();
     form_value.Dump(s);
     //  *ostrm_ptr << HEX32 << abstract_die.GetOffset() << " ( ";
-    GetName(abstract_die.GetCU(), abstract_die.GetOffset(), s);
+    abstract_die.GetName(s);
   } break;
 
   case DW_AT_type: {
     DWARFDIE type_die = form_value.Reference();
     s.PutCString(" ( ");
-    AppendTypeName(type_die.GetCU(), type_die.GetOffset(), s);
+    type_die.AppendTypeName(s);
     s.PutCString(" )");
   } break;
 
@@ -1038,166 +1038,6 @@ const char *DWARFDebugInfoEntry::GetPubname(const DWARFUnit *cu) const {
   return name;
 }
 
-// GetName
-//
-// Get value of the DW_AT_name attribute for a debug information entry that
-// exists at offset "die_offset" and place that value into the supplied stream
-// object. If the DIE is a NULL object "NULL" is placed into the stream, and if
-// no DW_AT_name attribute exists for the DIE then nothing is printed.
-bool DWARFDebugInfoEntry::GetName(const DWARFUnit *cu,
-                                  const dw_offset_t die_offset, Stream &s) {
-  if (cu == NULL) {
-    s.PutCString("NULL");
-    return false;
-  }
-
-  DWARFDebugInfoEntry die;
-  lldb::offset_t offset = die_offset;
-  if (die.Extract(cu, &offset)) {
-    if (die.IsNULL()) {
-      s.PutCString("NULL");
-      return true;
-    } else {
-      const char *name =
-          die.GetAttributeValueAsString(cu, DW_AT_name, nullptr, true);
-      if (name) {
-        s.PutCString(name);
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-// AppendTypeName
-//
-// Follows the type name definition down through all needed tags to end up with
-// a fully qualified type name and dump the results to the supplied stream.
-// This is used to show the name of types given a type identifier.
-bool DWARFDebugInfoEntry::AppendTypeName(const DWARFUnit *cu,
-                                         const dw_offset_t die_offset,
-                                         Stream &s) {
-  if (cu == NULL) {
-    s.PutCString("NULL");
-    return false;
-  }
-
-  DWARFDebugInfoEntry die;
-  lldb::offset_t offset = die_offset;
-  if (die.Extract(cu, &offset)) {
-    if (die.IsNULL()) {
-      s.PutCString("NULL");
-      return true;
-    } else {
-      const char *name = die.GetPubname(cu);
-      if (name)
-        s.PutCString(name);
-      else {
-        bool result = true;
-        const DWARFAbbreviationDeclaration *abbrevDecl =
-            die.GetAbbreviationDeclarationPtr(cu, offset);
-
-        if (abbrevDecl == NULL)
-          return false;
-
-        switch (abbrevDecl->Tag()) {
-        case DW_TAG_array_type:
-          break; // print out a "[]" after printing the full type of the element
-                 // below
-        case DW_TAG_base_type:
-          s.PutCString("base ");
-          break;
-        case DW_TAG_class_type:
-          s.PutCString("class ");
-          break;
-        case DW_TAG_const_type:
-          s.PutCString("const ");
-          break;
-        case DW_TAG_enumeration_type:
-          s.PutCString("enum ");
-          break;
-        case DW_TAG_file_type:
-          s.PutCString("file ");
-          break;
-        case DW_TAG_interface_type:
-          s.PutCString("interface ");
-          break;
-        case DW_TAG_packed_type:
-          s.PutCString("packed ");
-          break;
-        case DW_TAG_pointer_type:
-          break; // print out a '*' after printing the full type below
-        case DW_TAG_ptr_to_member_type:
-          break; // print out a '*' after printing the full type below
-        case DW_TAG_reference_type:
-          break; // print out a '&' after printing the full type below
-        case DW_TAG_restrict_type:
-          s.PutCString("restrict ");
-          break;
-        case DW_TAG_set_type:
-          s.PutCString("set ");
-          break;
-        case DW_TAG_shared_type:
-          s.PutCString("shared ");
-          break;
-        case DW_TAG_string_type:
-          s.PutCString("string ");
-          break;
-        case DW_TAG_structure_type:
-          s.PutCString("struct ");
-          break;
-        case DW_TAG_subrange_type:
-          s.PutCString("subrange ");
-          break;
-        case DW_TAG_subroutine_type:
-          s.PutCString("function ");
-          break;
-        case DW_TAG_thrown_type:
-          s.PutCString("thrown ");
-          break;
-        case DW_TAG_union_type:
-          s.PutCString("union ");
-          break;
-        case DW_TAG_unspecified_type:
-          s.PutCString("unspecified ");
-          break;
-        case DW_TAG_volatile_type:
-          s.PutCString("volatile ");
-          break;
-        default:
-          return false;
-        }
-
-        // Follow the DW_AT_type if possible
-        DWARFFormValue form_value;
-        if (die.GetAttributeValue(cu, DW_AT_type, form_value)) {
-          DWARFDIE next_die = form_value.Reference();
-          result = AppendTypeName(next_die.GetCU(), next_die.GetOffset(), s);
-        }
-
-        switch (abbrevDecl->Tag()) {
-        case DW_TAG_array_type:
-          s.PutCString("[]");
-          break;
-        case DW_TAG_pointer_type:
-          s.PutChar('*');
-          break;
-        case DW_TAG_ptr_to_member_type:
-          s.PutChar('*');
-          break;
-        case DW_TAG_reference_type:
-          s.PutChar('&');
-          break;
-        default:
-          break;
-        }
-        return result;
-      }
-    }
-  }
-  return false;
-}
-
 // BuildAddressRangeTable
 void DWARFDebugInfoEntry::BuildAddressRangeTable(
     const DWARFUnit *cu, DWARFDebugAranges *debug_aranges) const {
@@ -1383,7 +1223,7 @@ DWARFDebugInfoEntry::GetQualifiedName(DWARFUnit *cu,
     storage.append(name);
   }
   if (storage.empty())
-    return NULL;
+    return nullptr;
   return storage.c_str();
 }
 
@@ -1545,13 +1385,14 @@ bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
             switch (m_tag) {
             case DW_TAG_compile_unit: // File
             case DW_TAG_partial_unit: // File
-              check_children = ((function_die != NULL) || (block_die != NULL));
+              check_children =
+                  ((function_die != nullptr) || (block_die != nullptr));
               break;
 
             case DW_TAG_subprogram: // Function
               if (function_die)
                 *function_die = this;
-              check_children = (block_die != NULL);
+              check_children = (block_die != nullptr);
               break;
 
             case DW_TAG_inlined_subroutine: // Inlined Function
@@ -1571,9 +1412,9 @@ bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
           // Compile units may not have a valid high/low pc when there
           // are address gaps in subroutines so we must always search
           // if there is no valid high and low PC.
-          check_children = (m_tag == DW_TAG_compile_unit ||
-                            m_tag == DW_TAG_partial_unit) &&
-                           ((function_die != NULL) || (block_die != NULL));
+          check_children =
+              (m_tag == DW_TAG_compile_unit || m_tag == DW_TAG_partial_unit) &&
+              ((function_die != nullptr) || (block_die != nullptr));
         }
       } else {
         DWARFFormValue form_value;
@@ -1590,13 +1431,14 @@ bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
             switch (m_tag) {
             case DW_TAG_compile_unit: // File
             case DW_TAG_partial_unit: // File
-              check_children = ((function_die != NULL) || (block_die != NULL));
+              check_children =
+                  ((function_die != nullptr) || (block_die != nullptr));
               break;
 
             case DW_TAG_subprogram: // Function
               if (function_die)
                 *function_die = this;
-              check_children = (block_die != NULL);
+              check_children = (block_die != nullptr);
               break;
 
             case DW_TAG_inlined_subroutine: // Inlined Function
@@ -1660,7 +1502,7 @@ DWARFDebugInfoEntry::GetAbbreviationDeclarationPtr(
     }
   }
   offset = DW_INVALID_OFFSET;
-  return NULL;
+  return nullptr;
 }
 
 bool DWARFDebugInfoEntry::OffsetLessThan(const DWARFDebugInfoEntry &a,

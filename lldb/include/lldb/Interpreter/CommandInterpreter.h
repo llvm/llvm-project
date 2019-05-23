@@ -441,8 +441,6 @@ public:
            "the target.max-children-count setting.\n";
   }
 
-  //const CommandHistory &GetCommandHistory() const { return m_command_history; }
-
   CommandHistory &GetCommandHistory() { return m_command_history; }
 
   bool IsActive();

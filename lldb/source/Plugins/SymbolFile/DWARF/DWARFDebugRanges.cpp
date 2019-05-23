@@ -105,7 +105,7 @@ void DWARFDebugRanges::Dump(Stream &s,
       dw_addr_t begin_addr = begin + base_addr;
       dw_addr_t end_addr = end + base_addr;
 
-      s.AddressRange(begin_addr, end_addr, sizeof(dw_addr_t), NULL);
+      s.AddressRange(begin_addr, end_addr, sizeof(dw_addr_t), nullptr);
     }
   }
 }

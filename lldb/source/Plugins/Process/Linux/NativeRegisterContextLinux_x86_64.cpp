@@ -29,13 +29,13 @@ static inline int get_cpuid_count(unsigned int __leaf,
                                   unsigned int *__eax, unsigned int *__ebx,
                                   unsigned int *__ecx, unsigned int *__edx)
 {
-    unsigned int __max_leaf = __get_cpuid_max(__leaf & 0x80000000, 0);
+  unsigned int __max_leaf = __get_cpuid_max(__leaf & 0x80000000, nullptr);
 
-    if (__max_leaf == 0 || __max_leaf < __leaf)
-        return 0;
+  if (__max_leaf == 0 || __max_leaf < __leaf)
+    return 0;
 
-    __cpuid_count(__leaf, __subleaf, *__eax, *__ebx, *__ecx, *__edx);
-    return 1;
+  __cpuid_count(__leaf, __subleaf, *__eax, *__ebx, *__ecx, *__edx);
+  return 1;
 }
 
 using namespace lldb_private;

@@ -132,7 +132,7 @@ lldb::thread_result_t DebuggerThread::DebuggerThreadLaunchRoutine(
   else
     m_debug_delegate->OnDebuggerError(error, 0);
 
-  return 0;
+  return {};
 }
 
 lldb::thread_result_t DebuggerThread::DebuggerThreadAttachRoutine(
@@ -148,7 +148,7 @@ lldb::thread_result_t DebuggerThread::DebuggerThreadAttachRoutine(
   if (!DebugActiveProcess((DWORD)pid)) {
     Status error(::GetLastError(), eErrorTypeWin32);
     m_debug_delegate->OnDebuggerError(error, 0);
-    return 0;
+    return {};
   }
 
   // The attach was successful, enter the debug loop.  From here on out, this
@@ -156,7 +156,7 @@ lldb::thread_result_t DebuggerThread::DebuggerThreadAttachRoutine(
   // in DebugLaunch should apply from this point out.
   DebugLoop();
 
-  return 0;
+  return {};
 }
 
 Status DebuggerThread::StopDebugging(bool terminate) {

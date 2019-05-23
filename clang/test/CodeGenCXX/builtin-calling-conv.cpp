@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -triple spir-unknown-unknown -DREDECL -DSPIR -emit-llvm %s -o - | FileCheck %s -check-prefix SPIR
 // RUN: %clang_cc1 -triple x86_64-linux-pc -emit-llvm %s -o - | FileCheck %s -check-prefix LINUX
 // RUN: %clang_cc1 -triple spir-unknown-unknown -DSPIR -emit-llvm %s -o - | FileCheck %s -check-prefix SPIR
+// RUN: %clang_cc1 -triple i386-windows-pc -fdefault-calling-conv=stdcall -emit-llvm %s -o - | FileCheck %s -check-prefix WIN32
 
 #ifdef REDECL
 namespace std {
@@ -40,3 +41,13 @@ void user() {
 // SPIR: declare spir_func noalias i8* @_Znwj(i32)
 // SPIR: declare spir_func float @atan2f(float, float)
 // SPIR: declare spir_func void @_Z3foov()
+
+// Note: Windows /G options should not change the platform default calling
+// convention of builtins.
+// WIN32: define dso_local x86_stdcallcc void @"?user@@YGXXZ"()
+// WIN32: call i8* @"??2@YAPAXI@Z"
+// WIN32: call float @atan2f
+// WIN32: call x86_stdcallcc void @"?foo@@YGXXZ"
+// WIN32: declare dso_local noalias i8* @"??2@YAPAXI@Z"(
+// WIN32: declare dso_local float @atan2f(float, float)
+// WIN32: declare dso_local x86_stdcallcc void @"?foo@@YGXXZ"()

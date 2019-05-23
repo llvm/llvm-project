@@ -117,8 +117,8 @@ public:
   class ParserVars {
   public:
     ParserVars()
-        : m_parser_type(), m_named_decl(NULL), m_llvm_value(NULL),
-          m_lldb_value(), m_lldb_var(), m_lldb_sym(NULL) {}
+        : m_parser_type(), m_named_decl(nullptr), m_llvm_value(nullptr),
+          m_lldb_value(), m_lldb_var(), m_lldb_sym(nullptr) {}
 
     TypeFromParser
         m_parser_type; ///< The type of the variable according to the parser
@@ -152,7 +152,7 @@ public:
     ParserVarMap::iterator i = m_parser_vars.find(parser_id);
 
     if (i == m_parser_vars.end())
-      return NULL;
+      return nullptr;
     else
       return &i->second;
   }
@@ -186,7 +186,7 @@ public:
     JITVarMap::iterator i = m_jit_vars.find(parser_id);
 
     if (i == m_jit_vars.end())
-      return NULL;
+      return nullptr;
     else
       return &i->second;
   }

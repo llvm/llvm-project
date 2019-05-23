@@ -271,7 +271,7 @@ static bool DumpUTFBufferToStream(
                                               llvm::ConversionFlags),
     const StringPrinter::ReadBufferAndDumpToStreamOptions &dump_options) {
   Stream &stream(*dump_options.GetStream());
-  if (dump_options.GetPrefixToken() != 0)
+  if (dump_options.GetPrefixToken() != nullptr)
     stream.Printf("%s", dump_options.GetPrefixToken());
   if (dump_options.GetQuote() != 0)
     stream.Printf("%c", dump_options.GetQuote());
@@ -373,7 +373,7 @@ static bool DumpUTFBufferToStream(
   }
   if (dump_options.GetQuote() != 0)
     stream.Printf("%c", dump_options.GetQuote());
-  if (dump_options.GetSuffixToken() != 0)
+  if (dump_options.GetSuffixToken() != nullptr)
     stream.Printf("%s", dump_options.GetSuffixToken());
   if (dump_options.GetIsTruncated())
     stream.Printf("...");
@@ -449,7 +449,7 @@ bool StringPrinter::ReadStringAndDumpToStream<
   const char *prefix_token = options.GetPrefixToken();
   char quote = options.GetQuote();
 
-  if (prefix_token != 0)
+  if (prefix_token != nullptr)
     options.GetStream()->Printf("%s%c", prefix_token, quote);
   else if (quote != 0)
     options.GetStream()->Printf("%c", quote);
@@ -497,7 +497,7 @@ bool StringPrinter::ReadStringAndDumpToStream<
 
   const char *suffix_token = options.GetSuffixToken();
 
-  if (suffix_token != 0)
+  if (suffix_token != nullptr)
     options.GetStream()->Printf("%c%s", quote, suffix_token);
   else if (quote != 0)
     options.GetStream()->Printf("%c", quote);

@@ -48,7 +48,7 @@ void ClangPersistentVariables::RemovePersistentVariable(
     return;
   name++;
 
-  if (strtoul(name, NULL, 0) == m_next_persistent_variable_id - 1)
+  if (strtoul(name, nullptr, 0) == m_next_persistent_variable_id - 1)
     m_next_persistent_variable_id--;
 }
 
@@ -72,7 +72,7 @@ ClangPersistentVariables::GetPersistentDecl(ConstString name) {
       m_persistent_decls.find(name.GetCString());
 
   if (i == m_persistent_decls.end())
-    return NULL;
+    return nullptr;
   else
     return i->second;
 }

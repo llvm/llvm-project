@@ -40,7 +40,7 @@ void DwarfExpression::emitConstu(uint64_t Value) {
 
 void DwarfExpression::addReg(int DwarfReg, const char *Comment) {
  assert(DwarfReg >= 0 && "invalid negative dwarf register number");
- assert((LocationKind == Unknown || LocationKind == Register) &&
+ assert((isUnknownLocation() || isRegisterLocation()) &&
         "location description already locked down");
  LocationKind = Register;
  if (DwarfReg < 32) {
@@ -53,7 +53,7 @@ void DwarfExpression::addReg(int DwarfReg, const char *Comment) {
 
 void DwarfExpression::addBReg(int DwarfReg, int Offset) {
   assert(DwarfReg >= 0 && "invalid negative dwarf register number");
-  assert(LocationKind != Register && "location description already locked down");
+  assert(!isRegisterLocation() && "location description already locked down");
   if (DwarfReg < 32) {
     emitOp(dwarf::DW_OP_breg0 + DwarfReg);
   } else {
@@ -184,20 +184,20 @@ void DwarfExpression::addStackValue() {
 }
 
 void DwarfExpression::addSignedConstant(int64_t Value) {
-  assert(LocationKind == Implicit || LocationKind == Unknown);
+  assert(isImplicitLocation() || isUnknownLocation());
   LocationKind = Implicit;
   emitOp(dwarf::DW_OP_consts);
   emitSigned(Value);
 }
 
 void DwarfExpression::addUnsignedConstant(uint64_t Value) {
-  assert(LocationKind == Implicit || LocationKind == Unknown);
+  assert(isImplicitLocation() || isUnknownLocation());
   LocationKind = Implicit;
   emitConstu(Value);
 }
 
 void DwarfExpression::addUnsignedConstant(const APInt &Value) {
-  assert(LocationKind == Implicit || LocationKind == Unknown);
+  assert(isImplicitLocation() || isUnknownLocation());
   LocationKind = Implicit;
 
   unsigned Size = Value.getBitWidth();
@@ -242,7 +242,7 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   }
 
   // Handle simple register locations.
-  if (LocationKind != Memory && !HasComplexExpression) {
+  if (!isMemoryLocation() && !HasComplexExpression) {
     for (auto &Reg : DwarfRegs) {
       if (Reg.DwarfRegNo >= 0)
         addReg(Reg.DwarfRegNo, Reg.Comment);
@@ -343,7 +343,7 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
         SizeInBits = std::min<unsigned>(SizeInBits, SubRegisterSizeInBits);
 
       // Emit a DW_OP_stack_value for implicit location descriptions.
-      if (LocationKind == Implicit)
+      if (isImplicitLocation())
         addStackValue();
 
       // Emit the DW_OP_piece.
@@ -354,7 +354,7 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       return;
     }
     case dwarf::DW_OP_plus_uconst:
-      assert(LocationKind != Register);
+      assert(!isRegisterLocation());
       emitOp(dwarf::DW_OP_plus_uconst);
       emitUnsigned(Op->getArg(0));
       break;
@@ -375,8 +375,8 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       emitOp(Op->getOp());
       break;
     case dwarf::DW_OP_deref:
-      assert(LocationKind != Register);
-      if (LocationKind != Memory && ::isMemoryLocation(ExprCursor))
+      assert(!isRegisterLocation());
+      if (!isMemoryLocation() && ::isMemoryLocation(ExprCursor))
         // Turning this into a memory location description makes the deref
         // implicit.
         LocationKind = Memory;
@@ -384,7 +384,7 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
         emitOp(dwarf::DW_OP_deref);
       break;
     case dwarf::DW_OP_constu:
-      assert(LocationKind != Register);
+      assert(!isRegisterLocation());
       emitConstu(Op->getArg(0));
       break;
     case dwarf::DW_OP_LLVM_convert: {
@@ -427,11 +427,11 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       LocationKind = Implicit;
       break;
     case dwarf::DW_OP_swap:
-      assert(LocationKind != Register);
+      assert(!isRegisterLocation());
       emitOp(dwarf::DW_OP_swap);
       break;
     case dwarf::DW_OP_xderef:
-      assert(LocationKind != Register);
+      assert(!isRegisterLocation());
       emitOp(dwarf::DW_OP_xderef);
       break;
     case dwarf::DW_OP_deref_size:
@@ -443,7 +443,7 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
     }
   }
 
-  if (LocationKind == Implicit)
+  if (isImplicitLocation())
     // Turn this into an implicit location description.
     addStackValue();
 }

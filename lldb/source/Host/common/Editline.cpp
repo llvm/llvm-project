@@ -163,7 +163,7 @@ private:
   // Use static GetHistory() function to get a EditlineHistorySP to one of
   // these objects
   EditlineHistory(const std::string &prefix, uint32_t size, bool unique_entries)
-      : m_history(NULL), m_event(), m_prefix(prefix), m_path() {
+      : m_history(nullptr), m_event(), m_prefix(prefix), m_path() {
     m_history = history_winit();
     history_w(m_history, &m_event, H_SETSIZE, size);
     if (unique_entries)
@@ -202,7 +202,7 @@ public:
 
     if (m_history) {
       history_wend(m_history);
-      m_history = NULL;
+      m_history = nullptr;
     }
   }
 
@@ -224,7 +224,7 @@ public:
     return history_sp;
   }
 
-  bool IsValid() const { return m_history != NULL; }
+  bool IsValid() const { return m_history != nullptr; }
 
   HistoryW *GetHistoryPtr() { return m_history; }
 
@@ -514,11 +514,13 @@ int Editline::GetCharacter(EditLineGetCharType *c) {
     // Read returns, immediately lock the mutex again and check if we were
     // interrupted.
     m_output_mutex.unlock();
-    int read_count = m_input_connection.Read(&ch, 1, llvm::None, status, NULL);
+    int read_count =
+        m_input_connection.Read(&ch, 1, llvm::None, status, nullptr);
     m_output_mutex.lock();
     if (m_editor_status == EditorStatus::Interrupted) {
       while (read_count > 0 && status == lldb::eConnectionStatusSuccess)
-        read_count = m_input_connection.Read(&ch, 1, llvm::None, status, NULL);
+        read_count =
+            m_input_connection.Read(&ch, 1, llvm::None, status, nullptr);
       lldbassert(status == lldb::eConnectionStatusInterrupted);
       return 0;
     }
@@ -1081,7 +1083,7 @@ void Editline::ConfigureEditor(bool multiline) {
 
   // Allow user-specific customization prior to registering bindings we
   // absolutely require
-  el_source(m_editline, NULL);
+  el_source(m_editline, nullptr);
 
   // Register an internal binding that external developers shouldn't use
   el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-revert-line"),

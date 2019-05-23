@@ -6,7 +6,7 @@
 
 declare  i64 @llvm.smul.fix.i64  (i64, i64, i32)
 
-define i64 @addcarry(i64 %x, i64 %y) {
+define i64 @addcarry(i64 %x, i64 %y) nounwind {
 ; RISCV32-LABEL: addcarry:
 ; RISCV32:       # %bb.0:
 ; RISCV32-NEXT:    mul a4, a0, a3

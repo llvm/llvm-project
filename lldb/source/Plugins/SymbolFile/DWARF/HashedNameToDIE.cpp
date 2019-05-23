@@ -264,7 +264,7 @@ bool DWARFMappedHash::Header::Read(const lldb_private::DWARFDataExtractor &data,
     return false;
 
   for (size_t i = 0; i < num_atoms; ++i) {
-    DWARFFormValue form_value(NULL, header_data.atoms[i].form);
+    DWARFFormValue form_value(nullptr, header_data.atoms[i].form);
 
     if (!form_value.ExtractValue(data, offset_ptr))
       return false;
@@ -341,7 +341,7 @@ DWARFMappedHash::MemoryTable::GetHashDataForName(
   // There definitely should be a string for this string offset, if there
   // isn't, there is something wrong, return and error
   const char *strp_cstr = m_string_table.PeekCStr(pair.key);
-  if (strp_cstr == NULL) {
+  if (strp_cstr == nullptr) {
     *hash_data_offset_ptr = UINT32_MAX;
     return eResultError;
   }
@@ -408,7 +408,7 @@ DWARFMappedHash::MemoryTable::AppendHashDataForRegularExpression(
   // There definitely should be a string for this string offset, if there
   // isn't, there is something wrong, return and error
   const char *strp_cstr = m_string_table.PeekCStr(pair.key);
-  if (strp_cstr == NULL)
+  if (strp_cstr == nullptr)
     return eResultError;
 
   const uint32_t count = m_data.GetU32(hash_data_offset_ptr);

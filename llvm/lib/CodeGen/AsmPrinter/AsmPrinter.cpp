@@ -2231,7 +2231,10 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
 
     // We can emit the pointer value into this slot if the slot is an
     // integer slot equal to the size of the pointer.
-    if (DL.getTypeAllocSize(Ty) == DL.getTypeAllocSize(Op->getType()))
+    //
+    // If the pointer is larger than the resultant integer, then
+    // as with Trunc just depend on the assembler to truncate it.
+    if (DL.getTypeAllocSize(Ty) <= DL.getTypeAllocSize(Op->getType()))
       return OpExpr;
 
     // Otherwise the pointer is smaller than the resultant integer, mask off

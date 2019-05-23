@@ -518,7 +518,7 @@ void ARM::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
                   (Val & 0x00ff));           // imm8
     break;
   default:
-    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    error(getErrorLocation(Loc) + "unrecognized relocation " + toString(Type));
   }
 }
 

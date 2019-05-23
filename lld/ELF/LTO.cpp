@@ -212,7 +212,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
 // distributed build system that depends on that behavior.
 static void thinLTOCreateEmptyIndexFiles() {
   for (LazyObjFile *F : LazyObjFiles) {
-    if (F->AddedToLink || !isBitcode(F->MB))
+    if (!isBitcode(F->MB))
       continue;
     std::string Path = replaceThinLTOSuffix(getThinLTOOutputFile(F->getName()));
     std::unique_ptr<raw_fd_ostream> OS = openFile(Path + ".thinlto.bc");

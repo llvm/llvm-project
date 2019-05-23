@@ -66,7 +66,7 @@ DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration(
     if (idx < m_decls.size())
       return &m_decls[idx];
   }
-  return NULL;
+  return nullptr;
 }
 
 
@@ -137,7 +137,7 @@ DWARFDebugAbbrev::GetAbbreviationDeclarationSet(
 
   if (pos != m_abbrevCollMap.end())
     return &(pos->second);
-  return NULL;
+  return nullptr;
 }
 
 // DWARFDebugAbbrev::GetUnsupportedForms()

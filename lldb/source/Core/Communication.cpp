@@ -359,7 +359,7 @@ lldb::thread_result_t Communication::ReadThread(lldb::thread_arg_t p) {
   // Let clients know that this thread is exiting
   comm->BroadcastEvent(eBroadcastBitNoMorePendingInput);
   comm->BroadcastEvent(eBroadcastBitReadThreadDidExit);
-  return NULL;
+  return {};
 }
 
 void Communication::SetReadThreadBytesReceivedCallback(

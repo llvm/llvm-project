@@ -127,7 +127,7 @@ Searcher::CallbackReturn
 BreakpointResolverScripted::SearchCallback(SearchFilter &filter,
                                           SymbolContext &context, Address *addr,
                                           bool containing) {
-  assert(m_breakpoint != NULL);
+  assert(m_breakpoint != nullptr);
   bool should_continue = true;
   if (!m_implementation_sp)
     return Searcher::eCallbackReturnStop;
@@ -144,7 +144,7 @@ BreakpointResolverScripted::SearchCallback(SearchFilter &filter,
 
 lldb::SearchDepth
 BreakpointResolverScripted::GetDepth() {
-  assert(m_breakpoint != NULL);
+  assert(m_breakpoint != nullptr);
   lldb::SearchDepth depth = lldb::eSearchDepthModule;
   if (m_implementation_sp) {
     ScriptInterpreter *interp = GetScriptInterpreter();

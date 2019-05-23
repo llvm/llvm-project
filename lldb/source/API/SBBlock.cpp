@@ -25,7 +25,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBBlock::SBBlock() : m_opaque_ptr(NULL) {
+SBBlock::SBBlock() : m_opaque_ptr(nullptr) {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBBlock);
 }
 
@@ -44,7 +44,7 @@ const SBBlock &SBBlock::operator=(const SBBlock &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBBlock::~SBBlock() { m_opaque_ptr = NULL; }
+SBBlock::~SBBlock() { m_opaque_ptr = nullptr; }
 
 bool SBBlock::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBBlock, IsValid);
@@ -53,14 +53,14 @@ bool SBBlock::IsValid() const {
 SBBlock::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBBlock, operator bool);
 
-  return m_opaque_ptr != NULL;
+  return m_opaque_ptr != nullptr;
 }
 
 bool SBBlock::IsInlined() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBBlock, IsInlined);
 
   if (m_opaque_ptr)
-    return m_opaque_ptr->GetInlinedFunctionInfo() != NULL;
+    return m_opaque_ptr->GetInlinedFunctionInfo() != nullptr;
   return false;
 }
 
@@ -77,10 +77,10 @@ const char *SBBlock::GetInlinedName() const {
         language = function->GetLanguage();
       else
         language = lldb::eLanguageTypeUnknown;
-      return inlined_info->GetName(language).AsCString(NULL);
+      return inlined_info->GetName(language).AsCString(nullptr);
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 SBFileSpec SBBlock::GetInlinedCallSiteFile() const {

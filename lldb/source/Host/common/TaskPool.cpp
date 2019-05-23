@@ -73,7 +73,7 @@ void TaskPoolImpl::AddTask(std::function<void()> &&task_fn) {
 
 lldb::thread_result_t TaskPoolImpl::WorkerPtr(void *pool) {
   Worker((TaskPoolImpl *)pool);
-  return 0;
+  return {};
 }
 
 void TaskPoolImpl::Worker(TaskPoolImpl *pool) {
