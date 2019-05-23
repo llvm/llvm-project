@@ -84,7 +84,7 @@ void Stream::Address(uint64_t addr, uint32_t addr_size, const char *prefix,
     suffix = "";
   //    int addr_width = m_addr_size << 1;
   //    Printf ("%s0x%0*" PRIx64 "%s", prefix, addr_width, addr, suffix);
-  Printf("%s0x%0*" PRIx64 "%s", prefix, addr_size * 2, (uint64_t)addr, suffix);
+  Printf("%s0x%0*" PRIx64 "%s", prefix, addr_size * 2, addr, suffix);
 }
 
 // Put an address range out to the stream with optional prefix and suffix
@@ -156,7 +156,7 @@ Stream &Stream::operator<<(llvm::StringRef str) {
 
 // Stream the pointer value out to this stream.
 Stream &Stream::operator<<(const void *p) {
-  Printf("0x%.*tx", (int)sizeof(const void *) * 2, (ptrdiff_t)p);
+  Printf("0x%.*tx", static_cast<int>(sizeof(const void *)) * 2, (ptrdiff_t)p);
   return *this;
 }
 
@@ -186,19 +186,19 @@ Stream &Stream::operator<<(uint64_t uval) {
 
 // Stream a int8_t "sval" out to this stream.
 Stream &Stream::operator<<(int8_t sval) {
-  Printf("%i", (int)sval);
+  Printf("%i", static_cast<int>(sval));
   return *this;
 }
 
 // Stream a int16_t "sval" out to this stream.
 Stream &Stream::operator<<(int16_t sval) {
-  Printf("%i", (int)sval);
+  Printf("%i", static_cast<int>(sval));
   return *this;
 }
 
 // Stream a int32_t "sval" out to this stream.
 Stream &Stream::operator<<(int32_t sval) {
-  Printf("%i", (int)sval);
+  Printf("%i", static_cast<int>(sval));
   return *this;
 }
 
@@ -295,10 +295,10 @@ size_t Stream::PutHex16(uint16_t uvalue, ByteOrder byte_order) {
 
   if (byte_order == eByteOrderLittle) {
     for (size_t byte = 0; byte < sizeof(uvalue); ++byte)
-      _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
+      _PutHex8(static_cast<uint8_t>(uvalue >> (byte * 8)), false);
   } else {
     for (size_t byte = sizeof(uvalue) - 1; byte < sizeof(uvalue); --byte)
-      _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
+      _PutHex8(static_cast<uint8_t>(uvalue >> (byte * 8)), false);
   }
   return *delta;
 }
@@ -311,10 +311,10 @@ size_t Stream::PutHex32(uint32_t uvalue, ByteOrder byte_order) {
 
   if (byte_order == eByteOrderLittle) {
     for (size_t byte = 0; byte < sizeof(uvalue); ++byte)
-      _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
+      _PutHex8(static_cast<uint8_t>(uvalue >> (byte * 8)), false);
   } else {
     for (size_t byte = sizeof(uvalue) - 1; byte < sizeof(uvalue); --byte)
-      _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
+      _PutHex8(static_cast<uint8_t>(uvalue >> (byte * 8)), false);
   }
   return *delta;
 }
@@ -327,10 +327,10 @@ size_t Stream::PutHex64(uint64_t uvalue, ByteOrder byte_order) {
 
   if (byte_order == eByteOrderLittle) {
     for (size_t byte = 0; byte < sizeof(uvalue); ++byte)
-      _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
+      _PutHex8(static_cast<uint8_t>(uvalue >> (byte * 8)), false);
   } else {
     for (size_t byte = sizeof(uvalue) - 1; byte < sizeof(uvalue); --byte)
-      _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
+      _PutHex8(static_cast<uint8_t>(uvalue >> (byte * 8)), false);
   }
   return *delta;
 }
@@ -339,11 +339,11 @@ size_t Stream::PutMaxHex64(uint64_t uvalue, size_t byte_size,
                            lldb::ByteOrder byte_order) {
   switch (byte_size) {
   case 1:
-    return PutHex8((uint8_t)uvalue);
+    return PutHex8(static_cast<uint8_t>(uvalue));
   case 2:
-    return PutHex16((uint16_t)uvalue, byte_order);
+    return PutHex16(static_cast<uint16_t>(uvalue), byte_order);
   case 4:
-    return PutHex32((uint32_t)uvalue, byte_order);
+    return PutHex32(static_cast<uint32_t>(uvalue), byte_order);
   case 8:
     return PutHex64(uvalue, byte_order);
   }
@@ -386,7 +386,7 @@ size_t Stream::PutRawBytes(const void *s, size_t src_len,
   if (dst_byte_order == eByteOrderInvalid)
     dst_byte_order = m_byte_order;
 
-  const uint8_t *src = (const uint8_t *)s;
+  const uint8_t *src = static_cast<const uint8_t *>(s);
   bool binary_was_set = m_flags.Test(eBinary);
   if (!binary_was_set)
     m_flags.Set(eBinary);
@@ -413,7 +413,7 @@ size_t Stream::PutBytesAsRawHex8(const void *s, size_t src_len,
   if (dst_byte_order == eByteOrderInvalid)
     dst_byte_order = m_byte_order;
 
-  const uint8_t *src = (const uint8_t *)s;
+  const uint8_t *src = static_cast<const uint8_t *>(s);
   bool binary_is_set = m_flags.Test(eBinary);
   m_flags.Clear(eBinary);
   if (src_byte_order == dst_byte_order) {
