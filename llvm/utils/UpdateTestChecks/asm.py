@@ -29,7 +29,7 @@ ASM_FUNCTION_ARM_RE = re.compile(
 
 ASM_FUNCTION_AARCH64_RE = re.compile(
      r'^_?(?P<func>[^:]+):[ \t]*\/\/[ \t]*@(?P=func)\n'
-     r'(?:[ \t]+.cfi_startproc\n)?'  # drop optional cfi noise 
+     r'(?:[ \t]+.cfi_startproc\n)?'  # drop optional cfi noise
      r'(?P<body>.*?)\n'
      # This list is incomplete
      r'.Lfunc_end[0-9]+:\n',
@@ -219,6 +219,7 @@ def scrub_asm_wasm32(asm, args):
 def get_triple_from_march(march):
   triples = {
       'amdgcn': 'amdgcn',
+      'mips': 'mips',
       'sparc': 'sparc',
   }
   for prefix, triple in triples.items():

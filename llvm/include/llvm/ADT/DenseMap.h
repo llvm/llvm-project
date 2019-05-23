@@ -63,7 +63,7 @@ struct DenseMapPair : public std::pair<KeyT, ValueT> {
   template <typename AltPairT>
   DenseMapPair(AltPairT &&AltPair,
                typename std::enable_if<std::is_convertible<
-                   AltPairT, std::pair<KeyT, ValueT>>::value>::type * = 0)
+                   AltPairT, std::pair<KeyT, ValueT>>::value>::type * = nullptr)
       : std::pair<KeyT, ValueT>(std::forward<AltPairT>(AltPair)) {}
 
   KeyT &getFirst() { return std::pair<KeyT, ValueT>::first; }

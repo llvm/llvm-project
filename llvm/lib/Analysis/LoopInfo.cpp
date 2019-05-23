@@ -17,10 +17,13 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfoImpl.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/CFG.h"
@@ -162,6 +165,249 @@ PHINode *Loop::getCanonicalInductionVariable() const {
                 return PN;
   }
   return nullptr;
+}
+
+/// Return true if V1 and V2 have the same value ignoring bit width.
+static bool isEqualIgnoreBitwidth(Value &V1, Value &V2, ScalarEvolution &SE) {
+  const SCEV *S1 = SE.getSCEV(&V1);
+  const SCEV *S2 = SE.getSCEV(&V2);
+  Type *WiderType = SE.getWiderType(S1->getType(), S2->getType());
+  S1 = SE.getNoopOrAnyExtend(S1, WiderType);
+  S2 = SE.getNoopOrAnyExtend(S2, WiderType);
+  return SE.getMinusSCEV(S1, S2)->isZero();
+}
+
+/// Get the latch condition instruction.
+static ICmpInst *getLatchCmpInst(const Loop &L) {
+  if (BasicBlock *Latch = L.getLoopLatch())
+    if (BranchInst *BI = dyn_cast_or_null<BranchInst>(Latch->getTerminator()))
+      if (BI->isConditional())
+        return dyn_cast<ICmpInst>(BI->getCondition());
+
+  return nullptr;
+}
+
+/// Return the final value of the loop induction variable if found.
+static Value *findFinalIVValue(const Loop &L, const PHINode &IndVar,
+                               const Instruction &StepInst) {
+  ICmpInst *LatchCmpInst = getLatchCmpInst(L);
+  if (!LatchCmpInst)
+    return nullptr;
+
+  Value *Op0 = LatchCmpInst->getOperand(0);
+  Value *Op1 = LatchCmpInst->getOperand(1);
+  if (Op0 == &IndVar || Op0 == &StepInst)
+    return Op1;
+
+  if (Op1 == &IndVar || Op1 == &StepInst)
+    return Op0;
+
+  return nullptr;
+}
+
+Optional<Loop::LoopBounds> Loop::LoopBounds::getBounds(const Loop &L,
+                                                       PHINode &IndVar,
+                                                       ScalarEvolution &SE) {
+  InductionDescriptor IndDesc;
+  if (!InductionDescriptor::isInductionPHI(&IndVar, &L, &SE, IndDesc))
+    return None;
+
+  Value *InitialIVValue = IndDesc.getStartValue();
+  Instruction *StepInst = IndDesc.getInductionBinOp();
+  if (!InitialIVValue || !StepInst)
+    return None;
+
+  const SCEV *Step = IndDesc.getStep();
+  Value *StepInstOp1 = StepInst->getOperand(1);
+  Value *StepInstOp0 = StepInst->getOperand(0);
+  Value *StepValue = nullptr;
+  if (SE.getSCEV(StepInstOp1) == Step)
+    StepValue = StepInstOp1;
+  else if (SE.getSCEV(StepInstOp0) == Step)
+    StepValue = StepInstOp0;
+
+  Value *FinalIVValue = findFinalIVValue(L, IndVar, *StepInst);
+  if (!FinalIVValue)
+    return None;
+
+  return LoopBounds(L, *InitialIVValue, *StepInst, StepValue, *FinalIVValue,
+                    SE);
+}
+
+using Direction = Loop::LoopBounds::Direction;
+
+ICmpInst::Predicate Loop::LoopBounds::getCanonicalPredicate() const {
+  BasicBlock *Latch = L.getLoopLatch();
+  assert(Latch && "Expecting valid latch");
+
+  BranchInst *BI = dyn_cast_or_null<BranchInst>(Latch->getTerminator());
+  assert(BI && BI->isConditional() && "Expecting conditional latch branch");
+
+  ICmpInst *LatchCmpInst = dyn_cast<ICmpInst>(BI->getCondition());
+  assert(LatchCmpInst &&
+         "Expecting the latch compare instruction to be a CmpInst");
+
+  // Need to inverse the predicate when first successor is not the loop
+  // header
+  ICmpInst::Predicate Pred = (BI->getSuccessor(0) == L.getHeader())
+                                 ? LatchCmpInst->getPredicate()
+                                 : LatchCmpInst->getInversePredicate();
+
+  if (LatchCmpInst->getOperand(0) == &getFinalIVValue())
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+
+  // Need to flip strictness of the predicate when the latch compare instruction
+  // is not using StepInst
+  if (LatchCmpInst->getOperand(0) == &getStepInst() ||
+      LatchCmpInst->getOperand(1) == &getStepInst())
+    return Pred;
+
+  // Cannot flip strictness of NE and EQ
+  if (Pred != ICmpInst::ICMP_NE && Pred != ICmpInst::ICMP_EQ)
+    return ICmpInst::getFlippedStrictnessPredicate(Pred);
+
+  Direction D = getDirection();
+  if (D == Direction::Increasing)
+    return ICmpInst::ICMP_SLT;
+
+  if (D == Direction::Decreasing)
+    return ICmpInst::ICMP_SGT;
+
+  // If cannot determine the direction, then unable to find the canonical
+  // predicate
+  return ICmpInst::BAD_ICMP_PREDICATE;
+}
+
+Direction Loop::LoopBounds::getDirection() const {
+  if (const SCEVAddRecExpr *StepAddRecExpr =
+          dyn_cast<SCEVAddRecExpr>(SE.getSCEV(&getStepInst())))
+    if (const SCEV *StepRecur = StepAddRecExpr->getStepRecurrence(SE)) {
+      if (SE.isKnownPositive(StepRecur))
+        return Direction::Increasing;
+      if (SE.isKnownNegative(StepRecur))
+        return Direction::Decreasing;
+    }
+
+  return Direction::Unknown;
+}
+
+Optional<Loop::LoopBounds> Loop::getBounds(ScalarEvolution &SE) const {
+  if (PHINode *IndVar = getInductionVariable(SE))
+    return LoopBounds::getBounds(*this, *IndVar, SE);
+
+  return None;
+}
+
+PHINode *Loop::getInductionVariable(ScalarEvolution &SE) const {
+  if (!isLoopSimplifyForm())
+    return nullptr;
+
+  BasicBlock *Header = getHeader();
+  assert(Header && "Expected a valid loop header");
+  BasicBlock *Latch = getLoopLatch();
+  assert(Latch && "Expected a valid loop latch");
+  ICmpInst *CmpInst = getLatchCmpInst(*this);
+  if (!CmpInst)
+    return nullptr;
+
+  // case 1:
+  // IndVar = phi[{InitialValue, preheader}, {StepInst, latch}]
+  // StepInst = IndVar + step
+  // cmp = StepInst < FinalValue
+  Instruction *LatchCmpOp0 = dyn_cast<Instruction>(CmpInst->getOperand(0));
+  Instruction *LatchCmpOp1 = dyn_cast<Instruction>(CmpInst->getOperand(1));
+  // Loop over all of the PHI nodes in loop header, store the PHI node that has
+  // incoming value from latch equals to the StepInst
+  BinaryOperator *StepInst = nullptr;
+  PHINode *IndVar = nullptr;
+  for (PHINode &PN : Header->phis()) {
+    Value *IncomingValue = PN.getIncomingValueForBlock(Latch);
+    assert(IncomingValue && "Expecting valid incoming value from latch");
+    if (IncomingValue == LatchCmpOp0 || IncomingValue == LatchCmpOp1) {
+      IndVar = &PN;
+      StepInst = dyn_cast<BinaryOperator>(IncomingValue);
+      if (StepInst)
+        if (isEqualIgnoreBitwidth(*StepInst->getOperand(0), *IndVar, SE) ||
+            isEqualIgnoreBitwidth(*StepInst->getOperand(1), *IndVar, SE))
+          return IndVar;
+    }
+  }
+
+  // case 2:
+  // IndVar = phi[{InitialValue, preheader}, {StepInst, latch}]
+  // StepInst = IndVar + step
+  // cmp = IndVar < FinalValue
+  for (Value *Op : CmpInst->operands()) {
+    PHINode *IndVar = dyn_cast<PHINode>(Op);
+    if (!IndVar)
+      continue;
+
+    if (IndVar->getParent() != Header)
+      continue;
+
+    Value *IncomingValue = IndVar->getIncomingValueForBlock(Latch);
+    assert(IncomingValue && "Expecting valid incoming value from latch");
+    StepInst = dyn_cast<BinaryOperator>(IncomingValue);
+    if (StepInst)
+      if (StepInst->getOperand(0) == IndVar ||
+          StepInst->getOperand(1) == IndVar)
+        return IndVar;
+  }
+
+  return nullptr;
+}
+
+bool Loop::getInductionDescriptor(ScalarEvolution &SE,
+                                  InductionDescriptor &IndDesc) const {
+  if (PHINode *IndVar = getInductionVariable(SE))
+    return InductionDescriptor::isInductionPHI(IndVar, this, &SE, IndDesc);
+
+  return false;
+}
+
+bool Loop::isAuxiliaryInductionVariable(PHINode &AuxIndVar,
+                                        ScalarEvolution &SE) const {
+  // Located in the loop header
+  BasicBlock *Header = getHeader();
+  if (AuxIndVar.getParent() != Header)
+    return false;
+
+  // No uses outside of the loop
+  for (User *U : AuxIndVar.users())
+    if (const Instruction *I = dyn_cast<Instruction>(U))
+      if (!contains(I))
+        return false;
+
+  InductionDescriptor IndDesc;
+  if (!InductionDescriptor::isInductionPHI(&AuxIndVar, this, &SE, IndDesc))
+    return false;
+
+  // The step instruction opcode should be add or sub.
+  if (IndDesc.getInductionOpcode() != Instruction::Add &&
+      IndDesc.getInductionOpcode() != Instruction::Sub)
+    return false;
+
+  // Incremented by a loop invariant step for each loop iteration
+  return SE.isLoopInvariant(IndDesc.getStep(), this);
+}
+
+bool Loop::isCanonical(ScalarEvolution &SE) const {
+  InductionDescriptor IndDesc;
+  if (!getInductionDescriptor(SE, IndDesc))
+    return false;
+
+  ConstantInt *Init = dyn_cast_or_null<ConstantInt>(IndDesc.getStartValue());
+  if (!Init || !Init->isZero())
+    return false;
+
+  if (IndDesc.getInductionOpcode() != Instruction::Add)
+    return false;
+
+  ConstantInt *Step = IndDesc.getConstIntStepValue();
+  if (!Step || !Step->isOne())
+    return false;
+
+  return true;
 }
 
 // Check that 'BB' doesn't have any uses outside of the 'L'

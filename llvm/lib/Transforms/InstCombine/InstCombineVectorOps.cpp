@@ -1635,8 +1635,8 @@ static Instruction *foldIdentityPaddedShuffles(ShuffleVectorInst &Shuf) {
   // We limit this transform to power-of-2 types because we expect that the
   // backend can convert the simplified IR patterns to identical nodes as the
   // original IR.
-  // TODO: If we can verify that behavior for arbitrary types, the power-of-2
-  // checks can be removed.
+  // TODO: If we can verify the same behavior for arbitrary types, the
+  //       power-of-2 checks can be removed.
   Value *X = Shuffle0->getOperand(0);
   Value *Y = Shuffle1->getOperand(0);
   if (X->getType() != Y->getType() ||
@@ -1663,10 +1663,27 @@ static Instruction *foldIdentityPaddedShuffles(ShuffleVectorInst &Shuf) {
   for (int i = 0, e = Mask.size(); i != e; ++i) {
     if (Mask[i] == -1)
       continue;
-    if (Mask[i] < WideElts)
+
+    // If this shuffle is choosing an undef element from 1 of the sources, that
+    // element is undef.
+    if (Mask[i] < WideElts) {
+      if (Shuffle0->getMaskValue(Mask[i]) == -1)
+        continue;
+    } else {
+      if (Shuffle1->getMaskValue(Mask[i] - WideElts) == -1)
+        continue;
+    }
+
+    // If this shuffle is choosing from the 1st narrow op, the mask element is
+    // the same. If this shuffle is choosing from the 2nd narrow op, the mask
+    // element is offset down to adjust for the narrow vector widths.
+    if (Mask[i] < WideElts) {
+      assert(Mask[i] < NarrowElts && "Unexpected shuffle mask");
       NewMask[i] = ConstantInt::get(I32Ty, Mask[i]);
-    else
+    } else {
+      assert(Mask[i] < (WideElts + NarrowElts) && "Unexpected shuffle mask");
       NewMask[i] = ConstantInt::get(I32Ty, Mask[i] - (WideElts - NarrowElts));
+    }
   }
   return new ShuffleVectorInst(X, Y, ConstantVector::get(NewMask));
 }

@@ -48,7 +48,7 @@ private:
   StringRef Name;
 
   /// Value of numeric variable, if defined, or None otherwise.
-  llvm::Optional<uint64_t> Value;
+  Optional<uint64_t> Value;
 
 public:
   /// Constructor for numeric variable \p Name with a known \p Value at parse
@@ -60,7 +60,7 @@ public:
   StringRef getName() const { return Name; }
 
   /// \returns value of this numeric variable.
-  llvm::Optional<uint64_t> getValue() const { return Value; }
+  Optional<uint64_t> getValue() const { return Value; }
 
   /// Sets value of this numeric variable if not defined. \returns whether the
   /// variable was already defined.
@@ -96,7 +96,7 @@ public:
   /// Evaluates the value of this numeric expression, using EvalBinop to
   /// perform the binary operation it consists of. \returns None if the numeric
   /// variable used is undefined, or the expression value otherwise.
-  llvm::Optional<uint64_t> eval() const;
+  Optional<uint64_t> eval() const;
 
   /// \returns the name of the undefined variable used in this expression if
   /// any or an empty string otherwise.
@@ -139,7 +139,7 @@ public:
 
   /// \returns a string containing the result of the substitution represented
   /// by this class instance or None if substitution failed.
-  virtual llvm::Optional<std::string> getResult() const = 0;
+  virtual Optional<std::string> getResult() const = 0;
 
   /// \returns the name of the variable used in this substitution if undefined,
   /// or an empty string otherwise.
@@ -154,7 +154,7 @@ public:
 
   /// \returns the text that the string variable in this substitution matched
   /// when defined, or None if the variable is undefined.
-  llvm::Optional<std::string> getResult() const override;
+  Optional<std::string> getResult() const override;
 
   /// \returns the name of the string variable used in this substitution if
   /// undefined, or an empty string otherwise.
@@ -174,7 +174,7 @@ public:
 
   /// \returns a string containing the result of evaluating the numeric
   /// expression in this substitution, or None if evaluation failed.
-  llvm::Optional<std::string> getResult() const override;
+  Optional<std::string> getResult() const override;
 
   /// \returns the name of the numeric variable used in this substitution if
   /// undefined, or an empty string otherwise.
@@ -268,7 +268,7 @@ private:
 public:
   /// \returns the value of string variable \p VarName or None if no such
   /// variable has been defined.
-  llvm::Optional<StringRef> getPatternVarValue(StringRef VarName);
+  Optional<StringRef> getPatternVarValue(StringRef VarName);
 
   /// Defines string and numeric variables from definitions given on the
   /// command line, passed as a vector of [#]VAR=VAL strings in

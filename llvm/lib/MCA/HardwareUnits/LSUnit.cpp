@@ -21,48 +21,48 @@
 namespace llvm {
 namespace mca {
 
-LSUnit::LSUnit(const MCSchedModel &SM, unsigned LQ, unsigned SQ,
-               bool AssumeNoAlias)
-    : LQ_Size(LQ), SQ_Size(SQ), NoAlias(AssumeNoAlias) {
+LSUnitBase::LSUnitBase(const MCSchedModel &SM, unsigned LQ, unsigned SQ,
+                       bool AssumeNoAlias)
+    : LQSize(LQ), SQSize(SQ), NoAlias(AssumeNoAlias) {
   if (SM.hasExtraProcessorInfo()) {
     const MCExtraProcessorInfo &EPI = SM.getExtraProcessorInfo();
-    if (!LQ_Size && EPI.LoadQueueID) {
+    if (!LQSize && EPI.LoadQueueID) {
       const MCProcResourceDesc &LdQDesc = *SM.getProcResource(EPI.LoadQueueID);
-      LQ_Size = LdQDesc.BufferSize;
+      LQSize = LdQDesc.BufferSize;
     }
 
-    if (!SQ_Size && EPI.StoreQueueID) {
+    if (!SQSize && EPI.StoreQueueID) {
       const MCProcResourceDesc &StQDesc = *SM.getProcResource(EPI.StoreQueueID);
-      SQ_Size = StQDesc.BufferSize;
+      SQSize = StQDesc.BufferSize;
     }
   }
 }
 
+LSUnitBase::~LSUnitBase() {}
+
 #ifndef NDEBUG
 void LSUnit::dump() const {
-  dbgs() << "[LSUnit] LQ_Size = " << LQ_Size << '\n';
-  dbgs() << "[LSUnit] SQ_Size = " << SQ_Size << '\n';
+  dbgs() << "[LSUnit] LQ_Size = " << getLoadQueueSize() << '\n';
+  dbgs() << "[LSUnit] SQ_Size = " << getStoreQueueSize() << '\n';
   dbgs() << "[LSUnit] NextLQSlotIdx = " << LoadQueue.size() << '\n';
   dbgs() << "[LSUnit] NextSQSlotIdx = " << StoreQueue.size() << '\n';
 }
 #endif
 
-void LSUnit::assignLQSlot(unsigned Index) {
-  assert(!isLQFull());
-  assert(LoadQueue.count(Index) == 0);
+void LSUnit::assignLQSlot(const InstRef &IR) {
+  assert(!isLQFull() && "Load Queue is full!");
 
-  LLVM_DEBUG(dbgs() << "[LSUnit] - AssignLQSlot <Idx=" << Index
+  LLVM_DEBUG(dbgs() << "[LSUnit] - AssignLQSlot <Idx=" << IR.getSourceIndex()
                     << ",slot=" << LoadQueue.size() << ">\n");
-  LoadQueue.insert(Index);
+  LoadQueue.insert(IR);
 }
 
-void LSUnit::assignSQSlot(unsigned Index) {
-  assert(!isSQFull());
-  assert(StoreQueue.count(Index) == 0);
+void LSUnit::assignSQSlot(const InstRef &IR) {
+  assert(!isSQFull() && "Store Queue is full!");
 
-  LLVM_DEBUG(dbgs() << "[LSUnit] - AssignSQSlot <Idx=" << Index
+  LLVM_DEBUG(dbgs() << "[LSUnit] - AssignSQSlot <Idx=" << IR.getSourceIndex()
                     << ",slot=" << StoreQueue.size() << ">\n");
-  StoreQueue.insert(Index);
+  StoreQueue.insert(IR);
 }
 
 void LSUnit::dispatch(const InstRef &IR) {
@@ -70,17 +70,16 @@ void LSUnit::dispatch(const InstRef &IR) {
   unsigned IsMemBarrier = Desc.HasSideEffects;
   assert((Desc.MayLoad || Desc.MayStore) && "Not a memory operation!");
 
-  const unsigned Index = IR.getSourceIndex();
   if (Desc.MayLoad) {
     if (IsMemBarrier)
-      LoadBarriers.insert(Index);
-    assignLQSlot(Index);
+      LoadBarriers.insert(IR);
+    assignLQSlot(IR);
   }
 
   if (Desc.MayStore) {
     if (IsMemBarrier)
-      StoreBarriers.insert(Index);
-    assignSQSlot(Index);
+      StoreBarriers.insert(IR);
+    assignSQSlot(IR);
   }
 }
 
@@ -93,65 +92,67 @@ LSUnit::Status LSUnit::isAvailable(const InstRef &IR) const {
   return LSUnit::LSU_AVAILABLE;
 }
 
-unsigned LSUnit::isReady(const InstRef &IR) const {
+const InstRef &LSUnit::isReady(const InstRef &IR) const {
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
   const unsigned Index = IR.getSourceIndex();
   bool IsALoad = Desc.MayLoad;
   bool IsAStore = Desc.MayStore;
   assert((IsALoad || IsAStore) && "Not a memory operation!");
-  assert((!IsALoad || LoadQueue.count(Index) == 1) && "Load not in queue!");
-  assert((!IsAStore || StoreQueue.count(Index) == 1) && "Store not in queue!");
 
   if (IsALoad && !LoadBarriers.empty()) {
-    unsigned LoadBarrierIndex = *LoadBarriers.begin();
+    const InstRef &LoadBarrier = *LoadBarriers.begin();
     // A younger load cannot pass a older load barrier.
-    if (Index > LoadBarrierIndex)
-      return LoadBarrierIndex;
+    if (Index > LoadBarrier.getSourceIndex())
+      return LoadBarrier;
     // A load barrier cannot pass a older load.
-    if (Index == LoadBarrierIndex && Index != *LoadQueue.begin())
-      return *LoadQueue.begin();
+    if (Index == LoadBarrier.getSourceIndex()) {
+      const InstRef &Load = *LoadQueue.begin();
+      if (Index != Load.getSourceIndex())
+        return Load;
+    }
   }
 
   if (IsAStore && !StoreBarriers.empty()) {
-    unsigned StoreBarrierIndex = *StoreBarriers.begin();
+    const InstRef &StoreBarrier = *StoreBarriers.begin();
     // A younger store cannot pass a older store barrier.
-    if (Index > StoreBarrierIndex)
-      return StoreBarrierIndex;
+    if (Index > StoreBarrier.getSourceIndex())
+      return StoreBarrier;
     // A store barrier cannot pass a older store.
-    if (Index == StoreBarrierIndex && Index != *StoreQueue.begin())
-      return *StoreQueue.begin();
+    if (Index == StoreBarrier.getSourceIndex()) {
+      const InstRef &Store = *StoreQueue.begin();
+      if (Index != Store.getSourceIndex())
+        return Store;
+    }
   }
 
   // A load may not pass a previous store unless flag 'NoAlias' is set.
   // A load may pass a previous load.
-  if (NoAlias && IsALoad)
-    return Index;
+  if (assumeNoAlias() && IsALoad)
+    return IR;
 
   if (StoreQueue.size()) {
     // A load may not pass a previous store.
     // A store may not pass a previous store.
-    if (Index > *StoreQueue.begin())
-      return *StoreQueue.begin();
+    const InstRef &Store = *StoreQueue.begin();
+    if (Index > Store.getSourceIndex())
+      return Store;
   }
 
   // Okay, we are older than the oldest store in the queue.
-  // If there are no pending loads, then we can say for sure that this
-  // instruction is ready.
   if (isLQEmpty())
-    return Index;
+    return IR;
 
   // Check if there are no older loads.
-  if (Index <= *LoadQueue.begin())
-    return Index;
+  const InstRef &Load = *LoadQueue.begin();
+  if (Index <= Load.getSourceIndex())
+    return IR;
 
-  // There is at least one younger load.
-  //
   // A load may pass a previous load.
   if (IsALoad)
-    return Index;
+    return IR;
 
   // A store may not pass a previous load.
-  return *LoadQueue.begin();
+  return Load;
 }
 
 void LSUnit::onInstructionExecuted(const InstRef &IR) {
@@ -161,29 +162,35 @@ void LSUnit::onInstructionExecuted(const InstRef &IR) {
   bool IsAStore = Desc.MayStore;
 
   if (IsALoad) {
-    if (LoadQueue.erase(Index)) {
+    if (LoadQueue.erase(IR)) {
       LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << Index
                         << " has been removed from the load queue.\n");
     }
-    if (!LoadBarriers.empty() && Index == *LoadBarriers.begin()) {
-      LLVM_DEBUG(
-          dbgs() << "[LSUnit]: Instruction idx=" << Index
-                 << " has been removed from the set of load barriers.\n");
-      LoadBarriers.erase(Index);
+    if (!LoadBarriers.empty()) {
+      const InstRef &LoadBarrier = *LoadBarriers.begin();
+      if (Index == LoadBarrier.getSourceIndex()) {
+        LLVM_DEBUG(
+            dbgs() << "[LSUnit]: Instruction idx=" << Index
+                   << " has been removed from the set of load barriers.\n");
+        LoadBarriers.erase(IR);
+      }
     }
   }
 
   if (IsAStore) {
-    if (StoreQueue.erase(Index)) {
+    if (StoreQueue.erase(IR)) {
       LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << Index
                         << " has been removed from the store queue.\n");
     }
 
-    if (!StoreBarriers.empty() && Index == *StoreBarriers.begin()) {
-      LLVM_DEBUG(
-          dbgs() << "[LSUnit]: Instruction idx=" << Index
-                 << " has been removed from the set of store barriers.\n");
-      StoreBarriers.erase(Index);
+    if (!StoreBarriers.empty()) {
+      const InstRef &StoreBarrier = *StoreBarriers.begin();
+      if (Index == StoreBarrier.getSourceIndex()) {
+        LLVM_DEBUG(
+            dbgs() << "[LSUnit]: Instruction idx=" << Index
+                   << " has been removed from the set of store barriers.\n");
+        StoreBarriers.erase(IR);
+      }
     }
   }
 }

@@ -4,7 +4,7 @@
 
 ; Ensure that the ISDOpcodes ADDC, ADDE, SUBC, SUBE are handled correctly
 
-define i64 @addc_adde(i64 %a, i64 %b) {
+define i64 @addc_adde(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: addc_adde:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    add a1, a1, a3
@@ -17,7 +17,7 @@ define i64 @addc_adde(i64 %a, i64 %b) {
   ret i64 %1
 }
 
-define i64 @subc_sube(i64 %a, i64 %b) {
+define i64 @subc_sube(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: subc_sube:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sub a1, a1, a3

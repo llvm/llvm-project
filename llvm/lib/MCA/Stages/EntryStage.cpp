@@ -18,7 +18,9 @@
 namespace llvm {
 namespace mca {
 
-bool EntryStage::hasWorkToComplete() const { return CurrentInstruction; }
+bool EntryStage::hasWorkToComplete() const {
+  return static_cast<bool>(CurrentInstruction);
+}
 
 bool EntryStage::isAvailable(const InstRef & /* unused */) const {
   if (CurrentInstruction)

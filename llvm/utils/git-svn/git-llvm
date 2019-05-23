@@ -413,12 +413,22 @@ def cmd_push(args):
 
 
 def lookup_llvm_svn_id(git_commit_hash):
-    commit_msg = git('log', '-1', git_commit_hash, ignore_errors=True)
+    # Use --format=%b to get the raw commit message, without any extra
+    # whitespace.
+    commit_msg = git('log', '-1', '--format=%b', git_commit_hash,
+                     ignore_errors=True)
     if len(commit_msg) == 0:
       die("Can't find git commit " + git_commit_hash)
-    svn_match = re.search('llvm-svn: (\d{5,7})$', commit_msg)
+    # If a commit has multiple "llvm-svn:" lines (e.g. if the commit is
+    # reverting/quoting a previous commit), choose the last one, which should
+    # be the authoritative one.
+    svn_match_iter = re.finditer('^llvm-svn: (\d{5,7})$', commit_msg,
+                                 re.MULTILINE)
+    svn_match = None
+    for m in svn_match_iter:
+      svn_match = m.group(1)
     if svn_match:
-      return int(svn_match.group(1))
+      return int(svn_match)
     die("Can't find svn revision in git commit " + git_commit_hash)
 
 
@@ -436,6 +446,28 @@ def cmd_svn_lookup(args):
 
     log('r' + str(lookup_llvm_svn_id(args.git_commit_hash)))
 
+
+def git_hash_by_svn_rev(svn_rev):
+    '''Find the git hash for a given svn revision.
+
+    This check is paranoid: 'llvm-svn: NNNNNN' could exist on its own line
+    somewhere else in the commit message. Look in the full log message to see
+    if it's actually on the last line.
+
+    Since this check is expensive (we're searching every single commit), limit
+    to the past 10k commits (about 5 months).
+    '''
+    possible_hashes = git(
+        'log', '--format=%H', '--grep', '^llvm-svn: %d$' % svn_rev,
+        'HEAD~10000...HEAD').split('\n')
+    matching_hashes = [h for h in possible_hashes
+                       if lookup_llvm_svn_id(h) == svn_rev]
+    if len(matching_hashes) > 1:
+      die("svn revision r%d has ambiguous commits: %s" % (
+          svn_rev, ', '.join(matching_hashes)))
+    elif len(matching_hashes) < 1:
+      die("svn revision r%d matches no commits" % svn_rev)
+    return matching_hashes[0]
 
 def cmd_revert(args):
     '''Revert a commit by either SVN id (rNNNNNN) or git hash. This also
@@ -459,24 +491,28 @@ def cmd_revert(args):
     # the git commit.
     svn_match = re.match('^r(\d{5,7})$', args.revision)
     if svn_match:
-      svn_rev = svn_match.group(1)
+      # If the revision looks like rNNNNNN, use that as the svn revision, and
+      # grep through git commits to find which one corresponds to that svn
+      # revision.
+      svn_rev = int(svn_match.group(1))
+      git_hash = git_hash_by_svn_rev(svn_rev)
     else:
-      svn_rev = str(lookup_llvm_svn_id(args.revision))
+      # Otherwise, this looks like a git hash, so we just need to grab the svn
+      # revision from the end of the commit message.
+      # Get the actual git hash in case the revision is something like "HEAD~1"
+      git_hash = git('rev-parse', '--verify', args.revision + '^{commit}')
+      svn_rev = lookup_llvm_svn_id(git_hash)
 
-    oneline = git('log', '--all',  '-1', '--format=%H %s', '--grep',
-                  'llvm-svn: ' + svn_rev)
-    if len(oneline) == 0:
-      die("Can't find svn revision r" + svn_rev)
-    (git_hash, msg) = oneline.split(' ', 1)
+    msg = git('log', '-1', '--format=%s', git_hash)
 
-    log_verbose('Ready to revert r%s/%s: "%s"' % (svn_rev, git_hash, msg))
+    log_verbose('Ready to revert r%d (%s): "%s"' % (svn_rev, git_hash, msg))
 
     revert_args = ['revert', '--no-commit', git_hash]
     # TODO: Running --edit doesn't seem to work, with errors that stdin is not
     # a tty.
     commit_args = [
         'commit', '-m', 'Revert ' + msg,
-        '-m', 'This reverts r%s (git commit %s)' % (svn_rev, git_hash)]
+        '-m', 'This reverts r%d (git commit %s)' % (svn_rev, git_hash)]
     if args.dry_run:
       log("Would have run the following commands, if this weren't a dry run:\n"
           '1) git %s\n2) git %s' % (
@@ -487,7 +523,7 @@ def cmd_revert(args):
     git(*revert_args)
     commit_log = git(*commit_args)
 
-    log('Created revert of r%s: %s' % (svn_rev, commit_log))
+    log('Created revert of r%d: %s' % (svn_rev, commit_log))
     log("Run 'git llvm push -n' to inspect your changes and "
         "run 'git llvm push' when ready")
 

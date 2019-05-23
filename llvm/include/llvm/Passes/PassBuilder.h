@@ -85,6 +85,9 @@ public:
   /// is that of the flag: `vectorize-slp`.
   bool SLPVectorization;
 
+  /// Tuning option to enable/disable loop unrolling. Its default value is true.
+  bool LoopUnrolling;
+
   /// Tuning option to cap the number of calls to retrive clobbering accesses in
   /// MemorySSA, in LICM.
   unsigned LicmMssaOptCap;
