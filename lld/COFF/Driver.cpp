@@ -203,9 +203,20 @@ void LinkerDriver::enqueuePath(StringRef Path, bool WholeArchive) {
   std::string PathStr = Path;
   enqueueTask([=]() {
     auto MBOrErr = Future->get();
-    if (MBOrErr.second)
-      error("could not open " + PathStr + ": " + MBOrErr.second.message());
-    else
+    if (MBOrErr.second) {
+      std::string Error =
+          "could not open '" + PathStr + "': " + MBOrErr.second.message();
+      // Check if the filename is a typo for an option flag. OptTable thinks
+      // that all args that are not known options and that start with / are
+      // filenames, but e.g. `/nodefaultlibs` is more likely a typo for
+      // the option `/nodefaultlib` than a reference to a file in the root
+      // directory.
+      std::string Nearest;
+      if (COFFOptTable().findNearest(PathStr, Nearest) > 1)
+        error(Error);
+      else
+        error(Error + "; did you mean '" + Nearest + "'");
+    } else
       Driver->addBuffer(std::move(MBOrErr.first), WholeArchive);
   });
 }

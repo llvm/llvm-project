@@ -1,8 +1,46 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.cstring,unix.Malloc,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -Wno-null-dereference -verify -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -DUSE_BUILTINS -analyzer-checker=core,unix.cstring,unix.Malloc,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -Wno-null-dereference -verify -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -DVARIANT -analyzer-checker=core,unix.cstring,unix.Malloc,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -Wno-null-dereference -verify -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -DUSE_BUILTINS -DVARIANT -analyzer-checker=alpha.security.taint,core,unix.cstring,unix.Malloc,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -Wno-null-dereference -verify -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -DSUPPRESS_OUT_OF_BOUND -analyzer-checker=core,unix.cstring,unix.Malloc,alpha.unix.cstring.BufferOverlap,alpha.unix.cstring.NotNullTerminated,debug.ExprInspection -analyzer-store=region -Wno-null-dereference -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -verify %s -Wno-null-dereference \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-checker=unix.Malloc \
+// RUN:   -analyzer-checker=alpha.unix.cstring \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false
+//
+// RUN: %clang_analyze_cc1 -verify %s -Wno-null-dereference -DUSE_BUILTINS \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-checker=unix.Malloc \
+// RUN:   -analyzer-checker=alpha.unix.cstring \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false
+//
+// RUN: %clang_analyze_cc1 -verify %s -Wno-null-dereference -DVARIANT \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-checker=unix.Malloc \
+// RUN:   -analyzer-checker=alpha.unix.cstring \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false
+//
+// RUN: %clang_analyze_cc1 -verify %s -Wno-null-dereference \
+// RUN:   -DUSE_BUILTINS -DVARIANT \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-checker=unix.Malloc \
+// RUN:   -analyzer-checker=alpha.unix.cstring \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false
+//
+// RUN: %clang_analyze_cc1 -verify %s -Wno-null-dereference \
+// RUN:   -DSUPPRESS_OUT_OF_BOUND \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-checker=unix.Malloc \
+// RUN:   -analyzer-checker=alpha.unix.cstring.BufferOverlap \
+// RUN:   -analyzer-checker=alpha.unix.cstring.NotNullTerminated \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false
 
 //===----------------------------------------------------------------------===
 // Declarations

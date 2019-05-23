@@ -51,3 +51,12 @@ void test4() {
   // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:50:35 %s -o - | FileCheck -check-prefix=CHECK-6 %s
   // CHECK-6-NOT: COMPLETION: Pattern : [<#=
 }
+
+void test5() {
+  // Completions are only added when -code-completion-patterns are enabled.
+  function<void()> b = {};
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:57:24 %s -o - | FileCheck -check-prefix=CHECK-7 %s
+  // CHECK-7: COMPLETION: Pattern : [<#=
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:57:24 %s -o - | FileCheck -check-prefix=CHECK-8 %s
+  // CHECK-8-NOT: COMPLETION: Pattern : [<#=
+}

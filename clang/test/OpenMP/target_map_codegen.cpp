@@ -4581,11 +4581,15 @@ struct CC {
 // CK26: define {{.+}}[[CALL00]]({{.*}}i32*{{.*}}[[PVTARG:%.+]])
 // CK26: store i32* [[PVTARG]], i32** [[PVTADDR:%.+]],
 // CK26: [[ADDR:%.+]] = load i32*, i32** [[PVTADDR]],
+// CK26: store i32* [[ADDR]], i32** [[PVTADDR:%.+]],
+// CK26: [[ADDR:%.+]] = load i32*, i32** [[PVTADDR]],
 // CK26: [[VAL:%.+]] = load i32, i32* [[ADDR]],
 // CK26: add nsw i32 [[VAL]], 1
 
 // CK26: define {{.+}}[[CALL01]]({{.*}}float*{{.*}}[[PVTARG:%.+]])
 // CK26: store float* [[PVTARG]], float** [[PVTADDR:%.+]],
+// CK26: [[ADDR:%.+]] = load float*, float** [[PVTADDR]],
+// CK26: store float* [[ADDR]], float** [[PVTADDR:%.+]],
 // CK26: [[ADDR:%.+]] = load float*, float** [[PVTADDR]],
 // CK26: [[VAL:%.+]] = load float, float* [[ADDR]],
 // CK26: [[EXT:%.+]] = fpext float [[VAL]] to double
@@ -4594,11 +4598,15 @@ struct CC {
 // CK26: define {{.+}}[[CALL02]]({{.*}}i32*{{.*}}[[PVTARG:%.+]])
 // CK26: store i32* [[PVTARG]], i32** [[PVTADDR:%.+]],
 // CK26: [[ADDR:%.+]] = load i32*, i32** [[PVTADDR]],
+// CK26: store i32* [[ADDR]], i32** [[PVTADDR:%.+]],
+// CK26: [[ADDR:%.+]] = load i32*, i32** [[PVTADDR]],
 // CK26: [[VAL:%.+]] = load i32, i32* [[ADDR]],
 // CK26: add nsw i32 [[VAL]], 1
 
 // CK26: define {{.+}}[[CALL03]]({{.*}}float*{{.*}}[[PVTARG:%.+]])
 // CK26: store float* [[PVTARG]], float** [[PVTADDR:%.+]],
+// CK26: [[ADDR:%.+]] = load float*, float** [[PVTADDR]],
+// CK26: store float* [[ADDR]], float** [[PVTADDR:%.+]],
 // CK26: [[ADDR:%.+]] = load float*, float** [[PVTADDR]],
 // CK26: [[VAL:%.+]] = load float, float* [[ADDR]],
 // CK26: [[EXT:%.+]] = fpext float [[VAL]] to double

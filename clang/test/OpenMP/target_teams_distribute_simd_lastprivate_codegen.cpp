@@ -110,12 +110,13 @@ int main() {
       // LAMBDA-64: [[G_IN_REF:%.+]] = bitcast i64* [[G_PRIVATE_ADDR]] to double*
       // LAMBDA-32: [[G_IN_REF:%.+]] = load double*, double** [[G_PRIVATE_ADDR]],
       // LAMBDA-64: [[G1_IN_REF:%.+]] = bitcast i64* [[G1_PRIVATE_ADDR]] to double*
-      // LAMBDA-64: store double* [[G1_IN_REF]], double** [[G1_IN_ADDR_REF:%.+]],
+      // LAMBDA-32: [[G1_IN_REF:%.+]] = load double*, double** [[G1_PRIVATE_ADDR]],
       // LAMBDA-64: [[SVAR_IN_REF:%.+]] = bitcast i64* [[SVAR_PRIVATE_ADDR]] to i32*
       // LAMBDA-64: [[SFVAR_IN_REF:%.+]] = bitcast i64* [[SFVAR_PRIVATE_ADDR]] to float*
       // LAMBDA-32: [[SFVAR_IN_REF:%.+]] = bitcast i32* [[SFVAR_PRIVATE_ADDR]] to float*
+      // LAMBDA-64: store double* [[G1_IN_REF]], double** [[G1_IN_ADDR_REF:%.+]],
       // LAMBDA-64: [[G1_IN_REF:%.+]] = load double*, double** [[G1_IN_ADDR_REF]],
-      // LAMBDA-32: [[G1_IN_REF:%.+]] = load double*, double** [[G1_PRIVATE_ADDR]],
+      // LAMBDA-32: [[G1_IN_REF:%.+]] = load double*, double** %
       // LAMBDA: store double* [[G1_PRIVATE]], double** [[TMP_G1_PRIVATE]],
       g = 1;
       g1 = 1;
@@ -245,9 +246,10 @@ int main() {
 // CHECK: [[VEC_ADDR_REF:%.+]] = load [2 x i{{[0-9]+}}]*, [2 x i{{[0-9]+}}]** [[VEC_ADDR]],
 // CHECK-64: [[T_VAR_ADDR_REF:%.+]] = bitcast i64* [[T_VAR_ADDR]] to i32*
 // CHECK: [[S_ARR_ADDR_REF:%.+]] = load [2 x [[S_FLOAT_TY]]]*, [2 x [[S_FLOAT_TY]]]** [[S_ARR_ADDR]],
+// CHECK:  [[VAR_ADDR_REF:%.+]] = load {{.+}}, {{.+}} [[VAR_ADDR]],
 // CHECK-64: [[SVAR_ADDR_REF:%.+]] = bitcast i64* [[SVAR_ADDR]] to i32*
 // CHECK: store i{{[0-9]+}} 0, i{{[0-9]+}}* [[OMP_IS_LAST]],
-// CHECK:  [[VAR_ADDR_REF:%.+]] = load {{.+}}, {{.+}} [[VAR_ADDR]],
+// CHECK:  [[TMP_VAR_ADDR_REF:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** %
 // the distribute loop
 // CHECK: call void @__kmpc_for_static_init_4(
 // assignment: vec[i] = t_var;
@@ -292,7 +294,7 @@ int main() {
 // CHECK: br i1 [[CPY_IS_FINISHED]], label %[[S_ARR_COPY_DONE]], label %[[S_ARR_COPY_BLOCK]]
 // CHECK: [[S_ARR_COPY_DONE]]:
 // CHECK: [[TMP_VAL1:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** [[TMP_PRIV]],
-// CHECK: [[VAR_ADDR_REF_BCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[VAR_ADDR_REF]] to i8*
+// CHECK: [[VAR_ADDR_REF_BCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[TMP_VAR_ADDR_REF]] to i8*
 // CHECK: [[TMP_VAL1_BCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[TMP_VAL1]] to i8*
 // CHECK: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VAR_ADDR_REF_BCAST]], i8* align {{[0-9]+}} [[TMP_VAL1_BCAST]],{{.+}})
 // CHECK: [[SVAR_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[S_VAR_PRIV]],
@@ -347,8 +349,9 @@ int main() {
 // CHECK: [[VEC_ADDR_REF1:%.+]] = load [2 x i{{[0-9]+}}]*, [2 x i{{[0-9]+}}]** [[VEC_ADDR1]],
 // CHECK-64: [[T_VAR_ADDR_REF1:%.+]] = bitcast i64* [[T_VAR_ADDR1]] to i32*
 // CHECK: [[S_ARR_ADDR_REF1:%.+]] = load [2 x [[S_INT_TY]]]*, [2 x [[S_INT_TY]]]** [[S_ARR_ADDR1]],
-// CHECK-DAG: store i{{[0-9]+}} 0, i{{[0-9]+}}* [[OMP_IS_LAST1]],
 // CHECK: [[VAR_ADDR1_REF:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** [[VAR_ADDR1]],
+// CHECK-DAG: store i{{[0-9]+}} 0, i{{[0-9]+}}* [[OMP_IS_LAST1]],
+// CHECK:  [[TMP_VAR_ADDR1_REF:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** %
 // CHECK-DAG: store [[S_INT_TY]]* [[VAR_PRIV1]], [[S_INT_TY]]** [[TMP_PRIV1]],
 // CHECK: call void @__kmpc_for_static_init_4(
 // assignment: vec[i] = t_var;
@@ -394,7 +397,7 @@ int main() {
 // CHECK: br i1 [[CPY_IS_FINISHED]], label %[[S_ARR_COPY_DONE]], label %[[S_ARR_COPY_BLOCK]]
 // CHECK: [[S_ARR_COPY_DONE]]:
 // CHECK: [[TMP_VAL1:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** [[TMP_PRIV1]],
-// CHECK: [[VAR_ADDR_REF_BCAST:%.+]] = bitcast [[S_INT_TY]]* [[VAR_ADDR1_REF]] to i8*
+// CHECK: [[VAR_ADDR_REF_BCAST:%.+]] = bitcast [[S_INT_TY]]* [[TMP_VAR_ADDR1_REF]] to i8*
 // CHECK: [[TMP_VAL1_BCAST:%.+]] = bitcast [[S_INT_TY]]* [[TMP_VAL1]] to i8*
 // CHECK: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VAR_ADDR_REF_BCAST]], i8* align {{[0-9]+}} [[TMP_VAL1_BCAST]],{{.+}})
 // CHECK: ret void
