@@ -28,4 +28,4 @@ Symbols:
     Value:    0x1000
     Size:     8
 
-#CHECK: not stripping symbol 'foo' because it is named in a relocation.
+# CHECK: not stripping symbol 'foo' because it is named in a relocation

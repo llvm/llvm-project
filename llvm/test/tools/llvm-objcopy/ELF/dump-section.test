@@ -3,7 +3,7 @@
 # RUN: llvm-objcopy -O binary --only-section .text %t %t3
 # RUN: llvm-objcopy --dump-section .text=%t4 %t %t5
 # RUN: llvm-objcopy --dump-section .foo=%t6 %t %t7
-# RUN: not llvm-objcopy --dump-section .bar=%t8 %t %t9 2>&1 | FileCheck %s --check-prefix=NOBITS
+# RUN: not llvm-objcopy --dump-section .bar=%t8 %t %t9 2>&1 | FileCheck %s --check-prefix=NOBITS -DINPUT=%t
 # RUN: od -t x1 %t2 | FileCheck %s
 # RUN: od -t x1 %t6 | FileCheck %s --check-prefix=NON-ALLOC
 # RUN: wc -c %t2 | FileCheck %s --check-prefix=SIZE
@@ -41,4 +41,4 @@ ProgramHeaders:
 
 #SIZE: 4
 
-#NOBITS: Can't dump section ".bar": it has no contents
+#NOBITS: error: '[[INPUT]]': cannot dump section '.bar': it has no contents

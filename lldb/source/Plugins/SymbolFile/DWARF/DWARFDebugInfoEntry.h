@@ -126,12 +126,6 @@ public:
 
   const char *GetPubname(const DWARFUnit *cu) const;
 
-  static bool GetName(const DWARFUnit *cu, const dw_offset_t die_offset,
-                      lldb_private::Stream &s);
-
-  static bool AppendTypeName(const DWARFUnit *cu, const dw_offset_t die_offset,
-                             lldb_private::Stream &s);
-
   const char *GetQualifiedName(DWARFUnit *cu, std::string &storage) const;
 
   const char *GetQualifiedName(DWARFUnit *cu, const DWARFAttributes &attributes,

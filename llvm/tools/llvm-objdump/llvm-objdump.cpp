@@ -334,18 +334,18 @@ static StringRef ToolName;
 
 typedef std::vector<std::tuple<uint64_t, StringRef, uint8_t>> SectionSymbolsTy;
 
+static bool shouldKeep(object::SectionRef S) {
+  if (FilterSections.empty())
+    return true;
+  StringRef String;
+  std::error_code error = S.getName(String);
+  if (error)
+    return false;
+  return is_contained(FilterSections, String);
+}
+
 SectionFilter ToolSectionFilter(object::ObjectFile const &O) {
-  return SectionFilter(
-      [](object::SectionRef const &S) {
-        if (FilterSections.empty())
-          return true;
-        StringRef String;
-        std::error_code error = S.getName(String);
-        if (error)
-          return false;
-        return is_contained(FilterSections, String);
-      },
-      O);
+  return SectionFilter([](object::SectionRef S) { return shouldKeep(S); }, O);
 }
 
 void error(std::error_code EC) {
@@ -922,15 +922,15 @@ static size_t countSkippableZeroBytes(ArrayRef<uint8_t> Buf) {
 static std::map<SectionRef, std::vector<RelocationRef>>
 getRelocsMap(object::ObjectFile const &Obj) {
   std::map<SectionRef, std::vector<RelocationRef>> Ret;
-  for (const SectionRef &Section : ToolSectionFilter(Obj)) {
-    section_iterator RelSec = Section.getRelocatedSection();
-    if (RelSec == Obj.section_end())
+  for (SectionRef Sec : Obj.sections()) {
+    section_iterator Relocated = Sec.getRelocatedSection();
+    if (Relocated == Obj.section_end() || !shouldKeep(*Relocated))
       continue;
-    std::vector<RelocationRef> &V = Ret[*RelSec];
-    for (const RelocationRef &R : Section.relocations())
+    std::vector<RelocationRef> &V = Ret[*Relocated];
+    for (const RelocationRef &R : Sec.relocations())
       V.push_back(R);
     // Sort relocations by address.
-    llvm::sort(V, isRelocAddressLess);
+    llvm::stable_sort(V, isRelocAddressLess);
   }
   return Ret;
 }

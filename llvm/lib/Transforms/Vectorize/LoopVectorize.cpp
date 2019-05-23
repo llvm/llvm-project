@@ -5001,6 +5001,8 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(bool OptForSize,
   if (LoopCost == 0)
     LoopCost = expectedCost(VF).first;
 
+  assert(LoopCost && "Non-zero loop cost expected");
+
   // Clamp the calculated IC to be between the 1 and the max interleave count
   // that the target allows.
   if (IC > MaxInterleaveCount)

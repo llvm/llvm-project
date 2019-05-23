@@ -3099,23 +3099,6 @@ multiclass scalar_unary_math_patterns<SDNode OpNode, string OpcPrefix, SDNode Mo
   }
 }
 
-multiclass scalar_unary_math_imm_patterns<SDNode OpNode, string OpcPrefix, SDNode Move,
-                                          ValueType VT, bits<8> ImmV,
-                                          Predicate BasePredicate> {
-  let Predicates = [BasePredicate] in {
-    def : Pat<(VT (Move VT:$dst, (scalar_to_vector
-                                  (OpNode (extractelt VT:$src, 0))))),
-              (!cast<Instruction>(OpcPrefix#r_Int) VT:$dst, VT:$src, (i32 ImmV))>;
-  }
-
-  // Repeat for AVX versions of the instructions.
-  let Predicates = [UseAVX] in {
-    def : Pat<(VT (Move VT:$dst, (scalar_to_vector
-                                  (OpNode (extractelt VT:$src, 0))))),
-              (!cast<Instruction>("V"#OpcPrefix#r_Int) VT:$dst, VT:$src, (i32 ImmV))>;
-  }
-}
-
 defm : scalar_unary_math_patterns<fsqrt, "SQRTSS", X86Movss, v4f32, UseSSE1>;
 defm : scalar_unary_math_patterns<fsqrt, "SQRTSD", X86Movsd, v2f64, UseSSE2>;
 
@@ -5983,15 +5966,6 @@ let Predicates = [UseSSE41] in {
   def : Pat<(v2f64 (ftrunc (memopv2f64 addr:$src))),
             (ROUNDPDm addr:$src, (i32 0xB))>;
 }
-
-defm : scalar_unary_math_imm_patterns<ffloor, "ROUNDSS", X86Movss,
-                                      v4f32, 0x01, UseSSE41>;
-defm : scalar_unary_math_imm_patterns<fceil, "ROUNDSS", X86Movss,
-                                      v4f32, 0x02, UseSSE41>;
-defm : scalar_unary_math_imm_patterns<ffloor, "ROUNDSD", X86Movsd,
-                                      v2f64, 0x01, UseSSE41>;
-defm : scalar_unary_math_imm_patterns<fceil, "ROUNDSD", X86Movsd,
-                                      v2f64, 0x02, UseSSE41>;
 
 //===----------------------------------------------------------------------===//
 // SSE4.1 - Packed Bit Test

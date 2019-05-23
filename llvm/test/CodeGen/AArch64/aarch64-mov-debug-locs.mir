@@ -1,0 +1,239 @@
+
+# RUN: llc -mtriple=aarch64-none-linux-gnu -verify-machineinstrs -run-pass=livedebugvalues %s -o - | FileCheck %s
+
+#
+# This test is for the problem from https://bugs.llvm.org/show_bug.cgi?id=38714.
+# 
+# Specifically, Simple Register Coalescing creates following conversion :
+#
+# undef %0.sub_32:gpr64 = ORRWrs $wzr, %3:gpr32common, 0, debug-location !24;
+#
+# It copies 32-bit value from gpr32 into gpr64. But later Live DEBUG_VALUE analysis
+# is not able to create debug location record for that instruction. The fix is
+# to write custom isCopyInstrImpl() which would recognize the ORRWrs instr as
+# move instruction.
+#
+# The LLVM-IR below was produced by clang on the following C++ code:
+# 
+# int printf(const char* restrict format, ...);
+# 
+# 
+# int main( int argc, char **argv )
+# {
+#   for(int i = 1; i < argc; ++i) {
+#     printf("Argument %d: %s\n", i, argv[i]);
+#   }
+#   return 0;
+# }
+# 
+
+# CHECK-LABEL: main
+# CHECK: DBG_VALUE $w0, $noreg
+# CHECK: renamable $[[REG1:w[0-9]+]] = ORRWrs $wzr, killed renamable $w0, 0
+# CHECK: DBG_VALUE $[[REG1]], $noreg
+
+
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "test.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux"
+  
+  @.str = private unnamed_addr constant [17 x i8] c"Argument %d: %s\0A\00", align 1
+  
+  ; Function Attrs: nounwind
+  define dso_local i32 @main(i32 %argc, i8** nocapture readonly %argv) local_unnamed_addr #0 !dbg !7 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 %argc, metadata !15, metadata !DIExpression()), !dbg !19
+    call void @llvm.dbg.value(metadata i8** %argv, metadata !16, metadata !DIExpression()), !dbg !19
+    call void @llvm.dbg.value(metadata i32 1, metadata !17, metadata !DIExpression()), !dbg !20
+    %cmp5 = icmp sgt i32 %argc, 1, !dbg !21
+    br i1 %cmp5, label %for.body.preheader, label %for.cond.cleanup, !dbg !23
+  
+  for.body.preheader:                               ; preds = %entry
+    %wide.trip.count = zext i32 %argc to i64, !dbg !24
+    br label %for.body, !dbg !25
+  
+  for.cond.cleanup:                                 ; preds = %for.body, %entry
+    ret i32 0, !dbg !27
+  
+  for.body:                                         ; preds = %for.body, %for.body.preheader
+    %indvars.iv = phi i64 [ 1, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
+    call void @llvm.dbg.value(metadata i64 %indvars.iv, metadata !17, metadata !DIExpression()), !dbg !20
+    %scevgep = getelementptr i8*, i8** %argv, i64 %indvars.iv, !dbg !25
+    %0 = load i8*, i8** %scevgep, align 8, !dbg !25, !tbaa !28
+    %tmp = trunc i64 %indvars.iv to i32
+    %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @.str, i64 0, i64 0), i32 %tmp, i8* %0), !dbg !32
+    %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !33
+    call void @llvm.dbg.value(metadata i32 undef, metadata !17, metadata !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value)), !dbg !20
+    %exitcond = icmp eq i64 %wide.trip.count, %indvars.iv.next, !dbg !21
+    br i1 %exitcond, label %for.cond.cleanup, label %for.body, !dbg !23, !llvm.loop !34
+  }
+  
+  ; Function Attrs: nounwind
+  declare dso_local i32 @printf(i8* nocapture readonly, ...) local_unnamed_addr #1
+  
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #2
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #3
+
+  attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #2 = { nounwind readnone speculatable }
+  attributes #3 = { nounwind }
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4, !5}
+  !llvm.ident = !{!6}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 9.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
+  !1 = !DIFile(filename: "test.c", directory: "test")
+  !2 = !{}
+  !3 = !{i32 2, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !{i32 1, !"wchar_size", i32 4}
+  !6 = !{!"clang version 9.0.0 "}
+  !7 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 6, type: !8, scopeLine: 7, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !14)
+  !8 = !DISubroutineType(types: !9)
+  !9 = !{!10, !10, !11}
+  !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !11 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !12, size: 64)
+  !12 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !13, size: 64)
+  !13 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_unsigned_char)
+  !14 = !{!15, !16, !17}
+  !15 = !DILocalVariable(name: "argc", arg: 1, scope: !7, file: !1, line: 6, type: !10)
+  !16 = !DILocalVariable(name: "argv", arg: 2, scope: !7, file: !1, line: 6, type: !11)
+  !17 = !DILocalVariable(name: "i", scope: !18, file: !1, line: 8, type: !10)
+  !18 = distinct !DILexicalBlock(scope: !7, file: !1, line: 8, column: 3)
+  !19 = !DILocation(line: 0, scope: !7)
+  !20 = !DILocation(line: 0, scope: !18)
+  !21 = !DILocation(line: 8, column: 20, scope: !22)
+  !22 = distinct !DILexicalBlock(scope: !18, file: !1, line: 8, column: 3)
+  !23 = !DILocation(line: 8, column: 3, scope: !18)
+  !24 = !DILocation(line: 0, scope: !22)
+  !25 = !DILocation(line: 9, column: 36, scope: !26)
+  !26 = distinct !DILexicalBlock(scope: !22, file: !1, line: 8, column: 33)
+  !27 = !DILocation(line: 11, column: 3, scope: !7)
+  !28 = !{!29, !29, i64 0}
+  !29 = !{!"any pointer", !30, i64 0}
+  !30 = !{!"omnipotent char", !31, i64 0}
+  !31 = !{!"Simple C/C++ TBAA"}
+  !32 = !DILocation(line: 9, column: 5, scope: !26)
+  !33 = !DILocation(line: 8, column: 28, scope: !22)
+  !34 = distinct !{!34, !23, !35}
+  !35 = !DILocation(line: 10, column: 3, scope: !18)
+
+...
+---
+name:            main
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:         
+  - { reg: '$w0', virtual-reg: '' }
+  - { reg: '$x1', virtual-reg: '' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       48
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           
+  - { id: 0, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8, 
+      stack-id: 0, callee-saved-register: '$lr', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8, 
+      stack-id: 0, callee-saved-register: '$fp', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -24, size: 8, alignment: 8, 
+      stack-id: 0, callee-saved-register: '$x19', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: spill-slot, offset: -32, size: 8, alignment: 8, 
+      stack-id: 0, callee-saved-register: '$x20', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 4, name: '', type: spill-slot, offset: -40, size: 8, alignment: 8, 
+      stack-id: 0, callee-saved-register: '$x21', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 5, name: '', type: spill-slot, offset: -48, size: 8, alignment: 8, 
+      stack-id: 0, callee-saved-register: '$x22', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.3(0x40000000)
+    liveins: $w0, $x1, $x21, $x22, $x19, $x20, $lr
+  
+    DBG_VALUE $w0, $noreg, !15, !DIExpression(), debug-location !19
+    DBG_VALUE $w0, $noreg, !15, !DIExpression(), debug-location !19
+    DBG_VALUE $x1, $noreg, !16, !DIExpression(), debug-location !19
+    early-clobber $sp = frame-setup STPXpre killed $x22, killed $x21, $sp, -6 :: (store 8 into %stack.5), (store 8 into %stack.4)
+    frame-setup STPXi killed $x20, killed $x19, $sp, 2 :: (store 8 into %stack.3), (store 8 into %stack.2)
+    frame-setup STPXi $fp, killed $lr, $sp, 4 :: (store 8 into %stack.1), (store 8 into %stack.0)
+    $fp = frame-setup ADDXri $sp, 32, 0
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+    frame-setup CFI_INSTRUCTION offset $w30, -8, debug-location !23
+    frame-setup CFI_INSTRUCTION offset $w29, -16, debug-location !23
+    frame-setup CFI_INSTRUCTION offset $w19, -24, debug-location !23
+    frame-setup CFI_INSTRUCTION offset $w20, -32, debug-location !23
+    frame-setup CFI_INSTRUCTION offset $w21, -40, debug-location !23
+    frame-setup CFI_INSTRUCTION offset $w22, -48, debug-location !23
+    DBG_VALUE 1, $noreg, !17, !DIExpression(), debug-location !20
+    dead $wzr = SUBSWri renamable $w0, 2, 0, implicit-def $nzcv, debug-location !23
+    Bcc 11, %bb.3, implicit $nzcv, debug-location !23
+  
+  bb.1.for.body.preheader:
+    successors: %bb.2(0x80000000)
+    liveins: $w0, $x1
+  
+    $x21 = ADRP target-flags(aarch64-page) @.str
+    $x19 = ORRXrs $xzr, killed $x1, 0
+    DBG_VALUE $x19, $noreg, !16, !DIExpression(), debug-location !19
+    renamable $w22 = ORRWrs $wzr, killed renamable $w0, 0, implicit-def $x22, debug-location !24
+    $w20 = MOVZWi 1, 0, implicit-def $x20
+    renamable $x21 = ADDXri killed $x21, target-flags(aarch64-pageoff, aarch64-nc) @.str, 0
+  
+  bb.2.for.body:
+    successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+    liveins: $x19, $x20, $x21, $x22
+  
+    DBG_VALUE $x20, $noreg, !17, !DIExpression(), debug-location !20
+    renamable $x2 = LDRXroX renamable $x19, renamable $x20, 0, 1, debug-location !25 :: (load 8 from %ir.scevgep, !tbaa !28)
+    $x0 = ORRXrs $xzr, $x21, 0, debug-location !32
+    $w1 = ORRWrs $wzr, $w20, 0, debug-location !32
+    BL @printf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit killed $w1, implicit killed $x2, implicit-def $sp, implicit-def dead $w0, debug-location !32
+    renamable $x20 = nuw nsw ADDXri killed renamable $x20, 1, 0, debug-location !33
+    DBG_VALUE $noreg, $noreg, !17, !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value), debug-location !20
+    $xzr = SUBSXrs renamable $x22, renamable $x20, 0, implicit-def $nzcv, implicit-def $nzcv, debug-location !23
+    Bcc 1, %bb.2, implicit killed $nzcv, debug-location !23
+  
+  bb.3.for.cond.cleanup:
+    $fp, $lr = frame-destroy LDPXi $sp, 4, debug-location !27 :: (load 8 from %stack.1), (load 8 from %stack.0)
+    $x20, $x19 = frame-destroy LDPXi $sp, 2, debug-location !27 :: (load 8 from %stack.3), (load 8 from %stack.2)
+    $w0 = ORRWrs $wzr, $wzr, 0, debug-location !27
+    early-clobber $sp, $x22, $x21 = frame-destroy LDPXpost $sp, 6, debug-location !27 :: (load 8 from %stack.5), (load 8 from %stack.4)
+    RET undef $lr, implicit killed $w0, debug-location !27
+
+...

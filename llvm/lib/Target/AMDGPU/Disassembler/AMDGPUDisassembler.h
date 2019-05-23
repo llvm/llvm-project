@@ -41,15 +41,14 @@ class AMDGPUDisassembler : public MCDisassembler {
 private:
   std::unique_ptr<MCInstrInfo const> const MCII;
   const MCRegisterInfo &MRI;
+  const unsigned TargetMaxInstBytes;
   mutable ArrayRef<uint8_t> Bytes;
   mutable uint32_t Literal;
   mutable bool HasLiteral;
 
 public:
   AMDGPUDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
-                     MCInstrInfo const *MCII) :
-    MCDisassembler(STI, Ctx), MCII(MCII), MRI(*Ctx.getRegisterInfo()) {}
-
+                     MCInstrInfo const *MCII);
   ~AMDGPUDisassembler() override = default;
 
   DecodeStatus getInstruction(MCInst &MI, uint64_t &Size,

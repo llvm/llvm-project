@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s > %t
 # RUN: not llvm-objcopy --build-id-link-dir=%t-dir --build-id-link-input=.debug %t 2>&1 >/dev/null | FileCheck %s
 
-# CHECK: build ID is smaller than two bytes.
+# CHECK: build ID is smaller than two bytes
 
 --- !ELF
 FileHeader:

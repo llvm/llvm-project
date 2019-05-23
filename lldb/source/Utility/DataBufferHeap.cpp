@@ -52,7 +52,7 @@ uint64_t DataBufferHeap::SetByteSize(uint64_t new_size) {
 }
 
 void DataBufferHeap::CopyData(const void *src, uint64_t src_len) {
-  const uint8_t *src_u8 = (const uint8_t *)src;
+  const uint8_t *src_u8 = static_cast<const uint8_t *>(src);
   if (src && src_len > 0)
     m_data.assign(src_u8, src_u8 + src_len);
   else
@@ -60,8 +60,8 @@ void DataBufferHeap::CopyData(const void *src, uint64_t src_len) {
 }
 
 void DataBufferHeap::AppendData(const void *src, uint64_t src_len) {
-  m_data.insert(m_data.end(), (const uint8_t *)src,
-                (const uint8_t *)src + src_len);
+  m_data.insert(m_data.end(), static_cast<const uint8_t *>(src),
+                static_cast<const uint8_t *>(src) + src_len);
 }
 
 void DataBufferHeap::Clear() {

@@ -143,7 +143,7 @@ size_t EventDataBytes::GetByteSize() const { return m_bytes.size(); }
 
 void EventDataBytes::SetBytes(const void *src, size_t src_len) {
   if (src != nullptr && src_len > 0)
-    m_bytes.assign((const char *)src, src_len);
+    m_bytes.assign(static_cast<const char *>(src), src_len);
   else
     m_bytes.clear();
 }
