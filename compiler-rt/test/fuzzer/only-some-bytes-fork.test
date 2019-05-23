@@ -1,0 +1,12 @@
+# Tests the data flow tracer.
+REQUIRES: linux, x86_64
+
+# Build the tracer and the test.
+RUN: %no_fuzzer_cpp_compiler -c -fno-sanitize=all -fsanitize=dataflow  %S/../../lib/fuzzer/dataflow/DataFlow.cpp -o  %t-DataFlow.o
+RUN: %no_fuzzer_cpp_compiler    -fno-sanitize=all -fsanitize=dataflow -fsanitize-coverage=trace-pc-guard,pc-table,bb,trace-cmp   %S/OnlySomeBytesTest.cpp     %t-DataFlow.o -o %t-DFT
+RUN: %cpp_compiler %S/OnlySomeBytesTest.cpp -o %t-Fuzz
+
+# Test that the fork mode can collect and use the DFT
+RUN: rm -rf %t && mkdir %t
+RUN: not %t-Fuzz -collect_data_flow=%t-DFT -use_value_profile=1 -runs=100000000 -fork=1 2> %t/log
+RUN: grep BINGO %t/log

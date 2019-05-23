@@ -978,7 +978,9 @@ void Editline::ConfigureEditor(bool multiline) {
   TerminalSizeChanged();
 
   if (m_history_sp && m_history_sp->IsValid()) {
-    m_history_sp->Load();
+    if (!m_history_sp->Load()) {
+        fputs("Could not load history file\n.", m_output_file);
+    }
     el_wset(m_editline, EL_HIST, history, m_history_sp->GetHistoryPtr());
   }
   el_set(m_editline, EL_CLIENTDATA, this);
