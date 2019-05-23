@@ -15,12 +15,12 @@ NOT-NOT: Value = [[VALUE]]
 
 ERRMSG: defines.txt:[[@LINE-3]]:8: error: CHECK: expected string not found in input
 ERRMSG: defines.txt:1:1: note: scanning from here
-ERRMSG: defines.txt:1:1: note: with string variable "VALUE" equal to "20"
+ERRMSG: defines.txt:1:1: note: with "VALUE" equal to "20"
 ERRMSG: defines.txt:[[@LINE-7]]:1: note: possible intended match here
 
 NOT-ERRMSG: defines.txt:[[@LINE-7]]:10: error: {{NOT}}-NOT: excluded string found in input
 NOT-ERRMSG: defines.txt:[[@LINE-10]]:1: note: found here
-NOT-ERRMSG: defines.txt:[[@LINE-11]]:1: note: with string variable "VALUE" equal to "10"
+NOT-ERRMSG: defines.txt:[[@LINE-11]]:1: note: with "VALUE" equal to "10"
 
 ; Definition of string variable to an empty string.
 RUN: FileCheck -DVALUE= --check-prefix EMPTY --input-file %s %s 2>&1

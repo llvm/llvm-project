@@ -116,37 +116,20 @@ protected:
   /// evaluate their value.
   FileCheckPatternContext *Context;
 
-  /// Whether this represents a numeric expression substitution.
-  bool IsNumSubst;
-
   /// The string that needs to be substituted for something else. For a
   /// string variable this is its name, otherwise this is the whole numeric
   /// expression.
   StringRef FromStr;
 
-  /// If this is a numeric expression substitution, this is the pointer to the
-  /// class representing the numeric expression whose value is to be
-  /// substituted.
-  FileCheckNumExpr *NumExpr = nullptr;
-
   // Index in RegExStr of where to do the substitution.
   size_t InsertIdx;
 
 public:
-  /// Constructor for a pattern variable substitution.
-  FileCheckSubstitution(FileCheckPatternContext *Context,
-                        StringRef VarName, size_t InsertIdx)
-      : Context(Context), IsNumSubst(false), FromStr(VarName),
-        InsertIdx(InsertIdx) {}
+  FileCheckSubstitution(FileCheckPatternContext *Context, StringRef VarName,
+                        size_t InsertIdx)
+      : Context(Context), FromStr(VarName), InsertIdx(InsertIdx) {}
 
-  /// Constructor for a numeric expression substitution.
-  FileCheckSubstitution(FileCheckPatternContext *Context, StringRef Expr,
-                        FileCheckNumExpr *NumExpr, size_t InsertIdx)
-      : Context(Context), IsNumSubst(true), FromStr(Expr), NumExpr(NumExpr),
-        InsertIdx(InsertIdx) {}
-
-  /// \returns whether this is a numeric expression substitution.
-  bool isNumSubst() const { return IsNumSubst; }
+  virtual ~FileCheckSubstitution() = default;
 
   /// \returns the string to be substituted for something else.
   StringRef getFromString() const { return FromStr; }
@@ -154,15 +137,48 @@ public:
   /// \returns the index where the substitution is to be performed in RegExStr.
   size_t getIndex() const { return InsertIdx; }
 
-  /// \returns the result of the substitution represented by this class
-  /// instance or None if substitution failed. Numeric expressions are
-  /// substituted by their values. String variables are simply replaced by the
-  /// text their definition matched.
-  llvm::Optional<std::string> getResult() const;
+  /// \returns a string containing the result of the substitution represented
+  /// by this class instance or None if substitution failed.
+  virtual llvm::Optional<std::string> getResult() const = 0;
 
-  /// \returns the name of the undefined variable used in this substitution, if
-  /// any, or an empty string otherwise.
-  StringRef getUndefVarName() const;
+  /// \returns the name of the variable used in this substitution if undefined,
+  /// or an empty string otherwise.
+  virtual StringRef getUndefVarName() const = 0;
+};
+
+class FileCheckStringSubstitution : public FileCheckSubstitution {
+public:
+  FileCheckStringSubstitution(FileCheckPatternContext *Context,
+                              StringRef VarName, size_t InsertIdx)
+      : FileCheckSubstitution(Context, VarName, InsertIdx) {}
+
+  /// \returns the text that the string variable in this substitution matched
+  /// when defined, or None if the variable is undefined.
+  llvm::Optional<std::string> getResult() const override;
+
+  /// \returns the name of the string variable used in this substitution if
+  /// undefined, or an empty string otherwise.
+  StringRef getUndefVarName() const override;
+};
+
+class FileCheckNumericSubstitution : public FileCheckSubstitution {
+private:
+  /// Pointer to the class representing the numeric expression whose value is
+  /// to be substituted.
+  FileCheckNumExpr *NumExpr;
+
+public:
+  FileCheckNumericSubstitution(FileCheckPatternContext *Context, StringRef Expr,
+                               FileCheckNumExpr *NumExpr, size_t InsertIdx)
+      : FileCheckSubstitution(Context, Expr, InsertIdx), NumExpr(NumExpr) {}
+
+  /// \returns a string containing the result of evaluating the numeric
+  /// expression in this substitution, or None if evaluation failed.
+  llvm::Optional<std::string> getResult() const override;
+
+  /// \returns the name of the numeric variable used in this substitution if
+  /// undefined, or an empty string otherwise.
+  StringRef getUndefVarName() const override;
 };
 
 //===----------------------------------------------------------------------===//
@@ -245,6 +261,10 @@ private:
   /// automatically free them once they are guaranteed to no longer be used.
   std::vector<std::unique_ptr<FileCheckNumericVariable>> NumericVariables;
 
+  /// Vector holding pointers to all substitutions. Used to automatically free
+  /// them once they are guaranteed to no longer be used.
+  std::vector<std::unique_ptr<FileCheckSubstitution>> Substitutions;
+
 public:
   /// \returns the value of string variable \p VarName or None if no such
   /// variable has been defined.
@@ -273,6 +293,17 @@ private:
   /// Makes a new numeric variable and registers it for destruction when the
   /// context is destroyed.
   FileCheckNumericVariable *makeNumericVariable(StringRef Name, uint64_t Value);
+
+  /// Makes a new string substitution and registers it for destruction when the
+  /// context is destroyed.
+  FileCheckSubstitution *makeStringSubstitution(StringRef VarName,
+                                                size_t InsertIdx);
+
+  /// Makes a new numeric substitution and registers it for destruction when
+  /// the context is destroyed.
+  FileCheckSubstitution *makeNumericSubstitution(StringRef Expr,
+                                                 FileCheckNumExpr *NumExpr,
+                                                 size_t InsertIdx);
 };
 
 class FileCheckPattern {
@@ -292,7 +323,7 @@ class FileCheckPattern {
   /// RegExStr will contain "foobaz" and we'll get two entries in this vector
   /// that tells us to insert the value of string variable "bar" at offset 3
   /// and the value of numeric expression "N+1" at offset 6.
-  std::vector<FileCheckSubstitution> Substitutions;
+  std::vector<FileCheckSubstitution *> Substitutions;
 
   /// Maps names of string variables defined in a pattern to the parenthesized
   /// capture numbers of their last definition.

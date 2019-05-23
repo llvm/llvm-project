@@ -229,9 +229,9 @@ TEST_F(FileCheckTest, Substitution) {
   Context.defineCmdlineVariables(GlobalDefines, SM);
 
   // Substitution of an undefined string variable fails.
-  FileCheckSubstitution Substitution =
-      FileCheckSubstitution(&Context, "VAR404", 42);
-  EXPECT_FALSE(Substitution.getResult());
+  FileCheckStringSubstitution StringSubstitution =
+      FileCheckStringSubstitution(&Context, "VAR404", 42);
+  EXPECT_FALSE(StringSubstitution.getResult());
 
   // Substitutions of defined pseudo and non-pseudo numeric variables return
   // the right value.
@@ -239,10 +239,10 @@ TEST_F(FileCheckTest, Substitution) {
   FileCheckNumericVariable NVar = FileCheckNumericVariable("@N", 10);
   FileCheckNumExpr NumExprLine = FileCheckNumExpr(doAdd, &LineVar, 0);
   FileCheckNumExpr NumExprN = FileCheckNumExpr(doAdd, &NVar, 3);
-  FileCheckSubstitution SubstitutionLine =
-      FileCheckSubstitution(&Context, "@LINE", &NumExprLine, 12);
-  FileCheckSubstitution SubstitutionN =
-      FileCheckSubstitution(&Context, "N", &NumExprN, 30);
+  FileCheckNumericSubstitution SubstitutionLine =
+      FileCheckNumericSubstitution(&Context, "@LINE", &NumExprLine, 12);
+  FileCheckNumericSubstitution SubstitutionN =
+      FileCheckNumericSubstitution(&Context, "N", &NumExprN, 30);
   llvm::Optional<std::string> Value = SubstitutionLine.getResult();
   EXPECT_TRUE(Value);
   EXPECT_EQ("42", *Value);
@@ -258,8 +258,8 @@ TEST_F(FileCheckTest, Substitution) {
 
   // Substitution of a defined string variable returns the right value.
   FileCheckPattern P = FileCheckPattern(Check::CheckPlain, &Context);
-  Substitution = FileCheckSubstitution(&Context, "FOO", 42);
-  Value = Substitution.getResult();
+  StringSubstitution = FileCheckStringSubstitution(&Context, "FOO", 42);
+  Value = StringSubstitution.getResult();
   EXPECT_TRUE(Value);
   EXPECT_EQ("BAR", *Value);
 }
@@ -273,29 +273,30 @@ TEST_F(FileCheckTest, UndefVars) {
 
   // getUndefVarName() on a string substitution with an undefined variable
   // returns that variable.
-  FileCheckSubstitution Substitution =
-      FileCheckSubstitution(&Context, "VAR404", 42);
-  StringRef UndefVar = Substitution.getUndefVarName();
+  FileCheckStringSubstitution StringSubstitution =
+      FileCheckStringSubstitution(&Context, "VAR404", 42);
+  StringRef UndefVar = StringSubstitution.getUndefVarName();
   EXPECT_EQ("VAR404", UndefVar);
 
   // getUndefVarName() on a string substitution with a defined variable returns
   // an empty string.
-  Substitution = FileCheckSubstitution(&Context, "FOO", 42);
-  UndefVar = Substitution.getUndefVarName();
+  StringSubstitution = FileCheckStringSubstitution(&Context, "FOO", 42);
+  UndefVar = StringSubstitution.getUndefVarName();
   EXPECT_EQ("", UndefVar);
 
   // getUndefVarName() on a numeric substitution with a defined variable
   // returns an empty string.
   FileCheckNumericVariable LineVar = FileCheckNumericVariable("@LINE", 42);
   FileCheckNumExpr NumExpr = FileCheckNumExpr(doAdd, &LineVar, 0);
-  Substitution = FileCheckSubstitution(&Context, "@LINE", &NumExpr, 12);
-  UndefVar = Substitution.getUndefVarName();
+  FileCheckNumericSubstitution NumericSubstitution =
+      FileCheckNumericSubstitution(&Context, "@LINE", &NumExpr, 12);
+  UndefVar = NumericSubstitution.getUndefVarName();
   EXPECT_EQ("", UndefVar);
 
   // getUndefVarName() on a numeric substitution with an undefined variable
   // returns that variable.
   LineVar.clearValue();
-  UndefVar = Substitution.getUndefVarName();
+  UndefVar = NumericSubstitution.getUndefVarName();
   EXPECT_EQ("@LINE", UndefVar);
 }
 

@@ -52,14 +52,14 @@ StringRef FileCheckNumExpr::getUndefVarName() const {
   return StringRef();
 }
 
-llvm::Optional<std::string> FileCheckSubstitution::getResult() const {
-  if (IsNumSubst) {
-    llvm::Optional<uint64_t> EvaluatedValue = NumExpr->eval();
-    if (!EvaluatedValue)
-      return llvm::None;
-    return utostr(*EvaluatedValue);
-  }
+llvm::Optional<std::string> FileCheckNumericSubstitution::getResult() const {
+  llvm::Optional<uint64_t> EvaluatedValue = NumExpr->eval();
+  if (!EvaluatedValue)
+    return llvm::None;
+  return utostr(*EvaluatedValue);
+}
 
+llvm::Optional<std::string> FileCheckStringSubstitution::getResult() const {
   // Look up the value and escape it so that we can put it into the regex.
   llvm::Optional<StringRef> VarVal = Context->getPatternVarValue(FromStr);
   if (!VarVal)
@@ -67,12 +67,13 @@ llvm::Optional<std::string> FileCheckSubstitution::getResult() const {
   return Regex::escape(*VarVal);
 }
 
-StringRef FileCheckSubstitution::getUndefVarName() const {
-  if (IsNumSubst)
-    // Although a use of an undefined numeric variable is detected at parse
-    // time, a numeric variable can be undefined later by ClearLocalVariables.
-    return NumExpr->getUndefVarName();
+StringRef FileCheckNumericSubstitution::getUndefVarName() const {
+  // Although a use of an undefined numeric variable is detected at parse
+  // time, a numeric variable can be undefined later by ClearLocalVariables.
+  return NumExpr->getUndefVarName();
+}
 
+StringRef FileCheckStringSubstitution::getUndefVarName() const {
   if (!Context->getPatternVarValue(FromStr))
     return FromStr;
 
@@ -385,11 +386,11 @@ bool FileCheckPattern::ParsePattern(StringRef PatternStr, StringRef Prefix,
         } else {
           // Handle substitution of string variables ([[<var>]]) defined in
           // previous CHECK patterns, and substitution of numeric expressions.
-          FileCheckSubstitution Substitution =
-              IsNumBlock ? FileCheckSubstitution(Context, MatchStr, NumExpr,
-                                                 SubstInsertIdx)
-                         : FileCheckSubstitution(Context, MatchStr,
-                                                 SubstInsertIdx);
+          FileCheckSubstitution *Substitution =
+              IsNumBlock
+                  ? Context->makeNumericSubstitution(MatchStr, NumExpr,
+                                                     SubstInsertIdx)
+                  : Context->makeStringSubstitution(MatchStr, SubstInsertIdx);
           Substitutions.push_back(Substitution);
         }
         continue;
@@ -471,12 +472,12 @@ size_t FileCheckPattern::match(StringRef Buffer, size_t &MatchLen) const {
     // handled by back-references.
     for (const auto &Substitution : Substitutions) {
       // Substitute and check for failure (e.g. use of undefined variable).
-      llvm::Optional<std::string> Value = Substitution.getResult();
+      llvm::Optional<std::string> Value = Substitution->getResult();
       if (!Value)
         return StringRef::npos;
 
       // Plop it into the regex at the adjusted offset.
-      TmpStr.insert(TmpStr.begin() + Substitution.getIndex() + InsertOffset,
+      TmpStr.insert(TmpStr.begin() + Substitution->getIndex() + InsertOffset,
                     Value->begin(), Value->end());
       InsertOffset += Value->size();
     }
@@ -532,24 +533,20 @@ void FileCheckPattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
     for (const auto &Substitution : Substitutions) {
       SmallString<256> Msg;
       raw_svector_ostream OS(Msg);
-      bool IsNumSubst = Substitution.isNumSubst();
-      llvm::Optional<std::string> MatchedValue = Substitution.getResult();
+      llvm::Optional<std::string> MatchedValue = Substitution->getResult();
 
       // Substitution failed or is not known at match time, print the undefined
       // variable it uses.
       if (!MatchedValue) {
-        StringRef UndefVarName = Substitution.getUndefVarName();
+        StringRef UndefVarName = Substitution->getUndefVarName();
         if (UndefVarName.empty())
           continue;
         OS << "uses undefined variable \"";
         OS.write_escaped(UndefVarName) << "\"";
       } else {
         // Substitution succeeded. Print substituted value.
-        if (IsNumSubst)
-          OS << "with numeric expression \"";
-        else
-          OS << "with string variable \"";
-        OS.write_escaped(Substitution.getFromString()) << "\" equal to \"";
+        OS << "with \"";
+        OS.write_escaped(Substitution->getFromString()) << "\" equal to \"";
         OS.write_escaped(*MatchedValue) << "\"";
       }
 
@@ -651,6 +648,21 @@ FileCheckPatternContext::makeNumericVariable(StringRef Name, uint64_t Value) {
   NumericVariables.push_back(
       llvm::make_unique<FileCheckNumericVariable>(Name, Value));
   return NumericVariables.back().get();
+}
+
+FileCheckSubstitution *
+FileCheckPatternContext::makeStringSubstitution(StringRef VarName,
+                                                size_t InsertIdx) {
+  Substitutions.push_back(
+      llvm::make_unique<FileCheckStringSubstitution>(this, VarName, InsertIdx));
+  return Substitutions.back().get();
+}
+
+FileCheckSubstitution *FileCheckPatternContext::makeNumericSubstitution(
+    StringRef Expr, FileCheckNumExpr *NumExpr, size_t InsertIdx) {
+  Substitutions.push_back(llvm::make_unique<FileCheckNumericSubstitution>(
+      this, Expr, NumExpr, InsertIdx));
+  return Substitutions.back().get();
 }
 
 size_t FileCheckPattern::FindRegexVarEnd(StringRef Str, SourceMgr &SM) {
