@@ -77,6 +77,7 @@ class ResumeInst;
 class ReturnInst;
 class SDDbgValue;
 class StoreInst;
+class SwiftErrorValueTracking;
 class SwitchInst;
 class TargetLibraryInfo;
 class TargetMachine;
@@ -613,6 +614,9 @@ public:
   /// Information about the function as a whole.
   FunctionLoweringInfo &FuncInfo;
 
+  /// Information about the swifterror values used throughout the function.
+  SwiftErrorValueTracking &SwiftError;
+
   /// Garbage collection metadata for the function.
   GCFunctionInfo *GFI;
 
@@ -626,9 +630,9 @@ public:
   LLVMContext *Context;
 
   SelectionDAGBuilder(SelectionDAG &dag, FunctionLoweringInfo &funcinfo,
-                      CodeGenOpt::Level ol)
-    : SDNodeOrder(LowestSDNodeOrder), TM(dag.getTarget()), DAG(dag),
-      FuncInfo(funcinfo) {}
+                      SwiftErrorValueTracking &swifterror, CodeGenOpt::Level ol)
+      : SDNodeOrder(LowestSDNodeOrder), TM(dag.getTarget()), DAG(dag),
+        FuncInfo(funcinfo), SwiftError(swifterror) {}
 
   void init(GCFunctionInfo *gfi, AliasAnalysis *AA,
             const TargetLibraryInfo *li);

@@ -292,6 +292,33 @@ static LoopVector populateWorklist(Loop &L) {
   return LoopList;
 }
 
+static PHINode *getInductionVariable(Loop *L, ScalarEvolution *SE) {
+  PHINode *InnerIndexVar = L->getCanonicalInductionVariable();
+  if (InnerIndexVar)
+    return InnerIndexVar;
+  if (L->getLoopLatch() == nullptr || L->getLoopPredecessor() == nullptr)
+    return nullptr;
+  for (BasicBlock::iterator I = L->getHeader()->begin(); isa<PHINode>(I); ++I) {
+    PHINode *PhiVar = cast<PHINode>(I);
+    Type *PhiTy = PhiVar->getType();
+    if (!PhiTy->isIntegerTy() && !PhiTy->isFloatingPointTy() &&
+        !PhiTy->isPointerTy())
+      return nullptr;
+    const SCEVAddRecExpr *AddRec =
+        dyn_cast<SCEVAddRecExpr>(SE->getSCEV(PhiVar));
+    if (!AddRec || !AddRec->isAffine())
+      continue;
+    const SCEV *Step = AddRec->getStepRecurrence(*SE);
+    if (!isa<SCEVConstant>(Step))
+      continue;
+    // Found the induction variable.
+    // FIXME: Handle loops with more than one induction variable. Note that,
+    // currently, legality makes sure we have only one induction variable.
+    return PhiVar;
+  }
+  return nullptr;
+}
+
 namespace {
 
 /// LoopInterchangeLegality checks if it is legal to interchange the loop.
@@ -1200,7 +1227,7 @@ bool LoopInterchangeTransform::transform() {
   if (InnerLoop->getSubLoops().empty()) {
     BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
     LLVM_DEBUG(dbgs() << "Calling Split Inner Loop\n");
-    PHINode *InductionPHI = InnerLoop->getInductionVariable(*SE);
+    PHINode *InductionPHI = getInductionVariable(InnerLoop, SE);
     if (!InductionPHI) {
       LLVM_DEBUG(dbgs() << "Failed to find the point to split loop latch \n");
       return false;

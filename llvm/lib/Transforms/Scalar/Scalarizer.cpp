@@ -408,8 +408,7 @@ bool ScalarizerVisitor::getVectorLayout(Type *Ty, unsigned Alignment,
 
   // Check that we're dealing with full-byte elements.
   Layout.ElemTy = Layout.VecTy->getElementType();
-  if (DL.getTypeSizeInBits(Layout.ElemTy) !=
-      DL.getTypeStoreSizeInBits(Layout.ElemTy))
+  if (!DL.typeSizeEqualsStoreSize(Layout.ElemTy))
     return false;
 
   if (Alignment)

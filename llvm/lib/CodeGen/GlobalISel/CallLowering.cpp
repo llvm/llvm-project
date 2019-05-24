@@ -26,9 +26,10 @@ using namespace llvm;
 
 void CallLowering::anchor() {}
 
-bool CallLowering::lowerCall(
-    MachineIRBuilder &MIRBuilder, ImmutableCallSite CS, unsigned ResReg,
-    ArrayRef<unsigned> ArgRegs, std::function<unsigned()> GetCalleeReg) const {
+bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
+                             unsigned ResReg, ArrayRef<unsigned> ArgRegs,
+                             unsigned SwiftErrorVReg,
+                             std::function<unsigned()> GetCalleeReg) const {
   auto &DL = CS.getParent()->getParent()->getParent()->getDataLayout();
 
   // First step is to marshall all the function's parameters into the correct
@@ -41,8 +42,8 @@ bool CallLowering::lowerCall(
     ArgInfo OrigArg{ArgRegs[i], Arg->getType(), ISD::ArgFlagsTy{},
                     i < NumFixedArgs};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CS);
-    // We don't currently support swifterror or swiftself args.
-    if (OrigArg.Flags.isSwiftError() || OrigArg.Flags.isSwiftSelf())
+    // We don't currently support swiftself args.
+    if (OrigArg.Flags.isSwiftSelf())
       return false;
     OrigArgs.push_back(OrigArg);
     ++i;
@@ -58,7 +59,8 @@ bool CallLowering::lowerCall(
   if (!OrigRet.Ty->isVoidTy())
     setArgFlags(OrigRet, AttributeList::ReturnIndex, DL, CS);
 
-  return lowerCall(MIRBuilder, CS.getCallingConv(), Callee, OrigRet, OrigArgs);
+  return lowerCall(MIRBuilder, CS.getCallingConv(), Callee, OrigRet, OrigArgs,
+                   SwiftErrorVReg);
 }
 
 template <typename FuncInfoTy>

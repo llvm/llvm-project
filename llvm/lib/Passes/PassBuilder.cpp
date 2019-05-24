@@ -218,6 +218,7 @@ PipelineTuningOptions::PipelineTuningOptions() {
   LoopVectorization = EnableLoopVectorization;
   SLPVectorization = RunSLPVectorization;
   LoopUnrolling = true;
+  ForgetAllSCEVInLoopUnroll = ForgetSCEVInLoopUnroll;
   LicmMssaOptCap = SetLicmMssaOptCap;
   LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
 }
@@ -463,7 +464,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   if ((Phase != ThinLTOPhase::PreLink || !PGOOpt ||
        PGOOpt->Action != PGOOptions::SampleUse) &&
       PTO.LoopUnrolling)
-    LPM2.addPass(LoopFullUnrollPass(Level));
+    LPM2.addPass(
+        LoopFullUnrollPass(Level, false, PTO.ForgetAllSCEVInLoopUnroll));
 
   for (auto &C : LoopOptimizerEndEPCallbacks)
     C(LPM2, Level);
@@ -910,7 +912,8 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
         createFunctionToLoopPassAdaptor(LoopUnrollAndJamPass(Level)));
   }
   if (PTO.LoopUnrolling)
-    OptimizePM.addPass(LoopUnrollPass(LoopUnrollOptions(Level)));
+    OptimizePM.addPass(LoopUnrollPass(
+        LoopUnrollOptions(Level, false, PTO.ForgetAllSCEVInLoopUnroll)));
   OptimizePM.addPass(WarnMissedTransformationsPass());
   OptimizePM.addPass(InstCombinePass());
   OptimizePM.addPass(RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());

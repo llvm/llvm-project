@@ -49,6 +49,7 @@
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/StackProtector.h"
+#include "llvm/CodeGen/SwiftErrorValueTracking.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -307,8 +308,9 @@ SelectionDAGISel::SelectionDAGISel(TargetMachine &tm,
                                    CodeGenOpt::Level OL) :
   MachineFunctionPass(ID), TM(tm),
   FuncInfo(new FunctionLoweringInfo()),
+  SwiftError(new SwiftErrorValueTracking()),
   CurDAG(new SelectionDAG(tm, OL)),
-  SDB(new SelectionDAGBuilder(*CurDAG, *FuncInfo, OL)),
+  SDB(new SelectionDAGBuilder(*CurDAG, *FuncInfo, *SwiftError, OL)),
   AA(), GFI(),
   OptLevel(OL),
   DAGSize(0) {
@@ -324,6 +326,7 @@ SelectionDAGISel::~SelectionDAGISel() {
   delete SDB;
   delete CurDAG;
   delete FuncInfo;
+  delete SwiftError;
 }
 
 void SelectionDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -446,6 +449,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   CurDAG->init(*MF, *ORE, this, LibInfo,
    getAnalysisIfAvailable<LegacyDivergenceAnalysis>());
   FuncInfo->set(Fn, *MF, CurDAG);
+  SwiftError->setFunction(*MF);
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -1254,77 +1258,6 @@ static bool isFoldedOrDeadInstruction(const Instruction *I,
          !FuncInfo->isExportedInst(I); // Exported instrs must be computed.
 }
 
-/// Set up SwiftErrorVals by going through the function. If the function has
-/// swifterror argument, it will be the first entry.
-static void setupSwiftErrorVals(const Function &Fn, const TargetLowering *TLI,
-                                FunctionLoweringInfo *FuncInfo) {
-  if (!TLI->supportSwiftError())
-    return;
-
-  FuncInfo->SwiftErrorVals.clear();
-  FuncInfo->SwiftErrorVRegDefMap.clear();
-  FuncInfo->SwiftErrorVRegUpwardsUse.clear();
-  FuncInfo->SwiftErrorVRegDefUses.clear();
-  FuncInfo->SwiftErrorArg = nullptr;
-
-  // Check if function has a swifterror argument.
-  bool HaveSeenSwiftErrorArg = false;
-  for (Function::const_arg_iterator AI = Fn.arg_begin(), AE = Fn.arg_end();
-       AI != AE; ++AI)
-    if (AI->hasSwiftErrorAttr()) {
-      assert(!HaveSeenSwiftErrorArg &&
-             "Must have only one swifterror parameter");
-      (void)HaveSeenSwiftErrorArg; // silence warning.
-      HaveSeenSwiftErrorArg = true;
-      FuncInfo->SwiftErrorArg = &*AI;
-      FuncInfo->SwiftErrorVals.push_back(&*AI);
-    }
-
-  for (const auto &LLVMBB : Fn)
-    for (const auto &Inst : LLVMBB) {
-      if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(&Inst))
-        if (Alloca->isSwiftError())
-          FuncInfo->SwiftErrorVals.push_back(Alloca);
-    }
-}
-
-static void createSwiftErrorEntriesInEntryBlock(FunctionLoweringInfo *FuncInfo,
-                                                FastISel *FastIS,
-                                                const TargetLowering *TLI,
-                                                const TargetInstrInfo *TII,
-                                                SelectionDAGBuilder *SDB) {
-  if (!TLI->supportSwiftError())
-    return;
-
-  // We only need to do this when we have swifterror parameter or swifterror
-  // alloc.
-  if (FuncInfo->SwiftErrorVals.empty())
-    return;
-
-  assert(FuncInfo->MBB == &*FuncInfo->MF->begin() &&
-         "expected to insert into entry block");
-  auto &DL = FuncInfo->MF->getDataLayout();
-  auto const *RC = TLI->getRegClassFor(TLI->getPointerTy(DL));
-  for (const auto *SwiftErrorVal : FuncInfo->SwiftErrorVals) {
-    // We will always generate a copy from the argument. It is always used at
-    // least by the 'return' of the swifterror.
-    if (FuncInfo->SwiftErrorArg && FuncInfo->SwiftErrorArg == SwiftErrorVal)
-      continue;
-    unsigned VReg = FuncInfo->MF->getRegInfo().createVirtualRegister(RC);
-    // Assign Undef to Vreg. We construct MI directly to make sure it works
-    // with FastISel.
-    BuildMI(*FuncInfo->MBB, FuncInfo->MBB->getFirstNonPHI(),
-            SDB->getCurDebugLoc(), TII->get(TargetOpcode::IMPLICIT_DEF),
-            VReg);
-
-    // Keep FastIS informed about the value we just inserted.
-    if (FastIS)
-      FastIS->setLastLocalValue(&*std::prev(FuncInfo->InsertPt));
-
-    FuncInfo->setCurrentSwiftErrorVReg(FuncInfo->MBB, SwiftErrorVal, VReg);
-  }
-}
-
 /// Collect llvm.dbg.declare information. This is done after argument lowering
 /// in case the declarations refer to arguments.
 static void processDbgDeclares(FunctionLoweringInfo *FuncInfo) {
@@ -1370,195 +1303,6 @@ static void processDbgDeclares(FunctionLoweringInfo *FuncInfo) {
   }
 }
 
-/// Propagate swifterror values through the machine function CFG.
-static void propagateSwiftErrorVRegs(FunctionLoweringInfo *FuncInfo) {
-  auto *TLI = FuncInfo->TLI;
-  if (!TLI->supportSwiftError())
-    return;
-
-  // We only need to do this when we have swifterror parameter or swifterror
-  // alloc.
-  if (FuncInfo->SwiftErrorVals.empty())
-    return;
-
-  // For each machine basic block in reverse post order.
-  ReversePostOrderTraversal<MachineFunction *> RPOT(FuncInfo->MF);
-  for (MachineBasicBlock *MBB : RPOT) {
-    // For each swifterror value in the function.
-    for(const auto *SwiftErrorVal : FuncInfo->SwiftErrorVals) {
-      auto Key = std::make_pair(MBB, SwiftErrorVal);
-      auto UUseIt = FuncInfo->SwiftErrorVRegUpwardsUse.find(Key);
-      auto VRegDefIt = FuncInfo->SwiftErrorVRegDefMap.find(Key);
-      bool UpwardsUse = UUseIt != FuncInfo->SwiftErrorVRegUpwardsUse.end();
-      unsigned UUseVReg = UpwardsUse ? UUseIt->second : 0;
-      bool DownwardDef = VRegDefIt != FuncInfo->SwiftErrorVRegDefMap.end();
-      assert(!(UpwardsUse && !DownwardDef) &&
-             "We can't have an upwards use but no downwards def");
-
-      // If there is no upwards exposed use and an entry for the swifterror in
-      // the def map for this value we don't need to do anything: We already
-      // have a downward def for this basic block.
-      if (!UpwardsUse && DownwardDef)
-        continue;
-
-      // Otherwise we either have an upwards exposed use vreg that we need to
-      // materialize or need to forward the downward def from predecessors.
-
-      // Check whether we have a single vreg def from all predecessors.
-      // Otherwise we need a phi.
-      SmallVector<std::pair<MachineBasicBlock *, unsigned>, 4> VRegs;
-      SmallSet<const MachineBasicBlock*, 8> Visited;
-      for (auto *Pred : MBB->predecessors()) {
-        if (!Visited.insert(Pred).second)
-          continue;
-        VRegs.push_back(std::make_pair(
-            Pred, FuncInfo->getOrCreateSwiftErrorVReg(Pred, SwiftErrorVal)));
-        if (Pred != MBB)
-          continue;
-        // We have a self-edge.
-        // If there was no upwards use in this basic block there is now one: the
-        // phi needs to use it self.
-        if (!UpwardsUse) {
-          UpwardsUse = true;
-          UUseIt = FuncInfo->SwiftErrorVRegUpwardsUse.find(Key);
-          assert(UUseIt != FuncInfo->SwiftErrorVRegUpwardsUse.end());
-          UUseVReg = UUseIt->second;
-        }
-      }
-
-      // We need a phi node if we have more than one predecessor with different
-      // downward defs.
-      bool needPHI =
-          VRegs.size() >= 1 &&
-          std::find_if(
-              VRegs.begin(), VRegs.end(),
-              [&](const std::pair<const MachineBasicBlock *, unsigned> &V)
-                  -> bool { return V.second != VRegs[0].second; }) !=
-              VRegs.end();
-
-      // If there is no upwards exposed used and we don't need a phi just
-      // forward the swifterror vreg from the predecessor(s).
-      if (!UpwardsUse && !needPHI) {
-        assert(!VRegs.empty() &&
-               "No predecessors? The entry block should bail out earlier");
-        // Just forward the swifterror vreg from the predecessor(s).
-        FuncInfo->setCurrentSwiftErrorVReg(MBB, SwiftErrorVal, VRegs[0].second);
-        continue;
-      }
-
-      auto DLoc = isa<Instruction>(SwiftErrorVal)
-                      ? cast<Instruction>(SwiftErrorVal)->getDebugLoc()
-                      : DebugLoc();
-      const auto *TII = FuncInfo->MF->getSubtarget().getInstrInfo();
-
-      // If we don't need a phi create a copy to the upward exposed vreg.
-      if (!needPHI) {
-        assert(UpwardsUse);
-        assert(!VRegs.empty() &&
-               "No predecessors?  Is the Calling Convention correct?");
-        unsigned DestReg = UUseVReg;
-        BuildMI(*MBB, MBB->getFirstNonPHI(), DLoc, TII->get(TargetOpcode::COPY),
-                DestReg)
-            .addReg(VRegs[0].second);
-        continue;
-      }
-
-      // We need a phi: if there is an upwards exposed use we already have a
-      // destination virtual register number otherwise we generate a new one.
-      auto &DL = FuncInfo->MF->getDataLayout();
-      auto const *RC = TLI->getRegClassFor(TLI->getPointerTy(DL));
-      unsigned PHIVReg =
-          UpwardsUse ? UUseVReg
-                     : FuncInfo->MF->getRegInfo().createVirtualRegister(RC);
-      MachineInstrBuilder SwiftErrorPHI =
-          BuildMI(*MBB, MBB->getFirstNonPHI(), DLoc,
-                  TII->get(TargetOpcode::PHI), PHIVReg);
-      for (auto BBRegPair : VRegs) {
-        SwiftErrorPHI.addReg(BBRegPair.second).addMBB(BBRegPair.first);
-      }
-
-      // We did not have a definition in this block before: store the phi's vreg
-      // as this block downward exposed def.
-      if (!UpwardsUse)
-        FuncInfo->setCurrentSwiftErrorVReg(MBB, SwiftErrorVal, PHIVReg);
-    }
-  }
-}
-
-static void preassignSwiftErrorRegs(const TargetLowering *TLI,
-                                    FunctionLoweringInfo *FuncInfo,
-                                    BasicBlock::const_iterator Begin,
-                                    BasicBlock::const_iterator End) {
-  if (!TLI->supportSwiftError() || FuncInfo->SwiftErrorVals.empty())
-    return;
-
-  // Iterator over instructions and assign vregs to swifterror defs and uses.
-  for (auto It = Begin; It != End; ++It) {
-    ImmutableCallSite CS(&*It);
-    if (CS) {
-      // A call-site with a swifterror argument is both use and def.
-      const Value *SwiftErrorAddr = nullptr;
-      for (auto &Arg : CS.args()) {
-        if (!Arg->isSwiftError())
-          continue;
-        // Use of swifterror.
-        assert(!SwiftErrorAddr && "Cannot have multiple swifterror arguments");
-        SwiftErrorAddr = &*Arg;
-        assert(SwiftErrorAddr->isSwiftError() &&
-               "Must have a swifterror value argument");
-        unsigned VReg; bool CreatedReg;
-        std::tie(VReg, CreatedReg) = FuncInfo->getOrCreateSwiftErrorVRegUseAt(
-          &*It, FuncInfo->MBB, SwiftErrorAddr);
-        assert(CreatedReg);
-      }
-      if (!SwiftErrorAddr)
-        continue;
-
-      // Def of swifterror.
-      unsigned VReg; bool CreatedReg;
-      std::tie(VReg, CreatedReg) =
-          FuncInfo->getOrCreateSwiftErrorVRegDefAt(&*It);
-      assert(CreatedReg);
-      FuncInfo->setCurrentSwiftErrorVReg(FuncInfo->MBB, SwiftErrorAddr, VReg);
-
-    // A load is a use.
-    } else if (const LoadInst *LI = dyn_cast<const LoadInst>(&*It)) {
-      const Value *V = LI->getOperand(0);
-      if (!V->isSwiftError())
-        continue;
-
-      unsigned VReg; bool CreatedReg;
-      std::tie(VReg, CreatedReg) =
-          FuncInfo->getOrCreateSwiftErrorVRegUseAt(LI, FuncInfo->MBB, V);
-      assert(CreatedReg);
-
-    // A store is a def.
-    } else if (const StoreInst *SI = dyn_cast<const StoreInst>(&*It)) {
-      const Value *SwiftErrorAddr = SI->getOperand(1);
-      if (!SwiftErrorAddr->isSwiftError())
-        continue;
-
-      // Def of swifterror.
-      unsigned VReg; bool CreatedReg;
-      std::tie(VReg, CreatedReg) =
-          FuncInfo->getOrCreateSwiftErrorVRegDefAt(&*It);
-      assert(CreatedReg);
-      FuncInfo->setCurrentSwiftErrorVReg(FuncInfo->MBB, SwiftErrorAddr, VReg);
-
-    // A return in a swiferror returning function is a use.
-    } else if (const ReturnInst *R = dyn_cast<const ReturnInst>(&*It)) {
-      const Function *F = R->getParent()->getParent();
-      if(!F->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
-        continue;
-
-      unsigned VReg; bool CreatedReg;
-      std::tie(VReg, CreatedReg) = FuncInfo->getOrCreateSwiftErrorVRegUseAt(
-          R, FuncInfo->MBB, FuncInfo->SwiftErrorArg);
-      assert(CreatedReg);
-    }
-  }
-}
-
 void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   FastISelFailed = false;
   // Initialize the Fast-ISel state, if needed.
@@ -1567,8 +1311,6 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
     LLVM_DEBUG(dbgs() << "Enabling fast-isel\n");
     FastIS = TLI->createFastISel(*FuncInfo, LibInfo);
   }
-
-  setupSwiftErrorVals(Fn, TLI, FuncInfo);
 
   ReversePostOrderTraversal<const Function*> RPOT(&Fn);
 
@@ -1615,7 +1357,11 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
     else
       FastIS->setLastLocalValue(nullptr);
   }
-  createSwiftErrorEntriesInEntryBlock(FuncInfo, FastIS, TLI, TII, SDB);
+
+  bool Inserted = SwiftError->createEntriesInEntryBlock(SDB->getCurDebugLoc());
+
+  if (FastIS && Inserted)
+    FastIS->setLastLocalValue(&*std::prev(FuncInfo->InsertPt));
 
   processDbgDeclares(FuncInfo);
 
@@ -1670,7 +1416,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
       unsigned NumFastIselRemaining = std::distance(Begin, End);
 
       // Pre-assign swifterror vregs.
-      preassignSwiftErrorRegs(TLI, FuncInfo, Begin, End);
+      SwiftError->preassignVRegs(FuncInfo->MBB, Begin, End);
 
       // Do FastISel on as many instructions as possible.
       for (; BI != Begin; --BI) {
@@ -1826,7 +1572,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
 
   SP.copyToMachineFrameInfo(MF->getFrameInfo());
 
-  propagateSwiftErrorVRegs(FuncInfo);
+  SwiftError->propagateVRegs();
 
   delete FastIS;
   SDB->clearDanglingDebugInfo();

@@ -453,6 +453,14 @@ public:
     return 8 * getTypeStoreSize(Ty);
   }
 
+  /// Returns true if no extra padding bits are needed when storing the
+  /// specified type.
+  ///
+  /// For example, returns false for i19 that has a 24-bit store size.
+  bool typeSizeEqualsStoreSize(Type *Ty) const {
+    return getTypeSizeInBits(Ty) == getTypeStoreSizeInBits(Ty);
+  }
+
   /// Returns the offset in bytes between successive objects of the
   /// specified type, including alignment padding.
   ///

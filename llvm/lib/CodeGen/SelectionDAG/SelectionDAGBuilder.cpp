@@ -54,6 +54,7 @@
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/CodeGen/SwiftErrorValueTracking.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -1895,7 +1896,7 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
   const Function *F = I.getParent()->getParent();
   if (TLI.supportSwiftError() &&
       F->getAttributes().hasAttrSomewhere(Attribute::SwiftError)) {
-    assert(FuncInfo.SwiftErrorArg && "Need a swift error argument");
+    assert(SwiftError.getFunctionArg() && "Need a swift error argument");
     ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy();
     Flags.setSwiftError();
     Outs.push_back(ISD::OutputArg(Flags, EVT(TLI.getPointerTy(DL)) /*vt*/,
@@ -1904,8 +1905,8 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
                                   0 /*partOffs*/));
     // Create SDNode for the swifterror virtual register.
     OutVals.push_back(
-        DAG.getRegister(FuncInfo.getOrCreateSwiftErrorVRegUseAt(
-                            &I, FuncInfo.MBB, FuncInfo.SwiftErrorArg).first,
+        DAG.getRegister(SwiftError.getOrCreateVRegUseAt(
+                            &I, FuncInfo.MBB, SwiftError.getFunctionArg()),
                         EVT(TLI.getPointerTy(DL))));
   }
 
@@ -4146,15 +4147,13 @@ void SelectionDAGBuilder::visitStoreToSwiftError(const StoreInst &I) {
 
   SDValue Src = getValue(SrcV);
   // Create a virtual register, then update the virtual register.
-  unsigned VReg; bool CreatedVReg;
-  std::tie(VReg, CreatedVReg) = FuncInfo.getOrCreateSwiftErrorVRegDefAt(&I);
+  unsigned VReg =
+      SwiftError.getOrCreateVRegDefAt(&I, FuncInfo.MBB, I.getPointerOperand());
   // Chain, DL, Reg, N or Chain, DL, Reg, N, Glue
   // Chain can be getRoot or getControlRoot.
   SDValue CopyNode = DAG.getCopyToReg(getRoot(), getCurSDLoc(), VReg,
                                       SDValue(Src.getNode(), Src.getResNo()));
   DAG.setRoot(CopyNode);
-  if (CreatedVReg)
-    FuncInfo.setCurrentSwiftErrorVReg(FuncInfo.MBB, I.getOperand(1), VReg);
 }
 
 void SelectionDAGBuilder::visitLoadFromSwiftError(const LoadInst &I) {
@@ -4187,8 +4186,7 @@ void SelectionDAGBuilder::visitLoadFromSwiftError(const LoadInst &I) {
   // Chain, DL, Reg, VT, Glue or Chain, DL, Reg, VT
   SDValue L = DAG.getCopyFromReg(
       getRoot(), getCurSDLoc(),
-      FuncInfo.getOrCreateSwiftErrorVRegUseAt(&I, FuncInfo.MBB, SV).first,
-      ValueVTs[0]);
+      SwiftError.getOrCreateVRegUseAt(&I, FuncInfo.MBB, SV), ValueVTs[0]);
 
   setValue(&I, L);
 }
@@ -7073,11 +7071,9 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
       SwiftErrorVal = V;
       // We find the virtual register for the actual swifterror argument.
       // Instead of using the Value, we use the virtual register instead.
-      Entry.Node = DAG.getRegister(FuncInfo
-                                       .getOrCreateSwiftErrorVRegUseAt(
-                                           CS.getInstruction(), FuncInfo.MBB, V)
-                                       .first,
-                                   EVT(TLI.getPointerTy(DL)));
+      Entry.Node = DAG.getRegister(
+          SwiftError.getOrCreateVRegUseAt(CS.getInstruction(), FuncInfo.MBB, V),
+          EVT(TLI.getPointerTy(DL)));
     }
 
     Args.push_back(Entry);
@@ -7118,13 +7114,9 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
   if (SwiftErrorVal && TLI.supportSwiftError()) {
     // Get the last element of InVals.
     SDValue Src = CLI.InVals.back();
-    unsigned VReg; bool CreatedVReg;
-    std::tie(VReg, CreatedVReg) =
-        FuncInfo.getOrCreateSwiftErrorVRegDefAt(CS.getInstruction());
+    unsigned VReg = SwiftError.getOrCreateVRegDefAt(
+        CS.getInstruction(), FuncInfo.MBB, SwiftErrorVal);
     SDValue CopyNode = CLI.DAG.getCopyToReg(Result.second, CLI.DL, VReg, Src);
-    // We update the virtual register for the actual swifterror argument.
-    if (CreatedVReg)
-      FuncInfo.setCurrentSwiftErrorVReg(FuncInfo.MBB, SwiftErrorVal, VReg);
     DAG.setRoot(CopyNode);
   }
 }
@@ -9761,8 +9753,8 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     if (Res.getOpcode() == ISD::CopyFromReg && isSwiftErrorArg) {
       unsigned Reg = cast<RegisterSDNode>(Res.getOperand(1))->getReg();
       if (TargetRegisterInfo::isVirtualRegister(Reg))
-        FuncInfo->setCurrentSwiftErrorVReg(FuncInfo->MBB,
-                                           FuncInfo->SwiftErrorArg, Reg);
+        SwiftError->setCurrentVReg(FuncInfo->MBB, SwiftError->getFunctionArg(),
+                                   Reg);
     }
 
     // If this argument is live outside of the entry block, insert a copy from

@@ -10006,12 +10006,16 @@ This instruction requires several arguments:
       recursive cycle in the call graph.
    #. Arguments with the :ref:`inalloca <attr_inalloca>` attribute are
       forwarded in place.
+   #. If the musttail call appears in a function with the ``"thunk"`` attribute
+      and the caller and callee both have varargs, than any unprototyped
+      arguments in register or memory are forwarded to the callee. Similarly,
+      the return value of the callee is returned the the caller's caller, even
+      if a void return type is in use.
 
    Both markers imply that the callee does not access allocas from the caller.
    The ``tail`` marker additionally implies that the callee does not access
-   varargs from the caller, while ``musttail`` implies that varargs from the
-   caller are passed to the callee. Calls marked ``musttail`` must obey the
-   following additional  rules:
+   varargs from the caller. Calls marked ``musttail`` must obey the following
+   additional  rules:
 
    - The call must immediately precede a :ref:`ret <i_ret>` instruction,
      or a pointer bitcast followed by a ret instruction.

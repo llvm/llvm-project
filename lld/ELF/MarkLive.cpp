@@ -287,7 +287,7 @@ template <class ELFT> void elf::markLive() {
   // unconditionally make non-SHF_ALLOC sections alive except
   // SHF_LINK_ORDER and SHT_REL/SHT_RELA sections.
   //
-  // Usually, SHF_ALLOC sections are not removed even if they are
+  // Usually, non-SHF_ALLOC sections are not removed even if they are
   // unreachable through relocations because reachability is not
   // a good signal whether they are garbage or not (e.g. there is
   // usually no section referring to a .comment section, but we
