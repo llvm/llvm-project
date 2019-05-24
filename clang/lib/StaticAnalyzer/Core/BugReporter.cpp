@@ -678,7 +678,7 @@ void generateMinimalDiagForBlockEdge(const ExplodedNode *N, BlockEdge BE,
   const LocationContext *LC = N->getLocationContext();
   const CFGBlock *Src = BE.getSrc();
   const CFGBlock *Dst = BE.getDst();
-  const Stmt *T = Src->getTerminator();
+  const Stmt *T = Src->getTerminatorStmt();
   if (!T)
     return;
 
@@ -1203,7 +1203,7 @@ static void generatePathDiagnosticsForNode(const ExplodedNode *N,
     const CFGBlock *BSrc = BE->getSrc();
     ParentMap &PM = PDB.getParentMap();
 
-    if (const Stmt *Term = BSrc->getTerminator()) {
+    if (const Stmt *Term = BSrc->getTerminatorStmt()) {
       // Are we jumping past the loop body without ever executing the
       // loop (because the condition was false)?
       if (isLoop(Term)) {

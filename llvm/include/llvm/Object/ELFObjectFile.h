@@ -56,6 +56,7 @@ protected:
 
   virtual uint16_t getEMachine() const = 0;
   virtual uint64_t getSymbolSize(DataRefImpl Symb) const = 0;
+  virtual uint8_t getSymbolBinding(DataRefImpl Symb) const = 0;
   virtual uint8_t getSymbolOther(DataRefImpl Symb) const = 0;
   virtual uint8_t getSymbolELFType(DataRefImpl Symb) const = 0;
 
@@ -143,6 +144,10 @@ public:
 
   uint64_t getSize() const {
     return getObject()->getSymbolSize(getRawDataRefImpl());
+  }
+
+  uint8_t getBinding() const {
+    return getObject()->getSymbolBinding(getRawDataRefImpl());
   }
 
   uint8_t getOther() const {
@@ -252,6 +257,7 @@ protected:
   uint32_t getSymbolAlignment(DataRefImpl Symb) const override;
   uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const override;
   uint32_t getSymbolFlags(DataRefImpl Symb) const override;
+  uint8_t getSymbolBinding(DataRefImpl Symb) const override;
   uint8_t getSymbolOther(DataRefImpl Symb) const override;
   uint8_t getSymbolELFType(DataRefImpl Symb) const override;
   Expected<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const override;
@@ -551,6 +557,11 @@ uint64_t ELFObjectFile<ELFT>::getSymbolSize(DataRefImpl Sym) const {
 template <class ELFT>
 uint64_t ELFObjectFile<ELFT>::getCommonSymbolSizeImpl(DataRefImpl Symb) const {
   return getSymbol(Symb)->st_size;
+}
+
+template <class ELFT>
+uint8_t ELFObjectFile<ELFT>::getSymbolBinding(DataRefImpl Symb) const {
+  return getSymbol(Symb)->getBinding();
 }
 
 template <class ELFT>

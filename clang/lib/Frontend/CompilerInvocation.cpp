@@ -285,7 +285,16 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
   }
 
   Opts.ShowCheckerHelp = Args.hasArg(OPT_analyzer_checker_help);
-  Opts.ShowCheckerHelpHidden = Args.hasArg(OPT_analyzer_checker_help_hidden);
+  Opts.ShowCheckerHelpAlpha = Args.hasArg(OPT_analyzer_checker_help_alpha);
+  Opts.ShowCheckerHelpDeveloper =
+      Args.hasArg(OPT_analyzer_checker_help_developer);
+
+  Opts.ShowCheckerOptionList = Args.hasArg(OPT_analyzer_checker_option_help);
+  Opts.ShowCheckerOptionAlphaList =
+      Args.hasArg(OPT_analyzer_checker_option_help_alpha);
+  Opts.ShowCheckerOptionDeveloperList =
+      Args.hasArg(OPT_analyzer_checker_option_help_developer);
+
   Opts.ShowConfigOptionsList = Args.hasArg(OPT_analyzer_config_help);
   Opts.ShowEnabledCheckerList = Args.hasArg(OPT_analyzer_list_enabled_checkers);
   Opts.ShouldEmitErrorsOnInvalidConfigValue =

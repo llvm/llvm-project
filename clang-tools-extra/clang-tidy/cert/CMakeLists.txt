@@ -20,6 +20,7 @@ add_clang_library(clangTidyCERTModule
   clangBasic
   clangLex
   clangTidy
+  clangTidyBugproneModule
   clangTidyGoogleModule
   clangTidyMiscModule
   clangTidyPerformanceModule

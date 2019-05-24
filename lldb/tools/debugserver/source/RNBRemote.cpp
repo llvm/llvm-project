@@ -4263,7 +4263,7 @@ rnb_err_t RNBRemote::HandlePacket_SetEnableAsyncProfiling(const char *p) {
   }
 
   if (interval_usec == 0) {
-    enable = 0;
+    enable = false;
   }
 
   DNBProcessSetEnableAsyncProfiling(pid, enable, interval_usec, scan_type);
@@ -5174,7 +5174,7 @@ bool get_array_of_ints_value_for_key_name_from_json(
         while (*c != '\0' &&
                (*c == ' ' || *c == '\t' || *c == '\n' || *c == '\r'))
           c++;
-        while (1) {
+        while (true) {
           if (!isdigit(*c)) {
             return true;
           }
@@ -6109,7 +6109,7 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
           cstr = data.GetCStr(&offset);
           if (cstr) {
             // Skip NULLs
-            while (1) {
+            while (true) {
               const char *p = data.PeekCStr(offset);
               if ((p == NULL) || (*p != '\0'))
                 break;

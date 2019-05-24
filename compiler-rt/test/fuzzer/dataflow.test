@@ -92,7 +92,7 @@ RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flo
 # Test that we can run collect_data_flow on the entire corpus dir
 RUN: rm -rf %t/OUT
 RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t/OUT %t/IN
-RUN: %t-ThreeFunctionsTest -data_flow_trace=%t/OUT -runs=0 -focus_function=Func2 2>&1 | FileCheck %s --check-prefix=USE_DATA_FLOW_TRACE
+RUN: %t-ThreeFunctionsTest -data_flow_trace=%t/OUT -runs=0 -focus_function=Func2 %t/IN 2>&1 | FileCheck %s --check-prefix=USE_DATA_FLOW_TRACE
 
 
 USE_DATA_FLOW_TRACE: INFO: DataFlowTrace: reading from {{.*}}/OUT

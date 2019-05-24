@@ -86,6 +86,7 @@ int main() {
       // LAMBDA: [[SVAR_ADDR:%.+]] = alloca i{{[0-9]+}}*,
       // LAMBDA: [[SFVAR_ADDR:%.+]] = alloca float*,
       // LAMBDA: [[G1_REF:%.+]] = alloca double*,
+      // LAMBDA: [[G1_REF1:%.+]] = alloca double*,
 
       // private alloca's
       // LAMBDA: [[G_PRIV:%.+]] = alloca double,
@@ -111,7 +112,7 @@ int main() {
       // LAMBDA-DAG: store {{.+}} [[G_ADDR_VAL]], {{.+}}* [[G_PRIV]],
 
       // g1
-      // LAMBDA-DAG: [[TMP_REF:%.+]] = load {{.+}}*, {{.+}}** [[G1_REF]],
+      // LAMBDA-DAG: [[TMP_REF:%.+]] = load {{.+}}*, {{.+}}** [[G1_REF1]],
       // LAMBDA-DAG: [[TMP_VAL:%.+]] = load {{.+}}, {{.+}}* [[TMP_REF]],
       // LAMBDA-DAG: store {{.+}} [[TMP_VAL]], {{.+}}* [[G1_PRIV]]
       // LAMBDA-DAG: store {{.+}}* [[G1_PRIV]], {{.+}}** [[TMP_PRIV]],
@@ -293,6 +294,7 @@ int main() {
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_FLOAT_TY]]*,
 // CHECK: [[SVAR_ADDR:%.+]] = alloca i{{[0-9]+}}*,
 // CHECK: [[TMP:%.+]] = alloca [[S_FLOAT_TY]]*,
+// CHECK: [[TMP1:%.+]] = alloca [[S_FLOAT_TY]]*,
 
 // skip loop alloca's
 // CHECK: [[OMP_IV:.omp.iv+]] = alloca i{{[0-9]+}},
@@ -342,7 +344,7 @@ int main() {
 // CHECK-DAG: [[CPY_DONE]]:
 
 // var
-// CHECK-DAG: [[TMP_REF:%.+]] = load {{.+}}*, {{.+}}* [[TMP]],
+// CHECK-DAG: [[TMP_REF:%.+]] = load {{.+}}*, {{.+}}* [[TMP1]],
 // CHECK-DAG: [[VAR_PRIV_BCAST:%.+]] = bitcast {{.+}}* [[VAR_PRIV]] to
 // CHECK-DAG: [[TMP_REF_BCAST:%.+]] = bitcast {{.+}}* [[TMP_REF]] to
 // CHECK-DAG: call void @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[VAR_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[TMP_REF_BCAST]],
@@ -393,6 +395,7 @@ int main() {
 // CHECK: [[S_ARR_ADDR:%.+]] = alloca [2 x [[S_FLOAT_TY]]]*,
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_FLOAT_TY]]*,
 // CHECK: [[SVAR_ADDR:%.+]] = alloca i{{[0-9]+}},
+// CHECK: [[TMP:%.+]] = alloca [[S_FLOAT_TY]]*,
 
 // skip loop alloca's
 // CHECK: [[OMP_IV:.omp.iv+]] = alloca i{{[0-9]+}},
@@ -435,7 +438,7 @@ int main() {
 // CHECK-DAG: [[CPY_DONE]]:
 
 // var
-// CHECK-DAG: [[VAR_ADDR_REF:%.+]] = load {{.+}}*, {{.+}}* [[VAR_ADDR]],
+// CHECK-DAG: [[VAR_ADDR_REF:%.+]] = load {{.+}}*, {{.+}}* [[TMP]],
 // CHECK-DAG: [[VAR_PRIV_BCAST:%.+]] = bitcast {{.+}}* [[VAR_PRIV]] to
 // CHECK-DAG: [[VAR_ADDR_BCAST:%.+]] = bitcast {{.+}}* [[VAR_ADDR_REF]] to
 // CHECK-DAG: call void @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[VAR_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[VAR_ADDR_BCAST]],
@@ -477,6 +480,7 @@ int main() {
 // CHECK: [[S_ARR_ADDR:%.+]] = alloca [2 x [[S_INT_TY]]]*,
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_INT_TY]]*,
 // CHECK: [[TMP:%.+]] = alloca [[S_INT_TY]]*,
+// CHECK: [[TMP1:%.+]] = alloca [[S_INT_TY]]*,
 
 // skip loop alloca's
 // CHECK: [[OMP_IV:.omp.iv+]] = alloca i{{[0-9]+}},
@@ -524,7 +528,7 @@ int main() {
 // CHECK-DAG: [[CPY_DONE]]:
 
 // var
-// CHECK-DAG: [[TMP_REF:%.+]] = load {{.+}}*, {{.+}}* [[TMP]],
+// CHECK-DAG: [[TMP_REF:%.+]] = load {{.+}}*, {{.+}}* [[TMP1]],
 // CHECK-DAG: [[VAR_PRIV_BCAST:%.+]] = bitcast {{.+}}* [[VAR_PRIV]] to
 // CHECK-DAG: [[TMP_REF_BCAST:%.+]] = bitcast {{.+}}* [[TMP_REF]] to
 // CHECK-DAG: call void @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[VAR_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[TMP_REF_BCAST]],
@@ -564,6 +568,7 @@ int main() {
 // CHECK: [[T_VAR_ADDR:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[S_ARR_ADDR:%.+]] = alloca [2 x [[S_INT_TY]]]*,
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_INT_TY]]*,
+// CHECK: [[TMP:%.+]] = alloca [[S_INT_TY]]*,
 
 // skip loop alloca's
 // CHECK: [[OMP_IV:.omp.iv+]] = alloca i{{[0-9]+}},
@@ -605,7 +610,7 @@ int main() {
 // CHECK-DAG: [[CPY_DONE]]:
 
 // var
-// CHECK-DAG: [[VAR_ADDR_REF:%.+]] = load {{.+}}*, {{.+}}* [[VAR_ADDR]],
+// CHECK-DAG: [[VAR_ADDR_REF:%.+]] = load {{.+}}*, {{.+}}* [[TMP]],
 // CHECK-DAG: [[VAR_PRIV_BCAST:%.+]] = bitcast {{.+}}* [[VAR_PRIV]] to
 // CHECK-DAG: [[VAR_ADDR_BCAST:%.+]] = bitcast {{.+}}* [[VAR_ADDR_REF]] to
 // CHECK-DAG: call void @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[VAR_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[VAR_ADDR_BCAST]],

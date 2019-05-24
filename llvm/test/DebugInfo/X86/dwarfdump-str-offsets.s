@@ -239,18 +239,19 @@ TypeDie:
 CU1_5_end:
 
 # DWARF v5 CU header
-        .long  CU2_5_end-CU2_5_version  # Length of Unit
+        .long 0xffffffff
+        .quad CU2_5_end-CU2_5_version  # Length of Unit
 CU2_5_version:
         .short 5               # DWARF version number
         .byte 1                # DWARF Unit Type
         .byte 8                # Address Size (in bytes)
-        .long .debug_abbrev    # Offset Into Abbrev. Section
+        .quad .debug_abbrev    # Offset Into Abbrev. Section
 # The compile-unit DIE, which has a DW_AT_producer, DW_AT_name, 
 # DW_AT_str_offsets and DW_AT_compdir.
         .byte 1                # Abbreviation code
         .byte 0                # The index of the producer string
         .byte 1                # The index of the CU name string
-        .long .debug_str_offsets_base1
+        .quad .debug_str_offsets_base1
         .byte 2                # The index of the comp dir string
         .byte 0 # NULL
 CU2_5_end:

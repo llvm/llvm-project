@@ -141,7 +141,7 @@ void *kqueue_thread(void *arg) {
 #endif
 
   struct kevent death_event;
-  while (1) {
+  while (true) {
     int n_events = kevent(kq_id, NULL, 0, &death_event, 1, NULL);
     if (n_events == -1) {
       if (errno == EINTR)
@@ -267,7 +267,7 @@ static void *waitpid_thread(void *arg) {
 #endif
 #endif
 
-  while (1) {
+  while (true) {
     pid_t child_pid = waitpid(pid, &status, 0);
     DNBLogThreadedIf(LOG_PROCESS, "waitpid_thread (): waitpid (pid = %i, "
                                   "&status, 0) => %i, status = %i, errno = %i",

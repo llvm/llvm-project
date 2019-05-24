@@ -85,6 +85,13 @@ public:
   /// is that of the flag: `vectorize-slp`.
   bool SLPVectorization;
 
+  /// Tuning option to enable/disable loop unrolling. Its default value is true.
+  bool LoopUnrolling;
+
+  /// Tuning option to forget all SCEV loops in LoopUnroll. Its default value
+  /// is that of the flag: `-forget-scev-loop-unroll`.
+  bool ForgetAllSCEVInLoopUnroll;
+
   /// Tuning option to cap the number of calls to retrive clobbering accesses in
   /// MemorySSA, in LICM.
   unsigned LicmMssaOptCap;

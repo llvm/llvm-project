@@ -70,7 +70,7 @@ static void Accumulate(SMap &SM, CFGBlock *B) {
   // Finally, look at the terminator.  If the terminator was already added
   // because it is a block-level expression in another block, overwrite
   // that mapping.
-  if (Stmt *Term = B->getTerminator())
+  if (Stmt *Term = B->getTerminatorStmt())
     SM[Term] = B;
 }
 

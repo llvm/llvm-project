@@ -513,4 +513,12 @@ namespace Union {
   static_assert(return_init_all().a.p == 7); // expected-error {{}} expected-note {{read of member 'p' of union with no active member}}
   static_assert(return_init_all().a.q == 8); // expected-error {{}} expected-note {{read of member 'q' of union with no active member}}
   constexpr B init_all = return_init_all();
+
+  constexpr bool test_no_member_change =  []{
+    union U { char dummy = {}; };
+    U u1;
+    U u2;
+    u1 = u2;
+    return true;
+  }();
 }

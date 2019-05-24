@@ -6,4 +6,4 @@
 // RUN: FileCheck %s --check-prefix=DID-YOU-MEAN
 
 // CHECK: error: unknown argument: '--helium'
-// DID-YOU-MEAN: error: unknown argument '--hel[', did you mean '--help'?
+// DID-YOU-MEAN: error: unknown argument '--hel['; did you mean '--help'?

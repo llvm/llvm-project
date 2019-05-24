@@ -651,7 +651,7 @@ public:
     // uninitialized.
     for (const auto *Block : cfg) {
       unsigned BlockID = Block->getBlockID();
-      const Stmt *Term = Block->getTerminator();
+      const Stmt *Term = Block->getTerminatorStmt();
       if (SuccsVisited[BlockID] && SuccsVisited[BlockID] < Block->succ_size() &&
           Term) {
         // This block inevitably leads to the use. If we have an edge from here

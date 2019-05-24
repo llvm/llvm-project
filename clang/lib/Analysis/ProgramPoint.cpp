@@ -144,7 +144,7 @@ void ProgramPoint::print(StringRef CR, llvm::raw_ostream &Out) const {
     Out << "Edge: (B" << E.getSrc()->getBlockID() << ", B"
         << E.getDst()->getBlockID() << ')';
 
-    if (const Stmt *T = E.getSrc()->getTerminator()) {
+    if (const Stmt *T = E.getSrc()->getTerminatorStmt()) {
       SourceLocation SLoc = T->getBeginLoc();
 
       Out << "\\|Terminator: ";

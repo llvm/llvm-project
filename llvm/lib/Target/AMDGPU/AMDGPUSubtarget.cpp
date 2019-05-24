@@ -190,7 +190,6 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     EnableCuMode(false),
     TrapHandler(false),
 
-    EnableHugePrivateBuffer(false),
     EnableLoadStoreOpt(false),
     EnableUnsafeDSOffsetFolding(false),
     EnableSIScheduler(false),

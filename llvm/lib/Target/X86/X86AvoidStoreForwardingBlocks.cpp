@@ -406,7 +406,10 @@ void X86AvoidSFBPass::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
   // If the load and store are consecutive, use the loadInst location to
   // reduce register pressure.
   MachineInstr *StInst = StoreInst;
-  if (StoreInst->getPrevNode() == LoadInst)
+  auto PrevInstrIt = skipDebugInstructionsBackward(
+      std::prev(MachineBasicBlock::instr_iterator(StoreInst)),
+      MBB->instr_begin());
+  if (PrevInstrIt.getNodePtr() == LoadInst)
     StInst = LoadInst;
   MachineInstr *NewStore =
       BuildMI(*MBB, StInst, StInst->getDebugLoc(), TII->get(NStoreOpcode))
@@ -491,19 +494,22 @@ void X86AvoidSFBPass::buildCopies(int Size, MachineInstr *LoadInst,
 static void updateKillStatus(MachineInstr *LoadInst, MachineInstr *StoreInst) {
   MachineOperand &LoadBase = getBaseOperand(LoadInst);
   MachineOperand &StoreBase = getBaseOperand(StoreInst);
+  auto StorePrevNonDbgInstr = skipDebugInstructionsBackward(
+          std::prev(MachineBasicBlock::instr_iterator(StoreInst)),
+          LoadInst->getParent()->instr_begin()).getNodePtr();
   if (LoadBase.isReg()) {
     MachineInstr *LastLoad = LoadInst->getPrevNode();
     // If the original load and store to xmm/ymm were consecutive
     // then the partial copies were also created in
     // a consecutive order to reduce register pressure,
     // and the location of the last load is before the last store.
-    if (StoreInst->getPrevNode() == LoadInst)
+    if (StorePrevNonDbgInstr == LoadInst)
       LastLoad = LoadInst->getPrevNode()->getPrevNode();
     getBaseOperand(LastLoad).setIsKill(LoadBase.isKill());
   }
   if (StoreBase.isReg()) {
     MachineInstr *StInst = StoreInst;
-    if (StoreInst->getPrevNode() == LoadInst)
+    if (StorePrevNonDbgInstr == LoadInst)
       StInst = LoadInst;
     getBaseOperand(StInst->getPrevNode()).setIsKill(StoreBase.isKill());
   }
@@ -530,7 +536,7 @@ void X86AvoidSFBPass::findPotentiallylBlockedCopies(MachineFunction &MF) {
       if (!isPotentialBlockedMemCpyLd(MI.getOpcode()))
         continue;
       int DefVR = MI.getOperand(0).getReg();
-      if (!MRI->hasOneUse(DefVR))
+      if (!MRI->hasOneNonDBGUse(DefVR))
         continue;
       for (auto UI = MRI->use_nodbg_begin(DefVR), UE = MRI->use_nodbg_end();
            UI != UE;) {

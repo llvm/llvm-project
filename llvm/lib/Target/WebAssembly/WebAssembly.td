@@ -33,6 +33,7 @@ def FeatureUnimplementedSIMD128 :
 
 def FeatureAtomics : SubtargetFeature<"atomics", "HasAtomics", "true",
                                       "Enable Atomics">;
+
 def FeatureNontrappingFPToInt :
       SubtargetFeature<"nontrapping-fptoint",
                        "HasNontrappingFPToInt", "true",
@@ -43,6 +44,11 @@ def FeatureSignExt :
                        "HasSignExt", "true",
                        "Enable sign extension operators">;
 
+def FeatureTailCall :
+      SubtargetFeature<"tail-call",
+                       "HasTailCall", "true",
+                       "Enable tail call instructions">;
+
 def FeatureExceptionHandling :
       SubtargetFeature<"exception-handling", "HasExceptionHandling", "true",
                        "Enable Wasm exception handling">;
@@ -50,6 +56,11 @@ def FeatureExceptionHandling :
 def FeatureBulkMemory :
       SubtargetFeature<"bulk-memory", "HasBulkMemory", "true",
                        "Enable bulk memory operations">;
+
+def FeatureMultivalue :
+      SubtargetFeature<"multivalue",
+                       "HasMultivalue", "true",
+                       "Enable multivalue blocks, instructions, and functions">;
 
 def FeatureMutableGlobals :
       SubtargetFeature<"mutable-globals", "HasMutableGlobals", "true",

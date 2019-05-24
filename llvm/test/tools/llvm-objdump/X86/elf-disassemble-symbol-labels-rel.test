@@ -9,6 +9,7 @@
 # RUN:                                   --implicit-check-not=absolute \
 # RUN:                                   --implicit-check-not=other
 
+# CHECK: {{.*}}: file format {{.*}}
 # CHECK: Disassembly of section .text:
 # CHECK: 0000000000000000 first:
 # CHECK: 0000000000000001 second:

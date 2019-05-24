@@ -299,7 +299,6 @@ protected:
   bool TrapHandler;
 
   // Used as options.
-  bool EnableHugePrivateBuffer;
   bool EnableLoadStoreOpt;
   bool EnableUnsafeDSOffsetFolding;
   bool EnableSIScheduler;
@@ -377,6 +376,9 @@ private:
   SITargetLowering TLInfo;
   SIFrameLowering FrameLowering;
 
+  // See COMPUTE_TMPRING_SIZE.WAVESIZE, 13-bit field in units of 256-dword.
+  static const unsigned MaxWaveScratchSize = (256 * 4) * ((1 << 13) - 1);
+
 public:
   GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                const GCNTargetMachine &TM);
@@ -434,6 +436,11 @@ public:
 
   unsigned getWavefrontSizeLog2() const {
     return Log2_32(WavefrontSize);
+  }
+
+  /// Return the number of high bits known to be zero fror a frame index.
+  unsigned getKnownHighZeroBitsForFrameIndex() const {
+    return countLeadingZeros(MaxWaveScratchSize) + getWavefrontSizeLog2();
   }
 
   int getLDSBankCount() const {
@@ -524,10 +531,6 @@ public:
 
   TrapHandlerAbi getTrapHandlerAbi() const {
     return isAmdHsaOS() ? TrapHandlerAbiHsa : TrapHandlerAbiNone;
-  }
-
-  bool enableHugePrivateBuffer() const {
-    return EnableHugePrivateBuffer;
   }
 
   bool unsafeDSOffsetFoldingEnabled() const {
