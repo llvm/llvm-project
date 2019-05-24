@@ -11,7 +11,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetOptions.h"
-#include "clang/CodeGen/OclCxxRewrite/BifNameReflower.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
@@ -816,10 +815,6 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
   legacy::FunctionPassManager PerFunctionPasses(TheModule);
   PerFunctionPasses.add(
       createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
-
-  if (LangOpts.SYCLIsDevice) {
-    PerModulePasses.add(createOclCxxBifNameReflowerPass());
-  }
 
   CreatePasses(PerModulePasses, PerFunctionPasses);
 
