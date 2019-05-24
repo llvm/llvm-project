@@ -1943,7 +1943,7 @@ lldb::StateType ScriptInterpreterPythonImpl::ScriptedThreadPlanGetRunState(
     Locker py_lock(this,
                    Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
     should_step = LLDBSWIGPythonCallThreadPlan(
-        generic->GetValue(), "should_step", NULL, script_error);
+        generic->GetValue(), "should_step", nullptr, script_error);
     if (script_error)
       should_step = true;
   }

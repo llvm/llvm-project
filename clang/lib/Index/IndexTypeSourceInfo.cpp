@@ -133,29 +133,41 @@ public:
     return true;
   }
 
-  template<typename TypeLocType>
-  bool HandleTemplateSpecializationTypeLoc(TypeLocType TL) {
-    if (const auto *T = TL.getTypePtr()) {
-      if (CXXRecordDecl *RD = T->getAsCXXRecordDecl()) {
-        if (!RD->isImplicit() || IndexCtx.shouldIndexImplicitInstantiation()) {
-          IndexCtx.handleReference(RD, TL.getTemplateNameLoc(), Parent,
-                                   ParentDC, SymbolRoleSet(), Relations);
-          return true;
-        }
-      }
-      if (const TemplateDecl *D = T->getTemplateName().getAsTemplateDecl())
-        IndexCtx.handleReference(D, TL.getTemplateNameLoc(), Parent, ParentDC,
-                                 SymbolRoleSet(), Relations);
+  void HandleTemplateSpecializationTypeLoc(TemplateName TemplName,
+                                           SourceLocation TemplNameLoc,
+                                           CXXRecordDecl *ResolvedClass,
+                                           bool IsTypeAlias) {
+    // In presence of type aliases, the resolved class was never written in
+    // the code so don't report it.
+    if (!IsTypeAlias && ResolvedClass &&
+        (!ResolvedClass->isImplicit() ||
+         IndexCtx.shouldIndexImplicitInstantiation())) {
+      IndexCtx.handleReference(ResolvedClass, TemplNameLoc, Parent, ParentDC,
+                               SymbolRoleSet(), Relations);
+    } else if (const TemplateDecl *D = TemplName.getAsTemplateDecl()) {
+      IndexCtx.handleReference(D, TemplNameLoc, Parent, ParentDC,
+                               SymbolRoleSet(), Relations);
     }
-    return true;
   }
 
   bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL) {
-    return HandleTemplateSpecializationTypeLoc(TL);
+    auto *T = TL.getTypePtr();
+    if (!T)
+      return true;
+    HandleTemplateSpecializationTypeLoc(
+        T->getTemplateName(), TL.getTemplateNameLoc(), T->getAsCXXRecordDecl(),
+        T->isTypeAlias());
+    return true;
   }
 
   bool VisitDeducedTemplateSpecializationTypeLoc(DeducedTemplateSpecializationTypeLoc TL) {
-    return HandleTemplateSpecializationTypeLoc(TL);
+    auto *T = TL.getTypePtr();
+    if (!T)
+      return true;
+    HandleTemplateSpecializationTypeLoc(
+        T->getTemplateName(), TL.getTemplateNameLoc(), T->getAsCXXRecordDecl(),
+        /*IsTypeAlias=*/false);
+    return true;
   }
 
   bool VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {

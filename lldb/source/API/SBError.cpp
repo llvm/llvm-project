@@ -41,7 +41,7 @@ const char *SBError::GetCString() const {
 
   if (m_opaque_up)
     return m_opaque_up->AsCString();
-  return NULL;
+  return nullptr;
 }
 
 void SBError::Clear() {
@@ -144,11 +144,11 @@ bool SBError::IsValid() const {
 SBError::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBError, operator bool);
 
-  return m_opaque_up != NULL;
+  return m_opaque_up != nullptr;
 }
 
 void SBError::CreateIfNeeded() {
-  if (m_opaque_up == NULL)
+  if (m_opaque_up == nullptr)
     m_opaque_up.reset(new Status());
 }
 
@@ -175,7 +175,8 @@ bool SBError::GetDescription(SBStream &description) {
       description.Printf("success");
     else {
       const char *err_string = GetCString();
-      description.Printf("error: %s", (err_string != NULL ? err_string : ""));
+      description.Printf("error: %s",
+                         (err_string != nullptr ? err_string : ""));
     }
   } else
     description.Printf("error: <NULL>");

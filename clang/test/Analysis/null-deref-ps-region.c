@@ -1,4 +1,8 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core,unix,alpha.unix -std=gnu99 -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -verify %s -std=gnu99 \
+// RUN:  -analyzer-checker=core \
+// RUN:  -analyzer-checker=alpha.core \
+// RUN:  -analyzer-checker=unix \
+// RUN:  -analyzer-checker=alpha.unix
 
 #include "Inputs/system-header-simulator.h"
 

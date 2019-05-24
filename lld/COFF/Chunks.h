@@ -78,10 +78,6 @@ public:
   // before calling this function.
   virtual void writeTo(uint8_t *Buf) const {}
 
-  // Called by the writer after an RVA is assigned, but before calling
-  // getSize().
-  virtual void finalizeContents() {}
-
   // The writer sets and uses the addresses. In practice, PE images cannot be
   // larger than 2GB. Chunks are always laid as part of the image, so Chunk RVAs
   // can be stored with 32 bits.
@@ -122,14 +118,9 @@ public:
 
 protected:
   Chunk(Kind K = OtherKind) : ChunkKind(K) {}
+
   const Kind ChunkKind;
 
-public:
-  // Whether this section needs to be kept distinct from other sections during
-  // ICF. This is set by the driver using address-significance tables.
-  bool KeepUnique = false;
-
-protected:
   // The alignment of this chunk, stored in log2 form. The writer uses the
   // value.
   uint8_t P2Align = 0;
@@ -137,7 +128,6 @@ protected:
   // The RVA of this chunk in the output. The writer sets a value.
   uint32_t RVA = 0;
 
-protected:
   // The output section for this chunk.
   OutputSection *Out = nullptr;
 };
@@ -283,6 +273,10 @@ public:
   // Used by the garbage collector.
   bool Live;
 
+  // Whether this section needs to be kept distinct from other sections during
+  // ICF. This is set by the driver using address-significance tables.
+  bool KeepUnique = false;
+
   // The COMDAT selection if this is a COMDAT chunk.
   llvm::COFF::COMDATType Selection = (llvm::COFF::COMDATType)0;
 
@@ -322,7 +316,8 @@ class MergeChunk : public Chunk {
 public:
   MergeChunk(uint32_t Alignment);
   static void addSection(SectionChunk *C);
-  void finalizeContents() override;
+  void finalizeContents();
+  void assignSubsectionRVAs();
 
   uint32_t getOutputCharacteristics() const override;
   StringRef getSectionName() const override { return ".rdata"; }

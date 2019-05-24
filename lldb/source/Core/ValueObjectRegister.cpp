@@ -76,7 +76,7 @@ bool ValueObjectRegisterContext::UpdateValue() {
   else
     m_reg_ctx_sp.reset();
 
-  if (m_reg_ctx_sp.get() == NULL) {
+  if (m_reg_ctx_sp.get() == nullptr) {
     SetValueIsValid(false);
     m_error.SetErrorToGenericError();
   } else
@@ -87,7 +87,7 @@ bool ValueObjectRegisterContext::UpdateValue() {
 
 ValueObject *ValueObjectRegisterContext::CreateChildAtIndex(
     size_t idx, bool synthetic_array_member, int32_t synthetic_index) {
-  ValueObject *new_valobj = NULL;
+  ValueObject *new_valobj = nullptr;
 
   const size_t num_children = GetNumChildren();
   if (idx < num_children) {
@@ -112,7 +112,7 @@ ValueObjectRegisterSet::Create(ExecutionContextScope *exe_scope,
 ValueObjectRegisterSet::ValueObjectRegisterSet(ExecutionContextScope *exe_scope,
                                                lldb::RegisterContextSP &reg_ctx,
                                                uint32_t reg_set_idx)
-    : ValueObject(exe_scope), m_reg_ctx_sp(reg_ctx), m_reg_set(NULL),
+    : ValueObject(exe_scope), m_reg_ctx_sp(reg_ctx), m_reg_set(nullptr),
       m_reg_set_idx(reg_set_idx) {
   assert(reg_ctx);
   m_reg_set = reg_ctx->GetRegisterSet(m_reg_set_idx);
@@ -149,13 +149,13 @@ bool ValueObjectRegisterSet::UpdateValue() {
   SetValueDidChange(false);
   ExecutionContext exe_ctx(GetExecutionContextRef());
   StackFrame *frame = exe_ctx.GetFramePtr();
-  if (frame == NULL)
+  if (frame == nullptr)
     m_reg_ctx_sp.reset();
   else {
     m_reg_ctx_sp = frame->GetRegisterContext();
     if (m_reg_ctx_sp) {
       const RegisterSet *reg_set = m_reg_ctx_sp->GetRegisterSet(m_reg_set_idx);
-      if (reg_set == NULL)
+      if (reg_set == nullptr)
         m_reg_ctx_sp.reset();
       else if (m_reg_set != reg_set) {
         SetValueDidChange(true);
@@ -175,7 +175,7 @@ bool ValueObjectRegisterSet::UpdateValue() {
 
 ValueObject *ValueObjectRegisterSet::CreateChildAtIndex(
     size_t idx, bool synthetic_array_member, int32_t synthetic_index) {
-  ValueObject *valobj = NULL;
+  ValueObject *valobj = nullptr;
   if (m_reg_ctx_sp && m_reg_set) {
     const size_t num_children = GetNumChildren();
     if (idx < num_children)
@@ -188,11 +188,11 @@ ValueObject *ValueObjectRegisterSet::CreateChildAtIndex(
 lldb::ValueObjectSP
 ValueObjectRegisterSet::GetChildMemberWithName(ConstString name,
                                                bool can_create) {
-  ValueObject *valobj = NULL;
+  ValueObject *valobj = nullptr;
   if (m_reg_ctx_sp && m_reg_set) {
     const RegisterInfo *reg_info =
         m_reg_ctx_sp->GetRegisterInfoByName(name.AsCString());
-    if (reg_info != NULL)
+    if (reg_info != nullptr)
       valobj = new ValueObjectRegister(*this, m_reg_ctx_sp,
                                        reg_info->kinds[eRegisterKindLLDB]);
   }
@@ -207,7 +207,7 @@ ValueObjectRegisterSet::GetIndexOfChildWithName(ConstString name) {
   if (m_reg_ctx_sp && m_reg_set) {
     const RegisterInfo *reg_info =
         m_reg_ctx_sp->GetRegisterInfoByName(name.AsCString());
-    if (reg_info != NULL)
+    if (reg_info != nullptr)
       return reg_info->kinds[eRegisterKindLLDB];
   }
   return UINT32_MAX;
@@ -289,7 +289,7 @@ bool ValueObjectRegister::UpdateValue() {
   m_error.Clear();
   ExecutionContext exe_ctx(GetExecutionContextRef());
   StackFrame *frame = exe_ctx.GetFramePtr();
-  if (frame == NULL) {
+  if (frame == nullptr) {
     m_reg_ctx_sp.reset();
     m_reg_value.Clear();
   }

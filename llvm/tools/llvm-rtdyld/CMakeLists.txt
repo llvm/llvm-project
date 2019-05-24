@@ -1,5 +1,7 @@
 set(LLVM_LINK_COMPONENTS
-  ${LLVM_TARGETS_TO_BUILD}
+  AllTargetsDisassemblers
+  AllTargetsDescs
+  AllTargetsInfos
   DebugInfoDWARF
   ExecutionEngine
   MC

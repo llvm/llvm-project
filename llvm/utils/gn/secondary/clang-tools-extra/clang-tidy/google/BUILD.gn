@@ -13,6 +13,7 @@ static_library("google") {
   ]
   sources = [
     "AvoidCStyleCastsCheck.cpp",
+    "AvoidNSObjectNewCheck.cpp",
     "AvoidThrowingObjCExceptionCheck.cpp",
     "AvoidUnderscoreInGoogletestNameCheck.cpp",
     "DefaultArgumentsCheck.cpp",

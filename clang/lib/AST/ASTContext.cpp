@@ -9627,8 +9627,8 @@ QualType ASTContext::GetBuiltinType(unsigned Id,
 
   bool Variadic = (TypeStr[0] == '.');
 
-  FunctionType::ExtInfo EI(
-      getDefaultCallingConvention(Variadic, /*IsCXXMethod=*/false));
+  FunctionType::ExtInfo EI(getDefaultCallingConvention(
+      Variadic, /*IsCXXMethod=*/false, /*IsBuiltin=*/true));
   if (BuiltinInfo.isNoReturn(Id)) EI = EI.withNoReturn(true);
 
 
@@ -10005,34 +10005,39 @@ void ASTContext::forEachMultiversionedFunctionVersion(
 }
 
 CallingConv ASTContext::getDefaultCallingConvention(bool IsVariadic,
-                                                    bool IsCXXMethod) const {
+                                                    bool IsCXXMethod,
+                                                    bool IsBuiltin) const {
   // Pass through to the C++ ABI object
   if (IsCXXMethod)
     return ABI->getDefaultMethodCallConv(IsVariadic);
 
-  switch (LangOpts.getDefaultCallingConv()) {
-  case LangOptions::DCC_None:
-    break;
-  case LangOptions::DCC_CDecl:
-    return CC_C;
-  case LangOptions::DCC_FastCall:
-    if (getTargetInfo().hasFeature("sse2") && !IsVariadic)
-      return CC_X86FastCall;
-    break;
-  case LangOptions::DCC_StdCall:
-    if (!IsVariadic)
-      return CC_X86StdCall;
-    break;
-  case LangOptions::DCC_VectorCall:
-    // __vectorcall cannot be applied to variadic functions.
-    if (!IsVariadic)
-      return CC_X86VectorCall;
-    break;
-  case LangOptions::DCC_RegCall:
-    // __regcall cannot be applied to variadic functions.
-    if (!IsVariadic)
-      return CC_X86RegCall;
-    break;
+  // Builtins ignore user-specified default calling convention and remain the
+  // Target's default calling convention.
+  if (!IsBuiltin) {
+    switch (LangOpts.getDefaultCallingConv()) {
+    case LangOptions::DCC_None:
+      break;
+    case LangOptions::DCC_CDecl:
+      return CC_C;
+    case LangOptions::DCC_FastCall:
+      if (getTargetInfo().hasFeature("sse2") && !IsVariadic)
+        return CC_X86FastCall;
+      break;
+    case LangOptions::DCC_StdCall:
+      if (!IsVariadic)
+        return CC_X86StdCall;
+      break;
+    case LangOptions::DCC_VectorCall:
+      // __vectorcall cannot be applied to variadic functions.
+      if (!IsVariadic)
+        return CC_X86VectorCall;
+      break;
+    case LangOptions::DCC_RegCall:
+      // __regcall cannot be applied to variadic functions.
+      if (!IsVariadic)
+        return CC_X86RegCall;
+      break;
+    }
   }
   return Target->getDefaultCallingConv(TargetInfo::CCMT_Unknown);
 }

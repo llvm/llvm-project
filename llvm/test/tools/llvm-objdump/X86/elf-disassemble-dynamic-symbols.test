@@ -1,0 +1,99 @@
+## Show the disassembly behaviour when dynamic symbols are present.
+# RUN: yaml2obj %s -o %t
+
+## Case 1: Both static and dynamic symbols are present. Only static
+## symbols are displayed.
+# RUN: llvm-objdump -d %t | FileCheck %s --check-prefixes=CHECK,STATIC
+
+## Case 2: Only the dynamic symbols are present. These should be displayed, if
+## they meet the necessary criteria.
+# RUN: llvm-objcopy --strip-all %t %t2
+# RUN: llvm-objdump -d %t2 | FileCheck %s --check-prefixes=CHECK,DYN
+
+# CHECK:       Disassembly of section .text:
+# CHECK-EMPTY:
+# STATIC-NEXT: 0000000000001000 .text:
+# DYN-NEXT:    0000000000001000 only_dyn:
+# CHECK-NEXT:      1000:
+# CHECK-EMPTY:
+# STATIC-NEXT: 0000000000001001 both_static:
+# DYN-NEXT:    0000000000001001 both_dyn:
+# CHECK-NEXT:      1001:
+# STATIC-EMPTY:
+# STATIC-NEXT: 0000000000001002 only_static:
+# CHECK-NEXT:      1002:
+# CHECK-NEXT:      1003:
+# CHECK-NEXT:      1004:
+# CHECK-NEXT:      1005:{{.*}}
+# CHECK-NOT:   {{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Address: 0x1000
+    Content: 909090909090
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x1000
+    Sections:
+      - Section: .text
+Symbols:
+  - Name:    both_static
+    Value:   0x1001
+    Section: .text
+    Binding: STB_GLOBAL
+  - Name:    only_static
+    Value:   0x1002
+    Section: .text
+    Binding: STB_GLOBAL
+DynamicSymbols:
+  - Name:    only_dyn
+    Value:   0x1000
+    Section: .text
+    Size:    1
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+  - Name:    both_dyn
+    Value:   0x1001
+    Section: .text
+    Size:    1
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+  ## The rest of the dynamic symbols won't be used for various reasons.
+  ## FIXME: the first two symbols here should be dumped.
+  ##        See https://bugs.llvm.org/show_bug.cgi?id=41947
+  - Name:    not_func
+    Value:   0x1003
+    Section: .text
+    Type:    STT_OBJECT
+    Binding: STB_GLOBAL
+  - Name:    zero_sized
+    Value:   0x1004
+    Section: .text
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+  - Name:    '' # No name
+    Value:   0x1005
+    Section: .text
+    Size:    1
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+  - Name:    absolute
+    Value:   0x1005
+    Index:   SHN_ABS
+    Size:    1
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+  - Name:    undefined
+    Value:   0x1005
+    Index:   SHN_UNDEF
+    Size:    1
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL

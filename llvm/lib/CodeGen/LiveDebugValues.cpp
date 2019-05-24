@@ -425,17 +425,17 @@ void LiveDebugValues::insertTransferDebugPair(
     MachineInstr &MI, OpenRangesSet &OpenRanges, TransferMap &Transfers,
     VarLocMap &VarLocIDs, unsigned OldVarID, TransferKind Kind,
     unsigned NewReg) {
-  const MachineInstr *DMI = &VarLocIDs[OldVarID].MI;
+  const MachineInstr *DebugInstr = &VarLocIDs[OldVarID].MI;
   MachineFunction *MF = MI.getParent()->getParent();
-  MachineInstr *NewDMI;
+  MachineInstr *NewDebugInstr;
 
   auto ProcessVarLoc = [&MI, &OpenRanges, &Transfers,
-                        &VarLocIDs](VarLoc &VL, MachineInstr *NewDMI) {
+                        &VarLocIDs](VarLoc &VL, MachineInstr *NewDebugInstr) {
     unsigned LocId = VarLocIDs.insert(VL);
     OpenRanges.insert(LocId, VL.Var);
-    // The newly created DBG_VALUE instruction NewDMI must be inserted after
-    // MI. Keep track of the pairing.
-    TransferDebugPair MIP = {&MI, NewDMI};
+    // The newly created DBG_VALUE instruction NewDebugInstr must be inserted
+    // after MI. Keep track of the pairing.
+    TransferDebugPair MIP = {&MI, NewDebugInstr};
     Transfers.push_back(MIP);
   };
 
@@ -447,31 +447,33 @@ void LiveDebugValues::insertTransferDebugPair(
            "No register supplied when handling a copy of a debug value");
     // Create a DBG_VALUE instruction to describe the Var in its new
     // register location.
-    NewDMI = BuildMI(*MF, DMI->getDebugLoc(), DMI->getDesc(),
-                     DMI->isIndirectDebugValue(), NewReg,
-                     DMI->getDebugVariable(), DMI->getDebugExpression());
-    if (DMI->isIndirectDebugValue())
-      NewDMI->getOperand(1).setImm(DMI->getOperand(1).getImm());
-    VarLoc VL(*NewDMI, LS);
-    ProcessVarLoc(VL, NewDMI);
+    NewDebugInstr = BuildMI(
+        *MF, DebugInstr->getDebugLoc(), DebugInstr->getDesc(),
+        DebugInstr->isIndirectDebugValue(), NewReg,
+        DebugInstr->getDebugVariable(), DebugInstr->getDebugExpression());
+    if (DebugInstr->isIndirectDebugValue())
+      NewDebugInstr->getOperand(1).setImm(DebugInstr->getOperand(1).getImm());
+    VarLoc VL(*NewDebugInstr, LS);
+    ProcessVarLoc(VL, NewDebugInstr);
     LLVM_DEBUG(dbgs() << "Creating DBG_VALUE inst for register copy: ";
-               NewDMI->print(dbgs(), false, false, false, TII));
+               NewDebugInstr->print(dbgs(), false, false, false, TII));
     return;
   }
   case TransferKind::TransferSpill: {
     // Create a DBG_VALUE instruction to describe the Var in its spilled
     // location.
     VarLoc::SpillLoc SpillLocation = extractSpillBaseRegAndOffset(MI);
-    auto *SpillExpr = DIExpression::prepend(DMI->getDebugExpression(),
+    auto *SpillExpr = DIExpression::prepend(DebugInstr->getDebugExpression(),
                                             DIExpression::ApplyOffset,
                                             SpillLocation.SpillOffset);
-    NewDMI =
-        BuildMI(*MF, DMI->getDebugLoc(), DMI->getDesc(), true,
-                SpillLocation.SpillBase, DMI->getDebugVariable(), SpillExpr);
-    VarLoc VL(*NewDMI, SpillLocation.SpillBase, SpillLocation.SpillOffset, LS);
-    ProcessVarLoc(VL, NewDMI);
+    NewDebugInstr = BuildMI(
+        *MF, DebugInstr->getDebugLoc(), DebugInstr->getDesc(), true,
+        SpillLocation.SpillBase, DebugInstr->getDebugVariable(), SpillExpr);
+    VarLoc VL(*NewDebugInstr, SpillLocation.SpillBase,
+              SpillLocation.SpillOffset, LS);
+    ProcessVarLoc(VL, NewDebugInstr);
     LLVM_DEBUG(dbgs() << "Creating DBG_VALUE inst for spill: ";
-               NewDMI->print(dbgs(), false, false, false, TII));
+               NewDebugInstr->print(dbgs(), false, false, false, TII));
     return;
   }
   case TransferKind::TransferRestore: {
@@ -479,12 +481,13 @@ void LiveDebugValues::insertTransferDebugPair(
            "No register supplied when handling a restore of a debug value");
     MachineFunction *MF = MI.getMF();
     DIBuilder DIB(*const_cast<Function &>(MF->getFunction()).getParent());
-    NewDMI = BuildMI(*MF, DMI->getDebugLoc(), DMI->getDesc(), false, NewReg,
-                     DMI->getDebugVariable(), DIB.createExpression());
-    VarLoc VL(*NewDMI, LS);
-    ProcessVarLoc(VL, NewDMI);
+    NewDebugInstr =
+        BuildMI(*MF, DebugInstr->getDebugLoc(), DebugInstr->getDesc(), false,
+                NewReg, DebugInstr->getDebugVariable(), DIB.createExpression());
+    VarLoc VL(*NewDebugInstr, LS);
+    ProcessVarLoc(VL, NewDebugInstr);
     LLVM_DEBUG(dbgs() << "Creating DBG_VALUE inst for register restore: ";
-               NewDMI->print(dbgs(), false, false, false, TII));
+               NewDebugInstr->print(dbgs(), false, false, false, TII));
     return;
   }
   }
@@ -805,13 +808,14 @@ bool LiveDebugValues::join(
     // new range is started for the var from the mbb's beginning by inserting
     // a new DBG_VALUE. process() will end this range however appropriate.
     const VarLoc &DiffIt = VarLocIDs[ID];
-    const MachineInstr *DMI = &DiffIt.MI;
-    MachineInstr *MI =
-        BuildMI(MBB, MBB.instr_begin(), DMI->getDebugLoc(), DMI->getDesc(),
-                DMI->isIndirectDebugValue(), DMI->getOperand(0).getReg(),
-                DMI->getDebugVariable(), DMI->getDebugExpression());
-    if (DMI->isIndirectDebugValue())
-      MI->getOperand(1).setImm(DMI->getOperand(1).getImm());
+    const MachineInstr *DebugInstr = &DiffIt.MI;
+    MachineInstr *MI = BuildMI(
+        MBB, MBB.instr_begin(), DebugInstr->getDebugLoc(),
+        DebugInstr->getDesc(), DebugInstr->isIndirectDebugValue(),
+        DebugInstr->getOperand(0).getReg(), DebugInstr->getDebugVariable(),
+        DebugInstr->getDebugExpression());
+    if (DebugInstr->isIndirectDebugValue())
+      MI->getOperand(1).setImm(DebugInstr->getOperand(1).getImm());
     LLVM_DEBUG(dbgs() << "Inserted: "; MI->dump(););
     ILS.set(ID);
     ++NumInserted;

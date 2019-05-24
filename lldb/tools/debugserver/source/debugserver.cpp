@@ -490,6 +490,7 @@ RNBRunLoopMode HandleProcessStateChange(RNBRemote *remote, bool initialize) {
   // Catch all...
   return eRNBRunLoopModeExit;
 }
+
 // This function handles the case where our inferior program is stopped and
 // we are waiting for gdb remote protocol packets. When a packet occurs that
 // makes the inferior run, we need to leave this function with a new state

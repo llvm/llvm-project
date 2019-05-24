@@ -98,7 +98,7 @@ size_t GDBRemoteCommunication::SendAck() {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PACKETS));
   ConnectionStatus status = eConnectionStatusSuccess;
   char ch = '+';
-  const size_t bytes_written = Write(&ch, 1, status, NULL);
+  const size_t bytes_written = Write(&ch, 1, status, nullptr);
   if (log)
     log->Printf("<%4" PRIu64 "> send packet: %c", (uint64_t)bytes_written, ch);
   m_history.AddPacket(ch, GDBRemoteCommunicationHistory::ePacketTypeSend,
@@ -110,7 +110,7 @@ size_t GDBRemoteCommunication::SendNack() {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PACKETS));
   ConnectionStatus status = eConnectionStatusSuccess;
   char ch = '-';
-  const size_t bytes_written = Write(&ch, 1, status, NULL);
+  const size_t bytes_written = Write(&ch, 1, status, nullptr);
   if (log)
     log->Printf("<%4" PRIu64 "> send packet: %c", (uint64_t)bytes_written, ch);
   m_history.AddPacket(ch, GDBRemoteCommunicationHistory::ePacketTypeSend,
@@ -138,7 +138,7 @@ GDBRemoteCommunication::SendRawPacketNoLock(llvm::StringRef packet,
     ConnectionStatus status = eConnectionStatusSuccess;
     const char *packet_data = packet.data();
     const size_t packet_length = packet.size();
-    size_t bytes_written = Write(packet_data, packet_length, status, NULL);
+    size_t bytes_written = Write(packet_data, packet_length, status, nullptr);
     if (log) {
       size_t binary_start_offset = 0;
       if (strncmp(packet_data, "$vFile:pwrite:", strlen("$vFile:pwrite:")) ==
@@ -274,7 +274,7 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PACKETS));
 
   // Check for a packet from our cache first without trying any reading...
-  if (CheckForPacket(NULL, 0, packet) != PacketType::Invalid)
+  if (CheckForPacket(nullptr, 0, packet) != PacketType::Invalid)
     return PacketResult::Success;
 
   bool timed_out = false;
@@ -470,7 +470,7 @@ bool GDBRemoteCommunication::DecompressPacket() {
       content_length = hash_mark_idx - content_start;
       std::string bufsize_str(m_bytes.data() + 2, i - 2 - 1);
       errno = 0;
-      decompressed_bufsize = ::strtoul(bufsize_str.c_str(), NULL, 10);
+      decompressed_bufsize = ::strtoul(bufsize_str.c_str(), nullptr, 10);
       if (errno != 0 || decompressed_bufsize == ULONG_MAX) {
         m_bytes.erase(0, size_of_first_packet);
         return false;
@@ -483,7 +483,7 @@ bool GDBRemoteCommunication::DecompressPacket() {
     packet_checksum_cstr[0] = m_bytes[checksum_idx];
     packet_checksum_cstr[1] = m_bytes[checksum_idx + 1];
     packet_checksum_cstr[2] = '\0';
-    long packet_checksum = strtol(packet_checksum_cstr, NULL, 16);
+    long packet_checksum = strtol(packet_checksum_cstr, nullptr, 16);
 
     long actual_checksum = CalculcateChecksum(
         llvm::StringRef(m_bytes).substr(1, hash_mark_idx - 1));
@@ -541,7 +541,7 @@ bool GDBRemoteCommunication::DecompressPacket() {
 #if defined(HAVE_LIBCOMPRESSION)
   if (m_compression_type == CompressionType::ZlibDeflate ||
       m_compression_type == CompressionType::LZFSE ||
-      m_compression_type == CompressionType::LZ4 || 
+      m_compression_type == CompressionType::LZ4 ||
       m_compression_type == CompressionType::LZMA) {
     compression_algorithm compression_type;
     if (m_compression_type == CompressionType::LZFSE)
@@ -578,7 +578,7 @@ bool GDBRemoteCommunication::DecompressPacket() {
     if (decompressed_bufsize != ULONG_MAX && decompressed_buffer != nullptr) {
       decompressed_bytes = compression_decode_buffer(
           decompressed_buffer, decompressed_bufsize,
-          (uint8_t *)unescaped_content.data(), unescaped_content.size(), 
+          (uint8_t *)unescaped_content.data(), unescaped_content.size(),
           m_decompression_scratch, compression_type);
     }
   }
@@ -848,7 +848,7 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
             ::isxdigit(m_bytes[checksum_idx + 1])) {
           if (GetSendAcks()) {
             const char *packet_checksum_cstr = &m_bytes[checksum_idx];
-            char packet_checksum = strtol(packet_checksum_cstr, NULL, 16);
+            char packet_checksum = strtol(packet_checksum_cstr, nullptr, 16);
             char actual_checksum = CalculcateChecksum(
                 llvm::StringRef(m_bytes).slice(content_start, content_end));
             success = packet_checksum == actual_checksum;
@@ -923,9 +923,9 @@ GDBRemoteCommunication::ListenThread(lldb::thread_arg_t arg) {
     // Do the listen on another thread so we can continue on...
     if (connection->Connect(comm->m_listen_url.c_str(), &error) !=
         eConnectionStatusSuccess)
-      comm->SetConnection(NULL);
+      comm->SetConnection(nullptr);
   }
-  return NULL;
+  return {};
 }
 
 Status GDBRemoteCommunication::StartDebugserverProcess(

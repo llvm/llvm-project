@@ -27,7 +27,7 @@ GetRegisterInfoPtr(const lldb_private::ArchSpec &target_arch) {
     return g_register_infos_ppc64le;
   default:
     assert(false && "Unhandled target architecture.");
-    return NULL;
+    return nullptr;
   }
 }
 

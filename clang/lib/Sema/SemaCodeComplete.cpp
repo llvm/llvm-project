@@ -4134,6 +4134,8 @@ static const FunctionProtoType *TryDeconstructFunctionLike(QualType T) {
 static void AddLambdaCompletion(ResultBuilder &Results,
                                 llvm::ArrayRef<QualType> Parameters,
                                 const LangOptions &LangOpts) {
+  if (!Results.includeCodePatterns())
+    return;
   CodeCompletionBuilder Completion(Results.getAllocator(),
                                    Results.getCodeCompletionTUInfo());
   // [](<parameters>) {}

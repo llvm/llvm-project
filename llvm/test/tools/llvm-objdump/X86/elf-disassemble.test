@@ -1,0 +1,50 @@
+## Show that disassembly is printed correctly, for only the desired sections.
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-objdump %t.o --disassemble | FileCheck %s --implicit-check-not=Disassembly
+# RUN: llvm-objdump %t.o --disassemble-all | FileCheck %s --check-prefixes=CHECK,ALL
+
+# CHECK:       Disassembly of section .executable:
+# CHECK-EMPTY:
+# CHECK-NEXT:  0000000000001000 .executable:
+# CHECK-NEXT:         0: 90                            nop
+# ALL-EMPTY:
+# ALL-NEXT:    Disassembly of section .writable:
+# ALL-EMPTY:
+# ALL-NEXT:    0000000000002000 .writable:
+# ALL-NEXT:           0: c3                            retq
+# ALL-EMPTY:
+# ALL-NEXT:    Disassembly of section .readonly:
+# ALL-EMPTY:
+# ALL-NEXT:    0000000000003000 .readonly:
+# ALL-NEXT:           0: 01 00                         addl    %eax, (%rax)
+# ALL-EMPTY:
+# ALL-NEXT:    Disassembly of section .nobits:
+# ALL-EMPTY:
+# ALL-NEXT:    0000000000004000 .nobits:
+# ALL-NEXT:    ...
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .executable
+    Type:    SHT_PROGBITS
+    Address: 0x1000
+    Flags:   [SHF_EXECINSTR]
+    Content: '90'
+  - Name:    .writable
+    Type:    SHT_PROGBITS
+    Address: 0x2000
+    Flags:   [SHF_WRITE]
+    Content: 'c3'
+  - Name:    .readonly
+    Type:    SHT_PROGBITS
+    Address: 0x3000
+    Content: '0100'
+  - Name:    .nobits
+    Type:    SHT_NOBITS
+    Address: 0x4000
+    Size:    4

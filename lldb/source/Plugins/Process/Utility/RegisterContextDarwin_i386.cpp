@@ -176,42 +176,42 @@ static RegisterInfo g_register_infos[] = {
     //  =============================== =======================
     //  ===================   =========================  ==================
     //  =================
-    {DEFINE_GPR(eax, NULL),
+    {DEFINE_GPR(eax, nullptr),
      {ehframe_eax, dwarf_eax, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       gpr_eax},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(ebx, NULL),
+    {DEFINE_GPR(ebx, nullptr),
      {ehframe_ebx, dwarf_ebx, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       gpr_ebx},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(ecx, NULL),
+    {DEFINE_GPR(ecx, nullptr),
      {ehframe_ecx, dwarf_ecx, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       gpr_ecx},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(edx, NULL),
+    {DEFINE_GPR(edx, nullptr),
      {ehframe_edx, dwarf_edx, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       gpr_edx},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(edi, NULL),
+    {DEFINE_GPR(edi, nullptr),
      {ehframe_edi, dwarf_edi, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       gpr_edi},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(esi, NULL),
+    {DEFINE_GPR(esi, nullptr),
      {ehframe_esi, dwarf_esi, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       gpr_esi},
      nullptr,
@@ -232,7 +232,7 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(ss, NULL),
+    {DEFINE_GPR(ss, nullptr),
      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_ss},
      nullptr,
@@ -253,35 +253,35 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(cs, NULL),
+    {DEFINE_GPR(cs, nullptr),
      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_cs},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(ds, NULL),
+    {DEFINE_GPR(ds, nullptr),
      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_ds},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(es, NULL),
+    {DEFINE_GPR(es, nullptr),
      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_es},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(fs, NULL),
+    {DEFINE_GPR(fs, nullptr),
      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_fs},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(gs, NULL),
+    {DEFINE_GPR(gs, nullptr),
      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_gs},
      nullptr,
@@ -427,7 +427,7 @@ RegisterContextDarwin_i386::GetRegisterInfoAtIndex(size_t reg) {
   assert(k_num_register_infos == k_num_registers);
   if (reg < k_num_registers)
     return &g_register_infos[reg];
-  return NULL;
+  return nullptr;
 }
 
 size_t RegisterContextDarwin_i386::GetRegisterInfosCount() {
@@ -479,7 +479,7 @@ size_t RegisterContextDarwin_i386::GetRegisterSetCount() {
 const RegisterSet *RegisterContextDarwin_i386::GetRegisterSet(size_t reg_set) {
   if (reg_set < k_num_regsets)
     return &g_reg_sets[reg_set];
-  return NULL;
+  return nullptr;
 }
 
 // Register information definitions for 32 bit i386.

@@ -18,7 +18,6 @@
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
@@ -65,17 +64,20 @@ void ento::printEnabledCheckerList(raw_ostream &out,
       .printEnabledCheckerList(out);
 }
 
+void ento::printCheckerConfigList(raw_ostream &OS,
+                                  ArrayRef<std::string> plugins,
+                                  AnalyzerOptions &opts,
+                                  DiagnosticsEngine &diags,
+                                  const LangOptions &LangOpts) {
+  CheckerRegistry(plugins, diags, opts, LangOpts)
+      .printCheckerOptionList(OS);
+}
+
 void ento::printAnalyzerConfigList(raw_ostream &out) {
   out << "OVERVIEW: Clang Static Analyzer -analyzer-config Option List\n\n";
-  out << "USAGE: clang -cc1 [CLANG_OPTIONS] -analyzer-config "
-                                        "<OPTION1=VALUE,OPTION2=VALUE,...>\n\n";
-  out << "       clang -cc1 [CLANG_OPTIONS] -analyzer-config OPTION1=VALUE, "
-                                      "-analyzer-config OPTION2=VALUE, ...\n\n";
-  out << "       clang [CLANG_OPTIONS] -Xclang -analyzer-config -Xclang"
-                                        "<OPTION1=VALUE,OPTION2=VALUE,...>\n\n";
-  out << "       clang [CLANG_OPTIONS] -Xclang -analyzer-config -Xclang "
-                              "OPTION1=VALUE, -Xclang -analyzer-config -Xclang "
-                              "OPTION2=VALUE, ...\n\n";
+  out << "USAGE: -analyzer-config <OPTION1=VALUE,OPTION2=VALUE,...>\n\n";
+  out << "       -analyzer-config OPTION1=VALUE, -analyzer-config "
+         "OPTION2=VALUE, ...\n\n";
   out << "OPTIONS:\n\n";
 
   using OptionAndDescriptionTy = std::pair<StringRef, std::string>;
@@ -109,31 +111,10 @@ void ento::printAnalyzerConfigList(raw_ostream &out) {
     return LHS.first < RHS.first;
   });
 
-  constexpr size_t MinLineWidth = 70;
-  constexpr size_t PadForOpt = 2;
-  constexpr size_t OptionWidth = 30;
-  constexpr size_t PadForDesc = PadForOpt + OptionWidth;
-  static_assert(MinLineWidth > PadForDesc, "MinLineWidth must be greater!");
-
-  llvm::formatted_raw_ostream FOut(out);
-
   for (const auto &Pair : PrintableOptions) {
-    FOut.PadToColumn(PadForOpt) << Pair.first;
-
-    // If the buffer's length is greater then PadForDesc, print a newline.
-    if (FOut.getColumn() > PadForDesc)
-      FOut << '\n';
-
-    FOut.PadToColumn(PadForDesc);
-
-    for (char C : Pair.second) {
-      if (FOut.getColumn() > MinLineWidth && C == ' ') {
-        FOut << '\n';
-        FOut.PadToColumn(PadForDesc);
-        continue;
-      }
-      FOut << C;
-    }
-    FOut << "\n\n";
+    AnalyzerOptions::printFormattedEntry(out, Pair, /*InitialPad*/ 2,
+                                         /*EntryWidth*/ 30,
+                                         /*MinLineWidth*/ 70);
+    out << "\n\n";
   }
 }

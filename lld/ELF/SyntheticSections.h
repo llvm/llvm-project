@@ -69,6 +69,10 @@ public:
   bool isNeeded() const override { return !Sections.empty(); }
   size_t getSize() const override { return Size; }
 
+  static bool classof(const SectionBase *D) {
+    return SyntheticSection::classof(D) && D->Name == ".eh_frame";
+  }
+
   template <class ELFT> void addSection(InputSectionBase *S);
 
   std::vector<EhInputSection *> Sections;

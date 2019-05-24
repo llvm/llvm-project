@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64 %s
 
-define void @test1(float* %a, float* %b) {
+define void @test1(float* %a, float* %b) nounwind {
 ; RV32-LABEL: test1:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    lw a1, 0(a1)
@@ -28,7 +28,7 @@ entry:
   ret void
 }
 
-define void @test2(double* %a, double* %b) {
+define void @test2(double* %a, double* %b) nounwind {
 ; RV32-LABEL: test2:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    lw a2, 4(a1)
@@ -54,7 +54,7 @@ entry:
   ret void
 }
 
-define void @test3(fp128* %a, fp128* %b) {
+define void @test3(fp128* %a, fp128* %b) nounwind {
 ; RV32-LABEL: test3:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    lw a2, 12(a1)

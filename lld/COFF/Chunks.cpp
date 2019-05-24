@@ -873,14 +873,15 @@ void MergeChunk::addSection(SectionChunk *C) {
 }
 
 void MergeChunk::finalizeContents() {
-  if (!Finalized) {
-    for (SectionChunk *C : Sections)
-      if (C->Live)
-        Builder.add(toStringRef(C->getContents()));
-    Builder.finalize();
-    Finalized = true;
-  }
+  assert(!Finalized && "should only finalize once");
+  for (SectionChunk *C : Sections)
+    if (C->Live)
+      Builder.add(toStringRef(C->getContents()));
+  Builder.finalize();
+  Finalized = true;
+}
 
+void MergeChunk::assignSubsectionRVAs() {
   for (SectionChunk *C : Sections) {
     if (!C->Live)
       continue;

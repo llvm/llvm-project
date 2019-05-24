@@ -29,7 +29,7 @@ Status HostThreadPosix::Join(lldb::thread_result_t *result) {
     error.SetError(err, lldb::eErrorTypePOSIX);
   } else {
     if (result)
-      *result = NULL;
+      *result = nullptr;
     error.SetError(EINVAL, eErrorTypePOSIX);
   }
 

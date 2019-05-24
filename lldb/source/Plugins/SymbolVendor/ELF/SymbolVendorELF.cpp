@@ -59,20 +59,20 @@ SymbolVendor *
 SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
                                 lldb_private::Stream *feedback_strm) {
   if (!module_sp)
-    return NULL;
+    return nullptr;
 
   ObjectFile *obj_file = module_sp->GetObjectFile();
   if (!obj_file)
-    return NULL;
+    return nullptr;
 
   static ConstString obj_file_elf("elf");
   ConstString obj_name = obj_file->GetPluginName();
   if (obj_name != obj_file_elf)
-    return NULL;
+    return nullptr;
 
   lldb_private::UUID uuid = obj_file->GetUUID();
   if (!uuid)
-    return NULL;
+    return nullptr;
 
   // Get the .gnu_debuglink file (if specified).
   FileSpecList file_spec_list = obj_file->GetDebugSymbolFilePaths();
@@ -84,7 +84,7 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
 
   // If we have no debug symbol files, then nothing to do.
   if (file_spec_list.IsEmpty())
-    return NULL;
+    return nullptr;
 
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, "SymbolVendorELF::CreateInstance (module = %s)",
@@ -153,7 +153,7 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
       }
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 // PluginInterface protocol

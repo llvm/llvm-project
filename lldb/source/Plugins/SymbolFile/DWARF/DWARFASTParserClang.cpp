@@ -185,7 +185,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWO(const DWARFDIE &die, Log *log) {
   SymbolFileDWARF *dwarf = die.GetDWARF();
   TypeSP type_sp(new Type(
       die.GetID(), dwarf, dwo_type_sp->GetName(), dwo_type_sp->GetByteSize(),
-      NULL, LLDB_INVALID_UID, Type::eEncodingInvalid,
+      nullptr, LLDB_INVALID_UID, Type::eEncodingInvalid,
       &dwo_type_sp->GetDeclaration(), type, Type::eResolveStateForward));
 
   dwarf->GetTypeList()->Insert(type_sp);
@@ -461,7 +461,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
            sc.comp_unit->GetLanguage() == eLanguageTypeObjC_plus_plus);
 
       if (translation_unit_is_objc) {
-        if (type_name_cstr != NULL) {
+        if (type_name_cstr != nullptr) {
           static ConstString g_objc_type_name_id("id");
           static ConstString g_objc_type_name_Class("Class");
           static ConstString g_objc_type_name_selector("SEL");
@@ -1907,7 +1907,7 @@ public:
         m_property_setter_name(property_setter_name),
         m_property_getter_name(property_getter_name),
         m_property_attributes(property_attributes) {
-    if (metadata != NULL) {
+    if (metadata != nullptr) {
       m_metadata_up.reset(new ClangASTMetadata());
       *m_metadata_up = *metadata;
     }
@@ -2442,7 +2442,7 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
       DWARFAttributes attributes;
       const size_t num_child_attributes = die.GetAttributes(attributes);
       if (num_child_attributes > 0) {
-        const char *name = NULL;
+        const char *name = nullptr;
         bool got_value = false;
         int64_t enum_value = 0;
         Declaration decl;
@@ -2545,8 +2545,8 @@ protected:
 Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
                                                       const DWARFDIE &die) {
   DWARFRangeList func_ranges;
-  const char *name = NULL;
-  const char *mangled = NULL;
+  const char *name = nullptr;
+  const char *mangled = nullptr;
   int decl_file = 0;
   int decl_line = 0;
   int decl_column = 0;
@@ -2558,7 +2558,7 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
   const dw_tag_t tag = die.Tag();
 
   if (tag != DW_TAG_subprogram)
-    return NULL;
+    return nullptr;
 
   if (die.GetDIENamesAndRanges(name, mangled, func_ranges, decl_file, decl_line,
                                decl_column, call_file, call_line, call_column,
@@ -2633,7 +2633,7 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
       // Supply the type _only_ if it has already been parsed
       Type *func_type = dwarf->GetDIEToType().lookup(die.GetDIE());
 
-      assert(func_type == NULL || func_type != DIE_IS_BEING_PARSED);
+      assert(func_type == nullptr || func_type != DIE_IS_BEING_PARSED);
 
       if (dwarf->FixupAddress(func_range.GetBaseAddress())) {
         const user_id_t func_user_id = die.GetID();
@@ -2643,7 +2643,7 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
                                    func_user_id, func_name, func_type,
                                        func_range); // first address range
 
-        if (func_sp.get() != NULL) {
+        if (func_sp.get() != nullptr) {
           if (frame_base.IsValid())
             func_sp->GetFrameBaseExpression() = frame_base;
           comp_unit.AddFunction(func_sp);
@@ -2652,7 +2652,7 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
       }
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 bool DWARFASTParserClang::ParseChildMembers(
@@ -2693,10 +2693,10 @@ bool DWARFASTParserClang::ParseChildMembers(
       if (num_attributes > 0) {
         Declaration decl;
         // DWARFExpression location;
-        const char *name = NULL;
-        const char *prop_name = NULL;
-        const char *prop_getter_name = NULL;
-        const char *prop_setter_name = NULL;
+        const char *name = nullptr;
+        const char *prop_name = nullptr;
+        const char *prop_getter_name = nullptr;
+        const char *prop_setter_name = nullptr;
         uint32_t prop_attributes = 0;
 
         bool is_artificial = false;
@@ -2758,7 +2758,8 @@ bool DWARFASTParserClang::ParseChildMembers(
                         module_sp, debug_info_data, die.GetCU(), block_offset,
                         block_length, eRegisterKindDWARF, &initialValue,
                         nullptr, memberOffset, nullptr)) {
-                  member_byte_offset = memberOffset.ResolveValue(NULL).UInt();
+                  member_byte_offset =
+                      memberOffset.ResolveValue(nullptr).UInt();
                 }
               } else {
                 // With DWARF 3 and later, if the value is an integer constant,
@@ -2874,7 +2875,7 @@ bool DWARFASTParserClang::ParseChildMembers(
         if (!is_artificial) {
           Type *member_type = die.ResolveTypeUID(DIERef(encoding_form));
 
-          clang::FieldDecl *field_decl = NULL;
+          clang::FieldDecl *field_decl = nullptr;
           if (tag == DW_TAG_member) {
             if (member_type) {
               if (accessibility == eAccessNone)
@@ -3133,12 +3134,12 @@ bool DWARFASTParserClang::ParseChildMembers(
             }
           }
 
-          if (prop_name != NULL && member_type) {
-            clang::ObjCIvarDecl *ivar_decl = NULL;
+          if (prop_name != nullptr && member_type) {
+            clang::ObjCIvarDecl *ivar_decl = nullptr;
 
             if (field_decl) {
               ivar_decl = clang::dyn_cast<clang::ObjCIvarDecl>(field_decl);
-              assert(ivar_decl != NULL);
+              assert(ivar_decl != nullptr);
             }
 
             ClangASTMetadata metadata;
@@ -3209,7 +3210,8 @@ bool DWARFASTParserClang::ParseChildMembers(
                                               block_offset, block_length,
                                               eRegisterKindDWARF, &initialValue,
                                               nullptr, memberOffset, nullptr)) {
-                  member_byte_offset = memberOffset.ResolveValue(NULL).UInt();
+                  member_byte_offset =
+                      memberOffset.ResolveValue(nullptr).UInt();
                 }
               } else {
                 // With DWARF 3 and later, if the value is an integer constant,
@@ -3237,7 +3239,7 @@ bool DWARFASTParserClang::ParseChildMembers(
         }
 
         Type *base_class_type = die.ResolveTypeUID(DIERef(encoding_form));
-        if (base_class_type == NULL) {
+        if (base_class_type == nullptr) {
           module_sp->ReportError("0x%8.8x: DW_TAG_inheritance failed to "
                                  "resolve the base class at 0x%8.8x"
                                  " from enclosing type 0x%8.8x. \nPlease file "
@@ -3314,7 +3316,7 @@ size_t DWARFASTParserClang::ParseChildParameters(
       DWARFAttributes attributes;
       const size_t num_attributes = die.GetAttributes(attributes);
       if (num_attributes > 0) {
-        const char *name = NULL;
+        const char *name = nullptr;
         Declaration decl;
         DWARFFormValue param_type_die_form;
         bool is_artificial = false;
@@ -3371,7 +3373,7 @@ size_t DWARFASTParserClang::ParseChildParameters(
               // Often times compilers omit the "this" name for the
               // specification DIEs, so we can't rely upon the name being in
               // the formal parameter DIE...
-              (name == NULL || ::strcmp(name, "this") == 0)) {
+              (name == nullptr || ::strcmp(name, "this") == 0)) {
             Type *this_type = die.ResolveTypeUID(DIERef(param_type_die_form));
             if (this_type) {
               uint32_t encoding_mask = this_type->GetEncodingMask();

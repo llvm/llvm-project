@@ -122,11 +122,22 @@ Improvements to clang-tidy
   Checks whether there are underscores in googletest test and test case names in
   test macros, which is prohibited by the Googletest FAQ.
 
+- New :doc:`google-objc-avoid-nsobject-new
+  <clang-tidy/checks/google-objc-avoid-nsobject-new>` check.
+
+  Checks for calls to ``+new`` or overrides of it, which are prohibited by the
+  Google Objective-C style guide.
+
 - New :doc:`objc-super-self <clang-tidy/checks/objc-super-self>` check.
 
   Finds invocations of ``-self`` on super instances in initializers of
   subclasses of ``NSObject`` and recommends calling a superclass initializer
   instead.
+
+- New alias :doc:`cert-oop54-cpp
+  <clang-tidy/checks/cert-oop54-cpp>` to
+  :doc:`bugprone-unhandled-self-assignment
+  <clang-tidy/checks/bugprone-unhandled-self-assignment>` was added.
 
 - New alias :doc:`cppcoreguidelines-explicit-virtual-functions
   <clang-tidy/checks/cppcoreguidelines-explicit-virtual-functions>` to
@@ -171,7 +182,7 @@ Improvements to clang-tidy
   Rewrites function signatures to use a trailing return type.
 
 - The :doc:`misc-throw-by-value-catch-by-reference
-  <clang-tidy/misc-throw-by-value-catch-by-reference.rst>` now supports
+  <clang-tidy/checks/misc-throw-by-value-catch-by-reference.rst>` now supports
   `WarnOnLargeObject` and `MaxSize` options to warn on any large trivial
   object caught by value.
 

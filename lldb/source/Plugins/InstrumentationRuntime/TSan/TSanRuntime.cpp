@@ -900,7 +900,7 @@ void ThreadSanitizerRuntime::Activate() {
   const Symbol *symbol = GetRuntimeModuleSP()->FindFirstSymbolWithNameAndType(
       symbol_name, eSymbolTypeCode);
 
-  if (symbol == NULL)
+  if (symbol == nullptr)
     return;
 
   if (!symbol->ValueIsAddress() || !symbol->GetAddressRef().IsValid())

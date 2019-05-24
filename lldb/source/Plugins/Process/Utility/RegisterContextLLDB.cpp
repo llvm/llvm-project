@@ -113,7 +113,7 @@ void RegisterContextLLDB::InitializeZerothFrame() {
   ExecutionContext exe_ctx(m_thread.shared_from_this());
   RegisterContextSP reg_ctx_sp = m_thread.GetRegisterContext();
 
-  if (reg_ctx_sp.get() == NULL) {
+  if (reg_ctx_sp.get() == nullptr) {
     m_frame_type = eNotAValidFrame;
     UnwindLogMsg("frame does not have a register context");
     return;
@@ -664,7 +664,7 @@ UnwindPlanSP RegisterContextLLDB::GetFastUnwindPlanForFrame() {
   ModuleSP pc_module_sp(m_current_pc.GetModule());
 
   if (!m_current_pc.IsValid() || !pc_module_sp ||
-      pc_module_sp->GetObjectFile() == NULL)
+      pc_module_sp->GetObjectFile() == nullptr)
     return unwind_plan_sp;
 
   if (IsFrameZero())
@@ -715,7 +715,7 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
   UnwindPlanSP arch_default_unwind_plan_sp;
   ExecutionContext exe_ctx(m_thread.shared_from_this());
   Process *process = exe_ctx.GetProcessPtr();
-  ABI *abi = process ? process->GetABI().get() : NULL;
+  ABI *abi = process ? process->GetABI().get() : nullptr;
   if (abi) {
     arch_default_unwind_plan_sp =
         std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
@@ -743,7 +743,7 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
   // This is for jumping to memory regions without any information available.
 
   if ((!m_sym_ctx_valid ||
-       (m_sym_ctx.function == NULL && m_sym_ctx.symbol == NULL)) &&
+       (m_sym_ctx.function == nullptr && m_sym_ctx.symbol == nullptr)) &&
       behaves_like_zeroth_frame && m_current_pc.IsValid()) {
     uint32_t permissions;
     addr_t current_pc_addr =
@@ -765,7 +765,7 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
   // No Module for the current pc, try using the architecture default unwind.
   ModuleSP pc_module_sp(m_current_pc.GetModule());
   if (!m_current_pc.IsValid() || !pc_module_sp ||
-      pc_module_sp->GetObjectFile() == NULL) {
+      pc_module_sp->GetObjectFile() == nullptr) {
     m_frame_type = eNormalFrame;
     return arch_default_unwind_plan_sp;
   }
@@ -1349,7 +1349,7 @@ RegisterContextLLDB::SavedLocationForRegister(
     // register, we may be able to fall back to some ABI-defined default.  For
     // example, some ABIs allow to determine the caller's SP via the CFA. Also,
     // the ABI may set volatile registers to the undefined state.
-    ABI *abi = process ? process->GetABI().get() : NULL;
+    ABI *abi = process ? process->GetABI().get() : nullptr;
     if (abi) {
       const RegisterInfo *reg_info =
           GetRegisterInfoAtIndex(regnum.GetAsKind(eRegisterKindLLDB));
@@ -1702,10 +1702,10 @@ bool RegisterContextLLDB::TryFallbackUnwindPlan() {
 }
 
 bool RegisterContextLLDB::ForceSwitchToFallbackUnwindPlan() {
-  if (m_fallback_unwind_plan_sp.get() == NULL)
+  if (m_fallback_unwind_plan_sp.get() == nullptr)
     return false;
 
-  if (m_full_unwind_plan_sp.get() == NULL)
+  if (m_full_unwind_plan_sp.get() == nullptr)
     return false;
 
   if (m_full_unwind_plan_sp.get() == m_fallback_unwind_plan_sp.get() ||
@@ -2067,7 +2067,7 @@ void RegisterContextLLDB::UnwindLogMsg(const char *fmt, ...) {
     va_start(args, fmt);
 
     char *logmsg;
-    if (vasprintf(&logmsg, fmt, args) == -1 || logmsg == NULL) {
+    if (vasprintf(&logmsg, fmt, args) == -1 || logmsg == nullptr) {
       if (logmsg)
         free(logmsg);
       va_end(args);
@@ -2088,7 +2088,7 @@ void RegisterContextLLDB::UnwindLogMsgVerbose(const char *fmt, ...) {
     va_start(args, fmt);
 
     char *logmsg;
-    if (vasprintf(&logmsg, fmt, args) == -1 || logmsg == NULL) {
+    if (vasprintf(&logmsg, fmt, args) == -1 || logmsg == nullptr) {
       if (logmsg)
         free(logmsg);
       va_end(args);

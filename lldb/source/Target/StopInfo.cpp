@@ -1196,7 +1196,7 @@ StopInfo::GetCrashingDereference(StopInfoSP &stop_info_sp,
 
   address_loc += (sizeof(address_string) - 1);
 
-  uint64_t address = strtoull(address_loc, 0, 0);
+  uint64_t address = strtoull(address_loc, nullptr, 0);
   if (crashing_address) {
     *crashing_address = address;
   }

@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Cause a break.
-  volatile char *p = NULL;
+  volatile char *p = nullptr;
   *p = 'a';
 
   delay.store(false);

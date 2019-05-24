@@ -1739,7 +1739,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     log->Printf("HandleCommand, (revised) command_string: '%s'",
                 command_string.c_str());
     const bool wants_raw_input =
-        (cmd_obj != NULL) ? cmd_obj->WantsRawCommandString() : false;
+        (cmd_obj != nullptr) ? cmd_obj->WantsRawCommandString() : false;
     log->Printf("HandleCommand, wants_raw_input:'%s'",
                 wants_raw_input ? "True" : "False");
   }
@@ -2214,7 +2214,7 @@ void CommandInterpreter::SourceInitFileHome(CommandReturnObject &result) {
 
 const char *CommandInterpreter::GetCommandPrefix() {
   const char *prefix = GetDebugger().GetIOHandlerCommandPrefix();
-  return prefix == NULL ? "" : prefix;
+  return prefix == nullptr ? "" : prefix;
 }
 
 PlatformSP CommandInterpreter::GetPlatform(bool prefer_target_platform) {
@@ -3206,7 +3206,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
   if (!scratch_command.empty())
     revised_command_line.Printf(" %s", scratch_command.c_str());
 
-  if (cmd_obj != NULL)
+  if (cmd_obj != nullptr)
     command_line = revised_command_line.GetString();
 
   return cmd_obj;

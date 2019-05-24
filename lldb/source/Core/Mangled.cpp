@@ -160,7 +160,7 @@ Mangled::~Mangled() {}
 //  if (mangled)
 //  { ...
 Mangled::operator void *() const {
-  return (m_mangled) ? const_cast<Mangled *>(this) : NULL;
+  return (m_mangled) ? const_cast<Mangled *>(this) : nullptr;
 }
 
 // Logical NOT operator. This allows code to check any Mangled objects to see

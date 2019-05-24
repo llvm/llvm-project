@@ -865,9 +865,12 @@ void Writer::createSections() {
 }
 
 void Writer::createMiscChunks() {
-  for (MergeChunk *P : MergeChunk::Instances)
-    if (P)
+  for (MergeChunk *P : MergeChunk::Instances) {
+    if (P) {
+      P->finalizeContents();
       RdataSec->addChunk(P);
+    }
+  }
 
   // Create thunks for locally-dllimported symbols.
   if (!Symtab->LocalImportChunks.empty()) {
@@ -1162,7 +1165,6 @@ void Writer::assignAddresses() {
         VirtualSize += Padding;
       VirtualSize = alignTo(VirtualSize, C->getAlignment());
       C->setRVA(RVA + VirtualSize);
-      C->finalizeContents();
       VirtualSize += C->getSize();
       if (C->hasData())
         RawSize = alignTo(VirtualSize, SectorSize);
@@ -1177,6 +1179,11 @@ void Writer::assignAddresses() {
     FileSize += alignTo(RawSize, SectorSize);
   }
   SizeOfImage = alignTo(RVA, PageSize);
+
+  // Assign addresses to sections in MergeChunks.
+  for (MergeChunk *MC : MergeChunk::Instances)
+    if (MC)
+      MC->assignSubsectionRVAs();
 }
 
 template <typename PEHeaderTy> void Writer::writeHeader() {

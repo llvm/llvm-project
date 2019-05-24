@@ -3,11 +3,14 @@
 bugprone-unhandled-self-assignment
 ==================================
 
+`cert-oop54-cpp` redirects here as an alias for this check. For the CERT alias,
+the `WarnOnlyIfThisHasSuspiciousField` option is set to `0`.
+
 Finds user-defined copy assignment operators which do not protect the code
 against self-assignment either by checking self-assignment explicitly or
 using the copy-and-swap or the copy-and-move method.
 
-This check now searches only those classes which have any pointer or C array field
+By default, this check searches only those classes which have any pointer or C array field
 to avoid false positives. In case of a pointer or a C array, it's likely that self-copy
 assignment breaks the object if the copy assignment operator was not written with care.
 
@@ -114,3 +117,8 @@ temporary object into ``this`` (needs a move assignment operator):
       return *this;
     }
   };
+
+.. option:: WarnOnlyIfThisHasSuspiciousField
+
+  When non-zero, the check will warn only if the container class of the copy assignment operator
+  has any suspicious fields (pointer or C array). This option is set to `1` by default.

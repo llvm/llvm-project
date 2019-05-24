@@ -51,7 +51,7 @@ const CMIUtilString CMIDriver::ms_constAppNameLong(MIRSRC(IDS_MI_APPNAME_LONG));
 //--
 CMIDriver::CMIDriver()
     : m_bFallThruToOtherDriverEnabled(false), m_bDriverIsExiting(false),
-      m_handleMainThread(0), m_rStdin(CMICmnStreamStdin::Instance()),
+      m_handleMainThread(nullptr), m_rStdin(CMICmnStreamStdin::Instance()),
       m_rLldbDebugger(CMICmnLLDBDebugger::Instance()),
       m_rStdOut(CMICmnStreamStdout::Instance()),
       m_eCurrentDriverState(eDriverState_NotRunning),
@@ -737,7 +737,7 @@ FILE *CMIDriver::GetStdout() const {
   // available before *this driver has been initialized! Flaw?
 
   // Do not want to pass through driver to write to stdout
-  return NULL;
+  return nullptr;
 }
 
 //++

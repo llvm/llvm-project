@@ -32,7 +32,7 @@ CMICmnBase::CMICmnBase()
 // Return:  None.
 // Throws:  None.
 //--
-CMICmnBase::~CMICmnBase() { m_pLog = NULL; }
+CMICmnBase::~CMICmnBase() { m_pLog = nullptr; }
 
 //++
 // Details: Retrieve whether *this object has an error description set.

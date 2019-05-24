@@ -4011,6 +4011,11 @@ Value *llvm::SimplifyInsertElementInst(Value *Vec, Value *Val, Value *Idx,
   if (isa<UndefValue>(Idx))
     return UndefValue::get(Vec->getType());
 
+  // Inserting an undef scalar? Assume it is the same value as the existing
+  // vector element.
+  if (isa<UndefValue>(Val))
+    return Vec;
+
   return nullptr;
 }
 

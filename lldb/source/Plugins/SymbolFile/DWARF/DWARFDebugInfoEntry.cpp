@@ -51,7 +51,7 @@ bool DWARFDebugInfoEntry::FastExtract(
     const DWARFAbbreviationDeclaration *abbrevDecl =
         cu->GetAbbreviations()->GetAbbreviationDeclaration(m_abbr_idx);
 
-    if (abbrevDecl == NULL) {
+    if (abbrevDecl == nullptr) {
       cu->GetSymbolFileDWARF()->GetObjectFile()->GetModule()->ReportError(
           "{0x%8.8x}: invalid abbreviation code %u, please file a bug and "
           "attach the file at the start of this error message",
@@ -451,13 +451,13 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
         } break;
 
         case DW_AT_name:
-          if (name == NULL)
+          if (name == nullptr)
             name = form_value.AsCString();
           break;
 
         case DW_AT_MIPS_linkage_name:
         case DW_AT_linkage_name:
-          if (mangled == NULL)
+          if (mangled == nullptr)
             mangled = form_value.AsCString();
           break;
 
@@ -551,7 +551,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
     frame_base->SetLocationListSlide(lowest_range_pc - cu->GetBaseAddress());
   }
 
-  if (ranges.IsEmpty() || name == NULL || mangled == NULL) {
+  if (ranges.IsEmpty() || name == nullptr || mangled == nullptr) {
     for (const DIERef &die_ref : die_refs) {
       if (die_ref.die_offset != DW_INVALID_OFFSET) {
         DWARFDIE die = dwarf2Data->GetDIE(die_ref);
@@ -1223,7 +1223,7 @@ DWARFDebugInfoEntry::GetQualifiedName(DWARFUnit *cu,
     storage.append(name);
   }
   if (storage.empty())
-    return NULL;
+    return nullptr;
   return storage.c_str();
 }
 
@@ -1385,13 +1385,14 @@ bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
             switch (m_tag) {
             case DW_TAG_compile_unit: // File
             case DW_TAG_partial_unit: // File
-              check_children = ((function_die != NULL) || (block_die != NULL));
+              check_children =
+                  ((function_die != nullptr) || (block_die != nullptr));
               break;
 
             case DW_TAG_subprogram: // Function
               if (function_die)
                 *function_die = this;
-              check_children = (block_die != NULL);
+              check_children = (block_die != nullptr);
               break;
 
             case DW_TAG_inlined_subroutine: // Inlined Function
@@ -1411,9 +1412,9 @@ bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
           // Compile units may not have a valid high/low pc when there
           // are address gaps in subroutines so we must always search
           // if there is no valid high and low PC.
-          check_children = (m_tag == DW_TAG_compile_unit ||
-                            m_tag == DW_TAG_partial_unit) &&
-                           ((function_die != NULL) || (block_die != NULL));
+          check_children =
+              (m_tag == DW_TAG_compile_unit || m_tag == DW_TAG_partial_unit) &&
+              ((function_die != nullptr) || (block_die != nullptr));
         }
       } else {
         DWARFFormValue form_value;
@@ -1430,13 +1431,14 @@ bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
             switch (m_tag) {
             case DW_TAG_compile_unit: // File
             case DW_TAG_partial_unit: // File
-              check_children = ((function_die != NULL) || (block_die != NULL));
+              check_children =
+                  ((function_die != nullptr) || (block_die != nullptr));
               break;
 
             case DW_TAG_subprogram: // Function
               if (function_die)
                 *function_die = this;
-              check_children = (block_die != NULL);
+              check_children = (block_die != nullptr);
               break;
 
             case DW_TAG_inlined_subroutine: // Inlined Function
@@ -1500,7 +1502,7 @@ DWARFDebugInfoEntry::GetAbbreviationDeclarationPtr(
     }
   }
   offset = DW_INVALID_OFFSET;
-  return NULL;
+  return nullptr;
 }
 
 bool DWARFDebugInfoEntry::OffsetLessThan(const DWARFDebugInfoEntry &a,

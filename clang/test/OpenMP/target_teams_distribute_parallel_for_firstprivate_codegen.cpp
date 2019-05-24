@@ -391,6 +391,7 @@ int main() {
 // CHECK-DAG: [[TS_ARR_TE_PAR:%.+]] = load [2 x [[S_INT_TY]]]*, [2 x [[S_INT_TY]]]** [[TS_ARR_PRIV]],
 // CHECK-DAG: [[TVAR_TE_PAR:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** [[TVAR_PRIV]],
 
+// CHECK: [[TVAR_TE_PAR:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** %
 // CHECK: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 4, {{.+}} @[[TOUTL1:.+]] to {{.+}}, [2 x i{{[0-9]+}}]* [[TVEC_TE_PAR]], i{{[0-9]+}} [[TT_VAR_TE_PAR]], [2 x [[S_INT_TY]]]* [[TS_ARR_TE_PAR]], [[S_INT_TY]]* [[TVAR_TE_PAR]])
 // CHECK: ret void
 
@@ -426,9 +427,12 @@ int main() {
 // CHECK-64: [[CONV_TVAR:%.+]] = bitcast i64* [[T_VAR_ADDR]] to i32*
 // CHECK: [[S_ARR_ADDR_REF:%.+]] = load [2 x [[S_INT_TY]]]*, [2 x [[S_INT_TY]]]** [[S_ARR_ADDR]],
 
+// CHECK: [[VAR_REF:%.+]] = load{{.+}} [[VAR_ADDR]],
+// CHECK: store [[S_INT_TY]]* [[VAR_REF]], [[S_INT_TY]]** [[VAR_ADDR:%.+]],
+
 // firstprivate vec(vec): copy from *_addr into priv1 and then from priv1 into priv2
-// CHECK-DAG: [[VEC_DEST_PRIV:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8* 
-// CHECK-DAG: [[VEC_SRC:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_ADDR_VAL]] to i8* 
+// CHECK-DAG: [[VEC_DEST_PRIV:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8*
+// CHECK-DAG: [[VEC_SRC:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_ADDR_VAL]] to i8*
 // CHECK: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VEC_DEST_PRIV]], i8* align {{[0-9]+}} [[VEC_SRC]], {{.+}})
 
 // firstprivate(s_arr)
@@ -487,9 +491,12 @@ int main() {
 // CHECK-64: [[CONV_TVAR:%.+]] = bitcast i64* [[T_VAR_ADDR]] to i32*
 // CHECK: [[S_ARR_ADDR_REF:%.+]] = load [2 x [[S_INT_TY]]]*, [2 x [[S_INT_TY]]]** [[S_ARR_ADDR]],
 
+// CHECK: [[VAR_REF:%.+]] = load{{.+}} [[VAR_ADDR]],
+// CHECK: store [[S_INT_TY]]* [[VAR_REF]], [[S_INT_TY]]** [[VAR_ADDR:%.+]],
+
 // firstprivate vec(vec): copy from *_addr into priv1 and then from priv1 into priv2
-// CHECK-DAG: [[VEC_DEST_PRIV:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8* 
-// CHECK-DAG: [[VEC_SRC:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_ADDR_VAL]] to i8* 
+// CHECK-DAG: [[VEC_DEST_PRIV:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8*
+// CHECK-DAG: [[VEC_SRC:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_ADDR_VAL]] to i8*
 // CHECK: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VEC_DEST_PRIV]], i8* align {{[0-9]+}} [[VEC_SRC]], {{.+}})
 
 // firstprivate(s_arr)

@@ -70,7 +70,7 @@ const RegisterInfo *RegisterContextFreeBSD_i386::GetRegisterInfo() const {
     return g_register_infos_i386;
   default:
     assert(false && "Unhandled target architecture.");
-    return NULL;
+    return nullptr;
   }
 }
 

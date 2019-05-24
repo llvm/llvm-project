@@ -50,7 +50,7 @@ LLVMUserExpression::LLVMUserExpression(ExecutionContextScope &exe_scope,
       m_allow_objc(false), m_transformed_text(), m_execution_unit_sp(),
       m_materializer_up(), m_jit_module_wp(), m_enforce_valid_object(true),
       m_in_cplusplus_method(false), m_in_objectivec_method(false),
-      m_in_static_method(false), m_needs_object_ptr(false), m_target(NULL),
+      m_in_static_method(false), m_needs_object_ptr(false), m_target(nullptr),
       m_can_interpret(false), m_materialized_address(LLDB_INVALID_ADDRESS) {}
 
 LLVMUserExpression::~LLVMUserExpression() {
@@ -181,7 +181,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
 
       if (execution_result == lldb::eExpressionInterrupted ||
           execution_result == lldb::eExpressionHitBreakpoint) {
-        const char *error_desc = NULL;
+        const char *error_desc = nullptr;
 
         if (call_plan_sp) {
           lldb::StopInfoSP real_stop_info_sp = call_plan_sp->GetRealStopInfo();

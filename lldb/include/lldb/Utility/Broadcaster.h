@@ -51,7 +51,7 @@ public:
   // Tell whether this BroadcastEventSpec is contained in in_spec. That is: (a)
   // the two spec's share the same broadcaster class (b) the event bits of this
   // spec are wholly contained in those of in_spec.
-  bool IsContainedIn(BroadcastEventSpec in_spec) const {
+  bool IsContainedIn(const BroadcastEventSpec &in_spec) const {
     if (m_broadcaster_class != in_spec.GetBroadcasterClass())
       return false;
     uint32_t in_bits = in_spec.GetEventBits();
@@ -90,12 +90,13 @@ public:
   ~BroadcasterManager() = default;
 
   uint32_t RegisterListenerForEvents(const lldb::ListenerSP &listener_sp,
-                                     BroadcastEventSpec event_spec);
+                                     const BroadcastEventSpec &event_spec);
 
   bool UnregisterListenerForEvents(const lldb::ListenerSP &listener_sp,
-                                   BroadcastEventSpec event_spec);
+                                   const BroadcastEventSpec &event_spec);
 
-  lldb::ListenerSP GetListenerForEventSpec(BroadcastEventSpec event_spec) const;
+  lldb::ListenerSP
+  GetListenerForEventSpec(const BroadcastEventSpec &event_spec) const;
 
   void SignUpListenersForBroadcaster(Broadcaster &broadcaster);
 
@@ -123,7 +124,7 @@ private:
 
     ~BroadcasterClassMatches() = default;
 
-    bool operator()(const event_listener_key input) const {
+    bool operator()(const event_listener_key &input) const {
       return (input.first.GetBroadcasterClass() == m_broadcaster_class);
     }
 
@@ -133,12 +134,12 @@ private:
 
   class BroadcastEventSpecMatches {
   public:
-    BroadcastEventSpecMatches(BroadcastEventSpec broadcaster_spec)
+    BroadcastEventSpecMatches(const BroadcastEventSpec &broadcaster_spec)
         : m_broadcaster_spec(broadcaster_spec) {}
 
     ~BroadcastEventSpecMatches() = default;
 
-    bool operator()(const event_listener_key input) const {
+    bool operator()(const event_listener_key &input) const {
       return (input.first.IsContainedIn(m_broadcaster_spec));
     }
 
@@ -148,13 +149,14 @@ private:
 
   class ListenerMatchesAndSharedBits {
   public:
-    explicit ListenerMatchesAndSharedBits(BroadcastEventSpec broadcaster_spec,
-                                          const lldb::ListenerSP listener_sp)
+    explicit ListenerMatchesAndSharedBits(
+        const BroadcastEventSpec &broadcaster_spec,
+        const lldb::ListenerSP &listener_sp)
         : m_broadcaster_spec(broadcaster_spec), m_listener_sp(listener_sp) {}
 
     ~ListenerMatchesAndSharedBits() = default;
 
-    bool operator()(const event_listener_key input) const {
+    bool operator()(const event_listener_key &input) const {
       return (input.first.GetBroadcasterClass() ==
                   m_broadcaster_spec.GetBroadcasterClass() &&
               (input.first.GetEventBits() &
@@ -169,12 +171,12 @@ private:
 
   class ListenerMatches {
   public:
-    explicit ListenerMatches(const lldb::ListenerSP in_listener_sp)
+    explicit ListenerMatches(const lldb::ListenerSP &in_listener_sp)
         : m_listener_sp(in_listener_sp) {}
 
     ~ListenerMatches() = default;
 
-    bool operator()(const event_listener_key input) const {
+    bool operator()(const event_listener_key &input) const {
       if (input.second == m_listener_sp)
         return true;
       else
@@ -192,14 +194,14 @@ private:
 
     ~ListenerMatchesPointer() = default;
 
-    bool operator()(const event_listener_key input) const {
+    bool operator()(const event_listener_key &input) const {
       if (input.second.get() == m_listener)
         return true;
       else
         return false;
     }
 
-    bool operator()(const lldb::ListenerSP input) const {
+    bool operator()(const lldb::ListenerSP &input) const {
       if (input.get() == m_listener)
         return true;
       else

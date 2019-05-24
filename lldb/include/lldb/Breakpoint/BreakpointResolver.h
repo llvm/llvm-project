@@ -209,7 +209,7 @@ protected:
                           const char *) = delete;
 
   lldb::BreakpointLocationSP AddLocation(Address loc_addr,
-                                         bool *new_location = NULL);
+                                         bool *new_location = nullptr);
 
   Breakpoint *m_breakpoint; // This is the breakpoint we add locations to.
   lldb::addr_t m_offset;    // A random offset the user asked us to add to any

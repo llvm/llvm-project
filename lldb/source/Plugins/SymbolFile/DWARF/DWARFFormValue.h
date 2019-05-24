@@ -19,7 +19,7 @@ class DWARFDIE;
 class DWARFFormValue {
 public:
   typedef struct ValueTypeTag {
-    ValueTypeTag() : value(), data(NULL) { value.uval = 0; }
+    ValueTypeTag() : value(), data(nullptr) { value.uval = 0; }
 
     union {
       uint64_t uval;

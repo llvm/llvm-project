@@ -98,6 +98,7 @@ Clang-Tidy Checks
    cert-msc50-cpp
    cert-msc51-cpp
    cert-oop11-cpp (redirects to performance-move-constructor-init) <cert-oop11-cpp>
+   cert-oop54-cpp (redirects to bugprone-unhandled-self-assignment) <cert-oop54-cpp>
    cppcoreguidelines-avoid-c-arrays (redirects to modernize-avoid-c-arrays) <cppcoreguidelines-avoid-c-arrays>
    cppcoreguidelines-avoid-goto
    cppcoreguidelines-avoid-magic-numbers (redirects to readability-magic-numbers) <cppcoreguidelines-avoid-magic-numbers>
@@ -135,6 +136,7 @@ Clang-Tidy Checks
    google-default-arguments
    google-explicit-constructor
    google-global-names-in-headers
+   google-objc-avoid-nsobject-new
    google-objc-avoid-throwing-exception
    google-objc-function-naming
    google-objc-global-variable-declaration

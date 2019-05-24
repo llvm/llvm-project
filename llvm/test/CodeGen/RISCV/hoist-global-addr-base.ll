@@ -7,7 +7,7 @@
 @g = global [1048576 x i8] zeroinitializer, align 1
 
 
-define dso_local void @multiple_stores() local_unnamed_addr {
+define dso_local void @multiple_stores() local_unnamed_addr nounwind {
 ; CHECK-LABEL: multiple_stores:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a0, %hi(s)
@@ -23,7 +23,7 @@ entry:
   ret void
 }
 
-define dso_local void @control_flow_with_mem_access() local_unnamed_addr #0 {
+define dso_local void @control_flow_with_mem_access() local_unnamed_addr nounwind {
 ; CHECK-LABEL: control_flow_with_mem_access:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a0, %hi(s)
@@ -57,7 +57,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; lui  a0, 18     ---> offset
 ; addi a0, a0, -160
 ; add  a0, a0, a1  ---> base + offset.
-define i8* @big_offset_neg_addi() {
+define i8* @big_offset_neg_addi() nounwind {
 ; CHECK-LABEL: big_offset_neg_addi:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(g+73568)
@@ -72,7 +72,7 @@ define i8* @big_offset_neg_addi() {
 ; addi a0, a0, %lo(g)
 ; lui  a1, 128     ---> offset
 ; add  a0, a0, a1  ---> base + offset.
-define i8* @big_offset_lui_tail() {
+define i8* @big_offset_lui_tail() nounwind {
 ; CHECK-LABEL: big_offset_lui_tail:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(g+524288)
@@ -81,7 +81,7 @@ define i8* @big_offset_lui_tail() {
   ret i8* getelementptr inbounds ([1048576 x i8], [1048576 x i8]* @g, i32 0, i32 524288)
 }
 
-define dso_local i32* @big_offset_one_use() local_unnamed_addr {
+define dso_local i32* @big_offset_one_use() local_unnamed_addr nounwind {
 ; CHECK-LABEL: big_offset_one_use:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a0, %hi(s+16572)
@@ -91,7 +91,7 @@ entry:
   ret i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 5)
 }
 
-define dso_local i32* @small_offset_one_use() local_unnamed_addr {
+define dso_local i32* @small_offset_one_use() local_unnamed_addr nounwind {
 ; CHECK-LABEL: small_offset_one_use:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a0, %hi(s+160)
@@ -101,8 +101,7 @@ entry:
   ret i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 1)
 }
 
-; Function Attrs: norecurse nounwind optsize readonly
-define dso_local i32* @control_flow_no_mem(i32 %n) local_unnamed_addr #1 {
+define dso_local i32* @control_flow_no_mem(i32 %n) local_unnamed_addr nounwind {
 ; CHECK-LABEL: control_flow_no_mem:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a0, %hi(s)
@@ -156,7 +155,7 @@ if.end:
 
 declare void @abort()
 
-define dso_local void @one_store() local_unnamed_addr {
+define dso_local void @one_store() local_unnamed_addr nounwind {
 ; CHECK-LABEL: one_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a0, %hi(s+160)

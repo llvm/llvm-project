@@ -7,7 +7,7 @@
 ; higher bits were masked to zero for the comparison.
 
 define i1 @cmpxchg_i32_seq_cst_seq_cst(i32* %ptr, i32 signext %cmp,
-        i32 signext %val) {
+        i32 signext %val) nounwind {
 ; RV64IA-LABEL: cmpxchg_i32_seq_cst_seq_cst:
 ; RV64IA:       # %bb.0: # %entry
 ; RV64IA-NEXT:  .LBB0_1: # %entry

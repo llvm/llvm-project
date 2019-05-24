@@ -1,0 +1,20 @@
+## Show that llvm-objdump handles invalid byte sequences, and continues.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-objdump %t.o -d | FileCheck %s
+
+# CHECK:      0000000000000000 .text:
+# CHECK:         0: d9 e2 <unknown>
+# CHECK-NEXT:    2: 90    nop
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: 'd9e290'

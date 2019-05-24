@@ -186,7 +186,7 @@ bool CompactUnwindInfo::GetUnwindPlan(Target &target, Address addr,
       if (log && log->GetVerbose()) {
         StreamString strm;
         addr.Dump(
-            &strm, NULL,
+            &strm, nullptr,
             Address::DumpStyle::DumpStyleResolvedDescriptionNoFunctionArguments,
             Address::DumpStyle::DumpStyleFileAddress,
             arch.GetAddressByteSize());

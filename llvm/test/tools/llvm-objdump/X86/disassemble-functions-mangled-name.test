@@ -1,0 +1,27 @@
+## Show that the --disassemble-functions switch takes mangled names, not
+## demangled names.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-objdump -d --disassemble-functions=_Z3foov %t.o | FileCheck %s
+# RUN: llvm-objdump -d --disassemble-functions='foo()' %t.o | FileCheck %s --check-prefix=NOFOO
+# RUN: llvm-objdump -d -C --disassemble-functions='foo()' %t.o | FileCheck %s --check-prefix=NOFOO
+# RUN: llvm-objdump -d --disassemble-functions=foo %t.o | FileCheck %s --check-prefix=NOFOO
+
+# CHECK: _Z3foov:
+
+# NOFOO-NOT: foo
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [SHF_ALLOC, SHF_EXECINSTR]
+    Content: '90'
+Symbols:
+  - Name:    _Z3foov
+    Section: .text

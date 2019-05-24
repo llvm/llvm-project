@@ -2185,6 +2185,10 @@ def mbulk_memory : Flag<["-"], "mbulk-memory">, Group<m_wasm_Features_Group>;
 def mno_bulk_memory : Flag<["-"], "mno-bulk-memory">, Group<m_wasm_Features_Group>;
 def mmutable_globals : Flag<["-"], "mmutable-globals">, Group<m_wasm_Features_Group>;
 def mno_mutable_globals : Flag<["-"], "mno-mutable-globals">, Group<m_wasm_Features_Group>;
+def mmultivalue : Flag<["-"], "mmultivalue">, Group<m_wasm_Features_Group>;
+def mno_multivalue : Flag<["-"], "mno-multivalue">, Group<m_wasm_Features_Group>;
+def mtail_call : Flag<["-"], "mtail-call">, Group<m_wasm_Features_Group>;
+def mno_tail_call : Flag<["-"], "mno-tail-call">, Group<m_wasm_Features_Group>;
 
 def mamdgpu_debugger_abi : Joined<["-"], "mamdgpu-debugger-abi=">,
   Flags<[HelpHidden]>,

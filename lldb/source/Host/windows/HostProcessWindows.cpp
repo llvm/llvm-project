@@ -109,7 +109,7 @@ lldb::thread_result_t HostProcessWindows::MonitorThread(void *thread_arg) {
     ::CloseHandle(info->process_handle);
     delete (info);
   }
-  return 0;
+  return {};
 }
 
 void HostProcessWindows::Close() {

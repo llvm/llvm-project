@@ -87,22 +87,22 @@ static int g_verbose = 0;
 static struct option g_long_options[] = {
     {"debug", no_argument, &g_debug, 1},
     {"verbose", no_argument, &g_verbose, 1},
-    {"log-file", required_argument, NULL, 'l'},
-    {"log-channels", required_argument, NULL, 'c'},
-    {"attach", required_argument, NULL, 'a'},
-    {"named-pipe", required_argument, NULL, 'N'},
-    {"pipe", required_argument, NULL, 'U'},
-    {"native-regs", no_argument, NULL,
+    {"log-file", required_argument, nullptr, 'l'},
+    {"log-channels", required_argument, nullptr, 'c'},
+    {"attach", required_argument, nullptr, 'a'},
+    {"named-pipe", required_argument, nullptr, 'N'},
+    {"pipe", required_argument, nullptr, 'U'},
+    {"native-regs", no_argument, nullptr,
      'r'}, // Specify to use the native registers instead of the gdb defaults
            // for the architecture.  NOTE: this is a do-nothing arg as it's
            // behavior is default now.  FIXME remove call from lldb-platform.
-    {"reverse-connect", no_argument, NULL,
+    {"reverse-connect", no_argument, nullptr,
      'R'}, // Specifies that llgs attaches to the client address:port rather
            // than llgs listening for a connection from address on port.
-    {"setsid", no_argument, NULL,
+    {"setsid", no_argument, nullptr,
      'S'}, // Call setsid() to make llgs run in its own session.
-    {"fd", required_argument, NULL, 'F'},
-    {NULL, 0, NULL, 0}};
+    {"fd", required_argument, nullptr, 'F'},
+    {nullptr, 0, nullptr, 0}};
 
 // Watch for signals
 static int g_sighup_received_count = 0;

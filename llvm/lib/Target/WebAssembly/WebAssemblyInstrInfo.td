@@ -34,6 +34,10 @@ def HasAtomics :
     Predicate<"Subtarget->hasAtomics()">,
     AssemblerPredicate<"FeatureAtomics", "atomics">;
 
+def HasMultivalue :
+    Predicate<"Subtarget->hasMultivalue()">,
+    AssemblerPredicate<"FeatureMultivalue", "multivalue">;
+
 def HasNontrappingFPToInt :
     Predicate<"Subtarget->hasNontrappingFPToInt()">,
     AssemblerPredicate<"FeatureNontrappingFPToInt", "nontrapping-fptoint">;
@@ -46,17 +50,13 @@ def HasSignExt :
     Predicate<"Subtarget->hasSignExt()">,
     AssemblerPredicate<"FeatureSignExt", "sign-ext">;
 
-def NotHasSignExt :
-    Predicate<"!Subtarget->hasSignExt()">,
-    AssemblerPredicate<"!FeatureSignExt", "sign-ext">;
+def HasTailCall :
+    Predicate<"Subtarget->hasTailCall()">,
+    AssemblerPredicate<"FeatureTailCall", "tail-call">;
 
 def HasExceptionHandling :
     Predicate<"Subtarget->hasExceptionHandling()">,
     AssemblerPredicate<"FeatureExceptionHandling", "exception-handling">;
-
-def NotHasExceptionHandling :
-    Predicate<"!Subtarget->hasExceptionHandling()">,
-    AssemblerPredicate<"!FeatureExceptionHandling", "exception-handling">;
 
 def HasBulkMemory :
     Predicate<"Subtarget->hasBulkMemory()">,

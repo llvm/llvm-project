@@ -80,6 +80,16 @@ struct ReadDescriptor {
 
 class ReadState;
 
+/// Longest register dependency.
+///
+/// Used internally by WriteState/ReadState/InstructionBase to help with the
+/// computation of the longest register dependency for an instruction.
+struct CriticalRegDep {
+  unsigned IID;
+  unsigned RegID;
+  unsigned Cycles;
+};
+
 /// Tracks uses of a register definition (e.g. register write).
 ///
 /// Each implicit/explicit register write is associated with an instance of
@@ -123,8 +133,10 @@ class WriteState {
 
   // A partial write that is in a false dependency with this write.
   WriteState *PartialWrite;
-
   unsigned DependentWriteCyclesLeft;
+
+  // Critical register dependency for this write.
+  CriticalRegDep CRD;
 
   // A list of dependent reads. Users is a set of dependent
   // reads. A dependent read is added to the set only if CyclesLeft
@@ -140,7 +152,7 @@ public:
       : WD(&Desc), CyclesLeft(UNKNOWN_CYCLES), RegisterID(RegID), PRFID(0),
         ClearsSuperRegs(clearsSuperRegs), WritesZero(writesZero),
         IsEliminated(false), DependentWrite(nullptr), PartialWrite(nullptr),
-        DependentWriteCyclesLeft(0) {}
+        DependentWriteCyclesLeft(0), CRD() {}
 
   WriteState(const WriteState &Other) = default;
   WriteState &operator=(const WriteState &Other) = default;
@@ -150,7 +162,11 @@ public:
   unsigned getRegisterID() const { return RegisterID; }
   unsigned getRegisterFileID() const { return PRFID; }
   unsigned getLatency() const { return WD->Latency; }
+  unsigned getDependentWriteCyclesLeft() const {
+    return DependentWriteCyclesLeft;
+  }
   const WriteState *getDependentWrite() const { return DependentWrite; }
+  const CriticalRegDep &getCriticalRegDep() const { return CRD; }
 
   // This method adds Use to the set of data dependent reads. IID is the
   // instruction identifier associated with this write. ReadAdvance is the
@@ -161,10 +177,6 @@ public:
   // Use is a younger register write that is in a false dependency with this
   // write. IID is the instruction identifier associated with this write.
   void addUser(unsigned IID, WriteState *Use);
-
-  unsigned getDependentWriteCyclesLeft() const {
-    return DependentWriteCyclesLeft;
-  }
 
   unsigned getNumUsers() const {
     unsigned NumUsers = Users.size();
@@ -189,11 +201,7 @@ public:
   }
 
   void setDependentWrite(const WriteState *Other) { DependentWrite = Other; }
-  void writeStartEvent(unsigned IID, unsigned RegID, unsigned Cycles) {
-    DependentWriteCyclesLeft = Cycles;
-    DependentWrite = nullptr;
-  }
-
+  void writeStartEvent(unsigned IID, unsigned RegID, unsigned Cycles);
   void setWriteZero() { WritesZero = true; }
   void setEliminated() {
     assert(Users.empty() && "Write is in an inconsistent state.");
@@ -235,6 +243,8 @@ class ReadState {
   // dependent writes (i.e. field DependentWrite) is zero, this value is
   // propagated to field CyclesLeft.
   unsigned TotalCycles;
+  // Longest register dependency.
+  CriticalRegDep CRD;
   // This field is set to true only if there are no dependent writes, and
   // there are no `CyclesLeft' to wait.
   bool IsReady;
@@ -246,13 +256,14 @@ class ReadState {
 public:
   ReadState(const ReadDescriptor &Desc, unsigned RegID)
       : RD(&Desc), RegisterID(RegID), PRFID(0), DependentWrites(0),
-        CyclesLeft(UNKNOWN_CYCLES), TotalCycles(0), IsReady(true),
-        IsZero(false), IndependentFromDef(false) {}
+        CyclesLeft(UNKNOWN_CYCLES), TotalCycles(0), CRD(),
+        IsReady(true), IsZero(false), IndependentFromDef(false) {}
 
   const ReadDescriptor &getDescriptor() const { return *RD; }
   unsigned getSchedClass() const { return RD->SchedClassID; }
   unsigned getRegisterID() const { return RegisterID; }
   unsigned getRegisterFileID() const { return PRFID; }
+  const CriticalRegDep &getCriticalRegDep() const { return CRD; }
 
   bool isPending() const { return !IndependentFromDef && CyclesLeft > 0; }
   bool isReady() const { return IsReady; }
@@ -394,6 +405,9 @@ class InstructionBase {
   // One entry per each implicit and explicit register use.
   SmallVector<ReadState, 4> Uses;
 
+  // Critical register dependency.
+  CriticalRegDep CRD;
+
 public:
   InstructionBase(const InstrDesc &D) : Desc(D), IsOptimizableMove(false) {}
 
@@ -404,6 +418,9 @@ public:
   const InstrDesc &getDesc() const { return Desc; }
 
   unsigned getLatency() const { return Desc.MaxLatency; }
+
+  const CriticalRegDep &getCriticalRegDep() const { return CRD; }
+  const CriticalRegDep &computeCriticalRegDep();
 
   bool hasDependentUsers() const {
     return any_of(Defs,
@@ -526,13 +543,17 @@ public:
   InstRef(unsigned Index, Instruction *I) : Data(std::make_pair(Index, I)) {}
 
   bool operator==(const InstRef &Other) const { return Data == Other.Data; }
+  bool operator!=(const InstRef &Other) const { return Data != Other.Data; }
+  bool operator<(const InstRef &Other) const {
+    return Data.first < Other.Data.first;
+  }
 
   unsigned getSourceIndex() const { return Data.first; }
   Instruction *getInstruction() { return Data.second; }
   const Instruction *getInstruction() const { return Data.second; }
 
   /// Returns true if this references a valid instruction.
-  operator bool() const { return Data.second != nullptr; }
+  explicit operator bool() const { return Data.second != nullptr; }
 
   /// Invalidate this reference.
   void invalidate() { Data.second = nullptr; }

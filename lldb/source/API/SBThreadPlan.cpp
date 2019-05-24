@@ -92,7 +92,7 @@ bool SBThreadPlan::IsValid() const {
 SBThreadPlan::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBThreadPlan, operator bool);
 
-  return m_opaque_sp.get() != NULL;
+  return m_opaque_sp.get() != nullptr;
 }
 
 void SBThreadPlan::Clear() {
@@ -262,7 +262,7 @@ SBThreadPlan::QueueThreadPlanForStepInRange(SBAddress &sb_start_address,
     Status plan_status;
     SBThreadPlan plan =
         SBThreadPlan(m_opaque_sp->GetThread().QueueThreadPlanForStepInRange(
-            false, range, sc, NULL, eAllThreads, plan_status));
+            false, range, sc, nullptr, eAllThreads, plan_status));
 
     if (plan_status.Fail())
       error.SetErrorString(plan_status.AsCString());

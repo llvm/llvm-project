@@ -513,7 +513,7 @@ struct NodeArrayNode : public Node {
 
   void output(OutputStream &OS, OutputFlags Flags, StringView Separator) const;
 
-  Node **Nodes = 0;
+  Node **Nodes = nullptr;
   size_t Count = 0;
 };
 

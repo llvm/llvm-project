@@ -285,7 +285,7 @@ bool GDBRemoteClientBase::ShouldStop(const UnixSignals &signals,
 
 void GDBRemoteClientBase::OnRunPacketSent(bool first) {
   if (first)
-    BroadcastEvent(eBroadcastBitRunPacketSent, NULL);
+    BroadcastEvent(eBroadcastBitRunPacketSent, nullptr);
 }
 
 ///////////////////////////////////////
@@ -365,7 +365,7 @@ void GDBRemoteClientBase::Lock::SyncWithContinueThread(bool interrupt) {
       // packet. Let's interrupt it.
       const char ctrl_c = '\x03';
       ConnectionStatus status = eConnectionStatusSuccess;
-      size_t bytes_written = m_comm.Write(&ctrl_c, 1, status, NULL);
+      size_t bytes_written = m_comm.Write(&ctrl_c, 1, status, nullptr);
       if (bytes_written == 0) {
         --m_comm.m_async_count;
         if (log)
