@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <CL/sycl.hpp>
+
 #include <iostream>
 #include <numeric>
 #include <string>
@@ -40,6 +41,13 @@ int main() {
         auto acc = buf.get_access<cl::sycl::access::mode::read_write>(cgh);
         cgh.single_task<class SingleTask>(krn, [=]() { acc[0] = acc[0] + 1; });
       });
+      if (!q.is_host()) {
+        const std::string integrationHeaderKernelName =
+            cl::sycl::detail::KernelInfo<SingleTask>::getName();
+        const std::string clKerneName =
+            krn.get_info<cl::sycl::info::kernel::function_name>();
+        assert(integrationHeaderKernelName == clKerneName);
+      }
     }
     assert(data == 1);
 

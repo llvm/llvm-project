@@ -28,11 +28,11 @@ template <info::kernel Param> struct get_kernel_info_cl<string_class, Param> {
     if (ResultSize == 0) {
       return "";
     }
-    string_class Result(ResultSize, ' ');
+    vector_class<char> Result(ResultSize);
     // TODO catch an exception and put it to list of asynchronous exceptions
     CHECK_OCL_CODE(clGetKernelInfo(ClKernel, cl_kernel_info(Param), ResultSize,
-                                   &Result[0], nullptr));
-    return Result;
+                                   Result.data(), nullptr));
+    return string_class(Result.data());
   }
 };
 
