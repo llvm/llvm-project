@@ -51,7 +51,7 @@ static StructuredData::ObjectSP ParseJSONObject(JSONParser &json_parser) {
 
   std::string value;
   std::string key;
-  while (1) {
+  while (true) {
     JSONParser::Token token = json_parser.GetToken(value);
 
     if (token == JSONParser::Token::String) {
@@ -82,7 +82,7 @@ static StructuredData::ObjectSP ParseJSONArray(JSONParser &json_parser) {
 
   std::string value;
   std::string key;
-  while (1) {
+  while (true) {
     StructuredData::ObjectSP value_sp = ParseJSONValue(json_parser);
     if (value_sp)
       array_up->AddItem(value_sp);

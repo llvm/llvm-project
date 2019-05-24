@@ -5350,7 +5350,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
             event_explanation = ts.GetData();
           }
-        } while (0);
+        } while (false);
 
         if (event_explanation)
           log->Printf("Process::RunThreadPlan(): execution interrupted: %s %s",
