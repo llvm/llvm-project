@@ -394,8 +394,8 @@ Status Socket::Close() {
 
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
-    log->Printf("%p Socket::Close (fd = %i)", static_cast<void *>(this),
-                m_socket);
+    log->Printf("%p Socket::Close (fd = %" PRIu64 ")",
+                static_cast<void *>(this), static_cast<uint64_t>(m_socket));
 
 #if defined(_WIN32)
   bool success = !!closesocket(m_socket);

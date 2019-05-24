@@ -391,6 +391,7 @@ def ssubsat    : SDNode<"ISD::SSUBSAT"   , SDTIntBinOp>;
 def usubsat    : SDNode<"ISD::USUBSAT"   , SDTIntBinOp>;
 
 def smulfix    : SDNode<"ISD::SMULFIX"   , SDTIntScaledBinOp, [SDNPCommutative]>;
+def smulfixsat : SDNode<"ISD::SMULFIXSAT", SDTIntScaledBinOp, [SDNPCommutative]>;
 def umulfix    : SDNode<"ISD::UMULFIX"   , SDTIntScaledBinOp, [SDNPCommutative]>;
 
 def sext_inreg : SDNode<"ISD::SIGN_EXTEND_INREG", SDTExtInreg>;
@@ -449,6 +450,9 @@ def fceil      : SDNode<"ISD::FCEIL"      , SDTFPUnaryOp>;
 def ffloor     : SDNode<"ISD::FFLOOR"     , SDTFPUnaryOp>;
 def fnearbyint : SDNode<"ISD::FNEARBYINT" , SDTFPUnaryOp>;
 def fround     : SDNode<"ISD::FROUND"     , SDTFPUnaryOp>;
+
+def lround     : SDNode<"ISD::LROUND"     , SDTFPToIntOp>;
+def llround    : SDNode<"ISD::LLROUND"    , SDTFPToIntOp>;
 
 def fpround    : SDNode<"ISD::FP_ROUND"   , SDTFPRoundOp>;
 def fpextend   : SDNode<"ISD::FP_EXTEND"  , SDTFPExtendOp>;

@@ -951,6 +951,28 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
   if (clang::TagDecl *to_tag = dyn_cast<clang::TagDecl>(to)) {
     if (clang::TagDecl *from_tag = dyn_cast<clang::TagDecl>(from)) {
       to_tag->setCompleteDefinition(from_tag->isCompleteDefinition());
+
+      if (Log *log_ast =
+              lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_AST)) {
+        std::string name_string;
+        if (NamedDecl *from_named_decl = dyn_cast<clang::NamedDecl>(from)) {
+          llvm::raw_string_ostream name_stream(name_string);
+          from_named_decl->printName(name_stream);
+          name_stream.flush();
+        }
+        LLDB_LOG(log_ast, "==== [ClangASTImporter][TUDecl: {0}] Imported "
+                          "({1}Decl*){2}, named {3} (from "
+                          "(Decl*){4})",
+                 static_cast<void *>(to->getTranslationUnitDecl()),
+                 from->getDeclKindName(), static_cast<void *>(to), name_string,
+                 static_cast<void *>(from));
+
+        // Log the AST of the TU.
+        std::string ast_string;
+        llvm::raw_string_ostream ast_stream(ast_string);
+        to->getTranslationUnitDecl()->dump(ast_stream);
+        LLDB_LOG(log_ast, "{0}", ast_string);
+      }
     }
   }
 

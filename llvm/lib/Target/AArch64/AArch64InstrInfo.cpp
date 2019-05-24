@@ -2959,7 +2959,7 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
                            unsigned DestReg, unsigned SrcReg, int Offset,
                            const TargetInstrInfo *TII,
                            MachineInstr::MIFlag Flag, bool SetNZCV,
-                           bool NeedsWinCFI) {
+                           bool NeedsWinCFI, bool *HasWinCFI) {
   if (DestReg == SrcReg && Offset == 0)
     return;
 
@@ -3004,10 +3004,13 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
         .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, ShiftSize))
         .setMIFlag(Flag);
 
-   if (NeedsWinCFI && SrcReg == AArch64::SP && DestReg == AArch64::SP)
-     BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_StackAlloc))
-         .addImm(ThisVal)
-         .setMIFlag(Flag);
+    if (NeedsWinCFI && SrcReg == AArch64::SP && DestReg == AArch64::SP) {
+      if (HasWinCFI)
+        *HasWinCFI = true;
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_StackAlloc))
+          .addImm(ThisVal)
+          .setMIFlag(Flag);
+    }
 
     SrcReg = DestReg;
     Offset -= ThisVal;
@@ -3023,6 +3026,8 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
   if (NeedsWinCFI) {
     if ((DestReg == AArch64::FP && SrcReg == AArch64::SP) ||
         (SrcReg == AArch64::FP && DestReg == AArch64::SP)) {
+      if (HasWinCFI)
+        *HasWinCFI = true;
       if (Offset == 0)
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_SetFP)).
                 setMIFlag(Flag);
@@ -3030,6 +3035,8 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_AddFP)).
                 addImm(Offset).setMIFlag(Flag);
     } else if (DestReg == AArch64::SP) {
+      if (HasWinCFI)
+        *HasWinCFI = true;
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_StackAlloc)).
               addImm(Offset).setMIFlag(Flag);
     }
@@ -5503,6 +5510,31 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
 bool AArch64InstrInfo::shouldOutlineFromFunctionByDefault(
   MachineFunction &MF) const {
   return MF.getFunction().hasMinSize();
+}
+
+bool AArch64InstrInfo::isCopyInstrImpl(
+    const MachineInstr &MI, const MachineOperand *&Source,
+    const MachineOperand *&Destination) const {
+
+  // AArch64::ORRWrs and AArch64::ORRXrs with WZR/XZR reg
+  // and zero immediate operands used as an alias for mov instruction.
+  if (MI.getOpcode() == AArch64::ORRWrs &&
+      MI.getOperand(1).getReg() == AArch64::WZR &&
+      MI.getOperand(3).getImm() == 0x0) {
+    Destination = &MI.getOperand(0);
+    Source = &MI.getOperand(2);
+    return true;
+  }
+
+  if (MI.getOpcode() == AArch64::ORRXrs &&
+      MI.getOperand(1).getReg() == AArch64::XZR &&
+      MI.getOperand(3).getImm() == 0x0) {
+    Destination = &MI.getOperand(0);
+    Source = &MI.getOperand(2);
+    return true;
+  }
+
+  return false;
 }
 
 #define GET_INSTRINFO_HELPERS

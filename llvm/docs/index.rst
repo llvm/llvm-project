@@ -89,11 +89,13 @@ intermediate LLVM representation.
    GetElementPtr
    Frontend/PerformanceTips
    MCJITDesignAndImplementation
+   ORCv2DesignAndImplementation
    CodeOfConduct
    CompileCudaWithLLVM
    ReportingGuide
    Benchmarking
    Docker
+   BuildingADistribution
 
 :doc:`GettingStarted`
    Discusses how to get up and running quickly with the LLVM infrastructure.
@@ -175,6 +177,10 @@ intermediate LLVM representation.
 
 :doc:`Docker`
    A reference for using Dockerfiles provided with LLVM.
+
+:doc:`BuildingADistribution`
+  A best-practices guide for using LLVM's CMake build system to package and
+  distribute LLVM-based tools.
 
 
 Programming Documentation
@@ -373,6 +379,10 @@ For API clients and LLVM developers.
 
 :doc:`MCJITDesignAndImplementation`
    Describes the inner workings of MCJIT execution engine.
+
+:doc:`ORCv2DesignAndImplementation`
+   Describes the design and implementation of the ORC APIs, including some
+   usage examples.
 
 :doc:`BranchWeightMetadata`
    Provides information about Branch Prediction Information.

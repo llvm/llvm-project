@@ -362,6 +362,20 @@ static void getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = INTEL_COREI7_CANNONLAKE; // "cannonlake"
       break;
 
+    // Icelake:
+    case 0x7d:
+    case 0x7e:
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_ICELAKE_CLIENT; // "icelake-client"
+      break;
+
+    // Icelake Xeon:
+    case 0x6a:
+    case 0x6c:
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_ICELAKE_SERVER; // "icelake-server"
+      break;
+
     case 0x1c: // Most 45 nm Intel Atom processors
     case 0x26: // 45 nm Atom Lincroft
     case 0x27: // 32 nm Atom Medfield
@@ -386,6 +400,9 @@ static void getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       break; // "goldmont"
     case 0x7a:
       *Type = INTEL_GOLDMONT_PLUS;
+      break;
+    case 0x86:
+      *Type = INTEL_TREMONT;
       break;
 
     case 0x57:

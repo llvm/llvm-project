@@ -488,10 +488,7 @@ bool DYLDRendezvous::ReadSOEntryFromMemory(lldb::addr_t addr, SOEntry &entry) {
   const ArchSpec &arch = m_process->GetTarget().GetArchitecture();
   if ((arch.GetTriple().getOS() == llvm::Triple::FreeBSD ||
        arch.GetTriple().getOS() == llvm::Triple::NetBSD) &&
-      (arch.GetMachine() == llvm::Triple::mips ||
-       arch.GetMachine() == llvm::Triple::mipsel ||
-       arch.GetMachine() == llvm::Triple::mips64 ||
-       arch.GetMachine() == llvm::Triple::mips64el)) {
+      arch.IsMIPS()) {
     addr_t mips_l_offs;
     if (!(addr = ReadPointer(addr, &mips_l_offs)))
       return false;

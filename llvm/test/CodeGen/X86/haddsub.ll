@@ -1628,8 +1628,8 @@ define float @extract_extract01_v4f32_fadd_f32_uses3(<4 x float> %x, float* %p1,
 ; Repeat tests from general reductions to verify output for hoppy targets:
 ; PR38971: https://bugs.llvm.org/show_bug.cgi?id=38971
 
-declare float @llvm.experimental.vector.reduce.fadd.f32.f32.v8f32(float, <8 x float>)
-declare double @llvm.experimental.vector.reduce.fadd.f64.f64.v4f64(double, <4 x double>)
+declare float @llvm.experimental.vector.reduce.fadd.f32.v8f32(float, <8 x float>)
+declare double @llvm.experimental.vector.reduce.fadd.f64.v4f64(double, <4 x double>)
 
 define float @fadd_reduce_v8f32(float %a0, <8 x float> %a1) {
 ; SSE3-SLOW-LABEL: fadd_reduce_v8f32:
@@ -1671,7 +1671,7 @@ define float @fadd_reduce_v8f32(float %a0, <8 x float> %a1) {
 ; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vzeroupper
 ; AVX-FAST-NEXT:    retq
-  %r = call fast float @llvm.experimental.vector.reduce.fadd.f32.f32.v8f32(float %a0, <8 x float> %a1)
+  %r = call fast float @llvm.experimental.vector.reduce.fadd.f32.v8f32(float %a0, <8 x float> %a1)
   ret float %r
 }
 
@@ -1707,7 +1707,7 @@ define double @fadd_reduce_v4f64(double %a0, <4 x double> %a1) {
 ; AVX-FAST-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vzeroupper
 ; AVX-FAST-NEXT:    retq
-  %r = call fast double @llvm.experimental.vector.reduce.fadd.f64.f64.v4f64(double %a0, <4 x double> %a1)
+  %r = call fast double @llvm.experimental.vector.reduce.fadd.f64.v4f64(double %a0, <4 x double> %a1)
   ret double %r
 }
 

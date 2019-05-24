@@ -51,7 +51,18 @@ public:
   /// Returns a reference to the JITDylib representing the JIT'd main program.
   JITDylib &getMainJITDylib() { return Main; }
 
+  /// Returns the JITDylib with the given name, or nullptr if no JITDylib with
+  /// that name exists.
+  JITDylib *getJITDylibByName(StringRef Name) {
+    return ES->getJITDylibByName(Name);
+  }
+
   /// Create a new JITDylib with the given name and return a reference to it.
+  ///
+  /// JITDylib names must be unique. If the given name is derived from user
+  /// input or elsewhere in the environment then the client should check
+  /// (e.g. by calling getJITDylibByName) that the given name is not already in
+  /// use.
   JITDylib &createJITDylib(std::string Name) {
     return ES->createJITDylib(std::move(Name));
   }

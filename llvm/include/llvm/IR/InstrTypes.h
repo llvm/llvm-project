@@ -225,39 +225,39 @@ public:
 
   static BinaryOperator *CreateWithCopiedFlags(BinaryOps Opc,
                                                Value *V1, Value *V2,
-                                               BinaryOperator *CopyBO,
+                                               Instruction *CopyO,
                                                const Twine &Name = "") {
     BinaryOperator *BO = Create(Opc, V1, V2, Name);
-    BO->copyIRFlags(CopyBO);
+    BO->copyIRFlags(CopyO);
     return BO;
   }
 
   static BinaryOperator *CreateFAddFMF(Value *V1, Value *V2,
-                                       BinaryOperator *FMFSource,
+                                       Instruction *FMFSource,
                                        const Twine &Name = "") {
     return CreateWithCopiedFlags(Instruction::FAdd, V1, V2, FMFSource, Name);
   }
   static BinaryOperator *CreateFSubFMF(Value *V1, Value *V2,
-                                       BinaryOperator *FMFSource,
+                                       Instruction *FMFSource,
                                        const Twine &Name = "") {
     return CreateWithCopiedFlags(Instruction::FSub, V1, V2, FMFSource, Name);
   }
   static BinaryOperator *CreateFMulFMF(Value *V1, Value *V2,
-                                       BinaryOperator *FMFSource,
+                                       Instruction *FMFSource,
                                        const Twine &Name = "") {
     return CreateWithCopiedFlags(Instruction::FMul, V1, V2, FMFSource, Name);
   }
   static BinaryOperator *CreateFDivFMF(Value *V1, Value *V2,
-                                       BinaryOperator *FMFSource,
+                                       Instruction *FMFSource,
                                        const Twine &Name = "") {
     return CreateWithCopiedFlags(Instruction::FDiv, V1, V2, FMFSource, Name);
   }
   static BinaryOperator *CreateFRemFMF(Value *V1, Value *V2,
-                                       BinaryOperator *FMFSource,
+                                       Instruction *FMFSource,
                                        const Twine &Name = "") {
     return CreateWithCopiedFlags(Instruction::FRem, V1, V2, FMFSource, Name);
   }
-  static BinaryOperator *CreateFNegFMF(Value *Op, BinaryOperator *FMFSource,
+  static BinaryOperator *CreateFNegFMF(Value *Op, Instruction *FMFSource,
                                        const Twine &Name = "") {
     Value *Zero = ConstantFP::getNegativeZero(Op->getType());
     return CreateWithCopiedFlags(Instruction::FSub, Zero, Op, FMFSource);

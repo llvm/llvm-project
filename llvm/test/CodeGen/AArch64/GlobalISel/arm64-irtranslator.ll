@@ -1418,6 +1418,18 @@ define float @test_fabs_intrin(float %a) {
   ret float %res
 }
 
+declare float @llvm.copysign.f32(float, float)
+define float @test_fcopysign_intrin(float %a, float %b) {
+; CHECK-LABEL: name: test_fcopysign_intrin
+; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $s0
+; CHECK: [[B:%[0-9]+]]:_(s32) = COPY $s1
+; CHECK: [[RES:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FCOPYSIGN [[A]], [[B]]
+; CHECK: $s0 = COPY [[RES]]
+
+  %res = call nnan ninf nsz arcp contract afn reassoc float @llvm.copysign.f32(float %a, float %b)
+  ret float %res
+}
+
 declare float @llvm.canonicalize.f32(float)
 define float @test_fcanonicalize_intrin(float %a) {
 ; CHECK-LABEL: name: test_fcanonicalize_intrin

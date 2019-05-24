@@ -312,35 +312,17 @@ static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
 // If this is a bitwise operator or add with a constant RHS we might be able
 // to pull it through a shift.
 static bool canShiftBinOpWithConstantRHS(BinaryOperator &Shift,
-                                         BinaryOperator *BO,
-                                         const APInt &C) {
-  bool IsValid = true;     // Valid only for And, Or Xor,
-  bool HighBitSet = false; // Transform ifhigh bit of constant set?
-
+                                         BinaryOperator *BO) {
   switch (BO->getOpcode()) {
-  default: IsValid = false; break;   // Do not perform transform!
+  default:
+    return false; // Do not perform transform!
   case Instruction::Add:
-    IsValid = Shift.getOpcode() == Instruction::Shl;
-    break;
+    return Shift.getOpcode() == Instruction::Shl;
   case Instruction::Or:
   case Instruction::Xor:
-    HighBitSet = false;
-    break;
   case Instruction::And:
-    HighBitSet = true;
-    break;
+    return true;
   }
-
-  // If this is a signed shift right, and the high bit is modified
-  // by the logical operation, do not perform the transformation.
-  // The HighBitSet boolean indicates the value of the high bit of
-  // the constant which would cause it to be modified for this
-  // operation.
-  //
-  if (IsValid && Shift.getOpcode() == Instruction::AShr)
-    IsValid = C.isNegative() == HighBitSet;
-
-  return IsValid;
 }
 
 Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
@@ -507,7 +489,7 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
       // shift is the only use, we can pull it out of the shift.
       const APInt *Op0C;
       if (match(Op0BO->getOperand(1), m_APInt(Op0C))) {
-        if (canShiftBinOpWithConstantRHS(I, Op0BO, *Op0C)) {
+        if (canShiftBinOpWithConstantRHS(I, Op0BO)) {
           Constant *NewRHS = ConstantExpr::get(I.getOpcode(),
                                      cast<Constant>(Op0BO->getOperand(1)), Op1);
 
@@ -551,7 +533,7 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
       const APInt *C;
       if (!isa<Constant>(FalseVal) && TBO->getOperand(0) == FalseVal &&
           match(TBO->getOperand(1), m_APInt(C)) &&
-          canShiftBinOpWithConstantRHS(I, TBO, *C)) {
+          canShiftBinOpWithConstantRHS(I, TBO)) {
         Constant *NewRHS = ConstantExpr::get(I.getOpcode(),
                                        cast<Constant>(TBO->getOperand(1)), Op1);
 
@@ -570,7 +552,7 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
       const APInt *C;
       if (!isa<Constant>(TrueVal) && FBO->getOperand(0) == TrueVal &&
           match(FBO->getOperand(1), m_APInt(C)) &&
-          canShiftBinOpWithConstantRHS(I, FBO, *C)) {
+          canShiftBinOpWithConstantRHS(I, FBO)) {
         Constant *NewRHS = ConstantExpr::get(I.getOpcode(),
                                        cast<Constant>(FBO->getOperand(1)), Op1);
 

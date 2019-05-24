@@ -212,7 +212,8 @@ public:
     return GetStaticBroadcasterClass();
   }
 
-  void SourceInitFile(bool in_cwd, CommandReturnObject &result);
+  void SourceInitFileCwd(CommandReturnObject &result);
+  void SourceInitFileHome(CommandReturnObject &result);
 
   bool AddCommand(llvm::StringRef name, const lldb::CommandObjectSP &cmd_sp,
                   bool can_replace);
@@ -403,7 +404,7 @@ public:
   }
 
   void SkipAppInitFiles(bool skip_app_init_files) {
-    m_skip_app_init_files = m_skip_lldbinit_files;
+    m_skip_app_init_files = skip_app_init_files;
   }
 
   bool GetSynchronous();
@@ -439,8 +440,6 @@ public:
            "--show-all-children option to %s or raise the limit by changing "
            "the target.max-children-count setting.\n";
   }
-
-  const CommandHistory &GetCommandHistory() const { return m_command_history; }
 
   CommandHistory &GetCommandHistory() { return m_command_history; }
 
@@ -532,6 +531,8 @@ protected:
 
 private:
   Status PreprocessCommand(std::string &command);
+
+  void SourceInitFile(FileSpec file, CommandReturnObject &result);
 
   // Completely resolves aliases and abbreviations, returning a pointer to the
   // final command object and updating command_line to the fully substituted

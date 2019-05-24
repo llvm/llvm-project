@@ -86,6 +86,9 @@ enum RuntimeLibcallSignature {
   func_iPTR_i64_i64_i64_i64_i64_i64,
   i32_func_i64_i64,
   i32_func_i64_i64_i64_i64,
+  iPTR_func_f32,
+  iPTR_func_f64,
+  iPTR_func_i64_i64,
   unsupported
 };
 
@@ -216,6 +219,12 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::ROUND_F32] = f32_func_f32;
     Table[RTLIB::ROUND_F64] = f64_func_f64;
     Table[RTLIB::ROUND_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::LROUND_F32] = iPTR_func_f32;
+    Table[RTLIB::LROUND_F64] = iPTR_func_f64;
+    Table[RTLIB::LROUND_F128] = iPTR_func_i64_i64;
+    Table[RTLIB::LLROUND_F32] = i64_func_f32;
+    Table[RTLIB::LLROUND_F64] = i64_func_f64;
+    Table[RTLIB::LLROUND_F128] = i64_func_i64_i64;
     Table[RTLIB::FLOOR_F32] = f32_func_f32;
     Table[RTLIB::FLOOR_F64] = f64_func_f64;
     Table[RTLIB::FLOOR_F128] = func_iPTR_i64_i64;
@@ -315,6 +324,9 @@ struct RuntimeLibcallSignatureTable {
 
     // __stack_chk_fail
     Table[RTLIB::STACKPROTECTOR_CHECK_FAIL] = func;
+
+    // Return address handling
+    Table[RTLIB::RETURN_ADDRESS] = i32_func_i32;
 
     // Element-wise Atomic memory
     // TODO: Fix these when we implement atomic support
@@ -490,6 +502,8 @@ struct StaticLibcallNameMap {
     // consistent with the f64 and f128 names.
     Map["__extendhfsf2"] = RTLIB::FPEXT_F16_F32;
     Map["__truncsfhf2"] = RTLIB::FPROUND_F32_F16;
+
+    Map["emscripten_return_address"] = RTLIB::RETURN_ADDRESS;
   }
 };
 
@@ -840,6 +854,19 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Rets.push_back(wasm::ValType::I32);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
+    Params.push_back(wasm::ValType::I64);
+    Params.push_back(wasm::ValType::I64);
+    break;
+  case iPTR_func_f32:
+    Rets.push_back(PtrTy);
+    Params.push_back(wasm::ValType::F32);
+    break;
+  case iPTR_func_f64:
+    Rets.push_back(PtrTy);
+    Params.push_back(wasm::ValType::F64);
+    break;
+  case iPTR_func_i64_i64:
+    Rets.push_back(PtrTy);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     break;

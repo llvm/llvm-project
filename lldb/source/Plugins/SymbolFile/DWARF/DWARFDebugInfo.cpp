@@ -22,6 +22,7 @@
 #include "DWARFDebugInfo.h"
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFFormValue.h"
+#include "DWARFTypeUnit.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -44,13 +45,10 @@ llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
   assert(m_dwarf2Data);
 
   m_cu_aranges_up = llvm::make_unique<DWARFDebugAranges>();
-  const DWARFDataExtractor *debug_aranges_data =
+  const DWARFDataExtractor &debug_aranges_data =
       m_context.getOrLoadArangesData();
-  if (debug_aranges_data) {
-    llvm::Error error = m_cu_aranges_up->extract(*debug_aranges_data);
-    if (error)
-      return std::move(error);
-  }
+  if (llvm::Error error = m_cu_aranges_up->extract(debug_aranges_data))
+    return std::move(error);
 
   // Make a list of all CUs represented by the arange data in the file.
   std::set<dw_offset_t> cus_with_data;
@@ -68,12 +66,34 @@ llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
 
     dw_offset_t offset = cu->GetOffset();
     if (cus_with_data.find(offset) == cus_with_data.end())
-      cu->BuildAddressRangeTable(m_dwarf2Data, m_cu_aranges_up.get());
+      cu->BuildAddressRangeTable(m_cu_aranges_up.get());
   }
 
   const bool minimize = true;
   m_cu_aranges_up->Sort(minimize);
   return *m_cu_aranges_up;
+}
+
+void Parse(SymbolFileDWARF *dwarf, const DWARFDataExtractor &data,
+           DIERef::Section section, std::vector<DWARFUnitSP> &units) {
+  lldb::offset_t offset = 0;
+  while (data.ValidOffset(offset)) {
+    llvm::Expected<DWARFUnitSP> unit_sp =
+        DWARFUnit::extract(dwarf, units.size(), data, section, &offset);
+
+    if (!unit_sp) {
+      // FIXME: Propagate this error up.
+      llvm::consumeError(unit_sp.takeError());
+      return;
+    }
+
+    // If it didn't return an error, then it should be returning a valid Unit.
+    assert(*unit_sp);
+
+    units.push_back(*unit_sp);
+
+    offset = (*unit_sp)->GetNextUnitOffset();
+  }
 }
 
 void DWARFDebugInfo::ParseUnitHeadersIfNeeded() {
@@ -82,26 +102,10 @@ void DWARFDebugInfo::ParseUnitHeadersIfNeeded() {
   if (!m_dwarf2Data)
     return;
 
-  lldb::offset_t offset = 0;
-  const auto &debug_info_data = m_dwarf2Data->get_debug_info_data();
-
-  while (debug_info_data.ValidOffset(offset)) {
-    llvm::Expected<DWARFUnitSP> cu_sp = DWARFCompileUnit::extract(
-        m_dwarf2Data, m_units.size(), debug_info_data, &offset);
-
-    if (!cu_sp) {
-      // FIXME: Propagate this error up.
-      llvm::consumeError(cu_sp.takeError());
-      return;
-    }
-
-    // If it didn't return an error, then it should be returning a valid Unit.
-    assert(*cu_sp);
-
-    m_units.push_back(*cu_sp);
-
-    offset = (*cu_sp)->GetNextUnitOffset();
-  }
+  Parse(m_dwarf2Data, m_context.getOrLoadDebugInfoData(),
+        DIERef::Section::DebugInfo, m_units);
+  Parse(m_dwarf2Data, m_context.getOrLoadDebugTypesData(),
+        DIERef::Section::DebugTypes, m_units);
 }
 
 size_t DWARFDebugInfo::GetNumUnits() {
@@ -116,26 +120,28 @@ DWARFUnit *DWARFDebugInfo::GetUnitAtIndex(user_id_t idx) {
   return cu;
 }
 
-bool DWARFDebugInfo::OffsetLessThanUnitOffset(dw_offset_t offset,
-                                              const DWARFUnitSP &cu_sp) {
-  return offset < cu_sp->GetOffset();
-}
-
-uint32_t DWARFDebugInfo::FindUnitIndex(dw_offset_t offset) {
+uint32_t DWARFDebugInfo::FindUnitIndex(DIERef::Section section,
+                                       dw_offset_t offset) {
   ParseUnitHeadersIfNeeded();
 
   // llvm::lower_bound is not used as for DIE offsets it would still return
   // index +1 and GetOffset() returning index itself would be a special case.
-  auto pos = llvm::upper_bound(m_units, offset, OffsetLessThanUnitOffset);
+  auto pos = llvm::upper_bound(
+      m_units, std::make_pair(section, offset),
+      [](const std::pair<DIERef::Section, dw_offset_t> &lhs,
+         const DWARFUnitSP &rhs) {
+        return lhs < std::make_pair(rhs->GetDebugSection(), rhs->GetOffset());
+      });
   uint32_t idx = std::distance(m_units.begin(), pos);
   if (idx == 0)
     return DW_INVALID_OFFSET;
   return idx - 1;
 }
 
-DWARFUnit *DWARFDebugInfo::GetUnitAtOffset(dw_offset_t cu_offset,
+DWARFUnit *DWARFDebugInfo::GetUnitAtOffset(DIERef::Section section,
+                                           dw_offset_t cu_offset,
                                            uint32_t *idx_ptr) {
-  uint32_t idx = FindUnitIndex(cu_offset);
+  uint32_t idx = FindUnitIndex(section, cu_offset);
   DWARFUnit *result = GetUnitAtIndex(idx);
   if (result && result->GetOffset() != cu_offset) {
     result = nullptr;
@@ -148,13 +154,15 @@ DWARFUnit *DWARFDebugInfo::GetUnitAtOffset(dw_offset_t cu_offset,
 
 DWARFUnit *DWARFDebugInfo::GetUnit(const DIERef &die_ref) {
   if (die_ref.cu_offset == DW_INVALID_OFFSET)
-    return GetUnitContainingDIEOffset(die_ref.die_offset);
+    return GetUnitContainingDIEOffset(die_ref.section, die_ref.die_offset);
   else
-    return GetUnitAtOffset(die_ref.cu_offset);
+    return GetUnitAtOffset(die_ref.section, die_ref.cu_offset);
 }
 
-DWARFUnit *DWARFDebugInfo::GetUnitContainingDIEOffset(dw_offset_t die_offset) {
-  uint32_t idx = FindUnitIndex(die_offset);
+DWARFUnit *
+DWARFDebugInfo::GetUnitContainingDIEOffset(DIERef::Section section,
+                                           dw_offset_t die_offset) {
+  uint32_t idx = FindUnitIndex(section, die_offset);
   DWARFUnit *result = GetUnitAtIndex(idx);
   if (result && !result->ContainsDIEOffset(die_offset))
     return nullptr;
@@ -162,8 +170,9 @@ DWARFUnit *DWARFDebugInfo::GetUnitContainingDIEOffset(dw_offset_t die_offset) {
 }
 
 DWARFDIE
-DWARFDebugInfo::GetDIEForDIEOffset(dw_offset_t die_offset) {
-  DWARFUnit *cu = GetUnitContainingDIEOffset(die_offset);
+DWARFDebugInfo::GetDIEForDIEOffset(DIERef::Section section,
+                                   dw_offset_t die_offset) {
+  DWARFUnit *cu = GetUnitContainingDIEOffset(section, die_offset);
   if (cu)
     return cu->GetDIE(die_offset);
   return DWARFDIE();

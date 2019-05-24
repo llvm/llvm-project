@@ -417,6 +417,15 @@ def ext_decomp_decl_cond : ExtWarn<
 def err_decomp_decl_spec : Error<
   "decomposition declaration cannot be declared "
   "%plural{1:'%1'|:with '%1' specifiers}0">;
+def ext_decomp_decl_spec : ExtWarn<
+  "decomposition declaration declared "
+  "%plural{1:'%1'|:with '%1' specifiers}0 is a C++2a extension">,
+  InGroup<CXX2a>;
+def warn_cxx17_compat_decomp_decl_spec : Warning<
+  "decomposition declaration declared "
+  "%plural{1:'%1'|:with '%1' specifiers}0 "
+  "is incompatible with C++ standards before C++2a">,
+  InGroup<CXXPre2aCompat>, DefaultIgnore;
 def err_decomp_decl_type : Error<
   "decomposition declaration cannot be declared with type %0; "
   "declared type must be 'auto' or reference to 'auto'">;
@@ -6663,6 +6672,11 @@ let CategoryName = "Lambda Issue" in {
     "cannot deduce type for lambda capture %0 from initializer of type %2">;
   def err_init_capture_deduction_failure_from_init_list : Error<
     "cannot deduce type for lambda capture %0 from initializer list">;
+  def warn_cxx17_compat_init_capture_pack : Warning<
+    "initialized lambda capture packs are incompatible with C++ standards "
+    "before C++2a">, InGroup<CXXPre2aCompat>, DefaultIgnore;
+  def ext_init_capture_pack : ExtWarn<
+    "initialized lambda pack captures are a C++2a extension">, InGroup<CXX2a>;
 
   // C++14 generic lambdas.
   def warn_cxx11_compat_generic_lambda : Warning<

@@ -702,3 +702,16 @@ OSObject *testSuppressionForMethodsEndingWithMatching(IOService *svc,
   // returning from it at +0.
   return table; // no-warning
 }
+
+namespace weird_result {
+struct WeirdResult {
+  int x, y, z;
+};
+
+WeirdResult outParamWithWeirdResult(OS_RETURNS_RETAINED_ON_ZERO OSObject **obj);
+
+WeirdResult testOutParamWithWeirdResult() {
+  OSObject *obj;
+  return outParamWithWeirdResult(&obj); // no-warning
+}
+} // namespace weird_result

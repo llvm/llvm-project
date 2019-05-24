@@ -4485,23 +4485,19 @@ define i1 @movmsk_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm0, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm0
-; SSE2-NEXT:    movmskpd %xmm0, %ecx
-; SSE2-NEXT:    movl %ecx, %eax
-; SSE2-NEXT:    shrb %al
-; SSE2-NEXT:    andb %cl, %al
+; SSE2-NEXT:    movmskpd %xmm1, %eax
+; SSE2-NEXT:    xorl $3, %eax
+; SSE2-NEXT:    cmpb $3, %al
+; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: movmsk_v2i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovmskpd %xmm0, %ecx
-; AVX-NEXT:    movl %ecx, %eax
-; AVX-NEXT:    shrb %al
-; AVX-NEXT:    andb %cl, %al
+; AVX-NEXT:    vmovmskpd %xmm0, %eax
+; AVX-NEXT:    xorl $3, %eax
+; AVX-NEXT:    cmpb $3, %al
+; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
 ;
 ; KNL-LABEL: movmsk_v2i64:
@@ -4596,19 +4592,17 @@ define i1 @movmsk_v2f64(<2 x double> %x, <2 x double> %y) {
 ; SSE2-LABEL: movmsk_v2f64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cmplepd %xmm0, %xmm1
-; SSE2-NEXT:    movmskpd %xmm1, %ecx
-; SSE2-NEXT:    movl %ecx, %eax
-; SSE2-NEXT:    shrb %al
-; SSE2-NEXT:    andb %cl, %al
+; SSE2-NEXT:    movmskpd %xmm1, %eax
+; SSE2-NEXT:    cmpb $3, %al
+; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: movmsk_v2f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmplepd %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovmskpd %xmm0, %ecx
-; AVX-NEXT:    movl %ecx, %eax
-; AVX-NEXT:    shrb %al
-; AVX-NEXT:    andb %cl, %al
+; AVX-NEXT:    vmovmskpd %xmm0, %eax
+; AVX-NEXT:    cmpb $3, %al
+; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
 ;
 ; KNL-LABEL: movmsk_v2f64:

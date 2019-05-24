@@ -187,14 +187,8 @@ else:
     config.available_features.add('can-execute')
 
 # Loadable module
-# FIXME: This should be supplied by Makefile or autoconf.
-if sys.platform in ['win32', 'cygwin']:
-    loadable_module = (config.enable_shared == 1)
-else:
-    loadable_module = True
-
-if loadable_module:
-    config.available_features.add('loadable_module')
+if config.has_plugins:
+    config.available_features.add('plugins')
 
 # Static libraries are not built if BUILD_SHARED_LIBS is ON.
 if not config.build_shared_libs and not config.link_llvm_dylib:

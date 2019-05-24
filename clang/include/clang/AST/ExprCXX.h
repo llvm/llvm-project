@@ -1121,7 +1121,11 @@ class CXXDefaultArgExpr final : public Expr {
   /// The parameter whose default is being used.
   ParmVarDecl *Param;
 
-  CXXDefaultArgExpr(StmtClass SC, SourceLocation Loc, ParmVarDecl *Param)
+  /// The context where the default argument expression was used.
+  DeclContext *UsedContext;
+
+  CXXDefaultArgExpr(StmtClass SC, SourceLocation Loc, ParmVarDecl *Param,
+      DeclContext *UsedContext)
       : Expr(SC,
              Param->hasUnparsedDefaultArg()
                  ? Param->getType().getNonReferenceType()
@@ -1129,7 +1133,7 @@ class CXXDefaultArgExpr final : public Expr {
              Param->getDefaultArg()->getValueKind(),
              Param->getDefaultArg()->getObjectKind(), false, false, false,
              false),
-        Param(Param) {
+        Param(Param), UsedContext(UsedContext) {
     CXXDefaultArgExprBits.Loc = Loc;
   }
 
@@ -1139,8 +1143,10 @@ public:
   // \p Param is the parameter whose default argument is used by this
   // expression.
   static CXXDefaultArgExpr *Create(const ASTContext &C, SourceLocation Loc,
-                                   ParmVarDecl *Param) {
-    return new (C) CXXDefaultArgExpr(CXXDefaultArgExprClass, Loc, Param);
+                                   ParmVarDecl *Param,
+                                   DeclContext *UsedContext) {
+    return new (C)
+        CXXDefaultArgExpr(CXXDefaultArgExprClass, Loc, Param, UsedContext);
   }
 
   // Retrieve the parameter that the argument was created from.
@@ -1150,6 +1156,9 @@ public:
   // Retrieve the actual argument to the function call.
   const Expr *getExpr() const { return getParam()->getDefaultArg(); }
   Expr *getExpr() { return getParam()->getDefaultArg(); }
+
+  const DeclContext *getUsedContext() const { return UsedContext; }
+  DeclContext *getUsedContext() { return UsedContext; }
 
   /// Retrieve the location where this default argument was actually used.
   SourceLocation getUsedLocation() const { return CXXDefaultArgExprBits.Loc; }
@@ -1190,8 +1199,11 @@ class CXXDefaultInitExpr : public Expr {
   /// The field whose default is being used.
   FieldDecl *Field;
 
+  /// The context where the default initializer expression was used.
+  DeclContext *UsedContext;
+
   CXXDefaultInitExpr(const ASTContext &Ctx, SourceLocation Loc,
-                     FieldDecl *Field, QualType Ty);
+                     FieldDecl *Field, QualType Ty, DeclContext *UsedContext);
 
   CXXDefaultInitExpr(EmptyShell Empty) : Expr(CXXDefaultInitExprClass, Empty) {}
 
@@ -1199,8 +1211,8 @@ public:
   /// \p Field is the non-static data member whose default initializer is used
   /// by this expression.
   static CXXDefaultInitExpr *Create(const ASTContext &Ctx, SourceLocation Loc,
-                                    FieldDecl *Field) {
-    return new (Ctx) CXXDefaultInitExpr(Ctx, Loc, Field, Field->getType());
+                                    FieldDecl *Field, DeclContext *UsedContext) {
+    return new (Ctx) CXXDefaultInitExpr(Ctx, Loc, Field, Field->getType(), UsedContext);
   }
 
   /// Get the field whose initializer will be used.
@@ -1216,6 +1228,13 @@ public:
     assert(Field->getInClassInitializer() && "initializer hasn't been parsed");
     return Field->getInClassInitializer();
   }
+
+  const DeclContext *getUsedContext() const { return UsedContext; }
+  DeclContext *getUsedContext() { return UsedContext; }
+
+  /// Retrieve the location where this default initializer expression was
+  /// actually used.
+  SourceLocation getUsedLocation() const { return getBeginLoc(); }
 
   SourceLocation getBeginLoc() const { return CXXDefaultInitExprBits.Loc; }
   SourceLocation getEndLoc() const { return CXXDefaultInitExprBits.Loc; }
@@ -4214,8 +4233,8 @@ public:
   }
 };
 
-/// Represents a reference to a function parameter pack that has been
-/// substituted but not yet expanded.
+/// Represents a reference to a function parameter pack or init-capture pack
+/// that has been substituted but not yet expanded.
 ///
 /// When a pack expansion contains multiple parameter packs at different levels,
 /// this node is used to represent a function parameter pack at an outer level
@@ -4230,13 +4249,13 @@ public:
 /// \endcode
 class FunctionParmPackExpr final
     : public Expr,
-      private llvm::TrailingObjects<FunctionParmPackExpr, ParmVarDecl *> {
+      private llvm::TrailingObjects<FunctionParmPackExpr, VarDecl *> {
   friend class ASTReader;
   friend class ASTStmtReader;
   friend TrailingObjects;
 
   /// The function parameter pack which was referenced.
-  ParmVarDecl *ParamPack;
+  VarDecl *ParamPack;
 
   /// The location of the function parameter pack reference.
   SourceLocation NameLoc;
@@ -4244,35 +4263,35 @@ class FunctionParmPackExpr final
   /// The number of expansions of this pack.
   unsigned NumParameters;
 
-  FunctionParmPackExpr(QualType T, ParmVarDecl *ParamPack,
+  FunctionParmPackExpr(QualType T, VarDecl *ParamPack,
                        SourceLocation NameLoc, unsigned NumParams,
-                       ParmVarDecl *const *Params);
+                       VarDecl *const *Params);
 
 public:
   static FunctionParmPackExpr *Create(const ASTContext &Context, QualType T,
-                                      ParmVarDecl *ParamPack,
+                                      VarDecl *ParamPack,
                                       SourceLocation NameLoc,
-                                      ArrayRef<ParmVarDecl *> Params);
+                                      ArrayRef<VarDecl *> Params);
   static FunctionParmPackExpr *CreateEmpty(const ASTContext &Context,
                                            unsigned NumParams);
 
   /// Get the parameter pack which this expression refers to.
-  ParmVarDecl *getParameterPack() const { return ParamPack; }
+  VarDecl *getParameterPack() const { return ParamPack; }
 
   /// Get the location of the parameter pack.
   SourceLocation getParameterPackLocation() const { return NameLoc; }
 
   /// Iterators over the parameters which the parameter pack expanded
   /// into.
-  using iterator = ParmVarDecl * const *;
-  iterator begin() const { return getTrailingObjects<ParmVarDecl *>(); }
+  using iterator = VarDecl * const *;
+  iterator begin() const { return getTrailingObjects<VarDecl *>(); }
   iterator end() const { return begin() + NumParameters; }
 
   /// Get the number of parameters in this parameter pack.
   unsigned getNumExpansions() const { return NumParameters; }
 
   /// Get an expansion of the parameter pack by index.
-  ParmVarDecl *getExpansion(unsigned I) const { return begin()[I]; }
+  VarDecl *getExpansion(unsigned I) const { return begin()[I]; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return NameLoc; }
   SourceLocation getEndLoc() const LLVM_READONLY { return NameLoc; }

@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Refactoring/Transformer.h"
-
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Tooling/Refactoring/RangeSelector.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -116,7 +116,8 @@ protected:
     };
   }
 
-  void testRule(RewriteRule Rule, StringRef Input, StringRef Expected) {
+  template <typename R>
+  void testRule(R Rule, StringRef Input, StringRef Expected) {
     Transformer T(std::move(Rule), consumer());
     T.registerMatchers(&MatchFinder);
     compareSnippets(Expected, rewrite(Input));
@@ -146,8 +147,8 @@ static RewriteRule ruleStrlenSize() {
                                   on(expr(hasType(isOrPointsTo(StringType)))
                                          .bind(StringExpr)),
                                   callee(cxxMethodDecl(hasName("c_str")))))),
-      change<clang::Expr>("REPLACED"));
-  R.Explanation = text("Use size() method directly on string.");
+      change(text("REPLACED")));
+  R.Cases[0].Explanation = text("Use size() method directly on string.");
   return R;
 }
 
@@ -182,7 +183,7 @@ TEST_F(TransformerTest, Flag) {
                                     hasName("proto::ProtoCommandLineFlag"))))
                                .bind(Flag)),
                         unless(callee(cxxMethodDecl(hasName("GetProto"))))),
-      change<clang::Expr>(Flag, "EXPR"));
+      change(node(Flag), text("EXPR")));
 
   std::string Input = R"cc(
     proto::ProtoCommandLineFlag flag;
@@ -200,9 +201,8 @@ TEST_F(TransformerTest, Flag) {
 
 TEST_F(TransformerTest, NodePartNameNamedDecl) {
   StringRef Fun = "fun";
-  RewriteRule Rule =
-      makeRule(functionDecl(hasName("bad")).bind(Fun),
-               change<clang::FunctionDecl>(Fun, NodePart::Name, "good"));
+  RewriteRule Rule = makeRule(functionDecl(hasName("bad")).bind(Fun),
+                              change(name(Fun), text("good")));
 
   std::string Input = R"cc(
     int bad(int x);
@@ -234,7 +234,7 @@ TEST_F(TransformerTest, NodePartNameDeclRef) {
 
   StringRef Ref = "ref";
   testRule(makeRule(declRefExpr(to(functionDecl(hasName("bad")))).bind(Ref),
-                    change<clang::Expr>(Ref, NodePart::Name, "good")),
+                    change(name(Ref), text("good"))),
            Input, Expected);
 }
 
@@ -252,7 +252,7 @@ TEST_F(TransformerTest, NodePartNameDeclRefFailure) {
 
   StringRef Ref = "ref";
   Transformer T(makeRule(declRefExpr(to(functionDecl())).bind(Ref),
-                         change<clang::Expr>(Ref, NodePart::Name, "good")),
+                         change(name(Ref), text("good"))),
                 consumer());
   T.registerMatchers(&MatchFinder);
   EXPECT_FALSE(rewrite(Input));
@@ -261,7 +261,7 @@ TEST_F(TransformerTest, NodePartNameDeclRefFailure) {
 TEST_F(TransformerTest, NodePartMember) {
   StringRef E = "expr";
   RewriteRule Rule = makeRule(memberExpr(member(hasName("bad"))).bind(E),
-                              change<clang::Expr>(E, NodePart::Member, "good"));
+                              change(member(E), text("good")));
 
   std::string Input = R"cc(
     struct S {
@@ -314,8 +314,7 @@ TEST_F(TransformerTest, NodePartMemberQualified) {
   )cc";
 
   StringRef E = "expr";
-  testRule(makeRule(memberExpr().bind(E),
-                    change<clang::Expr>(E, NodePart::Member, "good")),
+  testRule(makeRule(memberExpr().bind(E), change(member(E), text("good"))),
            Input, Expected);
 }
 
@@ -347,7 +346,7 @@ TEST_F(TransformerTest, NodePartMemberMultiToken) {
 
   StringRef MemExpr = "member";
   testRule(makeRule(memberExpr().bind(MemExpr),
-                    change<clang::Expr>(MemExpr, NodePart::Member, "good")),
+                    change(member(MemExpr), text("good"))),
            Input, Expected);
 }
 
@@ -370,9 +369,96 @@ TEST_F(TransformerTest, MultiChange) {
   StringRef C = "C", T = "T", E = "E";
   testRule(makeRule(ifStmt(hasCondition(expr().bind(C)),
                            hasThen(stmt().bind(T)), hasElse(stmt().bind(E))),
-                    {change<Expr>(C, "true"), change<Stmt>(T, "{ /* then */ }"),
-                     change<Stmt>(E, "{ /* else */ }")}),
+                    {change(node(C), text("true")),
+                     change(statement(T), text("{ /* then */ }")),
+                     change(statement(E), text("{ /* else */ }"))}),
            Input, Expected);
+}
+
+TEST_F(TransformerTest, OrderedRuleUnrelated) {
+  StringRef Flag = "flag";
+  RewriteRule FlagRule = makeRule(
+      cxxMemberCallExpr(on(expr(hasType(cxxRecordDecl(
+                                    hasName("proto::ProtoCommandLineFlag"))))
+                               .bind(Flag)),
+                        unless(callee(cxxMethodDecl(hasName("GetProto"))))),
+      change(node(Flag), text("PROTO")));
+
+  std::string Input = R"cc(
+    proto::ProtoCommandLineFlag flag;
+    int x = flag.foo();
+    int y = flag.GetProto().foo();
+    int f(string s) { return strlen(s.c_str()); }
+  )cc";
+  std::string Expected = R"cc(
+    proto::ProtoCommandLineFlag flag;
+    int x = PROTO.foo();
+    int y = flag.GetProto().foo();
+    int f(string s) { return REPLACED; }
+  )cc";
+
+  testRule(applyFirst({ruleStrlenSize(), FlagRule}), Input, Expected);
+}
+
+// Version of ruleStrlenSizeAny that inserts a method with a different name than
+// ruleStrlenSize, so we can tell their effect apart.
+RewriteRule ruleStrlenSizeDistinct() {
+  StringRef S;
+  return makeRule(
+      callExpr(callee(functionDecl(hasName("strlen"))),
+               hasArgument(0, cxxMemberCallExpr(
+                                  on(expr().bind(S)),
+                                  callee(cxxMethodDecl(hasName("c_str")))))),
+      change(text("DISTINCT")));
+}
+
+TEST_F(TransformerTest, OrderedRuleRelated) {
+  std::string Input = R"cc(
+    namespace foo {
+    struct mystring {
+      char* c_str();
+    };
+    int f(mystring s) { return strlen(s.c_str()); }
+    }  // namespace foo
+    int g(string s) { return strlen(s.c_str()); }
+  )cc";
+  std::string Expected = R"cc(
+    namespace foo {
+    struct mystring {
+      char* c_str();
+    };
+    int f(mystring s) { return DISTINCT; }
+    }  // namespace foo
+    int g(string s) { return REPLACED; }
+  )cc";
+
+  testRule(applyFirst({ruleStrlenSize(), ruleStrlenSizeDistinct()}), Input,
+           Expected);
+}
+
+// Change the order of the rules to get a different result.
+TEST_F(TransformerTest, OrderedRuleRelatedSwapped) {
+  std::string Input = R"cc(
+    namespace foo {
+    struct mystring {
+      char* c_str();
+    };
+    int f(mystring s) { return strlen(s.c_str()); }
+    }  // namespace foo
+    int g(string s) { return strlen(s.c_str()); }
+  )cc";
+  std::string Expected = R"cc(
+    namespace foo {
+    struct mystring {
+      char* c_str();
+    };
+    int f(mystring s) { return DISTINCT; }
+    }  // namespace foo
+    int g(string s) { return DISTINCT; }
+  )cc";
+
+  testRule(applyFirst({ruleStrlenSizeDistinct(), ruleStrlenSize()}), Input,
+           Expected);
 }
 
 //
@@ -388,7 +474,7 @@ TEST_F(TransformerTest, TextGeneratorFailure) {
       -> llvm::Expected<std::string> {
     return llvm::createStringError(llvm::errc::invalid_argument, "ERROR");
   };
-  Transformer T(makeRule(binaryOperator().bind(O), change<Expr>(O, AlwaysFail)),
+  Transformer T(makeRule(binaryOperator().bind(O), change(node(O), AlwaysFail)),
                 consumer());
   T.registerMatchers(&MatchFinder);
   EXPECT_FALSE(rewrite(Input));
@@ -401,10 +487,10 @@ TEST_F(TransformerTest, OverlappingEditsInRule) {
   std::string Input = "int conflictOneRule() { return 3 + 7; }";
   // Try to change the whole binary-operator expression AND one its operands:
   StringRef O = "O", L = "L";
-  Transformer T(
-      makeRule(binaryOperator(hasLHS(expr().bind(L))).bind(O),
-               {change<Expr>(O, "DELETE_OP"), change<Expr>(L, "DELETE_LHS")}),
-      consumer());
+  Transformer T(makeRule(binaryOperator(hasLHS(expr().bind(L))).bind(O),
+                         {change(node(O), text("DELETE_OP")),
+                          change(node(L), text("DELETE_LHS"))}),
+                consumer());
   T.registerMatchers(&MatchFinder);
   EXPECT_FALSE(rewrite(Input));
   EXPECT_THAT(Changes, IsEmpty());
@@ -416,7 +502,7 @@ TEST_F(TransformerTest, OverlappingEditsMultipleMatches) {
   std::string Input = "int conflictOneRule() { return -7; }";
   // Try to change the whole binary-operator expression AND one its operands:
   StringRef E = "E";
-  Transformer T(makeRule(expr().bind(E), change<Expr>(E, "DELETE_EXPR")),
+  Transformer T(makeRule(expr().bind(E), change(node(E), text("DELETE_EXPR"))),
                 consumer());
   T.registerMatchers(&MatchFinder);
   // The rewrite process fails because the changes conflict with each other...
@@ -430,7 +516,7 @@ TEST_F(TransformerTest, ErrorOccurredMatchSkipped) {
   // Syntax error in the function body:
   std::string Input = "void errorOccurred() { 3 }";
   Transformer T(makeRule(functionDecl(hasName("errorOccurred")),
-                         change<Decl>("DELETED;")),
+                         change(text("DELETED;"))),
                 consumer());
   T.registerMatchers(&MatchFinder);
   // The rewrite process itself fails...

@@ -277,7 +277,7 @@ define double @fmax_f64(<2 x double> %vec) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x double> [[VEC:%.*]], <2 x double> undef, <2 x i32> <i32 1, i32 undef>
 ; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast ogt <2 x double> [[VEC]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <2 x i1> [[RDX_MINMAX_CMP]], <2 x double> [[VEC]], <2 x double> [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select fast <2 x i1> [[RDX_MINMAX_CMP]], <2 x double> [[VEC]], <2 x double> [[RDX_SHUF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x double> [[RDX_MINMAX_SELECT]], i32 0
 ; CHECK-NEXT:    ret double [[TMP0]]
 ;
@@ -291,7 +291,7 @@ define double @fmin_f64(<2 x double> %vec) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x double> [[VEC:%.*]], <2 x double> undef, <2 x i32> <i32 1, i32 undef>
 ; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast olt <2 x double> [[VEC]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <2 x i1> [[RDX_MINMAX_CMP]], <2 x double> [[VEC]], <2 x double> [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select fast <2 x i1> [[RDX_MINMAX_CMP]], <2 x double> [[VEC]], <2 x double> [[RDX_SHUF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x double> [[RDX_MINMAX_SELECT]], i32 0
 ; CHECK-NEXT:    ret double [[TMP0]]
 ;

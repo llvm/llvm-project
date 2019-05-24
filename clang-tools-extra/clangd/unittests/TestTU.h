@@ -57,6 +57,7 @@ struct TestTU {
   std::vector<const char *> ExtraArgs;
 
   llvm::Optional<std::string> ClangTidyChecks;
+  llvm::Optional<std::string> ClangTidyWarningsAsErrors;
   // Index to use when building AST.
   const SymbolIndex *ExternalIndex = nullptr;
 

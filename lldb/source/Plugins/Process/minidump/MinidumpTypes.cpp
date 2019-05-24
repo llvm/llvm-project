@@ -68,25 +68,6 @@ MinidumpExceptionStream::Parse(llvm::ArrayRef<uint8_t> &data) {
   return exception_stream;
 }
 
-llvm::ArrayRef<MemoryDescriptor>
-minidump::ParseMemoryList(llvm::ArrayRef<uint8_t> &data) {
-  const auto orig_size = data.size();
-  const llvm::support::ulittle32_t *mem_ranges_count;
-  Status error = consumeObject(data, mem_ranges_count);
-  if (error.Fail() ||
-      *mem_ranges_count * sizeof(MemoryDescriptor) > data.size())
-    return {};
-  
-  // Compilers might end up padding an extra 4 bytes depending on how the
-  // structure is padded by the compiler and the #pragma pack settings.
-  if (4 + *mem_ranges_count * sizeof(MemoryDescriptor) < orig_size)
-    data = data.drop_front(4);
-
-  return llvm::makeArrayRef(
-      reinterpret_cast<const MemoryDescriptor *>(data.data()),
-      *mem_ranges_count);
-}
-
 std::pair<llvm::ArrayRef<MinidumpMemoryDescriptor64>, uint64_t>
 MinidumpMemoryDescriptor64::ParseMemory64List(llvm::ArrayRef<uint8_t> &data) {
   const llvm::support::ulittle64_t *mem_ranges_count;

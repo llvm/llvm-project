@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Support
+  TestingSupport
   )
 
 # By default MSVC has a 2^16 limit on the number of sections in an object file,
@@ -22,6 +23,7 @@ add_clang_unittest(ToolingTests
   LexicallyOrderedRecursiveASTVisitorTest.cpp
   LookupTest.cpp
   QualTypeNamesTest.cpp
+  RangeSelectorTest.cpp
   RecursiveASTVisitorTests/Attr.cpp
   RecursiveASTVisitorTests/Class.cpp
   RecursiveASTVisitorTests/ConstructExpr.cpp
@@ -70,3 +72,6 @@ target_link_libraries(ToolingTests
   clangToolingInclusions
   clangToolingRefactor
   )
+
+
+add_subdirectory(Syntax)

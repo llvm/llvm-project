@@ -44,7 +44,7 @@ X86ELFObjectWriter::X86ELFObjectWriter(bool IsELF64, uint8_t OSABI,
                               (EMachine != ELF::EM_386) &&
                                   (EMachine != ELF::EM_IAMCU)) {}
 
-enum X86_64RelType { RT64_64, RT64_32, RT64_32S, RT64_16, RT64_8 };
+enum X86_64RelType { RT64_NONE, RT64_64, RT64_32, RT64_32S, RT64_16, RT64_8 };
 
 static X86_64RelType getType64(unsigned Kind,
                                MCSymbolRefExpr::VariantKind &Modifier,
@@ -52,6 +52,8 @@ static X86_64RelType getType64(unsigned Kind,
   switch (Kind) {
   default:
     llvm_unreachable("Unimplemented");
+  case FK_NONE:
+    return RT64_NONE;
   case X86::reloc_global_offset_table8:
     Modifier = MCSymbolRefExpr::VK_GOT;
     IsPCRel = true;
@@ -102,6 +104,10 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
   case MCSymbolRefExpr::VK_None:
   case MCSymbolRefExpr::VK_X86_ABS8:
     switch (Type) {
+    case RT64_NONE:
+      if (Modifier == MCSymbolRefExpr::VK_None)
+        return ELF::R_X86_64_NONE;
+      llvm_unreachable("Unimplemented");
     case RT64_64:
       return IsPCRel ? ELF::R_X86_64_PC64 : ELF::R_X86_64_64;
     case RT64_32:
@@ -123,6 +129,7 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
     case RT64_32S:
     case RT64_16:
     case RT64_8:
+    case RT64_NONE:
       llvm_unreachable("Unimplemented");
     }
     llvm_unreachable("unexpected relocation type!");
@@ -140,6 +147,7 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
     case RT64_32S:
     case RT64_16:
     case RT64_8:
+    case RT64_NONE:
       llvm_unreachable("Unimplemented");
     }
     llvm_unreachable("unexpected relocation type!");
@@ -153,6 +161,7 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
     case RT64_32S:
     case RT64_16:
     case RT64_8:
+    case RT64_NONE:
       llvm_unreachable("Unimplemented");
     }
     llvm_unreachable("unexpected relocation type!");
@@ -166,6 +175,7 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
     case RT64_32S:
     case RT64_16:
     case RT64_8:
+    case RT64_NONE:
       llvm_unreachable("Unimplemented");
     }
     llvm_unreachable("unexpected relocation type!");
@@ -205,10 +215,12 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
   }
 }
 
-enum X86_32RelType { RT32_32, RT32_16, RT32_8 };
+enum X86_32RelType { RT32_NONE, RT32_32, RT32_16, RT32_8 };
 
 static X86_32RelType getType32(X86_64RelType T) {
   switch (T) {
+  case RT64_NONE:
+    return RT32_NONE;
   case RT64_64:
     llvm_unreachable("Unimplemented");
   case RT64_32:
@@ -232,6 +244,10 @@ static unsigned getRelocType32(MCContext &Ctx,
   case MCSymbolRefExpr::VK_None:
   case MCSymbolRefExpr::VK_X86_ABS8:
     switch (Type) {
+    case RT32_NONE:
+      if (Modifier == MCSymbolRefExpr::VK_None)
+        return ELF::R_386_NONE;
+      llvm_unreachable("Unimplemented");
     case RT32_32:
       return IsPCRel ? ELF::R_386_PC32 : ELF::R_386_32;
     case RT32_16:

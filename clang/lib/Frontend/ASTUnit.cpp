@@ -1304,22 +1304,22 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
                             PreambleInvocationIn.getDiagnosticOpts());
       getDiagnostics().setNumWarnings(NumWarningsInPreamble);
 
-      PreambleRebuildCounter = 1;
+      PreambleRebuildCountdown = 1;
       return MainFileBuffer;
     } else {
       Preamble.reset();
       PreambleDiagnostics.clear();
       TopLevelDeclsInPreamble.clear();
       PreambleSrcLocCache.clear();
-      PreambleRebuildCounter = 1;
+      PreambleRebuildCountdown = 1;
     }
   }
 
   // If the preamble rebuild counter > 1, it's because we previously
   // failed to build a preamble and we're not yet ready to try
   // again. Decrement the counter and return a failure.
-  if (PreambleRebuildCounter > 1) {
-    --PreambleRebuildCounter;
+  if (PreambleRebuildCountdown > 1) {
+    --PreambleRebuildCountdown;
     return nullptr;
   }
 
@@ -1328,6 +1328,8 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
   // return now.
   if (!AllowRebuild)
     return nullptr;
+
+  ++PreambleCounter;
 
   SmallVector<StandaloneDiagnostic, 4> NewPreambleDiagsStandalone;
   SmallVector<StoredDiagnostic, 4> NewPreambleDiags;
@@ -1356,18 +1358,19 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
 
     if (NewPreamble) {
       Preamble = std::move(*NewPreamble);
-      PreambleRebuildCounter = 1;
+      PreambleRebuildCountdown = 1;
     } else {
       switch (static_cast<BuildPreambleError>(NewPreamble.getError().value())) {
       case BuildPreambleError::CouldntCreateTempFile:
         // Try again next time.
-        PreambleRebuildCounter = 1;
+        PreambleRebuildCountdown = 1;
         return nullptr;
       case BuildPreambleError::CouldntCreateTargetInfo:
       case BuildPreambleError::BeginSourceFileFailed:
       case BuildPreambleError::CouldntEmitPCH:
+      case BuildPreambleError::BadInputs:
         // These erros are more likely to repeat, retry after some period.
-        PreambleRebuildCounter = DefaultPreambleRebuildInterval;
+        PreambleRebuildCountdown = DefaultPreambleRebuildInterval;
         return nullptr;
       }
       llvm_unreachable("unexpected BuildPreambleError");
@@ -1507,7 +1510,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
   AST->OnlyLocalDecls = OnlyLocalDecls;
   AST->CaptureDiagnostics = CaptureDiagnostics;
   if (PrecompilePreambleAfterNParses > 0)
-    AST->PreambleRebuildCounter = PrecompilePreambleAfterNParses;
+    AST->PreambleRebuildCountdown = PrecompilePreambleAfterNParses;
   AST->TUKind = Action ? Action->getTranslationUnitKind() : TU_Complete;
   AST->ShouldCacheCodeCompletionResults = CacheCodeCompletionResults;
   AST->IncludeBriefCommentsInCodeCompletion
@@ -1641,7 +1644,7 @@ bool ASTUnit::LoadFromCompilerInvocation(
 
   std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer;
   if (PrecompilePreambleAfterNParses > 0) {
-    PreambleRebuildCounter = PrecompilePreambleAfterNParses;
+    PreambleRebuildCountdown = PrecompilePreambleAfterNParses;
     OverrideMainBuffer =
         getMainBufferWithPrecompiledPreamble(PCHContainerOps, *Invocation, VFS);
     getDiagnostics().Reset();
@@ -1819,7 +1822,7 @@ bool ASTUnit::Reparse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   // If we have a preamble file lying around, or if we might try to
   // build a precompiled preamble, do so now.
   std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer;
-  if (Preamble || PreambleRebuildCounter > 0)
+  if (Preamble || PreambleRebuildCountdown > 0)
     OverrideMainBuffer =
         getMainBufferWithPrecompiledPreamble(PCHContainerOps, *Invocation, VFS);
 

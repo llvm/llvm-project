@@ -1712,17 +1712,19 @@ bool HexagonInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
 /// Hexagon counts the number of ##'s and adjust for that many
 /// constant exenders.
 unsigned HexagonInstrInfo::getInlineAsmLength(const char *Str,
-      const MCAsmInfo &MAI) const {
+                                              const MCAsmInfo &MAI,
+                                              const TargetSubtargetInfo *STI) const {
   StringRef AStr(Str);
   // Count the number of instructions in the asm.
   bool atInsnStart = true;
   unsigned Length = 0;
+  const unsigned MaxInstLength = MAI.getMaxInstLength(STI);
   for (; *Str; ++Str) {
     if (*Str == '\n' || strncmp(Str, MAI.getSeparatorString(),
                                 strlen(MAI.getSeparatorString())) == 0)
       atInsnStart = true;
     if (atInsnStart && !std::isspace(static_cast<unsigned char>(*Str))) {
-      Length += MAI.getMaxInstLength();
+      Length += MaxInstLength;
       atInsnStart = false;
     }
     if (atInsnStart && strncmp(Str, MAI.getCommentString().data(),

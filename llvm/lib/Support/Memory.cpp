@@ -43,8 +43,8 @@ raw_ostream &operator<<(raw_ostream &OS, const Memory::ProtectionFlags &PF) {
 
 raw_ostream &operator<<(raw_ostream &OS, const MemoryBlock &MB) {
   return OS << "[ " << MB.base() << " .. "
-            << (void *)((char *)MB.base() + MB.size()) << " ] (" << MB.size()
-            << " bytes)";
+            << (void *)((char *)MB.base() + MB.allocatedSize()) << " ] ("
+            << MB.allocatedSize() << " bytes)";
 }
 
 } // end namespace sys

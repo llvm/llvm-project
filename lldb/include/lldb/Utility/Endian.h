@@ -23,7 +23,7 @@ static union EndianTest {
 } const endianTest = {0x01020304};
 
 inline lldb::ByteOrder InlHostByteOrder() {
-  return (lldb::ByteOrder)endianTest.bytes[0];
+  return static_cast<lldb::ByteOrder>(endianTest.bytes[0]);
 }
 
 //    ByteOrder const InlHostByteOrder = (ByteOrder)endianTest.bytes[0];

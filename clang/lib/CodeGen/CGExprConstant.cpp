@@ -476,7 +476,7 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
   for (RecordDecl::field_iterator Field = RD->field_begin(),
        FieldEnd = RD->field_end(); Field != FieldEnd; ++Field, ++FieldNo) {
     // If this is a union, skip all the fields that aren't being initialized.
-    if (RD->isUnion() && Val.getUnionField() != *Field)
+    if (RD->isUnion() && !declaresSameEntity(Val.getUnionField(), *Field))
       continue;
 
     // Don't emit anonymous bitfields, they just affect layout.
@@ -882,10 +882,6 @@ public:
       return nullptr;
     }
     llvm_unreachable("Invalid CastKind");
-  }
-
-  llvm::Constant *VisitCXXDefaultArgExpr(CXXDefaultArgExpr *DAE, QualType T) {
-    return Visit(DAE->getExpr(), T);
   }
 
   llvm::Constant *VisitCXXDefaultInitExpr(CXXDefaultInitExpr *DIE, QualType T) {
@@ -1739,6 +1735,17 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     return nullptr;
   }
 
+  // Handle typeid(T).
+  if (TypeInfoLValue TI = base.dyn_cast<TypeInfoLValue>()) {
+    llvm::Type *StdTypeInfoPtrTy =
+        CGM.getTypes().ConvertType(base.getTypeInfoType())->getPointerTo();
+    llvm::Constant *TypeInfo =
+        CGM.GetAddrOfRTTIDescriptor(QualType(TI.getType(), 0));
+    if (TypeInfo->getType() != StdTypeInfoPtrTy)
+      TypeInfo = llvm::ConstantExpr::getBitCast(TypeInfo, StdTypeInfoPtrTy);
+    return TypeInfo;
+  }
+
   // Otherwise, it must be an expression.
   return Visit(base.get<const Expr*>());
 }
@@ -1853,8 +1860,10 @@ ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
 llvm::Constant *ConstantEmitter::tryEmitPrivate(const APValue &Value,
                                                 QualType DestType) {
   switch (Value.getKind()) {
-  case APValue::Uninitialized:
-    llvm_unreachable("Constant expressions should be initialized.");
+  case APValue::None:
+  case APValue::Indeterminate:
+    // Out-of-lifetime and indeterminate values can be modeled as 'undef'.
+    return llvm::UndefValue::get(CGM.getTypes().ConvertType(DestType));
   case APValue::LValue:
     return ConstantLValueEmitter(*this, Value, DestType).tryEmit();
   case APValue::Int:

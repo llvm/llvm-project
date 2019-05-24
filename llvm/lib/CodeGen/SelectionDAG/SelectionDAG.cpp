@@ -1792,7 +1792,8 @@ SDValue SelectionDAG::getLabelNode(unsigned Opcode, const SDLoc &dl,
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  auto *N = newSDNode<LabelSDNode>(dl.getIROrder(), dl.getDebugLoc(), Label);
+  auto *N =
+      newSDNode<LabelSDNode>(Opcode, dl.getIROrder(), dl.getDebugLoc(), Label);
   createOperands(N, Ops);
 
   CSEMap.InsertNode(N, IP);
@@ -5366,6 +5367,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   }
   case ISD::INSERT_SUBVECTOR: {
+    // Inserting undef into undef is still undef.
+    if (N1.isUndef() && N2.isUndef())
+      return getUNDEF(VT);
     SDValue Index = N3;
     if (VT.isSimple() && N1.getValueType().isSimple()
         && N2.getValueType().isSimple()) {
@@ -7945,9 +7949,8 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
         // DIExpression, we need to mark the expression with a
         // DW_OP_stack_value.
         auto *DIExpr = DV->getExpression();
-        DIExpr = DIExpression::prepend(DIExpr, DIExpression::NoDeref, Offset,
-                                       DIExpression::NoDeref,
-                                       DIExpression::WithStackValue);
+        DIExpr =
+            DIExpression::prepend(DIExpr, DIExpression::StackValue, Offset);
         SDDbgValue *Clone =
             getDbgValue(DV->getVariable(), DIExpr, N0.getNode(), N0.getResNo(),
                         DV->isIndirect(), DV->getDebugLoc(), DV->getOrder());

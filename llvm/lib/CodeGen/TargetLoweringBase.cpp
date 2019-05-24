@@ -623,6 +623,7 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::SSUBSAT, VT, Expand);
     setOperationAction(ISD::USUBSAT, VT, Expand);
     setOperationAction(ISD::SMULFIX, VT, Expand);
+    setOperationAction(ISD::SMULFIXSAT, VT, Expand);
     setOperationAction(ISD::UMULFIX, VT, Expand);
 
     // Overflow operations default to expand
@@ -710,6 +711,8 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::FRINT,      VT, Expand);
     setOperationAction(ISD::FTRUNC,     VT, Expand);
     setOperationAction(ISD::FROUND,     VT, Expand);
+    setOperationAction(ISD::LROUND,     VT, Expand);
+    setOperationAction(ISD::LLROUND,    VT, Expand);
   }
 
   // Default ISD::TRAP to expand (which turns it into abort).

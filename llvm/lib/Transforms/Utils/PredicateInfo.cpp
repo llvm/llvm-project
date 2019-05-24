@@ -473,7 +473,8 @@ void PredicateInfo::buildPredicateInfo() {
   }
   for (auto &Assume : AC.assumptions()) {
     if (auto *II = dyn_cast_or_null<IntrinsicInst>(Assume))
-      processAssume(II, II->getParent(), OpsToRename);
+      if (DT.isReachableFromEntry(II->getParent()))
+        processAssume(II, II->getParent(), OpsToRename);
   }
   // Now rename all our operations.
   renameUses(OpsToRename);

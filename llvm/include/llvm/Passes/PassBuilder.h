@@ -54,7 +54,7 @@ struct PGOOptions {
     // a profile.
     assert(this->CSAction != CSIRUse || this->Action == IRUse);
 
-    // If neither CSAction nor CSAction, SamplePGOSupport needs to be true.
+    // If neither Action nor CSAction, SamplePGOSupport needs to be true.
     assert(this->Action != NoAction || this->CSAction != NoCSAction ||
            this->SamplePGOSupport);
   }

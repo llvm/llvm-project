@@ -71,6 +71,10 @@ defm apply_dynamic_relocs: B<"apply-dynamic-relocs",
     "Apply link-time values for dynamic relocations",
     "Do not apply link-time values for dynamic relocations (default)">;
 
+defm dependent_libraries: B<"dependent-libraries",
+    "Process dependent library specifiers from input files (default)",
+    "Ignore dependent library specifiers from input files">;
+
 defm as_needed: B<"as-needed",
     "Only set DT_NEEDED for shared libraries if used",
     "Always set DT_NEEDED for shared libraries (default)">;

@@ -827,6 +827,79 @@ wrappers.
 The AST Library
 ===============
 
+.. _ASTPhilosophy:
+
+Design philosophy
+-----------------
+
+Immutability
+^^^^^^^^^^^^
+
+Clang AST nodes (types, declarations, statements, expressions, and so on) are
+generally designed to be immutable once created. This provides a number of key
+benefits:
+
+  * Canonicalization of the "meaning" of nodes is possible as soon as the nodes
+    are created, and is not invalidated by later addition of more information.
+    For example, we :ref:`canonicalize types <CanonicalType>`, and use a
+    canonicalized representation of expressions when determining whether two
+    function template declarations involving dependent expressions declare the
+    same entity.
+  * AST nodes can be reused when they have the same meaning. For example, we
+    reuse ``Type`` nodes when representing the same type (but maintain separate
+    ``TypeLoc``\s for each instance where a type is written), and we reuse
+    non-dependent ``Stmt`` and ``Expr`` nodes across instantiations of a
+    template.
+  * Serialization and deserialization of the AST to/from AST files is simpler:
+    we do not need to track modifications made to AST nodes imported from AST
+    files and serialize separate "update records".
+
+There are unfortunately exceptions to this general approach, such as:
+
+  * A the first declaration of a redeclarable entity maintains a pointer to the
+    most recent declaration of that entity, which naturally needs to change as
+    more declarations are parsed.
+  * Name lookup tables in declaration contexts change after the namespace
+    declaration is formed.
+  * We attempt to maintain only a single declaration for an instantiation of a
+    template, rather than having distinct declarations for an instantiation of
+    the declaration versus the definition, so template instantiation often
+    updates parts of existing declarations.
+  * Some parts of declarations are required to be instantiated separately (this
+    includes default arguments and exception specifications), and such
+    instantiations update the existing declaration.
+
+These cases tend to be fragile; mutable AST state should be avoided where
+possible.
+
+As a consequence of this design principle, we typically do not provide setters
+for AST state. (Some are provided for short-term modifications intended to be
+used immediately after an AST node is created and before it's "published" as
+part of the complete AST, or where language semantics require after-the-fact
+updates.)
+
+Faithfulness
+^^^^^^^^^^^^
+
+The AST intends to provide a representation of the program that is faithful to
+the original source. We intend for it to be possible to write refactoring tools
+using only information stored in, or easily reconstructible from, the Clang AST.
+This means that the AST representation should either not desugar source-level
+constructs to simpler forms, or -- where made necessary by language semantics
+or a clear engineering tradeoff -- should desugar minimally and wrap the result
+in a construct representing the original source form.
+
+For example, ``CXXForRangeStmt`` directly represents the syntactic form of a
+range-based for statement, but also holds a semantic representation of the
+range declaration and iterator declarations. It does not contain a
+fully-desugared ``ForStmt``, however.
+
+Some AST nodes (for example, ``ParenExpr``) represent only syntax, and others
+(for example, ``ImplicitCastExpr``) represent only semantics, but most nodes
+will represent a combination of syntax and associated semantics. Inheritance
+is typically used when representing different (but related) syntaxes for nodes
+with the same or similar semantics.
+
 .. _Type:
 
 The ``Type`` class and its subclasses
@@ -888,6 +961,8 @@ with this: first, various semantic checks need to make judgements about the
 way to query whether two types are structurally identical to each other,
 ignoring typedefs.  The solution to both of these problems is the idea of
 canonical types.
+
+.. _CanonicalType:
 
 Canonical Types
 ^^^^^^^^^^^^^^^
@@ -1149,6 +1224,10 @@ the source code.  In the semantics-centric view, only the most recent "``f``"
 will be found by the lookup, since it effectively replaces the first
 declaration of "``f``".
 
+(Note that because ``f`` can be redeclared at block scope, or in a friend
+declaration, etc. it is possible that the declaration of ``f`` found by name
+lookup will not be the most recent one.)
+
 In the semantics-centric view, overloading of functions is represented
 explicitly.  For example, given two declarations of a function "``g``" that are
 overloaded, e.g.,
@@ -1313,7 +1392,7 @@ The transparent ``DeclContext``\ s are:
 Multiply-Defined Declaration Contexts
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-C++ namespaces have the interesting --- and, so far, unique --- property that
+C++ namespaces have the interesting property that
 the namespace can be defined multiple times, and the declarations provided by
 each namespace definition are effectively merged (from the semantic point of
 view).  For example, the following two code snippets are semantically
@@ -1352,6 +1431,18 @@ this context (which will be the only result, for non-namespace contexts) via
 ``DeclContext::collectAllContexts``. Note that these functions are used
 internally within the lookup and insertion methods of the ``DeclContext``, so
 the vast majority of clients can ignore them.
+
+Because the same entity can be defined multiple times in different modules,
+it is also possible for there to be multiple definitions of (for instance)
+a ``CXXRecordDecl``, all of which describe a definition of the same class.
+In such a case, only one of those "definitions" is considered by Clang to be
+the definiition of the class, and the others are treated as non-defining
+declarations that happen to also contain member declarations. Corresponding
+members in each definition of such multiply-defined classes are identified
+either by redeclaration chains (if the members are ``Redeclarable``)
+or by simply a pointer to the canonical declaration (if the declarations
+are not ``Redeclarable`` -- in that case, a ``Mergeable`` base class is used
+instead).
 
 .. _CFG:
 

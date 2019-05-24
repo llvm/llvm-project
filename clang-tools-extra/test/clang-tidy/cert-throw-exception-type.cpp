@@ -1,4 +1,6 @@
-// RUN: %check_clang_tidy %s cert-err60-cpp %t -- -- -std=c++11 -fcxx-exceptions
+// RUN: %check_clang_tidy -std=c++11,c++14 %s cert-err60-cpp %t -- -- -fcxx-exceptions
+// FIXME: Split off parts of this test that rely on dynamic exeption
+// specifications, and run this test in all language modes.
 
 struct S {};
 struct T : S {};

@@ -1,6 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-use-default-member-init %t -- \
-// RUN:   -config="{CheckOptions: [{key: modernize-use-default-member-init.IgnoreMacros, value: 0}]}" \
-// RUN:   -- -std=c++11
+// RUN:   -config="{CheckOptions: [{key: modernize-use-default-member-init.IgnoreMacros, value: 0}]}"
 
 #define MACRO() \
   struct S { \

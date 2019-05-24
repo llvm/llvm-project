@@ -14,9 +14,9 @@ NUMNOT-NOT: Numeric value = [[#NUMVAL]]
 
 NUMERRMSG: defines.txt:[[#@LINE-3]]:11: error: CHECKNUM: expected string not found in input
 NUMERRMSG: defines.txt:1:1: note: scanning from here
-NUMERRMSG: defines.txt:1:1: note: with numeric expression "NUMVAL" equal to "8"
+NUMERRMSG: defines.txt:1:1: note: with "NUMVAL" equal to "8"
 NUMERRMSG: defines.txt:[[#@LINE-7]]:1: note: possible intended match here
 
 NOT-NUMERRMSG: defines.txt:[[#@LINE-7]]:13: error: {{NUMNOT}}-NOT: excluded string found in input
 NOT-NUMERRMSG: defines.txt:[[#@LINE-10]]:1: note: found here
-NOT-NUMERRMSG: defines.txt:[[#@LINE-11]]:1: note: with numeric expression "NUMVAL" equal to "12"
+NOT-NUMERRMSG: defines.txt:[[#@LINE-11]]:1: note: with "NUMVAL" equal to "12"

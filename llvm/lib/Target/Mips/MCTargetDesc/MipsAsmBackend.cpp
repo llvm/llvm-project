@@ -302,7 +302,7 @@ void MipsAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 
 Optional<MCFixupKind> MipsAsmBackend::getFixupKind(StringRef Name) const {
   return StringSwitch<Optional<MCFixupKind>>(Name)
-      .Case("R_MIPS_NONE", (MCFixupKind)Mips::fixup_Mips_NONE)
+      .Case("R_MIPS_NONE", FK_NONE)
       .Case("R_MIPS_32", FK_Data_4)
       .Case("R_MIPS_GOT_PAGE", (MCFixupKind)Mips::fixup_Mips_GOT_PAGE)
       .Case("R_MIPS_CALL_HI16", (MCFixupKind)Mips::fixup_Mips_CALL_HI16)
@@ -350,7 +350,6 @@ getFixupKindInfo(MCFixupKind Kind) const {
     // MipsFixupKinds.h.
     //
     // name                    offset  bits  flags
-    { "fixup_Mips_NONE",         0,      0,   0 },
     { "fixup_Mips_16",           0,     16,   0 },
     { "fixup_Mips_32",           0,     32,   0 },
     { "fixup_Mips_REL32",        0,     32,   0 },
@@ -430,7 +429,6 @@ getFixupKindInfo(MCFixupKind Kind) const {
     // MipsFixupKinds.h.
     //
     // name                    offset  bits  flags
-    { "fixup_Mips_NONE",         0,      0,   0 },
     { "fixup_Mips_16",          16,     16,   0 },
     { "fixup_Mips_32",           0,     32,   0 },
     { "fixup_Mips_REL32",        0,     32,   0 },

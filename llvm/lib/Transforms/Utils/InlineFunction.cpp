@@ -1351,6 +1351,44 @@ static bool allocaWouldBeStaticInEntry(const AllocaInst *AI ) {
   return isa<Constant>(AI->getArraySize()) && !AI->isUsedWithInAlloca();
 }
 
+/// Returns a DebugLoc for a new DILocation which is a clone of \p OrigDL
+/// inlined at \p InlinedAt. \p IANodes is an inlined-at cache.
+static DebugLoc inlineDebugLoc(DebugLoc OrigDL, DILocation *InlinedAt,
+                               LLVMContext &Ctx,
+                               DenseMap<const MDNode *, MDNode *> &IANodes) {
+  auto IA = DebugLoc::appendInlinedAt(OrigDL, InlinedAt, Ctx, IANodes);
+  return DebugLoc::get(OrigDL.getLine(), OrigDL.getCol(), OrigDL.getScope(),
+                       IA);
+}
+
+/// Returns the LoopID for a loop which has has been cloned from another
+/// function for inlining with the new inlined-at start and end locs.
+static MDNode *inlineLoopID(const MDNode *OrigLoopId, DILocation *InlinedAt,
+                            LLVMContext &Ctx,
+                            DenseMap<const MDNode *, MDNode *> &IANodes) {
+  assert(OrigLoopId && OrigLoopId->getNumOperands() > 0 &&
+         "Loop ID needs at least one operand");
+  assert(OrigLoopId && OrigLoopId->getOperand(0).get() == OrigLoopId &&
+         "Loop ID should refer to itself");
+
+  // Save space for the self-referential LoopID.
+  SmallVector<Metadata *, 4> MDs = {nullptr};
+
+  for (unsigned i = 1; i < OrigLoopId->getNumOperands(); ++i) {
+    Metadata *MD = OrigLoopId->getOperand(i);
+    // Update the DILocations to encode the inlined-at metadata.
+    if (DILocation *DL = dyn_cast<DILocation>(MD))
+      MDs.push_back(inlineDebugLoc(DL, InlinedAt, Ctx, IANodes));
+    else
+      MDs.push_back(MD);
+  }
+
+  MDNode *NewLoopID = MDNode::getDistinct(Ctx, MDs);
+  // Insert the self-referential LoopID.
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+  return NewLoopID;
+}
+
 /// Update inlined instructions' line numbers to
 /// to encode location where these instructions are inlined.
 static void fixupLineNumbers(Function *Fn, Function::iterator FI,
@@ -1376,10 +1414,17 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
   for (; FI != Fn->end(); ++FI) {
     for (BasicBlock::iterator BI = FI->begin(), BE = FI->end();
          BI != BE; ++BI) {
+      // Loop metadata needs to be updated so that the start and end locs
+      // reference inlined-at locations.
+      if (MDNode *LoopID = BI->getMetadata(LLVMContext::MD_loop)) {
+        MDNode *NewLoopID =
+            inlineLoopID(LoopID, InlinedAtNode, BI->getContext(), IANodes);
+        BI->setMetadata(LLVMContext::MD_loop, NewLoopID);
+      }
+
       if (DebugLoc DL = BI->getDebugLoc()) {
-        auto IA = DebugLoc::appendInlinedAt(DL, InlinedAtNode, BI->getContext(),
-                                            IANodes);
-        auto IDL = DebugLoc::get(DL.getLine(), DL.getCol(), DL.getScope(), IA);
+        DebugLoc IDL =
+            inlineDebugLoc(DL, InlinedAtNode, BI->getContext(), IANodes);
         BI->setDebugLoc(IDL);
         continue;
       }
@@ -1817,8 +1862,7 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     // Move any dbg.declares describing the allocas into the entry basic block.
     DIBuilder DIB(*Caller->getParent());
     for (auto &AI : IFI.StaticAllocas)
-      replaceDbgDeclareForAlloca(AI, AI, DIB, DIExpression::NoDeref, 0,
-                                 DIExpression::NoDeref);
+      replaceDbgDeclareForAlloca(AI, AI, DIB, DIExpression::ApplyOffset, 0);
   }
 
   SmallVector<Value*,4> VarArgsToForward;

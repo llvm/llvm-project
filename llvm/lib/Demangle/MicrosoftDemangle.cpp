@@ -2175,8 +2175,10 @@ Demangler::demangleTemplateParameterList(StringView &MangledName) {
       SymbolNode *S = nullptr;
       if (MangledName.startsWith('?')) {
         S = parse(MangledName);
-        if (Error)
+        if (Error || !S->Name) {
+          Error = true;
           return nullptr;
+        }
         memorizeIdentifier(S->Name->getUnqualifiedIdentifier());
       }
 

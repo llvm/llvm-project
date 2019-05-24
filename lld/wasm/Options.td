@@ -85,6 +85,8 @@ defm print_gc_sections: B<"print-gc-sections",
 
 def relocatable: F<"relocatable">, HelpText<"Create relocatable object file">;
 
+defm reproduce: Eq<"reproduce", "Dump linker invocation and input files for debugging">;
+
 def shared: F<"shared">, HelpText<"Build a shared object">;
 
 def strip_all: F<"strip-all">, HelpText<"Strip all symbols">;

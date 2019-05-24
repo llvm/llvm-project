@@ -55,7 +55,7 @@ extern std::unique_ptr<llvm::TarWriter> Tar;
 llvm::Optional<MemoryBufferRef> readFile(StringRef Path);
 
 // Add symbols in File to the symbol table.
-template <class ELFT> void parseFile(InputFile *File);
+void parseFile(InputFile *File);
 
 // The root class of input files.
 class InputFile {
@@ -187,9 +187,6 @@ template <class ELFT> class ObjFile : public ELFFileBase {
   using Elf_Word = typename ELFT::Word;
   using Elf_CGProfile = typename ELFT::CGProfile;
 
-  StringRef getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
-                                 const Elf_Shdr &Sec);
-
 public:
   static bool classof(const InputFile *F) { return F->kind() == ObjKind; }
 
@@ -201,7 +198,11 @@ public:
   ArrayRef<Symbol *> getGlobalSymbols();
 
   ObjFile(MemoryBufferRef M, StringRef ArchiveName);
-  void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
+  void parse(llvm::DenseMap<llvm::CachedHashStringRef, const InputFile *>
+                 &ComdatGroups);
+
+  StringRef getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
+                                 const Elf_Shdr &Sec);
 
   Symbol &getSymbol(uint32_t SymbolIndex) const {
     if (SymbolIndex >= this->Symbols.size())
@@ -237,10 +238,6 @@ public:
   // but had one or more functions with the no_split_stack attribute.
   bool SomeNoSplitStack = false;
 
-  // True if the file has any live Regular or Merge sections that aren't
-  // the LDSA section.
-  bool HasLiveCodeOrData = false;
-
   // Pointer to this input file's .llvm_addrsig section, if it has one.
   const Elf_Shdr *AddrsigSec = nullptr;
 
@@ -248,8 +245,8 @@ public:
   ArrayRef<Elf_CGProfile> CGProfile;
 
 private:
-  void
-  initializeSections(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
+  void initializeSections(llvm::DenseMap<llvm::CachedHashStringRef,
+                                         const InputFile *> &ComdatGroups);
   void initializeSymbols();
   void initializeJustSymbols();
   void initializeDwarf();
@@ -323,7 +320,7 @@ class ArchiveFile : public InputFile {
 public:
   explicit ArchiveFile(std::unique_ptr<Archive> &&File);
   static bool classof(const InputFile *F) { return F->kind() == ArchiveKind; }
-  template <class ELFT> void parse();
+  void parse();
 
   // Pulls out an object file that contains a definition for Sym and
   // returns it. If the same file was instantiated before, this
@@ -342,7 +339,8 @@ public:
               uint64_t OffsetInArchive);
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
   template <class ELFT>
-  void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
+  void parse(llvm::DenseMap<llvm::CachedHashStringRef, const InputFile *>
+                 &ComdatGroups);
   std::unique_ptr<llvm::lto::InputFile> Obj;
 };
 

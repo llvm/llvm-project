@@ -49,3 +49,82 @@ bb:
 }
 
 @run.bb = global [1 x i8*] zeroinitializer
+
+; Check that a function referenced by a global blockaddress wont be inlined,
+; even if it contains a callbr. We might be able to relax this in the future
+; as long as the global blockaddress is updated correctly.
+@ba = internal global i8* blockaddress(@foo, %7), align 8
+define internal i32 @foo(i32) {
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  store i32 %0, i32* %3, align 4
+  %4 = load i32, i32* %3, align 4
+  callbr void asm sideeffect "testl $0, $0; jne ${1:l};", "r,X,X,~{dirflag},~{fpsr},~{flags}"(i32 %4, i8* blockaddress(@foo, %7), i8* blockaddress(@foo, %6)) #1
+          to label %5 [label %7, label %6]
+
+; <label>:5:                                      ; preds = %1
+  store i32 0, i32* %2, align 4
+  br label %8
+
+; <label>:6:                                      ; preds = %1
+  store i32 1, i32* %2, align 4
+  br label %8
+
+; <label>:7:                                      ; preds = %1
+  store i32 2, i32* %2, align 4
+  br label %8
+
+; <label>:8:                                      ; preds = %7, %6, %5
+  %9 = load i32, i32* %2, align 4
+  ret i32 %9
+}
+define dso_local i32 @bar() {
+  %1 = call i32 @foo(i32 0)
+  ret i32 %1
+}
+
+; CHECK: define dso_local i32 @bar() {
+; CHECK:   %1 = call i32 @foo(i32 0)
+; CHECK:   ret i32 %1
+; CHECK: }
+
+; Triple check that even with a global aggregate whose member is a blockaddress,
+; we still don't inline referred to functions.
+
+%struct.foo = type { i8* }
+
+@my_foo = dso_local global %struct.foo { i8* blockaddress(@baz, %7) }
+
+define internal i32 @baz(i32) {
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  store i32 %0, i32* %3, align 4
+  %4 = load i32, i32* %3, align 4
+  callbr void asm sideeffect "testl $0, $0; jne ${1:l};", "r,X,X,~{dirflag},~{fpsr},~{flags}"(i32 %4, i8* blockaddress(@baz, %7), i8* blockaddress(@baz, %6)) #1
+          to label %5 [label %7, label %6]
+
+; <label>:5:                                      ; preds = %1
+  store i32 0, i32* %2, align 4
+  br label %8
+
+; <label>:6:                                      ; preds = %1
+  store i32 1, i32* %2, align 4
+  br label %8
+
+; <label>:7:                                      ; preds = %1
+  store i32 2, i32* %2, align 4
+  br label %8
+
+; <label>:8:                                      ; preds = %7, %6, %5
+  %9 = load i32, i32* %2, align 4
+  ret i32 %9
+}
+define dso_local i32 @quux() {
+  %1 = call i32 @baz(i32 0)
+  ret i32 %1
+}
+
+; CHECK: define dso_local i32 @quux() {
+; CHECK:   %1 = call i32 @baz(i32 0)
+; CHECK:   ret i32 %1
+; CHECK: }

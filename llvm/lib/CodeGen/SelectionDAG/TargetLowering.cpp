@@ -1739,6 +1739,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(SDValue Op,
     DCI.AddToWorklist(Op.getNode());
     DCI.CommitTargetLoweringOpt(TLO);
   }
+
   return Simplified;
 }
 
@@ -3561,7 +3562,16 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
         return;
       } else if ((C = dyn_cast<ConstantSDNode>(Op)) &&
                  ConstraintLetter != 's') {
-        Ops.push_back(DAG.getTargetConstant(Offset + C->getSExtValue(),
+        // gcc prints these as sign extended.  Sign extend value to 64 bits
+        // now; without this it would get ZExt'd later in
+        // ScheduleDAGSDNodes::EmitNode, which is very generic.
+        bool IsBool = C->getConstantIntValue()->getBitWidth() == 1;
+        BooleanContent BCont = getBooleanContents(MVT::i64);
+        ISD::NodeType ExtOpc = IsBool ? getExtendForContent(BCont)
+                                      : ISD::SIGN_EXTEND;
+        int64_t ExtVal = ExtOpc == ISD::ZERO_EXTEND ? C->getZExtValue()
+                                                    : C->getSExtValue();
+        Ops.push_back(DAG.getTargetConstant(Offset + ExtVal,
                                             SDLoc(C), MVT::i64));
         return;
       } else {
@@ -5695,25 +5705,42 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
 SDValue
 TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
   assert((Node->getOpcode() == ISD::SMULFIX ||
-          Node->getOpcode() == ISD::UMULFIX) &&
-         "Expected opcode to be SMULFIX or UMULFIX.");
+          Node->getOpcode() == ISD::UMULFIX ||
+          Node->getOpcode() == ISD::SMULFIXSAT) &&
+         "Expected a fixed point multiplication opcode");
 
   SDLoc dl(Node);
   SDValue LHS = Node->getOperand(0);
   SDValue RHS = Node->getOperand(1);
   EVT VT = LHS.getValueType();
   unsigned Scale = Node->getConstantOperandVal(2);
+  bool Saturating = Node->getOpcode() == ISD::SMULFIXSAT;
+  EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  unsigned VTSize = VT.getScalarSizeInBits();
 
-  // [us]mul.fix(a, b, 0) -> mul(a, b)
   if (!Scale) {
-    if (VT.isVector() && !isOperationLegalOrCustom(ISD::MUL, VT))
-      return SDValue();
-    return DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
+    // [us]mul.fix(a, b, 0) -> mul(a, b)
+    if (!Saturating && isOperationLegalOrCustom(ISD::MUL, VT)) {
+      return DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
+    } else if (Saturating && isOperationLegalOrCustom(ISD::SMULO, VT)) {
+      SDValue Result =
+          DAG.getNode(ISD::SMULO, dl, DAG.getVTList(VT, BoolVT), LHS, RHS);
+      SDValue Product = Result.getValue(0);
+      SDValue Overflow = Result.getValue(1);
+      SDValue Zero = DAG.getConstant(0, dl, VT);
+
+      APInt MinVal = APInt::getSignedMinValue(VTSize);
+      APInt MaxVal = APInt::getSignedMaxValue(VTSize);
+      SDValue SatMin = DAG.getConstant(MinVal, dl, VT);
+      SDValue SatMax = DAG.getConstant(MaxVal, dl, VT);
+      SDValue ProdNeg = DAG.getSetCC(dl, BoolVT, Product, Zero, ISD::SETLT);
+      Result = DAG.getSelect(dl, VT, ProdNeg, SatMax, SatMin);
+      return DAG.getSelect(dl, VT, Overflow, Result, Product);
+    }
   }
 
-  unsigned VTSize = VT.getScalarSizeInBits();
-  bool Signed = Node->getOpcode() == ISD::SMULFIX;
-
+  bool Signed =
+      Node->getOpcode() == ISD::SMULFIX || Node->getOpcode() == ISD::SMULFIXSAT;
   assert(((Signed && Scale < VTSize) || (!Signed && Scale <= VTSize)) &&
          "Expected scale to be less than the number of bits if signed or at "
          "most the number of bits if unsigned.");
@@ -5746,8 +5773,99 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
   // are scaled. The result is given to us in 2 halves, so we only want part of
   // both in the result.
   EVT ShiftTy = getShiftAmountTy(VT, DAG.getDataLayout());
-  return DAG.getNode(ISD::FSHR, dl, VT, Hi, Lo,
-                     DAG.getConstant(Scale, dl, ShiftTy));
+  SDValue Result = DAG.getNode(ISD::FSHR, dl, VT, Hi, Lo,
+                               DAG.getConstant(Scale, dl, ShiftTy));
+  if (!Saturating)
+    return Result;
+
+  unsigned OverflowBits = VTSize - Scale + 1; // +1 for the sign
+  SDValue HiMask =
+      DAG.getConstant(APInt::getHighBitsSet(VTSize, OverflowBits), dl, VT);
+  SDValue LoMask = DAG.getConstant(
+      APInt::getLowBitsSet(VTSize, VTSize - OverflowBits), dl, VT);
+  APInt MaxVal = APInt::getSignedMaxValue(VTSize);
+  APInt MinVal = APInt::getSignedMinValue(VTSize);
+
+  Result = DAG.getSelectCC(dl, Hi, LoMask,
+                           DAG.getConstant(MaxVal, dl, VT), Result,
+                           ISD::SETGT);
+  return DAG.getSelectCC(dl, Hi, HiMask,
+                         DAG.getConstant(MinVal, dl, VT), Result,
+                         ISD::SETLT);
+}
+
+void TargetLowering::expandUADDSUBO(
+    SDNode *Node, SDValue &Result, SDValue &Overflow, SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+  bool IsAdd = Node->getOpcode() == ISD::UADDO;
+
+  // If ADD/SUBCARRY is legal, use that instead.
+  unsigned OpcCarry = IsAdd ? ISD::ADDCARRY : ISD::SUBCARRY;
+  if (isOperationLegalOrCustom(OpcCarry, Node->getValueType(0))) {
+    SDValue CarryIn = DAG.getConstant(0, dl, Node->getValueType(1));
+    SDValue NodeCarry = DAG.getNode(OpcCarry, dl, Node->getVTList(),
+                                    { LHS, RHS, CarryIn });
+    Result = SDValue(NodeCarry.getNode(), 0);
+    Overflow = SDValue(NodeCarry.getNode(), 1);
+    return;
+  }
+
+  Result = DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, dl,
+                            LHS.getValueType(), LHS, RHS);
+
+  EVT ResultType = Node->getValueType(1);
+  EVT SetCCType = getSetCCResultType(
+      DAG.getDataLayout(), *DAG.getContext(), Node->getValueType(0));
+  ISD::CondCode CC = IsAdd ? ISD::SETULT : ISD::SETUGT;
+  SDValue SetCC = DAG.getSetCC(dl, SetCCType, Result, LHS, CC);
+  Overflow = DAG.getBoolExtOrTrunc(SetCC, dl, ResultType, ResultType);
+}
+
+void TargetLowering::expandSADDSUBO(
+    SDNode *Node, SDValue &Result, SDValue &Overflow, SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+  bool IsAdd = Node->getOpcode() == ISD::SADDO;
+
+  Result = DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, dl,
+                            LHS.getValueType(), LHS, RHS);
+
+  EVT ResultType = Node->getValueType(1);
+  EVT OType = getSetCCResultType(
+      DAG.getDataLayout(), *DAG.getContext(), Node->getValueType(0));
+
+  // If SADDSAT/SSUBSAT is legal, compare results to detect overflow.
+  unsigned OpcSat = IsAdd ? ISD::SADDSAT : ISD::SSUBSAT;
+  if (isOperationLegalOrCustom(OpcSat, LHS.getValueType())) {
+    SDValue Sat = DAG.getNode(OpcSat, dl, LHS.getValueType(), LHS, RHS);
+    SDValue SetCC = DAG.getSetCC(dl, OType, Result, Sat, ISD::SETNE);
+    Overflow = DAG.getBoolExtOrTrunc(SetCC, dl, ResultType, ResultType);
+    return;
+  }
+
+  SDValue Zero = DAG.getConstant(0, dl, LHS.getValueType());
+
+  //   LHSSign -> LHS >= 0
+  //   RHSSign -> RHS >= 0
+  //   SumSign -> Result >= 0
+  //
+  //   Add:
+  //   Overflow -> (LHSSign == RHSSign) && (LHSSign != SumSign)
+  //   Sub:
+  //   Overflow -> (LHSSign != RHSSign) && (LHSSign != SumSign)
+  SDValue LHSSign = DAG.getSetCC(dl, OType, LHS, Zero, ISD::SETGE);
+  SDValue RHSSign = DAG.getSetCC(dl, OType, RHS, Zero, ISD::SETGE);
+  SDValue SignsMatch = DAG.getSetCC(dl, OType, LHSSign, RHSSign,
+                                    IsAdd ? ISD::SETEQ : ISD::SETNE);
+
+  SDValue SumSign = DAG.getSetCC(dl, OType, Result, Zero, ISD::SETGE);
+  SDValue SumSignNE = DAG.getSetCC(dl, OType, LHSSign, SumSign, ISD::SETNE);
+
+  SDValue Cmp = DAG.getNode(ISD::AND, dl, OType, SignsMatch, SumSignNE);
+  Overflow = DAG.getBoolExtOrTrunc(Cmp, dl, ResultType, ResultType);
 }
 
 bool TargetLowering::expandMULO(SDNode *Node, SDValue &Result,
@@ -5846,7 +5964,7 @@ bool TargetLowering::expandMULO(SDNode *Node, SDValue &Result,
     // being a legal type for the architecture and thus has to be split to
     // two arguments.
     SDValue Ret;
-    if (DAG.getDataLayout().isLittleEndian()) {
+    if (shouldSplitFunctionArgumentsAsLittleEndian(DAG.getDataLayout())) {
       // Halves of WideVT are packed into registers in different order
       // depending on platform endianness. This is usually handled by
       // the C calling convention, but we can't defer to it in

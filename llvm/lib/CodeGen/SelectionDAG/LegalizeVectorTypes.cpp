@@ -183,6 +183,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
     R = ScalarizeVecRes_OverflowOp(N, ResNo);
     break;
   case ISD::SMULFIX:
+  case ISD::SMULFIXSAT:
   case ISD::UMULFIX:
     R = ScalarizeVecRes_MULFIX(N);
     break;
@@ -971,6 +972,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     SplitVecRes_OverflowOp(N, ResNo, Lo, Hi);
     break;
   case ISD::SMULFIX:
+  case ISD::SMULFIXSAT:
   case ISD::UMULFIX:
     SplitVecRes_MULFIX(N, Lo, Hi);
     break;
@@ -4216,6 +4218,24 @@ SDValue DAGTypeLegalizer::WidenVecOp_BITCAST(SDNode *N) {
       return DAG.getNode(
           ISD::EXTRACT_VECTOR_ELT, dl, VT, BitOp,
           DAG.getConstant(0, dl, TLI.getVectorIdxTy(DAG.getDataLayout())));
+    }
+  }
+
+  // Handle a case like bitcast v12i8 -> v3i32. Normally that would get widened
+  // to v16i8 -> v4i32, but for a target where v3i32 is legal but v12i8 is not,
+  // we end up here. Handling the case here with EXTRACT_SUBVECTOR avoids
+  // having to copy via memory.
+  if (VT.isVector()) {
+    EVT EltVT = VT.getVectorElementType();
+    unsigned EltSize = EltVT.getSizeInBits();
+    if (InWidenSize % EltSize == 0) {
+      unsigned NewNumElts = InWidenSize / EltSize;
+      EVT NewVT = EVT::getVectorVT(*DAG.getContext(), EltVT, NewNumElts);
+      if (TLI.isTypeLegal(NewVT)) {
+        SDValue BitOp = DAG.getNode(ISD::BITCAST, dl, NewVT, InOp);
+        return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, BitOp,
+            DAG.getConstant(0, dl, TLI.getVectorIdxTy(DAG.getDataLayout())));
+      }
     }
   }
 

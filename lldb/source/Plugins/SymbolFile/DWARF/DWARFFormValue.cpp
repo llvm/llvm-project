@@ -8,11 +8,14 @@
 
 #include <assert.h>
 
+#include "lldb/Core/Module.h"
 #include "lldb/Core/dwarf.h"
+#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/Stream.h"
 
-#include "DWARFUnit.h"
+#include "DWARFDebugInfo.h"
 #include "DWARFFormValue.h"
+#include "DWARFUnit.h"
 
 class DWARFUnit;
 
@@ -489,7 +492,8 @@ const char *DWARFFormValue::AsCString() const {
     if (!symbol_file)
       return nullptr;
 
-    return symbol_file->get_debug_str_data().PeekCStr(m_value.value.uval);
+    return symbol_file->GetDWARFContext().getOrLoadStrData().PeekCStr(
+        m_value.value.uval);
   } else if (m_form == DW_FORM_GNU_str_index) {
     if (!symbol_file)
       return nullptr;
@@ -497,9 +501,10 @@ const char *DWARFFormValue::AsCString() const {
     uint32_t index_size = 4;
     lldb::offset_t offset = m_value.value.uval * index_size;
     dw_offset_t str_offset =
-        symbol_file->get_debug_str_offsets_data().GetMaxU64(&offset,
-                                                            index_size);
-    return symbol_file->get_debug_str_data().PeekCStr(str_offset);
+        symbol_file->GetDWARFContext().getOrLoadStrOffsetsData().GetMaxU64(
+            &offset, index_size);
+    return symbol_file->GetDWARFContext().getOrLoadStrData().PeekCStr(
+        str_offset);
   }
 
   if (m_form == DW_FORM_strx || m_form == DW_FORM_strx1 ||
@@ -514,12 +519,15 @@ const char *DWARFFormValue::AsCString() const {
     lldb::offset_t offset =
         m_unit->GetStrOffsetsBase() + m_value.value.uval * indexSize;
     dw_offset_t strOffset =
-        symbol_file->get_debug_str_offsets_data().GetMaxU64(&offset, indexSize);
-    return symbol_file->get_debug_str_data().PeekCStr(strOffset);
+        symbol_file->GetDWARFContext().getOrLoadStrOffsetsData().GetMaxU64(
+            &offset, indexSize);
+    return symbol_file->GetDWARFContext().getOrLoadStrData().PeekCStr(
+        strOffset);
   }
 
   if (m_form == DW_FORM_line_strp)
-    return symbol_file->get_debug_line_str_data().PeekCStr(m_value.value.uval);
+    return symbol_file->GetDWARFContext().getOrLoadLineStrData().PeekCStr(
+        m_value.value.uval);
 
   return nullptr;
 }
@@ -541,10 +549,11 @@ dw_addr_t DWARFFormValue::Address() const {
   uint32_t index_size = m_unit->GetAddressByteSize();
   dw_offset_t addr_base = m_unit->GetAddrBase();
   lldb::offset_t offset = addr_base + m_value.value.uval * index_size;
-  return symbol_file->get_debug_addr_data().GetMaxU64(&offset, index_size);
+  return symbol_file->GetDWARFContext().getOrLoadAddrData().GetMaxU64(
+      &offset, index_size);
 }
 
-uint64_t DWARFFormValue::Reference() const {
+DWARFDIE DWARFFormValue::Reference() const {
   uint64_t value = m_value.value.uval;
   switch (m_form) {
   case DW_FORM_ref1:
@@ -554,15 +563,30 @@ uint64_t DWARFFormValue::Reference() const {
   case DW_FORM_ref_udata:
     assert(m_unit); // Unit must be valid for DW_FORM_ref forms that are compile
                     // unit relative or we will get this wrong
-    return value + m_unit->GetOffset();
+    value += m_unit->GetOffset();
+    if (!m_unit->ContainsDIEOffset(value)) {
+      m_unit->GetSymbolFileDWARF()->GetObjectFile()->GetModule()->ReportError(
+          "DW_FORM_ref* DIE reference 0x%" PRIx64 " is outside of its CU",
+          value);
+      return {};
+    }
+    return const_cast<DWARFUnit *>(m_unit)->GetDIE(value);
 
-  case DW_FORM_ref_addr:
-  case DW_FORM_ref_sig8:
-  case DW_FORM_GNU_ref_alt:
-    return value;
+  case DW_FORM_ref_addr: {
+    DWARFUnit *ref_cu =
+        m_unit->GetSymbolFileDWARF()->DebugInfo()->GetUnitContainingDIEOffset(
+            DIERef::Section::DebugInfo, value);
+    if (!ref_cu) {
+      m_unit->GetSymbolFileDWARF()->GetObjectFile()->GetModule()->ReportError(
+          "DW_FORM_ref_addr DIE reference 0x%" PRIx64 " has no matching CU",
+          value);
+      return {};
+    }
+    return ref_cu->GetDIE(value);
+  }
 
   default:
-    return DW_INVALID_OFFSET;
+    return {};
   }
 }
 
@@ -689,8 +713,8 @@ int DWARFFormValue::Compare(const DWARFFormValue &a_value,
   case DW_FORM_ref4:
   case DW_FORM_ref8:
   case DW_FORM_ref_udata: {
-    uint64_t a = a_value.Reference();
-    uint64_t b = b_value.Reference();
+    uint64_t a = a_value.m_value.value.uval;
+    uint64_t b = b_value.m_value.value.uval;
     if (a < b)
       return -1;
     if (a > b)

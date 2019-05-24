@@ -9,6 +9,7 @@
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
@@ -306,30 +307,83 @@ void CheckerRegistry::addDependency(StringRef FullName, StringRef Dependency) {
   Dependencies.emplace_back(FullName, Dependency);
 }
 
+/// Insert the checker/package option to AnalyzerOptions' config table, and
+/// validate it, if the user supplied it on the command line.
+static void insertAndValidate(StringRef FullName,
+                              const CheckerRegistry::CmdLineOption &Option,
+                              AnalyzerOptions &AnOpts,
+                              DiagnosticsEngine &Diags) {
+
+  std::string FullOption = (FullName + ":" + Option.OptionName).str();
+
+  auto It = AnOpts.Config.insert({FullOption, Option.DefaultValStr});
+
+  // Insertation was successful -- CmdLineOption's constructor will validate
+  // whether values received from plugins or TableGen files are correct.
+  if (It.second)
+    return;
+
+  // Insertion failed, the user supplied this package/checker option on the
+  // command line. If the supplied value is invalid, we'll restore the option
+  // to it's default value, and if we're in non-compatibility mode, we'll also
+  // emit an error.
+
+  StringRef SuppliedValue = It.first->getValue();
+
+  if (Option.OptionType == "bool") {
+    if (SuppliedValue != "true" && SuppliedValue != "false") {
+      if (AnOpts.ShouldEmitErrorsOnInvalidConfigValue) {
+        Diags.Report(diag::err_analyzer_checker_option_invalid_input)
+            << FullOption << "a boolean value";
+      }
+
+      It.first->setValue(Option.DefaultValStr);
+    }
+    return;
+  }
+
+  if (Option.OptionType == "int") {
+    int Tmp;
+    bool HasFailed = SuppliedValue.getAsInteger(0, Tmp);
+    if (HasFailed) {
+      if (AnOpts.ShouldEmitErrorsOnInvalidConfigValue) {
+        Diags.Report(diag::err_analyzer_checker_option_invalid_input)
+            << FullOption << "an integer value";
+      }
+
+      It.first->setValue(Option.DefaultValStr);
+    }
+    return;
+  }
+}
+
 template <class T>
 static void
 insertOptionToCollection(StringRef FullName, T &Collection,
-                         const CheckerRegistry::CmdLineOption &&Option) {
+                         const CheckerRegistry::CmdLineOption &Option,
+                         AnalyzerOptions &AnOpts, DiagnosticsEngine &Diags) {
   auto It = binaryFind(Collection, FullName);
   assert(It != Collection.end() &&
          "Failed to find the checker while attempting to add a command line "
          "option to it!");
 
-  It->CmdLineOptions.emplace_back(std::move(Option));
+  insertAndValidate(FullName, Option, AnOpts, Diags);
+
+  It->CmdLineOptions.emplace_back(Option);
 }
 
 void CheckerRegistry::resolveCheckerAndPackageOptions() {
   for (const std::pair<StringRef, CmdLineOption> &CheckerOptEntry :
        CheckerOptions) {
     insertOptionToCollection(CheckerOptEntry.first, Checkers,
-                             std::move(CheckerOptEntry.second));
+                             CheckerOptEntry.second, AnOpts, Diags);
   }
   CheckerOptions.clear();
 
   for (const std::pair<StringRef, CmdLineOption> &PackageOptEntry :
        PackageOptions) {
-    insertOptionToCollection(PackageOptEntry.first, Checkers,
-                             std::move(PackageOptEntry.second));
+    insertOptionToCollection(PackageOptEntry.first, Packages,
+                             PackageOptEntry.second, AnOpts, Diags);
   }
   PackageOptions.clear();
 }
@@ -384,23 +438,62 @@ void CheckerRegistry::initializeManager(CheckerManager &CheckerMgr) const {
   }
 }
 
+static void
+isOptionContainedIn(const CheckerRegistry::CmdLineOptionList &OptionList,
+                    StringRef SuppliedChecker, StringRef SuppliedOption,
+                    const AnalyzerOptions &AnOpts, DiagnosticsEngine &Diags) {
+
+  if (!AnOpts.ShouldEmitErrorsOnInvalidConfigValue)
+    return;
+
+  using CmdLineOption = CheckerRegistry::CmdLineOption;
+
+  auto SameOptName = [SuppliedOption](const CmdLineOption &Opt) {
+    return Opt.OptionName == SuppliedOption;
+  };
+
+  auto OptionIt = llvm::find_if(OptionList, SameOptName);
+
+  if (OptionIt == OptionList.end()) {
+    Diags.Report(diag::err_analyzer_checker_option_unknown)
+        << SuppliedChecker << SuppliedOption;
+    return;
+  }
+}
+
 void CheckerRegistry::validateCheckerOptions() const {
   for (const auto &Config : AnOpts.Config) {
-    size_t Pos = Config.getKey().find(':');
-    if (Pos == StringRef::npos)
+
+    StringRef SuppliedChecker;
+    StringRef SuppliedOption;
+    std::tie(SuppliedChecker, SuppliedOption) = Config.getKey().split(':');
+
+    if (SuppliedOption.empty())
       continue;
 
-    bool HasChecker = false;
-    StringRef CheckerName = Config.getKey().substr(0, Pos);
-    for (const auto &Checker : Checkers) {
-      if (Checker.FullName.startswith(CheckerName) &&
-          (Checker.FullName.size() == Pos || Checker.FullName[Pos] == '.')) {
-        HasChecker = true;
-        break;
-      }
+    // AnalyzerOptions' config table contains the user input, so an entry could
+    // look like this:
+    //
+    //   cor:NoFalsePositives=true
+    //
+    // Since lower_bound would look for the first element *not less* than "cor",
+    // it would return with an iterator to the first checker in the core, so we
+    // we really have to use find here, which uses operator==.
+    auto CheckerIt = llvm::find(Checkers, CheckerInfo(SuppliedChecker));
+    if (CheckerIt != Checkers.end()) {
+      isOptionContainedIn(CheckerIt->CmdLineOptions, SuppliedChecker,
+                          SuppliedOption, AnOpts, Diags);
+      continue;
     }
-    if (!HasChecker)
-      Diags.Report(diag::err_unknown_analyzer_checker) << CheckerName;
+
+    auto PackageIt = llvm::find(Packages, PackageInfo(SuppliedChecker));
+    if (PackageIt != Packages.end()) {
+      isOptionContainedIn(PackageIt->CmdLineOptions, SuppliedChecker,
+                          SuppliedOption, AnOpts, Diags);
+      continue;
+    }
+
+    Diags.Report(diag::err_unknown_analyzer_checker) << SuppliedChecker;
   }
 }
 

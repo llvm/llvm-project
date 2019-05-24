@@ -16,9 +16,12 @@ class DWARFFormValue;
 class SymbolFileDWARF;
 
 struct DIERef {
+  enum Section : uint8_t { DebugInfo, DebugTypes };
+
   DIERef() = default;
 
-  DIERef(dw_offset_t c, dw_offset_t d) : cu_offset(c), die_offset(d) {}
+  DIERef(Section s, dw_offset_t c, dw_offset_t d)
+      : section(s), cu_offset(c), die_offset(d) {}
 
   explicit DIERef(const DWARFFormValue &form_value);
 
@@ -30,6 +33,7 @@ struct DIERef {
     return cu_offset != DW_INVALID_OFFSET || die_offset != DW_INVALID_OFFSET;
   }
 
+  Section section = Section::DebugInfo;
   dw_offset_t cu_offset = DW_INVALID_OFFSET;
   dw_offset_t die_offset = DW_INVALID_OFFSET;
 };

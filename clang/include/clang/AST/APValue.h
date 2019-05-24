@@ -24,14 +24,52 @@ namespace clang {
   class AddrLabelExpr;
   class ASTContext;
   class CharUnits;
+  class CXXRecordDecl;
+  class Decl;
   class DiagnosticBuilder;
   class Expr;
   class FieldDecl;
-  class Decl;
+  struct PrintingPolicy;
+  class Type;
   class ValueDecl;
-  class CXXRecordDecl;
-  class QualType;
 
+/// Symbolic representation of typeid(T) for some type T.
+class TypeInfoLValue {
+  const Type *T;
+
+public:
+  TypeInfoLValue() : T() {}
+  explicit TypeInfoLValue(const Type *T);
+
+  const Type *getType() const { return T; }
+  explicit operator bool() const { return T; }
+
+  void *getOpaqueValue() { return const_cast<Type*>(T); }
+  static TypeInfoLValue getFromOpaqueValue(void *Value) {
+    TypeInfoLValue V;
+    V.T = reinterpret_cast<const Type*>(Value);
+    return V;
+  }
+
+  void print(llvm::raw_ostream &Out, const PrintingPolicy &Policy) const;
+};
+}
+
+namespace llvm {
+template<> struct PointerLikeTypeTraits<clang::TypeInfoLValue> {
+  static void *getAsVoidPointer(clang::TypeInfoLValue V) {
+    return V.getOpaqueValue();
+  }
+  static clang::TypeInfoLValue getFromVoidPointer(void *P) {
+    return clang::TypeInfoLValue::getFromOpaqueValue(P);
+  }
+  // Validated by static_assert in APValue.cpp; hardcoded to avoid needing
+  // to include Type.h.
+  static constexpr int NumLowBitsAvailable = 3;
+};
+}
+
+namespace clang {
 /// APValue - This class implements a discriminated union of [uninitialized]
 /// [APSInt] [APFloat], [Complex APSInt] [Complex APFloat], [Expr + Offset],
 /// [Vector: N * APValue], [Array: N * APValue]
@@ -40,7 +78,10 @@ class APValue {
   typedef llvm::APFloat APFloat;
 public:
   enum ValueKind {
-    Uninitialized,
+    /// There is no such object (it's outside its lifetime).
+    None,
+    /// This object has an indeterminate value (C++ [basic.indet]).
+    Indeterminate,
     Int,
     Float,
     FixedPoint,
@@ -56,14 +97,14 @@ public:
   };
 
   class LValueBase {
+    typedef llvm::PointerUnion<const ValueDecl *, const Expr *, TypeInfoLValue>
+        PtrTy;
+
   public:
-    typedef llvm::PointerUnion<const ValueDecl *, const Expr *> PtrTy;
-
-    LValueBase() : CallIndex(0), Version(0) {}
-
-    template <class T>
-    LValueBase(T P, unsigned I = 0, unsigned V = 0)
-        : Ptr(P), CallIndex(I), Version(V) {}
+    LValueBase() : Local{} {}
+    LValueBase(const ValueDecl *P, unsigned I = 0, unsigned V = 0);
+    LValueBase(const Expr *P, unsigned I = 0, unsigned V = 0);
+    static LValueBase getTypeInfo(TypeInfoLValue LV, QualType TypeInfo);
 
     template <class T>
     bool is() const { return Ptr.is<T>(); }
@@ -78,28 +119,13 @@ public:
 
     bool isNull() const;
 
-    explicit operator bool () const;
+    explicit operator bool() const;
 
-    PtrTy getPointer() const {
-      return Ptr;
-    }
+    unsigned getCallIndex() const;
+    unsigned getVersion() const;
+    QualType getTypeInfoType() const;
 
-    unsigned getCallIndex() const {
-      return CallIndex;
-    }
-
-    void setCallIndex(unsigned Index) {
-      CallIndex = Index;
-    }
-
-    unsigned getVersion() const {
-      return Version;
-    }
-
-    friend bool operator==(const LValueBase &LHS, const LValueBase &RHS) {
-      return LHS.Ptr == RHS.Ptr && LHS.CallIndex == RHS.CallIndex &&
-             LHS.Version == RHS.Version;
-    }
+    friend bool operator==(const LValueBase &LHS, const LValueBase &RHS);
     friend bool operator!=(const LValueBase &LHS, const LValueBase &RHS) {
       return !(LHS == RHS);
     }
@@ -107,7 +133,14 @@ public:
 
   private:
     PtrTy Ptr;
-    unsigned CallIndex, Version;
+    struct LocalState {
+      unsigned CallIndex, Version;
+    };
+    union {
+      LocalState Local;
+      /// The type std::type_info, if this is a TypeInfoLValue.
+      void *TypeInfoType;
+    };
   };
 
   /// A FieldDecl or CXXRecordDecl, along with a flag indicating whether we
@@ -201,58 +234,64 @@ private:
   DataType Data;
 
 public:
-  APValue() : Kind(Uninitialized) {}
-  explicit APValue(APSInt I) : Kind(Uninitialized) {
+  APValue() : Kind(None) {}
+  explicit APValue(APSInt I) : Kind(None) {
     MakeInt(); setInt(std::move(I));
   }
-  explicit APValue(APFloat F) : Kind(Uninitialized) {
+  explicit APValue(APFloat F) : Kind(None) {
     MakeFloat(); setFloat(std::move(F));
   }
-  explicit APValue(APFixedPoint FX) : Kind(Uninitialized) {
+  explicit APValue(APFixedPoint FX) : Kind(None) {
     MakeFixedPoint(std::move(FX));
   }
-  explicit APValue(const APValue *E, unsigned N) : Kind(Uninitialized) {
+  explicit APValue(const APValue *E, unsigned N) : Kind(None) {
     MakeVector(); setVector(E, N);
   }
-  APValue(APSInt R, APSInt I) : Kind(Uninitialized) {
+  APValue(APSInt R, APSInt I) : Kind(None) {
     MakeComplexInt(); setComplexInt(std::move(R), std::move(I));
   }
-  APValue(APFloat R, APFloat I) : Kind(Uninitialized) {
+  APValue(APFloat R, APFloat I) : Kind(None) {
     MakeComplexFloat(); setComplexFloat(std::move(R), std::move(I));
   }
   APValue(const APValue &RHS);
-  APValue(APValue &&RHS) : Kind(Uninitialized) { swap(RHS); }
+  APValue(APValue &&RHS) : Kind(None) { swap(RHS); }
   APValue(LValueBase B, const CharUnits &O, NoLValuePath N,
           bool IsNullPtr = false)
-      : Kind(Uninitialized) {
+      : Kind(None) {
     MakeLValue(); setLValue(B, O, N, IsNullPtr);
   }
   APValue(LValueBase B, const CharUnits &O, ArrayRef<LValuePathEntry> Path,
           bool OnePastTheEnd, bool IsNullPtr = false)
-      : Kind(Uninitialized) {
+      : Kind(None) {
     MakeLValue(); setLValue(B, O, Path, OnePastTheEnd, IsNullPtr);
   }
-  APValue(UninitArray, unsigned InitElts, unsigned Size) : Kind(Uninitialized) {
+  APValue(UninitArray, unsigned InitElts, unsigned Size) : Kind(None) {
     MakeArray(InitElts, Size);
   }
-  APValue(UninitStruct, unsigned B, unsigned M) : Kind(Uninitialized) {
+  APValue(UninitStruct, unsigned B, unsigned M) : Kind(None) {
     MakeStruct(B, M);
   }
   explicit APValue(const FieldDecl *D, const APValue &V = APValue())
-      : Kind(Uninitialized) {
+      : Kind(None) {
     MakeUnion(); setUnion(D, V);
   }
   APValue(const ValueDecl *Member, bool IsDerivedMember,
-          ArrayRef<const CXXRecordDecl*> Path) : Kind(Uninitialized) {
+          ArrayRef<const CXXRecordDecl*> Path) : Kind(None) {
     MakeMemberPointer(Member, IsDerivedMember, Path);
   }
   APValue(const AddrLabelExpr* LHSExpr, const AddrLabelExpr* RHSExpr)
-      : Kind(Uninitialized) {
+      : Kind(None) {
     MakeAddrLabelDiff(); setAddrLabelDiff(LHSExpr, RHSExpr);
+  }
+  static APValue IndeterminateValue() {
+    APValue Result;
+    Result.Kind = Indeterminate;
+    return Result;
   }
 
   ~APValue() {
-    MakeUninit();
+    if (Kind != None && Kind != Indeterminate)
+      DestroyDataAndMakeUninit();
   }
 
   /// Returns whether the object performed allocations.
@@ -266,7 +305,11 @@ public:
   void swap(APValue &RHS);
 
   ValueKind getKind() const { return Kind; }
-  bool isUninit() const { return Kind == Uninitialized; }
+
+  bool isAbsent() const { return Kind == None; }
+  bool isIndeterminate() const { return Kind == Indeterminate; }
+  bool hasValue() const { return Kind != None && Kind != Indeterminate; }
+
   bool isInt() const { return Kind == Int; }
   bool isFloat() const { return Kind == Float; }
   bool isFixedPoint() const { return Kind == FixedPoint; }
@@ -506,56 +549,52 @@ public:
 
 private:
   void DestroyDataAndMakeUninit();
-  void MakeUninit() {
-    if (Kind != Uninitialized)
-      DestroyDataAndMakeUninit();
-  }
   void MakeInt() {
-    assert(isUninit() && "Bad state change");
+    assert(isAbsent() && "Bad state change");
     new ((void*)Data.buffer) APSInt(1);
     Kind = Int;
   }
   void MakeFloat() {
-    assert(isUninit() && "Bad state change");
+    assert(isAbsent() && "Bad state change");
     new ((void*)(char*)Data.buffer) APFloat(0.0);
     Kind = Float;
   }
   void MakeFixedPoint(APFixedPoint &&FX) {
-    assert(isUninit() && "Bad state change");
+    assert(isAbsent() && "Bad state change");
     new ((void *)(char *)Data.buffer) APFixedPoint(std::move(FX));
     Kind = FixedPoint;
   }
   void MakeVector() {
-    assert(isUninit() && "Bad state change");
+    assert(isAbsent() && "Bad state change");
     new ((void*)(char*)Data.buffer) Vec();
     Kind = Vector;
   }
   void MakeComplexInt() {
-    assert(isUninit() && "Bad state change");
+    assert(isAbsent() && "Bad state change");
     new ((void*)(char*)Data.buffer) ComplexAPSInt();
     Kind = ComplexInt;
   }
   void MakeComplexFloat() {
-    assert(isUninit() && "Bad state change");
+    assert(isAbsent() && "Bad state change");
     new ((void*)(char*)Data.buffer) ComplexAPFloat();
     Kind = ComplexFloat;
   }
   void MakeLValue();
   void MakeArray(unsigned InitElts, unsigned Size);
   void MakeStruct(unsigned B, unsigned M) {
-    assert(isUninit() && "Bad state change");
+    assert(isAbsent() && "Bad state change");
     new ((void*)(char*)Data.buffer) StructData(B, M);
     Kind = Struct;
   }
   void MakeUnion() {
-    assert(isUninit() && "Bad state change");
+    assert(isAbsent() && "Bad state change");
     new ((void*)(char*)Data.buffer) UnionData();
     Kind = Union;
   }
   void MakeMemberPointer(const ValueDecl *Member, bool IsDerivedMember,
                          ArrayRef<const CXXRecordDecl*> Path);
   void MakeAddrLabelDiff() {
-    assert(isUninit() && "Bad state change");
+    assert(isAbsent() && "Bad state change");
     new ((void*)(char*)Data.buffer) AddrLabelDiffData();
     Kind = AddrLabelDiff;
   }

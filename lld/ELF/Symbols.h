@@ -51,6 +51,7 @@ public:
   enum Kind {
     PlaceholderKind,
     DefinedKind,
+    CommonKind,
     SharedKind,
     UndefinedKind,
     LazyArchiveKind,
@@ -82,7 +83,7 @@ public:
   // An index into the .branch_lt section on PPC64.
   uint16_t PPC64BranchltIndex = -1;
 
-  // Symbol binding. This is not overwritten by replaceSymbol to track
+  // Symbol binding. This is not overwritten by replace() to track
   // changes during resolution. In particular:
   //  - An undefined weak is still weak when it resolves to a shared library.
   //  - An undefined weak will not fetch archive members, but we have to
@@ -119,13 +120,18 @@ public:
   // True if this symbol is specified by --trace-symbol option.
   unsigned Traced : 1;
 
+  inline void replace(const Symbol &New);
+
   bool includeInDynsym() const;
   uint8_t computeBinding() const;
   bool isWeak() const { return Binding == llvm::ELF::STB_WEAK; }
 
   bool isUndefined() const { return SymbolKind == UndefinedKind; }
+  bool isCommon() const { return SymbolKind == CommonKind; }
   bool isDefined() const { return SymbolKind == DefinedKind; }
   bool isShared() const { return SymbolKind == SharedKind; }
+  bool isPlaceholder() const { return SymbolKind == PlaceholderKind; }
+
   bool isLocal() const { return Binding == llvm::ELF::STB_LOCAL; }
 
   bool isLazy() const {
@@ -168,13 +174,24 @@ public:
   uint64_t getSize() const;
   OutputSection *getOutputSection() const;
 
+private:
+  static bool isExportDynamic(Kind K, uint8_t Visibility) {
+    if (K == SharedKind)
+      return Visibility == llvm::ELF::STV_DEFAULT;
+    return Config->Shared || Config->ExportDynamic;
+  }
+
+  inline size_t getSymbolSize() const;
+
 protected:
   Symbol(Kind K, InputFile *File, StringRefZ Name, uint8_t Binding,
          uint8_t StOther, uint8_t Type)
       : File(File), NameData(Name.Data), NameSize(Name.Size), Binding(Binding),
-        Type(Type), StOther(StOther), SymbolKind(K), NeedsPltAddr(false),
-        IsInIplt(false), GotInIgot(false), IsPreemptible(false),
-        Used(!Config->GcSections), NeedsTocRestore(false),
+        Type(Type), StOther(StOther), SymbolKind(K), Visibility(StOther & 3),
+        IsUsedInRegularObj(!File || File->kind() == InputFile::ObjKind),
+        ExportDynamic(isExportDynamic(K, Visibility)), CanInline(false),
+        Traced(false), NeedsPltAddr(false), IsInIplt(false), GotInIgot(false),
+        IsPreemptible(false), Used(!Config->GcSections), NeedsTocRestore(false),
         ScriptDefined(false) {}
 
 public:
@@ -226,13 +243,51 @@ public:
   SectionBase *Section;
 };
 
+// Represents a common symbol.
+//
+// On Unix, it is traditionally allowed to write variable definitions
+// without initialization expressions (such as "int foo;") to header
+// files. Such definition is called "tentative definition".
+//
+// Using tentative definition is usually considered a bad practice
+// because you should write only declarations (such as "extern int
+// foo;") to header files. Nevertheless, the linker and the compiler
+// have to do something to support bad code by allowing duplicate
+// definitions for this particular case.
+//
+// Common symbols represent variable definitions without initializations.
+// The compiler creates common symbols when it sees varaible definitions
+// without initialization (you can suppress this behavior and let the
+// compiler create a regular defined symbol by -fno-common).
+//
+// The linker allows common symbols to be replaced by regular defined
+// symbols. If there are remaining common symbols after name resolution is
+// complete, they are converted to regular defined symbols in a .bss
+// section. (Therefore, the later passes don't see any CommonSymbols.)
+class CommonSymbol : public Symbol {
+public:
+  CommonSymbol(InputFile *File, StringRefZ Name, uint8_t Binding,
+               uint8_t StOther, uint8_t Type, uint64_t Alignment, uint64_t Size)
+      : Symbol(CommonKind, File, Name, Binding, StOther, Type),
+        Alignment(Alignment), Size(Size) {}
+
+  static bool classof(const Symbol *S) { return S->isCommon(); }
+
+  uint32_t Alignment;
+  uint64_t Size;
+};
+
 class Undefined : public Symbol {
 public:
   Undefined(InputFile *File, StringRefZ Name, uint8_t Binding, uint8_t StOther,
-            uint8_t Type)
-      : Symbol(UndefinedKind, File, Name, Binding, StOther, Type) {}
+            uint8_t Type, uint32_t DiscardedSecIdx = 0)
+      : Symbol(UndefinedKind, File, Name, Binding, StOther, Type),
+        DiscardedSecIdx(DiscardedSecIdx) {}
 
   static bool classof(const Symbol *S) { return S->kind() == UndefinedKind; }
+
+  // The section index if in a discarded section, 0 otherwise.
+  uint32_t DiscardedSecIdx;
 };
 
 class SharedSymbol : public Symbol {
@@ -289,15 +344,14 @@ public:
 // symbol.
 class LazyArchive : public Symbol {
 public:
-  LazyArchive(InputFile &File, uint8_t Type,
-              const llvm::object::Archive::Symbol S)
+  LazyArchive(InputFile &File, const llvm::object::Archive::Symbol S)
       : Symbol(LazyArchiveKind, &File, S.getName(), llvm::ELF::STB_GLOBAL,
-               llvm::ELF::STV_DEFAULT, Type),
+               llvm::ELF::STV_DEFAULT, llvm::ELF::STT_NOTYPE),
         Sym(S) {}
 
   static bool classof(const Symbol *S) { return S->kind() == LazyArchiveKind; }
 
-  InputFile *fetch();
+  InputFile *fetch() const;
   MemoryBufferRef getMemberBuffer();
 
 private:
@@ -308,11 +362,13 @@ private:
 // --start-lib and --end-lib options.
 class LazyObject : public Symbol {
 public:
-  LazyObject(InputFile &File, uint8_t Type, StringRef Name)
+  LazyObject(InputFile &File, StringRef Name)
       : Symbol(LazyObjectKind, &File, Name, llvm::ELF::STB_GLOBAL,
-               llvm::ELF::STV_DEFAULT, Type) {}
+               llvm::ELF::STV_DEFAULT, llvm::ELF::STT_NOTYPE) {}
 
   static bool classof(const Symbol *S) { return S->kind() == LazyObjectKind; }
+
+  InputFile *fetch() const;
 };
 
 // Some linker-generated symbols need to be created as
@@ -353,54 +409,92 @@ struct ElfSym {
 // using the placement new.
 union SymbolUnion {
   alignas(Defined) char A[sizeof(Defined)];
+  alignas(CommonSymbol) char B[sizeof(CommonSymbol)];
   alignas(Undefined) char C[sizeof(Undefined)];
   alignas(SharedSymbol) char D[sizeof(SharedSymbol)];
   alignas(LazyArchive) char E[sizeof(LazyArchive)];
   alignas(LazyObject) char F[sizeof(LazyObject)];
 };
 
-void printTraceSymbol(Symbol *Sym);
-
-template <typename T, typename... ArgT>
-void replaceSymbol(Symbol *S, ArgT &&... Arg) {
-  using llvm::ELF::STT_TLS;
-
+template <typename T> struct AssertSymbol {
   static_assert(std::is_trivially_destructible<T>(),
                 "Symbol types must be trivially destructible");
   static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");
   static_assert(alignof(T) <= alignof(SymbolUnion),
                 "SymbolUnion not aligned enough");
-  assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&
-         "Not a Symbol");
+};
 
-  Symbol Sym = *S;
+static inline void assertSymbols() {
+  AssertSymbol<Defined>();
+  AssertSymbol<CommonSymbol>();
+  AssertSymbol<Undefined>();
+  AssertSymbol<SharedSymbol>();
+  AssertSymbol<LazyArchive>();
+  AssertSymbol<LazyObject>();
+}
 
-  new (S) T(std::forward<ArgT>(Arg)...);
+void printTraceSymbol(Symbol *Sym);
 
-  S->VersionId = Sym.VersionId;
-  S->Visibility = Sym.Visibility;
-  S->IsUsedInRegularObj = Sym.IsUsedInRegularObj;
-  S->ExportDynamic = Sym.ExportDynamic;
-  S->CanInline = Sym.CanInline;
-  S->Traced = Sym.Traced;
-  S->ScriptDefined = Sym.ScriptDefined;
+size_t Symbol::getSymbolSize() const {
+  switch (kind()) {
+  case CommonKind:
+    return sizeof(CommonSymbol);
+  case DefinedKind:
+    return sizeof(Defined);
+  case LazyArchiveKind:
+    return sizeof(LazyArchive);
+  case LazyObjectKind:
+    return sizeof(LazyObject);
+  case SharedKind:
+    return sizeof(SharedSymbol);
+  case UndefinedKind:
+    return sizeof(Undefined);
+  case PlaceholderKind:
+    return sizeof(Symbol);
+  }
+  llvm_unreachable("unknown symbol kind");
+}
+
+// replace() replaces "this" object with a given symbol by memcpy'ing
+// it over to "this". This function is called as a result of name
+// resolution, e.g. to replace an undefind symbol with a defined symbol.
+void Symbol::replace(const Symbol &New) {
+  using llvm::ELF::STT_TLS;
 
   // Symbols representing thread-local variables must be referenced by
   // TLS-aware relocations, and non-TLS symbols must be reference by
   // non-TLS relocations, so there's a clear distinction between TLS
   // and non-TLS symbols. It is an error if the same symbol is defined
   // as a TLS symbol in one file and as a non-TLS symbol in other file.
-  bool TlsMismatch = (Sym.Type == STT_TLS && S->Type != STT_TLS) ||
-                     (Sym.Type != STT_TLS && S->Type == STT_TLS);
+  if (SymbolKind != PlaceholderKind && !isLazy() && !New.isLazy()) {
+    bool TlsMismatch = (Type == STT_TLS && New.Type != STT_TLS) ||
+                       (Type != STT_TLS && New.Type == STT_TLS);
+    if (TlsMismatch)
+      error("TLS attribute mismatch: " + toString(*this) + "\n>>> defined in " +
+            toString(New.File) + "\n>>> defined in " + toString(File));
+  }
 
-  if (Sym.SymbolKind != Symbol::PlaceholderKind && TlsMismatch && !Sym.isLazy())
-    error("TLS attribute mismatch: " + toString(Sym) + "\n>>> defined in " +
-          toString(Sym.File) + "\n>>> defined in " + toString(S->File));
+  Symbol Old = *this;
+  memcpy(this, &New, New.getSymbolSize());
+
+  VersionId = Old.VersionId;
+  Visibility = Old.Visibility;
+  IsUsedInRegularObj = Old.IsUsedInRegularObj;
+  ExportDynamic = Old.ExportDynamic;
+  CanInline = Old.CanInline;
+  Traced = Old.Traced;
+  IsPreemptible = Old.IsPreemptible;
+  ScriptDefined = Old.ScriptDefined;
+
+  // Symbol length is computed lazily. If we already know a symbol length,
+  // propagate it.
+  if (NameData == Old.NameData && NameSize == 0 && Old.NameSize != 0)
+    NameSize = Old.NameSize;
 
   // Print out a log message if --trace-symbol was specified.
   // This is for debugging.
-  if (S->Traced)
-    printTraceSymbol(S);
+  if (Traced)
+    printTraceSymbol(this);
 }
 
 void maybeWarnUnorderableSymbol(const Symbol *Sym);

@@ -10,17 +10,17 @@ define void @_Z1av() {
 ; CHECK-NEXT:    subl $2, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 6
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movb %al, %cl
-; CHECK-NEXT:    movb c, %dl
-; CHECK-NEXT:    xorb $-1, %dl
-; CHECK-NEXT:    testb $1, %dl
-; CHECK-NEXT:    movb %cl, (%esp) # 1-byte Spill
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    movb c, %cl
+; CHECK-NEXT:    xorb $-1, %cl
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    movb %al, (%esp) # 1-byte Spill
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:    jmp .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: # %land.rhs
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movb %al, %cl
-; CHECK-NEXT:    movb %cl, (%esp) # 1-byte Spill
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    movb %al, (%esp) # 1-byte Spill
 ; CHECK-NEXT:    jmp .LBB0_2
 ; CHECK-NEXT:  .LBB0_2: # %land.end
 ; CHECK-NEXT:    movb (%esp), %al # 1-byte Reload

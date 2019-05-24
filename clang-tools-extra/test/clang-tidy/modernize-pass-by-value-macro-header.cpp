@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-pass-by-value %t -- -- -std=c++11 -isystem %S/Inputs/Headers
+// RUN: %check_clang_tidy %s modernize-pass-by-value %t -- -- -isystem %S/Inputs/Headers
 
 // CHECK-FIXES: #include <utility>
 

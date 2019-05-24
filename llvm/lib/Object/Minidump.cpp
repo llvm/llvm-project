@@ -78,6 +78,8 @@ template Expected<ArrayRef<Module>>
     MinidumpFile::getListStream(StreamType) const;
 template Expected<ArrayRef<Thread>>
     MinidumpFile::getListStream(StreamType) const;
+template Expected<ArrayRef<MemoryDescriptor>>
+    MinidumpFile::getListStream(StreamType) const;
 
 Expected<ArrayRef<uint8_t>>
 MinidumpFile::getDataSlice(ArrayRef<uint8_t> Data, size_t Offset, size_t Size) {

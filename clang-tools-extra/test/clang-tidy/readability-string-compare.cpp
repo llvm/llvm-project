@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-string-compare %t -- -- -std=c++11
+// RUN: %check_clang_tidy %s readability-string-compare %t
 
 namespace std {
 template <typename T>

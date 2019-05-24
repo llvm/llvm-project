@@ -1033,6 +1033,10 @@ def SerializedDiagnostics : DiagGroup<"serialized-diagnostics">;
 // compiling CUDA C/C++ but which is not compatible with the CUDA spec.
 def CudaCompat : DiagGroup<"cuda-compat">;
 
+// Warnings which cause linking of the runtime libraries like
+// libc and the CRT to be skipped.
+def AVRRtlibLinkingQuirks : DiagGroup<"avr-rtlib-linking-quirks">;
+
 // A warning group for things that will change semantics in the future.
 def FutureCompat : DiagGroup<"future-compat">;
 

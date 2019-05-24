@@ -752,8 +752,7 @@ void MoveChecker::printState(raw_ostream &Out, ProgramStateRef State,
 void ento::registerMoveChecker(CheckerManager &mgr) {
   MoveChecker *chk = mgr.registerChecker<MoveChecker>();
   chk->setAggressiveness(
-      mgr.getAnalyzerOptions().getCheckerStringOption(chk, "WarnOn",
-                                                      "KnownsAndLocals"), mgr);
+      mgr.getAnalyzerOptions().getCheckerStringOption(chk, "WarnOn"), mgr);
 }
 
 bool ento::shouldRegisterMoveChecker(const LangOptions &LO) {

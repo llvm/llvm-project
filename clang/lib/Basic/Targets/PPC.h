@@ -382,10 +382,10 @@ public:
       ABI = "elfv2";
     } else {
       resetDataLayout("E-m:e-i64:64-n32:64");
-      ABI = "elfv1";
+      ABI = Triple.getEnvironment() == llvm::Triple::ELFv2 ? "elfv2" : "elfv1";
     }
 
-    switch (getTriple().getOS()) {
+    switch (Triple.getOS()) {
     case llvm::Triple::FreeBSD:
       LongDoubleWidth = LongDoubleAlign = 64;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();

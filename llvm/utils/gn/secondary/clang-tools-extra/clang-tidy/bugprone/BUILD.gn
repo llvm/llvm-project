@@ -17,6 +17,7 @@ static_library("bugprone") {
     "ArgumentCommentCheck.cpp",
     "AssertSideEffectCheck.cpp",
     "BoolPointerImplicitConversionCheck.cpp",
+    "BranchCloneCheck.cpp",
     "BugproneTidyModule.cpp",
     "CopyConstructorInitCheck.cpp",
     "DanglingHandleCheck.cpp",

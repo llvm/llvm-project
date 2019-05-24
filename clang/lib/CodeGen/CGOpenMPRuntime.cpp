@@ -457,6 +457,26 @@ enum OpenMPLocationFlags : unsigned {
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/OMP_IDENT_WORK_DISTRIBUTE)
 };
 
+namespace {
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+/// Values for bit flags for marking which requires clauses have been used.
+enum OpenMPOffloadingRequiresDirFlags : int64_t {
+  /// flag undefined.
+  OMP_REQ_UNDEFINED               = 0x000,
+  /// no requires clause present.
+  OMP_REQ_NONE                    = 0x001,
+  /// reverse_offload clause.
+  OMP_REQ_REVERSE_OFFLOAD         = 0x002,
+  /// unified_address clause.
+  OMP_REQ_UNIFIED_ADDRESS         = 0x004,
+  /// unified_shared_memory clause.
+  OMP_REQ_UNIFIED_SHARED_MEMORY   = 0x008,
+  /// dynamic_allocators clause.
+  OMP_REQ_DYNAMIC_ALLOCATORS      = 0x010,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/OMP_REQ_DYNAMIC_ALLOCATORS)
+};
+} // anonymous namespace
+
 /// Describes ident structure that describes a source location.
 /// All descriptions are taken from
 /// https://github.com/llvm/llvm-project/blob/master/openmp/runtime/src/kmp.h
@@ -694,6 +714,8 @@ enum OpenMPRTLFunction {
   // *host_ptr, int32_t arg_num, void** args_base, void **args, size_t
   // *arg_sizes, int64_t *arg_types, int32_t num_teams, int32_t thread_limit);
   OMPRTL__tgt_target_teams_nowait,
+  // Call to void __tgt_register_requires(int64_t flags);
+  OMPRTL__tgt_register_requires,
   // Call to void __tgt_register_lib(__tgt_bin_desc *desc);
   OMPRTL__tgt_register_lib,
   // Call to void __tgt_unregister_lib(__tgt_bin_desc *desc);
@@ -1274,9 +1296,11 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
-  Fn->removeFnAttr(llvm::Attribute::NoInline);
-  Fn->removeFnAttr(llvm::Attribute::OptimizeNone);
-  Fn->addFnAttr(llvm::Attribute::AlwaysInline);
+  if (CGM.getLangOpts().Optimize) {
+    Fn->removeFnAttr(llvm::Attribute::NoInline);
+    Fn->removeFnAttr(llvm::Attribute::OptimizeNone);
+    Fn->addFnAttr(llvm::Attribute::AlwaysInline);
+  }
   CodeGenFunction CGF(CGM);
   // Map "T omp_in;" variable to "*omp_in_parm" value in all expressions.
   // Map "T omp_out;" variable to "*omp_out_parm" value in all expressions.
@@ -2292,6 +2316,14 @@ llvm::FunctionCallee CGOpenMPRuntime::createRuntimeFunction(unsigned Function) {
     auto *FnTy =
         llvm::FunctionType::get(CGM.Int32Ty, TypeParams, /*isVarArg*/ false);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__tgt_target_teams_nowait");
+    break;
+  }
+  case OMPRTL__tgt_register_requires: {
+    // Build void __tgt_register_requires(int64_t flags);
+    llvm::Type *TypeParams[] = {CGM.Int64Ty};
+    auto *FnTy =
+        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
+    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__tgt_register_requires");
     break;
   }
   case OMPRTL__tgt_register_lib: {
@@ -4671,9 +4703,11 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
       &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), TaskPrivatesMap,
                                     TaskPrivatesMapFnInfo);
-  TaskPrivatesMap->removeFnAttr(llvm::Attribute::NoInline);
-  TaskPrivatesMap->removeFnAttr(llvm::Attribute::OptimizeNone);
-  TaskPrivatesMap->addFnAttr(llvm::Attribute::AlwaysInline);
+  if (CGM.getLangOpts().Optimize) {
+    TaskPrivatesMap->removeFnAttr(llvm::Attribute::NoInline);
+    TaskPrivatesMap->removeFnAttr(llvm::Attribute::OptimizeNone);
+    TaskPrivatesMap->addFnAttr(llvm::Attribute::AlwaysInline);
+  }
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, TaskPrivatesMap,
                     TaskPrivatesMapFnInfo, Args, Loc, Loc);
@@ -6401,6 +6435,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunction(
     llvm::Function *&OutlinedFn, llvm::Constant *&OutlinedFnID,
     bool IsOffloadEntry, const RegionCodeGenTy &CodeGen) {
   assert(!ParentName.empty() && "Invalid target region parent name!");
+  HasEmittedTargetRegion = true;
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
                                    IsOffloadEntry, CodeGen);
 }
@@ -8221,7 +8256,7 @@ public:
                                         MapValuesArrayTy &Sizes,
                                         MapFlagsArrayTy &Types) const {
     // Map other list items in the map clause which are not captured variables
-    // but "declare target link" global variables.,
+    // but "declare target link" global variables.
     for (const auto *C : this->CurDir.getClausesOfKind<OMPMapClause>()) {
       for (const auto &L : C->component_lists()) {
         if (!L.first)
@@ -9182,6 +9217,16 @@ void CGOpenMPRuntime::adjustTargetSpecificDataForLambdas(
          " Expected target-based directive.");
 }
 
+void CGOpenMPRuntime::checkArchForUnifiedAddressing(
+    const OMPRequiresDecl *D) {
+  for (const OMPClause *Clause : D->clauselists()) {
+    if (Clause->getClauseKind() == OMPC_unified_shared_memory) {
+      HasRequiresUnifiedSharedMemory = true;
+      break;
+    }
+  }
+}
+
 bool CGOpenMPRuntime::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
                                                        LangAS &AS) {
   if (!VD || !VD->hasAttr<OMPAllocateDeclAttr>())
@@ -9238,6 +9283,47 @@ bool CGOpenMPRuntime::markAsGlobalTarget(GlobalDecl GD) {
   }
 
   return !AlreadyEmittedTargetFunctions.insert(Name).second;
+}
+
+llvm::Function *CGOpenMPRuntime::emitRequiresDirectiveRegFun() {
+  // If we don't have entries or if we are emitting code for the device, we
+  // don't need to do anything.
+  if (CGM.getLangOpts().OMPTargetTriples.empty() ||
+      CGM.getLangOpts().OpenMPSimd || CGM.getLangOpts().OpenMPIsDevice ||
+      (OffloadEntriesInfoManager.empty() &&
+       !HasEmittedDeclareTargetRegion &&
+       !HasEmittedTargetRegion))
+    return nullptr;
+
+  // Create and register the function that handles the requires directives.
+  ASTContext &C = CGM.getContext();
+
+  llvm::Function *RequiresRegFn;
+  {
+    CodeGenFunction CGF(CGM);
+    const auto &FI = CGM.getTypes().arrangeNullaryFunction();
+    llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);
+    std::string ReqName = getName({"omp_offloading", "requires_reg"});
+    RequiresRegFn = CGM.CreateGlobalInitOrDestructFunction(FTy, ReqName, FI);
+    CGF.StartFunction(GlobalDecl(), C.VoidTy, RequiresRegFn, FI, {});
+    OpenMPOffloadingRequiresDirFlags Flags = OMP_REQ_NONE;
+    // TODO: check for other requires clauses.
+    // The requires directive takes effect only when a target region is
+    // present in the compilation unit. Otherwise it is ignored and not
+    // passed to the runtime. This avoids the runtime from throwing an error
+    // for mismatching requires clauses across compilation units that don't
+    // contain at least 1 target region.
+    assert((HasEmittedTargetRegion ||
+            HasEmittedDeclareTargetRegion ||
+            !OffloadEntriesInfoManager.empty()) &&
+           "Target or declare target region expected.");
+    if (HasRequiresUnifiedSharedMemory)
+      Flags = OMP_REQ_UNIFIED_SHARED_MEMORY;
+    CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__tgt_register_requires),
+        llvm::ConstantInt::get(CGM.Int64Ty, Flags));
+    CGF.FinishFunction();
+  }
+  return RequiresRegFn;
 }
 
 llvm::Function *CGOpenMPRuntime::emitRegistrationFunction() {
@@ -9688,8 +9774,9 @@ emitX86DeclareSimdFunction(const FunctionDecl *FD, llvm::Function *Fn,
       llvm::raw_svector_ostream Out(Buffer);
       Out << "_ZGV" << Data.ISA << Mask;
       if (!VLENVal) {
-        Out << llvm::APSInt::getUnsigned(Data.VecRegSize /
-                                         evaluateCDTSize(FD, ParamAttrs));
+        unsigned NumElts = evaluateCDTSize(FD, ParamAttrs);
+        assert(NumElts && "Non-zero simdlen/cdtsize expected");
+        Out << llvm::APSInt::getUnsigned(Data.VecRegSize / NumElts);
       } else {
         Out << VLENVal;
       }
@@ -10278,6 +10365,12 @@ void CGOpenMPRuntime::emitOutlinedFunctionCall(
     CodeGenFunction &CGF, SourceLocation Loc, llvm::FunctionCallee OutlinedFn,
     ArrayRef<llvm::Value *> Args) const {
   emitCall(CGF, Loc, OutlinedFn, Args);
+}
+
+void CGOpenMPRuntime::emitFunctionProlog(CodeGenFunction &CGF, const Decl *D) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(D))
+    if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(FD))
+      HasEmittedDeclareTargetRegion = true;
 }
 
 Address CGOpenMPRuntime::getParameterAddress(CodeGenFunction &CGF,

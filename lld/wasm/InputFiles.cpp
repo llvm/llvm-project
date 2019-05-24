@@ -14,8 +14,10 @@
 #include "SymbolTable.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Reproduce.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/Wasm.h"
+#include "llvm/Support/TarWriter.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "lld"
@@ -26,6 +28,8 @@ using namespace lld::wasm;
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::wasm;
+
+std::unique_ptr<llvm::TarWriter> lld::wasm::Tar;
 
 Optional<MemoryBufferRef> lld::wasm::readFile(StringRef Path) {
   log("Loading: " + Path);
@@ -39,6 +43,8 @@ Optional<MemoryBufferRef> lld::wasm::readFile(StringRef Path) {
   MemoryBufferRef MBRef = MB->getMemBufferRef();
   make<std::unique_ptr<MemoryBuffer>>(std::move(MB)); // take MB ownership
 
+  if (Tar)
+    Tar->append(relativeToRoot(Path), MBRef.getBuffer());
   return MBRef;
 }
 
@@ -75,7 +81,10 @@ uint32_t ObjFile::calcNewIndex(const WasmRelocation &Reloc) const {
     assert(TypeIsUsed[Reloc.Index]);
     return TypeMap[Reloc.Index];
   }
-  return Symbols[Reloc.Index]->getOutputSymbolIndex();
+  const Symbol *Sym = Symbols[Reloc.Index];
+  if (auto *SS = dyn_cast<SectionSymbol>(Sym))
+    Sym = SS->getOutputSectionSymbol();
+  return Sym->getOutputSymbolIndex();
 }
 
 // Relocations can contain addend for combined sections. This function takes a
@@ -395,7 +404,7 @@ Symbol *ObjFile::createDefined(const WasmSymbol &Sym) {
   case WASM_SYMBOL_TYPE_SECTION: {
     InputSection *Section = CustomSectionsByIndex[Sym.Info.ElementIndex];
     assert(Sym.isBindingLocal());
-    return make<SectionSymbol>(Name, Flags, Section, this);
+    return make<SectionSymbol>(Flags, Section, this);
   }
   case WASM_SYMBOL_TYPE_EVENT: {
     InputEvent *Event =

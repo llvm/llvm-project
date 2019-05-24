@@ -2335,7 +2335,11 @@ TEST_F(DIExpressionTest, get) {
   // Test DIExpression::prepend().
   uint64_t Elts0[] = {dwarf::DW_OP_LLVM_fragment, 0, 32};
   auto *N0 = DIExpression::get(Context, Elts0);
-  auto *N0WithPrependedOps = DIExpression::prepend(N0, true, 64, true, true);
+  uint8_t DIExprFlags = DIExpression::ApplyOffset;
+  DIExprFlags |= DIExpression::DerefBefore;
+  DIExprFlags |= DIExpression::DerefAfter;
+  DIExprFlags |= DIExpression::StackValue;
+  auto *N0WithPrependedOps = DIExpression::prepend(N0, DIExprFlags, 64);
   uint64_t Elts1[] = {dwarf::DW_OP_deref,
                       dwarf::DW_OP_plus_uconst, 64,
                       dwarf::DW_OP_deref,

@@ -26,11 +26,11 @@
 
 // No fastcall or stdcall on x86_64:
 
-// RUN: %clang_cl -Wno-msvc-not-found --target=x86_64-windows-msvc /Gr -### -- %s 2>&1 | FileCheck --check-prefix=UNSUPPORTED %s
-// RUN: %clang_cl -Wno-msvc-not-found --target=x86_64-windows-msvc /Gz -### -- %s 2>&1 | FileCheck --check-prefix=UNSUPPORTED %s
-// RUN: %clang_cl -Wno-msvc-not-found --target=thumbv7-windows-msvc /Gv -### -- %s 2>&1 | FileCheck --check-prefix=UNSUPPORTED %s
+// RUN: %clang_cl -Wno-msvc-not-found --target=x86_64-windows-msvc /Gr -### -- %s 2>&1 | FileCheck --check-prefix=UNAVAILABLE %s
+// RUN: %clang_cl -Wno-msvc-not-found --target=x86_64-windows-msvc /Gz -### -- %s 2>&1 | FileCheck --check-prefix=UNAVAILABLE %s
+// RUN: %clang_cl -Wno-msvc-not-found --target=thumbv7-windows-msvc /Gv -### -- %s 2>&1 | FileCheck --check-prefix=UNAVAILABLE %s
 
-// UNSUPPORTED-NOT: error:
-// UNSUPPORTED-NOT: warning:
-// UNSUPPORTED-NOT: -fdefault-calling-conv=
+// UNAVAILABLE-NOT: error:
+// UNAVAILABLE-NOT: warning:
+// UNAVAILABLE-NOT: -fdefault-calling-conv=
 

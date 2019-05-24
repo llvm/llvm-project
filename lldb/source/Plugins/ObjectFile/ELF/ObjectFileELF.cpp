@@ -2185,11 +2185,7 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
        * class
        * accordingly.
       */
-      const llvm::Triple::ArchType llvm_arch = arch.GetMachine();
-      if (llvm_arch == llvm::Triple::mips ||
-          llvm_arch == llvm::Triple::mipsel ||
-          llvm_arch == llvm::Triple::mips64 ||
-          llvm_arch == llvm::Triple::mips64el) {
+      if (arch.IsMIPS()) {
         if (IS_MICROMIPS(symbol.st_other))
           m_address_class_map[symbol.st_value] = AddressClass::eCodeAlternateISA;
         else if ((symbol.st_value & 1) && (symbol_type == eSymbolTypeCode)) {

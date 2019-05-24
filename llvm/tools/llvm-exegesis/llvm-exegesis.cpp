@@ -18,6 +18,7 @@
 #include "lib/LlvmState.h"
 #include "lib/PerfHelper.h"
 #include "lib/Target.h"
+#include "lib/TargetSelect.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -144,10 +145,6 @@ static cl::opt<bool>
                      cl::cat(BenchmarkOptions), cl::init(true));
 
 static ExitOnError ExitOnErr;
-
-#ifdef LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET
-void LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET();
-#endif
 
 // Checks that only one of OpcodeNames, OpcodeIndex or SnippetsFile is provided,
 // and returns the opcode indices or {} if snippets should be read from
@@ -370,9 +367,7 @@ void benchmarkMain() {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   llvm::InitializeNativeTargetAsmParser();
-#ifdef LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET
-  LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET();
-#endif
+  InitializeNativeExegesisTarget();
 
   const LLVMState State(CpuName);
   const auto Opcodes = getOpcodesOrDie(State.getInstrInfo());

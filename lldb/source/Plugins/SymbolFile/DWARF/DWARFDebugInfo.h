@@ -41,10 +41,13 @@ public:
 
   size_t GetNumUnits();
   DWARFUnit *GetUnitAtIndex(lldb::user_id_t idx);
-  DWARFUnit *GetUnitAtOffset(dw_offset_t cu_offset, uint32_t *idx_ptr = NULL);
-  DWARFUnit *GetUnitContainingDIEOffset(dw_offset_t die_offset);
+  DWARFUnit *GetUnitAtOffset(DIERef::Section section,
+                             dw_offset_t cu_offset, uint32_t *idx_ptr = NULL);
+  DWARFUnit *GetUnitContainingDIEOffset(DIERef::Section section,
+                                        dw_offset_t die_offset);
   DWARFUnit *GetUnit(const DIERef &die_ref);
-  DWARFDIE GetDIEForDIEOffset(dw_offset_t die_offset);
+  DWARFDIE GetDIEForDIEOffset(DIERef::Section section,
+                              dw_offset_t die_offset);
   DWARFDIE GetDIE(const DIERef &die_ref);
 
   enum {
@@ -57,9 +60,6 @@ public:
   llvm::Expected<DWARFDebugAranges &> GetCompileUnitAranges();
 
 protected:
-  static bool OffsetLessThanUnitOffset(dw_offset_t offset,
-                                       const DWARFUnitSP &cu_sp);
-
   typedef std::vector<DWARFUnitSP> UnitColl;
 
   // Member variables
@@ -74,7 +74,7 @@ private:
   // accessors are called.
   void ParseUnitHeadersIfNeeded();
 
-  uint32_t FindUnitIndex(dw_offset_t offset);
+  uint32_t FindUnitIndex(DIERef::Section section, dw_offset_t offset);
 
   DISALLOW_COPY_AND_ASSIGN(DWARFDebugInfo);
 };

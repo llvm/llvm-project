@@ -584,8 +584,7 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
 
 /// Copy the debug_line over to the updated binary while unobfuscating the file
 /// names and directories.
-void DwarfStreamer::translateLineTable(DataExtractor Data, uint32_t Offset,
-                                       LinkOptions &Options) {
+void DwarfStreamer::translateLineTable(DataExtractor Data, uint32_t Offset) {
   MS->SwitchSection(MC->getObjectFileInfo()->getDwarfLineSection());
   StringRef Contents = Data.getData();
 
@@ -667,10 +666,12 @@ void DwarfStreamer::translateLineTable(DataExtractor Data, uint32_t Offset,
 
 static void emitSectionContents(const object::ObjectFile &Obj,
                                 StringRef SecName, MCStreamer *MS) {
-  StringRef Contents;
-  if (auto Sec = getSectionByName(Obj, SecName))
-    if (!Sec->getContents(Contents))
-      MS->EmitBytes(Contents);
+  if (auto Sec = getSectionByName(Obj, SecName)) {
+    if (Expected<StringRef> E = Sec->getContents())
+      MS->EmitBytes(*E);
+    else
+      consumeError(E.takeError());
+  }
 }
 
 void DwarfStreamer::copyInvariantDebugSection(const object::ObjectFile &Obj) {

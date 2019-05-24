@@ -1020,11 +1020,7 @@ bool ProcessFreeBSD::IsSoftwareStepBreakpoint(lldb::tid_t tid) {
 
 bool ProcessFreeBSD::SupportHardwareSingleStepping() const {
   lldb_private::ArchSpec arch = GetTarget().GetArchitecture();
-  if (arch.GetMachine() == llvm::Triple::arm ||
-      arch.GetMachine() == llvm::Triple::mips64 ||
-      arch.GetMachine() == llvm::Triple::mips64el ||
-      arch.GetMachine() == llvm::Triple::mips ||
-      arch.GetMachine() == llvm::Triple::mipsel)
+  if (arch.GetMachine() == llvm::Triple::arm || arch.IsMIPS())
     return false;
   return true;
 }

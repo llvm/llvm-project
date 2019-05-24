@@ -62,7 +62,7 @@ namespace {
 
   public:
     CheckDefaultArgumentVisitor(Expr *defarg, Sema *s)
-      : DefaultArg(defarg), S(s) {}
+        : DefaultArg(defarg), S(s) {}
 
     bool VisitExpr(Expr *Node);
     bool VisitDeclRefExpr(DeclRefExpr *DRE);
@@ -715,20 +715,30 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   // The semantic context is always just the current context.
   DeclContext *const DC = CurContext;
 
-  // C++1z [dcl.dcl]/8:
+  // C++17 [dcl.dcl]/8:
   //   The decl-specifier-seq shall contain only the type-specifier auto
   //   and cv-qualifiers.
+  // C++2a [dcl.dcl]/8:
+  //   If decl-specifier-seq contains any decl-specifier other than static,
+  //   thread_local, auto, or cv-qualifiers, the program is ill-formed.
   auto &DS = D.getDeclSpec();
   {
     SmallVector<StringRef, 8> BadSpecifiers;
     SmallVector<SourceLocation, 8> BadSpecifierLocs;
+    SmallVector<StringRef, 8> CPlusPlus20Specifiers;
+    SmallVector<SourceLocation, 8> CPlusPlus20SpecifierLocs;
     if (auto SCS = DS.getStorageClassSpec()) {
-      BadSpecifiers.push_back(DeclSpec::getSpecifierName(SCS));
-      BadSpecifierLocs.push_back(DS.getStorageClassSpecLoc());
+      if (SCS == DeclSpec::SCS_static) {
+        CPlusPlus20Specifiers.push_back(DeclSpec::getSpecifierName(SCS));
+        CPlusPlus20SpecifierLocs.push_back(DS.getStorageClassSpecLoc());
+      } else {
+        BadSpecifiers.push_back(DeclSpec::getSpecifierName(SCS));
+        BadSpecifierLocs.push_back(DS.getStorageClassSpecLoc());
+      }
     }
     if (auto TSCS = DS.getThreadStorageClassSpec()) {
-      BadSpecifiers.push_back(DeclSpec::getSpecifierName(TSCS));
-      BadSpecifierLocs.push_back(DS.getThreadStorageClassSpecLoc());
+      CPlusPlus20Specifiers.push_back(DeclSpec::getSpecifierName(TSCS));
+      CPlusPlus20SpecifierLocs.push_back(DS.getThreadStorageClassSpecLoc());
     }
     if (DS.isConstexprSpecified()) {
       BadSpecifiers.push_back("constexpr");
@@ -746,6 +756,16 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
       // them when building the underlying variable.
       for (auto Loc : BadSpecifierLocs)
         Err << SourceRange(Loc, Loc);
+    } else if (!CPlusPlus20Specifiers.empty()) {
+      auto &&Warn = Diag(CPlusPlus20SpecifierLocs.front(),
+                         getLangOpts().CPlusPlus2a
+                             ? diag::warn_cxx17_compat_decomp_decl_spec
+                             : diag::ext_decomp_decl_spec);
+      Warn << (int)CPlusPlus20Specifiers.size()
+           << llvm::join(CPlusPlus20Specifiers.begin(),
+                         CPlusPlus20Specifiers.end(), " ");
+      for (auto Loc : CPlusPlus20SpecifierLocs)
+        Warn << SourceRange(Loc, Loc);
     }
     // We can't recover from it being declared as a typedef.
     if (DS.getStorageClassSpec() == DeclSpec::SCS_typedef)
@@ -13025,7 +13045,7 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
 
   // If we already have the in-class initializer nothing needs to be done.
   if (Field->getInClassInitializer())
-    return CXXDefaultInitExpr::Create(Context, Loc, Field);
+    return CXXDefaultInitExpr::Create(Context, Loc, Field, CurContext);
 
   // If we might have already tried and failed to instantiate, don't try again.
   if (Field->isInvalidDecl())
@@ -13066,7 +13086,7 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
       Field->setInvalidDecl();
       return ExprError();
     }
-    return CXXDefaultInitExpr::Create(Context, Loc, Field);
+    return CXXDefaultInitExpr::Create(Context, Loc, Field, CurContext);
   }
 
   // DR1351:

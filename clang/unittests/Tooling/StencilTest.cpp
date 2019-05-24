@@ -22,9 +22,9 @@ using ::testing::AllOf;
 using ::testing::Eq;
 using ::testing::HasSubstr;
 using MatchResult = MatchFinder::MatchResult;
-using tooling::stencil::node;
-using tooling::stencil::sNode;
-using tooling::stencil::text;
+using stencil::cat;
+using stencil::dPrint;
+using stencil::text;
 
 // In tests, we can't directly match on llvm::Expected since its accessors
 // mutate the object. So, we collapse it to an Optional.
@@ -141,8 +141,8 @@ TEST_F(StencilTest, SingleStatement) {
                       hasThen(stmt().bind(Then)), hasElse(stmt().bind(Else))));
   ASSERT_TRUE(StmtMatch);
   // Invert the if-then-else.
-  auto Stencil = Stencil::cat("if (!", node(Condition), ") ", sNode(Else),
-                              " else ", sNode(Then));
+  auto Stencil = cat("if (!", node(Condition), ") ", statement(Else), " else ",
+                     statement(Then));
   EXPECT_THAT(toOptional(Stencil.eval(StmtMatch->Result)),
               IsSomething(Eq("if (!true) return 0; else return 1;")));
 }
@@ -160,8 +160,8 @@ TEST_F(StencilTest, SingleStatementCallOperator) {
                       hasThen(stmt().bind(Then)), hasElse(stmt().bind(Else))));
   ASSERT_TRUE(StmtMatch);
   // Invert the if-then-else.
-  Stencil S = Stencil::cat("if (!", node(Condition), ") ", sNode(Else),
-                              " else ", sNode(Then));
+  Stencil S = cat("if (!", node(Condition), ") ", statement(Else), " else ",
+                  statement(Then));
   EXPECT_THAT(toOptional(S(StmtMatch->Result)),
               IsSomething(Eq("if (!true) return 0; else return 1;")));
 }
@@ -176,7 +176,7 @@ TEST_F(StencilTest, UnboundNode) {
   auto StmtMatch = matchStmt(Snippet, ifStmt(hasCondition(stmt().bind("a1")),
                                              hasThen(stmt().bind("a2"))));
   ASSERT_TRUE(StmtMatch);
-  auto Stencil = Stencil::cat("if(!", sNode("a1"), ") ", node("UNBOUND"), ";");
+  auto Stencil = cat("if(!", node("a1"), ") ", node("UNBOUND"), ";");
   auto ResultOrErr = Stencil.eval(StmtMatch->Result);
   EXPECT_TRUE(llvm::errorToBool(ResultOrErr.takeError()))
       << "Expected unbound node, got " << *ResultOrErr;
@@ -192,32 +192,33 @@ void testExpr(StringRef Id, StringRef Snippet, const Stencil &Stencil,
               IsSomething(Expected));
 }
 
-TEST_F(StencilTest, NodeOp) {
+TEST_F(StencilTest, SelectionOp) {
   StringRef Id = "id";
-  testExpr(Id, "3;", Stencil::cat(node(Id)), "3");
-}
-
-TEST_F(StencilTest, SNodeOp) {
-  StringRef Id = "id";
-  testExpr(Id, "3;", Stencil::cat(sNode(Id)), "3;");
+  testExpr(Id, "3;", cat(node(Id)), "3");
 }
 
 TEST(StencilEqualityTest, Equality) {
-  using stencil::dPrint;
-  auto Lhs = Stencil::cat("foo", node("node"), dPrint("dprint_id"));
-  auto Rhs = Lhs;
+  auto Lhs = cat("foo", dPrint("dprint_id"));
+  auto Rhs = cat("foo", dPrint("dprint_id"));
   EXPECT_EQ(Lhs, Rhs);
 }
 
 TEST(StencilEqualityTest, InEqualityDifferentOrdering) {
-  auto Lhs = Stencil::cat("foo", node("node"));
-  auto Rhs = Stencil::cat(node("node"), "foo");
+  auto Lhs = cat("foo", dPrint("node"));
+  auto Rhs = cat(dPrint("node"), "foo");
   EXPECT_NE(Lhs, Rhs);
 }
 
 TEST(StencilEqualityTest, InEqualityDifferentSizes) {
-  auto Lhs = Stencil::cat("foo", node("node"), "bar", "baz");
-  auto Rhs = Stencil::cat("foo", node("node"), "bar");
+  auto Lhs = cat("foo", dPrint("node"), "bar", "baz");
+  auto Rhs = cat("foo", dPrint("node"), "bar");
   EXPECT_NE(Lhs, Rhs);
+}
+
+// node is opaque and therefore cannot be examined for equality.
+TEST(StencilEqualityTest, InEqualitySelection) {
+  auto S1 = cat(node("node"));
+  auto S2 = cat(node("node"));
+  EXPECT_NE(S1, S2);
 }
 } // namespace

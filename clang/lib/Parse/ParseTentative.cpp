@@ -653,12 +653,15 @@ Parser::isCXX11AttributeSpecifier(bool Disambiguate,
   if (!Disambiguate && !getLangOpts().ObjC)
     return CAK_AttributeSpecifier;
 
+  // '[[using ns: ...]]' is an attribute.
+  if (GetLookAheadToken(2).is(tok::kw_using))
+    return CAK_AttributeSpecifier;
+
   RevertingTentativeParsingAction PA(*this);
 
   // Opening brackets were checked for above.
   ConsumeBracket();
 
-  // Outside Obj-C++11, treat anything with a matching ']]' as an attribute.
   if (!getLangOpts().ObjC) {
     ConsumeBracket();
 
@@ -677,24 +680,45 @@ Parser::isCXX11AttributeSpecifier(bool Disambiguate,
   //   4) [[obj]{ return self; }() doStuff]; Lambda in message send.
   // (1) is an attribute, (2) is ill-formed, and (3) and (4) are accepted.
 
-  // If we have a lambda-introducer, then this is definitely not a message send.
+  // Check to see if this is a lambda-expression.
   // FIXME: If this disambiguation is too slow, fold the tentative lambda parse
   // into the tentative attribute parse below.
-  LambdaIntroducer Intro;
-  if (!TryParseLambdaIntroducer(Intro)) {
-    // A lambda cannot end with ']]', and an attribute must.
-    bool IsAttribute = Tok.is(tok::r_square);
+  {
+    RevertingTentativeParsingAction LambdaTPA(*this);
+    LambdaIntroducer Intro;
+    LambdaIntroducerTentativeParse Tentative;
+    if (ParseLambdaIntroducer(Intro, &Tentative)) {
+      // We hit a hard error after deciding this was not an attribute.
+      // FIXME: Don't parse and annotate expressions when disambiguating
+      // against an attribute.
+      return CAK_NotAttributeSpecifier;
+    }
 
-    if (IsAttribute)
-      // Case 1: C++11 attribute.
-      return CAK_AttributeSpecifier;
-
-    if (OuterMightBeMessageSend)
-      // Case 4: Lambda in message send.
+    switch (Tentative) {
+    case LambdaIntroducerTentativeParse::MessageSend:
+      // Case 3: The inner construct is definitely a message send, so the
+      // outer construct is definitely not an attribute.
       return CAK_NotAttributeSpecifier;
 
-    // Case 2: Lambda in array size / index.
-    return CAK_InvalidAttributeSpecifier;
+    case LambdaIntroducerTentativeParse::Success:
+    case LambdaIntroducerTentativeParse::Incomplete:
+      // This is a lambda-introducer or attribute-specifier.
+      if (Tok.is(tok::r_square))
+        // Case 1: C++11 attribute.
+        return CAK_AttributeSpecifier;
+
+      if (OuterMightBeMessageSend)
+        // Case 4: Lambda in message send.
+        return CAK_NotAttributeSpecifier;
+
+      // Case 2: Lambda in array size / index.
+      return CAK_InvalidAttributeSpecifier;
+
+    case LambdaIntroducerTentativeParse::Invalid:
+      // No idea what this is; we couldn't parse it as a lambda-introducer.
+      // Might still be an attribute-specifier or a message send.
+      break;
+    }
   }
 
   ConsumeBracket();
@@ -1437,6 +1461,8 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
   case tok::kw___read_only:
   case tok::kw___write_only:
   case tok::kw___read_write:
+    // OpenCL pipe
+  case tok::kw_pipe:
 
     // GNU
   case tok::kw_restrict:
@@ -2065,33 +2091,31 @@ Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip) {
   if (!TryConsumeToken(tok::less))
     return TPResult::False;
 
+  // We can't do much to tell an expression apart from a template-argument,
+  // but one good distinguishing factor is that a "decl-specifier" not
+  // followed by '(' or '{' can't appear in an expression.
   bool InvalidAsTemplateArgumentList = false;
-  while (true) {
-    // We can't do much to tell an expression apart from a template-argument,
-    // but one good distinguishing factor is that a "decl-specifier" not
-    // followed by '(' or '{' can't appear in an expression.
-    if (isCXXDeclarationSpecifier(
-            TPResult::False, &InvalidAsTemplateArgumentList) == TPResult::True)
-      return TPResult::True;
+  if (isCXXDeclarationSpecifier(TPResult::False,
+                                       &InvalidAsTemplateArgumentList) ==
+             TPResult::True)
+    return TPResult::True;
+  if (InvalidAsTemplateArgumentList)
+    return TPResult::False;
 
-    // That didn't help, try the next template-argument.
-    SkipUntil({tok::comma, tok::greater, tok::greatergreater,
-               tok::greatergreatergreater},
-              StopAtSemi | StopBeforeMatch);
-    switch (Tok.getKind()) {
-    case tok::comma:
-      ConsumeToken();
-      break;
+  // FIXME: In many contexts, X<thing1, Type> can only be a
+  // template-argument-list. But that's not true in general:
+  //
+  // using b = int;
+  // void f() {
+  //   int a = A<B, b, c = C>D; // OK, declares b, not a template-id.
+  //
+  // X<Y<0, int> // ', int>' might be end of X's template argument list
+  //
+  // We might be able to disambiguate a few more cases if we're careful.
 
-    case tok::greater:
-    case tok::greatergreater:
-    case tok::greatergreatergreater:
-      if (InvalidAsTemplateArgumentList)
-        return TPResult::False;
-      return TPResult::Ambiguous;
-
-    default:
-      return TPResult::False;
-    }
-  }
+  // A template-argument-list must be terminated by a '>'.
+  if (SkipUntil({tok::greater, tok::greatergreater, tok::greatergreatergreater},
+                StopAtSemi | StopBeforeMatch))
+    return TPResult::Ambiguous;
+  return TPResult::False;
 }

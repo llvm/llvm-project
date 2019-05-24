@@ -436,9 +436,13 @@ static bool isMachOPairedReloc(uint64_t RelocType, uint64_t Arch) {
 void DwarfLinker::RelocationManager::findValidRelocsMachO(
     const object::SectionRef &Section, const object::MachOObjectFile &Obj,
     const DebugMapObject &DMO) {
-  StringRef Contents;
-  Section.getContents(Contents);
-  DataExtractor Data(Contents, Obj.isLittleEndian(), 0);
+  Expected<StringRef> ContentsOrErr = Section.getContents();
+  if (!ContentsOrErr) {
+    consumeError(ContentsOrErr.takeError());
+    Linker.reportWarning("error reading section", DMO);
+    return;
+  }
+  DataExtractor Data(*ContentsOrErr, Obj.isLittleEndian(), 0);
   bool SkipNext = false;
 
   for (const object::RelocationRef &Reloc : Section.relocations()) {
@@ -622,7 +626,7 @@ unsigned DwarfLinker::shouldKeepVariableDIE(RelocationManager &RelocMgr,
     MyInfo.InDebugMap = true;
     return Flags | TF_Keep;
   }
-  
+
   Optional<uint32_t> LocationIdx =
       Abbrev->findAttributeIndex(dwarf::DW_AT_location);
   if (!LocationIdx)
@@ -1816,7 +1820,7 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
       OrigDwarf.getDWARFObj(), OrigDwarf.getDWARFObj().getLineSection(),
       OrigDwarf.isLittleEndian(), Unit.getOrigUnit().getAddressByteSize());
   if (Options.Translator)
-    return Streamer->translateLineTable(LineExtractor, StmtOffset, Options);
+    return Streamer->translateLineTable(LineExtractor, StmtOffset);
 
   Error Err = LineTable.parse(LineExtractor, &StmtOffset, OrigDwarf,
                               &Unit.getOrigUnit(), DWARFContext::dumpWarning);
@@ -2841,7 +2845,7 @@ bool DwarfLinker::link(const DebugMap &Map) {
             copySwiftInterfaces(ParseableSwiftInterfaces, ArchName, Options))
       return error(toString(std::move(E)));
   }
-  
+
   return Streamer->finish(Map, Options.Translator);
 } // namespace dsymutil
 

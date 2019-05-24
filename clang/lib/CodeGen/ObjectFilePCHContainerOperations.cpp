@@ -337,8 +337,14 @@ ObjectFilePCHContainerReader::ExtractPCH(llvm::MemoryBufferRef Buffer) const {
       StringRef Name;
       Section.getName(Name);
       if ((!IsCOFF && Name == "__clangast") || (IsCOFF && Name == "clangast")) {
-        Section.getContents(PCH);
-        return PCH;
+        if (Expected<StringRef> E = Section.getContents())
+          return *E;
+        else {
+          handleAllErrors(E.takeError(), [&](const llvm::ErrorInfoBase &EIB) {
+            EIB.log(llvm::errs());
+          });
+          return "";
+        }
       }
     }
   }

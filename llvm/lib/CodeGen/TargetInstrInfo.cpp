@@ -85,11 +85,13 @@ static bool isAsmComment(const char *Str, const MCAsmInfo &MAI) {
 /// simple--i.e. not a logical or arithmetic expression--size values without
 /// the optional fill value. This is primarily used for creating arbitrary
 /// sized inline asm blocks for testing purposes.
-unsigned TargetInstrInfo::getInlineAsmLength(const char *Str,
-                                             const MCAsmInfo &MAI) const {
+unsigned TargetInstrInfo::getInlineAsmLength(
+  const char *Str,
+  const MCAsmInfo &MAI, const TargetSubtargetInfo *STI) const {
   // Count the number of instructions in the asm.
   bool AtInsnStart = true;
   unsigned Length = 0;
+  const unsigned MaxInstLength = MAI.getMaxInstLength(STI);
   for (; *Str; ++Str) {
     if (*Str == '\n' || strncmp(Str, MAI.getSeparatorString(),
                                 strlen(MAI.getSeparatorString())) == 0) {
@@ -101,7 +103,7 @@ unsigned TargetInstrInfo::getInlineAsmLength(const char *Str,
     }
 
     if (AtInsnStart && !std::isspace(static_cast<unsigned char>(*Str))) {
-      unsigned AddLength = MAI.getMaxInstLength();
+      unsigned AddLength = MaxInstLength;
       if (strncmp(Str, ".space", 6) == 0) {
         char *EStr;
         int SpaceSize;

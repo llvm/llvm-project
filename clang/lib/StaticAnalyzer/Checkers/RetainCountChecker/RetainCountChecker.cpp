@@ -537,6 +537,11 @@ updateOutParameters(ProgramStateRef State, const RetainSummary &Summ,
   ProgramStateRef AssumeZeroReturn = State;
 
   if (SplitNecessary) {
+    if (!CE.getResultType()->isScalarType()) {
+      // Structures cannot be assumed. This probably deserves
+      // a compiler warning for invalid annotations.
+      return {State};
+    }
     if (auto DL = L.getAs<DefinedOrUnknownSVal>()) {
       AssumeNonZeroReturn = AssumeNonZeroReturn->assume(*DL, true);
       AssumeZeroReturn = AssumeZeroReturn->assume(*DL, false);

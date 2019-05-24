@@ -2130,7 +2130,7 @@ unsigned ASTContext::getTypeUnadjustedAlign(const Type *T) const {
     const ASTRecordLayout &Layout = getASTObjCInterfaceLayout(ObjCI->getDecl());
     UnadjustedAlign = toBits(Layout.getUnadjustedAlignment());
   } else {
-    UnadjustedAlign = getTypeAlign(T);
+    UnadjustedAlign = getTypeAlign(T->getUnqualifiedDesugaredType());
   }
 
   MemoizedUnadjustedAlign[T] = UnadjustedAlign;
@@ -4372,7 +4372,13 @@ QualType ASTContext::getPackExpansionType(QualType Pattern,
   llvm::FoldingSetNodeID ID;
   PackExpansionType::Profile(ID, Pattern, NumExpansions);
 
-  assert(Pattern->containsUnexpandedParameterPack() &&
+  // A deduced type can deduce to a pack, eg
+  //   auto ...x = some_pack;
+  // That declaration isn't (yet) valid, but is created as part of building an
+  // init-capture pack:
+  //   [...x = some_pack] {}
+  assert((Pattern->containsUnexpandedParameterPack() ||
+          Pattern->getContainedDeducedType()) &&
          "Pack expansions must expand one or more parameter packs");
   void *InsertPos = nullptr;
   PackExpansionType *T
@@ -4872,19 +4878,20 @@ QualType ASTContext::getUnaryTransformType(QualType BaseType,
 /// deduced to the given type, or to the canonical undeduced 'auto' type, or the
 /// canonical deduced-but-dependent 'auto' type.
 QualType ASTContext::getAutoType(QualType DeducedType, AutoTypeKeyword Keyword,
-                                 bool IsDependent) const {
+                                 bool IsDependent, bool IsPack) const {
+  assert((!IsPack || IsDependent) && "only use IsPack for a dependent pack");
   if (DeducedType.isNull() && Keyword == AutoTypeKeyword::Auto && !IsDependent)
     return getAutoDeductType();
 
   // Look in the folding set for an existing type.
   void *InsertPos = nullptr;
   llvm::FoldingSetNodeID ID;
-  AutoType::Profile(ID, DeducedType, Keyword, IsDependent);
+  AutoType::Profile(ID, DeducedType, Keyword, IsDependent, IsPack);
   if (AutoType *AT = AutoTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(AT, 0);
 
   auto *AT = new (*this, TypeAlignment)
-      AutoType(DeducedType, Keyword, IsDependent);
+      AutoType(DeducedType, Keyword, IsDependent, IsPack);
   Types.push_back(AT);
   if (InsertPos)
     AutoTypes.InsertNode(AT, InsertPos);
@@ -4946,7 +4953,7 @@ QualType ASTContext::getAutoDeductType() const {
   if (AutoDeductTy.isNull())
     AutoDeductTy = QualType(
       new (*this, TypeAlignment) AutoType(QualType(), AutoTypeKeyword::Auto,
-                                          /*dependent*/false),
+                                          /*dependent*/false, /*pack*/false),
       0);
   return AutoDeductTy;
 }
@@ -9286,7 +9293,7 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   // Read the prefixed modifiers first.
   bool Done = false;
   #ifndef NDEBUG
-  bool IsSpecialLong = false;
+  bool IsSpecial = false;
   #endif
   while (!Done) {
     switch (*Str++) {
@@ -9305,30 +9312,51 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Unsigned = true;
       break;
     case 'L':
-      assert(!IsSpecialLong && "Can't use 'L' with 'W' or 'N' modifiers");
+      assert(!IsSpecial && "Can't use 'L' with 'W', 'N' or 'Z' modifiers");
       assert(HowLong <= 2 && "Can't have LLLL modifier");
       ++HowLong;
       break;
     case 'N':
       // 'N' behaves like 'L' for all non LP64 targets and 'int' otherwise.
-      assert(!IsSpecialLong && "Can't use two 'N' or 'W' modifiers!");
+      assert(!IsSpecial && "Can't use two 'N', 'W' or 'Z' modifiers!");
       assert(HowLong == 0 && "Can't use both 'L' and 'N' modifiers!");
       #ifndef NDEBUG
-      IsSpecialLong = true;
+      IsSpecial = true;
       #endif
       if (Context.getTargetInfo().getLongWidth() == 32)
         ++HowLong;
       break;
     case 'W':
       // This modifier represents int64 type.
-      assert(!IsSpecialLong && "Can't use two 'N' or 'W' modifiers!");
+      assert(!IsSpecial && "Can't use two 'N', 'W' or 'Z'  modifiers!");
       assert(HowLong == 0 && "Can't use both 'L' and 'W' modifiers!");
       #ifndef NDEBUG
-      IsSpecialLong = true;
+      IsSpecial = true;
       #endif
       switch (Context.getTargetInfo().getInt64Type()) {
       default:
         llvm_unreachable("Unexpected integer type");
+      case TargetInfo::SignedLong:
+        HowLong = 1;
+        break;
+      case TargetInfo::SignedLongLong:
+        HowLong = 2;
+        break;
+      }
+      break;
+    case 'Z':
+      // This modifier represents int32 type.
+      assert(!IsSpecial && "Can't use two 'N', 'W' or 'Z' modifiers!");
+      assert(HowLong == 0 && "Can't use both 'L' and 'Z' modifiers!");
+      #ifndef NDEBUG
+      IsSpecial = true;
+      #endif
+      switch (Context.getTargetInfo().getIntTypeByWidth(32, true)) {
+      default:
+        llvm_unreachable("Unexpected integer type");
+      case TargetInfo::SignedInt:
+        HowLong = 0;
+        break;
       case TargetInfo::SignedLong:
         HowLong = 1;
         break;
@@ -10185,6 +10213,31 @@ ASTContext::getMaterializedTemporaryValue(const MaterializeTemporaryExpr *E,
   }
 
   return MaterializedTemporaryValues.lookup(E);
+}
+
+QualType ASTContext::getStringLiteralArrayType(QualType EltTy,
+                                               unsigned Length) const {
+  // A C++ string literal has a const-qualified element type (C++ 2.13.4p1).
+  if (getLangOpts().CPlusPlus || getLangOpts().ConstStrings)
+    EltTy = EltTy.withConst();
+
+  EltTy = adjustStringLiteralBaseType(EltTy);
+
+  // Get an array type for the string, according to C99 6.4.5. This includes
+  // the null terminator character.
+  return getConstantArrayType(EltTy, llvm::APInt(32, Length + 1),
+                              ArrayType::Normal, /*IndexTypeQuals*/ 0);
+}
+
+StringLiteral *
+ASTContext::getPredefinedStringLiteralFromCache(StringRef Key) const {
+  StringLiteral *&Result = StringLiteralCache[Key];
+  if (!Result)
+    Result = StringLiteral::Create(
+        *this, Key, StringLiteral::Ascii,
+        /*Pascal*/ false, getStringLiteralArrayType(CharTy, Key.size()),
+        SourceLocation());
+  return Result;
 }
 
 bool ASTContext::AtomicUsesUnsupportedLibcall(const AtomicExpr *E) const {

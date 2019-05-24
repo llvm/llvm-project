@@ -1040,7 +1040,7 @@ void Parser::AnnotateExistingDecltypeSpecifier(const DeclSpec& DS,
   if (PP.isBacktrackEnabled())
     PP.RevertCachedTokens(1);
   else
-    PP.EnterToken(Tok);
+    PP.EnterToken(Tok, /*IsReinject*/true);
 
   Tok.setKind(tok::annot_decltype);
   setExprAnnotation(Tok,
@@ -1736,7 +1736,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       // A semicolon was missing after this declaration. Diagnose and recover.
       ExpectAndConsume(tok::semi, diag::err_expected_after,
                        DeclSpec::getSpecifierName(TagType, PPol));
-      PP.EnterToken(Tok);
+      PP.EnterToken(Tok, /*IsReinject*/true);
       Tok.setKind(tok::semi);
     }
   } else
@@ -2013,7 +2013,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       // Push this token back into the preprocessor and change our current token
       // to ';' so that the rest of the code recovers as though there were an
       // ';' after the definition.
-      PP.EnterToken(Tok);
+      PP.EnterToken(Tok, /*IsReinject=*/true);
       Tok.setKind(tok::semi);
     }
   }
@@ -3280,7 +3280,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
       if (SuggestFixIt) {
         LBraceDiag << FixItHint::CreateInsertion(BraceLoc, " {");
         // Try recovering from missing { after base-clause.
-        PP.EnterToken(Tok);
+        PP.EnterToken(Tok, /*IsReinject*/true);
         Tok.setKind(tok::l_brace);
       } else {
         if (TagDecl)
@@ -3376,12 +3376,12 @@ void Parser::DiagnoseUnexpectedNamespace(NamedDecl *D) {
        diag::note_missing_end_of_definition_before) << D;
 
   // Push '};' onto the token stream to recover.
-  PP.EnterToken(Tok);
+  PP.EnterToken(Tok, /*IsReinject*/ true);
 
   Tok.startToken();
   Tok.setLocation(PP.getLocForEndOfToken(PrevTokLocation));
   Tok.setKind(tok::semi);
-  PP.EnterToken(Tok);
+  PP.EnterToken(Tok, /*IsReinject*/ true);
 
   Tok.setKind(tok::r_brace);
 }

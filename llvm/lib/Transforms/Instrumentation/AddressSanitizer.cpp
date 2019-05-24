@@ -3053,7 +3053,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
   Value *FakeStack;
   Value *LocalStackBase;
   Value *LocalStackBaseAlloca;
-  bool Deref;
+  uint8_t DIExprFlags = DIExpression::ApplyOffset;
 
   if (DoStackMalloc) {
     LocalStackBaseAlloca =
@@ -3094,7 +3094,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
     LocalStackBase = createPHI(IRB, NoFakeStack, AllocaValue, Term, FakeStack);
     IRB.SetCurrentDebugLocation(EntryDebugLocation);
     IRB.CreateStore(LocalStackBase, LocalStackBaseAlloca);
-    Deref = true;
+    DIExprFlags |= DIExpression::DerefBefore;
   } else {
     // void *FakeStack = nullptr;
     // void *LocalStackBase = alloca(LocalStackSize);
@@ -3102,14 +3102,13 @@ void FunctionStackPoisoner::processStaticAllocas() {
     LocalStackBase =
         DoDynamicAlloca ? createAllocaForLayout(IRB, L, true) : StaticAlloca;
     LocalStackBaseAlloca = LocalStackBase;
-    Deref = false;
   }
 
   // Replace Alloca instructions with base+offset.
   for (const auto &Desc : SVD) {
     AllocaInst *AI = Desc.AI;
-    replaceDbgDeclareForAlloca(AI, LocalStackBaseAlloca, DIB, Deref,
-                               Desc.Offset, DIExpression::NoDeref);
+    replaceDbgDeclareForAlloca(AI, LocalStackBaseAlloca, DIB, DIExprFlags,
+                               Desc.Offset);
     Value *NewAllocaPtr = IRB.CreateIntToPtr(
         IRB.CreateAdd(LocalStackBase, ConstantInt::get(IntptrTy, Desc.Offset)),
         AI->getType());

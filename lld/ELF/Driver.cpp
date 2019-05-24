@@ -790,6 +790,7 @@ static void readConfigs(opt::InputArgList &Args) {
   Config->DefineCommon = Args.hasFlag(OPT_define_common, OPT_no_define_common,
                                       !Args.hasArg(OPT_relocatable));
   Config->Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, true);
+  Config->DependentLibraries = Args.hasFlag(OPT_dependent_libraries, OPT_no_dependent_libraries, true);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->Discard = getDiscard(Args);
   Config->DwoDir = Args.getLastArgValue(OPT_plugin_opt_dwo_dir_eq);
@@ -974,9 +975,17 @@ static void readConfigs(opt::InputArgList &Args) {
   std::tie(Config->AndroidPackDynRelocs, Config->RelrPackDynRelocs) =
       getPackDynRelocs(Args);
 
-  if (auto *Arg = Args.getLastArg(OPT_symbol_ordering_file))
-    if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
+  if (auto *Arg = Args.getLastArg(OPT_symbol_ordering_file)){
+    if (Args.hasArg(OPT_call_graph_ordering_file))
+      error("--symbol-ordering-file and --call-graph-order-file "
+            "may not be used together");
+    if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue())){
       Config->SymbolOrderingFile = getSymbolOrderingFile(*Buffer);
+      // Also need to disable CallGraphProfileSort to prevent
+      // LLD order symbols with CGProfile
+      Config->CallGraphProfileSort = false;
+    }
+  }
 
   // If --retain-symbol-file is used, we'll keep only the symbols listed in
   // the file and discard all others.
@@ -1295,7 +1304,7 @@ static void excludeLibs(opt::InputArgList &Args) {
 }
 
 // Force Sym to be entered in the output. Used for -u or equivalent.
-template <class ELFT> static void handleUndefined(StringRef Name) {
+static void handleUndefined(StringRef Name) {
   Symbol *Sym = Symtab->find(Name);
   if (!Sym)
     return;
@@ -1305,10 +1314,10 @@ template <class ELFT> static void handleUndefined(StringRef Name) {
   Sym->IsUsedInRegularObj = true;
 
   if (Sym->isLazy())
-    Symtab->fetchLazy<ELFT>(Sym);
+    Symtab->fetchLazy(Sym);
 }
 
-template <class ELFT> static void handleLibcall(StringRef Name) {
+static void handleLibcall(StringRef Name) {
   Symbol *Sym = Symtab->find(Name);
   if (!Sym || !Sym->isLazy())
     return;
@@ -1320,7 +1329,26 @@ template <class ELFT> static void handleLibcall(StringRef Name) {
     MB = cast<LazyArchive>(Sym)->getMemberBuffer();
 
   if (isBitcode(MB))
-    Symtab->fetchLazy<ELFT>(Sym);
+    Symtab->fetchLazy(Sym);
+}
+
+// Replaces common symbols with defined symbols reside in .bss sections.
+// This function is called after all symbol names are resolved. As a
+// result, the passes after the symbol resolution won't see any
+// symbols of type CommonSymbol.
+static void replaceCommonSymbols() {
+  for (Symbol *Sym : Symtab->getSymbols()) {
+    auto *S = dyn_cast<CommonSymbol>(Sym);
+    if (!S)
+      continue;
+
+    auto *Bss = make<BssSection>("COMMON", S->Size, S->Alignment);
+    Bss->File = S->File;
+    Bss->Live = !Config->GcSections;
+    InputSections.push_back(Bss);
+    S->replace(Defined{S->File, S->getName(), S->Binding, S->StOther, S->Type,
+                       /*Value=*/0, S->Size, Bss});
+  }
 }
 
 // If all references to a DSO happen to be weak, the DSO is not added
@@ -1329,14 +1357,13 @@ template <class ELFT> static void handleLibcall(StringRef Name) {
 // that point to a non-existent DSO.
 static void demoteSharedSymbols() {
   for (Symbol *Sym : Symtab->getSymbols()) {
-    if (auto *S = dyn_cast<SharedSymbol>(Sym)) {
-      if (!S->getFile().IsNeeded) {
-        bool Used = S->Used;
-        replaceSymbol<Undefined>(S, nullptr, S->getName(), STB_WEAK, S->StOther,
-                                 S->Type);
-        S->Used = Used;
-      }
-    }
+    auto *S = dyn_cast<SharedSymbol>(Sym);
+    if (!S || S->getFile().IsNeeded)
+      continue;
+
+    bool Used = S->Used;
+    S->replace(Undefined{nullptr, S->getName(), STB_WEAK, S->StOther, S->Type});
+    S->Used = Used;
   }
 }
 
@@ -1405,8 +1432,8 @@ static void findKeepUniqueSections(opt::InputArgList &Args) {
 }
 
 template <class ELFT> static Symbol *addUndefined(StringRef Name) {
-  return Symtab->addUndefined<ELFT>(Name, STB_GLOBAL, STV_DEFAULT, 0, false,
-                                    nullptr);
+  return Symtab->addSymbol(
+      Undefined{nullptr, Name, STB_GLOBAL, STV_DEFAULT, 0});
 }
 
 // The --wrap option is a feature to rename symbols so that you can write
@@ -1528,9 +1555,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     Symtab->trace(Arg->getValue());
 
   // Add all files to the symbol table. This will add almost all
-  // symbols that we need to the symbol table.
-  for (InputFile *F : Files)
-    parseFile<ELFT>(F);
+  // symbols that we need to the symbol table. This process might
+  // add files to the link, via autolinking, these files are always
+  // appended to the Files vector.
+  for (size_t I = 0; I < Files.size(); ++I)
+    parseFile(Files[I]);
 
   // Now that we have every file, we can decide if we will need a
   // dynamic symbol table.
@@ -1548,10 +1577,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Handle the `--undefined <sym>` options.
   for (StringRef S : Config->Undefined)
-    handleUndefined<ELFT>(S);
+    handleUndefined(S);
 
   // If an entry symbol is in a static archive, pull out that file now.
-  handleUndefined<ELFT>(Config->Entry);
+  handleUndefined(Config->Entry);
 
   // If any of our inputs are bitcode files, the LTO code generator may create
   // references to certain library functions that might not be explicit in the
@@ -1572,7 +1601,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // object file to the link.
   if (!BitcodeFiles.empty())
     for (const char *S : LibcallRoutineNames)
-      handleLibcall<ELFT>(S);
+      handleLibcall(S);
 
   // Return if there were name resolution errors.
   if (errorCount())
@@ -1649,8 +1678,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // We do not want to emit debug sections if --strip-all
   // or -strip-debug are given.
-  if (Config->Strip != StripPolicy::None)
-    llvm::erase_if(InputSections, [](InputSectionBase *S) { return S->Debug; });
+  if (Config->Strip != StripPolicy::None) {
+    llvm::erase_if(InputSections, [](InputSectionBase *S) {
+      return S->Name.startswith(".debug") || S->Name.startswith(".zdebug");
+    });
+  }
 
   Config->EFlags = Target->calcEFlags();
   // MaxPageSize (sometimes called abi page size) is the maximum page size that
@@ -1680,6 +1712,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // before mergeSections because the .comment section is a mergeable section.
   if (!Config->Relocatable)
     InputSections.push_back(createCommentSection());
+
+  // Replace common symbols with regular symbols.
+  replaceCommonSymbols();
 
   // Do size optimizations: garbage collection, merging of SHF_MERGE sections
   // and identical code folding.

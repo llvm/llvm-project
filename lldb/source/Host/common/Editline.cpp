@@ -171,23 +171,28 @@ private:
   }
 
   const char *GetHistoryFilePath() {
+    // Compute the history path lazily.
     if (m_path.empty() && m_history && !m_prefix.empty()) {
-      FileSpec parent_path("~/.lldb");
-      FileSystem::Instance().Resolve(parent_path);
-      char history_path[PATH_MAX];
-      if (!llvm::sys::fs::create_directory(parent_path.GetPath())) {
-        snprintf(history_path, sizeof(history_path), "~/.lldb/%s-history",
-                 m_prefix.c_str());
-      } else {
-        snprintf(history_path, sizeof(history_path), "~/%s-widehistory",
-                 m_prefix.c_str());
+      llvm::SmallString<128> lldb_history_file;
+      llvm::sys::path::home_directory(lldb_history_file);
+      llvm::sys::path::append(lldb_history_file, ".lldb");
+
+      // LLDB stores its history in ~/.lldb/. If for some reason this directory
+      // isn't writable or cannot be created, history won't be available.
+      if (!llvm::sys::fs::create_directory(lldb_history_file)) {
+#if LLDB_EDITLINE_USE_WCHAR
+        std::string filename = m_prefix + "-widehistory";
+#else
+        std::string filename = m_prefix + "-history";
+#endif
+        llvm::sys::path::append(lldb_history_file, filename);
+        m_path = lldb_history_file.str();
       }
-      auto file_spec = FileSpec(history_path);
-      FileSystem::Instance().Resolve(file_spec);
-      m_path = file_spec.GetPath();
     }
+
     if (m_path.empty())
-      return NULL;
+      return nullptr;
+
     return m_path.c_str();
   }
 
@@ -870,10 +875,11 @@ static void PrintCompletion(FILE *output_file, size_t start, size_t end,
     const char *completion_str = completions.GetStringAtIndex(i);
     const char *description_str = descriptions.GetStringAtIndex(i);
 
-    fprintf(output_file, "\n\t%-*s", max_len, completion_str);
+    if (completion_str)
+      fprintf(output_file, "\n\t%-*s", max_len, completion_str);
 
     // Print the description if we got one.
-    if (strlen(description_str))
+    if (description_str && strlen(description_str))
       fprintf(output_file, " -- %s", description_str);
   }
 }
@@ -972,7 +978,9 @@ void Editline::ConfigureEditor(bool multiline) {
   TerminalSizeChanged();
 
   if (m_history_sp && m_history_sp->IsValid()) {
-    m_history_sp->Load();
+    if (!m_history_sp->Load()) {
+        fputs("Could not load history file\n.", m_output_file);
+    }
     el_wset(m_editline, EL_HIST, history, m_history_sp->GetHistoryPtr());
   }
   el_set(m_editline, EL_CLIENTDATA, this);

@@ -348,7 +348,7 @@ public:
 void ento::registerPaddingChecker(CheckerManager &Mgr) {
   auto *Checker = Mgr.registerChecker<PaddingChecker>();
   Checker->AllowedPad = Mgr.getAnalyzerOptions()
-          .getCheckerIntegerOption(Checker, "AllowedPad", 24);
+          .getCheckerIntegerOption(Checker, "AllowedPad");
   if (Checker->AllowedPad < 0)
     Mgr.reportInvalidCheckerOptionValue(
         Checker, "AllowedPad", "a non-negative value");

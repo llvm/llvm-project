@@ -803,6 +803,10 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     CmdArgs.push_back("-fprofile-instrument=csllvm");
   }
   if (PGOGenArg) {
+    if (TC.getTriple().isWindowsMSVCEnvironment()) {
+      CmdArgs.push_back(Args.MakeArgString("--dependent-lib=" +
+                                           TC.getCompilerRT(Args, "profile")));
+    }
     if (PGOGenArg->getOption().matches(
             PGOGenerateArg ? options::OPT_fprofile_generate_EQ
                            : options::OPT_fcs_profile_generate_EQ)) {
@@ -1423,6 +1427,9 @@ void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
   if (!Args.hasFlag(options::OPT_mimplicit_float,
                     options::OPT_mno_implicit_float, true))
     CmdArgs.push_back("-no-implicit-float");
+
+  if (Args.getLastArg(options::OPT_mcmse))
+    CmdArgs.push_back("-mcmse");
 }
 
 void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,

@@ -2,7 +2,7 @@
 // RUN:   -config="{CheckOptions: \
 // RUN:             [{key: modernize-use-emplace.IgnoreImplicitConstructors, \
 // RUN:               value: 1}] \
-// RUN:             }" -- -std=c++11
+// RUN:             }"
 
 namespace std {
 template <typename>

@@ -6081,10 +6081,10 @@ enum is the smallest type which can represent all of its values::
 Automatic Linker Flags Named Metadata
 =====================================
 
-Some targets support embedding flags to the linker inside individual object
+Some targets support embedding of flags to the linker inside individual object
 files. Typically this is used in conjunction with language extensions which
-allow source files to explicitly declare the libraries they depend on, and have
-these automatically be transmitted to the linker via object files.
+allow source files to contain linker command line options, and have these
+automatically be transmitted to the linker via object files.
 
 These flags are encoded in the IR using named metadata with the name
 ``!llvm.linker.options``. Each operand is expected to be a metadata node
@@ -6095,8 +6095,8 @@ For example, the following metadata section specifies two separate sets of
 linker options, presumably to link against ``libz`` and the ``Cocoa``
 framework::
 
-    !0 = !{ !"-lz" },
-    !1 = !{ !"-framework", !"Cocoa" } } }
+    !0 = !{ !"-lz" }
+    !1 = !{ !"-framework", !"Cocoa" }
     !llvm.linker.options = !{ !0, !1 }
 
 The metadata encoding as lists of lists of options, as opposed to a collapsed
@@ -6108,6 +6108,28 @@ assembly writer or object file emitter.
 Each individual option is required to be either a valid option for the target's
 linker, or an option that is reserved by the target specific assembly writer or
 object file emitter. No other aspect of these options is defined by the IR.
+
+Dependent Libs Named Metadata
+=============================
+
+Some targets support embedding of strings into object files to indicate
+a set of libraries to add to the link. Typically this is used in conjunction
+with language extensions which allow source files to explicitly declare the
+libraries they depend on, and have these automatically be transmitted to the
+linker via object files.
+
+The list is encoded in the IR using named metadata with the name
+``!llvm.dependent-libraries``. Each operand is expected to be a metadata node
+which should contain a single string operand.
+
+For example, the following metadata section contains two library specfiers::
+
+    !0 = !{!"a library specifier"}
+    !1 = !{!"another library specifier"}
+    !llvm.dependent-libraries = !{ !0, !1 }
+
+Each library specifier will be handled independently by the consuming linker.
+The effect of the library specifiers are defined by the consuming linker.
 
 .. _summary:
 
@@ -9909,7 +9931,7 @@ Syntax:
 
 ::
 
-      <result> = select selty <cond>, <ty> <val1>, <ty> <val2>             ; yields ty
+      <result> = select [fast-math flags] selty <cond>, <ty> <val1>, <ty> <val2>             ; yields ty
 
       selty is either i1 or {<N x i1>}
 
@@ -9925,6 +9947,11 @@ Arguments:
 The '``select``' instruction requires an 'i1' value or a vector of 'i1'
 values indicating the condition, and two values of the same :ref:`first
 class <t_firstclass>` type.
+
+#. The optional ``fast-math flags`` marker indicates that the select has one or more
+   :ref:`fast-math flags <fastmath>`. These are optimization hints to enable
+   otherwise unsafe floating-point optimizations. Fast-math flags are only valid
+   for selects that return a floating-point scalar or vector type.
 
 Semantics:
 """"""""""
@@ -12344,6 +12371,80 @@ Semantics:
 This function returns the same values as the libm ``round``
 functions would, and handles error conditions in the same way.
 
+'``llvm.lround.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.lround`` on any
+floating-point type. Not all targets support all types however.
+
+::
+
+      declare i32 @llvm.lround.i32.f32(float %Val)
+      declare i32 @llvm.lround.i32.f64(double %Val)
+      declare i32 @llvm.lround.i32.f80(float %Val)
+      declare i32 @llvm.lround.i32.f128(double %Val)
+      declare i32 @llvm.lround.i32.ppcf128(double %Val)
+
+      declare i64 @llvm.lround.i64.f32(float %Val)
+      declare i64 @llvm.lround.i64.f64(double %Val)
+      declare i64 @llvm.lround.i64.f80(float %Val)
+      declare i64 @llvm.lround.i64.f128(double %Val)
+      declare i64 @llvm.lround.i64.ppcf128(double %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.lround.*``' intrinsics returns the operand rounded to the
+nearest integer.
+
+Arguments:
+""""""""""
+
+The argument is a floating-point number and return is an integer type.
+
+Semantics:
+""""""""""
+
+This function returns the same values as the libm ``lround``
+functions would, but without setting errno.
+
+'``llvm.llround.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.llround`` on any
+floating-point type. Not all targets support all types however.
+
+::
+
+      declare i64 @llvm.lround.i64.f32(float %Val)
+      declare i64 @llvm.lround.i64.f64(double %Val)
+      declare i64 @llvm.lround.i64.f80(float %Val)
+      declare i64 @llvm.lround.i64.f128(double %Val)
+      declare i64 @llvm.lround.i64.ppcf128(double %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.llround.*``' intrinsics returns the operand rounded to the
+nearest integer.
+
+Arguments:
+""""""""""
+
+The argument is a floating-point number and return is an integer type.
+
+Semantics:
+""""""""""
+
+This function returns the same values as the libm ``llround``
+functions would, but without setting errno.
+
 Bit Manipulation Intrinsics
 ---------------------------
 
@@ -13182,6 +13283,32 @@ are useful for representing fractional values to a specific precision. The
 following intrinsics perform fixed point arithmetic operations on 2 operands
 of the same scale, specified as the third argument.
 
+The `llvm.*mul.fix` family of intrinsic functions represents a multiplication
+of fixed point numbers through scaled integers. Therefore, fixed point
+multplication can be represented as
+
+::
+        %result = call i4 @llvm.smul.fix.i4(i4 %a, i4 %b, i32 %scale)
+
+        ; Expands to
+        %a2 = sext i4 %a to i8
+        %b2 = sext i4 %b to i8
+        %mul = mul nsw nuw i8 %a, %b
+        %scale2 = trunc i32 %scale to i8
+        %r = ashr i8 %mul, i8 %scale2  ; this is for a target rounding down towards negative infinity
+        %result = trunc i8 %r to i4
+
+For each of these functions, if the result cannot be represented exactly with
+the provided scale, the result is rounded. Rounding is unspecified since
+preferred rounding may vary for different targets. Rounding is specified
+through a target hook. Different pipelines should legalize or optimize this
+using the rounding specified by this hook if it is provided. Operations like
+constant folding, instruction combining, KnownBits, and ValueTracking should
+also use this hook, if provided, and not assume the direction of rounding. A
+rounded result must always be within one unit of precision from the true
+result. That is, the error between the returned result and the true result must
+be less than 1/2^(scale).
+
 
 '``llvm.smul.fix.*``' Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -13300,6 +13427,76 @@ Examples
 
       ; The result in the following could be rounded down to 3.5 or up to 4
       %res = call i4 @llvm.umul.fix.i4(i4 15, i4 1, i32 1)  ; %res = 7 (or 8) (7.5 x 0.5 = 3.75)
+
+
+'``llvm.smul.fix.sat.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.smul.fix.sat``
+on any integer bit width or vectors of integers.
+
+::
+
+      declare i16 @llvm.smul.fix.sat.i16(i16 %a, i16 %b, i32 %scale)
+      declare i32 @llvm.smul.fix.sat.i32(i32 %a, i32 %b, i32 %scale)
+      declare i64 @llvm.smul.fix.sat.i64(i64 %a, i64 %b, i32 %scale)
+      declare <4 x i32> @llvm.smul.fix.sat.v4i32(<4 x i32> %a, <4 x i32> %b, i32 %scale)
+
+Overview
+"""""""""
+
+The '``llvm.smul.fix.sat``' family of intrinsic functions perform signed
+fixed point saturation multiplication on 2 arguments of the same scale.
+
+Arguments
+""""""""""
+
+The arguments (%a and %b) and the result may be of integer types of any bit
+width, but they must have the same bit width. ``%a`` and ``%b`` are the two
+values that will undergo signed fixed point multiplication. The argument
+``%scale`` represents the scale of both operands, and must be a constant
+integer.
+
+Semantics:
+""""""""""
+
+This operation performs fixed point multiplication on the 2 arguments of a
+specified scale. The result will also be returned in the same scale specified
+in the third argument.
+
+If the result value cannot be precisely represented in the given scale, the
+value is rounded up or down to the closest representable value. The rounding
+direction is unspecified.
+
+The maximum value this operation can clamp to is the largest signed value
+representable by the bit width of the first 2 arguments. The minimum value is the
+smallest signed value representable by this bit width.
+
+
+Examples
+"""""""""
+
+.. code-block:: llvm
+
+      %res = call i4 @llvm.smul.fix.sat.i4(i4 3, i4 2, i32 0)  ; %res = 6 (2 x 3 = 6)
+      %res = call i4 @llvm.smul.fix.sat.i4(i4 3, i4 2, i32 1)  ; %res = 3 (1.5 x 1 = 1.5)
+      %res = call i4 @llvm.smul.fix.sat.i4(i4 3, i4 -2, i32 1)  ; %res = -3 (1.5 x -1 = -1.5)
+
+      ; The result in the following could be rounded up to -2 or down to -2.5
+      %res = call i4 @llvm.smul.fix.sat.i4(i4 3, i4 -3, i32 1)  ; %res = -5 (or -4) (1.5 x -1.5 = -2.25)
+
+      ; Saturation
+      %res = call i4 @llvm.smul.fix.sat.i4(i4 7, i4 2, i32 0)  ; %res = 7
+      %res = call i4 @llvm.smul.fix.sat.i4(i4 7, i4 2, i32 2)  ; %res = 7
+      %res = call i4 @llvm.smul.fix.sat.i4(i4 -8, i4 2, i32 2)  ; %res = -8
+      %res = call i4 @llvm.smul.fix.sat.i4(i4 -8, i4 -2, i32 2)  ; %res = 7
+
+      ; Scale can affect the saturation result
+      %res = call i4 @llvm.smul.fix.sat.i4(i4 2, i4 4, i32 0)  ; %res = 7 (2 x 4 -> clamped to 7)
+      %res = call i4 @llvm.smul.fix.sat.i4(i4 2, i4 4, i32 1)  ; %res = 4 (1 x 2 = 2)
 
 
 Specialised Arithmetic Intrinsics
@@ -13483,7 +13680,8 @@ Arguments:
 """"""""""
 The first argument to this intrinsic is a scalar accumulator value, which is
 only used when there are no fast-math flags attached. This argument may be undef
-when fast-math flags are used.
+when fast-math flags are used. The type of the accumulator matches the
+element-type of the vector input.
 
 The second argument must be a vector of floating-point values.
 
@@ -13546,7 +13744,8 @@ Arguments:
 """"""""""
 The first argument to this intrinsic is a scalar accumulator value, which is
 only used when there are no fast-math flags attached. This argument may be undef
-when fast-math flags are used.
+when fast-math flags are used. The type of the accumulator matches the
+element-type of the vector input.
 
 The second argument must be a vector of floating-point values.
 

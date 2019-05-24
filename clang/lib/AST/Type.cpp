@@ -1743,6 +1743,10 @@ namespace {
     Type *VisitAdjustedType(const AdjustedType *T) {
       return Visit(T->getOriginalType());
     }
+
+    Type *VisitPackExpansionType(const PackExpansionType *T) {
+      return Visit(T->getPattern());
+    }
   };
 
 } // namespace
@@ -3929,7 +3933,11 @@ AttributedType::getImmediateNullability() const {
 }
 
 Optional<NullabilityKind> AttributedType::stripOuterNullability(QualType &T) {
-  if (auto attributed = dyn_cast<AttributedType>(T.getTypePtr())) {
+  QualType AttrTy = T;
+  if (auto MacroTy = dyn_cast<MacroQualifiedType>(T))
+    AttrTy = MacroTy->getUnderlyingType();
+
+  if (auto attributed = dyn_cast<AttributedType>(AttrTy)) {
     if (auto nullability = attributed->getImmediateNullability()) {
       T = attributed->getModifiedType();
       return nullability;

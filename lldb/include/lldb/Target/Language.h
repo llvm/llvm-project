@@ -255,6 +255,9 @@ public:
 
   static bool LanguageIsC(lldb::LanguageType language);
 
+  /// Equivalent to \c LanguageIsC||LanguageIsObjC||LanguageIsCPlusPlus.
+  static bool LanguageIsCFamily(lldb::LanguageType language);
+
   static bool LanguageIsPascal(lldb::LanguageType language);
 
   // return the primary language, so if LanguageIsC(l), return eLanguageTypeC,

@@ -88,8 +88,8 @@ s_mulk_i32 s2, 0xFFFF
 // VI9:  s_mulk_i32 s2, 0xffff ; encoding: [0xff,0xff,0x82,0xb7]
 
 s_cbranch_i_fork s[2:3], 0x6
-// SICI: s_cbranch_i_fork s[2:3], 0x6 ; encoding: [0x06,0x00,0x82,0xb8]
-// VI9:  s_cbranch_i_fork s[2:3], 0x6 ; encoding: [0x06,0x00,0x02,0xb8]
+// SICI: s_cbranch_i_fork s[2:3], 6 ; encoding: [0x06,0x00,0x82,0xb8]
+// VI9:  s_cbranch_i_fork s[2:3], 6 ; encoding: [0x06,0x00,0x02,0xb8]
 
 // raw number mapped to known HW register
 s_getreg_b32 s2, 0x6
@@ -282,13 +282,13 @@ s_endpgm_ordered_ps_done
 // NOSICIVI: error: instruction not supported on this GPU
 
 s_call_b64 s[12:13], 12609
-// GFX9:     s_call_b64 s[12:13], 0x3141 ; encoding: [0x41,0x31,0x8c,0xba]
+// GFX9:     s_call_b64 s[12:13], 12609 ; encoding: [0x41,0x31,0x8c,0xba]
 // NOSICIVI: error: instruction not supported on this GPU
 
 s_call_b64 s[100:101], 12609
-// GFX9:     s_call_b64 s[100:101], 0x3141 ; encoding: [0x41,0x31,0xe4,0xba]
+// GFX9:     s_call_b64 s[100:101], 12609 ; encoding: [0x41,0x31,0xe4,0xba]
 // NOSICIVI: error: instruction not supported on this GPU
 
 s_call_b64 s[10:11], 49617
-// GFX9:     s_call_b64 s[10:11], 0xc1d1 ; encoding: [0xd1,0xc1,0x8a,0xba]
+// GFX9:     s_call_b64 s[10:11], 49617 ; encoding: [0xd1,0xc1,0x8a,0xba]
 // NOSICIVI: error: instruction not supported on this GPU

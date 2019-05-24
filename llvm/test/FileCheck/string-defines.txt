@@ -1,0 +1,29 @@
+; Test functionality of -D option: string variables are defined to the right
+; value and CHECK directives using them match as expected given the value set.
+
+; String variable correctly defined to a non-empty string.
+RUN: FileCheck -DVALUE=10 --input-file %s %s
+RUN: not FileCheck -DVALUE=20 --input-file %s %s 2>&1 \
+RUN:   | FileCheck %s --check-prefix ERRMSG
+RUN: not FileCheck -DVALUE=10 --check-prefix NOT --input-file %s %s 2>&1 \
+RUN:   | FileCheck %s --check-prefix NOT-ERRMSG
+RUN: FileCheck -DVALUE=20 --check-prefix NOT --input-file %s %s
+
+Value = 10
+CHECK: Value = [[VALUE]]
+NOT-NOT: Value = [[VALUE]]
+
+ERRMSG: defines.txt:[[@LINE-3]]:8: error: CHECK: expected string not found in input
+ERRMSG: defines.txt:1:1: note: scanning from here
+ERRMSG: defines.txt:1:1: note: with "VALUE" equal to "20"
+ERRMSG: defines.txt:[[@LINE-7]]:1: note: possible intended match here
+
+NOT-ERRMSG: defines.txt:[[@LINE-7]]:10: error: {{NOT}}-NOT: excluded string found in input
+NOT-ERRMSG: defines.txt:[[@LINE-10]]:1: note: found here
+NOT-ERRMSG: defines.txt:[[@LINE-11]]:1: note: with "VALUE" equal to "10"
+
+; Definition of string variable to an empty string.
+RUN: FileCheck -DVALUE= --check-prefix EMPTY --input-file %s %s 2>&1
+
+Empty value = @@
+EMPTY: Empty value = @[[VALUE]]@

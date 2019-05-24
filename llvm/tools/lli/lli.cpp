@@ -821,8 +821,10 @@ int runOrcLazyJIT(const char *ProgName) {
     IdxToDylib[0] = &J->getMainJITDylib();
     for (auto JDItr = JITDylibs.begin(), JDEnd = JITDylibs.end();
          JDItr != JDEnd; ++JDItr) {
-      IdxToDylib[JITDylibs.getPosition(JDItr - JITDylibs.begin())] =
-          &J->createJITDylib(*JDItr);
+      orc::JITDylib *JD = J->getJITDylibByName(*JDItr);
+      if (!JD)
+        JD = &J->createJITDylib(*JDItr);
+      IdxToDylib[JITDylibs.getPosition(JDItr - JITDylibs.begin())] = JD;
     }
 
     for (auto EMItr = ExtraModules.begin(), EMEnd = ExtraModules.end();

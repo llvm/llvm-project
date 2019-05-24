@@ -59,6 +59,11 @@
   attributes #0 = { convergent nounwind }
   attributes #1 = { convergent nounwind readnone }
 
+  define amdgpu_kernel void @move_waw_hazards() #0 {
+    ret void
+  }
+
+  attributes #0 = { convergent nounwind }
 ...
 ---
 name:            mem_dependency
@@ -128,4 +133,33 @@ body:             |
     %7:vgpr_32 = DS_READ_B32 %1, 0, 0, implicit $m0, implicit $exec :: (load 4 from `i32 addrspace(3)* getelementptr ([256 x i32], [256 x i32] addrspace(3)* @lds2, i32 0, i32 undef)`, addrspace 3)
     S_SETPC_B64_return undef $sgpr30_sgpr31, implicit %6, implicit %7
 
+...
+---
+# Make sure Write-after-Write hazards are correctly detected and the
+# instructions moved accordingly.
+# operations.
+# CHECK-LABEL: name: move_waw_hazards
+# CHECK: S_AND_B64
+# CHECK: S_CMP_EQ_U32
+name:            move_waw_hazards
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    %3:sgpr_64 = COPY $sgpr0_sgpr1
+    %6:sreg_32_xm0_xexec = S_MOV_B32 0
+    %7:sreg_32_xm0 = S_MOV_B32 0
+    %8:sreg_64_xexec = REG_SEQUENCE killed %6, %subreg.sub0, %7, %subreg.sub1
+    %9:sreg_128 = S_LOAD_DWORDX4_IMM killed %8, 0, 0, 0 :: (invariant load 16, addrspace 6)
+    %31:sreg_64_xexec = S_BUFFER_LOAD_DWORDX2_IMM %9, 0, 0, 0 :: (dereferenceable invariant load 4)
+    %10:sreg_32_xm0_xexec = COPY %31.sub0
+    %11:sreg_32_xm0_xexec = COPY killed %31.sub1
+    %12:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %9, 2, 0, 0 :: (dereferenceable invariant load 4)
+    %13:sreg_64 = V_CMP_NE_U32_e64 killed %11, 0, implicit $exec
+    %15:sreg_64 = V_CMP_NE_U32_e64 killed %12, 0, implicit $exec
+    %17:sreg_64_xexec = S_AND_B64 killed %13, killed %15, implicit-def dead $scc
+    S_CMP_EQ_U32 killed %10, 0, implicit-def $scc
+    %18:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %9, 3, 0, 0 :: (dereferenceable invariant load 4)
+    S_ENDPGM 0
 ...

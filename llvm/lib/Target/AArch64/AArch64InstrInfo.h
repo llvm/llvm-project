@@ -267,6 +267,13 @@ public:
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 
+protected:
+  /// If the specific machine instruction is a instruction that moves/copies
+  /// value from one register to another register return true along with
+  /// @Source machine operand and @Destination machine operand.
+  bool isCopyInstrImpl(const MachineInstr &MI, const MachineOperand *&Source,
+                       const MachineOperand *&Destination) const override;
+
 private:
   /// Sets the offsets on outlined instructions in \p MBB which use SP
   /// so that they will be valid post-outlining.
@@ -293,7 +300,8 @@ void emitFrameOffset(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                      const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                      int Offset, const TargetInstrInfo *TII,
                      MachineInstr::MIFlag = MachineInstr::NoFlags,
-                     bool SetNZCV = false,  bool NeedsWinCFI = false);
+                     bool SetNZCV = false, bool NeedsWinCFI = false,
+                     bool *HasWinCFI = nullptr);
 
 /// rewriteAArch64FrameIndex - Rewrite MI to access 'Offset' bytes from the
 /// FP. Return false if the offset could not be handled directly in MI, and

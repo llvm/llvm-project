@@ -15,7 +15,7 @@
 ; This function tests that RISCVRegisterInfo::getCalleeSavedRegs returns
 ; something appropriate.
 
-define void @callee() {
+define void @callee() nounwind {
 ; ILP32-LP64-LABEL: callee:
 ; ILP32-LP64:       # %bb.0:
 ; ILP32-LP64-NEXT:    lui a0, %hi(var)
@@ -115,7 +115,7 @@ define void @callee() {
 ; codegen will use only ft0 in the body of caller. For the 'f' and 'd ABIs,
 ; fs0-fs11 are preserved across calls.
 
-define void @caller() {
+define void @caller() nounwind {
 ; ILP32-LP64-LABEL: caller:
 ; ILP32-LP64-NOT:     ft{{[1-9][0-9]*}}
 ; ILP32-LP64-NOT:     fs{{[0-9]+}}

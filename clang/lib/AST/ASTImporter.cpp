@@ -5325,7 +5325,7 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
       return ImportedDefOrErr.takeError();
   }
 
-  VarTemplateDecl *VarTemplate;
+  VarTemplateDecl *VarTemplate = nullptr;
   if (Error Err = importInto(VarTemplate, D->getSpecializedTemplate()))
     return std::move(Err);
 
@@ -6801,8 +6801,12 @@ ExpectedStmt ASTNodeImporter::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
   if (!ToParamOrErr)
     return ToParamOrErr.takeError();
 
+  auto UsedContextOrErr = Importer.ImportContext(E->getUsedContext());
+  if (!UsedContextOrErr)
+    return UsedContextOrErr.takeError();
+
   return CXXDefaultArgExpr::Create(
-      Importer.getToContext(), *ToUsedLocOrErr, *ToParamOrErr);
+      Importer.getToContext(), *ToUsedLocOrErr, *ToParamOrErr, *UsedContextOrErr);
 }
 
 ExpectedStmt
@@ -7525,8 +7529,12 @@ ExpectedStmt ASTNodeImporter::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
   if (!ToFieldOrErr)
     return ToFieldOrErr.takeError();
 
+  auto UsedContextOrErr = Importer.ImportContext(E->getUsedContext());
+  if (!UsedContextOrErr)
+    return UsedContextOrErr.takeError();
+
   return CXXDefaultInitExpr::Create(
-      Importer.getToContext(), *ToBeginLocOrErr, *ToFieldOrErr);
+      Importer.getToContext(), *ToBeginLocOrErr, *ToFieldOrErr, *UsedContextOrErr);
 }
 
 ExpectedStmt ASTNodeImporter::VisitCXXNamedCastExpr(CXXNamedCastExpr *E) {
@@ -8002,7 +8010,7 @@ ASTImporter::Import(NestedNameSpecifierLoc FromNNS) {
 
   while (!NestedNames.empty()) {
     NNS = NestedNames.pop_back_val();
-    NestedNameSpecifier *Spec;
+    NestedNameSpecifier *Spec = nullptr;
     if (Error Err = importInto(Spec, NNS.getNestedNameSpecifier()))
       return std::move(Err);
 

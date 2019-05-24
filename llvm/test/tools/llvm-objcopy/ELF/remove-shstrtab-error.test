@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s > %t
-# RUN: not llvm-objcopy -R .shstrtab %t %t2 2>&1 >/dev/null | FileCheck %s
+# RUN: not llvm-objcopy -R .shstrtab %t %t2 2>&1 >/dev/null | FileCheck %s -DINPUT=%t
 
 !ELF
 FileHeader:
@@ -8,4 +8,4 @@ FileHeader:
   Type:            ET_REL
   Machine:         EM_X86_64
 
-# CHECK: Cannot write section header table because section header string table was removed.
+# CHECK: error: '[[INPUT]]': cannot write section header table because section header string table was removed

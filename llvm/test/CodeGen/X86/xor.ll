@@ -480,16 +480,16 @@ define %struct.ref_s* @test12(%struct.ref_s* %op, i64 %osbot, i64 %intval) {
 ;
 ; X64-LIN-LABEL: test12:
 ; X64-LIN:       # %bb.0:
-; X64-LIN-NEXT:    notl %edx
 ; X64-LIN-NEXT:    movslq %edx, %rax
+; X64-LIN-NEXT:    notq %rax
 ; X64-LIN-NEXT:    shlq $4, %rax
 ; X64-LIN-NEXT:    addq %rdi, %rax
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: test12:
 ; X64-WIN:       # %bb.0:
-; X64-WIN-NEXT:    notl %r8d
 ; X64-WIN-NEXT:    movslq %r8d, %rax
+; X64-WIN-NEXT:    notq %rax
 ; X64-WIN-NEXT:    shlq $4, %rax
 ; X64-WIN-NEXT:    addq %rcx, %rax
 ; X64-WIN-NEXT:    retq
@@ -528,3 +528,162 @@ define i32 @PR39657(i8* %p, i64 %x) {
   ret i32 %load
 }
 
+define i32 @add_of_not(i32 %x, i32 %y) {
+; X32-LABEL: add_of_not:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    decl %eax
+; X32-NEXT:    retl
+;
+; X64-LIN-LABEL: add_of_not:
+; X64-LIN:       # %bb.0:
+; X64-LIN-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-LIN-NEXT:    subl %esi, %edi
+; X64-LIN-NEXT:    leal -1(%rdi), %eax
+; X64-LIN-NEXT:    retq
+;
+; X64-WIN-LABEL: add_of_not:
+; X64-WIN:       # %bb.0:
+; X64-WIN-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; X64-WIN-NEXT:    subl %edx, %ecx
+; X64-WIN-NEXT:    leal -1(%rcx), %eax
+; X64-WIN-NEXT:    retq
+  %t0 = sub i32 %x, %y
+  %r = add i32 %t0, -1
+  ret i32 %r
+}
+
+define i32 @add_of_not_decrement(i32 %x, i32 %y) {
+; X32-LABEL: add_of_not_decrement:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    decl %eax
+; X32-NEXT:    retl
+;
+; X64-LIN-LABEL: add_of_not_decrement:
+; X64-LIN:       # %bb.0:
+; X64-LIN-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-LIN-NEXT:    subl %esi, %edi
+; X64-LIN-NEXT:    leal -1(%rdi), %eax
+; X64-LIN-NEXT:    retq
+;
+; X64-WIN-LABEL: add_of_not_decrement:
+; X64-WIN:       # %bb.0:
+; X64-WIN-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; X64-WIN-NEXT:    subl %edx, %ecx
+; X64-WIN-NEXT:    leal -1(%rcx), %eax
+; X64-WIN-NEXT:    retq
+  %t0 = sub i32 %x, %y
+  %r = sub i32 %t0, 1
+  ret i32 %r
+}
+
+define <4 x i32> @vec_add_of_not(<4 x i32> %x, <4 x i32> %y) {
+; X32-LABEL: vec_add_of_not:
+; X32:       # %bb.0:
+; X32-NEXT:    psubd %xmm1, %xmm0
+; X32-NEXT:    pcmpeqd %xmm1, %xmm1
+; X32-NEXT:    paddd %xmm1, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LIN-LABEL: vec_add_of_not:
+; X64-LIN:       # %bb.0:
+; X64-LIN-NEXT:    psubd %xmm1, %xmm0
+; X64-LIN-NEXT:    pcmpeqd %xmm1, %xmm1
+; X64-LIN-NEXT:    paddd %xmm1, %xmm0
+; X64-LIN-NEXT:    retq
+;
+; X64-WIN-LABEL: vec_add_of_not:
+; X64-WIN:       # %bb.0:
+; X64-WIN-NEXT:    movdqa (%rcx), %xmm1
+; X64-WIN-NEXT:    psubd (%rdx), %xmm1
+; X64-WIN-NEXT:    pcmpeqd %xmm0, %xmm0
+; X64-WIN-NEXT:    paddd %xmm1, %xmm0
+; X64-WIN-NEXT:    retq
+  %t0 = sub <4 x i32> %x, %y
+  %r = add <4 x i32> %t0, <i32 -1, i32 -1, i32 -1, i32 -1>
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @vec_add_of_not_decrement(<4 x i32> %x, <4 x i32> %y) {
+; X32-LABEL: vec_add_of_not_decrement:
+; X32:       # %bb.0:
+; X32-NEXT:    psubd %xmm1, %xmm0
+; X32-NEXT:    pcmpeqd %xmm1, %xmm1
+; X32-NEXT:    paddd %xmm1, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LIN-LABEL: vec_add_of_not_decrement:
+; X64-LIN:       # %bb.0:
+; X64-LIN-NEXT:    psubd %xmm1, %xmm0
+; X64-LIN-NEXT:    pcmpeqd %xmm1, %xmm1
+; X64-LIN-NEXT:    paddd %xmm1, %xmm0
+; X64-LIN-NEXT:    retq
+;
+; X64-WIN-LABEL: vec_add_of_not_decrement:
+; X64-WIN:       # %bb.0:
+; X64-WIN-NEXT:    movdqa (%rcx), %xmm1
+; X64-WIN-NEXT:    psubd (%rdx), %xmm1
+; X64-WIN-NEXT:    pcmpeqd %xmm0, %xmm0
+; X64-WIN-NEXT:    paddd %xmm1, %xmm0
+; X64-WIN-NEXT:    retq
+  %t0 = sub <4 x i32> %x, %y
+  %r = sub <4 x i32> %t0, <i32 1, i32 1, i32 1, i32 1>
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @vec_add_of_not_with_undef(<4 x i32> %x, <4 x i32> %y) {
+; X32-LABEL: vec_add_of_not_with_undef:
+; X32:       # %bb.0:
+; X32-NEXT:    psubd %xmm1, %xmm0
+; X32-NEXT:    pcmpeqd %xmm1, %xmm1
+; X32-NEXT:    paddd %xmm1, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LIN-LABEL: vec_add_of_not_with_undef:
+; X64-LIN:       # %bb.0:
+; X64-LIN-NEXT:    psubd %xmm1, %xmm0
+; X64-LIN-NEXT:    pcmpeqd %xmm1, %xmm1
+; X64-LIN-NEXT:    paddd %xmm1, %xmm0
+; X64-LIN-NEXT:    retq
+;
+; X64-WIN-LABEL: vec_add_of_not_with_undef:
+; X64-WIN:       # %bb.0:
+; X64-WIN-NEXT:    movdqa (%rcx), %xmm1
+; X64-WIN-NEXT:    psubd (%rdx), %xmm1
+; X64-WIN-NEXT:    pcmpeqd %xmm0, %xmm0
+; X64-WIN-NEXT:    paddd %xmm1, %xmm0
+; X64-WIN-NEXT:    retq
+  %t0 = sub <4 x i32> %x, %y
+  %r = add <4 x i32> %t0, <i32 -1, i32 undef, i32 -1, i32 -1>
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @vec_add_of_not_with_undef_decrement(<4 x i32> %x, <4 x i32> %y) {
+; X32-LABEL: vec_add_of_not_with_undef_decrement:
+; X32:       # %bb.0:
+; X32-NEXT:    psubd %xmm1, %xmm0
+; X32-NEXT:    pcmpeqd %xmm1, %xmm1
+; X32-NEXT:    psubd %xmm1, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LIN-LABEL: vec_add_of_not_with_undef_decrement:
+; X64-LIN:       # %bb.0:
+; X64-LIN-NEXT:    psubd %xmm1, %xmm0
+; X64-LIN-NEXT:    pcmpeqd %xmm1, %xmm1
+; X64-LIN-NEXT:    psubd %xmm1, %xmm0
+; X64-LIN-NEXT:    retq
+;
+; X64-WIN-LABEL: vec_add_of_not_with_undef_decrement:
+; X64-WIN:       # %bb.0:
+; X64-WIN-NEXT:    movdqa (%rcx), %xmm0
+; X64-WIN-NEXT:    psubd (%rdx), %xmm0
+; X64-WIN-NEXT:    pcmpeqd %xmm1, %xmm1
+; X64-WIN-NEXT:    psubd %xmm1, %xmm0
+; X64-WIN-NEXT:    retq
+  %t0 = sub <4 x i32> %x, %y
+  %r = add <4 x i32> %t0, <i32 1, i32 undef, i32 1, i32 1>
+  ret <4 x i32> %r
+}

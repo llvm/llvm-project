@@ -265,27 +265,27 @@ class Option {
   // Out of line virtual function to provide home for the class.
   virtual void anchor();
 
-  int NumOccurrences = 0; // The number of times specified
+  uint16_t NumOccurrences; // The number of times specified
   // Occurrences, HiddenFlag, and Formatting are all enum types but to avoid
   // problems with signed enums in bitfields.
-  unsigned Occurrences : 3; // enum NumOccurrencesFlag
+  uint16_t Occurrences : 3; // enum NumOccurrencesFlag
   // not using the enum type for 'Value' because zero is an implementation
   // detail representing the non-value
-  unsigned Value : 2;
-  unsigned HiddenFlag : 2; // enum OptionHidden
-  unsigned Formatting : 2; // enum FormattingFlags
-  unsigned Misc : 5;
-  unsigned Position = 0;       // Position of last occurrence of the option
-  unsigned AdditionalVals = 0; // Greater than 0 for multi-valued option.
+  uint16_t Value : 2;
+  uint16_t HiddenFlag : 2; // enum OptionHidden
+  uint16_t Formatting : 2; // enum FormattingFlags
+  uint16_t Misc : 5;
+  uint16_t FullyInitialized : 1; // Has addArgument been called?
+  uint16_t Position;             // Position of last occurrence of the option
+  uint16_t AdditionalVals;       // Greater than 0 for multi-valued option.
 
 public:
   StringRef ArgStr;   // The argument string itself (ex: "help", "o")
   StringRef HelpStr;  // The descriptive text message for -help
   StringRef ValueStr; // String describing what the value of this option is
-  SmallVector<OptionCategory *, 2>
+  SmallVector<OptionCategory *, 1>
       Categories;                    // The Categories this option belongs to
-  SmallPtrSet<SubCommand *, 4> Subs; // The subcommands this option belongs to.
-  bool FullyInitialized = false; // Has addArgument been called?
+  SmallPtrSet<SubCommand *, 1> Subs; // The subcommands this option belongs to.
 
   inline enum NumOccurrencesFlag getNumOccurrencesFlag() const {
     return (enum NumOccurrencesFlag)Occurrences;
@@ -341,8 +341,9 @@ public:
 protected:
   explicit Option(enum NumOccurrencesFlag OccurrencesFlag,
                   enum OptionHidden Hidden)
-      : Occurrences(OccurrencesFlag), Value(0), HiddenFlag(Hidden),
-        Formatting(NormalFormatting), Misc(0) {
+      : NumOccurrences(0), Occurrences(OccurrencesFlag), Value(0),
+        HiddenFlag(Hidden), Formatting(NormalFormatting), Misc(0),
+        FullyInitialized(false), Position(0), AdditionalVals(0) {
     Categories.push_back(&GeneralCategory);
   }
 

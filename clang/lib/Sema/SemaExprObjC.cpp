@@ -1097,12 +1097,7 @@ ExprResult Sema::BuildObjCEncodeExpression(SourceLocation AtLoc,
 
     // The type of @encode is the same as the type of the corresponding string,
     // which is an array type.
-    StrTy = Context.CharTy;
-    // A C++ string literal has a const-qualified element type (C++ 2.13.4p1).
-    if (getLangOpts().CPlusPlus || getLangOpts().ConstStrings)
-      StrTy.addConst();
-    StrTy = Context.getConstantArrayType(StrTy, llvm::APInt(32, Str.size()+1),
-                                         ArrayType::Normal, 0);
+    StrTy = Context.getStringLiteralArrayType(Context.CharTy, Str.size());
   }
 
   return new (Context) ObjCEncodeExpr(StrTy, EncodedTypeInfo, AtLoc, RParenLoc);

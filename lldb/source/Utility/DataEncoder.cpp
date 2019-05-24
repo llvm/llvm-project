@@ -34,8 +34,9 @@ DataEncoder::DataEncoder()
 // data must stay around as long as this object is valid.
 DataEncoder::DataEncoder(void *data, uint32_t length, ByteOrder endian,
                          uint8_t addr_size)
-    : m_start((uint8_t *)data), m_end((uint8_t *)data + length),
-      m_byte_order(endian), m_addr_size(addr_size), m_data_sp() {}
+    : m_start(static_cast<uint8_t *>(data)),
+      m_end(static_cast<uint8_t *>(data) + length), m_byte_order(endian),
+      m_addr_size(addr_size), m_data_sp() {}
 
 // Make a shared pointer reference to the shared data in "data_sp" and set the
 // endian swapping setting to "swap", and the address size to "addr_size". The
@@ -90,7 +91,7 @@ uint32_t DataEncoder::SetData(void *bytes, uint32_t length, ByteOrder endian) {
     m_start = nullptr;
     m_end = nullptr;
   } else {
-    m_start = (uint8_t *)bytes;
+    m_start = static_cast<uint8_t *>(bytes);
     m_end = m_start + length;
   }
   return GetByteSize();

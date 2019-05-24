@@ -90,7 +90,7 @@ void CloexecCheck::insertStringFlag(
   if (!ModeStr || (ModeStr->getString().find(Mode) != StringRef::npos))
     return;
 
-  const std::string &ReplacementText = buildFixMsgForStringFlag(
+  std::string ReplacementText = buildFixMsgForStringFlag(
       ModeArg, *Result.SourceManager, Result.Context->getLangOpts(), Mode);
 
   diag(ModeArg->getBeginLoc(), "use %0 mode '%1' to set O_CLOEXEC")

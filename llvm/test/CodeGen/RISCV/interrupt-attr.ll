@@ -1060,7 +1060,7 @@ define void @foo_fp_with_call() #3 {
   ret void
 }
 
-attributes #0 = { "interrupt"="user" }
-attributes #1 = { "interrupt"="supervisor" }
-attributes #2 = { "interrupt"="machine" }
-attributes #3 = { "interrupt"="machine" "no-frame-pointer-elim"="true" }
+attributes #0 = { nounwind "interrupt"="user" }
+attributes #1 = { nounwind "interrupt"="supervisor" }
+attributes #2 = { nounwind  "interrupt"="machine" }
+attributes #3 = { nounwind "interrupt"="machine" "no-frame-pointer-elim"="true" }

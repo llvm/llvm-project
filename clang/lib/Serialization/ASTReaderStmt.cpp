@@ -968,6 +968,15 @@ void ASTStmtReader::VisitVAArgExpr(VAArgExpr *E) {
   E->setIsMicrosoftABI(Record.readInt());
 }
 
+void ASTStmtReader::VisitSourceLocExpr(SourceLocExpr *E) {
+  VisitExpr(E);
+  E->ParentContext = ReadDeclAs<DeclContext>();
+  E->BuiltinLoc = ReadSourceLocation();
+  E->RParenLoc = ReadSourceLocation();
+  E->SourceLocExprBits.Kind =
+      static_cast<SourceLocExpr::IdentKind>(Record.readInt());
+}
+
 void ASTStmtReader::VisitAddrLabelExpr(AddrLabelExpr *E) {
   VisitExpr(E);
   E->setAmpAmpLoc(ReadSourceLocation());
@@ -1487,12 +1496,14 @@ void ASTStmtReader::VisitCXXThrowExpr(CXXThrowExpr *E) {
 void ASTStmtReader::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
   VisitExpr(E);
   E->Param = ReadDeclAs<ParmVarDecl>();
+  E->UsedContext = ReadDeclAs<DeclContext>();
   E->CXXDefaultArgExprBits.Loc = ReadSourceLocation();
 }
 
 void ASTStmtReader::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
   VisitExpr(E);
   E->Field = ReadDeclAs<FieldDecl>();
+  E->UsedContext = ReadDeclAs<DeclContext>();
   E->CXXDefaultInitExprBits.Loc = ReadSourceLocation();
 }
 
@@ -1792,9 +1803,9 @@ void ASTStmtReader::VisitFunctionParmPackExpr(FunctionParmPackExpr *E) {
   E->NumParameters = Record.readInt();
   E->ParamPack = ReadDeclAs<ParmVarDecl>();
   E->NameLoc = ReadSourceLocation();
-  auto **Parms = E->getTrailingObjects<ParmVarDecl *>();
+  auto **Parms = E->getTrailingObjects<VarDecl *>();
   for (unsigned i = 0, n = E->NumParameters; i != n; ++i)
-    Parms[i] = ReadDeclAs<ParmVarDecl>();
+    Parms[i] = ReadDeclAs<VarDecl>();
 }
 
 void ASTStmtReader::VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E) {
@@ -2649,6 +2660,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_VA_ARG:
       S = new (Context) VAArgExpr(Empty);
+      break;
+
+    case EXPR_SOURCE_LOC:
+      S = new (Context) SourceLocExpr(Empty);
       break;
 
     case EXPR_ADDR_LABEL:

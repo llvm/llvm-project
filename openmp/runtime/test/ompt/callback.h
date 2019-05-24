@@ -67,9 +67,11 @@ static ompt_set_callback_t ompt_set_callback;
 static ompt_get_callback_t ompt_get_callback;
 static ompt_get_state_t ompt_get_state;
 static ompt_get_task_info_t ompt_get_task_info;
+static ompt_get_task_memory_t ompt_get_task_memory;
 static ompt_get_thread_data_t ompt_get_thread_data;
 static ompt_get_parallel_info_t ompt_get_parallel_info;
 static ompt_get_unique_id_t ompt_get_unique_id;
+static ompt_finalize_tool_t ompt_finalize_tool;
 static ompt_get_num_procs_t ompt_get_num_procs;
 static ompt_get_num_places_t ompt_get_num_places;
 static ompt_get_place_proc_ids_t ompt_get_place_proc_ids;
@@ -196,6 +198,16 @@ ompt_label_##id:
          ((uint64_t)addr) / FUZZY_ADDRESS_DISCARD_BYTES + 1,                   \
          ((uint64_t)addr) / FUZZY_ADDRESS_DISCARD_BYTES + 2, addr)
 
+#define register_callback_t(name, type)                                        \
+  do {                                                                         \
+    type f_##name = &on_##name;                                                \
+    if (ompt_set_callback(name, (ompt_callback_t)f_##name) == ompt_set_never)  \
+      printf("0: Could not register callback '" #name "'\n");                  \
+  } while (0)
+
+#define register_callback(name) register_callback_t(name, name##_t)
+
+#ifndef USE_PRIVATE_TOOL
 static void
 on_ompt_callback_mutex_acquire(
   ompt_mutex_t kind,
@@ -452,10 +464,29 @@ on_ompt_callback_implicit_task(
       if(task_data->ptr)
         printf("%s\n", "0: task_data initially not null");
       task_data->value = ompt_get_unique_id();
-      printf("%" PRIu64 ": ompt_event_implicit_task_begin: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", team_size=%" PRIu32 ", thread_num=%" PRIu32 "\n", ompt_get_thread_data()->value, parallel_data->value, task_data->value, team_size, thread_num);
+
+      //there is no parallel_begin callback for implicit parallel region
+      //thus it is initialized in initial task
+      if(flags & ompt_task_initial)
+      {
+        char buffer[2048];
+
+        format_task_type(flags, buffer);
+        if(parallel_data->ptr)
+          printf("%s\n", "0: parallel_data initially not null");
+        parallel_data->value = ompt_get_unique_id();
+        printf("%" PRIu64 ": ompt_event_initial_task_begin: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", actual_parallelism=%" PRIu32 ", index=%" PRIu32 ", flags=%" PRIu32 "\n", ompt_get_thread_data()->value, parallel_data->value, task_data->value, team_size, thread_num, flags);
+      } else {
+        printf("%" PRIu64 ": ompt_event_implicit_task_begin: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", team_size=%" PRIu32 ", thread_num=%" PRIu32 "\n", ompt_get_thread_data()->value, parallel_data->value, task_data->value, team_size, thread_num);
+      }
+
       break;
     case ompt_scope_end:
-      printf("%" PRIu64 ": ompt_event_implicit_task_end: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", team_size=%" PRIu32 ", thread_num=%" PRIu32 "\n", ompt_get_thread_data()->value, (parallel_data)?parallel_data->value:0, task_data->value, team_size, thread_num);
+      if(flags & ompt_task_initial){
+        printf("%" PRIu64 ": ompt_event_initial_task_end: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", team_size=%" PRIu32 ", thread_num=%" PRIu32 "\n", ompt_get_thread_data()->value, (parallel_data)?parallel_data->value:0, task_data->value, team_size, thread_num);
+      } else {
+        printf("%" PRIu64 ": ompt_event_implicit_task_end: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", team_size=%" PRIu32 ", thread_num=%" PRIu32 "\n", ompt_get_thread_data()->value, (parallel_data)?parallel_data->value:0, task_data->value, team_size, thread_num);
+      }
       break;
   }
 }
@@ -628,17 +659,6 @@ on_ompt_callback_task_create(
 
   format_task_type(type, buffer);
 
-  //there is no parallel_begin callback for implicit parallel region
-  //thus it is initialized in initial task
-  if(type & ompt_task_initial)
-  {
-    ompt_data_t *parallel_data;
-    ompt_get_parallel_info(0, &parallel_data, NULL);
-    if(parallel_data->ptr)
-      printf("%s\n", "0: parallel_data initially not null");
-    parallel_data->value = ompt_get_unique_id();
-  }
-
   printf("%" PRIu64 ": ompt_event_task_create: parent_task_id=%" PRIu64 ", parent_task_frame.exit=%p, parent_task_frame.reenter=%p, new_task_id=%" PRIu64 ", codeptr_ra=%p, task_type=%s=%d, has_dependences=%s\n", ompt_get_thread_data()->value, encountering_task_data ? encountering_task_data->value : 0, encountering_task_frame ? encountering_task_frame->exit_frame.ptr : NULL, encountering_task_frame ? encountering_task_frame->enter_frame.ptr : NULL, new_task_data->value, codeptr_ra, buffer, type, has_dependences ? "yes" : "no");
 }
 
@@ -703,16 +723,6 @@ on_ompt_callback_control_tool(
   return 0; //success
 }
 
-#define register_callback_t(name, type)                       \
-do{                                                           \
-  type f_##name = &on_##name;                                 \
-  if (ompt_set_callback(name, (ompt_callback_t)f_##name) ==   \
-      ompt_set_never)                                         \
-    printf("0: Could not register callback '" #name "'\n");   \
-}while(0)
-
-#define register_callback(name) register_callback_t(name, name##_t)
-
 int ompt_initialize(
   ompt_function_lookup_t lookup,
   int initial_device_num,
@@ -722,9 +732,11 @@ int ompt_initialize(
   ompt_get_callback = (ompt_get_callback_t) lookup("ompt_get_callback");
   ompt_get_state = (ompt_get_state_t) lookup("ompt_get_state");
   ompt_get_task_info = (ompt_get_task_info_t) lookup("ompt_get_task_info");
+  ompt_get_task_memory = (ompt_get_task_memory_t)lookup("ompt_get_task_memory");
   ompt_get_thread_data = (ompt_get_thread_data_t) lookup("ompt_get_thread_data");
   ompt_get_parallel_info = (ompt_get_parallel_info_t) lookup("ompt_get_parallel_info");
   ompt_get_unique_id = (ompt_get_unique_id_t) lookup("ompt_get_unique_id");
+  ompt_finalize_tool = (ompt_finalize_tool_t)lookup("ompt_finalize_tool");
 
   ompt_get_num_procs = (ompt_get_num_procs_t) lookup("ompt_get_num_procs");
   ompt_get_num_places = (ompt_get_num_places_t) lookup("ompt_get_num_places");
@@ -779,3 +791,4 @@ ompt_start_tool_result_t* ompt_start_tool(
 #ifdef __cplusplus
 }
 #endif
+#endif // ifndef USE_PRIVATE_TOOL

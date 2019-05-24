@@ -23,6 +23,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Tooling/Refactoring/RangeSelector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include <string>
@@ -121,6 +122,7 @@ public:
 private:
   friend bool operator==(const Stencil &A, const Stencil &B);
   static StencilPart wrap(llvm::StringRef Text);
+  static StencilPart wrap(RangeSelector Selector);
   static StencilPart wrap(StencilPart Part) { return Part; }
 
   std::vector<StencilPart> Parts;
@@ -142,14 +144,24 @@ template <typename... Ts> Stencil cat(Ts &&... Parts) {
 /// \returns exactly the text provided.
 StencilPart text(llvm::StringRef Text);
 
+/// \returns the source corresponding to the selected range.
+StencilPart selection(RangeSelector Selector);
+
 /// \returns the source corresponding to the identified node.
-StencilPart node(llvm::StringRef Id);
+/// FIXME: Deprecated. Write `selection(node(Id))` instead.
+inline StencilPart node(llvm::StringRef Id) {
+  return selection(tooling::node(Id));
+}
+
 /// Variant of \c node() that identifies the node as a statement, for purposes
 /// of deciding whether to include any trailing semicolon.  Only relevant for
 /// Expr nodes, which, by default, are *not* considered as statements.
 /// \returns the source corresponding to the identified node, considered as a
 /// statement.
-StencilPart sNode(llvm::StringRef Id);
+/// FIXME: Deprecated. Write `selection(statement(Id))` instead.
+inline StencilPart sNode(llvm::StringRef Id) {
+  return selection(tooling::statement(Id));
+}
 
 /// For debug use only; semantics are not guaranteed.
 ///

@@ -4612,6 +4612,17 @@ public:
   ExprResult BuildVAArgExpr(SourceLocation BuiltinLoc, Expr *E,
                             TypeSourceInfo *TInfo, SourceLocation RPLoc);
 
+  // __builtin_LINE(), __builtin_FUNCTION(), __builtin_FILE(),
+  // __builtin_COLUMN()
+  ExprResult ActOnSourceLocExpr(SourceLocExpr::IdentKind Kind,
+                                SourceLocation BuiltinLoc,
+                                SourceLocation RPLoc);
+
+  // Build a potentially resolved SourceLocExpr.
+  ExprResult BuildSourceLocExpr(SourceLocExpr::IdentKind Kind,
+                                SourceLocation BuiltinLoc, SourceLocation RPLoc,
+                                DeclContext *ParentContext);
+
   // __null
   ExprResult ActOnGNUNullExpr(SourceLocation TokenLoc);
 
@@ -5700,14 +5711,16 @@ public:
   /// any implicit conversions such as an lvalue-to-rvalue conversion if
   /// not being used to initialize a reference.
   ParsedType actOnLambdaInitCaptureInitialization(
-      SourceLocation Loc, bool ByRef, IdentifierInfo *Id,
-      LambdaCaptureInitKind InitKind, Expr *&Init) {
+      SourceLocation Loc, bool ByRef, SourceLocation EllipsisLoc,
+      IdentifierInfo *Id, LambdaCaptureInitKind InitKind, Expr *&Init) {
     return ParsedType::make(buildLambdaInitCaptureInitialization(
-        Loc, ByRef, Id, InitKind != LambdaCaptureInitKind::CopyInit, Init));
+        Loc, ByRef, EllipsisLoc, None, Id,
+        InitKind != LambdaCaptureInitKind::CopyInit, Init));
   }
-  QualType buildLambdaInitCaptureInitialization(SourceLocation Loc, bool ByRef,
-                                                IdentifierInfo *Id,
-                                                bool DirectInit, Expr *&Init);
+  QualType buildLambdaInitCaptureInitialization(
+      SourceLocation Loc, bool ByRef, SourceLocation EllipsisLoc,
+      Optional<unsigned> NumExpansions, IdentifierInfo *Id, bool DirectInit,
+      Expr *&Init);
 
   /// Create a dummy variable within the declcontext of the lambda's
   ///  call operator, for name lookup purposes for a lambda init capture.
@@ -5716,6 +5729,7 @@ public:
   ///  variables appropriately.
   VarDecl *createLambdaInitCaptureVarDecl(SourceLocation Loc,
                                           QualType InitCaptureType,
+                                          SourceLocation EllipsisLoc,
                                           IdentifierInfo *Id,
                                           unsigned InitStyle, Expr *Init);
 

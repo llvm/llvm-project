@@ -1466,8 +1466,13 @@ public:
 
     // This happens when the macro is the result of a paste, in that case
     // its spelling is the scratch memory, so we take the parent context.
-    if (isWrittenInScratchSpace(getSpellingLoc(loc)))
-      return isInSystemHeader(getSpellingLoc(getImmediateMacroCallerLoc(loc)));
+    // There can be several level of token pasting.
+    if (isWrittenInScratchSpace(getSpellingLoc(loc))) {
+      do {
+        loc = getImmediateMacroCallerLoc(loc);
+      } while (isWrittenInScratchSpace(getSpellingLoc(loc)));
+      return isInSystemMacro(loc);
+    }
 
     return isInSystemHeader(getSpellingLoc(loc));
   }

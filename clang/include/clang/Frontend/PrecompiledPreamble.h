@@ -291,7 +291,8 @@ enum class BuildPreambleError {
   CouldntCreateTempFile = 1,
   CouldntCreateTargetInfo,
   BeginSourceFileFailed,
-  CouldntEmitPCH
+  CouldntEmitPCH,
+  BadInputs
 };
 
 class BuildPreambleErrorCategory final : public std::error_category {

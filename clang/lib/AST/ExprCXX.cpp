@@ -907,13 +907,14 @@ const IdentifierInfo *UserDefinedLiteral::getUDSuffix() const {
 }
 
 CXXDefaultInitExpr::CXXDefaultInitExpr(const ASTContext &Ctx, SourceLocation Loc,
-                                       FieldDecl *Field, QualType Ty)
+                                       FieldDecl *Field, QualType Ty,
+                                       DeclContext *UsedContext)
     : Expr(CXXDefaultInitExprClass, Ty.getNonLValueExprType(Ctx),
            Ty->isLValueReferenceType() ? VK_LValue : Ty->isRValueReferenceType()
                                                         ? VK_XValue
                                                         : VK_RValue,
            /*FIXME*/ OK_Ordinary, false, false, false, false),
-      Field(Field) {
+      Field(Field), UsedContext(UsedContext) {
   CXXDefaultInitExprBits.Loc = Loc;
   assert(Field->hasInClassInitializer());
 }
@@ -1540,30 +1541,30 @@ TemplateArgument SubstNonTypeTemplateParmPackExpr::getArgumentPack() const {
   return TemplateArgument(llvm::makeArrayRef(Arguments, NumArguments));
 }
 
-FunctionParmPackExpr::FunctionParmPackExpr(QualType T, ParmVarDecl *ParamPack,
+FunctionParmPackExpr::FunctionParmPackExpr(QualType T, VarDecl *ParamPack,
                                            SourceLocation NameLoc,
                                            unsigned NumParams,
-                                           ParmVarDecl *const *Params)
+                                           VarDecl *const *Params)
     : Expr(FunctionParmPackExprClass, T, VK_LValue, OK_Ordinary, true, true,
            true, true),
       ParamPack(ParamPack), NameLoc(NameLoc), NumParameters(NumParams) {
   if (Params)
     std::uninitialized_copy(Params, Params + NumParams,
-                            getTrailingObjects<ParmVarDecl *>());
+                            getTrailingObjects<VarDecl *>());
 }
 
 FunctionParmPackExpr *
 FunctionParmPackExpr::Create(const ASTContext &Context, QualType T,
-                             ParmVarDecl *ParamPack, SourceLocation NameLoc,
-                             ArrayRef<ParmVarDecl *> Params) {
-  return new (Context.Allocate(totalSizeToAlloc<ParmVarDecl *>(Params.size())))
+                             VarDecl *ParamPack, SourceLocation NameLoc,
+                             ArrayRef<VarDecl *> Params) {
+  return new (Context.Allocate(totalSizeToAlloc<VarDecl *>(Params.size())))
       FunctionParmPackExpr(T, ParamPack, NameLoc, Params.size(), Params.data());
 }
 
 FunctionParmPackExpr *
 FunctionParmPackExpr::CreateEmpty(const ASTContext &Context,
                                   unsigned NumParams) {
-  return new (Context.Allocate(totalSizeToAlloc<ParmVarDecl *>(NumParams)))
+  return new (Context.Allocate(totalSizeToAlloc<VarDecl *>(NumParams)))
       FunctionParmPackExpr(QualType(), nullptr, SourceLocation(), 0, nullptr);
 }
 

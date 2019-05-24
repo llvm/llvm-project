@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-else-after-return %t -- -- -std=c++11 -fexceptions
+// RUN: %check_clang_tidy %s readability-else-after-return %t -- -- -fexceptions
 
 namespace std {
 struct string {

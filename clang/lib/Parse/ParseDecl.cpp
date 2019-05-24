@@ -1470,7 +1470,7 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA,
   // Append the current token at the end of the new token stream so that it
   // doesn't get lost.
   LA.Toks.push_back(Tok);
-  PP.EnterTokenStream(LA.Toks, true);
+  PP.EnterTokenStream(LA.Toks, true, /*IsReinject=*/true);
   // Consume the previously pushed token.
   ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
 
@@ -2559,6 +2559,11 @@ bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
     // identifier in the declarator.
     return false;
   }
+
+  // Early exit as Sema has a dedicated missing_actual_pipe_type diagnostic
+  // for incomplete declarations such as `pipe p`.
+  if (getLangOpts().OpenCLCPlusPlus && DS.isTypeSpecPipe())
+    return false;
 
   if (getLangOpts().CPlusPlus &&
       DS.getStorageClassSpec() == DeclSpec::SCS_auto) {
@@ -3769,7 +3774,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       isInvalid = DS.SetTypeAltiVecBool(true, Loc, PrevSpec, DiagID, Policy);
       break;
     case tok::kw_pipe:
-      if (!getLangOpts().OpenCL || (getLangOpts().OpenCLVersion < 200)) {
+      if (!getLangOpts().OpenCL || (getLangOpts().OpenCLVersion < 200 &&
+                                    !getLangOpts().OpenCLCPlusPlus)) {
         // OpenCL 2.0 defined this keyword. OpenCL 1.2 and earlier should
         // support the "pipe" word as identifier.
         Tok.getIdentifierInfo()->revertTokenIDToIdentifier();
@@ -4424,7 +4430,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     if (Tok.isNot(tok::semi)) {
       // A semicolon was missing after this declaration. Diagnose and recover.
       ExpectAndConsume(tok::semi, diag::err_expected_after, "enum");
-      PP.EnterToken(Tok);
+      PP.EnterToken(Tok, /*IsReinject=*/true);
       Tok.setKind(tok::semi);
     }
   } else {
@@ -4702,7 +4708,7 @@ void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl) {
     // Push this token back into the preprocessor and change our current token
     // to ';' so that the rest of the code recovers as though there were an
     // ';' after the definition.
-    PP.EnterToken(Tok);
+    PP.EnterToken(Tok, /*IsReinject=*/true);
     Tok.setKind(tok::semi);
   }
 }
@@ -4896,7 +4902,8 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   default: return false;
 
   case tok::kw_pipe:
-    return getLangOpts().OpenCL && (getLangOpts().OpenCLVersion >= 200);
+    return (getLangOpts().OpenCL && getLangOpts().OpenCLVersion >= 200) ||
+           getLangOpts().OpenCLCPlusPlus;
 
   case tok::identifier:   // foo::bar
     // Unfortunate hack to support "Class.factoryMethod" notation.
@@ -5384,7 +5391,8 @@ static bool isPtrOperatorToken(tok::TokenKind Kind, const LangOptions &Lang,
   if (Kind == tok::star || Kind == tok::caret)
     return true;
 
-  if ((Kind == tok::kw_pipe) && Lang.OpenCL && (Lang.OpenCLVersion >= 200))
+  if (Kind == tok::kw_pipe &&
+      ((Lang.OpenCL && Lang.OpenCLVersion >= 200) || Lang.OpenCLCPlusPlus))
     return true;
 
   if (!Lang.CPlusPlus)

@@ -17,6 +17,7 @@ unittest("ASTTests") {
     "ASTImporterGenericRedeclTest.cpp",
     "ASTImporterTest.cpp",
     "ASTImporterVisibilityTest.cpp",
+    "ASTTraverserTest.cpp",
     "ASTTypeTraitsTest.cpp",
     "ASTVectorTest.cpp",
     "CommentLexer.cpp",

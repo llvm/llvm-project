@@ -71,25 +71,19 @@ enum class align_val_t: size_t {};
 // TODO(alekseyshl): throw std::bad_alloc instead of dying on OOM.
 // For local pool allocation, align to SHADOW_GRANULARITY to match asan
 // allocator behavior.
-#define OPERATOR_NEW_BODY(type, nothrow) \
-  if (ALLOCATE_FROM_LOCAL_POOL) {\
-    void *res = MemalignFromLocalPool(SHADOW_GRANULARITY, size);\
-    if (!nothrow) CHECK(res);\
-    return res;\
-  }\
-  GET_STACK_TRACE_MALLOC;\
-  void *res = asan_memalign(0, size, &stack, type);\
-  if (!nothrow && UNLIKELY(!res)) ReportOutOfMemory(size, &stack);\
+#define OPERATOR_NEW_BODY(type, nothrow)            \
+  MAYBE_ALLOCATE_FROM_LOCAL_POOL(nothrow);          \
+  GET_STACK_TRACE_MALLOC;                           \
+  void *res = asan_memalign(0, size, &stack, type); \
+  if (!nothrow && UNLIKELY(!res))                   \
+    ReportOutOfMemory(size, &stack);                \
   return res;
-#define OPERATOR_NEW_BODY_ALIGN(type, nothrow) \
-  if (ALLOCATE_FROM_LOCAL_POOL) {\
-    void *res = MemalignFromLocalPool((uptr)align, size);\
-    if (!nothrow) CHECK(res);\
-    return res;\
-  }\
-  GET_STACK_TRACE_MALLOC;\
-  void *res = asan_memalign((uptr)align, size, &stack, type);\
-  if (!nothrow && UNLIKELY(!res)) ReportOutOfMemory(size, &stack);\
+#define OPERATOR_NEW_BODY_ALIGN(type, nothrow)                \
+  MAYBE_ALLOCATE_FROM_LOCAL_POOL(nothrow);                    \
+  GET_STACK_TRACE_MALLOC;                                     \
+  void *res = asan_memalign((uptr)align, size, &stack, type); \
+  if (!nothrow && UNLIKELY(!res))                             \
+    ReportOutOfMemory(size, &stack);                          \
   return res;
 
 // On OS X it's not enough to just provide our own 'operator new' and

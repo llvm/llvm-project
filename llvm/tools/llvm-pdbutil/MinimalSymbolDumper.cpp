@@ -780,3 +780,12 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   P.format(" `{0}`", UN.Name);
   return Error::success();
 }
+
+Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
+                                            AnnotationSym &Annot) {
+  AutoIndent Indent(P, 7);
+  P.formatLine("addr = {0}", formatSegmentOffset(Annot.Segment, Annot.CodeOffset));
+  P.formatLine("strings = {0}", typesetStringList(P.getIndentLevel() + 9 + 2,
+                                                   Annot.Strings));
+  return Error::success();
+}

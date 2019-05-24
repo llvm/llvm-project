@@ -418,6 +418,7 @@ private:
   void ExpandIntRes_FLT_ROUNDS        (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_FP_TO_SINT        (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_FP_TO_UINT        (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_LLROUND           (SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void ExpandIntRes_Logical           (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_ADDSUB            (SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -553,6 +554,8 @@ private:
   SDValue SoftenFloatOp_FP_EXTEND(SDNode *N);
   SDValue SoftenFloatOp_FP_ROUND(SDNode *N);
   SDValue SoftenFloatOp_FP_TO_XINT(SDNode *N);
+  SDValue SoftenFloatOp_LROUND(SDNode *N);
+  SDValue SoftenFloatOp_LLROUND(SDNode *N);
   SDValue SoftenFloatOp_SELECT(SDNode *N);
   SDValue SoftenFloatOp_SELECT_CC(SDNode *N);
   SDValue SoftenFloatOp_SETCC(SDNode *N);
@@ -612,6 +615,8 @@ private:
   SDValue ExpandFloatOp_FP_ROUND(SDNode *N);
   SDValue ExpandFloatOp_FP_TO_SINT(SDNode *N);
   SDValue ExpandFloatOp_FP_TO_UINT(SDNode *N);
+  SDValue ExpandFloatOp_LROUND(SDNode *N);
+  SDValue ExpandFloatOp_LLROUND(SDNode *N);
   SDValue ExpandFloatOp_SELECT_CC(SDNode *N);
   SDValue ExpandFloatOp_SETCC(SDNode *N);
   SDValue ExpandFloatOp_STORE(SDNode *N, unsigned OpNo);

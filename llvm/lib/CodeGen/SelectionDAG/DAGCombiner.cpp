@@ -1042,6 +1042,13 @@ SDValue DAGCombiner::reassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
   // Don't reassociate reductions.
   if (Flags.hasVectorReduction())
     return SDValue();
+
+  // Floating-point reassociation is not allowed without loose FP math.
+  if (N0.getValueType().isFloatingPoint() ||
+      N1.getValueType().isFloatingPoint())
+    if (!Flags.hasAllowReassociation() || !Flags.hasNoSignedZeros())
+      return SDValue();
+
   if (SDValue Combined = reassociateOpsCommutative(Opc, DL, N0, N1))
     return Combined;
   if (SDValue Combined = reassociateOpsCommutative(Opc, DL, N1, N0))
@@ -1728,7 +1735,7 @@ SDValue DAGCombiner::combine(SDNode *N) {
     }
   }
 
-  // If N is a commutative binary node, try eliminate it if the commuted
+  // If N is a commutative binary node, try to eliminate it if the commuted
   // version is already present in the DAG.
   if (!RV.getNode() && TLI.isCommutativeBinOp(N->getOpcode()) &&
       N->getNumValues() == 1) {
@@ -6582,11 +6589,16 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
 
 /// Handle transforms common to the three shifts, when the shift amount is a
 /// constant.
+/// We are looking for: (shift being one of shl/sra/srl)
+///   shift (binop X, C0), C1
+/// And want to transform into:
+///   binop (shift X, C1), (shift C0, C1)
 SDValue DAGCombiner::visitShiftByConstant(SDNode *N, ConstantSDNode *Amt) {
   // Do not turn a 'not' into a regular xor.
   if (isBitwiseNot(N->getOperand(0)))
     return SDValue();
 
+  // The inner binop must be one-use, since we want to replace it.
   SDNode *LHS = N->getOperand(0).getNode();
   if (!LHS->hasOneUse()) return SDValue();
 
@@ -6594,55 +6606,42 @@ SDValue DAGCombiner::visitShiftByConstant(SDNode *N, ConstantSDNode *Amt) {
   // instead of (shift (and)), likewise for add, or, xor, etc.  This sort of
   // thing happens with address calculations, so it's important to canonicalize
   // it.
-  bool HighBitSet = false;  // Can we transform this if the high bit is set?
-
   switch (LHS->getOpcode()) {
-  default: return SDValue();
+  default:
+    return SDValue();
   case ISD::OR:
   case ISD::XOR:
-    HighBitSet = false; // We can only transform sra if the high bit is clear.
-    break;
   case ISD::AND:
-    HighBitSet = true;  // We can only transform sra if the high bit is set.
     break;
   case ISD::ADD:
     if (N->getOpcode() != ISD::SHL)
       return SDValue(); // only shl(add) not sr[al](add).
-    HighBitSet = false; // We can only transform sra if the high bit is clear.
     break;
   }
 
   // We require the RHS of the binop to be a constant and not opaque as well.
   ConstantSDNode *BinOpCst = getAsNonOpaqueConstant(LHS->getOperand(1));
-  if (!BinOpCst) return SDValue();
-
-  // FIXME: disable this unless the input to the binop is a shift by a constant
-  // or is copy/select.Enable this in other cases when figure out it's exactly profitable.
-  SDNode *BinOpLHSVal = LHS->getOperand(0).getNode();
-  bool isShift = BinOpLHSVal->getOpcode() == ISD::SHL ||
-                 BinOpLHSVal->getOpcode() == ISD::SRA ||
-                 BinOpLHSVal->getOpcode() == ISD::SRL;
-  bool isCopyOrSelect = BinOpLHSVal->getOpcode() == ISD::CopyFromReg ||
-                        BinOpLHSVal->getOpcode() == ISD::SELECT;
-
-  if ((!isShift || !isa<ConstantSDNode>(BinOpLHSVal->getOperand(1))) &&
-      !isCopyOrSelect)
+  if (!BinOpCst)
     return SDValue();
 
-  if (isCopyOrSelect && N->hasOneUse())
+  // FIXME: disable this unless the input to the binop is a shift by a constant
+  // or is copy/select. Enable this in other cases when figure out it's exactly
+  // profitable.
+  SDValue BinOpLHSVal = LHS->getOperand(0);
+  bool IsShiftByConstant = (BinOpLHSVal.getOpcode() == ISD::SHL ||
+                            BinOpLHSVal.getOpcode() == ISD::SRA ||
+                            BinOpLHSVal.getOpcode() == ISD::SRL) &&
+                           isa<ConstantSDNode>(BinOpLHSVal.getOperand(1));
+  bool IsCopyOrSelect = BinOpLHSVal.getOpcode() == ISD::CopyFromReg ||
+                        BinOpLHSVal.getOpcode() == ISD::SELECT;
+
+  if (!IsShiftByConstant && !IsCopyOrSelect)
+    return SDValue();
+
+  if (IsCopyOrSelect && N->hasOneUse())
     return SDValue();
 
   EVT VT = N->getValueType(0);
-
-  // If this is a signed shift right, and the high bit is modified by the
-  // logical operation, do not perform the transformation. The highBitSet
-  // boolean indicates the value of the high bit of the constant which would
-  // cause it to be modified for this operation.
-  if (N->getOpcode() == ISD::SRA) {
-    bool BinOpRHSSignSet = BinOpCst->getAPIntValue().isNegative();
-    if (BinOpRHSSignSet != HighBitSet)
-      return SDValue();
-  }
 
   if (!TLI.isDesirableToCommuteWithShift(N, Level))
     return SDValue();

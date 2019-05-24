@@ -42,8 +42,6 @@ public:
 // Extract
 llvm::Error
 DWARFDebugAranges::extract(const DWARFDataExtractor &debug_aranges_data) {
-  assert(debug_aranges_data.ValidOffset(0));
-
   lldb::offset_t offset = 0;
 
   DWARFDebugArangeSet set;
@@ -65,8 +63,8 @@ DWARFDebugAranges::extract(const DWARFDataExtractor &debug_aranges_data) {
       }
     }
     set.Clear();
-    }
-    return llvm::ErrorSuccess();
+  }
+  return llvm::ErrorSuccess();
 }
 
 void DWARFDebugAranges::Dump(Log *log) const {

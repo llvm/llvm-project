@@ -311,7 +311,7 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
 
 static bool getPIE(const ArgList &Args, const toolchains::Linux &ToolChain) {
   if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_static) ||
-      Args.hasArg(options::OPT_r))
+      Args.hasArg(options::OPT_r) || Args.hasArg(options::OPT_static_pie))
     return false;
 
   Arg *A = Args.getLastArg(options::OPT_pie, options::OPT_no_pie,
@@ -319,6 +319,26 @@ static bool getPIE(const ArgList &Args, const toolchains::Linux &ToolChain) {
   if (!A)
     return ToolChain.isPIEDefault();
   return A->getOption().matches(options::OPT_pie);
+}
+
+static bool getStaticPIE(const ArgList &Args,
+                         const toolchains::Linux &ToolChain) {
+  bool HasStaticPIE = Args.hasArg(options::OPT_static_pie);
+  // -no-pie is an alias for -nopie. So, handling -nopie takes care of
+  // -no-pie as well.
+  if (HasStaticPIE && Args.hasArg(options::OPT_nopie)) {
+    const Driver &D = ToolChain.getDriver();
+    const llvm::opt::OptTable &Opts = D.getOpts();
+    const char *StaticPIEName = Opts.getOptionName(options::OPT_static_pie);
+    const char *NoPIEName = Opts.getOptionName(options::OPT_nopie);
+    D.Diag(diag::err_drv_cannot_mix_options) << StaticPIEName << NoPIEName;
+  }
+  return HasStaticPIE;
+}
+
+static bool getStatic(const ArgList &Args) {
+  return Args.hasArg(options::OPT_static) &&
+      !Args.hasArg(options::OPT_static_pie);
 }
 
 void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -336,7 +356,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const bool isAndroid = ToolChain.getTriple().isAndroid();
   const bool IsIAMCU = ToolChain.getTriple().isOSIAMCU();
   const bool IsPIE = getPIE(Args, ToolChain);
-  const bool IsStaticPIE = Args.hasArg(options::OPT_static_pie);
+  const bool IsStaticPIE = getStaticPIE(Args, ToolChain);
+  const bool IsStatic = getStatic(Args);
   const bool HasCRTBeginEndFiles =
       ToolChain.getTriple().hasEnvironment() ||
       (ToolChain.getTriple().getVendor() != llvm::Triple::MipsTechnologies);
@@ -408,7 +429,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     return;
   }
 
-  if (Args.hasArg(options::OPT_static)) {
+  if (IsStatic) {
     if (Arch == llvm::Triple::arm || Arch == llvm::Triple::armeb ||
         Arch == llvm::Triple::thumb || Arch == llvm::Triple::thumbeb)
       CmdArgs.push_back("-Bstatic");
@@ -418,7 +439,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-shared");
   }
 
-  if (!Args.hasArg(options::OPT_static)) {
+  if (!IsStatic) {
     if (Args.hasArg(options::OPT_rdynamic))
       CmdArgs.push_back("-export-dynamic");
 
@@ -465,7 +486,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       }
       if (P.empty()) {
         const char *crtbegin;
-        if (Args.hasArg(options::OPT_static))
+        if (IsStatic)
           crtbegin = isAndroid ? "crtbegin_static.o" : "crtbeginT.o";
         else if (Args.hasArg(options::OPT_shared))
           crtbegin = isAndroid ? "crtbegin_so.o" : "crtbeginS.o";
@@ -520,7 +541,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (!Args.hasArg(options::OPT_nostdlib)) {
     if (!Args.hasArg(options::OPT_nodefaultlibs)) {
-      if (Args.hasArg(options::OPT_static) || IsStaticPIE)
+      if (IsStatic || IsStaticPIE)
         CmdArgs.push_back("--start-group");
 
       if (NeedsSanitizerDeps)
@@ -556,7 +577,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       if (IsIAMCU)
         CmdArgs.push_back("-lgloss");
 
-      if (Args.hasArg(options::OPT_static) || IsStaticPIE)
+      if (IsStatic || IsStaticPIE)
         CmdArgs.push_back("--end-group");
       else
         AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
@@ -1926,6 +1947,9 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   static const char *const ARMebHFTriples[] = {
       "armeb-linux-gnueabihf", "armebv7hl-redhat-linux-gnueabi"};
 
+  static const char *const AVRLibDirs[] = {"/lib"};
+  static const char *const AVRTriples[] = {"avr"};
+
   static const char *const X86_64LibDirs[] = {"/lib64", "/lib"};
   static const char *const X86_64Triples[] = {
       "x86_64-linux-gnu",       "x86_64-unknown-linux-gnu",
@@ -2146,6 +2170,10 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       TripleAliases.append(begin(ARMebTriples), end(ARMebTriples));
     }
     break;
+  case llvm::Triple::avr:
+    LibDirs.append(begin(AVRLibDirs), end(AVRLibDirs));
+    TripleAliases.append(begin(AVRTriples), end(AVRTriples));
+    break;
   case llvm::Triple::x86_64:
     LibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
     TripleAliases.append(begin(X86_64Triples), end(X86_64Triples));
@@ -2286,6 +2314,8 @@ bool Generic_GCC::GCCInstallationDetector::ScanGCCForMultilibs(
     findRISCVMultilibs(D, TargetTriple, Path, Args, Detected);
   } else if (isMSP430(TargetArch)) {
     findMSP430Multilibs(D, TargetTriple, Path, Args, Detected);
+  } else if (TargetArch == llvm::Triple::avr) {
+    // AVR has no multilibs.
   } else if (!findBiarchMultilibs(D, TargetTriple, Path, Args,
                                   NeedsBiarchSuffix, Detected)) {
     return false;

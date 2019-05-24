@@ -3,11 +3,16 @@
 
 #include <no-warn-in-system-macro.c.inc>
 
+#define MACRO(x) x
+
 int main(void)
 {
 	double foo = 1.0;
 
 	if (isnan(foo))
 		return 1;
-	return 0;
+
+        MACRO(isnan(foo));
+
+        return 0;
 }

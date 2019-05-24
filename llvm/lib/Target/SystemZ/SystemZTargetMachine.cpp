@@ -133,9 +133,9 @@ getEffectiveSystemZCodeModel(Optional<CodeModel::Model> CM, Reloc::Model RM,
                              bool JIT) {
   if (CM) {
     if (*CM == CodeModel::Tiny)
-      report_fatal_error("Target does not support the tiny CodeModel");
+      report_fatal_error("Target does not support the tiny CodeModel", false);
     if (*CM == CodeModel::Kernel)
-      report_fatal_error("Target does not support the kernel CodeModel");
+      report_fatal_error("Target does not support the kernel CodeModel", false);
     return *CM;
   }
   if (JIT)

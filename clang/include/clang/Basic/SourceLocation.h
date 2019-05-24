@@ -282,13 +282,15 @@ public:
 /// You can get a PresumedLoc from a SourceLocation with SourceManager.
 class PresumedLoc {
   const char *Filename = nullptr;
+  FileID ID;
   unsigned Line, Col;
   SourceLocation IncludeLoc;
 
 public:
   PresumedLoc() = default;
-  PresumedLoc(const char *FN, unsigned Ln, unsigned Co, SourceLocation IL)
-      : Filename(FN), Line(Ln), Col(Co), IncludeLoc(IL) {}
+  PresumedLoc(const char *FN, FileID FID, unsigned Ln, unsigned Co,
+              SourceLocation IL)
+      : Filename(FN), ID(FID), Line(Ln), Col(Co), IncludeLoc(IL) {}
 
   /// Return true if this object is invalid or uninitialized.
   ///
@@ -303,6 +305,11 @@ public:
   const char *getFilename() const {
     assert(isValid());
     return Filename;
+  }
+
+  FileID getFileID() const {
+    assert(isValid());
+    return ID;
   }
 
   /// Return the presumed line number of this location.
