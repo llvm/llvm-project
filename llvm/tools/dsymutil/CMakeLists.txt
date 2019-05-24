@@ -1,5 +1,8 @@
 set(LLVM_LINK_COMPONENTS
-  ${LLVM_TARGETS_TO_BUILD}
+  AllTargetsAsmPrinters
+  AllTargetsCodeGens
+  AllTargetsDescs
+  AllTargetsInfos
   AsmPrinter
   DebugInfoDWARF
   MC

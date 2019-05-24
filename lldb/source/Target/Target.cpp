@@ -1856,7 +1856,7 @@ size_t Target::ReadCStringFromMemory(const Address &addr, std::string &out_str,
   out_str.clear();
   addr_t curr_addr = addr.GetLoadAddress(this);
   Address address(addr);
-  while (1) {
+  while (true) {
     size_t length = ReadCStringFromMemory(address, buf, sizeof(buf), error);
     if (length == 0)
       break;

@@ -180,10 +180,10 @@ int main() {
     // LAMBDA: [[B_PRIV:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA: [[C_PRIV:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA-64: [[A_CONV:%.+]] = bitcast i64* [[A_PRIV]] to i32*
-    // LAMBDA-64: store i32* [[A_CONV]], i32** [[REFA:%.+]],
-    // LAMBDA-32: store i32* [[A_PRIV]], i32** [[REFA:%.+]],
     // LAMBDA-64: [[B_CONV:%.+]] = bitcast i64* [[B_PRIV]] to i32*
     // LAMBDA-64: [[C_CONV:%.+]] = bitcast i64* [[C_PRIV]] to i32*
+    // LAMBDA-64: store i32* [[A_CONV]], i32** [[REFA:%.+]],
+    // LAMBDA-32: store i32* [[A_PRIV]], i32** [[REFA:%.+]],
     // LAMBDA-64: store i32* [[C_CONV]], i32** [[REFC:%.+]],
     // LAMBDA-32: store i32* [[C_PRIV]], i32** [[REFC:%.+]],
     // LAMBDA-NEXT: [[A_PRIV:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[REFA]],
@@ -303,10 +303,10 @@ int main() {
 // BLOCKS: [[B_PRIV:%.+]] = alloca i{{[0-9]+}},
 // BLOCKS: [[C_PRIV:%.+]] = alloca i{{[0-9]+}},
 // BLOCKS-64: [[A_CONV:%.+]] = bitcast i64* [[A_PRIV]] to i32*
-// BLOCKS-64: store i32* [[A_CONV]], i32** [[REFA:%.+]],
-// BLOCKS-32: store i32* [[A_PRIV]], i32** [[REFA:%.+]],
 // BLOCKS-64: [[B_CONV:%.+]] = bitcast i64* [[B_PRIV]] to i32*
 // BLOCKS-64: [[C_CONV:%.+]] = bitcast i64* [[C_PRIV]] to i32*
+// BLOCKS-64: store i32* [[A_CONV]], i32** [[REFA:%.+]],
+// BLOCKS-32: store i32* [[A_PRIV]], i32** [[REFA:%.+]],
 // BLOCKS-64: store i32* [[C_CONV]], i32** [[REFC:%.+]],
 // BLOCKS-32: store i32* [[C_PRIV]], i32** [[REFC:%.+]],
 // BLOCKS-NEXT: [[A_PRIV:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[REFA]],
@@ -335,8 +335,9 @@ int main() {
     s_arr[0] = var;
     sivar = 2;
   }
-#pragma omp parallel allocate(omp_default_mem_alloc: t_var) firstprivate(t_var)
-  {}
+  const int a = 0;
+#pragma omp parallel allocate(omp_default_mem_alloc: t_var) firstprivate(t_var, a)
+  { t_var = a; }
   return tmain<int>();
 #endif
 }
@@ -346,6 +347,7 @@ int main() {
 // CHECK: [[T_VAR:%.+]] = alloca i32,
 // CHECK: [[T_VARCAST:%.+]] = alloca [[iz:i64|i32]],
 // CHECK: [[SIVARCAST:%.+]] = alloca [[iz]],
+// CHECK: [[A:%.+]] = alloca i32,
 // CHECK: [[T_VARCAST1:%.+]] = alloca [[iz:i64|i32]],
 // CHECK: call {{.*}} [[S_FLOAT_TY_DEF_CONSTR:@.+]]([[S_FLOAT_TY]]* [[TEST]])
 // CHECK: [[T_VARVAL:%.+]] = load i32, i32* [[T_VAR]],
@@ -420,6 +422,7 @@ int main() {
 // CHECK-32: [[T_VAR_VAL:%.+]] = load i32, i32* [[T_VAR_ADDR]],
 // CHECK-64: [[T_VAR_VAL:%.+]] = load i32, i32* [[BC]],
 // CHECK:    store i32 [[T_VAR_VAL]], i32* [[T_VAR_PRIV]],
+// CHECK:    store i32 0, i32* [[T_VAR_PRIV]],
 // CHECK:    call void @__kmpc_free(i32 [[GTID]], i8* [[T_VAR_VOID_PTR]], i8* inttoptr ([[iz]] 1 to i8*))
 // CHECK:    ret void
 
@@ -452,10 +455,10 @@ int main() {
 // CHECK: store i{{[0-9]+}} {{.+}}, i{{[0-9]+}}* [[B_PRIV]]
 // CHECK: store i{{[0-9]+}} {{.+}}, i{{[0-9]+}}* [[C_PRIV]]
 // CHECK-64: [[A_CONV:%.+]] = bitcast i64* [[A_PRIV:%.+]] to i32*
-// CHECK-64: store i32* [[A_CONV]], i32** [[REFA:%.+]],
-// CHECK-32: store i32* [[A_PRIV]], i32** [[REFA:%.+]],
 // CHECK-64: [[B_CONV:%.+]] = bitcast i64* [[B_PRIV:%.+]] to i32*
 // CHECK-64: [[C_CONV:%.+]] = bitcast i64* [[C_PRIV:%.+]] to i32*
+// CHECK-64: store i32* [[A_CONV]], i32** [[REFA:%.+]],
+// CHECK-32: store i32* [[A_PRIV]], i32** [[REFA:%.+]],
 // CHECK-64: store i32* [[C_CONV]], i32** [[REFC:%.+]],
 // CHECK-32: store i32* [[C_PRIV]], i32** [[REFC:%.+]],
 // CHECK: bitcast [4 x i{{[0-9]+}}]* [[E_PRIV]] to i8*

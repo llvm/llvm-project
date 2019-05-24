@@ -253,14 +253,14 @@
 // HOST: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // HOST-SAME: "-aux-triple" "nvptx64-nvidia-cuda"
 // HOST-NOT: "-fcuda-is-device"
-// HOST-SAME: "-o" "[[HOSTOUTPUT:[^"]*]]"
-// HOST-NOSAVE-SAME: "-x" "cuda"
-// HOST-SAVE-SAME: "-x" "cuda-cpp-output"
 // There is only one GPU binary after combining it with fatbinary!
 // INCLUDES-DEVICE2-NOT: "-fcuda-include-gpubinary"
 // INCLUDES-DEVICE-SAME: "-fcuda-include-gpubinary" "[[FATBINARY]]"
 // There is only one GPU binary after combining it with fatbinary.
 // INCLUDES-DEVICE2-NOT: "-fcuda-include-gpubinary"
+// HOST-SAME: "-o" "[[HOSTOUTPUT:[^"]*]]"
+// HOST-NOSAVE-SAME: "-x" "cuda"
+// HOST-SAVE-SAME: "-x" "cuda-cpp-output"
 
 // Match external assembler that uses compilation output.
 // HOST-AS: "-o" "{{.*}}.o" "[[HOSTOUTPUT]]"

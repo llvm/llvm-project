@@ -793,6 +793,8 @@ int main() {
 // CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
 // CHECK: store [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]], [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR:%.+]],
 // CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
+// CHECK: store [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]], [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR:%.+]],
+// CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
 
 // CHECK: [[LOW:%.+]] = getelementptr inbounds [4 x [[S_FLOAT_TY]]], [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]], i64 0, i64 1
 // CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
@@ -820,6 +822,8 @@ int main() {
 
 // CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
 
+// CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
+// CHECK: store [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]], [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR:%.+]],
 // CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
 // CHECK: store [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]], [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR:%.+]],
 // CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],

@@ -482,7 +482,7 @@ public:
 
       case 'e':
         if (option_arg == "block") {
-          m_end_line_is_block_end = 1;
+          m_end_line_is_block_end = true;
           break;
         }
         if (option_arg.getAsInteger(0, m_end_line))

@@ -182,7 +182,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // Expand float operations supported for scalars but not SIMD
     for (auto Op : {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT,
-                    ISD::FCOPYSIGN}) {
+                    ISD::FCOPYSIGN, ISD::FLOG, ISD::FLOG2, ISD::FLOG10,
+                    ISD::FEXP, ISD::FEXP2, ISD::FRINT}) {
       setOperationAction(Op, MVT::v4f32, Expand);
       if (Subtarget->hasUnimplementedSIMD128())
         setOperationAction(Op, MVT::v2f64, Expand);
@@ -895,6 +896,21 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
                     Params.begin()));
 
   return Chain;
+}
+
+void WebAssemblyTargetLowering::ReplaceNodeResults(
+    SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
+  switch (N->getOpcode()) {
+  case ISD::SIGN_EXTEND_INREG:
+    // Do not add any results, signifying that N should not be custom lowered
+    // after all. This happens because simd128 turns on custom lowering for
+    // SIGN_EXTEND_INREG, but for non-vector sign extends the result might be an
+    // illegal type.
+    break;
+  default:
+    llvm_unreachable(
+        "ReplaceNodeResults not implemented for this op for WebAssembly!");
+  }
 }
 
 //===----------------------------------------------------------------------===//

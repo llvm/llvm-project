@@ -5223,6 +5223,10 @@ public:
   //// ActOnCXXThis -  Parse 'this' pointer.
   ExprResult ActOnCXXThis(SourceLocation loc);
 
+  /// Build a CXXThisExpr and mark it referenced in the current context.
+  Expr *BuildCXXThisExpr(SourceLocation Loc, QualType Type, bool IsImplicit);
+  void MarkThisReferenced(CXXThisExpr *This);
+
   /// Try to retrieve the type of the 'this' pointer.
   ///
   /// \returns The type of 'this', if possible. Otherwise, returns a NULL type.

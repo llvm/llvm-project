@@ -2664,7 +2664,7 @@ bool DWARFASTParserClang::ParseChildMembers(
     DelayedPropertyList &delayed_properties, AccessType &default_accessibility,
     bool &is_a_class, ClangASTImporter::LayoutInfo &layout_info) {
   if (!parent_die)
-    return 0;
+    return false;
 
   // Get the parent byte size so we can verify any members will fit
   const uint64_t parent_byte_size =
@@ -2679,7 +2679,7 @@ bool DWARFASTParserClang::ParseChildMembers(
   ClangASTContext *ast =
       llvm::dyn_cast_or_null<ClangASTContext>(class_clang_type.GetTypeSystem());
   if (ast == nullptr)
-    return 0;
+    return false;
 
   for (DWARFDIE die = parent_die.GetFirstChild(); die.IsValid();
        die = die.GetSibling()) {

@@ -494,33 +494,44 @@ private:
 
 /// Represents CFGBlock terminator statement.
 ///
-/// TemporaryDtorsBranch bit is set to true if the terminator marks a branch
-/// in control flow of destructors of temporaries. In this case terminator
-/// statement is the same statement that branches control flow in evaluation
-/// of matching full expression.
 class CFGTerminator {
-  llvm::PointerIntPair<Stmt *, 1> Data;
+public:
+  enum Kind {
+    /// A branch that corresponds to a statement in the code,
+    /// such as an if-statement.
+    StmtBranch,
+    /// A branch in control flow of destructors of temporaries. In this case
+    /// terminator statement is the same statement that branches control flow
+    /// in evaluation of matching full expression.
+    TemporaryDtorsBranch,
+
+    /// Number of different kinds, for sanity checks. We subtract 1 so that
+    /// to keep receiving compiler warnings when we don't cover all enum values
+    /// in a switch.
+    NumKindsMinusOne = TemporaryDtorsBranch
+  };
+
+private:
+  static constexpr int KindBits = 1;
+  static_assert((1 << KindBits) > NumKindsMinusOne,
+                "Not enough room for kind!");
+  llvm::PointerIntPair<Stmt *, KindBits> Data;
 
 public:
-  CFGTerminator() = default;
-  CFGTerminator(Stmt *S, bool TemporaryDtorsBranch = false)
-      : Data(S, TemporaryDtorsBranch) {}
+  CFGTerminator() { assert(!isValid()); }
+  CFGTerminator(Stmt *S, Kind K = StmtBranch) : Data(S, K) {}
 
+  bool isValid() const { return Data.getOpaqueValue() != nullptr; }
   Stmt *getStmt() { return Data.getPointer(); }
   const Stmt *getStmt() const { return Data.getPointer(); }
+  Kind getKind() const { return static_cast<Kind>(Data.getInt()); }
 
-  bool isTemporaryDtorsBranch() const { return Data.getInt(); }
-
-  operator Stmt *() { return getStmt(); }
-  operator const Stmt *() const { return getStmt(); }
-
-  Stmt *operator->() { return getStmt(); }
-  const Stmt *operator->() const { return getStmt(); }
-
-  Stmt &operator*() { return *getStmt(); }
-  const Stmt &operator*() const { return *getStmt(); }
-
-  explicit operator bool() const { return getStmt(); }
+  bool isStmtBranch() const {
+    return getKind() == StmtBranch;
+  }
+  bool isTemporaryDtorsBranch() const {
+    return getKind() == TemporaryDtorsBranch;
+  }
 };
 
 /// Represents a single basic block in a source-level CFG.
@@ -836,8 +847,10 @@ public:
   void setLoopTarget(const Stmt *loopTarget) { LoopTarget = loopTarget; }
   void setHasNoReturnElement() { HasNoReturnElement = true; }
 
-  CFGTerminator getTerminator() { return Terminator; }
-  const CFGTerminator getTerminator() const { return Terminator; }
+  CFGTerminator getTerminator() const { return Terminator; }
+
+  Stmt *getTerminatorStmt() { return Terminator.getStmt(); }
+  const Stmt *getTerminatorStmt() const { return Terminator.getStmt(); }
 
   Stmt *getTerminatorCondition(bool StripParens = true);
 

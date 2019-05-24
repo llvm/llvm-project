@@ -5215,30 +5215,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       isa<CompileJobAction>(JA))
     CmdArgs.push_back("-disable-llvm-passes");
 
-  if (Output.getType() == types::TY_Dependencies) {
-    // Handled with other dependency code.
-  } else if (Output.isFilename()) {
-    CmdArgs.push_back("-o");
-    CmdArgs.push_back(Output.getFilename());
-  } else {
-    assert(Output.isNothing() && "Invalid output.");
-  }
-
-  addDashXForInput(Args, Input, CmdArgs);
-
-  ArrayRef<InputInfo> FrontendInputs = Input;
-  if (IsHeaderModulePrecompile)
-    FrontendInputs = ModuleHeaderInputs;
-  else if (Input.isNothing())
-    FrontendInputs = {};
-
-  for (const InputInfo &Input : FrontendInputs) {
-    if (Input.isFilename())
-      CmdArgs.push_back(Input.getFilename());
-    else
-      Input.getInputArg().renderAsInput(Args, CmdArgs);
-  }
-
   Args.AddAllArgs(CmdArgs, options::OPT_undef);
 
   const char *Exec = D.getClangProgramPath();
@@ -5435,6 +5411,32 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                       !TC.getTriple().isAndroid() &&
                        TC.useIntegratedAs()))
     CmdArgs.push_back("-faddrsig");
+
+  // Add the "-o out -x type src.c" flags last. This is done primarily to make
+  // the -cc1 command easier to edit when reproducing compiler crashes.
+  if (Output.getType() == types::TY_Dependencies) {
+    // Handled with other dependency code.
+  } else if (Output.isFilename()) {
+    CmdArgs.push_back("-o");
+    CmdArgs.push_back(Output.getFilename());
+  } else {
+    assert(Output.isNothing() && "Invalid output.");
+  }
+
+  addDashXForInput(Args, Input, CmdArgs);
+
+  ArrayRef<InputInfo> FrontendInputs = Input;
+  if (IsHeaderModulePrecompile)
+    FrontendInputs = ModuleHeaderInputs;
+  else if (Input.isNothing())
+    FrontendInputs = {};
+
+  for (const InputInfo &Input : FrontendInputs) {
+    if (Input.isFilename())
+      CmdArgs.push_back(Input.getFilename());
+    else
+      Input.getInputArg().renderAsInput(Args, CmdArgs);
+  }
 
   // Finally add the compile command to the compilation.
   if (Args.hasArg(options::OPT__SLASH_fallback) &&

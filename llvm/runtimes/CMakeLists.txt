@@ -209,7 +209,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 
 else() # if this is included from LLVM's CMake
   include(LLVMExternalProjectUtils)
-  if (LLVM_EXTERNAL_LIBCXX_SOURCE_DIR)
+  if (LLVM_EXTERNAL_LIBCXX_SOURCE_DIR AND "libcxx" IN_LIST LLVM_ENABLE_RUNTIMES)
     set(LIBCXX_HEADER_DIR ${LLVM_INCLUDE_DIR}/c++/v1/)
     set(CXX_HEADER_TARGET runtime-libcxx-headers)
     add_subdirectory(${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR}/include ${CXX_HEADER_TARGET})

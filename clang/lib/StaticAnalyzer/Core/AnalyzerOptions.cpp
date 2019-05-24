@@ -19,6 +19,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstddef>
@@ -46,6 +47,37 @@ AnalyzerOptions::getRegisteredCheckers(bool IncludeExperimental /* = false */) {
       Result.push_back(CheckName);
   }
   return Result;
+}
+
+void AnalyzerOptions::printFormattedEntry(
+    llvm::raw_ostream &Out,
+    std::pair<StringRef, StringRef> EntryDescPair,
+    size_t InitialPad, size_t EntryWidth, size_t MinLineWidth) {
+
+  llvm::formatted_raw_ostream FOut(Out);
+
+  const size_t PadForDesc = InitialPad + EntryWidth;
+
+  FOut.PadToColumn(InitialPad) << EntryDescPair.first;
+  // If the buffer's length is greater then PadForDesc, print a newline.
+  if (FOut.getColumn() > PadForDesc)
+    FOut << '\n';
+
+  FOut.PadToColumn(PadForDesc);
+
+  if (MinLineWidth == 0) {
+    FOut << EntryDescPair.second;
+    return;
+  }
+
+  for (char C : EntryDescPair.second) {
+    if (FOut.getColumn() > MinLineWidth && C == ' ') {
+      FOut << '\n';
+      FOut.PadToColumn(PadForDesc);
+      continue;
+    }
+    FOut << C;
+  }
 }
 
 ExplorationStrategyKind

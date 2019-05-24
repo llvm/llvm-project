@@ -166,6 +166,29 @@ public:
   static std::vector<StringRef>
   getRegisteredCheckers(bool IncludeExperimental = false);
 
+  /// Convenience function for printing options or checkers and their
+  /// description in a formatted manner. If \p MinLineWidth is set to 0, no line
+  /// breaks are introduced for the description.
+  ///
+  /// Format, depending whether the option name's length is less then
+  /// \p OptionWidth:
+  ///
+  ///   <padding>EntryName<padding>Description
+  ///   <---------padding--------->Description
+  ///   <---------padding--------->Description
+  ///
+  ///   <padding>VeryVeryLongOptionName
+  ///   <---------padding--------->Description
+  ///   <---------padding--------->Description
+  ///   ^~~~~~~~ InitialPad
+  ///   ^~~~~~~~~~~~~~~~~~~~~~~~~~ EntryWidth
+  ///   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MinLineWidth
+  static void printFormattedEntry(
+      llvm::raw_ostream &Out,
+      std::pair<StringRef, StringRef> EntryDescPair,
+      size_t EntryWidth, size_t InitialPad, size_t MinLineWidth = 0);
+
+
   /// Pair of checker name and enable/disable.
   std::vector<std::pair<std::string, bool>> CheckersControlList;
 
@@ -197,7 +220,13 @@ public:
   unsigned DisableAllChecks : 1;
 
   unsigned ShowCheckerHelp : 1;
-  unsigned ShowCheckerHelpHidden : 1;
+  unsigned ShowCheckerHelpAlpha : 1;
+  unsigned ShowCheckerHelpDeveloper : 1;
+
+  unsigned ShowCheckerOptionList : 1;
+  unsigned ShowCheckerOptionAlphaList : 1;
+  unsigned ShowCheckerOptionDeveloperList : 1;
+
   unsigned ShowEnabledCheckerList : 1;
   unsigned ShowConfigOptionsList : 1;
   unsigned ShouldEmitErrorsOnInvalidConfigValue : 1;
@@ -261,7 +290,9 @@ public:
 
   AnalyzerOptions()
       : DisableAllChecks(false), ShowCheckerHelp(false),
-        ShowCheckerHelpHidden(false), ShowEnabledCheckerList(false),
+        ShowCheckerHelpAlpha(false), ShowCheckerHelpDeveloper(false),
+        ShowCheckerOptionList(false), ShowCheckerOptionAlphaList(false),
+        ShowCheckerOptionDeveloperList(false), ShowEnabledCheckerList(false),
         ShowConfigOptionsList(false), AnalyzeAll(false),
         AnalyzerDisplayProgress(false), AnalyzeNestedBlocks(false),
         eagerlyAssumeBinOpBifurcation(false), TrimGraph(false),

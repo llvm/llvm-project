@@ -334,9 +334,9 @@ bool ClassDescriptorV2::Describe(
   std::unique_ptr<class_rw_t> class_rw;
 
   if (!Read_objc_class(process, objc_class))
-    return 0;
+    return false;
   if (!Read_class_row(process, *objc_class, class_ro, class_rw))
-    return 0;
+    return false;
 
   static ConstString NSObject_name("NSObject");
 

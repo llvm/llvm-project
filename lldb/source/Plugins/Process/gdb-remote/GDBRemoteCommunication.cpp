@@ -541,7 +541,7 @@ bool GDBRemoteCommunication::DecompressPacket() {
 #if defined(HAVE_LIBCOMPRESSION)
   if (m_compression_type == CompressionType::ZlibDeflate ||
       m_compression_type == CompressionType::LZFSE ||
-      m_compression_type == CompressionType::LZ4 || 
+      m_compression_type == CompressionType::LZ4 ||
       m_compression_type == CompressionType::LZMA) {
     compression_algorithm compression_type;
     if (m_compression_type == CompressionType::LZFSE)
@@ -578,7 +578,7 @@ bool GDBRemoteCommunication::DecompressPacket() {
     if (decompressed_bufsize != ULONG_MAX && decompressed_buffer != nullptr) {
       decompressed_bytes = compression_decode_buffer(
           decompressed_buffer, decompressed_bufsize,
-          (uint8_t *)unescaped_content.data(), unescaped_content.size(), 
+          (uint8_t *)unescaped_content.data(), unescaped_content.size(),
           m_decompression_scratch, compression_type);
     }
   }
@@ -925,7 +925,7 @@ GDBRemoteCommunication::ListenThread(lldb::thread_arg_t arg) {
         eConnectionStatusSuccess)
       comm->SetConnection(nullptr);
   }
-  return nullptr;
+  return {};
 }
 
 Status GDBRemoteCommunication::StartDebugserverProcess(

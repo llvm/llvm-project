@@ -93,12 +93,6 @@ static cl::opt<bool> EnableVGPRIndexMode(
   cl::desc("Use GPR indexing mode instead of movrel for vector indexing"),
   cl::init(false));
 
-static cl::opt<unsigned> AssumeFrameIndexHighZeroBits(
-  "amdgpu-frame-index-zero-bits",
-  cl::desc("High bits of frame index assumed to be zero"),
-  cl::init(5),
-  cl::ReallyHidden);
-
 static cl::opt<bool> DisableLoopAlignment(
   "amdgpu-disable-loop-alignment",
   cl::desc("Do not align and prefetch loops"),
@@ -2059,13 +2053,14 @@ SDValue SITargetLowering::LowerFormalArguments(
     Reg = MF.addLiveIn(Reg, RC);
     SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, VT);
 
-    if (Arg.Flags.isSRet() && !getSubtarget()->enableHugePrivateBuffer()) {
+    if (Arg.Flags.isSRet()) {
       // The return object should be reasonably addressable.
 
       // FIXME: This helps when the return is a real sret. If it is a
       // automatically inserted sret (i.e. CanLowerReturn returns false), an
       // extra copy is inserted in SelectionDAGBuilder which obscures this.
-      unsigned NumBits = 32 - AssumeFrameIndexHighZeroBits;
+      unsigned NumBits
+        = 32 - getSubtarget()->getKnownHighZeroBitsForFrameIndex();
       Val = DAG.getNode(ISD::AssertZext, DL, VT, Val,
         DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), NumBits)));
     }
@@ -9970,14 +9965,10 @@ void SITargetLowering::computeKnownBitsForFrameIndex(const SDValue Op,
   TargetLowering::computeKnownBitsForFrameIndex(Op, Known, DemandedElts,
                                                 DAG, Depth);
 
-  if (getSubtarget()->enableHugePrivateBuffer())
-    return;
-
-  // Technically it may be possible to have a dispatch with a single workitem
-  // that uses the full private memory size, but that's not really useful. We
-  // can't use vaddr in MUBUF instructions if we don't know the address
+  // Set the high bits to zero based on the maximum allowed scratch size per
+  // wave. We can't use vaddr in MUBUF instructions if we don't know the address
   // calculation won't overflow, so assume the sign bit is never set.
-  Known.Zero.setHighBits(AssumeFrameIndexHighZeroBits);
+  Known.Zero.setHighBits(getSubtarget()->getKnownHighZeroBitsForFrameIndex());
 }
 
 unsigned SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {

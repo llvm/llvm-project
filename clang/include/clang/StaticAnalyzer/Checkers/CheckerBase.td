@@ -21,17 +21,39 @@ def Integer : CmdLineOptionTypeEnum<0>;
 def String : CmdLineOptionTypeEnum<1>;
 def Boolean : CmdLineOptionTypeEnum<2>;
 
-class Type<CmdLineOptionTypeEnum val> {
-  bits<2> Type = val.Type;
+/// Describes the state of the entry. We wouldn't like to display, for example,
+/// developer only entries for a list meant for end users.
+class DevelopmentStageEnum<bits<1> val> {
+  bits<1> Val = val;
 }
+
+/// Alpha entries are under development, might be incomplet, inkorrekt and
+/// unstable.
+def InAlpha : DevelopmentStageEnum<0>;
+
+/// Released entries are stable, produce minimal, if any false positives,
+/// and emits reports that explain the occurance of the bug understandably and
+/// thoroughly.
+def Released : DevelopmentStageEnum<1>;
+
+/// Marks the entry hidden. Hidden entries won't be displayed in
+/// -analyzer-checker-option-help.
+class HiddenEnum<bit val> {
+  bit Val = val;
+}
+def DontHide : HiddenEnum<0>;
+def Hide : HiddenEnum<1>;
 
 /// Describes an option for a checker or a package.
 class CmdLineOption<CmdLineOptionTypeEnum type, string cmdFlag, string desc,
-                    string defaultVal> {
+                    string defaultVal, DevelopmentStageEnum stage,
+                    HiddenEnum isHidden = DontHide> {
   bits<2> Type = type.Type;
-  string CmdFlag = cmdFlag;
-  string Desc = desc;
-  string DefaultVal = defaultVal;
+  string  CmdFlag = cmdFlag;
+  string  Desc = desc;
+  string  DefaultVal = defaultVal;
+  bits<1> DevelopmentStage = stage.Val;
+  bit     Hidden = isHidden.Val;
 }
 
 /// Describes a list of package options.
@@ -111,6 +133,6 @@ class Dependencies<list<Checker> Deps = []> {
   list<Checker> Dependencies = Deps;
 }
 
-/// Marks a checker or a package hidden. Hidden entries won't be displayed in
-/// -analyzer-checker-help, which is desirable for alpha or modeling checkers.
+/// Marks a checker or a package hidden. Hidden entries are meant for developers
+/// only, and aren't exposed to end users.
 class Hidden { bit Hidden = 1; }

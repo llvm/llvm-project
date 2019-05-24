@@ -33,6 +33,12 @@ public:
 };
 
 enum class align_val_t : size_t {}; // C++17
+
+struct destroying_delete_t { // C++20
+  explicit destroying_delete_t() = default;
+};
+inline constexpr destroying_delete_t destroying_delete{}; // C++20
+
 struct nothrow_t {};
 extern const nothrow_t nothrow;
 typedef void (*new_handler)();
@@ -157,6 +163,15 @@ enum class _LIBCPP_ENUM_VIS align_val_t : size_t { };
 enum align_val_t { __zero = 0, __max = (size_t)-1 };
 #endif
 #endif
+
+#if _LIBCPP_STD_VER > 17
+// Enable the declaration even if the compiler doesn't support the language
+// feature.
+struct destroying_delete_t {
+  explicit destroying_delete_t() = default;
+};
+_LIBCPP_INLINE_VAR constexpr destroying_delete_t destroying_delete{};
+#endif // _LIBCPP_STD_VER > 17
 
 }  // std
 

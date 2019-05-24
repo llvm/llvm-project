@@ -863,10 +863,6 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
           VecOp, ScalarOp, IdxOp, SQ.getWithInstruction(&IE)))
     return replaceInstUsesWith(IE, V);
 
-  // Inserting an undef or into an undefined place, remove this.
-  if (isa<UndefValue>(ScalarOp) || isa<UndefValue>(IdxOp))
-    replaceInstUsesWith(IE, VecOp);
-
   // If the vector and scalar are both bitcast from the same element type, do
   // the insert in that source type followed by bitcast.
   Value *VecSrc, *ScalarSrc;
@@ -888,19 +884,6 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
   if (match(IdxOp, m_ConstantInt(InsertedIdx)) &&
       match(ScalarOp, m_ExtractElement(m_Value(ExtVecOp),
                                        m_ConstantInt(ExtractedIdx)))) {
-    unsigned NumInsertVectorElts = IE.getType()->getNumElements();
-    unsigned NumExtractVectorElts = ExtVecOp->getType()->getVectorNumElements();
-    if (ExtractedIdx >= NumExtractVectorElts) // Out of range extract.
-      return replaceInstUsesWith(IE, VecOp);
-
-    if (InsertedIdx >= NumInsertVectorElts)  // Out of range insert.
-      return replaceInstUsesWith(IE, UndefValue::get(IE.getType()));
-
-    // If we are extracting a value from a vector, then inserting it right
-    // back into the same place, just use the input vector.
-    if (ExtVecOp == VecOp && ExtractedIdx == InsertedIdx)
-      return replaceInstUsesWith(IE, VecOp);
-
     // TODO: Looking at the user(s) to determine if this insert is a
     // fold-to-shuffle opportunity does not match the usual instcombine
     // constraints. We should decide if the transform is worthy based only
@@ -1635,8 +1618,8 @@ static Instruction *foldIdentityPaddedShuffles(ShuffleVectorInst &Shuf) {
   // We limit this transform to power-of-2 types because we expect that the
   // backend can convert the simplified IR patterns to identical nodes as the
   // original IR.
-  // TODO: If we can verify that behavior for arbitrary types, the power-of-2
-  // checks can be removed.
+  // TODO: If we can verify the same behavior for arbitrary types, the
+  //       power-of-2 checks can be removed.
   Value *X = Shuffle0->getOperand(0);
   Value *Y = Shuffle1->getOperand(0);
   if (X->getType() != Y->getType() ||
@@ -1663,10 +1646,27 @@ static Instruction *foldIdentityPaddedShuffles(ShuffleVectorInst &Shuf) {
   for (int i = 0, e = Mask.size(); i != e; ++i) {
     if (Mask[i] == -1)
       continue;
-    if (Mask[i] < WideElts)
+
+    // If this shuffle is choosing an undef element from 1 of the sources, that
+    // element is undef.
+    if (Mask[i] < WideElts) {
+      if (Shuffle0->getMaskValue(Mask[i]) == -1)
+        continue;
+    } else {
+      if (Shuffle1->getMaskValue(Mask[i] - WideElts) == -1)
+        continue;
+    }
+
+    // If this shuffle is choosing from the 1st narrow op, the mask element is
+    // the same. If this shuffle is choosing from the 2nd narrow op, the mask
+    // element is offset down to adjust for the narrow vector widths.
+    if (Mask[i] < WideElts) {
+      assert(Mask[i] < NarrowElts && "Unexpected shuffle mask");
       NewMask[i] = ConstantInt::get(I32Ty, Mask[i]);
-    else
+    } else {
+      assert(Mask[i] < (WideElts + NarrowElts) && "Unexpected shuffle mask");
       NewMask[i] = ConstantInt::get(I32Ty, Mask[i] - (WideElts - NarrowElts));
+    }
   }
   return new ShuffleVectorInst(X, Y, ConstantVector::get(NewMask));
 }

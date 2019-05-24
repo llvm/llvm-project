@@ -134,6 +134,11 @@ Improvements to clang-tidy
   subclasses of ``NSObject`` and recommends calling a superclass initializer
   instead.
 
+- New alias :doc:`cert-oop54-cpp
+  <clang-tidy/checks/cert-oop54-cpp>` to
+  :doc:`bugprone-unhandled-self-assignment
+  <clang-tidy/checks/bugprone-unhandled-self-assignment>` was added.
+
 - New alias :doc:`cppcoreguidelines-explicit-virtual-functions
   <clang-tidy/checks/cppcoreguidelines-explicit-virtual-functions>` to
   :doc:`modernize-use-override
@@ -177,7 +182,7 @@ Improvements to clang-tidy
   Rewrites function signatures to use a trailing return type.
 
 - The :doc:`misc-throw-by-value-catch-by-reference
-  <clang-tidy/misc-throw-by-value-catch-by-reference.rst>` now supports
+  <clang-tidy/checks/misc-throw-by-value-catch-by-reference.rst>` now supports
   `WarnOnLargeObject` and `MaxSize` options to warn on any large trivial
   object caught by value.
 
