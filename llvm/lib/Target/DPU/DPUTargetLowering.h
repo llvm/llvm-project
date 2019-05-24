@@ -96,8 +96,6 @@ private:
 
   SDValue LowerBrCc(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue LowerDynamicStackAlloc(SDValue Op, SelectionDAG &DAG) const;
-
   SDValue LowerStore(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerLoad(SDValue Op, SelectionDAG &DAG) const;
@@ -107,7 +105,7 @@ private:
   SDValue LowerIntrinsic(SDValue Op, SelectionDAG &DAG,
                          int IntrinsicType) const;
 
-  SDValue LowerAddrSpaceCast(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerUnsupported(SDValue Op, SelectionDAG &DAG, StringRef Message) const;
 
   // Analysis and mute for 64 bits emulation.
   // Shifts: third parameter stands for Left (0), Right (1) or Arithmetic (2)

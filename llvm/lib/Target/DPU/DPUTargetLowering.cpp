@@ -119,6 +119,9 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i16, Promote);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Custom);
 
+  setOperationAction(ISD::STACKSAVE, MVT::i32, Custom);
+  setOperationAction(ISD::STACKRESTORE, MVT::i32, Custom);
+
   // @todo MULHU and MULHS could work with 8 and 16 bits... need to implement it
   // for 8 bits... 16 is expansive.
   setOperationAction(ISD::MULHU, MVT::i1, Expand);
@@ -263,7 +266,14 @@ SDValue DPUTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   });
   switch (Op.getOpcode()) {
   case ISD::ADDRSPACECAST:
-    return LowerAddrSpaceCast(Op, DAG);
+    return LowerUnsupported(Op,DAG,
+                            "Cast between addresses of different address space is not supported");
+
+  case ISD::DYNAMIC_STACKALLOC:
+  case ISD::STACKSAVE:
+  case ISD::STACKRESTORE:
+    return LowerUnsupported(Op, DAG,
+                            "Dynamic allocation of stack is not supported");
 
   case ISD::MUL:
     return LowerMultiplication(Op, DAG);
@@ -282,9 +292,6 @@ SDValue DPUTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 
   case ISD::BR_CC:
     return LowerBrCc(Op, DAG);
-
-  case ISD::DYNAMIC_STACKALLOC:
-    return LowerDynamicStackAlloc(Op, DAG);
 
   case ISD::STORE:
     return LowerStore(Op, DAG);
@@ -597,13 +604,19 @@ const char *DPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   }
 }
 
-SDValue DPUTargetLowering::LowerAddrSpaceCast(SDValue Op, SelectionDAG &DAG) const {
+SDValue DPUTargetLowering::LowerUnsupported(SDValue Op,
+                                            SelectionDAG &DAG,
+                                            StringRef Message) const {
   const Function & Func = DAG.getMachineFunction().getFunction();
-  DiagnosticInfoUnsupported Diag(Func,
-                                 "Cast between addresses of different address space is not supported",
-                                 Op.getDebugLoc());
+  const DebugLoc &DL = Op.getDebugLoc();
+  DiagnosticInfoUnsupported Diag(Func, Message, DL);
   Func.getContext().diagnose(Diag);
-  report_fatal_error("Cast between addresses of different address space is not supported", false);
+  if (DL.get() == NULL) {
+    report_fatal_error(Message + "\n(add -g to cflags for more precise diagnostic)",
+                       false);
+  } else {
+    report_fatal_error(Message, false);
+  }
   return Op;
 }
 
@@ -1549,35 +1562,6 @@ SDValue DPUTargetLowering::LowerBrCc(SDValue Op, SelectionDAG &DAG) const {
   SDValue Ops[] = {Chain, DAG.getConstant(CC, dl, MVT::i32), leftOp, rightOp,
                    Destination};
   return DAG.getNode(DPUISD::BrCCi, dl, VTs, Ops);
-}
-
-SDValue DPUTargetLowering::LowerDynamicStackAlloc(SDValue Op,
-                                                  SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-
-  // Get the inputs.
-  SDValue Chain = Op.getOperand(0);
-  SDValue Size = Op.getOperand(1);
-
-  LLVM_DEBUG({
-    dbgs() << "DPU/Lower - lowering dynamic stack alloc [chain=";
-    Chain.dump(&DAG);
-    dbgs() << " - size = ";
-    Size.dump(&DAG);
-  });
-
-  SDValue Words = DAG.getNode(ISD::SRL, DL, MVT::i32, Size,
-                              DAG.getConstant(2, DL, MVT::i32));
-
-  SDValue Glue;
-  Chain = DAG.getCopyToReg(Chain, DL, DPU::R0, Words, Glue);
-  // Glue = Chain.getValue(1);
-
-  SDValue NewSP = DAG.getCopyFromReg(Chain, DL, DPU::STKP, MVT::i32);
-  Chain = NewSP.getValue(1);
-
-  SDValue Ops[2] = {NewSP, Chain};
-  return DAG.getMergeValues(Ops, DL);
 }
 
 static bool canBeEncodedOn12Bits(uint64_t value) {
