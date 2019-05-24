@@ -27,6 +27,7 @@ struct Configuration {
   bool CompressRelocations;
   bool Demangle;
   bool DisableVerify;
+  bool EmitRelocs;
   bool ExportAll;
   bool ExportDynamic;
   bool ExportTable;

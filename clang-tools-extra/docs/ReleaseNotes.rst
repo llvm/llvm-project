@@ -186,6 +186,11 @@ Improvements to clang-tidy
   `WarnOnLargeObject` and `MaxSize` options to warn on any large trivial
   object caught by value.
 
+- Added `UseAssignment` option to :doc:`cppcoreguidelines-pro-type-member-init`
+
+  If set to true, the check will provide fix-its with literal initializers
+  (``int i = 0;``) instead of curly braces (``int i{};``).
+
 Improvements to include-fixer
 -----------------------------
 

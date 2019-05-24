@@ -1522,7 +1522,7 @@ static void wrapSymbols(ArrayRef<WrappedSymbol> Wrapped) {
 
   // Update pointers in input files.
   parallelForEach(ObjectFiles, [&](InputFile *File) {
-    std::vector<Symbol *> &Syms = File->getMutableSymbols();
+    MutableArrayRef<Symbol *> Syms = File->getMutableSymbols();
     for (size_t I = 0, E = Syms.size(); I != E; ++I)
       if (Symbol *S = Map.lookup(Syms[I]))
         Syms[I] = S;

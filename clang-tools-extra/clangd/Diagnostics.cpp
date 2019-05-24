@@ -25,7 +25,9 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cstddef>
 
 namespace clang {
 namespace clangd {
@@ -437,6 +439,21 @@ void StoreDiags::EndSourceFile() {
   LangOpts = None;
 }
 
+/// Sanitizes a piece for presenting it in a synthesized fix message. Ensures
+/// the result is not too large and does not contain newlines.
+static void writeCodeToFixMessage(llvm::raw_ostream &OS, llvm::StringRef Code) {
+  constexpr unsigned MaxLen = 50;
+
+  // Only show the first line if there are many.
+  llvm::StringRef R = Code.split('\n').first;
+  // Shorten the message if it's too long.
+  R = R.take_front(MaxLen);
+
+  OS << R;
+  if (R.size() != Code.size())
+    OS << "…";
+}
+
 void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                                   const clang::Diagnostic &Info) {
   DiagnosticConsumer::HandleDiagnostic(DiagLevel, Info);
@@ -494,12 +511,21 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
       llvm::StringRef Insert = FixIt.CodeToInsert;
       if (!Invalid) {
         llvm::raw_svector_ostream M(Message);
-        if (!Remove.empty() && !Insert.empty())
-          M << "change '" << Remove << "' to '" << Insert << "'";
-        else if (!Remove.empty())
-          M << "remove '" << Remove << "'";
-        else if (!Insert.empty())
-          M << "insert '" << Insert << "'";
+        if (!Remove.empty() && !Insert.empty()) {
+          M << "change '";
+          writeCodeToFixMessage(M, Remove);
+          M << "' to '";
+          writeCodeToFixMessage(M, Insert);
+          M << "'";
+        } else if (!Remove.empty()) {
+          M << "remove '";
+          writeCodeToFixMessage(M, Remove);
+          M << "'";
+        } else if (!Insert.empty()) {
+          M << "insert '";
+          writeCodeToFixMessage(M, Insert);
+          M << "'";
+        }
         // Don't allow source code to inject newlines into diagnostics.
         std::replace(Message.begin(), Message.end(), '\n', ' ');
       }

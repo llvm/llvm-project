@@ -6649,14 +6649,13 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
                                 const TargetLowering &TLI) {
   // Handle simple but common cases only.
   Type *StoreType = SI.getValueOperand()->getType();
-  if (DL.getTypeStoreSizeInBits(StoreType) != DL.getTypeSizeInBits(StoreType) ||
+  if (!DL.typeSizeEqualsStoreSize(StoreType) ||
       DL.getTypeSizeInBits(StoreType) == 0)
     return false;
 
   unsigned HalfValBitSize = DL.getTypeSizeInBits(StoreType) / 2;
   Type *SplitStoreType = Type::getIntNTy(SI.getContext(), HalfValBitSize);
-  if (DL.getTypeStoreSizeInBits(SplitStoreType) !=
-      DL.getTypeSizeInBits(SplitStoreType))
+  if (!DL.typeSizeEqualsStoreSize(SplitStoreType))
     return false;
 
   // Don't split the store if it is volatile.

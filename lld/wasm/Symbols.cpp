@@ -307,12 +307,19 @@ std::string lld::toString(wasm::Symbol::Kind Kind) {
   llvm_unreachable("invalid symbol kind");
 }
 
+
+void lld::wasm::printTraceSymbolUndefined(StringRef Name, const InputFile* File) {
+  message(toString(File) + ": reference to " + Name);
+}
+
 // Print out a log message for --trace-symbol.
 void lld::wasm::printTraceSymbol(Symbol *Sym) {
-  std::string S;
+  // Undefined symbols are traced via printTraceSymbolUndefined
   if (Sym->isUndefined())
-    S = ": reference to ";
-  else if (Sym->isLazy())
+    return;
+
+  std::string S;
+  if (Sym->isLazy())
     S = ": lazy definition of ";
   else
     S = ": definition of ";

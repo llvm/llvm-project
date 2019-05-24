@@ -81,6 +81,12 @@ OPENCLEXT_INTERNAL(cl_clang_storage_class_specifiers, 100, ~0U)
 OPENCLEXT_INTERNAL(cl_amd_media_ops, 100, ~0U)
 OPENCLEXT_INTERNAL(cl_amd_media_ops2, 100, ~0U)
 
+// ARM OpenCL extensions
+OPENCLEXT_INTERNAL(cl_arm_integer_dot_product_int8, 120, ~0U)
+OPENCLEXT_INTERNAL(cl_arm_integer_dot_product_accumulate_int8, 120, ~0U)
+OPENCLEXT_INTERNAL(cl_arm_integer_dot_product_accumulate_int16, 120, ~0U)
+OPENCLEXT_INTERNAL(cl_arm_integer_dot_product_accumulate_saturate_int8, 120, ~0U)
+
 // Intel OpenCL extensions
 OPENCLEXT_INTERNAL(cl_intel_subgroups, 120, ~0U)
 OPENCLEXT_INTERNAL(cl_intel_subgroups_short, 120, ~0U)

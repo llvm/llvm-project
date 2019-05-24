@@ -129,7 +129,7 @@ void Writer::createCustomSections() {
     LLVM_DEBUG(dbgs() << "createCustomSection: " << Name << "\n");
 
     OutputSection *Sec = make<CustomSection>(Name, Pair.second);
-    if (Config->Relocatable) {
+    if (Config->Relocatable || Config->EmitRelocs) {
       auto *Sym = make<OutputSectionSymbol>(Sec);
       Out.LinkingSec->addToSymtab(Sym);
       Sec->SectionSym = Sym;
@@ -330,7 +330,7 @@ void Writer::addSections() {
   createCustomSections();
 
   addSection(Out.LinkingSec);
-  if (Config->Relocatable) {
+  if (Config->EmitRelocs || Config->Relocatable) {
     createRelocSections();
   }
 
@@ -493,17 +493,17 @@ void Writer::calculateExports() {
 }
 
 void Writer::populateSymtab() {
-  if (!Config->Relocatable)
+  if (!Config->Relocatable && !Config->EmitRelocs)
     return;
 
   for (Symbol *Sym : Symtab->getSymbols())
-    if (Sym->IsUsedInRegularObj)
+    if (Sym->IsUsedInRegularObj && Sym->isLive())
       Out.LinkingSec->addToSymtab(Sym);
 
   for (ObjFile *File : Symtab->ObjectFiles) {
     LLVM_DEBUG(dbgs() << "Local symtab entries: " << File->getName() << "\n");
     for (Symbol *Sym : File->getSymbols())
-      if (Sym->isLocal() && !isa<SectionSymbol>(Sym))
+      if (Sym->isLocal() && !isa<SectionSymbol>(Sym) && Sym->isLive())
         Out.LinkingSec->addToSymtab(Sym);
   }
 }

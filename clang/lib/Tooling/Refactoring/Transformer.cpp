@@ -96,10 +96,10 @@ ASTEdit tooling::change(RangeSelector S, TextGenerator Replacement) {
   return E;
 }
 
-RewriteRule tooling::makeRule(DynTypedMatcher M,
-                              SmallVector<ASTEdit, 1> Edits) {
-  return RewriteRule{
-      {RewriteRule::Case{std::move(M), std::move(Edits), nullptr}}};
+RewriteRule tooling::makeRule(DynTypedMatcher M, SmallVector<ASTEdit, 1> Edits,
+                              TextGenerator Explanation) {
+  return RewriteRule{{RewriteRule::Case{std::move(M), std::move(Edits),
+                                        std::move(Explanation)}}};
 }
 
 // Determines whether A is a base type of B in the class hierarchy, including

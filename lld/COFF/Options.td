@@ -32,6 +32,7 @@ def errorlimit : P<"errorlimit",
 def export  : P<"export", "Export a function">;
 // No help text because /failifmismatch is not intended to be used by the user.
 def failifmismatch : P<"failifmismatch", "">;
+def filealign : P<"filealign", "Section alignment in the output file">;
 def functionpadmin : F<"functionpadmin">;
 def functionpadmin_opt : P<"functionpadmin", "Prepares an image for hotpatching">;
 def guard   : P<"guard", "Control flow guard">;

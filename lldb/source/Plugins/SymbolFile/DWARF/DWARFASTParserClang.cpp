@@ -237,7 +237,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   AccessType accessibility = eAccessNone;
   if (!die)
     return nullptr;
-
   SymbolFileDWARF *dwarf = die.GetDWARF();
   if (log) {
     DWARFDIE context_die;
@@ -252,11 +251,27 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         die.GetTagAsCString(), die.GetName());
   }
 
+
   Type *type_ptr = dwarf->GetDIEToType().lookup(die.GetDIE());
   if (type_ptr == DIE_IS_BEING_PARSED)
     return nullptr;
   if (type_ptr)
     return type_ptr->shared_from_this();
+  // Set a bit that lets us know that we are currently parsing this
+  dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
+
+  if (DWARFDIE signature_die =
+          die.GetAttributeValueAsReferenceDIE(DW_AT_signature)) {
+    if (TypeSP type_sp =
+            ParseTypeFromDWARF(sc, signature_die, log, type_is_new_ptr)) {
+      dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
+      if (clang::DeclContext *decl_ctx =
+              GetCachedClangDeclContextForDIE(signature_die))
+        LinkDeclContextToDIE(decl_ctx, die);
+      return type_sp;
+    }
+    return nullptr;
+  }
 
   TypeList *type_list = dwarf->GetTypeList();
   if (type_is_new_ptr)
@@ -289,9 +304,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   case DW_TAG_restrict_type:
   case DW_TAG_volatile_type:
   case DW_TAG_unspecified_type: {
-    // Set a bit that lets us know that we are currently parsing this
-    dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
-
     const size_t num_attributes = die.GetAttributes(attributes);
     uint32_t encoding = 0;
     DWARFFormValue encoding_uid;
@@ -540,9 +552,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   case DW_TAG_structure_type:
   case DW_TAG_union_type:
   case DW_TAG_class_type: {
-    // Set a bit that lets us know that we are currently parsing this
-    dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
-
     LanguageType class_language = eLanguageTypeUnknown;
     bool is_complete_objc_class = false;
     size_t calling_convention = llvm::dwarf::CallingConvention::DW_CC_normal;
@@ -974,9 +983,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   } break;
 
   case DW_TAG_enumeration_type: {
-    // Set a bit that lets us know that we are currently parsing this
-    dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
-
     bool is_scoped = false;
     DWARFFormValue encoding_form;
 
@@ -1136,9 +1142,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   case DW_TAG_inlined_subroutine:
   case DW_TAG_subprogram:
   case DW_TAG_subroutine_type: {
-    // Set a bit that lets us know that we are currently parsing this
-    dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
-
     DWARFFormValue type_die_form;
     bool is_variadic = false;
     bool is_inline = false;
@@ -1658,9 +1661,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   } break;
 
   case DW_TAG_array_type: {
-    // Set a bit that lets us know that we are currently parsing this
-    dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
-
     DWARFFormValue type_die_form;
     uint32_t byte_stride = 0;
     uint32_t bit_stride = 0;

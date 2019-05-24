@@ -120,7 +120,7 @@ o]]();
                      "use of undeclared identifier 'goo'; did you mean 'foo'?"),
                 DiagSource(Diag::Clang), DiagName("undeclared_var_use_suggest"),
                 WithFix(
-                    Fix(Test.range("typo"), "foo", "change 'go\\ o' to 'foo'")),
+                    Fix(Test.range("typo"), "foo", "change 'go\\…' to 'foo'")),
                 // This is a pretty normal range.
                 WithNote(Diag(Test.range("decl"), "'foo' declared here"))),
           // This range is zero-width and insertion. Therefore make sure we are
@@ -245,6 +245,36 @@ TEST(DiagnosticTest, ClangTidyWarningAsError) {
                              "point context; possible loss of precision"),
           DiagSource(Diag::ClangTidy), DiagName("bugprone-integer-division"),
           DiagSeverity(DiagnosticsEngine::Error))));
+}
+
+TEST(DiagnosticTest, LongFixMessages) {
+  // We limit the size of printed code.
+  Annotations Source(R"cpp(
+    int main() {
+      int somereallyreallyreallyreallyreallyreallyreallyreallylongidentifier;
+      [[omereallyreallyreallyreallyreallyreallyreallyreallylongidentifier]]= 10;
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ElementsAre(WithFix(Fix(
+          Source.range(),
+          "somereallyreallyreallyreallyreallyreallyreallyreallylongidentifier",
+          "change 'omereallyreallyreallyreallyreallyreallyreallyreall…' to "
+          "'somereallyreallyreallyreallyreallyreallyreallyreal…'"))));
+  // Only show changes up to a first newline.
+  Source = Annotations(R"cpp(
+    int main() {
+      int ident;
+      [[ide\
+n]] = 10;
+    }
+  )cpp");
+  TU = TestTU::withCode(Source.code());
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ElementsAre(WithFix(
+                  Fix(Source.range(), "ident", "change 'ide\\…' to 'ident'"))));
 }
 
 TEST(DiagnosticTest, ClangTidyWarningAsErrorTrumpsSuppressionComment) {
