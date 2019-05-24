@@ -391,17 +391,28 @@ produced by OpenCL C front-end compiler.
 It's a regular function, which can conflict with user code produced from C++
 source.
 
-
-SYCL compiler uses solution developed for OpenCL C++ compiler prototype:
+SYCL compiler uses modified solution developed for OpenCL C++ compiler
+prototype:
 
 - Compiler: https://github.com/KhronosGroup/SPIR/tree/spirv-1.1
 - Headers: https://github.com/KhronosGroup/libclcxx
 
-SPIR-V types and operations that do not have LLVM equivalents are **declared**
+Our solution re-uses OpenCL data types like sampler, event, image types, etc,
+but we use different spelling to avoid potential conflicts with C++ code.
+Spelling convention for the OpenCL types enabled in SYCL mode is:
+
+```
+__ocl_<OpenCL_type_name> // e.g. __ocl_sampler_t, __ocl_event_t
+```
+
+Operations using OpenCL types use special naming convention described in this
+[document](https://github.com/KhronosGroup/SPIRV-LLVM-Translator/blob/master/docs/SPIRVRepresentationInLLVM.rst).
+This solution allows us avoid SYCL specialization in SPIR-V translator and
+leverage clang infrastructure developed for OpenCL types.
+
+SPIR-V operations that do not have LLVM equivalents are **declared**
 (but not defined) in the headers and satisfy following requirements:
 
-- the type must be pre-declared as a C++ class in `cl::__spirv` namespace
-- the type must not have actual definition in C++ program
 - the operation is expressed in C++ as `extern` function not throwing C++
   exceptions
 - the operation must not have the actual definition in C++ program
@@ -410,41 +421,16 @@ For example, the following C++ code is successfully recognized and translated
 into SPIR-V operation `OpGroupAsyncCopy`:
 
 ```C++
-namespace cl {
-  namespace __spirv {
-  // This class does not have definition, it is only predeclared here.
-  // The pointers to this class objects can be passed to or returned from
-  // SPIR-V built-in functions. Only in such cases the class is recognized
-  // as SPIR-V type OpTypeEvent.
-  class OpTypeEvent;
+template <typename dataT>
+extern __ocl_event_t
+__spirv_OpGroupAsyncCopy(int32_t Scope, __local dataT *Dest,
+                         __global dataT *Src, size_t NumElements,
+                         size_t Stride, __ocl_event_t E) noexcept;
 
-  template <typename dataT>
-  extern OpTypeEvent *OpGroupAsyncCopy(int32_t Scope, __local dataT *Dest,
-                                       __global dataT *Src, size_t NumElements,
-                                       size_t Stride, OpTypeEvent *E) noexcept;
-  } // namespace __spirv
-} // namespace cl
-
-cl::__spirv::OpTypeEvent *e =
-    cl::__spirv::OpGroupAsyncCopy<dataT>(cl::__spirv::Scope::Workgroup,
-                                         dst, src, numElements, 1, 0);
+__ocl_event_t e =
+  __spirv_OpGroupAsyncCopy(cl::__spirv::Scope::Workgroup,
+                           dst, src, numElements, 1, E);
 ```
-
-OpenCL C++ compiler uses a special module pass in clang that transforms the
-names of C++ classes, globals and functions from the namespace `cl::__spirv::`
-to
-["SPIR-V representation in LLVM IR"](https://github.com/KhronosGroup/SPIRV-LLVM-Translator/blob/master/docs/SPIRVRepresentationInLLVM.rst)
-which is recognized by the LLVM IR to SPIR-V translator.
-
-In the OpenCL C++ prototype project the pass is located at the directory:
-`lib/CodeGen/OclCxxRewrite`.  The file with the pass is:
-`lib/CodeGen/OclCxxRewrite/BifNameReflower.cpp`.  The other files in
-`lib/CodeGen/OclCxxRewrite` are utility files implementing Itanium demangler
-and other helping functionality.
-
-That LLVM module pass has been ported from OpenCL C++ prototype to the SYCL
-compiler as is. It made possible using simple declarations of C++ classes and
-external functions as if they were the SPIR-V specific types and operations.
 
 #### Some details and agreements on using SPIR-V special types and operations
 
