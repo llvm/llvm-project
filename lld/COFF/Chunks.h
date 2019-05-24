@@ -78,10 +78,6 @@ public:
   // before calling this function.
   virtual void writeTo(uint8_t *Buf) const {}
 
-  // Called by the writer after an RVA is assigned, but before calling
-  // getSize().
-  virtual void finalizeContents() {}
-
   // The writer sets and uses the addresses. In practice, PE images cannot be
   // larger than 2GB. Chunks are always laid as part of the image, so Chunk RVAs
   // can be stored with 32 bits.
@@ -320,7 +316,8 @@ class MergeChunk : public Chunk {
 public:
   MergeChunk(uint32_t Alignment);
   static void addSection(SectionChunk *C);
-  void finalizeContents() override;
+  void finalizeContents();
+  void assignSubsectionRVAs();
 
   uint32_t getOutputCharacteristics() const override;
   StringRef getSectionName() const override { return ".rdata"; }
