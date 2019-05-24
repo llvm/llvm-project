@@ -884,11 +884,6 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
   if (match(IdxOp, m_ConstantInt(InsertedIdx)) &&
       match(ScalarOp, m_ExtractElement(m_Value(ExtVecOp),
                                        m_ConstantInt(ExtractedIdx)))) {
-    // If we are extracting a value from a vector, then inserting it right
-    // back into the same place, just use the input vector.
-    if (ExtVecOp == VecOp && ExtractedIdx == InsertedIdx)
-      return replaceInstUsesWith(IE, VecOp);
-
     // TODO: Looking at the user(s) to determine if this insert is a
     // fold-to-shuffle opportunity does not match the usual instcombine
     // constraints. We should decide if the transform is worthy based only

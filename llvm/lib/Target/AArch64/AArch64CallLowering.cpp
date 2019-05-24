@@ -232,7 +232,8 @@ void AArch64CallLowering::splitToValueTypes(
 
 bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                       const Value *Val,
-                                      ArrayRef<unsigned> VRegs) const {
+                                      ArrayRef<unsigned> VRegs,
+                                      unsigned SwiftErrorVReg) const {
   auto MIB = MIRBuilder.buildInstrNoInsert(AArch64::RET_ReallyLR);
   assert(((Val && !VRegs.empty()) || (!Val && VRegs.empty())) &&
          "Return value without a vreg");
@@ -340,6 +341,11 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     Success = handleAssignments(MIRBuilder, SplitArgs, Handler);
   }
 
+  if (SwiftErrorVReg) {
+    MIB.addUse(AArch64::X21, RegState::Implicit);
+    MIRBuilder.buildCopy(AArch64::X21, SwiftErrorVReg);
+  }
+
   MIRBuilder.insertInstr(MIB);
   return Success;
 }
@@ -420,7 +426,8 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                     CallingConv::ID CallConv,
                                     const MachineOperand &Callee,
                                     const ArgInfo &OrigRet,
-                                    ArrayRef<ArgInfo> OrigArgs) const {
+                                    ArrayRef<ArgInfo> OrigArgs,
+                                    unsigned SwiftErrorVReg) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -501,6 +508,11 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
     if (!RegOffsets.empty())
       MIRBuilder.buildSequence(OrigRet.Reg, SplitRegs, RegOffsets);
+  }
+
+  if (SwiftErrorVReg) {
+    MIB.addDef(AArch64::X21, RegState::Implicit);
+    MIRBuilder.buildCopy(SwiftErrorVReg, AArch64::X21);
   }
 
   CallSeqStart.addImm(Handler.StackSize).addImm(0);

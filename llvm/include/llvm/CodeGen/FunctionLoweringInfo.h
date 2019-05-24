@@ -71,48 +71,6 @@ public:
   /// MBBMap - A mapping from LLVM basic blocks to their machine code entry.
   DenseMap<const BasicBlock*, MachineBasicBlock *> MBBMap;
 
-  /// A map from swifterror value in a basic block to the virtual register it is
-  /// currently represented by.
-  DenseMap<std::pair<const MachineBasicBlock *, const Value *>, unsigned>
-      SwiftErrorVRegDefMap;
-
-  /// A list of upward exposed vreg uses that need to be satisfied by either a
-  /// copy def or a phi node at the beginning of the basic block representing
-  /// the predecessor(s) swifterror value.
-  DenseMap<std::pair<const MachineBasicBlock *, const Value *>, unsigned>
-      SwiftErrorVRegUpwardsUse;
-
-  /// A map from instructions that define/use a swifterror value to the virtual
-  /// register that represents that def/use.
-  llvm::DenseMap<PointerIntPair<const Instruction *, 1, bool>, unsigned>
-      SwiftErrorVRegDefUses;
-
-  /// The swifterror argument of the current function.
-  const Value *SwiftErrorArg;
-
-  using SwiftErrorValues = SmallVector<const Value*, 1>;
-  /// A function can only have a single swifterror argument. And if it does
-  /// have a swifterror argument, it must be the first entry in
-  /// SwiftErrorVals.
-  SwiftErrorValues SwiftErrorVals;
-
-  /// Get or create the swifterror value virtual register in
-  /// SwiftErrorVRegDefMap for this basic block.
-  unsigned getOrCreateSwiftErrorVReg(const MachineBasicBlock *,
-                                     const Value *);
-
-  /// Set the swifterror virtual register in the SwiftErrorVRegDefMap for this
-  /// basic block.
-  void setCurrentSwiftErrorVReg(const MachineBasicBlock *MBB, const Value *,
-                                unsigned);
-
-  /// Get or create the swifterror value virtual register for a def of a
-  /// swifterror by an instruction.
-  std::pair<unsigned, bool> getOrCreateSwiftErrorVRegDefAt(const Instruction *);
-  std::pair<unsigned, bool>
-  getOrCreateSwiftErrorVRegUseAt(const Instruction *, const MachineBasicBlock *,
-                                 const Value *);
-
   /// ValueMap - Since we emit code for the function a basic block at a time,
   /// we must remember which virtual registers hold the values for
   /// cross-basic-block values.

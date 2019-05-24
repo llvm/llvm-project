@@ -10110,7 +10110,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
 
   // trunc (shl x, K) -> shl (trunc x), K => K < VT.getScalarSizeInBits()
   if (N0.getOpcode() == ISD::SHL && N0.hasOneUse() &&
-      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::SHL, VT)) &&
+      (!LegalOperations || TLI.isOperationLegal(ISD::SHL, VT)) &&
       TLI.isTypeDesirableForOp(ISD::SHL, VT)) {
     SDValue Amt = N0.getOperand(1);
     KnownBits Known = DAG.computeKnownBits(Amt);

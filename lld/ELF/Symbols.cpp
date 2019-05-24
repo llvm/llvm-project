@@ -291,7 +291,7 @@ bool Symbol::includeInDynsym() const {
 }
 
 // Print out a log message for --trace-symbol.
-void elf::printTraceSymbol(Symbol *Sym) {
+void elf::printTraceSymbol(const Symbol *Sym) {
   std::string S;
   if (Sym->isUndefined())
     S = ": reference to ";
@@ -412,6 +412,9 @@ void Symbol::resolveUndefined(const Undefined &Other) {
     replace(Other);
     return;
   }
+
+  if (Traced)
+    printTraceSymbol(&Other);
 
   if (isShared() || isLazy() || (isUndefined() && Other.Binding != STB_WEAK))
     Binding = Other.Binding;

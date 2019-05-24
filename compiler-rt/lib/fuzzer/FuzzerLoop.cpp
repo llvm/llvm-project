@@ -157,9 +157,6 @@ Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
   AllocateCurrentUnitData();
   CurrentUnitSize = 0;
   memset(BaseSha1, 0, sizeof(BaseSha1));
-  auto FocusFunctionOrAuto = Options.FocusFunction;
-  DFT.Init(Options.DataFlowTrace, &FocusFunctionOrAuto , MD.GetRand());
-  TPC.SetFocusFunction(FocusFunctionOrAuto);
 }
 
 Fuzzer::~Fuzzer() {}
@@ -789,6 +786,10 @@ void Fuzzer::ReadAndExecuteSeedCorpora(Vector<SizedFile> &CorporaFiles) {
 }
 
 void Fuzzer::Loop(Vector<SizedFile> &CorporaFiles) {
+  auto FocusFunctionOrAuto = Options.FocusFunction;
+  DFT.Init(Options.DataFlowTrace, &FocusFunctionOrAuto, CorporaFiles,
+           MD.GetRand());
+  TPC.SetFocusFunction(FocusFunctionOrAuto);
   ReadAndExecuteSeedCorpora(CorporaFiles);
   DFT.Clear();  // No need for DFT any more.
   TPC.SetPrintNewPCs(Options.PrintNewCovPcs);

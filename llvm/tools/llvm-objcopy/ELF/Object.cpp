@@ -809,6 +809,20 @@ static bool sectionWithinSegment(const SectionBase &Section,
   // segments and ensures that the section "belongs" to the second segment and
   // not the first.
   uint64_t SecSize = Section.Size ? Section.Size : 1;
+
+  if (Section.Type == SHT_NOBITS) {
+    if (!(Section.Flags & SHF_ALLOC))
+      return false;
+
+    bool SectionIsTLS = Section.Flags & SHF_TLS;
+    bool SegmentIsTLS = Segment.Type == PT_TLS;
+    if (SectionIsTLS != SegmentIsTLS)
+      return false;
+
+    return Segment.VAddr <= Section.Addr &&
+           Segment.VAddr + Segment.MemSize >= Section.Addr + SecSize;
+  }
+
   return Segment.Offset <= Section.OriginalOffset &&
          Segment.Offset + Segment.FileSize >= Section.OriginalOffset + SecSize;
 }

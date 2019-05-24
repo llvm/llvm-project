@@ -204,7 +204,7 @@ const Stmt *UnreachableCodeChecker::getUnreachableStmt(const CFGBlock *CB) {
         return S->getStmt();
     }
   }
-  if (const Stmt *S = CB->getTerminator())
+  if (const Stmt *S = CB->getTerminatorStmt())
     return S;
   else
     return nullptr;
@@ -250,7 +250,7 @@ bool UnreachableCodeChecker::isInvalidPath(const CFGBlock *CB,
 bool UnreachableCodeChecker::isEmptyCFGBlock(const CFGBlock *CB) {
   return CB->getLabel() == nullptr // No labels
       && CB->size() == 0           // No statements
-      && !CB->getTerminator();     // No terminator
+      && !CB->getTerminatorStmt(); // No terminator
 }
 
 void ento::registerUnreachableCodeChecker(CheckerManager &mgr) {

@@ -144,7 +144,7 @@ bool CompilerType::IsBlockPointerType(
     CompilerType *function_pointer_type_ptr) const {
   if (IsValid())
     return m_type_system->IsBlockPointerType(m_type, function_pointer_type_ptr);
-  return 0;
+  return false;
 }
 
 bool CompilerType::IsIntegerType(bool &is_signed) const {

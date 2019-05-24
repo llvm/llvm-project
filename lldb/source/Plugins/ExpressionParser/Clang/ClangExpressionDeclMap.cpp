@@ -927,7 +927,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
                     name.GetCString());
 
       context.AddNamedDecl(parser_named_decl);
-    } while (0);
+    } while (false);
   }
 
   if (name.GetCString()[0] == '$' && !namespace_decl) {
@@ -1562,7 +1562,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
             context.m_found.variable = true;
           }
         }
-      } while (0);
+      } while (false);
     }
 
     if (target && !context.m_found.variable && !namespace_decl) {

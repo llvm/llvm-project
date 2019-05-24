@@ -244,8 +244,8 @@ void RegisterContextLLDB::InitializeZerothFrame() {
     }
 
     if (func_unwinders_sp.get() != nullptr)
-      call_site_unwind_plan =
-          func_unwinders_sp->GetUnwindPlanAtCallSite(process->GetTarget());
+      call_site_unwind_plan = func_unwinders_sp->GetUnwindPlanAtCallSite(
+          process->GetTarget(), m_thread);
 
     if (call_site_unwind_plan.get() != nullptr) {
       m_fallback_unwind_plan_sp = call_site_unwind_plan;
@@ -873,7 +873,8 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
         // location what helps in the most common cases when the instruction
         // emulation fails.
         UnwindPlanSP call_site_unwind_plan =
-            func_unwinders_sp->GetUnwindPlanAtCallSite(process->GetTarget());
+            func_unwinders_sp->GetUnwindPlanAtCallSite(process->GetTarget(),
+                                                       m_thread);
         if (call_site_unwind_plan &&
             call_site_unwind_plan.get() != unwind_plan_sp.get() &&
             call_site_unwind_plan->GetSourceName() !=
@@ -909,8 +910,8 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
   // Typically this is unwind info from an eh_frame section intended for
   // exception handling; only valid at call sites
   if (process) {
-    unwind_plan_sp =
-        func_unwinders_sp->GetUnwindPlanAtCallSite(process->GetTarget());
+    unwind_plan_sp = func_unwinders_sp->GetUnwindPlanAtCallSite(
+        process->GetTarget(), m_thread);
   }
   int valid_offset = -1;
   if (IsUnwindPlanValidForCurrentPC(unwind_plan_sp, valid_offset)) {
@@ -940,7 +941,8 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
     // code it is often written in a way that it valid at all location what
     // helps in the most common cases when the instruction emulation fails.
     UnwindPlanSP call_site_unwind_plan =
-        func_unwinders_sp->GetUnwindPlanAtCallSite(process->GetTarget());
+        func_unwinders_sp->GetUnwindPlanAtCallSite(process->GetTarget(),
+                                                   m_thread);
     if (call_site_unwind_plan &&
         call_site_unwind_plan.get() != unwind_plan_sp.get() &&
         call_site_unwind_plan->GetSourceName() !=

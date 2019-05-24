@@ -48,7 +48,7 @@ static bool isTrivialExpression(const Expr *Ex) {
 static bool isTrivialDoWhile(const CFGBlock *B, const Stmt *S) {
   // Check if the block ends with a do...while() and see if 'S' is the
   // condition.
-  if (const Stmt *Term = B->getTerminator()) {
+  if (const Stmt *Term = B->getTerminatorStmt()) {
     if (const DoStmt *DS = dyn_cast<DoStmt>(Term)) {
       const Expr *Cond = DS->getCond()->IgnoreParenCasts();
       return Cond == S && isTrivialExpression(Cond);
@@ -116,7 +116,7 @@ static bool isDeadReturn(const CFGBlock *B, const Stmt *S) {
       // the call to the destructor.
       assert(Current->succ_size() == 2);
       Current = *(Current->succ_begin() + 1);
-    } else if (!Current->getTerminator() && Current->succ_size() == 1) {
+    } else if (!Current->getTerminatorStmt() && Current->succ_size() == 1) {
       // If there is only one successor, we're not dealing with outgoing control
       // flow. Thus, look into the next block.
       Current = *Current->succ_begin();
@@ -292,7 +292,7 @@ static bool isConfigurationValue(const ValueDecl *D, Preprocessor &PP) {
 /// Returns true if we should always explore all successors of a block.
 static bool shouldTreatSuccessorsAsReachable(const CFGBlock *B,
                                              Preprocessor &PP) {
-  if (const Stmt *Term = B->getTerminator()) {
+  if (const Stmt *Term = B->getTerminatorStmt()) {
     if (isa<SwitchStmt>(Term))
       return true;
     // Specially handle '||' and '&&'.
@@ -461,12 +461,11 @@ const Stmt *DeadCodeScan::findDeadCode(const clang::CFGBlock *Block) {
         return S;
     }
 
-  if (CFGTerminator T = Block->getTerminator()) {
-    if (!T.isTemporaryDtorsBranch()) {
-      const Stmt *S = T.getStmt();
-      if (isValidDeadStmt(S))
-        return S;
-    }
+  CFGTerminator T = Block->getTerminator();
+  if (T.isStmtBranch()) {
+    const Stmt *S = T.getStmt();
+    if (S && isValidDeadStmt(S))
+      return S;
   }
 
   return nullptr;

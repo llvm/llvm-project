@@ -242,16 +242,20 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
   if (!IndexEntry && Index)
     IndexEntry = Index->getFromOffset(*offset_ptr);
   Length = debug_info.getU32(offset_ptr);
-  // FIXME: Support DWARF64.
-  unsigned SizeOfLength = 4;
   FormParams.Format = DWARF32;
+  unsigned SizeOfLength = 4;
+  if (Length == 0xffffffff) {
+    Length = debug_info.getU64(offset_ptr);
+    FormParams.Format = DWARF64;
+    SizeOfLength = 8;
+  }
   FormParams.Version = debug_info.getU16(offset_ptr);
   if (FormParams.Version >= 5) {
     UnitType = debug_info.getU8(offset_ptr);
     FormParams.AddrSize = debug_info.getU8(offset_ptr);
-    AbbrOffset = debug_info.getU32(offset_ptr);
+    AbbrOffset = debug_info.getRelocatedValue(FormParams.getDwarfOffsetByteSize(), offset_ptr);
   } else {
-    AbbrOffset = debug_info.getRelocatedValue(4, offset_ptr);
+    AbbrOffset = debug_info.getRelocatedValue(FormParams.getDwarfOffsetByteSize(), offset_ptr);
     FormParams.AddrSize = debug_info.getU8(offset_ptr);
     // Fake a unit type based on the section type.  This isn't perfect,
     // but distinguishing compile and type units is generally enough.
@@ -807,12 +811,19 @@ DWARFUnit::determineStringOffsetsTableContribution(DWARFDataExtractor &DA) {
   auto Offset = toSectionOffset(getUnitDIE().find(DW_AT_str_offsets_base), 0);
   Optional<StrOffsetsContributionDescriptor> Descriptor;
   // Attempt to find a DWARF64 contribution 16 bytes before the base.
-  if (Offset >= 16)
+  switch (Header.getFormat()) {
+  case dwarf::DwarfFormat::DWARF64:
+    if (Offset < 16)
+      return None;
     Descriptor =
         parseDWARF64StringOffsetsTableHeader(DA, (uint32_t)Offset - 16);
-  // Try to find a DWARF32 contribution 8 bytes before the base.
-  if (!Descriptor && Offset >= 8)
+    break;
+  case dwarf::DwarfFormat::DWARF32:
+    if (Offset < 8)
+      return None;
     Descriptor = parseDWARF32StringOffsetsTableHeader(DA, (uint32_t)Offset - 8);
+    break;
+  }
   return Descriptor ? Descriptor->validateContributionSize(DA) : Descriptor;
 }
 

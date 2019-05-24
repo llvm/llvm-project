@@ -34,14 +34,24 @@ public:
   AArch64CallLowering(const AArch64TargetLowering &TLI);
 
   bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
-                   ArrayRef<unsigned> VRegs) const override;
+                   ArrayRef<unsigned> VRegs,
+                   unsigned SwiftErrorVReg) const override;
 
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
                             ArrayRef<unsigned> VRegs) const override;
 
   bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
                  const MachineOperand &Callee, const ArgInfo &OrigRet,
-                 ArrayRef<ArgInfo> OrigArgs) const override;
+                 ArrayRef<ArgInfo> OrigArgs,
+                 unsigned SwiftErrorVReg) const override;
+
+  bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
+                 const MachineOperand &Callee, const ArgInfo &OrigRet,
+                 ArrayRef<ArgInfo> OrigArgs) const override {
+    return lowerCall(MIRBuilder, CallConv, Callee, OrigRet, OrigArgs, 0);
+  }
+
+  bool supportSwiftError() const override { return true; }
 
 private:
   using RegHandler = std::function<void(MachineIRBuilder &, Type *, unsigned,

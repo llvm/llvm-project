@@ -35,7 +35,7 @@ public:
 
   ~FuncUnwinders();
 
-  lldb::UnwindPlanSP GetUnwindPlanAtCallSite(Target &target);
+  lldb::UnwindPlanSP GetUnwindPlanAtCallSite(Target &target, Thread &thread);
 
   lldb::UnwindPlanSP GetUnwindPlanAtNonCallSite(Target &target,
                                                 lldb_private::Thread &thread);

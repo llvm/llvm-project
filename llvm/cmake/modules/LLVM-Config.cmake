@@ -210,7 +210,7 @@ function(llvm_map_components_to_libnames out_libs)
     elseif( c STREQUAL "all" )
       list(APPEND expanded_components ${LLVM_AVAILABLE_LIBS})
     elseif( c STREQUAL "AllTargetsCodeGens" )
-      # Link all the asm printers from all the targets
+      # Link all the codegens from all the targets
       foreach(t ${LLVM_TARGETS_TO_BUILD})
         if( TARGET LLVM${t}CodeGen)
           list(APPEND expanded_components "LLVM${t}CodeGen")

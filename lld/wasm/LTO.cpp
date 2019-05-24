@@ -108,6 +108,11 @@ void BitcodeCompiler::add(BitcodeFile &F) {
                             (R.Prevailing && Sym->isExported());
     if (R.Prevailing)
       undefine(Sym);
+
+    // We tell LTO to not apply interprocedural optimization for wrapped
+    // (with --wrap) symbols because otherwise LTO would inline them while
+    // their values are still not final.
+    R.LinkerRedefined = !Sym->CanInline;
   }
   checkError(LTOObj->add(std::move(F.Obj), Resols));
 }

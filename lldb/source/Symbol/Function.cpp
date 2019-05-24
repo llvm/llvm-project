@@ -546,7 +546,7 @@ uint32_t Function::GetPrologueByteSize() {
 
         // Now calculate the offset to pass the subsequent line 0 entries.
         uint32_t first_non_zero_line = prologue_end_line_idx;
-        while (1) {
+        while (true) {
           LineEntry line_entry;
           if (line_table->GetLineEntryAtIndex(first_non_zero_line,
                                               line_entry)) {

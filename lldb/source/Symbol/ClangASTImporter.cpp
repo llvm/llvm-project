@@ -1018,7 +1018,7 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
 
       to_objc_interface->setSuperClass(m_source_ctx->getTrivialTypeSourceInfo(
           m_source_ctx->getObjCInterfaceType(imported_from_superclass)));
-    } while (0);
+    } while (false);
   }
 }
 

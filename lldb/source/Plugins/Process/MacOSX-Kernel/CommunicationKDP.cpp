@@ -87,7 +87,7 @@ bool CommunicationKDP::SendRequestAndGetReply(
   for (uint32_t i = 0; i < num_retries; ++i) {
     if (SendRequestPacketNoLock(request_packet)) {
       const uint8_t request_sequence_id = (uint8_t)request_packet.GetData()[1];
-      while (1) {
+      while (true) {
         if (WaitForPacketWithTimeoutMicroSecondsNoLock(
                 reply_packet,
                 std::chrono::microseconds(GetPacketTimeout()).count())) {

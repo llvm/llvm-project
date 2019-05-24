@@ -1,7 +1,9 @@
 set(LLVM_LINK_COMPONENTS
   AllTargetsAsmParsers
   AllTargetsCodeGens
+  AllTargetsDescs
   AllTargetsDisassemblers
+  AllTargetsInfos
   BitReader
   Core
   MCDisassembler

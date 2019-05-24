@@ -184,10 +184,6 @@
    <key>col</key><integer>8</integer>
    <key>file</key><integer>1</integer>
   </dict>
-  <key>HTMLDiagnostics_files</key>
-  <array>
-   <string>report-288847.html</string>
-  </array>
   <key>ExecutedLines</key>
   <dict>
    <key>0</key>

@@ -250,7 +250,8 @@ void fixInitializerList(const ASTContext &Context, DiagnosticBuilder &Diag,
 ProTypeMemberInitCheck::ProTypeMemberInitCheck(StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreArrays(Options.get("IgnoreArrays", false)) {}
+      IgnoreArrays(Options.get("IgnoreArrays", false)),
+      UseAssignment(Options.getLocalOrGlobal("UseAssignment", false)) {}
 
 void ProTypeMemberInitCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
@@ -314,6 +315,7 @@ void ProTypeMemberInitCheck::check(const MatchFinder::MatchResult &Result) {
 
 void ProTypeMemberInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreArrays", IgnoreArrays);
+  Options.store(Opts, "UseAssignment", UseAssignment);
 }
 
 // FIXME: Copied from clang/lib/Sema/SemaDeclCXX.cpp.
@@ -336,6 +338,56 @@ static bool isEmpty(ASTContext &Context, const QualType &Type) {
     return ClassDecl->isEmpty();
   }
   return isIncompleteOrZeroLengthArrayType(Context, Type);
+}
+
+static const char *getInitializer(QualType QT, bool UseAssignment) {
+  const char *DefaultInitializer = "{}";
+  if (!UseAssignment)
+    return DefaultInitializer;
+
+  if (QT->isPointerType())
+    return " = nullptr";
+
+  const BuiltinType *BT =
+      dyn_cast<BuiltinType>(QT.getCanonicalType().getTypePtr());
+  if (!BT)
+    return DefaultInitializer;
+
+  switch (BT->getKind()) {
+  case BuiltinType::Bool:
+    return " = false";
+  case BuiltinType::Float:
+    return " = 0.0F";
+  case BuiltinType::Double:
+    return " = 0.0";
+  case BuiltinType::LongDouble:
+    return " = 0.0L";
+  case BuiltinType::SChar:
+  case BuiltinType::Char_S:
+  case BuiltinType::WChar_S:
+  case BuiltinType::Char16:
+  case BuiltinType::Char32:
+  case BuiltinType::Short:
+  case BuiltinType::Int:
+    return " = 0";
+  case BuiltinType::UChar:
+  case BuiltinType::Char_U:
+  case BuiltinType::WChar_U:
+  case BuiltinType::UShort:
+  case BuiltinType::UInt:
+    return " = 0U";
+  case BuiltinType::Long:
+    return " = 0L";
+  case BuiltinType::ULong:
+    return " = 0UL";
+  case BuiltinType::LongLong:
+    return " = 0LL";
+  case BuiltinType::ULongLong:
+    return " = 0ULL";
+
+  default:
+    return DefaultInitializer;
+  }
 }
 
 void ProTypeMemberInitCheck::checkMissingMemberInitializer(
@@ -420,7 +472,7 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
     for (const FieldDecl *Field : FieldsToFix) {
       Diag << FixItHint::CreateInsertion(
           getLocationForEndOfToken(Context, Field->getSourceRange().getEnd()),
-          "{}");
+          getInitializer(Field->getType(), UseAssignment));
     }
   } else if (Ctor) {
     // Otherwise, rewrite the constructor's initializer list.

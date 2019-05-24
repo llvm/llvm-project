@@ -794,7 +794,7 @@ const Stmt *PathDiagnosticLocation::getStmt(const ExplodedNode *N) {
   if (auto SP = P.getAs<StmtPoint>())
     return SP->getStmt();
   if (auto BE = P.getAs<BlockEdge>())
-    return BE->getSrc()->getTerminator();
+    return BE->getSrc()->getTerminatorStmt();
   if (auto CE = P.getAs<CallEnter>())
     return CE->getCallExpr();
   if (auto CEE = P.getAs<CallExitEnd>())

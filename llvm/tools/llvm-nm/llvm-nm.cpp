@@ -894,6 +894,9 @@ static char getSymbolNMTypeChar(ELFObjectFileBase &Obj,
     return '?';
   }
 
+  if (SymI->getBinding() == ELF::STB_GNU_UNIQUE)
+    return 'u';
+
   elf_section_iterator SecI = *SecIOrErr;
   if (SecI != Obj.section_end()) {
     uint32_t Type = SecI->getType();
@@ -1119,10 +1122,13 @@ static char getNMSectionTagAndName(SymbolicFile &Obj, basic_symbol_iterator I,
   else
     Ret = getSymbolNMTypeChar(cast<ELFObjectFileBase>(Obj), I);
 
-  if (Symflags & object::SymbolRef::SF_Global)
-    Ret = toupper(Ret);
+  if (!(Symflags & object::SymbolRef::SF_Global))
+    return Ret;
 
-  return Ret;
+  if (Obj.isELF() && ELFSymbolRef(*I).getBinding() == ELF::STB_GNU_UNIQUE)
+    return Ret;
+
+  return toupper(Ret);
 }
 
 // getNsectForSegSect() is used to implement the Mach-O "-s segname sectname"

@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsAsmParsers
   AllTargetsCodeGens
   AllTargetsDescs
+  AllTargetsInfos
   BitReader
   Core
   Linker

@@ -48,7 +48,7 @@ class DWARFUnitHeader {
   uint32_t Offset = 0;
   // Version, address size, and DWARF format.
   dwarf::FormParams FormParams;
-  uint32_t Length = 0;
+  uint64_t Length = 0;
   uint64_t AbbrOffset = 0;
 
   // For DWO units only.
@@ -82,7 +82,7 @@ public:
   uint8_t getDwarfOffsetByteSize() const {
     return FormParams.getDwarfOffsetByteSize();
   }
-  uint32_t getLength() const { return Length; }
+  uint64_t getLength() const { return Length; }
   uint64_t getAbbrOffset() const { return AbbrOffset; }
   Optional<uint64_t> getDWOId() const { return DWOId; }
   void setDWOId(uint64_t Id) {
@@ -97,8 +97,11 @@ public:
     return UnitType == dwarf::DW_UT_type || UnitType == dwarf::DW_UT_split_type;
   }
   uint8_t getSize() const { return Size; }
-  // FIXME: Support DWARF64.
-  uint32_t getNextUnitOffset() const { return Offset + Length + 4; }
+  uint32_t getNextUnitOffset() const {
+    return Offset + Length +
+           (FormParams.Format == llvm::dwarf::DwarfFormat::DWARF64 ? 4 : 0) +
+           FormParams.getDwarfOffsetByteSize();
+  }
 };
 
 const DWARFUnitIndex &getDWARFUnitIndex(DWARFContext &Context,

@@ -49,3 +49,21 @@ define <4 x i32> @PR1286(<4 x i32> %A) {
   %B = insertelement <4 x i32> %A, i32 undef, i32 1
   ret <4 x i32> %B
 }
+
+define <8 x i8> @extract_insert_same_vec_and_index(<8 x i8> %in) {
+; CHECK-LABEL: @extract_insert_same_vec_and_index(
+; CHECK-NEXT:    ret <8 x i8> [[IN:%.*]]
+;
+  %val = extractelement <8 x i8> %in, i32 5
+  %vec = insertelement <8 x i8> %in, i8 %val, i32 5
+  ret <8 x i8> %vec
+}
+
+define <8 x i8> @extract_insert_same_vec_and_index2(<8 x i8> %in, i32 %index) {
+; CHECK-LABEL: @extract_insert_same_vec_and_index2(
+; CHECK-NEXT:    ret <8 x i8> [[IN:%.*]]
+;
+  %val = extractelement <8 x i8> %in, i32 %index
+  %vec = insertelement <8 x i8> %in, i8 %val, i32 %index
+  ret <8 x i8> %vec
+}

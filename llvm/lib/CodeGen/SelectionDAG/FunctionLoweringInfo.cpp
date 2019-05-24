@@ -519,56 +519,6 @@ unsigned FunctionLoweringInfo::getCatchPadExceptionPointerVReg(
   return VReg;
 }
 
-unsigned
-FunctionLoweringInfo::getOrCreateSwiftErrorVReg(const MachineBasicBlock *MBB,
-                                                const Value *Val) {
-  auto Key = std::make_pair(MBB, Val);
-  auto It = SwiftErrorVRegDefMap.find(Key);
-  // If this is the first use of this swifterror value in this basic block,
-  // create a new virtual register.
-  // After we processed all basic blocks we will satisfy this "upwards exposed
-  // use" by inserting a copy or phi at the beginning of this block.
-  if (It == SwiftErrorVRegDefMap.end()) {
-    auto &DL = MF->getDataLayout();
-    const TargetRegisterClass *RC = TLI->getRegClassFor(TLI->getPointerTy(DL));
-    auto VReg = MF->getRegInfo().createVirtualRegister(RC);
-    SwiftErrorVRegDefMap[Key] = VReg;
-    SwiftErrorVRegUpwardsUse[Key] = VReg;
-    return VReg;
-  } else return It->second;
-}
-
-void FunctionLoweringInfo::setCurrentSwiftErrorVReg(
-    const MachineBasicBlock *MBB, const Value *Val, unsigned VReg) {
-  SwiftErrorVRegDefMap[std::make_pair(MBB, Val)] = VReg;
-}
-
-std::pair<unsigned, bool>
-FunctionLoweringInfo::getOrCreateSwiftErrorVRegDefAt(const Instruction *I) {
-  auto Key = PointerIntPair<const Instruction *, 1, bool>(I, true);
-  auto It = SwiftErrorVRegDefUses.find(Key);
-  if (It == SwiftErrorVRegDefUses.end()) {
-    auto &DL = MF->getDataLayout();
-    const TargetRegisterClass *RC = TLI->getRegClassFor(TLI->getPointerTy(DL));
-    unsigned VReg =  MF->getRegInfo().createVirtualRegister(RC);
-    SwiftErrorVRegDefUses[Key] = VReg;
-    return std::make_pair(VReg, true);
-  }
-  return std::make_pair(It->second, false);
-}
-
-std::pair<unsigned, bool>
-FunctionLoweringInfo::getOrCreateSwiftErrorVRegUseAt(const Instruction *I, const MachineBasicBlock *MBB, const Value *Val) {
-  auto Key = PointerIntPair<const Instruction *, 1, bool>(I, false);
-  auto It = SwiftErrorVRegDefUses.find(Key);
-  if (It == SwiftErrorVRegDefUses.end()) {
-    unsigned VReg = getOrCreateSwiftErrorVReg(MBB, Val);
-    SwiftErrorVRegDefUses[Key] = VReg;
-    return std::make_pair(VReg, true);
-  }
-  return std::make_pair(It->second, false);
-}
-
 const Value *
 FunctionLoweringInfo::getValueFromVirtualReg(unsigned Vreg) {
   if (VirtReg2Value.empty()) {

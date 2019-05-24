@@ -12,6 +12,7 @@
 #include "DWARFDataExtractor.h"
 #include "lldb/Core/Section.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/Support/Threading.h"
 #include <memory>
 
 namespace lldb_private {
@@ -20,18 +21,28 @@ private:
   SectionList *m_main_section_list;
   SectionList *m_dwo_section_list;
 
-  llvm::Optional<DWARFDataExtractor> m_data_debug_abbrev;
-  llvm::Optional<DWARFDataExtractor> m_data_debug_addr;
-  llvm::Optional<DWARFDataExtractor> m_data_debug_aranges;
-  llvm::Optional<DWARFDataExtractor> m_data_debug_info;
-  llvm::Optional<DWARFDataExtractor> m_data_debug_line;
-  llvm::Optional<DWARFDataExtractor> m_data_debug_line_str;
-  llvm::Optional<DWARFDataExtractor> m_data_debug_macro;
-  llvm::Optional<DWARFDataExtractor> m_data_debug_str;
-  llvm::Optional<DWARFDataExtractor> m_data_debug_str_offsets;
-  llvm::Optional<DWARFDataExtractor> m_data_debug_types;
+  struct SectionData {
+    llvm::once_flag flag;
+    DWARFDataExtractor data;
+  };
+
+  SectionData m_data_debug_abbrev;
+  SectionData m_data_debug_addr;
+  SectionData m_data_debug_aranges;
+  SectionData m_data_debug_info;
+  SectionData m_data_debug_line;
+  SectionData m_data_debug_line_str;
+  SectionData m_data_debug_macro;
+  SectionData m_data_debug_str;
+  SectionData m_data_debug_str_offsets;
+  SectionData m_data_debug_types;
 
   bool isDwo() { return m_dwo_section_list != nullptr; }
+
+  const DWARFDataExtractor &
+  LoadOrGetSection(lldb::SectionType main_section_type,
+                   llvm::Optional<lldb::SectionType> dwo_section_type,
+                   SectionData &data);
 
 public:
   explicit DWARFContext(SectionList *main_section_list,

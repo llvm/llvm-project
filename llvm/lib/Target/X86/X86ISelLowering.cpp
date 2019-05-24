@@ -5731,10 +5731,7 @@ static SDValue getShuffleVectorZeroOrUndef(SDValue V2, int Idx,
   return DAG.getVectorShuffle(VT, SDLoc(V2), V1, V2, MaskVec);
 }
 
-static const Constant *getTargetConstantFromNode(SDValue Op) {
-  Op = peekThroughBitcasts(Op);
-
-  auto *Load = dyn_cast<LoadSDNode>(Op);
+static const Constant *getTargetConstantFromNode(LoadSDNode *Load) {
   if (!Load)
     return nullptr;
 
@@ -5748,6 +5745,17 @@ static const Constant *getTargetConstantFromNode(SDValue Op) {
     return nullptr;
 
   return CNode->getConstVal();
+}
+
+static const Constant *getTargetConstantFromNode(SDValue Op) {
+  Op = peekThroughBitcasts(Op);
+  return getTargetConstantFromNode(dyn_cast<LoadSDNode>(Op));
+}
+
+const Constant *
+X86TargetLowering::getTargetConstantFromLoad(LoadSDNode *LD) const {
+  assert(LD && "Unexpected null LoadSDNode");
+  return getTargetConstantFromNode(LD);
 }
 
 // Extract raw constant bits from constant pools.

@@ -908,6 +908,8 @@ namespace llvm {
                                            TargetLoweringOpt &TLO,
                                            unsigned Depth) const override;
 
+    const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const override;
+
     SDValue unwrapAddress(SDValue N) const override;
 
     SDValue getReturnAddressFrameIndex(SelectionDAG &DAG) const;
