@@ -2538,8 +2538,7 @@ public:
 
   ObjCLanguageRuntime *GetObjCLanguageRuntime(bool retry_if_null = true);
 
-  virtual SwiftLanguageRuntime *
-  GetSwiftLanguageRuntime(bool retry_if_null = true);
+  SwiftLanguageRuntime *GetSwiftLanguageRuntime(bool retry_if_null = true);
 
   bool IsPossibleDynamicValue(ValueObject &in_value);
 
