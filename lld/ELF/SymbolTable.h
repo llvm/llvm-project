@@ -17,14 +17,6 @@
 namespace lld {
 namespace elf {
 
-class CommonSymbol;
-class Defined;
-class LazyArchive;
-class LazyObject;
-class SectionBase;
-class SharedSymbol;
-class Undefined;
-
 // SymbolTable is a bucket of all known symbols, including defined,
 // undefined, or lazy symbols (the last one is symbols in archive
 // files whose archive members are not yet loaded).

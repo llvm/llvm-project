@@ -2886,8 +2886,59 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   }
   case ISD::LOAD: {
     LoadSDNode *LD = cast<LoadSDNode>(Op);
-    // If this is a ZEXTLoad and we are looking at the loaded value.
-    if (ISD::isZEXTLoad(Op.getNode()) && Op.getResNo() == 0) {
+    const Constant *Cst = TLI->getTargetConstantFromLoad(LD);
+    if (ISD::isNON_EXTLoad(LD) && Cst) {
+      // Determine any common known bits from the loaded constant pool value.
+      Type *CstTy = Cst->getType();
+      if ((NumElts * BitWidth) == CstTy->getPrimitiveSizeInBits()) {
+        // If its a vector splat, then we can (quickly) reuse the scalar path.
+        // NOTE: We assume all elements match and none are UNDEF.
+        if (CstTy->isVectorTy()) {
+          if (const Constant *Splat = Cst->getSplatValue()) {
+            Cst = Splat;
+            CstTy = Cst->getType();
+          }
+        }
+        // TODO - do we need to handle different bitwidths?
+        if (CstTy->isVectorTy() && BitWidth == CstTy->getScalarSizeInBits()) {
+          // Iterate across all vector elements finding common known bits.
+          Known.One.setAllBits();
+          Known.Zero.setAllBits();
+          for (unsigned i = 0; i != NumElts; ++i) {
+            if (!DemandedElts[i])
+              continue;
+            if (Constant *Elt = Cst->getAggregateElement(i)) {
+              if (auto *CInt = dyn_cast<ConstantInt>(Elt)) {
+                const APInt &Value = CInt->getValue();
+                Known.One &= Value;
+                Known.Zero &= ~Value;
+                continue;
+              }
+              if (auto *CFP = dyn_cast<ConstantFP>(Elt)) {
+                APInt Value = CFP->getValueAPF().bitcastToAPInt();
+                Known.One &= Value;
+                Known.Zero &= ~Value;
+                continue;
+              }
+            }
+            Known.One.clearAllBits();
+            Known.Zero.clearAllBits();
+            break;
+          }
+        } else if (BitWidth == CstTy->getPrimitiveSizeInBits()) {
+          if (auto *CInt = dyn_cast<ConstantInt>(Cst)) {
+            const APInt &Value = CInt->getValue();
+            Known.One = Value;
+            Known.Zero = ~Value;
+          } else if (auto *CFP = dyn_cast<ConstantFP>(Cst)) {
+            APInt Value = CFP->getValueAPF().bitcastToAPInt();
+            Known.One = Value;
+            Known.Zero = ~Value;
+          }
+        }
+      }
+    } else if (ISD::isZEXTLoad(Op.getNode()) && Op.getResNo() == 0) {
+      // If this is a ZEXTLoad and we are looking at the loaded value.
       EVT VT = LD->getMemoryVT();
       unsigned MemBits = VT.getScalarSizeInBits();
       Known.Zero.setBitsFrom(MemBits);

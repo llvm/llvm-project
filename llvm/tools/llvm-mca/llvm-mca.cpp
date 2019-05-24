@@ -68,8 +68,9 @@ static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"));
 
 static cl::opt<std::string>
-    ArchName("march", cl::desc("Target architecture. "
-                               "See -version for available targets"),
+    ArchName("march",
+             cl::desc("Target architecture. "
+                      "See -version for available targets"),
              cl::cat(ToolOptions));
 
 static cl::opt<std::string>
@@ -441,8 +442,8 @@ int main(int argc, char **argv) {
                   WithColor::error() << IE.Message << '\n';
                   IP->printInst(&IE.Inst, SS, "", *STI);
                   SS.flush();
-                  WithColor::note() << "instruction: " << InstructionStr
-                                    << '\n';
+                  WithColor::note()
+                      << "instruction: " << InstructionStr << '\n';
                 })) {
           // Default case.
           WithColor::error() << toString(std::move(NewE));
@@ -482,8 +483,8 @@ int main(int argc, char **argv) {
     mca::PipelinePrinter Printer(*P);
 
     if (PrintSummaryView)
-      Printer.addView(llvm::make_unique<mca::SummaryView>(
-          SM, Insts, DispatchWidth));
+      Printer.addView(
+          llvm::make_unique<mca::SummaryView>(SM, Insts, DispatchWidth));
 
     if (EnableBottleneckAnalysis)
       Printer.addView(llvm::make_unique<mca::BottleneckAnalysis>(SM));

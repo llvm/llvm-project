@@ -2546,6 +2546,7 @@ def CRORC  : XLForm_1<19, 417, (outs crbitrc:$CRD),
                       [(set i1:$CRD, (or i1:$CRA, (not i1:$CRB)))]>;
 
 let isCodeGenOnly = 1 in {
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def CRSET  : XLForm_1_ext<19, 289, (outs crbitrc:$dst), (ins),
               "creqv $dst, $dst, $dst", IIC_BrCR,
               [(set i1:$dst, 1)]>;
@@ -2553,6 +2554,7 @@ def CRSET  : XLForm_1_ext<19, 289, (outs crbitrc:$dst), (ins),
 def CRUNSET: XLForm_1_ext<19, 193, (outs crbitrc:$dst), (ins),
               "crxor $dst, $dst, $dst", IIC_BrCR,
               [(set i1:$dst, 0)]>;
+}
 
 let Defs = [CR1EQ], CRD = 6 in {
 def CR6SET  : XLForm_1_ext<19, 289, (outs), (ins),

@@ -147,15 +147,38 @@ public:
   CallLowering(const TargetLowering *TLI) : TLI(TLI) {}
   virtual ~CallLowering() = default;
 
+  /// \return true if the target is capable of handling swifterror values that
+  /// have been promoted to a specified register. The extended versions of
+  /// lowerReturn and lowerCall should be implemented.
+  virtual bool supportSwiftError() const {
+    return false;
+  }
+
   /// This hook must be implemented to lower outgoing return values, described
   /// by \p Val, into the specified virtual registers \p VRegs.
   /// This hook is used by GlobalISel.
   ///
+  /// \p SwiftErrorVReg is non-zero if the function has a swifterror parameter
+  /// that needs to be implicitly returned.
+  ///
   /// \return True if the lowering succeeds, false otherwise.
+  virtual bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
+                           ArrayRef<unsigned> VRegs,
+                           unsigned SwiftErrorVReg) const {
+    if (!supportSwiftError()) {
+      assert(SwiftErrorVReg == 0 && "attempt to use unsupported swifterror");
+      return lowerReturn(MIRBuilder, Val, VRegs);
+    }
+    return false;
+  }
+
+  /// This hook behaves as the extended lowerReturn function, but for targets
+  /// that do not support swifterror value promotion.
   virtual bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
                            ArrayRef<unsigned> VRegs) const {
     return false;
   }
+
 
   /// This hook must be implemented to lower the incoming (formal)
   /// arguments, described by \p Args, for GlobalISel. Each argument
@@ -180,18 +203,29 @@ public:
   /// \p Callee is the destination of the call. It should be either a register,
   /// globaladdress, or externalsymbol.
   ///
-  /// \p ResTy is the type returned by the function
+  /// \p OrigRet is a descriptor for the return type of the function.
   ///
-  /// \p ResReg is the generic virtual register that the returned
-  /// value should be lowered into.
+  /// \p OrigArgs is a list of descriptors of the arguments passed to the
+  /// function.
   ///
-  /// \p ArgTys is a list of the types each member of \p ArgRegs has; used by
-  /// the target to decide which register/stack slot should be allocated.
-  ///
-  /// \p ArgRegs is a list of virtual registers containing each argument that
-  /// needs to be passed.
+  /// \p SwiftErrorVReg is non-zero if the call has a swifterror inout
+  /// parameter, and contains the vreg that the swifterror should be copied into
+  /// after the call.
   ///
   /// \return true if the lowering succeeded, false otherwise.
+  virtual bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
+                         const MachineOperand &Callee, const ArgInfo &OrigRet,
+                         ArrayRef<ArgInfo> OrigArgs,
+                         unsigned SwiftErrorVReg) const {
+    if (!supportSwiftError()) {
+      assert(SwiftErrorVReg == 0 && "trying to use unsupported swifterror");
+      return lowerCall(MIRBuilder, CallConv, Callee, OrigRet, OrigArgs);
+    }
+    return false;
+  }
+
+  /// This hook behaves as the extended lowerCall function, but for targets that
+  /// do not support swifterror value promotion.
   virtual bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
                          const MachineOperand &Callee, const ArgInfo &OrigRet,
                          ArrayRef<ArgInfo> OrigArgs) const {
@@ -209,6 +243,10 @@ public:
   /// \p ArgRegs is a list of virtual registers containing each argument that
   /// needs to be passed.
   ///
+  /// \p SwiftErrorVReg is non-zero if the call has a swifterror inout
+  /// parameter, and contains the vreg that the swifterror should be copied into
+  /// after the call.
+  ///
   /// \p GetCalleeReg is a callback to materialize a register for the callee if
   /// the target determines it cannot jump to the destination based purely on \p
   /// CI. This might be because \p CI is indirect, or because of the limited
@@ -217,7 +255,9 @@ public:
   /// \return true if the lowering succeeded, false otherwise.
   bool lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
                  unsigned ResReg, ArrayRef<unsigned> ArgRegs,
+                 unsigned SwiftErrorVReg,
                  std::function<unsigned()> GetCalleeReg) const;
+
 };
 
 } // end namespace llvm

@@ -354,11 +354,16 @@ bool IRTranslator::translateRet(const User &U, MachineIRBuilder &MIRBuilder) {
   if (Ret)
     VRegs = getOrCreateVRegs(*Ret);
 
+  unsigned SwiftErrorVReg = 0;
+  if (CLI->supportSwiftError() && SwiftError.getFunctionArg()) {
+    SwiftErrorVReg = SwiftError.getOrCreateVRegUseAt(
+        &RI, &MIRBuilder.getMBB(), SwiftError.getFunctionArg());
+  }
+
   // The target may mess up with the insertion point, but
   // this is not important as a return is the last instruction
   // of the block anyway.
-
-  return CLI->lowerReturn(MIRBuilder, Ret, VRegs);
+  return CLI->lowerReturn(MIRBuilder, Ret, VRegs, SwiftErrorVReg);
 }
 
 bool IRTranslator::translateBr(const User &U, MachineIRBuilder &MIRBuilder) {
@@ -447,6 +452,14 @@ bool IRTranslator::translateIndirectBr(const User &U,
   return true;
 }
 
+static bool isSwiftError(const Value *V) {
+  if (auto Arg = dyn_cast<Argument>(V))
+    return Arg->hasSwiftErrorAttr();
+  if (auto AI = dyn_cast<AllocaInst>(V))
+    return AI->isSwiftError();
+  return false;
+}
+
 bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
   const LoadInst &LI = cast<LoadInst>(U);
 
@@ -463,6 +476,15 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
 
   Type *OffsetIRTy = DL->getIntPtrType(LI.getPointerOperandType());
   LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
+
+  if (CLI->supportSwiftError() && isSwiftError(LI.getPointerOperand())) {
+    assert(Regs.size() == 1 && "swifterror should be single pointer");
+    unsigned VReg = SwiftError.getOrCreateVRegUseAt(&LI, &MIRBuilder.getMBB(),
+                                                    LI.getPointerOperand());
+    MIRBuilder.buildCopy(Regs[0], VReg);
+    return true;
+  }
+
 
   for (unsigned i = 0; i < Regs.size(); ++i) {
     unsigned Addr = 0;
@@ -495,6 +517,15 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
 
   Type *OffsetIRTy = DL->getIntPtrType(SI.getPointerOperandType());
   LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
+
+  if (CLI->supportSwiftError() && isSwiftError(SI.getPointerOperand())) {
+    assert(Vals.size() == 1 && "swifterror should be single pointer");
+
+    unsigned VReg = SwiftError.getOrCreateVRegDefAt(&SI, &MIRBuilder.getMBB(),
+                                                    SI.getPointerOperand());
+    MIRBuilder.buildCopy(VReg, Vals[0]);
+    return true;
+  }
 
   for (unsigned i = 0; i < Vals.size(); ++i) {
     unsigned Addr = 0;
@@ -1154,16 +1185,29 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
                                : getOrCreateVReg(CI);
 
     SmallVector<unsigned, 8> Args;
-    for (auto &Arg: CI.arg_operands())
+    unsigned SwiftErrorVReg = 0;
+    for (auto &Arg: CI.arg_operands()) {
+      if (CLI->supportSwiftError() && isSwiftError(Arg)) {
+        LLT Ty = getLLTForType(*Arg->getType(), *DL);
+        unsigned InVReg = MRI->createGenericVirtualRegister(Ty);
+        MIRBuilder.buildCopy(InVReg, SwiftError.getOrCreateVRegUseAt(
+                                         &CI, &MIRBuilder.getMBB(), Arg));
+        Args.push_back(InVReg);
+        SwiftErrorVReg =
+            SwiftError.getOrCreateVRegDefAt(&CI, &MIRBuilder.getMBB(), Arg);
+        continue;
+      }
       Args.push_back(packRegs(*Arg, MIRBuilder));
+    }
 
     MF->getFrameInfo().setHasCalls(true);
-    bool Success = CLI->lowerCall(MIRBuilder, &CI, Res, Args, [&]() {
-      return getOrCreateVReg(*CI.getCalledValue());
-    });
+    bool Success =
+        CLI->lowerCall(MIRBuilder, &CI, Res, Args, SwiftErrorVReg,
+                       [&]() { return getOrCreateVReg(*CI.getCalledValue()); });
 
     if (IsSplitType)
       unpackRegs(CI, Res, MIRBuilder);
+
     return Success;
   }
 
@@ -1239,10 +1283,23 @@ bool IRTranslator::translateInvoke(const User &U,
   if (!I.getType()->isVoidTy())
     Res = MRI->createGenericVirtualRegister(getLLTForType(*I.getType(), *DL));
   SmallVector<unsigned, 8> Args;
-  for (auto &Arg: I.arg_operands())
-    Args.push_back(packRegs(*Arg, MIRBuilder));
+  unsigned SwiftErrorVReg = 0;
+  for (auto &Arg : I.arg_operands()) {
+    if (CLI->supportSwiftError() && isSwiftError(Arg)) {
+      LLT Ty = getLLTForType(*Arg->getType(), *DL);
+      unsigned InVReg = MRI->createGenericVirtualRegister(Ty);
+      MIRBuilder.buildCopy(InVReg, SwiftError.getOrCreateVRegUseAt(
+                                       &I, &MIRBuilder.getMBB(), Arg));
+      Args.push_back(InVReg);
+      SwiftErrorVReg =
+          SwiftError.getOrCreateVRegDefAt(&I, &MIRBuilder.getMBB(), Arg);
+      continue;
+    }
 
-  if (!CLI->lowerCall(MIRBuilder, &I, Res, Args,
+    Args.push_back(packRegs(*Arg, MIRBuilder));
+  }
+
+  if (!CLI->lowerCall(MIRBuilder, &I, Res, Args, SwiftErrorVReg,
                       [&]() { return getOrCreateVReg(*I.getCalledValue()); }))
     return false;
 
@@ -1331,7 +1388,7 @@ bool IRTranslator::translateAlloca(const User &U,
   auto &AI = cast<AllocaInst>(U);
 
   if (AI.isSwiftError())
-    return false;
+    return true;
 
   if (AI.isStaticAlloca()) {
     unsigned Res = getOrCreateVReg(AI);
@@ -1776,6 +1833,10 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   MF->push_back(EntryBB);
   EntryBuilder->setMBB(*EntryBB);
 
+  DebugLoc DbgLoc = F.getEntryBlock().getFirstNonPHI()->getDebugLoc();
+  SwiftError.setFunction(CurMF);
+  SwiftError.createEntriesInEntryBlock(DbgLoc);
+
   // Create all blocks, in IR order, to preserve the layout.
   for (const BasicBlock &BB: F) {
     auto *&MBB = BBToMBB[&BB];
@@ -1797,14 +1858,18 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
       continue; // Don't handle zero sized types.
     VRegArgs.push_back(
         MRI->createGenericVirtualRegister(getLLTForType(*Arg.getType(), *DL)));
+
+    if (Arg.hasSwiftErrorAttr())
+      SwiftError.setCurrentVReg(EntryBB, SwiftError.getFunctionArg(),
+                                VRegArgs.back());
   }
 
   // We don't currently support translating swifterror or swiftself functions.
   for (auto &Arg : F.args()) {
-    if (Arg.hasSwiftErrorAttr() || Arg.hasSwiftSelfAttr()) {
+    if (Arg.hasSwiftSelfAttr()) {
       OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                  F.getSubprogram(), &F.getEntryBlock());
-      R << "unable to lower arguments due to swifterror/swiftself: "
+      R << "unable to lower arguments due to swiftself: "
         << ore::NV("Prototype", F.getType());
       reportTranslationError(*MF, *TPC, *ORE, R);
       return false;
@@ -1879,6 +1944,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   }
 
   finishPendingPhis();
+
+  SwiftError.propagateVRegs();
 
   // Merge the argument lowering and constants block with its single
   // successor, the LLVM-IR entry block.  We want the basic block to

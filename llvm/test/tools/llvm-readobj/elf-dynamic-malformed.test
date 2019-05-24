@@ -28,14 +28,19 @@ ProgramHeaders:
 
 # Test handling of a .dynamic section with an invalid entsize (i.e. not 2 * sizeof(Elf_Dyn)).
 # RUN: yaml2obj %s --docnum=2 -o %t.bad-entsize
-# RUN: llvm-readobj --dynamic-table %t.bad-entsize | FileCheck %s --check-prefix BAD-ENTSIZE
-# RUN: llvm-readelf --dynamic-table %t.bad-entsize | FileCheck %s --check-prefix BAD-ENTSIZE
+# RUN: llvm-readobj --dynamic-table %t.bad-entsize | FileCheck %s --check-prefix BAD-ENTSIZE-LLVM
+# RUN: llvm-readelf --dynamic-table %t.bad-entsize | FileCheck %s --check-prefix BAD-ENTSIZE-GNU
 
-# BAD-ENTSIZE:      DynamicSection [ (2 entries)
-# BAD-ENTSIZE-NEXT:   Tag                Type                 Name/Value
-# BAD-ENTSIZE-NEXT:   0x0000000000000015 DEBUG                0x0
-# BAD-ENTSIZE-NEXT:   0x0000000000000000 NULL                 0x0
-# BAD-ENTSIZE-NEXT: ]
+# BAD-ENTSIZE-LLVM:      DynamicSection [ (2 entries)
+# BAD-ENTSIZE-LLVM-NEXT:   Tag                Type                 Name/Value
+# BAD-ENTSIZE-LLVM-NEXT:   0x0000000000000015 DEBUG                0x0
+# BAD-ENTSIZE-LLVM-NEXT:   0x0000000000000000 NULL                 0x0
+# BAD-ENTSIZE-LLVM-NEXT: ]
+
+# BAD-ENTSIZE-GNU:      Dynamic section at offset 0x{{.*}} contains 2 entries:
+# BAD-ENTSIZE-GNU-NEXT:   Tag                Type                 Name/Value
+# BAD-ENTSIZE-GNU-NEXT:   0x0000000000000015 (DEBUG)              0x0
+# BAD-ENTSIZE-GNU-NEXT:   0x0000000000000000 (NULL)               0x0
 
 --- !ELF
 FileHeader:

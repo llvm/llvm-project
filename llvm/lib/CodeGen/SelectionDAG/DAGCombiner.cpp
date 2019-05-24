@@ -10110,7 +10110,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
 
   // trunc (shl x, K) -> shl (trunc x), K => K < VT.getScalarSizeInBits()
   if (N0.getOpcode() == ISD::SHL && N0.hasOneUse() &&
-      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::SHL, VT)) &&
+      (!LegalOperations || TLI.isOperationLegal(ISD::SHL, VT)) &&
       TLI.isTypeDesirableForOp(ISD::SHL, VT)) {
     SDValue Amt = N0.getOperand(1);
     KnownBits Known = DAG.computeKnownBits(Amt);
@@ -13919,9 +13919,11 @@ struct LoadedSlice {
     assert(DAG && "Missing context");
     const TargetLowering &TLI = DAG->getTargetLoweringInfo();
     EVT ResVT = Use->getValueType(0);
-    const TargetRegisterClass *ResRC = TLI.getRegClassFor(ResVT.getSimpleVT());
+    const TargetRegisterClass *ResRC =
+        TLI.getRegClassFor(ResVT.getSimpleVT(), Use->isDivergent());
     const TargetRegisterClass *ArgRC =
-        TLI.getRegClassFor(Use->getOperand(0).getValueType().getSimpleVT());
+        TLI.getRegClassFor(Use->getOperand(0).getValueType().getSimpleVT(),
+                           Use->getOperand(0)->isDivergent());
     if (ArgRC == ResRC || !TLI.isOperationLegal(ISD::LOAD, ResVT))
       return false;
 

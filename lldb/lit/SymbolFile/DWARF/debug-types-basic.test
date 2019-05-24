@@ -19,6 +19,8 @@ type lookup A
 # CHECK-NEXT:   long l;
 # CHECK-NEXT:   float f;
 # CHECK-NEXT:   double d;
+# CHECK-NEXT:   E e;
+# CHECK-NEXT:   EC ec;
 # CHECK-NEXT: }
 
 type lookup E
@@ -44,3 +46,9 @@ print (E) 1
 print (EC) 1
 # CHECK-LABEL: print (EC) 1
 # CHECK: (EC) $1 = e2
+
+target variable a e ec
+# CHECK-LABEL: target variable a e ec
+# CHECK: (const A) a = (i = 42, l = 47, f = 4.{{[12].*}}, d = 4.{{[67].*}}, e = e1, ec = e3)
+# CHECK: (const E) e = e2
+# CHECK: (const EC) ec = e2

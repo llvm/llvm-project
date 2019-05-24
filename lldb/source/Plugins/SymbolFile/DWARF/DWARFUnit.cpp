@@ -715,9 +715,16 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data, DIERef::Section section
         section == DIERef::Section::DebugTypes ? DW_UT_type : DW_UT_compile;
   }
 
+  if (header.IsTypeUnit()) {
+    header.m_type_hash = data.GetU64(offset_ptr);
+    header.m_type_offset = data.GetDWARFOffset(offset_ptr);
+  }
+
   bool length_OK = data.ValidOffset(header.GetNextUnitOffset() - 1);
   bool version_OK = SymbolFileDWARF::SupportedVersion(header.m_version);
   bool addr_size_OK = (header.m_addr_size == 4) || (header.m_addr_size == 8);
+  bool type_offset_OK =
+      !header.IsTypeUnit() || (header.m_type_offset <= header.GetLength());
 
   if (!length_OK)
     return llvm::make_error<llvm::object::GenericBinaryError>(
@@ -728,6 +735,9 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data, DIERef::Section section
   if (!addr_size_OK)
     return llvm::make_error<llvm::object::GenericBinaryError>(
         "Invalid unit address size");
+  if (!type_offset_OK)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "Type offset out of range");
 
   return header;
 }

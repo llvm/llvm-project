@@ -256,8 +256,8 @@ class ReadState {
 public:
   ReadState(const ReadDescriptor &Desc, unsigned RegID)
       : RD(&Desc), RegisterID(RegID), PRFID(0), DependentWrites(0),
-        CyclesLeft(UNKNOWN_CYCLES), TotalCycles(0), CRD(),
-        IsReady(true), IsZero(false), IndependentFromDef(false) {}
+        CyclesLeft(UNKNOWN_CYCLES), TotalCycles(0), CRD(), IsReady(true),
+        IsZero(false), IndependentFromDef(false) {}
 
   const ReadDescriptor &getDescriptor() const { return *RD; }
   unsigned getSchedClass() const { return RD->SchedClassID; }
@@ -409,7 +409,8 @@ class InstructionBase {
   CriticalRegDep CRD;
 
 public:
-  InstructionBase(const InstrDesc &D) : Desc(D), IsOptimizableMove(false) {}
+  InstructionBase(const InstrDesc &D)
+      : Desc(D), IsOptimizableMove(false), CRD() {}
 
   SmallVectorImpl<WriteState> &getDefs() { return Defs; }
   const ArrayRef<WriteState> getDefs() const { return Defs; }

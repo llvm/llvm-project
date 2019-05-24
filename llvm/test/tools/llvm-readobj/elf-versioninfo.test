@@ -73,9 +73,9 @@ LLVM-VERDEF-NEXT:     Predecessor: VERSION1
 LLVM-VERDEF-NEXT:   }
 LLVM-VERDEF-NEXT: }
 
-GNU-VERDEF: 0x000000006ffffff0 VERSYM               0x24c
-GNU-VERDEF: 0x000000006ffffffc VERDEF               0x25c
-GNU-VERDEF: 0x000000006ffffffd VERDEFNUM            3
+GNU-VERDEF: 0x000000006ffffff0 (VERSYM)             0x24c
+GNU-VERDEF: 0x000000006ffffffc (VERDEF)             0x25c
+GNU-VERDEF: 0x000000006ffffffd (VERDEFNUM)          3
 
 GNU-VERDEF:      Version symbols section '.gnu.version' contains 8 entries:
 GNU-VERDEF-NEXT:  Addr: 000000000000024c  Offset: 0x00024c  Link: 1 (.dynsym)

@@ -61,6 +61,8 @@ public:
 
   ArrayRef<Symbol *> getSymbols() const { return Symbols; }
 
+  MutableArrayRef<Symbol *> getMutableSymbols() { return Symbols; }
+
 protected:
   InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {}
   MemoryBufferRef MB;

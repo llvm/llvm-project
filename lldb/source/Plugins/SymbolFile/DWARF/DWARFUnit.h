@@ -41,6 +41,10 @@ class DWARFUnitHeader {
   dw_offset_t m_abbr_offset = 0;
   uint8_t m_unit_type = 0;
   uint8_t m_addr_size = 0;
+
+  uint64_t m_type_hash = 0;
+  uint32_t m_type_offset = 0;
+
   uint64_t m_dwo_id = 0;
 
   DWARFUnitHeader() = default;
@@ -52,6 +56,8 @@ public:
   dw_offset_t GetLength() const { return m_length; }
   dw_offset_t GetAbbrOffset() const { return m_abbr_offset; }
   uint8_t GetUnitType() const { return m_unit_type; }
+  uint64_t GetTypeHash() const { return m_type_hash; }
+  dw_offset_t GetTypeOffset() const { return m_type_offset; }
   bool IsTypeUnit() const {
     return m_unit_type == DW_UT_type || m_unit_type == DW_UT_split_type;
   }
@@ -204,6 +210,8 @@ public:
   }
 
   DIERef::Section GetDebugSection() const { return m_section; }
+
+  uint8_t GetUnitType() const { return m_header.GetUnitType(); }
 
 protected:
   DWARFUnit(SymbolFileDWARF *dwarf, lldb::user_id_t uid,

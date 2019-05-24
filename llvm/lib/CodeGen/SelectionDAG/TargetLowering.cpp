@@ -659,6 +659,14 @@ bool TargetLowering::SimplifyDemandedBits(
       Known.Zero &= Known2.Zero;
     }
     return false; // Don't fall through, will infinitely loop.
+  case ISD::LOAD: {
+    LoadSDNode *LD = cast<LoadSDNode>(Op);
+    if (getTargetConstantFromLoad(LD)) {
+      Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
+      return false; // Don't fall through, will infinitely loop.
+    }
+    break;
+  }
   case ISD::INSERT_VECTOR_ELT: {
     SDValue Vec = Op.getOperand(0);
     SDValue Scl = Op.getOperand(1);
@@ -2312,6 +2320,10 @@ bool TargetLowering::SimplifyDemandedBitsForTargetNode(
          " is a target node!");
   computeKnownBitsForTargetNode(Op, Known, DemandedElts, TLO.DAG, Depth);
   return false;
+}
+
+const Constant *TargetLowering::getTargetConstantFromLoad(LoadSDNode*) const {
+  return nullptr;
 }
 
 bool TargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,

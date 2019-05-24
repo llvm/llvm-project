@@ -230,23 +230,8 @@ define void @nonpow2_vector_add_fewerelements() {
 
 %swift_error = type {i64, i8}
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to lower arguments due to swifterror/swiftself: void (%swift_error**)* (in function: swifterror_param)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for swifterror_param
-define void @swifterror_param(%swift_error** swifterror %error_ptr_ref) {
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to lower arguments due to swiftself: void (%swift_error**)* (in function: swiftself_param)
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for swiftself_param
+define void @swiftself_param(%swift_error** swiftself %error_ptr_ref) {
   ret void
 }
-
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: alloca: '  %error_ptr_ref = alloca swifterror %swift_error*' (in function: swifterror_alloca)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for swifterror_alloca
-; We can't currently test the call parameters being swifterror because the value
-; must come from a swifterror alloca or parameter, at which point we already
-; fallback. As long as those cases work however we should be fine.
-define void @swifterror_alloca(i8* %error_ref) {
-entry:
-  %error_ptr_ref = alloca swifterror %swift_error*
-  store %swift_error* null, %swift_error** %error_ptr_ref
-  call void @swifterror_param(%swift_error** swifterror %error_ptr_ref)
-  ret void
-}
-
-

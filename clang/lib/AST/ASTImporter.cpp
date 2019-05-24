@@ -2585,7 +2585,7 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
     } // for
 
     if (!ConflictingDecls.empty() && SearchName) {
-      Name = Importer.HandleNameConflict(Name, DC, IDNS,
+      Name = Importer.HandleNameConflict(SearchName, DC, IDNS,
                                          ConflictingDecls.data(),
                                          ConflictingDecls.size());
       if (!Name)

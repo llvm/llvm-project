@@ -387,7 +387,8 @@ static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
   // The purpose of this loop is to mark symbols referenced by sections
   // (like GroupSection or RelocationSection). This way, we know which
   // symbols are still 'needed' and which are not.
-  if (Config.StripUnneeded || !Config.UnneededSymbolsToRemove.empty()) {
+  if (Config.StripUnneeded || !Config.UnneededSymbolsToRemove.empty() ||
+      !Config.OnlySection.empty()) {
     for (auto &Section : Obj.sections())
       Section.markSymbols();
   }
@@ -413,6 +414,11 @@ static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
     if ((Config.StripUnneeded ||
          is_contained(Config.UnneededSymbolsToRemove, Sym.Name)) &&
         isUnneededSymbol(Sym))
+      return true;
+
+    // We want to remove undefined symbols if all references have been stripped.
+    if (!Config.OnlySection.empty() && !Sym.Referenced &&
+        Sym.getShndx() == SHN_UNDEF)
       return true;
 
     return false;
