@@ -98,11 +98,15 @@ public:
     StringRef OptionName;
     StringRef DefaultValStr;
     StringRef Description;
+    StringRef DevelopmentStatus;
+    bool IsHidden;
 
     CmdLineOption(StringRef OptionType, StringRef OptionName,
-                  StringRef DefaultValStr, StringRef Description)
+                  StringRef DefaultValStr, StringRef Description,
+                  StringRef DevelopmentStatus, bool IsHidden)
         : OptionType(OptionType), OptionName(OptionName),
-          DefaultValStr(DefaultValStr), Description(Description) {
+          DefaultValStr(DefaultValStr), Description(Description),
+          DevelopmentStatus(DevelopmentStatus), IsHidden(IsHidden) {
 
       assert((OptionType == "bool" || OptionType == "string" ||
               OptionType == "int") &&
@@ -118,6 +122,10 @@ public:
              "Invalid value for integer command line option! Maybe incorrect "
              "parameters to the addCheckerOption or addPackageOption method?");
       (void)Tmp;
+
+      assert((DevelopmentStatus == "alpha" || DevelopmentStatus == "beta" ||
+              DevelopmentStatus == "released") &&
+             "Invalid development status!");
     }
   };
 
@@ -239,7 +247,8 @@ public:
   /// non-compatibility mode.
   void addCheckerOption(StringRef OptionType, StringRef CheckerFullName,
                         StringRef OptionName, StringRef DefaultValStr,
-                        StringRef Description);
+                        StringRef Description, StringRef DevelopmentStatus,
+                        bool IsHidden = false);
 
   /// Adds a package to the registry.
   void addPackage(StringRef FullName);
@@ -255,7 +264,8 @@ public:
   /// non-compatibility mode.
   void addPackageOption(StringRef OptionType, StringRef PackageFullName,
                         StringRef OptionName, StringRef DefaultValStr,
-                        StringRef Description);
+                        StringRef Description, StringRef DevelopmentStatus,
+                         bool IsHidden = false);
 
   // FIXME: This *really* should be added to the frontend flag descriptions.
   /// Initializes a CheckerManager by calling the initialization functions for
@@ -272,6 +282,7 @@ public:
   void printCheckerWithDescList(raw_ostream &Out,
                                 size_t MaxNameChars = 30) const;
   void printEnabledCheckerList(raw_ostream &Out) const;
+  void printCheckerOptionList(raw_ostream &Out) const;
 
 private:
   /// Collect all enabled checkers. The returned container preserves the order

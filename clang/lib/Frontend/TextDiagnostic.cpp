@@ -765,7 +765,28 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
     const DirectoryEntry *Dir = SM.getFileManager().getDirectory(
         llvm::sys::path::parent_path(Filename));
     if (Dir) {
+      // We want to print a simplified absolute path, i. e. without "dots".
+      //
+      // The hardest part here are the paths like "<part1>/<link>/../<part2>".
+      // On Unix-like systems, we cannot just collapse "<link>/..", because
+      // paths are resolved sequentially, and, thereby, the path
+      // "<part1>/<part2>" may point to a different location. That is why
+      // we use FileManager::getCanonicalName(), which expands all indirections
+      // with llvm::sys::fs::real_path() and caches the result.
+      //
+      // On the other hand, it would be better to preserve as much of the
+      // original path as possible, because that helps a user to recognize it.
+      // real_path() expands all links, which sometimes too much. Luckily,
+      // on Windows we can just use llvm::sys::path::remove_dots(), because,
+      // on that system, both aforementioned paths point to the same place.
+#ifdef _WIN32
+      SmallString<4096> DirName = Dir->getName();
+      llvm::sys::fs::make_absolute(DirName);
+      llvm::sys::path::native(DirName);
+      llvm::sys::path::remove_dots(DirName, /* remove_dot_dot */ true);
+#else
       StringRef DirName = SM.getFileManager().getCanonicalName(Dir);
+#endif
       llvm::sys::path::append(AbsoluteFilename, DirName,
                               llvm::sys::path::filename(Filename));
       Filename = StringRef(AbsoluteFilename.data(), AbsoluteFilename.size());

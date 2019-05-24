@@ -36,7 +36,8 @@ extern "C" void clang_registerCheckers(CheckerRegistry &registry) {
                             /*CheckerFullName*/ "example.MyChecker",
                             /*OptionName*/ "ExampleOption",
                             /*DefaultValStr*/ "false",
-                            /*Description*/ "This is an example checker opt.");
+                            /*Description*/ "This is an example checker opt.",
+                            /*DevelopmentStage*/ "released");
 }
 
 extern "C" const char clang_analyzerAPIVersionString[] =

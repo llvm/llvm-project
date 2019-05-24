@@ -4994,9 +4994,8 @@ static bool HandleUnionActiveMemberChange(EvalInfo &Info, const Expr *LHSExpr,
   llvm::SmallVector<std::pair<unsigned, const FieldDecl*>, 4> UnionPathLengths;
   // C++ [class.union]p5:
   //   define the set S(E) of subexpressions of E as follows:
-  const Expr *E = LHSExpr;
   unsigned PathLength = LHS.Designator.Entries.size();
-  while (E) {
+  for (const Expr *E = LHSExpr; E != nullptr;) {
     //   -- If E is of the form A.B, S(E) contains the elements of S(A)...
     if (auto *ME = dyn_cast<MemberExpr>(E)) {
       auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
@@ -5026,6 +5025,7 @@ static bool HandleUnionActiveMemberChange(EvalInfo &Info, const Expr *LHSExpr,
 
     } else if (auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
       // Step over a derived-to-base conversion.
+      E = ICE->getSubExpr();
       if (ICE->getCastKind() == CK_NoOp)
         continue;
       if (ICE->getCastKind() != CK_DerivedToBase &&
@@ -5038,7 +5038,6 @@ static bool HandleUnionActiveMemberChange(EvalInfo &Info, const Expr *LHSExpr,
                                   LHS.Designator.Entries[PathLength]
                                       .getAsBaseOrMember().getPointer()));
       }
-      E = ICE->getSubExpr();
 
     //   -- Otherwise, S(E) is empty.
     } else {

@@ -76,7 +76,7 @@ static SourceLocation getFirstStmtLoc(const CFGBlock *Block) {
 static SourceLocation getLastStmtLoc(const CFGBlock *Block) {
   // Find the source location of the last statement in the block, if the block
   // is not empty.
-  if (const Stmt *StmtNode = Block->getTerminator()) {
+  if (const Stmt *StmtNode = Block->getTerminatorStmt()) {
     return StmtNode->getBeginLoc();
   } else {
     for (CFGBlock::const_reverse_iterator BI = Block->rbegin(),

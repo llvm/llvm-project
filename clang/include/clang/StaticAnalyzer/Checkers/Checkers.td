@@ -51,7 +51,8 @@ def Nullability : Package<"nullability">,
                   "concerned with your custom nullability annotations more "
                   "than with following nullability specifications of system "
                   "header functions.",
-                  "false">
+                  "false",
+                  Released>
   ]>;
 
 def Cplusplus : Package<"cplusplus">;
@@ -391,7 +392,8 @@ def DynamicMemoryModeling: Checker<"DynamicMemoryModeling">,
                   "If set to true, the checker assumes that all the "
                   "allocating and deallocating functions are annotated with "
                   "ownership_holds, ownership_takes and ownership_returns.",
-                  "false">
+                  "false",
+                  InAlpha>
   ]>,
   Dependencies<[CStringModeling]>,
   Documentation<NotDocumented>,
@@ -496,7 +498,8 @@ def MoveChecker: Checker<"Move">,
                   "user has intentionally asked us to completely eliminate "
                   "use-after-move in his code. Values: \"KnownsOnly\", "
                   "\"KnownsAndLocals\", \"All\".",
-                  "KnownsAndLocals">
+                  "KnownsAndLocals",
+                  Released>
   ]>,
   Documentation<HasDocumentation>;
 
@@ -512,32 +515,38 @@ def UninitializedObjectChecker: Checker<"UninitializedObject">,
                   "If set to false, the checker won't emit warnings "
                   "for objects that don't have at least one initialized "
                   "field.",
-                  "false">,
+                  "false",
+                  Released>,
     CmdLineOption<Boolean,
                   "NotesAsWarnings",
                   "If set to true, the checker will emit a warning "
                   "for each uninitalized field, as opposed to emitting one "
                   "warning per constructor call, and listing the uninitialized "
                   "fields that belongs to it in notes.",
-                  "false">,
+                  "false",
+                  Released,
+                  Hide>,
     CmdLineOption<Boolean,
                   "CheckPointeeInitialization",
                   "If set to false, the checker will not analyze "
                   "the pointee of pointer/reference fields, and will only "
                   "check whether the object itself is initialized.",
-                  "false">,
+                  "false",
+                  InAlpha>,
     CmdLineOption<String,
                   "IgnoreRecordsWithField",
                   "If supplied, the checker will not analyze "
                   "structures that have a field with a name or type name that "
                   "matches the given pattern.",
-                  "\"\"">,
+                  "\"\"",
+                  Released>,
     CmdLineOption<Boolean,
                   "IgnoreGuardedFields",
                   "If set to true, the checker will analyze _syntactically_ "
                   "whether the found uninitialized object is used without a "
                   "preceding assert call. Defaults to false.",
-                  "false">
+                  "false",
+                  InAlpha>
   ]>,
   Documentation<HasAlphaDocumentation>;
 
@@ -547,7 +556,8 @@ def VirtualCallChecker : Checker<"VirtualCall">,
     CmdLineOption<Boolean,
                   "PureOnly",
                   "Whether to only report calls to pure virtual methods.",
-                  "false">
+                  "false",
+                  Released>
   ]>,
   Documentation<HasDocumentation>;
 
@@ -650,7 +660,8 @@ def PaddingChecker : Checker<"Padding">,
                   "AllowedPad",
                   "Reports are only generated if the excessive padding exceeds "
                   "'AllowedPad' in bytes.",
-                  "24">
+                  "24",
+                  Released>
   ]>,
   Documentation<NotDocumented>;
 
@@ -767,11 +778,13 @@ def MmapWriteExecChecker : Checker<"MmapWriteExec">,
     CmdLineOption<Integer,
                   "MmapProtExec",
                   "Specifies the value of PROT_EXEC",
-                  "0x04">,
+                  "0x04",
+                  Released>,
     CmdLineOption<Integer,
                   "MmapProtRead",
                   "Specifies the value of PROT_READ",
-                  "0x01">
+                  "0x01",
+                  Released>
   ]>,
   Documentation<HasAlphaDocumentation>;
 
@@ -818,7 +831,8 @@ def NumberObjectConversionChecker : Checker<"NumberObjectConversion">,
                   "Enables detection of more conversion patterns (which are "
                   "most likely more harmless, and therefore are more likely to "
                   "produce false positives).",
-                  "false">
+                  "false",
+                  Released>
   ]>,
   Documentation<NotDocumented>;
 
@@ -918,7 +932,9 @@ def RetainCountChecker : Checker<"RetainCount">,
                   "OSObject instances. By default, the checker only checks "
                   "retain-release rules for Objective-C NSObject instances "
                   "and CoreFoundation objects.",
-                  "true">,
+                  "true",
+                  InAlpha,
+                  Hide>,
     CmdLineOption<Boolean,
                   "TrackNSCFStartParam",
                   "Check not only that the code follows retain-release rules "
@@ -926,7 +942,8 @@ def RetainCountChecker : Checker<"RetainCount">,
                   "elsewhere, but also that it fulfills its own retain count "
                   "specification with respect to objects that it receives as "
                   "arguments.",
-                  "false">
+                  "false",
+                  Released>
   ]>,
   Dependencies<[RetainCountBase]>,
   Documentation<HasDocumentation>;
@@ -1046,7 +1063,9 @@ def NonLocalizedStringChecker : Checker<"NonLocalizedStringChecker">,
                   "(Aggressive) or NonLocalized only if it is not backed by a "
                   "SymRegion (Non-Aggressive), basically leaving only string "
                   "literals as NonLocalized.",
-                  "false">
+                  "false",
+                  InAlpha,
+                  Hide>
   ]>,
   Documentation<HasDocumentation>;
 
@@ -1110,67 +1129,99 @@ def AnalysisOrderChecker : Checker<"AnalysisOrder">,
     CmdLineOption<Boolean,
                   "PreStmtCastExpr",
                   "",
-                  "false">,
+                  "false",
+                  Released,
+                  Hide>,
     CmdLineOption<Boolean,
                   "PostStmtCastExpr",
                   "",
-                  "false">,
+                  "false",
+                  Released,
+                  Hide>,
     CmdLineOption<Boolean,
                   "PreStmtArraySubscriptExpr",
                   "",
-                  "false">,
+                  "false",
+                  Released,
+                  Hide>,
     CmdLineOption<Boolean,
                   "PostStmtArraySubscriptExpr",
                   "",
-                  "false">,
+                  "false",
+                  Released,
+                  Hide>,
     CmdLineOption<Boolean,
                   "PreStmtCXXNewExpr",
                   "",
-                  "false">,
+                  "false",
+                  Released,
+                  Hide>,
     CmdLineOption<Boolean,
                   "PostStmtCXXNewExpr",
                   "",
-                  "false">,
+                  "false",
+                  Released,
+                  Hide>,
     CmdLineOption<Boolean,
                   "PreStmtOffsetOfExpr",
                   "",
-                  "false">,
+                  "false",
+                  Released,
+                  Hide>,
     CmdLineOption<Boolean,
                   "PostStmtOffsetOfExpr",
                   "",
-                  "false">,
+                  "false",
+                  Released,
+                  Hide>,
     CmdLineOption<Boolean,
                   "PreCall",
                   "",
-                  "false">,
+                  "false",
+                  Released,
+                  Hide>,
     CmdLineOption<Boolean,
                   "PostCall",
                   "",
-                  "false">,
+                  "false",
+                  Released,
+                  Hide>,
     CmdLineOption<Boolean,
                   "EndFunction",
                   "",
-                  "false">,
+                  "false",
+                  Released,
+                  Hide>,
     CmdLineOption<Boolean,
                   "NewAllocator",
                   "",
-                  "false">,
+                  "false",
+                  Released,
+                  Hide>,
     CmdLineOption<Boolean,
                   "Bind",
                   "",
-                  "false">,
+                  "false",
+                  Released,
+                  Hide>,
     CmdLineOption<Boolean,
                   "LiveSymbols",
                   "",
-                  "false">,
+                  "false",
+                  Released,
+                  Hide>,
     CmdLineOption<Boolean,
                   "RegionChanges",
                   "",
-                  "false">,
+                  "false",
+                  Released,
+                  Hide>,
     CmdLineOption<Boolean,
                   "*",
                   "Enables all callbacks.",
-                  "false">
+                  "false",
+                  Released,
+                  Hide>
   ]>,
   Documentation<NotDocumented>;
 
@@ -1253,16 +1304,19 @@ def CloneChecker : Checker<"CloneChecker">,
                   "of a statement. This constraint assumes the first statement "
                   "in the group is representative for all other statements in "
                   "the group in terms of complexity.",
-                  "50">,
+                  "50",
+                  Released>,
     CmdLineOption<Boolean,
                   "ReportNormalClones",
                   "Report all clones, even less suspicious ones.",
-                  "true">,
+                  "true",
+                  Released>,
     CmdLineOption<String,
                   "IgnoredFilesPattern",
                   "If supplied, the checker wont analyze files with a filename "
                   "that matches the given pattern.",
-                  "\"\"">
+                  "\"\"",
+                  Released>
   ]>,
   Documentation<HasAlphaDocumentation>;
 

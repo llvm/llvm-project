@@ -1,7 +1,7 @@
-// RUN: %clang -target x86_64 -S -c -O1 -fvectorize -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-ENABLE-VECT
-// RUN: %clang -target x86_64 -S -c -O1 -fno-vectorize -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-DISABLE-VECT
-// RUN: %clang -target x86_64 -fexperimental-new-pass-manager -S -c -O1 -fvectorize -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-ENABLE-VECT
-// RUN: %clang -target x86_64 -fexperimental-new-pass-manager -S -c -O1 -fno-vectorize -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-DISABLE-VECT
+// RUN: %clang_cc1 -triple x86_64 -target-cpu x86-64 -S -O1 -vectorize-loops -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-ENABLE-VECT
+// RUN: %clang_cc1 -triple x86_64 -target-cpu x86-64 -S -O1 -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-DISABLE-VECT
+// RUN: %clang_cc1 -triple x86_64 -target-cpu x86-64 -fexperimental-new-pass-manager -S -O1 -vectorize-loops -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-ENABLE-VECT
+// RUN: %clang_cc1 -triple x86_64 -target-cpu x86-64 -fexperimental-new-pass-manager -S -O1 -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-DISABLE-VECT
 
 // CHECK-ENABLE-VECT-LABEL: @for_test()
 // CHECK-ENABLE-VECT: fmul <{{[0-9]+}} x double>

@@ -815,7 +815,7 @@ static void findBlockLocations(CFG *CFGraph,
 
     // Find the source location of the last statement in the block, if the
     // block is not empty.
-    if (const Stmt *S = CurrBlock->getTerminator()) {
+    if (const Stmt *S = CurrBlock->getTerminatorStmt()) {
       CurrBlockInfo->EntryLoc = CurrBlockInfo->ExitLoc = S->getBeginLoc();
     } else {
       for (CFGBlock::const_reverse_iterator BI = CurrBlock->rbegin(),
@@ -1499,7 +1499,7 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
 
   const Stmt *Cond = PredBlock->getTerminatorCondition();
   // We don't acquire try-locks on ?: branches, only when its result is used.
-  if (!Cond || isa<ConditionalOperator>(PredBlock->getTerminator()))
+  if (!Cond || isa<ConditionalOperator>(PredBlock->getTerminatorStmt()))
     return;
 
   bool Negate = false;
@@ -2402,7 +2402,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
       // a difference in locksets is probably due to a bug in that block, rather
       // than in some other predecessor. In that case, keep the other
       // predecessor's lockset.
-      if (const Stmt *Terminator = (*PI)->getTerminator()) {
+      if (const Stmt *Terminator = (*PI)->getTerminatorStmt()) {
         if (isa<ContinueStmt>(Terminator) || isa<BreakStmt>(Terminator)) {
           SpecialBlocks.push_back(*PI);
           continue;
@@ -2441,7 +2441,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         // it might also be part of a switch. Also, a subsequent destructor
         // might add to the lockset, in which case the real issue might be a
         // double lock on the other path.
-        const Stmt *Terminator = PrevBlock->getTerminator();
+        const Stmt *Terminator = PrevBlock->getTerminatorStmt();
         bool IsLoop = Terminator && isa<ContinueStmt>(Terminator);
 
         FactSet PrevLockset;

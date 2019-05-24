@@ -335,8 +335,9 @@ int main() {
     s_arr[0] = var;
     sivar = 2;
   }
-#pragma omp parallel allocate(omp_default_mem_alloc: t_var) firstprivate(t_var)
-  {}
+  const int a = 0;
+#pragma omp parallel allocate(omp_default_mem_alloc: t_var) firstprivate(t_var, a)
+  { t_var = a; }
   return tmain<int>();
 #endif
 }
@@ -346,6 +347,7 @@ int main() {
 // CHECK: [[T_VAR:%.+]] = alloca i32,
 // CHECK: [[T_VARCAST:%.+]] = alloca [[iz:i64|i32]],
 // CHECK: [[SIVARCAST:%.+]] = alloca [[iz]],
+// CHECK: [[A:%.+]] = alloca i32,
 // CHECK: [[T_VARCAST1:%.+]] = alloca [[iz:i64|i32]],
 // CHECK: call {{.*}} [[S_FLOAT_TY_DEF_CONSTR:@.+]]([[S_FLOAT_TY]]* [[TEST]])
 // CHECK: [[T_VARVAL:%.+]] = load i32, i32* [[T_VAR]],
@@ -420,6 +422,7 @@ int main() {
 // CHECK-32: [[T_VAR_VAL:%.+]] = load i32, i32* [[T_VAR_ADDR]],
 // CHECK-64: [[T_VAR_VAL:%.+]] = load i32, i32* [[BC]],
 // CHECK:    store i32 [[T_VAR_VAL]], i32* [[T_VAR_PRIV]],
+// CHECK:    store i32 0, i32* [[T_VAR_PRIV]],
 // CHECK:    call void @__kmpc_free(i32 [[GTID]], i8* [[T_VAR_VOID_PTR]], i8* inttoptr ([[iz]] 1 to i8*))
 // CHECK:    ret void
 
