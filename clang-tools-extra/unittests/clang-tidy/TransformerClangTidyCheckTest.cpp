@@ -26,15 +26,18 @@ RewriteRule invertIf() {
   using tooling::change;
   using tooling::node;
   using tooling::statement;
+  using tooling::text;
   using tooling::stencil::cat;
 
   StringRef C = "C", T = "T", E = "E";
-  return tooling::makeRule(ifStmt(hasCondition(expr().bind(C)),
-                                  hasThen(stmt().bind(T)),
-                                  hasElse(stmt().bind(E))),
-                           change(statement(RewriteRule::RootID),
-                                  cat("if(!(", node(C), ")) ", statement(E),
-                                      " else ", statement(T))));
+  RewriteRule Rule = tooling::makeRule(
+      ifStmt(hasCondition(expr().bind(C)), hasThen(stmt().bind(T)),
+             hasElse(stmt().bind(E))),
+      change(
+          statement(RewriteRule::RootID),
+          cat("if(!(", node(C), ")) ", statement(E), " else ", statement(T))),
+      text("negate condition and reverse `then` and `else` branches"));
+  return Rule;
 }
 
 class IfInverterCheck : public TransformerClangTidyCheck {

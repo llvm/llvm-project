@@ -206,8 +206,6 @@ private:
   void loadDynamicTable(const ELFFile<ELFT> *Obj);
   void parseDynamicTable();
 
-  void printValue(uint64_t Type, uint64_t Value);
-
   StringRef getDynamicString(uint64_t Offset) const;
   StringRef getSymbolVersion(StringRef StrTab, const Elf_Sym *symb,
                              bool &IsDefault) const;
@@ -262,7 +260,18 @@ private:
 
 public:
   Elf_Dyn_Range dynamic_table() const {
-    return DynamicTable.getAsArrayRef<Elf_Dyn>();
+    // A valid .dynamic section contains an array of entries terminated
+    // with a DT_NULL entry. However, sometimes the section content may
+    // continue past the DT_NULL entry, so to dump the section correctly,
+    // we first find the end of the entries by iterating over them.
+    Elf_Dyn_Range Table = DynamicTable.getAsArrayRef<Elf_Dyn>();
+
+    size_t Size = 0;
+    while (Size < Table.size())
+      if (Table[Size++].getTag() == DT_NULL)
+        break;
+
+    return Table.slice(0, Size);
   }
 
   Elf_Sym_Range dynamic_symbols() const {
@@ -283,6 +292,8 @@ public:
                                     bool &IsDefault) const;
 
   void printSymbolsHelper(bool IsDynamic) const;
+  void printDynamicEntry(raw_ostream &OS, uint64_t Type, uint64_t Value) const;
+
   const Elf_Shdr *getDotSymtabSec() const { return DotSymtabSec; }
   const Elf_Shdr *getDotCGProfileSec() const { return DotCGProfileSec; }
   const Elf_Shdr *getDotAddrsigSec() const { return DotAddrsigSec; }
@@ -292,6 +303,7 @@ public:
   const DynRegionInfo &getDynRelaRegion() const { return DynRelaRegion; }
   const DynRegionInfo &getDynRelrRegion() const { return DynRelrRegion; }
   const DynRegionInfo &getDynPLTRelRegion() const { return DynPLTRelRegion; }
+  const DynRegionInfo &getDynamicTableRegion() const { return DynamicTable; }
   const Elf_Hash *getHashTable() const { return HashTable; }
   const Elf_GnuHash *getGnuHashTable() const { return GnuHashTable; }
 };
@@ -340,6 +352,7 @@ public:
   virtual void printSymbols(const ELFFile<ELFT> *Obj, bool PrintSymbols,
                             bool PrintDynamicSymbols) = 0;
   virtual void printHashSymbols(const ELFFile<ELFT> *Obj) {}
+  virtual void printDynamic(const ELFFile<ELFT> *Obj) {}
   virtual void printDynamicRelocations(const ELFFile<ELFT> *Obj) = 0;
   virtual void printSymtabMessage(const ELFFile<ELFT> *Obj, StringRef Name,
                                   size_t Offset) {}
@@ -384,6 +397,7 @@ public:
   void printSymbols(const ELFO *Obj, bool PrintSymbols,
                     bool PrintDynamicSymbols) override;
   void printHashSymbols(const ELFO *Obj) override;
+  void printDynamic(const ELFFile<ELFT> *Obj) override;
   void printDynamicRelocations(const ELFO *Obj) override;
   void printSymtabMessage(const ELFO *Obj, StringRef Name,
                           size_t Offset) override;
@@ -488,6 +502,7 @@ public:
   void printSectionHeaders(const ELFO *Obj) override;
   void printSymbols(const ELFO *Obj, bool PrintSymbols,
                     bool PrintDynamicSymbols) override;
+  void printDynamic(const ELFFile<ELFT> *Obj) override;
   void printDynamicRelocations(const ELFO *Obj) override;
   void printProgramHeaders(const ELFO *Obj, bool PrintProgramHeaders,
                            cl::boolOrDefault PrintSectionMapping) override;
@@ -1764,8 +1779,8 @@ static void printLibrary(raw_ostream &OS, const Twine &Tag, const Twine &Name) {
 }
 
 template <class ELFT>
-void ELFDumper<ELFT>::printValue(uint64_t Type, uint64_t Value) {
-  raw_ostream &OS = W.getOStream();
+void ELFDumper<ELFT>::printDynamicEntry(raw_ostream &OS, uint64_t Type,
+                                        uint64_t Value) const {
   const char *ConvChar =
       (opts::Output == opts::GNU) ? "0x%" PRIx64 : "0x%" PRIX64;
   switch (Type) {
@@ -1883,41 +1898,7 @@ template <> void ELFDumper<ELF32LE>::printUnwindInfo() {
 } // end anonymous namespace
 
 template <class ELFT> void ELFDumper<ELFT>::printDynamicTable() {
-  // A valid .dynamic section contains an array of entries terminated with
-  // a DT_NULL entry. However, sometimes the section content may continue
-  // past the DT_NULL entry, so to dump the section correctly, we first find
-  // the end of the entries by iterating over them.
-  size_t Size = 0;
-  Elf_Dyn_Range DynTableEntries = dynamic_table();
-  for (; Size < DynTableEntries.size();)
-    if (DynTableEntries[Size++].getTag() == DT_NULL)
-      break;
-
-  if (!Size)
-    return;
-
-  raw_ostream &OS = W.getOStream();
-  W.startLine() << "DynamicSection [ (" << Size << " entries)\n";
-
-  bool Is64 = ELFT::Is64Bits;
-  W.startLine() << "  Tag" << (Is64 ? "                " : "        ") << "Type"
-                << "                 "
-                << "Name/Value\n";
-  for (size_t I = 0; I < Size; ++I) {
-    const Elf_Dyn &Entry = DynTableEntries[I];
-    uintX_t Tag = Entry.getTag();
-    W.startLine() << "  "
-                  << format_hex(Tag, Is64 ? 18 : 10, opts::Output != opts::GNU)
-                  << " "
-                  << format(
-                         "%-21s",
-                         getTypeString(
-                             ObjF->getELFFile()->getHeader()->e_machine, Tag));
-    printValue(Tag, Entry.getVal());
-    OS << "\n";
-  }
-
-  W.startLine() << "]\n";
+  ELFDumperStyle->printDynamic(ObjF->getELFFile());
 }
 
 template <class ELFT> void ELFDumper<ELFT>::printNeededLibraries() {
@@ -3344,6 +3325,35 @@ void GNUStyle<ELFT>::printDynamicRelocation(const ELFO *Obj, Elf_Rela R,
   printRelocation(Obj, Sym, SymbolName, R, IsRela);
 }
 
+template <class ELFT> void GNUStyle<ELFT>::printDynamic(const ELFO *Obj) {
+  Elf_Dyn_Range Table = this->dumper()->dynamic_table();
+  if (Table.empty())
+    return;
+
+  const DynRegionInfo &DynamicTableRegion =
+      this->dumper()->getDynamicTableRegion();
+
+  OS << "Dynamic section at offset "
+     << format_hex(reinterpret_cast<const uint8_t *>(DynamicTableRegion.Addr) -
+                       Obj->base(),
+                   1)
+     << " contains " << Table.size() << " entries:\n";
+
+  bool Is64 = ELFT::Is64Bits;
+  if (Is64)
+    OS << "  Tag                Type                 Name/Value\n";
+  else
+    OS << "  Tag        Type                 Name/Value\n";
+  for (auto Entry : Table) {
+    uintX_t Tag = Entry.getTag();
+    std::string TypeString = getTypeString(Obj->getHeader()->e_machine, Tag);
+    OS << format("  0x%0*x %-20s ", Is64 ? 16 : 8, Tag,
+                 ("(" + TypeString + ")").c_str());
+    this->dumper()->printDynamicEntry(OS, Tag, Entry.getVal());
+    OS << "\n";
+  }
+}
+
 template <class ELFT>
 void GNUStyle<ELFT>::printDynamicRelocations(const ELFO *Obj) {
   const DynRegionInfo &DynRelRegion = this->dumper()->getDynRelRegion();
@@ -4061,7 +4071,10 @@ void GNUStyle<ELFT>::printMipsGOT(const MipsGOTParser<ELFT> &Parser) {
      << format_hex_no_prefix(Parser.getGp(), 8 + Bias) << "\n\n";
 
   OS << " Reserved entries:\n";
-  OS << "   Address     Access  Initial Purpose\n";
+  if (ELFT::Is64Bits)
+    OS << "           Address     Access          Initial Purpose\n";
+  else
+    OS << "   Address     Access  Initial Purpose\n";
   PrintEntry(Parser.getGotLazyResolver(), "Lazy resolver");
   if (Parser.getGotModulePointer())
     PrintEntry(Parser.getGotModulePointer(), "Module pointer (GNU extension)");
@@ -4069,7 +4082,10 @@ void GNUStyle<ELFT>::printMipsGOT(const MipsGOTParser<ELFT> &Parser) {
   if (!Parser.getLocalEntries().empty()) {
     OS << "\n";
     OS << " Local entries:\n";
-    OS << "   Address     Access  Initial\n";
+    if (ELFT::Is64Bits)
+      OS << "           Address     Access          Initial\n";
+    else
+      OS << "   Address     Access  Initial\n";
     for (auto &E : Parser.getLocalEntries())
       PrintEntry(&E, "");
   }
@@ -4080,7 +4096,11 @@ void GNUStyle<ELFT>::printMipsGOT(const MipsGOTParser<ELFT> &Parser) {
   if (!Parser.getGlobalEntries().empty()) {
     OS << "\n";
     OS << " Global entries:\n";
-    OS << "   Address     Access  Initial Sym.Val. Type    Ndx Name\n";
+    if (ELFT::Is64Bits)
+      OS << "           Address     Access          Initial         Sym.Val."
+         << " Type    Ndx Name\n";
+    else
+      OS << "   Address     Access  Initial Sym.Val. Type    Ndx Name\n";
     for (auto &E : Parser.getGlobalEntries()) {
       const Elf_Sym *Sym = Parser.getGotSym(&E);
       std::string SymName = this->dumper()->getFullSymbolName(
@@ -4490,6 +4510,31 @@ template <class ELFT>
 void LLVMStyle<ELFT>::printDynamicSymbols(const ELFO *Obj) {
   ListScope Group(W, "DynamicSymbols");
   this->dumper()->printSymbolsHelper(true);
+}
+
+template <class ELFT> void LLVMStyle<ELFT>::printDynamic(const ELFFile<ELFT> *Obj) {
+  Elf_Dyn_Range Table = this->dumper()->dynamic_table();
+  if (Table.empty())
+    return;
+
+  raw_ostream &OS = W.getOStream();
+  W.startLine() << "DynamicSection [ (" << Table.size() << " entries)\n";
+
+  bool Is64 = ELFT::Is64Bits;
+  if (Is64)
+    W.startLine() << "  Tag                Type                 Name/Value\n";
+  else
+    W.startLine() << "  Tag        Type                 Name/Value\n";
+  for (auto Entry : Table) {
+    uintX_t Tag = Entry.getTag();
+    W.startLine() << "  " << format_hex(Tag, Is64 ? 18 : 10, true) << " "
+                  << format("%-21s",
+                            getTypeString(Obj->getHeader()->e_machine, Tag));
+    this->dumper()->printDynamicEntry(OS, Tag, Entry.getVal());
+    OS << "\n";
+  }
+
+  W.startLine() << "]\n";
 }
 
 template <class ELFT>

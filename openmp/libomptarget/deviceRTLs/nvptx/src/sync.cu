@@ -62,8 +62,6 @@ EXTERN void __kmpc_barrier(kmp_Ident *loc_ref, int32_t tid) {
         // Barrier #1 is for synchronization among active threads.
         named_sync(L1_BARRIER, threads);
       }
-    } else {
-      __kmpc_flush(loc_ref);
     } // numberOfActiveOMPThreads > 1
     PRINT0(LD_SYNC, "completed kmpc_barrier\n");
   }
@@ -132,7 +130,7 @@ EXTERN void __kmpc_end_single(kmp_Ident *loc, int32_t global_tid) {
 
 EXTERN void __kmpc_flush(kmp_Ident *loc) {
   PRINT0(LD_IO, "call kmpc_flush\n");
-  __threadfence();
+  __threadfence_system();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -29,7 +29,7 @@
 // DIS:     .plt       00000018  0000000010030000 BSS
 
 // DT_PLTGOT should point to the start of the .plt section.
-// DT: 0x0000000000000003 PLTGOT               0x10030000
+// DT: 0x0000000000000003 (PLTGOT)             0x10030000
 
     .text
     .abiversion 2

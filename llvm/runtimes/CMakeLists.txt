@@ -210,7 +210,9 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 else() # if this is included from LLVM's CMake
   include(LLVMExternalProjectUtils)
   if (LLVM_EXTERNAL_LIBCXX_SOURCE_DIR AND "libcxx" IN_LIST LLVM_ENABLE_RUNTIMES)
-    set(LIBCXX_HEADER_DIR ${LLVM_INCLUDE_DIR}/c++/v1/)
+    # This looks wrong, but libcxx's build actually wants the header dir to be
+    # the root build dir, not the include directory.
+    set(LIBCXX_HEADER_DIR ${LLVM_BINARY_DIR})
     set(CXX_HEADER_TARGET runtime-libcxx-headers)
     add_subdirectory(${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR}/include ${CXX_HEADER_TARGET})
   endif()
@@ -363,7 +365,7 @@ else() # if this is included from LLVM's CMake
 
     llvm_ExternalProject_Add(runtimes
                              ${CMAKE_CURRENT_SOURCE_DIR}
-                             DEPENDS ${ARG_DEPENDS} runtime-libcxx-headers
+                             DEPENDS ${ARG_DEPENDS} ${CXX_HEADER_TARGET}
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
@@ -454,7 +456,7 @@ else() # if this is included from LLVM's CMake
 
     llvm_ExternalProject_Add(runtimes-${name}
                              ${CMAKE_CURRENT_SOURCE_DIR}
-                             DEPENDS ${${name}_deps} runtime-libcxx-headers
+                             DEPENDS ${${name}_deps} ${CXX_HEADER_TARGET}
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}

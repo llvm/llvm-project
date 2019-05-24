@@ -1211,12 +1211,17 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
           auto *Earlier = dyn_cast<StoreInst>(DepWrite);
           auto *Later = dyn_cast<StoreInst>(Inst);
           if (Earlier && isa<ConstantInt>(Earlier->getValueOperand()) &&
+              DL.typeSizeEqualsStoreSize(
+                  Earlier->getValueOperand()->getType()) &&
               Later && isa<ConstantInt>(Later->getValueOperand()) &&
+              DL.typeSizeEqualsStoreSize(
+                  Later->getValueOperand()->getType()) &&
               memoryIsNotModifiedBetween(Earlier, Later, AA)) {
             // If the store we find is:
             //   a) partially overwritten by the store to 'Loc'
             //   b) the later store is fully contained in the earlier one and
             //   c) they both have a constant value
+            //   d) none of the two stores need padding
             // Merge the two stores, replacing the earlier store's value with a
             // merge of both values.
             // TODO: Deal with other constant types (vectors, etc), and probably

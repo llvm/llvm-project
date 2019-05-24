@@ -34,6 +34,7 @@ namespace llvm {
   class TargetLibraryInfo;
   class FunctionLoweringInfo;
   class ScheduleHazardRecognizer;
+  class SwiftErrorValueTracking;
   class GCFunctionInfo;
   class ScheduleDAGSDNodes;
   class LoadInst;
@@ -45,6 +46,7 @@ public:
   TargetMachine &TM;
   const TargetLibraryInfo *LibInfo;
   FunctionLoweringInfo *FuncInfo;
+  SwiftErrorValueTracking *SwiftError;
   MachineFunction *MF;
   MachineRegisterInfo *RegInfo;
   SelectionDAG *CurDAG;

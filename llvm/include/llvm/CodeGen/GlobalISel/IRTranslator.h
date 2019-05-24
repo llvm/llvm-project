@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Types.h"
+#include "llvm/CodeGen/SwiftErrorValueTracking.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Allocator.h"
@@ -162,6 +163,8 @@ private:
   /// Record of what frame index has been allocated to specified allocas for
   /// this function.
   DenseMap<const AllocaInst *, int> FrameIndices;
+
+  SwiftErrorValueTracking SwiftError;
 
   /// \name Methods for translating form LLVM IR to MachineInstr.
   /// \see ::translate for general information on the translate methods.

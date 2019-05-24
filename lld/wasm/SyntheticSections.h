@@ -246,7 +246,9 @@ public:
                  const std::vector<OutputSegment *> &DataSegments)
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "linking"),
         InitFunctions(InitFunctions), DataSegments(DataSegments) {}
-  bool isNeeded() const override { return Config->Relocatable; }
+  bool isNeeded() const override {
+    return Config->Relocatable || Config->EmitRelocs;
+  }
   void writeBody() override;
   void addToSymtab(Symbol *Sym);
 

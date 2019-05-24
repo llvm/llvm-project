@@ -5,15 +5,23 @@
 ## We check that we warn about this case.
 
 # RUN: yaml2obj --docnum=1 %s -o %t.o
-# RUN: llvm-readobj --dynamic-table %t.o 2>&1 | FileCheck %s --check-prefixes=WARNING,CHECK
-# RUN: llvm-readelf --dynamic-table %t.o 2>&1 | FileCheck %s --check-prefixes=WARNING,CHECK
+# RUN: llvm-readobj --dynamic-table %t.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=WARNING,LLVM
+# RUN: llvm-readelf --dynamic-table %t.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=WARNING,GNU
 
 # WARNING:    warning: The SHT_DYNAMIC section '.dynamic' is not at the start of PT_DYNAMIC segment
-# CHECK:      DynamicSection [ (2 entries)
-# CHECK-NEXT:   Tag                Type     Name/Value
-# CHECK-NEXT:   0x0000000000000018 BIND_NOW 0x1
-# CHECK-NEXT:   0x0000000000000000 NULL     0x0
-# CHECK-NEXT: ]
+
+# LLVM:      DynamicSection [ (2 entries)
+# LLVM-NEXT:   Tag                Type     Name/Value
+# LLVM-NEXT:   0x0000000000000018 BIND_NOW 0x1
+# LLVM-NEXT:   0x0000000000000000 NULL     0x0
+# LLVM-NEXT: ]
+
+# GNU:      Dynamic section at offset 0x{{.*}} contains 2 entries:
+# GNU-NEXT:   Tag                Type       Name/Value
+# GNU-NEXT:   0x0000000000000018 (BIND_NOW) 0x1
+# GNU-NEXT:   0x0000000000000000 (NULL)     0x0
 
 --- !ELF
 FileHeader:

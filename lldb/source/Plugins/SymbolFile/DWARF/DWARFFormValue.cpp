@@ -585,6 +585,14 @@ DWARFDIE DWARFFormValue::Reference() const {
     return ref_cu->GetDIE(value);
   }
 
+  case DW_FORM_ref_sig8: {
+    DWARFTypeUnit *tu =
+        m_unit->GetSymbolFileDWARF()->DebugInfo()->GetTypeUnitForHash(value);
+    if (!tu)
+      return {};
+    return tu->GetDIE(tu->GetTypeOffset());
+  }
+
   default:
     return {};
   }

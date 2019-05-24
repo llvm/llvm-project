@@ -1,6 +1,8 @@
 // Check dynamic section tags in case of shared library file.
 RUN: llvm-readobj --dynamic-table %p/Inputs/dynamic-table-so.mips \
 RUN:     | FileCheck %s -check-prefix ELF-MIPS
+RUN: llvm-readelf --dynamic-table %p/Inputs/dynamic-table-so.mips \
+RUN:     | FileCheck %s --strict-whitespace -check-prefix ELF-MIPS-GNU
 
 ELF-MIPS: Format: ELF32-mips
 ELF-MIPS: Arch: mipsel
@@ -32,6 +34,32 @@ ELF-MIPS:   0x6FFFFFFF VERNEEDNUM           1
 ELF-MIPS:   0x6FFFFFF0 VERSYM               0x4C0
 ELF-MIPS:   0x00000000 NULL                 0x0
 ELF-MIPS: ]
+
+ELF-MIPS-GNU:      Dynamic section at offset 0x{{.*}} contains 23 entries:
+ELF-MIPS-GNU-NEXT:   Tag        Type                 Name/Value
+ELF-MIPS-GNU-NEXT:   0x00000001 (NEEDED)             Shared library: [libc.so.6]
+ELF-MIPS-GNU-NEXT:   0x0000000c (INIT)               0x528
+ELF-MIPS-GNU-NEXT:   0x0000000d (FINI)               0x860
+ELF-MIPS-GNU-NEXT:   0x00000004 (HASH)               0x210
+ELF-MIPS-GNU-NEXT:   0x00000005 (STRTAB)             0x3d8
+ELF-MIPS-GNU-NEXT:   0x00000006 (SYMTAB)             0x2a8
+ELF-MIPS-GNU-NEXT:   0x0000000a (STRSZ)              231 (bytes)
+ELF-MIPS-GNU-NEXT:   0x0000000b (SYMENT)             16 (bytes)
+ELF-MIPS-GNU-NEXT:   0x00000003 (PLTGOT)             0x108e0
+ELF-MIPS-GNU-NEXT:   0x00000011 (REL)                0x518
+ELF-MIPS-GNU-NEXT:   0x00000012 (RELSZ)              16 (bytes)
+ELF-MIPS-GNU-NEXT:   0x00000013 (RELENT)             8 (bytes)
+ELF-MIPS-GNU-NEXT:   0x70000001 (MIPS_RLD_VERSION)   1
+ELF-MIPS-GNU-NEXT:   0x70000005 (MIPS_FLAGS)         NOTPOT
+ELF-MIPS-GNU-NEXT:   0x70000006 (MIPS_BASE_ADDRESS)  0x0
+ELF-MIPS-GNU-NEXT:   0x7000000a (MIPS_LOCAL_GOTNO)   10
+ELF-MIPS-GNU-NEXT:   0x70000011 (MIPS_SYMTABNO)      19
+ELF-MIPS-GNU-NEXT:   0x70000012 (MIPS_UNREFEXTNO)    26
+ELF-MIPS-GNU-NEXT:   0x70000013 (MIPS_GOTSYM)        0xd
+ELF-MIPS-GNU-NEXT:   0x6ffffffe (VERNEED)            0x4e8
+ELF-MIPS-GNU-NEXT:   0x6fffffff (VERNEEDNUM)         1
+ELF-MIPS-GNU-NEXT:   0x6ffffff0 (VERSYM)             0x4c0
+ELF-MIPS-GNU-NEXT:   0x00000000 (NULL)               0x0
 
 // Check dynamic section tags in case of non-pic executable file.
 RUN: llvm-readobj --dynamic-table %p/Inputs/dynamic-table-exe.mips \
@@ -151,6 +179,8 @@ ELF-X86-SO:   0x0000000000000000 NULL                 0x0
 
 RUN: llvm-readobj --dynamic-table %p/Inputs/dynamic-table-so.aarch64 \
 RUN:     | FileCheck %s -check-prefix ELF-AARCH64-SO
+RUN: llvm-readelf --dynamic-table %p/Inputs/dynamic-table-so.aarch64 \
+RUN:     | FileCheck %s --strict-whitespace -check-prefix ELF-AARCH64-SO-GNU
 
 ELF-AARCH64-SO: Format: ELF64-aarch64-little
 ELF-AARCH64-SO: Arch: aarch64
@@ -185,3 +215,32 @@ ELF-AARCH64-SO:   0x000000006FFFFFF0 VERSYM               0x4F2
 ELF-AARCH64-SO:   0x000000006FFFFFF9 RELACOUNT            3
 ELF-AARCH64-SO:   0x0000000000000000 NULL                 0x0
 ELF-AARCH64-SO: ]
+
+ELF-AARCH64-SO-GNU:      Dynamic section at offset 0x{{.*}} contains 26 entries:
+ELF-AARCH64-SO-GNU-NEXT:   Tag                Type                 Name/Value
+ELF-AARCH64-SO-GNU-NEXT:   0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
+ELF-AARCH64-SO-GNU-NEXT:   0x000000000000000c (INIT)               0x660
+ELF-AARCH64-SO-GNU-NEXT:   0x000000000000000d (FINI)               0x83c
+ELF-AARCH64-SO-GNU-NEXT:   0x0000000000000019 (INIT_ARRAY)         0x10db8
+ELF-AARCH64-SO-GNU-NEXT:   0x000000000000001b (INIT_ARRAYSZ)       8 (bytes)
+ELF-AARCH64-SO-GNU-NEXT:   0x000000000000001a (FINI_ARRAY)         0x10dc0
+ELF-AARCH64-SO-GNU-NEXT:   0x000000000000001c (FINI_ARRAYSZ)       8 (bytes)
+ELF-AARCH64-SO-GNU-NEXT:   0x000000006ffffef5 (GNU_HASH)           0x1f0
+ELF-AARCH64-SO-GNU-NEXT:   0x0000000000000005 (STRTAB)             0x420
+ELF-AARCH64-SO-GNU-NEXT:   0x0000000000000006 (SYMTAB)             0x240
+ELF-AARCH64-SO-GNU-NEXT:   0x000000000000000a (STRSZ)              210 (bytes)
+ELF-AARCH64-SO-GNU-NEXT:   0x000000000000000b (SYMENT)             24 (bytes)
+ELF-AARCH64-SO-GNU-NEXT:   0x0000000000000003 (PLTGOT)             0x10fe8
+ELF-AARCH64-SO-GNU-NEXT:   0x0000000000000002 (PLTRELSZ)           96 (bytes)
+ELF-AARCH64-SO-GNU-NEXT:   0x0000000000000014 (PLTREL)             RELA
+ELF-AARCH64-SO-GNU-NEXT:   0x0000000000000017 (JMPREL)             0x600
+ELF-AARCH64-SO-GNU-NEXT:   0x000000006ffffef6 (TLSDESC_PLT)        0x6d0
+ELF-AARCH64-SO-GNU-NEXT:   0x000000006ffffef7 (TLSDESC_GOT)        0x10fe0
+ELF-AARCH64-SO-GNU-NEXT:   0x0000000000000007 (RELA)               0x540
+ELF-AARCH64-SO-GNU-NEXT:   0x0000000000000008 (RELASZ)             192 (bytes)
+ELF-AARCH64-SO-GNU-NEXT:   0x0000000000000009 (RELAENT)            24 (bytes)
+ELF-AARCH64-SO-GNU-NEXT:   0x000000006ffffffe (VERNEED)            0x520
+ELF-AARCH64-SO-GNU-NEXT:   0x000000006fffffff (VERNEEDNUM)         1
+ELF-AARCH64-SO-GNU-NEXT:   0x000000006ffffff0 (VERSYM)             0x4f2
+ELF-AARCH64-SO-GNU-NEXT:   0x000000006ffffff9 (RELACOUNT)          3
+ELF-AARCH64-SO-GNU-NEXT:   0x0000000000000000 (NULL)               0x0

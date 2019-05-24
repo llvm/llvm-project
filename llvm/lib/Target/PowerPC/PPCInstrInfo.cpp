@@ -341,6 +341,8 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case PPC::V_SETALLONESB:
   case PPC::V_SETALLONESH:
   case PPC::V_SETALLONES:
+  case PPC::CRSET:
+  case PPC::CRUNSET:
     return true;
   }
   return false;
