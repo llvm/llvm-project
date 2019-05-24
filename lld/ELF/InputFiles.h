@@ -90,7 +90,7 @@ public:
   // function on files of other types.
   ArrayRef<Symbol *> getSymbols() { return getMutableSymbols(); }
 
-  std::vector<Symbol *> &getMutableSymbols() {
+  MutableArrayRef<Symbol *> getMutableSymbols() {
     assert(FileKind == BinaryKind || FileKind == ObjKind ||
            FileKind == BitcodeKind);
     return Symbols;

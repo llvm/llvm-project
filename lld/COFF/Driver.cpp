@@ -1197,6 +1197,13 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (auto *Arg = Args.getLastArg(OPT_base))
     parseNumbers(Arg->getValue(), &Config->ImageBase);
 
+  // Handle /filealign
+  if (auto *Arg = Args.getLastArg(OPT_filealign)) {
+    parseNumbers(Arg->getValue(), &Config->FileAlign);
+    if (!isPowerOf2_64(Config->FileAlign))
+      error("/filealign: not a power of two: " + Twine(Config->FileAlign));
+  }
+
   // Handle /stack
   if (auto *Arg = Args.getLastArg(OPT_stack))
     parseNumbers(Arg->getValue(), &Config->StackReserve, &Config->StackCommit);

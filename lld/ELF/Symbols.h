@@ -464,7 +464,7 @@ static inline void assertSymbols() {
   AssertSymbol<LazyObject>();
 }
 
-void printTraceSymbol(Symbol *Sym);
+void printTraceSymbol(const Symbol *Sym);
 
 size_t Symbol::getSymbolSize() const {
   switch (kind()) {

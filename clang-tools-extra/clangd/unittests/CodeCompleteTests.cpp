@@ -49,6 +49,9 @@ class IgnoreDiagnostics : public DiagnosticsConsumer {
 
 // GMock helpers for matching completion items.
 MATCHER_P(Named, Name, "") { return arg.Name == Name; }
+MATCHER_P(NameStartsWith, Prefix, "") {
+  return llvm::StringRef(arg.Name).startswith(Prefix);
+}
 MATCHER_P(Scope, S, "") { return arg.Scope == S; }
 MATCHER_P(Qualifier, Q, "") { return arg.RequiredQualifier == Q; }
 MATCHER_P(Labeled, Label, "") {
@@ -1946,10 +1949,13 @@ TEST(CompletionTest, SuggestOverrides) {
   };
   )cpp");
   const auto Results = completions(Text);
-  EXPECT_THAT(Results.Completions,
-              AllOf(Contains(Labeled("void vfunc(bool param, int p) override")),
-                    Contains(Labeled("void ttt(bool param) const override")),
-                    Not(Contains(Labeled("void vfunc(bool param) override")))));
+  EXPECT_THAT(
+      Results.Completions,
+      AllOf(Contains(AllOf(Labeled("void vfunc(bool param, int p) override"),
+                           NameStartsWith("vfunc"))),
+            Contains(AllOf(Labeled("void ttt(bool param) const override"),
+                           NameStartsWith("ttt"))),
+            Not(Contains(Labeled("void vfunc(bool param) override")))));
 }
 
 TEST(CompletionTest, OverridesNonIdentName) {
