@@ -264,6 +264,10 @@ void Sema::Initialize() {
 
     addImplicitTypedef("size_t", Context.getSizeType());
   }
+  if (getLangOpts().SYCLIsDevice) {
+    addImplicitTypedef("__ocl_event_t", Context.OCLEventTy);
+    addImplicitTypedef("__ocl_sampler_t", Context.OCLSamplerTy);
+  }
 
   // Initialize predefined OpenCL types and supported extensions and (optional)
   // core features.

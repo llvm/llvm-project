@@ -129,7 +129,7 @@ CodeGenModule::CodeGenModule(ASTContext &C, const HeaderSearchOptions &HSO,
 
   if (LangOpts.ObjC)
     createObjCRuntime();
-  if (LangOpts.OpenCL)
+  if (LangOpts.OpenCL || LangOpts.SYCLIsDevice)
     createOpenCLRuntime();
   if (LangOpts.OpenMP)
     createOpenMPRuntime();
