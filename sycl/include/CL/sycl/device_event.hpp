@@ -16,7 +16,7 @@ namespace sycl {
 
 class device_event {
 private:
-  cl::__spirv::OpTypeEvent *m_Event;
+  __ocl_event_t *m_Event;
 
 public:
   device_event(const device_event &rhs) = default;
@@ -24,11 +24,11 @@ public:
   device_event &operator=(const device_event &rhs) = default;
   device_event &operator=(device_event &&rhs) = default;
 
-  device_event(cl::__spirv::OpTypeEvent *Event) : m_Event(Event) {}
+  device_event(__ocl_event_t *Event) : m_Event(Event) {}
 
   void wait() {
-    cl::__spirv::OpGroupWaitEvents(cl::__spirv::Scope::Workgroup, 1,
-                                   &m_Event);
+    __spirv_GroupWaitEvents(Scope::Workgroup, 1,
+                                   m_Event);
   }
 };
 

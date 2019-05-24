@@ -81,18 +81,18 @@ public:
                      accessMode == access::mode::read_write,
                      access::fence_space>::type accessSpace =
                      access::fence_space::global_and_local) const {
-    uint32_t flags = ::cl::__spirv::MemorySemantics::SequentiallyConsistent;
+    uint32_t flags = MemorySemantics::SequentiallyConsistent;
     switch (accessSpace) {
     case access::fence_space::global_space:
-      flags |= cl::__spirv::MemorySemantics::CrossWorkgroupMemory;
+      flags |= MemorySemantics::CrossWorkgroupMemory;
       break;
     case access::fence_space::local_space:
-      flags |= cl::__spirv::MemorySemantics::WorkgroupMemory;
+      flags |= MemorySemantics::WorkgroupMemory;
       break;
     case access::fence_space::global_and_local:
     default:
-      flags |= cl::__spirv::MemorySemantics::CrossWorkgroupMemory |
-               cl::__spirv::MemorySemantics::WorkgroupMemory;
+      flags |= MemorySemantics::CrossWorkgroupMemory |
+               MemorySemantics::WorkgroupMemory;
       break;
     }
     // TODO: currently, there is no good way in SPIRV to set the memory
@@ -103,29 +103,29 @@ public:
     // or if we decide that 'accessMode' is the important feature then
     // we can fix this later, for example, by using OpenCL 1.2 functions
     // read_mem_fence() and write_mem_fence().
-    cl::__spirv::OpMemoryBarrier(cl::__spirv::Scope::Workgroup, flags);
+    __spirv_MemoryBarrier(Scope::Workgroup, flags);
   }
 
   template <typename dataT>
   device_event async_work_group_copy(local_ptr<dataT> dest,
                                      global_ptr<dataT> src,
                                      size_t numElements) const {
-    cl::__spirv::OpTypeEvent *e =
-        cl::__spirv::OpGroupAsyncCopyGlobalToLocal<dataT>(
-            cl::__spirv::Scope::Workgroup,
+    __ocl_event_t e =
+        OpGroupAsyncCopyGlobalToLocal<dataT>(
+            Scope::Workgroup,
             dest.get(), src.get(), numElements, 1, 0);
-    return device_event(e);
+    return device_event(&e);
   }
 
   template <typename dataT>
   device_event async_work_group_copy(global_ptr<dataT> dest,
                                      local_ptr<dataT> src,
                                      size_t numElements) const {
-    cl::__spirv::OpTypeEvent *e =
-        cl::__spirv::OpGroupAsyncCopyLocalToGlobal<dataT>(
-            cl::__spirv::Scope::Workgroup,
+    __ocl_event_t e =
+        OpGroupAsyncCopyLocalToGlobal<dataT>(
+            Scope::Workgroup,
             dest.get(), src.get(), numElements, 1, 0);
-    return device_event(e);
+    return device_event(&e);
   }
 
   template <typename dataT>
@@ -133,11 +133,11 @@ public:
                                      global_ptr<dataT> src,
                                      size_t numElements,
                                      size_t srcStride) const {
-    cl::__spirv::OpTypeEvent *e =
-        cl::__spirv::OpGroupAsyncCopyGlobalToLocal<dataT>(
-            cl::__spirv::Scope::Workgroup,
+    __ocl_event_t e =
+        OpGroupAsyncCopyGlobalToLocal<dataT>(
+            Scope::Workgroup,
             dest.get(), src.get(), numElements, srcStride, 0);
-    return device_event(e);
+    return device_event(&e);
   }
 
   template <typename dataT>
@@ -145,11 +145,11 @@ public:
                                      local_ptr<dataT> src,
                                      size_t numElements,
                                      size_t destStride) const {
-    cl::__spirv::OpTypeEvent *e =
-        cl::__spirv::OpGroupAsyncCopyLocalToGlobal<dataT>(
-            cl::__spirv::Scope::Workgroup,
+    __ocl_event_t e =
+        OpGroupAsyncCopyLocalToGlobal<dataT>(
+            Scope::Workgroup,
             dest.get(), src.get(), numElements, destStride, 0);
-    return device_event(e);
+    return device_event(&e);
   }
 
   template <typename... eventTN>

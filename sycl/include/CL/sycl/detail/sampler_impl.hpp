@@ -24,8 +24,8 @@ namespace detail {
 class sampler_impl {
 public:
 #ifdef __SYCL_DEVICE_ONLY__
-  __spirv::OpTypeSampler *m_Sampler;
-  sampler_impl(__spirv::OpTypeSampler *Sampler) : m_Sampler(Sampler) {}
+  __ocl_sampler_t m_Sampler;
+  sampler_impl(__ocl_sampler_t Sampler) : m_Sampler(Sampler) {}
 #else
   std::unordered_map<context, cl_sampler> m_contextToSampler;
 

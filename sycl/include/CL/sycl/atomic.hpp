@@ -51,16 +51,16 @@ template <cl::sycl::access::address_space AS> struct IsValidAtomicAddressSpace {
 // a SPIR-V memory scope
 template <access::address_space AS> struct GetSpirvMemoryScope {};
 template <> struct GetSpirvMemoryScope<access::address_space::global_space> {
-  static constexpr auto scope = cl::__spirv::Scope::Device;
+  static constexpr auto scope = Scope::Device;
 };
 template <> struct GetSpirvMemoryScope<access::address_space::local_space> {
-  static constexpr auto scope = ::cl::__spirv::Scope::Workgroup;
+  static constexpr auto scope = Scope::Workgroup;
 };
 
 // Translate the cl::sycl::memory_order to a SPIR-V builtin order
-static inline ::cl::__spirv::MemorySemantics
+static inline MemorySemantics
 getSpirvMemorySemantics(memory_order Order) {
-  return ::cl::__spirv::MemorySemantics::None;
+  return MemorySemantics::None;
 }
 
 } // namespace detail
@@ -76,7 +76,7 @@ namespace detail {
 // into std::memory_order
 // Only relaxed memory semantics are supported currently
 static inline std::memory_order
-getStdMemoryOrder(::cl::__spirv::MemorySemantics MS) {
+getStdMemoryOrder(MemorySemantics MS) {
   return std::memory_order_relaxed;
 }
 static inline std::memory_order getStdMemoryOrder(::cl::sycl::memory_order MS) {
@@ -84,52 +84,52 @@ static inline std::memory_order getStdMemoryOrder(::cl::sycl::memory_order MS) {
 }
 } // namespace detail
 } // namespace sycl
+} // namespace cl
 
 // std::atomic version of atomic SPIR-V builtins
-namespace __spirv {
 
 template <typename T>
-void OpAtomicStore(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
+void __spirv_AtomicStore(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
   Ptr->store(V, ::cl::sycl::detail::getStdMemoryOrder(MS));
 }
 
 template <typename T>
-T OpAtomicLoad(const std::atomic<T> *Ptr, Scope S, MemorySemantics MS) {
+T __spirv_AtomicLoad(const std::atomic<T> *Ptr, Scope S, MemorySemantics MS) {
   return Ptr->load(::cl::sycl::detail::getStdMemoryOrder(MS));
 }
 
 template <typename T>
-T OpAtomicExchange(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
+T __spirv_AtomicExchange(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
   return Ptr->exchange(V, ::cl::sycl::detail::getStdMemoryOrder(MS));
 }
 
 template <typename T>
-extern T OpAtomicIAdd(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
+extern T __spirv_AtomicIAdd(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
   return Ptr->fetch_add(V, ::cl::sycl::detail::getStdMemoryOrder(MS));
 }
 
 template <typename T>
-extern T OpAtomicISub(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
+extern T __spirv_AtomicISub(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
   return Ptr->fetch_sub(V, ::cl::sycl::detail::getStdMemoryOrder(MS));
 }
 
 template <typename T>
-extern T OpAtomicAnd(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
+extern T __spirv_AtomicAnd(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
   return Ptr->fetch_and(V, ::cl::sycl::detail::getStdMemoryOrder(MS));
 }
 
 template <typename T>
-extern T OpAtomicOr(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
+extern T __spirv_AtomicOr(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
   return Ptr->fetch_or(V, ::cl::sycl::detail::getStdMemoryOrder(MS));
 }
 
 template <typename T>
-extern T OpAtomicXor(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
+extern T __spirv_AtomicXor(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
   return Ptr->fetch_xor(V, ::cl::sycl::detail::getStdMemoryOrder(MS));
 }
 
 template <typename T>
-extern T OpAtomicMin(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
+extern T __spirv_AtomicMin(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
   std::memory_order MemoryOrder = ::cl::sycl::detail::getStdMemoryOrder(MS);
   T Val = Ptr->load(MemoryOrder);
   while (V < Val) {
@@ -141,7 +141,7 @@ extern T OpAtomicMin(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
 }
 
 template <typename T>
-extern T OpAtomicMax(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
+extern T __spirv_AtomicMax(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
   std::memory_order MemoryOrder = ::cl::sycl::detail::getStdMemoryOrder(MS);
   T Val = Ptr->load(MemoryOrder);
   while (V > Val) {
@@ -152,8 +152,6 @@ extern T OpAtomicMax(std::atomic<T> *Ptr, Scope S, MemorySemantics MS, T V) {
   return Val;
 }
 
-} // namespace __spirv
-} // namespace cl
 #endif // !defined(__SYCL_DEVICE_ONLY__)
 
 namespace cl {
@@ -187,17 +185,17 @@ public:
   }
 
   void store(T Operand, memory_order Order = memory_order::relaxed) {
-    ::cl::__spirv::OpAtomicStore(
+    __spirv_AtomicStore(
         Ptr, SpirvScope, detail::getSpirvMemorySemantics(Order), Operand);
   }
 
   T load(memory_order Order = memory_order::relaxed) const {
-    return ::cl::__spirv::OpAtomicLoad(Ptr, SpirvScope,
+    return __spirv_AtomicLoad(Ptr, SpirvScope,
                                        detail::getSpirvMemorySemantics(Order));
   }
 
   T exchange(T Operand, memory_order Order = memory_order::relaxed) {
-    return ::cl::__spirv::OpAtomicExchange(
+    return __spirv_AtomicExchange(
         Ptr, SpirvScope, detail::getSpirvMemorySemantics(Order), Operand);
   }
 
@@ -207,7 +205,7 @@ public:
                           memory_order FailOrder = memory_order::relaxed) {
     STATIC_ASSERT_NOT_FLOAT(T);
 #ifdef __SYCL_DEVICE_ONLY__
-    T Value = ::cl::__spirv::OpAtomicCompareExchange(
+    T Value = __spirv_AtomicCompareExchange(
         Ptr, SpirvScope, detail::getSpirvMemorySemantics(SuccessOrder),
         detail::getSpirvMemorySemantics(FailOrder), Desired, Expected);
     return (Value == Expected);
@@ -220,43 +218,43 @@ public:
 
   T fetch_add(T Operand, memory_order Order = memory_order::relaxed) {
     STATIC_ASSERT_NOT_FLOAT(T);
-    return ::cl::__spirv::OpAtomicIAdd(
+    return __spirv_AtomicIAdd(
         Ptr, SpirvScope, detail::getSpirvMemorySemantics(Order), Operand);
   }
 
   T fetch_sub(T Operand, memory_order Order = memory_order::relaxed) {
     STATIC_ASSERT_NOT_FLOAT(T);
-    return ::cl::__spirv::OpAtomicISub(
+    return __spirv_AtomicISub(
         Ptr, SpirvScope, detail::getSpirvMemorySemantics(Order), Operand);
   }
 
   T fetch_and(T Operand, memory_order Order = memory_order::relaxed) {
     STATIC_ASSERT_NOT_FLOAT(T);
-    return ::cl::__spirv::OpAtomicAnd(
+    return __spirv_AtomicAnd(
         Ptr, SpirvScope, detail::getSpirvMemorySemantics(Order), Operand);
   }
 
   T fetch_or(T Operand, memory_order Order = memory_order::relaxed) {
     STATIC_ASSERT_NOT_FLOAT(T);
-    return ::cl::__spirv::OpAtomicOr(
+    return __spirv_AtomicOr(
         Ptr, SpirvScope, detail::getSpirvMemorySemantics(Order), Operand);
   }
 
   T fetch_xor(T Operand, memory_order Order = memory_order::relaxed) {
     STATIC_ASSERT_NOT_FLOAT(T);
-    return ::cl::__spirv::OpAtomicXor(
+    return __spirv_AtomicXor(
         Ptr, SpirvScope, detail::getSpirvMemorySemantics(Order), Operand);
   }
 
   T fetch_min(T Operand, memory_order Order = memory_order::relaxed) {
     STATIC_ASSERT_NOT_FLOAT(T);
-    return ::cl::__spirv::OpAtomicMin(
+    return __spirv_AtomicMin(
         Ptr, SpirvScope, detail::getSpirvMemorySemantics(Order), Operand);
   }
 
   T fetch_max(T Operand, memory_order Order = memory_order::relaxed) {
     STATIC_ASSERT_NOT_FLOAT(T);
-    return ::cl::__spirv::OpAtomicMax(
+    return __spirv_AtomicMax(
         Ptr, SpirvScope, detail::getSpirvMemorySemantics(Order), Operand);
   }
 

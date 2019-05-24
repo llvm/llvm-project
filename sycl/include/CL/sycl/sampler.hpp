@@ -60,7 +60,7 @@ public:
 private:
 #ifdef __SYCL_DEVICE_ONLY__
   detail::sampler_impl impl;
-  void __init(__spirv::OpTypeSampler *Sampler) { impl.m_Sampler = Sampler; }
+  void __init(__ocl_sampler_t Sampler) { impl.m_Sampler = Sampler; }
   char padding[sizeof(std::shared_ptr<detail::sampler_impl>) - sizeof(impl)];
 #else
   std::shared_ptr<detail::sampler_impl> impl;

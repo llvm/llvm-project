@@ -259,7 +259,7 @@ public:
 #else
     auto PrefetchPtr = reinterpret_cast<const char *>(m_Pointer);
 #endif
-    cl::__spirv::prefetch(PrefetchPtr, NumBytes);
+    __spirv_ocl_prefetch(PrefetchPtr, NumBytes);
   }
 
 private:

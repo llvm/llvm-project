@@ -20,7 +20,7 @@
 namespace cl {
 namespace sycl {
 #ifdef __SYCL_DEVICE_ONLY__
-namespace __sycl_std = cl::__spirv;
+#define __sycl_std
 #else
 namespace __sycl_std = __host_std;
 #endif
@@ -1020,7 +1020,7 @@ cross(T p0, T p1) __NOEXC {
 template <typename T>
 typename std::enable_if<detail::is_sgenfloat<T>::value, T>::type
 dot(T p0, T p1) __NOEXC {
-  return __sycl_std::__invoke_OpFMul<T>(p0, p1);
+  return __sycl_std::__invoke_FMul<T>(p0, p1);
 }
 
 // float dot (vgengeofloat p0, vgengeofloat p1)
@@ -1028,7 +1028,7 @@ template <typename T>
 typename std::enable_if<detail::is_vgengeofloat<T>::value,
                         cl::sycl::cl_float>::type
 dot(T p0, T p1) __NOEXC {
-  return __sycl_std::__invoke_OpDot<cl::sycl::cl_float>(p0, p1);
+  return __sycl_std::__invoke_Dot<cl::sycl::cl_float>(p0, p1);
 }
 
 // double dot (vgengeodouble p0, vgengeodouble p1)
@@ -1036,7 +1036,7 @@ template <typename T>
 typename std::enable_if<detail::is_vgengeodouble<T>::value,
                         cl::sycl::cl_double>::type
 dot(T p0, T p1) __NOEXC {
-  return __sycl_std::__invoke_OpDot<cl::sycl::cl_double>(p0, p1);
+  return __sycl_std::__invoke_Dot<cl::sycl::cl_double>(p0, p1);
 }
 
 // half dot (vgengeohalf p0, vgengeohalf p1)
@@ -1044,7 +1044,7 @@ template <typename T>
 typename std::enable_if<detail::is_vgengeohalf<T>::value,
                         cl::sycl::cl_half>::type
 dot(T p0, T p1) __NOEXC {
-  return __sycl_std::__invoke_OpDot<cl::sycl::cl_half>(p0, p1);
+  return __sycl_std::__invoke_Dot<cl::sycl::cl_half>(p0, p1);
 }
 
 // float distance (gengeofloat p0, gengeofloat p1)
@@ -1162,7 +1162,7 @@ template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 detail::common_rel_ret_t<T> isequal(T x, T y) __NOEXC {
   return detail::RelConverter<T>::apply(
-      __sycl_std::__invoke_OpFOrdEqual<detail::rel_ret_t<T>>(x, y));
+      __sycl_std::__invoke_FOrdEqual<detail::rel_ret_t<T>>(x, y));
 }
 
 // int isnotequal (half x, half y)
@@ -1174,7 +1174,7 @@ template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 detail::common_rel_ret_t<T> isnotequal(T x, T y) __NOEXC {
   return detail::RelConverter<T>::apply(
-      __sycl_std::__invoke_OpFUnordNotEqual<detail::rel_ret_t<T>>(x, y));
+      __sycl_std::__invoke_FUnordNotEqual<detail::rel_ret_t<T>>(x, y));
 }
 
 // int isgreater (half x, half y)
@@ -1186,7 +1186,7 @@ template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 detail::common_rel_ret_t<T> isgreater(T x, T y) __NOEXC {
   return detail::RelConverter<T>::apply(
-      __sycl_std::__invoke_OpFOrdGreaterThan<detail::rel_ret_t<T>>(x, y));
+      __sycl_std::__invoke_FOrdGreaterThan<detail::rel_ret_t<T>>(x, y));
 }
 
 // int isgreaterequal (half x, half y)
@@ -1198,7 +1198,7 @@ template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 detail::common_rel_ret_t<T> isgreaterequal(T x, T y) __NOEXC {
   return detail::RelConverter<T>::apply(
-      __sycl_std::__invoke_OpFOrdGreaterThanEqual<detail::rel_ret_t<T>>(x, y));
+      __sycl_std::__invoke_FOrdGreaterThanEqual<detail::rel_ret_t<T>>(x, y));
 }
 
 // int isless (half x, half y)
@@ -1210,7 +1210,7 @@ template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 detail::common_rel_ret_t<T> isless(T x, T y) __NOEXC {
   return detail::RelConverter<T>::apply(
-      __sycl_std::__invoke_OpFOrdLessThan<detail::rel_ret_t<T>>(x, y));
+      __sycl_std::__invoke_FOrdLessThan<detail::rel_ret_t<T>>(x, y));
 }
 
 // int islessequal (half x, half y)
@@ -1222,7 +1222,7 @@ template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 detail::common_rel_ret_t<T> islessequal(T x, T y) __NOEXC {
   return detail::RelConverter<T>::apply(
-      __sycl_std::__invoke_OpFOrdLessThanEqual<detail::rel_ret_t<T>>(x, y));
+      __sycl_std::__invoke_FOrdLessThanEqual<detail::rel_ret_t<T>>(x, y));
 }
 
 // int islessgreater (half x, half y)
@@ -1234,7 +1234,7 @@ template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 detail::common_rel_ret_t<T> islessgreater(T x, T y) __NOEXC {
   return detail::RelConverter<T>::apply(
-      __sycl_std::__invoke_OpLessOrGreater<detail::rel_ret_t<T>>(x, y));
+      __sycl_std::__invoke_LessOrGreater<detail::rel_ret_t<T>>(x, y));
 }
 
 // int isfinite (half x)
@@ -1246,7 +1246,7 @@ template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 detail::common_rel_ret_t<T> isfinite(T x) __NOEXC {
   return detail::RelConverter<T>::apply(
-      __sycl_std::__invoke_OpIsFinite<detail::rel_ret_t<T>>(x));
+      __sycl_std::__invoke_IsFinite<detail::rel_ret_t<T>>(x));
 }
 
 // int isinf (half x)
@@ -1258,7 +1258,7 @@ template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 detail::common_rel_ret_t<T> isinf(T x) __NOEXC {
   return detail::RelConverter<T>::apply(
-      __sycl_std::__invoke_OpIsInf<detail::rel_ret_t<T>>(x));
+      __sycl_std::__invoke_IsInf<detail::rel_ret_t<T>>(x));
 }
 
 // int isnan (half x)
@@ -1270,7 +1270,7 @@ template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 detail::common_rel_ret_t<T> isnan(T x) __NOEXC {
   return detail::RelConverter<T>::apply(
-      __sycl_std::__invoke_OpIsNan<detail::rel_ret_t<T>>(x));
+      __sycl_std::__invoke_IsNan<detail::rel_ret_t<T>>(x));
 }
 
 // int isnormal (half x)
@@ -1282,7 +1282,7 @@ template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 detail::common_rel_ret_t<T> isnormal(T x) __NOEXC {
   return detail::RelConverter<T>::apply(
-      __sycl_std::__invoke_OpIsNormal<detail::rel_ret_t<T>>(x));
+      __sycl_std::__invoke_IsNormal<detail::rel_ret_t<T>>(x));
 }
 
 // int isordered (half x)
@@ -1294,7 +1294,7 @@ template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 detail::common_rel_ret_t<T> isordered(T x, T y) __NOEXC {
   return detail::RelConverter<T>::apply(
-      __sycl_std::__invoke_OpOrdered<detail::rel_ret_t<T>>(x, y));
+      __sycl_std::__invoke_Ordered<detail::rel_ret_t<T>>(x, y));
 }
 
 // int isunordered (half x, half y)
@@ -1306,7 +1306,7 @@ template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 detail::common_rel_ret_t<T> isunordered(T x, T y) __NOEXC {
   return detail::RelConverter<T>::apply(
-      __sycl_std::__invoke_OpUnordered<detail::rel_ret_t<T>>(x, y));
+      __sycl_std::__invoke_Unordered<detail::rel_ret_t<T>>(x, y));
 }
 
 // int signbit (half x)
@@ -1318,7 +1318,7 @@ template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 detail::common_rel_ret_t<T> signbit(T x) __NOEXC {
   return detail::RelConverter<T>::apply(
-      __sycl_std::__invoke_OpSignBitSet<detail::rel_ret_t<T>>(x));
+      __sycl_std::__invoke_SignBitSet<detail::rel_ret_t<T>>(x));
 }
 
 // int any (sigeninteger x)
@@ -1335,7 +1335,7 @@ typename std::enable_if<detail::is_vigeninteger<T>::value,
                         cl::sycl::cl_int>::type
 any(T x) __NOEXC {
   return detail::rel_sign_bit_test_ret_t<T>(
-      __sycl_std::__invoke_OpAny<detail::rel_sign_bit_test_ret_t<T>>(
+      __sycl_std::__invoke_Any<detail::rel_sign_bit_test_ret_t<T>>(
           detail::rel_sign_bit_test_arg_t<T>(x)));
 }
 
@@ -1353,7 +1353,7 @@ typename std::enable_if<detail::is_vigeninteger<T>::value,
                         cl::sycl::cl_int>::type
 all(T x) __NOEXC {
   return detail::rel_sign_bit_test_ret_t<T>(
-      __sycl_std::__invoke_OpAll<detail::rel_sign_bit_test_ret_t<T>>(
+      __sycl_std::__invoke_All<detail::rel_sign_bit_test_ret_t<T>>(
           detail::rel_sign_bit_test_arg_t<T>(x)));
 }
 
@@ -1370,7 +1370,7 @@ typename std::enable_if<detail::is_geninteger<T>::value &&
                             detail::is_igeninteger<T2>::value,
                         T>::type
 select(T a, T b, T2 c) __NOEXC {
-  return __sycl_std::__invoke_OpSelect<T>(detail::select_arg_c_t<T2>(c), b, a);
+  return __sycl_std::__invoke_Select<T>(detail::select_arg_c_t<T2>(c), b, a);
 }
 
 // geninteger select (geninteger a, geninteger b, ugeninteger c)
@@ -1379,7 +1379,7 @@ typename std::enable_if<detail::is_geninteger<T>::value &&
                             detail::is_ugeninteger<T2>::value,
                         T>::type
 select(T a, T b, T2 c) __NOEXC {
-  return __sycl_std::__invoke_OpSelect<T>(detail::select_arg_c_t<T2>(c), b, a);
+  return __sycl_std::__invoke_Select<T>(detail::select_arg_c_t<T2>(c), b, a);
 }
 
 // genfloatf select (genfloatf a, genfloatf b, genint c)
@@ -1387,7 +1387,7 @@ template <typename T, typename T2>
 typename std::enable_if<
     detail::is_genfloatf<T>::value && detail::is_genint<T2>::value, T>::type
 select(T a, T b, T2 c) __NOEXC {
-  return __sycl_std::__invoke_OpSelect<T>(detail::select_arg_c_t<T2>(c), b, a);
+  return __sycl_std::__invoke_Select<T>(detail::select_arg_c_t<T2>(c), b, a);
 }
 
 // genfloatf select (genfloatf a, genfloatf b, ugenint c)
@@ -1395,7 +1395,7 @@ template <typename T, typename T2>
 typename std::enable_if<
     detail::is_genfloatf<T>::value && detail::is_ugenint<T2>::value, T>::type
 select(T a, T b, T2 c) __NOEXC {
-  return __sycl_std::__invoke_OpSelect<T>(detail::select_arg_c_t<T2>(c), b, a);
+  return __sycl_std::__invoke_Select<T>(detail::select_arg_c_t<T2>(c), b, a);
 }
 
 // genfloatd select (genfloatd a, genfloatd b, igeninteger64 c)
@@ -1404,7 +1404,7 @@ typename std::enable_if<detail::is_genfloatd<T>::value &&
                             detail::is_igeninteger64bit<T2>::value,
                         T>::type
 select(T a, T b, T2 c) __NOEXC {
-  return __sycl_std::__invoke_OpSelect<T>(detail::select_arg_c_t<T2>(c), b, a);
+  return __sycl_std::__invoke_Select<T>(detail::select_arg_c_t<T2>(c), b, a);
 }
 
 // genfloatd select (genfloatd a, genfloatd b, ugeninteger64 c)
@@ -1413,7 +1413,7 @@ typename std::enable_if<detail::is_genfloatd<T>::value &&
                             detail::is_ugeninteger64bit<T2>::value,
                         T>::type
 select(T a, T b, T2 c) __NOEXC {
-  return __sycl_std::__invoke_OpSelect<T>(detail::select_arg_c_t<T2>(c), b, a);
+  return __sycl_std::__invoke_Select<T>(detail::select_arg_c_t<T2>(c), b, a);
 }
 
 // genfloath select (genfloath a, genfloath b, igeninteger16 c)
@@ -1422,7 +1422,7 @@ typename std::enable_if<detail::is_genfloath<T>::value &&
                             detail::is_igeninteger16bit<T2>::value,
                         T>::type
 select(T a, T b, T2 c) __NOEXC {
-  return __sycl_std::__invoke_OpSelect<T>(detail::select_arg_c_t<T2>(c), b, a);
+  return __sycl_std::__invoke_Select<T>(detail::select_arg_c_t<T2>(c), b, a);
 }
 
 // genfloath select (genfloath a, genfloath b, ugeninteger16 c)
@@ -1431,7 +1431,7 @@ typename std::enable_if<detail::is_genfloath<T>::value &&
                             detail::is_ugeninteger16bit<T2>::value,
                         T>::type
 select(T a, T b, T2 c) __NOEXC {
-  return __sycl_std::__invoke_OpSelect<T>(detail::select_arg_c_t<T2>(c), b, a);
+  return __sycl_std::__invoke_Select<T>(detail::select_arg_c_t<T2>(c), b, a);
 }
 
 namespace native {

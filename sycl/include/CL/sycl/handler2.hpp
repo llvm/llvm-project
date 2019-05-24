@@ -76,20 +76,20 @@ namespace detail {
                                                                                \
   template <class DstT> struct InitSizesST##POSTFIX<1, DstT> {                 \
     static void initSize(DstT &Dst) {                                          \
-      Dst[0] = cl::__spirv::get##POSTFIX<0>();                                 \
+      Dst[0] = get##POSTFIX<0>();                                 \
     }                                                                          \
   };                                                                           \
                                                                                \
   template <class DstT> struct InitSizesST##POSTFIX<2, DstT> {                 \
     static void initSize(DstT &Dst) {                                          \
-      Dst[1] = cl::__spirv::get##POSTFIX<1>();                                 \
+      Dst[1] = get##POSTFIX<1>();                                 \
       InitSizesST##POSTFIX<1, DstT>::initSize(Dst);                            \
     }                                                                          \
   };                                                                           \
                                                                                \
   template <class DstT> struct InitSizesST##POSTFIX<3, DstT> {                 \
     static void initSize(DstT &Dst) {                                          \
-      Dst[2] = cl::__spirv::get##POSTFIX<2>();                                 \
+      Dst[2] = get##POSTFIX<2>();                                 \
       InitSizesST##POSTFIX<2, DstT>::initSize(Dst);                            \
     }                                                                          \
   };                                                                           \
