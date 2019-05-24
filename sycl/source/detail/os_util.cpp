@@ -22,7 +22,7 @@
 #elif defined(SYCL_RT_OS_WINDOWS)
 
 #include <Windows.h>
-
+#include <malloc.h>
 #endif
 
 namespace cl {
@@ -87,6 +87,22 @@ size_t OSUtil::getOSMemSize() {
   MemInfo.dwLength = sizeof(MemInfo);
   GlobalMemoryStatusEx(&MemInfo);
   return static_cast<size_t>(MemInfo.ullTotalPhys);
+#endif
+}
+
+void *OSUtil::alignedAlloc(size_t Alignment, size_t NumBytes) {
+#if defined(SYCL_RT_OS_LINUX)
+  return aligned_alloc(Alignment, NumBytes);
+#elif defined(SYCL_RT_OS_WINDOWS)
+  return _aligned_malloc(NumBytes, Alignment);
+#endif
+}
+
+void OSUtil::alignedFree(void *Ptr) {
+#if defined(SYCL_RT_OS_LINUX)
+  free(Ptr);
+#elif defined(SYCL_RT_OS_WINDOWS)
+  _aligned_free(Ptr);
 #endif
 }
 

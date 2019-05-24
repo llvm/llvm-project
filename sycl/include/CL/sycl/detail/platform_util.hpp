@@ -10,6 +10,11 @@
 
 #include <cstdint>
 
+#ifdef _MSC_VER
+// This feature is not supported in MSVC.
+#define __builtin_expect(a, b) (a)
+#endif
+
 namespace cl {
 namespace sycl {
 namespace detail {
@@ -33,6 +38,8 @@ struct PlatformUtil {
   static uint32_t getMemCacheLineSize();
 
   static uint64_t getMemCacheSize();
+
+  static void prefetch(const char *Ptr, size_t NumBytes);
 };
 
 } // namespace detail

@@ -10,6 +10,7 @@
 
 #include <CL/cl.h>
 #include <CL/sycl/detail/cnri.h>
+#include <CL/sycl/detail/os_util.hpp>
 #include <CL/sycl/range.hpp>
 
 #include <cstring>
@@ -49,7 +50,7 @@ public:
   pointer allocate(size_t Size) {
     Size += Alignment - Size % Alignment;
     pointer Result = reinterpret_cast<pointer>(
-      aligned_alloc(Alignment, Size * sizeof(value_type)));
+      detail::OSUtil::alignedAlloc(Alignment, Size * sizeof(value_type)));
     if (!Result)
       throw std::bad_alloc();
     return Result;
@@ -58,7 +59,7 @@ public:
   // Release allocated memory
   void deallocate(pointer Ptr, size_t size) {
     if (Ptr)
-      free(Ptr);
+      detail::OSUtil::alignedFree(Ptr);
   }
 
   bool operator==(const aligned_allocator&) { return true; }

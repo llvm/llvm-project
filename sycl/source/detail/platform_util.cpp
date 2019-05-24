@@ -120,6 +120,27 @@ uint32_t PlatformUtil::getNativeVectorWidth(PlatformUtil::TypeIndex TIndex) {
   return VECTOR_WIDTH_SSE42[Index];
 }
 
+void PlatformUtil::prefetch(const char *Ptr, size_t NumBytes) {
+  if (!Ptr)
+    return;
+
+  // The current implementation assumes 64-byte x86 cache lines.
+  const size_t CacheLineSize = 64;
+  const size_t CacheLineMask = ~(CacheLineSize - 1);
+  const char *PtrEnd = Ptr + NumBytes;
+
+  // Set the pointer to the beginning of the current cache line.
+  Ptr = reinterpret_cast<const char *>(
+            reinterpret_cast<size_t>(Ptr) & CacheLineMask);
+  for (; Ptr < PtrEnd; Ptr += CacheLineSize) {
+#if defined(SYCL_RT_OS_LINUX)
+    __builtin_prefetch(Ptr);
+#elif defined(SYCL_RT_OS_WINDOWS)
+    _mm_prefetch(Ptr, _MM_HINT_T0);
+#endif
+  }
+}
+
 } // namespace detail
 } // namespace sycl
 } // namespace cl

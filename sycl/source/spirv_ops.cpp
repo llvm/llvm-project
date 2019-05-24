@@ -8,6 +8,7 @@
 
 #include <CL/__spirv/spirv_ops.hpp>
 #include <CL/sycl/exception.hpp>
+#include <CL/sycl/detail/platform_util.hpp>
 #include <atomic>
 
 // This operation is NOP on HOST as all operations there are blocking and
@@ -32,12 +33,5 @@ void __spirv_MemoryBarrier(Scope Memory, uint32_t Semantics) noexcept {
 }
 
 void __spirv_ocl_prefetch(const char *Ptr, size_t NumBytes) noexcept {
-  // TODO: the cache line size may be different.
-  const size_t CacheLineSize = 64;
-  size_t NumCacheLines =
-      (NumBytes / CacheLineSize) + ((NumBytes % CacheLineSize) ? 1 : 0);
-  for (; NumCacheLines != 0; NumCacheLines--) {
-    __builtin_prefetch(reinterpret_cast<const void *>(Ptr));
-    Ptr += 64;
-  }
+  cl::sycl::detail::PlatformUtil::prefetch(Ptr, NumBytes);
 }

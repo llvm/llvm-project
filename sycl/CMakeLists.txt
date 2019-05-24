@@ -9,6 +9,9 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 if(MSVC)
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+  # Skip asynchronous C++ exceptions catching and assume "extern C" functions
+  # never throw C++ exceptions.
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
 endif()
 
 # Get clang's version

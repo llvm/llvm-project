@@ -254,12 +254,8 @@ public:
                 Space == access::address_space::global_space>::type>
   void prefetch(size_t NumElements) const {
     size_t NumBytes = NumElements * sizeof(ElementType);
-#ifdef __SYCL_DEVICE_ONLY__
-    auto PrefetchPtr = reinterpret_cast<const __global char *>(m_Pointer);
-#else
-    auto PrefetchPtr = reinterpret_cast<const char *>(m_Pointer);
-#endif
-    __spirv_ocl_prefetch(PrefetchPtr, NumBytes);
+    using ptr_t = typename detail::PtrValueType<char, Space>::type const *;
+    __spirv_ocl_prefetch(reinterpret_cast<ptr_t>(m_Pointer), NumBytes);
   }
 
 private:

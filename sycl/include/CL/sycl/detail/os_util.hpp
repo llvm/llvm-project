@@ -53,6 +53,13 @@ public:
 
   /// Returns the amount of RAM available for the operating system.
   static size_t getOSMemSize();
+
+  /// Allocates \p NumBytes bytes of uninitialized storage whose alignment
+  /// is specified by \p Alignment.
+  static void *alignedAlloc(size_t Alignment, size_t NumBytes);
+
+  /// Deallocates the memory referenced by \p Ptr.
+  static void alignedFree(void *Ptr);
 };
 
 } // namespace detail
