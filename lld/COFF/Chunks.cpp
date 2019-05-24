@@ -43,6 +43,8 @@ SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
 
   setAlignment(Header->getAlignment());
 
+  HasData = !(Header->Characteristics & IMAGE_SCN_CNT_UNINITIALIZED_DATA);
+
   // If linker GC is disabled, every chunk starts out alive.  If linker GC is
   // enabled, treat non-comdat sections as roots. Generally optimized object
   // files will be built with -ffunction-sections or /Gy, so most things worth
@@ -53,7 +55,7 @@ SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
 // SectionChunk is one of the most frequently allocated classes, so it is
 // important to keep it as compact as possible. As of this writing, the number
 // below is the size of this class on x64 platforms.
-static_assert(sizeof(SectionChunk) <= 104, "SectionChunk grew unexpectedly");
+static_assert(sizeof(SectionChunk) <= 88, "SectionChunk grew unexpectedly");
 
 static void add16(uint8_t *P, int16_t V) { write16le(P, read16le(P) + V); }
 static void add32(uint8_t *P, int32_t V) { write32le(P, read32le(P) + V); }
@@ -559,14 +561,6 @@ void SectionChunk::getRuntimePseudoRelocs(
   }
 }
 
-bool SectionChunk::hasData() const {
-  return !(Header->Characteristics & IMAGE_SCN_CNT_UNINITIALIZED_DATA);
-}
-
-uint32_t SectionChunk::getOutputCharacteristics() const {
-  return Header->Characteristics & (PermMask | TypeMask);
-}
-
 bool SectionChunk::isCOMDAT() const {
   return Header->Characteristics & IMAGE_SCN_LNK_COMDAT;
 }
@@ -578,7 +572,7 @@ void SectionChunk::printDiscardedMessage() const {
     message("Discarded " + Sym->getName());
 }
 
-StringRef SectionChunk::getDebugName() {
+StringRef SectionChunk::getDebugName() const {
   if (Sym)
     return Sym->getName();
   return "";
@@ -642,6 +636,7 @@ CommonChunk::CommonChunk(const COFFSymbolRef S) : Sym(S) {
   // than 32 bytes naturally, i.e. round the size up to the next power of two.
   // This is what MSVC link.exe does.
   setAlignment(std::min(32U, uint32_t(PowerOf2Ceil(Sym.getValue()))));
+  HasData = false;
 }
 
 uint32_t CommonChunk::getOutputCharacteristics() const {
@@ -886,7 +881,6 @@ void MergeChunk::assignSubsectionRVAs() {
     if (!C->Live)
       continue;
     size_t Off = Builder.getOffset(toStringRef(C->getContents()));
-    C->setOutputSection(Out);
     C->setRVA(RVA + Off);
   }
 }

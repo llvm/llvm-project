@@ -218,6 +218,19 @@ public:
   void VisitAccessSpecDecl(const AccessSpecDecl *ASD);
   void VisitFriendDecl(const FriendDecl *FD);
 
+  void VisitObjCIvarDecl(const ObjCIvarDecl *D);
+  void VisitObjCMethodDecl(const ObjCMethodDecl *D);
+  void VisitObjCTypeParamDecl(const ObjCTypeParamDecl *D);
+  void VisitObjCCategoryDecl(const ObjCCategoryDecl *D);
+  void VisitObjCCategoryImplDecl(const ObjCCategoryImplDecl *D);
+  void VisitObjCProtocolDecl(const ObjCProtocolDecl *D);
+  void VisitObjCInterfaceDecl(const ObjCInterfaceDecl *D);
+  void VisitObjCImplementationDecl(const ObjCImplementationDecl *D);
+  void VisitObjCCompatibleAliasDecl(const ObjCCompatibleAliasDecl *D);
+  void VisitObjCPropertyDecl(const ObjCPropertyDecl *D);
+  void VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D);
+  void VisitBlockDecl(const BlockDecl *D);
+
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitPredefinedExpr(const PredefinedExpr *PE);
   void VisitUnaryOperator(const UnaryOperator *UO);
@@ -247,6 +260,7 @@ public:
   void VisitLabelStmt(const LabelStmt *LS);
   void VisitGotoStmt(const GotoStmt *GS);
   void VisitWhileStmt(const WhileStmt *WS);
+  void VisitObjCAtCatchStmt(const ObjCAtCatchStmt *OACS);
 
   void visitTextComment(const comments::TextComment *C,
                         const comments::FullComment *);

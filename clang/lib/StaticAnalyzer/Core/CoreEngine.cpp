@@ -216,6 +216,25 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
                                            LC->getDecl(),
                                            LC->getCFG()->getNumBlockIDs());
 
+  // Display a prunable path note to the user if it's a virtual bases branch
+  // and we're taking the path that skips virtual base constructors.
+  if (L.getSrc()->getTerminator().isVirtualBaseBranch() &&
+      L.getDst() == *L.getSrc()->succ_begin()) {
+    ProgramPoint P = L.withTag(getNoteTags().makeNoteTag(
+        [](BugReporterContext &, BugReport &) -> std::string {
+          // TODO: Just call out the name of the most derived class
+          // when we know it.
+          return "Virtual base initialization skipped because "
+                 "it has already been handled by the most derived class";
+        }, /*IsPrunable=*/true));
+    // Perform the transition.
+    ExplodedNodeSet Dst;
+    NodeBuilder Bldr(Pred, Dst, BuilderCtx);
+    Pred = Bldr.generateNode(P, Pred->getState(), Pred);
+    if (!Pred)
+      return;
+  }
+
   // Check if we are entering the EXIT block.
   if (Blk == &(L.getLocationContext()->getCFG()->getExit())) {
     assert(L.getLocationContext()->getCFG()->getExit().empty() &&
@@ -380,6 +399,11 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
     }
   }
 
+  if (B->getTerminator().isVirtualBaseBranch()) {
+    HandleVirtualBaseBranch(B, Pred);
+    return;
+  }
+
   assert(B->succ_size() == 1 &&
          "Blocks with no terminator should have at most 1 successor.");
 
@@ -437,6 +461,29 @@ void CoreEngine::HandlePostStmt(const CFGBlock *B, unsigned StmtIdx,
     NodeBuilderContext Ctx(*this, B, Pred);
     SubEng.processCFGElement((*B)[StmtIdx], Pred, StmtIdx, &Ctx);
   }
+}
+
+void CoreEngine::HandleVirtualBaseBranch(const CFGBlock *B,
+                                         ExplodedNode *Pred) {
+  const LocationContext *LCtx = Pred->getLocationContext();
+  if (const auto *CallerCtor = dyn_cast_or_null<CXXConstructExpr>(
+          LCtx->getStackFrame()->getCallSite())) {
+    switch (CallerCtor->getConstructionKind()) {
+    case CXXConstructExpr::CK_NonVirtualBase:
+    case CXXConstructExpr::CK_VirtualBase: {
+      BlockEdge Loc(B, *B->succ_begin(), LCtx);
+      HandleBlockEdge(Loc, Pred);
+      return;
+    }
+    default:
+      break;
+    }
+  }
+
+  // We either don't see a parent stack frame because we're in the top frame,
+  // or the parent stack frame doesn't initialize our virtual bases.
+  BlockEdge Loc(B, *(B->succ_begin() + 1), LCtx);
+  HandleBlockEdge(Loc, Pred);
 }
 
 /// generateNode - Utility method to generate nodes, hook up successors,

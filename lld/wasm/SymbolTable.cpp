@@ -286,7 +286,11 @@ Symbol *SymbolTable::addDefinedFunction(StringRef Name, uint32_t Flags,
     return S;
   }
 
-  if (Function && !signatureMatches(ExistingFunction, &Function->Signature)) {
+  bool CheckSig = true;
+  if (auto UD = dyn_cast<UndefinedFunction>(ExistingFunction))
+    CheckSig = UD->IsCalledDirectly;
+
+  if (CheckSig && Function && !signatureMatches(ExistingFunction, &Function->Signature)) {
     Symbol* Variant;
     if (getFunctionVariant(S, &Function->Signature, File, &Variant))
       // New variant, always replace
@@ -384,7 +388,8 @@ Symbol *SymbolTable::addDefinedEvent(StringRef Name, uint32_t Flags,
 Symbol *SymbolTable::addUndefinedFunction(StringRef Name, StringRef ImportName,
                                           StringRef ImportModule,
                                           uint32_t Flags, InputFile *File,
-                                          const WasmSignature *Sig) {
+                                          const WasmSignature *Sig,
+                                          bool IsCalledDirectly) {
   LLVM_DEBUG(dbgs() << "addUndefinedFunction: " << Name <<
              " [" << (Sig ? toString(*Sig) : "none") << "]\n");
 
@@ -396,7 +401,7 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef Name, StringRef ImportName,
 
   auto Replace = [&]() {
     replaceSymbol<UndefinedFunction>(S, Name, ImportName, ImportModule, Flags,
-                                     File, Sig);
+                                     File, Sig, IsCalledDirectly);
   };
 
   if (WasInserted)
@@ -409,7 +414,7 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef Name, StringRef ImportName,
       reportTypeError(S, File, WASM_SYMBOL_TYPE_FUNCTION);
       return S;
     }
-    if (!signatureMatches(ExistingFunction, Sig))
+    if (IsCalledDirectly && !signatureMatches(ExistingFunction, Sig))
       if (getFunctionVariant(S, Sig, File, &S))
         Replace();
   }

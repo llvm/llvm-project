@@ -63,7 +63,8 @@ public:
 
   Symbol *addUndefinedFunction(StringRef Name, StringRef ImportName,
                                StringRef ImportModule, uint32_t Flags,
-                               InputFile *File, const WasmSignature *Signature);
+                               InputFile *File, const WasmSignature *Signature,
+                               bool IsCalledDirectly);
   Symbol *addUndefinedData(StringRef Name, uint32_t Flags, InputFile *File);
   Symbol *addUndefinedGlobal(StringRef Name, StringRef ImportName,
                              StringRef ImportModule,  uint32_t Flags,

@@ -20,9 +20,10 @@ namespace wasm {
 
 class LLVM_LIBRARY_VISIBILITY Linker : public GnuTool {
 public:
-  explicit Linker(const ToolChain &TC);
-  bool isLinkJob() const override;
-  bool hasIntegratedCPP() const override;
+  explicit Linker(const ToolChain &TC)
+      : GnuTool("wasm::Linker", "linker", TC) {}
+  bool isLinkJob() const override { return true; }
+  bool hasIntegratedCPP() const override { return false; }
   std::string getLinkerPath(const llvm::opt::ArgList &Args) const;
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,

@@ -17033,6 +17033,34 @@ uint8 __ovld amd_sadw(uint8 src0, uint8 src1, uint8 src2);
 uint16 __ovld amd_sadw(uint16 src0, uint16 src1, uint16 src2);
 #endif // cl_amd_media_ops2
 
+#if defined(cl_arm_integer_dot_product_int8)
+#pragma OPENCL EXTENSION cl_arm_integer_dot_product_int8 : begin
+uint __ovld arm_dot(uchar4 a, uchar4 b);
+int __ovld arm_dot(char4 a, char4 b);
+#pragma OPENCL EXTENSION cl_arm_integer_dot_product_int8 : end
+#endif // defined(cl_arm_integer_dot_product_int8)
+
+#if defined(cl_arm_integer_dot_product_accumulate_int8)
+#pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_int8 : begin
+uint __ovld arm_dot_acc(uchar4 a, uchar4 b, uint c);
+int __ovld arm_dot_acc(char4 a, char4 b, int c);
+#pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_int8 : end
+#endif // defined(cl_arm_integer_dot_product_accumulate_int8)
+
+#if defined(cl_arm_integer_dot_product_accumulate_int16)
+#pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_int16 : begin
+uint __ovld arm_dot_acc(ushort2 a, ushort2 b, uint c);
+int __ovld arm_dot_acc(short2 a, short2 b, int c);
+#pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_int16 : end
+#endif // defined(cl_arm_integer_dot_product_accumulate_int16)
+
+#if defined(cl_arm_integer_dot_product_accumulate_saturate_int8)
+#pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_saturate_int8 : begin
+uint __ovld arm_dot_acc_sat(uchar4 a, uchar4 b, uint c);
+int __ovld arm_dot_acc_sat(char4 a, char4 b, int c);
+#pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_saturate_int8 : end
+#endif // defined(cl_arm_integer_dot_product_accumulate_saturate_int8)
+
 // Disable any extensions we may have enabled previously.
 #pragma OPENCL EXTENSION all : disable
 

@@ -1340,6 +1340,10 @@ def UnixAPIPortabilityChecker : Checker<"UnixAPI">,
 
 let ParentPackage = NonDeterminismAlpha in {
 
+def PointerIterationChecker : Checker<"PointerIteration">,
+  HelpText<"Checks for non-determinism caused by iteration of unordered containers of pointers">,
+  Documentation<HasDocumentation>;
+
 def PointerSortingChecker : Checker<"PointerSorting">,
   HelpText<"Check for non-determinism caused by sorting of pointers">,
   Documentation<HasDocumentation>;

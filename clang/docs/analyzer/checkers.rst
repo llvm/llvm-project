@@ -211,8 +211,8 @@ Check for uninitialized values being returned to the caller.
 .. _cplusplus-checkers:
 
 
-cpluslus
-^^^^^^^^
+cplusplus
+^^^^^^^^^
 
 C++ Checkers.
 
@@ -1949,6 +1949,20 @@ Check for out-of-bounds access in string functions; applies to:`` strncopy, strn
 
  void test() {
    int y = strlen((char *)&test); // warn
+ }
+
+alpha.nondeterminism.PointerIteration (C++)
+"""""""""""""""""""""""""""""""""""""""""""
+Check for non-determinism caused by iterating unordered containers of pointers.
+
+.. code-block:: c
+
+ void test() {
+  int a = 1, b = 2;
+  std::unordered_set<int *> UnorderedPtrSet = {&a, &b};
+
+  for (auto i : UnorderedPtrSet) // warn
+    f(i);
  }
 
 alpha.nondeterminism.PointerSorting (C++)
