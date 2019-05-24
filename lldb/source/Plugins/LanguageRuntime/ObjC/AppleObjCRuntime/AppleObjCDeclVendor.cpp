@@ -62,7 +62,7 @@ public:
           non_const_interface_decl->lookup(name);
 
       return (result.size() != 0);
-    } while (0);
+    } while (false);
 
     SetNoExternalVisibleDeclsForName(decl_ctx, name);
     return false;
@@ -208,7 +208,7 @@ public:
 
     uint32_t stepsLeft = 256;
 
-    while (1) {
+    while (true) {
       if (--stepsLeft == 0) {
         m_is_valid = false;
         return;
@@ -647,7 +647,7 @@ AppleObjCDeclVendor::FindDecls(ConstString name, bool append,
     decls.push_back(iface_decl);
     ret++;
     break;
-  } while (0);
+  } while (false);
 
   return ret;
 }

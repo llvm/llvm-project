@@ -1235,3 +1235,20 @@ define <4 x double> @not_insert_subvector_shuffles_with_same_size(<2 x double> %
   %s3 = shufflevector <4 x double> %s2, <4 x double> %s1, <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>
   ret <4 x double> %s3
 }
+
+; Demanded vector elements may not be able to simplify a shuffle mask
+; before we try to narrow it. This used to crash.
+
+define <4 x float> @insert_subvector_crash_invalid_mask_elt(<2 x float> %x, <4 x float>* %p) {
+; CHECK-LABEL: @insert_subvector_crash_invalid_mask_elt(
+; CHECK-NEXT:    [[WIDEN:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[I:%.*]] = shufflevector <2 x float> [[X]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    store <4 x float> [[I]], <4 x float>* [[P:%.*]], align 16
+; CHECK-NEXT:    ret <4 x float> [[WIDEN]]
+;
+  %widen = shufflevector <2 x float> %x, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %ext2 = extractelement <2 x float> %x, i32 0
+  %I = insertelement <4 x float> %widen, float %ext2, i16 0
+  store <4 x float> %I, <4 x float>* %p
+  ret <4 x float> %widen
+}

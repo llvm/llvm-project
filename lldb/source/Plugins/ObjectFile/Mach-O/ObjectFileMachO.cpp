@@ -5038,7 +5038,7 @@ ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
               triple.setEnvironmentName(os_env.environment);
             return arch;
           }
-        } while (0);
+        } while (false);
         offset = cmd_offset + load_cmd.cmdsize;
       }
 

@@ -192,7 +192,7 @@ lldb_private::Status SelectHelper::Select() {
   struct timeval *tv_ptr = nullptr;
   struct timeval tv = {0, 0};
 
-  while (1) {
+  while (true) {
     using namespace std::chrono;
     // Setup out relative timeout based on the end time if we have one
     if (m_end_time.hasValue()) {

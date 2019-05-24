@@ -483,7 +483,14 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
      "c++2a": 201806L,
    },
    "headers": ["new"],
-   "unimplemented": True,
+   "depends":
+      "TEST_STD_VER > 17"
+      " && defined(__cpp_impl_destroying_delete)"
+      " && __cpp_impl_destroying_delete >= 201806L",
+   "internal_depends":
+      "_LIBCPP_STD_VER > 17"
+      " && defined(__cpp_impl_destroying_delete)"
+      " && __cpp_impl_destroying_delete >= 201806L",
    },
   {"name": "__cpp_lib_three_way_comparison",
    "values": {

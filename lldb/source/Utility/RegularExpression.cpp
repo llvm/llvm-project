@@ -29,13 +29,12 @@ RegularExpression::RegularExpression() : m_re(), m_comp_err(1), m_preg() {
 // Constructor that compiles "re" using "flags" and stores the resulting
 // compiled regular expression into this object.
 RegularExpression::RegularExpression(llvm::StringRef str)
-    : m_re(), m_comp_err(1), m_preg() {
-  memset(&m_preg, 0, sizeof(m_preg));
+    : RegularExpression() {
   Compile(str);
 }
 
-RegularExpression::RegularExpression(const RegularExpression &rhs) {
-  memset(&m_preg, 0, sizeof(m_preg));
+RegularExpression::RegularExpression(const RegularExpression &rhs)
+    : RegularExpression() {
   Compile(rhs.GetText());
 }
 

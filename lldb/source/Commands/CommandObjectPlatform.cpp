@@ -235,7 +235,7 @@ protected:
                  host_platform_sp->GetDescription());
 
     uint32_t idx;
-    for (idx = 0; 1; ++idx) {
+    for (idx = 0; true; ++idx) {
       const char *plugin_name =
           PluginManager::GetPlatformPluginNameAtIndex(idx);
       if (plugin_name == nullptr)

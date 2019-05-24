@@ -86,6 +86,7 @@ int main() {
       // LAMBDA: [[SVAR_ADDR:%.+]] = alloca i{{[0-9]+}}*,
       // LAMBDA: [[SFVAR_ADDR:%.+]] = alloca float*,
       // LAMBDA: [[G1_REF:%.+]] = alloca double*,
+      // LAMBDA: [[G1_REF1:%.+]] = alloca double*,
 
       // Actual private variables to be used in the body (tmp is used for the reference type)
       // LAMBDA: [[G_PRIVATE:%.+]] = alloca double,
@@ -105,9 +106,11 @@ int main() {
       // LAMBDA-DAG: [[SFVAR_ADDR_VAL:%.+]] = load float*, float** [[SFVAR_ADDR]],
       // LAMBDA-DAG: [[G1_ADDR_VAL:%.+]] = load double*, double** [[G1_ADDR]],
       // LAMBDA-DAG: store double* [[G1_ADDR_VAL]], double** [[G1_REF]],
+      // LAMBDA-DAG: [[G1_ADDR_VAL:%.+]] = load double*, double** [[G1_REF]],
+      // LAMBDA-DAG: store double* [[G1_ADDR_VAL]], double** [[G1_REF1]],
       // LAMBDA-DAG: [[G_CONV_VAL:%.+]] = load{{.*}} double, double* [[G_ADDR_VAL]],
       // LAMBDA-DAG: store double [[G_CONV_VAL]], double* [[G_PRIVATE]],
-      // LAMBDA-DAG: [[TMP_VAL:%.+]] = load double*, double** [[G1_REF]],
+      // LAMBDA-DAG: [[TMP_VAL:%.+]] = load double*, double** [[G1_REF1]],
       // LAMBDA-DAG: [[TMP_VAL_VAL:%.+]] = load{{.*}} double, double* [[TMP_VAL]],
       // LAMBDA-DAG: store double [[TMP_VAL_VAL]], double* [[G1_PRIVATE]],
       // LAMBDA-DAG: store double* [[G1_PRIVATE]], double** [[TMP_PRIVATE]],
@@ -224,6 +227,7 @@ int main() {
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_FLOAT_TY]]*,
 // CHECK: [[SVAR_ADDR:%.+]] = alloca i{{[0-9]+}}*,
 // CHECK: [[TMP:%.+]] = alloca [[S_FLOAT_TY]]*,
+// CHECK: [[TMP1:%.+]] = alloca [[S_FLOAT_TY]]*,
 
 // discard omp loop variables
 // CHECK: {{.*}} = alloca i{{[0-9]+}},
@@ -280,7 +284,9 @@ int main() {
 // init var
 // CHECK-DAG: [[VAR_ADDR_VAL:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** [[VAR_ADDR]],
 // CHECK-DAG: store{{.+}} [[VAR_ADDR_VAL]],{{.+}} [[TMP]],
-// CHECK-DAG: [[TMP_VAL:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** [[TMP]],
+// CHECK-DAG: [[VAR_ADDR_VAL:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** [[TMP]],
+// CHECK-DAG: store{{.+}} [[VAR_ADDR_VAL]],{{.+}} [[TMP1]],
+// CHECK-DAG: [[TMP_VAL:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** [[TMP1]],
 // CHECK-DAG: [[VAR_PRIV_BCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[VAR_PRIV]] to{{.+}}
 // CHECK-DAG: [[TMP_BCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[TMP_VAL]] to{{.+}}
 // CHECK-DAG: call{{.+}} @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[VAR_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[TMP_BCAST]],{{.+}})
@@ -321,6 +327,7 @@ int main() {
 // CHECK: [[S_ARR_ADDR:%.+]] = alloca [2 x [[S_INT_TY]]]*,
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_INT_TY]]*,
 // CHECK: [[TMP:%.+]] = alloca [[S_INT_TY]]*,
+// CHECK: [[TMP1:%.+]] = alloca [[S_INT_TY]]*,
 
 // discard omp loop variables
 // CHECK: {{.*}} = alloca i{{[0-9]+}},
@@ -375,7 +382,9 @@ int main() {
 // init var
 // CHECK-DAG: [[VAR_ADDR_VAL:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** [[VAR_ADDR]],
 // CHECK-DAG: store{{.+}} [[VAR_ADDR_VAL]],{{.+}} [[TMP]],
-// CHECK-DAG: [[TMP_VAL:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** [[TMP]],
+// CHECK-DAG: [[VAR_ADDR_VAL:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** [[TMP]],
+// CHECK-DAG: store{{.+}} [[VAR_ADDR_VAL]],{{.+}} [[TMP1]],
+// CHECK-DAG: [[TMP_VAL:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** [[TMP1]],
 // CHECK-DAG: [[VAR_PRIV_BCAST:%.+]] = bitcast [[S_INT_TY]]* [[VAR_PRIV]] to{{.+}}
 // CHECK-DAG: [[TMP_BCAST:%.+]] = bitcast [[S_INT_TY]]* [[TMP_VAL]] to{{.+}}
 // CHECK-DAG: call{{.+}} @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[VAR_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[TMP_BCAST]],{{.+}})

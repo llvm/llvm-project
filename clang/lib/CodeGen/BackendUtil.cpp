@@ -1050,7 +1050,14 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
                           CodeGenOpts.DebugInfoForProfiling);
   }
 
-  PassBuilder PB(TM.get(), PipelineTuningOptions(), PGOOpt);
+  PipelineTuningOptions PTO;
+  // For historical reasons, loop interleaving is set to mirror setting for loop
+  // unrolling.
+  PTO.LoopInterleaving = CodeGenOpts.UnrollLoops;
+  PTO.LoopVectorization = CodeGenOpts.VectorizeLoop;
+  PTO.SLPVectorization = CodeGenOpts.VectorizeSLP;
+
+  PassBuilder PB(TM.get(), PTO, PGOOpt);
 
   // Attempt to load pass plugins and register their callbacks with PB.
   for (auto &PluginFN : CodeGenOpts.PassPlugins) {

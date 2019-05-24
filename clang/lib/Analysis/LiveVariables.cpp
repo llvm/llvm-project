@@ -501,7 +501,7 @@ LiveVariablesImpl::runOnBlock(const CFGBlock *block,
   TransferFunctions TF(*this, val, obs, block);
 
   // Visit the terminator (if any).
-  if (const Stmt *term = block->getTerminator())
+  if (const Stmt *term = block->getTerminatorStmt())
     TF.Visit(const_cast<Stmt*>(term));
 
   // Apply the transfer function for all Stmts in the block.

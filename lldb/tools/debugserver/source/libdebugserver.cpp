@@ -69,7 +69,7 @@ RNBRunLoopMode RNBRunLoopGetStartModeFromRemote(RNBRemoteSP &remoteSP) {
     uint32_t event_mask = RNBContext::event_read_packet_available;
 
     // Spin waiting to get the A packet.
-    while (1) {
+    while (true) {
       DNBLogThreadedIf(LOG_RNB_MAX,
                        "%s ctx.Events().WaitForSetEvents( 0x%08x ) ...",
                        __FUNCTION__, event_mask);

@@ -80,7 +80,7 @@ public:
   /// API below.
   ///
   /// This is used by targets to construct a TTI wrapping their target-specific
-  /// implementaion that encodes appropriate costs for their target.
+  /// implementation that encodes appropriate costs for their target.
   template <typename T> TargetTransformInfo(T Impl);
 
   /// Construct a baseline TTI object using a minimal implementation of
@@ -246,7 +246,7 @@ public:
                        ArrayRef<const Value *> Arguments,
                        const User *U = nullptr) const;
 
-  /// \Return the expected cost of a memcpy, which could e.g. depend on the
+  /// \return the expected cost of a memcpy, which could e.g. depend on the
   /// source/destination type and alignment and the number of bytes copied.
   int getMemcpyCost(const Instruction *I) const;
 
@@ -304,7 +304,7 @@ public:
 
   // Returns true for the target specific
   // set of operations which produce uniform result
-  // even taking non-unform arguments
+  // even taking non-uniform arguments
   bool isAlwaysUniform(const Value *V) const;
 
   /// Returns the address space ID for a target's 'flat' address space. Note
@@ -716,7 +716,7 @@ public:
   bool shouldMaximizeVectorBandwidth(bool OptSize) const;
 
   /// \return The minimum vectorization factor for types of given element
-  /// bit width, or 0 if there is no mimimum VF. The returned value only
+  /// bit width, or 0 if there is no minimum VF. The returned value only
   /// applies when shouldMaximizeVectorBandwidth returns true.
   unsigned getMinimumVF(unsigned ElemWidth) const;
 

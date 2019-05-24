@@ -257,7 +257,7 @@ public:
   }
 
   const Stmt *getTerminator() const {
-    return getBlock()->getTerminator();
+    return getBlock()->getTerminatorStmt();
   }
 
 private:

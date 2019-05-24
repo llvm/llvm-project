@@ -1968,7 +1968,8 @@ static ConstantSDNode *getAsNonOpaqueConstant(SDValue N) {
 }
 
 SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
-  assert(TLI.isBinOp(BO->getOpcode()) && "Unexpected binary operator");
+  assert(TLI.isBinOp(BO->getOpcode()) && BO->getNumValues() == 1 &&
+         "Unexpected binary operator");
 
   // Don't do this unless the old select is going away. We want to eliminate the
   // binary operator, not replace a binop with a select.
@@ -16172,7 +16173,8 @@ static SDValue scalarizeExtractedBinop(SDNode *ExtElt, SelectionDAG &DAG,
   SDValue Vec = ExtElt->getOperand(0);
   SDValue Index = ExtElt->getOperand(1);
   auto *IndexC = dyn_cast<ConstantSDNode>(Index);
-  if (!IndexC || !TLI.isBinOp(Vec.getOpcode()) || !Vec.hasOneUse())
+  if (!IndexC || !TLI.isBinOp(Vec.getOpcode()) || !Vec.hasOneUse() ||
+      Vec.getNode()->getNumValues() != 1)
     return SDValue();
 
   // Targets may want to avoid this to prevent an expensive register transfer.
@@ -17412,7 +17414,7 @@ static SDValue narrowInsertExtractVectorBinOp(SDNode *Extract,
                                               SelectionDAG &DAG) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue BinOp = Extract->getOperand(0);
-  if (!TLI.isBinOp(BinOp.getOpcode()))
+  if (!TLI.isBinOp(BinOp.getOpcode()) || BinOp.getNode()->getNumValues() != 1)
     return SDValue();
 
   SDValue Bop0 = BinOp.getOperand(0), Bop1 = BinOp.getOperand(1);
@@ -17456,7 +17458,7 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
   // feeding an extract subvector.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue BinOp = peekThroughBitcasts(Extract->getOperand(0));
-  if (!TLI.isBinOp(BinOp.getOpcode()))
+  if (!TLI.isBinOp(BinOp.getOpcode()) || BinOp.getNode()->getNumValues() != 1)
     return SDValue();
 
   // The binop must be a vector type, so we can extract some fraction of it.
@@ -18268,7 +18270,7 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
   if (SVN->isSplat() && SVN->getSplatIndex() < (int)NumElts) {
     int SplatIndex = SVN->getSplatIndex();
     if (TLI.isExtractVecEltCheap(VT, SplatIndex) &&
-        TLI.isBinOp(N0.getOpcode())) {
+        TLI.isBinOp(N0.getOpcode()) && N0.getNode()->getNumValues() == 1) {
       // splat (vector_bo L, R), Index -->
       // splat (scalar_bo (extelt L, Index), (extelt R, Index))
       SDValue L = N0.getOperand(0), R = N0.getOperand(1);

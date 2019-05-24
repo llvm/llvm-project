@@ -296,8 +296,7 @@ void CodeGenFunction::GenerateOpenMPCapturedVars(
 
 static Address castValueFromUintptr(CodeGenFunction &CGF, SourceLocation Loc,
                                     QualType DstType, StringRef Name,
-                                    LValue AddrLV,
-                                    bool isReferenceType = false) {
+                                    LValue AddrLV) {
   ASTContext &Ctx = CGF.getContext();
 
   llvm::Value *CastedPtr = CGF.EmitScalarConversion(
@@ -306,17 +305,6 @@ static Address castValueFromUintptr(CodeGenFunction &CGF, SourceLocation Loc,
   Address TmpAddr =
       CGF.MakeNaturalAlignAddrLValue(CastedPtr, Ctx.getPointerType(DstType))
           .getAddress();
-
-  // If we are dealing with references we need to return the address of the
-  // reference instead of the reference of the value.
-  if (isReferenceType) {
-    QualType RefType = Ctx.getLValueReferenceType(DstType);
-    llvm::Value *RefVal = TmpAddr.getPointer();
-    TmpAddr = CGF.CreateMemTemp(RefType, Twine(Name, ".ref"));
-    LValue TmpLVal = CGF.MakeAddrLValue(TmpAddr, RefType);
-    CGF.EmitStoreThroughLValue(RValue::get(RefVal), TmpLVal, /*isInit=*/true);
-  }
-
   return TmpAddr;
 }
 
@@ -473,14 +461,6 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     // use the value that we get from the arguments.
     if (I->capturesVariableByCopy() && FD->getType()->isAnyPointerType()) {
       const VarDecl *CurVD = I->getCapturedVar();
-      // If the variable is a reference we need to materialize it here.
-      if (CurVD->getType()->isReferenceType()) {
-        Address RefAddr = CGF.CreateMemTemp(
-            CurVD->getType(), CGM.getPointerAlign(), ".materialized_ref");
-        CGF.EmitStoreOfScalar(LocalAddr.getPointer(), RefAddr,
-                              /*Volatile=*/false, CurVD->getType());
-        LocalAddr = RefAddr;
-      }
       if (!FO.RegisterCastedArgsOnly)
         LocalAddrs.insert({Args[Cnt], {CurVD, LocalAddr}});
       ++Cnt;
@@ -504,15 +484,12 @@ static llvm::Function *emitOutlinedFunctionPrologue(
       const VarDecl *Var = I->getCapturedVar();
       QualType VarTy = Var->getType();
       Address ArgAddr = ArgLVal.getAddress();
-      if (!VarTy->isReferenceType()) {
-        if (ArgLVal.getType()->isLValueReferenceType()) {
-          ArgAddr = CGF.EmitLoadOfReference(ArgLVal);
-        } else if (!VarTy->isVariablyModifiedType() ||
-                   !VarTy->isPointerType()) {
-          assert(ArgLVal.getType()->isPointerType());
-          ArgAddr = CGF.EmitLoadOfPointer(
-              ArgAddr, ArgLVal.getType()->castAs<PointerType>());
-        }
+      if (ArgLVal.getType()->isLValueReferenceType()) {
+        ArgAddr = CGF.EmitLoadOfReference(ArgLVal);
+      } else if (!VarTy->isVariablyModifiedType() || !VarTy->isPointerType()) {
+        assert(ArgLVal.getType()->isPointerType());
+        ArgAddr = CGF.EmitLoadOfPointer(
+            ArgAddr, ArgLVal.getType()->castAs<PointerType>());
       }
       if (!FO.RegisterCastedArgsOnly) {
         LocalAddrs.insert(
@@ -523,14 +500,12 @@ static llvm::Function *emitOutlinedFunctionPrologue(
       assert(!FD->getType()->isAnyPointerType() &&
              "Not expecting a captured pointer.");
       const VarDecl *Var = I->getCapturedVar();
-      QualType VarTy = Var->getType();
-      LocalAddrs.insert(
-          {Args[Cnt],
-           {Var, FO.UIntPtrCastRequired
-                     ? castValueFromUintptr(CGF, I->getLocation(),
-                                            FD->getType(), Args[Cnt]->getName(),
-                                            ArgLVal, VarTy->isReferenceType())
-                     : ArgLVal.getAddress()}});
+      LocalAddrs.insert({Args[Cnt],
+                         {Var, FO.UIntPtrCastRequired
+                                   ? castValueFromUintptr(
+                                         CGF, I->getLocation(), FD->getType(),
+                                         Args[Cnt]->getName(), ArgLVal)
+                                   : ArgLVal.getAddress()}});
     } else {
       // If 'this' is captured, load it into CXXThisValue.
       assert(I->capturesThis());
@@ -566,16 +541,20 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
                      Out.str());
   llvm::Function *F = emitOutlinedFunctionPrologue(*this, Args, LocalAddrs,
                                                    VLASizes, CXXThisValue, FO);
+  CodeGenFunction::OMPPrivateScope LocalScope(*this);
   for (const auto &LocalAddrPair : LocalAddrs) {
     if (LocalAddrPair.second.first) {
-      setAddrOfLocalVar(LocalAddrPair.second.first,
-                        LocalAddrPair.second.second);
+      LocalScope.addPrivate(LocalAddrPair.second.first, [&LocalAddrPair]() {
+        return LocalAddrPair.second.second;
+      });
     }
   }
+  (void)LocalScope.Privatize();
   for (const auto &VLASizePair : VLASizes)
     VLASizeMap[VLASizePair.second.first] = VLASizePair.second.second;
   PGO.assignRegionCounters(GlobalDecl(CD), F);
   CapturedStmtInfo->EmitBody(*this, CD->getBody());
+  (void)LocalScope.ForceCleanup();
   FinishFunction(CD->getBodyRBrace());
   if (!NeedWrapperFunction)
     return F;
@@ -779,7 +758,25 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
         DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(OrigVD),
                         /*RefersToEnclosingVariableOrCapture=*/FD != nullptr,
                         (*IRef)->getType(), VK_LValue, (*IRef)->getExprLoc());
-        LValue OriginalLVal = EmitLValue(&DRE);
+        LValue OriginalLVal;
+        if (!FD) {
+          // Check if the firstprivate variable is just a constant value.
+          ConstantEmission CE = tryEmitAsConstant(&DRE);
+          if (CE && !CE.isReference()) {
+            // Constant value, no need to create a copy.
+            ++IRef;
+            ++InitsRef;
+            continue;
+          }
+          if (CE && CE.isReference()) {
+            OriginalLVal = CE.getReferenceLValue(*this, &DRE);
+          } else {
+            assert(!CE && "Expected non-constant firstprivate.");
+            OriginalLVal = EmitLValue(&DRE);
+          }
+        } else {
+          OriginalLVal = EmitLValue(&DRE);
+        }
         QualType Type = VD->getType();
         if (Type->isArrayType()) {
           // Emit VarDecl with copy init for arrays.

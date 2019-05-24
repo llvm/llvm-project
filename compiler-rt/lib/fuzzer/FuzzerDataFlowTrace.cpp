@@ -100,6 +100,7 @@ void DataFlowTrace::ReadCoverage(const std::string &DirPath) {
   for (auto &SF : Files) {
     auto Name = Basename(SF.File);
     if (Name == kFunctionsTxt) continue;
+    if (!CorporaHashes.count(Name)) continue;
     std::ifstream IF(SF.File);
     Coverage.AppendCoverage(IF);
   }
@@ -154,9 +155,8 @@ static bool ParseDFTLine(const std::string &Line, size_t *FunctionNum,
   return true;
 }
 
-bool DataFlowTrace::Init(const std::string &DirPath,
-                         std::string *FocusFunction,
-                         Random &Rand) {
+bool DataFlowTrace::Init(const std::string &DirPath, std::string *FocusFunction,
+                         Vector<SizedFile> &CorporaFiles, Random &Rand) {
   if (DirPath.empty()) return false;
   Printf("INFO: DataFlowTrace: reading from '%s'\n", DirPath.c_str());
   Vector<SizedFile> Files;
@@ -164,6 +164,10 @@ bool DataFlowTrace::Init(const std::string &DirPath,
   std::string L;
   size_t FocusFuncIdx = SIZE_MAX;
   Vector<std::string> FunctionNames;
+
+  // Collect the hashes of the corpus files.
+  for (auto &SF : CorporaFiles)
+    CorporaHashes.insert(Hash(FileToVector(SF.File)));
 
   // Read functions.txt
   std::ifstream IF(DirPlusFile(DirPath, kFunctionsTxt));
@@ -211,6 +215,7 @@ bool DataFlowTrace::Init(const std::string &DirPath,
   for (auto &SF : Files) {
     auto Name = Basename(SF.File);
     if (Name == kFunctionsTxt) continue;
+    if (!CorporaHashes.count(Name)) continue;  // not in the corpus.
     NumTraceFiles++;
     // Printf("=== %s\n", Name.c_str());
     std::ifstream IF(SF.File);
@@ -231,11 +236,10 @@ bool DataFlowTrace::Init(const std::string &DirPath,
       }
     }
   }
-  assert(NumTraceFiles == Files.size() - 1);
   Printf("INFO: DataFlowTrace: %zd trace files, %zd functions, "
          "%zd traces with focus function\n",
          NumTraceFiles, NumFunctions, NumTracesWithFocusFunction);
-  return true;
+  return NumTraceFiles > 0;
 }
 
 int CollectDataFlow(const std::string &DFTBinary, const std::string &DirPath,
@@ -311,7 +315,7 @@ int CollectDataFlow(const std::string &DFTBinary, const std::string &DirPath,
   }
   RemoveFile(Temp);
   // Write functions.txt if it's currently empty or doesn't exist.
-  auto FunctionsTxtPath = DirPlusFile(DirPath, "functions.txt");
+  auto FunctionsTxtPath = DirPlusFile(DirPath, kFunctionsTxt);
   if (FileToString(FunctionsTxtPath).empty()) {
     Command Cmd;
     Cmd.addArgument(DFTBinary);

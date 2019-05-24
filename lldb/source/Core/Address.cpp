@@ -161,7 +161,7 @@ static bool ReadAddress(ExecutionContextScope *exe_scope,
 static bool DumpUInt(ExecutionContextScope *exe_scope, const Address &address,
                      uint32_t byte_size, Stream *strm) {
   if (exe_scope == nullptr || byte_size == 0)
-    return 0;
+    return false;
   std::vector<uint8_t> buf(byte_size, 0);
 
   if (ReadBytes(exe_scope, address, &buf[0], buf.size()) == buf.size()) {

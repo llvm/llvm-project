@@ -184,7 +184,7 @@ static bool IsSafeComputationToRemove(Value *V, const TargetLibraryInfo *TLI) {
 /// This GV is a pointer root.  Loop over all users of the global and clean up
 /// any that obviously don't assign the global a value that isn't dynamically
 /// allocated.
-static bool CleanupPointerRootUsers(Value *V,
+static bool CleanupPointerRootUsers(GlobalVariable *GV,
                                     const TargetLibraryInfo *TLI) {
   // A brief explanation of leak checkers.  The goal is to find bugs where
   // pointers are forgotten, causing an accumulating growth in memory
@@ -202,7 +202,7 @@ static bool CleanupPointerRootUsers(Value *V,
   SmallVector<std::pair<Instruction *, Instruction *>, 32> Dead;
 
   // Constants can't be pointers to dynamically allocated memory.
-  for (Value::user_iterator UI = V->user_begin(), E = V->user_end();
+  for (Value::user_iterator UI = GV->user_begin(), E = GV->user_end();
        UI != E;) {
     User *U = *UI++;
     if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
@@ -232,9 +232,6 @@ static bool CleanupPointerRootUsers(Value *V,
           Dead.push_back(std::make_pair(I, MTI));
       }
     } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(U)) {
-      if (CE->getOpcode() == Instruction::GetElementPtr) {
-        Changed |= CleanupPointerRootUsers(CE, TLI);
-      }
       if (CE->use_empty()) {
         CE->destroyConstant();
         Changed = true;
@@ -244,7 +241,7 @@ static bool CleanupPointerRootUsers(Value *V,
         C->destroyConstant();
         // This could have invalidated UI, start over from scratch.
         Dead.clear();
-        CleanupPointerRootUsers(V, TLI);
+        CleanupPointerRootUsers(GV, TLI);
         return true;
       }
     }
@@ -394,22 +391,6 @@ static bool isSafeSROAGEP(User *U) {
                       [](User *UU) { return isSafeSROAElementUse(UU); });
 }
 
-/// Return true if the specified GEP is a safe user of a derived
-/// expression from a global that we want to SROA.
-static bool isSafeSubSROAGEP(User *U) {
-
-  // Check to see if this ConstantExpr GEP is SRA'able.  In particular, we
-  // don't like < 3 operand CE's, and we don't like non-constant integer
-  // indices.  This enforces that all uses are 'gep GV, 0, C, ...' for some
-  // value of C.
-  if (U->getNumOperands() < 3 || !isa<Constant>(U->getOperand(1)) ||
-      !cast<Constant>(U->getOperand(1))->isNullValue())
-    return false;
-
-  return llvm::all_of(U->users(),
-                      [](User *UU) { return isSafeSROAElementUse(UU); });
-}
-
 /// Return true if the specified instruction is a safe user of a derived
 /// expression from a global that we want to SROA.
 static bool isSafeSROAElementUse(Value *V) {
@@ -428,7 +409,7 @@ static bool isSafeSROAElementUse(Value *V) {
     return SI->getOperand(0) != V;
 
   // Otherwise, it must be a GEP. Check it and its users are safe to SRA.
-  return isa<GetElementPtrInst>(I) && isSafeSubSROAGEP(I);
+  return isa<GetElementPtrInst>(I) && isSafeSROAGEP(I);
 }
 
 /// Look at all uses of the global and decide whether it is safe for us to

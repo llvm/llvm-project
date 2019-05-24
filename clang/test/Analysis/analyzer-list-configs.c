@@ -1,14 +1,11 @@
 // RUN: %clang_cc1 -analyzer-config-help 2>&1 | FileCheck %s
+
 // CHECK: OVERVIEW: Clang Static Analyzer -analyzer-config Option List
 //
-// CHECK: USAGE: clang -cc1 [CLANG_OPTIONS] -analyzer-config <OPTION1=VALUE,OPTION2=VALUE,...>
+// CHECK: USAGE: -analyzer-config <OPTION1=VALUE,OPTION2=VALUE,...>
 //
-// CHECK:      clang -cc1 [CLANG_OPTIONS] -analyzer-config OPTION1=VALUE, -analyzer-config OPTION2=VALUE, ...
-//
-// CHECK:      clang [CLANG_OPTIONS] -Xclang -analyzer-config -Xclang<OPTION1=VALUE,OPTION2=VALUE,...>
-//
-// CHECK:      clang [CLANG_OPTIONS] -Xclang -analyzer-config -Xclang OPTION1=VALUE, -Xclang -analyzer-config -Xclang OPTION2=VALUE, ...
-//
+// CHECK:        -analyzer-config OPTION1=VALUE, -analyzer-config
+// CHECK-SAME:   OPTION2=VALUE, ...
 //
 // CHECK: OPTIONS:
 //

@@ -657,10 +657,10 @@ bool EmulateInstructionARM64::EmulateADDSUBImm(const uint32_t opcode) {
 
   if (sub_op) {
     operand2 = NOT(operand2);
-    carry_in = 1;
+    carry_in = true;
     imm = -imm; // For the Register plug offset context below
   } else {
-    carry_in = 0;
+    carry_in = false;
   }
 
   ProcState proc_state;

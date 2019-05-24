@@ -275,14 +275,14 @@ void CoreEngine::HandleBlockEntrance(const BlockEntrance &L,
 }
 
 void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
-  if (const Stmt *Term = B->getTerminator()) {
+  if (const Stmt *Term = B->getTerminatorStmt()) {
     switch (Term->getStmtClass()) {
       default:
         llvm_unreachable("Analysis for this terminator not implemented.");
 
       case Stmt::CXXBindTemporaryExprClass:
         HandleCleanupTemporaryBranch(
-            cast<CXXBindTemporaryExpr>(B->getTerminator().getStmt()), B, Pred);
+            cast<CXXBindTemporaryExpr>(Term), B, Pred);
         return;
 
       // Model static initializers.

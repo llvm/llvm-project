@@ -71,6 +71,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loop-unroll"
 
+cl::opt<bool> llvm::ForgetSCEVInLoopUnroll(
+    "forget-scev-loop-unroll", cl::init(false), cl::Hidden,
+    cl::desc("Forget everything in SCEV when doing LoopUnroll, instead of just"
+             " the current top-most loop. This is somtimes preferred to reduce"
+             " compile time."));
+
 static cl::opt<unsigned>
     UnrollThreshold("unroll-threshold", cl::Hidden,
                     cl::desc("The cost threshold for loop unrolling"));
@@ -1281,7 +1287,7 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
       tryToUnrollLoop(&L, AR.DT, &AR.LI, AR.SE, AR.TTI, AR.AC, *ORE,
                       /*BFI*/ nullptr, /*PSI*/ nullptr,
                       /*PreserveLCSSA*/ true, OptLevel, OnlyWhenForced,
-                      /*ForgetAllSCEV*/ false, /*Count*/ None,
+                      ForgetSCEV, /*Count*/ None,
                       /*Threshold*/ None, /*AllowPartial*/ false,
                       /*Runtime*/ false, /*UpperBound*/ false,
                       /*AllowPeeling*/ false) != LoopUnrollResult::Unmodified;
@@ -1422,7 +1428,7 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
     LoopUnrollResult Result = tryToUnrollLoop(
         &L, DT, &LI, SE, TTI, AC, ORE, BFI, PSI,
         /*PreserveLCSSA*/ true, UnrollOpts.OptLevel, UnrollOpts.OnlyWhenForced,
-        /*ForgetAllSCEV*/ false, /*Count*/ None,
+        UnrollOpts.ForgetSCEV, /*Count*/ None,
         /*Threshold*/ None, UnrollOpts.AllowPartial, UnrollOpts.AllowRuntime,
         UnrollOpts.AllowUpperBound, LocalAllowPeeling);
     Changed |= Result != LoopUnrollResult::Unmodified;

@@ -458,13 +458,6 @@ def FeatureMaxPrivateElementSize4 : FeatureMaxPrivateElementSize<4>;
 def FeatureMaxPrivateElementSize8 : FeatureMaxPrivateElementSize<8>;
 def FeatureMaxPrivateElementSize16 : FeatureMaxPrivateElementSize<16>;
 
-def FeatureEnableHugePrivateBuffer : SubtargetFeature<
-  "huge-private-buffer",
-  "EnableHugePrivateBuffer",
-  "true",
-  "Enable private/scratch buffer sizes greater than 128 GB"
->;
-
 def FeatureDumpCode : SubtargetFeature <"DumpCode",
   "DumpCode",
   "true",

@@ -214,7 +214,7 @@ bool MachThreadList::RestoreRegisterState(nub_thread_t tid, uint32_t save_id) {
   MachThreadSP thread_sp(GetThreadByID(tid));
   if (thread_sp)
     return thread_sp->RestoreRegisterState(save_id);
-  return 0;
+  return false;
 }
 
 nub_size_t MachThreadList::NumThreads() const {

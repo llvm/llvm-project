@@ -13,6 +13,11 @@ declare fp128 @llvm.pow.f128(fp128, fp128)
 
 declare double @llvm.cos.f64(double)
 declare double @llvm.log10.f64(double)
+declare double @llvm.pow.f64(double, double)
+declare double @llvm.log.f64(double)
+declare double @llvm.exp.f64(double)
+declare i32 @llvm.lround(double)
+
 
 
 ; CHECK-LABEL: fp128libcalls:
@@ -51,12 +56,20 @@ define i128 @i128libcalls(i128 %x, i128 %y) {
 }
 
 ; CHECK-LABEL: f64libcalls:
-define double @f64libcalls(double %x, double %y) {
+define i32 @f64libcalls(double %x, double %y) {
  ; CHECK: f64.call $push{{[0-9]}}=, cos
  %a = call double @llvm.cos.f64(double %x)
  ; CHECK: f64.call $push{{[0-9]}}=, log10
  %b = call double @llvm.log10.f64(double %a)
- ret double %b
+ ; CHECK: f64.call $push{{[0-9]}}=, pow
+ %c = call double @llvm.pow.f64(double %b, double %y)
+ ; CHECK: f64.call $push{{[0-9]}}=, log
+ %d = call double @llvm.log.f64(double %c)
+ ; CHECK: f64.call $push{{[0-9]}}=, exp
+ %e = call double @llvm.exp.f64(double %d)
+ ; CHECK: i32.call $push{{[0-9]}}=, lround
+ %f = call i32 @llvm.lround(double %e)
+ ret i32 %f
 }
 
 ; fcmp ord and unord (RTLIB::O_F32 / RTLIB::UO_F32 etc) are a special case (see

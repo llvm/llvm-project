@@ -547,7 +547,7 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
                 match_info_ptr->GetNameMatchType(),
                 match_info_ptr->GetProcessInfo().GetName())) {
           // Skip NULLs
-          while (1) {
+          while (true) {
             const uint8_t *p = data.PeekData(offset, 1);
             if ((p == NULL) || (*p != '\0'))
               break;

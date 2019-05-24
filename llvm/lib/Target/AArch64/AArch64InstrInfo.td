@@ -6203,6 +6203,7 @@ def : Pat<(v4i16 (AArch64NvCast (v2f32 FPR64:$src))), (v4i16 FPR64:$src)>;
 def : Pat<(v2i32 (AArch64NvCast (v2f32 FPR64:$src))), (v2i32 FPR64:$src)>;
 def : Pat<(v2f32 (AArch64NvCast (v2f32 FPR64:$src))), (v2f32 FPR64:$src)>;
 def : Pat<(v1i64 (AArch64NvCast (v2f32 FPR64:$src))), (v1i64 FPR64:$src)>;
+def : Pat<(v1f64 (AArch64NvCast (v2f32 FPR64:$src))), (v1f64 FPR64:$src)>;
 
 // Natural vector casts (128 bit)
 def : Pat<(v16i8 (AArch64NvCast (v4i32 FPR128:$src))), (v16i8 FPR128:$src)>;

@@ -47,3 +47,15 @@ entry:
   store <2 x float> <float 0xC7DFDFDFC0000000, float 0xC7DFDFDFC0000000>, <2 x float>* bitcast (%"st1"* @_gv to <2 x float>*), align 8
   ret void
 }
+
+%struct.Vector3 = type { float, float, float }
+
+define void @nvcast_v2f32_v1f64(%struct.Vector3*) {
+; CHECK-LABEL: _nvcast_v2f32_v1f64
+; CHECK: fmov.2s v[[REG:[0-9]+]], #1.00000000
+; CHECK: str d[[REG]], [x0]
+entry:
+  %a13 = bitcast %struct.Vector3* %0 to <1 x double>*
+  store <1 x double> <double 0x3F8000003F800000>, <1 x double>* %a13, align 8
+  ret void
+}

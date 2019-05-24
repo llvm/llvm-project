@@ -96,7 +96,7 @@ RNBRunLoopMode RNBRunLoopGetStartModeFromRemote(RNBRemote *remote) {
                           RNBContext::event_read_thread_exiting;
 
     // Spin waiting to get the A packet.
-    while (1) {
+    while (true) {
       DNBLogThreadedIf(LOG_RNB_MAX,
                        "%s ctx.Events().WaitForSetEvents( 0x%08x ) ...",
                        __FUNCTION__, event_mask);
@@ -490,6 +490,7 @@ RNBRunLoopMode HandleProcessStateChange(RNBRemote *remote, bool initialize) {
   // Catch all...
   return eRNBRunLoopModeExit;
 }
+
 // This function handles the case where our inferior program is stopped and
 // we are waiting for gdb remote protocol packets. When a packet occurs that
 // makes the inferior run, we need to leave this function with a new state

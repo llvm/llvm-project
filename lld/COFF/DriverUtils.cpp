@@ -833,7 +833,8 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> Argv) {
 
   // Expand response files (arguments in the form of @<filename>)
   // and then parse the argument again.
-  SmallVector<const char *, 256> ExpandedArgv(Argv.data(), Argv.data() + Argv.size());
+  SmallVector<const char *, 256> ExpandedArgv(Argv.data(),
+                                              Argv.data() + Argv.size());
   cl::ExpandResponseFiles(Saver, getQuotingStyle(Args), ExpandedArgv);
   Args = Table.ParseArgs(makeArrayRef(ExpandedArgv).drop_front(), MissingIndex,
                          MissingCount);

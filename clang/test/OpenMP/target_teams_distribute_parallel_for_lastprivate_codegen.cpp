@@ -83,7 +83,7 @@ int main() {
       // LAMBDA: [[SVAR_ADDR:%.+]] = alloca {{.+}},
       // LAMBDA: [[SFVAR_ADDR:%.+]] = alloca {{.+}},
       // LAMBDA: [[G_ADDR:%.+]] = alloca {{.+}},
-      // LAMBDA-64: [[G1_REF:%.+]] = alloca double*,
+      // LAMBDA: [[G1_REF:%.+]] = alloca double*,
       // loop variables
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
@@ -91,19 +91,18 @@ int main() {
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: [[OMP_IS_LAST:%.+]] = alloca i{{[0-9]+}},
-       
+
       // LAMBDA-DAG: store {{.+}} [[G_IN]], {{.+}} [[G_ADDR]],
       // LAMBDA-DAG: store {{.+}} [[G1_IN]], {{.+}} [[G1_ADDR]],
       // LAMBDA-DAG: store {{.+}} [[SVAR_IN]], {{.+}} [[SVAR_ADDR]],
       // LAMBDA-DAG: store {{.+}} [[SFVAR_IN]], {{.+}} [[SFVAR_ADDR]],
-    
+
       // LAMBDA-64-DAG: [[G_TGT:%.+]] = bitcast {{.+}} [[G_ADDR]] to
       // LAMBDA-32-DAG: [[G_TGT:%.+]] = load {{.+}}, {{.+}} [[G_ADDR]],
-      // LAMBDA-64-DAG: [[G1_TGT:%.+]] = load {{.+}}, {{.+}} [[G1_REF]],
-      // LAMBDA-32-DAG: [[G1_TGT:%.+]] = load {{.+}}, {{.+}} [[G1_ADDR]],
+      // LAMBDA-DAG: [[G1_TGT:%.+]] = load {{.+}}, {{.+}} [[G1_REF]],
       // LAMBDA-64-DAG: [[SVAR_TGT:%.+]] = bitcast {{.+}} [[SVAR_ADDR]] to
       // LAMBDA-DAG: [[SFVAR_TGT:%.+]] = bitcast {{.+}} [[SFVAR_ADDR]] to
-      
+
       g1 = 1;
       svar = 3;
       sfvar = 4.0;
@@ -135,7 +134,7 @@ int main() {
       // LAMBDA: [[SVAR_ADDR:%.+]] = alloca {{.+}},
       // LAMBDA: [[SFVAR_ADDR:%.+]] = alloca {{.+}},
       // LAMBDA: [[G_ADDR:%.+]] = alloca {{.+}},
-      // LAMBDA-64: [[G1_REF:%.+]] = alloca double*,
+      // LAMBDA: [[G1_REF:%.+]] = alloca double*,
       // loop variables
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
@@ -143,16 +142,15 @@ int main() {
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: [[OMP_IS_LAST:%.+]] = alloca i{{[0-9]+}},
-       
+
       // LAMBDA-DAG: store {{.+}} [[G_IN]], {{.+}} [[G_ADDR]],
       // LAMBDA-DAG: store {{.+}} [[G1_IN]], {{.+}} [[G1_ADDR]],
       // LAMBDA-DAG: store {{.+}} [[SVAR_IN]], {{.+}} [[SVAR_ADDR]],
       // LAMBDA-DAG: store {{.+}} [[SFVAR_IN]], {{.+}} [[SFVAR_ADDR]],
-    
+
       // LAMBDA-64-DAG: [[G_TGT:%.+]] = bitcast {{.+}} [[G_ADDR]] to
       // LAMBDA-32-DAG: [[G_TGT:%.+]] = load {{.+}}, {{.+}} [[G_ADDR]],
-      // LAMBDA-64-DAG: [[G1_TGT:%.+]] = load {{.+}}, {{.+}} [[G1_REF]],
-      // LAMBDA-32-DAG: [[G1_TGT:%.+]] = load {{.+}}, {{.+}} [[G1_ADDR]],
+      // LAMBDA-DAG: [[G1_TGT:%.+]] = load {{.+}}, {{.+}} [[G1_REF]],
       // LAMBDA-64-DAG: [[SVAR_TGT:%.+]] = bitcast {{.+}} [[SVAR_ADDR]] to
       // LAMBDA-DAG: [[SFVAR_TGT:%.+]] = bitcast {{.+}} [[SFVAR_ADDR]] to
 
@@ -164,7 +162,7 @@ int main() {
       // LAMBDA: [[OMP_IS_LAST_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[OMP_IS_LAST]],
       // LAMBDA: [[IS_LAST_IT:%.+]] = icmp ne i{{[0-9]+}} [[OMP_IS_LAST_VAL]], 0
       // LAMBDA: br i1 [[IS_LAST_IT]], label %[[OMP_LASTPRIV_BLOCK:.+]], label %[[OMP_LASTPRIV_DONE:.+]]
-      
+
       // LAMBDA: [[OMP_LASTPRIV_BLOCK]]:
       // LAMBDA-DAG: store {{.+}}, {{.+}} [[G_TGT]],
       // LAMBDA-DAG: store {{.+}}, {{.+}} [[G1_TGT]],
@@ -176,26 +174,26 @@ int main() {
       // LAMBDA: ret
 
       [&]() {
-	// LAMBDA: define {{.+}} void [[INNER_LAMBDA]](%{{.+}}* [[ARG_PTR:%.+]])
-	// LAMBDA: store %{{.+}}* [[ARG_PTR]], %{{.+}}** [[ARG_PTR_REF:%.+]],
-	g = 2;
-	g1 = 2;
-	svar = 4;
-	sfvar = 8.0;
-	// LAMBDA: [[ARG_PTR:%.+]] = load %{{.+}}*, %{{.+}}** [[ARG_PTR_REF]]
-	// LAMBDA: [[G_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-	// LAMBDA: [[G_REF:%.+]] = load double*, double** [[G_PTR_REF]]
-	// LAMBDA: store double 2.0{{.+}}, double* [[G_REF]]
+        // LAMBDA: define {{.+}} void [[INNER_LAMBDA]](%{{.+}}* [[ARG_PTR:%.+]])
+        // LAMBDA: store %{{.+}}* [[ARG_PTR]], %{{.+}}** [[ARG_PTR_REF:%.+]],
+        g = 2;
+        g1 = 2;
+        svar = 4;
+        sfvar = 8.0;
+        // LAMBDA: [[ARG_PTR:%.+]] = load %{{.+}}*, %{{.+}}** [[ARG_PTR_REF]]
+        // LAMBDA: [[G_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+        // LAMBDA: [[G_REF:%.+]] = load double*, double** [[G_PTR_REF]]
+        // LAMBDA: store double 2.0{{.+}}, double* [[G_REF]]
 
-	// LAMBDA: [[TMP_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
-	// LAMBDA: [[G1_REF:%.+]] = load double*, double** [[TMP_PTR_REF]]
-	// LAMBDA: store double 2.0{{.+}}, double* [[G1_REF]],
-	// LAMBDA: [[SVAR_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
-	// LAMBDA: [[SVAR_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[SVAR_PTR_REF]]
-	// LAMBDA: store i{{[0-9]+}} 4, i{{[0-9]+}}* [[SVAR_REF]]
-	// LAMBDA: [[SFVAR_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 3
-	// LAMBDA: [[SFVAR_REF:%.+]] = load float*, float** [[SFVAR_PTR_REF]]
-	// LAMBDA: store float 8.0{{.+}}, float* [[SFVAR_REF]]
+        // LAMBDA: [[TMP_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+        // LAMBDA: [[G1_REF:%.+]] = load double*, double** [[TMP_PTR_REF]]
+        // LAMBDA: store double 2.0{{.+}}, double* [[G1_REF]],
+        // LAMBDA: [[SVAR_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
+        // LAMBDA: [[SVAR_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[SVAR_PTR_REF]]
+        // LAMBDA: store i{{[0-9]+}} 4, i{{[0-9]+}}* [[SVAR_REF]]
+        // LAMBDA: [[SFVAR_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 3
+        // LAMBDA: [[SFVAR_REF:%.+]] = load float*, float** [[SFVAR_PTR_REF]]
+        // LAMBDA: store float 8.0{{.+}}, float* [[SFVAR_REF]]
       }();
     }
   }();
@@ -237,6 +235,7 @@ int main() {
 // CHECK: [[S_ARR_ADDR:%.+]] = alloca [2 x [[S_FLOAT_TY]]]*,
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_FLOAT_TY]]*,
 // CHECK: [[SVAR_ADDR:%.+]] = alloca i{{[0-9]+}},
+// CHECK: [[TMP_VAR_ADDR:%.+]] = alloca [[S_FLOAT_TY]]*,
 // skip loop variables
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
@@ -256,7 +255,7 @@ int main() {
 // CHECK-64-DAG: [[TVAR_TGT:%.+]] = bitcast {{.+}} [[T_VAR_ADDR]] to
 // CHECK-DAG: [[VEC_TGT:%.+]] = load {{.+}}, {{.+}} [[VEC_ADDR]],
 // CHECK-DAG: [[S_ARR_TGT:%.+]] = load {{.+}}, {{.+}} [[S_ARR_ADDR]],
-// CHECK-DAG: [[VAR_TGT:%.+]] = load {{.+}}, {{.+}} [[VAR_ADDR]],
+// CHECK-DAG: [[VAR_TGT:%.+]] = load {{.+}}, {{.+}} [[TMP_VAR_ADDR]],
 // CHECK-64-DAG: [[SVAR_TGT:%.+]] = bitcast {{.+}} [[SVAR_ADDR]] to
 
 // the distribute loop
@@ -295,6 +294,7 @@ int main() {
 // CHECK: [[S_ARR_ADDR:%.+]] = alloca [2 x [[S_FLOAT_TY]]]*,
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_FLOAT_TY]]*,
 // CHECK: [[SVAR_ADDR:%.+]] = alloca i{{[0-9]+}},
+// CHECK: [[TMP_VAR_ADDR:%.+]] = alloca [[S_FLOAT_TY]]*,
 // skip loop variables
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
@@ -314,7 +314,7 @@ int main() {
 // CHECK-64-DAG: [[TVAR_TGT:%.+]] = bitcast {{.+}} [[T_VAR_ADDR]] to
 // CHECK-DAG: [[VEC_TGT:%.+]] = load {{.+}}, {{.+}} [[VEC_ADDR]],
 // CHECK-DAG: [[S_ARR_TGT:%.+]] = load {{.+}}, {{.+}} [[S_ARR_ADDR]],
-// CHECK-DAG: [[VAR_TGT:%.+]] = load {{.+}}, {{.+}} [[VAR_ADDR]],
+// CHECK-DAG: [[VAR_TGT:%.+]] = load {{.+}}, {{.+}} [[TMP_VAR_ADDR]],
 // CHECK-64-DAG: [[SVAR_TGT:%.+]] = bitcast {{.+}} [[SVAR_ADDR]] to
 
 // the distribute loop
@@ -360,6 +360,7 @@ int main() {
 // CHECK: [[T_VAR_ADDR1:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[S_ARR_ADDR1:%.+]] = alloca [2 x [[S_INT_TY]]]*,
 // CHECK: [[VAR_ADDR1:%.+]] = alloca [[S_INT_TY]]*,
+// CHECK: [[TMP_VAR_ADDR1:%.+]] = alloca [[S_INT_TY]]*,
 // skip loop variables
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
@@ -378,7 +379,7 @@ int main() {
 // CHECK-64-DAG: [[T_VAR_TGT:%.+]] = bitcast {{.+}} [[T_VAR_ADDR1]] to
 // CHECK-DAG: [[VEC_TGT:%.+]] = load {{.+}}, {{.+}} [[VEC_ADDR1]],
 // CHECK-DAG: [[S_ARR_TGT:%.+]] = load {{.+}}, {{.+}} [[S_ARR_ADDR1]],
-// CHECK-DAG: [[VAR_TGT:%.+]] = load {{.+}}, {{.+}} [[VAR_ADDR1]], 
+// CHECK-DAG: [[VAR_TGT:%.+]] = load {{.+}}, {{.+}} [[TMP_VAR_ADDR1]],
 
 // CHECK: call void @__kmpc_for_static_init_4(
 // CHECK: call void {{.*}} @__kmpc_fork_call({{.+}}, {{.+}}, {{.+}} @[[TPAR_OUTL:.+]] to
@@ -397,7 +398,7 @@ int main() {
 // CHECK-DAG: {{.+}} = getelementptr {{.+}} [[S_ARR_TGT]],
 // CHECK: call void @llvm.memcpy.{{.+}}(
 // CHECK-DAG: [[VAR_ADDR_BCAST:%.+]] = bitcast {{.+}} [[VAR_TGT]] to
-// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VAR_ADDR_BCAST]],  
+// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VAR_ADDR_BCAST]],
 // CHECK: ret void
 
 // CHECK: define internal void [[TPAR_OUTL:@.+]](i{{[0-9]+}}* noalias [[GTID_ADDR1:%.+]], i{{[0-9]+}}* noalias %{{.+}}, {{.+}}, {{.+}}, [2 x i{{[0-9]+}}]*{{.+}} [[VEC_IN1:%.+]], i{{[0-9]+}}{{.+}} [[T_VAR_IN1:%.+]], [2 x [[S_INT_TY]]]*{{.+}} [[S_ARR_IN1:%.+]], [[S_INT_TY]]*{{.+}} [[VAR_IN1:%.+]])
@@ -411,6 +412,7 @@ int main() {
 // CHECK: [[T_VAR_ADDR1:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[S_ARR_ADDR1:%.+]] = alloca [2 x [[S_INT_TY]]]*,
 // CHECK: [[VAR_ADDR1:%.+]] = alloca [[S_INT_TY]]*,
+// CHECK: [[TMP_VAR_ADDR1:%.+]] = alloca [[S_INT_TY]]*,
 // skip loop variables
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
@@ -429,7 +431,7 @@ int main() {
 // CHECK-64-DAG: [[T_VAR_TGT:%.+]] = bitcast {{.+}} [[T_VAR_ADDR1]] to
 // CHECK-DAG: [[VEC_TGT:%.+]] = load {{.+}}, {{.+}} [[VEC_ADDR1]],
 // CHECK-DAG: [[S_ARR_TGT:%.+]] = load {{.+}}, {{.+}} [[S_ARR_ADDR1]],
-// CHECK-DAG: [[VAR_TGT:%.+]] = load {{.+}}, {{.+}} [[VAR_ADDR1]], 
+// CHECK-DAG: [[VAR_TGT:%.+]] = load {{.+}}, {{.+}} [[TMP_VAR_ADDR1]],
 
 // CHECK: call void @__kmpc_for_static_init_4(
 // skip body: code generation routine is same as distribute parallel for lastprivate
@@ -448,7 +450,7 @@ int main() {
 // CHECK-DAG: {{.+}} = getelementptr {{.+}} [[S_ARR_TGT]],
 // CHECK: call void @llvm.memcpy.{{.+}}(
 // CHECK-DAG: [[VAR_ADDR_BCAST:%.+]] = bitcast {{.+}} [[VAR_TGT]] to
-// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VAR_ADDR_BCAST]],  
+// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VAR_ADDR_BCAST]],
 // CHECK: ret void
 
 #endif
