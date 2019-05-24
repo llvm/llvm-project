@@ -19,6 +19,13 @@ frame variable a
 # CHECK-LABEL: frame variable a
 # CHECK: (B *) a =
 
+frame variable *a
+# CHECK-LABEL: frame variable *a
+# CHECK:      (B) *a = {
+# CHECK-NEXT:   A = (i = 47)
+# CHECK-NEXT:   j = 42
+# CHECK-NEXT: }
+
 print a->f()
 # CHECK-LABEL: print a->f()
 # CHECK: (int) $0 = 47
@@ -26,3 +33,11 @@ print a->f()
 print ns::A()
 # CHECK-LABEL: print ns::A()
 # CHECK: (ns::A) $1 = (i = 147)
+
+print ns::A().i + a->i
+# CHECK-LABEL: print ns::A().i + a->i
+# CHECK: (int) $2 = 194
+
+print ns::A().getA()
+# CHECK-LABEL: ns::A().getA()
+# CHECK: (A) $3 = (i = 146)

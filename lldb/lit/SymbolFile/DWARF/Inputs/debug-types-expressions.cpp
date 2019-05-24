@@ -11,10 +11,18 @@ struct B: public A {
 namespace ns {
 struct A {
   int i = 147;
+  ::A getA();
   A();
 };
 A::A() = default;
+
+::A A::getA() {
+  ::A a;
+  a.i = i - 1;
+  return a;
 }
+
+} // namespace ns
 
 int foo(A *a) {
   return a->f();
