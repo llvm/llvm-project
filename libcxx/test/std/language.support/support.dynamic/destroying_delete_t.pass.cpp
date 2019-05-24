@@ -15,6 +15,7 @@
 // UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // UNSUPPORTED: apple-clang-9, apple-clang-10
+// UNSUPPORTED: clang-6
 
 #include <new>
 
