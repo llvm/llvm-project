@@ -1,6 +1,6 @@
 set(LLVM_LINK_COMPONENTS Support)
 
-add_clang_library(clangToolingRefactor
+add_clang_library(clangToolingRefactoring
   ASTSelection.cpp
   ASTSelectionRequirements.cpp
   AtomicChange.cpp

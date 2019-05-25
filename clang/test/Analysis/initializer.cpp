@@ -275,3 +275,94 @@ B foo_recursive() {
   B b { foo_recursive() };
 }
 } // namespace CXX17_transparent_init_list_exprs
+
+namespace skip_vbase_initializer_side_effects {
+int glob;
+struct S {
+  S() { ++glob; }
+};
+
+struct A {
+  A() {}
+  A(S s) {}
+};
+
+struct B : virtual A {
+  B() : A(S()) {}
+};
+
+struct C : B {
+  C() {}
+};
+
+void foo() {
+  glob = 0;
+  B b;
+  clang_analyzer_eval(glob == 1); // expected-warning{{TRUE}}
+  C c; // no-crash
+  clang_analyzer_eval(glob == 1); // expected-warning{{TRUE}}
+}
+} // namespace skip_vbase_initializer_side_effects
+
+namespace dont_skip_vbase_initializers_in_most_derived_class {
+struct A {
+  static int a;
+  A() { a = 0; }
+  A(int x) { a = x; }
+};
+
+struct B {
+  static int b;
+  B() { b = 0; }
+  B(int y) { b = y; }
+};
+
+struct C : virtual A {
+  C() : A(1) {}
+};
+struct D : C, virtual B {
+  D() : B(2) {}
+};
+
+void testD() {
+  D d;
+  clang_analyzer_eval(A::a == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(B::b == 2); // expected-warning{{TRUE}}
+}
+
+struct E : virtual B, C {
+  E() : B(2) {}
+};
+
+void testE() {
+  E e;
+  clang_analyzer_eval(A::a == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(B::b == 2); // expected-warning{{TRUE}}
+}
+
+struct F : virtual A, virtual B {
+  F() : A(1) {}
+};
+struct G : F {
+  G(): B(2) {}
+};
+
+void testG() {
+  G g;
+  clang_analyzer_eval(A::a == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(B::b == 2); // expected-warning{{TRUE}}
+}
+
+struct H : virtual B, virtual A {
+  H(): A(1) {}
+};
+struct I : H {
+  I(): B(2) {}
+};
+
+void testI() {
+  I i;
+  clang_analyzer_eval(A::a == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(B::b == 2); // expected-warning{{TRUE}}
+}
+} // namespace dont_skip_vbase_initializers_in_most_derived_class

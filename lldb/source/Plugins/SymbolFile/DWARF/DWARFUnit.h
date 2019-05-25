@@ -157,8 +157,6 @@ public:
 
   const DWARFDebugAranges &GetFunctionAranges();
 
-  DWARFFormValue::FixedFormSizes GetFixedFormSizes();
-
   void SetBaseAddress(dw_addr_t base_addr);
 
   DWARFBaseDIE GetUnitDIEOnly() { return DWARFDIE(this, GetUnitDIEPtrOnly()); }

@@ -33,7 +33,6 @@ extern int g_verbose;
 
 bool DWARFDebugInfoEntry::FastExtract(
     const DWARFDataExtractor &debug_info_data, const DWARFUnit *cu,
-    const DWARFFormValue::FixedFormSizes &fixed_form_sizes,
     lldb::offset_t *offset_ptr) {
   m_offset = *offset_ptr;
   m_parent_idx = 0;
@@ -69,9 +68,9 @@ bool DWARFDebugInfoEntry::FastExtract(
     for (i = 0; i < numAttributes; ++i) {
       form = abbrevDecl->GetFormByIndexUnchecked(i);
 
-      const uint8_t fixed_skip_size = fixed_form_sizes.GetSize(form);
+      llvm::Optional<uint8_t> fixed_skip_size = DWARFFormValue::GetFixedSize(form, cu);
       if (fixed_skip_size)
-        offset += fixed_skip_size;
+        offset += *fixed_skip_size;
       else {
         bool form_is_indirect = false;
         do {
@@ -723,8 +722,8 @@ void DWARFDebugInfoEntry::DumpAttribute(
 // results. Any duplicate attributes will have the first instance take
 // precedence (this can happen for declaration attributes).
 size_t DWARFDebugInfoEntry::GetAttributes(
-    const DWARFUnit *cu, DWARFFormValue::FixedFormSizes fixed_form_sizes,
-    DWARFAttributes &attributes, uint32_t curr_depth) const {
+    const DWARFUnit *cu, DWARFAttributes &attributes,
+    uint32_t curr_depth) const {
   const DWARFAbbreviationDeclaration *abbrevDecl = nullptr;
   lldb::offset_t offset = 0;
   if (cu)
@@ -732,10 +731,6 @@ size_t DWARFDebugInfoEntry::GetAttributes(
 
   if (abbrevDecl) {
     const DWARFDataExtractor &debug_info_data = cu->GetData();
-
-    if (fixed_form_sizes.Empty())
-      fixed_form_sizes = DWARFFormValue::GetFixedFormSizesForAddressSize(
-          cu->GetAddressByteSize());
 
     const uint32_t num_attributes = abbrevDecl->NumAttributes();
     for (uint32_t i = 0; i < num_attributes; ++i) {
@@ -769,9 +764,9 @@ size_t DWARFDebugInfoEntry::GetAttributes(
             spec_die.GetAttributes(attributes, curr_depth + 1);
         }
       } else {
-        const uint8_t fixed_skip_size = fixed_form_sizes.GetSize(form);
+        llvm::Optional<uint8_t> fixed_skip_size = DWARFFormValue::GetFixedSize(form, cu);
         if (fixed_skip_size)
-          offset += fixed_skip_size;
+          offset += *fixed_skip_size;
         else
           DWARFFormValue::SkipValue(form, debug_info_data, &offset, cu);
       }
@@ -1120,7 +1115,7 @@ bool DWARFDebugInfoEntry::MatchesDWARFDeclContext(
 DWARFDIE
 DWARFDebugInfoEntry::GetParentDeclContextDIE(DWARFUnit *cu) const {
   DWARFAttributes attributes;
-  GetAttributes(cu, DWARFFormValue::FixedFormSizes(), attributes);
+  GetAttributes(cu, attributes);
   return GetParentDeclContextDIE(cu, attributes);
 }
 
@@ -1170,7 +1165,7 @@ DWARFDebugInfoEntry::GetParentDeclContextDIE(
 const char *DWARFDebugInfoEntry::GetQualifiedName(DWARFUnit *cu,
                                                   std::string &storage) const {
   DWARFAttributes attributes;
-  GetAttributes(cu, DWARFFormValue::FixedFormSizes(), attributes);
+  GetAttributes(cu, attributes);
   return GetQualifiedName(cu, attributes, storage);
 }
 

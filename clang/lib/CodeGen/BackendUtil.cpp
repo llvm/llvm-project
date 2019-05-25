@@ -1103,6 +1103,7 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   }
 
   PipelineTuningOptions PTO;
+  PTO.LoopUnrolling = CodeGenOpts.UnrollLoops;
   // For historical reasons, loop interleaving is set to mirror setting for loop
   // unrolling.
   PTO.LoopInterleaving = CodeGenOpts.UnrollLoops;

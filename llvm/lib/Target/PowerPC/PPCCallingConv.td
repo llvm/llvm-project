@@ -306,6 +306,13 @@ def CSR_SVR432_Altivec : CalleeSavedRegs<(add CSR_SVR432, CSR_Altivec)>;
 
 def CSR_SVR432_SPE : CalleeSavedRegs<(add CSR_SVR432_COMM, CSR_SPE)>;
 
+def CSR_AIX32 : CalleeSavedRegs<(add R13, R14, R15, R16, R17, R18, R19, R20,
+                                     R21, R22, R23, R24, R25, R26, R27, R28,
+                                     R29, R30, R31, F14, F15, F16, F17, F18,
+                                     F19, F20, F21, F22, F23, F24, F25, F26,
+                                     F27, F28, F29, F30, F31, CR2, CR3, CR4
+                                )>;
+
 def CSR_Darwin64 : CalleeSavedRegs<(add X13, X14, X15, X16, X17, X18, X19, X20,
                                         X21, X22, X23, X24, X25, X26, X27, X28,
                                         X29, X30, X31, F14, F15, F16, F17, F18,
@@ -321,6 +328,13 @@ def CSR_SVR464   : CalleeSavedRegs<(add X14, X15, X16, X17, X18, X19, X20,
                                         F19, F20, F21, F22, F23, F24, F25, F26,
                                         F27, F28, F29, F30, F31, CR2, CR3, CR4
                                    )>;
+
+def CSR_AIX64 : CalleeSavedRegs<(add X14, X15, X16, X17, X18, X19, X20,
+                                     X21, X22, X23, X24, X25, X26, X27, X28,
+                                     X29, X30, X31, F14, F15, F16, F17, F18,
+                                     F19, F20, F21, F22, F23, F24, F25, F26,
+                                     F27, F28, F29, F30, F31, CR2, CR3, CR4
+                                )>;
 
 // CSRs that are handled by prologue, epilogue.
 def CSR_SRV464_TLS_PE : CalleeSavedRegs<(add)>;

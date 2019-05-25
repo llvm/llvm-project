@@ -604,8 +604,10 @@ private:
   static int Kind;
 
   const Callback Cb;
+  const bool IsPrunable;
 
-  NoteTag(Callback &&Cb) : ProgramPointTag(&Kind), Cb(std::move(Cb)) {}
+  NoteTag(Callback &&Cb, bool IsPrunable)
+      : ProgramPointTag(&Kind), Cb(std::move(Cb)), IsPrunable(IsPrunable) {}
 
 public:
   static bool classof(const ProgramPointTag *T) {
@@ -628,15 +630,17 @@ public:
     return "Note Tag";
   }
 
+  bool isPrunable() const { return IsPrunable; }
+
   // Manage memory for NoteTag objects.
   class Factory {
     std::vector<std::unique_ptr<NoteTag>> Tags;
 
   public:
-    const NoteTag *makeNoteTag(Callback &&Cb) {
+    const NoteTag *makeNoteTag(Callback &&Cb, bool IsPrunable = false) {
       // We cannot use make_unique because we cannot access the private
       // constructor from inside it.
-      std::unique_ptr<NoteTag> T(new NoteTag(std::move(Cb)));
+      std::unique_ptr<NoteTag> T(new NoteTag(std::move(Cb), IsPrunable));
       Tags.push_back(std::move(T));
       return Tags.back().get();
     }

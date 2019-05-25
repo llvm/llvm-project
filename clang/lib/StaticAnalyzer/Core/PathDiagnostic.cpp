@@ -724,7 +724,15 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
   const Stmt* S = nullptr;
   if (Optional<BlockEdge> BE = P.getAs<BlockEdge>()) {
     const CFGBlock *BSrc = BE->getSrc();
-    S = BSrc->getTerminatorCondition();
+    if (BSrc->getTerminator().isVirtualBaseBranch()) {
+      // TODO: VirtualBaseBranches should also appear for destructors.
+      // In this case we should put the diagnostic at the end of decl.
+      return PathDiagnosticLocation::createBegin(
+          P.getLocationContext()->getDecl(), SMng);
+
+    } else {
+      S = BSrc->getTerminatorCondition();
+    }
   } else if (Optional<StmtPoint> SP = P.getAs<StmtPoint>()) {
     S = SP->getStmt();
     if (P.getAs<PostStmtPurgeDeadSymbols>())

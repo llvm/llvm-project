@@ -504,15 +504,19 @@ public:
     /// terminator statement is the same statement that branches control flow
     /// in evaluation of matching full expression.
     TemporaryDtorsBranch,
+    /// A shortcut around virtual base initializers. It gets taken when
+    /// virtual base classes have already been initialized by the constructor
+    /// of the most derived class while we're in the base class.
+    VirtualBaseBranch,
 
     /// Number of different kinds, for sanity checks. We subtract 1 so that
     /// to keep receiving compiler warnings when we don't cover all enum values
     /// in a switch.
-    NumKindsMinusOne = TemporaryDtorsBranch
+    NumKindsMinusOne = VirtualBaseBranch
   };
 
 private:
-  static constexpr int KindBits = 1;
+  static constexpr int KindBits = 2;
   static_assert((1 << KindBits) > NumKindsMinusOne,
                 "Not enough room for kind!");
   llvm::PointerIntPair<Stmt *, KindBits> Data;
@@ -531,6 +535,9 @@ public:
   }
   bool isTemporaryDtorsBranch() const {
     return getKind() == TemporaryDtorsBranch;
+  }
+  bool isVirtualBaseBranch() const {
+    return getKind() == VirtualBaseBranch;
   }
 };
 
@@ -552,11 +559,12 @@ public:
 /// Successors: the order in the set of successors is NOT arbitrary.  We
 ///  currently have the following orderings based on the terminator:
 ///
-///     Terminator       Successor Ordering
-///  -----------------------------------------------------
-///       if            Then Block;  Else Block
-///     ? operator      LHS expression;  RHS expression
-///     &&, ||          expression that uses result of && or ||, RHS
+///     Terminator     |   Successor Ordering
+///  ------------------|------------------------------------
+///       if           |  Then Block;  Else Block
+///     ? operator     |  LHS expression;  RHS expression
+///     logical and/or |  expression that consumes the op, RHS
+///     vbase inits    |  already handled by the most derived class; not yet
 ///
 /// But note that any of that may be NULL in case of optimized-out edges.
 class CFGBlock {
@@ -1039,6 +1047,7 @@ public:
     bool AddCXXDefaultInitExprInCtors = false;
     bool AddRichCXXConstructors = false;
     bool MarkElidedCXXConstructors = false;
+    bool AddVirtualBaseBranches = false;
 
     BuildOptions() = default;
 

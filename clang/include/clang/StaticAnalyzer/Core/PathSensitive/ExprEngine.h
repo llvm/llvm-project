@@ -156,8 +156,6 @@ private:
   /// The flag, which specifies the mode of inlining for the engine.
   InliningModes HowToInline;
 
-  NoteTag::Factory NoteTags;
-
 public:
   ExprEngine(cross_tu::CrossTranslationUnitContext &CTU, AnalysisManager &mgr,
              SetOfConstDecls *VisitedCalleesIn,
@@ -399,7 +397,7 @@ public:
   SymbolManager &getSymbolManager() { return SymMgr; }
   MemRegionManager &getRegionManager() { return MRMgr; }
 
-  NoteTag::Factory &getNoteTags() { return NoteTags; }
+  NoteTag::Factory &getNoteTags() { return Engine.getNoteTags(); }
 
 
   // Functions for external checking of whether we have unfinished work

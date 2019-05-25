@@ -16,5 +16,5 @@ target_link_libraries(ClangApplyReplacementsTests
   clangApplyReplacements
   clangBasic
   clangToolingCore
-  clangToolingRefactor
+  clangToolingRefactoring
   )
