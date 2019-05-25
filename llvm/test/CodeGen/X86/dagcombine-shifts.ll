@@ -161,7 +161,7 @@ define i64 @fun11(i16 zeroext %v) {
 ; CHECK-NEXT:    shrl $4, %edi
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    shlq $4, %rax
-; CHECK-NEXT:    leaq (%rax,%rdi), %rax
+; CHECK-NEXT:    addq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:
   %shr = lshr i16 %v, 4
@@ -178,7 +178,7 @@ define i64 @fun12(i32 zeroext %v) {
 ; CHECK-NEXT:    shrl $4, %edi
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    shlq $4, %rax
-; CHECK-NEXT:    leaq (%rax,%rdi), %rax
+; CHECK-NEXT:    addq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:
   %shr = lshr i32 %v, 4

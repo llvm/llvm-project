@@ -9637,8 +9637,7 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
       break;
 
     MVT VT = Src0.getValueType().getSimpleVT();
-    const TargetRegisterClass *RC =
-        getRegClassFor(VT, Src0.getNode()->isDivergent());
+    const TargetRegisterClass *RC = getRegClassFor(VT);
 
     MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
     SDValue UndefReg = DAG.getRegister(MRI.createVirtualRegister(RC), VT);
@@ -10171,92 +10170,4 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   }
 
   return AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(RMW);
-}
-
-const TargetRegisterClass *
-SITargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
-  const TargetRegisterClass *RC = TargetLoweringBase::getRegClassFor(VT, false);
-  const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
-  if (RC == &AMDGPU::VReg_1RegClass && !isDivergent)
-    return &AMDGPU::SReg_64RegClass;
-  if (!TRI->isSGPRClass(RC) && !isDivergent)
-    return TRI->getEquivalentSGPRClass(RC);
-  else if (TRI->isSGPRClass(RC) && isDivergent)
-    return TRI->getEquivalentVGPRClass(RC);
-
-  return RC;
-}
-
-static bool hasIfBreakUser(const Value *V, SetVector<const Value *> &Visited) {
-  if (Visited.count(V))
-    return false;
-  Visited.insert(V);
-  bool Result = false;
-  for (auto U : V->users()) {
-    if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(U)) {
-      if ((Intrinsic->getIntrinsicID() == Intrinsic::amdgcn_if_break) &&
-          (V == U->getOperand(1)))
-        Result = true;
-    } else {
-      Result = hasIfBreakUser(U, Visited);
-    }
-    if (Result)
-      break;
-  }
-  return Result;
-}
-
-bool SITargetLowering::requiresUniformRegister(MachineFunction &MF,
-                                               const Value *V) const {
-  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
-    switch (Intrinsic->getIntrinsicID()) {
-    default:
-      return false;
-    case Intrinsic::amdgcn_if_break:
-      return true;
-    }
-  }
-  if (const ExtractValueInst *ExtValue = dyn_cast<ExtractValueInst>(V)) {
-    if (const IntrinsicInst *Intrinsic =
-            dyn_cast<IntrinsicInst>(ExtValue->getOperand(0))) {
-      switch (Intrinsic->getIntrinsicID()) {
-      default:
-        return false;
-      case Intrinsic::amdgcn_if:
-      case Intrinsic::amdgcn_else: {
-        ArrayRef<unsigned> Indices = ExtValue->getIndices();
-        if (Indices.size() == 1 && Indices[0] == 1) {
-          return true;
-        }
-      }
-      }
-    }
-  }
-  if (const CallInst *CI = dyn_cast<CallInst>(V)) {
-    if (isa<InlineAsm>(CI->getCalledValue())) {
-      const SIRegisterInfo *SIRI = Subtarget->getRegisterInfo();
-      ImmutableCallSite CS(CI);
-      TargetLowering::AsmOperandInfoVector TargetConstraints = ParseConstraints(
-          MF.getDataLayout(), Subtarget->getRegisterInfo(), CS);
-      for (auto &TC : TargetConstraints) {
-        if (TC.Type == InlineAsm::isOutput) {
-          ComputeConstraintToUse(TC, SDValue());
-          unsigned AssignedReg;
-          const TargetRegisterClass *RC;
-          std::tie(AssignedReg, RC) = getRegForInlineAsmConstraint(
-              SIRI, TC.ConstraintCode,
-              getSimpleValueType(MF.getDataLayout(), CS.getType()));
-          if (RC) {
-            MachineRegisterInfo &MRI = MF.getRegInfo();
-            if (AssignedReg != 0 && SIRI->isSGPRReg(MRI, AssignedReg))
-              return true;
-            else if (SIRI->isSGPRClass(RC))
-              return true;
-          }
-        }
-      }
-    }
-  }
-  SetVector<const Value *> Visited;
-  return hasIfBreakUser(V, Visited);
 }

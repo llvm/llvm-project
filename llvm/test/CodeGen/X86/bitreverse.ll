@@ -347,7 +347,7 @@ define i8 @test_bitreverse_i8(i8 %a) {
 ; X64-NEXT:    addb %al, %al
 ; X64-NEXT:    andb $-86, %dil
 ; X64-NEXT:    shrb %dil
-; X64-NEXT:    leal (%rdi,%rax), %eax
+; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %b = call i8 @llvm.bitreverse.i8(i8 %a)
@@ -391,7 +391,7 @@ define i4 @test_bitreverse_i4(i4 %a) {
 ; X64-NEXT:    addb %al, %al
 ; X64-NEXT:    andb $-96, %dil
 ; X64-NEXT:    shrb %dil
-; X64-NEXT:    leal (%rdi,%rax), %eax
+; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    shrb $4, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq

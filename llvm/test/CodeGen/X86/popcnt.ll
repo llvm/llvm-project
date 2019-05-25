@@ -39,7 +39,7 @@ define i8 @cnt8(i8 %x) nounwind readnone {
 ; X64-NEXT:    addb %al, %dil
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shrb $4, %al
-; X64-NEXT:    leal (%rax,%rdi), %eax
+; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    andb $15, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
@@ -227,7 +227,7 @@ define i64 @cnt64(i64 %x) nounwind readnone {
 ; X64-NEXT:    addq %rcx, %rdi
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    shrq $4, %rax
-; X64-NEXT:    leaq (%rax,%rdi), %rax
+; X64-NEXT:    addq %rdi, %rax
 ; X64-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
 ; X64-NEXT:    andq %rax, %rcx
 ; X64-NEXT:    movabsq $72340172838076673, %rax # imm = 0x101010101010101
@@ -347,7 +347,7 @@ define i64 @cnt64_noimplicitfloat(i64 %x) nounwind readnone noimplicitfloat  {
 ; X64-NEXT:    addq %rcx, %rdi
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    shrq $4, %rax
-; X64-NEXT:    leaq (%rax,%rdi), %rax
+; X64-NEXT:    addq %rdi, %rax
 ; X64-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
 ; X64-NEXT:    andq %rax, %rcx
 ; X64-NEXT:    movabsq $72340172838076673, %rax # imm = 0x101010101010101

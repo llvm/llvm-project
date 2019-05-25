@@ -8,7 +8,7 @@
 //
 // This file defines the pass that finds instructions that can be
 // re-written as LEA instructions in order to reduce pipeline delays.
-// When optimizing for size it replaces suitable LEAs with INC or DEC.
+// It replaces LEAs with ADD/INC/DEC when that is better for size/speed.
 //
 //===----------------------------------------------------------------------===//
 
@@ -70,10 +70,11 @@ class FixupLEAPass : public MachineFunctionPass {
   MachineInstr *processInstrForSlow3OpLEA(MachineInstr &MI,
                                           MachineBasicBlock &MBB);
 
-  /// Look for LEAs that add 1 to reg or subtract 1 from reg
-  /// and convert them to INC or DEC respectively.
-  bool fixupIncDec(MachineBasicBlock::iterator &I,
-                   MachineBasicBlock &MBB) const;
+  /// Look for LEAs that are really two address LEAs that we might be able to
+  /// turn into regular ADD instructions.
+  bool optTwoAddrLEA(MachineBasicBlock::iterator &I,
+                     MachineBasicBlock &MBB, bool OptIncDec,
+                     bool UseLEAForSP) const;
 
   /// Determine if an instruction references a machine register
   /// and, if so, whether it reads or writes the register.
@@ -114,7 +115,8 @@ public:
 
 private:
   TargetSchedModel TSM;
-  const X86InstrInfo *TII; // Machine instruction info.
+  const X86InstrInfo *TII;
+  const X86RegisterInfo *TRI;
 };
 }
 
@@ -197,13 +199,11 @@ bool FixupLEAPass::runOnMachineFunction(MachineFunction &MF) {
   bool LEAUsesAG = ST.LEAusesAG();
 
   bool OptIncDec = !ST.slowIncDec() || MF.getFunction().hasOptSize();
-  bool OptLEA = LEAUsesAG || IsSlowLEA || IsSlow3OpsLEA;
-
-  if (!OptLEA && !OptIncDec)
-    return false;
+  bool UseLEAForSP = ST.useLeaForSP();
 
   TSM.init(&ST);
   TII = ST.getInstrInfo();
+  TRI = ST.getRegisterInfo();
 
   LLVM_DEBUG(dbgs() << "Start X86FixupLEAs\n";);
   for (MachineBasicBlock &MBB : MF) {
@@ -212,7 +212,7 @@ bool FixupLEAPass::runOnMachineFunction(MachineFunction &MF) {
       if (!isLEA(I->getOpcode()))
         continue;
 
-      if (OptIncDec && fixupIncDec(I, MBB))
+      if (optTwoAddrLEA(I, MBB, OptIncDec, UseLEAForSP))
         continue;
 
       if (IsSlowLEA) {
@@ -323,8 +323,8 @@ static inline unsigned getADDrrFromLEA(unsigned LEAOpcode) {
   default:
     llvm_unreachable("Unexpected LEA instruction");
   case X86::LEA32r:
-    return X86::ADD32rr;
   case X86::LEA64_32r:
+    return X86::ADD32rr;
   case X86::LEA64r:
     return X86::ADD64rr;
   }
@@ -344,48 +344,106 @@ static inline unsigned getADDriFromLEA(unsigned LEAOpcode,
   }
 }
 
-/// isLEASimpleIncOrDec - Does this LEA have one these forms:
-/// lea  %reg, 1(%reg)
-/// lea  %reg, -1(%reg)
-static inline bool isLEASimpleIncOrDec(MachineInstr &LEA) {
-  unsigned SrcReg = LEA.getOperand(1 + X86::AddrBaseReg).getReg();
-  unsigned DstReg = LEA.getOperand(0).getReg();
-  const MachineOperand &AddrDisp = LEA.getOperand(1 + X86::AddrDisp);
-  return SrcReg == DstReg &&
-         LEA.getOperand(1 + X86::AddrIndexReg).getReg() == 0 &&
-         LEA.getOperand(1 + X86::AddrSegmentReg).getReg() == 0 &&
-         AddrDisp.isImm() &&
-         (AddrDisp.getImm() == 1 || AddrDisp.getImm() == -1);
+static inline unsigned getINCDECFromLEA(unsigned LEAOpcode, bool IsINC) {
+  switch (LEAOpcode) {
+  default:
+    llvm_unreachable("Unexpected LEA instruction");
+  case X86::LEA32r:
+  case X86::LEA64_32r:
+    return IsINC ? X86::INC32r : X86::DEC32r;
+  case X86::LEA64r:
+    return IsINC ? X86::INC64r : X86::DEC64r;
+  }
 }
 
-bool FixupLEAPass::fixupIncDec(MachineBasicBlock::iterator &I,
-                               MachineBasicBlock &MBB) const {
+bool FixupLEAPass::optTwoAddrLEA(MachineBasicBlock::iterator &I,
+                                 MachineBasicBlock &MBB, bool OptIncDec,
+                                 bool UseLEAForSP) const {
   MachineInstr &MI = *I;
 
-  if (isLEASimpleIncOrDec(MI) && TII->isSafeToClobberEFLAGS(MBB, I)) {
-    unsigned NewOpcode;
-    bool isINC = MI.getOperand(1 + X86::AddrDisp).getImm() == 1;
-    switch (MI.getOpcode()) {
-    default:
-      llvm_unreachable("Unexpected LEA instruction");
-    case X86::LEA32r:
-    case X86::LEA64_32r:
-      NewOpcode = isINC ? X86::INC32r : X86::DEC32r;
-      break;
-    case X86::LEA64r:
-      NewOpcode = isINC ? X86::INC64r : X86::DEC64r;
-      break;
-    }
+  const MachineOperand &Base =    MI.getOperand(1 + X86::AddrBaseReg);
+  const MachineOperand &Scale =   MI.getOperand(1 + X86::AddrScaleAmt);
+  const MachineOperand &Index =   MI.getOperand(1 + X86::AddrIndexReg);
+  const MachineOperand &Disp =    MI.getOperand(1 + X86::AddrDisp);
+  const MachineOperand &Segment = MI.getOperand(1 + X86::AddrSegmentReg);
 
-    MachineInstr *NewMI =
-        BuildMI(MBB, I, MI.getDebugLoc(), TII->get(NewOpcode))
-            .add(MI.getOperand(0))
-            .add(MI.getOperand(1 + X86::AddrBaseReg));
-    MBB.erase(I);
-    I = static_cast<MachineBasicBlock::iterator>(NewMI);
-    return true;
+  if (Segment.getReg() != 0 || !Disp.isImm() || Scale.getImm() > 1 ||
+      !TII->isSafeToClobberEFLAGS(MBB, I))
+    return false;
+
+  unsigned DestReg  = MI.getOperand(0).getReg();
+  unsigned BaseReg  = Base.getReg();
+  unsigned IndexReg = Index.getReg();
+
+  // Don't change stack adjustment LEAs.
+  if (UseLEAForSP && (DestReg == X86::ESP || DestReg == X86::RSP))
+    return false;
+
+  // LEA64_32 has 64-bit operands but 32-bit result.
+  if (MI.getOpcode() == X86::LEA64_32r) {
+    if (BaseReg != 0)
+      BaseReg = TRI->getSubReg(BaseReg, X86::sub_32bit);
+    if (IndexReg != 0)
+      IndexReg = TRI->getSubReg(IndexReg, X86::sub_32bit);
   }
-  return false;
+
+  MachineInstr *NewMI = nullptr;
+
+  // Look for lea(%reg1, %reg2), %reg1 or lea(%reg2, %reg1), %reg1
+  // which can be turned into add %reg2, %reg1
+  if (BaseReg != 0 && IndexReg != 0 && Disp.getImm() == 0 &&
+      (DestReg == BaseReg || DestReg == IndexReg)) {
+    unsigned NewOpcode = getADDrrFromLEA(MI.getOpcode());
+    if (DestReg != BaseReg)
+      std::swap(BaseReg, IndexReg);
+
+    if (MI.getOpcode() == X86::LEA64_32r) {
+      // TODO: Do we need the super register implicit use?
+      NewMI = BuildMI(MBB, I, MI.getDebugLoc(), TII->get(NewOpcode), DestReg)
+        .addReg(BaseReg).addReg(IndexReg)
+        .addReg(Base.getReg(), RegState::Implicit)
+        .addReg(Index.getReg(), RegState::Implicit);
+    } else {
+      NewMI = BuildMI(MBB, I, MI.getDebugLoc(), TII->get(NewOpcode), DestReg)
+        .addReg(BaseReg).addReg(IndexReg);
+    }
+  } else if (DestReg == BaseReg && IndexReg == 0) {
+    // This is an LEA with only a base register and a displacement,
+    // We can use ADDri or INC/DEC.
+
+    // Does this LEA have one these forms:
+    // lea  %reg, 1(%reg)
+    // lea  %reg, -1(%reg)
+    if (OptIncDec && (Disp.getImm() == 1 || Disp.getImm() == -1)) {
+      bool IsINC = Disp.getImm() == 1;
+      unsigned NewOpcode = getINCDECFromLEA(MI.getOpcode(), IsINC);
+
+      if (MI.getOpcode() == X86::LEA64_32r) {
+        // TODO: Do we need the super register implicit use?
+        NewMI = BuildMI(MBB, I, MI.getDebugLoc(), TII->get(NewOpcode), DestReg)
+          .addReg(BaseReg).addReg(Base.getReg(), RegState::Implicit);
+      } else {
+        NewMI = BuildMI(MBB, I, MI.getDebugLoc(), TII->get(NewOpcode), DestReg)
+          .addReg(BaseReg);
+      }
+    } else {
+      unsigned NewOpcode = getADDriFromLEA(MI.getOpcode(), Disp);
+      if (MI.getOpcode() == X86::LEA64_32r) {
+        // TODO: Do we need the super register implicit use?
+        NewMI = BuildMI(MBB, I, MI.getDebugLoc(), TII->get(NewOpcode), DestReg)
+          .addReg(BaseReg).addImm(Disp.getImm())
+          .addReg(Base.getReg(), RegState::Implicit);
+      } else {
+        NewMI = BuildMI(MBB, I, MI.getDebugLoc(), TII->get(NewOpcode), DestReg)
+          .addReg(BaseReg).addImm(Disp.getImm());
+      }
+    }
+  } else
+    return false;
+
+  MBB.erase(I);
+  I = NewMI;
+  return true;
 }
 
 void FixupLEAPass::processInstruction(MachineBasicBlock::iterator &I,

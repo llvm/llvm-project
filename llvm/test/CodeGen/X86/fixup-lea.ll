@@ -129,7 +129,7 @@ define void @foo_nosize(i32 inreg %dns) {
 ; FAST-NEXT:  .LBB4_1: # %for.body
 ; FAST-NEXT:    # =>This Inner Loop Header: Depth=1
 ; FAST-NEXT:    movzwl %cx, %edx
-; FAST-NEXT:    leal -1(%ecx), %ecx
+; FAST-NEXT:    addl $-1, %ecx
 ; FAST-NEXT:    cmpl %eax, %edx
 ; FAST-NEXT:    jl .LBB4_1
 ; FAST-NEXT:  # %bb.2: # %for.end
@@ -169,7 +169,7 @@ define void @bar_nosize(i32 inreg %dns) {
 ; FAST-NEXT:  .LBB5_1: # %for.body
 ; FAST-NEXT:    # =>This Inner Loop Header: Depth=1
 ; FAST-NEXT:    movzwl %cx, %edx
-; FAST-NEXT:    leal 1(%ecx), %ecx
+; FAST-NEXT:    addl $1, %ecx
 ; FAST-NEXT:    cmpl %eax, %edx
 ; FAST-NEXT:    jl .LBB5_1
 ; FAST-NEXT:  # %bb.2: # %for.end

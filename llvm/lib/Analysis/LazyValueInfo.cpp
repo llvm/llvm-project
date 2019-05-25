@@ -422,10 +422,16 @@ namespace {
                              BasicBlock *BB);
   Optional<ConstantRange> getRangeForOperand(unsigned Op, Instruction *I,
                                              BasicBlock *BB);
+  bool solveBlockValueBinaryOpImpl(
+      ValueLatticeElement &BBLV, Instruction *I, BasicBlock *BB,
+      std::function<ConstantRange(const ConstantRange &,
+                                  const ConstantRange &)> OpFn);
   bool solveBlockValueBinaryOp(ValueLatticeElement &BBLV, BinaryOperator *BBI,
                                BasicBlock *BB);
   bool solveBlockValueCast(ValueLatticeElement &BBLV, CastInst *CI,
                            BasicBlock *BB);
+  bool solveBlockValueOverflowIntrinsic(
+      ValueLatticeElement &BBLV, WithOverflowInst *WO, BasicBlock *BB);
   void intersectAssumeOrGuardBlockValueConstantRange(Value *Val,
                                                      ValueLatticeElement &BBLV,
                                                      Instruction *BBI);
@@ -638,6 +644,11 @@ bool LazyValueInfoImpl::solveBlockValueImpl(ValueLatticeElement &Res,
 
     if (BinaryOperator *BO = dyn_cast<BinaryOperator>(BBI))
       return solveBlockValueBinaryOp(Res, BO, BB);
+
+    if (auto *EVI = dyn_cast<ExtractValueInst>(BBI))
+      if (auto *WO = dyn_cast<WithOverflowInst>(EVI->getAggregateOperand()))
+        if (EVI->getNumIndices() == 1 && *EVI->idx_begin() == 0)
+          return solveBlockValueOverflowIntrinsic(Res, WO, BB);
   }
 
   LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
@@ -1040,6 +1051,26 @@ bool LazyValueInfoImpl::solveBlockValueCast(ValueLatticeElement &BBLV,
   return true;
 }
 
+bool LazyValueInfoImpl::solveBlockValueBinaryOpImpl(
+    ValueLatticeElement &BBLV, Instruction *I, BasicBlock *BB,
+    std::function<ConstantRange(const ConstantRange &,
+                                const ConstantRange &)> OpFn) {
+  // Figure out the ranges of the operands.  If that fails, use a
+  // conservative range, but apply the transfer rule anyways.  This
+  // lets us pick up facts from expressions like "and i32 (call i32
+  // @foo()), 32"
+  Optional<ConstantRange> LHSRes = getRangeForOperand(0, I, BB);
+  Optional<ConstantRange> RHSRes = getRangeForOperand(1, I, BB);
+  if (!LHSRes.hasValue() || !RHSRes.hasValue())
+    // More work to do before applying this transfer rule.
+    return false;
+
+  ConstantRange LHSRange = LHSRes.getValue();
+  ConstantRange RHSRange = RHSRes.getValue();
+  BBLV = ValueLatticeElement::getRange(OpFn(LHSRange, RHSRange));
+  return true;
+}
+
 bool LazyValueInfoImpl::solveBlockValueBinaryOp(ValueLatticeElement &BBLV,
                                                 BinaryOperator *BO,
                                                 BasicBlock *BB) {
@@ -1060,8 +1091,10 @@ bool LazyValueInfoImpl::solveBlockValueBinaryOp(ValueLatticeElement &BBLV,
   case Instruction::AShr:
   case Instruction::And:
   case Instruction::Or:
-    // continue into the code below
-    break;
+    return solveBlockValueBinaryOpImpl(BBLV, BO, BB,
+        [BO](const ConstantRange &CR1, const ConstantRange &CR2) {
+          return CR1.binaryOp(BO->getOpcode(), CR2);
+        });
   default:
     // Unhandled instructions are overdefined.
     LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
@@ -1069,27 +1102,14 @@ bool LazyValueInfoImpl::solveBlockValueBinaryOp(ValueLatticeElement &BBLV,
     BBLV = ValueLatticeElement::getOverdefined();
     return true;
   };
+}
 
-  // Figure out the ranges of the operands.  If that fails, use a
-  // conservative range, but apply the transfer rule anyways.  This
-  // lets us pick up facts from expressions like "and i32 (call i32
-  // @foo()), 32"
-  Optional<ConstantRange> LHSRes = getRangeForOperand(0, BO, BB);
-  Optional<ConstantRange> RHSRes = getRangeForOperand(1, BO, BB);
-
-  if (!LHSRes.hasValue() || !RHSRes.hasValue())
-    // More work to do before applying this transfer rule.
-    return false;
-
-  ConstantRange LHSRange = LHSRes.getValue();
-  ConstantRange RHSRange = RHSRes.getValue();
-
-  // NOTE: We're currently limited by the set of operations that ConstantRange
-  // can evaluate symbolically.  Enhancing that set will allows us to analyze
-  // more definitions.
-  Instruction::BinaryOps BinOp = BO->getOpcode();
-  BBLV = ValueLatticeElement::getRange(LHSRange.binaryOp(BinOp, RHSRange));
-  return true;
+bool LazyValueInfoImpl::solveBlockValueOverflowIntrinsic(
+    ValueLatticeElement &BBLV, WithOverflowInst *WO, BasicBlock *BB) {
+  return solveBlockValueBinaryOpImpl(BBLV, WO, BB,
+      [WO](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.binaryOp(WO->getBinaryOp(), CR2);
+      });
 }
 
 static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,

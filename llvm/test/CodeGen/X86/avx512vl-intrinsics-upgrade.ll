@@ -9268,7 +9268,7 @@ define i8@test_int_x86_avx512_ptestm_d_128(<4 x i32> %x0, <4 x i32> %x1, i8 %x2)
 ; X64-NEXT:    kandw %k1, %k0, %k1 # encoding: [0xc5,0xfc,0x41,0xc9]
 ; X64-NEXT:    kmovw %k1, %eax # encoding: [0xc5,0xf8,0x93,0xc1]
 ; X64-NEXT:    kmovw %k0, %ecx # encoding: [0xc5,0xf8,0x93,0xc8]
-; X64-NEXT:    leal (%rcx,%rax), %eax # encoding: [0x8d,0x04,0x01]
+; X64-NEXT:    addl %ecx, %eax # encoding: [0x01,0xc8]
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call i8 @llvm.x86.avx512.ptestm.d.128(<4 x i32> %x0, <4 x i32> %x1, i8 %x2)
@@ -9327,7 +9327,7 @@ define i8@test_int_x86_avx512_ptestm_q_128(<2 x i64> %x0, <2 x i64> %x1, i8 %x2)
 ; X64-NEXT:    kandw %k1, %k0, %k1 # encoding: [0xc5,0xfc,0x41,0xc9]
 ; X64-NEXT:    kmovw %k1, %eax # encoding: [0xc5,0xf8,0x93,0xc1]
 ; X64-NEXT:    kmovw %k0, %ecx # encoding: [0xc5,0xf8,0x93,0xc8]
-; X64-NEXT:    leal (%rcx,%rax), %eax # encoding: [0x8d,0x04,0x01]
+; X64-NEXT:    addl %ecx, %eax # encoding: [0x01,0xc8]
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call i8 @llvm.x86.avx512.ptestm.q.128(<2 x i64> %x0, <2 x i64> %x1, i8 %x2)
@@ -9359,7 +9359,7 @@ define i8@test_int_x86_avx512_ptestm_q_256(<4 x i64> %x0, <4 x i64> %x1, i8 %x2)
 ; X64-NEXT:    kandw %k1, %k0, %k1 # encoding: [0xc5,0xfc,0x41,0xc9]
 ; X64-NEXT:    kmovw %k1, %eax # encoding: [0xc5,0xf8,0x93,0xc1]
 ; X64-NEXT:    kmovw %k0, %ecx # encoding: [0xc5,0xf8,0x93,0xc8]
-; X64-NEXT:    leal (%rcx,%rax), %eax # encoding: [0x8d,0x04,0x01]
+; X64-NEXT:    addl %ecx, %eax # encoding: [0x01,0xc8]
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-NEXT:    retq # encoding: [0xc3]
@@ -9391,7 +9391,7 @@ define i8@test_int_x86_avx512_ptestnm_d_128(<4 x i32> %x0, <4 x i32> %x1, i8 %x2
 ; X64-NEXT:    kandw %k1, %k0, %k1 # encoding: [0xc5,0xfc,0x41,0xc9]
 ; X64-NEXT:    kmovw %k1, %eax # encoding: [0xc5,0xf8,0x93,0xc1]
 ; X64-NEXT:    kmovw %k0, %ecx # encoding: [0xc5,0xf8,0x93,0xc8]
-; X64-NEXT:    leal (%rcx,%rax), %eax # encoding: [0x8d,0x04,0x01]
+; X64-NEXT:    addl %ecx, %eax # encoding: [0x01,0xc8]
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call i8 @llvm.x86.avx512.ptestnm.d.128(<4 x i32> %x0, <4 x i32> %x1, i8 %x2)
@@ -9450,7 +9450,7 @@ define i8@test_int_x86_avx512_ptestnm_q_128(<2 x i64> %x0, <2 x i64> %x1, i8 %x2
 ; X64-NEXT:    kandw %k1, %k0, %k1 # encoding: [0xc5,0xfc,0x41,0xc9]
 ; X64-NEXT:    kmovw %k1, %eax # encoding: [0xc5,0xf8,0x93,0xc1]
 ; X64-NEXT:    kmovw %k0, %ecx # encoding: [0xc5,0xf8,0x93,0xc8]
-; X64-NEXT:    leal (%rcx,%rax), %eax # encoding: [0x8d,0x04,0x01]
+; X64-NEXT:    addl %ecx, %eax # encoding: [0x01,0xc8]
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call i8 @llvm.x86.avx512.ptestnm.q.128(<2 x i64> %x0, <2 x i64> %x1, i8 %x2)
@@ -9482,7 +9482,7 @@ define i8@test_int_x86_avx512_ptestnm_q_256(<4 x i64> %x0, <4 x i64> %x1, i8 %x2
 ; X64-NEXT:    kandw %k1, %k0, %k1 # encoding: [0xc5,0xfc,0x41,0xc9]
 ; X64-NEXT:    kmovw %k1, %eax # encoding: [0xc5,0xf8,0x93,0xc1]
 ; X64-NEXT:    kmovw %k0, %ecx # encoding: [0xc5,0xf8,0x93,0xc8]
-; X64-NEXT:    leal (%rcx,%rax), %eax # encoding: [0x8d,0x04,0x01]
+; X64-NEXT:    addl %ecx, %eax # encoding: [0x01,0xc8]
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-NEXT:    retq # encoding: [0xc3]

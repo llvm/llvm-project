@@ -166,7 +166,7 @@ define i8* @SyFgets(i8* %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:  LBB0_34: ## %if.end517
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax ## 8-byte Reload
-; CHECK-NEXT:    leal -324(%rax), %eax
+; CHECK-NEXT:    addl $-324, %eax ## imm = 0xFEBC
 ; CHECK-NEXT:    cmpl $59, %eax
 ; CHECK-NEXT:    ja LBB0_35
 ; CHECK-NEXT:  ## %bb.57: ## %if.end517

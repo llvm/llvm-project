@@ -247,7 +247,7 @@ frameInfo:
 body:             |
   bb.0 (%ir-block.0):
     liveins: $rax, $rbp
-    ; CHECK: $ebp = LEA64_32r killed $rax, 1, killed $rbp, 0
+    ; CHECK: $ebp = ADD32rr $ebp, $eax, implicit-def $eflags, implicit $rbp, implicit $rax
  
     $ebp = LEA64_32r killed $rbp, 1, killed $rax, 0, $noreg
     RETQ $ebp
@@ -351,7 +351,7 @@ frameInfo:
 body:             |
   bb.0 (%ir-block.0):
     liveins: $rax, $rbp
-    ; CHECK: $rbp = ADD64rr $rbp, killed $rax
+    ; CHECK: $rbp = ADD64rr $rbp, $rax
  
     $rbp = LEA64r killed $rbp, 1, killed $rax, 0, $noreg
     RETQ $ebp
