@@ -37,5 +37,5 @@ target_link_libraries(ClangTidyTests
   clangTidyUtils
   clangTooling
   clangToolingCore
-  clangToolingRefactor
+  clangToolingRefactoring
   )
