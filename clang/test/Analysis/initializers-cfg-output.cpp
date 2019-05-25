@@ -30,21 +30,25 @@ public:
 class B : public virtual A {
 public:
   // CHECK:       B()
-  // CHECK:        [B2 (ENTRY)]
-  // CHECK-NEXT:     Succs (1): B1
+  // CHECK:        [B3 (ENTRY)]
+  // CHECK-NEXT:     Succs (1): B2
   // CHECK:        [B1]
   // WARNINGS-NEXT:     1:  (CXXConstructExpr, class A)
   // ANALYZER-NEXT:     1:  (CXXConstructExpr, A() (Base initializer), class A)
   // CHECK-NEXT:     2: A([B1.1]) (Base initializer)
   // CHECK-NEXT:     Preds (1): B2
   // CHECK-NEXT:     Succs (1): B0
+  // CHECK:        [B2]
+  // CHECK-NEXT:     T: (See if most derived ctor has already initialized vbases)
+  // CHECK-NEXT:     Preds (1): B3
+  // CHECK-NEXT:     Succs (2): B0 B1
   // CHECK:        [B0 (EXIT)]
-  // CHECK-NEXT:     Preds (1): B1
+  // CHECK-NEXT:     Preds (2): B1 B2
   B() {}
 
   // CHECK:       B(int i)
-  // CHECK:        [B2 (ENTRY)]
-  // CHECK-NEXT:     Succs (1): B1
+  // CHECK:        [B3 (ENTRY)]
+  // CHECK-NEXT:     Succs (1): B2
   // CHECK:        [B1]
   // CHECK-NEXT:     1: i
   // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, LValueToRValue, int)
@@ -53,29 +57,37 @@ public:
   // CHECK-NEXT:     4: A([B1.3]) (Base initializer)
   // CHECK-NEXT:     Preds (1): B2
   // CHECK-NEXT:     Succs (1): B0
+  // CHECK:        [B2]
+  // CHECK-NEXT:     T: (See if most derived ctor has already initialized vbases)
+  // CHECK-NEXT:     Preds (1): B3
+  // CHECK-NEXT:     Succs (2): B0 B1
   // CHECK:        [B0 (EXIT)]
-  // CHECK-NEXT:     Preds (1): B1
+  // CHECK-NEXT:     Preds (2): B1 B2
   B(int i) : A(i) {}
 };
 
 class C : public virtual A {
 public:
   // CHECK:       C()
-  // CHECK:        [B2 (ENTRY)]
-  // CHECK-NEXT:     Succs (1): B1
+  // CHECK:        [B3 (ENTRY)]
+  // CHECK-NEXT:     Succs (1): B2
   // CHECK:        [B1]
   // WARNINGS-NEXT:     1:  (CXXConstructExpr, class A)
   // ANALYZER-NEXT:     1:  (CXXConstructExpr, A() (Base initializer), class A)
   // CHECK-NEXT:     2: A([B1.1]) (Base initializer)
   // CHECK-NEXT:     Preds (1): B2
   // CHECK-NEXT:     Succs (1): B0
+  // CHECK:        [B2]
+  // CHECK-NEXT:     T: (See if most derived ctor has already initialized vbases)
+  // CHECK-NEXT:     Preds (1): B3
+  // CHECK-NEXT:     Succs (2): B0 B1
   // CHECK:        [B0 (EXIT)]
-  // CHECK-NEXT:     Preds (1): B1
+  // CHECK-NEXT:     Preds (2): B1 B2
   C() {}
 
   // CHECK:       C(int i)
-  // CHECK:        [B2 (ENTRY)]
-  // CHECK-NEXT:     Succs (1): B1
+  // CHECK:        [B3 (ENTRY)]
+  // CHECK-NEXT:     Succs (1): B2
   // CHECK:        [B1]
   // CHECK-NEXT:     1: i
   // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, LValueToRValue, int)
@@ -84,8 +96,12 @@ public:
   // CHECK-NEXT:     4: A([B1.3]) (Base initializer)
   // CHECK-NEXT:     Preds (1): B2
   // CHECK-NEXT:     Succs (1): B0
+  // CHECK:        [B2]
+  // CHECK-NEXT:     T: (See if most derived ctor has already initialized vbases)
+  // CHECK-NEXT:     Preds (1): B3
+  // CHECK-NEXT:     Succs (2): B0 B1
   // CHECK:        [B0 (EXIT)]
-  // CHECK-NEXT:     Preds (1): B1
+  // CHECK-NEXT:     Preds (2): B1 B2
   C(int i) : A(i) {}
 };
 
@@ -98,31 +114,38 @@ public:
 };
 
 // CHECK:       TestOrder::TestOrder()
-// CHECK:        [B2 (ENTRY)]
-// CHECK-NEXT:     Succs (1): B1
+// CHECK:        [B4 (ENTRY)]
+// CHECK-NEXT:     Succs (1): B3
 // CHECK:        [B1]
+// WARNINGS-NEXT:     1:  (CXXConstructExpr, class C)
+// ANALYZER-NEXT:     1:  (CXXConstructExpr, C() (Base initializer), class C)
+// CHECK-NEXT:     2: C([B1.1]) (Base initializer)
+// WARNINGS-NEXT:     3:  (CXXConstructExpr, class B)
+// ANALYZER-NEXT:     3:  (CXXConstructExpr, B() (Base initializer), class B)
+// CHECK-NEXT:     4: B([B1.3]) (Base initializer)
+// WARNINGS-NEXT:     5:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:     5:  (CXXConstructExpr, A() (Base initializer), class A)
+// CHECK-NEXT:     6: A([B1.5]) (Base initializer)
+// CHECK-NEXT:     7: /*implicit*/(int)0
+// CHECK-NEXT:     8: i([B1.7]) (Member initializer)
+// CHECK-NEXT:     9: this
+// CHECK-NEXT:    10: [B1.9]->i
+// CHECK-NEXT:    11: r([B1.10]) (Member initializer)
+// WARNINGS-NEXT:    12:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:    12:  (CXXConstructExpr, [B1.13], class A)
+// CHECK-NEXT:    13: A a;
+// CHECK-NEXT:     Preds (2): B2 B3
+// CHECK-NEXT:     Succs (1): B0
+// CHECK:        [B2]
 // WARNINGS-NEXT:     1:  (CXXConstructExpr, class A)
 // ANALYZER-NEXT:     1:  (CXXConstructExpr, A() (Base initializer), class A)
-// CHECK-NEXT:     2: A([B1.1]) (Base initializer)
-// WARNINGS-NEXT:     3:  (CXXConstructExpr, class C)
-// ANALYZER-NEXT:     3:  (CXXConstructExpr, C() (Base initializer), class C)
-// CHECK-NEXT:     4: C([B1.3]) (Base initializer)
-// WARNINGS-NEXT:     5:  (CXXConstructExpr, class B)
-// ANALYZER-NEXT:     5:  (CXXConstructExpr, B() (Base initializer), class B)
-// CHECK-NEXT:     6: B([B1.5]) (Base initializer)
-// WARNINGS-NEXT:     7:  (CXXConstructExpr, class A)
-// ANALYZER-NEXT:     7:  (CXXConstructExpr, A() (Base initializer), class A)
-// CHECK-NEXT:     8: A([B1.7]) (Base initializer)
-// CHECK-NEXT:     9: /*implicit*/(int)0
-// CHECK-NEXT:    10: i([B1.9]) (Member initializer)
-// CHECK-NEXT:    11: this
-// CHECK-NEXT:    12: [B1.11]->i
-// CHECK-NEXT:    13: r([B1.12]) (Member initializer)
-// WARNINGS-NEXT:    14:  (CXXConstructExpr, class A)
-// ANALYZER-NEXT:    14:  (CXXConstructExpr, [B1.15], class A)
-// CHECK-NEXT:    15: A a;
-// CHECK-NEXT:     Preds (1): B2
-// CHECK-NEXT:     Succs (1): B0
+// CHECK-NEXT:     2: A([B2.1]) (Base initializer)
+// CHECK-NEXT:     Preds (1): B3
+// CHECK-NEXT:     Succs (1): B1
+// CHECK:        [B3]
+// CHECK-NEXT:     T: (See if most derived ctor has already initialized vbases)
+// CHECK-NEXT:     Preds (1): B4
+// CHECK-NEXT:     Succs (2): B1 B2
 // CHECK:        [B0 (EXIT)]
 // CHECK-NEXT:     Preds (1): B1
 TestOrder::TestOrder()
@@ -209,3 +232,64 @@ public:
   // CHECK-NEXT:     Preds (1): B1
   TestDelegating(int x, int z) : x(x), z(z) {}
 };
+
+class TestMoreControlFlow : public virtual A {
+  A a;
+
+public:
+  TestMoreControlFlow(bool coin);
+};
+
+// CHECK:       TestMoreControlFlow::TestMoreControlFlow(bool coin)
+// CHECK:        [B10 (ENTRY)]
+// CHECK-NEXT:     Succs (1): B9
+// CHECK:        [B1]
+// CHECK-NEXT:     1: [B4.2] ? [B2.1] : [B3.1]
+// WARNINGS-NEXT:     2: [B1.1] (CXXConstructExpr, class A)
+// ANALYZER-NEXT:     2: [B1.1] (CXXConstructExpr, a([B1.1]) (Member initializer), class A)
+// CHECK-NEXT:     3: a([B1.2]) (Member initializer)
+// CHECK-NEXT:     Preds (2): B2 B3
+// CHECK-NEXT:     Succs (1): B0
+// CHECK:        [B2]
+// CHECK-NEXT:     1: 3
+// CHECK-NEXT:     Preds (1): B4
+// CHECK-NEXT:     Succs (1): B1
+// CHECK:        [B3]
+// CHECK-NEXT:     1: 4
+// CHECK-NEXT:     Preds (1): B4
+// CHECK-NEXT:     Succs (1): B1
+// CHECK:        [B4]
+// CHECK-NEXT:     1: coin
+// CHECK-NEXT:     2: [B4.1] (ImplicitCastExpr, LValueToRValue, _Bool)
+// CHECK-NEXT:     T: [B4.2] ? ... : ...
+// CHECK-NEXT:     Preds (2): B5 B9
+// CHECK-NEXT:     Succs (2): B2 B3
+// CHECK:        [B5]
+// CHECK-NEXT:     1: [B8.2] ? [B6.1] : [B7.1]
+// WARNINGS-NEXT:     2: [B5.1] (CXXConstructExpr, class A)
+// ANALYZER-NEXT:     2: [B5.1] (CXXConstructExpr, A([B5.1]) (Base initializer), class A)
+// CHECK-NEXT:     3: A([B5.2]) (Base initializer)
+// CHECK-NEXT:     Preds (2): B6 B7
+// CHECK-NEXT:     Succs (1): B4
+// CHECK:        [B6]
+// CHECK-NEXT:     1: 1
+// CHECK-NEXT:     Preds (1): B8
+// CHECK-NEXT:     Succs (1): B5
+// CHECK:        [B7]
+// CHECK-NEXT:     1: 2
+// CHECK-NEXT:     Preds (1): B8
+// CHECK-NEXT:     Succs (1): B5
+// CHECK:        [B8]
+// CHECK-NEXT:     1: coin
+// CHECK-NEXT:     2: [B8.1] (ImplicitCastExpr, LValueToRValue, _Bool)
+// CHECK-NEXT:     T: [B8.2] ? ... : ...
+// CHECK-NEXT:     Preds (1): B9
+// CHECK-NEXT:     Succs (2): B6 B7
+// CHECK:        [B9]
+// CHECK-NEXT:     T: (See if most derived ctor has already initialized vbases)
+// CHECK-NEXT:     Preds (1): B10
+// CHECK-NEXT:     Succs (2): B4 B8
+// CHECK:        [B0 (EXIT)]
+// CHECK-NEXT:     Preds (1): B1
+TestMoreControlFlow::TestMoreControlFlow(bool coin)
+    : A(coin ? 1 : 2), a(coin ? 3 : 4) {}

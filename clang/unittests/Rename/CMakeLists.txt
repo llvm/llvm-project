@@ -24,5 +24,5 @@ target_link_libraries(ClangRenameTests
   clangSerialization
   clangTooling
   clangToolingCore
-  clangToolingRefactor
+  clangToolingRefactoring
   )

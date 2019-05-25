@@ -194,9 +194,10 @@ public:
   UndefinedFunction(StringRef Name, StringRef ImportName,
                     StringRef ImportModule, uint32_t Flags,
                     InputFile *File = nullptr,
-                    const WasmSignature *Type = nullptr)
+                    const WasmSignature *Type = nullptr,
+                    bool IsCalledDirectly = true)
       : FunctionSymbol(Name, UndefinedFunctionKind, Flags, File, Type),
-        ImportName(ImportName), ImportModule(ImportModule) {}
+        ImportName(ImportName), ImportModule(ImportModule), IsCalledDirectly(IsCalledDirectly) {}
 
   static bool classof(const Symbol *S) {
     return S->kind() == UndefinedFunctionKind;
@@ -204,6 +205,7 @@ public:
 
   StringRef ImportName;
   StringRef ImportModule;
+  bool IsCalledDirectly;
 };
 
 // Section symbols for output sections are different from those for input

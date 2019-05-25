@@ -227,7 +227,7 @@ void DwarfLinker::reportWarning(const Twine &Warning, const DebugMapObject &DMO,
     return;
 
   DIDumpOptions DumpOpts;
-  DumpOpts.RecurseDepth = 0;
+  DumpOpts.ChildRecurseDepth = 0;
   DumpOpts.Verbose = Options.Verbose;
 
   WithColor::note() << "    in DIE:\n";
@@ -649,7 +649,7 @@ unsigned DwarfLinker::shouldKeepVariableDIE(RelocationManager &RelocMgr,
 
   if (Options.Verbose) {
     DIDumpOptions DumpOpts;
-    DumpOpts.RecurseDepth = 0;
+    DumpOpts.ChildRecurseDepth = 0;
     DumpOpts.Verbose = Options.Verbose;
     DIE.dump(outs(), 8 /* Indent */, DumpOpts);
   }
@@ -685,7 +685,7 @@ unsigned DwarfLinker::shouldKeepSubprogramDIE(
 
   if (Options.Verbose) {
     DIDumpOptions DumpOpts;
-    DumpOpts.RecurseDepth = 0;
+    DumpOpts.ChildRecurseDepth = 0;
     DumpOpts.Verbose = Options.Verbose;
     DIE.dump(outs(), 8 /* Indent */, DumpOpts);
   }
@@ -2096,8 +2096,10 @@ void DwarfLinker::DIECloner::copyAbbrev(
   Linker.AssignAbbrev(Copy);
 }
 
-uint32_t DwarfLinker::DIECloner::hashFullyQualifiedName(
-    DWARFDie DIE, CompileUnit &U, const DebugMapObject &DMO, int RecurseDepth) {
+uint32_t
+DwarfLinker::DIECloner::hashFullyQualifiedName(DWARFDie DIE, CompileUnit &U,
+                                               const DebugMapObject &DMO,
+                                               int ChildRecurseDepth) {
   const char *Name = nullptr;
   DWARFUnit *OrigUnit = &U.getOrigUnit();
   CompileUnit *CU = &U;
@@ -2131,13 +2133,13 @@ uint32_t DwarfLinker::DIECloner::hashFullyQualifiedName(
       // FIXME: dsymutil-classic compatibility. Ignore modules.
       CU->getOrigUnit().getDIEAtIndex(CU->getInfo(Idx).ParentIdx).getTag() ==
           dwarf::DW_TAG_module)
-    return djbHash(Name ? Name : "", djbHash(RecurseDepth ? "" : "::"));
+    return djbHash(Name ? Name : "", djbHash(ChildRecurseDepth ? "" : "::"));
 
   DWARFDie Die = OrigUnit->getDIEAtIndex(CU->getInfo(Idx).ParentIdx);
   return djbHash(
       (Name ? Name : ""),
       djbHash((Name ? "::" : ""),
-              hashFullyQualifiedName(Die, *CU, DMO, ++RecurseDepth)));
+              hashFullyQualifiedName(Die, *CU, DMO, ++ChildRecurseDepth)));
 }
 
 static uint64_t getDwoId(const DWARFDie &CUDie, const DWARFUnit &Unit) {
@@ -2656,7 +2658,7 @@ bool DwarfLinker::link(const DebugMap &Map) {
       if (Options.Verbose) {
         outs() << "Input compilation unit:";
         DIDumpOptions DumpOpts;
-        DumpOpts.RecurseDepth = 0;
+        DumpOpts.ChildRecurseDepth = 0;
         DumpOpts.Verbose = Options.Verbose;
         CUDie.dump(outs(), 0, DumpOpts);
       }

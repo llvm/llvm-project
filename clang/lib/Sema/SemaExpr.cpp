@@ -3059,9 +3059,11 @@ ExprResult Sema::BuildDeclarationNameExpr(
       // FIXME: Support lambda-capture of BindingDecls, once CWG actually
       // decides how that's supposed to work.
       auto *BD = cast<BindingDecl>(VD);
-      if (BD->getDeclContext()->isFunctionOrMethod() &&
-          BD->getDeclContext() != CurContext)
-        diagnoseUncapturableValueReference(*this, Loc, BD, CurContext);
+      if (BD->getDeclContext() != CurContext) {
+        auto *DD = dyn_cast_or_null<VarDecl>(BD->getDecomposedDecl());
+        if (DD && DD->hasLocalStorage())
+          diagnoseUncapturableValueReference(*this, Loc, BD, CurContext);
+      }
       break;
     }
 
@@ -14730,55 +14732,80 @@ ExprResult Sema::HandleExprEvaluationContextForTypeof(Expr *E) {
   return TransformToPotentiallyEvaluated(E);
 }
 
-/// Are we within a context in which some evaluation could be performed (be it
-/// constant evaluation or runtime evaluation)? Sadly, this notion is not quite
-/// captured by C++'s idea of an "unevaluated context".
-static bool isEvaluatableContext(Sema &SemaRef) {
+/// Are we in a context that is potentially constant evaluated per C++20
+/// [expr.const]p12?
+static bool isPotentiallyConstantEvaluatedContext(Sema &SemaRef) {
+  /// C++2a [expr.const]p12:
+  //   An expression or conversion is potentially constant evaluated if it is
   switch (SemaRef.ExprEvalContexts.back().Context) {
+    case Sema::ExpressionEvaluationContext::ConstantEvaluated:
+      // -- a manifestly constant-evaluated expression,
+    case Sema::ExpressionEvaluationContext::PotentiallyEvaluated:
+    case Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed:
+    case Sema::ExpressionEvaluationContext::DiscardedStatement:
+      // -- a potentially-evaluated expression,
+    case Sema::ExpressionEvaluationContext::UnevaluatedList:
+      // -- an immediate subexpression of a braced-init-list,
+
+      // -- [FIXME] an expression of the form & cast-expression that occurs
+      //    within a templated entity
+      // -- a subexpression of one of the above that is not a subexpression of
+      // a nested unevaluated operand.
+      return true;
+
     case Sema::ExpressionEvaluationContext::Unevaluated:
     case Sema::ExpressionEvaluationContext::UnevaluatedAbstract:
       // Expressions in this context are never evaluated.
-      return false;
-
-    case Sema::ExpressionEvaluationContext::UnevaluatedList:
-    case Sema::ExpressionEvaluationContext::ConstantEvaluated:
-    case Sema::ExpressionEvaluationContext::PotentiallyEvaluated:
-    case Sema::ExpressionEvaluationContext::DiscardedStatement:
-      // Expressions in this context could be evaluated.
-      return true;
-
-    case Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed:
-      // Referenced declarations will only be used if the construct in the
-      // containing expression is used, at which point we'll be given another
-      // turn to mark them.
       return false;
   }
   llvm_unreachable("Invalid context");
 }
 
+namespace {
+enum class OdrUseContext {
+  /// Declarations in this context are not odr-used.
+  None,
+  /// Declarations in this context are formally odr-used, but this is a
+  /// dependent context.
+  Dependent,
+  /// Declarations in this context are odr-used but not actually used (yet).
+  FormallyOdrUsed,
+  /// Declarations in this context are used.
+  Used
+};
+}
+
 /// Are we within a context in which references to resolved functions or to
 /// variables result in odr-use?
-static bool isOdrUseContext(Sema &SemaRef, bool SkipDependentUses = true) {
-  // An expression in a template is not really an expression until it's been
-  // instantiated, so it doesn't trigger odr-use.
-  if (SkipDependentUses && SemaRef.CurContext->isDependentContext())
-    return false;
+static OdrUseContext isOdrUseContext(Sema &SemaRef) {
+  OdrUseContext Result;
 
   switch (SemaRef.ExprEvalContexts.back().Context) {
     case Sema::ExpressionEvaluationContext::Unevaluated:
     case Sema::ExpressionEvaluationContext::UnevaluatedList:
     case Sema::ExpressionEvaluationContext::UnevaluatedAbstract:
-    case Sema::ExpressionEvaluationContext::DiscardedStatement:
-      return false;
+      return OdrUseContext::None;
 
     case Sema::ExpressionEvaluationContext::ConstantEvaluated:
     case Sema::ExpressionEvaluationContext::PotentiallyEvaluated:
-      return true;
+      Result = OdrUseContext::Used;
+      break;
+
+    case Sema::ExpressionEvaluationContext::DiscardedStatement:
+      Result = OdrUseContext::FormallyOdrUsed;
+      break;
 
     case Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed:
-      return false;
+      // A default argument formally results in odr-use, but doesn't actually
+      // result in a use in any real sense until it itself is used.
+      Result = OdrUseContext::FormallyOdrUsed;
+      break;
   }
-  llvm_unreachable("Invalid context");
+
+  if (SemaRef.CurContext->isDependentContext())
+    return OdrUseContext::Dependent;
+
+  return Result;
 }
 
 static bool isImplicitlyDefinableConstexprFunction(FunctionDecl *Func) {
@@ -14795,6 +14822,10 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
 
   Func->setReferenced();
 
+  // Recursive functions aren't really used until they're used from some other
+  // context.
+  bool IsRecursiveCall = CurContext == Func;
+
   // C++11 [basic.def.odr]p3:
   //   A function whose name appears as a potentially-evaluated expression is
   //   odr-used if it is the unique lookup result or the selected member of a
@@ -14802,7 +14833,18 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   //
   // We (incorrectly) mark overload resolution as an unevaluated context, so we
   // can just check that here.
-  bool OdrUse = MightBeOdrUse && isOdrUseContext(*this);
+  OdrUseContext OdrUse =
+      MightBeOdrUse ? isOdrUseContext(*this) : OdrUseContext::None;
+  if (IsRecursiveCall && OdrUse == OdrUseContext::Used)
+    OdrUse = OdrUseContext::FormallyOdrUsed;
+
+  // C++20 [expr.const]p12:
+  //   A function [...] is needed for constant evaluation if it is [...] a
+  //   constexpr function that is named by an expression that is potentially
+  //   constant evaluated
+  bool NeededForConstantEvaluation =
+      isPotentiallyConstantEvaluatedContext(*this) &&
+      isImplicitlyDefinableConstexprFunction(Func);
 
   // Determine whether we require a function definition to exist, per
   // C++11 [temp.inst]p3:
@@ -14810,12 +14852,23 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   //   instantiated or explicitly specialized, the function template
   //   specialization is implicitly instantiated when the specialization is
   //   referenced in a context that requires a function definition to exist.
+  // C++20 [temp.inst]p7:
+  //   The existence of a definition of a [...] function is considered to
+  //   affect the semantics of the program if the [...] function is needed for
+  //   constant evaluation by an expression
+  // C++20 [basic.def.odr]p10:
+  //   Every program shall contain exactly one definition of every non-inline
+  //   function or variable that is odr-used in that program outside of a
+  //   discarded statement
+  // C++20 [special]p1:
+  //   The implementation will implicitly define [defaulted special members]
+  //   if they are odr-used or needed for constant evaluation.
   //
-  // That is either when this is an odr-use, or when a usage of a constexpr
-  // function occurs within an evaluatable context.
-  bool NeedDefinition =
-      OdrUse || (isEvaluatableContext(*this) &&
-                 isImplicitlyDefinableConstexprFunction(Func));
+  // Note that we skip the implicit instantiation of templates that are only
+  // used in unused default arguments or by recursive calls to themselves.
+  // This is formally non-conforming, but seems reasonable in practice.
+  bool NeedDefinition = !IsRecursiveCall && (OdrUse == OdrUseContext::Used ||
+                                             NeededForConstantEvaluation);
 
   // C++14 [temp.expl.spec]p6:
   //   If a template [...] is explicitly specialized then that specialization
@@ -14843,127 +14896,121 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   if (getLangOpts().CUDA)
     CheckCUDACall(Loc, Func);
 
-  // If we don't need to mark the function as used, and we don't need to
-  // try to provide a definition, there's nothing more to do.
-  if ((Func->isUsed(/*CheckUsedAttr=*/false) || !OdrUse) &&
-      (!NeedDefinition || Func->getBody()))
-    return;
-
-  // Note that this declaration has been used.
-  if (CXXConstructorDecl *Constructor = dyn_cast<CXXConstructorDecl>(Func)) {
-    Constructor = cast<CXXConstructorDecl>(Constructor->getFirstDecl());
-    if (Constructor->isDefaulted() && !Constructor->isDeleted()) {
-      if (Constructor->isDefaultConstructor()) {
-        if (Constructor->isTrivial() && !Constructor->hasAttr<DLLExportAttr>())
+  // If we need a definition, try to create one.
+  if (NeedDefinition && !Func->getBody()) {
+    if (CXXConstructorDecl *Constructor = dyn_cast<CXXConstructorDecl>(Func)) {
+      Constructor = cast<CXXConstructorDecl>(Constructor->getFirstDecl());
+      if (Constructor->isDefaulted() && !Constructor->isDeleted()) {
+        if (Constructor->isDefaultConstructor()) {
+          if (Constructor->isTrivial() &&
+              !Constructor->hasAttr<DLLExportAttr>())
+            return;
+          DefineImplicitDefaultConstructor(Loc, Constructor);
+        } else if (Constructor->isCopyConstructor()) {
+          DefineImplicitCopyConstructor(Loc, Constructor);
+        } else if (Constructor->isMoveConstructor()) {
+          DefineImplicitMoveConstructor(Loc, Constructor);
+        }
+      } else if (Constructor->getInheritedConstructor()) {
+        DefineInheritingConstructor(Loc, Constructor);
+      }
+    } else if (CXXDestructorDecl *Destructor =
+                   dyn_cast<CXXDestructorDecl>(Func)) {
+      Destructor = cast<CXXDestructorDecl>(Destructor->getFirstDecl());
+      if (Destructor->isDefaulted() && !Destructor->isDeleted()) {
+        if (Destructor->isTrivial() && !Destructor->hasAttr<DLLExportAttr>())
           return;
-        DefineImplicitDefaultConstructor(Loc, Constructor);
-      } else if (Constructor->isCopyConstructor()) {
-        DefineImplicitCopyConstructor(Loc, Constructor);
-      } else if (Constructor->isMoveConstructor()) {
-        DefineImplicitMoveConstructor(Loc, Constructor);
+        DefineImplicitDestructor(Loc, Destructor);
       }
-    } else if (Constructor->getInheritedConstructor()) {
-      DefineInheritingConstructor(Loc, Constructor);
-    }
-  } else if (CXXDestructorDecl *Destructor =
-                 dyn_cast<CXXDestructorDecl>(Func)) {
-    Destructor = cast<CXXDestructorDecl>(Destructor->getFirstDecl());
-    if (Destructor->isDefaulted() && !Destructor->isDeleted()) {
-      if (Destructor->isTrivial() && !Destructor->hasAttr<DLLExportAttr>())
-        return;
-      DefineImplicitDestructor(Loc, Destructor);
-    }
-    if (Destructor->isVirtual() && getLangOpts().AppleKext)
-      MarkVTableUsed(Loc, Destructor->getParent());
-  } else if (CXXMethodDecl *MethodDecl = dyn_cast<CXXMethodDecl>(Func)) {
-    if (MethodDecl->isOverloadedOperator() &&
-        MethodDecl->getOverloadedOperator() == OO_Equal) {
-      MethodDecl = cast<CXXMethodDecl>(MethodDecl->getFirstDecl());
-      if (MethodDecl->isDefaulted() && !MethodDecl->isDeleted()) {
-        if (MethodDecl->isCopyAssignmentOperator())
-          DefineImplicitCopyAssignment(Loc, MethodDecl);
-        else if (MethodDecl->isMoveAssignmentOperator())
-          DefineImplicitMoveAssignment(Loc, MethodDecl);
-      }
-    } else if (isa<CXXConversionDecl>(MethodDecl) &&
-               MethodDecl->getParent()->isLambda()) {
-      CXXConversionDecl *Conversion =
-          cast<CXXConversionDecl>(MethodDecl->getFirstDecl());
-      if (Conversion->isLambdaToBlockPointerConversion())
-        DefineImplicitLambdaToBlockPointerConversion(Loc, Conversion);
-      else
-        DefineImplicitLambdaToFunctionPointerConversion(Loc, Conversion);
-    } else if (MethodDecl->isVirtual() && getLangOpts().AppleKext)
-      MarkVTableUsed(Loc, MethodDecl->getParent());
-  }
-
-  // Recursive functions should be marked when used from another function.
-  // FIXME: Is this really right?
-  if (CurContext == Func) return;
-
-  // Implicit instantiation of function templates and member functions of
-  // class templates.
-  if (Func->isImplicitlyInstantiable()) {
-    TemplateSpecializationKind TSK =
-        Func->getTemplateSpecializationKindForInstantiation();
-    SourceLocation PointOfInstantiation = Func->getPointOfInstantiation();
-    bool FirstInstantiation = PointOfInstantiation.isInvalid();
-    if (FirstInstantiation) {
-      PointOfInstantiation = Loc;
-      Func->setTemplateSpecializationKind(TSK, PointOfInstantiation);
-    } else if (TSK != TSK_ImplicitInstantiation) {
-      // Use the point of use as the point of instantiation, instead of the
-      // point of explicit instantiation (which we track as the actual point of
-      // instantiation). This gives better backtraces in diagnostics.
-      PointOfInstantiation = Loc;
+      if (Destructor->isVirtual() && getLangOpts().AppleKext)
+        MarkVTableUsed(Loc, Destructor->getParent());
+    } else if (CXXMethodDecl *MethodDecl = dyn_cast<CXXMethodDecl>(Func)) {
+      if (MethodDecl->isOverloadedOperator() &&
+          MethodDecl->getOverloadedOperator() == OO_Equal) {
+        MethodDecl = cast<CXXMethodDecl>(MethodDecl->getFirstDecl());
+        if (MethodDecl->isDefaulted() && !MethodDecl->isDeleted()) {
+          if (MethodDecl->isCopyAssignmentOperator())
+            DefineImplicitCopyAssignment(Loc, MethodDecl);
+          else if (MethodDecl->isMoveAssignmentOperator())
+            DefineImplicitMoveAssignment(Loc, MethodDecl);
+        }
+      } else if (isa<CXXConversionDecl>(MethodDecl) &&
+                 MethodDecl->getParent()->isLambda()) {
+        CXXConversionDecl *Conversion =
+            cast<CXXConversionDecl>(MethodDecl->getFirstDecl());
+        if (Conversion->isLambdaToBlockPointerConversion())
+          DefineImplicitLambdaToBlockPointerConversion(Loc, Conversion);
+        else
+          DefineImplicitLambdaToFunctionPointerConversion(Loc, Conversion);
+      } else if (MethodDecl->isVirtual() && getLangOpts().AppleKext)
+        MarkVTableUsed(Loc, MethodDecl->getParent());
     }
 
-    if (FirstInstantiation || TSK != TSK_ImplicitInstantiation ||
-        Func->isConstexpr()) {
-      if (isa<CXXRecordDecl>(Func->getDeclContext()) &&
-          cast<CXXRecordDecl>(Func->getDeclContext())->isLocalClass() &&
-          CodeSynthesisContexts.size())
-        PendingLocalImplicitInstantiations.push_back(
-            std::make_pair(Func, PointOfInstantiation));
-      else if (Func->isConstexpr())
-        // Do not defer instantiations of constexpr functions, to avoid the
-        // expression evaluator needing to call back into Sema if it sees a
-        // call to such a function.
-        InstantiateFunctionDefinition(PointOfInstantiation, Func);
-      else {
-        Func->setInstantiationIsPending(true);
-        PendingInstantiations.push_back(std::make_pair(Func,
-                                                       PointOfInstantiation));
-        // Notify the consumer that a function was implicitly instantiated.
-        Consumer.HandleCXXImplicitFunctionInstantiation(Func);
+    // Implicit instantiation of function templates and member functions of
+    // class templates.
+    if (Func->isImplicitlyInstantiable()) {
+      TemplateSpecializationKind TSK =
+          Func->getTemplateSpecializationKindForInstantiation();
+      SourceLocation PointOfInstantiation = Func->getPointOfInstantiation();
+      bool FirstInstantiation = PointOfInstantiation.isInvalid();
+      if (FirstInstantiation) {
+        PointOfInstantiation = Loc;
+        Func->setTemplateSpecializationKind(TSK, PointOfInstantiation);
+      } else if (TSK != TSK_ImplicitInstantiation) {
+        // Use the point of use as the point of instantiation, instead of the
+        // point of explicit instantiation (which we track as the actual point
+        // of instantiation). This gives better backtraces in diagnostics.
+        PointOfInstantiation = Loc;
       }
-    }
-  } else {
-    // Walk redefinitions, as some of them may be instantiable.
-    for (auto i : Func->redecls()) {
-      if (!i->isUsed(false) && i->isImplicitlyInstantiable())
-        MarkFunctionReferenced(Loc, i, OdrUse);
+
+      if (FirstInstantiation || TSK != TSK_ImplicitInstantiation ||
+          Func->isConstexpr()) {
+        if (isa<CXXRecordDecl>(Func->getDeclContext()) &&
+            cast<CXXRecordDecl>(Func->getDeclContext())->isLocalClass() &&
+            CodeSynthesisContexts.size())
+          PendingLocalImplicitInstantiations.push_back(
+              std::make_pair(Func, PointOfInstantiation));
+        else if (Func->isConstexpr())
+          // Do not defer instantiations of constexpr functions, to avoid the
+          // expression evaluator needing to call back into Sema if it sees a
+          // call to such a function.
+          InstantiateFunctionDefinition(PointOfInstantiation, Func);
+        else {
+          Func->setInstantiationIsPending(true);
+          PendingInstantiations.push_back(
+              std::make_pair(Func, PointOfInstantiation));
+          // Notify the consumer that a function was implicitly instantiated.
+          Consumer.HandleCXXImplicitFunctionInstantiation(Func);
+        }
+      }
+    } else {
+      // Walk redefinitions, as some of them may be instantiable.
+      for (auto i : Func->redecls()) {
+        if (!i->isUsed(false) && i->isImplicitlyInstantiable())
+          MarkFunctionReferenced(Loc, i, MightBeOdrUse);
+      }
     }
   }
 
-  if (!OdrUse) return;
+  // If this is the first "real" use, act on that.
+  if (OdrUse == OdrUseContext::Used && !Func->isUsed(/*CheckUsedAttr=*/false)) {
+    // Keep track of used but undefined functions.
+    if (!Func->isDefined()) {
+      if (mightHaveNonExternalLinkage(Func))
+        UndefinedButUsed.insert(std::make_pair(Func->getCanonicalDecl(), Loc));
+      else if (Func->getMostRecentDecl()->isInlined() &&
+               !LangOpts.GNUInline &&
+               !Func->getMostRecentDecl()->hasAttr<GNUInlineAttr>())
+        UndefinedButUsed.insert(std::make_pair(Func->getCanonicalDecl(), Loc));
+      else if (isExternalWithNoLinkageType(Func))
+        UndefinedButUsed.insert(std::make_pair(Func->getCanonicalDecl(), Loc));
+    }
 
-  // Keep track of used but undefined functions.
-  if (!Func->isDefined()) {
-    if (mightHaveNonExternalLinkage(Func))
-      UndefinedButUsed.insert(std::make_pair(Func->getCanonicalDecl(), Loc));
-    else if (Func->getMostRecentDecl()->isInlined() &&
-             !LangOpts.GNUInline &&
-             !Func->getMostRecentDecl()->hasAttr<GNUInlineAttr>())
-      UndefinedButUsed.insert(std::make_pair(Func->getCanonicalDecl(), Loc));
-    else if (isExternalWithNoLinkageType(Func))
-      UndefinedButUsed.insert(std::make_pair(Func->getCanonicalDecl(), Loc));
+    Func->markUsed(Context);
+
+    if (LangOpts.OpenMP && LangOpts.OpenMPIsDevice)
+      checkOpenMPDeviceFunction(Loc, Func);
   }
-
-  Func->markUsed(Context);
-
-  if (LangOpts.OpenMP && LangOpts.OpenMPIsDevice)
-    checkOpenMPDeviceFunction(Loc, Func);
 }
 
 static void
@@ -15775,11 +15822,20 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
   TemplateSpecializationKind TSK = MSI ? MSI->getTemplateSpecializationKind()
                                        : Var->getTemplateSpecializationKind();
 
-  bool OdrUseContext = isOdrUseContext(SemaRef);
+  OdrUseContext OdrUse = isOdrUseContext(SemaRef);
   bool UsableInConstantExpr =
       Var->isUsableInConstantExpressions(SemaRef.Context);
+
+  // C++20 [expr.const]p12:
+  //   A variable [...] is needed for constant evaluation if it is [...] a
+  //   variable whose name appears as a potentially constant evaluated
+  //   expression that is either a contexpr variable or is of non-volatile
+  //   const-qualified integral type or of reference type
+  bool NeededForConstantEvaluation =
+      isPotentiallyConstantEvaluatedContext(SemaRef) && UsableInConstantExpr;
+
   bool NeedDefinition =
-      OdrUseContext || (isEvaluatableContext(SemaRef) && UsableInConstantExpr);
+      OdrUse == OdrUseContext::Used || NeededForConstantEvaluation;
 
   VarTemplateSpecializationDecl *VarSpec =
       dyn_cast<VarTemplateSpecializationDecl>(Var);
@@ -15843,25 +15899,46 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
     }
   }
 
-  // Per C++11 [basic.def.odr], a variable is odr-used "unless it satisfies
-  // the requirements for appearing in a constant expression (5.19) and, if
-  // it is an object, the lvalue-to-rvalue conversion (4.1)
-  // is immediately applied."  We check the first part here, and
+  // C++20 [basic.def.odr]p4:
+  //   A variable x whose name appears as a potentially-evaluated expression e
+  //   is odr-used by e unless
+  //   -- x is a reference that is usable in constant expressions
+  //   -- x is a variable of non-reference type that is usable in constant
+  //      expressions and has no mutable subobjects [FIXME], and e is an
+  //      element of the set of potential results of an expression of
+  //      non-volatile-qualified non-class type to which the lvalue-to-rvalue
+  //      conversion is applied
+  //   -- x is a variable of non-reference type, and e is an element of the set
+  //      of potential results of a discarded-value expression to which the
+  //      lvalue-to-rvalue conversion is not applied [FIXME]
+  //
+  // We check the first part of the second bullet here, and
   // Sema::UpdateMarkingForLValueToRValue deals with the second part.
-  // Note that we use the C++11 definition everywhere because nothing in
-  // C++03 depends on whether we get the C++03 version correct. The second
-  // part does not apply to references, since they are not objects.
-  if (OdrUseContext && E &&
-      IsVariableAConstantExpression(Var, SemaRef.Context)) {
-    // A reference initialized by a constant expression can never be
-    // odr-used, so simply ignore it.
-    if (!Var->getType()->isReferenceType() ||
-        (SemaRef.LangOpts.OpenMP && SemaRef.isOpenMPCapturedDecl(Var)))
-      SemaRef.MaybeODRUseExprs.insert(E);
-  } else if (OdrUseContext) {
-    MarkVarDeclODRUsed(Var, Loc, SemaRef,
-                       /*MaxFunctionScopeIndex ptr*/ nullptr);
-  } else if (isOdrUseContext(SemaRef, /*SkipDependentUses*/false)) {
+  // FIXME: To get the third bullet right, we need to delay this even for
+  // variables that are not usable in constant expressions.
+  switch (OdrUse) {
+  case OdrUseContext::None:
+    break;
+
+  case OdrUseContext::FormallyOdrUsed:
+    // FIXME: Ignoring formal odr-uses results in incorrect lambda capture
+    // behavior.
+    break;
+
+  case OdrUseContext::Used:
+    if (E && IsVariableAConstantExpression(Var, SemaRef.Context)) {
+      // A reference initialized by a constant expression can never be
+      // odr-used, so simply ignore it.
+      if (!Var->getType()->isReferenceType() ||
+          (SemaRef.LangOpts.OpenMP && SemaRef.isOpenMPCapturedDecl(Var)))
+        SemaRef.MaybeODRUseExprs.insert(E);
+    } else {
+      MarkVarDeclODRUsed(Var, Loc, SemaRef,
+                         /*MaxFunctionScopeIndex ptr*/ nullptr);
+    }
+    break;
+
+  case OdrUseContext::Dependent:
     // If this is a dependent context, we don't need to mark variables as
     // odr-used, but we may still need to track them for lambda capture.
     // FIXME: Do we also need to do this inside dependent typeid expressions
@@ -15882,12 +15959,15 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
         // later (ActOnFinishFullExpr) for eventual capture and odr-use marking
         // unless the variable is a reference that was initialized by a constant
         // expression (this will never need to be captured or odr-used).
+        //
+        // FIXME: We can simplify this a lot after implementing P0588R1.
         assert(E && "Capture variable should be used in an expression.");
         if (!Var->getType()->isReferenceType() ||
             !IsVariableNonDependentAndAConstantExpression(Var, SemaRef.Context))
           LSI->addPotentialCapture(E->IgnoreParens());
       }
     }
+    break;
   }
 }
 
