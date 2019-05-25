@@ -79,7 +79,7 @@ define i8* @gep8(i32 %i, i8* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addl $5, %edi
 ; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    leaq (%rsi,%rax), %rax
+; CHECK-NEXT:    addq %rsi, %rax
 ; CHECK-NEXT:    retq
 
   %add = add nsw i32 %i, 5
@@ -166,16 +166,16 @@ define void @PR20134(i32* %a, i32 %i) {
 ; CHECK-NEXT:    cltq
 ; CHECK-NEXT:    movq $4, %rcx
 ; CHECK-NEXT:    imulq %rcx, %rax
-; CHECK-NEXT:    leaq (%rdi,%rax), %rax
+; CHECK-NEXT:    addq %rdi, %rax
 ; CHECK-NEXT:    leal 2(%rsi), %edx
 ; CHECK-NEXT:    movslq %edx, %rdx
 ; CHECK-NEXT:    imulq %rcx, %rdx
-; CHECK-NEXT:    leaq (%rdi,%rdx), %rdx
+; CHECK-NEXT:    addq %rdi, %rdx
 ; CHECK-NEXT:    movl (%rdx), %edx
 ; CHECK-NEXT:    addl (%rax), %edx
 ; CHECK-NEXT:    movslq %esi, %rax
 ; CHECK-NEXT:    imulq %rcx, %rax
-; CHECK-NEXT:    leaq (%rdi,%rax), %rax
+; CHECK-NEXT:    addq %rdi, %rax
 ; CHECK-NEXT:    movl %edx, (%rax)
 ; CHECK-NEXT:    retq
 
@@ -204,10 +204,10 @@ define void @PR20134_zext(i32* %a, i32 %i) {
 ; CHECK-NEXT:    leal 1(%rsi), %eax
 ; CHECK-NEXT:    movq $4, %rcx
 ; CHECK-NEXT:    imulq %rcx, %rax
-; CHECK-NEXT:    leaq (%rdi,%rax), %rax
+; CHECK-NEXT:    addq %rdi, %rax
 ; CHECK-NEXT:    leal 2(%rsi), %edx
 ; CHECK-NEXT:    imulq %rcx, %rdx
-; CHECK-NEXT:    leaq (%rdi,%rdx), %rdx
+; CHECK-NEXT:    addq %rdi, %rdx
 ; CHECK-NEXT:    movl (%rdx), %edx
 ; CHECK-NEXT:    addl (%rax), %edx
 ; CHECK-NEXT:    imulq %rcx, %rsi

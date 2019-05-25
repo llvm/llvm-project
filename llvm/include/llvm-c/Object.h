@@ -102,6 +102,22 @@ LLVMMemoryBufferRef LLVMBinaryCopyMemoryBuffer(LLVMBinaryRef BR);
  */
 LLVMBinaryType LLVMBinaryGetType(LLVMBinaryRef BR);
 
+/*
+ * For a Mach-O universal binary file, retrieves the object file corresponding
+ * to the given architecture if it is present as a slice.
+ *
+ * If NULL is returned, the \p ErrorMessage parameter is populated with the
+ * error's description.  It is then the caller's responsibility to free this
+ * message by calling \c LLVMDisposeMessage.
+ *
+ * It is the responsiblity of the caller to free the returned object file by
+ * calling \c LLVMDisposeBinary.
+ */
+LLVMBinaryRef LLVMMachOUniversalBinaryCopyObjectForArch(LLVMBinaryRef BR,
+                                                        const char *Arch,
+                                                        size_t ArchLen,
+                                                        char **ErrorMessage);
+
 /**
  * Retrieve a copy of the section iterator for this object file.
  *

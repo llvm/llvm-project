@@ -191,7 +191,7 @@ define i8 @test_mul_by_17(i8 %x) {
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll $4, %eax
-; X64-NEXT:    leal (%rax,%rdi), %eax
+; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %m = mul i8 %x, 17

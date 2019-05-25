@@ -470,8 +470,7 @@ define i1 @uadd_val(i8 %x, i1* %pc) {
 ; CHECK:       split:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i8 [[VAL]], 100
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp uge i8 [[VAL]], 100
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -506,8 +505,7 @@ define i1 @sadd_val(i8 %x, i1* %pc) {
 ; CHECK:       split:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i8 [[VAL]], -28
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp sge i8 [[VAL]], -28
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -542,8 +540,7 @@ define i1 @usub_val(i8 %x, i1* %pc) {
 ; CHECK:       split:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[VAL]], -101
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ule i8 [[VAL]], -101
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -578,8 +575,7 @@ define i1 @ssub_val(i8 %x, i1* %pc) {
 ; CHECK:       split:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i8 [[VAL]], 27
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp sle i8 [[VAL]], 27
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -614,8 +610,7 @@ define i1 @umul_val(i8 %x, i1* %pc) {
 ; CHECK:       split:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[VAL]], -6
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ule i8 [[VAL]], -6
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -650,8 +645,7 @@ define i1 @smul_val_bound1(i8 %x, i1* %pc) {
 ; CHECK:       split:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i8 [[VAL]], 120
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp sle i8 [[VAL]], 120
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -686,8 +680,7 @@ define i1 @smul_val_bound2(i8 %x, i1* %pc) {
 ; CHECK:       split:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i8 [[VAL]], -120
 ; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp sge i8 [[VAL]], -120
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable

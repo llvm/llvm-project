@@ -561,9 +561,9 @@ define i64 @test_reduce_v4i64(<4 x i64> %a0) {
 ; X64-AVX512-LABEL: test_reduce_v4i64:
 ; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X64-AVX512-NEXT:    vpminsq %ymm1, %ymm0, %ymm0
+; X64-AVX512-NEXT:    vpminsq %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; X64-AVX512-NEXT:    vpminsq %ymm1, %ymm0, %ymm0
+; X64-AVX512-NEXT:    vpminsq %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vmovq %xmm0, %rax
 ; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq
@@ -625,11 +625,11 @@ define i32 @test_reduce_v8i32(<8 x i32> %a0) {
 ; X86-AVX2-LABEL: test_reduce_v8i32:
 ; X86-AVX2:       ## %bb.0:
 ; X86-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X86-AVX2-NEXT:    vpminsd %ymm1, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; X86-AVX2-NEXT:    vpminsd %ymm1, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; X86-AVX2-NEXT:    vpminsd %ymm1, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX2-NEXT:    vzeroupper
 ; X86-AVX2-NEXT:    retl
@@ -681,11 +681,11 @@ define i32 @test_reduce_v8i32(<8 x i32> %a0) {
 ; X64-AVX2-LABEL: test_reduce_v8i32:
 ; X64-AVX2:       ## %bb.0:
 ; X64-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X64-AVX2-NEXT:    vpminsd %ymm1, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; X64-AVX2-NEXT:    vpminsd %ymm1, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; X64-AVX2-NEXT:    vpminsd %ymm1, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
@@ -693,11 +693,11 @@ define i32 @test_reduce_v8i32(<8 x i32> %a0) {
 ; X64-AVX512-LABEL: test_reduce_v8i32:
 ; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X64-AVX512-NEXT:    vpminsd %ymm1, %ymm0, %ymm0
+; X64-AVX512-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; X64-AVX512-NEXT:    vpminsd %ymm1, %ymm0, %ymm0
+; X64-AVX512-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; X64-AVX512-NEXT:    vpminsd %ymm1, %ymm0, %ymm0
+; X64-AVX512-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq
@@ -1280,9 +1280,9 @@ define i64 @test_reduce_v8i64(<8 x i64> %a0) {
 ; X64-AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; X64-AVX512-NEXT:    vpminsq %zmm1, %zmm0, %zmm0
 ; X64-AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X64-AVX512-NEXT:    vpminsq %zmm1, %zmm0, %zmm0
+; X64-AVX512-NEXT:    vpminsq %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; X64-AVX512-NEXT:    vpminsq %zmm1, %zmm0, %zmm0
+; X64-AVX512-NEXT:    vpminsq %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vmovq %xmm0, %rax
 ; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq
@@ -1363,11 +1363,11 @@ define i32 @test_reduce_v16i32(<16 x i32> %a0) {
 ; X86-AVX2:       ## %bb.0:
 ; X86-AVX2-NEXT:    vpminsd %ymm1, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X86-AVX2-NEXT:    vpminsd %ymm1, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; X86-AVX2-NEXT:    vpminsd %ymm1, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; X86-AVX2-NEXT:    vpminsd %ymm1, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX2-NEXT:    vzeroupper
 ; X86-AVX2-NEXT:    retl
@@ -1435,11 +1435,11 @@ define i32 @test_reduce_v16i32(<16 x i32> %a0) {
 ; X64-AVX2:       ## %bb.0:
 ; X64-AVX2-NEXT:    vpminsd %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X64-AVX2-NEXT:    vpminsd %ymm1, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; X64-AVX2-NEXT:    vpminsd %ymm1, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; X64-AVX2-NEXT:    vpminsd %ymm1, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
@@ -1449,11 +1449,11 @@ define i32 @test_reduce_v16i32(<16 x i32> %a0) {
 ; X64-AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; X64-AVX512-NEXT:    vpminsd %zmm1, %zmm0, %zmm0
 ; X64-AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X64-AVX512-NEXT:    vpminsd %zmm1, %zmm0, %zmm0
+; X64-AVX512-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; X64-AVX512-NEXT:    vpminsd %zmm1, %zmm0, %zmm0
+; X64-AVX512-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; X64-AVX512-NEXT:    vpminsd %zmm1, %zmm0, %zmm0
+; X64-AVX512-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq

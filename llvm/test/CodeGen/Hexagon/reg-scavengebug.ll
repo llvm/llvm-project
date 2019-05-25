@@ -19,7 +19,7 @@ declare <16 x i32> @llvm.hexagon.V6.valignb(<16 x i32>, <16 x i32>, i32) #0
 declare <16 x i32> @llvm.hexagon.V6.vaddh(<16 x i32>, <16 x i32>) #0
 
 ; Function Attrs: nounwind
-define void @f0(i16* noalias nocapture %a0, i32* noalias nocapture readonly %a1, i32 %a2, i8* noalias nocapture readonly %a3) #1 {
+define void @f0(i16* noalias nocapture %a0, i32* noalias nocapture readonly %a1, i32 %a2, i8* noalias nocapture readonly %a3, i1 %cond) #1 {
 b0:
   %v0 = add nsw i32 %a2, 63
   %v1 = ashr i32 %v0, 6
@@ -40,7 +40,7 @@ b1:                                               ; preds = %b0
   %v13 = getelementptr inbounds i32, i32* %a1, i32 48
   %v14 = tail call <16 x i32> @llvm.hexagon.V6.vaddh(<16 x i32> %v12, <16 x i32> undef)
   %v15 = bitcast i32* %v13 to <16 x i32>*
-  br i1 undef, label %b2, label %b3
+  br i1 %cond, label %b2, label %b3
 
 b2:                                               ; preds = %b1
   %v16 = getelementptr inbounds <16 x i32>, <16 x i32>* %v15, i32 1

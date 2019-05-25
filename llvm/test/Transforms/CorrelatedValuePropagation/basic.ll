@@ -986,3 +986,100 @@ exit1:
 exit2:
   ret i1 %cmp2
 }
+
+define i1 @uadd_sat_unknown(i32 %a) {
+; CHECK-LABEL: @uadd_sat_unknown(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[A:%.*]], i32 100)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp uge i32 [[VAL]], 100
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[VAL]], 100
+; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
+; CHECK:       exit1:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+entry:
+  %val = call i32 @llvm.uadd.sat.i32(i32 %a, i32 100)
+  %cmp1 = icmp uge i32 %val, 100
+  %cmp2 = icmp ugt i32 %val, 100
+  br i1 undef, label %exit1, label %exit2
+exit1:
+  ret i1 %cmp1
+exit2:
+  ret i1 %cmp2
+}
+
+define i1 @usub_sat_unknown(i32 %a) {
+; CHECK-LABEL: @usub_sat_unknown(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[A:%.*]], i32 100)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule i32 [[VAL]], -101
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[VAL]], -101
+; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
+; CHECK:       exit1:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+entry:
+  %val = call i32 @llvm.usub.sat.i32(i32 %a, i32 100)
+  %cmp1 = icmp ule i32 %val, 4294967195
+  %cmp2 = icmp ult i32 %val, 4294967195
+  br i1 undef, label %exit1, label %exit2
+exit1:
+  ret i1 %cmp1
+exit2:
+  ret i1 %cmp2
+}
+
+define i1 @sadd_sat_unknown(i32 %a) {
+; CHECK-LABEL: @sadd_sat_unknown(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[A:%.*]], i32 100)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[VAL]], -2147483548
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[VAL]], -2147483548
+; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
+; CHECK:       exit1:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+entry:
+  %val = call i32 @llvm.sadd.sat.i32(i32 %a, i32 100)
+  %cmp1 = icmp sge i32 %val, -2147483548
+  %cmp2 = icmp sgt i32 %val, -2147483548
+  br i1 undef, label %exit1, label %exit2
+exit1:
+  ret i1 %cmp1
+exit2:
+  ret i1 %cmp2
+}
+
+define i1 @ssub_sat_unknown(i32 %a) {
+; CHECK-LABEL: @ssub_sat_unknown(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.ssub.sat.i32(i32 [[A:%.*]], i32 100)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[VAL]], 2147483547
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[VAL]], 2147483547
+; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
+; CHECK:       exit1:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+entry:
+  %val = call i32 @llvm.ssub.sat.i32(i32 %a, i32 100)
+  %cmp1 = icmp sle i32 %val, 2147483547
+  %cmp2 = icmp slt i32 %val, 2147483547
+  br i1 undef, label %exit1, label %exit2
+exit1:
+  ret i1 %cmp1
+exit2:
+  ret i1 %cmp2
+}
+
+declare i32 @llvm.uadd.sat.i32(i32, i32)
+declare i32 @llvm.usub.sat.i32(i32, i32)
+declare i32 @llvm.sadd.sat.i32(i32, i32)
+declare i32 @llvm.ssub.sat.i32(i32, i32)

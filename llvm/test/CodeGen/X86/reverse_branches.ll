@@ -62,7 +62,7 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:    ## in Loop: Header=BB0_3 Depth=2
 ; CHECK-NEXT:    addq $1002, %rbp ## imm = 0x3EA
 ; CHECK-NEXT:    movq %rbx, %rdi
-; CHECK-NEXT:    leaq 1001(%rbx), %rbx
+; CHECK-NEXT:    addq $1001, %rbx ## imm = 0x3E9
 ; CHECK-NEXT:    movl $1000, %edx ## imm = 0x3E8
 ; CHECK-NEXT:    movl $120, %esi
 ; CHECK-NEXT:    callq _memchr
