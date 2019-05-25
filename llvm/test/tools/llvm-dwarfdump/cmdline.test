@@ -13,6 +13,7 @@ HELP: -find
 HELP: -ignore-case
 HELP: -lookup
 HELP: -name
+HELP: -parent-recurse-depth=<N>
 HELP: -recurse-depth=<N>
 HELP: -regex
 HELP: -show-children

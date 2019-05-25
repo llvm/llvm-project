@@ -550,7 +550,7 @@ struct WrappedSymbol {
 };
 
 static Symbol *addUndefined(StringRef Name) {
-  return Symtab->addUndefinedFunction(Name, "", "", 0, nullptr, nullptr);
+  return Symtab->addUndefinedFunction(Name, "", "", 0, nullptr, nullptr, false);
 }
 
 // Handles -wrap option.

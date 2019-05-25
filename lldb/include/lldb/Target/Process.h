@@ -2178,13 +2178,12 @@ public:
 
   OperatingSystem *GetOperatingSystem() { return m_os_up.get(); }
 
-  virtual LanguageRuntime *GetLanguageRuntime(lldb::LanguageType language,
-                                              bool retry_if_null = true);
+  LanguageRuntime *GetLanguageRuntime(lldb::LanguageType language,
+                                      bool retry_if_null = true);
 
-  virtual CPPLanguageRuntime *GetCPPLanguageRuntime(bool retry_if_null = true);
+  CPPLanguageRuntime *GetCPPLanguageRuntime(bool retry_if_null = true);
 
-  virtual ObjCLanguageRuntime *
-  GetObjCLanguageRuntime(bool retry_if_null = true);
+  ObjCLanguageRuntime *GetObjCLanguageRuntime(bool retry_if_null = true);
 
   bool IsPossibleDynamicValue(ValueObject &in_value);
 

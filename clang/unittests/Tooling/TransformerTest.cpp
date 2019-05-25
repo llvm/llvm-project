@@ -147,8 +147,7 @@ static RewriteRule ruleStrlenSize() {
                                   on(expr(hasType(isOrPointsTo(StringType)))
                                          .bind(StringExpr)),
                                   callee(cxxMethodDecl(hasName("c_str")))))),
-      change(text("REPLACED")));
-  R.Cases[0].Explanation = text("Use size() method directly on string.");
+      change(text("REPLACED")), text("Use size() method directly on string."));
   return R;
 }
 

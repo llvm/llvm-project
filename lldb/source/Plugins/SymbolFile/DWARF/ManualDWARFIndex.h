@@ -59,7 +59,6 @@ private:
 
   static void
   IndexUnitImpl(DWARFUnit &unit, const lldb::LanguageType cu_language,
-                const DWARFFormValue::FixedFormSizes &fixed_form_sizes,
                 const dw_offset_t cu_offset, IndexSet &set);
 
   /// Non-null value means we haven't built the index yet.

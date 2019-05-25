@@ -4177,8 +4177,11 @@ static void AddLambdaCompletion(ResultBuilder &Results,
     };
     Completion.AddChunk(CodeCompletionString::CK_RightParen);
   }
+  Completion.AddChunk(clang::CodeCompletionString::CK_HorizontalSpace);
   Completion.AddChunk(CodeCompletionString::CK_LeftBrace);
+  Completion.AddChunk(CodeCompletionString::CK_HorizontalSpace);
   Completion.AddPlaceholderChunk("body");
+  Completion.AddChunk(CodeCompletionString::CK_HorizontalSpace);
   Completion.AddChunk(CodeCompletionString::CK_RightBrace);
 
   Results.AddResult(Completion.TakeString());

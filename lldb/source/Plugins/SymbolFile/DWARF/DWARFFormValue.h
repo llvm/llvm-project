@@ -11,6 +11,7 @@
 
 #include "DWARFDataExtractor.h"
 #include <stddef.h>
+#include "llvm/ADT/Optional.h"
 
 class DWARFUnit;
 class SymbolFileDWARF;
@@ -28,24 +29,6 @@ public:
     } value;
     const uint8_t *data;
   } ValueType;
-
-  class FixedFormSizes {
-  public:
-    FixedFormSizes() : m_fix_sizes(nullptr), m_size(0) {}
-
-    FixedFormSizes(const uint8_t *fix_sizes, size_t size)
-        : m_fix_sizes(fix_sizes), m_size(size) {}
-
-    uint8_t GetSize(uint32_t index) const {
-      return index < m_size ? m_fix_sizes[index] : 0;
-    }
-
-    bool Empty() const { return m_size == 0; }
-
-  private:
-    const uint8_t *m_fix_sizes;
-    size_t m_size;
-  };
 
   enum {
     eValueTypeInvalid = 0,
@@ -71,6 +54,9 @@ public:
   bool ExtractValue(const lldb_private::DWARFDataExtractor &data,
                     lldb::offset_t *offset_ptr);
   const uint8_t *BlockData() const;
+  static llvm::Optional<uint8_t> GetFixedSize(dw_form_t form,
+                                              const DWARFUnit *u);
+  llvm::Optional<uint8_t> GetFixedSize() const;
   DWARFDIE Reference() const;
   uint64_t Reference(dw_offset_t offset) const;
   bool Boolean() const { return m_value.value.uval != 0; }
@@ -88,7 +74,6 @@ public:
                         lldb::offset_t *offset_ptr, const DWARFUnit *unit);
   static bool IsBlockForm(const dw_form_t form);
   static bool IsDataForm(const dw_form_t form);
-  static FixedFormSizes GetFixedFormSizesForAddressSize(uint8_t addr_size);
   static int Compare(const DWARFFormValue &a, const DWARFFormValue &b);
   void Clear();
   static bool FormIsSupported(dw_form_t form);

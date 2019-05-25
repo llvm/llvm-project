@@ -113,6 +113,10 @@ class AArch64RegisterBankInfo final : public AArch64GenRegisterBankInfo {
   const InstructionMapping &
   getSameKindOfOperandsMapping(const MachineInstr &MI) const;
 
+  /// Returns true if the output of \p MI must be stored on a FPR register.
+  bool hasFPConstraints(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                     const TargetRegisterInfo &TRI) const;
+
 public:
   AArch64RegisterBankInfo(const TargetRegisterInfo &TRI);
 

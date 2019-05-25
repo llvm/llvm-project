@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize -dce -instcombine -force-vector-width=2 -force-vector-interleave=1  < %s | FileCheck %s
+; RUN: opt -S -loop-vectorize -dce -force-vector-width=2 -force-vector-interleave=1  < %s | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -244,7 +244,7 @@ for.end:
 ; SGE -> SLT
 ; Turn this into a min reduction (select inputs are reversed).
 ; CHECK-LABEL: @sge_min_red(
-; CHECK: icmp slt <2 x i32>
+; CHECK: icmp sge <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: icmp slt <2 x i32>
@@ -273,7 +273,7 @@ for.end:
 ; SLE -> SGT
 ; Turn this into a max reduction (select inputs are reversed).
 ; CHECK-LABEL: @sle_min_red(
-; CHECK: icmp sgt <2 x i32>
+; CHECK: icmp sle <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: icmp sgt <2 x i32>
@@ -302,7 +302,7 @@ for.end:
 ; UGE -> ULT
 ; Turn this into a min reduction (select inputs are reversed).
 ; CHECK-LABEL: @uge_min_red(
-; CHECK: icmp ult <2 x i32>
+; CHECK: icmp uge <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: icmp ult <2 x i32>
@@ -331,7 +331,7 @@ for.end:
 ; ULE -> UGT
 ; Turn this into a max reduction (select inputs are reversed).
 ; CHECK-LABEL: @ule_min_red(
-; CHECK: icmp ugt <2 x i32>
+; CHECK: icmp ule <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: icmp ugt <2 x i32>
@@ -516,7 +516,7 @@ for.end:
 }
 
 ; CHECK-LABEL: @unordered_max_red_float(
-; CHECK: fcmp fast ole <2 x float>
+; CHECK: fcmp fast ugt <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast ogt <2 x float>
@@ -542,7 +542,7 @@ for.end:
 }
 
 ; CHECK-LABEL: @unordered_max_red_float_ge(
-; CHECK: fcmp fast olt <2 x float>
+; CHECK: fcmp fast uge <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast ogt <2 x float>
@@ -568,7 +568,7 @@ for.end:
 }
 
 ; CHECK-LABEL: @inverted_unordered_max_red_float(
-; CHECK: fcmp fast oge <2 x float>
+; CHECK: fcmp fast ult <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast ogt <2 x float>
@@ -594,7 +594,7 @@ for.end:
 }
 
 ; CHECK-LABEL: @inverted_unordered_max_red_float_le(
-; CHECK: fcmp fast ogt <2 x float>
+; CHECK: fcmp fast ule <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast ogt <2 x float>
@@ -727,7 +727,7 @@ for.end:
 }
 
 ; CHECK-LABEL: @unordered_min_red_float(
-; CHECK: fcmp fast oge <2 x float>
+; CHECK: fcmp fast ult <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast olt <2 x float>
@@ -753,7 +753,7 @@ for.end:
 }
 
 ; CHECK-LABEL: @unordered_min_red_float_le(
-; CHECK: fcmp fast ogt <2 x float>
+; CHECK: fcmp fast ule <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast olt <2 x float>
@@ -779,7 +779,7 @@ for.end:
 }
 
 ; CHECK-LABEL: @inverted_unordered_min_red_float(
-; CHECK: fcmp fast ole <2 x float>
+; CHECK: fcmp fast ugt <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast olt <2 x float>
@@ -805,7 +805,7 @@ for.end:
 }
 
 ; CHECK-LABEL: @inverted_unordered_min_red_float_ge(
-; CHECK: fcmp fast olt <2 x float>
+; CHECK: fcmp fast uge <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: fcmp fast olt <2 x float>

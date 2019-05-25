@@ -27,8 +27,8 @@ define amdgpu_kernel void @s_fsub_f32(float addrspace(1)* %out, float %a, float 
 ; R600-DAG: ADD {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[3].X, -KC0[3].Z
 ; R600-DAG: ADD {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[2].W, -KC0[3].Y
 
-; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; SI: v_sub_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; SI: v_sub_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 define amdgpu_kernel void @fsub_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %a, <2 x float> %b) {
   %sub = fsub <2 x float> %a, %b
   store <2 x float> %sub, <2 x float> addrspace(1)* %out, align 8
@@ -55,10 +55,10 @@ define amdgpu_kernel void @v_fsub_v4f32(<4 x float> addrspace(1)* %out, <4 x flo
 }
 
 ; FUNC-LABEL: {{^}}s_fsub_v4f32:
-; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
-; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; SI: v_sub_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; SI: v_sub_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; SI: v_sub_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; SI: v_sub_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 ; SI: s_endpgm
 define amdgpu_kernel void @s_fsub_v4f32(<4 x float> addrspace(1)* %out, <4 x float> %a, <4 x float> %b) {
   %result = fsub <4 x float> %a, %b

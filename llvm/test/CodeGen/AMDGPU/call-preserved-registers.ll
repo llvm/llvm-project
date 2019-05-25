@@ -38,8 +38,8 @@ define amdgpu_kernel void @test_kernel_call_external_void_func_void_clobber_s30_
 ; GCN-NEXT: ;;#ASMSTART
 ; GCN-NEXT: ;;#ASMEND
 ; GCN-NEXT: s_swappc_b64
-; GCN-NEXT: s_mov_b32 s5, s33
-; GCN: v_readlane_b32 s37, v32, 4
+; GCN-DAG: s_mov_b32 s5, s33
+; GCN-DAG: v_readlane_b32 s37, v32, 4
 ; GCN: v_readlane_b32 s36, v32, 3
 ; GCN: v_readlane_b32 s35, v32, 2
 ; GCN: v_readlane_b32 s34, v32, 1
@@ -59,7 +59,7 @@ define void @test_func_call_external_void_func_void_clobber_s30_s31_call_externa
 ; GCN-NEXT: s_mov_b32 s5, s33
 ; GCN-NEXT: s_mov_b32 s33, s5
 ; GCN-NEXT: s_swappc_b64
-; GCN-NEXT: s_mov_b32 s5, s33
+; GCN: s_mov_b32 s5, s33
 define void @test_func_call_external_void_funcx2() #0 {
   call void @external_void_func_void()
   call void @external_void_func_void()
@@ -175,7 +175,7 @@ define amdgpu_kernel void @test_call_void_func_void_preserves_v32(i32 addrspace(
 ; GCN-NEXT: ; clobber
 ; GCN-NEXT: #ASMEND
 ; GCN-NEXT:	v_readlane_b32 s33, v0, 0
-; GCN-NEXT: s_setpc_b64
+; GCN: s_setpc_b64
 define hidden void @void_func_void_clobber_s33() #2 {
   call void asm sideeffect "; clobber", "~{s33}"() #0
   ret void

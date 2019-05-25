@@ -2,10 +2,15 @@
 # RUN: llvm-dwarfdump --debug-info=0x0000002a -p %t | FileCheck %s --check-prefix=PARENTS
 # RUN: llvm-dwarfdump --debug-info=0x0000002a -c %t | FileCheck %s --check-prefix=CHILDREN
 # RUN: llvm-dwarfdump --debug-info=0x0000002a -p -c %t | FileCheck %s --check-prefix=BOTH
+# RUN: llvm-dwarfdump  --debug-info=0x00000032 -p -parent-recurse-depth 1 -c %t | FileCheck %s --check-prefix=ONEPARENT
 
 # PARENTS: DW_TAG_compile_unit
 # PARENTS: DW_TAG_enumeration_type
 # PARENTS-NOT: DW_TAG_enumerator
+
+# ONEPARENT-NOT: DW_TAG_compile_unit
+# ONEPARENT: DW_TAG_enumeration_type
+# ONEPARENT: DW_TAG_enumerator
 
 # CHILDREN-NOT: DW_TAG_compile_unit
 # CHILDREN:   DW_TAG_enumerator

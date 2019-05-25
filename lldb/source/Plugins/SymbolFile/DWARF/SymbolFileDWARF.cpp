@@ -3166,13 +3166,11 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                                         block_length);
               } else if (DWARFFormValue::IsDataForm(form_value.Form())) {
                 // Retrieve the value as a data expression.
-                DWARFFormValue::FixedFormSizes fixed_form_sizes =
-                    DWARFFormValue::GetFixedFormSizesForAddressSize(
-                        attributes.CompileUnitAtIndex(i)->GetAddressByteSize());
                 uint32_t data_offset = attributes.DIEOffsetAtIndex(i);
-                uint32_t data_length =
-                    fixed_form_sizes.GetSize(form_value.Form());
-                if (data_length == 0) {
+                if (auto data_length = form_value.GetFixedSize())
+                  location.CopyOpcodeData(module, debug_info_data, data_offset,
+                                          *data_length);
+                else {
                   const uint8_t *data_pointer = form_value.BlockData();
                   if (data_pointer) {
                     form_value.Unsigned();
@@ -3181,21 +3179,14 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                     // create the variable
                     const_value = form_value;
                   }
-                } else
-                  location.CopyOpcodeData(module, debug_info_data, data_offset,
-                                          data_length);
+                }
               } else {
                 // Retrieve the value as a string expression.
                 if (form_value.Form() == DW_FORM_strp) {
-                  DWARFFormValue::FixedFormSizes fixed_form_sizes =
-                      DWARFFormValue::GetFixedFormSizesForAddressSize(
-                          attributes.CompileUnitAtIndex(i)
-                              ->GetAddressByteSize());
                   uint32_t data_offset = attributes.DIEOffsetAtIndex(i);
-                  uint32_t data_length =
-                      fixed_form_sizes.GetSize(form_value.Form());
-                  location.CopyOpcodeData(module, debug_info_data, data_offset,
-                                          data_length);
+                  if (auto data_length = form_value.GetFixedSize())
+                    location.CopyOpcodeData(module, debug_info_data,
+                                            data_offset, *data_length);
                 } else {
                   const char *str = form_value.AsCString();
                   uint32_t string_offset =
