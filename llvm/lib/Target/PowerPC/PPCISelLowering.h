@@ -160,7 +160,7 @@ namespace llvm {
 
       /// CALL - A direct function call.
       /// CALL_NOP is a call with the special NOP which follows 64-bit
-      /// SVR4 calls.
+      /// SVR4 calls and 32-bit/64-bit AIX calls.
       CALL, CALL_NOP,
 
       /// CHAIN,FLAG = MTCTR(VAL, CHAIN[, INFLAG]) - Directly corresponds to a
@@ -1120,6 +1120,15 @@ namespace llvm {
                              const SDLoc &dl, SelectionDAG &DAG,
                              SmallVectorImpl<SDValue> &InVals,
                              ImmutableCallSite CS) const;
+    SDValue LowerCall_AIX(SDValue Chain, SDValue Callee,
+                          CallingConv::ID CallConv, bool isVarArg,
+                          bool isTailCall, bool isPatchPoint,
+                          const SmallVectorImpl<ISD::OutputArg> &Outs,
+                          const SmallVectorImpl<SDValue> &OutVals,
+                          const SmallVectorImpl<ISD::InputArg> &Ins,
+                          const SDLoc &dl, SelectionDAG &DAG,
+                          SmallVectorImpl<SDValue> &InVals,
+                          ImmutableCallSite CS) const;
 
     SDValue lowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEH_SJLJ_LONGJMP(SDValue Op, SelectionDAG &DAG) const;

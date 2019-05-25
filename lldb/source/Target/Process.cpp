@@ -1569,19 +1569,22 @@ CPPLanguageRuntime *Process::GetCPPLanguageRuntime(bool retry_if_null) {
   std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
   LanguageRuntime *runtime =
       GetLanguageRuntime(eLanguageTypeC_plus_plus, retry_if_null);
-  if (runtime != nullptr &&
-      runtime->GetLanguageType() == eLanguageTypeC_plus_plus)
-    return static_cast<CPPLanguageRuntime *>(runtime);
-  return nullptr;
+  if (!runtime)
+    return nullptr;
+
+  assert(runtime->GetLanguageType() == eLanguageTypeC_plus_plus);
+  return static_cast<CPPLanguageRuntime *>(runtime);
 }
 
 ObjCLanguageRuntime *Process::GetObjCLanguageRuntime(bool retry_if_null) {
   std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
   LanguageRuntime *runtime =
       GetLanguageRuntime(eLanguageTypeObjC, retry_if_null);
-  if (runtime != nullptr && runtime->GetLanguageType() == eLanguageTypeObjC)
-    return static_cast<ObjCLanguageRuntime *>(runtime);
-  return nullptr;
+  if (!runtime)
+    return nullptr;
+
+  assert(runtime->GetLanguageType() == eLanguageTypeObjC);
+  return static_cast<ObjCLanguageRuntime *>(runtime);
 }
 
 bool Process::IsPossibleDynamicValue(ValueObject &in_value) {

@@ -21,92 +21,6 @@ class DWARFUnit;
 
 using namespace lldb_private;
 
-static uint8_t g_form_sizes_addr4[] = {
-    0, // 0x00 unused
-    4, // 0x01 DW_FORM_addr
-    0, // 0x02 unused
-    0, // 0x03 DW_FORM_block2
-    0, // 0x04 DW_FORM_block4
-    2, // 0x05 DW_FORM_data2
-    4, // 0x06 DW_FORM_data4
-    8, // 0x07 DW_FORM_data8
-    0, // 0x08 DW_FORM_string
-    0, // 0x09 DW_FORM_block
-    0, // 0x0a DW_FORM_block1
-    1, // 0x0b DW_FORM_data1
-    1, // 0x0c DW_FORM_flag
-    0, // 0x0d DW_FORM_sdata
-    4, // 0x0e DW_FORM_strp
-    0, // 0x0f DW_FORM_udata
-    0, // 0x10 DW_FORM_ref_addr (addr size for DWARF2 and earlier, 4 bytes for
-       // DWARF32, 8 bytes for DWARF32 in DWARF 3 and later
-    1, // 0x11 DW_FORM_ref1
-    2, // 0x12 DW_FORM_ref2
-    4, // 0x13 DW_FORM_ref4
-    8, // 0x14 DW_FORM_ref8
-    0, // 0x15 DW_FORM_ref_udata
-    0, // 0x16 DW_FORM_indirect
-    4, // 0x17 DW_FORM_sec_offset
-    0, // 0x18 DW_FORM_exprloc
-    0, // 0x19 DW_FORM_flag_present
-    0, // 0x1a
-    0, // 0x1b
-    0, // 0x1c
-    0, // 0x1d
-    0, // 0x1e
-    0, // 0x1f
-    8, // 0x20 DW_FORM_ref_sig8
-
-};
-
-static uint8_t g_form_sizes_addr8[] = {
-    0, // 0x00 unused
-    8, // 0x01 DW_FORM_addr
-    0, // 0x02 unused
-    0, // 0x03 DW_FORM_block2
-    0, // 0x04 DW_FORM_block4
-    2, // 0x05 DW_FORM_data2
-    4, // 0x06 DW_FORM_data4
-    8, // 0x07 DW_FORM_data8
-    0, // 0x08 DW_FORM_string
-    0, // 0x09 DW_FORM_block
-    0, // 0x0a DW_FORM_block1
-    1, // 0x0b DW_FORM_data1
-    1, // 0x0c DW_FORM_flag
-    0, // 0x0d DW_FORM_sdata
-    4, // 0x0e DW_FORM_strp
-    0, // 0x0f DW_FORM_udata
-    0, // 0x10 DW_FORM_ref_addr (addr size for DWARF2 and earlier, 4 bytes for
-       // DWARF32, 8 bytes for DWARF32 in DWARF 3 and later
-    1, // 0x11 DW_FORM_ref1
-    2, // 0x12 DW_FORM_ref2
-    4, // 0x13 DW_FORM_ref4
-    8, // 0x14 DW_FORM_ref8
-    0, // 0x15 DW_FORM_ref_udata
-    0, // 0x16 DW_FORM_indirect
-    4, // 0x17 DW_FORM_sec_offset
-    0, // 0x18 DW_FORM_exprloc
-    0, // 0x19 DW_FORM_flag_present
-    0, // 0x1a
-    0, // 0x1b
-    0, // 0x1c
-    0, // 0x1d
-    0, // 0x1e
-    0, // 0x1f
-    8, // 0x20 DW_FORM_ref_sig8
-};
-
-DWARFFormValue::FixedFormSizes
-DWARFFormValue::GetFixedFormSizesForAddressSize(uint8_t addr_size) {
-  switch (addr_size) {
-  case 4:
-    return FixedFormSizes(g_form_sizes_addr4, sizeof(g_form_sizes_addr4));
-  case 8:
-    return FixedFormSizes(g_form_sizes_addr8, sizeof(g_form_sizes_addr8));
-  }
-  return FixedFormSizes();
-}
-
 void DWARFFormValue::Clear() {
   m_unit = nullptr;
   m_form = 0;
@@ -229,6 +143,59 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
   }
 
   return true;
+}
+
+struct FormSize {
+  uint8_t valid:1, size:7;
+};
+static FormSize g_form_sizes[] = {
+  {0,0}, // 0x00 unused
+  {0,0}, // 0x01 DW_FORM_addr
+  {0,0}, // 0x02 unused
+  {0,0}, // 0x03 DW_FORM_block2
+  {0,0}, // 0x04 DW_FORM_block4
+  {1,2}, // 0x05 DW_FORM_data2
+  {1,4}, // 0x06 DW_FORM_data4
+  {1,8}, // 0x07 DW_FORM_data8
+  {0,0}, // 0x08 DW_FORM_string
+  {0,0}, // 0x09 DW_FORM_block
+  {0,0}, // 0x0a DW_FORM_block1
+  {1,1}, // 0x0b DW_FORM_data1
+  {1,1}, // 0x0c DW_FORM_flag
+  {0,0}, // 0x0d DW_FORM_sdata
+  {1,4}, // 0x0e DW_FORM_strp
+  {0,0}, // 0x0f DW_FORM_udata
+  {0,0}, // 0x10 DW_FORM_ref_addr (addr size for DWARF2 and earlier, 4 bytes for
+         // DWARF32, 8 bytes for DWARF32 in DWARF 3 and later
+  {1,1}, // 0x11 DW_FORM_ref1
+  {1,2}, // 0x12 DW_FORM_ref2
+  {1,4}, // 0x13 DW_FORM_ref4
+  {1,8}, // 0x14 DW_FORM_ref8
+  {0,0}, // 0x15 DW_FORM_ref_udata
+  {0,0}, // 0x16 DW_FORM_indirect
+  {1,4}, // 0x17 DW_FORM_sec_offset
+  {0,0}, // 0x18 DW_FORM_exprloc
+  {1,0}, // 0x19 DW_FORM_flag_present
+  {0,0}, // 0x1a
+  {0,0}, // 0x1b
+  {0,0}, // 0x1c
+  {0,0}, // 0x1d
+  {0,0}, // 0x1e
+  {0,0}, // 0x1f
+  {1,8}, // 0x20 DW_FORM_ref_sig8
+};
+
+llvm::Optional<uint8_t>
+DWARFFormValue::GetFixedSize(dw_form_t form, const DWARFUnit *u) {
+  if (form <= DW_FORM_ref_sig8 && g_form_sizes[form].valid)
+    return g_form_sizes[form].size;
+  if (form == DW_FORM_addr && u)
+    return u->GetAddressByteSize();
+  return llvm::None;
+}
+
+llvm::Optional<uint8_t> DWARFFormValue::GetFixedSize() const {
+  return GetFixedSize(m_form, m_unit);
 }
 
 bool DWARFFormValue::SkipValue(const DWARFDataExtractor &debug_info_data,

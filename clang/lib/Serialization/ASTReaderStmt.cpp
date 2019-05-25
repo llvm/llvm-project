@@ -1904,7 +1904,7 @@ void ASTStmtReader::VisitSEHTryStmt(SEHTryStmt *S) {
 
 void ASTStmtReader::VisitCUDAKernelCallExpr(CUDAKernelCallExpr *E) {
   VisitCallExpr(E);
-  E->setConfig(cast<CallExpr>(Record.readSubExpr()));
+  E->setPreArg(CUDAKernelCallExpr::CONFIG, Record.readSubExpr());
 }
 
 //===----------------------------------------------------------------------===//

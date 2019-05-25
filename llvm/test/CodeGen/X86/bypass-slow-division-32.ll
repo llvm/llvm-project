@@ -143,7 +143,7 @@ define i32 @Test_use_div_reg_imm(i32 %a) nounwind {
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    shrl $31, %eax
 ; CHECK-NEXT:    sarl $3, %edx
-; CHECK-NEXT:    leal (%edx,%eax), %eax
+; CHECK-NEXT:    addl %edx, %eax
 ; CHECK-NEXT:    retl
   %resultdiv = sdiv i32 %a, 33
   ret i32 %resultdiv

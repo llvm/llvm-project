@@ -1469,6 +1469,9 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR] in {
       def BCLn : BForm_4<16, 4, 0, 1, (outs),
                          (ins crbitrc:$bi, condbrtarget:$dst),
                          "bcl 4, $bi, $dst">;
+      def BL_NOP  : IForm_and_DForm_4_zero<18, 0, 1, 24,
+                                           (outs), (ins calltarget:$func),
+                                           "bl $func\n\tnop", IIC_BrB, []>;
     }
   }
   let Uses = [CTR, RM] in {
@@ -3029,6 +3032,9 @@ def : Pat<(and (rotl i32:$in, i32:$sh), maskimm32:$imm),
 // Calls
 def : Pat<(PPCcall (i32 tglobaladdr:$dst)),
           (BL tglobaladdr:$dst)>;
+def : Pat<(PPCcall_nop (i32 tglobaladdr:$dst)),
+          (BL_NOP tglobaladdr:$dst)>;
+
 def : Pat<(PPCcall (i32 texternalsym:$dst)),
           (BL texternalsym:$dst)>;
 

@@ -105,7 +105,7 @@ EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone, bool IsCloned,
 
   // Stick to the preferred register classes for legal types.
   if (TLI->isTypeLegal(VT))
-    UseRC = TLI->getRegClassFor(VT, Node->isDivergent());
+    UseRC = TLI->getRegClassFor(VT);
 
   if (!IsClone && !IsCloned)
     for (SDNode *User : Node->uses()) {
@@ -164,7 +164,7 @@ EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone, bool IsCloned,
            "Incompatible phys register def and uses!");
     DstRC = UseRC;
   } else {
-    DstRC = TLI->getRegClassFor(VT, Node->isDivergent());
+    DstRC = TLI->getRegClassFor(VT);
   }
 
   // If all uses are reading from the src physical register and copying the
@@ -225,9 +225,8 @@ void InstrEmitter::CreateVirtualRegisters(SDNode *Node,
     // type correctly. For example, a 64-bit float (X86::FR64) can't live in
     // the 32-bit float super-class (X86::FR32).
     if (i < NumResults && TLI->isTypeLegal(Node->getSimpleValueType(i))) {
-      const TargetRegisterClass *VTRC = TLI->getRegClassFor(
-          Node->getSimpleValueType(i),
-          (Node->isDivergent() || (RC && TRI->isDivergentRegClass(RC))));
+      const TargetRegisterClass *VTRC =
+        TLI->getRegClassFor(Node->getSimpleValueType(i));
       if (RC)
         VTRC = TRI->getCommonSubClass(RC, VTRC);
       if (VTRC)
@@ -290,8 +289,8 @@ unsigned InstrEmitter::getVR(SDValue Op,
     // IMPLICIT_DEF can produce any type of result so its MCInstrDesc
     // does not include operand register class info.
     if (!VReg) {
-      const TargetRegisterClass *RC = TLI->getRegClassFor(
-          Op.getSimpleValueType(), Op.getNode()->isDivergent());
+      const TargetRegisterClass *RC =
+        TLI->getRegClassFor(Op.getSimpleValueType());
       VReg = MRI->createVirtualRegister(RC);
     }
     BuildMI(*MBB, InsertPos, Op.getDebugLoc(),
@@ -396,15 +395,11 @@ void InstrEmitter::AddOperand(MachineInstrBuilder &MIB,
   } else if (RegisterSDNode *R = dyn_cast<RegisterSDNode>(Op)) {
     unsigned VReg = R->getReg();
     MVT OpVT = Op.getSimpleValueType();
+    const TargetRegisterClass *OpRC =
+        TLI->isTypeLegal(OpVT) ? TLI->getRegClassFor(OpVT) : nullptr;
     const TargetRegisterClass *IIRC =
         II ? TRI->getAllocatableClass(TII->getRegClass(*II, IIOpNum, TRI, *MF))
            : nullptr;
-    const TargetRegisterClass *OpRC =
-        TLI->isTypeLegal(OpVT)
-            ? TLI->getRegClassFor(OpVT,
-                                  Op.getNode()->isDivergent() ||
-                                      (IIRC && TRI->isDivergentRegClass(IIRC)))
-            : nullptr;
 
     if (OpRC && IIRC && OpRC != IIRC &&
         TargetRegisterInfo::isVirtualRegister(VReg)) {
@@ -469,7 +464,7 @@ void InstrEmitter::AddOperand(MachineInstrBuilder &MIB,
 }
 
 unsigned InstrEmitter::ConstrainForSubReg(unsigned VReg, unsigned SubIdx,
-                                          MVT VT, bool isDivergent, const DebugLoc &DL) {
+                                          MVT VT, const DebugLoc &DL) {
   const TargetRegisterClass *VRC = MRI->getRegClass(VReg);
   const TargetRegisterClass *RC = TRI->getSubClassWithSubReg(VRC, SubIdx);
 
@@ -484,7 +479,7 @@ unsigned InstrEmitter::ConstrainForSubReg(unsigned VReg, unsigned SubIdx,
 
   // VReg couldn't be reasonably constrained.  Emit a COPY to a new virtual
   // register instead.
-  RC = TRI->getSubClassWithSubReg(TLI->getRegClassFor(VT, isDivergent), SubIdx);
+  RC = TRI->getSubClassWithSubReg(TLI->getRegClassFor(VT), SubIdx);
   assert(RC && "No legal register class for VT supports that SubIdx");
   unsigned NewReg = MRI->createVirtualRegister(RC);
   BuildMI(*MBB, InsertPos, DL, TII->get(TargetOpcode::COPY), NewReg)
@@ -519,7 +514,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
     // classes.
     unsigned SubIdx = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
     const TargetRegisterClass *TRC =
-      TLI->getRegClassFor(Node->getSimpleValueType(0), Node->isDivergent());
+      TLI->getRegClassFor(Node->getSimpleValueType(0));
 
     unsigned Reg;
     MachineInstr *DefMI;
@@ -553,7 +548,8 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
       if (TargetRegisterInfo::isVirtualRegister(Reg))
         Reg = ConstrainForSubReg(Reg, SubIdx,
                                  Node->getOperand(0).getSimpleValueType(),
-                                 Node->isDivergent(), Node->getDebugLoc());
+                                 Node->getDebugLoc());
+
       // Create the destreg if it is missing.
       if (VRBase == 0)
         VRBase = MRI->createVirtualRegister(TRC);
@@ -588,8 +584,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
     //
     // There is no constraint on the %src register class.
     //
-    const TargetRegisterClass *SRC =
-        TLI->getRegClassFor(Node->getSimpleValueType(0), Node->isDivergent());
+    const TargetRegisterClass *SRC = TLI->getRegClassFor(Node->getSimpleValueType(0));
     SRC = TRI->getSubClassWithSubReg(SRC, SubIdx);
     assert(SRC && "No register class supports VT and SubIdx for INSERT_SUBREG");
 

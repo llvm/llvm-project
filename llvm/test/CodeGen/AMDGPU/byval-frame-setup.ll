@@ -30,11 +30,11 @@ entry:
 
 ; GCN-LABEL: {{^}}void_func_byval_struct_non_leaf:
 ; GCN: s_mov_b32 s5, s32
+; GCN: s_add_u32 s32, s32, 0xc00{{$}}
 ; GCN-DAG: buffer_store_dword v32
 ; GCN-DAG: buffer_store_dword v33
 ; GCN-NOT: v_writelane_b32 v{{[0-9]+}}, s32
 ; GCN-DAG: v_writelane_b32
-; GCN-DAG: s_add_u32 s32, s32, 0xc00{{$}}
 ; GCN-DAG: buffer_load_dword [[LOAD0:v[0-9]+]], off, s[0:3], s5 offset:4{{$}}
 ; GCN-DAG: v_add_{{[iu]}}32_e32 [[ADD0:v[0-9]+]], vcc, 1, [[LOAD0]]
 ; GCN-DAG: buffer_store_dword [[ADD0]], off, s[0:3], s5 offset:4{{$}}

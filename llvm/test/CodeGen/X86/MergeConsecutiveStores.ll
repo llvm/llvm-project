@@ -632,7 +632,7 @@ define void @loadStoreBaseIndexOffsetSextNoSex(i8* %a, i8* %b, i8* %c, i32 %n) {
 ; BWON-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
 ; BWON-NEXT:    movsbq (%rdi,%rcx), %rax
 ; BWON-NEXT:    movzbl (%rdx,%rax), %r9d
-; BWON-NEXT:    leal 1(%rax), %eax
+; BWON-NEXT:    incl %eax
 ; BWON-NEXT:    movsbq %al, %rax
 ; BWON-NEXT:    movzbl (%rdx,%rax), %eax
 ; BWON-NEXT:    movb %r9b, (%rsi,%rcx,2)
@@ -651,7 +651,7 @@ define void @loadStoreBaseIndexOffsetSextNoSex(i8* %a, i8* %b, i8* %c, i32 %n) {
 ; BWOFF-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
 ; BWOFF-NEXT:    movsbq (%rdi,%rcx), %rax
 ; BWOFF-NEXT:    movb (%rdx,%rax), %r9b
-; BWOFF-NEXT:    leal 1(%rax), %eax
+; BWOFF-NEXT:    incl %eax
 ; BWOFF-NEXT:    movsbq %al, %rax
 ; BWOFF-NEXT:    movb (%rdx,%rax), %al
 ; BWOFF-NEXT:    movb %r9b, (%rsi,%rcx,2)

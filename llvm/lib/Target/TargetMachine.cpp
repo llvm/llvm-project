@@ -173,6 +173,11 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
     return GV && GV->isStrongDefinitionForLinker();
   }
 
+  // Due to the AIX linkage model, any global with default visibility is
+  // considered non-local.
+  if (TT.isOSBinFormatXCOFF())
+    return false;
+
   assert(TT.isOSBinFormatELF() || TT.isOSBinFormatWasm());
   assert(RM != Reloc::DynamicNoPIC);
 

@@ -2743,13 +2743,11 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     // We're going to widen this vector op to a legal type by padding with undef
     // elements. If the wide vector op is eventually going to be expanded to
     // scalar libcalls, then unroll into scalar ops now to avoid unnecessary
-    // libcalls on the undef elements. We are assuming that if the scalar op
-    // requires expanding, then the vector op needs expanding too.
+    // libcalls on the undef elements.
     EVT VT = N->getValueType(0);
-    if (TLI.isOperationExpand(N->getOpcode(), VT.getScalarType())) {
-      EVT WideVecVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-      assert(!TLI.isOperationLegalOrCustom(N->getOpcode(), WideVecVT) &&
-             "Target supports vector op, but scalar requires expansion?");
+    EVT WideVecVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+    if (!TLI.isOperationLegalOrCustom(N->getOpcode(), WideVecVT) &&
+        TLI.isOperationExpand(N->getOpcode(), VT.getScalarType())) {
       Res = DAG.UnrollVectorOp(N, WideVecVT.getVectorNumElements());
       break;
     }

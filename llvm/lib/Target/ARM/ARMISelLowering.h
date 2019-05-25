@@ -456,8 +456,7 @@ class VectorType;
 
     /// getRegClassFor - Return the register class that should be used for the
     /// specified value type.
-    const TargetRegisterClass *
-    getRegClassFor(MVT VT, bool isDivergent = false) const override;
+    const TargetRegisterClass *getRegClassFor(MVT VT) const override;
 
     /// Returns true if a cast between SrcAS and DestAS is a noop.
     bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {

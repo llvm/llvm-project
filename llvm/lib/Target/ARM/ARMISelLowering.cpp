@@ -1429,9 +1429,7 @@ EVT ARMTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
 
 /// getRegClassFor - Return the register class that should be used for the
 /// specified value type.
-const TargetRegisterClass *
-ARMTargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
-  (void)isDivergent;
+const TargetRegisterClass *ARMTargetLowering::getRegClassFor(MVT VT) const {
   // Map v4i64 to QQ registers but do not make the type legal. Similarly map
   // v8i64 to QQQQ registers. v4i64 and v8i64 are only used for REG_SEQUENCE to
   // load / store 4 to 8 consecutive D registers.
