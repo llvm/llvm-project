@@ -1,13 +1,17 @@
 # Check we are able to dump the dynamic section without a DT_NULL entry correctly.
 
 # RUN: yaml2obj -docnum=1 %s -o %t.o
-# RUN: llvm-readobj --dynamic-table %t.o | FileCheck %s --check-prefix=NONULL
-# RUN: llvm-readelf --dynamic-table %t.o | FileCheck %s --check-prefix=NONULL
+# RUN: llvm-readobj --dynamic-table %t.o | FileCheck %s --check-prefix=NONULL-LLVM
+# RUN: llvm-readelf --dynamic-table %t.o | FileCheck %s --check-prefix=NONULL-GNU
 
-# NONULL:      DynamicSection [ (1 entries)
-# NONULL-NEXT:   Tag                Type   Name/Value
-# NONULL-NEXT:   0x0000000000000015 DEBUG  0x0
-# NONULL-NEXT: ]
+# NONULL-LLVM:      DynamicSection [ (1 entries)
+# NONULL-LLVM-NEXT:   Tag                Type   Name/Value
+# NONULL-LLVM-NEXT:   0x0000000000000015 DEBUG  0x0
+# NONULL-LLVM-NEXT: ]
+
+# NONULL-GNU:      Dynamic section at offset {{.*}} contains 1 entries:
+# NONULL-GNU-NEXT:   Tag                Type     Name/Value
+# NONULL-GNU-NEXT:   0x0000000000000015 (DEBUG)  0x0
 
 --- !ELF
 FileHeader:
@@ -39,14 +43,19 @@ ProgramHeaders:
 # past the DT_NULL entry, which works as a terminator.
 
 # RUN: yaml2obj -docnum=2 %s -o %t.o
-# RUN: llvm-readobj --dynamic-table %t.o | FileCheck %s --check-prefix=LONG
-# RUN: llvm-readelf --dynamic-table %t.o | FileCheck %s --check-prefix=LONG
+# RUN: llvm-readobj --dynamic-table %t.o | FileCheck %s --check-prefix=LONG-LLVM
+# RUN: llvm-readelf --dynamic-table %t.o | FileCheck %s --check-prefix=LONG-GNU
 
-# LONG:      DynamicSection [ (2 entries)
-# LONG-NEXT:   Tag                Type                 Name/Value
-# LONG-NEXT:   0x0000000000000015 DEBUG                0x0
-# LONG-NEXT:   0x0000000000000000 NULL                 0x0
-# LONG-NEXT: ]
+# LONG-LLVM:      DynamicSection [ (2 entries)
+# LONG-LLVM-NEXT:   Tag                Type                 Name/Value
+# LONG-LLVM-NEXT:   0x0000000000000015 DEBUG                0x0
+# LONG-LLVM-NEXT:   0x0000000000000000 NULL                 0x0
+# LONG-LLVM-NEXT: ]
+
+# LONG-GNU:      Dynamic section at offset {{.*}} contains 2 entries:
+# LONG-GNU-NEXT:   Tag                Type                 Name/Value
+# LONG-GNU-NEXT:   0x0000000000000015 (DEBUG)              0x0
+# LONG-GNU-NEXT:   0x0000000000000000 (NULL)               0x0
 
 --- !ELF
 FileHeader:

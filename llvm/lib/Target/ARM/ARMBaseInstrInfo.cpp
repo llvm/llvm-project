@@ -706,15 +706,7 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   if (MCID.getSize())
     return MCID.getSize();
 
-  // If this machine instr is an inline asm, measure it.
-  if (MI.getOpcode() == ARM::INLINEASM) {
-    unsigned Size = getInlineAsmLength(MI.getOperand(0).getSymbolName(), *MAI);
-    if (!MF->getInfo<ARMFunctionInfo>()->isThumbFunction())
-      Size = alignTo(Size, 4);
-    return Size;
-  }
-  unsigned Opc = MI.getOpcode();
-  switch (Opc) {
+  switch (MI.getOpcode()) {
   default:
     // pseudo-instruction sizes are zero.
     return 0;
@@ -751,6 +743,14 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 12;
   case ARM::SPACE:
     return MI.getOperand(1).getImm();
+  case ARM::INLINEASM:
+  case ARM::INLINEASM_BR: {
+    // If this machine instr is an inline asm, measure it.
+    unsigned Size = getInlineAsmLength(MI.getOperand(0).getSymbolName(), *MAI);
+    if (!MF->getInfo<ARMFunctionInfo>()->isThumbFunction())
+      Size = alignTo(Size, 4);
+    return Size;
+  }
   }
 }
 
@@ -2392,7 +2392,7 @@ bool llvm::rewriteARMFrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   bool isSub = false;
 
   // Memory operands in inline assembly always use AddrMode2.
-  if (Opcode == ARM::INLINEASM)
+  if (Opcode == ARM::INLINEASM || Opcode == ARM::INLINEASM_BR)
     AddrMode = ARMII::AddrMode2;
 
   if (Opcode == ARM::ADDri) {

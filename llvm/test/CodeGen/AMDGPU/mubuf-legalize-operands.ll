@@ -155,8 +155,9 @@ entry:
 ; CHECK-O0: buffer_store_dword [[RES]], off, s[0:3], s5 offset:[[RES_OFF_TMP:[0-9]+]] ; 4-byte Folded Spill
 ; CHECK-O0: s_xor_b64 exec, exec, [[CMP]]
 ; CHECK-O0-NEXT: s_cbranch_execnz [[LOOPBB0]]
-
-; CHECK-O0: s_mov_b64 exec, [[SAVEEXEC]]
+; CHECK-O0: v_readlane_b32 s[[S1:[0-9]+]], v{{[0-9]+}}, 4
+; CHECK-O0: v_readlane_b32 s[[S2:[0-9]+]], v{{[0-9]+}}, 5
+; CHECK-O0: s_mov_b64 exec, s{{\[}}[[S1]]:[[S2]]{{\]}}
 ; CHECK-O0: buffer_load_dword [[RES:v[0-9]+]], off, s[0:3], s5 offset:[[RES_OFF_TMP]] ; 4-byte Folded Reload
 ; CHECK-O0: buffer_store_dword [[RES]], off, s[0:3], s5 offset:[[RES_OFF:[0-9]+]] ; 4-byte Folded Spill
 ; CHECK-O0: s_cbranch_execz [[TERMBB:BB[0-9]+_[0-9]+]]

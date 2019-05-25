@@ -47,31 +47,25 @@ define <4 x i32> @test_demandedbits_bitreverse(<4 x i32> %a0) nounwind {
 ; X86-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,7,6,5,4]
 ; X86-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; X86-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
-; X86-NEXT:    pshufhw {{.*#+}} xmm1 = xmm0[0,1,2,3,7,6,5,4]
-; X86-NEXT:    packuswb %xmm2, %xmm1
-; X86-NEXT:    movdqa {{.*#+}} xmm0 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X86-NEXT:    movdqa %xmm1, %xmm2
-; X86-NEXT:    pand %xmm0, %xmm2
-; X86-NEXT:    psllw $4, %xmm2
+; X86-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
+; X86-NEXT:    packuswb %xmm2, %xmm0
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psllw $4, %xmm1
 ; X86-NEXT:    pand {{\.LCPI.*}}, %xmm1
-; X86-NEXT:    psrlw $4, %xmm1
-; X86-NEXT:    pand %xmm0, %xmm1
-; X86-NEXT:    pandn %xmm2, %xmm0
+; X86-NEXT:    psrlw $4, %xmm0
+; X86-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X86-NEXT:    por %xmm1, %xmm0
 ; X86-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; X86-NEXT:    pand %xmm0, %xmm1
 ; X86-NEXT:    psllw $2, %xmm1
-; X86-NEXT:    pand {{\.LCPI.*}}, %xmm1
 ; X86-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X86-NEXT:    psrlw $2, %xmm0
-; X86-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X86-NEXT:    por %xmm1, %xmm0
 ; X86-NEXT:    movdqa {{.*#+}} xmm1 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
 ; X86-NEXT:    pand %xmm0, %xmm1
 ; X86-NEXT:    paddb %xmm1, %xmm1
 ; X86-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X86-NEXT:    psrlw $1, %xmm0
-; X86-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X86-NEXT:    por %xmm1, %xmm0
 ; X86-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X86-NEXT:    retl

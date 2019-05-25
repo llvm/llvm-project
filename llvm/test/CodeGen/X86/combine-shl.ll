@@ -268,16 +268,11 @@ define <8 x i32> @combine_vec_shl_ext_shl1(<8 x i16> %x) {
 ; SSE2-LABEL: combine_vec_shl_ext_shl1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pmullw {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
-; SSE2-NEXT:    psrad $16, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    pslld $29, %xmm2
-; SSE2-NEXT:    pslld $28, %xmm1
-; SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE2-NEXT:    pslld $30, %xmm0
-; SSE2-NEXT:    xorpd %xmm2, %xmm2
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
+; SSE2-NEXT:    xorpd %xmm1, %xmm1
+; SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm1[0,1]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: combine_vec_shl_ext_shl1:

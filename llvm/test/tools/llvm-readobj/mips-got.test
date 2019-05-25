@@ -14,15 +14,15 @@ RUN:   FileCheck %s -check-prefix GOT-STATIC
 RUN: not llvm-readelf --mips-plt-got %p/Inputs/relocs.obj.elf-mips 2>&1 | \
 RUN:   FileCheck %s -check-prefix GNU-GOT-OBJ
 RUN: llvm-readelf --mips-plt-got %p/Inputs/dynamic-table-exe.mips | \
-RUN:   FileCheck %s -check-prefix GNU-GOT-EXE
+RUN:   FileCheck %s --strict-whitespace -check-prefix GNU-GOT-EXE
 RUN: llvm-readelf --mips-plt-got %p/Inputs/dynamic-table-so.mips | \
-RUN:   FileCheck %s -check-prefix GNU-GOT-SO
+RUN:   FileCheck %s --strict-whitespace -check-prefix GNU-GOT-SO
 RUN: llvm-readelf --mips-plt-got %p/Inputs/got-tls.so.elf-mips64el | \
-RUN:   FileCheck %s -check-prefix GNU-GOT-TLS
+RUN:   FileCheck %s --strict-whitespace -check-prefix GNU-GOT-TLS
 RUN: llvm-readelf --mips-plt-got %p/Inputs/got-empty.exe.mipsel | \
-RUN:   FileCheck %s -check-prefix GNU-GOT-EMPTY
+RUN:   FileCheck %s --strict-whitespace -check-prefix GNU-GOT-EMPTY
 RUN: llvm-readelf --mips-plt-got %p/Inputs/got-static.exe.mips | \
-RUN:   FileCheck %s -check-prefix GNU-GOT-STATIC
+RUN:   FileCheck %s --strict-whitespace -check-prefix GNU-GOT-STATIC
 
 GOT-OBJ: error: Cannot find .got section
 

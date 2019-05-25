@@ -195,6 +195,11 @@ public:
                                                unsigned Reg) const;
   bool isVGPR(const MachineRegisterInfo &MRI, unsigned Reg) const;
 
+  virtual bool
+  isDivergentRegClass(const TargetRegisterClass *RC) const override {
+    return !isSGPRClass(RC);
+  }
+
   bool isSGPRPressureSet(unsigned SetID) const {
     return SGPRPressureSets.test(SetID) && !VGPRPressureSets.test(SetID);
   }

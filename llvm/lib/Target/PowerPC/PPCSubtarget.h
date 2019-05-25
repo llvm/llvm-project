@@ -314,7 +314,8 @@ public:
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
 
   bool isDarwinABI() const { return isTargetMachO() || isDarwin(); }
-  bool isSVR4ABI() const { return !isDarwinABI(); }
+  bool isAIXABI() const { return TargetTriple.isOSAIX(); }
+  bool isSVR4ABI() const { return !isDarwinABI() && !isAIXABI(); }
   bool isELFv2ABI() const;
 
   /// Originally, this function return hasISEL(). Now we always enable it,

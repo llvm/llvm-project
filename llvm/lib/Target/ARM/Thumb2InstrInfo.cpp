@@ -477,7 +477,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   bool isSub = false;
 
   // Memory operands in inline assembly always use AddrModeT2_i12.
-  if (Opcode == ARM::INLINEASM)
+  if (Opcode == ARM::INLINEASM || Opcode == ARM::INLINEASM_BR)
     AddrMode = ARMII::AddrModeT2_i12; // FIXME. mode for thumb2?
 
   if (Opcode == ARM::t2ADDri || Opcode == ARM::t2ADDri12) {

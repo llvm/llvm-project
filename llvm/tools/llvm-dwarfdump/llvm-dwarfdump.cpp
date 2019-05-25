@@ -192,13 +192,18 @@ static opt<bool>
              cat(DwarfDumpCategory));
 static alias ShowFormAlias("F", desc("Alias for -show-form."),
                            aliasopt(ShowForm), cat(DwarfDumpCategory));
-static opt<unsigned> RecurseDepth(
-    "recurse-depth",
-    desc("Only recurse to a depth of N when displaying debug info entries."),
-    cat(DwarfDumpCategory), init(-1U), value_desc("N"));
-static alias RecurseDepthAlias("r", desc("Alias for -recurse-depth."),
-                               aliasopt(RecurseDepth));
-
+static opt<unsigned>
+    ChildRecurseDepth("recurse-depth",
+                      desc("Only recurse to a depth of N when displaying "
+                           "children of debug info entries."),
+                      cat(DwarfDumpCategory), init(-1U), value_desc("N"));
+static alias ChildRecurseDepthAlias("r", desc("Alias for -recurse-depth."),
+                                    aliasopt(ChildRecurseDepth));
+static opt<unsigned>
+    ParentRecurseDepth("parent-recurse-depth",
+                       desc("Only recurse to a depth of N when displaying "
+                            "parents of debug info entries."),
+                       cat(DwarfDumpCategory), init(-1U), value_desc("N"));
 static opt<bool>
     SummarizeTypes("summarize-types",
                    desc("Abbreviate the description of type unit entries."),
@@ -233,7 +238,8 @@ static void error(StringRef Prefix, std::error_code EC) {
 static DIDumpOptions getDumpOpts() {
   DIDumpOptions DumpOpts;
   DumpOpts.DumpType = DumpType;
-  DumpOpts.RecurseDepth = RecurseDepth;
+  DumpOpts.ChildRecurseDepth = ChildRecurseDepth;
+  DumpOpts.ParentRecurseDepth = ParentRecurseDepth;
   DumpOpts.ShowAddresses = !Diff;
   DumpOpts.ShowChildren = ShowChildren;
   DumpOpts.ShowParents = ShowParents;
@@ -389,7 +395,7 @@ static bool lookup(ObjectFile &Obj, DWARFContext &DICtx, uint64_t Address,
     return false;
 
   DIDumpOptions DumpOpts = getDumpOpts();
-  DumpOpts.RecurseDepth = 0;
+  DumpOpts.ChildRecurseDepth = 0;
   DIEsForAddr.CompileUnit->dump(OS, DumpOpts);
   if (DIEsForAddr.FunctionDIE) {
     DIEsForAddr.FunctionDIE.dump(OS, 2, DumpOpts);

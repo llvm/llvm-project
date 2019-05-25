@@ -5160,18 +5160,23 @@ SDValue PPCTargetLowering::FinishCall(
   }
 
   // Add a NOP immediately after the branch instruction when using the 64-bit
-  // SVR4 ABI. At link time, if caller and callee are in a different module and
+  // SVR4 or the AIX ABI.
+  // At link time, if caller and callee are in a different module and
   // thus have a different TOC, the call will be replaced with a call to a stub
   // function which saves the current TOC, loads the TOC of the callee and
   // branches to the callee. The NOP will be replaced with a load instruction
   // which restores the TOC of the caller from the TOC save slot of the current
   // stack frame. If caller and callee belong to the same module (and have the
-  // same TOC), the NOP will remain unchanged.
+  // same TOC), the NOP will remain unchanged, or become some other NOP.
 
   MachineFunction &MF = DAG.getMachineFunction();
-  if (!isTailCall && Subtarget.isSVR4ABI()&& Subtarget.isPPC64() &&
-      !isPatchPoint) {
+  if (!isTailCall && !isPatchPoint &&
+      ((Subtarget.isSVR4ABI() && Subtarget.isPPC64()) ||
+       Subtarget.isAIXABI())) {
     if (CallOpc == PPCISD::BCTRL) {
+      if (Subtarget.isAIXABI())
+        report_fatal_error("Indirect call on AIX is not implemented.");
+
       // This is a call through a function pointer.
       // Restore the caller TOC from the save area into R2.
       // See PrepareCall() for more information about calls through function
@@ -5268,16 +5273,20 @@ PPCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       !isTailCall)
     Callee = LowerGlobalAddress(Callee, DAG);
 
-  if (Subtarget.isSVR4ABI()) {
-    if (Subtarget.isPPC64())
-      return LowerCall_64SVR4(Chain, Callee, CallConv, isVarArg,
-                              isTailCall, isPatchPoint, Outs, OutVals, Ins,
-                              dl, DAG, InVals, CS);
-    else
-      return LowerCall_32SVR4(Chain, Callee, CallConv, isVarArg,
-                              isTailCall, isPatchPoint, Outs, OutVals, Ins,
-                              dl, DAG, InVals, CS);
-  }
+  if (Subtarget.isSVR4ABI() && Subtarget.isPPC64())
+    return LowerCall_64SVR4(Chain, Callee, CallConv, isVarArg,
+                            isTailCall, isPatchPoint, Outs, OutVals, Ins,
+                            dl, DAG, InVals, CS);
+
+  if (Subtarget.isSVR4ABI())
+    return LowerCall_32SVR4(Chain, Callee, CallConv, isVarArg,
+                            isTailCall, isPatchPoint, Outs, OutVals, Ins,
+                            dl, DAG, InVals, CS);
+
+  if (Subtarget.isAIXABI())
+    return LowerCall_AIX(Chain, Callee, CallConv, isVarArg,
+                         isTailCall, isPatchPoint, Outs, OutVals, Ins,
+                         dl, DAG, InVals, CS);
 
   return LowerCall_Darwin(Chain, Callee, CallConv, isVarArg,
                           isTailCall, isPatchPoint, Outs, OutVals, Ins,
@@ -6560,6 +6569,67 @@ SDValue PPCTargetLowering::LowerCall_Darwin(
   if (isTailCall)
     PrepareTailCall(DAG, InFlag, Chain, dl, SPDiff, NumBytes, LROp, FPOp,
                     TailCallArguments);
+
+  return FinishCall(CallConv, dl, isTailCall, isVarArg, isPatchPoint,
+                    /* unused except on PPC64 ELFv1 */ false, DAG,
+                    RegsToPass, InFlag, Chain, CallSeqStart, Callee, SPDiff,
+                    NumBytes, Ins, InVals, CS);
+}
+
+
+SDValue PPCTargetLowering::LowerCall_AIX(
+    SDValue Chain, SDValue Callee, CallingConv::ID CallConv, bool isVarArg,
+    bool isTailCall, bool isPatchPoint,
+    const SmallVectorImpl<ISD::OutputArg> &Outs,
+    const SmallVectorImpl<SDValue> &OutVals,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
+    ImmutableCallSite CS) const {
+
+  assert((CallConv == CallingConv::C || CallConv == CallingConv::Fast) &&
+         "Unimplemented calling convention!");
+  if (isVarArg || isPatchPoint)
+    report_fatal_error("This call type is unimplemented on AIX.");
+
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  bool isPPC64 = PtrVT == MVT::i64;
+  unsigned PtrByteSize = isPPC64 ? 8 : 4;
+  unsigned NumOps = Outs.size();
+
+  if (NumOps != 0)
+    report_fatal_error("Call lowering with parameters is not implemented "
+                       "on AIX yet.");
+
+  // Count how many bytes are to be pushed on the stack, including the linkage
+  // area, parameter list area.
+  // On XCOFF, we start with 24/48, which is reserved space for
+  // [SP][CR][LR][2 x reserved][TOC].
+  unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
+
+  // The prolog code of the callee may store up to 8 GPR argument registers to
+  // the stack, allowing va_start to index over them in memory if the callee
+  // is variadic.
+  // Because we cannot tell if this is needed on the caller side, we have to
+  // conservatively assume that it is needed.  As such, make sure we have at
+  // least enough stack space for the caller to store the 8 GPRs.
+  unsigned NumBytes = LinkageSize + 8 * PtrByteSize;
+
+  // Adjust the stack pointer for the new arguments...
+  // These operations are automatically eliminated by the prolog/epilog
+  // inserter pass.
+  Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
+  SDValue CallSeqStart = Chain;
+
+  if (!isFunctionGlobalAddress(Callee) &&
+      !isa<ExternalSymbolSDNode>(Callee))
+    report_fatal_error("Handling of indirect call is unimplemented!");
+
+  SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
+  SDValue InFlag;
+
+  if (isTailCall)
+    report_fatal_error("Handling of tail call is unimplemented!");
+  int SPDiff = 0;
 
   return FinishCall(CallConv, dl, isTailCall, isVarArg, isPatchPoint,
                     /* unused except on PPC64 ELFv1 */ false, DAG,

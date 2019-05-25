@@ -7,7 +7,7 @@
 # RUN: llc -o %t.o -filetype=obj -mtriple=x86_64-pc-linux %t.ll
 # RUN: llc -o %t2.o -filetype=obj -mtriple=x86_64-pc-linux %t2.ll
 
-# RUN: llvm-objdump --source %t.o | FileCheck %s --implicit-check-not=main
+# RUN: llvm-objdump --source %t.o | FileCheck %s --implicit-check-not='main()'
 # RUN: llvm-objdump --source %t2.o | FileCheck %s --check-prefixes=CHECK,SOURCE
 
 # CHECK:       0000000000000010 main:

@@ -636,10 +636,19 @@ public:
 
   /// Return the register class that should be used for the specified value
   /// type.
-  virtual const TargetRegisterClass *getRegClassFor(MVT VT) const {
+  virtual const TargetRegisterClass *getRegClassFor(MVT VT, bool isDivergent = false) const {
+    (void)isDivergent;
     const TargetRegisterClass *RC = RegClassForVT[VT.SimpleTy];
     assert(RC && "This value type is not natively supported!");
     return RC;
+  }
+
+  /// Allows target to decide about the register class of the
+  /// specific value that is live outside the defining block.
+  /// Returns true if the value needs uniform register class.
+  virtual bool requiresUniformRegister(MachineFunction &MF,
+                                       const Value *) const {
+    return false;
   }
 
   /// Return the 'representative' register class for the specified value
@@ -3118,6 +3127,10 @@ public:
                                                  KnownBits &Known,
                                                  TargetLoweringOpt &TLO,
                                                  unsigned Depth = 0) const;
+
+  /// This method returns the constant pool value that will be loaded by LD.
+  /// NOTE: You must check for implicit extensions of the constant by LD.
+  virtual const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const;
 
   /// If \p SNaN is false, \returns true if \p Op is known to never be any
   /// NaN. If \p sNaN is true, returns if \p Op is known to never be a signaling

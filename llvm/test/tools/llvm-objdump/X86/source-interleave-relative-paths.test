@@ -17,18 +17,18 @@
 
 # RUN: cd %t
 # RUN: llvm-objdump --source a/a.o | FileCheck %s --check-prefixes=CHECK,SOURCE
-# RUN: llvm-objdump --source a/b.o | FileCheck %s --implicit-check-not=main
-# RUN: llvm-objdump --source a/c.o | FileCheck %s --implicit-check-not=main
-# RUN: llvm-objdump --source a/d.o | FileCheck %s --implicit-check-not=main
+# RUN: llvm-objdump --source a/b.o | FileCheck %s --implicit-check-not='main()'
+# RUN: llvm-objdump --source a/c.o | FileCheck %s --implicit-check-not='main()'
+# RUN: llvm-objdump --source a/d.o | FileCheck %s --implicit-check-not='main()'
 # RUN: cd a
-# RUN: llvm-objdump --source a.o | FileCheck %s --implicit-check-not=main
+# RUN: llvm-objdump --source a.o | FileCheck %s --implicit-check-not='main()'
 # RUN: llvm-objdump --source b.o | FileCheck %s --check-prefixes=CHECK,SOURCE
 # RUN: llvm-objdump --source c.o | FileCheck %s --check-prefixes=CHECK,SOURCE
-# RUN: llvm-objdump --source d.o | FileCheck %s --implicit-check-not=main
+# RUN: llvm-objdump --source d.o | FileCheck %s --implicit-check-not='main()'
 # RUN: cd b
-# RUN: llvm-objdump --source ../a.o | FileCheck %s --implicit-check-not=main
-# RUN: llvm-objdump --source ../b.o | FileCheck %s --implicit-check-not=main
-# RUN: llvm-objdump --source ../c.o | FileCheck %s --implicit-check-not=main
+# RUN: llvm-objdump --source ../a.o | FileCheck %s --implicit-check-not='main()'
+# RUN: llvm-objdump --source ../b.o | FileCheck %s --implicit-check-not='main()'
+# RUN: llvm-objdump --source ../c.o | FileCheck %s --implicit-check-not='main()'
 # RUN: llvm-objdump --source ../d.o | FileCheck %s --check-prefixes=CHECK,SOURCE
 
 # CHECK:       0000000000000010 main:

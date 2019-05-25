@@ -226,13 +226,12 @@ define amdgpu_kernel void @test_literal_use_twice_ternary_op_s_k_k_x2(float addr
 ; GCN-LABEL: {{^}}test_s0_s1_k_f32:
 ; SI-DAG: s_load_dwordx2 s{{\[}}[[SGPR0:[0-9]+]]:[[SGPR1:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI-DAG: s_load_dwordx2 s{{\[}}[[SGPR0:[0-9]+]]:[[SGPR1:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x2c
-; GCN-DAG: s_mov_b32 [[SK0:s[0-9]+]], 0x44800000
+; GCN-DAG: v_mov_b32_e32 [[VK0:v[0-9]+]], 0x44800000
 ; GCN-DAG: v_mov_b32_e32 [[VS1:v[0-9]+]], s[[SGPR1]]
-; GCN-DAG: v_mov_b32_e32 [[VS0:v[0-9]+]], s[[SGPR0]]
 
-; GCN-DAG: v_fma_f32 [[RESULT0:v[0-9]+]], [[VS0]], [[VS1]], [[SK0]]
-; GCN-DAG: s_mov_b32 [[SK1:s[0-9]+]], 0x45800000
-; GCN-DAG: v_fma_f32 [[RESULT1:v[0-9]+]], [[VS0]], [[VS1]], [[SK1]]
+; GCN-DAG: v_fma_f32 [[RESULT0:v[0-9]+]], s[[SGPR0]], [[VS1]], [[VK0]]
+; GCN-DAG: v_mov_b32_e32 [[VK1:v[0-9]+]], 0x45800000
+; GCN-DAG: v_fma_f32 [[RESULT1:v[0-9]+]], s[[SGPR0]], [[VS1]], [[VK1]]
 
 ; GCN: buffer_store_dword [[RESULT0]]
 ; GCN: buffer_store_dword [[RESULT1]]
