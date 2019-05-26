@@ -8746,9 +8746,15 @@ static SDValue lowerBuildVectorToBitOp(BuildVectorSDNode *Op,
       return SDValue();
 
   // TODO: We may be able to add support for other Ops (ADD/SUB + shifts).
+  bool IsShift = false;
   switch (Opcode) {
   default:
     return SDValue();
+  case ISD::SHL:
+  case ISD::SRL:
+  case ISD::SRA:
+    IsShift = true;
+    break;
   case ISD::AND:
   case ISD::XOR:
   case ISD::OR:
@@ -8769,9 +8775,23 @@ static SDValue lowerBuildVectorToBitOp(BuildVectorSDNode *Op,
     // We expect the canonicalized RHS operand to be the constant.
     if (!isa<ConstantSDNode>(RHS))
       return SDValue();
+
+    // Extend shift amounts.
+    if (RHS.getValueSizeInBits() != VT.getScalarSizeInBits()) {
+      if (!IsShift)
+        return SDValue();
+      RHS = DAG.getZExtOrTrunc(RHS, DL, VT.getScalarType());
+    }
+
     LHSElts.push_back(LHS);
     RHSElts.push_back(RHS);
   }
+
+  // Limit to shifts by uniform immediates.
+  // TODO: Only accept vXi8/vXi64 special cases?
+  // TODO: Permit non-uniform XOP/AVX2/MULLO cases?
+  if (IsShift && any_of(RHSElts, [&](SDValue V) { return RHSElts[0] != V; }))
+    return SDValue();
 
   SDValue LHS = DAG.getBuildVector(VT, DL, LHSElts);
   SDValue RHS = DAG.getBuildVector(VT, DL, RHSElts);
@@ -40511,9 +40531,6 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
-  // TODO: If an operand is already known to be a NaN or not a NaN, this
-  //       should be an optional swap and FMAX/FMIN.
-
   EVT VT = N->getValueType(0);
   if (!((Subtarget.hasSSE1() && VT == MVT::f32) ||
         (Subtarget.hasSSE2() && VT == MVT::f64) ||
@@ -40529,6 +40546,13 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
   // min/max instructions.
   if (DAG.getTarget().Options.NoNaNsFPMath || N->getFlags().hasNoNaNs())
     return DAG.getNode(MinMaxOp, DL, VT, Op0, Op1, N->getFlags());
+
+  // If one of the operands is known non-NaN use the native min/max instructions
+  // with the non-NaN input as second operand.
+  if (DAG.isKnownNeverNaN(Op1))
+    return DAG.getNode(MinMaxOp, DL, VT, Op0, Op1, N->getFlags());
+  if (DAG.isKnownNeverNaN(Op0))
+    return DAG.getNode(MinMaxOp, DL, VT, Op1, Op0, N->getFlags());
 
   // If we have to respect NaN inputs, this takes at least 3 instructions.
   // Favor a library call when operating on a scalar and minimizing code size.

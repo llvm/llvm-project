@@ -469,5 +469,33 @@ define <2 x double> @maxnum_intrinsic_nnan_attr_f64(<2 x double> %a, <2 x double
   ret <2 x double> %r
 }
 
+define float @test_maxnum_const_op1(float %x) {
+; SSE-LABEL: test_maxnum_const_op1:
+; SSE:       # %bb.0:
+; SSE-NEXT:    maxss {{.*}}(%rip), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_maxnum_const_op1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmaxss {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %r = call float @llvm.maxnum.f32(float 1.0, float %x)
+  ret float %r
+}
+
+define float @test_maxnum_const_op2(float %x) {
+; SSE-LABEL: test_maxnum_const_op2:
+; SSE:       # %bb.0:
+; SSE-NEXT:    maxss {{.*}}(%rip), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_maxnum_const_op2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmaxss {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %r = call float @llvm.maxnum.f32(float %x, float 1.0)
+  ret float %r
+}
+
 attributes #0 = { "no-nans-fp-math"="true" }
 

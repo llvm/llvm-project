@@ -93,8 +93,6 @@
 // CHECK-ASAN-X86: "-fsanitize=address"
 // CHECK-ASAN-X86: "-fsanitize-address-globals-dead-stripping"
 // CHECK-ASAN-X86: "-dynamic-linker" "asan/ld.so.1"
-// CHECK-ASAN-X86: "-L[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}asan"
-// CHECK-ASAN-X86: "-L[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib"
 // CHECK-ASAN-X86: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.asan.so"
 // CHECK-ASAN-X86: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.asan-preinit.a"
 
@@ -107,8 +105,6 @@
 // CHECK-ASAN-AARCH64: "-fsanitize=address"
 // CHECK-ASAN-AARCH64: "-fsanitize-address-globals-dead-stripping"
 // CHECK-ASAN-AARCH64: "-dynamic-linker" "asan/ld.so.1"
-// CHECK-ASAN-AARCH64: "-L[[RESOURCE_DIR]]{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}lib{{/|\\\\}}asan"
-// CHECK-ASAN-AARCH64: "-L[[RESOURCE_DIR]]{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}lib"
 // CHECK-ASAN-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.asan.so"
 // CHECK-ASAN-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.asan-preinit.a"
 

@@ -238,8 +238,7 @@ ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
 
   switch (BinOp) {
   default:
-    // Conservative answer: empty set
-    return getEmpty(BitWidth);
+    llvm_unreachable("Unsupported binary op");
 
   case Instruction::Add: {
     if (Unsigned)

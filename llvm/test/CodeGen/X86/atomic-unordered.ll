@@ -772,7 +772,7 @@ define i64 @load_fold_sdiv1(i64* %p) {
 ; CHECK-O3-NEXT:    movq %rdx, %rax
 ; CHECK-O3-NEXT:    shrq $63, %rax
 ; CHECK-O3-NEXT:    sarq $3, %rdx
-; CHECK-O3-NEXT:    leaq (%rdx,%rax), %rax
+; CHECK-O3-NEXT:    addq %rdx, %rax
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i64, i64* %p unordered, align 8
   %ret = sdiv i64 %v, 15

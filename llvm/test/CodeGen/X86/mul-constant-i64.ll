@@ -515,26 +515,12 @@ define i64 @test_mul_by_17(i64 %x) {
 ; X86-NOOPT-NEXT:    addl %ecx, %edx
 ; X86-NOOPT-NEXT:    retl
 ;
-; X64-HSW-LABEL: test_mul_by_17:
-; X64-HSW:       # %bb.0:
-; X64-HSW-NEXT:    movq %rdi, %rax
-; X64-HSW-NEXT:    shlq $4, %rax
-; X64-HSW-NEXT:    leaq (%rax,%rdi), %rax
-; X64-HSW-NEXT:    retq
-;
-; X64-JAG-LABEL: test_mul_by_17:
-; X64-JAG:       # %bb.0:
-; X64-JAG-NEXT:    movq %rdi, %rax
-; X64-JAG-NEXT:    shlq $4, %rax
-; X64-JAG-NEXT:    leaq (%rax,%rdi), %rax
-; X64-JAG-NEXT:    retq
-;
-; X64-SLM-LABEL: test_mul_by_17:
-; X64-SLM:       # %bb.0:
-; X64-SLM-NEXT:    movq %rdi, %rax
-; X64-SLM-NEXT:    shlq $4, %rax
-; X64-SLM-NEXT:    addq %rdi, %rax
-; X64-SLM-NEXT:    retq
+; X64-OPT-LABEL: test_mul_by_17:
+; X64-OPT:       # %bb.0:
+; X64-OPT-NEXT:    movq %rdi, %rax
+; X64-OPT-NEXT:    shlq $4, %rax
+; X64-OPT-NEXT:    addq %rdi, %rax
+; X64-OPT-NEXT:    retq
 ;
 ; X64-NOOPT-LABEL: test_mul_by_17:
 ; X64-NOOPT:       # %bb.0:
