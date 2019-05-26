@@ -878,12 +878,13 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
   }
 
   // If the inserted element was extracted from some other vector and both
-  // indexes are constant, try to turn this into a shuffle.
+  // indexes are valid constants, try to turn this into a shuffle.
   uint64_t InsertedIdx, ExtractedIdx;
   Value *ExtVecOp;
   if (match(IdxOp, m_ConstantInt(InsertedIdx)) &&
       match(ScalarOp, m_ExtractElement(m_Value(ExtVecOp),
-                                       m_ConstantInt(ExtractedIdx)))) {
+                                       m_ConstantInt(ExtractedIdx))) &&
+      ExtractedIdx < ExtVecOp->getType()->getVectorNumElements()) {
     // TODO: Looking at the user(s) to determine if this insert is a
     // fold-to-shuffle opportunity does not match the usual instcombine
     // constraints. We should decide if the transform is worthy based only

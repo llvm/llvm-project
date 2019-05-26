@@ -1749,15 +1749,12 @@ static Instruction *canonicalizeConstantArg0ToArg1(CallInst &Call) {
 }
 
 Instruction *InstCombiner::foldIntrinsicWithOverflowCommon(IntrinsicInst *II) {
-  OverflowCheckFlavor OCF =
-      IntrinsicIDToOverflowCheckFlavor(II->getIntrinsicID());
-  assert(OCF != OCF_INVALID && "unexpected!");
-
+  WithOverflowInst *WO = cast<WithOverflowInst>(II);
   Value *OperationResult = nullptr;
   Constant *OverflowResult = nullptr;
-  if (OptimizeOverflowCheck(OCF, II->getArgOperand(0), II->getArgOperand(1),
-                            *II, OperationResult, OverflowResult))
-    return CreateOverflowTuple(II, OperationResult, OverflowResult);
+  if (OptimizeOverflowCheck(WO->getBinaryOp(), WO->isSigned(), WO->getLHS(),
+                            WO->getRHS(), *WO, OperationResult, OverflowResult))
+    return CreateOverflowTuple(WO, OperationResult, OverflowResult);
   return nullptr;
 }
 
