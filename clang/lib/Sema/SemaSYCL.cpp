@@ -809,7 +809,6 @@ static void buildArgTys(ASTContext &Context, CXXRecordDecl *KernelObj,
       assert(InitMethod && "sampler must have __init method");
 
       // sampler __init method has only one parameter
-      // void __init(__ocl_sampler_t *Sampler)
       auto *FuncDecl = cast<FunctionDecl>(InitMethod);
       ParmVarDecl *SamplerArg = FuncDecl->getParamDecl(0);
       assert(SamplerArg && "sampler __init method must have sampler parameter");
@@ -912,7 +911,6 @@ static void populateIntHeader(SYCLIntegrationHeader &H, const StringRef Name,
       assert(InitMethod && "sampler must have __init method");
 
       // sampler __init method has only one argument
-      // void __init(__ocl_sampler_t *Sampler)
       auto *FuncDecl = cast<FunctionDecl>(InitMethod);
       ParmVarDecl *SamplerArg = FuncDecl->getParamDecl(0);
       assert(SamplerArg && "sampler __init method must have sampler parameter");
