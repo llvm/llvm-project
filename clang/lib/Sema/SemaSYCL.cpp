@@ -59,15 +59,15 @@ class Util {
 public:
   using DeclContextDesc = std::pair<clang::Decl::Kind, StringRef>;
 
-  /// Checks whether given clang type is a full specialization of the sycl
+  /// Checks whether given clang type is a full specialization of the SYCL
   /// accessor class.
   static bool isSyclAccessorType(const QualType &Ty);
 
-  /// Checks whether given clang type is a full specialization of the sycl
+  /// Checks whether given clang type is a full specialization of the SYCL
   /// sampler class.
   static bool isSyclSamplerType(const QualType &Ty);
 
-  /// Checks whether given clang type is the sycl stream class.
+  /// Checks whether given clang type is the SYCL stream class.
   static bool isSyclStreamType(const QualType &Ty);
 
   /// Checks whether given clang type is declared in the given hierarchy of
