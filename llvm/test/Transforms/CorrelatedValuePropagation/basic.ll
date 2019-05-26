@@ -995,7 +995,7 @@ define i1 @uadd_sat_unknown(i32 %a) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[VAL]], 100
 ; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
 ; CHECK:       exit1:
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       exit2:
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
@@ -1018,7 +1018,7 @@ define i1 @usub_sat_unknown(i32 %a) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[VAL]], -101
 ; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
 ; CHECK:       exit1:
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       exit2:
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
@@ -1041,7 +1041,7 @@ define i1 @sadd_sat_unknown(i32 %a) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[VAL]], -2147483548
 ; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
 ; CHECK:       exit1:
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       exit2:
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
@@ -1064,7 +1064,7 @@ define i1 @ssub_sat_unknown(i32 %a) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[VAL]], 2147483547
 ; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
 ; CHECK:       exit1:
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       exit2:
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;

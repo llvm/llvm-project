@@ -432,6 +432,8 @@ namespace {
                            BasicBlock *BB);
   bool solveBlockValueOverflowIntrinsic(
       ValueLatticeElement &BBLV, WithOverflowInst *WO, BasicBlock *BB);
+  bool solveBlockValueIntrinsic(ValueLatticeElement &BBLV, IntrinsicInst *II,
+                                BasicBlock *BB);
   void intersectAssumeOrGuardBlockValueConstantRange(Value *Val,
                                                      ValueLatticeElement &BBLV,
                                                      Instruction *BBI);
@@ -649,6 +651,9 @@ bool LazyValueInfoImpl::solveBlockValueImpl(ValueLatticeElement &Res,
       if (auto *WO = dyn_cast<WithOverflowInst>(EVI->getAggregateOperand()))
         if (EVI->getNumIndices() == 1 && *EVI->idx_begin() == 0)
           return solveBlockValueOverflowIntrinsic(Res, WO, BB);
+
+    if (auto *II = dyn_cast<IntrinsicInst>(BBI))
+      return solveBlockValueIntrinsic(Res, II, BB);
   }
 
   LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
@@ -1110,6 +1115,37 @@ bool LazyValueInfoImpl::solveBlockValueOverflowIntrinsic(
       [WO](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.binaryOp(WO->getBinaryOp(), CR2);
       });
+}
+
+bool LazyValueInfoImpl::solveBlockValueIntrinsic(
+    ValueLatticeElement &BBLV, IntrinsicInst *II, BasicBlock *BB) {
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::uadd_sat:
+    return solveBlockValueBinaryOpImpl(BBLV, II, BB,
+        [](const ConstantRange &CR1, const ConstantRange &CR2) {
+          return CR1.uadd_sat(CR2);
+        });
+  case Intrinsic::usub_sat:
+    return solveBlockValueBinaryOpImpl(BBLV, II, BB,
+        [](const ConstantRange &CR1, const ConstantRange &CR2) {
+          return CR1.usub_sat(CR2);
+        });
+  case Intrinsic::sadd_sat:
+    return solveBlockValueBinaryOpImpl(BBLV, II, BB,
+        [](const ConstantRange &CR1, const ConstantRange &CR2) {
+          return CR1.sadd_sat(CR2);
+        });
+  case Intrinsic::ssub_sat:
+    return solveBlockValueBinaryOpImpl(BBLV, II, BB,
+        [](const ConstantRange &CR1, const ConstantRange &CR2) {
+          return CR1.ssub_sat(CR2);
+        });
+  default:
+    LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
+                      << "' - overdefined (unknown intrinsic).\n");
+    BBLV = ValueLatticeElement::getOverdefined();
+    return true;
+  }
 }
 
 static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
