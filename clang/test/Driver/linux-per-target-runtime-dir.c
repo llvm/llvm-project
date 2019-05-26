@@ -13,7 +13,6 @@
 // CHECK-PER-TARGET-RUNTIME: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-PER-TARGET-RUNTIME: "--sysroot=[[SYSROOT]]"
 // CHECK-PER-TARGET-RUNTIME: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-linux-gnu{{/|\\\\}}c++"
-// CHECK-PER-TARGET-RUNTIME: "-L[[RESDIR]]{{/|\\\\}}x86_64-linux-gnu{{/|\\\\}}lib"
 
 // RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name 2>&1 \
 // RUN:     --target=x86_64-linux-gnu \

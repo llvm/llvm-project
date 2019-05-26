@@ -595,9 +595,9 @@ def VABSS  : ASuIn<0b11101, 0b11, 0b0000, 0b11, 0,
 }
 
 def VABSH  : AHuI<0b11101, 0b11, 0b0000, 0b11, 0,
-                   (outs SPR:$Sd), (ins SPR:$Sm),
+                   (outs HPR:$Sd), (ins HPR:$Sm),
                    IIC_fpUNA16, "vabs", ".f16\t$Sd, $Sm",
-                   []>;
+                   [(set HPR:$Sd, (fabs (f16 HPR:$Sm)))]>;
 
 let Defs = [FPSCR_NZCV] in {
 def VCMPEZD : ADuI<0b11101, 0b11, 0b0101, 0b11, 0,
@@ -930,9 +930,9 @@ def VNEGH  : AHuI<0b11101, 0b11, 0b0001, 0b01, 0,
 
 multiclass vrint_inst_zrx<string opc, bit op, bit op2, SDPatternOperator node> {
   def H : AHuI<0b11101, 0b11, 0b0110, 0b11, 0,
-               (outs SPR:$Sd), (ins SPR:$Sm),
+               (outs HPR:$Sd), (ins HPR:$Sm),
                NoItinerary, !strconcat("vrint", opc), ".f16\t$Sd, $Sm",
-               []>,
+               [(set (f16 HPR:$Sd), (node (f16 HPR:$Sm)))]>,
                Requires<[HasFullFP16]> {
     let Inst{7} = op2;
     let Inst{16} = op;
@@ -975,9 +975,9 @@ multiclass vrint_inst_anpm<string opc, bits<2> rm,
   let PostEncoderMethod = "", DecoderNamespace = "VFPV8",
       isUnpredicable = 1 in {
     def H : AHuInp<0b11101, 0b11, 0b1000, 0b01, 0,
-                   (outs SPR:$Sd), (ins SPR:$Sm),
+                   (outs HPR:$Sd), (ins HPR:$Sm),
                    NoItinerary, !strconcat("vrint", opc, ".f16\t$Sd, $Sm"),
-                   []>,
+                   [(set (f16 HPR:$Sd), (node (f16 HPR:$Sm)))]>,
                    Requires<[HasFullFP16]> {
       let Inst{17-16} = rm;
     }
@@ -1023,9 +1023,9 @@ def VSQRTS : ASuI<0b11101, 0b11, 0b0001, 0b11, 0,
              Sched<[WriteFPSQRT32]>;
 
 def VSQRTH : AHuI<0b11101, 0b11, 0b0001, 0b11, 0,
-                  (outs SPR:$Sd), (ins SPR:$Sm),
+                  (outs HPR:$Sd), (ins HPR:$Sm),
                   IIC_fpSQRT16, "vsqrt", ".f16\t$Sd, $Sm",
-                  []>;
+                  [(set HPR:$Sd, (fsqrt (f16 HPR:$Sm)))]>;
 
 let hasSideEffects = 0 in {
 let isMoveReg = 1 in {
@@ -2073,6 +2073,9 @@ def : Pat<(f64 (fma DPR:$Dn, DPR:$Dm, DPR:$Ddin)),
 def : Pat<(f32 (fma SPR:$Sn, SPR:$Sm, SPR:$Sdin)),
           (VFMAS SPR:$Sdin, SPR:$Sn, SPR:$Sm)>,
       Requires<[HasVFP4]>;
+def : Pat<(f16 (fma HPR:$Sn, HPR:$Sm, HPR:$Sdin)),
+          (VFMAH HPR:$Sdin, HPR:$Sn, HPR:$Sm)>,
+      Requires<[HasFullFP16]>;
 
 def VFMSD : ADbI<0b11101, 0b10, 1, 0,
                  (outs DPR:$Dd), (ins DPR:$Ddin, DPR:$Dn, DPR:$Dm),

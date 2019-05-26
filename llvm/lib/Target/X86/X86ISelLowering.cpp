@@ -6849,17 +6849,20 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
     return true;
   }
   case ISD::ZERO_EXTEND:
-  case ISD::ZERO_EXTEND_VECTOR_INREG: {
+  case ISD::ZERO_EXTEND_VECTOR_INREG:
+  case ISD::ANY_EXTEND_VECTOR_INREG: {
     SDValue Src = N.getOperand(0);
     EVT SrcVT = Src.getValueType();
 
-    // Zero-extended source must be a simple vector.
+    // Extended source must be a simple vector.
     if (!SrcVT.isSimple() || (SrcVT.getSizeInBits() % 128) != 0 ||
         (SrcVT.getScalarSizeInBits() % 8) != 0)
       return false;
 
     unsigned NumSrcBitsPerElt = SrcVT.getScalarSizeInBits();
-    DecodeZeroExtendMask(NumSrcBitsPerElt, NumBitsPerElt, NumElts, Mask);
+    bool IsAnyExtend = (ISD::ANY_EXTEND_VECTOR_INREG == Opcode);
+    DecodeZeroExtendMask(NumSrcBitsPerElt, NumBitsPerElt, NumElts, IsAnyExtend,
+                         Mask);
 
     if (NumSizeInBits != SrcVT.getSizeInBits()) {
       assert((NumSizeInBits % SrcVT.getSizeInBits()) == 0 &&
@@ -34126,6 +34129,21 @@ static SDValue XFormVExtractWithShuffleIntoLoad(SDNode *N, SelectionDAG &DAG,
                      EltNo);
 }
 
+// Helper to peek through bitops/setcc to determine size of source vector.
+// Allows combineBitcastvxi1 to determine what size vector generated a <X x i1>.
+static bool checkBitcastSrcVectorSize(SDValue Src, unsigned Size) {
+  switch (Src.getOpcode()) {
+  case ISD::SETCC:
+    return Src.getOperand(0).getValueSizeInBits() == Size;
+  case ISD::AND:
+  case ISD::XOR:
+  case ISD::OR:
+    return checkBitcastSrcVectorSize(Src.getOperand(0), Size) &&
+           checkBitcastSrcVectorSize(Src.getOperand(1), Size);
+  }
+  return false;
+}
+
 // Try to match patterns such as
 // (i16 bitcast (v16i1 x))
 // ->
@@ -34174,10 +34192,8 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
     SExtVT = MVT::v4i32;
     // For cases such as (i4 bitcast (v4i1 setcc v4i64 v1, v2))
     // sign-extend to a 256-bit operation to avoid truncation.
-    if (Src.getOpcode() == ISD::SETCC && Subtarget.hasAVX() &&
-        Src.getOperand(0).getValueType().is256BitVector()) {
+    if (Subtarget.hasAVX() && checkBitcastSrcVectorSize(Src, 256))
       SExtVT = MVT::v4i64;
-    }
     break;
   case MVT::v8i1:
     SExtVT = MVT::v8i16;
@@ -34186,6 +34202,7 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
     // If the setcc operand is 128-bit, prefer sign-extending to 128-bit over
     // 256-bit because the shuffle is cheaper than sign extending the result of
     // the compare.
+    // TODO : use checkBitcastSrcVectorSize
     if (Src.getOpcode() == ISD::SETCC && Subtarget.hasAVX() &&
         (Src.getOperand(0).getValueType().is256BitVector() ||
          Src.getOperand(0).getValueType().is512BitVector())) {
@@ -43245,7 +43262,7 @@ static SDValue combineExtInVec(SDNode *N, SelectionDAG &DAG,
 
   // Attempt to combine as a shuffle.
   // TODO: SSE41 support
-  if (Subtarget.hasAVX() && N->getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG) {
+  if (Subtarget.hasAVX()) {
     SDValue Op(N, 0);
     if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(In.getValueType()))
       if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))

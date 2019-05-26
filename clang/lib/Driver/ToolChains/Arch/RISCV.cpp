@@ -54,20 +54,14 @@ static bool isSupportedExtension(StringRef Ext) {
 static bool getExtensionVersion(const Driver &D, StringRef MArch,
                                 StringRef Ext, StringRef In,
                                 std::string &Major, std::string &Minor) {
-  auto I = In.begin();
-  auto E = In.end();
-
-  while (I != E && isDigit(*I))
-    Major.append(1, *I++);
-
+  Major = In.take_while(isDigit);
+  In = In.substr(Major.size());
   if (Major.empty())
     return true;
 
-  if (I != E && *I == 'p') {
-    ++I;
-
-    while (I != E && isDigit(*I))
-      Minor.append(1, *I++);
+  if (In.consume_front("p")) {
+    Minor = In.take_while(isDigit);
+    In = In.substr(Major.size());
 
     // Expected 'p' to be followed by minor version number.
     if (Minor.empty()) {
@@ -110,17 +104,13 @@ static void getExtensionFeatures(const Driver &D,
   SmallVector<StringRef, 8> Split;
   Exts.split(Split, StringRef("_"));
 
-  SmallVector<StringRef, 3> Prefix;
-  Prefix.push_back("x");
-  Prefix.push_back("s");
-  Prefix.push_back("sx");
+  SmallVector<StringRef, 3> Prefix{"x", "s", "sx"};
   auto I = Prefix.begin();
   auto E = Prefix.end();
 
   SmallVector<StringRef, 8> AllExts;
 
   for (StringRef Ext : Split) {
-
     if (Ext.empty()) {
       D.Diag(diag::err_drv_invalid_riscv_arch_name) << MArch
         << "extension name missing after separator '_'";
@@ -205,11 +195,9 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const ArgList &Args,
     StringRef MArch = A->getValue();
 
     // RISC-V ISA strings must be lowercase.
-    if (std::any_of(std::begin(MArch), std::end(MArch),
-                    [](char c) { return isupper(c); })) {
-
-      D.Diag(diag::err_drv_invalid_riscv_arch_name) << MArch
-        << "string must be lowercase";
+    if (llvm::any_of(MArch, [](char c) { return isupper(c); })) {
+      D.Diag(diag::err_drv_invalid_riscv_arch_name)
+          << MArch << "string must be lowercase";
       return;
     }
 
@@ -221,7 +209,7 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const ArgList &Args,
       return;
     }
 
-    bool HasRV64 = MArch.startswith("rv64") ? true : false;
+    bool HasRV64 = MArch.startswith("rv64");
 
     // The canonical order specified in ISA manual.
     // Ref: Table 22.1 in RISC-V User-Level ISA V2.2
@@ -365,16 +353,10 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const ArgList &Args,
   }
 
   // -mrelax is default, unless -mno-relax is specified.
-  bool Relax = true;
-  if (auto *A = Args.getLastArg(options::OPT_mrelax, options::OPT_mno_relax)) {
-    if (A->getOption().matches(options::OPT_mno_relax)) {
-      Relax = false;
-      Features.push_back("-relax");
-    }
-  }
-
-  if (Relax)
+  if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true))
     Features.push_back("+relax");
+  else
+    Features.push_back("-relax");
 
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.

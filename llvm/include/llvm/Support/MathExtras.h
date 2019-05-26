@@ -51,14 +51,14 @@ enum ZeroBehavior {
 
 namespace detail {
 template <typename T, std::size_t SizeOfT> struct TrailingZerosCounter {
-  static std::size_t count(T Val, ZeroBehavior) {
+  static unsigned count(T Val, ZeroBehavior) {
     if (!Val)
       return std::numeric_limits<T>::digits;
     if (Val & 0x1)
       return 0;
 
     // Bisection method.
-    std::size_t ZeroBits = 0;
+    unsigned ZeroBits = 0;
     T Shift = std::numeric_limits<T>::digits >> 1;
     T Mask = std::numeric_limits<T>::max() >> Shift;
     while (Shift) {
@@ -75,7 +75,7 @@ template <typename T, std::size_t SizeOfT> struct TrailingZerosCounter {
 
 #if __GNUC__ >= 4 || defined(_MSC_VER)
 template <typename T> struct TrailingZerosCounter<T, 4> {
-  static std::size_t count(T Val, ZeroBehavior ZB) {
+  static unsigned count(T Val, ZeroBehavior ZB) {
     if (ZB != ZB_Undefined && Val == 0)
       return 32;
 
@@ -91,7 +91,7 @@ template <typename T> struct TrailingZerosCounter<T, 4> {
 
 #if !defined(_MSC_VER) || defined(_M_X64)
 template <typename T> struct TrailingZerosCounter<T, 8> {
-  static std::size_t count(T Val, ZeroBehavior ZB) {
+  static unsigned count(T Val, ZeroBehavior ZB) {
     if (ZB != ZB_Undefined && Val == 0)
       return 64;
 
@@ -116,7 +116,7 @@ template <typename T> struct TrailingZerosCounter<T, 8> {
 /// \param ZB the behavior on an input of 0. Only ZB_Width and ZB_Undefined are
 ///   valid arguments.
 template <typename T>
-std::size_t countTrailingZeros(T Val, ZeroBehavior ZB = ZB_Width) {
+unsigned countTrailingZeros(T Val, ZeroBehavior ZB = ZB_Width) {
   static_assert(std::numeric_limits<T>::is_integer &&
                     !std::numeric_limits<T>::is_signed,
                 "Only unsigned integral types are allowed.");
@@ -125,12 +125,12 @@ std::size_t countTrailingZeros(T Val, ZeroBehavior ZB = ZB_Width) {
 
 namespace detail {
 template <typename T, std::size_t SizeOfT> struct LeadingZerosCounter {
-  static std::size_t count(T Val, ZeroBehavior) {
+  static unsigned count(T Val, ZeroBehavior) {
     if (!Val)
       return std::numeric_limits<T>::digits;
 
     // Bisection method.
-    std::size_t ZeroBits = 0;
+    unsigned ZeroBits = 0;
     for (T Shift = std::numeric_limits<T>::digits >> 1; Shift; Shift >>= 1) {
       T Tmp = Val >> Shift;
       if (Tmp)
@@ -144,7 +144,7 @@ template <typename T, std::size_t SizeOfT> struct LeadingZerosCounter {
 
 #if __GNUC__ >= 4 || defined(_MSC_VER)
 template <typename T> struct LeadingZerosCounter<T, 4> {
-  static std::size_t count(T Val, ZeroBehavior ZB) {
+  static unsigned count(T Val, ZeroBehavior ZB) {
     if (ZB != ZB_Undefined && Val == 0)
       return 32;
 
@@ -160,7 +160,7 @@ template <typename T> struct LeadingZerosCounter<T, 4> {
 
 #if !defined(_MSC_VER) || defined(_M_X64)
 template <typename T> struct LeadingZerosCounter<T, 8> {
-  static std::size_t count(T Val, ZeroBehavior ZB) {
+  static unsigned count(T Val, ZeroBehavior ZB) {
     if (ZB != ZB_Undefined && Val == 0)
       return 64;
 
@@ -185,7 +185,7 @@ template <typename T> struct LeadingZerosCounter<T, 8> {
 /// \param ZB the behavior on an input of 0. Only ZB_Width and ZB_Undefined are
 ///   valid arguments.
 template <typename T>
-std::size_t countLeadingZeros(T Val, ZeroBehavior ZB = ZB_Width) {
+unsigned countLeadingZeros(T Val, ZeroBehavior ZB = ZB_Width) {
   static_assert(std::numeric_limits<T>::is_integer &&
                     !std::numeric_limits<T>::is_signed,
                 "Only unsigned integral types are allowed.");
@@ -458,7 +458,7 @@ inline uint64_t ByteSwap_64(uint64_t Value) {
 /// \param ZB the behavior on an input of all ones. Only ZB_Width and
 /// ZB_Undefined are valid arguments.
 template <typename T>
-std::size_t countLeadingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
+unsigned countLeadingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
   static_assert(std::numeric_limits<T>::is_integer &&
                     !std::numeric_limits<T>::is_signed,
                 "Only unsigned integral types are allowed.");
@@ -474,7 +474,7 @@ std::size_t countLeadingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
 /// \param ZB the behavior on an input of all ones. Only ZB_Width and
 /// ZB_Undefined are valid arguments.
 template <typename T>
-std::size_t countTrailingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
+unsigned countTrailingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
   static_assert(std::numeric_limits<T>::is_integer &&
                     !std::numeric_limits<T>::is_signed,
                 "Only unsigned integral types are allowed.");
