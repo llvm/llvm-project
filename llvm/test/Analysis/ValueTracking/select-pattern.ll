@@ -8,6 +8,8 @@
 define void @PR36045(i1 %t, i32* %b) {
 ; CHECK-LABEL: @PR36045(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[T:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

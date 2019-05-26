@@ -4,6 +4,8 @@
 define void @test1(i1 %C, i1* %BP) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[C:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -62,6 +64,8 @@ T:
 define void @test5(i1 %cond, i8* %ptr) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    store i8 2, i8* [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -107,6 +111,8 @@ bb2:
 define void @test6(i1 %cond, i8* %ptr) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    store i8 2, i8* [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -145,6 +151,8 @@ bb2:
 define i32 @test7(i1 %X) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -162,6 +170,8 @@ else:
 define void @test8(i1 %X, void ()* %Y) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    call void [[Y:%.*]]()
 ; CHECK-NEXT:    ret void
 ;

@@ -10,6 +10,8 @@ define i32 @test1(i1 %B) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND_US:%.*]]
 ; CHECK:       for.cond.us:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[B:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    br label [[FOR_COND_US]]
 ;
 entry:
