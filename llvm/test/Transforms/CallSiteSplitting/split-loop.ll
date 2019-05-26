@@ -5,6 +5,9 @@ define i16 @test1() {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 undef, i16 1, i16 0
+; CHECK-NEXT:    [[TOBOOL18:%.*]] = icmp ne i16 [[SPEC_SELECT]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[TOBOOL18]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    br label [[FOR_COND12:%.*]]
 ; CHECK:       for.cond12:
 ; CHECK-NEXT:    call void @callee(i16 [[SPEC_SELECT]])
@@ -27,6 +30,9 @@ define i16 @test2() {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = select i1 undef, i16 1, i16 0
+; CHECK-NEXT:    [[TOBOOL18:%.*]] = icmp ne i16 [[S]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[TOBOOL18]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    br label [[FOR_COND12:%.*]]
 ; CHECK:       for.cond12:
 ; CHECK-NEXT:    call void @callee(i16 [[S]])
@@ -53,6 +59,9 @@ define i16 @test3() {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = select i1 undef, i16 1, i16 0
+; CHECK-NEXT:    [[TOBOOL18:%.*]] = icmp ne i16 [[S]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[TOBOOL18]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    br label [[FOR_COND12:%.*]]
 ; CHECK:       for.cond12:
 ; CHECK-NEXT:    call void @callee(i16 [[S]])

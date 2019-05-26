@@ -4205,10 +4205,13 @@ bool SimplifyCFGOpt::SimplifyUnreachable(UnreachableInst *UI) {
           Changed = true;
         }
       } else {
+        Value* Cond = BI->getCondition();
         if (BI->getSuccessor(0) == BB) {
+          Builder.CreateAssumption(Builder.CreateNot(Cond));
           Builder.CreateBr(BI->getSuccessor(1));
           EraseTerminatorAndDCECond(BI);
         } else if (BI->getSuccessor(1) == BB) {
+          Builder.CreateAssumption(Cond);
           Builder.CreateBr(BI->getSuccessor(0));
           EraseTerminatorAndDCECond(BI);
           Changed = true;
