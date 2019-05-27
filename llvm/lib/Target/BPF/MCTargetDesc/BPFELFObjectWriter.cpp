@@ -50,21 +50,33 @@ unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   case FK_Data_8:
     return ELF::R_BPF_64_64;
   case FK_Data_4:
-    // .BTF.ext generates FK_Data_4 relocations for
-    // insn offset by creating temporary labels.
-    // The insn offset is within the code section and
-    // already been fulfilled by applyFixup(). No
-    // further relocation is needed.
     if (const MCSymbolRefExpr *A = Target.getSymA()) {
-      if (A->getSymbol().isTemporary()) {
-        MCSection &Section = A->getSymbol().getSection();
+      const MCSymbol &Sym = A->getSymbol();
+
+      if (Sym.isDefined()) {
+        MCSection &Section = Sym.getSection();
         const MCSectionELF *SectionELF = dyn_cast<MCSectionELF>(&Section);
         assert(SectionELF && "Null section for reloc symbol");
 
-        // The reloc symbol should be in text section.
         unsigned Flags = SectionELF->getFlags();
-        if ((Flags & ELF::SHF_ALLOC) && (Flags & ELF::SHF_EXECINSTR))
-          return ELF::R_BPF_NONE;
+
+        if (Sym.isTemporary()) {
+          // .BTF.ext generates FK_Data_4 relocations for
+          // insn offset by creating temporary labels.
+          // The insn offset is within the code section and
+          // already been fulfilled by applyFixup(). No
+          // further relocation is needed.
+          // The reloc symbol should be in text section.
+          if ((Flags & ELF::SHF_ALLOC) && (Flags & ELF::SHF_EXECINSTR))
+            return ELF::R_BPF_NONE;
+        } else {
+          // .BTF generates FK_Data_4 relocations for variable
+          // offset in DataSec kind. Similar to the above .BTF.ext
+          // insn offset, no further relocation is needed.
+          // The reloc symbol should be in data section.
+          if ((Flags & ELF::SHF_ALLOC) && (Flags & ELF::SHF_WRITE))
+            return ELF::R_BPF_NONE;
+        }
       }
     }
     return ELF::R_BPF_64_32;

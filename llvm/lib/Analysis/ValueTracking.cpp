@@ -3987,51 +3987,44 @@ bool llvm::mayBeMemoryDependent(const Instruction &I) {
   return I.mayReadOrWriteMemory() || !isSafeToSpeculativelyExecute(&I);
 }
 
+/// Convert ConstantRange OverflowResult into ValueTracking OverflowResult.
+static OverflowResult mapOverflowResult(ConstantRange::OverflowResult OR) {
+  switch (OR) {
+    case ConstantRange::OverflowResult::MayOverflow:
+      return OverflowResult::MayOverflow;
+    case ConstantRange::OverflowResult::AlwaysOverflows:
+      return OverflowResult::AlwaysOverflows;
+    case ConstantRange::OverflowResult::NeverOverflows:
+      return OverflowResult::NeverOverflows;
+  }
+  llvm_unreachable("Unknown OverflowResult");
+}
+
+/// Combine constant ranges from computeConstantRange() and computeKnownBits().
+static ConstantRange computeConstantRangeIncludingKnownBits(
+    const Value *V, bool ForSigned, const DataLayout &DL, unsigned Depth,
+    AssumptionCache *AC, const Instruction *CxtI, const DominatorTree *DT,
+    OptimizationRemarkEmitter *ORE = nullptr, bool UseInstrInfo = true) {
+  KnownBits Known = computeKnownBits(
+      V, DL, Depth, AC, CxtI, DT, ORE, UseInstrInfo);
+  ConstantRange CR1 = ConstantRange::fromKnownBits(Known, ForSigned);
+  ConstantRange CR2 = computeConstantRange(V, UseInstrInfo);
+  ConstantRange::PreferredRangeType RangeType =
+      ForSigned ? ConstantRange::Signed : ConstantRange::Unsigned;
+  return CR1.intersectWith(CR2, RangeType);
+}
+
 OverflowResult llvm::computeOverflowForUnsignedMul(
     const Value *LHS, const Value *RHS, const DataLayout &DL,
     AssumptionCache *AC, const Instruction *CxtI, const DominatorTree *DT,
     bool UseInstrInfo) {
-  // Multiplying n * m significant bits yields a result of n + m significant
-  // bits. If the total number of significant bits does not exceed the
-  // result bit width (minus 1), there is no overflow.
-  // This means if we have enough leading zero bits in the operands
-  // we can guarantee that the result does not overflow.
-  // Ref: "Hacker's Delight" by Henry Warren
-  unsigned BitWidth = LHS->getType()->getScalarSizeInBits();
-  KnownBits LHSKnown(BitWidth);
-  KnownBits RHSKnown(BitWidth);
-  computeKnownBits(LHS, LHSKnown, DL, /*Depth=*/0, AC, CxtI, DT, nullptr,
-                   UseInstrInfo);
-  computeKnownBits(RHS, RHSKnown, DL, /*Depth=*/0, AC, CxtI, DT, nullptr,
-                   UseInstrInfo);
-  // Note that underestimating the number of zero bits gives a more
-  // conservative answer.
-  unsigned ZeroBits = LHSKnown.countMinLeadingZeros() +
-                      RHSKnown.countMinLeadingZeros();
-  // First handle the easy case: if we have enough zero bits there's
-  // definitely no overflow.
-  if (ZeroBits >= BitWidth)
-    return OverflowResult::NeverOverflows;
-
-  // Get the largest possible values for each operand.
-  APInt LHSMax = ~LHSKnown.Zero;
-  APInt RHSMax = ~RHSKnown.Zero;
-
-  // We know the multiply operation doesn't overflow if the maximum values for
-  // each operand will not overflow after we multiply them together.
-  bool MaxOverflow;
-  (void)LHSMax.umul_ov(RHSMax, MaxOverflow);
-  if (!MaxOverflow)
-    return OverflowResult::NeverOverflows;
-
-  // We know it always overflows if multiplying the smallest possible values for
-  // the operands also results in overflow.
-  bool MinOverflow;
-  (void)LHSKnown.One.umul_ov(RHSKnown.One, MinOverflow);
-  if (MinOverflow)
-    return OverflowResult::AlwaysOverflows;
-
-  return OverflowResult::MayOverflow;
+  KnownBits LHSKnown = computeKnownBits(LHS, DL, /*Depth=*/0, AC, CxtI, DT,
+                                        nullptr, UseInstrInfo);
+  KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT,
+                                        nullptr, UseInstrInfo);
+  ConstantRange LHSRange = ConstantRange::fromKnownBits(LHSKnown, false);
+  ConstantRange RHSRange = ConstantRange::fromKnownBits(RHSKnown, false);
+  return mapOverflowResult(LHSRange.unsignedMulMayOverflow(RHSRange));
 }
 
 OverflowResult
@@ -4075,33 +4068,6 @@ llvm::computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
       return OverflowResult::NeverOverflows;
   }
   return OverflowResult::MayOverflow;
-}
-
-/// Convert ConstantRange OverflowResult into ValueTracking OverflowResult.
-static OverflowResult mapOverflowResult(ConstantRange::OverflowResult OR) {
-  switch (OR) {
-    case ConstantRange::OverflowResult::MayOverflow:
-      return OverflowResult::MayOverflow;
-    case ConstantRange::OverflowResult::AlwaysOverflows:
-      return OverflowResult::AlwaysOverflows;
-    case ConstantRange::OverflowResult::NeverOverflows:
-      return OverflowResult::NeverOverflows;
-  }
-  llvm_unreachable("Unknown OverflowResult");
-}
-
-/// Combine constant ranges from computeConstantRange() and computeKnownBits().
-static ConstantRange computeConstantRangeIncludingKnownBits(
-    const Value *V, bool ForSigned, const DataLayout &DL, unsigned Depth,
-    AssumptionCache *AC, const Instruction *CxtI, const DominatorTree *DT,
-    OptimizationRemarkEmitter *ORE = nullptr, bool UseInstrInfo = true) {
-  KnownBits Known = computeKnownBits(
-      V, DL, Depth, AC, CxtI, DT, ORE, UseInstrInfo);
-  ConstantRange CR1 = ConstantRange::fromKnownBits(Known, ForSigned);
-  ConstantRange CR2 = computeConstantRange(V, UseInstrInfo);
-  ConstantRange::PreferredRangeType RangeType =
-      ForSigned ? ConstantRange::Signed : ConstantRange::Unsigned;
-  return CR1.intersectWith(CR2, RangeType);
 }
 
 OverflowResult llvm::computeOverflowForUnsignedAdd(

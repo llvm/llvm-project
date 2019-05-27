@@ -43,8 +43,6 @@ entry:
 ; CHECK-HARDFP-FULLFP16:  {{.*}} lr
 }
 
-; 1. VABS: TODO
-
 ; 2. VADD
 define float @Add(float %a.coerce, float %b.coerce) {
 entry:
@@ -691,15 +689,6 @@ entry:
 ; CHECK-HARDFP-FULLFP16:       vnmul.f16  s0, s0, s1
 }
 
-; TODO:
-; 28. VRINTA
-; 29. VRINTM
-; 30. VRINTN
-; 31. VRINTP
-; 32. VRINTR
-; 33. VRINTX
-; 34. VRINTZ
-
 ; 35. VSELEQ
 define half @select_cc1(half* %a0)  {
   %1 = load half, half* %a0
@@ -954,8 +943,6 @@ entry:
 ; CHECK-SOFTFP-FP16-T32-NEXT:  vmovvs.f32	[[S4]], [[S2]]
 ; CHECK-SOFTFP-FP16-T32-NEXT:  vcvtb.f16.f32 s0, [[S4]]
 }
-
-; 39. VSQRT - TODO
 
 ; 40. VSUB
 define float @Sub(float %a.coerce, float %b.coerce) {

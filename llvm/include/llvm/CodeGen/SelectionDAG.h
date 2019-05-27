@@ -406,6 +406,7 @@ public:
   const TargetLowering &getTargetLoweringInfo() const { return *TLI; }
   const TargetLibraryInfo &getLibInfo() const { return *LibInfo; }
   const SelectionDAGTargetInfo &getSelectionDAGInfo() const { return *TSI; }
+  const LegacyDivergenceAnalysis *getDivergenceAnalysis() const { return DA; }
   LLVMContext *getContext() const {return Context; }
   OptimizationRemarkEmitter &getORE() const { return *ORE; }
 
@@ -1448,8 +1449,14 @@ public:
   /// Return true if 'Op & Mask' is known to be zero.  We
   /// use this predicate to simplify operations downstream.  Op and Mask are
   /// known to be the same type.
-  bool MaskedValueIsZero(SDValue Op, const APInt &Mask, unsigned Depth = 0)
-    const;
+  bool MaskedValueIsZero(SDValue Op, const APInt &Mask,
+                         unsigned Depth = 0) const;
+
+  /// Return true if 'Op & Mask' is known to be zero in DemandedElts.  We
+  /// use this predicate to simplify operations downstream.  Op and Mask are
+  /// known to be the same type.
+  bool MaskedValueIsZero(SDValue Op, const APInt &Mask,
+                         const APInt &DemandedElts, unsigned Depth = 0) const;
 
   /// Determine which bits of Op are known to be either zero or one and return
   /// them in Known. For vectors, the known bits are those that are shared by

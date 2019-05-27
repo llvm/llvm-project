@@ -310,3 +310,22 @@ define float @bitcasted_inselt_to_and_from_FP_uses2(double %x) {
   ret float %r
 }
 
+; This would crash/assert because the logic for collectShuffleElements()
+; does not consider the possibility of invalid insert/extract operands.
+
+define <4 x double> @invalid_extractelement(<2 x double> %a, <4 x double> %b, double* %p) {
+; ANY-LABEL: @invalid_extractelement(
+; ANY-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+; ANY-NEXT:    [[T4:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> [[TMP1]], <4 x i32> <i32 undef, i32 1, i32 4, i32 3>
+; ANY-NEXT:    [[E:%.*]] = extractelement <4 x double> [[B]], i32 1
+; ANY-NEXT:    store double [[E]], double* [[P:%.*]], align 8
+; ANY-NEXT:    ret <4 x double> [[T4]]
+;
+  %t3 = extractelement <2 x double> %a, i32 0
+  %t4 = insertelement <4 x double> %b, double %t3, i32 2
+  %e = extractelement <4 x double> %t4, i32 1
+  store double %e, double* %p
+  %e1 = extractelement <2 x double> %a, i32 4 ; invalid index
+  %r = insertelement <4 x double> %t4, double %e1, i64 0
+  ret <4 x double> %r
+}

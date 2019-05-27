@@ -2123,15 +2123,17 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
 
 /// See if the specified operand can be simplified with the knowledge that only
 /// the bits specified by Mask are used.
-SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &Mask) {
+/// TODO: really we should be making this into the DAG equivalent of
+/// SimplifyMultipleUseDemandedBits and not generate any new nodes.
+SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &DemandedBits) {
   switch (V.getOpcode()) {
   default:
     break;
   case ISD::Constant: {
-    const ConstantSDNode *CV = cast<ConstantSDNode>(V.getNode());
+    auto *CV = cast<ConstantSDNode>(V.getNode());
     assert(CV && "Const value should be ConstSDNode.");
     const APInt &CVal = CV->getAPIntValue();
-    APInt NewVal = CVal & Mask;
+    APInt NewVal = CVal & DemandedBits;
     if (NewVal != CVal)
       return getConstant(NewVal, SDLoc(V), V.getValueType());
     break;
@@ -2139,24 +2141,25 @@ SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &Mask) {
   case ISD::OR:
   case ISD::XOR:
     // If the LHS or RHS don't contribute bits to the or, drop them.
-    if (MaskedValueIsZero(V.getOperand(0), Mask))
+    if (MaskedValueIsZero(V.getOperand(0), DemandedBits))
       return V.getOperand(1);
-    if (MaskedValueIsZero(V.getOperand(1), Mask))
+    if (MaskedValueIsZero(V.getOperand(1), DemandedBits))
       return V.getOperand(0);
     break;
   case ISD::SRL:
     // Only look at single-use SRLs.
     if (!V.getNode()->hasOneUse())
       break;
-    if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(V.getOperand(1))) {
+    if (auto *RHSC = dyn_cast<ConstantSDNode>(V.getOperand(1))) {
       // See if we can recursively simplify the LHS.
       unsigned Amt = RHSC->getZExtValue();
 
       // Watch out for shift count overflow though.
-      if (Amt >= Mask.getBitWidth())
+      if (Amt >= DemandedBits.getBitWidth())
         break;
-      APInt NewMask = Mask << Amt;
-      if (SDValue SimplifyLHS = GetDemandedBits(V.getOperand(0), NewMask))
+      APInt SrcDemandedBits = DemandedBits << Amt;
+      if (SDValue SimplifyLHS =
+              GetDemandedBits(V.getOperand(0), SrcDemandedBits))
         return getNode(ISD::SRL, SDLoc(V), V.getValueType(), SimplifyLHS,
                        V.getOperand(1));
     }
@@ -2166,8 +2169,9 @@ SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &Mask) {
     // Also handle the case where masked out bits in X are known to be zero.
     if (ConstantSDNode *RHSC = isConstOrConstSplat(V.getOperand(1))) {
       const APInt &AndVal = RHSC->getAPIntValue();
-      if (Mask.isSubsetOf(AndVal) ||
-          Mask.isSubsetOf(computeKnownBits(V.getOperand(0)).Zero | AndVal))
+      if (DemandedBits.isSubsetOf(AndVal) ||
+          DemandedBits.isSubsetOf(computeKnownBits(V.getOperand(0)).Zero |
+                                  AndVal))
         return V.getOperand(0);
     }
     break;
@@ -2176,11 +2180,12 @@ SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &Mask) {
     SDValue Src = V.getOperand(0);
     unsigned SrcBitWidth = Src.getScalarValueSizeInBits();
     // Being conservative here - only peek through if we only demand bits in the
-    // non-extended source (even though the extended bits are technically undef).
-    if (Mask.getActiveBits() > SrcBitWidth)
+    // non-extended source (even though the extended bits are technically
+    // undef).
+    if (DemandedBits.getActiveBits() > SrcBitWidth)
       break;
-    APInt SrcMask = Mask.trunc(SrcBitWidth);
-    if (SDValue DemandedSrc = GetDemandedBits(Src, SrcMask))
+    APInt SrcDemandedBits = DemandedBits.trunc(SrcBitWidth);
+    if (SDValue DemandedSrc = GetDemandedBits(Src, SrcDemandedBits))
       return getNode(ISD::ANY_EXTEND, SDLoc(V), V.getValueType(), DemandedSrc);
     break;
   }
@@ -2189,7 +2194,7 @@ SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &Mask) {
     unsigned ExVTBits = ExVT.getScalarSizeInBits();
 
     // If none of the extended bits are demanded, eliminate the sextinreg.
-    if (Mask.getActiveBits() <= ExVTBits)
+    if (DemandedBits.getActiveBits() <= ExVTBits)
       return V.getOperand(0);
 
     break;
@@ -2207,9 +2212,22 @@ bool SelectionDAG::SignBitIsZero(SDValue Op, unsigned Depth) const {
 /// MaskedValueIsZero - Return true if 'V & Mask' is known to be zero.  We use
 /// this predicate to simplify operations downstream.  Mask is known to be zero
 /// for bits that V cannot have.
-bool SelectionDAG::MaskedValueIsZero(SDValue Op, const APInt &Mask,
+bool SelectionDAG::MaskedValueIsZero(SDValue V, const APInt &Mask,
                                      unsigned Depth) const {
-  return Mask.isSubsetOf(computeKnownBits(Op, Depth).Zero);
+  EVT VT = V.getValueType();
+  APInt DemandedElts = VT.isVector()
+                           ? APInt::getAllOnesValue(VT.getVectorNumElements())
+                           : APInt(1, 1);
+  return MaskedValueIsZero(V, Mask, DemandedElts, Depth);
+}
+
+/// MaskedValueIsZero - Return true if 'V & Mask' is known to be zero in
+/// DemandedElts.  We use this predicate to simplify operations downstream.
+/// Mask is known to be zero for bits that V cannot have.
+bool SelectionDAG::MaskedValueIsZero(SDValue V, const APInt &Mask,
+                                     const APInt &DemandedElts,
+                                     unsigned Depth) const {
+  return Mask.isSubsetOf(computeKnownBits(V, DemandedElts, Depth).Zero);
 }
 
 /// isSplatValue - Return true if the vector V has the same value
