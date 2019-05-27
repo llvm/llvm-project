@@ -389,6 +389,12 @@ public:
   getCompilerRTArgString(const llvm::opt::ArgList &Args, StringRef Component,
                          FileType Type = ToolChain::FT_Static) const;
 
+  // Returns target specific runtime path if it exists.
+  virtual Optional<std::string> getRuntimePath() const;
+
+  // Returns target specific C++ library path if it exists.
+  virtual Optional<std::string> getCXXStdlibPath() const;
+
   // Returns <ResourceDir>/lib/<OSName>/<arch>.  This is used by runtimes (such
   // as OpenMP) to find arch-specific libraries.
   std::string getArchSpecificLibPath() const;
