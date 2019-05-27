@@ -1950,7 +1950,10 @@ void StmtPrinter::VisitLambdaExpr(LambdaExpr *Node) {
 
   // Print the body.
   OS << ' ';
-  PrintRawCompoundStmt(Node->getBody());
+  if (Policy.TerseOutput)
+    OS << "{}";
+  else
+    PrintRawCompoundStmt(Node->getBody());
 }
 
 void StmtPrinter::VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *Node) {

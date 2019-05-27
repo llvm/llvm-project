@@ -288,6 +288,7 @@ private:
                            const VarLocMap &VarLocIDs);
   bool transferTerminatorInst(MachineInstr &MI, OpenRangesSet &OpenRanges,
                               VarLocInMBB &OutLocs, const VarLocMap &VarLocIDs);
+
   bool process(MachineInstr &MI, OpenRangesSet &OpenRanges,
                VarLocInMBB &OutLocs, VarLocMap &VarLocIDs,
                TransferMap &Transfers, bool transferChanges);

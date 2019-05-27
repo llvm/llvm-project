@@ -131,6 +131,30 @@ s_waitcnt lgkmcnt_sat(15)
 s_waitcnt lgkmcnt_sat(16)
 // GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
+x=1
+s_waitcnt lgkmcnt_sat(x+1)
+// GCN: s_waitcnt lgkmcnt(2)            ; encoding: [0x7f,0x02,0x8c,0xbf]
+
+s_waitcnt lgkmcnt_sat(1+x)
+// GCN: s_waitcnt lgkmcnt(2)            ; encoding: [0x7f,0x02,0x8c,0xbf]
+
+s_waitcnt x+1
+// GCN: s_waitcnt vmcnt(2) expcnt(0) lgkmcnt(0) ; encoding: [0x02,0x00,0x8c,0xbf]
+
+s_waitcnt 1+x
+// GCN: s_waitcnt vmcnt(2) expcnt(0) lgkmcnt(0) ; encoding: [0x02,0x00,0x8c,0xbf]
+
+lgkmcnt_sat=1
+s_waitcnt lgkmcnt_sat
+// GCN: s_waitcnt vmcnt(1) expcnt(0) lgkmcnt(0) ; encoding: [0x01,0x00,0x8c,0xbf]
+
+s_waitcnt lgkmcnt_sat+1
+// GCN: s_waitcnt vmcnt(2) expcnt(0) lgkmcnt(0) ; encoding: [0x02,0x00,0x8c,0xbf]
+
+//===----------------------------------------------------------------------===//
+// misc sopp instructions
+//===----------------------------------------------------------------------===//
+
 s_sethalt 9
 // GCN: s_sethalt 9 ; encoding: [0x09,0x00,0x8d,0xbf]
 
