@@ -685,34 +685,6 @@ static target getAccessTarget(const ClassTemplateSpecializationDecl *AccTy) {
       AccTy->getTemplateArgs()[3].getAsIntegral().getExtValue());
 }
 
-///
-static FieldDecl *getFieldDeclByName(const CXXRecordDecl *RD,
-                                     const ArrayRef<StringRef> FldExpr,
-                                     uint64_t *Offset = nullptr) {
-
-  FieldDecl *Res = nullptr;
-
-  for (const auto FldName : FldExpr) {
-    Res = nullptr;
-    assert(RD && "field lookup in non-struct type");
-
-    for (FieldDecl *Fld : RD->fields()) {
-      if (Fld->getNameAsString() == FldName) {
-        if (Offset) {
-          const ASTRecordLayout &LO =
-              RD->getASTContext().getASTRecordLayout(RD);
-          *Offset += LO.getFieldOffset(Fld->getFieldIndex()) / 8;
-        }
-        RD = Fld->getType()->getAsCXXRecordDecl();
-        Res = Fld;
-        break;
-      }
-    }
-    assert(Res && "field declaration must have been found");
-  }
-  return Res;
-}
-
 static void buildArgTys(ASTContext &Context, CXXRecordDecl *KernelObj,
                         SmallVectorImpl<ParamDesc> &ParamDescs) {
   const LambdaCapture *Cpt = KernelObj->captures_begin();
