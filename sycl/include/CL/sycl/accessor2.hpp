@@ -370,7 +370,7 @@ public:
             detail::convertToArrayOfN<3, 1>(BufferRef.MemRange), AccessMode,
             detail::getSyclObjImpl(BufferRef).get(), Dimensions,
             sizeof(DataT)) {
-    CommandGroupHandler.set_arg(/*Index=*/0, *this);
+    CommandGroupHandler.associateWithHandler(*this);
   }
 #endif
 
@@ -411,7 +411,7 @@ public:
             detail::convertToArrayOfN<3, 1>(BufferRef.MemRange), AccessMode,
             detail::getSyclObjImpl(BufferRef).get(), Dimensions,
             sizeof(DataT)) {
-    CommandGroupHandler.set_arg(/*Index=*/0, *this);
+    CommandGroupHandler.associateWithHandler(*this);
   }
 #endif
 
@@ -452,7 +452,7 @@ public:
                            detail::convertToArrayOfN<3, 1>(BufferRef.MemRange),
                            AccessMode, detail::getSyclObjImpl(BufferRef).get(),
                            Dimensions, sizeof(DataT)) {
-    CommandGroupHandler.set_arg(/*Index=*/0, *this);
+    CommandGroupHandler.associateWithHandler(*this);
   }
 #endif
 

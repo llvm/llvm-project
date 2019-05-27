@@ -266,7 +266,8 @@ public:
           std::make_shared<kernel_impl>(Context, PtrToSelf));
     }
     return createSyclObjFromImpl<kernel>(std::make_shared<kernel_impl>(
-        get_cl_kernel(KernelInfo<KernelT>::getName()), Context, PtrToSelf));
+        get_cl_kernel(KernelInfo<KernelT>::getName()), Context, PtrToSelf,
+        /*IsCreatedFromSource*/ false));
   }
 #endif
 
@@ -276,8 +277,9 @@ public:
     if (is_host()) {
       throw invalid_object_error("This instance of program is a host instance");
     }
-    return createSyclObjFromImpl<kernel>(std::make_shared<kernel_impl>(
-        get_cl_kernel(KernelName), Context, PtrToSelf));
+    return createSyclObjFromImpl<kernel>(
+        std::make_shared<kernel_impl>(get_cl_kernel(KernelName), Context,
+                                      PtrToSelf, /*IsCreatedFromSource*/ true));
   }
 
   template <info::program param>

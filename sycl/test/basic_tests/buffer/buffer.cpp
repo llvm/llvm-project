@@ -1,8 +1,10 @@
-// RUN: %clang -std=c++11 -fsycl %s -o %t.out -lstdc++ -lOpenCL -lsycl
-// RUN: env SYCL_DEVICE_TYPE=HOST %t.out
-// RUN: %CPU_RUN_PLACEHOLDER %t.out
-// RUN: %GPU_RUN_PLACEHOLDER %t.out
-// RUN: %ACC_RUN_PLACEHOLDER %t.out
+// RUN: %clang -std=c++11 %s -o %t1.out -lstdc++ -lOpenCL -lsycl
+// RUN: env SYCL_DEVICE_TYPE=HOST %t1.out
+// RUN: %clang -std=c++11 -fsycl %s -o %t2.out -lstdc++ -lOpenCL -lsycl
+// RUN: env SYCL_DEVICE_TYPE=HOST %t2.out
+// RUN: %CPU_RUN_PLACEHOLDER %t2.out
+// RUN: %GPU_RUN_PLACEHOLDER %t2.out
+// RUN: %ACC_RUN_PLACEHOLDER %t2.out
 //==------------------- buffer.cpp - SYCL buffer basic test ----------------==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -535,6 +537,114 @@ int main() {
         failed = true;
       }
   }
+
+  {
+    std::vector<int> data1(10, -1);
+    std::vector<int> data2(10, -2);
+    {
+      buffer<int, 1> a(data1.data(), range<1>(10));
+      buffer<int, 1> b(data2.data(), range<1>(10));
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto A = a.get_access<access::mode::read_write>(cgh);
+        auto B = b.get_access<access::mode::read_write>(cgh);
+        cgh.parallel_for<class override_lambda>(
+            range<1>{10}, [=](id<1> index) { A[index] = 0; });
+      });
+    } // Data is copied back
+    for (int i = 0; i < 10; i++)
+      assert(data2[i] == -2);
+    for (int i = 0; i < 10; i++)
+      assert(data1[i] == 0);
+  }
+
+  {
+    queue myQueue;
+    if (!myQueue.is_host()) {
+      std::vector<int> data1(10, -1);
+      std::vector<int> data2(10, -2);
+      {
+        buffer<int, 1> a(data1.data(), range<1>(10));
+        buffer<int, 1> b(data2.data(), range<1>(10));
+
+        program prog(myQueue.get_context());
+        prog.build_with_source("kernel void override_source(global int* Acc) "
+                               "{Acc[get_global_id(0)] = 0; }\n");
+        cl::sycl::kernel krn = prog.get_kernel("override_source");
+        myQueue.submit([&](handler &cgh) {
+          auto A = a.get_access<access::mode::read_write>(cgh);
+          cgh.set_arg(0, A);
+          auto B = b.get_access<access::mode::read_write>(cgh);
+          cgh.parallel_for(cl::sycl::range<1>(10), krn);
+        });
+      } // Data is copied back
+      for (int i = 0; i < 10; i++)
+        assert(data2[i] == -2);
+      for (int i = 0; i < 10; i++)
+        assert(data1[i] == 0);
+    }
+  }
+
+  {
+    std::vector<int> data1(10, -1);
+    std::vector<int> data2(10, -2);
+    {
+      buffer<int, 1> a(data1.data(), range<1>(10));
+      buffer<int, 1> b(data2.data(), range<1>(10));
+      accessor<int, 1, access::mode::read_write, access::target::global_buffer,
+               access::placeholder::true_t>
+          A(a);
+      accessor<int, 1, access::mode::read_write, access::target::global_buffer,
+               access::placeholder::true_t>
+          B(b);
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        cgh.require(A);
+        cgh.require(B);
+        cgh.parallel_for<class override_lambda_placeholder>(
+            range<1>{10}, [=](id<1> index) { A[index] = 0; });
+      });
+    } // Data is copied back
+    for (int i = 0; i < 10; i++)
+      assert(data2[i] == -2);
+    for (int i = 0; i < 10; i++)
+      assert(data1[i] == 0);
+  }
+
+  {
+    queue myQueue;
+    if (!myQueue.is_host()) {
+      std::vector<int> data1(10, -1);
+      std::vector<int> data2(10, -2);
+      {
+        buffer<int, 1> a(data1.data(), range<1>(10));
+        buffer<int, 1> b(data2.data(), range<1>(10));
+        accessor<int, 1, access::mode::read_write,
+                 access::target::global_buffer, access::placeholder::true_t>
+            A(a);
+        accessor<int, 1, access::mode::read_write,
+                 access::target::global_buffer, access::placeholder::true_t>
+            B(b);
+
+        program prog(myQueue.get_context());
+        prog.build_with_source("kernel void override_source_placeholder(global "
+                               "int* Acc) {Acc[get_global_id(0)] = 0; }\n");
+        cl::sycl::kernel krn = prog.get_kernel("override_source_placeholder");
+
+        myQueue.submit([&](handler &cgh) {
+          cgh.require(A);
+          cgh.set_arg(0, A);
+          cgh.require(B);
+          cgh.parallel_for(cl::sycl::range<1>(10), krn);
+        });
+      } // Data is copied back
+      for (int i = 0; i < 10; i++)
+        assert(data2[i] == -2);
+      for (int i = 0; i < 10; i++)
+        assert(data1[i] == 0);
+    }
+  }
+
   // TODO tests with mutex property
   return failed;
 }

@@ -30,8 +30,10 @@ public:
   kernel_impl(cl_kernel ClKernel, const context &SyclContext);
 
   kernel_impl(cl_kernel ClKernel, const context &SyclContext,
-              std::shared_ptr<program_impl> ProgramImpl)
-      : ClKernel(ClKernel), Context(SyclContext), ProgramImpl(ProgramImpl) {}
+              std::shared_ptr<program_impl> ProgramImpl,
+              bool IsCreatedFromSource)
+      : ClKernel(ClKernel), Context(SyclContext), ProgramImpl(ProgramImpl),
+        IsCreatedFromSource(IsCreatedFromSource) {}
 
   // Host kernel constructor
   kernel_impl(const context &SyclContext,
@@ -114,10 +116,13 @@ public:
 
   cl_kernel &getHandleRef() { return ClKernel; }
 
+  bool isCreatedFromSource() const;
+
 private:
   cl_kernel ClKernel;
   context Context;
   std::shared_ptr<program_impl> ProgramImpl;
+  bool IsCreatedFromSource = true;
 };
 
 template <> context kernel_impl::get_info<info::kernel::context>() const;

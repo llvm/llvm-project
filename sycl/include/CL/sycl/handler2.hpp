@@ -118,11 +118,11 @@ static Arg member_ptr_helper(RetType (Func::*)(Arg) const);
 template <typename RetType, typename Func, typename Arg>
 static Arg member_ptr_helper(RetType (Func::*)(Arg));
 
-//template <typename RetType, typename Func>
-//static void member_ptr_helper(RetType (Func::*)() const);
+// template <typename RetType, typename Func>
+// static void member_ptr_helper(RetType (Func::*)() const);
 
-//template <typename RetType, typename Func>
-//static void member_ptr_helper(RetType (Func::*)());
+// template <typename RetType, typename Func>
+// static void member_ptr_helper(RetType (Func::*)());
 
 template <typename F>
 decltype(member_ptr_helper(&F::operator())) argument_helper(F);
@@ -167,6 +167,10 @@ class handler {
   std::vector<std::shared_ptr<void>> MSharedPtrStorage;
   // The list of arguments for the kernel.
   std::vector<detail::ArgDesc> MArgs;
+  // The list of associated accessors with this handler.
+  // These accessors were created with this handler as argument or
+  // have become required for this handler via require method.
+  std::vector<detail::ArgDesc> MAssociatedAccesors;
   // The list of requirements to the memory objects for the scheduling.
   std::vector<detail::Requirement *> MRequirements;
   // Struct that encodes global size, local size, ...
@@ -202,97 +206,137 @@ private:
     return Storage;
   }
 
-  // Method extracts kernel arguments and requirements from the lambda using
+  // The method extracts and prepares kernel arguments from the lambda using
   // integration header.
   void
   extractArgsAndReqsFromLambda(char *LambdaPtr, size_t KernelArgsNum,
                                const detail::kernel_param_desc_t *KernelArgs) {
-    unsigned NextArgId = 0;
-    for (unsigned I = 0; I < KernelArgsNum; ++I, ++NextArgId) {
+    const bool IsKernelCreatedFromSource = false;
+    size_t IndexShift = 0;
+    for (size_t I = 0; I < KernelArgsNum; ++I) {
       void *Ptr = LambdaPtr + KernelArgs[I].offset;
       const detail::kernel_param_kind_t &Kind = KernelArgs[I].kind;
-
-      switch (Kind) {
-      case detail::kernel_param_kind_t::kind_std_layout: {
-        const size_t Size = KernelArgs[I].info;
-        MArgs.emplace_back(detail::ArgDesc(Kind, Ptr, Size, NextArgId));
-        break;
-      }
-      case detail::kernel_param_kind_t::kind_accessor: {
-
-        const int AccTarget = KernelArgs[I].info & 0x7ff;
-        switch (static_cast<access::target>(AccTarget)) {
-        case access::target::global_buffer:
-        case access::target::constant_buffer: {
-
-          detail::AccessorBaseHost *AccBase = (detail::AccessorBaseHost *)Ptr;
-
-          detail::Requirement *AccImpl = detail::getSyclObjImpl(*AccBase).get();
-
-          MArgs.emplace_back(
-              detail::ArgDesc(Kind, AccImpl, /*Size=*/0, NextArgId));
-          MRequirements.emplace_back(AccImpl);
-
-          MArgs.emplace_back(
-              detail::ArgDesc(detail::kernel_param_kind_t::kind_std_layout,
-                              &(AccImpl->MAccessRange[0]),
-                              sizeof(size_t) * AccImpl->MDims, NextArgId + 1));
-          MArgs.emplace_back(
-              detail::ArgDesc(detail::kernel_param_kind_t::kind_std_layout,
-                              &AccImpl->MMemoryRange[0],
-                              sizeof(size_t) * AccImpl->MDims, NextArgId + 2));
-          MArgs.emplace_back(
-              detail::ArgDesc(detail::kernel_param_kind_t::kind_std_layout,
-                              &AccImpl->MOffset[0],
-                              sizeof(size_t) * AccImpl->MDims, NextArgId + 3));
-          NextArgId += 3;
-          break;
-        }
-        case access::target::local: {
-
-          detail::LocalAccessorBaseHost *LAcc =
-              (detail::LocalAccessorBaseHost *)Ptr;
-          range<3> &Size = LAcc->getSize();
-          const int Dims = LAcc->getNumOfDims();
-          int SizeInBytes = LAcc->getElementSize();
-          for (int I = 0; I < Dims; ++I)
-            SizeInBytes *= Size[I];
-          MArgs.emplace_back(
-              detail::ArgDesc(detail::kernel_param_kind_t::kind_std_layout,
-                              nullptr, SizeInBytes, NextArgId));
-
-          MArgs.emplace_back(
-              detail::ArgDesc(detail::kernel_param_kind_t::kind_std_layout,
-                              &Size, Dims * sizeof(Size[0]), NextArgId + 1));
-          MArgs.emplace_back(
-              detail::ArgDesc(detail::kernel_param_kind_t::kind_std_layout,
-                              &Size, Dims * sizeof(Size[0]), NextArgId + 2));
-          MArgs.emplace_back(
-              detail::ArgDesc(detail::kernel_param_kind_t::kind_std_layout,
-                              &Size, Dims * sizeof(Size[0]), NextArgId + 3));
-          NextArgId += 3;
-          break;
-        }
-
-        case access::target::image:
-        case access::target::host_buffer:
-        case access::target::host_image:
-        case access::target::image_array: {
-          assert(0);
-          break;
-        }
-        }
-        break;
-      }
-      case detail::kernel_param_kind_t::kind_sampler: {
-        MArgs.emplace_back(
-            detail::ArgDesc(detail::kernel_param_kind_t::kind_sampler, Ptr,
-                            sizeof(sampler), NextArgId));
-        NextArgId++;
-        break;
-      }
-      }
+      const int &Size = KernelArgs[I].info;
+      processArg(Ptr, Kind, Size, I, IndexShift, IsKernelCreatedFromSource);
     }
+  }
+
+  // The method extracts and prepares kernel arguments that were set
+  // via set_arg(s)
+  void extractArgsAndReqs() {
+    assert(MSyclKernel && "MSyclKernel is not initialized");
+    std::vector<detail::ArgDesc> UnPreparedArgs = std::move(MArgs);
+    MArgs.clear();
+
+    std::sort(UnPreparedArgs.begin(), UnPreparedArgs.end(),
+              [](const detail::ArgDesc &first, const detail::ArgDesc &second)
+                  -> bool { return (first.MIndex < second.MIndex); });
+
+    const bool IsKernelCreatedFromSource = MSyclKernel->isCreatedFromSource();
+
+    size_t IndexShift = 0;
+    for (size_t I = 0; I < UnPreparedArgs.size(); ++I) {
+      void *Ptr = UnPreparedArgs[I].MPtr;
+      const detail::kernel_param_kind_t &Kind = UnPreparedArgs[I].MType;
+      const int &Size = UnPreparedArgs[I].MSize;
+      const int Index = UnPreparedArgs[I].MIndex;
+      processArg(Ptr, Kind, Size, Index, IndexShift, IsKernelCreatedFromSource);
+    }
+  }
+
+  void processArg(void *Ptr, const detail::kernel_param_kind_t &Kind,
+                  const int Size, const size_t Index, size_t &IndexShift,
+                  bool IsKernelCreatedFromSource) {
+    const auto kind_std_layout = detail::kernel_param_kind_t::kind_std_layout;
+    const auto kind_accessor = detail::kernel_param_kind_t::kind_accessor;
+    const auto kind_sampler = detail::kernel_param_kind_t::kind_sampler;
+
+    switch (Kind) {
+    case kind_std_layout: {
+      MArgs.emplace_back(Kind, Ptr, Size, Index + IndexShift);
+      break;
+    }
+    case kind_accessor: {
+      // For args kind of accessor Size is information about accessor.
+      // The first 11 bits of Size encodes the accessor target.
+      const access::target AccTarget =
+          static_cast<access::target>(Size & 0x7ff);
+      switch (AccTarget) {
+      case access::target::global_buffer:
+      case access::target::constant_buffer: {
+        detail::AccessorBaseHost *AccBase =
+            static_cast<detail::AccessorBaseHost *>(Ptr);
+        detail::Requirement *AccImpl = detail::getSyclObjImpl(*AccBase).get();
+        MArgs.emplace_back(Kind, AccImpl, Size, Index + IndexShift);
+        if (!IsKernelCreatedFromSource) {
+          const size_t SizeAccField = sizeof(size_t) * AccImpl->MDims;
+          ++IndexShift;
+          MArgs.emplace_back(kind_std_layout, &AccImpl->MAccessRange[0],
+                             SizeAccField, Index + IndexShift);
+          ++IndexShift;
+          MArgs.emplace_back(kind_std_layout, &AccImpl->MMemoryRange[0],
+                             SizeAccField, Index + IndexShift);
+          ++IndexShift;
+          MArgs.emplace_back(kind_std_layout, &AccImpl->MOffset[0],
+                             SizeAccField, Index + IndexShift);
+        }
+        break;
+      }
+      case access::target::local: {
+        detail::LocalAccessorBaseHost *LAcc =
+            static_cast<detail::LocalAccessorBaseHost *>(Ptr);
+        range<3> &Size = LAcc->getSize();
+        const int Dims = LAcc->getNumOfDims();
+        int SizeInBytes = LAcc->getElementSize();
+        for (int I = 0; I < Dims; ++I)
+          SizeInBytes *= Size[I];
+        MArgs.emplace_back(kind_std_layout, nullptr, SizeInBytes,
+                           Index + IndexShift);
+        if (!IsKernelCreatedFromSource) {
+          ++IndexShift;
+          const size_t SizeAccField = Dims * sizeof(Size[0]);
+          MArgs.emplace_back(kind_std_layout, &Size, SizeAccField,
+                             Index + IndexShift);
+          ++IndexShift;
+          MArgs.emplace_back(kind_std_layout, &Size, SizeAccField,
+                             Index + IndexShift);
+          ++IndexShift;
+          MArgs.emplace_back(kind_std_layout, &Size, SizeAccField,
+                             Index + IndexShift);
+        }
+        break;
+      }
+      case access::target::image:
+      case access::target::host_buffer:
+      case access::target::host_image:
+      case access::target::image_array: {
+        throw cl::sycl::invalid_parameter_error(
+            "Unsupported accessor target case.");
+        assert(0);
+        break;
+      }
+      }
+      break;
+    }
+    case kind_sampler: {
+      MArgs.emplace_back(kind_sampler, Ptr, sizeof(sampler),
+                         Index + IndexShift);
+      break;
+    }
+    }
+  }
+
+  template <typename LambdaName> bool lambdaAndKernelHaveEqualName() {
+    // TODO It is unclear a kernel and a lambda/functor must to be equal or not
+    // for parallel_for with sycl::kernel and lambda/functor together
+    // Now if they are equal we extract argumets from lambda/functor for the
+    // kernel. Else it is necessary use set_atg(s) for resolve the order and
+    // values of arguments for the kernel.
+    assert(MSyclKernel && "MSyclKernel is not initialized");
+    const std::string lambdaName = detail::KernelInfo<LambdaName>::getName();
+    const std::string kernelName =
+        MSyclKernel->get_info<info::kernel::function_name>();
+    return lambdaName == kernelName;
   }
 
   // The method constructs CG object of specific type, pass it to Scheduler and
@@ -345,6 +389,25 @@ private:
 
   bool is_host() { return MIsHost; }
 
+  template <typename DataT, int Dims, access::mode AccessMode,
+            access::target AccessTarget>
+  void associateWithHandler(accessor<DataT, Dims, AccessMode, AccessTarget,
+                                     access::placeholder::false_t>
+                                Acc) {
+    detail::AccessorBaseHost *AccBase = (detail::AccessorBaseHost *)&Acc;
+    detail::AccessorImplPtr AccImpl = detail::getSyclObjImpl(*AccBase);
+    detail::Requirement *Req = AccImpl.get();
+    // Add accessor to the list of requirements.
+    MRequirements.push_back(Req);
+    // Store copy of the accessor.
+    MAccStorage.push_back(std::move(AccImpl));
+    // Add an accessor to the handler list of associated accessors.
+    // For associated accessors index does not means nothing.
+    MAssociatedAccesors.emplace_back(detail::kernel_param_kind_t::kind_accessor,
+                                     Req, static_cast<int>(AccessTarget),
+                                     /*index*/ 0);
+  }
+
   // Recursively calls itself until arguments pack is fully processed.
   // The version for regular(standard layout) argument.
   template <typename T, typename... Ts>
@@ -362,18 +425,16 @@ private:
       int ArgIndex,
       accessor<DataT, Dims, AccessMode, AccessTarget, IsPlaceholder> &&Arg) {
     // TODO: Handle local accessor in separate method.
-
     detail::AccessorBaseHost *AccBase = (detail::AccessorBaseHost *)&Arg;
     detail::AccessorImplPtr AccImpl = detail::getSyclObjImpl(*AccBase);
-    // Add accessor to the list of arguments.
-    MRequirements.push_back(AccImpl.get());
-    MArgs.emplace_back(detail::kernel_param_kind_t::kind_accessor,
-                       AccImpl.get(),
-                       /*size=*/0, ArgIndex);
-    // TODO: offset, ranges...
-
+    detail::Requirement *Req = AccImpl.get();
+    // Add accessor to the list of requirements.
+    MRequirements.push_back(Req);
     // Store copy of the accessor.
     MAccStorage.push_back(std::move(AccImpl));
+    // Add accessor to the list of arguments.
+    MArgs.emplace_back(detail::kernel_param_kind_t::kind_accessor, AccBase,
+                       static_cast<int>(AccessTarget), ArgIndex);
   }
 
   template <typename T> void setArgHelper(int ArgIndex, T &&Arg) {
@@ -397,6 +458,10 @@ private:
 
   // Make queue_impl class friend to be able to call finalize method.
   friend class detail::queue_impl;
+  // Make accessor class friend to keep the list of associated accessors.
+  template <typename DataT, int Dims, access::mode AccMode,
+            access::target AccTarget, access::placeholder isPlaceholder>
+  friend class accessor;
 
 public:
   handler(const handler &) = delete;
@@ -413,10 +478,16 @@ public:
               Acc) {
     detail::AccessorBaseHost *AccBase = (detail::AccessorBaseHost *)&Acc;
     detail::AccessorImplPtr AccImpl = detail::getSyclObjImpl(*AccBase);
+    detail::Requirement *Req = AccImpl.get();
     // Add accessor to the list of requirements.
-    MRequirements.emplace_back(AccImpl.get());
+    MRequirements.push_back(Req);
     // Store copy of the accessor.
     MAccStorage.push_back(std::move(AccImpl));
+    // Add an accessor to the handler list of associated accessors.
+    // For associated accessors index does not means nothing.
+    MAssociatedAccesors.emplace_back(detail::kernel_param_kind_t::kind_accessor,
+                                     Req, static_cast<int>(AccTarget),
+                                     /*index*/ 0);
   }
 
   // OpenCL interoperability interface
@@ -518,6 +589,11 @@ public:
                                    &KI::getParamDesc(0));
       MKernelName = KI::getName();
       MOSModuleHandle = csd::OSUtil::getOSModuleHandle(KI::getName());
+    } else {
+      // In case w/o the integration header it is necessary to process
+      // accessors from the list(which are associated with this handler) as
+      // arguments.
+      MArgs = std::move(MAssociatedAccesors);
     }
   }
 
@@ -617,6 +693,7 @@ public:
     MNDRDesc.set(range<1>{1});
     MSyclKernel = detail::getSyclObjImpl(std::move(SyclKernel));
     MCGType = detail::CG::KERNEL;
+    extractArgsAndReqs();
   }
 
   // parallel_for version with a kernel represented as a sycl::kernel + range
@@ -628,6 +705,7 @@ public:
     MSyclKernel = detail::getSyclObjImpl(std::move(SyclKernel));
     MNDRDesc.set(std::move(NumWorkItems));
     MCGType = detail::CG::KERNEL;
+    extractArgsAndReqs();
   }
 
   // parallel_for version with a kernel represented as a sycl::kernel + range
@@ -640,6 +718,7 @@ public:
     MSyclKernel = detail::getSyclObjImpl(std::move(SyclKernel));
     MNDRDesc.set(std::move(NumWorkItems), std::move(workItemOffset));
     MCGType = detail::CG::KERNEL;
+    extractArgsAndReqs();
   }
 
   // parallel_for version with a kernel represented as a sycl::kernel + nd_range
@@ -651,6 +730,7 @@ public:
     MSyclKernel = detail::getSyclObjImpl(std::move(SyclKernel));
     MNDRDesc.set(std::move(NDRange));
     MCGType = detail::CG::KERNEL;
+    extractArgsAndReqs();
   }
 
   // Note: the kernel invocation methods below are only planned to be added
@@ -667,9 +747,12 @@ public:
 #else
     MNDRDesc.set(range<1>{1});
     MSyclKernel = detail::getSyclObjImpl(std::move(SyclKernel));
-    StoreLambda<KernelName, KernelType, /*Dims*/ 0, void>(
-        std::move(KernelFunc));
     MCGType = detail::CG::KERNEL;
+    if (!MIsHost && !lambdaAndKernelHaveEqualName<KernelName>())
+      extractArgsAndReqs();
+    else
+      StoreLambda<KernelName, KernelType, /*Dims*/ 0, void>(
+          std::move(KernelFunc));
 #endif
   }
 
@@ -693,8 +776,11 @@ public:
 #else
     MNDRDesc.set(std::move(NumWorkItems));
     MSyclKernel = detail::getSyclObjImpl(std::move(SyclKernel));
-    StoreLambda<KernelName, KernelType, Dims>(std::move(KernelFunc));
     MCGType = detail::CG::KERNEL;
+    if (!MIsHost && !lambdaAndKernelHaveEqualName<KernelName>())
+      extractArgsAndReqs();
+    else
+      StoreLambda<KernelName, KernelType, Dims>(std::move(KernelFunc));
 #endif
   }
 
@@ -721,8 +807,11 @@ public:
 #else
     MNDRDesc.set(std::move(NumWorkItems), std::move(WorkItemOffset));
     MSyclKernel = detail::getSyclObjImpl(std::move(SyclKernel));
-    StoreLambda<KernelName, KernelType, Dims>(std::move(KernelFunc));
     MCGType = detail::CG::KERNEL;
+    if (!MIsHost && !lambdaAndKernelHaveEqualName<KernelName>())
+      extractArgsAndReqs();
+    else
+      StoreLambda<KernelName, KernelType, Dims>(std::move(KernelFunc));
 #endif
   }
 
@@ -737,12 +826,15 @@ public:
 #else
     MNDRDesc.set(std::move(NDRange));
     MSyclKernel = detail::getSyclObjImpl(std::move(SyclKernel));
-    StoreLambda<KernelName, KernelType, Dims>(std::move(KernelFunc));
     MCGType = detail::CG::KERNEL;
+    if (!MIsHost && !lambdaAndKernelHaveEqualName<KernelName>())
+      extractArgsAndReqs();
+    else
+      StoreLambda<KernelName, KernelType, Dims>(std::move(KernelFunc));
 #endif
   }
 
-  // parallel_for version which takes two "kernels". One is a lambda which is
+  // parallel_for version which takes two "kernels". One is a functor which is
   // used if device, queue is bound to, is host device. Second is a sycl::kernel
   // which is used otherwise. nd_range specifies global, local size and offset.
   // Simply redirects to the lambda-based form of invocation, setting kernel
@@ -892,9 +984,11 @@ public:
                            isConstOrGlobal<AccessTarget_Dst>()),
                           void>::type
   copy(accessor<T_Src, Dims_Src, AccessMode_Src, AccessTarget_Src,
-                IsPlaceholder_Src> Src,
+                IsPlaceholder_Src>
+           Src,
        accessor<T_Dst, Dims_Dst, AccessMode_Dst, AccessTarget_Dst,
-                IsPlaceholder_Dst> Dst) {
+                IsPlaceholder_Dst>
+           Dst) {
 
     if (MIsHost) {
       range<Dims_Src> Range = Dst.get_range();
