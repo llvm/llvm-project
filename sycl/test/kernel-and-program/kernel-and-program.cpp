@@ -154,12 +154,18 @@ int main() {
         assert(err == CL_SUCCESS);
 
         cl::sycl::program prog(ctx);
-        prog.build_with_source("kernel void ParallelFor(global int* a, int v) "
-                               "{a[get_global_id(0)]+=v; }\n");
+        prog.build_with_source(
+            "kernel void ParallelFor(__global int* a, int v, __local int *l) "
+            "{ size_t index = get_global_id(0); l[index] = a[index];"
+            " l[index] += v; a[index] = l[index]; }\n");
 
         q.submit([&](cl::sycl::handler &cgh) {
           const int value = 1;
-          cgh.set_args(clBuffer, value);
+          auto local_acc =
+              cl::sycl::accessor<int, 1, cl::sycl::access::mode::read_write,
+                                 cl::sycl::access::target::local>(
+                  cl::sycl::range<1>(10), cgh);
+          cgh.set_args(clBuffer, value, local_acc);
           cgh.parallel_for(cl::sycl::range<1>(10),
                            prog.get_kernel("ParallelFor"));
         });

@@ -418,13 +418,25 @@ private:
 
   void setArgsHelper(int ArgIndex) {}
 
-  // setArgHelper version for accessor argument.
+  // setArgHelper for local accessor argument.
+  template <typename DataT, int Dims, access::mode AccessMode,
+            access::placeholder IsPlaceholder>
+  void setArgHelper(int ArgIndex,
+                    accessor<DataT, Dims, AccessMode, access::target::local,
+                             IsPlaceholder> &&Arg) {
+    detail::LocalAccessorBaseHost *LocalAccBase =
+        (detail::LocalAccessorBaseHost *)&Arg;
+    MArgs.emplace_back(detail::kernel_param_kind_t::kind_accessor, LocalAccBase,
+                       static_cast<int>(access::target::local), ArgIndex);
+  }
+
+  // setArgHelper for non local accessor argument.
   template <typename DataT, int Dims, access::mode AccessMode,
             access::target AccessTarget, access::placeholder IsPlaceholder>
-  void setArgHelper(
+  typename std::enable_if<AccessTarget != access::target::local, void>::type
+  setArgHelper(
       int ArgIndex,
       accessor<DataT, Dims, AccessMode, AccessTarget, IsPlaceholder> &&Arg) {
-    // TODO: Handle local accessor in separate method.
     detail::AccessorBaseHost *AccBase = (detail::AccessorBaseHost *)&Arg;
     detail::AccessorImplPtr AccImpl = detail::getSyclObjImpl(*AccBase);
     detail::Requirement *Req = AccImpl.get();
