@@ -119,12 +119,11 @@ three:
 ; Optimization shouldn't trigger; not an arithmetic progression
 define i32 @test4(i32 %a) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], 97
-; CHECK-NEXT:    switch i32 [[TMP1]], label [[DEF:%.*]] [
-; CHECK-NEXT:    i32 0, label [[ONE:%.*]]
-; CHECK-NEXT:    i32 5, label [[TWO:%.*]]
-; CHECK-NEXT:    i32 8, label [[THREE:%.*]]
-; CHECK-NEXT:    i32 12, label [[THREE]]
+; CHECK-NEXT:    switch i32 [[A:%.*]], label [[DEF:%.*]] [
+; CHECK-NEXT:    i32 97, label [[ONE:%.*]]
+; CHECK-NEXT:    i32 102, label [[TWO:%.*]]
+; CHECK-NEXT:    i32 105, label [[THREE:%.*]]
+; CHECK-NEXT:    i32 109, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       def:
 ; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 8867, [[TMP0:%.*]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ]
@@ -157,12 +156,11 @@ three:
 ; Optimization shouldn't trigger; not a power of two
 define i32 @test5(i32 %a) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], 97
-; CHECK-NEXT:    switch i32 [[TMP1]], label [[DEF:%.*]] [
-; CHECK-NEXT:    i32 0, label [[ONE:%.*]]
-; CHECK-NEXT:    i32 5, label [[TWO:%.*]]
-; CHECK-NEXT:    i32 10, label [[THREE:%.*]]
-; CHECK-NEXT:    i32 15, label [[THREE]]
+; CHECK-NEXT:    switch i32 [[A:%.*]], label [[DEF:%.*]] [
+; CHECK-NEXT:    i32 97, label [[ONE:%.*]]
+; CHECK-NEXT:    i32 102, label [[TWO:%.*]]
+; CHECK-NEXT:    i32 107, label [[THREE:%.*]]
+; CHECK-NEXT:    i32 112, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       def:
 ; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 8867, [[TMP0:%.*]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ]
@@ -234,10 +232,10 @@ three:
 
 define i8 @test7(i8 %a) optsize {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[A:%.*]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i8 [[A]], 6
-; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i8 [[TMP3]], 55
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 [[A:%.*]], -36
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i8 [[TMP1]], 6
+; CHECK-NEXT:    [[TMP4:%.*]] = or i8 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i8 [[TMP4]], 4
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[SWITCH_LOOKUP:%.*]], label [[DEF:%.*]]
 ; CHECK:       switch.lookup:
@@ -309,14 +307,15 @@ three:
 
 define i32 @test9(i32 %a) {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[A]], 31
-; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    switch i32 [[TMP3]], label [[DEF:%.*]] [
-; CHECK-NEXT:    i32 9, label [[ONE:%.*]]
-; CHECK-NEXT:    i32 10, label [[TWO:%.*]]
-; CHECK-NEXT:    i32 3, label [[THREE:%.*]]
-; CHECK-NEXT:    i32 5, label [[THREE]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], 6
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 31
+; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    switch i32 [[TMP4]], label [[DEF:%.*]] [
+; CHECK-NEXT:    i32 6, label [[ONE:%.*]]
+; CHECK-NEXT:    i32 7, label [[TWO:%.*]]
+; CHECK-NEXT:    i32 0, label [[THREE:%.*]]
+; CHECK-NEXT:    i32 2, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       def:
 ; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 8867, [[TMP0:%.*]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ]

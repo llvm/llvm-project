@@ -165,8 +165,8 @@ exit:
 ; SI: [[LABEL_LOOP:BB[0-9]+_[0-9]+]]:
 ; SI: buffer_load_dword
 ; SI-DAG: buffer_store_dword
-; SI-DAG: v_cmp_eq_u32_e32 vcc, 0x100
-; SI: s_cbranch_vccz [[LABEL_LOOP]]
+; SI-DAG: s_cmpk_eq_i32 s{{[0-9+]}}, 0x100
+; SI: s_cbranch_scc0 [[LABEL_LOOP]]
 ; SI: [[LABEL_EXIT]]:
 ; SI: s_endpgm
 
@@ -214,7 +214,7 @@ exit:
 ; SI-DAG: v_cmp_ne_u32_e32 [[NEG1_CHECK_1:vcc]], -1, [[B]]
 ; SI: s_and_b64 [[ORNEG1:s\[[0-9]+:[0-9]+\]]], [[NEG1_CHECK_1]], [[NEG1_CHECK_0]]
 ; SI: s_and_saveexec_b64 [[ORNEG2:s\[[0-9]+:[0-9]+\]]], [[ORNEG1]]
-; SI: s_cbranch_execz [[LABEL_FLOW:BB[0-9]+_[0-9]+]]
+; SI: ; mask branch [[LABEL_FLOW:BB[0-9]+_[0-9]+]]
 
 ; SI: BB{{[0-9]+_[0-9]+}}: ; %bb20
 ; SI: buffer_store_dword

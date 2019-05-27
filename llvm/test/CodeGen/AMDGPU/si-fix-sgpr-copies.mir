@@ -16,7 +16,7 @@ registers:
 
 body: |
   ; GCN-LABEL: name: phi_visit_order
-  ; GCN: V_ADD_I32
+  ; GCN: S_ADD_I32
   bb.0:
     liveins: $vgpr0
     %7 = COPY $vgpr0

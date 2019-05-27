@@ -2168,23 +2168,38 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
       Results.AddResult(Result(Builder.TakeString()));
     }
 
-    // "return expression ;" or "return ;", depending on whether we
-    // know the function is void or not.
-    bool isVoid = false;
+    // "return expression ;" or "return ;", depending on the return type.
+    QualType ReturnType;
     if (const auto *Function = dyn_cast<FunctionDecl>(SemaRef.CurContext))
-      isVoid = Function->getReturnType()->isVoidType();
+      ReturnType = Function->getReturnType();
     else if (const auto *Method = dyn_cast<ObjCMethodDecl>(SemaRef.CurContext))
-      isVoid = Method->getReturnType()->isVoidType();
+      ReturnType = Method->getReturnType();
     else if (SemaRef.getCurBlock() &&
              !SemaRef.getCurBlock()->ReturnType.isNull())
-      isVoid = SemaRef.getCurBlock()->ReturnType->isVoidType();
-    Builder.AddTypedTextChunk("return");
-    if (!isVoid) {
-      Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+      ReturnType = SemaRef.getCurBlock()->ReturnType;;
+    if (ReturnType.isNull() || ReturnType->isVoidType()) {
+      Builder.AddTypedTextChunk("return");
+      Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+      Results.AddResult(Result(Builder.TakeString()));
+    } else {
+      assert(!ReturnType.isNull());
+      // "return expression ;"
+      Builder.AddTypedTextChunk("return");
+      Builder.AddChunk(clang::CodeCompletionString::CK_HorizontalSpace);
       Builder.AddPlaceholderChunk("expression");
+      Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+      Results.AddResult(Result(Builder.TakeString()));
+      // When boolean, also add 'return true;' and 'return false;'.
+      if (ReturnType->isBooleanType()) {
+        Builder.AddTypedTextChunk("return true");
+        Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+        Results.AddResult(Result(Builder.TakeString()));
+
+        Builder.AddTypedTextChunk("return false");
+        Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+        Results.AddResult(Result(Builder.TakeString()));
+      }
     }
-    Builder.AddChunk(CodeCompletionString::CK_SemiColon);
-    Results.AddResult(Result(Builder.TakeString()));
 
     // goto identifier ;
     Builder.AddTypedTextChunk("goto");
