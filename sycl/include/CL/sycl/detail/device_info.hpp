@@ -265,6 +265,24 @@ struct get_device_info_cl<T, info::device::parent_device> {
   }
 };
 
+// Specialization for supported subgroup sizes
+template <>
+struct get_device_info_cl<vector_class<size_t>,
+                          info::device::sub_group_sizes> {
+  static vector_class<size_t> _(cl_device_id dev) {
+    size_t resultSize = 0;
+    CHECK_OCL_CODE(
+        clGetDeviceInfo(dev, (cl_device_info)info::device::sub_group_sizes,
+                        0, nullptr, &resultSize));
+    vector_class<size_t> result(resultSize);
+    CHECK_OCL_CODE(
+        clGetDeviceInfo(dev, (cl_device_info)info::device::sub_group_sizes,
+                        resultSize, result.data(), nullptr));
+    return result;
+  }
+};
+
+
 // SYCL host device information
 
 // Default template is disabled, all possible instantiations are
@@ -470,6 +488,9 @@ get_device_info_host<info::device::partition_type_affinity_domain>();
 template <> cl_uint get_device_info_host<info::device::reference_count>();
 
 template <> cl_uint get_device_info_host<info::device::max_num_sub_groups>();
+
+template <>
+vector_class<size_t> get_device_info_host<info::device::sub_group_sizes>();
 
 template <>
 bool get_device_info_host<

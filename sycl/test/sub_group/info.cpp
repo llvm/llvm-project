@@ -28,18 +28,38 @@ int main() {
       return 1;
     } catch (runtime_error e) {
       /* Expected exception. */
-      try {
-        Device.get_info<info::device::sub_group_independent_forward_progress>();
-        std::cout << "Expected exception has not been generated\n";
-        return 1;
-      } catch (runtime_error e) {
-        /* Expected exception - do nothing. */
-      }
     }
-
+    try {
+      Device.get_info<info::device::sub_group_independent_forward_progress>();
+      std::cout << "Expected exception has not been generated\n";
+      return 1;
+    } catch (runtime_error e) {
+      /* Expected exception. */
+    }
+    try {
+      Device.get_info<info::device::sub_group_sizes>();
+      std::cout << "Expected exception has not been generated\n";
+      return 1;
+    } catch (runtime_error e) {
+       /* Expected exception. */
+    }
   } else {
     Device.get_info<info::device::sub_group_independent_forward_progress>();
     Device.get_info<info::device::max_num_sub_groups>();
+    // There is no support on CPU and accelerator devices for now.
+    if ( Device.get_info<info::device::device_type>() == info::device_type::cpu ||
+         Device.get_info<info::device::device_type>() == 
+             info::device_type::accelerator) {
+      try {
+        Device.get_info<info::device::sub_group_sizes>();
+        std::cout << "Expected exception has not been generated\n";
+        return 1;
+      } catch (runtime_error e) {
+        /* Expected exception. */
+      }
+    } else {
+      Device.get_info<info::device::sub_group_sizes>();
+    }
 
     /* Basic sub-group functionality is supported as part of cl_khr_subgrou
      * extension or as core OpenCL 2.1 feature. */

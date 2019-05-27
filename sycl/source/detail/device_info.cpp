@@ -466,6 +466,12 @@ template <> cl_uint get_device_info_host<info::device::max_num_sub_groups>() {
   throw runtime_error("Sub-group feature is not supported on HOST device.");
 }
 
+template <> vector_class<size_t>
+get_device_info_host<info::device::sub_group_sizes>() {
+  // TODO update once subgroups are enabled
+  throw runtime_error("Sub-group feature is not supported on HOST device.");
+}
+
 template <>
 bool get_device_info_host<
     info::device::sub_group_independent_forward_progress>() {
