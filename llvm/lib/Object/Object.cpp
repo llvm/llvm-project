@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/MachOUniversal.h"
 
 using namespace llvm;
 using namespace object;
@@ -129,6 +130,20 @@ LLVMBinaryType LLVMBinaryGetType(LLVMBinaryRef BR) {
     }
   };
   return BinaryTypeMapper::mapBinaryTypeToLLVMBinaryType(unwrap(BR)->getType());
+}
+
+LLVMBinaryRef LLVMMachOUniversalBinaryCopyObjectForArch(LLVMBinaryRef BR,
+                                                        const char *Arch,
+                                                        size_t ArchLen,
+                                                        char **ErrorMessage) {
+  auto universal = cast<MachOUniversalBinary>(unwrap(BR));
+  Expected<std::unique_ptr<ObjectFile>> ObjOrErr(
+      universal->getObjectForArch({Arch, ArchLen}));
+  if (!ObjOrErr) {
+    *ErrorMessage = strdup(toString(ObjOrErr.takeError()).c_str());
+    return nullptr;
+  }
+  return wrap(ObjOrErr.get().release());
 }
 
 LLVMSectionIteratorRef LLVMObjectFileCopySectionIterator(LLVMBinaryRef BR) {

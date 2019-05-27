@@ -117,6 +117,14 @@ class AArch64RegisterBankInfo final : public AArch64GenRegisterBankInfo {
   bool hasFPConstraints(const MachineInstr &MI, const MachineRegisterInfo &MRI,
                      const TargetRegisterInfo &TRI) const;
 
+  /// Returns true if the source registers of \p MI must all be FPRs.
+  bool onlyUsesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                  const TargetRegisterInfo &TRI) const;
+
+  /// Returns true if the destination register of \p MI must be a FPR.
+  bool onlyDefinesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                     const TargetRegisterInfo &TRI) const;
+
 public:
   AArch64RegisterBankInfo(const TargetRegisterInfo &TRI);
 

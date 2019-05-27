@@ -383,7 +383,8 @@ void DecodeVPERMMask(unsigned NumElts, unsigned Imm,
 }
 
 void DecodeZeroExtendMask(unsigned SrcScalarBits, unsigned DstScalarBits,
-                          unsigned NumDstElts, SmallVectorImpl<int> &Mask) {
+                          unsigned NumDstElts, bool IsAnyExtend,
+                          SmallVectorImpl<int> &Mask) {
   unsigned Scale = DstScalarBits / SrcScalarBits;
   assert(SrcScalarBits < DstScalarBits &&
          "Expected zero extension mask to increase scalar size");
@@ -391,7 +392,7 @@ void DecodeZeroExtendMask(unsigned SrcScalarBits, unsigned DstScalarBits,
   for (unsigned i = 0; i != NumDstElts; i++) {
     Mask.push_back(i);
     for (unsigned j = 1; j != Scale; j++)
-      Mask.push_back(SM_SentinelZero);
+      Mask.push_back(IsAnyExtend ? SM_SentinelUndef : SM_SentinelZero);
   }
 }
 

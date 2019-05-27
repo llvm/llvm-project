@@ -27,7 +27,7 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; SSE-NEXT:    addb %al, %al
 ; SSE-NEXT:    andb $-86, %dil
 ; SSE-NEXT:    shrb %dil
-; SSE-NEXT:    leal (%rdi,%rax), %eax
+; SSE-NEXT:    addl %edi, %eax
 ; SSE-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE-NEXT:    retq
 ;
@@ -46,7 +46,7 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; AVX-NEXT:    addb %al, %al
 ; AVX-NEXT:    andb $-86, %dil
 ; AVX-NEXT:    shrb %dil
-; AVX-NEXT:    leal (%rdi,%rax), %eax
+; AVX-NEXT:    addl %edi, %eax
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX-NEXT:    retq
 ;

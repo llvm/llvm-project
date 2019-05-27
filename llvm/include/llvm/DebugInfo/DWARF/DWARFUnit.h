@@ -175,6 +175,7 @@ struct StrOffsetsContributionDescriptor {
   StrOffsetsContributionDescriptor(uint64_t Base, uint64_t Size,
                                    uint8_t Version, dwarf::DwarfFormat Format)
       : Base(Base), Size(Size), FormParams({Version, 0, Format}) {}
+  StrOffsetsContributionDescriptor() = default;
 
   uint8_t getVersion() const { return FormParams.Version; }
   dwarf::DwarfFormat getFormat() const { return FormParams.Format; }
@@ -184,7 +185,7 @@ struct StrOffsetsContributionDescriptor {
   /// Determine whether a contribution to the string offsets table is
   /// consistent with the relevant section size and that its length is
   /// a multiple of the size of one of its entries.
-  Optional<StrOffsetsContributionDescriptor>
+  Expected<StrOffsetsContributionDescriptor>
   validateContributionSize(DWARFDataExtractor &DA);
 };
 
@@ -249,14 +250,14 @@ protected:
   /// Find the unit's contribution to the string offsets table and determine its
   /// length and form. The given offset is expected to be derived from the unit
   /// DIE's DW_AT_str_offsets_base attribute.
-  Optional<StrOffsetsContributionDescriptor>
+  Expected<Optional<StrOffsetsContributionDescriptor>>
   determineStringOffsetsTableContribution(DWARFDataExtractor &DA);
 
   /// Find the unit's contribution to the string offsets table and determine its
   /// length and form. The given offset is expected to be 0 in a dwo file or,
   /// in a dwp file, the start of the unit's contribution to the string offsets
   /// table section (as determined by the index table).
-  Optional<StrOffsetsContributionDescriptor>
+  Expected<Optional<StrOffsetsContributionDescriptor>>
   determineStringOffsetsTableContributionDWO(DWARFDataExtractor &DA);
 
 public:

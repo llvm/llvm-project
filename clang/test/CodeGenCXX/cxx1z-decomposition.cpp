@@ -129,7 +129,7 @@ void test_static_simple() {
 }
 
 // CHECK-LABEL: define {{.*}}@_Z17test_static_tuple
-void test_static_tuple() {
+int test_static_tuple() {
   // Note that the desugaring specified for this construct requires three
   // separate guarded initializations. It is possible for an exception to be
   // thrown after the first initialization and before the second, and if that
@@ -162,4 +162,14 @@ void test_static_tuple() {
   // CHECK: store {{.*}}, {{.*}} @_ZGRZ17test_static_tuplevE2x2_
   // CHECK: store {{.*}} @_ZGRZ17test_static_tuplevE2x2_, {{.*}} @_ZZ17test_static_tuplevE2x2
   // CHECK: call void @__cxa_guard_release({{.*}} @_ZGVZ17test_static_tuplevE2x2)
+
+  struct Inner {
+    // CHECK-LABEL: define {{.*}}@_ZZ17test_static_tuplevEN5Inner1fEv(
+    // FIXME: This first load should be constant-folded to the _ZGV... temporary.
+    // CHECK: load {{.*}} @_ZZ17test_static_tuplevE2x2
+    // CHECK: load
+    // CHECK: ret
+    int f() { return x2; }
+  };
+  return Inner().f();
 }

@@ -302,30 +302,6 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
   return true;
 }
 
-static bool phiHasBreakDef(const MachineInstr &PHI,
-                           const MachineRegisterInfo &MRI,
-                           SmallSet<unsigned, 8> &Visited) {
-  for (unsigned i = 1; i < PHI.getNumOperands(); i += 2) {
-    unsigned Reg = PHI.getOperand(i).getReg();
-    if (Visited.count(Reg))
-      continue;
-
-    Visited.insert(Reg);
-
-    MachineInstr *DefInstr = MRI.getVRegDef(Reg);
-    switch (DefInstr->getOpcode()) {
-    default:
-      break;
-    case AMDGPU::SI_IF_BREAK:
-      return true;
-    case AMDGPU::PHI:
-      if (phiHasBreakDef(*DefInstr, MRI, Visited))
-        return true;
-    }
-  }
-  return false;
-}
-
 static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
                                     const MachineInstr *MoveImm,
                                     const SIInstrInfo *TII,

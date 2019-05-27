@@ -172,21 +172,16 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
     getFilePaths().push_back(P.str());
   }
 
-  auto RuntimeDirs = [&](const Multilib &M) -> std::vector<std::string> {
-    SmallString<128> P;
-    std::vector<std::string> RD;
-
-    P.assign(D.ResourceDir);
-    llvm::sys::path::append(P, D.getTargetTriple(), "lib", M.gccSuffix());
-    if (getVFS().exists(P))
-      RD.push_back(P.str());
-
-    P.assign(D.ResourceDir);
-    llvm::sys::path::append(P, Triple.str(), "lib", M.gccSuffix());
-    if (getVFS().exists(P))
-      RD.push_back(P.str());
-
-    return RD;
+  auto FilePaths = [&](const Multilib &M) -> std::vector<std::string> {
+    std::vector<std::string> FP;
+    if (D.CCCIsCXX()) {
+      if (auto CXXStdlibPath = getCXXStdlibPath()) {
+        SmallString<128> P(*CXXStdlibPath);
+        llvm::sys::path::append(P, M.gccSuffix());
+        FP.push_back(P.str());
+      }
+    }
+    return FP;
   };
 
   Multilibs.push_back(Multilib());
@@ -198,7 +193,7 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
   Multilibs.push_back(Multilib("asan", {}, {}, 2)
                           .flag("+fsanitize=address"));
   Multilibs.FilterOut([&](const Multilib &M) {
-    std::vector<std::string> RD = RuntimeDirs(M);
+    std::vector<std::string> RD = FilePaths(M);
     return std::all_of(RD.begin(), RD.end(), [&](std::string P) {
       return !getVFS().exists(P);
     });
@@ -209,14 +204,14 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
       Args.hasFlag(options::OPT_fexceptions, options::OPT_fno_exceptions, true),
       "fexceptions", Flags);
   addMultilibFlag(getSanitizerArgs().needsAsanRt(), "fsanitize=address", Flags);
-  Multilibs.setFilePathsCallback(RuntimeDirs);
+  Multilibs.setFilePathsCallback(FilePaths);
 
   if (Multilibs.select(Flags, SelectedMultilib))
     if (!SelectedMultilib.isDefault())
       if (const auto &PathsCallback = Multilibs.filePathsCallback())
         for (const auto &Path : PathsCallback(SelectedMultilib))
-          // We need to prepend the multilib path to ensure it takes precedence.
-          getLibraryPaths().insert(getLibraryPaths().begin(), Path);
+          // Prepend the multilib path to ensure it takes the precedence.
+          getFilePaths().insert(getFilePaths().begin(), Path);
 }
 
 std::string Fuchsia::ComputeEffectiveClangTriple(const ArgList &Args,

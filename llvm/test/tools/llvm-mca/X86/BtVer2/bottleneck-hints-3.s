@@ -24,7 +24,7 @@ vmovaps %xmm0, 48(%rdi)
 # CHECK-NEXT: Throughput Bottlenecks:
 # CHECK-NEXT:   Resource Pressure       [ 0.00% ]
 # CHECK-NEXT:   Data Dependencies:      [ 99.89% ]
-# CHECK-NEXT:   - Register Dependencies [ 0.00% ]
+# CHECK-NEXT:   - Register Dependencies [ 83.24% ]
 # CHECK-NEXT:   - Memory Dependencies   [ 99.89% ]
 
 # CHECK:      Instruction Info:

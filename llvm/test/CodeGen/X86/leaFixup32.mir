@@ -174,7 +174,7 @@ frameInfo:
 body:             |
   bb.0 (%ir-block.0):
     liveins: $eax, $ebp
-    ; CHECK: $ebp = ADD32rr $ebp, killed $eax
+    ; CHECK: $ebp = ADD32rr $ebp, $eax
  
     $ebp = LEA32r killed $ebp, 1, killed $eax, 0, $noreg
     RETQ $ebp

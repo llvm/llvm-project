@@ -476,6 +476,35 @@ bool AArch64RegisterBankInfo::hasFPConstraints(
          &AArch64::FPRRegBank;
 }
 
+bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
+                                         const MachineRegisterInfo &MRI,
+                                         const TargetRegisterInfo &TRI) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_FCMP:
+    return true;
+  default:
+    break;
+  }
+  return hasFPConstraints(MI, MRI, TRI);
+}
+
+bool AArch64RegisterBankInfo::onlyDefinesFP(
+    const MachineInstr &MI, const MachineRegisterInfo &MRI,
+    const TargetRegisterInfo &TRI) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP:
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT:
+  case TargetOpcode::G_INSERT_VECTOR_ELT:
+    return true;
+  default:
+    break;
+  }
+  return hasFPConstraints(MI, MRI, TRI);
+}
+
 const RegisterBankInfo::InstructionMapping &
 AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const unsigned Opc = MI.getOpcode();
@@ -642,7 +671,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         // assume this was a floating point load in the IR.
         // If it was not, we would have had a bitcast before
         // reaching that instruction.
-        if (hasFPConstraints(UseMI, MRI, TRI)) {
+        if (onlyUsesFP(UseMI, MRI, TRI)) {
           OpRegBankIdx[0] = PMI_FirstFPR;
           break;
         }
@@ -655,7 +684,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       if (!VReg)
         break;
       MachineInstr *DefMI = MRI.getVRegDef(VReg);
-      if (hasFPConstraints(*DefMI, MRI, TRI))
+      if (onlyDefinesFP(*DefMI, MRI, TRI))
         OpRegBankIdx[0] = PMI_FirstFPR;
       break;
     }
@@ -687,7 +716,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // fpr = G_FOO %z ...
     if (any_of(
             MRI.use_instructions(MI.getOperand(0).getReg()),
-            [&](MachineInstr &MI) { return hasFPConstraints(MI, MRI, TRI); }))
+            [&](MachineInstr &MI) { return onlyUsesFP(MI, MRI, TRI); }))
       ++NumFP;
 
     // Check if the defs of the source values always produce floating point
@@ -707,7 +736,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       unsigned VReg = MI.getOperand(Idx).getReg();
       MachineInstr *DefMI = MRI.getVRegDef(VReg);
       if (getRegBank(VReg, MRI, TRI) == &AArch64::FPRRegBank ||
-          hasFPConstraints(*DefMI, MRI, TRI))
+          onlyDefinesFP(*DefMI, MRI, TRI))
         ++NumFP;
     }
 
@@ -729,9 +758,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // UNMERGE into scalars from a vector should always use FPR.
     // Likewise if any of the uses are FP instructions.
     if (SrcTy.isVector() ||
-        any_of(
-            MRI.use_instructions(MI.getOperand(0).getReg()),
-            [&](MachineInstr &MI) { return hasFPConstraints(MI, MRI, TRI); })) {
+        any_of(MRI.use_instructions(MI.getOperand(0).getReg()),
+               [&](MachineInstr &MI) { return onlyUsesFP(MI, MRI, TRI); })) {
       // Set the register bank of every operand to FPR.
       for (unsigned Idx = 0, NumOperands = MI.getNumOperands();
            Idx < NumOperands; ++Idx)

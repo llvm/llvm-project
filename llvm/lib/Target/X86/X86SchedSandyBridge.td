@@ -698,12 +698,6 @@ def SBWriteResGroup29_2 : SchedWriteRes<[SBPort5,SBPort015]> {
 }
 def: InstRW<[SBWriteResGroup29_2], (instrs PAUSE)>;
 
-def SBWriteResGroup30 : SchedWriteRes<[SBPort0]> {
-  let Latency = 5;
-  let NumMicroOps = 1;
-  let ResourceCycles = [1];
-}
-
 def SBWriteResGroup31 : SchedWriteRes<[SBPort23]> {
   let Latency = 5;
   let NumMicroOps = 1;
@@ -1134,6 +1128,12 @@ def SBWriteFZeroIdiom : SchedWriteVariant<[
 def : InstRW<[SBWriteFZeroIdiom], (instrs XORPSrr, VXORPSrr, XORPDrr,
                                           VXORPDrr)>;
 
+def SBWriteFZeroIdiomY : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [SBWriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteFLogicY]>
+]>;
+def : InstRW<[SBWriteFZeroIdiomY], (instrs VXORPSYrr, VXORPDYrr)>;
+
 def SBWriteVZeroIdiomLogicX : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [SBWriteZeroLatency]>,
     SchedVar<NoSchedPred,                          [WriteVecLogicX]>
@@ -1152,9 +1152,15 @@ def : InstRW<[SBWriteVZeroIdiomALUX], (instrs PSUBBrr, VPSUBBrr,
                                               PCMPGTDrr, VPCMPGTDrr,
                                               PCMPGTWrr, VPCMPGTWrr)>;
 
+def SBWritePCMPGTQ : SchedWriteRes<[SBPort0]> {
+  let Latency = 5;
+  let NumMicroOps = 1;
+  let ResourceCycles = [1];
+}
+
 def SBWriteVZeroIdiomPCMPGTQ : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [SBWriteZeroLatency]>,
-    SchedVar<NoSchedPred,                          [SBWriteResGroup30]>
+    SchedVar<NoSchedPred,                          [SBWritePCMPGTQ]>
 ]>;
 def : InstRW<[SBWriteVZeroIdiomPCMPGTQ], (instrs PCMPGTQrr, VPCMPGTQrr)>;
 

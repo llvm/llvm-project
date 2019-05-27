@@ -236,7 +236,7 @@ define i16 @unsigned_sat_variable_i16_using_min(i16 %x, i16 %y) {
 ; ANY-NEXT:    notl %eax
 ; ANY-NEXT:    cmpw %ax, %di
 ; ANY-NEXT:    cmovbl %edi, %eax
-; ANY-NEXT:    leal (%rax,%rsi), %eax
+; ANY-NEXT:    addl %esi, %eax
 ; ANY-NEXT:    # kill: def $ax killed $ax killed $eax
 ; ANY-NEXT:    retq
   %noty = xor i16 %y, -1
@@ -287,7 +287,7 @@ define i32 @unsigned_sat_variable_i32_using_min(i32 %x, i32 %y) {
 ; ANY-NEXT:    notl %eax
 ; ANY-NEXT:    cmpl %eax, %edi
 ; ANY-NEXT:    cmovbl %edi, %eax
-; ANY-NEXT:    leal (%rax,%rsi), %eax
+; ANY-NEXT:    addl %esi, %eax
 ; ANY-NEXT:    retq
   %noty = xor i32 %y, -1
   %c = icmp ult i32 %x, %noty
@@ -334,7 +334,7 @@ define i64 @unsigned_sat_variable_i64_using_min(i64 %x, i64 %y) {
 ; ANY-NEXT:    notq %rax
 ; ANY-NEXT:    cmpq %rax, %rdi
 ; ANY-NEXT:    cmovbq %rdi, %rax
-; ANY-NEXT:    leaq (%rax,%rsi), %rax
+; ANY-NEXT:    addq %rsi, %rax
 ; ANY-NEXT:    retq
   %noty = xor i64 %y, -1
   %c = icmp ult i64 %x, %noty

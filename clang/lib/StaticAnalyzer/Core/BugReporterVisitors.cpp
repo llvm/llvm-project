@@ -2501,7 +2501,9 @@ TagVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   if (Optional<std::string> Msg = T->generateMessage(BRC, R)) {
     PathDiagnosticLocation Loc =
         PathDiagnosticLocation::create(PP, BRC.getSourceManager());
-    return std::make_shared<PathDiagnosticEventPiece>(Loc, *Msg);
+    auto Piece = std::make_shared<PathDiagnosticEventPiece>(Loc, *Msg);
+    Piece->setPrunable(T->isPrunable());
+    return Piece;
   }
 
   return nullptr;

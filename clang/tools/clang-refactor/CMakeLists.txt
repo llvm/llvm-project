@@ -19,5 +19,5 @@ target_link_libraries(clang-refactor
   clangSerialization
   clangTooling
   clangToolingCore
-  clangToolingRefactor
+  clangToolingRefactoring
   )

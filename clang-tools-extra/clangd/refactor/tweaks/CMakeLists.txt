@@ -17,6 +17,7 @@ add_clang_library(clangDaemonTweaks OBJECT
 
   LINK_LIBS
   clangAST
+  clangBasic
   clangDaemon
   clangToolingCore
   )
