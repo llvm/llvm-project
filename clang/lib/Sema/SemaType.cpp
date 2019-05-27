@@ -7363,7 +7363,21 @@ static void deduceOpenCLImplicitAddrSpace(TypeProcessingState &State,
       T->isDependentType() ||
       // Do not deduce addr space of decltype because it will be taken from
       // its argument.
-      T->isDecltypeType())
+      T->isDecltypeType() ||
+      // OpenCL spec v2.0 s6.9.b:
+      // The sampler type cannot be used with the __local and __global address
+      // space qualifiers.
+      // OpenCL spec v2.0 s6.13.14:
+      // Samplers can also be declared as global constants in the program
+      // source using the following syntax.
+      //   const sampler_t <sampler name> = <value>
+      // In codegen, file-scope sampler type variable has special handing and
+      // does not rely on address space qualifier. On the other hand, deducing
+      // address space of const sampler file-scope variable as global address
+      // space causes spurious diagnostic about __global address space
+      // qualifier, therefore do not deduce address space of file-scope sampler
+      // type variable.
+      (D.getContext() == DeclaratorContext::FileContext && T->isSamplerT()))
     return;
 
   LangAS ImpAddr = LangAS::Default;

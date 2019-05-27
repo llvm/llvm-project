@@ -572,6 +572,8 @@ void JSONNodeDumper::VisitFunctionDecl(const FunctionDecl *FD) {
   attributeOnlyIfTrue("pure", FD->isPure());
   attributeOnlyIfTrue("explicitlyDeleted", FD->isDeletedAsWritten());
   attributeOnlyIfTrue("constexpr", FD->isConstexpr());
+  attributeOnlyIfTrue("variadic", FD->isVariadic());
+
   if (FD->isDefaulted())
     JOS.attribute("explicitlyDefaulted",
                   FD->isDeleted() ? "deleted" : "default");
@@ -829,9 +831,10 @@ void JSONNodeDumper::VisitCompoundAssignOperator(
 void JSONNodeDumper::VisitMemberExpr(const MemberExpr *ME) {
   // Note, we always write this Boolean field because the information it conveys
   // is critical to understanding the AST node.
+  ValueDecl *VD = ME->getMemberDecl();
+  JOS.attribute("name", VD && VD->getDeclName() ? VD->getNameAsString() : "");
   JOS.attribute("isArrow", ME->isArrow());
-  JOS.attribute("referencedMemberDecl",
-                createPointerRepresentation(ME->getMemberDecl()));
+  JOS.attribute("referencedMemberDecl", createPointerRepresentation(VD));
 }
 
 void JSONNodeDumper::VisitCXXNewExpr(const CXXNewExpr *NE) {
@@ -894,6 +897,10 @@ void JSONNodeDumper::VisitUnaryExprOrTypeTraitExpr(
     JOS.attribute("argType", createQualType(TTE->getArgumentType()));
 }
 
+void JSONNodeDumper::VisitSizeOfPackExpr(const SizeOfPackExpr *SOPE) {
+  VisitNamedDecl(SOPE->getPack());
+}
+
 void JSONNodeDumper::VisitUnresolvedLookupExpr(
     const UnresolvedLookupExpr *ULE) {
   JOS.attribute("usesADL", ULE->requiresADL());
@@ -908,6 +915,16 @@ void JSONNodeDumper::VisitUnresolvedLookupExpr(
 void JSONNodeDumper::VisitAddrLabelExpr(const AddrLabelExpr *ALE) {
   JOS.attribute("name", ALE->getLabel()->getName());
   JOS.attribute("labelDeclId", createPointerRepresentation(ALE->getLabel()));
+}
+
+void JSONNodeDumper::VisitCXXTypeidExpr(const CXXTypeidExpr *CTE) {
+  if (CTE->isTypeOperand()) {
+    QualType Adjusted = CTE->getTypeOperand(Ctx);
+    QualType Unadjusted = CTE->getTypeOperandSourceInfo()->getType();
+    JOS.attribute("typeArg", createQualType(Unadjusted));
+    if (Adjusted != Unadjusted)
+      JOS.attribute("adjustedTypeArg", createQualType(Adjusted));
+  }
 }
 
 void JSONNodeDumper::VisitIntegerLiteral(const IntegerLiteral *IL) {

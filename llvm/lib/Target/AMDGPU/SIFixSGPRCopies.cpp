@@ -595,7 +595,9 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
 
             unsigned OpNo = UseMI->getOperandNo(&Use);
             const MCInstrDesc &Desc = TII->get(UseMI->getOpcode());
-            if (Desc.OpInfo && Desc.OpInfo[OpNo].RegClass != -1) {
+            if (!Desc.isPseudo() && Desc.OpInfo &&
+                OpNo <= Desc.getNumOperands() &&
+                Desc.OpInfo[OpNo].RegClass != -1) {
               const TargetRegisterClass *OpRC =
                   TRI->getRegClass(Desc.OpInfo[OpNo].RegClass);
               if (!TRI->isSGPRClass(OpRC) && OpRC != &AMDGPU::VS_32RegClass &&

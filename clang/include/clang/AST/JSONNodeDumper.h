@@ -121,6 +121,7 @@ class JSONNodeDumper
   friend class JSONDumper;
 
   const SourceManager &SM;
+  ASTContext& Ctx;
   PrintingPolicy PrintPolicy;
   const comments::CommandTraits *Traits;
 
@@ -172,11 +173,11 @@ class JSONNodeDumper
   StringRef getCommentCommandName(unsigned CommandID) const;
 
 public:
-  JSONNodeDumper(raw_ostream &OS, const SourceManager &SrcMgr,
+  JSONNodeDumper(raw_ostream &OS, const SourceManager &SrcMgr, ASTContext &Ctx,
                  const PrintingPolicy &PrintPolicy,
                  const comments::CommandTraits *Traits)
-      : NodeStreamer(OS), SM(SrcMgr), PrintPolicy(PrintPolicy), Traits(Traits) {
-  }
+      : NodeStreamer(OS), SM(SrcMgr), Ctx(Ctx), PrintPolicy(PrintPolicy),
+        Traits(Traits) {}
 
   void Visit(const Attr *A);
   void Visit(const Stmt *Node);
@@ -244,8 +245,10 @@ public:
   void VisitImplicitCastExpr(const ImplicitCastExpr *ICE);
   void VisitCallExpr(const CallExpr *CE);
   void VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *TTE);
+  void VisitSizeOfPackExpr(const SizeOfPackExpr *SOPE);
   void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr *ULE);
   void VisitAddrLabelExpr(const AddrLabelExpr *ALE);
+  void VisitCXXTypeidExpr(const CXXTypeidExpr *CTE);
 
   void VisitIntegerLiteral(const IntegerLiteral *IL);
   void VisitCharacterLiteral(const CharacterLiteral *CL);
@@ -359,10 +362,10 @@ class JSONDumper : public ASTNodeTraverser<JSONDumper, JSONNodeDumper> {
   }
 
 public:
-  JSONDumper(raw_ostream &OS, const SourceManager &SrcMgr,
+  JSONDumper(raw_ostream &OS, const SourceManager &SrcMgr, ASTContext &Ctx,
              const PrintingPolicy &PrintPolicy,
              const comments::CommandTraits *Traits)
-      : NodeDumper(OS, SrcMgr, PrintPolicy, Traits) {}
+      : NodeDumper(OS, SrcMgr, Ctx, PrintPolicy, Traits) {}
 
   JSONNodeDumper &doGetNodeDelegate() { return NodeDumper; }
 
