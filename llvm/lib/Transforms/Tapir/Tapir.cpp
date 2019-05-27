@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Tapir.h"
+#include "llvm/Transforms/Tapir/TapirTypes.h"
+#include "llvm/Transforms/Tapir/LoweringUtils.h"
 #include "llvm-c/Initialization.h"
 #include "llvm-c/Transforms/Tapir.h"
 #include "llvm/Analysis/Passes.h"
