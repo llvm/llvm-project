@@ -43,31 +43,31 @@ struct foo_two {
 
 void bar() {
   struct foo_two s1;
-  //CHECK: %[[FIELD1:.*]] = getelementptr inbounds %struct.foo_two{{.*}}
+  //CHECK: %[[FIELD1:.*]] = getelementptr inbounds %struct.{{.*}}.foo_two{{.*}}
   //CHECK: %[[CAST:.*]] = bitcast{{.*}}%[[FIELD1]]
   //CHECK: call i8* @llvm.ptr.annotation.p0i8{{.*}}%[[CAST]]{{.*}}[[ANN1]]
   s1.f1 = 0;
-  //CHECK: %[[FIELD2:.*]] = getelementptr inbounds %struct.foo_two{{.*}}
+  //CHECK: %[[FIELD2:.*]] = getelementptr inbounds %struct.{{.*}}.foo_two{{.*}}
   //CHECK: %[[CAST:.*]] = bitcast{{.*}}%[[FIELD2]]
   //CHECK: call i8* @llvm.ptr.annotation.p0i8{{.*}}%[[CAST]]{{.*}}[[ANN2]]
   s1.f2 = 0;
-  //CHECK: %[[FIELD3:.*]] = getelementptr inbounds %struct.foo_two{{.*}}
+  //CHECK: %[[FIELD3:.*]] = getelementptr inbounds %struct.{{.*}}.foo_two{{.*}}
   //CHECK: %[[CAST:.*]] = bitcast{{.*}}%[[FIELD3]]
   //CHECK: call i8* @llvm.ptr.annotation.p0i8{{.*}}%[[CAST]]{{.*}}[[ANN3]]
   s1.f3 = 0;
-  //CHECK: %[[FIELD4:.*]] = getelementptr inbounds %struct.foo_two{{.*}}
+  //CHECK: %[[FIELD4:.*]] = getelementptr inbounds %struct.{{.*}}.foo_two{{.*}}
   //CHECK: %[[CAST:.*]] = bitcast{{.*}}%[[FIELD4]]
   //CHECK: call i8* @llvm.ptr.annotation.p0i8{{.*}}%[[CAST]]{{.*}}[[ANN4]]
   s1.f4 = 0;
-  //CHECK: %[[FIELD5:.*]] = getelementptr inbounds %struct.foo_two{{.*}}
+  //CHECK: %[[FIELD5:.*]] = getelementptr inbounds %struct.{{.*}}.foo_two{{.*}}
   //CHECK: %[[CAST:.*]] = bitcast{{.*}}%[[FIELD5]]
   //CHECK: call i8* @llvm.ptr.annotation.p0i8{{.*}}%[[CAST]]{{.*}}[[ANN5]]
   s1.f5 = 0;
-  //CHECK: %[[FIELD6:.*]] = getelementptr inbounds %struct.foo_two{{.*}}
+  //CHECK: %[[FIELD6:.*]] = getelementptr inbounds %struct.{{.*}}.foo_two{{.*}}
   //CHECK: %[[CAST:.*]] = bitcast{{.*}}%[[FIELD6]]
   //CHECK: call i8* @llvm.ptr.annotation.p0i8{{.*}}%[[CAST]]{{.*}}[[ANN10]]
   s1.f6 = 0;
-  //CHECK: %[[FIELD7:.*]] = getelementptr inbounds %struct.foo_two{{.*}}
+  //CHECK: %[[FIELD7:.*]] = getelementptr inbounds %struct.{{.*}}.foo_two{{.*}}
   //CHECK: %[[CAST:.*]] = bitcast{{.*}}%[[FIELD7]]
   //CHECK: call i8* @llvm.ptr.annotation.p0i8{{.*}}%[[CAST]]{{.*}}[[ANN11]]
   s1.f7 = 0;
