@@ -1147,7 +1147,7 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
 
   // These alignment values are specified in powers of two, so alignment =
   // 2^n.  The minimum alignment is 2^4 = 16.
-  Out.kernarg_segment_alignment = std::max<size_t>(4,
+  Out.kernarg_segment_alignment = std::max((size_t)4,
       countTrailingZeros(MaxKernArgAlign));
 }
 
