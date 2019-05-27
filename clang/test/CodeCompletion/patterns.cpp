@@ -30,10 +30,23 @@ int value_return() {
 void void_return() {
   // line 31
 }
+bool bool_return() {
+  // line 34
+}
 // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:28:1 %s -o - | FileCheck -check-prefix=RETURN-VAL %s
-// RETURN-VAL-NOT: COMPLETION: Pattern : return;{{$}}
+// RETURN-VAL-NOT: COMPLETION: Pattern : return;
+// RETURN-VAL-NOT: COMPLETION: Pattern : return false;
+// RETURN-VAL-NOT: COMPLETION: Pattern : return true;
 // RETURN-VAL: COMPLETION: Pattern : return <#expression#>;{{$}}
 
 // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:31:1 %s -o - | FileCheck -check-prefix=RETURN-VOID %s
-// RETURN-VOID-NOT: COMPLETION: Pattern : return <#expression#>;{{$}}
+// RETURN-VOID-NOT: COMPLETION: Pattern : return false;
+// RETURN-VOID-NOT: COMPLETION: Pattern : return true;
+// RETURN-VOID-NOT: COMPLETION: Pattern : return <#expression#>;
 // RETURN-VOID: COMPLETION: Pattern : return;{{$}}
+
+// RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:34:1 %s -o - | FileCheck -check-prefix=RETURN-BOOL %s
+// RETURN-BOOL-NOT: COMPLETION: Pattern : return;
+// RETURN-BOOL: COMPLETION: Pattern : return <#expression#>;{{$}}
+// RETURN-BOOL: COMPLETION: Pattern : return false;{{$}}
+// RETURN-BOOL: COMPLETION: Pattern : return true;{{$}}

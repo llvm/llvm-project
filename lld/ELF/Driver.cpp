@@ -250,7 +250,7 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     // significant, as a user did not specify it. This behavior is
     // compatible with GNU.
     Files.push_back(
-        createSharedFile(MBRef, WithLOption ? path::filename(Path) : Path));
+        make<SharedFile>(MBRef, WithLOption ? path::filename(Path) : Path));
     return;
   case file_magic::bitcode:
   case file_magic::elf_relocatable:

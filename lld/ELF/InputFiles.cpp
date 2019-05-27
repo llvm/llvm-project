@@ -48,6 +48,36 @@ std::vector<SharedFile *> elf::SharedFiles;
 
 std::unique_ptr<TarWriter> elf::Tar;
 
+static ELFKind getELFKind(MemoryBufferRef MB, StringRef ArchiveName) {
+  unsigned char Size;
+  unsigned char Endian;
+  std::tie(Size, Endian) = getElfArchType(MB.getBuffer());
+
+  auto Fatal = [&](StringRef Msg) {
+    StringRef Filename = MB.getBufferIdentifier();
+    if (ArchiveName.empty())
+      fatal(Filename + ": " + Msg);
+    else
+      fatal(ArchiveName + "(" + Filename + "): " + Msg);
+  };
+
+  if (!MB.getBuffer().startswith(ElfMagic))
+    Fatal("not an ELF file");
+  if (Endian != ELFDATA2LSB && Endian != ELFDATA2MSB)
+    Fatal("corrupted ELF file: invalid data encoding");
+  if (Size != ELFCLASS32 && Size != ELFCLASS64)
+    Fatal("corrupted ELF file: invalid file class");
+
+  size_t BufSize = MB.getBuffer().size();
+  if ((Size == ELFCLASS32 && BufSize < sizeof(Elf32_Ehdr)) ||
+      (Size == ELFCLASS64 && BufSize < sizeof(Elf64_Ehdr)))
+    Fatal("corrupted ELF file: file is too short");
+
+  if (Size == ELFCLASS32)
+    return (Endian == ELFDATA2LSB) ? ELF32LEKind : ELF32BEKind;
+  return (Endian == ELFDATA2LSB) ? ELF64LEKind : ELF64BEKind;
+}
+
 InputFile::InputFile(Kind K, MemoryBufferRef M)
     : MB(M), GroupId(NextGroupId), FileKind(K) {
   // All files within the same --{start,end}-group get the same group ID.
@@ -1038,7 +1068,24 @@ unsigned SharedFile::VernauxNum;
 
 SharedFile::SharedFile(MemoryBufferRef M, StringRef DefaultSoName)
     : ELFFileBase(SharedKind, M), SoName(DefaultSoName),
-      IsNeeded(!Config->AsNeeded) {}
+      IsNeeded(!Config->AsNeeded) {
+  switch (getELFKind(MB, "")) {
+  case ELF32LEKind:
+    parseHeader<ELF32LE>();
+    break;
+  case ELF32BEKind:
+    parseHeader<ELF32BE>();
+    break;
+  case ELF64LEKind:
+    parseHeader<ELF64LE>();
+    break;
+  case ELF64BEKind:
+    parseHeader<ELF64BE>();
+    break;
+  default:
+    llvm_unreachable("getELFKind");
+  }
+}
 
 // Parse the version definitions in the object file if present, and return a
 // vector whose nth element contains a pointer to the Elf_Verdef for version
@@ -1376,36 +1423,6 @@ void BitcodeFile::parse(
     addDependentLibrary(L, this);
 }
 
-static ELFKind getELFKind(MemoryBufferRef MB, StringRef ArchiveName) {
-  unsigned char Size;
-  unsigned char Endian;
-  std::tie(Size, Endian) = getElfArchType(MB.getBuffer());
-
-  auto Fatal = [&](StringRef Msg) {
-    StringRef Filename = MB.getBufferIdentifier();
-    if (ArchiveName.empty())
-      fatal(Filename + ": " + Msg);
-    else
-      fatal(ArchiveName + "(" + Filename + "): " + Msg);
-  };
-
-  if (!MB.getBuffer().startswith(ElfMagic))
-    Fatal("not an ELF file");
-  if (Endian != ELFDATA2LSB && Endian != ELFDATA2MSB)
-    Fatal("corrupted ELF file: invalid data encoding");
-  if (Size != ELFCLASS32 && Size != ELFCLASS64)
-    Fatal("corrupted ELF file: invalid file class");
-
-  size_t BufSize = MB.getBuffer().size();
-  if ((Size == ELFCLASS32 && BufSize < sizeof(Elf32_Ehdr)) ||
-      (Size == ELFCLASS64 && BufSize < sizeof(Elf64_Ehdr)))
-    Fatal("corrupted ELF file: file is too short");
-
-  if (Size == ELFCLASS32)
-    return (Endian == ELFDATA2LSB) ? ELF32LEKind : ELF32BEKind;
-  return (Endian == ELFDATA2LSB) ? ELF64LEKind : ELF64BEKind;
-}
-
 void BinaryFile::parse() {
   ArrayRef<uint8_t> Data = arrayRefFromStringRef(MB.getBuffer());
   auto *Section = make<InputSection>(this, SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
@@ -1446,27 +1463,6 @@ InputFile *elf::createObjectFile(MemoryBufferRef MB, StringRef ArchiveName,
   default:
     llvm_unreachable("getELFKind");
   }
-}
-
-InputFile *elf::createSharedFile(MemoryBufferRef MB, StringRef DefaultSoName) {
-  auto *F = make<SharedFile>(MB, DefaultSoName);
-  switch (getELFKind(MB, "")) {
-  case ELF32LEKind:
-    F->parseHeader<ELF32LE>();
-    break;
-  case ELF32BEKind:
-    F->parseHeader<ELF32BE>();
-    break;
-  case ELF64LEKind:
-    F->parseHeader<ELF64LE>();
-    break;
-  case ELF64BEKind:
-    F->parseHeader<ELF64BE>();
-    break;
-  default:
-    llvm_unreachable("getELFKind");
-  }
-  return F;
 }
 
 void LazyObjFile::fetch() {

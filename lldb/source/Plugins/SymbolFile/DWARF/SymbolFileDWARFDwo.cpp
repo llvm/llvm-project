@@ -45,13 +45,11 @@ void SymbolFileDWARFDwo::LoadSectionData(lldb::SectionType sect_type,
   SymbolFileDWARF::LoadSectionData(sect_type, data);
 }
 
-lldb::CompUnitSP
-SymbolFileDWARFDwo::ParseCompileUnit(DWARFUnit *dwarf_cu,
-                                     uint32_t cu_idx) {
+lldb::CompUnitSP SymbolFileDWARFDwo::ParseCompileUnit(DWARFUnit *dwarf_cu) {
   assert(GetCompileUnit() == dwarf_cu && "SymbolFileDWARFDwo::ParseCompileUnit "
                                          "called with incompatible compile "
                                          "unit");
-  return GetBaseSymbolFile()->ParseCompileUnit(m_base_dwarf_cu, UINT32_MAX);
+  return GetBaseSymbolFile()->ParseCompileUnit(m_base_dwarf_cu);
 }
 
 DWARFUnit *SymbolFileDWARFDwo::GetCompileUnit() {

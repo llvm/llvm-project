@@ -640,8 +640,7 @@ const DWARFDebugRangesBase *SymbolFileDWARF::DebugRanges() const {
   return m_ranges.get();
 }
 
-lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFUnit *dwarf_cu,
-                                                   uint32_t cu_idx) {
+lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFUnit *dwarf_cu) {
   CompUnitSP cu_sp;
   if (dwarf_cu) {
     CompileUnit *comp_unit = (CompileUnit *)dwarf_cu->GetUserData();
@@ -650,8 +649,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFUnit *dwarf_cu,
       cu_sp = comp_unit->shared_from_this();
     } else {
       if (dwarf_cu->GetSymbolFileDWARF() != this) {
-        return dwarf_cu->GetSymbolFileDWARF()->ParseCompileUnit(dwarf_cu,
-                                                                cu_idx);
+        return dwarf_cu->GetSymbolFileDWARF()->ParseCompileUnit(dwarf_cu);
       } else if (dwarf_cu->GetOffset() == 0 && GetDebugMapSymfile()) {
         // Let the debug map create the compile unit
         cu_sp = m_debug_map_symfile->GetCompileUnit(this);
@@ -681,29 +679,24 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFUnit *dwarf_cu,
             cu_sp = std::make_shared<CompileUnit>(
                 module_sp, dwarf_cu, cu_file_spec, dwarf_cu->GetID(),
                 cu_language, is_optimized ? eLazyBoolYes : eLazyBoolNo);
-            if (cu_sp) {
-              // If we just created a compile unit with an invalid file spec,
-              // try and get the first entry in the supports files from the
-              // line table as that should be the compile unit.
-              if (!cu_file_spec) {
-                cu_file_spec = cu_sp->GetSupportFiles().GetFileSpecAtIndex(1);
-                if (cu_file_spec) {
-                  (FileSpec &)(*cu_sp) = cu_file_spec;
-                  // Also fix the invalid file spec which was copied from the
-                  // compile unit.
-                  cu_sp->GetSupportFiles().Replace(0, cu_file_spec);
-                }
+
+            // If we just created a compile unit with an invalid file spec,
+            // try and get the first entry in the supports files from the
+            // line table as that should be the compile unit.
+            if (!cu_file_spec) {
+              cu_file_spec = cu_sp->GetSupportFiles().GetFileSpecAtIndex(1);
+              if (cu_file_spec) {
+                (FileSpec &)(*cu_sp) = cu_file_spec;
+                // Also fix the invalid file spec which was copied from the
+                // compile unit.
+                cu_sp->GetSupportFiles().Replace(0, cu_file_spec);
               }
-
-              dwarf_cu->SetUserData(cu_sp.get());
-
-              // Figure out the compile unit index if we weren't given one
-              if (cu_idx == UINT32_MAX)
-                cu_idx = dwarf_cu->GetID();
-
-              m_obj_file->GetModule()->GetSymbolVendor()->SetCompileUnitAtIndex(
-                  cu_idx, cu_sp);
             }
+
+            dwarf_cu->SetUserData(cu_sp.get());
+
+            m_obj_file->GetModule()->GetSymbolVendor()->SetCompileUnitAtIndex(
+                dwarf_cu->GetID(), cu_sp);
           }
         }
       }
@@ -726,7 +719,7 @@ CompUnitSP SymbolFileDWARF::ParseCompileUnitAtIndex(uint32_t cu_idx) {
   if (info) {
     DWARFUnit *dwarf_cu = info->GetUnitAtIndex(cu_idx);
     if (dwarf_cu)
-      cu_sp = ParseCompileUnit(dwarf_cu, cu_idx);
+      cu_sp = ParseCompileUnit(dwarf_cu);
   }
   return cu_sp;
 }
@@ -1405,14 +1398,12 @@ Type *SymbolFileDWARF::ResolveType(const DWARFDIE &die,
   return nullptr;
 }
 
-CompileUnit *
-SymbolFileDWARF::GetCompUnitForDWARFCompUnit(DWARFUnit *dwarf_cu,
-                                             uint32_t cu_idx) {
+CompileUnit *SymbolFileDWARF::GetCompUnitForDWARFCompUnit(DWARFUnit *dwarf_cu) {
   // Check if the symbol vendor already knows about this compile unit?
   if (dwarf_cu->GetUserData() == nullptr) {
     // The symbol vendor doesn't know about this compile unit, we need to parse
     // and add it to the symbol vendor object.
-    return ParseCompileUnit(dwarf_cu, cu_idx).get();
+    return ParseCompileUnit(dwarf_cu).get();
   }
   return (CompileUnit *)dwarf_cu->GetUserData();
 }
@@ -1429,7 +1420,7 @@ bool SymbolFileDWARF::GetFunction(const DWARFDIE &die, SymbolContext &sc) {
 
   if (die) {
     // Check if the symbol vendor already knows about this compile unit?
-    sc.comp_unit = GetCompUnitForDWARFCompUnit(die.GetCU(), UINT32_MAX);
+    sc.comp_unit = GetCompUnitForDWARFCompUnit(die.GetCU());
 
     sc.function = sc.comp_unit->FindFunctionByUID(die.GetID()).get();
     if (sc.function == nullptr)
@@ -1691,7 +1682,7 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const Address &so_addr,
         DWARFUnit *dwarf_cu = debug_info->GetUnitAtOffset(DIERef::Section::DebugInfo,
                                                           cu_offset, &cu_idx);
         if (dwarf_cu) {
-          sc.comp_unit = GetCompUnitForDWARFCompUnit(dwarf_cu, cu_idx);
+          sc.comp_unit = GetCompUnitForDWARFCompUnit(dwarf_cu);
           if (sc.comp_unit) {
             resolved |= eSymbolContextCompUnit;
 
@@ -1792,13 +1783,13 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const FileSpec &file_spec,
       for (cu_idx = 0;
            (dwarf_cu = debug_info->GetUnitAtIndex(cu_idx)) != nullptr;
            ++cu_idx) {
-        CompileUnit *dc_cu = GetCompUnitForDWARFCompUnit(dwarf_cu, cu_idx);
+        CompileUnit *dc_cu = GetCompUnitForDWARFCompUnit(dwarf_cu);
         const bool full_match = (bool)file_spec.GetDirectory();
         bool file_spec_matches_cu_file_spec =
             dc_cu != nullptr && FileSpec::Equal(file_spec, *dc_cu, full_match);
         if (check_inlines || file_spec_matches_cu_file_spec) {
           SymbolContext sc(m_obj_file->GetModule());
-          sc.comp_unit = GetCompUnitForDWARFCompUnit(dwarf_cu, cu_idx);
+          sc.comp_unit = GetCompUnitForDWARFCompUnit(dwarf_cu);
           if (sc.comp_unit) {
             uint32_t file_idx = UINT32_MAX;
 
@@ -1989,7 +1980,7 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(
           break;
 
         case DW_TAG_variable: {
-          sc.comp_unit = GetCompUnitForDWARFCompUnit(die.GetCU(), UINT32_MAX);
+          sc.comp_unit = GetCompUnitForDWARFCompUnit(die.GetCU());
 
           if (parent_decl_ctx) {
             DWARFASTParser *dwarf_ast = die.GetDWARFParser();
@@ -2071,7 +2062,7 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
       DWARFDIE die = GetDIE(die_ref);
 
       if (die) {
-        sc.comp_unit = GetCompUnitForDWARFCompUnit(die.GetCU(), UINT32_MAX);
+        sc.comp_unit = GetCompUnitForDWARFCompUnit(die.GetCU());
 
         ParseVariables(sc, die, LLDB_INVALID_ADDRESS, false, false, &variables);
 
