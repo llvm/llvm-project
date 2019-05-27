@@ -380,7 +380,6 @@ public:
 
 InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "",
                             uint64_t OffsetInArchive = 0);
-InputFile *createSharedFile(MemoryBufferRef MB, StringRef DefaultSoName);
 
 inline bool isBitcode(MemoryBufferRef MB) {
   return identify_magic(MB.getBuffer()) == llvm::file_magic::bitcode;

@@ -7,21 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "TransformerClangTidyCheck.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace clang {
 namespace tidy {
 namespace utils {
 using tooling::RewriteRule;
 
-TransformerClangTidyCheck::TransformerClangTidyCheck(tooling::RewriteRule R,
+TransformerClangTidyCheck::TransformerClangTidyCheck(RewriteRule R,
                                                      StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), Rule(std::move(R)) {
-  for (const auto &Case : Rule.Cases) {
-    assert(Case.Explanation != nullptr &&
-           "clang-tidy checks must have an explanation by default;"
-           " explicitly provide an empty explanation if none is desired");
-  }
+  assert(llvm::all_of(Rule.Cases, [](const RewriteRule::Case &C) {
+                       return C.Explanation != nullptr;
+                     }) &&
+         "clang-tidy checks must have an explanation by default;"
+         " explicitly provide an empty explanation if none is desired");
 }
 
 void TransformerClangTidyCheck::registerMatchers(

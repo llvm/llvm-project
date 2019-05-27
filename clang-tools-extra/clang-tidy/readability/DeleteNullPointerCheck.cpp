@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DeleteNullPointerCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
@@ -62,9 +63,11 @@ void DeleteNullPointerCheck::check(const MatchFinder::MatchResult &Result) {
 
   Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
       IfWithDelete->getBeginLoc(),
-      Lexer::getLocForEndOfToken(IfWithDelete->getCond()->getEndLoc(), 0,
-                                 *Result.SourceManager,
-                                 Result.Context->getLangOpts())));
+      utils::lexer::getPreviousToken(IfWithDelete->getThen()->getBeginLoc(),
+                                     *Result.SourceManager,
+                                     Result.Context->getLangOpts())
+          .getLocation()));
+
   if (Compound) {
     Diag << FixItHint::CreateRemoval(
         CharSourceRange::getTokenRange(Compound->getLBracLoc()));
