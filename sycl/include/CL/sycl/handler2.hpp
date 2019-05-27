@@ -193,7 +193,8 @@ private:
       : MQueue(std::move(Queue)), MIsHost(IsHost) {}
 
   // Method stores copy of Arg passed to the MArgsStorage.
-  template <typename T, typename F = typename std::remove_reference<T>::type>
+  template <typename T, typename F = typename std::remove_const<
+                            typename std::remove_reference<T>::type>::type>
   F *storePlainArg(T &&Arg) {
     MArgsStorage.emplace_back(sizeof(T));
     F *Storage = (F *)MArgsStorage.back().data();

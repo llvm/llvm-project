@@ -154,11 +154,12 @@ int main() {
         assert(err == CL_SUCCESS);
 
         cl::sycl::program prog(ctx);
-        prog.build_with_source("kernel void ParallelFor(global int* a) "
-                               "{a[get_global_id(0)]+=1; }\n");
+        prog.build_with_source("kernel void ParallelFor(global int* a, int v) "
+                               "{a[get_global_id(0)]+=v; }\n");
 
         q.submit([&](cl::sycl::handler &cgh) {
-          cgh.set_args(clBuffer);
+          const int value = 1;
+          cgh.set_args(clBuffer, value);
           cgh.parallel_for(cl::sycl::range<1>(10),
                            prog.get_kernel("ParallelFor"));
         });
