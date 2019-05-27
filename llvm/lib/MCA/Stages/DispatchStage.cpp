@@ -102,9 +102,6 @@ Error DispatchStage::dispatch(InstRef IR) {
       IS.setEliminated();
   }
 
-  if (IS.isMemOp())
-    IS.setCriticalMemDep(IR.getSourceIndex());
-
   // A dependency-breaking instruction doesn't have to wait on the register
   // input operands, and it is often optimized at register renaming stage.
   // Update RAW dependencies if this instruction is not a dependency-breaking

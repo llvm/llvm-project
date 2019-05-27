@@ -13,7 +13,6 @@
 
 #ifndef LLVM_CODEGEN_FUNCTIONLOWERINGINFO_H
 #define LLVM_CODEGEN_FUNCTIONLOWERINGINFO_H
-
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -21,6 +20,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -57,6 +57,7 @@ public:
   const TargetLowering *TLI;
   MachineRegisterInfo *RegInfo;
   BranchProbabilityInfo *BPI;
+  const LegacyDivergenceAnalysis *DA;
   /// CanLowerReturn - true iff the function's return value can be lowered to
   /// registers.
   bool CanLowerReturn;
@@ -198,9 +199,11 @@ public:
     return ValueMap.count(V);
   }
 
-  unsigned CreateReg(MVT VT);
+  unsigned CreateReg(MVT VT, bool isDivergent = false);
 
-  unsigned CreateRegs(Type *Ty);
+  unsigned CreateRegs(const Value *V);
+
+  unsigned CreateRegs(Type *Ty, bool isDivergent = false);
 
   unsigned InitializeRegForValue(const Value *V) {
     // Tokens never live in vregs.
@@ -209,7 +212,7 @@ public:
     unsigned &R = ValueMap[V];
     assert(R == 0 && "Already initialized this value register!");
     assert(VirtReg2Value.empty());
-    return R = CreateRegs(V->getType());
+    return R = CreateRegs(V);
   }
 
   /// GetLiveOutRegInfo - Gets LiveOutInfo for a register, returning NULL if the
