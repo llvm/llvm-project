@@ -100,7 +100,31 @@ s_waitcnt vmcnt(0xFFFFFFFFFFFF0000)
 // GCN: error: too large value for vmcnt
 
 s_waitcnt vmcnt(0), expcnt(0), lgkmcnt(0),
-// GCN: error: failed parsing operand
+// GCN: error: expected a counter name
 
 s_waitcnt vmcnt(0) & expcnt(0) & lgkmcnt(0)&
-// GCN: error: failed parsing operand
+// GCN: error: expected a counter name
+
+s_waitcnt vmcnt(0) & expcnt(0) & x
+// GCN: error: expected a left parenthesis
+
+s_waitcnt vmcnt(0) & expcnt(0) x
+// GCN: error: expected a left parenthesis
+
+s_waitcnt vmcnt(0) & expcnt(0) & 1
+// GCN: error: expected a counter name
+
+s_waitcnt vmcnt(0) & expcnt(0) 1
+// GCN: error: expected a counter name
+
+s_waitcnt vmcnt(0) & expcnt(0) x(0)
+// GCN: error: invalid counter name x
+
+s_waitcnt vmcnt(x)
+// GCN: error: expected absolute expression
+
+s_waitcnt x
+// GCN: error: expected absolute expression
+
+s_waitcnt vmcnt(0
+// GCN: error: expected a closing parenthesis

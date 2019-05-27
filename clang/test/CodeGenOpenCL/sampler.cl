@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -emit-llvm -triple spir-unknown-unknown -o - -O0 | FileCheck %s
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -triple spir-unknown-unknown -o - -O0 | FileCheck %s
 //
 // This test covers 5 cases of sampler initialzation:
 //   1. function argument passing
@@ -6,8 +7,9 @@
 //      1b. argument is a function-scope variable
 //      1c. argument is one of caller function's parameters
 //   2. variable initialization
-//      2a. initializing a file-scope variable
+//      2a. initializing a file-scope variable with constant addr space qualifier
 //      2b. initializing a function-scope variable
+//      2c. initializing a file-scope variable with const qualifier
 
 #define CLK_ADDRESS_CLAMP_TO_EDGE       2
 #define CLK_NORMALIZED_COORDS_TRUE      1
@@ -19,6 +21,10 @@
 // Case 2a
 constant sampler_t glb_smp = CLK_ADDRESS_CLAMP_TO_EDGE | CLK_NORMALIZED_COORDS_TRUE | CLK_FILTER_LINEAR;
 // CHECK-NOT: glb_smp
+
+// Case 2c
+const sampler_t glb_smp_const = CLK_ADDRESS_CLAMP_TO_EDGE | CLK_NORMALIZED_COORDS_TRUE | CLK_FILTER_LINEAR;
+// CHECK-NOT: glb_smp_const
 
 int get_sampler_initializer(void);
 
@@ -47,8 +53,13 @@ kernel void foo(sampler_t smp_par) {
   // CHECK: [[SAMP:%[0-9]+]] = load %opencl.sampler_t addrspace(2)*, %opencl.sampler_t addrspace(2)** [[smp_ptr]]
   // CHECK: call spir_func void @fnc4smp(%opencl.sampler_t addrspace(2)* [[SAMP]])
 
-  // Case 1a
+  // Case 1a/2a
   fnc4smp(glb_smp);
+  // CHECK: [[SAMP:%[0-9]+]] = call %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32 35)
+  // CHECK: call spir_func void @fnc4smp(%opencl.sampler_t addrspace(2)* [[SAMP]])
+
+  // Case 1a/2c
+  fnc4smp(glb_smp_const);
   // CHECK: [[SAMP:%[0-9]+]] = call %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32 35)
   // CHECK: call spir_func void @fnc4smp(%opencl.sampler_t addrspace(2)* [[SAMP]])
 

@@ -60,9 +60,9 @@ UnwindPlanSP FuncUnwinders::GetUnwindPlanAtCallSite(Target &target,
 
   if (UnwindPlanSP plan_sp = GetSymbolFileUnwindPlan(thread))
     return plan_sp;
-  if (UnwindPlanSP plan_sp = GetEHFrameUnwindPlan(target))
-    return plan_sp;
   if (UnwindPlanSP plan_sp = GetDebugFrameUnwindPlan(target))
+    return plan_sp;
+  if (UnwindPlanSP plan_sp = GetEHFrameUnwindPlan(target))
     return plan_sp;
   if (UnwindPlanSP plan_sp = GetCompactUnwindUnwindPlan(target))
     return plan_sp;
@@ -362,9 +362,9 @@ UnwindPlanSP FuncUnwinders::GetUnwindPlanAtNonCallSite(Target &target,
 
   if (UnwindPlanSP plan_sp = GetSymbolFileUnwindPlan(thread))
     return plan_sp;
-  if (UnwindPlanSP plan_sp = GetEHFrameAugmentedUnwindPlan(target, thread))
-    return plan_sp;
   if (UnwindPlanSP plan_sp = GetDebugFrameAugmentedUnwindPlan(target, thread))
+    return plan_sp;
+  if (UnwindPlanSP plan_sp = GetEHFrameAugmentedUnwindPlan(target, thread))
     return plan_sp;
 
   return assembly_sp;

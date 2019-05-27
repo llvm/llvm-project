@@ -4391,20 +4391,18 @@ encodeCnt(
 }
 
 bool AMDGPUAsmParser::parseCnt(int64_t &IntVal) {
-  StringRef CntName = Parser.getTok().getString();
+
+  SMLoc CntLoc = getLoc();
+  StringRef CntName = getTokenStr();
+
+  if (!skipToken(AsmToken::Identifier, "expected a counter name") ||
+      !skipToken(AsmToken::LParen, "expected a left parenthesis"))
+    return false;
+
   int64_t CntVal;
-
-  Parser.Lex();
-  if (getLexer().isNot(AsmToken::LParen))
-    return true;
-
-  Parser.Lex();
-  if (getLexer().isNot(AsmToken::Integer))
-    return true;
-
-  SMLoc ValLoc = Parser.getTok().getLoc();
-  if (getParser().parseAbsoluteExpression(CntVal))
-    return true;
+  SMLoc ValLoc = getLoc();
+  if (!parseExpr(CntVal))
+    return false;
 
   AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
 
@@ -4417,49 +4415,43 @@ bool AMDGPUAsmParser::parseCnt(int64_t &IntVal) {
     Failed = encodeCnt(ISA, IntVal, CntVal, Sat, encodeExpcnt, decodeExpcnt);
   } else if (CntName == "lgkmcnt" || CntName == "lgkmcnt_sat") {
     Failed = encodeCnt(ISA, IntVal, CntVal, Sat, encodeLgkmcnt, decodeLgkmcnt);
+  } else {
+    Error(CntLoc, "invalid counter name " + CntName);
+    return false;
   }
 
   if (Failed) {
     Error(ValLoc, "too large value for " + CntName);
-    return true;
+    return false;
   }
 
-  if (getLexer().isNot(AsmToken::RParen)) {
-    return true;
-  }
+  if (!skipToken(AsmToken::RParen, "expected a closing parenthesis"))
+    return false;
 
-  Parser.Lex();
-  if (getLexer().is(AsmToken::Amp) || getLexer().is(AsmToken::Comma)) {
-    const AsmToken NextToken = getLexer().peekTok();
-    if (NextToken.is(AsmToken::Identifier)) {
-      Parser.Lex();
+  if (trySkipToken(AsmToken::Amp) || trySkipToken(AsmToken::Comma)) {
+    if (isToken(AsmToken::EndOfStatement)) {
+      Error(getLoc(), "expected a counter name");
+      return false;
     }
   }
 
-  return false;
+  return true;
 }
 
 OperandMatchResultTy
 AMDGPUAsmParser::parseSWaitCntOps(OperandVector &Operands) {
   AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
   int64_t Waitcnt = getWaitcntBitMask(ISA);
-  SMLoc S = Parser.getTok().getLoc();
+  SMLoc S = getLoc();
 
-  switch(getLexer().getKind()) {
-    default: return MatchOperand_ParseFail;
-    case AsmToken::Integer:
-      // The operand can be an integer value.
-      if (getParser().parseAbsoluteExpression(Waitcnt))
-        return MatchOperand_ParseFail;
-      break;
-
-    case AsmToken::Identifier:
-      do {
-        if (parseCnt(Waitcnt))
-          return MatchOperand_ParseFail;
-      } while(getLexer().isNot(AsmToken::EndOfStatement));
-      break;
+  // If parse failed, do not return error code
+  // to avoid excessive error messages.
+  if (isToken(AsmToken::Identifier) && peekToken().is(AsmToken::LParen)) {
+    while (parseCnt(Waitcnt) && !isToken(AsmToken::EndOfStatement));
+  } else {
+    parseExpr(Waitcnt);
   }
+
   Operands.push_back(AMDGPUOperand::CreateImm(this, Waitcnt, S));
   return MatchOperand_Success;
 }
