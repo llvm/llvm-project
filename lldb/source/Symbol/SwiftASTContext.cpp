@@ -1274,6 +1274,44 @@ static void ConfigureResourceDirs(swift::CompilerInvocation &invocation,
   invocation.setRuntimeResourcePath(resource_dir.GetPath().c_str());
 }
 
+
+static const char *getImportFailureString(swift::serialization::Status status) {
+  switch (status) {
+  case swift::serialization::Status::Valid:
+    return "The module is valid.";
+  case swift::serialization::Status::FormatTooOld:
+    return "The module file format is too old to be used by this version of "
+           "the debugger.";
+  case swift::serialization::Status::FormatTooNew:
+    return "The module file format is too new to be used by this version of "
+           "the debugger.";
+  case swift::serialization::Status::MissingDependency:
+    return "The module file depends on another module that can't be loaded.";
+  case swift::serialization::Status::MissingShadowedModule:
+    return "The module file is an overlay for a Clang module, which can't be "
+           "found.";
+  case swift::serialization::Status::CircularDependency:
+    return "The module file depends on a module that is still being loaded, "
+           "i.e. there is a circular dependency.";
+  case swift::serialization::Status::FailedToLoadBridgingHeader:
+    return "The module file depends on a bridging header that can't be loaded.";
+  case swift::serialization::Status::Malformed:
+    return "The module file is malformed in some way.";
+  case swift::serialization::Status::MalformedDocumentation:
+    return "The module documentation file is malformed in some way.";
+  case swift::serialization::Status::NameMismatch:
+    return "The module file's name does not match the module it is being "
+           "loaded into.";
+  case swift::serialization::Status::TargetIncompatible:
+    return "The module file was built for a different target platform.";
+  case swift::serialization::Status::TargetTooNew:
+    return "The module file was built for a target newer than the current "
+           "target.";
+  default:
+    return "An unknown error occurred.";
+  }
+}
+
 /// Initialize the compiler invocation with it the search paths from a
 /// serialized AST.
 /// \returns true on success.
@@ -1284,62 +1322,43 @@ static bool DeserializeCompilerFlags(swift::CompilerInvocation &invocation,
   if (result == swift::serialization::Status::Valid)
     return true;
 
-  error << "While deserializing" << name << ":\n";
-  switch (result) {
-  case swift::serialization::Status::Valid:
-    llvm_unreachable("already checked");
-  case swift::serialization::Status::FormatTooOld:
-    error << "The swift module file format is too old to be used by the "
-             "version of the swift compiler in LLDB\n";
-    break;
-
-  case swift::serialization::Status::FormatTooNew:
-    error << "the swift module file format is too new to be used by this "
-             "version of the swift compiler in LLDB\n";
-    break;
-
-  case swift::serialization::Status::MissingDependency:
-    error << "the swift module file depends on another module that can't be "
-             "loaded\n";
-    break;
-
-  case swift::serialization::Status::MissingShadowedModule:
-    error << "the swift module file is an overlay for a clang module, which "
-             "can't be found\n";
-    break;
-
-  case swift::serialization::Status::FailedToLoadBridgingHeader:
-    error << "the swift module file depends on a bridging header that can't "
-             "be loaded\n";
-    break;
-
-  case swift::serialization::Status::Malformed:
-    error << "the swift module file is malformed\n";
-    break;
-
-  case swift::serialization::Status::MalformedDocumentation:
-    error << "the swift module documentation file is malformed in some way\n";
-    break;
-
-  case swift::serialization::Status::NameMismatch:
-    error << "the swift module file's name does not match the module it is "
-             "being loaded into\n";
-    break;
-
-  case swift::serialization::Status::TargetIncompatible:
-    error << "the swift module file was built for a different target "
-             "platform\n";
-    break;
-
-  case swift::serialization::Status::TargetTooNew:
-    error << "the swift module file was built for a target newer than the "
-             "current target\n";
-    break;
-
-  case swift::serialization::Status::CircularDependency:
-    break;
-  }
+  error << "Could not deserialize " << name << ":\n"
+        << getImportFailureString(result) << "\n";
   return false;
+}
+
+static void printASTValidationInfo(
+    llvm::raw_ostream &errs,
+    const swift::serialization::ValidationInfo &ast_info,
+    const swift::serialization::ExtendedValidationInfo &ext_ast_info,
+    const Module &module, StringRef module_buf, bool invalid_name,
+    bool invalid_size) {
+  const char *error = getImportFailureString(ast_info.status);
+  errs << error;
+  if (invalid_name) {
+    error = "The module has an invalid name.";
+    errs << ' ' << error;
+  }
+  if (invalid_size) {
+    error = "The module has an invalid file size.";
+    errs << ' ' << error;
+  }
+
+  llvm::SmallString<1> m_description;
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  LLDB_LOG(log, R"(Unable to load Swift AST for module "{0}" from library "{1}".
+  {2}
+  - targetTriple: {3}
+  - shortVersion: {4}
+  - bytes: {5} (module_buf bytes: {6})
+  - SDK path: {7}
+  - Clang Importer Options:
+)",
+           ast_info.name, module.GetSpecificationDescription(), error,
+           ast_info.targetTriple, ast_info.shortVersion, ast_info.bytes,
+           module_buf.size(), ext_ast_info.getSDKPath());
+  for (StringRef ExtraOpt : ext_ast_info.getExtraClangImporterOptions())
+    LLDB_LOG(log, "  -- {0}", ExtraOpt);
 }
 
 /// Retrieve the serialized AST data blobs and initialize the compiler
@@ -1371,36 +1390,23 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
   for (auto ast_file_data_sp : ast_file_datas) {
     llvm::StringRef buf((const char *)ast_file_data_sp->GetBytes(),
                         ast_file_data_sp->GetByteSize());
-    while (!buf.empty()) {
+    swift::serialization::ValidationInfo info;
+    for (; !buf.empty(); buf = buf.substr(info.bytes)) {
       swift::serialization::ExtendedValidationInfo extended_validation_info;
-      swift::serialization::ValidationInfo info =
-          swift::serialization::validateSerializedAST(
-              buf, &extended_validation_info);
-      bool InvalidAST = info.status != swift::serialization::Status::Valid;
-      bool InvalidSize = (info.bytes == 0) || (info.bytes > buf.size());
-      if (InvalidAST) {
-        swift::ASTContext &ast_ctx = *swift_ast.GetASTContext();
-        std::string module_spec = module.GetSpecificationDescription();
-        swift::Identifier module_id = ast_ctx.getIdentifier(module_spec);
-        std::unique_ptr<swift::ModuleFile> loaded_module_file;
-        std::unique_ptr<llvm::MemoryBuffer> module_input_buffer =
-            llvm::MemoryBuffer::getMemBuffer(buf, module_spec,
-                                             /*NullTerminator=*/false);
-        swift::ModuleFile::load(std::move(module_input_buffer), {}, false,
-                                loaded_module_file);
-
-        swift::serialization::diagnoseSerializedASTLoadFailure(
-            ast_ctx, swift::SourceLoc(), info, extended_validation_info,
-            module_spec, "<invalid-doc-id>", loaded_module_file.get(),
-            module_id);
-      }
-      if (InvalidAST || InvalidSize) {
-        printASTValidationInfo(info, extended_validation_info, module, buf);
-        return true;
-      }
-
-      if (info.name.empty())
+      info = swift::serialization::validateSerializedAST(
+          buf, &extended_validation_info);
+      bool invalid_ast = info.status != swift::serialization::Status::Valid;
+      bool invalid_size = (info.bytes == 0) || (info.bytes > buf.size());
+      bool invalid_name = info.name.empty();
+      if (invalid_ast || invalid_size || invalid_name) {
+        // Validation errors are diagnosed, but not fatal for the context.
+        printASTValidationInfo(error, info, extended_validation_info, module,
+                               buf, invalid_name, invalid_size);
+        // If there's a size error, quit the loop early, otherwise try the next.
+        if (invalid_size)
+          break;
         continue;
+      }
 
       StringRef moduleData = buf.substr(0, info.bytes);
       got_serialized_options |=
@@ -1415,7 +1421,6 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
             invocation.setSDKPath(last_sdk_path);
       }
       last_sdk_path = invocation.getSDKPath();
-      buf = buf.substr(info.bytes);
     }
   }
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "Picking SDK path \"%s\".",
@@ -1681,6 +1686,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     if (DeserializeAllCompilerFlags(*swift_ast_sp, module, m_description, errs,
                                     got_serialized_options)) {
       swift_ast_sp->m_fatal_errors.SetErrorString(error.str());
+      assert(swift_ast_sp->HasFatalErrors() && "error string was empty");
       return swift_ast_sp;
     }
 
@@ -8073,65 +8079,6 @@ UserExpression *SwiftASTContextForExpressions::GetUserExpression(
 PersistentExpressionState *
 SwiftASTContextForExpressions::GetPersistentExpressionState() {
   return m_persistent_state_up.get();
-}
-
-static const char *getImportFailureString(swift::serialization::Status status) {
-  switch (status) {
-  case swift::serialization::Status::Valid:
-    return "The module is valid.";
-  case swift::serialization::Status::FormatTooOld:
-    return "The module file format is too old to be used by this version of "
-           "the debugger.";
-  case swift::serialization::Status::FormatTooNew:
-    return "The module file format is too new to be used by this version of "
-           "the debugger.";
-  case swift::serialization::Status::MissingDependency:
-    return "The module file depends on another module that can't be loaded.";
-  case swift::serialization::Status::MissingShadowedModule:
-    return "The module file is an overlay for a Clang module, which can't be "
-           "found.";
-  case swift::serialization::Status::CircularDependency:
-    return "The module file depends on a module that is still being loaded, "
-           "i.e. there is a circular dependency.";
-  case swift::serialization::Status::FailedToLoadBridgingHeader:
-    return "The module file depends on a bridging header that can't be loaded.";
-  case swift::serialization::Status::Malformed:
-    return "The module file is malformed in some way.";
-  case swift::serialization::Status::MalformedDocumentation:
-    return "The module documentation file is malformed in some way.";
-  case swift::serialization::Status::NameMismatch:
-    return "The module file's name does not match the module it is being "
-           "loaded into.";
-  case swift::serialization::Status::TargetIncompatible:
-    return "The module file was built for a different target platform.";
-  case swift::serialization::Status::TargetTooNew:
-    return "The module file was built for a target newer than the current "
-           "target.";
-  default:
-    return "An unknown error occurred.";
-  }
-}
-
-void lldb_private::printASTValidationInfo(
-    const swift::serialization::ValidationInfo &ast_info,
-    const swift::serialization::ExtendedValidationInfo &ext_ast_info,
-    const Module &module, StringRef module_buf) {
-  llvm::SmallString<1> m_description;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
-  LLDB_LOG(log, R"(Unable to load Swift AST for module {0} from library: {1}.
-  {2}
-  - targetTriple: {3}
-  - shortVersion: {4}
-  - bytes: {5} (module_buf bytes: {6})
-  - SDK path: {7}
-  - Clang Importer Options:
-)",
-           ast_info.name, module.GetSpecificationDescription(),
-           getImportFailureString(ast_info.status), ast_info.targetTriple,
-           ast_info.shortVersion, ast_info.bytes, module_buf.size(),
-           ext_ast_info.getSDKPath());
-  for (StringRef ExtraOpt : ext_ast_info.getExtraClangImporterOptions())
-    LLDB_LOG(log, "  -- {0}", ExtraOpt);
 }
 
 static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
