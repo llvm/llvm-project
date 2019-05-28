@@ -612,7 +612,7 @@ SDValue DPUTargetLowering::LowerUnsupported(SDValue Op,
   DiagnosticInfoUnsupported Diag(Func, Message, DL);
   Func.getContext().diagnose(Diag);
   if (DL.get() == NULL) {
-    report_fatal_error(Message + "\n(add -g to cflags for more precise diagnostic)",
+    report_fatal_error(Message + "\n(add -g to CFLAGS for more precise diagnostic)",
                        false);
   } else {
     report_fatal_error(Message, false);
