@@ -157,6 +157,7 @@ private:
   SymbolNode *demangleEncodedSymbol(StringView &MangledName,
                                     QualifiedNameNode *QN);
   SymbolNode *demangleDeclarator(StringView &MangledName);
+  SymbolNode *demangleMD5Name(StringView &MangledName);
 
   VariableSymbolNode *demangleVariableEncoding(StringView &MangledName,
                                                StorageClass SC);

@@ -226,6 +226,7 @@ namespace {
                 MCPhysReg PhysReg);
 
     bool mayLiveOut(unsigned VirtReg);
+    bool mayLiveIn(unsigned VirtReg);
 
     void dumpState();
   };
@@ -270,8 +271,10 @@ bool RegAllocFast::mayLiveOut(unsigned VirtReg) {
 
   // If this block loops back to itself, it would be necessary to check whether
   // the use comes after the def.
-  if (MBB->isSuccessor(MBB))
+  if (MBB->isSuccessor(MBB)) {
+    MayLiveAcrossBlocks.set(TargetRegisterInfo::virtReg2Index(VirtReg));
     return true;
+  }
 
   // See if the first \p Limit uses of the register are all in the current
   // block.
@@ -282,6 +285,24 @@ bool RegAllocFast::mayLiveOut(unsigned VirtReg) {
       MayLiveAcrossBlocks.set(TargetRegisterInfo::virtReg2Index(VirtReg));
       // Cannot be live-out if there are no successors.
       return !MBB->succ_empty();
+    }
+  }
+
+  return false;
+}
+
+/// Returns false if \p VirtReg is known to not be live into the current block.
+bool RegAllocFast::mayLiveIn(unsigned VirtReg) {
+  if (MayLiveAcrossBlocks.test(TargetRegisterInfo::virtReg2Index(VirtReg)))
+    return !MBB->pred_empty();
+
+  // See if the first \p Limit def of the register are all in the current block.
+  static const unsigned Limit = 8;
+  unsigned C = 0;
+  for (const MachineInstr &DefInst : MRI->def_instructions(VirtReg)) {
+    if (DefInst.getParent() != MBB || ++C >= Limit) {
+      MayLiveAcrossBlocks.set(TargetRegisterInfo::virtReg2Index(VirtReg));
+      return !MBB->pred_empty();
     }
   }
 
@@ -1083,6 +1104,11 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
         // There is no need to allocate a register for an undef use.
         continue;
       }
+
+      // Populate MayLiveAcrossBlocks in case the use block is allocated before
+      // the def block (removing the vreg uses).
+      mayLiveIn(Reg);
+
       LiveReg &LR = reloadVirtReg(MI, I, Reg, CopyDstReg);
       MCPhysReg PhysReg = LR.PhysReg;
       CopySrcReg = (CopySrcReg == Reg || CopySrcReg == PhysReg) ? PhysReg : 0;

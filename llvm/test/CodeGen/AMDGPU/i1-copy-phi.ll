@@ -37,3 +37,22 @@ bb6:                                              ; preds = %bb4, %bb3
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 attributes #0 = { nounwind readnone }
+
+; Make sure this won't crash.
+; SI-LABEL: {{^}}vcopy_i1_undef
+; SI: v_cndmask_b32_e64
+; SI: v_cndmask_b32_e64
+define <2 x float> @vcopy_i1_undef(<2 x float> addrspace(1)* %p) {
+entry:
+  br i1 undef, label %exit, label %false
+
+false:
+  %x = load <2 x float>, <2 x float> addrspace(1)* %p
+  %cmp = fcmp one <2 x float> %x, zeroinitializer
+  br label %exit
+
+exit:
+  %c = phi <2 x i1> [ undef, %entry ], [ %cmp, %false ]
+  %ret = select <2 x i1> %c, <2 x float> <float 2.0, float 2.0>, <2 x float> <float 4.0, float 4.0>
+  ret <2 x float> %ret
+}

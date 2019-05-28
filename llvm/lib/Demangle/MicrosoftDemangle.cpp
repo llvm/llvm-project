@@ -745,38 +745,42 @@ SymbolNode *Demangler::demangleDeclarator(StringView &MangledName) {
   return Symbol;
 }
 
+SymbolNode *Demangler::demangleMD5Name(StringView &MangledName) {
+  assert(MangledName.startsWith("??@"));
+  // This is an MD5 mangled name.  We can't demangle it, just return the
+  // mangled name.
+  // An MD5 mangled name is ??@ followed by 32 characters and a terminating @.
+  size_t MD5Last = MangledName.find('@', strlen("??@"));
+  if (MD5Last == StringView::npos) {
+    Error = true;
+    return nullptr;
+  }
+  const char *Start = MangledName.begin();
+  MangledName = MangledName.dropFront(MD5Last + 1);
+
+  // There are two additional special cases for MD5 names:
+  // 1. For complete object locators where the object name is long enough
+  //    for the object to have an MD5 name, the complete object locator is
+  //    called ??@...@??_R4@ (with a trailing "??_R4@" instead of the usual
+  //    leading "??_R4". This is handled here.
+  // 2. For catchable types, in versions of MSVC before 2015 (<1900) or after
+  //    2017.2 (>= 1914), the catchable type mangling is _CT??@...@??@...@8
+  //    instead of_CT??@...@8 with just one MD5 name. Since we don't yet
+  //    demangle catchable types anywhere, this isn't handled for MD5 names
+  //    either.
+  MangledName.consumeFront("??_R4@");
+
+  StringView MD5(Start, MangledName.begin());
+  SymbolNode *S = Arena.alloc<SymbolNode>(NodeKind::Md5Symbol);
+  S->Name = synthesizeQualifiedName(Arena, MD5);
+
+  return S;
+}
+
 // Parser entry point.
 SymbolNode *Demangler::parse(StringView &MangledName) {
-  if (MangledName.startsWith("??@")) {
-    // This is an MD5 mangled name.  We can't demangle it, just return the
-    // mangled name.
-    // An MD5 mangled name is ??@ followed by 32 characters and a terminating @.
-    size_t MD5Last = MangledName.find('@', strlen("??@"));
-    if (MD5Last == StringView::npos) {
-      Error = true;
-      return nullptr;
-    }
-    const char* Start = MangledName.begin();
-    MangledName = MangledName.dropFront(MD5Last + 1);
-
-    // There are two additional special cases for MD5 names:
-    // 1. For complete object locators where the object name is long enough
-    //    for the object to have an MD5 name, the complete object locator is
-    //    called ??@...@??_R4@ (with a trailing "??_R4@" instead of the usual
-    //    leading "??_R4". This is handled here.
-    // 2. For catchable types, in versions of MSVC before 2015 (<1900) or after
-    //    2017.2 (>= 1914), the catchable type mangling is _CT??@...@??@...@8
-    //    instead of_CT??@...@8 with just one MD5 name. Since we don't yet
-    //    demangle catchable types anywhere, this isn't handled for MD5 names
-    //    either.
-    MangledName.consumeFront("??_R4@");
-
-    StringView MD5(Start, MangledName.begin());
-    SymbolNode *S = Arena.alloc<SymbolNode>(NodeKind::Md5Symbol);
-    S->Name = synthesizeQualifiedName(Arena, MD5);
-
-    return S;
-  }
+  if (MangledName.startsWith("??@"))
+    return demangleMD5Name(MangledName);
 
   // MSVC-style mangled symbols must start with '?'.
   if (!MangledName.startsWith('?')) {
