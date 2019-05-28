@@ -38,12 +38,16 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &D);
 /// Formats the signature for an item, as a display string and snippet.
 /// e.g. for const_reference std::vector<T>::at(size_type) const, this returns:
 ///   *Signature = "(size_type) const"
-///   *Snippet = "(${0:size_type})"
+///   *Snippet = "(${1:size_type})"
 /// If set, RequiredQualifiers is the text that must be typed before the name.
 /// e.g "Base::" when calling a base class member function that's hidden.
+///
+/// When \p CompletingPattern is true, the last placeholder will be of the form
+/// ${0:…}, indicating the cursor should stay there.
 void getSignature(const CodeCompletionString &CCS, std::string *Signature,
                   std::string *Snippet,
-                  std::string *RequiredQualifiers = nullptr);
+                  std::string *RequiredQualifiers = nullptr,
+                  bool CompletingPattern = false);
 
 /// Assembles formatted documentation for a completion result. This includes
 /// documentation comments and other relevant information like annotations.

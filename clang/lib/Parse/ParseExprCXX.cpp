@@ -232,13 +232,16 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
     HasScopeSpecifier = true;
   }
 
+  // Preferred type might change when parsing qualifiers, we need the original.
+  auto SavedType = PreferredType;
   while (true) {
     if (HasScopeSpecifier) {
       if (Tok.is(tok::code_completion)) {
         // Code completion for a nested-name-specifier, where the code
         // completion token follows the '::'.
         Actions.CodeCompleteQualifiedId(getCurScope(), SS, EnteringContext,
-                                        ObjectType.get());
+                                        ObjectType.get(),
+                                        SavedType.get(SS.getBeginLoc()));
         // Include code completion token into the range of the scope otherwise
         // when we try to annotate the scope tokens the dangling code completion
         // token will cause assertion in

@@ -1268,6 +1268,32 @@ let Predicates = [HasSVE2] in {
   defm MATCH_PPzZZ  : sve2_char_match<0b0, "match">;
   defm NMATCH_PPzZZ : sve2_char_match<0b1, "nmatch">;
 
+  // SVE2 bitwise exclusive-or interleaved
+  defm EORBT_ZZZ : sve2_bitwise_xor_interleaved<0b0, "eorbt">;
+  defm EORTB_ZZZ : sve2_bitwise_xor_interleaved<0b1, "eortb">;
+
+  // SVE2 bitwise shift left long
+  defm SSHLLB_ZZI : sve2_bitwise_shift_left_long<0b00, "sshllb">;
+  defm SSHLLT_ZZI : sve2_bitwise_shift_left_long<0b01, "sshllt">;
+  defm USHLLB_ZZI : sve2_bitwise_shift_left_long<0b10, "ushllb">;
+  defm USHLLT_ZZI : sve2_bitwise_shift_left_long<0b11, "ushllt">;
+
+  // SVE2 integer add/subtract interleaved long
+  defm SADDLBT_ZZZ : sve2_misc_int_addsub_long_interleaved<0b00, "saddlbt">;
+  defm SSUBLBT_ZZZ : sve2_misc_int_addsub_long_interleaved<0b10, "ssublbt">;
+  defm SSUBLTB_ZZZ : sve2_misc_int_addsub_long_interleaved<0b11, "ssubltb">;
+
+  // SVE2 histogram generation (segment)
+  def HISTSEG_ZZZ : sve2_hist_gen_segment<"histseg">;
+
+  // SVE2 histogram generation (vector)
+  defm HISTCNT_ZPzZZ : sve2_hist_gen_vector<"histcnt">;
+
+  // SVE2 floating-point convert precision
+  defm FCVTXNT_ZPmZ : sve2_fp_convert_down_odd_rounding<"fcvtxnt">;
+  defm FCVTNT_ZPmZ  : sve2_fp_convert_down_narrow<"fcvtnt">;
+  defm FCVTLT_ZPmZ  : sve2_fp_convert_up_long<"fcvtlt">;
+
   // Predicated shifts
   defm SQSHL_ZPmI  : sve_int_bin_pred_shift_imm_left< 0b0110, "sqshl">;
   defm UQSHL_ZPmI  : sve_int_bin_pred_shift_imm_left< 0b0111, "uqshl">;
@@ -1277,6 +1303,14 @@ let Predicates = [HasSVE2] in {
 }
 
 let Predicates = [HasSVE2AES] in {
+  // SVE2 crypto destructive binary operations
+  def AESE_ZZZ_B : sve2_crypto_des_bin_op<0b00, "aese", ZPR8>;
+  def AESD_ZZZ_B : sve2_crypto_des_bin_op<0b01, "aesd", ZPR8>;
+
+  // SVE2 crypto unary operations
+  def AESMC_ZZ_B  : sve2_crypto_unary_op<0b0, "aesmc">;
+  def AESIMC_ZZ_B : sve2_crypto_unary_op<0b1, "aesimc">;
+
   // PMULLB and PMULLT instructions which operate with 64-bit source and
   // 128-bit destination elements are enabled with crypto extensions, similar
   // to NEON PMULL2 instruction.
@@ -1284,4 +1318,23 @@ let Predicates = [HasSVE2AES] in {
                                          ZPR128, ZPR64, ZPR64>;
   def PMULLT_ZZZ_Q : sve2_wide_int_arith<0b00, 0b11011, "pmullt",
                                          ZPR128, ZPR64, ZPR64>;
+}
+
+let Predicates = [HasSVE2SM4] in {
+  // SVE2 crypto constructive binary operations
+  def SM4EKEY_ZZZ_S : sve2_crypto_cons_bin_op<0b0, "sm4ekey", ZPR32>;
+  // SVE2 crypto destructive binary operations
+  def SM4E_ZZZ_S : sve2_crypto_des_bin_op<0b10, "sm4e", ZPR32>;
+}
+
+let Predicates = [HasSVE2SHA3] in {
+  // SVE2 crypto constructive binary operations
+  def RAX1_ZZZ_D : sve2_crypto_cons_bin_op<0b1, "rax1",    ZPR64>;
+}
+
+let Predicates = [HasSVE2BitPerm] in {
+  // SVE2 bitwise permute
+  defm BEXT_ZZZ : sve2_misc_bitwise<0b1100, "bext">;
+  defm BDEP_ZZZ : sve2_misc_bitwise<0b1101, "bdep">;
+  defm BGRP_ZZZ : sve2_misc_bitwise<0b1110, "bgrp">;
 }

@@ -56,7 +56,7 @@ GNU-NEXT: PLT GOT:
 GNU:       Reserved entries:
 GNU-NEXT:    Address  Initial Purpose
 GNU-NEXT:   00410814 00000000 PLT lazy resolver
-GNU-NEXT:   00410854 80000000 Module pointer
+GNU-NEXT:   00410818 00000000 Module pointer
 
 GNU:       Entries:
 GNU-NEXT:    Address  Initial Sym.Val. Type    Ndx Name

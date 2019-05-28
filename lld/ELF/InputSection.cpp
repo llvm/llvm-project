@@ -438,7 +438,8 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       // hopefully creates a frame that is ignored at runtime.
       auto *D = dyn_cast<Defined>(&Sym);
       if (!D) {
-        error("STT_SECTION symbol should be defined");
+        warn("STT_SECTION symbol should be defined");
+        P->setSymbolAndType(0, 0, false);
         continue;
       }
       SectionBase *Section = D->Section->Repl;

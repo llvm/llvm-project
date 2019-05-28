@@ -32,12 +32,40 @@ def ModeSoftFloat         : SubtargetFeature<"soft-float","UseSoftFloat",
 //
 
 // Floating Point, HW Division and Neon Support
-def FeatureVFP2           : SubtargetFeature<"vfp2", "HasVFPv2", "true",
-                                             "Enable VFP2 instructions">;
+def FeatureFP64           : SubtargetFeature<"fp64", "HasFP64", "true",
+                                             "Floating point unit supports "
+                                             "double precision">;
 
-def FeatureVFP3           : SubtargetFeature<"vfp3", "HasVFPv3", "true",
-                                             "Enable VFP3 instructions",
-                                             [FeatureVFP2]>;
+def FeatureD32            : SubtargetFeature<"d32", "HasD32", "true",
+                                             "Extend FP to 32 double registers">;
+
+multiclass VFPver<string name, string query, string description,
+                  list<SubtargetFeature> prev = [],
+                  list<SubtargetFeature> otherimplies = []> {
+  def _D16_SP: SubtargetFeature<
+    name#"d16sp", query#"D16SP", "true",
+    description#" with only 16 d-registers and no double precision",
+    !foreach(v, prev, !cast<SubtargetFeature>(v # "_D16_SP")) # otherimplies>;
+  def _SP: SubtargetFeature<
+    name#"sp", query#"SP", "true",
+    description#" with no double precision",
+    !foreach(v, prev, !cast<SubtargetFeature>(v # "_SP")) #
+      otherimplies # [FeatureD32, !cast<SubtargetFeature>(NAME # "_D16_SP")]>;
+  def _D16: SubtargetFeature<
+    name#"d16", query#"D16", "true",
+    description#" with only 16 d-registers",
+    !foreach(v, prev, !cast<SubtargetFeature>(v # "_D16")) #
+      otherimplies # [FeatureFP64, !cast<SubtargetFeature>(NAME # "_D16_SP")]>;
+  def "": SubtargetFeature<
+    name, query, "true", description,
+    prev # otherimplies # [
+        !cast<SubtargetFeature>(NAME # "_D16"),
+        !cast<SubtargetFeature>(NAME # "_SP")]>;
+}
+
+defm FeatureVFP2: VFPver<"vfp2", "HasVFPv2", "Enable VFP2 instructions">;
+defm FeatureVFP3: VFPver<"vfp3", "HasVFPv3", "Enable VFP3 instructions",
+                         [FeatureVFP2]>;
 
 def FeatureNEON           : SubtargetFeature<"neon", "HasNEON", "true",
                                              "Enable NEON instructions",
@@ -47,30 +75,21 @@ def FeatureFP16           : SubtargetFeature<"fp16", "HasFP16", "true",
                                              "Enable half-precision "
                                              "floating point">;
 
-def FeatureVFP4           : SubtargetFeature<"vfp4", "HasVFPv4", "true",
-                                             "Enable VFP4 instructions",
-                                             [FeatureVFP3, FeatureFP16]>;
+defm FeatureVFP4: VFPver<"vfp4", "HasVFPv4", "Enable VFP4 instructions",
+                         [FeatureVFP3], [FeatureFP16]>;
 
-def FeatureFPARMv8        : SubtargetFeature<"fp-armv8", "HasFPARMv8",
-                                             "true", "Enable ARMv8 FP",
-                                             [FeatureVFP4]>;
+defm FeatureFPARMv8: VFPver<"fp-armv8", "HasFPARMv8", "Enable ARMv8 FP",
+                         [FeatureVFP4]>;
 
 def FeatureFullFP16       : SubtargetFeature<"fullfp16", "HasFullFP16", "true",
                                              "Enable full half-precision "
                                              "floating point",
-                                             [FeatureFPARMv8]>;
+                                             [FeatureFPARMv8_D16_SP]>;
 
 def FeatureFP16FML        : SubtargetFeature<"fp16fml", "HasFP16FML", "true",
                                              "Enable full half-precision "
                                              "floating point fml instructions",
                                              [FeatureFullFP16]>;
-
-def FeatureVFPOnlySP      : SubtargetFeature<"fp-only-sp", "FPOnlySP", "true",
-                                             "Floating point unit supports "
-                                             "single precision only">;
-
-def FeatureD16            : SubtargetFeature<"d16", "HasD16", "true",
-                                             "Restrict FP to 16 double registers">;
 
 def FeatureHWDivThumb     : SubtargetFeature<"hwdiv",
                                              "HasHardwareDivideInThumb", "true",
@@ -943,14 +962,12 @@ def : ProcessorModel<"cortex-r4f",  CortexA8Model,      [ARMv7r, ProcR4,
                                                          FeatureHasRetAddrStack,
                                                          FeatureSlowFPBrcc,
                                                          FeatureHasSlowFPVMLx,
-                                                         FeatureVFP3,
-                                                         FeatureD16,
+                                                         FeatureVFP3_D16,
                                                          FeatureAvoidPartialCPSR]>;
 
 def : ProcessorModel<"cortex-r5",   CortexA8Model,      [ARMv7r, ProcR5,
                                                          FeatureHasRetAddrStack,
-                                                         FeatureVFP3,
-                                                         FeatureD16,
+                                                         FeatureVFP3_D16,
                                                          FeatureSlowFPBrcc,
                                                          FeatureHWDivARM,
                                                          FeatureHasSlowFPVMLx,
@@ -958,8 +975,7 @@ def : ProcessorModel<"cortex-r5",   CortexA8Model,      [ARMv7r, ProcR5,
 
 def : ProcessorModel<"cortex-r7",   CortexA8Model,      [ARMv7r, ProcR7,
                                                          FeatureHasRetAddrStack,
-                                                         FeatureVFP3,
-                                                         FeatureD16,
+                                                         FeatureVFP3_D16,
                                                          FeatureFP16,
                                                          FeatureMP,
                                                          FeatureSlowFPBrcc,
@@ -969,8 +985,7 @@ def : ProcessorModel<"cortex-r7",   CortexA8Model,      [ARMv7r, ProcR7,
 
 def : ProcessorModel<"cortex-r8",   CortexA8Model,      [ARMv7r,
                                                          FeatureHasRetAddrStack,
-                                                         FeatureVFP3,
-                                                         FeatureD16,
+                                                         FeatureVFP3_D16,
                                                          FeatureFP16,
                                                          FeatureMP,
                                                          FeatureSlowFPBrcc,
@@ -991,10 +1006,8 @@ def : ProcessorModel<"sc300",       CortexM4Model,      [ARMv7m,
                                                          FeatureUseAA,
                                                          FeatureHasNoBranchPredictor]>;
 
-def : ProcessorModel<"cortex-m4",   CortexM4Model,      [ARMv7em,
-                                                         FeatureVFP4,
-                                                         FeatureVFPOnlySP,
-                                                         FeatureD16,
+def : ProcessorModel<"cortex-m4", CortexM4Model,        [ARMv7em,
+                                                         FeatureVFP4_D16_SP,
                                                          FeaturePrefLoopAlign32,
                                                          FeatureHasSlowFPVMLx,
                                                          FeatureUseMISched,
@@ -1002,17 +1015,14 @@ def : ProcessorModel<"cortex-m4",   CortexM4Model,      [ARMv7em,
                                                          FeatureHasNoBranchPredictor]>;
 
 def : ProcNoItin<"cortex-m7",                           [ARMv7em,
-                                                         FeatureFPARMv8,
-                                                         FeatureD16]>;
+                                                         FeatureFPARMv8_D16]>;
 
 def : ProcNoItin<"cortex-m23",                          [ARMv8mBaseline,
                                                          FeatureNoMovt]>;
 
 def : ProcessorModel<"cortex-m33", CortexM4Model,       [ARMv8mMainline,
                                                          FeatureDSP,
-                                                         FeatureFPARMv8,
-                                                         FeatureD16,
-                                                         FeatureVFPOnlySP,
+                                                         FeatureFPARMv8_D16_SP,
                                                          FeaturePrefLoopAlign32,
                                                          FeatureHasSlowFPVMLx,
                                                          FeatureUseMISched,
@@ -1021,9 +1031,7 @@ def : ProcessorModel<"cortex-m33", CortexM4Model,       [ARMv8mMainline,
 
 def : ProcessorModel<"cortex-m35p", CortexM4Model,      [ARMv8mMainline,
                                                          FeatureDSP,
-                                                         FeatureFPARMv8,
-                                                         FeatureD16,
-                                                         FeatureVFPOnlySP,
+                                                         FeatureFPARMv8_D16_SP,
                                                          FeaturePrefLoopAlign32,
                                                          FeatureHasSlowFPVMLx,
                                                          FeatureUseMISched,

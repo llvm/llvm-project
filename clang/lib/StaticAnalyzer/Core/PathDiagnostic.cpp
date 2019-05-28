@@ -732,6 +732,15 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
 
     } else {
       S = BSrc->getTerminatorCondition();
+      if (!S) {
+        // If the BlockEdge has no terminator condition statement but its
+        // source is the entry of the CFG (e.g. a checker crated the branch at
+        // the beginning of a function), use the function's declaration instead.
+        assert(BSrc == &BSrc->getParent()->getEntry() && "CFGBlock has no "
+               "TerminatorCondition and is not the enrty block of the CFG");
+        return PathDiagnosticLocation::createBegin(
+            P.getLocationContext()->getDecl(), SMng);
+      }
     }
   } else if (Optional<StmtPoint> SP = P.getAs<StmtPoint>()) {
     S = SP->getStmt();

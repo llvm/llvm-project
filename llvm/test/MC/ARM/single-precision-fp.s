@@ -1,4 +1,4 @@
-@ RUN: not llvm-mc < %s -triple thumbv8-unknown-unknown -show-encoding -mattr=+fp-only-sp,-neon 2> %t > %t2
+@ RUN: not llvm-mc < %s -triple thumbv8-unknown-unknown -show-encoding -mattr=-fp64,-neon 2> %t > %t2
 @ RUN:     FileCheck %s < %t --check-prefix=CHECK-ERRORS
 @ RUN:     FileCheck %s < %t2
 

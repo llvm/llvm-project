@@ -1,4 +1,4 @@
-# RUN: not clangd -run-synchronously < %s 2>&1 | FileCheck -check-prefix=STDERR %s
+# RUN: not clangd -sync < %s 2>&1 | FileCheck -check-prefix=STDERR %s
 # vim: fileformat=dos
 # It is absolutely vital that this file has CRLF line endings.
 #

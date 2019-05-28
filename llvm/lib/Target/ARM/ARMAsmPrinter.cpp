@@ -657,7 +657,7 @@ void ARMAsmPrinter::emitAttributes() {
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::IEEEDenormals);
   else {
-    if (!STI.hasVFP2()) {
+    if (!STI.hasVFP2Base()) {
       // When the target doesn't have an FPU (by design or
       // intention), the assumptions made on the software support
       // mirror that of the equivalent hardware support *if it
@@ -667,7 +667,7 @@ void ARMAsmPrinter::emitAttributes() {
       if (STI.hasV7Ops())
         ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                           ARMBuildAttrs::PreserveFPSign);
-    } else if (STI.hasVFP3()) {
+    } else if (STI.hasVFP3Base()) {
       // In VFPv4, VFPv4U, VFPv3, or VFPv3U, it is preserved. That is,
       // the sign bit of the zero matches the sign bit of the input or
       // result that is being flushed to zero.

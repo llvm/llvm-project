@@ -6,7 +6,6 @@
 // CHECK-DEFAULT: "-target-feature" "+soft-float-abi"
 // CHECK-DEFAULT-NOT: "-target-feature" "+vfp2"
 // CHECK-DEFAULT-NOT: "-target-feature" "+vfp3"
-// CHECK-DEFAULT-NOT: "-target-feature" "+d16"
 // CHECK-DEFAULT-NOT: "-target-feature" "+neon"
 
 // RUN: %clang -target arm-linux-eabi -mfpu=fpa %s -### -o %t.o 2>&1 \
@@ -64,12 +63,12 @@
 // RUN:   | FileCheck --check-prefix=CHECK-SOFT-ABI-FP-3 %s
 // CHECK-VFP3-FP16-NOT: "-target-feature" "+soft-float"
 // CHECK-VFP3-FP16: "-target-feature" "+soft-float-abi"
-// CHECK-VFP3-FP16: "-target-feature" "-fp-only-sp"
-// CHECK-VFP3-FP16: "-target-feature" "-d16"
 // CHECK-VFP3-FP16: "-target-feature" "+vfp3"
 // CHECK-VFP3-FP16: "-target-feature" "+fp16"
 // CHECK-VFP3-FP16: "-target-feature" "-vfp4"
 // CHECK-VFP3-FP16: "-target-feature" "-fp-armv8"
+// CHECK-VFP3-FP16: "-target-feature" "+fp64"
+// CHECK-VFP3-FP16: "-target-feature" "+d32"
 // CHECK-VFP3-FP16: "-target-feature" "-neon"
 // CHECK-VFP3-FP16: "-target-feature" "-crypto"
 
@@ -81,11 +80,11 @@
 // RUN:   | FileCheck --check-prefix=CHECK-SOFT-ABI-FP-3 %s
 // CHECK-VFP3-D16-NOT: "-target-feature" "+soft-float"
 // CHECK-VFP3-D16: "-target-feature" "+soft-float-abi"
-// CHECK-VFP3-D16: "-target-feature" "-fp-only-sp"
-// CHECK-VFP3-D16: "-target-feature" "+d16"
 // CHECK-VFP3-D16: "-target-feature" "+vfp3"
 // CHECK-VFP3-D16: "-target-feature" "-vfp4"
 // CHECK-VFP3-D16: "-target-feature" "-fp-armv8"
+// CHECK-VFP3-D16: "-target-feature" "+fp64"
+// CHECK-VFP3-D16-NOT: "-target-feature" "+d32"
 // CHECK-VFP3-D16: "-target-feature" "-neon"
 
 // RUN: %clang -target arm-linux-eabi -mfpu=vfpv3-d16-fp16 %s -### -o %t.o 2>&1 \
@@ -94,12 +93,12 @@
 // RUN:   | FileCheck --check-prefix=CHECK-SOFT-ABI-FP-3 %s
 // CHECK-VFP3-D16-FP16-NOT: "-target-feature" "+soft-float"
 // CHECK-VFP3-D16-FP16: "-target-feature" "+soft-float-abi"
-// CHECK-VFP3-D16-FP16: "-target-feature" "-fp-only-sp"
-// CHECK-VFP3-D16-FP16: "-target-feature" "+d16"
 // CHECK-VFP3-D16-FP16: "-target-feature" "+vfp3"
 // CHECK-VFP3-D16-FP16: "-target-feature" "+fp16"
 // CHECK-VFP3-D16-FP16: "-target-feature" "-vfp4"
 // CHECK-VFP3-D16-FP16: "-target-feature" "-fp-armv8"
+// CHECK-VFP3-D16-FP16: "-target-feature" "+fp64"
+// CHECK-VFP3-D16-FP16-NOT: "-target-feature" "+d32"
 // CHECK-VFP3-D16-FP16: "-target-feature" "-neon"
 // CHECK-VFP3-D16-FP16: "-target-feature" "-crypto"
 
@@ -109,8 +108,8 @@
 // RUN:   | FileCheck --check-prefix=CHECK-SOFT-ABI-FP-3 %s
 // CHECK-VFP3XD-NOT: "-target-feature" "+soft-float"
 // CHECK-VFP3XD: "-target-feature" "+soft-float-abi"
-// CHECK-VFP3XD: "-target-feature" "+fp-only-sp"
-// CHECK-VFP3XD: "-target-feature" "+d16"
+// CHECK-VFP3XD-NOT: "-target-feature" "+fp64"
+// CHECK-VFP3XD-NOT: "-target-feature" "+d32"
 // CHECK-VFP3XD: "-target-feature" "+vfp3"
 // CHECK-VFP3XD: "-target-feature" "-fp16"
 // CHECK-VFP3XD: "-target-feature" "-vfp4"
@@ -124,12 +123,12 @@
 // RUN:   | FileCheck --check-prefix=CHECK-SOFT-ABI-FP-3 %s
 // CHECK-VFP3XD-FP16-NOT: "-target-feature" "+soft-float"
 // CHECK-VFP3XD-FP16: "-target-feature" "+soft-float-abi"
-// CHECK-VFP3XD-FP16: "-target-feature" "+fp-only-sp"
-// CHECK-VFP3XD-FP16: "-target-feature" "+d16"
 // CHECK-VFP3XD-FP16: "-target-feature" "+vfp3"
 // CHECK-VFP3XD-FP16: "-target-feature" "+fp16"
 // CHECK-VFP3XD-FP16: "-target-feature" "-vfp4"
 // CHECK-VFP3XD-FP16: "-target-feature" "-fp-armv8"
+// CHECK-VFP3XD-FP16-NOT: "-target-feature" "+fp64"
+// CHECK-VFP3XD-FP16-NOT: "-target-feature" "+d32"
 // CHECK-VFP3XD-FP16: "-target-feature" "-neon"
 // CHECK-VFP3XD-FP16: "-target-feature" "-crypto"
 
@@ -160,10 +159,10 @@
 // RUN:   | FileCheck --check-prefix=CHECK-SOFT-ABI-FP-4 %s
 // CHECK-VFP4-D16-NOT: "-target-feature" "+soft-float"
 // CHECK-VFP4-D16: "-target-feature" "+soft-float-abi"
-// CHECK-VFP4-D16: "-target-feature" "-fp-only-sp"
-// CHECK-VFP4-D16: "-target-feature" "+d16"
 // CHECK-VFP4-D16: "-target-feature" "+vfp4"
 // CHECK-VFP4-D16: "-target-feature" "-fp-armv8"
+// CHECK-VFP4-D16: "-target-feature" "+fp64"
+// CHECK-VFP4-D16-NOT: "-target-feature" "+d32"
 // CHECK-VFP4-D16: "-target-feature" "-neon"
 
 // RUN: %clang -target arm-linux-eabi -mfpu=fp4-sp-d16 %s -### -o %t.o 2>&1 \
@@ -174,10 +173,10 @@
 // RUN:   | FileCheck --check-prefix=CHECK-SOFT-ABI-FP-4 %s
 // CHECK-FP4-SP-D16-NOT: "-target-feature" "+soft-float"
 // CHECK-FP4-SP-D16: "-target-feature" "+soft-float-abi"
-// CHECK-FP4-SP-D16: "-target-feature" "+fp-only-sp"
-// CHECK-FP4-SP-D16: "-target-feature" "+d16"
 // CHECK-FP4-SP-D16: "-target-feature" "+vfp4"
 // CHECK-FP4-SP-D16: "-target-feature" "-fp-armv8"
+// CHECK-FP4-SP-D16-NOT: "-target-feature" "+fp64"
+// CHECK-FP4-SP-D16-NOT: "-target-feature" "+d32"
 // CHECK-FP4-SP-D16: "-target-feature" "-neon"
 
 // RUN: %clang -target arm-linux-eabi -mfpu=fp5-sp-d16 %s -### -o %t.o 2>&1 \
@@ -188,10 +187,10 @@
 // RUN:   2>&1 | FileCheck --check-prefix=CHECK-SOFT-ABI-FP %s
 // CHECK-FP5-SP-D16-NOT: "-target-feature" "+soft-float"
 // CHECK-FP5-SP-D16: "-target-feature" "+soft-float-abi"
-// CHECK-FP5-SP-D16: "-target-feature" "+fp-only-sp"
-// CHECK-FP5-SP-D16: "-target-feature" "+d16"
 // CHECK-FP5-SP-D16: "-target-feature" "+fp-armv8"
 // CHECK-FP5-SP-D16: "-target-feature" "-neon"
+// CHECK-FP5-SP-D16-NOT: "-target-feature" "+fp64"
+// CHECK-FP5-SP-D16-NOT: "-target-feature" "+d32"
 // CHECK-FP5-SP-D16: "-target-feature" "-crypto"
 
 // RUN: %clang -target arm-linux-eabi -mfpu=fp5-dp-d16 %s -### -o %t.o 2>&1 \
@@ -202,9 +201,9 @@
 // RUN:   | FileCheck --check-prefix=CHECK-SOFT-ABI-FP-5 %s
 // CHECK-FP5-DP-D16-NOT: "-target-feature" "+soft-float"
 // CHECK-FP5-DP-D16: "-target-feature" "+soft-float-abi"
-// CHECK-FP5-DP-D16: "-target-feature" "-fp-only-sp"
-// CHECK-FP5-DP-D16: "-target-feature" "+d16"
 // CHECK-FP5-DP-D16: "-target-feature" "+fp-armv8"
+// CHECK-FP5-DP-D16: "-target-feature" "+fp64"
+// CHECK-FP5-DP-D16-NOT: "-target-feature" "+d32"
 // CHECK-FP5-DP-D16: "-target-feature" "-neon"
 // CHECK-FP5-DP-D16: "-target-feature" "-crypto"
 // CHECK-SOFT-ABI-FP-5: "-target-feature" "+soft-float"
@@ -236,12 +235,12 @@
 // RUN:   | FileCheck --check-prefix=CHECK-SOFT-ABI-FP-6 %s
 // CHECK-NEON-FP16-NOT: "-target-feature" "+soft-float"
 // CHECK-NEON-FP16: "-target-feature" "+soft-float-abi"
-// CHECK-NEON-FP16: "-target-feature" "-fp-only-sp"
-// CHECK-NEON-FP16: "-target-feature" "-d16"
 // CHECK-NEON-FP16: "-target-feature" "+vfp3"
 // CHECK-NEON-FP16: "-target-feature" "+fp16"
 // CHECK-NEON-FP16: "-target-feature" "-vfp4"
 // CHECK-NEON-FP16: "-target-feature" "-fp-armv8"
+// CHECK-NEON-FP16: "-target-feature" "+fp64"
+// CHECK-NEON-FP16: "-target-feature" "+d32"
 // CHECK-NEON-FP16: "-target-feature" "+neon"
 // CHECK-NEON-FP16: "-target-feature" "-crypto"
 
@@ -319,12 +318,12 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NO-FP %s
 // CHECK-NO-FP-NOT: "-target-feature" "+soft-float"
 // CHECK-NO-FP: "-target-feature" "+soft-float-abi"
-// CHECK-NO-FP: "-target-feature" "-fp-only-sp"
-// CHECK-NO-FP: "-target-feature" "-d16"
 // CHECK-NO-FP: "-target-feature" "-vfp2"
 // CHECK-NO-FP: "-target-feature" "-vfp3"
 // CHECK-NO-FP: "-target-feature" "-vfp4"
 // CHECK-NO-FP: "-target-feature" "-fp-armv8"
+// CHECK-NO-FP-NOT: "-target-feature" "+fp64"
+// CHECK-NO-FP-NOT: "-target-feature" "+d32"
 // CHECK-NO-FP: "-target-feature" "-neon"
 // CHECK-NO-FP: "-target-feature" "-crypto"
 
@@ -369,7 +368,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-ARM5-ANDROID-FP-DEFAULT %s
 // CHECK-ARM5-ANDROID-FP-DEFAULT: "-target-feature" "+soft-float"
 // CHECK-ARM5-ANDROID-FP-DEFAULT: "-target-feature" "+soft-float-abi"
-// CHECK-ARM5-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+d16"
+// CHECK-ARM5-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+d32"
 // CHECK-ARM5-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+vfp3"
 // CHECK-ARM5-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+vfp4"
 // CHECK-ARM5-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+fp-armv8"
@@ -390,7 +389,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-ARM7-ANDROID-FP-D16 %s
 // CHECK-ARM7-ANDROID-FP-D16-NOT: "-target-feature" "+soft-float"
 // CHECK-ARM7-ANDROID-FP-D16: "-target-feature" "+soft-float-abi"
-// CHECK-ARM7-ANDROID-FP-D16: "-target-feature" "+d16"
+// CHECK-ARM7-ANDROID-FP-D16-NOT: "-target-feature" "+d32"
 // CHECK-ARM7-ANDROID-FP-D16: "-target-feature" "+vfp3"
 // CHECK-ARM7-ANDROID-FP-D16-NOT: "-target-feature" "+vfp4"
 // CHECK-ARM7-ANDROID-FP-D16-NOT: "-target-feature" "+fp-armv8"

@@ -149,7 +149,7 @@ ARMBaseRegisterInfo::getTLSCallPreservedMask(const MachineFunction &MF) const {
 const uint32_t *
 ARMBaseRegisterInfo::getSjLjDispatchPreservedMask(const MachineFunction &MF) const {
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
-  if (!STI.useSoftFloat() && STI.hasVFP2() && !STI.isThumb1Only())
+  if (!STI.useSoftFloat() && STI.hasVFP2Base() && !STI.isThumb1Only())
     return CSR_NoRegs_RegMask;
   else
     return CSR_FPRegs_RegMask;
@@ -193,7 +193,7 @@ getReservedRegs(const MachineFunction &MF) const {
   if (STI.isR9Reserved())
     markSuperRegs(Reserved, ARM::R9);
   // Reserve D16-D31 if the subtarget doesn't support them.
-  if (!STI.hasVFP3() || STI.hasD16()) {
+  if (!STI.hasD32()) {
     static_assert(ARM::D31 == ARM::D16 + 15, "Register list not consecutive!");
     for (unsigned R = 0; R < 16; ++R)
       markSuperRegs(Reserved, ARM::D16 + R);

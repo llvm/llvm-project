@@ -11,7 +11,7 @@
   define void @test_gep_s16() { ret void }
 
   attributes #0 = { "target-features"="+vfp2" }
-  attributes #1 = { "target-features"="-vfp2" }
+  attributes #1 = { "target-features"="-vfp2d16sp" }
 ...
 ---
 name:            test_legal_loads_stores

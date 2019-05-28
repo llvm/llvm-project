@@ -842,7 +842,20 @@ void ClangdLSPServer::onDocumentHighlight(
 void ClangdLSPServer::onHover(const TextDocumentPositionParams &Params,
                               Callback<llvm::Optional<Hover>> Reply) {
   Server->findHover(Params.textDocument.uri.file(), Params.position,
-                    std::move(Reply));
+                    Bind(
+                        [](decltype(Reply) Reply,
+                           llvm::Expected<llvm::Optional<HoverInfo>> HIorErr) {
+                          if (!HIorErr)
+                            return Reply(HIorErr.takeError());
+                          const auto &HI = HIorErr.get();
+                          if (!HI)
+                            return Reply(llvm::None);
+                          Hover H;
+                          H.range = HI->SymRange;
+                          H.contents = HI->render();
+                          return Reply(H);
+                        },
+                        std::move(Reply)));
 }
 
 void ClangdLSPServer::onTypeHierarchy(

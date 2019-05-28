@@ -202,6 +202,18 @@ TEST_F(IRBuilderTest, GetIntTy) {
   delete DL;
 }
 
+TEST_F(IRBuilderTest, UnaryOperators) {
+  IRBuilder<NoFolder> Builder(BB);
+  Value *V = Builder.CreateLoad(GV->getValueType(), GV);
+
+  // Test CreateUnOp
+  Value *U = Builder.CreateUnOp(Instruction::FNeg, V);
+  ASSERT_TRUE(isa<Instruction>(U));
+  ASSERT_TRUE(isa<FPMathOperator>(U));
+  ASSERT_TRUE(isa<UnaryOperator>(U));
+  ASSERT_FALSE(isa<BinaryOperator>(U));
+}
+
 TEST_F(IRBuilderTest, FastMathFlags) {
   IRBuilder<> Builder(BB);
   Value *F, *FC;

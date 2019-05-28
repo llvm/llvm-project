@@ -708,7 +708,7 @@ bool CallAnalyzer::visitIntToPtr(IntToPtrInst &I) {
 }
 
 bool CallAnalyzer::visitCastInst(CastInst &I) {
-  // Propagate constants through ptrtoint.
+  // Propagate constants through casts.
   if (simplifyInstruction(I, [&](SmallVectorImpl<Constant *> &COps) {
         return ConstantExpr::getCast(I.getOpcode(), COps[0], I.getType());
       }))
@@ -744,7 +744,7 @@ bool CallAnalyzer::visitUnaryInstruction(UnaryInstruction &I) {
       }))
     return true;
 
-  // Disable any SROA on the argument to arbitrary unary operators.
+  // Disable any SROA on the argument to arbitrary unary instructions.
   disableSROA(Operand);
 
   return false;
