@@ -42,11 +42,6 @@ class LLVM_LIBRARY_VISIBILITY InstrEmitter {
                        unsigned SrcReg,
                        DenseMap<SDValue, unsigned> &VRBaseMap);
 
-  /// getDstOfCopyToRegUse - If the only use of the specified result number of
-  /// node is a CopyToReg, return its destination register. Return 0 otherwise.
-  unsigned getDstOfOnlyCopyToRegUse(SDNode *Node,
-                                    unsigned ResNo) const;
-
   void CreateVirtualRegisters(SDNode *Node,
                               MachineInstrBuilder &MIB,
                               const MCInstrDesc &II,

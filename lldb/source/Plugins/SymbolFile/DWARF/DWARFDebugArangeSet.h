@@ -9,10 +9,9 @@
 #ifndef SymbolFileDWARF_DWARFDebugArangeSet_h_
 #define SymbolFileDWARF_DWARFDebugArangeSet_h_
 
-#include "SymbolFileDWARF.h"
+#include "lldb/Core/dwarf.h"
+#include <cstdint>
 #include <vector>
-
-class SymbolFileDWARF;
 
 class DWARFDebugArangeSet {
 public:

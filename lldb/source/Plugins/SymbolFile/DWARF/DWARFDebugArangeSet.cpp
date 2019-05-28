@@ -7,11 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "DWARFDebugArangeSet.h"
-
-#include "SymbolFileDWARF.h"
-#include "lldb/Utility/Stream.h"
+#include "DWARFDataExtractor.h"
 #include "llvm/Object/Error.h"
-#include <assert.h>
+#include <cassert>
 
 using namespace lldb_private;
 

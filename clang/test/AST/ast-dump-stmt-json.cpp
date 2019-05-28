@@ -4653,6 +4653,7 @@ void TestIteration() {
 // CHECK-NEXT:               "qualType": "<bound member function type>"
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "valueCategory": "rvalue",
+// CHECK-NEXT:              "name": "begin",
 // CHECK-NEXT:              "isArrow": false,
 // CHECK-NEXT:              "referencedMemberDecl": "0x{{.*}}",
 // CHECK-NEXT:              "inner": [
@@ -4799,6 +4800,7 @@ void TestIteration() {
 // CHECK-NEXT:               "qualType": "<bound member function type>"
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "valueCategory": "rvalue",
+// CHECK-NEXT:              "name": "end",
 // CHECK-NEXT:              "isArrow": false,
 // CHECK-NEXT:              "referencedMemberDecl": "0x{{.*}}",
 // CHECK-NEXT:              "inner": [

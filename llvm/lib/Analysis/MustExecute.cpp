@@ -193,7 +193,8 @@ bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
   SmallPtrSet<const BasicBlock *, 4> Predecessors;
   collectTransitivePredecessors(CurLoop, BB, Predecessors);
 
-  // Make sure that all successors of all predecessors of BB are either:
+  // Make sure that all successors of, all predecessors of BB which are not
+  // dominated by BB, are either:
   // 1) BB,
   // 2) Also predecessors of BB,
   // 3) Exit blocks which are not taken on 1st iteration.
@@ -203,6 +204,12 @@ bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
     // Predecessor block may throw, so it has a side exit.
     if (blockMayThrow(Pred))
       return false;
+
+    // BB dominates Pred, so if Pred runs, BB must run.
+    // This is true when Pred is a loop latch.
+    if (DT->dominates(BB, Pred))
+      continue;
+
     for (auto *Succ : successors(Pred))
       if (CheckedSuccessors.insert(Succ).second &&
           Succ != BB && !Predecessors.count(Succ))

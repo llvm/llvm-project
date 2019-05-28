@@ -130,7 +130,7 @@ public:
 
   class ConstIterator {
     typename MapTy::const_iterator I;
-    friend class DenseSet;
+    friend class DenseSetImpl;
     friend class Iterator;
 
   public:
