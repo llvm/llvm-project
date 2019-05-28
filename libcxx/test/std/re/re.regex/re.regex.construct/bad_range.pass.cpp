@@ -31,8 +31,8 @@ static bool error_range_thrown(const char *pat)
 
 int main(int, char**)
 {
-    assert(error_range_thrown(R"([\w-a])"));
-    assert(error_range_thrown(R"([a-\w])"));
+    assert(error_range_thrown("([\\w-a])"));
+    assert(error_range_thrown("([a-\\w])"));
 
   return 0;
 }
