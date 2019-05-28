@@ -47,7 +47,7 @@ private:
                       ArrayRef<unsigned> VRegs,
                       MachineInstrBuilder &Ret) const;
 
-  using SplitArgTy = std::function<void(unsigned Reg, uint64_t Offset)>;
+  using SplitArgTy = std::function<void(unsigned Reg)>;
 
   /// Split an argument into one or more arguments that the CC lowering can cope
   /// with (e.g. replace pointers with integers).

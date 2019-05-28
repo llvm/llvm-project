@@ -186,24 +186,6 @@ EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone, bool IsCloned,
   assert(isNew && "Node emitted out of order - early");
 }
 
-/// getDstOfCopyToRegUse - If the only use of the specified result number of
-/// node is a CopyToReg, return its destination register. Return 0 otherwise.
-unsigned InstrEmitter::getDstOfOnlyCopyToRegUse(SDNode *Node,
-                                                unsigned ResNo) const {
-  if (!Node->hasOneUse())
-    return 0;
-
-  SDNode *User = *Node->use_begin();
-  if (User->getOpcode() == ISD::CopyToReg &&
-      User->getOperand(2).getNode() == Node &&
-      User->getOperand(2).getResNo() == ResNo) {
-    unsigned Reg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
-    if (TargetRegisterInfo::isVirtualRegister(Reg))
-      return Reg;
-  }
-  return 0;
-}
-
 void InstrEmitter::CreateVirtualRegisters(SDNode *Node,
                                        MachineInstrBuilder &MIB,
                                        const MCInstrDesc &II,
@@ -286,14 +268,11 @@ unsigned InstrEmitter::getVR(SDValue Op,
   if (Op.isMachineOpcode() &&
       Op.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF) {
     // Add an IMPLICIT_DEF instruction before every use.
-    unsigned VReg = getDstOfOnlyCopyToRegUse(Op.getNode(), Op.getResNo());
     // IMPLICIT_DEF can produce any type of result so its MCInstrDesc
     // does not include operand register class info.
-    if (!VReg) {
-      const TargetRegisterClass *RC = TLI->getRegClassFor(
-          Op.getSimpleValueType(), Op.getNode()->isDivergent());
-      VReg = MRI->createVirtualRegister(RC);
-    }
+    const TargetRegisterClass *RC = TLI->getRegClassFor(
+        Op.getSimpleValueType(), Op.getNode()->isDivergent());
+    unsigned VReg = MRI->createVirtualRegister(RC);
     BuildMI(*MBB, InsertPos, Op.getDebugLoc(),
             TII->get(TargetOpcode::IMPLICIT_DEF), VReg);
     return VReg;
@@ -1011,14 +990,23 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
   case ISD::TokenFactor: // fall thru
     break;
   case ISD::CopyToReg: {
-    unsigned SrcReg;
+    unsigned DestReg = cast<RegisterSDNode>(Node->getOperand(1))->getReg();
     SDValue SrcVal = Node->getOperand(2);
+    if (TargetRegisterInfo::isVirtualRegister(DestReg) &&
+        SrcVal.isMachineOpcode() &&
+        SrcVal.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF) {
+      // Instead building a COPY to that vreg destination, build an
+      // IMPLICIT_DEF instruction instead.
+      BuildMI(*MBB, InsertPos, Node->getDebugLoc(),
+              TII->get(TargetOpcode::IMPLICIT_DEF), DestReg);
+      break;
+    }
+    unsigned SrcReg;
     if (RegisterSDNode *R = dyn_cast<RegisterSDNode>(SrcVal))
       SrcReg = R->getReg();
     else
       SrcReg = getVR(SrcVal, VRBaseMap);
 
-    unsigned DestReg = cast<RegisterSDNode>(Node->getOperand(1))->getReg();
     if (SrcReg == DestReg) // Coalesced away the copy? Ignore.
       break;
 

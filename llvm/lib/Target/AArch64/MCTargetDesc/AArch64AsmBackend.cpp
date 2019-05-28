@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
 #include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCTargetDesc.h"
+#include "Utils/AArch64BaseInfo.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -21,8 +22,10 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
 namespace {
