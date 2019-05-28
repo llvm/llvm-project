@@ -75,7 +75,7 @@ future versions of Clang.
 Modified Compiler Flags
 -----------------------
 
-- `clang -dumpversion` now returns the version of Clang itself.
+- ``clang -dumpversion`` now returns the version of Clang itself.
 
 - ...
 
@@ -92,7 +92,10 @@ Attribute Changes in Clang
 Windows Support
 ---------------
 
-- ...
+- clang-cl now treats non-existent files as possible typos for flags,
+  ``clang-cl /diagnostic:caret /c test.cc`` for example now produces
+  ``clang: error: no such file or directory: '/diagnostic:caret'; did you mean '/diagnostics:caret'?``
+
 
 
 C Language Changes in Clang

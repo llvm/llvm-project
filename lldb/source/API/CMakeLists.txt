@@ -144,6 +144,7 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
     MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
     add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb-private.exports)
   endif()
+  set_target_properties(liblldb_exports PROPERTIES FOLDER "lldb misc")
 endif()
 
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )

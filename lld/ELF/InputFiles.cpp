@@ -997,6 +997,9 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
 
       if (ESym.st_shndx == SHN_UNDEF)
         this->Symbols[I] = make<Undefined>(this, Name, Binding, StOther, Type);
+      else if (Sec == &InputSection::Discarded)
+        this->Symbols[I] = make<Undefined>(this, Name, Binding, StOther, Type,
+                                           /*DiscardedSecIdx=*/SecIdx);
       else
         this->Symbols[I] =
             make<Defined>(this, Name, Binding, StOther, Type, Value, Size, Sec);

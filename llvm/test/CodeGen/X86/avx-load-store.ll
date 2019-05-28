@@ -187,8 +187,10 @@ define void @double_save(<4 x i32> %A, <4 x i32> %B, <8 x i32>* %P) nounwind ssp
 define void @double_save_volatile(<4 x i32> %A, <4 x i32> %B, <8 x i32>* %P) nounwind {
 ; CHECK-LABEL: double_save_volatile:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps %xmm1, 16(%rdi)
-; CHECK-NEXT:    vmovaps %xmm0, (%rdi)
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vmovups %ymm0, (%rdi)
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 ;
 ; CHECK_O0-LABEL: double_save_volatile:

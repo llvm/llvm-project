@@ -26,6 +26,17 @@ enum { XCOFF32FileHeaderSize = 20 };
 static_assert(sizeof(XCOFFFileHeader) == XCOFF32FileHeaderSize,
               "Wrong size for XCOFF file header.");
 
+// Sets EC and returns false if there is less than 'Size' bytes left in the
+// buffer at 'Offset'.
+static bool checkSize(MemoryBufferRef M, std::error_code &EC, uint64_t Offset,
+                      uint64_t Size) {
+  if (M.getBufferSize() < Offset + Size) {
+    EC = object_error::unexpected_eof;
+    return false;
+  }
+  return true;
+}
+
 // Sets Obj unless any bytes in [addr, addr + size) fall outsize of m.
 // Returns unexpected_eof on error.
 template <typename T>
@@ -43,6 +54,12 @@ template <typename T> static const T *viewAs(uintptr_t in) {
   return reinterpret_cast<const T *>(in);
 }
 
+static StringRef generateStringRef(const char *Name, uint64_t Size) {
+  auto NulCharPtr = static_cast<const char *>(memchr(Name, '\0', Size));
+  return NulCharPtr ? StringRef(Name, NulCharPtr - Name)
+                    : StringRef(Name, Size);
+}
+
 const XCOFFSectionHeader *XCOFFObjectFile::toSection(DataRefImpl Ref) const {
   auto Sec = viewAs<XCOFFSectionHeader>(Ref.p);
 #ifndef NDEBUG
@@ -58,6 +75,12 @@ const XCOFFSectionHeader *XCOFFObjectFile::toSection(DataRefImpl Ref) const {
   return Sec;
 }
 
+const XCOFFSymbolEntry *XCOFFObjectFile::toSymbolEntry(DataRefImpl Ref) const {
+  assert(Ref.p != 0 && "Symbol table pointer can not be nullptr!");
+  auto SymEntPtr = viewAs<XCOFFSymbolEntry>(Ref.p);
+  return SymEntPtr;
+}
+
 // The next 2 functions are not exactly necessary yet, but they are useful to
 // abstract over the size difference between XCOFF32 and XCOFF64 structure
 // definitions.
@@ -69,15 +92,40 @@ size_t XCOFFObjectFile::getSectionHeaderSize() const {
   return sizeof(XCOFFSectionHeader);
 }
 
+uint16_t XCOFFObjectFile::getMagic() const { return FileHdrPtr->Magic; }
+
 void XCOFFObjectFile::moveSymbolNext(DataRefImpl &Symb) const {
-  llvm_unreachable("Not yet implemented!");
-  return;
+  const XCOFFSymbolEntry *SymEntPtr = toSymbolEntry(Symb);
+
+  SymEntPtr += SymEntPtr->NumberOfAuxEntries + 1;
+  Symb.p = reinterpret_cast<uintptr_t>(SymEntPtr);
 }
 
 Expected<StringRef> XCOFFObjectFile::getSymbolName(DataRefImpl Symb) const {
-  StringRef Result;
-  llvm_unreachable("Not yet implemented!");
-  return Result;
+  const XCOFFSymbolEntry *SymEntPtr = toSymbolEntry(Symb);
+
+  if (SymEntPtr->NameInStrTbl.Magic != XCOFFSymbolEntry::NAME_IN_STR_TBL_MAGIC)
+    return generateStringRef(SymEntPtr->SymbolName, XCOFF::SymbolNameSize);
+
+  // A storage class value with the high-order bit on indicates that the name is
+  // a symbolic debugger stabstring.
+  if (SymEntPtr->StorageClass & 0x80)
+    return StringRef("Unimplemented Debug Name");
+
+  uint32_t Offset = SymEntPtr->NameInStrTbl.Offset;
+  // The byte offset is relative to the start of the string table
+  // or .debug section. A byte offset value of 0 is a null or zero-length symbol
+  // name. A byte offset in the range 1 to 3 (inclusive) points into the length
+  // field; as a soft-error recovery mechanism, we treat such cases as having an
+  // offset of 0.
+  if (Offset < 4)
+    return StringRef(nullptr, 0);
+
+  if (StringTable.Data != nullptr && StringTable.Size > Offset)
+    return (StringTable.Data + Offset);
+
+  return make_error<GenericBinaryError>("Symbol Name parse failed",
+                                        object_error::parse_failed);
 }
 
 Expected<uint64_t> XCOFFObjectFile::getSymbolAddress(DataRefImpl Symb) const {
@@ -87,9 +135,7 @@ Expected<uint64_t> XCOFFObjectFile::getSymbolAddress(DataRefImpl Symb) const {
 }
 
 uint64_t XCOFFObjectFile::getSymbolValueImpl(DataRefImpl Symb) const {
-  uint64_t Result = 0;
-  llvm_unreachable("Not yet implemented!");
-  return Result;
+  return toSymbolEntry(Symb)->Value;
 }
 
 uint64_t XCOFFObjectFile::getCommonSymbolSizeImpl(DataRefImpl Symb) const {
@@ -106,8 +152,20 @@ XCOFFObjectFile::getSymbolType(DataRefImpl Symb) const {
 
 Expected<section_iterator>
 XCOFFObjectFile::getSymbolSection(DataRefImpl Symb) const {
-  llvm_unreachable("Not yet implemented!");
-  return section_iterator(SectionRef());
+  const XCOFFSymbolEntry *SymEntPtr = toSymbolEntry(Symb);
+  int16_t SectNum = SymEntPtr->SectionNumber;
+
+  if (isReservedSectionNumber(SectNum))
+    return section_end();
+
+  const XCOFFSectionHeader *Sec;
+  if (std::error_code EC = getSectionByNum(SectNum, Sec))
+    return errorCodeToError(EC);
+
+  DataRefImpl SecDRI;
+  SecDRI.p = reinterpret_cast<uintptr_t>(Sec);
+
+  return section_iterator(SectionRef(SecDRI, this));
 }
 
 void XCOFFObjectFile::moveSectionNext(DataRefImpl &Sec) const {
@@ -219,13 +277,16 @@ uint32_t XCOFFObjectFile::getSymbolFlags(DataRefImpl Symb) const {
 }
 
 basic_symbol_iterator XCOFFObjectFile::symbol_begin() const {
-  llvm_unreachable("Not yet implemented!");
-  return basic_symbol_iterator(SymbolRef());
+  DataRefImpl SymDRI;
+  SymDRI.p = reinterpret_cast<uintptr_t>(SymbolTblPtr);
+  return basic_symbol_iterator(SymbolRef(SymDRI, this));
 }
 
 basic_symbol_iterator XCOFFObjectFile::symbol_end() const {
-  llvm_unreachable("Not yet implemented!");
-  return basic_symbol_iterator(SymbolRef());
+  DataRefImpl SymDRI;
+  SymDRI.p = reinterpret_cast<uintptr_t>(
+      SymbolTblPtr + getLogicalNumberOfSymbolTableEntries());
+  return basic_symbol_iterator(SymbolRef(SymDRI, this));
 }
 
 section_iterator XCOFFObjectFile::section_begin() const {
@@ -243,7 +304,7 @@ section_iterator XCOFFObjectFile::section_end() const {
 
 uint8_t XCOFFObjectFile::getBytesInAddress() const {
   // Only support 32-bit object files for now ...
-  assert(getFileHeaderSize() ==  XCOFF32FileHeaderSize);
+  assert(getFileHeaderSize() == XCOFF32FileHeaderSize);
   return 4;
 }
 
@@ -274,6 +335,67 @@ Expected<uint64_t> XCOFFObjectFile::getStartAddress() const {
   return 0;
 }
 
+std::error_code
+XCOFFObjectFile::getSectionByNum(int16_t Num,
+                                 const XCOFFSectionHeader *&Result) const {
+  if (Num > 0 && static_cast<uint16_t>(Num) <= getNumberOfSections()) {
+    Result = SectionHdrTablePtr + (Num - 1);
+    return std::error_code();
+  }
+
+  return object_error::invalid_section_index;
+}
+
+Expected<StringRef>
+XCOFFObjectFile::getSymbolSectionName(const XCOFFSymbolEntry *SymEntPtr) const {
+  int16_t SectionNum = SymEntPtr->SectionNumber;
+
+  switch (SectionNum) {
+  case XCOFF::N_DEBUG:
+    return "N_DEBUG";
+  case XCOFF::N_ABS:
+    return "N_ABS";
+  case XCOFF::N_UNDEF:
+    return "N_UNDEF";
+  default: {
+    const XCOFFSectionHeader *SectHeaderPtr;
+    std::error_code EC;
+    if ((EC = getSectionByNum(SectionNum, SectHeaderPtr)))
+      return errorCodeToError(EC);
+    else
+      return generateStringRef(SectHeaderPtr->Name, XCOFF::SectionNameSize);
+  }
+  }
+}
+
+bool XCOFFObjectFile::isReservedSectionNumber(int16_t SectionNumber) {
+  return (SectionNumber <= 0 && SectionNumber >= -2);
+}
+
+uint16_t XCOFFObjectFile::getNumberOfSections() const {
+  return FileHdrPtr->NumberOfSections;
+}
+
+int32_t XCOFFObjectFile::getTimeStamp() const { return FileHdrPtr->TimeStamp; }
+
+uint32_t XCOFFObjectFile::getSymbolTableOffset() const {
+  return FileHdrPtr->SymbolTableOffset;
+}
+
+int32_t XCOFFObjectFile::getRawNumberOfSymbolTableEntries() const {
+  return FileHdrPtr->NumberOfSymTableEntries;
+}
+
+uint32_t XCOFFObjectFile::getLogicalNumberOfSymbolTableEntries() const {
+  return (FileHdrPtr->NumberOfSymTableEntries >= 0
+              ? FileHdrPtr->NumberOfSymTableEntries
+              : 0);
+}
+
+uint16_t XCOFFObjectFile::getOptionalHeaderSize() const {
+  return FileHdrPtr->AuxHeaderSize;
+}
+
 XCOFFObjectFile::XCOFFObjectFile(MemoryBufferRef Object, std::error_code &EC)
     : ObjectFile(Binary::ID_XCOFF32, Object) {
 
@@ -293,37 +415,39 @@ XCOFFObjectFile::XCOFFObjectFile(MemoryBufferRef Object, std::error_code &EC)
                         getNumberOfSections() * getSectionHeaderSize())))
       return;
   }
-}
 
-uint16_t XCOFFObjectFile::getMagic() const {
-  return FileHdrPtr->Magic;
-}
+  if (getLogicalNumberOfSymbolTableEntries() == 0)
+    return;
 
-uint16_t XCOFFObjectFile::getNumberOfSections() const {
-  return FileHdrPtr->NumberOfSections;
-}
+  // Get pointer to the symbol table.
+  CurPtr = FileHdrPtr->SymbolTableOffset;
+  uint64_t SymbolTableSize = (uint64_t)(sizeof(XCOFFSymbolEntry)) *
+                             getLogicalNumberOfSymbolTableEntries();
 
-int32_t XCOFFObjectFile::getTimeStamp() const {
-  return FileHdrPtr->TimeStamp;
-}
+  if ((EC = getObject(SymbolTblPtr, Data, base() + CurPtr, SymbolTableSize)))
+    return;
 
-uint32_t XCOFFObjectFile::getSymbolTableOffset() const {
-  return FileHdrPtr->SymbolTableOffset;
-}
+  // Move pointer to the string table.
+  CurPtr += SymbolTableSize;
 
-int32_t XCOFFObjectFile::getNumberOfSymbolTableEntries() const {
-  // As far as symbol table size is concerned, if this field is negative it is
-  // to be treated as a 0. However since this field is also used for printing we
-  // don't want to truncate any negative values.
-  return FileHdrPtr->NumberOfSymTableEntries;
-}
+  if (CurPtr + 4 > Data.getBufferSize())
+    return;
 
-uint16_t XCOFFObjectFile::getOptionalHeaderSize() const {
-  return FileHdrPtr->AuxHeaderSize;
-}
+  StringTable.Size = support::endian::read32be(base() + CurPtr);
 
-uint16_t XCOFFObjectFile::getFlags() const {
-  return FileHdrPtr->Flags;
+  if (StringTable.Size <= 4)
+    return;
+
+  // Check for whether the String table has the size indicated by length
+  // field
+  if (!checkSize(Data, EC, CurPtr, StringTable.Size))
+    return;
+
+  StringTable.Data = reinterpret_cast<const char *>(base() + CurPtr);
+  if (StringTable.Data[StringTable.Size - 1] != '\0') {
+    EC = object_error::string_table_non_null_end;
+    return;
+  }
 }
 
 Expected<std::unique_ptr<ObjectFile>>

@@ -9,6 +9,7 @@
 #include "ClangdUnit.h"
 #include "Compiler.h"
 #include "Matchers.h"
+#include "Protocol.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
 #include "TestTU.h"
@@ -16,6 +17,7 @@
 #include "index/FileIndex.h"
 #include "index/SymbolCollector.h"
 #include "clang/Index/IndexingAction.h"
+#include "llvm/ADT/None.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
@@ -569,6 +571,306 @@ int [[bar_not_preamble]];
                               HeaderNotInPreambleAnnotations.range())));
 }
 
+TEST(Hover, Structured) {
+  struct {
+    const char *const Code;
+    const std::function<void(HoverInfo &)> ExpectedBuilder;
+  } Cases[] = {
+      // Global scope.
+      {R"cpp(
+          // Best foo ever.
+          void [[fo^o]]() {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "void foo()";
+         HI.ReturnType = "void";
+         HI.Type = "void()";
+         HI.Parameters.emplace();
+       }},
+      // Inside namespace
+      {R"cpp(
+          namespace ns1 { namespace ns2 {
+            /// Best foo ever.
+            void [[fo^o]]() {}
+          }}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "ns1::ns2::";
+         HI.Name = "foo";
+         HI.Kind = SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "void foo()";
+         HI.ReturnType = "void";
+         HI.Type = "void()";
+         HI.Parameters.emplace();
+       }},
+      // Field
+      {R"cpp(
+          namespace ns1 { namespace ns2 {
+            struct Foo {
+              int [[b^ar]];
+            };
+          }}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "ns1::ns2::";
+         HI.LocalScope = "Foo::";
+         HI.Name = "bar";
+         HI.Kind = SymbolKind::Field;
+         HI.Definition = "int bar";
+         HI.Type = "int";
+       }},
+      // Local to class method.
+      {R"cpp(
+          namespace ns1 { namespace ns2 {
+            struct Foo {
+              void foo() {
+                int [[b^ar]];
+              }
+            };
+          }}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "ns1::ns2::";
+         HI.LocalScope = "Foo::foo::";
+         HI.Name = "bar";
+         HI.Kind = SymbolKind::Variable;
+         HI.Definition = "int bar";
+         HI.Type = "int";
+       }},
+      // Anon namespace and local scope.
+      {R"cpp(
+          namespace ns1 { namespace {
+            struct {
+              int [[b^ar]];
+            } T;
+          }}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "ns1::(anonymous)::";
+         HI.LocalScope = "(anonymous struct)::";
+         HI.Name = "bar";
+         HI.Kind = SymbolKind::Field;
+         HI.Definition = "int bar";
+         HI.Type = "int";
+       }},
+      // Variable with template type
+      {R"cpp(
+          template <typename T, class... Ts> class Foo {};
+          Foo<int, char, bool> [[fo^o]];
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = SymbolKind::Variable;
+         HI.Definition = "Foo<int, char, bool> foo";
+         HI.Type = "Foo<int, char, bool>";
+       }},
+      // Implicit template instantiation
+      {R"cpp(
+          template <typename T> class vector{};
+          [[vec^tor]]<int> foo;
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "vector";
+         HI.Kind = SymbolKind::Class;
+         HI.Definition = "template <typename T> class vector {}";
+         HI.TemplateParameters = {
+             {std::string("typename"), std::string("T"), llvm::None},
+         };
+       }},
+      // Class template
+      {R"cpp(
+          template <template<typename, bool...> class C,
+                    typename = char,
+                    int = 0,
+                    bool Q = false,
+                    class... Ts> class Foo {};
+          template <template<typename, bool...> class T>
+          [[F^oo]]<T> foo;
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "Foo";
+         HI.Kind = SymbolKind::Class;
+         HI.Definition =
+             R"cpp(template <template <typename, bool...> class C, typename = char, int = 0,
+          bool Q = false, class... Ts>
+class Foo {})cpp";
+         HI.TemplateParameters = {
+             {std::string("template <typename, bool...> class"),
+              std::string("C"), llvm::None},
+             {std::string("typename"), llvm::None, std::string("char")},
+             {std::string("int"), llvm::None, std::string("0")},
+             {std::string("bool"), std::string("Q"), std::string("false")},
+             {std::string("class..."), std::string("Ts"), llvm::None},
+         };
+       }},
+      // Function template
+      {R"cpp(
+          template <template<typename, bool...> class C,
+                    typename = char,
+                    int = 0,
+                    bool Q = false,
+                    class... Ts> void foo();
+          template<typename, bool...> class Foo;
+
+          void bar() {
+            [[fo^o]]<Foo>();
+          }
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = SymbolKind::Function;
+         HI.Definition =
+             R"cpp(template <template <typename, bool...> class C, typename = char, int = 0,
+          bool Q = false, class... Ts>
+void foo())cpp";
+         HI.ReturnType = "void";
+         HI.Type = "void()";
+         HI.Parameters.emplace();
+         HI.TemplateParameters = {
+             {std::string("template <typename, bool...> class"),
+              std::string("C"), llvm::None},
+             {std::string("typename"), llvm::None, std::string("char")},
+             {std::string("int"), llvm::None, std::string("0")},
+             {std::string("bool"), std::string("Q"), std::string("false")},
+             {std::string("class..."), std::string("Ts"), llvm::None},
+         };
+       }},
+      // Function decl
+      {R"cpp(
+          template<typename, bool...> class Foo {};
+          Foo<bool, true, false> foo(int, bool T = false);
+
+          void bar() {
+            [[fo^o]](3);
+          }
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = SymbolKind::Function;
+         HI.Definition = "Foo<bool, true, false> foo(int, bool T = false)";
+         HI.ReturnType = "Foo<bool, true, false>";
+         HI.Type = "Foo<bool, true, false>(int, bool)";
+         HI.Parameters = {
+             {std::string("int"), llvm::None, llvm::None},
+             {std::string("bool"), std::string("T"), std::string("false")},
+         };
+       }},
+      // Lambda variable
+      {R"cpp(
+        void foo() {
+          int bar = 5;
+          auto lamb = [&bar](int T, bool B) -> bool { return T && B && bar; };
+          bool res = [[lam^b]](bar, false);
+        }
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.LocalScope = "foo::";
+         HI.Name = "lamb";
+         HI.Kind = SymbolKind::Variable;
+         HI.Definition = "auto lamb = [&bar](int T, bool B) -> bool {}";
+         HI.Type = std::string("class (lambda)");
+         return HI;
+       }},
+      // Local variable in lambda
+      {R"cpp(
+        void foo() {
+          auto lamb = []{int [[te^st]];};
+        }
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.LocalScope = "foo::(anonymous class)::operator()::";
+         HI.Name = "test";
+         HI.Kind = SymbolKind::Variable;
+         HI.Definition = "int test";
+         HI.Type = "int";
+       }},
+
+      // auto on lambda
+      {R"cpp(
+        void foo() {
+          [[au^to]] lamb = []{};
+        }
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "class (lambda)";
+         HI.Kind = SymbolKind::Variable;
+       }},
+      // auto on template instantiation
+      {R"cpp(
+        template<typename T> class Foo{};
+        void foo() {
+          [[au^to]] x = Foo<int>();
+        }
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "class Foo<int>";
+         HI.Kind = SymbolKind::Variable;
+       }},
+      // auto on specialized template
+      {R"cpp(
+        template<typename T> class Foo{};
+        template<> class Foo<int>{};
+        void foo() {
+          [[au^to]] x = Foo<int>();
+        }
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "class Foo<int>";
+         HI.Kind = SymbolKind::Variable;
+       }},
+
+      // macro
+      {R"cpp(
+        // Best MACRO ever.
+        #define MACRO(x,y,z) void foo(x, y, z);
+        [[MAC^RO]](int, double d, bool z = false);
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "MACRO", HI.Kind = SymbolKind::String,
+         HI.Definition = "#define MACRO(x, y, z) void foo(x, y, z);";
+       }},
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+
+    Annotations T(Case.Code);
+    TestTU TU = TestTU::withCode(T.code());
+    TU.ExtraArgs.push_back("-std=c++17");
+    auto AST = TU.build();
+    ASSERT_TRUE(AST.getDiagnostics().empty());
+
+    auto H = getHover(AST, T.point(), format::getLLVMStyle());
+    ASSERT_TRUE(H);
+    HoverInfo Expected;
+    Expected.SymRange = T.range();
+    Case.ExpectedBuilder(Expected);
+
+    EXPECT_EQ(H->NamespaceScope, Expected.NamespaceScope);
+    EXPECT_EQ(H->LocalScope, Expected.LocalScope);
+    EXPECT_EQ(H->Name, Expected.Name);
+    EXPECT_EQ(H->Kind, Expected.Kind);
+    EXPECT_EQ(H->Documentation, Expected.Documentation);
+    EXPECT_EQ(H->Definition, Expected.Definition);
+    EXPECT_EQ(H->Type, Expected.Type);
+    EXPECT_EQ(H->ReturnType, Expected.ReturnType);
+    EXPECT_EQ(H->Parameters, Expected.Parameters);
+    EXPECT_EQ(H->TemplateParameters, Expected.TemplateParameters);
+    EXPECT_EQ(H->SymRange, Expected.SymRange);
+  }
+} // namespace clang
+
 TEST(Hover, All) {
   struct OneTest {
     StringRef Input;
@@ -591,7 +893,7 @@ TEST(Hover, All) {
               int test1 = bonjour;
             }
           )cpp",
-          "Declared in function main\n\nint bonjour",
+          "Declared in main\n\nint bonjour",
       },
       {
           R"cpp(// Local variable in method
@@ -602,7 +904,7 @@ TEST(Hover, All) {
               }
             };
           )cpp",
-          "Declared in function s::method\n\nint bonjour",
+          "Declared in s::method\n\nint bonjour",
       },
       {
           R"cpp(// Struct
@@ -613,7 +915,7 @@ TEST(Hover, All) {
               ns1::My^Class* Params;
             }
           )cpp",
-          "Declared in namespace ns1\n\nstruct MyClass {}",
+          "Declared in ns1\n\nstruct MyClass {}",
       },
       {
           R"cpp(// Class
@@ -624,7 +926,7 @@ TEST(Hover, All) {
               ns1::My^Class* Params;
             }
           )cpp",
-          "Declared in namespace ns1\n\nclass MyClass {}",
+          "Declared in ns1\n\nclass MyClass {}",
       },
       {
           R"cpp(// Union
@@ -635,7 +937,7 @@ TEST(Hover, All) {
               ns1::My^Union Params;
             }
           )cpp",
-          "Declared in namespace ns1\n\nunion MyUnion {}",
+          "Declared in ns1\n\nunion MyUnion {}",
       },
       {
           R"cpp(// Function definition via pointer
@@ -663,7 +965,7 @@ TEST(Hover, All) {
               bar.^x;
             }
           )cpp",
-          "Declared in struct Foo\n\nint x",
+          "Declared in Foo\n\nint x",
       },
       {
           R"cpp(// Field with initialization
@@ -673,7 +975,7 @@ TEST(Hover, All) {
               bar.^x;
             }
           )cpp",
-          "Declared in struct Foo\n\nint x = 5",
+          "Declared in Foo\n\nint x = 5",
       },
       {
           R"cpp(// Static field
@@ -682,7 +984,7 @@ TEST(Hover, All) {
               Foo::^x;
             }
           )cpp",
-          "Declared in struct Foo\n\nstatic int x",
+          "Declared in Foo\n\nstatic int x",
       },
       {
           R"cpp(// Field, member initializer
@@ -691,7 +993,7 @@ TEST(Hover, All) {
               Foo() : ^x(0) {}
             };
           )cpp",
-          "Declared in struct Foo\n\nint x",
+          "Declared in Foo\n\nint x",
       },
       {
           R"cpp(// Field, GNU old-style field designator
@@ -700,7 +1002,7 @@ TEST(Hover, All) {
               Foo bar = { ^x : 1 };
             }
           )cpp",
-          "Declared in struct Foo\n\nint x",
+          "Declared in Foo\n\nint x",
       },
       {
           R"cpp(// Field, field designator
@@ -709,7 +1011,7 @@ TEST(Hover, All) {
               Foo bar = { .^x = 2 };
             }
           )cpp",
-          "Declared in struct Foo\n\nint x",
+          "Declared in Foo\n\nint x",
       },
       {
           R"cpp(// Method call
@@ -719,7 +1021,7 @@ TEST(Hover, All) {
               bar.^x();
             }
           )cpp",
-          "Declared in struct Foo\n\nint x()",
+          "Declared in Foo\n\nint x()",
       },
       {
           R"cpp(// Static method call
@@ -728,7 +1030,7 @@ TEST(Hover, All) {
               Foo::^x();
             }
           )cpp",
-          "Declared in struct Foo\n\nstatic int x()",
+          "Declared in Foo\n\nstatic int x()",
       },
       {
           R"cpp(// Typedef
@@ -746,7 +1048,7 @@ TEST(Hover, All) {
             } // namespace ns
             int main() { ^ns::Foo::bar(); }
           )cpp",
-          "Declared in global namespace\n\nnamespace ns {\n}",
+          "Declared in global namespace\n\nnamespace ns {}",
       },
       {
           R"cpp(// Anonymous namespace
@@ -757,7 +1059,7 @@ TEST(Hover, All) {
             } // namespace ns
             int main() { ns::f^oo++; }
           )cpp",
-          "Declared in namespace ns::(anonymous)\n\nint foo",
+          "Declared in ns::(anonymous)\n\nint foo",
       },
       {
           R"cpp(// Macro
@@ -783,9 +1085,8 @@ TEST(Hover, All) {
             }
             int main() ^MACRO
           )cpp",
-          R"cpp(#define MACRO {\
-              return 0;\
-            })cpp",
+          "#define MACRO                                                       "
+          "           \\\n  { return 0; }",
       },
       {
           R"cpp(// Forward class declaration
@@ -812,7 +1113,7 @@ TEST(Hover, All) {
               Hel^lo hello = ONE;
             }
           )cpp",
-          "Declared in global namespace\n\nenum Hello {\n}",
+          "Declared in global namespace\n\nenum Hello {}",
       },
       {
           R"cpp(// Enumerator
@@ -823,7 +1124,7 @@ TEST(Hover, All) {
               Hello hello = O^NE;
             }
           )cpp",
-          "Declared in enum Hello\n\nONE",
+          "Declared in Hello\n\nONE",
       },
       {
           R"cpp(// Enumerator in anonymous enum
@@ -834,7 +1135,7 @@ TEST(Hover, All) {
               int hello = O^NE;
             }
           )cpp",
-          "Declared in enum (anonymous)\n\nONE",
+          "Declared in global namespace\n\nONE",
       },
       {
           R"cpp(// Global variable
@@ -854,7 +1155,7 @@ TEST(Hover, All) {
               ns1::he^y++;
             }
           )cpp",
-          "Declared in namespace ns1\n\nstatic int hey = 10",
+          "Declared in ns1\n\nstatic int hey = 10",
       },
       {
           R"cpp(// Field in anonymous struct
@@ -865,7 +1166,7 @@ TEST(Hover, All) {
               s.he^llo++;
             }
           )cpp",
-          "Declared in struct (anonymous)\n\nint hello",
+          "Declared in (anonymous struct)\n\nint hello",
       },
       {
           R"cpp(// Templated function
@@ -886,7 +1187,7 @@ TEST(Hover, All) {
             };
             void g() { struct outer o; o.v.d^ef++; }
           )cpp",
-          "Declared in union outer::(anonymous)\n\nint def",
+          "Declared in outer::(anonymous union)\n\nint def",
       },
       {
           R"cpp(// Nothing
@@ -1194,9 +1495,9 @@ TEST(Hover, All) {
     TestTU TU = TestTU::withCode(T.code());
     TU.ExtraArgs.push_back("-std=c++17");
     auto AST = TU.build();
-    if (auto H = getHover(AST, T.point())) {
+    if (auto H = getHover(AST, T.point(), format::getLLVMStyle())) {
       EXPECT_NE("", Test.ExpectedHover) << Test.Input;
-      EXPECT_EQ(H->contents.value, Test.ExpectedHover.str()) << Test.Input;
+      EXPECT_EQ(H->render().value, Test.ExpectedHover.str()) << Test.Input;
     } else
       EXPECT_EQ("", Test.ExpectedHover.str()) << Test.Input;
   }

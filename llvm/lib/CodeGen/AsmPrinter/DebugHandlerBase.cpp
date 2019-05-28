@@ -246,8 +246,13 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
                                        Pred.getInstr()->getDebugExpression());
                           }))
             break;
-          if (!IsDescribedByReg(I->getInstr()))
-            LabelsBeforeInsn[I->getInstr()] = Asm->getFunctionBegin();
+          // The code that generates location lists for DWARF assumes that the
+          // entries' start labels are monotonically increasing, and since we
+          // don't change the label for fragments that are described by
+          // registers, we must bail out when encountering such a fragment.
+          if (IsDescribedByReg(I->getInstr()))
+            break;
+          LabelsBeforeInsn[I->getInstr()] = Asm->getFunctionBegin();
         }
       }
     }

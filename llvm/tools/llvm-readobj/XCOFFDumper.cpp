@@ -66,7 +66,7 @@ void XCOFFDumper::printFileHeaders() {
   }
 
   W.printHex("SymbolTableOffset", Obj.getSymbolTableOffset());
-  int32_t SymTabEntries = Obj.getNumberOfSymbolTableEntries();
+  int32_t SymTabEntries = Obj.getRawNumberOfSymbolTableEntries();
   if (SymTabEntries >= 0)
     W.printNumber("SymbolTableEntries", SymTabEntries);
   else

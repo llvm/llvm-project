@@ -21,3 +21,5 @@ include_directories(${LLDB_SOURCE_DIR}/tools/debugserver/source)
 add_library(lldbDebugserverArchSupport
   ${SOURCES}
   )
+
+set_target_properties(lldbDebugserverArchSupport PROPERTIES FOLDER "lldb libraries/debugserver")

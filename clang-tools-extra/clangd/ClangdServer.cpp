@@ -461,15 +461,18 @@ void ClangdServer::findDocumentHighlights(
 }
 
 void ClangdServer::findHover(PathRef File, Position Pos,
-                             Callback<llvm::Optional<Hover>> CB) {
-  auto Action = [Pos](Callback<llvm::Optional<Hover>> CB,
+                             Callback<llvm::Optional<HoverInfo>> CB) {
+  auto Action = [Pos](Callback<llvm::Optional<HoverInfo>> CB, Path File,
                       llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
-    CB(clangd::getHover(InpAST->AST, Pos));
+    format::FormatStyle Style = getFormatStyleForFile(
+        File, InpAST->Inputs.Contents, InpAST->Inputs.FS.get());
+    CB(clangd::getHover(InpAST->AST, Pos, std::move(Style)));
   };
 
-  WorkScheduler.runWithAST("Hover", File, Bind(Action, std::move(CB)));
+  WorkScheduler.runWithAST("Hover", File,
+                           Bind(Action, std::move(CB), File.str()));
 }
 
 void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,

@@ -203,6 +203,10 @@ public:
     return BinaryOperator::CreateNot(C);
   }
 
+  Instruction *CreateUnOp(Instruction::UnaryOps Opc, Constant *C) const {
+    return UnaryOperator::Create(Opc, C);
+  }
+
   //===--------------------------------------------------------------------===//
   // Memory Instructions
   //===--------------------------------------------------------------------===//

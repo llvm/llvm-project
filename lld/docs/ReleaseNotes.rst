@@ -24,10 +24,16 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
+* ld.lld now has typo suggestions for flags:
+  ``$ ld.lld --call-shared`` now prints
+  ``unknown argument '--call-shared', did you mean '--call_shared'``.
+
 * ...
 
 COFF Improvements
 -----------------
+
+* Like the ELF driver, lld-link now has typo suggestions for flags.
 
 * lld-link now correctly reports duplicate symbol errors for obj files
   that were compiled with /Gy.

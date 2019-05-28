@@ -403,6 +403,9 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
   }
 
   for (const auto &CSInfo : MFI.getCalleeSavedInfo()) {
+    if (!CSInfo.isSpilledToReg() && MFI.isDeadObjectIndex(CSInfo.getFrameIdx()))
+      continue;
+
     yaml::StringValue Reg;
     printRegMIR(CSInfo.getReg(), Reg, TRI);
     if (!CSInfo.isSpilledToReg()) {

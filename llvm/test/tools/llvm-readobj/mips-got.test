@@ -405,7 +405,7 @@ GNU-GOT-EXE:      PLT GOT:
 GNU-GOT-EXE:       Reserved entries:
 GNU-GOT-EXE-NEXT:    Address  Initial Purpose
 GNU-GOT-EXE-NEXT:   00410854 00000000 PLT lazy resolver
-GNU-GOT-EXE-NEXT:   00410894 80000000 Module pointer
+GNU-GOT-EXE-NEXT:   00410858 00000000 Module pointer
 
 GNU-GOT-EXE:       Entries:
 GNU-GOT-EXE-NEXT:    Address  Initial Sym.Val. Type    Ndx Name

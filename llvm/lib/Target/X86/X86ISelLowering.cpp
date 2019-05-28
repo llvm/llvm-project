@@ -1287,6 +1287,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SCALAR_TO_VECTOR,   VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR,   VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS,     VT, Custom);
+      setOperationAction(ISD::STORE,              VT, Custom);
     }
 
     if (HasInt256)
@@ -1357,19 +1358,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SSUBSAT,          VT, Custom);
 
       setOperationAction(ISD::BUILD_VECTOR,     VT, Custom);
+      setOperationAction(ISD::CONCAT_VECTORS,   VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
+      setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE,   VT,  Custom);
       setOperationAction(ISD::VSELECT,          VT,  Expand);
     }
 
-    setOperationAction(ISD::CONCAT_VECTORS,     MVT::v16i1, Custom);
-    setOperationAction(ISD::CONCAT_VECTORS,     MVT::v8i1,  Custom);
-    setOperationAction(ISD::CONCAT_VECTORS,     MVT::v4i1,  Custom);
-    setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v2i1,  Custom);
-    setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v4i1,  Custom);
-    setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v8i1,  Custom);
-    setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v16i1, Custom);
     for (auto VT : { MVT::v1i1, MVT::v2i1, MVT::v4i1, MVT::v8i1 })
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   }
@@ -21027,6 +21023,35 @@ static SDValue LowerSIGN_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
   return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, OpLo, OpHi);
 }
 
+/// Change a 256-bit vector store into a pair of 128-bit vector stores.
+static SDValue split256BitStore(StoreSDNode *Store, SelectionDAG &DAG) {
+  SDValue StoredVal = Store->getValue();
+  assert(StoredVal.getValueType().is256BitVector() && "Expecting 256-bit op");
+
+  // Splitting volatile memory ops is not allowed unless the operation was not
+  // legal to begin with. We are assuming the input op is legal (this transform
+  // is only used for targets with AVX).
+  if (Store->isVolatile())
+    return SDValue();
+
+  MVT StoreVT = StoredVal.getSimpleValueType();
+  unsigned NumElems = StoreVT.getVectorNumElements();
+  SDLoc DL(Store);
+  SDValue Value0 = extract128BitVector(StoredVal, 0, DAG, DL);
+  SDValue Value1 = extract128BitVector(StoredVal, NumElems / 2, DAG, DL);
+  SDValue Ptr0 = Store->getBasePtr();
+  SDValue Ptr1 = DAG.getMemBasePlusOffset(Ptr0, 16, DL);
+  unsigned Alignment = Store->getAlignment();
+  SDValue Ch0 =
+      DAG.getStore(Store->getChain(), DL, Value0, Ptr0, Store->getPointerInfo(),
+                   Alignment, Store->getMemOperand()->getFlags());
+  SDValue Ch1 =
+      DAG.getStore(Store->getChain(), DL, Value1, Ptr1,
+                   Store->getPointerInfo().getWithOffset(16),
+                   MinAlign(Alignment, 16), Store->getMemOperand()->getFlags());
+  return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Ch0, Ch1);
+}
+
 static SDValue LowerStore(SDValue Op, const X86Subtarget &Subtarget,
                           SelectionDAG &DAG) {
   StoreSDNode *St = cast<StoreSDNode>(Op.getNode());
@@ -21056,7 +21081,17 @@ static SDValue LowerStore(SDValue Op, const X86Subtarget &Subtarget,
   if (St->isTruncatingStore())
     return SDValue();
 
+  // If this is a 256-bit store of concatenated ops, we are better off splitting
+  // that store into two 128-bit stores. This avoids spurious use of 256-bit ops
+  // and each half can execute independently. Some cores would split the op into
+  // halves anyway, so the concat (vinsertf128) is purely an extra op.
   MVT StoreVT = StoredVal.getSimpleValueType();
+  if (StoreVT.is256BitVector()) {
+    if (StoredVal.getOpcode() != ISD::CONCAT_VECTORS || !StoredVal.hasOneUse())
+      return SDValue();
+    return split256BitStore(St, DAG);
+  }
+
   assert(StoreVT.isVector() && StoreVT.getSizeInBits() == 64 &&
          "Unexpected VT");
   if (DAG.getTargetLoweringInfo().getTypeAction(*DAG.getContext(), StoreVT) !=
@@ -39350,20 +39385,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
     if (NumElems < 2)
       return SDValue();
 
-    SDValue Value0 = extract128BitVector(StoredVal, 0, DAG, dl);
-    SDValue Value1 = extract128BitVector(StoredVal, NumElems / 2, DAG, dl);
-
-    SDValue Ptr0 = St->getBasePtr();
-    SDValue Ptr1 = DAG.getMemBasePlusOffset(Ptr0, 16, dl);
-
-    SDValue Ch0 =
-        DAG.getStore(St->getChain(), dl, Value0, Ptr0, St->getPointerInfo(),
-                     Alignment, St->getMemOperand()->getFlags());
-    SDValue Ch1 =
-        DAG.getStore(St->getChain(), dl, Value1, Ptr1,
-                     St->getPointerInfo().getWithOffset(16),
-                     MinAlign(Alignment, 16U), St->getMemOperand()->getFlags());
-    return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Ch0, Ch1);
+    return split256BitStore(St, DAG);
   }
 
   // Optimize trunc store (of multiple scalars) to shuffle and store.
