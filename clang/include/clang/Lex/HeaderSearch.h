@@ -392,8 +392,9 @@ public:
   /// true.
   ///
   /// \param IsFrameworkFound If non-null, will be set to true if a framework is
-  /// found in any of searched SearchDirs. Doesn't guarantee the requested file
-  /// is found.
+  /// found in any of searched SearchDirs. Will be set to false if a framework
+  /// is found only through header maps. Doesn't guarantee the requested file is
+  /// found.
   const FileEntry *LookupFile(
       StringRef Filename, SourceLocation IncludeLoc, bool isAngled,
       const DirectoryLookup *FromDir, const DirectoryLookup *&CurDir,

@@ -411,13 +411,13 @@ Optional<std::string> ToolChain::getRuntimePath() const {
 
   // First try the triple passed to driver as --target=<triple>.
   P.assign(D.ResourceDir);
-  llvm::sys::path::append(P, D.getTargetTriple(), "lib");
+  llvm::sys::path::append(P, "lib", D.getTargetTriple());
   if (getVFS().exists(P))
     return llvm::Optional<std::string>(P.str());
 
   // Second try the normalized triple.
   P.assign(D.ResourceDir);
-  llvm::sys::path::append(P, Triple.str(), "lib");
+  llvm::sys::path::append(P, "lib", Triple.str());
   if (getVFS().exists(P))
     return llvm::Optional<std::string>(P.str());
 
