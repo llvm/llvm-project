@@ -869,7 +869,10 @@ const FileEntry *HeaderSearch::LookupFile(
         *IsMapped = true;
     }
     if (IsFrameworkFound)
-      *IsFrameworkFound |= IsFrameworkFoundInDir;
+      // Because we keep a filename remapped for subsequent search directory
+      // lookups, ignore IsFrameworkFoundInDir after the first remapping and not
+      // just for remapping in a current search directory.
+      *IsFrameworkFound |= (IsFrameworkFoundInDir && !CacheLookup.MappedName);
     if (!FE) continue;
 
     CurDir = &SearchDirs[i];

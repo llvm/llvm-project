@@ -596,7 +596,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
             unsigned OpNo = UseMI->getOperandNo(&Use);
             const MCInstrDesc &Desc = TII->get(UseMI->getOpcode());
             if (!Desc.isPseudo() && Desc.OpInfo &&
-                OpNo <= Desc.getNumOperands() &&
+                OpNo < Desc.getNumOperands() &&
                 Desc.OpInfo[OpNo].RegClass != -1) {
               const TargetRegisterClass *OpRC =
                   TRI->getRegClass(Desc.OpInfo[OpNo].RegClass);
