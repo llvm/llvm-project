@@ -454,5 +454,31 @@ TEST(PreferredTypeTest, FunctionArguments) {
     }
   )cpp";
   EXPECT_THAT(collectPreferredTypes(Code), Each("volatile double *"));
+
+  Code = R"cpp(
+    namespace ns {
+      struct vector {
+      };
+    }
+    void accepts_vector(ns::vector);
+
+    void test() {
+      accepts_vector(^::^ns::^vector());
+    }
+  )cpp";
+  EXPECT_THAT(collectPreferredTypes(Code), Each("ns::vector"));
+
+  Code = R"cpp(
+    template <class T>
+    struct vector { using self = vector; };
+
+    void accepts_vector(vector<int>);
+    int foo(int);
+
+    void test() {
+      accepts_vector(^::^vector<decltype(foo(1))>::^self);
+    }
+  )cpp";
+  EXPECT_THAT(collectPreferredTypes(Code), Each("vector<int>"));
 }
 } // namespace

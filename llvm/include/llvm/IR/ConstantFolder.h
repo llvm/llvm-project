@@ -134,6 +134,10 @@ public:
     return ConstantExpr::getNot(C);
   }
 
+  Constant *CreateUnOp(Instruction::UnaryOps Opc, Constant *C) const {
+    return ConstantExpr::get(Opc, C);
+  }
+
   //===--------------------------------------------------------------------===//
   // Memory Instructions
   //===--------------------------------------------------------------------===//

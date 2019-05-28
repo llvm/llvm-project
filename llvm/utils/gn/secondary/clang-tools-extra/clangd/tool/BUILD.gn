@@ -11,6 +11,7 @@ executable("clangd") {
     "//clang/lib/Basic",
     "//clang/lib/Format",
     "//clang/lib/Frontend",
+    "//clang/lib/Headers",
     "//clang/lib/Sema",
     "//clang/lib/Tooling",
     "//clang/lib/Tooling/Core",

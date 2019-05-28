@@ -7,21 +7,37 @@
 //===----------------------------------------------------------------------===//
 #include "XRefs.h"
 #include "AST.h"
+#include "CodeCompletionStrings.h"
 #include "FindSymbols.h"
 #include "Logger.h"
+#include "Protocol.h"
 #include "SourceCode.h"
 #include "URI.h"
 #include "index/Merge.h"
 #include "index/SymbolCollector.h"
 #include "index/SymbolLocation.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Index/USRGeneration.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 namespace clangd {
@@ -241,17 +257,17 @@ IdentifiedSymbol getSymbolAtPosition(ParsedAST &AST, SourceLocation Pos) {
   return {DeclMacrosFinder.getFoundDecls(), DeclMacrosFinder.takeMacroInfos()};
 }
 
-Range getTokenRange(ParsedAST &AST, SourceLocation TokLoc) {
-  const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
-  SourceLocation LocEnd = Lexer::getLocForEndOfToken(
-      TokLoc, 0, SourceMgr, AST.getASTContext().getLangOpts());
+Range getTokenRange(ASTContext &AST, SourceLocation TokLoc) {
+  const SourceManager &SourceMgr = AST.getSourceManager();
+  SourceLocation LocEnd =
+      Lexer::getLocForEndOfToken(TokLoc, 0, SourceMgr, AST.getLangOpts());
   return {sourceLocToPosition(SourceMgr, TokLoc),
           sourceLocToPosition(SourceMgr, LocEnd)};
 }
 
-llvm::Optional<Location> makeLocation(ParsedAST &AST, SourceLocation TokLoc,
+llvm::Optional<Location> makeLocation(ASTContext &AST, SourceLocation TokLoc,
                                       llvm::StringRef TUPath) {
-  const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
+  const SourceManager &SourceMgr = AST.getSourceManager();
   const FileEntry *F = SourceMgr.getFileEntryForID(SourceMgr.getFileID(TokLoc));
   if (!F)
     return None;
@@ -299,8 +315,8 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
   // As a consequence, there's no need to look them up in the index either.
   std::vector<LocatedSymbol> Result;
   for (auto M : Symbols.Macros) {
-    if (auto Loc =
-            makeLocation(AST, M.Info->getDefinitionLoc(), *MainFilePath)) {
+    if (auto Loc = makeLocation(AST.getASTContext(), M.Info->getDefinitionLoc(),
+                                *MainFilePath)) {
       LocatedSymbol Macro;
       Macro.Name = M.Name;
       Macro.PreferredDeclaration = *Loc;
@@ -320,7 +336,7 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
 
   // Emit all symbol locations (declaration or definition) from AST.
   for (const Decl *D : Symbols.Decls) {
-    auto Loc = makeLocation(AST, findNameLoc(D), *MainFilePath);
+    auto Loc = makeLocation(AST.getASTContext(), findNameLoc(D), *MainFilePath);
     if (!Loc)
       continue;
 
@@ -453,7 +469,7 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
   std::vector<DocumentHighlight> Result;
   for (const auto &Ref : References) {
     DocumentHighlight DH;
-    DH.range = getTokenRange(AST, Ref.Loc);
+    DH.range = getTokenRange(AST.getASTContext(), Ref.Loc);
     if (Ref.Role & index::SymbolRoleSet(index::SymbolRole::Write))
       DH.kind = DocumentHighlightKind::Write;
     else if (Ref.Role & index::SymbolRoleSet(index::SymbolRole::Read))
@@ -477,102 +493,238 @@ static PrintingPolicy printingPolicyForDecls(PrintingPolicy Base) {
   return Policy;
 }
 
-/// Return a string representation (e.g. "class MyNamespace::MyClass") of
-/// the type declaration \p TD.
-static std::string typeDeclToString(const TypeDecl *TD) {
-  QualType Type = TD->getASTContext().getTypeDeclType(TD);
-
-  PrintingPolicy Policy =
-      printingPolicyForDecls(TD->getASTContext().getPrintingPolicy());
-
-  std::string Name;
-  llvm::raw_string_ostream Stream(Name);
-  Type.print(Stream, Policy);
-
-  return Stream.str();
-}
-
-/// Return a string representation (e.g. "namespace ns1::ns2") of
-/// the named declaration \p ND.
-static std::string namedDeclQualifiedName(const NamedDecl *ND,
-                                          llvm::StringRef Prefix) {
-  PrintingPolicy Policy =
-      printingPolicyForDecls(ND->getASTContext().getPrintingPolicy());
-
-  std::string Name;
-  llvm::raw_string_ostream Stream(Name);
-  Stream << Prefix << ' ';
-  ND->printQualifiedName(Stream, Policy);
-
-  return Stream.str();
-}
-
 /// Given a declaration \p D, return a human-readable string representing the
-/// scope in which it is declared.  If the declaration is in the global scope,
-/// return the string "global namespace".
-static llvm::Optional<std::string> getScopeName(const Decl *D) {
+/// local scope in which it is declared, i.e. class(es) and method name. Returns
+/// an empty string if it is not local.
+static std::string getLocalScope(const Decl *D) {
+  std::vector<std::string> Scopes;
+  const DeclContext *DC = D->getDeclContext();
+  auto GetName = [](const Decl *D) {
+    const NamedDecl *ND = dyn_cast<NamedDecl>(D);
+    std::string Name = ND->getNameAsString();
+    if (!Name.empty())
+      return Name;
+    if (auto RD = dyn_cast<RecordDecl>(D))
+      return ("(anonymous " + RD->getKindName() + ")").str();
+    return std::string("");
+  };
+  while (DC) {
+    if (const TypeDecl *TD = dyn_cast<TypeDecl>(DC))
+      Scopes.push_back(GetName(TD));
+    else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DC))
+      Scopes.push_back(FD->getNameAsString());
+    DC = DC->getParent();
+  }
+
+  return llvm::join(llvm::reverse(Scopes), "::");
+}
+
+/// Returns the human-readable representation for namespace containing the
+/// declaration \p D. Returns empty if it is contained global namespace.
+static std::string getNamespaceScope(const Decl *D) {
   const DeclContext *DC = D->getDeclContext();
 
-  if (isa<TranslationUnitDecl>(DC))
-    return std::string("global namespace");
   if (const TypeDecl *TD = dyn_cast<TypeDecl>(DC))
-    return typeDeclToString(TD);
-  else if (const NamespaceDecl *ND = dyn_cast<NamespaceDecl>(DC))
-    return namedDeclQualifiedName(ND, "namespace");
-  else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DC))
-    return namedDeclQualifiedName(FD, "function");
+    return getNamespaceScope(TD);
+  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DC))
+    return getNamespaceScope(FD);
+  if (const NamedDecl *ND = dyn_cast<NamedDecl>(DC))
+    return ND->getQualifiedNameAsString();
 
-  return None;
+  return "";
+}
+
+static std::string printDefinition(const Decl *D) {
+  std::string Definition;
+  llvm::raw_string_ostream OS(Definition);
+  PrintingPolicy Policy =
+      printingPolicyForDecls(D->getASTContext().getPrintingPolicy());
+  Policy.IncludeTagDefinition = false;
+  D->print(OS, Policy);
+  return Definition;
+}
+
+static void printParams(llvm::raw_ostream &OS,
+                        const std::vector<HoverInfo::Param> &Params) {
+  for (size_t I = 0, E = Params.size(); I != E; ++I) {
+    if (I)
+      OS << ", ";
+    OS << Params.at(I);
+  }
+}
+
+static std::vector<HoverInfo::Param>
+fetchTemplateParameters(const TemplateParameterList *Params,
+                        const PrintingPolicy &PP) {
+  assert(Params);
+  std::vector<HoverInfo::Param> TempParameters;
+
+  for (const Decl *Param : *Params) {
+    HoverInfo::Param P;
+    P.Type.emplace();
+    if (const auto TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
+      P.Type = TTP->wasDeclaredWithTypename() ? "typename" : "class";
+      if (TTP->isParameterPack())
+        *P.Type += "...";
+
+      if (!TTP->getName().empty())
+        P.Name = TTP->getNameAsString();
+      if (TTP->hasDefaultArgument())
+        P.Default = TTP->getDefaultArgument().getAsString(PP);
+    } else if (const auto NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+      if (IdentifierInfo *II = NTTP->getIdentifier())
+        P.Name = II->getName().str();
+
+      llvm::raw_string_ostream Out(*P.Type);
+      NTTP->getType().print(Out, PP);
+      if (NTTP->isParameterPack())
+        Out << "...";
+
+      if (NTTP->hasDefaultArgument()) {
+        P.Default.emplace();
+        llvm::raw_string_ostream Out(*P.Default);
+        NTTP->getDefaultArgument()->printPretty(Out, nullptr, PP);
+      }
+    } else if (const auto TTPD = dyn_cast<TemplateTemplateParmDecl>(Param)) {
+      llvm::raw_string_ostream OS(*P.Type);
+      OS << "template <";
+      printParams(OS,
+                  fetchTemplateParameters(TTPD->getTemplateParameters(), PP));
+      OS << "> class"; // FIXME: TemplateTemplateParameter doesn't store the
+                       // info on whether this param was a "typename" or
+                       // "class".
+      if (!TTPD->getName().empty())
+        P.Name = TTPD->getNameAsString();
+      if (TTPD->hasDefaultArgument()) {
+        P.Default.emplace();
+        llvm::raw_string_ostream Out(*P.Default);
+        TTPD->getDefaultArgument().getArgument().print(PP, Out);
+      }
+    }
+    TempParameters.push_back(std::move(P));
+  }
+
+  return TempParameters;
+}
+
+static llvm::Optional<Range> getTokenRange(SourceLocation Loc,
+                                           const ASTContext &Ctx) {
+  if (!Loc.isValid())
+    return llvm::None;
+  SourceLocation End = Lexer::getLocForEndOfToken(
+      Loc, 0, Ctx.getSourceManager(), Ctx.getLangOpts());
+  if (!End.isValid())
+    return llvm::None;
+  return halfOpenToRange(Ctx.getSourceManager(),
+                         CharSourceRange::getCharRange(Loc, End));
 }
 
 /// Generate a \p Hover object given the declaration \p D.
-static Hover getHoverContents(const Decl *D) {
-  Hover H;
-  llvm::Optional<std::string> NamedScope = getScopeName(D);
+static HoverInfo getHoverContents(const Decl *D) {
+  HoverInfo HI;
+  const ASTContext &Ctx = D->getASTContext();
 
-  // Generate the "Declared in" section.
-  if (NamedScope) {
-    assert(!NamedScope->empty());
+  HI.NamespaceScope = getNamespaceScope(D);
+  if (!HI.NamespaceScope->empty())
+    HI.NamespaceScope->append("::");
+  HI.LocalScope = getLocalScope(D);
+  if (!HI.LocalScope.empty())
+    HI.LocalScope.append("::");
 
-    H.contents.value += "Declared in ";
-    H.contents.value += *NamedScope;
-    H.contents.value += "\n\n";
+  PrintingPolicy Policy = printingPolicyForDecls(Ctx.getPrintingPolicy());
+  if (const NamedDecl *ND = llvm::dyn_cast<NamedDecl>(D)) {
+    HI.Documentation = getDeclComment(Ctx, *ND);
+    HI.Name = printName(Ctx, *ND);
   }
 
-  // We want to include the template in the Hover.
-  if (TemplateDecl *TD = D->getDescribedTemplate())
+  HI.Kind = indexSymbolKindToSymbolKind(index::getSymbolInfo(D).Kind);
+
+  // Fill in template params.
+  if (const TemplateDecl *TD = D->getDescribedTemplate()) {
+    HI.TemplateParameters =
+        fetchTemplateParameters(TD->getTemplateParameters(), Policy);
     D = TD;
+  } else if (const FunctionDecl *FD = D->getAsFunction()) {
+    if (const auto FTD = FD->getDescribedTemplate()) {
+      HI.TemplateParameters =
+          fetchTemplateParameters(FTD->getTemplateParameters(), Policy);
+      D = FTD;
+    }
+  }
 
-  std::string DeclText;
-  llvm::raw_string_ostream OS(DeclText);
+  // Fill in types and params.
+  if (const FunctionDecl *FD = D->getAsFunction()) {
+    HI.ReturnType.emplace();
+    llvm::raw_string_ostream OS(*HI.ReturnType);
+    FD->getReturnType().print(OS, Policy);
 
-  PrintingPolicy Policy =
-      printingPolicyForDecls(D->getASTContext().getPrintingPolicy());
+    HI.Type.emplace();
+    llvm::raw_string_ostream TypeOS(*HI.Type);
+    FD->getReturnType().print(TypeOS, Policy);
+    TypeOS << '(';
 
-  D->print(OS, Policy);
+    HI.Parameters.emplace();
+    for (const ParmVarDecl *PVD : FD->parameters()) {
+      if (HI.Parameters->size())
+        TypeOS << ", ";
+      HI.Parameters->emplace_back();
+      auto &P = HI.Parameters->back();
+      if (!PVD->getType().isNull()) {
+        P.Type.emplace();
+        llvm::raw_string_ostream OS(*P.Type);
+        PVD->getType().print(OS, Policy);
+        PVD->getType().print(TypeOS, Policy);
+      } else {
+        std::string Param;
+        llvm::raw_string_ostream OS(Param);
+        PVD->dump(OS);
+        OS.flush();
+        elog("Got param with null type: {0}", Param);
+      }
+      if (!PVD->getName().empty())
+        P.Name = PVD->getNameAsString();
+      if (PVD->hasDefaultArg()) {
+        P.Default.emplace();
+        llvm::raw_string_ostream Out(*P.Default);
+        PVD->getDefaultArg()->printPretty(Out, nullptr, Policy);
+      }
+    }
+    TypeOS << ')';
+    // FIXME: handle variadics.
+  } else if (const auto *VD = dyn_cast<ValueDecl>(D)) {
+    // FIXME: Currently lambdas are also handled as ValueDecls, they should be
+    // more similar to functions.
+    HI.Type.emplace();
+    llvm::raw_string_ostream OS(*HI.Type);
+    VD->getType().print(OS, Policy);
+  }
 
-  OS.flush();
-
-  H.contents.value += DeclText;
-  return H;
+  HI.Definition = printDefinition(D);
+  return HI;
 }
 
 /// Generate a \p Hover object given the type \p T.
-static Hover getHoverContents(QualType T, ASTContext &ASTCtx) {
-  Hover H;
-  std::string TypeText;
-  llvm::raw_string_ostream OS(TypeText);
+static HoverInfo getHoverContents(QualType T, const Decl *D,
+                                  ASTContext &ASTCtx) {
+  HoverInfo HI;
+  llvm::raw_string_ostream OS(HI.Name);
   PrintingPolicy Policy = printingPolicyForDecls(ASTCtx.getPrintingPolicy());
   T.print(OS, Policy);
-  OS.flush();
-  H.contents.value += TypeText;
-  return H;
+
+  if (D)
+    HI.Kind = indexSymbolKindToSymbolKind(index::getSymbolInfo(D).Kind);
+  return HI;
 }
 
 /// Generate a \p Hover object given the macro \p MacroDecl.
-static Hover getHoverContents(MacroDecl Decl, ParsedAST &AST) {
+static HoverInfo getHoverContents(MacroDecl Decl, ParsedAST &AST) {
+  HoverInfo HI;
   SourceManager &SM = AST.getASTContext().getSourceManager();
-  std::string Definition = Decl.Name;
+  HI.Name = Decl.Name;
+  HI.Kind = indexSymbolKindToSymbolKind(
+      index::getSymbolInfoForMacro(*Decl.Info).Kind);
+  // FIXME: Populate documentation
+  // FIXME: Pupulate parameters
 
   // Try to get the full definition, not just the name
   SourceLocation StartLoc = Decl.Info->getDefinitionLoc();
@@ -586,14 +738,12 @@ static Hover getHoverContents(MacroDecl Decl, ParsedAST &AST) {
       unsigned StartOffset = SM.getFileOffset(StartLoc);
       unsigned EndOffset = SM.getFileOffset(EndLoc);
       if (EndOffset <= Buffer.size() && StartOffset < EndOffset)
-        Definition = Buffer.substr(StartOffset, EndOffset - StartOffset).str();
+        HI.Definition =
+            ("#define " + Buffer.substr(StartOffset, EndOffset - StartOffset))
+                .str();
     }
   }
-
-  Hover H;
-  H.contents.kind = MarkupKind::PlainText;
-  H.contents.value = "#define " + Definition;
-  return H;
+  return HI;
 }
 
 namespace {
@@ -607,13 +757,10 @@ namespace {
 /// a deduced type set. The AST should be improved to simplify this scenario.
 class DeducedTypeVisitor : public RecursiveASTVisitor<DeducedTypeVisitor> {
   SourceLocation SearchedLocation;
-  llvm::Optional<QualType> DeducedType;
 
 public:
   DeducedTypeVisitor(SourceLocation SearchedLocation)
       : SearchedLocation(SearchedLocation) {}
-
-  llvm::Optional<QualType> getDeducedType() { return DeducedType; }
 
   // Handle auto initializers:
   //- auto i = 1;
@@ -626,8 +773,10 @@ public:
       return true;
 
     if (auto *AT = D->getType()->getContainedAutoType()) {
-      if (!AT->getDeducedType().isNull())
+      if (!AT->getDeducedType().isNull()) {
         DeducedType = AT->getDeducedType();
+        this->D = D;
+      }
     }
     return true;
   }
@@ -655,13 +804,17 @@ public:
     const AutoType *AT = D->getReturnType()->getContainedAutoType();
     if (AT && !AT->getDeducedType().isNull()) {
       DeducedType = AT->getDeducedType();
+      this->D = D;
     } else if (auto DT = dyn_cast<DecltypeType>(D->getReturnType())) {
       // auto in a trailing return type just points to a DecltypeType and
       // getContainedAutoType does not unwrap it.
-      if (!DT->getUnderlyingType().isNull())
+      if (!DT->getUnderlyingType().isNull()) {
         DeducedType = DT->getUnderlyingType();
+        this->D = D;
+      }
     } else if (!D->getReturnType().isNull()) {
       DeducedType = D->getReturnType();
+      this->D = D;
     }
     return true;
   }
@@ -680,16 +833,19 @@ public:
     const DecltypeType *DT = dyn_cast<DecltypeType>(TL.getTypePtr());
     while (DT && !DT->getUnderlyingType().isNull()) {
       DeducedType = DT->getUnderlyingType();
-      DT = dyn_cast<DecltypeType>(DeducedType->getTypePtr());
+      D = DT->getAsTagDecl();
+      DT = dyn_cast<DecltypeType>(DeducedType.getTypePtr());
     }
     return true;
   }
+
+  QualType DeducedType;
+  const Decl *D = nullptr;
 };
 } // namespace
 
 /// Retrieves the deduced type at a given location (auto, decltype).
-llvm::Optional<QualType> getDeducedType(ParsedAST &AST,
-                                        SourceLocation SourceLocationBeg) {
+bool hasDeducedType(ParsedAST &AST, SourceLocation SourceLocationBeg) {
   Token Tok;
   auto &ASTCtx = AST.getASTContext();
   // Only try to find a deduced type if the token is auto or decltype.
@@ -697,18 +853,17 @@ llvm::Optional<QualType> getDeducedType(ParsedAST &AST,
       Lexer::getRawToken(SourceLocationBeg, Tok, ASTCtx.getSourceManager(),
                          ASTCtx.getLangOpts(), false) ||
       !Tok.is(tok::raw_identifier)) {
-    return {};
+    return false;
   }
   AST.getPreprocessor().LookUpIdentifierInfo(Tok);
   if (!(Tok.is(tok::kw_auto) || Tok.is(tok::kw_decltype)))
-    return {};
-
-  DeducedTypeVisitor V(SourceLocationBeg);
-  V.TraverseAST(AST.getASTContext());
-  return V.getDeducedType();
+    return false;
+  return true;
 }
 
-llvm::Optional<Hover> getHover(ParsedAST &AST, Position Pos) {
+llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
+                                   format::FormatStyle Style) {
+  llvm::Optional<HoverInfo> HI;
   const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
   SourceLocation SourceLocationBeg =
       getBeginningOfIdentifier(AST, Pos, SourceMgr.getMainFileID());
@@ -716,16 +871,28 @@ llvm::Optional<Hover> getHover(ParsedAST &AST, Position Pos) {
   auto Symbols = getSymbolAtPosition(AST, SourceLocationBeg);
 
   if (!Symbols.Macros.empty())
-    return getHoverContents(Symbols.Macros[0], AST);
+    HI = getHoverContents(Symbols.Macros[0], AST);
+  else if (!Symbols.Decls.empty())
+    HI = getHoverContents(Symbols.Decls[0]);
+  else {
+    if (!hasDeducedType(AST, SourceLocationBeg))
+      return None;
 
-  if (!Symbols.Decls.empty())
-    return getHoverContents(Symbols.Decls[0]);
+    DeducedTypeVisitor V(SourceLocationBeg);
+    V.TraverseAST(AST.getASTContext());
+    if (V.DeducedType.isNull())
+      return None;
+    HI = getHoverContents(V.DeducedType, V.D, AST.getASTContext());
+  }
 
-  auto DeducedType = getDeducedType(AST, SourceLocationBeg);
-  if (DeducedType && !DeducedType->isNull())
-    return getHoverContents(*DeducedType, AST.getASTContext());
+  auto Replacements = format::reformat(
+      Style, HI->Definition, tooling::Range(0, HI->Definition.size()));
+  if (auto Formatted =
+          tooling::applyAllReplacements(HI->Definition, Replacements))
+    HI->Definition = *Formatted;
 
-  return None;
+  HI->SymRange = getTokenRange(SourceLocationBeg, AST.getASTContext());
+  return HI;
 }
 
 std::vector<Location> findReferences(ParsedAST &AST, Position Pos,
@@ -748,7 +915,7 @@ std::vector<Location> findReferences(ParsedAST &AST, Position Pos,
   auto MainFileRefs = findRefs(Symbols.Decls, AST);
   for (const auto &Ref : MainFileRefs) {
     Location Result;
-    Result.range = getTokenRange(AST, Ref.Loc);
+    Result.range = getTokenRange(AST.getASTContext(), Ref.Loc);
     Result.uri = URIForFile::canonicalize(*MainFilePath, *MainFilePath);
     Results.push_back(std::move(Result));
   }
@@ -989,6 +1156,47 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
   // and ResolveLevels > 0.
 
   return Result;
+}
+
+MarkupContent HoverInfo::render() const {
+  MarkupContent Content;
+  Content.kind = MarkupKind::PlainText;
+  std::vector<std::string> Output;
+
+  if (NamespaceScope) {
+    llvm::raw_string_ostream Out(Content.value);
+    Out << "Declared in ";
+    // Drop trailing "::".
+    if (!LocalScope.empty())
+      Out << *NamespaceScope << llvm::StringRef(LocalScope).drop_back(2);
+    else if (NamespaceScope->empty())
+      Out << "global namespace";
+    else
+      Out << llvm::StringRef(*NamespaceScope).drop_back(2);
+    Out << "\n\n";
+  }
+
+  if (!Definition.empty()) {
+    Output.push_back(Definition);
+  } else {
+    // Builtin types
+    Output.push_back(Name);
+  }
+  Content.value += llvm::join(Output, " ");
+  return Content;
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const HoverInfo::Param &P) {
+  std::vector<llvm::StringRef> Output;
+  if (P.Type)
+    Output.push_back(*P.Type);
+  if (P.Name)
+    Output.push_back(*P.Name);
+  OS << llvm::join(Output, " ");
+  if (P.Default)
+    OS << " = " << *P.Default;
+  return OS;
 }
 
 } // namespace clangd

@@ -184,6 +184,28 @@ define void @double_save(<4 x i32> %A, <4 x i32> %B, <8 x i32>* %P) nounwind ssp
   ret void
 }
 
+define void @double_save_volatile(<4 x i32> %A, <4 x i32> %B, <8 x i32>* %P) nounwind {
+; CHECK-LABEL: double_save_volatile:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vmovups %ymm0, (%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+;
+; CHECK_O0-LABEL: double_save_volatile:
+; CHECK_O0:       # %bb.0:
+; CHECK_O0-NEXT:    # implicit-def: $ymm2
+; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm2
+; CHECK_O0-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm2
+; CHECK_O0-NEXT:    vmovdqu %ymm2, (%rdi)
+; CHECK_O0-NEXT:    vzeroupper
+; CHECK_O0-NEXT:    retq
+  %Z = shufflevector <4 x i32>%A, <4 x i32>%B, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store volatile <8 x i32> %Z, <8 x i32>* %P, align 16
+  ret void
+}
+
 declare void @llvm.x86.avx.maskstore.ps.256(i8*, <8 x i32>, <8 x float>) nounwind
 
 define void @f_f() nounwind {
@@ -191,38 +213,38 @@ define void @f_f() nounwind {
 ; CHECK:       # %bb.0: # %allocas
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB8_2
+; CHECK-NEXT:    jne .LBB9_2
 ; CHECK-NEXT:  # %bb.1: # %cif_mask_all
-; CHECK-NEXT:  .LBB8_2: # %cif_mask_mixed
+; CHECK-NEXT:  .LBB9_2: # %cif_mask_mixed
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB8_4
+; CHECK-NEXT:    jne .LBB9_4
 ; CHECK-NEXT:  # %bb.3: # %cif_mixed_test_all
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    vmovd %eax, %xmm0
 ; CHECK-NEXT:    vmaskmovps %ymm0, %ymm0, (%rax)
-; CHECK-NEXT:  .LBB8_4: # %cif_mixed_test_any_check
+; CHECK-NEXT:  .LBB9_4: # %cif_mixed_test_any_check
 ;
 ; CHECK_O0-LABEL: f_f:
 ; CHECK_O0:       # %bb.0: # %allocas
 ; CHECK_O0-NEXT:    # implicit-def: $al
 ; CHECK_O0-NEXT:    testb $1, %al
-; CHECK_O0-NEXT:    jne .LBB8_1
-; CHECK_O0-NEXT:    jmp .LBB8_2
-; CHECK_O0-NEXT:  .LBB8_1: # %cif_mask_all
-; CHECK_O0-NEXT:  .LBB8_2: # %cif_mask_mixed
+; CHECK_O0-NEXT:    jne .LBB9_1
+; CHECK_O0-NEXT:    jmp .LBB9_2
+; CHECK_O0-NEXT:  .LBB9_1: # %cif_mask_all
+; CHECK_O0-NEXT:  .LBB9_2: # %cif_mask_mixed
 ; CHECK_O0-NEXT:    # implicit-def: $al
 ; CHECK_O0-NEXT:    testb $1, %al
-; CHECK_O0-NEXT:    jne .LBB8_3
-; CHECK_O0-NEXT:    jmp .LBB8_4
-; CHECK_O0-NEXT:  .LBB8_3: # %cif_mixed_test_all
+; CHECK_O0-NEXT:    jne .LBB9_3
+; CHECK_O0-NEXT:    jmp .LBB9_4
+; CHECK_O0-NEXT:  .LBB9_3: # %cif_mixed_test_all
 ; CHECK_O0-NEXT:    movl $-1, %eax
 ; CHECK_O0-NEXT:    vmovd %eax, %xmm0
 ; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm1
 ; CHECK_O0-NEXT:    # implicit-def: $rcx
 ; CHECK_O0-NEXT:    # implicit-def: $ymm2
 ; CHECK_O0-NEXT:    vmaskmovps %ymm2, %ymm1, (%rcx)
-; CHECK_O0-NEXT:  .LBB8_4: # %cif_mixed_test_any_check
+; CHECK_O0-NEXT:  .LBB9_4: # %cif_mixed_test_any_check
 allocas:
   br i1 undef, label %cif_mask_all, label %cif_mask_mixed
 

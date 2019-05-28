@@ -213,9 +213,10 @@ template <class ELFT> void MarkLive<ELFT>::run() {
 
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interrupt other ELF file's symbols at runtime.
-  for (Symbol *S : Symtab->getSymbols())
-    if (S->includeInDynsym())
-      markSymbol(S);
+  Symtab->forEachSymbol([&](Symbol *Sym) {
+    if (Sym->includeInDynsym())
+      markSymbol(Sym);
+  });
 
   // Preserve special sections and those which are specified in linker
   // script KEEP command.
@@ -273,10 +274,11 @@ template <class ELFT> void elf::markLive() {
       Sec->Live = true;
 
     // If a DSO defines a symbol referenced in a regular object, it is needed.
-    for (Symbol *Sym : Symtab->getSymbols())
+    Symtab->forEachSymbol([](Symbol *Sym) {
       if (auto *S = dyn_cast<SharedSymbol>(Sym))
         if (S->IsUsedInRegularObj && !S->isWeak())
           S->getFile().IsNeeded = true;
+    });
     return;
   }
 

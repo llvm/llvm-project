@@ -258,18 +258,18 @@ def HasV8_4a         : Predicate<"Subtarget->hasV8_4aOps()">,
                                  AssemblerPredicate<"HasV8_4aOps", "armv8.4a">;
 def HasV8_5a         : Predicate<"Subtarget->hasV8_5aOps()">,
                                  AssemblerPredicate<"HasV8_5aOps", "armv8.5a">;
-def NoVFP            : Predicate<"!Subtarget->hasVFP2()">;
-def HasVFP2          : Predicate<"Subtarget->hasVFP2()">,
-                                 AssemblerPredicate<"FeatureVFP2", "VFP2">;
-def HasVFP3          : Predicate<"Subtarget->hasVFP3()">,
-                                 AssemblerPredicate<"FeatureVFP3", "VFP3">;
-def HasVFP4          : Predicate<"Subtarget->hasVFP4()">,
-                                 AssemblerPredicate<"FeatureVFP4", "VFP4">;
-def HasDPVFP         : Predicate<"!Subtarget->isFPOnlySP()">,
-                                 AssemblerPredicate<"!FeatureVFPOnlySP",
+def NoVFP            : Predicate<"!Subtarget->hasVFP2Base()">;
+def HasVFP2          : Predicate<"Subtarget->hasVFP2Base()">,
+                                 AssemblerPredicate<"FeatureVFP2_D16_SP", "VFP2">;
+def HasVFP3          : Predicate<"Subtarget->hasVFP3Base()">,
+                                 AssemblerPredicate<"FeatureVFP3_D16_SP", "VFP3">;
+def HasVFP4          : Predicate<"Subtarget->hasVFP4Base()">,
+                                 AssemblerPredicate<"FeatureVFP4_D16_SP", "VFP4">;
+def HasDPVFP         : Predicate<"Subtarget->hasFP64()">,
+                                 AssemblerPredicate<"FeatureFP64",
                                                     "double precision VFP">;
-def HasFPARMv8       : Predicate<"Subtarget->hasFPARMv8()">,
-                                 AssemblerPredicate<"FeatureFPARMv8", "FPARMv8">;
+def HasFPARMv8       : Predicate<"Subtarget->hasFPARMv8Base()">,
+                                 AssemblerPredicate<"FeatureFPARMv8_D16_SP", "FPARMv8">;
 def HasNEON          : Predicate<"Subtarget->hasNEON()">,
                                  AssemblerPredicate<"FeatureNEON", "NEON">;
 def HasSHA2          : Predicate<"Subtarget->hasSHA2()">,
@@ -371,7 +371,7 @@ def UseMulOps        : Predicate<"Subtarget->useMulOps()">;
 // Do not use them for Darwin platforms.
 def UseFusedMAC      : Predicate<"(TM.Options.AllowFPOpFusion =="
                                  " FPOpFusion::Fast && "
-                                 " Subtarget->hasVFP4()) && "
+                                 " Subtarget->hasVFP4Base()) && "
                                  "!Subtarget->isTargetDarwin() &&"
                                  "Subtarget->useFPVMLx()">;
 

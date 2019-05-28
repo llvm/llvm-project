@@ -236,6 +236,7 @@ if(build_and_sign_debugserver)
     ${DEBUGSERVER_VERS_GENERATED_FILE})
 
   add_library(lldbDebugserverCommon ${lldbDebugserverCommonSources})
+  set_target_properties(lldbDebugserverCommon PROPERTIES FOLDER "lldb libraries/debugserver")
 
   target_link_libraries(lldbDebugserverCommon
                         INTERFACE ${COCOA_LIBRARY}

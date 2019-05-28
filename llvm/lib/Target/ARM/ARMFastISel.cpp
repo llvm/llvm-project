@@ -441,7 +441,7 @@ unsigned ARMFastISel::ARMMaterializeFP(const ConstantFP *CFP, MVT VT) {
   }
 
   // Require VFP2 for loading fp constants.
-  if (!Subtarget->hasVFP2()) return false;
+  if (!Subtarget->hasVFP2Base()) return false;
 
   // MachineConstantPool wants an explicit alignment.
   unsigned Align = DL.getPrefTypeAlignment(CFP->getType());
@@ -969,7 +969,7 @@ bool ARMFastISel::ARMEmitLoad(MVT VT, unsigned &ResultReg, Address &Addr,
       RC = isThumb2 ? &ARM::rGPRRegClass : &ARM::GPRnopcRegClass;
       break;
     case MVT::f32:
-      if (!Subtarget->hasVFP2()) return false;
+      if (!Subtarget->hasVFP2Base()) return false;
       // Unaligned loads need special handling. Floats require word-alignment.
       if (Alignment && Alignment < 4) {
         needVMOV = true;
@@ -982,7 +982,8 @@ bool ARMFastISel::ARMEmitLoad(MVT VT, unsigned &ResultReg, Address &Addr,
       }
       break;
     case MVT::f64:
-      if (!Subtarget->hasVFP2()) return false;
+      // Can load and store double precision even without FeatureFP64
+      if (!Subtarget->hasVFP2Base()) return false;
       // FIXME: Unaligned loads need special handling.  Doublewords require
       // word-alignment.
       if (Alignment && Alignment < 4)
@@ -1107,7 +1108,7 @@ bool ARMFastISel::ARMEmitStore(MVT VT, unsigned SrcReg, Address &Addr,
       }
       break;
     case MVT::f32:
-      if (!Subtarget->hasVFP2()) return false;
+      if (!Subtarget->hasVFP2Base()) return false;
       // Unaligned stores need special handling. Floats require word-alignment.
       if (Alignment && Alignment < 4) {
         unsigned MoveReg = createResultReg(TLI.getRegClassFor(MVT::i32));
@@ -1122,7 +1123,8 @@ bool ARMFastISel::ARMEmitStore(MVT VT, unsigned SrcReg, Address &Addr,
       }
       break;
     case MVT::f64:
-      if (!Subtarget->hasVFP2()) return false;
+      // Can load and store double precision even without FeatureFP64
+      if (!Subtarget->hasVFP2Base()) return false;
       // FIXME: Unaligned stores need special handling.  Doublewords require
       // word-alignment.
       if (Alignment && Alignment < 4)
@@ -1353,10 +1355,10 @@ bool ARMFastISel::ARMEmitCmp(const Value *Src1Value, const Value *Src2Value,
   if (!SrcEVT.isSimple()) return false;
   MVT SrcVT = SrcEVT.getSimpleVT();
 
-  if (Ty->isFloatTy() && !Subtarget->hasVFP2())
+  if (Ty->isFloatTy() && !Subtarget->hasVFP2Base())
     return false;
 
-  if (Ty->isDoubleTy() && (!Subtarget->hasVFP2() || Subtarget->isFPOnlySP()))
+  if (Ty->isDoubleTy() && (!Subtarget->hasVFP2Base() || !Subtarget->hasFP64()))
     return false;
 
   // Check to see if the 2nd operand is a constant that we can encode directly
@@ -1506,7 +1508,7 @@ bool ARMFastISel::SelectCmp(const Instruction *I) {
 
 bool ARMFastISel::SelectFPExt(const Instruction *I) {
   // Make sure we have VFP and that we're extending float to double.
-  if (!Subtarget->hasVFP2() || Subtarget->isFPOnlySP()) return false;
+  if (!Subtarget->hasVFP2Base() || !Subtarget->hasFP64()) return false;
 
   Value *V = I->getOperand(0);
   if (!I->getType()->isDoubleTy() ||
@@ -1525,7 +1527,7 @@ bool ARMFastISel::SelectFPExt(const Instruction *I) {
 
 bool ARMFastISel::SelectFPTrunc(const Instruction *I) {
   // Make sure we have VFP and that we're truncating double to float.
-  if (!Subtarget->hasVFP2() || Subtarget->isFPOnlySP()) return false;
+  if (!Subtarget->hasVFP2Base() || !Subtarget->hasFP64()) return false;
 
   Value *V = I->getOperand(0);
   if (!(I->getType()->isFloatTy() &&
@@ -1544,7 +1546,7 @@ bool ARMFastISel::SelectFPTrunc(const Instruction *I) {
 
 bool ARMFastISel::SelectIToFP(const Instruction *I, bool isSigned) {
   // Make sure we have VFP.
-  if (!Subtarget->hasVFP2()) return false;
+  if (!Subtarget->hasVFP2Base()) return false;
 
   MVT DstVT;
   Type *Ty = I->getType();
@@ -1576,7 +1578,7 @@ bool ARMFastISel::SelectIToFP(const Instruction *I, bool isSigned) {
 
   unsigned Opc;
   if (Ty->isFloatTy()) Opc = isSigned ? ARM::VSITOS : ARM::VUITOS;
-  else if (Ty->isDoubleTy() && !Subtarget->isFPOnlySP())
+  else if (Ty->isDoubleTy() && Subtarget->hasFP64())
     Opc = isSigned ? ARM::VSITOD : ARM::VUITOD;
   else return false;
 
@@ -1589,7 +1591,7 @@ bool ARMFastISel::SelectIToFP(const Instruction *I, bool isSigned) {
 
 bool ARMFastISel::SelectFPToI(const Instruction *I, bool isSigned) {
   // Make sure we have VFP.
-  if (!Subtarget->hasVFP2()) return false;
+  if (!Subtarget->hasVFP2Base()) return false;
 
   MVT DstVT;
   Type *RetTy = I->getType();
@@ -1602,7 +1604,7 @@ bool ARMFastISel::SelectFPToI(const Instruction *I, bool isSigned) {
   unsigned Opc;
   Type *OpTy = I->getOperand(0)->getType();
   if (OpTy->isFloatTy()) Opc = isSigned ? ARM::VTOSIZS : ARM::VTOUIZS;
-  else if (OpTy->isDoubleTy() && !Subtarget->isFPOnlySP())
+  else if (OpTy->isDoubleTy() && Subtarget->hasFP64())
     Opc = isSigned ? ARM::VTOSIZD : ARM::VTOUIZD;
   else return false;
 
@@ -1808,9 +1810,9 @@ bool ARMFastISel::SelectBinaryFPOp(const Instruction *I, unsigned ISDOpcode) {
   // if we have them.
   // FIXME: It'd be nice to use NEON instructions.
   Type *Ty = I->getType();
-  if (Ty->isFloatTy() && !Subtarget->hasVFP2())
+  if (Ty->isFloatTy() && !Subtarget->hasVFP2Base())
     return false;
-  if (Ty->isDoubleTy() && (!Subtarget->hasVFP2() || Subtarget->isFPOnlySP()))
+  if (Ty->isDoubleTy() && (!Subtarget->hasVFP2Base() || !Subtarget->hasFP64()))
     return false;
 
   unsigned Opc;
@@ -1852,7 +1854,7 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
   default:
     report_fatal_error("Unsupported calling convention");
   case CallingConv::Fast:
-    if (Subtarget->hasVFP2() && !isVarArg) {
+    if (Subtarget->hasVFP2Base() && !isVarArg) {
       if (!Subtarget->isAAPCS_ABI())
         return (Return ? RetFastCC_ARM_APCS : FastCC_ARM_APCS);
       // For AAPCS ABI targets, just use VFP variant of the calling convention.
@@ -1863,7 +1865,7 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::CXX_FAST_TLS:
     // Use target triple & subtarget features to do actual dispatch.
     if (Subtarget->isAAPCS_ABI()) {
-      if (Subtarget->hasVFP2() &&
+      if (Subtarget->hasVFP2Base() &&
           TM.Options.FloatABIType == FloatABI::Hard && !isVarArg)
         return (Return ? RetCC_ARM_AAPCS_VFP: CC_ARM_AAPCS_VFP);
       else
@@ -1932,11 +1934,11 @@ bool ARMFastISel::ProcessCallArgs(SmallVectorImpl<Value*> &Args,
       case MVT::i32:
         break;
       case MVT::f32:
-        if (!Subtarget->hasVFP2())
+        if (!Subtarget->hasVFP2Base())
           return false;
         break;
       case MVT::f64:
-        if (!Subtarget->hasVFP2())
+        if (!Subtarget->hasVFP2Base())
           return false;
         break;
       }

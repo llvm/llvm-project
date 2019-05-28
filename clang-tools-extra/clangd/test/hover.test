@@ -10,6 +10,16 @@
 # CHECK-NEXT:    "contents": {
 # CHECK-NEXT:      "kind": "plaintext",
 # CHECK-NEXT:      "value": "Declared in global namespace\n\nvoid foo()"
+# CHECK-NEXT:    },
+# CHECK-NEXT:    "range": {
+# CHECK-NEXT:      "end": {
+# CHECK-NEXT:        "character": 28,
+# CHECK-NEXT:        "line": 0
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "start": {
+# CHECK-NEXT:        "character": 25,
+# CHECK-NEXT:        "line": 0
+# CHECK-NEXT:      }
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
 # CHECK-NEXT:}
@@ -18,6 +28,29 @@
 #      CHECK:  "id": 1,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": null
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main2.cpp","languageId":"cpp","version":1,"text":"enum foo{}; int main() { foo f; }\n"}}}
+---
+{"jsonrpc":"2.0","id":1,"method":"textDocument/hover","params":{"textDocument":{"uri":"test:///main2.cpp"},"position":{"line":0,"character":27}}}
+#      CHECK:  "id": 1,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "contents": {
+# CHECK-NEXT:      "kind": "plaintext",
+# CHECK-NEXT:      "value": "Declared in global namespace\n\nenum foo {}"
+# CHECK-NEXT:    },
+# CHECK-NEXT:    "range": {
+# CHECK-NEXT:      "end": {
+# CHECK-NEXT:        "character": 28,
+# CHECK-NEXT:        "line": 0
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "start": {
+# CHECK-NEXT:        "character": 25,
+# CHECK-NEXT:        "line": 0
+# CHECK-NEXT:      }
+# CHECK-NEXT:    }
+# CHECK-NEXT:  }
+# CHECK-NEXT:}
 ---
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
 ---

@@ -194,9 +194,9 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
     default:
       break;
     case ARMBuildAttrs::Not_Allowed:
-      Features.AddFeature("vfp2", false);
-      Features.AddFeature("vfp3", false);
-      Features.AddFeature("vfp4", false);
+      Features.AddFeature("vfp2d16sp", false);
+      Features.AddFeature("vfp3d16sp", false);
+      Features.AddFeature("vfp4d16sp", false);
       break;
     case ARMBuildAttrs::AllowFPv2:
       Features.AddFeature("vfp2");

@@ -88,6 +88,14 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
   set(LLVM_INCLUDE_TESTS ON CACHE INTERNAL "")
 
+  option(LLVM_USE_FOLDERS "Enable solution folders in Visual Studio. Disable for Express versions." ON)
+  if(LLVM_USE_FOLDERS)
+    set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+  endif()
+
+  set_target_properties(clang-tablegen-targets PROPERTIES FOLDER "lldb misc")
+  set_target_properties(intrinsics_gen PROPERTIES FOLDER "lldb misc")
+
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
   include_directories(
     "${CMAKE_BINARY_DIR}/include"

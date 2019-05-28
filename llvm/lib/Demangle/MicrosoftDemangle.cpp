@@ -293,9 +293,10 @@ Demangler::demangleSpecialTableSymbolNode(StringView &MangledName,
 }
 
 LocalStaticGuardVariableNode *
-Demangler::demangleLocalStaticGuard(StringView &MangledName) {
+Demangler::demangleLocalStaticGuard(StringView &MangledName, bool IsThread) {
   LocalStaticGuardIdentifierNode *LSGI =
       Arena.alloc<LocalStaticGuardIdentifierNode>();
+  LSGI->IsThread = IsThread;
   QualifiedNameNode *QN = demangleNameScopeChain(MangledName, LSGI);
   LocalStaticGuardVariableNode *LSGVN =
       Arena.alloc<LocalStaticGuardVariableNode>();
@@ -443,7 +444,9 @@ SymbolNode *Demangler::demangleSpecialIntrinsic(StringView &MangledName) {
   case SpecialIntrinsicKind::VcallThunk:
     return demangleVcallThunkNode(MangledName);
   case SpecialIntrinsicKind::LocalStaticGuard:
-    return demangleLocalStaticGuard(MangledName);
+    return demangleLocalStaticGuard(MangledName, /*IsThread=*/false);
+  case SpecialIntrinsicKind::LocalStaticThreadGuard:
+    return demangleLocalStaticGuard(MangledName, /*IsThread=*/true);
   case SpecialIntrinsicKind::RttiTypeDescriptor: {
     TypeNode *T = demangleType(MangledName, QualifierMangleMode::Result);
     if (Error)
@@ -674,7 +677,6 @@ Demangler::demangleFunctionIdentifierCode(StringView &MangledName,
       return Arena.alloc<IntrinsicFunctionIdentifierNode>(
           translateIntrinsicFunctionCode(CH, Group));
     }
-    break;
   case FunctionIdentifierCodeGroup::Under:
     return Arena.alloc<IntrinsicFunctionIdentifierNode>(
         translateIntrinsicFunctionCode(MangledName.popFront(), Group));
@@ -1942,6 +1944,8 @@ PrimitiveTypeNode *Demangler::demanglePrimitiveType(StringView &MangledName) {
       return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Uint64);
     case 'W':
       return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Wchar);
+    case 'Q':
+      return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Char8);
     case 'S':
       return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Char16);
     case 'U':

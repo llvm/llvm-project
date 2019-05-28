@@ -222,37 +222,37 @@ void ARMTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
                         ? ARMBuildAttrs::AllowNeonARMv8_1a
                         : ARMBuildAttrs::AllowNeonARMv8);
   } else {
-    if (STI.hasFeature(ARM::FeatureFPARMv8))
+    if (STI.hasFeature(ARM::FeatureFPARMv8_D16_SP))
       // FPv5 and FP-ARMv8 have the same instructions, so are modeled as one
       // FPU, but there are two different names for it depending on the CPU.
-      emitFPU(STI.hasFeature(ARM::FeatureD16)
-                  ? (STI.hasFeature(ARM::FeatureVFPOnlySP) ? ARM::FK_FPV5_SP_D16
-                                                           : ARM::FK_FPV5_D16)
-                  : ARM::FK_FP_ARMV8);
-    else if (STI.hasFeature(ARM::FeatureVFP4))
-      emitFPU(STI.hasFeature(ARM::FeatureD16)
-                  ? (STI.hasFeature(ARM::FeatureVFPOnlySP) ? ARM::FK_FPV4_SP_D16
-                                                           : ARM::FK_VFPV4_D16)
-                  : ARM::FK_VFPV4);
-    else if (STI.hasFeature(ARM::FeatureVFP3))
+      emitFPU(STI.hasFeature(ARM::FeatureD32)
+                  ? ARM::FK_FP_ARMV8
+                  : (STI.hasFeature(ARM::FeatureFP64) ? ARM::FK_FPV5_D16
+                                                      : ARM::FK_FPV5_SP_D16));
+    else if (STI.hasFeature(ARM::FeatureVFP4_D16_SP))
+      emitFPU(STI.hasFeature(ARM::FeatureD32)
+                  ? ARM::FK_VFPV4
+                  : (STI.hasFeature(ARM::FeatureFP64) ? ARM::FK_VFPV4_D16
+                                                      : ARM::FK_FPV4_SP_D16));
+    else if (STI.hasFeature(ARM::FeatureVFP3_D16_SP))
       emitFPU(
-          STI.hasFeature(ARM::FeatureD16)
-              // +d16
-              ? (STI.hasFeature(ARM::FeatureVFPOnlySP)
-                     ? (STI.hasFeature(ARM::FeatureFP16) ? ARM::FK_VFPV3XD_FP16
-                                                         : ARM::FK_VFPV3XD)
-                     : (STI.hasFeature(ARM::FeatureFP16)
+          STI.hasFeature(ARM::FeatureD32)
+              // +d32
+              ? (STI.hasFeature(ARM::FeatureFP16) ? ARM::FK_VFPV3_FP16
+                                                  : ARM::FK_VFPV3)
+              // -d32
+              : (STI.hasFeature(ARM::FeatureFP64)
+                     ? (STI.hasFeature(ARM::FeatureFP16)
                             ? ARM::FK_VFPV3_D16_FP16
-                            : ARM::FK_VFPV3_D16))
-              // -d16
-              : (STI.hasFeature(ARM::FeatureFP16) ? ARM::FK_VFPV3_FP16
-                                                  : ARM::FK_VFPV3));
-    else if (STI.hasFeature(ARM::FeatureVFP2))
+                            : ARM::FK_VFPV3_D16)
+                     : (STI.hasFeature(ARM::FeatureFP16) ? ARM::FK_VFPV3XD_FP16
+                                                         : ARM::FK_VFPV3XD)));
+    else if (STI.hasFeature(ARM::FeatureVFP2_D16_SP))
       emitFPU(ARM::FK_VFPV2);
   }
 
   // ABI_HardFP_use attribute to indicate single precision FP.
-  if (STI.hasFeature(ARM::FeatureVFPOnlySP))
+  if (STI.hasFeature(ARM::FeatureVFP2_D16_SP) && !STI.hasFeature(ARM::FeatureFP64))
     emitAttribute(ARMBuildAttrs::ABI_HardFP_use,
                   ARMBuildAttrs::HardFPSinglePrecision);
 

@@ -5,28 +5,28 @@
 ; SOFTFP:
 ; RUN: llc < %s -mtriple=arm-none-eabi -mattr=+vfp3        | FileCheck %s --check-prefixes=CHECK,CHECK-SOFTFP-VFP3
 ; RUN: llc < %s -mtriple=arm-none-eabi -mattr=+vfp4        | FileCheck %s --check-prefixes=CHECK,CHECK-SOFTFP-FP16,CHECK-SOFTFP-FP16-A32
-; RUN: llc < %s -mtriple=arm-none-eabi -mattr=+fullfp16    | FileCheck %s --check-prefixes=CHECK,CHECK-SOFTFP-FULLFP16
+; RUN: llc < %s -mtriple=arm-none-eabi -mattr=+fullfp16,+fp64    | FileCheck %s --check-prefixes=CHECK,CHECK-SOFTFP-FULLFP16
 
 ; RUN: llc < %s -mtriple=thumbv7-none-eabi -mattr=+vfp3        | FileCheck %s --check-prefixes=CHECK,CHECK-SOFTFP-VFP3
 ; RUN: llc < %s -mtriple=thumbv7-none-eabi -mattr=+vfp4        | FileCheck %s --check-prefixes=CHECK,CHECK-SOFTFP-FP16,CHECK-SOFTFP-FP16-T32
-; RUN: llc < %s -mtriple=thumbv7-none-eabi -mattr=+fullfp16    | FileCheck %s --check-prefixes=CHECK,CHECK-SOFTFP-FULLFP16
+; RUN: llc < %s -mtriple=thumbv7-none-eabi -mattr=+fullfp16,+fp64    | FileCheck %s --check-prefixes=CHECK,CHECK-SOFTFP-FULLFP16
 
 ; Test fast-isel
-; RUN: llc < %s -mtriple=arm-none-eabi -mattr=+fullfp16 -O0 | FileCheck %s --check-prefixes=CHECK-SPILL-RELOAD
-; RUN: llc < %s -mtriple=thumbv7-none-eabi -mattr=+fullfp16 -O0 | FileCheck %s --check-prefixes=CHECK-SPILL-RELOAD
+; RUN: llc < %s -mtriple=arm-none-eabi -mattr=+fullfp16,+fp64 -O0 | FileCheck %s --check-prefixes=CHECK-SPILL-RELOAD
+; RUN: llc < %s -mtriple=thumbv7-none-eabi -mattr=+fullfp16,+fp64 -O0 | FileCheck %s --check-prefixes=CHECK-SPILL-RELOAD
 
 ; HARD:
 ; RUN: llc < %s -mtriple=arm-none-eabihf -mattr=+vfp3      | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-VFP3
 ; RUN: llc < %s -mtriple=arm-none-eabihf -mattr=+vfp4      | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-FP16
-; RUN: llc < %s -mtriple=arm-none-eabihf -mattr=+fullfp16  | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-FULLFP16
+; RUN: llc < %s -mtriple=arm-none-eabihf -mattr=+fullfp16,+fp64  | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-FULLFP16
 
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mattr=+vfp3      | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-VFP3
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mattr=+vfp4      | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-FP16
-; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mattr=+fullfp16  | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-FULLFP16
+; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mattr=+fullfp16,fp64  | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-FULLFP16
 
 ; FP-CONTRACT=FAST
-; RUN: llc < %s -mtriple=arm-none-eabihf -mattr=+fullfp16 -fp-contract=fast | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-FULLFP16-FAST
-; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mattr=+fullfp16 -fp-contract=fast | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-FULLFP16-FAST
+; RUN: llc < %s -mtriple=arm-none-eabihf -mattr=+fullfp16,+fp64 -fp-contract=fast | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-FULLFP16-FAST
+; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mattr=+fullfp16,+fp64 -fp-contract=fast | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-FULLFP16-FAST
 
 ; TODO: we can't pass half-precision arguments as "half" types yet. We do
 ; that for the time being by passing "float %f.coerce" and the necessary

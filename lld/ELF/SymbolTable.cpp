@@ -32,12 +32,6 @@ using namespace lld::elf;
 
 SymbolTable *elf::Symtab;
 
-// Set a flag for --trace-symbol so that we can print out a log message
-// if a new symbol with the same name is inserted into the symbol table.
-void SymbolTable::trace(StringRef Name) {
-  SymMap.insert({CachedHashStringRef(Name), -1});
-}
-
 void SymbolTable::wrap(Symbol *Sym, Symbol *Real, Symbol *Wrap) {
   // Swap symbols as instructed by -wrap.
   int &Idx1 = SymMap[CachedHashStringRef(Sym->getName())];
@@ -70,13 +64,6 @@ Symbol *SymbolTable::insert(StringRef Name) {
   auto P = SymMap.insert({CachedHashStringRef(Name), (int)SymVector.size()});
   int &SymIndex = P.first->second;
   bool IsNew = P.second;
-  bool Traced = false;
-
-  if (SymIndex == -1) {
-    SymIndex = SymVector.size();
-    IsNew = true;
-    Traced = true;
-  }
 
   if (!IsNew)
     return SymVector[SymIndex];
@@ -91,7 +78,6 @@ Symbol *SymbolTable::insert(StringRef Name) {
   Sym->IsUsedInRegularObj = false;
   Sym->ExportDynamic = false;
   Sym->CanInline = true;
-  Sym->Traced = Traced;
   Sym->ScriptDefined = false;
   return Sym;
 }
@@ -106,9 +92,10 @@ Symbol *SymbolTable::find(StringRef Name) {
   auto It = SymMap.find(CachedHashStringRef(Name));
   if (It == SymMap.end())
     return nullptr;
-  if (It->second == -1)
+  Symbol *Sym = SymVector[It->second];
+  if (Sym->isPlaceholder())
     return nullptr;
-  return SymVector[It->second];
+  return Sym;
 }
 
 // Initialize DemangledSyms with a map from demangled symbols to symbol

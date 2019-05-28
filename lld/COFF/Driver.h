@@ -77,6 +77,8 @@ public:
 
   MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> MB);
 
+  void enqueuePath(StringRef Path, bool WholeArchive);
+
 private:
   std::unique_ptr<llvm::TarWriter> Tar; // for /linkrepro
 
@@ -119,8 +121,6 @@ private:
   void addBuffer(std::unique_ptr<MemoryBuffer> MB, bool WholeArchive);
   void addArchiveBuffer(MemoryBufferRef MBRef, StringRef SymName,
                         StringRef ParentName, uint64_t OffsetInArchive);
-
-  void enqueuePath(StringRef Path, bool WholeArchive);
 
   void enqueueTask(std::function<void()> Task);
   bool run();

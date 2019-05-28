@@ -141,6 +141,10 @@ public:
   /// all feature bits implied by the flag.
   FeatureBitset ApplyFeatureFlag(StringRef FS);
 
+  /// Set/clear additional feature bits, including all other bits they imply.
+  FeatureBitset SetFeatureBitsTransitively(const FeatureBitset& FB);
+  FeatureBitset ClearFeatureBitsTransitively(const FeatureBitset &FB);
+
   /// Check whether the subtarget features are enabled/disabled as per
   /// the provided string, ignoring all other features.
   bool checkFeatures(StringRef FS) const;

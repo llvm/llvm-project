@@ -280,7 +280,8 @@ bool X86CmovConverterPass::collectCmovCandidates(
     Group.clear();
     // Condition code of first CMOV instruction current processed range and its
     // opposite condition code.
-    X86::CondCode FirstCC, FirstOppCC, MemOpCC;
+    X86::CondCode FirstCC = X86::COND_INVALID, FirstOppCC = X86::COND_INVALID,
+                  MemOpCC = X86::COND_INVALID;
     // Indicator of a non CMOVrr instruction in the current processed range.
     bool FoundNonCMOVInst = false;
     // Indicator for current processed CMOV-group if it should be skipped.

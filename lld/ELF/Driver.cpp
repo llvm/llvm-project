@@ -1337,10 +1337,10 @@ static void handleLibcall(StringRef Name) {
 // result, the passes after the symbol resolution won't see any
 // symbols of type CommonSymbol.
 static void replaceCommonSymbols() {
-  for (Symbol *Sym : Symtab->getSymbols()) {
+  Symtab->forEachSymbol([](Symbol *Sym) {
     auto *S = dyn_cast<CommonSymbol>(Sym);
     if (!S)
-      continue;
+      return;
 
     auto *Bss = make<BssSection>("COMMON", S->Size, S->Alignment);
     Bss->File = S->File;
@@ -1348,7 +1348,7 @@ static void replaceCommonSymbols() {
     InputSections.push_back(Bss);
     S->replace(Defined{S->File, S->getName(), S->Binding, S->StOther, S->Type,
                        /*Value=*/0, S->Size, Bss});
-  }
+  });
 }
 
 // If all references to a DSO happen to be weak, the DSO is not added
@@ -1356,15 +1356,15 @@ static void replaceCommonSymbols() {
 // created from the DSO. Otherwise, they become dangling references
 // that point to a non-existent DSO.
 static void demoteSharedSymbols() {
-  for (Symbol *Sym : Symtab->getSymbols()) {
+  Symtab->forEachSymbol([](Symbol *Sym) {
     auto *S = dyn_cast<SharedSymbol>(Sym);
     if (!S || S->getFile().IsNeeded)
-      continue;
+      return;
 
     bool Used = S->Used;
     S->replace(Undefined{nullptr, S->getName(), STB_WEAK, S->StOther, S->Type});
     S->Used = Used;
-  }
+  });
 }
 
 // The section referred to by S is considered address-significant. Set the
@@ -1400,9 +1400,10 @@ static void findKeepUniqueSections(opt::InputArgList &Args) {
 
   // Symbols in the dynsym could be address-significant in other executables
   // or DSOs, so we conservatively mark them as address-significant.
-  for (Symbol *S : Symtab->getSymbols())
-    if (S->includeInDynsym())
-      markAddrsig(S);
+  Symtab->forEachSymbol([&](Symbol *Sym) {
+    if (Sym->includeInDynsym())
+      markAddrsig(Sym);
+  });
 
   // Visit the address-significance table in each object file and mark each
   // referenced symbol as address-significant.
@@ -1575,7 +1576,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Handle --trace-symbol.
   for (auto *Arg : Args.filtered(OPT_trace_symbol))
-    Symtab->trace(Arg->getValue());
+    Symtab->insert(Arg->getValue())->Traced = true;
 
   // Add all files to the symbol table. This will add almost all
   // symbols that we need to the symbol table. This process might
