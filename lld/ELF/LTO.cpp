@@ -142,12 +142,12 @@ BitcodeCompiler::BitcodeCompiler() {
                                        Config->LTOPartitions);
 
   // Initialize UsedStartStop.
-  for (Symbol *Sym : Symtab->getSymbols()) {
+  Symtab->forEachSymbol([&](Symbol *Sym) {
     StringRef S = Sym->getName();
     for (StringRef Prefix : {"__start_", "__stop_"})
       if (S.startswith(Prefix))
         UsedStartStop.insert(S.substr(Prefix.size()));
-  }
+  });
 }
 
 BitcodeCompiler::~BitcodeCompiler() = default;

@@ -231,3 +231,17 @@ class A {
   ASSERT_TRUE(PrintedStmtObjCMatches(ObjCSource, returnStmt().bind("id"),
                                      "return self->ivar;\n"));
 }
+
+TEST(StmtPrinter, TerseOutputWithLambdas) {
+  const char *CPPSource = "auto lamb = []{ return 0; };";
+
+  // body is printed when TerseOutput is off(default).
+  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX11, CPPSource,
+                                    lambdaExpr(anything()).bind("id"),
+                                    "[] {\n    return 0;\n}"));
+
+  // body not printed when TerseOutput is on.
+  ASSERT_TRUE(PrintedStmtCXXMatches(
+      StdVer::CXX11, CPPSource, lambdaExpr(anything()).bind("id"), "[] {}",
+      PolicyAdjusterType([](PrintingPolicy &PP) { PP.TerseOutput = true; })));
+}

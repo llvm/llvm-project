@@ -1169,9 +1169,11 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
 
   // We want both global and local symbols. We get the global ones from the
   // symbol table and iterate the object files for the local ones.
-  for (Symbol *Sym : Symtab->getSymbols())
+  Symtab->forEachSymbol([&](Symbol *Sym) {
     if (!Sym->isLazy())
       AddSym(*Sym);
+  });
+
   for (InputFile *File : ObjectFiles)
     for (Symbol *Sym : File->getSymbols())
       if (Sym->isLocal())
@@ -1609,9 +1611,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // earlier.
   finalizeSynthetic(In.EhFrame);
 
-  for (Symbol *S : Symtab->getSymbols())
+  Symtab->forEachSymbol([](Symbol *S) {
     if (!S->IsPreemptible)
       S->IsPreemptible = computeIsPreemptible(*S);
+  });
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
@@ -1638,18 +1641,20 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
           llvm::all_of(File->DtNeeded, [&](StringRef Needed) {
             return Symtab->SoNames.count(Needed);
           });
-    for (Symbol *Sym : Symtab->getSymbols())
+
+    Symtab->forEachSymbol([](Symbol *Sym) {
       if (Sym->isUndefined() && !Sym->isWeak())
         if (auto *F = dyn_cast_or_null<SharedFile>(Sym->File))
           if (F->AllNeededIsKnown)
             error(toString(F) + ": undefined reference to " + toString(*Sym));
+    });
   }
 
   // Now that we have defined all possible global symbols including linker-
   // synthesized ones. Visit all symbols to give the finishing touches.
-  for (Symbol *Sym : Symtab->getSymbols()) {
+  Symtab->forEachSymbol([](Symbol *Sym) {
     if (!includeInSymtab(*Sym))
-      continue;
+      return;
     if (In.SymTab)
       In.SymTab->addSymbol(Sym);
 
@@ -1659,7 +1664,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
         if (File->IsNeeded && !Sym->isUndefined())
           addVerneed(Sym);
     }
-  }
+  });
 
   // Do not proceed if there was an undefined symbol.
   if (errorCount())

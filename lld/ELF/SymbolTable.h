@@ -10,9 +10,11 @@
 #define LLD_ELF_SYMBOL_TABLE_H
 
 #include "InputFiles.h"
+#include "Symbols.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace lld {
 namespace elf {
@@ -33,7 +35,11 @@ class SymbolTable {
 public:
   void wrap(Symbol *Sym, Symbol *Real, Symbol *Wrap);
 
-  ArrayRef<Symbol *> getSymbols() const { return SymVector; }
+  void forEachSymbol(llvm::function_ref<void(Symbol *)> Fn) {
+    for (Symbol *Sym : SymVector)
+      if (!Sym->isPlaceholder())
+        Fn(Sym);
+  }
 
   Symbol *insert(StringRef Name);
 
@@ -42,8 +48,6 @@ public:
   void scanVersionScript();
 
   Symbol *find(StringRef Name);
-
-  void trace(StringRef Name);
 
   void handleDynamicList();
 

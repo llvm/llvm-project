@@ -4433,6 +4433,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:         "qualType": "int"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "lvalue",
+// CHECK-NEXT:        "name": "a",
 // CHECK-NEXT:        "isArrow": false,
 // CHECK-NEXT:        "referencedMemberDecl": "0x{{.*}}",
 // CHECK-NEXT:        "inner": [
@@ -4510,6 +4511,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:         "qualType": "int"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "lvalue",
+// CHECK-NEXT:        "name": "a",
 // CHECK-NEXT:        "isArrow": true,
 // CHECK-NEXT:        "referencedMemberDecl": "0x{{.*}}",
 // CHECK-NEXT:        "inner": [
