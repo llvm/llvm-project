@@ -215,10 +215,9 @@ define void @mul_8xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 
 ; X86-AVX1-NEXT:    vpmaddwd %xmm0, %xmm2, %xmm0
 ; X86-AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm2 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; X86-AVX1-NEXT:    vpmaddwd %xmm1, %xmm2, %xmm1
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X86-AVX1-NEXT:    vmovups %ymm0, (%esi,%ecx,4)
+; X86-AVX1-NEXT:    vmovdqu %xmm0, 16(%esi,%ecx,4)
+; X86-AVX1-NEXT:    vmovdqu %xmm1, (%esi,%ecx,4)
 ; X86-AVX1-NEXT:    popl %esi
-; X86-AVX1-NEXT:    vzeroupper
 ; X86-AVX1-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: mul_8xi8:
@@ -261,9 +260,8 @@ define void @mul_8xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 
 ; X64-AVX1-NEXT:    vpmaddwd %xmm0, %xmm2, %xmm0
 ; X64-AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm2 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; X64-AVX1-NEXT:    vpmaddwd %xmm1, %xmm2, %xmm1
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X64-AVX1-NEXT:    vmovups %ymm0, (%rax,%rdx,4)
-; X64-AVX1-NEXT:    vzeroupper
+; X64-AVX1-NEXT:    vmovdqu %xmm0, 16(%rax,%rdx,4)
+; X64-AVX1-NEXT:    vmovdqu %xmm1, (%rax,%rdx,4)
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: mul_8xi8:
@@ -349,12 +347,11 @@ define void @mul_16xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64
 ; X86-AVX1-NEXT:    vpmaddwd %xmm2, %xmm4, %xmm2
 ; X86-AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm4 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; X86-AVX1-NEXT:    vpmaddwd %xmm3, %xmm4, %xmm3
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X86-AVX1-NEXT:    vmovups %ymm0, 32(%esi,%ecx,4)
-; X86-AVX1-NEXT:    vmovups %ymm2, (%esi,%ecx,4)
+; X86-AVX1-NEXT:    vmovdqu %xmm0, 48(%esi,%ecx,4)
+; X86-AVX1-NEXT:    vmovdqu %xmm1, 32(%esi,%ecx,4)
+; X86-AVX1-NEXT:    vmovdqu %xmm2, 16(%esi,%ecx,4)
+; X86-AVX1-NEXT:    vmovdqu %xmm3, (%esi,%ecx,4)
 ; X86-AVX1-NEXT:    popl %esi
-; X86-AVX1-NEXT:    vzeroupper
 ; X86-AVX1-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: mul_16xi8:
@@ -417,11 +414,10 @@ define void @mul_16xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64
 ; X64-AVX1-NEXT:    vpmaddwd %xmm2, %xmm4, %xmm2
 ; X64-AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm4 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; X64-AVX1-NEXT:    vpmaddwd %xmm3, %xmm4, %xmm3
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X64-AVX1-NEXT:    vmovups %ymm0, 32(%rax,%rdx,4)
-; X64-AVX1-NEXT:    vmovups %ymm2, (%rax,%rdx,4)
-; X64-AVX1-NEXT:    vzeroupper
+; X64-AVX1-NEXT:    vmovdqu %xmm0, 48(%rax,%rdx,4)
+; X64-AVX1-NEXT:    vmovdqu %xmm1, 32(%rax,%rdx,4)
+; X64-AVX1-NEXT:    vmovdqu %xmm2, 16(%rax,%rdx,4)
+; X64-AVX1-NEXT:    vmovdqu %xmm3, (%rax,%rdx,4)
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: mul_16xi8:
@@ -648,10 +644,9 @@ define void @mul_8xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64
 ; X86-AVX1-NEXT:    vpmulld %xmm0, %xmm2, %xmm0
 ; X86-AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; X86-AVX1-NEXT:    vpmulld %xmm1, %xmm2, %xmm1
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X86-AVX1-NEXT:    vmovups %ymm0, (%esi,%ecx,4)
+; X86-AVX1-NEXT:    vmovdqu %xmm0, 16(%esi,%ecx,4)
+; X86-AVX1-NEXT:    vmovdqu %xmm1, (%esi,%ecx,4)
 ; X86-AVX1-NEXT:    popl %esi
-; X86-AVX1-NEXT:    vzeroupper
 ; X86-AVX1-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: mul_8xi16:
@@ -693,9 +688,8 @@ define void @mul_8xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64
 ; X64-AVX1-NEXT:    vpmulld %xmm0, %xmm2, %xmm0
 ; X64-AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; X64-AVX1-NEXT:    vpmulld %xmm1, %xmm2, %xmm1
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X64-AVX1-NEXT:    vmovups %ymm0, (%rax,%rdx,4)
-; X64-AVX1-NEXT:    vzeroupper
+; X64-AVX1-NEXT:    vmovdqu %xmm0, 16(%rax,%rdx,4)
+; X64-AVX1-NEXT:    vmovdqu %xmm1, (%rax,%rdx,4)
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: mul_8xi16:
@@ -780,12 +774,11 @@ define void @mul_16xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i6
 ; X86-AVX1-NEXT:    vpmulld %xmm2, %xmm4, %xmm2
 ; X86-AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; X86-AVX1-NEXT:    vpmulld %xmm3, %xmm4, %xmm3
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X86-AVX1-NEXT:    vmovups %ymm0, 32(%esi,%ecx,4)
-; X86-AVX1-NEXT:    vmovups %ymm2, (%esi,%ecx,4)
+; X86-AVX1-NEXT:    vmovdqu %xmm0, 48(%esi,%ecx,4)
+; X86-AVX1-NEXT:    vmovdqu %xmm1, 32(%esi,%ecx,4)
+; X86-AVX1-NEXT:    vmovdqu %xmm2, 16(%esi,%ecx,4)
+; X86-AVX1-NEXT:    vmovdqu %xmm3, (%esi,%ecx,4)
 ; X86-AVX1-NEXT:    popl %esi
-; X86-AVX1-NEXT:    vzeroupper
 ; X86-AVX1-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: mul_16xi16:
@@ -847,11 +840,10 @@ define void @mul_16xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i6
 ; X64-AVX1-NEXT:    vpmulld %xmm2, %xmm4, %xmm2
 ; X64-AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; X64-AVX1-NEXT:    vpmulld %xmm3, %xmm4, %xmm3
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X64-AVX1-NEXT:    vmovups %ymm0, 32(%rax,%rdx,4)
-; X64-AVX1-NEXT:    vmovups %ymm2, (%rax,%rdx,4)
-; X64-AVX1-NEXT:    vzeroupper
+; X64-AVX1-NEXT:    vmovdqu %xmm0, 48(%rax,%rdx,4)
+; X64-AVX1-NEXT:    vmovdqu %xmm1, 32(%rax,%rdx,4)
+; X64-AVX1-NEXT:    vmovdqu %xmm2, 16(%rax,%rdx,4)
+; X64-AVX1-NEXT:    vmovdqu %xmm3, (%rax,%rdx,4)
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: mul_16xi16:
@@ -1284,24 +1276,23 @@ define void @mul_16xi16_sext(i8* nocapture readonly %a, i8* nocapture readonly %
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-AVX1-NEXT:    movl c, %esi
-; X86-AVX1-NEXT:    vpmovsxwd 16(%edx,%ecx), %xmm0
-; X86-AVX1-NEXT:    vpmovsxwd 24(%edx,%ecx), %xmm1
-; X86-AVX1-NEXT:    vpmovsxwd (%edx,%ecx), %xmm2
-; X86-AVX1-NEXT:    vpmovsxwd 8(%edx,%ecx), %xmm3
-; X86-AVX1-NEXT:    vpmovsxwd 16(%eax,%ecx), %xmm4
-; X86-AVX1-NEXT:    vpmulld %xmm0, %xmm4, %xmm0
+; X86-AVX1-NEXT:    vpmovsxwd 24(%edx,%ecx), %xmm0
+; X86-AVX1-NEXT:    vpmovsxwd 16(%edx,%ecx), %xmm1
+; X86-AVX1-NEXT:    vpmovsxwd 8(%edx,%ecx), %xmm2
+; X86-AVX1-NEXT:    vpmovsxwd (%edx,%ecx), %xmm3
 ; X86-AVX1-NEXT:    vpmovsxwd 24(%eax,%ecx), %xmm4
+; X86-AVX1-NEXT:    vpmulld %xmm0, %xmm4, %xmm0
+; X86-AVX1-NEXT:    vpmovsxwd 16(%eax,%ecx), %xmm4
 ; X86-AVX1-NEXT:    vpmulld %xmm1, %xmm4, %xmm1
-; X86-AVX1-NEXT:    vpmovsxwd (%eax,%ecx), %xmm4
-; X86-AVX1-NEXT:    vpmulld %xmm2, %xmm4, %xmm2
 ; X86-AVX1-NEXT:    vpmovsxwd 8(%eax,%ecx), %xmm4
+; X86-AVX1-NEXT:    vpmulld %xmm2, %xmm4, %xmm2
+; X86-AVX1-NEXT:    vpmovsxwd (%eax,%ecx), %xmm4
 ; X86-AVX1-NEXT:    vpmulld %xmm3, %xmm4, %xmm3
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X86-AVX1-NEXT:    vmovups %ymm0, 32(%esi,%ecx,4)
-; X86-AVX1-NEXT:    vmovups %ymm2, (%esi,%ecx,4)
+; X86-AVX1-NEXT:    vmovdqu %xmm0, 48(%esi,%ecx,4)
+; X86-AVX1-NEXT:    vmovdqu %xmm1, 32(%esi,%ecx,4)
+; X86-AVX1-NEXT:    vmovdqu %xmm2, 16(%esi,%ecx,4)
+; X86-AVX1-NEXT:    vmovdqu %xmm3, (%esi,%ecx,4)
 ; X86-AVX1-NEXT:    popl %esi
-; X86-AVX1-NEXT:    vzeroupper
 ; X86-AVX1-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: mul_16xi16_sext:
@@ -1351,23 +1342,22 @@ define void @mul_16xi16_sext(i8* nocapture readonly %a, i8* nocapture readonly %
 ; X64-AVX1-LABEL: mul_16xi16_sext:
 ; X64-AVX1:       # %bb.0: # %entry
 ; X64-AVX1-NEXT:    movq {{.*}}(%rip), %rax
-; X64-AVX1-NEXT:    vpmovsxwd 16(%rdi,%rdx), %xmm0
-; X64-AVX1-NEXT:    vpmovsxwd 24(%rdi,%rdx), %xmm1
-; X64-AVX1-NEXT:    vpmovsxwd (%rdi,%rdx), %xmm2
-; X64-AVX1-NEXT:    vpmovsxwd 8(%rdi,%rdx), %xmm3
-; X64-AVX1-NEXT:    vpmovsxwd 16(%rsi,%rdx), %xmm4
-; X64-AVX1-NEXT:    vpmulld %xmm0, %xmm4, %xmm0
+; X64-AVX1-NEXT:    vpmovsxwd 24(%rdi,%rdx), %xmm0
+; X64-AVX1-NEXT:    vpmovsxwd 16(%rdi,%rdx), %xmm1
+; X64-AVX1-NEXT:    vpmovsxwd 8(%rdi,%rdx), %xmm2
+; X64-AVX1-NEXT:    vpmovsxwd (%rdi,%rdx), %xmm3
 ; X64-AVX1-NEXT:    vpmovsxwd 24(%rsi,%rdx), %xmm4
+; X64-AVX1-NEXT:    vpmulld %xmm0, %xmm4, %xmm0
+; X64-AVX1-NEXT:    vpmovsxwd 16(%rsi,%rdx), %xmm4
 ; X64-AVX1-NEXT:    vpmulld %xmm1, %xmm4, %xmm1
-; X64-AVX1-NEXT:    vpmovsxwd (%rsi,%rdx), %xmm4
-; X64-AVX1-NEXT:    vpmulld %xmm2, %xmm4, %xmm2
 ; X64-AVX1-NEXT:    vpmovsxwd 8(%rsi,%rdx), %xmm4
+; X64-AVX1-NEXT:    vpmulld %xmm2, %xmm4, %xmm2
+; X64-AVX1-NEXT:    vpmovsxwd (%rsi,%rdx), %xmm4
 ; X64-AVX1-NEXT:    vpmulld %xmm3, %xmm4, %xmm3
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X64-AVX1-NEXT:    vmovups %ymm0, 32(%rax,%rdx,4)
-; X64-AVX1-NEXT:    vmovups %ymm2, (%rax,%rdx,4)
-; X64-AVX1-NEXT:    vzeroupper
+; X64-AVX1-NEXT:    vmovdqu %xmm0, 48(%rax,%rdx,4)
+; X64-AVX1-NEXT:    vmovdqu %xmm1, 32(%rax,%rdx,4)
+; X64-AVX1-NEXT:    vmovdqu %xmm2, 16(%rax,%rdx,4)
+; X64-AVX1-NEXT:    vmovdqu %xmm3, (%rax,%rdx,4)
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: mul_16xi16_sext:
@@ -2201,8 +2191,8 @@ define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) nounwind {
 ; X86-AVX1-NEXT:    divl 32(%ecx)
 ; X86-AVX1-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-AVX1-NEXT:    vpextrd $3, %xmm2, %eax
-; X86-AVX1-NEXT:    vmovdqa (%ecx), %xmm3
-; X86-AVX1-NEXT:    vmovdqa 16(%ecx), %xmm1
+; X86-AVX1-NEXT:    vmovdqa (%ecx), %xmm1
+; X86-AVX1-NEXT:    vmovdqa 16(%ecx), %xmm3
 ; X86-AVX1-NEXT:    vpextrd $3, %xmm3, %ecx
 ; X86-AVX1-NEXT:    xorl %edx, %edx
 ; X86-AVX1-NEXT:    divl %ecx
@@ -2255,14 +2245,13 @@ define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) nounwind {
 ; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [8199,8199,8199,8199]
 ; X86-AVX1-NEXT:    vpmulld %xmm2, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpmulld %xmm2, %xmm1, %xmm1
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; X86-AVX1-NEXT:    vmovaps %ymm0, (%eax)
+; X86-AVX1-NEXT:    vmovdqa %xmm1, (%eax)
+; X86-AVX1-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-AVX1-NEXT:    addl $16, %esp
 ; X86-AVX1-NEXT:    popl %esi
 ; X86-AVX1-NEXT:    popl %edi
 ; X86-AVX1-NEXT:    popl %ebx
 ; X86-AVX1-NEXT:    popl %ebp
-; X86-AVX1-NEXT:    vzeroupper
 ; X86-AVX1-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: PR34947:
@@ -2435,8 +2424,8 @@ define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) nounwind {
 ; X64-AVX1-NEXT:    divl 32(%rsi)
 ; X64-AVX1-NEXT:    movl %edx, %r8d
 ; X64-AVX1-NEXT:    vpextrd $3, %xmm2, %eax
-; X64-AVX1-NEXT:    vmovdqa (%rsi), %xmm3
-; X64-AVX1-NEXT:    vmovdqa 16(%rsi), %xmm1
+; X64-AVX1-NEXT:    vmovdqa (%rsi), %xmm1
+; X64-AVX1-NEXT:    vmovdqa 16(%rsi), %xmm3
 ; X64-AVX1-NEXT:    vpextrd $3, %xmm3, %ecx
 ; X64-AVX1-NEXT:    xorl %edx, %edx
 ; X64-AVX1-NEXT:    divl %ecx
@@ -2486,13 +2475,12 @@ define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) nounwind {
 ; X64-AVX1-NEXT:    vpinsrd $2, %r10d, %xmm2, %xmm2
 ; X64-AVX1-NEXT:    vpinsrd $3, %r9d, %xmm2, %xmm2
 ; X64-AVX1-NEXT:    vpmulld %xmm1, %xmm2, %xmm1
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X64-AVX1-NEXT:    imull $8199, %r8d, %eax # imm = 0x2007
 ; X64-AVX1-NEXT:    movl %eax, (%rax)
-; X64-AVX1-NEXT:    vmovaps %ymm0, (%rax)
+; X64-AVX1-NEXT:    vmovdqa %xmm1, (%rax)
+; X64-AVX1-NEXT:    vmovdqa %xmm0, (%rax)
 ; X64-AVX1-NEXT:    popq %rbx
 ; X64-AVX1-NEXT:    popq %rbp
-; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: PR34947:

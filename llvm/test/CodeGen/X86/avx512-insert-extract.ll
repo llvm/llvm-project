@@ -2252,3 +2252,107 @@ define i128 @test_insertelement_variable_v128i1(<128 x i8> %a, i8 %b, i32 %index
   %t4 = bitcast <128 x i1> %t3 to i128
   ret i128 %t4
 }
+
+define void @test_concat_v2i1(<2 x half>* %arg, <2 x half>* %arg1, <2 x half>* %arg2) {
+; KNL-LABEL: test_concat_v2i1:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    movswl (%rdi), %eax
+; KNL-NEXT:    vmovd %eax, %xmm0
+; KNL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; KNL-NEXT:    movswl 2(%rdi), %eax
+; KNL-NEXT:    vmovd %eax, %xmm1
+; KNL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; KNL-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; KNL-NEXT:    vucomiss %xmm2, %xmm1
+; KNL-NEXT:    setb %al
+; KNL-NEXT:    kmovw %eax, %k0
+; KNL-NEXT:    kshiftlw $1, %k0, %k0
+; KNL-NEXT:    vucomiss %xmm2, %xmm0
+; KNL-NEXT:    setb %al
+; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    kmovw %eax, %k1
+; KNL-NEXT:    korw %k0, %k1, %k0
+; KNL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; KNL-NEXT:    vucomiss %xmm2, %xmm1
+; KNL-NEXT:    seta %al
+; KNL-NEXT:    kmovw %eax, %k1
+; KNL-NEXT:    kshiftlw $1, %k1, %k1
+; KNL-NEXT:    vucomiss %xmm2, %xmm0
+; KNL-NEXT:    seta %al
+; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    kmovw %eax, %k2
+; KNL-NEXT:    korw %k1, %k2, %k1
+; KNL-NEXT:    kandw %k1, %k0, %k1
+; KNL-NEXT:    kshiftrw $1, %k1, %k2
+; KNL-NEXT:    movswl (%rsi), %eax
+; KNL-NEXT:    vmovd %eax, %xmm0
+; KNL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; KNL-NEXT:    movswl 2(%rsi), %eax
+; KNL-NEXT:    vmovd %eax, %xmm1
+; KNL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; KNL-NEXT:    vmovss %xmm1, %xmm0, %xmm1 {%k2} {z}
+; KNL-NEXT:    vmovss %xmm0, %xmm0, %xmm0 {%k1} {z}
+; KNL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; KNL-NEXT:    vmovd %xmm0, %eax
+; KNL-NEXT:    movw %ax, (%rdx)
+; KNL-NEXT:    vcvtps2ph $4, %xmm1, %xmm0
+; KNL-NEXT:    vmovd %xmm0, %eax
+; KNL-NEXT:    movw %ax, 2(%rdx)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_concat_v2i1:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    movswl (%rdi), %eax
+; SKX-NEXT:    vmovd %eax, %xmm0
+; SKX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; SKX-NEXT:    movswl 2(%rdi), %eax
+; SKX-NEXT:    vmovd %eax, %xmm1
+; SKX-NEXT:    vcvtph2ps %xmm1, %xmm1
+; SKX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SKX-NEXT:    vucomiss %xmm2, %xmm1
+; SKX-NEXT:    setb %al
+; SKX-NEXT:    kmovd %eax, %k0
+; SKX-NEXT:    kshiftlb $1, %k0, %k0
+; SKX-NEXT:    vucomiss %xmm2, %xmm0
+; SKX-NEXT:    setb %al
+; SKX-NEXT:    kmovd %eax, %k1
+; SKX-NEXT:    kshiftlb $7, %k1, %k1
+; SKX-NEXT:    kshiftrb $7, %k1, %k1
+; SKX-NEXT:    korw %k0, %k1, %k0
+; SKX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vucomiss %xmm2, %xmm1
+; SKX-NEXT:    seta %al
+; SKX-NEXT:    kmovd %eax, %k1
+; SKX-NEXT:    kshiftlb $1, %k1, %k1
+; SKX-NEXT:    vucomiss %xmm2, %xmm0
+; SKX-NEXT:    seta %al
+; SKX-NEXT:    kmovd %eax, %k2
+; SKX-NEXT:    kshiftlb $7, %k2, %k2
+; SKX-NEXT:    kshiftrb $7, %k2, %k2
+; SKX-NEXT:    korw %k1, %k2, %k1
+; SKX-NEXT:    kandw %k1, %k0, %k1
+; SKX-NEXT:    kshiftrb $1, %k1, %k2
+; SKX-NEXT:    movswl (%rsi), %eax
+; SKX-NEXT:    vmovd %eax, %xmm0
+; SKX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; SKX-NEXT:    movswl 2(%rsi), %eax
+; SKX-NEXT:    vmovd %eax, %xmm1
+; SKX-NEXT:    vcvtph2ps %xmm1, %xmm1
+; SKX-NEXT:    vmovss %xmm1, %xmm0, %xmm1 {%k2} {z}
+; SKX-NEXT:    vmovss %xmm0, %xmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; SKX-NEXT:    vmovd %xmm0, %eax
+; SKX-NEXT:    movw %ax, (%rdx)
+; SKX-NEXT:    vcvtps2ph $4, %xmm1, %xmm0
+; SKX-NEXT:    vmovd %xmm0, %eax
+; SKX-NEXT:    movw %ax, 2(%rdx)
+; SKX-NEXT:    retq
+  %tmp = load <2 x half>, <2 x half>* %arg, align 8
+  %tmp3 = fcmp fast olt <2 x half> %tmp, <half 0xH4600, half 0xH4600>
+  %tmp4 = fcmp fast ogt <2 x half> %tmp, zeroinitializer
+  %tmp5 = and <2 x i1> %tmp3, %tmp4
+  %tmp6 = load <2 x half>, <2 x half>* %arg1, align 8
+  %tmp7 = select <2 x i1> %tmp5, <2 x half> %tmp6, <2 x half> zeroinitializer
+  store <2 x half> %tmp7, <2 x half>* %arg2, align 8
+  ret void
+}

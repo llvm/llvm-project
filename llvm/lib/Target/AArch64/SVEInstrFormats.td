@@ -1436,6 +1436,43 @@ multiclass sve_fp_fcadd<string asm> {
 }
 
 //===----------------------------------------------------------------------===//
+// SVE2 Floating Point Convert Group
+//===----------------------------------------------------------------------===//
+
+class sve2_fp_convert_precision<bits<4> opc, string asm,
+                                ZPRRegOp zprty1, ZPRRegOp zprty2>
+: I<(outs zprty1:$Zd), (ins PPR3bAny:$Pg, zprty2:$Zn),
+  asm, "\t$Zd, $Pg/m, $Zn",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  bits<3> Pg;
+  let Inst{31-24} = 0b01100100;
+  let Inst{23-22} = opc{3-2};
+  let Inst{21-18} = 0b0010;
+  let Inst{17-16} = opc{1-0};
+  let Inst{15-13} = 0b101;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve2_fp_convert_down_narrow<string asm> {
+  def _StoH : sve2_fp_convert_precision<0b1000, asm, ZPR16, ZPR32>;
+  def _DtoS : sve2_fp_convert_precision<0b1110, asm, ZPR32, ZPR64>;
+}
+
+multiclass sve2_fp_convert_up_long<string asm> {
+  def _HtoS : sve2_fp_convert_precision<0b1001, asm, ZPR32, ZPR16>;
+  def _StoD : sve2_fp_convert_precision<0b1111, asm, ZPR64, ZPR32>;
+}
+
+multiclass sve2_fp_convert_down_odd_rounding<string asm> {
+  def _DtoS : sve2_fp_convert_precision<0b0010, asm, ZPR32, ZPR64>;
+}
+
+//===----------------------------------------------------------------------===//
 // SVE Stack Allocation Group
 //===----------------------------------------------------------------------===//
 
@@ -2189,6 +2226,82 @@ multiclass sve2_wide_int_arith_wide<bits<3> opc, string asm> {
 multiclass sve2_pmul_long<bits<1> opc, string asm> {
   def _H : sve2_wide_int_arith<0b01, {0b1101, opc}, asm, ZPR16, ZPR8, ZPR8>;
   def _D : sve2_wide_int_arith<0b11, {0b1101, opc}, asm, ZPR64, ZPR32, ZPR32>;
+}
+
+//===----------------------------------------------------------------------===//
+// SVE2 Misc Group
+//===----------------------------------------------------------------------===//
+
+class sve2_misc<bits<2> sz, bits<4> opc, string asm,
+                ZPRRegOp zprty1, ZPRRegOp zprty2>
+: I<(outs zprty1:$Zd), (ins zprty2:$Zn, zprty2:$Zm),
+  asm, "\t$Zd, $Zn, $Zm", "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  bits<5> Zm;
+  let Inst{31-24} = 0b01000101;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b0;
+  let Inst{20-16} = Zm;
+  let Inst{15-14} = 0b10;
+  let Inst{13-10} = opc;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve2_misc_bitwise<bits<4> opc, string asm> {
+  def _B : sve2_misc<0b00, opc, asm, ZPR8, ZPR8>;
+  def _H : sve2_misc<0b01, opc, asm, ZPR16, ZPR16>;
+  def _S : sve2_misc<0b10, opc, asm, ZPR32, ZPR32>;
+  def _D : sve2_misc<0b11, opc, asm, ZPR64, ZPR64>;
+}
+
+multiclass sve2_bitwise_xor_interleaved<bit opc, string asm> {
+  let DestructiveInstType = Destructive, ElementSize = ElementSizeNone in {
+    def _B : sve2_misc<0b00, { 0b010, opc }, asm, ZPR8,  ZPR8>;
+    def _H : sve2_misc<0b01, { 0b010, opc }, asm, ZPR16, ZPR16>;
+    def _S : sve2_misc<0b10, { 0b010, opc }, asm, ZPR32, ZPR32>;
+    def _D : sve2_misc<0b11, { 0b010, opc }, asm, ZPR64, ZPR64>;
+  }
+}
+
+multiclass sve2_misc_int_addsub_long_interleaved<bits<2> opc, string asm> {
+  def _H : sve2_misc<0b01, { 0b00, opc }, asm, ZPR16, ZPR8>;
+  def _S : sve2_misc<0b10, { 0b00, opc }, asm, ZPR32, ZPR16>;
+  def _D : sve2_misc<0b11, { 0b00, opc }, asm, ZPR64, ZPR32>;
+}
+
+class sve2_bitwise_shift_left_long<bits<3> tsz8_64, bits<2> opc, string asm,
+                                   ZPRRegOp zprty1, ZPRRegOp zprty2,
+                                   Operand immtype>
+: I<(outs zprty1:$Zd), (ins zprty2:$Zn, immtype:$imm),
+  asm, "\t$Zd, $Zn, $imm",
+  "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  bits<5> imm;
+  let Inst{31-23} = 0b010001010;
+  let Inst{22}    = tsz8_64{2};
+  let Inst{21}    = 0b0;
+  let Inst{20-19} = tsz8_64{1-0};
+  let Inst{18-16} = imm{2-0}; // imm3
+  let Inst{15-12} = 0b1010;
+  let Inst{11-10} = opc;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve2_bitwise_shift_left_long<bits<2> opc, string asm> {
+  def _H : sve2_bitwise_shift_left_long<{0,0,1}, opc, asm,
+                                        ZPR16, ZPR8, vecshiftL8>;
+  def _S : sve2_bitwise_shift_left_long<{0,1,?}, opc, asm,
+                                        ZPR32, ZPR16, vecshiftL16> {
+    let Inst{19} = imm{3};
+  }
+  def _D : sve2_bitwise_shift_left_long<{1,?,?}, opc, asm,
+                                        ZPR64, ZPR32, vecshiftL32> {
+    let Inst{20-19} = imm{4-3};
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -5162,4 +5275,102 @@ class sve2_char_match<bit sz, bit opc, string asm,
 multiclass sve2_char_match<bit opc, string asm> {
   def _B : sve2_char_match<0b0, opc, asm, PPR8, ZPR8>;
   def _H : sve2_char_match<0b1, opc, asm, PPR16, ZPR16>;
+}
+
+//===----------------------------------------------------------------------===//
+// SVE2 Histogram Computation - Segment Group
+//===----------------------------------------------------------------------===//
+
+class sve2_hist_gen_segment<string asm>
+: I<(outs ZPR8:$Zd), (ins ZPR8:$Zn, ZPR8:$Zm),
+  asm, "\t$Zd, $Zn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  bits<5> Zm;
+  let Inst{31-21} = 0b01000101001;
+  let Inst{20-16} = Zm;
+  let Inst{15-10} = 0b101000;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+//===----------------------------------------------------------------------===//
+// SVE2 Histogram Computation - Vector Group
+//===----------------------------------------------------------------------===//
+
+class sve2_hist_gen_vector<bit sz, string asm, ZPRRegOp zprty>
+: I<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zn, zprty:$Zm),
+  asm, "\t$Zd, $Pg/z, $Zn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  bits<3> Pg;
+  bits<5> Zm;
+  let Inst{31-23} = 0b010001011;
+  let Inst{22}    = sz;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Zm;
+  let Inst{15-13} = 0b110;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve2_hist_gen_vector<string asm> {
+  def _S : sve2_hist_gen_vector<0b0, asm, ZPR32>;
+  def _D : sve2_hist_gen_vector<0b1, asm, ZPR64>;
+}
+
+//===----------------------------------------------------------------------===//
+// SVE2 Crypto Extensions Group
+//===----------------------------------------------------------------------===//
+
+class sve2_crypto_cons_bin_op<bit opc, string asm, ZPRRegOp zprty>
+: I<(outs zprty:$Zd), (ins zprty:$Zn, zprty:$Zm),
+  asm, "\t$Zd, $Zn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  bits<5> Zm;
+  let Inst{31-21} = 0b01000101001;
+  let Inst{20-16} = Zm;
+  let Inst{15-11} = 0b11110;
+  let Inst{10}    = opc;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+class sve2_crypto_des_bin_op<bits<2> opc, string asm, ZPRRegOp zprty>
+: I<(outs zprty:$Zdn), (ins zprty:$_Zdn, zprty:$Zm),
+  asm, "\t$Zdn, $_Zdn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zdn;
+  bits<5> Zm;
+  let Inst{31-17} = 0b010001010010001;
+  let Inst{16}    = opc{1};
+  let Inst{15-11} = 0b11100;
+  let Inst{10}    = opc{0};
+  let Inst{9-5}   = Zm;
+  let Inst{4-0}   = Zdn;
+
+  let Constraints = "$Zdn = $_Zdn";
+}
+
+class sve2_crypto_unary_op<bit opc, string asm>
+: I<(outs ZPR8:$Zdn), (ins ZPR8:$_Zdn),
+  asm, "\t$Zdn, $_Zdn",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zdn;
+  let Inst{31-11} = 0b010001010010000011100;
+  let Inst{10}    = opc;
+  let Inst{9-5}   = 0b00000;
+  let Inst{4-0}   = Zdn;
+
+  let Constraints = "$Zdn = $_Zdn";
 }

@@ -337,5 +337,5 @@ define arm_aapcs_vfpcc void @test(i8* %v50) #0 {
   ret void
   }
 
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="preserve-sign" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="cortex-m7" "target-features"="+d16,+dsp,+fp-armv8,+hwdiv,+thumb-mode,-crc,-crypto,-dotprod,-fp-only-sp,-fullfp16,-hwdiv-arm,-neon,-ras" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="preserve-sign" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="cortex-m7" "target-features"="-d32,+dsp,+fp-armv8,+hwdiv,+thumb-mode,-crc,-crypto,-dotprod,-fullfp16,-hwdiv-arm,-neon,-ras" "unsafe-fp-math"="false" "use-soft-float"="false" }
 

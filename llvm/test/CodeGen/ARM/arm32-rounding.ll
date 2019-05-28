@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabihf -mattr=+fp-armv8 | FileCheck --check-prefix=CHECK --check-prefix=DP %s
-; RUN: llc < %s -mtriple=thumbv7em-linux-gnueabihf -mattr=+fp-armv8,+d16,+fp-only-sp | FileCheck --check-prefix=SP %s
-; RUN: llc < %s -mtriple=thumbv7em-linux-gnueabihf -mattr=+fp-armv8,+d16 | FileCheck --check-prefix=DP %s
+; RUN: llc < %s -mtriple=thumbv7em-linux-gnueabihf -mattr=+fp-armv8,-d32,-fp64 | FileCheck --check-prefix=SP %s
+; RUN: llc < %s -mtriple=thumbv7em-linux-gnueabihf -mattr=+fp-armv8,-d32 | FileCheck --check-prefix=DP %s
 
 ; CHECK-LABEL: test1
 ; CHECK: vrintm.f32

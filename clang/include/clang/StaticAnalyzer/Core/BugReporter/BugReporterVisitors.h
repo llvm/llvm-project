@@ -294,20 +294,6 @@ public:
                                                  BugReport &BR) override;
 };
 
-class CXXSelfAssignmentBRVisitor final : public BugReporterVisitor {
-  bool Satisfied = false;
-
-public:
-  CXXSelfAssignmentBRVisitor() = default;
-
-  void Profile(llvm::FoldingSetNodeID &ID) const override {}
-
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *Succ,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override;
-};
-
-
 /// The bug visitor will walk all the nodes in a path and collect all the
 /// constraints. When it reaches the root node, will create a refutation
 /// manager and check if the constraints are satisfiable

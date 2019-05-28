@@ -11,6 +11,8 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Sema/CodeCompleteConsumer.h"
+#include <limits>
 #include <utility>
 
 namespace clang {
@@ -73,8 +75,23 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
 }
 
 void getSignature(const CodeCompletionString &CCS, std::string *Signature,
-                  std::string *Snippet, std::string *RequiredQualifiers) {
-  unsigned ArgCount = 0;
+                  std::string *Snippet, std::string *RequiredQualifiers,
+                  bool CompletingPattern) {
+  // Placeholder with this index will be ${0:…} to mark final cursor position.
+  // Usually we do not add $0, so the cursor is placed at end of completed text.
+  unsigned CursorSnippetArg = std::numeric_limits<unsigned>::max();
+  if (CompletingPattern) {
+    // In patterns, it's best to place the cursor at the last placeholder, to
+    // handle cases like
+    //    namespace ${1:name} {
+    //      ${0:decls}
+    //    }
+    CursorSnippetArg =
+        llvm::count_if(CCS, [](const CodeCompletionString::Chunk &C) {
+          return C.Kind == CodeCompletionString::CK_Placeholder;
+        });
+  }
+  unsigned SnippetArg = 0;
   bool HadObjCArguments = false;
   for (const auto &Chunk : CCS) {
     // Informative qualifier chunks only clutter completion results, skip
@@ -124,8 +141,10 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
       break;
     case CodeCompletionString::CK_Placeholder:
       *Signature += Chunk.Text;
-      ++ArgCount;
-      *Snippet += "${" + std::to_string(ArgCount) + ':';
+      ++SnippetArg;
+      *Snippet +=
+          "${" +
+          std::to_string(SnippetArg == CursorSnippetArg ? 0 : SnippetArg) + ':';
       appendEscapeSnippet(Chunk.Text, Snippet);
       *Snippet += '}';
       break;

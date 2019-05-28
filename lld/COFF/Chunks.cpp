@@ -860,7 +860,7 @@ MergeChunk::MergeChunk(uint32_t Alignment)
 void MergeChunk::addSection(SectionChunk *C) {
   assert(isPowerOf2_32(C->getAlignment()));
   uint8_t P2Align = llvm::Log2_32(C->getAlignment());
-  assert(P2Align >= 0 && P2Align < array_lengthof(Instances));
+  assert(P2Align < array_lengthof(Instances));
   auto *&MC = Instances[P2Align];
   if (!MC)
     MC = make<MergeChunk>(C->getAlignment());

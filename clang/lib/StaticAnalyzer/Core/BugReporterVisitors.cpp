@@ -2371,59 +2371,6 @@ UndefOrNullArgVisitor::VisitNode(const ExplodedNode *N,
   return nullptr;
 }
 
-std::shared_ptr<PathDiagnosticPiece>
-CXXSelfAssignmentBRVisitor::VisitNode(const ExplodedNode *Succ,
-                                      BugReporterContext &BRC, BugReport &) {
-  if (Satisfied)
-    return nullptr;
-
-  const auto Edge = Succ->getLocation().getAs<BlockEdge>();
-  if (!Edge.hasValue())
-    return nullptr;
-
-  auto Tag = Edge->getTag();
-  if (!Tag)
-    return nullptr;
-
-  if (Tag->getTagDescription() != "cplusplus.SelfAssignment")
-    return nullptr;
-
-  Satisfied = true;
-
-  const auto *Met =
-      dyn_cast<CXXMethodDecl>(Succ->getCodeDecl().getAsFunction());
-  assert(Met && "Not a C++ method.");
-  assert((Met->isCopyAssignmentOperator() || Met->isMoveAssignmentOperator()) &&
-         "Not a copy/move assignment operator.");
-
-  const auto *LCtx = Edge->getLocationContext();
-
-  const auto &State = Succ->getState();
-  auto &SVB = State->getStateManager().getSValBuilder();
-
-  const auto Param =
-      State->getSVal(State->getRegion(Met->getParamDecl(0), LCtx));
-  const auto This =
-      State->getSVal(SVB.getCXXThis(Met, LCtx->getStackFrame()));
-
-  auto L = PathDiagnosticLocation::create(Met, BRC.getSourceManager());
-
-  if (!L.isValid() || !L.asLocation().isValid())
-    return nullptr;
-
-  SmallString<256> Buf;
-  llvm::raw_svector_ostream Out(Buf);
-
-  Out << "Assuming " << Met->getParamDecl(0)->getName() <<
-    ((Param == This) ? " == " : " != ") << "*this";
-
-  auto Piece = std::make_shared<PathDiagnosticEventPiece>(L, Out.str());
-  Piece->addRange(Met->getSourceRange());
-
-  return std::move(Piece);
-}
-
-
 FalsePositiveRefutationBRVisitor::FalsePositiveRefutationBRVisitor()
     : Constraints(ConstraintRangeTy::Factory().getEmptyMap()) {}
 

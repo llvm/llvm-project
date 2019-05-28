@@ -124,6 +124,10 @@ public:
     return Fold(ConstantExpr::getNot(C));
   }
 
+  Constant *CreateUnOp(Instruction::UnaryOps Opc, Constant *C) const {
+    return Fold(ConstantExpr::get(Opc, C));
+  }
+
   //===--------------------------------------------------------------------===//
   // Memory Instructions
   //===--------------------------------------------------------------------===//

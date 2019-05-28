@@ -153,6 +153,7 @@ if(LLDB_INCLUDE_TESTS)
 
   add_custom_target(lldb-test-deps)
   add_dependencies(lldb-test-deps ${LLDB_TEST_DEPS})
+  set_target_properties(lldb-test-deps PROPERTIES FOLDER "lldb misc")
 
   add_subdirectory(test)
   add_subdirectory(unittests)
@@ -193,6 +194,7 @@ if (NOT LLDB_DISABLE_PYTHON)
       set(readline_dep readline)
     endif()
     add_dependencies(finish_swig swig_wrapper liblldb lldb-argdumper ${readline_dep})
+    set_target_properties(finish_swig swig_wrapper PROPERTIES FOLDER "lldb misc")
 
     # Ensure we do the python post-build step when building lldb.
     add_dependencies(lldb finish_swig)

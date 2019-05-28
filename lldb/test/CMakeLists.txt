@@ -110,13 +110,13 @@ add_python_test_target(check-lldb-single
   "--no-multiprocess;${LLDB_DOTEST_ARGS}"
   "Testing LLDB with args: ${LLDB_DOTEST_ARGS}"
   )
+set_target_properties(check-lldb-single PROPERTIES FOLDER "lldb misc")
 
 # If tests crash cause LLDB to crash, or things are otherwise unstable, or if machine-parsable
 # output is desired (i.e. in continuous integration contexts) check-lldb-single is a better target.
 add_custom_target(check-lldb)
-
-# Make check-lldb depend on all test dependencies.
 add_dependencies(check-lldb lldb-test-deps)
+set_target_properties(check-lldb PROPERTIES FOLDER "lldb misc")
 
 # If we're building with an in-tree clang, then list clang as a dependency
 # to run tests.

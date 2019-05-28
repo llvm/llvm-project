@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=thumbv7-none-eabi   -mcpu=cortex-m3                    | FileCheck %s -check-prefix=CHECK -check-prefix=SOFT -check-prefix=NONE
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-m4                    | FileCheck %s -check-prefix=CHECK -check-prefix=SOFT -check-prefix=SP
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-m7                    | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=DP -check-prefix=VFP  -check-prefix=FP-ARMv8
-; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-m7 -mattr=+fp-only-sp | FileCheck %s -check-prefix=CHECK -check-prefix=SOFT -check-prefix=SP
+; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-m7 -mattr=-fp64 | FileCheck %s -check-prefix=CHECK -check-prefix=SOFT -check-prefix=SP
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-a7                    | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=DP -check-prefix=NEON -check-prefix=VFP4
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-a57                   | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=DP -check-prefix=NEON -check-prefix=FP-ARMv8
 

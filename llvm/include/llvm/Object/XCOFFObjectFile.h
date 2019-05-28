@@ -61,16 +61,54 @@ struct XCOFFSectionHeader {
   support::big32_t Flags;
 };
 
+struct XCOFFSymbolEntry {
+  enum { NAME_IN_STR_TBL_MAGIC = 0x0 };
+  typedef struct {
+    support::big32_t Magic; // Zero indicates name in string table.
+    support::ubig32_t Offset;
+  } NameInStrTblType;
+
+  typedef struct {
+    uint8_t LanguageId;
+    uint8_t CpuTypeId;
+  } CFileLanguageIdAndTypeIdType;
+
+  union {
+    char SymbolName[XCOFF::SymbolNameSize];
+    NameInStrTblType NameInStrTbl;
+  };
+
+  support::ubig32_t Value; // Symbol value; storage class-dependent.
+  support::big16_t SectionNumber;
+
+  union {
+    support::ubig16_t SymbolType;
+    CFileLanguageIdAndTypeIdType CFileLanguageIdAndTypeId;
+  };
+
+  XCOFF::StorageClass StorageClass;
+  uint8_t NumberOfAuxEntries;
+};
+
+struct XCOFFStringTable {
+  uint32_t Size;
+  const char *Data;
+};
+
 class XCOFFObjectFile : public ObjectFile {
 private:
   const XCOFFFileHeader *FileHdrPtr = nullptr;
   const XCOFFSectionHeader *SectionHdrTablePtr = nullptr;
+  const XCOFFSymbolEntry *SymbolTblPtr = nullptr;
+  XCOFFStringTable StringTable = {0, nullptr};
 
   size_t getFileHeaderSize() const;
   size_t getSectionHeaderSize() const;
 
   const XCOFFSectionHeader *toSection(DataRefImpl Ref) const;
-
+  static bool isReservedSectionNumber(int16_t SectionNumber);
+  std::error_code getSectionByNum(int16_t Num,
+                                  const XCOFFSectionHeader *&Result) const;
 
 public:
   void moveSymbolNext(DataRefImpl &Symb) const override;
@@ -121,18 +159,27 @@ public:
   XCOFFObjectFile(MemoryBufferRef Object, std::error_code &EC);
 
   const XCOFFFileHeader *getFileHeader() const { return FileHdrPtr; }
+  const XCOFFSymbolEntry *getPointerToSymbolTable() const {
+    return SymbolTblPtr;
+  }
 
+  Expected<StringRef>
+  getSymbolSectionName(const XCOFFSymbolEntry *SymEntPtr) const;
+
+  const XCOFFSymbolEntry *toSymbolEntry(DataRefImpl Ref) const;
   uint16_t getMagic() const;
   uint16_t getNumberOfSections() const;
-  int32_t  getTimeStamp() const;
-  uint32_t  getSymbolTableOffset() const;
+  int32_t getTimeStamp() const;
+  uint32_t getSymbolTableOffset() const;
 
-  // Note that this value is signed and might return a negative value. Negative
-  // values are reserved for future use.
-  int32_t  getNumberOfSymbolTableEntries() const;
+  // Returns the value as encoded in the object file.
+  // Negative values are reserved for future use.
+  int32_t getRawNumberOfSymbolTableEntries() const;
 
+  // Returns a sanitized value, useable as an index into the symbol table.
+  uint32_t getLogicalNumberOfSymbolTableEntries() const;
   uint16_t getOptionalHeaderSize() const;
-  uint16_t getFlags() const;
+  uint16_t getFlags() const { return FileHdrPtr->Flags; };
 }; // XCOFFObjectFile
 
 } // namespace object

@@ -3932,6 +3932,12 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       MIB.addReg(SrcReg, RegState::ImplicitDefine);
       return true;
     }
+    if (MI.getOpcode() == X86::AVX512_256_SET0) {
+      // No VLX so we must reference a zmm.
+      unsigned ZReg =
+        TRI->getMatchingSuperReg(SrcReg, X86::sub_ymm, &X86::VR512RegClass);
+      MIB->getOperand(0).setReg(ZReg);
+    }
     return Expand2AddrUndef(MIB, get(X86::VPXORDZrr));
   }
   case X86::V_SETALLONES:

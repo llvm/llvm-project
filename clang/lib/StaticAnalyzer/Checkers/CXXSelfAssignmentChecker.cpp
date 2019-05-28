@@ -50,10 +50,26 @@ void CXXSelfAssignmentChecker::checkBeginFunction(CheckerContext &C) const {
       State->getSVal(SVB.getCXXThis(MD, LCtx->getStackFrame()));
   auto Param = SVB.makeLoc(State->getRegion(MD->getParamDecl(0), LCtx));
   auto ParamVal = State->getSVal(Param);
+
   ProgramStateRef SelfAssignState = State->bindLoc(Param, ThisVal, LCtx);
-  C.addTransition(SelfAssignState);
+  const NoteTag *SelfAssignTag =
+    C.getNoteTag([MD](BugReport &BR) -> std::string {
+        SmallString<256> Msg;
+        llvm::raw_svector_ostream Out(Msg);
+        Out << "Assuming " << MD->getParamDecl(0)->getName() << " == *this";
+        return Out.str();
+      });
+  C.addTransition(SelfAssignState, SelfAssignTag);
+
   ProgramStateRef NonSelfAssignState = State->bindLoc(Param, ParamVal, LCtx);
-  C.addTransition(NonSelfAssignState);
+  const NoteTag *NonSelfAssignTag =
+    C.getNoteTag([MD](BugReport &BR) -> std::string {
+        SmallString<256> Msg;
+        llvm::raw_svector_ostream Out(Msg);
+        Out << "Assuming " << MD->getParamDecl(0)->getName() << " != *this";
+        return Out.str();
+      });
+  C.addTransition(NonSelfAssignState, NonSelfAssignTag);
 }
 
 void ento::registerCXXSelfAssignmentChecker(CheckerManager &Mgr) {

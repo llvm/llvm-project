@@ -725,12 +725,12 @@ define void @test_x86_avx_storeu_dq_256(i8* %a0, <32 x i8> %a1) {
 ; X86-AVX-LABEL: test_x86_avx_storeu_dq_256:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1 # encoding: [0xc4,0xe3,0x7d,0x19,0xc1,0x01]
-; X86-AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2 # encoding: [0xc5,0xe9,0x76,0xd2]
-; X86-AVX-NEXT:    vpsubb %xmm2, %xmm1, %xmm1 # encoding: [0xc5,0xf1,0xf8,0xca]
-; X86-AVX-NEXT:    vpsubb %xmm2, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xf8,0xc2]
-; X86-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0x7d,0x18,0xc1,0x01]
-; X86-AVX-NEXT:    vmovups %ymm0, (%eax) # encoding: [0xc5,0xfc,0x11,0x00]
+; X86-AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1 # encoding: [0xc5,0xf1,0x76,0xc9]
+; X86-AVX-NEXT:    vpsubb %xmm1, %xmm0, %xmm2 # encoding: [0xc5,0xf9,0xf8,0xd1]
+; X86-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0 # encoding: [0xc4,0xe3,0x7d,0x19,0xc0,0x01]
+; X86-AVX-NEXT:    vpsubb %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xf8,0xc1]
+; X86-AVX-NEXT:    vmovdqu %xmm0, 16(%eax) # encoding: [0xc5,0xfa,0x7f,0x40,0x10]
+; X86-AVX-NEXT:    vmovdqu %xmm2, (%eax) # encoding: [0xc5,0xfa,0x7f,0x10]
 ; X86-AVX-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-AVX-NEXT:    retl # encoding: [0xc3]
 ;
@@ -745,12 +745,12 @@ define void @test_x86_avx_storeu_dq_256(i8* %a0, <32 x i8> %a1) {
 ;
 ; X64-AVX-LABEL: test_x86_avx_storeu_dq_256:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1 # encoding: [0xc4,0xe3,0x7d,0x19,0xc1,0x01]
-; X64-AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2 # encoding: [0xc5,0xe9,0x76,0xd2]
-; X64-AVX-NEXT:    vpsubb %xmm2, %xmm1, %xmm1 # encoding: [0xc5,0xf1,0xf8,0xca]
-; X64-AVX-NEXT:    vpsubb %xmm2, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xf8,0xc2]
-; X64-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0x7d,0x18,0xc1,0x01]
-; X64-AVX-NEXT:    vmovups %ymm0, (%rdi) # encoding: [0xc5,0xfc,0x11,0x07]
+; X64-AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1 # encoding: [0xc5,0xf1,0x76,0xc9]
+; X64-AVX-NEXT:    vpsubb %xmm1, %xmm0, %xmm2 # encoding: [0xc5,0xf9,0xf8,0xd1]
+; X64-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0 # encoding: [0xc4,0xe3,0x7d,0x19,0xc0,0x01]
+; X64-AVX-NEXT:    vpsubb %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xf8,0xc1]
+; X64-AVX-NEXT:    vmovdqu %xmm0, 16(%rdi) # encoding: [0xc5,0xfa,0x7f,0x47,0x10]
+; X64-AVX-NEXT:    vmovdqu %xmm2, (%rdi) # encoding: [0xc5,0xfa,0x7f,0x17]
 ; X64-AVX-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-AVX-NEXT:    retq # encoding: [0xc3]
 ;

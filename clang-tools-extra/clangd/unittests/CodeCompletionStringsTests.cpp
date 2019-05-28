@@ -22,10 +22,12 @@ public:
         CCTUInfo(Allocator), Builder(*Allocator, CCTUInfo) {}
 
 protected:
-  void computeSignature(const CodeCompletionString &CCS) {
+  void computeSignature(const CodeCompletionString &CCS,
+                        bool CompletingPattern = false) {
     Signature.clear();
     Snippet.clear();
-    getSignature(CCS, &Signature, &Snippet);
+    getSignature(CCS, &Signature, &Snippet, /*RequiredQualifier=*/nullptr,
+                 CompletingPattern);
   }
 
   std::shared_ptr<clang::GlobalCodeCompletionAllocator> Allocator;
@@ -97,6 +99,25 @@ TEST_F(CompletionStringTest, EscapeSnippet) {
   computeSignature(*Builder.TakeString());
   EXPECT_EQ(Signature, "($p}1\\)");
   EXPECT_EQ(Snippet, "(${1:\\$p\\}1\\\\})");
+}
+
+TEST_F(CompletionStringTest, SnippetsInPatterns) {
+  auto MakeCCS = [this]() -> const CodeCompletionString & {
+    CodeCompletionBuilder Builder(*Allocator, CCTUInfo);
+    Builder.AddTypedTextChunk("namespace");
+    Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+    Builder.AddPlaceholderChunk("name");
+    Builder.AddChunk(CodeCompletionString::CK_Equal);
+    Builder.AddPlaceholderChunk("target");
+    Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+    return *Builder.TakeString();
+  };
+  computeSignature(MakeCCS(), /*CompletingPattern=*/false);
+  EXPECT_EQ(Snippet, " ${1:name} = ${2:target};");
+
+  // When completing a pattern, the last placeholder holds the cursor position.
+  computeSignature(MakeCCS(), /*CompletingPattern=*/true);
+  EXPECT_EQ(Snippet, " ${1:name} = ${0:target};");
 }
 
 TEST_F(CompletionStringTest, IgnoreInformativeQualifier) {

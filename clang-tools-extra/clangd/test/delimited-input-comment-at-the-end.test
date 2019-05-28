@@ -1,4 +1,4 @@
-# RUN: clangd -input-style=delimited -run-synchronously -input-mirror-file %t < %s
+# RUN: clangd -input-style=delimited -sync -input-mirror-file %t < %s
 # RUN: grep '{"jsonrpc":"2.0","id":3,"method":"exit"}' %t
 #
 # RUN: clangd -lit-test -input-mirror-file %t < %s
