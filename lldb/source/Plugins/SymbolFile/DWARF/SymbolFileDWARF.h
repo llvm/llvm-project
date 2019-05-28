@@ -453,11 +453,9 @@ protected:
   DWARFDataSegment m_data_debug_rnglists;
 
   // The unique pointer items below are generated on demand if and when someone
-  // accesses
-  // them through a non const version of this class.
+  // accesses them through a non const version of this class.
   std::unique_ptr<DWARFDebugAbbrev> m_abbr;
   std::unique_ptr<DWARFDebugInfo> m_info;
-  std::unique_ptr<DWARFDebugLine> m_line;
   std::unique_ptr<GlobalVariableMap> m_global_aranges_up;
 
   typedef std::unordered_map<lldb::offset_t, lldb_private::DebugMacrosSP>

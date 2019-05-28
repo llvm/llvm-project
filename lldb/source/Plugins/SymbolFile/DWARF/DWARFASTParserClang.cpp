@@ -2553,7 +2553,7 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
   int call_file = 0;
   int call_line = 0;
   int call_column = 0;
-  DWARFExpression frame_base(die.GetCU());
+  DWARFExpression frame_base;
 
   const dw_tag_t tag = die.Tag();
 
@@ -2692,7 +2692,6 @@ bool DWARFASTParserClang::ParseChildMembers(
       const size_t num_attributes = die.GetAttributes(attributes);
       if (num_attributes > 0) {
         Declaration decl;
-        // DWARFExpression location;
         const char *name = nullptr;
         const char *prop_name = nullptr;
         const char *prop_getter_name = nullptr;
@@ -3172,7 +3171,6 @@ bool DWARFASTParserClang::ParseChildMembers(
       const size_t num_attributes = die.GetAttributes(attributes);
       if (num_attributes > 0) {
         Declaration decl;
-        DWARFExpression location(die.GetCU());
         DWARFFormValue encoding_form;
         AccessType accessibility = default_accessibility;
         bool is_virtual = false;

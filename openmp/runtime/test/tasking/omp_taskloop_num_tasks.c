@@ -1,9 +1,15 @@
+// This test is known to be fragile on NetBSD kernel at the moment.
+// UNSUPPORTED: netbsd
 // RUN: %libomp-compile-and-run
 // RUN: %libomp-compile && env KMP_TASKLOOP_MIN_TASKS=1 %libomp-run
 // REQUIRES: openmp-4.5
 
 // These compilers don't support the taskloop construct
 // UNSUPPORTED: gcc-4, gcc-5, icc-16
+
+// This test is known to be fragile on NetBSD kernel at the moment,
+// https://bugs.llvm.org/show_bug.cgi?id=42020.
+// UNSUPPORTED: netbsd
 
 /*
  * Test for taskloop

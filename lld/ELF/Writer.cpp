@@ -180,9 +180,9 @@ static Defined *addOptionalRegular(StringRef Name, SectionBase *Sec,
   if (!S || S->isDefined())
     return nullptr;
 
-  return cast<Defined>(Symtab->addSymbol(
-      Defined{/*File=*/nullptr, Name, Binding, StOther, STT_NOTYPE, Val,
-              /*Size=*/0, Sec}));
+  S->resolve(Defined{/*File=*/nullptr, Name, Binding, StOther, STT_NOTYPE, Val,
+                     /*Size=*/0, Sec});
+  return cast<Defined>(S);
 }
 
 static Defined *addAbsolute(StringRef Name) {
@@ -239,9 +239,8 @@ void elf::addReservedSymbols() {
     if (Config->EMachine == EM_PPC || Config->EMachine == EM_PPC64)
       GotOff = 0x8000;
 
-    Symtab->addSymbol(Defined{/*File=*/nullptr, GotSymName, STB_GLOBAL,
-                              STV_HIDDEN, STT_NOTYPE, GotOff, /*Size=*/0,
-                              Out::ElfHeader});
+    S->resolve(Defined{/*File=*/nullptr, GotSymName, STB_GLOBAL, STV_HIDDEN,
+                       STT_NOTYPE, GotOff, /*Size=*/0, Out::ElfHeader});
     ElfSym::GlobalOffsetTable = cast<Defined>(S);
   }
 
