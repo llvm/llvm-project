@@ -103,7 +103,9 @@ class invalid_object_error : public device_error {
 class memory_allocation_error : public device_error {};
 class platform_error : public device_error {};
 class profiling_error : public device_error {};
-class feature_not_supported : public device_error {};
+class feature_not_supported : public device_error {
+  using device_error::device_error;
+};
 
 } // namespace sycl
 } // namespace cl

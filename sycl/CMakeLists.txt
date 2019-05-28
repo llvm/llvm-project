@@ -130,6 +130,7 @@ add_library("${SYCLLibrary}" SHARED
   "${sourceRootPath}/detail/event_impl.cpp"
   "${sourceRootPath}/detail/force_device.cpp"
   "${sourceRootPath}/detail/helpers.cpp"
+  "${sourceRootPath}/detail/image_impl.cpp"
   "${sourceRootPath}/detail/kernel_impl.cpp"
   "${sourceRootPath}/detail/kernel_info.cpp"
   "${sourceRootPath}/detail/memory_manager.cpp"

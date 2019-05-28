@@ -90,6 +90,7 @@ struct cnri_bin_desc {
 
 // TODO For now code below is a placeholder for future real implementation
 typedef cl_context cnri_context;
+typedef cl_event cnri_event;
 typedef cl_program cnri_program;
 typedef cl_kernel cnri_kernel;
 
