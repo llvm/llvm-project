@@ -68,7 +68,7 @@ add_lit_testsuite(check-lldb-lit "Running lldb lit test suite"
   DEPENDS ${LLDB_TEST_DEPS}
   )
 
-set_target_properties(check-lldb-lit PROPERTIES FOLDER "LLDB tests")
+set_target_properties(check-lldb-lit PROPERTIES FOLDER "lldb tests")
 
 # If we're building with an in-tree clang, then list clang as a dependency
 # to run tests.
