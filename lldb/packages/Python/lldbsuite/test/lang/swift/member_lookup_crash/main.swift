@@ -10,7 +10,7 @@ extension Measurement where UnitType == UnitAngle {
   }
 
   func f() {
-    return //%self.expect('p self.radians', substrs=['is not convertible to'], error=True)
+    return //%self.expect('p self.radians', substrs=["property 'radians' requires the types 'UnitType' and 'UnitAngle' be equivalent"], error=True)
   }
 }
 
