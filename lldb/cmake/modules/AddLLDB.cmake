@@ -100,7 +100,11 @@ function(add_lldb_library name)
   # Add in any extra C++ compilation flags for this library.
   target_compile_options(${name} PRIVATE ${PARAM_EXTRA_CXXFLAGS})
 
-  set_target_properties(${name} PROPERTIES FOLDER "lldb libraries")
+  if(PARAM_PLUGIN)
+    set_target_properties(${name} PROPERTIES FOLDER "lldb plugins")
+  else()
+    set_target_properties(${name} PROPERTIES FOLDER "lldb libraries")
+  endif()
 endfunction(add_lldb_library)
 
 function(add_lldb_executable name)
