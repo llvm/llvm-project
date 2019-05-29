@@ -443,7 +443,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
         continue;
       }
       SectionBase *Section = D->Section->Repl;
-      if (!Section->Live) {
+      if (!Section->isLive()) {
         P->setSymbolAndType(0, 0, false);
         continue;
       }
@@ -1095,8 +1095,19 @@ template <class ELFT> void InputSection::writeTo(uint8_t *Buf) {
 
 void InputSection::replace(InputSection *Other) {
   Alignment = std::max(Alignment, Other->Alignment);
+
+  // When a section is replaced with another section that was allocated to
+  // another partition, the replacement section (and its associated sections)
+  // need to be placed in the main partition so that both partitions will be
+  // able to access it.
+  if (Partition != Other->Partition) {
+    Partition = 1;
+    for (InputSection *IS : DependentSections)
+      IS->Partition = 1;
+  }
+
   Other->Repl = Repl;
-  Other->Live = false;
+  Other->markDead();
 }
 
 template <class ELFT>

@@ -333,7 +333,7 @@ void elf::maybeWarnUnorderableSymbol(const Symbol *Sym) {
     Warn(": unable to order absolute symbol: ");
   else if (D && isa<OutputSection>(D->Section))
     Warn(": unable to order synthetic symbol: ");
-  else if (D && !D->Section->Repl->Live)
+  else if (D && !D->Section->Repl->isLive())
     Warn(": unable to order discarded symbol: ");
 }
 

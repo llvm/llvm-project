@@ -246,6 +246,10 @@ public:
       std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
   }
 
+  /// Default to DFA for resource management, return false when target will use
+  /// ProcResource in InstrSchedModel instead.
+  virtual bool useDFAforSMS() const { return true; }
+
   // For use with PostRAScheduling: get the minimum optimization level needed
   // to enable post-RA scheduling.
   virtual CodeGenOpt::Level getOptLevelToEnablePostRAScheduler() const {

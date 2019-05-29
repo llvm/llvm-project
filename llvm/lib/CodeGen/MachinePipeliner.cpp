@@ -179,6 +179,13 @@ bool MachinePipeliner::runOnMachineFunction(MachineFunction &mf) {
       !EnableSWPOptSize.getPosition())
     return false;
 
+  // Cannot pipeline loops without instruction itineraries if we are using
+  // DFA for the pipeliner.
+  if (mf.getSubtarget().useDFAforSMS() &&
+      (!mf.getSubtarget().getInstrItineraryData() ||
+       mf.getSubtarget().getInstrItineraryData()->isEmpty()))
+    return false;
+
   MF = &mf;
   MLI = &getAnalysis<MachineLoopInfo>();
   MDT = &getAnalysis<MachineDominatorTree>();
@@ -810,27 +817,55 @@ namespace {
 // the number of functional unit choices.
 struct FuncUnitSorter {
   const InstrItineraryData *InstrItins;
+  const MCSubtargetInfo *STI;
   DenseMap<unsigned, unsigned> Resources;
 
-  FuncUnitSorter(const InstrItineraryData *IID) : InstrItins(IID) {}
+  FuncUnitSorter(const TargetSubtargetInfo &TSI)
+      : InstrItins(TSI.getInstrItineraryData()), STI(&TSI) {}
 
   // Compute the number of functional unit alternatives needed
   // at each stage, and take the minimum value. We prioritize the
   // instructions by the least number of choices first.
   unsigned minFuncUnits(const MachineInstr *Inst, unsigned &F) const {
-    unsigned schedClass = Inst->getDesc().getSchedClass();
+    unsigned SchedClass = Inst->getDesc().getSchedClass();
     unsigned min = UINT_MAX;
-    for (const InstrStage *IS = InstrItins->beginStage(schedClass),
-                          *IE = InstrItins->endStage(schedClass);
-         IS != IE; ++IS) {
-      unsigned funcUnits = IS->getUnits();
-      unsigned numAlternatives = countPopulation(funcUnits);
-      if (numAlternatives < min) {
-        min = numAlternatives;
-        F = funcUnits;
+    if (InstrItins && !InstrItins->isEmpty()) {
+      for (const InstrStage &IS :
+           make_range(InstrItins->beginStage(SchedClass),
+                      InstrItins->endStage(SchedClass))) {
+        unsigned funcUnits = IS.getUnits();
+        unsigned numAlternatives = countPopulation(funcUnits);
+        if (numAlternatives < min) {
+          min = numAlternatives;
+          F = funcUnits;
+        }
       }
+      return min;
     }
-    return min;
+    if (STI && STI->getSchedModel().hasInstrSchedModel()) {
+      const MCSchedClassDesc *SCDesc =
+          STI->getSchedModel().getSchedClassDesc(SchedClass);
+      if (!SCDesc->isValid())
+        // No valid Schedule Class Desc for schedClass, should be
+        // Pseudo/PostRAPseudo
+        return min;
+
+      for (const MCWriteProcResEntry &PRE :
+           make_range(STI->getWriteProcResBegin(SCDesc),
+                      STI->getWriteProcResEnd(SCDesc))) {
+        if (!PRE.Cycles)
+          continue;
+        const MCProcResourceDesc *ProcResource =
+            STI->getSchedModel().getProcResource(PRE.ProcResourceIdx);
+        unsigned NumUnits = ProcResource->NumUnits;
+        if (NumUnits < min) {
+          min = NumUnits;
+          F = PRE.ProcResourceIdx;
+        }
+      }
+      return min;
+    }
+    llvm_unreachable("Should have non-empty InstrItins or hasInstrSchedModel!");
   }
 
   // Compute the critical resources needed by the instruction. This
@@ -840,13 +875,34 @@ struct FuncUnitSorter {
   // the same, highly used, functional unit have high priority.
   void calcCriticalResources(MachineInstr &MI) {
     unsigned SchedClass = MI.getDesc().getSchedClass();
-    for (const InstrStage *IS = InstrItins->beginStage(SchedClass),
-                          *IE = InstrItins->endStage(SchedClass);
-         IS != IE; ++IS) {
-      unsigned FuncUnits = IS->getUnits();
-      if (countPopulation(FuncUnits) == 1)
-        Resources[FuncUnits]++;
+    if (InstrItins && !InstrItins->isEmpty()) {
+      for (const InstrStage &IS :
+           make_range(InstrItins->beginStage(SchedClass),
+                      InstrItins->endStage(SchedClass))) {
+        unsigned FuncUnits = IS.getUnits();
+        if (countPopulation(FuncUnits) == 1)
+          Resources[FuncUnits]++;
+      }
+      return;
     }
+    if (STI && STI->getSchedModel().hasInstrSchedModel()) {
+      const MCSchedClassDesc *SCDesc =
+          STI->getSchedModel().getSchedClassDesc(SchedClass);
+      if (!SCDesc->isValid())
+        // No valid Schedule Class Desc for schedClass, should be
+        // Pseudo/PostRAPseudo
+        return;
+
+      for (const MCWriteProcResEntry &PRE :
+           make_range(STI->getWriteProcResBegin(SCDesc),
+                      STI->getWriteProcResEnd(SCDesc))) {
+        if (!PRE.Cycles)
+          continue;
+        Resources[PRE.ProcResourceIdx]++;
+      }
+      return;
+    }
+    llvm_unreachable("Should have non-empty InstrItins or hasInstrSchedModel!");
   }
 
   /// Return true if IS1 has less priority than IS2.
@@ -869,14 +925,14 @@ struct FuncUnitSorter {
 /// to add it to each existing DFA, until a legal space is found. If the
 /// instruction cannot be reserved in an existing DFA, we create a new one.
 unsigned SwingSchedulerDAG::calculateResMII() {
-  SmallVector<DFAPacketizer *, 8> Resources;
+
+  SmallVector<ResourceManager*, 8> Resources;
   MachineBasicBlock *MBB = Loop.getHeader();
-  Resources.push_back(TII->CreateTargetScheduleState(MF.getSubtarget()));
+  Resources.push_back(new ResourceManager(&MF.getSubtarget()));
 
   // Sort the instructions by the number of available choices for scheduling,
   // least to most. Use the number of critical resources as the tie breaker.
-  FuncUnitSorter FUS =
-      FuncUnitSorter(MF.getSubtarget().getInstrItineraryData());
+  FuncUnitSorter FUS = FuncUnitSorter(MF.getSubtarget());
   for (MachineBasicBlock::iterator I = MBB->getFirstNonPHI(),
                                    E = MBB->getFirstTerminator();
        I != E; ++I)
@@ -898,8 +954,8 @@ unsigned SwingSchedulerDAG::calculateResMII() {
     // DFA is needed for each cycle.
     unsigned NumCycles = getSUnit(MI)->Latency;
     unsigned ReservedCycles = 0;
-    SmallVectorImpl<DFAPacketizer *>::iterator RI = Resources.begin();
-    SmallVectorImpl<DFAPacketizer *>::iterator RE = Resources.end();
+    SmallVectorImpl<ResourceManager *>::iterator RI = Resources.begin();
+    SmallVectorImpl<ResourceManager *>::iterator RE = Resources.end();
     for (unsigned C = 0; C < NumCycles; ++C)
       while (RI != RE) {
         if ((*RI++)->canReserveResources(*MI)) {
@@ -914,8 +970,7 @@ unsigned SwingSchedulerDAG::calculateResMII() {
     }
     // Add new DFAs, if needed, to reserve resources.
     for (unsigned C = ReservedCycles; C < NumCycles; ++C) {
-      DFAPacketizer *NewResource =
-          TII->CreateTargetScheduleState(MF.getSubtarget());
+      ResourceManager *NewResource = new ResourceManager(&MF.getSubtarget());
       assert(NewResource->canReserveResources(*MI) && "Reserve error.");
       NewResource->reserveResources(*MI);
       Resources.push_back(NewResource);
@@ -923,8 +978,8 @@ unsigned SwingSchedulerDAG::calculateResMII() {
   }
   int Resmii = Resources.size();
   // Delete the memory for each of the DFAs that were created earlier.
-  for (DFAPacketizer *RI : Resources) {
-    DFAPacketizer *D = RI;
+  for (ResourceManager *RI : Resources) {
+    ResourceManager *D = RI;
     delete D;
   }
   Resources.clear();
@@ -3197,8 +3252,9 @@ bool SMSchedule::insert(SUnit *SU, int StartCycle, int EndCycle, int II) {
   for (int curCycle = StartCycle; curCycle != termCycle;
        forward ? ++curCycle : --curCycle) {
 
-    // Add the already scheduled instructions at the specified cycle to the DFA.
-    Resources->clearResources();
+    // Add the already scheduled instructions at the specified cycle to the
+    // DFA.
+    ProcItinResources.clearResources();
     for (int checkCycle = FirstCycle + ((curCycle - FirstCycle) % II);
          checkCycle <= LastCycle; checkCycle += II) {
       std::deque<SUnit *> &cycleInstrs = ScheduledInstrs[checkCycle];
@@ -3208,13 +3264,13 @@ bool SMSchedule::insert(SUnit *SU, int StartCycle, int EndCycle, int II) {
            I != E; ++I) {
         if (ST.getInstrInfo()->isZeroCost((*I)->getInstr()->getOpcode()))
           continue;
-        assert(Resources->canReserveResources(*(*I)->getInstr()) &&
+        assert(ProcItinResources.canReserveResources(*(*I)->getInstr()) &&
                "These instructions have already been scheduled.");
-        Resources->reserveResources(*(*I)->getInstr());
+        ProcItinResources.reserveResources(*(*I)->getInstr());
       }
     }
     if (ST.getInstrInfo()->isZeroCost(SU->getInstr()->getOpcode()) ||
-        Resources->canReserveResources(*SU->getInstr())) {
+        ProcItinResources.canReserveResources(*SU->getInstr())) {
       LLVM_DEBUG({
         dbgs() << "\tinsert at cycle " << curCycle << " ";
         SU->getInstr()->dump();
@@ -3812,5 +3868,125 @@ LLVM_DUMP_METHOD void NodeSet::dump() const { print(dbgs()); }
 
 #endif
 
+void ResourceManager::initProcResourceVectors(
+    const MCSchedModel &SM, SmallVectorImpl<uint64_t> &Masks) {
+  unsigned ProcResourceID = 0;
 
+  // We currently limit the resource kinds to 64 and below so that we can use
+  // uint64_t for Masks
+  assert(SM.getNumProcResourceKinds() < 64 &&
+         "Too many kinds of resources, unsupported");
+  // Create a unique bitmask for every processor resource unit.
+  // Skip resource at index 0, since it always references 'InvalidUnit'.
+  Masks.resize(SM.getNumProcResourceKinds());
+  for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+    const MCProcResourceDesc &Desc = *SM.getProcResource(I);
+    if (Desc.SubUnitsIdxBegin)
+      continue;
+    Masks[I] = 1ULL << ProcResourceID;
+    ProcResourceID++;
+  }
+  // Create a unique bitmask for every processor resource group.
+  for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+    const MCProcResourceDesc &Desc = *SM.getProcResource(I);
+    if (!Desc.SubUnitsIdxBegin)
+      continue;
+    Masks[I] = 1ULL << ProcResourceID;
+    for (unsigned U = 0; U < Desc.NumUnits; ++U)
+      Masks[I] |= Masks[Desc.SubUnitsIdxBegin[U]];
+    ProcResourceID++;
+  }
+  LLVM_DEBUG({
+    dbgs() << "ProcResourceDesc:\n";
+    for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+      const MCProcResourceDesc *ProcResource = SM.getProcResource(I);
+      dbgs() << format(" %16s(%2d): Mask: 0x%08x, NumUnits:%2d\n",
+                       ProcResource->Name, I, Masks[I], ProcResource->NumUnits);
+    }
+    dbgs() << " -----------------\n";
+  });
+}
+
+bool ResourceManager::canReserveResources(const MCInstrDesc *MID) const {
+
+  LLVM_DEBUG({ dbgs() << "canReserveResources:\n"; });
+  if (UseDFA)
+    return DFAResources->canReserveResources(MID);
+
+  unsigned InsnClass = MID->getSchedClass();
+  const MCSchedClassDesc *SCDesc = SM.getSchedClassDesc(InsnClass);
+  if (!SCDesc->isValid()) {
+    LLVM_DEBUG({
+      dbgs() << "No valid Schedule Class Desc for schedClass!\n";
+      dbgs() << "isPseduo:" << MID->isPseudo() << "\n";
+    });
+    return true;
+  }
+
+  const MCWriteProcResEntry *I = STI->getWriteProcResBegin(SCDesc);
+  const MCWriteProcResEntry *E = STI->getWriteProcResEnd(SCDesc);
+  for (; I != E; ++I) {
+    if (!I->Cycles)
+      continue;
+    const MCProcResourceDesc *ProcResource =
+        SM.getProcResource(I->ProcResourceIdx);
+    unsigned NumUnits = ProcResource->NumUnits;
+    LLVM_DEBUG({
+      dbgs() << format(" %16s(%2d): Count: %2d, NumUnits:%2d, Cycles:%2d\n",
+                       ProcResource->Name, I->ProcResourceIdx,
+                       ProcResourceCount[I->ProcResourceIdx], NumUnits,
+                       I->Cycles);
+    });
+    if (ProcResourceCount[I->ProcResourceIdx] >= NumUnits)
+      return false;
+  }
+  LLVM_DEBUG(dbgs() << "return true\n\n";);
+  return true;
+}
+
+void ResourceManager::reserveResources(const MCInstrDesc *MID) {
+  LLVM_DEBUG({ dbgs() << "reserveResources:\n"; });
+  if (UseDFA)
+    return DFAResources->reserveResources(MID);
+
+  unsigned InsnClass = MID->getSchedClass();
+  const MCSchedClassDesc *SCDesc = SM.getSchedClassDesc(InsnClass);
+  if (!SCDesc->isValid()) {
+    LLVM_DEBUG({
+      dbgs() << "No valid Schedule Class Desc for schedClass!\n";
+      dbgs() << "isPseduo:" << MID->isPseudo() << "\n";
+    });
+    return;
+  }
+  for (const MCWriteProcResEntry &PRE :
+       make_range(STI->getWriteProcResBegin(SCDesc),
+                  STI->getWriteProcResEnd(SCDesc))) {
+    if (!PRE.Cycles)
+      continue;
+    ++ProcResourceCount[PRE.ProcResourceIdx];
+    LLVM_DEBUG({
+      const MCProcResourceDesc *ProcResource =
+          SM.getProcResource(PRE.ProcResourceIdx);
+      dbgs() << format(" %16s(%2d): Count: %2d, NumUnits:%2d, Cycles:%2d\n",
+                       ProcResource->Name, PRE.ProcResourceIdx,
+                       ProcResourceCount[PRE.ProcResourceIdx],
+                       ProcResource->NumUnits, PRE.Cycles);
+    });
+  }
+  LLVM_DEBUG({ dbgs() << "reserveResources: done!\n\n"; });
+}
+
+bool ResourceManager::canReserveResources(const MachineInstr &MI) const {
+  return canReserveResources(&MI.getDesc());
+}
+
+void ResourceManager::reserveResources(const MachineInstr &MI) {
+  return reserveResources(&MI.getDesc());
+}
+
+void ResourceManager::clearResources() {
+  if (UseDFA)
+    return DFAResources->clearResources();
+  std::fill(ProcResourceCount.begin(), ProcResourceCount.end(), 0);
+}
 

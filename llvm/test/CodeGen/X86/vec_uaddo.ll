@@ -1336,12 +1336,14 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; AVX512-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
 ; AVX512-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
 ; AVX512-NEXT:    setb %al
-; AVX512-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
+; AVX512-NEXT:    kmovd %eax, %k0
+; AVX512-NEXT:    kshiftlw $1, %k0, %k0
 ; AVX512-NEXT:    addq %r8, %rdi
 ; AVX512-NEXT:    adcq %r9, %rsi
 ; AVX512-NEXT:    setb %al
-; AVX512-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1
+; AVX512-NEXT:    andl $1, %eax
+; AVX512-NEXT:    kmovw %eax, %k1
+; AVX512-NEXT:    korw %k0, %k1, %k1
 ; AVX512-NEXT:    movq %rdx, 16(%r10)
 ; AVX512-NEXT:    movq %rdi, (%r10)
 ; AVX512-NEXT:    movq %rcx, 24(%r10)

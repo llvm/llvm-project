@@ -79,6 +79,7 @@ Symbol *SymbolTable::insert(StringRef Name) {
   Sym->ExportDynamic = false;
   Sym->CanInline = true;
   Sym->ScriptDefined = false;
+  Sym->Partition = 1;
   return Sym;
 }
 

@@ -1607,12 +1607,22 @@ ThunkSection *ThunkCreator::addThunkSection(OutputSection *OS,
                                             InputSectionDescription *ISD,
                                             uint64_t Off) {
   auto *TS = make<ThunkSection>(OS, Off);
+  TS->Partition = OS->Partition;
   ISD->ThunkSections.push_back({TS, Pass});
   return TS;
 }
 
-std::pair<Thunk *, bool> ThunkCreator::getThunk(Symbol &Sym, RelType Type,
-                                                uint64_t Src) {
+static bool isThunkSectionCompatible(InputSection *Source,
+                                     SectionBase *Target) {
+  // We can't reuse thunks in different loadable partitions because they might
+  // not be loaded. But partition 1 (the main partition) will always be loaded.
+  if (Source->Partition != Target->Partition)
+    return Target->Partition == 1;
+  return true;
+}
+
+std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *IS, Symbol &Sym,
+                                                RelType Type, uint64_t Src) {
   std::vector<Thunk *> *ThunkVec = nullptr;
 
   // We use (section, offset) pair to find the thunk position if possible so
@@ -1625,7 +1635,8 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(Symbol &Sym, RelType Type,
 
   // Check existing Thunks for Sym to see if they can be reused
   for (Thunk *T : *ThunkVec)
-    if (T->isCompatibleWith(Type) &&
+    if (isThunkSectionCompatible(IS, T->getThunkTargetSym()->Section) &&
+        T->isCompatibleWith(Type) &&
         Target->inBranchRange(Type, Src, T->getThunkTargetSym()->getVA()))
       return std::make_pair(T, false);
 
@@ -1709,7 +1720,7 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> OutputSections) {
 
             Thunk *T;
             bool IsNew;
-            std::tie(T, IsNew) = getThunk(*Rel.Sym, Rel.Type, Src);
+            std::tie(T, IsNew) = getThunk(IS, *Rel.Sym, Rel.Type, Src);
 
             if (IsNew) {
               // Find or create a ThunkSection for the new Thunk

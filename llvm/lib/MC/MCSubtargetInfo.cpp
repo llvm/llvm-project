@@ -195,6 +195,23 @@ FeatureBitset MCSubtargetInfo::ToggleFeature(const FeatureBitset &FB) {
   return FeatureBits;
 }
 
+FeatureBitset MCSubtargetInfo::SetFeatureBitsTransitively(
+  const FeatureBitset &FB) {
+  SetImpliedBits(FeatureBits, FB, ProcFeatures);
+  return FeatureBits;
+}
+
+FeatureBitset MCSubtargetInfo::ClearFeatureBitsTransitively(
+  const FeatureBitset &FB) {
+  for (unsigned I = 0, E = FB.size(); I < E; I++) {
+    if (FB[I]) {
+      FeatureBits.reset(I);
+      ClearImpliedBits(FeatureBits, I, ProcFeatures);
+    }
+  }
+  return FeatureBits;
+}
+
 FeatureBitset MCSubtargetInfo::ToggleFeature(StringRef Feature) {
   // Find feature in table.
   const SubtargetFeatureKV *FeatureEntry =

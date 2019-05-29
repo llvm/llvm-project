@@ -113,6 +113,7 @@ enum Kind {
   kw_align,
   kw_addrspace,
   kw_section,
+  kw_partition,
   kw_alias,
   kw_ifunc,
   kw_module,

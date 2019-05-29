@@ -1003,6 +1003,8 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::EXTRACT_VECTOR_ELT:
   case ISD::LROUND:
   case ISD::LLROUND:
+  case ISD::LRINT:
+  case ISD::LLRINT:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
@@ -1415,6 +1417,7 @@ SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
   // Emit a store of each element to the stack slot.
   SmallVector<SDValue, 8> Stores;
   unsigned TypeByteSize = EltVT.getSizeInBits() / 8;
+  assert(TypeByteSize > 0 && "Vector element type too small for stack store!");
   // Store (in the right endianness) the elements to memory.
   for (unsigned i = 0, e = Node->getNumOperands(); i != e; ++i) {
     // Ignore undef elements.
@@ -2917,6 +2920,18 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
                                          RTLIB::LLROUND_F64, RTLIB::LLROUND_F80,
                                          RTLIB::LLROUND_F128,
                                          RTLIB::LLROUND_PPCF128));
+    break;
+  case ISD::LRINT:
+    Results.push_back(ExpandArgFPLibCall(Node, RTLIB::LRINT_F32,
+                                         RTLIB::LRINT_F64, RTLIB::LRINT_F80,
+                                         RTLIB::LRINT_F128,
+                                         RTLIB::LRINT_PPCF128));
+    break;
+  case ISD::LLRINT:
+    Results.push_back(ExpandArgFPLibCall(Node, RTLIB::LLRINT_F32,
+                                         RTLIB::LLRINT_F64, RTLIB::LLRINT_F80,
+                                         RTLIB::LLRINT_F128,
+                                         RTLIB::LLRINT_PPCF128));
     break;
   case ISD::VAARG:
     Results.push_back(DAG.expandVAArg(Node));

@@ -223,7 +223,7 @@ private:
   demangleSpecialTableSymbolNode(StringView &MangledName,
                                  SpecialIntrinsicKind SIK);
   LocalStaticGuardVariableNode *
-  demangleLocalStaticGuard(StringView &MangledName);
+  demangleLocalStaticGuard(StringView &MangledName, bool IsThread);
   VariableSymbolNode *demangleUntypedVariable(ArenaAllocator &Arena,
                                               StringView &MangledName,
                                               StringView VariableName);

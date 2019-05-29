@@ -453,7 +453,7 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     for (const auto &Mapping : OperandsMapping[i]) {
       assert(
           (Mapping.RegBank->getID() != ARM::FPRRegBankID ||
-           MF.getSubtarget<ARMSubtarget>().hasVFP2()) &&
+           MF.getSubtarget<ARMSubtarget>().hasVFP2Base()) &&
           "Trying to use floating point register bank on target without vfp");
     }
   }

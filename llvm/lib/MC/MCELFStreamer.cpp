@@ -400,6 +400,8 @@ void MCELFStreamer::fixSymbolsInTLSFixups(const MCExpr *expr) {
     case MCSymbolRefExpr::VK_INDNTPOFF:
     case MCSymbolRefExpr::VK_NTPOFF:
     case MCSymbolRefExpr::VK_GOTNTPOFF:
+    case MCSymbolRefExpr::VK_TLSCALL:
+    case MCSymbolRefExpr::VK_TLSDESC:
     case MCSymbolRefExpr::VK_TLSGD:
     case MCSymbolRefExpr::VK_TLSLD:
     case MCSymbolRefExpr::VK_TLSLDM:

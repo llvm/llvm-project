@@ -1871,7 +1871,8 @@ define <2 x i32> @saddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; AVX512-NEXT:    cmpb %al, %cl
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    andb %bl, %al
-; AVX512-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
+; AVX512-NEXT:    kmovd %eax, %k0
+; AVX512-NEXT:    kshiftlw $1, %k0, %k0
 ; AVX512-NEXT:    testq %r9, %r9
 ; AVX512-NEXT:    setns %al
 ; AVX512-NEXT:    testq %rsi, %rsi
@@ -1884,8 +1885,9 @@ define <2 x i32> @saddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; AVX512-NEXT:    cmpb %bl, %cl
 ; AVX512-NEXT:    setne %cl
 ; AVX512-NEXT:    andb %al, %cl
-; AVX512-NEXT:    movb %cl, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1
+; AVX512-NEXT:    andl $1, %ecx
+; AVX512-NEXT:    kmovw %ecx, %k1
+; AVX512-NEXT:    korw %k0, %k1, %k1
 ; AVX512-NEXT:    movq %rdx, 16(%r10)
 ; AVX512-NEXT:    movq %rdi, (%r10)
 ; AVX512-NEXT:    movq %r14, 24(%r10)

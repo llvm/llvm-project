@@ -30,7 +30,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -41,6 +40,7 @@
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <algorithm>
 #include <cassert>
@@ -1321,9 +1321,8 @@ public:
   Type X86_FP80Ty, FP128Ty, PPC_FP128Ty, X86_MMXTy;
   IntegerType Int1Ty, Int8Ty, Int16Ty, Int32Ty, Int64Ty, Int128Ty;
 
-  /// TypeAllocator - All dynamically allocated types are allocated from this.
-  /// They live forever until the context is torn down.
-  BumpPtrAllocator TypeAllocator;
+  BumpPtrAllocator Alloc;
+  UniqueStringSaver Saver{Alloc};
 
   DenseMap<unsigned, IntegerType*> IntegerTypes;
 
@@ -1357,8 +1356,8 @@ public:
   /// Collection of per-GlobalObject sections used in this context.
   DenseMap<const GlobalObject *, StringRef> GlobalObjectSections;
 
-  /// Stable collection of section strings.
-  StringSet<> SectionStrings;
+  /// Collection of per-GlobalValue partitions used in this context.
+  DenseMap<const GlobalValue *, StringRef> GlobalValuePartitions;
 
   /// DiscriminatorTable - This table maps file:line locations to an
   /// integer representing the next DWARF path discriminator to assign to

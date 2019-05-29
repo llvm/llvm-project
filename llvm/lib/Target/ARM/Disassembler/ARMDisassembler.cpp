@@ -1043,9 +1043,9 @@ static DecodeStatus DecodeDPRRegisterClass(MCInst &Inst, unsigned RegNo,
   const FeatureBitset &featureBits =
     ((const MCDisassembler*)Decoder)->getSubtargetInfo().getFeatureBits();
 
-  bool hasD16 = featureBits[ARM::FeatureD16];
+  bool hasD32 = featureBits[ARM::FeatureD32];
 
-  if (RegNo > 31 || (hasD16 && RegNo > 15))
+  if (RegNo > 31 || (!hasD32 && RegNo > 15))
     return MCDisassembler::Fail;
 
   unsigned Register = DPRDecoderTable[RegNo];

@@ -541,6 +541,8 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
 
   def int_lround : Intrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
   def int_llround : Intrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
+  def int_lrint : Intrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
+  def int_llrint : Intrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
 }
 
 def int_minnum : Intrinsic<[llvm_anyfloat_ty],

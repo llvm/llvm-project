@@ -365,6 +365,8 @@ template <typename ET>
 ErrorOr<StringRef>
 PrinterContext<ET>::FunctionAtAddress(unsigned Section,
                                       uint64_t Address) const {
+  if (!Symtab)
+    return readobj_error::unknown_symbol;
   auto StrTableOrErr = ELF->getStringTableForSymtab(*Symtab);
   if (!StrTableOrErr)
     error(StrTableOrErr.takeError());
@@ -550,13 +552,15 @@ void PrinterContext<ET>::PrintIndexTable(unsigned SectionIndex,
       const Elf_Shdr *EHT =
         FindExceptionTable(SectionIndex, Entry * IndexTableEntrySize + 4);
 
-      if (auto Name = ELF->getSectionName(EHT))
-        SW.printString("ExceptionHandlingTable", *Name);
+      if (EHT)
+        if (auto Name = ELF->getSectionName(EHT))
+          SW.printString("ExceptionHandlingTable", *Name);
 
       uint64_t TableEntryOffset = PREL31(Word1, IT->sh_addr);
       SW.printHex("TableEntryOffset", TableEntryOffset);
 
-      PrintExceptionTable(IT, EHT, TableEntryOffset);
+      if (EHT)
+        PrintExceptionTable(IT, EHT, TableEntryOffset);
     }
   }
 }

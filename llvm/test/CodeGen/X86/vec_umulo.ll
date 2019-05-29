@@ -2575,7 +2575,8 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; AVX512-NEXT:    setb %al
 ; AVX512-NEXT:    orb %cl, %al
 ; AVX512-NEXT:    orb %r13b, %al
-; AVX512-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
+; AVX512-NEXT:    kmovd %eax, %k0
+; AVX512-NEXT:    kshiftlw $1, %k0, %k0
 ; AVX512-NEXT:    testq %r9, %r9
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    testq %rsi, %rsi
@@ -2597,8 +2598,9 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; AVX512-NEXT:    setb %sil
 ; AVX512-NEXT:    orb %bl, %sil
 ; AVX512-NEXT:    orb %cl, %sil
-; AVX512-NEXT:    movb %sil, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1
+; AVX512-NEXT:    andl $1, %esi
+; AVX512-NEXT:    kmovw %esi, %k1
+; AVX512-NEXT:    korw %k0, %k1, %k1
 ; AVX512-NEXT:    movq %r10, 16(%r14)
 ; AVX512-NEXT:    movq %rax, (%r14)
 ; AVX512-NEXT:    movq %r15, 24(%r14)

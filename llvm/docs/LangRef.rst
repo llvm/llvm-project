@@ -12449,6 +12449,80 @@ Semantics:
 This function returns the same values as the libm ``llround``
 functions would, but without setting errno.
 
+'``llvm.lrint.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.lrint`` on any
+floating-point type. Not all targets support all types however.
+
+::
+
+      declare i32 @llvm.lrint.i32.f32(float %Val)
+      declare i32 @llvm.lrint.i32.f64(double %Val)
+      declare i32 @llvm.lrint.i32.f80(float %Val)
+      declare i32 @llvm.lrint.i32.f128(double %Val)
+      declare i32 @llvm.lrint.i32.ppcf128(double %Val)
+
+      declare i64 @llvm.lrint.i64.f32(float %Val)
+      declare i64 @llvm.lrint.i64.f64(double %Val)
+      declare i64 @llvm.lrint.i64.f80(float %Val)
+      declare i64 @llvm.lrint.i64.f128(double %Val)
+      declare i64 @llvm.lrint.i64.ppcf128(double %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.lrint.*``' intrinsics returns the operand rounded to the
+nearest integer.
+
+Arguments:
+""""""""""
+
+The argument is a floating-point number and return is an integer type.
+
+Semantics:
+""""""""""
+
+This function returns the same values as the libm ``lrint``
+functions would, but without setting errno.
+
+'``llvm.llrint.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.llrint`` on any
+floating-point type. Not all targets support all types however.
+
+::
+
+      declare i64 @llvm.llrint.i64.f32(float %Val)
+      declare i64 @llvm.llrint.i64.f64(double %Val)
+      declare i64 @llvm.llrint.i64.f80(float %Val)
+      declare i64 @llvm.llrint.i64.f128(double %Val)
+      declare i64 @llvm.llrint.i64.ppcf128(double %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.llrint.*``' intrinsics returns the operand rounded to the
+nearest integer.
+
+Arguments:
+""""""""""
+
+The argument is a floating-point number and return is an integer type.
+
+Semantics:
+""""""""""
+
+This function returns the same values as the libm ``llrint``
+functions would, but without setting errno.
+
 Bit Manipulation Intrinsics
 ---------------------------
 

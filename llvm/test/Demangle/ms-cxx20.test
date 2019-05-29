@@ -7,3 +7,6 @@
 
 ??__MS@@QEAA?AVstrong_ordering@std@@AEBU0@@Z'
 ; CHECK: class std::strong_ordering __cdecl S::operator<=>(struct S const &)
+
+?f@@YAX_Q@Z
+; CHECK: void __cdecl f(char8_t)

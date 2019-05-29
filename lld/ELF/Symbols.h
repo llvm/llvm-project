@@ -255,6 +255,9 @@ public:
   // True if this symbol is defined by a linker script.
   unsigned ScriptDefined : 1;
 
+  // The partition whose dynamic symbol table contains this symbol's definition.
+  uint8_t Partition = 1;
+
   bool isSection() const { return Type == llvm::ELF::STT_SECTION; }
   bool isTls() const { return Type == llvm::ELF::STT_TLS; }
   bool isFunc() const { return Type == llvm::ELF::STT_FUNC; }
@@ -516,6 +519,7 @@ void Symbol::replace(const Symbol &New) {
   Traced = Old.Traced;
   IsPreemptible = Old.IsPreemptible;
   ScriptDefined = Old.ScriptDefined;
+  Partition = Old.Partition;
 
   // Symbol length is computed lazily. If we already know a symbol length,
   // propagate it.

@@ -157,7 +157,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
 
-  if (!ST.useSoftFloat() && ST.hasVFP2()) {
+  if (!ST.useSoftFloat() && ST.hasVFP2Base()) {
     getActionDefinitionsBuilder(
         {G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FCONSTANT, G_FNEG})
         .legalFor({s32, s64});
@@ -208,7 +208,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .libcallForCartesianProduct({s32, s64}, {s32});
   }
 
-  if (!ST.useSoftFloat() && ST.hasVFP4())
+  if (!ST.useSoftFloat() && ST.hasVFP4Base())
     getActionDefinitionsBuilder(G_FMA).legalFor({s32, s64});
   else
     getActionDefinitionsBuilder(G_FMA).libcallFor({s32, s64});

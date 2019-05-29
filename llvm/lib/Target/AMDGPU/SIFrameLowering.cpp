@@ -613,30 +613,36 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
       .setMIFlag(MachineInstr::FrameSetup);
   }
 
-  if (!FuncInfo->getSGPRSpillVGPRs().empty()) {
-    if (LiveRegs.empty()) {
-      LiveRegs.init(TRI);
-      LiveRegs.addLiveIns(MBB);
+  // To avoid clobbering VGPRs in lanes that weren't active on function entry,
+  // turn on all lanes before doing the spill to memory.
+  unsigned ScratchExecCopy = AMDGPU::NoRegister;
+
+  for (const SIMachineFunctionInfo::SGPRSpillVGPRCSR &Reg
+         : FuncInfo->getSGPRSpillVGPRs()) {
+    if (!Reg.FI.hasValue())
+      continue;
+
+    if (ScratchExecCopy == AMDGPU::NoRegister) {
+      if (LiveRegs.empty()) {
+        LiveRegs.init(TRI);
+        LiveRegs.addLiveIns(MBB);
+      }
+
+      ScratchExecCopy
+        = findScratchNonCalleeSaveRegister(MF, LiveRegs,
+                                           AMDGPU::SReg_64_XEXECRegClass);
+
+      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_OR_SAVEEXEC_B64),
+              ScratchExecCopy)
+        .addImm(-1);
     }
 
-    // To avoid clobbering VGPRs in lanes that weren't active on function entry,
-    // turn on all lanes before doing the spill to memory.
-    unsigned ScratchExecCopy
-      = findScratchNonCalleeSaveRegister(MF, LiveRegs,
-                                         AMDGPU::SReg_64_XEXECRegClass);
+    TII->storeRegToStackSlot(MBB, MBBI, Reg.VGPR, true,
+                             Reg.FI.getValue(), &AMDGPU::VGPR_32RegClass,
+                             &TII->getRegisterInfo());
+  }
 
-    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_OR_SAVEEXEC_B64), ScratchExecCopy)
-      .addImm(-1);
-
-    for (const SIMachineFunctionInfo::SGPRSpillVGPRCSR &Reg
-           : FuncInfo->getSGPRSpillVGPRs()) {
-      if (!Reg.FI.hasValue())
-        continue;
-      TII->storeRegToStackSlot(MBB, MBBI, Reg.VGPR, true,
-                               Reg.FI.getValue(), &AMDGPU::VGPR_32RegClass,
-                               &TII->getRegisterInfo());
-    }
-
+  if (ScratchExecCopy != AMDGPU::NoRegister) {
     // FIXME: Split block and make terminator.
     BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_MOV_B64), AMDGPU::EXEC)
       .addReg(ScratchExecCopy);
@@ -654,27 +660,31 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
   DebugLoc DL;
 
-  if (!FuncInfo->getSGPRSpillVGPRs().empty()) {
-    // See emitPrologue
-    LivePhysRegs LiveRegs(*ST.getRegisterInfo());
-    LiveRegs.addLiveIns(MBB);
+  unsigned ScratchExecCopy = AMDGPU::NoRegister;
+  for (const SIMachineFunctionInfo::SGPRSpillVGPRCSR &Reg
+         : FuncInfo->getSGPRSpillVGPRs()) {
+    if (!Reg.FI.hasValue())
+      continue;
 
-    unsigned ScratchExecCopy
-      = findScratchNonCalleeSaveRegister(MF, LiveRegs,
-                                         AMDGPU::SReg_64_XEXECRegClass);
+    if (ScratchExecCopy == AMDGPU::NoRegister) {
+      // See emitPrologue
+      LivePhysRegs LiveRegs(*ST.getRegisterInfo());
+      LiveRegs.addLiveIns(MBB);
 
-    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_OR_SAVEEXEC_B64), ScratchExecCopy)
-      .addImm(-1);
+      ScratchExecCopy
+        = findScratchNonCalleeSaveRegister(MF, LiveRegs,
+                                           AMDGPU::SReg_64_XEXECRegClass);
 
-    for (const SIMachineFunctionInfo::SGPRSpillVGPRCSR &Reg
-           : FuncInfo->getSGPRSpillVGPRs()) {
-      if (!Reg.FI.hasValue())
-        continue;
-      TII->loadRegFromStackSlot(MBB, MBBI, Reg.VGPR,
-                                Reg.FI.getValue(), &AMDGPU::VGPR_32RegClass,
-                                &TII->getRegisterInfo());
+      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_OR_SAVEEXEC_B64), ScratchExecCopy)
+        .addImm(-1);
     }
 
+    TII->loadRegFromStackSlot(MBB, MBBI, Reg.VGPR,
+                              Reg.FI.getValue(), &AMDGPU::VGPR_32RegClass,
+                              &TII->getRegisterInfo());
+  }
+
+  if (ScratchExecCopy != AMDGPU::NoRegister) {
     // FIXME: Split block and make terminator.
     BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_MOV_B64), AMDGPU::EXEC)
       .addReg(ScratchExecCopy);

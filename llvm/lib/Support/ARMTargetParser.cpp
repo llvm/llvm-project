@@ -159,23 +159,6 @@ bool ARM::getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features) {
   if (FPUKind >= FK_LAST || FPUKind == FK_INVALID)
     return false;
 
-  // fp-only-sp and d16 subtarget features are independent of each other, so we
-  // must enable/disable both.
-  switch (FPUNames[FPUKind].Restriction) {
-  case FPURestriction::SP_D16:
-    Features.push_back("+fp-only-sp");
-    Features.push_back("+d16");
-    break;
-  case FPURestriction::D16:
-    Features.push_back("-fp-only-sp");
-    Features.push_back("+d16");
-    break;
-  case FPURestriction::None:
-    Features.push_back("-fp-only-sp");
-    Features.push_back("-d16");
-    break;
-  }
-
   // FPU version subtarget features are inclusive of lower-numbered ones, so
   // enable the one corresponding to this version and disable all that are
   // higher. We also have to make sure to disable fp16 when vfp4 is disabled,
@@ -214,6 +197,28 @@ bool ARM::getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features) {
     Features.push_back("-vfp4");
     Features.push_back("-fp-armv8");
     break;
+  }
+
+  // fp64 and d32 subtarget features are independent of each other, so we
+  // must disable/enable both.
+  if (FPUKind == FK_NONE) {
+    Features.push_back("-fp64");
+    Features.push_back("-d32");
+  } else {
+    switch (FPUNames[FPUKind].Restriction) {
+    case FPURestriction::SP_D16:
+      Features.push_back("-fp64");
+      Features.push_back("-d32");
+      break;
+    case FPURestriction::D16:
+      Features.push_back("+fp64");
+      Features.push_back("-d32");
+      break;
+    case FPURestriction::None:
+      Features.push_back("+fp64");
+      Features.push_back("+d32");
+      break;
+    }
   }
 
   // crypto includes neon, so we handle this similarly to FPU version.

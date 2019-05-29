@@ -160,6 +160,10 @@ $comdat.samesize = comdat samesize
 @g.section = global i32 0, section "_DATA"
 ; CHECK: @g.section = global i32 0, section "_DATA"
 
+; Global Variables -- partition
+@g.partition = global i32 0, partition "part"
+; CHECK: @g.partition = global i32 0, partition "part"
+
 ; Global Variables -- comdat
 @comdat.any = global i32 0, comdat
 ; CHECK: @comdat.any = global i32 0, comdat
@@ -251,6 +255,10 @@ declare void @g.f1()
 @a.local_unnamed_addr = local_unnamed_addr alias i32, i32* @g.local_unnamed_addr
 ; CHECK: @a.local_unnamed_addr = local_unnamed_addr alias i32, i32* @g.local_unnamed_addr
 
+; Aliases -- partition
+; CHECK: @alias.partition = alias i32, i32* @g.partition, partition "part"
+@alias.partition = alias i32, i32* @g.partition, partition "part"
+
 ;; IFunc
 ; Format @<Name> = [Linkage] [Visibility] ifunc <IFuncTy>,
 ;                  <ResolverTy>* @<Resolver>
@@ -270,6 +278,10 @@ declare void @g.f1()
 ; CHECK: @ifunc.hidden = hidden ifunc void (), i8* ()* @ifunc_resolver
 @ifunc.protected = protected ifunc void (), i8* ()* @ifunc_resolver
 ; CHECK: @ifunc.protected = protected ifunc void (), i8* ()* @ifunc_resolver
+
+; IFunc -- partition
+; CHECK: @ifunc.partition = ifunc void (), i8* ()* @ifunc_resolver, partition "part"
+@ifunc.partition = ifunc void (), i8* ()* @ifunc_resolver, partition "part"
 
 define i8* @ifunc_resolver() {
 entry:
@@ -619,6 +631,12 @@ declare void @f.strictfp() #35
 ; Functions -- section
 declare void @f.section() section "80"
 ; CHECK: declare void @f.section() section "80"
+
+; Functions -- partition
+define void @f.partition() partition "part" {
+; CHECK: define void @f.partition() partition "part"
+  ret void
+}
 
 ; Functions -- comdat
 define void @f.comdat_any() comdat($comdat.any) {

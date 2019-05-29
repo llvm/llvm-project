@@ -610,7 +610,7 @@ namespace ISD {
     FNEG, FABS, FSQRT, FCBRT, FSIN, FCOS, FPOWI, FPOW,
     FLOG, FLOG2, FLOG10, FEXP, FEXP2,
     FCEIL, FTRUNC, FRINT, FNEARBYINT, FROUND, FFLOOR,
-    LROUND, LLROUND,
+    LROUND, LLROUND, LRINT, LLRINT,
 
     /// FMINNUM/FMAXNUM - Perform floating-point minimum or maximum on two
     /// values.

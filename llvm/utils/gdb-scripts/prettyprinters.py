@@ -129,8 +129,7 @@ class OptionalPrinter(Iterator):
     self.val = None
     if not val['Storage']['hasVal']:
       raise StopIteration
-    return ('value', val['Storage']['storage']['buffer'].address.cast(
-        val.type.template_argument(0).pointer()).dereference())
+    return ('value', val['Storage']['value'])
 
   def to_string(self):
     return 'llvm::Optional{}'.format('' if self.val['Storage']['hasVal'] else ' is not initialized')

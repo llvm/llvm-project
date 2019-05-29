@@ -77,7 +77,8 @@ public:
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::Alloca ||
+    return I->isUnaryOp() ||
+           I->getOpcode() == Instruction::Alloca ||
            I->getOpcode() == Instruction::Load ||
            I->getOpcode() == Instruction::VAArg ||
            I->getOpcode() == Instruction::ExtractValue ||
@@ -155,6 +156,14 @@ public:
 
   UnaryOps getOpcode() const {
     return static_cast<UnaryOps>(Instruction::getOpcode());
+  }
+
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Instruction *I) {
+    return I->isUnaryOp();
+  }
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 };
 

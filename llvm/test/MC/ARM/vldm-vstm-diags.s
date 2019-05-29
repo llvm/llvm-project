@@ -1,5 +1,5 @@
 @ RUN: not llvm-mc -triple armv7-eabi -filetype asm -o /dev/null             %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-D32
-@ RUN: not llvm-mc -triple armv7-eabi -filetype asm -o /dev/null -mattr=+d16 %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-D16
+@ RUN: not llvm-mc -triple armv7-eabi -filetype asm -o /dev/null -mattr=-d32 %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-D16
 
   // First operand must be a GPR
   vldm s0, {s1, s2}

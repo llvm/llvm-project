@@ -1139,16 +1139,6 @@ void DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
   for (auto EB = Entries.begin(), EI = EB, EE = Entries.end(); EI != EE; ++EI) {
     const MachineInstr *Instr = EI->getInstr();
 
-    if (EI->isDbgValue()) {
-      // Check if a variable is inaccessible in this range.
-      // TODO: This should only truncate open ranges that are overlapping.
-      if (Instr->getNumOperands() > 1 &&
-          Instr->getOperand(0).isReg() && !Instr->getOperand(0).getReg()) {
-        OpenRanges.clear();
-        continue;
-      }
-    }
-
     // Remove all values that are no longer live.
     size_t Index = std::distance(EB, EI);
     auto Last =
@@ -1177,8 +1167,16 @@ void DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
     // If this history map entry has a debug value, add that to the list of
     // open ranges.
     if (EI->isDbgValue()) {
-      auto Value = getDebugLocValue(Instr);
-      OpenRanges.emplace_back(EI->getEndIndex(), Value);
+      // Do not add undef debug values, as they are redundant information in
+      // the location list entries. An undef debug results in an empty location
+      // description. If there are any non-undef fragments then padding pieces
+      // with empty location descriptions will automatically be inserted, and if
+      // all fragments are undef then the whole location list entry is
+      // redundant.
+      if (!Instr->isUndefDebugValue()) {
+        auto Value = getDebugLocValue(Instr);
+        OpenRanges.emplace_back(EI->getEndIndex(), Value);
+      }
     }
 
     // Location list entries with empty location descriptions are redundant

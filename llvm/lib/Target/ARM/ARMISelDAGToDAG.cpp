@@ -4043,9 +4043,9 @@ bool ARMDAGToDAGISel::tryReadRegister(SDNode *N){
 
   // If an opcode was found then we can lower the read to a VFP instruction.
   if (Opcode) {
-    if (!Subtarget->hasVFP2())
+    if (!Subtarget->hasVFP2Base())
       return false;
-    if (Opcode == ARM::VMRS_MVFR2 && !Subtarget->hasFPARMv8())
+    if (Opcode == ARM::VMRS_MVFR2 && !Subtarget->hasFPARMv8Base())
       return false;
 
     Ops = { getAL(CurDAG, DL), CurDAG->getRegister(0, MVT::i32),
@@ -4154,7 +4154,7 @@ bool ARMDAGToDAGISel::tryWriteRegister(SDNode *N){
                     .Default(0);
 
   if (Opcode) {
-    if (!Subtarget->hasVFP2())
+    if (!Subtarget->hasVFP2Base())
       return false;
     Ops = { N->getOperand(2), getAL(CurDAG, DL),
             CurDAG->getRegister(0, MVT::i32), N->getOperand(0) };

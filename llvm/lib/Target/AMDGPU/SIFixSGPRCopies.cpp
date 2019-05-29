@@ -588,7 +588,9 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
             }
 
             if (UseMI->isPHI()) {
-              if (!TRI->isSGPRReg(MRI, Use.getReg()))
+              const TargetRegisterClass *UseRC = MRI.getRegClass(Use.getReg());
+              if (!TRI->isSGPRReg(MRI, Use.getReg()) &&
+                  UseRC != &AMDGPU::VReg_1RegClass)
                 hasVGPRUses++;
               continue;
             }
@@ -633,8 +635,10 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
 
         if ((!TRI->isVGPR(MRI, PHIRes) && RC0 != &AMDGPU::VReg_1RegClass) &&
             (hasVGPRInput || hasVGPRUses > 1)) {
+          LLVM_DEBUG(dbgs() << "Fixing PHI: " << MI);
           TII->moveToVALU(MI);
         } else {
+          LLVM_DEBUG(dbgs() << "Legalizing PHI: " << MI);
           TII->legalizeOperands(MI, MDT);
         }
 
