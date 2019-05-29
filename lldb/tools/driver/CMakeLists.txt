@@ -31,5 +31,15 @@ add_dependencies(lldb
 set_target_properties(LLDBOptionsTableGen PROPERTIES FOLDER "lldb misc")
 
 if(LLDB_BUILD_FRAMEWORK)
-  lldb_setup_framework_rpaths_in_tool(lldb)
+  # In the build-tree, we know the exact path to the framework directory.
+  # The installed framework can be in different locations.
+  get_target_property(framework_build_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
+  lldb_setup_rpaths(lldb
+    BUILD_RPATH
+      "${framework_build_dir}"
+    INSTALL_RPATH
+      "@loader_path/../../../SharedFrameworks"
+      "@loader_path/../../System/Library/PrivateFrameworks"
+      "@loader_path/../../Library/PrivateFrameworks"
+  )
 endif()

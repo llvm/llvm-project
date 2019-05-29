@@ -78,3 +78,7 @@ add_lldb_tool(lldb-server
 )
 
 target_link_libraries(lldb-server PRIVATE ${LLDB_SYSTEM_LIBS})
+
+if(LLDB_BUILD_FRAMEWORK)
+  lldb_add_to_framework(lldb-server)
+endif()
