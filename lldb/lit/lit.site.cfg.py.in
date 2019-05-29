@@ -17,6 +17,7 @@ config.python_executable = "@PYTHON_EXECUTABLE@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@
 config.host_triple = "@LLVM_HOST_TRIPLE@"
 config.lldb_bitness = 64 if @LLDB_IS_64_BITS@ else 32
+config.lldb_disable_python = @LLDB_DISABLE_PYTHON@
 
 # Support substitution of the tools and libs dirs with user parameters. This is
 # used when we can't determine the tool dir at configuration time.
