@@ -312,9 +312,10 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
   SmallVector<BasicBlock *, 8> ExitBlocks;
   CurLoop->getUniqueExitBlocks(ExitBlocks);
 
-  LLVM_DEBUG(dbgs() << "loop-idiom Scanning: F["
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE " Scanning: F["
                     << CurLoop->getHeader()->getParent()->getName()
-                    << "] Loop %" << CurLoop->getHeader()->getName() << "\n");
+                    << "] Countable Loop %" << CurLoop->getHeader()->getName()
+                    << "\n");
 
   bool MadeChange = false;
 
@@ -1107,6 +1108,11 @@ bool LoopIdiomRecognize::avoidLIRForMultiBlockLoop(bool IsMemset,
 }
 
 bool LoopIdiomRecognize::runOnNoncountableLoop() {
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE " Scanning: F["
+                    << CurLoop->getHeader()->getParent()->getName()
+                    << "] Noncountable Loop %"
+                    << CurLoop->getHeader()->getName() << "\n");
+
   return recognizePopcount() || recognizeAndInsertFFS();
 }
 

@@ -356,14 +356,22 @@ bool LoopVersioningLICM::legalLoopMemoryAccesses() {
 /// 1) Check all load store in loop body are non atomic & non volatile.
 /// 2) Check function call safety, by ensuring its not accessing memory.
 /// 3) Loop body shouldn't have any may throw instruction.
+/// 4) Loop body shouldn't have any convergent or noduplicate instructions.
 bool LoopVersioningLICM::instructionSafeForVersioning(Instruction *I) {
   assert(I != nullptr && "Null instruction found!");
   // Check function call safety
-  if (auto *Call = dyn_cast<CallBase>(I))
+  if (auto *Call = dyn_cast<CallBase>(I)) {
+    if (Call->isConvergent() || Call->cannotDuplicate()) {
+      LLVM_DEBUG(dbgs() << "    Convergent call site found.\n");
+      return false;
+    }
+
     if (!AA->doesNotAccessMemory(Call)) {
       LLVM_DEBUG(dbgs() << "    Unsafe call site found.\n");
       return false;
     }
+  }
+
   // Avoid loops with possiblity of throw
   if (I->mayThrow()) {
     LLVM_DEBUG(dbgs() << "    May throw instruction found in loop body\n");

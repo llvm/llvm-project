@@ -341,10 +341,7 @@ define <2 x i8> @test_vector_sadd_neg_neg(<2 x i8> %a) {
 
 define i8 @test_scalar_sadd_always_overflows_low(i8 %a) {
 ; CHECK-LABEL: @test_scalar_sadd_always_overflows_low(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[A:%.*]], -120
-; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[CMP]], i8 [[A]], i8 -120
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[MIN]], i8 -10)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 -128
 ;
   %cmp = icmp slt i8 %a, -120
   %min = select i1 %cmp, i8 %a, i8 -120
@@ -354,10 +351,7 @@ define i8 @test_scalar_sadd_always_overflows_low(i8 %a) {
 
 define i8 @test_scalar_sadd_always_overflows_high(i8 %a) {
 ; CHECK-LABEL: @test_scalar_sadd_always_overflows_high(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], 120
-; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP]], i8 [[A]], i8 120
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[MAX]], i8 10)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 127
 ;
   %cmp = icmp sgt i8 %a, 120
   %max = select i1 %cmp, i8 %a, i8 120
@@ -829,10 +823,7 @@ define <2 x i8> @test_vector_ssub_neg_nneg(<2 x i8> %a) {
 
 define i8 @test_scalar_ssub_always_overflows_low(i8 %a) {
 ; CHECK-LABEL: @test_scalar_ssub_always_overflows_low(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], 120
-; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP]], i8 [[A]], i8 120
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ssub.sat.i8(i8 -10, i8 [[MAX]])
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 -128
 ;
   %cmp = icmp sgt i8 %a, 120
   %max = select i1 %cmp, i8 %a, i8 120
@@ -842,10 +833,7 @@ define i8 @test_scalar_ssub_always_overflows_low(i8 %a) {
 
 define i8 @test_scalar_ssub_always_overflows_high(i8 %a) {
 ; CHECK-LABEL: @test_scalar_ssub_always_overflows_high(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[A:%.*]], -120
-; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[CMP]], i8 [[A]], i8 -120
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ssub.sat.i8(i8 10, i8 [[MIN]])
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 127
 ;
   %cmp = icmp slt i8 %a, -120
   %min = select i1 %cmp, i8 %a, i8 -120

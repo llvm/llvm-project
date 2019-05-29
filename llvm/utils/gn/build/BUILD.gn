@@ -3,6 +3,19 @@ import("//llvm/utils/gn/build/mac_sdk.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 import("//llvm/utils/gn/build/toolchain/target_flags.gni")
 
+declare_args() {
+  # Whether to build everything with coverage information.
+  # After building with this, run tests and then run
+  #    llvm/utils/prepare-code-coverage-artifact.py  \
+  #        .../llvm-profdata .../llvm-cov out/gn/profiles/ report/ \
+  #        out/gn/bin/llvm-undname ...`
+  # to generate a HTML report for the binaries passed in the last line.
+  llvm_build_instrumented_coverage = false
+}
+
+assert(!llvm_build_instrumented_coverage || is_clang,
+       "llvm_build_instrumented_coverage requires clang as host compiler")
+
 config("compiler_defaults") {
   defines = []
 
@@ -135,6 +148,21 @@ config("compiler_defaults") {
   # On Windows, the linker is not invoked through the compiler driver.
   if (use_lld && host_os != "win") {
     ldflags += [ "-fuse-ld=lld" ]
+  }
+
+  if (llvm_build_instrumented_coverage) {
+    cflags += [
+      "-fcoverage-mapping",
+
+      # Using an absolute path here is lame, but it's used at test execution
+      # time to generate the profiles, and lit doesn't specify a fixed folder
+      # for test execution -- so this is the only way to get all profiles into
+      # a single folder like llvm/utils/prepare-code-coverage-artifact.py
+      # expects.
+      "-fprofile-instr-generate=" +
+          rebase_path("$root_build_dir/profiles/%4m.profraw"),
+    ]
+    ldflags += [ "-fprofile-instr-generate" ]
   }
 }
 

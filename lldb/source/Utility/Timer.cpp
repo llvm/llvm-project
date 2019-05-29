@@ -144,7 +144,8 @@ void Timer::DumpCategoryTimes(Stream *s) {
   llvm::sort(sorted.begin(), sorted.end(), CategoryMapIteratorSortCriterion);
 
   for (const auto &stats : sorted)
-    s->Printf("%.9f sec (total: %.3fs; child: %.3fs; count: %llu) for %s\n",
+    s->Printf("%.9f sec (total: %.3fs; child: %.3fs; count: %" PRIu64
+              ") for %s\n",
               stats.nanos / 1000000000., stats.nanos_total / 1000000000.,
               (stats.nanos_total - stats.nanos) / 1000000000., stats.count,
               stats.name);

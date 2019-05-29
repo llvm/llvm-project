@@ -209,7 +209,7 @@ bool MachineModuleInfo::doInitialization(Module &M) {
   HasSplitStack = HasNosplitStack = false;
   AddrLabelSymbols = nullptr;
   TheModule = &M;
-  DbgInfoAvailable = !empty(M.debug_compile_units());
+  DbgInfoAvailable = !llvm::empty(M.debug_compile_units());
   return false;
 }
 

@@ -276,7 +276,7 @@ void IHexSectionWriterBase::visit(const StringTableSection &Sec) {
   // We are free to pass an invalid pointer to writeSection as long
   // as we don't actually write any data. The real writer class has
   // to override this method .
-  writeSection(&Sec, {nullptr, Sec.Size});
+  writeSection(&Sec, {nullptr, static_cast<size_t>(Sec.Size)});
 }
 
 void IHexSectionWriterBase::visit(const DynamicRelocationSection &Sec) {
