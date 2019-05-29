@@ -621,14 +621,12 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     DeviceTripleStr =
         HostTriple.isArch64Bit() ? "nvptx64-nvidia-cuda" : "nvptx-nvidia-cuda";
     llvm::Triple CudaTriple(DeviceTripleStr);
-    // Use the CUDA and host triples as the key into the ToolChains map,
-    // because the device toolchain we create depends on both.
-    auto &CudaTC = ToolChains[CudaTriple.str() + "/" + HostTriple.str()];
-    if (!CudaTC) {
-      CudaTC = llvm::make_unique<toolchains::CudaToolChain>(
-          *this, CudaTriple, *HostTC, C.getInputArgs(), OFK);
-    }
-    C.addOffloadDeviceToolChain(CudaTC.get(), OFK);
+    // Use the CUDA and host triples as the key into the
+    // getOffloadingDeviceToolChain, because the device toolchain we
+    // create depends on both.
+    auto CudaTC = &getOffloadingDeviceToolChain(C.getInputArgs(), CudaTriple,
+                                                *HostTC, OFK);
+    C.addOffloadDeviceToolChain(CudaTC, OFK);
   } else if (IsHIP) {
     const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
     const llvm::Triple &HostTriple = HostTC->getTriple();
@@ -636,14 +634,12 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     auto OFK = Action::OFK_HIP;
     DeviceTripleStr = "amdgcn-amd-amdhsa";
     llvm::Triple HIPTriple(DeviceTripleStr);
-    // Use the HIP and host triples as the key into the ToolChains map,
-    // because the device toolchain we create depends on both.
-    auto &HIPTC = ToolChains[HIPTriple.str() + "/" + HostTriple.str()];
-    if (!HIPTC) {
-      HIPTC = llvm::make_unique<toolchains::HIPToolChain>(
-          *this, HIPTriple, *HostTC, C.getInputArgs());
-    }
-    C.addOffloadDeviceToolChain(HIPTC.get(), OFK);
+    // Use the HIP and host triples as the key into
+    // getOffloadingDeviceToolChain, because the device toolchain we create
+    // depends on both.
+    auto HIPTC = &getOffloadingDeviceToolChain(C.getInputArgs(), HIPTriple,
+                                               *HostTC, OFK);
+    C.addOffloadDeviceToolChain(HIPTC, OFK);
   }
 
   //
@@ -695,12 +691,8 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
               const ToolChain *HostTC =
                   C.getSingleOffloadToolChain<Action::OFK_Host>();
               assert(HostTC && "Host toolchain should be always defined.");
-              auto &CudaTC =
-                  ToolChains[TT.str() + "/" + HostTC->getTriple().normalize()];
-              if (!CudaTC)
-                CudaTC = llvm::make_unique<toolchains::CudaToolChain>(
-                    *this, TT, *HostTC, C.getInputArgs(), Action::OFK_OpenMP);
-              TC = CudaTC.get();
+              TC = &getOffloadingDeviceToolChain(C.getInputArgs(), TT, *HostTC,
+                                                 Action::OFK_OpenMP);
             } else
               TC = &getToolChain(C.getInputArgs(), TT);
             C.addOffloadDeviceToolChain(TC, Action::OFK_OpenMP);
@@ -781,15 +773,13 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
           else {
             const ToolChain *HostTC =
                 C.getSingleOffloadToolChain<Action::OFK_Host>();
-            const llvm::Triple &HostTriple = HostTC->getTriple();
-            // Use the SYCL and host triples as the key into the ToolChains map,
-            // because the device toolchain we create depends on both.
-            auto &SYCLTC = ToolChains[TT.str() + "/" + HostTriple.str()];
-            if (!SYCLTC) {
-              SYCLTC = llvm::make_unique<toolchains::SYCLToolChain>(
-                  *this, TT, *HostTC, C.getInputArgs());
-            }
-            C.addOffloadDeviceToolChain(SYCLTC.get(), Action::OFK_SYCL);
+            // Use the SYCL and host triples as the key into
+            // getOffloadingDeviceToolChain, because the device toolchain we
+            // create depends on both.
+            auto SYCLTC = &getOffloadingDeviceToolChain(C.getInputArgs(), TT,
+                                                        *HostTC,
+                                                        Action::OFK_SYCL);
+            C.addOffloadDeviceToolChain(SYCLTC, Action::OFK_SYCL);
           }
         }
       } else {
@@ -811,15 +801,12 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       TT.setVendor(llvm::Triple::UnknownVendor);
       TT.setOS(llvm::Triple(llvm::sys::getProcessTriple()).getOS());
       TT.setEnvironment(llvm::Triple::SYCLDevice);
-      // Use the SYCL and host triples as the key into the ToolChains map,
-      // because the device toolchain we create depends on both.
-      auto &SYCLTC = ToolChains[(TT.normalize() + Twine("/") +
-                                 HostTriple.normalize()).str()];
-      if (!SYCLTC) {
-        SYCLTC = llvm::make_unique<toolchains::SYCLToolChain>(
-            *this, TT, *HostTC, C.getInputArgs());
-      }
-      C.addOffloadDeviceToolChain(SYCLTC.get(), Action::OFK_SYCL);
+      // Use the SYCL and host triples as the key into
+      // getOffloadingDeviceToolChain, because the device toolchain we create
+      // depends on both.
+      auto SYCLTC = &getOffloadingDeviceToolChain(C.getInputArgs(), TT, *HostTC,
+                                                  Action::OFK_SYCL);
+      C.addOffloadDeviceToolChain(SYCLTC, Action::OFK_SYCL);
     }
   }
 
@@ -5130,6 +5117,49 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
   // compiles always need two toolchains, the CUDA toolchain and the host
   // toolchain.  So the only valid way to create a CUDA toolchain is via
   // CreateOffloadingDeviceToolChains.
+
+  return *TC;
+}
+
+const ToolChain &Driver::getOffloadingDeviceToolChain(const ArgList &Args,
+                  const llvm::Triple &Target, const ToolChain &HostTC,
+                  const Action::OffloadKind &TargetDeviceOffloadKind) const {
+  // Use device / host triples as the key into the ToolChains map because the
+  // device ToolChain we create depends on both.
+  auto &TC = ToolChains[Target.str() + "/" + HostTC.getTriple().str()];
+  if (!TC) {
+    // Categorized by offload kind > arch rather than OS > arch like
+    // the normal getToolChain call, as it seems a reasonable way to categorize
+    // things.
+    switch (TargetDeviceOffloadKind) {
+      case Action::OFK_Cuda:
+        TC = llvm::make_unique<toolchains::CudaToolChain>(
+          *this, Target, HostTC, Args, TargetDeviceOffloadKind);
+        break;
+      case Action::OFK_HIP:
+        TC = llvm::make_unique<toolchains::HIPToolChain>(
+          *this, Target, HostTC, Args);
+        break;
+      case Action::OFK_OpenMP:
+        // omp + nvptx
+        TC = llvm::make_unique<toolchains::CudaToolChain>(
+          *this, Target, HostTC, Args, TargetDeviceOffloadKind);
+        break;
+      case Action::OFK_SYCL:
+        switch (Target.getArch()) {
+          case llvm::Triple::spir:
+          case llvm::Triple::spir64:
+            TC = llvm::make_unique<toolchains::SYCLToolChain>(
+              *this, Target, HostTC, Args);
+            break;
+          default:
+            llvm_unreachable("Unexpected option.");
+        }
+      break;
+      default:
+        llvm_unreachable("Unexpected option.");
+    }
+  }
 
   return *TC;
 }
