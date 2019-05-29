@@ -629,7 +629,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     C.addOffloadDeviceToolChain(CudaTC, OFK);
   } else if (IsHIP) {
     const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
-    const llvm::Triple &HostTriple = HostTC->getTriple();
     StringRef DeviceTripleStr;
     auto OFK = Action::OFK_HIP;
     DeviceTripleStr = "amdgcn-amd-amdhsa";
@@ -795,7 +794,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     if (HasValidSYCLRuntime) {
       const ToolChain *HostTC =
           C.getSingleOffloadToolChain<Action::OFK_Host>();
-      const llvm::Triple &HostTriple = HostTC->getTriple();
       llvm::Triple TT(TargetTriple);
       TT.setArch(llvm::Triple::spir64);
       TT.setVendor(llvm::Triple::UnknownVendor);
@@ -3205,6 +3203,23 @@ class OffloadingActionBuilder final {
     }
 
     bool initialize() override {
+      // Get and check the SYCL target triples if any, if it's not a valid
+      // triple print a diagnostic and return true stating the initialization
+      // has failed
+      if (Arg *A = Args.getLastArg(options::OPT_fsycl_targets_EQ)) {
+        for (unsigned i = 0; i < A->getNumValues(); ++i) {
+          llvm::Triple TT(A->getValue(i));
+
+          if (TT.getArch() == llvm::Triple::UnknownArch ||
+              !(TT.getArch() == llvm::Triple::spir ||
+                TT.getArch() == llvm::Triple::spir64)) {
+            C.getDriver().Diag(diag::err_drv_invalid_sycl_target)
+              << A->getValue(i);
+            return true;
+          }
+        }
+      }
+
       // Get the SYCL toolchains. If we don't get any, the action builder will
       // know there is nothing to do related to SYCL offloading.
       auto SYCLTCRange = C.getOffloadToolChains<Action::OFK_SYCL>();
@@ -5153,11 +5168,11 @@ const ToolChain &Driver::getOffloadingDeviceToolChain(const ArgList &Args,
               *this, Target, HostTC, Args);
             break;
           default:
-            llvm_unreachable("Unexpected option.");
+          break;
         }
       break;
       default:
-        llvm_unreachable("Unexpected option.");
+      break;
     }
   }
 
