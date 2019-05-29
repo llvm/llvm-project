@@ -2,6 +2,7 @@
 
 int f() {
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'f' defined in a header file; function definitions in header files can lead to ODR violations [misc-definitions-in-headers]
+// CHECK-MESSAGES: :[[@LINE-2]]:5: note: make as 'inline'
 // CHECK-FIXES: inline int f() {
   return 1;
 }

@@ -359,7 +359,7 @@ SymbolFileDWARF::SymbolFileDWARF(ObjectFile *objfile,
       m_context(objfile->GetModule()->GetSectionList(), dwo_section_list),
       m_data_debug_loc(), m_data_debug_ranges(), m_data_debug_rnglists(),
       m_abbr(), m_info(), m_fetched_external_modules(false),
-      m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate), m_ranges(),
+      m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate),
       m_unique_ast_type_map() {}
 
 SymbolFileDWARF::~SymbolFileDWARF() {}
@@ -619,16 +619,14 @@ SymbolFileDWARF::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
   return nullptr;
 }
 
-DWARFDebugRangesBase *SymbolFileDWARF::DebugRanges() {
-  if (m_ranges == nullptr) {
+DWARFDebugRangesBase *SymbolFileDWARF::GetDebugRanges() {
+  if (!m_ranges) {
     static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
     Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
                        static_cast<void *>(this));
 
     if (get_debug_ranges_data().GetByteSize() > 0)
       m_ranges.reset(new DWARFDebugRanges());
-    else if (get_debug_rnglists_data().GetByteSize() > 0)
-      m_ranges.reset(new DWARFDebugRngLists());
 
     if (m_ranges)
       m_ranges->Extract(this);
@@ -636,8 +634,19 @@ DWARFDebugRangesBase *SymbolFileDWARF::DebugRanges() {
   return m_ranges.get();
 }
 
-const DWARFDebugRangesBase *SymbolFileDWARF::DebugRanges() const {
-  return m_ranges.get();
+DWARFDebugRangesBase *SymbolFileDWARF::GetDebugRngLists() {
+  if (!m_rnglists) {
+    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+    Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
+                       static_cast<void *>(this));
+
+    if (get_debug_rnglists_data().GetByteSize() > 0)
+      m_rnglists.reset(new DWARFDebugRngLists());
+
+    if (m_rnglists)
+      m_rnglists->Extract(this);
+  }
+  return m_rnglists.get();
 }
 
 lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFUnit *dwarf_cu) {
@@ -3222,29 +3231,9 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
           case DW_AT_specification:
             spec_die = form_value.Reference();
             break;
-          case DW_AT_start_scope: {
-            if (form_value.Form() == DW_FORM_sec_offset) {
-              DWARFRangeList dwarf_scope_ranges;
-              const DWARFDebugRangesBase *debug_ranges = DebugRanges();
-              debug_ranges->FindRanges(die.GetCU(),
-                                       form_value.Unsigned(),
-                                       dwarf_scope_ranges);
-            } else {
-              // TODO: Handle the case when DW_AT_start_scope have form
-              // constant. The
-              // dwarf spec is a bit ambiguous about what is the expected
-              // behavior in case the enclosing block have a non coninious
-              // address range and the DW_AT_start_scope entry have a form
-              // constant.
-              GetObjectFile()->GetModule()->ReportWarning(
-                  "0x%8.8" PRIx64
-                  ": DW_AT_start_scope has unsupported form type (0x%x)\n",
-                  die.GetID(), form_value.Form());
-            }
-
-            scope_ranges.Sort();
-            scope_ranges.CombineConsecutiveRanges();
-          } break;
+          case DW_AT_start_scope:
+            // TODO: Implement this.
+            break;
           case DW_AT_artificial:
             is_artificial = form_value.Boolean();
             break;

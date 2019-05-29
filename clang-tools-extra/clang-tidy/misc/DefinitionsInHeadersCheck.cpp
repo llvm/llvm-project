@@ -124,13 +124,16 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
       }
     }
 
-    bool is_full_spec = FD->getTemplateSpecializationKind() != TSK_Undeclared;
+    bool IsFullSpec = FD->getTemplateSpecializationKind() != TSK_Undeclared;
     diag(FD->getLocation(),
          "%select{function|full function template specialization}0 %1 defined "
          "in a header file; function definitions in header files can lead to "
          "ODR violations")
-        << is_full_spec << FD << FixItHint::CreateInsertion(
-                     FD->getReturnTypeSourceRange().getBegin(), "inline ");
+        << IsFullSpec << FD;
+    diag(FD->getLocation(), /*FixDescription=*/"make as 'inline'",
+         DiagnosticIDs::Note)
+        << FixItHint::CreateInsertion(FD->getReturnTypeSourceRange().getBegin(),
+                                      "inline ");
   } else if (const auto *VD = dyn_cast<VarDecl>(ND)) {
     // Static data members of a class template are allowed.
     if (VD->getDeclContext()->isDependentContext() && VD->isStaticDataMember())

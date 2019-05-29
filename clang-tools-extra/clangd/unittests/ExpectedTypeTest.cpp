@@ -11,6 +11,7 @@
 #include "TestTU.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -31,16 +32,14 @@ protected:
     AST = TestTU::withCode(Code).build();
   }
 
-  const ValueDecl *decl(llvm::StringRef Name) {
-    return &cast<ValueDecl>(findDecl(*AST, Name));
-  }
+  const NamedDecl *decl(llvm::StringRef Name) { return &findDecl(*AST, Name); }
 
   QualType typeOf(llvm::StringRef Name) {
-    return decl(Name)->getType().getCanonicalType();
+    return cast<ValueDecl>(decl(Name))->getType().getCanonicalType();
   }
 
   /// An overload for convenience.
-  llvm::Optional<OpaqueType> fromCompletionResult(const ValueDecl *D) {
+  llvm::Optional<OpaqueType> fromCompletionResult(const NamedDecl *D) {
     return OpaqueType::fromCompletionResult(
         ASTCtx(), CodeCompletionResult(D, CCP_Declaration));
   }
@@ -146,6 +145,29 @@ TEST_F(ExpectedTypeConversionTest, FunctionReturns) {
 
   OpaqueType IntPtrTy = *OpaqueType::fromType(ASTCtx(), typeOf("int_ptr"));
   EXPECT_EQ(fromCompletionResult(decl("returns_ptr")), IntPtrTy);
+}
+
+TEST_F(ExpectedTypeConversionTest, Templates) {
+  build(R"cpp(
+template <class T>
+int* returns_not_dependent();
+template <class T>
+T* returns_dependent();
+
+template <class T>
+int* var_not_dependent = nullptr;
+template <class T>
+T* var_dependent = nullptr;
+
+int* int_ptr_;
+  )cpp");
+
+  auto IntPtrTy = *OpaqueType::fromType(ASTCtx(), typeOf("int_ptr_"));
+  EXPECT_EQ(fromCompletionResult(decl("returns_not_dependent")), IntPtrTy);
+  EXPECT_EQ(fromCompletionResult(decl("returns_dependent")), llvm::None);
+
+  EXPECT_EQ(fromCompletionResult(decl("var_not_dependent")), IntPtrTy);
+  EXPECT_EQ(fromCompletionResult(decl("var_dependent")), llvm::None);
 }
 
 } // namespace

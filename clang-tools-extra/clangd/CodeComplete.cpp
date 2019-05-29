@@ -394,8 +394,9 @@ struct CodeCompletionBuilder {
     Bundled.emplace_back();
     BundledEntry &S = Bundled.back();
     if (C.SemaResult) {
+      bool IsPattern = C.SemaResult->Kind == CodeCompletionResult::RK_Pattern;
       getSignature(*SemaCCS, &S.Signature, &S.SnippetSuffix,
-                   &Completion.RequiredQualifier);
+                   &Completion.RequiredQualifier, IsPattern);
       S.ReturnType = getReturnType(*SemaCCS);
     } else if (C.IndexResult) {
       S.Signature = C.IndexResult->Signature;

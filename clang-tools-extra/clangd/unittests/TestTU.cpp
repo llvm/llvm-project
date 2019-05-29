@@ -59,8 +59,7 @@ ParsedAST TestTU::build() const {
                     /*OldPreamble=*/nullptr,
                     /*OldCompileCommand=*/Inputs.CompileCommand, Inputs,
                     /*StoreInMemory=*/true, /*PreambleCallback=*/nullptr);
-  auto AST = buildAST(FullFilename, createInvocationFromCommandLine(Cmd),
-                      Inputs, Preamble);
+  auto AST = buildAST(FullFilename, std::move(CI), Inputs, Preamble);
   if (!AST.hasValue()) {
     ADD_FAILURE() << "Failed to build code:\n" << Code;
     llvm_unreachable("Failed to build TestTU!");

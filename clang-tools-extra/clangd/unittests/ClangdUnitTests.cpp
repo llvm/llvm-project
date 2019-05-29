@@ -49,7 +49,7 @@ Bar* bar;
     std::string WithPreamble = Preamble + Text;
     Annotations TestCase(WithPreamble);
     auto AST = TestTU::withCode(TestCase.code()).build();
-    const auto &SourceMgr = AST.getASTContext().getSourceManager();
+    const auto &SourceMgr = AST.getSourceManager();
     SourceLocation Actual = getBeginningOfIdentifier(
         AST, TestCase.points().back(), SourceMgr.getMainFileID());
     Position ActualPos = offsetToPosition(

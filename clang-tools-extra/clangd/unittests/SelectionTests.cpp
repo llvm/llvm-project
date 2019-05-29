@@ -37,7 +37,7 @@ SelectionTree makeSelectionTree(const StringRef MarkedCode, ParsedAST &AST) {
 Range nodeRange(const SelectionTree::Node *N, ParsedAST &AST) {
   if (!N)
     return Range{};
-  SourceManager &SM = AST.getASTContext().getSourceManager();
+  SourceManager &SM = AST.getSourceManager();
   StringRef Buffer = SM.getBufferData(SM.getMainFileID());
   SourceRange SR = N->ASTNode.getSourceRange();
   SR.setBegin(SM.getFileLoc(SR.getBegin()));

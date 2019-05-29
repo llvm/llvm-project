@@ -14,6 +14,7 @@
 #include "ClangdUnit.h"
 #include "CodeComplete.h"
 #include "FSProvider.h"
+#include "FormattedString.h"
 #include "Function.h"
 #include "GlobalCompilationDatabase.h"
 #include "Protocol.h"
@@ -186,7 +187,7 @@ public:
 
   /// Get code hover for a given position.
   void findHover(PathRef File, Position Pos,
-                 Callback<llvm::Optional<Hover>> CB);
+                 Callback<llvm::Optional<HoverInfo>> CB);
 
   /// Get information about type hierarchy for a given position.
   void typeHierarchy(PathRef File, Position Pos, int Resolve,
