@@ -62,8 +62,8 @@ public:
 
 template<class Container>
   stack(Container) -> stack<typename Container::value_type, Container>;  // C++17
-  
-template<class Container, class Allocator> 
+
+template<class Container, class Allocator>
   stack(Container, Allocator) -> stack<typename Container::value_type, Container>; // C++17
 
 template <class T, class Container>
@@ -118,7 +118,7 @@ public:
     typedef typename container_type::const_reference const_reference;
     typedef typename container_type::size_type       size_type;
     static_assert((is_same<_Tp, value_type>::value), "" );
-    
+
 protected:
     container_type c;
 
@@ -240,12 +240,12 @@ template<class _Container,
 >
 stack(_Container)
     -> stack<typename _Container::value_type, _Container>;
-  
+
 template<class _Container,
          class _Alloc,
          class = typename enable_if<!__is_allocator<_Container>::value, nullptr_t>::type,
          class = typename enable_if< __is_allocator<_Alloc>::value, nullptr_t>::type
-         > 
+         >
 stack(_Container, _Alloc)
     -> stack<typename _Container::value_type, _Container>;
 #endif
