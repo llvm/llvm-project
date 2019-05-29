@@ -153,83 +153,39 @@ function(find_python_libs_windows)
   endif()
 
   file(TO_CMAKE_PATH "${PYTHON_HOME}" PYTHON_HOME)
-  file(TO_CMAKE_PATH "${PYTHON_HOME}/python_d.exe" PYTHON_DEBUG_EXE)
-  file(TO_CMAKE_PATH "${PYTHON_HOME}/libs/${PYTHONLIBS_BASE_NAME}_d.lib" PYTHON_DEBUG_LIB)
-  file(TO_CMAKE_PATH "${PYTHON_HOME}/${PYTHONLIBS_BASE_NAME}_d.dll" PYTHON_DEBUG_DLL)
-
-  file(TO_CMAKE_PATH "${PYTHON_HOME}/python.exe" PYTHON_RELEASE_EXE)
-  file(TO_CMAKE_PATH "${PYTHON_HOME}/libs/${PYTHONLIBS_BASE_NAME}.lib" PYTHON_RELEASE_LIB)
-  file(TO_CMAKE_PATH "${PYTHON_HOME}/${PYTHONLIBS_BASE_NAME}.dll" PYTHON_RELEASE_DLL)
-
-  if (NOT EXISTS ${PYTHON_DEBUG_EXE})
-    message("Unable to find ${PYTHON_DEBUG_EXE}")
-    unset(PYTHON_DEBUG_EXE)
+  # TODO(compnerd) when CMake Policy `CMP0091` is set to NEW, we should use
+  # if(CMAKE_MSVC_RUNTIME_LIBRARY MATCHES MultiThreadedDebug)
+  if(CMAKE_BUILD_TYPE STREQUAL Debug)
+    file(TO_CMAKE_PATH "${PYTHON_HOME}/python_d.exe" PYTHON_EXE)
+    file(TO_CMAKE_PATH "${PYTHON_HOME}/libs/${PYTHONLIBS_BASE_NAME}_d.lib" PYTHON_LIB)
+    file(TO_CMAKE_PATH "${PYTHON_HOME}/${PYTHONLIBS_BASE_NAME}_d.dll" PYTHON_DLL)
+  else()
+    file(TO_CMAKE_PATH "${PYTHON_HOME}/python.exe" PYTHON_EXE)
+    file(TO_CMAKE_PATH "${PYTHON_HOME}/libs/${PYTHONLIBS_BASE_NAME}.lib" PYTHON_LIB)
+    file(TO_CMAKE_PATH "${PYTHON_HOME}/${PYTHONLIBS_BASE_NAME}.dll" PYTHON_DLL)
   endif()
 
-  if (NOT EXISTS ${PYTHON_RELEASE_EXE})
-    message("Unable to find ${PYTHON_RELEASE_EXE}")
-    unset(PYTHON_RELEASE_EXE)
-  endif()
+  foreach(component PYTHON_EXE;PYTHON_LIB;PYTHON_DLL)
+    if(NOT EXISTS ${${component}})
+      message("unable to find ${component}")
+      unset(${component})
+    endif()
+  endforeach()
 
-  if (NOT EXISTS ${PYTHON_DEBUG_LIB})
-    message("Unable to find ${PYTHON_DEBUG_LIB}")
-    unset(PYTHON_DEBUG_LIB)
-  endif()
-
-  if (NOT EXISTS ${PYTHON_RELEASE_LIB})
-    message("Unable to find ${PYTHON_RELEASE_LIB}")
-    unset(PYTHON_RELEASE_LIB)
-  endif()
-
-  if (NOT EXISTS ${PYTHON_DEBUG_DLL})
-    message("Unable to find ${PYTHON_DEBUG_DLL}")
-    unset(PYTHON_DEBUG_DLL)
-  endif()
-
-  if (NOT EXISTS ${PYTHON_RELEASE_DLL})
-    message("Unable to find ${PYTHON_RELEASE_DLL}")
-    unset(PYTHON_RELEASE_DLL)
-  endif()
-
-  if (NOT (PYTHON_DEBUG_EXE AND PYTHON_RELEASE_EXE AND PYTHON_DEBUG_LIB AND PYTHON_RELEASE_LIB AND PYTHON_DEBUG_DLL AND PYTHON_RELEASE_DLL))
-    message("Python installation is corrupt. Python support will be disabled for this build.")
+  if (NOT PYTHON_EXE OR NOT PYTHON_LIB OR NOT PYTHON_DLL)
+    message("Unable to find all Python components.  Python support will be disabled for this build.")
     set(LLDB_DISABLE_PYTHON 1 PARENT_SCOPE)
     return()
   endif()
 
-  # Generator expressions are evaluated in the context of each build configuration generated
-  # by CMake. Here we use the $<CONFIG:Debug>:VALUE logical generator expression to ensure
-  # that the debug Python library, DLL, and executable are used in the Debug build configuration.
-  #
-  # Generator expressions can be difficult to grok at first so here's a breakdown of the one
-  # used for PYTHON_LIBRARY:
-  #
-  # 1. $<CONFIG:Debug> evaluates to 1 when the Debug configuration is being generated,
-  #    or 0 in all other cases.
-  # 2. $<$<CONFIG:Debug>:${PYTHON_DEBUG_LIB}> expands to ${PYTHON_DEBUG_LIB} when the Debug
-  #    configuration is being generated, or nothing (literally) in all other cases.
-  # 3. $<$<NOT:$<CONFIG:Debug>>:${PYTHON_RELEASE_LIB}> expands to ${PYTHON_RELEASE_LIB} when
-  #    any configuration other than Debug is being generated, or nothing in all other cases.
-  # 4. The conditionals in 2 & 3 are mutually exclusive.
-  # 5. A logical expression with a conditional that evaluates to 0 yields no value at all.
-  #
-  # Due to 4 & 5 it's possible to concatenate 2 & 3 to obtain a single value specific to each
-  # build configuration. In this example the value will be ${PYTHON_DEBUG_LIB} when generating the
-  # Debug configuration, or ${PYTHON_RELEASE_LIB} when generating any other configuration.
-  # Note that it's imperative that there is no whitespace between the two expressions, otherwise
-  # CMake will insert a semicolon between the two.
-  set (PYTHON_EXECUTABLE $<$<CONFIG:Debug>:${PYTHON_DEBUG_EXE}>$<$<NOT:$<CONFIG:Debug>>:${PYTHON_RELEASE_EXE}>)
-  set (PYTHON_LIBRARY $<$<CONFIG:Debug>:${PYTHON_DEBUG_LIB}>$<$<NOT:$<CONFIG:Debug>>:${PYTHON_RELEASE_LIB}>)
-  set (PYTHON_DLL $<$<CONFIG:Debug>:${PYTHON_DEBUG_DLL}>$<$<NOT:$<CONFIG:Debug>>:${PYTHON_RELEASE_DLL}>)
-
-  set (PYTHON_EXECUTABLE ${PYTHON_EXECUTABLE} PARENT_SCOPE)
-  set (PYTHON_LIBRARY ${PYTHON_LIBRARY} PARENT_SCOPE)
+  set (PYTHON_EXECUTABLE ${PYTHON_EXE} PARENT_SCOPE)
+  set (PYTHON_LIBRARY ${PYTHON_LIB} PARENT_SCOPE)
   set (PYTHON_DLL ${PYTHON_DLL} PARENT_SCOPE)
   set (PYTHON_INCLUDE_DIR ${PYTHON_INCLUDE_DIR} PARENT_SCOPE)
 
-  message("-- LLDB Found PythonExecutable: ${PYTHON_RELEASE_EXE} and ${PYTHON_DEBUG_EXE}")
-  message("-- LLDB Found PythonLibs: ${PYTHON_RELEASE_LIB} and ${PYTHON_DEBUG_LIB}")
-  message("-- LLDB Found PythonDLL: ${PYTHON_RELEASE_DLL} and ${PYTHON_DEBUG_DLL}")
+  message("-- LLDB Found PythonExecutable: ${PYTHON_EXE}}")
+  message("-- LLDB Found PythonLibs: ${PYTHON_LIB}")
+  message("-- LLDB Found PythonDLL: ${PYTHON_DLL}")
   message("-- LLDB Found PythonIncludeDirs: ${PYTHON_INCLUDE_DIR}")
 endfunction(find_python_libs_windows)
 
