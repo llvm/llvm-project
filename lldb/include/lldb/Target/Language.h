@@ -264,6 +264,8 @@ public:
   // etc.
   static lldb::LanguageType GetPrimaryLanguage(lldb::LanguageType language);
 
+  static std::set<lldb::LanguageType> GetSupportedLanguages();
+
   static void GetLanguagesSupportingTypeSystems(
       std::set<lldb::LanguageType> &languages,
       std::set<lldb::LanguageType> &languages_for_expressions);
