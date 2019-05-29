@@ -775,6 +775,16 @@ typedef __char32_t char32_t;
 #  endif
 #endif
 
+#ifndef _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT
+# ifdef _LIBCPP_OBJECT_FORMAT_COFF // Windows binaries can't merge typeinfos.
+# define _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT 0
+#else
+// TODO: This isn't strictly correct on ELF platforms due to llvm.org/PR37398
+// And we should consider defaulting to OFF.
+# define _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT 1
+#endif
+#endif
+
 #ifndef _LIBCPP_HIDE_FROM_ABI
 #  if _LIBCPP_HIDE_FROM_ABI_PER_TU
 #    define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_INTERNAL_LINKAGE
@@ -934,10 +944,6 @@ template <unsigned> struct __static_assert_check {};
 
 #ifndef _LIBCPP_EXTERN_TEMPLATE2
 #define _LIBCPP_EXTERN_TEMPLATE2(...) extern template __VA_ARGS__;
-#endif
-
-#if defined(__APPLE__) && defined(__LP64__) && !defined(__x86_64__)
-#define _LIBCPP_NONUNIQUE_RTTI_BIT (1ULL << 63)
 #endif
 
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(_LIBCPP_MSVCRT_LIKE) || \

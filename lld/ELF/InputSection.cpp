@@ -755,6 +755,8 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
     return Sym.getSize() + A;
   case R_TLSDESC:
     return In.Got->getGlobalDynAddr(Sym) + A;
+  case R_TLSDESC_PC:
+    return In.Got->getGlobalDynAddr(Sym) + A - P;
   case R_AARCH64_TLSDESC_PAGE:
     return getAArch64Page(In.Got->getGlobalDynAddr(Sym) + A) -
            getAArch64Page(P);

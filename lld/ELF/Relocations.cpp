@@ -217,7 +217,8 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
   if (Config->EMachine == EM_MIPS)
     return handleMipsTlsRelocation(Type, Sym, C, Offset, Addend, Expr);
 
-  if (oneof<R_TLSDESC, R_AARCH64_TLSDESC_PAGE, R_TLSDESC_CALL>(Expr) &&
+  if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC>(
+          Expr) &&
       Config->Shared) {
     if (In.Got->addDynTlsEntry(Sym)) {
       uint64_t Off = In.Got->getGlobalDynOffset(Sym);
@@ -273,8 +274,8 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
     return 1;
   }
 
-  if (oneof<R_TLSDESC, R_AARCH64_TLSDESC_PAGE, R_TLSDESC_CALL, R_TLSGD_GOT,
-            R_TLSGD_GOTPLT, R_TLSGD_PC>(Expr)) {
+  if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
+            R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC>(Expr)) {
     if (Config->Shared) {
       if (In.Got->addDynTlsEntry(Sym)) {
         uint64_t Off = In.Got->getGlobalDynOffset(Sym);
@@ -403,8 +404,8 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
             R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC, R_MIPS_TLSGD,
             R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,
             R_PLT_PC, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC, R_PPC_CALL_PLT,
-            R_PPC64_RELAX_TOC, R_TLSDESC_CALL, R_AARCH64_TLSDESC_PAGE, R_HINT, R_TLSLD_HINT,
-            R_TLSIE_HINT>(E))
+            R_PPC64_RELAX_TOC, R_TLSDESC_CALL, R_TLSDESC_PC,
+            R_AARCH64_TLSDESC_PAGE, R_HINT, R_TLSLD_HINT, R_TLSIE_HINT>(E))
     return true;
 
   // These never do, except if the entire file is position dependent or if
