@@ -225,9 +225,8 @@ public:
 
   const DWARFDebugInfo *DebugInfo() const;
 
-  DWARFDebugRangesBase *DebugRanges();
-
-  const DWARFDebugRangesBase *DebugRanges() const;
+  DWARFDebugRangesBase *GetDebugRanges();
+  DWARFDebugRangesBase *GetDebugRngLists();
 
   const lldb_private::DWARFDataExtractor &DebugLocData();
 
@@ -453,11 +452,9 @@ protected:
   DWARFDataSegment m_data_debug_rnglists;
 
   // The unique pointer items below are generated on demand if and when someone
-  // accesses
-  // them through a non const version of this class.
+  // accesses them through a non const version of this class.
   std::unique_ptr<DWARFDebugAbbrev> m_abbr;
   std::unique_ptr<DWARFDebugInfo> m_info;
-  std::unique_ptr<DWARFDebugLine> m_line;
   std::unique_ptr<GlobalVariableMap> m_global_aranges_up;
 
   typedef std::unordered_map<lldb::offset_t, lldb_private::DebugMacrosSP>
@@ -473,6 +470,7 @@ protected:
   typedef std::unordered_map<std::string, DIERefSetSP> NameToOffsetMap;
   NameToOffsetMap m_function_scope_qualified_name_map;
   std::unique_ptr<DWARFDebugRangesBase> m_ranges;
+  std::unique_ptr<DWARFDebugRangesBase> m_rnglists;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
   DIEToTypePtr m_die_to_type;
   DIEToVariableSP m_die_to_variable_sp;

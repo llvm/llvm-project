@@ -506,20 +506,19 @@ class Capture {
   enum CaptureKind {
     Cap_ByCopy, Cap_ByRef, Cap_Block, Cap_VLA
   };
-  enum {
-    IsNestedCapture = 0x1,
-    IsThisCaptured = 0x2
+
+  union {
+    /// If Kind == Cap_VLA, the captured type.
+    const VariableArrayType *CapturedVLA;
+
+    /// Otherwise, the captured variable (if any).
+    VarDecl *CapturedVar;
   };
 
-  /// The variable being captured (if we are not capturing 'this') and whether
-  /// this is a nested capture, and whether we are capturing 'this'
-  llvm::PointerIntPair<VarDecl*, 2> VarAndNestedAndThis;
-
-  /// Expression to initialize a field of the given type, and the kind of
-  /// capture (if this is a capture and not an init-capture). The expression
-  /// is only required if we are capturing ByVal and the variable's type has
-  /// a non-trivial copy constructor.
-  llvm::PointerIntPair<void *, 2, CaptureKind> InitExprAndCaptureKind;
+  /// Expression to initialize a field of the given type. This is only required
+  /// if we are capturing ByVal and the variable's type has a non-trivial copy
+  /// constructor.
+  Expr *InitExpr = nullptr;
 
   /// The source location at which the first capture occurred.
   SourceLocation Loc;
@@ -527,71 +526,88 @@ class Capture {
   /// The location of the ellipsis that expands a parameter pack.
   SourceLocation EllipsisLoc;
 
-  /// The type as it was captured, which is in effect the type of the
-  /// non-static data member that would hold the capture.
+  /// The type as it was captured, which is the type of the non-static data
+  /// member that would hold the capture.
   QualType CaptureType;
+
+  /// The CaptureKind of this capture.
+  unsigned Kind : 2;
+
+  /// Whether this is a nested capture (a capture of an enclosing capturing
+  /// scope's capture).
+  unsigned Nested : 1;
+
+  /// Whether this is a capture of '*this'.
+  unsigned CapturesThis : 1;
 
   /// Whether an explicit capture has been odr-used in the body of the
   /// lambda.
-  bool ODRUsed = false;
+  unsigned ODRUsed : 1;
 
   /// Whether an explicit capture has been non-odr-used in the body of
   /// the lambda.
-  bool NonODRUsed = false;
+  unsigned NonODRUsed : 1;
+
+  /// Whether the capture is invalid (a capture was required but the entity is
+  /// non-capturable).
+  unsigned Invalid : 1;
 
 public:
   Capture(VarDecl *Var, bool Block, bool ByRef, bool IsNested,
-          SourceLocation Loc, SourceLocation EllipsisLoc,
-          QualType CaptureType, Expr *Cpy)
-      : VarAndNestedAndThis(Var, IsNested ? IsNestedCapture : 0),
-        InitExprAndCaptureKind(
-            Cpy, !Var ? Cap_VLA : Block ? Cap_Block : ByRef ? Cap_ByRef
-                                                            : Cap_ByCopy),
-        Loc(Loc), EllipsisLoc(EllipsisLoc), CaptureType(CaptureType) {}
+          SourceLocation Loc, SourceLocation EllipsisLoc, QualType CaptureType,
+          Expr *Cpy, bool Invalid)
+      : CapturedVar(Var), InitExpr(Cpy), Loc(Loc), EllipsisLoc(EllipsisLoc),
+        CaptureType(CaptureType),
+        Kind(Block ? Cap_Block : ByRef ? Cap_ByRef : Cap_ByCopy),
+        Nested(IsNested), CapturesThis(false), ODRUsed(false),
+        NonODRUsed(false), Invalid(Invalid) {}
 
   enum IsThisCapture { ThisCapture };
   Capture(IsThisCapture, bool IsNested, SourceLocation Loc,
-          QualType CaptureType, Expr *Cpy, const bool ByCopy)
-      : VarAndNestedAndThis(
-            nullptr, (IsThisCaptured | (IsNested ? IsNestedCapture : 0))),
-        InitExprAndCaptureKind(Cpy, ByCopy ? Cap_ByCopy : Cap_ByRef),
-        Loc(Loc), CaptureType(CaptureType) {}
+          QualType CaptureType, Expr *Cpy, const bool ByCopy, bool Invalid)
+      : InitExpr(Cpy), Loc(Loc), CaptureType(CaptureType),
+        Kind(ByCopy ? Cap_ByCopy : Cap_ByRef), Nested(IsNested),
+        CapturesThis(true), ODRUsed(false), NonODRUsed(false),
+        Invalid(Invalid) {}
 
-  bool isThisCapture() const {
-    return VarAndNestedAndThis.getInt() & IsThisCaptured;
-  }
+  enum IsVLACapture { VLACapture };
+  Capture(IsVLACapture, const VariableArrayType *VLA, bool IsNested,
+          SourceLocation Loc, QualType CaptureType)
+      : CapturedVLA(VLA), Loc(Loc), CaptureType(CaptureType), Kind(Cap_VLA),
+        Nested(IsNested), CapturesThis(false), ODRUsed(false),
+        NonODRUsed(false), Invalid(false) {}
 
+  bool isThisCapture() const { return CapturesThis; }
   bool isVariableCapture() const {
     return !isThisCapture() && !isVLATypeCapture();
   }
 
-  bool isCopyCapture() const {
-    return InitExprAndCaptureKind.getInt() == Cap_ByCopy;
-  }
+  bool isCopyCapture() const { return Kind == Cap_ByCopy; }
+  bool isReferenceCapture() const { return Kind == Cap_ByRef; }
+  bool isBlockCapture() const { return Kind == Cap_Block; }
+  bool isVLATypeCapture() const { return Kind == Cap_VLA; }
 
-  bool isReferenceCapture() const {
-    return InitExprAndCaptureKind.getInt() == Cap_ByRef;
-  }
+  bool isNested() const { return Nested; }
 
-  bool isBlockCapture() const {
-    return InitExprAndCaptureKind.getInt() == Cap_Block;
-  }
-
-  bool isVLATypeCapture() const {
-    return InitExprAndCaptureKind.getInt() == Cap_VLA;
-  }
-
-  bool isNested() const {
-    return VarAndNestedAndThis.getInt() & IsNestedCapture;
-  }
+  bool isInvalid() const { return Invalid; }
 
   bool isODRUsed() const { return ODRUsed; }
   bool isNonODRUsed() const { return NonODRUsed; }
-  void markUsed(bool IsODRUse) { (IsODRUse ? ODRUsed : NonODRUsed) = true; }
+  void markUsed(bool IsODRUse) {
+    if (IsODRUse)
+      ODRUsed = true;
+    else
+      NonODRUsed = true;
+  }
 
   VarDecl *getVariable() const {
     assert(isVariableCapture());
-    return VarAndNestedAndThis.getPointer();
+    return CapturedVar;
+  }
+
+  const VariableArrayType *getCapturedVLAType() const {
+    assert(isVLATypeCapture());
+    return CapturedVLA;
   }
 
   /// Retrieve the location at which this variable was captured.
@@ -604,14 +620,11 @@ public:
   /// Retrieve the capture type for this capture, which is effectively
   /// the type of the non-static data member in the lambda/block structure
   /// that would store this capture.
-  QualType getCaptureType() const {
-    assert(!isThisCapture());
-    return CaptureType;
-  }
+  QualType getCaptureType() const { return CaptureType; }
 
   Expr *getInitExpr() const {
     assert(!isVLATypeCapture() && "no init expression for type capture");
-    return static_cast<Expr *>(InitExprAndCaptureKind.getPointer());
+    return InitExpr;
   }
 };
 
@@ -650,23 +663,19 @@ public:
 
   void addCapture(VarDecl *Var, bool isBlock, bool isByref, bool isNested,
                   SourceLocation Loc, SourceLocation EllipsisLoc,
-                  QualType CaptureType, Expr *Cpy) {
+                  QualType CaptureType, Expr *Cpy, bool Invalid) {
     Captures.push_back(Capture(Var, isBlock, isByref, isNested, Loc,
-                               EllipsisLoc, CaptureType, Cpy));
+                               EllipsisLoc, CaptureType, Cpy, Invalid));
     CaptureMap[Var] = Captures.size();
   }
 
-  void addVLATypeCapture(SourceLocation Loc, QualType CaptureType) {
-    Captures.push_back(Capture(/*Var*/ nullptr, /*isBlock*/ false,
-                               /*isByref*/ false, /*isNested*/ false, Loc,
-                               /*EllipsisLoc*/ SourceLocation(), CaptureType,
-                               /*Cpy*/ nullptr));
+  void addVLATypeCapture(SourceLocation Loc, const VariableArrayType *VLAType,
+                         QualType CaptureType) {
+    Captures.push_back(Capture(Capture::VLACapture, VLAType,
+                               /*FIXME: IsNested*/ false, Loc, CaptureType));
   }
 
-  // Note, we do not need to add the type of 'this' since that is always
-  // retrievable from Sema::getCurrentThisType - and is also encoded within the
-  // type of the corresponding FieldDecl.
-  void addThisCapture(bool isNested, SourceLocation Loc,
+  void addThisCapture(bool isNested, SourceLocation Loc, QualType CaptureType,
                       Expr *Cpy, bool ByCopy);
 
   /// Determine whether the C++ 'this' is captured.
@@ -1013,10 +1022,10 @@ void FunctionScopeInfo::recordUseOfWeak(const ExprT *E, bool IsRead) {
 
 inline void
 CapturingScopeInfo::addThisCapture(bool isNested, SourceLocation Loc,
-                                   Expr *Cpy,
+                                   QualType CaptureType, Expr *Cpy,
                                    const bool ByCopy) {
-  Captures.push_back(Capture(Capture::ThisCapture, isNested, Loc, QualType(),
-                             Cpy, ByCopy));
+  Captures.push_back(Capture(Capture::ThisCapture, isNested, Loc, CaptureType,
+                             Cpy, ByCopy, /*Invalid*/ false));
   CXXThisCaptureIndex = Captures.size();
 }
 

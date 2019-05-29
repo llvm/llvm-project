@@ -212,6 +212,12 @@ def _SLASH_Zc_alignedNew : CLFlag<"Zc:alignedNew">,
 def _SLASH_Zc_alignedNew_ : CLFlag<"Zc:alignedNew-">,
   HelpText<"Disable C++17 aligned allocation functions">,
   Alias<fno_aligned_allocation>;
+def _SLASH_Zc_char8_t : CLFlag<"Zc:char8_t">,
+  HelpText<"Enable char8_t from C++2a">,
+  Alias<fchar8__t>;
+def _SLASH_Zc_char8_t_ : CLFlag<"Zc:char8_t-">,
+  HelpText<"Disable char8_t from c++2a">,
+  Alias<fno_char8__t>;
 def _SLASH_Zc_strictStrings : CLFlag<"Zc:strictStrings">,
   HelpText<"Treat string literals as const">, Alias<W_Joined>,
   AliasArgs<["error=c++11-compat-deprecated-writable-strings"]>;

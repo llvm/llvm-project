@@ -1,4 +1,5 @@
 set (FILES
+  ConnectionFileDescriptorTest.cpp
   FileActionTest.cpp
   FileSystemTest.cpp
   HostInfoTest.cpp
@@ -8,6 +9,7 @@ set (FILES
   ProcessLaunchInfoTest.cpp
   SocketAddressTest.cpp
   SocketTest.cpp
+  SocketTestUtilities.cpp
   TaskPoolTest.cpp
 )
 

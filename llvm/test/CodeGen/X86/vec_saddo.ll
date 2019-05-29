@@ -693,8 +693,8 @@ define <8 x i32> @saddo_v8i32(<8 x i32> %a0, <8 x i32> %a1, <8 x i32>* %p2) noun
 ; AVX1-NEXT:    vpxor %xmm5, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm0, %ymm0
 ; AVX1-NEXT:    vandps %ymm0, %ymm8, %ymm0
-; AVX1-NEXT:    vmovdqa %xmm2, 16(%rdi)
-; AVX1-NEXT:    vmovdqa %xmm1, (%rdi)
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; AVX1-NEXT:    vmovaps %ymm1, (%rdi)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: saddo_v8i32:
@@ -824,48 +824,48 @@ define <16 x i32> @saddo_v16i32(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %p2)
 ; AVX1-NEXT:    vpxor %xmm6, %xmm4, %xmm4
 ; AVX1-NEXT:    vpcmpeqd %xmm7, %xmm4, %xmm7
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm1, %xmm10
-; AVX1-NEXT:    vpcmpgtd %xmm10, %xmm5, %xmm1
-; AVX1-NEXT:    vpxor %xmm6, %xmm1, %xmm1
-; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm4, %xmm1
-; AVX1-NEXT:    vpandn %xmm7, %xmm1, %xmm1
-; AVX1-NEXT:    vpackssdw %xmm8, %xmm1, %xmm8
+; AVX1-NEXT:    vpcmpgtd %xmm10, %xmm5, %xmm3
+; AVX1-NEXT:    vpxor %xmm6, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm4, %xmm3
+; AVX1-NEXT:    vpandn %xmm7, %xmm3, %xmm3
+; AVX1-NEXT:    vpackssdw %xmm8, %xmm3, %xmm8
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
 ; AVX1-NEXT:    vpcmpgtd %xmm4, %xmm5, %xmm7
 ; AVX1-NEXT:    vpxor %xmm6, %xmm7, %xmm7
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpcmpgtd %xmm1, %xmm5, %xmm3
-; AVX1-NEXT:    vpxor %xmm6, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpeqd %xmm7, %xmm3, %xmm7
-; AVX1-NEXT:    vpaddd %xmm4, %xmm1, %xmm4
-; AVX1-NEXT:    vpcmpgtd %xmm4, %xmm5, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpcmpgtd %xmm3, %xmm5, %xmm1
 ; AVX1-NEXT:    vpxor %xmm6, %xmm1, %xmm1
-; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm3, %xmm1
+; AVX1-NEXT:    vpcmpeqd %xmm7, %xmm1, %xmm7
+; AVX1-NEXT:    vpaddd %xmm4, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpgtd %xmm3, %xmm5, %xmm4
+; AVX1-NEXT:    vpxor %xmm6, %xmm4, %xmm4
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm1, %xmm1
 ; AVX1-NEXT:    vpandn %xmm7, %xmm1, %xmm1
-; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm5, %xmm3
-; AVX1-NEXT:    vpxor %xmm6, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm5, %xmm4
+; AVX1-NEXT:    vpxor %xmm6, %xmm4, %xmm4
 ; AVX1-NEXT:    vpcmpgtd %xmm0, %xmm5, %xmm7
 ; AVX1-NEXT:    vpxor %xmm6, %xmm7, %xmm7
-; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm7, %xmm3
-; AVX1-NEXT:    vpaddd %xmm2, %xmm0, %xmm2
-; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm5, %xmm0
-; AVX1-NEXT:    vpxor %xmm6, %xmm0, %xmm0
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm7, %xmm0
-; AVX1-NEXT:    vpandn %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpacksswb %xmm8, %xmm0, %xmm1
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm7, %xmm4
+; AVX1-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpgtd %xmm0, %xmm5, %xmm2
+; AVX1-NEXT:    vpxor %xmm6, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm7, %xmm2
+; AVX1-NEXT:    vpandn %xmm4, %xmm2, %xmm2
+; AVX1-NEXT:    vpackssdw %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vpacksswb %xmm8, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm2
+; AVX1-NEXT:    vinsertf128 $1, %xmm9, %ymm10, %ymm3
 ; AVX1-NEXT:    vpmovsxbd %xmm1, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[1,1,2,3]
-; AVX1-NEXT:    vpmovsxbd %xmm3, %xmm3
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[2,3,0,1]
-; AVX1-NEXT:    vpmovsxbd %xmm3, %xmm3
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm1[1,1,2,3]
+; AVX1-NEXT:    vpmovsxbd %xmm4, %xmm4
+; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm1[2,3,0,1]
+; AVX1-NEXT:    vpmovsxbd %xmm4, %xmm4
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[3,3,0,1]
 ; AVX1-NEXT:    vpmovsxbd %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm1
-; AVX1-NEXT:    vmovdqa %xmm9, 48(%rdi)
-; AVX1-NEXT:    vmovdqa %xmm10, 32(%rdi)
-; AVX1-NEXT:    vmovdqa %xmm4, 16(%rdi)
-; AVX1-NEXT:    vmovdqa %xmm2, (%rdi)
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm4, %ymm1
+; AVX1-NEXT:    vmovaps %ymm3, 32(%rdi)
+; AVX1-NEXT:    vmovaps %ymm2, (%rdi)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: saddo_v16i32:

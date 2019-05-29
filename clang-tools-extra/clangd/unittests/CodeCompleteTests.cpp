@@ -449,6 +449,20 @@ TEST(CompletionTest, Kinds) {
   Results = completions("nam^");
   EXPECT_THAT(Results.Completions,
               Has("namespace", CompletionItemKind::Snippet));
+
+  // Members of anonymous unions are of kind 'field'.
+  Results = completions(
+      R"cpp(
+        struct X{
+            union {
+              void *a;
+            };
+        };
+        auto u = X().^
+      )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      UnorderedElementsAre(AllOf(Named("a"), Kind(CompletionItemKind::Field))));
 }
 
 TEST(CompletionTest, NoDuplicates) {

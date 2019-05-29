@@ -453,6 +453,8 @@ def fround     : SDNode<"ISD::FROUND"     , SDTFPUnaryOp>;
 
 def lround     : SDNode<"ISD::LROUND"     , SDTFPToIntOp>;
 def llround    : SDNode<"ISD::LLROUND"    , SDTFPToIntOp>;
+def lrint      : SDNode<"ISD::LRINT"      , SDTFPToIntOp>;
+def llrint     : SDNode<"ISD::LLRINT"     , SDTFPToIntOp>;
 
 def fpround    : SDNode<"ISD::FP_ROUND"   , SDTFPRoundOp>;
 def fpextend   : SDNode<"ISD::FP_EXTEND"  , SDTFPExtendOp>;

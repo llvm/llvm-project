@@ -95,6 +95,13 @@ public:
   std::shared_ptr<Preprocessor> getPreprocessorPtr();
   const Preprocessor &getPreprocessor() const;
 
+  SourceManager &getSourceManager() {
+    return getASTContext().getSourceManager();
+  }
+  const SourceManager &getSourceManager() const {
+    return getASTContext().getSourceManager();
+  }
+
   /// This function returns top-level decls present in the main file of the AST.
   /// The result does not include the decls that come from the preamble.
   /// (These should be const, but RecursiveASTVisitor requires Decl*).

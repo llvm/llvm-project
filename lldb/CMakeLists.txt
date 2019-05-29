@@ -151,6 +151,10 @@ if(LLDB_INCLUDE_TESTS)
     list(APPEND LLDB_TEST_DEPS dsymutil)
   endif()
 
+  if(TARGET lldb-framework)
+    list(APPEND LLDB_TEST_DEPS lldb-framework)
+  endif()
+
   add_custom_target(lldb-test-deps)
   add_dependencies(lldb-test-deps ${LLDB_TEST_DEPS})
   set_target_properties(lldb-test-deps PROPERTIES FOLDER "lldb misc")

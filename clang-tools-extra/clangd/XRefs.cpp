@@ -9,6 +9,7 @@
 #include "AST.h"
 #include "CodeCompletionStrings.h"
 #include "FindSymbols.h"
+#include "FormattedString.h"
 #include "Logger.h"
 #include "Protocol.h"
 #include "SourceCode.h"
@@ -286,7 +287,7 @@ llvm::Optional<Location> makeLocation(ASTContext &AST, SourceLocation TokLoc,
 
 std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
                                           const SymbolIndex *Index) {
-  const auto &SM = AST.getASTContext().getSourceManager();
+  const auto &SM = AST.getSourceManager();
   auto MainFilePath =
       getCanonicalPath(SM.getFileEntryForID(SM.getMainFileID()), SM);
   if (!MainFilePath) {
@@ -461,7 +462,7 @@ findRefs(const std::vector<const Decl *> &Decls, ParsedAST &AST) {
 
 std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
                                                       Position Pos) {
-  const SourceManager &SM = AST.getASTContext().getSourceManager();
+  const SourceManager &SM = AST.getSourceManager();
   auto Symbols = getSymbolAtPosition(
       AST, getBeginningOfIdentifier(AST, Pos, SM.getMainFileID()));
   auto References = findRefs(Symbols.Decls, AST);
@@ -719,7 +720,7 @@ static HoverInfo getHoverContents(QualType T, const Decl *D,
 /// Generate a \p Hover object given the macro \p MacroDecl.
 static HoverInfo getHoverContents(MacroDecl Decl, ParsedAST &AST) {
   HoverInfo HI;
-  SourceManager &SM = AST.getASTContext().getSourceManager();
+  SourceManager &SM = AST.getSourceManager();
   HI.Name = Decl.Name;
   HI.Kind = indexSymbolKindToSymbolKind(
       index::getSymbolInfoForMacro(*Decl.Info).Kind);
@@ -864,9 +865,8 @@ bool hasDeducedType(ParsedAST &AST, SourceLocation SourceLocationBeg) {
 llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
                                    format::FormatStyle Style) {
   llvm::Optional<HoverInfo> HI;
-  const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
-  SourceLocation SourceLocationBeg =
-      getBeginningOfIdentifier(AST, Pos, SourceMgr.getMainFileID());
+  SourceLocation SourceLocationBeg = getBeginningOfIdentifier(
+      AST, Pos, AST.getSourceManager().getMainFileID());
   // Identified symbols at a specific position.
   auto Symbols = getSymbolAtPosition(AST, SourceLocationBeg);
 
@@ -900,7 +900,7 @@ std::vector<Location> findReferences(ParsedAST &AST, Position Pos,
   if (!Limit)
     Limit = std::numeric_limits<uint32_t>::max();
   std::vector<Location> Results;
-  const SourceManager &SM = AST.getASTContext().getSourceManager();
+  const SourceManager &SM = AST.getSourceManager();
   auto MainFilePath =
       getCanonicalPath(SM.getFileEntryForID(SM.getMainFileID()), SM);
   if (!MainFilePath) {
@@ -949,7 +949,7 @@ std::vector<Location> findReferences(ParsedAST &AST, Position Pos,
 }
 
 std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
-  const SourceManager &SM = AST.getASTContext().getSourceManager();
+  const SourceManager &SM = AST.getSourceManager();
 
   auto Loc = getBeginningOfIdentifier(AST, Pos, SM.getMainFileID());
   auto Symbols = getSymbolAtPosition(AST, Loc);
@@ -1084,10 +1084,8 @@ getTypeAncestors(const CXXRecordDecl &CXXRD, ASTContext &ASTCtx,
 }
 
 const CXXRecordDecl *findRecordTypeAt(ParsedAST &AST, Position Pos) {
-  ASTContext &ASTCtx = AST.getASTContext();
-  const SourceManager &SourceMgr = ASTCtx.getSourceManager();
-  SourceLocation SourceLocationBeg =
-      getBeginningOfIdentifier(AST, Pos, SourceMgr.getMainFileID());
+  SourceLocation SourceLocationBeg = getBeginningOfIdentifier(
+      AST, Pos, AST.getSourceManager().getMainFileID());
   IdentifiedSymbol Symbols = getSymbolAtPosition(AST, SourceLocationBeg);
   if (Symbols.Decls.empty())
     return nullptr;
@@ -1158,32 +1156,26 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
   return Result;
 }
 
-MarkupContent HoverInfo::render() const {
-  MarkupContent Content;
-  Content.kind = MarkupKind::PlainText;
-  std::vector<std::string> Output;
-
+FormattedString HoverInfo::present() const {
+  FormattedString Output;
   if (NamespaceScope) {
-    llvm::raw_string_ostream Out(Content.value);
-    Out << "Declared in ";
+    Output.appendText("Declared in");
     // Drop trailing "::".
     if (!LocalScope.empty())
-      Out << *NamespaceScope << llvm::StringRef(LocalScope).drop_back(2);
+      Output.appendInlineCode(llvm::StringRef(LocalScope).drop_back(2));
     else if (NamespaceScope->empty())
-      Out << "global namespace";
+      Output.appendInlineCode("global namespace");
     else
-      Out << llvm::StringRef(*NamespaceScope).drop_back(2);
-    Out << "\n\n";
+      Output.appendInlineCode(llvm::StringRef(*NamespaceScope).drop_back(2));
   }
 
   if (!Definition.empty()) {
-    Output.push_back(Definition);
+    Output.appendCodeBlock(Definition);
   } else {
     // Builtin types
-    Output.push_back(Name);
+    Output.appendCodeBlock(Name);
   }
-  Content.value += llvm::join(Output, " ");
-  return Content;
+  return Output;
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,

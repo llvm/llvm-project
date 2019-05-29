@@ -1,5 +1,4 @@
 # REQUIRES: lld
-# XFAIL: *
 
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj %S/debug_ranges.s > %t-ranges.o
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj %S/debug_rnglists.s > %t-rnglists.o

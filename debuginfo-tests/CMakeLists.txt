@@ -13,6 +13,9 @@ set(DEBUGINFO_TEST_DEPS
   not
   )
 
+# Indicate if this is an MSVC environment.
+pythonize_bool(MSVC)
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py

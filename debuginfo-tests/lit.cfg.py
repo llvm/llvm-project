@@ -38,6 +38,36 @@ config.test_source_root = os.path.join(config.debuginfo_tests_src_root)
 # test_exec_root: The root path where tests should be run.
 config.test_exec_root = config.debuginfo_tests_obj_root
 
+tools = [
+    ToolSubst('%test_debuginfo', command=os.path.join(
+        config.debuginfo_tests_src_root, 'test_debuginfo.pl')),
+]
+
+def get_required_attr(config, attr_name):
+  attr_value = getattr(config, attr_name, None)
+  if attr_value == None:
+    lit_config.fatal(
+      "No attribute %r in test configuration! You may need to run "
+      "tests from your build directory or add this attribute "
+      "to lit.site.cfg " % attr_name)
+  return attr_value
+
+# If this is an MSVC environment, the tests at the root of the tree are
+# unsupported. The local win_cdb test suite, however, is supported.
+is_msvc = get_required_attr(config, "is_msvc")
+if is_msvc:
+    # FIXME: We should add some llvm lit utility code to find the Windows SDK
+    # and set up the environment appopriately.
+    win_sdk = 'C:/Program Files (x86)/Windows Kits/10/'
+    arch = 'x64'
+    config.unsupported = True
+    llvm_config.with_system_environment(['LIB', 'LIBPATH', 'INCLUDE'])
+    # Clear _NT_SYMBOL_PATH to prevent cdb from attempting to load symbols from
+    # the network.
+    llvm_config.with_environment('_NT_SYMBOL_PATH', '')
+    tools.append(ToolSubst('%cdb', '"%s"' % os.path.join(win_sdk, 'Debuggers',
+                                                         arch, 'cdb.exe')))
+
 llvm_config.use_default_substitutions()
 
 # clang_src_dir is not used by these tests, but is required by
@@ -52,11 +82,6 @@ if config.llvm_use_sanitizer:
         ['ASAN_SYMBOLIZER_PATH', 'MSAN_SYMBOLIZER_PATH'])
 
 tool_dirs = [config.llvm_tools_dir]
-
-tools = [
-    ToolSubst('%test_debuginfo', command=os.path.join(
-        config.debuginfo_tests_src_root, 'test_debuginfo.pl')),
-]
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 

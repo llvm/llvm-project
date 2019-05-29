@@ -369,6 +369,10 @@ void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       OutStreamer->AddBlankLine();
     }
     break;
+  case WebAssembly::COMPILER_FENCE:
+    // This is a compiler barrier that prevents instruction reordering during
+    // backend compilation, and should not be emitted.
+    break;
   case WebAssembly::EXTRACT_EXCEPTION_I32:
   case WebAssembly::EXTRACT_EXCEPTION_I32_S:
     // These are pseudo instructions that simulates popping values from stack.

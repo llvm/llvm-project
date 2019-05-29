@@ -524,9 +524,23 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
     // indirect register encoding, this handles addresses like [EAX].  The
     // encoding for [EBP] with no displacement means [disp32] so we handle it
     // by emitting a displacement of 0 below.
-    if (Disp.isImm() && Disp.getImm() == 0 && BaseRegNo != N86::EBP) {
-      EmitByte(ModRMByte(0, RegOpcodeField, BaseRegNo), CurByte, OS);
-      return;
+    if (BaseRegNo != N86::EBP) {
+      if (Disp.isImm() && Disp.getImm() == 0) {
+        EmitByte(ModRMByte(0, RegOpcodeField, BaseRegNo), CurByte, OS);
+        return;
+      }
+
+      // If the displacement is @tlscall, treat it as a zero.
+      if (Disp.isExpr()) {
+        auto *Sym = dyn_cast<MCSymbolRefExpr>(Disp.getExpr());
+        if (Sym && Sym->getKind() == MCSymbolRefExpr::VK_TLSCALL) {
+          // This is exclusively used by call *a@tlscall(base). The relocation
+          // (R_386_TLSCALL or R_X86_64_TLSCALL) applies to the beginning.
+          Fixups.push_back(MCFixup::create(0, Sym, FK_NONE, MI.getLoc()));
+          EmitByte(ModRMByte(0, RegOpcodeField, BaseRegNo), CurByte, OS);
+          return;
+        }
+      }
     }
 
     // Otherwise, if the displacement fits in a byte, encode as [REG+disp8].

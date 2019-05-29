@@ -175,6 +175,11 @@ private:
 
   llvm::SmallString<128> NativePath;
 
+  /// A list of other PDBs which are loaded during the linking process and which
+  /// we need to keep around since the linking operation may reference pointers
+  /// inside of these PDBs.
+  llvm::SmallVector<std::unique_ptr<pdb::NativeSession>, 2> LoadedPDBs;
+
   std::vector<pdb::SecMapEntry> SectionMap;
 
   /// Type index mappings of type server PDBs that we've loaded so far.
@@ -183,6 +188,10 @@ private:
   /// Type index mappings of precompiled objects type map that we've loaded so
   /// far.
   std::map<uint32_t, CVIndexMap> PrecompTypeIndexMappings;
+
+  /// List of TypeServer PDBs which cannot be loaded.
+  /// Cached to prevent repeated load attempts.
+  std::map<codeview::GUID, std::string> MissingTypeServerPDBs;
 
   // For statistics
   uint64_t GlobalSymbols = 0;
@@ -407,26 +416,115 @@ PDBLinker::mergeDebugT(ObjFile *File, CVIndexMap *ObjectIndexMap) {
   return *ObjectIndexMap;
 }
 
+static Expected<std::unique_ptr<pdb::NativeSession>>
+tryToLoadPDB(const codeview::GUID &GuidFromObj, StringRef TSPath) {
+  // Ensure the file exists before anything else. We want to return ENOENT,
+  // "file not found", even if the path points to a removable device (in which
+  // case the return message would be EAGAIN, "resource unavailable try again")
+  if (!llvm::sys::fs::exists(TSPath))
+    return errorCodeToError(std::error_code(ENOENT, std::generic_category()));
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr = MemoryBuffer::getFile(
+      TSPath, /*FileSize=*/-1, /*RequiresNullTerminator=*/false);
+  if (!MBOrErr)
+    return errorCodeToError(MBOrErr.getError());
+
+  std::unique_ptr<pdb::IPDBSession> ThisSession;
+  if (auto EC = pdb::NativeSession::createFromPdb(
+          MemoryBuffer::getMemBuffer(Driver->takeBuffer(std::move(*MBOrErr)),
+                                     /*RequiresNullTerminator=*/false),
+          ThisSession))
+    return std::move(EC);
+
+  std::unique_ptr<pdb::NativeSession> NS(
+      static_cast<pdb::NativeSession *>(ThisSession.release()));
+  pdb::PDBFile &File = NS->getPDBFile();
+  auto ExpectedInfo = File.getPDBInfoStream();
+  // All PDB Files should have an Info stream.
+  if (!ExpectedInfo)
+    return ExpectedInfo.takeError();
+
+  // Just because a file with a matching name was found and it was an actual
+  // PDB file doesn't mean it matches.  For it to match the InfoStream's GUID
+  // must match the GUID specified in the TypeServer2 record.
+  if (ExpectedInfo->getGuid() != GuidFromObj)
+    return make_error<pdb::PDBError>(pdb::pdb_error_code::signature_out_of_date);
+
+  return std::move(NS);
+}
+
 Expected<const CVIndexMap &> PDBLinker::maybeMergeTypeServerPDB(ObjFile *File) {
-  Expected<llvm::pdb::NativeSession *> PDBSession = findTypeServerSource(File);
-  if (!PDBSession)
-    return PDBSession.takeError();
+  const TypeServer2Record &TS =
+      retrieveDependencyInfo<TypeServer2Record>(File->DebugTypesObj);
 
-  pdb::PDBFile &PDBFile = PDBSession.get()->getPDBFile();
-  pdb::InfoStream &Info = cantFail(PDBFile.getPDBInfoStream());
+  const codeview::GUID &TSId = TS.getGuid();
+  StringRef TSPath = TS.getName();
 
-  auto It = TypeServerIndexMappings.emplace(Info.getGuid(), CVIndexMap());
-  CVIndexMap &IndexMap = It.first->second;
-  if (!It.second)
-    return IndexMap; // already merged
+  // First, check if the PDB has previously failed to load.
+  auto PrevErr = MissingTypeServerPDBs.find(TSId);
+  if (PrevErr != MissingTypeServerPDBs.end())
+    return createFileError(
+        TSPath,
+        make_error<StringError>(PrevErr->second, inconvertibleErrorCode()));
+
+  // Second, check if we already loaded a PDB with this GUID. Return the type
+  // index mapping if we have it.
+  auto Insertion = TypeServerIndexMappings.insert({TSId, CVIndexMap()});
+  CVIndexMap &IndexMap = Insertion.first->second;
+  if (!Insertion.second)
+    return IndexMap;
 
   // Mark this map as a type server map.
   IndexMap.IsTypeServerMap = true;
 
-  Expected<pdb::TpiStream &> ExpectedTpi = PDBFile.getPDBTpiStream();
+  // Check for a PDB at:
+  // 1. The given file path
+  // 2. Next to the object file or archive file
+  auto ExpectedSession = handleExpected(
+      tryToLoadPDB(TSId, TSPath),
+      [&]() {
+        StringRef LocalPath =
+            !File->ParentName.empty() ? File->ParentName : File->getName();
+        SmallString<128> Path = sys::path::parent_path(LocalPath);
+        // Currently, type server PDBs are only created by cl, which only runs
+        // on Windows, so we can assume type server paths are Windows style.
+        sys::path::append(
+            Path, sys::path::filename(TSPath, sys::path::Style::windows));
+        return tryToLoadPDB(TSId, Path);
+      },
+      [&](std::unique_ptr<ECError> EC) -> Error {
+        auto SysErr = EC->convertToErrorCode();
+        // Only re-try loading if the previous error was "No such file or
+        // directory"
+        if (SysErr.category() == std::generic_category() &&
+            SysErr.value() == ENOENT)
+          return Error::success();
+        return Error(std::move(EC));
+      });
+
+  if (auto E = ExpectedSession.takeError()) {
+    TypeServerIndexMappings.erase(TSId);
+
+    // Flatten the error to a string, for later display, if the error occurs
+    // again on the same PDB.
+    std::string ErrMsg;
+    raw_string_ostream S(ErrMsg);
+    S << E;
+    MissingTypeServerPDBs.emplace(TSId, S.str());
+
+    return createFileError(TSPath, std::move(E));
+  }
+
+  pdb::NativeSession *Session = ExpectedSession->get();
+
+  // Keep a strong reference to this PDB, so that it's safe to hold pointers
+  // into the file.
+  LoadedPDBs.push_back(std::move(*ExpectedSession));
+
+  auto ExpectedTpi = Session->getPDBFile().getPDBTpiStream();
   if (auto E = ExpectedTpi.takeError())
     fatal("Type server does not have TPI stream: " + toString(std::move(E)));
-  Expected<pdb::TpiStream &> ExpectedIpi = PDBFile.getPDBIpiStream();
+  auto ExpectedIpi = Session->getPDBFile().getPDBIpiStream();
   if (auto E = ExpectedIpi.takeError())
     fatal("Type server does not have TPI stream: " + toString(std::move(E)));
 

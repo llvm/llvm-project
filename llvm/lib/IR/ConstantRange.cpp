@@ -1208,9 +1208,9 @@ ConstantRange::OverflowResult ConstantRange::unsignedAddMayOverflow(
   APInt Min = getUnsignedMin(), Max = getUnsignedMax();
   APInt OtherMin = Other.getUnsignedMin(), OtherMax = Other.getUnsignedMax();
 
-  // a u+ b overflows iff a u> ~b.
+  // a u+ b overflows high iff a u> ~b.
   if (Min.ugt(~OtherMin))
-    return OverflowResult::AlwaysOverflows;
+    return OverflowResult::AlwaysOverflowsHigh;
   if (Max.ugt(~OtherMax))
     return OverflowResult::MayOverflow;
   return OverflowResult::NeverOverflows;
@@ -1231,10 +1231,10 @@ ConstantRange::OverflowResult ConstantRange::signedAddMayOverflow(
   // a s+ b overflows low iff a s< 0 && b s< 0 && a s< smin - b.
   if (Min.isNonNegative() && OtherMin.isNonNegative() &&
       Min.sgt(SignedMax - OtherMin))
-    return OverflowResult::AlwaysOverflows;
+    return OverflowResult::AlwaysOverflowsHigh;
   if (Max.isNegative() && OtherMax.isNegative() &&
       Max.slt(SignedMin - OtherMax))
-    return OverflowResult::AlwaysOverflows;
+    return OverflowResult::AlwaysOverflowsLow;
 
   if (Max.isNonNegative() && OtherMax.isNonNegative() &&
       Max.sgt(SignedMax - OtherMax))
@@ -1254,9 +1254,9 @@ ConstantRange::OverflowResult ConstantRange::unsignedSubMayOverflow(
   APInt Min = getUnsignedMin(), Max = getUnsignedMax();
   APInt OtherMin = Other.getUnsignedMin(), OtherMax = Other.getUnsignedMax();
 
-  // a u- b overflows iff a u< b.
+  // a u- b overflows low iff a u< b.
   if (Max.ult(OtherMin))
-    return OverflowResult::AlwaysOverflows;
+    return OverflowResult::AlwaysOverflowsLow;
   if (Min.ult(OtherMax))
     return OverflowResult::MayOverflow;
   return OverflowResult::NeverOverflows;
@@ -1277,10 +1277,10 @@ ConstantRange::OverflowResult ConstantRange::signedSubMayOverflow(
   // a s- b overflows low iff a s< 0 && b s>= 0 && a s< smin + b.
   if (Min.isNonNegative() && OtherMax.isNegative() &&
       Min.sgt(SignedMax + OtherMax))
-    return OverflowResult::AlwaysOverflows;
+    return OverflowResult::AlwaysOverflowsHigh;
   if (Max.isNegative() && OtherMin.isNonNegative() &&
       Max.slt(SignedMin + OtherMin))
-    return OverflowResult::AlwaysOverflows;
+    return OverflowResult::AlwaysOverflowsLow;
 
   if (Max.isNonNegative() && OtherMin.isNegative() &&
       Max.sgt(SignedMax + OtherMin))
@@ -1303,7 +1303,7 @@ ConstantRange::OverflowResult ConstantRange::unsignedMulMayOverflow(
 
   (void) Min.umul_ov(OtherMin, Overflow);
   if (Overflow)
-    return OverflowResult::AlwaysOverflows;
+    return OverflowResult::AlwaysOverflowsHigh;
 
   (void) Max.umul_ov(OtherMax, Overflow);
   if (Overflow)

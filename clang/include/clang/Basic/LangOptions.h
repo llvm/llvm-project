@@ -109,7 +109,8 @@ public:
     MSVC2013 = 1800,
     MSVC2015 = 1900,
     MSVC2017 = 1910,
-    MSVC2017_5 = 1912
+    MSVC2017_5 = 1912,
+    MSVC2017_7 = 1914,
   };
 
   /// Clang versions with different platform ABI conformance.

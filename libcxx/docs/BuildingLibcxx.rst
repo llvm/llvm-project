@@ -369,6 +369,21 @@ The following options allow building libc++ for a different ABI version.
   A semicolon-separated list of ABI macros to persist in the site config header.
   See ``include/__config`` for the list of ABI macros.
 
+
+.. option:: LIBCXX_HAS_MERGED_TYPEINFO_NAMES_DEFAULT
+
+  **Default**: ``None``. When defined this option overrides the libraries default configuration
+  for whether merged type info names are present.
+
+
+  Build ``std::type_info`` with the assumption that type info names for a type have been fully
+  merged are unique across the entire program. This may not be the case for libraries built with
+  ``-Bsymbolic`` or due to compiler or linker bugs (Ex. llvm.org/PR37398).
+
+  When the value is ``ON`` typeinfo comparisons compare only the pointer value, otherwise ``strcmp``
+  is used as a fallback.
+
+
 .. _LLVM-specific variables:
 
 LLVM-specific options

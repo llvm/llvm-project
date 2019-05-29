@@ -65,11 +65,18 @@ void test_nest_block() {
   int b;
   #pragma clang __debug captured
   {
-    __block int c;
     int d;
     ^{
       a = b; // expected-error{{__block variable 'a' cannot be captured in a captured statement}}
+      a = b; // (duplicate diagnostic suppressed)
       b = d; // OK - Consistent with block inside a lambda
+    }();
+  }
+  #pragma clang __debug captured
+  {
+    __block int c;
+    int d;
+    ^{
       c = a; // expected-error{{__block variable 'a' cannot be captured in a captured statement}}
       c = d; // OK
       d = b; // expected-error{{variable is not assignable (missing __block type specifier)}}

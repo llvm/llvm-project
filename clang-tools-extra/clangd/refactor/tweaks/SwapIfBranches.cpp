@@ -62,7 +62,7 @@ bool SwapIfBranches::prepare(const Selection &Inputs) {
 
 Expected<tooling::Replacements> SwapIfBranches::apply(const Selection &Inputs) {
   auto &Ctx = Inputs.AST.getASTContext();
-  auto &SrcMgr = Ctx.getSourceManager();
+  auto &SrcMgr = Inputs.AST.getSourceManager();
 
   auto ThenRng = toHalfOpenFileRange(SrcMgr, Ctx.getLangOpts(),
                                      If->getThen()->getSourceRange());

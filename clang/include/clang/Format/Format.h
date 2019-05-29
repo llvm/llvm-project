@@ -1160,6 +1160,22 @@ struct FormatStyle {
   /// For example: BOOST_FOREACH.
   std::vector<std::string> ForEachMacros;
 
+  /// \brief A vector of macros that should be interpreted as type declarations
+  /// instead of as function calls.
+  ///
+  /// These are expected to be macros of the form:
+  /// \code
+  ///   STACK_OF(...)
+  /// \endcode
+  ///
+  /// In the .clang-format configuration file, this can be configured like:
+  /// \code{.yaml}
+  ///   TypenameMacros: ['STACK_OF', 'LIST']
+  /// \endcode
+  ///
+  /// For example: OpenSSL STACK_OF, BSD LIST_ENTRY.
+  std::vector<std::string> TypenameMacros;
+
   /// A vector of macros that should be interpreted as complete
   /// statements.
   ///
@@ -1952,7 +1968,8 @@ struct FormatStyle {
            SpacesInParentheses == R.SpacesInParentheses &&
            SpacesInSquareBrackets == R.SpacesInSquareBrackets &&
            Standard == R.Standard && TabWidth == R.TabWidth &&
-           StatementMacros == R.StatementMacros && UseTab == R.UseTab;
+           StatementMacros == R.StatementMacros && UseTab == R.UseTab &&
+           TypenameMacros == R.TypenameMacros;
   }
 
   llvm::Optional<FormatStyle> GetLanguageStyle(LanguageKind Language) const;

@@ -627,13 +627,13 @@ struct __libcpp_string_gets_noexcept_iterator_impl : public false_type {};
 #else
 template <class _Iter, bool = __is_forward_iterator<_Iter>::value>
 struct __libcpp_string_gets_noexcept_iterator_impl : public _LIBCPP_BOOL_CONSTANT((
-    noexcept(++(declval<_Iter&>())) && 
-    is_nothrow_assignable<_Iter&, _Iter>::value && 
-    noexcept(declval<_Iter>() == declval<_Iter>()) && 
+    noexcept(++(declval<_Iter&>())) &&
+    is_nothrow_assignable<_Iter&, _Iter>::value &&
+    noexcept(declval<_Iter>() == declval<_Iter>()) &&
     noexcept(*declval<_Iter>())
 )) {};
 
-template <class _Iter> 
+template <class _Iter>
 struct __libcpp_string_gets_noexcept_iterator_impl<_Iter, false> : public false_type {};
 #endif
 
@@ -2525,7 +2525,7 @@ basic_string<_CharT, _Traits, _Allocator>::__append_forward_unsafe(
             const basic_string __temp (__first, __last, __alloc());
             append(__temp.data(), __temp.size());
         }
-        else 
+        else
         {
             if (__cap - __sz < __n)
                 __grow_by(__cap, __sz + __n - __cap, __sz, __sz, 0);
@@ -3824,7 +3824,7 @@ basic_string<_CharT, _Traits, _Allocator>::__invariants() const
 
 template<class _CharT, class _Traits, class _Allocator>
 inline
-void 
+void
 basic_string<_CharT, _Traits, _Allocator>::__clear_and_shrink() _NOEXCEPT
 {
     clear();
@@ -3834,7 +3834,7 @@ basic_string<_CharT, _Traits, _Allocator>::__clear_and_shrink() _NOEXCEPT
         __set_long_cap(0);
         __set_short_size(0);
     }
-} 
+}
 
 // operator==
 
@@ -4327,7 +4327,7 @@ basic_string<_CharT, _Traits, _Allocator>::__subscriptable(const const_iterator*
 _LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_string<char>)
 _LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_string<wchar_t>)
 
-#if _LIBCPP_STD_VER > 11 
+#if _LIBCPP_STD_VER > 11
 // Literal suffixes for basic_string [basic.string.literals]
 inline namespace literals
 {

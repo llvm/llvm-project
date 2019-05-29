@@ -777,6 +777,7 @@ def ARMv7s   : Architecture<"armv7s",      "ARMv7a",   [ARMv7a]>;
 // ARM schedules.
 //===----------------------------------------------------------------------===//
 //
+include "ARMPredicates.td"
 include "ARMSchedule.td"
 
 //===----------------------------------------------------------------------===//

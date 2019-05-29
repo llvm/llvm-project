@@ -8,6 +8,7 @@
 
 #include "ClangdLSPServer.h"
 #include "Diagnostics.h"
+#include "FormattedString.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "Trace.h"
@@ -358,6 +359,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   SupportsHierarchicalDocumentSymbol =
       Params.capabilities.HierarchicalDocumentSymbol;
   SupportFileStatus = Params.initializationOptions.FileStatus;
+  HoverContentFormat = Params.capabilities.HoverContentFormat;
   llvm::json::Object Result{
       {{"capabilities",
         llvm::json::Object{
@@ -843,17 +845,27 @@ void ClangdLSPServer::onHover(const TextDocumentPositionParams &Params,
                               Callback<llvm::Optional<Hover>> Reply) {
   Server->findHover(Params.textDocument.uri.file(), Params.position,
                     Bind(
-                        [](decltype(Reply) Reply,
-                           llvm::Expected<llvm::Optional<HoverInfo>> HIorErr) {
-                          if (!HIorErr)
-                            return Reply(HIorErr.takeError());
-                          const auto &HI = HIorErr.get();
-                          if (!HI)
+                        [this](decltype(Reply) Reply,
+                               llvm::Expected<llvm::Optional<HoverInfo>> H) {
+                          if (!H)
+                            return Reply(H.takeError());
+                          if (!*H)
                             return Reply(llvm::None);
-                          Hover H;
-                          H.range = HI->SymRange;
-                          H.contents = HI->render();
-                          return Reply(H);
+
+                          Hover R;
+                          R.contents.kind = HoverContentFormat;
+                          R.range = (*H)->SymRange;
+                          switch (HoverContentFormat) {
+                          case MarkupKind::PlainText:
+                            R.contents.value =
+                                (*H)->present().renderAsPlainText();
+                            return Reply(std::move(R));
+                          case MarkupKind::Markdown:
+                            R.contents.value =
+                                (*H)->present().renderAsMarkdown();
+                            return Reply(std::move(R));
+                          };
+                          llvm_unreachable("unhandled MarkupKind");
                         },
                         std::move(Reply)));
 }

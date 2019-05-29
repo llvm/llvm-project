@@ -14,6 +14,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/ProgramPoint.h"
+#include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -698,11 +699,73 @@ void CheckerManager::runCheckersOnEndOfTranslationUnit(
     EndOfTranslationUnitChecker(TU, mgr, BR);
 }
 
-void CheckerManager::runCheckersForPrintState(raw_ostream &Out,
-                                              ProgramStateRef State,
-                                              const char *NL, const char *Sep) {
-  for (const auto &CheckerTag : CheckerTags)
-    CheckerTag.second->printState(Out, State, NL, Sep);
+void CheckerManager::runCheckersForPrintStateJson(raw_ostream &Out,
+                                                  ProgramStateRef State,
+                                                  const char *NL,
+                                                  unsigned int Space,
+                                                  bool IsDot) const {
+  Indent(Out, Space, IsDot) << "\"checker_messages\": ";
+
+  // Create a temporary stream to see whether we have any message.
+  SmallString<1024> TempBuf;
+  llvm::raw_svector_ostream TempOut(TempBuf);
+  unsigned int InnerSpace = Space + 2;
+
+  // Create the new-line in JSON with enough space.
+  SmallString<128> NewLine;
+  llvm::raw_svector_ostream NLOut(NewLine);
+  NLOut << "\", " << NL;                     // Inject the ending and a new line
+  Indent(NLOut, InnerSpace, IsDot) << "\"";  // then begin the next message.
+
+  ++Space;
+  bool HasMessage = false;
+
+  // Store the last CheckerTag.
+  const void *LastCT = nullptr;
+  for (const auto &CT : CheckerTags) {
+    // See whether the current checker has a message.
+    CT.second->printState(TempOut, State, /*NL=*/NewLine.c_str(), /*Sep=*/"");
+
+    if (TempBuf.empty())
+      continue;
+
+    if (!HasMessage) {
+      Out << '[' << NL;
+      HasMessage = true;
+    }
+
+    LastCT = &CT;
+    TempBuf.clear();
+  }
+
+  for (const auto &CT : CheckerTags) {
+    // See whether the current checker has a message.
+    CT.second->printState(TempOut, State, /*NL=*/NewLine.c_str(), /*Sep=*/"");
+
+    if (TempBuf.empty())
+      continue;
+
+    Indent(Out, Space, IsDot)
+        << "{ \"checker\": \"" << CT.second->getCheckName().getName()
+        << "\", \"messages\": [" << NL;
+    Indent(Out, InnerSpace, IsDot)
+        << '\"' << TempBuf.str().trim() << '\"' << NL;
+    Indent(Out, Space, IsDot) << "]}";
+
+    if (&CT != LastCT)
+      Out << ',';
+    Out << NL;
+
+    TempBuf.clear();
+  }
+
+  // It is the last element of the 'program_state' so do not add a comma.
+  if (HasMessage)
+    Indent(Out, --Space, IsDot) << "]";
+  else
+    Out << "null";
+
+  Out << NL;
 }
 
 //===----------------------------------------------------------------------===//

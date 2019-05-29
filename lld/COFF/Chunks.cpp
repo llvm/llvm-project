@@ -649,7 +649,7 @@ void StringChunk::writeTo(uint8_t *Buf) const {
   Buf[Str.size()] = '\0';
 }
 
-ImportThunkChunkX64::ImportThunkChunkX64(Defined *S) : ImpSymbol(S) {
+ImportThunkChunkX64::ImportThunkChunkX64(Defined *S) : ImportThunkChunk(S) {
   // Intel Optimization Manual says that all branch targets
   // should be 16-byte aligned. MSVC linker does this too.
   setAlignment(16);

@@ -457,7 +457,12 @@ void CodeGenModule::Release() {
   // that ELF linkers tend to handle libraries in a more complicated fashion
   // than on other platforms. This forces us to defer handling the dependent
   // libs to the linker.
-  if (!ELFDependentLibraries.empty()) {
+  //
+  // CUDA/HIP device and host libraries are different. Currently there is no
+  // way to differentiate dependent libraries for host or device. Existing
+  // usage of #pragma comment(lib, *) is intended for host libraries on
+  // Windows. Therefore emit llvm.dependent-libraries only for host.
+  if (!ELFDependentLibraries.empty() && !Context.getLangOpts().CUDAIsDevice) {
     auto *NMD = getModule().getOrInsertNamedMetadata("llvm.dependent-libraries");
     for (auto *MD : ELFDependentLibraries)
       NMD->addOperand(MD);

@@ -40,9 +40,6 @@ SECTION-NEXT:    EntrySize: 32
 RUN: not llvm-readobj --symbols %p/Inputs/invalid-sh_entsize.elf 2>&1 | FileCheck --check-prefix=INVALID-SYM-SIZE %s
 INVALID-SYM-SIZE: invalid sh_entsize
 
-RUN: not llvm-readobj --dyn-symbols %p/Inputs/invalid-sh_entsize.elf 2>&1 | FileCheck --check-prefix=INVALID-DYNSYM-SIZE %s
-INVALID-DYNSYM-SIZE: Invalid entity size
-
 RUN: not llvm-readobj --symbols %p/Inputs/invalid-section-index.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-INDEX %s
 INVALID-SECTION-INDEX: invalid section index
 

@@ -3160,6 +3160,19 @@ let Predicates = [HasFRInt3264] in {
   defm FRINT64X : FRIntNNT<0b11, "frint64x">;
 } // HasFRInt3264
 
+def : Pat<(i32 (lrint f32:$Rn)),
+          (FCVTZSUWSr (!cast<Instruction>(FRINTXSr) f32:$Rn))>;
+def : Pat<(i32 (lrint f64:$Rn)),
+          (FCVTZSUWDr (!cast<Instruction>(FRINTXDr) f64:$Rn))>;
+def : Pat<(i64 (lrint f32:$Rn)),
+          (FCVTZSUXSr (!cast<Instruction>(FRINTXSr) f32:$Rn))>;
+def : Pat<(i64 (lrint f64:$Rn)),
+          (FCVTZSUXDr (!cast<Instruction>(FRINTXDr) f64:$Rn))>;
+def : Pat<(i64 (llrint f32:$Rn)),
+          (FCVTZSUXSr (!cast<Instruction>(FRINTXSr) f32:$Rn))>;
+def : Pat<(i64 (llrint f64:$Rn)),
+          (FCVTZSUXDr (!cast<Instruction>(FRINTXDr) f64:$Rn))>;
+
 //===----------------------------------------------------------------------===//
 // Floating point two operand instructions.
 //===----------------------------------------------------------------------===//

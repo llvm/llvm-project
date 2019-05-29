@@ -57,7 +57,7 @@ static std::vector<Defined *> getSymbols() {
   for (InputFile *File : ObjectFiles)
     for (Symbol *B : File->getSymbols())
       if (auto *DR = dyn_cast<Defined>(B))
-        if (!DR->isSection() && DR->Section && DR->Section->Live &&
+        if (!DR->isSection() && DR->Section && DR->Section->isLive() &&
             (DR->File == File || DR->NeedsPltAddr || DR->Section->Bss))
           V.push_back(DR);
   return V;
@@ -239,7 +239,7 @@ void elf::writeCrossReferenceTable() {
       if (isa<SharedSymbol>(Sym))
         Map[Sym].insert(File);
       if (auto *D = dyn_cast<Defined>(Sym))
-        if (!D->isLocal() && (!D->Section || D->Section->Live))
+        if (!D->isLocal() && (!D->Section || D->Section->isLive()))
           Map[D].insert(File);
     }
   }

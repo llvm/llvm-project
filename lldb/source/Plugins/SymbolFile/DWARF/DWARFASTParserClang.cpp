@@ -294,6 +294,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
   dw_attr_t attr;
   TypeSP type_sp;
+  LanguageType cu_language = die.GetLanguage();
   switch (tag) {
   case DW_TAG_typedef:
   case DW_TAG_base_type:
@@ -468,11 +469,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         }
       }
 
-      bool translation_unit_is_objc =
-          (sc.comp_unit->GetLanguage() == eLanguageTypeObjC ||
-           sc.comp_unit->GetLanguage() == eLanguageTypeObjC_plus_plus);
-
-      if (translation_unit_is_objc) {
+      if (cu_language == eLanguageTypeObjC ||
+          cu_language == eLanguageTypeObjC_plus_plus) {
         if (type_name_cstr != nullptr) {
           static ConstString g_objc_type_name_id("id");
           static ConstString g_objc_type_name_Class("Class");
@@ -629,8 +627,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
     Declaration unique_decl(decl);
 
     if (type_name_const_str) {
-      LanguageType die_language = die.GetLanguage();
-      if (Language::LanguageIsCPlusPlus(die_language)) {
+      if (Language::LanguageIsCPlusPlus(cu_language)) {
         // For C++, we rely solely upon the one definition rule that says
         // only one thing can exist at a given decl context. We ignore the
         // file and line that things are declared on.
@@ -668,7 +665,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
     }
 
     if (byte_size && *byte_size == 0 && type_name_cstr && !die.HasChildren() &&
-        sc.comp_unit->GetLanguage() == eLanguageTypeObjC) {
+        cu_language == eLanguageTypeObjC) {
       // Work around an issue with clang at the moment where forward
       // declarations for objective C classes are emitted as:
       //  DW_TAG_structure_type [2]
@@ -2553,7 +2550,7 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
   int call_file = 0;
   int call_line = 0;
   int call_column = 0;
-  DWARFExpression frame_base(die.GetCU());
+  DWARFExpression frame_base;
 
   const dw_tag_t tag = die.Tag();
 
@@ -2692,7 +2689,6 @@ bool DWARFASTParserClang::ParseChildMembers(
       const size_t num_attributes = die.GetAttributes(attributes);
       if (num_attributes > 0) {
         Declaration decl;
-        // DWARFExpression location;
         const char *name = nullptr;
         const char *prop_name = nullptr;
         const char *prop_getter_name = nullptr;
@@ -3172,7 +3168,6 @@ bool DWARFASTParserClang::ParseChildMembers(
       const size_t num_attributes = die.GetAttributes(attributes);
       if (num_attributes > 0) {
         Declaration decl;
-        DWARFExpression location(die.GetCU());
         DWARFFormValue encoding_form;
         AccessType accessibility = default_accessibility;
         bool is_virtual = false;

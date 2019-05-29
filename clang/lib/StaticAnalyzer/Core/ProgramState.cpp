@@ -10,13 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Basic/JsonSupport.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeMap.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SubEngine.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeMap.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -440,34 +441,40 @@ void ProgramState::setStore(const StoreRef &newStore) {
 //  State pretty-printing.
 //===----------------------------------------------------------------------===//
 
-void ProgramState::print(raw_ostream &Out,
-                         const char *NL, const char *Sep,
-                         const LocationContext *LC) const {
-  // Print the store.
+void ProgramState::printJson(raw_ostream &Out, const LocationContext *LCtx,
+                             const char *NL, unsigned int Space,
+                             bool IsDot) const {
+  Indent(Out, Space, IsDot) << "\"program_state\": {" << NL;
+  ++Space;
+
   ProgramStateManager &Mgr = getStateManager();
-  const ASTContext &Context = getStateManager().getContext();
-  Mgr.getStoreManager().print(getStore(), Out, NL);
+
+  // Print the store.
+  Mgr.getStoreManager().printJson(Out, getStore(), NL, Space, IsDot);
 
   // Print out the environment.
-  Env.print(Out, NL, Sep, Context, LC);
+  Env.printJson(Out, Mgr.getContext(), LCtx, NL, Space, IsDot);
 
   // Print out the constraints.
-  Mgr.getConstraintManager().print(this, Out, NL, Sep);
+  Mgr.getConstraintManager().printJson(Out, this, NL, Space, IsDot);
 
   // Print out the tracked dynamic types.
-  printDynamicTypeInfo(this, Out, NL, Sep);
+  printDynamicTypeInfoJson(Out, this, NL, Space, IsDot);
 
   // Print checker-specific data.
-  Mgr.getOwningEngine().printState(Out, this, NL, Sep, LC);
+  Mgr.getOwningEngine().printJson(Out, this, LCtx, NL, Space, IsDot);
+
+  --Space;
+  Indent(Out, Space, IsDot) << '}';
 }
 
-void ProgramState::printDOT(raw_ostream &Out,
-                            const LocationContext *LC) const {
-  print(Out, "\\l", "\\|", LC);
+void ProgramState::printDOT(raw_ostream &Out, const LocationContext *LCtx,
+                            unsigned int Space) const {
+  printJson(Out, LCtx, /*NL=*/"\\l", Space, /*IsDot=*/true);
 }
 
 LLVM_DUMP_METHOD void ProgramState::dump() const {
-  print(llvm::errs());
+  printJson(llvm::errs());
 }
 
 AnalysisManager& ProgramState::getAnalysisManager() const {

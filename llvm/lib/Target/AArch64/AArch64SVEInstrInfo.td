@@ -1294,6 +1294,36 @@ let Predicates = [HasSVE2] in {
   defm FCVTNT_ZPmZ  : sve2_fp_convert_down_narrow<"fcvtnt">;
   defm FCVTLT_ZPmZ  : sve2_fp_convert_up_long<"fcvtlt">;
 
+  // SVE2 floating-point pairwise operations
+  defm FADDP_ZPmZZ   : sve2_fp_pairwise_pred<0b000, "faddp">;
+  defm FMAXNMP_ZPmZZ : sve2_fp_pairwise_pred<0b100, "fmaxnmp">;
+  defm FMINNMP_ZPmZZ : sve2_fp_pairwise_pred<0b101, "fminnmp">;
+  defm FMAXP_ZPmZZ   : sve2_fp_pairwise_pred<0b110, "fmaxp">;
+  defm FMINP_ZPmZZ   : sve2_fp_pairwise_pred<0b111, "fminp">;
+
+  // SVE2 floating-point multiply-add long (indexed)
+  def FMLALB_ZZZI_SHH : sve2_fp_mla_long_by_indexed_elem<0b00, "fmlalb">;
+  def FMLALT_ZZZI_SHH : sve2_fp_mla_long_by_indexed_elem<0b01, "fmlalt">;
+  def FMLSLB_ZZZI_SHH : sve2_fp_mla_long_by_indexed_elem<0b10, "fmlslb">;
+  def FMLSLT_ZZZI_SHH : sve2_fp_mla_long_by_indexed_elem<0b11, "fmlslt">;
+
+  // SVE2 floating-point multiply-add long
+  def FMLALB_ZZZ_SHH : sve2_fp_mla_long<0b00, "fmlalb">;
+  def FMLALT_ZZZ_SHH : sve2_fp_mla_long<0b01, "fmlalt">;
+  def FMLSLB_ZZZ_SHH : sve2_fp_mla_long<0b10, "fmlslb">;
+  def FMLSLT_ZZZ_SHH : sve2_fp_mla_long<0b11, "fmlslt">;
+
+  // SVE2 bitwise ternary operations
+  defm EOR3_ZZZZ_D  : sve2_int_bitwise_ternary_op<0b000, "eor3">;
+  defm BCAX_ZZZZ_D  : sve2_int_bitwise_ternary_op<0b010, "bcax">;
+  def BSL_ZZZZ_D    : sve2_int_bitwise_ternary_op_d<0b001, "bsl">;
+  def BSL1N_ZZZZ_D  : sve2_int_bitwise_ternary_op_d<0b011, "bsl1n">;
+  def BSL2N_ZZZZ_D  : sve2_int_bitwise_ternary_op_d<0b101, "bsl2n">;
+  def NBSL_ZZZZ_D   : sve2_int_bitwise_ternary_op_d<0b111, "nbsl">;
+
+  // sve_int_rotate_imm
+  defm XAR_ZZZI : sve2_int_rotate_right_imm<"xar">;
+
   // Predicated shifts
   defm SQSHL_ZPmI  : sve_int_bin_pred_shift_imm_left< 0b0110, "sqshl">;
   defm UQSHL_ZPmI  : sve_int_bin_pred_shift_imm_left< 0b0111, "uqshl">;

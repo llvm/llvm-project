@@ -458,6 +458,11 @@ class Instruction : public InstructionBase {
   // Retire Unit token ID for this instruction.
   unsigned RCUTokenID;
 
+  // LS token ID for this instruction.
+  // This field is set to the invalid null token if this is not a memory
+  // operation.
+  unsigned LSUTokenID;
+
   // Critical register dependency.
   CriticalDependency CriticalRegDep;
 
@@ -469,19 +474,18 @@ class Instruction : public InstructionBase {
   // cycle because of unavailable pipeline resources.
   uint64_t CriticalResourceMask;
 
-  // Used internally by the logic that computes the critical memory dependency.
-  const Instruction *CurrentMemDep;
-
   // True if this instruction has been optimized at register renaming stage.
   bool IsEliminated;
 
 public:
   Instruction(const InstrDesc &D)
       : InstructionBase(D), Stage(IS_INVALID), CyclesLeft(UNKNOWN_CYCLES),
-        RCUTokenID(0), CriticalRegDep(), CriticalMemDep(),
-        CriticalResourceMask(0), CurrentMemDep(nullptr), IsEliminated(false) {}
+        RCUTokenID(0), LSUTokenID(0), CriticalRegDep(), CriticalMemDep(),
+        CriticalResourceMask(0), IsEliminated(false) {}
 
   unsigned getRCUTokenID() const { return RCUTokenID; }
+  unsigned getLSUTokenID() const { return LSUTokenID; }
+  void setLSUTokenID(unsigned LSUTok) { LSUTokenID = LSUTok; }
   int getCyclesLeft() const { return CyclesLeft; }
 
   // Transition to the dispatch stage, and assign a RCUToken to this
@@ -523,13 +527,9 @@ public:
   const CriticalDependency &getCriticalRegDep() const { return CriticalRegDep; }
   const CriticalDependency &getCriticalMemDep() const { return CriticalMemDep; }
   const CriticalDependency &computeCriticalRegDep();
-
-  void setCriticalMemDep(unsigned IID, unsigned Cycles) {
-    CriticalMemDep.IID = IID;
-    CriticalMemDep.Cycles = Cycles;
+  void setCriticalMemDep(const CriticalDependency &MemDep) {
+    CriticalMemDep = MemDep;
   }
-  const Instruction *getCurrentMemDep() const { return CurrentMemDep; }
-  void setCurrentMemDep(const Instruction *CMD) { CurrentMemDep = CMD; }
 
   uint64_t getCriticalResourceMask() const { return CriticalResourceMask; }
   void setCriticalResourceMask(uint64_t ResourceMask) {

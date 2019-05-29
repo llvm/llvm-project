@@ -45,10 +45,9 @@ renameWithinFile(ParsedAST &AST, llvm::StringRef File, Position Pos,
                  llvm::StringRef NewName) {
   RefactoringResultCollector ResultCollector;
   ASTContext &ASTCtx = AST.getASTContext();
-  const SourceManager &SourceMgr = ASTCtx.getSourceManager();
-  SourceLocation SourceLocationBeg =
-      clangd::getBeginningOfIdentifier(AST, Pos, SourceMgr.getMainFileID());
-  tooling::RefactoringRuleContext Context(ASTCtx.getSourceManager());
+  SourceLocation SourceLocationBeg = clangd::getBeginningOfIdentifier(
+      AST, Pos, AST.getSourceManager().getMainFileID());
+  tooling::RefactoringRuleContext Context(AST.getSourceManager());
   Context.setASTContext(ASTCtx);
   auto Rename = clang::tooling::RenameOccurrences::initiate(
       Context, SourceRange(SourceLocationBeg), NewName);

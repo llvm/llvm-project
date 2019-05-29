@@ -2217,7 +2217,7 @@ void PragmaOpenMPHandler::HandlePragma(Preprocessor &PP,
   Token Tok;
   Tok.startToken();
   Tok.setKind(tok::annot_pragma_openmp);
-  Tok.setLocation(FirstTok.getLocation());
+  Tok.setLocation(Introducer.Loc);
 
   while (Tok.isNot(tok::eod) && Tok.isNot(tok::eof)) {
     Pragma.push_back(Tok);

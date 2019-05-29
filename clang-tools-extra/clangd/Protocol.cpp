@@ -303,6 +303,17 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R) {
               DocumentSymbol->getBoolean("hierarchicalDocumentSymbolSupport"))
         R.HierarchicalDocumentSymbol = *HierarchicalSupport;
     }
+    if (auto *Hover = TextDocument->getObject("hover")) {
+      if (auto *ContentFormat = Hover->getArray("contentFormat")) {
+        for (const auto &Format : *ContentFormat) {
+          MarkupKind K = MarkupKind::PlainText;
+          if (fromJSON(Format, K)) {
+            R.HoverContentFormat = K;
+            break;
+          }
+        }
+      }
+    }
   }
   if (auto *Workspace = O->getObject("workspace")) {
     if (auto *Symbol = Workspace->getObject("symbol")) {
@@ -682,6 +693,27 @@ static llvm::StringRef toTextKind(MarkupKind Kind) {
     return "markdown";
   }
   llvm_unreachable("Invalid MarkupKind");
+}
+
+bool fromJSON(const llvm::json::Value &V, MarkupKind &K) {
+  auto Str = V.getAsString();
+  if (!Str) {
+    elog("Failed to parse markup kind: expected a string");
+    return false;
+  }
+  if (*Str == "plaintext")
+    K = MarkupKind::PlainText;
+  else if (*Str == "markdown")
+    K = MarkupKind::Markdown;
+  else {
+    elog("Unknown markup kind: {0}", *Str);
+    return false;
+  }
+  return true;
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, MarkupKind K) {
+  return OS << toTextKind(K);
 }
 
 llvm::json::Value toJSON(const MarkupContent &MC) {

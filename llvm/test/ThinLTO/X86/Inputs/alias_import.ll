@@ -5,7 +5,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 @globalfuncLinkonceAlias = linkonce alias void (...), bitcast (void ()* @globalfunc to void (...)*)
 @globalfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @globalfunc to void (...)*)
 @globalfuncLinkonceODRAlias = linkonce_odr alias void (...), bitcast (void ()* @globalfunc to void (...)*)
-define void @globalfunc() {
+define hidden void @globalfunc() {
 entry:
   ret void
 }

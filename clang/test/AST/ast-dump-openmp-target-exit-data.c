@@ -9,16 +9,16 @@ void test(int x) {
 // CHECK: `-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-target-exit-data.c:3:1, line:6:1> line:3:6 test 'void (int)'
 // CHECK-NEXT:   |-ParmVarDecl {{.*}} <col:11, col:15> col:15 used x 'int'
 // CHECK-NEXT:   `-CompoundStmt {{.*}} <col:18, line:6:1>
-// CHECK-NEXT:     `-OMPTargetExitDataDirective {{.*}} <line:4:9, line:5:38> openmp_standalone_directive
+// CHECK-NEXT:     `-OMPTargetExitDataDirective {{.*}} <line:4:1, line:5:38> openmp_standalone_directive
 // CHECK-NEXT:       |-OMPMapClause {{.*}} <line:4:30, line:5:37>
 // CHECK-NEXT:       | `-DeclRefExpr {{.*}} <col:36> 'int' lvalue ParmVar {{.*}} 'x' 'int'
-// CHECK-NEXT:       `-CapturedStmt {{.*}} <line:4:9>
+// CHECK-NEXT:       `-CapturedStmt {{.*}} <line:4:1>
 // CHECK-NEXT:         `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:           |-CompoundStmt {{.*}} <col:9>
+// CHECK-NEXT:           |-CompoundStmt {{.*}} <col:1>
 // CHECK-NEXT:           |-AlwaysInlineAttr {{.*}} <<invalid sloc>> Implicit __forceinline
-// CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:9> col:9 implicit .global_tid. 'const int'
-// CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:9> col:9 implicit .part_id. 'const int *const restrict'
-// CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:9> col:9 implicit .privates. 'void *const restrict'
-// CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:9> col:9 implicit .copy_fn. 'void (*const restrict)(void *const restrict, ...)'
-// CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:9> col:9 implicit .task_t. 'void *const'
-// CHECK-NEXT:           `-ImplicitParamDecl {{.*}} <col:9> col:9 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-target-exit-data.c:4:9) *const restrict'
+// CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .global_tid. 'const int'
+// CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .part_id. 'const int *const restrict'
+// CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .privates. 'void *const restrict'
+// CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .copy_fn. 'void (*const restrict)(void *const restrict, ...)'
+// CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .task_t. 'void *const'
+// CHECK-NEXT:           `-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-target-exit-data.c:4:1) *const restrict'
