@@ -30,6 +30,8 @@ public:
     friend class Timer;
     const char *m_name;
     std::atomic<uint64_t> m_nanos;
+    std::atomic<uint64_t> m_nanos_total;
+    std::atomic<uint64_t> m_count;
     std::atomic<Category *> m_next;
 
     DISALLOW_COPY_AND_ASSIGN(Category);
