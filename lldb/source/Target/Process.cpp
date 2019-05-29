@@ -1907,7 +1907,6 @@ SwiftLanguageRuntime *Process::GetSwiftLanguageRuntime(bool retry_if_null) {
   if (!runtime)
     return nullptr;
 
-  assert(runtime->GetLanguageType() == eLanguageTypeSwift);
   return static_cast<SwiftLanguageRuntime *>(runtime);
 }
 
