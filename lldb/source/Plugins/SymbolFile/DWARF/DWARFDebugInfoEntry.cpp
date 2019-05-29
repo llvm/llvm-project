@@ -1074,13 +1074,6 @@ void DWARFDebugInfoEntry::BuildFunctionAddressRangeTable(
   }
 }
 
-std::vector<DWARFDIE>
-DWARFDebugInfoEntry::GetDeclContextDIEs(DWARFUnit *cu) const {
-
-  DWARFDIE die(cu, const_cast<DWARFDebugInfoEntry *>(this));
-  return die.GetDeclContextDIEs();
-}
-
 void DWARFDebugInfoEntry::GetDWARFDeclContext(
     DWARFUnit *cu, DWARFDeclContext &dwarf_decl_ctx) const {
   const dw_tag_t tag = Tag();
@@ -1094,14 +1087,6 @@ void DWARFDebugInfoEntry::GetDWARFDeclContext(
             parent_decl_ctx_die.GetCU(), dwarf_decl_ctx);
     }
   }
-}
-
-bool DWARFDebugInfoEntry::MatchesDWARFDeclContext(
-    DWARFUnit *cu, const DWARFDeclContext &dwarf_decl_ctx) const {
-
-  DWARFDeclContext this_dwarf_decl_ctx;
-  GetDWARFDeclContext(cu, this_dwarf_decl_ctx);
-  return this_dwarf_decl_ctx == dwarf_decl_ctx;
 }
 
 DWARFDIE
@@ -1214,7 +1199,6 @@ DWARFDebugInfoEntry::GetQualifiedName(DWARFUnit *cu,
   return storage.c_str();
 }
 
-// LookupAddress
 bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
                                         const DWARFUnit *cu,
                                         DWARFDebugInfoEntry **function_die,
@@ -1232,13 +1216,9 @@ bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
       check_children = true;
       break;
     case DW_TAG_entry_point:
-      break;
     case DW_TAG_enumeration_type:
-      break;
     case DW_TAG_formal_parameter:
-      break;
     case DW_TAG_imported_declaration:
-      break;
     case DW_TAG_label:
       break;
     case DW_TAG_lexical_block:
@@ -1246,9 +1226,7 @@ bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
       match_addr_range = true;
       break;
     case DW_TAG_member:
-      break;
     case DW_TAG_pointer_type:
-      break;
     case DW_TAG_reference_type:
       break;
     case DW_TAG_compile_unit:
@@ -1260,20 +1238,15 @@ bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
       check_children = true;
       break;
     case DW_TAG_subroutine_type:
-      break;
     case DW_TAG_typedef:
-      break;
     case DW_TAG_union_type:
-      break;
     case DW_TAG_unspecified_parameters:
-      break;
     case DW_TAG_variant:
       break;
     case DW_TAG_common_block:
       check_children = true;
       break;
     case DW_TAG_common_inclusion:
-      break;
     case DW_TAG_inheritance:
       break;
     case DW_TAG_inlined_subroutine:
@@ -1284,76 +1257,53 @@ bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
       match_addr_range = true;
       break;
     case DW_TAG_ptr_to_member_type:
-      break;
     case DW_TAG_set_type:
-      break;
     case DW_TAG_subrange_type:
-      break;
     case DW_TAG_with_stmt:
-      break;
     case DW_TAG_access_declaration:
-      break;
     case DW_TAG_base_type:
       break;
     case DW_TAG_catch_block:
       match_addr_range = true;
       break;
     case DW_TAG_const_type:
-      break;
     case DW_TAG_constant:
-      break;
     case DW_TAG_enumerator:
-      break;
     case DW_TAG_file_type:
-      break;
     case DW_TAG_friend:
-      break;
     case DW_TAG_namelist:
-      break;
     case DW_TAG_namelist_item:
-      break;
     case DW_TAG_packed_type:
       break;
     case DW_TAG_subprogram:
       match_addr_range = true;
       break;
     case DW_TAG_template_type_parameter:
-      break;
     case DW_TAG_template_value_parameter:
-      break;
     case DW_TAG_GNU_template_parameter_pack:
-      break;
     case DW_TAG_thrown_type:
       break;
     case DW_TAG_try_block:
       match_addr_range = true;
       break;
     case DW_TAG_variant_part:
-      break;
     case DW_TAG_variable:
-      break;
     case DW_TAG_volatile_type:
-      break;
     case DW_TAG_dwarf_procedure:
-      break;
     case DW_TAG_restrict_type:
-      break;
     case DW_TAG_interface_type:
       break;
     case DW_TAG_namespace:
       check_children = true;
       break;
     case DW_TAG_imported_module:
-      break;
     case DW_TAG_unspecified_type:
       break;
     case DW_TAG_partial_unit:
       match_addr_range = true;
       break;
     case DW_TAG_imported_unit:
-      break;
     case DW_TAG_shared_type:
-      break;
     default:
       break;
     }
@@ -1483,11 +1433,6 @@ DWARFDebugInfoEntry::GetAbbreviationDeclarationPtr(
   }
   offset = DW_INVALID_OFFSET;
   return nullptr;
-}
-
-bool DWARFDebugInfoEntry::OffsetLessThan(const DWARFDebugInfoEntry &a,
-                                         const DWARFDebugInfoEntry &b) {
-  return a.GetOffset() < b.GetOffset();
 }
 
 bool DWARFDebugInfoEntry::operator==(const DWARFDebugInfoEntry &rhs) const {
