@@ -17,5 +17,7 @@ class TestSwiftREPLCompletion(TestBase):
         # Assign to make sure the sessions are killed during teardown
         self.child = child
         # Send a <TAB> and make sure we don't crash.
-        child.sendline("import Foundation\t")
+        child.sendline("import Foundatio\t")
         child.expect("2>")
+        child.sendline("print(NSString(\"patatino\"))")
+        child.expect("patatino")
