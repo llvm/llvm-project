@@ -1346,6 +1346,7 @@ static const char *getElfMipsOptionsOdkType(unsigned Odk) {
 
 template <typename ELFT>
 void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
+  // Try to locate the PT_DYNAMIC header.
   const Elf_Phdr *DynamicPhdr = nullptr;
   for (const Elf_Phdr &Phdr : unwrapOrError(Obj->program_headers())) {
     if (Phdr.p_type != ELF::PT_DYNAMIC)
@@ -1353,11 +1354,6 @@ void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
     DynamicPhdr = &Phdr;
     break;
   }
-
-  // We do not want to dump dynamic section if we have no PT_DYNAMIC header.
-  // This matches GNU's behavior.
-  if (!DynamicPhdr)
-    return;
 
   // Try to locate the .dynamic section in the sections header table.
   const Elf_Shdr *DynamicSec = nullptr;
@@ -1373,9 +1369,16 @@ void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
   // Ignore sh_entsize and use the expected value for entry size explicitly.
   // This allows us to dump the dynamic sections with a broken sh_entsize
   // field.
-  if (DynamicSec)
+  if (DynamicSec) {
     DynamicTable = checkDRI({ObjF->getELFFile()->base() + DynamicSec->sh_offset,
                              DynamicSec->sh_size, sizeof(Elf_Dyn)});
+    parseDynamicTable();
+  }
+
+  // If we have a PT_DYNAMIC header, we will either check the found dynamic
+  // section or take the dynamic table data directly from the header.
+  if (!DynamicPhdr)
+    return;
 
   if (DynamicPhdr->p_offset + DynamicPhdr->p_filesz >
       ObjF->getMemoryBufferRef().getBufferSize())
@@ -1389,7 +1392,6 @@ void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
   }
 
   StringRef Name = unwrapOrError(Obj->getSectionName(DynamicSec));
-
   if (DynamicSec->sh_addr + DynamicSec->sh_size >
           DynamicPhdr->p_vaddr + DynamicPhdr->p_memsz ||
       DynamicSec->sh_addr < DynamicPhdr->p_vaddr)
@@ -1401,8 +1403,6 @@ void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
     reportWarning("The SHT_DYNAMIC section '" + Name +
                   "' is not at the start of "
                   "PT_DYNAMIC segment");
-
-  parseDynamicTable();
 }
 
 template <typename ELFT>
@@ -1460,11 +1460,71 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> *ObjF,
     ELFDumperStyle.reset(new LLVMStyle<ELFT>(Writer, this));
 }
 
+static const char *getTypeString(unsigned Arch, uint64_t Type) {
+#define DYNAMIC_TAG(n, v)
+  switch (Arch) {
+  case EM_HEXAGON:
+    switch (Type) {
+#define HEXAGON_DYNAMIC_TAG(name, value)                                       \
+  case DT_##name:                                                              \
+    return #name;
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef HEXAGON_DYNAMIC_TAG
+    }
+    break;
+
+  case EM_MIPS:
+    switch (Type) {
+#define MIPS_DYNAMIC_TAG(name, value)                                          \
+  case DT_##name:                                                              \
+    return #name;
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef MIPS_DYNAMIC_TAG
+    }
+    break;
+
+  case EM_PPC64:
+    switch (Type) {
+#define PPC64_DYNAMIC_TAG(name, value)                                         \
+  case DT_##name:                                                              \
+    return #name;
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef PPC64_DYNAMIC_TAG
+    }
+    break;
+  }
+#undef DYNAMIC_TAG
+  switch (Type) {
+// Now handle all dynamic tags except the architecture specific ones
+#define MIPS_DYNAMIC_TAG(name, value)
+#define HEXAGON_DYNAMIC_TAG(name, value)
+#define PPC64_DYNAMIC_TAG(name, value)
+// Also ignore marker tags such as DT_HIOS (maps to DT_VERNEEDNUM), etc.
+#define DYNAMIC_TAG_MARKER(name, value)
+#define DYNAMIC_TAG(name, value)                                               \
+  case DT_##name:                                                              \
+    return #name;
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef DYNAMIC_TAG
+#undef MIPS_DYNAMIC_TAG
+#undef HEXAGON_DYNAMIC_TAG
+#undef PPC64_DYNAMIC_TAG
+#undef DYNAMIC_TAG_MARKER
+  default:
+    return "unknown";
+  }
+}
+
 template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
-  auto toMappedAddr = [&](uint64_t VAddr) -> const uint8_t * {
+  auto toMappedAddr = [&](uint64_t Tag, uint64_t VAddr) -> const uint8_t * {
     auto MappedAddrOrError = ObjF->getELFFile()->toMappedAddr(VAddr);
-    if (!MappedAddrOrError)
-      report_fatal_error(MappedAddrOrError.takeError());
+    if (!MappedAddrOrError) {
+      reportWarning("Unable to parse DT_" +
+                    Twine(getTypeString(
+                        ObjF->getELFFile()->getHeader()->e_machine, Tag)) +
+                    ": " + llvm::toString(MappedAddrOrError.takeError()));
+      return nullptr;
+    }
     return MappedAddrOrError.get();
   };
 
@@ -1474,26 +1534,26 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
   for (const Elf_Dyn &Dyn : dynamic_table()) {
     switch (Dyn.d_tag) {
     case ELF::DT_HASH:
-      HashTable =
-          reinterpret_cast<const Elf_Hash *>(toMappedAddr(Dyn.getPtr()));
+      HashTable = reinterpret_cast<const Elf_Hash *>(
+          toMappedAddr(Dyn.getTag(), Dyn.getPtr()));
       break;
     case ELF::DT_GNU_HASH:
-      GnuHashTable =
-          reinterpret_cast<const Elf_GnuHash *>(toMappedAddr(Dyn.getPtr()));
+      GnuHashTable = reinterpret_cast<const Elf_GnuHash *>(
+          toMappedAddr(Dyn.getTag(), Dyn.getPtr()));
       break;
     case ELF::DT_STRTAB:
-      StringTableBegin =
-          reinterpret_cast<const char *>(toMappedAddr(Dyn.getPtr()));
+      StringTableBegin = reinterpret_cast<const char *>(
+          toMappedAddr(Dyn.getTag(), Dyn.getPtr()));
       break;
     case ELF::DT_STRSZ:
       StringTableSize = Dyn.getVal();
       break;
     case ELF::DT_SYMTAB:
-      DynSymRegion.Addr = toMappedAddr(Dyn.getPtr());
+      DynSymRegion.Addr = toMappedAddr(Dyn.getTag(), Dyn.getPtr());
       DynSymRegion.EntSize = sizeof(Elf_Sym);
       break;
     case ELF::DT_RELA:
-      DynRelaRegion.Addr = toMappedAddr(Dyn.getPtr());
+      DynRelaRegion.Addr = toMappedAddr(Dyn.getTag(), Dyn.getPtr());
       break;
     case ELF::DT_RELASZ:
       DynRelaRegion.Size = Dyn.getVal();
@@ -1505,7 +1565,7 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
       SONameOffset = Dyn.getVal();
       break;
     case ELF::DT_REL:
-      DynRelRegion.Addr = toMappedAddr(Dyn.getPtr());
+      DynRelRegion.Addr = toMappedAddr(Dyn.getTag(), Dyn.getPtr());
       break;
     case ELF::DT_RELSZ:
       DynRelRegion.Size = Dyn.getVal();
@@ -1515,7 +1575,7 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
       break;
     case ELF::DT_RELR:
     case ELF::DT_ANDROID_RELR:
-      DynRelrRegion.Addr = toMappedAddr(Dyn.getPtr());
+      DynRelrRegion.Addr = toMappedAddr(Dyn.getTag(), Dyn.getPtr());
       break;
     case ELF::DT_RELRSZ:
     case ELF::DT_ANDROID_RELRSZ:
@@ -1535,7 +1595,7 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
                     Twine((uint64_t)Dyn.getVal()));
       break;
     case ELF::DT_JMPREL:
-      DynPLTRelRegion.Addr = toMappedAddr(Dyn.getPtr());
+      DynPLTRelRegion.Addr = toMappedAddr(Dyn.getTag(), Dyn.getPtr());
       break;
     case ELF::DT_PLTRELSZ:
       DynPLTRelRegion.Size = Dyn.getVal();
@@ -1625,61 +1685,6 @@ template <class ELFT> void ELFDumper<ELFT>::printNotes() {
 
 template <class ELFT> void ELFDumper<ELFT>::printELFLinkerOptions() {
   ELFDumperStyle->printELFLinkerOptions(ObjF->getELFFile());
-}
-
-static const char *getTypeString(unsigned Arch, uint64_t Type) {
-#define DYNAMIC_TAG(n, v)
-  switch (Arch) {
-  case EM_HEXAGON:
-    switch (Type) {
-#define HEXAGON_DYNAMIC_TAG(name, value)                                       \
-    case DT_##name:                                                            \
-      return #name;
-#include "llvm/BinaryFormat/DynamicTags.def"
-#undef HEXAGON_DYNAMIC_TAG
-    }
-    break;
-
-  case EM_MIPS:
-    switch (Type) {
-#define MIPS_DYNAMIC_TAG(name, value)                                          \
-    case DT_##name:                                                            \
-      return #name;
-#include "llvm/BinaryFormat/DynamicTags.def"
-#undef MIPS_DYNAMIC_TAG
-    }
-    break;
-
-  case EM_PPC64:
-    switch(Type) {
-#define PPC64_DYNAMIC_TAG(name, value)                                         \
-    case DT_##name:                                                            \
-      return #name;
-#include "llvm/BinaryFormat/DynamicTags.def"
-#undef PPC64_DYNAMIC_TAG
-    }
-    break;
-  }
-#undef DYNAMIC_TAG
-  switch (Type) {
-// Now handle all dynamic tags except the architecture specific ones
-#define MIPS_DYNAMIC_TAG(name, value)
-#define HEXAGON_DYNAMIC_TAG(name, value)
-#define PPC64_DYNAMIC_TAG(name, value)
-// Also ignore marker tags such as DT_HIOS (maps to DT_VERNEEDNUM), etc.
-#define DYNAMIC_TAG_MARKER(name, value)
-#define DYNAMIC_TAG(name, value)                                               \
-  case DT_##name:                                                              \
-    return #name;
-#include "llvm/BinaryFormat/DynamicTags.def"
-#undef DYNAMIC_TAG
-#undef MIPS_DYNAMIC_TAG
-#undef HEXAGON_DYNAMIC_TAG
-#undef PPC64_DYNAMIC_TAG
-#undef DYNAMIC_TAG_MARKER
-  default:
-    return "unknown";
-  }
 }
 
 #define LLVM_READOBJ_DT_FLAG_ENT(prefix, enum)                                 \

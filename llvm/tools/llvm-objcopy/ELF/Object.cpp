@@ -17,7 +17,7 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Compression.h"
-#include "llvm/Support/Errc.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Path.h"
@@ -147,6 +147,156 @@ void SectionWriter::visit(const Section &Sec) {
     llvm::copy(Sec.Contents, Out.getBufferStart() + Sec.Offset);
 }
 
+static bool addressOverflows32bit(uint64_t Addr) {
+  // Sign extended 32 bit addresses (e.g 0xFFFFFFFF80000000) are ok
+  return Addr > UINT32_MAX && Addr + 0x80000000 > UINT32_MAX;
+}
+
+template <class T> static T checkedGetHex(StringRef S) {
+  T Value;
+  bool Fail = S.getAsInteger(16, Value);
+  assert(!Fail);
+  (void)Fail;
+  return Value;
+}
+
+// Fills exactly Len bytes of buffer with hexadecimal characters
+// representing value 'X'
+template <class T, class Iterator>
+static Iterator utohexstr(T X, Iterator It, size_t Len) {
+  // Fill range with '0'
+  std::fill(It, It + Len, '0');
+
+  for (long I = Len - 1; I >= 0; --I) {
+    unsigned char Mod = static_cast<unsigned char>(X) & 15;
+    *(It + I) = hexdigit(Mod, false);
+    X >>= 4;
+  }
+  assert(X == 0);
+  return It + Len;
+}
+
+uint8_t IHexRecord::getChecksum(StringRef S) {
+  assert((S.size() & 1) == 0);
+  uint8_t Checksum = 0;
+  while (!S.empty()) {
+    Checksum += checkedGetHex<uint8_t>(S.take_front(2));
+    S = S.drop_front(2);
+  }
+  return -Checksum;
+}
+
+IHexLineData IHexRecord::getLine(uint8_t Type, uint16_t Addr,
+                                 ArrayRef<uint8_t> Data) {
+  IHexLineData Line(getLineLength(Data.size()));
+  assert(Line.size());
+  auto Iter = Line.begin();
+  *Iter++ = ':';
+  Iter = utohexstr(Data.size(), Iter, 2);
+  Iter = utohexstr(Addr, Iter, 4);
+  Iter = utohexstr(Type, Iter, 2);
+  for (uint8_t X : Data)
+    Iter = utohexstr(X, Iter, 2);
+  StringRef S(Line.data() + 1, std::distance(Line.begin() + 1, Iter));
+  Iter = utohexstr(getChecksum(S), Iter, 2);
+  *Iter++ = '\r';
+  *Iter++ = '\n';
+  assert(Iter == Line.end());
+  return Line;
+}
+
+static uint64_t sectionPhysicalAddr(const SectionBase *Sec) {
+  Segment *Seg = Sec->ParentSegment;
+  if (Seg && Seg->Type != ELF::PT_LOAD)
+    Seg = nullptr;
+  return Seg ? Seg->PAddr + Sec->OriginalOffset - Seg->OriginalOffset
+             : Sec->Addr;
+}
+
+void IHexSectionWriterBase::writeSection(const SectionBase *Sec,
+                                         ArrayRef<uint8_t> Data) {
+  assert(Data.size() == Sec->Size);
+  const uint32_t ChunkSize = 16;
+  uint32_t Addr = sectionPhysicalAddr(Sec) & 0xFFFFFFFFU;
+  while (!Data.empty()) {
+    uint64_t DataSize = std::min<uint64_t>(Data.size(), ChunkSize);
+    if (Addr > SegmentAddr + BaseAddr + 0xFFFFU) {
+      if (Addr > 0xFFFFFU) {
+        // Write extended address record, zeroing segment address
+        // if needed.
+        if (SegmentAddr != 0)
+          SegmentAddr = writeSegmentAddr(0U);
+        BaseAddr = writeBaseAddr(Addr);
+      } else {
+        // We can still remain 16-bit
+        SegmentAddr = writeSegmentAddr(Addr);
+      }
+    }
+    uint64_t SegOffset = Addr - BaseAddr - SegmentAddr;
+    assert(SegOffset <= 0xFFFFU);
+    DataSize = std::min(DataSize, 0x10000U - SegOffset);
+    writeData(0, SegOffset, Data.take_front(DataSize));
+    Addr += DataSize;
+    Data = Data.drop_front(DataSize);
+  }
+}
+
+uint64_t IHexSectionWriterBase::writeSegmentAddr(uint64_t Addr) {
+  assert(Addr <= 0xFFFFFU);
+  uint8_t Data[] = {static_cast<uint8_t>((Addr & 0xF0000U) >> 12), 0};
+  writeData(2, 0, Data);
+  return Addr & 0xF0000U;
+}
+
+uint64_t IHexSectionWriterBase::writeBaseAddr(uint64_t Addr) {
+  assert(Addr <= 0xFFFFFFFFU);
+  uint64_t Base = Addr & 0xFFFF0000U;
+  uint8_t Data[] = {static_cast<uint8_t>(Base >> 24),
+                    static_cast<uint8_t>((Base >> 16) & 0xFF)};
+  writeData(4, 0, Data);
+  return Base;
+}
+
+void IHexSectionWriterBase::writeData(uint8_t Type, uint16_t Addr,
+                                      ArrayRef<uint8_t> Data) {
+  Offset += IHexRecord::getLineLength(Data.size());
+}
+
+void IHexSectionWriterBase::visit(const Section &Sec) {
+  writeSection(&Sec, Sec.Contents);
+}
+
+void IHexSectionWriterBase::visit(const OwnedDataSection &Sec) {
+  writeSection(&Sec, Sec.Data);
+}
+
+void IHexSectionWriterBase::visit(const StringTableSection &Sec) {
+  // Check that sizer has already done its work
+  assert(Sec.Size == Sec.StrTabBuilder.getSize());
+  // We are free to pass an invalid pointer to writeSection as long
+  // as we don't actually write any data. The real writer class has
+  // to override this method .
+  writeSection(&Sec, {nullptr, Sec.Size});
+}
+
+void IHexSectionWriterBase::visit(const DynamicRelocationSection &Sec) {
+  writeSection(&Sec, Sec.Contents);
+}
+
+void IHexSectionWriter::writeData(uint8_t Type, uint16_t Addr,
+                                  ArrayRef<uint8_t> Data) {
+  IHexLineData HexData = IHexRecord::getLine(Type, Addr, Data);
+  memcpy(Out.getBufferStart() + Offset, HexData.data(), HexData.size());
+  Offset += HexData.size();
+}
+
+void IHexSectionWriter::visit(const StringTableSection &Sec) {
+  assert(Sec.Size == Sec.StrTabBuilder.getSize());
+  std::vector<uint8_t> Data(Sec.Size);
+  Sec.StrTabBuilder.write(Data.data());
+  writeSection(&Sec, Data);
+}
+
 void Section::accept(SectionVisitor &Visitor) const { Visitor.visit(*this); }
 
 void Section::accept(MutableSectionVisitor &Visitor) { Visitor.visit(*this); }
@@ -215,6 +365,15 @@ void OwnedDataSection::accept(SectionVisitor &Visitor) const {
 
 void OwnedDataSection::accept(MutableSectionVisitor &Visitor) {
   Visitor.visit(*this);
+}
+
+void OwnedDataSection::appendHexData(StringRef HexData) {
+  assert((HexData.size() & 1) == 0);
+  while (!HexData.empty()) {
+    Data.push_back(checkedGetHex<uint8_t>(HexData.take_front(2)));
+    HexData = HexData.drop_front(2);
+  }
+  Size = Data.size();
 }
 
 void BinarySectionWriter::visit(const CompressedSection &Sec) {
@@ -1804,6 +1963,109 @@ Error BinaryWriter::finalize() {
   if (Error E = Buf.allocate(TotalSize))
     return E;
   SecWriter = llvm::make_unique<BinarySectionWriter>(Buf);
+  return Error::success();
+}
+
+bool IHexWriter::SectionCompare::operator()(const SectionBase *Lhs,
+                                            const SectionBase *Rhs) const {
+  return (sectionPhysicalAddr(Lhs) & 0xFFFFFFFFU) <
+         (sectionPhysicalAddr(Rhs) & 0xFFFFFFFFU);
+}
+
+uint64_t IHexWriter::writeEntryPointRecord(uint8_t *Buf) {
+  IHexLineData HexData;
+  uint8_t Data[4] = {};
+  // We don't write entry point record if entry is zero.
+  if (Obj.Entry == 0)
+    return 0;
+
+  if (Obj.Entry <= 0xFFFFFU) {
+    Data[0] = ((Obj.Entry & 0xF0000U) >> 12) & 0xFF;
+    support::endian::write(&Data[2], static_cast<uint16_t>(Obj.Entry),
+                           support::big);
+    HexData = IHexRecord::getLine(IHexRecord::StartAddr80x86, 0, Data);
+  } else {
+    support::endian::write(Data, static_cast<uint32_t>(Obj.Entry),
+                           support::big);
+    HexData = IHexRecord::getLine(IHexRecord::StartAddr, 0, Data);
+  }
+  memcpy(Buf, HexData.data(), HexData.size());
+  return HexData.size();
+}
+
+uint64_t IHexWriter::writeEndOfFileRecord(uint8_t *Buf) {
+  IHexLineData HexData = IHexRecord::getLine(IHexRecord::EndOfFile, 0, {});
+  memcpy(Buf, HexData.data(), HexData.size());
+  return HexData.size();
+}
+
+Error IHexWriter::write() {
+  IHexSectionWriter Writer(Buf);
+  // Write sections.
+  for (const SectionBase *Sec : Sections)
+    Sec->accept(Writer);
+
+  uint64_t Offset = Writer.getBufferOffset();
+  // Write entry point address.
+  Offset += writeEntryPointRecord(Buf.getBufferStart() + Offset);
+  // Write EOF.
+  Offset += writeEndOfFileRecord(Buf.getBufferStart() + Offset);
+  assert(Offset == TotalSize);
+  return Buf.commit();
+}
+
+Error IHexWriter::checkSection(const SectionBase &Sec) {
+  uint64_t Addr = sectionPhysicalAddr(&Sec);
+  if (addressOverflows32bit(Addr) || addressOverflows32bit(Addr + Sec.Size - 1))
+    return createStringError(
+        errc::invalid_argument,
+        "Section '%s' address range [%p, %p] is not 32 bit", Sec.Name.c_str(),
+        Addr, Addr + Sec.Size - 1);
+  return Error::success();
+}
+
+Error IHexWriter::finalize() {
+  bool UseSegments = false;
+  auto ShouldWrite = [](const SectionBase &Sec) {
+    return (Sec.Flags & ELF::SHF_ALLOC) && (Sec.Type != ELF::SHT_NOBITS);
+  };
+  auto IsInPtLoad = [](const SectionBase &Sec) {
+    return Sec.ParentSegment && Sec.ParentSegment->Type == ELF::PT_LOAD;
+  };
+
+  // We can't write 64-bit addresses.
+  if (addressOverflows32bit(Obj.Entry))
+    return createStringError(errc::invalid_argument,
+                             "Entry point address %p overflows 32 bits.",
+                             Obj.Entry);
+
+  // If any section we're to write has segment then we
+  // switch to using physical addresses. Otherwise we
+  // use section virtual address.
+  for (auto &Section : Obj.sections())
+    if (ShouldWrite(Section) && IsInPtLoad(Section)) {
+      UseSegments = true;
+      break;
+    }
+
+  for (auto &Section : Obj.sections())
+    if (ShouldWrite(Section) && (!UseSegments || IsInPtLoad(Section))) {
+      if (Error E = checkSection(Section))
+        return E;
+      Sections.insert(&Section);
+    }
+
+  IHexSectionWriterBase LengthCalc(Buf);
+  for (const SectionBase *Sec : Sections)
+    Sec->accept(LengthCalc);
+
+  // We need space to write section records + StartAddress record
+  // (if start adress is not zero) + EndOfFile record.
+  TotalSize = LengthCalc.getBufferOffset() +
+              (Obj.Entry ? IHexRecord::getLineLength(4) : 0) +
+              IHexRecord::getLineLength(0);
+  if (Error E = Buf.allocate(TotalSize))
+    return E;
   return Error::success();
 }
 

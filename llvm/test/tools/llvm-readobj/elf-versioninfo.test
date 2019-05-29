@@ -174,5 +174,5 @@ DynamicSymbols:
 # GNU-NEXT:   000:   0 (*local*) 2 (VERSION1) 3 (VERSION2) 4 (v1)
 # GNU-NEXT:   004:   5 (v2)      6 (v3)
 
-# GNU-VERDEF: Dumper for .gnu.version_d is not implemented
-# GNU-VERNEED: Dumper for .gnu.version_r is not implemented
+# GNU: Dumper for .gnu.version_d is not implemented
+# GNU: Dumper for .gnu.version_r is not implemented

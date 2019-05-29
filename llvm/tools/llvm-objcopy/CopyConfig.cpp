@@ -458,7 +458,8 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
       return MI.takeError();
     Config.BinaryArch = *MI;
   }
-  if (!Config.OutputFormat.empty() && Config.OutputFormat != "binary") {
+  if (!Config.OutputFormat.empty() && Config.OutputFormat != "binary" &&
+      Config.OutputFormat != "ihex") {
     Expected<MachineInfo> MI = getOutputFormatMachineInfo(Config.OutputFormat);
     if (!MI)
       return MI.takeError();

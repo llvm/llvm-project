@@ -689,19 +689,6 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFUnit *dwarf_cu) {
                 module_sp, dwarf_cu, cu_file_spec, dwarf_cu->GetID(),
                 cu_language, is_optimized ? eLazyBoolYes : eLazyBoolNo);
 
-            // If we just created a compile unit with an invalid file spec,
-            // try and get the first entry in the supports files from the
-            // line table as that should be the compile unit.
-            if (!cu_file_spec) {
-              cu_file_spec = cu_sp->GetSupportFiles().GetFileSpecAtIndex(1);
-              if (cu_file_spec) {
-                (FileSpec &)(*cu_sp) = cu_file_spec;
-                // Also fix the invalid file spec which was copied from the
-                // compile unit.
-                cu_sp->GetSupportFiles().Replace(0, cu_file_spec);
-              }
-            }
-
             dwarf_cu->SetUserData(cu_sp.get());
 
             m_obj_file->GetModule()->GetSymbolVendor()->SetCompileUnitAtIndex(
