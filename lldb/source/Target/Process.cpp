@@ -44,6 +44,7 @@
 #include "lldb/Target/InstrumentationRuntime.h"
 #include "lldb/Target/JITLoader.h"
 #include "lldb/Target/JITLoaderList.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/MemoryHistory.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -1545,6 +1546,27 @@ const lldb::ABISP &Process::GetABI() {
   if (!m_abi_sp)
     m_abi_sp = ABI::FindPlugin(shared_from_this(), GetTarget().GetArchitecture());
   return m_abi_sp;
+}
+
+std::vector<LanguageRuntime *>
+Process::GetLanguageRuntimes(bool retry_if_null) {
+  std::vector<LanguageRuntime *> language_runtimes;
+
+  if (m_finalizing)
+    return language_runtimes;
+
+  std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
+  // Before we pass off a copy of the language runtimes, we must make sure that
+  // our collection is properly populated. It's possible that some of the
+  // language runtimes were not loaded yet, either because nobody requested it
+  // yet or the proper condition for loading wasn't yet met (e.g. libc++.so
+  // hadn't been loaded).
+  for (const lldb::LanguageType lang_type : Language::GetSupportedLanguages()) {
+    if (LanguageRuntime *runtime = GetLanguageRuntime(lang_type, retry_if_null))
+      language_runtimes.emplace_back(runtime);
+  }
+
+  return language_runtimes;
 }
 
 LanguageRuntime *Process::GetLanguageRuntime(lldb::LanguageType language,

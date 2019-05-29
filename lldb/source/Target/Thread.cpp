@@ -2211,11 +2211,9 @@ ValueObjectSP Thread::GetCurrentException() {
 
   // NOTE: Even though this behavior is generalized, only ObjC is actually
   // supported at the moment.
-  for (unsigned lang = eLanguageTypeUnknown; lang < eNumLanguageTypes; lang++) {
-    if (auto runtime = GetProcess()->GetLanguageRuntime(
-            static_cast<lldb::LanguageType>(lang)))
-      if (auto e = runtime->GetExceptionObjectForThread(shared_from_this()))
-        return e;
+  for (LanguageRuntime *runtime : GetProcess()->GetLanguageRuntimes()) {
+    if (auto e = runtime->GetExceptionObjectForThread(shared_from_this()))
+      return e;
   }
 
   return ValueObjectSP();
@@ -2228,11 +2226,9 @@ ThreadSP Thread::GetCurrentExceptionBacktrace() {
 
   // NOTE: Even though this behavior is generalized, only ObjC is actually
   // supported at the moment.
-  for (unsigned lang = eLanguageTypeUnknown; lang < eNumLanguageTypes; lang++) {
-    if (auto runtime = GetProcess()->GetLanguageRuntime(
-            static_cast<lldb::LanguageType>(lang)))
-      if (auto bt = runtime->GetBacktraceThreadFromException(exception))
-        return bt;
+  for (LanguageRuntime *runtime : GetProcess()->GetLanguageRuntimes()) {
+    if (auto bt = runtime->GetBacktraceThreadFromException(exception))
+      return bt;
   }
 
   return ThreadSP();
