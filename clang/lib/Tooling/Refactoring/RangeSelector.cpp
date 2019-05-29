@@ -104,6 +104,28 @@ static SourceLocation findOpenParen(const CallExpr &E, const SourceManager &SM,
   return findPreviousTokenKind(EndLoc, SM, LangOpts, tok::TokenKind::l_paren);
 }
 
+RangeSelector tooling::before(RangeSelector Selector) {
+  return [Selector](const MatchResult &Result) -> Expected<CharSourceRange> {
+    Expected<CharSourceRange> SelectedRange = Selector(Result);
+    if (!SelectedRange)
+      return SelectedRange.takeError();
+    return CharSourceRange::getCharRange(SelectedRange->getBegin());
+  };
+}
+
+RangeSelector tooling::after(RangeSelector Selector) {
+  return [Selector](const MatchResult &Result) -> Expected<CharSourceRange> {
+    Expected<CharSourceRange> SelectedRange = Selector(Result);
+    if (!SelectedRange)
+      return SelectedRange.takeError();
+    if (SelectedRange->isCharRange())
+      return CharSourceRange::getCharRange(SelectedRange->getEnd());
+    return CharSourceRange::getCharRange(Lexer::getLocForEndOfToken(
+        SelectedRange->getEnd(), 0, Result.Context->getSourceManager(),
+        Result.Context->getLangOpts()));
+  };
+}
+
 RangeSelector tooling::node(std::string ID) {
   return [ID](const MatchResult &Result) -> Expected<CharSourceRange> {
     Expected<DynTypedNode> Node = getNode(Result.Nodes, ID);

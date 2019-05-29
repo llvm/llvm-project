@@ -1100,6 +1100,10 @@ public:
                    StringRef NewlineSymbol = "\n",
                    const ASTContext *Context = nullptr) const;
 
+  /// Pretty-prints in JSON format.
+  void printJson(raw_ostream &Out, PrinterHelper *Helper,
+                 const PrintingPolicy &Policy, bool AddQuotes) const;
+
   /// viewAST - Visualize an AST rooted at this Stmt* using GraphViz.  Only
   ///   works on systems with GraphViz (Mac OS X) or dot+gv installed.
   void viewAST() const;

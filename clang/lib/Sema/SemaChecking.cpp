@@ -3034,6 +3034,8 @@ bool Sema::CheckMipsBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   // These intrinsics take an unsigned 5 bit immediate.
   // The first block of intrinsics actually have an unsigned 5 bit field,
   // not a df/n field.
+  case Mips::BI__builtin_msa_cfcmsa:
+  case Mips::BI__builtin_msa_ctcmsa: i = 0; l = 0; u = 31; break;
   case Mips::BI__builtin_msa_clei_u_b:
   case Mips::BI__builtin_msa_clei_u_h:
   case Mips::BI__builtin_msa_clei_u_w:

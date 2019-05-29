@@ -11,6 +11,10 @@ int foo() {
 }
 
 // CHECK: digraph "Exploded Graph" {
-// CHECK: Edge: (B2, B1)
-// CHECK: Block Entrance: B1
-// CHECK: Bug report attached
+
+// CHECK: \"program_points\": [\l&nbsp;&nbsp;&nbsp;&nbsp;\{ \"kind\": \"Edge\", \"src_id\": 2, \"dst_id\": 1, \"terminator\": null, \"term_kind\": null, \"tag\": null \}\l&nbsp;&nbsp;],\l&nbsp;&nbsp;\"program_state\": null
+
+// CHECK: \"program_points\": [\l&nbsp;&nbsp;&nbsp;&nbsp;\{ \"kind\": \"BlockEntrance\", \"block_id\": 1
+
+// CHECK: \"has_report\": true
+

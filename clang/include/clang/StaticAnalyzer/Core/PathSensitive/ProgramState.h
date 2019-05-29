@@ -424,10 +424,12 @@ public:
   }
 
   // Pretty-printing.
-  void print(raw_ostream &Out, const char *nl = "\n", const char *sep = "",
-             const LocationContext *CurrentLC = nullptr) const;
-  void printDOT(raw_ostream &Out,
-                const LocationContext *CurrentLC = nullptr) const;
+  void printJson(raw_ostream &Out, const LocationContext *LCtx = nullptr,
+                 const char *NL = "\n", unsigned int Space = 0,
+                 bool IsDot = false) const;
+
+  void printDOT(raw_ostream &Out, const LocationContext *LCtx = nullptr,
+                unsigned int Space = 0) const;
 
   void dump() const;
 
@@ -631,10 +633,6 @@ public:
                              ProgramStateTrait<T>::DeleteContext);
 
     return ProgramStateTrait<T>::MakeContext(p);
-  }
-
-  void EndPath(ProgramStateRef St) {
-    ConstraintMgr->EndPath(St);
   }
 };
 

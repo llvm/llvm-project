@@ -27,10 +27,11 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
-#include "clang/Analysis/Support/BumpVector.h"
 #include "clang/Analysis/ConstructionContext.h"
+#include "clang/Analysis/Support/BumpVector.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
+#include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -5559,6 +5560,17 @@ void CFGBlock::printTerminator(raw_ostream &OS,
                                const LangOptions &LO) const {
   CFGBlockTerminatorPrint TPrinter(OS, nullptr, PrintingPolicy(LO));
   TPrinter.print(getTerminator());
+}
+
+/// printTerminatorJson - Pretty-prints the terminator in JSON format.
+void CFGBlock::printTerminatorJson(raw_ostream &Out, const LangOptions &LO,
+                                   bool AddQuotes) const {
+  std::string Buf;
+  llvm::raw_string_ostream TempOut(Buf);
+
+  printTerminator(TempOut, LO);
+
+  Out << JsonFormat(TempOut.str(), AddQuotes);
 }
 
 Stmt *CFGBlock::getTerminatorCondition(bool StripParens) {

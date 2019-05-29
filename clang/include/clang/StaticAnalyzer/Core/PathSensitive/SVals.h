@@ -190,6 +190,9 @@ public:
 
   const MemRegion *getAsRegion() const;
 
+  /// printJson - Pretty-prints in JSON format.
+  void printJson(raw_ostream &Out, bool AddQuotes) const;
+
   void dumpToStream(raw_ostream &OS) const;
   void dump() const;
 

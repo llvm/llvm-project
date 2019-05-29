@@ -231,7 +231,7 @@ struct Owner {
 };
 
 void Owner::testGetDerefExprOnMemberExprWithADot() {
-	if (arr)  // expected-note {{Assuming pointer value is null}}
+	if (arr)  // expected-note {{Assuming field 'arr' is null}}
             // expected-note@-1 {{Taking false branch}}
 	  ;
 	arr[1].x = 1; //expected-warning {{Dereference of null pointer}}

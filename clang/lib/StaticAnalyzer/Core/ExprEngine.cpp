@@ -33,6 +33,7 @@
 #include "clang/Analysis/ConstructionContext.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/PrettyStackTrace.h"
@@ -141,21 +142,37 @@ public:
     return getLocationContext()->getDecl()->getASTContext();
   }
 
-  void print(llvm::raw_ostream &OS, PrinterHelper *Helper, PrintingPolicy &PP) {
-    OS << "(LC" << getLocationContext()->getID() << ',';
-    if (const Stmt *S = getItem().getStmtOrNull())
-      OS << 'S' << S->getID(getASTContext());
+  void printJson(llvm::raw_ostream &Out, PrinterHelper *Helper,
+                 PrintingPolicy &PP) const {
+    const Stmt *S = getItem().getStmtOrNull();
+    const CXXCtorInitializer *I = nullptr;
+    if (!S)
+      I = getItem().getCXXCtorInitializer();
+
+    // IDs
+    Out << "\"lctx_id\": " << getLocationContext()->getID() << ", ";
+
+    if (S)
+      Out << "\"stmt_id\": " << S->getID(getASTContext());
     else
-      OS << 'I' << getItem().getCXXCtorInitializer()->getID(getASTContext());
-    OS << ',' << getItem().getKindAsString();
+      Out << "\"init_id\": " << I->getID(getASTContext());
+
+    // Kind
+    Out << ", \"kind\": \"" << getItem().getKindAsString()
+        << "\", \"argument_index\": ";
+
     if (getItem().getKind() == ConstructionContextItem::ArgumentKind)
-      OS << " #" << getItem().getIndex();
-    OS << ") ";
-    if (const Stmt *S = getItem().getStmtOrNull()) {
-      S->printPretty(OS, Helper, PP);
+      Out << getItem().getIndex();
+    else
+      Out << "null";
+
+    // Pretty-print
+    Out << ", \"pretty\": ";
+
+    if (S) {
+      S->printJson(Out, Helper, PP, /*AddQuotes=*/true);
     } else {
-      const CXXCtorInitializer *I = getItem().getCXXCtorInitializer();
-      OS << I->getAnyMember()->getNameAsString();
+      Out << '\"' << I->getAnyMember()->getNameAsString() << '\"';
     }
   }
 
@@ -541,36 +558,73 @@ ExprEngine::processRegionChanges(ProgramStateRef state,
                                                          LCtx, Call);
 }
 
-static void printObjectsUnderConstructionForContext(raw_ostream &Out,
-                                                    ProgramStateRef State,
-                                                    const char *NL,
-                                                    const LocationContext *LC) {
+static void
+printObjectsUnderConstructionJson(raw_ostream &Out, ProgramStateRef State,
+                                  const char *NL, const LocationContext *LCtx,
+                                  unsigned int Space = 0, bool IsDot = false) {
   PrintingPolicy PP =
-      LC->getAnalysisDeclContext()->getASTContext().getPrintingPolicy();
-  for (auto I : State->get<ObjectsUnderConstruction>()) {
-    ConstructedObjectKey Key = I.first;
-    SVal Value = I.second;
-    if (Key.getLocationContext() != LC)
+      LCtx->getAnalysisDeclContext()->getASTContext().getPrintingPolicy();
+
+  ++Space;
+  bool HasItem = false;
+
+  // Store the last key.
+  const ConstructedObjectKey *LastKey = nullptr;
+  for (const auto &I : State->get<ObjectsUnderConstruction>()) {
+    const ConstructedObjectKey &Key = I.first;
+    if (Key.getLocationContext() != LCtx)
       continue;
-    Key.print(Out, nullptr, PP);
-    Out << " : " << Value << NL;
+
+    if (!HasItem) {
+      Out << "[" << NL;
+      HasItem = true;
+    }
+
+    LastKey = &Key;
+  }
+
+  for (const auto &I : State->get<ObjectsUnderConstruction>()) {
+    const ConstructedObjectKey &Key = I.first;
+    SVal Value = I.second;
+    if (Key.getLocationContext() != LCtx)
+      continue;
+
+    Indent(Out, Space, IsDot) << "{ ";
+    Key.printJson(Out, nullptr, PP);
+    Out << ", \"value\": \"" << Value << "\" }";
+
+    if (&Key != LastKey)
+      Out << ',';
+    Out << NL;
+  }
+
+  if (HasItem)
+    Indent(Out, --Space, IsDot) << ']'; // End of "location_context".
+  else {
+    Out << "null ";
   }
 }
 
-void ExprEngine::printState(raw_ostream &Out, ProgramStateRef State,
-                            const char *NL, const char *Sep,
-                            const LocationContext *LCtx) {
-  if (LCtx) {
-    if (!State->get<ObjectsUnderConstruction>().isEmpty()) {
-      Out << Sep << "Objects under construction:" << NL;
+void ExprEngine::printJson(raw_ostream &Out, ProgramStateRef State,
+                           const LocationContext *LCtx, const char *NL,
+                           unsigned int Space, bool IsDot) const {
+  Indent(Out, Space, IsDot) << "\"constructing_objects\": ";
 
-      LCtx->dumpStack(Out, "", NL, Sep, [&](const LocationContext *LC) {
-        printObjectsUnderConstructionForContext(Out, State, NL, LC);
-      });
-    }
+  if (LCtx && !State->get<ObjectsUnderConstruction>().isEmpty()) {
+    ++Space;
+    Out << '[' << NL;
+    LCtx->printJson(Out, NL, Space, IsDot, [&](const LocationContext *LC) {
+      printObjectsUnderConstructionJson(Out, State, NL, LC, Space, IsDot);
+    });
+
+    --Space;
+    Indent(Out, Space, IsDot) << "]," << NL; // End of "constructing_objects".
+  } else {
+    Out << "null," << NL;
   }
 
-  getCheckerManager().runCheckersForPrintState(Out, State, NL, Sep);
+  getCheckerManager().runCheckersForPrintStateJson(Out, State, NL, Space,
+                                                   IsDot);
 }
 
 void ExprEngine::processEndWorklist() {
@@ -2262,7 +2316,6 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
                                        Pred->getStackFrame()->getParent()));
 
   PrettyStackTraceLocationContext CrashInfo(Pred->getLocationContext());
-  StateMgr.EndPath(Pred->getState());
 
   ExplodedNodeSet Dst;
   if (Pred->getLocationContext()->inTopFrame()) {
@@ -3015,37 +3068,55 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
   }
 
   static std::string getNodeLabel(const ExplodedNode *N, ExplodedGraph *G){
-    std::string sbuf;
-    llvm::raw_string_ostream Out(sbuf);
+    std::string Buf;
+    llvm::raw_string_ostream Out(Buf);
 
+    const bool IsDot = true;
+    const unsigned int Space = 1;
     ProgramStateRef State = N->getState();
+
+    Out << "{ \"node_id\": \"" << (const void *)N
+        << "\", \"state_id\": " << State->getID()
+        << ", \"has_report\": " << (nodeHasBugReport(N) ? "true" : "false")
+        << ",\\l";
+
+    Indent(Out, Space, IsDot) << "\"program_points\": [\\l";
 
     // Dump program point for all the previously skipped nodes.
     traverseHiddenNodes(
         N,
         [&](const ExplodedNode *OtherNode) {
-          OtherNode->getLocation().print(/*CR=*/"\\l", Out);
+          Indent(Out, Space + 1, IsDot) << "{ ";
+          OtherNode->getLocation().printJson(Out, /*NL=*/"\\l");
+          Out << ", \"tag\": ";
           if (const ProgramPointTag *Tag = OtherNode->getLocation().getTag())
-            Out << "\\lTag:" << Tag->getTagDescription();
-          if (N->isSink())
-            Out << "\\lNode is sink\\l";
-          if (nodeHasBugReport(N))
-            Out << "\\lBug report attached\\l";
+            Out << '\"' << Tag->getTagDescription() << "\" }";
+          else
+            Out << "null }";
         },
-        [&](const ExplodedNode *) { Out << "\\l--------\\l"; },
+	// Adds a comma and a new-line between each program point.
+        [&](const ExplodedNode *) { Out << ",\\l"; },
         [&](const ExplodedNode *) { return false; });
 
-    Out << "\\l\\|";
-
-    Out << "StateID: ST" << State->getID() << ", NodeID: N" << N->getID(G)
-        << " <" << (const void *)N << ">\\|";
+    Out << "\\l"; // Adds a new-line to the last program point.
+    Indent(Out, Space, IsDot) << "],\\l";
 
     bool SameAsAllPredecessors =
         std::all_of(N->pred_begin(), N->pred_end(), [&](const ExplodedNode *P) {
           return P->getState() == State;
         });
-    if (!SameAsAllPredecessors)
-      State->printDOT(Out, N->getLocationContext());
+
+    if (!SameAsAllPredecessors) {
+      State->printDOT(Out, N->getLocationContext(), Space);
+    } else {
+      Indent(Out, Space, IsDot) << "\"program_state\": null";
+    }
+
+    Out << "\\l}";
+    if (!N->succ_empty())
+      Out << ',';
+    Out << "\\l";
+
     return Out.str();
   }
 };

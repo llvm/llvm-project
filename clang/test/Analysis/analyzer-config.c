@@ -2,6 +2,7 @@
 // RUN: FileCheck --input-file=%t %s --match-full-lines
 
 // CHECK: [config]
+// CHECK-NEXT: add-pop-up-notes = true
 // CHECK-NEXT: aggressive-binary-operation-simplification = false
 // CHECK-NEXT: alpha.clone.CloneChecker:IgnoredFilesPattern = ""
 // CHECK-NEXT: alpha.clone.CloneChecker:MinimumCloneComplexity = 50
@@ -87,4 +88,4 @@
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 84
+// CHECK-NEXT: num-entries = 85

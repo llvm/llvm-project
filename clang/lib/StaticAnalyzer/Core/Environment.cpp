@@ -18,6 +18,7 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/JsonSupport.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
@@ -199,43 +200,86 @@ EnvironmentManager::removeDeadBindings(Environment Env,
   return NewEnv;
 }
 
-void Environment::print(raw_ostream &Out, const char *NL,
-                        const char *Sep,
-                        const ASTContext &Context,
-                        const LocationContext *WithLC) const {
-  if (ExprBindings.isEmpty())
-    return;
+void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
+                            const LocationContext *LCtx, const char *NL,
+                            unsigned int Space, bool IsDot) const {
+  Indent(Out, Space, IsDot) << "\"environment\": ";
+  ++Space;
 
-  if (!WithLC) {
+  if (ExprBindings.isEmpty()) {
+    Out << "null," << NL;
+    return;
+  }
+
+  if (!LCtx) {
     // Find the freshest location context.
     llvm::SmallPtrSet<const LocationContext *, 16> FoundContexts;
-    for (auto I : *this) {
+    for (const auto &I : *this) {
       const LocationContext *LC = I.first.getLocationContext();
       if (FoundContexts.count(LC) == 0) {
         // This context is fresher than all other contexts so far.
-        WithLC = LC;
+        LCtx = LC;
         for (const LocationContext *LCI = LC; LCI; LCI = LCI->getParent())
           FoundContexts.insert(LCI);
       }
     }
   }
 
-  assert(WithLC);
+  assert(LCtx);
 
-  PrintingPolicy PP = Context.getPrintingPolicy();
+  Out << '[' << NL; // Start of Environment.
+  PrintingPolicy PP = Ctx.getPrintingPolicy();
 
-  Out << NL << "Expressions by stack frame:" << NL;
-  WithLC->dumpStack(Out, "", NL, Sep, [&](const LocationContext *LC) {
-    for (auto I : ExprBindings) {
-      if (I.first.getLocationContext() != LC)
+  LCtx->printJson(Out, NL, Space, IsDot, [&](const LocationContext *LC) {
+    // LCtx items begin
+    bool HasItem = false;
+    unsigned int InnerSpace = Space + 1;
+
+    // Store the last ExprBinding which we will print.
+    BindingsTy::iterator LastI = ExprBindings.end();
+    for (BindingsTy::iterator I = ExprBindings.begin(); I != ExprBindings.end();
+         ++I) {
+      if (I->first.getLocationContext() != LC)
         continue;
 
-      const Stmt *S = I.first.getStmt();
+      if (!HasItem) {
+        HasItem = true;
+        Out << '[' << NL;
+      }
+
+      const Stmt *S = I->first.getStmt();
+      (void)S;
       assert(S != nullptr && "Expected non-null Stmt");
 
-      Out << "(LC" << LC->getID() << ", S" << S->getID(Context) << ") ";
-      S->printPretty(Out, /*Helper=*/nullptr, PP);
-      Out << " : " << I.second << NL;
+      LastI = I;
     }
+
+    for (BindingsTy::iterator I = ExprBindings.begin(); I != ExprBindings.end();
+         ++I) {
+      if (I->first.getLocationContext() != LC)
+        continue;
+
+      const Stmt *S = I->first.getStmt();
+      Indent(Out, InnerSpace, IsDot)
+          << "{ \"lctx_id\": " << LC->getID()
+          << ", \"stmt_id\": " << S->getID(Ctx) << ", \"pretty\": ";
+      S->printJson(Out, nullptr, PP, /*AddQuotes=*/true);
+
+      Out << ", \"value\": ";
+      I->second.printJson(Out, /*AddQuotes=*/true);
+
+      Out << " }";
+
+      if (I != LastI)
+        Out << ',';
+      Out << NL;
+    }
+
+    if (HasItem)
+      Indent(Out, --InnerSpace, IsDot) << ']';
+    else
+      Out << "null ";
   });
+
+  Indent(Out, --Space, IsDot) << "]," << NL; // End of Environment.
 }

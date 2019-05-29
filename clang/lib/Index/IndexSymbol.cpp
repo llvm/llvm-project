@@ -96,6 +96,13 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
     Info.Properties |= (SymbolPropertySet)SymbolProperty::ProtocolInterface;
   }
 
+  if (auto *VT = dyn_cast<VarTemplateDecl>(D)) {
+    Info.Properties |= (SymbolPropertySet)SymbolProperty::Generic;
+    Info.Lang = SymbolLanguage::CXX;
+    // All other fields are filled from the templated decl.
+    D = VT->getTemplatedDecl();
+  }
+
   if (const TagDecl *TD = dyn_cast<TagDecl>(D)) {
     switch (TD->getTagKind()) {
     case TTK_Struct:
@@ -168,6 +175,7 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Kind = SymbolKind::Function;
       break;
     case Decl::Field:
+    case Decl::IndirectField:
       Info.Kind = SymbolKind::Field;
       if (const CXXRecordDecl *
             CXXRec = dyn_cast<CXXRecordDecl>(D->getDeclContext())) {
@@ -332,6 +340,23 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
           Info.Lang = SymbolLanguage::CXX;
       }
       break;
+    case Decl::ClassTemplatePartialSpecialization:
+    case Decl::ClassScopeFunctionSpecialization:
+    case Decl::ClassTemplateSpecialization:
+    case Decl::CXXRecord:
+    case Decl::Enum:
+    case Decl::Record:
+      llvm_unreachable("records handled before");
+      break;
+    case Decl::VarTemplateSpecialization:
+    case Decl::VarTemplatePartialSpecialization:
+    case Decl::ImplicitParam:
+    case Decl::ParmVar:
+    case Decl::Var:
+    case Decl::VarTemplate:
+      llvm_unreachable("variables handled before");
+      break;
+    // Other decls get the 'unknown' kind.
     default:
       break;
     }

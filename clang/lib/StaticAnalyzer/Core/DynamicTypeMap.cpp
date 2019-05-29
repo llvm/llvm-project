@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeMap.h"
+#include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
@@ -53,27 +54,38 @@ ProgramStateRef setDynamicTypeInfo(ProgramStateRef State, const MemRegion *Reg,
   return NewState;
 }
 
-void printDynamicTypeInfo(ProgramStateRef State, raw_ostream &Out,
-                          const char *NL, const char *Sep) {
-  bool First = true;
-  for (const auto &I : State->get<DynamicTypeMap>()) {
-    if (First) {
-      Out << NL << "Dynamic types of regions:" << NL;
-      First = false;
-    }
-    const MemRegion *MR = I.first;
-    const DynamicTypeInfo &DTI = I.second;
-    Out << MR << " : ";
+void printDynamicTypeInfoJson(raw_ostream &Out, ProgramStateRef State,
+                              const char *NL, unsigned int Space, bool IsDot) {
+  Indent(Out, Space, IsDot) << "\"dynamic_types\": ";
+
+  const DynamicTypeMapTy &DTM = State->get<DynamicTypeMap>();
+  if (DTM.isEmpty()) {
+    Out << "null," << NL;
+    return;
+  }
+
+  ++Space;
+  Out << '[' << NL;
+  for (DynamicTypeMapTy::iterator I = DTM.begin(); I != DTM.end(); ++I) {
+    const MemRegion *MR = I->first;
+    const DynamicTypeInfo &DTI = I->second;
+    Out << "{ \"region\": \"" << MR << "\", \"dyn_type\": ";
     if (DTI.isValid()) {
-      Out << DTI.getType()->getPointeeType().getAsString();
-      if (DTI.canBeASubClass()) {
-        Out << " (or its subclass)";
-      }
+      Out << '\"' << DTI.getType()->getPointeeType().getAsString()
+          << "\" \"sub_classable\": "
+          << (DTI.canBeASubClass() ? "true" : "false");
     } else {
-      Out << "Invalid type info";
+      Out << "null"; // Invalid type info
     }
+    Out << "\" }";
+
+    if (std::next(I) != DTM.end())
+      Out << ',';
     Out << NL;
   }
+
+  --Space;
+  Indent(Out, Space, IsDot) << "]," << NL;
 }
 
 void *ProgramStateTrait<DynamicTypeMap>::GDMIndex() {

@@ -204,6 +204,10 @@ ANALYZER_OPTION(bool, ShouldPrunePaths, "prune-paths",
                 "be pruned out of the final output.",
                 true)
 
+ANALYZER_OPTION(bool, ShouldAddPopUpNotes, "add-pop-up-notes",
+                "Whether pop-up notes should be added to the final output.",
+                true)
+
 ANALYZER_OPTION(
     bool, ShouldConditionalizeStaticInitializers,
     "cfg-conditional-static-initializers",

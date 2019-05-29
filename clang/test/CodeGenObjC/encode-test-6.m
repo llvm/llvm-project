@@ -34,7 +34,7 @@ typedef BABugExample BABugExampleRedefinition;
 @synthesize property = _property;
 @end
 
-// CHECK: private unnamed_addr constant [24 x i8] c"^{BABugExample=@}16
+// CHECK: private unnamed_addr constant [8 x i8] c"@16
 
 // rdar://14408244
 @class SCNCamera;
@@ -52,7 +52,7 @@ typedef struct
     C3DCameraStorage _storage;
 }
 @end
-// CHECK: private unnamed_addr constant [39 x i8] c"{?=\22presentationInstance\22^{SCNCamera}}\00"
+// CHECK: private unnamed_addr constant [39 x i8] c"{?=\22presentationInstance\22@\22SCNCamera\22}\00"
 
 // rdar://16655340
 int i;
