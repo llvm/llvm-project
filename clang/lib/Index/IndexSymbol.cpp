@@ -168,6 +168,7 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Kind = SymbolKind::Function;
       break;
     case Decl::Field:
+    case Decl::IndirectField:
       Info.Kind = SymbolKind::Field;
       if (const CXXRecordDecl *
             CXXRec = dyn_cast<CXXRecordDecl>(D->getDeclContext())) {

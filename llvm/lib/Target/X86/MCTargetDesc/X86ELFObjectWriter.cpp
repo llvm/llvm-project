@@ -271,6 +271,10 @@ static unsigned getRelocType32(MCContext &Ctx,
     assert(Type == RT32_32);
     assert(!IsPCRel);
     return ELF::R_386_GOTOFF;
+  case MCSymbolRefExpr::VK_TLSCALL:
+    return ELF::R_386_TLS_DESC_CALL;
+  case MCSymbolRefExpr::VK_TLSDESC:
+    return ELF::R_386_TLS_GOTDESC;
   case MCSymbolRefExpr::VK_TPOFF:
     assert(Type == RT32_32);
     assert(!IsPCRel);

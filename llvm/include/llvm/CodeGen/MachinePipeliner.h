@@ -463,6 +463,56 @@ public:
 #endif
 };
 
+// 16 was selected based on the number of ProcResource kinds for all
+// existing Subtargets, so that SmallVector don't need to resize too often.
+static const int DefaultProcResSize = 16;
+
+class ResourceManager {
+private:
+  const MCSubtargetInfo *STI;
+  const MCSchedModel &SM;
+  const bool UseDFA;
+  std::unique_ptr<DFAPacketizer> DFAResources;
+  /// Each processor resource is associated with a so-called processor resource
+  /// mask. This vector allows to correlate processor resource IDs with
+  /// processor resource masks. There is exactly one element per each processor
+  /// resource declared by the scheduling model.
+  llvm::SmallVector<uint64_t, DefaultProcResSize> ProcResourceMasks;
+
+  llvm::SmallVector<uint64_t, DefaultProcResSize> ProcResourceCount;
+
+public:
+  ResourceManager(const TargetSubtargetInfo *ST)
+      : STI(ST), SM(ST->getSchedModel()), UseDFA(ST->useDFAforSMS()),
+        ProcResourceMasks(SM.getNumProcResourceKinds(), 0),
+        ProcResourceCount(SM.getNumProcResourceKinds(), 0) {
+    if (UseDFA)
+      DFAResources.reset(ST->getInstrInfo()->CreateTargetScheduleState(*ST));
+    initProcResourceVectors(SM, ProcResourceMasks);
+  }
+
+  void initProcResourceVectors(const MCSchedModel &SM,
+                               SmallVectorImpl<uint64_t> &Masks);
+  /// Check if the resources occupied by a MCInstrDesc are available in
+  /// the current state.
+  bool canReserveResources(const MCInstrDesc *MID) const;
+
+  /// Reserve the resources occupied by a MCInstrDesc and change the current
+  /// state to reflect that change.
+  void reserveResources(const MCInstrDesc *MID);
+
+  /// Check if the resources occupied by a machine instruction are available
+  /// in the current state.
+  bool canReserveResources(const MachineInstr &MI) const;
+
+  /// Reserve the resources occupied by a machine instruction and change the
+  /// current state to reflect that change.
+  void reserveResources(const MachineInstr &MI);
+
+  /// Reset the state
+  void clearResources();
+};
+
 /// This class represents the scheduled code.  The main data structure is a
 /// map from scheduled cycle to instructions.  During scheduling, the
 /// data structure explicitly represents all stages/iterations.   When
@@ -501,12 +551,11 @@ private:
   /// Virtual register information.
   MachineRegisterInfo &MRI;
 
-  std::unique_ptr<DFAPacketizer> Resources;
+  ResourceManager ProcItinResources;
 
 public:
   SMSchedule(MachineFunction *mf)
-      : ST(mf->getSubtarget()), MRI(mf->getRegInfo()),
-        Resources(ST.getInstrInfo()->CreateTargetScheduleState(ST)) {}
+      : ST(mf->getSubtarget()), MRI(mf->getRegInfo()), ProcItinResources(&ST) {}
 
   void reset() {
     ScheduledInstrs.clear();

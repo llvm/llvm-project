@@ -353,6 +353,15 @@ llvm::json::Value toJSON(const OffsetEncoding &);
 bool fromJSON(const llvm::json::Value &, OffsetEncoding &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, OffsetEncoding);
 
+// Describes the content type that a client supports in various result literals
+// like `Hover`, `ParameterInfo` or `CompletionItem`.
+enum class MarkupKind {
+  PlainText,
+  Markdown,
+};
+bool fromJSON(const llvm::json::Value &, MarkupKind &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, MarkupKind);
+
 // This struct doesn't mirror LSP!
 // The protocol defines deeply nested structures for client capabilities.
 // Instead of mapping them all, this just parses out the bits we care about.
@@ -391,6 +400,9 @@ struct ClientCapabilities {
 
   /// Supported encodings for LSP character offsets. (clangd extension).
   llvm::Optional<std::vector<OffsetEncoding>> offsetEncoding;
+
+  /// The content format that should be used for Hover requests.
+  MarkupKind HoverContentFormat = MarkupKind::PlainText;
 };
 bool fromJSON(const llvm::json::Value &, ClientCapabilities &);
 
@@ -860,11 +872,6 @@ struct CompletionParams : TextDocumentPositionParams {
   CompletionContext context;
 };
 bool fromJSON(const llvm::json::Value &, CompletionParams &);
-
-enum class MarkupKind {
-  PlainText,
-  Markdown,
-};
 
 struct MarkupContent {
   MarkupKind kind = MarkupKind::PlainText;

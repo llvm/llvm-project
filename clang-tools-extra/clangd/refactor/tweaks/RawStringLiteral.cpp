@@ -82,15 +82,14 @@ bool RawStringLiteral::prepare(const Selection &Inputs) {
     return false;
   Str = dyn_cast_or_null<StringLiteral>(N->ASTNode.get<Stmt>());
   return Str &&
-         isNormalString(*Str, Inputs.Cursor,
-                        Inputs.AST.getASTContext().getSourceManager()) &&
+         isNormalString(*Str, Inputs.Cursor, Inputs.AST.getSourceManager()) &&
          needsRaw(Str->getBytes()) && canBeRaw(Str->getBytes());
 }
 
 Expected<tooling::Replacements>
 RawStringLiteral::apply(const Selection &Inputs) {
   return tooling::Replacements(
-      tooling::Replacement(Inputs.AST.getASTContext().getSourceManager(), Str,
+      tooling::Replacement(Inputs.AST.getSourceManager(), Str,
                            ("R\"(" + Str->getBytes() + ")\"").str(),
                            Inputs.AST.getASTContext().getLangOpts()));
 }

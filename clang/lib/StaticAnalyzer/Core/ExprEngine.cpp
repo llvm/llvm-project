@@ -33,6 +33,7 @@
 #include "clang/Analysis/ConstructionContext.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/PrettyStackTrace.h"
@@ -141,21 +142,47 @@ public:
     return getLocationContext()->getDecl()->getASTContext();
   }
 
-  void print(llvm::raw_ostream &OS, PrinterHelper *Helper, PrintingPolicy &PP) {
-    OS << "(LC" << getLocationContext()->getID() << ',';
-    if (const Stmt *S = getItem().getStmtOrNull())
-      OS << 'S' << S->getID(getASTContext());
+  void printJson(llvm::raw_ostream &Out, PrinterHelper *Helper,
+                 PrintingPolicy &PP) const {
+    const Stmt *S = getItem().getStmtOrNull();
+    const CXXCtorInitializer *I = nullptr;
+    if (!S)
+      I = getItem().getCXXCtorInitializer();
+
+    // IDs
+    Out << "\"lctx_id\": " << getLocationContext()->getID() << ", ";
+
+    if (S)
+      Out << "\"stmt_id\": " << S->getID(getASTContext());
     else
-      OS << 'I' << getItem().getCXXCtorInitializer()->getID(getASTContext());
-    OS << ',' << getItem().getKindAsString();
+      Out << "\"init_id\": " << I->getID(getASTContext());
+
+    // Kind
+    Out << ", \"kind\": \"" << getItem().getKindAsString()
+        << "\", \"argument_index\": ";
+
     if (getItem().getKind() == ConstructionContextItem::ArgumentKind)
-      OS << " #" << getItem().getIndex();
-    OS << ") ";
-    if (const Stmt *S = getItem().getStmtOrNull()) {
-      S->printPretty(OS, Helper, PP);
+      Out << getItem().getIndex() << '\"';
+    else
+      Out << "null";
+
+    // Pretty-print
+    Out << ", \"pretty\": \"";
+
+    if (S) {
+      llvm::SmallString<256> TempBuf;
+      llvm::raw_svector_ostream TempOut(TempBuf);
+
+      // See whether the current statement is pretty-printable.
+      S->printPretty(TempOut, Helper, PP);
+      if (!TempBuf.empty()) {
+        Out << TempBuf.str().trim() << '\"';
+        TempBuf.clear();
+      } else {
+        Out << "null";
+      }
     } else {
-      const CXXCtorInitializer *I = getItem().getCXXCtorInitializer();
-      OS << I->getAnyMember()->getNameAsString();
+      Out << I->getAnyMember()->getNameAsString() << '\"';
     }
   }
 
@@ -541,36 +568,73 @@ ExprEngine::processRegionChanges(ProgramStateRef state,
                                                          LCtx, Call);
 }
 
-static void printObjectsUnderConstructionForContext(raw_ostream &Out,
-                                                    ProgramStateRef State,
-                                                    const char *NL,
-                                                    const LocationContext *LC) {
+static void
+printObjectsUnderConstructionJson(raw_ostream &Out, ProgramStateRef State,
+                                  const char *NL, const LocationContext *LCtx,
+                                  unsigned int Space = 0, bool IsDot = false) {
   PrintingPolicy PP =
-      LC->getAnalysisDeclContext()->getASTContext().getPrintingPolicy();
-  for (auto I : State->get<ObjectsUnderConstruction>()) {
-    ConstructedObjectKey Key = I.first;
-    SVal Value = I.second;
-    if (Key.getLocationContext() != LC)
+      LCtx->getAnalysisDeclContext()->getASTContext().getPrintingPolicy();
+
+  ++Space;
+  bool HasItem = false;
+
+  // Store the last key.
+  const ConstructedObjectKey *LastKey = nullptr;
+  for (const auto &I : State->get<ObjectsUnderConstruction>()) {
+    const ConstructedObjectKey &Key = I.first;
+    if (Key.getLocationContext() != LCtx)
       continue;
-    Key.print(Out, nullptr, PP);
-    Out << " : " << Value << NL;
+
+    if (!HasItem) {
+      Out << "[" << NL;
+      HasItem = true;
+    }
+
+    LastKey = &Key;
+  }
+
+  for (const auto &I : State->get<ObjectsUnderConstruction>()) {
+    const ConstructedObjectKey &Key = I.first;
+    SVal Value = I.second;
+    if (Key.getLocationContext() != LCtx)
+      continue;
+
+    Indent(Out, Space, IsDot) << "{ ";
+    Key.printJson(Out, nullptr, PP);
+    Out << ", \"value\": \"" << Value << "\" }";
+
+    if (&Key != LastKey)
+      Out << ',';
+    Out << NL;
+  }
+
+  if (HasItem)
+    Indent(Out, --Space, IsDot) << ']'; // End of "location_context".
+  else {
+    Out << "null ";
   }
 }
 
-void ExprEngine::printState(raw_ostream &Out, ProgramStateRef State,
-                            const char *NL, const char *Sep,
-                            const LocationContext *LCtx) {
-  if (LCtx) {
-    if (!State->get<ObjectsUnderConstruction>().isEmpty()) {
-      Out << Sep << "Objects under construction:" << NL;
+void ExprEngine::printJson(raw_ostream &Out, ProgramStateRef State,
+                           const LocationContext *LCtx, const char *NL,
+                           unsigned int Space, bool IsDot) const {
+  Indent(Out, Space, IsDot) << "\"constructing_objects\": ";
 
-      LCtx->dumpStack(Out, "", NL, Sep, [&](const LocationContext *LC) {
-        printObjectsUnderConstructionForContext(Out, State, NL, LC);
-      });
-    }
+  if (LCtx && !State->get<ObjectsUnderConstruction>().isEmpty()) {
+    ++Space;
+    Out << '[' << NL;
+    LCtx->printJson(Out, NL, Space, IsDot, [&](const LocationContext *LC) {
+      printObjectsUnderConstructionJson(Out, State, NL, LC, Space, IsDot);
+    });
+
+    --Space;
+    Indent(Out, Space, IsDot) << "]," << NL; // End of "constructing_objects".
+  } else {
+    Out << "null," << NL;
   }
 
-  getCheckerManager().runCheckersForPrintState(Out, State, NL, Sep);
+  getCheckerManager().runCheckersForPrintStateJson(Out, State, NL, Space,
+                                                   IsDot);
 }
 
 void ExprEngine::processEndWorklist() {

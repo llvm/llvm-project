@@ -44,9 +44,18 @@
 // CHECK-MOVE-INVALID-VALUE-SAME: "KnownsOnly", "KnownsAndLocals" or "All"
 // CHECK-MOVE-INVALID-VALUE-SAME: string value
 
+// Tests checker-messages printing.
+// RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.Move %s\
+// RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
+// RUN:  -analyzer-config exploration_strategy=dfs -DDFS\
+// RUN:  -analyzer-config cplusplus.Move:WarnOn=All -DAGGRESSIVE_DFS\
+// RUN:  -analyzer-checker core,cplusplus.SmartPtr,debug.ExprInspection\
+// RUN:  -verify=expected,peaceful,aggressive %s 2>&1 | FileCheck %s
+
 #include "Inputs/system-header-simulator-cxx.h"
 
 void clang_analyzer_warnIfReached();
+void clang_analyzer_printState();
 
 class B {
 public:
@@ -145,6 +154,19 @@ void simpleMoveCtorTest() {
   {
     A a;
     A b = std::move(a); // peaceful-note {{Object 'a' is moved}}
+
+#ifdef AGGRESSIVE_DFS
+    clang_analyzer_printState();
+
+// CHECK:      "checker_messages": [
+// CHECK-NEXT:   { "checker": "cplusplus.Move", "messages": [
+// CHECK-NEXT:     "Moved-from objects :",
+// CHECK:          "a: moved",
+// CHECK:          ""
+// CHECK-NEXT:   ]}
+// CHECK-NEXT: ]
+#endif
+
     a.foo(); // peaceful-warning {{Method called on moved-from object 'a'}}
              // peaceful-note@-1 {{Method called on moved-from object 'a'}}
   }

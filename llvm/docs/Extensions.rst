@@ -379,6 +379,22 @@ this directive, all symbols are considered address-significant.
 
 This marks ``sym`` as address-significant.
 
+``SHT_LLVM_SYMPART`` Section (symbol partition specification)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This section is used to mark symbols with the `partition`_ that they
+belong to. An ``.llvm_sympart`` section consists of a null-terminated string
+specifying the name of the partition followed by a relocation referring to
+the symbol that belongs to the partition. It may be constructed as follows:
+
+.. code-block:: gas
+
+  .section ".llvm_sympart","",@llvm_sympart
+  .asciz "libpartition.so"
+  .word symbol_in_partition
+
+.. _partition: https://lld.llvm.org/Partitions.html
+
 CodeView-Dependent
 ------------------
 

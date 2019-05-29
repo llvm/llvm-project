@@ -113,17 +113,9 @@ FunctionScopeInfo::WeakObjectProfileTy::getBaseInfo(const Expr *E) {
 }
 
 bool CapturingScopeInfo::isVLATypeCaptured(const VariableArrayType *VAT) const {
-  RecordDecl *RD = nullptr;
-  if (auto *LSI = dyn_cast<LambdaScopeInfo>(this))
-    RD = LSI->Lambda;
-  else if (auto CRSI = dyn_cast<CapturedRegionScopeInfo>(this))
-    RD = CRSI->TheRecordDecl;
-
-  if (RD)
-    for (auto *FD : RD->fields()) {
-      if (FD->hasCapturedVLAType() && FD->getCapturedVLAType() == VAT)
-        return true;
-    }
+  for (auto &Cap : Captures)
+    if (Cap.isVLATypeCapture() && Cap.getCapturedVLAType() == VAT)
+      return true;
   return false;
 }
 

@@ -111,6 +111,16 @@ mla z0.d, p0/m, z0.d, z2.d
 
 
 // ------------------------------------------------------------------------- //
+// Destination used in other operand (ternary + indexed)
+
+movprfx z0, z1
+sdot z0.s, z1.b, z0.b[3]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx and destination also used as non-destructive source
+// CHECK-NEXT: sdot z0.s, z1.b, z0.b[3]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// ------------------------------------------------------------------------- //
 // Different general predicate (unary)
 
 movprfx z0.d, p0/m, z1.d

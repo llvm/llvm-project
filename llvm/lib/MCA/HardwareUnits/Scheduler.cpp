@@ -84,6 +84,12 @@ void Scheduler::issueInstructionImpl(
 
   IS->computeCriticalRegDep();
 
+  if (IS->isMemOp()) {
+    LSU.onInstructionIssued(IR);
+    const MemoryGroup &Group = LSU.getGroup(IS->getLSUTokenID());
+    IS->setCriticalMemDep(Group.getCriticalPredecessor());
+  }
+
   if (IS->isExecuting())
     IssuedSet.emplace_back(IR);
   else if (IS->isExecuted())
@@ -115,59 +121,6 @@ void Scheduler::issueInstruction(
     promoteToReadySet(ReadyInstructions);
 }
 
-static bool initializeCriticalMemDepInfo(InstRef &IR, const LSUnit &LSU) {
-  Instruction &IS = *IR.getInstruction();
-  assert(IS.isMemOp() && "Not a memory operation!");
-
-  // Check if this instruction depends on another memory operation.
-  InstRef DependentMemOp = LSU.isReady(IR);
-  const Instruction *MemOp = DependentMemOp.getInstruction();
-  IS.setCurrentMemDep(MemOp);
-
-  // Initialize the CriticalMemDep structure.
-  unsigned Cycles = 0;
-  if (MemOp->isExecuting())
-    Cycles = static_cast<unsigned>(MemOp->getCyclesLeft());
-  IS.setCriticalMemDep(DependentMemOp.getSourceIndex(), Cycles);
-  return IR.getSourceIndex() == DependentMemOp.getSourceIndex();
-}
-
-static bool updateMemoryDependencyInfo(InstRef &IR, const LSUnit &LSU) {
-  Instruction &IS = *IR.getInstruction();
-  assert(IS.isMemOp() && "Not a memory operation!");
-
-  const Instruction *MemOp = IS.getCurrentMemDep();
-  if (!MemOp && initializeCriticalMemDepInfo(IR, LSU))
-    return true;
-
-  MemOp = IS.getCurrentMemDep();
-  if (MemOp == IR.getInstruction())
-    return true;
-
-  const CriticalDependency &CMD = IS.getCriticalMemDep();
-  if (MemOp->isExecuting() && !CMD.Cycles) {
-    // Update the critical memory dependency info.
-    IS.setCriticalMemDep(CMD.IID, MemOp->getCyclesLeft());
-    return false;
-  }
-
-  if (!MemOp->isExecuted() && !MemOp->isRetired())
-    return false;
-
-  // Check if there are still unsolved memory dependencies.
-  InstRef DependentMemOp = LSU.isReady(IR);
-  MemOp = DependentMemOp.getInstruction();
-  IS.setCurrentMemDep(MemOp);
-  if (DependentMemOp == IR)
-    return true;
-
-  unsigned Cycles = 0;
-  if (MemOp->isExecuting())
-    Cycles = static_cast<unsigned>(MemOp->getCyclesLeft());
-  IS.setCriticalMemDep(DependentMemOp.getSourceIndex(), Cycles);
-  return false;
-}
-
 bool Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
   // Scan the set of waiting instructions and promote them to the
   // ready set if operands are all ready.
@@ -179,7 +132,7 @@ bool Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
 
     // Check if there are unsolved memory dependencies.
     Instruction &IS = *IR.getInstruction();
-    if (IS.isMemOp() && !updateMemoryDependencyInfo(IR, LSU)) {
+    if (IS.isMemOp() && !LSU.isReady(IR)) {
       ++I;
       continue;
     }
@@ -298,14 +251,16 @@ void Scheduler::analyzeDataDependencies(SmallVectorImpl<InstRef> &RegDeps,
     if (Resources->checkAvailability(IS.getDesc()))
       continue;
 
-    const CriticalDependency &CMD = IS.getCriticalMemDep();
-    if (IS.isMemOp() && IS.getCurrentMemDep() != &IS && !CMD.Cycles)
-      continue;
+    if (IS.isMemOp()) {
+      const MemoryGroup &Group = LSU.getGroup(IS.getLSUTokenID());
+      if (Group.isWaiting())
+        continue;
+      if (Group.isPending())
+        MemDeps.emplace_back(IR);
+    }
 
     if (IS.isPending())
       RegDeps.emplace_back(IR);
-    if (CMD.Cycles)
-      MemDeps.emplace_back(IR);
   }
 }
 
@@ -313,6 +268,8 @@ void Scheduler::cycleEvent(SmallVectorImpl<ResourceRef> &Freed,
                            SmallVectorImpl<InstRef> &Executed,
                            SmallVectorImpl<InstRef> &Pending,
                            SmallVectorImpl<InstRef> &Ready) {
+  LSU.cycleEvent();
+
   // Release consumed resources.
   Resources->cycleEvent(Freed);
 
@@ -343,14 +300,14 @@ bool Scheduler::mustIssueImmediately(const InstRef &IR) const {
   return Desc.MustIssueImmediately;
 }
 
-bool Scheduler::dispatch(const InstRef &IR) {
-  const Instruction &IS = *IR.getInstruction();
+bool Scheduler::dispatch(InstRef &IR) {
+  Instruction &IS = *IR.getInstruction();
   const InstrDesc &Desc = IS.getDesc();
   Resources->reserveBuffers(Desc.Buffers);
 
   // If necessary, reserve queue entries in the load-store unit (LSU).
   if (IS.isMemOp())
-    LSU.dispatch(IR);
+    IS.setLSUTokenID(LSU.dispatch(IR));
 
   if (IS.isPending()) {
     LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR
@@ -360,9 +317,9 @@ bool Scheduler::dispatch(const InstRef &IR) {
     return false;
   }
 
-  // Memory operations that are not in a ready state are initially assigned to
-  // the WaitSet.
-  if (!IS.isReady() || (IS.isMemOp() && LSU.isReady(IR) != IR)) {
+  // Memory operations that still have unsolved memory dependencies are
+  // initially dispatched to the WaitSet.
+  if (!IS.isReady() || (IS.isMemOp() && !LSU.isReady(IR))) {
     LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR << " to the WaitSet\n");
     WaitSet.push_back(IR);
     return false;

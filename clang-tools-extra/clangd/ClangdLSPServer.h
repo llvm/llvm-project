@@ -154,7 +154,10 @@ private:
   bool SupportsHierarchicalDocumentSymbol = false;
   /// Whether the client supports showing file status.
   bool SupportFileStatus = false;
-  // Store of the current versions of the open documents.
+  /// Which kind of markup should we use in textDocument/hover responses.
+  MarkupKind HoverContentFormat = MarkupKind::PlainText;
+
+  /// Store of the current versions of the open documents.
   DraftStore DraftMgr;
 
   // The CDB is created by the "initialize" LSP method.

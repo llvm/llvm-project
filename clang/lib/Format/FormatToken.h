@@ -96,6 +96,7 @@ namespace format {
   TYPE(TrailingAnnotation)                                                     \
   TYPE(TrailingReturnArrow)                                                    \
   TYPE(TrailingUnaryOperator)                                                  \
+  TYPE(TypenameMacro)                                                          \
   TYPE(UnaryOperator)                                                          \
   TYPE(CSharpStringLiteral)                                                    \
   TYPE(CSharpNullCoalescing)                                                   \

@@ -45,124 +45,124 @@ protected:
 
 TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace {\n"
-            "  int i;\n"
-            "  int j;\n"
+            "int i;\n"
+            "int j;\n"
             "}// namespace",
             fixNamespaceEndComments("namespace {\n"
-                                    "  int i;\n"
-                                    "  int j;\n"
+                                    "int i;\n"
+                                    "int j;\n"
                                     "}"));
   EXPECT_EQ("namespace {\n"
-            "  int i;\n"
-            "  int j;\n"
+            "int i;\n"
+            "int j;\n"
             "}// namespace\n",
             fixNamespaceEndComments("namespace {\n"
-                                    "  int i;\n"
-                                    "  int j;\n"
+                                    "int i;\n"
+                                    "int j;\n"
                                     "}\n"));
   EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
-            "  int j;\n"
+            "int i;\n"
+            "int j;\n"
             "}// namespace A",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
-                                    "  int j;\n"
+                                    "int i;\n"
+                                    "int j;\n"
                                     "}"));
   EXPECT_EQ("inline namespace A {\n"
-            "  int i;\n"
-            "  int j;\n"
+            "int i;\n"
+            "int j;\n"
             "}// namespace A",
             fixNamespaceEndComments("inline namespace A {\n"
-                                    "  int i;\n"
-                                    "  int j;\n"
+                                    "int i;\n"
+                                    "int j;\n"
                                     "}"));
   EXPECT_EQ("namespace ::A {\n"
-            "  int i;\n"
-            "  int j;\n"
+            "int i;\n"
+            "int j;\n"
             "}// namespace ::A",
             fixNamespaceEndComments("namespace ::A {\n"
-                                    "  int i;\n"
-                                    "  int j;\n"
+                                    "int i;\n"
+                                    "int j;\n"
                                     "}"));
   EXPECT_EQ("namespace ::A::B {\n"
-            "  int i;\n"
-            "  int j;\n"
+            "int i;\n"
+            "int j;\n"
             "}// namespace ::A::B",
             fixNamespaceEndComments("namespace ::A::B {\n"
-                                    "  int i;\n"
-                                    "  int j;\n"
+                                    "int i;\n"
+                                    "int j;\n"
                                     "}"));
   EXPECT_EQ("namespace /**/::/**/A/**/::/**/B/**/ {\n"
-            "  int i;\n"
-            "  int j;\n"
+            "int i;\n"
+            "int j;\n"
             "}// namespace ::A::B",
             fixNamespaceEndComments("namespace /**/::/**/A/**/::/**/B/**/ {\n"
-                                    "  int i;\n"
-                                    "  int j;\n"
+                                    "int i;\n"
+                                    "int j;\n"
                                     "}"));
   EXPECT_EQ("namespace A {\n"
             "namespace B {\n"
-            "  int i;\n"
+            "int i;\n"
             "}\n"
             "}// namespace A",
             fixNamespaceEndComments("namespace A {\n"
                                     "namespace B {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "}\n"
                                     "}"));
   EXPECT_EQ("namespace A {\n"
             "namespace B {\n"
-            "  int i;\n"
-            "  int j;\n"
+            "int i;\n"
+            "int j;\n"
             "}// namespace B\n"
             "}// namespace A",
             fixNamespaceEndComments("namespace A {\n"
                                     "namespace B {\n"
-                                    "  int i;\n"
-                                    "  int j;\n"
+                                    "int i;\n"
+                                    "int j;\n"
                                     "}\n"
                                     "}"));
   EXPECT_EQ("namespace A {\n"
-            "  int a;\n"
-            "  int b;\n"
+            "int a;\n"
+            "int b;\n"
             "}// namespace A\n"
             "namespace B {\n"
-            "  int b;\n"
-            "  int a;\n"
+            "int b;\n"
+            "int a;\n"
             "}// namespace B",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int a;\n"
-                                    "  int b;\n"
+                                    "int a;\n"
+                                    "int b;\n"
                                     "}\n"
                                     "namespace B {\n"
-                                    "  int b;\n"
-                                    "  int a;\n"
+                                    "int b;\n"
+                                    "int a;\n"
                                     "}"));
   EXPECT_EQ("namespace A {\n"
-            "  int a1;\n"
-            "  int a2;\n"
+            "int a1;\n"
+            "int a2;\n"
             "}// namespace A\n"
             "namespace A {\n"
-            "  int a2;\n"
-            "  int a1;\n"
+            "int a2;\n"
+            "int a1;\n"
             "}// namespace A",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int a1;\n"
-                                    "  int a2;\n"
+                                    "int a1;\n"
+                                    "int a2;\n"
                                     "}\n"
                                     "namespace A {\n"
-                                    "  int a2;\n"
-                                    "  int a1;\n"
+                                    "int a2;\n"
+                                    "int a1;\n"
                                     "}"));
   EXPECT_EQ("namespace A {\n"
-            "  int a;\n"
-            "  int b;\n"
+            "int a;\n"
+            "int b;\n"
             "}// namespace A\n"
             "// comment about b\n"
             "int b;",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int a;\n"
-                                    "  int b;\n"
+                                    "int a;\n"
+                                    "int b;\n"
                                     "}\n"
                                     "// comment about b\n"
                                     "int b;"));
@@ -221,84 +221,84 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
 
   // Adds an end comment after a semicolon.
   EXPECT_EQ("namespace {\n"
-            "  int i;\n"
-            "  int j;\n"
+            "int i;\n"
+            "int j;\n"
             "};// namespace",
             fixNamespaceEndComments("namespace {\n"
-                                    "  int i;\n"
-                                    "  int j;\n"
+                                    "int i;\n"
+                                    "int j;\n"
                                     "};"));
   EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
-            "  int j;\n"
+            "int i;\n"
+            "int j;\n"
             "};// namespace A",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
-                                    "  int j;\n"
+                                    "int i;\n"
+                                    "int j;\n"
                                     "};"));
   EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
-            "  int j;\n"
+            "int i;\n"
+            "int j;\n"
             "};// namespace A\n"
             "// unrelated",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
-                                    "  int j;\n"
+                                    "int i;\n"
+                                    "int j;\n"
                                     "};\n"
                                     "// unrelated"));
 }
 
 TEST_F(NamespaceEndCommentsFixerTest, AddsNewlineIfNeeded) {
   EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
-            "  int j;\n"
+            "int i;\n"
+            "int j;\n"
             "}// namespace A\n"
             " int k;",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
-                                    "  int j;\n"
+                                    "int i;\n"
+                                    "int j;\n"
                                     "} int k;"));
   EXPECT_EQ("namespace {\n"
-            "  int i;\n"
-            "  int j;\n"
+            "int i;\n"
+            "int j;\n"
             "}// namespace\n"
             " int k;",
             fixNamespaceEndComments("namespace {\n"
-                                    "  int i;\n"
-                                    "  int j;\n"
+                                    "int i;\n"
+                                    "int j;\n"
                                     "} int k;"));
   EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
-            "  int j;\n"
+            "int i;\n"
+            "int j;\n"
             "}// namespace A\n"
             " namespace B {\n"
-            "  int j;\n"
-            "  int k;\n"
+            "int j;\n"
+            "int k;\n"
             "}// namespace B",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
-                                    "  int j;\n"
+                                    "int i;\n"
+                                    "int j;\n"
                                     "} namespace B {\n"
-                                    "  int j;\n"
-                                    "  int k;\n"
+                                    "int j;\n"
+                                    "int k;\n"
                                     "}"));
   EXPECT_EQ("namespace {\n"
-            "  int i;\n"
-            "  int j;\n"
+            "int i;\n"
+            "int j;\n"
             "};// namespace\n"
             "int k;",
             fixNamespaceEndComments("namespace {\n"
-                                    "  int i;\n"
-                                    "  int j;\n"
+                                    "int i;\n"
+                                    "int j;\n"
                                     "};int k;"));
   EXPECT_EQ("namespace {\n"
-            "  int i;\n"
-            "  int j;\n"
+            "int i;\n"
+            "int j;\n"
             "};// namespace\n"
             ";",
             fixNamespaceEndComments("namespace {\n"
-                                    "  int i;\n"
-                                    "  int j;\n"
+                                    "int i;\n"
+                                    "int j;\n"
                                     "};;"));
 }
 
@@ -313,18 +313,18 @@ TEST_F(NamespaceEndCommentsFixerTest, DoesNotAddEndCommentForShortNamespace) {
 
 TEST_F(NamespaceEndCommentsFixerTest, DoesNotAddCommentAfterUnaffectedRBrace) {
   EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
+            "int i;\n"
             "}",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "}",
                                     // The range (16, 3) spans the 'int' above.
                                     /*Ranges=*/{1, tooling::Range(16, 3)}));
   EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
+            "int i;\n"
             "};",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "};",
                                     // The range (16, 3) spans the 'int' above.
                                     /*Ranges=*/{1, tooling::Range(16, 3)}));
@@ -333,89 +333,90 @@ TEST_F(NamespaceEndCommentsFixerTest, DoesNotAddCommentAfterUnaffectedRBrace) {
 TEST_F(NamespaceEndCommentsFixerTest, DoesNotAddCommentAfterRBraceInPPDirective) {
   EXPECT_EQ("#define SAD \\\n"
             "namespace A { \\\n"
-            "  int i; \\\n"
+            "int i; \\\n"
             "}",
             fixNamespaceEndComments("#define SAD \\\n"
                                     "namespace A { \\\n"
-                                    "  int i; \\\n"
+                                    "int i; \\\n"
                                     "}"));
 }
 
 TEST_F(NamespaceEndCommentsFixerTest, KeepsValidEndComment) {
   EXPECT_EQ("namespace {\n"
-            "  int i;\n"
+            "int i;\n"
             "} // end anonymous namespace",
             fixNamespaceEndComments("namespace {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "} // end anonymous namespace"));
   EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
+            "int i;\n"
             "} /* end of namespace A */",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "} /* end of namespace A */"));
   EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
+            "int i;\n"
             "}   //   namespace A",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "}   //   namespace A"));
   EXPECT_EQ("namespace A::B {\n"
-            "  int i;\n"
+            "int i;\n"
             "} // end namespace A::B",
             fixNamespaceEndComments("namespace A::B {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "} // end namespace A::B"));
   EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
+            "int i;\n"
             "}; // end namespace A",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "}; // end namespace A"));
   EXPECT_EQ("namespace {\n"
-            "  int i;\n"
+            "int i;\n"
             "}; /* unnamed namespace */",
             fixNamespaceEndComments("namespace {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "}; /* unnamed namespace */"));
 }
 
 TEST_F(NamespaceEndCommentsFixerTest, UpdatesInvalidEndLineComment) {
   EXPECT_EQ("namespace {\n"
-            "  int i;\n"
+            "int i;\n"
             "} // namespace",
             fixNamespaceEndComments("namespace {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "} // namespace A"));
   EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
+            "int i;\n"
             "} // namespace A",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "} // namespace"));
   EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
+            "int i;\n"
             "} // namespace A",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "} //"));
   EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
-            "} // namespace A",
-            fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
-                                    "} //"));
-  EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
-            "} // namespace A",
-            fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
-                                    "} // banamespace A"));
-  EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
+            "int i;\n"
             "}; // namespace A",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
+                                    "}; //"));
+
+  EXPECT_EQ("namespace A {\n"
+            "int i;\n"
+            "} // namespace A",
+            fixNamespaceEndComments("namespace A {\n"
+                                    "int i;\n"
+                                    "} // banamespace A"));
+  EXPECT_EQ("namespace A {\n"
+            "int i;\n"
+            "}; // namespace A",
+            fixNamespaceEndComments("namespace A {\n"
+                                    "int i;\n"
                                     "}; // banamespace A"));
   // Updates invalid line comments even for short namespaces.
   EXPECT_EQ("namespace A {} // namespace A",
@@ -447,40 +448,40 @@ TEST_F(NamespaceEndCommentsFixerTest, UpdatesInvalidEndLineComment) {
 
 TEST_F(NamespaceEndCommentsFixerTest, UpdatesInvalidEndBlockComment) {
   EXPECT_EQ("namespace {\n"
-            "  int i;\n"
+            "int i;\n"
             "} // namespace",
             fixNamespaceEndComments("namespace {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "} /* namespace A */"));
   EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
+            "int i;\n"
             "}  // namespace A",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "}  /* end namespace */"));
   EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
+            "int i;\n"
             "} // namespace A",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "} /**/"));
   EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
+            "int i;\n"
             "} // namespace A",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "} /* end unnamed namespace */"));
   EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
+            "int i;\n"
             "} // namespace A",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "} /* banamespace A */"));
   EXPECT_EQ("namespace A {\n"
-            "  int i;\n"
+            "int i;\n"
             "}; // namespace A",
             fixNamespaceEndComments("namespace A {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "}; /* banamespace A */"));
   EXPECT_EQ("namespace A {} // namespace A",
             fixNamespaceEndComments("namespace A {} /**/"));
@@ -495,7 +496,7 @@ TEST_F(NamespaceEndCommentsFixerTest,
             "#elseif\n"
             "namespace B {\n"
             "#endif\n"
-            "  int i;\n"
+            "int i;\n"
             "}\n"
             "}\n",
             fixNamespaceEndComments("#ifdef 1\n"
@@ -503,7 +504,7 @@ TEST_F(NamespaceEndCommentsFixerTest,
                                     "#elseif\n"
                                     "namespace B {\n"
                                     "#endif\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "}\n"
                                     "}\n"));
 }
@@ -643,7 +644,7 @@ TEST_F(NamespaceEndCommentsFixerTest,
             "#elseif\n"
             "namespace B {\n"
             "#endif\n"
-            "  int i;\n"
+            "int i;\n"
             "}\n"
             "}\n",
             fixNamespaceEndComments("#ifdef 1\n"
@@ -651,26 +652,26 @@ TEST_F(NamespaceEndCommentsFixerTest,
                                     "#elseif\n"
                                     "namespace B {\n"
                                     "#endif\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "}\n"
                                     "}\n"));
   EXPECT_EQ("namespace {\n"
-            "  int i;\n"
-            "  int j;\n"
+            "int i;\n"
+            "int j;\n"
             "}// namespace\n"
             "#if A\n"
-            "  int i;\n"
+            "int i;\n"
             "#else\n"
-            "  int j;\n"
+            "int j;\n"
             "#endif",
             fixNamespaceEndComments("namespace {\n"
-                                    "  int i;\n"
-                                    "  int j;\n"
+                                    "int i;\n"
+                                    "int j;\n"
                                     "}\n"
                                     "#if A\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "#else\n"
-                                    "  int j;\n"
+                                    "int j;\n"
                                     "#endif"));
   EXPECT_EQ("#if A\n"
             "namespace A {\n"
@@ -757,11 +758,11 @@ TEST_F(NamespaceEndCommentsFixerTest,
 TEST_F(NamespaceEndCommentsFixerTest,
        DoesNotAddEndCommentForUnbalancedRBracesAfterNamespaceEnd) {
   EXPECT_EQ("namespace {\n"
-            "  int i;\n"
+            "int i;\n"
             "} // namespace\n"
             "}",
             fixNamespaceEndComments("namespace {\n"
-                                    "  int i;\n"
+                                    "int i;\n"
                                     "} // namespace\n"
                                     "}"));
 }

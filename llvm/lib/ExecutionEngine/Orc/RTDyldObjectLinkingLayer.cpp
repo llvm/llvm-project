@@ -175,7 +175,7 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
       auto I = R.getSymbols().find(InternedName);
 
       if (OverrideObjectFlags && I != R.getSymbols().end())
-        Flags = JITSymbolFlags::stripTransientFlags(I->second);
+        Flags = I->second;
       else if (AutoClaimObjectSymbols && I == R.getSymbols().end())
         ExtraSymbolsToClaim[InternedName] = Flags;
     }

@@ -6029,12 +6029,16 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::lround:
-  case Intrinsic::llround: {
+  case Intrinsic::llround:
+  case Intrinsic::lrint:
+  case Intrinsic::llrint: {
     unsigned Opcode;
     switch (Intrinsic) {
     default: llvm_unreachable("Impossible intrinsic");  // Can't reach here.
     case Intrinsic::lround:  Opcode = ISD::LROUND;  break;
     case Intrinsic::llround: Opcode = ISD::LLROUND; break;
+    case Intrinsic::lrint:   Opcode = ISD::LRINT;   break;
+    case Intrinsic::llrint:  Opcode = ISD::LLRINT;  break;
     }
 
     EVT RetVT = TLI.getValueType(DAG.getDataLayout(), I.getType());

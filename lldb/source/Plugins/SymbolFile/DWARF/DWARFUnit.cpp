@@ -789,3 +789,32 @@ uint32_t DWARFUnit::GetHeaderByteSize() const {
   }
   llvm_unreachable("invalid UnitType.");
 }
+
+llvm::Expected<DWARFRangeList>
+DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) const {
+  const DWARFDebugRangesBase *debug_ranges;
+  llvm::StringRef section;
+  if (GetVersion() <= 4) {
+    debug_ranges = m_dwarf->GetDebugRanges();
+    section = "debug_ranges";
+  } else {
+    debug_ranges = m_dwarf->GetDebugRngLists();
+    section = "debug_rnglists";
+  }
+  if (!debug_ranges)
+    return llvm::make_error<llvm::object::GenericBinaryError>("No " + section +
+                                                              " section");
+
+  DWARFRangeList ranges;
+  debug_ranges->FindRanges(this, offset, ranges);
+  return ranges;
+}
+
+llvm::Expected<DWARFRangeList>
+DWARFUnit::FindRnglistFromIndex(uint32_t index) const {
+  const DWARFDebugRangesBase *debug_rnglists = m_dwarf->GetDebugRngLists();
+  if (!debug_rnglists)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "No debug_rnglists section");
+  return FindRnglistFromOffset(debug_rnglists->GetOffset(index));
+}

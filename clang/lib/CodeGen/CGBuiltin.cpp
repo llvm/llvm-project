@@ -1741,6 +1741,22 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_llroundl:
       return RValue::get(emitFPToIntRoundBuiltin(*this, E, Intrinsic::llround));
 
+    case Builtin::BIlrint:
+    case Builtin::BIlrintf:
+    case Builtin::BIlrintl:
+    case Builtin::BI__builtin_lrint:
+    case Builtin::BI__builtin_lrintf:
+    case Builtin::BI__builtin_lrintl:
+      return RValue::get(emitFPToIntRoundBuiltin(*this, E, Intrinsic::lrint));
+
+    case Builtin::BIllrint:
+    case Builtin::BIllrintf:
+    case Builtin::BIllrintl:
+    case Builtin::BI__builtin_llrint:
+    case Builtin::BI__builtin_llrintf:
+    case Builtin::BI__builtin_llrintl:
+      return RValue::get(emitFPToIntRoundBuiltin(*this, E, Intrinsic::llrint));
+
     default:
       break;
     }

@@ -130,6 +130,17 @@ define i1 @nnan_fneg() {
   ret i1 %tmp
 }
 
+define i1 @nnan_unary_fneg() {
+; CHECK-LABEL: @nnan_unary_fneg(
+; CHECK-NEXT:    [[NNAN:%.*]] = call nnan double @func()
+; CHECK-NEXT:    ret i1 true
+;
+  %nnan = call nnan double @func()
+  %op = fneg double %nnan
+  %tmp = fcmp ord double %op, %op
+  ret i1 %tmp
+}
+
 define i1 @fpext_maybe_nan(float %arg0) {
 ; CHECK-LABEL: @fpext_maybe_nan(
 ; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord float [[ARG0:%.*]], 0.000000e+00

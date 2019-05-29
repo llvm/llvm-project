@@ -274,11 +274,17 @@ public:
   virtual void Profile(llvm::FoldingSetNodeID &ID) = 0;
 
   void dumpStack(
-      raw_ostream &OS, StringRef Indent = {}, const char *NL = "\n",
-      const char *Sep = "",
+      raw_ostream &Out, const char *NL = "\n",
       std::function<void(const LocationContext *)> printMoreInfoPerContext =
           [](const LocationContext *) {}) const;
-  void dumpStack() const;
+
+  void printJson(
+      raw_ostream &Out, const char *NL = "\n", unsigned int Space = 0,
+      bool IsDot = false,
+      std::function<void(const LocationContext *)> printMoreInfoPerContext =
+          [](const LocationContext *) {}) const;
+
+  void dump() const;
 
 public:
   static void ProfileCommon(llvm::FoldingSetNodeID &ID,

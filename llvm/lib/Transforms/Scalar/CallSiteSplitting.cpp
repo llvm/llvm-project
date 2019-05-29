@@ -183,6 +183,9 @@ static SmallVector<BasicBlock *, 2> getTwoPredecessors(BasicBlock *BB) {
 }
 
 static bool canSplitCallSite(CallSite CS, TargetTransformInfo &TTI) {
+  if (CS.isConvergent() || CS.cannotDuplicate())
+    return false;
+
   // FIXME: As of now we handle only CallInst. InvokeInst could be handled
   // without too much effort.
   Instruction *Instr = CS.getInstruction();

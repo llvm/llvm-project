@@ -120,6 +120,20 @@ class ScopBuilder {
   void buildScop(Region &R, AssumptionCache &AC,
                  OptimizationRemarkEmitter &ORE);
 
+  /// Create equivalence classes for required invariant accesses.
+  ///
+  /// These classes will consolidate multiple required invariant loads from the
+  /// same address in order to keep the number of dimensions in the SCoP
+  /// description small. For each such class equivalence class only one
+  /// representing element, hence one required invariant load, will be chosen
+  /// and modeled as parameter. The method
+  /// Scop::getRepresentingInvariantLoadSCEV() will replace each element from an
+  /// equivalence class with the representing element that is modeled. As a
+  /// consequence Scop::getIdForParam() will only return an id for the
+  /// representing element of each equivalence class, thus for each required
+  /// invariant location.
+  void buildInvariantEquivalenceClasses();
+
   /// Try to build a multi-dimensional fixed sized MemoryAccess from the
   /// Load/Store instruction.
   ///

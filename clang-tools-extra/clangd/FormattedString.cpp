@@ -9,6 +9,7 @@
 #include "clang/Basic/CharInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <cstddef>
 #include <string>
 
@@ -164,6 +165,28 @@ std::string FormattedString::renderAsPlainText() const {
       continue;
     }
     llvm_unreachable("unhanlded ChunkKind");
+  }
+  while (!R.empty() && isWhitespace(R.back()))
+    R.pop_back();
+  return R;
+}
+
+std::string FormattedString::renderForTests() const {
+  std::string R;
+  for (const auto &C : Chunks) {
+    switch (C.Kind) {
+    case ChunkKind::PlainText:
+      R += "text[" + C.Contents + "]";
+      break;
+    case ChunkKind::InlineCodeBlock:
+      R += "code[" + C.Contents + "]";
+      break;
+    case ChunkKind::CodeBlock:
+      if (!R.empty())
+        R += "\n";
+      R += llvm::formatv("codeblock({0}) [\n{1}\n]\n", C.Language, C.Contents);
+      break;
+    }
   }
   while (!R.empty() && isWhitespace(R.back()))
     R.pop_back();

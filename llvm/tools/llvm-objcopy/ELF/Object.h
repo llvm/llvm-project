@@ -17,6 +17,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include <cstddef>
 #include <cstdint>
@@ -168,6 +169,8 @@ public:
 
 #define MAKE_SEC_WRITER_FRIEND                                                 \
   friend class SectionWriter;                                                  \
+  friend class IHexSectionWriterBase;                                          \
+  friend class IHexSectionWriter;                                              \
   template <class ELFT> friend class ELFSectionWriter;                         \
   template <class ELFT> friend class ELFSectionSizer;
 
@@ -184,6 +187,114 @@ public:
   void visit(const DecompressedSection &Sec) override;
 
   explicit BinarySectionWriter(Buffer &Buf) : SectionWriter(Buf) {}
+};
+
+using IHexLineData = SmallVector<char, 64>;
+
+struct IHexRecord {
+  // Memory address of the record.
+  uint16_t Addr;
+  // Record type (see below).
+  uint16_t Type;
+  // Record data in hexadecimal form.
+  StringRef HexData;
+
+  // Helper method to get file length of the record
+  // including newline character
+  static size_t getLength(size_t DataSize) {
+    // :LLAAAATT[DD...DD]CC'
+    return DataSize * 2 + 11;
+  }
+
+  // Gets length of line in a file (getLength + CRLF).
+  static size_t getLineLength(size_t DataSize) {
+    return getLength(DataSize) + 2;
+  }
+
+  // Given type, address and data returns line which can
+  // be written to output file.
+  static IHexLineData getLine(uint8_t Type, uint16_t Addr,
+                              ArrayRef<uint8_t> Data);
+
+  // Calculates checksum of stringified record representation
+  // S must NOT contain leading ':' and trailing whitespace
+  // characters
+  static uint8_t getChecksum(StringRef S);
+
+  enum Type {
+    // Contains data and a 16-bit starting address for the data.
+    // The byte count specifies number of data bytes in the record.
+    Data = 0,
+    // Must occur exactly once per file in the last line of the file.
+    // The data field is empty (thus byte count is 00) and the address
+    // field is typically 0000.
+    EndOfFile = 1,
+    // The data field contains a 16-bit segment base address (thus byte
+    // count is always 02) compatible with 80x86 real mode addressing.
+    // The address field (typically 0000) is ignored. The segment address
+    // from the most recent 02 record is multiplied by 16 and added to each
+    // subsequent data record address to form the physical starting address
+    // for the data. This allows addressing up to one megabyte of address
+    // space.
+    SegmentAddr = 2,
+    // or 80x86 processors, specifies the initial content of the CS:IP
+    // registers. The address field is 0000, the byte count is always 04,
+    // the first two data bytes are the CS value, the latter two are the
+    // IP value.
+    StartAddr80x86 = 3,
+    // Allows for 32 bit addressing (up to 4GiB). The record's address field
+    // is ignored (typically 0000) and its byte count is always 02. The two
+    // data bytes (big endian) specify the upper 16 bits of the 32 bit
+    // absolute address for all subsequent type 00 records
+    ExtendedAddr = 4,
+    // The address field is 0000 (not used) and the byte count is always 04.
+    // The four data bytes represent a 32-bit address value. In the case of
+    // 80386 and higher CPUs, this address is loaded into the EIP register.
+    StartAddr = 5,
+    // We have no other valid types
+    InvalidType = 6
+  };
+};
+
+// Base class for IHexSectionWriter. This class implements writing algorithm,
+// but doesn't actually write records. It is used for output buffer size
+// calculation in IHexWriter::finalize.
+class IHexSectionWriterBase : public BinarySectionWriter {
+  // 20-bit segment address
+  uint32_t SegmentAddr = 0;
+  // Extended linear address
+  uint32_t BaseAddr = 0;
+
+  // Write segment address corresponding to 'Addr'
+  uint64_t writeSegmentAddr(uint64_t Addr);
+  // Write extended linear (base) address corresponding to 'Addr'
+  uint64_t writeBaseAddr(uint64_t Addr);
+
+protected:
+  // Offset in the output buffer
+  uint64_t Offset = 0;
+
+  void writeSection(const SectionBase *Sec, ArrayRef<uint8_t> Data);
+  virtual void writeData(uint8_t Type, uint16_t Addr, ArrayRef<uint8_t> Data);
+
+public:
+  explicit IHexSectionWriterBase(Buffer &Buf) : BinarySectionWriter(Buf) {}
+
+  uint64_t getBufferOffset() const { return Offset; }
+  void visit(const Section &Sec) final;
+  void visit(const OwnedDataSection &Sec) final;
+  void visit(const StringTableSection &Sec) override;
+  void visit(const DynamicRelocationSection &Sec) final;
+  using BinarySectionWriter::visit;
+};
+
+// Real IHEX section writer
+class IHexSectionWriter : public IHexSectionWriterBase {
+public:
+  IHexSectionWriter(Buffer &Buf) : IHexSectionWriterBase(Buf) {}
+
+  void writeData(uint8_t Type, uint16_t Addr, ArrayRef<uint8_t> Data) override;
+  void visit(const StringTableSection &Sec) override;
 };
 
 class Writer {
@@ -243,6 +354,25 @@ public:
   Error finalize() override;
   Error write() override;
   BinaryWriter(Object &Obj, Buffer &Buf) : Writer(Obj, Buf) {}
+};
+
+class IHexWriter : public Writer {
+  struct SectionCompare {
+    bool operator()(const SectionBase *Lhs, const SectionBase *Rhs) const;
+  };
+
+  std::set<const SectionBase *, SectionCompare> Sections;
+  size_t TotalSize;
+
+  Error checkSection(const SectionBase &Sec);
+  uint64_t writeEntryPointRecord(uint8_t *Buf);
+  uint64_t writeEndOfFileRecord(uint8_t *Buf);
+
+public:
+  ~IHexWriter() {}
+  Error finalize() override;
+  Error write() override;
+  IHexWriter(Object &Obj, Buffer &Buf) : Writer(Obj, Buf) {}
 };
 
 class SectionBase {
@@ -361,6 +491,16 @@ public:
     OriginalOffset = std::numeric_limits<uint64_t>::max();
   }
 
+  OwnedDataSection(const Twine &SecName, uint64_t SecAddr, uint64_t SecFlags,
+                   uint64_t SecOff) {
+    Name = SecName.str();
+    Type = ELF::SHT_PROGBITS;
+    Addr = SecAddr;
+    Flags = SecFlags;
+    OriginalOffset = SecOff;
+  }
+
+  void appendHexData(StringRef HexData);
   void accept(SectionVisitor &Sec) const override;
   void accept(MutableSectionVisitor &Visitor) override;
 };

@@ -416,7 +416,16 @@ public:
 
   /// Represents whether an operation on the given constant range is known to
   /// always or never overflow.
-  enum class OverflowResult { AlwaysOverflows, MayOverflow, NeverOverflows };
+  enum class OverflowResult {
+    /// Always overflows in the direction of signed/unsigned min value.
+    AlwaysOverflowsLow,
+    /// Always overflows in the direction of signed/unsigned max value.
+    AlwaysOverflowsHigh,
+    /// May or may not overflow.
+    MayOverflow,
+    /// Never overflows.
+    NeverOverflows,
+  };
 
   /// Return whether unsigned add of the two ranges always/never overflows.
   OverflowResult unsignedAddMayOverflow(const ConstantRange &Other) const;

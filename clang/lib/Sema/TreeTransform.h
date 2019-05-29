@@ -11382,7 +11382,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
           break;
         }
         NewVDs.push_back(NewVD);
-        getSema().buildInitCaptureField(LSI, NewVD);
+        getSema().addInitCapture(LSI, NewVD);
       }
 
       if (Invalid)

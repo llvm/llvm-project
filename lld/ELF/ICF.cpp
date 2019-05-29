@@ -157,7 +157,7 @@ private:
 
 // Returns true if section S is subject of ICF.
 static bool isEligible(InputSection *S) {
-  if (!S->Live || S->KeepUnique || !(S->Flags & SHF_ALLOC))
+  if (!S->isLive() || S->KeepUnique || !(S->Flags & SHF_ALLOC))
     return false;
 
   // Don't merge writable sections. .data.rel.ro sections are marked as writable
@@ -496,7 +496,7 @@ template <class ELFT> void ICF<ELFT>::run() {
       // we want to remove duplicate implicit dependencies such as link order
       // and relocation sections.
       for (InputSection *IS : Sections[I]->DependentSections)
-        IS->Live = false;
+        IS->markDead();
     }
   });
 }

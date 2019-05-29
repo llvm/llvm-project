@@ -135,5 +135,21 @@ define void @callee_func_sgpr_spill_no_calls(i32 %in) #0 {
   ret void
 }
 
+; Has no spilled CSR VGPRs used for SGPR spilling, so no need to
+; enable all lanes and restore.
+
+; GCN-LABEL: {{^}}spill_only_csr_sgpr:
+; GCN: s_waitcnt
+; GCN-NEXT: v_writelane_b32 v0, s42, 0
+; GCN-NEXT: ;;#ASMSTART
+; GCN-NEXT: ; clobber s42
+; GCN-NEXT: ;;#ASMEND
+; GCN-NEXT: v_readlane_b32 s42, v0, 0
+; GCN-NEXT: s_setpc_b64
+define void @spill_only_csr_sgpr() {
+  call void asm sideeffect "; clobber s42", "~{s42}"()
+  ret void
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind "no-frame-pointer-elim"="true" }

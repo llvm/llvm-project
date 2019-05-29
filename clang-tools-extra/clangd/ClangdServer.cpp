@@ -10,11 +10,13 @@
 #include "ClangdUnit.h"
 #include "CodeComplete.h"
 #include "FindSymbols.h"
+#include "FormattedString.h"
 #include "Headers.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "TUScheduler.h"
 #include "Trace.h"
+#include "XRefs.h"
 #include "index/CanonicalIncludes.h"
 #include "index/FileIndex.h"
 #include "index/Merge.h"
@@ -462,7 +464,7 @@ void ClangdServer::findDocumentHighlights(
 
 void ClangdServer::findHover(PathRef File, Position Pos,
                              Callback<llvm::Optional<HoverInfo>> CB) {
-  auto Action = [Pos](Callback<llvm::Optional<HoverInfo>> CB, Path File,
+  auto Action = [Pos](decltype(CB) CB, Path File,
                       llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());

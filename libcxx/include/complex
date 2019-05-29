@@ -1449,10 +1449,10 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const complex<_Tp>& __x)
     return __os << __s.str();
 }
 
-#if _LIBCPP_STD_VER > 11 
+#if _LIBCPP_STD_VER > 11
 // Literal suffix for complex number literals [complex.literals]
 inline namespace literals
-{ 
+{
   inline namespace complex_literals
   {
     constexpr complex<long double> operator""il(long double __im)

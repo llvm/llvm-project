@@ -77,6 +77,8 @@ void test(void) {
   v4i32_r = __msa_ceqi_w(v4i32_a, 16);               // expected-error {{argument value 16 is outside the valid range [-16, 15]}}
   v2i64_r = __msa_ceqi_d(v2i64_a, 16);               // expected-error {{argument value 16 is outside the valid range [-16, 15]}}
 
+  int_r = __msa_cfcmsa(32);                          // expected-error {{argument value 32 is outside the valid range [0, 31]}}
+
   v16i8_r = __msa_clei_s_b(v16i8_a, 16);             // expected-error {{argument value 16 is outside the valid range [-16, 15]}}
   v8i16_r = __msa_clei_s_h(v8i16_a, 16);             // expected-error {{argument value 16 is outside the valid range [-16, 15]}}
   v4i32_r = __msa_clei_s_w(v4i32_a, 16);             // expected-error {{argument value 16 is outside the valid range [-16, 15]}}
@@ -106,6 +108,8 @@ void test(void) {
   int_r = __msa_copy_u_h(v8u16_a, 8);                // expected-error {{argument value 8 is outside the valid range [0, 7]}}
   int_r = __msa_copy_u_w(v4u32_a, 4);                // expected-error {{argument value 4 is outside the valid range [0, 3]}}
   ll_r  = __msa_copy_u_d(v2i64_a, 2);                // expected-error {{argument value 2 is outside the valid range [0, 1]}}
+
+  __builtin_msa_ctcmsa(32, 777);                     // expected-error {{argument value 32 is outside the valid range [0, 31]}}
 
   v16i8_r = __msa_insve_b(v16i8_r, 16, v16i8_a);     // expected-error {{argument value 16 is outside the valid range [0, 15]}}
   v8i16_r = __msa_insve_h(v8i16_r, 8, v8i16_a);      // expected-error {{argument value 8 is outside the valid range [0, 7]}}

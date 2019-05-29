@@ -713,6 +713,8 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::FROUND,     VT, Expand);
     setOperationAction(ISD::LROUND,     VT, Expand);
     setOperationAction(ISD::LLROUND,    VT, Expand);
+    setOperationAction(ISD::LRINT,      VT, Expand);
+    setOperationAction(ISD::LLRINT,     VT, Expand);
   }
 
   // Default ISD::TRAP to expand (which turns it into abort).

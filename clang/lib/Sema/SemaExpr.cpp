@@ -4050,32 +4050,11 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
 
       // Unknown size indication requires no size computation.
       // Otherwise, evaluate and record it.
-      if (auto Size = VAT->getSizeExpr()) {
-        if (!CSI->isVLATypeCaptured(VAT)) {
-          RecordDecl *CapRecord = nullptr;
-          if (auto LSI = dyn_cast<LambdaScopeInfo>(CSI)) {
-            CapRecord = LSI->Lambda;
-          } else if (auto CRSI = dyn_cast<CapturedRegionScopeInfo>(CSI)) {
-            CapRecord = CRSI->TheRecordDecl;
-          }
-          if (CapRecord) {
-            auto ExprLoc = Size->getExprLoc();
-            auto SizeType = Context.getSizeType();
-            // Build the non-static data member.
-            auto Field =
-                FieldDecl::Create(Context, CapRecord, ExprLoc, ExprLoc,
-                                  /*Id*/ nullptr, SizeType, /*TInfo*/ nullptr,
-                                  /*BW*/ nullptr, /*Mutable*/ false,
-                                  /*InitStyle*/ ICIS_NoInit);
-            Field->setImplicit(true);
-            Field->setAccess(AS_private);
-            Field->setCapturedVLAType(VAT);
-            CapRecord->addDecl(Field);
+      auto Size = VAT->getSizeExpr();
+      if (Size && !CSI->isVLATypeCaptured(VAT) &&
+          (isa<CapturedRegionScopeInfo>(CSI) || isa<LambdaScopeInfo>(CSI)))
+        CSI->addVLATypeCapture(Size->getExprLoc(), VAT, Context.getSizeType());
 
-            CSI->addVLATypeCapture(ExprLoc, SizeType);
-          }
-        }
-      }
       T = VAT->getElementType();
       break;
     }
@@ -13853,10 +13832,9 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   QualType BlockTy;
 
   // Set the captured variables on the block.
-  // FIXME: Share capture structure between BlockDecl and CapturingScopeInfo!
   SmallVector<BlockDecl::Capture, 4> Captures;
   for (Capture &Cap : BSI->Captures) {
-    if (Cap.isThisCapture())
+    if (Cap.isInvalid() || Cap.isThisCapture())
       continue;
     BlockDecl::Capture NewCap(Cap.getVariable(), Cap.isBlockCapture(),
                               Cap.isNested(), Cap.getInitExpr());
@@ -15013,6 +14991,42 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   }
 }
 
+/// Directly mark a variable odr-used. Given a choice, prefer to use
+/// MarkVariableReferenced since it does additional checks and then
+/// calls MarkVarDeclODRUsed.
+/// If the variable must be captured:
+///  - if FunctionScopeIndexToStopAt is null, capture it in the CurContext
+///  - else capture it in the DeclContext that maps to the
+///    *FunctionScopeIndexToStopAt on the FunctionScopeInfo stack.
+static void
+MarkVarDeclODRUsed(VarDecl *Var, SourceLocation Loc, Sema &SemaRef,
+                   const unsigned *const FunctionScopeIndexToStopAt) {
+  // Keep track of used but undefined variables.
+  // FIXME: We shouldn't suppress this warning for static data members.
+  if (Var->hasDefinition(SemaRef.Context) == VarDecl::DeclarationOnly &&
+      (!Var->isExternallyVisible() || Var->isInline() ||
+       SemaRef.isExternalWithNoLinkageType(Var)) &&
+      !(Var->isStaticDataMember() && Var->hasInit())) {
+    SourceLocation &old = SemaRef.UndefinedButUsed[Var->getCanonicalDecl()];
+    if (old.isInvalid())
+      old = Loc;
+  }
+  QualType CaptureType, DeclRefType;
+  SemaRef.tryCaptureVariable(Var, Loc, Sema::TryCapture_Implicit,
+    /*EllipsisLoc*/ SourceLocation(),
+    /*BuildAndDiagnose*/ true,
+    CaptureType, DeclRefType,
+    FunctionScopeIndexToStopAt);
+
+  Var->markUsed(SemaRef.Context);
+}
+
+void Sema::MarkCaptureUsedInEnclosingContext(VarDecl *Capture,
+                                             SourceLocation Loc,
+                                             unsigned CapturingScopeIndex) {
+  MarkVarDeclODRUsed(Capture, Loc, *this, &CapturingScopeIndex);
+}
+
 static void
 diagnoseUncapturableValueReference(Sema &S, SourceLocation loc,
                                    ValueDecl *var, DeclContext *DC) {
@@ -15176,31 +15190,36 @@ static bool captureInBlock(BlockScopeInfo *BSI, VarDecl *Var,
                                  QualType &CaptureType,
                                  QualType &DeclRefType,
                                  const bool Nested,
-                                 Sema &S) {
+                                 Sema &S, bool Invalid) {
   Expr *CopyExpr = nullptr;
   bool ByRef = false;
 
   // Blocks are not allowed to capture arrays, excepting OpenCL.
   // OpenCL v2.0 s1.12.5 (revision 40): arrays are captured by reference
   // (decayed to pointers).
-  if (!S.getLangOpts().OpenCL && CaptureType->isArrayType()) {
+  if (!Invalid && !S.getLangOpts().OpenCL && CaptureType->isArrayType()) {
     if (BuildAndDiagnose) {
       S.Diag(Loc, diag::err_ref_array_type);
       S.Diag(Var->getLocation(), diag::note_previous_decl)
       << Var->getDeclName();
+      Invalid = true;
+    } else {
+      return false;
     }
-    return false;
   }
 
   // Forbid the block-capture of autoreleasing variables.
-  if (CaptureType.getObjCLifetime() == Qualifiers::OCL_Autoreleasing) {
+  if (!Invalid &&
+      CaptureType.getObjCLifetime() == Qualifiers::OCL_Autoreleasing) {
     if (BuildAndDiagnose) {
       S.Diag(Loc, diag::err_arc_autoreleasing_capture)
         << /*block*/ 0;
       S.Diag(Var->getLocation(), diag::note_previous_decl)
         << Var->getDeclName();
+      Invalid = true;
+    } else {
+      return false;
     }
-    return false;
   }
 
   // Warn about implicitly autoreleasing indirect parameters captured by blocks.
@@ -15223,7 +15242,7 @@ static bool captureInBlock(BlockScopeInfo *BSI, VarDecl *Var,
 
     QualType PointeeTy = PT->getPointeeType();
 
-    if (PointeeTy->getAs<ObjCObjectPointerType>() &&
+    if (!Invalid && PointeeTy->getAs<ObjCObjectPointerType>() &&
         PointeeTy.getObjCLifetime() == Qualifiers::OCL_Autoreleasing &&
         !IsObjCOwnershipAttributedType(PointeeTy)) {
       if (BuildAndDiagnose) {
@@ -15287,11 +15306,10 @@ static bool captureInBlock(BlockScopeInfo *BSI, VarDecl *Var,
 
   // Actually capture the variable.
   if (BuildAndDiagnose)
-    BSI->addCapture(Var, HasBlocksAttr, ByRef, Nested, Loc,
-                    SourceLocation(), CaptureType, CopyExpr);
+    BSI->addCapture(Var, HasBlocksAttr, ByRef, Nested, Loc, SourceLocation(),
+                    CaptureType, CopyExpr, Invalid);
 
-  return true;
-
+  return !Invalid;
 }
 
 
@@ -15303,7 +15321,7 @@ static bool captureInCapturedRegion(CapturedRegionScopeInfo *RSI,
                                     QualType &CaptureType,
                                     QualType &DeclRefType,
                                     const bool RefersToCapturedVariable,
-                                    Sema &S) {
+                                    Sema &S, bool Invalid) {
   // By default, capture variables by reference.
   bool ByRef = true;
   // Using an LValue reference type is consistent with Lambdas (see below).
@@ -15328,18 +15346,6 @@ static bool captureInCapturedRegion(CapturedRegionScopeInfo *RSI,
     // The current implementation assumes that all variables are captured
     // by references. Since there is no capture by copy, no expression
     // evaluation will be needed.
-    RecordDecl *RD = RSI->TheRecordDecl;
-
-    FieldDecl *Field
-      = FieldDecl::Create(S.Context, RD, Loc, Loc, nullptr, CaptureType,
-                          S.Context.getTrivialTypeSourceInfo(CaptureType, Loc),
-                          nullptr, false, ICIS_NoInit);
-    Field->setImplicit(true);
-    Field->setAccess(AS_private);
-    RD->addDecl(Field);
-    if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP)
-      S.setOpenMPCaptureKind(Field, Var, RSI->OpenMPLevel);
-
     CopyExpr = new (S.Context) DeclRefExpr(
         S.Context, Var, RefersToCapturedVariable, DeclRefType, VK_LValue, Loc);
     Var->setReferenced(true);
@@ -15348,44 +15354,11 @@ static bool captureInCapturedRegion(CapturedRegionScopeInfo *RSI,
 
   // Actually capture the variable.
   if (BuildAndDiagnose)
-    RSI->addCapture(Var, /*isBlock*/false, ByRef, RefersToCapturedVariable, Loc,
-                    SourceLocation(), CaptureType, CopyExpr);
+    RSI->addCapture(Var, /*isBlock*/ false, ByRef, RefersToCapturedVariable,
+                    Loc, SourceLocation(), CaptureType, CopyExpr,
+                    Invalid);
 
-
-  return true;
-}
-
-/// Create a field within the lambda class for the variable
-/// being captured.
-static void addAsFieldToClosureType(Sema &S, LambdaScopeInfo *LSI,
-                                    QualType FieldType, QualType DeclRefType,
-                                    SourceLocation Loc,
-                                    bool RefersToCapturedVariable) {
-  CXXRecordDecl *Lambda = LSI->Lambda;
-
-  // Build the non-static data member.
-  FieldDecl *Field
-    = FieldDecl::Create(S.Context, Lambda, Loc, Loc, nullptr, FieldType,
-                        S.Context.getTrivialTypeSourceInfo(FieldType, Loc),
-                        nullptr, false, ICIS_NoInit);
-  // If the variable being captured has an invalid type, mark the lambda class
-  // as invalid as well.
-  if (!FieldType->isDependentType()) {
-    if (S.RequireCompleteType(Loc, FieldType, diag::err_field_incomplete)) {
-      Lambda->setInvalidDecl();
-      Field->setInvalidDecl();
-    } else {
-      NamedDecl *Def;
-      FieldType->isIncompleteType(&Def);
-      if (Def && Def->isInvalidDecl()) {
-        Lambda->setInvalidDecl();
-        Field->setInvalidDecl();
-      }
-    }
-  }
-  Field->setImplicit(true);
-  Field->setAccess(AS_private);
-  Lambda->addDecl(Field);
+  return !Invalid;
 }
 
 /// Capture the given variable in the lambda.
@@ -15399,8 +15372,7 @@ static bool captureInLambda(LambdaScopeInfo *LSI,
                             const Sema::TryCaptureKind Kind,
                             SourceLocation EllipsisLoc,
                             const bool IsTopScope,
-                            Sema &S) {
-
+                            Sema &S, bool Invalid) {
   // Determine whether we are capturing by reference or by value.
   bool ByRef = false;
   if (IsTopScope && Kind != Sema::TryCapture_Implicit) {
@@ -15441,33 +15413,30 @@ static bool captureInLambda(LambdaScopeInfo *LSI,
     }
 
     // Forbid the lambda copy-capture of autoreleasing variables.
-    if (CaptureType.getObjCLifetime() == Qualifiers::OCL_Autoreleasing) {
+    if (!Invalid &&
+        CaptureType.getObjCLifetime() == Qualifiers::OCL_Autoreleasing) {
       if (BuildAndDiagnose) {
         S.Diag(Loc, diag::err_arc_autoreleasing_capture) << /*lambda*/ 1;
         S.Diag(Var->getLocation(), diag::note_previous_decl)
           << Var->getDeclName();
+        Invalid = true;
+      } else {
+        return false;
       }
-      return false;
     }
 
     // Make sure that by-copy captures are of a complete and non-abstract type.
-    if (BuildAndDiagnose) {
+    if (!Invalid && BuildAndDiagnose) {
       if (!CaptureType->isDependentType() &&
           S.RequireCompleteType(Loc, CaptureType,
                                 diag::err_capture_of_incomplete_type,
                                 Var->getDeclName()))
-        return false;
-
-      if (S.RequireNonAbstractType(Loc, CaptureType,
-                                   diag::err_capture_of_abstract_type))
-        return false;
+        Invalid = true;
+      else if (S.RequireNonAbstractType(Loc, CaptureType,
+                                        diag::err_capture_of_abstract_type))
+        Invalid = true;
     }
   }
-
-  // Capture this variable in the lambda.
-  if (BuildAndDiagnose)
-    addAsFieldToClosureType(S, LSI, CaptureType, DeclRefType, Loc,
-                            RefersToCapturedVariable);
 
   // Compute the type of a reference to this captured variable.
   if (ByRef)
@@ -15486,9 +15455,10 @@ static bool captureInLambda(LambdaScopeInfo *LSI,
   // Add the capture.
   if (BuildAndDiagnose)
     LSI->addCapture(Var, /*IsBlock=*/false, ByRef, RefersToCapturedVariable,
-                    Loc, EllipsisLoc, CaptureType, /*CopyExpr=*/nullptr);
+                    Loc, EllipsisLoc, CaptureType, /*CopyExpr=*/nullptr,
+                    Invalid);
 
-  return true;
+  return !Invalid;
 }
 
 bool Sema::tryCaptureVariable(
@@ -15586,11 +15556,6 @@ bool Sema::tryCaptureVariable(
       }
       return true;
     }
-    // Certain capturing entities (lambdas, blocks etc.) are not allowed to capture
-    // certain types of variables (unnamed, variably modified types etc.)
-    // so check for eligibility.
-    if (!isVariableCapturable(CSI, Var, ExprLoc, BuildAndDiagnose, *this))
-       return true;
 
     // Try to capture variable-length arrays types.
     if (Var->getType()->isVariablyModifiedType()) {
@@ -15661,33 +15626,45 @@ bool Sema::tryCaptureVariable(
   // requirements, and adding captures if requested.
   // If the variable had already been captured previously, we start capturing
   // at the lambda nested within that one.
+  bool Invalid = false;
   for (unsigned I = ++FunctionScopesIndex, N = MaxFunctionScopesIndex + 1; I != N;
        ++I) {
     CapturingScopeInfo *CSI = cast<CapturingScopeInfo>(FunctionScopes[I]);
 
+    // Certain capturing entities (lambdas, blocks etc.) are not allowed to capture
+    // certain types of variables (unnamed, variably modified types etc.)
+    // so check for eligibility.
+    if (!Invalid)
+      Invalid =
+          !isVariableCapturable(CSI, Var, ExprLoc, BuildAndDiagnose, *this);
+
+    // After encountering an error, if we're actually supposed to capture, keep
+    // capturing in nested contexts to suppress any follow-on diagnostics.
+    if (Invalid && !BuildAndDiagnose)
+      return true;
+
     if (BlockScopeInfo *BSI = dyn_cast<BlockScopeInfo>(CSI)) {
-      if (!captureInBlock(BSI, Var, ExprLoc,
-                          BuildAndDiagnose, CaptureType,
-                          DeclRefType, Nested, *this))
-        return true;
+      Invalid = !captureInBlock(BSI, Var, ExprLoc, BuildAndDiagnose, CaptureType,
+                               DeclRefType, Nested, *this, Invalid);
       Nested = true;
     } else if (CapturedRegionScopeInfo *RSI = dyn_cast<CapturedRegionScopeInfo>(CSI)) {
-      if (!captureInCapturedRegion(RSI, Var, ExprLoc,
-                                   BuildAndDiagnose, CaptureType,
-                                   DeclRefType, Nested, *this))
-        return true;
+      Invalid = !captureInCapturedRegion(RSI, Var, ExprLoc, BuildAndDiagnose,
+                                         CaptureType, DeclRefType, Nested,
+                                         *this, Invalid);
       Nested = true;
     } else {
       LambdaScopeInfo *LSI = cast<LambdaScopeInfo>(CSI);
-      if (!captureInLambda(LSI, Var, ExprLoc,
-                           BuildAndDiagnose, CaptureType,
+      Invalid =
+          !captureInLambda(LSI, Var, ExprLoc, BuildAndDiagnose, CaptureType,
                            DeclRefType, Nested, Kind, EllipsisLoc,
-                            /*IsTopScope*/I == N - 1, *this))
-        return true;
+                           /*IsTopScope*/ I == N - 1, *this, Invalid);
       Nested = true;
     }
+
+    if (Invalid && !BuildAndDiagnose)
+      return true;
   }
-  return false;
+  return Invalid;
 }
 
 bool Sema::tryCaptureVariable(VarDecl *Var, SourceLocation Loc,

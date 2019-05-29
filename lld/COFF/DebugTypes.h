@@ -10,16 +10,12 @@
 #define LLD_COFF_DEBUGTYPES_H
 
 #include "llvm/Support/Error.h"
-#include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {
 namespace codeview {
 class PrecompRecord;
 class TypeServer2Record;
 } // namespace codeview
-namespace pdb {
-class NativeSession;
-}
 } // namespace llvm
 
 namespace lld {
@@ -31,28 +27,23 @@ class TpiSource {
 public:
   enum TpiKind { Regular, PCH, UsingPCH, PDB, UsingPDB };
 
-  TpiSource(TpiKind K, const ObjFile *F);
+  TpiSource(TpiKind K, ObjFile *F);
   virtual ~TpiSource() {}
 
   const TpiKind Kind;
-  const ObjFile *File;
+  ObjFile *File;
 };
 
-TpiSource *makeTpiSource(const ObjFile *F);
-TpiSource *makeUseTypeServerSource(const ObjFile *F,
-                                   const llvm::codeview::TypeServer2Record *TS);
-TpiSource *makePrecompSource(const ObjFile *F);
-TpiSource *makeUsePrecompSource(const ObjFile *F,
-                                const llvm::codeview::PrecompRecord *Precomp);
-
-void loadTypeServerSource(llvm::MemoryBufferRef M);
+TpiSource *makeTpiSource(ObjFile *F);
+TpiSource *makeTypeServerSource(ObjFile *F);
+TpiSource *makeUseTypeServerSource(ObjFile *F,
+                                   llvm::codeview::TypeServer2Record *TS);
+TpiSource *makePrecompSource(ObjFile *F);
+TpiSource *makeUsePrecompSource(ObjFile *F,
+                                llvm::codeview::PrecompRecord *Precomp);
 
 // Temporary interface to get the dependency
-template <typename T> const T &retrieveDependencyInfo(const TpiSource *Source);
-
-// Temporary interface until we move PDBLinker::maybeMergeTypeServerPDB here
-llvm::Expected<llvm::pdb::NativeSession *>
-findTypeServerSource(const ObjFile *F);
+template <typename T> const T &retrieveDependencyInfo(TpiSource *Source);
 
 } // namespace coff
 } // namespace lld

@@ -449,6 +449,20 @@ TEST(CompletionTest, Kinds) {
   Results = completions("nam^");
   EXPECT_THAT(Results.Completions,
               Has("namespace", CompletionItemKind::Snippet));
+
+  // Members of anonymous unions are of kind 'field'.
+  Results = completions(
+      R"cpp(
+        struct X{
+            union {
+              void *a;
+            };
+        };
+        auto u = X().^
+      )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      UnorderedElementsAre(AllOf(Named("a"), Kind(CompletionItemKind::Field))));
 }
 
 TEST(CompletionTest, NoDuplicates) {
@@ -2397,7 +2411,7 @@ TEST(CompletionTest, CursorInSnippets) {
   EXPECT_THAT(
       Results.Completions,
       Contains(AllOf(Named("while"),
-                     SnippetSuffix("(${1:condition}){${0:statements}\n}"))));
+                     SnippetSuffix("(${1:condition}){\n${0:statements}\n}"))));
   // However, snippets for functions must *not* end with $0.
   EXPECT_THAT(Results.Completions,
               Contains(AllOf(Named("while_foo"),

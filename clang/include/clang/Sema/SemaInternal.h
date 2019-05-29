@@ -59,36 +59,6 @@ inline bool DeclAttrsMatchCUDAMode(const LangOptions &LangOpts, Decl *D) {
   return isDeviceSideDecl == LangOpts.CUDAIsDevice;
 }
 
-// Directly mark a variable odr-used. Given a choice, prefer to use
-// MarkVariableReferenced since it does additional checks and then
-// calls MarkVarDeclODRUsed.
-// If the variable must be captured:
-//  - if FunctionScopeIndexToStopAt is null, capture it in the CurContext
-//  - else capture it in the DeclContext that maps to the
-//    *FunctionScopeIndexToStopAt on the FunctionScopeInfo stack.
-inline void MarkVarDeclODRUsed(VarDecl *Var,
-    SourceLocation Loc, Sema &SemaRef,
-    const unsigned *const FunctionScopeIndexToStopAt) {
-  // Keep track of used but undefined variables.
-  // FIXME: We shouldn't suppress this warning for static data members.
-  if (Var->hasDefinition(SemaRef.Context) == VarDecl::DeclarationOnly &&
-      (!Var->isExternallyVisible() || Var->isInline() ||
-       SemaRef.isExternalWithNoLinkageType(Var)) &&
-      !(Var->isStaticDataMember() && Var->hasInit())) {
-    SourceLocation &old = SemaRef.UndefinedButUsed[Var->getCanonicalDecl()];
-    if (old.isInvalid())
-      old = Loc;
-  }
-  QualType CaptureType, DeclRefType;
-  SemaRef.tryCaptureVariable(Var, Loc, Sema::TryCapture_Implicit,
-    /*EllipsisLoc*/ SourceLocation(),
-    /*BuildAndDiagnose*/ true,
-    CaptureType, DeclRefType,
-    FunctionScopeIndexToStopAt);
-
-  Var->markUsed(SemaRef.Context);
-}
-
 /// Return a DLL attribute from the declaration.
 inline InheritableAttr *getDLLAttr(Decl *D) {
   assert(!(D->hasAttr<DLLImportAttr>() && D->hasAttr<DLLExportAttr>()) &&
