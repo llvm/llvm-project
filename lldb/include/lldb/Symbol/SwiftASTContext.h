@@ -920,11 +920,5 @@ private:
   std::unique_ptr<SwiftPersistentExpressionState> m_persistent_state_up;
 };
 
-void printASTValidationInfo(
-    const swift::serialization::ValidationInfo &ast_info,
-    const swift::serialization::ExtendedValidationInfo &ext_ast_info,
-    const Module &module, llvm::StringRef module_buf);
-
-}
-
+} // namespace lldb_private
 #endif // #ifndef liblldb_SwiftASTContext_h_
