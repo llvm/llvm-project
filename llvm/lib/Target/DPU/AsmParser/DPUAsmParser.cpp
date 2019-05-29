@@ -92,6 +92,7 @@ public:
   DPUAsmParser(const MCSubtargetInfo &STI, MCAsmParser &parser,
                const MCInstrInfo &MII, const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, STI, MII), SubtargetInfo(STI) {
+    setAvailableFeatures(ComputeAvailableFeatures(SubtargetInfo.getFeatureBits()));
     MCAsmParserExtension::Initialize(parser);
   }
 
@@ -654,22 +655,19 @@ OperandMatchResultTy DPUAsmParser::parseAnyRegister(OperandVector &Operands) {
 
   SMLoc S = Token.getLoc();
 
-  if (Token.isNot(AsmToken::Percent)) {
+  if (Token.is(AsmToken::Percent)) {
+    Parser.Lex(); // % (before the register identifier)
+    Token = Parser.getTok();
+  }
+
+  if (Token.isNot(AsmToken::Identifier)) {
     return MatchOperand_NoMatch;
   }
 
-  Parser.Lex(); // % (before the register identifier)
-  auto IdToken = Parser.getTok();
-
-  if (IdToken.isNot(AsmToken::Identifier)) {
-    return MatchOperand_ParseFail;
-  }
-
-  unsigned RegNum = MatchRegisterName(IdToken.getIdentifier());
+  unsigned RegNum = MatchRegisterName(Token.getIdentifier());
 
   if (RegNum == 0) {
-    Error(S, "unknown register");
-    return MatchOperand_ParseFail;
+    return MatchOperand_NoMatch;
   }
 
   Parser.Lex(); // identifier
@@ -687,6 +685,10 @@ OperandMatchResultTy DPUAsmParser::parseAnyImmediate(OperandVector &Operands) {
   SMLoc End = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
 
   const MCExpr *ExprVal;
+
+  if (parseAnyRegister(Operands) == MatchOperand_Success) {
+    return MatchOperand_Success;
+  }
 
   if (Parser.parseExpression(ExprVal)) {
     return MatchOperand_NoMatch;

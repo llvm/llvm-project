@@ -55,7 +55,7 @@ void DPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   assert((Modifier == nullptr || Modifier[0] == 0) && "No modifiers supported");
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
-    O << "%" << getRegisterName(Op.getReg());
+    O << getRegisterName(Op.getReg());
   } else if (Op.isImm()) {
     O << "0x";
     O.write_hex((uint64_t)Op.getImm());
@@ -185,7 +185,7 @@ void DPUInstPrinter::printMemOperandWithImm24(const MCInst *MI,
   const MCOperand &OffsetOp = MI->getOperand(OpNo + 1);
   assert(OffsetOp.isImm() && "offset to address operand is not an immediate");
   assert(RegOp.isReg() && "base to address operand is not a register");
-  O << "%" << getRegisterName(RegOp.getReg()) << ", "
+  O << getRegisterName(RegOp.getReg()) << ", "
     << formatDec(OffsetOp.getImm());
 }
 

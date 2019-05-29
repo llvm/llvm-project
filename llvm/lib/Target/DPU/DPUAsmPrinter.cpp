@@ -77,7 +77,7 @@ void DPUAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
 
   switch (MO.getType()) {
   case MachineOperand::MO_Register:
-    O << "%" << DPUInstPrinter::getRegisterName(MO.getReg());
+    O << DPUInstPrinter::getRegisterName(MO.getReg());
     break;
 
   case MachineOperand::MO_Immediate:

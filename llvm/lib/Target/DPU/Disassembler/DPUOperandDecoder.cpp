@@ -70,7 +70,7 @@ static MCDisassembler::DecodeStatus DecodeZeroOr_GP_REG(MCInst &MI,
                                                         unsigned RegNo) {
   if (RegNo > 24) {
     LLVM_DEBUG(dbgs() << "ERROR: register #" << RegNo
-                      << " is not a valid GP_REG nor %zero\n");
+                      << " is not a valid GP_REG nor zero\n");
     return MCDisassembler::Fail;
   }
   return Decode_32RegisterClass(MI, RegNo);
