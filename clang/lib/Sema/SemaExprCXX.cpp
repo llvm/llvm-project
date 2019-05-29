@@ -1135,39 +1135,15 @@ Sema::CXXThisScopeRAII::~CXXThisScopeRAII() {
 }
 
 static Expr *captureThis(Sema &S, ASTContext &Context, RecordDecl *RD,
-                         QualType ThisTy, SourceLocation Loc,
-                         const bool ByCopy) {
-
-  QualType AdjustedThisTy = ThisTy;
-  // The type of the corresponding data member (not a 'this' pointer if 'by
-  // copy').
-  QualType CaptureThisFieldTy = ThisTy;
+                         QualType ThisTy, QualType CaptureType,
+                         SourceLocation Loc, const bool ByCopy) {
+  Expr *This = new (Context) CXXThisExpr(Loc, ThisTy, /*isImplicit*/ true);
   if (ByCopy) {
-    // If we are capturing the object referred to by '*this' by copy, ignore any
-    // cv qualifiers inherited from the type of the member function for the type
-    // of the closure-type's corresponding data member and any use of 'this'.
-    CaptureThisFieldTy = ThisTy->getPointeeType();
-    CaptureThisFieldTy.removeLocalCVRQualifiers(Qualifiers::CVRMask);
-    AdjustedThisTy = Context.getPointerType(CaptureThisFieldTy);
-  }
-
-  FieldDecl *Field = FieldDecl::Create(
-      Context, RD, Loc, Loc, nullptr, CaptureThisFieldTy,
-      Context.getTrivialTypeSourceInfo(CaptureThisFieldTy, Loc), nullptr, false,
-      ICIS_NoInit);
-
-  Field->setImplicit(true);
-  Field->setAccess(AS_private);
-  RD->addDecl(Field);
-  Expr *This =
-      new (Context) CXXThisExpr(Loc, ThisTy, /*isImplicit*/ true);
-  if (ByCopy) {
-    Expr *StarThis =  S.CreateBuiltinUnaryOp(Loc,
-                                      UO_Deref,
-                                      This).get();
-    InitializedEntity Entity = InitializedEntity::InitializeLambdaCapture(
-      nullptr, CaptureThisFieldTy, Loc);
-    InitializationKind InitKind = InitializationKind::CreateDirect(Loc, Loc, Loc);
+    Expr *StarThis = S.CreateBuiltinUnaryOp(Loc, UO_Deref, This).get();
+    InitializedEntity Entity =
+        InitializedEntity::InitializeLambdaCapture(nullptr, CaptureType, Loc);
+    InitializationKind InitKind =
+        InitializationKind::CreateDirect(Loc, Loc, Loc);
     InitializationSequence Init(S, Entity, InitKind, StarThis);
     ExprResult ER = Init.Perform(S, Entity, InitKind, StarThis);
     if (ER.isInvalid()) return nullptr;
@@ -1273,21 +1249,32 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
     CapturingScopeInfo *CSI = cast<CapturingScopeInfo>(FunctionScopes[idx]);
     Expr *ThisExpr = nullptr;
 
+    // The type of the corresponding data member (not a 'this' pointer if 'by
+    // copy').
+    QualType CaptureType = ThisTy;
+    if (ByCopy) {
+      // If we are capturing the object referred to by '*this' by copy, ignore
+      // any cv qualifiers inherited from the type of the member function for
+      // the type of the closure-type's corresponding data member and any use
+      // of 'this'.
+      CaptureType = ThisTy->getPointeeType();
+      CaptureType.removeLocalCVRQualifiers(Qualifiers::CVRMask);
+    }
+
     if (LambdaScopeInfo *LSI = dyn_cast<LambdaScopeInfo>(CSI)) {
       // For lambda expressions, build a field and an initializing expression,
       // and capture the *enclosing object* by copy only if this is the first
       // iteration.
-      ThisExpr = captureThis(*this, Context, LSI->Lambda, ThisTy, Loc,
-                             ByCopy && idx == MaxFunctionScopesIndex);
+      ThisExpr = captureThis(*this, Context, LSI->Lambda, ThisTy, CaptureType,
+                             Loc, ByCopy && idx == MaxFunctionScopesIndex);
 
     } else if (CapturedRegionScopeInfo *RSI
         = dyn_cast<CapturedRegionScopeInfo>(FunctionScopes[idx]))
-      ThisExpr =
-          captureThis(*this, Context, RSI->TheRecordDecl, ThisTy, Loc,
-                      false/*ByCopy*/);
+      ThisExpr = captureThis(*this, Context, RSI->TheRecordDecl, ThisTy,
+                             CaptureType, Loc, false /*ByCopy*/);
 
     bool isNested = NumCapturingClosures > 1;
-    CSI->addThisCapture(isNested, Loc, ThisExpr, ByCopy);
+    CSI->addThisCapture(isNested, Loc, CaptureType, ThisExpr, ByCopy);
   }
   return false;
 }
@@ -7495,11 +7482,9 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
     // capture the variable in that lambda (and all its enclosing lambdas).
     if (const Optional<unsigned> Index =
             getStackIndexOfNearestEnclosingCaptureCapableLambda(
-                S.FunctionScopes, Var, S)) {
-      const unsigned FunctionScopeIndexOfCapturableLambda = Index.getValue();
-      MarkVarDeclODRUsed(Var, VarExpr->getExprLoc(), S,
-                         &FunctionScopeIndexOfCapturableLambda);
-    }
+                S.FunctionScopes, Var, S))
+      S.MarkCaptureUsedInEnclosingContext(Var, VarExpr->getExprLoc(),
+                                          Index.getValue());
     const bool IsVarNeverAConstantExpression =
         VariableCanNeverBeAConstantExpression(Var, S.Context);
     if (!IsFullExprInstantiationDependent || IsVarNeverAConstantExpression) {

@@ -81,6 +81,14 @@ __mmask16 test__builtin_ia32_cmpps512_mask_rounding(__m512 __a, __m512 __b, __mm
   return __builtin_ia32_cmpps512_mask(__a, __b, 0, __u, 0); // expected-error {{invalid rounding argument}}
 }
 
+__m512 test__builtin_ia32_getmantps512_mask(__m512 a, __m512 b) {
+  return __builtin_ia32_getmantps512_mask(a, 0, b, (__mmask16)-1, 10); // expected-error {{invalid rounding argument}}
+}
+
+__m128 test__builtin_ia32_getmantss_round_mask(__m128 a, __m128 b, __m128 c) {
+  return __builtin_ia32_getmantss_round_mask(a, b, 0, c, (__mmask8)-1, 10); // expected-error {{invalid rounding argument}}
+}
+
 __m128i test_mm_mask_i32gather_epi32(__m128i a, int const *b, __m128i c, __m128i mask) {
   return __builtin_ia32_gatherd_d(a, b, c, mask, 5); // expected-error {{scale argument must be 1, 2, 4, or 8}}
 }

@@ -9,10 +9,10 @@ void test(int x) {
 // CHECK: `-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-target-data.c:3:1, line:6:1> line:3:6 test 'void (int)'
 // CHECK-NEXT:   |-ParmVarDecl {{.*}} <col:11, col:15> col:15 used x 'int'
 // CHECK-NEXT:   `-CompoundStmt {{.*}} <col:18, line:6:1>
-// CHECK-NEXT:     `-OMPTargetDataDirective {{.*}} <line:4:9, col:31>
+// CHECK-NEXT:     `-OMPTargetDataDirective {{.*}} <line:4:1, col:31>
 // CHECK-NEXT:       |-OMPMapClause {{.*}} <col:25, col:30>
 // CHECK-NEXT:       | `-DeclRefExpr {{.*}} <col:29> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT:       `-CapturedStmt {{.*}} <line:5:3>
 // CHECK-NEXT:         `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>
 // CHECK-NEXT:           |-NullStmt {{.*}} <col:3> openmp_structured_block
-// CHECK-NEXT:           `-ImplicitParamDecl {{.*}} <line:4:9> col:9 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-target-data.c:4:9) *const restrict'
+// CHECK-NEXT:           `-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-target-data.c:4:1) *const restrict'

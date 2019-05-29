@@ -4225,6 +4225,8 @@ public:
   void MarkVariableReferenced(SourceLocation Loc, VarDecl *Var);
   void MarkDeclRefReferenced(DeclRefExpr *E, const Expr *Base = nullptr);
   void MarkMemberReferenced(MemberExpr *E);
+  void MarkCaptureUsedInEnclosingContext(VarDecl *Capture, SourceLocation Loc,
+                                         unsigned CapturingScopeIndex);
 
   void UpdateMarkingForLValueToRValue(Expr *E);
   void CleanupVarDeclMarking();
@@ -5797,8 +5799,8 @@ public:
                                           IdentifierInfo *Id,
                                           unsigned InitStyle, Expr *Init);
 
-  /// Build the implicit field for an init-capture.
-  FieldDecl *buildInitCaptureField(sema::LambdaScopeInfo *LSI, VarDecl *Var);
+  /// Add an init-capture to a lambda scope.
+  void addInitCapture(sema::LambdaScopeInfo *LSI, VarDecl *Var);
 
   /// Note that we have finished the explicit captures for the
   /// given lambda.
@@ -5843,6 +5845,9 @@ public:
   /// diagnostic is emitted.
   bool DiagnoseUnusedLambdaCapture(SourceRange CaptureRange,
                                    const sema::Capture &From);
+
+  /// Build a FieldDecl suitable to hold the given capture.
+  FieldDecl *BuildCaptureField(RecordDecl *RD, const sema::Capture &Capture);
 
   /// Complete a lambda-expression having processed and attached the
   /// lambda body.
@@ -10712,8 +10717,8 @@ public:
   void CodeCompleteInitializer(Scope *S, Decl *D);
   void CodeCompleteAfterIf(Scope *S);
 
-  void CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
-                               bool EnteringContext, QualType BaseType);
+  void CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS, bool EnteringContext,
+                               QualType BaseType, QualType PreferredType);
   void CodeCompleteUsing(Scope *S);
   void CodeCompleteUsingDirective(Scope *S);
   void CodeCompleteNamespaceDecl(Scope *S);

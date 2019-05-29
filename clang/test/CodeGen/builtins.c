@@ -390,6 +390,15 @@ void test_float_builtin_ops(float F, double D, long double LD) {
 
   resli = __builtin_lroundl (LD);
   // CHECK: call i64 @llvm.lround.i64.f80
+
+  resli = __builtin_lrintf (F);
+  // CHECK: call i64 @llvm.lrint.i64.f32
+
+  resli = __builtin_lrint (D);
+  // CHECK: call i64 @llvm.lrint.i64.f64
+
+  resli = __builtin_lrintl (LD);
+  // CHECK: call i64 @llvm.lrint.i64.f80
 }
 
 // __builtin_longjmp isn't supported on all platforms, so only test it on X86.
