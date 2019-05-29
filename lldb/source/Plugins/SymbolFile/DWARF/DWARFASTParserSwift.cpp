@@ -298,7 +298,7 @@ Function *DWARFASTParserSwift::ParseFunctionFromDWARF(
   int call_file = 0;
   int call_line = 0;
   int call_column = 0;
-  DWARFExpression frame_base(die.GetCU());
+  DWARFExpression frame_base;
 
   if (die.Tag() != DW_TAG_subprogram)
     return NULL;
