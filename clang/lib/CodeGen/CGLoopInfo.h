@@ -63,10 +63,10 @@ struct LoopAttributes {
   /// Value for llvm.loop.ivdep.safelen metadata.
   unsigned IVDepSafelen;
 
-  /// Value for llvm.loop.ii metadata.
+  /// Value for llvm.loop.ii.count metadata.
   unsigned IInterval;
 
-  /// Value for llvm.loop.max_concurrency metadata.
+  /// Value for llvm.loop.max_concurrency.count metadata.
   unsigned MaxConcurrencyNThreads;
 
   /// llvm.unroll.

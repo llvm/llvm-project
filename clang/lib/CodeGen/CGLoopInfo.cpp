@@ -422,7 +422,7 @@ MDNode *LoopInfo::createMetadata(
   // Setting ii attribute with an initiation interval
   if (Attrs.IInterval > 0) {
     LLVMContext &Ctx = Header->getContext();
-    Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.ii"),
+    Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.ii.count"),
                         ConstantAsMetadata::get(ConstantInt::get(
                             llvm::Type::getInt32Ty(Ctx), Attrs.IInterval))};
     LoopProperties.push_back(MDNode::get(Ctx, Vals));
@@ -431,7 +431,7 @@ MDNode *LoopInfo::createMetadata(
   // Setting max_concurrency attribute with number of threads
   if (Attrs.MaxConcurrencyNThreads > 0) {
     LLVMContext &Ctx = Header->getContext();
-    Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.max_concurrency"),
+    Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.max_concurrency.count"),
                         ConstantAsMetadata::get(ConstantInt::get(
                             llvm::Type::getInt32Ty(Ctx),
                             Attrs.MaxConcurrencyNThreads))};
@@ -766,9 +766,9 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
   // 0 - 'llvm.loop.ivdep.enable' metadata will be emitted
   // n - 'llvm.loop.ivdep.safelen, i32 n' metadata will be emitted
   // For attribute ii:
-  // n - 'llvm.loop.ii, i32 n' metadata will be emitted
+  // n - 'llvm.loop.ii.count, i32 n' metadata will be emitted
   // For attribute max_concurrency:
-  // n - 'llvm.loop.max_concurrency, i32 n' metadata will be emitted
+  // n - 'llvm.loop.max_concurrency.count, i32 n' metadata will be emitted
   for (const auto *Attr : Attrs) {
     const IntelFPGAIVDepAttr *IntelFPGAIVDep =
       dyn_cast<IntelFPGAIVDepAttr>(Attr);

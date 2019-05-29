@@ -24,7 +24,7 @@ void boo() {
 }
 
 // CHECK: ![[MD_C]] = distinct !{![[MD_C]], ![[MD_ii:[0-9]+]]}
-// CHECK-NEXT: ![[MD_ii]] = !{!"llvm.loop.ii", i32 2}
+// CHECK-NEXT: ![[MD_ii]] = !{!"llvm.loop.ii.count", i32 2}
 void goo() {
   int a[10];
   [[intelfpga::ii(2)]]
@@ -33,7 +33,7 @@ void goo() {
 }
 
 // CHECK: ![[MD_D]] = distinct !{![[MD_D]], ![[MD_max_concurrency:[0-9]+]]}
-// CHECK-NEXT: ![[MD_max_concurrency]] = !{!"llvm.loop.max_concurrency", i32 2}
+// CHECK-NEXT: ![[MD_max_concurrency]] = !{!"llvm.loop.max_concurrency.count", i32 2}
 void zoo() {
   int a[10];
   [[intelfpga::max_concurrency(2)]]
