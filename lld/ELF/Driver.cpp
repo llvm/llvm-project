@@ -98,6 +98,8 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
   Tar = nullptr;
   memset(&In, 0, sizeof(In));
 
+  Partitions = {Partition()};
+
   SharedFile::VernauxNum = 0;
 
   Config->ProgName = Args[0];
@@ -1344,7 +1346,7 @@ static void replaceCommonSymbols() {
 
     auto *Bss = make<BssSection>("COMMON", S->Size, S->Alignment);
     Bss->File = S->File;
-    Bss->Live = !Config->GcSections;
+    Bss->markDead();
     InputSections.push_back(Bss);
     S->replace(Defined{S->File, S->getName(), S->Binding, S->StOther, S->Type,
                        /*Value=*/0, S->Size, Bss});
@@ -1430,6 +1432,55 @@ static void findKeepUniqueSections(opt::InputArgList &Args) {
         markAddrsig(S);
     }
   }
+}
+
+// This function reads a symbol partition specification section. These sections
+// are used to control which partition a symbol is allocated to. See
+// https://lld.llvm.org/Partitions.html for more details on partitions.
+template <typename ELFT>
+static void readSymbolPartitionSection(InputSectionBase *S) {
+  // Read the relocation that refers to the partition's entry point symbol.
+  Symbol *Sym;
+  if (S->AreRelocsRela)
+    Sym = &S->getFile<ELFT>()->getRelocTargetSym(S->template relas<ELFT>()[0]);
+  else
+    Sym = &S->getFile<ELFT>()->getRelocTargetSym(S->template rels<ELFT>()[0]);
+  if (!isa<Defined>(Sym) || !Sym->includeInDynsym())
+    return;
+
+  StringRef PartName = reinterpret_cast<const char *>(S->data().data());
+  for (Partition &Part : Partitions) {
+    if (Part.Name == PartName) {
+      Sym->Partition = Part.getNumber();
+      return;
+    }
+  }
+
+  // Forbid partitions from being used on incompatible targets, and forbid them
+  // from being used together with various linker features that assume a single
+  // set of output sections.
+  if (Script->HasSectionsCommand)
+    error(toString(S->File) +
+          ": partitions cannot be used with the SECTIONS command");
+  if (Script->hasPhdrsCommands())
+    error(toString(S->File) +
+          ": partitions cannot be used with the PHDRS command");
+  if (!Config->SectionStartMap.empty())
+    error(toString(S->File) + ": partitions cannot be used with "
+                              "--section-start, -Ttext, -Tdata or -Tbss");
+  if (Config->EMachine == EM_MIPS)
+    error(toString(S->File) + ": partitions cannot be used on this target");
+
+  // Impose a limit of no more than 254 partitions. This limit comes from the
+  // sizes of the Partition fields in InputSectionBase and Symbol, as well as
+  // the amount of space devoted to the partition number in RankFlags.
+  if (Partitions.size() == 254)
+    fatal("may not have more than 254 partitions");
+
+  Partitions.emplace_back();
+  Partition &NewPart = Partitions.back();
+  NewPart.Name = PartName;
+  Sym->Partition = NewPart.getNumber();
 }
 
 template <class ELFT> static Symbol *addUndefined(StringRef Name) {
@@ -1700,13 +1751,17 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     for (InputSectionBase *S : F->getSections())
       InputSections.push_back(cast<InputSection>(S));
 
-  // We do not want to emit debug sections if --strip-all
-  // or -strip-debug are given.
-  if (Config->Strip != StripPolicy::None) {
-    llvm::erase_if(InputSections, [](InputSectionBase *S) {
-      return S->Name.startswith(".debug") || S->Name.startswith(".zdebug");
-    });
-  }
+  llvm::erase_if(InputSections, [](InputSectionBase *S) {
+    if (S->Type == SHT_LLVM_SYMPART) {
+      readSymbolPartitionSection<ELFT>(S);
+      return true;
+    }
+
+    // We do not want to emit debug sections if --strip-all
+    // or -strip-debug are given.
+    return Config->Strip != StripPolicy::None &&
+           (S->Name.startswith(".debug") || S->Name.startswith(".zdebug"));
+  });
 
   Config->EFlags = Target->calcEFlags();
   // MaxPageSize (sometimes called abi page size) is the maximum page size that

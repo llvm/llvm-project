@@ -43,8 +43,7 @@ public:
                             // (.debug_loclists/.debug_loclists.dwo).
   };
 
-  /// Constructor
-  explicit DWARFExpression(DWARFUnit *dwarf_cu);
+  DWARFExpression();
 
   /// Constructor
   ///
@@ -58,7 +57,7 @@ public:
   /// \param[in] data_length
   ///     The byte length of the location expression.
   DWARFExpression(lldb::ModuleSP module, const DataExtractor &data,
-                  DWARFUnit *dwarf_cu, lldb::offset_t data_offset,
+                  const DWARFUnit *dwarf_cu, lldb::offset_t data_offset,
                   lldb::offset_t data_length);
 
   /// Destructor
@@ -132,6 +131,9 @@ public:
 
   bool Update_DW_OP_addr(lldb::addr_t file_addr);
 
+  void UpdateValue(uint64_t const_value, lldb::offset_t const_value_byte_size,
+                   uint8_t addr_byte_size);
+
   void SetModule(const lldb::ModuleSP &module) { m_module_wp = module; }
 
   bool ContainsThreadLocalStorage() const;
@@ -140,66 +142,6 @@ public:
       lldb::ModuleSP new_module_sp,
       std::function<lldb::addr_t(lldb::addr_t file_addr)> const
           &link_address_callback);
-
-  /// Make the expression parser read its location information from a given
-  /// data source.  Does not change the offset and length
-  ///
-  /// \param[in] data
-  ///     A data extractor configured to read the DWARF location expression's
-  ///     bytecode.
-  void SetOpcodeData(const DataExtractor &data);
-
-  /// Make the expression parser read its location information from a given
-  /// data source
-  ///
-  /// \param[in] module_sp
-  ///     The module that defines the DWARF expression.
-  ///
-  /// \param[in] data
-  ///     A data extractor configured to read the DWARF location expression's
-  ///     bytecode.
-  ///
-  /// \param[in] data_offset
-  ///     The offset of the location expression in the extractor.
-  ///
-  /// \param[in] data_length
-  ///     The byte length of the location expression.
-  void SetOpcodeData(lldb::ModuleSP module_sp, const DataExtractor &data,
-                     lldb::offset_t data_offset, lldb::offset_t data_length);
-
-  /// Copy the DWARF location expression into a local buffer.
-  ///
-  /// It is a good idea to copy the data so we don't keep the entire object
-  /// file worth of data around just for a few bytes of location expression.
-  /// LLDB typically will mmap the entire contents of debug information files,
-  /// and if we use SetOpcodeData, it will get a shared reference to all of
-  /// this data for the and cause the object file to have to stay around. Even
-  /// worse, a very very large ".a" that contains one or more .o files could
-  /// end up being referenced. Location lists are typically small so even
-  /// though we are copying the data, it shouldn't amount to that much for the
-  /// variables we end up parsing.
-  ///
-  /// \param[in] module_sp
-  ///     The module that defines the DWARF expression.
-  ///
-  /// \param[in] data
-  ///     A data extractor configured to read and copy the DWARF
-  ///     location expression's bytecode.
-  ///
-  /// \param[in] data_offset
-  ///     The offset of the location expression in the extractor.
-  ///
-  /// \param[in] data_length
-  ///     The byte length of the location expression.
-  void CopyOpcodeData(lldb::ModuleSP module_sp, const DataExtractor &data,
-                      lldb::offset_t data_offset, lldb::offset_t data_length);
-
-  void CopyOpcodeData(const void *data, lldb::offset_t data_length,
-                      lldb::ByteOrder byte_order, uint8_t addr_byte_size);
-
-  void CopyOpcodeData(uint64_t const_value,
-                      lldb::offset_t const_value_byte_size,
-                      uint8_t addr_byte_size);
 
   /// Tells the expression that it refers to a location list.
   ///
@@ -294,7 +236,7 @@ public:
   ///     details of the failure are provided through it.
   static bool Evaluate(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
                        lldb::ModuleSP opcode_ctx, const DataExtractor &opcodes,
-                       DWARFUnit *dwarf_cu, const lldb::offset_t offset,
+                       const DWARFUnit *dwarf_cu, const lldb::offset_t offset,
                        const lldb::offset_t length,
                        const lldb::RegisterKind reg_set,
                        const Value *initial_value_ptr,
@@ -324,7 +266,7 @@ public:
 
   bool MatchesOperand(StackFrame &frame, const Instruction::Operand &op);
 
-protected:
+private:
   /// Pretty-prints the location expression to a stream
   ///
   /// \param[in] stream
@@ -355,20 +297,24 @@ protected:
   bool GetOpAndEndOffsets(StackFrame &frame, lldb::offset_t &op_offset,
                           lldb::offset_t &end_offset);
 
-  /// Classes that inherit from DWARFExpression can see and modify these
+  /// Module which defined this expression.
+  lldb::ModuleWP m_module_wp;
 
-  lldb::ModuleWP m_module_wp; ///< Module which defined this expression.
-  DataExtractor m_data; ///< A data extractor capable of reading opcode bytes
-  DWARFUnit *m_dwarf_cu; ///< The DWARF compile unit this expression
-                                ///belongs to. It is used
-  ///< to evaluate values indexing into the .debug_addr section (e.g.
-  ///< DW_OP_GNU_addr_index, DW_OP_GNU_const_index)
-  lldb::RegisterKind
-      m_reg_kind; ///< One of the defines that starts with LLDB_REGKIND_
-  lldb::addr_t m_loclist_slide; ///< A value used to slide the location list
-                                ///offsets so that
-  ///< they are relative to the object that owns the location list
-  ///< (the function for frame base and variable location lists)
+  /// A data extractor capable of reading opcode bytes
+  DataExtractor m_data;
+
+  /// The DWARF compile unit this expression belongs to. It is used to evaluate
+  /// values indexing into the .debug_addr section (e.g. DW_OP_GNU_addr_index,
+  /// DW_OP_GNU_const_index)
+  const DWARFUnit *m_dwarf_cu;
+
+  /// One of the defines that starts with LLDB_REGKIND_
+  lldb::RegisterKind m_reg_kind;
+
+  /// A value used to slide the location list offsets so that m_c they are
+  /// relative to the object that owns the location list (the function for
+  /// frame base and variable location lists)
+  lldb::addr_t m_loclist_slide;
 };
 
 } // namespace lldb_private

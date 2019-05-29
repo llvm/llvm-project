@@ -22,8 +22,6 @@ namespace llvm {
 class AArch64MCExpr : public MCTargetExpr {
 public:
   enum VariantKind {
-    VK_NONE     = 0x000,
-
     // Symbol locations specifying (roughly speaking) what calculation should be
     // performed to construct the final address for the relocated
     // symbol. E.g. direct, via the GOT, ...

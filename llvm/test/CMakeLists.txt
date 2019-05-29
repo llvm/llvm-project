@@ -72,6 +72,7 @@ set(LLVM_TEST_DEPENDS
           llvm-jitlink
           llvm-lib
           llvm-link
+          llvm-lipo
           llvm-lto2
           llvm-mc
           llvm-mca

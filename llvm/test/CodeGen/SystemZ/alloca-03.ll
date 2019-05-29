@@ -75,13 +75,12 @@ define void @f3(i64 %len) {
 ; CHECK-NEXT:    lgr %r11, %r15
 ; CHECK-NEXT:    .cfi_def_cfa_register %r11
 ; CHECK-NEXT:    lgr %r1, %r15
-; CHECK-NEXT:    sllg %r2, %r2, 3
-; CHECK-NEXT:    la %r0, 120(%r2)
+; CHECK-NEXT:    sllg %r0, %r2, 3
 ; CHECK-NEXT:    sgr %r1, %r0
-; CHECK-NEXT:    la %r2, 280(%r1)
-; CHECK-NEXT:    nill %r2, 65408
-; CHECK-NEXT:    lgr %r15, %r1
-; CHECK-NEXT:    mvghi 0(%r2), 10
+; CHECK-NEXT:    lay %r15, -120(%r1)
+; CHECK-NEXT:    la %r1, 160(%r1)
+; CHECK-NEXT:    nill %r1, 65408
+; CHECK-NEXT:    mvghi 0(%r1), 10
 ; CHECK-NEXT:    lmg %r11, %r15, 248(%r11)
 ; CHECK-NEXT:    br %r14
   %x = alloca i64, i64 %len, align 128

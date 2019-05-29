@@ -38,12 +38,11 @@
 
 #include "../assembly.h"
 
-    .macro COMPARESF2_FUNCTION name:req handle_nan:req
-@ int \name(float a, float b)
+    .syntax unified
+    .text
+    DEFINE_CODE_STATE
 
-    .p2align 2
-DEFINE_COMPILERRT_FUNCTION(\name)
-
+    .macro COMPARESF2_FUNCTION_BODY handle_nan:req
 #if defined(COMPILER_RT_ARMHF_TARGET)
     vmov r0, s0
     vmov r1, s1
@@ -168,12 +167,12 @@ LOCAL_LABEL(CHECK_NAN\@):
     \handle_nan
     JMP(lr)
 #endif
-END_COMPILERRT_FUNCTION(\name)
     .endm
 
-    .syntax unified
-    .text
-    DEFINE_CODE_STATE
+@ int __eqsf2(float a, float b)
+
+    .p2align 2
+DEFINE_COMPILERRT_FUNCTION(__eqsf2)
 
     .macro __eqsf2_handle_nan
 #if defined(USE_THUMB_1)
@@ -183,7 +182,9 @@ END_COMPILERRT_FUNCTION(\name)
 #endif
     .endm
 
-COMPARESF2_FUNCTION __eqsf2, __eqsf2_handle_nan
+COMPARESF2_FUNCTION_BODY __eqsf2_handle_nan
+
+END_COMPILERRT_FUNCTION(__eqsf2)
 
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__lesf2, __eqsf2)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__ltsf2, __eqsf2)
@@ -194,6 +195,11 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__nesf2, __eqsf2)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__cmpsf2, __lesf2)
 #endif
 
+@ int __gtsf2(float a, float b)
+
+    .p2align 2
+DEFINE_COMPILERRT_FUNCTION(__gtsf2)
+
     .macro __gtsf2_handle_nan
 #if defined(USE_THUMB_1)
     movs    r0,         #1
@@ -203,7 +209,9 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__cmpsf2, __lesf2)
 #endif
     .endm
 
-COMPARESF2_FUNCTION __gtsf2, __gtsf2_handle_nan
+COMPARESF2_FUNCTION_BODY __gtsf2_handle_nan
+
+END_COMPILERRT_FUNCTION(__gtsf2)
 
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__gesf2, __gtsf2)
 

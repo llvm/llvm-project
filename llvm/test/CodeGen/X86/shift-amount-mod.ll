@@ -1111,7 +1111,7 @@ define i32 @reg32_lshr_by_negated_unfolded_sub_b(i32 %val, i32 %a, i32 %b) nounw
 ; X32-LABEL: reg32_lshr_by_negated_unfolded_sub_b:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl $32, %ecx
+; X32-NEXT:    xorl %ecx, %ecx
 ; X32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -1120,9 +1120,9 @@ define i32 @reg32_lshr_by_negated_unfolded_sub_b(i32 %val, i32 %a, i32 %b) nounw
 ;
 ; X64-LABEL: reg32_lshr_by_negated_unfolded_sub_b:
 ; X64:       # %bb.0:
+; X64-NEXT:    movl %esi, %ecx
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movl $32, %ecx
-; X64-NEXT:    subl %esi, %ecx
+; X64-NEXT:    negl %ecx
 ; X64-NEXT:    subl %edx, %ecx
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrl %cl, %eax
@@ -1139,9 +1139,10 @@ define i64 @reg64_lshr_by_negated_unfolded_sub_b(i64 %val, i64 %a, i64 %b) nounw
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl $64, %ecx
+; X32-NEXT:    xorl %ecx, %ecx
 ; X32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    addb $64, %cl
 ; X32-NEXT:    movl %esi, %edx
 ; X32-NEXT:    shrl %cl, %edx
 ; X32-NEXT:    shrdl %cl, %esi, %eax

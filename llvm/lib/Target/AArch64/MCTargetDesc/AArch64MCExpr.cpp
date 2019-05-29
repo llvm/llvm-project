@@ -79,8 +79,7 @@ StringRef AArch64MCExpr::getVariantKindName() const {
 }
 
 void AArch64MCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-  if (getKind() != VK_NONE)
-    OS << getVariantKindName();
+  OS << getVariantKindName();
   Expr->print(OS, MAI);
 }
 

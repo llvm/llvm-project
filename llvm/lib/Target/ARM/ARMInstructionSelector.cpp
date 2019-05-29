@@ -232,7 +232,7 @@ static bool selectMergeValues(MachineInstrBuilder &MIB,
                               MachineRegisterInfo &MRI,
                               const TargetRegisterInfo &TRI,
                               const RegisterBankInfo &RBI) {
-  assert(TII.getSubtarget().hasVFP2() && "Can't select merge without VFP");
+  assert(TII.getSubtarget().hasVFP2Base() && "Can't select merge without VFP");
 
   // We only support G_MERGE_VALUES as a way to stick together two scalar GPRs
   // into one DPR.
@@ -263,7 +263,8 @@ static bool selectUnmergeValues(MachineInstrBuilder &MIB,
                                 MachineRegisterInfo &MRI,
                                 const TargetRegisterInfo &TRI,
                                 const RegisterBankInfo &RBI) {
-  assert(TII.getSubtarget().hasVFP2() && "Can't select unmerge without VFP");
+  assert(TII.getSubtarget().hasVFP2Base() &&
+         "Can't select unmerge without VFP");
 
   // We only support G_UNMERGE_VALUES as a way to break up one DPR into two
   // GPRs.
@@ -1036,12 +1037,12 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     return selectCmp(Helper, MIB, MRI);
   }
   case G_FCMP: {
-    assert(STI.hasVFP2() && "Can't select fcmp without VFP");
+    assert(STI.hasVFP2Base() && "Can't select fcmp without VFP");
 
     unsigned OpReg = I.getOperand(2).getReg();
     unsigned Size = MRI.getType(OpReg).getSizeInBits();
 
-    if (Size == 64 && STI.isFPOnlySP()) {
+    if (Size == 64 && !STI.hasFP64()) {
       LLVM_DEBUG(dbgs() << "Subtarget only supports single precision");
       return false;
     }
@@ -1087,7 +1088,7 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     LLT ValTy = MRI.getType(Reg);
     const auto ValSize = ValTy.getSizeInBits();
 
-    assert((ValSize != 64 || STI.hasVFP2()) &&
+    assert((ValSize != 64 || STI.hasVFP2Base()) &&
            "Don't know how to load/store 64-bit value without VFP");
 
     const auto NewOpc = selectLoadStoreOpCode(I.getOpcode(), RegBank, ValSize);

@@ -377,9 +377,9 @@ public:
                        const CallEvent *Call) override;
 
   /// printState - Called by ProgramStateManager to print checker-specific data.
-  void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
-                  const char *Sep,
-                  const LocationContext *LCtx = nullptr) override;
+  void printState(raw_ostream &Out, ProgramStateRef State,
+                  const LocationContext *LCtx, const char *NL,
+                  unsigned int Space, bool IsDot) const override;
 
   ProgramStateManager &getStateManager() override { return StateMgr; }
 

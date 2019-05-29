@@ -10244,8 +10244,7 @@ bool SITargetLowering::requiresUniformRegister(MachineFunction &MF,
           unsigned AssignedReg;
           const TargetRegisterClass *RC;
           std::tie(AssignedReg, RC) = getRegForInlineAsmConstraint(
-              SIRI, TC.ConstraintCode,
-              getSimpleValueType(MF.getDataLayout(), CS.getType()));
+              SIRI, TC.ConstraintCode, TC.ConstraintVT);
           if (RC) {
             MachineRegisterInfo &MRI = MF.getRegInfo();
             if (AssignedReg != 0 && SIRI->isSGPRReg(MRI, AssignedReg))

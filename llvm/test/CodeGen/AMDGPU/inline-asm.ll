@@ -277,3 +277,23 @@ entry:
   tail call void asm sideeffect "; sgpr96 $0", "s"(<3 x i32> <i32 10, i32 11, i32 12>) #1
   ret void
 }
+
+; Check aggregate types are handled properly.
+; CHECK-LABEL: mad_u64
+; CHECK: v_mad_u64_u32
+define void @mad_u64(i32 %x) {
+entry:
+  br i1 undef, label %exit, label %false
+
+false:
+  %s0 = tail call { i64, i64 } asm sideeffect "v_mad_u64_u32 $0, $1, $2, $3, $4", "=v,=s,v,v,v"(i32 -766435501, i32 %x, i64 0)
+  br label %exit
+
+exit:
+  %s1 = phi { i64, i64} [ undef, %entry ], [ %s0, %false]
+  %v0 = extractvalue { i64, i64 } %s1, 0
+  %v1 = extractvalue { i64, i64 } %s1, 1
+  tail call void asm sideeffect "; use $0", "v"(i64 %v0)
+  tail call void asm sideeffect "; use $0", "v"(i64 %v1)
+  ret void
+}

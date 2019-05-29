@@ -641,6 +641,59 @@ private:
     LLVM_MARK_AS_BITMASK_ENUM(NotifyFullyReady)
   };
 
+  enum class SymbolState : uint8_t {
+    Invalid,       // No symbol should be in this state.
+    NeverSearched, // Added to the symbol table, never queried.
+    Materializing, // Queried, materialization begun.
+    Resolved,      // Assigned address, still materializing.
+    Ready = 0x3f   // Ready and safe for clients to access.
+  };
+
+  class SymbolTableEntry {
+  public:
+    SymbolTableEntry() = default;
+    SymbolTableEntry(JITSymbolFlags Flags)
+        : Flags(Flags), State(SymbolState::NeverSearched),
+          MaterializerAttached(false), PendingRemoval(false) {}
+
+    JITTargetAddress getAddress() const { return Addr; }
+    JITSymbolFlags getFlags() const { return Flags; }
+    SymbolState getState() const { return State; }
+
+    bool isInMaterializationPhase() const {
+      return State == SymbolState::Materializing ||
+             State == SymbolState::Resolved;
+    }
+
+    bool hasMaterializerAttached() const { return MaterializerAttached; }
+    bool isPendingRemoval() const { return PendingRemoval; }
+
+    void setAddress(JITTargetAddress Addr) { this->Addr = Addr; }
+    void setFlags(JITSymbolFlags Flags) { this->Flags = Flags; }
+    void setState(SymbolState State) { this->State = State; }
+
+    void setMaterializerAttached(bool MaterializerAttached) {
+      this->MaterializerAttached = MaterializerAttached;
+    }
+
+    void setPendingRemoval(bool PendingRemoval) {
+      this->PendingRemoval = PendingRemoval;
+    }
+
+    JITEvaluatedSymbol getSymbol() const {
+      return JITEvaluatedSymbol(Addr, Flags);
+    }
+
+  private:
+    JITTargetAddress Addr = 0;
+    JITSymbolFlags Flags;
+    SymbolState State : 6;
+    bool MaterializerAttached : 1;
+    bool PendingRemoval : 1;
+  };
+
+  using SymbolTable = DenseMap<SymbolStringPtr, SymbolTableEntry>;
+
   JITDylib(ExecutionSession &ES, std::string Name);
 
   Error defineImpl(MaterializationUnit &MU);
@@ -685,7 +738,7 @@ private:
 
   ExecutionSession &ES;
   std::string JITDylibName;
-  SymbolMap Symbols;
+  SymbolTable Symbols;
   UnmaterializedInfosMap UnmaterializedInfos;
   MaterializingInfosMap MaterializingInfos;
   GeneratorFunction DefGenerator;

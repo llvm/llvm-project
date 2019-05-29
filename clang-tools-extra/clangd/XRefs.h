@@ -14,6 +14,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_XREFS_H
 
 #include "ClangdUnit.h"
+#include "FormattedString.h"
 #include "Protocol.h"
 #include "index/Index.h"
 #include "index/SymbolLocation.h"
@@ -103,8 +104,8 @@ struct HoverInfo {
   /// Set for all templates(function, class, variable).
   llvm::Optional<std::vector<Param>> TemplateParameters;
 
-  /// Lower to LSP struct.
-  MarkupContent render() const;
+  /// Produce a user-readable information.
+  FormattedString present() const;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const HoverInfo::Param &);
 inline bool operator==(const HoverInfo::Param &LHS,

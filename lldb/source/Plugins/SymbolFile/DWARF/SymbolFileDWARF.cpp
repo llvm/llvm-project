@@ -358,8 +358,8 @@ SymbolFileDWARF::SymbolFileDWARF(ObjectFile *objfile,
       m_debug_map_module_wp(), m_debug_map_symfile(nullptr),
       m_context(objfile->GetModule()->GetSectionList(), dwo_section_list),
       m_data_debug_loc(), m_data_debug_ranges(), m_data_debug_rnglists(),
-      m_abbr(), m_info(), m_line(), m_fetched_external_modules(false),
-      m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate), m_ranges(),
+      m_abbr(), m_info(), m_fetched_external_modules(false),
+      m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate),
       m_unique_ast_type_map() {}
 
 SymbolFileDWARF::~SymbolFileDWARF() {}
@@ -619,16 +619,14 @@ SymbolFileDWARF::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
   return nullptr;
 }
 
-DWARFDebugRangesBase *SymbolFileDWARF::DebugRanges() {
-  if (m_ranges == nullptr) {
+DWARFDebugRangesBase *SymbolFileDWARF::GetDebugRanges() {
+  if (!m_ranges) {
     static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
     Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
                        static_cast<void *>(this));
 
     if (get_debug_ranges_data().GetByteSize() > 0)
       m_ranges.reset(new DWARFDebugRanges());
-    else if (get_debug_rnglists_data().GetByteSize() > 0)
-      m_ranges.reset(new DWARFDebugRngLists());
 
     if (m_ranges)
       m_ranges->Extract(this);
@@ -636,8 +634,19 @@ DWARFDebugRangesBase *SymbolFileDWARF::DebugRanges() {
   return m_ranges.get();
 }
 
-const DWARFDebugRangesBase *SymbolFileDWARF::DebugRanges() const {
-  return m_ranges.get();
+DWARFDebugRangesBase *SymbolFileDWARF::GetDebugRngLists() {
+  if (!m_rnglists) {
+    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+    Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
+                       static_cast<void *>(this));
+
+    if (get_debug_rnglists_data().GetByteSize() > 0)
+      m_rnglists.reset(new DWARFDebugRngLists());
+
+    if (m_rnglists)
+      m_rnglists->Extract(this);
+  }
+  return m_rnglists.get();
 }
 
 lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFUnit *dwarf_cu) {
@@ -679,19 +688,6 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFUnit *dwarf_cu) {
             cu_sp = std::make_shared<CompileUnit>(
                 module_sp, dwarf_cu, cu_file_spec, dwarf_cu->GetID(),
                 cu_language, is_optimized ? eLazyBoolYes : eLazyBoolNo);
-
-            // If we just created a compile unit with an invalid file spec,
-            // try and get the first entry in the supports files from the
-            // line table as that should be the compile unit.
-            if (!cu_file_spec) {
-              cu_file_spec = cu_sp->GetSupportFiles().GetFileSpecAtIndex(1);
-              if (cu_file_spec) {
-                (FileSpec &)(*cu_sp) = cu_file_spec;
-                // Also fix the invalid file spec which was copied from the
-                // compile unit.
-                cu_sp->GetSupportFiles().Replace(0, cu_file_spec);
-              }
-            }
 
             dwarf_cu->SetUserData(cu_sp.get());
 
@@ -3102,7 +3098,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
       Declaration decl;
       uint32_t i;
       DWARFFormValue type_die_form;
-      DWARFExpression location(die.GetCU());
+      DWARFExpression location;
       bool is_external = false;
       bool is_artificial = false;
       bool location_is_const_value_data = false;
@@ -3153,14 +3149,15 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                 uint32_t block_offset =
                     form_value.BlockData() - debug_info_data.GetDataStart();
                 uint32_t block_length = form_value.Unsigned();
-                location.CopyOpcodeData(module, debug_info_data, block_offset,
-                                        block_length);
+                location = DWARFExpression(module, debug_info_data, die.GetCU(),
+                                           block_offset, block_length);
               } else if (DWARFFormValue::IsDataForm(form_value.Form())) {
                 // Retrieve the value as a data expression.
                 uint32_t data_offset = attributes.DIEOffsetAtIndex(i);
                 if (auto data_length = form_value.GetFixedSize())
-                  location.CopyOpcodeData(module, debug_info_data, data_offset,
-                                          *data_length);
+                  location =
+                      DWARFExpression(module, debug_info_data, die.GetCU(),
+                                      data_offset, *data_length);
                 else {
                   const uint8_t *data_pointer = form_value.BlockData();
                   if (data_pointer) {
@@ -3176,15 +3173,17 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                 if (form_value.Form() == DW_FORM_strp) {
                   uint32_t data_offset = attributes.DIEOffsetAtIndex(i);
                   if (auto data_length = form_value.GetFixedSize())
-                    location.CopyOpcodeData(module, debug_info_data,
-                                            data_offset, *data_length);
+                    location =
+                        DWARFExpression(module, debug_info_data, die.GetCU(),
+                                        data_offset, *data_length);
                 } else {
                   const char *str = form_value.AsCString();
                   uint32_t string_offset =
                       str - (const char *)debug_info_data.GetDataStart();
                   uint32_t string_length = strlen(str) + 1;
-                  location.CopyOpcodeData(module, debug_info_data,
-                                          string_offset, string_length);
+                  location =
+                      DWARFExpression(module, debug_info_data, die.GetCU(),
+                                      string_offset, string_length);
                 }
               }
             }
@@ -3198,7 +3197,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
               uint32_t block_offset =
                   form_value.BlockData() - data.GetDataStart();
               uint32_t block_length = form_value.Unsigned();
-              location.CopyOpcodeData(module, data, block_offset, block_length);
+              location = DWARFExpression(module, data, die.GetCU(),
+                                         block_offset, block_length);
             } else {
               const DWARFDataExtractor &debug_loc_data = DebugLocData();
               const dw_offset_t debug_loc_offset = form_value.Unsigned();
@@ -3206,8 +3206,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
               size_t loc_list_length = DWARFExpression::LocationListSize(
                   die.GetCU(), debug_loc_data, debug_loc_offset);
               if (loc_list_length > 0) {
-                location.CopyOpcodeData(module, debug_loc_data,
-                                        debug_loc_offset, loc_list_length);
+                location = DWARFExpression(module, debug_loc_data, die.GetCU(),
+                                           debug_loc_offset, loc_list_length);
                 assert(func_low_pc != LLDB_INVALID_ADDRESS);
                 location.SetLocationListSlide(
                     func_low_pc -
@@ -3218,29 +3218,9 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
           case DW_AT_specification:
             spec_die = form_value.Reference();
             break;
-          case DW_AT_start_scope: {
-            if (form_value.Form() == DW_FORM_sec_offset) {
-              DWARFRangeList dwarf_scope_ranges;
-              const DWARFDebugRangesBase *debug_ranges = DebugRanges();
-              debug_ranges->FindRanges(die.GetCU(),
-                                       form_value.Unsigned(),
-                                       dwarf_scope_ranges);
-            } else {
-              // TODO: Handle the case when DW_AT_start_scope have form
-              // constant. The
-              // dwarf spec is a bit ambiguous about what is the expected
-              // behavior in case the enclosing block have a non coninious
-              // address range and the DW_AT_start_scope entry have a form
-              // constant.
-              GetObjectFile()->GetModule()->ReportWarning(
-                  "0x%8.8" PRIx64
-                  ": DW_AT_start_scope has unsupported form type (0x%x)\n",
-                  die.GetID(), form_value.Form());
-            }
-
-            scope_ranges.Sort();
-            scope_ranges.CombineConsecutiveRanges();
-          } break;
+          case DW_AT_start_scope:
+            // TODO: Implement this.
+            break;
           case DW_AT_artificial:
             is_artificial = form_value.Boolean();
             break;
@@ -3444,10 +3424,9 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
             new SymbolFileType(*this, GetUID(DIERef(type_die_form))));
 
         if (const_value.Form() && type_sp && type_sp->GetType())
-          location.CopyOpcodeData(
-              const_value.Unsigned(),
-              type_sp->GetType()->GetByteSize().getValueOr(0),
-              die.GetCU()->GetAddressByteSize());
+          location.UpdateValue(const_value.Unsigned(),
+                               type_sp->GetType()->GetByteSize().getValueOr(0),
+                               die.GetCU()->GetAddressByteSize());
 
         var_sp = std::make_shared<Variable>(
             die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,

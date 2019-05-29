@@ -558,19 +558,19 @@ static void printObjectsUnderConstructionForContext(raw_ostream &Out,
 }
 
 void ExprEngine::printState(raw_ostream &Out, ProgramStateRef State,
-                            const char *NL, const char *Sep,
-                            const LocationContext *LCtx) {
+                            const LocationContext *LCtx, const char *NL,
+                            unsigned int Space, bool IsDot) const {
   if (LCtx) {
     if (!State->get<ObjectsUnderConstruction>().isEmpty()) {
-      Out << Sep << "Objects under construction:" << NL;
+      Out << "Objects under construction:" << NL;
 
-      LCtx->dumpStack(Out, "", NL, Sep, [&](const LocationContext *LC) {
+      LCtx->printJson(Out, NL, Space, IsDot, [&](const LocationContext *LC) {
         printObjectsUnderConstructionForContext(Out, State, NL, LC);
       });
     }
   }
 
-  getCheckerManager().runCheckersForPrintState(Out, State, NL, Sep);
+  getCheckerManager().runCheckersForPrintState(Out, State, NL, "");
 }
 
 void ExprEngine::processEndWorklist() {

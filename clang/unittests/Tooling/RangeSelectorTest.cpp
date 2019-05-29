@@ -21,13 +21,15 @@ using namespace tooling;
 using namespace ast_matchers;
 
 namespace {
-using ::testing::AllOf;
-using ::testing::HasSubstr;
-using MatchResult = MatchFinder::MatchResult;
 using ::llvm::Expected;
 using ::llvm::Failed;
 using ::llvm::HasValue;
 using ::llvm::StringError;
+using ::testing::AllOf;
+using ::testing::HasSubstr;
+using ::testing::Property;
+
+using MatchResult = MatchFinder::MatchResult;
 
 struct TestMatch {
   // The AST unit from which `result` is built. We bundle it because it backs
@@ -115,6 +117,55 @@ testing::Matcher<StringError> withTypeErrorMessage(StringRef NodeID) {
 TEST(RangeSelectorTest, UnboundNode) {
   EXPECT_THAT_EXPECTED(selectFromTrivial(node("unbound_id")),
                        Failed<StringError>(withUnboundNodeMessage()));
+}
+
+MATCHER_P(EqualsCharSourceRange, Range, "") {
+  return Range.getAsRange() == arg.getAsRange() &&
+         Range.isTokenRange() == arg.isTokenRange();
+}
+
+// FIXME: here and elsewhere: use llvm::Annotations library to explicitly mark
+// points and ranges of interest, enabling more readable tests.
+TEST(RangeSelectorTest, BeforeOp) {
+  StringRef Code = R"cc(
+    int f(int x, int y, int z) { return 3; }
+    int g() { return f(/* comment */ 3, 7 /* comment */, 9); }
+  )cc";
+  StringRef Call = "call";
+  TestMatch Match = matchCode(Code, callExpr().bind(Call));
+  const auto* E = Match.Result.Nodes.getNodeAs<Expr>(Call);
+  assert(E != nullptr);
+  auto ExprBegin = E->getSourceRange().getBegin();
+  EXPECT_THAT_EXPECTED(
+      before(node(Call))(Match.Result),
+      HasValue(EqualsCharSourceRange(
+          CharSourceRange::getCharRange(ExprBegin, ExprBegin))));
+}
+
+TEST(RangeSelectorTest, AfterOp) {
+  StringRef Code = R"cc(
+    int f(int x, int y, int z) { return 3; }
+    int g() { return f(/* comment */ 3, 7 /* comment */, 9); }
+  )cc";
+  StringRef Call = "call";
+  TestMatch Match = matchCode(Code, callExpr().bind(Call));
+  const auto* E = Match.Result.Nodes.getNodeAs<Expr>(Call);
+  assert(E != nullptr);
+  const SourceRange Range = E->getSourceRange();
+  // The end token, a right paren, is one character wide, so advance by one,
+  // bringing us to the semicolon.
+  const SourceLocation SemiLoc = Range.getEnd().getLocWithOffset(1);
+  const auto ExpectedAfter = CharSourceRange::getCharRange(SemiLoc, SemiLoc);
+
+  // Test with a char range.
+  auto CharRange = CharSourceRange::getCharRange(Range.getBegin(), SemiLoc);
+  EXPECT_THAT_EXPECTED(after(charRange(CharRange))(Match.Result),
+                       HasValue(EqualsCharSourceRange(ExpectedAfter)));
+
+  // Test with a token range.
+  auto TokenRange = CharSourceRange::getTokenRange(Range);
+  EXPECT_THAT_EXPECTED(after(charRange(TokenRange))(Match.Result),
+                       HasValue(EqualsCharSourceRange(ExpectedAfter)));
 }
 
 TEST(RangeSelectorTest, RangeOp) {

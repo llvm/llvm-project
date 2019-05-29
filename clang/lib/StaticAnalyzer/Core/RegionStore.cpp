@@ -19,6 +19,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -120,21 +121,21 @@ BindingKey BindingKey::Make(const MemRegion *R, Kind k) {
 }
 
 namespace llvm {
-  static inline
-  raw_ostream &operator<<(raw_ostream &os, BindingKey K) {
-    os << '(' << K.getRegion();
-    if (!K.hasSymbolicOffset())
-      os << ',' << K.getOffset();
-    os << ',' << (K.isDirect() ? "direct" : "default")
-       << ')';
-    return os;
-  }
+static inline raw_ostream &operator<<(raw_ostream &Out, BindingKey K) {
+  Out << "\"kind\": \"" << (K.isDirect() ? "Direct" : "Default")
+      << "\", \"offset\": ";
 
-} // end llvm namespace
+  if (!K.hasSymbolicOffset())
+    Out << K.getOffset();
+  else
+    Out << "null";
 
-#ifndef NDEBUG
+  return Out;
+}
+
+} // namespace llvm
+
 LLVM_DUMP_METHOD void BindingKey::dump() const { llvm::errs() << *this; }
-#endif
 
 //===----------------------------------------------------------------------===//
 // Actual Store type.
@@ -206,18 +207,31 @@ public:
     return asImmutableMap().getRootWithoutRetain();
   }
 
-  void dump(raw_ostream &OS, const char *nl) const {
-   for (iterator I = begin(), E = end(); I != E; ++I) {
-     const ClusterBindings &Cluster = I.getData();
-     for (ClusterBindings::iterator CI = Cluster.begin(), CE = Cluster.end();
-          CI != CE; ++CI) {
-       OS << ' ' << CI.getKey() << " : " << CI.getData() << nl;
-     }
-     OS << nl;
-   }
+  void printJson(raw_ostream &Out, const char *NL = "\n",
+                 unsigned int Space = 0, bool IsDot = false) const {
+    for (iterator I = begin(); I != end(); ++I) {
+      Indent(Out, Space, IsDot)
+          << "{ \"cluster\": \"" << I.getKey() << "\", \"items\": [" << NL;
+
+      ++Space;
+      const ClusterBindings &CB = I.getData();
+      for (ClusterBindings::iterator CI = CB.begin(); CI != CB.end(); ++CI) {
+        Indent(Out, Space, IsDot) << "{ " << CI.getKey() << ", \"value\": \""
+                                  << CI.getData() << "\" }";
+        if (std::next(CI) != CB.end())
+          Out << ',';
+        Out << NL;
+      }
+
+      --Space;
+      Indent(Out, Space, IsDot) << "]}";
+      if (std::next(I) != end())
+        Out << ',';
+      Out << NL;
+    }
   }
 
-  LLVM_DUMP_METHOD void dump() const { dump(llvm::errs(), "\n"); }
+  LLVM_DUMP_METHOD void dump() const { printJson(llvm::errs()); }
 };
 } // end anonymous namespace
 
@@ -594,7 +608,8 @@ public: // Part of public interface to class.
                              RBFactory.getTreeFactory());
   }
 
-  void print(Store store, raw_ostream &Out, const char* nl) override;
+  void printJson(raw_ostream &Out, Store S, const char *NL = "\n",
+                 unsigned int Space = 0, bool IsDot = false) const override;
 
   void iterBindings(Store store, BindingsHandler& f) override {
     RegionBindingsRef B = getRegionBindings(store);
@@ -2611,11 +2626,18 @@ StoreRef RegionStoreManager::removeDeadBindings(Store store,
 // Utility methods.
 //===----------------------------------------------------------------------===//
 
-void RegionStoreManager::print(Store store, raw_ostream &OS,
-                               const char* nl) {
-  RegionBindingsRef B = getRegionBindings(store);
-  OS << "Store (direct and default bindings), "
-     << B.asStore()
-     << " :" << nl;
-  B.dump(OS, nl);
+void RegionStoreManager::printJson(raw_ostream &Out, Store S, const char *NL,
+                                   unsigned int Space, bool IsDot) const {
+  RegionBindingsRef Bindings = getRegionBindings(S);
+
+  Indent(Out, Space, IsDot) << "\"store\": ";
+
+  if (Bindings.isEmpty()) {
+    Out << "null," << NL;
+    return;
+  }
+
+  Out << '[' << NL;
+  Bindings.printJson(Out, NL, ++Space, IsDot);
+  Indent(Out, --Space, IsDot) << "]," << NL;
 }

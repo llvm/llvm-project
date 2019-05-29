@@ -130,12 +130,9 @@ static ElfType getOutputElfType(const MachineInfo &MI) {
     return MI.IsLittleEndian ? ELFT_ELF32LE : ELFT_ELF32BE;
 }
 
-static std::unique_ptr<Writer> createWriter(const CopyConfig &Config,
-                                            Object &Obj, Buffer &Buf,
-                                            ElfType OutputElfType) {
-  if (Config.OutputFormat == "binary") {
-    return llvm::make_unique<BinaryWriter>(Obj, Buf);
-  }
+static std::unique_ptr<Writer> createELFWriter(const CopyConfig &Config,
+                                               Object &Obj, Buffer &Buf,
+                                               ElfType OutputElfType) {
   // Depending on the initial ELFT and OutputFormat we need a different Writer.
   switch (OutputElfType) {
   case ELFT_ELF32LE:
@@ -152,6 +149,17 @@ static std::unique_ptr<Writer> createWriter(const CopyConfig &Config,
                                                  !Config.StripSections);
   }
   llvm_unreachable("Invalid output format");
+}
+
+static std::unique_ptr<Writer> createWriter(const CopyConfig &Config,
+                                            Object &Obj, Buffer &Buf,
+                                            ElfType OutputElfType) {
+  using Functor = std::function<std::unique_ptr<Writer>()>;
+  return StringSwitch<Functor>(Config.OutputFormat)
+      .Case("binary", [&] { return llvm::make_unique<BinaryWriter>(Obj, Buf); })
+      .Case("ihex", [&] { return llvm::make_unique<IHexWriter>(Obj, Buf); })
+      .Default(
+          [&] { return createELFWriter(Config, Obj, Buf, OutputElfType); })();
 }
 
 template <class ELFT>
@@ -714,6 +722,15 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
   return Error::success();
 }
 
+static Error writeOutput(const CopyConfig &Config, Object &Obj, Buffer &Out,
+                         ElfType OutputElfType) {
+  std::unique_ptr<Writer> Writer =
+      createWriter(Config, Obj, Out, OutputElfType);
+  if (Error E = Writer->finalize())
+    return E;
+  return Writer->write();
+}
+
 Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
                                 Buffer &Out) {
   BinaryReader Reader(Config.BinaryArch, &In);
@@ -721,15 +738,11 @@ Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
 
   // Prefer OutputArch (-O<format>) if set, otherwise fallback to BinaryArch
   // (-B<arch>).
-  const ElfType OutputElfType = getOutputElfType(
-      Config.OutputArch ? Config.OutputArch.getValue() : Config.BinaryArch);
+  const ElfType OutputElfType =
+      getOutputElfType(Config.OutputArch.getValueOr(Config.BinaryArch));
   if (Error E = handleArgs(Config, *Obj, Reader, OutputElfType))
     return E;
-  std::unique_ptr<Writer> Writer =
-      createWriter(Config, *Obj, Out, OutputElfType);
-  if (Error E = Writer->finalize())
-    return E;
-  return Writer->write();
+  return writeOutput(Config, *Obj, Out, OutputElfType);
 }
 
 Error executeObjcopyOnBinary(const CopyConfig &Config,
@@ -764,12 +777,8 @@ Error executeObjcopyOnBinary(const CopyConfig &Config,
   if (Error E = handleArgs(Config, *Obj, Reader, OutputElfType))
     return createFileError(Config.InputFilename, std::move(E));
 
-  std::unique_ptr<Writer> Writer =
-      createWriter(Config, *Obj, Out, OutputElfType);
-  if (Error E = Writer->finalize())
+  if (Error E = writeOutput(Config, *Obj, Out, OutputElfType))
     return createFileError(Config.InputFilename, std::move(E));
-  if (Error E = Writer->write())
-    return E;
   if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkOutput)
     if (Error E =
             linkToBuildIdDir(Config, Config.OutputFilename,

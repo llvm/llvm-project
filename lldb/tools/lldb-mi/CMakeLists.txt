@@ -95,5 +95,15 @@ add_lldb_tool(lldb-mi
   )
 
 if(LLDB_BUILD_FRAMEWORK)
-  lldb_setup_framework_rpaths_in_tool(lldb-mi)
+  # In the build-tree, we know the exact path to the framework directory.
+  # The installed framework can be in different locations.
+  get_target_property(framework_build_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
+  lldb_setup_rpaths(lldb-mi
+    BUILD_RPATH
+      "${framework_build_dir}"
+    INSTALL_RPATH
+      "@loader_path/../../../SharedFrameworks"
+      "@loader_path/../../System/Library/PrivateFrameworks"
+      "@loader_path/../../Library/PrivateFrameworks"
+  )
 endif()

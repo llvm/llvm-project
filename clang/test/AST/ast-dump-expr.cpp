@@ -252,9 +252,9 @@ void PrimaryExpressions(Ts... a) {
       // CHECK-NEXT: CopyAssignment
       // CHECK-NEXT: MoveAssignment
       // CHECK-NEXT: Destructor
-      // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:8> col:8 implicit 'V *'
       // CHECK-NEXT: CXXMethodDecl
       // CHECK-NEXT: CompoundStmt
+      // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:8> col:8 implicit 'V *'
       // CHECK-NEXT: CXXThisExpr 0x{{[^ ]*}} <col:8> 'V *' implicit this
 
       [*this]{};
@@ -267,9 +267,9 @@ void PrimaryExpressions(Ts... a) {
       // CHECK-NEXT: CopyAssignment
       // CHECK-NEXT: MoveAssignment
       // CHECK-NEXT: Destructor
-      // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:8> col:8 implicit 'V'
       // CHECK-NEXT: CXXMethodDecl
       // CHECK-NEXT: CompoundStmt
+      // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:8> col:8 implicit 'V'
       // CHECK-NEXT: ParenListExpr 0x{{[^ ]*}} <col:8> 'NULL TYPE'
       // CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:8> '<dependent type>' prefix '*' cannot overflow
       // CHECK-NEXT: CXXThisExpr 0x{{[^ ]*}} <col:8> 'V *' implicit this
@@ -322,9 +322,9 @@ void PrimaryExpressions(Ts... a) {
   // CHECK-NEXT: CopyAssignment
   // CHECK-NEXT: MoveAssignment
   // CHECK-NEXT: Destructor
-  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:4> col:4 implicit 'Ts...'
   // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:8, col:10> col:3 operator() 'auto () const -> auto' inline
   // CHECK-NEXT: CompoundStmt
+  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:4> col:4 implicit 'Ts...'
   // CHECK-NEXT: ParenListExpr 0x{{[^ ]*}} <col:4> 'NULL TYPE'
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'Ts...' lvalue ParmVar 0x{{[^ ]*}} 'a' 'Ts...'
   // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:9, col:10>
@@ -403,8 +403,6 @@ void PrimaryExpressions(Ts... a) {
   // CHECK-NEXT: CopyAssignment
   // CHECK-NEXT: MoveAssignment
   // CHECK-NEXT: Destructor
-  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:4> col:4 implicit 'int'
-  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:8> col:8 implicit 'int &'
   // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:9, col:26> col:3 operator() 'auto () const -> auto' inline
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: ReturnStmt 0x{{[^ ]*}} <col:12, col:23>
@@ -413,6 +411,8 @@ void PrimaryExpressions(Ts... a) {
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:19> 'const int' lvalue Var 0x{{[^ ]*}} 'b' 'int'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:23> 'int' lvalue Var 0x{{[^ ]*}} 'c' 'int'
+  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:4> col:4 implicit 'int'
+  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:8> col:8 implicit 'int &'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'int' lvalue Var 0x{{[^ ]*}} 'b' 'int'
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:8> 'int' lvalue Var 0x{{[^ ]*}} 'c' 'int'
@@ -434,10 +434,10 @@ void PrimaryExpressions(Ts... a) {
   // CHECK-NEXT: CopyAssignment
   // CHECK-NEXT: MoveAssignment
   // CHECK-NEXT: Destructor
-  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:4> col:4 implicit 'Ts...'
-  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:10> col:10 implicit 'int':'int'
   // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:16, col:18> col:3 operator() 'auto () const -> auto' inline
   // CHECK-NEXT: CompoundStmt
+  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:4> col:4 implicit 'Ts...'
+  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:10> col:10 implicit 'int':'int'
   // CHECK-NEXT: ParenListExpr 0x{{[^ ]*}} <col:4> 'NULL TYPE'
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'Ts...' lvalue ParmVar 0x{{[^ ]*}} 'a' 'Ts...'
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:14> 'int' 12

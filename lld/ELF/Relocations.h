@@ -61,6 +61,7 @@ enum RelExpr {
   R_TLS,
   R_TLSDESC,
   R_TLSDESC_CALL,
+  R_TLSDESC_PC,
   R_TLSGD_GOT,
   R_TLSGD_GOTPLT,
   R_TLSGD_PC,
@@ -135,7 +136,8 @@ private:
 
   void createInitialThunkSections(ArrayRef<OutputSection *> OutputSections);
 
-  std::pair<Thunk *, bool> getThunk(Symbol &Sym, RelType Type, uint64_t Src);
+  std::pair<Thunk *, bool> getThunk(InputSection *IS, Symbol &Sym, RelType Type,
+                                    uint64_t Src);
 
   ThunkSection *addThunkSection(OutputSection *OS, InputSectionDescription *,
                                 uint64_t Off);

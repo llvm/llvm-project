@@ -41,7 +41,7 @@ void validateRegistry() {
 Tweak::Selection::Selection(ParsedAST &AST, unsigned RangeBegin,
                             unsigned RangeEnd)
     : AST(AST), ASTSelection(AST.getASTContext(), RangeBegin, RangeEnd) {
-  auto &SM = AST.getASTContext().getSourceManager();
+  auto &SM = AST.getSourceManager();
   Code = SM.getBufferData(SM.getMainFileID());
   Cursor = SM.getComposedLoc(SM.getMainFileID(), RangeBegin);
 }

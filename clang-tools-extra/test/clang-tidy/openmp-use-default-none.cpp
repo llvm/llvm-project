@@ -23,7 +23,7 @@ void n0(const int a) {
 void p0_0() {
 #pragma omp parallel
   ;
-  // CHECK-NOTES: :[[@LINE-2]]:9: warning: OpenMP directive 'parallel' does not specify 'default' clause, consider specifying 'default(none)' clause
+  // CHECK-NOTES: :[[@LINE-2]]:1: warning: OpenMP directive 'parallel' does not specify 'default' clause, consider specifying 'default(none)' clause
 }
 
 // 'parallel' directive can have 'default' clause, and said clause specified,
@@ -38,7 +38,7 @@ void p0_1() {
 void p0_2() {
 #pragma omp parallel default(shared)
   ;
-  // CHECK-NOTES: :[[@LINE-2]]:9: warning: OpenMP directive 'parallel' specifies 'default(shared)' clause, consider using 'default(none)' clause instead
+  // CHECK-NOTES: :[[@LINE-2]]:1: warning: OpenMP directive 'parallel' specifies 'default(shared)' clause, consider using 'default(none)' clause instead
   // CHECK-NOTES: :[[@LINE-3]]:22: note: existing 'default' clause specified here
 }
 
@@ -49,7 +49,7 @@ void p0_2() {
 void p1_0() {
 #pragma omp task
   ;
-  // CHECK-NOTES: :[[@LINE-2]]:9: warning: OpenMP directive 'task' does not specify 'default' clause, consider specifying 'default(none)' clause
+  // CHECK-NOTES: :[[@LINE-2]]:1: warning: OpenMP directive 'task' does not specify 'default' clause, consider specifying 'default(none)' clause
 }
 
 // 'task' directive can have 'default' clause, and said clause specified,
@@ -64,7 +64,7 @@ void p1_1() {
 void p1_2() {
 #pragma omp task default(shared)
   ;
-  // CHECK-NOTES: :[[@LINE-2]]:9: warning: OpenMP directive 'task' specifies 'default(shared)' clause, consider using 'default(none)' clause instead
+  // CHECK-NOTES: :[[@LINE-2]]:1: warning: OpenMP directive 'task' specifies 'default(shared)' clause, consider using 'default(none)' clause instead
   // CHECK-NOTES: :[[@LINE-3]]:18: note: existing 'default' clause specified here
 }
 
@@ -76,7 +76,7 @@ void p2_0() {
 #pragma omp target
 #pragma omp teams
   ;
-  // CHECK-NOTES: :[[@LINE-2]]:9: warning: OpenMP directive 'teams' does not specify 'default' clause, consider specifying 'default(none)' clause
+  // CHECK-NOTES: :[[@LINE-2]]:1: warning: OpenMP directive 'teams' does not specify 'default' clause, consider specifying 'default(none)' clause
 }
 
 // 'teams' directive can have 'default' clause, and said clause specified,
@@ -93,7 +93,7 @@ void p2_2() {
 #pragma omp target
 #pragma omp teams default(shared)
   ;
-  // CHECK-NOTES: :[[@LINE-2]]:9: warning: OpenMP directive 'teams' specifies 'default(shared)' clause, consider using 'default(none)' clause instead
+  // CHECK-NOTES: :[[@LINE-2]]:1: warning: OpenMP directive 'teams' specifies 'default(shared)' clause, consider using 'default(none)' clause instead
   // CHECK-NOTES: :[[@LINE-3]]:19: note: existing 'default' clause specified here
 }
 
@@ -105,7 +105,7 @@ void p3_0(const int a) {
 #pragma omp taskloop
   for (int b = 0; b < a; b++)
     ;
-  // CHECK-NOTES: :[[@LINE-3]]:9: warning: OpenMP directive 'taskloop' does not specify 'default' clause, consider specifying 'default(none)' clause
+  // CHECK-NOTES: :[[@LINE-3]]:1: warning: OpenMP directive 'taskloop' does not specify 'default' clause, consider specifying 'default(none)' clause
 }
 
 // 'taskloop' directive can have 'default' clause, and said clause specified,
@@ -122,7 +122,7 @@ void p3_2(const int a) {
 #pragma omp taskloop default(shared)
   for (int b = 0; b < a; b++)
     ;
-  // CHECK-NOTES: :[[@LINE-3]]:9: warning: OpenMP directive 'taskloop' specifies 'default(shared)' clause, consider using 'default(none)' clause instead
+  // CHECK-NOTES: :[[@LINE-3]]:1: warning: OpenMP directive 'taskloop' specifies 'default(shared)' clause, consider using 'default(none)' clause instead
   // CHECK-NOTES: :[[@LINE-4]]:22: note: existing 'default' clause specified here
 }
 
@@ -138,7 +138,7 @@ void p4_0(const int a) {
 #pragma omp parallel for
   for (int b = 0; b < a; b++)
     ;
-  // CHECK-NOTES: :[[@LINE-3]]:9: warning: OpenMP directive 'parallel for' does not specify 'default' clause, consider specifying 'default(none)' clause
+  // CHECK-NOTES: :[[@LINE-3]]:1: warning: OpenMP directive 'parallel for' does not specify 'default' clause, consider specifying 'default(none)' clause
 }
 
 // 'parallel' directive can have 'default' clause, and said clause specified,
@@ -155,6 +155,6 @@ void p4_2(const int a) {
 #pragma omp parallel for default(shared)
   for (int b = 0; b < a; b++)
     ;
-  // CHECK-NOTES: :[[@LINE-3]]:9: warning: OpenMP directive 'parallel for' specifies 'default(shared)' clause, consider using 'default(none)' clause instead
+  // CHECK-NOTES: :[[@LINE-3]]:1: warning: OpenMP directive 'parallel for' specifies 'default(shared)' clause, consider using 'default(none)' clause instead
   // CHECK-NOTES: :[[@LINE-4]]:26: note: existing 'default' clause specified here
 }

@@ -2052,38 +2052,29 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     LLVM_FALLTHROUGH;
   case Intrinsic::usub_sat:
   case Intrinsic::ssub_sat: {
-    Value *Arg0 = II->getArgOperand(0);
-    Value *Arg1 = II->getArgOperand(1);
+    SaturatingInst *SI = cast<SaturatingInst>(II);
+    Value *Arg0 = SI->getLHS();
+    Value *Arg1 = SI->getRHS();
 
     // Make use of known overflow information.
-    OverflowResult OR;
-    switch (IID) {
-    default:
-      llvm_unreachable("Unexpected intrinsic!");
-    case Intrinsic::uadd_sat:
-      OR = computeOverflowForUnsignedAdd(Arg0, Arg1, II);
-      if (OR == OverflowResult::NeverOverflows)
-        return BinaryOperator::CreateNUWAdd(Arg0, Arg1);
-      if (OR == OverflowResult::AlwaysOverflows)
-        return replaceInstUsesWith(*II,
-                                   ConstantInt::getAllOnesValue(II->getType()));
-      break;
-    case Intrinsic::usub_sat:
-      OR = computeOverflowForUnsignedSub(Arg0, Arg1, II);
-      if (OR == OverflowResult::NeverOverflows)
-        return BinaryOperator::CreateNUWSub(Arg0, Arg1);
-      if (OR == OverflowResult::AlwaysOverflows)
-        return replaceInstUsesWith(*II,
+    OverflowResult OR = computeOverflow(SI->getBinaryOp(), SI->isSigned(),
+                                        Arg0, Arg1, SI);
+    switch (OR) {
+      case OverflowResult::MayOverflow:
+        break;
+      case OverflowResult::NeverOverflows:
+        if (SI->isSigned())
+          return BinaryOperator::CreateNSW(SI->getBinaryOp(), Arg0, Arg1);
+        else
+          return BinaryOperator::CreateNUW(SI->getBinaryOp(), Arg0, Arg1);
+      case OverflowResult::AlwaysOverflowsLow:
+        if (SI->isSigned()) break; // TODO: Support signed.
+        return replaceInstUsesWith(*SI,
                                    ConstantInt::getNullValue(II->getType()));
-      break;
-    case Intrinsic::sadd_sat:
-      if (willNotOverflowSignedAdd(Arg0, Arg1, *II))
-        return BinaryOperator::CreateNSWAdd(Arg0, Arg1);
-      break;
-    case Intrinsic::ssub_sat:
-      if (willNotOverflowSignedSub(Arg0, Arg1, *II))
-        return BinaryOperator::CreateNSWSub(Arg0, Arg1);
-      break;
+      case OverflowResult::AlwaysOverflowsHigh:
+        if (SI->isSigned()) break; // TODO: Support signed.
+        return replaceInstUsesWith(*SI,
+                                   ConstantInt::getAllOnesValue(II->getType()));
     }
 
     // ssub.sat(X, C) -> sadd.sat(X, -C) if C != MIN

@@ -136,14 +136,13 @@ static void reportTypeError(const Symbol *Existing, const InputFile *File,
 // mismatch.
 static bool signatureMatches(FunctionSymbol *Existing,
                              const WasmSignature *NewSig) {
-  if (!NewSig)
-    return true;
-
   const WasmSignature *OldSig = Existing->Signature;
-  if (!OldSig) {
-    Existing->Signature = NewSig;
+
+  // If either function is missing a signature (this happend for bitcode
+  // symbols) then assume they match.  Any mismatch will be reported later
+  // when the LTO objects are added.
+  if (!NewSig || !OldSig)
     return true;
-  }
 
   return *NewSig == *OldSig;
 }
@@ -390,8 +389,9 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef Name, StringRef ImportName,
                                           uint32_t Flags, InputFile *File,
                                           const WasmSignature *Sig,
                                           bool IsCalledDirectly) {
-  LLVM_DEBUG(dbgs() << "addUndefinedFunction: " << Name <<
-             " [" << (Sig ? toString(*Sig) : "none") << "]\n");
+  LLVM_DEBUG(dbgs() << "addUndefinedFunction: " << Name << " ["
+                    << (Sig ? toString(*Sig) : "none")
+                    << "] IsCalledDirectly:" << IsCalledDirectly << "\n");
 
   Symbol *S;
   bool WasInserted;
@@ -414,6 +414,8 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef Name, StringRef ImportName,
       reportTypeError(S, File, WASM_SYMBOL_TYPE_FUNCTION);
       return S;
     }
+    if (!ExistingFunction->Signature && Sig)
+      ExistingFunction->Signature = Sig;
     if (IsCalledDirectly && !signatureMatches(ExistingFunction, Sig))
       if (getFunctionVariant(S, Sig, File, &S))
         Replace();

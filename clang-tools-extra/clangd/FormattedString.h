@@ -35,6 +35,7 @@ public:
 
   std::string renderAsMarkdown() const;
   std::string renderAsPlainText() const;
+  std::string renderForTests() const;
 
 private:
   enum class ChunkKind {

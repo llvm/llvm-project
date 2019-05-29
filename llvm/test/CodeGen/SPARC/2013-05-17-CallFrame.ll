@@ -15,10 +15,9 @@ define void @variable_alloca_with_adj_call_stack(i32 %num) {
 ; V8-NEXT:    .cfi_register 15, 31
 ; V8-NEXT:    add %i0, 7, %i0
 ; V8-NEXT:    and %i0, -8, %i0
-; V8-NEXT:    add %i0, 8, %i0
 ; V8-NEXT:    sub %sp, %i0, %i0
-; V8-NEXT:    add %i0, 96, %o0
-; V8-NEXT:    mov %i0, %sp
+; V8-NEXT:    add %i0, -8, %sp
+; V8-NEXT:    add %i0, 88, %o0
 ; V8-NEXT:    add %sp, -16, %sp
 ; V8-NEXT:    st %o0, [%sp+104]
 ; V8-NEXT:    st %o0, [%sp+100]

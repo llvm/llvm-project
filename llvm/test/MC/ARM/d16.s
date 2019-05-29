@@ -1,5 +1,5 @@
-@ RUN:     llvm-mc < %s -triple thumbv7-unknown-unknown -show-encoding -mattr=+vfp4,-d16 2>&1 | FileCheck %s --check-prefix=D32
-@ RUN: not llvm-mc < %s -triple thumbv7-unknown-unknown -show-encoding -mattr=+vfp4,+d16 2>&1 | FileCheck %s --check-prefix=D16
+@ RUN:     llvm-mc < %s -triple thumbv7-unknown-unknown -show-encoding -mattr=+vfp4,+d32 2>&1 | FileCheck %s --check-prefix=D32
+@ RUN: not llvm-mc < %s -triple thumbv7-unknown-unknown -show-encoding -mattr=+vfp4,-d32 2>&1 | FileCheck %s --check-prefix=D16
 
 @ D32-NOT: error:
 

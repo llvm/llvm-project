@@ -208,3 +208,32 @@ function(lldb_setup_framework_rpaths_in_tool name)
 
   add_dependencies(${name} lldb-framework)
 endfunction()
+
+# Unified handling for executable LLDB.framework resources. Given the name of an
+# executable target, this function adds a post-build step to copy it to the
+# framework bundle in the build-tree.
+function(lldb_add_to_framework name)
+  set(subdir "LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/Resources")
+
+  # Destination for the copy in the build-tree. While the framework target may
+  # not exist yet, it will exist when the generator expression gets expanded.
+  set(copy_dest "$<TARGET_FILE_DIR:liblldb>/../../../${subdir}")
+
+  # Copy into the framework's Resources directory for testing.
+  add_custom_command(TARGET ${name} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${name}> ${copy_dest}
+    COMMENT "Copy ${name} to ${copy_dest}"
+  )
+endfunction()
+
+# CMake's set_target_properties() doesn't allow to pass lists for RPATH
+# properties directly (error: "called with incorrect number of arguments").
+# Instead of defining two list variables each time, use this helper function.
+function(lldb_setup_rpaths name)
+  cmake_parse_arguments(LIST "" "" "BUILD_RPATH;INSTALL_RPATH" ${ARGN})
+  set_target_properties(${name} PROPERTIES
+    BUILD_WITH_INSTALL_RPATH OFF
+    BUILD_RPATH "${LIST_BUILD_RPATH}"
+    INSTALL_RPATH "${LIST_INSTALL_RPATH}"
+  )
+endfunction()

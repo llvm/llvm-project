@@ -617,6 +617,8 @@ EndStmt:
       Type = ELF::SHT_LLVM_CALL_GRAPH_PROFILE;
     else if (TypeName == "llvm_dependent_libraries")
       Type = ELF::SHT_LLVM_DEPENDENT_LIBRARIES;
+    else if (TypeName == "llvm_sympart")
+      Type = ELF::SHT_LLVM_SYMPART;
     else if (TypeName.getAsInteger(0, Type))
       return TokError("unknown section type");
   }

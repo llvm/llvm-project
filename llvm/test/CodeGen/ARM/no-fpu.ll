@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=armv7-none-gnueabi -mattr=-neon,-vfp2 | FileCheck --check-prefix=NONEON-NOVFP %s
+; RUN: llc < %s -mtriple=armv7-none-gnueabi -mattr=-neon,-vfp2d16sp | FileCheck --check-prefix=NONEON-NOVFP %s
 ; RUN: llc < %s -mtriple=armv7-none-gnueabi -mattr=-neon | FileCheck --check-prefix=NONEON %s
-; RUN: llc < %s -mtriple=armv7-none-gnueabi -mattr=-vfp2 | FileCheck --check-prefix=NOVFP %s
+; RUN: llc < %s -mtriple=armv7-none-gnueabi -mattr=-vfp2d16sp | FileCheck --check-prefix=NOVFP %s
 ; RUN: llc < %s -mtriple=armv7-none-gnueabi -mattr=-neon,+vfp2 | FileCheck --check-prefix=NONEON-VFP %s
 
 ; Check no NEON instructions are selected when feature is disabled.

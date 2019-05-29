@@ -53,13 +53,13 @@ ReadAddressFromDebugAddrSection(const DWARFUnit *dwarf_cu,
 }
 
 // DWARFExpression constructor
-DWARFExpression::DWARFExpression(DWARFUnit *dwarf_cu)
-    : m_module_wp(), m_data(), m_dwarf_cu(dwarf_cu),
+DWARFExpression::DWARFExpression()
+    : m_module_wp(), m_data(), m_dwarf_cu(nullptr),
       m_reg_kind(eRegisterKindDWARF), m_loclist_slide(LLDB_INVALID_ADDRESS) {}
 
 DWARFExpression::DWARFExpression(lldb::ModuleSP module_sp,
                                  const DataExtractor &data,
-                                 DWARFUnit *dwarf_cu,
+                                 const DWARFUnit *dwarf_cu,
                                  lldb::offset_t data_offset,
                                  lldb::offset_t data_length)
     : m_module_wp(), m_data(data, data_offset, data_length),
@@ -74,51 +74,16 @@ DWARFExpression::~DWARFExpression() {}
 
 bool DWARFExpression::IsValid() const { return m_data.GetByteSize() > 0; }
 
-void DWARFExpression::SetOpcodeData(const DataExtractor &data) {
-  m_data = data;
-}
+void DWARFExpression::UpdateValue(uint64_t const_value,
+                                  lldb::offset_t const_value_byte_size,
+                                  uint8_t addr_byte_size) {
+  if (!const_value_byte_size)
+    return;
 
-void DWARFExpression::CopyOpcodeData(lldb::ModuleSP module_sp,
-                                     const DataExtractor &data,
-                                     lldb::offset_t data_offset,
-                                     lldb::offset_t data_length) {
-  const uint8_t *bytes = data.PeekData(data_offset, data_length);
-  if (bytes) {
-    m_module_wp = module_sp;
-    m_data.SetData(DataBufferSP(new DataBufferHeap(bytes, data_length)));
-    m_data.SetByteOrder(data.GetByteOrder());
-    m_data.SetAddressByteSize(data.GetAddressByteSize());
-  }
-}
-
-void DWARFExpression::CopyOpcodeData(const void *data,
-                                     lldb::offset_t data_length,
-                                     ByteOrder byte_order,
-                                     uint8_t addr_byte_size) {
-  if (data && data_length) {
-    m_data.SetData(DataBufferSP(new DataBufferHeap(data, data_length)));
-    m_data.SetByteOrder(byte_order);
-    m_data.SetAddressByteSize(addr_byte_size);
-  }
-}
-
-void DWARFExpression::CopyOpcodeData(uint64_t const_value,
-                                     lldb::offset_t const_value_byte_size,
-                                     uint8_t addr_byte_size) {
-  if (const_value_byte_size) {
-    m_data.SetData(
-        DataBufferSP(new DataBufferHeap(&const_value, const_value_byte_size)));
-    m_data.SetByteOrder(endian::InlHostByteOrder());
-    m_data.SetAddressByteSize(addr_byte_size);
-  }
-}
-
-void DWARFExpression::SetOpcodeData(lldb::ModuleSP module_sp,
-                                    const DataExtractor &data,
-                                    lldb::offset_t data_offset,
-                                    lldb::offset_t data_length) {
-  m_module_wp = module_sp;
-  m_data.SetData(data, data_offset, data_length);
+  m_data.SetData(
+      DataBufferSP(new DataBufferHeap(&const_value, const_value_byte_size)));
+  m_data.SetByteOrder(endian::InlHostByteOrder());
+  m_data.SetAddressByteSize(addr_byte_size);
 }
 
 void DWARFExpression::DumpLocation(Stream *s, lldb::offset_t offset,
@@ -1191,7 +1156,7 @@ bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
 bool DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
-    DWARFUnit *dwarf_cu, const lldb::offset_t opcodes_offset,
+    const DWARFUnit *dwarf_cu, const lldb::offset_t opcodes_offset,
     const lldb::offset_t opcodes_length, const lldb::RegisterKind reg_kind,
     const Value *initial_value_ptr, const Value *object_address_ptr,
     Value &result, Status *error_ptr) {

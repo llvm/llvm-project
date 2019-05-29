@@ -55,6 +55,22 @@ entry:
   ret float %tmp34
 }
 
+; FIXME: This combine isn't working.
+define float @test4_unary_fneg(float %x) nounwind  {
+; CHECK-LABEL: @test4_unary_fneg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP1:%.*]] = fpext float [[X:%.*]] to double
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg double [[TMP1]]
+; CHECK-NEXT:    [[TMP34:%.*]] = fptrunc double [[TMP2]] to float
+; CHECK-NEXT:    ret float [[TMP34]]
+;
+entry:
+  %tmp1 = fpext float %x to double
+  %tmp2 = fneg double %tmp1
+  %tmp34 = fptrunc double %tmp2 to float
+  ret float %tmp34
+}
+
 ; Test with vector splat constant
 define <2 x float> @test5(<2 x float> %x) nounwind  {
 ; CHECK-LABEL: @test5(

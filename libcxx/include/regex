@@ -2306,7 +2306,7 @@ public:
             else
             {
                 if (__b.size() != 1 || __e.size() != 1)
-                    __throw_regex_error<regex_constants::error_collate>();
+                    __throw_regex_error<regex_constants::error_range>();
                 if (__icase_)
                 {
                     __b[0] = __traits_.translate_nocase(__b[0]);

@@ -492,8 +492,8 @@ class ARMAsmParser : public MCTargetAsmParser {
     return getSTI().getFeatureBits()[ARM::FeatureDSP];
   }
 
-  bool hasD16() const {
-    return getSTI().getFeatureBits()[ARM::FeatureD16];
+  bool hasD32() const {
+    return getSTI().getFeatureBits()[ARM::FeatureD32];
   }
 
   bool hasV8_1aOps() const {
@@ -3424,7 +3424,7 @@ int ARMAsmParser::tryParseRegister() {
   }
 
   // Some FPUs only have 16 D registers, so D16-D31 are invalid
-  if (hasD16() && RegNum >= ARM::D16 && RegNum <= ARM::D31)
+  if (!hasD32() && RegNum >= ARM::D16 && RegNum <= ARM::D31)
     return -1;
 
   Parser.Lex(); // Eat identifier token.
@@ -10415,11 +10415,11 @@ ARMAsmParser::getCustomOperandDiag(ARMMatchResultTy MatchError) {
                       : "operand must be a register in range [r0, r12] or r14";
   // DPR contains 16 registers for some FPUs, and 32 for others.
   case Match_DPR:
-    return hasD16() ? "operand must be a register in range [d0, d15]"
-                    : "operand must be a register in range [d0, d31]";
+    return hasD32() ? "operand must be a register in range [d0, d31]"
+                    : "operand must be a register in range [d0, d15]";
   case Match_DPR_RegList:
-    return hasD16() ? "operand must be a list of registers in range [d0, d15]"
-                    : "operand must be a list of registers in range [d0, d31]";
+    return hasD32() ? "operand must be a list of registers in range [d0, d31]"
+                    : "operand must be a list of registers in range [d0, d15]";
 
   // For all other diags, use the static string from tablegen.
   default:
@@ -10621,14 +10621,15 @@ bool ARMAsmParser::parseDirectiveArchExtension(SMLoc L) {
     { ARM::AEK_CRC, {Feature_HasV8Bit}, {ARM::FeatureCRC} },
     { ARM::AEK_CRYPTO,  {Feature_HasV8Bit},
       {ARM::FeatureCrypto, ARM::FeatureNEON, ARM::FeatureFPARMv8} },
-    { ARM::AEK_FP, {Feature_HasV8Bit}, {ARM::FeatureFPARMv8} },
+    { ARM::AEK_FP, {Feature_HasV8Bit},
+      {ARM::FeatureVFP2_D16_SP, ARM::FeatureFPARMv8} },
     { (ARM::AEK_HWDIVTHUMB | ARM::AEK_HWDIVARM),
       {Feature_HasV7Bit, Feature_IsNotMClassBit},
       {ARM::FeatureHWDivThumb, ARM::FeatureHWDivARM} },
     { ARM::AEK_MP, {Feature_HasV7Bit, Feature_IsNotMClassBit},
       {ARM::FeatureMP} },
     { ARM::AEK_SIMD, {Feature_HasV8Bit},
-      {ARM::FeatureNEON, ARM::FeatureFPARMv8} },
+      {ARM::FeatureNEON, ARM::FeatureVFP2_D16_SP, ARM::FeatureFPARMv8} },
     { ARM::AEK_SEC, {Feature_HasV6KBit}, {ARM::FeatureTrustZone} },
     // FIXME: Only available in A-class, isel not predicated
     { ARM::AEK_VIRT, {Feature_HasV7Bit}, {ARM::FeatureVirtualization} },
@@ -10678,12 +10679,12 @@ bool ARMAsmParser::parseDirectiveArchExtension(SMLoc L) {
                                "allowed for the current base architecture");
 
     MCSubtargetInfo &STI = copySTI();
-    FeatureBitset ToggleFeatures = EnableFeature
-      ? (~STI.getFeatureBits() & Extension.Features)
-      : ( STI.getFeatureBits() & Extension.Features);
-
-    FeatureBitset Features =
-        ComputeAvailableFeatures(STI.ToggleFeature(ToggleFeatures));
+    if (EnableFeature) {
+      STI.SetFeatureBitsTransitively(Extension.Features);
+    } else {
+      STI.ClearFeatureBitsTransitively(Extension.Features);
+    }
+    FeatureBitset Features = ComputeAvailableFeatures(STI.getFeatureBits());
     setAvailableFeatures(Features);
     return false;
   }

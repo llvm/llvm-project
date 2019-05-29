@@ -38,11 +38,11 @@ RUN:   FileCheck --check-prefix=PHENTSIZE %s
 
 PHENTSIZE: invalid e_phentsize
 
-RUN: not llvm-readobj --dynamic-table \
+RUN: llvm-readobj --dynamic-table \
 RUN:   %p/Inputs/corrupt-invalid-virtual-addr.elf.x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=VIRTADDR %s
 
-VIRTADDR: Virtual address is not in any segment
+VIRTADDR: warning: Unable to parse DT_STRTAB: Virtual address is not in any segment
 
 
 RUN: not llvm-readobj --dyn-relocations \

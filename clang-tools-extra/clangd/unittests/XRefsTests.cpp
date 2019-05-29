@@ -893,7 +893,10 @@ TEST(Hover, All) {
               int test1 = bonjour;
             }
           )cpp",
-          "Declared in main\n\nint bonjour",
+          "text[Declared in]code[main]\n"
+          "codeblock(cpp) [\n"
+          "int bonjour\n"
+          "]",
       },
       {
           R"cpp(// Local variable in method
@@ -904,7 +907,10 @@ TEST(Hover, All) {
               }
             };
           )cpp",
-          "Declared in s::method\n\nint bonjour",
+          "text[Declared in]code[s::method]\n"
+          "codeblock(cpp) [\n"
+          "int bonjour\n"
+          "]",
       },
       {
           R"cpp(// Struct
@@ -915,7 +921,10 @@ TEST(Hover, All) {
               ns1::My^Class* Params;
             }
           )cpp",
-          "Declared in ns1\n\nstruct MyClass {}",
+          "text[Declared in]code[ns1]\n"
+          "codeblock(cpp) [\n"
+          "struct MyClass {}\n"
+          "]",
       },
       {
           R"cpp(// Class
@@ -926,7 +935,10 @@ TEST(Hover, All) {
               ns1::My^Class* Params;
             }
           )cpp",
-          "Declared in ns1\n\nclass MyClass {}",
+          "text[Declared in]code[ns1]\n"
+          "codeblock(cpp) [\n"
+          "class MyClass {}\n"
+          "]",
       },
       {
           R"cpp(// Union
@@ -937,7 +949,10 @@ TEST(Hover, All) {
               ns1::My^Union Params;
             }
           )cpp",
-          "Declared in ns1\n\nunion MyUnion {}",
+          "text[Declared in]code[ns1]\n"
+          "codeblock(cpp) [\n"
+          "union MyUnion {}\n"
+          "]",
       },
       {
           R"cpp(// Function definition via pointer
@@ -946,7 +961,10 @@ TEST(Hover, All) {
               auto *X = &^foo;
             }
           )cpp",
-          "Declared in global namespace\n\nint foo(int)",
+          "text[Declared in]code[global namespace]\n"
+          "codeblock(cpp) [\n"
+          "int foo(int)\n"
+          "]",
       },
       {
           R"cpp(// Function declaration via call
@@ -955,7 +973,10 @@ TEST(Hover, All) {
               return ^foo(42);
             }
           )cpp",
-          "Declared in global namespace\n\nint foo(int)",
+          "text[Declared in]code[global namespace]\n"
+          "codeblock(cpp) [\n"
+          "int foo(int)\n"
+          "]",
       },
       {
           R"cpp(// Field
@@ -965,7 +986,10 @@ TEST(Hover, All) {
               bar.^x;
             }
           )cpp",
-          "Declared in Foo\n\nint x",
+          "text[Declared in]code[Foo]\n"
+          "codeblock(cpp) [\n"
+          "int x\n"
+          "]",
       },
       {
           R"cpp(// Field with initialization
@@ -975,7 +999,10 @@ TEST(Hover, All) {
               bar.^x;
             }
           )cpp",
-          "Declared in Foo\n\nint x = 5",
+          "text[Declared in]code[Foo]\n"
+          "codeblock(cpp) [\n"
+          "int x = 5\n"
+          "]",
       },
       {
           R"cpp(// Static field
@@ -984,7 +1011,10 @@ TEST(Hover, All) {
               Foo::^x;
             }
           )cpp",
-          "Declared in Foo\n\nstatic int x",
+          "text[Declared in]code[Foo]\n"
+          "codeblock(cpp) [\n"
+          "static int x\n"
+          "]",
       },
       {
           R"cpp(// Field, member initializer
@@ -993,7 +1023,10 @@ TEST(Hover, All) {
               Foo() : ^x(0) {}
             };
           )cpp",
-          "Declared in Foo\n\nint x",
+          "text[Declared in]code[Foo]\n"
+          "codeblock(cpp) [\n"
+          "int x\n"
+          "]",
       },
       {
           R"cpp(// Field, GNU old-style field designator
@@ -1002,7 +1035,10 @@ TEST(Hover, All) {
               Foo bar = { ^x : 1 };
             }
           )cpp",
-          "Declared in Foo\n\nint x",
+          "text[Declared in]code[Foo]\n"
+          "codeblock(cpp) [\n"
+          "int x\n"
+          "]",
       },
       {
           R"cpp(// Field, field designator
@@ -1011,7 +1047,10 @@ TEST(Hover, All) {
               Foo bar = { .^x = 2 };
             }
           )cpp",
-          "Declared in Foo\n\nint x",
+          "text[Declared in]code[Foo]\n"
+          "codeblock(cpp) [\n"
+          "int x\n"
+          "]",
       },
       {
           R"cpp(// Method call
@@ -1021,7 +1060,10 @@ TEST(Hover, All) {
               bar.^x();
             }
           )cpp",
-          "Declared in Foo\n\nint x()",
+          "text[Declared in]code[Foo]\n"
+          "codeblock(cpp) [\n"
+          "int x()\n"
+          "]",
       },
       {
           R"cpp(// Static method call
@@ -1030,7 +1072,10 @@ TEST(Hover, All) {
               Foo::^x();
             }
           )cpp",
-          "Declared in Foo\n\nstatic int x()",
+          "text[Declared in]code[Foo]\n"
+          "codeblock(cpp) [\n"
+          "static int x()\n"
+          "]",
       },
       {
           R"cpp(// Typedef
@@ -1039,7 +1084,10 @@ TEST(Hover, All) {
               ^Foo bar;
             }
           )cpp",
-          "Declared in global namespace\n\ntypedef int Foo",
+          "text[Declared in]code[global namespace]\n"
+          "codeblock(cpp) [\n"
+          "typedef int Foo\n"
+          "]",
       },
       {
           R"cpp(// Namespace
@@ -1048,7 +1096,10 @@ TEST(Hover, All) {
             } // namespace ns
             int main() { ^ns::Foo::bar(); }
           )cpp",
-          "Declared in global namespace\n\nnamespace ns {}",
+          "text[Declared in]code[global namespace]\n"
+          "codeblock(cpp) [\n"
+          "namespace ns {}\n"
+          "]",
       },
       {
           R"cpp(// Anonymous namespace
@@ -1059,7 +1110,10 @@ TEST(Hover, All) {
             } // namespace ns
             int main() { ns::f^oo++; }
           )cpp",
-          "Declared in ns::(anonymous)\n\nint foo",
+          "text[Declared in]code[ns::(anonymous)]\n"
+          "codeblock(cpp) [\n"
+          "int foo\n"
+          "]",
       },
       {
           R"cpp(// Macro
@@ -1069,14 +1123,18 @@ TEST(Hover, All) {
             #define MACRO 2
             #undef macro
           )cpp",
-          "#define MACRO 1",
+          "codeblock(cpp) [\n"
+          "#define MACRO 1\n"
+          "]",
       },
       {
           R"cpp(// Macro
             #define MACRO 0
             #define MACRO2 ^MACRO
           )cpp",
-          "#define MACRO 0",
+          "codeblock(cpp) [\n"
+          "#define MACRO 0\n"
+          "]",
       },
       {
           R"cpp(// Macro
@@ -1085,8 +1143,10 @@ TEST(Hover, All) {
             }
             int main() ^MACRO
           )cpp",
-          "#define MACRO                                                       "
-          "           \\\n  { return 0; }",
+          R"cpp(codeblock(cpp) [
+#define MACRO                                                                  \
+  { return 0; }
+])cpp",
       },
       {
           R"cpp(// Forward class declaration
@@ -1094,7 +1154,10 @@ TEST(Hover, All) {
             class Foo {};
             F^oo* foo();
           )cpp",
-          "Declared in global namespace\n\nclass Foo {}",
+          "text[Declared in]code[global namespace]\n"
+          "codeblock(cpp) [\n"
+          "class Foo {}\n"
+          "]",
       },
       {
           R"cpp(// Function declaration
@@ -1102,7 +1165,10 @@ TEST(Hover, All) {
             void g() { f^oo(); }
             void foo() {}
           )cpp",
-          "Declared in global namespace\n\nvoid foo()",
+          "text[Declared in]code[global namespace]\n"
+          "codeblock(cpp) [\n"
+          "void foo()\n"
+          "]",
       },
       {
           R"cpp(// Enum declaration
@@ -1113,7 +1179,10 @@ TEST(Hover, All) {
               Hel^lo hello = ONE;
             }
           )cpp",
-          "Declared in global namespace\n\nenum Hello {}",
+          "text[Declared in]code[global namespace]\n"
+          "codeblock(cpp) [\n"
+          "enum Hello {}\n"
+          "]",
       },
       {
           R"cpp(// Enumerator
@@ -1124,7 +1193,10 @@ TEST(Hover, All) {
               Hello hello = O^NE;
             }
           )cpp",
-          "Declared in Hello\n\nONE",
+          "text[Declared in]code[Hello]\n"
+          "codeblock(cpp) [\n"
+          "ONE\n"
+          "]",
       },
       {
           R"cpp(// Enumerator in anonymous enum
@@ -1135,7 +1207,10 @@ TEST(Hover, All) {
               int hello = O^NE;
             }
           )cpp",
-          "Declared in global namespace\n\nONE",
+          "text[Declared in]code[global namespace]\n"
+          "codeblock(cpp) [\n"
+          "ONE\n"
+          "]",
       },
       {
           R"cpp(// Global variable
@@ -1144,7 +1219,10 @@ TEST(Hover, All) {
               he^y++;
             }
           )cpp",
-          "Declared in global namespace\n\nstatic int hey = 10",
+          "text[Declared in]code[global namespace]\n"
+          "codeblock(cpp) [\n"
+          "static int hey = 10\n"
+          "]",
       },
       {
           R"cpp(// Global variable in namespace
@@ -1155,7 +1233,10 @@ TEST(Hover, All) {
               ns1::he^y++;
             }
           )cpp",
-          "Declared in ns1\n\nstatic int hey = 10",
+          "text[Declared in]code[ns1]\n"
+          "codeblock(cpp) [\n"
+          "static int hey = 10\n"
+          "]",
       },
       {
           R"cpp(// Field in anonymous struct
@@ -1166,7 +1247,10 @@ TEST(Hover, All) {
               s.he^llo++;
             }
           )cpp",
-          "Declared in (anonymous struct)\n\nint hello",
+          "text[Declared in]code[(anonymous struct)]\n"
+          "codeblock(cpp) [\n"
+          "int hello\n"
+          "]",
       },
       {
           R"cpp(// Templated function
@@ -1176,7 +1260,10 @@ TEST(Hover, All) {
             }
             void g() { auto x = f^oo<int>(); }
           )cpp",
-          "Declared in global namespace\n\ntemplate <typename T> T foo()",
+          "text[Declared in]code[global namespace]\n"
+          "codeblock(cpp) [\n"
+          "template <typename T> T foo()\n"
+          "]",
       },
       {
           R"cpp(// Anonymous union
@@ -1187,7 +1274,10 @@ TEST(Hover, All) {
             };
             void g() { struct outer o; o.v.d^ef++; }
           )cpp",
-          "Declared in outer::(anonymous union)\n\nint def",
+          "text[Declared in]code[outer::(anonymous union)]\n"
+          "codeblock(cpp) [\n"
+          "int def\n"
+          "]",
       },
       {
           R"cpp(// Nothing
@@ -1203,7 +1293,9 @@ TEST(Hover, All) {
               ^auto i = 1;
             }
           )cpp",
-          "int",
+          "codeblock(cpp) [\n"
+          "int\n"
+          "]",
       },
       {
           R"cpp(// Simple initialization with const auto
@@ -1211,7 +1303,9 @@ TEST(Hover, All) {
               const ^auto i = 1;
             }
           )cpp",
-          "int",
+          "codeblock(cpp) [\n"
+          "int\n"
+          "]",
       },
       {
           R"cpp(// Simple initialization with const auto&
@@ -1219,7 +1313,9 @@ TEST(Hover, All) {
               const ^auto& i = 1;
             }
           )cpp",
-          "int",
+          "codeblock(cpp) [\n"
+          "int\n"
+          "]",
       },
       {
           R"cpp(// Simple initialization with auto&
@@ -1227,7 +1323,9 @@ TEST(Hover, All) {
               ^auto& i = 1;
             }
           )cpp",
-          "int",
+          "codeblock(cpp) [\n"
+          "int\n"
+          "]",
       },
       {
           R"cpp(// Simple initialization with auto*
@@ -1236,7 +1334,9 @@ TEST(Hover, All) {
               ^auto* i = &a;
             }
           )cpp",
-          "int",
+          "codeblock(cpp) [\n"
+          "int\n"
+          "]",
       },
       {
           R"cpp(// Auto with initializer list.
@@ -1249,7 +1349,9 @@ TEST(Hover, All) {
               ^auto i = {1,2};
             }
           )cpp",
-          "class std::initializer_list<int>",
+          "codeblock(cpp) [\n"
+          "class std::initializer_list<int>\n"
+          "]",
       },
       {
           R"cpp(// User defined conversion to auto
@@ -1257,7 +1359,9 @@ TEST(Hover, All) {
               operator ^auto() const { return 10; }
             };
           )cpp",
-          "int",
+          "codeblock(cpp) [\n"
+          "int\n"
+          "]",
       },
       {
           R"cpp(// Simple initialization with decltype(auto)
@@ -1265,7 +1369,9 @@ TEST(Hover, All) {
               ^decltype(auto) i = 1;
             }
           )cpp",
-          "int",
+          "codeblock(cpp) [\n"
+          "int\n"
+          "]",
       },
       {
           R"cpp(// Simple initialization with const decltype(auto)
@@ -1274,7 +1380,9 @@ TEST(Hover, All) {
               ^decltype(auto) i = j;
             }
           )cpp",
-          "const int",
+          "codeblock(cpp) [\n"
+          "const int\n"
+          "]",
       },
       {
           R"cpp(// Simple initialization with const& decltype(auto)
@@ -1284,7 +1392,9 @@ TEST(Hover, All) {
               ^decltype(auto) i = j;
             }
           )cpp",
-          "const int &",
+          "codeblock(cpp) [\n"
+          "const int &\n"
+          "]",
       },
       {
           R"cpp(// Simple initialization with & decltype(auto)
@@ -1294,7 +1404,9 @@ TEST(Hover, All) {
               ^decltype(auto) i = j;
             }
           )cpp",
-          "int &",
+          "codeblock(cpp) [\n"
+          "int &\n"
+          "]",
       },
       {
           R"cpp(// decltype with initializer list: nothing
@@ -1315,7 +1427,9 @@ TEST(Hover, All) {
               return 0;
             }
           )cpp",
-          "int",
+          "codeblock(cpp) [\n"
+          "int\n"
+          "]",
       },
       {
           R"cpp(// auto function return with trailing type
@@ -1324,7 +1438,9 @@ TEST(Hover, All) {
               return Bar();
             }
           )cpp",
-          "struct Bar",
+          "codeblock(cpp) [\n"
+          "struct Bar\n"
+          "]",
       },
       {
           R"cpp(// trailing return type
@@ -1333,7 +1449,9 @@ TEST(Hover, All) {
               return Bar();
             }
           )cpp",
-          "struct Bar",
+          "codeblock(cpp) [\n"
+          "struct Bar\n"
+          "]",
       },
       {
           R"cpp(// auto in function return
@@ -1342,7 +1460,9 @@ TEST(Hover, All) {
               return Bar();
             }
           )cpp",
-          "struct Bar",
+          "codeblock(cpp) [\n"
+          "struct Bar\n"
+          "]",
       },
       {
           R"cpp(// auto& in function return
@@ -1351,7 +1471,9 @@ TEST(Hover, All) {
               return Bar();
             }
           )cpp",
-          "struct Bar",
+          "codeblock(cpp) [\n"
+          "struct Bar\n"
+          "]",
       },
       {
           R"cpp(// auto* in function return
@@ -1361,7 +1483,9 @@ TEST(Hover, All) {
               return bar;
             }
           )cpp",
-          "struct Bar",
+          "codeblock(cpp) [\n"
+          "struct Bar\n"
+          "]",
       },
       {
           R"cpp(// const auto& in function return
@@ -1370,7 +1494,9 @@ TEST(Hover, All) {
               return Bar();
             }
           )cpp",
-          "struct Bar",
+          "codeblock(cpp) [\n"
+          "struct Bar\n"
+          "]",
       },
       {
           R"cpp(// decltype(auto) in function return
@@ -1379,7 +1505,9 @@ TEST(Hover, All) {
               return Bar();
             }
           )cpp",
-          "struct Bar",
+          "codeblock(cpp) [\n"
+          "struct Bar\n"
+          "]",
       },
       {
           R"cpp(// decltype(auto) reference in function return
@@ -1389,7 +1517,9 @@ TEST(Hover, All) {
               return (a);
             }
           )cpp",
-          "int &",
+          "codeblock(cpp) [\n"
+          "int &\n"
+          "]",
       },
       {
           R"cpp(// decltype lvalue reference
@@ -1398,7 +1528,9 @@ TEST(Hover, All) {
               ^decltype(I) J = I;
             }
           )cpp",
-          "int",
+          "codeblock(cpp) [\n"
+          "int\n"
+          "]",
       },
       {
           R"cpp(// decltype lvalue reference
@@ -1408,7 +1540,9 @@ TEST(Hover, All) {
               ^decltype(K) J = I;
             }
           )cpp",
-          "int &",
+          "codeblock(cpp) [\n"
+          "int &\n"
+          "]",
       },
       {
           R"cpp(// decltype lvalue reference parenthesis
@@ -1417,7 +1551,9 @@ TEST(Hover, All) {
               ^decltype((I)) J = I;
             }
           )cpp",
-          "int &",
+          "codeblock(cpp) [\n"
+          "int &\n"
+          "]",
       },
       {
           R"cpp(// decltype rvalue reference
@@ -1426,7 +1562,9 @@ TEST(Hover, All) {
               ^decltype(static_cast<int&&>(I)) J = static_cast<int&&>(I);
             }
           )cpp",
-          "int &&",
+          "codeblock(cpp) [\n"
+          "int &&\n"
+          "]",
       },
       {
           R"cpp(// decltype rvalue reference function call
@@ -1436,7 +1574,9 @@ TEST(Hover, All) {
               ^decltype(bar()) J = bar();
             }
           )cpp",
-          "int &&",
+          "codeblock(cpp) [\n"
+          "int &&\n"
+          "]",
       },
       {
           R"cpp(// decltype of function with trailing return type.
@@ -1448,7 +1588,9 @@ TEST(Hover, All) {
               ^decltype(test()) i = test();
             }
           )cpp",
-          "struct Bar",
+          "codeblock(cpp) [\n"
+          "struct Bar\n"
+          "]",
       },
       {
           R"cpp(// decltype of var with decltype.
@@ -1458,7 +1600,9 @@ TEST(Hover, All) {
               ^decltype(J) K = J;
             }
           )cpp",
-          "int",
+          "codeblock(cpp) [\n"
+          "int\n"
+          "]",
       },
       {
           R"cpp(// structured binding. Not supported yet
@@ -1486,7 +1630,9 @@ TEST(Hover, All) {
             int bar();
             ^auto (*foo)() = bar;
           )cpp",
-          "int",
+          "codeblock(cpp) [\n"
+          "int\n"
+          "]",
       },
   };
 
@@ -1497,7 +1643,8 @@ TEST(Hover, All) {
     auto AST = TU.build();
     if (auto H = getHover(AST, T.point(), format::getLLVMStyle())) {
       EXPECT_NE("", Test.ExpectedHover) << Test.Input;
-      EXPECT_EQ(H->render().value, Test.ExpectedHover.str()) << Test.Input;
+      EXPECT_EQ(H->present().renderForTests(), Test.ExpectedHover.str())
+          << Test.Input;
     } else
       EXPECT_EQ("", Test.ExpectedHover.str()) << Test.Input;
   }

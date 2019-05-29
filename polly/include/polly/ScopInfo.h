@@ -2031,20 +2031,6 @@ private:
   /// Check if the base ptr of @p MA is in the SCoP but not hoistable.
   bool hasNonHoistableBasePtrInScop(MemoryAccess *MA, isl::union_map Writes);
 
-  /// Create equivalence classes for required invariant accesses.
-  ///
-  /// These classes will consolidate multiple required invariant loads from the
-  /// same address in order to keep the number of dimensions in the SCoP
-  /// description small. For each such class equivalence class only one
-  /// representing element, hence one required invariant load, will be chosen
-  /// and modeled as parameter. The method
-  /// Scop::getRepresentingInvariantLoadSCEV() will replace each element from an
-  /// equivalence class with the representing element that is modeled. As a
-  /// consequence Scop::getIdForParam() will only return an id for the
-  /// representing element of each equivalence class, thus for each required
-  /// invariant location.
-  void buildInvariantEquivalenceClasses();
-
   /// Return the context under which the access cannot be hoisted.
   ///
   /// @param Access The access to check.
@@ -2385,6 +2371,18 @@ public:
 
   /// Add metadata for @p Access.
   void addAccessData(MemoryAccess *Access);
+
+  /// Add new invariant access equivalence class
+  void
+  addInvariantEquivClass(const InvariantEquivClassTy &InvariantEquivClass) {
+    InvariantEquivClasses.emplace_back(InvariantEquivClass);
+  }
+
+  /// Add mapping from invariant loads to the representing invariant load of
+  ///        their equivalence class.
+  void addInvariantLoadMapping(const Value *LoadInst, Value *ClassRep) {
+    InvEquivClassVMap[LoadInst] = ClassRep;
+  }
 
   /// Remove the metadata stored for @p Access.
   void removeAccessData(MemoryAccess *Access);
