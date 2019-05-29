@@ -14,6 +14,7 @@
 #include "ClangdUnit.h"
 #include "CodeComplete.h"
 #include "FSProvider.h"
+#include "FormattedString.h"
 #include "Function.h"
 #include "GlobalCompilationDatabase.h"
 #include "Protocol.h"

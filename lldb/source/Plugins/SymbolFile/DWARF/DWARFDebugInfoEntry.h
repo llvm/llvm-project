@@ -19,26 +19,6 @@
 #include <set>
 #include <vector>
 
-typedef std::map<const DWARFDebugInfoEntry *, dw_addr_t> DIEToAddressMap;
-typedef DIEToAddressMap::iterator DIEToAddressMapIter;
-typedef DIEToAddressMap::const_iterator DIEToAddressMapConstIter;
-
-typedef std::map<dw_addr_t, const DWARFDebugInfoEntry *> AddressToDIEMap;
-typedef AddressToDIEMap::iterator AddressToDIEMapIter;
-typedef AddressToDIEMap::const_iterator AddressToDIEMapConstIter;
-
-typedef std::map<dw_offset_t, dw_offset_t> DIEToDIEMap;
-typedef DIEToDIEMap::iterator DIEToDIEMapIter;
-typedef DIEToDIEMap::const_iterator DIEToDIEMapConstIter;
-
-typedef std::map<uint32_t, const DWARFDebugInfoEntry *> UInt32ToDIEMap;
-typedef UInt32ToDIEMap::iterator UInt32ToDIEMapIter;
-typedef UInt32ToDIEMap::const_iterator UInt32ToDIEMapConstIter;
-
-typedef std::multimap<uint32_t, const DWARFDebugInfoEntry *> UInt32ToDIEMMap;
-typedef UInt32ToDIEMMap::iterator UInt32ToDIEMMapIter;
-typedef UInt32ToDIEMMap::const_iterator UInt32ToDIEMMapConstIter;
-
 class DWARFDeclContext;
 
 #define DIE_SIBLING_IDX_BITSIZE 31
@@ -48,10 +28,6 @@ public:
   typedef std::vector<DWARFDebugInfoEntry> collection;
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;
-
-  typedef std::vector<dw_offset_t> offset_collection;
-  typedef offset_collection::iterator offset_collection_iterator;
-  typedef offset_collection::const_iterator offset_collection_const_iterator;
 
   DWARFDebugInfoEntry()
       : m_offset(DW_INVALID_OFFSET), m_parent_idx(0), m_sibling_idx(0),
@@ -129,9 +105,6 @@ public:
   const char *GetQualifiedName(DWARFUnit *cu, const DWARFAttributes &attributes,
                                std::string &storage) const;
 
-  static bool OffsetLessThan(const DWARFDebugInfoEntry &a,
-                             const DWARFDebugInfoEntry &b);
-
   void Dump(const DWARFUnit *cu, lldb_private::Stream &s,
             uint32_t recurse_depth) const;
 
@@ -187,38 +160,14 @@ public:
     return HasChildren() ? this + 1 : nullptr;
   }
 
-  std::vector<DWARFDIE> GetDeclContextDIEs(DWARFUnit *cu) const;
-
   void GetDWARFDeclContext(DWARFUnit *cu,
                            DWARFDeclContext &dwarf_decl_ctx) const;
-
-  bool MatchesDWARFDeclContext(DWARFUnit *cu,
-                               const DWARFDeclContext &dwarf_decl_ctx) const;
 
   DWARFDIE GetParentDeclContextDIE(DWARFUnit *cu) const;
   DWARFDIE GetParentDeclContextDIE(DWARFUnit *cu,
                                    const DWARFAttributes &attributes) const;
 
-  void SetParent(DWARFDebugInfoEntry *parent) {
-    if (parent) {
-      // We know we are kept in a vector of contiguous entries, so we know
-      // our parent will be some index behind "this".
-      m_parent_idx = this - parent;
-    } else
-      m_parent_idx = 0;
-  }
-  void SetSibling(DWARFDebugInfoEntry *sibling) {
-    if (sibling) {
-      // We know we are kept in a vector of contiguous entries, so we know
-      // our sibling will be some index after "this".
-      m_sibling_idx = sibling - this;
-      sibling->SetParent(GetParent());
-    } else
-      m_sibling_idx = 0;
-  }
-
   void SetSiblingIndex(uint32_t idx) { m_sibling_idx = idx; }
-
   void SetParentIndex(uint32_t idx) { m_parent_idx = idx; }
 
 protected:

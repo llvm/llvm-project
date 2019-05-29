@@ -15,9 +15,9 @@ void test_one() {
 // CHECK-NEXT: | `-CompoundStmt {{.*}} <col:18, line:6:1>
 // CHECK-NEXT: `-FunctionDecl {{.*}} <line:8:1, line:11:1> line:8:6 test_one 'void ()'
 // CHECK-NEXT:   `-CompoundStmt {{.*}} <col:17, line:11:1>
-// CHECK-NEXT:     `-OMPSectionsDirective {{.*}} <line:9:9, col:21>
+// CHECK-NEXT:     `-OMPSectionsDirective {{.*}} <line:9:1, col:21>
 // CHECK-NEXT:       `-CapturedStmt {{.*}} <line:10:3, col:7>
 // CHECK-NEXT:         `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>
 // CHECK-NEXT:           |-CompoundStmt {{.*}} <col:3, col:7> openmp_structured_block
 // CHECK-NEXT:           | `-NullStmt {{.*}} <col:5>
-// CHECK-NEXT:           `-ImplicitParamDecl {{.*}} <line:9:9> col:9 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-sections.c:9:9) *const restrict'
+// CHECK-NEXT:           `-ImplicitParamDecl {{.*}} <line:9:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-sections.c:9:1) *const restrict'

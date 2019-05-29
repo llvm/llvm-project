@@ -54,7 +54,7 @@ enum : unsigned { Log2MaxSectionAlignment = 13 };
 // doesn't even have actual data (if common or bss).
 class Chunk {
 public:
-  enum Kind : uint8_t { SectionKind, OtherKind };
+  enum Kind : uint8_t { SectionKind, OtherKind, ImportThunkKind };
   Kind kind() const { return ChunkKind; }
 
   // Returns the size of this chunk (even if this is a common or BSS.)
@@ -167,19 +167,14 @@ public:
   // Collect all locations that contain absolute addresses for base relocations.
   virtual void getBaserels(std::vector<Baserel> *Res) {}
 
-  // Return true if this file has the hotpatch flag set to true in the
-  // S_COMPILE3 record in codeview debug info. Also returns true for some thunks
-  // synthesized by the linker.
-  virtual bool isHotPatchable() const { return false; }
-
   // Returns a human-readable name of this chunk. Chunks are unnamed chunks of
   // bytes, so this is used only for logging or debugging.
   virtual StringRef getDebugName() const { return ""; }
 
-  static bool classof(const Chunk *C) { return C->kind() == OtherKind; }
+  static bool classof(const Chunk *C) { return C->kind() != SectionKind; }
 
 protected:
-  NonSectionChunk() : Chunk(OtherKind) {}
+  NonSectionChunk(Kind K = OtherKind) : Chunk(K) {}
 };
 
 // A chunk corresponding a section of an input file.
@@ -249,8 +244,6 @@ public:
   bool isDWARF() const {
     return getSectionName().startswith(".debug_") || getSectionName() == ".eh_frame";
   }
-
-  bool isHotPatchable() const { return File->HotPatchable; }
 
   // Allow iteration over the bodies of this chunk's relocated symbols.
   llvm::iterator_range<symbol_iterator> symbols() const {
@@ -379,13 +372,6 @@ inline void Chunk::writeTo(uint8_t *Buf) const {
     static_cast<const NonSectionChunk *>(this)->writeTo(Buf);
 }
 
-inline bool Chunk::isHotPatchable() const {
-  if (isa<SectionChunk>(this))
-    return static_cast<const SectionChunk *>(this)->isHotPatchable();
-  else
-    return static_cast<const NonSectionChunk *>(this)->isHotPatchable();
-}
-
 inline StringRef Chunk::getSectionName() const {
   if (isa<SectionChunk>(this))
     return static_cast<const SectionChunk *>(this)->getSectionName();
@@ -478,57 +464,44 @@ static const uint8_t ImportThunkARM64[] = {
 // Windows-specific.
 // A chunk for DLL import jump table entry. In a final output, its
 // contents will be a JMP instruction to some __imp_ symbol.
-class ImportThunkChunkX64 : public NonSectionChunk {
+class ImportThunkChunk : public NonSectionChunk {
+public:
+  ImportThunkChunk(Defined *S)
+      : NonSectionChunk(ImportThunkKind), ImpSymbol(S) {}
+  static bool classof(const Chunk *C) { return C->kind() == ImportThunkKind; }
+
+protected:
+  Defined *ImpSymbol;
+};
+
+class ImportThunkChunkX64 : public ImportThunkChunk {
 public:
   explicit ImportThunkChunkX64(Defined *S);
   size_t getSize() const override { return sizeof(ImportThunkX86); }
   void writeTo(uint8_t *Buf) const override;
-
-  bool isHotPatchable() const override { return true; }
-
-private:
-  Defined *ImpSymbol;
 };
 
-class ImportThunkChunkX86 : public NonSectionChunk {
+class ImportThunkChunkX86 : public ImportThunkChunk {
 public:
-  explicit ImportThunkChunkX86(Defined *S) : ImpSymbol(S) {
-  }
+  explicit ImportThunkChunkX86(Defined *S) : ImportThunkChunk(S) {}
   size_t getSize() const override { return sizeof(ImportThunkX86); }
   void getBaserels(std::vector<Baserel> *Res) override;
   void writeTo(uint8_t *Buf) const override;
-
-  bool isHotPatchable() const override { return true; }
-
-private:
-  Defined *ImpSymbol;
 };
 
-class ImportThunkChunkARM : public NonSectionChunk {
+class ImportThunkChunkARM : public ImportThunkChunk {
 public:
-  explicit ImportThunkChunkARM(Defined *S) : ImpSymbol(S) {
-  }
+  explicit ImportThunkChunkARM(Defined *S) : ImportThunkChunk(S) {}
   size_t getSize() const override { return sizeof(ImportThunkARM); }
   void getBaserels(std::vector<Baserel> *Res) override;
   void writeTo(uint8_t *Buf) const override;
-
-  bool isHotPatchable() const override { return true; }
-
-private:
-  Defined *ImpSymbol;
 };
 
-class ImportThunkChunkARM64 : public NonSectionChunk {
+class ImportThunkChunkARM64 : public ImportThunkChunk {
 public:
-  explicit ImportThunkChunkARM64(Defined *S) : ImpSymbol(S) {
-  }
+  explicit ImportThunkChunkARM64(Defined *S) : ImportThunkChunk(S) {}
   size_t getSize() const override { return sizeof(ImportThunkARM64); }
   void writeTo(uint8_t *Buf) const override;
-
-  bool isHotPatchable() const override { return true; }
-
-private:
-  Defined *ImpSymbol;
 };
 
 class RangeExtensionThunkARM : public NonSectionChunk {
@@ -683,6 +656,17 @@ public:
 private:
   uint64_t Value;
 };
+
+// Return true if this file has the hotpatch flag set to true in the S_COMPILE3
+// record in codeview debug info. Also returns true for some thunks synthesized
+// by the linker.
+inline bool Chunk::isHotPatchable() const {
+  if (auto *SC = dyn_cast<SectionChunk>(this))
+    return SC->File->HotPatchable;
+  else if (isa<ImportThunkChunk>(this))
+    return true;
+  return false;
+}
 
 void applyMOV32T(uint8_t *Off, uint32_t V);
 void applyBranch24T(uint8_t *Off, int32_t V);

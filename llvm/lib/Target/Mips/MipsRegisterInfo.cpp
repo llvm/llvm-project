@@ -159,8 +159,6 @@ getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   const MipsSubtarget &Subtarget = MF.getSubtarget<MipsSubtarget>();
 
-  using RegIter = TargetRegisterClass::const_iterator;
-
   for (unsigned I = 0; I < array_lengthof(ReservedGPR32); ++I)
     Reserved.set(ReservedGPR32[I]);
 
@@ -182,14 +180,12 @@ getReservedRegs(const MachineFunction &MF) const {
 
   if (Subtarget.isFP64bit()) {
     // Reserve all registers in AFGR64.
-    for (RegIter Reg = Mips::AFGR64RegClass.begin(),
-         EReg = Mips::AFGR64RegClass.end(); Reg != EReg; ++Reg)
-      Reserved.set(*Reg);
+    for (MCPhysReg Reg : Mips::AFGR64RegClass)
+      Reserved.set(Reg);
   } else {
     // Reserve all registers in FGR64.
-    for (RegIter Reg = Mips::FGR64RegClass.begin(),
-         EReg = Mips::FGR64RegClass.end(); Reg != EReg; ++Reg)
-      Reserved.set(*Reg);
+    for (MCPhysReg Reg : Mips::FGR64RegClass)
+      Reserved.set(Reg);
   }
   // Reserve FP if this function should have a dedicated frame pointer register.
   if (Subtarget.getFrameLowering()->hasFP(MF)) {
@@ -221,14 +217,8 @@ getReservedRegs(const MachineFunction &MF) const {
   Reserved.set(Mips::DSPOutFlag);
 
   // Reserve MSA control registers.
-  Reserved.set(Mips::MSAIR);
-  Reserved.set(Mips::MSACSR);
-  Reserved.set(Mips::MSAAccess);
-  Reserved.set(Mips::MSASave);
-  Reserved.set(Mips::MSAModify);
-  Reserved.set(Mips::MSARequest);
-  Reserved.set(Mips::MSAMap);
-  Reserved.set(Mips::MSAUnmap);
+  for (MCPhysReg Reg : Mips::MSACtrlRegClass)
+    Reserved.set(Reg);
 
   // Reserve RA if in mips16 mode.
   if (Subtarget.inMips16Mode()) {

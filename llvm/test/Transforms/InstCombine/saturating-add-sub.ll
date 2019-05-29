@@ -339,6 +339,32 @@ define <2 x i8> @test_vector_sadd_neg_neg(<2 x i8> %a) {
   ret <2 x i8> %r
 }
 
+define i8 @test_scalar_sadd_always_overflows_low(i8 %a) {
+; CHECK-LABEL: @test_scalar_sadd_always_overflows_low(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[A:%.*]], -120
+; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[CMP]], i8 [[A]], i8 -120
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[MIN]], i8 -10)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %cmp = icmp slt i8 %a, -120
+  %min = select i1 %cmp, i8 %a, i8 -120
+  %r = call i8 @llvm.sadd.sat.i8(i8 %min, i8 -10)
+  ret i8 %r
+}
+
+define i8 @test_scalar_sadd_always_overflows_high(i8 %a) {
+; CHECK-LABEL: @test_scalar_sadd_always_overflows_high(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], 120
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP]], i8 [[A]], i8 120
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[MAX]], i8 10)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %cmp = icmp sgt i8 %a, 120
+  %max = select i1 %cmp, i8 %a, i8 120
+  %r = call i8 @llvm.sadd.sat.i8(i8 %max, i8 10)
+  ret i8 %r
+}
+
 ; While this is a no-overflow condition, the nuw flag gets lost due to
 ; canonicalization and we can no longer determine this
 define i8 @test_scalar_uadd_sub_nuw_lost_no_ov(i8 %a) {
@@ -799,6 +825,32 @@ define <2 x i8> @test_vector_ssub_neg_nneg(<2 x i8> %a) {
   %a_neg = or <2 x i8> %a, <i8 -128, i8 -128>
   %r = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> %a_neg, <2 x i8> <i8 10, i8 20>)
   ret <2 x i8> %r
+}
+
+define i8 @test_scalar_ssub_always_overflows_low(i8 %a) {
+; CHECK-LABEL: @test_scalar_ssub_always_overflows_low(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], 120
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP]], i8 [[A]], i8 120
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ssub.sat.i8(i8 -10, i8 [[MAX]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %cmp = icmp sgt i8 %a, 120
+  %max = select i1 %cmp, i8 %a, i8 120
+  %r = call i8 @llvm.ssub.sat.i8(i8 -10, i8 %max)
+  ret i8 %r
+}
+
+define i8 @test_scalar_ssub_always_overflows_high(i8 %a) {
+; CHECK-LABEL: @test_scalar_ssub_always_overflows_high(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[A:%.*]], -120
+; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[CMP]], i8 [[A]], i8 -120
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ssub.sat.i8(i8 10, i8 [[MIN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %cmp = icmp slt i8 %a, -120
+  %min = select i1 %cmp, i8 %a, i8 -120
+  %r = call i8 @llvm.ssub.sat.i8(i8 10, i8 %min)
+  ret i8 %r
 }
 
 define i8 @test_scalar_usub_add_nuw_no_ov(i8 %a) {

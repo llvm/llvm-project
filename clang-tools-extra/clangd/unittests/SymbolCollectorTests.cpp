@@ -123,11 +123,10 @@ public:
     assert(AST.hasValue());
     const NamedDecl &ND =
         Qualified ? findDecl(*AST, Name) : findUnqualifiedDecl(*AST, Name);
-    ASTContext& Ctx = AST->getASTContext();
-    const SourceManager& SM = Ctx.getSourceManager();
+    const SourceManager& SM = AST->getSourceManager();
     bool MainFile = SM.isWrittenInMainFile(SM.getExpansionLoc(ND.getBeginLoc()));
     return SymbolCollector::shouldCollectSymbol(
-        ND, Ctx, SymbolCollector::Options(), MainFile);
+        ND, AST->getASTContext(), SymbolCollector::Options(), MainFile);
   }
 
 protected:

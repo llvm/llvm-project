@@ -648,24 +648,34 @@ TEST_F(TestArm64InstEmulation, TestRegisterDoubleSpills) {
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row_sp->GetCFAValue().GetOffset());
 
-  if (row_sp->GetRegisterInfo(fpu_d8_arm64, regloc))
+  if (row_sp->GetRegisterInfo(fpu_d8_arm64, regloc)) {
     EXPECT_TRUE(regloc.IsSame());
-  if (row_sp->GetRegisterInfo(fpu_d9_arm64, regloc))
+  }
+  if (row_sp->GetRegisterInfo(fpu_d9_arm64, regloc)) {
     EXPECT_TRUE(regloc.IsSame());
-  if (row_sp->GetRegisterInfo(fpu_d10_arm64, regloc))
+  }
+  if (row_sp->GetRegisterInfo(fpu_d10_arm64, regloc)) {
     EXPECT_TRUE(regloc.IsSame());
-  if (row_sp->GetRegisterInfo(fpu_d11_arm64, regloc))
+  }
+  if (row_sp->GetRegisterInfo(fpu_d11_arm64, regloc)) {
     EXPECT_TRUE(regloc.IsSame());
-  if (row_sp->GetRegisterInfo(fpu_d12_arm64, regloc))
+  }
+  if (row_sp->GetRegisterInfo(fpu_d12_arm64, regloc)) {
     EXPECT_TRUE(regloc.IsSame());
-  if (row_sp->GetRegisterInfo(fpu_d13_arm64, regloc))
+  }
+  if (row_sp->GetRegisterInfo(fpu_d13_arm64, regloc)) {
     EXPECT_TRUE(regloc.IsSame());
-  if (row_sp->GetRegisterInfo(fpu_d14_arm64, regloc))
+  }
+  if (row_sp->GetRegisterInfo(fpu_d14_arm64, regloc)) {
     EXPECT_TRUE(regloc.IsSame());
-  if (row_sp->GetRegisterInfo(fpu_d15_arm64, regloc))
+  }
+  if (row_sp->GetRegisterInfo(fpu_d15_arm64, regloc)) {
     EXPECT_TRUE(regloc.IsSame());
-  if (row_sp->GetRegisterInfo(gpr_x27_arm64, regloc))
+  }
+  if (row_sp->GetRegisterInfo(gpr_x27_arm64, regloc)) {
     EXPECT_TRUE(regloc.IsSame());
-  if (row_sp->GetRegisterInfo(gpr_x28_arm64, regloc))
+  }
+  if (row_sp->GetRegisterInfo(gpr_x28_arm64, regloc)) {
     EXPECT_TRUE(regloc.IsSame());
+  }
 }

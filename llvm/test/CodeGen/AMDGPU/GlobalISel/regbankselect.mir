@@ -1,7 +1,5 @@
 # RUN: llc -march=amdgcn -mcpu=hawaii -run-pass=regbankselect %s -verify-machineinstrs -o - | FileCheck %s
 
-# REQUIRES: global-isel
-
 --- |
   define amdgpu_kernel void @load_constant(i32 addrspace(4)* %ptr0) { ret void }
   define amdgpu_kernel void @load_global_uniform(i32 addrspace(1)* %ptr1) {

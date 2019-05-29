@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SMTCONSTRAINTMANAGER_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SMTCONSTRAINTMANAGER_H
 
+#include "clang/Basic/JsonSupport.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
 
@@ -208,17 +209,32 @@ public:
     return State->set<ConstraintSMT>(CZ);
   }
 
-  void print(ProgramStateRef St, raw_ostream &OS, const char *nl,
-             const char *sep) override {
+  void printJson(raw_ostream &Out, ProgramStateRef State, const char *NL = "\n",
+                 unsigned int Space = 0, bool IsDot = false) const override {
+    ConstraintSMTType Constraints = State->get<ConstraintSMT>();
 
-    auto CZ = St->get<ConstraintSMT>();
-
-    OS << nl << sep << "Constraints:";
-    for (auto I = CZ.begin(), E = CZ.end(); I != E; ++I) {
-      OS << nl << ' ' << I->first << " : ";
-      I->second->print(OS);
+    Indent(Out, Space, IsDot) << "\"constraints\": ";
+    if (Constraints.isEmpty()) {
+      Out << "null," << NL;
+      return;
     }
-    OS << nl;
+
+    ++Space;
+    Out << '[' << NL;
+    for (ConstraintSMTType::iterator I = Constraints.begin();
+         I != Constraints.end(); ++I) {
+      Indent(Out, Space, IsDot)
+          << "{ \"symbol\": \"" << I->first << "\", \"range\": \"";
+      I->second->print(Out);
+      Out << "\" }";
+
+      if (std::next(I) != Constraints.end())
+        Out << ',';
+      Out << NL;
+    }
+
+    --Space;
+    Indent(Out, Space, IsDot) << "],";
   }
 
   bool haveEqualConstraints(ProgramStateRef S1,

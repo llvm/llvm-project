@@ -1620,6 +1620,10 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
                       .Case("__is_target_vendor", true)
                       .Case("__is_target_os", true)
                       .Case("__is_target_environment", true)
+                      .Case("__builtin_LINE", true)
+                      .Case("__builtin_FILE", true)
+                      .Case("__builtin_FUNCTION", true)
+                      .Case("__builtin_COLUMN", true)
                       .Default(false);
         }
       });

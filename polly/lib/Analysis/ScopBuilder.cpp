@@ -105,6 +105,26 @@ static cl::opt<GranularityChoice> StmtGranularity(
                           "Store-level granularity")),
     cl::init(GranularityChoice::ScalarIndependence), cl::cat(PollyCategory));
 
+void ScopBuilder::buildInvariantEquivalenceClasses() {
+  DenseMap<std::pair<const SCEV *, Type *>, LoadInst *> EquivClasses;
+
+  const InvariantLoadsSetTy &RIL = scop->getRequiredInvariantLoads();
+  for (LoadInst *LInst : RIL) {
+    const SCEV *PointerSCEV = SE.getSCEV(LInst->getPointerOperand());
+
+    Type *Ty = LInst->getType();
+    LoadInst *&ClassRep = EquivClasses[std::make_pair(PointerSCEV, Ty)];
+    if (ClassRep) {
+      scop->addInvariantLoadMapping(LInst, ClassRep);
+      continue;
+    }
+
+    ClassRep = LInst;
+    scop->addInvariantEquivClass(
+        InvariantEquivClassTy{PointerSCEV, MemoryAccessList(), nullptr, Ty});
+  }
+}
+
 void ScopBuilder::buildPHIAccesses(ScopStmt *PHIStmt, PHINode *PHI,
                                    Region *NonAffineSubRegion,
                                    bool IsExitBlock) {
@@ -1492,7 +1512,7 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC,
                      BP, BP->getType(), false, {AF}, {nullptr}, GlobalRead);
   }
 
-  scop->buildInvariantEquivalenceClasses();
+  buildInvariantEquivalenceClasses();
 
   /// A map from basic blocks to their invalid domains.
   DenseMap<BasicBlock *, isl::set> InvalidDomainMap;

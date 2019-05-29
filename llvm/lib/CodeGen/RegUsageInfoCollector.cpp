@@ -179,12 +179,15 @@ computeCalleeSavedRegs(BitVector &SavedRegs, MachineFunction &MF) {
 
       // Add PReg to SavedRegs if all subregs are saved.
       bool AllSubRegsSaved = true;
-      for (MCSubRegIterator SR(PReg, &TRI, false); SR.isValid(); ++SR)
+      bool HasAtLeastOneSubreg = false;
+      for (MCSubRegIterator SR(PReg, &TRI, false); SR.isValid(); ++SR) {
+        HasAtLeastOneSubreg = true;
         if (!SavedRegs.test(*SR)) {
           AllSubRegsSaved = false;
           break;
         }
-      if (AllSubRegsSaved)
+      }
+      if (AllSubRegsSaved && HasAtLeastOneSubreg)
         SavedRegs.set(PReg);
     }
   }

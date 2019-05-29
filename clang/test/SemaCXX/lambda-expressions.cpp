@@ -65,9 +65,9 @@ namespace ImplicitCapture {
     d = 3;
     [=]() { return c; }; // expected-error {{unnamed variable cannot be implicitly captured in a lambda expression}}
 
-    __block int e; // expected-note 3 {{declared}}
+    __block int e; // expected-note 2{{declared}}
     [&]() { return e; }; // expected-error {{__block variable 'e' cannot be captured in a lambda expression}}
-    [&e]() { return e; }; // expected-error 2 {{__block variable 'e' cannot be captured in a lambda expression}}
+    [&e]() { return e; }; // expected-error {{__block variable 'e' cannot be captured in a lambda expression}}
 
     int f[10]; // expected-note {{declared}}
     [&]() { return f[2]; };

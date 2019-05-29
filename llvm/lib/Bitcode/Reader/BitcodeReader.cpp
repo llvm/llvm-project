@@ -1758,7 +1758,8 @@ Error BitcodeReader::parseTypeTableBody() {
         return error("Invalid type");
       ResultTy = ArrayType::get(ResultTy, Record[0]);
       break;
-    case bitc::TYPE_CODE_VECTOR:    // VECTOR: [numelts, eltty]
+    case bitc::TYPE_CODE_VECTOR:    // VECTOR: [numelts, eltty] or
+                                    //         [numelts, eltty, scalable]
       if (Record.size() < 2)
         return error("Invalid record");
       if (Record[0] == 0)
@@ -1766,7 +1767,8 @@ Error BitcodeReader::parseTypeTableBody() {
       ResultTy = getTypeByID(Record[1]);
       if (!ResultTy || !StructType::isValidElementType(ResultTy))
         return error("Invalid type");
-      ResultTy = VectorType::get(ResultTy, Record[0]);
+      bool Scalable = Record.size() > 2 ? Record[2] : false;
+      ResultTy = VectorType::get(ResultTy, Record[0], Scalable);
       break;
     }
 
@@ -2892,7 +2894,8 @@ static void inferDSOLocal(GlobalValue *GV) {
 Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
   // v1: [pointer type, isconst, initid, linkage, alignment, section,
   // visibility, threadlocal, unnamed_addr, externally_initialized,
-  // dllstorageclass, comdat, attributes, preemption specifier] (name in VST)
+  // dllstorageclass, comdat, attributes, preemption specifier,
+  // partition strtab offset, partition strtab size] (name in VST)
   // v2: [strtab_offset, strtab_size, v1]
   StringRef Name;
   std::tie(Name, Record) = readNameFromStrtab(Record);
@@ -2983,6 +2986,10 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
   }
   inferDSOLocal(NewGV);
 
+  // Check whether we have enough values to read a partition name.
+  if (Record.size() > 15)
+    NewGV->setPartition(StringRef(Strtab.data() + Record[14], Record[15]));
+
   return Error::success();
 }
 
@@ -3072,6 +3079,12 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
   }
   inferDSOLocal(Func);
 
+  // Record[16] is the address space number.
+
+  // Check whether we have enough values to read a partition name.
+  if (Record.size() > 18)
+    Func->setPartition(StringRef(Strtab.data() + Record[17], Record[18]));
+
   ValueList.push_back(Func);
 
   // If this is a function with a body, remember the prototype we are
@@ -3148,6 +3161,13 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
   if (OpNum != Record.size())
     NewGA->setDSOLocal(getDecodedDSOLocal(Record[OpNum++]));
   inferDSOLocal(NewGA);
+
+  // Check whether we have enough values to read a partition name.
+  if (OpNum + 1 < Record.size()) {
+    NewGA->setPartition(
+        StringRef(Strtab.data() + Record[OpNum], Record[OpNum + 1]));
+    OpNum += 2;
+  }
 
   ValueList.push_back(NewGA);
   IndirectSymbolInits.push_back(std::make_pair(NewGA, Val));

@@ -79,12 +79,12 @@ public:
       unordered_map(InputIterator f, InputIterator l, size_type n, const allocator_type& a)
       : unordered_map(f, l, n, hasher(), key_equal(), a) {}  // C++14
     template <class InputIterator>
-      unordered_map(InputIterator f, InputIterator l, size_type n, const hasher& hf, 
+      unordered_map(InputIterator f, InputIterator l, size_type n, const hasher& hf,
         const allocator_type& a)
       : unordered_map(f, l, n, hf, key_equal(), a) {}  // C++14
     unordered_map(initializer_list<value_type> il, size_type n, const allocator_type& a)
       : unordered_map(il, n, hasher(), key_equal(), a) {}  // C++14
-    unordered_map(initializer_list<value_type> il, size_type n, const hasher& hf, 
+    unordered_map(initializer_list<value_type> il, size_type n, const hasher& hf,
       const allocator_type& a)
       : unordered_map(il, n, hf, key_equal(), a) {}  // C++14
     ~unordered_map();
@@ -277,12 +277,12 @@ public:
       unordered_multimap(InputIterator f, InputIterator l, size_type n, const allocator_type& a)
       : unordered_multimap(f, l, n, hasher(), key_equal(), a) {}  // C++14
     template <class InputIterator>
-      unordered_multimap(InputIterator f, InputIterator l, size_type n, const hasher& hf, 
+      unordered_multimap(InputIterator f, InputIterator l, size_type n, const hasher& hf,
         const allocator_type& a)
       : unordered_multimap(f, l, n, hf, key_equal(), a) {}  // C++14
     unordered_multimap(initializer_list<value_type> il, size_type n, const allocator_type& a)
       : unordered_multimap(il, n, hasher(), key_equal(), a) {}  // C++14
-    unordered_multimap(initializer_list<value_type> il, size_type n, const hasher& hf, 
+    unordered_multimap(initializer_list<value_type> il, size_type n, const hasher& hf,
       const allocator_type& a)
       : unordered_multimap(il, n, hf, key_equal(), a) {}  // C++14
     ~unordered_multimap();
@@ -951,14 +951,14 @@ public:
       : unordered_map(__first, __last, __n, hasher(), key_equal(), __a) {}
     template <class _InputIterator>
     _LIBCPP_INLINE_VISIBILITY
-      unordered_map(_InputIterator __first, _InputIterator __last, size_type __n, const hasher& __hf, 
+      unordered_map(_InputIterator __first, _InputIterator __last, size_type __n, const hasher& __hf,
         const allocator_type& __a)
       : unordered_map(__first, __last, __n, __hf, key_equal(), __a) {}
     _LIBCPP_INLINE_VISIBILITY
     unordered_map(initializer_list<value_type> __il, size_type __n, const allocator_type& __a)
       : unordered_map(__il, __n, hasher(), key_equal(), __a) {}
     _LIBCPP_INLINE_VISIBILITY
-    unordered_map(initializer_list<value_type> __il, size_type __n, const hasher& __hf, 
+    unordered_map(initializer_list<value_type> __il, size_type __n, const hasher& __hf,
       const allocator_type& __a)
       : unordered_map(__il, __n, __hf, key_equal(), __a) {}
 #endif
@@ -1778,14 +1778,14 @@ public:
       : unordered_multimap(__first, __last, __n, hasher(), key_equal(), __a) {}
     template <class _InputIterator>
     _LIBCPP_INLINE_VISIBILITY
-      unordered_multimap(_InputIterator __first, _InputIterator __last, size_type __n, const hasher& __hf, 
+      unordered_multimap(_InputIterator __first, _InputIterator __last, size_type __n, const hasher& __hf,
         const allocator_type& __a)
       : unordered_multimap(__first, __last, __n, __hf, key_equal(), __a) {}
     _LIBCPP_INLINE_VISIBILITY
     unordered_multimap(initializer_list<value_type> __il, size_type __n, const allocator_type& __a)
       : unordered_multimap(__il, __n, hasher(), key_equal(), __a) {}
     _LIBCPP_INLINE_VISIBILITY
-    unordered_multimap(initializer_list<value_type> __il, size_type __n, const hasher& __hf, 
+    unordered_multimap(initializer_list<value_type> __il, size_type __n, const hasher& __hf,
       const allocator_type& __a)
       : unordered_multimap(__il, __n, __hf, key_equal(), __a) {}
 #endif

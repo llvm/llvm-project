@@ -191,7 +191,11 @@ public:
   /// Returns true if instruction IR is ready to be issued to the underlying
   /// pipelines. Note that this operation cannot fail; it assumes that a
   /// previous call to method `isAvailable(IR)` returned `SC_AVAILABLE`.
-  bool dispatch(const InstRef &IR);
+  ///
+  /// If IR is a memory operation, then the Scheduler queries the LS unit to
+  /// obtain a LS token. An LS token is used internally to track memory
+  /// dependencies.
+  bool dispatch(InstRef &IR);
 
   /// Issue an instruction and populates a vector of used pipeline resources,
   /// and a vector of instructions that transitioned to the ready state as a

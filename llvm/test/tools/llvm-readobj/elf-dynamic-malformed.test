@@ -114,7 +114,8 @@ ProgramHeaders:
 # RUN: not llvm-readobj --dynamic-table %t.bad-strtab 2>&1 | FileCheck %s --check-prefix BAD-STRTAB
 # RUN: not llvm-readelf --dynamic-table %t.bad-strtab 2>&1 | FileCheck %s --check-prefix BAD-STRTAB
 
-# BAD-STRTAB: LLVM ERROR: Virtual address is not in any segment
+# BAD-STRTAB: warning: Unable to parse DT_STRTAB: Virtual address is not in any segment
+# BAD-STRTAB: error: Invalid dynamic string table reference
 
 --- !ELF
 FileHeader:
@@ -147,10 +148,19 @@ ProgramHeaders:
 
 # Test handling of other d_ptr tags pointing outside the file's address space.
 # RUN: yaml2obj %s --docnum=5 -o %t.bad-rela
-# RUN: not llvm-readobj --dynamic-table %t.bad-rela 2>&1 | FileCheck %s --check-prefix BAD-RELA
-# RUN: not llvm-readelf --dynamic-table %t.bad-rela 2>&1 | FileCheck %s --check-prefix BAD-RELA
+# RUN: llvm-readobj --dynamic-table %t.bad-rela 2>&1 | FileCheck %s --check-prefixes=CHECK,BAD-RELA
+# RUN: llvm-readelf --dynamic-table %t.bad-rela 2>&1 | FileCheck %s --check-prefixes=CHECK,BAD-RELA-GNU
 
-# BAD-RELA: LLVM ERROR: Virtual address is not in any segment
+# CHECK: warning: Unable to parse DT_RELA: Virtual address is not in any segment
+# BAD-RELA:      DynamicSection [ (2 entries)
+# BAD-RELA-NEXT:   Tag                Type Name/Value
+# BAD-RELA-NEXT:   0x0000000000000007 RELA 0x1000000
+# BAD-RELA-NEXT:   0x0000000000000000 NULL 0x0
+# BAD-RELA-NEXT: ]
+# BAD-RELA-GNU:      Dynamic section at offset 0x1f0 contains 2 entries:
+# BAD-RELA-GNU-NEXT: Tag                Type   Name/Value
+# BAD-RELA-GNU-NEXT: 0x0000000000000007 (RELA) 0x1000000
+# BAD-RELA-GNU-NEXT: 0x0000000000000000 (NULL) 0x0
 
 --- !ELF
 FileHeader:

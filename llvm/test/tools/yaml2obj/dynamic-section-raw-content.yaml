@@ -10,10 +10,10 @@
 # RAW-NEXT: ]
 # RAW-NEXT: Address:
 # RAW-NEXT: Offset:
-# RAW-NEXT: Size: 5
+# RAW-NEXT: Size: 16
 
 # RAW:      Hex dump of section '.dynamic':
-# RAW-NEXT: 0x00000000 01234567 89 {{.*}}
+# RAW-NEXT: 0x00000000 01234567 89012345 67890000 00000000 {{.*}}
 
 # RUN: not yaml2obj --docnum=2 %s -o %t2 2>&1 | FileCheck %s --check-prefix=ERR
 # ERR: Cannot specify both raw content and explicit entries for dynamic section '.dynamic'.
@@ -27,7 +27,7 @@ FileHeader:
 Sections:
   - Name: .dynamic
     Type: SHT_DYNAMIC
-    Content: "0123456789"
+    Content: "01234567890123456789000000000000"
 
 --- !ELF
 FileHeader:

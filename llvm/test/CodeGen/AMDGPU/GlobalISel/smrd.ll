@@ -3,8 +3,6 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=bonaire -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefix=CI --check-prefix=GCN %s
 ; RUN: llc < %s -march=amdgcn -mcpu=tonga -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefix=VI --check-prefix=GCN --check-prefix=SIVI %s
 
-; REQUIRES: global-isel
-
 ; SMRD load with an immediate offset.
 ; GCN-LABEL: {{^}}smrd0:
 ; SICI: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x1 ; encoding: [0x01

@@ -3992,8 +3992,10 @@ static OverflowResult mapOverflowResult(ConstantRange::OverflowResult OR) {
   switch (OR) {
     case ConstantRange::OverflowResult::MayOverflow:
       return OverflowResult::MayOverflow;
-    case ConstantRange::OverflowResult::AlwaysOverflows:
-      return OverflowResult::AlwaysOverflows;
+    case ConstantRange::OverflowResult::AlwaysOverflowsLow:
+      return OverflowResult::AlwaysOverflowsLow;
+    case ConstantRange::OverflowResult::AlwaysOverflowsHigh:
+      return OverflowResult::AlwaysOverflowsHigh;
     case ConstantRange::OverflowResult::NeverOverflows:
       return OverflowResult::NeverOverflows;
   }

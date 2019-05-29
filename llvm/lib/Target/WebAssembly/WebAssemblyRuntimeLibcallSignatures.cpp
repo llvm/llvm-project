@@ -225,6 +225,12 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::LLROUND_F32] = i64_func_f32;
     Table[RTLIB::LLROUND_F64] = i64_func_f64;
     Table[RTLIB::LLROUND_F128] = i64_func_i64_i64;
+    Table[RTLIB::LRINT_F32] = iPTR_func_f32;
+    Table[RTLIB::LRINT_F64] = iPTR_func_f64;
+    Table[RTLIB::LRINT_F128] = iPTR_func_i64_i64;
+    Table[RTLIB::LLRINT_F32] = i64_func_f32;
+    Table[RTLIB::LLRINT_F64] = i64_func_f64;
+    Table[RTLIB::LLRINT_F128] = i64_func_i64_i64;
     Table[RTLIB::FLOOR_F32] = f32_func_f32;
     Table[RTLIB::FLOOR_F64] = f64_func_f64;
     Table[RTLIB::FLOOR_F128] = func_iPTR_i64_i64;

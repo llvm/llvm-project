@@ -3993,7 +3993,8 @@ bool InstCombiner::OptimizeOverflowCheck(
   switch (computeOverflow(BinaryOp, IsSigned, LHS, RHS, &OrigI)) {
     case OverflowResult::MayOverflow:
       return false;
-    case OverflowResult::AlwaysOverflows:
+    case OverflowResult::AlwaysOverflowsLow:
+    case OverflowResult::AlwaysOverflowsHigh:
       Result = Builder.CreateBinOp(BinaryOp, LHS, RHS);
       Result->takeName(&OrigI);
       Overflow = Builder.getTrue();

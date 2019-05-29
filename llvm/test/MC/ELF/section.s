@@ -306,3 +306,15 @@ bar:
 // CHECK-NEXT:       SHF_STRINGS
 // CHECK-NEXT:   ]
 // CHECK: }
+
+// Test SHT_LLVM_SYMPART
+
+.section .llvm_sympart,"",@llvm_sympart
+// ASM: .section .llvm_sympart,"",@llvm_sympart
+
+// CHECK: Section {
+// CHECK:   Name: .llvm_sympart
+// CHECK-NEXT:   Type: SHT_LLVM_SYMPART
+// CHECK-NEXT:   Flags [
+// CHECK-NEXT:   ]
+// CHECK: }

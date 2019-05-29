@@ -887,3 +887,13 @@ defm : TerRMWTruncExtPattern<
   ATOMIC_RMW8_U_CMPXCHG_I32, ATOMIC_RMW16_U_CMPXCHG_I32,
   ATOMIC_RMW8_U_CMPXCHG_I64, ATOMIC_RMW16_U_CMPXCHG_I64,
   ATOMIC_RMW32_U_CMPXCHG_I64>;
+
+//===----------------------------------------------------------------------===//
+// Atomic fences
+//===----------------------------------------------------------------------===//
+
+// A compiler fence instruction that prevents reordering of instructions.
+let Defs = [ARGUMENTS] in {
+let isPseudo = 1, hasSideEffects = 1 in
+defm COMPILER_FENCE : ATOMIC_NRI<(outs), (ins), [], "compiler_fence">;
+} // Defs = [ARGUMENTS]

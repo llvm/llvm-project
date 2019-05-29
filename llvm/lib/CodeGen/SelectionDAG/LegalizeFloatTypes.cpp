@@ -774,6 +774,8 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
   case ISD::FP_TO_UINT:  Res = SoftenFloatOp_FP_TO_XINT(N); break;
   case ISD::LROUND:      Res = SoftenFloatOp_LROUND(N); break;
   case ISD::LLROUND:     Res = SoftenFloatOp_LLROUND(N); break;
+  case ISD::LRINT:       Res = SoftenFloatOp_LRINT(N); break;
+  case ISD::LLRINT:      Res = SoftenFloatOp_LLRINT(N); break;
   case ISD::SELECT:      Res = SoftenFloatOp_SELECT(N); break;
   case ISD::SELECT_CC:   Res = SoftenFloatOp_SELECT_CC(N); break;
   case ISD::SETCC:       Res = SoftenFloatOp_SETCC(N); break;
@@ -1065,6 +1067,34 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_LLROUND(SDNode *N) {
                                            RTLIB::LLROUND_F80,
                                            RTLIB::LLROUND_F128,
                                            RTLIB::LLROUND_PPCF128),
+                         NVT, Op, false, SDLoc(N)).first;
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatOp_LRINT(SDNode *N) {
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+
+  SDValue Op = GetSoftenedFloat(N->getOperand(0));
+  EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
+  return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
+                                           RTLIB::LRINT_F32,
+                                           RTLIB::LRINT_F64,
+                                           RTLIB::LRINT_F80,
+                                           RTLIB::LRINT_F128,
+                                           RTLIB::LRINT_PPCF128),
+                         NVT, Op, false, SDLoc(N)).first;
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatOp_LLRINT(SDNode *N) {
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+
+  SDValue Op = GetSoftenedFloat(N->getOperand(0));
+  EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
+  return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
+                                           RTLIB::LLRINT_F32,
+                                           RTLIB::LLRINT_F64,
+                                           RTLIB::LLRINT_F80,
+                                           RTLIB::LLRINT_F128,
+                                           RTLIB::LLRINT_PPCF128),
                          NVT, Op, false, SDLoc(N)).first;
 }
 
@@ -1602,6 +1632,8 @@ bool DAGTypeLegalizer::ExpandFloatOperand(SDNode *N, unsigned OpNo) {
   case ISD::FP_TO_UINT: Res = ExpandFloatOp_FP_TO_UINT(N); break;
   case ISD::LROUND:     Res = ExpandFloatOp_LROUND(N); break;
   case ISD::LLROUND:    Res = ExpandFloatOp_LLROUND(N); break;
+  case ISD::LRINT:      Res = ExpandFloatOp_LRINT(N); break;
+  case ISD::LLRINT:     Res = ExpandFloatOp_LLRINT(N); break;
   case ISD::SELECT_CC:  Res = ExpandFloatOp_SELECT_CC(N); break;
   case ISD::SETCC:      Res = ExpandFloatOp_SETCC(N); break;
   case ISD::STORE:      Res = ExpandFloatOp_STORE(cast<StoreSDNode>(N),
@@ -1793,6 +1825,30 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_LLROUND(SDNode *N) {
                                            RTLIB::LLROUND_F80,
                                            RTLIB::LLROUND_F128,
                                            RTLIB::LLROUND_PPCF128),
+                         RVT, N->getOperand(0), false, SDLoc(N)).first;
+}
+
+SDValue DAGTypeLegalizer::ExpandFloatOp_LRINT(SDNode *N) {
+  EVT RVT = N->getValueType(0);
+  EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
+  return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
+                                           RTLIB::LRINT_F32,
+                                           RTLIB::LRINT_F64,
+                                           RTLIB::LRINT_F80,
+                                           RTLIB::LRINT_F128,
+                                           RTLIB::LRINT_PPCF128),
+                         RVT, N->getOperand(0), false, SDLoc(N)).first;
+}
+
+SDValue DAGTypeLegalizer::ExpandFloatOp_LLRINT(SDNode *N) {
+  EVT RVT = N->getValueType(0);
+  EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
+  return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
+                                           RTLIB::LLRINT_F32,
+                                           RTLIB::LLRINT_F64,
+                                           RTLIB::LLRINT_F80,
+                                           RTLIB::LLRINT_F128,
+                                           RTLIB::LLRINT_PPCF128),
                          RVT, N->getOperand(0), false, SDLoc(N)).first;
 }
 

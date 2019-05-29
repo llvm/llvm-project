@@ -741,6 +741,20 @@ static unsigned selectFPConvOpc(unsigned GenericOpc, LLT DstTy, LLT SrcTy) {
   return GenericOpc;
 }
 
+/// Helper function to select the opcode for a G_FCMP.
+static unsigned selectFCMPOpc(MachineInstr &I, MachineRegisterInfo &MRI) {
+  // If this is a compare against +0.0, then we don't have to explicitly
+  // materialize a constant.
+  const ConstantFP *FPImm = getConstantFPVRegVal(I.getOperand(3).getReg(), MRI);
+  bool ShouldUseImm = FPImm && (FPImm->isZero() && !FPImm->isNegative());
+  unsigned OpSize = MRI.getType(I.getOperand(2).getReg()).getSizeInBits();
+  if (OpSize != 32 && OpSize != 64)
+    return 0;
+  unsigned CmpOpcTbl[2][2] = {{AArch64::FCMPSrr, AArch64::FCMPDrr},
+                              {AArch64::FCMPSri, AArch64::FCMPDri}};
+  return CmpOpcTbl[ShouldUseImm][OpSize == 64];
+}
+
 static AArch64CC::CondCode changeICMPPredToAArch64CC(CmpInst::Predicate P) {
   switch (P) {
   default:
@@ -1845,15 +1859,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
       return false;
     }
 
-    unsigned CmpOpc = 0;
-    LLT CmpTy = MRI.getType(I.getOperand(2).getReg());
-    if (CmpTy == LLT::scalar(32)) {
-      CmpOpc = AArch64::FCMPSrr;
-    } else if (CmpTy == LLT::scalar(64)) {
-      CmpOpc = AArch64::FCMPDrr;
-    } else {
+    unsigned CmpOpc = selectFCMPOpc(I, MRI);
+    if (!CmpOpc)
       return false;
-    }
 
     // FIXME: regbank
 
@@ -1861,9 +1869,16 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     changeFCMPPredToAArch64CC(
         (CmpInst::Predicate)I.getOperand(1).getPredicate(), CC1, CC2);
 
-    MachineInstr &CmpMI = *BuildMI(MBB, I, I.getDebugLoc(), TII.get(CmpOpc))
-                               .addUse(I.getOperand(2).getReg())
-                               .addUse(I.getOperand(3).getReg());
+    // Partially build the compare. Decide if we need to add a use for the
+    // third operand based off whether or not we're comparing against 0.0.
+    auto CmpMI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(CmpOpc))
+                     .addUse(I.getOperand(2).getReg());
+
+    // If we don't have an immediate compare, then we need to add a use of the
+    // register which wasn't used for the immediate.
+    // Note that the immediate will always be the last operand.
+    if (CmpOpc != AArch64::FCMPSri && CmpOpc != AArch64::FCMPDri)
+      CmpMI = CmpMI.addUse(I.getOperand(3).getReg());
 
     const unsigned DefReg = I.getOperand(0).getReg();
     unsigned Def1Reg = DefReg;
@@ -1893,8 +1908,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
       constrainSelectedInstRegOperands(OrMI, TII, TRI, RBI);
       constrainSelectedInstRegOperands(CSet2MI, TII, TRI, RBI);
     }
-
-    constrainSelectedInstRegOperands(CmpMI, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*CmpMI, TII, TRI, RBI);
     constrainSelectedInstRegOperands(CSetMI, TII, TRI, RBI);
 
     I.eraseFromParent();

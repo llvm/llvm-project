@@ -332,6 +332,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FP_TO_FP16:                 return "fp_to_fp16";
   case ISD::LROUND:                     return "lround";
   case ISD::LLROUND:                    return "llround";
+  case ISD::LRINT:                      return "lrint";
+  case ISD::LLRINT:                     return "llrint";
 
     // Control flow instructions
   case ISD::BR:                         return "br";

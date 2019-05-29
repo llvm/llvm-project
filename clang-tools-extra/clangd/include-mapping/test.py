@@ -85,7 +85,11 @@ class TestStdGen(unittest.TestCase):
     <td></td>
   </tr>
   <tr class="t-dcl">
-    <td>void foo()</td>
+    <td>
+      <span>void</span>
+      foo
+      <span>()</span>
+    </td>
     <td>this is matched</td>
   </tr>
 </tbody></table>
@@ -108,13 +112,43 @@ class TestStdGen(unittest.TestCase):
 <td></td>
 </tr>
 <tr class="t-dcl">
-  <td>void foo()</td>
+  <td>
+    <span>void</span>
+    foo
+    <span>()</span>
+  </td>
   <td>this is matched</td>
 </tr>
 </tbody></table>
 """
     self.assertEqual(ParseSymbolPage(html, "foo"),
                      set(['<algorithm>', '<utility>']))
+
+  def testParseSymbolPage_MulSymbolsInSameTd(self):
+    # defined in header <cstdint>
+    #   int8_t
+    #   int16_t
+    html = """
+<table class="t-dcl-begin"><tbody>
+<tr class="t-dsc-header">
+<td><div>
+     Defined in header <code><a href="cstdint.html" title="cstdint">&lt;cstdint&gt;</a></code><br>
+</div></td>
+<td></td>
+</tr>
+<tr class="t-dcl">
+  <td>
+    <span>int8_t</span>
+    <span>int16_t</span>
+  </td>
+  <td>this is matched</td>
+</tr>
+</tbody></table>
+"""
+    self.assertEqual(ParseSymbolPage(html, "int8_t"),
+                     set(['<cstdint>']))
+    self.assertEqual(ParseSymbolPage(html, "int16_t"),
+                     set(['<cstdint>']))
 
 
 if __name__ == '__main__':

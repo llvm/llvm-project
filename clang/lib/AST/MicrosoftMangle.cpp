@@ -3151,12 +3151,18 @@ void MicrosoftMangleContextImpl::mangleCXXCatchableType(
   }
   Mangler.getStream() << RTTIMangling;
 
-  // VS2015 CTP6 omits the copy-constructor in the mangled name.  This name is,
-  // in fact, superfluous but I'm not sure the change was made consciously.
+  // VS2015 and VS2017.1 omit the copy-constructor in the mangled name but
+  // both older and newer versions include it.
+  // FIXME: It is known that the Ctor is present in 2013, and in 2017.7
+  // (_MSC_VER 1914) and newer, and that it's omitted in 2015 and 2017.4
+  // (_MSC_VER 1911), but it's unknown when exactly it reappeared (1914?
+  // Or 1912, 1913 aleady?).
+  bool OmitCopyCtor = getASTContext().getLangOpts().isCompatibleWithMSVC(
+                          LangOptions::MSVC2015) &&
+                      !getASTContext().getLangOpts().isCompatibleWithMSVC(
+                          LangOptions::MSVC2017_7);
   llvm::SmallString<64> CopyCtorMangling;
-  if (!getASTContext().getLangOpts().isCompatibleWithMSVC(
-          LangOptions::MSVC2015) &&
-      CD) {
+  if (!OmitCopyCtor && CD) {
     llvm::raw_svector_ostream Stream(CopyCtorMangling);
     msvc_hashing_ostream MHO(Stream);
     mangleCXXCtor(CD, CT, MHO);

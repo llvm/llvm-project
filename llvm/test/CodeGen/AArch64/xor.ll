@@ -18,8 +18,8 @@ define i32 @PR39657(i8* %p, i64 %x) {
 define i32 @add_of_not(i32 %x, i32 %y) {
 ; CHECK-LABEL: add_of_not:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w8, w0, w1
-; CHECK-NEXT:    sub w0, w8, #1 // =1
+; CHECK-NEXT:    mvn w8, w1
+; CHECK-NEXT:    add w0, w8, w0
 ; CHECK-NEXT:    ret
   %t0 = sub i32 %x, %y
   %r = add i32 %t0, -1
@@ -29,8 +29,8 @@ define i32 @add_of_not(i32 %x, i32 %y) {
 define i32 @add_of_not_decrement(i32 %x, i32 %y) {
 ; CHECK-LABEL: add_of_not_decrement:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w8, w0, w1
-; CHECK-NEXT:    sub w0, w8, #1 // =1
+; CHECK-NEXT:    mvn w8, w1
+; CHECK-NEXT:    add w0, w8, w0
 ; CHECK-NEXT:    ret
   %t0 = sub i32 %x, %y
   %r = sub i32 %t0, 1
@@ -40,9 +40,8 @@ define i32 @add_of_not_decrement(i32 %x, i32 %y) {
 define <4 x i32> @vec_add_of_not(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: vec_add_of_not:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    movi v1.2d, #0xffffffffffffffff
-; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    add v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %t0 = sub <4 x i32> %x, %y
   %r = add <4 x i32> %t0, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -52,9 +51,8 @@ define <4 x i32> @vec_add_of_not(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @vec_add_of_not_decrement(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: vec_add_of_not_decrement:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    add v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %t0 = sub <4 x i32> %x, %y
   %r = sub <4 x i32> %t0, <i32 1, i32 1, i32 1, i32 1>

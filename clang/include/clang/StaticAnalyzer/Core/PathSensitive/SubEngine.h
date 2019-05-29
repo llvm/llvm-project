@@ -158,10 +158,10 @@ public:
                            const CallEvent *Call,
                            RegionAndSymbolInvalidationTraits &HTraits) = 0;
 
-  /// printState - Called by ProgramStateManager to print checker-specific data.
-  virtual void printState(raw_ostream &Out, ProgramStateRef State,
-                          const char *NL, const char *Sep,
-                          const LocationContext *LCtx = nullptr) = 0;
+  /// printJson - Called by ProgramStateManager to print checker-specific data.
+  virtual void printJson(raw_ostream &Out, ProgramStateRef State,
+                         const LocationContext *LCtx, const char *NL,
+                         unsigned int Space, bool IsDot) const = 0;
 
   /// Called by CoreEngine when the analysis worklist is either empty or the
   //  maximum number of analysis steps have been reached.

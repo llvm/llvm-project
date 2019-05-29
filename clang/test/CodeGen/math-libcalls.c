@@ -308,9 +308,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   llrint(f);     llrintf(f);    llrintl(f);
 
-// NO__ERRNO: declare i64 @llrint(double) [[READNONE]]
-// NO__ERRNO: declare i64 @llrintf(float) [[READNONE]]
-// NO__ERRNO: declare i64 @llrintl(x86_fp80) [[READNONE]]
+// NO__ERRNO: declare i64 @llvm.llrint.i64.f64(double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare i64 @llvm.llrint.i64.f32(float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare i64 @llvm.llrint.i64.f80(x86_fp80) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare i64 @llrint(double) [[NOT_READNONE]]
 // HAS_ERRNO: declare i64 @llrintf(float) [[NOT_READNONE]]
 // HAS_ERRNO: declare i64 @llrintl(x86_fp80) [[NOT_READNONE]]
@@ -371,9 +371,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   lrint(f);      lrintf(f);     lrintl(f);
 
-// NO__ERRNO: declare i64 @lrint(double) [[READNONE]]
-// NO__ERRNO: declare i64 @lrintf(float) [[READNONE]]
-// NO__ERRNO: declare i64 @lrintl(x86_fp80) [[READNONE]]
+// NO__ERRNO: declare i64 @llvm.lrint.i64.f64(double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare i64 @llvm.lrint.i64.f32(float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare i64 @llvm.lrint.i64.f80(x86_fp80) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare i64 @lrint(double) [[NOT_READNONE]]
 // HAS_ERRNO: declare i64 @lrintf(float) [[NOT_READNONE]]
 // HAS_ERRNO: declare i64 @lrintl(x86_fp80) [[NOT_READNONE]]

@@ -84,10 +84,9 @@ def ParseSymbolPage(symbol_page_html, symbol_name):
     for row in table.select('tr'):
       if HasClass(row, 't-dcl', 't-dsc'):
         was_decl = True
-        # Declaration is in the first cell.
-        text = row.find('td').text
-        # Decl may not be for the symbol name we're looking for.
-        if not re.search("\\b%s\\b" % symbol_name, text):
+        # Symbols are in the first cell.
+        found_symbols = row.find('td').stripped_strings
+        if not symbol_name in found_symbols:
           continue
         headers.update(current_headers)
       elif HasClass(row, 't-dsc-header'):
