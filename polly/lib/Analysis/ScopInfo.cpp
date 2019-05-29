@@ -2102,26 +2102,6 @@ void Scop::addUserContext() {
   Context = Context.intersect(UserContext);
 }
 
-void Scop::buildInvariantEquivalenceClasses() {
-  DenseMap<std::pair<const SCEV *, Type *>, LoadInst *> EquivClasses;
-
-  const InvariantLoadsSetTy &RIL = getRequiredInvariantLoads();
-  for (LoadInst *LInst : RIL) {
-    const SCEV *PointerSCEV = SE->getSCEV(LInst->getPointerOperand());
-
-    Type *Ty = LInst->getType();
-    LoadInst *&ClassRep = EquivClasses[std::make_pair(PointerSCEV, Ty)];
-    if (ClassRep) {
-      InvEquivClassVMap[LInst] = ClassRep;
-      continue;
-    }
-
-    ClassRep = LInst;
-    InvariantEquivClasses.emplace_back(
-        InvariantEquivClassTy{PointerSCEV, MemoryAccessList(), nullptr, Ty});
-  }
-}
-
 void Scop::buildContext() {
   isl::space Space = isl::space::params_alloc(getIslCtx(), 0);
   Context = isl::set::universe(Space);
@@ -3699,7 +3679,7 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, InvariantAccessesTy &InvMAs) {
 
     // If we did not consolidate MA, thus did not find an equivalence class
     // for it, we create a new one.
-    InvariantEquivClasses.emplace_back(
+    addInvariantEquivClass(
         InvariantEquivClassTy{PointerSCEV, MemoryAccessList{MA}, MACtx, Ty});
   }
 }
