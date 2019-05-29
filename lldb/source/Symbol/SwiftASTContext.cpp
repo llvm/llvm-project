@@ -877,16 +877,8 @@ SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
   InitializeSearchPathOptions(module_search_paths, framework_search_paths);
   GetClangImporterOptions();
 
-  swift::ASTContext *lhs_ast = GetASTContext();
-  swift::ASTContext *rhs_ast =
-      const_cast<SwiftASTContext &>(rhs).GetASTContext();
-
-  // As this is a copy constructor, make sure we copy the search path
-  // opts and clang importer options from RHS to LHS.
-  assert(lhs_ast && "Invalid LHS ASTContext");
-  assert(rhs_ast && "Invalid RHS ASTContext");
-  lhs_ast->SearchPathOpts = rhs_ast->SearchPathOpts;
-
+  // As this is a copy constructor, make sure we copy the clang importer
+  // options from RHS to LHS.
   GetCompilerInvocation().getClangImporterOptions() =
       rhs.m_compiler_invocation_ap->getClangImporterOptions();
 }
