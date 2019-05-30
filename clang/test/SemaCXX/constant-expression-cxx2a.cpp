@@ -521,4 +521,14 @@ namespace Union {
     u1 = u2;
     return true;
   }();
+
+  struct S1 {
+    int n;
+  };
+  struct S2 : S1 {};
+  struct S3 : S2 {};
+  void f() {
+    S3 s;
+    s.n = 0;
+  }
 }

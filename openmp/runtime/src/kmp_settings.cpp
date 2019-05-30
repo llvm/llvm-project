@@ -1250,11 +1250,11 @@ static void __kmp_stg_parse_target_offload(char const *name, char const *value,
   if (*next == '\0')
     return;
   scan = next;
-  if (__kmp_match_str("MANDATORY", scan, &next)) {
+  if (!__kmp_strcasecmp_with_sentinel("mandatory", scan, 0)) {
     __kmp_target_offload = tgt_mandatory;
-  } else if (__kmp_match_str("DISABLED", scan, &next)) {
+  } else if (!__kmp_strcasecmp_with_sentinel("disabled", scan, 0)) {
     __kmp_target_offload = tgt_disabled;
-  } else if (__kmp_match_str("DEFAULT", scan, &next)) {
+  } else if (!__kmp_strcasecmp_with_sentinel("default", scan, 0)) {
     __kmp_target_offload = tgt_default;
   } else {
     KMP_WARNING(SyntaxErrorUsing, name, "DEFAULT");

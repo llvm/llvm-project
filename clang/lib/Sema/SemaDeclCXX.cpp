@@ -192,6 +192,7 @@ Sema::ImplicitExceptionSpecification::CalledDecl(SourceLocation CallLoc,
   // If this function has a basic noexcept, it doesn't affect the outcome.
   case EST_BasicNoexcept:
   case EST_NoexceptTrue:
+  case EST_NoThrow:
     return;
   // If we're still at noexcept(true) and there's a throw() callee,
   // change to that specification.
@@ -15460,6 +15461,7 @@ bool Sema::checkThisInStaticMemberFunctionExceptionSpec(CXXMethodDecl *Method) {
   case EST_Uninstantiated:
   case EST_Unevaluated:
   case EST_BasicNoexcept:
+  case EST_NoThrow:
   case EST_DynamicNone:
   case EST_MSAny:
   case EST_None:

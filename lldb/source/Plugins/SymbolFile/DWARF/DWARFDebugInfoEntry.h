@@ -43,7 +43,7 @@ public:
   void BuildFunctionAddressRangeTable(const DWARFUnit *cu,
                                       DWARFDebugAranges *debug_aranges) const;
 
-  bool Extract(const lldb_private::DWARFDataExtractor &debug_info_data,
+  bool Extract(const lldb_private::DWARFDataExtractor &data,
                const DWARFUnit *cu, lldb::offset_t *offset_ptr);
 
   bool LookupAddress(const dw_addr_t address, const DWARFUnit *cu,
@@ -107,7 +107,7 @@ public:
 
   static void
   DumpAttribute(const DWARFUnit *cu,
-                const lldb_private::DWARFDataExtractor &debug_info_data,
+                const lldb_private::DWARFDataExtractor &data,
                 lldb::offset_t *offset_ptr, lldb_private::Stream &s,
                 dw_attr_t attr, DWARFFormValue &form_value);
 
@@ -169,8 +169,7 @@ public:
   void SetParentIndex(uint32_t idx) { m_parent_idx = idx; }
 
 protected:
-  dw_offset_t
-      m_offset; // Offset within the .debug_info of the start of this entry
+  dw_offset_t m_offset; // Offset within the .debug_info/.debug_types
   uint32_t m_parent_idx; // How many to subtract from "this" to get the parent.
                          // If zero this die has no parent
   uint32_t m_sibling_idx : 31, // How many to add to "this" to get the sibling.

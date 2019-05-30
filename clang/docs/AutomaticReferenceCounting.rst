@@ -268,7 +268,7 @@ ARC's semantics and restrictions.
   * There must be reliable conventions for whether and when "ownership" is
     passed between caller and callee, for both arguments and return values.
     Objective-C methods follow such a convention very reliably, at least for
-    system libraries on Mac OS X, and functions always pass objects at +0.  The
+    system libraries on macOS, and functions always pass objects at +0.  The
     C-based APIs for Core Foundation objects, on the other hand, have much more
     varied transfer semantics.
 

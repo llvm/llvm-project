@@ -295,7 +295,7 @@ UndefinedBehaviorSanitizer is supported on the following operating systems:
 * NetBSD
 * FreeBSD
 * OpenBSD
-* OS X 10.6 onwards
+* macOS
 * Windows
 
 The runtime library is relatively portable and platform independent. If the OS

@@ -742,6 +742,8 @@ getExternalExceptionSpecificationKind(ExceptionSpecificationType EST) {
     return CXCursor_ExceptionSpecificationKind_MSAny;
   case EST_BasicNoexcept:
     return CXCursor_ExceptionSpecificationKind_BasicNoexcept;
+  case EST_NoThrow:
+    return CXCursor_ExceptionSpecificationKind_NoThrow;
   case EST_NoexceptFalse:
   case EST_NoexceptTrue:
   case EST_DependentNoexcept:
