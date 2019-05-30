@@ -497,7 +497,14 @@ Error RuntimeDyldImpl::computeTotalAllocSize(const ObjectFile &Obj,
         return errorCodeToError(EC);
 
       uint64_t StubBufSize = computeSectionStubBufSize(Obj, Section);
-      uint64_t SectionSize = DataSize + StubBufSize;
+
+      uint64_t PaddingSize = 0;
+      if (Name == ".eh_frame")
+        PaddingSize += 4;
+      if (StubBufSize != 0)
+        PaddingSize += getStubAlignment() - 1;
+
+      uint64_t SectionSize = DataSize + PaddingSize + StubBufSize;
 
       // The .eh_frame section (at least on Linux) needs an extra four bytes
       // padded
