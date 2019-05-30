@@ -32,9 +32,26 @@ def ModeSoftFloat         : SubtargetFeature<"soft-float","UseSoftFloat",
 //
 
 // Floating Point, HW Division and Neon Support
+
+// FP loads/stores/moves, shared between VFP and MVE (even in the integer-only
+// version).
+def FeatureFPRegs         : SubtargetFeature<"fpregs", "HasFPRegs", "true",
+                                             "Enable FP registers">;
+
+// 16-bit FP loads/stores/moves, shared between VFP (with the v8.2A FP16
+// extension) and MVE (even in the integer-only version).
+def FeatureFPRegs16       : SubtargetFeature<"fpregs16", "HasFPRegs16", "true",
+                                             "Enable 16-bit FP registers",
+                                             [FeatureFPRegs]>;
+
+def FeatureFPRegs64       : SubtargetFeature<"fpregs64", "HasFPRegs64", "true",
+                                             "Enable 64-bit FP registers",
+                                             [FeatureFPRegs]>;
+
 def FeatureFP64           : SubtargetFeature<"fp64", "HasFP64", "true",
                                              "Floating point unit supports "
-                                             "double precision">;
+                                             "double precision",
+                                             [FeatureFPRegs64]>;
 
 def FeatureD32            : SubtargetFeature<"d32", "HasD32", "true",
                                              "Extend FP to 32 double registers">;
@@ -63,7 +80,9 @@ multiclass VFPver<string name, string query, string description,
         !cast<SubtargetFeature>(NAME # "_SP")]>;
 }
 
-defm FeatureVFP2: VFPver<"vfp2", "HasVFPv2", "Enable VFP2 instructions">;
+defm FeatureVFP2: VFPver<"vfp2", "HasVFPv2", "Enable VFP2 instructions",
+                         [], [FeatureFPRegs]>;
+
 defm FeatureVFP3: VFPver<"vfp3", "HasVFPv3", "Enable VFP3 instructions",
                          [FeatureVFP2]>;
 
@@ -84,7 +103,7 @@ defm FeatureFPARMv8: VFPver<"fp-armv8", "HasFPARMv8", "Enable ARMv8 FP",
 def FeatureFullFP16       : SubtargetFeature<"fullfp16", "HasFullFP16", "true",
                                              "Enable full half-precision "
                                              "floating point",
-                                             [FeatureFPARMv8_D16_SP]>;
+                                             [FeatureFPARMv8_D16_SP, FeatureFPRegs16]>;
 
 def FeatureFP16FML        : SubtargetFeature<"fp16fml", "HasFP16FML", "true",
                                              "Enable full half-precision "
@@ -479,6 +498,19 @@ def HasV8_5aOps   : SubtargetFeature<"v8.5a", "HasV8_5aOps", "true",
                                    "Support ARM v8.5a instructions",
                                    [HasV8_4aOps, FeatureSB]>;
 
+def HasV8_1MMainlineOps : SubtargetFeature<
+               "v8.1m.main", "HasV8_1MMainlineOps", "true",
+               "Support ARM v8-1M Mainline instructions",
+               [HasV8MMainlineOps]>;
+def HasMVEIntegerOps : SubtargetFeature<
+               "mve", "HasMVEIntegerOps", "true",
+               "Support M-Class Vector Extension with integer ops",
+               [HasV8_1MMainlineOps, FeatureDSP, FeatureFPRegs16, FeatureFPRegs64]>;
+def HasMVEFloatOps : SubtargetFeature<
+               "mve.fp", "HasMVEFloatOps", "true",
+               "Support M-Class Vector Extension with integer and floating ops",
+               [HasMVEIntegerOps, FeatureFPARMv8_D16_SP, FeatureFullFP16]>;
+
 //===----------------------------------------------------------------------===//
 // ARM Processor subtarget features.
 //
@@ -763,6 +795,17 @@ def ARMv8mMainline : Architecture<"armv8-m.main", "ARMv8mMainline",
                                                        Feature8MSecExt,
                                                        FeatureAcquireRelease,
                                                        FeatureMClass]>;
+
+def ARMv81mMainline : Architecture<"armv8.1-m.main", "ARMv81mMainline",
+                                                      [HasV8_1MMainlineOps,
+                                                       FeatureNoARM,
+                                                       ModeThumb,
+                                                       FeatureDB,
+                                                       FeatureHWDivThumb,
+                                                       Feature8MSecExt,
+                                                       FeatureAcquireRelease,
+                                                       FeatureMClass,
+                                                       FeatureRAS]>;
 
 // Aliases
 def IWMMXT   : Architecture<"iwmmxt",      "ARMv5te",  [ARMv5te]>;

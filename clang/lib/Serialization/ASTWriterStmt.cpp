@@ -283,7 +283,6 @@ void ASTStmtWriter::VisitAsmStmt(AsmStmt *S) {
 
 void ASTStmtWriter::VisitGCCAsmStmt(GCCAsmStmt *S) {
   VisitAsmStmt(S);
-  Record.push_back(S->getNumLabels());
   Record.AddSourceLocation(S->getRParenLoc());
   Record.AddStmt(S->getAsmString());
 
@@ -304,9 +303,6 @@ void ASTStmtWriter::VisitGCCAsmStmt(GCCAsmStmt *S) {
   // Clobbers
   for (unsigned I = 0, N = S->getNumClobbers(); I != N; ++I)
     Record.AddStmt(S->getClobberStringLiteral(I));
-
-  // Labels
-  for (auto *E : S->labels()) Record.AddStmt(E);
 
   Code = serialization::STMT_GCCASM;
 }

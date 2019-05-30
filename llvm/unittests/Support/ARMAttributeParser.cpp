@@ -75,6 +75,16 @@ TEST(CPUArchBuildAttr, testBuildAttr) {
                                ARMBuildAttrs::v6S_M));
   EXPECT_TRUE(testBuildAttr(6, 13, ARMBuildAttrs::CPU_arch,
                                ARMBuildAttrs::v7E_M));
+  EXPECT_TRUE(testBuildAttr(6, 14, ARMBuildAttrs::CPU_arch,
+                               ARMBuildAttrs::v8_A));
+  EXPECT_TRUE(testBuildAttr(6, 15, ARMBuildAttrs::CPU_arch,
+                               ARMBuildAttrs::v8_R));
+  EXPECT_TRUE(testBuildAttr(6, 16, ARMBuildAttrs::CPU_arch,
+                               ARMBuildAttrs::v8_M_Base));
+  EXPECT_TRUE(testBuildAttr(6, 17, ARMBuildAttrs::CPU_arch,
+                               ARMBuildAttrs::v8_M_Main));
+  EXPECT_TRUE(testBuildAttr(6, 21, ARMBuildAttrs::CPU_arch,
+                               ARMBuildAttrs::v8_1_M_Main));
 }
 
 TEST(CPUArchProfileBuildAttr, testBuildAttr) {
@@ -157,6 +167,16 @@ TEST(FPHPBuildAttr, testBuildAttr) {
                             ARMBuildAttrs::Not_Allowed));
   EXPECT_TRUE(testBuildAttr(36, 1, ARMBuildAttrs::FP_HP_extension,
                             ARMBuildAttrs::AllowHPFP));
+}
+
+TEST(MVEBuildAttr, testBuildAttr) {
+  EXPECT_TRUE(testTagString(48, "Tag_MVE_arch"));
+  EXPECT_TRUE(testBuildAttr(48, 0, ARMBuildAttrs::MVE_arch,
+                            ARMBuildAttrs::Not_Allowed));
+  EXPECT_TRUE(testBuildAttr(48, 1, ARMBuildAttrs::MVE_arch,
+                            ARMBuildAttrs::AllowMVEInteger));
+  EXPECT_TRUE(testBuildAttr(48, 2, ARMBuildAttrs::MVE_arch,
+                            ARMBuildAttrs::AllowMVEIntegerAndFloat));
 }
 
 TEST(CPUAlignBuildAttr, testBuildAttr) {

@@ -15,7 +15,7 @@ General Analysis Dumpers
 
 These checkers are used to dump the results of various infrastructural analyses
 to stderr. Some checkers also have "view" variants, which will display a graph
-using a 'dot' format viewer (such as Graphviz on OS X) instead.
+using a 'dot' format viewer (such as Graphviz on macOS) instead.
 
 - debug.DumpCallGraph, debug.ViewCallGraph: Show the call graph generated for
   the current translation unit. This is used to determine the order in which to

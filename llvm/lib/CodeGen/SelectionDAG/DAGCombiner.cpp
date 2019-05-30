@@ -2303,13 +2303,6 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
     }
   }
 
-  // (x - y) + -1  ->  add (xor y, -1), x
-  if (N0.hasOneUse() && N0.getOpcode() == ISD::SUB &&
-      isAllOnesOrAllOnesSplat(N1)) {
-    SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, N0.getOperand(1), N1);
-    return DAG.getNode(ISD::ADD, DL, VT, Xor, N0.getOperand(0));
-  }
-
   if (SDValue Combined = visitADDLikeCommutative(N0, N1, N))
     return Combined;
 
@@ -2929,33 +2922,6 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
 
   if (SDValue V = foldAddSubMasked1(false, N0, N1, DAG, SDLoc(N)))
     return V;
-
-  // (x - y) - 1  ->  add (xor y, -1), x
-  if (N0.hasOneUse() && N0.getOpcode() == ISD::SUB && isOneOrOneSplat(N1)) {
-    SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, N0.getOperand(1),
-                              DAG.getAllOnesConstant(DL, VT));
-    return DAG.getNode(ISD::ADD, DL, VT, Xor, N0.getOperand(0));
-  }
-
-  // Hoist one-use addition by constant:  (x + C) - y  ->  (x - y) + C
-  if (N0.hasOneUse() && N0.getOpcode() == ISD::ADD &&
-      isConstantOrConstantVector(N0.getOperand(1))) {
-    SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0), N1);
-    return DAG.getNode(ISD::ADD, DL, VT, Sub, N0.getOperand(1));
-  }
-  // y - (x + C)  ->  (y - x) - C
-  if (N1.hasOneUse() && N1.getOpcode() == ISD::ADD &&
-      isConstantOrConstantVector(N1.getOperand(1))) {
-    SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N0, N1.getOperand(0));
-    return DAG.getNode(ISD::SUB, DL, VT, Sub, N1.getOperand(1));
-  }
-  // (x - C) - y  ->  (x - y) - C
-  // This is necessary because SUB(X,C) -> ADD(X,-C) doesn't work for vectors.
-  if (N0.hasOneUse() && N0.getOpcode() == ISD::SUB &&
-      isConstantOrConstantVector(N0.getOperand(1))) {
-    SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0), N1);
-    return DAG.getNode(ISD::SUB, DL, VT, Sub, N0.getOperand(1));
-  }
 
   // If the target's bool is represented as 0/-1, prefer to make this 'add 0/-1'
   // rather than 'sub 0/1' (the sext should get folded).

@@ -248,7 +248,7 @@ uint32_t CompileUnit::FindLineEntry(uint32_t start_idx, uint32_t line,
     // All the line table entries actually point to the version of the Compile
     // Unit that is in the support files (the one at 0 was artificially added.)
     // So prefer the one further on in the support files if it exists...
-    FileSpecList &support_files = GetSupportFiles();
+    const FileSpecList &support_files = GetSupportFiles();
     const bool full = true;
     file_idx = support_files.FindFileIndex(
         1, support_files.GetFileSpecAtIndex(0), full);
@@ -397,7 +397,7 @@ const std::vector<SourceModule> &CompileUnit::GetImportedModules() {
   return m_imported_modules;
 }
 
-FileSpecList &CompileUnit::GetSupportFiles() {
+const FileSpecList &CompileUnit::GetSupportFiles() {
   if (m_support_files.GetSize() == 0) {
     if (m_flags.IsClear(flagsParsedSupportFiles)) {
       m_flags.Set(flagsParsedSupportFiles);

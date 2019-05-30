@@ -1,0 +1,145 @@
+## Test that llvm-readobj/llvm-readelf shows proper relocation type
+## names and values for x86_64 target.
+
+# RUN: yaml2obj %s -o %t-x86_64.o
+# RUN: llvm-readobj -r --expand-relocs %t-x86_64.o | FileCheck %s
+
+# CHECK: Type: R_X86_64_NONE (0)
+# CHECK: Type: R_X86_64_64 (1)
+# CHECK: Type: R_X86_64_PC32 (2)
+# CHECK: Type: R_X86_64_GOT32 (3)
+# CHECK: Type: R_X86_64_PLT32 (4)
+# CHECK: Type: R_X86_64_COPY (5)
+# CHECK: Type: R_X86_64_GLOB_DAT (6)
+# CHECK: Type: R_X86_64_JUMP_SLOT (7)
+# CHECK: Type: R_X86_64_RELATIVE (8)
+# CHECK: Type: R_X86_64_GOTPCREL (9)
+# CHECK: Type: R_X86_64_32 (10)
+# CHECK: Type: R_X86_64_32S (11)
+# CHECK: Type: R_X86_64_16 (12)
+# CHECK: Type: R_X86_64_PC16 (13)
+# CHECK: Type: R_X86_64_8 (14)
+# CHECK: Type: R_X86_64_PC8 (15)
+# CHECK: Type: R_X86_64_DTPMOD64 (16)
+# CHECK: Type: R_X86_64_DTPOFF64 (17)
+# CHECK: Type: R_X86_64_TPOFF64 (18)
+# CHECK: Type: R_X86_64_TLSGD (19)
+# CHECK: Type: R_X86_64_TLSLD (20)
+# CHECK: Type: R_X86_64_DTPOFF32 (21)
+# CHECK: Type: R_X86_64_GOTTPOFF (22)
+# CHECK: Type: R_X86_64_TPOFF32 (23)
+# CHECK: Type: R_X86_64_PC64 (24)
+# CHECK: Type: R_X86_64_GOTOFF64 (25)
+# CHECK: Type: R_X86_64_GOTPC32 (26)
+# CHECK: Type: R_X86_64_GOT64 (27)
+# CHECK: Type: R_X86_64_GOTPCREL64 (28)
+# CHECK: Type: R_X86_64_GOTPC64 (29)
+# CHECK: Type: R_X86_64_GOTPLT64 (30)
+# CHECK: Type: R_X86_64_PLTOFF64 (31)
+# CHECK: Type: R_X86_64_SIZE32 (32)
+# CHECK: Type: R_X86_64_SIZE64 (33)
+# CHECK: Type: R_X86_64_GOTPC32_TLSDESC (34)
+# CHECK: Type: R_X86_64_TLSDESC_CALL (35)
+# CHECK: Type: R_X86_64_TLSDESC (36)
+# CHECK: Type: R_X86_64_IRELATIVE (37)
+# CHECK: Type: R_X86_64_GOTPCRELX (41)
+# CHECK: Type: R_X86_64_REX_GOTPCRELX (42)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_GNU
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Content: 00
+  - Name:         .rela.text
+    Type:         SHT_RELA
+    Link:         .symtab
+    AddressAlign: 0x0000000000000008
+    EntSize:      0x0000000000000018
+    Info:         .text
+    Relocations:
+      - Offset: 0x0000000000000003
+        Type:   R_X86_64_NONE
+      - Offset: 0x000000000000000A
+        Type:   R_X86_64_64
+      - Offset: 0x0000000000000011
+        Type:   R_X86_64_PC32
+      - Offset: 0x0000000000000018
+        Type:   R_X86_64_GOT32
+      - Offset: 0x000000000000001F
+        Type:   R_X86_64_PLT32
+      - Offset: 0x0000000000000026
+        Type:   R_X86_64_COPY
+      - Offset: 0x000000000000002D
+        Type:   R_X86_64_GLOB_DAT
+      - Offset: 0x0000000000000034
+        Type:   R_X86_64_JUMP_SLOT
+      - Offset: 0x000000000000003B
+        Type:   R_X86_64_RELATIVE
+      - Offset: 0x0000000000000042
+        Type:   R_X86_64_GOTPCREL
+      - Offset: 0x0000000000000049
+        Type:   R_X86_64_32
+      - Offset: 0x0000000000000050
+        Type:   R_X86_64_32S
+      - Offset: 0x0000000000000057
+        Type:   R_X86_64_16
+      - Offset: 0x000000000000005E
+        Type:   R_X86_64_PC16
+      - Offset: 0x0000000000000065
+        Type:   R_X86_64_8
+      - Offset: 0x000000000000006C
+        Type:   R_X86_64_PC8
+      - Offset: 0x0000000000000073
+        Type:   R_X86_64_DTPMOD64
+      - Offset: 0x000000000000007A
+        Type:   R_X86_64_DTPOFF64
+      - Offset: 0x0000000000000081
+        Type:   R_X86_64_TPOFF64
+      - Offset: 0x0000000000000088
+        Type:   R_X86_64_TLSGD
+      - Offset: 0x000000000000008F
+        Type:   R_X86_64_TLSLD
+      - Offset: 0x0000000000000096
+        Type:   R_X86_64_DTPOFF32
+      - Offset: 0x000000000000009D
+        Type:   R_X86_64_GOTTPOFF
+      - Offset: 0x00000000000000A4
+        Type:   R_X86_64_TPOFF32
+      - Offset: 0x00000000000000AB
+        Type:   R_X86_64_PC64
+      - Offset: 0x00000000000000B2
+        Type:   R_X86_64_GOTOFF64
+      - Offset: 0x00000000000000B9
+        Type:   R_X86_64_GOTPC32
+      - Offset: 0x00000000000000C0
+        Type:   R_X86_64_GOT64
+      - Offset: 0x00000000000000C7
+        Type:   R_X86_64_GOTPCREL64
+      - Offset: 0x00000000000000CE
+        Type:   R_X86_64_GOTPC64
+      - Offset: 0x00000000000000D5
+        Type:   R_X86_64_GOTPLT64
+      - Offset: 0x00000000000000DC
+        Type:   R_X86_64_PLTOFF64
+      - Offset: 0x00000000000000E3
+        Type:   R_X86_64_SIZE32
+      - Offset: 0x00000000000000EA
+        Type:   R_X86_64_SIZE64
+      - Offset: 0x00000000000000F1
+        Type:   R_X86_64_GOTPC32_TLSDESC
+      - Offset: 0x00000000000000F8
+        Type:   R_X86_64_TLSDESC_CALL
+      - Offset: 0x00000000000000FF
+        Type:   R_X86_64_TLSDESC
+      - Offset: 0x0000000000000106
+        Type:   R_X86_64_IRELATIVE
+      - Offset: 0x000000000000010A
+        Type:   R_X86_64_GOTPCRELX
+      - Offset: 0x000000000000010E
+        Type:   R_X86_64_REX_GOTPCRELX

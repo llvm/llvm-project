@@ -691,6 +691,17 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode *N,
       return;
     }
 
+    if (Def->getName() == "undef_tied_input") {
+      std::array<MVT::SimpleValueType, 1> ResultVTs = { N->getSimpleType(0) };
+      std::array<unsigned, 0> InstOps;
+      auto IDOperandNo = NextRecordedOperandNo++;
+      AddMatcher(new EmitNodeMatcher("TargetOpcode::IMPLICIT_DEF",
+                                     ResultVTs, InstOps, false, false, false,
+                                     false, -1, IDOperandNo));
+      ResultOps.push_back(IDOperandNo);
+      return;
+    }
+
     // Handle a reference to a register class. This is used
     // in COPY_TO_SUBREG instructions.
     if (Def->isSubClassOf("RegisterOperand"))

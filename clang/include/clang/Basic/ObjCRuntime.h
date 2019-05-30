@@ -443,6 +443,7 @@ public:
     case WatchOS:
       return true;
     }
+    llvm_unreachable("bad kind");
   }
 
   /// Try to parse an Objective-C runtime specification from the given

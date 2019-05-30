@@ -436,6 +436,9 @@ struct ElfSym {
   // __rel{,a}_iplt_{start,end} symbols.
   static Defined *RelaIpltStart;
   static Defined *RelaIpltEnd;
+
+  // _TLS_MODULE_BASE_ on targets that support TLSDESC.
+  static Defined *TlsModuleBase;
 };
 
 // A buffer class that is large enough to hold any Symbol-derived

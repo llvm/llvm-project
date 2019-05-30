@@ -3037,7 +3037,8 @@ private:
   importExplicitUseRenderer(action_iterator InsertPt, RuleMatcher &Rule,
                             BuildMIAction &DstMIBuilder,
                             TreePatternNode *DstChild);
-  Error importDefaultOperandRenderers(BuildMIAction &DstMIBuilder,
+  Error importDefaultOperandRenderers(action_iterator InsertPt, RuleMatcher &M,
+                                      BuildMIAction &DstMIBuilder,
                                       DagInit *DefaultOps) const;
   Error
   importImplicitDefRenderers(BuildMIAction &DstMIBuilder,
@@ -3777,7 +3778,8 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
     // end up with too many rendered operands.
     if (DstIOperand.Rec->isSubClassOf("OperandWithDefaultOps")) {
       DagInit *DefaultOps = DstIOperand.Rec->getValueAsDag("DefaultOps");
-      if (auto Error = importDefaultOperandRenderers(DstMIBuilder, DefaultOps))
+      if (auto Error = importDefaultOperandRenderers(
+            InsertPt, M, DstMIBuilder, DefaultOps))
         return std::move(Error);
       ++NumDefaultOps;
       continue;
@@ -3802,19 +3804,38 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
 }
 
 Error GlobalISelEmitter::importDefaultOperandRenderers(
-    BuildMIAction &DstMIBuilder, DagInit *DefaultOps) const {
+    action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
+    DagInit *DefaultOps) const {
   for (const auto *DefaultOp : DefaultOps->getArgs()) {
+    Optional<LLTCodeGen> OpTyOrNone = None;
+
     // Look through ValueType operators.
     if (const DagInit *DefaultDagOp = dyn_cast<DagInit>(DefaultOp)) {
       if (const DefInit *DefaultDagOperator =
               dyn_cast<DefInit>(DefaultDagOp->getOperator())) {
         if (DefaultDagOperator->getDef()->isSubClassOf("ValueType"))
+          OpTyOrNone = MVTToLLT(getValueType(
+                                  DefaultDagOperator->getDef()));
           DefaultOp = DefaultDagOp->getArg(0);
       }
     }
 
     if (const DefInit *DefaultDefOp = dyn_cast<DefInit>(DefaultOp)) {
-      DstMIBuilder.addRenderer<AddRegisterRenderer>(DefaultDefOp->getDef());
+      auto Def = DefaultDefOp->getDef();
+      if (Def->getName() == "undef_tied_input") {
+        unsigned TempRegID = M.allocateTempRegID();
+        M.insertAction<MakeTempRegisterAction>(
+          InsertPt, OpTyOrNone.getValue(), TempRegID);
+        InsertPt = M.insertAction<BuildMIAction>(
+          InsertPt, M.allocateOutputInsnID(),
+          &Target.getInstruction(RK.getDef("IMPLICIT_DEF")));
+        BuildMIAction &IDMIBuilder = *static_cast<BuildMIAction *>(
+          InsertPt->get());
+        IDMIBuilder.addRenderer<TempRegRenderer>(TempRegID);
+        DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID);
+      } else {
+        DstMIBuilder.addRenderer<AddRegisterRenderer>(Def);
+      }
       continue;
     }
 

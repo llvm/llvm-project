@@ -377,9 +377,7 @@ StringExtractorGDBRemote::GetServerPacketType() const {
     break;
 
   case 'g':
-    if (packet_size == 1)
-      return eServerPacketType_g;
-    break;
+    return eServerPacketType_g;
 
   case 'G':
     return eServerPacketType_G;

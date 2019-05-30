@@ -30,7 +30,7 @@ Sections:
         Flags:      0
         VersionNdx: 2
         Hash:       175630257
-        Names:           
+        Names:
           - VERSION1
       - Version:    1
         Flags:      0
@@ -64,7 +64,7 @@ Sections:
             Hash:  1937
             Flags: 0
             Other: 6
-DynamicSymbols:  
+DynamicSymbols:
   - Name:            sym1
     Binding:         STB_GLOBAL
   - Name:            sym2
@@ -173,6 +173,19 @@ DynamicSymbols:
 # GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000280  Link: 7 (.dynsym)
 # GNU-NEXT:   000:   0 (*local*) 2 (VERSION1) 3 (VERSION2) 4 (v1)
 # GNU-NEXT:   004:   5 (v2)      6 (v3)
-
-# GNU: Dumper for .gnu.version_d is not implemented
-# GNU: Dumper for .gnu.version_r is not implemented
+# GNU-EMPTY:
+# GNU-NEXT: Version definition section '.gnu.version_d' contains 3 entries:
+# GNU-NEXT:  Addr: 0000000000000000  Offset: 0x00028c  Link: 8 (.dynstr)
+# GNU-NEXT:   0x0000: Rev: 1  Flags: none  Index: 2  Cnt: 1  Name: VERSION1
+# GNU-NEXT:   0x001c: Rev: 1  Flags: none  Index: 3  Cnt: 2  Name: VERSION2
+# GNU-NEXT:   0x0038: Parent 1: VERSION1
+# GNU-NEXT:   0x001c: Rev: 1  Flags: none  Index: 3  Cnt: 2  Name: VERSION2
+# GNU-NEXT:   0x0038: Parent 1: VERSION1
+# GNU-EMPTY:
+# GNU-NEXT: Version needs section '.gnu.version_r' contains 2 entries:
+# GNU-NEXT:  Addr: 0000000000000000  Offset: 0x0002cc  Link: 8 (.dynstr)
+# GNU-NEXT:   0x0000: Version: 1  File: verneed1.so.0  Cnt: 2
+# GNU-NEXT:   0x0010:   Name: v1  Flags: none  Version: 4
+# GNU-NEXT:   0x0020:   Name: v2  Flags: none  Version: 5
+# GNU-NEXT:   0x0030: Version: 1  File: verneed2.so.0  Cnt: 1
+# GNU-NEXT:   0x0040:   Name: v3  Flags: none  Version: 6

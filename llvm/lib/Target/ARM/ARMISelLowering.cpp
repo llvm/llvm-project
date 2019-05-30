@@ -7007,8 +7007,8 @@ static SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) {
                          DAG.getConstant(Lane, dl, MVT::i32));
     }
 
-    bool ReverseVEXT;
-    unsigned Imm;
+    bool ReverseVEXT = false;
+    unsigned Imm = 0;
     if (isVEXTMask(ShuffleMask, VT, ReverseVEXT, Imm)) {
       if (ReverseVEXT)
         std::swap(V1, V2);
@@ -7033,8 +7033,8 @@ static SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) {
     // source operands and with masks corresponding to both results of one of
     // these operations, DAG memoization will ensure that a single node is
     // used for both shuffles.
-    unsigned WhichResult;
-    bool isV_UNDEF;
+    unsigned WhichResult = 0;
+    bool isV_UNDEF = false;
     if (unsigned ShuffleOpc = isNEONTwoResultShuffleMask(
             ShuffleMask, VT, WhichResult, isV_UNDEF)) {
       if (isV_UNDEF)

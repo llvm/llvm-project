@@ -1,0 +1,63 @@
+## Test that llvm-readobj/llvm-readelf shows proper relocation type
+## names and values for coff-i386 target.
+
+# RUN: yaml2obj %s -o %t-coff-i386.o
+# RUN: llvm-readobj -r --expand-relocs %t-coff-i386.o | FileCheck %s
+
+# CHECK: Type: IMAGE_REL_I386_ABSOLUTE (0)
+# CHECK: Type: IMAGE_REL_I386_DIR16 (1)
+# CHECK: Type: IMAGE_REL_I386_REL16 (2)
+# CHECK: Type: IMAGE_REL_I386_DIR32 (6)
+# CHECK: Type: IMAGE_REL_I386_DIR32NB (7)
+# CHECK: Type: IMAGE_REL_I386_SEG12 (9)
+# CHECK: Type: IMAGE_REL_I386_SECTION (10)
+# CHECK: Type: IMAGE_REL_I386_SECREL (11)
+# CHECK: Type: IMAGE_REL_I386_TOKEN (12)
+# CHECK: Type: IMAGE_REL_I386_SECREL7 (13)
+# CHECK: Type: IMAGE_REL_I386_REL32 (20)
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_I386
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     00
+    Relocations:
+      - VirtualAddress: 3
+        Type:           IMAGE_REL_I386_ABSOLUTE
+      - VirtualAddress: 10
+        Type:           IMAGE_REL_I386_DIR16
+      - VirtualAddress: 17
+        Type:           IMAGE_REL_I386_REL16
+      - VirtualAddress: 24
+        Type:           IMAGE_REL_I386_DIR32
+      - VirtualAddress: 31
+        Type:           IMAGE_REL_I386_DIR32NB
+      - VirtualAddress: 38
+        Type:           IMAGE_REL_I386_SEG12
+      - VirtualAddress: 45
+        Type:           IMAGE_REL_I386_SECTION
+      - VirtualAddress: 52
+        Type:           IMAGE_REL_I386_SECREL
+      - VirtualAddress: 59
+        Type:           IMAGE_REL_I386_TOKEN
+      - VirtualAddress: 66
+        Type:           IMAGE_REL_I386_SECREL7
+      - VirtualAddress: 73
+        Type:           IMAGE_REL_I386_REL32
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition: 
+      Length:          77
+      NumberOfRelocations: 11
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1

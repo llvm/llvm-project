@@ -77,6 +77,7 @@ unsigned ARM::parseArchVersion(StringRef Arch) {
   case ArchKind::ARMV8R:
   case ArchKind::ARMV8MBaseline:
   case ArchKind::ARMV8MMainline:
+  case ArchKind::ARMV8_1MMainline:
     return 8;
   case ArchKind::INVALID:
     return 0;
@@ -93,6 +94,7 @@ ARM::ProfileKind ARM::parseArchProfile(StringRef Arch) {
   case ArchKind::ARMV7EM:
   case ArchKind::ARMV8MMainline:
   case ArchKind::ARMV8MBaseline:
+  case ArchKind::ARMV8_1MMainline:
     return ProfileKind::M;
   case ArchKind::ARMV7R:
   case ArchKind::ARMV8R:
@@ -151,6 +153,7 @@ StringRef ARM::getArchSynonym(StringRef Arch) {
       .Case("v8r", "v8-r")
       .Case("v8m.base", "v8-m.base")
       .Case("v8m.main", "v8-m.main")
+      .Case("v8.1m.main", "v8.1-m.main")
       .Default(Arch);
 }
 
@@ -164,6 +167,10 @@ bool ARM::getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features) {
   // higher. We also have to make sure to disable fp16 when vfp4 is disabled,
   // as +vfp4 implies +fp16 but -vfp4 does not imply -fp16.
   switch (FPUNames[FPUKind].FPUVer) {
+  case FPUVersion::VFPV5_FULLFP16:
+    Features.push_back("+fp-armv8");
+    Features.push_back("+fullfp16");
+    break;
   case FPUVersion::VFPV5:
     Features.push_back("+fp-armv8");
     break;

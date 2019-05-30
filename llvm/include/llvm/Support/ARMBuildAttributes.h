@@ -67,6 +67,7 @@ enum AttrType {
   MPextension_use           = 42, // recoded from 70 (ABI r2.08)
   DIV_use                   = 44,
   DSP_extension             = 46,
+  MVE_arch                  = 48,
   also_compatible_with      = 65,
   conformance               = 67,
   Virtualization_use        = 68,
@@ -110,6 +111,7 @@ enum CPUArch {
   v8_R     = 15,  // e.g. Cortex R52
   v8_M_Base= 16,  // v8_M_Base AArch32
   v8_M_Main= 17,  // v8_M_Main AArch32
+  v8_1_M_Main=21, // v8_1_M_Main AArch32
 };
 
 enum CPUArchProfile {               // (=7), uleb128
@@ -150,6 +152,10 @@ enum {
   AllowNeon2 = 2,     // SIMDv2 was permitted (Half-precision FP, MAC operations)
   AllowNeonARMv8 = 3, // ARM v8-A SIMD was permitted
   AllowNeonARMv8_1a = 4,// ARM v8.1-A SIMD was permitted (RDMA)
+
+  // Tag_MVE_arch, (=48), uleb128
+  AllowMVEInteger = 1, // integer-only MVE was permitted
+  AllowMVEIntegerAndFloat = 2, // both integer and floating point MVE were permitted
 
   // Tag_ABI_PCS_R9_use, (=14), uleb128
   R9IsGPR = 0,        // R9 used as v6 (just another callee-saved register)

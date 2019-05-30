@@ -1324,6 +1324,33 @@ let Predicates = [HasSVE2] in {
   // sve_int_rotate_imm
   defm XAR_ZZZI : sve2_int_rotate_right_imm<"xar">;
 
+  // SVE2 extract vector (immediate offset, constructive)
+  def EXT_ZZI_B : sve2_int_perm_extract_i_cons<"ext">;
+
+  // SVE floating-point convert precision
+  def FCVTX_ZPmZ_DtoS : sve_fp_2op_p_zd<0b0001010, "fcvtx", ZPR64, ZPR32, ElementSizeD>;
+
+  // SVE floating-point convert to integer
+  defm FLOGB_ZPmZ : sve2_fp_flogb<"flogb">;
+
+  // Non-temporal contiguous loads (vector + register)
+  defm LDNT1SB_ZZR_S : sve2_mem_cldnt_vs<0b00000, "ldnt1sb", Z_s, ZPR32>;
+  defm LDNT1B_ZZR_S  : sve2_mem_cldnt_vs<0b00001, "ldnt1b",  Z_s, ZPR32>;
+  defm LDNT1SH_ZZR_S : sve2_mem_cldnt_vs<0b00100, "ldnt1sh", Z_s, ZPR32>;
+  defm LDNT1H_ZZR_S  : sve2_mem_cldnt_vs<0b00101, "ldnt1h",  Z_s, ZPR32>;
+  defm LDNT1W_ZZR_S  : sve2_mem_cldnt_vs<0b01001, "ldnt1w",  Z_s, ZPR32>;
+
+  defm LDNT1SB_ZZR_D : sve2_mem_cldnt_vs<0b10000, "ldnt1sb", Z_d, ZPR64>;
+  defm LDNT1B_ZZR_D  : sve2_mem_cldnt_vs<0b10010, "ldnt1b",  Z_d, ZPR64>;
+  defm LDNT1SH_ZZR_D : sve2_mem_cldnt_vs<0b10100, "ldnt1sh", Z_d, ZPR64>;
+  defm LDNT1H_ZZR_D  : sve2_mem_cldnt_vs<0b10110, "ldnt1h",  Z_d, ZPR64>;
+  defm LDNT1SW_ZZR_D : sve2_mem_cldnt_vs<0b11000, "ldnt1sw", Z_d, ZPR64>;
+  defm LDNT1W_ZZR_D  : sve2_mem_cldnt_vs<0b11010, "ldnt1w",  Z_d, ZPR64>;
+  defm LDNT1D_ZZR_D  : sve2_mem_cldnt_vs<0b11110, "ldnt1d",  Z_d, ZPR64>;
+
+  // SVE2 vector splice (constructive)
+  defm SPLICE_ZPZZ : sve2_int_perm_splice_cons<"splice">;
+
   // Predicated shifts
   defm SQSHL_ZPmI  : sve_int_bin_pred_shift_imm_left< 0b0110, "sqshl">;
   defm UQSHL_ZPmI  : sve_int_bin_pred_shift_imm_left< 0b0111, "uqshl">;
