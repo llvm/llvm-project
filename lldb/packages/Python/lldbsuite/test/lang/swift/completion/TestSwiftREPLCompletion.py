@@ -18,6 +18,5 @@ class TestSwiftREPLCompletion(TestBase):
         self.child = child
         # Send a <TAB> and make sure we don't crash.
         child.sendline("import Foundatio\t")
-        child.expect("2>")
         child.sendline("print(NSString(\"patatino\"))")
         child.expect("patatino")
