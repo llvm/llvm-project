@@ -555,9 +555,12 @@ public:
       if (matchSectionName(SIZE_SECTION_PREFIX, *Sec, OffloadTriple)) {
         // yes, it is - parse object sizes
         Expected<StringRef> Content = Sec->getContents();
+        if (!Content) {
+          consumeError(Content.takeError());
+          return;
+        }
         unsigned int ElemSize =
             getSectionSizeTy(VMContext)->getPrimitiveSizeInBits() / 8;
-
         // the size of the size section must be a multiple of ElemSize
         if (Content->size() % ElemSize != 0)
           report_fatal_error(
