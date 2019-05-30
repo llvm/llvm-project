@@ -362,6 +362,10 @@ if (WIN32 AND LIBUNWIND_ENABLE_STATIC AND NOT LIBUNWIND_ENABLE_SHARED)
   add_definitions(-D_LIBUNWIND_DISABLE_VISIBILITY_ANNOTATIONS)
 endif()
 
+if (LIBUNWIND_HAS_COMMENT_LIB_PRAGMA)
+  add_definitions(-D_LIBUNWIND_HAS_COMMENT_LIB_PRAGMA)
+endif()
+
 #===============================================================================
 # Setup Source Code
 #===============================================================================

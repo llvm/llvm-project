@@ -61,7 +61,7 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
   // parse
   const DWARFDataExtractor &data = GetData();
   if (offset < GetNextUnitOffset() &&
-      m_first_die.FastExtract(data, this, &offset)) {
+      m_first_die.Extract(data, this, &offset)) {
     AddUnitDIE(m_first_die);
     return;
   }
@@ -165,7 +165,7 @@ void DWARFUnit::ExtractDIEsRWLocked() {
   die_index_stack.reserve(32);
   die_index_stack.push_back(0);
   bool prev_die_had_children = false;
-  while (offset < next_cu_offset && die.FastExtract(data, this, &offset)) {
+  while (offset < next_cu_offset && die.Extract(data, this, &offset)) {
     const bool null_die = die.IsNULL();
     if (depth == 0) {
       assert(m_die_array.empty() && "Compile unit DIE already added");

@@ -1,6 +1,7 @@
 include(CheckLibraryExists)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
+include(CheckCSourceCompiles)
 
 check_library_exists(c fopen "" LIBCXXABI_HAS_C_LIB)
 if (NOT LIBCXXABI_USE_COMPILER_RT)
@@ -47,6 +48,14 @@ if (LIBCXXABI_HAS_NODEFAULTLIBS_FLAG)
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fno-sanitize-coverage=edge,trace-cmp,indirect-calls,8bit-counters")
   endif ()
 endif ()
+
+# Check compiler pragmas
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  check_c_source_compiles("
+#pragma comment(lib, \"c\")
+int main() { return 0; }
+" LIBCXXABI_HAS_COMMENT_LIB_PRAGMA)
+endif()
 
 # Check compiler flags
 check_c_compiler_flag(-funwind-tables         LIBCXXABI_HAS_FUNWIND_TABLES)

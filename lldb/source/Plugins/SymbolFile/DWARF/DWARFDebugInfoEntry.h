@@ -43,11 +43,8 @@ public:
   void BuildFunctionAddressRangeTable(const DWARFUnit *cu,
                                       DWARFDebugAranges *debug_aranges) const;
 
-  bool FastExtract(const lldb_private::DWARFDataExtractor &debug_info_data,
-                   const DWARFUnit *cu,
-                   lldb::offset_t *offset_ptr);
-
-  bool Extract(const DWARFUnit *cu, lldb::offset_t *offset_ptr);
+  bool Extract(const lldb_private::DWARFDataExtractor &debug_info_data,
+               const DWARFUnit *cu, lldb::offset_t *offset_ptr);
 
   bool LookupAddress(const dw_addr_t address, const DWARFUnit *cu,
                      DWARFDebugInfoEntry **function_die,
