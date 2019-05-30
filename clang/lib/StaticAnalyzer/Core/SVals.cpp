@@ -16,6 +16,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/BasicValueFactory.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
@@ -282,6 +283,15 @@ SVal loc::ConcreteInt::evalBinOp(BasicValueFactory& BasicVals,
 //===----------------------------------------------------------------------===//
 
 LLVM_DUMP_METHOD void SVal::dump() const { dumpToStream(llvm::errs()); }
+
+void SVal::printJson(raw_ostream &Out, bool AddQuotes) const {
+  std::string Buf;
+  llvm::raw_string_ostream TempOut(Buf);
+
+  dumpToStream(TempOut);
+
+  Out << JsonFormat(TempOut.str(), AddQuotes);
+}
 
 void SVal::dumpToStream(raw_ostream &os) const {
   switch (getBaseKind()) {

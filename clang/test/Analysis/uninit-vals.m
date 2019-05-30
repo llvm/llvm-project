@@ -164,7 +164,7 @@ void PR14765_test() {
                                            // expected-note@-1{{TRUE}}
 
   testObj->origin = makePoint(0.0, 0.0);
-  if (testObj->size > 0) { ; } // expected-note{{Assuming the condition is false}}
+  if (testObj->size > 0) { ; } // expected-note{{Assuming field 'size' is <= 0}}
                                // expected-note@-1{{Taking false branch}}
 
   // FIXME: Assigning to 'testObj->origin' kills the default binding for the
@@ -219,13 +219,13 @@ void PR14765_test_int() {
                                                // expected-note@-1{{TRUE}}
 
   testObj->origin = makeIntPoint(1, 2);
-  if (testObj->size > 0) { ; } // expected-note{{Assuming the condition is false}}
+  if (testObj->size > 0) { ; } // expected-note{{Assuming field 'size' is <= 0}}
                                // expected-note@-1{{Taking false branch}}
-                               // expected-note@-2{{Assuming the condition is false}}
+                               // expected-note@-2{{Assuming field 'size' is <= 0}}
                                // expected-note@-3{{Taking false branch}}
-                               // expected-note@-4{{Assuming the condition is false}}
+                               // expected-note@-4{{Assuming field 'size' is <= 0}}
                                // expected-note@-5{{Taking false branch}}
-                               // expected-note@-6{{Assuming the condition is false}}
+                               // expected-note@-6{{Assuming field 'size' is <= 0}}
                                // expected-note@-7{{Taking false branch}}
 
   // FIXME: Assigning to 'testObj->origin' kills the default binding for the
@@ -321,9 +321,12 @@ void testSmallStructInLargerStruct() {
                                                // expected-note@-1{{TRUE}}
 
   testObj->origin = makeIntPoint2D(1, 2);
-  if (testObj->size > 0) { ; } // expected-note{{Taking false branch}}
+  if (testObj->size > 0) { ; } // expected-note{{Field 'size' is <= 0}}
                                // expected-note@-1{{Taking false branch}}
-                               // expected-note@-2{{Taking false branch}}
+                               // expected-note@-2{{Field 'size' is <= 0}}
+                               // expected-note@-3{{Taking false branch}}
+                               // expected-note@-4{{Field 'size' is <= 0}}
+                               // expected-note@-5{{Taking false branch}}
 
   clang_analyzer_eval(testObj->size == 0); // expected-warning{{TRUE}}
                                            // expected-note@-1{{TRUE}}

@@ -90,8 +90,14 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_TOOLS_BINARY_DIR})
 
   # This variable makes sure that e.g. llvm-lit is found.
+  set(LLVM_BINARY_DIR ${LLVM_BUILD_BINARY_DIR})
+  set(LLVM_LIBRARY_DIR ${LLVM_BUILD_LIBRARY_DIR})
+  set(LLVM_INCLUDE_DIR ${LLVM_BUILD_MAIN_INCLUDE_DIR})
   set(LLVM_MAIN_SRC_DIR ${LLVM_BUILD_MAIN_SRC_DIR})
   set(LLVM_CMAKE_PATH ${LLVM_MAIN_SRC_DIR}/cmake/modules)
+
+  # This variable is used by individual runtimes to locate LLVM files.
+  set(LLVM_PATH ${LLVM_BUILD_MAIN_SRC_DIR})
 
   if(APPLE)
     set(LLVM_ENABLE_LIBCXX ON CACHE BOOL "")
@@ -127,6 +133,12 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     # TODO: Clean this up as part of an interface standardization
     string(REPLACE "-" "_" canon_name ${projName})
     string(TOUPPER ${canon_name} canon_name)
+
+    # The subdirectories need to treat this as standalone builds. D57992 tried
+    # to get rid of this, but the runtimes treat *_STANDALONE_BUILD=OFF as if
+    # llvm & clang are configured in the same CMake, and setup dependencies
+    # against their targets.
+    set(${canon_name}_STANDALONE_BUILD ON)
 
     if(LLVM_RUNTIMES_LIBDIR_SUBDIR)
       set(${canon_name}_LIBDIR_SUBDIR "${LLVM_RUNTIMES_LIBDIR_SUBDIR}" CACHE STRING "" FORCE)
@@ -369,8 +381,6 @@ else() # if this is included from LLVM's CMake
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
-                                        -DLLVM_BINARY_DIR=${LLVM_BINARY_DIR}
-                                        -DLLVM_LIBRARY_DIR=${LLVM_LIBRARY_DIR}
                                         -DLLVM_DEFAULT_TARGET_TRIPLE=${TARGET_TRIPLE}
                                         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                         -DCMAKE_C_COMPILER_TARGET=${TARGET_TRIPLE}
@@ -460,8 +470,6 @@ else() # if this is included from LLVM's CMake
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
-                                        -DLLVM_BINARY_DIR=${LLVM_BINARY_DIR}
-                                        -DLLVM_LIBRARY_DIR=${LLVM_LIBRARY_DIR}
                                         -DLLVM_DEFAULT_TARGET_TRIPLE=${target}
                                         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                         -DCMAKE_C_COMPILER_TARGET=${target}

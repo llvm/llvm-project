@@ -900,6 +900,7 @@
 		26D7E45D13D5E30A007FD12B /* SocketAddress.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26D7E45C13D5E30A007FD12B /* SocketAddress.cpp */; };
 		23CB15451D66DA9300EDDDE1 /* SocketAddressTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F9391BDD332400BA9A93 /* SocketAddressTest.cpp */; };
 		23CB153B1D66DA9300EDDDE1 /* SocketTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F93A1BDD332400BA9A93 /* SocketTest.cpp */; };
+		26FCE61C229F00F000D125BD /* SocketTestUtilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26FCE61B229F00F000D125BD /* SocketTestUtilities.cpp */; };
 		26603879211CA90F00329572 /* SourceBreakpoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26603870211CA90D00329572 /* SourceBreakpoint.cpp */; };
 		2689004C13353E0400698AC0 /* SourceManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E8F10F1B85900F91463 /* SourceManager.cpp */; };
 		268900F313353E6F00698AC0 /* StackFrame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F3810F1B90C00F91463 /* StackFrame.cpp */; };
@@ -2964,6 +2965,7 @@
 		26D7E45B13D5E2F9007FD12B /* SocketAddress.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SocketAddress.h; path = include/lldb/Host/SocketAddress.h; sourceTree = "<group>"; };
 		2321F9391BDD332400BA9A93 /* SocketAddressTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SocketAddressTest.cpp; sourceTree = "<group>"; };
 		2321F93A1BDD332400BA9A93 /* SocketTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SocketTest.cpp; sourceTree = "<group>"; };
+		26FCE61B229F00F000D125BD /* SocketTestUtilities.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SocketTestUtilities.cpp; sourceTree = "<group>"; };
 		26603870211CA90D00329572 /* SourceBreakpoint.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SourceBreakpoint.cpp; path = "tools/lldb-vscode/SourceBreakpoint.cpp"; sourceTree = "<group>"; };
 		2660386D211CA90C00329572 /* SourceBreakpoint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SourceBreakpoint.h; path = "tools/lldb-vscode/SourceBreakpoint.h"; sourceTree = "<group>"; };
 		26BC7E8F10F1B85900F91463 /* SourceManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SourceManager.cpp; path = source/Core/SourceManager.cpp; sourceTree = "<group>"; };
@@ -3612,6 +3614,7 @@
 				2321F9381BDD332400BA9A93 /* CMakeLists.txt */,
 				2321F9391BDD332400BA9A93 /* SocketAddressTest.cpp */,
 				2321F93A1BDD332400BA9A93 /* SocketTest.cpp */,
+				26FCE61B229F00F000D125BD /* SocketTestUtilities.cpp */,
 				2321F9451BDD346100BA9A93 /* TaskPoolTest.cpp */,
 			);
 			path = Host;
@@ -7836,6 +7839,7 @@
 				23CB15411D66DA9300EDDDE1 /* StringExtractorTest.cpp in Sources */,
 				9A2057031F3A605200F6C293 /* VASprintfTest.cpp in Sources */,
 				4C639ED121FA684900A7B957 /* OptionsWithRawTest.cpp in Sources */,
+				26FCE61C229F00F000D125BD /* SocketTestUtilities.cpp in Sources */,
 				4C639ED321FA684900A7B957 /* EventTest.cpp in Sources */,
 				9A18903C1F47D5E600394BCA /* TestUtilities.cpp in Sources */,
 				4C639ECD21FA684900A7B957 /* StreamTest.cpp in Sources */,

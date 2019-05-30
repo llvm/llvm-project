@@ -16,5 +16,8 @@ except KeyError:
     key, = e.args
     lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))
 
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
+
 # Let the main config do the real work.
 lit_config.load_config(config, "@LLVM_BINARY_DIR@/utils/lit/tests/lit.cfg")

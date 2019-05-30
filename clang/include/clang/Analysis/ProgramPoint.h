@@ -213,7 +213,7 @@ public:
     ID.AddPointer(getTag());
   }
 
-  void print(StringRef CR, llvm::raw_ostream &Out) const;
+  void printJson(llvm::raw_ostream &Out, const char *NL = "\n") const;
 
   LLVM_DUMP_METHOD void dump() const;
 

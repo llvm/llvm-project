@@ -31,9 +31,12 @@ using namespace lldb_private;
 using namespace std;
 extern int g_verbose;
 
-bool DWARFDebugInfoEntry::FastExtract(
-    const DWARFDataExtractor &debug_info_data, const DWARFUnit *cu,
-    lldb::offset_t *offset_ptr) {
+// Extract a debug info entry for a given compile unit from the .debug_info and
+// .debug_abbrev data within the SymbolFileDWARF class starting at the given
+// offset
+bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &debug_info_data,
+                                  const DWARFUnit *cu,
+                                  lldb::offset_t *offset_ptr) {
   m_offset = *offset_ptr;
   m_parent_idx = 0;
   m_sibling_idx = 0;
@@ -193,168 +196,6 @@ bool DWARFDebugInfoEntry::FastExtract(
     m_tag = 0;
     m_has_children = false;
     return true; // NULL debug tag entry
-  }
-
-  return false;
-}
-
-// Extract
-//
-// Extract a debug info entry for a given compile unit from the .debug_info and
-// .debug_abbrev data within the SymbolFileDWARF class starting at the given
-// offset
-bool DWARFDebugInfoEntry::Extract(const DWARFUnit *cu,
-                                  lldb::offset_t *offset_ptr) {
-  const DWARFDataExtractor &debug_info_data = cu->GetData();
-  //    const DWARFDataExtractor& debug_str_data =
-  //    dwarf2Data->get_debug_str_data();
-  const uint32_t cu_end_offset = cu->GetNextUnitOffset();
-  lldb::offset_t offset = *offset_ptr;
-  //  if (offset >= cu_end_offset)
-  //      Log::Status("DIE at offset 0x%8.8x is beyond the end of the current
-  //      compile unit (0x%8.8x)", m_offset, cu_end_offset);
-  if ((offset < cu_end_offset) && debug_info_data.ValidOffset(offset)) {
-    m_offset = offset;
-
-    const uint64_t abbr_idx = debug_info_data.GetULEB128(&offset);
-    lldbassert(abbr_idx <= UINT16_MAX);
-    m_abbr_idx = abbr_idx;
-    if (abbr_idx) {
-      const DWARFAbbreviationDeclaration *abbrevDecl =
-          cu->GetAbbreviations()->GetAbbreviationDeclaration(abbr_idx);
-
-      if (abbrevDecl) {
-        m_tag = abbrevDecl->Tag();
-        m_has_children = abbrevDecl->HasChildren();
-
-        bool isCompileUnitTag = (m_tag == DW_TAG_compile_unit ||
-                                 m_tag == DW_TAG_partial_unit);
-        if (cu && isCompileUnitTag)
-          const_cast<DWARFUnit *>(cu)->SetBaseAddress(0);
-
-        // Skip all data in the .debug_info for the attributes
-        const uint32_t numAttributes = abbrevDecl->NumAttributes();
-        for (uint32_t i = 0; i < numAttributes; ++i) {
-          DWARFFormValue form_value(cu);
-          dw_attr_t attr;
-          abbrevDecl->GetAttrAndFormValueByIndex(i, attr, form_value);
-          dw_form_t form = form_value.Form();
-
-          if (isCompileUnitTag &&
-              ((attr == DW_AT_entry_pc) || (attr == DW_AT_low_pc))) {
-            if (form_value.ExtractValue(debug_info_data, &offset)) {
-              if (attr == DW_AT_low_pc || attr == DW_AT_entry_pc)
-                const_cast<DWARFUnit *>(cu)->SetBaseAddress(
-                    form_value.Address());
-            }
-          } else {
-            bool form_is_indirect = false;
-            do {
-              form_is_indirect = false;
-              uint32_t form_size = 0;
-              switch (form) {
-              // Blocks if inlined data that have a length field and the data
-              // bytes inlined in the .debug_info
-              case DW_FORM_exprloc:
-              case DW_FORM_block:
-                form_size = debug_info_data.GetULEB128(&offset);
-                break;
-              case DW_FORM_block1:
-                form_size = debug_info_data.GetU8(&offset);
-                break;
-              case DW_FORM_block2:
-                form_size = debug_info_data.GetU16(&offset);
-                break;
-              case DW_FORM_block4:
-                form_size = debug_info_data.GetU32(&offset);
-                break;
-
-              // Inlined NULL terminated C-strings
-              case DW_FORM_string:
-                debug_info_data.GetCStr(&offset);
-                break;
-
-              // Compile unit address sized values
-              case DW_FORM_addr:
-                form_size = cu->GetAddressByteSize();
-                break;
-              case DW_FORM_ref_addr:
-                if (cu->GetVersion() <= 2)
-                  form_size = cu->GetAddressByteSize();
-                else
-                  form_size = 4;
-                break;
-
-              // 0 sized form
-              case DW_FORM_flag_present:
-              case DW_FORM_implicit_const:
-                form_size = 0;
-                break;
-
-              // 1 byte values
-              case DW_FORM_data1:
-              case DW_FORM_flag:
-              case DW_FORM_ref1:
-                form_size = 1;
-                break;
-
-              // 2 byte values
-              case DW_FORM_data2:
-              case DW_FORM_ref2:
-                form_size = 2;
-                break;
-
-              // 4 byte values
-              case DW_FORM_data4:
-              case DW_FORM_ref4:
-                form_size = 4;
-                break;
-
-              // 8 byte values
-              case DW_FORM_data8:
-              case DW_FORM_ref8:
-              case DW_FORM_ref_sig8:
-                form_size = 8;
-                break;
-
-              // signed or unsigned LEB 128 values
-              case DW_FORM_addrx:
-              case DW_FORM_sdata:
-              case DW_FORM_udata:
-              case DW_FORM_ref_udata:
-              case DW_FORM_GNU_addr_index:
-              case DW_FORM_GNU_str_index:
-                debug_info_data.Skip_LEB128(&offset);
-                break;
-
-              case DW_FORM_indirect:
-                form = debug_info_data.GetULEB128(&offset);
-                form_is_indirect = true;
-                break;
-
-              case DW_FORM_strp:
-              case DW_FORM_sec_offset:
-                debug_info_data.GetU32(&offset);
-                break;
-
-              default:
-                *offset_ptr = offset;
-                return false;
-              }
-
-              offset += form_size;
-            } while (form_is_indirect);
-          }
-        }
-        *offset_ptr = offset;
-        return true;
-      }
-    } else {
-      m_tag = 0;
-      m_has_children = false;
-      *offset_ptr = offset;
-      return true; // NULL debug tag entry
-    }
   }
 
   return false;
