@@ -134,3 +134,11 @@ Status UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit,
   error.Clear();
   return error;
 }
+
+std::string UDPSocket::GetRemoteConnectionURI() const {
+  if (m_socket != kInvalidSocketValue) {
+    return llvm::formatv("udp://[{0}]:{1}", m_sockaddr.GetIPAddress(),
+                         m_sockaddr.GetPort());
+  }
+  return "";
+}

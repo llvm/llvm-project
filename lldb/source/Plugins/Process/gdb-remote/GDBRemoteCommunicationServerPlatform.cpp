@@ -115,25 +115,24 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
                 this, std::placeholders::_1),
       false);
 
-  llvm::StringRef platform_scheme;
-  llvm::StringRef platform_ip;
-  int platform_port;
-  llvm::StringRef platform_path;
-  std::string platform_uri = GetConnection()->GetURI();
-  bool ok = UriParser::Parse(platform_uri, platform_scheme, platform_ip,
-                             platform_port, platform_path);
-  UNUSED_IF_ASSERT_DISABLED(ok);
-  assert(ok);
-
   std::ostringstream url;
 // debugserver does not accept the URL scheme prefix.
 #if !defined(__APPLE__)
   url << m_socket_scheme << "://";
 #endif
   uint16_t *port_ptr = &port;
-  if (m_socket_protocol == Socket::ProtocolTcp)
+  if (m_socket_protocol == Socket::ProtocolTcp) {
+    llvm::StringRef platform_scheme;
+    llvm::StringRef platform_ip;
+    int platform_port;
+    llvm::StringRef platform_path;
+    std::string platform_uri = GetConnection()->GetURI();
+    bool ok = UriParser::Parse(platform_uri, platform_scheme, platform_ip,
+                               platform_port, platform_path);
+    UNUSED_IF_ASSERT_DISABLED(ok);
+    assert(ok);
     url << platform_ip.str() << ":" << port;
-  else {
+  } else {
     socket_name = GetDomainSocketPath("gdbserver").GetPath();
     url << socket_name;
     port_ptr = nullptr;
