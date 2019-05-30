@@ -39,6 +39,7 @@ Defined *ElfSym::MipsGpDisp;
 Defined *ElfSym::MipsLocalGp;
 Defined *ElfSym::RelaIpltStart;
 Defined *ElfSym::RelaIpltEnd;
+Defined *ElfSym::TlsModuleBase;
 
 static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
   switch (Sym.kind()) {

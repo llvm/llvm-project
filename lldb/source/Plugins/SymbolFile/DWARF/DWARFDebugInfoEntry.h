@@ -118,8 +118,9 @@ public:
       lldb_private::DWARFExpression *frame_base = nullptr) const;
 
   const DWARFAbbreviationDeclaration *
-  GetAbbreviationDeclarationPtr(const DWARFUnit *cu,
-                                lldb::offset_t &offset) const;
+  GetAbbreviationDeclarationPtr(const DWARFUnit *cu) const;
+
+  lldb::offset_t GetFirstAttributeOffset() const;
 
   dw_tag_t Tag() const { return m_tag; }
 

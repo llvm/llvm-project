@@ -53,6 +53,8 @@ class ARMAttributeParser {
                  uint32_t &Offset);
   void Advanced_SIMD_arch(ARMBuildAttrs::AttrType Tag, const uint8_t *Data,
                           uint32_t &Offset);
+  void MVE_arch(ARMBuildAttrs::AttrType Tag, const uint8_t *Data,
+                uint32_t &Offset);
   void PCS_config(ARMBuildAttrs::AttrType Tag, const uint8_t *Data,
                   uint32_t &Offset);
   void ABI_PCS_R9_use(ARMBuildAttrs::AttrType Tag, const uint8_t *Data,

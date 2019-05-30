@@ -46,6 +46,10 @@ extern "C" {
 #include "abort_message.h"
 #include "fallback_malloc.h"
 
+#if defined(__unix__) &&  defined(__ELF__) && defined(_LIBCXXABI_HAS_COMMENT_LIB_PRAGMA)
+#pragma comment(lib, "pthread")
+#endif
+
 //  In general, we treat all threading errors as fatal.
 //  We cannot call std::terminate() because that will in turn
 //  call __cxa_get_globals() and cause infinite recursion.

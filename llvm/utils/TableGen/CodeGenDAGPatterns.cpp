@@ -2132,7 +2132,7 @@ static TypeSetByHwMode getImplicitType(Record *R, unsigned ResNo,
 
   if (R->getName() == "node" || R->getName() == "srcvalue" ||
       R->getName() == "zero_reg" || R->getName() == "immAllOnesV" ||
-      R->getName() == "immAllZerosV") {
+      R->getName() == "immAllZerosV" || R->getName() == "undef_tied_input") {
     // Placeholder.
     return TypeSetByHwMode(); // Unknown.
   }

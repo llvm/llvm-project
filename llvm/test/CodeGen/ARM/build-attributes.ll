@@ -240,6 +240,9 @@
 ; RUN: llc < %s -mtriple=thumbv8-none-none-eabi -mcpu=cortex-m33 -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
 ; RUN: llc < %s -mtriple=thumbv8-none-none-eabi -mcpu=cortex-m35p | FileCheck %s --check-prefix=NO-STRICT-ALIGN
 ; RUN: llc < %s -mtriple=thumbv8-none-none-eabi -mcpu=cortex-m35p -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
+; RUN: llc < %s -mtriple=thumbv8.1m.main-none-none-eabi | FileCheck %s --check-prefix=ARMv81M-MAIN
+; RUN: llc < %s -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve | FileCheck %s --check-prefix=ARMv81M-MAIN-MVEINT
+; RUN: llc < %s -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve.fp | FileCheck %s --check-prefix=ARMv81M-MAIN-MVEFP
 
 ; CPU-SUPPORTED-NOT: is not a recognized processor for this target
 
@@ -1769,6 +1772,12 @@
 ; ARMv8R: .eabi_attribute 38, 1   @ Tag_ABI_FP_16bit_format
 ; ARMv8R: .eabi_attribute 14, 0   @ Tag_ABI_PCS_R9_use
 
+; ARMv81M-MAIN: .eabi_attribute 6, 21 @ Tag_CPU_arch
+; ARMv81M-MAIN-NOT: .eabi_attribute 48
+; ARMv81M-MAIN-MVEINT: .eabi_attribute 6, 21 @ Tag_CPU_arch
+; ARMv81M-MAIN-MVEINT: .eabi_attribute 48, 1 @ Tag_MVE_arch
+; ARMv81M-MAIN-MVEFP: .eabi_attribute 6, 21 @ Tag_CPU_arch
+; ARMv81M-MAIN-MVEFP: .eabi_attribute 48, 2 @ Tag_MVE_arch
 define i32 @f(i64 %z) {
     ret i32 0
 }

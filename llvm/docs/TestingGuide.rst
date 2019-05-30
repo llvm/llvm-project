@@ -511,7 +511,7 @@ RUN lines:
    The suffix for the host platforms shared library files. This includes the
    period as the first character.
 
-   Example: ``.so`` (Linux), ``.dylib`` (OS X), ``.dll`` (Windows)
+   Example: ``.so`` (Linux), ``.dylib`` (macOS), ``.dll`` (Windows)
 
 ``%exeext``
    The suffix for the host platforms executable files. This includes the

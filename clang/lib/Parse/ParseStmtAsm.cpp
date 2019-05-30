@@ -710,12 +710,12 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
 
   // Remember if this was a volatile asm.
   bool isVolatile = DS.getTypeQualifiers() & DeclSpec::TQ_volatile;
-  // Remember if this was a goto asm.
-  bool isGotoAsm = false;
 
+  // TODO: support "asm goto" constructs (PR#9295).
   if (Tok.is(tok::kw_goto)) {
-    isGotoAsm = true;
-    ConsumeToken();
+    Diag(Tok, diag::err_asm_goto_not_supported_yet);
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return StmtError();
   }
 
   if (Tok.isNot(tok::l_paren)) {
@@ -753,8 +753,7 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
     return Actions.ActOnGCCAsmStmt(AsmLoc, /*isSimple*/ true, isVolatile,
                                    /*NumOutputs*/ 0, /*NumInputs*/ 0, nullptr,
                                    Constraints, Exprs, AsmString.get(),
-                                   Clobbers, /*NumLabels*/ 0,
-                                   T.getCloseLocation());
+                                   Clobbers, T.getCloseLocation());
   }
 
   // Parse Outputs, if present.
@@ -763,12 +762,6 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
     // In C++ mode, parse "::" like ": :".
     AteExtraColon = Tok.is(tok::coloncolon);
     ConsumeToken();
-
-    if (!AteExtraColon && isGotoAsm && Tok.isNot(tok::colon)) {
-      Diag(Tok, diag::err_asm_goto_cannot_have_output);
-      SkipUntil(tok::r_paren, StopAtSemi);
-      return StmtError();
-    }
 
     if (!AteExtraColon && ParseAsmOperandsOpt(Names, Constraints, Exprs))
       return StmtError();
@@ -796,15 +789,12 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
   unsigned NumInputs = Names.size() - NumOutputs;
 
   // Parse the clobbers, if present.
-  if (AteExtraColon || Tok.is(tok::colon) || Tok.is(tok::coloncolon)) {
-    if (AteExtraColon)
-      AteExtraColon = false;
-    else {
-      AteExtraColon = Tok.is(tok::coloncolon);
+  if (AteExtraColon || Tok.is(tok::colon)) {
+    if (!AteExtraColon)
       ConsumeToken();
-    }
+
     // Parse the asm-string list for clobbers if present.
-    if (!AteExtraColon && isTokenStringLiteral()) {
+    if (Tok.isNot(tok::r_paren)) {
       while (1) {
         ExprResult Clobber(ParseAsmStringLiteral());
 
@@ -818,49 +808,11 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
       }
     }
   }
-  if (!isGotoAsm && (Tok.isNot(tok::r_paren) || AteExtraColon)) {
-    Diag(Tok, diag::err_expected) << tok::r_paren;
-    SkipUntil(tok::r_paren, StopAtSemi);
-    return StmtError();
-  }
 
-  // Parse the goto label, if present.
-  unsigned NumLabels = 0;
-  if (AteExtraColon || Tok.is(tok::colon)) {
-    if (!AteExtraColon)
-      ConsumeToken();
-
-    while (true) {
-      if (Tok.isNot(tok::identifier)) {
-        Diag(Tok, diag::err_expected) << tok::identifier;
-        SkipUntil(tok::r_paren, StopAtSemi);
-        return StmtError();
-      }
-      LabelDecl *LD = Actions.LookupOrCreateLabel(Tok.getIdentifierInfo(),
-                                                  Tok.getLocation());
-      Names.push_back(Tok.getIdentifierInfo());
-      if (!LD) {
-        SkipUntil(tok::r_paren, StopAtSemi);
-        return StmtError();
-      }
-      ExprResult Res =
-          Actions.ActOnAddrLabel(Tok.getLocation(), Tok.getLocation(), LD);
-      Exprs.push_back(Res.get());
-      NumLabels++;
-      ConsumeToken();
-      if (!TryConsumeToken(tok::comma))
-        break;
-    }
-  } else if (isGotoAsm) {
-    Diag(Tok, diag::err_expected) << tok::colon;
-    SkipUntil(tok::r_paren, StopAtSemi);
-    return StmtError();
-  }
   T.consumeClose();
   return Actions.ActOnGCCAsmStmt(
       AsmLoc, false, isVolatile, NumOutputs, NumInputs, Names.data(),
-      Constraints, Exprs, AsmString.get(), Clobbers, NumLabels,
-      T.getCloseLocation());
+      Constraints, Exprs, AsmString.get(), Clobbers, T.getCloseLocation());
 }
 
 /// ParseAsmOperands - Parse the asm-operands production as used by

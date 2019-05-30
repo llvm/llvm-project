@@ -414,15 +414,12 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
   if (Node->isVolatile())
     OS << "volatile ";
 
-  if (Node->isAsmGoto())
-    OS << "goto ";
-
   OS << "(";
   VisitStringLiteral(Node->getAsmString());
 
   // Outputs
   if (Node->getNumOutputs() != 0 || Node->getNumInputs() != 0 ||
-      Node->getNumClobbers() != 0 || Node->getNumLabels() != 0)
+      Node->getNumClobbers() != 0)
     OS << " : ";
 
   for (unsigned i = 0, e = Node->getNumOutputs(); i != e; ++i) {
@@ -442,8 +439,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
   }
 
   // Inputs
-  if (Node->getNumInputs() != 0 || Node->getNumClobbers() != 0 ||
-      Node->getNumLabels() != 0)
+  if (Node->getNumInputs() != 0 || Node->getNumClobbers() != 0)
     OS << " : ";
 
   for (unsigned i = 0, e = Node->getNumInputs(); i != e; ++i) {
@@ -463,7 +459,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
   }
 
   // Clobbers
-  if (Node->getNumClobbers() != 0 || Node->getNumLabels())
+  if (Node->getNumClobbers() != 0)
     OS << " : ";
 
   for (unsigned i = 0, e = Node->getNumClobbers(); i != e; ++i) {
@@ -471,16 +467,6 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
       OS << ", ";
 
     VisitStringLiteral(Node->getClobberStringLiteral(i));
-  }
-
-  // Labels
-  if (Node->getNumLabels() != 0)
-    OS << " : ";
-
-  for (unsigned i = 0, e = Node->getNumLabels(); i != e; ++i) {
-    if (i != 0)
-      OS << ", ";
-    OS << Node->getLabelName(i);
   }
 
   OS << ");";

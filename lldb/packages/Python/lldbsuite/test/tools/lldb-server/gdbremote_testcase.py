@@ -378,6 +378,11 @@ class GdbRemoteTestCaseBase(TestBase):
             commandline_args += ["--named-pipe", self.named_pipe_path]
         return commandline_args
 
+    def get_target_byte_order(self):
+        inferior_exe_path = self.getBuildArtifact("a.out")
+        target = self.dbg.CreateTarget(inferior_exe_path)
+        return target.GetByteOrder()
+
     def launch_debug_monitor(self, attach_pid=None, logfile=None):
         # Create the command line.
         commandline_args = self.get_debug_monitor_command_line_args(

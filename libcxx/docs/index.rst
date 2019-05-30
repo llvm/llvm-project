@@ -93,7 +93,7 @@ and GCC.
 ============ ==================== ============ ========================
 OS           Arch                 Compilers    ABI Library
 ============ ==================== ============ ========================
-Mac OS X     i386, x86_64         Clang, GCC   libc++abi
+macOS        i386, x86_64         Clang, GCC   libc++abi
 FreeBSD 10+  i386, x86_64, ARM    Clang, GCC   libcxxrt, libc++abi
 Linux        i386, x86_64         Clang, GCC   libc++abi
 ============ ==================== ============ ========================

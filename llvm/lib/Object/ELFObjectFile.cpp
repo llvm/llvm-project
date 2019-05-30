@@ -230,6 +230,24 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
     }
   }
 
+  if (Attributes.hasAttribute(ARMBuildAttrs::MVE_arch)) {
+    switch(Attributes.getAttributeValue(ARMBuildAttrs::MVE_arch)) {
+    default:
+      break;
+    case ARMBuildAttrs::Not_Allowed:
+      Features.AddFeature("mve", false);
+      Features.AddFeature("mve.fp", false);
+      break;
+    case ARMBuildAttrs::AllowMVEInteger:
+      Features.AddFeature("mve.fp", false);
+      Features.AddFeature("mve");
+      break;
+    case ARMBuildAttrs::AllowMVEIntegerAndFloat:
+      Features.AddFeature("mve.fp");
+      break;
+    }
+  }
+
   if (Attributes.hasAttribute(ARMBuildAttrs::DIV_use)) {
     switch(Attributes.getAttributeValue(ARMBuildAttrs::DIV_use)) {
     default:
