@@ -41,5 +41,15 @@ int main(int, char**) {
     assert(std::regex_match("X", std::regex("[^\\W]")));
     assert(std::regex_match("_", std::regex("[^\\W]")));
 
-  return 0;
+    // Those test cases are taken from PR40904
+    assert(std::regex_match("abZcd", std::regex("^ab[\\d\\D]cd")));
+    assert(std::regex_match("ab5cd", std::regex("^ab[\\d\\D]cd")));
+    assert(std::regex_match("abZcd", std::regex("^ab[\\D]cd")));
+    assert(std::regex_match("abZcd", std::regex("^ab\\Dcd")));
+    assert(std::regex_match("ab5cd", std::regex("^ab[\\d]cd")));
+    assert(std::regex_match("ab5cd", std::regex("^ab\\dcd")));
+    assert(!std::regex_match("abZcd", std::regex("^ab\\dcd")));
+    assert(!std::regex_match("ab5cd", std::regex("^ab\\Dcd")));
+
+    return 0;
 }
