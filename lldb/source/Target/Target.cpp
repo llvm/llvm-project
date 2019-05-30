@@ -2511,9 +2511,10 @@ SwiftASTContextReader Target::GetScratchSwiftASTContext(
     if (auto *global_scratch_ctx = llvm::cast_or_null<SwiftASTContext>(
             GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift, false)))
       DisplayFallbackSwiftContextErrors(global_scratch_ctx);
-    
+
+    bool fallback = true;
     auto typesystem_sp = SwiftASTContext::CreateInstance(
-        lldb::eLanguageTypeSwift, *lldb_module, this);
+        lldb::eLanguageTypeSwift, *lldb_module, this, fallback);
     auto *swift_ast_ctx = cast<SwiftASTContext>(typesystem_sp.get());
     m_scratch_typesystem_for_module.insert({idx, typesystem_sp});
     GetSwiftScratchContextLock().unlock();
