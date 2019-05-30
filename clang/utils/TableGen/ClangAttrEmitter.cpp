@@ -1954,10 +1954,6 @@ static std::string GenerateTestExpression(ArrayRef<Record *> LangOpts) {
     if (!Test.empty())
       Test += " || ";
 
-    if (E->getValueAsBit("Negated")) {
-      Test += "!";
-    }
-
     const StringRef Code = E->getValueAsString("CustomCode");
     if (!Code.empty()) {
       Test += "(";
@@ -3477,11 +3473,8 @@ static std::string GenerateLangOptRequirements(const Record &R,
   // options should usually be short (one or two options), and the
   // uniqueness isn't strictly necessary (it is just for codegen efficiency).
   std::string FnName = "check";
-  for (auto I = LangOpts.begin(), E = LangOpts.end(); I != E; ++I) {
-    if ((*I)->getValueAsBit("Negated"))
-      FnName += "Not";
+  for (auto I = LangOpts.begin(), E = LangOpts.end(); I != E; ++I)
     FnName += (*I)->getValueAsString("Name");
-  }
   FnName += "LangOpts";
 
   // If this code has already been generated, simply return the previous

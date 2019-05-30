@@ -17,7 +17,7 @@ detection phase.
 Usage
 =====
 
-LeakSanitizer is supported on x86\_64 Linux and OS X. In order to use it,
+LeakSanitizer is supported on x86\_64 Linux and macOS. In order to use it,
 simply build your program with :doc:`AddressSanitizer`:
 
 .. code-block:: console

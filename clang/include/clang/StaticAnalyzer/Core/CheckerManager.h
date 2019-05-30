@@ -410,7 +410,6 @@ public:
   /// \param Out   The output stream
   /// \param State The state being printed
   /// \param NL    The preferred representation of a newline.
-  /// \param Sep   The preferred separator between different messages.
   /// \param Space The preferred space between the left side and the message.
   /// \param IsDot Whether the message will be printed in 'dot' format.
   void runCheckersForPrintStateJson(raw_ostream &Out, ProgramStateRef State,

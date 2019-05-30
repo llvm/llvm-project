@@ -119,7 +119,7 @@ force disabled by setting ``ASAN_OPTIONS=symbolize=0``):
         #1 0x7f7ddabcac4d in __libc_start_main ??:0
     ...
 
-Note that on OS X you may need to run ``dsymutil`` on your binary to have the
+Note that on macOS you may need to run ``dsymutil`` on your binary to have the
 file\:line info in the AddressSanitizer reports.
 
 Additional Checks
@@ -134,14 +134,14 @@ globals defined in another translation unit. To enable this check at runtime,
 you should set environment variable
 ``ASAN_OPTIONS=check_initialization_order=1``.
 
-Note that this option is not supported on OS X.
+Note that this option is not supported on macOS.
 
 Memory leak detection
 ---------------------
 
 For more information on leak detector in AddressSanitizer, see
 :doc:`LeakSanitizer`. The leak detection is turned on by default on Linux,
-and can be enabled using ``ASAN_OPTIONS=detect_leaks=1`` on OS X;
+and can be enabled using ``ASAN_OPTIONS=detect_leaks=1`` on macOS;
 however, it is not yet supported on other platforms.
 
 Issue Suppression
@@ -273,7 +273,7 @@ Supported Platforms
 AddressSanitizer is supported on:
 
 * Linux i386/x86\_64 (tested on Ubuntu 12.04)
-* OS X 10.7 - 10.11 (i386/x86\_64)
+* macOS 10.7 - 10.11 (i386/x86\_64)
 * iOS Simulator
 * Android ARM
 * NetBSD i386/x86\_64

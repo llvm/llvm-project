@@ -733,7 +733,7 @@ public:
     // Also it is safe to make it readnone, since we never load or store the
     // classref except by calling this function.
     llvm::Type *params[] = { Int8PtrPtrTy };
-    auto F = CGM.CreateRuntimeFunction(
+    llvm::FunctionCallee F = CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(ClassnfABIPtrTy, params, false),
         "objc_loadClassref",
         llvm::AttributeList::get(CGM.getLLVMContext(),
@@ -7313,6 +7313,37 @@ CGObjCNonFragileABIMac::EmitLoadOfClassRef(CodeGenFunction &CGF,
   return CGF.Builder.CreateAlignedLoad(Entry, Align);
 }
 
+llvm::Constant *
+CGObjCNonFragileABIMac::GetClassGlobalForClassRef(const ObjCInterfaceDecl *ID) {
+  llvm::Constant *ClassGV = GetClassGlobal(ID, /*metaclass*/ false,
+                                           NotForDefinition);
+
+  if (!ID->hasAttr<ObjCClassStubAttr>())
+    return ClassGV;
+
+  ClassGV = llvm::ConstantExpr::getPointerCast(ClassGV, ObjCTypes.Int8PtrTy);
+
+  // Stub classes are pointer-aligned. Classrefs pointing at stub classes
+  // must set the least significant bit set to 1.
+  auto *Idx = llvm::ConstantInt::get(CGM.Int32Ty, 1);
+  return llvm::ConstantExpr::getGetElementPtr(CGM.Int8Ty, ClassGV, Idx);
+}
+
+llvm::Value *
+CGObjCNonFragileABIMac::EmitLoadOfClassRef(CodeGenFunction &CGF,
+                                           const ObjCInterfaceDecl *ID,
+                                           llvm::GlobalVariable *Entry) {
+  if (ID && ID->hasAttr<ObjCClassStubAttr>()) {
+    // Classrefs pointing at Objective-C stub classes must be loaded by calling
+    // a special runtime function.
+    return CGF.EmitRuntimeCall(
+      ObjCTypes.getLoadClassrefFn(), Entry, "load_classref_result");
+  }
+
+  CharUnits Align = CGF.getPointerAlign();
+  return CGF.Builder.CreateAlignedLoad(Entry, Align);
+}
+
 llvm::Value *
 CGObjCNonFragileABIMac::EmitClassRefFromId(CodeGenFunction &CGF,
                                            IdentifierInfo *II,
@@ -7326,7 +7357,8 @@ CGObjCNonFragileABIMac::EmitClassRefFromId(CodeGenFunction &CGF,
     } else {
       ClassGV = GetClassGlobal((getClassSymbolPrefix() + II->getName()).str(),
                                NotForDefinition);
-      assert(ClassGV->getType() == ObjCTypes.ClassnfABIPtrTy);
+      assert(ClassGV->getType() == ObjCTypes.ClassnfABIPtrTy &&
+             "classref was emitted with the wrong type?");
     }
 
     std::string SectionName =

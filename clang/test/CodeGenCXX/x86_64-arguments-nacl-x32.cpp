@@ -20,7 +20,7 @@ void f_struct_with_mdp(struct_with_mdp a) { (void)a; }
 struct struct_with_mdp_too_much {
   char *a; char *b; char *c; char *d; test_struct_mdp e;
 };
-// CHECK-LABEL: define void @{{.*}}f_struct_with_mdp_too_much{{.*}}({{.*}} byval {{.*}} %a)
+// CHECK-LABEL: define void @{{.*}}f_struct_with_mdp_too_much{{.*}}({{.*}} byval
 void f_struct_with_mdp_too_much(struct_with_mdp_too_much a) {
   (void)a;
 }

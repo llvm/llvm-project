@@ -197,6 +197,8 @@ StringRef ARMTargetInfo::getCPUAttr() const {
     return "8M_MAIN";
   case llvm::ARM::ArchKind::ARMV8R:
     return "8R";
+  case llvm::ARM::ArchKind::ARMV8_1MMainline:
+    return "8_1M_MAIN";
   }
 }
 
