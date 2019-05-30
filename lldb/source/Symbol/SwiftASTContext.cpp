@@ -1516,6 +1516,14 @@ void SwiftASTContext::AddExtraClangArgs(std::vector<std::string> ExtraArgs) {
   }
 }
 
+void SwiftASTContext::AddUserClangArgs(TargetProperties &props) {
+  Args args(props.GetSwiftExtraClangFlags());
+  std::vector<std::string> user_clang_flags;
+  for (const auto &arg : args.entries())
+    user_clang_flags.push_back(arg.ref);
+  AddExtraClangArgs(user_clang_flags);
+}
+
 void SwiftASTContext::RemapClangImporterOptions(
     const PathMappingList &path_map) {
   auto &options = GetClangImporterOptions();
@@ -1800,6 +1808,11 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   std::vector<std::string> DeserializedArgs = swift_ast_sp->GetClangArguments();
   swift_ast_sp->GetClangImporterOptions().ExtraArgs.clear();
   swift_ast_sp->AddExtraClangArgs(DeserializedArgs);
+  if (target)
+    swift_ast_sp->AddUserClangArgs(*target);
+  else if (auto &global_target_properties = Target::GetGlobalProperties())
+    swift_ast_sp->AddUserClangArgs(*global_target_properties);
+
   // Apply source path remappings found in the module's dSYM.
   swift_ast_sp->RemapClangImporterOptions(module.GetSourceMappingList());
 
@@ -2136,6 +2149,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   // Now fold any extra options we were passed. This has to be done
   // BEFORE the ClangImporter is made by calling GetClangImporter or
   // these options will be ignored.
+
+  swift_ast_sp->AddUserClangArgs(target);
 
   if (extra_options) {
     swift::CompilerInvocation &compiler_invocation =
