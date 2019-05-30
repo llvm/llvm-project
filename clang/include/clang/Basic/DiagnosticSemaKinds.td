@@ -9723,7 +9723,8 @@ def err_sycl_restrict : Error<
   "|call through a function pointer"
   "|allocate storage"
   "|use exceptions"
-  "|use inline assembly}0">;
+  "|use inline assembly"
+  "|have a class with a virtual function table}0">;
 def err_sycl_virtual_types : Error<
   "No class with a vtable can be used in a SYCL kernel or any code included in the kernel">;
 def note_sycl_used_here : Note<"used here">;

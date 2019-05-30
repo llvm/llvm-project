@@ -4017,6 +4017,11 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
     CUDADiagIfDeviceCode(TryLoc, diag::err_cuda_device_exceptions)
         << "try" << CurrentCUDATarget();
 
+  // Exceptions aren't allowed in SYCL device code.
+  if (getLangOpts().SYCLIsDevice)
+    SYCLDiagIfDeviceCode(TryLoc, diag::err_sycl_restrict)
+        << KernelUseExceptions;
+
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
     Diag(TryLoc, diag::err_omp_simd_region_cannot_use_stmt) << "try";
 
@@ -4113,6 +4118,11 @@ StmtResult Sema::ActOnSEHTryBlock(bool IsCXXTry, SourceLocation TryLoc,
       Diag(FSI->FirstCXXTryLoc, diag::note_conflicting_try_here) << "'try'";
     }
   }
+
+  // Exceptions aren't allowed in SYCL device code.
+  if (getLangOpts().SYCLIsDevice)
+    SYCLDiagIfDeviceCode(TryLoc, diag::err_sycl_restrict)
+        << KernelUseExceptions;
 
   FSI->setHasSEHTry(TryLoc);
 

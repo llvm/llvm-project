@@ -760,6 +760,11 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
     CUDADiagIfDeviceCode(OpLoc, diag::err_cuda_device_exceptions)
         << "throw" << CurrentCUDATarget();
 
+  // Exceptions aren't allowed in SYCL device code.
+  if (getLangOpts().SYCLIsDevice)
+    SYCLDiagIfDeviceCode(OpLoc, diag::err_sycl_restrict)
+        << KernelUseExceptions;
+
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
     Diag(OpLoc, diag::err_omp_simd_region_cannot_use_stmt) << "throw";
 
@@ -2193,11 +2198,19 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     if (DiagnoseUseOfDecl(OperatorNew, StartLoc))
       return ExprError();
     MarkFunctionReferenced(StartLoc, OperatorNew);
+    if (getLangOpts().SYCLIsDevice) {
+      CheckSYCLCall(StartLoc, OperatorNew);
+      if (OperatorNew->isReplaceableGlobalAllocationFunction())
+        SYCLDiagIfDeviceCode(StartLoc, diag::err_sycl_restrict)
+            << KernelAllocateStorage;
+    }
   }
   if (OperatorDelete) {
     if (DiagnoseUseOfDecl(OperatorDelete, StartLoc))
       return ExprError();
     MarkFunctionReferenced(StartLoc, OperatorDelete);
+    if (getLangOpts().SYCLIsDevice)
+      CheckSYCLCall(StartLoc, OperatorDelete);
   }
 
   return CXXNewExpr::Create(Context, UseGlobal, OperatorNew, OperatorDelete,

@@ -271,6 +271,9 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
 
     if (getLangOpts().CUDA && !CheckCUDACall(Loc, FD))
       return true;
+
+    if (getLangOpts().SYCLIsDevice)
+      CheckSYCLCall(Loc, FD);
   }
 
   if (auto *MD = dyn_cast<CXXMethodDecl>(D)) {
@@ -14842,6 +14845,8 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
 
   if (getLangOpts().CUDA)
     CheckCUDACall(Loc, Func);
+  if (getLangOpts().SYCLIsDevice)
+    CheckSYCLCall(Loc, Func);
 
   // If we don't need to mark the function as used, and we don't need to
   // try to provide a definition, there's nothing more to do.
@@ -16063,7 +16068,15 @@ namespace {
     }
 
     void VisitCXXNewExpr(CXXNewExpr *E) {
-      if (E->getOperatorNew())
+      FunctionDecl *FD = E->getOperatorNew();
+      if (FD && S.getLangOpts().SYCLIsDevice) {
+        if (FD->isReplaceableGlobalAllocationFunction())
+          S.SYCLDiagIfDeviceCode(E->getExprLoc(), diag::err_sycl_restrict)
+              << S.KernelAllocateStorage;
+        else if (FunctionDecl *Def = FD->getDefinition())
+          S.CheckSYCLCall(E->getExprLoc(), Def);
+      }
+      if (FD)
         S.MarkFunctionReferenced(E->getBeginLoc(), E->getOperatorNew());
       if (E->getOperatorDelete())
         S.MarkFunctionReferenced(E->getBeginLoc(), E->getOperatorDelete());

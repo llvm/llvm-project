@@ -256,6 +256,8 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
   // Skip all the checks if we are compiling SYCL device code, but the function
   // is not marked to be used on device, this code won't be codegen'ed anyway.
   if (getLangOpts().SYCLIsDevice) {
+    SYCLDiagIfDeviceCode(AsmLoc, diag::err_sycl_restrict)
+        << KernelUseAssembly;
     GCCAsmStmt *NS = new (Context) GCCAsmStmt(
         Context, AsmLoc, IsSimple, IsVolatile, NumOutputs, NumInputs, Names,
         Constraints, Exprs.data(), AsmString, NumClobbers, Clobbers, RParenLoc);
@@ -863,6 +865,9 @@ StmtResult Sema::ActOnMSAsmStmt(SourceLocation AsmLoc, SourceLocation LBraceLoc,
                                 SourceLocation EndLoc) {
   bool IsSimple = (NumOutputs != 0 || NumInputs != 0);
   setFunctionHasBranchProtectedScope();
+  if (getLangOpts().SYCLIsDevice)
+    SYCLDiagIfDeviceCode(AsmLoc, diag::err_sycl_restrict)
+        << KernelUseAssembly;
   MSAsmStmt *NS =
     new (Context) MSAsmStmt(Context, AsmLoc, LBraceLoc, IsSimple,
                             /*IsVolatile*/ true, AsmToks, NumOutputs, NumInputs,
