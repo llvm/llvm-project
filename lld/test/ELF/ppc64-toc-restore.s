@@ -32,10 +32,10 @@ _start:
 
 // CHECK: Disassembly of section .text:
 // CHECK: _start:
-// CHECK:     1001001c: {{.*}}  bl .+67108836
+// CHECK:     1001001c: {{.*}}  bl .-28
 // CHECK-NOT: 10010020: {{.*}}  nop
 // CHECK:     10010020: {{.*}}  ld 2, 24(1)
-// CHECK:     10010024: {{.*}}  bl .+67108848
+// CHECK:     10010024: {{.*}}  bl .-16
 // CHECK-NOT: 10010028: {{.*}}  nop
 // CHECK-NOT: 10010028: {{.*}}  ld 2, 24(1)
 
@@ -68,5 +68,5 @@ last:
   bl foo
   nop
 // CHECK: last:
-// CHECK:      10010038: {{.*}}   bl .+67108808
+// CHECK:      10010038: {{.*}}   bl .-56
 // CHECK-NEXT: 1001003c: {{.*}}   ld 2, 24(1)
