@@ -1,3 +1,4 @@
+include(CMakePushCheckState)
 include(CheckLibraryExists)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
@@ -62,10 +63,13 @@ endif ()
 
 # Check compiler pragmas
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  cmake_push_check_state()
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Werror=unknown-pragmas")
   check_c_source_compiles("
 #pragma comment(lib, \"c\")
 int main() { return 0; }
 " LIBCXX_HAS_COMMENT_LIB_PRAGMA)
+  cmake_pop_check_state()
 endif()
 
 if(NOT WIN32 OR MINGW)
