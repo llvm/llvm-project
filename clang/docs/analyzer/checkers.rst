@@ -778,7 +778,7 @@ Check for null pointers being passed as arguments to C string functions:
 
 osx
 ^^^
-OS X checkers.
+macOS checkers.
 
 osx.API (C)
 """""""""""

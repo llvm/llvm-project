@@ -14,6 +14,17 @@ define float @test1(float %x, float %y) {
   ret float %t2
 }
 
+define float @test1_unary(float %x, float %y) {
+; CHECK-LABEL: @test1_unary(
+; CHECK-NEXT:    [[T1:%.*]] = fsub float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fneg float [[T1]]
+; CHECK-NEXT:    ret float [[T2]]
+;
+  %t1 = fsub float %x, %y
+  %t2 = fneg float %t1
+  ret float %t2
+}
+
 ; Can't do anything with the test above because -0.0 - 0.0 = -0.0, but if we have nsz:
 ; -(X - Y) --> Y - X
 

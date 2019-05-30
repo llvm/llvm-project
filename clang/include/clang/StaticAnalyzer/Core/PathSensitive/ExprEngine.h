@@ -376,10 +376,10 @@ public:
                        const LocationContext *LCtx,
                        const CallEvent *Call) override;
 
-  /// printState - Called by ProgramStateManager to print checker-specific data.
-  void printState(raw_ostream &Out, ProgramStateRef State,
-                  const LocationContext *LCtx, const char *NL,
-                  unsigned int Space, bool IsDot) const override;
+  /// printJson - Called by ProgramStateManager to print checker-specific data.
+  void printJson(raw_ostream &Out, ProgramStateRef State,
+                 const LocationContext *LCtx, const char *NL,
+                 unsigned int Space, bool IsDot) const override;
 
   ProgramStateManager &getStateManager() override { return StateMgr; }
 

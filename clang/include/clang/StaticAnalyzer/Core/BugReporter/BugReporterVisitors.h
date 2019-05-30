@@ -189,22 +189,40 @@ public:
                   BugReporterContext &BRC);
 
   std::shared_ptr<PathDiagnosticPiece>
-  VisitTrueTest(const Expr *Cond, bool tookTrue, BugReporterContext &BRC,
-                BugReport &R, const ExplodedNode *N);
+  VisitTrueTest(const Expr *Cond, BugReporterContext &BRC, BugReport &R,
+                const ExplodedNode *N, bool TookTrue);
 
   std::shared_ptr<PathDiagnosticPiece>
-  VisitTrueTest(const Expr *Cond, const DeclRefExpr *DR, const bool tookTrue,
-                BugReporterContext &BRC, BugReport &R, const ExplodedNode *N);
+  VisitTrueTest(const Expr *Cond, const DeclRefExpr *DR,
+                BugReporterContext &BRC, BugReport &R, const ExplodedNode *N,
+                bool TookTrue, bool IsAssuming);
 
   std::shared_ptr<PathDiagnosticPiece>
   VisitTrueTest(const Expr *Cond, const BinaryOperator *BExpr,
-                const bool tookTrue, BugReporterContext &BRC, BugReport &R,
-                const ExplodedNode *N);
+                BugReporterContext &BRC, BugReport &R, const ExplodedNode *N,
+                bool TookTrue, bool IsAssuming);
+
+  std::shared_ptr<PathDiagnosticPiece>
+  VisitTrueTest(const Expr *Cond, const MemberExpr *ME, BugReporterContext &BRC,
+                BugReport &R, const ExplodedNode *N, bool TookTrue,
+                bool IsAssuming);
 
   std::shared_ptr<PathDiagnosticPiece>
   VisitConditionVariable(StringRef LhsString, const Expr *CondVarExpr,
-                         const bool tookTrue, BugReporterContext &BRC,
-                         BugReport &R, const ExplodedNode *N);
+                         BugReporterContext &BRC, BugReport &R,
+                         const ExplodedNode *N, bool TookTrue);
+
+  /// Tries to print the value of the given expression.
+  ///
+  /// \param CondVarExpr The expression to print its value.
+  /// \param Out The stream to print.
+  /// \param N The node where we encountered the condition.
+  /// \param TookTrue Whether we took the \c true branch of the condition.
+  ///
+  /// \return Whether the print was successful. (The printing is successful if
+  ///         we model the value and we could obtain it.)
+  bool printValue(const Expr *CondVarExpr, raw_ostream &Out,
+                  const ExplodedNode *N, bool TookTrue, bool IsAssuming);
 
   bool patternMatch(const Expr *Ex,
                     const Expr *ParentEx,
@@ -212,7 +230,8 @@ public:
                     BugReporterContext &BRC,
                     BugReport &R,
                     const ExplodedNode *N,
-                    Optional<bool> &prunable);
+                    Optional<bool> &prunable,
+                    bool IsSameFieldName);
 
   static bool isPieceMessageGeneric(const PathDiagnosticPiece *Piece);
 };

@@ -1,0 +1,148 @@
+## Test that llvm-readobj/llvm-readelf shows proper relocation type
+## names and values for i386 target.
+
+# RUN: yaml2obj %s -o %t-i386.o
+# RUN: llvm-readobj -r --expand-relocs %t-i386.o | FileCheck %s
+
+# CHECK: Type: R_386_NONE (0)
+# CHECK: Type: R_386_32 (1)
+# CHECK: Type: R_386_PC32 (2)
+# CHECK: Type: R_386_GOT32 (3)
+# CHECK: Type: R_386_PLT32 (4)
+# CHECK: Type: R_386_COPY (5)
+# CHECK: Type: R_386_GLOB_DAT (6)
+# CHECK: Type: R_386_JUMP_SLOT (7)
+# CHECK: Type: R_386_RELATIVE (8)
+# CHECK: Type: R_386_GOTOFF (9)
+# CHECK: Type: R_386_GOTPC (10)
+# CHECK: Type: R_386_32PLT (11)
+# CHECK: Type: R_386_TLS_TPOFF (14)
+# CHECK: Type: R_386_TLS_IE (15)
+# CHECK: Type: R_386_TLS_GOTIE (16)
+# CHECK: Type: R_386_TLS_LE (17)
+# CHECK: Type: R_386_TLS_GD (18)
+# CHECK: Type: R_386_TLS_LDM (19)
+# CHECK: Type: R_386_16 (20)
+# CHECK: Type: R_386_PC16 (21)
+# CHECK: Type: R_386_8 (22)
+# CHECK: Type: R_386_PC8 (23)
+# CHECK: Type: R_386_TLS_GD_32 (24)
+# CHECK: Type: R_386_TLS_GD_PUSH (25)
+# CHECK: Type: R_386_TLS_GD_CALL (26)
+# CHECK: Type: R_386_TLS_GD_POP (27)
+# CHECK: Type: R_386_TLS_LDM_32 (28)
+# CHECK: Type: R_386_TLS_LDM_PUSH (29)
+# CHECK: Type: R_386_TLS_LDM_CALL (30)
+# CHECK: Type: R_386_TLS_LDM_POP (31)
+# CHECK: Type: R_386_TLS_LDO_32 (32)
+# CHECK: Type: R_386_TLS_IE_32 (33)
+# CHECK: Type: R_386_TLS_LE_32 (34)
+# CHECK: Type: R_386_TLS_DTPMOD32 (35)
+# CHECK: Type: R_386_TLS_DTPOFF32 (36)
+# CHECK: Type: R_386_TLS_TPOFF32 (37)
+# CHECK: Type: R_386_TLS_GOTDESC (39)
+# CHECK: Type: R_386_TLS_DESC_CALL (40)
+# CHECK: Type: R_386_TLS_DESC (41)
+# CHECK: Type: R_386_IRELATIVE (42)
+# CHECK: Type: R_386_GOT32X (43)
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS32
+  Data:     ELFDATA2LSB
+  OSABI:    ELFOSABI_GNU
+  Type:     ET_REL
+  Machine:  EM_386
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Content: 00
+  - Name:         .rel.text
+    Type:         SHT_REL
+    Link:         .symtab
+    AddressAlign: 0x0000000000000004
+    EntSize:      0x0000000000000008
+    Info:         .text
+    Relocations:
+      - Offset: 0x0000000000000002
+        Type:   R_386_NONE
+      - Offset: 0x0000000000000008
+        Type:   R_386_32
+      - Offset: 0x000000000000000E
+        Type:   R_386_PC32
+      - Offset: 0x0000000000000014
+        Type:   R_386_GOT32
+      - Offset: 0x000000000000001A
+        Type:   R_386_PLT32
+      - Offset: 0x0000000000000020
+        Type:   R_386_COPY
+      - Offset: 0x0000000000000026
+        Type:   R_386_GLOB_DAT
+      - Offset: 0x000000000000002C
+        Type:   R_386_JUMP_SLOT
+      - Offset: 0x0000000000000032
+        Type:   R_386_RELATIVE
+      - Offset: 0x0000000000000038
+        Type:   R_386_GOTOFF
+      - Offset: 0x000000000000003E
+        Type:   R_386_GOTPC
+      - Offset: 0x0000000000000044
+        Type:   R_386_32PLT
+      - Offset: 0x000000000000004A
+        Type:   R_386_TLS_TPOFF
+      - Offset: 0x0000000000000050
+        Type:   R_386_TLS_IE
+      - Offset: 0x0000000000000056
+        Type:   R_386_TLS_GOTIE
+      - Offset: 0x000000000000005C
+        Type:   R_386_TLS_LE
+      - Offset: 0x0000000000000062
+        Type:   R_386_TLS_GD
+      - Offset: 0x0000000000000068
+        Type:   R_386_TLS_LDM
+      - Offset: 0x000000000000006E
+        Type:   R_386_16
+      - Offset: 0x0000000000000074
+        Type:   R_386_PC16
+      - Offset: 0x000000000000007A
+        Type:   R_386_8
+      - Offset: 0x0000000000000080
+        Type:   R_386_PC8
+      - Offset: 0x0000000000000086
+        Type:   R_386_TLS_GD_32
+      - Offset: 0x000000000000008C
+        Type:   R_386_TLS_GD_PUSH
+      - Offset: 0x0000000000000092
+        Type:   R_386_TLS_GD_CALL
+      - Offset: 0x0000000000000098
+        Type:   R_386_TLS_GD_POP
+      - Offset: 0x000000000000009E
+        Type:   R_386_TLS_LDM_32
+      - Offset: 0x00000000000000A4
+        Type:   R_386_TLS_LDM_PUSH
+      - Offset: 0x00000000000000AA
+        Type:   R_386_TLS_LDM_CALL
+      - Offset: 0x00000000000000B0
+        Type:   R_386_TLS_LDM_POP
+      - Offset: 0x00000000000000B6
+        Type:   R_386_TLS_LDO_32
+      - Offset: 0x00000000000000BC
+        Type:   R_386_TLS_IE_32
+      - Offset: 0x00000000000000C2
+        Type:   R_386_TLS_LE_32
+      - Offset: 0x00000000000000C8
+        Type:   R_386_TLS_DTPMOD32
+      - Offset: 0x00000000000000CE
+        Type:   R_386_TLS_DTPOFF32
+      - Offset: 0x00000000000000D4
+        Type:   R_386_TLS_TPOFF32
+      - Offset: 0x00000000000000DA
+        Type:   R_386_TLS_GOTDESC
+      - Offset: 0x00000000000000E0
+        Type:   R_386_TLS_DESC_CALL
+      - Offset: 0x00000000000000E6
+        Type:   R_386_TLS_DESC
+      - Offset: 0x00000000000000EC
+        Type:   R_386_IRELATIVE
+      - Offset: 0x00000000000000F2
+        Type:   R_386_GOT32X

@@ -721,6 +721,33 @@ public:
                                      "objc_begin_catch");
   }
 
+  /// Class objc_loadClassref (void *)
+  ///
+  /// Loads from a classref. For Objective-C stub classes, this invokes the
+  /// initialization callback stored inside the stub. For all other classes
+  /// this simply dereferences the pointer.
+  llvm::FunctionCallee getLoadClassrefFn() const {
+    // Add the non-lazy-bind attribute, since objc_loadClassref is likely to
+    // be called a lot.
+    //
+    // Also it is safe to make it readnone, since we never load or store the
+    // classref except by calling this function.
+    llvm::Type *params[] = { Int8PtrPtrTy };
+    llvm::FunctionCallee F = CGM.CreateRuntimeFunction(
+        llvm::FunctionType::get(ClassnfABIPtrTy, params, false),
+        "objc_loadClassref",
+        llvm::AttributeList::get(CGM.getLLVMContext(),
+                                 llvm::AttributeList::FunctionIndex,
+                                 {llvm::Attribute::NonLazyBind,
+                                  llvm::Attribute::ReadNone,
+                                  llvm::Attribute::NoUnwind}));
+    if (!CGM.getTriple().isOSBinFormatCOFF())
+      cast<llvm::Function>(F.getCallee())->setLinkage(
+        llvm::Function::ExternalWeakLinkage);
+
+    return F;
+  }
+
   llvm::StructType *EHTypeTy;
   llvm::Type *EHTypePtrTy;
 
@@ -876,6 +903,9 @@ protected:
 
   /// DefinedCategories - List of defined categories.
   SmallVector<llvm::GlobalValue*, 16> DefinedCategories;
+
+  /// DefinedStubCategories - List of defined categories on class stubs.
+  SmallVector<llvm::GlobalValue*, 16> DefinedStubCategories;
 
   /// DefinedNonLazyCategories - List of defined "non-lazy" categories.
   SmallVector<llvm::GlobalValue*, 16> DefinedNonLazyCategories;
@@ -1464,6 +1494,12 @@ private:
                                  bool isMetaclass,
                                  ForDefinition_t isForDefinition);
 
+  llvm::Constant *GetClassGlobalForClassRef(const ObjCInterfaceDecl *ID);
+
+  llvm::Value *EmitLoadOfClassRef(CodeGenFunction &CGF,
+                                  const ObjCInterfaceDecl *ID,
+                                  llvm::GlobalVariable *Entry);
+
   /// EmitClassRef - Return a Value*, of type ObjCTypes.ClassPtrTy,
   /// for the given class reference.
   llvm::Value *EmitClassRef(CodeGenFunction &CGF,
@@ -1933,7 +1969,7 @@ llvm::Constant *CGObjCNonFragileABIMac::getNSConstantStringClassRef() {
   std::string str =
     StringClass.empty() ? "OBJC_CLASS_$_NSConstantString"
                         : "OBJC_CLASS_$_" + StringClass;
-  auto GV = GetClassGlobal(str, NotForDefinition);
+  llvm::Constant *GV = GetClassGlobal(str, NotForDefinition);
 
   // Make sure the result is of the correct type.
   auto V = llvm::ConstantExpr::getBitCast(GV, CGM.IntTy->getPointerTo());
@@ -6069,6 +6105,9 @@ void CGObjCNonFragileABIMac::FinishNonFragileABIModule() {
   AddModuleClassList(DefinedCategories, "OBJC_LABEL_CATEGORY_$",
                      GetSectionName("__objc_catlist",
                                     "regular,no_dead_strip"));
+  AddModuleClassList(DefinedStubCategories, "OBJC_LABEL_STUB_CATEGORY_$",
+                     GetSectionName("__objc_catlist2",
+                                    "regular,no_dead_strip"));
   AddModuleClassList(DefinedNonLazyCategories, "OBJC_LABEL_NONLAZY_CATEGORY_$",
                      GetSectionName("__objc_nlcatlist",
                                     "regular,no_dead_strip"));
@@ -6560,7 +6599,10 @@ void CGObjCNonFragileABIMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
   llvm::GlobalVariable *GCATV =
       finishAndCreateGlobal(values, ExtCatName.str(), CGM);
   CGM.addCompilerUsedGlobal(GCATV);
-  DefinedCategories.push_back(GCATV);
+  if (Interface->hasAttr<ObjCClassStubAttr>())
+    DefinedStubCategories.push_back(GCATV);
+  else
+    DefinedCategories.push_back(GCATV);
 
   // Determine if this category is also "non-lazy".
   if (ImplementationIsNonLazy(OCD))
@@ -7236,33 +7278,68 @@ CGObjCNonFragileABIMac::GetClassGlobal(StringRef Name,
   return GV;
 }
 
+llvm::Constant *
+CGObjCNonFragileABIMac::GetClassGlobalForClassRef(const ObjCInterfaceDecl *ID) {
+  llvm::Constant *ClassGV = GetClassGlobal(ID, /*metaclass*/ false,
+                                           NotForDefinition);
+
+  if (!ID->hasAttr<ObjCClassStubAttr>())
+    return ClassGV;
+
+  ClassGV = llvm::ConstantExpr::getPointerCast(ClassGV, ObjCTypes.Int8PtrTy);
+
+  // Stub classes are pointer-aligned. Classrefs pointing at stub classes
+  // must set the least significant bit set to 1.
+  auto *Idx = llvm::ConstantInt::get(CGM.Int32Ty, 1);
+  return llvm::ConstantExpr::getGetElementPtr(CGM.Int8Ty, ClassGV, Idx);
+}
+
+llvm::Value *
+CGObjCNonFragileABIMac::EmitLoadOfClassRef(CodeGenFunction &CGF,
+                                           const ObjCInterfaceDecl *ID,
+                                           llvm::GlobalVariable *Entry) {
+  if (ID && ID->hasAttr<ObjCClassStubAttr>()) {
+    // Classrefs pointing at Objective-C stub classes must be loaded by calling
+    // a special runtime function.
+    return CGF.EmitRuntimeCall(
+      ObjCTypes.getLoadClassrefFn(), Entry, "load_classref_result");
+  }
+
+  CharUnits Align = CGF.getPointerAlign();
+  return CGF.Builder.CreateAlignedLoad(Entry, Align);
+}
+
 llvm::Value *
 CGObjCNonFragileABIMac::EmitClassRefFromId(CodeGenFunction &CGF,
                                            IdentifierInfo *II,
                                            const ObjCInterfaceDecl *ID) {
-  CharUnits Align = CGF.getPointerAlign();
   llvm::GlobalVariable *&Entry = ClassReferences[II];
 
   if (!Entry) {
     llvm::Constant *ClassGV;
     if (ID) {
-      ClassGV = GetClassGlobal(ID, /*metaclass*/ false, NotForDefinition);
+      ClassGV = GetClassGlobalForClassRef(ID);
     } else {
       ClassGV = GetClassGlobal((getClassSymbolPrefix() + II->getName()).str(),
                                NotForDefinition);
+      assert(ClassGV->getType() == ObjCTypes.ClassnfABIPtrTy &&
+             "classref was emitted with the wrong type?");
     }
 
     std::string SectionName =
         GetSectionName("__objc_classrefs", "regular,no_dead_strip");
     Entry = new llvm::GlobalVariable(
-        CGM.getModule(), ObjCTypes.ClassnfABIPtrTy, false,
+        CGM.getModule(), ClassGV->getType(), false,
         getLinkageTypeForObjCMetadata(CGM, SectionName), ClassGV,
         "OBJC_CLASSLIST_REFERENCES_$_");
-    Entry->setAlignment(Align.getQuantity());
-    Entry->setSection(SectionName);
+    Entry->setAlignment(CGF.getPointerAlign().getQuantity());
+    if (!ID || !ID->hasAttr<ObjCClassStubAttr>())
+      Entry->setSection(SectionName);
+
     CGM.addCompilerUsedGlobal(Entry);
   }
-  return CGF.Builder.CreateAlignedLoad(Entry, Align);
+
+  return EmitLoadOfClassRef(CGF, ID, Entry);
 }
 
 llvm::Value *CGObjCNonFragileABIMac::EmitClassRef(CodeGenFunction &CGF,
@@ -7284,22 +7361,22 @@ llvm::Value *CGObjCNonFragileABIMac::EmitNSAutoreleasePoolClassRef(
 llvm::Value *
 CGObjCNonFragileABIMac::EmitSuperClassRef(CodeGenFunction &CGF,
                                           const ObjCInterfaceDecl *ID) {
-  CharUnits Align = CGF.getPointerAlign();
   llvm::GlobalVariable *&Entry = SuperClassReferences[ID->getIdentifier()];
 
   if (!Entry) {
-    auto ClassGV = GetClassGlobal(ID, /*metaclass*/ false, NotForDefinition);
+    llvm::Constant *ClassGV = GetClassGlobalForClassRef(ID);
     std::string SectionName =
         GetSectionName("__objc_superrefs", "regular,no_dead_strip");
     Entry = new llvm::GlobalVariable(
-        CGM.getModule(), ObjCTypes.ClassnfABIPtrTy, false,
+        CGM.getModule(), ClassGV->getType(), false,
         getLinkageTypeForObjCMetadata(CGM, SectionName), ClassGV,
         "OBJC_CLASSLIST_SUP_REFS_$_");
-    Entry->setAlignment(Align.getQuantity());
+    Entry->setAlignment(CGF.getPointerAlign().getQuantity());
     Entry->setSection(SectionName);
     CGM.addCompilerUsedGlobal(Entry);
   }
-  return CGF.Builder.CreateAlignedLoad(Entry, Align);
+
+  return EmitLoadOfClassRef(CGF, ID, Entry);
 }
 
 /// EmitMetaClassRef - Return a Value * of the address of _class_t

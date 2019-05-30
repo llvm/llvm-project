@@ -589,6 +589,9 @@ namespace llvm {
       // User level wait
       UMWAIT, TPAUSE,
 
+      // Enqueue Stores Instructions
+      ENQCMD, ENQCMDS,
+
       // Compare and swap.
       LCMPXCHG_DAG = ISD::FIRST_TARGET_MEMORY_OPCODE,
       LCMPXCHG8_DAG,

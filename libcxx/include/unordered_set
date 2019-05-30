@@ -75,7 +75,7 @@ public:
     template <class InputIterator>
       unordered_set(InputIterator f, InputIterator l, size_type n, const allocator_type& a); // C++14
     template <class InputIterator>
-      unordered_set(InputIterator f, InputIterator l, size_type n, 
+      unordered_set(InputIterator f, InputIterator l, size_type n,
                     const hasher& hf,  const allocator_type& a); // C++14
     unordered_set(initializer_list<value_type> il, size_type n, const allocator_type& a); // C++14
     unordered_set(initializer_list<value_type> il, size_type n,
@@ -242,7 +242,7 @@ public:
       unordered_multiset(InputIterator f, InputIterator l, size_type n,
                          const hasher& hf, const allocator_type& a); // C++14
     unordered_multiset(initializer_list<value_type> il, size_type n, const allocator_type& a); // C++14
-    unordered_multiset(initializer_list<value_type> il, size_type n, 
+    unordered_multiset(initializer_list<value_type> il, size_type n,
                        const hasher& hf,  const allocator_type& a); // C++14
     ~unordered_multiset();
     unordered_multiset& operator=(const unordered_multiset&);
@@ -450,11 +450,11 @@ public:
 #if _LIBCPP_STD_VER > 11
     template <class _InputIterator>
     inline _LIBCPP_INLINE_VISIBILITY
-        unordered_set(_InputIterator __first, _InputIterator __last, 
+        unordered_set(_InputIterator __first, _InputIterator __last,
                     size_type __n, const allocator_type& __a)
             : unordered_set(__first, __last, __n, hasher(), key_equal(), __a) {}
     template <class _InputIterator>
-        unordered_set(_InputIterator __first, _InputIterator __last, 
+        unordered_set(_InputIterator __first, _InputIterator __last,
                       size_type __n, const hasher& __hf, const allocator_type& __a)
             : unordered_set(__first, __last, __n, __hf, key_equal(), __a) {}
 #endif
@@ -480,7 +480,7 @@ public:
                                                       const allocator_type& __a)
         : unordered_set(__il, __n, hasher(), key_equal(), __a) {}
     inline _LIBCPP_INLINE_VISIBILITY
-    unordered_set(initializer_list<value_type> __il, size_type __n, 
+    unordered_set(initializer_list<value_type> __il, size_type __n,
                                   const hasher& __hf, const allocator_type& __a)
         : unordered_set(__il, __n, __hf, key_equal(), __a) {}
 #endif
@@ -1052,7 +1052,7 @@ public:
 #if _LIBCPP_STD_VER > 11
     template <class _InputIterator>
     inline _LIBCPP_INLINE_VISIBILITY
-    unordered_multiset(_InputIterator __first, _InputIterator __last, 
+    unordered_multiset(_InputIterator __first, _InputIterator __last,
                        size_type __n, const allocator_type& __a)
         : unordered_multiset(__first, __last, __n, hasher(), key_equal(), __a) {}
     template <class _InputIterator>

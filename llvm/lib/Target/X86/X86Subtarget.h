@@ -356,6 +356,9 @@ protected:
   /// Processor has AVX-512 bfloat16 floating-point extensions
   bool HasBF16 = false;
 
+  /// Processor supports ENQCMD instructions
+  bool HasENQCMD = false;
+
   /// Processor has AVX-512 Bit Algorithms instructions
   bool HasBITALG = false;
 
@@ -688,6 +691,7 @@ public:
   bool hasSGX() const { return HasSGX; }
   bool threewayBranchProfitable() const { return ThreewayBranchProfitable; }
   bool hasINVPCID() const { return HasINVPCID; }
+  bool hasENQCMD() const { return HasENQCMD; }
   bool useRetpolineIndirectCalls() const { return UseRetpolineIndirectCalls; }
   bool useRetpolineIndirectBranches() const {
     return UseRetpolineIndirectBranches;

@@ -37,6 +37,7 @@ ARMAttributeParser::DisplayRoutines[] = {
   ATTRIBUTE_HANDLER(FP_arch),
   ATTRIBUTE_HANDLER(WMMX_arch),
   ATTRIBUTE_HANDLER(Advanced_SIMD_arch),
+  ATTRIBUTE_HANDLER(MVE_arch),
   ATTRIBUTE_HANDLER(PCS_config),
   ATTRIBUTE_HANDLER(ABI_PCS_R9_use),
   ATTRIBUTE_HANDLER(ABI_PCS_RW_data),
@@ -132,7 +133,9 @@ void ARMAttributeParser::CPU_arch(AttrType Tag, const uint8_t *Data,
   static const char *const Strings[] = {
     "Pre-v4", "ARM v4", "ARM v4T", "ARM v5T", "ARM v5TE", "ARM v5TEJ", "ARM v6",
     "ARM v6KZ", "ARM v6T2", "ARM v6K", "ARM v7", "ARM v6-M", "ARM v6S-M",
-    "ARM v7E-M", "ARM v8"
+    "ARM v7E-M", "ARM v8", nullptr,
+    "ARM v8-M Baseline", "ARM v8-M Mainline", nullptr, nullptr, nullptr,
+    "ARM v8.1-M Mainline"
   };
 
   uint64_t Value = ParseInteger(Data, Offset);
@@ -205,6 +208,18 @@ void ARMAttributeParser::Advanced_SIMD_arch(AttrType Tag, const uint8_t *Data,
                                             uint32_t &Offset) {
   static const char *const Strings[] = {
     "Not Permitted", "NEONv1", "NEONv2+FMA", "ARMv8-a NEON", "ARMv8.1-a NEON"
+  };
+
+  uint64_t Value = ParseInteger(Data, Offset);
+  StringRef ValueDesc =
+    (Value < array_lengthof(Strings)) ? Strings[Value] : nullptr;
+  PrintAttribute(Tag, Value, ValueDesc);
+}
+
+void ARMAttributeParser::MVE_arch(AttrType Tag, const uint8_t *Data,
+                                  uint32_t &Offset) {
+  static const char *const Strings[] = {
+    "Not Permitted", "MVE integer", "MVE integer and float"
   };
 
   uint64_t Value = ParseInteger(Data, Offset);

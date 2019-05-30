@@ -429,6 +429,23 @@ public:
     }
   }
 
+  /// Returns true if this Objective-C runtime supports Objective-C class
+  /// stubs.
+  bool allowsClassStubs() const {
+    switch (getKind()) {
+    case FragileMacOSX:
+    case GCC:
+    case GNUstep:
+    case ObjFW:
+      return false;
+    case MacOSX:
+    case iOS:
+    case WatchOS:
+      return true;
+    }
+    llvm_unreachable("bad kind");
+  }
+
   /// Try to parse an Objective-C runtime specification from the given
   /// string.
   ///

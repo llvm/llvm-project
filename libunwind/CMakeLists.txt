@@ -15,7 +15,7 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
   )
 
-if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBUNWIND_STANDALONE_BUILD)
   project(libunwind)
 
   # Rely on llvm-config.
@@ -360,6 +360,10 @@ endif()
 # Disable DLL annotations on Windows for static builds.
 if (WIN32 AND LIBUNWIND_ENABLE_STATIC AND NOT LIBUNWIND_ENABLE_SHARED)
   add_definitions(-D_LIBUNWIND_DISABLE_VISIBILITY_ANNOTATIONS)
+endif()
+
+if (LIBUNWIND_HAS_COMMENT_LIB_PRAGMA)
+  add_definitions(-D_LIBUNWIND_HAS_COMMENT_LIB_PRAGMA)
 endif()
 
 #===============================================================================

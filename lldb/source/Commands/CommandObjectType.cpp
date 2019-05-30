@@ -2841,10 +2841,6 @@ public:
                                  exe_ctx))
         return false;
 
-    // TargetSP
-    // target_sp(GetCommandInterpreter().GetDebugger().GetSelectedTarget());
-    // const bool fill_all_in = true;
-    // ExecutionContext exe_ctx(target_sp.get(), fill_all_in);
     ExecutionContextScope *best_scope = exe_ctx.GetBestExecutionContextScope();
 
     bool any_found = false;

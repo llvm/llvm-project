@@ -69,6 +69,13 @@ ASM_FUNCTION_RISCV_RE = re.compile(
     r'.Lfunc_end[0-9]+:\n',
     flags=(re.M | re.S))
 
+ASM_FUNCTION_LANAI_RE = re.compile(
+    r'^_?(?P<func>[^:]+):[ \t]*!+[ \t]*@(?P=func)\n'
+    r'(?:[ \t]+.cfi_startproc\n)?'  # drop optional cfi noise
+    r'(?P<body>.*?)\s*'
+    r'.Lfunc_end[0-9]+:\n',
+    flags=(re.M | re.S))
+
 ASM_FUNCTION_SPARC_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*!+[ \t]*@(?P=func)\n'
     r'(?P<body>.*?)\s*'
@@ -186,6 +193,16 @@ def scrub_asm_riscv(asm, args):
   asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm
 
+def scrub_asm_lanai(asm, args):
+  # Scrub runs of whitespace out of the assembly, but leave the leading
+  # whitespace in place.
+  asm = common.SCRUB_WHITESPACE_RE.sub(r' ', asm)
+  # Expand the tabs used for indentation.
+  asm = string.expandtabs(asm, 2)
+  # Strip trailing whitespace.
+  asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
+  return asm
+
 def scrub_asm_sparc(asm, args):
   # Scrub runs of whitespace out of the assembly, but leave the leading
   # whitespace in place.
@@ -266,6 +283,7 @@ def build_function_body_dictionary_for_triple(args, raw_tool_output, triple, pre
       'powerpc64le': (scrub_asm_powerpc, ASM_FUNCTION_PPC_RE),
       'riscv32': (scrub_asm_riscv, ASM_FUNCTION_RISCV_RE),
       'riscv64': (scrub_asm_riscv, ASM_FUNCTION_RISCV_RE),
+      'lanai': (scrub_asm_lanai, ASM_FUNCTION_LANAI_RE),
       'sparc': (scrub_asm_sparc, ASM_FUNCTION_SPARC_RE),
       'sparcv9': (scrub_asm_sparc, ASM_FUNCTION_SPARC_RE),
       's390x': (scrub_asm_systemz, ASM_FUNCTION_SYSTEMZ_RE),

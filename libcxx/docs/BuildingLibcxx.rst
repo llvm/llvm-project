@@ -41,7 +41,7 @@ The basic steps needed to build libc++ are:
 
    .. warning::
      * Replacing your systems libc++ installation could render the system non-functional.
-     * Mac OS X will not boot without a valid copy of ``libc++.1.dylib`` in ``/usr/lib``.
+     * macOS will not boot without a valid copy of ``libc++.1.dylib`` in ``/usr/lib``.
 
 
 The instructions are for building libc++ on

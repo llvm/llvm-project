@@ -165,25 +165,25 @@
   vldr.16 s2, [pc, #510]
   vldr.16 s3, [pc, #-510]
   vldr.16 s4, [r4, #-18]
-@ CHECK: instruction requires: full half-float
-@ CHECK: instruction requires: full half-float
-@ CHECK: instruction requires: full half-float
-@ CHECK: instruction requires: full half-float
+@ CHECK: instruction requires: 16-bit fp registers
+@ CHECK: instruction requires: 16-bit fp registers
+@ CHECK: instruction requires: 16-bit fp registers
+@ CHECK: instruction requires: 16-bit fp registers
 
 
   vstr.16 s1, [pc, #6]
   vstr.16 s2, [pc, #510]
   vstr.16 s3, [pc, #-510]
   vstr.16 s4, [r4, #-18]
-@ CHECK: instruction requires: full half-float
-@ CHECK: instruction requires: full half-float
-@ CHECK: instruction requires: full half-float
-@ CHECK: instruction requires: full half-float
+@ CHECK: instruction requires: 16-bit fp registers
+@ CHECK: instruction requires: 16-bit fp registers
+@ CHECK: instruction requires: 16-bit fp registers
+@ CHECK: instruction requires: 16-bit fp registers
 
   vmov.f16 s0, #1.0
 @ CHECK: instruction requires: full half-float
 
   vmov.f16 s1, r2
   vmov.f16 r3, s4
-@ CHECK: instruction requires: full half-float
-@ CHECK: instruction requires: full half-float
+@ CHECK: instruction requires: 16-bit fp registers
+@ CHECK: instruction requires: 16-bit fp registers

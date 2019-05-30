@@ -306,14 +306,16 @@ h1 { font-size:14pt }
 .keyword { color: blue }
 .string_literal { color: red }
 .directive { color: darkmagenta }
-/* Macro expansions. */
-.expansion { display: none; }
-.macro:hover .expansion {
+
+/* Macros and variables could have pop-up notes hidden by default.
+  - Macro pop-up:    expansion of the macro
+  - Variable pop-up: value (table) of the variable */
+.macro_popup, .variable_popup { display: none; }
+
+/* Pop-up appears on mouse-hover event. */
+.macro:hover .macro_popup, .variable:hover .variable_popup {
   display: block;
-  border: 2px solid #FF0000;
   padding: 2px;
-  background-color:#FFF0F0;
-  font-weight: normal;
   -webkit-border-radius:5px;
   -webkit-box-shadow:1px 1px 7px #000;
   border-radius:5px;
@@ -323,6 +325,27 @@ h1 { font-size:14pt }
   left:10em;
   z-index: 1
 }
+
+.macro_popup {
+  border: 2px solid red;
+  background-color:#FFF0F0;
+  font-weight: normal;
+}
+
+.variable_popup {
+  border: 2px solid blue;
+  background-color:#F0F0FF;
+  font-weight: bold;
+  font-family: Helvetica, sans-serif;
+  font-size: 9pt;
+}
+
+/* Pop-up notes needs a relative position as a base where they pops up. */
+.macro, .variable {
+  background-color: PaleGoldenRod;
+  position: relative;
+}
+.macro { color: DarkMagenta; }
 
 #tooltiphint {
   position: fixed;
@@ -335,12 +358,6 @@ h1 { font-size:14pt }
   box-shadow: 1px 1px 7px black;
   background-color: #c0c0c0;
   z-index: 2;
-}
-.macro {
-  color: darkmagenta;
-  background-color:LemonChiffon;
-  /* Macros are position: relative to provide base for expansions. */
-  position: relative;
 }
 
 .num { width:2.5em; padding-right:2ex; background-color:#eeeeee }
@@ -369,6 +386,7 @@ h1 { font-size:14pt }
 .PathIndex { border-radius:8px }
 .PathIndexEvent { background-color:#bfba87 }
 .PathIndexControl { background-color:#8c8c8c }
+.PathIndexPopUp { background-color: #879abc; }
 .PathNav a { text-decoration:none; font-size: larger }
 .CodeInsertionHint { font-weight: bold; background-color: #10dd10 }
 .CodeRemovalHint { background-color:#de1010 }
@@ -636,10 +654,9 @@ void html::HighlightMacros(Rewriter &R, FileID FID, const Preprocessor& PP) {
       TmpPP.Lex(Tok);
     }
 
-
-    // Insert the expansion as the end tag, so that multi-line macros all get
-    // highlighted.
-    Expansion = "<span class='expansion'>" + Expansion + "</span></span>";
+    // Insert the 'macro_popup' as the end tag, so that multi-line macros all
+    // get highlighted.
+    Expansion = "<span class='macro_popup'>" + Expansion + "</span></span>";
 
     HighlightRange(R, LLoc.getBegin(), LLoc.getEnd(), "<span class='macro'>",
                    Expansion.c_str(), LLoc.isTokenRange());

@@ -1,7 +1,8 @@
-
+include(CMakePushCheckState)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckLibraryExists)
+include(CheckCSourceCompiles)
 
 check_library_exists(c fopen "" LIBUNWIND_HAS_C_LIB)
 
@@ -55,6 +56,17 @@ if (LIBUNWIND_HAS_NODEFAULTLIBS_FLAG)
   endif ()
 endif ()
 
+# Check compiler pragmas
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  cmake_push_check_state()
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Werror=unknown-pragmas")
+  check_c_source_compiles("
+#pragma comment(lib, \"c\")
+int main() { return 0; }
+" LIBUNWIND_HAS_COMMENT_LIB_PRAGMA)
+  cmake_pop_check_state()
+endif()
+
 # Check compiler flags
 check_c_compiler_flag(-funwind-tables         LIBUNWIND_HAS_FUNWIND_TABLES)
 check_cxx_compiler_flag(-fno-exceptions       LIBUNWIND_HAS_NO_EXCEPTIONS_FLAG)
@@ -96,4 +108,3 @@ endif()
 
 check_library_exists(dl dladdr "" LIBUNWIND_HAS_DL_LIB)
 check_library_exists(pthread pthread_once "" LIBUNWIND_HAS_PTHREAD_LIB)
-

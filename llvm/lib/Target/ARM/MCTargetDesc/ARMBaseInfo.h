@@ -385,16 +385,17 @@ namespace ARMII {
     // instruction. Used by the parser to determine whether to require the 'S'
     // suffix on the mnemonic (when not in an IT block) or preclude it (when
     // in an IT block).
-    ThumbArithFlagSetting = 1 << 18,
+    ThumbArithFlagSetting = 1 << 19,
 
     //===------------------------------------------------------------------===//
     // Code domain.
     DomainShift   = 15,
-    DomainMask    = 7 << DomainShift,
+    DomainMask    = 15 << DomainShift,
     DomainGeneral = 0 << DomainShift,
     DomainVFP     = 1 << DomainShift,
     DomainNEON    = 2 << DomainShift,
     DomainNEONA8  = 4 << DomainShift,
+    DomainMVE     = 8 << DomainShift,
 
     //===------------------------------------------------------------------===//
     // Field shifts - such shifts are used to set field while generating

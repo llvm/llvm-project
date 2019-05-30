@@ -31,6 +31,8 @@ ARM_FPU("fpv4-sp-d16", FK_FPV4_SP_D16, FPUVersion::VFPV4, NeonSupportLevel::None
 ARM_FPU("fpv5-d16", FK_FPV5_D16, FPUVersion::VFPV5, NeonSupportLevel::None, FPURestriction::D16)
 ARM_FPU("fpv5-sp-d16", FK_FPV5_SP_D16, FPUVersion::VFPV5, NeonSupportLevel::None, FPURestriction::SP_D16)
 ARM_FPU("fp-armv8", FK_FP_ARMV8, FPUVersion::VFPV5, NeonSupportLevel::None, FPURestriction::None)
+ARM_FPU("fp-armv8-fullfp16-d16", FK_FP_ARMV8_FULLFP16_D16, FPUVersion::VFPV5_FULLFP16, NeonSupportLevel::None, FPURestriction::D16)
+ARM_FPU("fp-armv8-fullfp16-sp-d16", FK_FP_ARMV8_FULLFP16_SP_D16, FPUVersion::VFPV5_FULLFP16, NeonSupportLevel::None, FPURestriction::SP_D16)
 ARM_FPU("neon", FK_NEON, FPUVersion::VFPV3, NeonSupportLevel::Neon, FPURestriction::None)
 ARM_FPU("neon-fp16", FK_NEON_FP16, FPUVersion::VFPV3_FP16, NeonSupportLevel::Neon, FPURestriction::None)
 ARM_FPU("neon-vfpv4", FK_NEON_VFPV4, FPUVersion::VFPV4, NeonSupportLevel::Neon, FPURestriction::None)
@@ -118,6 +120,8 @@ ARM_ARCH("armv8-m.base", ARMV8MBaseline, "8-M.Baseline", "v8m.base",
           ARMBuildAttrs::CPUArch::v8_M_Base, FK_NONE, ARM::AEK_HWDIVTHUMB)
 ARM_ARCH("armv8-m.main", ARMV8MMainline, "8-M.Mainline", "v8m.main",
           ARMBuildAttrs::CPUArch::v8_M_Main, FK_FPV5_D16, ARM::AEK_HWDIVTHUMB)
+ARM_ARCH("armv8.1-m.main", ARMV8_1MMainline, "8.1-M.Mainline", "v8.1m.main",
+         ARMBuildAttrs::CPUArch::v8_1_M_Main, FK_FP_ARMV8_FULLFP16_SP_D16, ARM::AEK_HWDIVTHUMB | ARM::AEK_RAS)
 // Non-standard Arch names.
 ARM_ARCH("iwmmxt", IWMMXT, "iwmmxt", "", ARMBuildAttrs::CPUArch::v5TE,
           FK_NONE, ARM::AEK_NONE)
@@ -144,6 +148,8 @@ ARM_ARCH_EXT_NAME("aes",      ARM::AEK_AES,      "+aes",   "-aes")
 ARM_ARCH_EXT_NAME("dotprod",  ARM::AEK_DOTPROD,  "+dotprod","-dotprod")
 ARM_ARCH_EXT_NAME("dsp",      ARM::AEK_DSP,      "+dsp",   "-dsp")
 ARM_ARCH_EXT_NAME("fp",       ARM::AEK_FP,       nullptr,  nullptr)
+ARM_ARCH_EXT_NAME("mve",      ARM::AEK_SIMD,     "+mve",   "-mve")
+ARM_ARCH_EXT_NAME("mve.fp",   (ARM::AEK_SIMD | ARM::AEK_FP), "+mve.fp", "-mve.fp")
 ARM_ARCH_EXT_NAME("idiv",     (ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB), nullptr, nullptr)
 ARM_ARCH_EXT_NAME("mp",       ARM::AEK_MP,       nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("simd",     ARM::AEK_SIMD,     nullptr,  nullptr)

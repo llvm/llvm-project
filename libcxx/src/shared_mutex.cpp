@@ -10,6 +10,9 @@
 #ifndef _LIBCPP_HAS_NO_THREADS
 
 #include "shared_mutex"
+#if defined(__unix__) &&  defined(__ELF__) && defined(_LIBCPP_HAS_COMMENT_LIB_PRAGMA)
+#pragma comment(lib, "pthread")
+#endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

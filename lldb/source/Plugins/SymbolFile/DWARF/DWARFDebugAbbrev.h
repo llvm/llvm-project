@@ -45,6 +45,10 @@ public:
   const DWARFAbbreviationDeclaration *
   GetAbbreviationDeclaration(dw_uleb128_t abbrCode) const;
 
+  /// Unit test accessor functions.
+  /// @{
+  uint32_t GetIndexOffset() const { return m_idx_offset; }
+  /// @}
 private:
   dw_offset_t m_offset;
   uint32_t m_idx_offset;

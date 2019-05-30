@@ -235,9 +235,6 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
     bool HasItem = false;
     unsigned int InnerSpace = Space + 1;
 
-    llvm::SmallString<256> TempBuf;
-    llvm::raw_svector_ostream TempOut(TempBuf);
-
     // Store the last ExprBinding which we will print.
     BindingsTy::iterator LastI = ExprBindings.end();
     for (BindingsTy::iterator I = ExprBindings.begin(); I != ExprBindings.end();
@@ -251,6 +248,7 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
       }
 
       const Stmt *S = I->first.getStmt();
+      (void)S;
       assert(S != nullptr && "Expected non-null Stmt");
 
       LastI = I;
@@ -265,17 +263,12 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
       Indent(Out, InnerSpace, IsDot)
           << "{ \"lctx_id\": " << LC->getID()
           << ", \"stmt_id\": " << S->getID(Ctx) << ", \"pretty\": ";
+      S->printJson(Out, nullptr, PP, /*AddQuotes=*/true);
 
-      // See whether the current statement is pretty-printable.
-      S->printPretty(TempOut, /*Helper=*/nullptr, PP);
-      if (!TempBuf.empty()) {
-        Out << '\"' << TempBuf.str().trim() << '\"';
-        TempBuf.clear();
-      } else {
-        Out << "null";
-      }
+      Out << ", \"value\": ";
+      I->second.printJson(Out, /*AddQuotes=*/true);
 
-      Out << ", \"value\": \"" << I->second << "\" }";
+      Out << " }";
 
       if (I != LastI)
         Out << ',';

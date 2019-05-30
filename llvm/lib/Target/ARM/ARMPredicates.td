@@ -26,6 +26,27 @@ def HasV8MBaseline   : Predicate<"Subtarget->hasV8MBaselineOps()">,
 def HasV8MMainline   : Predicate<"Subtarget->hasV8MMainlineOps()">,
                                  AssemblerPredicate<"HasV8MMainlineOps",
                                                     "armv8m.main">;
+def HasV8_1MMainline : Predicate<"Subtarget->hasV8_1MMainlineOps()">,
+                                 AssemblerPredicate<"HasV8_1MMainlineOps",
+                                                    "armv8.1m.main">;
+def HasMVEInt        : Predicate<"Subtarget->hasMVEIntegerOps()">,
+                                 AssemblerPredicate<"HasMVEIntegerOps",
+                                                    "mve">;
+def HasMVEFloat      : Predicate<"Subtarget->hasMVEFloatOps()">,
+                                 AssemblerPredicate<"HasMVEFloatOps",
+                                                    "mve.fp">;
+def HasFPRegs        : Predicate<"Subtarget->hasFPRegs()">,
+                                 AssemblerPredicate<"FeatureFPRegs",
+                                                    "fp registers">;
+def HasFPRegs16      : Predicate<"Subtarget->hasFPRegs16()">,
+                                 AssemblerPredicate<"FeatureFPRegs16",
+                                                    "16-bit fp registers">;
+def HasFPRegs64      : Predicate<"Subtarget->hasFPRegs64()">,
+                                 AssemblerPredicate<"FeatureFPRegs64",
+                                                    "64-bit fp registers">;
+def HasFPRegsV8_1M   : Predicate<"Subtarget->hasFPRegs() && Subtarget->hasV8_1MMainlineOps()">,
+                                 AssemblerPredicate<"FeatureFPRegs,HasV8_1MMainlineOps",
+                                                    "armv8.1m.main with FP or MVE">;
 def HasV6T2          : Predicate<"Subtarget->hasV6T2Ops()">,
                                  AssemblerPredicate<"HasV6T2Ops", "armv6t2">;
 def NoV6T2           : Predicate<"!Subtarget->hasV6T2Ops()">;

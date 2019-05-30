@@ -650,13 +650,85 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, InlineSiteSym &IS) {
   AutoIndent Indent(P, 7);
-  auto Bytes = makeArrayRef(IS.AnnotationData);
-  StringRef Annotations(reinterpret_cast<const char *>(Bytes.begin()),
-                        Bytes.size());
-
   P.formatLine("inlinee = {0}, parent = {1}, end = {2}", idIndex(IS.Inlinee),
                IS.Parent, IS.End);
-  P.formatLine("annotations = {0}", toHex(Annotations));
+
+  // Break down the annotation byte code and calculate code and line offsets.
+  // FIXME: It would be helpful if we could look up the initial file and inlinee
+  // lines offset using the inlinee index above.
+  uint32_t CodeOffset = 0;
+  int32_t LineOffset = 0;
+  for (auto &Annot : IS.annotations()) {
+    P.formatLine("  {0}", fmt_align(toHex(Annot.Bytes), AlignStyle::Left, 9));
+
+    auto formatCodeOffset = [&](uint32_t Delta) {
+      CodeOffset += Delta;
+      P.format(" code 0x{0} (+0x{1})", utohexstr(CodeOffset), utohexstr(Delta));
+    };
+    auto formatCodeLength = [&](uint32_t Length) {
+      // Notably, changing the code length does not affect the code offset.
+      P.format(" code end 0x{0} (+0x{1})", utohexstr(CodeOffset + Length),
+               utohexstr(Length));
+    };
+    auto formatLineOffset = [&](int32_t Delta) {
+      LineOffset += Delta;
+      char Sign = Delta > 0 ? '+' : '-';
+      P.format(" line {0} ({1}{2})", LineOffset, Sign, std::abs(Delta));
+    };
+
+    // Use the opcode to interpret the integer values.
+    switch (Annot.OpCode) {
+    case BinaryAnnotationsOpCode::Invalid:
+      break;
+    case BinaryAnnotationsOpCode::CodeOffset:
+    case BinaryAnnotationsOpCode::ChangeCodeOffset:
+      formatCodeOffset(Annot.U1);
+      break;
+    case BinaryAnnotationsOpCode::ChangeLineOffset:
+      formatLineOffset(Annot.S1);
+      break;
+    case BinaryAnnotationsOpCode::ChangeCodeLength:
+      formatCodeLength(Annot.U1);
+      break;
+    case BinaryAnnotationsOpCode::ChangeCodeOffsetAndLineOffset:
+      formatCodeOffset(Annot.U1);
+      formatLineOffset(Annot.S1);
+      break;
+    case BinaryAnnotationsOpCode::ChangeCodeLengthAndCodeOffset:
+      formatCodeOffset(Annot.U2);
+      formatCodeLength(Annot.U1);
+      break;
+
+    case BinaryAnnotationsOpCode::ChangeFile: {
+      uint32_t FileOffset = Annot.U1;
+      StringRef Filename = "<unknown>";
+      if (SymGroup) {
+        if (Expected<StringRef> MaybeFile =
+                SymGroup->getNameFromStringTable(FileOffset))
+          Filename = *MaybeFile;
+        else
+          return MaybeFile.takeError();
+      }
+      P.format(" setfile {0} 0x{1}", utohexstr(FileOffset));
+      break;
+    }
+
+    // The rest of these are hard to convince MSVC to emit, so they are not as
+    // well understood.
+    case BinaryAnnotationsOpCode::ChangeCodeOffsetBase:
+      formatCodeOffset(Annot.U1);
+      break;
+    case BinaryAnnotationsOpCode::ChangeLineEndDelta:
+    case BinaryAnnotationsOpCode::ChangeRangeKind:
+    case BinaryAnnotationsOpCode::ChangeColumnStart:
+    case BinaryAnnotationsOpCode::ChangeColumnEnd:
+      P.format(" {0} {1}", Annot.Name, Annot.U1);
+      break;
+    case BinaryAnnotationsOpCode::ChangeColumnEndDelta:
+      P.format(" {0} {1}", Annot.Name, Annot.S1);
+      break;
+    }
+  }
   return Error::success();
 }
 

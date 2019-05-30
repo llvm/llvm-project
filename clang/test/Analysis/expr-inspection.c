@@ -23,16 +23,22 @@ void foo(int x) {
   }
 }
 
-// CHECK:      "store": [
-// CHECK-NEXT:   { "cluster": "y", "items": [
-// CHECK-NEXT:     { "kind": "Direct", "offset": 0, "value": "2 S32b" }
-// CHECK-NEXT:   ]}
-// CHECK-NEXT: ],
-// CHECK-NEXT: "environment": [
-// CHECK-NEXT:   { "location_context": "#0 Call", "calling": "foo", "call_line": null, "items": [
-// CHECK-NEXT:     { "lctx_id": 1, "stmt_id": 847, "pretty": "clang_analyzer_printState", "value": "&code{clang_analyzer_printState}" }
-// CHECK-NEXT:   ]}
-// CHECK-NEXT: ],
+// CHECK:      "program_state": {
+// CHECK-NEXT:   "store": [
+// CHECK-NEXT:     { "cluster": "y", "items": [
+// CHECK-NEXT:       { "kind": "Direct", "offset": 0, "value": "2 S32b" }
+// CHECK-NEXT:     ]}
+// CHECK-NEXT:   ],
+// CHECK-NEXT:   "environment": [
+// CHECK-NEXT:     { "location_context": "#0 Call", "calling": "foo", "call_line": null, "items": [
+// CHECK-NEXT:       { "lctx_id": 1, "stmt_id": {{[0-9]+}}, "pretty": "clang_analyzer_printState", "value": "&code{clang_analyzer_printState}" }
+// CHECK-NEXT:     ]}
+// CHECK-NEXT:   ],
+// CHECK-NEXT:   "constraints": [
+// CHECK-NEXT:     { "symbol": "reg_$0<int x>", "range": "{ [-2147483648, 13] }" }
+// CHECK-NEXT:   ],
+// CHECK-NEXT:   "dynamic_types": null,
+// CHECK-NEXT:   "constructing_objects": null,
+// CHECK-NEXT:   "checker_messages": null
+// CHECK-NEXT: }
 
-// CHECK:      Ranges of symbol values:
-// CHECK-NEXT:  reg_$0<int x> : { [-2147483648, 13] }

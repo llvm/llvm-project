@@ -37,6 +37,10 @@
 #endif
 #endif
 
+#if defined(__unix__) &&  defined(__ELF__) && defined(_LIBCPP_HAS_COMMENT_LIB_PRAGMA)
+#pragma comment(lib, "rt")
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace chrono

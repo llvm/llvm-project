@@ -232,7 +232,7 @@ public:
   ///
   /// \return
   ///     A support file list object.
-  FileSpecList &GetSupportFiles();
+  const FileSpecList &GetSupportFiles();
 
   /// Get the compile unit's imported module list.
   ///

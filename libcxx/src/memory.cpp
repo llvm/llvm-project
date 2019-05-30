@@ -10,6 +10,9 @@
 #ifndef _LIBCPP_HAS_NO_THREADS
 #include "mutex"
 #include "thread"
+#if defined(__unix__) &&  defined(__ELF__) && defined(_LIBCPP_HAS_COMMENT_LIB_PRAGMA)
+#pragma comment(lib, "pthread")
+#endif
 #endif
 #include "include/atomic_support.h"
 

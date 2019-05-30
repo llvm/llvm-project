@@ -208,6 +208,14 @@ void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
   }
 }
 
+SanitizerMask WebAssembly::getSupportedSanitizers() const {
+  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  if (getTriple().isOSEmscripten()) {
+    Res |= SanitizerKind::Vptr;
+  }
+  return Res;
+}
+
 Tool *WebAssembly::buildLinker() const {
   return new tools::wasm::Linker(*this);
 }

@@ -12,6 +12,9 @@
 #include "atomic"
 #elif !defined(_LIBCPP_HAS_NO_THREADS)
 #include "mutex"
+#if defined(__unix__) &&  defined(__ELF__) && defined(_LIBCPP_HAS_COMMENT_LIB_PRAGMA)
+#pragma comment(lib, "pthread")
+#endif
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_LFTS_PMR

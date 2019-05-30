@@ -3952,13 +3952,14 @@ recurse:
       Diags.Report(DiagID);
       return;
     }
-    case UETT_OpenMPRequiredSimdAlign:
+    case UETT_OpenMPRequiredSimdAlign: {
       DiagnosticsEngine &Diags = Context.getDiags();
       unsigned DiagID = Diags.getCustomDiagID(
           DiagnosticsEngine::Error,
           "cannot yet mangle __builtin_omp_required_simd_align expression");
       Diags.Report(DiagID);
       return;
+    }
     }
     if (SAE->isArgumentType()) {
       Out << 't';

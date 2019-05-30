@@ -117,8 +117,12 @@ There are two ways to build LLDB on macOS: Using Xcode and using CMake
 
 **Preliminaries**
 
-* Xcode 4.3 or newer requires the "Command Line Tools" component (XCode->Preferences->Downloads->Components).
-* Mac OS X Lion or newer requires installing `Swig <http://swig.org/>`_.
+In addition to any dependencies required by LLVM and Clang, LLDB needs a few
+development packages that may also need to be installed depending on your
+system. The current list of dependencies are:
+
+* Xcode 4.3 or newer requires the "Command Line Tools" component (XCode->Preferences->Downloads->Components)
+* `Swig <http://swig.org/>`_
 
 **Building LLDB with Xcode**
 

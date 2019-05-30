@@ -316,7 +316,7 @@ number of cross compilers, or may only support a native target.
 
 .. option:: -mmacosx-version-min=<version>
 
-  When building for Mac OS X, specify the minimum version supported by your
+  When building for macOS, specify the minimum version supported by your
   application.
 
 .. option:: -miphoneos-version-min

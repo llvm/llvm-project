@@ -110,7 +110,8 @@ protected:
     ARMv8a,
     ARMv8mBaseline,
     ARMv8mMainline,
-    ARMv8r
+    ARMv8r,
+    ARMv81mMainline,
   };
 
 public:
@@ -157,6 +158,9 @@ protected:
   bool HasV8_5aOps = false;
   bool HasV8MBaselineOps = false;
   bool HasV8MMainlineOps = false;
+  bool HasV8_1MMainlineOps = false;
+  bool HasMVEIntegerOps = false;
+  bool HasMVEFloatOps = false;
 
   /// HasVFPv2, HasVFPv3, HasVFPv4, HasFPARMv8, HasNEON - Specify what
   /// floating point ISAs are supported.
@@ -165,6 +169,9 @@ protected:
   bool HasVFPv4 = false;
   bool HasFPARMv8 = false;
   bool HasNEON = false;
+  bool HasFPRegs = false;
+  bool HasFPRegs16 = false;
+  bool HasFPRegs64 = false;
 
   /// Versions of the VFP flags restricted to single precision, or to
   /// 16 d-registers, or both.
@@ -566,6 +573,12 @@ public:
   bool hasV8_5aOps() const { return HasV8_5aOps; }
   bool hasV8MBaselineOps() const { return HasV8MBaselineOps; }
   bool hasV8MMainlineOps() const { return HasV8MMainlineOps; }
+  bool hasV8_1MMainlineOps() const { return HasV8_1MMainlineOps; }
+  bool hasMVEIntegerOps() const { return HasMVEIntegerOps; }
+  bool hasMVEFloatOps() const { return HasMVEFloatOps; }
+  bool hasFPRegs() const { return HasFPRegs; }
+  bool hasFPRegs16() const { return HasFPRegs16; }
+  bool hasFPRegs64() const { return HasFPRegs64; }
 
   /// @{
   /// These functions are obsolete, please consider adding subtarget features

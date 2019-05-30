@@ -44,6 +44,10 @@
 #include <sys/time.h> // for gettimeofday and timeval
 #endif                // !defined(CLOCK_REALTIME)
 
+#if defined(__unix__) &&  defined(__ELF__) && defined(_LIBCPP_HAS_COMMENT_LIB_PRAGMA)
+#pragma comment(lib, "rt")
+#endif
+
 #if defined(_LIBCPP_COMPILER_GCC)
 #if _GNUC_VER < 500
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"

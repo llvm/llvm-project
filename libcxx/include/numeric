@@ -548,9 +548,9 @@ _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 
 template <class _TPtr>
 _LIBCPP_INLINE_VISIBILITY constexpr
-enable_if_t<is_pointer_v<_TPtr> 
-             && is_object_v<remove_pointer_t<_TPtr>> 
-             && ! is_void_v<remove_pointer_t<_TPtr>> 
+enable_if_t<is_pointer_v<_TPtr>
+             && is_object_v<remove_pointer_t<_TPtr>>
+             && ! is_void_v<remove_pointer_t<_TPtr>>
              && (sizeof(remove_pointer_t<_TPtr>) > 0), _TPtr>
 midpoint(_TPtr __a, _TPtr __b) noexcept
 {
@@ -568,7 +568,7 @@ _LIBCPP_INLINE_VISIBILITY constexpr
 enable_if_t<is_floating_point_v<_Fp>, _Fp>
 midpoint(_Fp __a, _Fp __b) noexcept
 {
-    return isnormal(__a) && isnormal(__b) 
+    return isnormal(__a) && isnormal(__b)
        && ((__sign(__a) != __sign(__b)) || ((numeric_limits<_Fp>::max() - abs(__a)) < abs(__b)))
              ?  __a / 2 + __b / 2
              : (__a + __b) / 2;

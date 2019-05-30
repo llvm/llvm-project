@@ -28,6 +28,7 @@ const struct {
   { ARMBuildAttrs::FP_arch, "Tag_FP_arch" },
   { ARMBuildAttrs::WMMX_arch, "Tag_WMMX_arch" },
   { ARMBuildAttrs::Advanced_SIMD_arch, "Tag_Advanced_SIMD_arch" },
+  { ARMBuildAttrs::MVE_arch, "Tag_MVE_arch" },
   { ARMBuildAttrs::PCS_config, "Tag_PCS_config" },
   { ARMBuildAttrs::ABI_PCS_R9_use, "Tag_ABI_PCS_R9_use" },
   { ARMBuildAttrs::ABI_PCS_RW_data, "Tag_ABI_PCS_RW_data" },
