@@ -216,9 +216,6 @@ public:
 
   virtual bool HasReadObjCLibrary() = 0;
 
-  virtual lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
-                                                          bool stop_others) = 0;
-
   lldb::addr_t LookupInMethodCache(lldb::addr_t class_addr, lldb::addr_t sel);
 
   void AddToMethodCache(lldb::addr_t class_addr, lldb::addr_t sel,
