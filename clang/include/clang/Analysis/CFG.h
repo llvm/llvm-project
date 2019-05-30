@@ -882,7 +882,11 @@ public:
   void dump(const CFG *cfg, const LangOptions &LO, bool ShowColors = false) const;
   void print(raw_ostream &OS, const CFG* cfg, const LangOptions &LO,
              bool ShowColors) const;
+
   void printTerminator(raw_ostream &OS, const LangOptions &LO) const;
+  void printTerminatorJson(raw_ostream &Out, const LangOptions &LO,
+                           bool AddQuotes) const;
+  
   void printAsOperand(raw_ostream &OS, bool /*PrintType*/) {
     OS << "BB#" << getBlockID();
   }

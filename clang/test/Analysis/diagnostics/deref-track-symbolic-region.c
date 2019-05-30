@@ -15,8 +15,8 @@ void test(struct S syz, int *pp) {
 
   struct S *ps = &syz;
   if (ps->x)
-    //expected-note@-1{{Taking false branch}}
-    //expected-note@-2{{Assuming pointer value is null}}
+    //expected-note@-1{{Assuming field 'x' is null}}
+    //expected-note@-2{{Taking false branch}}
 
     m++;
 
@@ -30,8 +30,8 @@ void testTrackConstraintBRVisitorIsTrackingTurnedOn(struct S syz, int *pp) {
 
   struct S *ps = &syz;
   if (ps->x)
-    //expected-note@-1{{Taking false branch}}
-    //expected-note@-2{{Assuming pointer value is null}}
+    //expected-note@-1{{Assuming field 'x' is null}}
+    //expected-note@-2{{Taking false branch}}
 
     m++;
   int *p = syz.x; //expected-note {{'p' initialized to a null pointer value}}

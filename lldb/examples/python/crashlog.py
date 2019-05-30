@@ -257,7 +257,7 @@ class CrashLog(symbolication.Symbolicator):
 
         def find_matching_slice(self):
             dwarfdump_cmd_output = subprocess.check_output(
-                'dwarfdump --uuid "%s"' % self.path, shell=True)
+                'dwarfdump --uuid "%s"' % self.path, shell=True).decode("utf-8")
             self_uuid = self.get_uuid()
             for line in dwarfdump_cmd_output.splitlines():
                 match = self.dwarfdump_uuid_regex.search(line)

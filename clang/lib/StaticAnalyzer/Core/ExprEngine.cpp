@@ -162,27 +162,17 @@ public:
         << "\", \"argument_index\": ";
 
     if (getItem().getKind() == ConstructionContextItem::ArgumentKind)
-      Out << getItem().getIndex() << '\"';
+      Out << getItem().getIndex();
     else
       Out << "null";
 
     // Pretty-print
-    Out << ", \"pretty\": \"";
+    Out << ", \"pretty\": ";
 
     if (S) {
-      llvm::SmallString<256> TempBuf;
-      llvm::raw_svector_ostream TempOut(TempBuf);
-
-      // See whether the current statement is pretty-printable.
-      S->printPretty(TempOut, Helper, PP);
-      if (!TempBuf.empty()) {
-        Out << TempBuf.str().trim() << '\"';
-        TempBuf.clear();
-      } else {
-        Out << "null";
-      }
+      S->printJson(Out, Helper, PP, /*AddQuotes=*/true);
     } else {
-      Out << I->getAnyMember()->getNameAsString() << '\"';
+      Out << '\"' << I->getAnyMember()->getNameAsString() << '\"';
     }
   }
 
@@ -2326,7 +2316,6 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
                                        Pred->getStackFrame()->getParent()));
 
   PrettyStackTraceLocationContext CrashInfo(Pred->getLocationContext());
-  StateMgr.EndPath(Pred->getState());
 
   ExplodedNodeSet Dst;
   if (Pred->getLocationContext()->inTopFrame()) {
@@ -3079,37 +3068,55 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
   }
 
   static std::string getNodeLabel(const ExplodedNode *N, ExplodedGraph *G){
-    std::string sbuf;
-    llvm::raw_string_ostream Out(sbuf);
+    std::string Buf;
+    llvm::raw_string_ostream Out(Buf);
 
+    const bool IsDot = true;
+    const unsigned int Space = 1;
     ProgramStateRef State = N->getState();
+
+    Out << "{ \"node_id\": \"" << (const void *)N
+        << "\", \"state_id\": " << State->getID()
+        << ", \"has_report\": " << (nodeHasBugReport(N) ? "true" : "false")
+        << ",\\l";
+
+    Indent(Out, Space, IsDot) << "\"program_points\": [\\l";
 
     // Dump program point for all the previously skipped nodes.
     traverseHiddenNodes(
         N,
         [&](const ExplodedNode *OtherNode) {
-          OtherNode->getLocation().print(/*CR=*/"\\l", Out);
+          Indent(Out, Space + 1, IsDot) << "{ ";
+          OtherNode->getLocation().printJson(Out, /*NL=*/"\\l");
+          Out << ", \"tag\": ";
           if (const ProgramPointTag *Tag = OtherNode->getLocation().getTag())
-            Out << "\\lTag:" << Tag->getTagDescription();
-          if (N->isSink())
-            Out << "\\lNode is sink\\l";
-          if (nodeHasBugReport(N))
-            Out << "\\lBug report attached\\l";
+            Out << '\"' << Tag->getTagDescription() << "\" }";
+          else
+            Out << "null }";
         },
-        [&](const ExplodedNode *) { Out << "\\l--------\\l"; },
+	// Adds a comma and a new-line between each program point.
+        [&](const ExplodedNode *) { Out << ",\\l"; },
         [&](const ExplodedNode *) { return false; });
 
-    Out << "\\l\\|";
-
-    Out << "StateID: ST" << State->getID() << ", NodeID: N" << N->getID(G)
-        << " <" << (const void *)N << ">\\|";
+    Out << "\\l"; // Adds a new-line to the last program point.
+    Indent(Out, Space, IsDot) << "],\\l";
 
     bool SameAsAllPredecessors =
         std::all_of(N->pred_begin(), N->pred_end(), [&](const ExplodedNode *P) {
           return P->getState() == State;
         });
-    if (!SameAsAllPredecessors)
-      State->printDOT(Out, N->getLocationContext());
+
+    if (!SameAsAllPredecessors) {
+      State->printDOT(Out, N->getLocationContext(), Space);
+    } else {
+      Indent(Out, Space, IsDot) << "\"program_state\": null";
+    }
+
+    Out << "\\l}";
+    if (!N->succ_empty())
+      Out << ',';
+    Out << "\\l";
+
     return Out.str();
   }
 };

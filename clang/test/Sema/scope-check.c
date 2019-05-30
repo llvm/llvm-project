@@ -232,3 +232,19 @@ void test15(int n, void *pc) {
 
 // rdar://9024687
 int test16(int [sizeof &&z]); // expected-error {{use of address-of-label extension outside of a function body}}
+
+//Asm goto:
+int test16(int n)
+{
+  // expected-error@+2 {{cannot jump from this asm goto statement to one of its possible targets}}
+  // expected-error@+1 {{cannot jump from this asm goto statement to one of its possible targets}}
+  asm volatile goto("testl %0, %0; jne %l1;" :: "r"(n)::label_true, loop);
+  // expected-note@+2 {{jump bypasses initialization of variable length array}}
+  // expected-note@+1 {{possible target of asm goto statement}}
+  return ({int a[n];label_true: 2;});
+  // expected-note@+1 {{jump bypasses initialization of variable length array}}
+  int b[n];
+// expected-note@+1 {{possible target of asm goto statement}}
+loop:
+  return 0;
+}

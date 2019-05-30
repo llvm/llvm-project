@@ -5,7 +5,8 @@ typedef __typeof(sizeof(int)) size_t;
 void *memset(void *__s, int __c, size_t __n);
 
 int initializer1(int *p, int x) {
-  if (x) { // expected-note{{Taking false branch}}
+  if (x) { // expected-note{{'x' is 0}}
+           // expected-note@-1{{Taking false branch}}
     *p = 1;
     return 0;
   } else {
@@ -30,7 +31,8 @@ int param_initialized_properly() {
 static int global;
 
 int initializer2(int **p, int x) {
-  if (x) { // expected-note{{Taking false branch}}
+  if (x) { // expected-note{{'x' is 0}}
+           // expected-note@-1{{Taking false branch}}
     *p = &global;
     return 0;
   } else {
@@ -47,7 +49,8 @@ int param_not_written_into_by_func() {
 }
 
 void initializer3(int *p, int param) {
-  if (param) // expected-note{{Taking false branch}}
+  if (param) // expected-note{{'param' is 0}}
+             // expected-note@-1{{Taking false branch}}
     *p = 0;
 } // expected-note{{Returning without writing to '*p'}}
 
@@ -60,12 +63,14 @@ int param_written_into_by_void_func() {
 }
 
 void initializer4(int *p, int param) {
-  if (param) // expected-note{{Taking false branch}}
+  if (param) // expected-note{{'param' is 0}}
+             // expected-note@-1{{Taking false branch}}
     *p = 0;
 } // expected-note{{Returning without writing to '*p'}}
 
 void initializer5(int *p, int param) {
-  if (!param) // expected-note{{Taking false branch}}
+  if (!param) // expected-note{{'param' is 1}}
+              // expected-note@-1{{Taking false branch}}
     *p = 0;
 } // expected-note{{Returning without writing to '*p'}}
 
@@ -95,7 +100,8 @@ typedef struct {
 } S;
 
 int initializer7(S *s, int param) {
-  if (param) { // expected-note{{Taking false branch}}
+  if (param) { // expected-note{{'param' is 0}}
+               // expected-note@-1{{Taking false branch}}
     s->x = 0;
     return 0;
   }

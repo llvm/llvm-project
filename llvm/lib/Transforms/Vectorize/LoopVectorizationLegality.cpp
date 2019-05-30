@@ -599,9 +599,10 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         // Check that this PHI type is allowed.
         if (!PhiTy->isIntegerTy() && !PhiTy->isFloatingPointTy() &&
             !PhiTy->isPointerTy()) {
+          LLVM_DEBUG(dbgs()
+                 << "LV: Not vectorizing: Found a non-int non-pointer PHI.\n");
           ORE->emit(createMissedAnalysis("CFGNotUnderstood", Phi)
                     << "loop control flow is not understood by vectorizer");
-          LLVM_DEBUG(dbgs() << "LV: Found an non-int non-pointer PHI.\n");
           return false;
         }
 
@@ -967,7 +968,8 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
   // We must have a loop in canonical form. Loops with indirectbr in them cannot
   // be canonicalized.
   if (!Lp->getLoopPreheader()) {
-    LLVM_DEBUG(dbgs() << "LV: Loop doesn't have a legal pre-header.\n");
+    LLVM_DEBUG(dbgs()
+             << "LV: Not vectorizing: Loop doesn't have a legal pre-header.\n");
     ORE->emit(createMissedAnalysis("CFGNotUnderstood")
               << "loop control flow is not understood by vectorizer");
     if (DoExtraAnalysis)
@@ -978,6 +980,8 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
 
   // We must have a single backedge.
   if (Lp->getNumBackEdges() != 1) {
+    LLVM_DEBUG(dbgs()
+            << "LV: Not vectorizing: The loop must have a single backedge.\n");
     ORE->emit(createMissedAnalysis("CFGNotUnderstood")
               << "loop control flow is not understood by vectorizer");
     if (DoExtraAnalysis)
@@ -988,6 +992,8 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
 
   // We must have a single exiting block.
   if (!Lp->getExitingBlock()) {
+    LLVM_DEBUG(dbgs()
+            << "LV: Not vectorizing: The loop must have an exiting block.\n");
     ORE->emit(createMissedAnalysis("CFGNotUnderstood")
               << "loop control flow is not understood by vectorizer");
     if (DoExtraAnalysis)
@@ -1000,6 +1006,8 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
   // checked at the end of each iteration. With that we can assume that all
   // instructions in the loop are executed the same number of times.
   if (Lp->getExitingBlock() != Lp->getLoopLatch()) {
+    LLVM_DEBUG(dbgs()
+          << "LV: Not vectorizing: The exiting block is not the loop latch.\n");
     ORE->emit(createMissedAnalysis("CFGNotUnderstood")
               << "loop control flow is not understood by vectorizer");
     if (DoExtraAnalysis)

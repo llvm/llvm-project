@@ -634,10 +634,6 @@ public:
 
     return ProgramStateTrait<T>::MakeContext(p);
   }
-
-  void EndPath(ProgramStateRef St) {
-    ConstraintMgr->EndPath(St);
-  }
 };
 
 

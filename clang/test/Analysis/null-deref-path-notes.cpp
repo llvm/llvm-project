@@ -19,7 +19,7 @@ void c::f(B &g, int &i) {
                 // expected-note@-1{{Array access (via field 'd') results in a null pointer dereference}}
   B h, a; // expected-note{{Value assigned to 'h.d'}}
   a.d == __null; // expected-note{{Assuming the condition is true}}
-  a.d != h.d; // expected-note{{Assuming pointer value is null}}
+  a.d != h.d; // expected-note{{Assuming 'a.d' is equal to 'h.d'}}
   f(h, b); // expected-note{{Calling 'c::f'}}
 }
 }

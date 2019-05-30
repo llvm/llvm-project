@@ -23290,6 +23290,27 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       return DAG.getNode(ISD::MERGE_VALUES, dl, Op->getVTList(), SetCC,
                          Operation.getValue(1));
     }
+    case Intrinsic::x86_enqcmd:
+    case Intrinsic::x86_enqcmds: {
+      SDLoc dl(Op);
+      SDValue Chain = Op.getOperand(0);
+      SDVTList VTs = DAG.getVTList(MVT::i32, MVT::Other);
+      unsigned Opcode;
+      switch (IntNo) {
+      default: llvm_unreachable("Impossible intrinsic!");
+      case Intrinsic::x86_enqcmd:
+        Opcode = X86ISD::ENQCMD;
+        break;
+      case Intrinsic::x86_enqcmds:
+        Opcode = X86ISD::ENQCMDS;
+        break;
+      }
+      SDValue Operation = DAG.getNode(Opcode, dl, VTs, Chain, Op.getOperand(2),
+                                      Op.getOperand(3));
+      SDValue SetCC = getSETCC(X86::COND_E, Operation.getValue(0), dl, DAG);
+      return DAG.getNode(ISD::MERGE_VALUES, dl, Op->getVTList(), SetCC,
+                         Operation.getValue(1));
+    }
     }
     return SDValue();
   }
@@ -28270,6 +28291,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::NT_BRIND:           return "X86ISD::NT_BRIND";
   case X86ISD::UMWAIT:             return "X86ISD::UMWAIT";
   case X86ISD::TPAUSE:             return "X86ISD::TPAUSE";
+  case X86ISD::ENQCMD:             return "X86ISD:ENQCMD";
+  case X86ISD::ENQCMDS:            return "X86ISD:ENQCMDS";
   }
   return nullptr;
 }

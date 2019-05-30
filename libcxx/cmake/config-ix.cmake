@@ -1,6 +1,7 @@
 include(CheckLibraryExists)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
+include(CheckCSourceCompiles)
 
 if(WIN32 AND NOT MINGW)
   # NOTE(compnerd) this is technically a lie, there is msvcrt, but for now, lets
@@ -59,6 +60,14 @@ if (LIBCXX_SUPPORTS_NODEFAULTLIBS_FLAG)
   endif ()
 endif ()
 
+# Check compiler pragmas
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  check_c_source_compiles("
+#pragma comment(lib, \"c\")
+int main() { return 0; }
+" LIBCXX_HAS_COMMENT_LIB_PRAGMA)
+endif()
+
 if(NOT WIN32 OR MINGW)
   include(CheckLibcxxAtomic)
 endif()
@@ -71,7 +80,6 @@ check_cxx_compiler_flag(/EHsc                   LIBCXX_HAS_EHSC_FLAG)
 check_cxx_compiler_flag(/EHs-                   LIBCXX_HAS_NO_EHS_FLAG)
 check_cxx_compiler_flag(/EHa-                   LIBCXX_HAS_NO_EHA_FLAG)
 check_cxx_compiler_flag(/GR-                    LIBCXX_HAS_NO_GR_FLAG)
-
 
 # Check libraries
 if(WIN32 AND NOT MINGW)

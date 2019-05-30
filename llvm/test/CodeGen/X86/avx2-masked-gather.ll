@@ -769,3 +769,24 @@ entry:
   ret <2 x double> %res
 }
 
+
+define <2 x double> @masked_gather_zeromask(<2 x double*>* %ptr, <2 x double> %dummy, <2 x double> %passthru) {
+; X86-LABEL: masked_gather_zeromask:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    vmovaps %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: masked_gather_zeromask:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vmovaps %xmm1, %xmm0
+; X64-NEXT:    retq
+;
+; NOGATHER-LABEL: masked_gather_zeromask:
+; NOGATHER:       # %bb.0: # %entry
+; NOGATHER-NEXT:    vmovaps %xmm1, %xmm0
+; NOGATHER-NEXT:    retq
+entry:
+  %ld  = load <2 x double*>, <2 x double*>* %ptr
+  %res = call <2 x double> @llvm.masked.gather.v2double(<2 x double*> %ld, i32 0, <2 x i1> zeroinitializer, <2 x double> %passthru)
+  ret <2 x double> %res
+}

@@ -3695,6 +3695,7 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default: return AMDGPUTargetLowering::LowerOperation(Op, DAG);
   case ISD::BRCOND: return LowerBRCOND(Op, DAG);
+  case ISD::RETURNADDR: return LowerRETURNADDR(Op, DAG);
   case ISD::LOAD: {
     SDValue Result = LowerLOAD(Op, DAG);
     assert((!Result.getNode() ||
@@ -4151,6 +4152,31 @@ SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND,
     Intr->getOperand(0));
 
   return Chain;
+}
+
+SDValue SITargetLowering::LowerRETURNADDR(SDValue Op,
+                                          SelectionDAG &DAG) const {
+  MVT VT = Op.getSimpleValueType();
+  SDLoc DL(Op);
+  // Checking the depth
+  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() != 0)
+    return DAG.getConstant(0, DL, VT);
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  // Check for kernel and shader functions
+  if (Info->isEntryFunction())
+    return DAG.getConstant(0, DL, VT);
+
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  // There is a call to @llvm.returnaddress in this function
+  MFI.setReturnAddressIsTaken(true);
+
+  const SIRegisterInfo *TRI = getSubtarget()->getRegisterInfo();
+  // Get the return address reg and mark it as an implicit live-in
+  unsigned Reg = MF.addLiveIn(TRI->getReturnAddressReg(MF), getRegClassFor(VT, Op.getNode()->isDivergent()));
+
+  return DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, VT);
 }
 
 SDValue SITargetLowering::getFPExtOrFPTrunc(SelectionDAG &DAG,
