@@ -3649,6 +3649,8 @@ static constexpr PropertyDefinition g_properties[] = {
     {"swift-module-search-paths", OptionValue::eTypeFileSpecList, false, 0,
      nullptr, {},
      "List of directories to be searched when locating modules for Swift."},
+    {"swift-extra-clang-flags", OptionValue::eTypeString, false, 0, nullptr, {},
+     "Additional -Xcc flags to be passed to the Swift ClangImporter."},
     {"auto-import-clang-modules", OptionValue::eTypeBoolean, false, true,
      nullptr, {},
      "Automatically load Clang modules referred to by the program."},
@@ -3796,6 +3798,7 @@ enum {
   ePropertyClangModuleSearchPaths,
   ePropertySwiftFrameworkSearchPaths,
   ePropertySwiftModuleSearchPaths,
+  ePropertySwiftExtraClangFlags,
   ePropertyAutoImportClangModules,
   ePropertyUseAllCompilerFlags,
   ePropertyAutoApplyFixIts,
@@ -4259,6 +4262,12 @@ FileSpecList TargetProperties::GetSwiftModuleSearchPaths() {
                                                                    idx);
   assert(option_value);
   return option_value->GetCurrentValue();
+}
+
+llvm::StringRef TargetProperties::GetSwiftExtraClangFlags() const {
+  const uint32_t idx = ePropertySwiftExtraClangFlags;
+  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx,
+                                                     llvm::StringRef());
 }
 
 FileSpecList TargetProperties::GetClangModuleSearchPaths() {

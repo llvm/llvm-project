@@ -196,6 +196,9 @@ public:
   /// apply the working directory to any relative paths.
   void AddExtraClangArgs(std::vector<std::string> ExtraArgs);
 
+  /// Add the target's swift-extra-clang-flags to the ClangImporter options.
+  void AddUserClangArgs(TargetProperties &props);
+
   llvm::StringRef GetPlatformSDKPath() const {
     return m_platform_sdk_path;
   }
