@@ -333,7 +333,7 @@ class accessor :
 public:
   using value_type = DataT;
   using reference = DataT &;
-  using const_reference = const reference;
+  using const_reference = const DataT &;
 
   template <int Dims = Dimensions>
   accessor(enable_if_t<((!IsPlaceH && IsHostBuf) ||
