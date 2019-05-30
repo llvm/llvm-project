@@ -260,8 +260,8 @@ public:
                                   bool debug_only = true,
                                   bool resolve_thunks = true);
 
-  virtual lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
-                                                          bool stop_others);
+  lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
+                                                  bool stop_others) override;
 
   // this call should return true if it could set the name and/or the type
   virtual bool GetDynamicTypeAndAddress(ValueObject &in_value,
