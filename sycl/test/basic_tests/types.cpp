@@ -80,4 +80,8 @@ int main() {
   CHECK_SIZE_TYPE_F(cl::sycl::cl_float, 4);
   CHECK_SIZE_TYPE_F(cl::sycl::cl_double, 8);
   // CHECK_SIZE_TYPE_F(cl::sycl::cl_half, 2);
+
+  using value_type = decltype(std::declval<cl::sycl::item<1>>()[0]);
+  static_assert(!std::is_reference<value_type>::value,
+                "Expected a non-reference type");
 }

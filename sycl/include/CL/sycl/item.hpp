@@ -28,8 +28,6 @@ template <int dimensions = 1, bool with_offset = true> struct item {
 
   size_t get_id(int dimension) const { return index[dimension]; }
 
-  size_t &operator[](int dimension) { return index[dimension]; }
-
   size_t operator[](int dimension) const { return index[dimension]; }
 
   range<dimensions> get_range() const { return extent; }
