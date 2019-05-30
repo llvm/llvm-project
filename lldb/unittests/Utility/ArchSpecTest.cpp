@@ -10,6 +10,7 @@
 
 #include "lldb/Utility/ArchSpec.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/BinaryFormat/ELF.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -172,6 +173,31 @@ TEST(ArchSpecTest, MergeFrom) {
               A.GetTriple().getVendor());
     EXPECT_EQ(llvm::Triple::OSType::Linux, A.GetTriple().getOS());
     EXPECT_EQ(llvm::Triple::EnvironmentType::Android,
+              A.GetTriple().getEnvironment());
+  }
+  {
+    ArchSpec A, B;
+    A.SetArchitecture(eArchTypeELF, llvm::ELF::EM_ARM,
+                      LLDB_INVALID_CPUTYPE, llvm::ELF::ELFOSABI_NONE);
+    B.SetArchitecture(eArchTypeELF, llvm::ELF::EM_ARM,
+                      LLDB_INVALID_CPUTYPE, llvm::ELF::ELFOSABI_LINUX);
+
+    EXPECT_TRUE(A.IsValid());
+    EXPECT_TRUE(B.IsValid());
+    
+    EXPECT_EQ(llvm::Triple::ArchType::arm, B.GetTriple().getArch());
+    EXPECT_EQ(llvm::Triple::VendorType::UnknownVendor,
+              B.GetTriple().getVendor());
+    EXPECT_EQ(llvm::Triple::OSType::Linux, B.GetTriple().getOS());
+    EXPECT_EQ(llvm::Triple::EnvironmentType::UnknownEnvironment,
+              B.GetTriple().getEnvironment());
+    
+    A.MergeFrom(B);
+    EXPECT_EQ(llvm::Triple::ArchType::arm, A.GetTriple().getArch());
+    EXPECT_EQ(llvm::Triple::VendorType::UnknownVendor,
+              A.GetTriple().getVendor());
+    EXPECT_EQ(llvm::Triple::OSType::Linux, A.GetTriple().getOS());
+    EXPECT_EQ(llvm::Triple::EnvironmentType::UnknownEnvironment,
               A.GetTriple().getEnvironment());
   }
 }
