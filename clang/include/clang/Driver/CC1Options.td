@@ -392,6 +392,8 @@ def header_include_file : Separate<["-"], "header-include-file">,
   HelpText<"Filename (or -) to write header include output to">;
 def show_includes : Flag<["--"], "show-includes">,
   HelpText<"Print cl.exe style /showIncludes to stdout">;
+def dependency_filter : Separate<["-"], "dependency-filter">,
+  HelpText<"Filter dependencies with prefix from the dependency output.">;
 
 //===----------------------------------------------------------------------===//
 // Diagnostic Options

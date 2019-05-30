@@ -154,6 +154,7 @@ class DFGImpl : public PPCallbacks {
   llvm::StringSet<> FilesSet;
   const Preprocessor *PP;
   std::string OutputFile;
+  std::string DependencyFilter;
   std::vector<std::string> Targets;
   bool IncludeSystemHeaders;
   bool PhonyTarget;
@@ -170,7 +171,8 @@ private:
 
 public:
   DFGImpl(const Preprocessor *_PP, const DependencyOutputOptions &Opts)
-    : PP(_PP), OutputFile(Opts.OutputFile), Targets(Opts.Targets),
+    : PP(_PP), OutputFile(Opts.OutputFile),
+      DependencyFilter(Opts.DependencyFilter), Targets(Opts.Targets),
       IncludeSystemHeaders(Opts.IncludeSystemHeaders),
       PhonyTarget(Opts.UsePhonyTargets),
       AddMissingHeaderDeps(Opts.AddMissingHeaderDeps),
@@ -271,6 +273,12 @@ void DependencyFileGenerator::AttachToASTReader(ASTReader &R) {
 bool DFGImpl::FileMatchesDepCriteria(const char *Filename,
                                      SrcMgr::CharacteristicKind FileType) {
   if (isSpecialFilename(Filename))
+    return false;
+
+  if (DependencyFilter.size() &&
+      DependencyFilter.compare(0, DependencyFilter.size(), Filename,
+                               DependencyFilter.size()) == 0)
+    // Remove dependencies that are prefixed by the Filter string.
     return false;
 
   if (IncludeSystemHeaders)

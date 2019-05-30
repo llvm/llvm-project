@@ -5,6 +5,10 @@
 // RUN: cd %t.dir
 // RUN: %clang -MD -MF - %s -fsyntax-only -I a/b | FileCheck -check-prefix=CHECK-ONE %s
 // CHECK-ONE: {{ }}a{{[/\\]}}b{{[/\\]}}x.h
+// RUN: %clang_cc1 -MT %s.o -dependency-file - -fsyntax-only -I a/b -dependency-filter a/b %s | FileCheck -check-prefix=CHECK-FILTER %s
+// CHECK-FILTER-NOT: {{ }}a{{[/\\]}}b{{[/\\]}}x.h
+// RUN: %clang_cc1  -MT %s.o -dependency-file - -fsyntax-only -I a/b -dependency-filter fail %s | FileCheck -check-prefix=CHECK-ONE %s
+// CHECK-WS: {{^ *$}}
 
 // PR8974 (-include flag)
 // RUN: %clang -MD -MF - %s -fsyntax-only -include a/b/x.h -DINCLUDE_FLAG_TEST | FileCheck -check-prefix=CHECK-TWO %s
