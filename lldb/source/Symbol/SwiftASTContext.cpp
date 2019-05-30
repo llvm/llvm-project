@@ -864,14 +864,23 @@ SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
 
   m_platform_sdk_path = rhs.m_platform_sdk_path;
 
-  swift::ASTContext *lhs_ast = GetASTContext();
-  swift::ASTContext *rhs_ast =
-      const_cast<SwiftASTContext &>(rhs).GetASTContext();
+  // Initialize search paths and clang importer options, we need
+  // them to grab a SwiftASTContext without asserting.
+  std::vector<std::string> module_search_paths;
+  std::vector<std::pair<std::string, bool>> framework_search_paths;
+  const auto &opts = rhs.m_compiler_invocation_ap->getSearchPathOptions();
+  module_search_paths.insert(module_search_paths.end(),
+                             opts.ImportSearchPaths.begin(),
+                             opts.ImportSearchPaths.end());
+  for (const auto &fwsp : opts.FrameworkSearchPaths)
+      framework_search_paths.push_back({fwsp.Path, fwsp.IsSystem});
+  InitializeSearchPathOptions(module_search_paths, framework_search_paths);
+  GetClangImporterOptions();
 
-  if (lhs_ast && rhs_ast) {
-    lhs_ast->SearchPathOpts = rhs_ast->SearchPathOpts;
-  }
-  GetClangImporter();
+  // As this is a copy constructor, make sure we copy the clang importer
+  // options from RHS to LHS.
+  GetCompilerInvocation().getClangImporterOptions() =
+      rhs.m_compiler_invocation_ap->getClangImporterOptions();
 }
 
 SwiftASTContext::~SwiftASTContext() {
