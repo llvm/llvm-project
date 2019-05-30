@@ -2481,7 +2481,6 @@ bool DWARFASTParserClang::ParseChildMembers(
       DWARFAttributes attributes;
       const size_t num_attributes = die.GetAttributes(attributes);
       if (num_attributes > 0) {
-        Declaration decl;
         const char *name = nullptr;
         const char *prop_name = nullptr;
         const char *prop_getter_name = nullptr;
@@ -2505,16 +2504,6 @@ bool DWARFASTParserClang::ParseChildMembers(
           DWARFFormValue form_value;
           if (attributes.ExtractFormValueAtIndex(i, form_value)) {
             switch (attr) {
-            case DW_AT_decl_file:
-              decl.SetFile(sc.comp_unit->GetSupportFiles().GetFileSpecAtIndex(
-                  form_value.Unsigned()));
-              break;
-            case DW_AT_decl_line:
-              decl.SetLine(form_value.Unsigned());
-              break;
-            case DW_AT_decl_column:
-              decl.SetColumn(form_value.Unsigned());
-              break;
             case DW_AT_name:
               name = form_value.AsCString();
               break;
@@ -2960,7 +2949,6 @@ bool DWARFASTParserClang::ParseChildMembers(
       DWARFAttributes attributes;
       const size_t num_attributes = die.GetAttributes(attributes);
       if (num_attributes > 0) {
-        Declaration decl;
         DWARFFormValue encoding_form;
         AccessType accessibility = default_accessibility;
         bool is_virtual = false;
@@ -2972,16 +2960,6 @@ bool DWARFASTParserClang::ParseChildMembers(
           DWARFFormValue form_value;
           if (attributes.ExtractFormValueAtIndex(i, form_value)) {
             switch (attr) {
-            case DW_AT_decl_file:
-              decl.SetFile(sc.comp_unit->GetSupportFiles().GetFileSpecAtIndex(
-                  form_value.Unsigned()));
-              break;
-            case DW_AT_decl_line:
-              decl.SetLine(form_value.Unsigned());
-              break;
-            case DW_AT_decl_column:
-              decl.SetColumn(form_value.Unsigned());
-              break;
             case DW_AT_type:
               encoding_form = form_value;
               break;
@@ -3105,7 +3083,6 @@ size_t DWARFASTParserClang::ParseChildParameters(
       const size_t num_attributes = die.GetAttributes(attributes);
       if (num_attributes > 0) {
         const char *name = nullptr;
-        Declaration decl;
         DWARFFormValue param_type_die_form;
         bool is_artificial = false;
         // one of None, Auto, Register, Extern, Static, PrivateExtern
@@ -3117,16 +3094,6 @@ size_t DWARFASTParserClang::ParseChildParameters(
           DWARFFormValue form_value;
           if (attributes.ExtractFormValueAtIndex(i, form_value)) {
             switch (attr) {
-            case DW_AT_decl_file:
-              decl.SetFile(comp_unit.GetSupportFiles().GetFileSpecAtIndex(
-                  form_value.Unsigned()));
-              break;
-            case DW_AT_decl_line:
-              decl.SetLine(form_value.Unsigned());
-              break;
-            case DW_AT_decl_column:
-              decl.SetColumn(form_value.Unsigned());
-              break;
             case DW_AT_name:
               name = form_value.AsCString();
               break;

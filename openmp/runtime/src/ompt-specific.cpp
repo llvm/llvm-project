@@ -210,7 +210,8 @@ ompt_data_t *__ompt_get_thread_data_internal() {
 void __ompt_thread_assign_wait_id(void *variable) {
   kmp_info_t *ti = ompt_get_thread();
 
-  ti->th.ompt_thread_info.wait_id = (ompt_wait_id_t)(uintptr_t)variable;
+  if (ti)
+    ti->th.ompt_thread_info.wait_id = (ompt_wait_id_t)(uintptr_t)variable;
 }
 
 int __ompt_get_state_internal(ompt_wait_id_t *omp_wait_id) {
@@ -432,6 +433,9 @@ int __ompt_get_task_memory_internal(void **addr, size_t *size, int blocknum) {
     return 0; // support only a single block
 
   kmp_info_t *thr = ompt_get_thread();
+  if (!thr)
+    return 0;
+
   kmp_taskdata_t *taskdata = thr->th.th_current_task;
   kmp_task_t *task = KMP_TASKDATA_TO_TASK(taskdata);
 

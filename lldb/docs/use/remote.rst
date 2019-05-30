@@ -17,7 +17,7 @@ advanced debugging operations, like copying files from/to the remote system and
 can be used to execute arbitrary shell commands on the remote system.
 
 In order to reduce code complexity and improve remote debugging experience LLDB
-on Linux and OSX uses the remote debugging stub even when debugging a process
+on Linux and macOS uses the remote debugging stub even when debugging a process
 locally. This is achieved by spawning a remote stub process locally and
 communicating with it over the loopback interface. In the case of local
 debugging this whole process is transparent to the user. The platform binary is
@@ -44,7 +44,7 @@ gdb-remote stub. A single binary facilitates deployment and reduces code size,
 since the two functions share a lot of code. The lldb-server binary is also
 statically linked with the rest of LLDB (unlike lldb, which dynamically links
 to liblldb.so by default), so it does not have any dependencies on the rest of
-lldb. On Mac OSX and iOS, the remote-gdb functionality is implemented by the
+lldb. On macOS and iOS, the remote-gdb functionality is implemented by the
 debugserver binary, which you will need to deploy alongside lldb-server.
 
 The binaries mentioned above need to be present on the remote system to enable
