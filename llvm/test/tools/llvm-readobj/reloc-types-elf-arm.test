@@ -1,0 +1,420 @@
+## Test that llvm-readobj/llvm-readelf shows proper relocation type
+## names and values for arm target.
+
+# RUN: yaml2obj %s -o %t-arm.o
+# RUN: llvm-readobj -r --expand-relocs %t-arm.o | FileCheck %s
+
+# CHECK: Type: R_ARM_NONE (0)
+# CHECK: Type: R_ARM_PC24 (1)
+# CHECK: Type: R_ARM_ABS32 (2)
+# CHECK: Type: R_ARM_REL32 (3)
+# CHECK: Type: R_ARM_LDR_PC_G0 (4)
+# CHECK: Type: R_ARM_ABS16 (5)
+# CHECK: Type: R_ARM_ABS12 (6)
+# CHECK: Type: R_ARM_THM_ABS5 (7)
+# CHECK: Type: R_ARM_ABS8 (8)
+# CHECK: Type: R_ARM_SBREL32 (9)
+# CHECK: Type: R_ARM_THM_CALL (10)
+# CHECK: Type: R_ARM_THM_PC8 (11)
+# CHECK: Type: R_ARM_BREL_ADJ (12)
+# CHECK: Type: R_ARM_TLS_DESC (13)
+# CHECK: Type: R_ARM_THM_SWI8 (14)
+# CHECK: Type: R_ARM_XPC25 (15)
+# CHECK: Type: R_ARM_THM_XPC22 (16)
+# CHECK: Type: R_ARM_TLS_DTPMOD32 (17)
+# CHECK: Type: R_ARM_TLS_DTPOFF32 (18)
+# CHECK: Type: R_ARM_TLS_TPOFF32 (19)
+# CHECK: Type: R_ARM_COPY (20)
+# CHECK: Type: R_ARM_GLOB_DAT (21)
+# CHECK: Type: R_ARM_JUMP_SLOT (22)
+# CHECK: Type: R_ARM_RELATIVE (23)
+# CHECK: Type: R_ARM_GOTOFF32 (24)
+# CHECK: Type: R_ARM_BASE_PREL (25)
+# CHECK: Type: R_ARM_GOT_BREL (26)
+# CHECK: Type: R_ARM_CALL (28)
+# CHECK: Type: R_ARM_JUMP24 (29)
+# CHECK: Type: R_ARM_THM_JUMP24 (30)
+# CHECK: Type: R_ARM_BASE_ABS (31)
+# CHECK: Type: R_ARM_ALU_PCREL_7_0 (32)
+# CHECK: Type: R_ARM_ALU_PCREL_15_8 (33)
+# CHECK: Type: R_ARM_ALU_PCREL_23_15 (34)
+# CHECK: Type: R_ARM_LDR_SBREL_11_0_NC (35)
+# CHECK: Type: R_ARM_ALU_SBREL_19_12_NC (36)
+# CHECK: Type: R_ARM_ALU_SBREL_27_20_CK (37)
+# CHECK: Type: R_ARM_TARGET1 (38)
+# CHECK: Type: R_ARM_SBREL31 (39)
+# CHECK: Type: R_ARM_V4BX (40)
+# CHECK: Type: R_ARM_TARGET2 (41)
+# CHECK: Type: R_ARM_PREL31 (42)
+# CHECK: Type: R_ARM_MOVW_ABS_NC (43)
+# CHECK: Type: R_ARM_MOVT_ABS (44)
+# CHECK: Type: R_ARM_MOVW_PREL_NC (45)
+# CHECK: Type: R_ARM_MOVT_PREL (46)
+# CHECK: Type: R_ARM_THM_MOVW_ABS_NC (47)
+# CHECK: Type: R_ARM_THM_MOVT_ABS (48)
+# CHECK: Type: R_ARM_THM_MOVW_PREL_NC (49)
+# CHECK: Type: R_ARM_THM_MOVT_PREL (50)
+# CHECK: Type: R_ARM_THM_JUMP19 (51)
+# CHECK: Type: R_ARM_THM_JUMP6 (52)
+# CHECK: Type: R_ARM_THM_ALU_PREL_11_0 (53)
+# CHECK: Type: R_ARM_THM_PC12 (54)
+# CHECK: Type: R_ARM_ABS32_NOI (55)
+# CHECK: Type: R_ARM_REL32_NOI (56)
+# CHECK: Type: R_ARM_ALU_PC_G0_NC (57)
+# CHECK: Type: R_ARM_ALU_PC_G0 (58)
+# CHECK: Type: R_ARM_ALU_PC_G1_NC (59)
+# CHECK: Type: R_ARM_ALU_PC_G1 (60)
+# CHECK: Type: R_ARM_ALU_PC_G2 (61)
+# CHECK: Type: R_ARM_LDR_PC_G1 (62)
+# CHECK: Type: R_ARM_LDR_PC_G2 (63)
+# CHECK: Type: R_ARM_LDRS_PC_G0 (64)
+# CHECK: Type: R_ARM_LDRS_PC_G1 (65)
+# CHECK: Type: R_ARM_LDRS_PC_G2 (66)
+# CHECK: Type: R_ARM_LDC_PC_G0 (67)
+# CHECK: Type: R_ARM_LDC_PC_G1 (68)
+# CHECK: Type: R_ARM_LDC_PC_G2 (69)
+# CHECK: Type: R_ARM_ALU_SB_G0_NC (70)
+# CHECK: Type: R_ARM_ALU_SB_G0 (71)
+# CHECK: Type: R_ARM_ALU_SB_G1_NC (72)
+# CHECK: Type: R_ARM_ALU_SB_G1 (73)
+# CHECK: Type: R_ARM_ALU_SB_G2 (74)
+# CHECK: Type: R_ARM_LDR_SB_G0 (75)
+# CHECK: Type: R_ARM_LDR_SB_G1 (76)
+# CHECK: Type: R_ARM_LDR_SB_G2 (77)
+# CHECK: Type: R_ARM_LDRS_SB_G0 (78)
+# CHECK: Type: R_ARM_LDRS_SB_G1 (79)
+# CHECK: Type: R_ARM_LDRS_SB_G2 (80)
+# CHECK: Type: R_ARM_LDC_SB_G0 (81)
+# CHECK: Type: R_ARM_LDC_SB_G1 (82)
+# CHECK: Type: R_ARM_LDC_SB_G2 (83)
+# CHECK: Type: R_ARM_MOVW_BREL_NC (84)
+# CHECK: Type: R_ARM_MOVT_BREL (85)
+# CHECK: Type: R_ARM_MOVW_BREL (86)
+# CHECK: Type: R_ARM_THM_MOVW_BREL_NC (87)
+# CHECK: Type: R_ARM_THM_MOVT_BREL (88)
+# CHECK: Type: R_ARM_THM_MOVW_BREL (89)
+# CHECK: Type: R_ARM_TLS_GOTDESC (90)
+# CHECK: Type: R_ARM_TLS_CALL (91)
+# CHECK: Type: R_ARM_TLS_DESCSEQ (92)
+# CHECK: Type: R_ARM_THM_TLS_CALL (93)
+# CHECK: Type: R_ARM_PLT32_ABS (94)
+# CHECK: Type: R_ARM_GOT_ABS (95)
+# CHECK: Type: R_ARM_GOT_PREL (96)
+# CHECK: Type: R_ARM_GOT_BREL12 (97)
+# CHECK: Type: R_ARM_GOTOFF12 (98)
+# CHECK: Type: R_ARM_GOTRELAX (99)
+# CHECK: Type: R_ARM_GNU_VTENTRY (100)
+# CHECK: Type: R_ARM_GNU_VTINHERIT (101)
+# CHECK: Type: R_ARM_THM_JUMP11 (102)
+# CHECK: Type: R_ARM_THM_JUMP8 (103)
+# CHECK: Type: R_ARM_TLS_GD32 (104)
+# CHECK: Type: R_ARM_TLS_LDM32 (105)
+# CHECK: Type: R_ARM_TLS_LDO32 (106)
+# CHECK: Type: R_ARM_TLS_IE32 (107)
+# CHECK: Type: R_ARM_TLS_LE32 (108)
+# CHECK: Type: R_ARM_TLS_LDO12 (109)
+# CHECK: Type: R_ARM_TLS_LE12 (110)
+# CHECK: Type: R_ARM_TLS_IE12GP (111)
+# CHECK: Type: R_ARM_PRIVATE_0 (112)
+# CHECK: Type: R_ARM_PRIVATE_1 (113)
+# CHECK: Type: R_ARM_PRIVATE_2 (114)
+# CHECK: Type: R_ARM_PRIVATE_3 (115)
+# CHECK: Type: R_ARM_PRIVATE_4 (116)
+# CHECK: Type: R_ARM_PRIVATE_5 (117)
+# CHECK: Type: R_ARM_PRIVATE_6 (118)
+# CHECK: Type: R_ARM_PRIVATE_7 (119)
+# CHECK: Type: R_ARM_PRIVATE_8 (120)
+# CHECK: Type: R_ARM_PRIVATE_9 (121)
+# CHECK: Type: R_ARM_PRIVATE_10 (122)
+# CHECK: Type: R_ARM_PRIVATE_11 (123)
+# CHECK: Type: R_ARM_PRIVATE_12 (124)
+# CHECK: Type: R_ARM_PRIVATE_13 (125)
+# CHECK: Type: R_ARM_PRIVATE_14 (126)
+# CHECK: Type: R_ARM_PRIVATE_15 (127)
+# CHECK: Type: R_ARM_ME_TOO (128)
+# CHECK: Type: R_ARM_THM_TLS_DESCSEQ16 (129)
+# CHECK: Type: R_ARM_THM_TLS_DESCSEQ32 (130)
+# CHECK: Type: R_ARM_IRELATIVE (160)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_ARM
+  Flags:   [ EF_ARM_EABI_VER5 ]
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Content: 00
+  - Name:         .rel.text
+    Type:         SHT_REL
+    Link:         .symtab
+    AddressAlign: 0x0000000000000004
+    EntSize:      0x0000000000000008
+    Info:         .text
+    Relocations:
+      - Offset: 0x0000000000000000
+        Type:   R_ARM_NONE
+      - Offset: 0x0000000000000004
+        Type:   R_ARM_PC24
+      - Offset: 0x0000000000000008
+        Type:   R_ARM_ABS32
+      - Offset: 0x000000000000000C
+        Type:   R_ARM_REL32
+      - Offset: 0x0000000000000010
+        Type:   R_ARM_LDR_PC_G0
+      - Offset: 0x0000000000000014
+        Type:   R_ARM_ABS16
+      - Offset: 0x0000000000000018
+        Type:   R_ARM_ABS12
+      - Offset: 0x000000000000001C
+        Type:   R_ARM_THM_ABS5
+      - Offset: 0x0000000000000020
+        Type:   R_ARM_ABS8
+      - Offset: 0x0000000000000024
+        Type:   R_ARM_SBREL32
+      - Offset: 0x0000000000000028
+        Type:   R_ARM_THM_CALL
+      - Offset: 0x000000000000002C
+        Type:   R_ARM_THM_PC8
+      - Offset: 0x0000000000000030
+        Type:   R_ARM_BREL_ADJ
+      - Offset: 0x0000000000000034
+        Type:   R_ARM_TLS_DESC
+      - Offset: 0x0000000000000038
+        Type:   R_ARM_THM_SWI8
+      - Offset: 0x000000000000003C
+        Type:   R_ARM_XPC25
+      - Offset: 0x0000000000000040
+        Type:   R_ARM_THM_XPC22
+      - Offset: 0x0000000000000044
+        Type:   R_ARM_TLS_DTPMOD32
+      - Offset: 0x0000000000000048
+        Type:   R_ARM_TLS_DTPOFF32
+      - Offset: 0x000000000000004C
+        Type:   R_ARM_TLS_TPOFF32
+      - Offset: 0x0000000000000050
+        Type:   R_ARM_COPY
+      - Offset: 0x0000000000000054
+        Type:   R_ARM_GLOB_DAT
+      - Offset: 0x0000000000000058
+        Type:   R_ARM_JUMP_SLOT
+      - Offset: 0x000000000000005C
+        Type:   R_ARM_RELATIVE
+      - Offset: 0x0000000000000060
+        Type:   R_ARM_GOTOFF32
+      - Offset: 0x0000000000000064
+        Type:   R_ARM_BASE_PREL
+      - Offset: 0x0000000000000068
+        Type:   R_ARM_GOT_BREL
+      - Offset: 0x000000000000006C
+        Type:   R_ARM_PLT32
+      - Offset: 0x0000000000000070
+        Type:   R_ARM_CALL
+      - Offset: 0x0000000000000074
+        Type:   R_ARM_JUMP24
+      - Offset: 0x0000000000000078
+        Type:   R_ARM_THM_JUMP24
+      - Offset: 0x000000000000007C
+        Type:   R_ARM_BASE_ABS
+      - Offset: 0x0000000000000080
+        Type:   R_ARM_ALU_PCREL_7_0
+      - Offset: 0x0000000000000084
+        Type:   R_ARM_ALU_PCREL_15_8
+      - Offset: 0x0000000000000088
+        Type:   R_ARM_ALU_PCREL_23_15
+      - Offset: 0x000000000000008C
+        Type:   R_ARM_LDR_SBREL_11_0_NC
+      - Offset: 0x0000000000000090
+        Type:   R_ARM_ALU_SBREL_19_12_NC
+      - Offset: 0x0000000000000094
+        Type:   R_ARM_ALU_SBREL_27_20_CK
+      - Offset: 0x0000000000000098
+        Type:   R_ARM_TARGET1
+      - Offset: 0x000000000000009C
+        Type:   R_ARM_SBREL31
+      - Offset: 0x00000000000000A0
+        Type:   R_ARM_V4BX
+      - Offset: 0x00000000000000A4
+        Type:   R_ARM_TARGET2
+      - Offset: 0x00000000000000A8
+        Type:   R_ARM_PREL31
+      - Offset: 0x00000000000000AC
+        Type:   R_ARM_MOVW_ABS_NC
+      - Offset: 0x00000000000000B0
+        Type:   R_ARM_MOVT_ABS
+      - Offset: 0x00000000000000B4
+        Type:   R_ARM_MOVW_PREL_NC
+      - Offset: 0x00000000000000B8
+        Type:   R_ARM_MOVT_PREL
+      - Offset: 0x00000000000000BC
+        Type:   R_ARM_THM_MOVW_ABS_NC
+      - Offset: 0x00000000000000C0
+        Type:   R_ARM_THM_MOVT_ABS
+      - Offset: 0x00000000000000C4
+        Type:   R_ARM_THM_MOVW_PREL_NC
+      - Offset: 0x00000000000000C8
+        Type:   R_ARM_THM_MOVT_PREL
+      - Offset: 0x00000000000000CC
+        Type:   R_ARM_THM_JUMP19
+      - Offset: 0x00000000000000D0
+        Type:   R_ARM_THM_JUMP6
+      - Offset: 0x00000000000000D4
+        Type:   R_ARM_THM_ALU_PREL_11_0
+      - Offset: 0x00000000000000D8
+        Type:   R_ARM_THM_PC12
+      - Offset: 0x00000000000000DC
+        Type:   R_ARM_ABS32_NOI
+      - Offset: 0x00000000000000E0
+        Type:   R_ARM_REL32_NOI
+      - Offset: 0x00000000000000E4
+        Type:   R_ARM_ALU_PC_G0_NC
+      - Offset: 0x00000000000000E8
+        Type:   R_ARM_ALU_PC_G0
+      - Offset: 0x00000000000000EC
+        Type:   R_ARM_ALU_PC_G1_NC
+      - Offset: 0x00000000000000F0
+        Type:   R_ARM_ALU_PC_G1
+      - Offset: 0x00000000000000F4
+        Type:   R_ARM_ALU_PC_G2
+      - Offset: 0x00000000000000F8
+        Type:   R_ARM_LDR_PC_G1
+      - Offset: 0x00000000000000FC
+        Type:   R_ARM_LDR_PC_G2
+      - Offset: 0x0000000000000100
+        Type:   R_ARM_LDRS_PC_G0
+      - Offset: 0x0000000000000104
+        Type:   R_ARM_LDRS_PC_G1
+      - Offset: 0x0000000000000108
+        Type:   R_ARM_LDRS_PC_G2
+      - Offset: 0x000000000000010C
+        Type:   R_ARM_LDC_PC_G0
+      - Offset: 0x0000000000000110
+        Type:   R_ARM_LDC_PC_G1
+      - Offset: 0x0000000000000114
+        Type:   R_ARM_LDC_PC_G2
+      - Offset: 0x0000000000000118
+        Type:   R_ARM_ALU_SB_G0_NC
+      - Offset: 0x000000000000011C
+        Type:   R_ARM_ALU_SB_G0
+      - Offset: 0x0000000000000120
+        Type:   R_ARM_ALU_SB_G1_NC
+      - Offset: 0x0000000000000124
+        Type:   R_ARM_ALU_SB_G1
+      - Offset: 0x0000000000000128
+        Type:   R_ARM_ALU_SB_G2
+      - Offset: 0x000000000000012C
+        Type:   R_ARM_LDR_SB_G0
+      - Offset: 0x0000000000000130
+        Type:   R_ARM_LDR_SB_G1
+      - Offset: 0x0000000000000134
+        Type:   R_ARM_LDR_SB_G2
+      - Offset: 0x0000000000000138
+        Type:   R_ARM_LDRS_SB_G0
+      - Offset: 0x000000000000013C
+        Type:   R_ARM_LDRS_SB_G1
+      - Offset: 0x0000000000000140
+        Type:   R_ARM_LDRS_SB_G2
+      - Offset: 0x0000000000000144
+        Type:   R_ARM_LDC_SB_G0
+      - Offset: 0x0000000000000148
+        Type:   R_ARM_LDC_SB_G1
+      - Offset: 0x000000000000014C
+        Type:   R_ARM_LDC_SB_G2
+      - Offset: 0x0000000000000150
+        Type:   R_ARM_MOVW_BREL_NC
+      - Offset: 0x0000000000000154
+        Type:   R_ARM_MOVT_BREL
+      - Offset: 0x0000000000000158
+        Type:   R_ARM_MOVW_BREL
+      - Offset: 0x000000000000015C
+        Type:   R_ARM_THM_MOVW_BREL_NC
+      - Offset: 0x0000000000000160
+        Type:   R_ARM_THM_MOVT_BREL
+      - Offset: 0x0000000000000164
+        Type:   R_ARM_THM_MOVW_BREL
+      - Offset: 0x0000000000000168
+        Type:   R_ARM_TLS_GOTDESC
+      - Offset: 0x000000000000016C
+        Type:   R_ARM_TLS_CALL
+      - Offset: 0x0000000000000170
+        Type:   R_ARM_TLS_DESCSEQ
+      - Offset: 0x0000000000000174
+        Type:   R_ARM_THM_TLS_CALL
+      - Offset: 0x0000000000000178
+        Type:   R_ARM_PLT32_ABS
+      - Offset: 0x000000000000017C
+        Type:   R_ARM_GOT_ABS
+      - Offset: 0x0000000000000180
+        Type:   R_ARM_GOT_PREL
+      - Offset: 0x0000000000000184
+        Type:   R_ARM_GOT_BREL12
+      - Offset: 0x0000000000000188
+        Type:   R_ARM_GOTOFF12
+      - Offset: 0x000000000000018C
+        Type:   R_ARM_GOTRELAX
+      - Offset: 0x0000000000000190
+        Type:   R_ARM_GNU_VTENTRY
+      - Offset: 0x0000000000000194
+        Type:   R_ARM_GNU_VTINHERIT
+      - Offset: 0x0000000000000198
+        Type:   R_ARM_THM_JUMP11
+      - Offset: 0x000000000000019C
+        Type:   R_ARM_THM_JUMP8
+      - Offset: 0x00000000000001A0
+        Type:   R_ARM_TLS_GD32
+      - Offset: 0x00000000000001A4
+        Type:   R_ARM_TLS_LDM32
+      - Offset: 0x00000000000001A8
+        Type:   R_ARM_TLS_LDO32
+      - Offset: 0x00000000000001AC
+        Type:   R_ARM_TLS_IE32
+      - Offset: 0x00000000000001B0
+        Type:   R_ARM_TLS_LE32
+      - Offset: 0x00000000000001B4
+        Type:   R_ARM_TLS_LDO12
+      - Offset: 0x00000000000001B8
+        Type:   R_ARM_TLS_LE12
+      - Offset: 0x00000000000001BC
+        Type:   R_ARM_TLS_IE12GP
+      - Offset: 0x00000000000001C0
+        Type:   R_ARM_PRIVATE_0
+      - Offset: 0x00000000000001C4
+        Type:   R_ARM_PRIVATE_1
+      - Offset: 0x00000000000001C8
+        Type:   R_ARM_PRIVATE_2
+      - Offset: 0x00000000000001CC
+        Type:   R_ARM_PRIVATE_3
+      - Offset: 0x00000000000001D0
+        Type:   R_ARM_PRIVATE_4
+      - Offset: 0x00000000000001D4
+        Type:   R_ARM_PRIVATE_5
+      - Offset: 0x00000000000001D8
+        Type:   R_ARM_PRIVATE_6
+      - Offset: 0x00000000000001DC
+        Type:   R_ARM_PRIVATE_7
+      - Offset: 0x00000000000001E0
+        Type:   R_ARM_PRIVATE_8
+      - Offset: 0x00000000000001E4
+        Type:   R_ARM_PRIVATE_9
+      - Offset: 0x00000000000001E8
+        Type:   R_ARM_PRIVATE_10
+      - Offset: 0x00000000000001EC
+        Type:   R_ARM_PRIVATE_11
+      - Offset: 0x00000000000001F0
+        Type:   R_ARM_PRIVATE_12
+      - Offset: 0x00000000000001F4
+        Type:   R_ARM_PRIVATE_13
+      - Offset: 0x00000000000001F8
+        Type:   R_ARM_PRIVATE_14
+      - Offset: 0x00000000000001FC
+        Type:   R_ARM_PRIVATE_15
+      - Offset: 0x0000000000000200
+        Type:   R_ARM_ME_TOO
+      - Offset: 0x0000000000000204
+        Type:   R_ARM_THM_TLS_DESCSEQ16
+      - Offset: 0x0000000000000208
+        Type:   R_ARM_THM_TLS_DESCSEQ32
+      - Offset: 0x000000000000020C
+        Type:   R_ARM_IRELATIVE

@@ -2019,7 +2019,7 @@ Error IHexWriter::checkSection(const SectionBase &Sec) {
   if (addressOverflows32bit(Addr) || addressOverflows32bit(Addr + Sec.Size - 1))
     return createStringError(
         errc::invalid_argument,
-        "Section '%s' address range [%p, %p] is not 32 bit", Sec.Name.c_str(),
+        "Section '%s' address range [0x%llx, 0x%llx] is not 32 bit", Sec.Name.c_str(),
         Addr, Addr + Sec.Size - 1);
   return Error::success();
 }
@@ -2036,7 +2036,7 @@ Error IHexWriter::finalize() {
   // We can't write 64-bit addresses.
   if (addressOverflows32bit(Obj.Entry))
     return createStringError(errc::invalid_argument,
-                             "Entry point address %p overflows 32 bits.",
+                             "Entry point address 0x%llx overflows 32 bits.",
                              Obj.Entry);
 
   // If any section we're to write has segment then we

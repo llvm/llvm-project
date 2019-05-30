@@ -5592,17 +5592,12 @@ ExpectedStmt ASTNodeImporter::VisitGCCAsmStmt(GCCAsmStmt *S) {
       return InputOrErr.takeError();
   }
 
-  SmallVector<Expr *, 4> Exprs(S->getNumOutputs() + S->getNumInputs() +
-                               S->getNumLabels());
+  SmallVector<Expr *, 4> Exprs(S->getNumOutputs() + S->getNumInputs());
   if (Error Err = ImportContainerChecked(S->outputs(), Exprs))
     return std::move(Err);
 
-  if (Error Err =
-          ImportArrayChecked(S->inputs(), Exprs.begin() + S->getNumOutputs()))
-    return std::move(Err);
-
   if (Error Err = ImportArrayChecked(
-          S->labels(), Exprs.begin() + S->getNumOutputs() + S->getNumInputs()))
+      S->inputs(), Exprs.begin() + S->getNumOutputs()))
     return std::move(Err);
 
   ExpectedSLoc AsmLocOrErr = import(S->getAsmLoc());
@@ -5628,7 +5623,6 @@ ExpectedStmt ASTNodeImporter::VisitGCCAsmStmt(GCCAsmStmt *S) {
       *AsmStrOrErr,
       S->getNumClobbers(),
       Clobbers.data(),
-      S->getNumLabels(),
       *RParenLocOrErr);
 }
 

@@ -1606,6 +1606,27 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     if (!dyn_cast_or_null<Defined>(Symtab->find("__global_pointer$")))
       addOptionalRegular("__global_pointer$", findSection(".sdata"), 0x800);
 
+  if (Config->EMachine == EM_X86_64) {
+    // On targets that support TLSDESC, _TLS_MODULE_BASE_ is defined in such a
+    // way that:
+    //
+    // 1) Without relaxation: it produces a dynamic TLSDESC relocation that
+    // computes 0.
+    // 2) With LD->LE relaxation: _TLS_MODULE_BASE_@tpoff = 0 (lowest address in
+    // the TLS block).
+    //
+    // 2) is special cased in @tpoff computation. To satisfy 1), we define it as
+    // an absolute symbol of zero. This is different from GNU linkers which
+    // define _TLS_MODULE_BASE_ relative to the first TLS section.
+    Symbol *S = Symtab->find("_TLS_MODULE_BASE_");
+    if (S && S->isUndefined()) {
+      S->resolve(Defined{/*File=*/nullptr, S->getName(), STB_GLOBAL, STV_HIDDEN,
+                         STT_TLS, /*Value=*/0, 0,
+                         /*Section=*/nullptr});
+      ElfSym::TlsModuleBase = cast<Defined>(S);
+    }
+  }
+
   // This responsible for splitting up .eh_frame section into
   // pieces. The relocation scan uses those pieces, so this has to be
   // earlier.

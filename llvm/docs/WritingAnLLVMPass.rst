@@ -77,7 +77,7 @@ This build script specifies that ``Hello.cpp`` file in the current directory
 is to be compiled and linked into a shared object ``$(LEVEL)/lib/LLVMHello.so`` that
 can be dynamically loaded by the :program:`opt` tool via its :option:`-load`
 option. If your operating system uses a suffix other than ``.so`` (such as
-Windows or Mac OS X), the appropriate extension will be used.
+Windows or macOS), the appropriate extension will be used.
 
 Now that we have the build scripts set up, we just need to write the code for
 the pass itself.

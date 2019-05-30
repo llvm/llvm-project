@@ -128,8 +128,8 @@ FreeBSD            x86\ :sup:`1`         GCC, Clang
 FreeBSD            amd64                 GCC, Clang
 NetBSD             x86\ :sup:`1`         GCC, Clang
 NetBSD             amd64                 GCC, Clang
-MacOS X\ :sup:`2`  PowerPC               GCC
-MacOS X            x86                   GCC, Clang
+macOS\ :sup:`2`    PowerPC               GCC
+macOS              x86                   GCC, Clang
 Cygwin/Win32       x86\ :sup:`1, 3`      GCC
 Windows            x86\ :sup:`1`         Visual Studio
 Windows x64        x86-64                Visual Studio
@@ -272,7 +272,7 @@ newer version of Gold.
 Getting a Modern Host C++ Toolchain
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This section mostly applies to Linux and older BSDs. On Mac OS X, you should
+This section mostly applies to Linux and older BSDs. On macOS, you should
 have a sufficiently modern Xcode, or you will likely need to upgrade until you
 do. Windows does not have a "system compiler", so you must install either Visual
 Studio 2015 or a recent version of mingw64. FreeBSD 10.0 and newer have a modern
@@ -711,7 +711,7 @@ define compiler flags and variables used during the CMake test operations.
 
 The result of such a build is executables that are not runnable on the build
 host but can be executed on the target. As an example the following CMake
-invocation can generate build files targeting iOS. This will work on Mac OS X
+invocation can generate build files targeting iOS. This will work on macOS
 with the latest Xcode:
 
 .. code-block:: console

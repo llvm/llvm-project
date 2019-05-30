@@ -10902,7 +10902,7 @@ QualType Sema::CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   if (vType.isNull())
     return InvalidOperands(Loc, LHS, RHS);
   if (getLangOpts().OpenCL && getLangOpts().OpenCLVersion < 120 &&
-      vType->hasFloatingRepresentation())
+      !getLangOpts().OpenCLCPlusPlus && vType->hasFloatingRepresentation())
     return InvalidOperands(Loc, LHS, RHS);
   // FIXME: The check for C++ here is for GCC compatibility. GCC rejects the
   //        usage of the logical operators && and || with vectors in C. This
@@ -13165,7 +13165,8 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       }
     } else if (resultType->isExtVectorType()) {
       if (Context.getLangOpts().OpenCL &&
-          Context.getLangOpts().OpenCLVersion < 120) {
+          Context.getLangOpts().OpenCLVersion < 120 &&
+          !Context.getLangOpts().OpenCLCPlusPlus) {
         // OpenCL v1.1 6.3.h: The logical operator not (!) does not
         // operate on vector float types.
         QualType T = resultType->getAs<ExtVectorType>()->getElementType();

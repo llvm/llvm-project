@@ -1896,55 +1896,6 @@ static llvm::MDNode *getAsmSrcLocInfo(const StringLiteral *Str,
   return llvm::MDNode::get(CGF.getLLVMContext(), Locs);
 }
 
-static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
-                              bool ReadOnly, bool ReadNone, const AsmStmt &S,
-                              const std::vector<llvm::Type *> &ResultRegTypes,
-                              CodeGenFunction &CGF,
-                              std::vector<llvm::Value *> &RegResults) {
-  Result.addAttribute(llvm::AttributeList::FunctionIndex,
-                      llvm::Attribute::NoUnwind);
-  // Attach readnone and readonly attributes.
-  if (!HasSideEffect) {
-    if (ReadNone)
-      Result.addAttribute(llvm::AttributeList::FunctionIndex,
-                          llvm::Attribute::ReadNone);
-    else if (ReadOnly)
-      Result.addAttribute(llvm::AttributeList::FunctionIndex,
-                          llvm::Attribute::ReadOnly);
-  }
-
-  // Slap the source location of the inline asm into a !srcloc metadata on the
-  // call.
-  if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(&S))
-    Result.setMetadata("srcloc",
-                       getAsmSrcLocInfo(gccAsmStmt->getAsmString(), CGF));
-  else {
-    // At least put the line number on MS inline asm blobs.
-    llvm::Constant *Loc = llvm::ConstantInt::get(CGF.Int32Ty,
-                                        S.getAsmLoc().getRawEncoding());
-    Result.setMetadata("srcloc",
-                       llvm::MDNode::get(CGF.getLLVMContext(),
-                                         llvm::ConstantAsMetadata::get(Loc)));
-  }
-
-  if (CGF.getLangOpts().assumeFunctionsAreConvergent())
-    // Conservatively, mark all inline asm blocks in CUDA or OpenCL as
-    // convergent (meaning, they may call an intrinsically convergent op, such
-    // as bar.sync, and so can't have certain optimizations applied around
-    // them).
-    Result.addAttribute(llvm::AttributeList::FunctionIndex,
-                        llvm::Attribute::Convergent);
-  // Extract all of the register value results from the asm.
-  if (ResultRegTypes.size() == 1) {
-    RegResults.push_back(&Result);
-  } else {
-    for (unsigned i = 0, e = ResultRegTypes.size(); i != e; ++i) {
-      llvm::Value *Tmp = CGF.Builder.CreateExtractValue(&Result, i, "asmresult");
-      RegResults.push_back(Tmp);
-    }
-  }
-}
-
 void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   // Assemble the final asm string.
   std::string AsmString = S.generateAsmString(getContext());
@@ -2187,29 +2138,6 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   }
   Constraints += InOutConstraints;
 
-  // Labels
-  SmallVector<llvm::BasicBlock *, 16> Transfer;
-  llvm::BasicBlock *Fallthrough = nullptr;
-  bool IsGCCAsmGoto = false;
-  if (const auto *GS =  dyn_cast<GCCAsmStmt>(&S)) {
-    IsGCCAsmGoto = GS->isAsmGoto();
-    if (IsGCCAsmGoto) {
-      for (auto *E : GS->labels()) {
-        JumpDest Dest = getJumpDestForLabel(E->getLabel());
-        Transfer.push_back(Dest.getBlock());
-        llvm::BlockAddress *BA =
-            llvm::BlockAddress::get(CurFn, Dest.getBlock());
-        Args.push_back(BA);
-        ArgTypes.push_back(BA->getType());
-        if (!Constraints.empty())
-          Constraints += ',';
-        Constraints += 'X';
-      }
-      StringRef Name = "asm.fallthrough";
-      Fallthrough = createBasicBlock(Name);
-    }
-  }
-
   // Clobbers
   for (unsigned i = 0, e = S.getNumClobbers(); i != e; i++) {
     StringRef Clobber = S.getClobber(i);
@@ -2252,18 +2180,52 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   llvm::InlineAsm *IA =
     llvm::InlineAsm::get(FTy, AsmString, Constraints, HasSideEffect,
                          /* IsAlignStack */ false, AsmDialect);
-  std::vector<llvm::Value*> RegResults;
-  if (IsGCCAsmGoto) {
-    llvm::CallBrInst *Result =
-        Builder.CreateCallBr(IA, Fallthrough, Transfer, Args);
-    UpdateAsmCallInst(cast<llvm::CallBase>(*Result), HasSideEffect, ReadOnly,
-                      ReadNone, S, ResultRegTypes, *this, RegResults);
-    EmitBlock(Fallthrough);
+  llvm::CallInst *Result =
+      Builder.CreateCall(IA, Args, getBundlesForFunclet(IA));
+  Result->addAttribute(llvm::AttributeList::FunctionIndex,
+                       llvm::Attribute::NoUnwind);
+
+  // Attach readnone and readonly attributes.
+  if (!HasSideEffect) {
+    if (ReadNone)
+      Result->addAttribute(llvm::AttributeList::FunctionIndex,
+                           llvm::Attribute::ReadNone);
+    else if (ReadOnly)
+      Result->addAttribute(llvm::AttributeList::FunctionIndex,
+                           llvm::Attribute::ReadOnly);
+  }
+
+  // Slap the source location of the inline asm into a !srcloc metadata on the
+  // call.
+  if (const GCCAsmStmt *gccAsmStmt = dyn_cast<GCCAsmStmt>(&S)) {
+    Result->setMetadata("srcloc", getAsmSrcLocInfo(gccAsmStmt->getAsmString(),
+                                                   *this));
   } else {
-    llvm::CallInst *Result =
-        Builder.CreateCall(IA, Args, getBundlesForFunclet(IA));
-    UpdateAsmCallInst(cast<llvm::CallBase>(*Result), HasSideEffect, ReadOnly,
-                      ReadNone, S, ResultRegTypes, *this, RegResults);
+    // At least put the line number on MS inline asm blobs.
+    auto Loc = llvm::ConstantInt::get(Int32Ty, S.getAsmLoc().getRawEncoding());
+    Result->setMetadata("srcloc",
+                        llvm::MDNode::get(getLLVMContext(),
+                                          llvm::ConstantAsMetadata::get(Loc)));
+  }
+
+  if (getLangOpts().assumeFunctionsAreConvergent()) {
+    // Conservatively, mark all inline asm blocks in CUDA or OpenCL as
+    // convergent (meaning, they may call an intrinsically convergent op, such
+    // as bar.sync, and so can't have certain optimizations applied around
+    // them).
+    Result->addAttribute(llvm::AttributeList::FunctionIndex,
+                         llvm::Attribute::Convergent);
+  }
+
+  // Extract all of the register value results from the asm.
+  std::vector<llvm::Value*> RegResults;
+  if (ResultRegTypes.size() == 1) {
+    RegResults.push_back(Result);
+  } else {
+    for (unsigned i = 0, e = ResultRegTypes.size(); i != e; ++i) {
+      llvm::Value *Tmp = Builder.CreateExtractValue(Result, i, "asmresult");
+      RegResults.push_back(Tmp);
+    }
   }
 
   assert(RegResults.size() == ResultRegTypes.size());

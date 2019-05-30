@@ -15,7 +15,7 @@ If you already have libc++ installed you can use it with clang.
     $ clang++ -stdlib=libc++ test.cpp
     $ clang++ -std=c++11 -stdlib=libc++ test.cpp
 
-On OS X and FreeBSD libc++ is the default standard library
+On macOS and FreeBSD libc++ is the default standard library
 and the ``-stdlib=libc++`` is not required.
 
 .. _alternate libcxx:
@@ -34,7 +34,7 @@ can use the following options.
 The option ``-Wl,-rpath,<libcxx-install-prefix>/lib`` adds a runtime library
 search path. Meaning that the systems dynamic linker will look for libc++ in
 ``<libcxx-install-prefix>/lib`` whenever the program is run. Alternatively the
-environment variable ``LD_LIBRARY_PATH`` (``DYLD_LIBRARY_PATH`` on OS X) can
+environment variable ``LD_LIBRARY_PATH`` (``DYLD_LIBRARY_PATH`` on macOS) can
 be used to change the dynamic linkers search paths after a program is compiled.
 
 An example of using ``LD_LIBRARY_PATH``:

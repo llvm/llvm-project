@@ -29,7 +29,7 @@ GDB Version
 In order to debug code JIT-ed by LLVM, you need GDB 7.0 or newer, which is
 available on most modern distributions of Linux.  The version of GDB that
 Apple ships with Xcode has been frozen at 6.3 for a while.  LLDB may be a
-better option for debugging JIT-ed code on Mac OS X.
+better option for debugging JIT-ed code on macOS.
 
 
 Debugging MCJIT-ed code

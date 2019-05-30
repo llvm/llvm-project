@@ -124,7 +124,9 @@ static ARMBuildAttrs::CPUArch getArchForCPU(const MCSubtargetInfo &STI) {
     if (STI.hasFeature(ARM::FeatureRClass))
       return ARMBuildAttrs::v8_R;
     return ARMBuildAttrs::v8_A;
-  } else if (STI.hasFeature(ARM::HasV8MMainlineOps))
+  } else if (STI.hasFeature(ARM::HasV8_1MMainlineOps))
+    return ARMBuildAttrs::v8_1_M_Main;
+  else if (STI.hasFeature(ARM::HasV8MMainlineOps))
     return ARMBuildAttrs::v8_M_Main;
   else if (STI.hasFeature(ARM::HasV7Ops)) {
     if (STI.hasFeature(ARM::FeatureMClass) && STI.hasFeature(ARM::FeatureDSP))
@@ -261,6 +263,11 @@ void ARMTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
 
   if (STI.hasFeature(ARM::FeatureMP))
     emitAttribute(ARMBuildAttrs::MPextension_use, ARMBuildAttrs::AllowMP);
+
+  if (STI.hasFeature(ARM::HasMVEFloatOps))
+    emitAttribute(ARMBuildAttrs::MVE_arch, ARMBuildAttrs::AllowMVEIntegerAndFloat);
+  else if (STI.hasFeature(ARM::HasMVEIntegerOps))
+    emitAttribute(ARMBuildAttrs::MVE_arch, ARMBuildAttrs::AllowMVEInteger);
 
   // Hardware divide in ARM mode is part of base arch, starting from ARMv8.
   // If only Thumb hwdiv is present, it must also be in base arch (ARMv7-R/M).

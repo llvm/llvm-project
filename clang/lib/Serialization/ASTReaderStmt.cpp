@@ -370,14 +370,12 @@ void ASTStmtReader::VisitAsmStmt(AsmStmt *S) {
 
 void ASTStmtReader::VisitGCCAsmStmt(GCCAsmStmt *S) {
   VisitAsmStmt(S);
-  S->NumLabels = Record.readInt();
   S->setRParenLoc(ReadSourceLocation());
   S->setAsmString(cast_or_null<StringLiteral>(Record.readSubStmt()));
 
   unsigned NumOutputs = S->getNumOutputs();
   unsigned NumInputs = S->getNumInputs();
   unsigned NumClobbers = S->getNumClobbers();
-  unsigned NumLabels = S->getNumLabels();
 
   // Outputs and inputs
   SmallVector<IdentifierInfo *, 16> Names;
@@ -394,14 +392,9 @@ void ASTStmtReader::VisitGCCAsmStmt(GCCAsmStmt *S) {
   for (unsigned I = 0; I != NumClobbers; ++I)
     Clobbers.push_back(cast_or_null<StringLiteral>(Record.readSubStmt()));
 
-  // Labels
-  for (unsigned I = 0, N = NumLabels; I != N; ++I)
-    Exprs.push_back(Record.readSubStmt());
-
   S->setOutputsAndInputsAndClobbers(Record.getContext(),
                                     Names.data(), Constraints.data(),
                                     Exprs.data(), NumOutputs, NumInputs,
-                                    NumLabels,
                                     Clobbers.data(), NumClobbers);
 }
 

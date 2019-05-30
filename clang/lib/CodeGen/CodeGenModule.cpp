@@ -564,11 +564,13 @@ void CodeGenModule::Release() {
     if (getTriple().isSPIR()) {
       // SPIR v2.0 s2.12 - The SPIR version used by the module is stored in the
       // opencl.spir.version named metadata.
+      // C++ is backwards compatible with OpenCL v2.0.
+      auto Version = LangOpts.OpenCLCPlusPlus ? 200 : LangOpts.OpenCLVersion;
       llvm::Metadata *SPIRVerElts[] = {
           llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-              Int32Ty, LangOpts.OpenCLVersion / 100)),
+              Int32Ty, Version / 100)),
           llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-              Int32Ty, (LangOpts.OpenCLVersion / 100 > 1) ? 0 : 2))};
+              Int32Ty, (Version / 100 > 1) ? 0 : 2))};
       llvm::NamedMDNode *SPIRVerMD =
           TheModule.getOrInsertNamedMetadata("opencl.spir.version");
       llvm::LLVMContext &Ctx = TheModule.getContext();
@@ -623,11 +625,14 @@ void CodeGenModule::Release() {
 void CodeGenModule::EmitOpenCLMetadata() {
   // SPIR v2.0 s2.13 - The OpenCL version used by the module is stored in the
   // opencl.ocl.version named metadata node.
+  // C++ is backwards compatible with OpenCL v2.0.
+  // FIXME: We might need to add CXX version at some point too?
+  auto Version = LangOpts.OpenCLCPlusPlus ? 200 : LangOpts.OpenCLVersion;
   llvm::Metadata *OCLVerElts[] = {
       llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-          Int32Ty, LangOpts.OpenCLVersion / 100)),
+          Int32Ty, Version / 100)),
       llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-          Int32Ty, (LangOpts.OpenCLVersion % 100) / 10))};
+          Int32Ty, (Version % 100) / 10))};
   llvm::NamedMDNode *OCLVerMD =
       TheModule.getOrInsertNamedMetadata("opencl.ocl.version");
   llvm::LLVMContext &Ctx = TheModule.getContext();

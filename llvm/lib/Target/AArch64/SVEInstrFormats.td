@@ -874,6 +874,21 @@ class sve_int_perm_extract_i<string asm>
   let ElementSize = ElementSizeNone;
 }
 
+class sve2_int_perm_extract_i_cons<string asm>
+: I<(outs ZPR8:$Zd), (ins ZZ_b:$Zn, imm0_255:$imm8),
+  asm, "\t$Zd, $Zn, $imm8",
+  "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  bits<8> imm8;
+  let Inst{31-21} = 0b00000101011;
+  let Inst{20-16} = imm8{7-3};
+  let Inst{15-13} = 0b000;
+  let Inst{12-10} = imm8{2-0};
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
 //===----------------------------------------------------------------------===//
 // SVE Vector Select Group
 //===----------------------------------------------------------------------===//
@@ -1659,6 +1674,12 @@ multiclass sve_fp_2op_p_zd_HSD<bits<5> opc, string asm> {
   def _H : sve_fp_2op_p_zd<{ 0b01, opc }, asm, ZPR16, ZPR16, ElementSizeH>;
   def _S : sve_fp_2op_p_zd<{ 0b10, opc }, asm, ZPR32, ZPR32, ElementSizeS>;
   def _D : sve_fp_2op_p_zd<{ 0b11, opc }, asm, ZPR64, ZPR64, ElementSizeD>;
+}
+
+multiclass sve2_fp_flogb<string asm> {
+  def _H : sve_fp_2op_p_zd<0b0011010, asm, ZPR16, ZPR16, ElementSizeH>;
+  def _S : sve_fp_2op_p_zd<0b0011100, asm, ZPR32, ZPR32, ElementSizeS>;
+  def _D : sve_fp_2op_p_zd<0b0011110, asm, ZPR64, ZPR64, ElementSizeD>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4254,6 +4275,30 @@ multiclass sve_int_perm_splice<string asm> {
   def _D : sve_int_perm_splice<0b11, asm, ZPR64>;
 }
 
+class sve2_int_perm_splice_cons<bits<2> sz8_64, string asm,
+                               ZPRRegOp zprty, RegisterOperand VecList>
+: I<(outs zprty:$Zd), (ins PPR3bAny:$Pg, VecList:$Zn),
+  asm, "\t$Zd, $Pg, $Zn",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Zn;
+  bits<5> Zd;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = sz8_64;
+  let Inst{21-13} = 0b101101100;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve2_int_perm_splice_cons<string asm> {
+  def _B : sve2_int_perm_splice_cons<0b00, asm, ZPR8,  ZZ_b>;
+  def _H : sve2_int_perm_splice_cons<0b01, asm, ZPR16, ZZ_h>;
+  def _S : sve2_int_perm_splice_cons<0b10, asm, ZPR32, ZZ_s>;
+  def _D : sve2_int_perm_splice_cons<0b11, asm, ZPR64, ZZ_d>;
+}
+
 class sve_int_perm_rev<bits<2> sz8_64, bits<2> opc, string asm,
                        ZPRRegOp zprty>
 : I<(outs zprty:$Zd), (ins zprty:$_Zd, PPR3bAny:$Pg, zprty:$Zn),
@@ -4951,6 +4996,46 @@ multiclass sve_mem_p_fill<string asm> {
 
   def : InstAlias<asm # "\t$Pt, [$Rn]",
                   (!cast<Instruction>(NAME) PPRAny:$Pt, GPR64sp:$Rn, 0), 1>;
+}
+
+class sve2_mem_cldnt_vs_base<bits<5> opc, dag iops, string asm,
+                             RegisterOperand VecList>
+: I<(outs VecList:$Zt), iops,
+  asm, "\t$Zt, $Pg/z, [$Zn, $Rm]",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Rm;
+  bits<5> Zn;
+  bits<5> Zt;
+  let Inst{31}    = 0b1;
+  let Inst{30}    = opc{4};
+  let Inst{29-25} = 0b00010;
+  let Inst{24-23} = opc{3-2};
+  let Inst{22-21} = 0b00;
+  let Inst{20-16} = Rm;
+  let Inst{15}    = 0b1;
+  let Inst{14-13} = opc{1-0};
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zt;
+
+  let mayLoad = 1;
+}
+
+multiclass sve2_mem_cldnt_vs<bits<5> opc, string asm,
+                             RegisterOperand listty, ZPRRegOp zprty> {
+  def _REAL : sve2_mem_cldnt_vs_base<opc, (ins PPR3bAny:$Pg, zprty:$Zn, GPR64:$Rm),
+                                     asm, listty>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn, $Rm]",
+                 (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, zprty:$Zn, GPR64:$Rm), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
+                 (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, zprty:$Zn, XZR), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn, $Rm]",
+                 (!cast<Instruction>(NAME # _REAL) listty:$Zt, PPR3bAny:$Pg, zprty:$Zn, GPR64:$Rm), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
+                 (!cast<Instruction>(NAME # _REAL) listty:$Zt, PPR3bAny:$Pg, zprty:$Zn, XZR), 1>;
 }
 
 //===----------------------------------------------------------------------===//

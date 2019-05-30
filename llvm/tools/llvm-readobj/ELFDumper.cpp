@@ -3424,22 +3424,30 @@ void GNUStyle<ELFT>::printDynamicRelocations(const ELFO *Obj) {
 }
 
 template <class ELFT>
+static void printGNUVersionSectionProlog(formatted_raw_ostream &OS,
+                                         const Twine &Name, unsigned EntriesNum,
+                                         const ELFFile<ELFT> *Obj,
+                                         const typename ELFT::Shdr *Sec) {
+  StringRef SecName = unwrapOrError(Obj->getSectionName(Sec));
+  OS << Name << " section '" << SecName << "' "
+     << "contains " << EntriesNum << " entries:\n";
+
+  const typename ELFT::Shdr *SymTab =
+      unwrapOrError(Obj->getSection(Sec->sh_link));
+  StringRef SymTabName = unwrapOrError(Obj->getSectionName(SymTab));
+  OS << " Addr: " << format_hex_no_prefix(Sec->sh_addr, 16)
+     << "  Offset: " << format_hex(Sec->sh_offset, 8)
+     << "  Link: " << Sec->sh_link << " (" << SymTabName << ")\n";
+}
+
+template <class ELFT>
 void GNUStyle<ELFT>::printVersionSymbolSection(const ELFFile<ELFT> *Obj,
                                                const Elf_Shdr *Sec) {
   if (!Sec)
     return;
 
-  StringRef SecName = unwrapOrError(Obj->getSectionName(Sec));
-  uint64_t Entries = Sec->sh_size / sizeof(Elf_Versym);
-
-  OS << "Version symbols section '" << SecName << "' "
-     << "contains " << Entries << " entries:\n";
-
-  const Elf_Shdr *SymTab = unwrapOrError(Obj->getSection(Sec->sh_link));
-  StringRef SymTabName = unwrapOrError(Obj->getSectionName(SymTab));
-  OS << " Addr: " << format_hex_no_prefix(Sec->sh_addr, 16)
-     << "  Offset: " << format_hex(Sec->sh_offset, 8)
-     << "  Link: " << Sec->sh_link << " (" << SymTabName << ")\n";
+  unsigned Entries = Sec->sh_size / sizeof(Elf_Versym);
+  printGNUVersionSectionProlog(OS, "Version symbols", Entries, Obj, Sec);
 
   const uint8_t *VersymBuf =
       reinterpret_cast<const uint8_t *>(Obj->base() + Sec->sh_offset);
@@ -3483,14 +3491,67 @@ void GNUStyle<ELFT>::printVersionSymbolSection(const ELFFile<ELFT> *Obj,
   OS << '\n';
 }
 
+static std::string versionFlagToString(unsigned Flags) {
+  if (Flags == 0)
+    return "none";
+
+  std::string Ret;
+  auto AddFlag = [&Ret, &Flags](unsigned Flag, StringRef Name) {
+    if (!(Flags & Flag))
+      return;
+    if (!Ret.empty())
+      Ret += " | ";
+    Ret += Name;
+    Flags &= ~Flag;
+  };
+
+  AddFlag(VER_FLG_BASE, "BASE");
+  AddFlag(VER_FLG_WEAK, "WEAK");
+  AddFlag(VER_FLG_INFO, "INFO");
+  AddFlag(~0, "<unknown>");
+  return Ret;
+}
+
 template <class ELFT>
 void GNUStyle<ELFT>::printVersionDefinitionSection(const ELFFile<ELFT> *Obj,
                                                    const Elf_Shdr *Sec) {
   if (!Sec)
     return;
 
-  StringRef SecName = unwrapOrError(Obj->getSectionName(Sec));
-  OS << "Dumper for " << SecName << " is not implemented\n";
+  unsigned VerDefsNum = Sec->sh_info;
+  printGNUVersionSectionProlog(OS, "Version definition", VerDefsNum, Obj, Sec);
+
+  const Elf_Shdr *StrTabSec = unwrapOrError(Obj->getSection(Sec->sh_link));
+  StringRef StringTable(
+      reinterpret_cast<const char *>(Obj->base() + StrTabSec->sh_offset),
+      (size_t)StrTabSec->sh_size);
+
+  const uint8_t *VerdefBuf = unwrapOrError(Obj->getSectionContents(Sec)).data();
+  const uint8_t *Begin = VerdefBuf;
+
+  while (VerDefsNum--) {
+    const Elf_Verdef *Verdef = reinterpret_cast<const Elf_Verdef *>(VerdefBuf);
+    OS << format("  0x%04x: Rev: %u  Flags: %s  Index: %u  Cnt: %u",
+                 VerdefBuf - Begin, (unsigned)Verdef->vd_version,
+                 versionFlagToString(Verdef->vd_flags).c_str(),
+                 (unsigned)Verdef->vd_ndx, (unsigned)Verdef->vd_cnt);
+
+    const uint8_t *VerdauxBuf = VerdefBuf + Verdef->vd_aux;
+    const Elf_Verdaux *Verdaux =
+        reinterpret_cast<const Elf_Verdaux *>(VerdauxBuf);
+    OS << format("  Name: %s\n",
+                 StringTable.drop_front(Verdaux->vda_name).data());
+
+    for (unsigned I = 1; I < Verdef->vd_cnt; ++I) {
+      VerdauxBuf += Verdaux->vda_next;
+      Verdaux = reinterpret_cast<const Elf_Verdaux *>(VerdauxBuf);
+      OS << format("  0x%04x: Parent %u: %s\n", VerdauxBuf - Begin, I,
+                   StringTable.drop_front(Verdaux->vda_name).data());
+    }
+
+    VerdefBuf += Verdef->vd_next;
+  }
+  OS << '\n';
 }
 
 template <class ELFT>
@@ -3499,8 +3560,42 @@ void GNUStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
   if (!Sec)
     return;
 
-  StringRef SecName = unwrapOrError(Obj->getSectionName(Sec));
-  OS << "Dumper for " << SecName << " is not implemented\n";
+  unsigned VerneedNum = Sec->sh_info;
+  printGNUVersionSectionProlog(OS, "Version needs", VerneedNum, Obj, Sec);
+
+  ArrayRef<uint8_t> SecData = unwrapOrError(Obj->getSectionContents(Sec));
+
+  const Elf_Shdr *StrTabSec = unwrapOrError(Obj->getSection(Sec->sh_link));
+  StringRef StringTable = {
+      reinterpret_cast<const char *>(Obj->base() + StrTabSec->sh_offset),
+      (size_t)StrTabSec->sh_size};
+
+  const uint8_t *VerneedBuf = SecData.data();
+  for (unsigned I = 0; I < VerneedNum; ++I) {
+    const Elf_Verneed *Verneed =
+        reinterpret_cast<const Elf_Verneed *>(VerneedBuf);
+
+    OS << format("  0x%04x: Version: %u  File: %s  Cnt: %u\n",
+                 reinterpret_cast<const uint8_t *>(Verneed) - SecData.begin(),
+                 (unsigned)Verneed->vn_version,
+                 StringTable.drop_front(Verneed->vn_file).data(),
+                 (unsigned)Verneed->vn_cnt);
+
+    const uint8_t *VernauxBuf = VerneedBuf + Verneed->vn_aux;
+    for (unsigned J = 0; J < Verneed->vn_cnt; ++J) {
+      const Elf_Vernaux *Vernaux =
+          reinterpret_cast<const Elf_Vernaux *>(VernauxBuf);
+
+      OS << format("  0x%04x:   Name: %s  Flags: %s  Version: %u\n",
+                   reinterpret_cast<const uint8_t *>(Vernaux) - SecData.begin(),
+                   StringTable.drop_front(Vernaux->vna_name).data(),
+                   versionFlagToString(Vernaux->vna_flags).c_str(),
+                   (unsigned)Vernaux->vna_other);
+      VernauxBuf += Vernaux->vna_next;
+    }
+    VerneedBuf += Verneed->vn_next;
+  }
+  OS << '\n';
 }
 
 // Hash histogram shows  statistics of how efficient the hash was for the

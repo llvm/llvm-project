@@ -273,11 +273,6 @@ static void finalizeShtGroup(OutputSection *OS,
 }
 
 void OutputSection::finalize() {
-  if (Type == SHT_NOBITS)
-    for (BaseCommand *Base : SectionCommands)
-      if (isa<ByteCommand>(Base))
-        Type = SHT_PROGBITS;
-
   std::vector<InputSection *> V = getInputSections(this);
   InputSection *First = V.empty() ? nullptr : V[0];
 

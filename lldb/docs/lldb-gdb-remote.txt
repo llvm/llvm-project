@@ -787,9 +787,9 @@ os_version: a version string that represents the current OS version (10.8.2)
 watchpoint_exceptions_received: one of "before" or "after" to specify if a watchpoint is triggered before or after the pc when it stops
 default_packet_timeout: an unsigned number that specifies the default timeout in seconds
 distribution_id: optional. For linux, specifies distribution id (e.g. ubuntu, fedora, etc.)
-osmajor: optional, specifies the major version number of the OS (e.g. for Mac OS X 10.11.2, it would be 10)
-osminor: optional, specifies the minor version number of the OS (e.g. for Mac OS X 10.11.2, it would be 11)
-ospatch: optional, specifies the patch level number of the OS (e.g. for Mac OS X 10.11.2, it would be 2)
+osmajor: optional, specifies the major version number of the OS (e.g. for macOS 10.12.2, it would be 10)
+osminor: optional, specifies the minor version number of the OS (e.g. for macOS 10.12.2, it would be 12)
+ospatch: optional, specifies the patch level number of the OS (e.g. for macOS 10.12.2, it would be 2)
 
 //----------------------------------------------------------------------
 // "qGDBServerVersion"
@@ -1160,7 +1160,7 @@ for this region.
 //  second form of this packet is used, otherwise the first form is 
 //  used. This packet is called prior to executing an expression, so
 //  the remote GDB server should do anything it needs to in order to 
-//  ensure the registers that are saved are correct. On MacOSX this
+//  ensure the registers that are saved are correct. On macOS this
 //  involves calling "thread_abort_safely(mach_port_t thread)" to 
 //  ensure we get the correct registers for a thread in case it is
 //  currently having code run on its behalf in the kernel.
@@ -1723,7 +1723,7 @@ for this region.
 //  There are three ways this packet can be used.  All three return a dictionary of
 //  binary images formatted the same way.
 //
-//  On MacOS X 10.11, iOS 9, tvOS 9, watchOS 2 and earlier, the packet is used like
+//  On OS X 10.11, iOS 9, tvOS 9, watchOS 2 and earlier, the packet is used like
 //       jGetLoadedDynamicLibrariesInfos:{"image_count":1,"image_list_address":140734800075128}
 //  where the image_list_address is an array of {void* load_addr, void* mod_date, void* pathname}
 //  in the inferior process memory (and image_count is the number of elements in this array).
@@ -1863,9 +1863,9 @@ server to expedite memory that the client is likely to use (e.g., areas around t
 stack pointer, which are needed for computing backtraces) and it reduces the packet
 count.
 
-On MacOSX with debugserver, we expedite the frame pointer backchain for a thread
+On macOS with debugserver, we expedite the frame pointer backchain for a thread
 (up to 256 entries) by reading 2 pointers worth of bytes at the frame pointer (for
-the previous FP and PC), and follow the backchain. Most backtraces on MacOSX and
+the previous FP and PC), and follow the backchain. Most backtraces on macOS and
 iOS now don't require us to read any memory!
 
 //----------------------------------------------------------------------

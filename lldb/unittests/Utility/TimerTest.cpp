@@ -62,7 +62,7 @@ TEST(TimerTest, CategoryTimes2) {
   Timer::DumpCategoryTimes(&ss);
   double seconds1, seconds2;
   ASSERT_EQ(2, sscanf(ss.GetData(),
-                      "%lf sec (total: %*lfs; child: %*lfs; count: %*d) for "
+                      "%lf sec (total: %*fs; child: %*fs; count: %*d) for "
                       "CAT1%*[\n ]%lf sec for CAT2",
                       &seconds1, &seconds2))
       << "String: " << ss.GetData();
@@ -98,7 +98,7 @@ TEST(TimerTest, CategoryTimesStats) {
   ASSERT_EQ(
       6, sscanf(ss.GetData(),
                 "%lf sec (total: %lfs; child: %lfs; count: %d) for CAT1%*[\n ]"
-                "%lf sec (total: %*lfs; child: %*lfs; count: %d) for CAT2",
+                "%lf sec (total: %*fs; child: %*fs; count: %d) for CAT2",
                 &seconds1, &total1, &child1, &count1, &seconds2, &count2))
       << "String: " << ss.GetData();
   EXPECT_NEAR(total1 - child1, seconds1, 0.002);

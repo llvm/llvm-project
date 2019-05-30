@@ -2218,7 +2218,7 @@ Generate branches with extended addressability, usually via indirect jumps.
 
 .. option:: -mmacosx-version-min=<arg>, -mmacos-version-min=<arg>
 
-Set Mac OS X deployment target
+Set macOS deployment target
 
 .. option:: -mmcu=<arg>
 
