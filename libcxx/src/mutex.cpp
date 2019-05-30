@@ -12,6 +12,12 @@
 #include "include/atomic_support.h"
 #include "__undef_macros"
 
+#ifndef _LIBCPP_HAS_NO_THREADS
+#if defined(__unix__) &&  defined(__ELF__) && defined(__clang__)
+#pragma comment(lib, "pthread")
+#endif
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 #ifndef _LIBCPP_HAS_NO_THREADS
 
