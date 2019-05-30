@@ -1072,8 +1072,9 @@ bool MatchableInfo::validate(StringRef CommentDelimiter, bool IsAlias) const {
   // handle, the target should be refactored to use operands instead of
   // modifiers.
   //
-  // Also, check for instructions which reference the operand multiple times;
-  // this implies a constraint we would not honor.
+  // Also, check for instructions which reference the operand multiple times,
+  // if they don't define a custom AsmMatcher: this implies a constraint that
+  // the built-in matching code would not honor.
   std::set<std::string> OperandNames;
   for (const AsmOperand &Op : AsmOperands) {
     StringRef Tok = Op.Token;
@@ -1083,7 +1084,8 @@ bool MatchableInfo::validate(StringRef CommentDelimiter, bool IsAlias) const {
                       "' not supported by asm matcher.  Mark isCodeGenOnly!");
     // Verify that any operand is only mentioned once.
     // We reject aliases and ignore instructions for now.
-    if (!IsAlias && Tok[0] == '$' && !OperandNames.insert(Tok).second) {
+    if (!IsAlias && TheDef->getValueAsString("AsmMatchConverter").empty() &&
+        Tok[0] == '$' && !OperandNames.insert(Tok).second) {
       LLVM_DEBUG({
         errs() << "warning: '" << TheDef->getName() << "': "
                << "ignoring instruction with tied operand '"

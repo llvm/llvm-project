@@ -3069,7 +3069,12 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     OS.EmitBinaryData(SRef);
 
     OS.AddComment("Name");
-    emitNullTerminatedSymbolName(OS, DIGV->getDisplayName());
+    // Get fully qualified name if global is a static data member.
+    std::string Name = DIGV->getDisplayName();
+    if (const auto *MemberDecl = dyn_cast_or_null<DIDerivedType>(
+            DIGV->getRawStaticDataMemberDeclaration()))
+      Name = getFullyQualifiedName(MemberDecl->getScope(), Name);
+    emitNullTerminatedSymbolName(OS, Name);
     endSymbolRecord(SConstantEnd);
   }
 }

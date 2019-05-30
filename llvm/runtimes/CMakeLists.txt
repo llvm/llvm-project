@@ -59,12 +59,13 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   cmake_minimum_required(VERSION 3.4.3)
   project(Runtimes C CXX ASM)
 
+  find_package(LLVM PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+
   # Add the root project's CMake modules, and the LLVM build's modules to the
   # CMake module path.
   list(INSERT CMAKE_MODULE_PATH 0
     "${CMAKE_CURRENT_SOURCE_DIR}/../cmake"
     "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/modules"
-    "${LLVM_LIBRARY_DIR}/cmake/llvm"
   )
 
   # Some of the runtimes will conditionally use the compiler-rt sanitizers
@@ -79,11 +80,6 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     endif()
   endif()
 
-  # LLVMConfig.cmake contains a bunch of CMake variables from the LLVM build.
-  # This file is installed as part of LLVM distributions, so this can be used
-  # either from a build directory or an installed LLVM.
-  include(LLVMConfig)
-
   # Setting these variables will allow the sub-build to put their outputs into
   # the library and bin directories of the top-level build.
   set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_LIBRARY_DIR})
@@ -92,6 +88,9 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   # This variable makes sure that e.g. llvm-lit is found.
   set(LLVM_MAIN_SRC_DIR ${LLVM_BUILD_MAIN_SRC_DIR})
   set(LLVM_CMAKE_PATH ${LLVM_MAIN_SRC_DIR}/cmake/modules)
+
+  # This variable is used by individual runtimes to locate LLVM files.
+  set(LLVM_PATH ${LLVM_BUILD_MAIN_SRC_DIR})
 
   if(APPLE)
     set(LLVM_ENABLE_LIBCXX ON CACHE BOOL "")
@@ -375,8 +374,6 @@ else() # if this is included from LLVM's CMake
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
-                                        -DLLVM_BINARY_DIR=${LLVM_BINARY_DIR}
-                                        -DLLVM_LIBRARY_DIR=${LLVM_LIBRARY_DIR}
                                         -DLLVM_DEFAULT_TARGET_TRIPLE=${TARGET_TRIPLE}
                                         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                         -DCMAKE_C_COMPILER_TARGET=${TARGET_TRIPLE}
@@ -466,8 +463,6 @@ else() # if this is included from LLVM's CMake
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
-                                        -DLLVM_BINARY_DIR=${LLVM_BINARY_DIR}
-                                        -DLLVM_LIBRARY_DIR=${LLVM_LIBRARY_DIR}
                                         -DLLVM_DEFAULT_TARGET_TRIPLE=${target}
                                         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                         -DCMAKE_C_COMPILER_TARGET=${target}

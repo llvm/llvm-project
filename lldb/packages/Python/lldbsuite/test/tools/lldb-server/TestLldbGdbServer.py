@@ -558,9 +558,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertIsNotNone(reg_infos)
         self.assertTrue(len(reg_infos) > 0)
 
-        inferior_exe_path = self.getBuildArtifact("a.out")
-        Target = self.dbg.CreateTarget(inferior_exe_path)
-        byte_order = Target.GetByteOrder()
+        byte_order = self.get_target_byte_order()
 
         # Read value for each register.
         reg_index = 0
