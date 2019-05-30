@@ -367,7 +367,7 @@ public:
 
 class PathDiagnosticPiece: public llvm::FoldingSetNode {
 public:
-  enum Kind { ControlFlow, Event, Macro, Call, Note };
+  enum Kind { ControlFlow, Event, Macro, Call, Note, PopUp };
   enum DisplayHint { Above, Below };
 
 private:
@@ -482,7 +482,7 @@ public:
 
   static bool classof(const PathDiagnosticPiece *P) {
     return P->getKind() == Event || P->getKind() == Macro ||
-           P->getKind() == Note;
+           P->getKind() == Note || P->getKind() == PopUp;
   }
 };
 
@@ -746,12 +746,28 @@ public:
 class PathDiagnosticNotePiece: public PathDiagnosticSpotPiece {
 public:
   PathDiagnosticNotePiece(const PathDiagnosticLocation &Pos, StringRef S,
-                               bool AddPosRange = true)
+                          bool AddPosRange = true)
       : PathDiagnosticSpotPiece(Pos, S, Note, AddPosRange) {}
   ~PathDiagnosticNotePiece() override;
 
   static bool classof(const PathDiagnosticPiece *P) {
     return P->getKind() == Note;
+  }
+
+  void dump() const override;
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override;
+};
+
+class PathDiagnosticPopUpPiece: public PathDiagnosticSpotPiece {
+public:
+  PathDiagnosticPopUpPiece(const PathDiagnosticLocation &Pos, StringRef S,
+                           bool AddPosRange = true)
+      : PathDiagnosticSpotPiece(Pos, S, PopUp, AddPosRange) {}
+  ~PathDiagnosticPopUpPiece() override;
+
+  static bool classof(const PathDiagnosticPiece *P) {
+    return P->getKind() == PopUp;
   }
 
   void dump() const override;

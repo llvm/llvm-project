@@ -348,6 +348,15 @@ LanguageType Language::GetPrimaryLanguage(LanguageType language) {
   }
 }
 
+std::set<lldb::LanguageType> Language::GetSupportedLanguages() {
+  std::set<lldb::LanguageType> supported_languages;
+  ForEach([&](Language *lang) {
+    supported_languages.emplace(lang->GetLanguageType());
+    return true;
+  });
+  return supported_languages;
+}
+
 void Language::GetLanguagesSupportingTypeSystems(
     std::set<lldb::LanguageType> &languages,
     std::set<lldb::LanguageType> &languages_for_expressions) {

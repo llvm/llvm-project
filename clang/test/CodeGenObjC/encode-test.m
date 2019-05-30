@@ -107,7 +107,7 @@ const char g3[] = @encode(const struct S *);
 // CHECK: @g4 = constant [6 x i8] c"{S=i}\00"
 const char g4[] = @encode(const struct S);
 
-// CHECK: @g5 = constant [12 x i8] c"^{Object=#}\00"
+// CHECK: @g5 = constant [2 x i8] c"@\00"
 const char g5[] = @encode(MyObj * const);
 
 ////

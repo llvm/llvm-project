@@ -463,6 +463,31 @@ TEST(CompletionTest, Kinds) {
   EXPECT_THAT(
       Results.Completions,
       UnorderedElementsAre(AllOf(Named("a"), Kind(CompletionItemKind::Field))));
+
+  // Completion kinds for templates should not be unknown.
+  Results = completions(
+      R"cpp(
+        template <class T> struct complete_class {};
+        template <class T> void complete_function();
+        template <class T> using complete_type_alias = int;
+        template <class T> int complete_variable = 10;
+
+        struct X {
+          template <class T> static int complete_static_member = 10;
+
+          static auto x = complete_^
+        }
+      )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      UnorderedElementsAre(
+          AllOf(Named("complete_class"), Kind(CompletionItemKind::Class)),
+          AllOf(Named("complete_function"), Kind(CompletionItemKind::Function)),
+          AllOf(Named("complete_type_alias"),
+                Kind(CompletionItemKind::Interface)),
+          AllOf(Named("complete_variable"), Kind(CompletionItemKind::Variable)),
+          AllOf(Named("complete_static_member"),
+                Kind(CompletionItemKind::Property))));
 }
 
 TEST(CompletionTest, NoDuplicates) {

@@ -35,6 +35,10 @@
 #include <windows.h>
 #endif
 
+#if defined(__unix__) &&  defined(__ELF__) && defined(__clang__)
+#pragma comment(lib, "pthread")
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 thread::~thread()

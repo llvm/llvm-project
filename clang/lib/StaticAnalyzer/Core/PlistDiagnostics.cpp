@@ -120,6 +120,9 @@ private:
       case PathDiagnosticPiece::Note:
         ReportNote(o, cast<PathDiagnosticNotePiece>(P), indent);
         break;
+      case PathDiagnosticPiece::PopUp:
+        ReportPopUp(o, cast<PathDiagnosticPopUpPiece>(P), indent);
+        break;
     }
   }
 
@@ -138,6 +141,9 @@ private:
                             unsigned indent, unsigned depth);
   void ReportNote(raw_ostream &o, const PathDiagnosticNotePiece& P,
                   unsigned indent);
+
+  void ReportPopUp(raw_ostream &o, const PathDiagnosticPopUpPiece &P,
+                   unsigned indent);
 };
 
 } // end of anonymous namespace
@@ -395,6 +401,34 @@ void PlistPrinter::ReportNote(raw_ostream &o, const PathDiagnosticNotePiece& P,
   // Finish up.
   --indent;
   Indent(o, indent); o << "</dict>\n";
+}
+
+void PlistPrinter::ReportPopUp(raw_ostream &o,
+                               const PathDiagnosticPopUpPiece &P,
+                               unsigned indent) {
+  const SourceManager &SM = PP.getSourceManager();
+
+  Indent(o, indent) << "<dict>\n";
+  ++indent;
+
+  Indent(o, indent) << "<key>kind</key><string>pop-up</string>\n";
+
+  // Output the location.
+  FullSourceLoc L = P.getLocation().asLocation();
+
+  Indent(o, indent) << "<key>location</key>\n";
+  EmitLocation(o, SM, L, FM, indent);
+
+  // Output the ranges (if any).
+  ArrayRef<SourceRange> Ranges = P.getRanges();
+  EmitRanges(o, Ranges, indent);
+
+  // Output the text.
+  EmitMessage(o, P.getString(), indent);
+
+  // Finish up.
+  --indent;
+  Indent(o, indent) << "</dict>\n";
 }
 
 //===----------------------------------------------------------------------===//

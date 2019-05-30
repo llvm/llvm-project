@@ -36,6 +36,7 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Lambda.h"
 #include "clang/Basic/OpenMPKinds.h"
@@ -413,12 +414,15 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
   if (Node->isVolatile())
     OS << "volatile ";
 
+  if (Node->isAsmGoto())
+    OS << "goto ";
+
   OS << "(";
   VisitStringLiteral(Node->getAsmString());
 
   // Outputs
   if (Node->getNumOutputs() != 0 || Node->getNumInputs() != 0 ||
-      Node->getNumClobbers() != 0)
+      Node->getNumClobbers() != 0 || Node->getNumLabels() != 0)
     OS << " : ";
 
   for (unsigned i = 0, e = Node->getNumOutputs(); i != e; ++i) {
@@ -438,7 +442,8 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
   }
 
   // Inputs
-  if (Node->getNumInputs() != 0 || Node->getNumClobbers() != 0)
+  if (Node->getNumInputs() != 0 || Node->getNumClobbers() != 0 ||
+      Node->getNumLabels() != 0)
     OS << " : ";
 
   for (unsigned i = 0, e = Node->getNumInputs(); i != e; ++i) {
@@ -458,7 +463,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
   }
 
   // Clobbers
-  if (Node->getNumClobbers() != 0)
+  if (Node->getNumClobbers() != 0 || Node->getNumLabels())
     OS << " : ";
 
   for (unsigned i = 0, e = Node->getNumClobbers(); i != e; ++i) {
@@ -466,6 +471,16 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
       OS << ", ";
 
     VisitStringLiteral(Node->getClobberStringLiteral(i));
+  }
+
+  // Labels
+  if (Node->getNumLabels() != 0)
+    OS << " : ";
+
+  for (unsigned i = 0, e = Node->getNumLabels(); i != e; ++i) {
+    if (i != 0)
+      OS << ", ";
+    OS << Node->getLabelName(i);
   }
 
   OS << ");";
@@ -2395,12 +2410,21 @@ void Stmt::dumpPretty(const ASTContext &Context) const {
   printPretty(llvm::errs(), nullptr, PrintingPolicy(Context.getLangOpts()));
 }
 
-void Stmt::printPretty(raw_ostream &OS, PrinterHelper *Helper,
+void Stmt::printPretty(raw_ostream &Out, PrinterHelper *Helper,
                        const PrintingPolicy &Policy, unsigned Indentation,
-                       StringRef NL,
-                       const ASTContext *Context) const {
-  StmtPrinter P(OS, Helper, Policy, Indentation, NL, Context);
-  P.Visit(const_cast<Stmt*>(this));
+                       StringRef NL, const ASTContext *Context) const {
+  StmtPrinter P(Out, Helper, Policy, Indentation, NL, Context);
+  P.Visit(const_cast<Stmt *>(this));
+}
+
+void Stmt::printJson(raw_ostream &Out, PrinterHelper *Helper,
+                     const PrintingPolicy &Policy, bool AddQuotes) const {
+  std::string Buf;
+  llvm::raw_string_ostream TempOut(Buf);
+
+  printPretty(TempOut, Helper, Policy);
+
+  Out << JsonFormat(TempOut.str(), AddQuotes);
 }
 
 //===----------------------------------------------------------------------===//

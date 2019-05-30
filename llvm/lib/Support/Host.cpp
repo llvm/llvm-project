@@ -1380,6 +1380,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["cldemote"]        = HasLeaf7 && ((ECX >> 25) & 1);
   Features["movdiri"]         = HasLeaf7 && ((ECX >> 27) & 1);
   Features["movdir64b"]       = HasLeaf7 && ((ECX >> 28) & 1);
+  Features["enqcmd"]          = HasLeaf7 && ((ECX >> 29) & 1);
 
   // There are two CPUID leafs which information associated with the pconfig
   // instruction:

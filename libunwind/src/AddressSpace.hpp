@@ -27,6 +27,9 @@
 
 #if _LIBUNWIND_USE_DLADDR
 #include <dlfcn.h>
+#if defined(__unix__) &&  defined(__ELF__) && defined(__clang__)
+#pragma comment(lib, "dl")
+#endif
 #endif
 
 #ifdef __APPLE__

@@ -191,15 +191,16 @@ static json::Object createLocation(json::Object &&PhysicalLocation,
 
 static Importance calculateImportance(const PathDiagnosticPiece &Piece) {
   switch (Piece.getKind()) {
-  case PathDiagnosticPiece::Kind::Call:
-  case PathDiagnosticPiece::Kind::Macro:
-  case PathDiagnosticPiece::Kind::Note:
+  case PathDiagnosticPiece::Call:
+  case PathDiagnosticPiece::Macro:
+  case PathDiagnosticPiece::Note:
+  case PathDiagnosticPiece::PopUp:
     // FIXME: What should be reported here?
     break;
-  case PathDiagnosticPiece::Kind::Event:
+  case PathDiagnosticPiece::Event:
     return Piece.getTagStr() == "ConditionBRVisitor" ? Importance::Important
                                                      : Importance::Essential;
-  case PathDiagnosticPiece::Kind::ControlFlow:
+  case PathDiagnosticPiece::ControlFlow:
     return Importance::Unimportant;
   }
   return Importance::Unimportant;

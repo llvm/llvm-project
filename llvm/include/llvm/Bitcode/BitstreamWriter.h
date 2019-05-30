@@ -486,10 +486,8 @@ private:
   }
 public:
 
-  /// EmitAbbrev - This emits an abbreviation to the stream.  Note that this
-  /// method takes ownership of the specified abbrev.
+  /// Emits the abbreviation \p Abbv to the stream.
   unsigned EmitAbbrev(std::shared_ptr<BitCodeAbbrev> Abbv) {
-    // Emit the abbreviation as a record.
     EncodeAbbrev(*Abbv);
     CurAbbrevs.push_back(std::move(Abbv));
     return static_cast<unsigned>(CurAbbrevs.size())-1 +

@@ -3666,6 +3666,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     // Disable all llvm IR level optimizations.
     CmdArgs.push_back("-disable-llvm-passes");
 
+    // Render target options such as -fuse-init-array on modern ELF platforms.
+    TC.addClangTargetOptions(Args, CmdArgs, JA.getOffloadingDeviceKind());
+
     // reject options that shouldn't be supported in bitcode
     // also reject kernel/kext
     static const constexpr unsigned kBitcodeOptionBlacklist[] = {

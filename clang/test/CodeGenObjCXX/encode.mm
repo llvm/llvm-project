@@ -242,6 +242,6 @@ struct S {
 @end
 
 const char *expand_struct() {
-  // CHECK: @{{.*}} = private unnamed_addr constant [16 x i8] c"{N={S<N>=^{N}}}\00"
+  // CHECK: @{{.*}} = private unnamed_addr constant [13 x i8] c"{N={S<N>=@}}\00"
   return @encode(N);
 }

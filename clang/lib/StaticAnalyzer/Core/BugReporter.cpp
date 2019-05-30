@@ -154,8 +154,6 @@ static void removeRedundantMsgs(PathPieces &path) {
       case PathDiagnosticPiece::Macro:
         removeRedundantMsgs(cast<PathDiagnosticMacroPiece>(*piece).subPieces);
         break;
-      case PathDiagnosticPiece::ControlFlow:
-        break;
       case PathDiagnosticPiece::Event: {
         if (i == N-1)
           break;
@@ -175,7 +173,9 @@ static void removeRedundantMsgs(PathPieces &path) {
         }
         break;
       }
+      case PathDiagnosticPiece::ControlFlow:
       case PathDiagnosticPiece::Note:
+      case PathDiagnosticPiece::PopUp:
         break;
     }
     path.push_back(std::move(piece));
@@ -230,9 +230,8 @@ static bool removeUnneededCalls(PathPieces &pieces, BugReport *R,
         break;
       }
       case PathDiagnosticPiece::ControlFlow:
-        break;
-
       case PathDiagnosticPiece::Note:
+      case PathDiagnosticPiece::PopUp:
         break;
     }
 
@@ -240,6 +239,16 @@ static bool removeUnneededCalls(PathPieces &pieces, BugReport *R,
   }
 
   return containsSomethingInteresting;
+}
+
+/// Same logic as above to remove extra pieces.
+static void removePopUpNotes(PathPieces &Path) {
+  for (unsigned int i = 0; i < Path.size(); ++i) {
+    auto Piece = std::move(Path.front());
+    Path.pop_front();
+    if (!isa<PathDiagnosticPopUpPiece>(*Piece))
+      Path.push_back(std::move(Piece));
+  }
 }
 
 /// Returns true if the given decl has been implicitly given a body, either by
@@ -1980,6 +1989,10 @@ static std::unique_ptr<PathDiagnostic> generatePathDiagnosticForConsumer(
       assert(stillHasNotes);
       (void)stillHasNotes;
     }
+
+    // Remove pop-up notes if needed.
+    if (!Opts.ShouldAddPopUpNotes)
+      removePopUpNotes(PD->getMutablePieces());
 
     // Redirect all call pieces to have valid locations.
     adjustCallLocations(PD->getMutablePieces());

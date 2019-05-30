@@ -13,6 +13,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -155,15 +156,19 @@ public:
   uint32_t RecordOffset;
 };
 
-struct BinaryAnnotationIterator {
-  struct AnnotationData {
-    BinaryAnnotationsOpCode OpCode;
-    StringRef Name;
-    uint32_t U1;
-    uint32_t U2;
-    int32_t S1;
-  };
+struct DecodedAnnotation {
+  StringRef Name;
+  ArrayRef<uint8_t> Bytes;
+  BinaryAnnotationsOpCode OpCode;
+  uint32_t U1 = 0;
+  uint32_t U2 = 0;
+  int32_t S1 = 0;
+};
 
+struct BinaryAnnotationIterator
+    : public iterator_facade_base<BinaryAnnotationIterator,
+                                  std::forward_iterator_tag,
+                                  DecodedAnnotation> {
   BinaryAnnotationIterator() = default;
   BinaryAnnotationIterator(ArrayRef<uint8_t> Annotations) : Data(Annotations) {}
   BinaryAnnotationIterator(const BinaryAnnotationIterator &Other)
@@ -171,10 +176,6 @@ struct BinaryAnnotationIterator {
 
   bool operator==(BinaryAnnotationIterator Other) const {
     return Data == Other.Data;
-  }
-
-  bool operator!=(const BinaryAnnotationIterator &Other) const {
-    return !(*this == Other);
   }
 
   BinaryAnnotationIterator &operator=(const BinaryAnnotationIterator Other) {
@@ -193,13 +194,7 @@ struct BinaryAnnotationIterator {
     return *this;
   }
 
-  BinaryAnnotationIterator operator++(int) {
-    BinaryAnnotationIterator Orig(*this);
-    ++(*this);
-    return Orig;
-  }
-
-  const AnnotationData &operator*() {
+  const DecodedAnnotation &operator*() {
     ParseCurrentAnnotation();
     return Current.getValue();
   }
@@ -241,17 +236,17 @@ private:
              (ThirdByte << 8) | FourthByte;
 
     return -1;
-  };
+  }
 
   static int32_t DecodeSignedOperand(uint32_t Operand) {
     if (Operand & 1)
       return -(Operand >> 1);
     return Operand >> 1;
-  };
+  }
 
   static int32_t DecodeSignedOperand(ArrayRef<uint8_t> &Annotations) {
     return DecodeSignedOperand(GetCompressedAnnotation(Annotations));
-  };
+  }
 
   bool ParseCurrentAnnotation() {
     if (Current.hasValue())
@@ -259,7 +254,7 @@ private:
 
     Next = Data;
     uint32_t Op = GetCompressedAnnotation(Next);
-    AnnotationData Result;
+    DecodedAnnotation Result;
     Result.OpCode = static_cast<BinaryAnnotationsOpCode>(Op);
     switch (Result.OpCode) {
     case BinaryAnnotationsOpCode::Invalid:
@@ -324,11 +319,12 @@ private:
       break;
     }
     }
+    Result.Bytes = Data.take_front(Data.size() - Next.size());
     Current = Result;
     return true;
   }
 
-  Optional<AnnotationData> Current;
+  Optional<DecodedAnnotation> Current;
   ArrayRef<uint8_t> Data;
   ArrayRef<uint8_t> Next;
 };

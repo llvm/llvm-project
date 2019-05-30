@@ -1085,6 +1085,25 @@ them.
     }];
 }
 
+def ObjCClassStubDocs : Documentation {
+    let Category = DocCatType;
+    let Content = [{
+This attribute specifies that the Objective-C class to which it applies is
+instantiated at runtime.
+
+Unlike ``__attribute__((objc_runtime_visible))``, a class having this attribute
+still has a "class stub" that is visible to the linker. This allows categories
+to be defined. Static message sends with the class as a receiver use a special
+access pattern to ensure the class is lazily instantiated from the class stub.
+
+Classes annotated with this attribute cannot be subclassed and cannot have
+implementations defined for them. This attribute is intended for use in
+Swift-generated headers for classes defined in Swift.
+
+Adding or removing this attribute to a class is an ABI-breaking change.
+    }];
+}
+
 def ObjCBoxableDocs : Documentation {
     let Category = DocCatDecl;
     let Content = [{

@@ -8084,12 +8084,16 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitMGATHER(SDNode *N) {
-  if (Level >= AfterLegalizeTypes)
-    return SDValue();
-
   MaskedGatherSDNode *MGT = cast<MaskedGatherSDNode>(N);
   SDValue Mask = MGT->getMask();
   SDLoc DL(N);
+
+  // Zap gathers with a zero mask.
+  if (ISD::isBuildVectorAllZeros(Mask.getNode()))
+    return CombineTo(N, MGT->getPassThru(), MGT->getChain());
+
+  if (Level >= AfterLegalizeTypes)
+    return SDValue();
 
   // If the MGATHER result requires splitting and the mask is provided by a
   // SETCC, then split both nodes and its operands before legalization. This

@@ -71,7 +71,9 @@ theif:
   }
 
   asm ("nop");
-
+  int cond;
+  asm goto("testl %0, %0; jne %l1;" :: "r"(cond)::label_true);
+label_true:
   return;
 }
 

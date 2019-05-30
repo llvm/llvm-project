@@ -13,6 +13,7 @@
 #include "InstCombineInternal.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -2053,6 +2054,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::usub_sat:
   case Intrinsic::ssub_sat: {
     SaturatingInst *SI = cast<SaturatingInst>(II);
+    Type *Ty = SI->getType();
     Value *Arg0 = SI->getLHS();
     Value *Arg1 = SI->getRHS();
 
@@ -2067,14 +2069,16 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
           return BinaryOperator::CreateNSW(SI->getBinaryOp(), Arg0, Arg1);
         else
           return BinaryOperator::CreateNUW(SI->getBinaryOp(), Arg0, Arg1);
-      case OverflowResult::AlwaysOverflowsLow:
-        if (SI->isSigned()) break; // TODO: Support signed.
-        return replaceInstUsesWith(*SI,
-                                   ConstantInt::getNullValue(II->getType()));
-      case OverflowResult::AlwaysOverflowsHigh:
-        if (SI->isSigned()) break; // TODO: Support signed.
-        return replaceInstUsesWith(*SI,
-                                   ConstantInt::getAllOnesValue(II->getType()));
+      case OverflowResult::AlwaysOverflowsLow: {
+        unsigned BitWidth = Ty->getScalarSizeInBits();
+        APInt Min = APSInt::getMinValue(BitWidth, !SI->isSigned());
+        return replaceInstUsesWith(*SI, ConstantInt::get(Ty, Min));
+      }
+      case OverflowResult::AlwaysOverflowsHigh: {
+        unsigned BitWidth = Ty->getScalarSizeInBits();
+        APInt Max = APSInt::getMaxValue(BitWidth, !SI->isSigned());
+        return replaceInstUsesWith(*SI, ConstantInt::get(Ty, Max));
+      }
     }
 
     // ssub.sat(X, C) -> sadd.sat(X, -C) if C != MIN
