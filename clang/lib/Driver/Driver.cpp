@@ -767,7 +767,9 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
           FoundNormalizedTriples[NormalizedName] = Val;
 
           // If the specified target is invalid, emit a diagnostic.
-          if (TT.getArch() == llvm::Triple::UnknownArch)
+          if (TT.getArch() == llvm::Triple::UnknownArch ||
+              !(TT.getArch() == llvm::Triple::spir ||
+                TT.getArch() == llvm::Triple::spir64))
             Diag(clang::diag::err_drv_invalid_sycl_target) << Val;
           else {
             const ToolChain *HostTC =
@@ -3203,23 +3205,6 @@ class OffloadingActionBuilder final {
     }
 
     bool initialize() override {
-      // Get and check the SYCL target triples if any, if it's not a valid
-      // triple print a diagnostic and return true stating the initialization
-      // has failed
-      if (Arg *A = Args.getLastArg(options::OPT_fsycl_targets_EQ)) {
-        for (unsigned i = 0; i < A->getNumValues(); ++i) {
-          llvm::Triple TT(A->getValue(i));
-
-          if (TT.getArch() == llvm::Triple::UnknownArch ||
-              !(TT.getArch() == llvm::Triple::spir ||
-                TT.getArch() == llvm::Triple::spir64)) {
-            C.getDriver().Diag(diag::err_drv_invalid_sycl_target)
-              << A->getValue(i);
-            return true;
-          }
-        }
-      }
-
       // Get the SYCL toolchains. If we don't get any, the action builder will
       // know there is nothing to do related to SYCL offloading.
       auto SYCLTCRange = C.getOffloadToolChains<Action::OFK_SYCL>();
