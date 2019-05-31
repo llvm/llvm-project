@@ -22,6 +22,8 @@
 #include <unordered_map>
 #include <cassert>
 
+#include "test_macros.h"
+
 
 bool
 is_power_of_two(unsigned long n)

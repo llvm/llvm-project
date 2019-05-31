@@ -18,6 +18,7 @@
 #include <tuple>
 #include <cassert>
 
+#include "test_macros.h"
 #include "MoveOnly.h"
 #include "allocators.h"
 #include "../alloc_first.h"

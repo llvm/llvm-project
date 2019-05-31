@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <cassert>
 
+#include "test_macros.h"
 #include "incomplete_type_helper.h"
 
 template <class T>

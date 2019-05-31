@@ -18,6 +18,8 @@
 #include <chrono>
 #include <type_traits>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     typedef std::chrono::duration<long, std::ratio<3, 2> > D;

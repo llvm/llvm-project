@@ -20,6 +20,7 @@
 #include <experimental/functional>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 struct count_equal

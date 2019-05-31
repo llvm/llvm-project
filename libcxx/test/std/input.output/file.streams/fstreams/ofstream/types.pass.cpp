@@ -22,6 +22,8 @@
 #include <fstream>
 #include <type_traits>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     static_assert((std::is_base_of<std::basic_ostream<char>, std::basic_ofstream<char> >::value), "");

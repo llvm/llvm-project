@@ -22,6 +22,8 @@
 #include "filesystem_test_helper.hpp"
 #include "rapid-cxx-test.hpp"
 
+#include "test_macros.h"
+
 TEST_SUITE(directory_entry_obs_suite)
 
 TEST_CASE(test_signature) {

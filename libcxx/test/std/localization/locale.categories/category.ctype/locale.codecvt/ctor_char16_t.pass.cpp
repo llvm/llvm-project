@@ -15,6 +15,8 @@
 #include <locale>
 #include <cassert>
 
+#include "test_macros.h"
+
 //#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 
 typedef std::codecvt<char16_t, char, std::mbstate_t> F;

@@ -11,6 +11,8 @@
 
 #include <cerrno>
 
+#include "test_macros.h"
+
 #ifndef E2BIG
 #error E2BIG not defined
 #endif

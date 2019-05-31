@@ -23,6 +23,8 @@
 #include <chrono>
 #include <cassert>
 
+#include "test_macros.h"
+
 std::condition_variable cv;
 std::mutex mut;
 

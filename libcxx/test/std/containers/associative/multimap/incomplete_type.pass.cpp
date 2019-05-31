@@ -13,6 +13,8 @@
 
 #include <map>
 
+#include "test_macros.h"
+
 struct A {
     typedef std::multimap<A, A> Map;
     int data;

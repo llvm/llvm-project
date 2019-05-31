@@ -10,6 +10,8 @@
 
 #include <forward_list>
 
+#include "test_macros.h"
+
 #ifndef _LIBCPP_VERSION
 #error _LIBCPP_VERSION not defined
 #endif

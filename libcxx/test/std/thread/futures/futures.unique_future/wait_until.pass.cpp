@@ -21,6 +21,8 @@
 #include <atomic>
 #include <cassert>
 
+#include "test_macros.h"
+
 enum class WorkerThreadState { Uninitialized, AllowedToRun, Exiting };
 typedef std::chrono::milliseconds ms;
 

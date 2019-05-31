@@ -14,6 +14,8 @@
 #include <cassert>
 #include <regex>
 
+#include "test_macros.h"
+
 
 int main(int, char**) {
     assert(std::regex_match("X", std::regex("[X]")));

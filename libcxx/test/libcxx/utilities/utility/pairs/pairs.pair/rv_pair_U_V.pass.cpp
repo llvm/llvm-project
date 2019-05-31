@@ -17,6 +17,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "test_macros.h"
+
 
 struct ExplicitT {
     constexpr explicit ExplicitT(int x) : value(x) {}

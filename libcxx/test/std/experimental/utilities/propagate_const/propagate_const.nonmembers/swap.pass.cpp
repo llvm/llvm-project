@@ -13,6 +13,7 @@
 // template <class T> constexpr void swap(propagate_const<T>& x, propagate_const<T>& y);
 
 #include <experimental/propagate_const>
+#include "test_macros.h"
 #include "propagate_const_helpers.h"
 #include <cassert>
 

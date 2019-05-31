@@ -23,6 +23,8 @@
 #include <sstream>
 #include <type_traits>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     static_assert((std::is_base_of<std::basic_streambuf<char>, std::basic_stringbuf<char> >::value), "");

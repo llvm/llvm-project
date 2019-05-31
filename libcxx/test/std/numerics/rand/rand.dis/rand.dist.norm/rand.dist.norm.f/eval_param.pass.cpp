@@ -21,6 +21,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "test_macros.h"
+
 double fac(double x)
 {
     double r = 1;

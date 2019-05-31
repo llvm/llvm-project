@@ -16,6 +16,8 @@
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     int i = 1;

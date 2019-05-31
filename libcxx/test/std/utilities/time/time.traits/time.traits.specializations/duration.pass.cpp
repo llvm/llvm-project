@@ -16,6 +16,8 @@
 
 #include <chrono>
 
+#include "test_macros.h"
+
 template <class D1, class D2, class De>
 void
 test()

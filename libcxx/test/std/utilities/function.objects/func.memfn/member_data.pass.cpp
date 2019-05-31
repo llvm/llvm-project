@@ -13,6 +13,8 @@
 #include <functional>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct A
 {
     double data_;

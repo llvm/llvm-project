@@ -19,6 +19,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 
 void test_path_method() {
   using namespace fs;

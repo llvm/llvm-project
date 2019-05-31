@@ -22,6 +22,8 @@
 
 #include "archetypes.hpp"
 
+#include "test_macros.h"
+
 // Clang warns about missing braces when initializing std::array.
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wmissing-braces"

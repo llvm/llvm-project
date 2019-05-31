@@ -16,6 +16,8 @@
 #include <__tree>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct Node
 {
     Node* __left_;

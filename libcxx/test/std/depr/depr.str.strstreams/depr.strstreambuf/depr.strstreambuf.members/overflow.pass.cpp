@@ -20,6 +20,8 @@
 #include <string>
 #include <strstream>
 
+#include "test_macros.h"
+
 int main(int, char**) {
   std::ostrstream oss;
   std::string s;

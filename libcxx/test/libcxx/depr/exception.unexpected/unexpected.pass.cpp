@@ -14,6 +14,8 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "test_macros.h"
+
 void fexit()
 {
     std::exit(0);

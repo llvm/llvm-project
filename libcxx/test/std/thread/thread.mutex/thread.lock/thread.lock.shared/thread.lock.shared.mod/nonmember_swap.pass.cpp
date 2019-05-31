@@ -19,6 +19,8 @@
 #include <shared_mutex>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct mutex
 {
     void lock_shared() {}

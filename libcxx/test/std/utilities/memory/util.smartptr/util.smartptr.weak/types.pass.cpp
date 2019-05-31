@@ -17,6 +17,8 @@
 
 #include <memory>
 
+#include "test_macros.h"
+
 struct A;  // purposefully incomplete
 
 int main(int, char**)

@@ -15,6 +15,8 @@
 #include <any>
 #include <type_traits>
 
+#include "test_macros.h"
+
 int main(int, char**) {
     static_assert(!std::is_literal_type<std::any>::value, "");
 

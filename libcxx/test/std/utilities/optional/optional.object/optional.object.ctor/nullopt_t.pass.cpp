@@ -17,6 +17,8 @@
 
 #include "archetypes.hpp"
 
+#include "test_macros.h"
+
 using std::optional;
 using std::nullopt_t;
 using std::nullopt;

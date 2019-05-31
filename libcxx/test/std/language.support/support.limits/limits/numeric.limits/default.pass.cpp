@@ -14,6 +14,8 @@
 #include <limits>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct A
 {
     A(int i = 0) : data_(i) {}

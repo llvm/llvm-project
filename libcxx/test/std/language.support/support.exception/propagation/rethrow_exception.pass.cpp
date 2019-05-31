@@ -14,6 +14,8 @@
 #include <exception>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct A
 {
     static int constructed;

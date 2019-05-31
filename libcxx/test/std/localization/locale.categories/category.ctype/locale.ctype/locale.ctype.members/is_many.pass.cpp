@@ -19,6 +19,8 @@
 
 #include <stdio.h>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     std::locale l = std::locale::classic();

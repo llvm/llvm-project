@@ -20,6 +20,8 @@
 #include <cassert>
 #include "test_memory_resource.hpp"
 
+#include "test_macros.h"
+
 using std::size_t;
 namespace ex = std::experimental::pmr;
 

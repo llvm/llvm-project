@@ -19,6 +19,8 @@
 #include <thread>
 #include <cassert>
 
+#include "test_macros.h"
+
 std::condition_variable_any* cv;
 std::mutex m;
 

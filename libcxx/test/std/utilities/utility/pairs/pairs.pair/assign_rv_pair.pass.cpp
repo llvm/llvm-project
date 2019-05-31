@@ -18,6 +18,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 
 struct NonAssignable {
   NonAssignable& operator=(NonAssignable const&) = delete;

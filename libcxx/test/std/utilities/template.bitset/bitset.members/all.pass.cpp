@@ -12,6 +12,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <std::size_t N>
 void test_all()
 {

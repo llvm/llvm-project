@@ -12,6 +12,7 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
 #include "hexfloat.h"
 #include "truncate_fp.h"
 

@@ -23,3 +23,5 @@
 #define _LIBCPP_USE_IS_CONVERTIBLE_FALLBACK
 #include "is_convertible.pass.cpp"
 
+#include "test_macros.h"
+

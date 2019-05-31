@@ -15,6 +15,8 @@
 #include <cstdlib>
 #include <vector>
 
+#include "test_macros.h"
+
 
 int main(int, char**) {
     std::vector<int> v;

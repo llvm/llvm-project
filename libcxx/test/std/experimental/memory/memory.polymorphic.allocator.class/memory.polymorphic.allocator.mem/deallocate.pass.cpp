@@ -20,6 +20,8 @@
 
 #include "test_memory_resource.hpp"
 
+#include "test_macros.h"
+
 namespace ex = std::experimental::pmr;
 
 template <size_t S, size_t Align>

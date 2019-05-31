@@ -23,6 +23,7 @@
 #include <map>
 #include <cassert>
 
+#include "test_macros.h"
 #include "is_transparent.h"
 
 int main(int, char**)

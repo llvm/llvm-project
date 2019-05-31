@@ -17,6 +17,8 @@
 #include <ostream>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class CharT>
 class testbuf
     : public std::basic_streambuf<CharT>

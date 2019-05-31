@@ -13,6 +13,8 @@
 #include <string_view>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class S>
 void
 test(const S& s, const S& str, typename S::size_type pos, typename S::size_type x)

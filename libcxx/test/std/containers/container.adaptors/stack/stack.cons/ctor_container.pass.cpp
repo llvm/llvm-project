@@ -14,6 +14,8 @@
 #include <cassert>
 #include <cstddef>
 
+#include "test_macros.h"
+
 template <class C>
 C
 make(int n)

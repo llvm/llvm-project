@@ -12,6 +12,8 @@
 
 #include <limits>
 
+#include "test_macros.h"
+
 typedef char one;
 struct two {one _[2];};
 

@@ -18,6 +18,8 @@
 
 #include "archetypes.hpp"
 
+#include "test_macros.h"
+
 
 template <class T>
 struct SpecialMemberTest {

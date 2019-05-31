@@ -15,6 +15,8 @@
 
 #include <map>
 
+#include "test_macros.h"
+
 int main(int, char**) {
   std::map<int, int> m;
   ((void)m);

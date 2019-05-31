@@ -31,6 +31,8 @@
 #include <algorithm>
 #include <vector>
 
+#include "test_macros.h"
+
 struct gen
 {
     std::ptrdiff_t operator()(std::ptrdiff_t n)

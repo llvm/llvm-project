@@ -29,6 +29,8 @@
 #include <type_traits>
 #include <vector>
 
+#include "test_macros.h"
+
 template <class C>
 struct find_container
     : private std::front_insert_iterator<C>

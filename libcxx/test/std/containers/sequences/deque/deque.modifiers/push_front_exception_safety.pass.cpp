@@ -13,6 +13,7 @@
 
 #include <deque>
 #include <cassert>
+#include "test_macros.h"
 #include "test_allocator.h"
 
 // Flag that makes the copy constructor for CMyClass throw an exception

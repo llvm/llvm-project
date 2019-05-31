@@ -29,6 +29,7 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "test_macros.h"
 #include "debug_mode_helper.h"
 
 int main(int, char**)

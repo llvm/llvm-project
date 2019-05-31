@@ -23,6 +23,8 @@
 #include <thread>
 #include <cassert>
 
+#include "test_macros.h"
+
 std::once_flag flg0;
 long global = 0;
 

@@ -16,6 +16,7 @@
 #include <cassert>
 #include <iterator>
 
+#include "test_macros.h"
 #include "test_allocator.h"
 #include "test_iterators.h"
 #include "min_allocator.h"

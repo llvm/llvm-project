@@ -11,6 +11,8 @@
 #include <set>
 std::set<int> s;
 #include <map>
+
+#include "test_macros.h"
 using std::map;
 using std::multimap;
 

@@ -21,6 +21,8 @@
 
 #include <stdio.h>
 
+#include "test_macros.h"
+
 typedef std::codecvt<char16_t, char, std::mbstate_t> F;
 
 int main(int, char**)

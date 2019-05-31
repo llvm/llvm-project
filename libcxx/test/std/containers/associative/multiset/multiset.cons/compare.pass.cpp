@@ -19,6 +19,7 @@
 #include <set>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../../../test_compare.h"
 
 int main(int, char**)

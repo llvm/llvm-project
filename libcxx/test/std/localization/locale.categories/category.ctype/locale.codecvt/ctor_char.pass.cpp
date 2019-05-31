@@ -15,6 +15,8 @@
 #include <locale>
 #include <cassert>
 
+#include "test_macros.h"
+
 typedef std::codecvt<char, char, std::mbstate_t> F;
 
 class my_facet

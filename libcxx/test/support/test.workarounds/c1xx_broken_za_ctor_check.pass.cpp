@@ -12,6 +12,7 @@
 
 #include <type_traits>
 
+#include "test_macros.h"
 #include "test_workarounds.h"
 
 struct X {

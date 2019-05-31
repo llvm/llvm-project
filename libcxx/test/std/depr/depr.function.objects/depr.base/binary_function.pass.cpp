@@ -21,6 +21,8 @@
 #include <functional>
 #include <type_traits>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     static_assert((std::is_same<std::binary_function<int, unsigned, char>::first_argument_type, int>::value), "");

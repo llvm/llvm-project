@@ -24,6 +24,7 @@
 // to_chars_result to_chars(char* first, char* last, Integral value,
 //                          int base = 10)
 
+#include "test_macros.h"
 #include "charconv_test_helpers.h"
 
 template <typename T>

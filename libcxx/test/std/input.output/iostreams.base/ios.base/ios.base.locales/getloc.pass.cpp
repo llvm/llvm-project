@@ -16,6 +16,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 class test
     : public std::ios
 {

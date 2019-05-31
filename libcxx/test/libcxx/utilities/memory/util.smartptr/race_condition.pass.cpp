@@ -20,6 +20,8 @@
 #include <thread>
 #include <cassert>
 
+#include "test_macros.h"
+
 typedef std::shared_ptr<int> Ptr;
 typedef std::weak_ptr<int> WeakPtr;
 

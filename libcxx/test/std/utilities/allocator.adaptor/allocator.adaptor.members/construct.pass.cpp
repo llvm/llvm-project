@@ -19,6 +19,7 @@
 #include <cassert>
 #include <string>
 
+#include "test_macros.h"
 #include "allocators.h"
 
 struct B

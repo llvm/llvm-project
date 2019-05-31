@@ -26,6 +26,7 @@
 #include <scoped_allocator>
 #include <cassert>
 
+#include "test_macros.h"
 #include "allocators.h"
 
 int main(int, char**)

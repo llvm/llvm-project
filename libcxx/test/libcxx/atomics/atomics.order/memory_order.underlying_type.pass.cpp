@@ -18,6 +18,8 @@
 #include <atomic>
 #include <type_traits>
 
+#include "test_macros.h"
+
 
 enum cpp17_memory_order {
   cpp17_memory_order_relaxed, cpp17_memory_order_consume, cpp17_memory_order_acquire,

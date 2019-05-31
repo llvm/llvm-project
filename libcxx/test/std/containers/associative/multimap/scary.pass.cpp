@@ -14,6 +14,8 @@
 
 #include <map>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     typedef std::map<int, int> M1;

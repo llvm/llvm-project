@@ -13,6 +13,7 @@
 // propagate_const(const propagate_const&)=delete;
 
 #include <experimental/propagate_const>
+#include "test_macros.h"
 #include "propagate_const_helpers.h"
 #include <type_traits>
 

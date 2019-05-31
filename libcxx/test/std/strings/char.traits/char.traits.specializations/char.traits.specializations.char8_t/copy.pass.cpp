@@ -16,6 +16,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
 #if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L

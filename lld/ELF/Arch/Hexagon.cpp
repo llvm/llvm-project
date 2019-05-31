@@ -40,11 +40,10 @@ Hexagon::Hexagon() {
   PltRel = R_HEX_JMP_SLOT;
   RelativeRel = R_HEX_RELATIVE;
   GotRel = R_HEX_GLOB_DAT;
-  GotEntrySize = 4;
+
   // The zero'th GOT entry is reserved for the address of _DYNAMIC.  The
   // next 3 are reserved for the dynamic loader.
   GotPltHeaderEntriesNum = 4;
-  GotPltEntrySize = 4;
 
   PltEntrySize = 16;
   PltHeaderSize = 32;

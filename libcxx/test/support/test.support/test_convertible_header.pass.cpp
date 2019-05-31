@@ -12,6 +12,8 @@
 
 #include "test_convertible.hpp"
 
+#include "test_macros.h"
+
 struct ImplicitDefault {
   ImplicitDefault() {}
 };

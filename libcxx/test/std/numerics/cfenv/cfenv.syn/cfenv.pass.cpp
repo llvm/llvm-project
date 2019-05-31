@@ -13,6 +13,8 @@
 #include <cfenv>
 #include <type_traits>
 
+#include "test_macros.h"
+
 #ifndef FE_DIVBYZERO
 #error FE_DIVBYZERO not defined
 #endif

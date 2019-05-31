@@ -17,6 +17,8 @@
 #include <string_view>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class S>
 void
 test(const S& lhs, const typename S::value_type* rhs, bool x, bool y)

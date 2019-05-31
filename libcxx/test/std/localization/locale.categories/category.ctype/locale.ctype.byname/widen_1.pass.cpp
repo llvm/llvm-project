@@ -21,6 +21,7 @@
 #include <cassert>
 #include <limits.h>
 
+#include "test_macros.h"
 #include "platform_support.h" // locale name macros
 
 int main(int, char**)

@@ -55,8 +55,6 @@ X86::X86() {
   TlsGotRel = R_386_TLS_TPOFF;
   TlsModuleIndexRel = R_386_TLS_DTPMOD32;
   TlsOffsetRel = R_386_TLS_DTPOFF32;
-  GotEntrySize = 4;
-  GotPltEntrySize = 4;
   PltEntrySize = 16;
   PltHeaderSize = 16;
   TrapInstr = {0xcc, 0xcc, 0xcc, 0xcc}; // 0xcc = INT3

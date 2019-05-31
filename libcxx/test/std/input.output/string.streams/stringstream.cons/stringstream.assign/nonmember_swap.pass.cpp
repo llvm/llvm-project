@@ -19,6 +19,8 @@
 #include <sstream>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     {

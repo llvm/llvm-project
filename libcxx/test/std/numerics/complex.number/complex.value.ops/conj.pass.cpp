@@ -15,6 +15,8 @@
 #include <complex>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class T>
 void
 test(const std::complex<T>& z, std::complex<T> x)
