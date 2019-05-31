@@ -6119,13 +6119,6 @@ void Process::PrintWarningOptimization(const SymbolContext &sc) {
   }
 }
 
-void Process::PrintWarningCantLoadSwift(const Module &module) {
-  PrintWarning(Process::Warnings::eWarningsCantLoadSwift, (void *)&module,
-               "%s had Swift information that isn't usable on the current "
-               "system; its internals will be unavailable.\n",
-               module.GetFileSpec().GetCString());
-}
-
 bool Process::GetProcessInfo(ProcessInstanceInfo &info) {
   info.Clear();
 
