@@ -14,6 +14,13 @@
 
 /// ###########################################################################
 
+/// Check whether an invalid SYCL target is specified:
+// RUN:   %clang -### -fsycl -fsycl-targets=x86_64 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-INVALID-REAL-TARGET %s
+// CHK-INVALID-REAL-TARGET: error: SYCL target is invalid: 'x86_64'
+
+/// ###########################################################################
+
 /// Check warning for empty -fsycl-targets
 // RUN:   %clang -### -fsycl -fsycl-targets=  %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-EMPTY-SYCLTARGETS %s
