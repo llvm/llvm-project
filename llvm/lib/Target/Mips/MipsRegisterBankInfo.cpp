@@ -79,6 +79,7 @@ const RegisterBank &MipsRegisterBankInfo::getRegBankFromRegClass(
   case Mips::GPRMM16MoveP_and_CPU16Regs_and_GPRMM16ZeroRegClassID:
   case Mips::GPRMM16MovePPairFirst_and_GPRMM16MovePPairSecondRegClassID:
   case Mips::SP32RegClassID:
+  case Mips::GP32RegClassID:
     return getRegBank(Mips::GPRBRegBankID);
   case Mips::FGRCCRegClassID:
   case Mips::FGR32RegClassID:

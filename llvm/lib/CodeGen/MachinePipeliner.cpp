@@ -96,6 +96,14 @@ using namespace llvm;
 STATISTIC(NumTrytoPipeline, "Number of loops that we attempt to pipeline");
 STATISTIC(NumPipelined, "Number of loops software pipelined");
 STATISTIC(NumNodeOrderIssues, "Number of node order issues found");
+STATISTIC(NumFailBranch, "Pipeliner abort due to unknown branch");
+STATISTIC(NumFailLoop, "Pipeliner abort due to unsupported loop");
+STATISTIC(NumFailPreheader, "Pipeliner abort due to missing preheader");
+STATISTIC(NumFailLargeMaxMII, "Pipeliner abort due to MaxMII too large");
+STATISTIC(NumFailZeroMII, "Pipeliner abort due to zero MII");
+STATISTIC(NumFailNoSchedule, "Pipeliner abort due to no schedule found");
+STATISTIC(NumFailZeroStage, "Pipeliner abort due to zero stage");
+STATISTIC(NumFailLargeMaxStage, "Pipeliner abort due to too many stages");
 
 /// A command line option to turn software pipelining on or off.
 static cl::opt<bool> EnableSWP("enable-pipeliner", cl::Hidden, cl::init(true),
@@ -289,16 +297,28 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
   LI.TBB = nullptr;
   LI.FBB = nullptr;
   LI.BrCond.clear();
-  if (TII->analyzeBranch(*L.getHeader(), LI.TBB, LI.FBB, LI.BrCond))
+  if (TII->analyzeBranch(*L.getHeader(), LI.TBB, LI.FBB, LI.BrCond)) {
+    LLVM_DEBUG(
+        dbgs() << "Unable to analyzeBranch, can NOT pipeline current Loop\n");
+    NumFailBranch++;
     return false;
+  }
 
   LI.LoopInductionVar = nullptr;
   LI.LoopCompare = nullptr;
-  if (TII->analyzeLoop(L, LI.LoopInductionVar, LI.LoopCompare))
+  if (TII->analyzeLoop(L, LI.LoopInductionVar, LI.LoopCompare)) {
+    LLVM_DEBUG(
+        dbgs() << "Unable to analyzeLoop, can NOT pipeline current Loop\n");
+    NumFailLoop++;
     return false;
+  }
 
-  if (!L.getLoopPreheader())
+  if (!L.getLoopPreheader()) {
+    LLVM_DEBUG(
+        dbgs() << "Preheader not found, can NOT pipeline current Loop\n");
+    NumFailPreheader++;
     return false;
+  }
 
   // Remove any subregisters from inputs to phi nodes.
   preprocessPhiNodes(*L.getHeader());
@@ -413,12 +433,21 @@ void SwingSchedulerDAG::schedule() {
                     << " (rec=" << RecMII << ", res=" << ResMII << ")\n");
 
   // Can't schedule a loop without a valid MII.
-  if (MII == 0)
+  if (MII == 0) {
+    LLVM_DEBUG(
+        dbgs()
+        << "0 is not a valid Minimal Initiation Interval, can NOT schedule\n");
+    NumFailZeroMII++;
     return;
+  }
 
   // Don't pipeline large loops.
-  if (SwpMaxMii != -1 && (int)MII > SwpMaxMii)
+  if (SwpMaxMii != -1 && (int)MII > SwpMaxMii) {
+    LLVM_DEBUG(dbgs() << "MII > " << SwpMaxMii
+                      << ", we don't pipleline large loops\n");
+    NumFailLargeMaxMII++;
     return;
+  }
 
   computeNodeFunctions(NodeSets);
 
@@ -456,17 +485,27 @@ void SwingSchedulerDAG::schedule() {
   SMSchedule Schedule(Pass.MF);
   Scheduled = schedulePipeline(Schedule);
 
-  if (!Scheduled)
+  if (!Scheduled){
+    LLVM_DEBUG(dbgs() << "No schedule found, return\n");
+    NumFailNoSchedule++;
     return;
+  }
 
   unsigned numStages = Schedule.getMaxStageCount();
   // No need to generate pipeline if there are no overlapped iterations.
-  if (numStages == 0)
+  if (numStages == 0) {
+    LLVM_DEBUG(
+        dbgs() << "No overlapped iterations, no need to generate pipeline\n");
+    NumFailZeroStage++;
     return;
-
+  }
   // Check that the maximum stage count is less than user-defined limit.
-  if (SwpMaxStages > -1 && (int)numStages > SwpMaxStages)
+  if (SwpMaxStages > -1 && (int)numStages > SwpMaxStages) {
+    LLVM_DEBUG(dbgs() << "numStages:" << numStages << ">" << SwpMaxStages
+                      << " : too many stages, abort\n");
+    NumFailLargeMaxStage++;
     return;
+  }
 
   generatePipelinedLoop(Schedule);
   ++NumPipelined;
@@ -926,6 +965,7 @@ struct FuncUnitSorter {
 /// instruction cannot be reserved in an existing DFA, we create a new one.
 unsigned SwingSchedulerDAG::calculateResMII() {
 
+  LLVM_DEBUG(dbgs() << "calculateResMII:\n");
   SmallVector<ResourceManager*, 8> Resources;
   MachineBasicBlock *MBB = Loop.getHeader();
   Resources.push_back(new ResourceManager(&MF.getSubtarget()));
@@ -956,6 +996,11 @@ unsigned SwingSchedulerDAG::calculateResMII() {
     unsigned ReservedCycles = 0;
     SmallVectorImpl<ResourceManager *>::iterator RI = Resources.begin();
     SmallVectorImpl<ResourceManager *>::iterator RE = Resources.end();
+    LLVM_DEBUG({
+      dbgs() << "Trying to reserve resource for " << NumCycles
+             << " cycles for \n";
+      MI->dump();
+    });
     for (unsigned C = 0; C < NumCycles; ++C)
       while (RI != RE) {
         if ((*RI++)->canReserveResources(*MI)) {
@@ -968,8 +1013,13 @@ unsigned SwingSchedulerDAG::calculateResMII() {
       --RI;
       (*RI)->reserveResources(*MI);
     }
+
+    LLVM_DEBUG(dbgs() << "ReservedCycles:" << ReservedCycles
+                      << ", NumCycles:" << NumCycles << "\n");
     // Add new DFAs, if needed, to reserve resources.
     for (unsigned C = ReservedCycles; C < NumCycles; ++C) {
+      LLVM_DEBUG(dbgs() << "NewResource created to reserve resources"
+                        << "\n");
       ResourceManager *NewResource = new ResourceManager(&MF.getSubtarget());
       assert(NewResource->canReserveResources(*MI) && "Reserve error.");
       NewResource->reserveResources(*MI);
@@ -977,6 +1027,7 @@ unsigned SwingSchedulerDAG::calculateResMII() {
     }
   }
   int Resmii = Resources.size();
+  LLVM_DEBUG(dbgs() << "Retrun Res MII:" << Resmii << "\n");
   // Delete the memory for each of the DFAs that were created earlier.
   for (ResourceManager *RI : Resources) {
     ResourceManager *D = RI;
@@ -1862,8 +1913,11 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
 /// Process the nodes in the computed order and create the pipelined schedule
 /// of the instructions, if possible. Return true if a schedule is found.
 bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
-  if (NodeOrder.empty())
+
+  if (NodeOrder.empty()){
+    LLVM_DEBUG(dbgs() << "NodeOrder is empty! abort scheduling\n" );
     return false;
+  }
 
   bool scheduleFound = false;
   unsigned II = 0;
@@ -1889,13 +1943,14 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
       Schedule.computeStart(SU, &EarlyStart, &LateStart, &SchedEnd, &SchedStart,
                             II, this);
       LLVM_DEBUG({
+        dbgs() << "\n";
         dbgs() << "Inst (" << SU->NodeNum << ") ";
         SU->getInstr()->dump();
         dbgs() << "\n";
       });
       LLVM_DEBUG({
-        dbgs() << "\tes: " << EarlyStart << " ls: " << LateStart
-               << " me: " << SchedEnd << " ms: " << SchedStart << "\n";
+        dbgs() << format("\tes: %8x ls: %8x me: %8x ms: %8x\n", EarlyStart,
+                         LateStart, SchedEnd, SchedStart);
       });
 
       if (EarlyStart > LateStart || SchedEnd < EarlyStart ||
@@ -3244,6 +3299,10 @@ void SwingSchedulerDAG::postprocessDAG() {
 /// the relative values of StartCycle and EndCycle.
 bool SMSchedule::insert(SUnit *SU, int StartCycle, int EndCycle, int II) {
   bool forward = true;
+  LLVM_DEBUG({
+    dbgs() << "Trying to insert node between " << StartCycle << " and "
+           << EndCycle << " II: " << II << "\n";
+  });
   if (StartCycle > EndCycle)
     forward = false;
 

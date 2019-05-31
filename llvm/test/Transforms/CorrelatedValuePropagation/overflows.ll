@@ -739,8 +739,8 @@ define i8 @uadd_sat_no_overflow(i8 %x) {
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cont:
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X]], i8 100)
-; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK-NEXT:    [[RES1:%.*]] = add nuw i8 [[X]], 100
+; CHECK-NEXT:    ret i8 [[RES1]]
 ;
   %cmp = icmp ugt i8 %x, 100
   br i1 %cmp, label %trap, label %cont
@@ -762,8 +762,8 @@ define i8 @sadd_sat_no_overflow(i8 %x) {
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cont:
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X]], i8 20)
-; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK-NEXT:    [[RES1:%.*]] = add nsw i8 [[X]], 20
+; CHECK-NEXT:    ret i8 [[RES1]]
 ;
   %cmp = icmp sgt i8 %x, 100
   br i1 %cmp, label %trap, label %cont
@@ -785,8 +785,8 @@ define i8 @usub_sat_no_overflow(i8 %x) {
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cont:
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[X]], i8 100)
-; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK-NEXT:    [[RES1:%.*]] = sub nuw i8 [[X]], 100
+; CHECK-NEXT:    ret i8 [[RES1]]
 ;
   %cmp = icmp ult i8 %x, 100
   br i1 %cmp, label %trap, label %cont
@@ -808,8 +808,8 @@ define i8 @ssub_sat_no_overflow(i8 %x) {
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cont:
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[X]], i8 20)
-; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK-NEXT:    [[RES1:%.*]] = sub nsw i8 [[X]], 20
+; CHECK-NEXT:    ret i8 [[RES1]]
 ;
   %cmp = icmp slt i8 %x, -100
   br i1 %cmp, label %trap, label %cont

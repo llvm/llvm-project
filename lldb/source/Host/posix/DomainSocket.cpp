@@ -132,11 +132,14 @@ std::string DomainSocket::GetSocketName() const {
     saddr_un.sun_family = AF_UNIX;
     socklen_t sock_addr_len = sizeof(struct sockaddr_un);
     if (::getpeername(m_socket, (struct sockaddr *)&saddr_un, &sock_addr_len) ==
-        0)
-      return std::string(saddr_un.sun_path + GetNameOffset(),
-                         sock_addr_len -
-                             offsetof(struct sockaddr_un, sun_path) -
-                             GetNameOffset() - 1);
+        0) {
+      std::string name(saddr_un.sun_path + GetNameOffset(),
+                       sock_addr_len -
+                           offsetof(struct sockaddr_un, sun_path) -
+                           GetNameOffset());
+      if (name.back() == '\0') name.pop_back();
+      return name;
+    }
   }
   return "";
 }

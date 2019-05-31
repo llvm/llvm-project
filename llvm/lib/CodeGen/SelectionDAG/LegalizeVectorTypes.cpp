@@ -1318,6 +1318,63 @@ void DAGTypeLegalizer::SplitVecRes_StrictFPOp(SDNode *N, SDValue &Lo,
   ReplaceValueWith(SDValue(N, 1), Chain);
 }
 
+SDValue DAGTypeLegalizer::UnrollVectorOp_StrictFP(SDNode *N, unsigned ResNE) {
+  SDValue Chain = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  unsigned NE = VT.getVectorNumElements();
+  EVT EltVT = VT.getVectorElementType();
+  SDLoc dl(N);
+
+  SmallVector<SDValue, 8> Scalars;
+  SmallVector<SDValue, 4> Operands(N->getNumOperands());
+
+  // If ResNE is 0, fully unroll the vector op.
+  if (ResNE == 0)
+    ResNE = NE;
+  else if (NE > ResNE)
+    NE = ResNE;
+
+  //The results of each unrolled operation, including the chain.
+  EVT ChainVTs[] = {EltVT, MVT::Other};
+  SmallVector<SDValue, 8> Chains;
+
+  unsigned i;
+  for (i = 0; i != NE; ++i) {
+    Operands[0] = Chain;
+    for (unsigned j = 1, e = N->getNumOperands(); j != e; ++j) {
+      SDValue Operand = N->getOperand(j);
+      EVT OperandVT = Operand.getValueType();
+      if (OperandVT.isVector()) {
+        EVT OperandEltVT = OperandVT.getVectorElementType();
+        Operands[j] =
+            DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, OperandEltVT, Operand,
+                    DAG.getConstant(i, dl, TLI.getVectorIdxTy(
+                          DAG.getDataLayout())));
+      } else {
+        Operands[j] = Operand;
+      }
+    }
+    SDValue Scalar = DAG.getNode(N->getOpcode(), dl, ChainVTs, Operands);
+    Scalar.getNode()->setFlags(N->getFlags());
+
+    //Add in the scalar as well as its chain value to the
+    //result vectors.
+    Scalars.push_back(Scalar);
+    Chains.push_back(Scalar.getValue(1));
+  }
+
+  for (; i < ResNE; ++i)
+    Scalars.push_back(DAG.getUNDEF(EltVT));
+
+  // Build a new factor node to connect the chain back together.
+  Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);
+  ReplaceValueWith(SDValue(N, 1), Chain);
+
+  // Create a new BUILD_VECTOR node
+  EVT VecVT = EVT::getVectorVT(*DAG.getContext(), EltVT, ResNE);
+  return DAG.getBuildVector(VecVT, dl, Scalars);
+}
+
 void DAGTypeLegalizer::SplitVecRes_OverflowOp(SDNode *N, unsigned ResNo,
                                               SDValue &Lo, SDValue &Hi) {
   SDLoc dl(N);
@@ -2968,7 +3025,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_StrictFP(SDNode *N) {
 
   // No legal vector version so unroll the vector operation and then widen.
   if (NumElts == 1)
-    return DAG.UnrollVectorOp(N, WidenVT.getVectorNumElements());
+    return UnrollVectorOp_StrictFP(N, WidenVT.getVectorNumElements());
 
   // Since the operation can trap, apply operation on the original vector.
   EVT MaxVT = VT;

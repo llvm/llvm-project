@@ -542,8 +542,8 @@ void EhFrameSection::writeTo(uint8_t *Buf) {
 }
 
 GotSection::GotSection()
-    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                       Target->GotEntrySize, ".got") {
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS, Config->Wordsize,
+                       ".got") {
   // PPC64 saves the ElfSym::GlobalOffsetTable .TOC. as the first entry in the
   // .got. If there are no references to .TOC. in the symbol table,
   // ElfSym::GlobalOffsetTable will not be defined and we won't need to save
@@ -1030,7 +1030,7 @@ void MipsGotSection::writeTo(uint8_t *Buf) {
 GotPltSection::GotPltSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE,
                        Config->EMachine == EM_PPC64 ? SHT_NOBITS : SHT_PROGBITS,
-                       Target->GotPltEntrySize,
+                       Config->Wordsize,
                        Config->EMachine == EM_PPC64 ? ".plt" : ".got.plt") {}
 
 void GotPltSection::addEntry(Symbol &Sym) {
@@ -1039,13 +1039,12 @@ void GotPltSection::addEntry(Symbol &Sym) {
 }
 
 size_t GotPltSection::getSize() const {
-  return (Target->GotPltHeaderEntriesNum + Entries.size()) *
-         Target->GotPltEntrySize;
+  return (Target->GotPltHeaderEntriesNum + Entries.size()) * Config->Wordsize;
 }
 
 void GotPltSection::writeTo(uint8_t *Buf) {
   Target->writeGotPltHeader(Buf);
-  Buf += Target->GotPltHeaderEntriesNum * Target->GotPltEntrySize;
+  Buf += Target->GotPltHeaderEntriesNum * Config->Wordsize;
   for (const Symbol *B : Entries) {
     Target->writeGotPlt(Buf, *B);
     Buf += Config->Wordsize;
@@ -1076,7 +1075,7 @@ static StringRef getIgotPltName() {
 IgotPltSection::IgotPltSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE,
                        Config->EMachine == EM_PPC64 ? SHT_NOBITS : SHT_PROGBITS,
-                       Target->GotPltEntrySize, getIgotPltName()) {}
+                       Config->Wordsize, getIgotPltName()) {}
 
 void IgotPltSection::addEntry(Symbol &Sym) {
   assert(Sym.PltIndex == Entries.size());
@@ -1084,7 +1083,7 @@ void IgotPltSection::addEntry(Symbol &Sym) {
 }
 
 size_t IgotPltSection::getSize() const {
-  return Entries.size() * Target->GotPltEntrySize;
+  return Entries.size() * Config->Wordsize;
 }
 
 void IgotPltSection::writeTo(uint8_t *Buf) {
@@ -3228,7 +3227,6 @@ size_t PPC64LongBranchTargetSection::getSize() const {
 }
 
 void PPC64LongBranchTargetSection::writeTo(uint8_t *Buf) {
-  assert(Target->GotPltEntrySize == 8);
   // If linking non-pic we have the final addresses of the targets and they get
   // written to the table directly. For pic the dynamic linker will allocate
   // the section and fill it it.
@@ -3241,7 +3239,7 @@ void PPC64LongBranchTargetSection::writeTo(uint8_t *Buf) {
     // must be a local-call.
     write64(Buf,
             Sym->getVA() + getPPC64GlobalEntryToLocalEntryOffset(Sym->StOther));
-    Buf += Target->GotPltEntrySize;
+    Buf += 8;
   }
 }
 

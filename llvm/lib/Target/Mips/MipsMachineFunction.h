@@ -33,6 +33,11 @@ public:
 
   bool globalBaseRegSet() const;
   unsigned getGlobalBaseReg();
+  unsigned getGlobalBaseRegForGlobalISel();
+
+  // Insert instructions to initialize the global base register in the
+  // first MBB of the function.
+  void initGlobalBaseReg();
 
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Index) { VarArgsFrameIndex = Index; }

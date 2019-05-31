@@ -483,18 +483,14 @@ class NamedVRegCursor {
   unsigned virtualVRegNumber;
 
 public:
-  NamedVRegCursor(MachineRegisterInfo &MRI) : MRI(MRI) {
-    unsigned VRegGapIndex = 0;
-    const unsigned VR_GAP = (++VRegGapIndex * 1000);
-
-    unsigned I = MRI.createIncompleteVirtualRegister();
-    const unsigned E = (((I + VR_GAP) / VR_GAP) + 1) * VR_GAP;
-
-    virtualVRegNumber = E;
-  }
+  NamedVRegCursor(MachineRegisterInfo &MRI) : MRI(MRI), virtualVRegNumber(0) {}
 
   void SkipVRegs() {
     unsigned VRegGapIndex = 1;
+    if (!virtualVRegNumber) {
+      VRegGapIndex = 0;
+      virtualVRegNumber = MRI.createIncompleteVirtualRegister();
+    }
     const unsigned VR_GAP = (++VRegGapIndex * 1000);
 
     unsigned I = virtualVRegNumber;
@@ -511,6 +507,8 @@ public:
   }
 
   unsigned createVirtualRegister(unsigned VReg) {
+    if (!virtualVRegNumber)
+      SkipVRegs();
     std::string S;
     raw_string_ostream OS(S);
     OS << "namedVReg" << (virtualVRegNumber & ~0x80000000);

@@ -63,6 +63,8 @@ STATISTIC(NumUDivs,     "Number of udivs whose width was decreased");
 STATISTIC(NumAShrs,     "Number of ashr converted to lshr");
 STATISTIC(NumSRems,     "Number of srem converted to urem");
 STATISTIC(NumOverflows, "Number of overflow checks removed");
+STATISTIC(NumSaturating,
+    "Number of saturating arithmetics converted to normal arithmetics");
 
 static cl::opt<bool> DontAddNoWrapFlags("cvp-dont-add-nowrap-flags", cl::init(true));
 
@@ -413,7 +415,7 @@ static void processOverflowIntrinsic(WithOverflowInst *WO) {
   IRBuilder<> B(WO);
   Value *NewOp = B.CreateBinOp(
       WO->getBinaryOp(), WO->getLHS(), WO->getRHS(), WO->getName());
-  // Constant-holing could have happened.
+  // Constant-folding could have happened.
   if (auto *Inst = dyn_cast<Instruction>(NewOp)) {
     if (WO->isSigned())
       Inst->setHasNoSignedWrap();
@@ -428,6 +430,20 @@ static void processOverflowIntrinsic(WithOverflowInst *WO) {
   ++NumOverflows;
 }
 
+static void processSaturatingInst(SaturatingInst *SI) {
+  BinaryOperator *BinOp = BinaryOperator::Create(
+      SI->getBinaryOp(), SI->getLHS(), SI->getRHS(), SI->getName(), SI);
+  BinOp->setDebugLoc(SI->getDebugLoc());
+  if (SI->isSigned())
+    BinOp->setHasNoSignedWrap();
+  else
+    BinOp->setHasNoUnsignedWrap();
+
+  SI->replaceAllUsesWith(BinOp);
+  SI->eraseFromParent();
+  ++NumSaturating;
+}
+
 /// Infer nonnull attributes for the arguments at the specified callsite.
 static bool processCallSite(CallSite CS, LazyValueInfo *LVI) {
   SmallVector<unsigned, 4> ArgNos;
@@ -436,6 +452,13 @@ static bool processCallSite(CallSite CS, LazyValueInfo *LVI) {
   if (auto *WO = dyn_cast<WithOverflowInst>(CS.getInstruction())) {
     if (willNotOverflow(WO, LVI)) {
       processOverflowIntrinsic(WO);
+      return true;
+    }
+  }
+
+  if (auto *SI = dyn_cast<SaturatingInst>(CS.getInstruction())) {
+    if (willNotOverflow(SI, LVI)) {
+      processSaturatingInst(SI);
       return true;
     }
   }
