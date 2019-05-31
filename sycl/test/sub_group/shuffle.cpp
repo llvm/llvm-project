@@ -33,8 +33,6 @@ void check(queue &Queue, size_t G = 240, size_t L = 60) {
     buffer<vec<T, N>> buf_down(G);
     buffer<vec<T, N>> buf_xor(G);
     buffer<size_t> sgsizebuf(1);
-    using TT = typename std::conditional<std::is_same<T, half>::value, wa_half,
-                                         T>::type;
     Queue.submit([&](handler &cgh) {
       auto acc2 = buf2.template get_access<access::mode::read_write>(cgh);
       auto acc2_up = buf2_up.template get_access<access::mode::read_write>(cgh);
@@ -48,7 +46,7 @@ void check(queue &Queue, size_t G = 240, size_t L = 60) {
       auto acc_xor = buf_xor.template get_access<access::mode::read_write>(cgh);
       auto sgsizeacc = sgsizebuf.get_access<access::mode::read_write>(cgh);
 
-      cgh.parallel_for<sycl_subgr<TT, N>>(NdRange, [=](nd_item<1> NdItem) {
+      cgh.parallel_for<sycl_subgr<T, N>>(NdRange, [=](nd_item<1> NdItem) {
         intel::sub_group SG = NdItem.get_sub_group();
         uint32_t wggid = NdItem.get_global_id(0);
         uint32_t sgid = SG.get_group_id().get(0);
@@ -141,8 +139,6 @@ template <typename T> void check(queue &Queue, size_t G = 240, size_t L = 60) {
     buffer<T> buf_down(G);
     buffer<T> buf_xor(G);
     buffer<size_t> sgsizebuf(1);
-    using TT = typename std::conditional<std::is_same<T, half>::value, wa_half,
-                                         T>::type;
     Queue.submit([&](handler &cgh) {
       auto acc2 = buf2.template get_access<access::mode::read_write>(cgh);
       auto acc2_up = buf2_up.template get_access<access::mode::read_write>(cgh);
@@ -156,7 +152,7 @@ template <typename T> void check(queue &Queue, size_t G = 240, size_t L = 60) {
       auto acc_xor = buf_xor.template get_access<access::mode::read_write>(cgh);
       auto sgsizeacc = sgsizebuf.get_access<access::mode::read_write>(cgh);
 
-      cgh.parallel_for<sycl_subgr<TT, 0>>(NdRange, [=](nd_item<1> NdItem) {
+      cgh.parallel_for<sycl_subgr<T, 0>>(NdRange, [=](nd_item<1> NdItem) {
         intel::sub_group SG = NdItem.get_sub_group();
         uint32_t wggid = NdItem.get_global_id(0);
         uint32_t sgid = SG.get_group_id().get(0);

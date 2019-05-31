@@ -16,10 +16,6 @@
 template <typename T, int N> class sycl_subgr;
 
 using namespace cl::sycl;
-// TODO remove this workaround when integration header will support correct
-// half generation
-struct wa_half;
-typedef half aligned_half __attribute__((aligned(16)));
 
 template <typename T, int N> void check(queue &Queue) {
   const int G = 1024, L = 64;
@@ -34,12 +30,10 @@ template <typename T, int N> void check(queue &Queue) {
         acc[i] += 0.1; // Check that floating point types are not casted to int
       }
     }
-    using TT = typename std::conditional<std::is_same<T, aligned_half>::value,
-                                         wa_half, T>::type;
     Queue.submit([&](handler &cgh) {
       auto acc = syclbuf.template get_access<access::mode::read_write>(cgh);
       auto sgsizeacc = sgsizebuf.get_access<access::mode::read_write>(cgh);
-      cgh.parallel_for<sycl_subgr<TT, N>>(NdRange, [=](nd_item<1> NdItem) {
+      cgh.parallel_for<sycl_subgr<T, N>>(NdRange, [=](nd_item<1> NdItem) {
         intel::sub_group SG = NdItem.get_sub_group();
         if (SG.get_group_id().get(0) % N == 0) {
           size_t WGSGoffset =
@@ -103,12 +97,10 @@ template <typename T> void check(queue &Queue) {
       }
     }
 
-    using TT = typename std::conditional<std::is_same<T, aligned_half>::value,
-                                         wa_half, T>::type;
     Queue.submit([&](handler &cgh) {
       auto acc = syclbuf.template get_access<access::mode::read_write>(cgh);
       auto sgsizeacc = sgsizebuf.get_access<access::mode::read_write>(cgh);
-      cgh.parallel_for<sycl_subgr<TT, 0>>(NdRange, [=](nd_item<1> NdItem) {
+      cgh.parallel_for<sycl_subgr<T, 0>>(NdRange, [=](nd_item<1> NdItem) {
         intel::sub_group SG = NdItem.get_sub_group();
         if (NdItem.get_global_id(0) == 0)
           sgsizeacc[0] = SG.get_max_local_range()[0];
@@ -180,6 +172,7 @@ int main() {
     check<aligned_short, 4>(Queue);
     check<aligned_short, 8>(Queue);
     if (Queue.get_device().has_extension("cl_khr_fp16")) {
+      typedef half aligned_half __attribute__((aligned(16)));
       check<aligned_half>(Queue);
       check<aligned_half, 1>(Queue);
       check<aligned_half, 2>(Queue);
