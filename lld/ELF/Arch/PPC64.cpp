@@ -113,6 +113,7 @@ public:
   void writeGotHeader(uint8_t *Buf) const override;
   bool needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
                   uint64_t BranchAddr, const Symbol &S) const override;
+  uint32_t getThunkSectionSpacing() const override;
   bool inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const override;
   RelExpr adjustRelaxExpr(RelType Type, const uint8_t *Data,
                           RelExpr Expr) const override;
@@ -757,6 +758,14 @@ bool PPC64::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
   // If the offset exceeds the range of the branch type then it will need
   // a range-extending thunk.
   return !inBranchRange(Type, BranchAddr, S.getVA());
+}
+
+uint32_t PPC64::getThunkSectionSpacing() const {
+  // See comment in Arch/ARM.cpp for a more detailed explanation of
+  // getThunkSectionSpacing(). For PPC64 we pick the constant here based on
+  // R_PPC64_REL24, which is used by unconditional branch instructions.
+  // 0x2000000 = (1 << 24-1) * 4
+  return 0x2000000;
 }
 
 bool PPC64::inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const {
