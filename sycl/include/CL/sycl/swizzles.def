@@ -18,7 +18,7 @@
 #error "Undefine __SYCL_{ACCESS, INDEXER, EXPAND, NTH_ARG, E[0-8]} macros."
 #endif
 
-#define __SYCL_INDEXER(_X) Indexer(_X)
+#define __SYCL_INDEXER(_X) Indexer<_X>::value
 
 // Accepts any number of args >= _N, but expands to just the _N-th one.
 // Make N equal to the max number of args handled + 1. Here, N == 9.

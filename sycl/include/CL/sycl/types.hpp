@@ -568,7 +568,14 @@ public:
   // Begin hi/lo, even/odd, xyzw, and rgba swizzles.
 private:
   // Indexer used in the swizzles.def
-  static constexpr int Indexer(int index) { return index; }
+  // Currently it is defined as a template struct. Replacing it with a constexpr
+  // function would activate a bug in MSVC that is fixed only in v19.20.
+  // Until then MSVC does not recognize such constexpr functions as const and
+  // thus does not let using them in template parameters inside swizzle.def.
+  template <int Index>
+  struct Indexer {
+    static constexpr int value = Index;
+  };
 
 public:
 #ifdef __SYCL_ACCESS_RETURN
@@ -962,13 +969,11 @@ class SwizzleOp {
   using CommonDataT =
       typename std::common_type<typename OperationLeftT::DataT,
                                 typename OperationRightT::DataT>::type;
-
   static constexpr int getNumElements() { return sizeof...(Indexes); }
 
   using rel_t = detail::rel_t<DataT>;
-  using vec_t = vec<DataT, getNumElements()>;
-  using vec_rel_t = vec<rel_t, getNumElements()>;
-
+  using vec_t = vec<DataT, sizeof...(Indexes)>;
+  using vec_rel_t = vec<rel_t, sizeof...(Indexes)>;
 
   template <typename OperationRightT_,
             template <typename> class OperationCurrentT_, int... Idx_>
@@ -1397,15 +1402,16 @@ public:
 
   // Begin hi/lo, even/odd, xyzw, and rgba swizzles.
 private:
-  // Indexer used in the swizzles.def. C++11 way, a bit more verbose
-  // than C++14 way.
-  struct IndexerHelper {
-    static const constexpr int IDXs[] = {Indexes...};
-    static constexpr int get(int index) {
-      return IDXs[index >= getNumElements() ? 0 : index];
-    }
+  // Indexer used in the swizzles.def.
+  // Currently it is defined as a template struct. Replacing it with a constexpr
+  // function would activate a bug in MSVC that is fixed only in v19.20.
+  // Until then MSVC does not recognize such constexpr functions as const and
+  // thus does not let using them in template parameters inside swizzle.def.
+  template <int Index>
+  struct Indexer {
+    static constexpr int IDXs[] = {Indexes...};
+    static constexpr int value = IDXs[Index >= getNumElements() ? 0 : Index];
   };
-  static constexpr int Indexer(int index) { return IndexerHelper::get(index); }
 
 public:
 #ifdef __SYCL_ACCESS_RETURN
@@ -1439,7 +1445,7 @@ public:
 #undef __SYCL_LOAD
 
   template <typename convertT, rounding_mode roundingMode>
-  vec<convertT, getNumElements()> convert() const {
+  vec<convertT, sizeof...(Indexes)> convert() const {
     // First materialize the swizzle to vec_t and then apply convert() to it.
     vec_t Tmp = *this;
     return Tmp.template convert<convertT, roundingMode>();
