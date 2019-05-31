@@ -9,5 +9,6 @@ static_library("Remarks") {
     "RemarkParser.cpp",
     "RemarkStringTable.cpp",
     "YAMLRemarkParser.cpp",
+    "YAMLRemarkSerializer.cpp",
   ]
 }

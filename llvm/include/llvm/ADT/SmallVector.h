@@ -386,22 +386,18 @@ public:
                 std::input_iterator_tag>::value>::type>
   void append(in_iter in_start, in_iter in_end) {
     size_type NumInputs = std::distance(in_start, in_end);
-    // Grow allocated space if needed.
     if (NumInputs > this->capacity() - this->size())
       this->grow(this->size()+NumInputs);
 
-    // Copy the new elements over.
     this->uninitialized_copy(in_start, in_end, this->end());
     this->set_size(this->size() + NumInputs);
   }
 
-  /// Add the specified range to the end of the SmallVector.
+  /// Append \p NumInputs copies of \p Elt to the end.
   void append(size_type NumInputs, const T &Elt) {
-    // Grow allocated space if needed.
     if (NumInputs > this->capacity() - this->size())
       this->grow(this->size()+NumInputs);
 
-    // Copy the new elements over.
     std::uninitialized_fill_n(this->end(), NumInputs, Elt);
     this->set_size(this->size() + NumInputs);
   }

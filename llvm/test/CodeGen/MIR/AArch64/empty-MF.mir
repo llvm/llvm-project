@@ -1,0 +1,11 @@
+# RUN: llc -mtriple aarch64-- -run-pass mir-canonicalizer %s -o - | FileCheck %s
+# CHECK: ...
+# CHECK-NEXT: ---
+# CHECK-NEXT: name:            foo
+# CHECK: body:             |
+# CHECK-EMPTY:
+# CHECK-NEXT: ...
+---
+name: foo
+body:             |
+...

@@ -757,6 +757,33 @@ def lea64mem : Operand<i64> {
   let ParserMatchClass = X86MemAsmOperand;
 }
 
+let RenderMethod = "addMaskPairOperands" in {
+  def VK1PairAsmOperand : AsmOperandClass { let Name = "VK1Pair"; }
+  def VK2PairAsmOperand : AsmOperandClass { let Name = "VK2Pair"; }
+  def VK4PairAsmOperand : AsmOperandClass { let Name = "VK4Pair"; }
+  def VK8PairAsmOperand : AsmOperandClass { let Name = "VK8Pair"; }
+  def VK16PairAsmOperand : AsmOperandClass { let Name = "VK16Pair"; }
+}
+
+def VK1Pair : RegisterOperand<VK1PAIR, "printVKPair"> {
+  let ParserMatchClass = VK1PairAsmOperand;
+}
+
+def VK2Pair : RegisterOperand<VK2PAIR, "printVKPair"> {
+  let ParserMatchClass = VK2PairAsmOperand;
+}
+
+def VK4Pair : RegisterOperand<VK4PAIR, "printVKPair"> {
+  let ParserMatchClass = VK4PairAsmOperand;
+}
+
+def VK8Pair : RegisterOperand<VK8PAIR, "printVKPair"> {
+  let ParserMatchClass = VK8PairAsmOperand;
+}
+
+def VK16Pair : RegisterOperand<VK16PAIR, "printVKPair"> {
+  let ParserMatchClass = VK16PairAsmOperand;
+}
 
 //===----------------------------------------------------------------------===//
 // X86 Complex Pattern Definitions.
@@ -843,6 +870,7 @@ def NoVLX_Or_NoBWI : Predicate<"!Subtarget->hasVLX() || !Subtarget->hasBWI()">;
 def NoVLX_Or_NoDQI : Predicate<"!Subtarget->hasVLX() || !Subtarget->hasDQI()">;
 def PKU        : Predicate<"Subtarget->hasPKU()">;
 def HasVNNI    : Predicate<"Subtarget->hasVNNI()">;
+def HasVP2INTERSECT : Predicate<"Subtarget->hasVP2INTERSECT()">;
 def HasBF16      : Predicate<"Subtarget->hasBF16()">;
 
 def HasBITALG    : Predicate<"Subtarget->hasBITALG()">;

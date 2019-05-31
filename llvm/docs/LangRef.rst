@@ -1017,7 +1017,7 @@ Currently, only the following parameter attributes are defined:
     opposed to memory, though some targets use it to distinguish between
     two different kinds of registers). Use of this attribute is
     target-specific.
-``byval``
+``byval`` or ``byval(<ty>)``
     This indicates that the pointer parameter should really be passed by
     value to the function. The attribute implies that a hidden copy of
     the pointee is made between the caller and the callee, so the callee
@@ -1028,6 +1028,9 @@ Currently, only the following parameter attributes are defined:
     callee (for example, ``readonly`` functions should not write to
     ``byval`` parameters). This is not a valid attribute for return
     values.
+
+    The byval attribute also supports an optional type argument, which must be
+    the same as the pointee type of the argument.
 
     The byval attribute also supports specifying an alignment with the
     align attribute. It indicates the alignment of the stack slot to

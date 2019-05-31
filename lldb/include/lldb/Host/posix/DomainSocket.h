@@ -20,11 +20,14 @@ public:
   Status Listen(llvm::StringRef name, int backlog) override;
   Status Accept(Socket *&socket) override;
 
+  std::string GetRemoteConnectionURI() const override;
+
 protected:
   DomainSocket(SocketProtocol protocol, bool child_processes_inherit);
 
   virtual size_t GetNameOffset() const;
   virtual void DeleteSocketFile(llvm::StringRef name);
+  std::string GetSocketName() const;
 
 private:
   DomainSocket(NativeSocket socket, const DomainSocket &listen_socket);

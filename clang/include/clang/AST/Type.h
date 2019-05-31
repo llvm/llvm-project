@@ -3855,6 +3855,7 @@ private:
     case EST_MSAny:
     case EST_BasicNoexcept:
     case EST_Unparsed:
+    case EST_NoThrow:
       return {0, 0, 0};
 
     case EST_Dynamic:

@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass none -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass mir-canonicalizer -o - %s
 
 --- |
 

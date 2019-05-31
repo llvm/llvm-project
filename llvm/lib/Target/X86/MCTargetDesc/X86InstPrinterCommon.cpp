@@ -335,3 +335,28 @@ void X86InstPrinterCommon::printInstFlags(const MCInst *MI, raw_ostream &O) {
   else if (Flags & X86::IP_HAS_REPEAT)
     O << "\trep\t";
 }
+
+void X86InstPrinterCommon::printVKPair(const MCInst *MI, unsigned OpNo,
+                                       raw_ostream &OS) {
+  // In assembly listings, a pair is represented by one of its members, any
+  // of the two.  Here, we pick k0, k2, k4, k6, but we could as well
+  // print K2_K3 as "k3".  It would probably make a lot more sense, if
+  // the assembly would look something like:
+  // "vp2intersect %zmm5, %zmm7, {%k2, %k3}"
+  // but this can work too.
+  switch (MI->getOperand(OpNo).getReg()) {
+  case X86::K0_K1:
+    printRegName(OS, X86::K0);
+    return;
+  case X86::K2_K3:
+    printRegName(OS, X86::K2);
+    return;
+  case X86::K4_K5:
+    printRegName(OS, X86::K4);
+    return;
+  case X86::K6_K7:
+    printRegName(OS, X86::K6);
+    return;
+  }
+  llvm_unreachable("Unknown mask pair register name");
+}

@@ -640,6 +640,8 @@ static const llvm::StringMap<tok::TokenKind> &GetKeywordsMap() {
 }
 
 void CPlusPlusNameParser::ExtractTokens() {
+  if (m_text.empty())
+    return;
   clang::Lexer lexer(clang::SourceLocation(), GetLangOptions(), m_text.data(),
                      m_text.data(), m_text.data() + m_text.size());
   const auto &kw_map = GetKeywordsMap();

@@ -857,6 +857,11 @@ private:
   SDValue WidenVecOp_FCOPYSIGN(SDNode *N);
   SDValue WidenVecOp_VECREDUCE(SDNode *N);
 
+  /// Helper function to generate a set of operations to perform
+  /// a vector operation for a wider type.
+  ///
+  SDValue UnrollVectorOp_StrictFP(SDNode *N, unsigned ResNE);
+
   //===--------------------------------------------------------------------===//
   // Vector Widening Utilities Support: LegalizeVectorTypes.cpp
   //===--------------------------------------------------------------------===//
