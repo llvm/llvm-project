@@ -1,13 +1,13 @@
 # REQUIRES: arm-registered-target
-# RUN: not %clang -c -target arm-none-none-eabi -march=armv8-m.main %s 2>%t
+# RUN: not %clang -c -target arm-none-none-eabi -march=armv8-m.main -o /dev/null %s 2>%t
 # RUN:      FileCheck --check-prefix=ERROR-V8M < %t %s
-# RUN: not %clang -c -target arm-none-none-eabi -march=armv8.1-m.main %s 2>%t
+# RUN: not %clang -c -target arm-none-none-eabi -march=armv8.1-m.main -o /dev/null %s 2>%t
 # RUN:      FileCheck --check-prefix=ERROR-V81M < %t %s
-# RUN: not %clang -c -target arm-none-none-eabi -march=armv8.1-m.main+dsp %s 2>%t
+# RUN: not %clang -c -target arm-none-none-eabi -march=armv8.1-m.main+dsp -o /dev/null %s 2>%t
 # RUN:      FileCheck --check-prefix=ERROR-V81M_DSP < %t %s
-# RUN: not %clang -c -target arm-none-none-eabi -march=armv8.1-m.main+mve %s 2>%t
+# RUN: not %clang -c -target arm-none-none-eabi -march=armv8.1-m.main+mve -o /dev/null %s 2>%t
 # RUN:      FileCheck --check-prefix=ERROR-V81M_MVE < %t %s
-# RUN: not %clang -c -target arm-none-none-eabi -march=armv8.1-m.main+mve.fp %s 2>%t
+# RUN: not %clang -c -target arm-none-none-eabi -march=armv8.1-m.main+mve.fp -o /dev/null %s 2>%t
 # RUN:      FileCheck --check-prefix=ERROR-V81M_MVEFP < %t %s
 
 .syntax unified

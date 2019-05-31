@@ -487,6 +487,8 @@ public:
   /// Clear out the information in this function scope, making it
   /// suitable for reuse.
   void Clear();
+
+  bool isPlainFunction() const { return Kind == SK_Function; }
 };
 
 class Capture {
@@ -514,11 +516,6 @@ class Capture {
     /// Otherwise, the captured variable (if any).
     VarDecl *CapturedVar;
   };
-
-  /// Expression to initialize a field of the given type. This is only required
-  /// if we are capturing ByVal and the variable's type has a non-trivial copy
-  /// constructor.
-  Expr *InitExpr = nullptr;
 
   /// The source location at which the first capture occurred.
   SourceLocation Loc;
@@ -555,8 +552,8 @@ class Capture {
 public:
   Capture(VarDecl *Var, bool Block, bool ByRef, bool IsNested,
           SourceLocation Loc, SourceLocation EllipsisLoc, QualType CaptureType,
-          Expr *Cpy, bool Invalid)
-      : CapturedVar(Var), InitExpr(Cpy), Loc(Loc), EllipsisLoc(EllipsisLoc),
+          bool Invalid)
+      : CapturedVar(Var), Loc(Loc), EllipsisLoc(EllipsisLoc),
         CaptureType(CaptureType),
         Kind(Block ? Cap_Block : ByRef ? Cap_ByRef : Cap_ByCopy),
         Nested(IsNested), CapturesThis(false), ODRUsed(false),
@@ -564,8 +561,8 @@ public:
 
   enum IsThisCapture { ThisCapture };
   Capture(IsThisCapture, bool IsNested, SourceLocation Loc,
-          QualType CaptureType, Expr *Cpy, const bool ByCopy, bool Invalid)
-      : InitExpr(Cpy), Loc(Loc), CaptureType(CaptureType),
+          QualType CaptureType, const bool ByCopy, bool Invalid)
+      : Loc(Loc), CaptureType(CaptureType),
         Kind(ByCopy ? Cap_ByCopy : Cap_ByRef), Nested(IsNested),
         CapturesThis(true), ODRUsed(false), NonODRUsed(false),
         Invalid(Invalid) {}
@@ -590,6 +587,9 @@ public:
   bool isNested() const { return Nested; }
 
   bool isInvalid() const { return Invalid; }
+
+  /// Determine whether this capture is an init-capture.
+  bool isInitCapture() const;
 
   bool isODRUsed() const { return ODRUsed; }
   bool isNonODRUsed() const { return NonODRUsed; }
@@ -621,11 +621,6 @@ public:
   /// the type of the non-static data member in the lambda/block structure
   /// that would store this capture.
   QualType getCaptureType() const { return CaptureType; }
-
-  Expr *getInitExpr() const {
-    assert(!isVLATypeCapture() && "no init expression for type capture");
-    return InitExpr;
-  }
 };
 
 class CapturingScopeInfo : public FunctionScopeInfo {
@@ -663,9 +658,9 @@ public:
 
   void addCapture(VarDecl *Var, bool isBlock, bool isByref, bool isNested,
                   SourceLocation Loc, SourceLocation EllipsisLoc,
-                  QualType CaptureType, Expr *Cpy, bool Invalid) {
+                  QualType CaptureType, bool Invalid) {
     Captures.push_back(Capture(Var, isBlock, isByref, isNested, Loc,
-                               EllipsisLoc, CaptureType, Cpy, Invalid));
+                               EllipsisLoc, CaptureType, Invalid));
     CaptureMap[Var] = Captures.size();
   }
 
@@ -676,7 +671,7 @@ public:
   }
 
   void addThisCapture(bool isNested, SourceLocation Loc, QualType CaptureType,
-                      Expr *Cpy, bool ByCopy);
+                      bool ByCopy);
 
   /// Determine whether the C++ 'this' is captured.
   bool isCXXThisCaptured() const { return CXXThisCaptureIndex != 0; }
@@ -1020,12 +1015,12 @@ void FunctionScopeInfo::recordUseOfWeak(const ExprT *E, bool IsRead) {
   Uses.push_back(WeakUseTy(E, IsRead));
 }
 
-inline void
-CapturingScopeInfo::addThisCapture(bool isNested, SourceLocation Loc,
-                                   QualType CaptureType, Expr *Cpy,
-                                   const bool ByCopy) {
+inline void CapturingScopeInfo::addThisCapture(bool isNested,
+                                               SourceLocation Loc,
+                                               QualType CaptureType,
+                                               bool ByCopy) {
   Captures.push_back(Capture(Capture::ThisCapture, isNested, Loc, CaptureType,
-                             Cpy, ByCopy, /*Invalid*/ false));
+                             ByCopy, /*Invalid*/ false));
   CXXThisCaptureIndex = Captures.size();
 }
 

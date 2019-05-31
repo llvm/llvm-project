@@ -7007,7 +7007,7 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
       switch (Proto->getExceptionSpecType()) {
       case EST_None:
         llvm_unreachable("This doesn't have an exception spec!");
-        LLVM_FALLTHROUGH;
+
       case EST_DynamicNone:
       case EST_BasicNoexcept:
       case EST_NoexceptTrue:

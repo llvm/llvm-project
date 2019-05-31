@@ -11710,6 +11710,48 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return EmitX86MaskedCompareResult(*this, Fpclass, NumElts, MaskIn);
   }
 
+  case X86::BI__builtin_ia32_vp2intersect_q_512:
+  case X86::BI__builtin_ia32_vp2intersect_q_256:
+  case X86::BI__builtin_ia32_vp2intersect_q_128:
+  case X86::BI__builtin_ia32_vp2intersect_d_512:
+  case X86::BI__builtin_ia32_vp2intersect_d_256:
+  case X86::BI__builtin_ia32_vp2intersect_d_128: {
+    unsigned NumElts = Ops[0]->getType()->getVectorNumElements();
+    Intrinsic::ID ID;
+
+    switch (BuiltinID) {
+    default: llvm_unreachable("Unsupported intrinsic!");
+    case X86::BI__builtin_ia32_vp2intersect_q_512:
+      ID = Intrinsic::x86_avx512_vp2intersect_q_512;
+      break;
+    case X86::BI__builtin_ia32_vp2intersect_q_256:
+      ID = Intrinsic::x86_avx512_vp2intersect_q_256;
+      break;
+    case X86::BI__builtin_ia32_vp2intersect_q_128:
+      ID = Intrinsic::x86_avx512_vp2intersect_q_128;
+      break;
+    case X86::BI__builtin_ia32_vp2intersect_d_512:
+      ID = Intrinsic::x86_avx512_vp2intersect_d_512;
+      break;
+    case X86::BI__builtin_ia32_vp2intersect_d_256:
+      ID = Intrinsic::x86_avx512_vp2intersect_d_256;
+      break;
+    case X86::BI__builtin_ia32_vp2intersect_d_128:
+      ID = Intrinsic::x86_avx512_vp2intersect_d_128;
+      break;
+    }
+
+    Value *Call = Builder.CreateCall(CGM.getIntrinsic(ID), {Ops[0], Ops[1]});
+    Value *Result = Builder.CreateExtractValue(Call, 0);
+    Result = EmitX86MaskedCompareResult(*this, Result, NumElts, nullptr);
+    Value *Store = Builder.CreateDefaultAlignedStore(Result, Ops[2]);
+
+    Result = Builder.CreateExtractValue(Call, 1);
+    Result = EmitX86MaskedCompareResult(*this, Result, NumElts, nullptr);
+    Store = Builder.CreateDefaultAlignedStore(Result, Ops[3]);
+    return Store;
+  }
+
   case X86::BI__builtin_ia32_vpmultishiftqb128:
   case X86::BI__builtin_ia32_vpmultishiftqb256:
   case X86::BI__builtin_ia32_vpmultishiftqb512: {

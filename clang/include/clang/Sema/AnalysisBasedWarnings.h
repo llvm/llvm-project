@@ -90,7 +90,7 @@ public:
   AnalysisBasedWarnings(Sema &s);
 
   void IssueWarnings(Policy P, FunctionScopeInfo *fscope,
-                     const Decl *D, const BlockExpr *blkExpr);
+                     const Decl *D, QualType BlockType);
 
   Policy getDefaultPolicy() { return DefaultPolicy; }
 
