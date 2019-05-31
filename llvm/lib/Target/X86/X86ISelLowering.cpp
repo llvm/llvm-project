@@ -962,9 +962,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_EXTEND,          MVT::v2f32, Custom);
     setOperationAction(ISD::FP_ROUND,           MVT::v2f32, Custom);
 
-    for (MVT VT : MVT::fp_vector_valuetypes())
-      setLoadExtAction(ISD::EXTLOAD, VT, MVT::v2f32, Legal);
-
     // We want to legalize this to an f64 load rather than an i64 load on
     // 64-bit targets and two 32-bit loads on a 32-bit target. Similar for
     // store.
@@ -1144,9 +1141,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     if (!Subtarget.hasAVX512())
       setOperationAction(ISD::BITCAST, MVT::v32i1, Custom);
-
-    for (MVT VT : MVT::fp_vector_valuetypes())
-      setLoadExtAction(ISD::EXTLOAD, VT, MVT::v4f32, Legal);
 
     // In the customized shift lowering, the legal v8i32/v4i64 cases
     // in AVX2 will be recognized.
@@ -1379,9 +1373,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::v16f32, &X86::VR512RegClass);
     addRegisterClass(MVT::v8i64,  &X86::VR512RegClass);
     addRegisterClass(MVT::v8f64,  &X86::VR512RegClass);
-
-    for (MVT VT : MVT::fp_vector_valuetypes())
-      setLoadExtAction(ISD::EXTLOAD, VT, MVT::v8f32, Legal);
 
     for (auto ExtType : {ISD::ZEXTLOAD, ISD::SEXTLOAD}) {
       setLoadExtAction(ExtType, MVT::v16i32, MVT::v16i8,  Legal);
@@ -22953,6 +22944,28 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
     return DAG.getCopyFromReg(DAG.getEntryNode(), dl, Reg, VT);
   }
+
+  case Intrinsic::x86_avx512_vp2intersect_q_512:
+  case Intrinsic::x86_avx512_vp2intersect_q_256:
+  case Intrinsic::x86_avx512_vp2intersect_q_128:
+  case Intrinsic::x86_avx512_vp2intersect_d_512:
+  case Intrinsic::x86_avx512_vp2intersect_d_256:
+  case Intrinsic::x86_avx512_vp2intersect_d_128: {
+    MVT MaskVT = Op.getSimpleValueType();
+
+    SDVTList VTs = DAG.getVTList(MVT::Untyped, MVT::Other);
+    SDLoc DL(Op);
+
+    SDValue Operation =
+        DAG.getNode(X86ISD::VP2INTERSECT, DL, VTs,
+                    Op->getOperand(1), Op->getOperand(2));
+
+    SDValue Result0 = DAG.getTargetExtractSubreg(X86::sub_mask_0, DL,
+                                                 MaskVT, Operation);
+    SDValue Result1 = DAG.getTargetExtractSubreg(X86::sub_mask_1, DL,
+                                                 MaskVT, Operation);
+    return DAG.getMergeValues({Result0, Result1}, DL);
+  }
   }
 }
 
@@ -28293,6 +28306,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::TPAUSE:             return "X86ISD::TPAUSE";
   case X86ISD::ENQCMD:             return "X86ISD:ENQCMD";
   case X86ISD::ENQCMDS:            return "X86ISD:ENQCMDS";
+  case X86ISD::VP2INTERSECT:       return "X86ISD::VP2INTERSECT";
   }
   return nullptr;
 }

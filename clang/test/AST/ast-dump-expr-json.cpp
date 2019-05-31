@@ -3941,8 +3941,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:                  "type": {
 // CHECK-NEXT:                   "qualType": "V *"
 // CHECK-NEXT:                  },
-// CHECK-NEXT:                  "valueCategory": "rvalue",
-// CHECK-NEXT:                  "implicit": true
+// CHECK-NEXT:                  "valueCategory": "rvalue"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 {
 // CHECK-NEXT:                  "id": "0x{{.*}}",
@@ -4173,8 +4172,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:                      "type": {
 // CHECK-NEXT:                       "qualType": "V *"
 // CHECK-NEXT:                      },
-// CHECK-NEXT:                      "valueCategory": "rvalue",
-// CHECK-NEXT:                      "implicit": true
+// CHECK-NEXT:                      "valueCategory": "rvalue"
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                    ]
 // CHECK-NEXT:                   }

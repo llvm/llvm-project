@@ -431,6 +431,11 @@ public:
     return AttributeSets.getParamAlignment(ArgNo);
   }
 
+  /// Extract the byval type for a parameter (nullptr=unknown).
+  Type *getParamByValType(unsigned ArgNo) const {
+    return AttributeSets.getParamByValType(ArgNo);
+  }
+
   /// Extract the number of dereferenceable bytes for a call or
   /// parameter (0=unknown).
   /// @param i AttributeList index, referring to a return value or argument.

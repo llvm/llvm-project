@@ -5031,7 +5031,8 @@ static bool HandleUnionActiveMemberChange(EvalInfo &Info, const Expr *LHSExpr,
       if (ICE->getCastKind() != CK_DerivedToBase &&
           ICE->getCastKind() != CK_UncheckedDerivedToBase)
         break;
-      for (const CXXBaseSpecifier *Elt : ICE->path()) {
+      // Walk path backwards as we walk up from the base to the derived class.
+      for (const CXXBaseSpecifier *Elt : llvm::reverse(ICE->path())) {
         --PathLength;
         (void)Elt;
         assert(declaresSameEntity(Elt->getType()->getAsCXXRecordDecl(),
@@ -9453,10 +9454,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       if (IsSigned && !AllSigned)
         ++MaxBits;
 
-      LHS = APSInt(IsSigned ? LHS.sextOrSelf(MaxBits) : LHS.zextOrSelf(MaxBits),
-                   !IsSigned);
-      RHS = APSInt(IsSigned ? RHS.sextOrSelf(MaxBits) : RHS.zextOrSelf(MaxBits),
-                   !IsSigned);
+      LHS = APSInt(LHS.extOrTrunc(MaxBits), !IsSigned);
+      RHS = APSInt(RHS.extOrTrunc(MaxBits), !IsSigned);
       Result = APSInt(MaxBits, !IsSigned);
     }
 

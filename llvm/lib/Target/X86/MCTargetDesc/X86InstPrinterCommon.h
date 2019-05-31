@@ -33,6 +33,7 @@ public:
 protected:
   void printInstFlags(const MCInst *MI, raw_ostream &O);
   void printOptionalSegReg(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printVKPair(const MCInst *MI, unsigned OpNo, raw_ostream &OS);
 };
 
 } // end namespace llvm

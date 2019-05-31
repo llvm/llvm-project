@@ -189,14 +189,14 @@ __simd_first(_Index1 __first1, _DifferenceType __n, _Index2 __first2, _Pred __pr
         }
         if (__found)
         {
-            _DifferenceType __i;
+            _DifferenceType __i2;
             // This will vectorize
-            for (__i = 0; __i < __block_size; ++__i)
+            for (__i2 = 0; __i2 < __block_size; ++__i2)
             {
-                if (__lane[__i])
+                if (__lane[__i2])
                     break;
             }
-            return std::make_pair(__first1 + __i, __first2 + __i);
+            return std::make_pair(__first1 + __i2, __first2 + __i2);
         }
         __first1 += __block_size;
         __first2 += __block_size;
@@ -486,15 +486,15 @@ __simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _Un
             __lane[__j] = __binary_op(__lane[__j], __f(last_iteration + __j));
         }
         // combiner
-        for (_Size __i = 0; __i < __block_size; ++__i)
+        for (_Size __j = 0; __j < __block_size; ++__j)
         {
-            __init = __binary_op(__init, __lane[__i]);
+            __init = __binary_op(__init, __lane[__j]);
         }
         // destroyer
         _PSTL_PRAGMA_SIMD
-        for (_Size __i = 0; __i < __block_size; ++__i)
+        for (_Size __j = 0; __j < __block_size; ++__j)
         {
-            __lane[__i].~_Tp();
+            __lane[__j].~_Tp();
         }
     }
     else

@@ -51,7 +51,6 @@ func TestAttributes(t *testing.T) {
 		"sanitize_address",
 		"alwaysinline",
 		"builtin",
-		"byval",
 		"convergent",
 		"inalloca",
 		"inlinehint",

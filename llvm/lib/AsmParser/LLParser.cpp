@@ -1601,7 +1601,13 @@ bool LLParser::ParseOptionalParamAttrs(AttrBuilder &B) {
       B.addAlignmentAttr(Alignment);
       continue;
     }
-    case lltok::kw_byval:           B.addAttribute(Attribute::ByVal); break;
+    case lltok::kw_byval: {
+      Type *Ty;
+      if (ParseByValWithOptionalType(Ty))
+        return true;
+      B.addByValAttr(Ty);
+      continue;
+    }
     case lltok::kw_dereferenceable: {
       uint64_t Bytes;
       if (ParseOptionalDerefAttrBytes(lltok::kw_dereferenceable, Bytes))
@@ -2451,6 +2457,22 @@ bool LLParser::ParseParameterList(SmallVectorImpl<ParamInfo> &ArgList,
                     "in varargs function");
 
   Lex.Lex();  // Lex the ')'.
+  return false;
+}
+
+/// ParseByValWithOptionalType
+///   ::= byval
+///   ::= byval(<ty>)
+bool LLParser::ParseByValWithOptionalType(Type *&Result) {
+  Result = nullptr;
+  if (!EatIfPresent(lltok::kw_byval))
+    return true;
+  if (!EatIfPresent(lltok::lparen))
+    return false;
+  if (ParseType(Result))
+    return true;
+  if (!EatIfPresent(lltok::rparen))
+    return Error(Lex.getLoc(), "expected ')'");
   return false;
 }
 

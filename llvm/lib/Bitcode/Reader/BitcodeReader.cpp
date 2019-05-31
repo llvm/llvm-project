@@ -638,6 +638,10 @@ private:
     return getFnValueByID(ValNo, Ty);
   }
 
+  /// Upgrades old-style typeless byval attributes by adding the corresponding
+  /// argument's pointee type.
+  void propagateByValTypes(CallBase *CB);
+
   /// Converts alignment exponent (i.e. power of two (or zero)) to the
   /// corresponding alignment to use. If alignment is too large, returns
   /// a corresponding error code.
@@ -1492,6 +1496,12 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           if (Error Err = parseAttrKind(Record[++i], &Kind))
             return Err;
 
+          // Upgrade old-style byval attribute to one with a type, even if it's
+          // nullptr. We will have to insert the real type when we associate
+          // this AttributeList with a function.
+          if (Kind == Attribute::ByVal)
+            B.addByValAttr(nullptr);
+
           B.addAttribute(Kind);
         } else if (Record[i] == 1) { // Integer attribute
           Attribute::AttrKind Kind;
@@ -1507,9 +1517,7 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addDereferenceableOrNullAttr(Record[++i]);
           else if (Kind == Attribute::AllocSize)
             B.addAllocSizeAttrFromRawRepr(Record[++i]);
-        } else {                     // String attribute
-          assert((Record[i] == 3 || Record[i] == 4) &&
-                 "Invalid attribute group entry");
+        } else if (Record[i] == 3 || Record[i] == 4) { // String attribute
           bool HasValue = (Record[i++] == 4);
           SmallString<64> KindStr;
           SmallString<64> ValStr;
@@ -1527,6 +1535,15 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           }
 
           B.addAttribute(KindStr.str(), ValStr.str());
+        } else {
+          assert((Record[i] == 5 || Record[i] == 6) &&
+                 "Invalid attribute group entry");
+          bool HasType = Record[i] == 6;
+          Attribute::AttrKind Kind;
+          if (Error Err = parseAttrKind(Record[++i], &Kind))
+            return Err;
+          if (Kind == Attribute::ByVal)
+            B.addByValAttr(HasType ? getTypeByID(Record[++i]) : nullptr);
         }
       }
 
@@ -3028,6 +3045,17 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
   Func->setLinkage(getDecodedLinkage(RawLinkage));
   Func->setAttributes(getAttributes(Record[4]));
 
+  // Upgrade any old-style byval without a type by propagating the argument's
+  // pointee type. There should be no opaque pointers where the byval type is
+  // implicit.
+  for (auto &Arg : Func->args()) {
+    if (Arg.hasByValAttr() && !Arg.getParamByValType()) {
+      Arg.removeAttr(Attribute::ByVal);
+      Arg.addAttr(Attribute::getWithByValType(
+          Context, Arg.getType()->getPointerElementType()));
+    }
+  }
+
   unsigned Alignment;
   if (Error Err = parseAlignmentValue(Record[5], Alignment))
     return Err;
@@ -3439,6 +3467,19 @@ Error BitcodeReader::typeCheckLoadStoreInst(Type *ValType, Type *PtrType) {
   if (!PointerType::isLoadableOrStorableType(ElemType))
     return error("Cannot load/store from pointer");
   return Error::success();
+}
+
+void BitcodeReader::propagateByValTypes(CallBase *CB) {
+  for (unsigned i = 0; i < CB->getNumArgOperands(); ++i) {
+    if (CB->paramHasAttr(i, Attribute::ByVal) &&
+        !CB->getAttribute(i, Attribute::ByVal).getValueAsType()) {
+      CB->removeParamAttr(i, Attribute::ByVal);
+      CB->addParamAttr(
+          i, Attribute::getWithByValType(
+                 Context,
+                 CB->getArgOperand(i)->getType()->getPointerElementType()));
+    }
+  }
 }
 
 /// Lazily parse the specified function body block.
@@ -4256,6 +4297,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       cast<InvokeInst>(I)->setCallingConv(
           static_cast<CallingConv::ID>(CallingConv::MaxID & CCInfo));
       cast<InvokeInst>(I)->setAttributes(PAL);
+      propagateByValTypes(cast<CallBase>(I));
+
       break;
     }
     case bitc::FUNC_CODE_INST_RESUME: { // RESUME: [opval]
@@ -4731,6 +4774,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         TCK = CallInst::TCK_NoTail;
       cast<CallInst>(I)->setTailCallKind(TCK);
       cast<CallInst>(I)->setAttributes(PAL);
+      propagateByValTypes(cast<CallBase>(I));
       if (FMF.any()) {
         if (!isa<FPMathOperator>(I))
           return error("Fast-math-flags specified for call without "

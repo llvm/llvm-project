@@ -1,8 +1,13 @@
 # RUN: llc -o -  -march=amdgcn  -run-pass mir-canonicalizer  -x mir %s | FileCheck %s
 
+# CHECK: %namedVReg4354:vgpr_32 = COPY $vgpr0
 # CHECK: %namedVReg1352:vgpr_32 = COPY %namedVReg4353
-# CHECK: %namedVReg1359:vgpr_32 = COPY %namedVReg1362
-# CHECK: %namedVReg1360:vgpr_32 = COPY %namedVReg1363
+# CHECK-NEXT: %namedVReg1358:vgpr_32 = COPY %namedVReg1361
+# CHECK-NEXT: %namedVReg1359:vgpr_32 = COPY %namedVReg1362
+# CHECK-NEXT: %namedVReg1353:vreg_64 = REG_SEQUENCE %namedVReg4354, %subreg.sub0, %namedVReg1352, %subreg.sub1
+# CHECK-NEXT: %namedVReg1354:sgpr_128 = REG_SEQUENCE %namedVReg4354, %subreg.sub0, %namedVReg1352, %subreg.sub1, %namedVReg1358, %subreg.sub2, %namedVReg1359, %subreg.sub3
+# This tests for the itereator invalidation fix (reviews.llvm.org/D62713)
+# CHECK-NEXT: BUFFER_STORE_DWORD_ADDR64 %namedVReg1352, %namedVReg1353, %namedVReg1354, 0, 0, 0, 0, 0, 0, implicit $exec
 ...
 ---
 name: foo

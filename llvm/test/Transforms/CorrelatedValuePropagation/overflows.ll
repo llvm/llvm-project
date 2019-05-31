@@ -19,6 +19,13 @@ declare { i32, i1 } @llvm.usub.with.overflow.i32(i32, i32)
 
 declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32)
 
+declare { i8, i1 } @llvm.umul.with.overflow.i8(i8, i8)
+
+declare i8 @llvm.uadd.sat.i8(i8, i8)
+declare i8 @llvm.sadd.sat.i8(i8, i8)
+declare i8 @llvm.usub.sat.i8(i8, i8)
+declare i8 @llvm.ssub.sat.i8(i8, i8)
+
 declare void @llvm.trap()
 
 
@@ -719,8 +726,99 @@ cleanup2:                                         ; preds = %while.end
 define { i8, i1 } @signed_mul_constant_folding() {
 ; CHECK-LABEL: @signed_mul_constant_folding(
 ; CHECK-NEXT:    ret { i8, i1 } { i8 2, i1 false }
+;
   %mul = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 1, i8 2)
   ret { i8, i1 } %mul
 }
 
-declare { i8, i1 } @llvm.umul.with.overflow.i8(i8, i8)
+define i8 @uadd_sat_no_overflow(i8 %x) {
+; CHECK-LABEL: @uadd_sat_no_overflow(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], 100
+; CHECK-NEXT:    br i1 [[CMP]], label [[TRAP:%.*]], label [[CONT:%.*]]
+; CHECK:       trap:
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       cont:
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X]], i8 100)
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %cmp = icmp ugt i8 %x, 100
+  br i1 %cmp, label %trap, label %cont
+
+trap:
+  call void @llvm.trap()
+  unreachable
+
+cont:
+  %res = call i8 @llvm.uadd.sat.i8(i8 %x, i8 100)
+  ret i8 %res
+}
+
+define i8 @sadd_sat_no_overflow(i8 %x) {
+; CHECK-LABEL: @sadd_sat_no_overflow(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], 100
+; CHECK-NEXT:    br i1 [[CMP]], label [[TRAP:%.*]], label [[CONT:%.*]]
+; CHECK:       trap:
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       cont:
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X]], i8 20)
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %cmp = icmp sgt i8 %x, 100
+  br i1 %cmp, label %trap, label %cont
+
+trap:
+  call void @llvm.trap()
+  unreachable
+
+cont:
+  %res = call i8 @llvm.sadd.sat.i8(i8 %x, i8 20)
+  ret i8 %res
+}
+
+define i8 @usub_sat_no_overflow(i8 %x) {
+; CHECK-LABEL: @usub_sat_no_overflow(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X:%.*]], 100
+; CHECK-NEXT:    br i1 [[CMP]], label [[TRAP:%.*]], label [[CONT:%.*]]
+; CHECK:       trap:
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       cont:
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[X]], i8 100)
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %cmp = icmp ult i8 %x, 100
+  br i1 %cmp, label %trap, label %cont
+
+trap:
+  call void @llvm.trap()
+  unreachable
+
+cont:
+  %res = call i8 @llvm.usub.sat.i8(i8 %x, i8 100)
+  ret i8 %res
+}
+
+define i8 @ssub_sat_no_overflow(i8 %x) {
+; CHECK-LABEL: @ssub_sat_no_overflow(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], -100
+; CHECK-NEXT:    br i1 [[CMP]], label [[TRAP:%.*]], label [[CONT:%.*]]
+; CHECK:       trap:
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       cont:
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[X]], i8 20)
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %cmp = icmp slt i8 %x, -100
+  br i1 %cmp, label %trap, label %cont
+
+trap:
+  call void @llvm.trap()
+  unreachable
+
+cont:
+  %res = call i8 @llvm.ssub.sat.i8(i8 %x, i8 20)
+  ret i8 %res
+}

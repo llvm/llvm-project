@@ -3,17 +3,19 @@ add_compiler_rt_component(gwp_asan)
 include_directories(..)
 
 set(GWP_ASAN_SOURCES
+  platform_specific/mutex_posix.cpp
   random.cpp
 )
 
 set(GWP_ASAN_HEADERS
+  mutex.h
   random.h
 )
 
 # Ensure that GWP-ASan meets the delegated requirements of some supporting
 # allocators. Some supporting allocators (e.g. scudo standalone) cannot use any
 # parts of the C++ standard library.
-set(GWP_ASAN_CFLAGS -fno-rtti -fno-exceptions -nostdinc++)
+set(GWP_ASAN_CFLAGS -fno-rtti -fno-exceptions -nostdinc++ -pthread)
 
 # Remove -stdlib= which is unused when passing -nostdinc++.
 string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
@@ -36,4 +38,8 @@ if (COMPILER_RT_HAS_GWP_ASAN)
       SOURCES ${GWP_ASAN_SOURCES}
       ADDITIONAL_HEADERS ${GWP_ASAN_HEADERS}
       CFLAGS ${GWP_ASAN_CFLAGS})
+endif()
+
+if(COMPILER_RT_INCLUDE_TESTS)
+  add_subdirectory(tests)
 endif()

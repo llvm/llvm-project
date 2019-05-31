@@ -563,7 +563,8 @@ int main(int argc, char **argv) {
       return 1;
     }
     Context.setRemarkStreamer(llvm::make_unique<RemarkStreamer>(
-        RemarksFilename, OptRemarkFile->os()));
+        RemarksFilename,
+        llvm::make_unique<remarks::YAMLSerializer>(OptRemarkFile->os())));
 
     if (!RemarksPasses.empty())
       if (Error E = Context.getRemarkStreamer()->setFilter(RemarksPasses)) {

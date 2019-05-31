@@ -46,6 +46,8 @@ public:
 
   bool IsValid() const override;
 
+  std::string GetRemoteConnectionURI() const override;
+
 private:
   TCPSocket(NativeSocket socket, const TCPSocket &listen_socket);
 

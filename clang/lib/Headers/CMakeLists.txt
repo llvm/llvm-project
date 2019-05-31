@@ -126,6 +126,8 @@ set(cuda_wrapper_files
 
 set(ppc_wrapper_files
   ppc_wrappers/mmintrin.h
+  ppc_wrappers/xmmintrin.h
+  ppc_wrappers/mm_malloc.h
 )
 
 set(openmp_wrapper_files

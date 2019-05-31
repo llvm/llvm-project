@@ -1695,6 +1695,11 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
          "'noinline and alwaysinline' are incompatible!",
          V);
 
+  if (Attrs.hasAttribute(Attribute::ByVal) && Attrs.getByValType()) {
+    Assert(Attrs.getByValType() == cast<PointerType>(Ty)->getElementType(),
+           "Attribute 'byval' type does not match parameter!");
+  }
+
   AttrBuilder IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty);
   Assert(!AttrBuilder(Attrs).overlaps(IncompatibleAttrs),
          "Wrong types for attribute: " +

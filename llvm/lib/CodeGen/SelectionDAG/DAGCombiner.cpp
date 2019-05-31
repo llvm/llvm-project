@@ -2161,13 +2161,22 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
     return N0;
 
   if (isConstantOrConstantVector(N1, /* NoOpaque */ true)) {
+    // fold ((A-c1)+c2) -> (A+(c2-c1))
+    if (N0.getOpcode() == ISD::SUB &&
+        isConstantOrConstantVector(N0.getOperand(1), /* NoOpaque */ true)) {
+      SDValue Sub = DAG.FoldConstantArithmetic(ISD::SUB, DL, VT, N1.getNode(),
+                                               N0.getOperand(1).getNode());
+      assert(Sub && "Constant folding failed");
+      return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), Sub);
+    }
+
     // fold ((c1-A)+c2) -> (c1+c2)-A
     if (N0.getOpcode() == ISD::SUB &&
         isConstantOrConstantVector(N0.getOperand(0), /* NoOpaque */ true)) {
-      // FIXME: Adding 2 constants should be handled by FoldConstantArithmetic.
-      return DAG.getNode(ISD::SUB, DL, VT,
-                         DAG.getNode(ISD::ADD, DL, VT, N1, N0.getOperand(0)),
-                         N0.getOperand(1));
+      SDValue Add = DAG.FoldConstantArithmetic(ISD::ADD, DL, VT, N1.getNode(),
+                                               N0.getOperand(0).getNode());
+      assert(Add && "Constant folding failed");
+      return DAG.getNode(ISD::SUB, DL, VT, Add, N0.getOperand(1));
     }
 
     // add (sext i1 X), 1 -> zext (not i1 X)
@@ -2301,6 +2310,13 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
       if (Xor)
         return DAG.getNode(ISD::SUB, DL, VT, A, Xor.getOperand(0));
     }
+  }
+
+  // (x - y) + -1  ->  add (xor y, -1), x
+  if (N0.hasOneUse() && N0.getOpcode() == ISD::SUB &&
+      isAllOnesOrAllOnesSplat(N1)) {
+    SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, N0.getOperand(1), N1);
+    return DAG.getNode(ISD::ADD, DL, VT, Xor, N0.getOperand(0));
   }
 
   if (SDValue Combined = visitADDLikeCommutative(N0, N1, N))
@@ -2453,6 +2469,15 @@ SDValue DAGCombiner::visitADDLikeCommutative(SDValue N0, SDValue N1,
 
   if (SDValue V = foldAddSubMasked1(true, N0, N1, DAG, DL))
     return V;
+
+  // Hoist one-use subtraction by non-opaque constant:
+  //   (x - C) + y  ->  (x + y) - C
+  // This is necessary because SUB(X,C) -> ADD(X,-C) doesn't work for vectors.
+  if (N0.hasOneUse() && N0.getOpcode() == ISD::SUB &&
+      isConstantOrConstantVector(N0.getOperand(1), /*NoOpaques=*/true)) {
+    SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), N1);
+    return DAG.getNode(ISD::SUB, DL, VT, Add, N0.getOperand(1));
+  }
 
   // If the target's bool is represented as 0/1, prefer to make this 'sub 0/1'
   // rather than 'add 0/-1' (the zext should get folded).
@@ -2854,14 +2879,46 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   if (N0.getOpcode() == ISD::ADD && N0.getOperand(1) == N1)
     return N0.getOperand(0);
 
+  // fold (A+C1)-C2 -> A+(C1-C2)
+  if (N0.getOpcode() == ISD::ADD &&
+      isConstantOrConstantVector(N1, /* NoOpaques */ true) &&
+      isConstantOrConstantVector(N0.getOperand(1), /* NoOpaques */ true)) {
+    SDValue NewC = DAG.FoldConstantArithmetic(
+        ISD::SUB, DL, VT, N0.getOperand(1).getNode(), N1.getNode());
+    assert(NewC && "Constant folding failed");
+    return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), NewC);
+  }
+
   // fold C2-(A+C1) -> (C2-C1)-A
   if (N1.getOpcode() == ISD::ADD) {
     SDValue N11 = N1.getOperand(1);
     if (isConstantOrConstantVector(N0, /* NoOpaques */ true) &&
         isConstantOrConstantVector(N11, /* NoOpaques */ true)) {
-      SDValue NewC = DAG.getNode(ISD::SUB, DL, VT, N0, N11);
+      SDValue NewC = DAG.FoldConstantArithmetic(ISD::SUB, DL, VT, N0.getNode(),
+                                                N11.getNode());
+      assert(NewC && "Constant folding failed");
       return DAG.getNode(ISD::SUB, DL, VT, NewC, N1.getOperand(0));
     }
+  }
+
+  // fold (A-C1)-C2 -> A-(C1+C2)
+  if (N0.getOpcode() == ISD::SUB &&
+      isConstantOrConstantVector(N1, /* NoOpaques */ true) &&
+      isConstantOrConstantVector(N0.getOperand(1), /* NoOpaques */ true)) {
+    SDValue NewC = DAG.FoldConstantArithmetic(
+        ISD::ADD, DL, VT, N0.getOperand(1).getNode(), N1.getNode());
+    assert(NewC && "Constant folding failed");
+    return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0), NewC);
+  }
+
+  // fold (c1-A)-c2 -> (c1-c2)-A
+  if (N0.getOpcode() == ISD::SUB &&
+      isConstantOrConstantVector(N1, /* NoOpaques */ true) &&
+      isConstantOrConstantVector(N0.getOperand(0), /* NoOpaques */ true)) {
+    SDValue NewC = DAG.FoldConstantArithmetic(
+        ISD::SUB, DL, VT, N0.getOperand(0).getNode(), N1.getNode());
+    assert(NewC && "Constant folding failed");
+    return DAG.getNode(ISD::SUB, DL, VT, NewC, N0.getOperand(1));
   }
 
   // fold ((A+(B+or-C))-B) -> A+or-C
@@ -2922,6 +2979,34 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
 
   if (SDValue V = foldAddSubMasked1(false, N0, N1, DAG, SDLoc(N)))
     return V;
+
+  // (x - y) - 1  ->  add (xor y, -1), x
+  if (N0.hasOneUse() && N0.getOpcode() == ISD::SUB && isOneOrOneSplat(N1)) {
+    SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, N0.getOperand(1),
+                              DAG.getAllOnesConstant(DL, VT));
+    return DAG.getNode(ISD::ADD, DL, VT, Xor, N0.getOperand(0));
+  }
+
+  // Hoist one-use addition by non-opaque constant:
+  //   (x + C) - y  ->  (x - y) + C
+  if (N0.hasOneUse() && N0.getOpcode() == ISD::ADD &&
+      isConstantOrConstantVector(N0.getOperand(1), /*NoOpaques=*/true)) {
+    SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0), N1);
+    return DAG.getNode(ISD::ADD, DL, VT, Sub, N0.getOperand(1));
+  }
+  // y - (x + C)  ->  (y - x) - C
+  if (N1.hasOneUse() && N1.getOpcode() == ISD::ADD &&
+      isConstantOrConstantVector(N1.getOperand(1), /*NoOpaques=*/true)) {
+    SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N0, N1.getOperand(0));
+    return DAG.getNode(ISD::SUB, DL, VT, Sub, N1.getOperand(1));
+  }
+  // (x - C) - y  ->  (x - y) - C
+  // This is necessary because SUB(X,C) -> ADD(X,-C) doesn't work for vectors.
+  if (N0.hasOneUse() && N0.getOpcode() == ISD::SUB &&
+      isConstantOrConstantVector(N0.getOperand(1), /*NoOpaques=*/true)) {
+    SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0), N1);
+    return DAG.getNode(ISD::SUB, DL, VT, Sub, N0.getOperand(1));
+  }
 
   // If the target's bool is represented as 0/-1, prefer to make this 'add 0/-1'
   // rather than 'sub 0/1' (the sext should get folded).

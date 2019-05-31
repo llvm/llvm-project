@@ -348,9 +348,9 @@ void Writer::finalizeSections() {
 }
 
 void Writer::populateTargetFeatures() {
-  SmallSet<std::string, 8> Used;
-  SmallSet<std::string, 8> Required;
-  SmallSet<std::string, 8> Disallowed;
+  StringMap<std::string> Used;
+  StringMap<std::string> Required;
+  StringMap<std::string> Disallowed;
 
   // Only infer used features if user did not specify features
   bool InferFeatures = !Config->Features.hasValue();
@@ -365,17 +365,18 @@ void Writer::populateTargetFeatures() {
 
   // Find the sets of used, required, and disallowed features
   for (ObjFile *File : Symtab->ObjectFiles) {
+    StringRef FileName(File->getName());
     for (auto &Feature : File->getWasmObj()->getTargetFeatures()) {
       switch (Feature.Prefix) {
       case WASM_FEATURE_PREFIX_USED:
-        Used.insert(Feature.Name);
+        Used.insert({Feature.Name, FileName});
         break;
       case WASM_FEATURE_PREFIX_REQUIRED:
-        Used.insert(Feature.Name);
-        Required.insert(Feature.Name);
+        Used.insert({Feature.Name, FileName});
+        Required.insert({Feature.Name, FileName});
         break;
       case WASM_FEATURE_PREFIX_DISALLOWED:
-        Disallowed.insert(Feature.Name);
+        Disallowed.insert({Feature.Name, FileName});
         break;
       default:
         error("Unrecognized feature policy prefix " +
@@ -385,41 +386,52 @@ void Writer::populateTargetFeatures() {
   }
 
   if (InferFeatures)
-    Out.TargetFeaturesSec->Features.insert(Used.begin(), Used.end());
+    Out.TargetFeaturesSec->Features.insert(Used.keys().begin(),
+                                           Used.keys().end());
 
-  if (Out.TargetFeaturesSec->Features.count("atomics") && !Config->SharedMemory)
-    error("'atomics' feature is used, so --shared-memory must be used");
+  if (Out.TargetFeaturesSec->Features.count("atomics") &&
+      !Config->SharedMemory) {
+    if (InferFeatures)
+      error(Twine("'atomics' feature is used by ") + Used["atomics"] +
+            ", so --shared-memory must be used");
+    else
+      error("'atomics' feature is used, so --shared-memory must be used");
+  }
 
   if (!Config->CheckFeatures)
     return;
 
   if (Disallowed.count("atomics") && Config->SharedMemory)
-    error(
-        "'atomics' feature is disallowed, so --shared-memory must not be used");
+    error("'atomics' feature is disallowed by " + Disallowed["atomics"] +
+          ", so --shared-memory must not be used");
 
   // Validate that used features are allowed in output
   if (!InferFeatures) {
-    for (auto &Feature : Used) {
+    for (auto &Feature : Used.keys()) {
       if (!Out.TargetFeaturesSec->Features.count(Feature))
-        error(Twine("Target feature '") + Feature + "' is not allowed.");
+        error(Twine("Target feature '") + Feature + "' used by " +
+              Used[Feature] + " is not allowed.");
     }
   }
 
   // Validate the required and disallowed constraints for each file
   for (ObjFile *File : Symtab->ObjectFiles) {
+    StringRef FileName(File->getName());
     SmallSet<std::string, 8> ObjectFeatures;
     for (auto &Feature : File->getWasmObj()->getTargetFeatures()) {
       if (Feature.Prefix == WASM_FEATURE_PREFIX_DISALLOWED)
         continue;
       ObjectFeatures.insert(Feature.Name);
       if (Disallowed.count(Feature.Name))
-        error(Twine("Target feature '") + Feature.Name +
-              "' is disallowed. Use --no-check-features to suppress.");
+        error(Twine("Target feature '") + Feature.Name + "' used in " +
+              FileName + " is disallowed by " + Disallowed[Feature.Name] +
+              ". Use --no-check-features to suppress.");
     }
-    for (auto &Feature : Required) {
+    for (auto &Feature : Required.keys()) {
       if (!ObjectFeatures.count(Feature))
-        error(Twine("Missing required target feature '") + Feature +
-              "'. Use --no-check-features to suppress.");
+        error(Twine("Missing target feature '") + Feature + "' in " + FileName +
+              ", required by " + Required[Feature] +
+              ". Use --no-check-features to suppress.");
     }
   }
 }

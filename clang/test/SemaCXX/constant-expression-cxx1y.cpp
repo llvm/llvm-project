@@ -1205,3 +1205,19 @@ namespace ObjectsUnderConstruction {
   // The lifetime of 'n' begins at the initialization, not before.
   constexpr int n = ++const_cast<int&>(n); // expected-error {{constant expression}} expected-note {{modification}}
 }
+
+namespace PR39728 {
+  struct Comment0 {
+    Comment0 &operator=(const Comment0 &) = default;
+    ~Comment0() = default;
+  };
+  constexpr void f() {
+    Comment0 a;
+    a = a;
+  }
+  static_assert((f(), true), "");
+  struct Comment1 {
+    constexpr Comment1 &operator=(const Comment1 &) = default; // OK
+    ~Comment1() = default;
+  };
+}

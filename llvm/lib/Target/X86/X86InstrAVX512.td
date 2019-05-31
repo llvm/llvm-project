@@ -26,6 +26,10 @@ class X86VectorVTInfo<int numelts, ValueType eltvt, RegisterClass rc,
   // Corresponding mask register class.
   RegisterClass KRC = !cast<RegisterClass>("VK" # NumElts);
 
+  // Corresponding mask register pair class.
+  RegisterOperand KRPC = !if (!gt(NumElts, 16), ?,
+                              !cast<RegisterOperand>("VK" # NumElts # "Pair"));
+
   // Corresponding write-mask register class.
   RegisterClass KRCWM = !cast<RegisterClass>("VK" # NumElts # "WM");
 
@@ -12555,6 +12559,59 @@ defm VP4DPWSSDSrm : AVX512_maskable_3src_in_asm<0x53, MRMSrcMem, v16i32_info,
                      []>, EVEX_V512, EVEX_4V, T8XD, EVEX_CD8<32, CD8VQ>,
                      Sched<[SchedWriteFMA.ZMM.Folded]>;
 }
+
+let hasSideEffects = 0 in {
+  let mayStore = 1 in
+  def MASKPAIR16STORE : PseudoI<(outs), (ins anymem:$dst, VK16PAIR:$src), []>;
+  let mayLoad = 1 in
+  def MASKPAIR16LOAD : PseudoI<(outs VK16PAIR:$dst), (ins anymem:$src), []>;
+}
+
+//===----------------------------------------------------------------------===//
+// VP2INTERSECT
+//===----------------------------------------------------------------------===//
+
+multiclass avx512_vp2intersect_modes<X86VectorVTInfo _> {
+  def rr : I<0x68, MRMSrcReg,
+                  (outs _.KRPC:$dst),
+                  (ins _.RC:$src1, _.RC:$src2),
+                  !strconcat("vp2intersect", _.Suffix,
+                             "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+                  [(set _.KRPC:$dst, (X86vp2intersect
+                            _.RC:$src1, (_.VT _.RC:$src2)))]>,
+                  EVEX_4V, T8XD;
+
+  def rm : I<0x68, MRMSrcMem,
+                  (outs _.KRPC:$dst),
+                  (ins  _.RC:$src1, _.MemOp:$src2),
+                  !strconcat("vp2intersect", _.Suffix,
+                             "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+                  [(set _.KRPC:$dst, (X86vp2intersect
+                            _.RC:$src1, (_.VT (bitconvert (_.LdFrag addr:$src2)))))]>,
+                  EVEX_4V, T8XD, EVEX_CD8<_.EltSize, CD8VF>;
+
+  def rmb : I<0x68, MRMSrcMem,
+                  (outs _.KRPC:$dst),
+                  (ins _.RC:$src1, _.ScalarMemOp:$src2),
+                  !strconcat("vp2intersect", _.Suffix, "\t{${src2}", _.BroadcastStr,
+                             ", $src1, $dst|$dst, $src1, ${src2}", _.BroadcastStr ,"}"),
+                  [(set _.KRPC:$dst, (X86vp2intersect
+                             _.RC:$src1, (_.VT (X86VBroadcast (_.ScalarLdFrag addr:$src2)))))]>,
+                  EVEX_4V, T8XD, EVEX_B, EVEX_CD8<_.EltSize, CD8VF>;
+}
+
+multiclass avx512_vp2intersect<AVX512VLVectorVTInfo _> {
+  let Predicates  = [HasAVX512, HasVP2INTERSECT] in
+    defm Z : avx512_vp2intersect_modes<_.info512>, EVEX_V512;
+
+  let Predicates = [HasAVX512, HasVP2INTERSECT, HasVLX] in {
+    defm Z256 : avx512_vp2intersect_modes<_.info256>, EVEX_V256;
+    defm Z128 : avx512_vp2intersect_modes<_.info128>, EVEX_V128;
+  }
+}
+
+defm VP2INTERSECTD : avx512_vp2intersect<avx512vl_i32_info>;
+defm VP2INTERSECTQ : avx512_vp2intersect<avx512vl_i64_info>, VEX_W;
 
 multiclass avx512_binop_all2<bits<8> opc, string OpcodeStr,
                              X86SchedWriteWidths sched,

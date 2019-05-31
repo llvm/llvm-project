@@ -83,7 +83,7 @@ class ParanoidKey
         index = k.index;
         return *this;
     }
-    ParanoidKey(int32_t index, int32_t value, OddTag) : index(index), value(value) {}
+    ParanoidKey(int32_t index, int32_t value, OddTag) : value(value), index(index) {}
     ParanoidKey(ParanoidKey&& k) : value(k.value), index(k.index)
     {
         EXPECT_TRUE(k.isConstructed(), "source for move-construction is dead");
