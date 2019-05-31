@@ -61,8 +61,6 @@ AArch64::AArch64() {
   PltRel = R_AARCH64_JUMP_SLOT;
   TlsDescRel = R_AARCH64_TLSDESC;
   TlsGotRel = R_AARCH64_TLS_TPREL64;
-  GotEntrySize = 8;
-  GotPltEntrySize = 8;
   PltEntrySize = 16;
   PltHeaderSize = 32;
   DefaultMaxPageSize = 65536;

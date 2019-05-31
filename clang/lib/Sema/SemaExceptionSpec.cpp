@@ -381,6 +381,11 @@ bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
     // when declaring a replaceable global allocation function.
     DiagID = diag::ext_missing_exception_specification;
     ReturnValueOnError = false;
+  } else if (ESI.Type == EST_NoThrow) {
+    // Allow missing attribute 'nothrow' in redeclarations, since this is a very
+    // common omission.
+    DiagID = diag::ext_missing_exception_specification;
+    ReturnValueOnError = false;
   } else {
     DiagID = diag::err_missing_exception_specification;
     ReturnValueOnError = true;
@@ -421,7 +426,9 @@ bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
     OldProto->getNoexceptExpr()->printPretty(OS, nullptr, getPrintingPolicy());
     OS << ")";
     break;
-
+  case EST_NoThrow:
+    OS <<"__attribute__((nothrow))";
+    break;
   default:
     llvm_unreachable("This spec type is compatible with none.");
   }

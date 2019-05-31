@@ -1357,6 +1357,35 @@ let Predicates = [HasSVE2] in {
   defm SRSHR_ZPmI  : sve_int_bin_pred_shift_imm_right<0b1100, "srshr">;
   defm URSHR_ZPmI  : sve_int_bin_pred_shift_imm_right<0b1101, "urshr">;
   defm SQSHLU_ZPmI : sve_int_bin_pred_shift_imm_left< 0b1111, "sqshlu">;
+
+  // Non-temporal contiguous stores (vector + register)
+  defm STNT1B_ZZR_S : sve2_mem_cstnt_vs<0b001, "stnt1b", Z_s, ZPR32>;
+  defm STNT1H_ZZR_S : sve2_mem_cstnt_vs<0b011, "stnt1h", Z_s, ZPR32>;
+  defm STNT1W_ZZR_S : sve2_mem_cstnt_vs<0b101, "stnt1w", Z_s, ZPR32>;
+
+  defm STNT1B_ZZR_D : sve2_mem_cstnt_vs<0b000, "stnt1b", Z_d, ZPR64>;
+  defm STNT1H_ZZR_D : sve2_mem_cstnt_vs<0b010, "stnt1h", Z_d, ZPR64>;
+  defm STNT1W_ZZR_D : sve2_mem_cstnt_vs<0b100, "stnt1w", Z_d, ZPR64>;
+  defm STNT1D_ZZR_D : sve2_mem_cstnt_vs<0b110, "stnt1d", Z_d, ZPR64>;
+
+  // SVE table lookup (three sources)
+  defm TBL_ZZZZ : sve2_int_perm_tbl<"tbl">;
+  defm TBX_ZZZ  : sve2_int_perm_tbx<"tbx">;
+
+  // SVE integer compare scalar count and limit
+  defm WHILEGE_PWW : sve_int_while4_rr<0b000, "whilege">;
+  defm WHILEGT_PWW : sve_int_while4_rr<0b001, "whilegt">;
+  defm WHILEHS_PWW : sve_int_while4_rr<0b100, "whilehs">;
+  defm WHILEHI_PWW : sve_int_while4_rr<0b101, "whilehi">;
+
+  defm WHILEGE_PXX : sve_int_while8_rr<0b000, "whilege">;
+  defm WHILEGT_PXX : sve_int_while8_rr<0b001, "whilegt">;
+  defm WHILEHS_PXX : sve_int_while8_rr<0b100, "whilehs">;
+  defm WHILEHI_PXX : sve_int_while8_rr<0b101, "whilehi">;
+
+  // SVE pointer conflict compare
+  defm WHILEWR_PXX : sve2_int_while_rr<0b0, "whilewr">;
+  defm WHILERW_PXX : sve2_int_while_rr<0b1, "whilerw">;
 }
 
 let Predicates = [HasSVE2AES] in {

@@ -451,6 +451,31 @@ struct X86Operand final : public MCParsedAsmOperand {
       X86MCRegisterClasses[X86::GR64RegClassID].contains(getReg()));
   }
 
+  bool isVK1Pair() const {
+    return Kind == Register &&
+      X86MCRegisterClasses[X86::VK1RegClassID].contains(getReg());
+  }
+
+  bool isVK2Pair() const {
+    return Kind == Register &&
+      X86MCRegisterClasses[X86::VK2RegClassID].contains(getReg());
+  }
+
+  bool isVK4Pair() const {
+    return Kind == Register &&
+      X86MCRegisterClasses[X86::VK4RegClassID].contains(getReg());
+  }
+
+  bool isVK8Pair() const {
+    return Kind == Register &&
+      X86MCRegisterClasses[X86::VK8RegClassID].contains(getReg());
+  }
+
+  bool isVK16Pair() const {
+    return Kind == Register &&
+      X86MCRegisterClasses[X86::VK16RegClassID].contains(getReg());
+  }
+
   void addExpr(MCInst &Inst, const MCExpr *Expr) const {
     // Add as immediates when possible.
     if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Expr))
@@ -480,6 +505,30 @@ struct X86Operand final : public MCParsedAsmOperand {
   void addImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     addExpr(Inst, getImm());
+  }
+
+  void addMaskPairOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    unsigned Reg = getReg();
+    switch (Reg) {
+    case X86::K0:
+    case X86::K1:
+      Reg = X86::K0_K1;
+      break;
+    case X86::K2:
+    case X86::K3:
+      Reg = X86::K2_K3;
+      break;
+    case X86::K4:
+    case X86::K5:
+      Reg = X86::K4_K5;
+      break;
+    case X86::K6:
+    case X86::K7:
+      Reg = X86::K6_K7;
+      break;
+    }
+    Inst.addOperand(MCOperand::createReg(Reg));
   }
 
   void addMemOperands(MCInst &Inst, unsigned N) const {

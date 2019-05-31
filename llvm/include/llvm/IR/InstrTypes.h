@@ -1560,6 +1560,11 @@ public:
     return Attrs.getParamAlignment(ArgNo);
   }
 
+  /// Extract the byval type for a call or parameter (nullptr=unknown).
+  Type *getParamByValType(unsigned ArgNo) const {
+    return Attrs.getParamByValType(ArgNo);
+  }
+
   /// Extract the number of dereferenceable bytes for a call or
   /// parameter (0=unknown).
   uint64_t getDereferenceableBytes(unsigned i) const {

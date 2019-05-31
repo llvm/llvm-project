@@ -489,6 +489,10 @@ class IRLinker {
   void linkAliasBody(GlobalAlias &Dst, GlobalAlias &Src);
   Error linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src);
 
+  /// Replace all types in the source AttributeList with the
+  /// corresponding destination type.
+  AttributeList mapAttributeTypes(LLVMContext &C, AttributeList Attrs);
+
   /// Functions that take care of cloning a specific global value type
   /// into the destination module.
   GlobalVariable *copyGlobalVariableProto(const GlobalVariable *SGVar);
@@ -628,6 +632,21 @@ GlobalVariable *IRLinker::copyGlobalVariableProto(const GlobalVariable *SGVar) {
   return NewDGV;
 }
 
+AttributeList IRLinker::mapAttributeTypes(LLVMContext &C, AttributeList Attrs) {
+  for (unsigned i = 0; i < Attrs.getNumAttrSets(); ++i) {
+    if (Attrs.hasAttribute(i, Attribute::ByVal)) {
+      Type *Ty = Attrs.getAttribute(i, Attribute::ByVal).getValueAsType();
+      if (!Ty)
+        continue;
+
+      Attrs = Attrs.removeAttribute(C, i, Attribute::ByVal);
+      Attrs = Attrs.addAttribute(
+          C, i, Attribute::getWithByValType(C, TypeMap.get(Ty)));
+    }
+  }
+  return Attrs;
+}
+
 /// Link the function in the source module into the destination module if
 /// needed, setting up mapping information.
 Function *IRLinker::copyFunctionProto(const Function *SF) {
@@ -637,6 +656,7 @@ Function *IRLinker::copyFunctionProto(const Function *SF) {
       Function::Create(TypeMap.get(SF->getFunctionType()),
                        GlobalValue::ExternalLinkage, SF->getName(), &DstM);
   F->copyAttributesFrom(SF);
+  F->setAttributes(mapAttributeTypes(F->getContext(), F->getAttributes()));
   return F;
 }
 

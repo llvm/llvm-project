@@ -3,19 +3,8 @@
 define void @foo(float* %a, i64 %n) {
 ; CHECK:       vector.body:
 ; CHECK:         [[WIDE_LOAD:%.*]] = load <4 x float>, <4 x float>* {{.*}}, align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[WIDE_LOAD]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = fneg float [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[WIDE_LOAD]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = fneg float [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[WIDE_LOAD]], i32 2
-; CHECK-NEXT:    [[TMP9:%.*]] = fneg float [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[WIDE_LOAD]], i32 3
-; CHECK-NEXT:    [[TMP11:%.*]] = fneg float [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x float> undef, float [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> [[TMP12]], float [[TMP7]], i32 1
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP13]], float [[TMP9]], i32 2
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> [[TMP14]], float [[TMP11]], i32 3
-; CHECK:         store <4 x float> [[TMP15]], <4 x float>* {{.*}}, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = fneg <4 x float> [[WIDE_LOAD]]
+; CHECK:         store <4 x float> [[TMP4]], <4 x float>* {{.*}}, align 4
 ;
 entry:
   br label %for.body

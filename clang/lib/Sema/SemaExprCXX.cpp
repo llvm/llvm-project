@@ -1134,24 +1134,6 @@ Sema::CXXThisScopeRAII::~CXXThisScopeRAII() {
   }
 }
 
-static Expr *captureThis(Sema &S, ASTContext &Context, RecordDecl *RD,
-                         QualType ThisTy, QualType CaptureType,
-                         SourceLocation Loc, const bool ByCopy) {
-  Expr *This = new (Context) CXXThisExpr(Loc, ThisTy, /*isImplicit*/ true);
-  if (ByCopy) {
-    Expr *StarThis = S.CreateBuiltinUnaryOp(Loc, UO_Deref, This).get();
-    InitializedEntity Entity =
-        InitializedEntity::InitializeLambdaCapture(nullptr, CaptureType, Loc);
-    InitializationKind InitKind =
-        InitializationKind::CreateDirect(Loc, Loc, Loc);
-    InitializationSequence Init(S, Entity, InitKind, StarThis);
-    ExprResult ER = Init.Perform(S, Entity, InitKind, StarThis);
-    if (ER.isInvalid()) return nullptr;
-    return ER.get();
-  }
-  return This;
-}
-
 bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
     bool BuildAndDiagnose, const unsigned *const FunctionScopeIndexToStopAt,
     const bool ByCopy) {
@@ -1241,13 +1223,10 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
           dyn_cast<LambdaScopeInfo>(FunctionScopes[MaxFunctionScopesIndex])) &&
          "Only a lambda can capture the enclosing object (referred to by "
          "*this) by copy");
-  // FIXME: We need to delay this marking in PotentiallyPotentiallyEvaluated
-  // contexts.
   QualType ThisTy = getCurrentThisType();
   for (int idx = MaxFunctionScopesIndex; NumCapturingClosures;
        --idx, --NumCapturingClosures) {
     CapturingScopeInfo *CSI = cast<CapturingScopeInfo>(FunctionScopes[idx]);
-    Expr *ThisExpr = nullptr;
 
     // The type of the corresponding data member (not a 'this' pointer if 'by
     // copy').
@@ -1261,20 +1240,8 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
       CaptureType.removeLocalCVRQualifiers(Qualifiers::CVRMask);
     }
 
-    if (LambdaScopeInfo *LSI = dyn_cast<LambdaScopeInfo>(CSI)) {
-      // For lambda expressions, build a field and an initializing expression,
-      // and capture the *enclosing object* by copy only if this is the first
-      // iteration.
-      ThisExpr = captureThis(*this, Context, LSI->Lambda, ThisTy, CaptureType,
-                             Loc, ByCopy && idx == MaxFunctionScopesIndex);
-
-    } else if (CapturedRegionScopeInfo *RSI
-        = dyn_cast<CapturedRegionScopeInfo>(FunctionScopes[idx]))
-      ThisExpr = captureThis(*this, Context, RSI->TheRecordDecl, ThisTy,
-                             CaptureType, Loc, false /*ByCopy*/);
-
     bool isNested = NumCapturingClosures > 1;
-    CSI->addThisCapture(isNested, Loc, CaptureType, ThisExpr, ByCopy);
+    CSI->addThisCapture(isNested, Loc, CaptureType, ByCopy);
   }
   return false;
 }
@@ -6045,6 +6012,8 @@ mergeExceptionSpecs(Sema &S, FunctionProtoType::ExceptionSpecInfo ESI1,
   if (EST2 == EST_NoexceptFalse) return ESI2;
 
   // If either of them is non-throwing, the result is the other.
+  if (EST1 == EST_NoThrow) return ESI2;
+  if (EST2 == EST_NoThrow) return ESI1;
   if (EST1 == EST_DynamicNone) return ESI2;
   if (EST2 == EST_DynamicNone) return ESI1;
   if (EST1 == EST_BasicNoexcept) return ESI2;
@@ -6073,6 +6042,7 @@ mergeExceptionSpecs(Sema &S, FunctionProtoType::ExceptionSpecInfo ESI1,
   case EST_DependentNoexcept:
   case EST_NoexceptFalse:
   case EST_NoexceptTrue:
+  case EST_NoThrow:
     llvm_unreachable("handled above");
 
   case EST_Dynamic: {

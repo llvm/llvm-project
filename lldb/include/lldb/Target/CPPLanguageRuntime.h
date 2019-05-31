@@ -61,7 +61,7 @@ public:
   /// \return
   ///      A ThreadPlan Shared pointer
   lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
-                                                  bool stop_others);
+                                                  bool stop_others) override;
 
   bool IsRuntimeSupportValue(ValueObject &valobj) override;
 protected:

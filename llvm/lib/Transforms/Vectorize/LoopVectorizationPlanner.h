@@ -198,10 +198,8 @@ class LoopVectorizationPlanner {
   /// The legality analysis.
   LoopVectorizationLegality *Legal;
 
-  /// The profitablity analysis.
+  /// The profitability analysis.
   LoopVectorizationCostModel &CM;
-
-  using VPlanPtr = std::unique_ptr<VPlan>;
 
   SmallVector<VPlanPtr, 4> VPlans;
 

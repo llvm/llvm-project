@@ -540,7 +540,14 @@ Error RuntimeDyldImpl::computeTotalAllocSize(const ObjectFile &Obj,
         return errorCodeToError(EC);
 
       uint64_t StubBufSize = computeSectionStubBufSize(Obj, Section);
-      uint64_t SectionSize = DataSize + StubBufSize;
+
+      uint64_t PaddingSize = 0;
+      if (Name == ".eh_frame")
+        PaddingSize += 4;
+      if (StubBufSize != 0)
+        PaddingSize += getStubAlignment() - 1;
+
+      uint64_t SectionSize = DataSize + PaddingSize + StubBufSize;
 
       // The .eh_frame section (at least on Linux) needs an extra four bytes
       // padded
@@ -799,13 +806,12 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
     pData = data.data();
   }
 
-  // Code section alignment needs to be at least as high as stub alignment or
-  // padding calculations may by incorrect when the section is remapped to a
-  // higher alignment.
-  if (IsCode) {
+  // If there are any stubs then the section alignment needs to be at least as
+  // high as stub alignment or padding calculations may by incorrect when the
+  // section is remapped.
+  if (StubBufSize != 0) {
     Alignment = std::max(Alignment, getStubAlignment());
-    if (StubBufSize > 0)
-      PaddingSize += getStubAlignment() - 1;
+    PaddingSize += getStubAlignment() - 1;
   }
 
   // Some sections, such as debug info, don't need to be loaded for execution.

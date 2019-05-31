@@ -2330,6 +2330,14 @@ public:
     return T->castAs<FunctionType>()->getReturnType();
   }
 
+  /// Gets the ExceptionSpecificationType as declared.
+  ExceptionSpecificationType getExceptionSpecType() const {
+    auto *TSI = getTypeSourceInfo();
+    QualType T = TSI ? TSI->getType() : getType();
+    const auto *FPT = T->getAs<FunctionProtoType>();
+    return FPT ? FPT->getExceptionSpecType() : EST_None;
+  }
+
   /// Attempt to compute an informative source range covering the
   /// function exception specification, if any.
   SourceRange getExceptionSpecSourceRange() const;

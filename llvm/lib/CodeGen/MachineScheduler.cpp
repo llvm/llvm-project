@@ -2761,8 +2761,10 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
   MF.getSubtarget().overrideSchedPolicy(RegionPolicy, NumRegionInstrs);
 
   // After subtarget overrides, apply command line options.
-  if (!EnableRegPressure)
+  if (!EnableRegPressure) {
     RegionPolicy.ShouldTrackPressure = false;
+    RegionPolicy.ShouldTrackLaneMasks = false;
+  }
 
   // Check -misched-topdown/bottomup can force or unforce scheduling direction.
   // e.g. -misched-bottomup=false allows scheduling in both directions.

@@ -3742,7 +3742,10 @@ QualType ASTContext::getFunctionTypeInternal(
         break;
       }
 
-      case EST_DynamicNone: case EST_BasicNoexcept: case EST_NoexceptTrue:
+      case EST_DynamicNone:
+      case EST_BasicNoexcept:
+      case EST_NoexceptTrue:
+      case EST_NoThrow:
         CanonicalEPI.ExceptionSpec.Type = EST_BasicNoexcept;
         break;
 

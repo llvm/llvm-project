@@ -324,6 +324,12 @@ namespace X86Disassembler {
   ENTRY(K6)        \
   ENTRY(K7)
 
+#define REGS_MASK_PAIRS \
+  ENTRY(K0_K1)     \
+  ENTRY(K2_K3)     \
+  ENTRY(K4_K5)     \
+  ENTRY(K6_K7)
+
 #define REGS_SEGMENT \
   ENTRY(ES)          \
   ENTRY(CS)          \
@@ -393,6 +399,7 @@ namespace X86Disassembler {
   REGS_YMM            \
   REGS_ZMM            \
   REGS_MASKS          \
+  REGS_MASK_PAIRS     \
   REGS_SEGMENT        \
   REGS_DEBUG          \
   REGS_CONTROL        \

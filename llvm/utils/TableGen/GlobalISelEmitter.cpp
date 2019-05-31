@@ -3813,10 +3813,11 @@ Error GlobalISelEmitter::importDefaultOperandRenderers(
     if (const DagInit *DefaultDagOp = dyn_cast<DagInit>(DefaultOp)) {
       if (const DefInit *DefaultDagOperator =
               dyn_cast<DefInit>(DefaultDagOp->getOperator())) {
-        if (DefaultDagOperator->getDef()->isSubClassOf("ValueType"))
+        if (DefaultDagOperator->getDef()->isSubClassOf("ValueType")) {
           OpTyOrNone = MVTToLLT(getValueType(
                                   DefaultDagOperator->getDef()));
           DefaultOp = DefaultDagOp->getArg(0);
+        }
       }
     }
 

@@ -28,6 +28,8 @@ let Namespace = "X86" in {
   def sub_32bit    : SubRegIndex<32>;
   def sub_xmm      : SubRegIndex<128>;
   def sub_ymm      : SubRegIndex<256>;
+  def sub_mask_0   : SubRegIndex<-1>;
+  def sub_mask_1   : SubRegIndex<-1, -1>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -593,6 +595,16 @@ def VK8     : RegisterClass<"X86", [v8i1],  16,  (add VK4)> {let Size = 16;}
 def VK16    : RegisterClass<"X86", [v16i1], 16, (add VK8)> {let Size = 16;}
 def VK32    : RegisterClass<"X86", [v32i1], 32, (add VK16)> {let Size = 32;}
 def VK64    : RegisterClass<"X86", [v64i1], 64, (add VK32)> {let Size = 64;}
+
+// Mask register pairs
+def KPAIRS : RegisterTuples<[sub_mask_0, sub_mask_1],
+                             [(add K0, K2, K4, K6), (add K1, K3, K5, K7)]>;
+
+def VK1PAIR   : RegisterClass<"X86", [untyped], 16, (add KPAIRS)> {let Size = 32;}
+def VK2PAIR   : RegisterClass<"X86", [untyped], 16, (add KPAIRS)> {let Size = 32;}
+def VK4PAIR   : RegisterClass<"X86", [untyped], 16, (add KPAIRS)> {let Size = 32;}
+def VK8PAIR   : RegisterClass<"X86", [untyped], 16, (add KPAIRS)> {let Size = 32;}
+def VK16PAIR  : RegisterClass<"X86", [untyped], 16, (add KPAIRS)> {let Size = 32;}
 
 def VK1WM   : RegisterClass<"X86", [v1i1],  16,  (sub VK1, K0)> {let Size = 16;}
 def VK2WM   : RegisterClass<"X86", [v2i1],  16,  (sub VK2, K0)> {let Size = 16;}

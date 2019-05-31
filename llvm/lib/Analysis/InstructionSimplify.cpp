@@ -4589,6 +4589,10 @@ static Value *simplifyFPUnOp(unsigned Opcode, Value *Op,
   }
 }
 
+Value *llvm::SimplifyUnOp(unsigned Opcode, Value *Op, const SimplifyQuery &Q) {
+  return ::simplifyUnOp(Opcode, Op, Q, RecursionLimit);
+}
+
 Value *llvm::SimplifyFPUnOp(unsigned Opcode, Value *Op, FastMathFlags FMF,
                             const SimplifyQuery &Q) {
   return ::simplifyFPUnOp(Opcode, Op, FMF, Q, RecursionLimit);

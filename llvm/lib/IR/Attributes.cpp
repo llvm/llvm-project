@@ -121,6 +121,27 @@ Attribute Attribute::get(LLVMContext &Context, StringRef Kind, StringRef Val) {
   return Attribute(PA);
 }
 
+Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
+                         Type *Ty) {
+  LLVMContextImpl *pImpl = Context.pImpl;
+  FoldingSetNodeID ID;
+  ID.AddInteger(Kind);
+  ID.AddPointer(Ty);
+
+  void *InsertPoint;
+  AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
+
+  if (!PA) {
+    // If we didn't find any existing attributes of the same shape then create a
+    // new one and insert it.
+    PA = new TypeAttributeImpl(Kind, Ty);
+    pImpl->AttrsSet.InsertNode(PA, InsertPoint);
+  }
+
+  // Return the Attribute that we found or created.
+  return Attribute(PA);
+}
+
 Attribute Attribute::getWithAlignment(LLVMContext &Context, uint64_t Align) {
   assert(isPowerOf2_32(Align) && "Alignment must be a power of two.");
   assert(Align <= 0x40000000 && "Alignment too large.");
@@ -144,6 +165,10 @@ Attribute Attribute::getWithDereferenceableOrNullBytes(LLVMContext &Context,
                                                        uint64_t Bytes) {
   assert(Bytes && "Bytes must be non-zero.");
   return get(Context, DereferenceableOrNull, Bytes);
+}
+
+Attribute Attribute::getWithByValType(LLVMContext &Context, Type *Ty) {
+  return get(Context, ByVal, Ty);
 }
 
 Attribute
@@ -170,9 +195,13 @@ bool Attribute::isStringAttribute() const {
   return pImpl && pImpl->isStringAttribute();
 }
 
+bool Attribute::isTypeAttribute() const {
+  return pImpl && pImpl->isTypeAttribute();
+}
+
 Attribute::AttrKind Attribute::getKindAsEnum() const {
   if (!pImpl) return None;
-  assert((isEnumAttribute() || isIntAttribute()) &&
+  assert((isEnumAttribute() || isIntAttribute() || isTypeAttribute()) &&
          "Invalid attribute type to get the kind as an enum!");
   return pImpl->getKindAsEnum();
 }
@@ -197,6 +226,14 @@ StringRef Attribute::getValueAsString() const {
          "Invalid attribute type to get the value as a string!");
   return pImpl->getValueAsString();
 }
+
+Type *Attribute::getValueAsType() const {
+  if (!pImpl) return {};
+  assert(isTypeAttribute() &&
+         "Invalid attribute type to get the value as a type!");
+  return pImpl->getValueAsType();
+}
+
 
 bool Attribute::hasAttribute(AttrKind Kind) const {
   return (pImpl && pImpl->hasAttribute(Kind)) || (!pImpl && Kind == None);
@@ -252,8 +289,6 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return "argmemonly";
   if (hasAttribute(Attribute::Builtin))
     return "builtin";
-  if (hasAttribute(Attribute::ByVal))
-    return "byval";
   if (hasAttribute(Attribute::Convergent))
     return "convergent";
   if (hasAttribute(Attribute::SwiftError))
@@ -353,6 +388,19 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
   if (hasAttribute(Attribute::ImmArg))
     return "immarg";
 
+  if (hasAttribute(Attribute::ByVal)) {
+    std::string Result;
+    Result += "byval";
+    if (Type *Ty = getValueAsType()) {
+      raw_string_ostream OS(Result);
+      Result += '(';
+      Ty->print(OS, false, true);
+      OS.flush();
+      Result += ')';
+    }
+    return Result;
+  }
+
   // FIXME: These should be output like this:
   //
   //   align=4
@@ -451,6 +499,8 @@ void IntAttributeImpl::anchor() {}
 
 void StringAttributeImpl::anchor() {}
 
+void TypeAttributeImpl::anchor() {}
+
 bool AttributeImpl::hasAttribute(Attribute::AttrKind A) const {
   if (isStringAttribute()) return false;
   return getKindAsEnum() == A;
@@ -462,7 +512,7 @@ bool AttributeImpl::hasAttribute(StringRef Kind) const {
 }
 
 Attribute::AttrKind AttributeImpl::getKindAsEnum() const {
-  assert(isEnumAttribute() || isIntAttribute());
+  assert(isEnumAttribute() || isIntAttribute() || isTypeAttribute());
   return static_cast<const EnumAttributeImpl *>(this)->getEnumKind();
 }
 
@@ -481,6 +531,11 @@ StringRef AttributeImpl::getValueAsString() const {
   return static_cast<const StringAttributeImpl *>(this)->getStringValue();
 }
 
+Type *AttributeImpl::getValueAsType() const {
+  assert(isTypeAttribute());
+  return static_cast<const TypeAttributeImpl *>(this)->getTypeValue();
+}
+
 bool AttributeImpl::operator<(const AttributeImpl &AI) const {
   // This sorts the attributes with Attribute::AttrKinds coming first (sorted
   // relative to their enum value) and then strings.
@@ -488,10 +543,23 @@ bool AttributeImpl::operator<(const AttributeImpl &AI) const {
     if (AI.isEnumAttribute()) return getKindAsEnum() < AI.getKindAsEnum();
     if (AI.isIntAttribute()) return true;
     if (AI.isStringAttribute()) return true;
+    if (AI.isTypeAttribute()) return true;
+  }
+
+  if (isTypeAttribute()) {
+    if (AI.isEnumAttribute()) return false;
+    if (AI.isTypeAttribute()) {
+      assert(getKindAsEnum() != AI.getKindAsEnum() &&
+             "Comparison of types would be unstable");
+      return getKindAsEnum() < AI.getKindAsEnum();
+    }
+    if (AI.isIntAttribute()) return true;
+    if (AI.isStringAttribute()) return true;
   }
 
   if (isIntAttribute()) {
     if (AI.isEnumAttribute()) return false;
+    if (AI.isTypeAttribute()) return false;
     if (AI.isIntAttribute()) {
       if (getKindAsEnum() == AI.getKindAsEnum())
         return getValueAsInt() < AI.getValueAsInt();
@@ -500,7 +568,9 @@ bool AttributeImpl::operator<(const AttributeImpl &AI) const {
     if (AI.isStringAttribute()) return true;
   }
 
+  assert(isStringAttribute());
   if (AI.isEnumAttribute()) return false;
+  if (AI.isTypeAttribute()) return false;
   if (AI.isIntAttribute()) return false;
   if (getKindAsString() == AI.getKindAsString())
     return getValueAsString() < AI.getValueAsString();
@@ -608,6 +678,10 @@ uint64_t AttributeSet::getDereferenceableOrNullBytes() const {
   return SetNode ? SetNode->getDereferenceableOrNullBytes() : 0;
 }
 
+Type *AttributeSet::getByValType() const {
+  return SetNode ? SetNode->getByValType() : nullptr;
+}
+
 std::pair<unsigned, Optional<unsigned>> AttributeSet::getAllocSizeArgs() const {
   return SetNode ? SetNode->getAllocSizeArgs()
                  : std::pair<unsigned, Optional<unsigned>>(0, 0);
@@ -691,6 +765,9 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C, const AttrBuilder &B) {
 
     Attribute Attr;
     switch (Kind) {
+    case Attribute::ByVal:
+      Attr = Attribute::getWithByValType(C, B.getByValType());
+      break;
     case Attribute::Alignment:
       Attr = Attribute::getWithAlignment(C, B.getAlignment());
       break;
@@ -757,6 +834,13 @@ unsigned AttributeSetNode::getStackAlignment() const {
   for (const auto I : *this)
     if (I.hasAttribute(Attribute::StackAlignment))
       return I.getStackAlignment();
+  return 0;
+}
+
+Type *AttributeSetNode::getByValType() const {
+  for (const auto I : *this)
+    if (I.hasAttribute(Attribute::ByVal))
+      return I.getValueAsType();
   return 0;
 }
 
@@ -1258,6 +1342,11 @@ unsigned AttributeList::getParamAlignment(unsigned ArgNo) const {
   return getAttributes(ArgNo + FirstArgIndex).getAlignment();
 }
 
+Type *AttributeList::getParamByValType(unsigned Index) const {
+  return getAttributes(Index+FirstArgIndex).getByValType();
+}
+
+
 unsigned AttributeList::getStackAlignment(unsigned Index) const {
   return getAttributes(Index).getStackAlignment();
 }
@@ -1336,6 +1425,7 @@ void AttrBuilder::clear() {
   TargetDepAttrs.clear();
   Alignment = StackAlignment = DerefBytes = DerefOrNullBytes = 0;
   AllocSizeArgs = 0;
+  ByValType = nullptr;
 }
 
 AttrBuilder &AttrBuilder::addAttribute(Attribute::AttrKind Val) {
@@ -1360,6 +1450,8 @@ AttrBuilder &AttrBuilder::addAttribute(Attribute Attr) {
     Alignment = Attr.getAlignment();
   else if (Kind == Attribute::StackAlignment)
     StackAlignment = Attr.getStackAlignment();
+  else if (Kind == Attribute::ByVal)
+    ByValType = Attr.getValueAsType();
   else if (Kind == Attribute::Dereferenceable)
     DerefBytes = Attr.getDereferenceableBytes();
   else if (Kind == Attribute::DereferenceableOrNull)
@@ -1382,6 +1474,8 @@ AttrBuilder &AttrBuilder::removeAttribute(Attribute::AttrKind Val) {
     Alignment = 0;
   else if (Val == Attribute::StackAlignment)
     StackAlignment = 0;
+  else if (Val == Attribute::ByVal)
+    ByValType = nullptr;
   else if (Val == Attribute::Dereferenceable)
     DerefBytes = 0;
   else if (Val == Attribute::DereferenceableOrNull)
@@ -1464,6 +1558,12 @@ AttrBuilder &AttrBuilder::addAllocSizeAttrFromRawRepr(uint64_t RawArgs) {
   return *this;
 }
 
+AttrBuilder &AttrBuilder::addByValAttr(Type *Ty) {
+  Attrs[Attribute::ByVal] = true;
+  ByValType = Ty;
+  return *this;
+}
+
 AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
   // FIXME: What if both have alignments, but they don't match?!
   if (!Alignment)
@@ -1480,6 +1580,9 @@ AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
 
   if (!AllocSizeArgs)
     AllocSizeArgs = B.AllocSizeArgs;
+
+  if (!ByValType)
+    ByValType = B.ByValType;
 
   Attrs |= B.Attrs;
 
@@ -1505,6 +1608,9 @@ AttrBuilder &AttrBuilder::remove(const AttrBuilder &B) {
 
   if (B.AllocSizeArgs)
     AllocSizeArgs = 0;
+
+  if (B.ByValType)
+    ByValType = nullptr;
 
   Attrs &= ~B.Attrs;
 
@@ -1565,7 +1671,7 @@ bool AttrBuilder::operator==(const AttrBuilder &B) {
       return false;
 
   return Alignment == B.Alignment && StackAlignment == B.StackAlignment &&
-         DerefBytes == B.DerefBytes;
+         DerefBytes == B.DerefBytes && ByValType == B.ByValType;
 }
 
 //===----------------------------------------------------------------------===//

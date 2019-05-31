@@ -125,6 +125,11 @@
 // VBMI2: "-target-feature" "+avx512vbmi2"
 // NO-VBMI2: "-target-feature" "-avx512vbmi2"
 
+// RUN: %clang -target i386-linux-gnu -mavx512vp2intersect %s -### -o %t.o 2>&1 | FileCheck -check-prefix=VP2INTERSECT %s
+// RUN: %clang -target i386-linux-gnu -mno-avx512vp2intersect %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-VP2INTERSECT %s
+// VP2INTERSECT: "-target-feature" "+avx512vp2intersect"
+// NO-VP2INTERSECT: "-target-feature" "-avx512vp2intersect"
+
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mrdpid %s -### -o %t.o 2>&1 | FileCheck -check-prefix=RDPID %s
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-rdpid %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-RDPID %s
 // RDPID: "-target-feature" "+rdpid"
