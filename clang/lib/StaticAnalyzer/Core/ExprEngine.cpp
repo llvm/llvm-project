@@ -3075,8 +3075,8 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
     const unsigned int Space = 1;
     ProgramStateRef State = N->getState();
 
-    Out << "{ \"node_id\": \"" << (const void *)N
-        << "\", \"state_id\": " << State->getID()
+    Out << "{ \"node_id\": " << N->getID(G) << ", \"pointer\": \""
+        << (const void *)N << "\", \"state_id\": " << State->getID()
         << ", \"has_report\": " << (nodeHasBugReport(N) ? "true" : "false")
         << ",\\l";
 
@@ -3094,7 +3094,7 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
           else
             Out << "null }";
         },
-	// Adds a comma and a new-line between each program point.
+        // Adds a comma and a new-line between each program point.
         [&](const ExplodedNode *) { Out << ",\\l"; },
         [&](const ExplodedNode *) { return false; });
 

@@ -1306,6 +1306,20 @@ void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
   }
 }
 
+void ScopBuilder::verifyInvariantLoads() {
+  auto &RIL = scop->getRequiredInvariantLoads();
+  for (LoadInst *LI : RIL) {
+    assert(LI && scop->contains(LI));
+    // If there exists a statement in the scop which has a memory access for
+    // @p LI, then mark this scop as infeasible for optimization.
+    for (ScopStmt &Stmt : *scop)
+      if (Stmt.getArrayAccessOrNULLFor(LI)) {
+        scop->invalidate(INVARIANTLOAD, LI->getDebugLoc(), LI->getParent());
+        return;
+      }
+  }
+}
+
 void ScopBuilder::collectCandidateReductionLoads(
     MemoryAccess *StoreMA, SmallVectorImpl<MemoryAccess *> &Loads) {
   ScopStmt *Stmt = StoreMA->getStatement();
@@ -1588,7 +1602,7 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC,
 
   scop->hoistInvariantLoads();
   scop->canonicalizeDynamicBasePtrs();
-  scop->verifyInvariantLoads();
+  verifyInvariantLoads();
   scop->simplifySCoP(true);
 
   // Check late for a feasible runtime context because profitability did not
