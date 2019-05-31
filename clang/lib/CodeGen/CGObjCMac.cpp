@@ -7313,37 +7313,6 @@ CGObjCNonFragileABIMac::EmitLoadOfClassRef(CodeGenFunction &CGF,
   return CGF.Builder.CreateAlignedLoad(Entry, Align);
 }
 
-llvm::Constant *
-CGObjCNonFragileABIMac::GetClassGlobalForClassRef(const ObjCInterfaceDecl *ID) {
-  llvm::Constant *ClassGV = GetClassGlobal(ID, /*metaclass*/ false,
-                                           NotForDefinition);
-
-  if (!ID->hasAttr<ObjCClassStubAttr>())
-    return ClassGV;
-
-  ClassGV = llvm::ConstantExpr::getPointerCast(ClassGV, ObjCTypes.Int8PtrTy);
-
-  // Stub classes are pointer-aligned. Classrefs pointing at stub classes
-  // must set the least significant bit set to 1.
-  auto *Idx = llvm::ConstantInt::get(CGM.Int32Ty, 1);
-  return llvm::ConstantExpr::getGetElementPtr(CGM.Int8Ty, ClassGV, Idx);
-}
-
-llvm::Value *
-CGObjCNonFragileABIMac::EmitLoadOfClassRef(CodeGenFunction &CGF,
-                                           const ObjCInterfaceDecl *ID,
-                                           llvm::GlobalVariable *Entry) {
-  if (ID && ID->hasAttr<ObjCClassStubAttr>()) {
-    // Classrefs pointing at Objective-C stub classes must be loaded by calling
-    // a special runtime function.
-    return CGF.EmitRuntimeCall(
-      ObjCTypes.getLoadClassrefFn(), Entry, "load_classref_result");
-  }
-
-  CharUnits Align = CGF.getPointerAlign();
-  return CGF.Builder.CreateAlignedLoad(Entry, Align);
-}
-
 llvm::Value *
 CGObjCNonFragileABIMac::EmitClassRefFromId(CodeGenFunction &CGF,
                                            IdentifierInfo *II,
