@@ -92,6 +92,10 @@ public:
   DPUAsmParser(const MCSubtargetInfo &STI, MCAsmParser &parser,
                const MCInstrInfo &MII, const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, STI, MII), SubtargetInfo(STI) {
+    parser.addAliasForDirective(".half", ".2byte");
+    parser.addAliasForDirective(".hword", ".2byte");
+    parser.addAliasForDirective(".word", ".4byte");
+    parser.addAliasForDirective(".dword", ".8byte");
     setAvailableFeatures(ComputeAvailableFeatures(SubtargetInfo.getFeatureBits()));
     MCAsmParserExtension::Initialize(parser);
   }
