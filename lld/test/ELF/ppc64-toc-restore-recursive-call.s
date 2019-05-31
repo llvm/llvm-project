@@ -1,8 +1,8 @@
 # REQUIRES: ppc
 
-# RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t1.o
-# RUN: ld.lld -shared %t1.o -o %t
-# RUN: llvm-objdump -d -r %t | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
+# RUN: ld.lld -shared %t.o -o %t.so
+# RUN: llvm-objdump -d --no-show-raw-insn -r %t.so | FileCheck %s
 
 # For a recursive call that is interposable the linker calls the plt-stub rather
 # then calling the function directly. Since the call is through a plt stub and
@@ -18,8 +18,8 @@
 # CHECK-NEXT: 10000:
 # CHECK-LABEL: recursive_func
 # CHECK-NEXT:  10014:
-# CHECK:       1003c: {{.*}}  bl .-60
-# CHECK-NEXT:  ld 2, 24(1)
+# CHECK:       1003c:       bl .-60
+# CHECK-NEXT:  10040:       ld 2, 24(1)
 
         .abiversion 2
         .section ".text"
