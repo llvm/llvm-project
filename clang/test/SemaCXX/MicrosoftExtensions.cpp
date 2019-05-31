@@ -517,6 +517,15 @@ void PR34109(int* a) {
   delete a;
 }
 
+namespace PR42089 {
+  struct S {
+    __attribute__((nothrow)) void Foo(); // expected-note {{previous declaration is here}}
+    __attribute__((nothrow)) void Bar();
+  };
+  void S::Foo(){} // expected-warning {{is missing exception specification}}
+  __attribute__((nothrow)) void S::Bar(){}
+}
+
 #elif TEST2
 
 // Check that __unaligned is not recognized if MS extensions are not enabled

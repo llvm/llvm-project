@@ -19,6 +19,17 @@ define float @fma_fneg_x_fneg_y(float %x, float %y, float %z) {
   ret float %fma
 }
 
+define float @fma_unary_fneg_x_unary_fneg_y(float %x, float %y, float %z) {
+; CHECK-LABEL: @fma_unary_fneg_x_unary_fneg_y(
+; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]])
+; CHECK-NEXT:    ret float [[FMA]]
+;
+  %x.fneg = fneg float %x
+  %y.fneg = fneg float %y
+  %fma = call float @llvm.fma.f32(float %x.fneg, float %y.fneg, float %z)
+  ret float %fma
+}
+
 define <2 x float> @fma_fneg_x_fneg_y_vec(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @fma_fneg_x_fneg_y_vec(
 ; CHECK-NEXT:    [[FMA:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[Z:%.*]])
@@ -26,6 +37,17 @@ define <2 x float> @fma_fneg_x_fneg_y_vec(<2 x float> %x, <2 x float> %y, <2 x f
 ;
   %xn = fsub <2 x float> <float -0.0, float -0.0>, %x
   %yn = fsub <2 x float> <float -0.0, float -0.0>, %y
+  %fma = call <2 x float> @llvm.fma.v2f32(<2 x float> %xn, <2 x float> %yn, <2 x float> %z)
+  ret <2 x float> %fma
+}
+
+define <2 x float> @fma_unary_fneg_x_unary_fneg_y_vec(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
+; CHECK-LABEL: @fma_unary_fneg_x_unary_fneg_y_vec(
+; CHECK-NEXT:    [[FMA:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[Z:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[FMA]]
+;
+  %xn = fneg <2 x float> %x
+  %yn = fneg <2 x float> %y
   %fma = call <2 x float> @llvm.fma.v2f32(<2 x float> %xn, <2 x float> %yn, <2 x float> %z)
   ret <2 x float> %fma
 }
@@ -52,6 +74,17 @@ define float @fma_fneg_x_fneg_y_fast(float %x, float %y, float %z) {
   ret float %fma
 }
 
+define float @fma_unary_fneg_x_unary_fneg_y_fast(float %x, float %y, float %z) {
+; CHECK-LABEL: @fma_unary_fneg_x_unary_fneg_y_fast(
+; CHECK-NEXT:    [[FMA:%.*]] = call fast float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]])
+; CHECK-NEXT:    ret float [[FMA]]
+;
+  %x.fneg = fneg float %x
+  %y.fneg = fneg float %y
+  %fma = call fast float @llvm.fma.f32(float %x.fneg, float %y.fneg, float %z)
+  ret float %fma
+}
+
 define float @fma_fneg_const_fneg_y(float %y, float %z) {
 ; CHECK-LABEL: @fma_fneg_const_fneg_y(
 ; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[Y:%.*]], float bitcast (i32 ptrtoint (i32* @external to i32) to float), float [[Z:%.*]])
@@ -62,6 +95,16 @@ define float @fma_fneg_const_fneg_y(float %y, float %z) {
   ret float %fma
 }
 
+define float @fma_unary_fneg_const_unary_fneg_y(float %y, float %z) {
+; CHECK-LABEL: @fma_unary_fneg_const_unary_fneg_y(
+; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[Y:%.*]], float bitcast (i32 ptrtoint (i32* @external to i32) to float), float [[Z:%.*]])
+; CHECK-NEXT:    ret float [[FMA]]
+;
+  %y.fneg = fneg float %y
+  %fma = call float @llvm.fma.f32(float fneg (float bitcast (i32 ptrtoint (i32* @external to i32) to float)), float %y.fneg, float %z)
+  ret float %fma
+}
+
 define float @fma_fneg_x_fneg_const(float %x, float %z) {
 ; CHECK-LABEL: @fma_fneg_x_fneg_const(
 ; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float bitcast (i32 ptrtoint (i32* @external to i32) to float), float [[Z:%.*]])
@@ -69,6 +112,16 @@ define float @fma_fneg_x_fneg_const(float %x, float %z) {
 ;
   %x.fneg = fsub float -0.0, %x
   %fma = call float @llvm.fma.f32(float %x.fneg, float fsub (float -0.0, float bitcast (i32 ptrtoint (i32* @external to i32) to float)), float %z)
+  ret float %fma
+}
+
+define float @fma_unary_fneg_x_unary_fneg_const(float %x, float %z) {
+; CHECK-LABEL: @fma_unary_fneg_x_unary_fneg_const(
+; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float bitcast (i32 ptrtoint (i32* @external to i32) to float), float [[Z:%.*]])
+; CHECK-NEXT:    ret float [[FMA]]
+;
+  %x.fneg = fneg float %x
+  %fma = call float @llvm.fma.f32(float %x.fneg, float fneg (float bitcast (i32 ptrtoint (i32* @external to i32) to float)), float %z)
   ret float %fma
 }
 
@@ -116,6 +169,17 @@ define float @fmuladd_fneg_x_fneg_y(float %x, float %y, float %z) {
   ret float %fmuladd
 }
 
+define float @fmuladd_unary_fneg_x_unary_fneg_y(float %x, float %y, float %z) {
+; CHECK-LABEL: @fmuladd_unary_fneg_x_unary_fneg_y(
+; CHECK-NEXT:    [[FMULADD:%.*]] = call float @llvm.fmuladd.f32(float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]])
+; CHECK-NEXT:    ret float [[FMULADD]]
+;
+  %x.fneg = fneg float %x
+  %y.fneg = fneg float %y
+  %fmuladd = call float @llvm.fmuladd.f32(float %x.fneg, float %y.fneg, float %z)
+  ret float %fmuladd
+}
+
 define float @fmuladd_fneg_x_fneg_y_fast(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fmuladd_fneg_x_fneg_y_fast(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], [[Y:%.*]]
@@ -124,6 +188,18 @@ define float @fmuladd_fneg_x_fneg_y_fast(float %x, float %y, float %z) {
 ;
   %x.fneg = fsub float -0.0, %x
   %y.fneg = fsub float -0.0, %y
+  %fmuladd = call fast float @llvm.fmuladd.f32(float %x.fneg, float %y.fneg, float %z)
+  ret float %fmuladd
+}
+
+define float @fmuladd_unary_fneg_x_unary_fneg_y_fast(float %x, float %y, float %z) {
+; CHECK-LABEL: @fmuladd_unary_fneg_x_unary_fneg_y_fast(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[FMULADD:%.*]] = fadd fast float [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret float [[FMULADD]]
+;
+  %x.fneg = fneg float %x
+  %y.fneg = fneg float %y
   %fmuladd = call fast float @llvm.fmuladd.f32(float %x.fneg, float %y.fneg, float %z)
   ret float %fmuladd
 }
@@ -138,6 +214,16 @@ define float @fmuladd_fneg_const_fneg_y(float %y, float %z) {
   ret float %fmuladd
 }
 
+define float @fmuladd_unary_fneg_const_unary_fneg_y(float %y, float %z) {
+; CHECK-LABEL: @fmuladd_unary_fneg_const_unary_fneg_y(
+; CHECK-NEXT:    [[FMULADD:%.*]] = call float @llvm.fmuladd.f32(float [[Y:%.*]], float bitcast (i32 ptrtoint (i32* @external to i32) to float), float [[Z:%.*]])
+; CHECK-NEXT:    ret float [[FMULADD]]
+;
+  %y.fneg = fneg float %y
+  %fmuladd = call float @llvm.fmuladd.f32(float fneg (float bitcast (i32 ptrtoint (i32* @external to i32) to float)), float %y.fneg, float %z)
+  ret float %fmuladd
+}
+
 define float @fmuladd_fneg_x_fneg_const(float %x, float %z) {
 ; CHECK-LABEL: @fmuladd_fneg_x_fneg_const(
 ; CHECK-NEXT:    [[FMULADD:%.*]] = call float @llvm.fmuladd.f32(float [[X:%.*]], float bitcast (i32 ptrtoint (i32* @external to i32) to float), float [[Z:%.*]])
@@ -145,6 +231,16 @@ define float @fmuladd_fneg_x_fneg_const(float %x, float %z) {
 ;
   %x.fneg = fsub float -0.0, %x
   %fmuladd = call float @llvm.fmuladd.f32(float %x.fneg, float fsub (float -0.0, float bitcast (i32 ptrtoint (i32* @external to i32) to float)), float %z)
+  ret float %fmuladd
+}
+
+define float @fmuladd_unary_fneg_x_unary_fneg_const(float %x, float %z) {
+; CHECK-LABEL: @fmuladd_unary_fneg_x_unary_fneg_const(
+; CHECK-NEXT:    [[FMULADD:%.*]] = call float @llvm.fmuladd.f32(float [[X:%.*]], float bitcast (i32 ptrtoint (i32* @external to i32) to float), float [[Z:%.*]])
+; CHECK-NEXT:    ret float [[FMULADD]]
+;
+  %x.fneg = fneg float %x
+  %fmuladd = call float @llvm.fmuladd.f32(float %x.fneg, float fneg (float bitcast (i32 ptrtoint (i32* @external to i32) to float)), float %z)
   ret float %fmuladd
 }
 

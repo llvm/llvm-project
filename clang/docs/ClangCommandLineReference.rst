@@ -2639,6 +2639,8 @@ X86
 
 .. option:: -mavx512vnni, -mno-avx512vnni
 
+.. option:: -mavx512vp2intersect, -mno-avx512vp2intersect
+
 .. option:: -mavx512vpopcntdq, -mno-avx512vpopcntdq
 
 .. option:: -mbmi, -mno-bmi

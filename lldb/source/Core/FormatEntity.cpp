@@ -94,7 +94,7 @@ enum FileKind { FileError = 0, Basename, Dirname, Fullpath };
         static_cast<uint32_t>(llvm::array_lengthof(c)), c, true                \
   }
 #define ENTRY_STRING(n, s)                                                     \
-  { n, s, FormatEntity::Entry::Type::InsertString, 0, 0, nullptr, false }
+  { n, s, FormatEntity::Entry::Type::EscapeCode, 0, 0, nullptr, false }
 static FormatEntity::Entry::Definition g_string_entry[] = {
     ENTRY("*", ParentString)};
 
@@ -307,7 +307,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(Invalid);
     ENUM_TO_CSTR(ParentNumber);
     ENUM_TO_CSTR(ParentString);
-    ENUM_TO_CSTR(InsertString);
+    ENUM_TO_CSTR(EscapeCode);
     ENUM_TO_CSTR(Root);
     ENUM_TO_CSTR(String);
     ENUM_TO_CSTR(Scope);
@@ -1102,8 +1102,17 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
                                   // FormatEntity::Entry::Definition encoding
   case Entry::Type::ParentString: // Only used for
                                   // FormatEntity::Entry::Definition encoding
-  case Entry::Type::InsertString: // Only used for
-                                  // FormatEntity::Entry::Definition encoding
+    return false;
+  case Entry::Type::EscapeCode:
+    if (exe_ctx) {
+      if (Target *target = exe_ctx->GetTargetPtr()) {
+        Debugger &debugger = target->GetDebugger();
+        if (debugger.GetUseColor()) {
+          s.PutCString(entry.string);
+          return true;
+        }
+      }
+    }
     return false;
 
   case Entry::Type::Root:
@@ -1896,7 +1905,7 @@ static Status ParseEntry(const llvm::StringRef &format_str,
         entry.number = entry_def->data;
         return error; // Success
 
-      case FormatEntity::Entry::Type::InsertString:
+      case FormatEntity::Entry::Type::EscapeCode:
         entry.type = entry_def->type;
         entry.string = entry_def->string;
         return error; // Success
@@ -2265,13 +2274,7 @@ Status FormatEntity::ParseInternal(llvm::StringRef &format, Entry &parent_entry,
               return error;
             }
           }
-          // Check if this entry just wants to insert a constant string value
-          // into the parent_entry, if so, insert the string with AppendText,
-          // else append the entry to the parent_entry.
-          if (entry.type == Entry::Type::InsertString)
-            parent_entry.AppendText(entry.string.c_str());
-          else
-            parent_entry.AppendEntry(std::move(entry));
+          parent_entry.AppendEntry(std::move(entry));
         }
       }
       break;

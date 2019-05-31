@@ -844,9 +844,10 @@ VarDecl *Sema::createLambdaInitCaptureVarDecl(SourceLocation Loc,
 }
 
 void Sema::addInitCapture(LambdaScopeInfo *LSI, VarDecl *Var) {
+  assert(Var->isInitCapture() && "init capture flag should be set");
   LSI->addCapture(Var, /*isBlock*/false, Var->getType()->isReferenceType(),
                   /*isNested*/false, Var->getLocation(), SourceLocation(),
-                  Var->getType(), Var->getInit(), /*Invalid*/false);
+                  Var->getType(), /*Invalid*/false);
 }
 
 void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
@@ -1430,6 +1431,24 @@ static void addBlockPointerConversion(Sema &S,
   Class->addDecl(Conversion);
 }
 
+ExprResult Sema::performThisCaptureInitialization(const Capture &Cap,
+                                                  bool IsImplicit) {
+  QualType ThisTy = getCurrentThisType();
+  SourceLocation Loc = Cap.getLocation();
+  Expr *This = BuildCXXThisExpr(Loc, ThisTy, IsImplicit);
+  if (Cap.isReferenceCapture())
+    return This;
+
+  // Capture (by copy) of '*this'.
+  Expr *StarThis = CreateBuiltinUnaryOp(Loc, UO_Deref, This).get();
+  InitializedEntity Entity = InitializedEntity::InitializeLambdaCapture(
+      nullptr, Cap.getCaptureType(), Loc);
+  InitializationKind InitKind =
+      InitializationKind::CreateDirect(Loc, Loc, Loc);
+  InitializationSequence Init(*this, Entity, InitKind, StarThis);
+  return Init.Perform(*this, Entity, InitKind, StarThis);
+}
+
 static ExprResult performLambdaVarCaptureInitialization(
     Sema &S, const Capture &Capture, FieldDecl *Field,
     SourceLocation ImplicitCaptureLoc, bool IsImplicitCapture) {
@@ -1488,8 +1507,8 @@ mapImplicitCaptureStyle(CapturingScopeInfo::ImplicitCaptureStyle ICS) {
 }
 
 bool Sema::CaptureHasSideEffects(const Capture &From) {
-  if (!From.isVLATypeCapture()) {
-    Expr *Init = From.getInitExpr();
+  if (From.isInitCapture()) {
+    Expr *Init = From.getVariable()->getInit();
     if (Init && Init->HasSideEffects(Context))
       return true;
   }
@@ -1637,7 +1656,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
       if (!CurContext->isDependentContext() && !IsImplicit && !From.isODRUsed()) {
         // Initialized captures that are non-ODR used may not be eliminated.
         bool NonODRUsedInitCapture =
-            IsGenericLambda && From.isNonODRUsed() && From.getInitExpr();
+            IsGenericLambda && From.isNonODRUsed() && From.isInitCapture();
         if (!NonODRUsedInitCapture) {
           bool IsLast = (I + 1) == LSI->NumExplicitCaptures;
           SourceRange FixItRange;
@@ -1679,10 +1698,11 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
                      getLocForEndOfToken(CaptureDefaultLoc), ", this");
         }
 
+        ExprResult Init = performThisCaptureInitialization(From, IsImplicit);
         Captures.push_back(
             LambdaCapture(From.getLocation(), IsImplicit,
                           From.isCopyCapture() ? LCK_StarThis : LCK_This));
-        CaptureInits.push_back(From.getInitExpr());
+        CaptureInits.push_back(Init.get());
         continue;
       }
       if (From.isVLATypeCapture()) {
@@ -1696,15 +1716,13 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
       LambdaCaptureKind Kind = From.isCopyCapture() ? LCK_ByCopy : LCK_ByRef;
       Captures.push_back(LambdaCapture(From.getLocation(), IsImplicit, Kind,
                                        Var, From.getEllipsisLoc()));
-      Expr *Init = From.getInitExpr();
-      if (!Init) {
-        auto InitResult = performLambdaVarCaptureInitialization(
-            *this, From, Field, CaptureDefaultLoc, IsImplicit);
-        if (InitResult.isInvalid())
-          return ExprError();
-        Init = InitResult.get();
-      }
-      CaptureInits.push_back(Init);
+
+      ExprResult Init =
+          From.isInitCapture()
+              ? Var->getInit()
+              : performLambdaVarCaptureInitialization(
+                    *this, From, Field, CaptureDefaultLoc, IsImplicit);
+      CaptureInits.push_back(Init.get());
     }
 
     // C++11 [expr.prim.lambda]p6:

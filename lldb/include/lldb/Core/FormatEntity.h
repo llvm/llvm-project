@@ -41,7 +41,7 @@ public:
       Invalid,
       ParentNumber,
       ParentString,
-      InsertString,
+      EscapeCode,
       Root,
       String,
       Scope,

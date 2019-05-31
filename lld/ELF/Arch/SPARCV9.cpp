@@ -37,7 +37,6 @@ SPARCV9::SPARCV9() {
   NoneRel = R_SPARC_NONE;
   PltRel = R_SPARC_JMP_SLOT;
   RelativeRel = R_SPARC_RELATIVE;
-  GotEntrySize = 8;
   PltEntrySize = 32;
   PltHeaderSize = 4 * PltEntrySize;
 

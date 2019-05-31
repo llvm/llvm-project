@@ -193,10 +193,13 @@ int main() {
   // LAMBDA-LABEL: @main
   // LAMBDA: alloca [[SS_TY]],
   // LAMBDA: alloca [[CAP_TY:%.+]],
+  // FIXME: The outer lambda should not capture 'sivar'; that capture is not
+  // used for anything.
+  // LAMBDA: store {{.*}}@_ZZ4mainE5sivar,
   // LAMBDA: call void [[OUTER_LAMBDA:@.+]]([[CAP_TY]]*
   [&]() {
   // LAMBDA: define{{.*}} internal{{.*}} void [[OUTER_LAMBDA]](
-  // LAMBDA: call void {{.+}} @__kmpc_fork_call({{.+}}, i32 1, {{.+}}* [[OMP_REGION:@.+]] to {{.+}}, i32* %{{.+}})
+  // LAMBDA: call void {{.+}} @__kmpc_fork_call({{.+}}, i32 1, {{.+}}* [[OMP_REGION:@.+]] to {{.+}}, i32* @_ZZ4mainE5sivar)
 #pragma omp parallel
 #pragma omp for lastprivate(g, g1, sivar)
   for (int i = 0; i < 2; ++i) {

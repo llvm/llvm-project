@@ -156,6 +156,43 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &MIRBuilder,
   MIRBuilder.buildLoad(DstReg, PtrReg, *MMO);
 }
 
+static unsigned findFirstFreeSGPR(CCState &CCInfo) {
+  unsigned NumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
+  for (unsigned Reg = 0; Reg < NumSGPRs; ++Reg) {
+    if (!CCInfo.isAllocated(AMDGPU::SGPR0 + Reg)) {
+      return AMDGPU::SGPR0 + Reg;
+    }
+  }
+  llvm_unreachable("Cannot allocate sgpr");
+}
+
+static void allocateSystemSGPRs(CCState &CCInfo,
+                                MachineFunction &MF,
+                                SIMachineFunctionInfo &Info,
+                                CallingConv::ID CallConv,
+                                bool IsShader) {
+  if (Info.hasPrivateSegmentWaveByteOffset()) {
+    // Scratch wave offset passed in system SGPR.
+    unsigned PrivateSegmentWaveByteOffsetReg;
+
+    if (IsShader) {
+      PrivateSegmentWaveByteOffsetReg =
+        Info.getPrivateSegmentWaveByteOffsetSystemSGPR();
+
+      // This is true if the scratch wave byte offset doesn't have a fixed
+      // location.
+      if (PrivateSegmentWaveByteOffsetReg == AMDGPU::NoRegister) {
+        PrivateSegmentWaveByteOffsetReg = findFirstFreeSGPR(CCInfo);
+        Info.setPrivateSegmentWaveByteOffset(PrivateSegmentWaveByteOffsetReg);
+      }
+    } else
+      PrivateSegmentWaveByteOffsetReg = Info.addPrivateSegmentWaveByteOffset();
+
+    MF.addLiveIn(PrivateSegmentWaveByteOffsetReg, &AMDGPU::SGPR_32RegClass);
+    CCInfo.AllocateReg(PrivateSegmentWaveByteOffsetReg);
+  }
+}
+
 bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                               const Function &F,
                                               ArrayRef<unsigned> VRegs) const {
@@ -170,6 +207,8 @@ bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
   const DataLayout &DL = F.getParent()->getDataLayout();
+
+  bool IsShader = AMDGPU::isShader(F.getCallingConv());
 
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs, F.getContext());
@@ -242,6 +281,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       ++i;
     }
 
+    allocateSystemSGPRs(CCInfo, MF, *Info, F.getCallingConv(), IsShader);
     return true;
   }
 
@@ -313,6 +353,8 @@ bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       MIRBuilder.getMBB().addLiveIn(VA.getLocReg());
       MIRBuilder.buildCopy(VRegs[OrigArgIdx], VA.getLocReg());
     }
+
+    allocateSystemSGPRs(CCInfo, MF, *Info, F.getCallingConv(), IsShader);
     return true;
   }
 

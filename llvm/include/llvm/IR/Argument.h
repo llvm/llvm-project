@@ -78,6 +78,9 @@ public:
   /// If this is a byval or inalloca argument, return its alignment.
   unsigned getParamAlignment() const;
 
+  /// If this is a byval argument, return its type.
+  Type *getParamByValType() const;
+
   /// Return true if this argument has the nest attribute.
   bool hasNestAttr() const;
 

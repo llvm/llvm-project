@@ -188,6 +188,7 @@ public:
     bool IsSwiftSelf : 1;
     bool IsSwiftError : 1;
     uint16_t Alignment = 0;
+    Type *ByValType = nullptr;
 
     ArgListEntry()
         : IsSExt(false), IsZExt(false), IsInReg(false), IsSRet(false),

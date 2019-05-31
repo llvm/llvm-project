@@ -949,9 +949,11 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
   incorporateFunctionMetadata(F);
 
   // Adding function arguments to the value table.
-  for (const auto &I : F.args())
+  for (const auto &I : F.args()) {
     EnumerateValue(&I);
-
+    if (I.hasAttribute(Attribute::ByVal) && I.getParamByValType())
+      EnumerateType(I.getParamByValType());
+  }
   FirstFuncConstantID = Values.size();
 
   // Add all function-level constants to the value table.

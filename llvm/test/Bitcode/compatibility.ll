@@ -529,7 +529,7 @@ declare void @f.param.signext(i8 signext)
 declare void @f.param.inreg(i8 inreg)
 ; CHECK: declare void @f.param.inreg(i8 inreg)
 declare void @f.param.byval({ i8, i8 }* byval)
-; CHECK: declare void @f.param.byval({ i8, i8 }* byval)
+; CHECK: declare void @f.param.byval({ i8, i8 }* byval({ i8, i8 }))
 declare void @f.param.inalloca(i8* inalloca)
 ; CHECK: declare void @f.param.inalloca(i8* inalloca)
 declare void @f.param.sret(i8* sret)
@@ -1734,6 +1734,15 @@ define i8** @constexpr() {
 ; immarg attribute
 declare void @llvm.test.immarg.intrinsic(i32 immarg)
 ; CHECK: declare void @llvm.test.immarg.intrinsic(i32 immarg)
+
+; byval attribute with type
+%named_type = type [8 x i8]
+declare void @byval_type(i32* byval(i32) align 2)
+declare void @byval_type2({ i8, i8* }* byval({ i8, i8* }))
+declare void @byval_named_type(%named_type* byval(%named_type))
+; CHECK: declare void @byval_type(i32* byval(i32) align 2)
+; CHECK: declare void @byval_type2({ i8, i8* }* byval({ i8, i8* }))
+; CHECK: declare void @byval_named_type([8 x i8]* byval([8 x i8]))
 
 ; CHECK: attributes #0 = { alignstack=4 }
 ; CHECK: attributes #1 = { alignstack=8 }

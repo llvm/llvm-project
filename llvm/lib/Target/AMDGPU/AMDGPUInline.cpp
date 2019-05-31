@@ -111,7 +111,8 @@ unsigned AMDGPUInliner::getInlineThreshold(CallSite CS) const {
     Callee->hasFnAttribute(Attribute::InlineHint);
   if (InlineHint && Params.HintThreshold && Params.HintThreshold > Thres
       && !Caller->hasFnAttribute(Attribute::MinSize))
-    Thres = Params.HintThreshold.getValue();
+    Thres = Params.HintThreshold.getValue() *
+            TTIWP->getTTI(*Callee).getInliningThresholdMultiplier();
 
   const DataLayout &DL = Caller->getParent()->getDataLayout();
   if (!Callee)

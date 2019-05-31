@@ -1010,7 +1010,6 @@ class X86_32ABIInfo : public SwiftABIInfo {
   bool IsWin32StructABI;
   bool IsSoftFloatABI;
   bool IsMCUABI;
-  bool IsLinuxABI;
   unsigned DefaultNumRegisterParameters;
 
   static bool isRegisterSize(unsigned Size) {
@@ -1077,7 +1076,6 @@ public:
       IsWin32StructABI(Win32StructABI),
       IsSoftFloatABI(SoftFloatABI),
       IsMCUABI(CGT.getTarget().getTriple().isOSIAMCU()),
-      IsLinuxABI(CGT.getTarget().getTriple().isOSLinux()),
       DefaultNumRegisterParameters(NumRegisterParameters) {}
 
   bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
@@ -1494,15 +1492,8 @@ unsigned X86_32ABIInfo::getTypeStackAlignInBytes(QualType Ty,
   if (Align <= MinABIStackAlignInBytes)
     return 0; // Use default alignment.
 
-  if (IsLinuxABI) {
-    // i386 System V ABI 2.1: Structures and unions assume the alignment of their
-    // most strictly aligned component.
-    //
-    // Exclude other System V OS (e.g Darwin, PS4 and FreeBSD) since we don't
-    // want to spend any effort dealing with the ramifications of ABI breaks.
-    return Align;
-  } else if (!IsDarwinVectorABI) {
-    // On non-Darwin and non-Linux, the stack type alignment is always 4.
+  // On non-Darwin, the stack type alignment is always 4.
+  if (!IsDarwinVectorABI) {
     // Set explicit alignment, since we may need to realign the top.
     return MinABIStackAlignInBytes;
   }

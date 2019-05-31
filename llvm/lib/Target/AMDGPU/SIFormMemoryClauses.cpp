@@ -319,6 +319,8 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
 
   MaxVGPRs = TRI->getAllocatableSet(MF, &AMDGPU::VGPR_32RegClass).count();
   MaxSGPRs = TRI->getAllocatableSet(MF, &AMDGPU::SGPR_32RegClass).count();
+  unsigned FuncMaxClause = AMDGPU::getIntegerAttribute(
+      MF.getFunction(), "amdgpu-max-memory-clause", MaxClause);
 
   for (MachineBasicBlock &MBB : MF) {
     MachineBasicBlock::instr_iterator Next;
@@ -339,7 +341,7 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
         continue;
 
       unsigned Length = 1;
-      for ( ; Next != E && Length < MaxClause; ++Next) {
+      for ( ; Next != E && Length < FuncMaxClause; ++Next) {
         if (!isValidClauseInst(*Next, IsVMEM))
           break;
 

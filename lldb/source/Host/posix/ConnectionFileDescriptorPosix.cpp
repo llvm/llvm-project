@@ -758,13 +758,7 @@ void ConnectionFileDescriptor::SetChildProcessesInherit(
 }
 
 void ConnectionFileDescriptor::InitializeSocket(Socket *socket) {
-  assert(socket->GetSocketProtocol() == Socket::ProtocolTcp);
-  TCPSocket *tcp_socket = static_cast<TCPSocket *>(socket);
-
   m_write_sp.reset(socket);
   m_read_sp = m_write_sp;
-  StreamString strm;
-  strm.Printf("connect://[%s]:%u", tcp_socket->GetRemoteIPAddress().c_str(),
-              tcp_socket->GetRemotePortNumber());
-  m_uri = strm.GetString();
+  m_uri = socket->GetRemoteConnectionURI();
 }

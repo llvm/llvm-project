@@ -1631,12 +1631,12 @@ bool Process::IsPossibleDynamicValue(ValueObject &in_value) {
     return runtime ? runtime->CouldHaveDynamicValue(in_value) : false;
   }
 
-  LanguageRuntime *cpp_runtime = GetLanguageRuntime(eLanguageTypeC_plus_plus);
-  if (cpp_runtime && cpp_runtime->CouldHaveDynamicValue(in_value))
-    return true;
+  for (LanguageRuntime *runtime : GetLanguageRuntimes()) {
+    if (runtime->CouldHaveDynamicValue(in_value))
+      return true;
+  }
 
-  LanguageRuntime *objc_runtime = GetLanguageRuntime(eLanguageTypeObjC);
-  return objc_runtime ? objc_runtime->CouldHaveDynamicValue(in_value) : false;
+  return false;
 }
 
 void Process::SetDynamicCheckers(DynamicCheckerFunctions *dynamic_checkers) {

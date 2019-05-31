@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SocketTestUtilities.h"
+#include "lldb/Utility/UriParser.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
@@ -147,3 +148,64 @@ TEST_F(SocketTest, TCPListen0GetPort) {
   EXPECT_TRUE(socket_up->IsValid());
   EXPECT_NE(socket_up->GetLocalPortNumber(), 0);
 }
+
+TEST_F(SocketTest, TCPGetConnectURI) {
+  std::unique_ptr<TCPSocket> socket_a_up;
+  std::unique_ptr<TCPSocket> socket_b_up;
+  if (!IsAddressFamilySupported("127.0.0.1")) {
+    GTEST_LOG_(WARNING) << "Skipping test due to missing IPv4 support.";
+    return;
+  }
+  CreateTCPConnectedSockets("127.0.0.1", &socket_a_up, &socket_b_up);
+
+  llvm::StringRef scheme;
+  llvm::StringRef hostname;
+  int port;
+  llvm::StringRef path;
+  std::string uri(socket_a_up->GetRemoteConnectionURI());
+  EXPECT_TRUE(UriParser::Parse(uri, scheme, hostname, port, path));
+  EXPECT_EQ(scheme, "connect");
+  EXPECT_EQ(port, socket_a_up->GetRemotePortNumber());
+}
+
+TEST_F(SocketTest, UDPGetConnectURI) {
+  if (!IsAddressFamilySupported("127.0.0.1")) {
+    GTEST_LOG_(WARNING) << "Skipping test due to missing IPv4 support.";
+    return;
+  }
+  Socket *socket;
+  bool child_processes_inherit = false;
+  auto error =
+      UDPSocket::Connect("127.0.0.1:0", child_processes_inherit, socket);
+
+  llvm::StringRef scheme;
+  llvm::StringRef hostname;
+  int port;
+  llvm::StringRef path;
+  std::string uri(socket->GetRemoteConnectionURI());
+  EXPECT_TRUE(UriParser::Parse(uri, scheme, hostname, port, path));
+  EXPECT_EQ(scheme, "udp");
+}
+
+#ifndef LLDB_DISABLE_POSIX
+TEST_F(SocketTest, DomainGetConnectURI) {
+  llvm::SmallString<64> domain_path;
+  std::error_code EC =
+      llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", domain_path);
+  ASSERT_FALSE(EC);
+  llvm::sys::path::append(domain_path, "test");
+
+  std::unique_ptr<DomainSocket> socket_a_up;
+  std::unique_ptr<DomainSocket> socket_b_up;
+  CreateDomainConnectedSockets(domain_path, &socket_a_up, &socket_b_up);
+
+  llvm::StringRef scheme;
+  llvm::StringRef hostname;
+  int port;
+  llvm::StringRef path;
+  std::string uri(socket_a_up->GetRemoteConnectionURI());
+  EXPECT_TRUE(UriParser::Parse(uri, scheme, hostname, port, path));
+  EXPECT_EQ(scheme, "unix-connect");
+  EXPECT_EQ(path, domain_path);
+}
+#endif

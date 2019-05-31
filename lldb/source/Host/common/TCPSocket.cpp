@@ -118,6 +118,14 @@ std::string TCPSocket::GetRemoteIPAddress() const {
   return "";
 }
 
+std::string TCPSocket::GetRemoteConnectionURI() const {
+  if (m_socket != kInvalidSocketValue) {
+    return llvm::formatv("connect://[{0}]:{1}", GetRemoteIPAddress(),
+                         GetRemotePortNumber());
+  }
+  return "";
+};
+
 Status TCPSocket::CreateSocket(int domain) {
   Status error;
   if (IsValid())

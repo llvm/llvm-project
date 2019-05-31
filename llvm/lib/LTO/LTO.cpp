@@ -1356,8 +1356,9 @@ lto::setupOptimizationRemarks(LLVMContext &Context,
       llvm::make_unique<ToolOutputFile>(Filename, EC, sys::fs::F_None);
   if (EC)
     return errorCodeToError(EC);
-  Context.setRemarkStreamer(
-      llvm::make_unique<RemarkStreamer>(Filename, DiagnosticFile->os()));
+  Context.setRemarkStreamer(llvm::make_unique<RemarkStreamer>(
+      Filename,
+      llvm::make_unique<remarks::YAMLSerializer>(DiagnosticFile->os())));
 
   if (!LTORemarksPasses.empty())
     if (Error E = Context.getRemarkStreamer()->setFilter(LTORemarksPasses))

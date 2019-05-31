@@ -22,8 +22,9 @@ insn2:
 	movl	x(%rip), %eax
 
 # Test PC-rel GOT relocation.
-# Verify both the contents of the GOT entry for y, and that the movq instruction
-# references the correct GOT entry address:
+# Verify the alignment of the GOT entry, the contents of the GOT entry for y,
+# and that the movq instruction references the correct GOT entry address:
+# rtdyld-check: stub_addr(test_x86-64.o/__text, y)[2:0] = 0
 # rtdyld-check: *{8}(stub_addr(test_x86-64.o/__text, y)) = y
 # rtdyld-check: decode_operand(insn3, 4) = stub_addr(test_x86-64.o/__text, y) - next_pc(insn3)
 insn3:

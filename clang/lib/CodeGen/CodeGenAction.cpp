@@ -283,7 +283,8 @@ namespace clang {
         }
 
         Ctx.setRemarkStreamer(llvm::make_unique<RemarkStreamer>(
-            CodeGenOpts.OptRecordFile, OptRecordFile->os()));
+            CodeGenOpts.OptRecordFile,
+            llvm::make_unique<remarks::YAMLSerializer>(OptRecordFile->os())));
 
         if (!CodeGenOpts.OptRecordPasses.empty())
           if (Error E = Ctx.getRemarkStreamer()->setFilter(

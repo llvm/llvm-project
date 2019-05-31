@@ -13,7 +13,7 @@
 
 #ifndef FLT16_MIN_10_EXP
     #error "Macro FLT16_MIN_10_EXP is missing."
-#elif   FLT16_MIN_10_EXP > -13
+#elif   FLT16_MIN_10_EXP > -4
     #error "Macro FLT16_MIN_10_EXP is invalid."
 #endif
 
@@ -21,7 +21,7 @@ _Static_assert(FLT16_MIN_10_EXP == __FLT16_MIN_10_EXP__, "");
 
 #ifndef FLT16_MIN_EXP
     #error "Macro FLT16_MIN_EXP is missing."
-#elif   FLT16_MIN_EXP > -14
+#elif   FLT16_MIN_EXP > -13
     #error "Macro FLT16_MIN_EXP is invalid."
 #endif
 
@@ -37,7 +37,7 @@ _Static_assert(FLT16_MAX_10_EXP == __FLT16_MAX_10_EXP__, "");
 
 #ifndef FLT16_MAX_EXP
     #error "Macro FLT16_MAX_EXP is missing."
-#elif   FLT16_MAX_EXP < 15
+#elif   FLT16_MAX_EXP < 16
     #error "Macro FLT16_MAX_EXP is invalid."
 #endif
 
