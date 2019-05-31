@@ -26,12 +26,6 @@ define void @_start() {
 ; CHECK-NEXT:       - Name:            memory
 ; CHECK-NEXT:         Kind:            MEMORY
 ; CHECK-NEXT:         Index:           0
-; CHECK-NEXT:       - Name:            __heap_base
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           1
-; CHECK-NEXT:       - Name:            __data_end
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:       - Name:            _Z3fooi
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           1

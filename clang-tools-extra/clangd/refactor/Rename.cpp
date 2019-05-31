@@ -1,3 +1,11 @@
+//===--- Rename.cpp - Symbol-rename refactorings -----------------*- C++-*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "refactor/Rename.h"
 #include "clang/Tooling/Refactoring/RefactoringResultConsumer.h"
 #include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
@@ -65,7 +73,7 @@ renameWithinFile(ParsedAST &AST, llvm::StringRef File, Position Pos,
   // Right now we only support renaming the main file, so we
   // drop replacements not for the main file. In the future, we might
   // also support rename with wider scope.
-  // Rename sometimes returns duplicate edits (which is a bug). A side-effect of 
+  // Rename sometimes returns duplicate edits (which is a bug). A side-effect of
   // adding them to a single Replacements object is these are deduplicated.
   for (const tooling::AtomicChange &Change : ResultCollector.Result->get()) {
     for (const auto &Rep : Change.getReplacements()) {
