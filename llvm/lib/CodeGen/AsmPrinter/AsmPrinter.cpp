@@ -100,6 +100,7 @@
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Pass.h"
 #include "llvm/Remarks/Remark.h"
+#include "llvm/Remarks/RemarkStringTable.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -1347,6 +1348,7 @@ void AsmPrinter::emitRemarksSection(Module &M) {
   RemarkStreamer *RS = M.getContext().getRemarkStreamer();
   if (!RS)
     return;
+  const remarks::Serializer &Serializer = RS->getSerializer();
 
   // Switch to the right section: .remarks/__remarks.
   MCSection *RemarksSection =
@@ -1368,23 +1370,27 @@ void AsmPrinter::emitRemarksSection(Module &M) {
   // Note: we need to use the streamer here to emit it in the section. We can't
   // just use the serialize function with a raw_ostream because of the way
   // MCStreamers work.
-  const remarks::StringTable &StrTab = RS->getStringTable();
-  std::vector<StringRef> StrTabStrings = StrTab.serialize();
-  uint64_t StrTabSize = StrTab.SerializedSize;
+  uint64_t StrTabSize =
+      Serializer.StrTab ? Serializer.StrTab->SerializedSize : 0;
   // Emit the total size of the string table (the size itself excluded):
   // little-endian uint64_t.
   // The total size is located after the version number.
+  // Note: even if no string table is used, emit 0.
   std::array<char, 8> StrTabSizeBuf;
   support::endian::write64le(StrTabSizeBuf.data(), StrTabSize);
   OutStreamer->EmitBinaryData(
       StringRef(StrTabSizeBuf.data(), StrTabSizeBuf.size()));
-  // Emit a list of null-terminated strings.
-  // Note: the order is important here: the ID used in the remarks corresponds
-  // to the position of the string in the section.
-  for (StringRef Str : StrTabStrings) {
-    OutStreamer->EmitBytes(Str);
-    // Explicitly emit a '\0'.
-    OutStreamer->EmitIntValue(/*Value=*/0, /*Size=*/1);
+
+  if (const Optional<remarks::StringTable> &StrTab = Serializer.StrTab) {
+    std::vector<StringRef> StrTabStrings = StrTab->serialize();
+    // Emit a list of null-terminated strings.
+    // Note: the order is important here: the ID used in the remarks corresponds
+    // to the position of the string in the section.
+    for (StringRef Str : StrTabStrings) {
+      OutStreamer->EmitBytes(Str);
+      // Explicitly emit a '\0'.
+      OutStreamer->EmitIntValue(/*Value=*/0, /*Size=*/1);
+    }
   }
 
   // Emit the null-terminated absolute path to the remark file.

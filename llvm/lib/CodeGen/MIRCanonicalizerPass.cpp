@@ -104,6 +104,8 @@ INITIALIZE_PASS_END(MIRCanonicalizer, "mir-canonicalizer",
                     "Rename Register Operands Canonically", false, false)
 
 static std::vector<MachineBasicBlock *> GetRPOList(MachineFunction &MF) {
+  if (MF.empty())
+    return {};
   ReversePostOrderTraversal<MachineBasicBlock *> RPOT(&*MF.begin());
   std::vector<MachineBasicBlock *> RPOList;
   for (auto MBB : RPOT) {
@@ -341,15 +343,23 @@ static bool propagateLocalCopies(MachineBasicBlock *MBB) {
       continue;
     if (!TargetRegisterInfo::isVirtualRegister(Src))
       continue;
+    // Not folding COPY instructions if regbankselect has not set the RCs.
+    // Why are we only considering Register Classes? Because the verifier
+    // sometimes gets upset if the register classes don't match even if the
+    // types do. A future patch might add COPY folding for matching types in
+    // pre-registerbankselect code.
+    if (!MRI.getRegClassOrNull(Dst))
+      continue;
     if (MRI.getRegClass(Dst) != MRI.getRegClass(Src))
       continue;
 
-    for (auto UI = MRI.use_begin(Dst); UI != MRI.use_end(); ++UI) {
-      MachineOperand *MO = &*UI;
+    std::vector<MachineOperand *> Uses;
+    for (auto UI = MRI.use_begin(Dst); UI != MRI.use_end(); ++UI)
+      Uses.push_back(&*UI);
+    for (auto *MO : Uses)
       MO->setReg(Src);
-      Changed = true;
-    }
 
+    Changed = true;
     MI->eraseFromParent();
   }
 
@@ -473,18 +483,14 @@ class NamedVRegCursor {
   unsigned virtualVRegNumber;
 
 public:
-  NamedVRegCursor(MachineRegisterInfo &MRI) : MRI(MRI) {
-    unsigned VRegGapIndex = 0;
-    const unsigned VR_GAP = (++VRegGapIndex * 1000);
-
-    unsigned I = MRI.createIncompleteVirtualRegister();
-    const unsigned E = (((I + VR_GAP) / VR_GAP) + 1) * VR_GAP;
-
-    virtualVRegNumber = E;
-  }
+  NamedVRegCursor(MachineRegisterInfo &MRI) : MRI(MRI), virtualVRegNumber(0) {}
 
   void SkipVRegs() {
     unsigned VRegGapIndex = 1;
+    if (!virtualVRegNumber) {
+      VRegGapIndex = 0;
+      virtualVRegNumber = MRI.createIncompleteVirtualRegister();
+    }
     const unsigned VR_GAP = (++VRegGapIndex * 1000);
 
     unsigned I = virtualVRegNumber;
@@ -500,14 +506,17 @@ public:
     return virtualVRegNumber;
   }
 
-  unsigned createVirtualRegister(const TargetRegisterClass *RC) {
+  unsigned createVirtualRegister(unsigned VReg) {
+    if (!virtualVRegNumber)
+      SkipVRegs();
     std::string S;
     raw_string_ostream OS(S);
     OS << "namedVReg" << (virtualVRegNumber & ~0x80000000);
     OS.flush();
     virtualVRegNumber++;
-
-    return MRI.createVirtualRegister(RC, OS.str());
+    if (auto RC = MRI.getRegClassOrNull(VReg))
+      return MRI.createVirtualRegister(RC, OS.str());
+    return MRI.createGenericVirtualRegister(MRI.getType(VReg), OS.str());
   }
 };
 } // namespace
@@ -557,7 +566,7 @@ GetVRegRenameMap(const std::vector<TypedVReg> &VRegs,
       continue;
     }
 
-    auto Rename = NVC.createVirtualRegister(MRI.getRegClass(Reg));
+    auto Rename = NVC.createVirtualRegister(Reg);
 
     if (VRegRenameMap.find(Reg) == VRegRenameMap.end()) {
       LLVM_DEBUG(dbgs() << "Mapping vreg ";);
@@ -741,7 +750,7 @@ static bool runOnBasicBlock(MachineBasicBlock *MBB,
     MachineInstr &MI = *MII++;
     Changed = true;
     unsigned vRegToRename = MI.getOperand(0).getReg();
-    auto Rename = NVC.createVirtualRegister(MRI.getRegClass(vRegToRename));
+    auto Rename = NVC.createVirtualRegister(vRegToRename);
 
     std::vector<MachineOperand *> RenameMOs;
     for (auto &MO : MRI.reg_operands(vRegToRename)) {

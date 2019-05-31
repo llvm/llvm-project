@@ -1174,7 +1174,8 @@ def : InstRW<[A57Write_8cyc_1V], (instregex
 
 // ASIMD FP max/min
 def : InstRW<[A57Write_5cyc_1V], (instregex
-  "(VMAX|VMIN)(fd|fq|hd|hq)", "(VPMAX|VPMIN)(f|h)", "VMAXNM", "VMINNM")>;
+  "(VMAX|VMIN)(fd|fq|hd|hq)", "(VPMAX|VPMIN)(f|h)", "(NEON|VFP)_VMAXNM",
+  "(NEON|VFP)_VMINNM")>;
 
 // ASIMD FP multiply
 def A57WriteVMUL_VecFP  : SchedWriteRes<[A57UnitV]> { let Latency = 5;  }

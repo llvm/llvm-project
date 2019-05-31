@@ -2,6 +2,9 @@
 # This test ensures that the MIR parser can parse multiple register machine
 # operands before '='.
 
+# This tests that a MIR file with no vregs does not get altered by mir-canon.
+# RUN: llc -mtriple=aarch64 -o - -run-pass mir-canonicalizer -verify-machineinstrs %s
+
 --- |
 
   declare void @foo()

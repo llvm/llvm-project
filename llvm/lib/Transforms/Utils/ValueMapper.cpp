@@ -913,6 +913,21 @@ void Mapper::remapInstruction(Instruction *I) {
       Tys.push_back(TypeMapper->remapType(Ty));
     CS.mutateFunctionType(FunctionType::get(
         TypeMapper->remapType(I->getType()), Tys, FTy->isVarArg()));
+
+    LLVMContext &C = CS->getContext();
+    AttributeList Attrs = CS.getAttributes();
+    for (unsigned i = 0; i < Attrs.getNumAttrSets(); ++i) {
+      if (Attrs.hasAttribute(i, Attribute::ByVal)) {
+        Type *Ty = Attrs.getAttribute(i, Attribute::ByVal).getValueAsType();
+        if (!Ty)
+          continue;
+
+        Attrs = Attrs.removeAttribute(C, i, Attribute::ByVal);
+        Attrs = Attrs.addAttribute(
+            C, i, Attribute::getWithByValType(C, TypeMapper->remapType(Ty)));
+      }
+    }
+    CS.setAttributes(Attrs);
     return;
   }
   if (auto *AI = dyn_cast<AllocaInst>(I))

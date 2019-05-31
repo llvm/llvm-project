@@ -341,16 +341,16 @@ define <4 x i32> @vec_sink_add_of_const_to_add1(<4 x i32> %a, <4 x i32> %b, <4 x
 define <4 x i32> @vec_sink_sub_of_const_to_add0(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; X32-LABEL: vec_sink_sub_of_const_to_add0:
 ; X32:       # %bb.0:
+; X32-NEXT:    paddd %xmm2, %xmm1
 ; X32-NEXT:    paddd %xmm1, %xmm0
 ; X32-NEXT:    psubd {{\.LCPI.*}}, %xmm0
-; X32-NEXT:    paddd %xmm2, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vec_sink_sub_of_const_to_add0:
 ; X64:       # %bb.0:
+; X64-NEXT:    paddd %xmm2, %xmm1
 ; X64-NEXT:    paddd %xmm1, %xmm0
 ; X64-NEXT:    psubd {{.*}}(%rip), %xmm0
-; X64-NEXT:    paddd %xmm2, %xmm0
 ; X64-NEXT:    retq
   %t0 = add <4 x i32> %a, %b
   %t1 = sub <4 x i32> %t0, <i32 42, i32 24, i32 undef, i32 46>
@@ -360,16 +360,16 @@ define <4 x i32> @vec_sink_sub_of_const_to_add0(<4 x i32> %a, <4 x i32> %b, <4 x
 define <4 x i32> @vec_sink_sub_of_const_to_add1(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; X32-LABEL: vec_sink_sub_of_const_to_add1:
 ; X32:       # %bb.0:
+; X32-NEXT:    paddd %xmm2, %xmm1
 ; X32-NEXT:    paddd %xmm1, %xmm0
 ; X32-NEXT:    psubd {{\.LCPI.*}}, %xmm0
-; X32-NEXT:    paddd %xmm2, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vec_sink_sub_of_const_to_add1:
 ; X64:       # %bb.0:
+; X64-NEXT:    paddd %xmm2, %xmm1
 ; X64-NEXT:    paddd %xmm1, %xmm0
 ; X64-NEXT:    psubd {{.*}}(%rip), %xmm0
-; X64-NEXT:    paddd %xmm2, %xmm0
 ; X64-NEXT:    retq
   %t0 = add <4 x i32> %a, %b
   %t1 = sub <4 x i32> %t0, <i32 42, i32 24, i32 undef, i32 46>
@@ -525,15 +525,15 @@ define <4 x i32> @vec_sink_sub_from_const_to_sub2(<4 x i32> %a, <4 x i32> %b, <4
 ; X32-LABEL: vec_sink_sub_from_const_to_sub2:
 ; X32:       # %bb.0:
 ; X32-NEXT:    psubd %xmm1, %xmm0
-; X32-NEXT:    psubd {{\.LCPI.*}}, %xmm0
 ; X32-NEXT:    paddd %xmm2, %xmm0
+; X32-NEXT:    psubd {{\.LCPI.*}}, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vec_sink_sub_from_const_to_sub2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    psubd %xmm1, %xmm0
-; X64-NEXT:    psubd {{.*}}(%rip), %xmm0
 ; X64-NEXT:    paddd %xmm2, %xmm0
+; X64-NEXT:    psubd {{.*}}(%rip), %xmm0
 ; X64-NEXT:    retq
   %t0 = sub <4 x i32> %a, %b
   %t1 = sub <4 x i32> <i32 42, i32 24, i32 undef, i32 46>, %t0

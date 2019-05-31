@@ -218,8 +218,8 @@ define <4 x i32> @vec_sink_sub_of_const_to_add0(<4 x i32> %a, <4 x i32> %b, <4 x
 ; CHECK-NEXT:    adrp x8, .LCPI14_0
 ; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI14_0]
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    sub v0.4s, v0.4s, v3.4s
 ; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    sub v0.4s, v0.4s, v3.4s
 ; CHECK-NEXT:    ret
   %t0 = add <4 x i32> %a, %b
   %t1 = sub <4 x i32> %t0, <i32 42, i32 24, i32 undef, i32 46>
@@ -232,8 +232,8 @@ define <4 x i32> @vec_sink_sub_of_const_to_add1(<4 x i32> %a, <4 x i32> %b, <4 x
 ; CHECK-NEXT:    adrp x8, .LCPI15_0
 ; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI15_0]
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    sub v0.4s, v0.4s, v3.4s
-; CHECK-NEXT:    add v0.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    ret
   %t0 = add <4 x i32> %a, %b
   %t1 = sub <4 x i32> %t0, <i32 42, i32 24, i32 undef, i32 46>
@@ -360,8 +360,8 @@ define <4 x i32> @vec_sink_sub_from_const_to_sub2(<4 x i32> %a, <4 x i32> %b, <4
 ; CHECK-NEXT:    adrp x8, .LCPI23_0
 ; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI23_0]
 ; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    sub v0.4s, v0.4s, v3.4s
-; CHECK-NEXT:    add v0.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    ret
   %t0 = sub <4 x i32> %a, %b
   %t1 = sub <4 x i32> <i32 42, i32 24, i32 undef, i32 46>, %t0

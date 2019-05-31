@@ -103,10 +103,10 @@
 // ERROR-V8M: invalid operand for instruction
 // ERROR-V8M: invalid operand for instruction
 
-// ERROR-NOVFP: instruction requires: VFP2
-// ERROR-NOVFP: instruction requires: VFP2
-// ERROR-NOVFP: instruction requires: VFP2
-// ERROR-NOVFP: instruction requires: VFP2
+// ERROR-NOVFP: instruction requires: fp registers
+// ERROR-NOVFP: instruction requires: fp registers
+// ERROR-NOVFP: instruction requires: fp registers
+// ERROR-NOVFP: instruction requires: fp registers
 // ERROR-NOVFP: instruction requires: VFP2
 // ERROR-NOVFP: instruction requires: VFP2
 // ERROR-NOVFP: instruction requires: VFP2
@@ -172,9 +172,9 @@
 // ERROR-V8M: operand must be a register in range [r0, r14]
 
 // ERROR-NOVFP: invalid instruction
+// ERROR-NOVFP: instruction requires: fp registers
 // ERROR-NOVFP: instruction requires: VFP2
 // ERROR-NOVFP: instruction requires: VFP2
-// ERROR-NOVFP: instruction requires: VFP2
-// ERROR-NOVFP: instruction requires: VFP2
+// ERROR-NOVFP: instruction requires: fp registers
 // ERROR-NOVFP: invalid instruction
 // ERROR-NOVFP: invalid instruction

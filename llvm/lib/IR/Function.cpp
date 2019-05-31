@@ -113,6 +113,11 @@ unsigned Argument::getParamAlignment() const {
   return getParent()->getParamAlignment(getArgNo());
 }
 
+Type *Argument::getParamByValType() const {
+  assert(getType()->isPointerTy() && "Only pointers have byval types");
+  return getParent()->getParamByValType(getArgNo());
+}
+
 uint64_t Argument::getDereferenceableBytes() const {
   assert(getType()->isPointerTy() &&
          "Only pointers have dereferenceable bytes");

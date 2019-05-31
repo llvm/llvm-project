@@ -362,6 +362,9 @@ protected:
   /// Processor has AVX-512 Bit Algorithms instructions
   bool HasBITALG = false;
 
+  /// Processor has AVX-512 vp2intersect instructions
+  bool HasVP2INTERSECT = false;
+
   /// Processor supports MPX - Memory Protection Extensions
   bool HasMPX = false;
 
@@ -679,6 +682,7 @@ public:
   bool hasPKU() const { return HasPKU; }
   bool hasVNNI() const { return HasVNNI; }
   bool hasBF16() const { return HasBF16; }
+  bool hasVP2INTERSECT() const { return HasVP2INTERSECT; }
   bool hasBITALG() const { return HasBITALG; }
   bool hasMPX() const { return HasMPX; }
   bool hasSHSTK() const { return HasSHSTK; }

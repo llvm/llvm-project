@@ -32,6 +32,7 @@ required_libraries =
  ObjCARC
  Object
  Passes
+ Remarks
  Scalar
  Support
  Target

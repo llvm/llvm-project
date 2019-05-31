@@ -15,6 +15,7 @@ set(LLVM_LINK_COMPONENTS
   Instrumentation
   MC
   ObjCARCOpts
+  Remarks
   ScalarOpts
   Support
   Target

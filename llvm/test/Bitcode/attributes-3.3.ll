@@ -48,7 +48,7 @@ define void @f7(i8* noalias)
 }
 
 define void @f8(i8* byval)
-; CHECK: define void @f8(i8* byval)
+; CHECK: define void @f8(i8* byval(i8))
 {
         ret void;
 }

@@ -1468,6 +1468,10 @@ static int readModRM(struct InternalInstruction* insn) {
       if (index > 7)                                      \
         *valid = 0;                                       \
       return prefix##_K0 + index;                         \
+    case TYPE_VK_PAIR:                                    \
+      if (index > 7)                                      \
+        *valid = 0;                                       \
+      return prefix##_K0_K1 + (index / 2);                \
     case TYPE_MM64:                                       \
       return prefix##_MM0 + (index & 0x7);                \
     case TYPE_SEGMENTREG:                                 \

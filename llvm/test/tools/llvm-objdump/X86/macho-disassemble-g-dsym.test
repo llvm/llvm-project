@@ -5,3 +5,18 @@
 // RUN: FileCheck --input-file %t0 %s
 
 CHECK: Disassembly of section __TEXT,__text:
+
+// RUN: llvm-objdump -m -d -g -dsym %p/Inputs/hello-macho-fat.dwarf %p/Inputs/hello-macho-fat | FileCheck -check-prefix MACHO_DSYM %s
+// RUN: llvm-objdump -m -d -g -dsym %p/Inputs/hello-macho-fat.dwarf %p/Inputs/hello-macho-thin | FileCheck -check-prefix MACHO_DSYM %s
+// RUN: llvm-objdump -m -d -g -dsym %p/Inputs/hello-macho-thin.dwarf %p/Inputs/hello-macho-thin | FileCheck -check-prefix MACHO_DSYM %s
+
+MACHO_DSYM: (__TEXT,__text) section
+
+// RUN: llvm-objdump -m -d -g -dsym %p/../Inputs/libbogus11.a %p/../../dsymutil/Inputs/basic.macho.x86_64 2>&1 | FileCheck -check-prefix BAD_INPUT %s
+
+BAD_INPUT: is not a Mach-O or Universal file type.
+
+// RUN: not llvm-objdump -m -d -g -dsym %p/Inputs %p/Inputs/hello-macho-thin 2>&1 | FileCheck -check-prefix DIRECTORY %s
+
+// Windows will emit "Is a directory", whereas others emit "is a directory"
+DIRECTORY: {{[i|I]}}s a directory

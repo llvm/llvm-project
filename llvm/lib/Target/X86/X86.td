@@ -173,6 +173,10 @@ def FeatureBF16    : SubtargetFeature<"avx512bf16", "HasBF16", "true",
 def FeatureBITALG  : SubtargetFeature<"avx512bitalg", "HasBITALG", "true",
                        "Enable AVX-512 Bit Algorithms",
                         [FeatureBWI]>;
+def FeatureVP2INTERSECT  : SubtargetFeature<"avx512vp2intersect",
+                                            "HasVP2INTERSECT", "true",
+                                            "Enable AVX-512 vp2intersect",
+                                            [FeatureAVX512]>;
 def FeaturePCLMUL  : SubtargetFeature<"pclmul", "HasPCLMUL", "true",
                          "Enable packed carry-less multiplication instructions",
                                [FeatureSSE2]>;
