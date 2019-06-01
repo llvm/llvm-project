@@ -155,17 +155,21 @@ bool DWARFExpression::Operation::extract(DataExtractor Data, uint16_t Version,
     case Operation::SizeAddr:
       if (AddressSize == 8) {
         Operands[Operand] = Data.getU64(&Offset);
-      } else {
-        assert(AddressSize == 4);
+      } else if (AddressSize == 4) {
         Operands[Operand] = Data.getU32(&Offset);
+      } else {
+        assert(AddressSize == 2);
+        Operands[Operand] = Data.getU16(&Offset);
       }
       break;
     case Operation::SizeRefAddr:
       if (getRefAddrSize(AddressSize, Version) == 8) {
         Operands[Operand] = Data.getU64(&Offset);
-      } else {
-        assert(getRefAddrSize(AddressSize, Version) == 4);
+      } else if (getRefAddrSize(AddressSize, Version) == 4) {
         Operands[Operand] = Data.getU32(&Offset);
+      } else {
+        assert(getRefAddrSize(AddressSize, Version) == 2);
+        Operands[Operand] = Data.getU16(&Offset);
       }
       break;
     case Operation::SizeLEB:

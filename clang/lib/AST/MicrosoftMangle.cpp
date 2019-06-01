@@ -265,7 +265,8 @@ class MicrosoftCXXNameMangler {
   BackRefVec NameBackReferences;
 
   typedef llvm::DenseMap<const void *, unsigned> ArgBackRefMap;
-  ArgBackRefMap TypeBackReferences;
+  ArgBackRefMap FunArgBackReferences;
+  ArgBackRefMap TemplateArgBackReferences;
 
   typedef std::set<std::pair<int, bool>> PassObjectSizeArgsSet;
   PassObjectSizeArgsSet PassObjectSizeArgs;
@@ -343,7 +344,7 @@ private:
                                   const TemplateArgumentList &TemplateArgs);
   void mangleObjCMethodName(const ObjCMethodDecl *MD);
 
-  void mangleArgumentType(QualType T, SourceRange Range);
+  void mangleFunctionArgumentType(QualType T, SourceRange Range);
   void manglePassObjectSizeArg(const PassObjectSizeAttr *POSA);
 
   bool isArtificialTagType(QualType T) const;
@@ -793,7 +794,7 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
     // the X<Y> part is aliased. However, if you need to mangle
     //   void foo(A::X<A::Y>, A::X<B::Y>),
     // the A::X<> part is not aliased.
-    // That said, from the mangler's perspective we have a structure like this:
+    // That is, from the mangler's perspective we have a structure like this:
     //   namespace[s] -> type[ -> template-parameters]
     // but from the Clang perspective we have
     //   type [ -> template-parameters]
@@ -803,12 +804,30 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
     // the mangled type name as a key to check the mangling of different types
     // for aliasing.
 
-    llvm::SmallString<64> TemplateMangling;
-    llvm::raw_svector_ostream Stream(TemplateMangling);
-    MicrosoftCXXNameMangler Extra(Context, Stream);
-    Extra.mangleTemplateInstantiationName(TD, *TemplateArgs);
+    // It's important to key cache reads off ND, not TD -- the same TD can
+    // be used with different TemplateArgs, but ND uniquely identifies
+    // TD / TemplateArg pairs.
+    ArgBackRefMap::iterator Found = TemplateArgBackReferences.find(ND);
+    if (Found == TemplateArgBackReferences.end()) {
+      // Mangle full template name into temporary buffer.
+      llvm::SmallString<64> TemplateMangling;
+      llvm::raw_svector_ostream Stream(TemplateMangling);
+      MicrosoftCXXNameMangler Extra(Context, Stream);
+      Extra.mangleTemplateInstantiationName(TD, *TemplateArgs);
 
-    mangleSourceName(TemplateMangling);
+      // Use the string backref vector to possibly get a back reference.
+      mangleSourceName(TemplateMangling);
+
+      // Memoize back reference for this type.
+      BackRefVec::iterator StringFound =
+          llvm::find(NameBackReferences, TemplateMangling);
+      if (StringFound != NameBackReferences.end()) {
+        TemplateArgBackReferences[ND] =
+            StringFound - NameBackReferences.begin();
+      }
+    } else {
+      Out << Found->second;
+    }
     return;
   }
 
@@ -1282,11 +1301,13 @@ void MicrosoftCXXNameMangler::mangleTemplateInstantiationName(
   // Always start with the unqualified name.
 
   // Templates have their own context for back references.
-  ArgBackRefMap OuterArgsContext;
+  ArgBackRefMap OuterFunArgsContext;
+  ArgBackRefMap OuterTemplateArgsContext;
   BackRefVec OuterTemplateContext;
   PassObjectSizeArgsSet OuterPassObjectSizeArgs;
   NameBackReferences.swap(OuterTemplateContext);
-  TypeBackReferences.swap(OuterArgsContext);
+  FunArgBackReferences.swap(OuterFunArgsContext);
+  TemplateArgBackReferences.swap(OuterTemplateArgsContext);
   PassObjectSizeArgs.swap(OuterPassObjectSizeArgs);
 
   mangleUnscopedTemplateName(TD);
@@ -1294,7 +1315,8 @@ void MicrosoftCXXNameMangler::mangleTemplateInstantiationName(
 
   // Restore the previous back reference contexts.
   NameBackReferences.swap(OuterTemplateContext);
-  TypeBackReferences.swap(OuterArgsContext);
+  FunArgBackReferences.swap(OuterFunArgsContext);
+  TemplateArgBackReferences.swap(OuterTemplateArgsContext);
   PassObjectSizeArgs.swap(OuterPassObjectSizeArgs);
 }
 
@@ -1699,8 +1721,8 @@ void MicrosoftCXXNameMangler::manglePointerCVQualifiers(Qualifiers Quals) {
   }
 }
 
-void MicrosoftCXXNameMangler::mangleArgumentType(QualType T,
-                                                 SourceRange Range) {
+void MicrosoftCXXNameMangler::mangleFunctionArgumentType(QualType T,
+                                                         SourceRange Range) {
   // MSVC will backreference two canonically equivalent types that have slightly
   // different manglings when mangled alone.
 
@@ -1730,9 +1752,9 @@ void MicrosoftCXXNameMangler::mangleArgumentType(QualType T,
     TypePtr = T.getCanonicalType().getAsOpaquePtr();
   }
 
-  ArgBackRefMap::iterator Found = TypeBackReferences.find(TypePtr);
+  ArgBackRefMap::iterator Found = FunArgBackReferences.find(TypePtr);
 
-  if (Found == TypeBackReferences.end()) {
+  if (Found == FunArgBackReferences.end()) {
     size_t OutSizeBefore = Out.tell();
 
     mangleType(T, Range, QMM_Drop);
@@ -1741,9 +1763,9 @@ void MicrosoftCXXNameMangler::mangleArgumentType(QualType T,
     // Only types longer than 1 character are considered
     // and only 10 back references slots are available:
     bool LongerThanOneChar = (Out.tell() - OutSizeBefore > 1);
-    if (LongerThanOneChar && TypeBackReferences.size() < 10) {
-      size_t Size = TypeBackReferences.size();
-      TypeBackReferences[TypePtr] = Size;
+    if (LongerThanOneChar && FunArgBackReferences.size() < 10) {
+      size_t Size = FunArgBackReferences.size();
+      FunArgBackReferences[TypePtr] = Size;
     }
   } else {
     Out << Found->second;
@@ -1757,16 +1779,16 @@ void MicrosoftCXXNameMangler::manglePassObjectSizeArg(
 
   auto Iter = PassObjectSizeArgs.insert({Type, Dynamic}).first;
   auto *TypePtr = (const void *)&*Iter;
-  ArgBackRefMap::iterator Found = TypeBackReferences.find(TypePtr);
+  ArgBackRefMap::iterator Found = FunArgBackReferences.find(TypePtr);
 
-  if (Found == TypeBackReferences.end()) {
+  if (Found == FunArgBackReferences.end()) {
     std::string Name =
         Dynamic ? "__pass_dynamic_object_size" : "__pass_object_size";
     mangleArtificialTagType(TTK_Enum, Name + llvm::utostr(Type), {"__clang"});
 
-    if (TypeBackReferences.size() < 10) {
-      size_t Size = TypeBackReferences.size();
-      TypeBackReferences[TypePtr] = Size;
+    if (FunArgBackReferences.size() < 10) {
+      size_t Size = FunArgBackReferences.size();
+      FunArgBackReferences[TypePtr] = Size;
     }
   } else {
     Out << Found->second;
@@ -2192,12 +2214,12 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
         Out << 'X';
       } else if (StructorType == Ctor_CopyingClosure) {
         // Copy constructor closure always takes an unqualified reference.
-        mangleArgumentType(getASTContext().getLValueReferenceType(
-                               Proto->getParamType(0)
-                                   ->getAs<LValueReferenceType>()
-                                   ->getPointeeType(),
-                               /*SpelledAsLValue=*/true),
-                           Range);
+        mangleFunctionArgumentType(getASTContext().getLValueReferenceType(
+                                       Proto->getParamType(0)
+                                           ->getAs<LValueReferenceType>()
+                                           ->getPointeeType(),
+                                       /*SpelledAsLValue=*/true),
+                                   Range);
         Out << '@';
       } else {
         llvm_unreachable("unexpected constructor closure!");
@@ -2239,7 +2261,7 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
   } else {
     // Happens for function pointer type arguments for example.
     for (unsigned I = 0, E = Proto->getNumParams(); I != E; ++I) {
-      mangleArgumentType(Proto->getParamType(I), Range);
+      mangleFunctionArgumentType(Proto->getParamType(I), Range);
       // Mangle each pass_object_size parameter as if it's a parameter of enum
       // type passed directly after the parameter with the pass_object_size
       // attribute. The aforementioned enum's name is __pass_object_size, and we
@@ -2731,10 +2753,12 @@ void MicrosoftCXXNameMangler::mangleType(const ObjCObjectType *T,
   if (T->qual_empty() && !T->isSpecialized())
     return mangleType(T->getBaseType(), Range, QMM_Drop);
 
-  ArgBackRefMap OuterArgsContext;
+  ArgBackRefMap OuterFunArgsContext;
+  ArgBackRefMap OuterTemplateArgsContext;
   BackRefVec OuterTemplateContext;
 
-  TypeBackReferences.swap(OuterArgsContext);
+  FunArgBackReferences.swap(OuterFunArgsContext);
+  TemplateArgBackReferences.swap(OuterTemplateArgsContext);
   NameBackReferences.swap(OuterTemplateContext);
 
   mangleTagTypeKind(TTK_Struct);
@@ -2758,7 +2782,8 @@ void MicrosoftCXXNameMangler::mangleType(const ObjCObjectType *T,
 
   Out << '@';
 
-  TypeBackReferences.swap(OuterArgsContext);
+  FunArgBackReferences.swap(OuterFunArgsContext);
+  TemplateArgBackReferences.swap(OuterTemplateArgsContext);
   NameBackReferences.swap(OuterTemplateContext);
 }
 
