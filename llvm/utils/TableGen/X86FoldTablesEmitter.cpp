@@ -13,6 +13,7 @@
 
 #include "CodeGenTarget.h"
 #include "X86RecognizableInstr.h"
+#include "llvm/Support/FormattedStream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
@@ -108,23 +109,23 @@ class X86FoldTablesEmitter {
                       const CodeGenInstruction *MemInst)
         : RegInst(RegInst), MemInst(MemInst) {}
 
-    friend raw_ostream &operator<<(raw_ostream &OS,
-                                   const X86FoldTableEntry &E) {
-      OS << "{ X86::" << E.RegInst->TheDef->getName()
-         << ", X86::" << E.MemInst->TheDef->getName() << ", ";
+    void print(formatted_raw_ostream &OS) const {
+      OS.indent(2);
+      OS << "{ X86::" << RegInst->TheDef->getName() << ",";
+      OS.PadToColumn(40);
+      OS  << "X86::" << MemInst->TheDef->getName() << ",";
+      OS.PadToColumn(75);
 
-      if (E.IsLoad)
+      if (IsLoad)
         OS << "TB_FOLDED_LOAD | ";
-      if (E.IsStore)
+      if (IsStore)
         OS << "TB_FOLDED_STORE | ";
-      if (E.CannotUnfold)
+      if (CannotUnfold)
         OS << "TB_NO_REVERSE | ";
-      if (E.IsAligned)
-        OS << "TB_ALIGN_" << E.Alignment << " | ";
+      if (IsAligned)
+        OS << "TB_ALIGN_" << Alignment << " | ";
 
       OS << "0 },\n";
-
-      return OS;
     }
   };
 
@@ -144,7 +145,7 @@ public:
   X86FoldTablesEmitter(RecordKeeper &R) : Records(R), Target(R) {}
 
   // run - Generate the 6 X86 memory fold tables.
-  void run(raw_ostream &OS);
+  void run(formatted_raw_ostream &OS);
 
 private:
   // Decides to which table to add the entry with the given instructions.
@@ -162,21 +163,21 @@ private:
   // Print the given table as a static const C++ array of type
   // X86MemoryFoldTableEntry.
   void printTable(const FoldTable &Table, StringRef TableName,
-                  raw_ostream &OS) {
+                  formatted_raw_ostream &OS) {
     OS << "static const X86MemoryFoldTableEntry MemoryFold" << TableName
        << "[] = {\n";
 
     for (const X86FoldTableEntry &E : Table)
-      OS << E;
+      E.print(OS);
 
-    OS << "};\n";
+    OS << "};\n\n";
   }
 };
 
 // Return true if one of the instruction's operands is a RST register class
 static bool hasRSTRegClass(const CodeGenInstruction *Inst) {
   return any_of(Inst->Operands, [](const CGIOperandList::OperandInfo &OpIn) {
-    return OpIn.Rec->getName() == "RST";
+    return OpIn.Rec->getName() == "RST" || OpIn.Rec->getName() == "RSTi";
   });
 }
 
@@ -347,10 +348,18 @@ public:
             MemRec->getValueAsBit("hasLockPrefix") ||
         RegRec->getValueAsBit("hasNoTrackPrefix") !=
             MemRec->getValueAsBit("hasNoTrackPrefix") ||
-        !equalBitsInits(RegRec->getValueAsBitsInit("EVEX_LL"),
-                        MemRec->getValueAsBitsInit("EVEX_LL")) ||
-        !equalBitsInits(RegRec->getValueAsBitsInit("VEX_WPrefix"),
-                        MemRec->getValueAsBitsInit("VEX_WPrefix")) ||
+        RegRec->getValueAsBit("hasVEX_L") !=
+            MemRec->getValueAsBit("hasVEX_L") ||
+        RegRec->getValueAsBit("hasEVEX_L2") !=
+            MemRec->getValueAsBit("hasEVEX_L2") ||
+        RegRec->getValueAsBit("ignoresVEX_L") !=
+            MemRec->getValueAsBit("ignoresVEX_L") ||
+        RegRec->getValueAsBit("HasVEX_W") !=
+            MemRec->getValueAsBit("HasVEX_W") ||
+        RegRec->getValueAsBit("IgnoresVEX_W") !=
+            MemRec->getValueAsBit("IgnoresVEX_W") ||
+        RegRec->getValueAsBit("EVEX_W1_VEX_W0") !=
+            MemRec->getValueAsBit("EVEX_W1_VEX_W0") ||
         // Instruction's format - The register form's "Form" field should be
         // the opposite of the memory form's "Form" field.
         !areOppositeForms(RegRec->getValueAsBitsInit("FormBits"),
@@ -423,6 +432,7 @@ private:
         (MemFormNum == X86Local::MRM6m && RegFormNum == X86Local::MRM6r) ||
         (MemFormNum == X86Local::MRM7m && RegFormNum == X86Local::MRM7r) ||
         (MemFormNum == X86Local::MRMXm && RegFormNum == X86Local::MRMXr) ||
+        (MemFormNum == X86Local::MRMXmCC && RegFormNum == X86Local::MRMXrCC) ||
         (MemFormNum == X86Local::MRMDestMem &&
          RegFormNum == X86Local::MRMDestReg) ||
         (MemFormNum == X86Local::MRMSrcMem &&
@@ -430,7 +440,9 @@ private:
         (MemFormNum == X86Local::MRMSrcMem4VOp3 &&
          RegFormNum == X86Local::MRMSrcReg4VOp3) ||
         (MemFormNum == X86Local::MRMSrcMemOp4 &&
-         RegFormNum == X86Local::MRMSrcRegOp4))
+         RegFormNum == X86Local::MRMSrcRegOp4) ||
+        (MemFormNum == X86Local::MRMSrcMemCC &&
+         RegFormNum == X86Local::MRMSrcRegCC))
       return true;
 
     return false;
@@ -560,7 +572,7 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInstr,
   return;
 }
 
-void X86FoldTablesEmitter::run(raw_ostream &OS) {
+void X86FoldTablesEmitter::run(formatted_raw_ostream &OS) {
   emitSourceFileHeader("X86 fold tables", OS);
 
   // Holds all memory instructions
@@ -641,7 +653,7 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
                  &(Target.getInstruction(MemInstIter)), Entry.Strategy);
   }
 
-  // Print all tables to raw_ostream OS.
+  // Print all tables.
   printTable(Table2Addr, "Table2Addr", OS);
   printTable(Table0, "Table0", OS);
   printTable(Table1, "Table1", OS);
@@ -652,7 +664,8 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
 
 namespace llvm {
 
-void EmitX86FoldTables(RecordKeeper &RK, raw_ostream &OS) {
+void EmitX86FoldTables(RecordKeeper &RK, raw_ostream &o) {
+  formatted_raw_ostream OS(o);
   X86FoldTablesEmitter(RK).run(OS);
 }
 } // namespace llvm

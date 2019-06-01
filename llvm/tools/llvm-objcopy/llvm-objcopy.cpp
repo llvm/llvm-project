@@ -8,9 +8,9 @@
 
 #include "llvm-objcopy.h"
 #include "Buffer.h"
-#include "COFF/COFFObjcopy.h"
 #include "CopyConfig.h"
 #include "ELF/ELFObjcopy.h"
+#include "COFF/COFFObjcopy.h"
 #include "MachO/MachOObjcopy.h"
 
 #include "llvm/ADT/STLExtras.h"

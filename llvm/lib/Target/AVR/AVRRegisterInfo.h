@@ -55,6 +55,13 @@ public:
     return true;
   }
 
+  bool shouldCoalesce(MachineInstr *MI,
+                      const TargetRegisterClass *SrcRC,
+                      unsigned SubReg,
+                      const TargetRegisterClass *DstRC,
+                      unsigned DstSubReg,
+                      const TargetRegisterClass *NewRC,
+                      LiveIntervals &LIS) const override;
 };
 
 } // end namespace llvm

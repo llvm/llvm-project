@@ -104,6 +104,7 @@ void Scheduler::issueInstruction(
     SmallVectorImpl<InstRef> &ReadyInstructions) {
   const Instruction &Inst = *IR.getInstruction();
   bool HasDependentUsers = Inst.hasDependentUsers();
+  HasDependentUsers |= Inst.isMemOp() && LSU.hasDependentUsers(IR);
 
   Resources->releaseBuffers(Inst.getDesc().Buffers);
   issueInstructionImpl(IR, UsedResources);
@@ -111,14 +112,9 @@ void Scheduler::issueInstruction(
   // other dependent instructions. Dependent instructions may be issued during
   // this same cycle if operands have ReadAdvance entries.  Promote those
   // instructions to the ReadySet and notify the caller that those are ready.
-  // If IR is a memory operation, then always call method `promoteToReadySet()`
-  // to notify any dependent memory operations that IR started execution.
-  bool ShouldPromoteInstructions = Inst.isMemOp();
   if (HasDependentUsers)
-    ShouldPromoteInstructions |= promoteToPendingSet(PendingInstructions);
-
-  if (ShouldPromoteInstructions)
-    promoteToReadySet(ReadyInstructions);
+    if (promoteToPendingSet(PendingInstructions))
+      promoteToReadySet(ReadyInstructions);
 }
 
 bool Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
@@ -130,18 +126,18 @@ bool Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
     if (!IR)
       break;
 
-    // Check if there are unsolved memory dependencies.
+    // Check if there are unsolved register dependencies.
     Instruction &IS = *IR.getInstruction();
+    if (!IS.isReady() && !IS.updatePending()) {
+      ++I;
+      continue;
+    }
+    // Check if there are unsolved memory dependencies.
     if (IS.isMemOp() && !LSU.isReady(IR)) {
       ++I;
       continue;
     }
 
-    // Check if there are unsolved register dependencies.
-    if (!IS.isReady() && !IS.updatePending()) {
-      ++I;
-      continue;
-    }
     LLVM_DEBUG(dbgs() << "[SCHEDULER]: Instruction #" << IR
                       << " promoted to the READY set.\n");
 
@@ -173,6 +169,12 @@ bool Scheduler::promoteToPendingSet(SmallVectorImpl<InstRef> &Pending) {
       ++I;
       continue;
     }
+
+    if (IS.isMemOp() && LSU.isWaiting(IR)) {
+      ++I;
+      continue;
+    }
+
     LLVM_DEBUG(dbgs() << "[SCHEDULER]: Instruction #" << IR
                       << " promoted to the PENDING set.\n");
 
@@ -251,13 +253,8 @@ void Scheduler::analyzeDataDependencies(SmallVectorImpl<InstRef> &RegDeps,
     if (Resources->checkAvailability(IS.getDesc()))
       continue;
 
-    if (IS.isMemOp()) {
-      const MemoryGroup &Group = LSU.getGroup(IS.getLSUTokenID());
-      if (Group.isWaiting())
-        continue;
-      if (Group.isPending())
-        MemDeps.emplace_back(IR);
-    }
+    if (IS.isMemOp() && LSU.isPending(IR))
+      MemDeps.emplace_back(IR);
 
     if (IS.isPending())
       RegDeps.emplace_back(IR);
@@ -309,7 +306,13 @@ bool Scheduler::dispatch(InstRef &IR) {
   if (IS.isMemOp())
     IS.setLSUTokenID(LSU.dispatch(IR));
 
-  if (IS.isPending()) {
+  if (IS.isDispatched() || (IS.isMemOp() && LSU.isWaiting(IR))) {
+    LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR << " to the WaitSet\n");
+    WaitSet.push_back(IR);
+    return false;
+  }
+
+  if (IS.isPending() || (IS.isMemOp() && LSU.isPending(IR))) {
     LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR
                       << " to the PendingSet\n");
     PendingSet.push_back(IR);
@@ -317,14 +320,8 @@ bool Scheduler::dispatch(InstRef &IR) {
     return false;
   }
 
-  // Memory operations that still have unsolved memory dependencies are
-  // initially dispatched to the WaitSet.
-  if (!IS.isReady() || (IS.isMemOp() && !LSU.isReady(IR))) {
-    LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR << " to the WaitSet\n");
-    WaitSet.push_back(IR);
-    return false;
-  }
-
+  assert(IS.isReady() && (!IS.isMemOp() || LSU.isReady(IR)) &&
+         "Unexpected internal state found!");
   // Don't add a zero-latency instruction to the Ready queue.
   // A zero-latency instruction doesn't consume any scheduler resources. That is
   // because it doesn't need to be executed, and it is often removed at register
