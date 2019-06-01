@@ -419,7 +419,7 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const GCNSubtarget &ST,
       }
     }
     MF.getRegInfo().addLiveIn(GitPtrLo);
-    MF.front().addLiveIn(GitPtrLo);
+    MBB.addLiveIn(GitPtrLo);
     BuildMI(MBB, I, DL, SMovB32, RsrcLo)
       .addReg(GitPtrLo)
       .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
@@ -487,6 +487,9 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const GCNSubtarget &ST,
           .addImm(0) // dlc
           .addMemOperand(MMO)
           .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+
+        MF.getRegInfo().addLiveIn(MFI->getImplicitBufferPtrUserSGPR());
+        MBB.addLiveIn(MFI->getImplicitBufferPtrUserSGPR());
       }
     } else {
       unsigned Rsrc0 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0);

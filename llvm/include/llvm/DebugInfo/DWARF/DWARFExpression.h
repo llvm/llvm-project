@@ -129,7 +129,7 @@ public:
 
   DWARFExpression(DataExtractor Data, uint16_t Version, uint8_t AddressSize)
       : Data(Data), Version(Version), AddressSize(AddressSize) {
-    assert(AddressSize == 8 || AddressSize == 4);
+    assert(AddressSize == 8 || AddressSize == 4 || AddressSize == 2);
   }
 
   iterator begin() const { return iterator(this, 0); }
