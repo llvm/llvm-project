@@ -16,6 +16,8 @@
 #include <optional>
 #include <type_traits>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     using std::bad_optional_access;

@@ -19,6 +19,8 @@
 #include <tuple>
 #include <cassert>
 
+#include "test_macros.h"
+
 class A
 {
     int i_;

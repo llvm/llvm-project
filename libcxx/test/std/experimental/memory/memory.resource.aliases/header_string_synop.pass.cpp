@@ -30,6 +30,8 @@
 
 #include "constexpr_char_traits.hpp"
 
+#include "test_macros.h"
+
 namespace pmr = std::experimental::pmr;
 
 template <class Char, class PmrTypedef>

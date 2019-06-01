@@ -50,6 +50,7 @@ template <> struct ScalarEnumerationTraits<llvm::pdb::PDB_Machine> {
     io.enumCase(Value, "SH3DSP", PDB_Machine::SH3DSP);
     io.enumCase(Value, "Thumb", PDB_Machine::Thumb);
     io.enumCase(Value, "WceMipsV2", PDB_Machine::WceMipsV2);
+    io.enumCase(Value, "Arm64", PDB_Machine::Arm64);
   }
 };
 

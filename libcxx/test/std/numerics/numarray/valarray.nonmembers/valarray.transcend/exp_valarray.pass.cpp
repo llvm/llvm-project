@@ -19,6 +19,8 @@
 #include <sstream>
 #include <cstddef>
 
+#include "test_macros.h"
+
 bool is_about(double x, double y, int p)
 {
     std::ostringstream o;

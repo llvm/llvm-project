@@ -17,6 +17,8 @@
 #include <istream>
 #include <cassert>
 
+#include "test_macros.h"
+
 int seekoff_called = 0;
 
 template <class CharT>

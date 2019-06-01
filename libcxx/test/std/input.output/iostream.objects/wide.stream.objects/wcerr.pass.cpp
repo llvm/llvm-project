@@ -13,6 +13,8 @@
 #include <iostream>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
 #if 0

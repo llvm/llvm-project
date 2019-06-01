@@ -20,6 +20,8 @@
 #include <vector>
 #include <numeric>
 
+#include "test_macros.h"
+
 template <class T>
 inline
 T

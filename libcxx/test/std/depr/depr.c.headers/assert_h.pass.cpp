@@ -10,6 +10,8 @@
 
 #include <assert.h>
 
+#include "test_macros.h"
+
 #ifndef assert
 #error assert not defined
 #endif

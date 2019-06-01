@@ -16,6 +16,7 @@
 #include <locale>
 #include <cassert>
 
+#include "test_macros.h"
 #include "platform_support.h"
 
 typedef std::codecvt_byname<char, char, std::mbstate_t> F;

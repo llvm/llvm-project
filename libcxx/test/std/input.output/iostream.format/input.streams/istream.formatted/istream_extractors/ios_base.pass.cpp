@@ -16,6 +16,8 @@
 #include <istream>
 #include <cassert>
 
+#include "test_macros.h"
+
 int f_called = 0;
 
 std::ios_base&

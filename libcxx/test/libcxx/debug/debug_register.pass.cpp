@@ -20,6 +20,8 @@
 #include <__debug>
 #include <cassert>
 
+#include "test_macros.h"
+
 void my_debug_function(std::__libcpp_debug_info const& info) {
   assert(info.__msg_ == std::string("foo"));
   std::exit(0);

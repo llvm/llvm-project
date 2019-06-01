@@ -29,6 +29,8 @@
 #include <cassert>
 #include <pthread.h>
 
+#include "test_macros.h"
+
 std::condition_variable cv;
 std::mutex mut;
 bool exited = false;

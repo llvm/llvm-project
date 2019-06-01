@@ -19,6 +19,8 @@
 #include <shared_mutex>
 #include <cassert>
 
+#include "test_macros.h"
+
 std::shared_timed_mutex m;
 
 int main(int, char**)

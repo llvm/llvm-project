@@ -15,6 +15,8 @@
 #include <functional>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     std::function<int(int)> f;

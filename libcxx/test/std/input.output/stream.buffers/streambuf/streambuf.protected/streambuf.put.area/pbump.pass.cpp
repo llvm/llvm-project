@@ -16,6 +16,8 @@
 #include <streambuf>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class CharT>
 struct test
     : public std::basic_streambuf<CharT>

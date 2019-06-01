@@ -15,6 +15,8 @@
 #include <valarray>
 #include <cassert>
 
+#include "test_macros.h"
+
 typedef int T;
 
 T f(T t) {return t + 5;}

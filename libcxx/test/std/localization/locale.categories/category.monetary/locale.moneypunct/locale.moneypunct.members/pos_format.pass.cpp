@@ -16,6 +16,8 @@
 #include <limits>
 #include <cassert>
 
+#include "test_macros.h"
+
 typedef std::moneypunct<char> F;
 
 class Fnf

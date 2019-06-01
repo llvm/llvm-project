@@ -22,6 +22,8 @@
 #include <algorithm>   // for sort
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class T>
 inline
 T

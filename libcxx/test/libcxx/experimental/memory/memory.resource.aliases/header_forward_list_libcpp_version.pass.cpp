@@ -12,6 +12,8 @@
 
 #include <experimental/forward_list>
 
+#include "test_macros.h"
+
 #ifndef _LIBCPP_VERSION
 #error header must provide _LIBCPP_VERSION
 #endif

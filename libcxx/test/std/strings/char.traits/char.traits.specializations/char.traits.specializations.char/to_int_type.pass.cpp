@@ -15,6 +15,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     assert(std::char_traits<char>::to_int_type('a') == 'a');

@@ -17,6 +17,8 @@
 #include <mutex>
 #include <cassert>
 
+#include "test_macros.h"
+
 std::mutex m;
 
 int main(int, char**)

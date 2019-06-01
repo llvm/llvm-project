@@ -10,6 +10,8 @@
 
 #include <ratio>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     static_assert(std::atto::num == 1 && std::atto::den == 1000000000000000000ULL, "");

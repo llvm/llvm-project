@@ -15,6 +15,8 @@
 #include <filesystem>
 #include <type_traits>
 
+#include "test_macros.h"
+
 using namespace std::filesystem;
 
 int main(int, char**) {

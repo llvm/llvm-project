@@ -11,6 +11,8 @@
 #include <setjmp.h>
 #include <type_traits>
 
+#include "test_macros.h"
+
 #ifndef setjmp
 #error setjmp not defined
 #endif

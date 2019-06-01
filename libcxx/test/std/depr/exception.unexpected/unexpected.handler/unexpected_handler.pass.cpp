@@ -12,6 +12,8 @@
 
 #include <exception>
 
+#include "test_macros.h"
+
 void f() {}
 
 int main(int, char**)

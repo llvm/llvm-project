@@ -11,6 +11,8 @@
 #include <new>
 #include <cassert>
 
+#include "test_macros.h"
+
 void f1() {}
 void f2() {}
 

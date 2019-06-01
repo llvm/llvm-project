@@ -205,12 +205,10 @@ void DependencyGraph::addDepImpl(SmallVectorImpl<DependencyEdge> &Vec,
 }
 
 BottleneckAnalysis::BottleneckAnalysis(const MCSubtargetInfo &sti,
-                                       MCInstPrinter &Printer,
-                                       ArrayRef<MCInst> Sequence,
-                                       unsigned Executions)
-    : STI(sti), MCIP(Printer), Tracker(STI.getSchedModel()),
-      DG(Sequence.size()), Source(Sequence), Iterations(Executions),
-      TotalCycles(0), PressureIncreasedBecauseOfResources(false),
+                                       ArrayRef<MCInst> Sequence)
+    : STI(sti), Tracker(STI.getSchedModel()), DG(Sequence.size()),
+      Source(Sequence), TotalCycles(0),
+      PressureIncreasedBecauseOfResources(false),
       PressureIncreasedBecauseOfRegisterDependencies(false),
       PressureIncreasedBecauseOfMemoryDependencies(false),
       SeenStallCycles(false), BPI() {}
@@ -356,7 +354,6 @@ void BottleneckAnalysis::printView(raw_ostream &OS) const {
   printBottleneckHints(TempStream);
   TempStream.flush();
   OS << Buffer;
-  LLVM_DEBUG(DG.dump(OS, MCIP));
 }
 
 } // namespace mca.

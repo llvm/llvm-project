@@ -14,6 +14,8 @@
 #include <cassert>
 #include <string>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     const std::error_category& e_cat1 = std::iostream_category();

@@ -17,6 +17,7 @@
 #include <functional>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 #include "test_allocator.h"
 #include "count_new.hpp"

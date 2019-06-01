@@ -10,6 +10,8 @@
 
 #include <climits>
 
+#include "test_macros.h"
+
 #ifndef CHAR_BIT
 #error CHAR_BIT not defined
 #endif

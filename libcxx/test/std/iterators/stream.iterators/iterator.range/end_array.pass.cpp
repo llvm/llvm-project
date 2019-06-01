@@ -13,6 +13,8 @@
 #include <iterator>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     int ia[] = {1, 2, 3};

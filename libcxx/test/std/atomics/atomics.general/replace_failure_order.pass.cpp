@@ -23,6 +23,8 @@
 
 #include <atomic>
 
+#include "test_macros.h"
+
 int main(int, char**) {
     std::atomic<int> i;
     volatile std::atomic<int> v;

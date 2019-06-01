@@ -32,6 +32,8 @@
 #include <type_traits>
 #include <vector>
 
+#include "test_macros.h"
+
 struct test
     : private std::priority_queue<int>
 {

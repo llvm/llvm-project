@@ -23,6 +23,8 @@
 
 #include <future>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     static_assert(std::future_errc::broken_promise != std::future_errc::future_already_retrieved, "");

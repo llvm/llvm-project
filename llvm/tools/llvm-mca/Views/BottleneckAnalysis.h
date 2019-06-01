@@ -149,7 +149,7 @@ public:
   void dumpMemDeps(raw_ostream &OS) const;
   void dumpResDeps(raw_ostream &OS) const;
 
-  void dump(raw_ostream &OS, llvm::MCInstPrinter &MCIP) const {
+  void dump(raw_ostream &OS, MCInstPrinter &MCIP) const {
     dumpRegDeps(OS, MCIP);
     dumpMemDeps(OS);
     dumpResDeps(OS);
@@ -160,12 +160,10 @@ public:
 /// A view that collects and prints a few performance numbers.
 class BottleneckAnalysis : public View {
   const MCSubtargetInfo &STI;
-  MCInstPrinter &MCIP;
   PressureTracker Tracker;
   DependencyGraph DG;
 
   ArrayRef<MCInst> Source;
-  unsigned Iterations;
   unsigned TotalCycles;
 
   bool PressureIncreasedBecauseOfResources;
@@ -192,15 +190,18 @@ class BottleneckAnalysis : public View {
   void printBottleneckHints(raw_ostream &OS) const;
 
 public:
-  BottleneckAnalysis(const MCSubtargetInfo &STI, MCInstPrinter &MCIP,
-                     ArrayRef<MCInst> Sequence, unsigned Iterations);
+  BottleneckAnalysis(const MCSubtargetInfo &STI, ArrayRef<MCInst> Sequence);
 
   void onCycleEnd() override;
   void onEvent(const HWStallEvent &Event) override { SeenStallCycles = true; }
   void onEvent(const HWPressureEvent &Event) override;
   void onEvent(const HWInstructionEvent &Event) override;
 
-  void printView(llvm::raw_ostream &OS) const override;
+  void printView(raw_ostream &OS) const override;
+
+#ifndef NDEBUG
+  void dump(raw_ostream &OS, MCInstPrinter &MCIP) const { DG.dump(OS, MCIP); }
+#endif
 };
 
 } // namespace mca

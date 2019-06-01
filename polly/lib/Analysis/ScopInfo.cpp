@@ -3778,20 +3778,6 @@ isl::set Scop::getNonHoistableCtx(MemoryAccess *Access, isl::union_map Writes) {
   return WrittenCtx;
 }
 
-void Scop::verifyInvariantLoads() {
-  auto &RIL = getRequiredInvariantLoads();
-  for (LoadInst *LI : RIL) {
-    assert(LI && contains(LI));
-    // If there exists a statement in the scop which has a memory access for
-    // @p LI, then mark this scop as infeasible for optimization.
-    for (ScopStmt &Stmt : Stmts)
-      if (Stmt.getArrayAccessOrNULLFor(LI)) {
-        invalidate(INVARIANTLOAD, LI->getDebugLoc(), LI->getParent());
-        return;
-      }
-  }
-}
-
 void Scop::hoistInvariantLoads() {
   if (!PollyInvariantLoadHoisting)
     return;
@@ -4402,26 +4388,8 @@ isl::union_map Scop::getAccesses(ScopArrayInfo *Array) {
       [Array](MemoryAccess &MA) { return MA.getScopArrayInfo() == Array; });
 }
 
-// Check whether @p Node is an extension node.
-//
-// @return true if @p Node is an extension node.
-isl_bool isNotExtNode(__isl_keep isl_schedule_node *Node, void *User) {
-  if (isl_schedule_node_get_type(Node) == isl_schedule_node_extension)
-    return isl_bool_error;
-  else
-    return isl_bool_true;
-}
-
-bool Scop::containsExtensionNode(isl::schedule Schedule) {
-  return isl_schedule_foreach_schedule_node_top_down(
-             Schedule.get(), isNotExtNode, nullptr) == isl_stat_error;
-}
-
 isl::union_map Scop::getSchedule() const {
   auto Tree = getScheduleTree();
-  if (containsExtensionNode(Tree))
-    return nullptr;
-
   return Tree.get_map();
 }
 

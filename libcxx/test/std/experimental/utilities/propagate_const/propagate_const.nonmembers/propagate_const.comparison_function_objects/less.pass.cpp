@@ -13,6 +13,7 @@
 // template <class T> struct less<experimental::fundamentals_v2::propagate_const<T>>;
 
 #include <experimental/propagate_const>
+#include "test_macros.h"
 #include "propagate_const_helpers.h"
 #include <cassert>
 

@@ -12,6 +12,8 @@
 
 #include <vector>
 
+#include "test_macros.h"
+
 struct X
 {
     std::vector<X> q;

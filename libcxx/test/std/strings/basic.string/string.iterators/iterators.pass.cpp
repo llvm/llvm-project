@@ -20,6 +20,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     { // N3644 testing

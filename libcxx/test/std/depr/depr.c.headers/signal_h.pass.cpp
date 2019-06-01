@@ -11,6 +11,8 @@
 #include <signal.h>
 #include <type_traits>
 
+#include "test_macros.h"
+
 #ifndef SIG_DFL
 #error SIG_DFL not defined
 #endif

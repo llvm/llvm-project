@@ -21,6 +21,8 @@
 #include <locale>
 #include <cassert>
 
+#include "test_macros.h"
+
 std::locale::id id0;
 std::locale::id id2;
 std::locale::id id1;

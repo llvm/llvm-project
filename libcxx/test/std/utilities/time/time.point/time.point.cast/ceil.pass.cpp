@@ -19,6 +19,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class FromDuration, class ToDuration>
 void
 test(const FromDuration& df, const ToDuration& d)

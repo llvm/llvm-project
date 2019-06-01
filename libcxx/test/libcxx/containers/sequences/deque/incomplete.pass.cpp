@@ -16,6 +16,8 @@
 #include <deque>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct A {
   std::deque<A> d;
   std::deque<A>::iterator it;

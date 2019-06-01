@@ -16,6 +16,8 @@
 #include <cstdint>
 #include <experimental/simd>
 
+#include "test_macros.h"
+
 namespace ex = std::experimental::parallelism_v2;
 
 int main(int, char**) {

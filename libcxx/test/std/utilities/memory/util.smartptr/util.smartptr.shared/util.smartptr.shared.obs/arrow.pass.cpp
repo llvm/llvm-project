@@ -16,6 +16,8 @@
 #include <utility>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     const std::shared_ptr<std::pair<int, int> > p(new std::pair<int, int>(3, 4));

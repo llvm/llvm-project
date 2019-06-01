@@ -17,6 +17,8 @@
 #include <chrono>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     static_assert(std::is_signed<std::chrono::file_clock::rep>::value, "");

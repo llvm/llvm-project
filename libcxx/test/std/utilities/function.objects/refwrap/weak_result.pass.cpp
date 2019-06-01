@@ -15,6 +15,8 @@
 #include <functional>
 #include <type_traits>
 
+#include "test_macros.h"
+
 template <class Arg, class Result>
 struct my_unary_function
 { // std::unary_function was removed in C++17

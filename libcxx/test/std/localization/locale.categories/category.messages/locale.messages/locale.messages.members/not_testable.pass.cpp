@@ -15,6 +15,8 @@
 #include <locale>
 #include <cassert>
 
+#include "test_macros.h"
+
 // As far as I can tell, the messages facet is untestable.  I have a best
 // effort implementation in the hopes that in the future I will learn how
 // to test it.

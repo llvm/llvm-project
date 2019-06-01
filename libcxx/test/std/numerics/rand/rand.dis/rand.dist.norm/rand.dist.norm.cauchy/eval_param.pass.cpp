@@ -20,6 +20,8 @@
 #include <vector>
 #include <algorithm>
 
+#include "test_macros.h"
+
 double
 f(double x, double a, double b)
 {

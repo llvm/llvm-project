@@ -13,6 +13,7 @@
 // template <class U> constexpr propagate_const(propagate_const<_Up>&& pu);
 
 #include <experimental/propagate_const>
+#include "test_macros.h"
 #include "propagate_const_helpers.h"
 #include <cassert>
 

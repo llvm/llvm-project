@@ -20,6 +20,8 @@
 #include <functional>
 #include <cassert>
 
+#include "test_macros.h"
+
 int identity(int v) { return v; }
 int sum(int a, int b) { return a + b; }
 

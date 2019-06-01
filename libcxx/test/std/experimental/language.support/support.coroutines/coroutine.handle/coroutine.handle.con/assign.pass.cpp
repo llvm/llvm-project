@@ -20,6 +20,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 namespace coro = std::experimental;
 
 template <class C>

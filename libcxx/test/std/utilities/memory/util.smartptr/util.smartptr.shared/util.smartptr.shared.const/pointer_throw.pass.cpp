@@ -21,6 +21,8 @@
 
 #include "count_new.hpp"
 
+#include "test_macros.h"
+
 struct A
 {
     static int count;

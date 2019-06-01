@@ -14,6 +14,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     int* p = new int;

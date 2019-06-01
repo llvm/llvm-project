@@ -19,6 +19,8 @@
 #include <utility>
 #include <cassert>
 
+#include "test_macros.h"
+
 ////////////////////////////////////////////////////////////////////////////////
 template <class T, std::size_t Dummy = 0>
 struct always_imp

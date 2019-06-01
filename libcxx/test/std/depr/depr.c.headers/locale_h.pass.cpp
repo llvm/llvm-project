@@ -11,6 +11,8 @@
 #include <locale.h>
 #include <type_traits>
 
+#include "test_macros.h"
+
 #ifndef LC_ALL
 #error LC_ALL not defined
 #endif

@@ -16,6 +16,8 @@
 #include <random>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class T, T a, T c, T m>
 void
 test1()

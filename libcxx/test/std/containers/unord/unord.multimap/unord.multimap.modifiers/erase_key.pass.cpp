@@ -20,6 +20,7 @@
 #include <cassert>
 #include <cstddef>
 
+#include "test_macros.h"
 #include "../../../check_consecutive.h"
 #include "min_allocator.h"
 

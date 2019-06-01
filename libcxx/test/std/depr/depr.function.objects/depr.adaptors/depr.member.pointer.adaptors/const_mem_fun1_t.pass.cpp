@@ -17,6 +17,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct A
 {
     char a1() {return 5;}

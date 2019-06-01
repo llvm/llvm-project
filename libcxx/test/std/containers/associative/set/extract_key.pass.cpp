@@ -15,6 +15,7 @@
 // node_type extract(key_type const&);
 
 #include <set>
+#include "test_macros.h"
 #include "min_allocator.h"
 #include "Counter.h"
 

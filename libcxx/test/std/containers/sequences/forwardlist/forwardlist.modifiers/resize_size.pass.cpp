@@ -13,6 +13,7 @@
 #include <forward_list>
 #include <cassert>
 
+#include "test_macros.h"
 #include "DefaultOnly.h"
 #include "min_allocator.h"
 

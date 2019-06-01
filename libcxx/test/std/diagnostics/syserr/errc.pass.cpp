@@ -12,6 +12,8 @@
 
 #include <system_error>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     static_assert(static_cast<int>(std::errc::address_family_not_supported) == EAFNOSUPPORT, "");

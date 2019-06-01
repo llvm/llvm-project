@@ -18,6 +18,7 @@
 #include <set>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../../Emplaceable.h"
 #include "DefaultOnly.h"
 #include "min_allocator.h"

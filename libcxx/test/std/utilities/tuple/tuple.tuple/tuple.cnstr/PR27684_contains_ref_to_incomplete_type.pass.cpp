@@ -23,6 +23,8 @@
 #include <tuple>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct IncompleteType;
 extern IncompleteType inc1;
 extern IncompleteType inc2;

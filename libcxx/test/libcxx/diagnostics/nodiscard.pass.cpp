@@ -12,6 +12,8 @@
 
 #include <__config>
 
+#include "test_macros.h"
+
 _LIBCPP_NODISCARD_EXT int foo() { return 42; }
 
 int main(int, char**) {

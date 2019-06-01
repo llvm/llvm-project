@@ -18,6 +18,8 @@
 #include <cassert>
 #include <cstddef>
 
+#include "test_macros.h"
+
 struct S
 {
     S() : x_(0) { default_ctor_called = true; }

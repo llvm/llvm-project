@@ -15,6 +15,8 @@
 #include <system_error>
 #include <cassert>
 
+#include "test_macros.h"
+
 enum testing
 {
     zero, one, two

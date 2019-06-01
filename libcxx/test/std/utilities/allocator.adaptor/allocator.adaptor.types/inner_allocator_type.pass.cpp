@@ -18,6 +18,7 @@
 #include <scoped_allocator>
 #include <type_traits>
 
+#include "test_macros.h"
 #include "allocators.h"
 
 int main(int, char**)

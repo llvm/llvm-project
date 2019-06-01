@@ -287,21 +287,39 @@ static std::string formatCookieKind(FrameCookieKind Kind) {
   return formatUnknownEnum(Kind);
 }
 
-static std::string formatRegisterId(RegisterId Id) {
-  switch (Id) {
+static std::string formatRegisterId(RegisterId Id, CPUType Cpu) {
+  if (Cpu == CPUType::ARM64) {
+    switch (Id) {
+#define CV_REGISTERS_ARM64
 #define CV_REGISTER(name, val) RETURN_CASE(RegisterId, name, #name)
 #include "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
 #undef CV_REGISTER
+#undef CV_REGISTERS_ARM64
+
+    default:
+      break;
+    }
+  } else {
+    switch (Id) {
+#define CV_REGISTERS_X86
+#define CV_REGISTER(name, val) RETURN_CASE(RegisterId, name, #name)
+#include "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
+#undef CV_REGISTER
+#undef CV_REGISTERS_X86
+
+    default:
+      break;
+    }
   }
   return formatUnknownEnum(Id);
 }
 
-static std::string formatRegisterId(uint16_t Reg16) {
-  return formatRegisterId(RegisterId(Reg16));
+static std::string formatRegisterId(uint16_t Reg16, CPUType Cpu) {
+  return formatRegisterId(RegisterId(Reg16), Cpu);
 }
 
-static std::string formatRegisterId(ulittle16_t &Reg16) {
-  return formatRegisterId(uint16_t(Reg16));
+static std::string formatRegisterId(ulittle16_t &Reg16, CPUType Cpu) {
+  return formatRegisterId(uint16_t(Reg16), Cpu);
 }
 
 static std::string formatRange(LocalVariableAddrRange Range) {
@@ -562,7 +580,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   AutoIndent Indent(P, 7);
   P.formatLine("register = {0}, offset = {1}, offset in parent = {2}, has "
                "spilled udt = {3}",
-               formatRegisterId(Def.Hdr.Register),
+               formatRegisterId(Def.Hdr.Register, CompilationCPU),
                int32_t(Def.Hdr.BasePointerOffset), Def.offsetInParent(),
                Def.hasSpilledUDTMember());
   P.formatLine("range = {0}, gaps = {1}", formatRange(Def.Range),
@@ -575,7 +593,7 @@ Error MinimalSymbolDumper::visitKnownRecord(
   AutoIndent Indent(P, 7);
   P.formatLine("register = {0}, may have no name = {1}, range start = "
                "{2}, length = {3}",
-               formatRegisterId(DefRangeRegister.Hdr.Register),
+               formatRegisterId(DefRangeRegister.Hdr.Register, CompilationCPU),
                bool(DefRangeRegister.Hdr.MayHaveNoName),
                formatSegmentOffset(DefRangeRegister.Range.ISectStart,
                                    DefRangeRegister.Range.OffsetStart),
@@ -590,7 +608,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   AutoIndent Indent(P, 7);
   bool NoName = !!(Def.Hdr.MayHaveNoName == 0);
   P.formatLine("register = {0}, may have no name = {1}, offset in parent = {2}",
-               formatRegisterId(Def.Hdr.Register), NoName,
+               formatRegisterId(Def.Hdr.Register, CompilationCPU), NoName,
                uint32_t(Def.Hdr.OffsetInParent));
   P.formatLine("range = {0}, gaps = {1}", formatRange(Def.Range),
                formatGaps(P.getIndentLevel() + 9, Def.Gaps));
@@ -617,7 +635,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, DefRangeSym &Def) {
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, FrameCookieSym &FC) {
   AutoIndent Indent(P, 7);
   P.formatLine("code offset = {0}, Register = {1}, kind = {2}, flags = {3}",
-               FC.CodeOffset, formatRegisterId(FC.Register),
+               FC.CodeOffset, formatRegisterId(FC.Register, CompilationCPU),
                formatCookieKind(FC.CookieKind), FC.Flags);
   return Error::success();
 }
@@ -631,9 +649,10 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, FrameProcSym &FP) {
                FP.BytesOfCalleeSavedRegisters,
                formatSegmentOffset(FP.SectionIdOfExceptionHandler,
                                    FP.OffsetOfExceptionHandler));
-  P.formatLine("local fp reg = {0}, param fp reg = {1}",
-               formatRegisterId(FP.getLocalFramePtrReg(CompilationCPU)),
-               formatRegisterId(FP.getParamFramePtrReg(CompilationCPU)));
+  P.formatLine(
+      "local fp reg = {0}, param fp reg = {1}",
+      formatRegisterId(FP.getLocalFramePtrReg(CompilationCPU), CompilationCPU),
+      formatRegisterId(FP.getParamFramePtrReg(CompilationCPU), CompilationCPU));
   P.formatLine("flags = {0}",
                formatFrameProcedureOptions(P.getIndentLevel() + 9, FP.Flags));
   return Error::success();
@@ -689,6 +708,10 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, InlineSiteSym &IS) {
       break;
     case BinaryAnnotationsOpCode::ChangeCodeLength:
       formatCodeLength(Annot.U1);
+      // Apparently this annotation updates the code offset. It's hard to make
+      // MSVC produce this opcode, but clang uses it, and debuggers seem to use
+      // this interpretation.
+      CodeOffset += Annot.U1;
       break;
     case BinaryAnnotationsOpCode::ChangeCodeOffsetAndLineOffset:
       formatCodeOffset(Annot.U1);
@@ -737,7 +760,8 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   P.format(" `{0}`", Register.Name);
   AutoIndent Indent(P, 7);
   P.formatLine("register = {0}, type = {1}",
-               formatRegisterId(Register.Register), typeIndex(Register.Index));
+               formatRegisterId(Register.Register, CompilationCPU),
+               typeIndex(Register.Index));
   return Error::success();
 }
 
@@ -825,9 +849,9 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             RegRelativeSym &RegRel) {
   P.format(" `{0}`", RegRel.Name);
   AutoIndent Indent(P, 7);
-  P.formatLine("type = {0}, register = {1}, offset = {2}",
-               typeIndex(RegRel.Type), formatRegisterId(RegRel.Register),
-               RegRel.Offset);
+  P.formatLine(
+      "type = {0}, register = {1}, offset = {2}", typeIndex(RegRel.Type),
+      formatRegisterId(RegRel.Register, CompilationCPU), RegRel.Offset);
   return Error::success();
 }
 

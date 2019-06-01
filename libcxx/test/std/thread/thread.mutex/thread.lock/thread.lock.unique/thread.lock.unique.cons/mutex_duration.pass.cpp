@@ -22,6 +22,8 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "test_macros.h"
+
 std::timed_mutex m;
 
 typedef std::chrono::steady_clock Clock;

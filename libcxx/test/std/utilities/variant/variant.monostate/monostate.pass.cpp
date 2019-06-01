@@ -16,6 +16,8 @@
 #include <type_traits>
 #include <variant>
 
+#include "test_macros.h"
+
 int main(int, char**) {
   using M = std::monostate;
   static_assert(std::is_trivially_default_constructible<M>::value, "");

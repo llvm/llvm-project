@@ -691,11 +691,21 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     return ((NumParams == 2 || NumParams == 3) &&
             FTy.getParamType(0)->isPointerTy() &&
             FTy.getParamType(1)->isPointerTy());
+  case LibFunc_strcat_chk:
+    --NumParams;
+    if (!IsSizeTTy(FTy.getParamType(NumParams)))
+      return false;
+    LLVM_FALLTHROUGH;
   case LibFunc_strcat:
     return (NumParams == 2 && FTy.getReturnType()->isPointerTy() &&
             FTy.getParamType(0) == FTy.getReturnType() &&
             FTy.getParamType(1) == FTy.getReturnType());
 
+  case LibFunc_strncat_chk:
+    --NumParams;
+    if (!IsSizeTTy(FTy.getParamType(NumParams)))
+      return false;
+    LLVM_FALLTHROUGH;
   case LibFunc_strncat:
     return (NumParams == 3 && FTy.getReturnType()->isPointerTy() &&
             FTy.getParamType(0) == FTy.getReturnType() &&
@@ -713,6 +723,19 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     return (NumParams == 2 && FTy.getReturnType() == FTy.getParamType(0) &&
             FTy.getParamType(0) == FTy.getParamType(1) &&
             FTy.getParamType(0) == PCharTy);
+
+  case LibFunc_strlcat_chk:
+  case LibFunc_strlcpy_chk:
+    --NumParams;
+    if (!IsSizeTTy(FTy.getParamType(NumParams)))
+      return false;
+    LLVM_FALLTHROUGH;
+  case LibFunc_strlcat:
+  case LibFunc_strlcpy:
+    return NumParams == 3 && IsSizeTTy(FTy.getReturnType()) &&
+           FTy.getParamType(0)->isPointerTy() &&
+           FTy.getParamType(1)->isPointerTy() &&
+           IsSizeTTy(FTy.getParamType(2));
 
   case LibFunc_strncpy_chk:
   case LibFunc_stpncpy_chk:
@@ -784,10 +807,27 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     return (NumParams >= 2 && FTy.getParamType(0)->isPointerTy() &&
             FTy.getParamType(1)->isPointerTy() &&
             FTy.getReturnType()->isIntegerTy(32));
+
+  case LibFunc_sprintf_chk:
+    return NumParams == 4 && FTy.getParamType(0)->isPointerTy() &&
+           FTy.getParamType(1)->isIntegerTy(32) &&
+           IsSizeTTy(FTy.getParamType(2)) &&
+           FTy.getParamType(3)->isPointerTy() &&
+           FTy.getReturnType()->isIntegerTy(32);
+
   case LibFunc_snprintf:
     return (NumParams == 3 && FTy.getParamType(0)->isPointerTy() &&
             FTy.getParamType(2)->isPointerTy() &&
             FTy.getReturnType()->isIntegerTy(32));
+
+  case LibFunc_snprintf_chk:
+    return NumParams == 5 && FTy.getParamType(0)->isPointerTy() &&
+           IsSizeTTy(FTy.getParamType(1)) &&
+           FTy.getParamType(2)->isIntegerTy(32) &&
+           IsSizeTTy(FTy.getParamType(3)) &&
+           FTy.getParamType(4)->isPointerTy() &&
+           FTy.getReturnType()->isIntegerTy(32);
+
   case LibFunc_setitimer:
     return (NumParams == 3 && FTy.getParamType(1)->isPointerTy() &&
             FTy.getParamType(2)->isPointerTy());
@@ -836,6 +876,11 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
             FTy.getParamType(1)->isIntegerTy() &&
             IsSizeTTy(FTy.getParamType(2)));
 
+  case LibFunc_memccpy_chk:
+      --NumParams;
+    if (!IsSizeTTy(FTy.getParamType(NumParams)))
+      return false;
+    LLVM_FALLTHROUGH;
   case LibFunc_memccpy:
     return (NumParams >= 2 && FTy.getParamType(1)->isPointerTy());
   case LibFunc_memalign:
@@ -1004,9 +1049,17 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_vsprintf:
     return (NumParams == 3 && FTy.getParamType(0)->isPointerTy() &&
             FTy.getParamType(1)->isPointerTy());
+  case LibFunc_vsprintf_chk:
+    return NumParams == 5 && FTy.getParamType(0)->isPointerTy() &&
+           FTy.getParamType(1)->isIntegerTy(32) &&
+           IsSizeTTy(FTy.getParamType(2)) && FTy.getParamType(3)->isPointerTy();
   case LibFunc_vsnprintf:
     return (NumParams == 4 && FTy.getParamType(0)->isPointerTy() &&
             FTy.getParamType(2)->isPointerTy());
+  case LibFunc_vsnprintf_chk:
+    return NumParams == 6 && FTy.getParamType(0)->isPointerTy() &&
+           FTy.getParamType(2)->isIntegerTy(32) &&
+           IsSizeTTy(FTy.getParamType(3)) && FTy.getParamType(4)->isPointerTy();
   case LibFunc_open:
     return (NumParams >= 2 && FTy.getParamType(0)->isPointerTy());
   case LibFunc_opendir:

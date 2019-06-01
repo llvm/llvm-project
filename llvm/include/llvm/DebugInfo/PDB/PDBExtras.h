@@ -27,7 +27,8 @@ raw_ostream &operator<<(raw_ostream &OS, const PDB_VariantType &Value);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_CallingConv &Conv);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_BuiltinType &Type);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_DataKind &Data);
-raw_ostream &operator<<(raw_ostream &OS, const codeview::RegisterId &Reg);
+raw_ostream &operator<<(raw_ostream &OS,
+                        const llvm::codeview::CPURegister &CpuReg);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_LocType &Loc);
 raw_ostream &operator<<(raw_ostream &OS, const codeview::ThunkOrdinal &Thunk);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_Checksum &Checksum);

@@ -18,6 +18,8 @@
 #include <valarray>
 #include <type_traits>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     static_assert((std::is_same<std::valarray<int>::value_type, int>::value), "");

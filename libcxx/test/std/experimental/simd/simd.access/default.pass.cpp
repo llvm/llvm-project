@@ -18,6 +18,8 @@
 #include <cassert>
 #include <cstdint>
 
+#include "test_macros.h"
+
 namespace ex = std::experimental::parallelism_v2;
 
 template <typename SimdType>

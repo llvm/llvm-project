@@ -18,6 +18,7 @@
 #include <queue>
 #include <cassert>
 
+#include "test_macros.h"
 #include "MoveOnly.h"
 
 int main(int, char**)

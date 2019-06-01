@@ -32,6 +32,8 @@
 #include <signal.h>
 #include <sys/time.h>
 
+#include "test_macros.h"
+
 void sig_action(int) {}
 
 int main(int, char**)

@@ -13,6 +13,8 @@
 
 #include <memory>
 
+#include "test_macros.h"
+
 void test(std::allocator_arg_t) {}
 
 int main(int, char**)

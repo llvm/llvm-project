@@ -58,6 +58,8 @@
 #include <thread> // for thread_id
 #include <chrono> // for nanoseconds
 
+#include "test_macros.h"
+
 struct TriviallyCopyable {
     TriviallyCopyable ( int i ) : i_(i) {}
     int i_;

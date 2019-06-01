@@ -24,6 +24,8 @@ int AssertCount = 0;
 
 #include "test_memory_resource.hpp"
 
+#include "test_macros.h"
+
 namespace ex = std::experimental::pmr;
 
 int main(int, char**)

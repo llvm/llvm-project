@@ -18,6 +18,8 @@
 #include <chrono>
 #include <cassert>
 
+#include "test_macros.h"
+
 bool called = false;
 
 void f(std::chrono::milliseconds);

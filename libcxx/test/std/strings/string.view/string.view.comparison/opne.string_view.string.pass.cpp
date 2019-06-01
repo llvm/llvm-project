@@ -17,6 +17,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class S>
 void
 test(const std::string &lhs, S rhs, bool x)

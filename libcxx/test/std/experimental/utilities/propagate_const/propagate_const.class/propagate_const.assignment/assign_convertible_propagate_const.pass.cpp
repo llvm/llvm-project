@@ -13,6 +13,7 @@
 // template <class U> constexpr propagate_const& operator=(U&& u); // won't bind to propagate_const
 
 #include <experimental/propagate_const>
+#include "test_macros.h"
 #include "propagate_const_helpers.h"
 #include <type_traits>
 

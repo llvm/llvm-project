@@ -16,6 +16,8 @@
 #include <random>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     unsigned a[5] = {5, 4, 3, 2, 1};

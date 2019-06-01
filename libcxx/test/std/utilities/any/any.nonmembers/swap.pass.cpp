@@ -19,6 +19,8 @@
 #include <any>
 #include <cassert>
 
+#include "test_macros.h"
+
 using std::any;
 using std::any_cast;
 

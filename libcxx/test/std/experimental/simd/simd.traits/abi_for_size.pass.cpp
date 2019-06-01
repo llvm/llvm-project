@@ -18,6 +18,8 @@
 #include <cstdint>
 #include <experimental/simd>
 
+#include "test_macros.h"
+
 namespace ex = std::experimental::parallelism_v2;
 
 static_assert(std::is_same<typename ex::abi_for_size<int, 4>::type,

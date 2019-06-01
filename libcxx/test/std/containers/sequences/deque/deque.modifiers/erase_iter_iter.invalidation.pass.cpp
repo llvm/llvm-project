@@ -18,6 +18,8 @@
 #include <cstdint>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <typename C>
 void del_at_start(C c, size_t num)
 {

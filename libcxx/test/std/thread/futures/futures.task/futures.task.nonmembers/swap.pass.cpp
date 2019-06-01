@@ -20,6 +20,8 @@
 #include <future>
 #include <cassert>
 
+#include "test_macros.h"
+
 class A
 {
     long data_;

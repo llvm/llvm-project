@@ -19,6 +19,7 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../AB.h"
 
 std::auto_ptr<B>

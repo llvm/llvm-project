@@ -12,6 +12,7 @@
 // void push_back(const value_type& x);
 
 #include <deque>
+#include "test_macros.h"
 #include "test_allocator.h"
 #include <cassert>
 

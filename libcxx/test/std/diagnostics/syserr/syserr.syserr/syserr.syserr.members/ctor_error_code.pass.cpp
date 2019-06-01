@@ -18,6 +18,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     std::system_error se(static_cast<int>(std::errc::not_a_directory),

@@ -21,6 +21,7 @@
 #include <cassert>
 #include <streambuf>
 #include <cmath>
+#include "test_macros.h"
 #include "test_iterators.h"
 #include "hexfloat.h"
 

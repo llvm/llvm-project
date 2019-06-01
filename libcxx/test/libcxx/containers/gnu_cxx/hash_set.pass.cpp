@@ -18,6 +18,8 @@ struct equal_to;
 struct unique_ptr;
 #include <ext/hash_set>
 
+#include "test_macros.h"
+
 namespace __gnu_cxx {
 template class hash_set<int>;
 }

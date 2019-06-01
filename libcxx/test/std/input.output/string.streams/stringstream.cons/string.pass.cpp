@@ -17,6 +17,8 @@
 #include <sstream>
 #include <cassert>
 
+#include "test_macros.h"
+
 template<typename T>
 struct NoDefaultAllocator : std::allocator<T>
 {

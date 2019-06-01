@@ -17,6 +17,8 @@
 
 #include "counting_predicates.hpp"
 
+#include "test_macros.h"
+
 bool is5 ( int i ) { return i == 5; }
 
 template <typename T>
