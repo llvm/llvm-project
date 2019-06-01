@@ -27,6 +27,8 @@
 
 #include <iostream>
 
+#include "test_macros.h"
+
 class Moveable
 {
     Moveable(const Moveable&);

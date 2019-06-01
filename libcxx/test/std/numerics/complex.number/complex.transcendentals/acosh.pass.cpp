@@ -15,6 +15,7 @@
 #include <complex>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../cases.h"
 
 template <class T>

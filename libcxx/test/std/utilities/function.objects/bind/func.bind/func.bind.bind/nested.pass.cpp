@@ -21,6 +21,8 @@
 #include <functional>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct power
 {
   template <typename T>

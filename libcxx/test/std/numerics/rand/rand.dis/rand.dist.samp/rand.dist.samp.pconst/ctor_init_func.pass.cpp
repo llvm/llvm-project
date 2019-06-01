@@ -19,6 +19,8 @@
 #include <random>
 #include <cassert>
 
+#include "test_macros.h"
+
 double f(double x)
 {
     return x*2;

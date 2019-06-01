@@ -22,6 +22,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class C>
 void
 test(C c)

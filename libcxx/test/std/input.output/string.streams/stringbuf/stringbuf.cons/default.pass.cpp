@@ -16,6 +16,8 @@
 #include <sstream>
 #include <cassert>
 
+#include "test_macros.h"
+
 template<typename CharT>
 struct testbuf
     : std::basic_stringbuf<CharT>

@@ -38,12 +38,32 @@ define float @fneg_f32(float %x) {
   ret float %cos
 }
 
+define float @unary_fneg_f32(float %x) {
+; CHECK-LABEL: @unary_fneg_f32(
+; CHECK-NEXT:    [[COS:%.*]] = call float @llvm.cos.f32(float [[X:%.*]])
+; CHECK-NEXT:    ret float [[COS]]
+;
+  %x.fneg = fneg float %x
+  %cos = call float @llvm.cos.f32(float %x.fneg)
+  ret float %cos
+}
+
 define <2 x float> @fneg_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @fneg_v2f32(
 ; CHECK-NEXT:    [[COS:%.*]] = call <2 x float> @llvm.cos.v2f32(<2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[COS]]
 ;
   %x.fneg = fsub <2 x float> <float -0.0, float -0.0>, %x
+  %cos = call <2 x float> @llvm.cos.v2f32(<2 x float> %x.fneg)
+  ret <2 x float> %cos
+}
+
+define <2 x float> @unary_fneg_v2f32(<2 x float> %x) {
+; CHECK-LABEL: @unary_fneg_v2f32(
+; CHECK-NEXT:    [[COS:%.*]] = call <2 x float> @llvm.cos.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[COS]]
+;
+  %x.fneg = fneg <2 x float> %x
   %cos = call <2 x float> @llvm.cos.v2f32(<2 x float> %x.fneg)
   ret <2 x float> %cos
 }
@@ -56,6 +76,16 @@ define <2 x float> @fneg_cos_fmf(<2 x float> %x){
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %negx = fsub fast <2 x float> <float -0.0, float -0.0>, %x
+  %r = call nnan afn <2 x float> @llvm.cos.v2f32(<2 x float> %negx)
+  ret <2 x float> %r
+}
+
+define <2 x float> @unary_fneg_cos_fmf(<2 x float> %x){
+; CHECK-LABEL: @unary_fneg_cos_fmf(
+; CHECK-NEXT:    [[R:%.*]] = call nnan afn <2 x float> @llvm.cos.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %negx = fneg fast <2 x float> %x
   %r = call nnan afn <2 x float> @llvm.cos.v2f32(<2 x float> %negx)
   ret <2 x float> %r
 }
@@ -81,6 +111,17 @@ define float @fabs_fneg_f32(float %x) {
   ret float %cos
 }
 
+define float @fabs_unary_fneg_f32(float %x) {
+; CHECK-LABEL: @fabs_unary_fneg_f32(
+; CHECK-NEXT:    [[COS:%.*]] = call float @llvm.cos.f32(float [[X:%.*]])
+; CHECK-NEXT:    ret float [[COS]]
+;
+  %x.fabs = call float @llvm.fabs.f32(float %x)
+  %x.fabs.fneg = fneg float %x.fabs
+  %cos = call float @llvm.cos.f32(float %x.fabs.fneg)
+  ret float %cos
+}
+
 define <2 x float> @fabs_fneg_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @fabs_fneg_v2f32(
 ; CHECK-NEXT:    [[COS:%.*]] = call <2 x float> @llvm.cos.v2f32(<2 x float> [[X:%.*]])
@@ -88,6 +129,17 @@ define <2 x float> @fabs_fneg_v2f32(<2 x float> %x) {
 ;
   %x.fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %x)
   %x.fabs.fneg = fsub <2 x float> <float -0.0, float -0.0>, %x.fabs
+  %cos = call <2 x float> @llvm.cos.v2f32(<2 x float> %x.fabs.fneg)
+  ret <2 x float> %cos
+}
+
+define <2 x float> @fabs_unary_fneg_v2f32(<2 x float> %x) {
+; CHECK-LABEL: @fabs_unary_fneg_v2f32(
+; CHECK-NEXT:    [[COS:%.*]] = call <2 x float> @llvm.cos.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[COS]]
+;
+  %x.fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %x)
+  %x.fabs.fneg = fneg <2 x float> %x.fabs
   %cos = call <2 x float> @llvm.cos.v2f32(<2 x float> %x.fabs.fneg)
   ret <2 x float> %cos
 }
@@ -107,6 +159,17 @@ define <2 x float> @fneg_sin(<2 x float> %x){
   ret <2 x float> %r
 }
 
+define <2 x float> @unary_fneg_sin(<2 x float> %x){
+; CHECK-LABEL: @unary_fneg_sin(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.sin.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[TMP1]]
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %negx = fneg <2 x float> %x
+  %r = call <2 x float> @llvm.sin.v2f32(<2 x float> %negx)
+  ret <2 x float> %r
+}
+
 ; FMF are not required, but they should propagate.
 
 define <2 x float> @fneg_sin_fmf(<2 x float> %x){
@@ -120,3 +183,13 @@ define <2 x float> @fneg_sin_fmf(<2 x float> %x){
   ret <2 x float> %r
 }
 
+define <2 x float> @unary_fneg_sin_fmf(<2 x float> %x){
+; CHECK-LABEL: @unary_fneg_sin_fmf(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan arcp afn <2 x float> @llvm.sin.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fsub nnan arcp afn <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[TMP1]]
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %negx = fneg fast <2 x float> %x
+  %r = call nnan arcp afn <2 x float> @llvm.sin.v2f32(<2 x float> %negx)
+  ret <2 x float> %r
+}

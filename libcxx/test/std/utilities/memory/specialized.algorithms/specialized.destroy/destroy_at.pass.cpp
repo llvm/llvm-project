@@ -17,6 +17,8 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct Counted {
   static int count;
   static void reset() { count = 0; }

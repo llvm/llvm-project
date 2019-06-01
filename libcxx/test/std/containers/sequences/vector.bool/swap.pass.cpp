@@ -13,6 +13,7 @@
 
 #include <vector>
 #include <cassert>
+#include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
 

@@ -14,6 +14,7 @@
 #include <stack>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_allocator.h"
 
 template <class C>

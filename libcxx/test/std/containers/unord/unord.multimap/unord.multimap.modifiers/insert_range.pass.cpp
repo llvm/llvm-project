@@ -21,6 +21,7 @@
 #include <cassert>
 #include <cstddef>
 
+#include "test_macros.h"
 #include "../../../check_consecutive.h"
 #include "test_iterators.h"
 #include "min_allocator.h"

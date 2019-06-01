@@ -16,6 +16,8 @@
 #include <valarray>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     std::size_t a1[] = {1, 2, 3};

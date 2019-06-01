@@ -16,6 +16,7 @@
 #include <vector>
 #include <cassert>
 
+#include "test_macros.h"
 #include "coroutine_types.h"
 
 using namespace std::experimental;

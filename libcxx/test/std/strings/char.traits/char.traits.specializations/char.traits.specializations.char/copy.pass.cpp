@@ -15,6 +15,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     char s1[] = {1, 2, 3};

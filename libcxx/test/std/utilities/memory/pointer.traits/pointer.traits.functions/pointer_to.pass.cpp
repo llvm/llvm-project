@@ -18,6 +18,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class T>
 struct A
 {

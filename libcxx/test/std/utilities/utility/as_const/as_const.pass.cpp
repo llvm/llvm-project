@@ -14,6 +14,8 @@
 #include <utility>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct S {int i;};
 bool operator==(const S& x, const S& y) { return x.i == y.i; }
 bool operator==(const volatile S& x, const volatile S& y) { return x.i == y.i; }

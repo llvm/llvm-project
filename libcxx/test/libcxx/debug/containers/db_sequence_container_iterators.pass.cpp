@@ -23,6 +23,7 @@
 #include <vector>
 #include <deque>
 #include "container_debug_tests.hpp"
+#include "test_macros.h"
 #include "debug_mode_helper.h"
 
 using namespace IteratorDebugChecks;

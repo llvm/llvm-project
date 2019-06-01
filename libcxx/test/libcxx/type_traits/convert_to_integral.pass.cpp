@@ -23,6 +23,8 @@
 
 #include "user_defined_integral.hpp"
 
+#include "test_macros.h"
+
 template <class T>
 struct EnumType
 {

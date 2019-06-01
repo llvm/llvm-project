@@ -19,6 +19,8 @@ struct equal_to;
 struct unique_ptr;
 #include <ext/hash_map>
 
+#include "test_macros.h"
+
 
 namespace __gnu_cxx {
 template class hash_map<int, int>;

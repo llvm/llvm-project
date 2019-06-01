@@ -15,6 +15,8 @@
 #include <locale>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class C>
 class my_facet
     : public std::ctype<C>

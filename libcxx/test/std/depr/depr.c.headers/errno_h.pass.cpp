@@ -11,6 +11,8 @@
 
 #include <errno.h>
 
+#include "test_macros.h"
+
 #ifndef EDOM
 #error EDOM not defined
 #endif

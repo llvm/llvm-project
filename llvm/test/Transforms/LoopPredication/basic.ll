@@ -1602,13 +1602,53 @@ define i32 @ne_latch_zext(i32* %array, i32 %length, i16 %n16) {
 ; CHECK-LABEL: @ne_latch_zext(
 ; CHECK-NEXT:  loop.preheader:
 ; CHECK-NEXT:    [[N:%.*]] = zext i16 [[N16:%.*]] to i32
+; CHECK-NEXT:    [[NPLUS1:%.*]] = add nuw nsw i32 [[N]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[NPLUS1]], [[LENGTH:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 0, [[LENGTH]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
-; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH:%.*]]
-; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_BOUNDS]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ne i32 [[I_NEXT]], [[NPLUS1]]
+; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+loop.preheader:
+  %n = zext i16 %n16 to i32
+  %nplus1 = add nsw nuw i32 %n, 1
+  br label %loop
+
+loop:
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.next = add nsw nuw i32 %i, 1
+  %continue = icmp ne i32 %i.next, %nplus1
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  ret i32 0
+}
+
+; Same as previous, but with a pre-increment test since this is easier to match
+define i32 @ne_latch_zext_preinc(i32* %array, i32 %length, i16 %n16) {
+; CHECK-LABEL: @ne_latch_zext_preinc(
+; CHECK-NEXT:  loop.preheader:
+; CHECK-NEXT:    [[N:%.*]] = zext i16 [[N16:%.*]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LENGTH:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i32 [[N]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 0, [[LENGTH]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
-; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ne i32 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ne i32 [[I]], [[N]]
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
@@ -1623,7 +1663,7 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.next = add nuw i32 %i, 1
-  %continue = icmp ne i32 %i.next, %n
+  %continue = icmp ne i32 %i, %n
   br i1 %continue, label %loop, label %exit
 
 exit:
@@ -1636,6 +1676,7 @@ define i32 @ne_latch_dom_check(i32* %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @ne_latch_dom_check(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
+; CHECK-NEXT:    [[NPLUS1:%.*]] = add nuw i32 [[N]], 1
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[EXIT:%.*]], label [[LOOP_PREHEADER:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -1643,8 +1684,52 @@ define i32 @ne_latch_dom_check(i32* %array, i32 %length, i32 %n) {
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_BOUNDS]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ne i32 [[I_NEXT]], [[NPLUS1]]
+; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  %nplus1 = add nuw i32 %n, 1
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+  br label %loop
+
+loop:
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.next = add nsw nuw i32 %i, 1
+  %continue = icmp ne i32 %i.next, %nplus1
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  ret i32 0
+}
+
+; Same as previous, but easier to match
+define i32 @ne_latch_dom_check_preinc(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @ne_latch_dom_check_preinc(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP5]], label [[EXIT:%.*]], label [[LOOP_PREHEADER:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LENGTH:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i32 [[N]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 0, [[LENGTH]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
-; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ne i32 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ne i32 [[I]], [[N]]
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -1664,12 +1749,13 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.next = add nuw i32 %i, 1
-  %continue = icmp ne i32 %i.next, %n
+  %continue = icmp ne i32 %i, %n
   br i1 %continue, label %loop, label %exit
 
 exit:
   ret i32 0
 }
+
 
 ; NE latch - can't prove (end-start) mod step == 0 (i.e. might wrap
 ; around several times or even be infinite)
@@ -1683,7 +1769,7 @@ define i32 @neg_ne_latch_mod_step(i32* %array, i32 %length, i16 %n16) {
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_BOUNDS]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 3
-; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ne i32 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ne i32 [[I]], [[N]]
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
@@ -1698,7 +1784,7 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.next = add i32 %i, 3
-  %continue = icmp ne i32 %i.next, %n
+  %continue = icmp ne i32 %i, %n
   br i1 %continue, label %loop, label %exit
 
 exit:
@@ -1715,7 +1801,7 @@ define i32 @ne_latch_mod_step(i32* %array, i32 %length) {
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_BOUNDS]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 2
-; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ne i32 [[I_NEXT]], 400
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ne i32 [[I]], 400
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
@@ -1729,7 +1815,7 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.next = add nuw i32 %i, 2
-  %continue = icmp ne i32 %i.next, 400
+  %continue = icmp ne i32 %i, 400
   br i1 %continue, label %loop, label %exit
 
 exit:
@@ -1746,7 +1832,7 @@ define i32 @neg_ne_latch_swapped_order(i32* %array, i32 %length) {
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_BOUNDS]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
-; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ne i32 [[I_NEXT]], 0
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ne i32 [[I]], 0
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
@@ -1760,7 +1846,7 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.next = add i32 %i, 1
-  %continue = icmp ne i32 %i.next, 0
+  %continue = icmp ne i32 %i, 0
   br i1 %continue, label %loop, label %exit
 
 exit:

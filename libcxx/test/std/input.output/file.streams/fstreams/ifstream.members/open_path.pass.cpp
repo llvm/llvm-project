@@ -20,6 +20,8 @@
 #include <filesystem>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**) {
   {
     std::ifstream fs;

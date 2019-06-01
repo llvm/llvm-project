@@ -17,6 +17,8 @@
 #include <chrono>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     typedef std::chrono::steady_clock C;

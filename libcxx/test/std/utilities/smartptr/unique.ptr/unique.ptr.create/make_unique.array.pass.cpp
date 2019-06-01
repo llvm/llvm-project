@@ -11,6 +11,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 //    The only way to create an unique_ptr<T[]> is to default construct them.
 
 class foo {

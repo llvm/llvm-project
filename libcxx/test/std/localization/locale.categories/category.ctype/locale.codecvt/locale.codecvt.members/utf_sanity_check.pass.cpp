@@ -20,6 +20,8 @@
 
 #include <stdio.h>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     typedef std::codecvt<char32_t, char, std::mbstate_t> F32_8;

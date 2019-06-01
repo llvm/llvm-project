@@ -17,6 +17,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 namespace ex = std::experimental::pmr;
 
 int main(int, char**)

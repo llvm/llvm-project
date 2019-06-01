@@ -361,7 +361,7 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getIndex());
   case MachineOperand::MO_ExternalSymbol:
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getOffset(),
-                        MO.getSymbolName());
+                        StringRef(MO.getSymbolName()));
   case MachineOperand::MO_GlobalAddress:
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getGlobal(),
                         MO.getOffset());

@@ -360,6 +360,21 @@ class ScopBuilder {
   /// potential reduction.
   void checkForReductions(ScopStmt &Stmt);
 
+  /// Verify that all required invariant loads have been hoisted.
+  ///
+  /// Invariant load hoisting is not guaranteed to hoist all loads that were
+  /// assumed to be scop invariant during scop detection. This function checks
+  /// for cases where the hoisting failed, but where it would have been
+  /// necessary for our scop modeling to be correct. In case of insufficient
+  /// hoisting the scop is marked as invalid.
+  ///
+  /// In the example below Bound[1] is required to be invariant:
+  ///
+  /// for (int i = 1; i < Bound[0]; i++)
+  ///   for (int j = 1; j < Bound[1]; j++)
+  ///     ...
+  void verifyInvariantLoads();
+
   /// Collect loads which might form a reduction chain with @p StoreMA.
   ///
   /// Check if the stored value for @p StoreMA is a binary operator with one or

@@ -21,6 +21,8 @@
 #include <cmath>
 #include <cassert>
 
+#include "test_macros.h"
+
 float _pow(float a, float b)
 {
     return std::pow(a, b);

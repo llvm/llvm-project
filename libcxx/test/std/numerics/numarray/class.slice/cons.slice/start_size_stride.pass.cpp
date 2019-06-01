@@ -15,6 +15,8 @@
 #include <valarray>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     std::slice s(1, 3, 2);

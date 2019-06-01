@@ -16,6 +16,8 @@
 #include <cstddef>
 #include <cassert>
 
+#include "test_macros.h"
+
 int new_called = 0;
 
 int main(int, char**)

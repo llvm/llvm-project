@@ -21,6 +21,8 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "test_macros.h"
+
 std::shared_timed_mutex m;
 
 const int total_readers = 2;

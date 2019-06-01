@@ -13,6 +13,8 @@
 #include <locale>
 #include <cassert>
 
+#include "test_macros.h"
+
 void check(const std::locale& loc)
 {
     assert(std::has_facet<std::collate<char> >(loc));

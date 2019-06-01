@@ -16,6 +16,8 @@
 #include <cassert>
 #include <cstring>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     {

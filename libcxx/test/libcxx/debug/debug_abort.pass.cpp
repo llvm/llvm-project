@@ -20,6 +20,8 @@
 #include <cstdlib>
 #include <__debug>
 
+#include "test_macros.h"
+
 void signal_handler(int signal)
 {
     if (signal == SIGABRT)

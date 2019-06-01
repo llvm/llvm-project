@@ -21,6 +21,8 @@
 #include <filesystem>
 #include <cassert>
 
+#include "test_macros.h"
+
 namespace fs = std::filesystem;
 
 int main(int, char**) {

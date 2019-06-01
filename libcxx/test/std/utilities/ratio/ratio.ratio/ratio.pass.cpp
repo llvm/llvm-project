@@ -11,6 +11,8 @@
 
 #include <ratio>
 
+#include "test_macros.h"
+
 template <long long N, long long D, long long eN, long long eD>
 void test()
 {

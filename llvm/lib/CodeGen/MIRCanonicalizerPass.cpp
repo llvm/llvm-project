@@ -743,7 +743,8 @@ static bool runOnBasicBlock(MachineBasicBlock *MBB,
   // of the MachineBasicBlock so that they are named in the order that we sorted
   // them alphabetically. Eventually we wont need SkipVRegs because we will use
   // named vregs instead.
-  NVC.SkipVRegs();
+  if (IdempotentInstCount)
+    NVC.SkipVRegs();
 
   auto MII = MBB->begin();
   for (unsigned i = 0; i < IdempotentInstCount && MII != MBB->end(); ++i) {

@@ -13,6 +13,8 @@
 #include <array>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class C>
 void test_contiguous ( const C &c )
 {

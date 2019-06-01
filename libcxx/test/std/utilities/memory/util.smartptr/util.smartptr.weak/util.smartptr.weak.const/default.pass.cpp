@@ -15,6 +15,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct A;
 
 int main(int, char**)

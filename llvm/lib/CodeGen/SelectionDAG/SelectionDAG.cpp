@@ -7690,71 +7690,50 @@ SDNode *SelectionDAG::MorphNodeTo(SDNode *N, unsigned Opc,
 SDNode* SelectionDAG::mutateStrictFPToFP(SDNode *Node) {
   unsigned OrigOpc = Node->getOpcode();
   unsigned NewOpc;
-  bool IsUnary = false;
-  bool IsTernary = false;
   switch (OrigOpc) {
   default:
     llvm_unreachable("mutateStrictFPToFP called with unexpected opcode!");
-  case ISD::STRICT_FADD: NewOpc = ISD::FADD; break;
-  case ISD::STRICT_FSUB: NewOpc = ISD::FSUB; break;
-  case ISD::STRICT_FMUL: NewOpc = ISD::FMUL; break;
-  case ISD::STRICT_FDIV: NewOpc = ISD::FDIV; break;
-  case ISD::STRICT_FREM: NewOpc = ISD::FREM; break;
-  case ISD::STRICT_FMA: NewOpc = ISD::FMA; IsTernary = true; break;
-  case ISD::STRICT_FSQRT: NewOpc = ISD::FSQRT; IsUnary = true; break;
-  case ISD::STRICT_FPOW: NewOpc = ISD::FPOW; break;
-  case ISD::STRICT_FPOWI: NewOpc = ISD::FPOWI; break;
-  case ISD::STRICT_FSIN: NewOpc = ISD::FSIN; IsUnary = true; break;
-  case ISD::STRICT_FCOS: NewOpc = ISD::FCOS; IsUnary = true; break;
-  case ISD::STRICT_FEXP: NewOpc = ISD::FEXP; IsUnary = true; break;
-  case ISD::STRICT_FEXP2: NewOpc = ISD::FEXP2; IsUnary = true; break;
-  case ISD::STRICT_FLOG: NewOpc = ISD::FLOG; IsUnary = true; break;
-  case ISD::STRICT_FLOG10: NewOpc = ISD::FLOG10; IsUnary = true; break;
-  case ISD::STRICT_FLOG2: NewOpc = ISD::FLOG2; IsUnary = true; break;
-  case ISD::STRICT_FRINT: NewOpc = ISD::FRINT; IsUnary = true; break;
-  case ISD::STRICT_FNEARBYINT:
-    NewOpc = ISD::FNEARBYINT;
-    IsUnary = true;
-    break;
-  case ISD::STRICT_FMAXNUM: NewOpc = ISD::FMAXNUM; break;
-  case ISD::STRICT_FMINNUM: NewOpc = ISD::FMINNUM; break;
-  case ISD::STRICT_FCEIL: NewOpc = ISD::FCEIL; IsUnary = true; break;
-  case ISD::STRICT_FFLOOR: NewOpc = ISD::FFLOOR; IsUnary = true; break;
-  case ISD::STRICT_FROUND: NewOpc = ISD::FROUND; IsUnary = true; break;
-  case ISD::STRICT_FTRUNC: NewOpc = ISD::FTRUNC; IsUnary = true; break;
-  // STRICT_FP_ROUND takes an extra argument describing whether or not
-  // the value will be changed by this node. See ISDOpcodes.h for details.
-  case ISD::STRICT_FP_ROUND: NewOpc = ISD::FP_ROUND; break;
-  case ISD::STRICT_FP_EXTEND: NewOpc = ISD::FP_EXTEND; IsUnary = true; break;
+  case ISD::STRICT_FADD:       NewOpc = ISD::FADD;       break;
+  case ISD::STRICT_FSUB:       NewOpc = ISD::FSUB;       break;
+  case ISD::STRICT_FMUL:       NewOpc = ISD::FMUL;       break;
+  case ISD::STRICT_FDIV:       NewOpc = ISD::FDIV;       break;
+  case ISD::STRICT_FREM:       NewOpc = ISD::FREM;       break;
+  case ISD::STRICT_FMA:        NewOpc = ISD::FMA;        break;
+  case ISD::STRICT_FSQRT:      NewOpc = ISD::FSQRT;      break;
+  case ISD::STRICT_FPOW:       NewOpc = ISD::FPOW;       break;
+  case ISD::STRICT_FPOWI:      NewOpc = ISD::FPOWI;      break;
+  case ISD::STRICT_FSIN:       NewOpc = ISD::FSIN;       break;
+  case ISD::STRICT_FCOS:       NewOpc = ISD::FCOS;       break;
+  case ISD::STRICT_FEXP:       NewOpc = ISD::FEXP;       break;
+  case ISD::STRICT_FEXP2:      NewOpc = ISD::FEXP2;      break;
+  case ISD::STRICT_FLOG:       NewOpc = ISD::FLOG;       break;
+  case ISD::STRICT_FLOG10:     NewOpc = ISD::FLOG10;     break;
+  case ISD::STRICT_FLOG2:      NewOpc = ISD::FLOG2;      break;
+  case ISD::STRICT_FRINT:      NewOpc = ISD::FRINT;      break;
+  case ISD::STRICT_FNEARBYINT: NewOpc = ISD::FNEARBYINT; break;
+  case ISD::STRICT_FMAXNUM:    NewOpc = ISD::FMAXNUM;    break;
+  case ISD::STRICT_FMINNUM:    NewOpc = ISD::FMINNUM;    break;
+  case ISD::STRICT_FCEIL:      NewOpc = ISD::FCEIL;      break;
+  case ISD::STRICT_FFLOOR:     NewOpc = ISD::FFLOOR;     break;
+  case ISD::STRICT_FROUND:     NewOpc = ISD::FROUND;     break;
+  case ISD::STRICT_FTRUNC:     NewOpc = ISD::FTRUNC;     break;
+  case ISD::STRICT_FP_ROUND:   NewOpc = ISD::FP_ROUND;   break;
+  case ISD::STRICT_FP_EXTEND:  NewOpc = ISD::FP_EXTEND;  break;
   }
+
+  assert(Node->getNumValues() == 2 && "Unexpected number of results!");
 
   // We're taking this node out of the chain, so we need to re-link things.
   SDValue InputChain = Node->getOperand(0);
   SDValue OutputChain = SDValue(Node, 1);
   ReplaceAllUsesOfValueWith(OutputChain, InputChain);
 
-  SDVTList VTs;
-  SDNode *Res = nullptr;
+  SmallVector<SDValue, 3> Ops;
+  for (unsigned i = 1, e = Node->getNumOperands(); i != e; ++i)
+    Ops.push_back(Node->getOperand(i));
 
-  switch (OrigOpc) {
-  default:
-    VTs = getVTList(Node->getOperand(1).getValueType());
-    break;
-  case ISD::STRICT_FP_ROUND:
-  case ISD::STRICT_FP_EXTEND:
-    VTs = getVTList(Node->getValueType(0));
-    break;
-  }
-
-  if (IsUnary)
-    Res = MorphNodeTo(Node, NewOpc, VTs, { Node->getOperand(1) });
-  else if (IsTernary)
-    Res = MorphNodeTo(Node, NewOpc, VTs, { Node->getOperand(1),
-                                           Node->getOperand(2),
-                                           Node->getOperand(3)});
-  else
-    Res = MorphNodeTo(Node, NewOpc, VTs, { Node->getOperand(1),
-                                           Node->getOperand(2) });
+  SDVTList VTs = getVTList(Node->getValueType(0));
+  SDNode *Res = MorphNodeTo(Node, NewOpc, VTs, Ops);
 
   // MorphNodeTo can operate in two ways: if an existing node with the
   // specified operands exists, it can just return it.  Otherwise, it

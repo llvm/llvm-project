@@ -13,6 +13,8 @@
 #include <locale>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct my_facet
     : public std::locale::facet
 {

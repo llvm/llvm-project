@@ -25,6 +25,7 @@
 #include <iterator>
 #include <vector>
 
+#include "test_macros.h"
 #include "MoveOnly.h"
 
 

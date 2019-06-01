@@ -15,6 +15,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS

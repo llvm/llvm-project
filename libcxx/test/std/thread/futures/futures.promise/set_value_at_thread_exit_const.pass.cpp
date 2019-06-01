@@ -18,6 +18,8 @@
 #include <future>
 #include <cassert>
 
+#include "test_macros.h"
+
 void func(std::promise<int> p)
 {
     const int i = 5;

@@ -16,6 +16,7 @@
 
 #include <unordered_set>
 #include <type_traits>
+#include "test_macros.h"
 #include "min_allocator.h"
 
 template <class Container>

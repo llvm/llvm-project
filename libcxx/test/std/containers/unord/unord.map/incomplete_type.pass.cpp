@@ -14,6 +14,8 @@
 
 #include <unordered_map>
 
+#include "test_macros.h"
+
 template <class Tp>
 struct MyHash {
   MyHash() {}

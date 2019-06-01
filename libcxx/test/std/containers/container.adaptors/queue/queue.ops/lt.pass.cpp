@@ -23,6 +23,8 @@
 #include <queue>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class C>
 C
 make(int n)

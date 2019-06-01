@@ -21,6 +21,8 @@
 #include <array>
 #include <type_traits>
 
+#include "test_macros.h"
+
 template <class T, size_t Size = sizeof(std::tuple_size<T>)>
 constexpr bool is_complete(int) { static_assert(Size > 0, ""); return true; }
 template <class> constexpr bool is_complete(long) { return false; }

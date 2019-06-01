@@ -358,9 +358,10 @@ INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(RegisterCoalescer, "simple-register-coalescing",
                     "Simple Register Coalescing", false, false)
 
-static bool isMoveInstr(const TargetRegisterInfo &tri, const MachineInstr *MI,
-                        unsigned &Src, unsigned &Dst,
-                        unsigned &SrcSub, unsigned &DstSub) {
+LLVM_NODISCARD static bool isMoveInstr(const TargetRegisterInfo &tri,
+                                       const MachineInstr *MI, unsigned &Src,
+                                       unsigned &Dst, unsigned &SrcSub,
+                                       unsigned &DstSub) {
   if (MI->isCopy()) {
     Dst = MI->getOperand(0).getReg();
     DstSub = MI->getOperand(0).getSubReg();
@@ -1516,7 +1517,8 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
   // CoalescerPair may have a new register class with adjusted subreg indices
   // at this point.
   unsigned SrcReg, DstReg, SrcSubIdx, DstSubIdx;
-  isMoveInstr(*TRI, CopyMI, SrcReg, DstReg, SrcSubIdx, DstSubIdx);
+  if(!isMoveInstr(*TRI, CopyMI, SrcReg, DstReg, SrcSubIdx, DstSubIdx))
+    return nullptr;
 
   SlotIndex Idx = LIS->getInstructionIndex(*CopyMI);
   const LiveInterval &SrcLI = LIS->getInterval(SrcReg);
@@ -3514,7 +3516,8 @@ bool RegisterCoalescer::applyTerminalRule(const MachineInstr &Copy) const {
   if (!UseTerminalRule)
     return false;
   unsigned DstReg, DstSubReg, SrcReg, SrcSubReg;
-  isMoveInstr(*TRI, &Copy, SrcReg, DstReg, SrcSubReg, DstSubReg);
+  if (!isMoveInstr(*TRI, &Copy, SrcReg, DstReg, SrcSubReg, DstSubReg))
+    return false;
   // Check if the destination of this copy has any other affinity.
   if (TargetRegisterInfo::isPhysicalRegister(DstReg) ||
       // If SrcReg is a physical register, the copy won't be coalesced.
@@ -3538,8 +3541,9 @@ bool RegisterCoalescer::applyTerminalRule(const MachineInstr &Copy) const {
     if (&MI == &Copy || !MI.isCopyLike() || MI.getParent() != OrigBB)
       continue;
     unsigned OtherReg, OtherSubReg, OtherSrcReg, OtherSrcSubReg;
-    isMoveInstr(*TRI, &Copy, OtherSrcReg, OtherReg, OtherSrcSubReg,
-                OtherSubReg);
+    if (!isMoveInstr(*TRI, &Copy, OtherSrcReg, OtherReg, OtherSrcSubReg,
+                OtherSubReg))
+      return false;
     if (OtherReg == SrcReg)
       OtherReg = OtherSrcReg;
     // Check if OtherReg is a non-terminal.

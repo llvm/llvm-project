@@ -2040,21 +2040,6 @@ private:
   ///         nullptr if it cannot be hoisted at all.
   isl::set getNonHoistableCtx(MemoryAccess *Access, isl::union_map Writes);
 
-  /// Verify that all required invariant loads have been hoisted.
-  ///
-  /// Invariant load hoisting is not guaranteed to hoist all loads that were
-  /// assumed to be scop invariant during scop detection. This function checks
-  /// for cases where the hoisting failed, but where it would have been
-  /// necessary for our scop modeling to be correct. In case of insufficient
-  /// hoisting the scop is marked as invalid.
-  ///
-  /// In the example below Bound[1] is required to be invariant:
-  ///
-  /// for (int i = 1; i < Bound[0]; i++)
-  ///   for (int j = 1; j < Bound[1]; j++)
-  ///     ...
-  void verifyInvariantLoads();
-
   /// Hoist invariant memory loads and check for required ones.
   ///
   /// We first identify "common" invariant loads, thus loads that are invariant
@@ -2974,11 +2959,6 @@ public:
   /// Find the ScopArrayInfo associated with an isl Id
   ///        that has name @p Name.
   ScopArrayInfo *getArrayInfoByName(const std::string BaseName);
-
-  /// Check whether @p Schedule contains extension nodes.
-  ///
-  /// @return true if @p Schedule contains extension nodes.
-  static bool containsExtensionNode(isl::schedule Schedule);
 
   /// Simplify the SCoP representation.
   ///

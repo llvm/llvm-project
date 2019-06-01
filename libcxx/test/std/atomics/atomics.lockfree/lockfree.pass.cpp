@@ -24,6 +24,8 @@
 #include <atomic>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     assert(ATOMIC_BOOL_LOCK_FREE == 0 ||

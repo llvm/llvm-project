@@ -12,6 +12,8 @@
 #include <ext/hash_map>
 #include <string>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     char str[] = "test";

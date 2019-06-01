@@ -18,6 +18,8 @@
 #include <cassert>
 #include "nasty_containers.hpp"
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     {

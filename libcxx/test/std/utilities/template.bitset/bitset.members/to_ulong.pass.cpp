@@ -15,6 +15,8 @@
 #include <climits>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <std::size_t N>
 void test_to_ulong()
 {

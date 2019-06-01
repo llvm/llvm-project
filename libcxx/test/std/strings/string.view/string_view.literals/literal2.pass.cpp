@@ -15,6 +15,8 @@
 #include <string_view>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     using namespace std::literals::string_view_literals;

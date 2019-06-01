@@ -11,6 +11,8 @@
 #include <utility>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct A
 {
     int data_;

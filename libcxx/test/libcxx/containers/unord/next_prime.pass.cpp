@@ -19,6 +19,8 @@
 #include <__hash_table>
 #include <cassert>
 
+#include "test_macros.h"
+
 bool
 is_prime(size_t n)
 {

@@ -27,6 +27,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 namespace pmr = std::experimental::pmr;
 
 template <class T>

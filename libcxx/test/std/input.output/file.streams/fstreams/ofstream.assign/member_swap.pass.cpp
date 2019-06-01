@@ -16,6 +16,7 @@
 #include <fstream>
 #include <utility>
 #include <cassert>
+#include "test_macros.h"
 #include "platform_support.h"
 
 std::pair<std::string, std::string> get_temp_file_names() {

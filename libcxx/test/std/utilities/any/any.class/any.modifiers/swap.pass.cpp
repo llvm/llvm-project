@@ -19,6 +19,7 @@
 #include <any>
 #include <cassert>
 
+#include "test_macros.h"
 #include "any_helpers.h"
 
 using std::any;

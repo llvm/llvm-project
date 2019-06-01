@@ -26,6 +26,8 @@
 #include <limits>
 #include <complex>
 
+#include "test_macros.h"
+
 template <class T>
 void test()
 {

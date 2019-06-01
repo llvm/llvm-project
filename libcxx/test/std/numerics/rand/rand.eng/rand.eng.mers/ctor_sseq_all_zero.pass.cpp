@@ -27,6 +27,8 @@
 #include <cstddef>
 #if TEST_STD_VER >= 11
 #include <initializer_list>
+
+#include "test_macros.h"
 #endif
 
 struct all_zero_seed_seq {

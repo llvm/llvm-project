@@ -16,6 +16,8 @@
 #include <sstream>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct MyTraits : std::char_traits<char> {};
 
 typedef std::basic_ostringstream<char, MyTraits> StringStream;

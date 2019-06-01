@@ -24,6 +24,8 @@
 
 #include "test_memory_resource.hpp"
 
+#include "test_macros.h"
+
 using std::experimental::pmr::memory_resource;
 
 int main(int, char**)

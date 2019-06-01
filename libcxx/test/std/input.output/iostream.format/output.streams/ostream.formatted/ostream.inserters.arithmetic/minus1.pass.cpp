@@ -29,6 +29,8 @@
 #include <cstdint>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <typename T>
 void test_octal(const char *expected)
 {

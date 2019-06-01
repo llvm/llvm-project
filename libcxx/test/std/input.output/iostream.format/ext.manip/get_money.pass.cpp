@@ -16,6 +16,7 @@
 #include <istream>
 #include <cassert>
 
+#include "test_macros.h"
 #include "platform_support.h" // locale name macros
 
 template <class CharT>

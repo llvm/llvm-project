@@ -20,6 +20,7 @@
 #include <future>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_allocator.h"
 
 int main(int, char**)

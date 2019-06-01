@@ -15,6 +15,7 @@
 #include <vector>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 std::mt19937 randomness;

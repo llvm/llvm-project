@@ -16,6 +16,8 @@
 
 #include <tuple>
 
+#include "test_macros.h"
+
 struct A {};
 
 struct B {};

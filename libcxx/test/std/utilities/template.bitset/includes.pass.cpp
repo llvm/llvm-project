@@ -10,6 +10,8 @@
 
 #include <bitset>
 
+#include "test_macros.h"
+
 template <class> void test_typedef() {}
 
 int main(int, char**)

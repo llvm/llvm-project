@@ -19,6 +19,8 @@
 #include <cassert>
 #include <archetypes.hpp>
 
+#include "test_macros.h"
+
 struct Base
 {
     virtual ~Base() {}

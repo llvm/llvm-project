@@ -769,6 +769,16 @@ define float @cos_fneg_f32(float %x) {
   ret float %cos
 }
 
+define float @cos_unary_fneg_f32(float %x) {
+; CHECK-LABEL: @cos_unary_fneg_f32(
+; CHECK-NEXT:    [[COS:%.*]] = call float @llvm.amdgcn.cos.f32(float [[X:%.*]])
+; CHECK-NEXT:    ret float [[COS]]
+;
+  %x.fneg = fneg float %x
+  %cos = call float @llvm.amdgcn.cos.f32(float %x.fneg)
+  ret float %cos
+}
+
 define float @cos_fabs_f32(float %x) {
 ; CHECK-LABEL: @cos_fabs_f32(
 ; CHECK-NEXT:    [[COS:%.*]] = call float @llvm.amdgcn.cos.f32(float [[X:%.*]])
@@ -786,6 +796,17 @@ define float @cos_fabs_fneg_f32(float %x) {
 ;
   %x.fabs = call float @llvm.fabs.f32(float %x)
   %x.fabs.fneg = fsub float -0.0, %x.fabs
+  %cos = call float @llvm.amdgcn.cos.f32(float %x.fabs.fneg)
+  ret float %cos
+}
+
+define float @cos_fabs_unary_fneg_f32(float %x) {
+; CHECK-LABEL: @cos_fabs_unary_fneg_f32(
+; CHECK-NEXT:    [[COS:%.*]] = call float @llvm.amdgcn.cos.f32(float [[X:%.*]])
+; CHECK-NEXT:    ret float [[COS]]
+;
+  %x.fabs = call float @llvm.fabs.f32(float %x)
+  %x.fabs.fneg = fneg float %x.fabs
   %cos = call float @llvm.amdgcn.cos.f32(float %x.fabs.fneg)
   ret float %cos
 }

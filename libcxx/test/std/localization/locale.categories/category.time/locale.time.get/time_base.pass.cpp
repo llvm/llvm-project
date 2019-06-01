@@ -17,6 +17,8 @@
 #include <locale>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     std::time_base::dateorder d = std::time_base::no_order;

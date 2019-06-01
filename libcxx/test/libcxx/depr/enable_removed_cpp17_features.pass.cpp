@@ -13,6 +13,8 @@
 #define _LIBCPP_ENABLE_CXX17_REMOVED_FEATURES
 #include <__config>
 
+#include "test_macros.h"
+
 #ifndef _LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS
 #error _LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS must be defined
 #endif

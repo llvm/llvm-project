@@ -17,6 +17,8 @@
 
 #include <functional>
 
+#include "test_macros.h"
+
 template <class T>
 void test() {
     static_assert(!std::is_bind_expression<T>::value, "");

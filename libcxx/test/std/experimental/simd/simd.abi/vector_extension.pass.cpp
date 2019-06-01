@@ -15,6 +15,8 @@
 #include <experimental/simd>
 #include <cstdint>
 
+#include "test_macros.h"
+
 namespace ex = std::experimental::parallelism_v2;
 
 constexpr inline int reg_width() {

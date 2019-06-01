@@ -18,6 +18,7 @@
 #include <cassert>
 #include <limits>
 #include <streambuf>
+#include "test_macros.h"
 #include "test_iterators.h"
 
 typedef std::num_get<char, input_iterator<const char*> > F;

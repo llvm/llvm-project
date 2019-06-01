@@ -23,6 +23,8 @@
 #include <initializer_list>
 #include <type_traits>
 
+#include "test_macros.h"
+
 struct A {};
 
 int main(int, char**)

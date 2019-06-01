@@ -15,6 +15,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     const std::shared_ptr<int> p(new int(32));

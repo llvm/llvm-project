@@ -39,6 +39,8 @@
 #include <type_traits>
 #include <cstdint>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     static_assert((std::is_same<std::atomic<  std::int_least8_t>,   std::atomic_int_least8_t>::value), "");

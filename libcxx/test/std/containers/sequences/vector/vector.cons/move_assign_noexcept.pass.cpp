@@ -20,6 +20,7 @@
 #include <vector>
 #include <cassert>
 
+#include "test_macros.h"
 #include "MoveOnly.h"
 #include "test_allocator.h"
 

@@ -18,6 +18,8 @@
 #include <map>
 #include <functional>
 
+#include "test_macros.h"
+
 
 template <template <typename ...> class Container>
 void test_set() {

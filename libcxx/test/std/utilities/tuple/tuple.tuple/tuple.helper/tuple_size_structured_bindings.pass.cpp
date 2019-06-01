@@ -22,6 +22,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct S { int x; };
 
 void test_decomp_user_type() {

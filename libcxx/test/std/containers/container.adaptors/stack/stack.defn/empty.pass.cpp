@@ -13,6 +13,8 @@
 #include <stack>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     std::stack<int> q;
