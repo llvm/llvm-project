@@ -20,6 +20,8 @@
 #include <tuple>
 #include <type_traits>
 
+#include "test_macros.h"
+
 template <class T, class = decltype(std::tuple_size<T>::value)>
 constexpr bool has_value(int) { return true; }
 template <class> constexpr bool has_value(long) { return false; }

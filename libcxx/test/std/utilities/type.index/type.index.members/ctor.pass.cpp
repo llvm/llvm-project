@@ -16,6 +16,8 @@
 #include <typeindex>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     std::type_info const & info = typeid(int);

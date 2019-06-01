@@ -9,6 +9,8 @@
 #include <cstddef>
 #include <type_traits>
 
+#include "test_macros.h"
+
 // ptrdiff_t should:
 
 //  1. be in namespace std.

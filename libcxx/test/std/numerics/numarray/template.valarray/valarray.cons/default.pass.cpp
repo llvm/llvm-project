@@ -15,6 +15,8 @@
 #include <valarray>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct S {
     S() { ctor_called = true; }
     static bool ctor_called;

@@ -24,6 +24,8 @@
 #include <codecvt>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class CharT, size_t = sizeof(CharT)>
 struct TestHelper;
 

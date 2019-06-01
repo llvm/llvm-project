@@ -23,6 +23,8 @@
 #include <cstdlib>
 #include "uses_alloc_types.hpp"
 
+#include "test_macros.h"
+
 namespace ex = std::experimental::pmr;
 
 int constructed = 0;

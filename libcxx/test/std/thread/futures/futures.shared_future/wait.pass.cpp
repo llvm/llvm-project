@@ -18,6 +18,8 @@
 #include <future>
 #include <cassert>
 
+#include "test_macros.h"
+
 void func1(std::promise<int> p)
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(500));

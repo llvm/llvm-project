@@ -1,4 +1,4 @@
-; RUN: llc -ppc-reduce-cr-logicals -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -ppc-reduce-cr-logicals -verify-machineinstrs -tail-dup-placement=false < %s | FileCheck %s
 ; RUN: llc -ppc-reduce-cr-logicals -verify-machineinstrs \
 ; RUN:   -ppc-gen-isel=false < %s | FileCheck --check-prefix=CHECK-NO-ISEL %s
 target datalayout = "E-m:e-i64:64-n32:64"

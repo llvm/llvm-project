@@ -13,6 +13,8 @@
 #include <iterator>
 #include <type_traits>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     std::random_access_iterator_tag tag;

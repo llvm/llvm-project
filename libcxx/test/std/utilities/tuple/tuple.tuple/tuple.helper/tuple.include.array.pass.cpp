@@ -22,6 +22,8 @@
 #include <array>
 #include <type_traits>
 
+#include "test_macros.h"
+
 template <class T, std::size_t N, class U, size_t idx>
 void test()
 {

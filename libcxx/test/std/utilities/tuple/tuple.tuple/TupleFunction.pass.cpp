@@ -13,6 +13,8 @@
 #include <tuple>
 #include <functional>
 
+#include "test_macros.h"
+
 struct X
 {
     X() {}

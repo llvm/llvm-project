@@ -19,6 +19,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     std::pair<int*, std::ptrdiff_t> ip = std::get_temporary_buffer<int>(5);

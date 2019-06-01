@@ -17,6 +17,7 @@
 
 #define _LIBCPP_DEBUG 1
 #include <array>
+#include "test_macros.h"
 #include "debug_mode_helper.h"
 
 int main(int, char**)

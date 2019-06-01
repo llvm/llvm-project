@@ -22,6 +22,8 @@
 #include <cstddef>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
 //  Make a few of sequences

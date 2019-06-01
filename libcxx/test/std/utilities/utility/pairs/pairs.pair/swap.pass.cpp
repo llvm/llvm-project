@@ -15,6 +15,8 @@
 #include <utility>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct S {
     int i;
     S() : i(0) {}

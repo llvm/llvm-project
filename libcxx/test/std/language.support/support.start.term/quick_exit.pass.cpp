@@ -11,6 +11,8 @@
 
 #include <cstdlib>
 
+#include "test_macros.h"
+
 void f() {}
 
 int main(int, char**)

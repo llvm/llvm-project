@@ -13,6 +13,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     std::shared_ptr<int> p(nullptr);

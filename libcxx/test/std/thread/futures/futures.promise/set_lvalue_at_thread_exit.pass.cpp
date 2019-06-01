@@ -19,6 +19,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 int i = 0;
 
 void func(std::promise<int&> p)

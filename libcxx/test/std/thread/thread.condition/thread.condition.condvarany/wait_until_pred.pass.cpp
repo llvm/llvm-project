@@ -26,6 +26,8 @@
 #include <chrono>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct Clock
 {
     typedef std::chrono::milliseconds duration;

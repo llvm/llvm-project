@@ -12,6 +12,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 #ifdef isalnum
 #error isalnum defined
 #endif

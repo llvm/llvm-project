@@ -17,6 +17,8 @@
 #include <functional>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct X{
     typedef std::function<void(X&)> callback_type;
     virtual ~X() {}

@@ -16,6 +16,8 @@
 #include <streambuf>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct testbuf : public std::streambuf {};
 
 int main(int, char**)

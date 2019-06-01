@@ -21,6 +21,8 @@
 #include <thread>
 #include <cassert>
 
+#include "test_macros.h"
+
 std::condition_variable_any cv;
 
 typedef std::timed_mutex L0;

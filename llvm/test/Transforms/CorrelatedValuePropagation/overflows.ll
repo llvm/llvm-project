@@ -21,10 +21,13 @@ declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32)
 
 declare { i8, i1 } @llvm.umul.with.overflow.i8(i8, i8)
 
+declare { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32>, <2 x i32>)
+
 declare i8 @llvm.uadd.sat.i8(i8, i8)
 declare i8 @llvm.sadd.sat.i8(i8, i8)
 declare i8 @llvm.usub.sat.i8(i8, i8)
 declare i8 @llvm.ssub.sat.i8(i8, i8)
+declare <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8>, <2 x i8>)
 
 declare void @llvm.trap()
 
@@ -731,6 +734,16 @@ define { i8, i1 } @signed_mul_constant_folding() {
   ret { i8, i1 } %mul
 }
 
+define { <2 x i32>, <2 x i1> } @uaddo_vec(<2 x i32> %a) {
+; CHECK-LABEL: @uaddo_vec(
+; CHECK-NEXT:    [[ADD:%.*]] = call { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32> [[A:%.*]], <2 x i32> <i32 1, i32 1>)
+; CHECK-NEXT:    ret { <2 x i32>, <2 x i1> } [[ADD]]
+;
+  %add = call { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32> %a, <2 x i32> <i32 1, i32 1>)
+  ret { <2 x i32>, <2 x i1> } %add
+}
+
+
 define i8 @uadd_sat_no_overflow(i8 %x) {
 ; CHECK-LABEL: @uadd_sat_no_overflow(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], 100
@@ -739,8 +752,8 @@ define i8 @uadd_sat_no_overflow(i8 %x) {
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cont:
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X]], i8 100)
-; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK-NEXT:    [[RES1:%.*]] = add nuw i8 [[X]], 100
+; CHECK-NEXT:    ret i8 [[RES1]]
 ;
   %cmp = icmp ugt i8 %x, 100
   br i1 %cmp, label %trap, label %cont
@@ -762,8 +775,8 @@ define i8 @sadd_sat_no_overflow(i8 %x) {
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cont:
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X]], i8 20)
-; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK-NEXT:    [[RES1:%.*]] = add nsw i8 [[X]], 20
+; CHECK-NEXT:    ret i8 [[RES1]]
 ;
   %cmp = icmp sgt i8 %x, 100
   br i1 %cmp, label %trap, label %cont
@@ -785,8 +798,8 @@ define i8 @usub_sat_no_overflow(i8 %x) {
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cont:
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[X]], i8 100)
-; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK-NEXT:    [[RES1:%.*]] = sub nuw i8 [[X]], 100
+; CHECK-NEXT:    ret i8 [[RES1]]
 ;
   %cmp = icmp ult i8 %x, 100
   br i1 %cmp, label %trap, label %cont
@@ -808,8 +821,8 @@ define i8 @ssub_sat_no_overflow(i8 %x) {
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cont:
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[X]], i8 20)
-; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK-NEXT:    [[RES1:%.*]] = sub nsw i8 [[X]], 20
+; CHECK-NEXT:    ret i8 [[RES1]]
 ;
   %cmp = icmp slt i8 %x, -100
   br i1 %cmp, label %trap, label %cont
@@ -821,4 +834,13 @@ trap:
 cont:
   %res = call i8 @llvm.ssub.sat.i8(i8 %x, i8 20)
   ret i8 %res
+}
+
+define <2 x i8> @uadd_sat_vec(<2 x i8> %a) {
+; CHECK-LABEL: @uadd_sat_vec(
+; CHECK-NEXT:    [[ADD:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 1, i8 1>)
+; CHECK-NEXT:    ret <2 x i8> [[ADD]]
+;
+  %add = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 1, i8 1>)
+  ret <2 x i8> %add
 }

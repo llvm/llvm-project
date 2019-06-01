@@ -19,6 +19,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class Duration>
 void
 test(const Duration& f, const Duration& d)

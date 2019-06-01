@@ -123,7 +123,9 @@ Ltmp3:
 	.short	Ltmp5-Ltmp4
 Ltmp4:
 	.short	4429
-	.asciz	"\000\000\000\000\000\000\000\000\003\020\000"
+	.long 0 # parent
+	.long 0 # end
+	.long 0x1003 # inlinee, bar
 	.cv_inline_linetable	1 1 9 Lfunc_begin0 Lfunc_end0
 # CHECK:    InlineSiteSym {
 # CHECK:      PtrParent: 0x0

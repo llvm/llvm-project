@@ -24,6 +24,8 @@
 
 #include "archetypes.hpp"
 
+#include "test_macros.h"
+
 
 constexpr bool implies(bool p, bool q) {
     return !p || q;

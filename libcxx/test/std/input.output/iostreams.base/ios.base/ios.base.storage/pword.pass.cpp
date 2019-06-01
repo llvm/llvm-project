@@ -20,6 +20,8 @@
 #include <cassert>
 #include <cstdint>
 
+#include "test_macros.h"
+
 class test
     : public std::ios
 {

@@ -14,6 +14,8 @@
 
 #include <utility>
 
+#include "test_macros.h"
+
 template <class T1, class T2>
 void test()
 {

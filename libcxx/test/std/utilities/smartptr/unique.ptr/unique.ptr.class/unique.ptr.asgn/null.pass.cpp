@@ -15,6 +15,7 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
 #include "unique_ptr_test_helper.h"
 
 // test assignment from null

@@ -23,6 +23,7 @@
 #include <random>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 std::mt19937 randomness;

@@ -13,6 +13,7 @@
 // Check that the size and alignment of any are what we expect.
 
 #include <any>
+#include "test_macros.h"
 #include "any_helpers.h"
 
 constexpr std::size_t BufferSize = (sizeof(void*) * 3);

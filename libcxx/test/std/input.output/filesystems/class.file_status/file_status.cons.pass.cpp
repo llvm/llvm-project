@@ -21,6 +21,8 @@
 
 #include "test_convertible.hpp"
 
+#include "test_macros.h"
+
 
 int main(int, char**) {
  using namespace fs;

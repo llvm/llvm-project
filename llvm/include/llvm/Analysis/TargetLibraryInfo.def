@@ -329,6 +329,10 @@ TLI_DEFINE_STRING_INTERNAL("__logf_finite")
 /// long double __logl_finite(long double x);
 TLI_DEFINE_ENUM_INTERNAL(logl_finite)
 TLI_DEFINE_STRING_INTERNAL("__logl_finite")
+/// void *__memccpy_chk(void *dst, const void *src, int c, size_t n,
+///                     size_t dstsize)
+TLI_DEFINE_ENUM_INTERNAL(memccpy_chk)
+TLI_DEFINE_STRING_INTERNAL("__memccpy_chk")
 /// void *__memcpy_chk(void *s1, const void *s2, size_t n, size_t s1size);
 TLI_DEFINE_ENUM_INTERNAL(memcpy_chk)
 TLI_DEFINE_STRING_INTERNAL("__memcpy_chk")
@@ -381,6 +385,14 @@ TLI_DEFINE_STRING_INTERNAL("__small_printf")
 /// int __small_sprintf(char *str, const char *format, ...);
 TLI_DEFINE_ENUM_INTERNAL(small_sprintf)
 TLI_DEFINE_STRING_INTERNAL("__small_sprintf")
+/// int __snprintf_chk(char *s, size_t n, int flags, size_t slen,
+///                    const char *format, ...);
+TLI_DEFINE_ENUM_INTERNAL(snprintf_chk)
+TLI_DEFINE_STRING_INTERNAL("__snprintf_chk")
+/// int __sprintf_chk(char *str, int flags, size_t str_len,
+///                   const char *format, ...);
+TLI_DEFINE_ENUM_INTERNAL(sprintf_chk)
+TLI_DEFINE_STRING_INTERNAL("__sprintf_chk")
 /// double __sqrt_finite(double x);
 TLI_DEFINE_ENUM_INTERNAL(sqrt_finite)
 TLI_DEFINE_STRING_INTERNAL("__sqrt_finite")
@@ -396,12 +408,26 @@ TLI_DEFINE_STRING_INTERNAL("__stpcpy_chk")
 /// char *__stpncpy_chk(char *s1, const char *s2, size_t n, size_t s1size);
 TLI_DEFINE_ENUM_INTERNAL(stpncpy_chk)
 TLI_DEFINE_STRING_INTERNAL("__stpncpy_chk")
+/// char *__strcat_chk(char *s1, const char *s2, size_t s1size);
+TLI_DEFINE_ENUM_INTERNAL(strcat_chk)
+TLI_DEFINE_STRING_INTERNAL("__strcat_chk")
 /// char *__strcpy_chk(char *s1, const char *s2, size_t s1size);
 TLI_DEFINE_ENUM_INTERNAL(strcpy_chk)
 TLI_DEFINE_STRING_INTERNAL("__strcpy_chk")
 /// char * __strdup(const char *s);
 TLI_DEFINE_ENUM_INTERNAL(dunder_strdup)
 TLI_DEFINE_STRING_INTERNAL("__strdup")
+/// size_t __strlcat_chk(char *dst, const char *src, size_t size,
+///                      size_t dstsize);
+TLI_DEFINE_ENUM_INTERNAL(strlcat_chk)
+TLI_DEFINE_STRING_INTERNAL("__strlcat_chk")
+/// size_t __strlcpy_chk(char *dst, const char *src, size_t size,
+///                      size_t dstsize);
+TLI_DEFINE_ENUM_INTERNAL(strlcpy_chk)
+TLI_DEFINE_STRING_INTERNAL("__strlcpy_chk")
+/// char *strncat_chk(char *s1, const char *s2, size_t n, size_t s1size);
+TLI_DEFINE_ENUM_INTERNAL(strncat_chk)
+TLI_DEFINE_STRING_INTERNAL("__strncat_chk")
 /// char *__strncpy_chk(char *s1, const char *s2, size_t n, size_t s1size);
 TLI_DEFINE_ENUM_INTERNAL(strncpy_chk)
 TLI_DEFINE_STRING_INTERNAL("__strncpy_chk")
@@ -411,6 +437,14 @@ TLI_DEFINE_STRING_INTERNAL("__strndup")
 /// char * __strtok_r(char *s, const char *delim, char **save_ptr);
 TLI_DEFINE_ENUM_INTERNAL(dunder_strtok_r)
 TLI_DEFINE_STRING_INTERNAL("__strtok_r")
+/// int __vsnprintf_chk(char *s, size_t n, int flags, size_t slen,
+///                     const char *format, va_list ap);
+TLI_DEFINE_ENUM_INTERNAL(vsnprintf_chk)
+TLI_DEFINE_STRING_INTERNAL("__vsnprintf_chk")
+/// int __vsprintf_chk(char *s, int flags, size_t slen, const char *format,
+///                    va_list ap);
+TLI_DEFINE_ENUM_INTERNAL(vsprintf_chk)
+TLI_DEFINE_STRING_INTERNAL("__vsprintf_chk")
 /// int abs(int j);
 TLI_DEFINE_ENUM_INTERNAL(abs)
 TLI_DEFINE_STRING_INTERNAL("abs")
@@ -1200,6 +1234,12 @@ TLI_DEFINE_STRING_INTERNAL("strcspn")
 /// char *strdup(const char *s1);
 TLI_DEFINE_ENUM_INTERNAL(strdup)
 TLI_DEFINE_STRING_INTERNAL("strdup")
+/// size_t strlcat(char *dst, const char *src, size_t size);
+TLI_DEFINE_ENUM_INTERNAL(strlcat)
+TLI_DEFINE_STRING_INTERNAL("strlcat")
+/// size_t strlcpy(char *dst, const char *src, size_t size);
+TLI_DEFINE_ENUM_INTERNAL(strlcpy)
+TLI_DEFINE_STRING_INTERNAL("strlcpy")
 /// size_t strlen(const char *s);
 TLI_DEFINE_ENUM_INTERNAL(strlen)
 TLI_DEFINE_STRING_INTERNAL("strlen")

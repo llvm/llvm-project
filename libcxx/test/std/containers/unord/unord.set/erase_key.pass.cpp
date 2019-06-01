@@ -18,6 +18,7 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 #if TEST_STD_VER >= 11

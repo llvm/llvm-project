@@ -16,6 +16,8 @@
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct Tag {
     Tag() : val(0), tag("Default") {}
     Tag(int a, const char *b) : val(a), tag(b) {}

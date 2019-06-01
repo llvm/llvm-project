@@ -535,7 +535,6 @@ void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
           unsigned Length = computeLabelDiff(Layout, LastLabel, Loc.getLabel());
           compressAnnotation(BinaryAnnotationsOpCode::ChangeCodeLength, Buffer);
           compressAnnotation(Length, Buffer);
-          LastLabel = Loc.getLabel();
         }
         HaveOpenRange = false;
         continue;

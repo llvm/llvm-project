@@ -26,6 +26,8 @@
 #include <vector>
 #include "container_debug_tests.hpp"
 
+#include "test_macros.h"
+
 
 template <typename Container>
 Container makeContainer(int size) {

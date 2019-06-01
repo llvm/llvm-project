@@ -14,6 +14,8 @@
 
 #include <thread>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
 #ifndef __STDCPP_THREADS__

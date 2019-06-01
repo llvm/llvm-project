@@ -14,6 +14,8 @@
 
 #include <unordered_map>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     typedef std::unordered_map<int, int> M1;

@@ -17,6 +17,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class CharT, class Traits>
 bool is_skipws ( const std::basic_istream<CharT, Traits>& is ) {
     return ( is.flags() & std::ios_base::skipws ) != 0;

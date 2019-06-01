@@ -14,6 +14,8 @@
 #include <forward_list>
 #include <cassert>
 
+#include "test_macros.h"
+
 // Flag that makes the copy constructor for CMyClass throw an exception
 static bool gCopyConstructorShouldThow = false;
 

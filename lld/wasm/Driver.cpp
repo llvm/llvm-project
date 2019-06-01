@@ -481,13 +481,8 @@ static void createSyntheticSymbols() {
     // See: https://github.com/WebAssembly/mutable-global
     WasmSym::StackPointer = Symtab->addSyntheticGlobal(
         "__stack_pointer", WASM_SYMBOL_VISIBILITY_HIDDEN, StackPointer);
-    WasmSym::HeapBase = Symtab->addSyntheticDataSymbol("__heap_base", 0);
-    WasmSym::DataEnd = Symtab->addSyntheticDataSymbol("__data_end", 0);
-
-    // These two synthetic symbols exist purely for the embedder so we always
-    // want to export them.
-    WasmSym::HeapBase->ForceExport = true;
-    WasmSym::DataEnd->ForceExport = true;
+    WasmSym::DataEnd = Symtab->addOptionalDataSymbol("__data_end");
+    WasmSym::HeapBase = Symtab->addOptionalDataSymbol("__heap_base");
   }
 
   if (Config->Pic) {
@@ -670,6 +665,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   for (auto *Arg : Args.filtered(OPT_trace_symbol))
     Symtab->trace(Arg->getValue());
 
+  for (auto *Arg : Args.filtered(OPT_export))
+    Config->ExportedSymbols.insert(Arg->getValue());
+
   if (!Config->Relocatable)
     createSyntheticSymbols();
 
@@ -688,6 +686,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   for (auto *Arg : Args.filtered(OPT_undefined))
     handleUndefined(Arg->getValue());
 
+  // Handle the `--export <sym>` options
+  // This works like --undefined but also exports the symbol if its found
+  for (auto *Arg : Args.filtered(OPT_export))
+    handleUndefined(Arg->getValue());
+
   Symbol *EntrySym = nullptr;
   if (!Config->Relocatable && !Config->Entry.empty()) {
     EntrySym = handleUndefined(Config->Entry);
@@ -700,11 +703,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   if (errorCount())
     return;
-
-  // Handle the `--export <sym>` options
-  // This works like --undefined but also exports the symbol if its found
-  for (auto *Arg : Args.filtered(OPT_export))
-    handleUndefined(Arg->getValue());
 
   // Create wrapped symbols for -wrap option.
   std::vector<WrappedSymbol> Wrapped = addWrappedSymbols(Args);

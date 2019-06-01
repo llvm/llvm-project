@@ -14,6 +14,7 @@
 #include <iterator>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 struct S {

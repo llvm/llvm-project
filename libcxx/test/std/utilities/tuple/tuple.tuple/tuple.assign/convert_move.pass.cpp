@@ -21,6 +21,8 @@
 #include <utility>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct B
 {
     int id_;

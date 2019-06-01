@@ -16,6 +16,8 @@
 #include <list>
 #include "nasty_containers.hpp"
 
+#include "test_macros.h"
+
 template <class C>
 void
 test(C c)

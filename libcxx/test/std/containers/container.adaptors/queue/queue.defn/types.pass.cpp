@@ -26,6 +26,8 @@
 #include <queue>
 #include <type_traits>
 
+#include "test_macros.h"
+
 struct test
     : private std::queue<int>
 {

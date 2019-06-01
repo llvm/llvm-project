@@ -20,6 +20,8 @@
 #include <cstdlib>    // for rand()
 #include <type_traits>
 
+#include "test_macros.h"
+
 constexpr struct {
   int x;
   int y;

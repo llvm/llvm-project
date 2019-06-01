@@ -13,6 +13,8 @@
 
 #include <memory>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     char* p = new char[10];

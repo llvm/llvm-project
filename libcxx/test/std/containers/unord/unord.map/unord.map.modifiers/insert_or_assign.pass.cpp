@@ -25,6 +25,8 @@
 #include <cassert>
 #include <tuple>
 
+#include "test_macros.h"
+
 
 class Moveable
 {

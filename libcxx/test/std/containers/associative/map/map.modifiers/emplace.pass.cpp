@@ -19,6 +19,7 @@
 #include <cassert>
 #include <tuple>
 
+#include "test_macros.h"
 #include "../../../Emplaceable.h"
 #include "DefaultOnly.h"
 #include "min_allocator.h"

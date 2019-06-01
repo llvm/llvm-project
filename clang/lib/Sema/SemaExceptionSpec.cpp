@@ -429,7 +429,11 @@ bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
   case EST_NoThrow:
     OS <<"__attribute__((nothrow))";
     break;
-  default:
+  case EST_None:
+  case EST_MSAny:
+  case EST_Unevaluated:
+  case EST_Uninstantiated:
+  case EST_Unparsed:
     llvm_unreachable("This spec type is compatible with none.");
   }
 

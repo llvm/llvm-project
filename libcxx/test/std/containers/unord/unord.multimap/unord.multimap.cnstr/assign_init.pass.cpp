@@ -24,6 +24,7 @@
 #include <cmath>
 #include <cstddef>
 
+#include "test_macros.h"
 #include "../../../check_consecutive.h"
 #include "../../../test_compare.h"
 #include "../../../test_hash.h"

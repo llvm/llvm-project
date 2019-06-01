@@ -15,6 +15,8 @@
 
 #include "poisoned_hash_helper.hpp"
 
+#include "test_macros.h"
+
 template <class T, size_t = sizeof(T)>
 constexpr bool is_complete_imp(int) { return true; }
 template <class> constexpr bool is_complete_imp(long) { return false; }

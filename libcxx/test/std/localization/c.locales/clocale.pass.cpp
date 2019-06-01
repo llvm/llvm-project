@@ -11,6 +11,8 @@
 #include <clocale>
 #include <type_traits>
 
+#include "test_macros.h"
+
 #ifndef _LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS
 
 #ifndef LC_ALL

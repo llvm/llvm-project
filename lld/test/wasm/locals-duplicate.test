@@ -38,20 +38,8 @@
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           66592
-; CHECK-NEXT:       - Index:           2
-; CHECK-NEXT:         Type:            I32
-; CHECK-NEXT:         Mutable:         false
-; CHECK-NEXT:         InitExpr:
-; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           1048
-; CHECK-NEXT:       - Index:           3
-; CHECK-NEXT:         Type:            I32
-; CHECK-NEXT:         Mutable:         false
-; CHECK-NEXT:         InitExpr:
-; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1028
-; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
@@ -62,12 +50,6 @@
 ; CHECK-NEXT:       - Name:            memory
 ; CHECK-NEXT:         Kind:            MEMORY
 ; CHECK-NEXT:         Index:           0
-; CHECK-NEXT:       - Name:            __heap_base
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           1
-; CHECK-NEXT:       - Name:            __data_end
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:       - Name:            colliding_func2
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           1
@@ -79,7 +61,7 @@
 ; CHECK-NEXT:         Index:           4
 ; CHECK-NEXT:       - Name:            colliding_global2
 ; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           3
+; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:       - Name:            get_global3A
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           5
@@ -100,7 +82,7 @@
 ; CHECK-NEXT:         Index:           12
 ; CHECK-NEXT:       - Name:            colliding_global1
 ; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           4
+; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:       - Name:            get_global2B
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           13

@@ -19,6 +19,8 @@
 
 #include <future>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     static_assert(static_cast<int>(std::future_status::ready) == 0, "");

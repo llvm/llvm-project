@@ -202,7 +202,10 @@ DefinedFunction *SymbolTable::addSyntheticFunction(StringRef Name,
 DefinedData *SymbolTable::addOptionalDataSymbol(StringRef Name, uint32_t Value,
                                                 uint32_t Flags) {
   Symbol *S = find(Name);
-  if (!S || S->isDefined())
+  // Enable --export of optional symbols
+  if (!S && (Config->ExportAll || Config->ExportedSymbols.count(Name) != 0))
+    S = insertName(Name).first;
+  else if (!S || S->isDefined())
     return nullptr;
   LLVM_DEBUG(dbgs() << "addOptionalDataSymbol: " << Name << "\n");
   auto *rtn = replaceSymbol<DefinedData>(S, Name, Flags);

@@ -15,6 +15,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     wchar_t s2[3] = {0};

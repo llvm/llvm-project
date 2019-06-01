@@ -22,6 +22,8 @@
 #include "filesystem_test_helper.hpp"
 #include "rapid-cxx-test.hpp"
 
+#include "test_macros.h"
+
 TEST_SUITE(directory_entry_status_testsuite)
 
 TEST_CASE(test_basic) {

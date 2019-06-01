@@ -18,6 +18,7 @@
 #include <utility>
 #include <cassert>
 
+#include "test_macros.h"
 #include "deleter_types.h"
 #include "unique_ptr_test_helper.h"
 

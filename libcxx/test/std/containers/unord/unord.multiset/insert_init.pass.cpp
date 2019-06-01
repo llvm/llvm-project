@@ -19,6 +19,7 @@
 #include <unordered_set>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 #include "min_allocator.h"
 

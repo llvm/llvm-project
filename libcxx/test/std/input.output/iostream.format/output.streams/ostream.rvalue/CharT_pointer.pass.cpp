@@ -20,6 +20,8 @@
 #include <ostream>
 #include <cassert>
 
+#include "test_macros.h"
+
 
 template <class CharT>
 class testbuf

@@ -18,6 +18,8 @@
 #include <future>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct A {};
 
 int main(int, char**)

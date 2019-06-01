@@ -14,12 +14,6 @@ CHECK:         Exports:
 CHECK-NEXT:       - Name:            memory
 CHECK-NEXT:         Kind:            MEMORY
 CHECK-NEXT:         Index:           0
-CHECK-NEXT:       - Name:            __heap_base
-CHECK-NEXT:         Kind:            GLOBAL
-CHECK-NEXT:         Index:           1
-CHECK-NEXT:       - Name:            __data_end
-CHECK-NEXT:         Kind:            GLOBAL
-CHECK-NEXT:         Index:           2
 CHECK-NEXT:       - Name:            foo
 CHECK-NEXT:         Kind:            FUNCTION
 CHECK-NEXT:         Index:           1
@@ -38,12 +32,6 @@ NOEXPORT:         Exports:
 NOEXPORT-NEXT:       - Name:            memory
 NOEXPORT-NEXT:         Kind:            MEMORY
 NOEXPORT-NEXT:         Index:           0
-NOEXPORT-NEXT:       - Name:            __heap_base
-NOEXPORT-NEXT:         Kind:            GLOBAL
-NOEXPORT-NEXT:         Index:           1
-NOEXPORT-NEXT:       - Name:            __data_end
-NOEXPORT-NEXT:         Kind:            GLOBAL
-NOEXPORT-NEXT:         Index:           2
 NOEXPORT-NEXT:       - Name:            _start
 NOEXPORT-NEXT:         Kind:            FUNCTION
 NOEXPORT-NEXT:         Index:           0

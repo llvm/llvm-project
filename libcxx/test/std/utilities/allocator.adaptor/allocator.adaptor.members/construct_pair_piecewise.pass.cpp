@@ -26,6 +26,8 @@
 #include "uses_alloc_types.hpp"
 #include "controlled_allocators.hpp"
 
+#include "test_macros.h"
+
 
 void test_no_inner_alloc()
 {

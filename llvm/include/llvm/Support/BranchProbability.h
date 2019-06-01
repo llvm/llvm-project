@@ -118,6 +118,13 @@ public:
     return *this;
   }
 
+  BranchProbability &operator/=(BranchProbability RHS) {
+    assert(N != UnknownN && RHS.N != UnknownN &&
+           "Unknown probability cannot participate in arithmetics.");
+    N = (static_cast<uint64_t>(N) * D + RHS.N / 2) / RHS.N;
+    return *this;
+  }
+
   BranchProbability &operator/=(uint32_t RHS) {
     assert(N != UnknownN &&
            "Unknown probability cannot participate in arithmetics.");
@@ -147,6 +154,12 @@ public:
   BranchProbability operator*(uint32_t RHS) const {
     BranchProbability Prob(*this);
     Prob *= RHS;
+    return Prob;
+  }
+
+  BranchProbability operator/(BranchProbability RHS) const {
+    BranchProbability Prob(*this);
+    Prob /= RHS;
     return Prob;
   }
 

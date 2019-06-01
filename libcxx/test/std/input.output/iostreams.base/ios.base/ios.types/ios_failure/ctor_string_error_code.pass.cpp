@@ -17,6 +17,8 @@
 #include <system_error>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     // LWG2462 std::ios_base::failure is overspecified

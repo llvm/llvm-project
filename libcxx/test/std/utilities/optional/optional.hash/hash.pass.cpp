@@ -18,6 +18,8 @@
 
 #include "poisoned_hash_helper.hpp"
 
+#include "test_macros.h"
+
 struct A {};
 struct B {};
 

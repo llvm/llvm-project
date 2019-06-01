@@ -21,6 +21,8 @@
 #include <cassert>
 #include <cstdlib>
 
+#include "test_macros.h"
+
 namespace ex = std::experimental::pmr;
 
 int count = 0;

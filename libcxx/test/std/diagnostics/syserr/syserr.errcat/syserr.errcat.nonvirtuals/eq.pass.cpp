@@ -15,6 +15,8 @@
 #include <system_error>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     const std::error_category& e_cat1 = std::generic_category();

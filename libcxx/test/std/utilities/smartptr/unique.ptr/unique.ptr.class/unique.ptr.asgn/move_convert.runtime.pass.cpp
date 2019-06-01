@@ -18,6 +18,7 @@
 #include <utility>
 #include <cassert>
 
+#include "test_macros.h"
 #include "unique_ptr_test_helper.h"
 
 template <class APtr, class BPtr>

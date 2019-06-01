@@ -14,6 +14,7 @@
 #include <vector>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 void test_ctor_under_alloc() {

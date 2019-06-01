@@ -22,6 +22,8 @@
 
 #include <new>
 
+#include "test_macros.h"
+
 
 #ifdef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
 #   error "libc++ should have aligned allocation in C++17 and up when targeting a platform that supports it"

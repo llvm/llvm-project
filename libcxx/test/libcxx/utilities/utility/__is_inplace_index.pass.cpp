@@ -12,6 +12,8 @@
 
 #include <utility>
 
+#include "test_macros.h"
+
 struct S {};
 
 int main(int, char**) {

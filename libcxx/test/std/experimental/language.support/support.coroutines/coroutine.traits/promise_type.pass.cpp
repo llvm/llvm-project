@@ -11,6 +11,8 @@
 
 #include <experimental/coroutine>
 
+#include "test_macros.h"
+
 namespace coro = std::experimental;
 
 template <class T, class = typename T::promise_type>

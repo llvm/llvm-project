@@ -258,10 +258,9 @@ void Writer::layoutMemory() {
   // Set `__heap_base` to directly follow the end of the stack or global data.
   // The fact that this comes last means that a malloc/brk implementation
   // can grow the heap at runtime.
-  if (!Config->Relocatable) {
+  log("mem: heap base   = " + Twine(MemoryPtr));
+  if (WasmSym::HeapBase)
     WasmSym::HeapBase->setVirtualAddress(MemoryPtr);
-    log("mem: heap base   = " + Twine(MemoryPtr));
-  }
 
   if (Config->InitialMemory != 0) {
     if (Config->InitialMemory != alignTo(Config->InitialMemory, WasmPageSize))
@@ -307,8 +306,8 @@ void Writer::addStartStopSymbols(const InputSegment *Seg) {
     return;
   uint32_t Start = Seg->OutputSeg->StartVA + Seg->OutputSegmentOffset;
   uint32_t Stop = Start + Seg->getSize();
-  Symtab->addOptionalDataSymbol(Saver.save("__start_" + S), Start, 0);
-  Symtab->addOptionalDataSymbol(Saver.save("__stop_" + S), Stop, 0);
+  Symtab->addOptionalDataSymbol(Saver.save("__start_" + S), Start);
+  Symtab->addOptionalDataSymbol(Saver.save("__stop_" + S), Stop);
 }
 
 void Writer::addSections() {

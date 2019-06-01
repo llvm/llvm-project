@@ -14,6 +14,8 @@
 
 #include <set>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     typedef std::set<int> M1;

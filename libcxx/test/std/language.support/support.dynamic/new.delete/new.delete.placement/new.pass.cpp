@@ -11,6 +11,8 @@
 #include <new>
 #include <cassert>
 
+#include "test_macros.h"
+
 int A_constructed = 0;
 
 struct A

@@ -11,6 +11,8 @@
 #include <cinttypes>
 #include <type_traits>
 
+#include "test_macros.h"
+
 #ifndef INT8_MIN
 #error INT8_MIN not defined
 #endif

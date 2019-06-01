@@ -15,6 +15,8 @@
 #include <functional>
 #include <type_traits>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     typedef std::unary_function<int, bool> uf;

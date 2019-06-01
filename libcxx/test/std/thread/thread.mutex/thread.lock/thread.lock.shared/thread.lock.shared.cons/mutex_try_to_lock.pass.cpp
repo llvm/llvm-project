@@ -24,6 +24,8 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "test_macros.h"
+
 std::shared_timed_mutex m;
 
 typedef std::chrono::system_clock Clock;

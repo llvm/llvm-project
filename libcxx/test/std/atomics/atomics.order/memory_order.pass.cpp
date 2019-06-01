@@ -19,6 +19,8 @@
 #include <atomic>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     assert(static_cast<int>(std::memory_order_relaxed) == 0);

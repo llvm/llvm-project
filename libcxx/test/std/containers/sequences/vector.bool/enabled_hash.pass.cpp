@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "poisoned_hash_helper.hpp"
+#include "test_macros.h"
 #include "min_allocator.h"
 
 int main(int, char**) {

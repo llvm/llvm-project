@@ -14,6 +14,8 @@
 
 #include <unordered_set>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     typedef std::unordered_set<int> M1;

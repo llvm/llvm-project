@@ -18,6 +18,8 @@
 #include <functional>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class R, class F>
 void
 test(F f, R expected)

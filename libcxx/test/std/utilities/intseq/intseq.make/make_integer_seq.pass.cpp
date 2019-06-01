@@ -17,6 +17,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     static_assert(std::is_same<std::make_integer_sequence<int, 0>, std::integer_sequence<int>>::value, "");

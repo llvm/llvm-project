@@ -15,6 +15,8 @@
 #include <string>
 #include <type_traits>
 
+#include "test_macros.h"
+
 using std::optional;
 
 struct X {};

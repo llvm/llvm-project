@@ -19,6 +19,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 double unary_f(int i) {return 0.5 - i;}
 
 int main(int, char**)

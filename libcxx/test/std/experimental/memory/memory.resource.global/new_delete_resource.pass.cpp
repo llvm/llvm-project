@@ -18,6 +18,8 @@
 
 #include "count_new.hpp"
 
+#include "test_macros.h"
+
 namespace ex = std::experimental::pmr;
 
 struct assert_on_compare : public ex::memory_resource

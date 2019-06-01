@@ -57,14 +57,41 @@ private:
   Value *optimizeMemMoveChk(CallInst *CI, IRBuilder<> &B);
   Value *optimizeMemSetChk(CallInst *CI, IRBuilder<> &B);
 
-  // Str/Stp cpy are similar enough to be handled in the same functions.
+  /// Str/Stp cpy are similar enough to be handled in the same functions.
   Value *optimizeStrpCpyChk(CallInst *CI, IRBuilder<> &B, LibFunc Func);
   Value *optimizeStrpNCpyChk(CallInst *CI, IRBuilder<> &B, LibFunc Func);
+  Value *optimizeMemCCpyChk(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeSNPrintfChk(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeSPrintfChk(CallInst *CI,IRBuilder<> &B);
+  Value *optimizeStrCatChk(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeStrLCat(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeStrNCatChk(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeStrLCpyChk(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeVSNPrintfChk(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeVSPrintfChk(CallInst *CI, IRBuilder<> &B);
 
   /// Checks whether the call \p CI to a fortified libcall is foldable
   /// to the non-fortified version.
+  ///
+  /// \param CI the call to the fortified libcall.
+  ///
+  /// \param ObjSizeOp the index of the object size parameter of this chk
+  /// function. Not optional since this is mandatory.
+  ///
+  /// \param SizeOp optionally set to the parameter index of an explicit buffer
+  /// size argument. For instance, set to '2' for __strncpy_chk.
+  ///
+  /// \param StrOp optionally set to the parameter index of the source string
+  /// parameter to strcpy-like functions, where only the strlen of the source
+  /// will be writtin into the destination.
+  ///
+  /// \param FlagsOp optionally set to the parameter index of a 'flags'
+  /// parameter. These are used by an implementation to opt-into stricter
+  /// checking.
   bool isFortifiedCallFoldable(CallInst *CI, unsigned ObjSizeOp,
-                               unsigned SizeOp, bool isString);
+                               Optional<unsigned> SizeOp = None,
+                               Optional<unsigned> StrOp = None,
+                               Optional<unsigned> FlagsOp = None);
 };
 
 /// LibCallSimplifier - This class implements a collection of optimizations
