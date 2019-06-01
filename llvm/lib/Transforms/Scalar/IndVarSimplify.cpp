@@ -2372,6 +2372,27 @@ linearFunctionTestReplace(Loop *L, const SCEV *BackedgeTakenCount,
     CmpIndVar = IndVar->getIncomingValueForBlock(L->getExitingBlock());
   }
 
+  // It may be necessary to drop nowrap flags on the incrementing instruction
+  // if either LFTR moves from a pre-inc check to a post-inc check (in which
+  // case the increment might have previously been poison on the last iteration
+  // only) or if LFTR switches to a different IV that was previously dynamically
+  // dead (and as such may be arbitrarily poison). We remove any nowrap flags
+  // that SCEV didn't infer for the post-inc addrec (even if we use a pre-inc
+  // check), because the pre-inc addrec flags may be adopted from the original
+  // instruction, while SCEV has to explicitly prove the post-inc nowrap flags.
+  // TODO: This handling is inaccurate for one case: If we switch to a
+  // dynamically dead IV that wraps on the first loop iteration only, which is
+  // not covered by the post-inc addrec. (If the new IV was not dynamically
+  // dead, it could not be poison on the first iteration in the first place.)
+  Value *IncVar = IndVar->getIncomingValueForBlock(L->getLoopLatch());
+  if (auto *BO = dyn_cast<BinaryOperator>(IncVar)) {
+    const SCEVAddRecExpr *AR = cast<SCEVAddRecExpr>(SE->getSCEV(IncVar));
+    if (BO->hasNoUnsignedWrap())
+      BO->setHasNoUnsignedWrap(AR->hasNoUnsignedWrap());
+    if (BO->hasNoSignedWrap())
+      BO->setHasNoSignedWrap(AR->hasNoSignedWrap());
+  }
+
   Value *ExitCnt = genLoopLimit(IndVar, IVCount, L, Rewriter, SE);
   assert(ExitCnt->getType()->isPointerTy() ==
              IndVar->getType()->isPointerTy() &&

@@ -2,8 +2,12 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux %p/Inputs/aarch64-tls-ie.s -o %ttlsie.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux %s -o %tmain.o
 # RUN: ld.lld %tmain.o %ttlsie.o -o %tout
-# RUN: llvm-objdump -d %tout | FileCheck %s
-# RUN: llvm-readobj -S -r %tout | FileCheck -check-prefix=RELOC %s
+# RUN: llvm-objdump -d --no-show-raw-insn %tout | FileCheck %s
+# RUN: llvm-readobj -r %tout | FileCheck -check-prefix=RELOC %s
+
+# RUN: ld.lld -pie %tmain.o %ttlsie.o -o %tout
+# RUN: llvm-objdump -d --no-show-raw-insn %tout | FileCheck %s
+# RUN: llvm-readobj -r %tout | FileCheck -check-prefix=RELOC %s
 
 # Initial-Exec to Local-Exec relax creates no dynamic relocations.
 # RELOC:      Relocations [
@@ -13,10 +17,10 @@
 # CHECK: Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK: _start:
-# CHECK-NEXT: 210000:  00 00 a0 d2   movz   x0, #0, lsl #16
-# CHECK-NEXT: 210004:  80 02 80 f2   movk   x0, #20
-# CHECK-NEXT: 210008:  00 00 a0 d2   movz   x0, #0, lsl #16
-# CHECK-NEXT: 21000c:  00 02 80 f2   movk   x0, #16
+# CHECK-NEXT: movz   x0, #0, lsl #16
+# CHECK-NEXT: movk   x0, #20
+# CHECK-NEXT: movz   x0, #0, lsl #16
+# CHECK-NEXT: movk   x0, #16
 
 .section .tdata
 .align 2

@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 
@@ -270,6 +271,20 @@ void AVRRegisterInfo::splitReg(unsigned Reg,
 
     LoReg = getSubReg(Reg, AVR::sub_lo);
     HiReg = getSubReg(Reg, AVR::sub_hi);
+}
+
+bool AVRRegisterInfo::shouldCoalesce(MachineInstr *MI,
+                                     const TargetRegisterClass *SrcRC,
+                                     unsigned SubReg,
+                                     const TargetRegisterClass *DstRC,
+                                     unsigned DstSubReg,
+                                     const TargetRegisterClass *NewRC,
+                                     LiveIntervals &LIS) const {
+  if(this->getRegClass(AVR::PTRDISPREGSRegClassID)->hasSubClassEq(NewRC)) {
+    return false;
+  }
+
+  return TargetRegisterInfo::shouldCoalesce(MI, SrcRC, SubReg, DstRC, DstSubReg, NewRC, LIS);
 }
 
 } // end of namespace llvm
