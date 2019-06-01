@@ -36,7 +36,7 @@
 # CODEVIEW-NEXT: inlinee = 0x1002 (do_exit), parent = 0, end = 0
 # CODEVIEW-NEXT:   0602      line 1 (+1)
 # CODEVIEW-NEXT:   0409      code end 0x9 (+0x9)
-# CODEVIEW-NEXT:   0B2A      code 0xA (+0xA) line 2 (+1)
+# CODEVIEW-NEXT:   0B21      code 0xA (+0x1) line 2 (+1)
 # CODEVIEW-NEXT:   0B28      code 0x12 (+0x8) line 3 (+1)
 # CODEVIEW-NEXT:   0400      code end 0x12 (+0x0)
 

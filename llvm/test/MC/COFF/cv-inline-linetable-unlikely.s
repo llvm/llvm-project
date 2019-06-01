@@ -36,12 +36,11 @@
 # ASM-NEXT:       2b: 0f 0b                         ud2
 #  End inline loc
 
-# CODEVIEW:      S_INLINESITE [size = 26]
+# CODEVIEW:      S_INLINESITE [size = 24]
 # CODEVIEW-NEXT: inlinee = 0x1002 (f), parent = 0, end = 0
 # CODEVIEW-NEXT:   0B2E      code 0xE (+0xE) line 1 (+1)
 # CODEVIEW-NEXT:   0409      code end 0x17 (+0x9)
-# CODEVIEW-NEXT:   0602      line 2 (+1)
-# CODEVIEW-NEXT:   0318      code 0x26 (+0x18)
+# CODEVIEW-NEXT:   0B2F      code 0x26 (+0xF) line 2 (+1)
 # CODEVIEW-NEXT:   0407      code end 0x2D (+0x7)
 
 	.text

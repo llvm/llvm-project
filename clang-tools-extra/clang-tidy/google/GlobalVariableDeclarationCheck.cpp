@@ -23,29 +23,35 @@ namespace objc {
 
 namespace {
 
-AST_MATCHER(VarDecl, isLocalVariable) {
-  return Node.isLocalVarDecl();
-}
+AST_MATCHER(VarDecl, isLocalVariable) { return Node.isLocalVarDecl(); }
 
 FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
+  if (IsConst && (Decl->getStorageClass() != SC_Static)) {
+    // No fix available if it is not a static constant, since it is difficult
+    // to determine the proper fix in this case.
+    return FixItHint();
+  }
+
   char FC = Decl->getName()[0];
   if (!llvm::isAlpha(FC) || Decl->getName().size() == 1) {
     // No fix available if first character is not alphabetical character, or it
-    // is a single-character variable, since it is difficult to determine the 
+    // is a single-character variable, since it is difficult to determine the
     // proper fix in this case. Users should create a proper variable name by
     // their own.
     return FixItHint();
   }
   char SC = Decl->getName()[1];
   if ((FC == 'k' || FC == 'g') && !llvm::isAlpha(SC)) {
-    // No fix available if the prefix is correct but the second character is not
-    // alphabetical, since it is difficult to determine the proper fix in this
-    // case.
+    // No fix available if the prefix is correct but the second character is
+    // not alphabetical, since it is difficult to determine the proper fix in
+    // this case.
     return FixItHint();
   }
+
   auto NewName = (IsConst ? "k" : "g") +
                  llvm::StringRef(std::string(1, FC)).upper() +
                  Decl->getName().substr(1).str();
+
   return FixItHint::CreateReplacement(
       CharSourceRange::getTokenRange(SourceRange(Decl->getLocation())),
       llvm::StringRef(NewName));
@@ -71,7 +77,7 @@ void GlobalVariableDeclarationCheck::registerMatchers(MatchFinder *Finder) {
       this);
   Finder->addMatcher(varDecl(hasGlobalStorage(), hasType(isConstQualified()),
                              unless(isLocalVariable()),
-                             unless(matchesName("::(k[A-Z]|[A-Z]{2,})")))
+                             unless(matchesName("::(k[A-Z])|([A-Z][A-Z0-9])")))
                          .bind("global_const"),
                      this);
 }
