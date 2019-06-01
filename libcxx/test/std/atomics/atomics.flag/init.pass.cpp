@@ -18,6 +18,8 @@
 #include <atomic>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     std::atomic_flag f = ATOMIC_FLAG_INIT;

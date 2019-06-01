@@ -18,6 +18,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct B
 {
     static int count;

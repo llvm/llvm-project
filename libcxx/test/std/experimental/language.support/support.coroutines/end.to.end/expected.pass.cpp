@@ -11,6 +11,8 @@
 
 #include <experimental/coroutine>
 #include <cassert>
+
+#include "test_macros.h"
 using namespace std::experimental;
 
 struct error {};

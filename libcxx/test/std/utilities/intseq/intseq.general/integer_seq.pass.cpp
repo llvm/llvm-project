@@ -16,6 +16,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <typename AtContainer, typename T, T... I>
 auto extract ( const AtContainer &t, const std::integer_sequence<T, I...> )
 -> decltype ( std::make_tuple ( std::get<I>(t)... ))

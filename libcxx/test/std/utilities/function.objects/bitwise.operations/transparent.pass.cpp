@@ -10,6 +10,8 @@
 #include <functional>
 #include <string>
 
+#include "test_macros.h"
+
 template <class T>
 struct is_transparent
 {

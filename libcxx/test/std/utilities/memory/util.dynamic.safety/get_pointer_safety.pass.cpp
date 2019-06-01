@@ -15,6 +15,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 
 void test_pr26961() {
   std::pointer_safety d;

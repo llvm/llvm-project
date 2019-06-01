@@ -24,6 +24,8 @@
 
 #include <iostream>
 
+#include "test_macros.h"
+
 TEST_SUITE(directory_entry_obs_testsuite)
 
 TEST_CASE(signatures) {

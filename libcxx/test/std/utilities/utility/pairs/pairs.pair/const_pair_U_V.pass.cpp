@@ -19,6 +19,8 @@
 
 #include "archetypes.hpp"
 #include "test_convertible.hpp"
+
+#include "test_macros.h"
 using namespace ImplicitTypes; // Get implicitly archetypes
 
 template <class T1, class U1,

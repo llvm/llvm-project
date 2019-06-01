@@ -21,6 +21,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 namespace ex = std::experimental::pmr;
 
 struct POSType {

@@ -11,6 +11,8 @@
 
 #include <experimental/coroutine>
 
+#include "test_macros.h"
+
 namespace coro = std::experimental;
 
 struct A {

@@ -20,6 +20,8 @@
 #include <future>
 #include <cassert>
 
+#include "test_macros.h"
+
 typedef std::chrono::milliseconds ms;
 
 void func1(std::promise<int> p)

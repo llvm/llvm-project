@@ -16,6 +16,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct True  { static constexpr bool value = true; };
 struct False { static constexpr bool value = false; };
 

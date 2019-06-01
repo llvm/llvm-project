@@ -16,6 +16,8 @@
 
 #include <mutex>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     std::recursive_timed_mutex m;

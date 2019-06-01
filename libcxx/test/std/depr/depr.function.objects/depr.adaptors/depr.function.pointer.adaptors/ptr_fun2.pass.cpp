@@ -19,6 +19,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 double binary_f(int i, short j) {return i - j + .75;}
 
 int main(int, char**)

@@ -29,6 +29,8 @@
 #include <numeric>
 #include <vector>
 
+#include "test_macros.h"
+
 
 static int worker(std::vector<int> const& data) {
   return std::accumulate(data.begin(), data.end(), 0);

@@ -14,6 +14,8 @@
 
 #include <memory>
 
+#include "test_macros.h"
+
 struct A {
   std::unique_ptr<A> ptr_;
 

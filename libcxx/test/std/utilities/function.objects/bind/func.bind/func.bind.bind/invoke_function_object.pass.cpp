@@ -19,6 +19,8 @@
 
 #include <functional>
 
+#include "test_macros.h"
+
 struct DummyUnaryFunction
 {
     template <typename S>

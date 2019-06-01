@@ -22,6 +22,7 @@
 #include <tuple>
 #include <cassert>
 
+#include "test_macros.h"
 #include "DefaultOnly.h"
 #include "allocators.h"
 #include "../alloc_first.h"

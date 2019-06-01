@@ -21,6 +21,7 @@
 #include <unordered_set>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../../Emplaceable.h"
 #include "min_allocator.h"
 

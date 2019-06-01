@@ -17,6 +17,8 @@
 #include <utility>
 #include <type_traits>
 
+#include "test_macros.h"
+
 
 struct ThrowingDefault {
   ThrowingDefault() { }

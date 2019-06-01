@@ -17,6 +17,7 @@
 #include <queue>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../../../Emplaceable.h"
 
 int main(int, char**)

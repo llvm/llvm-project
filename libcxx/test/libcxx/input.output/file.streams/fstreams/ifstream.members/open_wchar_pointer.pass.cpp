@@ -16,6 +16,8 @@
 #include <fstream>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
 #ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR

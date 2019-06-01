@@ -13,6 +13,8 @@
 
 #include <set>
 
+#include "test_macros.h"
+
 struct A {
     typedef std::multiset<A> Set;
     int data;

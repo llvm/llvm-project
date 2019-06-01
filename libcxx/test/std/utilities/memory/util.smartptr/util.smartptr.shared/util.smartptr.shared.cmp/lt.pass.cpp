@@ -15,6 +15,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 void do_nothing(int*) {}
 
 int main(int, char**)

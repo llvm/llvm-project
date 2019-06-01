@@ -18,6 +18,8 @@
 #include <random>
 #include <cassert>
 
+#include "test_macros.h"
+
 double fw(double x)
 {
     return 2*x;

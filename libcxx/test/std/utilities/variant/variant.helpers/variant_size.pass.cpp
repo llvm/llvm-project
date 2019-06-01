@@ -22,6 +22,8 @@
 #include <type_traits>
 #include <variant>
 
+#include "test_macros.h"
+
 template <class V, size_t E> void test() {
   static_assert(std::variant_size<V>::value == E, "");
   static_assert(std::variant_size<const V>::value == E, "");

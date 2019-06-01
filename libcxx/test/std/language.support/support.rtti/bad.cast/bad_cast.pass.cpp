@@ -12,6 +12,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     static_assert((std::is_base_of<std::exception, std::bad_cast>::value),

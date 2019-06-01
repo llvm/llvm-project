@@ -14,6 +14,8 @@
 
 #include <type_traits>
 
+#include "test_macros.h"
+
 template <class T>
 void test_rvalue_ref()
 {

@@ -15,6 +15,8 @@
 #include <regex>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class CharT>
 void
 test(const CharT* p, std::size_t len, unsigned mc)

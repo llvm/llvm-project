@@ -21,6 +21,8 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "test_macros.h"
+
 class G
 {
     int alive_;

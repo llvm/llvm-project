@@ -15,6 +15,8 @@
 #include <chrono>
 #include <ctime>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     typedef std::chrono::system_clock C;

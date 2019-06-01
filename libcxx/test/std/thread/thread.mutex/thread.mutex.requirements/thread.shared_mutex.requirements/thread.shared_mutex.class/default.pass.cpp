@@ -17,6 +17,8 @@
 
 #include <shared_mutex>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     std::shared_mutex m;

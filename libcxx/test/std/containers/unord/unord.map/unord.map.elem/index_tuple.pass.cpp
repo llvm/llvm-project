@@ -21,6 +21,8 @@
 #include <unordered_map>
 #include <tuple>
 
+#include "test_macros.h"
+
 using namespace std;
 
 struct my_hash

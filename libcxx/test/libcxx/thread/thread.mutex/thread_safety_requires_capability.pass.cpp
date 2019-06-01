@@ -20,6 +20,8 @@
 
 #include <mutex>
 
+#include "test_macros.h"
+
 std::mutex m;
 int foo __attribute__((guarded_by(m)));
 

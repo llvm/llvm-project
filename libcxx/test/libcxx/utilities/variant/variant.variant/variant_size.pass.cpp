@@ -18,6 +18,8 @@
 #include <utility>
 #include <variant>
 
+#include "test_macros.h"
+
 template <class Sequence>
 struct make_variant_imp;
 

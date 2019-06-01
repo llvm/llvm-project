@@ -18,6 +18,7 @@
 #include <locale>
 #include <cassert>
 
+#include "test_macros.h"
 #include "platform_support.h" // locale name macros
 
 typedef std::codecvt_byname<wchar_t, char, std::mbstate_t> F;

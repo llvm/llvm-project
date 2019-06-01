@@ -22,6 +22,8 @@
 
 #include "archetypes.hpp"
 
+#include "test_macros.h"
+
 
 int main(int, char**) {
     using NonThrowingConvert = NonThrowingTypes::ConvertingType;

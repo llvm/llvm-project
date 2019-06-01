@@ -20,6 +20,7 @@
 #include <random>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 // Stable if and only if PopulationIterator meets the requirements of a

@@ -23,6 +23,8 @@
 #include <chrono>
 #include <cassert>
 
+#include "test_macros.h"
+
 class Pred
 {
     int& i_;

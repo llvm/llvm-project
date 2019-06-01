@@ -15,6 +15,8 @@
 #include <valarray>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct S {
     S() : x(1) {}
     ~S() { ++cnt_dtor; }

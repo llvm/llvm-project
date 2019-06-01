@@ -13,6 +13,8 @@
 #include <vector>
 #include <cassert>
 
+#include "test_macros.h"
+
 using namespace std::experimental;
 
 // This file tests, one shot, movable std::function like thing using coroutine

@@ -14,6 +14,8 @@
 
 #include <map>
 
+#include "test_macros.h"
+
 struct X
 {
     std::multimap<int, X> m;

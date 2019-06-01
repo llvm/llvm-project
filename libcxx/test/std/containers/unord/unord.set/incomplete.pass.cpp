@@ -15,6 +15,8 @@
 
 #include <unordered_set>
 
+#include "test_macros.h"
+
 template <class Tp>
 struct MyHash {
   MyHash() {}

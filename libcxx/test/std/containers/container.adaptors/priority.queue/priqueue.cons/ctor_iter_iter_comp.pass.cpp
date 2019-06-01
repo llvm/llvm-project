@@ -16,6 +16,8 @@
 #include <functional>
 #include <cstddef>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     int a[] = {3, 5, 2, 0, 6, 8, 1};

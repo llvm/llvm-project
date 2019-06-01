@@ -15,6 +15,8 @@
 #include <functional>
 #include <type_traits>
 
+#include "test_macros.h"
+
 class C {};
 
 int main(int, char**)

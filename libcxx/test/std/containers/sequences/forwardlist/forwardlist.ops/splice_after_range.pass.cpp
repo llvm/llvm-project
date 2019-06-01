@@ -16,6 +16,7 @@
 #include <cassert>
 #include <iterator>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 typedef ptrdiff_t T;

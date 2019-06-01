@@ -18,6 +18,7 @@
 #include <random>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 #if TEST_STD_VER >= 11

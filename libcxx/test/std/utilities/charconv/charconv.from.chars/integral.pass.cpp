@@ -24,6 +24,7 @@
 // from_chars_result from_chars(const char* first, const char* last,
 //                              Integral& value, int base = 10)
 
+#include "test_macros.h"
 #include "charconv_test_helpers.h"
 
 template <typename T>

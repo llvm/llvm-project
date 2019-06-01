@@ -23,6 +23,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include "test_macros.h"
 #include "platform_support.h"
 
 

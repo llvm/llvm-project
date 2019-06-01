@@ -17,6 +17,8 @@
 #include <locale>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     assert(std::codecvt_base::ok == 0);

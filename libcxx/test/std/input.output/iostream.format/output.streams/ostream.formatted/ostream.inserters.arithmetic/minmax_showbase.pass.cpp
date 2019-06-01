@@ -36,6 +36,8 @@
 #include <sstream>
 #include <type_traits>
 
+#include "test_macros.h"
+
 template <typename T>
 static void test(std::ios_base::fmtflags fmt, const char *expected)
 {

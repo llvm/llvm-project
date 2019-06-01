@@ -10,6 +10,8 @@
 
 #include <experimental/algorithm>
 
+#include "test_macros.h"
+
 #ifndef _LIBCPP_ALGORITHM
 #  error "<experimental/algorithm> must include <algorithm>"
 #endif

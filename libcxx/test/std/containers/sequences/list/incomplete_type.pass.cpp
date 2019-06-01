@@ -13,6 +13,8 @@
 
 #include <list>
 
+#include "test_macros.h"
+
 struct A {
     std::list<A> l;
     std::list<A>::iterator it;

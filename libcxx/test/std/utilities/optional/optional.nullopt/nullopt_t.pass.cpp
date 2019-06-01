@@ -19,6 +19,8 @@
 #include <optional>
 #include <type_traits>
 
+#include "test_macros.h"
+
 using std::nullopt_t;
 using std::nullopt;
 

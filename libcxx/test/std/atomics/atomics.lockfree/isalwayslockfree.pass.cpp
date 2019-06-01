@@ -15,6 +15,8 @@
 #include <atomic>
 #include <cassert>
 
+#include "test_macros.h"
+
 #if !defined(__cpp_lib_atomic_is_always_lock_free)
 # error Feature test macro missing.
 #endif

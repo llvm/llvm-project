@@ -15,6 +15,8 @@
 #include <chrono>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     typedef std::chrono::high_resolution_clock C;

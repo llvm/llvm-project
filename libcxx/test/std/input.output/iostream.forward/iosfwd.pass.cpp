@@ -11,6 +11,8 @@
 #include <iosfwd>
 #include <cwchar>  // for mbstate_t
 
+#include "test_macros.h"
+
 template <class Ptr> void test()
 {
     Ptr p = 0;

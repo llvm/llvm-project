@@ -16,6 +16,7 @@
 #include <numeric>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 template <class Iter, class T>

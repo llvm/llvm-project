@@ -17,6 +17,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     std::string l = "Long string so that allocation definitely, for sure, absolutely happens. Probably.";

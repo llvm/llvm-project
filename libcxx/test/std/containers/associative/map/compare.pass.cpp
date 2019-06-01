@@ -19,6 +19,8 @@
 #include <utility>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct Key {
   template <typename T> Key(const T&) {}
   bool operator< (const Key&) const { return false; }

@@ -15,6 +15,8 @@
 #include <locale>
 #include <cassert>
 
+#include "test_macros.h"
+
 typedef std::num_put<char, char*> F;
 
 class my_facet

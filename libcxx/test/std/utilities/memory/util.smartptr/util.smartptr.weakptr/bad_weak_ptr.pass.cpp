@@ -20,6 +20,8 @@
 #include <cassert>
 #include <cstring>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     static_assert((std::is_base_of<std::exception, std::bad_weak_ptr>::value), "");

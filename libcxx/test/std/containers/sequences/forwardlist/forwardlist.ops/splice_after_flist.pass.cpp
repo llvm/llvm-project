@@ -15,6 +15,7 @@
 #include <iterator>
 #include <cstddef>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 typedef int T;

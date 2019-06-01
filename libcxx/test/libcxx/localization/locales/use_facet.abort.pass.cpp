@@ -19,6 +19,8 @@
 #include <cstdlib>
 #include <locale>
 
+#include "test_macros.h"
+
 
 struct my_facet : public std::locale::facet {
     static std::locale::id id;

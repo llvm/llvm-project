@@ -19,6 +19,8 @@
 #include <cassert>
 #include <type_traits>
 
+#include "test_macros.h"
+
 #if __has_builtin(__builtin_coro_noop)
 
 namespace coro = std::experimental::coroutines_v1;

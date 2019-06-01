@@ -16,6 +16,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main(int, char**)
 {
     typedef std::unary_negate<std::logical_not<int> > F;

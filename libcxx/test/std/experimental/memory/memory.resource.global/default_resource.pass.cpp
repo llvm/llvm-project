@@ -33,6 +33,8 @@
 
 #include "test_memory_resource.hpp"
 
+#include "test_macros.h"
+
 using namespace std::experimental::pmr;
 
 int main(int, char**) {

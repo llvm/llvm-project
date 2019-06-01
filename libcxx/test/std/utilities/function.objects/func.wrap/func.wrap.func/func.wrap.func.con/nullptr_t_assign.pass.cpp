@@ -17,6 +17,8 @@
 
 #include "count_new.hpp"
 
+#include "test_macros.h"
+
 class A
 {
     int data_[10];

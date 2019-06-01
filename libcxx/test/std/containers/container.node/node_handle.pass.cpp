@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <set>
 #include <map>
+#include "test_macros.h"
 #include "min_allocator.h"
 
 using namespace std;

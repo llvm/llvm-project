@@ -24,6 +24,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class Tp>
 using uncvref_t = typename std::remove_cv<typename std::remove_reference<Tp>::type>::type;
 

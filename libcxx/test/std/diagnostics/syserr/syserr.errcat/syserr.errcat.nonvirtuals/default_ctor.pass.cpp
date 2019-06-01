@@ -18,6 +18,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 class test1
     : public std::error_category
 {

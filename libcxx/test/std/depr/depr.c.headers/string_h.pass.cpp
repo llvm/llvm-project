@@ -11,6 +11,8 @@
 #include <string.h>
 #include <type_traits>
 
+#include "test_macros.h"
+
 #ifndef NULL
 #error NULL not defined
 #endif

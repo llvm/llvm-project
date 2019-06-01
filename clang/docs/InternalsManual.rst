@@ -423,6 +423,9 @@ Fix-it hints on errors and warnings need to obey these rules:
   driver, they should only be used when it's very likely they match the user's
   intent.
 * Clang must recover from errors as if the fix-it had been applied.
+* Fix-it hints on a warning must not change the meaning of the code.
+  However, a hint may clarify the meaning as intentional, for example by adding
+  parentheses when the precedence of operators isn't obvious.
 
 If a fix-it can't obey these rules, put the fix-it on a note.  Fix-its on notes
 are not applied automatically.

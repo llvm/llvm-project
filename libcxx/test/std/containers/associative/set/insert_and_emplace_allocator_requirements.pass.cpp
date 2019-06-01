@@ -17,6 +17,7 @@
 // UNSUPPORTED: c++98, c++03
 
 #include <set>
+#include "test_macros.h"
 #include "container_test_types.h"
 #include "../../set_allocator_requirement_test_templates.h"
 

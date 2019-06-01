@@ -15,6 +15,8 @@
 
 #include <iterator>
 
+#include "test_macros.h"
+
 struct not_an_iterator
 {
 };

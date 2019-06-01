@@ -13,6 +13,7 @@
 // const element_type* propagate_const::operator->() const;
 
 #include <experimental/propagate_const>
+#include "test_macros.h"
 #include "propagate_const_helpers.h"
 #include <cassert>
 

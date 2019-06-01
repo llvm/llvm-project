@@ -16,6 +16,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct Pointer {
   constexpr Pointer(void* v) : value(v) {}
   void* value;

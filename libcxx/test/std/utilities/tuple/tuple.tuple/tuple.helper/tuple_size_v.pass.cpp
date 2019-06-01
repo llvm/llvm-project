@@ -16,6 +16,8 @@
 #include <utility>
 #include <array>
 
+#include "test_macros.h"
+
 template <class Tuple, int Expect>
 void test()
 {

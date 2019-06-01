@@ -23,6 +23,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 namespace pmr = std::experimental::pmr;
 
 int main(int, char**)

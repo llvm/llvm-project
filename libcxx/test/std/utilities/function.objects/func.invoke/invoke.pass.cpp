@@ -43,6 +43,8 @@
 #include <utility> // for std::move
 #include <cassert>
 
+#include "test_macros.h"
+
 struct NonCopyable {
     NonCopyable() {}
 private:

@@ -15,6 +15,8 @@
 #include <strstream>
 #include <cassert>
 
+#include "test_macros.h"
+
 int called = 0;
 
 void* my_alloc(std::size_t)
