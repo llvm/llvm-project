@@ -15,3 +15,6 @@
 
 ?f1@@YGXXZ
 ; CHECK: void __stdcall f1(void)
+
+?f5@@YCXXZ
+; CHECK: void __pascal f5(void)

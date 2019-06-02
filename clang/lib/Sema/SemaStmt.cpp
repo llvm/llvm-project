@@ -4231,39 +4231,35 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
     if (Cap.isInvalid())
       continue;
 
+    // Form the initializer for the capture.
+    ExprResult Init = S.BuildCaptureInit(Cap, Cap.getLocation(),
+                                         RSI->CapRegionKind == CR_OpenMP);
+
+    // FIXME: Bail out now if the capture is not used and the initializer has
+    // no side-effects.
+
     // Create a field for this capture.
     FieldDecl *Field = S.BuildCaptureField(RSI->TheRecordDecl, Cap);
 
+    // Add the capture to our list of captures.
     if (Cap.isThisCapture()) {
-      ExprResult Init =
-          S.performThisCaptureInitialization(Cap, /*Implicit*/ true);
       Captures.push_back(CapturedStmt::Capture(Cap.getLocation(),
                                                CapturedStmt::VCK_This));
-      CaptureInits.push_back(Init.get());
-      continue;
     } else if (Cap.isVLATypeCapture()) {
       Captures.push_back(
           CapturedStmt::Capture(Cap.getLocation(), CapturedStmt::VCK_VLAType));
-      CaptureInits.push_back(nullptr);
-      continue;
+    } else {
+      assert(Cap.isVariableCapture() && "unknown kind of capture");
+
+      if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP)
+        S.setOpenMPCaptureKind(Field, Cap.getVariable(), RSI->OpenMPLevel);
+
+      Captures.push_back(CapturedStmt::Capture(Cap.getLocation(),
+                                               Cap.isReferenceCapture()
+                                                   ? CapturedStmt::VCK_ByRef
+                                                   : CapturedStmt::VCK_ByCopy,
+                                               Cap.getVariable()));
     }
-
-    if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP)
-      S.setOpenMPCaptureKind(Field, Cap.getVariable(), RSI->OpenMPLevel);
-
-    VarDecl *Var = Cap.getVariable();
-    SourceLocation Loc = Cap.getLocation();
-
-    // FIXME: For a non-reference capture, we need to build an expression to
-    // perform a copy here!
-    ExprResult Init = S.BuildDeclarationNameExpr(
-        CXXScopeSpec(), DeclarationNameInfo(Var->getDeclName(), Loc), Var);
-
-    Captures.push_back(CapturedStmt::Capture(Loc,
-                                             Cap.isReferenceCapture()
-                                                 ? CapturedStmt::VCK_ByRef
-                                                 : CapturedStmt::VCK_ByCopy,
-                                             Var));
     CaptureInits.push_back(Init.get());
   }
   return false;

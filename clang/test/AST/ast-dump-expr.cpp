@@ -255,6 +255,7 @@ void PrimaryExpressions(Ts... a) {
       // CHECK-NEXT: CXXMethodDecl
       // CHECK-NEXT: CompoundStmt
       // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:8> col:8 implicit 'V *'
+      // CHECK-NEXT: ParenListExpr
       // CHECK-NEXT: CXXThisExpr 0x{{[^ ]*}} <col:8> 'V *' this
 
       [*this]{};
