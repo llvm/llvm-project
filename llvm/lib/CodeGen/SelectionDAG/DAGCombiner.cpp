@@ -8068,7 +8068,7 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
   if (Level >= AfterLegalizeTypes)
     return SDValue();
 
-  MaskedStoreSDNode *MST = dyn_cast<MaskedStoreSDNode>(N);
+  MaskedStoreSDNode *MST = cast<MaskedStoreSDNode>(N);
   SDValue Mask = MST->getMask();
   SDValue Data  = MST->getValue();
   EVT VT = Data.getValueType();
@@ -8219,7 +8219,7 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
   if (Level >= AfterLegalizeTypes)
     return SDValue();
 
-  MaskedLoadSDNode *MLD = dyn_cast<MaskedLoadSDNode>(N);
+  MaskedLoadSDNode *MLD = cast<MaskedLoadSDNode>(N);
   SDValue Mask = MLD->getMask();
   SDLoc DL(N);
 

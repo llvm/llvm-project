@@ -45,9 +45,9 @@ define void @store16disp(i16* %x, i16 %y) {
 
 define void @store16nodisp(i16* %x, i16 %y) {
 ; CHECK-LABEL: store16nodisp:
+; CHECK: subi r24, 192
+; CHECK: sbci r25, 255
 ; CHECK: movw r30, r24
-; CHECK: subi r30, 192
-; CHECK: sbci r31, 255
 ; CHECK: st {{[YZ]}}, r22
 ; CHECK: std {{[YZ]}}+1, r23
   %arrayidx = getelementptr inbounds i16, i16* %x, i16 32
