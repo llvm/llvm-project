@@ -22,7 +22,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrameRecognizer.h"
