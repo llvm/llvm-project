@@ -375,12 +375,16 @@ if (LIBCXX_ENABLE_STATIC)
       set(MERGE_ARCHIVES_ABI_TARGET
         "${CMAKE_STATIC_LIBRARY_PREFIX}${LIBCXX_CXX_STATIC_ABI_LIBRARY}${CMAKE_STATIC_LIBRARY_SUFFIX}")
     endif()
+    if (APPLE)
+      set(MERGE_ARCHIVES_LIBTOOL "--use-libtool" "--libtool" "${CMAKE_LIBTOOL}")
+    endif()
     add_custom_command(TARGET cxx_static POST_BUILD
     COMMAND
       ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/merge_archives.py
     ARGS
       -o $<TARGET_LINKER_FILE:cxx_static>
       --ar "${CMAKE_AR}"
+      ${MERGE_ARCHIVES_LIBTOOL}
       "$<TARGET_LINKER_FILE:cxx_static>"
       "${MERGE_ARCHIVES_ABI_TARGET}"
       "${MERGE_ARCHIVES_SEARCH_PATHS}"
