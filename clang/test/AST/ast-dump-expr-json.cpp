@@ -3924,24 +3924,46 @@ void TestNonADLCall3() {
 // CHECK-NEXT:                  ]
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 {
-// CHECK-NEXT:                  "id": "0x{{.*}}",
-// CHECK-NEXT:                  "kind": "CXXThisExpr",
-// CHECK-NEXT:                  "range": {
-// CHECK-NEXT:                   "begin": {
-// CHECK-NEXT:                    "col": 8,
-// CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 98
+// CHECK-NEXT:                   "id": "0x{{.*}}",
+// CHECK-NEXT:                   "kind": "ParenListExpr",
+// CHECK-NEXT:                   "range": {
+// CHECK-NEXT:                     "begin": {
+// CHECK-NEXT:                       "col": 8,
+// CHECK-NEXT:                       "file": "{{.*}}",
+// CHECK-NEXT:                       "line": 98
+// CHECK-NEXT:                     },
+// CHECK-NEXT:                     "end": {
+// CHECK-NEXT:                       "col": 8,
+// CHECK-NEXT:                       "file": "{{.*}}",
+// CHECK-NEXT:                       "line": 98
+// CHECK-NEXT:                     }
 // CHECK-NEXT:                   },
-// CHECK-NEXT:                   "end": {
-// CHECK-NEXT:                    "col": 8,
-// CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 98
-// CHECK-NEXT:                   }
-// CHECK-NEXT:                  },
-// CHECK-NEXT:                  "type": {
-// CHECK-NEXT:                   "qualType": "V *"
-// CHECK-NEXT:                  },
-// CHECK-NEXT:                  "valueCategory": "rvalue"
+// CHECK-NEXT:                   "type": {
+// CHECK-NEXT:                     "qualType": "NULL TYPE"
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   "valueCategory": "rvalue",
+// CHECK-NEXT:                   "inner": [
+// CHECK-NEXT:                     {
+// CHECK-NEXT:                       "id": "0x{{.*}}",
+// CHECK-NEXT:                       "kind": "CXXThisExpr",
+// CHECK-NEXT:                       "range": {
+// CHECK-NEXT:                         "begin": {
+// CHECK-NEXT:                           "col": 8,
+// CHECK-NEXT:                           "file": "{{.*}}",
+// CHECK-NEXT:                           "line": 98
+// CHECK-NEXT:                         },
+// CHECK-NEXT:                         "end": {
+// CHECK-NEXT:                           "col": 8,
+// CHECK-NEXT:                           "file": "{{.*}}",
+// CHECK-NEXT:                           "line": 98
+// CHECK-NEXT:                         }
+// CHECK-NEXT:                       },
+// CHECK-NEXT:                       "type": {
+// CHECK-NEXT:                         "qualType": "V *"
+// CHECK-NEXT:                       },
+// CHECK-NEXT:                       "valueCategory": "rvalue"
+// CHECK-NEXT:                     }
+// CHECK-NEXT:                   ]
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 {
 // CHECK-NEXT:                  "id": "0x{{.*}}",

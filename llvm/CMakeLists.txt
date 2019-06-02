@@ -622,6 +622,17 @@ set(TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
 message(STATUS "LLVM host triple: ${LLVM_HOST_TRIPLE}")
 message(STATUS "LLVM default target triple: ${LLVM_DEFAULT_TARGET_TRIPLE}")
 
+if(WIN32 OR CYGWIN)
+  if(BUILD_SHARED_LIBS OR LLVM_BUILD_LLVM_DYLIB)
+    set(LLVM_ENABLE_PLUGINS_default ON)
+  else()
+    set(LLVM_ENABLE_PLUGINS_default OFF)
+  endif()
+else()
+  set(LLVM_ENABLE_PLUGINS_default ON)
+endif()
+option(LLVM_ENABLE_PLUGINS "Enable plugin support" ${LLVM_ENABLE_PLUGINS_default})
+
 include(HandleLLVMOptions)
 
 # Verify that we can find a Python 2 interpreter.  Python 3 is unsupported.
