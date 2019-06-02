@@ -49,61 +49,6 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type (default Debug)" FORCE)
 endif()
 
-# This should only apply if you are both on an Apple host, and targeting Apple.
-if(CMAKE_HOST_APPLE AND APPLE)
-  # if CMAKE_LIBTOOL is not set, try and find it with xcrun or find_program
-  if(NOT CMAKE_LIBTOOL)
-    if(NOT CMAKE_XCRUN)
-      find_program(CMAKE_XCRUN NAMES xcrun)
-    endif()
-    if(CMAKE_XCRUN)
-      execute_process(COMMAND ${CMAKE_XCRUN} -find libtool
-        OUTPUT_VARIABLE CMAKE_LIBTOOL
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-    endif()
-
-    if(NOT CMAKE_LIBTOOL OR NOT EXISTS CMAKE_LIBTOOL)
-      find_program(CMAKE_LIBTOOL NAMES libtool)
-    endif()
-  endif()
-
-  get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
-  if(CMAKE_LIBTOOL)
-    set(CMAKE_LIBTOOL ${CMAKE_LIBTOOL} CACHE PATH "libtool executable")
-    message(STATUS "Found libtool - ${CMAKE_LIBTOOL}")
-
-    execute_process(COMMAND ${CMAKE_LIBTOOL} -V
-      OUTPUT_VARIABLE LIBTOOL_V_OUTPUT
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if("${LIBTOOL_V_OUTPUT}" MATCHES ".*cctools-([0-9.]+).*")
-      string(REGEX REPLACE ".*cctools-([0-9.]+).*" "\\1" LIBTOOL_VERSION
-        ${LIBTOOL_V_OUTPUT})
-      if(NOT LIBTOOL_VERSION VERSION_LESS "862")
-        set(LIBTOOL_NO_WARNING_FLAG "-no_warning_for_no_symbols")
-      endif()
-    endif()
-
-    foreach(lang ${languages})
-      set(CMAKE_${lang}_CREATE_STATIC_LIBRARY
-        "\"${CMAKE_LIBTOOL}\" -static ${LIBTOOL_NO_WARNING_FLAG} -o <TARGET> \
-        <LINK_FLAGS> <OBJECTS> ")
-    endforeach()
-  endif()
-
-  # If DYLD_LIBRARY_PATH is set we need to set it on archiver commands
-  if(DYLD_LIBRARY_PATH)
-    set(dyld_envar "DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}")
-    foreach(lang ${languages})
-      foreach(cmd ${CMAKE_${lang}_CREATE_STATIC_LIBRARY})
-        list(APPEND CMAKE_${lang}_CREATE_STATIC_LIBRARY_NEW
-             "${dyld_envar} ${cmd}")
-      endforeach()
-      set(CMAKE_${lang}_CREATE_STATIC_LIBRARY
-        ${CMAKE_${lang}_CREATE_STATIC_LIBRARY_NEW})
-    endforeach()
-  endif()
-endif()
-
 # Side-by-side subprojects layout: automatically set the
 # LLVM_EXTERNAL_${project}_SOURCE_DIR using LLVM_ALL_PROJECTS
 # This allows an easy way of setting up a build directory for llvm and another
@@ -646,6 +591,11 @@ endif()
 
 if (LLVM_BUILD_STATIC)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+endif()
+
+# Use libtool instead of ar if you are both on an Apple host, and targeting Apple.
+if(CMAKE_HOST_APPLE AND APPLE)
+  include(UseLibtool)
 endif()
 
 # Override the default target with an environment variable named by LLVM_TARGET_TRIPLE_ENV.

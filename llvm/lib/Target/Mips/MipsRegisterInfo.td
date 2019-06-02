@@ -258,6 +258,11 @@ let Namespace = "Mips" in {
   def MSARequest : MipsReg<5, "5">;
   def MSAMap     : MipsReg<6, "6">;
   def MSAUnmap   : MipsReg<7, "7">;
+  // MSA-ASE fake control registers.
+  // These registers do not exist, but instructions like `cfcmsa`
+  // and `ctcmsa` allows to specify them.
+  foreach I = 8-31 in
+  def MSA#I : MipsReg<#I, ""#I>;
 
   // Octeon multiplier and product registers
   def MPL0 : MipsReg<0, "mpl0">;
@@ -438,7 +443,8 @@ def MSA128WEvens: RegisterClass<"Mips", [v4i32, v4f32], 128,
                                 (decimate (sequence "W%u", 0, 31), 2)>;
 
 def MSACtrl: RegisterClass<"Mips", [i32], 32, (add
-  MSAIR, MSACSR, MSAAccess, MSASave, MSAModify, MSARequest, MSAMap, MSAUnmap)>;
+  MSAIR, MSACSR, MSAAccess, MSASave, MSAModify, MSARequest, MSAMap, MSAUnmap,
+  (sequence "MSA%u", 8, 31))>, Unallocatable;
 
 // Hi/Lo Registers
 def LO32 : RegisterClass<"Mips", [i32], 32, (add LO0)>;
