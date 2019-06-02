@@ -6920,6 +6920,8 @@ bool X86InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
   case X86::PADDWrr:
   case X86::PADDDrr:
   case X86::PADDQrr:
+  case X86::PMULLWrr:
+  case X86::PMULLDrr:
   case X86::VPANDrr:
   case X86::VPANDYrr:
   case X86::VPANDDZ128rr:

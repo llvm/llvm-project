@@ -188,8 +188,6 @@ static Defined *addOptionalRegular(StringRef Name, SectionBase *Sec,
 static Defined *addAbsolute(StringRef Name) {
   Symbol *Sym = Symtab->addSymbol(Defined{nullptr, Name, STB_GLOBAL, STV_HIDDEN,
                                           STT_NOTYPE, 0, 0, nullptr});
-  if (!Sym->isDefined())
-    error("duplicate symbol: " + toString(*Sym));
   return cast<Defined>(Sym);
 }
 

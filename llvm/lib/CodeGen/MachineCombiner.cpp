@@ -561,10 +561,12 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
         dbgs() << "\tFor the Pattern (" << (int)P
                << ") these instructions could be removed\n";
         for (auto const *InstrPtr : DelInstrs)
-          InstrPtr->print(dbgs(), false, false, false, TII);
+          InstrPtr->print(dbgs(), /*IsStandalone*/false, /*SkipOpers*/false,
+                          /*SkipDebugLoc*/false, /*AddNewLine*/true, TII);
         dbgs() << "\tThese instructions could replace the removed ones\n";
         for (auto const *InstrPtr : InsInstrs)
-          InstrPtr->print(dbgs(), false, false, false, TII);
+          InstrPtr->print(dbgs(), /*IsStandalone*/false, /*SkipOpers*/false,
+                          /*SkipDebugLoc*/false, /*AddNewLine*/true, TII);
       });
 
       bool SubstituteAlways = false;

@@ -22,6 +22,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -79,7 +80,7 @@ namespace {
     bool eliminateIdentitySCEV(Instruction *UseInst, Instruction *IVOperand);
     bool replaceIVUserWithLoopInvariant(Instruction *UseInst);
 
-    bool eliminateOverflowIntrinsic(CallInst *CI);
+    bool eliminateOverflowIntrinsic(WithOverflowInst *WO);
     bool eliminateTrunc(TruncInst *TI);
     bool eliminateIVUser(Instruction *UseInst, Instruction *IVOperand);
     bool makeIVComparisonInvariant(ICmpInst *ICmp, Value *IVOperand);
@@ -400,61 +401,29 @@ void SimplifyIndvar::simplifyIVRemainder(BinaryOperator *Rem, Value *IVOperand,
   replaceSRemWithURem(Rem);
 }
 
-bool SimplifyIndvar::eliminateOverflowIntrinsic(CallInst *CI) {
-  auto *F = CI->getCalledFunction();
-  if (!F)
-    return false;
-
-  typedef const SCEV *(ScalarEvolution::*OperationFunctionTy)(
-      const SCEV *, const SCEV *, SCEV::NoWrapFlags, unsigned);
-  typedef const SCEV *(ScalarEvolution::*ExtensionFunctionTy)(
-      const SCEV *, Type *, unsigned);
-
-  OperationFunctionTy Operation;
-  ExtensionFunctionTy Extension;
-
-  Instruction::BinaryOps RawOp;
-
-  // We always have exactly one of nsw or nuw.  If NoSignedOverflow is false, we
-  // have nuw.
-  bool NoSignedOverflow;
-
-  switch (F->getIntrinsicID()) {
+static bool willNotOverflow(ScalarEvolution *SE, Instruction::BinaryOps BinOp,
+                            bool Signed, const SCEV *LHS, const SCEV *RHS) {
+  const SCEV *(ScalarEvolution::*Operation)(const SCEV *, const SCEV *,
+                                            SCEV::NoWrapFlags, unsigned);
+  switch (BinOp) {
   default:
-    return false;
-
-  case Intrinsic::sadd_with_overflow:
+    llvm_unreachable("Unsupported binary op");
+  case Instruction::Add:
     Operation = &ScalarEvolution::getAddExpr;
-    Extension = &ScalarEvolution::getSignExtendExpr;
-    RawOp = Instruction::Add;
-    NoSignedOverflow = true;
     break;
-
-  case Intrinsic::uadd_with_overflow:
-    Operation = &ScalarEvolution::getAddExpr;
-    Extension = &ScalarEvolution::getZeroExtendExpr;
-    RawOp = Instruction::Add;
-    NoSignedOverflow = false;
-    break;
-
-  case Intrinsic::ssub_with_overflow:
+  case Instruction::Sub:
     Operation = &ScalarEvolution::getMinusSCEV;
-    Extension = &ScalarEvolution::getSignExtendExpr;
-    RawOp = Instruction::Sub;
-    NoSignedOverflow = true;
     break;
-
-  case Intrinsic::usub_with_overflow:
-    Operation = &ScalarEvolution::getMinusSCEV;
-    Extension = &ScalarEvolution::getZeroExtendExpr;
-    RawOp = Instruction::Sub;
-    NoSignedOverflow = false;
+  case Instruction::Mul:
+    Operation = &ScalarEvolution::getMulExpr;
     break;
   }
 
-  const SCEV *LHS = SE->getSCEV(CI->getArgOperand(0));
-  const SCEV *RHS = SE->getSCEV(CI->getArgOperand(1));
+  const SCEV *(ScalarEvolution::*Extension)(const SCEV *, Type *, unsigned) =
+      Signed ? &ScalarEvolution::getSignExtendExpr
+             : &ScalarEvolution::getZeroExtendExpr;
 
+  // Check ext(LHS op RHS) == ext(LHS) op ext(RHS)
   auto *NarrowTy = cast<IntegerType>(LHS->getType());
   auto *WideTy =
     IntegerType::get(NarrowTy->getContext(), NarrowTy->getBitWidth() * 2);
@@ -465,27 +434,32 @@ bool SimplifyIndvar::eliminateOverflowIntrinsic(CallInst *CI) {
   const SCEV *B =
       (SE->*Operation)((SE->*Extension)(LHS, WideTy, 0),
                        (SE->*Extension)(RHS, WideTy, 0), SCEV::FlagAnyWrap, 0);
+  return A == B;
+}
 
-  if (A != B)
+bool SimplifyIndvar::eliminateOverflowIntrinsic(WithOverflowInst *WO) {
+  const SCEV *LHS = SE->getSCEV(WO->getLHS());
+  const SCEV *RHS = SE->getSCEV(WO->getRHS());
+  if (!willNotOverflow(SE, WO->getBinaryOp(), WO->isSigned(), LHS, RHS))
     return false;
 
   // Proved no overflow, nuke the overflow check and, if possible, the overflow
   // intrinsic as well.
 
   BinaryOperator *NewResult = BinaryOperator::Create(
-      RawOp, CI->getArgOperand(0), CI->getArgOperand(1), "", CI);
+      WO->getBinaryOp(), WO->getLHS(), WO->getRHS(), "", WO);
 
-  if (NoSignedOverflow)
+  if (WO->isSigned())
     NewResult->setHasNoSignedWrap(true);
   else
     NewResult->setHasNoUnsignedWrap(true);
 
   SmallVector<ExtractValueInst *, 4> ToDelete;
 
-  for (auto *U : CI->users()) {
+  for (auto *U : WO->users()) {
     if (auto *EVI = dyn_cast<ExtractValueInst>(U)) {
       if (EVI->getIndices()[0] == 1)
-        EVI->replaceAllUsesWith(ConstantInt::getFalse(CI->getContext()));
+        EVI->replaceAllUsesWith(ConstantInt::getFalse(WO->getContext()));
       else {
         assert(EVI->getIndices()[0] == 0 && "Only two possibilities!");
         EVI->replaceAllUsesWith(NewResult);
@@ -497,8 +471,8 @@ bool SimplifyIndvar::eliminateOverflowIntrinsic(CallInst *CI) {
   for (auto *EVI : ToDelete)
     EVI->eraseFromParent();
 
-  if (CI->use_empty())
-    CI->eraseFromParent();
+  if (WO->use_empty())
+    WO->eraseFromParent();
 
   return true;
 }
@@ -635,8 +609,8 @@ bool SimplifyIndvar::eliminateIVUser(Instruction *UseInst,
       return eliminateSDiv(Bin);
   }
 
-  if (auto *CI = dyn_cast<CallInst>(UseInst))
-    if (eliminateOverflowIntrinsic(CI))
+  if (auto *WO = dyn_cast<WithOverflowInst>(UseInst))
+    if (eliminateOverflowIntrinsic(WO))
       return true;
 
   if (auto *TI = dyn_cast<TruncInst>(UseInst))
@@ -729,59 +703,31 @@ bool SimplifyIndvar::eliminateIdentitySCEV(Instruction *UseInst,
 /// unsigned-overflow.  Returns true if anything changed, false otherwise.
 bool SimplifyIndvar::strengthenOverflowingOperation(BinaryOperator *BO,
                                                     Value *IVOperand) {
-
   // Fastpath: we don't have any work to do if `BO` is `nuw` and `nsw`.
   if (BO->hasNoUnsignedWrap() && BO->hasNoSignedWrap())
     return false;
 
-  const SCEV *(ScalarEvolution::*GetExprForBO)(const SCEV *, const SCEV *,
-                                               SCEV::NoWrapFlags, unsigned);
-  switch (BO->getOpcode()) {
-  default:
+  if (BO->getOpcode() != Instruction::Add &&
+      BO->getOpcode() != Instruction::Sub &&
+      BO->getOpcode() != Instruction::Mul)
     return false;
 
-  case Instruction::Add:
-    GetExprForBO = &ScalarEvolution::getAddExpr;
-    break;
-
-  case Instruction::Sub:
-    GetExprForBO = &ScalarEvolution::getMinusSCEV;
-    break;
-
-  case Instruction::Mul:
-    GetExprForBO = &ScalarEvolution::getMulExpr;
-    break;
-  }
-
-  unsigned BitWidth = cast<IntegerType>(BO->getType())->getBitWidth();
-  Type *WideTy = IntegerType::get(BO->getContext(), BitWidth * 2);
   const SCEV *LHS = SE->getSCEV(BO->getOperand(0));
   const SCEV *RHS = SE->getSCEV(BO->getOperand(1));
-
   bool Changed = false;
 
-  if (!BO->hasNoUnsignedWrap()) {
-    const SCEV *ExtendAfterOp = SE->getZeroExtendExpr(SE->getSCEV(BO), WideTy);
-    const SCEV *OpAfterExtend = (SE->*GetExprForBO)(
-      SE->getZeroExtendExpr(LHS, WideTy), SE->getZeroExtendExpr(RHS, WideTy),
-      SCEV::FlagAnyWrap, 0u);
-    if (ExtendAfterOp == OpAfterExtend) {
-      BO->setHasNoUnsignedWrap();
-      SE->forgetValue(BO);
-      Changed = true;
-    }
+  if (!BO->hasNoUnsignedWrap() &&
+      willNotOverflow(SE, BO->getOpcode(), /* Signed */ false, LHS, RHS)) {
+    BO->setHasNoUnsignedWrap();
+    SE->forgetValue(BO);
+    Changed = true;
   }
 
-  if (!BO->hasNoSignedWrap()) {
-    const SCEV *ExtendAfterOp = SE->getSignExtendExpr(SE->getSCEV(BO), WideTy);
-    const SCEV *OpAfterExtend = (SE->*GetExprForBO)(
-      SE->getSignExtendExpr(LHS, WideTy), SE->getSignExtendExpr(RHS, WideTy),
-      SCEV::FlagAnyWrap, 0u);
-    if (ExtendAfterOp == OpAfterExtend) {
-      BO->setHasNoSignedWrap();
-      SE->forgetValue(BO);
-      Changed = true;
-    }
+  if (!BO->hasNoSignedWrap() &&
+      willNotOverflow(SE, BO->getOpcode(), /* Signed */ true, LHS, RHS)) {
+    BO->setHasNoSignedWrap();
+    SE->forgetValue(BO);
+    Changed = true;
   }
 
   return Changed;
