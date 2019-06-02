@@ -117,6 +117,11 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   # Remove the -nostdlib++ option we've added earlier.
   string(REPLACE "-nostdlib++" "" CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
 
+  # Use libtool instead of ar if you are both on an Apple host, and targeting Apple.
+  if(CMAKE_HOST_APPLE AND APPLE)
+    include(UseLibtool)
+  endif()
+
   # This can be used to detect whether we're in the runtimes build.
   set(RUNTIMES_BUILD ON)
 
