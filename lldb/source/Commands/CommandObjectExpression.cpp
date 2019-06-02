@@ -12,7 +12,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 #include "CommandObjectExpression.h"
-#include "Plugins/ExpressionParser/Clang/ClangExpressionVariable.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectVariable.h"
