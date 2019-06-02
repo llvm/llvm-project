@@ -124,7 +124,7 @@ std::string TCPSocket::GetRemoteConnectionURI() const {
                          GetRemotePortNumber());
   }
   return "";
-};
+}
 
 Status TCPSocket::CreateSocket(int domain) {
   Status error;

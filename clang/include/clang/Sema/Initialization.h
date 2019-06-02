@@ -386,6 +386,8 @@ public:
   }
 
   /// Create the initialization entity for a lambda capture.
+  ///
+  /// \p VarID The name of the entity being captured, or nullptr for 'this'.
   static InitializedEntity InitializeLambdaCapture(IdentifierInfo *VarID,
                                                    QualType FieldType,
                                                    SourceLocation Loc) {
@@ -509,7 +511,7 @@ public:
   /// For a lambda capture, return the capture's name.
   StringRef getCapturedVarName() const {
     assert(getKind() == EK_LambdaCapture && "Not a lambda capture!");
-    return Capture.VarID->getName();
+    return Capture.VarID ? Capture.VarID->getName() : "this";
   }
 
   /// Determine the location of the capture when initializing

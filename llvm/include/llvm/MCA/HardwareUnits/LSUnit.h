@@ -70,7 +70,7 @@ public:
   unsigned getNumExecuting() const { return NumExecuting; }
   unsigned getNumExecuted() const { return NumExecuted; }
 
-  const InstRef &getCriticalMemoryInstruction() const { 
+  const InstRef &getCriticalMemoryInstruction() const {
     return CriticalMemoryInstruction;
   }
   const CriticalDependency &getCriticalPredecessor() const {
@@ -96,7 +96,7 @@ public:
   }
   bool isReady() const { return NumExecutedPredecessors == NumPredecessors; }
   bool isExecuting() const {
-    return NumExecuting == NumInstructions - NumExecuted;
+    return NumExecuting && (NumExecuting == (NumInstructions - NumExecuted));
   }
   bool isExecuted() const { return NumInstructions == NumExecuted; }
 
@@ -247,20 +247,30 @@ public:
   /// Check if a peviously dispatched instruction IR is now ready for execution.
   bool isReady(const InstRef &IR) const {
     unsigned GroupID = IR.getInstruction()->getLSUTokenID();
-    assert(isValidGroupID(GroupID) &&
-           "Invalid group associated with this instruction!");
-    const MemoryGroup &Group = *Groups.find(GroupID)->second;
+    const MemoryGroup &Group = getGroup(GroupID);
     return Group.isReady();
   }
 
-  /// Check if a previously dispatched instruction IR only depends on
-  /// instructions that are currently executing.
+  /// Check if instruction IR only depends on memory instructions that are
+  /// currently executing.
   bool isPending(const InstRef &IR) const {
     unsigned GroupID = IR.getInstruction()->getLSUTokenID();
-    assert(isValidGroupID(GroupID) &&
-           "Invalid group associated with this instruction!");
-    const MemoryGroup &Group = *Groups.find(GroupID)->second;
+    const MemoryGroup &Group = getGroup(GroupID);
     return Group.isPending();
+  }
+
+  /// Check if instruction IR is still waiting on memory operations, and the
+  /// wait time is still unknown.
+  bool isWaiting(const InstRef &IR) const {
+    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
+    const MemoryGroup &Group = getGroup(GroupID);
+    return Group.isWaiting();
+  }
+
+  bool hasDependentUsers(const InstRef &IR) const {
+    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
+    const MemoryGroup &Group = getGroup(GroupID);
+    return !Group.isExecuted() && Group.getNumSuccessors();
   }
 
   const MemoryGroup &getGroup(unsigned Index) const {
@@ -274,7 +284,8 @@ public:
   }
 
   unsigned createMemoryGroup() {
-    Groups.insert(std::make_pair(NextGroupID, llvm::make_unique<MemoryGroup>()));
+    Groups.insert(
+        std::make_pair(NextGroupID, llvm::make_unique<MemoryGroup>()));
     return NextGroupID++;
   }
 

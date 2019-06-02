@@ -1262,6 +1262,9 @@ TEST(APIntTest, StringBitsNeeded10) {
   EXPECT_EQ(5U, APInt::getBitsNeeded("-10", 10));
   EXPECT_EQ(6U, APInt::getBitsNeeded("-19", 10));
   EXPECT_EQ(6U, APInt::getBitsNeeded("-20", 10));
+
+  // TODO: INT_MIN cases need 1 less bit (PR40897)
+  EXPECT_EQ(9U, APInt::getBitsNeeded("-128", 10));
 }
 
 TEST(APIntTest, StringBitsNeeded16) {

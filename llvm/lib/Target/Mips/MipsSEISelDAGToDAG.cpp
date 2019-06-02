@@ -75,18 +75,8 @@ void MipsSEDAGToDAGISel::addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
 }
 
 unsigned MipsSEDAGToDAGISel::getMSACtrlReg(const SDValue RegIdx) const {
-  switch (cast<ConstantSDNode>(RegIdx)->getZExtValue()) {
-  default:
-    llvm_unreachable("Could not map int to register");
-  case 0: return Mips::MSAIR;
-  case 1: return Mips::MSACSR;
-  case 2: return Mips::MSAAccess;
-  case 3: return Mips::MSASave;
-  case 4: return Mips::MSAModify;
-  case 5: return Mips::MSARequest;
-  case 6: return Mips::MSAMap;
-  case 7: return Mips::MSAUnmap;
-  }
+  uint64_t RegNum = cast<ConstantSDNode>(RegIdx)->getZExtValue();
+  return Mips::MSACtrlRegClass.getRegister(RegNum);
 }
 
 bool MipsSEDAGToDAGISel::replaceUsesWithZeroReg(MachineRegisterInfo *MRI,
