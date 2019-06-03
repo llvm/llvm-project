@@ -430,8 +430,8 @@ fp16_fml_fallthrough:
     llvm::ARM::getFPUFeatures(llvm::ARM::FK_NONE, Features);
 
     // Disable hardware FP features which have been enabled.
-    // FIXME: Disabling vfp2 and neon should be enough as all the other
-    //        features are dependent on these 2 features in LLVM. However
+    // FIXME: Disabling fpregs should be enough all by itself, since all
+    //        the other FP features are dependent on it. However
     //        there is currently no easy way to test this in clang, so for
     //        now just be explicit and disable all known dependent features
     //        as well.
@@ -439,6 +439,11 @@ fp16_fml_fallthrough:
                                 "neon", "crypto", "dotprod", "fp16fml"})
       if (std::find(std::begin(Features), std::end(Features), "+" + Feature) != std::end(Features))
         Features.push_back(Args.MakeArgString("-" + Feature));
+
+    // Disable the base feature unconditionally, even if it was not
+    // explicitly in the features list (e.g. if we had +vfp3, which
+    // implies it).
+    Features.push_back("-fpregs");
   }
 
   // En/disable crc code generation.

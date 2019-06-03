@@ -14,7 +14,7 @@ void foo() {
   // CHECK-CC1-NEXT: COMPLETION: Pattern : const_cast<<#type#>>(<#expression#>)
   // CHECK-CC1: COMPLETION: Pattern : [#void#]delete <#expression#>
   // CHECK-CC1-NEXT: COMPLETION: Pattern : [#void#]delete [] <#expression#>
-  // CHECK-CC1-NEXT: COMPLETION: Pattern : do{
+  // CHECK-CC1-NEXT: COMPLETION: Pattern : do {
   // CHECK-CC1-NEXT: <#statements#>
   // CHECK-CC1-NEXT: }
   // CHECK-CC1: COMPLETION: double
@@ -24,9 +24,9 @@ void foo() {
   // CHECK-CC1-NEXT: COMPLETION: Pattern : [#bool#]false
   // CHECK-CC1-NEXT: COMPLETION: float
   // CHECK-CC1-NEXT: COMPLETION: foo : [#void#]foo()
-  // CHECK-CC1-NEXT: COMPLETION: Pattern : for(<#init-statement#>;<#condition#>;<#inc-expression#>){
+  // CHECK-CC1-NEXT: COMPLETION: Pattern : for (<#init-statement#>; <#condition#>; <#inc-expression#>) {
   // CHECK-CC1: COMPLETION: Pattern : goto <#label#>;
-  // CHECK-CC1-NEXT: COMPLETION: Pattern : if(<#condition#>){
+  // CHECK-CC1-NEXT: COMPLETION: Pattern : if (<#condition#>) {
   // CHECK-CC1-NEXT: <#statements#>
   // CHECK-CC1-NEXT: }
   // CHECK-CC1: COMPLETION: int
@@ -46,12 +46,12 @@ void foo() {
   // CHECK-CC1-NEXT: COMPLETION: Pattern : static_assert(<#expression#>, <#message#>);
   // CHECK-CC1-NEXT: COMPLETION: Pattern : static_cast<<#type#>>(<#expression#>)
   // CHECK-CC1-NEXT: COMPLETION: struct
-  // CHECK-CC1-NEXT: COMPLETION: Pattern : switch(<#condition#>){
+  // CHECK-CC1-NEXT: COMPLETION: Pattern : switch (<#condition#>) {
   // CHECK-CC1: COMPLETION: t : t
   // CHECK-CC1-NEXT: COMPLETION: thread_local
   // CHECK-CC1-NEXT: COMPLETION: Pattern : [#void#]throw <#expression#>
   // CHECK-CC1-NEXT: COMPLETION: Pattern : [#bool#]true
-  // CHECK-CC1-NEXT: COMPLETION: Pattern : try{
+  // CHECK-CC1-NEXT: COMPLETION: Pattern : try {
   // CHECK-CC1-NEXT: <#statements#>
   // CHECK-CC1-NEXT: }
   // CHECK-CC1: COMPLETION: TYPEDEF : TYPEDEF
@@ -66,7 +66,7 @@ void foo() {
   // CHECK-CC1-NEXT: COMPLETION: void
   // CHECK-CC1-NEXT: COMPLETION: volatile
   // CHECK-CC1-NEXT: COMPLETION: wchar_t
-  // CHECK-CC1-NEXT: COMPLETION: Pattern : while(<#condition#>){
+  // CHECK-CC1-NEXT: COMPLETION: Pattern : while (<#condition#>) {
   // CHECK-CC1-NEXT: <#statements#>
   // CHECK-CC1-NEXT: }
   // CHECK-CC1: COMPLETION: X : X
@@ -91,7 +91,7 @@ void foo() {
   // CHECK-CC2-NEXT: COMPLETION: inline
   // CHECK-CC2-NEXT: COMPLETION: int
   // CHECK-CC2-NEXT: COMPLETION: long
-  // CHECK-CC2-NEXT: COMPLETION: Pattern : namespace <#identifier#>{
+  // CHECK-CC2-NEXT: COMPLETION: Pattern : namespace <#identifier#> {
   // CHECK-CC2-NEXT: <#declarations#>
   // CHECK-CC2-NEXT: }
   // CHECK-CC2: COMPLETION: Pattern : namespace <#name#> = <#namespace#>;
@@ -219,7 +219,7 @@ void foo() {
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : const_cast<<#type#>>(<#expression#>)
   // CHECK-NO-RTTI: COMPLETION: Pattern : [#void#]delete <#expression#>
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : [#void#]delete [] <#expression#>
-  // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : do{
+  // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : do {
   // CHECK-NO-RTTI-NEXT: <#statements#>
   // CHECK-NO-RTTI-NEXT: }
   // CHECK-NO-RTTI: COMPLETION: double
@@ -229,9 +229,9 @@ void foo() {
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : [#bool#]false
   // CHECK-NO-RTTI-NEXT: COMPLETION: float
   // CHECK-NO-RTTI-NEXT: COMPLETION: foo : [#void#]foo()
-  // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : for(<#init-statement#>;<#condition#>;<#inc-expression#>){
+  // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : for (<#init-statement#>; <#condition#>; <#inc-expression#>) {
   // CHECK-NO-RTTI: COMPLETION: Pattern : goto <#label#>;
-  // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : if(<#condition#>){
+  // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : if (<#condition#>) {
   // CHECK-NO-RTTI-NEXT: <#statements#>
   // CHECK-NO-RTTI-NEXT: }
   // CHECK-NO-RTTI: COMPLETION: int
@@ -251,7 +251,7 @@ void foo() {
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : static_assert(<#expression#>, <#message#>);
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : static_cast<<#type#>>(<#expression#>)
   // CHECK-NO-RTTI-NEXT: COMPLETION: struct
-  // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : switch(<#condition#>){
+  // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : switch (<#condition#>) {
   // CHECK-NO-RTTI: COMPLETION: t : t
   // CHECK-NO-RTTI-NOT: throw
   // CHECK-NO-RTTI: COMPLETION: Pattern : [#bool#]true
@@ -268,7 +268,7 @@ void foo() {
   // CHECK-NO-RTTI-NEXT: COMPLETION: void
   // CHECK-NO-RTTI-NEXT: COMPLETION: volatile
   // CHECK-NO-RTTI-NEXT: COMPLETION: wchar_t
-  // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : while(<#condition#>){
+  // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : while (<#condition#>) {
   // CHECK-NO-RTTI: COMPLETION: X : X
   // CHECK-NO-RTTI-NEXT: COMPLETION: y : [#int#]y
   // CHECK-NO-RTTI-NEXT: COMPLETION: z : [#void#]z(<#int#>)

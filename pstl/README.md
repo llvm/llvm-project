@@ -32,3 +32,4 @@ To use Parallel STL, you must have the following software installed:
 * The following algorithms require additional O(n) memory space for parallel execution: `copy_if`, `inplace_merge`,
   `partial_sort`, `partial_sort_copy`, `partition_copy`, `remove`, `remove_if`, `rotate`, `sort`, `stable_sort`,
   `unique`, `unique_copy`.
+

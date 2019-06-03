@@ -692,7 +692,7 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode *N,
     }
 
     if (Def->getName() == "undef_tied_input") {
-      std::array<MVT::SimpleValueType, 1> ResultVTs = { N->getSimpleType(0) };
+      std::array<MVT::SimpleValueType, 1> ResultVTs = {{ N->getSimpleType(0) }};
       std::array<unsigned, 0> InstOps;
       auto IDOperandNo = NextRecordedOperandNo++;
       AddMatcher(new EmitNodeMatcher("TargetOpcode::IMPLICIT_DEF",

@@ -70,7 +70,7 @@ sections:
         TypeServer2:
           Guid:            '{8DABD2A0-28FF-CB43-9BAF-175B77B76414}'
           Age:             1
-          Name:            'pdb-diff-cl.pdb'
+          Name:            'c:\some_invalid_path_AABB98765\pdb-diff-cl.pdb'
   - Name:            '.text$mn'
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
     Alignment:       16
