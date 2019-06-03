@@ -413,6 +413,12 @@ public:
       if (TLI->isZExtFree(OpTy, Ty))
         return TargetTransformInfo::TCC_Free;
       return TargetTransformInfo::TCC_Basic;
+
+    case Instruction::AddrSpaceCast:
+      if (TLI->isFreeAddrSpaceCast(OpTy->getPointerAddressSpace(),
+                                   Ty->getPointerAddressSpace()))
+        return TargetTransformInfo::TCC_Free;
+      return TargetTransformInfo::TCC_Basic;
     }
 
     return BaseT::getOperationCost(Opcode, Ty, OpTy);
@@ -656,7 +662,7 @@ public:
       return 0;
 
     if (Opcode == Instruction::AddrSpaceCast &&
-        TLI->isNoopAddrSpaceCast(Src->getPointerAddressSpace(),
+        TLI->isFreeAddrSpaceCast(Src->getPointerAddressSpace(),
                                  Dst->getPointerAddressSpace()))
       return 0;
 

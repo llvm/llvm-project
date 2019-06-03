@@ -13,7 +13,6 @@
 #ifndef LLVM_LIB_TARGET_HEXAGON_HEXAGONASMPRINTER_H
 #define LLVM_LIB_TARGET_HEXAGON_HEXAGONASMPRINTER_H
 
-#include "Hexagon.h"
 #include "HexagonSubtarget.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"

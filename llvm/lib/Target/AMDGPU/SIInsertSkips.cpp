@@ -270,8 +270,7 @@ void SIInsertSkips::kill(MachineInstr &MI) {
         .addImm(0)  // src1 modifiers
         .add(MI.getOperand(0));
 
-      if (!ST.hasNoSdstCMPX())
-        I.addImm(0);  // omod
+      I.addImm(0);  // omod
     }
     break;
   }

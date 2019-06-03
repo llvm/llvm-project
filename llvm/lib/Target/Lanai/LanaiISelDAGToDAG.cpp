@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Lanai.h"
+#include "LanaiAluCode.h"
 #include "LanaiMachineFunctionInfo.h"
 #include "LanaiRegisterInfo.h"
 #include "LanaiSubtarget.h"

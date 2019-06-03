@@ -1261,8 +1261,8 @@ bool SITargetLowering::isMemOpHasNoClobberedMemOperand(const SDNode *N) const {
   return I && I->getMetadata("amdgpu.noclobber");
 }
 
-bool SITargetLowering::isCheapAddrSpaceCast(unsigned SrcAS,
-                                            unsigned DestAS) const {
+bool SITargetLowering::isFreeAddrSpaceCast(unsigned SrcAS,
+                                           unsigned DestAS) const {
   // Flat -> private/local is a simple truncate.
   // Flat -> global is no-op
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS)

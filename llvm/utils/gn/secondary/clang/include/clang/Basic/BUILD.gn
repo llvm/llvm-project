@@ -89,6 +89,14 @@ clang_tablegen("AttrHasAttributeImpl") {
   td_file = "Attr.td"
 }
 
+clang_tablegen("OpenCLBuiltins") {
+  args = [
+    "-gen-clang-opencl-builtins",
+    "-I",
+    rebase_path("../..", root_out_dir),
+  ]
+}
+
 # Misc
 
 clang_tablegen("arm_neon") {

@@ -7941,9 +7941,16 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     }
 
     if (TLI.isOperationLegal(ISD::SELECT_CC, VT) ||
-        (!LegalOperations && TLI.isOperationLegalOrCustom(ISD::SELECT_CC, VT)))
-      return DAG.getNode(ISD::SELECT_CC, DL, VT, Cond0, Cond1, N1, N2,
-                         N0.getOperand(2));
+        (!LegalOperations &&
+         TLI.isOperationLegalOrCustom(ISD::SELECT_CC, VT))) {
+      // Any flags available in a select/setcc fold will be on the setcc as they
+      // migrated from fcmp
+      const SDNodeFlags Flags = N0.getNode()->getFlags();
+      SDValue SelectNode = DAG.getNode(ISD::SELECT_CC, DL, VT, Cond0, Cond1, N1,
+                                       N2, N0.getOperand(2));
+      SelectNode->setFlags(Flags);
+      return SelectNode;
+    }
 
     return SimplifySelect(DL, N0, N1, N2);
   }
@@ -12440,6 +12447,10 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT OpVT = N0.getValueType();
 
+  // [us]itofp(undef) = 0, because the result value is bounded.
+  if (N0.isUndef())
+    return DAG.getConstantFP(0.0, SDLoc(N), VT);
+
   // fold (sint_to_fp c1) -> c1fp
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       // ...but only if the target supports immediate floating-point values
@@ -12496,6 +12507,10 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
   EVT OpVT = N0.getValueType();
+
+  // [us]itofp(undef) = 0, because the result value is bounded.
+  if (N0.isUndef())
+    return DAG.getConstantFP(0.0, SDLoc(N), VT);
 
   // fold (uint_to_fp c1) -> c1fp
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&

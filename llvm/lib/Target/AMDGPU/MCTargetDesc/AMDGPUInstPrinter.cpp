@@ -281,8 +281,14 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   case AMDGPU::VCC:
     O << "vcc";
     return;
-  case AMDGPU::SCC:
-    O << "scc";
+  case AMDGPU::SRC_VCCZ:
+    O << "src_vccz";
+    return;
+  case AMDGPU::SRC_EXECZ:
+    O << "src_execz";
+    return;
+  case AMDGPU::SRC_SCC:
+    O << "src_scc";
     return;
   case AMDGPU::EXEC:
     O << "exec";
@@ -358,6 +364,8 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   case AMDGPU::SCRATCH_WAVE_OFFSET_REG:
   case AMDGPU::PRIVATE_RSRC_REG:
     llvm_unreachable("pseudo-register should not ever be emitted");
+  case AMDGPU::SCC:
+    llvm_unreachable("pseudo scc should not ever be emitted");
   default:
     break;
   }

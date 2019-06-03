@@ -1140,8 +1140,8 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
   // Sink only "cheap" (or nop) address-space casts.  This is a weaker condition
   // than sinking only nop casts, but is helpful on some platforms.
   if (auto *ASC = dyn_cast<AddrSpaceCastInst>(CI)) {
-    if (!TLI.isCheapAddrSpaceCast(ASC->getSrcAddressSpace(),
-                                  ASC->getDestAddressSpace()))
+    if (!TLI.isFreeAddrSpaceCast(ASC->getSrcAddressSpace(),
+                                 ASC->getDestAddressSpace()))
       return false;
   }
 
