@@ -2964,3 +2964,11 @@ define <16 x float> @test_sext_cse(float* %base, <16 x i32> %ind, <16 x i32>* %f
   %res3 = fadd <16 x float> %res2, %res
   ret <16 x float>%res3
 }
+
+define void @zero_mask(<2 x double>%a1, <2 x double*> %ptr) {
+; ALL-LABEL: zero_mask:
+; ALL:       # %bb.0:
+; ALL-NEXT:    ret{{[l|q]}}
+  call void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double> %a1, <2 x double*> %ptr, i32 4, <2 x i1> zeroinitializer)
+  ret void
+}

@@ -8264,18 +8264,9 @@ define <8 x double> @test_expand_load_pd_512(i8* %addr, <8 x double> %data) {
 
 ; Make sure we don't crash if you pass 0 to the mask.
 define <8 x double> @test_zero_mask_expand_load_pd_512(i8* %addr, <8 x double> %data, i8 %mask) {
-; X86-LABEL: test_zero_mask_expand_load_pd_512:
-; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    kxorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x47,0xc8]
-; X86-NEXT:    vexpandpd (%eax), %zmm0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x88,0x00]
-; X86-NEXT:    retl ## encoding: [0xc3]
-;
-; X64-LABEL: test_zero_mask_expand_load_pd_512:
-; X64:       ## %bb.0:
-; X64-NEXT:    kxorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x47,0xc8]
-; X64-NEXT:    vexpandpd (%rdi), %zmm0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x88,0x07]
-; X64-NEXT:    retq ## encoding: [0xc3]
+; CHECK-LABEL: test_zero_mask_expand_load_pd_512:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
   %res = call <8 x double> @llvm.x86.avx512.mask.expand.load.pd.512(i8* %addr, <8 x double> %data, i8 0)
   ret <8 x double> %res
 }

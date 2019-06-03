@@ -23,6 +23,12 @@
 ?x@@3PEAEEA
 ; CHECK: unsigned char *x
 
+?y@@3PEAGEA
+; CHECK: unsigned short *y
+
+?z@@3PEAKEA
+; CHECK: unsigned long *z
+
 ?x@@3PEAY1NKM@5HEA
 ; CHECK: int (*x)[3500][6]
 

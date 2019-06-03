@@ -1159,11 +1159,11 @@ isReMaterializable = 1 in
   // LDW Rd+1:Rd, P
   //
   // Expands to:
-  // ld Rd,   P+
-  // ld Rd+1, P
+  // ld  Rd,   P
+  // ldd Rd+1, P+1
   let Constraints = "@earlyclobber $reg" in
   def LDWRdPtr : Pseudo<(outs DREGS:$reg),
-                        (ins PTRREGS:$ptrreg),
+                        (ins PTRDISPREGS:$ptrreg),
                         "ldw\t$reg, $ptrreg",
                         [(set i16:$reg, (load i16:$ptrreg))]>,
                  Requires<[HasSRAM]>;
@@ -1230,7 +1230,7 @@ isReMaterializable = 1 in
   // ldd Rd,   P+q
   // ldd Rd+1, P+q+1
   let Constraints = "@earlyclobber $dst" in
-  def LDDWRdPtrQ : Pseudo<(outs DREGS_WITHOUT_Z_WORKAROUND:$dst),
+  def LDDWRdPtrQ : Pseudo<(outs DREGS_WITHOUT_YZ_WORKAROUND:$dst),
                           (ins memri:$memri),
                           "lddw\t$dst, $memri",
                           [(set i16:$dst, (load addr:$memri))]>,
