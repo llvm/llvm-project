@@ -2293,6 +2293,7 @@ static std::string GetSwiftFriendlyTriple(StringRef triple) {
 }
 
 bool SwiftASTContext::SetTriple(const llvm::Triple triple, Module *module) {
+  VALID_OR_RETURN(false);
   if (triple.str().empty())
     return false;
 
