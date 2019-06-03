@@ -318,6 +318,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NO-FP %s
 // CHECK-NO-FP-NOT: "-target-feature" "+soft-float"
 // CHECK-NO-FP: "-target-feature" "+soft-float-abi"
+// CHECK-NO-FP: "-target-feature" "-fpregs"
 // CHECK-NO-FP: "-target-feature" "-vfp2"
 // CHECK-NO-FP: "-target-feature" "-vfp3"
 // CHECK-NO-FP: "-target-feature" "-vfp4"
@@ -363,6 +364,7 @@
 // CHECK-SOFT-ABI-FP: "-target-feature" "-fp-armv8"
 // CHECK-SOFT-ABI-FP: "-target-feature" "-neon"
 // CHECK-SOFT-ABI-FP: "-target-feature" "-crypto"
+// CHECK-SOFT-ABI-FP: "-target-feature" "-fpregs"
 
 // RUN: %clang -target arm-linux-androideabi21 %s -### -c 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM5-ANDROID-FP-DEFAULT %s

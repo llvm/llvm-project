@@ -1007,7 +1007,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
 
   // Check for working directory option before accessing any files
   if (Arg *WD = Args.getLastArg(options::OPT_working_directory))
-    if (std::error_code EC = VFS->setCurrentWorkingDirectory(WD->getValue()))
+    if (VFS->setCurrentWorkingDirectory(WD->getValue()))
       Diag(diag::err_drv_unable_to_set_working_directory) << WD->getValue();
 
   // FIXME: This stuff needs to go into the Compilation, not the driver.
