@@ -1832,29 +1832,40 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool isVarArg                         = CLI.IsVarArg;
 
   MachineFunction &MF = DAG.getMachineFunction();
-  bool isStructRet    = (Outs.empty()) ? false : Outs[0].Flags.isSRet();
-  bool isThisReturn   = false;
-  bool isSibCall      = false;
+  bool isStructRet = (Outs.empty()) ? false : Outs[0].Flags.isSRet();
+  bool isThisReturn = false;
   auto Attr = MF.getFunction().getFnAttribute("disable-tail-calls");
+  bool PreferIndirect = false;
 
   // Disable tail calls if they're not supported.
   if (!Subtarget->supportsTailCall() || Attr.getValueAsString() == "true")
     isTailCall = false;
 
+  if (isa<GlobalAddressSDNode>(Callee)) {
+    // If we're optimizing for minimum size and the function is called three or
+    // more times in this block, we can improve codesize by calling indirectly
+    // as BLXr has a 16-bit encoding.
+    auto *GV = cast<GlobalAddressSDNode>(Callee)->getGlobal();
+    auto *BB = CLI.CS.getParent();
+    PreferIndirect =
+        Subtarget->isThumb() && Subtarget->hasMinSize() &&
+        count_if(GV->users(), [&BB](const User *U) {
+          return isa<Instruction>(U) && cast<Instruction>(U)->getParent() == BB;
+        }) > 2;
+  }
   if (isTailCall) {
     // Check if it's really possible to do a tail call.
-    isTailCall = IsEligibleForTailCallOptimization(Callee, CallConv,
-                    isVarArg, isStructRet, MF.getFunction().hasStructRetAttr(),
-                                                   Outs, OutVals, Ins, DAG);
+    isTailCall = IsEligibleForTailCallOptimization(
+        Callee, CallConv, isVarArg, isStructRet,
+        MF.getFunction().hasStructRetAttr(), Outs, OutVals, Ins, DAG,
+        PreferIndirect);
     if (!isTailCall && CLI.CS && CLI.CS.isMustTailCall())
       report_fatal_error("failed to perform tail call elimination on a call "
                          "site marked musttail");
     // We don't support GuaranteedTailCallOpt for ARM, only automatically
     // detected sibcalls.
-    if (isTailCall) {
+    if (isTailCall)
       ++NumTailCalls;
-      isSibCall = true;
-    }
   }
 
   // Analyze operands of the call, assigning locations to each operand.
@@ -1866,14 +1877,14 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getNextStackOffset();
 
-  // For tail calls, memory operands are available in our caller's stack.
-  if (isSibCall)
+  if (isTailCall) {
+    // For tail calls, memory operands are available in our caller's stack.
     NumBytes = 0;
-
-  // Adjust the stack pointer for the new arguments...
-  // These operations are automatically eliminated by the prolog/epilog pass
-  if (!isSibCall)
+  } else {
+    // Adjust the stack pointer for the new arguments...
+    // These operations are automatically eliminated by the prolog/epilog pass
     Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
+  }
 
   SDValue StackPtr =
       DAG.getCopyFromReg(Chain, dl, ARM::SP, getPointerTy(DAG.getDataLayout()));
@@ -1995,7 +2006,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         MemOpChains.push_back(DAG.getNode(ARMISD::COPY_STRUCT_BYVAL, dl, VTs,
                                           Ops));
       }
-    } else if (!isSibCall) {
+    } else if (!isTailCall) {
       assert(VA.isMemLoc());
 
       MemOpChains.push_back(LowerMemOpCallTo(Chain, StackPtr, Arg,
@@ -2067,17 +2078,6 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
           MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
     }
   } else if (isa<GlobalAddressSDNode>(Callee)) {
-    // If we're optimizing for minimum size and the function is called three or
-    // more times in this block, we can improve codesize by calling indirectly
-    // as BLXr has a 16-bit encoding.
-    auto *GV = cast<GlobalAddressSDNode>(Callee)->getGlobal();
-    auto *BB = CLI.CS.getParent();
-    bool PreferIndirect =
-        Subtarget->isThumb() && Subtarget->hasMinSize() &&
-        count_if(GV->users(), [&BB](const User *U) {
-          return isa<Instruction>(U) && cast<Instruction>(U)->getParent() == BB;
-        }) > 2;
-
     if (!PreferIndirect) {
       isDirect = true;
       bool isDef = GV->isStrongDefinitionForLinker();
@@ -2309,28 +2309,25 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
 /// IsEligibleForTailCallOptimization - Check whether the call is eligible
 /// for tail call optimization. Targets which want to do tail call
 /// optimization should implement this function.
-bool
-ARMTargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
-                                                     CallingConv::ID CalleeCC,
-                                                     bool isVarArg,
-                                                     bool isCalleeStructRet,
-                                                     bool isCallerStructRet,
-                                    const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                    const SmallVectorImpl<SDValue> &OutVals,
-                                    const SmallVectorImpl<ISD::InputArg> &Ins,
-                                                     SelectionDAG& DAG) const {
+bool ARMTargetLowering::IsEligibleForTailCallOptimization(
+    SDValue Callee, CallingConv::ID CalleeCC, bool isVarArg,
+    bool isCalleeStructRet, bool isCallerStructRet,
+    const SmallVectorImpl<ISD::OutputArg> &Outs,
+    const SmallVectorImpl<SDValue> &OutVals,
+    const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG,
+    const bool isIndirect) const {
   MachineFunction &MF = DAG.getMachineFunction();
   const Function &CallerF = MF.getFunction();
   CallingConv::ID CallerCC = CallerF.getCallingConv();
 
   assert(Subtarget->supportsTailCall());
 
-  // Tail calls to function pointers cannot be optimized for Thumb1 if the args
+  // Indirect tail calls cannot be optimized for Thumb1 if the args
   // to the call take up r0-r3. The reason is that there are no legal registers
   // left to hold the pointer to the function to be called.
   if (Subtarget->isThumb1Only() && Outs.size() >= 4 &&
-      !isa<GlobalAddressSDNode>(Callee.getNode()))
-      return false;
+      (!isa<GlobalAddressSDNode>(Callee.getNode()) || isIndirect))
+    return false;
 
   // Look for obvious safe cases to perform tail call optimization that do not
   // require ABI changes. This is what gcc calls sibcall.

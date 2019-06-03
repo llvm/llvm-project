@@ -488,7 +488,7 @@ static void scalarizeMaskedScatter(CallInst *CI, bool &ModifiedDT) {
   // Shorten the way if the mask is a vector of constants.
   if (isConstantIntVector(Mask)) {
     for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
-      if (cast<ConstantVector>(Mask)->getAggregateElement(Idx)->isNullValue())
+      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
         continue;
       Value *OneElt =
           Builder.CreateExtractElement(Src, Idx, "Elt" + Twine(Idx));
