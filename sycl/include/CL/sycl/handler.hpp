@@ -464,8 +464,11 @@ private:
                        sizeof(T), ArgIndex);
   }
 
-  //  TODO: implement when sampler class is ready
-  //  void setArgHelper(int argIndex, sampler &&arg) {}
+  void setArgHelper(int ArgIndex, sampler &&Arg) {
+    void *StoredArg = (void *)storePlainArg(Arg);
+    MArgs.emplace_back(detail::kernel_param_kind_t::kind_sampler, StoredArg,
+                       sizeof(sampler), ArgIndex);
+  }
 
   void verifySyclKernelInvoc(const kernel &SyclKernel) {
     if (is_host()) {
