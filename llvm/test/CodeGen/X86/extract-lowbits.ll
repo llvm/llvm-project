@@ -1026,6 +1026,90 @@ define i32 @bzhi64_32_a2(i64 %val, i32 %numlowbits) nounwind {
   ret i32 %truncmasked
 }
 
+; Shifting happens in 64-bit. Mask is 32-bit, but calculated in 64-bit.
+; Masking is 64-bit. Then truncation.
+define i32 @bzhi64_32_a3(i64 %val, i64 %numlowbits) nounwind {
+; X86-NOBMI-LABEL: bzhi64_32_a3:
+; X86-NOBMI:       # %bb.0:
+; X86-NOBMI-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NOBMI-NEXT:    movl $1, %edx
+; X86-NOBMI-NEXT:    shll %cl, %edx
+; X86-NOBMI-NEXT:    xorl %eax, %eax
+; X86-NOBMI-NEXT:    testb $32, %cl
+; X86-NOBMI-NEXT:    jne .LBB14_2
+; X86-NOBMI-NEXT:  # %bb.1:
+; X86-NOBMI-NEXT:    movl %edx, %eax
+; X86-NOBMI-NEXT:  .LBB14_2:
+; X86-NOBMI-NEXT:    decl %eax
+; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    retl
+;
+; X86-BMI1NOTBM-LABEL: bzhi64_32_a3:
+; X86-BMI1NOTBM:       # %bb.0:
+; X86-BMI1NOTBM-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-BMI1NOTBM-NEXT:    movl $1, %edx
+; X86-BMI1NOTBM-NEXT:    shll %cl, %edx
+; X86-BMI1NOTBM-NEXT:    xorl %eax, %eax
+; X86-BMI1NOTBM-NEXT:    testb $32, %cl
+; X86-BMI1NOTBM-NEXT:    jne .LBB14_2
+; X86-BMI1NOTBM-NEXT:  # %bb.1:
+; X86-BMI1NOTBM-NEXT:    movl %edx, %eax
+; X86-BMI1NOTBM-NEXT:  .LBB14_2:
+; X86-BMI1NOTBM-NEXT:    decl %eax
+; X86-BMI1NOTBM-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-BMI1NOTBM-NEXT:    retl
+;
+; X86-BMI1BMI2-LABEL: bzhi64_32_a3:
+; X86-BMI1BMI2:       # %bb.0:
+; X86-BMI1BMI2-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-BMI1BMI2-NEXT:    xorl %eax, %eax
+; X86-BMI1BMI2-NEXT:    testb $32, %cl
+; X86-BMI1BMI2-NEXT:    jne .LBB14_2
+; X86-BMI1BMI2-NEXT:  # %bb.1:
+; X86-BMI1BMI2-NEXT:    movl $1, %eax
+; X86-BMI1BMI2-NEXT:    shlxl %ecx, %eax, %eax
+; X86-BMI1BMI2-NEXT:  .LBB14_2:
+; X86-BMI1BMI2-NEXT:    decl %eax
+; X86-BMI1BMI2-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-BMI1BMI2-NEXT:    retl
+;
+; X64-NOBMI-LABEL: bzhi64_32_a3:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    movq %rsi, %rcx
+; X64-NOBMI-NEXT:    movl $1, %eax
+; X64-NOBMI-NEXT:    # kill: def $cl killed $cl killed $rcx
+; X64-NOBMI-NEXT:    shlq %cl, %rax
+; X64-NOBMI-NEXT:    decl %eax
+; X64-NOBMI-NEXT:    andl %edi, %eax
+; X64-NOBMI-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMI1NOTBM-LABEL: bzhi64_32_a3:
+; X64-BMI1NOTBM:       # %bb.0:
+; X64-BMI1NOTBM-NEXT:    movq %rsi, %rcx
+; X64-BMI1NOTBM-NEXT:    movl $1, %eax
+; X64-BMI1NOTBM-NEXT:    # kill: def $cl killed $cl killed $rcx
+; X64-BMI1NOTBM-NEXT:    shlq %cl, %rax
+; X64-BMI1NOTBM-NEXT:    decl %eax
+; X64-BMI1NOTBM-NEXT:    andl %edi, %eax
+; X64-BMI1NOTBM-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-BMI1NOTBM-NEXT:    retq
+;
+; X64-BMI1BMI2-LABEL: bzhi64_32_a3:
+; X64-BMI1BMI2:       # %bb.0:
+; X64-BMI1BMI2-NEXT:    movl $1, %eax
+; X64-BMI1BMI2-NEXT:    shlxq %rsi, %rax, %rax
+; X64-BMI1BMI2-NEXT:    decl %eax
+; X64-BMI1BMI2-NEXT:    andl %edi, %eax
+; X64-BMI1BMI2-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-BMI1BMI2-NEXT:    retq
+  %onebit = shl i64 1, %numlowbits
+  %mask = add nsw i64 %onebit, 4294967295
+  %masked = and i64 %mask, %val
+  %truncmasked = trunc i64 %masked to i32
+  ret i32 %truncmasked
+}
+
 ; ---------------------------------------------------------------------------- ;
 ; Pattern b. 32-bit
 ; ---------------------------------------------------------------------------- ;
@@ -1296,11 +1380,11 @@ define i64 @bzhi64_b0(i64 %val, i64 %numlowbits) nounwind {
 ; X86-NOBMI-NEXT:    shll %cl, %eax
 ; X86-NOBMI-NEXT:    shldl %cl, %edx, %edx
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    je .LBB19_2
+; X86-NOBMI-NEXT:    je .LBB20_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %eax, %edx
 ; X86-NOBMI-NEXT:    xorl %eax, %eax
-; X86-NOBMI-NEXT:  .LBB19_2:
+; X86-NOBMI-NEXT:  .LBB20_2:
 ; X86-NOBMI-NEXT:    notl %edx
 ; X86-NOBMI-NEXT:    notl %eax
 ; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %edx
@@ -1316,11 +1400,11 @@ define i64 @bzhi64_b0(i64 %val, i64 %numlowbits) nounwind {
 ; X86-BMI1NOTBM-NEXT:    shll %cl, %esi
 ; X86-BMI1NOTBM-NEXT:    shldl %cl, %eax, %eax
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    je .LBB19_2
+; X86-BMI1NOTBM-NEXT:    je .LBB20_2
 ; X86-BMI1NOTBM-NEXT:  # %bb.1:
 ; X86-BMI1NOTBM-NEXT:    movl %esi, %eax
 ; X86-BMI1NOTBM-NEXT:    xorl %esi, %esi
-; X86-BMI1NOTBM-NEXT:  .LBB19_2:
+; X86-BMI1NOTBM-NEXT:  .LBB20_2:
 ; X86-BMI1NOTBM-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %edx
 ; X86-BMI1NOTBM-NEXT:    andnl {{[0-9]+}}(%esp), %esi, %eax
 ; X86-BMI1NOTBM-NEXT:    popl %esi
@@ -1334,11 +1418,11 @@ define i64 @bzhi64_b0(i64 %val, i64 %numlowbits) nounwind {
 ; X86-BMI1BMI2-NEXT:    shlxl %ecx, %eax, %esi
 ; X86-BMI1BMI2-NEXT:    shldl %cl, %eax, %eax
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    je .LBB19_2
+; X86-BMI1BMI2-NEXT:    je .LBB20_2
 ; X86-BMI1BMI2-NEXT:  # %bb.1:
 ; X86-BMI1BMI2-NEXT:    movl %esi, %eax
 ; X86-BMI1BMI2-NEXT:    xorl %esi, %esi
-; X86-BMI1BMI2-NEXT:  .LBB19_2:
+; X86-BMI1BMI2-NEXT:  .LBB20_2:
 ; X86-BMI1BMI2-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %edx
 ; X86-BMI1BMI2-NEXT:    andnl {{[0-9]+}}(%esp), %esi, %eax
 ; X86-BMI1BMI2-NEXT:    popl %esi
@@ -1379,11 +1463,11 @@ define i64 @bzhi64_b1_indexzext(i64 %val, i8 zeroext %numlowbits) nounwind {
 ; X86-NOBMI-NEXT:    shll %cl, %eax
 ; X86-NOBMI-NEXT:    shldl %cl, %edx, %edx
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    je .LBB20_2
+; X86-NOBMI-NEXT:    je .LBB21_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %eax, %edx
 ; X86-NOBMI-NEXT:    xorl %eax, %eax
-; X86-NOBMI-NEXT:  .LBB20_2:
+; X86-NOBMI-NEXT:  .LBB21_2:
 ; X86-NOBMI-NEXT:    notl %edx
 ; X86-NOBMI-NEXT:    notl %eax
 ; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %edx
@@ -1399,11 +1483,11 @@ define i64 @bzhi64_b1_indexzext(i64 %val, i8 zeroext %numlowbits) nounwind {
 ; X86-BMI1NOTBM-NEXT:    shll %cl, %esi
 ; X86-BMI1NOTBM-NEXT:    shldl %cl, %eax, %eax
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    je .LBB20_2
+; X86-BMI1NOTBM-NEXT:    je .LBB21_2
 ; X86-BMI1NOTBM-NEXT:  # %bb.1:
 ; X86-BMI1NOTBM-NEXT:    movl %esi, %eax
 ; X86-BMI1NOTBM-NEXT:    xorl %esi, %esi
-; X86-BMI1NOTBM-NEXT:  .LBB20_2:
+; X86-BMI1NOTBM-NEXT:  .LBB21_2:
 ; X86-BMI1NOTBM-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %edx
 ; X86-BMI1NOTBM-NEXT:    andnl {{[0-9]+}}(%esp), %esi, %eax
 ; X86-BMI1NOTBM-NEXT:    popl %esi
@@ -1417,11 +1501,11 @@ define i64 @bzhi64_b1_indexzext(i64 %val, i8 zeroext %numlowbits) nounwind {
 ; X86-BMI1BMI2-NEXT:    shlxl %ecx, %eax, %esi
 ; X86-BMI1BMI2-NEXT:    shldl %cl, %eax, %eax
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    je .LBB20_2
+; X86-BMI1BMI2-NEXT:    je .LBB21_2
 ; X86-BMI1BMI2-NEXT:  # %bb.1:
 ; X86-BMI1BMI2-NEXT:    movl %esi, %eax
 ; X86-BMI1BMI2-NEXT:    xorl %esi, %esi
-; X86-BMI1BMI2-NEXT:  .LBB20_2:
+; X86-BMI1BMI2-NEXT:  .LBB21_2:
 ; X86-BMI1BMI2-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %edx
 ; X86-BMI1BMI2-NEXT:    andnl {{[0-9]+}}(%esp), %esi, %eax
 ; X86-BMI1BMI2-NEXT:    popl %esi
@@ -1467,11 +1551,11 @@ define i64 @bzhi64_b2_load(i64* %w, i64 %numlowbits) nounwind {
 ; X86-NOBMI-NEXT:    shll %cl, %eax
 ; X86-NOBMI-NEXT:    shldl %cl, %edx, %edx
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    je .LBB21_2
+; X86-NOBMI-NEXT:    je .LBB22_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %eax, %edx
 ; X86-NOBMI-NEXT:    xorl %eax, %eax
-; X86-NOBMI-NEXT:  .LBB21_2:
+; X86-NOBMI-NEXT:  .LBB22_2:
 ; X86-NOBMI-NEXT:    notl %edx
 ; X86-NOBMI-NEXT:    notl %eax
 ; X86-NOBMI-NEXT:    andl 4(%esi), %edx
@@ -1489,11 +1573,11 @@ define i64 @bzhi64_b2_load(i64* %w, i64 %numlowbits) nounwind {
 ; X86-BMI1NOTBM-NEXT:    shll %cl, %esi
 ; X86-BMI1NOTBM-NEXT:    shldl %cl, %edx, %edx
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    je .LBB21_2
+; X86-BMI1NOTBM-NEXT:    je .LBB22_2
 ; X86-BMI1NOTBM-NEXT:  # %bb.1:
 ; X86-BMI1NOTBM-NEXT:    movl %esi, %edx
 ; X86-BMI1NOTBM-NEXT:    xorl %esi, %esi
-; X86-BMI1NOTBM-NEXT:  .LBB21_2:
+; X86-BMI1NOTBM-NEXT:  .LBB22_2:
 ; X86-BMI1NOTBM-NEXT:    andnl 4(%eax), %edx, %edx
 ; X86-BMI1NOTBM-NEXT:    andnl (%eax), %esi, %eax
 ; X86-BMI1NOTBM-NEXT:    popl %esi
@@ -1508,11 +1592,11 @@ define i64 @bzhi64_b2_load(i64* %w, i64 %numlowbits) nounwind {
 ; X86-BMI1BMI2-NEXT:    shlxl %ecx, %edx, %esi
 ; X86-BMI1BMI2-NEXT:    shldl %cl, %edx, %edx
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    je .LBB21_2
+; X86-BMI1BMI2-NEXT:    je .LBB22_2
 ; X86-BMI1BMI2-NEXT:  # %bb.1:
 ; X86-BMI1BMI2-NEXT:    movl %esi, %edx
 ; X86-BMI1BMI2-NEXT:    xorl %esi, %esi
-; X86-BMI1BMI2-NEXT:  .LBB21_2:
+; X86-BMI1BMI2-NEXT:  .LBB22_2:
 ; X86-BMI1BMI2-NEXT:    andnl 4(%eax), %edx, %edx
 ; X86-BMI1BMI2-NEXT:    andnl (%eax), %esi, %eax
 ; X86-BMI1BMI2-NEXT:    popl %esi
@@ -1556,11 +1640,11 @@ define i64 @bzhi64_b3_load_indexzext(i64* %w, i8 zeroext %numlowbits) nounwind {
 ; X86-NOBMI-NEXT:    shll %cl, %eax
 ; X86-NOBMI-NEXT:    shldl %cl, %edx, %edx
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    je .LBB22_2
+; X86-NOBMI-NEXT:    je .LBB23_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %eax, %edx
 ; X86-NOBMI-NEXT:    xorl %eax, %eax
-; X86-NOBMI-NEXT:  .LBB22_2:
+; X86-NOBMI-NEXT:  .LBB23_2:
 ; X86-NOBMI-NEXT:    notl %edx
 ; X86-NOBMI-NEXT:    notl %eax
 ; X86-NOBMI-NEXT:    andl 4(%esi), %edx
@@ -1578,11 +1662,11 @@ define i64 @bzhi64_b3_load_indexzext(i64* %w, i8 zeroext %numlowbits) nounwind {
 ; X86-BMI1NOTBM-NEXT:    shll %cl, %esi
 ; X86-BMI1NOTBM-NEXT:    shldl %cl, %edx, %edx
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    je .LBB22_2
+; X86-BMI1NOTBM-NEXT:    je .LBB23_2
 ; X86-BMI1NOTBM-NEXT:  # %bb.1:
 ; X86-BMI1NOTBM-NEXT:    movl %esi, %edx
 ; X86-BMI1NOTBM-NEXT:    xorl %esi, %esi
-; X86-BMI1NOTBM-NEXT:  .LBB22_2:
+; X86-BMI1NOTBM-NEXT:  .LBB23_2:
 ; X86-BMI1NOTBM-NEXT:    andnl 4(%eax), %edx, %edx
 ; X86-BMI1NOTBM-NEXT:    andnl (%eax), %esi, %eax
 ; X86-BMI1NOTBM-NEXT:    popl %esi
@@ -1597,11 +1681,11 @@ define i64 @bzhi64_b3_load_indexzext(i64* %w, i8 zeroext %numlowbits) nounwind {
 ; X86-BMI1BMI2-NEXT:    shlxl %ecx, %edx, %esi
 ; X86-BMI1BMI2-NEXT:    shldl %cl, %edx, %edx
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    je .LBB22_2
+; X86-BMI1BMI2-NEXT:    je .LBB23_2
 ; X86-BMI1BMI2-NEXT:  # %bb.1:
 ; X86-BMI1BMI2-NEXT:    movl %esi, %edx
 ; X86-BMI1BMI2-NEXT:    xorl %esi, %esi
-; X86-BMI1BMI2-NEXT:  .LBB22_2:
+; X86-BMI1BMI2-NEXT:  .LBB23_2:
 ; X86-BMI1BMI2-NEXT:    andnl 4(%eax), %edx, %edx
 ; X86-BMI1BMI2-NEXT:    andnl (%eax), %esi, %eax
 ; X86-BMI1BMI2-NEXT:    popl %esi
@@ -1646,11 +1730,11 @@ define i64 @bzhi64_b4_commutative(i64 %val, i64 %numlowbits) nounwind {
 ; X86-NOBMI-NEXT:    shll %cl, %eax
 ; X86-NOBMI-NEXT:    shldl %cl, %edx, %edx
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    je .LBB23_2
+; X86-NOBMI-NEXT:    je .LBB24_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %eax, %edx
 ; X86-NOBMI-NEXT:    xorl %eax, %eax
-; X86-NOBMI-NEXT:  .LBB23_2:
+; X86-NOBMI-NEXT:  .LBB24_2:
 ; X86-NOBMI-NEXT:    notl %edx
 ; X86-NOBMI-NEXT:    notl %eax
 ; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %edx
@@ -1666,11 +1750,11 @@ define i64 @bzhi64_b4_commutative(i64 %val, i64 %numlowbits) nounwind {
 ; X86-BMI1NOTBM-NEXT:    shll %cl, %esi
 ; X86-BMI1NOTBM-NEXT:    shldl %cl, %eax, %eax
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    je .LBB23_2
+; X86-BMI1NOTBM-NEXT:    je .LBB24_2
 ; X86-BMI1NOTBM-NEXT:  # %bb.1:
 ; X86-BMI1NOTBM-NEXT:    movl %esi, %eax
 ; X86-BMI1NOTBM-NEXT:    xorl %esi, %esi
-; X86-BMI1NOTBM-NEXT:  .LBB23_2:
+; X86-BMI1NOTBM-NEXT:  .LBB24_2:
 ; X86-BMI1NOTBM-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %edx
 ; X86-BMI1NOTBM-NEXT:    andnl {{[0-9]+}}(%esp), %esi, %eax
 ; X86-BMI1NOTBM-NEXT:    popl %esi
@@ -1684,11 +1768,11 @@ define i64 @bzhi64_b4_commutative(i64 %val, i64 %numlowbits) nounwind {
 ; X86-BMI1BMI2-NEXT:    shlxl %ecx, %eax, %esi
 ; X86-BMI1BMI2-NEXT:    shldl %cl, %eax, %eax
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    je .LBB23_2
+; X86-BMI1BMI2-NEXT:    je .LBB24_2
 ; X86-BMI1BMI2-NEXT:  # %bb.1:
 ; X86-BMI1BMI2-NEXT:    movl %esi, %eax
 ; X86-BMI1BMI2-NEXT:    xorl %esi, %esi
-; X86-BMI1BMI2-NEXT:  .LBB23_2:
+; X86-BMI1BMI2-NEXT:  .LBB24_2:
 ; X86-BMI1BMI2-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %edx
 ; X86-BMI1BMI2-NEXT:    andnl {{[0-9]+}}(%esp), %esi, %eax
 ; X86-BMI1BMI2-NEXT:    popl %esi
@@ -1731,10 +1815,10 @@ define i32 @bzhi64_32_b0(i64 %val, i8 %numlowbits) nounwind {
 ; X86-NOBMI-NEXT:    shll %cl, %edx
 ; X86-NOBMI-NEXT:    xorl %eax, %eax
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    jne .LBB24_2
+; X86-NOBMI-NEXT:    jne .LBB25_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %edx, %eax
-; X86-NOBMI-NEXT:  .LBB24_2:
+; X86-NOBMI-NEXT:  .LBB25_2:
 ; X86-NOBMI-NEXT:    notl %eax
 ; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    retl
@@ -1746,10 +1830,10 @@ define i32 @bzhi64_32_b0(i64 %val, i8 %numlowbits) nounwind {
 ; X86-BMI1NOTBM-NEXT:    shll %cl, %eax
 ; X86-BMI1NOTBM-NEXT:    xorl %edx, %edx
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    jne .LBB24_2
+; X86-BMI1NOTBM-NEXT:    jne .LBB25_2
 ; X86-BMI1NOTBM-NEXT:  # %bb.1:
 ; X86-BMI1NOTBM-NEXT:    movl %eax, %edx
-; X86-BMI1NOTBM-NEXT:  .LBB24_2:
+; X86-BMI1NOTBM-NEXT:  .LBB25_2:
 ; X86-BMI1NOTBM-NEXT:    andnl {{[0-9]+}}(%esp), %edx, %eax
 ; X86-BMI1NOTBM-NEXT:    retl
 ;
@@ -1758,11 +1842,11 @@ define i32 @bzhi64_32_b0(i64 %val, i8 %numlowbits) nounwind {
 ; X86-BMI1BMI2-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-BMI1BMI2-NEXT:    xorl %ecx, %ecx
 ; X86-BMI1BMI2-NEXT:    testb $32, %al
-; X86-BMI1BMI2-NEXT:    jne .LBB24_2
+; X86-BMI1BMI2-NEXT:    jne .LBB25_2
 ; X86-BMI1BMI2-NEXT:  # %bb.1:
 ; X86-BMI1BMI2-NEXT:    movl $-1, %ecx
 ; X86-BMI1BMI2-NEXT:    shlxl %eax, %ecx, %ecx
-; X86-BMI1BMI2-NEXT:  .LBB24_2:
+; X86-BMI1BMI2-NEXT:  .LBB25_2:
 ; X86-BMI1BMI2-NEXT:    andnl {{[0-9]+}}(%esp), %ecx, %eax
 ; X86-BMI1BMI2-NEXT:    retl
 ;
@@ -1917,10 +2001,10 @@ define i32 @bzhi64_32_b3(i64 %val, i8 %numlowbits) nounwind {
 ; X86-NOBMI-NEXT:    shll %cl, %edx
 ; X86-NOBMI-NEXT:    xorl %eax, %eax
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    jne .LBB27_2
+; X86-NOBMI-NEXT:    jne .LBB28_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %edx, %eax
-; X86-NOBMI-NEXT:  .LBB27_2:
+; X86-NOBMI-NEXT:  .LBB28_2:
 ; X86-NOBMI-NEXT:    notl %eax
 ; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    retl
@@ -1932,10 +2016,10 @@ define i32 @bzhi64_32_b3(i64 %val, i8 %numlowbits) nounwind {
 ; X86-BMI1NOTBM-NEXT:    shll %cl, %eax
 ; X86-BMI1NOTBM-NEXT:    xorl %edx, %edx
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    jne .LBB27_2
+; X86-BMI1NOTBM-NEXT:    jne .LBB28_2
 ; X86-BMI1NOTBM-NEXT:  # %bb.1:
 ; X86-BMI1NOTBM-NEXT:    movl %eax, %edx
-; X86-BMI1NOTBM-NEXT:  .LBB27_2:
+; X86-BMI1NOTBM-NEXT:  .LBB28_2:
 ; X86-BMI1NOTBM-NEXT:    andnl {{[0-9]+}}(%esp), %edx, %eax
 ; X86-BMI1NOTBM-NEXT:    retl
 ;
@@ -1944,11 +2028,11 @@ define i32 @bzhi64_32_b3(i64 %val, i8 %numlowbits) nounwind {
 ; X86-BMI1BMI2-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-BMI1BMI2-NEXT:    xorl %ecx, %ecx
 ; X86-BMI1BMI2-NEXT:    testb $32, %al
-; X86-BMI1BMI2-NEXT:    jne .LBB27_2
+; X86-BMI1BMI2-NEXT:    jne .LBB28_2
 ; X86-BMI1BMI2-NEXT:  # %bb.1:
 ; X86-BMI1BMI2-NEXT:    movl $-1, %ecx
 ; X86-BMI1BMI2-NEXT:    shlxl %eax, %ecx, %ecx
-; X86-BMI1BMI2-NEXT:  .LBB27_2:
+; X86-BMI1BMI2-NEXT:  .LBB28_2:
 ; X86-BMI1BMI2-NEXT:    andnl {{[0-9]+}}(%esp), %ecx, %eax
 ; X86-BMI1BMI2-NEXT:    retl
 ;
@@ -2581,11 +2665,11 @@ define i64 @bzhi64_c0(i64 %val, i64 %numlowbits) nounwind {
 ; X86-NOBMI-NEXT:    shrl %cl, %edi
 ; X86-NOBMI-NEXT:    shrdl %cl, %esi, %esi
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    je .LBB33_2
+; X86-NOBMI-NEXT:    je .LBB34_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %edi, %esi
 ; X86-NOBMI-NEXT:    xorl %edi, %edi
-; X86-NOBMI-NEXT:  .LBB33_2:
+; X86-NOBMI-NEXT:  .LBB34_2:
 ; X86-NOBMI-NEXT:    subl $8, %esp
 ; X86-NOBMI-NEXT:    pushl %edi
 ; X86-NOBMI-NEXT:    pushl %esi
@@ -2612,11 +2696,11 @@ define i64 @bzhi64_c0(i64 %val, i64 %numlowbits) nounwind {
 ; X86-BMI1NOTBM-NEXT:    shrl %cl, %edi
 ; X86-BMI1NOTBM-NEXT:    shrdl %cl, %esi, %esi
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    je .LBB33_2
+; X86-BMI1NOTBM-NEXT:    je .LBB34_2
 ; X86-BMI1NOTBM-NEXT:  # %bb.1:
 ; X86-BMI1NOTBM-NEXT:    movl %edi, %esi
 ; X86-BMI1NOTBM-NEXT:    xorl %edi, %edi
-; X86-BMI1NOTBM-NEXT:  .LBB33_2:
+; X86-BMI1NOTBM-NEXT:  .LBB34_2:
 ; X86-BMI1NOTBM-NEXT:    subl $8, %esp
 ; X86-BMI1NOTBM-NEXT:    pushl %edi
 ; X86-BMI1NOTBM-NEXT:    pushl %esi
@@ -2642,11 +2726,11 @@ define i64 @bzhi64_c0(i64 %val, i64 %numlowbits) nounwind {
 ; X86-BMI1BMI2-NEXT:    shrxl %ecx, %esi, %edi
 ; X86-BMI1BMI2-NEXT:    shrdl %cl, %esi, %esi
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    je .LBB33_2
+; X86-BMI1BMI2-NEXT:    je .LBB34_2
 ; X86-BMI1BMI2-NEXT:  # %bb.1:
 ; X86-BMI1BMI2-NEXT:    movl %edi, %esi
 ; X86-BMI1BMI2-NEXT:    xorl %edi, %edi
-; X86-BMI1BMI2-NEXT:  .LBB33_2:
+; X86-BMI1BMI2-NEXT:  .LBB34_2:
 ; X86-BMI1BMI2-NEXT:    subl $8, %esp
 ; X86-BMI1BMI2-NEXT:    pushl %edi
 ; X86-BMI1BMI2-NEXT:    pushl %esi
@@ -2738,11 +2822,11 @@ define i64 @bzhi64_c1_indexzext(i64 %val, i8 %numlowbits) nounwind {
 ; X86-NOBMI-NEXT:    shrl %cl, %edi
 ; X86-NOBMI-NEXT:    shrdl %cl, %esi, %esi
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    je .LBB34_2
+; X86-NOBMI-NEXT:    je .LBB35_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %edi, %esi
 ; X86-NOBMI-NEXT:    xorl %edi, %edi
-; X86-NOBMI-NEXT:  .LBB34_2:
+; X86-NOBMI-NEXT:  .LBB35_2:
 ; X86-NOBMI-NEXT:    subl $8, %esp
 ; X86-NOBMI-NEXT:    pushl %edi
 ; X86-NOBMI-NEXT:    pushl %esi
@@ -2769,11 +2853,11 @@ define i64 @bzhi64_c1_indexzext(i64 %val, i8 %numlowbits) nounwind {
 ; X86-BMI1NOTBM-NEXT:    shrl %cl, %edi
 ; X86-BMI1NOTBM-NEXT:    shrdl %cl, %esi, %esi
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    je .LBB34_2
+; X86-BMI1NOTBM-NEXT:    je .LBB35_2
 ; X86-BMI1NOTBM-NEXT:  # %bb.1:
 ; X86-BMI1NOTBM-NEXT:    movl %edi, %esi
 ; X86-BMI1NOTBM-NEXT:    xorl %edi, %edi
-; X86-BMI1NOTBM-NEXT:  .LBB34_2:
+; X86-BMI1NOTBM-NEXT:  .LBB35_2:
 ; X86-BMI1NOTBM-NEXT:    subl $8, %esp
 ; X86-BMI1NOTBM-NEXT:    pushl %edi
 ; X86-BMI1NOTBM-NEXT:    pushl %esi
@@ -2799,11 +2883,11 @@ define i64 @bzhi64_c1_indexzext(i64 %val, i8 %numlowbits) nounwind {
 ; X86-BMI1BMI2-NEXT:    shrxl %ecx, %esi, %edi
 ; X86-BMI1BMI2-NEXT:    shrdl %cl, %esi, %esi
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    je .LBB34_2
+; X86-BMI1BMI2-NEXT:    je .LBB35_2
 ; X86-BMI1BMI2-NEXT:  # %bb.1:
 ; X86-BMI1BMI2-NEXT:    movl %edi, %esi
 ; X86-BMI1BMI2-NEXT:    xorl %edi, %edi
-; X86-BMI1BMI2-NEXT:  .LBB34_2:
+; X86-BMI1BMI2-NEXT:  .LBB35_2:
 ; X86-BMI1BMI2-NEXT:    subl $8, %esp
 ; X86-BMI1BMI2-NEXT:    pushl %edi
 ; X86-BMI1BMI2-NEXT:    pushl %esi
@@ -2897,11 +2981,11 @@ define i64 @bzhi64_c2_load(i64* %w, i64 %numlowbits) nounwind {
 ; X86-NOBMI-NEXT:    shrl %cl, %ebx
 ; X86-NOBMI-NEXT:    shrdl %cl, %eax, %eax
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    je .LBB35_2
+; X86-NOBMI-NEXT:    je .LBB36_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %ebx, %eax
 ; X86-NOBMI-NEXT:    xorl %ebx, %ebx
-; X86-NOBMI-NEXT:  .LBB35_2:
+; X86-NOBMI-NEXT:  .LBB36_2:
 ; X86-NOBMI-NEXT:    movl (%edx), %esi
 ; X86-NOBMI-NEXT:    andl %eax, %esi
 ; X86-NOBMI-NEXT:    movl 4(%edx), %edi
@@ -2931,11 +3015,11 @@ define i64 @bzhi64_c2_load(i64* %w, i64 %numlowbits) nounwind {
 ; X86-BMI1NOTBM-NEXT:    shrl %cl, %ebx
 ; X86-BMI1NOTBM-NEXT:    shrdl %cl, %eax, %eax
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    je .LBB35_2
+; X86-BMI1NOTBM-NEXT:    je .LBB36_2
 ; X86-BMI1NOTBM-NEXT:  # %bb.1:
 ; X86-BMI1NOTBM-NEXT:    movl %ebx, %eax
 ; X86-BMI1NOTBM-NEXT:    xorl %ebx, %ebx
-; X86-BMI1NOTBM-NEXT:  .LBB35_2:
+; X86-BMI1NOTBM-NEXT:  .LBB36_2:
 ; X86-BMI1NOTBM-NEXT:    movl (%edx), %esi
 ; X86-BMI1NOTBM-NEXT:    andl %eax, %esi
 ; X86-BMI1NOTBM-NEXT:    movl 4(%edx), %edi
@@ -2964,11 +3048,11 @@ define i64 @bzhi64_c2_load(i64* %w, i64 %numlowbits) nounwind {
 ; X86-BMI1BMI2-NEXT:    shrxl %ecx, %eax, %ebx
 ; X86-BMI1BMI2-NEXT:    shrdl %cl, %eax, %eax
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    je .LBB35_2
+; X86-BMI1BMI2-NEXT:    je .LBB36_2
 ; X86-BMI1BMI2-NEXT:  # %bb.1:
 ; X86-BMI1BMI2-NEXT:    movl %ebx, %eax
 ; X86-BMI1BMI2-NEXT:    xorl %ebx, %ebx
-; X86-BMI1BMI2-NEXT:  .LBB35_2:
+; X86-BMI1BMI2-NEXT:  .LBB36_2:
 ; X86-BMI1BMI2-NEXT:    movl (%edx), %esi
 ; X86-BMI1BMI2-NEXT:    andl %eax, %esi
 ; X86-BMI1BMI2-NEXT:    movl 4(%edx), %edi
@@ -3051,11 +3135,11 @@ define i64 @bzhi64_c3_load_indexzext(i64* %w, i8 %numlowbits) nounwind {
 ; X86-NOBMI-NEXT:    shrl %cl, %ebx
 ; X86-NOBMI-NEXT:    shrdl %cl, %eax, %eax
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    je .LBB36_2
+; X86-NOBMI-NEXT:    je .LBB37_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %ebx, %eax
 ; X86-NOBMI-NEXT:    xorl %ebx, %ebx
-; X86-NOBMI-NEXT:  .LBB36_2:
+; X86-NOBMI-NEXT:  .LBB37_2:
 ; X86-NOBMI-NEXT:    movl (%edx), %esi
 ; X86-NOBMI-NEXT:    andl %eax, %esi
 ; X86-NOBMI-NEXT:    movl 4(%edx), %edi
@@ -3085,11 +3169,11 @@ define i64 @bzhi64_c3_load_indexzext(i64* %w, i8 %numlowbits) nounwind {
 ; X86-BMI1NOTBM-NEXT:    shrl %cl, %ebx
 ; X86-BMI1NOTBM-NEXT:    shrdl %cl, %eax, %eax
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    je .LBB36_2
+; X86-BMI1NOTBM-NEXT:    je .LBB37_2
 ; X86-BMI1NOTBM-NEXT:  # %bb.1:
 ; X86-BMI1NOTBM-NEXT:    movl %ebx, %eax
 ; X86-BMI1NOTBM-NEXT:    xorl %ebx, %ebx
-; X86-BMI1NOTBM-NEXT:  .LBB36_2:
+; X86-BMI1NOTBM-NEXT:  .LBB37_2:
 ; X86-BMI1NOTBM-NEXT:    movl (%edx), %esi
 ; X86-BMI1NOTBM-NEXT:    andl %eax, %esi
 ; X86-BMI1NOTBM-NEXT:    movl 4(%edx), %edi
@@ -3118,11 +3202,11 @@ define i64 @bzhi64_c3_load_indexzext(i64* %w, i8 %numlowbits) nounwind {
 ; X86-BMI1BMI2-NEXT:    shrxl %ecx, %eax, %ebx
 ; X86-BMI1BMI2-NEXT:    shrdl %cl, %eax, %eax
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    je .LBB36_2
+; X86-BMI1BMI2-NEXT:    je .LBB37_2
 ; X86-BMI1BMI2-NEXT:  # %bb.1:
 ; X86-BMI1BMI2-NEXT:    movl %ebx, %eax
 ; X86-BMI1BMI2-NEXT:    xorl %ebx, %ebx
-; X86-BMI1BMI2-NEXT:  .LBB36_2:
+; X86-BMI1BMI2-NEXT:  .LBB37_2:
 ; X86-BMI1BMI2-NEXT:    movl (%edx), %esi
 ; X86-BMI1BMI2-NEXT:    andl %eax, %esi
 ; X86-BMI1BMI2-NEXT:    movl 4(%edx), %edi
@@ -3206,11 +3290,11 @@ define i64 @bzhi64_c4_commutative(i64 %val, i64 %numlowbits) nounwind {
 ; X86-NOBMI-NEXT:    shrl %cl, %edi
 ; X86-NOBMI-NEXT:    shrdl %cl, %esi, %esi
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    je .LBB37_2
+; X86-NOBMI-NEXT:    je .LBB38_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %edi, %esi
 ; X86-NOBMI-NEXT:    xorl %edi, %edi
-; X86-NOBMI-NEXT:  .LBB37_2:
+; X86-NOBMI-NEXT:  .LBB38_2:
 ; X86-NOBMI-NEXT:    subl $8, %esp
 ; X86-NOBMI-NEXT:    pushl %edi
 ; X86-NOBMI-NEXT:    pushl %esi
@@ -3237,11 +3321,11 @@ define i64 @bzhi64_c4_commutative(i64 %val, i64 %numlowbits) nounwind {
 ; X86-BMI1NOTBM-NEXT:    shrl %cl, %edi
 ; X86-BMI1NOTBM-NEXT:    shrdl %cl, %esi, %esi
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    je .LBB37_2
+; X86-BMI1NOTBM-NEXT:    je .LBB38_2
 ; X86-BMI1NOTBM-NEXT:  # %bb.1:
 ; X86-BMI1NOTBM-NEXT:    movl %edi, %esi
 ; X86-BMI1NOTBM-NEXT:    xorl %edi, %edi
-; X86-BMI1NOTBM-NEXT:  .LBB37_2:
+; X86-BMI1NOTBM-NEXT:  .LBB38_2:
 ; X86-BMI1NOTBM-NEXT:    subl $8, %esp
 ; X86-BMI1NOTBM-NEXT:    pushl %edi
 ; X86-BMI1NOTBM-NEXT:    pushl %esi
@@ -3267,11 +3351,11 @@ define i64 @bzhi64_c4_commutative(i64 %val, i64 %numlowbits) nounwind {
 ; X86-BMI1BMI2-NEXT:    shrxl %ecx, %esi, %edi
 ; X86-BMI1BMI2-NEXT:    shrdl %cl, %esi, %esi
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    je .LBB37_2
+; X86-BMI1BMI2-NEXT:    je .LBB38_2
 ; X86-BMI1BMI2-NEXT:  # %bb.1:
 ; X86-BMI1BMI2-NEXT:    movl %edi, %esi
 ; X86-BMI1BMI2-NEXT:    xorl %edi, %edi
-; X86-BMI1BMI2-NEXT:  .LBB37_2:
+; X86-BMI1BMI2-NEXT:  .LBB38_2:
 ; X86-BMI1BMI2-NEXT:    subl $8, %esp
 ; X86-BMI1BMI2-NEXT:    pushl %edi
 ; X86-BMI1BMI2-NEXT:    pushl %esi
@@ -3363,10 +3447,10 @@ define i32 @bzhi64_32_c0(i64 %val, i64 %numlowbits) nounwind {
 ; X86-NOBMI-NEXT:    shrl %cl, %eax
 ; X86-NOBMI-NEXT:    shrdl %cl, %edx, %edx
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    jne .LBB38_2
+; X86-NOBMI-NEXT:    jne .LBB39_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %edx, %eax
-; X86-NOBMI-NEXT:  .LBB38_2:
+; X86-NOBMI-NEXT:  .LBB39_2:
 ; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    retl
 ;
@@ -3379,10 +3463,10 @@ define i32 @bzhi64_32_c0(i64 %val, i64 %numlowbits) nounwind {
 ; X86-BMI1NOTBM-NEXT:    shrl %cl, %eax
 ; X86-BMI1NOTBM-NEXT:    shrdl %cl, %edx, %edx
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    jne .LBB38_2
+; X86-BMI1NOTBM-NEXT:    jne .LBB39_2
 ; X86-BMI1NOTBM-NEXT:  # %bb.1:
 ; X86-BMI1NOTBM-NEXT:    movl %edx, %eax
-; X86-BMI1NOTBM-NEXT:  .LBB38_2:
+; X86-BMI1NOTBM-NEXT:  .LBB39_2:
 ; X86-BMI1NOTBM-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-BMI1NOTBM-NEXT:    retl
 ;
@@ -3394,10 +3478,10 @@ define i32 @bzhi64_32_c0(i64 %val, i64 %numlowbits) nounwind {
 ; X86-BMI1BMI2-NEXT:    movl $-1, %eax
 ; X86-BMI1BMI2-NEXT:    shrdl %cl, %eax, %eax
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    je .LBB38_2
+; X86-BMI1BMI2-NEXT:    je .LBB39_2
 ; X86-BMI1BMI2-NEXT:  # %bb.1:
 ; X86-BMI1BMI2-NEXT:    shrxl %ecx, %edx, %eax
-; X86-BMI1BMI2-NEXT:  .LBB38_2:
+; X86-BMI1BMI2-NEXT:  .LBB39_2:
 ; X86-BMI1BMI2-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-BMI1BMI2-NEXT:    retl
 ;
@@ -3777,26 +3861,26 @@ define i64 @bzhi64_d0(i64 %val, i64 %numlowbits) nounwind {
 ; X86-NOBMI-NEXT:    shldl %cl, %edx, %eax
 ; X86-NOBMI-NEXT:    testb $32, %cl
 ; X86-NOBMI-NEXT:    movl %esi, %edi
-; X86-NOBMI-NEXT:    jne .LBB45_2
+; X86-NOBMI-NEXT:    jne .LBB46_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %eax, %edi
-; X86-NOBMI-NEXT:  .LBB45_2:
+; X86-NOBMI-NEXT:  .LBB46_2:
 ; X86-NOBMI-NEXT:    movl %edi, %eax
 ; X86-NOBMI-NEXT:    shrl %cl, %eax
 ; X86-NOBMI-NEXT:    xorl %ebx, %ebx
 ; X86-NOBMI-NEXT:    testb $32, %cl
 ; X86-NOBMI-NEXT:    movl $0, %edx
-; X86-NOBMI-NEXT:    jne .LBB45_4
+; X86-NOBMI-NEXT:    jne .LBB46_4
 ; X86-NOBMI-NEXT:  # %bb.3:
 ; X86-NOBMI-NEXT:    movl %esi, %ebx
 ; X86-NOBMI-NEXT:    movl %eax, %edx
-; X86-NOBMI-NEXT:  .LBB45_4:
+; X86-NOBMI-NEXT:  .LBB46_4:
 ; X86-NOBMI-NEXT:    shrdl %cl, %edi, %ebx
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    jne .LBB45_6
+; X86-NOBMI-NEXT:    jne .LBB46_6
 ; X86-NOBMI-NEXT:  # %bb.5:
 ; X86-NOBMI-NEXT:    movl %ebx, %eax
-; X86-NOBMI-NEXT:  .LBB45_6:
+; X86-NOBMI-NEXT:  .LBB46_6:
 ; X86-NOBMI-NEXT:    popl %esi
 ; X86-NOBMI-NEXT:    popl %edi
 ; X86-NOBMI-NEXT:    popl %ebx
@@ -3816,26 +3900,26 @@ define i64 @bzhi64_d0(i64 %val, i64 %numlowbits) nounwind {
 ; X86-BMI1NOTBM-NEXT:    shldl %cl, %edx, %eax
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
 ; X86-BMI1NOTBM-NEXT:    movl %esi, %edi
-; X86-BMI1NOTBM-NEXT:    jne .LBB45_2
+; X86-BMI1NOTBM-NEXT:    jne .LBB46_2
 ; X86-BMI1NOTBM-NEXT:  # %bb.1:
 ; X86-BMI1NOTBM-NEXT:    movl %eax, %edi
-; X86-BMI1NOTBM-NEXT:  .LBB45_2:
+; X86-BMI1NOTBM-NEXT:  .LBB46_2:
 ; X86-BMI1NOTBM-NEXT:    movl %edi, %eax
 ; X86-BMI1NOTBM-NEXT:    shrl %cl, %eax
 ; X86-BMI1NOTBM-NEXT:    xorl %ebx, %ebx
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
 ; X86-BMI1NOTBM-NEXT:    movl $0, %edx
-; X86-BMI1NOTBM-NEXT:    jne .LBB45_4
+; X86-BMI1NOTBM-NEXT:    jne .LBB46_4
 ; X86-BMI1NOTBM-NEXT:  # %bb.3:
 ; X86-BMI1NOTBM-NEXT:    movl %esi, %ebx
 ; X86-BMI1NOTBM-NEXT:    movl %eax, %edx
-; X86-BMI1NOTBM-NEXT:  .LBB45_4:
+; X86-BMI1NOTBM-NEXT:  .LBB46_4:
 ; X86-BMI1NOTBM-NEXT:    shrdl %cl, %edi, %ebx
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    jne .LBB45_6
+; X86-BMI1NOTBM-NEXT:    jne .LBB46_6
 ; X86-BMI1NOTBM-NEXT:  # %bb.5:
 ; X86-BMI1NOTBM-NEXT:    movl %ebx, %eax
-; X86-BMI1NOTBM-NEXT:  .LBB45_6:
+; X86-BMI1NOTBM-NEXT:  .LBB46_6:
 ; X86-BMI1NOTBM-NEXT:    popl %esi
 ; X86-BMI1NOTBM-NEXT:    popl %edi
 ; X86-BMI1NOTBM-NEXT:    popl %ebx
@@ -3853,22 +3937,22 @@ define i64 @bzhi64_d0(i64 %val, i64 %numlowbits) nounwind {
 ; X86-BMI1BMI2-NEXT:    shlxl %ecx, %eax, %edi
 ; X86-BMI1BMI2-NEXT:    xorl %edx, %edx
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    je .LBB45_2
+; X86-BMI1BMI2-NEXT:    je .LBB46_2
 ; X86-BMI1BMI2-NEXT:  # %bb.1:
 ; X86-BMI1BMI2-NEXT:    movl %edi, %esi
 ; X86-BMI1BMI2-NEXT:    movl $0, %edi
-; X86-BMI1BMI2-NEXT:  .LBB45_2:
+; X86-BMI1BMI2-NEXT:  .LBB46_2:
 ; X86-BMI1BMI2-NEXT:    shrxl %ecx, %esi, %eax
-; X86-BMI1BMI2-NEXT:    jne .LBB45_4
+; X86-BMI1BMI2-NEXT:    jne .LBB46_4
 ; X86-BMI1BMI2-NEXT:  # %bb.3:
 ; X86-BMI1BMI2-NEXT:    movl %eax, %edx
-; X86-BMI1BMI2-NEXT:  .LBB45_4:
+; X86-BMI1BMI2-NEXT:  .LBB46_4:
 ; X86-BMI1BMI2-NEXT:    shrdl %cl, %esi, %edi
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    jne .LBB45_6
+; X86-BMI1BMI2-NEXT:    jne .LBB46_6
 ; X86-BMI1BMI2-NEXT:  # %bb.5:
 ; X86-BMI1BMI2-NEXT:    movl %edi, %eax
-; X86-BMI1BMI2-NEXT:  .LBB45_6:
+; X86-BMI1BMI2-NEXT:  .LBB46_6:
 ; X86-BMI1BMI2-NEXT:    popl %esi
 ; X86-BMI1BMI2-NEXT:    popl %edi
 ; X86-BMI1BMI2-NEXT:    retl
@@ -3914,26 +3998,26 @@ define i64 @bzhi64_d1_indexzext(i64 %val, i8 %numlowbits) nounwind {
 ; X86-NOBMI-NEXT:    shldl %cl, %edx, %eax
 ; X86-NOBMI-NEXT:    testb $32, %cl
 ; X86-NOBMI-NEXT:    movl %esi, %edi
-; X86-NOBMI-NEXT:    jne .LBB46_2
+; X86-NOBMI-NEXT:    jne .LBB47_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %eax, %edi
-; X86-NOBMI-NEXT:  .LBB46_2:
+; X86-NOBMI-NEXT:  .LBB47_2:
 ; X86-NOBMI-NEXT:    movl %edi, %eax
 ; X86-NOBMI-NEXT:    shrl %cl, %eax
 ; X86-NOBMI-NEXT:    xorl %ebx, %ebx
 ; X86-NOBMI-NEXT:    testb $32, %cl
 ; X86-NOBMI-NEXT:    movl $0, %edx
-; X86-NOBMI-NEXT:    jne .LBB46_4
+; X86-NOBMI-NEXT:    jne .LBB47_4
 ; X86-NOBMI-NEXT:  # %bb.3:
 ; X86-NOBMI-NEXT:    movl %esi, %ebx
 ; X86-NOBMI-NEXT:    movl %eax, %edx
-; X86-NOBMI-NEXT:  .LBB46_4:
+; X86-NOBMI-NEXT:  .LBB47_4:
 ; X86-NOBMI-NEXT:    shrdl %cl, %edi, %ebx
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    jne .LBB46_6
+; X86-NOBMI-NEXT:    jne .LBB47_6
 ; X86-NOBMI-NEXT:  # %bb.5:
 ; X86-NOBMI-NEXT:    movl %ebx, %eax
-; X86-NOBMI-NEXT:  .LBB46_6:
+; X86-NOBMI-NEXT:  .LBB47_6:
 ; X86-NOBMI-NEXT:    popl %esi
 ; X86-NOBMI-NEXT:    popl %edi
 ; X86-NOBMI-NEXT:    popl %ebx
@@ -3953,26 +4037,26 @@ define i64 @bzhi64_d1_indexzext(i64 %val, i8 %numlowbits) nounwind {
 ; X86-BMI1NOTBM-NEXT:    shldl %cl, %edx, %eax
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
 ; X86-BMI1NOTBM-NEXT:    movl %esi, %edi
-; X86-BMI1NOTBM-NEXT:    jne .LBB46_2
+; X86-BMI1NOTBM-NEXT:    jne .LBB47_2
 ; X86-BMI1NOTBM-NEXT:  # %bb.1:
 ; X86-BMI1NOTBM-NEXT:    movl %eax, %edi
-; X86-BMI1NOTBM-NEXT:  .LBB46_2:
+; X86-BMI1NOTBM-NEXT:  .LBB47_2:
 ; X86-BMI1NOTBM-NEXT:    movl %edi, %eax
 ; X86-BMI1NOTBM-NEXT:    shrl %cl, %eax
 ; X86-BMI1NOTBM-NEXT:    xorl %ebx, %ebx
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
 ; X86-BMI1NOTBM-NEXT:    movl $0, %edx
-; X86-BMI1NOTBM-NEXT:    jne .LBB46_4
+; X86-BMI1NOTBM-NEXT:    jne .LBB47_4
 ; X86-BMI1NOTBM-NEXT:  # %bb.3:
 ; X86-BMI1NOTBM-NEXT:    movl %esi, %ebx
 ; X86-BMI1NOTBM-NEXT:    movl %eax, %edx
-; X86-BMI1NOTBM-NEXT:  .LBB46_4:
+; X86-BMI1NOTBM-NEXT:  .LBB47_4:
 ; X86-BMI1NOTBM-NEXT:    shrdl %cl, %edi, %ebx
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    jne .LBB46_6
+; X86-BMI1NOTBM-NEXT:    jne .LBB47_6
 ; X86-BMI1NOTBM-NEXT:  # %bb.5:
 ; X86-BMI1NOTBM-NEXT:    movl %ebx, %eax
-; X86-BMI1NOTBM-NEXT:  .LBB46_6:
+; X86-BMI1NOTBM-NEXT:  .LBB47_6:
 ; X86-BMI1NOTBM-NEXT:    popl %esi
 ; X86-BMI1NOTBM-NEXT:    popl %edi
 ; X86-BMI1NOTBM-NEXT:    popl %ebx
@@ -3990,22 +4074,22 @@ define i64 @bzhi64_d1_indexzext(i64 %val, i8 %numlowbits) nounwind {
 ; X86-BMI1BMI2-NEXT:    shlxl %ecx, %eax, %edi
 ; X86-BMI1BMI2-NEXT:    xorl %edx, %edx
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    je .LBB46_2
+; X86-BMI1BMI2-NEXT:    je .LBB47_2
 ; X86-BMI1BMI2-NEXT:  # %bb.1:
 ; X86-BMI1BMI2-NEXT:    movl %edi, %esi
 ; X86-BMI1BMI2-NEXT:    movl $0, %edi
-; X86-BMI1BMI2-NEXT:  .LBB46_2:
+; X86-BMI1BMI2-NEXT:  .LBB47_2:
 ; X86-BMI1BMI2-NEXT:    shrxl %ecx, %esi, %eax
-; X86-BMI1BMI2-NEXT:    jne .LBB46_4
+; X86-BMI1BMI2-NEXT:    jne .LBB47_4
 ; X86-BMI1BMI2-NEXT:  # %bb.3:
 ; X86-BMI1BMI2-NEXT:    movl %eax, %edx
-; X86-BMI1BMI2-NEXT:  .LBB46_4:
+; X86-BMI1BMI2-NEXT:  .LBB47_4:
 ; X86-BMI1BMI2-NEXT:    shrdl %cl, %esi, %edi
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    jne .LBB46_6
+; X86-BMI1BMI2-NEXT:    jne .LBB47_6
 ; X86-BMI1BMI2-NEXT:  # %bb.5:
 ; X86-BMI1BMI2-NEXT:    movl %edi, %eax
-; X86-BMI1BMI2-NEXT:  .LBB46_6:
+; X86-BMI1BMI2-NEXT:  .LBB47_6:
 ; X86-BMI1BMI2-NEXT:    popl %esi
 ; X86-BMI1BMI2-NEXT:    popl %edi
 ; X86-BMI1BMI2-NEXT:    retl
@@ -4055,26 +4139,26 @@ define i64 @bzhi64_d2_load(i64* %w, i64 %numlowbits) nounwind {
 ; X86-NOBMI-NEXT:    shldl %cl, %edx, %eax
 ; X86-NOBMI-NEXT:    testb $32, %cl
 ; X86-NOBMI-NEXT:    movl %esi, %edi
-; X86-NOBMI-NEXT:    jne .LBB47_2
+; X86-NOBMI-NEXT:    jne .LBB48_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %eax, %edi
-; X86-NOBMI-NEXT:  .LBB47_2:
+; X86-NOBMI-NEXT:  .LBB48_2:
 ; X86-NOBMI-NEXT:    movl %edi, %eax
 ; X86-NOBMI-NEXT:    shrl %cl, %eax
 ; X86-NOBMI-NEXT:    xorl %ebx, %ebx
 ; X86-NOBMI-NEXT:    testb $32, %cl
 ; X86-NOBMI-NEXT:    movl $0, %edx
-; X86-NOBMI-NEXT:    jne .LBB47_4
+; X86-NOBMI-NEXT:    jne .LBB48_4
 ; X86-NOBMI-NEXT:  # %bb.3:
 ; X86-NOBMI-NEXT:    movl %esi, %ebx
 ; X86-NOBMI-NEXT:    movl %eax, %edx
-; X86-NOBMI-NEXT:  .LBB47_4:
+; X86-NOBMI-NEXT:  .LBB48_4:
 ; X86-NOBMI-NEXT:    shrdl %cl, %edi, %ebx
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    jne .LBB47_6
+; X86-NOBMI-NEXT:    jne .LBB48_6
 ; X86-NOBMI-NEXT:  # %bb.5:
 ; X86-NOBMI-NEXT:    movl %ebx, %eax
-; X86-NOBMI-NEXT:  .LBB47_6:
+; X86-NOBMI-NEXT:  .LBB48_6:
 ; X86-NOBMI-NEXT:    popl %esi
 ; X86-NOBMI-NEXT:    popl %edi
 ; X86-NOBMI-NEXT:    popl %ebx
@@ -4095,26 +4179,26 @@ define i64 @bzhi64_d2_load(i64* %w, i64 %numlowbits) nounwind {
 ; X86-BMI1NOTBM-NEXT:    shldl %cl, %edx, %eax
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
 ; X86-BMI1NOTBM-NEXT:    movl %esi, %edi
-; X86-BMI1NOTBM-NEXT:    jne .LBB47_2
+; X86-BMI1NOTBM-NEXT:    jne .LBB48_2
 ; X86-BMI1NOTBM-NEXT:  # %bb.1:
 ; X86-BMI1NOTBM-NEXT:    movl %eax, %edi
-; X86-BMI1NOTBM-NEXT:  .LBB47_2:
+; X86-BMI1NOTBM-NEXT:  .LBB48_2:
 ; X86-BMI1NOTBM-NEXT:    movl %edi, %eax
 ; X86-BMI1NOTBM-NEXT:    shrl %cl, %eax
 ; X86-BMI1NOTBM-NEXT:    xorl %ebx, %ebx
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
 ; X86-BMI1NOTBM-NEXT:    movl $0, %edx
-; X86-BMI1NOTBM-NEXT:    jne .LBB47_4
+; X86-BMI1NOTBM-NEXT:    jne .LBB48_4
 ; X86-BMI1NOTBM-NEXT:  # %bb.3:
 ; X86-BMI1NOTBM-NEXT:    movl %esi, %ebx
 ; X86-BMI1NOTBM-NEXT:    movl %eax, %edx
-; X86-BMI1NOTBM-NEXT:  .LBB47_4:
+; X86-BMI1NOTBM-NEXT:  .LBB48_4:
 ; X86-BMI1NOTBM-NEXT:    shrdl %cl, %edi, %ebx
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    jne .LBB47_6
+; X86-BMI1NOTBM-NEXT:    jne .LBB48_6
 ; X86-BMI1NOTBM-NEXT:  # %bb.5:
 ; X86-BMI1NOTBM-NEXT:    movl %ebx, %eax
-; X86-BMI1NOTBM-NEXT:  .LBB47_6:
+; X86-BMI1NOTBM-NEXT:  .LBB48_6:
 ; X86-BMI1NOTBM-NEXT:    popl %esi
 ; X86-BMI1NOTBM-NEXT:    popl %edi
 ; X86-BMI1NOTBM-NEXT:    popl %ebx
@@ -4133,22 +4217,22 @@ define i64 @bzhi64_d2_load(i64* %w, i64 %numlowbits) nounwind {
 ; X86-BMI1BMI2-NEXT:    shlxl %ecx, %edx, %edi
 ; X86-BMI1BMI2-NEXT:    xorl %edx, %edx
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    je .LBB47_2
+; X86-BMI1BMI2-NEXT:    je .LBB48_2
 ; X86-BMI1BMI2-NEXT:  # %bb.1:
 ; X86-BMI1BMI2-NEXT:    movl %edi, %esi
 ; X86-BMI1BMI2-NEXT:    movl $0, %edi
-; X86-BMI1BMI2-NEXT:  .LBB47_2:
+; X86-BMI1BMI2-NEXT:  .LBB48_2:
 ; X86-BMI1BMI2-NEXT:    shrxl %ecx, %esi, %eax
-; X86-BMI1BMI2-NEXT:    jne .LBB47_4
+; X86-BMI1BMI2-NEXT:    jne .LBB48_4
 ; X86-BMI1BMI2-NEXT:  # %bb.3:
 ; X86-BMI1BMI2-NEXT:    movl %eax, %edx
-; X86-BMI1BMI2-NEXT:  .LBB47_4:
+; X86-BMI1BMI2-NEXT:  .LBB48_4:
 ; X86-BMI1BMI2-NEXT:    shrdl %cl, %esi, %edi
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    jne .LBB47_6
+; X86-BMI1BMI2-NEXT:    jne .LBB48_6
 ; X86-BMI1BMI2-NEXT:  # %bb.5:
 ; X86-BMI1BMI2-NEXT:    movl %edi, %eax
-; X86-BMI1BMI2-NEXT:  .LBB47_6:
+; X86-BMI1BMI2-NEXT:  .LBB48_6:
 ; X86-BMI1BMI2-NEXT:    popl %esi
 ; X86-BMI1BMI2-NEXT:    popl %edi
 ; X86-BMI1BMI2-NEXT:    retl
@@ -4196,26 +4280,26 @@ define i64 @bzhi64_d3_load_indexzext(i64* %w, i8 %numlowbits) nounwind {
 ; X86-NOBMI-NEXT:    shldl %cl, %edx, %eax
 ; X86-NOBMI-NEXT:    testb $32, %cl
 ; X86-NOBMI-NEXT:    movl %esi, %edi
-; X86-NOBMI-NEXT:    jne .LBB48_2
+; X86-NOBMI-NEXT:    jne .LBB49_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %eax, %edi
-; X86-NOBMI-NEXT:  .LBB48_2:
+; X86-NOBMI-NEXT:  .LBB49_2:
 ; X86-NOBMI-NEXT:    movl %edi, %eax
 ; X86-NOBMI-NEXT:    shrl %cl, %eax
 ; X86-NOBMI-NEXT:    xorl %ebx, %ebx
 ; X86-NOBMI-NEXT:    testb $32, %cl
 ; X86-NOBMI-NEXT:    movl $0, %edx
-; X86-NOBMI-NEXT:    jne .LBB48_4
+; X86-NOBMI-NEXT:    jne .LBB49_4
 ; X86-NOBMI-NEXT:  # %bb.3:
 ; X86-NOBMI-NEXT:    movl %esi, %ebx
 ; X86-NOBMI-NEXT:    movl %eax, %edx
-; X86-NOBMI-NEXT:  .LBB48_4:
+; X86-NOBMI-NEXT:  .LBB49_4:
 ; X86-NOBMI-NEXT:    shrdl %cl, %edi, %ebx
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    jne .LBB48_6
+; X86-NOBMI-NEXT:    jne .LBB49_6
 ; X86-NOBMI-NEXT:  # %bb.5:
 ; X86-NOBMI-NEXT:    movl %ebx, %eax
-; X86-NOBMI-NEXT:  .LBB48_6:
+; X86-NOBMI-NEXT:  .LBB49_6:
 ; X86-NOBMI-NEXT:    popl %esi
 ; X86-NOBMI-NEXT:    popl %edi
 ; X86-NOBMI-NEXT:    popl %ebx
@@ -4236,26 +4320,26 @@ define i64 @bzhi64_d3_load_indexzext(i64* %w, i8 %numlowbits) nounwind {
 ; X86-BMI1NOTBM-NEXT:    shldl %cl, %edx, %eax
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
 ; X86-BMI1NOTBM-NEXT:    movl %esi, %edi
-; X86-BMI1NOTBM-NEXT:    jne .LBB48_2
+; X86-BMI1NOTBM-NEXT:    jne .LBB49_2
 ; X86-BMI1NOTBM-NEXT:  # %bb.1:
 ; X86-BMI1NOTBM-NEXT:    movl %eax, %edi
-; X86-BMI1NOTBM-NEXT:  .LBB48_2:
+; X86-BMI1NOTBM-NEXT:  .LBB49_2:
 ; X86-BMI1NOTBM-NEXT:    movl %edi, %eax
 ; X86-BMI1NOTBM-NEXT:    shrl %cl, %eax
 ; X86-BMI1NOTBM-NEXT:    xorl %ebx, %ebx
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
 ; X86-BMI1NOTBM-NEXT:    movl $0, %edx
-; X86-BMI1NOTBM-NEXT:    jne .LBB48_4
+; X86-BMI1NOTBM-NEXT:    jne .LBB49_4
 ; X86-BMI1NOTBM-NEXT:  # %bb.3:
 ; X86-BMI1NOTBM-NEXT:    movl %esi, %ebx
 ; X86-BMI1NOTBM-NEXT:    movl %eax, %edx
-; X86-BMI1NOTBM-NEXT:  .LBB48_4:
+; X86-BMI1NOTBM-NEXT:  .LBB49_4:
 ; X86-BMI1NOTBM-NEXT:    shrdl %cl, %edi, %ebx
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    jne .LBB48_6
+; X86-BMI1NOTBM-NEXT:    jne .LBB49_6
 ; X86-BMI1NOTBM-NEXT:  # %bb.5:
 ; X86-BMI1NOTBM-NEXT:    movl %ebx, %eax
-; X86-BMI1NOTBM-NEXT:  .LBB48_6:
+; X86-BMI1NOTBM-NEXT:  .LBB49_6:
 ; X86-BMI1NOTBM-NEXT:    popl %esi
 ; X86-BMI1NOTBM-NEXT:    popl %edi
 ; X86-BMI1NOTBM-NEXT:    popl %ebx
@@ -4274,22 +4358,22 @@ define i64 @bzhi64_d3_load_indexzext(i64* %w, i8 %numlowbits) nounwind {
 ; X86-BMI1BMI2-NEXT:    shlxl %ecx, %edx, %edi
 ; X86-BMI1BMI2-NEXT:    xorl %edx, %edx
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    je .LBB48_2
+; X86-BMI1BMI2-NEXT:    je .LBB49_2
 ; X86-BMI1BMI2-NEXT:  # %bb.1:
 ; X86-BMI1BMI2-NEXT:    movl %edi, %esi
 ; X86-BMI1BMI2-NEXT:    movl $0, %edi
-; X86-BMI1BMI2-NEXT:  .LBB48_2:
+; X86-BMI1BMI2-NEXT:  .LBB49_2:
 ; X86-BMI1BMI2-NEXT:    shrxl %ecx, %esi, %eax
-; X86-BMI1BMI2-NEXT:    jne .LBB48_4
+; X86-BMI1BMI2-NEXT:    jne .LBB49_4
 ; X86-BMI1BMI2-NEXT:  # %bb.3:
 ; X86-BMI1BMI2-NEXT:    movl %eax, %edx
-; X86-BMI1BMI2-NEXT:  .LBB48_4:
+; X86-BMI1BMI2-NEXT:  .LBB49_4:
 ; X86-BMI1BMI2-NEXT:    shrdl %cl, %esi, %edi
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    jne .LBB48_6
+; X86-BMI1BMI2-NEXT:    jne .LBB49_6
 ; X86-BMI1BMI2-NEXT:  # %bb.5:
 ; X86-BMI1BMI2-NEXT:    movl %edi, %eax
-; X86-BMI1BMI2-NEXT:  .LBB48_6:
+; X86-BMI1BMI2-NEXT:  .LBB49_6:
 ; X86-BMI1BMI2-NEXT:    popl %esi
 ; X86-BMI1BMI2-NEXT:    popl %edi
 ; X86-BMI1BMI2-NEXT:    retl
@@ -4339,18 +4423,18 @@ define i32 @bzhi64_32_d0(i64 %val, i64 %numlowbits) nounwind {
 ; X86-NOBMI-NEXT:    shll %cl, %edx
 ; X86-NOBMI-NEXT:    shldl %cl, %esi, %eax
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    je .LBB49_2
+; X86-NOBMI-NEXT:    je .LBB50_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %edx, %eax
 ; X86-NOBMI-NEXT:    xorl %edx, %edx
-; X86-NOBMI-NEXT:  .LBB49_2:
+; X86-NOBMI-NEXT:  .LBB50_2:
 ; X86-NOBMI-NEXT:    shrdl %cl, %eax, %edx
 ; X86-NOBMI-NEXT:    shrl %cl, %eax
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    jne .LBB49_4
+; X86-NOBMI-NEXT:    jne .LBB50_4
 ; X86-NOBMI-NEXT:  # %bb.3:
 ; X86-NOBMI-NEXT:    movl %edx, %eax
-; X86-NOBMI-NEXT:  .LBB49_4:
+; X86-NOBMI-NEXT:  .LBB50_4:
 ; X86-NOBMI-NEXT:    popl %esi
 ; X86-NOBMI-NEXT:    retl
 ;
@@ -4365,18 +4449,18 @@ define i32 @bzhi64_32_d0(i64 %val, i64 %numlowbits) nounwind {
 ; X86-BMI1NOTBM-NEXT:    shll %cl, %edx
 ; X86-BMI1NOTBM-NEXT:    shldl %cl, %esi, %eax
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    je .LBB49_2
+; X86-BMI1NOTBM-NEXT:    je .LBB50_2
 ; X86-BMI1NOTBM-NEXT:  # %bb.1:
 ; X86-BMI1NOTBM-NEXT:    movl %edx, %eax
 ; X86-BMI1NOTBM-NEXT:    xorl %edx, %edx
-; X86-BMI1NOTBM-NEXT:  .LBB49_2:
+; X86-BMI1NOTBM-NEXT:  .LBB50_2:
 ; X86-BMI1NOTBM-NEXT:    shrdl %cl, %eax, %edx
 ; X86-BMI1NOTBM-NEXT:    shrl %cl, %eax
 ; X86-BMI1NOTBM-NEXT:    testb $32, %cl
-; X86-BMI1NOTBM-NEXT:    jne .LBB49_4
+; X86-BMI1NOTBM-NEXT:    jne .LBB50_4
 ; X86-BMI1NOTBM-NEXT:  # %bb.3:
 ; X86-BMI1NOTBM-NEXT:    movl %edx, %eax
-; X86-BMI1NOTBM-NEXT:  .LBB49_4:
+; X86-BMI1NOTBM-NEXT:  .LBB50_4:
 ; X86-BMI1NOTBM-NEXT:    popl %esi
 ; X86-BMI1NOTBM-NEXT:    retl
 ;
@@ -4389,17 +4473,17 @@ define i32 @bzhi64_32_d0(i64 %val, i64 %numlowbits) nounwind {
 ; X86-BMI1BMI2-NEXT:    shldl %cl, %eax, %edx
 ; X86-BMI1BMI2-NEXT:    shlxl %ecx, %eax, %eax
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    je .LBB49_2
+; X86-BMI1BMI2-NEXT:    je .LBB50_2
 ; X86-BMI1BMI2-NEXT:  # %bb.1:
 ; X86-BMI1BMI2-NEXT:    movl %eax, %edx
 ; X86-BMI1BMI2-NEXT:    xorl %eax, %eax
-; X86-BMI1BMI2-NEXT:  .LBB49_2:
+; X86-BMI1BMI2-NEXT:  .LBB50_2:
 ; X86-BMI1BMI2-NEXT:    shrdl %cl, %edx, %eax
 ; X86-BMI1BMI2-NEXT:    testb $32, %cl
-; X86-BMI1BMI2-NEXT:    je .LBB49_4
+; X86-BMI1BMI2-NEXT:    je .LBB50_4
 ; X86-BMI1BMI2-NEXT:  # %bb.3:
 ; X86-BMI1BMI2-NEXT:    shrxl %ecx, %edx, %eax
-; X86-BMI1BMI2-NEXT:  .LBB49_4:
+; X86-BMI1BMI2-NEXT:  .LBB50_4:
 ; X86-BMI1BMI2-NEXT:    retl
 ;
 ; X64-NOBMI-LABEL: bzhi64_32_d0:

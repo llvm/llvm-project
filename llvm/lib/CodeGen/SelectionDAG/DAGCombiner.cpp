@@ -8006,13 +8006,18 @@ static SDValue ConvertSelectToConcatVector(SDNode *N, SelectionDAG &DAG) {
 }
 
 SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
-  if (Level >= AfterLegalizeTypes)
-    return SDValue();
-
   MaskedScatterSDNode *MSC = cast<MaskedScatterSDNode>(N);
   SDValue Mask = MSC->getMask();
-  SDValue Data  = MSC->getValue();
+  SDValue Data = MSC->getValue();
+  SDValue Chain = MSC->getChain();
   SDLoc DL(N);
+
+  // Zap scatters with a zero mask.
+  if (ISD::isBuildVectorAllZeros(Mask.getNode()))
+    return Chain;
+
+  if (Level >= AfterLegalizeTypes)
+    return SDValue();
 
   // If the MSCATTER data type requires splitting and the mask is provided by a
   // SETCC, then split both nodes and its operands before legalization. This
@@ -8030,8 +8035,6 @@ SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
 
   EVT LoVT, HiVT;
   std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(MSC->getValueType(0));
-
-  SDValue Chain = MSC->getChain();
 
   EVT MemoryVT = MSC->getMemoryVT();
   unsigned Alignment = MSC->getOriginalAlignment();
@@ -8065,14 +8068,19 @@ SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitMSTORE(SDNode *N) {
-  if (Level >= AfterLegalizeTypes)
-    return SDValue();
-
   MaskedStoreSDNode *MST = cast<MaskedStoreSDNode>(N);
   SDValue Mask = MST->getMask();
-  SDValue Data  = MST->getValue();
+  SDValue Data = MST->getValue();
+  SDValue Chain = MST->getChain();
   EVT VT = Data.getValueType();
   SDLoc DL(N);
+
+  // Zap masked stores with a zero mask.
+  if (ISD::isBuildVectorAllZeros(Mask.getNode()))
+    return Chain;
+
+  if (Level >= AfterLegalizeTypes)
+    return SDValue();
 
   // If the MSTORE data type requires splitting and the mask is provided by a
   // SETCC, then split both nodes and its operands before legalization. This
@@ -8087,7 +8095,6 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
     SDValue MaskLo, MaskHi, Lo, Hi;
     std::tie(MaskLo, MaskHi) = SplitVSETCC(Mask.getNode(), DAG);
 
-    SDValue Chain = MST->getChain();
     SDValue Ptr   = MST->getBasePtr();
 
     EVT MemoryVT = MST->getMemoryVT();
@@ -8216,12 +8223,16 @@ SDValue DAGCombiner::visitMGATHER(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitMLOAD(SDNode *N) {
-  if (Level >= AfterLegalizeTypes)
-    return SDValue();
-
   MaskedLoadSDNode *MLD = cast<MaskedLoadSDNode>(N);
   SDValue Mask = MLD->getMask();
   SDLoc DL(N);
+
+  // Zap masked loads with a zero mask.
+  if (ISD::isBuildVectorAllZeros(Mask.getNode()))
+    return CombineTo(N, MLD->getPassThru(), MLD->getChain());
+
+  if (Level >= AfterLegalizeTypes)
+    return SDValue();
 
   // If the MLOAD result requires splitting and the mask is provided by a
   // SETCC, then split both nodes and its operands before legalization. This
