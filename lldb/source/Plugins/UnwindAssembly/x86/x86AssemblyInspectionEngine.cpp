@@ -667,10 +667,207 @@ bool x86AssemblyInspectionEngine::mov_reg_to_local_stack_frame_p(
   return false;
 }
 
+// Returns true if this is a jmp instruction where we can't
+// know the destination address statically. 
+//
+// ff e0                                   jmpq   *%rax
+// ff e1                                   jmpq   *%rcx
+// ff 60 28                                jmpq   *0x28(%rax)
+// ff 60 60                                jmpq   *0x60(%rax)
+bool x86AssemblyInspectionEngine::jmp_to_reg_p() {
+  if (*m_cur_insn != 0xff)
+    return false;
+
+  // The second byte is a ModR/M /4 byte, strip off the registers
+  uint8_t second_byte_sans_reg = *(m_cur_insn + 1) & ~7;
+
+  // Don't handle 0x24 disp32, because the target address is
+  // knowable statically - pc_rel_branch_or_jump_p() will
+  // return the target address.
+
+  // [reg]
+  if (second_byte_sans_reg == 0x20)
+    return true;
+
+  // [reg]+disp8
+  if (second_byte_sans_reg == 0x60)
+    return true;
+
+  // [reg]+disp32
+  if (second_byte_sans_reg == 0xa0)
+    return true;
+
+  // reg
+  if (second_byte_sans_reg == 0xe0)
+    return true;
+
+  // disp32
+  // jumps to an address stored in memory, the value can't be cached
+  // in an unwind plan.
+  if (second_byte_sans_reg == 0x24)
+    return true;
+
+  // use SIB byte
+  // ff 24 fe  jmpq   *(%rsi,%rdi,8)
+  if (second_byte_sans_reg == 0x24)
+    return true;
+
+  return false;
+}
+
+// Detect branches to fixed pc-relative offsets.
+// Returns the offset from the address of the next instruction
+// that may be branch/jumped to.
+//
+// Cannot determine the offset of a JMP that jumps to the address in
+// a register ("jmpq *%rax") or offset from a register value 
+// ("jmpq *0x28(%rax)"), this method will return false on those
+// instructions.
+//
+// These instructions all end in either a relative 8/16/32 bit value
+// depending on the instruction and the current execution mode of the
+// inferior process.  Once we know the size of the opcode instruction, 
+// we can use the total instruction length to determine the size of
+// the relative offset without having to compute it correctly.
+
+bool x86AssemblyInspectionEngine::pc_rel_branch_or_jump_p (
+    const int instruction_length, int &offset)
+{
+  int opcode_size = 0;
+
+  uint8_t b1 = m_cur_insn[0];
+  uint8_t b2 = m_cur_insn[1];
+
+  switch (b1) {
+    case 0x77: // JA/JNBE rel8
+    case 0x73: // JAE/JNB/JNC rel8
+    case 0x72: // JB/JC/JNAE rel8
+    case 0x76: // JBE/JNA rel8
+    case 0xe3: // JCXZ/JECXZ/JRCXZ rel8
+    case 0x74: // JE/JZ rel8
+    case 0x7f: // JG/JNLE rel8
+    case 0x7d: // JGE/JNL rel8
+    case 0x7c: // JL/JNGE rel8
+    case 0x7e: // JNG/JLE rel8
+    case 0x71: // JNO rel8
+    case 0x7b: // JNP/JPO rel8
+    case 0x79: // JNS rel8
+    case 0x75: // JNE/JNZ rel8
+    case 0x70: // JO rel8
+    case 0x7a: // JP/JPE rel8
+    case 0x78: // JS rel8
+    case 0xeb: // JMP rel8
+    case 0xe9: // JMP rel16/rel32
+      opcode_size = 1;
+      break;
+    default:
+      break;
+  }
+  if (b1 == 0x0f && opcode_size == 0) {
+    switch (b2) {
+      case 0x87: // JA/JNBE rel16/rel32
+      case 0x86: // JBE/JNA rel16/rel32
+      case 0x84: // JE/JZ rel16/rel32
+      case 0x8f: // JG/JNLE rel16/rel32
+      case 0x8d: // JNL/JGE rel16/rel32
+      case 0x8e: // JLE rel16/rel32
+      case 0x82: // JB/JC/JNAE rel16/rel32
+      case 0x83: // JAE/JNB/JNC rel16/rel32
+      case 0x85: // JNE/JNZ rel16/rel32
+      case 0x8c: // JL/JNGE rel16/rel32
+      case 0x81: // JNO rel16/rel32
+      case 0x8b: // JNP/JPO rel16/rel32
+      case 0x89: // JNS rel16/rel32
+      case 0x80: // JO rel16/rel32
+      case 0x8a: // JP rel16/rel32
+      case 0x88: // JS rel16/rel32
+        opcode_size = 2;
+        break;
+      default:
+        break;
+    }
+  }
+
+  if (opcode_size == 0)
+    return false;
+
+  offset = 0;
+  if (instruction_length - opcode_size == 1) {
+    int8_t rel8 = (int8_t) *(m_cur_insn + opcode_size);
+    offset = rel8;
+  } else if (instruction_length - opcode_size == 2) {
+    int16_t rel16 = extract_2_signed (m_cur_insn + opcode_size);
+    offset = rel16;
+  } else if (instruction_length - opcode_size == 4) {
+    int32_t rel32 = extract_4_signed (m_cur_insn + opcode_size);
+    offset = rel32;
+  } else {
+    return false;
+  }
+  return true;
+}
+
+// Returns true if this instruction is a intra-function branch or jump -
+// a branch/jump within the bounds of this same function.
+// Cannot predict where a jump through a register value ("jmpq *%rax")
+// will go, so it will return false on that instruction.
+bool x86AssemblyInspectionEngine::local_branch_p (
+    const addr_t current_func_text_offset,
+    const AddressRange &func_range,
+    const int instruction_length,
+    addr_t &target_insn_offset) {
+  int offset;
+  if (pc_rel_branch_or_jump_p (instruction_length, offset) && offset != 0) {
+    addr_t next_pc_value = current_func_text_offset + instruction_length;
+    if (offset < 0 && -offset > current_func_text_offset) {
+      // Branch target is before the start of this function
+      return false;
+    }
+    if (offset + next_pc_value > func_range.GetByteSize()) {
+      // Branch targets outside this function's bounds
+      return false;
+    }
+    // This instruction branches to target_insn_offset (byte offset into the function)
+    target_insn_offset = next_pc_value + offset;
+    return true;
+  }
+  return false;
+}
+
+// Returns true if this instruction is a inter-function branch or jump - a
+// branch/jump to another function.
+// Cannot predict where a jump through a register value ("jmpq *%rax")
+// will go, so it will return false on that instruction.
+bool x86AssemblyInspectionEngine::non_local_branch_p (
+    const addr_t current_func_text_offset,
+    const AddressRange &func_range,
+    const int instruction_length) {
+  int offset;
+  addr_t target_insn_offset;
+  if (pc_rel_branch_or_jump_p (instruction_length, offset)) {
+    return !local_branch_p(current_func_text_offset,func_range,instruction_length,target_insn_offset);
+  }
+  return false;
+}
+
 // ret [0xc3] or [0xcb] or [0xc2 imm16] or [0xca imm16]
 bool x86AssemblyInspectionEngine::ret_pattern_p() {
   uint8_t *p = m_cur_insn;
   return *p == 0xc3 || *p == 0xc2 || *p == 0xca || *p == 0xcb;
+}
+
+uint16_t x86AssemblyInspectionEngine::extract_2(uint8_t *b) {
+  uint16_t v = 0;
+  for (int i = 1; i >= 0; i--)
+    v = (v << 8) | b[i];
+  return v;
+}
+
+int16_t x86AssemblyInspectionEngine::extract_2_signed(uint8_t *b) {
+  int16_t v = 0;
+  for (int i = 1; i >= 0; i--)
+    v = (v << 8) | b[i];
+  return v;
 }
 
 uint32_t x86AssemblyInspectionEngine::extract_4(uint8_t *b) {
@@ -679,6 +876,14 @@ uint32_t x86AssemblyInspectionEngine::extract_4(uint8_t *b) {
     v = (v << 8) | b[i];
   return v;
 }
+
+int32_t x86AssemblyInspectionEngine::extract_4_signed(uint8_t *b) {
+  int32_t v = 0;
+  for (int i = 3; i >= 0; i--)
+    v = (v << 8) | b[i];
+  return v;
+}
+
 
 bool x86AssemblyInspectionEngine::instruction_length(uint8_t *insn_p,
                                                      int &length, 
@@ -704,7 +909,6 @@ bool x86AssemblyInspectionEngine::machine_regno_to_lldb_regno(
     lldb_regno = it->second.lldb_regnum;
     return true;
   }
-  return false;
   return false;
 }
 
@@ -1029,25 +1233,47 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
       }
     }
 
-    else if (ret_pattern_p() && prologue_completed_row.get()) {
-      // Reinstate the saved prologue setup for any instructions that come
-      // after the ret instruction
+    else if (prologue_completed_row.get() && 
+             (ret_pattern_p() ||
+              non_local_branch_p (current_func_text_offset, func_range, insn_len) ||
+              jmp_to_reg_p())) {
+      // Check if the current instruction is the end of an epilogue sequence,
+      // and if so, re-instate the prologue-completed unwind state.
 
-      UnwindPlan::Row *newrow = new UnwindPlan::Row;
-      *newrow = *prologue_completed_row.get();
-      row.reset(newrow);
-      current_sp_bytes_offset_from_fa =
-          prologue_completed_sp_bytes_offset_from_cfa;
-      is_aligned = prologue_completed_is_aligned;
+      // The current instruction is a branch/jump outside this function, 
+      // a ret, or a jump through a register value which we cannot 
+      // determine the effcts of.  Verify that the stack frame state 
+      // has been unwound to the same as it was at function entry to avoid 
+      // mis-identifying a JMP instruction as an epilogue.
+      UnwindPlan::Row::RegisterLocation sp, pc;
+      if (row->GetRegisterInfo(m_lldb_sp_regnum, sp) &&
+          row->GetRegisterInfo(m_lldb_ip_regnum, pc)) {
+        // Any ret instruction variant is definitely indicative of an
+        // epilogue; for other insn patterns verify that we're back to
+        // the original unwind state.
+        if (ret_pattern_p() ||
+            (sp.IsCFAPlusOffset() && sp.GetOffset() == 0 &&
+            pc.IsAtCFAPlusOffset() && pc.GetOffset() == -m_wordsize)) {
+          // Reinstate the saved prologue setup for any instructions that come
+          // after the epilogue
 
-      saved_registers.clear();
-      saved_registers.resize(prologue_completed_saved_registers.size(), false);
-      for (size_t i = 0; i < prologue_completed_saved_registers.size(); ++i) {
-        saved_registers[i] = prologue_completed_saved_registers[i];
+          UnwindPlan::Row *newrow = new UnwindPlan::Row;
+          *newrow = *prologue_completed_row.get();
+          row.reset(newrow);
+          current_sp_bytes_offset_from_fa =
+              prologue_completed_sp_bytes_offset_from_cfa;
+          is_aligned = prologue_completed_is_aligned;
+
+          saved_registers.clear();
+          saved_registers.resize(prologue_completed_saved_registers.size(), false);
+          for (size_t i = 0; i < prologue_completed_saved_registers.size(); ++i) {
+            saved_registers[i] = prologue_completed_saved_registers[i];
+          }
+
+          in_epilogue = true;
+          row_updated = true;
+        }
       }
-
-      in_epilogue = true;
-      row_updated = true;
     }
 
     // call next instruction
