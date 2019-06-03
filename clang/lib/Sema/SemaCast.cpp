@@ -2450,6 +2450,10 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
     tcr = TryAddressSpaceCast(Self, SrcExpr, DestType, /*CStyle*/ true, msg);
     if (SrcExpr.isInvalid())
       return;
+
+    if (isValidCast(tcr))
+      Kind = CK_AddressSpaceConversion;
+
     if (tcr == TC_NotApplicable) {
       // ... or if that is not possible, a static_cast, ignoring const, ...
       tcr = TryStaticCast(Self, SrcExpr, DestType, CCK, OpRange, msg, Kind,

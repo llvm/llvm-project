@@ -1,6 +1,6 @@
 // RUN: not llvm-mc -arch=amdgcn -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SI --check-prefix=SICI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SI --check-prefix=SICI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI --check-prefix=CIVI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI --check-prefix=CIVI --check-prefix=CI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=CIVI --check-prefix=GFX89
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=CIVI --check-prefix=GFX89 --check-prefix=GFX9
 
@@ -519,7 +519,125 @@ v_trunc_f64 v[0:1], 0x100000001
 v_trunc_f64 v[0:1], 0x1fffffff000
 
 //---------------------------------------------------------------------------//
-// named inline values like shared_base
+// named inline values: scc, vccz, execz
+//---------------------------------------------------------------------------//
+
+// SICI: buffer_atomic_add v0, off, s[0:3], src_scc offset:4095 ; encoding: [0xff,0x0f,0xc8,0xe0,0x00,0x00,0x00,0xfd]
+// GFX89: buffer_atomic_add v0, off, s[0:3], src_scc offset:4095 ; encoding: [0xff,0x0f,0x08,0xe1,0x00,0x00,0x00,0xfd]
+buffer_atomic_add v0, off, s[0:3], scc offset:4095
+
+// SICI: s_add_i32 s0, src_vccz, s0      ; encoding: [0xfb,0x00,0x00,0x81]
+// GFX89: s_add_i32 s0, src_vccz, s0      ; encoding: [0xfb,0x00,0x00,0x81]
+s_add_i32 s0, vccz, s0
+
+// SICI: s_add_i32 s0, src_execz, s0      ; encoding: [0xfc,0x00,0x00,0x81]
+// GFX89: s_add_i32 s0, src_execz, s0      ; encoding: [0xfc,0x00,0x00,0x81]
+s_add_i32 s0, execz, s0
+
+// SICI: s_add_i32 s0, src_scc, s0       ; encoding: [0xfd,0x00,0x00,0x81]
+// GFX89: s_add_i32 s0, src_scc, s0       ; encoding: [0xfd,0x00,0x00,0x81]
+s_add_i32 s0, scc, s0
+
+// SICI: s_and_b64 s[0:1], s[0:1], src_vccz ; encoding: [0x00,0xfb,0x80,0x87]
+// GFX89: s_and_b64 s[0:1], s[0:1], src_vccz ; encoding: [0x00,0xfb,0x80,0x86]
+s_and_b64 s[0:1], s[0:1], src_vccz
+
+// SICI: s_and_b64 s[0:1], s[0:1], src_execz ; encoding: [0x00,0xfc,0x80,0x87]
+// GFX89: s_and_b64 s[0:1], s[0:1], src_execz ; encoding: [0x00,0xfc,0x80,0x86]
+s_and_b64 s[0:1], s[0:1], src_execz
+
+// SICI: s_and_b64 s[0:1], s[0:1], src_scc ; encoding: [0x00,0xfd,0x80,0x87]
+// GFX89: s_and_b64 s[0:1], s[0:1], src_scc ; encoding: [0x00,0xfd,0x80,0x86]
+s_and_b64 s[0:1], s[0:1], src_scc
+
+// NOSICI: error: instruction not supported on this GPU
+// GFX89: v_add_u16_e32 v0, src_vccz, v0  ; encoding: [0xfb,0x00,0x00,0x4c]
+v_add_u16 v0, vccz, v0
+
+// NOSICI: error: not a valid operand
+// NOVI: error: invalid operand for instruction
+// GFX9: v_add_u16_sdwa v0, src_scc, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0x00,0x00,0x4c,0xfd,0x06,0x86,0x06]
+v_add_u16_sdwa v0, scc, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+
+// NOSICI: error: not a valid operand
+// NOVI: error: invalid operand for instruction
+// GFX9: v_add_u16_sdwa v0, v0, src_scc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0xfa,0x01,0x4c,0x00,0x06,0x06,0x86]
+v_add_u16_sdwa v0, v0, scc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+
+// NOSICIVI: error: instruction not supported on this GPU
+// GFX9: v_add_u32_e32 v0, src_execz, v0 ; encoding: [0xfc,0x00,0x00,0x68]
+v_add_u32 v0, execz, v0
+
+// NOSICIVI: error: instruction not supported on this GPU
+// GFX9: v_add_u32_e64 v0, src_scc, v0   ; encoding: [0x00,0x00,0x34,0xd1,0xfd,0x00,0x02,0x00]
+v_add_u32_e64 v0, scc, v0
+
+// SICI: v_cmp_eq_i64_e32 vcc, src_scc, v[0:1] ; encoding: [0xfd,0x00,0x44,0x7d]
+// GFX89: v_cmp_eq_i64_e32 vcc, src_scc, v[0:1] ; encoding: [0xfd,0x00,0xc4,0x7d]
+v_cmp_eq_i64 vcc, scc, v[0:1]
+
+// NOSICI: error: instruction not supported on this GPU
+// GFX89: v_max_f16_e32 v0, src_execz, v0 ; encoding: [0xfc,0x00,0x00,0x5a]
+v_max_f16 v0, execz, v0
+
+// SICI: v_max_f32_e32 v0, src_vccz, v0  ; encoding: [0xfb,0x00,0x00,0x20]
+// GFX89: v_max_f32_e32 v0, src_vccz, v0  ; encoding: [0xfb,0x00,0x00,0x16]
+v_max_f32 v0, vccz, v0
+
+// SICI: v_max_f64 v[0:1], src_scc, v[0:1] ; encoding: [0x00,0x00,0xce,0xd2,0xfd,0x00,0x02,0x00]
+// GFX89: v_max_f64 v[0:1], src_scc, v[0:1] ; encoding: [0x00,0x00,0x83,0xd2,0xfd,0x00,0x02,0x00]
+v_max_f64 v[0:1], scc, v[0:1]
+
+// NOSICIVI: error: instruction not supported on this GPU
+// GFX9: v_pk_add_f16 v0, src_execz, v0  ; encoding: [0x00,0x00,0x8f,0xd3,0xfc,0x00,0x02,0x18]
+v_pk_add_f16 v0, execz, v0
+
+// NOSICI: error: not a valid operand
+// GFX89: v_ceil_f16_e64 v0, -src_vccz    ; encoding: [0x00,0x00,0x85,0xd1,0xfb,0x00,0x00,0x20]
+v_ceil_f16 v0, neg(vccz)
+
+// NOSICI: error: not a valid operand
+// GFX89: v_ceil_f16_e64 v0, |src_scc|    ; encoding: [0x00,0x01,0x85,0xd1,0xfd,0x00,0x00,0x00]
+v_ceil_f16 v0, abs(scc)
+
+// NOSI: error: not a valid operand
+// CI: v_ceil_f64_e64 v[5:6], |src_execz| ; encoding: [0x05,0x01,0x30,0xd3,0xfc,0x00,0x00,0x00]
+// GFX89: v_ceil_f64_e64 v[5:6], |src_execz| ; encoding: [0x05,0x01,0x58,0xd1,0xfc,0x00,0x00,0x00]
+v_ceil_f64 v[5:6], |execz|
+
+// NOSI: error: not a valid operand
+// CI: v_ceil_f64_e64 v[5:6], -vcc     ; encoding: [0x05,0x00,0x30,0xd3,0x6a,0x00,0x00,0x20]
+// GFX89: v_ceil_f64_e64 v[5:6], -vcc     ; encoding: [0x05,0x00,0x58,0xd1,0x6a,0x00,0x00,0x20]
+v_ceil_f64 v[5:6], -vcc
+
+// SICI: v_ceil_f32_e64 v0, -src_vccz    ; encoding: [0x00,0x00,0x44,0xd3,0xfb,0x00,0x00,0x20]
+// GFX89: v_ceil_f32_e64 v0, -src_vccz    ; encoding: [0x00,0x00,0x5d,0xd1,0xfb,0x00,0x00,0x20]
+v_ceil_f32 v0, -vccz
+
+// SICI: v_ceil_f32_e64 v0, |src_execz|  ; encoding: [0x00,0x01,0x44,0xd3,0xfc,0x00,0x00,0x00]
+// GFX89: v_ceil_f32_e64 v0, |src_execz|  ; encoding: [0x00,0x01,0x5d,0xd1,0xfc,0x00,0x00,0x00]
+v_ceil_f32 v0, |execz|
+
+// NOSICI: error: not a valid operand
+// NOVI: error: invalid operand for instruction
+// GFX9: v_ceil_f16_sdwa v5, |src_vccz| dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x8a,0x0a,0x7e,0xfb,0x16,0xa6,0x00]
+v_ceil_f16_sdwa v5, |vccz| dst_sel:DWORD dst_unused:UNUSED_PRESERVE
+
+// NOSICI: error: not a valid operand
+// NOVI: error: invalid operand for instruction
+// GFX9: v_ceil_f16_sdwa v5, -src_scc dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x8a,0x0a,0x7e,0xfd,0x16,0x96,0x00]
+v_ceil_f16_sdwa v5, -scc dst_sel:DWORD dst_unused:UNUSED_PRESERVE
+
+// NOSICIVI: error: invalid operand for instruction
+// GFX9: v_ceil_f32_sdwa v5, src_vccz dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x3a,0x0a,0x7e,0xfb,0x16,0x86,0x00]
+v_ceil_f32_sdwa v5, vccz dst_sel:DWORD src0_sel:DWORD
+
+// NOSICIVI: error: invalid operand for instruction
+// GFX9: v_ceil_f32_sdwa v5, |src_execz| dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x3a,0x0a,0x7e,0xfc,0x16,0xa6,0x00]
+v_ceil_f32_sdwa v5, |execz| dst_sel:DWORD src0_sel:DWORD
+
+//---------------------------------------------------------------------------//
+// named inline values: shared_base, shared_limit, private_base, etc
 //---------------------------------------------------------------------------//
 
 // NOSICIVI: error: failed parsing operand.
@@ -659,6 +777,10 @@ v_ceil_f32_sdwa v5, |src_shared_base| dst_sel:DWORD src0_sel:DWORD
 // NOGFX9: error: invalid operand (violates constant bus restrictions)
 v_add_u32 v0, private_base, s0
 
+// NOSICIVI: error: instruction not supported on this GPU
+// NOGFX9: error: invalid operand (violates constant bus restrictions)
+v_add_u32 v0, scc, s0
+
 // v_div_fmas implicitly reads VCC
 // NOSICIVI: error: failed parsing operand.
 // NOGFX9: error: invalid operand (violates constant bus restrictions)
@@ -674,6 +796,18 @@ v_div_fmas_f32 v0, v0, shared_limit, v1
 // NOGFX9: error: invalid operand (violates constant bus restrictions)
 v_div_fmas_f32 v0, v0, v1, private_limit
 
+// v_div_fmas implicitly reads VCC
+// NOGCN: error: invalid operand (violates constant bus restrictions)
+v_div_fmas_f32 v0, execz, v0, v1
+
+// v_div_fmas implicitly reads VCC
+// NOGCN: error: invalid operand (violates constant bus restrictions)
+v_div_fmas_f32 v0, v0, scc, v1
+
+// v_div_fmas implicitly reads VCC
+// NOGCN: error: invalid operand (violates constant bus restrictions)
+v_div_fmas_f32 v0, v0, v1, vccz
+
 // v_addc_co_u32 implicitly reads VCC (VOP2)
 // NOSICIVI: error: failed parsing operand.
 // NOGFX9: error: invalid operand (violates constant bus restrictions)
@@ -683,6 +817,9 @@ v_addc_co_u32 v0, vcc, shared_base, v0, vcc
 // NOGFX9: error: invalid operand (violates constant bus restrictions)
 v_madak_f32 v0, shared_base, v0, 0x11213141
 
+// NOGCN: error: invalid operand (violates constant bus restrictions)
+v_madak_f32 v0, scc, v0, 0x11213141
+
 // NOSICIVI: error: failed parsing operand.
 // NOGFX9: error: invalid operand (violates constant bus restrictions)
 v_cmp_eq_f32 s[0:1], private_base, private_limit
@@ -691,6 +828,13 @@ v_cmp_eq_f32 s[0:1], private_base, private_limit
 // NOGFX9: error: invalid operand (violates constant bus restrictions)
 v_cmp_eq_f32 s[0:1], private_base, s0
 
+// NOGCN: error: invalid operand (violates constant bus restrictions)
+v_cmp_eq_f32 s[0:1], execz, s0
+
 // NOSICIVI: error: failed parsing operand.
 // NOGFX9: error: invalid operand (violates constant bus restrictions)
 v_pk_add_f16 v255, private_base, private_limit
+
+// NOSICIVI: error: instruction not supported on this GPU
+// NOGFX9: error: invalid operand (violates constant bus restrictions)
+v_pk_add_f16 v255, vccz, execz

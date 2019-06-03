@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/HexagonMCCodeEmitter.h"
-#include "Hexagon.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
 #include "MCTargetDesc/HexagonFixupKinds.h"
 #include "MCTargetDesc/HexagonMCExpr.h"

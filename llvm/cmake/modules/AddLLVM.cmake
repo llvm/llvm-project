@@ -878,6 +878,8 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
     llvm-ar
     llvm-ranlib
     llvm-lib
+    llvm-nm
+    llvm-objcopy
     llvm-objdump
     llvm-rc
     llvm-profdata

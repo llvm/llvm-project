@@ -46,6 +46,8 @@
 #include <utility>
 #include <vector>
 
+#include "clang/Basic/OpenCLBuiltins.inc"
+
 using namespace clang;
 using namespace sema;
 
@@ -670,6 +672,79 @@ LLVM_DUMP_METHOD void LookupResult::dump() {
     D->dump();
 }
 
+/// When trying to resolve a function name, if the isOpenCLBuiltin function
+/// defined in "OpenCLBuiltins.inc" returns a non-null <Index, Len>, then the
+/// identifier is referencing an OpenCL builtin function. Thus, all its
+/// prototypes are added to the LookUpResult.
+///
+/// \param S The Sema instance
+/// \param LR  The LookupResult instance
+/// \param II  The identifier being resolved
+/// \param Index  The list of prototypes starts at Index in OpenCLBuiltins[]
+/// \param Len  The list of prototypes has Len elements
+static void InsertOCLBuiltinDeclarations(Sema &S, LookupResult &LR,
+                                         IdentifierInfo *II, unsigned Index,
+                                         unsigned Len) {
+
+  for (unsigned i = 0; i < Len; ++i) {
+    OpenCLBuiltinDecl &Decl = OpenCLBuiltins[Index - 1 + i];
+    ASTContext &Context = S.Context;
+
+    // Ignore this BIF if the version is incorrect.
+    if (Context.getLangOpts().OpenCLVersion < Decl.Version)
+      continue;
+
+    FunctionProtoType::ExtProtoInfo PI;
+    PI.Variadic = false;
+
+    // Defined in "OpenCLBuiltins.inc"
+    QualType RT = OCL2Qual(Context, OpenCLSignature[Decl.ArgTableIndex]);
+
+    SmallVector<QualType, 5> ArgTypes;
+    for (unsigned I = 1; I < Decl.NumArgs; I++) {
+      QualType Ty = OCL2Qual(Context, OpenCLSignature[Decl.ArgTableIndex + I]);
+      ArgTypes.push_back(Ty);
+    }
+
+    QualType R = Context.getFunctionType(RT, ArgTypes, PI);
+    SourceLocation Loc = LR.getNameLoc();
+
+    // TODO: This part is taken from Sema::LazilyCreateBuiltin,
+    // maybe refactor it.
+    DeclContext *Parent = Context.getTranslationUnitDecl();
+    FunctionDecl *New = FunctionDecl::Create(Context, Parent, Loc, Loc, II, R,
+                                             /*TInfo=*/nullptr, SC_Extern,
+                                             false, R->isFunctionProtoType());
+    New->setImplicit();
+
+    // Create Decl objects for each parameter, adding them to the
+    // FunctionDecl.
+    if (const FunctionProtoType *FT = dyn_cast<FunctionProtoType>(R)) {
+      SmallVector<ParmVarDecl *, 16> Params;
+      for (unsigned i = 0, e = FT->getNumParams(); i != e; ++i) {
+        ParmVarDecl *Parm =
+            ParmVarDecl::Create(Context, New, SourceLocation(),
+                                SourceLocation(), nullptr, FT->getParamType(i),
+                                /*TInfo=*/nullptr, SC_None, nullptr);
+        Parm->setScopeInfo(0, i);
+        Params.push_back(Parm);
+      }
+      New->setParams(Params);
+    }
+
+    New->addAttr(OverloadableAttr::CreateImplicit(Context));
+
+    if (strlen(Decl.Extension))
+      S.setOpenCLExtensionForDecl(New, Decl.Extension);
+
+    LR.addDecl(New);
+  }
+
+  // If we added overloads, need to resolve the lookup result.
+  if (Len > 1)
+    LR.resolveKind();
+}
+
 /// Lookup a builtin function, when name lookup would otherwise
 /// fail.
 static bool LookupBuiltin(Sema &S, LookupResult &R) {
@@ -688,6 +763,15 @@ static bool LookupBuiltin(Sema &S, LookupResult &R) {
           return true;
         } else if (II == S.getASTContext().getTypePackElementName()) {
           R.addDecl(S.getASTContext().getTypePackElementDecl());
+          return true;
+        }
+      }
+
+      // Check if this is an OpenCL Builtin, and if so, insert its overloads.
+      if (S.getLangOpts().OpenCL && S.getLangOpts().DeclareOpenCLBuiltins) {
+        auto Index = isOpenCLBuiltin(II->getName());
+        if (Index.first) {
+          InsertOCLBuiltinDeclarations(S, R, II, Index.first, Index.second);
           return true;
         }
       }

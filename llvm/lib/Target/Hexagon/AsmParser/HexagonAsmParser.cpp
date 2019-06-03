@@ -8,7 +8,6 @@
 
 #define DEBUG_TYPE "mcasmparser"
 
-#include "Hexagon.h"
 #include "HexagonTargetStreamer.h"
 #include "MCTargetDesc/HexagonMCChecker.h"
 #include "MCTargetDesc/HexagonMCELFStreamer.h"

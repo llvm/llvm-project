@@ -25,6 +25,11 @@ public:
     lldb_private::HostInfo::Initialize();
   }
 
+  static void TearDownTestCase() {
+    lldb_private::HostInfo::Terminate();
+    lldb_private::FileSystem::Terminate();
+  }
+
   static std::string getInferiorPath(llvm::StringRef Name) {
     llvm::SmallString<64> Path(LLDB_TEST_INFERIOR_PATH);
     llvm::sys::path::append(Path, Name + LLDB_TEST_INFERIOR_SUFFIX);

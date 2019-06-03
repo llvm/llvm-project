@@ -13,7 +13,6 @@
 #ifndef LLVM_LIB_TARGET_POWERPC_PPCINSTRINFO_H
 #define LLVM_LIB_TARGET_POWERPC_PPCINSTRINFO_H
 
-#include "PPC.h"
 #include "PPCRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 

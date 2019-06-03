@@ -295,3 +295,24 @@ int test17(int t0)
   return r0 + r1;
 }
 
+void test18()
+{
+  // expected-error@+2 {{duplicate use of asm operand name "lab"}}
+  // expected-note@+1 {{asm operand name "lab" first referenced here}}
+  asm goto ("" : : : : lab, lab, lab2, lab);
+  // expected-error@+2 {{duplicate use of asm operand name "lab"}}
+  // expected-note@+1 {{asm operand name "lab" first referenced here}}
+  asm goto ("xorw %[lab], %[lab]; je %l[lab]" : : [lab] "i" (0) : : lab);
+lab:;
+lab2:;
+  int x,x1;
+  // expected-error@+2 {{duplicate use of asm operand name "lab"}}
+  // expected-note@+1 {{asm operand name "lab" first referenced here}}
+  asm ("" : [lab] "=r" (x),[lab] "+r" (x) : [lab1] "r" (x));
+  // expected-error@+2 {{duplicate use of asm operand name "lab"}}
+  // expected-note@+1 {{asm operand name "lab" first referenced here}}
+  asm ("" : [lab] "=r" (x1) : [lab] "r" (x));
+  // expected-error@+1 {{invalid operand number in inline asm string}}
+  asm ("jne %l0":::);
+  asm goto ("jne %l0"::::lab);
+}
