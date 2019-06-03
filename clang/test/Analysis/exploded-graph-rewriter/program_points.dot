@@ -1,0 +1,63 @@
+// RUN: %exploded_graph_rewriter %s | FileCheck %s
+
+// FIXME: Substitution doesn't seem to work on Windows.
+// UNSUPPORTED: system-windows
+
+// CHECK: <b>Program point:</b>
+// CHECK-SAME: <table border="0" align="left" width="0">
+// CHECK-SAME:   <tr>
+// CHECK-SAME:     <td width="0">
+// CHECK-SAME:       -
+// CHECK-SAME:     </td>
+// CHECK-SAME:     <td align="left" width="0">
+// CHECK-SAME:       <font color="gold3">Edge</font>
+// CHECK-SAME:     </td>
+// CHECK-SAME:     <td align="left">
+// CHECK-SAME:     [B0] -&gt; [B1]
+// CHECK-SAME:     </td>
+// CHECK-SAME:   </tr>
+// CHECK-SAME: </table>
+Node0x1 [shape=record,label=
+ "{
+    { "node_id": 1, "pointer": "0x1",
+      "program_state": null, "program_points": [
+      {
+        "kind": "Edge",
+        "src_id": 0,
+        "dst_id": 1,
+        "terminator": null,
+        "term_kind": null,
+        "tag": null }
+    ]}
+\l}"];
+
+// CHECK-NEXT: <b>Program point:</b>
+// CHECK-SAME: <table border="0" align="left" width="0">
+// CHECK-SAME:   <tr>
+// CHECK-SAME:     <td align="left" width="0">
+// CHECK-SAME:       (main file):<b>4</b>:<b>5</b>:
+// CHECK-SAME:     </td>
+// CHECK-SAME:     <td align="left" width="0">
+// CHECK-SAME:       <font color="cyan3">DeclRefExpr</font>
+// CHECK-SAME:     </td>
+// CHECK-SAME:     <td>x</td>
+// CHECK-SAME:   </tr>
+// CHECK-SAME: </table>
+Node0x2 [shape=record,label=
+ "{
+    { "node_id": 2, "pointer": "0x2",
+      "program_state": null, "program_points": [
+      {
+        "kind": "Statement",
+        "stmt_kind": "DeclRefExpr",
+        "stmd_id": 3,
+        "pointer": "0x3",
+        "pretty": "x",
+        "location": {
+          "line": 4,
+          "column": 5
+        },
+        "tag": null
+      }
+    ]}
+\l}"];

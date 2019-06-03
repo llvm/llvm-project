@@ -121,7 +121,7 @@ endif()
 
 if (CLANG_ENABLE_STATIC_ANALYZER)
   if (LLVM_ENABLE_PLUGINS)
-    set(CLANG_TEST_DEPS
+    list(APPEND CLANG_TEST_DEPS
       SampleAnalyzerPlugin
       CheckerDependencyHandlingAnalyzerPlugin
       CheckerOptionHandlingAnalyzerPlugin

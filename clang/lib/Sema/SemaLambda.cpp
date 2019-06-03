@@ -367,12 +367,11 @@ Sema::ExpressionEvaluationContextRecord::getMangleNumberingContext(
   return *MangleNumbering;
 }
 
-CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
-                                           SourceRange IntroducerRange,
-                                           TypeSourceInfo *MethodTypeInfo,
-                                           SourceLocation EndLoc,
-                                           ArrayRef<ParmVarDecl *> Params,
-                                           const bool IsConstexprSpecified) {
+CXXMethodDecl *Sema::startLambdaDefinition(
+    CXXRecordDecl *Class, SourceRange IntroducerRange,
+    TypeSourceInfo *MethodTypeInfo, SourceLocation EndLoc,
+    ArrayRef<ParmVarDecl *> Params, const bool IsConstexprSpecified,
+    Optional<std::pair<unsigned, Decl *>> Mangling) {
   QualType MethodType = MethodTypeInfo->getType();
   TemplateParameterList *TemplateParams =
             getGenericLambdaTemplateParameterList(getCurLambda(), *this);
@@ -438,12 +437,16 @@ CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
       P->setOwningFunction(Method);
   }
 
-  Decl *ManglingContextDecl;
-  if (MangleNumberingContext *MCtx =
-          getCurrentMangleNumberContext(Class->getDeclContext(),
-                                        ManglingContextDecl)) {
-    unsigned ManglingNumber = MCtx->getManglingNumber(Method);
-    Class->setLambdaMangling(ManglingNumber, ManglingContextDecl);
+  if (Mangling) {
+    Class->setLambdaMangling(Mangling->first, Mangling->second);
+  } else {
+    Decl *ManglingContextDecl;
+    if (MangleNumberingContext *MCtx =
+            getCurrentMangleNumberContext(Class->getDeclContext(),
+                                          ManglingContextDecl)) {
+      unsigned ManglingNumber = MCtx->getManglingNumber(Method);
+      Class->setLambdaMangling(ManglingNumber, ManglingContextDecl);
+    }
   }
 
   return Method;

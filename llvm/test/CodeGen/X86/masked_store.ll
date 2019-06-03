@@ -5505,6 +5505,18 @@ define void @widen_masked_store(<3 x i32> %v, <3 x i32>* %p, <3 x i1> %mask) {
   ret void
 }
 
+define void @zero_mask(<2 x double>* %addr, <2 x double> %val) {
+; SSE-LABEL: zero_mask:
+; SSE:       ## %bb.0:
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: zero_mask:
+; AVX:       ## %bb.0:
+; AVX-NEXT:    retq
+  call void @llvm.masked.store.v2f64.p0v2f64(<2 x double> %val, <2 x double>* %addr, i32 4, <2 x i1> zeroinitializer)
+  ret void
+}
+
 declare void @llvm.masked.store.v8f64.p0v8f64(<8 x double>, <8 x double>*, i32, <8 x i1>)
 declare void @llvm.masked.store.v4f64.p0v4f64(<4 x double>, <4 x double>*, i32, <4 x i1>)
 declare void @llvm.masked.store.v2f64.p0v2f64(<2 x double>, <2 x double>*, i32, <2 x i1>)
