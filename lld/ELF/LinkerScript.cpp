@@ -481,7 +481,6 @@ void LinkerScript::processSectionCommands() {
       if (Sec->Name == "/DISCARD/") {
         discard(V);
         Sec->SectionCommands.clear();
-        Sec->SectionIndex = 0; // Not an orphan.
         continue;
       }
 
@@ -824,6 +823,9 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
 }
 
 static bool isDiscardable(OutputSection &Sec) {
+  if (Sec.Name == "/DISCARD/")
+    return true;
+
   // We do not remove empty sections that are explicitly
   // assigned to any segment.
   if (!Sec.Phdrs.empty())

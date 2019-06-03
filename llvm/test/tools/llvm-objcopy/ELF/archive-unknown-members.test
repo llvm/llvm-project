@@ -23,10 +23,10 @@
 # RUN: llvm-ar rcT %t.thin1.a %t1.o %s
 # RUN: llvm-ar rcT %t.thin2.a %t2.o %s
 
-# RUN: not llvm-objcopy --strip-debug %t.thin1.a 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=THIN -DARCHIVE=%t.thin1.a -DMEMBER=%s
-# RUN: not llvm-strip --strip-debug %t.thin2.a 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=THIN -DARCHIVE=%t.thin2.a -DMEMBER=%s
+# RUN: not llvm-objcopy --strip-debug %/t.thin1.a 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=THIN -DARCHIVE=%/t.thin1.a -DMEMBER=%/s
+# RUN: not llvm-strip --strip-debug %/t.thin2.a 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=THIN -DARCHIVE=%/t.thin2.a -DMEMBER=%/s
 ## Verify that the first member was not modified, if a later member could not
 ## be recognized.
 # RUN: cmp %t.o %t1.o

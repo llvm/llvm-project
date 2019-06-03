@@ -2179,7 +2179,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     Opts.NativeHalfArgsAndReturns = 1;
     Opts.OpenCLCPlusPlus = Opts.CPlusPlus;
     // Include default header file for OpenCL.
-    if (Opts.IncludeDefaultHeader) {
+    if (Opts.IncludeDefaultHeader && !Opts.DeclareOpenCLBuiltins) {
       PPOpts.Includes.push_back("opencl-c.h");
     }
   }
@@ -2385,6 +2385,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   }
 
   Opts.IncludeDefaultHeader = Args.hasArg(OPT_finclude_default_header);
+  Opts.DeclareOpenCLBuiltins = Args.hasArg(OPT_fdeclare_opencl_builtins);
 
   llvm::Triple T(TargetOpts.Triple);
   CompilerInvocation::setLangDefaults(Opts, IK, T, PPOpts, LangStd);

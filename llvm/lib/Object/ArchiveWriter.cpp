@@ -494,29 +494,46 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
 }
 
 namespace llvm {
+
+static ErrorOr<SmallString<128>> canonicalizePath(StringRef P) {
+  SmallString<128> Ret = P;
+  std::error_code Err = sys::fs::make_absolute(Ret);
+  if (Err)
+    return Err;
+  sys::path::remove_dots(Ret, /*removedotdot*/ true);
+  return Ret;
+}
+
 // Compute the relative path from From to To.
-std::string computeArchiveRelativePath(StringRef From, StringRef To) {
-  if (sys::path::is_absolute(From) || sys::path::is_absolute(To))
-    return To;
+Expected<std::string> computeArchiveRelativePath(StringRef From, StringRef To) {
+  ErrorOr<SmallString<128>> PathToOrErr = canonicalizePath(To);
+  ErrorOr<SmallString<128>> DirFromOrErr = canonicalizePath(From);
+  if (!PathToOrErr || !DirFromOrErr)
+    return errorCodeToError(std::error_code(errno, std::generic_category()));
 
-  StringRef DirFrom = sys::path::parent_path(From);
-  auto FromI = sys::path::begin(DirFrom);
-  auto ToI = sys::path::begin(To);
-  while (*FromI == *ToI) {
-    ++FromI;
-    ++ToI;
-  }
+  const SmallString<128> &PathTo = *PathToOrErr;
+  const SmallString<128> &DirFrom = sys::path::parent_path(*DirFromOrErr);
 
+  // Can't construct a relative path between different roots
+  if (sys::path::root_name(PathTo) != sys::path::root_name(DirFrom))
+    return sys::path::convert_to_slash(PathTo);
+
+  // Skip common prefixes
+  auto FromTo =
+      std::mismatch(sys::path::begin(DirFrom), sys::path::end(DirFrom),
+                    sys::path::begin(PathTo), sys::path::end(PathTo));
+  auto FromI = FromTo.first;
+  auto ToI = FromTo.second;
+
+  // Construct relative path
   SmallString<128> Relative;
   for (auto FromE = sys::path::end(DirFrom); FromI != FromE; ++FromI)
-    sys::path::append(Relative, "..");
+    sys::path::append(Relative, sys::path::Style::posix, "..");
 
-  for (auto ToE = sys::path::end(To); ToI != ToE; ++ToI)
-    sys::path::append(Relative, *ToI);
+  for (auto ToE = sys::path::end(PathTo); ToI != ToE; ++ToI)
+    sys::path::append(Relative, sys::path::Style::posix, *ToI);
 
-  // Replace backslashes with slashes so that the path is portable between *nix
-  // and Windows.
-  return sys::path::convert_to_slash(Relative);
+  return Relative.str();
 }
 
 Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,

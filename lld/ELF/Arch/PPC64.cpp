@@ -445,10 +445,6 @@ void PPC64::relaxTlsLdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_PPC64_DTPREL16_DS:
   case R_PPC64_DTPREL16_LO:
   case R_PPC64_DTPREL16_LO_DS:
-  case R_PPC64_GOT_DTPREL16_HA:
-  case R_PPC64_GOT_DTPREL16_LO_DS:
-  case R_PPC64_GOT_DTPREL16_DS:
-  case R_PPC64_GOT_DTPREL16_HI:
     relocateOne(Loc, Type, Val);
     break;
   default:
@@ -549,10 +545,10 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
   case R_PPC64_TOC16_LO_DS:
     return Config->TocOptimize ? R_PPC64_RELAX_TOC : R_GOTREL;
   case R_PPC64_TOC:
-    return R_PPC_TOC;
+    return R_PPC64_TOCBASE;
   case R_PPC64_REL14:
   case R_PPC64_REL24:
-    return R_PPC_CALL_PLT;
+    return R_PPC64_CALL_PLT;
   case R_PPC64_REL16_LO:
   case R_PPC64_REL16_HA:
   case R_PPC64_REL32:

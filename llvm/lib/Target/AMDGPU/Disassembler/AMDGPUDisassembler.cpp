@@ -916,11 +916,9 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg32(unsigned Val) const {
   case 237: return createRegOperand(SRC_PRIVATE_BASE);
   case 238: return createRegOperand(SRC_PRIVATE_LIMIT);
   case 239: return createRegOperand(SRC_POPS_EXITING_WAVE_ID);
-    // ToDo: no support for vccz register
-  case 251: break;
-    // ToDo: no support for execz register
-  case 252: break;
-  case 253: return createRegOperand(SCC);
+  case 251: return createRegOperand(SRC_VCCZ);
+  case 252: return createRegOperand(SRC_EXECZ);
+  case 253: return createRegOperand(SRC_SCC);
   case 254: return createRegOperand(LDS_DIRECT);
   default: break;
   }
@@ -942,6 +940,9 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
   case 237: return createRegOperand(SRC_PRIVATE_BASE);
   case 238: return createRegOperand(SRC_PRIVATE_LIMIT);
   case 239: return createRegOperand(SRC_POPS_EXITING_WAVE_ID);
+  case 251: return createRegOperand(SRC_VCCZ);
+  case 252: return createRegOperand(SRC_EXECZ);
+  case 253: return createRegOperand(SRC_SCC);
   default: break;
   }
   return errOperand(Val, "unknown operand encoding " + Twine(Val));

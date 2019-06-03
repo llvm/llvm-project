@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Hexagon.h"
 #include "HexagonFixupKinds.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
 #include "MCTargetDesc/HexagonMCChecker.h"

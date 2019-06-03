@@ -430,9 +430,15 @@ void LiveDebugValues::insertTransferDebugPair(
   MachineFunction *MF = MI.getParent()->getParent();
   MachineInstr *NewDebugInstr;
 
-  auto ProcessVarLoc = [&MI, &OpenRanges, &Transfers,
+  auto ProcessVarLoc = [&MI, &OpenRanges, &Transfers, &DebugInstr,
                         &VarLocIDs](VarLoc &VL, MachineInstr *NewDebugInstr) {
     unsigned LocId = VarLocIDs.insert(VL);
+
+    // Close this variable's previous location range.
+    DebugVariable V(DebugInstr->getDebugVariable(),
+                    DebugInstr->getDebugLoc()->getInlinedAt());
+    OpenRanges.erase(V);
+
     OpenRanges.insert(LocId, VL.Var);
     // The newly created DBG_VALUE instruction NewDebugInstr must be inserted
     // after MI. Keep track of the pairing.
@@ -714,6 +720,10 @@ bool LiveDebugValues::transferTerminatorInst(MachineInstr &MI,
   });
   VarLocSet &VLS = OutLocs[CurMBB];
   Changed = VLS |= OpenRanges.getVarLocs();
+  // New OutLocs set may be different due to spill, restore or register
+  // copy instruction processing.
+  if (Changed)
+    VLS = OpenRanges.getVarLocs();
   OpenRanges.clear();
   return Changed;
 }

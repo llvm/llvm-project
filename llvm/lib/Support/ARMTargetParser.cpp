@@ -198,6 +198,7 @@ bool ARM::getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features) {
     Features.push_back("-fp-armv8");
     break;
   case FPUVersion::NONE:
+    Features.push_back("-fpregs");
     Features.push_back("-vfp2");
     Features.push_back("-vfp3");
     Features.push_back("-fp16");

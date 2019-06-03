@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Lanai.h"
 #include "LanaiInstrInfo.h"
-#include "LanaiMachineFunctionInfo.h"
-#include "LanaiTargetMachine.h"
+#include "LanaiAluCode.h"
+#include "LanaiCondCode.h"
+#include "MCTargetDesc/LanaiBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"

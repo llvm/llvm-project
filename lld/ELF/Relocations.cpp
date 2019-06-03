@@ -257,13 +257,8 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
   }
 
   // Local-Dynamic sequence where offset of tls variable relative to dynamic
-  // thread pointer is stored in the got.
+  // thread pointer is stored in the got. This cannot be relaxed to Local-Exec.
   if (Expr == R_TLSLD_GOT_OFF) {
-    // Local-Dynamic relocs can be relaxed to local-exec
-    if (!Config->Shared) {
-      C.Relocations.push_back({R_RELAX_TLS_LD_TO_LE, Type, Offset, Addend, &Sym});
-      return 1;
-    }
     if (!Sym.isInGot()) {
       In.Got->addEntry(Sym);
       uint64_t Off = Sym.getGotOffset();
@@ -368,7 +363,7 @@ static bool isAbsoluteValue(const Symbol &Sym) {
 
 // Returns true if Expr refers a PLT entry.
 static bool needsPlt(RelExpr Expr) {
-  return oneof<R_PLT_PC, R_PPC_CALL_PLT, R_PLT>(Expr);
+  return oneof<R_PLT_PC, R_PPC64_CALL_PLT, R_PLT>(Expr);
 }
 
 // Returns true if Expr refers a GOT entry. Note that this function
@@ -383,8 +378,9 @@ static bool needsGot(RelExpr Expr) {
 // True if this expression is of the form Sym - X, where X is a position in the
 // file (PC, or GOT for example).
 static bool isRelExpr(RelExpr Expr) {
-  return oneof<R_PC, R_GOTREL, R_GOTPLTREL, R_MIPS_GOTREL, R_PPC_CALL,
-               R_PPC64_RELAX_TOC, R_PPC_CALL_PLT, R_AARCH64_PAGE_PC, R_RELAX_GOT_PC>(Expr);
+  return oneof<R_PC, R_GOTREL, R_GOTPLTREL, R_MIPS_GOTREL, R_PPC64_CALL,
+               R_PPC64_CALL_PLT, R_PPC64_RELAX_TOC, R_AARCH64_PAGE_PC,
+               R_RELAX_GOT_PC>(Expr);
 }
 
 // Returns true if a given relocation can be computed at link-time.
@@ -403,7 +399,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
             R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL, R_MIPS_GOT_OFF,
             R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC, R_MIPS_TLSGD,
             R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,
-            R_PLT_PC, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC, R_PPC_CALL_PLT,
+            R_PLT_PC, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC, R_PPC64_CALL_PLT,
             R_PPC64_RELAX_TOC, R_TLSDESC_CALL, R_TLSDESC_PC,
             R_AARCH64_TLSDESC_PAGE, R_HINT, R_TLSLD_HINT, R_TLSIE_HINT>(E))
     return true;
@@ -457,8 +453,8 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
 
 static RelExpr toPlt(RelExpr Expr) {
   switch (Expr) {
-  case R_PPC_CALL:
-    return R_PPC_CALL_PLT;
+  case R_PPC64_CALL:
+    return R_PPC64_CALL_PLT;
   case R_PC:
     return R_PLT_PC;
   case R_ABS:
@@ -474,8 +470,8 @@ static RelExpr fromPlt(RelExpr Expr) {
   switch (Expr) {
   case R_PLT_PC:
     return R_PC;
-  case R_PPC_CALL_PLT:
-    return R_PPC_CALL;
+  case R_PPC64_CALL_PLT:
+    return R_PPC64_CALL;
   case R_PLT:
     return R_ABS;
   default:
@@ -1130,7 +1126,8 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
   // The 4 types that relative GOTPLT are all x86 and x86-64 specific.
   if (oneof<R_GOTPLTONLY_PC, R_GOTPLTREL, R_GOTPLT, R_TLSGD_GOTPLT>(Expr)) {
     In.GotPlt->HasGotPltOffRel = true;
-  } else if (oneof<R_GOTONLY_PC, R_GOTREL, R_PPC_TOC, R_PPC64_RELAX_TOC>(Expr)) {
+  } else if (oneof<R_GOTONLY_PC, R_GOTREL, R_PPC64_TOCBASE, R_PPC64_RELAX_TOC>(
+                 Expr)) {
     In.Got->HasGotOffRel = true;
   }
 

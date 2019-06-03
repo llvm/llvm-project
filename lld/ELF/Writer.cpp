@@ -138,8 +138,7 @@ StringRef elf::getOutputSectionName(const InputSectionBase *S) {
 }
 
 static bool needsInterpSection() {
-  return !SharedFiles.empty() && !Config->DynamicLinker.empty() &&
-         Script->needsInterpSection();
+  return !Config->DynamicLinker.empty() && Script->needsInterpSection();
 }
 
 template <class ELFT> void elf::writeResult() { Writer<ELFT>().run(); }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Hexagon.h"
 #include "MCTargetDesc/HexagonFixupKinds.h"
+#include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"

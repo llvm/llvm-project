@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -std=c++14 %s modernize-make-unique %t -- -- -I %S/Inputs/modernize-smart-ptr
-// FIXME: Fix the checker to work in C++17 mode.
+// RUN: %check_clang_tidy -std=c++14,c++17 %s modernize-make-unique %t -- -- -I %S/Inputs/modernize-smart-ptr
+// FIXME: Fix the test code in C++2a mode.
 
 #include "unique_ptr.h"
 #include "initializer_list.h"
@@ -455,10 +455,10 @@ void initialization(int T, Base b) {
 
   std::unique_ptr<J> PJ2 = std::unique_ptr<J>(new J(E{1, 2}, 1));
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
-  // CHECK-FIXES: std::unique_ptr<J> PJ2 = std::make_unique<J>(E{1, 2}, 1);
+  // CHECK-FIXES: std::unique_ptr<J> PJ2 = std::unique_ptr<J>(new J(E{1, 2}, 1));
   PJ2.reset(new J(E{1, 2}, 1));
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
-  // CHECK-FIXES: PJ2 = std::make_unique<J>(E{1, 2}, 1);
+  // CHECK-FIXES: PJ2.reset(new J(E{1, 2}, 1));
 
   std::unique_ptr<J> PJ3 = std::unique_ptr<J>(new J{ {1, 2}, 1 });
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
@@ -469,10 +469,10 @@ void initialization(int T, Base b) {
 
   std::unique_ptr<J> PJ4 = std::unique_ptr<J>(new J{E{1, 2}, 1});
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
-  // CHECK-FIXES: std::unique_ptr<J> PJ4 = std::make_unique<J>(E{1, 2}, 1);
+  // CHECK-FIXES: std::unique_ptr<J> PJ4 = std::unique_ptr<J>(new J{E{1, 2}, 1});
   PJ4.reset(new J{E{1, 2}, 1});
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
-  // CHECK-FIXES:  PJ4 = std::make_unique<J>(E{1, 2}, 1);
+  // CHECK-FIXES: PJ4.reset(new J{E{1, 2}, 1});
 
   std::unique_ptr<Foo> FF = std::unique_ptr<Foo>(new Foo());
   // CHECK-MESSAGES: :[[@LINE-1]]:29: warning:

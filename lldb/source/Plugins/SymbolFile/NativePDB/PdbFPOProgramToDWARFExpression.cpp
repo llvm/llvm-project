@@ -25,8 +25,19 @@ using namespace lldb_private::postfix;
 
 static uint32_t ResolveLLDBRegisterNum(llvm::StringRef reg_name, llvm::Triple::ArchType arch_type) {
   // lookup register name to get lldb register number
+  llvm::codeview::CPUType cpu_type;
+  switch (arch_type) {
+    case llvm::Triple::ArchType::aarch64:
+      cpu_type = llvm::codeview::CPUType::ARM64;
+      break;
+
+    default:
+      cpu_type = llvm::codeview::CPUType::X64;
+      break;
+  }
+
   llvm::ArrayRef<llvm::EnumEntry<uint16_t>> register_names =
-      llvm::codeview::getRegisterNames();
+      llvm::codeview::getRegisterNames(cpu_type);
   auto it = llvm::find_if(
       register_names,
       [&reg_name](const llvm::EnumEntry<uint16_t> &register_entry) {
