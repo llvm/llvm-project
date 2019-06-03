@@ -217,6 +217,18 @@ private:
       void *Ptr = LambdaPtr + KernelArgs[I].offset;
       const detail::kernel_param_kind_t &Kind = KernelArgs[I].kind;
       const int &Size = KernelArgs[I].info;
+      if (Kind == detail::kernel_param_kind_t::kind_accessor) {
+        // For args kind of accessor Size is information about accessor.
+        // The first 11 bits of Size encodes the accessor target.
+        const access::target AccTarget =
+            static_cast<access::target>(Size & 0x7ff);
+        if (AccTarget == access::target::global_buffer ||
+            AccTarget == access::target::constant_buffer) {
+          detail::AccessorBaseHost *AccBase =
+              static_cast<detail::AccessorBaseHost *>(Ptr);
+          Ptr = detail::getSyclObjImpl(*AccBase).get();
+        }
+      }
       processArg(Ptr, Kind, Size, I, IndexShift, IsKernelCreatedFromSource);
     }
   }
@@ -264,9 +276,7 @@ private:
       switch (AccTarget) {
       case access::target::global_buffer:
       case access::target::constant_buffer: {
-        detail::AccessorBaseHost *AccBase =
-            static_cast<detail::AccessorBaseHost *>(Ptr);
-        detail::Requirement *AccImpl = detail::getSyclObjImpl(*AccBase).get();
+        detail::Requirement *AccImpl = static_cast<detail::Requirement *>(Ptr);
         MArgs.emplace_back(Kind, AccImpl, Size, Index + IndexShift);
         if (!IsKernelCreatedFromSource) {
           const size_t SizeAccField = sizeof(size_t) * AccImpl->MDims;
@@ -312,7 +322,6 @@ private:
       case access::target::image_array: {
         throw cl::sycl::invalid_parameter_error(
             "Unsupported accessor target case.");
-        assert(0);
         break;
       }
       }
@@ -445,7 +454,7 @@ private:
     // Store copy of the accessor.
     MAccStorage.push_back(std::move(AccImpl));
     // Add accessor to the list of arguments.
-    MArgs.emplace_back(detail::kernel_param_kind_t::kind_accessor, AccBase,
+    MArgs.emplace_back(detail::kernel_param_kind_t::kind_accessor, Req,
                        static_cast<int>(AccessTarget), ArgIndex);
   }
 
