@@ -16,6 +16,13 @@
 //
 // RUN: %clang_cc1 -cl-std=CL2.0 -DIMPLICIT_INCLUDE -include %S/extension-begin.h -triple spir-unknown-unknown -O0 -emit-llvm -o - -fmodules -fimplicit-module-maps -fmodules-cache-path=%t.modules %s -verify -pedantic
 
+#pragma OPENCL EXTENSION my_ext : enable
+#ifndef IMPLICIT_INCLUDE
+// expected-warning@-2 {{unknown OpenCL extension 'my_ext' - ignoring}}
+// expected-warning@+2 {{unknown OpenCL extension 'my_ext' - ignoring}}
+#endif // IMPLICIT_INCLUDE
+#pragma OPENCL EXTENSION my_ext : disable
+
 #ifndef IMPLICIT_INCLUDE
 #include "extension-begin.h"
 #endif // IMPLICIT_INCLUDE

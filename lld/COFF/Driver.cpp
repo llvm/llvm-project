@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DebugTypes.h"
 #include "Driver.h"
 #include "Config.h"
 #include "ICF.h"
@@ -180,6 +181,9 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> MB,
   case file_magic::coff_object:
   case file_magic::coff_import_library:
     Symtab->addFile(make<ObjFile>(MBRef));
+    break;
+  case file_magic::pdb:
+    loadTypeServerSource(MBRef);
     break;
   case file_magic::coff_cl_gl_object:
     error(Filename + ": is not a native COFF file. Recompile without /GL");

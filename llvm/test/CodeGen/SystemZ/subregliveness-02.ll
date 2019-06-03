@@ -7,9 +7,9 @@ target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 target triple = "s390x-ibm-linux"
 
 ; Function Attrs: nounwind
-define void @spec_random_load() #0 {
+define void @spec_random_load(i64 %a0) #0 {
 bb:
-  %tmp = sitofp i64 undef to float
+  %tmp = sitofp i64 %a0 to float
   %tmp1 = fmul float %tmp, 0x3E00000000000000
   %tmp2 = fpext float %tmp1 to double
   %tmp3 = fmul double %tmp2, 2.560000e+02

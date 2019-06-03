@@ -549,6 +549,7 @@ private:
   CFGBlock *VisitExprWithCleanups(ExprWithCleanups *E, AddStmtChoice asc);
   CFGBlock *VisitForStmt(ForStmt *F);
   CFGBlock *VisitGotoStmt(GotoStmt *G);
+  CFGBlock *VisitGCCAsmStmt(GCCAsmStmt *G, AddStmtChoice asc);
   CFGBlock *VisitIfStmt(IfStmt *I);
   CFGBlock *VisitImplicitCastExpr(ImplicitCastExpr *E, AddStmtChoice asc);
   CFGBlock *VisitConstantExpr(ConstantExpr *E, AddStmtChoice asc);
@@ -1478,22 +1479,38 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
                                    E = BackpatchBlocks.end(); I != E; ++I ) {
 
     CFGBlock *B = I->block;
-    const GotoStmt *G = cast<GotoStmt>(B->getTerminator());
-    LabelMapTy::iterator LI = LabelMap.find(G->getLabel());
-
-    // If there is no target for the goto, then we are looking at an
-    // incomplete AST.  Handle this by not registering a successor.
-    if (LI == LabelMap.end()) continue;
-
-    JumpTarget JT = LI->second;
-    prependAutomaticObjLifetimeWithTerminator(B, I->scopePosition,
-                                              JT.scopePosition);
-    prependAutomaticObjDtorsWithTerminator(B, I->scopePosition,
-                                           JT.scopePosition);
-    const VarDecl *VD = prependAutomaticObjScopeEndWithTerminator(
-        B, I->scopePosition, JT.scopePosition);
-    appendScopeBegin(JT.block, VD, G);
-    addSuccessor(B, JT.block);
+    if (auto *G = dyn_cast<GotoStmt>(B->getTerminator())) {
+      LabelMapTy::iterator LI = LabelMap.find(G->getLabel());
+      // If there is no target for the goto, then we are looking at an
+      // incomplete AST.  Handle this by not registering a successor.
+      if (LI == LabelMap.end())
+        continue;
+      JumpTarget JT = LI->second;
+      prependAutomaticObjLifetimeWithTerminator(B, I->scopePosition,
+                                                JT.scopePosition);
+      prependAutomaticObjDtorsWithTerminator(B, I->scopePosition,
+                                             JT.scopePosition);
+      const VarDecl *VD = prependAutomaticObjScopeEndWithTerminator(
+          B, I->scopePosition, JT.scopePosition);
+      appendScopeBegin(JT.block, VD, G);
+      addSuccessor(B, JT.block);
+    };
+    if (auto *G = dyn_cast<GCCAsmStmt>(B->getTerminator())) {
+      CFGBlock *Successor  = (I+1)->block;
+      for (auto *L : G->labels()) {
+        LabelMapTy::iterator LI = LabelMap.find(L->getLabel());
+        // If there is no target for the goto, then we are looking at an
+        // incomplete AST.  Handle this by not registering a successor.
+        if (LI == LabelMap.end())
+          continue;
+        JumpTarget JT = LI->second;
+        // Successor has been added, so skip it.
+        if (JT.block == Successor)
+          continue;
+        addSuccessor(B, JT.block);
+      }
+      I++;
+    }
   }
 
   // Add successors to the Indirect Goto Dispatch block (if we have one).
@@ -2141,6 +2158,9 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc) {
 
     case Stmt::GotoStmtClass:
       return VisitGotoStmt(cast<GotoStmt>(S));
+
+    case Stmt::GCCAsmStmtClass:
+      return VisitGCCAsmStmt(cast<GCCAsmStmt>(S), asc);
 
     case Stmt::IfStmtClass:
       return VisitIfStmt(cast<IfStmt>(S));
@@ -3143,6 +3163,28 @@ CFGBlock *CFGBuilder::VisitGotoStmt(GotoStmt *G) {
     addSuccessor(Block, JT.block);
   }
 
+  return Block;
+}
+
+CFGBlock *CFGBuilder::VisitGCCAsmStmt(GCCAsmStmt *G, AddStmtChoice asc) {
+  // Goto is a control-flow statement.  Thus we stop processing the current
+  // block and create a new one.
+
+  if (!G->isAsmGoto())
+    return VisitStmt(G, asc);
+
+  if (Block) {
+    Succ = Block;
+    if (badCFG)
+      return nullptr;
+  }
+  Block = createBlock();
+  Block->setTerminator(G);
+  // We will backpatch this block later for all the labels.
+  BackpatchBlocks.push_back(JumpSource(Block, ScopePos));
+  // Save "Succ" in BackpatchBlocks. In the backpatch processing, "Succ" is
+  // used to avoid adding "Succ" again.
+  BackpatchBlocks.push_back(JumpSource(Succ, ScopePos));
   return Block;
 }
 

@@ -9206,6 +9206,9 @@ static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
   if (!Subtarget->hasNEON())
     return SDValue();
 
+  if (!N->getValueType(0).isSimple())
+    return SDValue();
+
   SDValue Op = N->getOperand(0);
   if (!Op.getValueType().isVector() || !Op.getValueType().isSimple() ||
       Op.getOpcode() != ISD::FMUL)

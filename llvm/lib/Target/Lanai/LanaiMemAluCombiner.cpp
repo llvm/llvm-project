@@ -22,7 +22,7 @@
 // in the same machine basic block into one machine instruction.
 //===----------------------------------------------------------------------===//
 
-#include "Lanai.h"
+#include "LanaiAluCode.h"
 #include "LanaiTargetMachine.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
