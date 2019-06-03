@@ -2,12 +2,12 @@
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
 # RUN: ld.lld --no-toc-optimize %t.o -o %t
-# RUN: llvm-readelf -x .rodata -x .eh_frame %t | FileCheck %s --check-prefix=DATALE
+# RUN: llvm-readelf -x .rodata -x .R_PPC64_TOC -x .eh_frame %t | FileCheck %s --check-prefix=DATALE
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
 # RUN: ld.lld --no-toc-optimize %t.o -o %t
-# RUN: llvm-readelf -x .rodata -x .eh_frame %t | FileCheck %s --check-prefix=DATABE
+# RUN: llvm-readelf -x .rodata -x .R_PPC64_TOC -x .eh_frame %t | FileCheck %s --check-prefix=DATABE
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 .text
@@ -139,14 +139,26 @@ _start:
 __foo:
   li 3,0
 
+.section .R_PPC64_TOC,"a",@progbits
+  .quad .TOC.@tocbase
+
+# SEC: .got PROGBITS 0000000010020000
+
+## tocbase = .got+0x8000 = 0x10028000
+# DATALE-LABEL: section '.R_PPC64_TOC':
+# DATALE: 00800210 00000000
+
+# DATABE-LABEL: section '.R_PPC64_TOC':
+# DATABE: 00000000 10028000
+
 # Check that the personality (relocated by R_PPC64_REL64) in the .eh_frame
 # equals the address of __foo.
-# 0x100001e2 + 0x76fe = 0x10010058
+# 0x100001ea + 0xfe6e = 0x10010058
 # DATALE: section '.eh_frame':
-# DATALE: 0x100001e0 {{....}}76fe
+# DATALE: 0x100001e8 {{....}}6efe
 
 # DATABE: section '.eh_frame':
-# DATABE: 0x100001e0 {{[0-9a-f]+ [0-9a-f]+}} fe76{{....}}
+# DATABE: 0x100001e8 {{[0-9a-f]+ [0-9a-f]+}} fe6e{{....}}
 
 # CHECK: __foo
 # CHECK-NEXT: 10010058:       li 3, 0

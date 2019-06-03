@@ -76,6 +76,45 @@ TEST(SymbolSlab, FindAndIterate) {
     EXPECT_THAT(*S.find(SymbolID(Sym)), Named(Sym));
 }
 
+TEST(RelationSlab, Lookup) {
+  SymbolID A{"A"};
+  SymbolID B{"B"};
+  SymbolID C{"C"};
+  SymbolID D{"D"};
+
+  RelationSlab::Builder Builder;
+  Builder.insert(Relation{A, index::SymbolRole::RelationBaseOf, B});
+  Builder.insert(Relation{A, index::SymbolRole::RelationBaseOf, C});
+  Builder.insert(Relation{B, index::SymbolRole::RelationBaseOf, D});
+  Builder.insert(Relation{C, index::SymbolRole::RelationBaseOf, D});
+  Builder.insert(Relation{B, index::SymbolRole::RelationChildOf, A});
+  Builder.insert(Relation{C, index::SymbolRole::RelationChildOf, A});
+  Builder.insert(Relation{D, index::SymbolRole::RelationChildOf, B});
+  Builder.insert(Relation{D, index::SymbolRole::RelationChildOf, C});
+
+  RelationSlab Slab = std::move(Builder).build();
+  EXPECT_THAT(
+      Slab.lookup(A, index::SymbolRole::RelationBaseOf),
+      UnorderedElementsAre(Relation{A, index::SymbolRole::RelationBaseOf, B},
+                           Relation{A, index::SymbolRole::RelationBaseOf, C}));
+}
+
+TEST(RelationSlab, Duplicates) {
+  SymbolID A{"A"};
+  SymbolID B{"B"};
+  SymbolID C{"C"};
+
+  RelationSlab::Builder Builder;
+  Builder.insert(Relation{A, index::SymbolRole::RelationBaseOf, B});
+  Builder.insert(Relation{A, index::SymbolRole::RelationBaseOf, C});
+  Builder.insert(Relation{A, index::SymbolRole::RelationBaseOf, B});
+
+  RelationSlab Slab = std::move(Builder).build();
+  EXPECT_THAT(Slab, UnorderedElementsAre(
+                        Relation{A, index::SymbolRole::RelationBaseOf, B},
+                        Relation{A, index::SymbolRole::RelationBaseOf, C}));
+}
+
 TEST(SwapIndexTest, OldIndexRecycled) {
   auto Token = std::make_shared<int>();
   std::weak_ptr<int> WeakToken = Token;

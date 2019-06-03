@@ -82,6 +82,14 @@ References:
       End:
         Line: 5
         Column: 8
+...
+--- !Relations
+Subject:
+  ID:              6481EE7AF2841756
+Predicate:       0
+Object:
+  ID:              6512AEC512EA3A2D
+...
 )";
 
 MATCHER_P(ID, I, "") { return arg.ID == cantFail(SymbolID::fromStr(I)); }
@@ -139,6 +147,13 @@ TEST(SerializationTest, YAMLConversions) {
   auto Ref1 = ParsedYAML->Refs->begin()->second.front();
   EXPECT_EQ(Ref1.Kind, RefKind::Reference);
   EXPECT_EQ(StringRef(Ref1.Location.FileURI), "file:///path/foo.cc");
+
+  SymbolID Base = cantFail(SymbolID::fromStr("6481EE7AF2841756"));
+  SymbolID Derived = cantFail(SymbolID::fromStr("6512AEC512EA3A2D"));
+  ASSERT_TRUE(bool(ParsedYAML->Relations));
+  EXPECT_THAT(*ParsedYAML->Relations,
+              UnorderedElementsAre(
+                  Relation{Base, index::SymbolRole::RelationBaseOf, Derived}));
 }
 
 std::vector<std::string> YAMLFromSymbols(const SymbolSlab &Slab) {
@@ -149,8 +164,15 @@ std::vector<std::string> YAMLFromSymbols(const SymbolSlab &Slab) {
 }
 std::vector<std::string> YAMLFromRefs(const RefSlab &Slab) {
   std::vector<std::string> Result;
-  for (const auto &Sym : Slab)
-    Result.push_back(toYAML(Sym));
+  for (const auto &Refs : Slab)
+    Result.push_back(toYAML(Refs));
+  return Result;
+}
+
+std::vector<std::string> YAMLFromRelations(const RelationSlab &Slab) {
+  std::vector<std::string> Result;
+  for (const auto &Rel : Slab)
+    Result.push_back(toYAML(Rel));
   return Result;
 }
 
@@ -167,12 +189,15 @@ TEST(SerializationTest, BinaryConversions) {
   ASSERT_TRUE(bool(In2)) << In.takeError();
   ASSERT_TRUE(In2->Symbols);
   ASSERT_TRUE(In2->Refs);
+  ASSERT_TRUE(In2->Relations);
 
   // Assert the YAML serializations match, for nice comparisons and diffs.
   EXPECT_THAT(YAMLFromSymbols(*In2->Symbols),
               UnorderedElementsAreArray(YAMLFromSymbols(*In->Symbols)));
   EXPECT_THAT(YAMLFromRefs(*In2->Refs),
               UnorderedElementsAreArray(YAMLFromRefs(*In->Refs)));
+  EXPECT_THAT(YAMLFromRelations(*In2->Relations),
+              UnorderedElementsAreArray(YAMLFromRelations(*In->Relations)));
 }
 
 TEST(SerializationTest, SrcsTest) {

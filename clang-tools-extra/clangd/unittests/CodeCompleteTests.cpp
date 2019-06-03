@@ -2436,7 +2436,7 @@ TEST(CompletionTest, CursorInSnippets) {
   EXPECT_THAT(
       Results.Completions,
       Contains(AllOf(Named("while"),
-                     SnippetSuffix("(${1:condition}){\n${0:statements}\n}"))));
+                     SnippetSuffix(" (${1:condition}) {\n${0:statements}\n}"))));
   // However, snippets for functions must *not* end with $0.
   EXPECT_THAT(Results.Completions,
               Contains(AllOf(Named("while_foo"),

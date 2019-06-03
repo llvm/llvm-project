@@ -824,6 +824,9 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
 }
 
 static bool isDiscardable(OutputSection &Sec) {
+  if (Sec.Name == "/DISCARD/")
+    return true;
+
   // We do not remove empty sections that are explicitly
   // assigned to any segment.
   if (!Sec.Phdrs.empty())
