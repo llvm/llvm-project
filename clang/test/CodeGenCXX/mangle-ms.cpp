@@ -120,6 +120,10 @@ FunT FunArr[10][20];
 int (__stdcall *j)(signed char, unsigned char);
 // CHECK-DAG: @"?j@@3P6GHCE@ZA"
 
+const char foo2::*m;
+// CHECK-DAG: @"?m@@3PRfoo@@DR1@"
+// X64-DAG:   @"?m@@3PERfoo@@DER1@"
+
 const volatile char foo2::*k;
 // CHECK-DAG: @"?k@@3PTfoo@@DT1@"
 // X64-DAG:   @"?k@@3PETfoo@@DET1@"

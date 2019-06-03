@@ -481,7 +481,6 @@ void LinkerScript::processSectionCommands() {
       if (Sec->Name == "/DISCARD/") {
         discard(V);
         Sec->SectionCommands.clear();
-        Sec->SectionIndex = 0; // Not an orphan.
         continue;
       }
 

@@ -90,6 +90,9 @@ void EmitClangAttrDocs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangDiagDocs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangOptDocs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
+void EmitClangOpenCLBuiltins(llvm::RecordKeeper &Records,
+                             llvm::raw_ostream &OS);
+
 void EmitClangDataCollectors(llvm::RecordKeeper &Records,
                              llvm::raw_ostream &OS);
 
