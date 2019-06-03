@@ -345,12 +345,6 @@ private:
       Ty = QualType{Ty->getPointeeOrArrayElementType(), 0};
 
     if (const auto *CRD = Ty->getAsCXXRecordDecl()) {
-      // FIXME: this seems like a temporary fix for SYCL programs
-      // that pre-declare, use, but not define OclCXX classes,
-      // which are later translated into SPIRV types.
-      if (!CRD->hasDefinition())
-        return true;
-
       if (CRD->isPolymorphic()) {
         SemaRef.Diag(CRD->getLocation(), diag::err_sycl_virtual_types);
         SemaRef.Diag(Loc.getBegin(), diag::note_sycl_used_here);
