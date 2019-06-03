@@ -367,12 +367,11 @@ Sema::ExpressionEvaluationContextRecord::getMangleNumberingContext(
   return *MangleNumbering;
 }
 
-CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
-                                           SourceRange IntroducerRange,
-                                           TypeSourceInfo *MethodTypeInfo,
-                                           SourceLocation EndLoc,
-                                           ArrayRef<ParmVarDecl *> Params,
-                                           const bool IsConstexprSpecified) {
+CXXMethodDecl *Sema::startLambdaDefinition(
+    CXXRecordDecl *Class, SourceRange IntroducerRange,
+    TypeSourceInfo *MethodTypeInfo, SourceLocation EndLoc,
+    ArrayRef<ParmVarDecl *> Params, const bool IsConstexprSpecified,
+    Optional<std::pair<unsigned, Decl *>> Mangling) {
   QualType MethodType = MethodTypeInfo->getType();
   TemplateParameterList *TemplateParams =
             getGenericLambdaTemplateParameterList(getCurLambda(), *this);
@@ -438,12 +437,16 @@ CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
       P->setOwningFunction(Method);
   }
 
-  Decl *ManglingContextDecl;
-  if (MangleNumberingContext *MCtx =
-          getCurrentMangleNumberContext(Class->getDeclContext(),
-                                        ManglingContextDecl)) {
-    unsigned ManglingNumber = MCtx->getManglingNumber(Method);
-    Class->setLambdaMangling(ManglingNumber, ManglingContextDecl);
+  if (Mangling) {
+    Class->setLambdaMangling(Mangling->first, Mangling->second);
+  } else {
+    Decl *ManglingContextDecl;
+    if (MangleNumberingContext *MCtx =
+            getCurrentMangleNumberContext(Class->getDeclContext(),
+                                          ManglingContextDecl)) {
+      unsigned ManglingNumber = MCtx->getManglingNumber(Method);
+      Class->setLambdaMangling(ManglingNumber, ManglingContextDecl);
+    }
   }
 
   return Method;
@@ -1431,32 +1434,22 @@ static void addBlockPointerConversion(Sema &S,
   Class->addDecl(Conversion);
 }
 
-ExprResult Sema::performThisCaptureInitialization(const Capture &Cap,
-                                                  bool IsImplicit) {
-  QualType ThisTy = getCurrentThisType();
-  SourceLocation Loc = Cap.getLocation();
-  Expr *This = BuildCXXThisExpr(Loc, ThisTy, IsImplicit);
-  if (Cap.isReferenceCapture())
-    return This;
+ExprResult Sema::BuildCaptureInit(const Capture &Cap,
+                                  SourceLocation ImplicitCaptureLoc,
+                                  bool IsOpenMPMapping) {
+  // VLA captures don't have a stored initialization expression.
+  if (Cap.isVLATypeCapture())
+    return ExprResult();
 
-  // Capture (by copy) of '*this'.
-  Expr *StarThis = CreateBuiltinUnaryOp(Loc, UO_Deref, This).get();
-  InitializedEntity Entity = InitializedEntity::InitializeLambdaCapture(
-      nullptr, Cap.getCaptureType(), Loc);
-  InitializationKind InitKind =
-      InitializationKind::CreateDirect(Loc, Loc, Loc);
-  InitializationSequence Init(*this, Entity, InitKind, StarThis);
-  return Init.Perform(*this, Entity, InitKind, StarThis);
-}
+  // An init-capture is initialized directly from its stored initializer.
+  if (Cap.isInitCapture())
+    return Cap.getVariable()->getInit();
 
-static ExprResult performLambdaVarCaptureInitialization(
-    Sema &S, const Capture &Capture, FieldDecl *Field,
-    SourceLocation ImplicitCaptureLoc, bool IsImplicitCapture) {
-  assert(Capture.isVariableCapture() && "not a variable capture");
-
-  auto *Var = Capture.getVariable();
+  // For anything else, build an initialization expression. For an implicit
+  // capture, the capture notionally happens at the capture-default, so use
+  // that location here.
   SourceLocation Loc =
-      IsImplicitCapture ? ImplicitCaptureLoc : Capture.getLocation();
+      ImplicitCaptureLoc.isValid() ? ImplicitCaptureLoc : Cap.getLocation();
 
   // C++11 [expr.prim.lambda]p21:
   //   When the lambda-expression is evaluated, the entities that
@@ -1470,17 +1463,39 @@ static ExprResult performLambdaVarCaptureInitialization(
   // C++ [expr.prim.lambda]p12:
   //   An entity captured by a lambda-expression is odr-used (3.2) in
   //   the scope containing the lambda-expression.
-  ExprResult RefResult = S.BuildDeclarationNameExpr(
+  ExprResult Init;
+  IdentifierInfo *Name = nullptr;
+  if (Cap.isThisCapture()) {
+    QualType ThisTy = getCurrentThisType();
+    Expr *This = BuildCXXThisExpr(Loc, ThisTy, ImplicitCaptureLoc.isValid());
+    if (Cap.isCopyCapture())
+      Init = CreateBuiltinUnaryOp(Loc, UO_Deref, This);
+    else
+      Init = This;
+  } else {
+    assert(Cap.isVariableCapture() && "unknown kind of capture");
+    VarDecl *Var = Cap.getVariable();
+    Name = Var->getIdentifier();
+    Init = BuildDeclarationNameExpr(
       CXXScopeSpec(), DeclarationNameInfo(Var->getDeclName(), Loc), Var);
-  if (RefResult.isInvalid())
-    return ExprError();
-  Expr *Ref = RefResult.get();
+  }
 
-  auto Entity = InitializedEntity::InitializeLambdaCapture(
-      Var->getIdentifier(), Field->getType(), Loc);
-  InitializationKind InitKind = InitializationKind::CreateDirect(Loc, Loc, Loc);
-  InitializationSequence Init(S, Entity, InitKind, Ref);
-  return Init.Perform(S, Entity, InitKind, Ref);
+  // In OpenMP, the capture kind doesn't actually describe how to capture:
+  // variables are "mapped" onto the device in a process that does not formally
+  // make a copy, even for a "copy capture".
+  if (IsOpenMPMapping)
+    return Init;
+
+  if (Init.isInvalid())
+    return ExprError();
+
+  Expr *InitExpr = Init.get();
+  InitializedEntity Entity = InitializedEntity::InitializeLambdaCapture(
+      Name, Cap.getCaptureType(), Loc);
+  InitializationKind InitKind =
+      InitializationKind::CreateDirect(Loc, Loc, Loc);
+  InitializationSequence InitSeq(*this, Entity, InitKind, InitExpr);
+  return InitSeq.Perform(*this, Entity, InitKind, InitExpr);
 }
 
 ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body,
@@ -1647,14 +1662,18 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
 
       assert(!From.isBlockCapture() && "Cannot capture __block variables");
       bool IsImplicit = I >= LSI->NumExplicitCaptures;
+      SourceLocation ImplicitCaptureLoc =
+          IsImplicit ? CaptureDefaultLoc : SourceLocation();
 
       // Use source ranges of explicit captures for fixits where available.
       SourceRange CaptureRange = LSI->ExplicitCaptureRanges[I];
 
       // Warn about unused explicit captures.
       bool IsCaptureUsed = true;
-      if (!CurContext->isDependentContext() && !IsImplicit && !From.isODRUsed()) {
+      if (!CurContext->isDependentContext() && !IsImplicit &&
+          !From.isODRUsed()) {
         // Initialized captures that are non-ODR used may not be eliminated.
+        // FIXME: Where did the IsGenericLambda here come from?
         bool NonODRUsedInitCapture =
             IsGenericLambda && From.isNonODRUsed() && From.isInitCapture();
         if (!NonODRUsedInitCapture) {
@@ -1682,46 +1701,43 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
         PrevCaptureLoc = CaptureRange.getEnd();
       }
 
-      // Add a FieldDecl for the capture.
-      FieldDecl *Field = BuildCaptureField(Class, From);
-
-      // Handle 'this' capture.
-      if (From.isThisCapture()) {
-        // Capturing 'this' implicitly with a default of '[=]' is deprecated,
-        // because it results in a reference capture. Don't warn prior to
-        // C++2a; there's nothing that can be done about it before then.
-        if (getLangOpts().CPlusPlus2a && IsImplicit &&
-            CaptureDefault == LCD_ByCopy) {
-          Diag(From.getLocation(), diag::warn_deprecated_this_capture);
-          Diag(CaptureDefaultLoc, diag::note_deprecated_this_capture)
-              << FixItHint::CreateInsertion(
-                     getLocForEndOfToken(CaptureDefaultLoc), ", this");
+      // Map the capture to our AST representation.
+      LambdaCapture Capture = [&] {
+        if (From.isThisCapture()) {
+          // Capturing 'this' implicitly with a default of '[=]' is deprecated,
+          // because it results in a reference capture. Don't warn prior to
+          // C++2a; there's nothing that can be done about it before then.
+          if (getLangOpts().CPlusPlus2a && IsImplicit &&
+              CaptureDefault == LCD_ByCopy) {
+            Diag(From.getLocation(), diag::warn_deprecated_this_capture);
+            Diag(CaptureDefaultLoc, diag::note_deprecated_this_capture)
+                << FixItHint::CreateInsertion(
+                       getLocForEndOfToken(CaptureDefaultLoc), ", this");
+          }
+          return LambdaCapture(From.getLocation(), IsImplicit,
+                               From.isCopyCapture() ? LCK_StarThis : LCK_This);
+        } else if (From.isVLATypeCapture()) {
+          return LambdaCapture(From.getLocation(), IsImplicit, LCK_VLAType);
+        } else {
+          assert(From.isVariableCapture() && "unknown kind of capture");
+          VarDecl *Var = From.getVariable();
+          LambdaCaptureKind Kind =
+              From.isCopyCapture() ? LCK_ByCopy : LCK_ByRef;
+          return LambdaCapture(From.getLocation(), IsImplicit, Kind, Var,
+                               From.getEllipsisLoc());
         }
+      }();
 
-        ExprResult Init = performThisCaptureInitialization(From, IsImplicit);
-        Captures.push_back(
-            LambdaCapture(From.getLocation(), IsImplicit,
-                          From.isCopyCapture() ? LCK_StarThis : LCK_This));
-        CaptureInits.push_back(Init.get());
-        continue;
-      }
-      if (From.isVLATypeCapture()) {
-        Captures.push_back(
-            LambdaCapture(From.getLocation(), IsImplicit, LCK_VLAType));
-        CaptureInits.push_back(nullptr);
-        continue;
-      }
+      // Form the initializer for the capture field.
+      ExprResult Init = BuildCaptureInit(From, ImplicitCaptureLoc);
 
-      VarDecl *Var = From.getVariable();
-      LambdaCaptureKind Kind = From.isCopyCapture() ? LCK_ByCopy : LCK_ByRef;
-      Captures.push_back(LambdaCapture(From.getLocation(), IsImplicit, Kind,
-                                       Var, From.getEllipsisLoc()));
+      // FIXME: Skip this capture if the capture is not used, the initializer
+      // has no side-effects, the type of the capture is trivial, and the
+      // lambda is not externally visible.
 
-      ExprResult Init =
-          From.isInitCapture()
-              ? Var->getInit()
-              : performLambdaVarCaptureInitialization(
-                    *this, From, Field, CaptureDefaultLoc, IsImplicit);
+      // Add a FieldDecl for the capture and form its initializer.
+      BuildCaptureField(Class, From);
+      Captures.push_back(Capture);
       CaptureInits.push_back(Init.get());
     }
 

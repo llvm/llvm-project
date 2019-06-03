@@ -2346,6 +2346,9 @@ int X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
 int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
                                       unsigned Alignment,
                                       unsigned AddressSpace) {
+  bool IsLoad = (Instruction::Load == Opcode);
+  bool IsStore = (Instruction::Store == Opcode);
+
   VectorType *SrcVTy = dyn_cast<VectorType>(SrcTy);
   if (!SrcVTy)
     // To calculate scalar take the regular cost, without mask
@@ -2353,10 +2356,9 @@ int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
 
   unsigned NumElem = SrcVTy->getVectorNumElements();
   VectorType *MaskTy =
-    VectorType::get(Type::getInt8Ty(SrcVTy->getContext()), NumElem);
-  if ((Opcode == Instruction::Load && !isLegalMaskedLoad(SrcVTy)) ||
-      (Opcode == Instruction::Store && !isLegalMaskedStore(SrcVTy)) ||
-      !isPowerOf2_32(NumElem)) {
+      VectorType::get(Type::getInt8Ty(SrcVTy->getContext()), NumElem);
+  if ((IsLoad && !isLegalMaskedLoad(SrcVTy)) ||
+      (IsStore && !isLegalMaskedStore(SrcVTy)) || !isPowerOf2_32(NumElem)) {
     // Scalarization
     int MaskSplitCost = getScalarizationOverhead(MaskTy, false, true);
     int ScalarCompareCost = getCmpSelInstrCost(
@@ -2364,8 +2366,7 @@ int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
     int BranchCost = getCFInstrCost(Instruction::Br);
     int MaskCmpCost = NumElem * (BranchCost + ScalarCompareCost);
 
-    int ValueSplitCost = getScalarizationOverhead(
-        SrcVTy, Opcode == Instruction::Load, Opcode == Instruction::Store);
+    int ValueSplitCost = getScalarizationOverhead(SrcVTy, IsLoad, IsStore);
     int MemopCost =
         NumElem * BaseT::getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
                                          Alignment, AddressSpace);
@@ -2388,11 +2389,13 @@ int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
     // Expanding requires fill mask with zeroes
     Cost += getShuffleCost(TTI::SK_InsertSubvector, NewMaskTy, 0, MaskTy);
   }
+
+  // Pre-AVX512 - each maskmov load costs 2 + store costs ~8.
   if (!ST->hasAVX512())
-    return Cost + LT.first*4; // Each maskmov costs 4
+    return Cost + LT.first * (IsLoad ? 2 : 8);
 
   // AVX-512 masked load/store is cheapper
-  return Cost+LT.first;
+  return Cost + LT.first;
 }
 
 int X86TTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,

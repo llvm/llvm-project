@@ -7250,6 +7250,18 @@ define i32 @pr38986(i1 %c, i32* %p) {
  ret i32 %ret
 }
 
+define <2 x double> @zero_mask(<2 x double>* %addr, <2 x double> %dst) {
+; SSE-LABEL: zero_mask:
+; SSE:       ## %bb.0:
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: zero_mask:
+; AVX:       ## %bb.0:
+; AVX-NEXT:    retq
+  %res = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %addr, i32 4, <2 x i1> zeroinitializer, <2 x double> %dst)
+  ret <2 x double> %res
+}
+
 declare <8 x double> @llvm.masked.load.v8f64.p0v8f64(<8 x double>*, i32, <8 x i1>, <8 x double>)
 declare <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>*, i32, <4 x i1>, <4 x double>)
 declare <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>*, i32, <2 x i1>, <2 x double>)

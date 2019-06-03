@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEX_H
 
 #include "Ref.h"
+#include "Relation.h"
 #include "Symbol.h"
 #include "SymbolID.h"
 #include "llvm/ADT/DenseSet.h"

@@ -24,6 +24,29 @@ llvm::Error makeError(const llvm::Twine &Msg) {
   return llvm::make_error<llvm::StringError>(Msg,
                                              llvm::inconvertibleErrorCode());
 }
+} // namespace
+
+RelationKind symbolRoleToRelationKind(index::SymbolRole Role) {
+  // SymbolRole is used to record relations in the index.
+  // Only handle the relations we actually store currently.
+  // If we start storing more relations, this list can be expanded.
+  switch (Role) {
+  case index::SymbolRole::RelationBaseOf:
+    return RelationKind::BaseOf;
+  default:
+    llvm_unreachable("Unsupported symbol role");
+  }
+}
+
+index::SymbolRole relationKindToSymbolRole(RelationKind Kind) {
+  switch (Kind) {
+  case RelationKind::BaseOf:
+    return index::SymbolRole::RelationBaseOf;
+  }
+  llvm_unreachable("Invalid relation kind");
+}
+
+namespace {
 
 // IO PRIMITIVES
 // We use little-endian 32 bit ints, sometimes with variable-length encoding.
@@ -358,6 +381,28 @@ readRefs(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings) {
   return Result;
 }
 
+// RELATIONS ENCODING
+// A relations section is a flat list of relations. Each relation has:
+//  - SymbolID (subject): 8 bytes
+//  - relation kind (predicate): 1 byte
+//  - SymbolID (object): 8 bytes
+// In the future, we might prefer a packed representation if the need arises.
+
+void writeRelation(const Relation &R, llvm::raw_ostream &OS) {
+  OS << R.Subject.raw();
+  RelationKind Kind = symbolRoleToRelationKind(R.Predicate);
+  OS.write(static_cast<uint8_t>(Kind));
+  OS << R.Object.raw();
+}
+
+Relation readRelation(Reader &Data) {
+  SymbolID Subject = Data.consumeID();
+  index::SymbolRole Predicate =
+      relationKindToSymbolRole(static_cast<RelationKind>(Data.consume8()));
+  SymbolID Object = Data.consumeID();
+  return {Subject, Predicate, Object};
+}
+
 // FILE ENCODING
 // A file is a RIFF chunk with type 'CdIx'.
 // It contains the sections:
@@ -434,6 +479,17 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
       return makeError("malformed or truncated refs");
     Result.Refs = std::move(Refs).build();
   }
+  if (Chunks.count("rela")) {
+    Reader RelationsReader(Chunks.lookup("rela"));
+    RelationSlab::Builder Relations;
+    while (!RelationsReader.eof()) {
+      auto Relation = readRelation(RelationsReader);
+      Relations.insert(Relation);
+    }
+    if (RelationsReader.err())
+      return makeError("malformed or truncated relations");
+    Result.Relations = std::move(Relations).build();
+  }
   return std::move(Result);
 }
 
@@ -483,6 +539,14 @@ void writeRIFF(const IndexFileOut &Data, llvm::raw_ostream &OS) {
     }
   }
 
+  std::vector<Relation> Relations;
+  if (Data.Relations) {
+    for (const auto &Relation : *Data.Relations) {
+      Relations.emplace_back(Relation);
+      // No strings to be interned in relations.
+    }
+  }
+
   std::string StringSection;
   {
     llvm::raw_string_ostream StringOS(StringSection);
@@ -506,6 +570,16 @@ void writeRIFF(const IndexFileOut &Data, llvm::raw_ostream &OS) {
         writeRefs(Sym.first, Sym.second, Strings, RefsOS);
     }
     RIFF.Chunks.push_back({riff::fourCC("refs"), RefsSection});
+  }
+
+  std::string RelationSection;
+  if (Data.Relations) {
+    {
+      llvm::raw_string_ostream RelationOS{RelationSection};
+      for (const auto &Relation : Relations)
+        writeRelation(Relation, RelationOS);
+    }
+    RIFF.Chunks.push_back({riff::fourCC("rela"), RelationSection});
   }
 
   std::string SrcsSection;
@@ -561,6 +635,7 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
 
   SymbolSlab Symbols;
   RefSlab Refs;
+  RelationSlab Relations;
   {
     trace::Span Tracer("ParseIndex");
     if (auto I = readIndexFile(Buffer->get()->getBuffer())) {
@@ -568,6 +643,8 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
         Symbols = std::move(*I->Symbols);
       if (I->Refs)
         Refs = std::move(*I->Refs);
+      if (I->Relations)
+        Relations = std::move(*I->Relations);
     } else {
       llvm::errs() << "Bad Index: " << llvm::toString(I.takeError()) << "\n";
       return nullptr;
@@ -576,15 +653,17 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
 
   size_t NumSym = Symbols.size();
   size_t NumRefs = Refs.numRefs();
+  size_t NumRelations = Relations.size();
 
   trace::Span Tracer("BuildIndex");
   auto Index = UseDex ? dex::Dex::build(std::move(Symbols), std::move(Refs))
                       : MemIndex::build(std::move(Symbols), std::move(Refs));
   vlog("Loaded {0} from {1} with estimated memory usage {2} bytes\n"
        "  - number of symbols: {3}\n"
-       "  - number of refs: {4}\n",
+       "  - number of refs: {4}\n"
+       "  - numnber of relations: {5}",
        UseDex ? "Dex" : "MemIndex", SymbolFilename,
-       Index->estimateMemoryUsage(), NumSym, NumRefs);
+       Index->estimateMemoryUsage(), NumSym, NumRefs, NumRelations);
   return Index;
 }
 

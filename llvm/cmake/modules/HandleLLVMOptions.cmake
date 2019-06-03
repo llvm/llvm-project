@@ -912,14 +912,6 @@ if(LLVM_LINK_LLVM_DYLIB AND LLVM_EXPORT_SYMBOLS_FOR_PLUGINS)
   message(FATAL_ERROR "LLVM_LINK_LLVM_DYLIB not compatible with LLVM_EXPORT_SYMBOLS_FOR_PLUGINS")
 endif()
 
-# Plugin support
-# FIXME: Make this configurable.
-if(BUILD_SHARED_LIBS OR LLVM_BUILD_LLVM_DYLIB)
-  set(LLVM_ENABLE_PLUGINS ON)
-else()
-  set(LLVM_ENABLE_PLUGINS OFF)
-endif()
-
 # By default we should enable LLVM_ENABLE_IDE only for multi-configuration
 # generators. This option disables optional build system features that make IDEs
 # less usable.
