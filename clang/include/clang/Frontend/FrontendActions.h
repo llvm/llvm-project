@@ -240,6 +240,17 @@ protected:
   bool usesPreprocessorOnly() const override { return true; }
 };
 
+class PrintDependencyDirectivesSourceMinimizerAction : public FrontendAction {
+protected:
+  void ExecuteAction() override;
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &,
+                                                 StringRef) override {
+    return nullptr;
+  }
+
+  bool usesPreprocessorOnly() const override { return true; }
+};
+
 //===----------------------------------------------------------------------===//
 // Preprocessor Actions
 //===----------------------------------------------------------------------===//

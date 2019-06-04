@@ -102,8 +102,8 @@ void foo() {
   // CHECK-CC2-NEXT: COMPLETION: Pattern : typeof(<#type#>)
   // CHECK-CC2-NEXT: COMPLETION: union
   // CHECK-CC2-NEXT: COMPLETION: unsigned
-  // CHECK-CC2-NEXT: COMPLETION: Pattern : using namespace <#identifier#>;
   // CHECK-CC2-NEXT: COMPLETION: Pattern : using <#qualifier#>::<#name#>;
+  // CHECK-CC2-NEXT: COMPLETION: Pattern : using namespace <#identifier#>;
   // CHECK-CC2-NEXT: COMPLETION: void
   // CHECK-CC2-NEXT: COMPLETION: volatile
   // CHECK-CC2-NEXT: COMPLETION: wchar_t
