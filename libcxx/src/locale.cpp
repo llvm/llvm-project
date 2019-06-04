@@ -4379,7 +4379,9 @@ void
 __check_grouping(const string& __grouping, unsigned* __g, unsigned* __g_end,
                  ios_base::iostate& __err)
 {
-    if (__grouping.size() != 0)
+//  if the grouping pattern is empty _or_ there are no grouping bits, then do nothing
+//  we always have at least a single entry in [__g, __g_end); the end of the input sequence
+	if (__grouping.size() >= 0 && __g_end - __g > 1)
     {
         reverse(__g, __g_end);
         const char* __ig = __grouping.data();

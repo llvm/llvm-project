@@ -3439,15 +3439,24 @@ public:
 /// their prof branch_weights metadata.
 class SwitchInstProfUpdateWrapper {
   SwitchInst &SI;
-  Optional<SmallVector<uint32_t, 8> > Weights;
-  bool Changed = false;
+  Optional<SmallVector<uint32_t, 8> > Weights = None;
+
+  // Sticky invalid state is needed to safely ignore operations with prof data
+  // in cases where SwitchInstProfUpdateWrapper is created from SwitchInst
+  // with inconsistent prof data. TODO: once we fix all prof data
+  // inconsistencies we can turn invalid state to assertions.
+  enum {
+    Invalid,
+    Initialized,
+    Changed
+  } State = Invalid;
 
 protected:
   static MDNode *getProfBranchWeightsMD(const SwitchInst &SI);
 
   MDNode *buildProfBranchWeightsMD();
 
-  Optional<SmallVector<uint32_t, 8> > getProfBranchWeights();
+  void init();
 
 public:
   using CaseWeightOpt = Optional<uint32_t>;
@@ -3455,11 +3464,10 @@ public:
   SwitchInst &operator*() { return SI; }
   operator SwitchInst *() { return &SI; }
 
-  SwitchInstProfUpdateWrapper(SwitchInst &SI)
-      : SI(SI), Weights(getProfBranchWeights()) {}
+  SwitchInstProfUpdateWrapper(SwitchInst &SI) : SI(SI) { init(); }
 
   ~SwitchInstProfUpdateWrapper() {
-    if (Changed)
+    if (State == Changed)
       SI.setMetadata(LLVMContext::MD_prof, buildProfBranchWeightsMD());
   }
 

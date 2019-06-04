@@ -123,8 +123,9 @@ public:
     assert(AST.hasValue());
     const NamedDecl &ND =
         Qualified ? findDecl(*AST, Name) : findUnqualifiedDecl(*AST, Name);
-    const SourceManager& SM = AST->getSourceManager();
-    bool MainFile = SM.isWrittenInMainFile(SM.getExpansionLoc(ND.getBeginLoc()));
+    const SourceManager &SM = AST->getSourceManager();
+    bool MainFile =
+        SM.isWrittenInMainFile(SM.getExpansionLoc(ND.getBeginLoc()));
     return SymbolCollector::shouldCollectSymbol(
         ND, AST->getASTContext(), SymbolCollector::Options(), MainFile);
   }
@@ -272,13 +273,14 @@ public:
         Args, Factory->create(), Files.get(),
         std::make_shared<PCHContainerOperations>());
 
-    InMemoryFileSystem->addFile(
-        TestHeaderName, 0, llvm::MemoryBuffer::getMemBuffer(HeaderCode));
+    InMemoryFileSystem->addFile(TestHeaderName, 0,
+                                llvm::MemoryBuffer::getMemBuffer(HeaderCode));
     InMemoryFileSystem->addFile(TestFileName, 0,
                                 llvm::MemoryBuffer::getMemBuffer(MainCode));
     Invocation.run();
     Symbols = Factory->Collector->takeSymbols();
     Refs = Factory->Collector->takeRefs();
+    Relations = Factory->Collector->takeRelations();
     return true;
   }
 
@@ -290,6 +292,7 @@ protected:
   std::string TestFileURI;
   SymbolSlab Symbols;
   RefSlab Refs;
+  RelationSlab Relations;
   SymbolCollector::Options CollectorOpts;
   std::unique_ptr<CommentHandler> PragmaHandler;
 };
@@ -634,6 +637,19 @@ TEST_F(SymbolCollectorTest, RefsInHeaders) {
                                   HaveRanges(Header.ranges()))));
 }
 
+TEST_F(SymbolCollectorTest, Relations) {
+  std::string Header = R"(
+  class Base {};
+  class Derived : public Base {};
+  )";
+  runSymbolCollector(Header, /*Main=*/"");
+  const Symbol &Base = findSymbol(Symbols, "Base");
+  const Symbol &Derived = findSymbol(Symbols, "Derived");
+  EXPECT_THAT(Relations,
+              Contains(Relation{Base.ID, index::SymbolRole::RelationBaseOf,
+                                Derived.ID}));
+}
+
 TEST_F(SymbolCollectorTest, References) {
   const std::string Header = R"(
     class W;
@@ -783,10 +799,9 @@ TEST_F(SymbolCollectorTest, SymbolsInMainFile) {
     void f1() {}
   )";
   runSymbolCollector(/*Header=*/"", Main);
-  EXPECT_THAT(Symbols,
-              UnorderedElementsAre(QName("Foo"), QName("f1"), QName("f2"),
-                                   QName("ff"), QName("foo"), QName("foo::Bar"),
-                                   QName("main_f")));
+  EXPECT_THAT(Symbols, UnorderedElementsAre(
+                           QName("Foo"), QName("f1"), QName("f2"), QName("ff"),
+                           QName("foo"), QName("foo::Bar"), QName("main_f")));
 }
 
 TEST_F(SymbolCollectorTest, Documentation) {

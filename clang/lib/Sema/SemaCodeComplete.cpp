@@ -1919,9 +1919,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
       Results.AddResult(Result(Builder.TakeString()));
 
       // Using directives
-      Builder.AddTypedTextChunk("using");
-      Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
-      Builder.AddTextChunk("namespace");
+      Builder.AddTypedTextChunk("using namespace");
       Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
       Builder.AddPlaceholderChunk("identifier");
       Builder.AddChunk(CodeCompletionString::CK_SemiColon);
@@ -1964,9 +1962,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
 
       // using typename qualifier::name (only in a dependent context)
       if (SemaRef.CurContext->isDependentContext()) {
-        Builder.AddTypedTextChunk("using");
-        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
-        Builder.AddTextChunk("typename");
+        Builder.AddTypedTextChunk("using typename");
         Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
         Builder.AddPlaceholderChunk("qualifier");
         Builder.AddTextChunk("::");
@@ -2236,9 +2232,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
     Results.AddResult(Result(Builder.TakeString()));
 
     // Using directives
-    Builder.AddTypedTextChunk("using");
-    Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
-    Builder.AddTextChunk("namespace");
+    Builder.AddTypedTextChunk("using namespace");
     Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
     Builder.AddPlaceholderChunk("identifier");
     Builder.AddChunk(CodeCompletionString::CK_SemiColon);
@@ -5201,9 +5195,7 @@ void Sema::CodeCompleteAfterIf(Scope *S) {
   Results.AddResult(Builder.TakeString());
 
   // "else if" block
-  Builder.AddTypedTextChunk("else");
-  Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
-  Builder.AddTextChunk("if");
+  Builder.AddTypedTextChunk("else if");
   Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
   Builder.AddChunk(CodeCompletionString::CK_LeftParen);
   if (getLangOpts().CPlusPlus)

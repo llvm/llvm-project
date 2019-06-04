@@ -35,15 +35,15 @@ namespace std {
   if (!nothrow && UNLIKELY(!res)) ReportOutOfMemory(size, &stack);\
   return res
 
-INTERCEPTOR_ATTRIBUTE
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void *operator new(size_t size) { OPERATOR_NEW_BODY(false /*nothrow*/); }
-INTERCEPTOR_ATTRIBUTE
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void *operator new[](size_t size) { OPERATOR_NEW_BODY(false /*nothrow*/); }
-INTERCEPTOR_ATTRIBUTE
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void *operator new(size_t size, std::nothrow_t const&) {
   OPERATOR_NEW_BODY(true /*nothrow*/);
 }
-INTERCEPTOR_ATTRIBUTE
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void *operator new[](size_t size, std::nothrow_t const&) {
   OPERATOR_NEW_BODY(true /*nothrow*/);
 }
@@ -52,13 +52,13 @@ void *operator new[](size_t size, std::nothrow_t const&) {
   GET_MALLOC_STACK_TRACE; \
   if (ptr) hwasan_free(ptr, &stack)
 
-INTERCEPTOR_ATTRIBUTE
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void operator delete(void *ptr) NOEXCEPT { OPERATOR_DELETE_BODY; }
-INTERCEPTOR_ATTRIBUTE
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void operator delete[](void *ptr) NOEXCEPT { OPERATOR_DELETE_BODY; }
-INTERCEPTOR_ATTRIBUTE
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void operator delete(void *ptr, std::nothrow_t const&) { OPERATOR_DELETE_BODY; }
-INTERCEPTOR_ATTRIBUTE
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void operator delete[](void *ptr, std::nothrow_t const&) {
   OPERATOR_DELETE_BODY;
 }

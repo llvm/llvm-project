@@ -333,12 +333,20 @@ public:
     for (uint64_t Byte = 0, End = PltContents.size(); Byte + 7 < End;
          Byte += 4) {
       uint32_t Insn = support::endian::read32le(PltContents.data() + Byte);
+      uint64_t Off = 0;
+      // Check for optional bti c that prefixes adrp in BTI enabled entries
+      if (Insn == 0xd503245f) {
+         Off = 4;
+         Insn = support::endian::read32le(PltContents.data() + Byte + Off);
+      }
       // Check for adrp.
       if ((Insn & 0x9f000000) != 0x90000000)
         continue;
+      Off += 4;
       uint64_t Imm = (((PltSectionVA + Byte) >> 12) << 12) +
             (((Insn >> 29) & 3) << 12) + (((Insn >> 5) & 0x3ffff) << 14);
-      uint32_t Insn2 = support::endian::read32le(PltContents.data() + Byte + 4);
+      uint32_t Insn2 =
+          support::endian::read32le(PltContents.data() + Byte + Off);
       // Check for: ldr Xt, [Xn, #pimm].
       if (Insn2 >> 22 == 0x3e5) {
         Imm += ((Insn2 >> 10) & 0xfff) << 3;

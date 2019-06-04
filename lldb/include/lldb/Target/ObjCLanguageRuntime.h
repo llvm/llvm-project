@@ -275,7 +275,7 @@ public:
     return (m_has_new_literals_and_indexing == eLazyBoolYes);
   }
 
-  virtual void SymbolsDidLoad(const ModuleList &module_list) {
+  void SymbolsDidLoad(const ModuleList &module_list) override {
     m_negative_complete_class_cache.clear();
   }
 

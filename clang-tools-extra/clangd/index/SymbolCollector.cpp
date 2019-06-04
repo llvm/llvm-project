@@ -193,6 +193,11 @@ RefKind toRefKind(index::SymbolRoleSet Roles) {
   return static_cast<RefKind>(static_cast<unsigned>(RefKind::All) & Roles);
 }
 
+bool shouldIndexRelation(const index::SymbolRelation &R) {
+  // We currently only index BaseOf relations, for type hierarchy subtypes.
+  return R.Roles & static_cast<unsigned>(index::SymbolRole::RelationBaseOf);
+}
+
 } // namespace
 
 SymbolCollector::SymbolCollector(Options Opts) : Opts(std::move(Opts)) {}
@@ -291,6 +296,16 @@ bool SymbolCollector::handleDeclOccurence(
       SM.getFileID(SpellingLoc) == SM.getMainFileID())
     ReferencedDecls.insert(ND);
 
+  auto ID = getSymbolID(ND);
+  if (!ID)
+    return true;
+
+  // Note: we need to process relations for all decl occurrences, including
+  // refs, because the indexing code only populates relations for specific
+  // occurrences. For example, RelationBaseOf is only populated for the
+  // occurrence inside the base-specifier.
+  processRelations(*ND, *ID, Relations);
+
   bool CollectRef = static_cast<unsigned>(Opts.RefFilter) & Roles;
   bool IsOnlyRef =
       !(Roles & (static_cast<unsigned>(index::SymbolRole::Declaration) |
@@ -315,10 +330,6 @@ bool SymbolCollector::handleDeclOccurence(
   if (IsOnlyRef)
     return true;
 
-  auto ID = getSymbolID(ND);
-  if (!ID)
-    return true;
-
   // FIXME: ObjCPropertyDecl are not properly indexed here:
   // - ObjCPropertyDecl may have an OrigD of ObjCPropertyImplDecl, which is
   // not a NamedDecl.
@@ -338,6 +349,7 @@ bool SymbolCollector::handleDeclOccurence(
 
   if (Roles & static_cast<unsigned>(index::SymbolRole::Definition))
     addDefinition(*OriginalDecl, *BasicSymbol);
+
   return true;
 }
 
@@ -414,6 +426,37 @@ bool SymbolCollector::handleMacroOccurence(const IdentifierInfo *Name,
   setIncludeLocation(S, DefLoc);
   Symbols.insert(S);
   return true;
+}
+
+void SymbolCollector::processRelations(
+    const NamedDecl &ND, const SymbolID &ID,
+    ArrayRef<index::SymbolRelation> Relations) {
+  // Store subtype relations.
+  if (!dyn_cast<TagDecl>(&ND))
+    return;
+
+  for (const auto &R : Relations) {
+    if (!shouldIndexRelation(R))
+      continue;
+
+    const Decl *Object = R.RelatedSymbol;
+
+    auto ObjectID = getSymbolID(Object);
+    if (!ObjectID)
+      continue;
+
+    // Record the relation.
+    // TODO: There may be cases where the object decl is not indexed for some
+    // reason. Those cases should probably be removed in due course, but for
+    // now there are two possible ways to handle it:
+    //   (A) Avoid storing the relation in such cases.
+    //   (B) Store it anyways. Clients will likely lookup() the SymbolID
+    //       in the index and find nothing, but that's a situation they
+    //       probably need to handle for other reasons anyways.
+    // We currently do (B) because it's simpler.
+    this->Relations.insert(
+        Relation{ID, index::SymbolRole::RelationBaseOf, *ObjectID});
+  }
 }
 
 void SymbolCollector::setIncludeLocation(const Symbol &S, SourceLocation Loc) {

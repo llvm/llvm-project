@@ -122,7 +122,7 @@ LLVM_NODISCARD static bool isRawStringLiteral(const char *First,
   assert(First <= Current);
 
   // Check if we can even back up.
-  if (*Current != '\"' || First == Current)
+  if (*Current != '"' || First == Current)
     return false;
 
   // Check for an "R".
@@ -143,7 +143,7 @@ LLVM_NODISCARD static bool isRawStringLiteral(const char *First,
 }
 
 static void skipRawString(const char *&First, const char *const End) {
-  assert(First[0] == '\"');
+  assert(First[0] == '"');
   assert(First[-1] == 'R');
 
   const char *Last = ++First;
@@ -177,7 +177,7 @@ static void skipRawString(const char *&First, const char *const End) {
     }
     if (size_t(Last - First) < Terminator.size())
       continue;
-    if (*Last != '\"')
+    if (*Last != '"')
       continue;
     First = Last + 1;
     return;
@@ -185,7 +185,7 @@ static void skipRawString(const char *&First, const char *const End) {
 }
 
 static void skipString(const char *&First, const char *const End) {
-  assert(*First == '\'' || *First == '\"');
+  assert(*First == '\'' || *First == '"');
   const char Terminator = *First;
   for (++First; First != End && *First != Terminator; ++First)
     if (*First == '\\')
@@ -281,7 +281,7 @@ static void skipLine(const char *&First, const char *const End) {
     const char *Start = First;
     while (First != End && !isVerticalWhitespace(*First)) {
       // Iterate over strings correctly to avoid comments and newlines.
-      if (*First == '\"' ||
+      if (*First == '"' ||
           (*First == '\'' && !isQuoteCppDigitSeparator(Start, First, End))) {
         if (isRawStringLiteral(Start, First))
           skipRawString(First, End);
@@ -336,7 +336,7 @@ void Minimizer::printToNewline(const char *&First, const char *const End) {
     const char *Last = First;
     do {
       // Iterate over strings correctly to avoid comments and newlines.
-      if (*Last == '\"' || *Last == '\'') {
+      if (*Last == '"' || *Last == '\'') {
         if (LLVM_UNLIKELY(isRawStringLiteral(First, Last)))
           skipRawString(Last, End);
         else

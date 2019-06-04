@@ -275,6 +275,9 @@ int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool ForceDelete) {
 
 /// Init device, should not be called directly.
 void DeviceTy::init() {
+  // Make call to init_requires if it exists for this plugin.
+  if (RTL->init_requires)
+    RTL->init_requires(RTLRequiresFlags);
   int32_t rc = RTL->init_device(RTLDeviceID);
   if (rc == OFFLOAD_SUCCESS) {
     IsInit = true;

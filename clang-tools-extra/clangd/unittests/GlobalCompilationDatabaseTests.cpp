@@ -21,6 +21,7 @@ using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::EndsWith;
 using ::testing::Not;
+using ::testing::StartsWith;
 
 TEST(GlobalCompilationDatabaseTest, FallbackCommand) {
   DirectoryBasedGlobalCompilationDatabase DB(None);
@@ -85,7 +86,8 @@ TEST_F(OverlayCDBTest, GetCompileCommand) {
 TEST_F(OverlayCDBTest, GetFallbackCommand) {
   OverlayCDB CDB(Base.get(), {"-DA=4"});
   EXPECT_THAT(CDB.getFallbackCommand(testPath("bar.cc")).CommandLine,
-              ElementsAre("clang", "-DA=2", testPath("bar.cc"), "-DA=4"));
+              ElementsAre("clang", "-DA=2", testPath("bar.cc"), "-DA=4",
+                          "-fsyntax-only", StartsWith("-resource-dir")));
 }
 
 TEST_F(OverlayCDBTest, NoBase) {
@@ -97,7 +99,8 @@ TEST_F(OverlayCDBTest, NoBase) {
               Contains("-DA=5"));
 
   EXPECT_THAT(CDB.getFallbackCommand(testPath("foo.cc")).CommandLine,
-              ElementsAre(EndsWith("clang"), testPath("foo.cc"), "-DA=6"));
+              ElementsAre(EndsWith("clang"), testPath("foo.cc"), "-DA=6",
+                          "-fsyntax-only"));
 }
 
 TEST_F(OverlayCDBTest, Watch) {

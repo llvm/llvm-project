@@ -14,13 +14,14 @@
 #ifndef LLVM_LIB_TARGET_POWERPC_PPCREGISTERINFO_H
 #define LLVM_LIB_TARGET_POWERPC_PPCREGISTERINFO_H
 
-#include "PPC.h"
+#include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "llvm/ADT/DenseMap.h"
 
 #define GET_REGINFO_HEADER
 #include "PPCGenRegisterInfo.inc"
 
 namespace llvm {
+class PPCTargetMachine;
 
 inline static unsigned getCRFromCRBit(unsigned SrcReg) {
   unsigned Reg = 0;
