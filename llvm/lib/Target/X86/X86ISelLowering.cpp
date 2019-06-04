@@ -1283,6 +1283,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SCALAR_TO_VECTOR,   VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR,   VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS,     VT, Custom);
+      setOperationAction(ISD::STORE,              VT, Custom);
     }
 
     if (HasInt256)
@@ -21073,7 +21074,17 @@ static SDValue LowerStore(SDValue Op, const X86Subtarget &Subtarget,
   if (St->isTruncatingStore())
     return SDValue();
 
+  // If this is a 256-bit store of concatenated ops, we are better off splitting
+  // that store into two 128-bit stores. This avoids spurious use of 256-bit ops
+  // and each half can execute independently. Some cores would split the op into
+  // halves anyway, so the concat (vinsertf128) is purely an extra op.
   MVT StoreVT = StoredVal.getSimpleValueType();
+  if (StoreVT.is256BitVector()) {
+    if (StoredVal.getOpcode() != ISD::CONCAT_VECTORS || !StoredVal.hasOneUse())
+      return SDValue();
+    return split256BitStore(St, DAG);
+  }
+
   assert(StoreVT.isVector() && StoreVT.getSizeInBits() == 64 &&
          "Unexpected VT");
   if (DAG.getTargetLoweringInfo().getTypeAction(*DAG.getContext(), StoreVT) !=
@@ -38102,6 +38113,68 @@ static bool matchLogicBlend(SDNode *N, SDValue &X, SDValue &Y, SDValue &Mask) {
   return true;
 }
 
+// Try to match:
+//   (or (and (M, (sub 0, X)), (pandn M, X)))
+// which is a special case of vselect:
+//   (vselect M, (sub 0, X), X)
+// Per:
+// http://graphics.stanford.edu/~seander/bithacks.html#ConditionalNegate
+// We know that, if fNegate is 0 or 1:
+//   (fNegate ? -v : v) == ((v ^ -fNegate) + fNegate)
+//
+// Here, we have a mask, M (all 1s or 0), and, similarly, we know that:
+//   ((M & 1) ? -X : X) == ((X ^ -(M & 1)) + (M & 1))
+//   ( M      ? -X : X) == ((X ^   M     ) + (M & 1))
+// This lets us transform our vselect to:
+//   (add (xor X, M), (and M, 1))
+// And further to:
+//   (sub (xor X, M), M)
+static SDValue combineLogicBlendIntoConditionalNegate(
+    EVT VT, SDValue Mask, SDValue X, SDValue Y, const SDLoc &DL,
+    SelectionDAG &DAG, const X86Subtarget &Subtarget) {
+  EVT MaskVT = Mask.getValueType();
+  unsigned EltBits = MaskVT.getScalarSizeInBits();
+  assert(MaskVT.isInteger() && DAG.ComputeNumSignBits(Mask) == EltBits &&
+         "Mask must be zero/all-bits");
+
+  if (X.getValueType() != MaskVT || Y.getValueType() != MaskVT)
+    return SDValue();
+  if (!DAG.getTargetLoweringInfo().isOperationLegal(ISD::SUB, MaskVT))
+    return SDValue();
+
+  auto IsNegV = [](SDNode *N, SDValue V) {
+    return N->getOpcode() == ISD::SUB && N->getOperand(1) == V &&
+           ISD::isBuildVectorAllZeros(N->getOperand(0).getNode());
+  };
+
+  SDValue V;
+  if (IsNegV(Y.getNode(), X))
+    V = X;
+  else if (IsNegV(X.getNode(), Y))
+    V = Y;
+  else
+    return SDValue();
+
+  SDValue SubOp1 = DAG.getNode(ISD::XOR, DL, MaskVT, V, Mask);
+  SDValue SubOp2 = Mask;
+
+  // If the negate was on the false side of the select, then
+  // the operands of the SUB need to be swapped. PR 27251.
+  // This is because the pattern being matched above is
+  // (vselect M, (sub (0, X), X)  -> (sub (xor X, M), M)
+  // but if the pattern matched was
+  // (vselect M, X, (sub (0, X))), that is really negation of the pattern
+  // above, -(vselect M, (sub 0, X), X), and therefore the replacement
+  // pattern also needs to be a negation of the replacement pattern above.
+  // And -(sub X, Y) is just sub (Y, X), so swapping the operands of the
+  // sub accomplishes the negation of the replacement pattern.
+  if (V == Y)
+    std::swap(SubOp1, SubOp2);
+
+  SDValue Res = DAG.getNode(ISD::SUB, DL, MaskVT, SubOp1, SubOp2);
+  return DAG.getBitcast(VT, Res);
+}
+
 // Try to fold:
 //   (or (and (m, y), (pandn m, x)))
 // into:
@@ -38137,55 +38210,10 @@ static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
 
   SDLoc DL(N);
 
-  // Try to match:
-  //   (or (and (M, (sub 0, X)), (pandn M, X)))
-  // which is a special case of vselect:
-  //   (vselect M, (sub 0, X), X)
-  // Per:
-  // http://graphics.stanford.edu/~seander/bithacks.html#ConditionalNegate
-  // We know that, if fNegate is 0 or 1:
-  //   (fNegate ? -v : v) == ((v ^ -fNegate) + fNegate)
-  //
-  // Here, we have a mask, M (all 1s or 0), and, similarly, we know that:
-  //   ((M & 1) ? -X : X) == ((X ^ -(M & 1)) + (M & 1))
-  //   ( M      ? -X : X) == ((X ^   M     ) + (M & 1))
-  // This lets us transform our vselect to:
-  //   (add (xor X, M), (and M, 1))
-  // And further to:
-  //   (sub (xor X, M), M)
-  if (X.getValueType() == MaskVT && Y.getValueType() == MaskVT &&
-      DAG.getTargetLoweringInfo().isOperationLegal(ISD::SUB, MaskVT)) {
-    auto IsNegV = [](SDNode *N, SDValue V) {
-      return N->getOpcode() == ISD::SUB && N->getOperand(1) == V &&
-        ISD::isBuildVectorAllZeros(N->getOperand(0).getNode());
-    };
-    SDValue V;
-    if (IsNegV(Y.getNode(), X))
-      V = X;
-    else if (IsNegV(X.getNode(), Y))
-      V = Y;
-
-    if (V) {
-      SDValue SubOp1 = DAG.getNode(ISD::XOR, DL, MaskVT, V, Mask);
-      SDValue SubOp2 = Mask;
-
-      // If the negate was on the false side of the select, then
-      // the operands of the SUB need to be swapped. PR 27251.
-      // This is because the pattern being matched above is
-      // (vselect M, (sub (0, X), X)  -> (sub (xor X, M), M)
-      // but if the pattern matched was
-      // (vselect M, X, (sub (0, X))), that is really negation of the pattern
-      // above, -(vselect M, (sub 0, X), X), and therefore the replacement
-      // pattern also needs to be a negation of the replacement pattern above.
-      // And -(sub X, Y) is just sub (Y, X), so swapping the operands of the
-      // sub accomplishes the negation of the replacement pattern.
-      if (V == Y)
-         std::swap(SubOp1, SubOp2);
-
-      SDValue Res = DAG.getNode(ISD::SUB, DL, MaskVT, SubOp1, SubOp2);
-      return DAG.getBitcast(VT, Res);
-    }
-  }
+  // Attempt to combine to conditional negate: (sub (xor X, M), M)
+  if (SDValue Res = combineLogicBlendIntoConditionalNegate(VT, Mask, X, Y, DL,
+                                                           DAG, Subtarget))
+    return Res;
 
   // PBLENDVB is only available on SSE 4.1.
   if (!Subtarget.hasSSE41())

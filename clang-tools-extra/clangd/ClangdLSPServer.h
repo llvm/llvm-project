@@ -156,8 +156,9 @@ private:
   bool SupportFileStatus = false;
   /// Which kind of markup should we use in textDocument/hover responses.
   MarkupKind HoverContentFormat = MarkupKind::PlainText;
-
-  /// Store of the current versions of the open documents.
+  /// Whether the client supports offsets for parameter info labels.
+  bool SupportsOffsetsInSignatureHelp = false;
+  // Store of the current versions of the open documents.
   DraftStore DraftMgr;
 
   // The CDB is created by the "initialize" LSP method.

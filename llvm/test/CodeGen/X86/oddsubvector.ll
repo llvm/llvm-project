@@ -116,13 +116,14 @@ define void @PR40815(%struct.Mat4* nocapture readonly dereferenceable(64), %stru
 ;
 ; AVX-LABEL: PR40815:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps 16(%rdi), %xmm0
-; AVX-NEXT:    vmovaps 48(%rdi), %xmm1
-; AVX-NEXT:    vinsertf128 $1, 32(%rdi), %ymm1, %ymm1
-; AVX-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm0
-; AVX-NEXT:    vmovups %ymm1, (%rsi)
-; AVX-NEXT:    vmovups %ymm0, 32(%rsi)
-; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    vmovaps (%rdi), %xmm0
+; AVX-NEXT:    vmovaps 16(%rdi), %xmm1
+; AVX-NEXT:    vmovaps 32(%rdi), %xmm2
+; AVX-NEXT:    vmovaps 48(%rdi), %xmm3
+; AVX-NEXT:    vmovaps %xmm2, 16(%rsi)
+; AVX-NEXT:    vmovaps %xmm3, (%rsi)
+; AVX-NEXT:    vmovaps %xmm0, 48(%rsi)
+; AVX-NEXT:    vmovaps %xmm1, 32(%rsi)
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: PR40815:

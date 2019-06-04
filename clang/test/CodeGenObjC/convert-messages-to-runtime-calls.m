@@ -150,6 +150,34 @@ float test_cannot_message_return_float(C *c) {
   return [c retain];
 }
 
+@interface TestSelf
++ (instancetype)alloc;
++ (instancetype)allocWithZone:(void*)zone;
++ (id)classMeth;
+- (id)instanceMeth;
+@end
+
+@implementation TestSelf
+// CHECK-LABEL: define internal i8* @"\01+[TestSelf classMeth]"(
++ (id)classMeth {
+  // MSGS: {{call.*@objc_msgSend}}
+  // MSGS: {{call.*@objc_msgSend}}
+  // CALLS: {{call.*@objc_allocWithZone\(}}
+  // CALLS: {{call.*@objc_alloc\(}}
+  [self allocWithZone:nil];
+  return [self alloc];
+}
+// CHECK-LABEL: define internal i8* @"\01-[TestSelf instanceMeth]"(
+- (id)instanceMeth {
+  // MSGS: {{call.*@objc_msgSend}}
+  // MSGS: {{call.*@objc_msgSend}}
+  // CALLS: {{call.*@objc_msgSend}}
+  // CALLS: {{call.*@objc_msgSend}}
+  [self allocWithZone:nil];
+  return [self alloc];
+}
+@end
+
 @interface NSString : NSObject
 + (void)retain_self;
 - (void)retain_super;

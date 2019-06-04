@@ -1117,6 +1117,12 @@ def VLD1LNq8Pseudo  : VLD1QLNPseudo<v16i8, extloadi8>;
 def VLD1LNq16Pseudo : VLD1QLNPseudo<v8i16, extloadi16>;
 def VLD1LNq32Pseudo : VLD1QLNPseudo<v4i32, load>;
 
+def : Pat<(vector_insert (v4f16 DPR:$src),
+                         (f16 (load addrmode6:$addr)), imm:$lane),
+          (VLD1LNd16 addrmode6:$addr, DPR:$src, imm:$lane)>;
+def : Pat<(vector_insert (v8f16 QPR:$src),
+                         (f16 (load addrmode6:$addr)), imm:$lane),
+          (VLD1LNq16Pseudo addrmode6:$addr, QPR:$src, imm:$lane)>;
 def : Pat<(vector_insert (v2f32 DPR:$src),
                          (f32 (load addrmode6:$addr)), imm:$lane),
           (VLD1LNd32 addrmode6:$addr, DPR:$src, imm:$lane)>;
@@ -2175,6 +2181,11 @@ def : Pat<(store (extractelt (v2f32 DPR:$src), imm:$lane), addrmode6:$addr),
 def : Pat<(store (extractelt (v4f32 QPR:$src), imm:$lane), addrmode6:$addr),
           (VST1LNq32Pseudo addrmode6:$addr, QPR:$src, imm:$lane)>;
 
+def : Pat<(store (extractelt (v4f16 DPR:$src), imm:$lane), addrmode6:$addr),
+          (VST1LNd16 addrmode6:$addr, DPR:$src, imm:$lane)>;
+def : Pat<(store (extractelt (v8f16 QPR:$src), imm:$lane), addrmode6:$addr),
+          (VST1LNq16Pseudo addrmode6:$addr, QPR:$src, imm:$lane)>;
+
 // ...with address register writeback:
 class VST1LNWB<bits<4> op11_8, bits<4> op7_4, string Dt, ValueType Ty,
                PatFrag StoreOp, SDNode ExtractOp, Operand AdrMode>
@@ -2501,6 +2512,13 @@ def DSubReg_f64_reg : SDNodeXForm<imm, [{
 def SSubReg_f32_reg : SDNodeXForm<imm, [{
   assert(ARM::ssub_3 == ARM::ssub_0+3 && "Unexpected subreg numbering");
   return CurDAG->getTargetConstant(ARM::ssub_0 + N->getZExtValue(), SDLoc(N),
+                                   MVT::i32);
+}]>;
+
+// Extract S sub-registers of Q/D registers containing a given f16 lane.
+def SSubReg_f16_reg : SDNodeXForm<imm, [{
+  assert(ARM::ssub_3 == ARM::ssub_0+3 && "Unexpected subreg numbering");
+  return CurDAG->getTargetConstant(ARM::ssub_0 + N->getZExtValue()/2, SDLoc(N),
                                    MVT::i32);
 }]>;
 
@@ -6223,6 +6241,32 @@ def : Pat<(extractelt (v4f32 QPR:$src1), imm:$src2),
 def : Pat<(extractelt (v2f64 QPR:$src1), imm:$src2),
           (EXTRACT_SUBREG QPR:$src1, (DSubReg_f64_reg imm:$src2))>;
 
+def imm_even : ImmLeaf<i32, [{ return (Imm & 1) == 0; }]>;
+def imm_odd : ImmLeaf<i32, [{ return (Imm & 1) == 1; }]>;
+
+def : Pat<(extractelt (v4f16 DPR:$src), imm_even:$lane),
+            (EXTRACT_SUBREG
+                (v2f32 (COPY_TO_REGCLASS (v4f16 DPR:$src), DPR_VFP2)),
+                (SSubReg_f16_reg imm_even:$lane))>;
+
+def : Pat<(extractelt (v4f16 DPR:$src), imm_odd:$lane),
+            (COPY_TO_REGCLASS
+              (VMOVH (EXTRACT_SUBREG
+                  (v2f32 (COPY_TO_REGCLASS (v4f16 DPR:$src), DPR_VFP2)),
+                  (SSubReg_f16_reg imm_odd:$lane))),
+              HPR)>;
+
+def : Pat<(extractelt (v8f16 QPR:$src), imm_even:$lane),
+            (EXTRACT_SUBREG
+                (v4f32 (COPY_TO_REGCLASS (v8f16 QPR:$src), QPR_VFP2)),
+                (SSubReg_f16_reg imm_even:$lane))>;
+
+def : Pat<(extractelt (v8f16 QPR:$src), imm_odd:$lane),
+            (COPY_TO_REGCLASS
+              (VMOVH (EXTRACT_SUBREG
+                  (v4f32 (COPY_TO_REGCLASS (v8f16 QPR:$src), QPR_VFP2)),
+                  (SSubReg_f16_reg imm_odd:$lane))),
+              HPR)>;
 
 //   VMOV     : Vector Set Lane (move ARM core register to scalar)
 
@@ -6280,6 +6324,15 @@ def : Pat<(v2f32 (insertelt DPR:$src1, SPR:$src2, imm:$src3)),
 def : Pat<(v4f32 (insertelt QPR:$src1, SPR:$src2, imm:$src3)),
           (INSERT_SUBREG (v4f32 (COPY_TO_REGCLASS QPR:$src1, QPR_VFP2)),
                                 SPR:$src2, (SSubReg_f32_reg imm:$src3))>;
+
+def : Pat<(insertelt (v4f16 DPR:$src1), HPR:$src2, imm:$lane),
+          (v4f16 (VSETLNi16 DPR:$src1, (VMOVRH $src2), imm:$lane))>;
+def : Pat<(insertelt (v8f16 QPR:$src1), HPR:$src2, imm:$lane),
+          (v8f16 (INSERT_SUBREG QPR:$src1,
+                   (v4i16 (VSETLNi16 (v4i16 (EXTRACT_SUBREG QPR:$src1,
+                                      (DSubReg_i16_reg imm:$lane))),
+                             (VMOVRH $src2), (SubReg_i16_lane imm:$lane))),
+                   (DSubReg_i16_reg imm:$lane)))>;
 
 //def : Pat<(v2i64 (insertelt QPR:$src1, DPR:$src2, imm:$src3)),
 //          (INSERT_SUBREG QPR:$src1, DPR:$src2, (DSubReg_f64_reg imm:$src3))>;

@@ -1082,31 +1082,18 @@ bool LazyValueInfoImpl::solveBlockValueBinaryOp(ValueLatticeElement &BBLV,
 
   assert(BO->getOperand(0)->getType()->isSized() &&
          "all operands to binary operators are sized");
-
-  // Filter out operators we don't know how to reason about before attempting to
-  // recurse on our operand(s).  This can cut a long search short if we know
-  // we're not going to be able to get any useful information anyways.
-  switch (BO->getOpcode()) {
-  case Instruction::Add:
-  case Instruction::Sub:
-  case Instruction::Mul:
-  case Instruction::UDiv:
-  case Instruction::Shl:
-  case Instruction::LShr:
-  case Instruction::AShr:
-  case Instruction::And:
-  case Instruction::Or:
-    return solveBlockValueBinaryOpImpl(BBLV, BO, BB,
-        [BO](const ConstantRange &CR1, const ConstantRange &CR2) {
-          return CR1.binaryOp(BO->getOpcode(), CR2);
-        });
-  default:
-    // Unhandled instructions are overdefined.
+  if (BO->getOpcode() == Instruction::Xor) {
+    // Xor is the only operation not supported by ConstantRange::binaryOp().
     LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
                       << "' - overdefined (unknown binary operator).\n");
     BBLV = ValueLatticeElement::getOverdefined();
     return true;
-  };
+  }
+
+  return solveBlockValueBinaryOpImpl(BBLV, BO, BB,
+      [BO](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.binaryOp(BO->getOpcode(), CR2);
+      });
 }
 
 bool LazyValueInfoImpl::solveBlockValueOverflowIntrinsic(

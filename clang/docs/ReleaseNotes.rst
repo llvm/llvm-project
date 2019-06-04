@@ -123,7 +123,14 @@ C++1z Feature Support
 Objective-C Language Changes in Clang
 -------------------------------------
 
-...
+- Fixed encoding of ObjC pointer types that are pointers to typedefs.
+
+.. code-block:: c++
+
+      typedef NSArray<NSObject *> MyArray;
+
+      // clang used to encode this as "^{NSArray=#}" instead of "@".
+      const char *s0 = @encode(MyArray *);
 
 OpenCL C Language Changes in Clang
 ----------------------------------

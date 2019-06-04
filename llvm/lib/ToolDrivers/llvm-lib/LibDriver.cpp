@@ -211,9 +211,14 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
   // llvm-lib uses relative paths for both regular and thin archives, unlike
   // standard GNU ar, which only uses relative paths for thin archives and
   // basenames for regular archives.
-  for (NewArchiveMember &Member : Members)
-    Member.MemberName =
-        Saver.save(computeArchiveRelativePath(OutputPath, Member.MemberName));
+  for (NewArchiveMember &Member : Members) {
+    if (sys::path::is_relative(Member.MemberName)) {
+      Expected<std::string> PathOrErr =
+          computeArchiveRelativePath(OutputPath, Member.MemberName);
+      if (PathOrErr)
+        Member.MemberName = Saver.save(*PathOrErr);
+    }
+  }
 
   if (Error E =
           writeArchive(OutputPath, Members,

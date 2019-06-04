@@ -179,8 +179,8 @@ define i128 @mul170141183460469231731687303715884105723_128(i128 signext %a) {
 ; MIPS32-NEXT:    subu $1, $1, $3
 ; MIPS32-NEXT:    subu $5, $1, $12
 ; MIPS32-NEXT:    subu $4, $9, $10
-; MIPS32-NEXT:    negu $1, $8
-; MIPS32-NEXT:    subu $3, $1, $11
+; MIPS32-NEXT:    addu $1, $8, $11
+; MIPS32-NEXT:    negu $3, $1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    negu $2, $2
 ;

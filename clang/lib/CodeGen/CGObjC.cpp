@@ -383,10 +383,12 @@ tryGenerateSpecializedMessageSend(CodeGenFunction &CGF, QualType ResultType,
     if (isClassMessage &&
         Runtime.shouldUseRuntimeFunctionsForAlloc() &&
         ResultType->isObjCObjectPointerType()) {
-        // [Foo alloc] -> objc_alloc(Foo)
+        // [Foo alloc] -> objc_alloc(Foo) or
+        // [self alloc] -> objc_alloc(self)
         if (Sel.isUnarySelector() && Sel.getNameForSlot(0) == "alloc")
           return CGF.EmitObjCAlloc(Receiver, CGF.ConvertType(ResultType));
-        // [Foo allocWithZone:nil] -> objc_allocWithZone(Foo)
+        // [Foo allocWithZone:nil] -> objc_allocWithZone(Foo) or
+        // [self allocWithZone:nil] -> objc_allocWithZone(self)
         if (Sel.isKeywordSelector() && Sel.getNumArgs() == 1 &&
             Args.size() == 1 && Args.front().getType()->isPointerType() &&
             Sel.getNameForSlot(0) == "allocWithZone") {
@@ -444,22 +446,38 @@ tryEmitSpecializedAllocInit(CodeGenFunction &CGF, const ObjCMessageExpr *OME) {
       Sel.getNameForSlot(0) != "init")
     return None;
 
-  // Okay, this is '[receiver init]', check if 'receiver' is '[cls alloc]'.
+  // Okay, this is '[receiver init]', check if 'receiver' is '[cls alloc]' or
+  // we are in an ObjC class method and 'receiver' is '[self alloc]'.
   auto *SubOME =
-      dyn_cast<ObjCMessageExpr>(OME->getInstanceReceiver()->IgnoreParens());
+      dyn_cast<ObjCMessageExpr>(OME->getInstanceReceiver()->IgnoreParenCasts());
   if (!SubOME)
     return None;
   Selector SubSel = SubOME->getSelector();
-  if (SubOME->getReceiverKind() != ObjCMessageExpr::Class ||
-      !SubOME->getType()->isObjCObjectPointerType() ||
+
+  // Check if we are in an ObjC class method and the receiver expression is
+  // 'self'.
+  const Expr *SelfInClassMethod = nullptr;
+  if (const auto *CurMD = dyn_cast_or_null<ObjCMethodDecl>(CGF.CurFuncDecl))
+    if (CurMD->isClassMethod())
+      if ((SelfInClassMethod = SubOME->getInstanceReceiver()))
+        if (!SelfInClassMethod->isObjCSelfExpr())
+          SelfInClassMethod = nullptr;
+
+  if ((SubOME->getReceiverKind() != ObjCMessageExpr::Class &&
+       !SelfInClassMethod) || !SubOME->getType()->isObjCObjectPointerType() ||
       !SubSel.isUnarySelector() || SubSel.getNameForSlot(0) != "alloc")
     return None;
 
-  QualType ReceiverType = SubOME->getClassReceiver();
-  const ObjCObjectType *ObjTy = ReceiverType->getAs<ObjCObjectType>();
-  const ObjCInterfaceDecl *ID = ObjTy->getInterface();
-  assert(ID && "null interface should be impossible here");
-  llvm::Value *Receiver = CGF.CGM.getObjCRuntime().GetClass(CGF, ID);
+  llvm::Value *Receiver;
+  if (SelfInClassMethod) {
+    Receiver = CGF.EmitScalarExpr(SelfInClassMethod);
+  } else {
+    QualType ReceiverType = SubOME->getClassReceiver();
+    const ObjCObjectType *ObjTy = ReceiverType->getAs<ObjCObjectType>();
+    const ObjCInterfaceDecl *ID = ObjTy->getInterface();
+    assert(ID && "null interface should be impossible here");
+    Receiver = CGF.CGM.getObjCRuntime().GetClass(CGF, ID);
+  }
   return CGF.EmitObjCAllocInit(Receiver, CGF.ConvertType(OME->getType()));
 }
 
@@ -507,6 +525,10 @@ RValue CodeGenFunction::EmitObjCMessageExpr(const ObjCMessageExpr *E,
   switch (E->getReceiverKind()) {
   case ObjCMessageExpr::Instance:
     ReceiverType = E->getInstanceReceiver()->getType();
+    if (auto *OMD = dyn_cast_or_null<ObjCMethodDecl>(CurFuncDecl))
+      if (OMD->isClassMethod())
+        if (E->getInstanceReceiver()->isObjCSelfExpr())
+          isClassMessage = true;
     if (retainSelf) {
       TryEmitResult ter = tryEmitARCRetainScalarExpr(*this,
                                                    E->getInstanceReceiver());

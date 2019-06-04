@@ -28,6 +28,7 @@
 #include "FuzzyMatch.h"
 #include "Headers.h"
 #include "Logger.h"
+#include "Protocol.h"
 #include "Quality.h"
 #include "SourceCode.h"
 #include "TUScheduler.h"
@@ -56,6 +57,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
@@ -146,46 +148,6 @@ toCompletionItemKind(CodeCompletionResult::ResultKind ResKind,
     return CompletionItemKind::Snippet;
   }
   llvm_unreachable("Unhandled CodeCompletionResult::ResultKind.");
-}
-
-/// Get the optional chunk as a string. This function is possibly recursive.
-///
-/// The parameter info for each parameter is appended to the Parameters.
-std::string getOptionalParameters(const CodeCompletionString &CCS,
-                                  std::vector<ParameterInformation> &Parameters,
-                                  SignatureQualitySignals &Signal) {
-  std::string Result;
-  for (const auto &Chunk : CCS) {
-    switch (Chunk.Kind) {
-    case CodeCompletionString::CK_Optional:
-      assert(Chunk.Optional &&
-             "Expected the optional code completion string to be non-null.");
-      Result += getOptionalParameters(*Chunk.Optional, Parameters, Signal);
-      break;
-    case CodeCompletionString::CK_VerticalSpace:
-      break;
-    case CodeCompletionString::CK_Placeholder:
-      // A string that acts as a placeholder for, e.g., a function call
-      // argument.
-      // Intentional fallthrough here.
-    case CodeCompletionString::CK_CurrentParameter: {
-      // A piece of text that describes the parameter that corresponds to
-      // the code-completion location within a function call, message send,
-      // macro invocation, etc.
-      Result += Chunk.Text;
-      ParameterInformation Info;
-      Info.label = Chunk.Text;
-      Parameters.push_back(std::move(Info));
-      Signal.ContainsActiveParameter = true;
-      Signal.NumberOfOptionalParameters++;
-      break;
-    }
-    default:
-      Result += Chunk.Text;
-      break;
-    }
-  }
-  return Result;
 }
 
 // Identifier code completion result.
@@ -830,8 +792,7 @@ class SignatureHelpCollector final : public CodeCompleteConsumer {
 public:
   SignatureHelpCollector(const clang::CodeCompleteOptions &CodeCompleteOpts,
                          const SymbolIndex *Index, SignatureHelp &SigHelp)
-      : CodeCompleteConsumer(CodeCompleteOpts),
-        SigHelp(SigHelp),
+      : CodeCompleteConsumer(CodeCompleteOpts), SigHelp(SigHelp),
         Allocator(std::make_shared<clang::GlobalCodeCompletionAllocator>()),
         CCTUInfo(Allocator), Index(Index) {}
 
@@ -944,6 +905,50 @@ public:
   CodeCompletionTUInfo &getCodeCompletionTUInfo() override { return CCTUInfo; }
 
 private:
+  void processParameterChunk(llvm::StringRef ChunkText,
+                             SignatureInformation &Signature,
+                             SignatureQualitySignals Signal) const {
+    // (!) this is O(n), should still be fast compared to building ASTs.
+    unsigned ParamStartOffset = lspLength(Signature.label);
+    unsigned ParamEndOffset = ParamStartOffset + lspLength(ChunkText);
+    // A piece of text that describes the parameter that corresponds to
+    // the code-completion location within a function call, message send,
+    // macro invocation, etc.
+    Signature.label += ChunkText;
+    ParameterInformation Info;
+    Info.labelOffsets.emplace(ParamStartOffset, ParamEndOffset);
+    // FIXME: only set 'labelOffsets' when all clients migrate out of it.
+    Info.labelString = ChunkText;
+
+    Signature.parameters.push_back(std::move(Info));
+    // FIXME: this should only be set on CK_CurrentParameter.
+    Signal.ContainsActiveParameter = true;
+  }
+
+  void processOptionalChunk(const CodeCompletionString &CCS,
+                            SignatureInformation &Signature,
+                            SignatureQualitySignals &Signal) const {
+    for (const auto &Chunk : CCS) {
+      switch (Chunk.Kind) {
+      case CodeCompletionString::CK_Optional:
+        assert(Chunk.Optional &&
+               "Expected the optional code completion string to be non-null.");
+        processOptionalChunk(*Chunk.Optional, Signature, Signal);
+        break;
+      case CodeCompletionString::CK_VerticalSpace:
+        break;
+      case CodeCompletionString::CK_CurrentParameter:
+      case CodeCompletionString::CK_Placeholder:
+        processParameterChunk(Chunk.Text, Signature, Signal);
+        Signal.NumberOfOptionalParameters++;
+        break;
+      default:
+        Signature.label += Chunk.Text;
+        break;
+      }
+    }
+  }
+
   // FIXME(ioeric): consider moving CodeCompletionString logic here to
   // CompletionString.h.
   ScoredSignature processOverloadCandidate(const OverloadCandidate &Candidate,
@@ -964,28 +969,16 @@ private:
         assert(!ReturnType && "Unexpected CK_ResultType");
         ReturnType = Chunk.Text;
         break;
+      case CodeCompletionString::CK_CurrentParameter:
       case CodeCompletionString::CK_Placeholder:
-        // A string that acts as a placeholder for, e.g., a function call
-        // argument.
-        // Intentional fallthrough here.
-      case CodeCompletionString::CK_CurrentParameter: {
-        // A piece of text that describes the parameter that corresponds to
-        // the code-completion location within a function call, message send,
-        // macro invocation, etc.
-        Signature.label += Chunk.Text;
-        ParameterInformation Info;
-        Info.label = Chunk.Text;
-        Signature.parameters.push_back(std::move(Info));
+        processParameterChunk(Chunk.Text, Signature, Signal);
         Signal.NumberOfParameters++;
-        Signal.ContainsActiveParameter = true;
         break;
-      }
       case CodeCompletionString::CK_Optional: {
         // The rest of the parameters are defaulted/optional.
         assert(Chunk.Optional &&
                "Expected the optional code completion string to be non-null.");
-        Signature.label += getOptionalParameters(*Chunk.Optional,
-                                                 Signature.parameters, Signal);
+        processOptionalChunk(*Chunk.Optional, Signature, Signal);
         break;
       }
       case CodeCompletionString::CK_VerticalSpace:
@@ -1037,7 +1030,7 @@ void loadMainFilePreambleMacros(const Preprocessor &PP,
       PP.getIdentifierTable().getExternalIdentifierLookup();
   if (!PreambleIdentifiers || !PreambleMacros)
     return;
-  for (const auto& MacroName : Preamble.MainFileMacros)
+  for (const auto &MacroName : Preamble.MainFileMacros)
     if (auto *II = PreambleIdentifiers->get(MacroName))
       if (II->isOutOfDate())
         PreambleMacros->updateOutOfDateIdentifier(*II);
@@ -1213,7 +1206,7 @@ class CodeCompleteFlow {
   int NSema = 0, NIndex = 0, NSemaAndIndex = 0, NIdent = 0;
   bool Incomplete = false; // Would more be available with a higher limit?
   CompletionPrefix HeuristicPrefix;
-  llvm::Optional<FuzzyMatcher> Filter;  // Initialized once Sema runs.
+  llvm::Optional<FuzzyMatcher> Filter; // Initialized once Sema runs.
   Range ReplacedRange;
   std::vector<std::string> QueryScopes; // Initialized once Sema runs.
   // Initialized once QueryScopes is initialized, if there are scopes.
@@ -1707,8 +1700,8 @@ clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
   return Result;
 }
 
-CompletionPrefix
-guessCompletionPrefix(llvm::StringRef Content, unsigned Offset) {
+CompletionPrefix guessCompletionPrefix(llvm::StringRef Content,
+                                       unsigned Offset) {
   assert(Offset <= Content.size());
   StringRef Rest = Content.take_front(Offset);
   CompletionPrefix Result;

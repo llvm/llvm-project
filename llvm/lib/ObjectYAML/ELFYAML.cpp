@@ -680,6 +680,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_DYNTAG>::enumeration(
   assert(Object && "The IO context is not initialized");
 
 // Disable architecture specific tags by default. We might enable them below.
+#define AARCH64_DYNAMIC_TAG(name, value)
 #define MIPS_DYNAMIC_TAG(name, value)
 #define HEXAGON_DYNAMIC_TAG(name, value)
 #define PPC64_DYNAMIC_TAG(name, value)
@@ -689,6 +690,13 @@ void ScalarEnumerationTraits<ELFYAML::ELF_DYNTAG>::enumeration(
 #define STRINGIFY(X) (#X)
 #define DYNAMIC_TAG(X, Y) IO.enumCase(Value, STRINGIFY(DT_##X), ELF::DT_##X);
   switch (Object->Header.Machine) {
+  case ELF::EM_AARCH64:
+#undef AARCH64_DYNAMIC_TAG
+#define AARCH64_DYNAMIC_TAG(name, value) DYNAMIC_TAG(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef AARCH64_DYNAMIC_TAG
+#define AARCH64_DYNAMIC_TAG(name, value)
+    break;
   case ELF::EM_MIPS:
 #undef MIPS_DYNAMIC_TAG
 #define MIPS_DYNAMIC_TAG(name, value) DYNAMIC_TAG(name, value)
@@ -714,7 +722,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_DYNTAG>::enumeration(
 #include "llvm/BinaryFormat/DynamicTags.def"
     break;
   }
-
+#undef AARCH64_DYNAMIC_TAG
 #undef MIPS_DYNAMIC_TAG
 #undef HEXAGON_DYNAMIC_TAG
 #undef PPC64_DYNAMIC_TAG

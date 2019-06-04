@@ -234,7 +234,7 @@ public:
   // MergeConsecutiveStores() merges two stores; LegalizeStoreOps() un-merges;
   // MergeConsecutiveStores() re-merges, etc. ) to warrant turning it off for
   // now.
-  bool mergeStoresAfterLegalization() const override { return false; }
+  bool mergeStoresAfterLegalization(EVT) const override { return false; }
 
   bool isFsqrtCheap(SDValue Operand, SelectionDAG &DAG) const override {
     return true;

@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCRegisterInfo.h"
-#include "PPC.h"
 #include "PPCFrameLowering.h"
 #include "PPCInstrBuilder.h"
 #include "PPCMachineFunctionInfo.h"

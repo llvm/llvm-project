@@ -152,28 +152,5 @@ default:
   ret void
 }
 
-;; All but one bit known undef
-;; Note: This is currently testing an optimization which doesn't trigger. The
-;; case this is protecting against is that a bit could be assumed both zero 
-;; *or* one given we know it's undef.  ValueTracking doesn't do this today,
-;; but it doesn't hurt to confirm.
-define void @test8(i8 %a) {
-; CHECK-LABEL: @test8(
-; CHECK: switch i8
-  %and = and i8 %a, 254
-  %cmp = icmp eq i8 %and, undef
-  call void @llvm.assume(i1 %cmp)
-  switch i8 %a, label %default [i8 255, label %true
-                                i8 254, label %false]
-true:
-  call void @foo(i32 1)
-  ret void
-false:
-  call void @foo(i32 3)
-  ret void
-default:
-  call void @foo(i32 2)
-  ret void
-}
-
 declare void @llvm.assume(i1)
+

@@ -1463,6 +1463,17 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> *ObjF,
 static const char *getTypeString(unsigned Arch, uint64_t Type) {
 #define DYNAMIC_TAG(n, v)
   switch (Arch) {
+
+  case EM_AARCH64:
+    switch (Type) {
+#define AARCH64_DYNAMIC_TAG(name, value)                                       \
+    case DT_##name:                                                            \
+      return #name;
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef AARCH64_DYNAMIC_TAG
+    }
+    break;
+
   case EM_HEXAGON:
     switch (Type) {
 #define HEXAGON_DYNAMIC_TAG(name, value)                                       \
@@ -1496,6 +1507,7 @@ static const char *getTypeString(unsigned Arch, uint64_t Type) {
 #undef DYNAMIC_TAG
   switch (Type) {
 // Now handle all dynamic tags except the architecture specific ones
+#define AARCH64_DYNAMIC_TAG(name, value)
 #define MIPS_DYNAMIC_TAG(name, value)
 #define HEXAGON_DYNAMIC_TAG(name, value)
 #define PPC64_DYNAMIC_TAG(name, value)
@@ -1506,6 +1518,7 @@ static const char *getTypeString(unsigned Arch, uint64_t Type) {
     return #name;
 #include "llvm/BinaryFormat/DynamicTags.def"
 #undef DYNAMIC_TAG
+#undef AARCH64_DYNAMIC_TAG
 #undef MIPS_DYNAMIC_TAG
 #undef HEXAGON_DYNAMIC_TAG
 #undef PPC64_DYNAMIC_TAG
@@ -1783,6 +1796,93 @@ void ELFDumper<ELFT>::printDynamicEntry(raw_ostream &OS, uint64_t Type,
                                         uint64_t Value) const {
   const char *ConvChar =
       (opts::Output == opts::GNU) ? "0x%" PRIx64 : "0x%" PRIX64;
+
+  // Handle custom printing of architecture specific tags
+  switch (ObjF->getELFFile()->getHeader()->e_machine) {
+  case EM_AARCH64:
+    switch (Type) {
+    case DT_AARCH64_BTI_PLT:
+    case DT_AARCH64_PAC_PLT:
+      OS << Value;
+      return;
+    default:
+      break;
+    }
+    break;
+  case EM_HEXAGON:
+    switch (Type) {
+    case DT_HEXAGON_VER:
+      OS << Value;
+      return;
+    case DT_HEXAGON_SYMSZ:
+    case DT_HEXAGON_PLT:
+      OS << format(ConvChar, Value);
+      return;
+    default:
+      break;
+    }
+    break;
+  case EM_MIPS:
+    switch (Type) {
+    case DT_MIPS_RLD_VERSION:
+    case DT_MIPS_LOCAL_GOTNO:
+    case DT_MIPS_SYMTABNO:
+    case DT_MIPS_UNREFEXTNO:
+      OS << Value;
+      return;
+    case DT_MIPS_TIME_STAMP:
+    case DT_MIPS_ICHECKSUM:
+    case DT_MIPS_IVERSION:
+    case DT_MIPS_BASE_ADDRESS:
+    case DT_MIPS_MSYM:
+    case DT_MIPS_CONFLICT:
+    case DT_MIPS_LIBLIST:
+    case DT_MIPS_CONFLICTNO:
+    case DT_MIPS_LIBLISTNO:
+    case DT_MIPS_GOTSYM:
+    case DT_MIPS_HIPAGENO:
+    case DT_MIPS_RLD_MAP:
+    case DT_MIPS_DELTA_CLASS:
+    case DT_MIPS_DELTA_CLASS_NO:
+    case DT_MIPS_DELTA_INSTANCE:
+    case DT_MIPS_DELTA_RELOC:
+    case DT_MIPS_DELTA_RELOC_NO:
+    case DT_MIPS_DELTA_SYM:
+    case DT_MIPS_DELTA_SYM_NO:
+    case DT_MIPS_DELTA_CLASSSYM:
+    case DT_MIPS_DELTA_CLASSSYM_NO:
+    case DT_MIPS_CXX_FLAGS:
+    case DT_MIPS_PIXIE_INIT:
+    case DT_MIPS_SYMBOL_LIB:
+    case DT_MIPS_LOCALPAGE_GOTIDX:
+    case DT_MIPS_LOCAL_GOTIDX:
+    case DT_MIPS_HIDDEN_GOTIDX:
+    case DT_MIPS_PROTECTED_GOTIDX:
+    case DT_MIPS_OPTIONS:
+    case DT_MIPS_INTERFACE:
+    case DT_MIPS_DYNSTR_ALIGN:
+    case DT_MIPS_INTERFACE_SIZE:
+    case DT_MIPS_RLD_TEXT_RESOLVE_ADDR:
+    case DT_MIPS_PERF_SUFFIX:
+    case DT_MIPS_COMPACT_SIZE:
+    case DT_MIPS_GP_VALUE:
+    case DT_MIPS_AUX_DYNAMIC:
+    case DT_MIPS_PLTGOT:
+    case DT_MIPS_RWPLT:
+    case DT_MIPS_RLD_MAP_REL:
+      OS << format(ConvChar, Value);
+      return;
+    case DT_MIPS_FLAGS:
+      printFlags(Value, makeArrayRef(ElfDynamicDTMipsFlags), OS);
+      return;
+    default:
+      break;
+    }
+    break;
+  default:
+    break;
+  }
+
   switch (Type) {
   case DT_PLTREL:
     if (Value == DT_REL) {
@@ -1811,22 +1911,12 @@ void ELFDumper<ELFT>::printDynamicEntry(raw_ostream &OS, uint64_t Type,
   case DT_VERSYM:
   case DT_GNU_HASH:
   case DT_NULL:
-  case DT_MIPS_BASE_ADDRESS:
-  case DT_MIPS_GOTSYM:
-  case DT_MIPS_RLD_MAP:
-  case DT_MIPS_RLD_MAP_REL:
-  case DT_MIPS_PLTGOT:
-  case DT_MIPS_OPTIONS:
     OS << format(ConvChar, Value);
     break;
   case DT_RELACOUNT:
   case DT_RELCOUNT:
   case DT_VERDEFNUM:
   case DT_VERNEEDNUM:
-  case DT_MIPS_RLD_VERSION:
-  case DT_MIPS_LOCAL_GOTNO:
-  case DT_MIPS_SYMTABNO:
-  case DT_MIPS_UNREFEXTNO:
     OS << Value;
     break;
   case DT_PLTRELSZ:
@@ -1861,9 +1951,6 @@ void ELFDumper<ELFT>::printDynamicEntry(raw_ostream &OS, uint64_t Type,
   case DT_RPATH:
   case DT_RUNPATH:
     OS << getDynamicString(Value);
-    break;
-  case DT_MIPS_FLAGS:
-    printFlags(Value, makeArrayRef(ElfDynamicDTMipsFlags), OS);
     break;
   case DT_FLAGS:
     printFlags(Value, makeArrayRef(ElfDynamicDTFlags), OS);
@@ -3840,8 +3927,10 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
     if (DataSize)
       OS << format(" <corrupt length: 0x%x>", DataSize);
     return OS.str();
+  case GNU_PROPERTY_AARCH64_FEATURE_1_AND:
   case GNU_PROPERTY_X86_FEATURE_1_AND:
-    OS << "x86 feature: ";
+    OS << ((Type == GNU_PROPERTY_AARCH64_FEATURE_1_AND) ? "aarch64 feature: "
+                                                        : "x86 feature: ");
     if (DataSize != 4) {
       OS << format("<corrupt length: 0x%x>", DataSize);
       return OS.str();
@@ -3851,8 +3940,13 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
       OS << "<None>";
       return OS.str();
     }
-    DumpBit(GNU_PROPERTY_X86_FEATURE_1_IBT, "IBT");
-    DumpBit(GNU_PROPERTY_X86_FEATURE_1_SHSTK, "SHSTK");
+    if (Type == GNU_PROPERTY_AARCH64_FEATURE_1_AND) {
+      DumpBit(GNU_PROPERTY_AARCH64_FEATURE_1_BTI, "BTI");
+      DumpBit(GNU_PROPERTY_AARCH64_FEATURE_1_PAC, "PAC");
+    } else {
+      DumpBit(GNU_PROPERTY_X86_FEATURE_1_IBT, "IBT");
+      DumpBit(GNU_PROPERTY_X86_FEATURE_1_SHSTK, "SHSTK");
+    }
     if (PrData)
       OS << format("<unknown flags: 0x%x>", PrData);
     return OS.str();

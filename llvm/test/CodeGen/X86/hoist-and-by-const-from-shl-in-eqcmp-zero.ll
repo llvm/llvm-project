@@ -818,6 +818,91 @@ define i1 @scalar_i8_signbit_ne(i8 %x, i8 %y) nounwind {
 }
 
 ;------------------------------------------------------------------------------;
+; What if X is a constant too?
+;------------------------------------------------------------------------------;
+
+define i1 @scalar_i32_x_is_const_eq(i32 %y) nounwind {
+; X86-NOBMI-LABEL: scalar_i32_x_is_const_eq:
+; X86-NOBMI:       # %bb.0:
+; X86-NOBMI-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NOBMI-NEXT:    movl $-1437226411, %eax # imm = 0xAA55AA55
+; X86-NOBMI-NEXT:    shll %cl, %eax
+; X86-NOBMI-NEXT:    testb $1, %al
+; X86-NOBMI-NEXT:    sete %al
+; X86-NOBMI-NEXT:    retl
+;
+; X86-BMI1-LABEL: scalar_i32_x_is_const_eq:
+; X86-BMI1:       # %bb.0:
+; X86-BMI1-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-BMI1-NEXT:    movl $-1437226411, %eax # imm = 0xAA55AA55
+; X86-BMI1-NEXT:    shll %cl, %eax
+; X86-BMI1-NEXT:    testb $1, %al
+; X86-BMI1-NEXT:    sete %al
+; X86-BMI1-NEXT:    retl
+;
+; X86-BMI12-LABEL: scalar_i32_x_is_const_eq:
+; X86-BMI12:       # %bb.0:
+; X86-BMI12-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-BMI12-NEXT:    movl $-1437226411, %ecx # imm = 0xAA55AA55
+; X86-BMI12-NEXT:    shlxl %eax, %ecx, %eax
+; X86-BMI12-NEXT:    testb $1, %al
+; X86-BMI12-NEXT:    sete %al
+; X86-BMI12-NEXT:    retl
+;
+; X64-NOBMI-LABEL: scalar_i32_x_is_const_eq:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    movl %edi, %ecx
+; X64-NOBMI-NEXT:    movl $-1437226411, %eax # imm = 0xAA55AA55
+; X64-NOBMI-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NOBMI-NEXT:    shll %cl, %eax
+; X64-NOBMI-NEXT:    testb $1, %al
+; X64-NOBMI-NEXT:    sete %al
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMI1-LABEL: scalar_i32_x_is_const_eq:
+; X64-BMI1:       # %bb.0:
+; X64-BMI1-NEXT:    movl %edi, %ecx
+; X64-BMI1-NEXT:    movl $-1437226411, %eax # imm = 0xAA55AA55
+; X64-BMI1-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-BMI1-NEXT:    shll %cl, %eax
+; X64-BMI1-NEXT:    testb $1, %al
+; X64-BMI1-NEXT:    sete %al
+; X64-BMI1-NEXT:    retq
+;
+; X64-BMI12-LABEL: scalar_i32_x_is_const_eq:
+; X64-BMI12:       # %bb.0:
+; X64-BMI12-NEXT:    movl $-1437226411, %eax # imm = 0xAA55AA55
+; X64-BMI12-NEXT:    shlxl %edi, %eax, %eax
+; X64-BMI12-NEXT:    testb $1, %al
+; X64-BMI12-NEXT:    sete %al
+; X64-BMI12-NEXT:    retq
+  %t0 = shl i32 2857740885, %y
+  %t1 = and i32 %t0, 1
+  %res = icmp eq i32 %t1, 0
+  ret i1 %res
+}
+define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
+; X86-LABEL: scalar_i32_x_is_const2_eq:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $-1437226411, %ecx # imm = 0xAA55AA55
+; X86-NEXT:    btl %eax, %ecx
+; X86-NEXT:    setae %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: scalar_i32_x_is_const2_eq:
+; X64:       # %bb.0:
+; X64-NEXT:    movl $-1437226411, %eax # imm = 0xAA55AA55
+; X64-NEXT:    btl %edi, %eax
+; X64-NEXT:    setae %al
+; X64-NEXT:    retq
+  %t0 = shl i32 1, %y
+  %t1 = and i32 %t0, 2857740885
+  %res = icmp eq i32 %t1, 0
+  ret i1 %res
+}
+
+;------------------------------------------------------------------------------;
 ; A few negative tests
 ;------------------------------------------------------------------------------;
 

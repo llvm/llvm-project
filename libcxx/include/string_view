@@ -228,9 +228,9 @@ public:
     basic_string_view(const _CharT* __s, size_type __len) _NOEXCEPT
         : __data(__s), __size(__len)
     {
-// #if _LIBCPP_STD_VER > 11
-//         _LIBCPP_ASSERT(__len == 0 || __s != nullptr, "string_view::string_view(_CharT *, size_t): received nullptr");
-// #endif
+#if _LIBCPP_STD_VER > 11
+    _LIBCPP_ASSERT(__len == 0 || __s != nullptr, "string_view::string_view(_CharT *, size_t): received nullptr");
+#endif
     }
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY

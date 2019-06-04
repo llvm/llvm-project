@@ -151,3 +151,25 @@
 # GNU-PPC-NEXT:   0x0000000070000000 (PPC64_GLINK)        0x1000
 # GNU-PPC-NEXT:   0x000000001234abcd (unknown)            0x1
 # GNU-PPC-NEXT:   0x0000000000000000 (NULL)               0x0
+
+# Test that AARCH64 machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=4 %S/Inputs/elf-dynamic-tags-machine-specific.yaml -o %t.aarch64
+# RUN: llvm-readobj --dynamic-table %t.aarch64 | FileCheck %s --check-prefix=LLVM-AARCH64
+# RUN: llvm-readelf --dynamic-table %t.aarch64 | FileCheck %s --check-prefix=GNU-AARCH64
+
+# LLVM-AARCH64:     DynamicSection [ (5 entries)
+# LLVM-AARCH64-NEXT:  Tag                Type                 Name/Value
+# LLVM-AARCH64-NEXT:  0x0000000000000004 HASH                 0x1000
+# LLVM-AARCH64-NEXT:  0x0000000070000001 AARCH64_BTI_PLT      0
+# LLVM-AARCH64-NEXT:  0x0000000070000003 AARCH64_PAC_PLT      0
+# LLVM-AARCH64-NEXT:  0x000000001234ABCD unknown              0x1
+# LLVM-AARCH64-NEXT:  0x0000000000000000 NULL                 0x0
+# LLVM-AARCH64-NEXT:]
+
+# GNU-AARCH64:      Dynamic section at offset {{.*}} contains 5 entries:
+# GNU-AARCH64-NEXT:  Tag                Type                 Name/Value
+# GNU-AARCH64-NEXT:  0x0000000000000004 (HASH)               0x1000
+# GNU-AARCH64-NEXT:  0x0000000070000001 (AARCH64_BTI_PLT)    0
+# GNU-AARCH64-NEXT:  0x0000000070000003 (AARCH64_PAC_PLT)    0
+# GNU-AARCH64-NEXT:  0x000000001234abcd (unknown)            0x1
+# GNU-AARCH64-NEXT:  0x0000000000000000 (NULL)               0x0

@@ -736,7 +736,6 @@ bool x86AssemblyInspectionEngine::pc_rel_branch_or_jump_p (
   int opcode_size = 0;
 
   uint8_t b1 = m_cur_insn[0];
-  uint8_t b2 = m_cur_insn[1];
 
   switch (b1) {
     case 0x77: // JA/JNBE rel8
@@ -764,6 +763,7 @@ bool x86AssemblyInspectionEngine::pc_rel_branch_or_jump_p (
       break;
   }
   if (b1 == 0x0f && opcode_size == 0) {
+    uint8_t b2 = m_cur_insn[1];
     switch (b2) {
       case 0x87: // JA/JNBE rel16/rel32
       case 0x86: // JBE/JNA rel16/rel32

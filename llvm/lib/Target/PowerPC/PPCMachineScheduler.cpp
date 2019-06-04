@@ -5,8 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "PPC.h"
+
 #include "PPCMachineScheduler.h"
+#include "MCTargetDesc/PPCMCTargetDesc.h"
+
 using namespace llvm;
 
 static cl::opt<bool> 
