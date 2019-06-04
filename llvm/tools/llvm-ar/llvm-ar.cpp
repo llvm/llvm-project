@@ -464,11 +464,9 @@ static void doDisplayTable(StringRef Name, const object::Archive::Child &C) {
   }
 
   if (C.getParent()->isThin()) {
-    if (!sys::path::is_absolute(Name)) {
-      StringRef ParentDir = sys::path::parent_path(ArchiveName);
-      if (!ParentDir.empty())
-        outs() << sys::path::convert_to_slash(ParentDir) << '/';
-    }
+    StringRef ParentDir = sys::path::parent_path(ArchiveName);
+    if (!ParentDir.empty())
+      outs() << ParentDir << '/';
   }
   outs() << Name << "\n";
 }
@@ -595,18 +593,10 @@ static void addChildMember(std::vector<NewArchiveMember> &Members,
   // the archive it's in, so the file resolves correctly.
   if (Thin && FlattenArchive) {
     StringSaver Saver(Alloc);
-    Expected<std::string> FileNameOrErr = M.getName();
+    Expected<std::string> FileNameOrErr = M.getFullName();
     failIfError(FileNameOrErr.takeError());
-    if (sys::path::is_absolute(*FileNameOrErr)) {
-      NMOrErr->MemberName = Saver.save(sys::path::convert_to_slash(*FileNameOrErr));
-    } else {
-      FileNameOrErr = M.getFullName();
-      failIfError(FileNameOrErr.takeError());
-      Expected<std::string> PathOrErr =
-          computeArchiveRelativePath(ArchiveName, *FileNameOrErr);
-      NMOrErr->MemberName = Saver.save(
-          PathOrErr ? *PathOrErr : sys::path::convert_to_slash(*FileNameOrErr));
-    }
+    NMOrErr->MemberName =
+        Saver.save(computeArchiveRelativePath(ArchiveName, *FileNameOrErr));
   }
   if (FlattenArchive &&
       identify_magic(NMOrErr->Buf->getBuffer()) == file_magic::archive) {
@@ -635,19 +625,9 @@ static void addMember(std::vector<NewArchiveMember> &Members,
   // For regular archives, use the basename of the object path for the member
   // name. For thin archives, use the full relative paths so the file resolves
   // correctly.
-  if (!Thin) {
-    NMOrErr->MemberName = sys::path::filename(NMOrErr->MemberName);
-  } else {
-    if (sys::path::is_absolute(FileName))
-      NMOrErr->MemberName = Saver.save(sys::path::convert_to_slash(FileName));
-    else {
-      Expected<std::string> PathOrErr =
-          computeArchiveRelativePath(ArchiveName, FileName);
-      NMOrErr->MemberName = Saver.save(
-          PathOrErr ? *PathOrErr : sys::path::convert_to_slash(FileName));
-    }
-  }
-
+  NMOrErr->MemberName =
+      Thin ? Saver.save(computeArchiveRelativePath(ArchiveName, FileName))
+           : sys::path::filename(NMOrErr->MemberName);
   if (FlattenArchive &&
       identify_magic(NMOrErr->Buf->getBuffer()) == file_magic::archive) {
     object::Archive &Lib = readLibrary(FileName);

@@ -218,6 +218,7 @@ group("test") {
     "//llvm/tools/llvm-isel-fuzzer",
     "//llvm/tools/llvm-jitlink",
     "//llvm/tools/llvm-link",
+    "//llvm/tools/llvm-lipo",
     "//llvm/tools/llvm-lto",
     "//llvm/tools/llvm-lto2",
     "//llvm/tools/llvm-mc",

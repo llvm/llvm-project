@@ -36,7 +36,7 @@ struct NewArchiveMember {
                                             bool Deterministic);
 };
 
-Expected<std::string> computeArchiveRelativePath(StringRef From, StringRef To);
+std::string computeArchiveRelativePath(StringRef From, StringRef To);
 
 Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
                    bool WriteSymtab, object::Archive::Kind Kind,

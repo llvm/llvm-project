@@ -584,6 +584,11 @@ void LowerSwitch::processSwitchInst(SwitchInst *SI,
         PopSucc->removePredecessor(OrigBlock);
       return;
     }
+
+    // If the condition was a PHI node with the switch block as a predecessor
+    // removing predecessors may have caused the condition to be erased.
+    // Getting the condition value again here protects against that.
+    Val = SI->getCondition();
   }
 
   // Create a new, empty default block so that the new hierarchy of

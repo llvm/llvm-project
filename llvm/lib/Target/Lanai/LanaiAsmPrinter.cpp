@@ -12,7 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/LanaiInstPrinter.h"
-#include "Lanai.h"
+#include "LanaiAluCode.h"
+#include "LanaiCondCode.h"
 #include "LanaiInstrInfo.h"
 #include "LanaiMCInstLower.h"
 #include "LanaiTargetMachine.h"

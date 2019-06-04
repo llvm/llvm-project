@@ -248,11 +248,11 @@ DEFINE_COMPILERRT_FUNCTION(__unordsf2)
 END_COMPILERRT_FUNCTION(__unordsf2)
 
 #if defined(COMPILER_RT_ARMHF_TARGET)
-DEFINE_COMPILERRT_FUNCTION(__aeabi_fcmpum)
+DEFINE_COMPILERRT_FUNCTION(__aeabi_fcmpun)
 	vmov s0, r0
 	vmov s1, r1
 	b SYMBOL_NAME(__unordsf2)
-END_COMPILERRT_FUNCTION(__aeabi_fcmpum)
+END_COMPILERRT_FUNCTION(__aeabi_fcmpun)
 #else
 DEFINE_AEABI_FUNCTION_ALIAS(__aeabi_fcmpun, __unordsf2)
 #endif
