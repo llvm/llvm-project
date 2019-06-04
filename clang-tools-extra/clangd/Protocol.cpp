@@ -314,6 +314,14 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R) {
         }
       }
     }
+    if (auto *Help = TextDocument->getObject("signatureHelp")) {
+      if (auto *Info = Help->getObject("signatureInformation")) {
+        if (auto *Parameter = Info->getObject("parameterInformation")) {
+          if (auto OffsetSupport = Parameter->getBoolean("labelOffsetSupport"))
+            R.OffsetsInSignatureHelp = *OffsetSupport;
+        }
+      }
+    }
   }
   if (auto *Workspace = O->getObject("workspace")) {
     if (auto *Symbol = Workspace->getObject("symbol")) {
@@ -824,8 +832,14 @@ llvm::json::Value toJSON(const CompletionList &L) {
 }
 
 llvm::json::Value toJSON(const ParameterInformation &PI) {
-  assert(!PI.label.empty() && "parameter information label is required");
-  llvm::json::Object Result{{"label", PI.label}};
+  assert(PI.labelOffsets.hasValue() ||
+         !PI.labelString.empty() && "parameter information label is required");
+  llvm::json::Object Result;
+  if (PI.labelOffsets)
+    Result["label"] =
+        llvm::json::Array({PI.labelOffsets->first, PI.labelOffsets->second});
+  else
+    Result["label"] = PI.labelString;
   if (!PI.documentation.empty())
     Result["documentation"] = PI.documentation;
   return std::move(Result);

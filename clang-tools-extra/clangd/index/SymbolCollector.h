@@ -110,6 +110,7 @@ public:
 
   SymbolSlab takeSymbols() { return std::move(Symbols).build(); }
   RefSlab takeRefs() { return std::move(Refs).build(); }
+  RelationSlab takeRelations() { return std::move(Relations).build(); }
 
   void finish() override;
 
@@ -117,6 +118,8 @@ private:
   const Symbol *addDeclaration(const NamedDecl &, SymbolID,
                                bool IsMainFileSymbol);
   void addDefinition(const NamedDecl &, const Symbol &DeclSymbol);
+  void processRelations(const NamedDecl &ND, const SymbolID &ID,
+                        ArrayRef<index::SymbolRelation> Relations);
 
   llvm::Optional<std::string> getIncludeHeader(llvm::StringRef QName, FileID);
   bool isSelfContainedHeader(FileID);
@@ -135,6 +138,8 @@ private:
   // Only symbols declared in preamble (from #include) and referenced from the
   // main file will be included.
   RefSlab::Builder Refs;
+  // All relations collected from the AST.
+  RelationSlab::Builder Relations;
   ASTContext *ASTCtx;
   std::shared_ptr<Preprocessor> PP;
   std::shared_ptr<GlobalCodeCompletionAllocator> CompletionAllocator;

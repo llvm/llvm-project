@@ -360,6 +360,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
       Params.capabilities.HierarchicalDocumentSymbol;
   SupportFileStatus = Params.initializationOptions.FileStatus;
   HoverContentFormat = Params.capabilities.HoverContentFormat;
+  SupportsOffsetsInSignatureHelp = Params.capabilities.OffsetsInSignatureHelp;
   llvm::json::Object Result{
       {{"capabilities",
         llvm::json::Object{
@@ -761,7 +762,22 @@ void ClangdLSPServer::onCompletion(const CompletionParams &Params,
 void ClangdLSPServer::onSignatureHelp(const TextDocumentPositionParams &Params,
                                       Callback<SignatureHelp> Reply) {
   Server->signatureHelp(Params.textDocument.uri.file(), Params.position,
-                        std::move(Reply));
+                        Bind(
+                            [this](decltype(Reply) Reply,
+                                   llvm::Expected<SignatureHelp> Signature) {
+                              if (!Signature)
+                                return Reply(Signature.takeError());
+                              if (SupportsOffsetsInSignatureHelp)
+                                return Reply(std::move(*Signature));
+                              // Strip out the offsets from signature help for
+                              // clients that only support string labels.
+                              for (auto &Signature : Signature->signatures) {
+                                for (auto &Param : Signature.parameters)
+                                  Param.labelOffsets.reset();
+                              }
+                              return Reply(std::move(*Signature));
+                            },
+                            std::move(Reply)));
 }
 
 // Go to definition has a toggle function: if def and decl are distinct, then

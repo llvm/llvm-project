@@ -390,6 +390,9 @@ struct ClientCapabilities {
   /// Client supports hierarchical document symbols.
   bool HierarchicalDocumentSymbol = false;
 
+  /// Client supports processing label offsets instead of a simple label string.
+  bool OffsetsInSignatureHelp = false;
+
   /// The supported set of CompletionItemKinds for textDocument/completion.
   /// textDocument.completion.completionItemKind.valueSet
   llvm::Optional<CompletionItemKindBitset> CompletionItemKinds;
@@ -979,8 +982,14 @@ llvm::json::Value toJSON(const CompletionList &);
 /// A single parameter of a particular signature.
 struct ParameterInformation {
 
-  /// The label of this parameter. Mandatory.
-  std::string label;
+  /// The label of this parameter. Ignored when labelOffsets is set.
+  std::string labelString;
+
+  /// Inclusive start and exclusive end offsets withing the containing signature
+  /// label.
+  /// Offsets are computed by lspLength(), which counts UTF-16 code units by
+  /// default but that can be overriden, see its documentation for details.
+  llvm::Optional<std::pair<unsigned, unsigned>> labelOffsets;
 
   /// The documentation of this parameter. Optional.
   std::string documentation;
