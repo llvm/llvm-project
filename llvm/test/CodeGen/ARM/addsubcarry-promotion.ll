@@ -10,40 +10,63 @@
 define void @fn1(i32 %a, i32 %b, i32 %c) local_unnamed_addr #0 {
 ; ARM-LABEL: fn1:
 ; ARM:       @ %bb.0: @ %entry
-; ARM-NEXT:    rsb r2, r2, #1
 ; ARM-NEXT:    adds r0, r1, r0
+; ARM-NEXT:    mov r3, #0
+; ARM-NEXT:    adc r0, r3, #0
 ; ARM-NEXT:    movw r1, #65535
-; ARM-NEXT:    sxth r2, r2
-; ARM-NEXT:    adc r0, r2, #0
-; ARM-NEXT:    tst r0, r1
+; ARM-NEXT:    sub r0, r0, r2
+; ARM-NEXT:    uxth r0, r0
+; ARM-NEXT:    cmp r0, r1
 ; ARM-NEXT:    bxeq lr
 ; ARM-NEXT:  .LBB0_1: @ %for.cond
 ; ARM-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; ARM-NEXT:    b .LBB0_1
 ;
-; THUMB1-LABEL: fn1:
-; THUMB1:       @ %bb.0: @ %entry
-; THUMB1-NEXT:    movs r3, #1
-; THUMB1-NEXT:    subs r2, r3, r2
-; THUMB1-NEXT:    sxth r2, r2
-; THUMB1-NEXT:    movs r3, #0
-; THUMB1-NEXT:    adds r0, r1, r0
-; THUMB1-NEXT:    adcs r3, r2
-; THUMB1-NEXT:    lsls r0, r3, #16
-; THUMB1-NEXT:    beq .LBB0_2
-; THUMB1-NEXT:  .LBB0_1: @ %for.cond
-; THUMB1-NEXT:    @ =>This Inner Loop Header: Depth=1
-; THUMB1-NEXT:    b .LBB0_1
-; THUMB1-NEXT:  .LBB0_2: @ %if.end
-; THUMB1-NEXT:    bx lr
+; THUMBV6M-LABEL: fn1:
+; THUMBV6M:       @ %bb.0: @ %entry
+; THUMBV6M-NEXT:    movs r3, #0
+; THUMBV6M-NEXT:    adds r0, r1, r0
+; THUMBV6M-NEXT:    adcs r3, r3
+; THUMBV6M-NEXT:    subs r0, r3, r2
+; THUMBV6M-NEXT:    uxth r0, r0
+; THUMBV6M-NEXT:    ldr r1, .LCPI0_0
+; THUMBV6M-NEXT:    cmp r0, r1
+; THUMBV6M-NEXT:    beq .LBB0_2
+; THUMBV6M-NEXT:  .LBB0_1: @ %for.cond
+; THUMBV6M-NEXT:    @ =>This Inner Loop Header: Depth=1
+; THUMBV6M-NEXT:    b .LBB0_1
+; THUMBV6M-NEXT:  .LBB0_2: @ %if.end
+; THUMBV6M-NEXT:    bx lr
+; THUMBV6M-NEXT:    .p2align 2
+; THUMBV6M-NEXT:  @ %bb.3:
+; THUMBV6M-NEXT:  .LCPI0_0:
+; THUMBV6M-NEXT:    .long 65535 @ 0xffff
+;
+; THUMBV8M-BASE-LABEL: fn1:
+; THUMBV8M-BASE:       @ %bb.0: @ %entry
+; THUMBV8M-BASE-NEXT:    movs r3, #0
+; THUMBV8M-BASE-NEXT:    adds r0, r1, r0
+; THUMBV8M-BASE-NEXT:    adcs r3, r3
+; THUMBV8M-BASE-NEXT:    subs r0, r3, r2
+; THUMBV8M-BASE-NEXT:    uxth r0, r0
+; THUMBV8M-BASE-NEXT:    movw r1, #65535
+; THUMBV8M-BASE-NEXT:    cmp r0, r1
+; THUMBV8M-BASE-NEXT:    beq .LBB0_2
+; THUMBV8M-BASE-NEXT:  .LBB0_1: @ %for.cond
+; THUMBV8M-BASE-NEXT:    @ =>This Inner Loop Header: Depth=1
+; THUMBV8M-BASE-NEXT:    b .LBB0_1
+; THUMBV8M-BASE-NEXT:  .LBB0_2: @ %if.end
+; THUMBV8M-BASE-NEXT:    bx lr
 ;
 ; THUMB-LABEL: fn1:
 ; THUMB:       @ %bb.0: @ %entry
-; THUMB-NEXT:    rsb.w r2, r2, #1
 ; THUMB-NEXT:    adds r0, r0, r1
-; THUMB-NEXT:    sxth r2, r2
-; THUMB-NEXT:    adc r0, r2, #0
-; THUMB-NEXT:    lsls r0, r0, #16
+; THUMB-NEXT:    mov.w r3, #0
+; THUMB-NEXT:    adc r0, r3, #0
+; THUMB-NEXT:    movw r1, #65535
+; THUMB-NEXT:    subs r0, r0, r2
+; THUMB-NEXT:    uxth r0, r0
+; THUMB-NEXT:    cmp r0, r1
 ; THUMB-NEXT:    it eq
 ; THUMB-NEXT:    bxeq lr
 ; THUMB-NEXT:  .LBB0_1: @ %for.cond

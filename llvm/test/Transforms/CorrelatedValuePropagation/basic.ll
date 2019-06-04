@@ -931,7 +931,7 @@ define i1 @urem_unknown(i32 %a) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[UREM]], 30
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %urem = urem i32 %a, 30
@@ -949,9 +949,9 @@ define i1 @srem_unknown(i32 %a) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[SREM]], -30
 ; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
 ; CHECK:       exit1:
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       exit2:
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %srem = srem i32 %a, 30
@@ -972,9 +972,9 @@ define i1 @sdiv_unknown(i32 %a) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[SREM]], -17459217
 ; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
 ; CHECK:       exit1:
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       exit2:
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %srem = sdiv i32 %a, 123

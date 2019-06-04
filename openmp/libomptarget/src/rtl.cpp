@@ -107,6 +107,10 @@ void RTLsTy::LoadRTLs() {
               dynlib_handle, "__tgt_rtl_run_target_team_region")))
       continue;
 
+    // Optional functions
+    *((void**) &R.init_requires) = dlsym(
+        dynlib_handle, "__tgt_rtl_init_requires");
+
     // No devices are supported by this RTL?
     if (!(R.NumberOfDevices = R.number_of_devices())) {
       DP("No devices supported in this RTL\n");

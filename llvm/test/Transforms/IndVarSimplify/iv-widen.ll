@@ -1,5 +1,5 @@
 ; RUN: opt < %s -indvars -S | FileCheck %s
-; RUN: opt -lcssa -loop-simplify -S < %s | opt -S -passes='require<targetir>,require<scalar-evolution>,require<domtree>,loop(indvars)'
+; RUN: opt < %s -S -passes='lcssa,loop-simplify,require<targetir>,require<scalar-evolution>,require<domtree>,loop(indvars)' | FileCheck %s
 
 ; Provide legal integer types.
 target datalayout = "n8:16:32:64"

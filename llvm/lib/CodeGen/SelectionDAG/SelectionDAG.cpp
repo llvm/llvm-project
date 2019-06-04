@@ -3878,13 +3878,43 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     if (LoadSDNode *LD = dyn_cast<LoadSDNode>(Op)) {
       unsigned ExtType = LD->getExtensionType();
       switch (ExtType) {
-        default: break;
-        case ISD::SEXTLOAD:    // '17' bits known
-          Tmp = LD->getMemoryVT().getScalarSizeInBits();
-          return VTBits-Tmp+1;
-        case ISD::ZEXTLOAD:    // '16' bits known
-          Tmp = LD->getMemoryVT().getScalarSizeInBits();
-          return VTBits-Tmp;
+      default: break;
+      case ISD::SEXTLOAD: // e.g. i16->i32 = '17' bits known.
+        Tmp = LD->getMemoryVT().getScalarSizeInBits();
+        return VTBits - Tmp + 1;
+      case ISD::ZEXTLOAD: // e.g. i16->i32 = '16' bits known.
+        Tmp = LD->getMemoryVT().getScalarSizeInBits();
+        return VTBits - Tmp;
+      case ISD::NON_EXTLOAD:
+        if (const Constant *Cst = TLI->getTargetConstantFromLoad(LD)) {
+          // We only need to handle vectors - computeKnownBits should handle
+          // scalar cases.
+          Type *CstTy = Cst->getType();
+          if (CstTy->isVectorTy() &&
+              (NumElts * VTBits) == CstTy->getPrimitiveSizeInBits()) {
+            Tmp = VTBits;
+            for (unsigned i = 0; i != NumElts; ++i) {
+              if (!DemandedElts[i])
+                continue;
+              if (Constant *Elt = Cst->getAggregateElement(i)) {
+                if (auto *CInt = dyn_cast<ConstantInt>(Elt)) {
+                  const APInt &Value = CInt->getValue();
+                  Tmp = std::min(Tmp, Value.getNumSignBits());
+                  continue;
+                }
+                if (auto *CFP = dyn_cast<ConstantFP>(Elt)) {
+                  APInt Value = CFP->getValueAPF().bitcastToAPInt();
+                  Tmp = std::min(Tmp, Value.getNumSignBits());
+                  continue;
+                }
+              }
+              // Unknown type. Conservatively assume no bits match sign bit.
+              return 1;
+            }
+            return Tmp;
+          }
+        }
+        break;
       }
     }
   }
@@ -4437,6 +4467,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "Vector element count mismatch!");
     assert(Operand.getValueType().bitsLT(VT) &&
            "Invalid fpext node, dst < src!");
+    if (Operand.isUndef())
+      return getUNDEF(VT);
+    break;
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
     if (Operand.isUndef())
       return getUNDEF(VT);
     break;

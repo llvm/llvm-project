@@ -173,6 +173,7 @@ tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File) const {
   std::lock_guard<std::mutex> Lock(Mutex);
   Cmd.CommandLine.insert(Cmd.CommandLine.end(), FallbackFlags.begin(),
                          FallbackFlags.end());
+  adjustArguments(Cmd, ResourceDir);
   return Cmd;
 }
 

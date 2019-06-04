@@ -14610,7 +14610,9 @@ namespace {
     // context so never needs to be transformed.
     // FIXME: Ideally we wouldn't transform the closure type either, and would
     // just recreate the capture expressions and lambda expression.
-    StmtResult TransformLambdaBody(Stmt *Body) { return Body; }
+    StmtResult TransformLambdaBody(LambdaExpr *E, Stmt *Body) {
+      return SkipLambdaBody(E, Body);
+    }
   };
 }
 
@@ -15054,7 +15056,7 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
 ///    *FunctionScopeIndexToStopAt on the FunctionScopeInfo stack.
 static void
 MarkVarDeclODRUsed(VarDecl *Var, SourceLocation Loc, Sema &SemaRef,
-                   const unsigned *const FunctionScopeIndexToStopAt) {
+                   const unsigned *const FunctionScopeIndexToStopAt = nullptr) {
   // Keep track of used but undefined variables.
   // FIXME: We shouldn't suppress this warning for static data members.
   if (Var->hasDefinition(SemaRef.Context) == VarDecl::DeclarationOnly &&
@@ -15735,14 +15737,21 @@ void Sema::UpdateMarkingForLValueToRValue(Expr *E) {
   // variable.
   if (LambdaScopeInfo *LSI = getCurLambda()) {
     Expr *SansParensExpr = E->IgnoreParens();
-    VarDecl *Var = nullptr;
+    VarDecl *Var;
+    ArrayRef<VarDecl *> Vars(&Var, &Var + 1);
     if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(SansParensExpr))
       Var = dyn_cast<VarDecl>(DRE->getFoundDecl());
     else if (MemberExpr *ME = dyn_cast<MemberExpr>(SansParensExpr))
       Var = dyn_cast<VarDecl>(ME->getMemberDecl());
+    else if (auto *FPPE = dyn_cast<FunctionParmPackExpr>(SansParensExpr))
+      Vars = llvm::makeArrayRef(FPPE->begin(), FPPE->end());
+    else
+      Vars = None;
 
-    if (Var && IsVariableNonDependentAndAConstantExpression(Var, Context))
-      LSI->markVariableExprAsNonODRUsed(SansParensExpr);
+    for (VarDecl *VD : Vars) {
+      if (VD && IsVariableNonDependentAndAConstantExpression(VD, Context))
+        LSI->markVariableExprAsNonODRUsed(SansParensExpr);
+    }
   }
 }
 
@@ -15767,20 +15776,18 @@ void Sema::CleanupVarDeclMarking() {
   std::swap(LocalMaybeODRUseExprs, MaybeODRUseExprs);
 
   for (Expr *E : LocalMaybeODRUseExprs) {
-    VarDecl *Var;
-    SourceLocation Loc;
-    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
-      Var = cast<VarDecl>(DRE->getDecl());
-      Loc = DRE->getLocation();
-    } else if (MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
-      Var = cast<VarDecl>(ME->getMemberDecl());
-      Loc = ME->getMemberLoc();
+    if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+      MarkVarDeclODRUsed(cast<VarDecl>(DRE->getDecl()),
+                         DRE->getLocation(), *this);
+    } else if (auto *ME = dyn_cast<MemberExpr>(E)) {
+      MarkVarDeclODRUsed(cast<VarDecl>(ME->getMemberDecl()), ME->getMemberLoc(),
+                         *this);
+    } else if (auto *FP = dyn_cast<FunctionParmPackExpr>(E)) {
+      for (VarDecl *VD : *FP)
+        MarkVarDeclODRUsed(VD, FP->getParameterPackLocation(), *this);
     } else {
       llvm_unreachable("Unexpected expression");
     }
-
-    MarkVarDeclODRUsed(Var, Loc, *this,
-                       /*MaxFunctionScopeIndex Pointer*/ nullptr);
   }
 
   assert(MaybeODRUseExprs.empty() &&
@@ -15789,7 +15796,8 @@ void Sema::CleanupVarDeclMarking() {
 
 static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
                                     VarDecl *Var, Expr *E) {
-  assert((!E || isa<DeclRefExpr>(E) || isa<MemberExpr>(E)) &&
+  assert((!E || isa<DeclRefExpr>(E) || isa<MemberExpr>(E) ||
+          isa<FunctionParmPackExpr>(E)) &&
          "Invalid Expr argument to DoMarkVarDeclReferenced");
   Var->setReferenced();
 
@@ -16020,6 +16028,12 @@ void Sema::MarkMemberReferenced(MemberExpr *E) {
   SourceLocation Loc =
       E->getMemberLoc().isValid() ? E->getMemberLoc() : E->getBeginLoc();
   MarkExprReferenced(*this, Loc, E->getMemberDecl(), E, MightBeOdrUse);
+}
+
+/// Perform reference-marking and odr-use handling for a FunctionParmPackExpr.
+void Sema::MarkFunctionParmPackReferenced(FunctionParmPackExpr *E) {
+  for (VarDecl *VD : *E)
+    MarkExprReferenced(*this, E->getParameterPackLocation(), VD, E, true);
 }
 
 /// Perform marking for a reference to an arbitrary declaration.  It

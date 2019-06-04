@@ -246,7 +246,6 @@ static void symbolizeInput(StringRef InputString, LLVMSymbolizer &Symbolizer,
   }
   if (ClOutputStyle == DIPrinter::OutputStyle::LLVM)
     outs() << "\n";
-  outs().flush();
 }
 
 int main(int argc, char **argv) {
@@ -291,8 +290,10 @@ int main(int argc, char **argv) {
     const int kMaxInputStringLength = 1024;
     char InputString[kMaxInputStringLength];
 
-    while (fgets(InputString, sizeof(InputString), stdin))
+    while (fgets(InputString, sizeof(InputString), stdin)) {
       symbolizeInput(InputString, Symbolizer, Printer);
+      outs().flush();
+    }
   } else {
     for (StringRef Address : ClInputAddresses)
       symbolizeInput(Address, Symbolizer, Printer);

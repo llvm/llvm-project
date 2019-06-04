@@ -1061,12 +1061,12 @@ define void @test_op_v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32>* %dst) {
 ;
 ; AVX1-LABEL: test_op_v8i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX1-NEXT:    vmovntdq %xmm0, 16(%rdi)
+; AVX1-NEXT:    vmovntdq %xmm2, (%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -1126,12 +1126,12 @@ define void @test_op_v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64>* %dst) {
 ;
 ; AVX1-LABEL: test_op_v4i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX1-NEXT:    vmovntdq %xmm0, 16(%rdi)
+; AVX1-NEXT:    vmovntdq %xmm2, (%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -1164,12 +1164,12 @@ define void @test_op_v16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16>* %dst) {
 ;
 ; AVX1-LABEL: test_op_v16i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpaddw %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpaddw %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX1-NEXT:    vmovntdq %xmm0, 16(%rdi)
+; AVX1-NEXT:    vmovntdq %xmm2, (%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -1202,12 +1202,12 @@ define void @test_op_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8>* %dst) {
 ;
 ; AVX1-LABEL: test_op_v32i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpaddb %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpaddb %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX1-NEXT:    vmovntdq %xmm0, 16(%rdi)
+; AVX1-NEXT:    vmovntdq %xmm2, (%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;

@@ -302,6 +302,40 @@ define i1 @scalar_i8_signbit_ne(i8 %x, i8 %y) nounwind {
 }
 
 ;------------------------------------------------------------------------------;
+; What if X is a constant too?
+;------------------------------------------------------------------------------;
+
+define i1 @scalar_i32_x_is_const_eq(i32 %y) nounwind {
+; CHECK-LABEL: scalar_i32_x_is_const_eq:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #43605
+; CHECK-NEXT:    movk w8, #43605, lsl #16
+; CHECK-NEXT:    lsr w8, w8, w0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+  %t0 = lshr i32 2857740885, %y
+  %t1 = and i32 %t0, 1
+  %res = icmp eq i32 %t1, 0
+  ret i1 %res
+}
+define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
+; CHECK-LABEL: scalar_i32_x_is_const2_eq:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w9, #43605
+; CHECK-NEXT:    lsr w8, w8, w0
+; CHECK-NEXT:    movk w9, #43605, lsl #16
+; CHECK-NEXT:    tst w8, w9
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+  %t0 = lshr i32 1, %y
+  %t1 = and i32 %t0, 2857740885
+  %res = icmp eq i32 %t1, 0
+  ret i1 %res
+}
+
+;------------------------------------------------------------------------------;
 ; A few negative tests
 ;------------------------------------------------------------------------------;
 

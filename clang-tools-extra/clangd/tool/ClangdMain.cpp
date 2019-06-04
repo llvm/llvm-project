@@ -512,14 +512,14 @@ int main(int argc, char *argv[]) {
         tidy::ClangTidyGlobalOptions(),
         /* Default */ tidy::ClangTidyOptions::getDefaults(),
         /* Override */ OverrideClangTidyOptions, FSProvider.getFileSystem());
+    Opts.GetClangTidyOptions = [&](llvm::vfs::FileSystem &,
+                                   llvm::StringRef File) {
+      // This function must be thread-safe and tidy option providers are not.
+      std::lock_guard<std::mutex> Lock(ClangTidyOptMu);
+      // FIXME: use the FS provided to the function.
+      return ClangTidyOptProvider->getOptions(File);
+    };
   }
-  Opts.GetClangTidyOptions = [&](llvm::vfs::FileSystem &,
-                                 llvm::StringRef File) {
-    // This function must be thread-safe and tidy option providers are not.
-    std::lock_guard<std::mutex> Lock(ClangTidyOptMu);
-    // FIXME: use the FS provided to the function.
-    return ClangTidyOptProvider->getOptions(File);
-  };
   Opts.SuggestMissingIncludes = SuggestMissingIncludes;
   llvm::Optional<OffsetEncoding> OffsetEncodingFromFlag;
   if (ForceOffsetEncoding != OffsetEncoding::UnsupportedEncoding)

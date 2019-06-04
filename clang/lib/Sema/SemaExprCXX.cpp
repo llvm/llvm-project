@@ -7427,12 +7427,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
   // All the potentially captureable variables in the current nested
   // lambda (within a generic outer lambda), must be captured by an
   // outer lambda that is enclosed within a non-dependent context.
-  const unsigned NumPotentialCaptures =
-      CurrentLSI->getNumPotentialVariableCaptures();
-  for (unsigned I = 0; I != NumPotentialCaptures; ++I) {
-    Expr *VarExpr = nullptr;
-    VarDecl *Var = nullptr;
-    CurrentLSI->getPotentialVariableCapture(I, Var, VarExpr);
+  CurrentLSI->visitPotentialCaptures([&] (VarDecl *Var, Expr *VarExpr) {
     // If the variable is clearly identified as non-odr-used and the full
     // expression is not instantiation dependent, only then do we not
     // need to check enclosing lambda's for speculative captures.
@@ -7446,7 +7441,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
     // }
     if (CurrentLSI->isVariableExprMarkedAsNonODRUsed(VarExpr) &&
         !IsFullExprInstantiationDependent)
-      continue;
+      return;
 
     // If we have a capture-capable lambda for the variable, go ahead and
     // capture the variable in that lambda (and all its enclosing lambdas).
@@ -7478,7 +7473,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
                           DeclRefType, nullptr);
       }
     }
-  }
+  });
 
   // Check if 'this' needs to be captured.
   if (CurrentLSI->hasPotentialThisCapture()) {

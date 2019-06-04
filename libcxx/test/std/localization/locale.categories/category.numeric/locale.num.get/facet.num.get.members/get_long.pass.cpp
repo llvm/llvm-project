@@ -162,14 +162,14 @@ int main(int, char**)
     ios.imbue(std::locale(std::locale(), new my_numpunct));
     {
         v = -1;
-        const char str[] = "123";
+        const char str[] = "123"; // no separators at all
         std::ios_base::iostate err = ios.goodbit;
         input_iterator<const char*> iter =
             f.get(input_iterator<const char*>(str),
                   input_iterator<const char*>(str+sizeof(str)),
                   ios, err, v);
         assert(iter.base() == str+sizeof(str)-1);
-        assert(err == ios.failbit);
+        assert(err == ios.goodbit);
         assert(v == 123);
     }
     {

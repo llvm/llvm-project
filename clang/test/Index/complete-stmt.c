@@ -9,11 +9,11 @@ void f(int x) {
 
 // RUN: env CINDEXTEST_CODE_COMPLETE_PATTERNS=1 c-index-test -code-completion-at=%s:7:4 %s | FileCheck -check-prefix=CHECK-IF-ELSE %s
 // CHECK-IF-ELSE: NotImplemented:{TypedText else}{HorizontalSpace  }{LeftBrace {}{VerticalSpace  }{Placeholder statements}{VerticalSpace  }{RightBrace }} (40)
-// CHECK-IF-ELSE: NotImplemented:{TypedText else}{HorizontalSpace  }{Text if}{HorizontalSpace  }{LeftParen (}{Placeholder expression}{RightParen )}{HorizontalSpace  }{LeftBrace {}{VerticalSpace  }{Placeholder statements}{VerticalSpace  }{RightBrace }} (40)
+// CHECK-IF-ELSE: NotImplemented:{TypedText else if}{HorizontalSpace  }{LeftParen (}{Placeholder expression}{RightParen )}{HorizontalSpace  }{LeftBrace {}{VerticalSpace  }{Placeholder statements}{VerticalSpace  }{RightBrace }} (40)
 
 // RUN: c-index-test -code-completion-at=%s:7:4 %s | FileCheck -check-prefix=CHECK-IF-ELSE-SIMPLE %s
 // CHECK-IF-ELSE-SIMPLE: NotImplemented:{TypedText else} (40)
-// CHECK-IF-ELSE-SIMPLE: NotImplemented:{TypedText else}{HorizontalSpace  }{Text if}{HorizontalSpace  }{LeftParen (}{Placeholder expression}{RightParen )} (40)
+// CHECK-IF-ELSE-SIMPLE: NotImplemented:{TypedText else if}{HorizontalSpace  }{LeftParen (}{Placeholder expression}{RightParen )} (40)
 
 // RUN: c-index-test -code-completion-at=%s:6:1 %s | FileCheck -check-prefix=CHECK-STMT %s
 // CHECK-STMT: NotImplemented:{TypedText _Nonnull} (50)

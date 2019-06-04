@@ -200,3 +200,41 @@ ProgramHeaders:
     VAddr: 0x1010
     Sections:
       - Section: .dynamic
+
+# Fourth document: AARCH64
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x1000
+    Size:    0x10
+    Content: "004400550066007700"
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1010
+    Entries:
+      - Tag:   DT_HASH
+        Value: 0x1000
+      - Tag:   DT_AARCH64_BTI_PLT
+        Value: 0
+      - Tag:   DT_AARCH64_PAC_PLT
+        Value: 0
+      - Tag:   0x1234abcd
+        Value: 0x1
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynstr
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    VAddr: 0x1010
+    Sections:
+      - Section: .dynamic

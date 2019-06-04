@@ -15,6 +15,7 @@
 #define LLVM_CLANG_SEMA_SCOPEINFO_H
 
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/CapturedStmt.h"
 #include "clang/Basic/LLVM.h"
@@ -913,7 +914,8 @@ public:
   ///   };
   /// }
   void addPotentialCapture(Expr *VarExpr) {
-    assert(isa<DeclRefExpr>(VarExpr) || isa<MemberExpr>(VarExpr));
+    assert(isa<DeclRefExpr>(VarExpr) || isa<MemberExpr>(VarExpr) ||
+           isa<FunctionParmPackExpr>(VarExpr));
     PotentiallyCapturingExprs.push_back(VarExpr);
   }
 
@@ -965,13 +967,15 @@ public:
   ///  building such a node. So we need a rule that anyone can implement and get
   ///  exactly the same result".
   void markVariableExprAsNonODRUsed(Expr *CapturingVarExpr) {
-    assert(isa<DeclRefExpr>(CapturingVarExpr)
-        || isa<MemberExpr>(CapturingVarExpr));
+    assert(isa<DeclRefExpr>(CapturingVarExpr) ||
+           isa<MemberExpr>(CapturingVarExpr) ||
+           isa<FunctionParmPackExpr>(CapturingVarExpr));
     NonODRUsedCapturingExprs.insert(CapturingVarExpr);
   }
   bool isVariableExprMarkedAsNonODRUsed(Expr *CapturingVarExpr) const {
-    assert(isa<DeclRefExpr>(CapturingVarExpr)
-      || isa<MemberExpr>(CapturingVarExpr));
+    assert(isa<DeclRefExpr>(CapturingVarExpr) ||
+           isa<MemberExpr>(CapturingVarExpr) ||
+           isa<FunctionParmPackExpr>(CapturingVarExpr));
     return NonODRUsedCapturingExprs.count(CapturingVarExpr);
   }
   void removePotentialCapture(Expr *E) {
@@ -993,9 +997,8 @@ public:
                                   PotentialThisCaptureLocation.isValid();
   }
 
-  // When passed the index, returns the VarDecl and Expr associated
-  // with the index.
-  void getPotentialVariableCapture(unsigned Idx, VarDecl *&VD, Expr *&E) const;
+  void visitPotentialCaptures(
+      llvm::function_ref<void(VarDecl *, Expr *)> Callback) const;
 };
 
 FunctionScopeInfo::WeakObjectProfileTy::WeakObjectProfileTy()
