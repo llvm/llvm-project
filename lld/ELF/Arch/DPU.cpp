@@ -78,7 +78,7 @@ uint64_t DPU::fixupTargetVA(uint64_t TargetVA) const {
   // which must be converted to an absolute address.
   // TODO: fix pointer length everywhere. For example:
   //  __sys_bootstrap:
-  //  release zero, 0x5, ?nz, . + 1
+  //  release zero, 0x5, nz, . + 1
   // In obj:
   //  Ltmp0 + 1
   // Ltmp0 becomes 0x8xxxxxx1 at this level.
