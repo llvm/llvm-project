@@ -25,8 +25,10 @@ std::vector<EventImplPtr>
 Scheduler::GraphProcessor::getWaitList(EventImplPtr Event) {
   std::vector<EventImplPtr> Result;
   Command *Cmd = getCommand(Event);
-  for (const DepDesc &Dep : Cmd->MDeps)
-    Result.push_back(Dep.MDepCommand->getEvent());
+  for (const DepDesc &Dep : Cmd->MDeps) {
+    if (Dep.MDepCommand)
+      Result.push_back(Dep.MDepCommand->getEvent());
+  }
   return Result;
 }
 

@@ -8,10 +8,6 @@
 
 #pragma once
 
-#ifndef SCHEDULER_10
-  #define SCHEDULER_20
-#endif
-
 #include <CL/sycl/accessor.hpp>
 #include <CL/sycl/atomic.hpp>
 #include <CL/sycl/buffer.hpp>
@@ -40,15 +36,3 @@
 #include <CL/sycl/sampler.hpp>
 #include <CL/sycl/types.hpp>
 #include <CL/sycl/version.hpp>
-
-#ifndef SCHEDULER_20
-// Do not include RT only function implementations for device code as it leads
-// to problem. Should be finally fixed when we introduce library.
-#ifndef __SYCL_DEVICE_ONLY__
-// The following files are supposed to be included after all SYCL classes
-// processed.
-#include <CL/sycl/detail/scheduler/commands.cpp>
-#include <CL/sycl/detail/scheduler/printers.cpp>
-#include <CL/sycl/detail/scheduler/scheduler.cpp>
-#endif //__SYCL_DEVICE_ONLY__
-#endif // !SCHEDULER_20

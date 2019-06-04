@@ -10,7 +10,7 @@
 #include <CL/sycl/detail/common.hpp>
 #include <CL/sycl/detail/event_impl.hpp>
 #include <CL/sycl/event.hpp>
-#include <CL/sycl/detail/scheduler/scheduler.h>
+#include <CL/sycl/detail/scheduler/scheduler.hpp>
 
 #include <CL/sycl/stl.hpp>
 
@@ -50,17 +50,12 @@ void event::wait_and_throw(const vector_class<event> &EventList) {
 }
 
 vector_class<event> event::get_wait_list() {
-#ifdef SCHEDULER_20
   vector_class<event> Result;
 
   for (auto &EventImpl : detail::Scheduler::getInstance().getWaitList(impl))
     Result.push_back(detail::createSyclObjFromImpl<event>(EventImpl));
 
   return Result;
-#else
-  return cl::sycl::simple_scheduler::Scheduler::getInstance().
-      getDepEvents(impl);
-#endif
 }
 
 event::event(std::shared_ptr<detail::event_impl> event_impl)

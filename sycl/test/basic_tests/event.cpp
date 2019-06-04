@@ -72,4 +72,38 @@ int main() {
     assert(hash == std::hash<cl::sycl::event>()(WillEventCopy));
     assert(Event == WillEventCopy);
   }
+
+  // Check wait and wait_and_throw methods do not crash
+  for (int i = 0; i < 4; ++i) {
+    cl::sycl::queue Queue;
+    float Data = 1.0;
+    float Scalar = 2.0;
+    cl::sycl::buffer<float, 1> Buf(&Data, cl::sycl::range<1>(1));
+    auto Event = Queue.submit([&](cl::sycl::handler &cgh) {
+      auto Acc = Buf.get_access<cl::sycl::access::mode::read_write>(cgh);
+
+      cgh.single_task<class test_event>([=]() { Acc[0] = Scalar; });
+    });
+
+    switch (i) {
+    case 0: {
+      Event.wait();
+      break;
+    }
+    case 1: {
+      Event.wait_and_throw();
+      break;
+    }
+    case 2: {
+      cl::sycl::vector_class<cl::sycl::event> EventList = Event.get_wait_list();
+      cl::sycl::event::wait(EventList);
+      break;
+    }
+    case 3: {
+      cl::sycl::vector_class<cl::sycl::event> EventList = Event.get_wait_list();
+      cl::sycl::event::wait_and_throw(EventList);
+      break;
+    }
+    }
+  }
 }
