@@ -3,6 +3,7 @@
 2 Capability Linkage
 2 Capability Kernel
 2 Capability Int64
+2 Capability Int8
 3 MemoryModel 2 2
 8 EntryPoint 6 1 "copy_object"
 3 Source 3 102000
@@ -12,9 +13,9 @@
 4 Decorate 2 FuncParamAttr 5
 11 Decorate 3 LinkageAttributes "__spirv_GlobalInvocationId" Import
 4 TypeInt 4 64 0
-4 TypeInt 8 8 1
+4 TypeInt 8 8 0
 5 Constant 4 11 32 0
-4 Constant 8 12 -20
+4 Constant 8 12 236
 4 TypeVector 5 4 3
 4 TypePointer 6 0 5
 2 TypeVoid 7
@@ -41,6 +42,7 @@
 ; reading the file after first ';' symbol
 
 ; RUN: llvm-spirv %s -to-binary -o %t.spv
+; RUN: spirv-val %t.spv
 ; RUN: llvm-spirv -r %t.spv -o %t.bc
 ; RUN: llvm-dis < %t.bc | FileCheck %s --check-prefix=CHECK-LLVM
 

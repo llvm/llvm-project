@@ -17,8 +17,11 @@
 ; clang -cc1 -x cl -emit-llvm -O2 -disable-llvm-passes -triple spir64 1.cl -o 1.ll
 ; opt -mem2reg 1.ll -S -o 1.o.ll
 
-; RUN: llvm-as < %s | llvm-spirv -spirv-text -o %t
+; RUN: llvm-as %s -o %t.bc
+; RUN: llvm-spirv %t.bc -spirv-text -o %t
 ; RUN: FileCheck < %t %s
+; RUN: llvm-spirv %t.bc -o %t.spv
+; RUN: spirv-val %t.spv
 
 ; CHECK: EntryPoint 6 [[K1:[0-9]+]] "k1"
 ; CHECK: EntryPoint 6 [[K2:[0-9]+]] "k2"

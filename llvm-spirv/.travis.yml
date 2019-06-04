@@ -19,12 +19,15 @@ addons:
     sources:
     - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial main'
       key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
-    - ubuntu-toolchain-r-test
+    - sourceline: 'deb https://packages.lunarg.com/vulkan xenial main'
+      key_url: 'http://packages.lunarg.com/lunarg-signing-key-pub.asc'
     packages:
     - llvm-9-tools
     - llvm-9-dev
     - clang-format-9
     - clang-tidy-9
+    - libclang-9-dev
+    - spirv-tools
 
 compiler:
   - gcc
@@ -71,6 +74,13 @@ script:
       mv * llvm-spirv
       git clone https://git.llvm.org/git/llvm.git/ --depth 1
       mv llvm-spirv llvm/tools/llvm-spirv
+    fi
+  - |
+    if [ $TRAVIS_OS_NAME == "osx" ]; then
+      wget -r --accept="*.tgz" --no-directories https://storage.googleapis.com/spirv-tools/badges/build_link_macos_clang_release.html
+      tar -xf install.tgz
+      sed -i '' -e 's|^prefix=\(.*\)|prefix='$PWD'/install|g' install/lib/pkgconfig/SPIRV-Tools.pc
+      export PKG_CONFIG_PATH=$PWD/install/lib/pkgconfig
     fi
   - mkdir build && cd build
   - |

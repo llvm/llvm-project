@@ -1407,12 +1407,11 @@ SPIRVValue *LLVMToSPIRV::transCallInst(CallInst *CI, SPIRVBasicBlock *BB) {
 
 bool LLVMToSPIRV::transAddressingMode() {
   Triple TargetTriple(M->getTargetTriple());
-  Triple::ArchType Arch = TargetTriple.getArch();
 
-  SPIRVCKRT(Arch == Triple::spir || Arch == Triple::spir64, InvalidTargetTriple,
+  SPIRVCKRT(isSupportedTriple(TargetTriple), InvalidTargetTriple,
             "Actual target triple is " + M->getTargetTriple());
 
-  if (Arch == Triple::spir)
+  if (TargetTriple.isArch32Bit())
     BM->setAddressingModel(AddressingModelPhysical32);
   else
     BM->setAddressingModel(AddressingModelPhysical64);
@@ -1911,7 +1910,7 @@ ModulePass *llvm::createLLVMToSPIRV(SPIRVModule *SMod) {
 void addPassesForSPIRV(legacy::PassManager &PassMgr) {
   if (SPIRVMemToReg)
     PassMgr.add(createPromoteMemoryToRegisterPass());
-  PassMgr.add(createTransOCLMD());
+  PassMgr.add(createPreprocessMetadata());
   PassMgr.add(createOCL21ToSPIRV());
   PassMgr.add(createSPIRVLowerSPIRBlocks());
   PassMgr.add(createOCLTypeToSPIRV());

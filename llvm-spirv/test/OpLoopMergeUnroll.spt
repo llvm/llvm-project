@@ -17,7 +17,7 @@
 11 Decorate 7 LinkageAttributes "__spirv_GlobalInvocationId" Import
 4 GroupDecorate 6 2 3
 4 TypeInt 8 64 0
-4 TypeInt 14 32 1
+4 TypeInt 14 32 0
 5 Constant 8 11 32 0
 4 Constant 14 15 0
 4 Constant 14 16 1
@@ -37,13 +37,13 @@
 3 FunctionParameter 14 5
 
 2 Label 20
+4 Variable 18 26 7
+4 Variable 18 27 7
 6 Load 9 21 7 2 0
 5 CompositeExtract 8 22 21 0
 5 ShiftLeftLogical 8 23 22 11
 5 ShiftRightArithmetic 8 24 23 11
 4 SConvert 14 25 24
-4 Variable 18 26 7
-4 Variable 18 27 7
 5 Store 26 15 2 4
 5 Store 27 15 2 4
 2 Branch 28
@@ -80,6 +80,7 @@
 1 FunctionEnd
 
 ; RUN: llvm-spirv %s -to-binary -o %t.spv
+; RUN: spirv-val %t.spv
 ; RUN: llvm-spirv -r %t.spv -o %t.bc
 ; RUN: llvm-dis < %t.bc | FileCheck %s --check-prefix=CHECK-LLVM
 

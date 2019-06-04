@@ -1,4 +1,7 @@
-; RUN: llvm-as < %s | llvm-spirv -spirv-text -o %t
+; RUN: llvm-as %s -o %t.bc
+; RUN: llvm-spirv %t.bc -spirv-text -o %t
+; RUN: llvm-spirv %t.bc -o %t.spv
+; RUN: spirv-val %t.spv
 ; RUN: FileCheck < %t %s
 
 ; CHECK-DAG: {{[0-9]*}} Capability Addresses

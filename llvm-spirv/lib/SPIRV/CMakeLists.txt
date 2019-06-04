@@ -21,7 +21,7 @@ add_llvm_library(LLVMSPIRVLib
   SPIRVUtil.cpp
   SPIRVWriter.cpp
   SPIRVWriterPass.cpp
-  TransOCLMD.cpp
+  PreprocessMetadata.cpp
   libSPIRV/SPIRVBasicBlock.cpp
   libSPIRV/SPIRVDebug.cpp
   libSPIRV/SPIRVDecorate.cpp

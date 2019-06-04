@@ -1,5 +1,8 @@
-; RUN: llvm-as < %s | llvm-spirv -spirv-text -o %t
+; RUN: llvm-as %s -o %t.bc
+; RUN: llvm-spirv %t.bc -spirv-text -o %t
 ; RUN: FileCheck < %t %s
+; RUN: llvm-spirv %t.bc -o %t.spv
+; RUN: spirv-val %t.spv
 
 ; Image types may be represented in two ways while translating to SPIR-V:
 ; - OpenCL form, for example, '%opencl.image2d_ro_t',

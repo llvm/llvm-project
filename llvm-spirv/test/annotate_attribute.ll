@@ -17,7 +17,7 @@ target triple = "spir64-unknown-linux"
 %class.anon = type { i8 }
 %struct.bar = type { i32, i8 }
 
-; CHECK-LLVM: [[STR1:@[a-zA-Z0-9_.]+]] = {{.*}}42
+; CHECK-LLVM:  [[STR:@[a-zA-Z0-9_.]+]] = {{.*}}42
 ; CHECK-LLVM: [[STR2:@[a-zA-Z0-9_.]+]] = {{.*}}{FOO}
 ; CHECK-LLVM: [[STR3:@[a-zA-Z0-9_.]+]] = {{.*}}bar
 ; CHECK-LLVM: [[STR4:@[a-zA-Z0-9_.]+]] = {{.*}}{baz}
@@ -67,7 +67,7 @@ entry:
   %0 = bitcast i32* %var_one to i8*
   call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #4
   %var_one1 = bitcast i32* %var_one to i8*
-  ; CHECK-LLVM: call void @llvm.var.annotation(i8* %[[VAR1:[a-zA-Z0-9_]+]], i8* getelementptr inbounds ([3 x i8], [3 x i8]* [[STR1]], i32 0, i32 0), i8* undef, i32 undef)
+  ; CHECK-LLVM: call void @llvm.var.annotation(i8* %[[VAR1:[a-zA-Z0-9_]+]], i8* getelementptr inbounds ([3 x i8], [3 x i8]* [[STR]], i32 0, i32 0), i8* undef, i32 undef)
   call void @llvm.var.annotation(i8* %var_one1, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str.1, i32 0, i32 0), i32 2)
   %1 = bitcast i32* %var_two to i8*
   call void @llvm.lifetime.start.p0i8(i64 4, i8* %1) #4

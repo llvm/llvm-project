@@ -1,4 +1,4 @@
-//===- TransOCLMD.cpp - Transform OCL metadata to SPIR-V metadata - C++ -*-===//
+//===- PreprocessMetadata.cpp -                                   - C++ -*-===//
 //
 //                     The LLVM/SPIRV Translator
 //
@@ -32,7 +32,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements translation of OCL metadata to SPIR-V metadata.
+// This file implements preprocessing of LLVM IR metadata in order to perform
+// further translation to SPIR-V.
 //
 //===----------------------------------------------------------------------===//
 #define DEBUG_TYPE "clmdtospv"
@@ -60,10 +61,10 @@ namespace SPIRV {
 cl::opt<bool> EraseOCLMD("spirv-erase-cl-md", cl::init(true),
                          cl::desc("Erase OpenCL metadata"));
 
-class TransOCLMD : public ModulePass {
+class PreprocessMetadata : public ModulePass {
 public:
-  TransOCLMD() : ModulePass(ID), M(nullptr), Ctx(nullptr), CLVer(0) {
-    initializeTransOCLMDPass(*PassRegistry::getPassRegistry());
+  PreprocessMetadata() : ModulePass(ID), M(nullptr), Ctx(nullptr) {
+    initializePreprocessMetadataPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnModule(Module &M) override;
@@ -74,22 +75,18 @@ public:
 private:
   Module *M;
   LLVMContext *Ctx;
-  unsigned CLVer; /// OpenCL version as major*10+minor
 };
 
-char TransOCLMD::ID = 0;
+char PreprocessMetadata::ID = 0;
 
-bool TransOCLMD::runOnModule(Module &Module) {
+bool PreprocessMetadata::runOnModule(Module &Module) {
   M = &Module;
   Ctx = &M->getContext();
-  CLVer = getOCLVersion(M, true);
-  if (CLVer == 0)
-    return false;
 
-  LLVM_DEBUG(dbgs() << "Enter TransOCLMD:\n");
+  LLVM_DEBUG(dbgs() << "Enter PreprocessMetadata:\n");
   visit(M);
 
-  LLVM_DEBUG(dbgs() << "After TransOCLMD:\n" << *M);
+  LLVM_DEBUG(dbgs() << "After PreprocessMetadata:\n" << *M);
   std::string Err;
   raw_string_ostream ErrorOS(Err);
   if (verifyModule(*M, &ErrorOS)) {
@@ -98,51 +95,55 @@ bool TransOCLMD::runOnModule(Module &Module) {
   return true;
 }
 
-void TransOCLMD::visit(Module *M) {
+void PreprocessMetadata::visit(Module *M) {
   SPIRVMDBuilder B(*M);
   SPIRVMDWalker W(*M);
-  // !spirv.Source = !{!x}
-  // !{x} = !{i32 3, i32 102000}
-  B.addNamedMD(kSPIRVMD::Source)
-      .addOp()
-      .add(CLVer < kOCLVer::CL21 ? spv::SourceLanguageOpenCL_C
-                                 : spv::SourceLanguageOpenCL_CPP)
-      .add(CLVer)
-      .done();
-  if (EraseOCLMD)
-    B.eraseNamedMD(kSPIR2MD::OCLVer).eraseNamedMD(kSPIR2MD::SPIRVer);
 
-  // !spirv.MemoryModel = !{!x}
-  // !{x} = !{i32 1, i32 2}
-  Triple TT(M->getTargetTriple());
-  auto Arch = TT.getArch();
-  assert((Arch == Triple::spir || Arch == Triple::spir64) && "Invalid triple");
-  B.addNamedMD(kSPIRVMD::MemoryModel)
-      .addOp()
-      .add(Arch == Triple::spir ? spv::AddressingModelPhysical32
-                                : spv::AddressingModelPhysical64)
-      .add(spv::MemoryModelOpenCL)
-      .done();
+  unsigned CLVer = getOCLVersion(M, true);
+  if (CLVer != 0) { // Preprocess OpenCL-specific metadata
+    // !spirv.Source = !{!x}
+    // !{x} = !{i32 3, i32 102000}
+    B.addNamedMD(kSPIRVMD::Source)
+        .addOp()
+        .add(CLVer < kOCLVer::CL21 ? spv::SourceLanguageOpenCL_C
+                                   : spv::SourceLanguageOpenCL_CPP)
+        .add(CLVer)
+        .done();
+    if (EraseOCLMD)
+      B.eraseNamedMD(kSPIR2MD::OCLVer).eraseNamedMD(kSPIR2MD::SPIRVer);
 
-  // Add source extensions
-  // !spirv.SourceExtension = !{!x, !y, ...}
-  // !x = {!"cl_khr_..."}
-  // !y = {!"cl_khr_..."}
-  auto Exts = getNamedMDAsStringSet(M, kSPIR2MD::Extensions);
-  if (!Exts.empty()) {
-    auto N = B.addNamedMD(kSPIRVMD::SourceExtension);
-    for (auto &I : Exts)
-      N.addOp().add(I).done();
+    // !spirv.MemoryModel = !{!x}
+    // !{x} = !{i32 1, i32 2}
+    Triple TT(M->getTargetTriple());
+    assert(isSupportedTriple(TT) && "Invalid triple");
+    B.addNamedMD(kSPIRVMD::MemoryModel)
+        .addOp()
+        .add(TT.isArch32Bit() ? spv::AddressingModelPhysical32
+                              : spv::AddressingModelPhysical64)
+        .add(spv::MemoryModelOpenCL)
+        .done();
+
+    // Add source extensions
+    // !spirv.SourceExtension = !{!x, !y, ...}
+    // !x = {!"cl_khr_..."}
+    // !y = {!"cl_khr_..."}
+    auto Exts = getNamedMDAsStringSet(M, kSPIR2MD::Extensions);
+    if (!Exts.empty()) {
+      auto N = B.addNamedMD(kSPIRVMD::SourceExtension);
+      for (auto &I : Exts)
+        N.addOp().add(I).done();
+    }
+    if (EraseOCLMD)
+      B.eraseNamedMD(kSPIR2MD::Extensions).eraseNamedMD(kSPIR2MD::OptFeatures);
+
+    if (EraseOCLMD)
+      B.eraseNamedMD(kSPIR2MD::FPContract);
   }
-  if (EraseOCLMD)
-    B.eraseNamedMD(kSPIR2MD::Extensions).eraseNamedMD(kSPIR2MD::OptFeatures);
 
-  if (EraseOCLMD)
-    B.eraseNamedMD(kSPIR2MD::FPContract);
+  // The rest of metadata might come not only from OpenCL
 
   // Create metadata representing (empty so far) list
-  // of OpEntryPoint and OpExecutionMode instructions
-  auto EP = B.addNamedMD(kSPIRVMD::EntryPoint);    // !spirv.EntryPoint = {}
+  // of OpExecutionMode instructions
   auto EM = B.addNamedMD(kSPIRVMD::ExecutionMode); // !spirv.ExecutionMode = {}
 
   // Add execution modes for kernels. We take it from metadata attached to
@@ -150,16 +151,6 @@ void TransOCLMD::visit(Module *M) {
   for (Function &Kernel : *M) {
     if (Kernel.getCallingConv() != CallingConv::SPIR_KERNEL)
       continue;
-
-    // Add EntryPoint(which actually is adding its operands) to the list of
-    // entry points:
-    // !{i32 6, void (i32 addrspace(1)*)* @kernel, !"kernel" }
-    MDNode *EPNode;
-    EP.addOp()
-        .add(spv::ExecutionModelKernel)
-        .add(&Kernel)
-        .add(Kernel.getName())
-        .done(&EPNode);
 
     // Specifing execution modes for the Kernel and adding it to the list
     // of ExecutionMode instructions.
@@ -212,8 +203,10 @@ void TransOCLMD::visit(Module *M) {
 
 } // namespace SPIRV
 
-INITIALIZE_PASS(TransOCLMD, "clmdtospv",
-                "Transform OCL metadata format to SPIR-V metadata format",
-                false, false)
+INITIALIZE_PASS(PreprocessMetadata, "preprocess-metadata",
+                "Transform LLVM IR metadata to SPIR-V metadata format", false,
+                false)
 
-ModulePass *llvm::createTransOCLMD() { return new TransOCLMD(); }
+ModulePass *llvm::createPreprocessMetadata() {
+  return new PreprocessMetadata();
+}

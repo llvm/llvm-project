@@ -87,14 +87,19 @@ size_t SPIRVDecorateGeneric::getLiteralCount() const { return Literals.size(); }
 void SPIRVDecorate::encode(spv_ostream &O) const {
   SPIRVEncoder Encoder = getEncoder(O);
   Encoder << Target << Dec;
-  if (Dec == DecorationLinkageAttributes)
+  switch (Dec) {
+  case DecorationLinkageAttributes:
     SPIRVDecorateLinkageAttr::encodeLiterals(Encoder, Literals);
-  else if (Dec == DecorationMemoryINTEL)
+    break;
+  case DecorationMemoryINTEL:
     SPIRVDecorateMemoryINTELAttr::encodeLiterals(Encoder, Literals);
-  else if (Dec == DecorationUserSemantic)
+    break;
+  case DecorationUserSemantic:
     SPIRVDecorateUserSemanticAttr::encodeLiterals(Encoder, Literals);
-  else
+    break;
+  default:
     Encoder << Literals;
+  }
 }
 
 void SPIRVDecorate::setWordCount(SPIRVWord Count) {
@@ -105,26 +110,35 @@ void SPIRVDecorate::setWordCount(SPIRVWord Count) {
 void SPIRVDecorate::decode(std::istream &I) {
   SPIRVDecoder Decoder = getDecoder(I);
   Decoder >> Target >> Dec;
-  if (Dec == DecorationLinkageAttributes)
+  switch (Dec) {
+  case DecorationLinkageAttributes:
     SPIRVDecorateLinkageAttr::decodeLiterals(Decoder, Literals);
-  else if (Dec == DecorationMemoryINTEL)
+    break;
+  case DecorationMemoryINTEL:
     SPIRVDecorateMemoryINTELAttr::decodeLiterals(Decoder, Literals);
-  else if (Dec == DecorationUserSemantic)
+    break;
+  case DecorationUserSemantic:
     SPIRVDecorateUserSemanticAttr::decodeLiterals(Decoder, Literals);
-  else
+    break;
+  default:
     Decoder >> Literals;
+  }
   getOrCreateTarget()->addDecorate(this);
 }
 
 void SPIRVMemberDecorate::encode(spv_ostream &O) const {
   SPIRVEncoder Encoder = getEncoder(O);
   Encoder << Target << MemberNumber << Dec;
-  if (Dec == DecorationMemoryINTEL)
+  switch (Dec) {
+  case DecorationMemoryINTEL:
     SPIRVDecorateMemoryINTELAttr::encodeLiterals(Encoder, Literals);
-  else if (Dec == DecorationUserSemantic)
+    break;
+  case DecorationUserSemantic:
     SPIRVDecorateUserSemanticAttr::encodeLiterals(Encoder, Literals);
-  else
+    break;
+  default:
     Encoder << Literals;
+  }
 }
 
 void SPIRVMemberDecorate::setWordCount(SPIRVWord Count) {
@@ -135,12 +149,16 @@ void SPIRVMemberDecorate::setWordCount(SPIRVWord Count) {
 void SPIRVMemberDecorate::decode(std::istream &I) {
   SPIRVDecoder Decoder = getDecoder(I);
   Decoder >> Target >> MemberNumber >> Dec;
-  if (Dec == DecorationMemoryINTEL)
+  switch (Dec) {
+  case DecorationMemoryINTEL:
     SPIRVDecorateMemoryINTELAttr::decodeLiterals(Decoder, Literals);
-  else if (Dec == DecorationUserSemantic)
+    break;
+  case DecorationUserSemantic:
     SPIRVDecorateUserSemanticAttr::decodeLiterals(Decoder, Literals);
-  else
+    break;
+  default:
     Decoder >> Literals;
+  }
   getOrCreateTarget()->addMemberDecorate(this);
 }
 
@@ -170,7 +188,7 @@ void SPIRVGroupDecorate::decorateTargets() {
     auto Target = getOrCreate(I);
     for (auto &Dec : DecorationGroup->getDecorations()) {
       assert(Dec->isDecorate());
-      Target->addDecorate(static_cast<SPIRVDecorate *const>(Dec));
+      Target->addDecorate(static_cast<SPIRVDecorate *>(Dec));
     }
   }
 }

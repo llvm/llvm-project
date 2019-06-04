@@ -1,9 +1,27 @@
+include(FindPkgConfig)
+
 llvm_canonicalize_cmake_booleans(SPIRV_SKIP_CLANG_BUILD)
 llvm_canonicalize_cmake_booleans(SPIRV_SKIP_DEBUG_INFO_TESTS)
 
 # required by lit.site.cfg.py.in
 get_target_property(LLVM_SPIRV_DIR llvm-spirv BINARY_DIR)
 set(LLVM_SPIRV_TEST_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
+# find spirv-val
+pkg_search_module(SPIRV_TOOLS SPIRV-Tools)
+if(SPIRV_TOOLS_FOUND)
+  find_program(SPIRV_TOOLS_SPIRV_VAL NAMES spirv-val PATHS ${SPIRV_TOOLS_PREFIX}/bin)
+  if(SPIRV_TOOLS_SPIRV_VAL)
+    get_filename_component(SPIRV_TOOLS_BINDIR "${SPIRV_TOOLS_SPIRV_VAL}" DIRECTORY)
+    set(SPIRV_TOOLS_SPIRV_VAL_FOUND True)
+  endif()
+endif()
+
+if(NOT SPIRV_TOOLS_SPIRV_VAL)
+  message(WARNING "spirv-val not found! SPIR-V generated for test suite will not be validated.")
+  set(SPIRV_TOOLS_SPIRV_VAL_FOUND False)
+endif()
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py

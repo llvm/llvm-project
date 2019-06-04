@@ -1,5 +1,8 @@
-; RUN: llvm-as < %s | llvm-spirv -spirv-text -o %t
+; RUN: llvm-as %s -o %t.bc
+; RUN: llvm-spirv %t.bc -spirv-text -o %t
 ; RUN: FileCheck < %t %s
+; RUN: llvm-spirv %t.bc -o %t.spv
+; RUN: spirv-val %t.spv
 
 ; CHECK: 119734787 {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} 0
 ; CHECK-NEXT: {{[0-9]*}} Capability

@@ -5,6 +5,8 @@
 
 ; RUN: llvm-as %s -o %t.bc
 ; RUN: llvm-spirv %t.bc -spirv-text -o - | FileCheck %s
+; RUN: llvm-spirv %t.bc -o %t.spv
+; RUN: spirv-val %t.spv
 
 ; CHECK: TypeInt [[TypeInt:[0-9]+]] 32
 ; CHECK: TypeVector [[TypeVector:[0-9]+]] [[TypeInt]] 8

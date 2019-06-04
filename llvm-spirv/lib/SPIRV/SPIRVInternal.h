@@ -519,6 +519,7 @@ inline size_t findFirstPtr(const std::vector<Value *> &Args) {
   return PtArg - Args.begin();
 }
 
+bool isSupportedTriple(Triple T);
 void removeFnAttr(LLVMContext *Context, CallInst *Call,
                   Attribute::AttrKind Attr);
 void addFnAttr(LLVMContext *Context, CallInst *Call, Attribute::AttrKind Attr);

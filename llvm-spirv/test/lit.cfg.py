@@ -53,3 +53,9 @@ if not config.spirv_skip_debug_info_tests:
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
+if config.spirv_tools_have_spirv_val:
+    new_ld_library_path = os.path.pathsep.join((config.spirv_tools_lib_dir, config.environment['LD_LIBRARY_PATH']))
+    config.environment['LD_LIBRARY_PATH'] = new_ld_library_path
+    llvm_config.add_tool_substitutions(['spirv-val'], [config.spirv_tools_bin_dir])
+else:
+    config.substitutions.append(('spirv-val', ':'))

@@ -48,12 +48,12 @@ namespace SPIRV {
 
 SPIRVType *SPIRVType::getArrayElementType() const {
   assert(OpCode == OpTypeArray && "Not array type");
-  return static_cast<const SPIRVTypeArray *const>(this)->getElementType();
+  return static_cast<const SPIRVTypeArray *>(this)->getElementType();
 }
 
 uint64_t SPIRVType::getArrayLength() const {
   assert(OpCode == OpTypeArray && "Not array type");
-  return static_cast<const SPIRVTypeArray *const>(this)
+  return static_cast<const SPIRVTypeArray *>(this)
       ->getLength()
       ->getZExtIntValue();
 }
@@ -68,7 +68,7 @@ SPIRVWord SPIRVType::getBitWidth() const {
 
 SPIRVWord SPIRVType::getFloatBitWidth() const {
   assert(OpCode == OpTypeFloat && "Not a float type");
-  return static_cast<const SPIRVTypeFloat *const>(this)->getBitWidth();
+  return static_cast<const SPIRVTypeFloat *>(this)->getBitWidth();
 }
 
 SPIRVWord SPIRVType::getIntegerBitWidth() const {
@@ -76,42 +76,42 @@ SPIRVWord SPIRVType::getIntegerBitWidth() const {
          "Not an integer type");
   if (isTypeBool())
     return 1;
-  return static_cast<const SPIRVTypeInt *const>(this)->getBitWidth();
+  return static_cast<const SPIRVTypeInt *>(this)->getBitWidth();
 }
 
 SPIRVType *SPIRVType::getFunctionReturnType() const {
   assert(OpCode == OpTypeFunction);
-  return static_cast<const SPIRVTypeFunction *const>(this)->getReturnType();
+  return static_cast<const SPIRVTypeFunction *>(this)->getReturnType();
 }
 
 SPIRVType *SPIRVType::getPointerElementType() const {
   assert(OpCode == OpTypePointer && "Not a pointer type");
-  return static_cast<const SPIRVTypePointer *const>(this)->getElementType();
+  return static_cast<const SPIRVTypePointer *>(this)->getElementType();
 }
 
 SPIRVStorageClassKind SPIRVType::getPointerStorageClass() const {
   assert(OpCode == OpTypePointer && "Not a pointer type");
-  return static_cast<const SPIRVTypePointer *const>(this)->getStorageClass();
+  return static_cast<const SPIRVTypePointer *>(this)->getStorageClass();
 }
 
 SPIRVType *SPIRVType::getStructMemberType(size_t Index) const {
   assert(OpCode == OpTypeStruct && "Not struct type");
-  return static_cast<const SPIRVTypeStruct *const>(this)->getMemberType(Index);
+  return static_cast<const SPIRVTypeStruct *>(this)->getMemberType(Index);
 }
 
 SPIRVWord SPIRVType::getStructMemberCount() const {
   assert(OpCode == OpTypeStruct && "Not struct type");
-  return static_cast<const SPIRVTypeStruct *const>(this)->getMemberCount();
+  return static_cast<const SPIRVTypeStruct *>(this)->getMemberCount();
 }
 
 SPIRVWord SPIRVType::getVectorComponentCount() const {
   assert(OpCode == OpTypeVector && "Not vector type");
-  return static_cast<const SPIRVTypeVector *const>(this)->getComponentCount();
+  return static_cast<const SPIRVTypeVector *>(this)->getComponentCount();
 }
 
 SPIRVType *SPIRVType::getVectorComponentType() const {
   assert(OpCode == OpTypeVector && "Not vector type");
-  return static_cast<const SPIRVTypeVector *const>(this)->getComponentType();
+  return static_cast<const SPIRVTypeVector *>(this)->getComponentType();
 }
 
 bool SPIRVType::isTypeVoid() const { return OpCode == OpTypeVoid; }

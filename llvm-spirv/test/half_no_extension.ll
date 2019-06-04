@@ -9,6 +9,7 @@
 ; RUN: llvm-spirv %t.bc -spirv-text -o %t.spt
 ; RUN: FileCheck < %t.spt %s --check-prefix=CHECK-SPIRV
 ; RUN: llvm-spirv %t.bc -o %t.spv
+; RUN: spirv-val %t.spv
 
 ; CHECK-SPIRV: {{[0-9]+}} Capability Float16Buffer
 ; CHECK-SPIRV-NOT: {{[0-9]+}} Capability Float16

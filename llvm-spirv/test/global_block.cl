@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -cl-std=CL2.0 -x cl %s -emit-llvm-bc -o %t.bc
 // RUN: llvm-spirv %t.bc -spirv-text -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 // RUN: llvm-spirv %t.bc -o %t.spv
+// RUN: spirv-val %t.spv
 // RUN: llvm-spirv -r %t.spv -o - | llvm-dis | FileCheck %s --check-prefix=CHECK-LLVM
 
 kernel void block_kernel(__global int* res) {

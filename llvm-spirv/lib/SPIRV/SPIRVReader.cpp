@@ -1929,7 +1929,8 @@ Instruction *SPIRVToLLVM::transEnqueueKernelBI(SPIRVInstruction *BI,
   Function *F = M->getFunction(FName);
   if (!F) {
     Type *EventTy = PointerType::get(
-        getOrCreateOpaquePtrType(M, SPIR_TYPE_NAME_CLK_EVENT_T, SPIRAS_Private),
+        getOrCreateOpaquePtrType(M, SPIR_TYPE_NAME_CLK_EVENT_T,
+                                 getOCLOpaqueTypeAddrSpace(OpTypeDeviceEvent)),
         SPIRAS_Generic);
 
     SmallVector<Type *, 8> Tys = {
@@ -2998,36 +2999,52 @@ Instruction *SPIRVToLLVM::transOCLRelational(SPIRVInstruction *I,
              &Attrs)));
 }
 
-} // namespace SPIRV
-
-bool llvm::readSpirv(LLVMContext &C, std::istream &IS, Module *&M,
-                     std::string &ErrMsg) {
+std::unique_ptr<SPIRVModule> readSpirvModule(std::istream &IS,
+                                             std::string &ErrMsg) {
   std::unique_ptr<SPIRVModule> BM(SPIRVModule::createSPIRVModule());
 
   IS >> *BM;
   if (!BM->isModuleValid()) {
     BM->getError(ErrMsg);
-    M = nullptr;
-    return false;
+    return nullptr;
+  }
+  return BM;
+}
+
+} // namespace SPIRV
+
+std::unique_ptr<Module>
+llvm::convertSpirvToLLVM(LLVMContext &C, SPIRVModule &BM, std::string &ErrMsg) {
+  std::unique_ptr<Module> M(new Module("", C));
+  SPIRVToLLVM BTL(M.get(), &BM);
+
+  if (!BTL.translate()) {
+    BM.getError(ErrMsg);
+    return nullptr;
   }
 
-  M = new Module("", C);
-  SPIRVToLLVM BTL(M, BM.get());
-  bool Succeed = true;
-  if (!BTL.translate()) {
-    BM->getError(ErrMsg);
-    Succeed = false;
-  }
   llvm::legacy::PassManager PassMgr;
   PassMgr.add(createSPIRVToOCL20());
   PassMgr.add(createOCL20To12());
   PassMgr.run(*M);
 
+  return M;
+}
+
+bool llvm::readSpirv(LLVMContext &C, std::istream &IS, Module *&M,
+                     std::string &ErrMsg) {
+  std::unique_ptr<SPIRVModule> BM(readSpirvModule(IS, ErrMsg));
+
+  if (!BM)
+    return false;
+
+  M = convertSpirvToLLVM(C, *BM, ErrMsg).release();
+
+  if (!M)
+    return false;
+
   if (DbgSaveTmpLLVM)
     dumpLLVM(M, DbgTmpLLVMFileName);
-  if (!Succeed) {
-    delete M;
-    M = nullptr;
-  }
-  return Succeed;
+
+  return true;
 }

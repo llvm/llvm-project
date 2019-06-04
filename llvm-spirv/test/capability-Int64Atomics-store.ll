@@ -6,7 +6,10 @@
 ;   atomic_store(object, desired);
 ;}
 
-; RUN: llvm-as < %s | llvm-spirv -spirv-text -o - | FileCheck %s
+; RUN: llvm-as %s -o %t.bc
+; RUN: llvm-spirv %t.bc -spirv-text -o - | FileCheck %s
+; RUN: llvm-spirv %t.bc -o %t.spv
+; RUN: spirv-val %t.spv
 
 ; CHECK: Capability Int64Atomics
 

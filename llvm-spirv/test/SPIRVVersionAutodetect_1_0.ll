@@ -1,5 +1,8 @@
-; RUN: llvm-as < %s | llvm-spirv -spirv-text -o %t
+; RUN: llvm-as %s -o %t.bc
+; RUN: llvm-spirv %t.bc -spirv-text -o %t
 ; RUN: FileCheck < %t %s
+; RUN: llvm-spirv %t.bc -o %t.spv
+; RUN: spirv-val %t.spv
 
 ; check for magic number followed by version 1.0
 ; CHECK: 119734787 65536

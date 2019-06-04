@@ -32,5 +32,6 @@
 ; reading the file after first ';' symbol
 
 ; RUN: llvm-spirv %s -to-binary -o %t.spv
+; RUN: spirv-val %t.spv
 ; RUN: llvm-spirv -r %t.spv -o %t.bc
 
