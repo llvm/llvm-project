@@ -67,7 +67,8 @@ bool lldb_private::formatters::LibcxxFunctionSummaryProvider(
   if (process == nullptr)
     return false;
 
-  CPPLanguageRuntime *cpp_runtime = process->GetCPPLanguageRuntime();
+  CPPLanguageRuntime *cpp_runtime =
+      CPPLanguageRuntime::GetCPPLanguageRuntime(*process);
 
   if (!cpp_runtime)
     return false;
