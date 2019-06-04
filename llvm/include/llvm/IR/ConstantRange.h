@@ -365,6 +365,13 @@ public:
   ConstantRange udiv(const ConstantRange &Other) const;
 
   /// Return a new range representing the possible values resulting
+  /// from a signed division of a value in this range and a value in
+  /// \p Other. Division by zero and division of SignedMin by -1 are considered
+  /// undefined behavior, in line with IR, and do not contribute towards the
+  /// result.
+  ConstantRange sdiv(const ConstantRange &Other) const;
+
+  /// Return a new range representing the possible values resulting
   /// from an unsigned remainder operation of a value in this range and a
   /// value in \p Other.
   ConstantRange urem(const ConstantRange &Other) const;

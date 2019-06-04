@@ -211,6 +211,10 @@ class DebugSHandler {
   /// PDB.
   DebugChecksumsSubsectionRef Checksums;
 
+  /// The DEBUG_S_INLINEELINES subsection. There can be only one of these per
+  /// object file.
+  DebugInlineeLinesSubsectionRef InlineeLines;
+
   /// The DEBUG_S_FRAMEDATA subsection(s).  There can be more than one of
   /// these and they need not appear in any specific order.  However, they
   /// contain string table references which need to be re-written, so we
@@ -231,6 +235,10 @@ public:
       : Linker(Linker), File(File), IndexMap(IndexMap) {}
 
   void handleDebugS(lld::coff::SectionChunk &DebugS);
+
+  std::shared_ptr<DebugInlineeLinesSubsection>
+  mergeInlineeLines(DebugChecksumsSubsection *NewChecksums);
+
   void finish();
 };
 }
@@ -1004,6 +1012,11 @@ void DebugSHandler::handleDebugS(lld::coff::SectionChunk &DebugS) {
       // modification because the file checksum offsets will stay the same.
       File.ModuleDBI->addDebugSubsection(SS);
       break;
+    case DebugSubsectionKind::InlineeLines:
+      assert(!InlineeLines.valid() &&
+             "Encountered multiple inlinee lines subsections!");
+      ExitOnErr(InlineeLines.initialize(SS.getRecordData()));
+      break;
     case DebugSubsectionKind::FrameData: {
       // We need to re-write string table indices here, so save off all
       // frame data subsections until we've processed the entire list of
@@ -1018,11 +1031,75 @@ void DebugSHandler::handleDebugS(lld::coff::SectionChunk &DebugS) {
                                 SS.getRecordData());
       break;
     }
+
+    case DebugSubsectionKind::CrossScopeImports:
+    case DebugSubsectionKind::CrossScopeExports:
+      // These appear to relate to cross-module optimization, so we might use
+      // these for ThinLTO.
+      break;
+
+    case DebugSubsectionKind::ILLines:
+    case DebugSubsectionKind::FuncMDTokenMap:
+    case DebugSubsectionKind::TypeMDTokenMap:
+    case DebugSubsectionKind::MergedAssemblyInput:
+      // These appear to relate to .Net assembly info.
+      break;
+
+    case DebugSubsectionKind::CoffSymbolRVA:
+      // Unclear what this is for.
+      break;
+
     default:
-      // FIXME: Process the rest of the subsections.
+      warn("ignoring unknown debug$S subsection kind 0x" +
+           utohexstr(uint32_t(SS.kind())));
       break;
     }
   }
+}
+
+static Expected<StringRef>
+getFileName(const DebugStringTableSubsectionRef &Strings,
+            const DebugChecksumsSubsectionRef &Checksums, uint32_t FileID) {
+  auto Iter = Checksums.getArray().at(FileID);
+  if (Iter == Checksums.getArray().end())
+    return make_error<CodeViewError>(cv_error_code::no_records);
+  uint32_t Offset = Iter->FileNameOffset;
+  return Strings.getString(Offset);
+}
+
+std::shared_ptr<DebugInlineeLinesSubsection>
+DebugSHandler::mergeInlineeLines(DebugChecksumsSubsection *NewChecksums) {
+  auto NewInlineeLines = std::make_shared<DebugInlineeLinesSubsection>(
+      *NewChecksums, InlineeLines.hasExtraFiles());
+
+  for (const InlineeSourceLine &Line : InlineeLines) {
+    TypeIndex Inlinee = Line.Header->Inlinee;
+    uint32_t FileID = Line.Header->FileID;
+    uint32_t SourceLine = Line.Header->SourceLineNum;
+
+    ArrayRef<TypeIndex> TypeOrItemMap =
+        IndexMap.IsTypeServerMap ? IndexMap.IPIMap : IndexMap.TPIMap;
+    if (!remapTypeIndex(Inlinee, TypeOrItemMap)) {
+      log("ignoring inlinee line record in " + File.getName() +
+          " with bad inlinee index 0x" + utohexstr(Inlinee.getIndex()));
+      continue;
+    }
+
+    SmallString<128> Filename =
+        ExitOnErr(getFileName(CVStrTab, Checksums, FileID));
+    pdbMakeAbsolute(Filename);
+    NewInlineeLines->addInlineSite(Inlinee, Filename, SourceLine);
+
+    if (InlineeLines.hasExtraFiles()) {
+      for (uint32_t ExtraFileId : Line.ExtraFiles) {
+        Filename = ExitOnErr(getFileName(CVStrTab, Checksums, ExtraFileId));
+        pdbMakeAbsolute(Filename);
+        NewInlineeLines->addExtraFile(Filename);
+      }
+    }
+  }
+
+  return NewInlineeLines;
 }
 
 void DebugSHandler::finish() {
@@ -1063,13 +1140,17 @@ void DebugSHandler::finish() {
   // subsections.
   auto NewChecksums = make_unique<DebugChecksumsSubsection>(Linker.PDBStrTab);
   for (FileChecksumEntry &FC : Checksums) {
-    SmallString<128> FileName =
+    SmallString<128> Filename =
         ExitOnErr(CVStrTab.getString(FC.FileNameOffset));
-    pdbMakeAbsolute(FileName);
-    ExitOnErr(Linker.Builder.getDbiBuilder().addModuleSourceFile(
-        *File.ModuleDBI, FileName));
-    NewChecksums->addChecksum(FileName, FC.Kind, FC.Checksum);
+    pdbMakeAbsolute(Filename);
+    ExitOnErr(DbiBuilder.addModuleSourceFile(*File.ModuleDBI, Filename));
+    NewChecksums->addChecksum(Filename, FC.Kind, FC.Checksum);
   }
+
+  // Rewrite inlinee item indices if present.
+  if (InlineeLines.valid())
+    File.ModuleDBI->addDebugSubsection(mergeInlineeLines(NewChecksums.get()));
+
   File.ModuleDBI->addDebugSubsection(std::move(NewChecksums));
 }
 
@@ -1602,16 +1683,6 @@ void PDBLinker::addSections(ArrayRef<OutputSection *> OutputSections,
 void PDBLinker::commit(codeview::GUID *Guid) {
   // Write to a file.
   ExitOnErr(Builder.commit(Config->PDBPath, Guid));
-}
-
-static Expected<StringRef>
-getFileName(const DebugStringTableSubsectionRef &Strings,
-            const DebugChecksumsSubsectionRef &Checksums, uint32_t FileID) {
-  auto Iter = Checksums.getArray().at(FileID);
-  if (Iter == Checksums.getArray().end())
-    return make_error<CodeViewError>(cv_error_code::no_records);
-  uint32_t Offset = Iter->FileNameOffset;
-  return Strings.getString(Offset);
 }
 
 static uint32_t getSecrelReloc() {

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
@@ -842,6 +843,63 @@ TEST_F(ConstantRangeTest, UDiv) {
             ConstantRange(APInt(16, 0), APInt(16, 99)));
   EXPECT_EQ(ConstantRange(APInt(16, 10), APInt(16, 99)).udiv(Full),
             ConstantRange(APInt(16, 0), APInt(16, 99)));
+}
+
+TEST_F(ConstantRangeTest, SDiv) {
+  unsigned Bits = 4;
+  EnumerateTwoConstantRanges(Bits, [&](const ConstantRange &CR1,
+                                       const ConstantRange &CR2) {
+    // Collect possible results in a bit vector. We store the signed value plus
+    // a bias to make it unsigned.
+    int Bias = 1 << (Bits - 1);
+    BitVector Results(1 << Bits);
+    ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
+      ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
+        // Division by zero is UB.
+        if (N2 == 0)
+          return;
+
+        // SignedMin / -1 is UB.
+        if (N1.isMinSignedValue() && N2.isAllOnesValue())
+          return;
+
+        APInt N = N1.sdiv(N2);
+        Results.set(N.getSExtValue() + Bias);
+      });
+    });
+
+    ConstantRange CR = CR1.sdiv(CR2);
+    if (Results.none()) {
+      EXPECT_TRUE(CR.isEmptySet());
+      return;
+    }
+
+    // If there is a non-full signed envelope, that should be the result.
+    APInt SMin(Bits, Results.find_first() - Bias);
+    APInt SMax(Bits, Results.find_last() - Bias);
+    ConstantRange Envelope = ConstantRange::getNonEmpty(SMin, SMax + 1);
+    if (!Envelope.isFullSet()) {
+      EXPECT_EQ(Envelope, CR);
+      return;
+    }
+
+    // If the signed envelope is a full set, try to find a smaller sign wrapped
+    // set that is separated in negative and positive components (or one which
+    // can also additionally contain zero).
+    int LastNeg = Results.find_last_in(0, Bias) - Bias;
+    int LastPos = Results.find_next(Bias) - Bias;
+    if (Results[Bias]) {
+      if (LastNeg == -1)
+        ++LastNeg;
+      else if (LastPos == 1)
+        --LastPos;
+    }
+
+    APInt WMax(Bits, LastNeg);
+    APInt WMin(Bits, LastPos);
+    ConstantRange Wrapped = ConstantRange::getNonEmpty(WMin, WMax + 1);
+    EXPECT_EQ(Wrapped, CR);
+  });
 }
 
 TEST_F(ConstantRangeTest, URem) {

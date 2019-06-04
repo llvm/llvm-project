@@ -765,6 +765,8 @@ ConstantRange ConstantRange::binaryOp(Instruction::BinaryOps BinOp,
     return multiply(Other);
   case Instruction::UDiv:
     return udiv(Other);
+  case Instruction::SDiv:
+    return sdiv(Other);
   case Instruction::URem:
     return urem(Other);
   case Instruction::SRem:
@@ -960,6 +962,91 @@ ConstantRange::udiv(const ConstantRange &RHS) const {
 
   APInt Upper = getUnsignedMax().udiv(RHS_umin) + 1;
   return getNonEmpty(std::move(Lower), std::move(Upper));
+}
+
+ConstantRange ConstantRange::sdiv(const ConstantRange &RHS) const {
+  // We split up the LHS and RHS into positive and negative components
+  // and then also compute the positive and negative components of the result
+  // separately by combining division results with the appropriate signs.
+  APInt Zero = APInt::getNullValue(getBitWidth());
+  APInt SignedMin = APInt::getSignedMinValue(getBitWidth());
+  ConstantRange PosFilter(APInt(getBitWidth(), 1), SignedMin);
+  ConstantRange NegFilter(SignedMin, Zero);
+  ConstantRange PosL = intersectWith(PosFilter);
+  ConstantRange NegL = intersectWith(NegFilter);
+  ConstantRange PosR = RHS.intersectWith(PosFilter);
+  ConstantRange NegR = RHS.intersectWith(NegFilter);
+
+  ConstantRange PosRes = getEmpty();
+  if (!PosL.isEmptySet() && !PosR.isEmptySet())
+    // pos / pos = pos.
+    PosRes = ConstantRange(PosL.Lower.sdiv(PosR.Upper - 1),
+                           (PosL.Upper - 1).sdiv(PosR.Lower) + 1);
+
+  if (!NegL.isEmptySet() && !NegR.isEmptySet()) {
+    // neg / neg = pos.
+    //
+    // We need to deal with one tricky case here: SignedMin / -1 is UB on the
+    // IR level, so we'll want to exclude this case when calculating bounds.
+    // (For APInts the operation is well-defined and yields SignedMin.) We
+    // handle this by dropping either SignedMin from the LHS or -1 from the RHS.
+    APInt Lo = (NegL.Upper - 1).sdiv(NegR.Lower);
+    if (NegL.Lower.isMinSignedValue() && NegR.Upper.isNullValue()) {
+      // Remove -1 from the LHS. Skip if it's the only element, as this would
+      // leave us with an empty set.
+      if (!NegR.Lower.isAllOnesValue()) {
+        APInt AdjNegRUpper;
+        if (RHS.Lower.isAllOnesValue())
+          // Negative part of [-1, X] without -1 is [SignedMin, X].
+          AdjNegRUpper = RHS.Upper;
+        else
+          // [X, -1] without -1 is [X, -2].
+          AdjNegRUpper = NegR.Upper - 1;
+
+        PosRes = PosRes.unionWith(
+            ConstantRange(Lo, NegL.Lower.sdiv(AdjNegRUpper - 1) + 1));
+      }
+
+      // Remove SignedMin from the RHS. Skip if it's the only element, as this
+      // would leave us with an empty set.
+      if (NegL.Upper != SignedMin + 1) {
+        APInt AdjNegLLower;
+        if (Upper == SignedMin + 1)
+          // Negative part of [X, SignedMin] without SignedMin is [X, -1].
+          AdjNegLLower = Lower;
+        else
+          // [SignedMin, X] without SignedMin is [SignedMin + 1, X].
+          AdjNegLLower = NegL.Lower + 1;
+
+        PosRes = PosRes.unionWith(
+            ConstantRange(std::move(Lo),
+                          AdjNegLLower.sdiv(NegR.Upper - 1) + 1));
+      }
+    } else {
+      PosRes = PosRes.unionWith(
+          ConstantRange(std::move(Lo), NegL.Lower.sdiv(NegR.Upper - 1) + 1));
+    }
+  }
+
+  ConstantRange NegRes = getEmpty();
+  if (!PosL.isEmptySet() && !NegR.isEmptySet())
+    // pos / neg = neg.
+    NegRes = ConstantRange((PosL.Upper - 1).sdiv(NegR.Upper - 1),
+                           PosL.Lower.sdiv(NegR.Lower) + 1);
+
+  if (!NegL.isEmptySet() && !PosR.isEmptySet())
+    // neg / pos = neg.
+    NegRes = NegRes.unionWith(
+        ConstantRange(NegL.Lower.sdiv(PosR.Lower),
+                      (NegL.Upper - 1).sdiv(PosR.Upper - 1) + 1));
+
+  // Prefer a non-wrapping signed range here.
+  ConstantRange Res = NegRes.unionWith(PosRes, PreferredRangeType::Signed);
+
+  // Preserve the zero that we dropped when splitting the LHS by sign.
+  if (contains(Zero) && (!PosR.isEmptySet() || !NegR.isEmptySet()))
+    Res = Res.unionWith(ConstantRange(Zero));
+  return Res;
 }
 
 ConstantRange ConstantRange::urem(const ConstantRange &RHS) const {

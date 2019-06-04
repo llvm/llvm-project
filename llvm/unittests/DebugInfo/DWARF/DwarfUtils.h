@@ -18,7 +18,8 @@ class Triple;
 namespace dwarf {
 namespace utils {
 
-Triple getHostTripleForAddrSize(uint8_t AddrSize);
+Triple getDefaultTargetTripleForAddrSize(uint8_t AddrSize);
+Triple getNormalizedDefaultTargetTriple();
 bool isConfigurationSupported(Triple &T);
 
 } // end namespace utils

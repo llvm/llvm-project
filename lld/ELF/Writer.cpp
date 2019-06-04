@@ -1052,7 +1052,7 @@ static int getRankProximityAux(OutputSection *A, OutputSection *B) {
 
 static int getRankProximity(OutputSection *A, BaseCommand *B) {
   auto *Sec = dyn_cast<OutputSection>(B);
-  return (Sec && Sec->isLive()) ? getRankProximityAux(A, Sec) : -1;
+  return (Sec && Sec->HasInputSections) ? getRankProximityAux(A, Sec) : -1;
 }
 
 // When placing orphan sections, we want to place them after symbol assignments
@@ -1094,19 +1094,20 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
   int Proximity = getRankProximity(Sec, *I);
   for (; I != E; ++I) {
     auto *CurSec = dyn_cast<OutputSection>(*I);
-    if (!CurSec || !CurSec->isLive())
+    if (!CurSec || !CurSec->HasInputSections)
       continue;
     if (getRankProximity(Sec, CurSec) != Proximity ||
         Sec->SortRank < CurSec->SortRank)
       break;
   }
 
-  auto IsLiveOutputSec = [](BaseCommand *Cmd) {
+  auto IsOutputSecWithInputSections = [](BaseCommand *Cmd) {
     auto *OS = dyn_cast<OutputSection>(Cmd);
-    return OS && OS->isLive();
+    return OS && OS->HasInputSections;
   };
   auto J = std::find_if(llvm::make_reverse_iterator(I),
-                        llvm::make_reverse_iterator(B), IsLiveOutputSec);
+                        llvm::make_reverse_iterator(B),
+                        IsOutputSecWithInputSections);
   I = J.base();
 
   // As a special case, if the orphan section is the last section, put
@@ -1114,7 +1115,7 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
   // This matches bfd's behavior and is convenient when the linker script fully
   // specifies the start of the file, but doesn't care about the end (the non
   // alloc sections for example).
-  auto NextSec = std::find_if(I, E, IsLiveOutputSec);
+  auto NextSec = std::find_if(I, E, IsOutputSecWithInputSections);
   if (NextSec == E)
     return E;
 

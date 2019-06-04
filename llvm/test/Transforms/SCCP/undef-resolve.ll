@@ -180,3 +180,11 @@ entry:
 ; CHECK-LABEL: @test11(
 ; CHECK: ret i32 0
 }
+
+; Test unary ops
+define double @test12(double %x) {
+  %t = fneg double undef
+  ret double %t
+; CHECK-LABEL: @test12(
+; CHECK: double undef
+}

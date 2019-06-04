@@ -707,6 +707,7 @@ void DAGTypeLegalizer::SetPromotedInteger(SDValue Op, SDValue Result) {
   auto &OpIdEntry = PromotedIntegers[getTableId(Op)];
   assert((OpIdEntry == 0) && "Node is already promoted!");
   OpIdEntry = getTableId(Result);
+  Result->setFlags(Op->getFlags());
 
   DAG.transferDbgValues(Op, Result);
 }

@@ -116,6 +116,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case RunAnalysis:            Action = "RunAnalysis"; break;
 #endif
   case RunPreprocessorOnly:    return llvm::make_unique<PreprocessOnlyAction>();
+  case PrintDependencyDirectivesSourceMinimizerOutput:
+    return llvm::make_unique<PrintDependencyDirectivesSourceMinimizerAction>();
   }
 
 #if !CLANG_ENABLE_ARCMT || !CLANG_ENABLE_STATIC_ANALYZER \
