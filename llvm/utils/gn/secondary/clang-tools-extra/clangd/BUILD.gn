@@ -108,6 +108,7 @@ static_library("clangd") {
     "index/MemIndex.cpp",
     "index/Merge.cpp",
     "index/Ref.cpp",
+    "index/Relation.cpp",
     "index/Serialization.cpp",
     "index/Symbol.cpp",
     "index/SymbolCollector.cpp",

@@ -14,6 +14,7 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Lex/DependencyDirectivesSourceMinimizer.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -23,8 +24,8 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <system_error>
 
@@ -907,4 +908,34 @@ void DumpCompilerOptionsAction::ExecuteAction() {
   OS << "\n]\n";
 
   OS << "}";
+}
+
+void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
+  CompilerInstance &CI = getCompilerInstance();
+  SourceManager &SM = CI.getPreprocessor().getSourceManager();
+  const llvm::MemoryBuffer *FromFile = SM.getBuffer(SM.getMainFileID());
+
+  llvm::SmallString<1024> Output;
+  llvm::SmallVector<minimize_source_to_dependency_directives::Token, 32> Toks;
+  if (minimizeSourceToDependencyDirectives(
+          FromFile->getBuffer(), Output, Toks, &CI.getDiagnostics(),
+          SM.getLocForStartOfFile(SM.getMainFileID()))) {
+    assert(CI.getDiagnostics().hasErrorOccurred() &&
+           "no errors reported for failure");
+
+    // Preprocess the source when verifying the diagnostics to capture the
+    // 'expected' comments.
+    if (CI.getDiagnosticOpts().VerifyDiagnostics) {
+      // Make sure we don't emit new diagnostics!
+      CI.getDiagnostics().setSuppressAllDiagnostics();
+      Preprocessor &PP = getCompilerInstance().getPreprocessor();
+      PP.EnterMainSourceFile();
+      Token Tok;
+      do {
+        PP.Lex(Tok);
+      } while (Tok.isNot(tok::eof));
+    }
+    return;
+  }
+  llvm::outs() << Output;
 }

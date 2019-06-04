@@ -375,11 +375,11 @@ define float @sqrt_fast(float %x) {
 ; fcmp can have fast-math-flags.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fcmp_nnan:'
-; FMFDEBUG:         select_cc {{t[0-9]+}}
+; FMFDEBUG:         select_cc nnan {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fcmp_nnan:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fcmp_nnan:'
-; GLOBALDEBUG:         select_cc {{t[0-9]+}}
+; GLOBALDEBUG:         select_cc nnan {{t[0-9]+}}
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'fcmp_nnan:'
 
 define double @fcmp_nnan(double %a, double %y, double %z) {

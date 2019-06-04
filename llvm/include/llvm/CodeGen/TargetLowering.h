@@ -1591,8 +1591,9 @@ public:
   }
 
   /// Returns true if a cast from SrcAS to DestAS is "cheap", such that e.g. we
-  /// are happy to sink it into basic blocks.
-  virtual bool isCheapAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const {
+  /// are happy to sink it into basic blocks. A cast may be free, but not
+  /// necessarily a no-op. e.g. a free truncate from a 64-bit to 32-bit pointer.
+  virtual bool isFreeAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const {
     return isNoopAddrSpaceCast(SrcAS, DestAS);
   }
 

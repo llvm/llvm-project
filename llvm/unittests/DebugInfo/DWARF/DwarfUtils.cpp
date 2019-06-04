@@ -9,6 +9,7 @@
 #include "DwarfUtils.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 
@@ -25,9 +26,20 @@ static void initLLVMIfNeeded() {
   }
 }
 
-Triple llvm::dwarf::utils::getHostTripleForAddrSize(uint8_t AddrSize) {
-  Triple T(Triple::normalize(LLVM_HOST_TRIPLE));
+Triple llvm::dwarf::utils::getNormalizedDefaultTargetTriple() {
+  Triple T(Triple::normalize(sys::getDefaultTargetTriple()));
 
+  return T;
+}
+
+Triple llvm::dwarf::utils::getDefaultTargetTripleForAddrSize(uint8_t AddrSize) {
+  Triple T = getNormalizedDefaultTargetTriple();
+
+  assert((AddrSize == 4 || AddrSize == 8) &&
+         "Only 32-bit/64-bit address size variants are supported");
+
+  // If a 32-bit/64-bit address size was specified, try to convert the triple
+  // if it is for the wrong variant.
   if (AddrSize == 8 && T.isArch32Bit())
     return T.get64BitArchVariant();
   if (AddrSize == 4 && T.isArch64Bit())

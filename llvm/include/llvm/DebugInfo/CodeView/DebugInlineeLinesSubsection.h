@@ -70,6 +70,11 @@ public:
   }
 
   Error initialize(BinaryStreamReader Reader);
+  Error initialize(BinaryStreamRef Section) {
+    return initialize(BinaryStreamReader(Section));
+  }
+
+  bool valid() const { return Lines.valid(); }
   bool hasExtraFiles() const;
 
   Iterator begin() const { return Lines.begin(); }
@@ -77,7 +82,7 @@ public:
 
 private:
   InlineeLinesSignature Signature;
-  VarStreamArray<InlineeSourceLine> Lines;
+  LinesArray Lines;
 };
 
 class DebugInlineeLinesSubsection final : public DebugSubsection {

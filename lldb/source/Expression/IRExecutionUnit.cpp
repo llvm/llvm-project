@@ -24,7 +24,7 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -902,10 +902,8 @@ IRExecutionUnit::FindInRuntimes(const std::vector<SearchSpec> &specs,
     return LLDB_INVALID_ADDRESS;
   }
 
-  ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
-
-  if (runtime) {
-    for (const SearchSpec &spec : specs) {
+  for (const SearchSpec &spec : specs) {
+    for (LanguageRuntime *runtime : process_sp->GetLanguageRuntimes()) {
       lldb::addr_t symbol_load_addr = runtime->LookupRuntimeSymbol(spec.name);
 
       if (symbol_load_addr != LLDB_INVALID_ADDRESS)

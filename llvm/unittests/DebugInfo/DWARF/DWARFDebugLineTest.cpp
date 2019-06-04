@@ -37,7 +37,7 @@ struct CommonFixture {
   }
 
   bool setupGenerator(uint16_t Version = 4) {
-    Triple T = getHostTripleForAddrSize(8);
+    Triple T = getDefaultTargetTripleForAddrSize(8);
     if (!isConfigurationSupported(T))
       return false;
     auto ExpectedGenerator = Generator::create(T, Version);
@@ -50,8 +50,9 @@ struct CommonFixture {
     Context = createContext();
     assert(Context != nullptr && "test state is not valid");
     const DWARFObject &Obj = Context->getDWARFObj();
-    LineData = DWARFDataExtractor(Obj, Obj.getLineSection(),
-                                  sys::IsLittleEndianHost, 8);
+    LineData = DWARFDataExtractor(
+        Obj, Obj.getLineSection(),
+        getDefaultTargetTripleForAddrSize(8).isLittleEndian(), 8);
   }
 
   std::unique_ptr<DWARFContext> createContext() {

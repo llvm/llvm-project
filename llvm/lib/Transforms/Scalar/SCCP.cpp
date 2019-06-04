@@ -613,6 +613,7 @@ private:
 
   void visitCastInst(CastInst &I);
   void visitSelectInst(SelectInst &I);
+  void visitUnaryOperator(Instruction &I);
   void visitBinaryOperator(Instruction &I);
   void visitCmpInst(CmpInst &I);
   void visitExtractValueInst(ExtractValueInst &EVI);
@@ -966,6 +967,29 @@ void SCCPSolver::visitSelectInst(SelectInst &I) {
     return (void)mergeInValue(&I, FVal);
   if (FVal.isUnknown())   // select ?, X, undef -> X.
     return (void)mergeInValue(&I, TVal);
+  markOverdefined(&I);
+}
+
+// Handle Unary Operators.
+void SCCPSolver::visitUnaryOperator(Instruction &I) {
+  LatticeVal V0State = getValueState(I.getOperand(0));
+
+  LatticeVal &IV = ValueState[&I];
+  if (IV.isOverdefined()) return;
+
+  if (V0State.isConstant()) {
+    Constant *C = ConstantExpr::get(I.getOpcode(), V0State.getConstant());
+
+    // op Y -> undef.
+    if (isa<UndefValue>(C))
+      return;
+    return (void)markConstant(IV, &I, C);
+  }
+
+  // If something is undef, wait for it to resolve.
+  if (!V0State.isOverdefined())
+    return;
+
   markOverdefined(&I);
 }
 
@@ -1484,6 +1508,8 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
         else
           markOverdefined(&I);
         return true;
+      case Instruction::FNeg:
+        break; // fneg undef -> undef
       case Instruction::ZExt:
       case Instruction::SExt:
       case Instruction::FPToUI:

@@ -120,6 +120,32 @@ define amdgpu_kernel void @kernel_call_align4_from_5() {
   ret void
 }
 
+; GCN-LABEL: {{^}}default_realign_align128:
+; GCN: s_add_u32 [[TMP:s[0-9]+]], s32, 0x1fc0
+; GCN-NEXT: s_and_b32 s5, [[TMP]], 0xffffe000
+; GCN-NEXT: s_add_u32 s32, s32, 0x6000
+; GCN-NOT: s5
+; GCN: buffer_store_dword v0, off, s[0:3], s5 offset:128
+; GCN: s_sub_u32 s32, s32, 0x6000
+define void @default_realign_align128(i32 %idx) #0 {
+  %alloca.align = alloca i32, align 128, addrspace(5)
+  store volatile i32 9, i32 addrspace(5)* %alloca.align, align 128
+  ret void
+}
+
+; GCN-LABEL: {{^}}disable_realign_align128:
+; GCN-NOT: s32
+; GCN: s_mov_b32 s5, s32
+; GCN-NOT: s32
+; GCN: buffer_store_dword v0, off, s[0:3], s5 offset:16
+; GCN-NOT: s32
+define void @disable_realign_align128(i32 %idx) #3 {
+  %alloca.align = alloca i32, align 128, addrspace(5)
+  store volatile i32 9, i32 addrspace(5)* %alloca.align, align 128
+  ret void
+}
+
 attributes #0 = { noinline nounwind }
 attributes #1 = { noinline nounwind "stackrealign" }
 attributes #2 = { noinline nounwind alignstack=4 }
+attributes #3 = { noinline nounwind "no-realign-stack" }

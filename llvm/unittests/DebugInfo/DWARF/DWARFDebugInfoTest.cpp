@@ -41,7 +41,7 @@ namespace {
 
 template <uint16_t Version, class AddrType, class RefAddrType>
 void TestAllForms() {
-  Triple Triple = getHostTripleForAddrSize(sizeof(AddrType));
+  Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -455,7 +455,7 @@ TEST(DWARFDebugInfo, TestDWARF32Version5Addr8AllForms) {
 }
 
 template <uint16_t Version, class AddrType> void TestChildren() {
-  Triple Triple = getHostTripleForAddrSize(sizeof(AddrType));
+  Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -585,7 +585,7 @@ TEST(DWARFDebugInfo, TestDWARF32Version4Addr8Children) {
 }
 
 template <uint16_t Version, class AddrType> void TestReferences() {
-  Triple Triple = getHostTripleForAddrSize(sizeof(AddrType));
+  Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -835,7 +835,7 @@ TEST(DWARFDebugInfo, TestDWARF32Version4Addr8References) {
 }
 
 template <uint16_t Version, class AddrType> void TestAddresses() {
-  Triple Triple = getHostTripleForAddrSize(sizeof(AddrType));
+  Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -1007,7 +1007,7 @@ TEST(DWARFDebugInfo, TestDWARF32Version4Addr8Addresses) {
 }
 
 TEST(DWARFDebugInfo, TestStringOffsets) {
-  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -1071,7 +1071,7 @@ TEST(DWARFDebugInfo, TestStringOffsets) {
 }
 
 TEST(DWARFDebugInfo, TestEmptyStringOffsets) {
-  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -1100,7 +1100,7 @@ TEST(DWARFDebugInfo, TestEmptyStringOffsets) {
 }
 
 TEST(DWARFDebugInfo, TestRelations) {
-  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -1287,7 +1287,7 @@ TEST(DWARFDebugInfo, TestDWARFDie) {
 }
 
 TEST(DWARFDebugInfo, TestChildIterators) {
-  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -1401,7 +1401,7 @@ TEST(DWARFDebugInfo, TestEmptyChildren) {
 }
 
 TEST(DWARFDebugInfo, TestAttributeIterators) {
-  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -1463,7 +1463,7 @@ TEST(DWARFDebugInfo, TestAttributeIterators) {
 }
 
 TEST(DWARFDebugInfo, TestFindRecurse) {
-  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -1677,7 +1677,7 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
 }
 
 TEST(DWARFDebugInfo, TestFindAttrs) {
-  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -1740,7 +1740,7 @@ TEST(DWARFDebugInfo, TestFindAttrs) {
 }
 
 TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {
-  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     return;
 

@@ -69,3 +69,36 @@ struct S {
   __declspec(nothrow) void f4() noexcept(true);
   __declspec(nothrow) void f5() noexcept(false);
 };
+
+namespace PR42100 {
+class Base {
+public:
+  // expected-note@+1{{overridden virtual function is here}}
+  virtual __declspec(nothrow) void foo() = 0;
+  // expected-note@+1{{previous declaration is here}}
+  __declspec(nothrow) void bar();
+};
+
+// expected-warning@+1{{'bar' is missing exception specification '__attribute__((nothrow))'}}
+void Base::bar() {}
+
+class Sub : public Base {
+public:
+  // expected-warning@+1{{exception specification of overriding function is more lax than base version}}
+  void foo() {}
+};
+}
+
+namespace FuncPointerReferenceConverts {
+void FuncToBeRefed();
+
+#ifndef CPP17
+// expected-error@+6{{target exception specification is not superset of source}}
+// expected-error@+6{{target exception specification is not superset of source}}
+#else
+// expected-error@+3{{non-const lvalue reference to type 'void () __attribute__((nothrow))' cannot bind to a value of unrelated type 'void ()'}}
+// expected-error@+3{{cannot initialize a variable of type 'void (*)() __attribute__((nothrow))' with an lvalue of type 'void ()': different exception specifications}}
+#endif
+__declspec(nothrow) void (&FuncRef)() = FuncToBeRefed;
+__declspec(nothrow) void (*FuncPtr)() = FuncToBeRefed;
+}
