@@ -143,6 +143,8 @@ public:
     return false;
   }
 
+  virtual void SymbolsDidLoad(const ModuleList &module_list) { return; }
+
   virtual lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                           bool stop_others) = 0;
 
@@ -164,6 +166,13 @@ public:
   // assembled and run.
   virtual bool GetIRPasses(LLVMUserExpression::IRPasses &custom_passes) {
     return false;
+  }
+
+  // Given the name of a runtime symbol (e.g. in Objective-C, an ivar offset
+  // symbol), try to determine from the runtime what the value of that symbol
+  // would be. Useful when the underlying binary is stripped.
+  virtual lldb::addr_t LookupRuntimeSymbol(ConstString name) {
+    return LLDB_INVALID_ADDRESS;
   }
 
 protected:
