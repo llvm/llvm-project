@@ -771,8 +771,8 @@ void ClangdLSPServer::onSignatureHelp(const TextDocumentPositionParams &Params,
                                 return Reply(std::move(*Signature));
                               // Strip out the offsets from signature help for
                               // clients that only support string labels.
-                              for (auto &Signature : Signature->signatures) {
-                                for (auto &Param : Signature.parameters)
+                              for (auto &SigInfo : Signature->signatures) {
+                                for (auto &Param : SigInfo.parameters)
                                   Param.labelOffsets.reset();
                               }
                               return Reply(std::move(*Signature));

@@ -832,8 +832,8 @@ llvm::json::Value toJSON(const CompletionList &L) {
 }
 
 llvm::json::Value toJSON(const ParameterInformation &PI) {
-  assert(PI.labelOffsets.hasValue() ||
-         !PI.labelString.empty() && "parameter information label is required");
+  assert((PI.labelOffsets.hasValue() || !PI.labelString.empty()) &&
+         "parameter information label is required");
   llvm::json::Object Result;
   if (PI.labelOffsets)
     Result["label"] =
