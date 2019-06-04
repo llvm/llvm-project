@@ -152,7 +152,7 @@ public:
   }
 };
 
-///A builder class used to create CFLGraph instance from a given function
+/// A builder class used to create CFLGraph instance from a given function
 /// The CFL-AA that uses this builder must provide its own type as a template
 /// argument. This is necessary for interprocedural processing: CFLGraphBuilder
 /// needs a way of obtaining the summary of other functions when callinsts are
@@ -181,8 +181,7 @@ template <typename CFLAA> class CFLGraphBuilder {
 
     static bool hasUsefulEdges(ConstantExpr *CE) {
       // ConstantExpr doesn't have terminators, invokes, or fences, so only
-      // needs
-      // to check for compares.
+      // needs to check for compares.
       return CE->getOpcode() != Instruction::ICmp &&
              CE->getOpcode() != Instruction::FCmp;
     }
@@ -197,8 +196,8 @@ template <typename CFLAA> class CFLGraphBuilder {
       }
 
       // TODO: If the call is indirect, we might be able to enumerate all
-      // potential
-      // targets of the call and return them, rather than just failing.
+      // potential targets of the call and return them, rather than just
+      // failing.
       return false;
     }
 
@@ -555,6 +554,7 @@ template <typename CFLAA> class CFLGraphBuilder {
       }
 
       case Instruction::Add:
+      case Instruction::FAdd:
       case Instruction::Sub:
       case Instruction::FSub:
       case Instruction::Mul:

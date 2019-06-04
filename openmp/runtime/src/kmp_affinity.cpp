@@ -457,7 +457,8 @@ static int __kmp_hwloc_get_nobjs_under_obj(hwloc_obj_t obj,
 }
 
 static int __kmp_hwloc_count_children_by_depth(hwloc_topology_t t,
-                                               hwloc_obj_t o, unsigned depth,
+                                               hwloc_obj_t o,
+                                               kmp_hwloc_depth_t depth,
                                                hwloc_obj_t *f) {
   if (o->depth == depth) {
     if (*f == NULL)

@@ -84,9 +84,10 @@ static bool canMergeToProgbits(unsigned Type) {
 }
 
 void OutputSection::addSection(InputSection *IS) {
-  if (!isLive()) {
+  if (!HasInputSections) {
     // If IS is the first section to be added to this section,
     // initialize Partition, Type, Entsize and flags from IS.
+    HasInputSections = true;
     Partition = IS->Partition;
     Type = IS->Type;
     Entsize = IS->Entsize;

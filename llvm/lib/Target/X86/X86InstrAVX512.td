@@ -7629,10 +7629,7 @@ multiclass avx512_vcvt_fp<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
                          (ins MaskRC:$mask, MemOp:$src),
                          OpcodeStr#Alias, "$src", "$src",
                          LdDAG,
-                         (vselect MaskRC:$mask,
-                                  (_.VT (OpNode (_Src.VT
-                                                 (_Src.LdFrag addr:$src)))),
-                                  _.RC:$src0),
+                         (vselect MaskRC:$mask, LdDAG, _.RC:$src0),
                          vselect, "$src0 = $dst">,
                          EVEX, Sched<[sched.Folded]>;
 

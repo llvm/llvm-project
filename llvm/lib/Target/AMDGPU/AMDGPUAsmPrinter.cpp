@@ -678,6 +678,15 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
         case AMDGPU::TMA_HI:
           llvm_unreachable("trap handler registers should not be used");
 
+        case AMDGPU::SRC_VCCZ:
+          llvm_unreachable("src_vccz register should not be used");
+
+        case AMDGPU::SRC_EXECZ:
+          llvm_unreachable("src_execz register should not be used");
+
+        case AMDGPU::SRC_SCC:
+          llvm_unreachable("src_scc register should not be used");
+
         default:
           break;
         }

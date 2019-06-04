@@ -262,3 +262,15 @@ void t31(int len) {
   // CHECK: @t31
   // CHECK: call void asm sideeffect "", "=*%rm,=*rm,0,1,~{dirflag},~{fpsr},~{flags}"
 }
+
+// CHECK: @t32
+int t32(int cond)
+{
+  asm goto("testl %0, %0; jne %l1;" :: "r"(cond)::label_true, loop);
+  // CHECK: callbr void asm sideeffect "testl $0, $0; jne ${1:l};", "r,X,X,~{dirflag},~{fpsr},~{flags}"(i32 %0, i8* blockaddress(@t32, %label_true), i8* blockaddress(@t32, %loop)) #1
+  return 0;
+loop:
+  return 0;
+label_true:
+  return 1;
+}

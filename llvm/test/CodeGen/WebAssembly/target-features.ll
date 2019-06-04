@@ -9,16 +9,16 @@
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
-define void @foo(i32* %p1) #0 {
+define void @foo(i32* %p1, float %f2) #0 {
   %a = atomicrmw min i32* undef, i32 42 seq_cst
-  %v = fptoui float undef to i32
+  %v = fptoui float %f2 to i32
   store i32 %v, i32* %p1
   ret void
 }
 
-define void @bar(i32* %p1) #1 {
+define void @bar(i32* %p1, float %f2) #1 {
   %a = atomicrmw min i32* undef, i32 42 seq_cst
-  %v = fptoui float undef to i32
+  %v = fptoui float %f2 to i32
   store i32 %v, i32* %p1
   ret void
 }

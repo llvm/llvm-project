@@ -1658,6 +1658,10 @@ static bool isInlineValue(unsigned Reg) {
   case AMDGPU::SRC_PRIVATE_LIMIT:
   case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
     return true;
+  case AMDGPU::SRC_VCCZ:
+  case AMDGPU::SRC_EXECZ:
+  case AMDGPU::SRC_SCC:
+    return true;
   default:
     return false;
   }
@@ -1723,7 +1727,12 @@ static unsigned getSpecialRegForName(StringRef RegName) {
     .Case("lds_direct", AMDGPU::LDS_DIRECT)
     .Case("src_lds_direct", AMDGPU::LDS_DIRECT)
     .Case("m0", AMDGPU::M0)
-    .Case("scc", AMDGPU::SCC)
+    .Case("vccz", AMDGPU::SRC_VCCZ)
+    .Case("src_vccz", AMDGPU::SRC_VCCZ)
+    .Case("execz", AMDGPU::SRC_EXECZ)
+    .Case("src_execz", AMDGPU::SRC_EXECZ)
+    .Case("scc", AMDGPU::SRC_SCC)
+    .Case("src_scc", AMDGPU::SRC_SCC)
     .Case("tba", AMDGPU::TBA)
     .Case("tma", AMDGPU::TMA)
     .Case("flat_scratch_lo", AMDGPU::FLAT_SCR_LO)
@@ -3878,6 +3887,12 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   }
 
   switch (RegNo) {
+  case AMDGPU::SRC_SHARED_BASE:
+  case AMDGPU::SRC_SHARED_LIMIT:
+  case AMDGPU::SRC_PRIVATE_BASE:
+  case AMDGPU::SRC_PRIVATE_LIMIT:
+  case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
+    return !isCI() && !isSI() && !isVI();
   case AMDGPU::TBA:
   case AMDGPU::TBA_LO:
   case AMDGPU::TBA_HI:
@@ -3894,9 +3909,6 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   default:
     break;
   }
-
-  if (isInlineValue(RegNo))
-    return !isCI() && !isSI() && !isVI();
 
   if (isCI())
     return true;

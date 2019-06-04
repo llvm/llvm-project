@@ -1962,6 +1962,7 @@ public:
   bool isLValueReferenceType() const;
   bool isRValueReferenceType() const;
   bool isFunctionPointerType() const;
+  bool isFunctionReferenceType() const;
   bool isMemberPointerType() const;
   bool isMemberFunctionPointerType() const;
   bool isMemberDataPointerType() const;
@@ -6369,6 +6370,13 @@ inline bool Type::isRValueReferenceType() const {
 
 inline bool Type::isFunctionPointerType() const {
   if (const auto *T = getAs<PointerType>())
+    return T->getPointeeType()->isFunctionType();
+  else
+    return false;
+}
+
+inline bool Type::isFunctionReferenceType() const {
+  if (const auto *T = getAs<ReferenceType>())
     return T->getPointeeType()->isFunctionType();
   else
     return false;

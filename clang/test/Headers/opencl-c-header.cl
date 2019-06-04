@@ -77,9 +77,6 @@ void test_image3dwo(write_only image3d_t img) {
 // OpenCL 1.2 onwards.
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
 // expected-no-diagnostics
-#ifndef cl_intel_planar_yuv
-#error "Missing cl_intel_planar_yuv define"
-#endif
 #else //__OPENCL_C_VERSION__
 // expected-warning@+2{{unknown OpenCL extension 'cl_intel_planar_yuv' - ignoring}}
 #endif //__OPENCL_C_VERSION__
