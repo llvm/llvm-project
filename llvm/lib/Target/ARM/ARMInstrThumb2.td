@@ -603,6 +603,17 @@ multiclass T2I_bin_irs<bits<4> opcod, string opc,
      let Inst{31-27} = 0b11101;
      let Inst{26-25} = 0b01;
      let Inst{24-21} = opcod;
+     let Inst{15} = 0b0;
+     // In most of these instructions, and most versions of the Arm
+     // architecture, bit 15 of this encoding is listed as (0) rather
+     // than 0, i.e. setting it to 1 is UNPREDICTABLE or a soft-fail
+     // rather than a hard failure. In v8.1-M, this requirement is
+     // upgraded to a hard one for ORR, so that the encodings with 1
+     // in this bit can be reused for other instructions (such as
+     // CSEL). Setting Unpredictable{15} = 1 here would reintroduce
+     // that encoding clash in the auto- generated MC decoder, so I
+     // comment it out.
+     let Unpredictable{15} = !if(!eq(opcod, 0b0010), 0b0, 0b1);
      let Inst{14-12} = 0b000; // imm3
      let Inst{7-6} = 0b00; // imm2
      let Inst{5-4} = 0b00; // type
@@ -616,6 +627,8 @@ multiclass T2I_bin_irs<bits<4> opcod, string opc,
      let Inst{31-27} = 0b11101;
      let Inst{26-25} = 0b01;
      let Inst{24-21} = opcod;
+     let Inst{15} = 0;
+     let Unpredictable{15} = !if(!eq(opcod, 0b0010), 0b0, 0b1); // see above
    }
   // Assembly aliases for optional destination operand when it's the same
   // as the source operand.
@@ -879,6 +892,7 @@ multiclass T2I_sh_ir<bits<2> opcod, string opc, Operand ty, SDNode opnode> {
      let Inst{31-27} = 0b11101;
      let Inst{26-21} = 0b010010;
      let Inst{19-16} = 0b1111; // Rn
+     let Inst{15}    = 0b0;
      let Inst{5-4} = opcod;
    }
    // register
@@ -1872,6 +1886,7 @@ def t2MOVr : T2sTwoReg<(outs GPRnopc:$Rd), (ins GPRnopc:$Rm), IIC_iMOVr,
   let Inst{26-25} = 0b01;
   let Inst{24-21} = 0b0010;
   let Inst{19-16} = 0b1111; // Rn
+  let Inst{15} = 0b0;
   let Inst{14-12} = 0b000;
   let Inst{7-4} = 0b0000;
 }
@@ -2400,6 +2415,8 @@ def t2RRX : T2sTwoReg<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
   let Inst{26-25} = 0b01;
   let Inst{24-21} = 0b0010;
   let Inst{19-16} = 0b1111; // Rn
+  let Inst{15} = 0b0;
+  let Unpredictable{15} = 0b1;
   let Inst{14-12} = 0b000;
   let Inst{7-4} = 0b0011;
 }

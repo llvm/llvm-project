@@ -629,7 +629,7 @@ if(WIN32 OR CYGWIN)
     set(LLVM_ENABLE_PLUGINS_default OFF)
   endif()
 else()
-  set(LLVM_ENABLE_PLUGINS_default LLVM_ENABLE_PIC)
+  set(LLVM_ENABLE_PLUGINS_default ${LLVM_ENABLE_PIC})
 endif()
 option(LLVM_ENABLE_PLUGINS "Enable plugin support" ${LLVM_ENABLE_PLUGINS_default})
 

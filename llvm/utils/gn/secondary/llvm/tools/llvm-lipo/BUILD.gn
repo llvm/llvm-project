@@ -1,0 +1,19 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("LipoOpts") {
+  visibility = [ ":llvm-lipo" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
+executable("llvm-lipo") {
+  deps = [
+    ":LipoOpts",
+    "//llvm/lib/Object",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target:TargetsToBuild",
+  ]
+  sources = [
+    "llvm-lipo.cpp",
+  ]
+}

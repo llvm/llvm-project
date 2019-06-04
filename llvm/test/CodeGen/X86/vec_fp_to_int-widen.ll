@@ -106,9 +106,7 @@ define <2 x i32> @fptosi_2f64_to_2i32(<2 x double> %a) {
 define <4 x i32> @fptosi_4f64_to_2i32(<2 x double> %a) {
 ; SSE-LABEL: fptosi_4f64_to_2i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    cvttpd2dq %xmm0, %xmm1
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: fptosi_4f64_to_2i32:

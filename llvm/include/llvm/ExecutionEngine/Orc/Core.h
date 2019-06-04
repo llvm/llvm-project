@@ -653,16 +653,16 @@ private:
   public:
     SymbolTableEntry() = default;
     SymbolTableEntry(JITSymbolFlags Flags)
-        : Flags(Flags), State(SymbolState::NeverSearched),
+        : Flags(Flags), State(static_cast<uint8_t>(SymbolState::NeverSearched)),
           MaterializerAttached(false), PendingRemoval(false) {}
 
     JITTargetAddress getAddress() const { return Addr; }
     JITSymbolFlags getFlags() const { return Flags; }
-    SymbolState getState() const { return State; }
+    SymbolState getState() const { return static_cast<SymbolState>(State); }
 
     bool isInMaterializationPhase() const {
-      return State == SymbolState::Materializing ||
-             State == SymbolState::Resolved;
+      return getState() == SymbolState::Materializing ||
+             getState() == SymbolState::Resolved;
     }
 
     bool hasMaterializerAttached() const { return MaterializerAttached; }
@@ -670,7 +670,11 @@ private:
 
     void setAddress(JITTargetAddress Addr) { this->Addr = Addr; }
     void setFlags(JITSymbolFlags Flags) { this->Flags = Flags; }
-    void setState(SymbolState State) { this->State = State; }
+    void setState(SymbolState State) {
+      assert(static_cast<uint8_t>(State) < (1 << 6) &&
+             "State does not fit in bitfield");
+      this->State = static_cast<uint8_t>(State);
+    }
 
     void setMaterializerAttached(bool MaterializerAttached) {
       this->MaterializerAttached = MaterializerAttached;
@@ -687,9 +691,9 @@ private:
   private:
     JITTargetAddress Addr = 0;
     JITSymbolFlags Flags;
-    SymbolState State : 6;
-    bool MaterializerAttached : 1;
-    bool PendingRemoval : 1;
+    uint8_t State : 6;
+    uint8_t MaterializerAttached : 1;
+    uint8_t PendingRemoval : 1;
   };
 
   using SymbolTable = DenseMap<SymbolStringPtr, SymbolTableEntry>;

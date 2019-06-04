@@ -21,7 +21,6 @@
 #include <cassert>
 
 using llvm::Failed;
-using llvm::HasValue;
 using llvm::Succeeded;
 
 namespace clang {

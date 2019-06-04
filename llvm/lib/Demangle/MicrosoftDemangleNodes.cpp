@@ -34,21 +34,20 @@ static void outputSpaceIfNecessary(OutputStream &OS) {
     OS << " ";
 }
 
-static bool outputSingleQualifier(OutputStream &OS, Qualifiers Q) {
+static void outputSingleQualifier(OutputStream &OS, Qualifiers Q) {
   switch (Q) {
   case Q_Const:
     OS << "const";
-    return true;
+    break;
   case Q_Volatile:
     OS << "volatile";
-    return true;
+    break;
   case Q_Restrict:
     OS << "__restrict";
-    return true;
+    break;
   default:
     break;
   }
-  return false;
 }
 
 static bool outputQualifierIfPresent(OutputStream &OS, Qualifiers Q,
