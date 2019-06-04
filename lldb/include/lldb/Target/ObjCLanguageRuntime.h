@@ -264,13 +264,6 @@ public:
   virtual size_t GetByteOffsetForIvar(CompilerType &parent_qual_type,
                                       const char *ivar_name);
 
-  // Given the name of an Objective-C runtime symbol (e.g., ivar offset
-  // symbol), try to determine from the runtime what the value of that symbol
-  // would be. Useful when the underlying binary is stripped.
-  virtual lldb::addr_t LookupRuntimeSymbol(ConstString name) {
-    return LLDB_INVALID_ADDRESS;
-  }
-
   bool HasNewLiteralsAndIndexing() {
     if (m_has_new_literals_and_indexing == eLazyBoolCalculate) {
       if (CalculateHasNewLiteralsAndIndexing())
