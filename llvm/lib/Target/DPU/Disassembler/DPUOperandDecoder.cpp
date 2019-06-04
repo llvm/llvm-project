@@ -160,8 +160,8 @@ DPUOperandDecoder::Decode_imm(MCInst &MI, int32_t Value, int32_t ValueSize) {
 MCDisassembler::DecodeStatus
 DPUOperandDecoder::Decode_cc(llvm::MCInst &MI, ConditionClass ccClass,
                              uint64_t Value) {
-  LLVM_DEBUG(dbgs() << "cc << class=" << ccClass << "cc=" << Value << "\n");
-  if (Value >= Condition::NR_CONDITIONS) {
+  LLVM_DEBUG(dbgs() << "cc << class=" << ccClass << " cc=" << Value << "\n");
+  if (Value >= DPUAsmCondition::nrEncodingValue) {
     LLVM_DEBUG(dbgs() << "condition #" << Value
                       << " is not a valid condition value");
     return MCDisassembler::Fail;

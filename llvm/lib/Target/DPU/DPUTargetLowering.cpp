@@ -1474,34 +1474,34 @@ static uint64_t translateToBinarySetDPUAsmCondition(ISD::CondCode cond) {
   case ISD::SETOEQ:
   case ISD::SETUEQ:
   case ISD::SETEQ:
-    return DPUAsmCondition::Condition::SetEqual;
+    return DPUAsmCondition::Condition::Equal;
   case ISD::SETONE:
   case ISD::SETUNE:
   case ISD::SETNE:
-    return DPUAsmCondition::Condition::SetNotEqual;
+    return DPUAsmCondition::Condition::NotEqual;
   case ISD::SETOGT:
   case ISD::SETGT:
-    return DPUAsmCondition::Condition::SetGreaterThanSigned;
+    return DPUAsmCondition::Condition::GreaterThanSigned;
   case ISD::SETOGE:
   case ISD::SETGE:
-    return DPUAsmCondition::Condition::SetGreaterOrEqualSigned;
+    return DPUAsmCondition::Condition::GreaterOrEqualSigned;
   case ISD::SETOLT:
   case ISD::SETLT:
-    return DPUAsmCondition::Condition::SetLessThanSigned;
+    return DPUAsmCondition::Condition::LessThanSigned;
   case ISD::SETOLE:
   case ISD::SETLE:
-    return DPUAsmCondition::Condition::SetLessOrEqualSigned;
+    return DPUAsmCondition::Condition::LessOrEqualSigned;
   case ISD::SETUGT:
-    return DPUAsmCondition::Condition::SetGreaterThanUnsigned;
+    return DPUAsmCondition::Condition::GreaterThanUnsigned;
   case ISD::SETUGE:
-    return DPUAsmCondition::Condition::SetGreaterOrEqualUnsigned;
+    return DPUAsmCondition::Condition::GreaterOrEqualUnsigned;
   case ISD::SETULT:
-    return DPUAsmCondition::Condition::SetLessThanUnsigned;
+    return DPUAsmCondition::Condition::LessThanUnsigned;
   case ISD::SETULE:
-    return DPUAsmCondition::Condition::SetLessOrEqualUnsigned;
+    return DPUAsmCondition::Condition::LessOrEqualUnsigned;
   case ISD::SETTRUE:
   case ISD::SETTRUE2:
-    return DPUAsmCondition::Condition::SetTrue;
+    return DPUAsmCondition::Condition::True;
   }
 }
 

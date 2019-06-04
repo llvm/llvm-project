@@ -54,28 +54,28 @@ findSelect64SetConditionFor(DPUAsmCondition::Condition cond) {
   switch (cond) {
   default:
     llvm_unreachable("invalid condition");
-  case DPUAsmCondition::Condition::SetZero:
-  case DPUAsmCondition::Condition::SetEqual:
-    return DPUAsmCondition::Condition::SetExtendedZero;
-  case DPUAsmCondition::Condition::SetNotZero:
-  case DPUAsmCondition::Condition::SetNotEqual:
-    return DPUAsmCondition::Condition::SetExtendedNotZero;
-  case DPUAsmCondition::Condition::SetGreaterThanSigned:
-    return DPUAsmCondition::Condition::SetExtendedGreaterThanSigned;
-  case DPUAsmCondition::Condition::SetGreaterOrEqualSigned:
-    return DPUAsmCondition::Condition::SetGreaterOrEqualSigned;
-  case DPUAsmCondition::Condition::SetLessThanSigned:
-    return DPUAsmCondition::Condition::SetLessThanSigned;
-  case DPUAsmCondition::Condition::SetLessOrEqualSigned:
-    return DPUAsmCondition::Condition::SetExtendedLessOrEqualSigned;
-  case DPUAsmCondition::Condition::SetGreaterThanUnsigned:
-    return DPUAsmCondition::Condition::SetExtendedGreaterThanUnsigned;
-  case DPUAsmCondition::Condition::SetGreaterOrEqualUnsigned:
-    return DPUAsmCondition::Condition::SetGreaterOrEqualUnsigned;
-  case DPUAsmCondition::Condition::SetLessThanUnsigned:
-    return DPUAsmCondition::Condition::SetLessThanUnsigned;
-  case DPUAsmCondition::Condition::SetLessOrEqualUnsigned:
-    return DPUAsmCondition::Condition::SetExtendedLessOrEqualUnsigned;
+  case DPUAsmCondition::Condition::Zero:
+  case DPUAsmCondition::Condition::Equal:
+    return DPUAsmCondition::Condition::ExtendedZero;
+  case DPUAsmCondition::Condition::NotZero:
+  case DPUAsmCondition::Condition::NotEqual:
+    return DPUAsmCondition::Condition::ExtendedNotZero;
+  case DPUAsmCondition::Condition::GreaterThanSigned:
+    return DPUAsmCondition::Condition::ExtendedGreaterThanSigned;
+  case DPUAsmCondition::Condition::GreaterOrEqualSigned:
+    return DPUAsmCondition::Condition::GreaterOrEqualSigned;
+  case DPUAsmCondition::Condition::LessThanSigned:
+    return DPUAsmCondition::Condition::LessThanSigned;
+  case DPUAsmCondition::Condition::LessOrEqualSigned:
+    return DPUAsmCondition::Condition::ExtendedLessOrEqualSigned;
+  case DPUAsmCondition::Condition::GreaterThanUnsigned:
+    return DPUAsmCondition::Condition::ExtendedGreaterThanUnsigned;
+  case DPUAsmCondition::Condition::GreaterOrEqualUnsigned:
+    return DPUAsmCondition::Condition::GreaterOrEqualUnsigned;
+  case DPUAsmCondition::Condition::LessThanUnsigned:
+    return DPUAsmCondition::Condition::LessThanUnsigned;
+  case DPUAsmCondition::Condition::LessOrEqualUnsigned:
+    return DPUAsmCondition::Condition::ExtendedLessOrEqualUnsigned;
   }
 }
 

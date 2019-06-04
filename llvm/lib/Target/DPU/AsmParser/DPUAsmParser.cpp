@@ -755,12 +755,11 @@ DPUAsmParser::parseAnyCondition(OperandVector &Operands,
 
   if (Token.is(AsmToken::Identifier)) {
     if (Token.getString().startswith("?")) {
-      CondStr = Token.getIdentifier().str();
+      CondStr = Token.getIdentifier().str().erase(0, 1);
     } else {
-      return MatchOperand_NoMatch;
+      CondStr = Token.getIdentifier().str();
     }
   } else if (Token.is(AsmToken::Exclaim)) {
-    char Prefix = '!';
     Parser.Lex(); // ! (before the condition identifier)
     auto IdToken = Parser.getTok();
 
@@ -771,7 +770,7 @@ DPUAsmParser::parseAnyCondition(OperandVector &Operands,
 
     StringRef Id = IdToken.getIdentifier();
 
-    CondStr = Prefix + Id.str();
+    CondStr = Id.str();
   } else {
     return MatchOperand_NoMatch;
   }
