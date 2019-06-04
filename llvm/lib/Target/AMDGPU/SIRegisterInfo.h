@@ -73,6 +73,7 @@ public:
 
   unsigned getFrameRegister(const MachineFunction &MF) const override;
 
+  bool canRealignStack(const MachineFunction &MF) const override;
   bool requiresRegisterScavenging(const MachineFunction &Fn) const override;
 
   bool requiresFrameIndexScavenging(const MachineFunction &MF) const override;

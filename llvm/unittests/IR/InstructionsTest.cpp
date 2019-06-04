@@ -753,6 +753,85 @@ TEST(InstructionsTest, SwitchInst) {
   EXPECT_EQ(BB1.get(), Handle.getCaseSuccessor());
 }
 
+TEST(InstructionsTest, SwitchInstProfUpdateWrapper) {
+  LLVMContext C;
+
+  std::unique_ptr<BasicBlock> BB1, BB2, BB3;
+  BB1.reset(BasicBlock::Create(C));
+  BB2.reset(BasicBlock::Create(C));
+  BB3.reset(BasicBlock::Create(C));
+
+  // We create block 0 after the others so that it gets destroyed first and
+  // clears the uses of the other basic blocks.
+  std::unique_ptr<BasicBlock> BB0(BasicBlock::Create(C));
+
+  auto *Int32Ty = Type::getInt32Ty(C);
+
+  SwitchInst *SI =
+      SwitchInst::Create(UndefValue::get(Int32Ty), BB0.get(), 4, BB0.get());
+  SI->addCase(ConstantInt::get(Int32Ty, 1), BB1.get());
+  SI->addCase(ConstantInt::get(Int32Ty, 2), BB2.get());
+  SI->setMetadata(LLVMContext::MD_prof,
+                  MDBuilder(C).createBranchWeights({ 9, 1, 22 }));
+
+  {
+    SwitchInstProfUpdateWrapper SIW(*SI);
+    EXPECT_EQ(*SIW.getSuccessorWeight(0), 9u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(1), 1u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(2), 22u);
+    SIW.setSuccessorWeight(0, 99u);
+    SIW.setSuccessorWeight(1, 11u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(0), 99u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(1), 11u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(2), 22u);
+  }
+
+  { // Create another wrapper and check that the data persist.
+    SwitchInstProfUpdateWrapper SIW(*SI);
+    EXPECT_EQ(*SIW.getSuccessorWeight(0), 99u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(1), 11u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(2), 22u);
+  }
+
+  // Make prof data invalid by adding one extra weight.
+  SI->setMetadata(LLVMContext::MD_prof, MDBuilder(C).createBranchWeights(
+                                            { 99, 11, 22, 33 })); // extra
+  { // Invalid prof data makes wrapper act as if there were no prof data.
+    SwitchInstProfUpdateWrapper SIW(*SI);
+    ASSERT_FALSE(SIW.getSuccessorWeight(0).hasValue());
+    ASSERT_FALSE(SIW.getSuccessorWeight(1).hasValue());
+    ASSERT_FALSE(SIW.getSuccessorWeight(2).hasValue());
+    SIW.addCase(ConstantInt::get(Int32Ty, 3), BB3.get(), 39);
+    ASSERT_FALSE(SIW.getSuccessorWeight(3).hasValue()); // did not add weight 39
+  }
+
+  { // With added 3rd case the prof data become consistent with num of cases.
+    SwitchInstProfUpdateWrapper SIW(*SI);
+    EXPECT_EQ(*SIW.getSuccessorWeight(0), 99u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(1), 11u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(2), 22u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(3), 33u);
+  }
+
+  // Make prof data invalid by removing one extra weight.
+  SI->setMetadata(LLVMContext::MD_prof,
+                  MDBuilder(C).createBranchWeights({ 99, 11, 22 })); // shorter
+  { // Invalid prof data makes wrapper act as if there were no prof data.
+    SwitchInstProfUpdateWrapper SIW(*SI);
+    ASSERT_FALSE(SIW.getSuccessorWeight(0).hasValue());
+    ASSERT_FALSE(SIW.getSuccessorWeight(1).hasValue());
+    ASSERT_FALSE(SIW.getSuccessorWeight(2).hasValue());
+    SIW.removeCase(SwitchInst::CaseIt(SI, 2));
+  }
+
+  { // With removed 3rd case the prof data become consistent with num of cases.
+    SwitchInstProfUpdateWrapper SIW(*SI);
+    EXPECT_EQ(*SIW.getSuccessorWeight(0), 99u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(1), 11u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(2), 22u);
+  }
+}
+
 TEST(InstructionsTest, CommuteShuffleMask) {
   SmallVector<int, 16> Indices({-1, 0, 7});
   ShuffleVectorInst::commuteShuffleMask(Indices, 4);

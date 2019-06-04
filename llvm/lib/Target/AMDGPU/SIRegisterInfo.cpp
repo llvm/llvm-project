@@ -245,6 +245,19 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
+bool SIRegisterInfo::canRealignStack(const MachineFunction &MF) const {
+  const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  // On entry, the base address is 0, so it can't possibly need any more
+  // alignment.
+
+  // FIXME: Should be able to specify the entry frame alignment per calling
+  // convention instead.
+  if (Info->isEntryFunction())
+    return false;
+
+  return TargetRegisterInfo::canRealignStack(MF);
+}
+
 bool SIRegisterInfo::requiresRegisterScavenging(const MachineFunction &Fn) const {
   const SIMachineFunctionInfo *Info = Fn.getInfo<SIMachineFunctionInfo>();
   if (Info->isEntryFunction()) {

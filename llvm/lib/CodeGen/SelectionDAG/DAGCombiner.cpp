@@ -524,6 +524,7 @@ namespace {
                               const SDLoc &DL);
     SDNode *MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL);
     SDValue MatchLoadCombine(SDNode *N);
+    SDValue MatchStoreCombine(StoreSDNode *N);
     SDValue ReduceLoadWidth(SDNode *N);
     SDValue ReduceLoadOpStoreWidth(SDNode *N);
     SDValue splitMergedValStore(StoreSDNode *ST);
@@ -6260,6 +6261,180 @@ static Optional<bool> isBigEndian(const SmallVector<int64_t, 4> &ByteOffsets,
   assert((BigEndian != LittleEndian) && "It should be either big endian or"
                                         "little endian");
   return BigEndian;
+}
+
+static SDValue stripTruncAndExt(SDValue Value) {
+  switch (Value.getOpcode()) {
+  case ISD::TRUNCATE:
+  case ISD::ZERO_EXTEND:
+  case ISD::SIGN_EXTEND:
+  case ISD::ANY_EXTEND:
+    return stripTruncAndExt(Value.getOperand(0));
+  }
+  return Value;
+}
+
+/// Match a pattern where a wide type scalar value is stored by several narrow
+/// stores. Fold it into a single store or a BSWAP and a store if the targets
+/// supports it.
+///
+/// Assuming little endian target:
+///  i8 *p = ...
+///  i32 val = ...
+///  p[0] = (val >> 0) & 0xFF;
+///  p[1] = (val >> 8) & 0xFF;
+///  p[2] = (val >> 16) & 0xFF;
+///  p[3] = (val >> 24) & 0xFF;
+/// =>
+///  *((i32)p) = val;
+///
+///  i8 *p = ...
+///  i32 val = ...
+///  p[0] = (val >> 24) & 0xFF;
+///  p[1] = (val >> 16) & 0xFF;
+///  p[2] = (val >> 8) & 0xFF;
+///  p[3] = (val >> 0) & 0xFF;
+/// =>
+///  *((i32)p) = BSWAP(val);
+SDValue DAGCombiner::MatchStoreCombine(StoreSDNode *N) {
+  // Collect all the stores in the chain.
+  SDValue Chain;
+  SmallVector<StoreSDNode *, 8> Stores;
+  for (StoreSDNode *Store = N; Store; Store = dyn_cast<StoreSDNode>(Chain)) {
+    if (Store->getMemoryVT() != MVT::i8 ||
+        Store->isVolatile() || Store->isIndexed())
+      return SDValue();
+    Stores.push_back(Store);
+    Chain = Store->getChain();
+  }
+  // Handle the simple type only.
+  unsigned Width = Stores.size();
+  EVT VT = EVT::getIntegerVT(
+    *DAG.getContext(), Width * N->getMemoryVT().getSizeInBits());
+  if (VT != MVT::i16 && VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (LegalOperations && !TLI.isOperationLegal(ISD::STORE, VT))
+    return SDValue();
+
+  // Check if all the bytes of the combined value we are looking at are stored 
+  // to the same base address. Collect bytes offsets from Base address into 
+  // ByteOffsets. 
+  SDValue CombinedValue;
+  SmallVector<int64_t, 4> ByteOffsets(Width);
+  int64_t FirstOffset = INT64_MAX;
+  StoreSDNode *FirstStore = nullptr;
+  Optional<BaseIndexOffset> Base;
+  for (auto Store : Stores) {
+    // All the stores store different byte of the CombinedValue. A truncate is
+    // required to get that byte value.
+    SDValue Trunc = Store->getValue();
+    if (Trunc.getOpcode() != ISD::TRUNCATE)
+      return SDValue();
+    // A shift operation is required to get the right byte offset, except the
+    // first byte.
+    int64_t Offset = 0;
+    SDValue Value = Trunc.getOperand(0);
+    if (Value.getOpcode() == ISD::SRL ||
+        Value.getOpcode() == ISD::SRA) {
+      ConstantSDNode *ShiftOffset =
+        dyn_cast<ConstantSDNode>(Value.getOperand(1));
+      // Trying to match the following pattern. The shift offset must be 
+      // a constant and a multiple of 8. It is the byte offset in "y".
+      // 
+      // x = srl y, offset
+      // i8 z = trunc x 
+      // store z, ...
+      if (!ShiftOffset || (ShiftOffset->getSExtValue() % 8))
+        return SDValue();
+  
+     Offset = ShiftOffset->getSExtValue()/8;
+     Value = Value.getOperand(0);
+    }
+
+    // Stores must share the same combined value with different offsets.
+    if (!CombinedValue)
+      CombinedValue = Value;
+    else if (stripTruncAndExt(CombinedValue) != stripTruncAndExt(Value))
+      return SDValue();
+
+    // The trunc and all the extend operation should be stripped to get the
+    // real value we are stored.
+    else if (CombinedValue.getValueType() != VT) {
+      if (Value.getValueType() == VT ||
+          Value.getValueSizeInBits() > CombinedValue.getValueSizeInBits())
+        CombinedValue = Value;
+      // Give up if the combined value type is smaller than the store size.
+      if (CombinedValue.getValueSizeInBits() < VT.getSizeInBits())
+        return SDValue();
+    }
+
+    // Stores must share the same base address
+    BaseIndexOffset Ptr = BaseIndexOffset::match(Store, DAG);
+    int64_t ByteOffsetFromBase = 0;
+    if (!Base)
+      Base = Ptr;
+    else if (!Base->equalBaseIndex(Ptr, DAG, ByteOffsetFromBase))
+      return SDValue();
+
+    // Remember the first byte store
+    if (ByteOffsetFromBase < FirstOffset) {
+      FirstStore = Store;
+      FirstOffset = ByteOffsetFromBase;
+    }
+    // Map the offset in the store and the offset in the combined value.
+    if (Offset < 0 || Offset >= Width)
+      return SDValue();
+    ByteOffsets[Offset] = ByteOffsetFromBase;
+  }
+
+  assert(FirstOffset != INT64_MAX && "First byte offset must be set");
+  assert(FirstStore && "First store must be set");
+
+  // Check if the bytes of the combined value we are looking at match with 
+  // either big or little endian value store.
+  Optional<bool> IsBigEndian = isBigEndian(ByteOffsets, FirstOffset);
+  if (!IsBigEndian.hasValue())
+    return SDValue();
+
+  // The node we are looking at matches with the pattern, check if we can
+  // replace it with a single bswap if needed and store.
+
+  // If the store needs byte swap check if the target supports it
+  bool NeedsBswap = DAG.getDataLayout().isBigEndian() != *IsBigEndian;
+
+  // Before legalize we can introduce illegal bswaps which will be later
+  // converted to an explicit bswap sequence. This way we end up with a single
+  // store and byte shuffling instead of several stores and byte shuffling.
+  if (NeedsBswap && LegalOperations && !TLI.isOperationLegal(ISD::BSWAP, VT))
+    return SDValue();
+
+  // Check that a store of the wide type is both allowed and fast on the target
+  bool Fast = false;
+  bool Allowed = TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(),
+                                        VT, FirstStore->getAddressSpace(),
+                                        FirstStore->getAlignment(), &Fast);
+  if (!Allowed || !Fast)
+    return SDValue();
+
+  if (VT != CombinedValue.getValueType()) {
+    assert(CombinedValue.getValueType().getSizeInBits() > VT.getSizeInBits() &&
+           "Get unexpected store value to combine");
+    CombinedValue = DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT,
+                             CombinedValue);
+  }
+
+  if (NeedsBswap)
+    CombinedValue = DAG.getNode(ISD::BSWAP, SDLoc(N), VT, CombinedValue);
+
+  SDValue NewStore =
+    DAG.getStore(Chain, SDLoc(N),  CombinedValue, FirstStore->getBasePtr(),
+                 FirstStore->getPointerInfo(), FirstStore->getAlignment());
+
+  // Rely on other DAG combine rules to remove the other individual stores.
+  DAG.ReplaceAllUsesWith(N, NewStore.getNode());
+  return NewStore;
 }
 
 /// Match a pattern where a wide type scalar value is loaded by several narrow
@@ -15761,6 +15936,10 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
   // load / store ops.
   if (SDValue NewST = TransformFPLoadStorePair(N))
     return NewST;
+
+  // Try transforming several stores into STORE (BSWAP).
+  if (SDValue Store = MatchStoreCombine(ST))
+    return Store;
 
   if (ST->isUnindexed()) {
     // Walk up chain skipping non-aliasing memory nodes, on this store and any
