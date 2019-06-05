@@ -1095,7 +1095,8 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
   array_pod_sort(AbsoluteSymbols.begin(), AbsoluteSymbols.end());
 
   for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
-    if (!DisassembleAll && (!Section.isText() || Section.isVirtual()))
+    if (FilterSections.empty() && !DisassembleAll &&
+        (!Section.isText() || Section.isVirtual()))
       continue;
 
     uint64_t SectionAddr = Section.getAddress();

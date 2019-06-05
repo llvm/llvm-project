@@ -150,11 +150,6 @@ void DynamicLoaderPOSIXDYLD::DidAttach() {
                          true);
 
     LoadAllCurrentModules();
-    if (!SetRendezvousBreakpoint()) {
-      // If we cannot establish rendezvous breakpoint right now we'll try again
-      // at entry point.
-      ProbeEntry();
-    }
 
     m_process->GetTarget().ModulesDidLoad(module_list);
     if (log) {
@@ -167,6 +162,14 @@ void DynamicLoaderPOSIXDYLD::DidAttach() {
                               : "<null>",
                     m_process ? m_process->GetID() : LLDB_INVALID_PROCESS_ID);
       }
+    }
+  }
+
+  if (executable_sp.get()) {
+    if (!SetRendezvousBreakpoint()) {
+      // If we cannot establish rendezvous breakpoint right now we'll try again
+      // at entry point.
+      ProbeEntry();
     }
   }
 }

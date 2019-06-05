@@ -675,12 +675,6 @@ bool llvm::hasIterationCountInvariantInParent(Loop *InnerLoop,
   return true;
 }
 
-static Value *addFastMathFlag(Value *V, FastMathFlags FMF) {
-  if (isa<FPMathOperator>(V))
-    cast<Instruction>(V)->setFastMathFlags(FMF);
-  return V;
-}
-
 Value *llvm::createMinMaxOp(IRBuilder<> &Builder,
                             RecurrenceDescriptor::MinMaxRecurrenceKind RK,
                             Value *Left, Value *Right) {
@@ -761,7 +755,7 @@ llvm::getOrderedReduction(IRBuilder<> &Builder, Value *Acc, Value *Src,
 Value *
 llvm::getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
                           RecurrenceDescriptor::MinMaxRecurrenceKind MinMaxKind,
-                          FastMathFlags FMF, ArrayRef<Value *> RedOps) {
+                          ArrayRef<Value *> RedOps) {
   unsigned VF = Src->getType()->getVectorNumElements();
   // VF is a power of 2 so we can emit the reduction using log2(VF) shuffles
   // and vector ops, reducing the set of values being computed by half each
@@ -784,10 +778,9 @@ llvm::getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
         ConstantVector::get(ShuffleMask), "rdx.shuf");
 
     if (Op != Instruction::ICmp && Op != Instruction::FCmp) {
-      // Floating point operations had to be 'fast' to enable the reduction.
-      TmpVec = addFastMathFlag(Builder.CreateBinOp((Instruction::BinaryOps)Op,
-                                                   TmpVec, Shuf, "bin.rdx"),
-                               FMF);
+      // The builder propagates its fast-math-flags setting.
+      TmpVec = Builder.CreateBinOp((Instruction::BinaryOps)Op, TmpVec, Shuf,
+                                   "bin.rdx");
     } else {
       assert(MinMaxKind != RecurrenceDescriptor::MRK_Invalid &&
              "Invalid min/max");
@@ -804,7 +797,7 @@ llvm::getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
 /// flags (if generating min/max reductions).
 Value *llvm::createSimpleTargetReduction(
     IRBuilder<> &Builder, const TargetTransformInfo *TTI, unsigned Opcode,
-    Value *Src, TargetTransformInfo::ReductionFlags Flags, FastMathFlags FMF,
+    Value *Src, TargetTransformInfo::ReductionFlags Flags,
     ArrayRef<Value *> RedOps) {
   assert(isa<VectorType>(Src->getType()) && "Type must be a vector");
 
@@ -874,7 +867,7 @@ Value *llvm::createSimpleTargetReduction(
   }
   if (TTI->useReductionIntrinsic(Opcode, Src->getType(), Flags))
     return BuildFunc();
-  return getShuffleReduction(Builder, Src, Opcode, MinMaxKind, FMF, RedOps);
+  return getShuffleReduction(Builder, Src, Opcode, MinMaxKind, RedOps);
 }
 
 /// Create a vector reduction using a given recurrence descriptor.
@@ -887,39 +880,36 @@ Value *llvm::createTargetReduction(IRBuilder<> &B,
   RD::RecurrenceKind RecKind = Desc.getRecurrenceKind();
   TargetTransformInfo::ReductionFlags Flags;
   Flags.NoNaN = NoNaN;
+
+  // All ops in the reduction inherit fast-math-flags from the recurrence
+  // descriptor.
+  IRBuilder<>::FastMathFlagGuard FMFGuard(B);
+  B.setFastMathFlags(Desc.getFastMathFlags());
+
   switch (RecKind) {
   case RD::RK_FloatAdd:
-    return createSimpleTargetReduction(B, TTI, Instruction::FAdd, Src, Flags,
-                                       Desc.getFastMathFlags());
+    return createSimpleTargetReduction(B, TTI, Instruction::FAdd, Src, Flags);
   case RD::RK_FloatMult:
-    return createSimpleTargetReduction(B, TTI, Instruction::FMul, Src, Flags,
-                                       Desc.getFastMathFlags());
+    return createSimpleTargetReduction(B, TTI, Instruction::FMul, Src, Flags);
   case RD::RK_IntegerAdd:
-    return createSimpleTargetReduction(B, TTI, Instruction::Add, Src, Flags,
-                                       Desc.getFastMathFlags());
+    return createSimpleTargetReduction(B, TTI, Instruction::Add, Src, Flags);
   case RD::RK_IntegerMult:
-    return createSimpleTargetReduction(B, TTI, Instruction::Mul, Src, Flags,
-                                       Desc.getFastMathFlags());
+    return createSimpleTargetReduction(B, TTI, Instruction::Mul, Src, Flags);
   case RD::RK_IntegerAnd:
-    return createSimpleTargetReduction(B, TTI, Instruction::And, Src, Flags,
-                                       Desc.getFastMathFlags());
+    return createSimpleTargetReduction(B, TTI, Instruction::And, Src, Flags);
   case RD::RK_IntegerOr:
-    return createSimpleTargetReduction(B, TTI, Instruction::Or, Src, Flags,
-                                       Desc.getFastMathFlags());
+    return createSimpleTargetReduction(B, TTI, Instruction::Or, Src, Flags);
   case RD::RK_IntegerXor:
-    return createSimpleTargetReduction(B, TTI, Instruction::Xor, Src, Flags,
-                                       Desc.getFastMathFlags());
+    return createSimpleTargetReduction(B, TTI, Instruction::Xor, Src, Flags);
   case RD::RK_IntegerMinMax: {
     RD::MinMaxRecurrenceKind MMKind = Desc.getMinMaxRecurrenceKind();
     Flags.IsMaxOp = (MMKind == RD::MRK_SIntMax || MMKind == RD::MRK_UIntMax);
     Flags.IsSigned = (MMKind == RD::MRK_SIntMax || MMKind == RD::MRK_SIntMin);
-    return createSimpleTargetReduction(B, TTI, Instruction::ICmp, Src, Flags,
-                                       Desc.getFastMathFlags());
+    return createSimpleTargetReduction(B, TTI, Instruction::ICmp, Src, Flags);
   }
   case RD::RK_FloatMinMax: {
     Flags.IsMaxOp = Desc.getMinMaxRecurrenceKind() == RD::MRK_FloatMax;
-    return createSimpleTargetReduction(B, TTI, Instruction::FCmp, Src, Flags,
-                                       Desc.getFastMathFlags());
+    return createSimpleTargetReduction(B, TTI, Instruction::FCmp, Src, Flags);
   }
   default:
     llvm_unreachable("Unhandled RecKind");
