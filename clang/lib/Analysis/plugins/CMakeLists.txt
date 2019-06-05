@@ -1,4 +1,4 @@
-if(LLVM_ENABLE_PLUGINS)
+if(CLANG_ENABLE_STATIC_ANALYZER AND LLVM_ENABLE_PLUGINS)
   add_subdirectory(SampleAnalyzer)
   add_subdirectory(CheckerDependencyHandling)
   add_subdirectory(CheckerOptionHandling)

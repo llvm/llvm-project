@@ -1368,9 +1368,11 @@ TemplateInstantiator::TransformFunctionParmPackExpr(FunctionParmPackExpr *E) {
     Vars.push_back(D);
   }
 
-  return FunctionParmPackExpr::Create(getSema().Context, T,
-                                      E->getParameterPack(),
-                                      E->getParameterPackLocation(), Vars);
+  auto *PackExpr =
+      FunctionParmPackExpr::Create(getSema().Context, T, E->getParameterPack(),
+                                   E->getParameterPackLocation(), Vars);
+  getSema().MarkFunctionParmPackReferenced(PackExpr);
+  return PackExpr;
 }
 
 ExprResult
@@ -1389,8 +1391,10 @@ TemplateInstantiator::TransformFunctionParmPackRefExpr(DeclRefExpr *E,
       QualType T = TransformType(E->getType());
       if (T.isNull())
         return ExprError();
-      return FunctionParmPackExpr::Create(getSema().Context, T, PD,
-                                          E->getExprLoc(), *Pack);
+      auto *PackExpr = FunctionParmPackExpr::Create(getSema().Context, T, PD,
+                                                    E->getExprLoc(), *Pack);
+      getSema().MarkFunctionParmPackReferenced(PackExpr);
+      return PackExpr;
     }
 
     TransformedDecl = (*Pack)[getSema().ArgumentPackSubstitutionIndex];

@@ -819,7 +819,7 @@ bool x86AssemblyInspectionEngine::local_branch_p (
   int offset;
   if (pc_rel_branch_or_jump_p (instruction_length, offset) && offset != 0) {
     addr_t next_pc_value = current_func_text_offset + instruction_length;
-    if (offset < 0 && abs (offset) > current_func_text_offset) {
+    if (offset < 0 && addr_t(-offset) > current_func_text_offset) {
       // Branch target is before the start of this function
       return false;
     }

@@ -660,7 +660,10 @@ public:
                                           bool ExpectParameterPack);
 
   /// Transform the body of a lambda-expression.
-  StmtResult TransformLambdaBody(Stmt *Body);
+  StmtResult TransformLambdaBody(LambdaExpr *E, Stmt *Body);
+  /// Alternative implementation of TransformLambdaBody that skips transforming
+  /// the body.
+  StmtResult SkipLambdaBody(LambdaExpr *E, Stmt *Body);
 
   QualType TransformReferenceType(TypeLocBuilder &TLB, ReferenceTypeLoc TL);
 
@@ -11370,16 +11373,13 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   bool Invalid = false;
 
   // Transform captures.
-  bool FinishedExplicitCaptures = false;
   for (LambdaExpr::capture_iterator C = E->capture_begin(),
                                  CEnd = E->capture_end();
        C != CEnd; ++C) {
     // When we hit the first implicit capture, tell Sema that we've finished
     // the list of explicit captures.
-    if (!FinishedExplicitCaptures && C->isImplicit()) {
-      getSema().finishLambdaExplicitCaptures(LSI);
-      FinishedExplicitCaptures = true;
-    }
+    if (C->isImplicit())
+      break;
 
     // Capturing 'this' is trivial.
     if (C->capturesThis()) {
@@ -11488,17 +11488,16 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     getSema().tryCaptureVariable(CapturedVar, C->getLocation(), Kind,
                                  EllipsisLoc);
   }
-  if (!FinishedExplicitCaptures)
-    getSema().finishLambdaExplicitCaptures(LSI);
+  getSema().finishLambdaExplicitCaptures(LSI);
 
-  // Enter a new evaluation context to insulate the lambda from any
-  // cleanups from the enclosing full-expression.
+  // FIXME: Sema's lambda-building mechanism expects us to push an expression
+  // evaluation context even if we're not transforming the function body.
   getSema().PushExpressionEvaluationContext(
       Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
 
   // Instantiate the body of the lambda expression.
   StmtResult Body =
-      Invalid ? StmtError() : getDerived().TransformLambdaBody(E->getBody());
+      Invalid ? StmtError() : getDerived().TransformLambdaBody(E, E->getBody());
 
   // ActOnLambda* will pop the function scope for us.
   FuncScopeCleanup.disable();
@@ -11524,8 +11523,48 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
 template<typename Derived>
 StmtResult
-TreeTransform<Derived>::TransformLambdaBody(Stmt *S) {
+TreeTransform<Derived>::TransformLambdaBody(LambdaExpr *E, Stmt *S) {
   return TransformStmt(S);
+}
+
+template<typename Derived>
+StmtResult
+TreeTransform<Derived>::SkipLambdaBody(LambdaExpr *E, Stmt *S) {
+  // Transform captures.
+  for (LambdaExpr::capture_iterator C = E->capture_begin(),
+                                 CEnd = E->capture_end();
+       C != CEnd; ++C) {
+    // When we hit the first implicit capture, tell Sema that we've finished
+    // the list of explicit captures.
+    if (!C->isImplicit())
+      continue;
+
+    // Capturing 'this' is trivial.
+    if (C->capturesThis()) {
+      getSema().CheckCXXThisCapture(C->getLocation(), C->isExplicit(),
+                                    /*BuildAndDiagnose*/ true, nullptr,
+                                    C->getCaptureKind() == LCK_StarThis);
+      continue;
+    }
+    // Captured expression will be recaptured during captured variables
+    // rebuilding.
+    if (C->capturesVLAType())
+      continue;
+
+    assert(C->capturesVariable() && "unexpected kind of lambda capture");
+    assert(!E->isInitCapture(C) && "implicit init-capture?");
+
+    // Transform the captured variable.
+    VarDecl *CapturedVar = cast_or_null<VarDecl>(
+        getDerived().TransformDecl(C->getLocation(), C->getCapturedVar()));
+    if (!CapturedVar || CapturedVar->isInvalidDecl())
+      return StmtError();
+
+    // Capture the transformed variable.
+    getSema().tryCaptureVariable(CapturedVar, C->getLocation());
+  }
+
+  return S;
 }
 
 template<typename Derived>

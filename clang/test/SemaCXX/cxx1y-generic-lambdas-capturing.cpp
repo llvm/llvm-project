@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -emit-llvm-only %s
+// RUN: %clang_cc1 -std=c++2a -verify -fsyntax-only -fblocks -emit-llvm-only %s
 // DONTRUNYET: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -fdelayed-template-parsing %s -DDELAYED_TEMPLATE_PARSING
 // DONTRUNYET: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -fms-extensions %s -DMS_EXTENSIONS
 // DONTRUNYET: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -fdelayed-template-parsing -fms-extensions %s -DMS_EXTENSIONS -DDELAYED_TEMPLATE_PARSING
@@ -176,7 +177,13 @@ void doit() {
     sample::X cx{5};
     auto L = [=](auto a) { 
       const int z = 3;
+      // FIXME: The warning below is correct but for some reason doesn't show
+      // up in C++17 mode.
       return [&,a](auto b) {
+#if __cplusplus > 201702L
+        // expected-warning@-2 {{address of stack memory associated with local variable 'z' returned}}
+        // expected-note@#call {{in instantiation of}}
+#endif
         const int y = 5;    
         return [=](auto c) { 
           int d[sizeof(a) == sizeof(c) || sizeof(c) == sizeof(b) ? 2 : 1];
@@ -189,7 +196,7 @@ void doit() {
         }; 
       };
     };
-    auto M = L(3)(3.5);
+    auto M = L(3)(3.5); // #call
     M(3.14);
   }
 }
@@ -1519,6 +1526,20 @@ void test() {
 
 } // end ns5
 
-
-
 } // end PR34266
+
+namespace capture_pack {
+#if __cplusplus >= 201702L
+  constexpr
+#endif
+  auto v =
+    [](auto ...a) {
+      [&](auto ...b) {
+        ((a = b), ...); // expected-warning 0-1{{extension}}
+      }(100, 20, 3);
+      return (a + ...); // expected-warning 0-1{{extension}}
+    }(400, 50, 6);
+#if __cplusplus >= 201702L
+  static_assert(v == 123);
+#endif
+}
