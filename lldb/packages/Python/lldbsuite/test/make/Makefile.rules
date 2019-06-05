@@ -288,7 +288,7 @@ endif
 DEBUG_INFO_FLAG ?= -g
 
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0 -fno-builtin
-SWIFTFLAGS ?= -g -Onone -Xfrontend -serialize-debugging-options
+SWIFTFLAGS ?= $(DEBUG_INFO_FLAG) -Onone -Xfrontend -serialize-debugging-options
 
 STATIC_STDLIB = 
 ifneq (,$(findstring arm,$(ARCH)))

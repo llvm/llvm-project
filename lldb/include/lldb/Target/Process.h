@@ -383,7 +383,7 @@ public:
 
   /// Process warning types.
   //------------------------------------------------------------------
-  enum Warnings { eWarningsOptimization = 1, eWarningsCantLoadSwift };
+  enum Warnings { eWarningsOptimization = 1 };
 
   typedef Range<lldb::addr_t, lldb::addr_t> LoadRange;
   // We use a read/write lock to allow on or more clients to access the process
@@ -1308,21 +1308,6 @@ public:
   ///     pre-computed.
   void PrintWarningOptimization(const SymbolContext &sc);
 
-  //------------------------------------------------------------------
-  /// Print a user-visible warning about a module having Swift settings
-  /// incompatible with the current system
-  ///
-  /// Prints a async warning message to the user one time per Process for a
-  /// Module
-  /// whose Swift AST sections couldn't be loaded because they aren't buildable
-  /// on
-  /// the current machine.
-  ///
-  /// @param [in] module
-  ///     The affected Module.
-  //------------------------------------------------------------------
-  void PrintWarningCantLoadSwift(const Module &module);
-
   virtual bool GetProcessInfo(ProcessInstanceInfo &info);
 
 public:
@@ -2200,16 +2185,17 @@ public:
 
   OperatingSystem *GetOperatingSystem() { return m_os_up.get(); }
 
-  virtual LanguageRuntime *GetLanguageRuntime(lldb::LanguageType language,
-                                              bool retry_if_null = true);
+  std::vector<LanguageRuntime *>
+  GetLanguageRuntimes(bool retry_if_null = true);
 
-  virtual CPPLanguageRuntime *GetCPPLanguageRuntime(bool retry_if_null = true);
+  LanguageRuntime *GetLanguageRuntime(lldb::LanguageType language,
+                                      bool retry_if_null = true);
 
-  virtual ObjCLanguageRuntime *
-  GetObjCLanguageRuntime(bool retry_if_null = true);
+  CPPLanguageRuntime *GetCPPLanguageRuntime(bool retry_if_null = true);
 
-  virtual SwiftLanguageRuntime *
-  GetSwiftLanguageRuntime(bool retry_if_null = true);
+  ObjCLanguageRuntime *GetObjCLanguageRuntime(bool retry_if_null = true);
+
+  SwiftLanguageRuntime *GetSwiftLanguageRuntime(bool retry_if_null = true);
 
   bool IsPossibleDynamicValue(ValueObject &in_value);
 

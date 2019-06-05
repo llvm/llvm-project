@@ -216,9 +216,6 @@ public:
 
   virtual bool HasReadObjCLibrary() = 0;
 
-  virtual lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
-                                                          bool stop_others) = 0;
-
   lldb::addr_t LookupInMethodCache(lldb::addr_t class_addr, lldb::addr_t sel);
 
   void AddToMethodCache(lldb::addr_t class_addr, lldb::addr_t sel,
@@ -267,13 +264,6 @@ public:
   virtual size_t GetByteOffsetForIvar(CompilerType &parent_qual_type,
                                       const char *ivar_name);
 
-  // Given the name of an Objective-C runtime symbol (e.g., ivar offset
-  // symbol), try to determine from the runtime what the value of that symbol
-  // would be. Useful when the underlying binary is stripped.
-  virtual lldb::addr_t LookupRuntimeSymbol(ConstString name) {
-    return LLDB_INVALID_ADDRESS;
-  }
-
   bool HasNewLiteralsAndIndexing() {
     if (m_has_new_literals_and_indexing == eLazyBoolCalculate) {
       if (CalculateHasNewLiteralsAndIndexing())
@@ -285,7 +275,7 @@ public:
     return (m_has_new_literals_and_indexing == eLazyBoolYes);
   }
 
-  virtual void SymbolsDidLoad(const ModuleList &module_list) {
+  void SymbolsDidLoad(const ModuleList &module_list) override {
     m_negative_complete_class_cache.clear();
   }
 

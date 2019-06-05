@@ -142,15 +142,6 @@ bool HostInfoPosix::ComputeHeaderDirectory(FileSpec &file_spec) {
   return true;
 }
 
-bool HostInfoPosix::ComputeSwiftDirectory(FileSpec &file_spec) {
-  if (FileSpec lldb_file_spec = GetShlibDir()) {
-    lldb_file_spec.AppendPathComponent("swift");
-    file_spec = lldb_file_spec;
-    return true;
-  }
-  return false;
-}
-
 bool HostInfoPosix::GetEnvironmentVar(const std::string &var_name,
                                       std::string &var) {
   if (const char *pvar = ::getenv(var_name.c_str())) {
