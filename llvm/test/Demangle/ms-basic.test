@@ -11,6 +11,9 @@
 ?x@@3PEAPEAHEA
 ; CHECK: int **x
 
+?foo@@3Y123KA
+; CHECK: unsigned long foo[3][4]
+
 ?x@@3PEAY02HEA
 ; CHECK: int (*x)[3]
 
@@ -34,6 +37,12 @@
 
 ?x@@YAXMH@Z
 ; CHECK: void __cdecl x(float, int)
+
+?x@@YAXMHZZ
+; CHECK: void __cdecl x(float, int, ...)
+
+?x@@YAXZZ
+; CHECK: void __cdecl x(...)
 
 ?x@@3P6AHMNH@ZEA
 ; CHECK: int (__cdecl *x)(float, double, int)

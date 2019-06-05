@@ -229,9 +229,33 @@ Sections:
       - Tag:             DT_HEXAGON_PLT
         Value:           0x0000000000000003
 
-## Check we can handle PPC64 specific tags.
+## Check we can handle PPC specific tags.
 # RUN: yaml2obj -docnum=3 %s -o %t3
-# RUN: obj2yaml %t3 | FileCheck %s --check-prefix=EM_PPC64
+# RUN: obj2yaml %t3 | FileCheck %s --check-prefix=EM_PPC
+
+# EM_PPC:      - Tag:             DT_PPC_GOT
+# EM_PPC-NEXT:   Value:           0x0000000000020000
+# EM_PPC-NEXT: - Tag:             DT_PPC_OPT
+# EM_PPC-NEXT:   Value:           0x0000000000000001
+
+--- !ELF
+FileHeader:
+  Class:             ELFCLASS32
+  Data:              ELFDATA2MSB
+  Type:              ET_REL
+  Machine:           EM_PPC
+Sections:
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Entries:
+      - Tag:             DT_PPC_GOT
+        Value:           0x0000000000020000
+      - Tag:             DT_PPC_OPT
+        Value:           0x0000000000000001
+
+## Check we can handle PPC64 specific tags.
+# RUN: yaml2obj -docnum=4 %s -o %t4
+# RUN: obj2yaml %t4 | FileCheck %s --check-prefix=EM_PPC64
 
 # EM_PPC64:      - Tag:             DT_PPC64_GLINK
 # EM_PPC64-NEXT:   Value:           0x0000000000000001
@@ -249,12 +273,36 @@ Sections:
       - Tag:             DT_PPC64_GLINK
         Value:           0x0000000000000001
 
+## Check we can handle AARCH64 specific tags.
+# RUN: yaml2obj -docnum=5 %s -o %t2
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=AARCH64
+
+# AARCH64:      - Tag:             DT_AARCH64_BTI_PLT
+# AARCH64-NEXT:   Value:           0x0000000000000000
+# AARCH64-NEXT: - Tag:             DT_AARCH64_PAC_PLT
+# AARCH64-NEXT:   Value:           0x0000000000000000
+
+--- !ELF
+FileHeader:
+  Class:             ELFCLASS64
+  Data:              ELFDATA2LSB
+  Type:              ET_REL
+  Machine:           EM_AARCH64
+Sections:
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Entries:
+      - Tag:             DT_AARCH64_BTI_PLT
+        Value:           0x0000000000000000
+      - Tag:             DT_AARCH64_PAC_PLT
+        Value:           0x0000000000000000
+
 ## Check we can't use a tag from a different architecture,
 ## even if it has the same numeric value as a valid tag.
 ## Here for EM_PPC64 we are trying to use DT_HEXAGON_SYMSZ
 ## instead of DT_PPC64_GLINK. They both have value of 0x70000000.
 
-# RUN: not yaml2obj -docnum=4 %s 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj -docnum=6 %s 2>&1 | FileCheck %s --check-prefix=ERR
 # ERR:      error: invalid hex64 number
 # ERR-NEXT: - Tag: DT_HEXAGON_SYMSZ
 

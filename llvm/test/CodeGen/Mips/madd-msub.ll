@@ -342,13 +342,13 @@ define i64 @msub2(i32 zeroext %a, i32 zeroext %b, i32 zeroext %c) nounwind readn
 ;
 ; 32R6-LABEL: msub2:
 ; 32R6:       # %bb.0: # %entry
-; 32R6-NEXT:    mul $1, $5, $4
-; 32R6-NEXT:    sltu $2, $6, $1
-; 32R6-NEXT:    muhu $3, $5, $4
-; 32R6-NEXT:    negu $3, $3
-; 32R6-NEXT:    subu $2, $3, $2
+; 32R6-NEXT:    muhu $1, $5, $4
+; 32R6-NEXT:    mul $3, $5, $4
+; 32R6-NEXT:    sltu $2, $6, $3
+; 32R6-NEXT:    addu $1, $1, $2
+; 32R6-NEXT:    negu $2, $1
 ; 32R6-NEXT:    jr $ra
-; 32R6-NEXT:    subu $3, $6, $1
+; 32R6-NEXT:    subu $3, $6, $3
 ;
 ; DSP-LABEL: msub2:
 ; DSP:       # %bb.0: # %entry
@@ -377,12 +377,12 @@ define i64 @msub2(i32 zeroext %a, i32 zeroext %b, i32 zeroext %c) nounwind readn
 ; 16:       # %bb.0: # %entry
 ; 16-NEXT:    multu $5, $4
 ; 16-NEXT:    mflo $2
-; 16-NEXT:    mfhi $4
-; 16-NEXT:    subu $3, $6, $2
+; 16-NEXT:    mfhi $3
 ; 16-NEXT:    sltu $6, $2
-; 16-NEXT:    move $2, $24
-; 16-NEXT:    neg $4, $4
-; 16-NEXT:    subu $2, $4, $2
+; 16-NEXT:    move $4, $24
+; 16-NEXT:    addu $4, $3, $4
+; 16-NEXT:    subu $3, $6, $2
+; 16-NEXT:    neg $2, $4
 ; 16-NEXT:    jrc $ra
 entry:
   %conv = zext i32 %c to i64

@@ -460,6 +460,7 @@ namespace {
 enum PointerStripKind {
   PSK_ZeroIndices,
   PSK_ZeroIndicesAndAliases,
+  PSK_ZeroIndicesAndAliasesSameRepresentation,
   PSK_ZeroIndicesAndAliasesAndInvariantGroups,
   PSK_InBoundsConstantIndices,
   PSK_InBounds
@@ -479,6 +480,7 @@ static const Value *stripPointerCastsAndOffsets(const Value *V) {
     if (auto *GEP = dyn_cast<GEPOperator>(V)) {
       switch (StripKind) {
       case PSK_ZeroIndicesAndAliases:
+      case PSK_ZeroIndicesAndAliasesSameRepresentation:
       case PSK_ZeroIndicesAndAliasesAndInvariantGroups:
       case PSK_ZeroIndices:
         if (!GEP->hasAllZeroIndices())
@@ -494,8 +496,12 @@ static const Value *stripPointerCastsAndOffsets(const Value *V) {
         break;
       }
       V = GEP->getPointerOperand();
-    } else if (Operator::getOpcode(V) == Instruction::BitCast ||
+    } else if (Operator::getOpcode(V) == Instruction::BitCast) {
+      V = cast<Operator>(V)->getOperand(0);
+    } else if (StripKind != PSK_ZeroIndicesAndAliasesSameRepresentation &&
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
+      // TODO: If we know an address space cast will not change the
+      //       representation we could look through it here as well.
       V = cast<Operator>(V)->getOperand(0);
     } else if (auto *GA = dyn_cast<GlobalAlias>(V)) {
       if (StripKind == PSK_ZeroIndices || GA->isInterposable())
@@ -528,6 +534,11 @@ static const Value *stripPointerCastsAndOffsets(const Value *V) {
 
 const Value *Value::stripPointerCasts() const {
   return stripPointerCastsAndOffsets<PSK_ZeroIndicesAndAliases>(this);
+}
+
+const Value *Value::stripPointerCastsSameRepresentation() const {
+  return stripPointerCastsAndOffsets<
+      PSK_ZeroIndicesAndAliasesSameRepresentation>(this);
 }
 
 const Value *Value::stripPointerCastsNoFollowAliases() const {

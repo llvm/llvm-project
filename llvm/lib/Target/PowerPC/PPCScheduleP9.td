@@ -50,8 +50,21 @@ let SchedModel = P9Model in {
 
   // ***************** Processor Resources *****************
 
-  //Dispatcher:
-  def DISPATCHER : ProcResource<12>;
+  // Dispatcher slots:
+  // x0, x1, x2, and x3 are the dedicated slice dispatch ports, where each
+  // corresponds to one of the four execution slices.
+  def DISPx02 : ProcResource<2>;
+  def DISPx13 : ProcResource<2>;
+  // The xa and xb ports can be used to send an iop to either of the two slices
+  // of the superslice, but are restricted to iops with only two primary sources.
+  def DISPxab : ProcResource<2>;
+  // b0 and b1 are dedicated dispatch ports into the branch slice.
+  def DISPb01 : ProcResource<2>;
+
+  // Any non BR dispatch ports
+  def DISP_NBR
+      : ProcResGroup<[ DISPx02, DISPx13, DISPxab]>;
+  def DISP_SS : ProcResGroup<[ DISPx02, DISPx13]>;
 
   // Issue Ports
   // An instruction can go down one of two issue queues.
@@ -116,8 +129,37 @@ let SchedModel = P9Model in {
 
   // ***************** SchedWriteRes Definitions *****************
 
-  //Dispatcher
-  def DISP_1C : SchedWriteRes<[DISPATCHER]> {
+  // Dispatcher
+  // Dispatch Rules: '-' or 'V'
+  // Vector ('V') - vector iops (128-bit operand) take only one decode and
+  // dispatch slot but are dispatched to both the even and odd slices of a
+  // superslice.
+  def DISP_1C : SchedWriteRes<[DISP_NBR]> {
+    let NumMicroOps = 0;
+    let Latency = 1;
+  }
+  // Dispatch Rules: 'E' 
+  // Even slice ('E')- certain operations must be sent only to an even slice.
+  // Also consumes odd dispatch slice slot of the same superslice at dispatch
+  def DISP_EVEN_1C : SchedWriteRes<[ DISPx02, DISPx13 ]> {
+    let NumMicroOps = 0;
+    let Latency = 1;
+  }
+  // Dispatch Rules: 'P'
+  // Paired ('P') - certain cracked and expanded iops are paired such that they
+  // must dispatch together to the same superslice.
+  def DISP_PAIR_1C : SchedWriteRes<[ DISP_SS, DISP_SS]> {
+    let NumMicroOps = 0;
+    let Latency = 1;
+  }
+  // Tuple Restricted ('R') - certain iops preclude dispatching more than one
+  // operation per slice for the super- slice to which they are dispatched
+  def DISP_3SLOTS_1C : SchedWriteRes<[DISPx02, DISPx13, DISPxab]> {
+    let NumMicroOps = 0;
+    let Latency = 1;
+  }
+  // Each execution and branch slice can receive up to two iops per cycle
+  def DISP_BR_1C : SchedWriteRes<[ DISPxab ]> {
     let NumMicroOps = 0;
     let Latency = 1;
   }

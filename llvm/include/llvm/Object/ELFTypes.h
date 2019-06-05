@@ -592,9 +592,9 @@ class Elf_Note_Impl {
 
   template <class NoteIteratorELFT> friend class Elf_Note_Iterator_Impl;
 
+public:
   Elf_Note_Impl(const Elf_Nhdr_Impl<ELFT> &Nhdr) : Nhdr(Nhdr) {}
 
-public:
   /// Get the note's name, excluding the terminating null byte.
   StringRef getName() const {
     if (!Nhdr.n_namesz)

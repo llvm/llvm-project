@@ -1120,6 +1120,111 @@ define i1 @scalar_i8_signbit_ne(i8 %x, i8 %y) nounwind {
 }
 
 ;------------------------------------------------------------------------------;
+; What if X is a constant too?
+;------------------------------------------------------------------------------;
+
+define i1 @scalar_i32_x_is_const_eq(i32 %y) nounwind {
+; ARM6-LABEL: scalar_i32_x_is_const_eq:
+; ARM6:       @ %bb.0:
+; ARM6-NEXT:    ldr r1, .LCPI18_0
+; ARM6-NEXT:    mov r2, #1
+; ARM6-NEXT:    bic r0, r2, r1, lsr r0
+; ARM6-NEXT:    bx lr
+; ARM6-NEXT:    .p2align 2
+; ARM6-NEXT:  @ %bb.1:
+; ARM6-NEXT:  .LCPI18_0:
+; ARM6-NEXT:    .long 2857740885 @ 0xaa55aa55
+;
+; ARM78-LABEL: scalar_i32_x_is_const_eq:
+; ARM78:       @ %bb.0:
+; ARM78-NEXT:    movw r1, #43605
+; ARM78-NEXT:    mov r2, #1
+; ARM78-NEXT:    movt r1, #43605
+; ARM78-NEXT:    bic r0, r2, r1, lsr r0
+; ARM78-NEXT:    bx lr
+;
+; THUMB6-LABEL: scalar_i32_x_is_const_eq:
+; THUMB6:       @ %bb.0:
+; THUMB6-NEXT:    ldr r1, .LCPI18_0
+; THUMB6-NEXT:    lsrs r1, r0
+; THUMB6-NEXT:    movs r2, #1
+; THUMB6-NEXT:    ands r2, r1
+; THUMB6-NEXT:    rsbs r0, r2, #0
+; THUMB6-NEXT:    adcs r0, r2
+; THUMB6-NEXT:    bx lr
+; THUMB6-NEXT:    .p2align 2
+; THUMB6-NEXT:  @ %bb.1:
+; THUMB6-NEXT:  .LCPI18_0:
+; THUMB6-NEXT:    .long 2857740885 @ 0xaa55aa55
+;
+; THUMB78-LABEL: scalar_i32_x_is_const_eq:
+; THUMB78:       @ %bb.0:
+; THUMB78-NEXT:    movw r1, #43605
+; THUMB78-NEXT:    movt r1, #43605
+; THUMB78-NEXT:    lsr.w r0, r1, r0
+; THUMB78-NEXT:    movs r1, #1
+; THUMB78-NEXT:    bic.w r0, r1, r0
+; THUMB78-NEXT:    bx lr
+  %t0 = lshr i32 2857740885, %y
+  %t1 = and i32 %t0, 1
+  %res = icmp eq i32 %t1, 0
+  ret i1 %res
+}
+define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
+; ARM6-LABEL: scalar_i32_x_is_const2_eq:
+; ARM6:       @ %bb.0:
+; ARM6-NEXT:    ldr r2, .LCPI19_0
+; ARM6-NEXT:    mov r1, #1
+; ARM6-NEXT:    and r0, r2, r1, lsr r0
+; ARM6-NEXT:    clz r0, r0
+; ARM6-NEXT:    lsr r0, r0, #5
+; ARM6-NEXT:    bx lr
+; ARM6-NEXT:    .p2align 2
+; ARM6-NEXT:  @ %bb.1:
+; ARM6-NEXT:  .LCPI19_0:
+; ARM6-NEXT:    .long 2857740885 @ 0xaa55aa55
+;
+; ARM78-LABEL: scalar_i32_x_is_const2_eq:
+; ARM78:       @ %bb.0:
+; ARM78-NEXT:    movw r1, #43605
+; ARM78-NEXT:    mov r2, #1
+; ARM78-NEXT:    movt r1, #43605
+; ARM78-NEXT:    and r0, r1, r2, lsr r0
+; ARM78-NEXT:    clz r0, r0
+; ARM78-NEXT:    lsr r0, r0, #5
+; ARM78-NEXT:    bx lr
+;
+; THUMB6-LABEL: scalar_i32_x_is_const2_eq:
+; THUMB6:       @ %bb.0:
+; THUMB6-NEXT:    movs r1, #1
+; THUMB6-NEXT:    lsrs r1, r0
+; THUMB6-NEXT:    ldr r2, .LCPI19_0
+; THUMB6-NEXT:    ands r2, r1
+; THUMB6-NEXT:    rsbs r0, r2, #0
+; THUMB6-NEXT:    adcs r0, r2
+; THUMB6-NEXT:    bx lr
+; THUMB6-NEXT:    .p2align 2
+; THUMB6-NEXT:  @ %bb.1:
+; THUMB6-NEXT:  .LCPI19_0:
+; THUMB6-NEXT:    .long 2857740885 @ 0xaa55aa55
+;
+; THUMB78-LABEL: scalar_i32_x_is_const2_eq:
+; THUMB78:       @ %bb.0:
+; THUMB78-NEXT:    movs r1, #1
+; THUMB78-NEXT:    lsr.w r0, r1, r0
+; THUMB78-NEXT:    movw r1, #43605
+; THUMB78-NEXT:    movt r1, #43605
+; THUMB78-NEXT:    ands r0, r1
+; THUMB78-NEXT:    clz r0, r0
+; THUMB78-NEXT:    lsrs r0, r0, #5
+; THUMB78-NEXT:    bx lr
+  %t0 = lshr i32 1, %y
+  %t1 = and i32 %t0, 2857740885
+  %res = icmp eq i32 %t1, 0
+  ret i1 %res
+}
+
+;------------------------------------------------------------------------------;
 ; A few negative tests
 ;------------------------------------------------------------------------------;
 
@@ -1154,11 +1259,11 @@ define i1 @negative_scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 ; THUMB6-NEXT:    ands r2, r0
 ; THUMB6-NEXT:    sxtb r0, r2
 ; THUMB6-NEXT:    cmp r0, #0
-; THUMB6-NEXT:    blt .LBB18_2
+; THUMB6-NEXT:    blt .LBB20_2
 ; THUMB6-NEXT:  @ %bb.1:
 ; THUMB6-NEXT:    movs r0, #0
 ; THUMB6-NEXT:    bx lr
-; THUMB6-NEXT:  .LBB18_2:
+; THUMB6-NEXT:  .LBB20_2:
 ; THUMB6-NEXT:    movs r0, #1
 ; THUMB6-NEXT:    bx lr
 ;

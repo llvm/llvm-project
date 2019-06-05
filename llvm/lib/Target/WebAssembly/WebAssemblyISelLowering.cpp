@@ -1197,6 +1197,7 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
 SDValue
 WebAssemblyTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
                                                   SelectionDAG &DAG) const {
+  SDLoc DL(Op);
   // If sign extension operations are disabled, allow sext_inreg only if operand
   // is a vector extract. SIMD does not depend on sign extension operations, but
   // allowing sext_inreg in this context lets us have simple patterns to select
@@ -1204,8 +1205,31 @@ WebAssemblyTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
   // simpler in this file, but would necessitate large and brittle patterns to
   // undo the expansion and select extract_lane_s instructions.
   assert(!Subtarget->hasSignExt() && Subtarget->hasSIMD128());
-  if (Op.getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT)
-    return Op;
+  if (Op.getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+    const SDValue &Extract = Op.getOperand(0);
+    MVT VecT = Extract.getOperand(0).getSimpleValueType();
+    MVT ExtractedLaneT = static_cast<VTSDNode *>(Op.getOperand(1).getNode())
+                             ->getVT()
+                             .getSimpleVT();
+    MVT ExtractedVecT =
+        MVT::getVectorVT(ExtractedLaneT, 128 / ExtractedLaneT.getSizeInBits());
+    if (ExtractedVecT == VecT)
+      return Op;
+    // Bitcast vector to appropriate type to ensure ISel pattern coverage
+    const SDValue &Index = Extract.getOperand(1);
+    unsigned IndexVal =
+        static_cast<ConstantSDNode *>(Index.getNode())->getZExtValue();
+    unsigned Scale =
+        ExtractedVecT.getVectorNumElements() / VecT.getVectorNumElements();
+    assert(Scale > 1);
+    SDValue NewIndex =
+        DAG.getConstant(IndexVal * Scale, DL, Index.getValueType());
+    SDValue NewExtract = DAG.getNode(
+        ISD::EXTRACT_VECTOR_ELT, DL, Extract.getValueType(),
+        DAG.getBitcast(ExtractedVecT, Extract.getOperand(0)), NewIndex);
+    return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, Op.getValueType(),
+                       NewExtract, Op.getOperand(1));
+  }
   // Otherwise expand
   return SDValue();
 }

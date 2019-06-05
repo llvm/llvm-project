@@ -799,7 +799,11 @@ namespace llvm {
     /// This method returns the name of a target specific DAG node.
     const char *getTargetNodeName(unsigned Opcode) const override;
 
-    bool mergeStoresAfterLegalization() const override { return true; }
+    /// Do not merge vector stores after legalization because that may conflict
+    /// with x86-specific store splitting optimizations.
+    bool mergeStoresAfterLegalization(EVT MemVT) const override {
+      return !MemVT.isVector();
+    }
 
     bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
                           const SelectionDAG &DAG) const override;
