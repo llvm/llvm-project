@@ -414,6 +414,12 @@ void FunctionSignatureNode::outputPost(OutputStream &OS,
       Params->output(OS, Flags);
     else
       OS << "void";
+
+    if (IsVariadic) {
+      if (OS.back() != '(')
+        OS << ", ";
+      OS << "...";
+    }
     OS << ")";
   }
 

@@ -1153,10 +1153,7 @@ declare void @bar()
 define void @pr42118_i32(i32 %x) {
 ; X86-LABEL: pr42118_i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    negl %ecx
-; X86-NEXT:    andnl %eax, %ecx, %eax
+; X86-NEXT:    blsrl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    jne .LBB48_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    jmp bar # TAILCALL
@@ -1165,9 +1162,7 @@ define void @pr42118_i32(i32 %x) {
 ;
 ; X64-LABEL: pr42118_i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    negl %eax
-; X64-NEXT:    andnl %edi, %eax, %eax
+; X64-NEXT:    blsrl %edi, %eax
 ; X64-NEXT:    jne .LBB48_1
 ; X64-NEXT:  # %bb.2:
 ; X64-NEXT:    jmp bar # TAILCALL
@@ -1192,13 +1187,13 @@ define void @pr42118_i64(i64 %x) {
 ; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    negl %esi
-; X86-NEXT:    sbbl %ecx, %edx
-; X86-NEXT:    andnl %ecx, %edx, %ecx
-; X86-NEXT:    andnl %eax, %esi, %eax
-; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    addl $-1, %edx
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    adcl $-1, %esi
+; X86-NEXT:    andl %eax, %edx
+; X86-NEXT:    andl %ecx, %esi
+; X86-NEXT:    orl %edx, %esi
 ; X86-NEXT:    jne .LBB49_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    popl %esi
@@ -1212,9 +1207,7 @@ define void @pr42118_i64(i64 %x) {
 ;
 ; X64-LABEL: pr42118_i64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    negq %rax
-; X64-NEXT:    andnq %rdi, %rax, %rax
+; X64-NEXT:    blsrq %rdi, %rax
 ; X64-NEXT:    jne .LBB49_1
 ; X64-NEXT:  # %bb.2:
 ; X64-NEXT:    jmp bar # TAILCALL

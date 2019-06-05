@@ -462,7 +462,7 @@ lldb::SearchFilterSP AppleObjCRuntime::CreateExceptionSearchFilter() {
 
 ValueObjectSP AppleObjCRuntime::GetExceptionObjectForThread(
     ThreadSP thread_sp) {
-  auto cpp_runtime = m_process->GetCPPLanguageRuntime();
+  auto *cpp_runtime = m_process->GetLanguageRuntime(eLanguageTypeC_plus_plus);
   if (!cpp_runtime) return ValueObjectSP();
   auto cpp_exception = cpp_runtime->GetExceptionObjectForThread(thread_sp);
   if (!cpp_exception) return ValueObjectSP();

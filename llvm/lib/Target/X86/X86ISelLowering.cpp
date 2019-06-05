@@ -1283,6 +1283,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SCALAR_TO_VECTOR,   VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR,   VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS,     VT, Custom);
+      setOperationAction(ISD::STORE,              VT, Custom);
     }
 
     if (HasInt256)
@@ -21073,7 +21074,17 @@ static SDValue LowerStore(SDValue Op, const X86Subtarget &Subtarget,
   if (St->isTruncatingStore())
     return SDValue();
 
+  // If this is a 256-bit store of concatenated ops, we are better off splitting
+  // that store into two 128-bit stores. This avoids spurious use of 256-bit ops
+  // and each half can execute independently. Some cores would split the op into
+  // halves anyway, so the concat (vinsertf128) is purely an extra op.
   MVT StoreVT = StoredVal.getSimpleValueType();
+  if (StoreVT.is256BitVector()) {
+    if (StoredVal.getOpcode() != ISD::CONCAT_VECTORS || !StoredVal.hasOneUse())
+      return SDValue();
+    return split256BitStore(St, DAG);
+  }
+
   assert(StoreVT.isVector() && StoreVT.getSizeInBits() == 64 &&
          "Unexpected VT");
   if (DAG.getTargetLoweringInfo().getTypeAction(*DAG.getContext(), StoreVT) !=
@@ -37656,34 +37667,35 @@ static SDValue PromoteMaskArithmetic(SDNode *N, SelectionDAG &DAG,
 /// unnecessary moves from SSE to integer registers.
 static SDValue convertIntLogicToFPLogic(SDNode *N, SelectionDAG &DAG,
                                         const X86Subtarget &Subtarget) {
-  unsigned FPOpcode = ISD::DELETED_NODE;
-  if (N->getOpcode() == ISD::AND)
-    FPOpcode = X86ISD::FAND;
-  else if (N->getOpcode() == ISD::OR)
-    FPOpcode = X86ISD::FOR;
-  else if (N->getOpcode() == ISD::XOR)
-    FPOpcode = X86ISD::FXOR;
-
-  assert(FPOpcode != ISD::DELETED_NODE &&
-         "Unexpected input node for FP logic conversion");
-
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   SDLoc DL(N);
-  if (N0.getOpcode() == ISD::BITCAST && N1.getOpcode() == ISD::BITCAST &&
-      ((Subtarget.hasSSE1() && VT == MVT::i32) ||
-       (Subtarget.hasSSE2() && VT == MVT::i64))) {
-    SDValue N00 = N0.getOperand(0);
-    SDValue N10 = N1.getOperand(0);
-    EVT N00Type = N00.getValueType();
-    EVT N10Type = N10.getValueType();
-    if (N00Type.isFloatingPoint() && N10Type.isFloatingPoint()) {
-      SDValue FPLogic = DAG.getNode(FPOpcode, DL, N00Type, N00, N10);
-      return DAG.getBitcast(VT, FPLogic);
-    }
+
+  if (N0.getOpcode() != ISD::BITCAST || N1.getOpcode() != ISD::BITCAST)
+    return SDValue();
+
+  SDValue N00 = N0.getOperand(0);
+  SDValue N10 = N1.getOperand(0);
+  EVT N00Type = N00.getValueType();
+  EVT N10Type = N10.getValueType();
+
+  // Ensure that both types are the same and are legal scalar fp types.
+  if (N00Type != N10Type ||
+      !((Subtarget.hasSSE1() && N00Type == MVT::f32) ||
+        (Subtarget.hasSSE2() && N00Type == MVT::f64)))
+    return SDValue();
+
+  unsigned FPOpcode;
+  switch (N->getOpcode()) {
+  default: llvm_unreachable("Unexpected input node for FP logic conversion");
+  case ISD::AND: FPOpcode = X86ISD::FAND; break;
+  case ISD::OR:  FPOpcode = X86ISD::FOR;  break;
+  case ISD::XOR: FPOpcode = X86ISD::FXOR; break;
   }
-  return SDValue();
+
+  SDValue FPLogic = DAG.getNode(FPOpcode, DL, N00Type, N00, N10);
+  return DAG.getBitcast(VT, FPLogic);
 }
 
 /// If this is a zero/all-bits result that is bitwise-anded with a low bits
@@ -38122,8 +38134,8 @@ static SDValue combineLogicBlendIntoConditionalNegate(
     EVT VT, SDValue Mask, SDValue X, SDValue Y, const SDLoc &DL,
     SelectionDAG &DAG, const X86Subtarget &Subtarget) {
   EVT MaskVT = Mask.getValueType();
-  unsigned EltBits = MaskVT.getScalarSizeInBits();
-  assert(MaskVT.isInteger() && DAG.ComputeNumSignBits(Mask) == EltBits &&
+  assert(MaskVT.isInteger() &&
+         DAG.ComputeNumSignBits(Mask) == MaskVT.getScalarSizeInBits() &&
          "Mask must be zero/all-bits");
 
   if (X.getValueType() != MaskVT || Y.getValueType() != MaskVT)

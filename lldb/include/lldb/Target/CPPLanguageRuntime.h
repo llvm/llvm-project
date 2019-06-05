@@ -43,6 +43,11 @@ public:
     return lldb::eLanguageTypeC_plus_plus;
   }
 
+  static CPPLanguageRuntime *GetCPPLanguageRuntime(Process &process) {
+    return static_cast<CPPLanguageRuntime *>(
+        process.GetLanguageRuntime(lldb::eLanguageTypeC_plus_plus));
+  }
+
   virtual bool IsVTableName(const char *name) = 0;
 
   bool GetObjectDescription(Stream &str, ValueObject &object) override;

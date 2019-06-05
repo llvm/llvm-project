@@ -181,6 +181,8 @@ public:
 
   virtual bool IsVoidType(lldb::opaque_compiler_type_t type) = 0;
 
+  virtual bool CanPassInRegisters(const CompilerType &type) = 0;
+
   // TypeSystems can support more than one language
   virtual bool SupportsLanguage(lldb::LanguageType language) = 0;
 

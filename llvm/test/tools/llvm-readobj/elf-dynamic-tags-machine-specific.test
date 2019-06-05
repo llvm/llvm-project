@@ -132,28 +132,49 @@
 # GNU-MIPS-NEXT:   0x0000000000000000 (NULL)               0x0
 
 
-# Test that PPC64 machine-specific tags can be dumped.
+# Test that PPC machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=3 %S/Inputs/elf-dynamic-tags-machine-specific.yaml -o %t.ppc
 # RUN: llvm-readobj --dynamic-table %t.ppc | FileCheck %s --check-prefix=LLVM-PPC
 # RUN: llvm-readelf --dynamic-table %t.ppc | FileCheck %s --check-prefix=GNU-PPC
 
 # LLVM-PPC:      DynamicSection [ (4 entries)
-# LLVM-PPC-NEXT:   Tag                Type                 Name/Value
-# LLVM-PPC-NEXT:   0x0000000000000004 HASH                 0x1000
-# LLVM-PPC-NEXT:   0x0000000070000000 PPC64_GLINK          0x1000
-# LLVM-PPC-NEXT:   0x000000001234ABCD unknown              0x1
-# LLVM-PPC-NEXT:   0x0000000000000000 NULL                 0x0
+# LLVM-PPC-NEXT:   Tag        Type                 Name/Value
+# LLVM-PPC-NEXT:   0x70000000 PPC_GOT              0x200C0
+# LLVM-PPC-NEXT:   0x70000001 PPC_OPT              0x1
+# LLVM-PPC-NEXT:   0x1234ABCD unknown              0x1
+# LLVM-PPC-NEXT:   0x00000000 NULL                 0x0
 # LLVM-PPC-NEXT: ]
 
 # GNU-PPC:      Dynamic section at offset {{.*}} contains 4 entries:
-# GNU-PPC-NEXT:   Tag                Type                 Name/Value
-# GNU-PPC-NEXT:   0x0000000000000004 (HASH)               0x1000
-# GNU-PPC-NEXT:   0x0000000070000000 (PPC64_GLINK)        0x1000
-# GNU-PPC-NEXT:   0x000000001234abcd (unknown)            0x1
-# GNU-PPC-NEXT:   0x0000000000000000 (NULL)               0x0
+# GNU-PPC-NEXT:   Tag        Type                 Name/Value
+# GNU-PPC-NEXT:   0x70000000 (PPC_GOT)            0x200c0
+# GNU-PPC-NEXT:   0x70000001 (PPC_OPT)            0x1
+# GNU-PPC-NEXT:   0x1234abcd (unknown)            0x1
+# GNU-PPC-NEXT:   0x00000000 (NULL)               0x0
+
+
+# Test that PPC64 machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=4 %S/Inputs/elf-dynamic-tags-machine-specific.yaml -o %t.ppc64
+# RUN: llvm-readobj --dynamic-table %t.ppc64 | FileCheck %s --check-prefix=LLVM-PPC64
+# RUN: llvm-readelf --dynamic-table %t.ppc64 | FileCheck %s --check-prefix=GNU-PPC64
+
+# LLVM-PPC64:      DynamicSection [ (4 entries)
+# LLVM-PPC64-NEXT:   Tag                Type                 Name/Value
+# LLVM-PPC64-NEXT:   0x0000000000000004 HASH                 0x1000
+# LLVM-PPC64-NEXT:   0x0000000070000000 PPC64_GLINK          0x1000
+# LLVM-PPC64-NEXT:   0x000000001234ABCD unknown              0x1
+# LLVM-PPC64-NEXT:   0x0000000000000000 NULL                 0x0
+# LLVM-PPC64-NEXT: ]
+
+# GNU-PPC64:      Dynamic section at offset {{.*}} contains 4 entries:
+# GNU-PPC64-NEXT:   Tag                Type                 Name/Value
+# GNU-PPC64-NEXT:   0x0000000000000004 (HASH)               0x1000
+# GNU-PPC64-NEXT:   0x0000000070000000 (PPC64_GLINK)        0x1000
+# GNU-PPC64-NEXT:   0x000000001234abcd (unknown)            0x1
+# GNU-PPC64-NEXT:   0x0000000000000000 (NULL)               0x0
 
 # Test that AARCH64 machine-specific tags can be dumped.
-# RUN: yaml2obj --docnum=4 %S/Inputs/elf-dynamic-tags-machine-specific.yaml -o %t.aarch64
+# RUN: yaml2obj --docnum=5 %S/Inputs/elf-dynamic-tags-machine-specific.yaml -o %t.aarch64
 # RUN: llvm-readobj --dynamic-table %t.aarch64 | FileCheck %s --check-prefix=LLVM-AARCH64
 # RUN: llvm-readelf --dynamic-table %t.aarch64 | FileCheck %s --check-prefix=GNU-AARCH64
 

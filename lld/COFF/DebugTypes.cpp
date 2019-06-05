@@ -198,9 +198,9 @@ TypeServerSource::findFromFile(const ObjFile *DependentFile) {
   pdb::InfoStream &Info = cantFail(PDBFile.getPDBInfoStream());
 
   // Just because a file with a matching name was found doesn't mean it can be
-  // used. The GUID and Age must match between the PDB header and the OBJ
+  // used. The GUID must match between the PDB header and the OBJ
   // TypeServer2 record. The 'Age' is used by MSVC incremental compilation.
-  if (Info.getGuid() != TS.getGuid() || Info.getAge() != TS.getAge())
+  if (Info.getGuid() != TS.getGuid())
     return createFileError(
         TS.Name,
         make_error<pdb::PDBError>(pdb::pdb_error_code::signature_out_of_date));

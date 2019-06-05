@@ -288,6 +288,35 @@ static size_t getHashSize() {
   }
 }
 
+// This class represents a linker-synthesized .note.gnu.property section.
+//
+// In x86, object files may contain feature flags indicating the features that
+// they are using. The flags are stored in a .note.gnu.property section.
+//
+// lld reads the sections from input files and merges them by computing AND of
+// the flags. The result is written as a new .note.gnu.property section.
+//
+// If the flag is zero (which indicates that the intersection of the feature
+// sets is empty, or some input files didn't have .note.gnu.property sections),
+// we don't create this section.
+GnuPropertySection::GnuPropertySection()
+    : SyntheticSection(llvm::ELF::SHF_ALLOC, llvm::ELF::SHT_NOTE, 4,
+                       ".note.gnu.property") {}
+
+void GnuPropertySection::writeTo(uint8_t *Buf) {
+  write32(Buf, 4);                                   // Name size
+  write32(Buf + 4, Config->Is64 ? 16 : 12);          // Content size
+  write32(Buf + 8, NT_GNU_PROPERTY_TYPE_0);          // Type
+  memcpy(Buf + 12, "GNU", 4);                        // Name string
+  write32(Buf + 16, GNU_PROPERTY_X86_FEATURE_1_AND); // Feature type
+  write32(Buf + 20, 4);                              // Feature size
+  write32(Buf + 24, Config->AndFeatures);            // Feature flags
+  if (Config->Is64)
+    write32(Buf + 28, 0); // Padding
+}
+
+size_t GnuPropertySection::getSize() const { return Config->Is64 ? 32 : 28; }
+
 BuildIdSection::BuildIdSection()
     : SyntheticSection(SHF_ALLOC, SHT_NOTE, 4, ".note.gnu.build-id"),
       HashSize(getHashSize()) {}

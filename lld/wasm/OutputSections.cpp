@@ -151,7 +151,8 @@ void DataSection::finalizeContents() {
 
     Segment->SectionOffset = BodySize;
     BodySize += Segment->Header.size() + Segment->Size;
-    log("Data segment: size=" + Twine(Segment->Size));
+    log("Data segment: size=" + Twine(Segment->Size) + ", startVA=" +
+        Twine::utohexstr(Segment->StartVA) + ", name=" + Segment->Name);
 
     for (InputSegment *InputSeg : Segment->InputSegments)
       InputSeg->OutputOffset = Segment->SectionOffset + Segment->Header.size() +
