@@ -6121,56 +6121,45 @@ ExpectedStmt ASTNodeImporter::VisitObjCAutoreleasePoolStmt(
                                                                *ToSubStmtOrErr);
 }
 
-Stmt *ASTNodeImporter::VisitCilkSpawnStmt(CilkSpawnStmt *S) {
-  SourceLocation SpawnLoc = Importer.Import(S->getSpawnLoc());
-  Stmt *Child = Importer.Import(S->getSpawnedStmt());
-  if (!Child && S->getSpawnedStmt())
-    return nullptr;
-  return new (Importer.getToContext()) CilkSpawnStmt(SpawnLoc, Child);
+ExpectedStmt ASTNodeImporter::VisitCilkSpawnStmt(CilkSpawnStmt *S) {
+  ExpectedSLoc ToSpawnLocOrErr = import(S->getSpawnLoc());
+  if (!ToSpawnLocOrErr)
+    return ToSpawnLocOrErr.takeError();
+  ExpectedStmt ToChildOrErr = import(S->getSpawnedStmt());
+  if (!ToChildOrErr)
+    return ToChildOrErr.takeError();
+  return new (Importer.getToContext()) CilkSpawnStmt(*ToSpawnLocOrErr,
+                                                     *ToChildOrErr);
 }
 
-Stmt *ASTNodeImporter::VisitCilkSyncStmt(CilkSyncStmt *S) {
-  SourceLocation SyncLoc = Importer.Import(S->getSyncLoc());
-  return new (Importer.getToContext()) CilkSyncStmt(SyncLoc);
+ExpectedStmt ASTNodeImporter::VisitCilkSyncStmt(CilkSyncStmt *S) {
+  ExpectedSLoc ToSyncLocOrErr = import(S->getSyncLoc());
+  if (!ToSyncLocOrErr)
+    return ToSyncLocOrErr.takeError();
+  return new (Importer.getToContext()) CilkSyncStmt(*ToSyncLocOrErr);
 }
 
-Stmt *ASTNodeImporter::VisitCilkForStmt(CilkForStmt *S) {
-  Stmt *ToInit = Importer.Import(S->getInit());
-  if (!ToInit && S->getInit())
-    return nullptr;
-  Expr *ToCondition = Importer.Import(S->getCond());
-  if (!ToCondition && S->getCond())
-    return nullptr;
-  // VarDecl *ToConditionVariable = nullptr;
-  // if (VarDecl *FromConditionVariable = S->getConditionVariable()) {
-  //   ToConditionVariable =
-  //     dyn_cast_or_null<VarDecl>(Importer.Import(FromConditionVariable));
-  //   if (!ToConditionVariable)
-  //     return nullptr;
-  // }
-  VarDecl *ToLoopVariable = nullptr;
-  if (VarDecl *FromLoopVariable = S->getLoopVariable()) {
-    ToLoopVariable =
-      dyn_cast_or_null<VarDecl>(Importer.Import(FromLoopVariable));
-    if (!ToLoopVariable)
-      return nullptr;
-  }
-  Expr *ToInc = Importer.Import(S->getInc());
-  if (!ToInc && S->getInc())
-    return nullptr;
-  Stmt *ToBody = Importer.Import(S->getBody());
-  if (!ToBody && S->getBody())
-    return nullptr;
-  SourceLocation ToForLoc = Importer.Import(S->getCilkForLoc());
-  SourceLocation ToLParenLoc = Importer.Import(S->getLParenLoc());
-  SourceLocation ToRParenLoc = Importer.Import(S->getRParenLoc());
-  return new (Importer.getToContext()) CilkForStmt(Importer.getToContext(),
-                                                   ToInit,
-                                                   ToCondition,
-                                                   // ToConditionVariable,
-                                                   ToInc, ToLoopVariable, ToBody,
-                                                   ToForLoc, ToLParenLoc,
-                                                   ToRParenLoc);
+ExpectedStmt ASTNodeImporter::VisitCilkForStmt(CilkForStmt *S) {
+  auto Imp = importSeq(
+      S->getInit(), S->getCond(), /*S->getConditionVariable(),*/ S->getInc(),
+      S->getLoopVariable(), S->getBody(), S->getCilkForLoc(), S->getLParenLoc(),
+      S->getRParenLoc());
+  if (!Imp)
+    return Imp.takeError();
+
+  Stmt *ToInit;
+  Expr *ToCond, *ToInc;
+  // VarDecl *ToConditionVariable;
+  VarDecl *ToLoopVariable;
+  Stmt *ToBody;
+  SourceLocation ToCilkForLoc, ToLParenLoc, ToRParenLoc;
+  std::tie(
+      ToInit, ToCond, /*ToConditionVariable,*/ ToInc, ToLoopVariable, ToBody,
+      ToCilkForLoc, ToLParenLoc, ToRParenLoc) = *Imp;
+
+  return new (Importer.getToContext()) CilkForStmt(
+      Importer.getToContext(), ToInit, ToCond, /*ToConditionVariable,*/ ToInc,
+      ToLoopVariable, ToBody, ToCilkForLoc, ToLParenLoc, ToRParenLoc);
 }
 
 //----------------------------------------------------------------------------

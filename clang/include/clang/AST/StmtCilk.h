@@ -46,9 +46,9 @@ public:
   SourceLocation getSpawnLoc() const { return SpawnLoc; }
   void setSpawnLoc(SourceLocation L) { SpawnLoc = L; }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return SpawnLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY {
-    return SpawnedStmt->getLocEnd();
+  SourceLocation getBeginLoc() const LLVM_READONLY { return SpawnLoc; }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return SpawnedStmt->getEndLoc();
   }
 
   static bool classof(const Stmt *T) {
@@ -67,16 +67,18 @@ class CilkSyncStmt : public Stmt {
   SourceLocation SyncLoc;
 
 public:
-  CilkSyncStmt(SourceLocation SL) : Stmt(CilkSyncStmtClass), SyncLoc(SL) {}
+  CilkSyncStmt(SourceLocation SL) : Stmt(CilkSyncStmtClass) {
+    setSyncLoc(SL);
+  }
 
-  // \brief Build an empty _Cilk_sync statement.
+  // Build an empty _Cilk_sync statement.
   explicit CilkSyncStmt(EmptyShell Empty) : Stmt(CilkSyncStmtClass, Empty) { }
 
   SourceLocation getSyncLoc() const { return SyncLoc; }
   void setSyncLoc(SourceLocation L) { SyncLoc = L; }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return SyncLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY { return SyncLoc; }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return getSyncLoc(); }
+  SourceLocation getEndLoc() const LLVM_READONLY { return getSyncLoc(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CilkSyncStmtClass;
@@ -150,9 +152,9 @@ public:
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return CilkForLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY {
-    return SubExprs[BODY]->getLocEnd();
+  SourceLocation getBeginLoc() const LLVM_READONLY { return getCilkForLoc(); }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return getBody()->getEndLoc();
   }
 
   static bool classof(const Stmt *T) {

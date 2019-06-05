@@ -59,7 +59,7 @@ StmtResult Parser::ParseCilkForStatement(SourceLocation *TrailingElseLoc) {
   }
 
   bool C99orCXXorObjC = getLangOpts().C99 || getLangOpts().CPlusPlus ||
-    getLangOpts().ObjC1;
+    getLangOpts().ObjC;
 
   // A _Cilk_for statement is a block.  Start the loop scope.
   //

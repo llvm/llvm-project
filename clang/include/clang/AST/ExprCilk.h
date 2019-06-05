@@ -47,11 +47,11 @@ public:
   SourceLocation getSpawnLoc() const { return SpawnLoc; }
   void setSpawnLoc(SourceLocation L) { SpawnLoc = L; }
 
-  SourceLocation getLocStart() const LLVM_READONLY {
-    return SpawnedExpr->getLocStart();
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return SpawnedExpr->getBeginLoc();
   }
-  SourceLocation getLocEnd() const LLVM_READONLY {
-    return SpawnedExpr->getLocEnd();
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return SpawnedExpr->getEndLoc();
   }
   SourceLocation getExprLoc() const LLVM_READONLY {
     return cast<Expr>(SpawnedExpr)->getExprLoc();

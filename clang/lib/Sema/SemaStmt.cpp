@@ -3011,7 +3011,7 @@ static Expr *GetCilkForStride(Sema &S, llvm::SmallPtrSetImpl<VarDecl *> &Decls,
 
 static void CheckCilkForInit(Sema &S, Stmt *First) {
   if (!isa<DeclStmt>(First))
-    S.Diag(First->getLocStart(), diag::err_cilk_for_initializer_expected_decl);
+    S.Diag(First->getBeginLoc(), diag::err_cilk_for_initializer_expected_decl);
 }
 
 /// Rewrite the loop control of simple _Cilk_for loops into a form that LLVM
@@ -3059,7 +3059,7 @@ StmtResult Sema::HandleSimpleCilkForStmt(SourceLocation CilkForLoc,
   // Get the loop variable initialization.
   Expr *LoopVarInit = LoopVar->getInit();
   if (!LoopVarInit) {
-    Diag(First->getLocStart(),
+    Diag(First->getBeginLoc(),
          diag::err_cilk_for_control_variable_not_initialized);
     return StmtEmpty();
   }
@@ -3299,7 +3299,7 @@ StmtResult Sema::LiftCilkForLoopLimit(SourceLocation CilkForLoc,
   // Create a new VarDecl that stores the result of the lifted
   // expression.
   Scope *S = getCurScope();
-  SourceLocation EndLoc = ToExtract->getLocStart();
+  SourceLocation EndLoc = ToExtract->getBeginLoc();
   QualType EndType = LoopVar->getType();
   QualType EndInitType = ToExtract->getType();
   // Hijacking this method for handling range loops to build the
@@ -3340,7 +3340,7 @@ StmtResult Sema::LiftCilkForLoopLimit(SourceLocation CilkForLoc,
 // Borrowed from SemaDeclCXX.cpp and modified.
 static void SearchForReturnInStmt(Sema &Self, Stmt *S) {
   if (isa<ReturnStmt>(S))
-    Self.Diag(S->getLocStart(),
+    Self.Diag(S->getBeginLoc(),
               diag::err_cilk_for_cannot_return);
 
   for (Stmt *SubStmt : S->children()) {

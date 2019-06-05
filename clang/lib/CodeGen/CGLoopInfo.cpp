@@ -726,6 +726,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
         break;
       case LoopHintAttr::PipelineInitiationInterval:
         setPipelineInitiationInterval(ValueInt);
+        break;
       case LoopHintAttr::TapirGrainsize:
         setTapirGrainsize(ValueInt);
         break;

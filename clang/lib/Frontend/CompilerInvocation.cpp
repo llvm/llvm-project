@@ -2573,7 +2573,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.Cilk = Args.hasArg(OPT_fcilkplus);
 
-  if (Opts.Cilk && (Opts.ObjC1 || Opts.ObjC2))
+  if (Opts.Cilk && Opts.ObjC)
     Diags.Report(diag::err_drv_cilk_objc);
 
   if (Args.hasArg(OPT_fgnu89_inline)) {

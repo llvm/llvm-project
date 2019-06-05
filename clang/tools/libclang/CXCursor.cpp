@@ -248,7 +248,8 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::CoroutineBodyStmtClass:
   case Stmt::CoreturnStmtClass:
     K = CXCursor_UnexposedStmt;
-    
+    break;
+
   case Stmt::CilkSpawnStmtClass:
     K = CXCursor_CilkSpawnStmt;
     break;
