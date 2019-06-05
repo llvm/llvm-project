@@ -124,9 +124,9 @@ bool DRFScopedNoAliasImpl::populateTaskScopeNoAliasInBlock(
       PtrArgs.push_back(CXI->getPointerOperand());
     else if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(&I))
       PtrArgs.push_back(RMWI->getPointerOperand());
-    else if (ImmutableCallSite ICS = ImmutableCallSite(&I)) {
+    else if (const CallBase *ICS = dyn_cast<CallBase>(&I)) {
       // We don't need to worry about callsites that don't access memory.
-      if (ICS.doesNotAccessMemory())
+      if (ICS->doesNotAccessMemory())
         continue;
 
       IsFuncCall = true;
@@ -135,7 +135,7 @@ bool DRFScopedNoAliasImpl::populateTaskScopeNoAliasInBlock(
           MRB == FMRB_OnlyReadsArgumentPointees)
         IsArgMemOnlyCall = true;
 
-      for (Value *Arg : ICS.args()) {
+      for (Value *Arg : ICS->args()) {
         // We need to check the underlying objects of all arguments, not just
         // the pointer arguments, because we might be passing pointers as
         // integers, etc.

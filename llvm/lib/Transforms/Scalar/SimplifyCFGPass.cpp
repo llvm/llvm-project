@@ -164,7 +164,7 @@ static bool removeUselessSyncs(Function &F) {
         for (pred_iterator PI = pred_begin(PBB), PE = pred_end(PBB);
              PI != PE; ++PI) {
           BasicBlock *Pred = *PI;
-          TerminatorInst *PT = Pred->getTerminator();
+          Instruction *PT = Pred->getTerminator();
           // Stop the traversal at the entry block of a detached CFG.
           if (DetachInst *DI = dyn_cast<DetachInst>(PT)) {
             if (DI->getDetached() == PBB)

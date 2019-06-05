@@ -17,7 +17,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/TypeBuilder.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Transforms/Tapir/Outline.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -371,15 +370,15 @@ static Value *GetOrCreateWorkerCount(Function &F) {
 
 /// Lower a call to get the grainsize of this Tapir loop.
 Value *llvm::OpenMPABI::lowerGrainsizeCall(CallInst *GrainsizeCall) {
+  LLVMContext &Ctx = M.getContext();
   Value *Limit = GrainsizeCall->getArgOperand(0);
-  Module *M = GrainsizeCall->getModule();
   IRBuilder<> Builder(GrainsizeCall);
 
   Value *Workers = GetOrCreateWorkerCount(*GrainsizeCall->getFunction());
   // num_threads returns 0 if not in parallel region, so need to add 1 to avoid
   // dividing by zero later in the case of fast-openmp
   // `nworkers += nworkers == 0`
-  Type *Int32Ty = IntegerType::get(M->getContext(), 32);
+  Type *Int32Ty = IntegerType::get(Ctx, 32);
   Value *EQCmp = Builder.CreateICmpEQ(Workers, ConstantInt::get(Int32Ty, 0));
   Value *IntEQCmp = Builder.CreateIntCast(EQCmp, Int32Ty, false);
   Value *PosWorkers = Builder.CreateAdd(Workers, IntEQCmp, "nworkers");
@@ -415,87 +414,7 @@ void llvm::OpenMPABI::lowerSync(SyncInst &SI) {
   ReplaceInstWithInst(&SI, PostSync);
 }
 
-
-typedef struct shar {
-    int **pth_counter;
-    int *pcounter;
-    int *pj;
-} *pshareds;
-
-namespace llvm {
-template<bool xcompile> class TypeBuilder<struct shar, xcompile> {
-public:
-  static StructType *get(LLVMContext &Context) {
-    // If you cache this result, be sure to cache it separately
-    // for each LLVMContext.
-    return StructType::get(Context, ArrayRef<Type*>({
-      TypeBuilder<int**, xcompile>::get(Context),
-      TypeBuilder<int*, xcompile>::get(Context),
-      TypeBuilder<int*, xcompile>::get(Context)}));
-  }
-  // You may find this a convenient place to put some constants
-  // to help with getelementptr.  They don't have any effect on
-  // the operation of TypeBuilder.
-  enum Fields {
-    pth_counter,
-    pcounter,
-    pj
-  };
-};
-}
-
-typedef struct task {
-    pshareds shareds;
-    int(* routine)(int,void*);
-    int part_id;
-// privates:
-    unsigned long long lb; // library always uses ULONG
-    unsigned long long ub;
-    int st;
-    int last;
-    int i;
-    int j;
-    int th;
-} *ptask, kmp_task_t;
-
-namespace llvm {
-template<bool xcompile> class TypeBuilder<struct task, xcompile> {
-public:
-  static StructType *get(LLVMContext &Context) {
-    // If you cache this result, be sure to cache it separately
-    // for each LLVMContext.
-    return StructType::get(Context, ArrayRef<Type*>({
-      TypeBuilder<pshareds, xcompile>::get(Context),
-      TypeBuilder<int(*)(int,void*), xcompile>::get(Context),
-      TypeBuilder<int, xcompile>::get(Context),
-      TypeBuilder<unsigned long long, xcompile>::get(Context),
-      TypeBuilder<unsigned long long, xcompile>::get(Context),
-      TypeBuilder<int, xcompile>::get(Context),
-      TypeBuilder<int, xcompile>::get(Context),
-      TypeBuilder<int, xcompile>::get(Context),
-      TypeBuilder<int, xcompile>::get(Context),
-      TypeBuilder<int, xcompile>::get(Context)}));
-  }
-  // You may find this a convenient place to put some constants
-  // to help with getelementptr.  They don't have any effect on
-  // the operation of TypeBuilder.
-  enum Fields {
-    shareds,
-    routine,
-    part_id,
-    lb,
-    ub,
-    st,
-    last,
-    i,
-    j,
-    th,
-  };
-};
-}
-
-typedef llvm::TypeBuilder<ptask, false> ptask_builder;
-typedef llvm::TypeBuilder<pshareds, false> pshareds_builder;
+OpenMPABI::OpenMPABI(Module &M) : TapirTarget(M) {}
 
 Function* formatFunctionToTask(Function* extracted, Instruction* CallSite) {
   // TODO: Fix this function to support call sites that are invokes instead of

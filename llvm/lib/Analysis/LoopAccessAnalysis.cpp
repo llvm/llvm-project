@@ -1852,8 +1852,7 @@ void LoopAccessInfo::analyzeLoop(AliasAnalysis *AA, LoopInfo *LI,
             TLI->isFunctionVectorizable(Call->getCalledFunction()->getName()))
           continue;
 
-        // TODO: Determine if we should do something other than ignore Tapir
-        // instructions here.
+        // Ignore Tapir instructions.
         if (isa<DetachInst>(&I) || isa<ReattachInst>(&I) || isa<SyncInst>(&I))
           continue;
 

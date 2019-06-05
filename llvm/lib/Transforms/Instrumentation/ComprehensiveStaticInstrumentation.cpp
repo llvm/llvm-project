@@ -849,7 +849,7 @@ void CSIImpl::instrumentBasicBlock(BasicBlock &BB) {
   CsiBBProperty Prop;
   Prop.setIsLandingPad(BB.isLandingPad());
   Prop.setIsEHPad(BB.isEHPad());
-  TerminatorInst *TI = BB.getTerminator();
+  Instruction *TI = BB.getTerminator();
   Value *PropVal = Prop.getValue(IRB);
   insertHookCall(&*IRB.GetInsertPoint(), CsiBBEntry, {CsiId, PropVal});
   IRB.SetInsertPoint(TI);

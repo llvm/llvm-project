@@ -39,7 +39,7 @@ enum OpenMPSchedType {
 
 class OpenMPABI : public TapirTarget {
 public:
-  OpenMPABI(Module &M) : TapirTarget(M) {}
+  OpenMPABI(Module &M);
   Value *lowerGrainsizeCall(CallInst *GrainsizeCall) override final;
   void lowerSync(SyncInst &inst) override final;
 

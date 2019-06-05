@@ -263,6 +263,7 @@ static bool isGuaranteedToExecuteInTask(const Instruction &Inst,
 /// once.
 bool SimpleLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
                                                  const DominatorTree *DT,
+                                                 const TaskInfo *TI,
                                                  const Loop *CurLoop) const {
   // If the instruction is in the header block for the loop (which is very
   // common), it is always guaranteed to dominate the exit blocks.  Since this
@@ -305,11 +306,12 @@ bool SimpleLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
 
   // If there is a path from header to exit or latch that doesn't lead to our
   // instruction's block, return false.
-  return allLoopPathsLeadToBlock(CurLoop, Inst.getParent(), DT);
+  return allLoopPathsLeadToBlock(CurLoop, RepInst->getParent(), DT);
 }
 
 bool ICFLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
                                               const DominatorTree *DT,
+                                              const TaskInfo *TI,
                                               const Loop *CurLoop) const {
   if (ICF.isDominatedByICFIFromSameBlock(&Inst))
     return false;
@@ -342,7 +344,7 @@ bool ICFLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
   if (!InstGuaranteedToExecuteInSubtask)
     return false;
 
-  return allLoopPathsLeadToBlock(CurLoop, Inst.getParent(), DT);
+  return allLoopPathsLeadToBlock(CurLoop, RepInst->getParent(), DT);
 }
 
 bool ICFLoopSafetyInfo::doesNotWriteMemoryBefore(const BasicBlock *BB,
@@ -384,6 +386,7 @@ namespace {
       AU.setPreservesAll();
       AU.addRequired<DominatorTreeWrapperPass>();
       AU.addRequired<LoopInfoWrapperPass>();
+      AU.addRequired<TaskInfoWrapperPass>();
     }
     bool runOnFunction(Function &F) override;
   };
@@ -394,6 +397,7 @@ INITIALIZE_PASS_BEGIN(MustExecutePrinter, "print-mustexecute",
                       "Instructions which execute on loop entry", false, true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TaskInfoWrapperPass)
 INITIALIZE_PASS_END(MustExecutePrinter, "print-mustexecute",
                     "Instructions which execute on loop entry", false, true)
 
@@ -401,13 +405,14 @@ FunctionPass *llvm::createMustExecutePrinter() {
   return new MustExecutePrinter();
 }
 
-static bool isMustExecuteIn(const Instruction &I, Loop *L, DominatorTree *DT) {
+static bool isMustExecuteIn(const Instruction &I, Loop *L, DominatorTree *DT,
+                            TaskInfo *TI) {
   // TODO: merge these two routines.  For the moment, we display the best
   // result obtained by *either* implementation.  This is a bit unfair since no
   // caller actually gets the full power at the moment.
   SimpleLoopSafetyInfo LSI;
   LSI.computeLoopSafetyInfo(L);
-  return LSI.isGuaranteedToExecute(I, DT, L) ||
+  return LSI.isGuaranteedToExecute(I, DT, TI, L) ||
     isGuaranteedToExecuteForEveryIteration(&I, L);
 }
 
@@ -419,11 +424,11 @@ class MustExecuteAnnotatedWriter : public AssemblyAnnotationWriter {
 
 public:
   MustExecuteAnnotatedWriter(const Function &F,
-                             DominatorTree &DT, LoopInfo &LI) {
+                             DominatorTree &DT, LoopInfo &LI, TaskInfo &TI) {
     for (auto &I: instructions(F)) {
       Loop *L = LI.getLoopFor(I.getParent());
       while (L) {
-        if (isMustExecuteIn(I, L, &DT)) {
+        if (isMustExecuteIn(I, L, &DT, &TI)) {
           MustExec[&I].push_back(L);
         }
         L = L->getParentLoop();
@@ -431,12 +436,12 @@ public:
     }
   }
   MustExecuteAnnotatedWriter(const Module &M,
-                             DominatorTree &DT, LoopInfo &LI) {
+                             DominatorTree &DT, LoopInfo &LI, TaskInfo &TI) {
     for (auto &F : M)
     for (auto &I: instructions(F)) {
       Loop *L = LI.getLoopFor(I.getParent());
       while (L) {
-        if (isMustExecuteIn(I, L, &DT)) {
+        if (isMustExecuteIn(I, L, &DT, &TI)) {
           MustExec[&I].push_back(L);
         }
         L = L->getParentLoop();
@@ -471,8 +476,9 @@ public:
 bool MustExecutePrinter::runOnFunction(Function &F) {
   auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  auto &TI = getAnalysis<TaskInfoWrapperPass>().getTaskInfo();
 
-  MustExecuteAnnotatedWriter Writer(F, DT, LI);
+  MustExecuteAnnotatedWriter Writer(F, DT, LI, TI);
   F.print(dbgs(), &Writer);
 
   return false;

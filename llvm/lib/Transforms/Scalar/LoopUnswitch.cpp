@@ -185,6 +185,7 @@ namespace {
     DominatorTree *DT = nullptr;
     MemorySSA *MSSA = nullptr;
     std::unique_ptr<MemorySSAUpdater> MSSAU;
+    TaskInfo *TaskI = nullptr;
     BasicBlock *loopHeader = nullptr;
     BasicBlock *loopPreheader = nullptr;
 
@@ -529,8 +530,7 @@ bool LoopUnswitch::runOnLoop(Loop *L, LPPassManager &LPM_Ref) {
     MSSAU = make_unique<MemorySSAUpdater>(MSSA);
     assert(DT && "Cannot update MemorySSA without a valid DomTree.");
   }
-  auto *TIWP = getAnalysisIfAvailable<TaskInfoWrapperPass>();
-  auto *TI = TIWP ? &TIWP->getTaskInfo() : nullptr;
+  TaskI = &getAnalysis<TaskInfoWrapperPass>().getTaskInfo();
   currentLoop = L;
   Function *F = currentLoop->getHeader()->getParent();
 
@@ -554,10 +554,10 @@ bool LoopUnswitch::runOnLoop(Loop *L, LPPassManager &LPM_Ref) {
     MSSA->verifyMemorySSA();
 
   // Update TaskInfo manually using the updated DT.
-  if (Changed && TI)
+  if (Changed && TaskI)
     // FIXME: Recalculating TaskInfo for the whole function is wasteful.
     // Optimize this routine in the future.
-    TI->recalculate(*F, *DT);
+    TaskI->recalculate(*F, *DT);
   return Changed;
 }
 
@@ -728,7 +728,7 @@ bool LoopUnswitch::processCurrentLoop() {
     // This is a workaround for the discrepancy between LLVM IR and MSan
     // semantics. See PR28054 for more details.
     if (SanitizeMemory &&
-        !SafetyInfo.isGuaranteedToExecute(*TI, DT, currentLoop))
+        !SafetyInfo.isGuaranteedToExecute(*TI, DT, TaskI, currentLoop))
       continue;
 
     if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {

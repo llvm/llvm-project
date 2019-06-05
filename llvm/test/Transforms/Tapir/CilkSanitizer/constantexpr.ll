@@ -563,7 +563,7 @@ attributes #7 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="fals
 !52 = !DIDerivedType(tag: DW_TAG_member, name: "icase", scope: !49, file: !50, line: 411, baseType: !53, flags: DIFlagPublic | DIFlagStaticMember, extraData: i32 1)
 !53 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !54)
 !54 = !DIDerivedType(tag: DW_TAG_typedef, name: "flag_type", file: !50, line: 403, baseType: !55)
-!55 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "syntax_option_type", scope: !57, file: !56, line: 81, baseType: !58, size: 32, flags: DIFlagFixedEnum, elements: !59, identifier: "_ZTSNSt15regex_constants18syntax_option_typeE")
+!55 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "syntax_option_type", scope: !57, file: !56, line: 81, baseType: !58, size: 32, elements: !59, identifier: "_ZTSNSt15regex_constants18syntax_option_typeE")
 !56 = !DIFile(filename: "/usr/lib/gcc/x86_64-redhat-linux/7/../../../../include/c++/7/bits/regex_constants.h", directory: "/home/gridsan/tschardl/graphtutorial")
 !57 = !DINamespace(name: "regex_constants", scope: !2)
 !58 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
@@ -1404,7 +1404,7 @@ attributes #7 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="fals
 !893 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "_State_base", scope: !361, file: !360, line: 73, size: 384, flags: DIFlagTypePassByValue, elements: !894, identifier: "_ZTSNSt8__detail11_State_baseE")
 !894 = !{!895, !911, !912, !1085, !1089}
 !895 = !DIDerivedType(tag: DW_TAG_member, name: "_M_opcode", scope: !893, file: !360, line: 76, baseType: !896, size: 32, flags: DIFlagProtected)
-!896 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "_Opcode", scope: !361, file: !360, line: 56, baseType: !11, size: 32, flags: DIFlagFixedEnum, elements: !897, identifier: "_ZTSNSt8__detail7_OpcodeE")
+!896 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "_Opcode", scope: !361, file: !360, line: 56, baseType: !11, size: 32, elements: !897, identifier: "_ZTSNSt8__detail7_OpcodeE")
 !897 = !{!898, !899, !900, !901, !902, !903, !904, !905, !906, !907, !908, !909, !910}
 !898 = !DIEnumerator(name: "_S_opcode_unknown", value: 0)
 !899 = !DIEnumerator(name: "_S_opcode_alternative", value: 1)
@@ -4236,7 +4236,7 @@ attributes #7 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="fals
 !3725 = !DITemplateTypeParameter(name: "_ResultsVec", type: !1899)
 !3726 = !DIDerivedType(tag: DW_TAG_member, name: "_M_flags", scope: !1895, file: !1894, line: 248, baseType: !3727, size: 32, offset: 1088, flags: DIFlagPublic)
 !3727 = !DIDerivedType(tag: DW_TAG_typedef, name: "_FlagT", file: !1894, line: 64, baseType: !3728)
-!3728 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "match_flag_type", scope: !57, file: !56, line: 255, baseType: !58, size: 32, flags: DIFlagFixedEnum, elements: !59, identifier: "_ZTSNSt15regex_constants15match_flag_typeE")
+!3728 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "match_flag_type", scope: !57, file: !56, line: 255, baseType: !58, size: 32, elements: !59, identifier: "_ZTSNSt15regex_constants15match_flag_typeE")
 !3729 = !DIDerivedType(tag: DW_TAG_member, name: "_M_has_sol", scope: !1895, file: !1894, line: 250, baseType: !13, size: 8, offset: 1120, flags: DIFlagPublic)
 !3730 = !DISubprogram(name: "_Executor", scope: !1895, file: !1894, line: 69, type: !3731, isLocal: false, isDefinition: false, scopeLine: 69, flags: DIFlagPublic | DIFlagPrototyped, isOptimized: true)
 !3731 = !DISubroutineType(types: !3732)
@@ -4250,7 +4250,7 @@ attributes #7 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="fals
 !3739 = !DISubprogram(name: "_M_rep_once_more", linkageName: "_ZNSt8__detail9_ExecutorIPKcSaINSt7__cxx119sub_matchIS2_EEENS3_12regex_traitsIcEELb0EE16_M_rep_once_moreENS9_11_Match_modeEl", scope: !1895, file: !1894, line: 109, type: !3740, isLocal: false, isDefinition: false, scopeLine: 109, flags: DIFlagPrototyped, isOptimized: true)
 !3740 = !DISubroutineType(types: !3741)
 !3741 = !{null, !3733, !3742, !841}
-!3742 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "_Match_mode", scope: !1895, file: !1894, line: 58, baseType: !302, size: 8, flags: DIFlagFixedEnum, elements: !3743, identifier: "_ZTSNSt8__detail9_ExecutorIPKcSaINSt7__cxx119sub_matchIS2_EEENS3_12regex_traitsIcEELb0EE11_Match_modeE")
+!3742 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "_Match_mode", scope: !1895, file: !1894, line: 58, baseType: !302, size: 8, elements: !3743, identifier: "_ZTSNSt8__detail9_ExecutorIPKcSaINSt7__cxx119sub_matchIS2_EEENS3_12regex_traitsIcEELb0EE11_Match_modeE")
 !3743 = !{!3744, !3745}
 !3744 = !DIEnumerator(name: "_Exact", value: 0, isUnsigned: true)
 !3745 = !DIEnumerator(name: "_Prefix", value: 1, isUnsigned: true)
@@ -4324,11 +4324,11 @@ attributes #7 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="fals
 !3813 = !DIFile(filename: "/usr/lib/gcc/x86_64-redhat-linux/7/../../../../include/c++/7/bits/basic_string.h", directory: "/home/gridsan/tschardl/graphtutorial")
 !3814 = !{!3815}
 !3815 = !DIEnumerator(name: "_S_local_capacity", value: 15, isUnsigned: true)
-!3816 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "_RegexExecutorPolicy", scope: !361, file: !50, line: 48, baseType: !11, size: 32, flags: DIFlagFixedEnum, elements: !3817, identifier: "_ZTSNSt8__detail20_RegexExecutorPolicyE")
+!3816 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "_RegexExecutorPolicy", scope: !361, file: !50, line: 48, baseType: !11, size: 32, elements: !3817, identifier: "_ZTSNSt8__detail20_RegexExecutorPolicyE")
 !3817 = !{!3818, !3819}
 !3818 = !DIEnumerator(name: "_S_auto", value: 0)
 !3819 = !DIEnumerator(name: "_S_alternate", value: 1)
-!3820 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "_Match_mode", scope: !3821, file: !1894, line: 58, baseType: !302, size: 8, flags: DIFlagFixedEnum, elements: !3743, identifier: "_ZTSNSt8__detail9_ExecutorIPKcSaINSt7__cxx119sub_matchIS2_EEENS3_12regex_traitsIcEELb1EE11_Match_modeE")
+!3820 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "_Match_mode", scope: !3821, file: !1894, line: 58, baseType: !302, size: 8, elements: !3743, identifier: "_ZTSNSt8__detail9_ExecutorIPKcSaINSt7__cxx119sub_matchIS2_EEENS3_12regex_traitsIcEELb1EE11_Match_modeE")
 !3821 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "_Executor<const char *, std::allocator<std::__cxx11::sub_match<const char *> >, std::__cxx11::regex_traits<char>, true>", scope: !361, file: !1894, line: 52, size: 960, flags: DIFlagTypePassByReference, elements: !3822, templateParams: !3910, identifier: "_ZTSNSt8__detail9_ExecutorIPKcSaINSt7__cxx119sub_matchIS2_EEENS3_12regex_traitsIcEELb1EEE")
 !3822 = !{!3823, !3825, !3826, !3827, !3828, !3832, !3836, !3838, !3839, !3861, !3862, !3863, !3867, !3870, !3871, !3872, !3875, !3876, !3877, !3878, !3879, !3880, !3881, !3882, !3883, !3884, !3885, !3886, !3887, !3890, !3893, !3896, !3902, !3905, !3906, !3907}
 !3823 = !DIDerivedType(tag: DW_TAG_member, name: "_M_cur_results", scope: !3821, file: !1894, line: 239, baseType: !3824, size: 192, flags: DIFlagPublic)
@@ -4428,7 +4428,7 @@ attributes #7 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="fals
 !3917 = !DIEnumerator(name: "_S_ios_iostate_end", value: 65536)
 !3918 = !DIEnumerator(name: "_S_ios_iostate_max", value: 2147483647)
 !3919 = !DIEnumerator(name: "_S_ios_iostate_min", value: -2147483648)
-!3920 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "_TokenT", scope: !3922, file: !3921, line: 46, baseType: !58, size: 32, flags: DIFlagFixedEnum, elements: !4049, identifier: "_ZTSNSt8__detail12_ScannerBase7_TokenTE")
+!3920 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "_TokenT", scope: !3922, file: !3921, line: 46, baseType: !58, size: 32, elements: !4049, identifier: "_ZTSNSt8__detail12_ScannerBase7_TokenTE")
 !3921 = !DIFile(filename: "/usr/lib/gcc/x86_64-redhat-linux/7/../../../../include/c++/7/bits/regex_scanner.h", directory: "/home/gridsan/tschardl/graphtutorial")
 !3922 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "_ScannerBase", scope: !361, file: !3921, line: 42, size: 1408, flags: DIFlagTypePassByValue, elements: !3923, identifier: "_ZTSNSt8__detail12_ScannerBaseE")
 !3923 = !{!3924, !3969, !4013, !4017, !4018, !4019, !4020, !4026, !4028, !4029, !4031, !4032, !4033, !4037, !4040, !4045, !4046, !4047, !4048}
@@ -5357,7 +5357,7 @@ attributes #7 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="fals
 !4846 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "__are_same<std::__detail::_StateSeq<std::__cxx11::regex_traits<char> > *, std::__detail::_StateSeq<std::__cxx11::regex_traits<char> > *>", scope: !2, file: !4467, line: 102, size: 8, flags: DIFlagTypePassByValue | DIFlagTrivial, elements: !59, templateParams: !4847, identifier: "_ZTSSt10__are_sameIPNSt8__detail9_StateSeqINSt7__cxx1112regex_traitsIcEEEES6_E")
 !4847 = !{!4848, !4848}
 !4848 = !DITemplateTypeParameter(type: !4116)
-!4849 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "_Match_mode", scope: !4850, file: !1894, line: 58, baseType: !302, size: 8, flags: DIFlagFixedEnum, elements: !3743, identifier: "_ZTSNSt8__detail9_ExecutorIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEESaINS5_9sub_matchISB_EEENS5_12regex_traitsIcEELb0EE11_Match_modeE")
+!4849 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "_Match_mode", scope: !4850, file: !1894, line: 58, baseType: !302, size: 8, elements: !3743, identifier: "_ZTSNSt8__detail9_ExecutorIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEESaINS5_9sub_matchISB_EEENS5_12regex_traitsIcEELb0EE11_Match_modeE")
 !4850 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "_Executor<__gnu_cxx::__normal_iterator<const char *, std::__cxx11::basic_string<char> >, std::allocator<std::__cxx11::sub_match<__gnu_cxx::__normal_iterator<const char *, std::__cxx11::basic_string<char> > > >, std::__cxx11::regex_traits<char>, false>", scope: !361, file: !1894, line: 52, size: 1152, flags: DIFlagTypePassByReference, elements: !4851, templateParams: !6460, identifier: "_ZTSNSt8__detail9_ExecutorIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEESaINS5_9sub_matchISB_EEENS5_12regex_traitsIcEELb0EEE")
 !4851 = !{!4852, !5459, !5460, !5461, !5462, !5466, !5470, !5472, !5878, !6411, !6412, !6413, !6417, !6420, !6421, !6422, !6425, !6426, !6427, !6428, !6429, !6430, !6431, !6432, !6433, !6434, !6435, !6436, !6437, !6440, !6443, !6446, !6452, !6455, !6456, !6457}
 !4852 = !DIDerivedType(tag: DW_TAG_member, name: "_M_cur_results", scope: !4850, file: !1894, line: 239, baseType: !4853, size: 192, flags: DIFlagPublic)
@@ -6971,7 +6971,7 @@ attributes #7 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="fals
 !6460 = !{!6461, !6462, !3786, !1595}
 !6461 = !DITemplateTypeParameter(type: !4882)
 !6462 = !DITemplateTypeParameter(type: !5011)
-!6463 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "_Match_mode", scope: !6464, file: !1894, line: 58, baseType: !302, size: 8, flags: DIFlagFixedEnum, elements: !3743, identifier: "_ZTSNSt8__detail9_ExecutorIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEESaINS5_9sub_matchISB_EEENS5_12regex_traitsIcEELb1EE11_Match_modeE")
+!6463 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "_Match_mode", scope: !6464, file: !1894, line: 58, baseType: !302, size: 8, elements: !3743, identifier: "_ZTSNSt8__detail9_ExecutorIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEESaINS5_9sub_matchISB_EEENS5_12regex_traitsIcEELb1EE11_Match_modeE")
 !6464 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "_Executor<__gnu_cxx::__normal_iterator<const char *, std::__cxx11::basic_string<char> >, std::allocator<std::__cxx11::sub_match<__gnu_cxx::__normal_iterator<const char *, std::__cxx11::basic_string<char> > > >, std::__cxx11::regex_traits<char>, true>", scope: !361, file: !1894, line: 52, size: 960, flags: DIFlagTypePassByReference, elements: !6465, templateParams: !6552, identifier: "_ZTSNSt8__detail9_ExecutorIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEESaINS5_9sub_matchISB_EEENS5_12regex_traitsIcEELb1EEE")
 !6465 = !{!6466, !6468, !6469, !6470, !6471, !6475, !6479, !6481, !6482, !6503, !6504, !6505, !6509, !6512, !6513, !6514, !6517, !6518, !6519, !6520, !6521, !6522, !6523, !6524, !6525, !6526, !6527, !6528, !6529, !6532, !6535, !6538, !6544, !6547, !6548, !6549}
 !6466 = !DIDerivedType(tag: DW_TAG_member, name: "_M_cur_results", scope: !6464, file: !1894, line: 239, baseType: !6467, size: 192, flags: DIFlagPublic)

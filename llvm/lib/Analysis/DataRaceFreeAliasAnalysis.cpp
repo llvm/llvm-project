@@ -80,33 +80,33 @@ AliasResult DRFAAResult::alias(const MemoryLocation &LocA,
   return AAResultBase::alias(LocA, LocB);
 }
 
-ModRefInfo DRFAAResult::getModRefInfo(ImmutableCallSite CS,
+ModRefInfo DRFAAResult::getModRefInfo(const CallBase *Call,
                                       const MemoryLocation &Loc) {
   if (!EnableDRFAA)
-    return AAResultBase::getModRefInfo(CS, Loc);
+    return AAResultBase::getModRefInfo(Call, Loc);
 
-  LLVM_DEBUG(dbgs() << "DRFAA:getModRefInfo(CS, Loc)\n");
-  assert(notDifferentParent(CS.getInstruction(), Loc.Ptr) &&
+  LLVM_DEBUG(dbgs() << "DRFAA:getModRefInfo(Call, Loc)\n");
+  assert(notDifferentParent(Call, Loc.Ptr) &&
          "DRFAliasAnalysis doesn't support interprocedural queries.");
 
   if (const Instruction *Addr = dyn_cast<Instruction>(Loc.Ptr))
-    if (TI.mayHappenInParallel(CS.getParent(), Addr->getParent()))
+    if (TI.mayHappenInParallel(Call->getParent(), Addr->getParent()))
       return ModRefInfo::NoModRef;
 
-  return AAResultBase::getModRefInfo(CS, Loc);
+  return AAResultBase::getModRefInfo(Call, Loc);
 }
 
-ModRefInfo DRFAAResult::getModRefInfo(ImmutableCallSite CS1,
-                                      ImmutableCallSite CS2) {
+ModRefInfo DRFAAResult::getModRefInfo(const CallBase *Call1,
+                                      const CallBase *Call2) {
   if (!EnableDRFAA)
-    return AAResultBase::getModRefInfo(CS1, CS2);
+    return AAResultBase::getModRefInfo(Call1, Call2);
 
-  LLVM_DEBUG(dbgs() << "DRFAA:getModRefInfo(CS1, CS2)\n");
+  LLVM_DEBUG(dbgs() << "DRFAA:getModRefInfo(Call1, Call2)\n");
 
-  if (TI.mayHappenInParallel(CS1.getParent(), CS2.getParent()))
+  if (TI.mayHappenInParallel(Call1->getParent(), Call2->getParent()))
     return ModRefInfo::NoModRef;
 
-  return AAResultBase::getModRefInfo(CS1, CS2);
+  return AAResultBase::getModRefInfo(Call1, Call2);
 }
 
 AnalysisKey DRFAA::Key;

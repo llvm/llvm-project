@@ -192,8 +192,8 @@ MemDepResult MemoryDependenceResults::getCallDependencyFrom(
   unsigned Limit = BlockScanLimit;
 
   if (EnableDRF && TI)
-    if ((TI->getTaskFor(BB) != TI->getTaskFor(CS.getInstruction()->getParent()))
-        && TI->mayHappenInParallel(CS.getInstruction()->getParent(), BB))
+    if ((TI->getTaskFor(BB) != TI->getTaskFor(Call->getParent()))
+        && TI->mayHappenInParallel(Call->getParent(), BB))
       return MemDepResult::getNonLocal();
 
   // Walk backwards through the block, looking for dependencies.

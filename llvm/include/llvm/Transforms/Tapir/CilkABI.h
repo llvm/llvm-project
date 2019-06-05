@@ -14,6 +14,7 @@
 #ifndef CILK_ABI_H_
 #define CILK_ABI_H_
 
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/Transforms/Tapir/LoopSpawning.h"
 #include "llvm/Transforms/Tapir/LoweringUtils.h"
 
@@ -27,6 +28,7 @@ public:
                       LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
                       OptimizationRemarkEmitter &ORE)
       : LoopOutline(OrigLoop, SE, LI, DT, AC, ORE),
+        M(*OrigLoop->getHeader()->getModule()),
         SpecifiedGrainsize(Grainsize)
   {}
 
@@ -37,13 +39,92 @@ public:
 protected:
   Value *canonicalizeLoopLatch(PHINode *IV, Value *Limit);
 
+  Module &M;
   unsigned SpecifiedGrainsize;
+
+  // Opaque Cilk RTS functions
+  Function *CilkRTSCilkFor32 = nullptr;
+  Function *CilkRTSCilkFor64 = nullptr;
+
+  Function *Get__cilkrts_cilk_for_32();
+  Function *Get__cilkrts_cilk_for_64();
 };
 
 class CilkABI : public TapirTarget {
   ValueToValueMapTy DetachCtxToStackFrame;
+
+  // Cilk RTS data types
+  StructType *PedigreeTy = nullptr;
+  enum PedigreeFields { rank = 0, next };
+  StructType *StackFrameTy = nullptr;
+  enum StackFrameFields
+    {
+     flags = 0,
+     size,
+     call_parent,
+     worker,
+     except_data,
+     ctx,
+     mxcsr,
+     fpcsr,
+     reserved,
+     parent_pedigree
+    };
+  StructType *WorkerTy = nullptr;
+  enum WorkerFields
+    {
+     tail = 0,
+     head,
+     exc,
+     protected_tail,
+     ltq_limit,
+     self,
+     g,
+     l,
+     reducer_map,
+     current_stack_frame,
+     saved_protected_tail,
+     sysdep,
+     pedigree
+    };
+
+  // Opaque Cilk RTS functions
+  Function *CilkRTSInit = nullptr;
+  Function *CilkRTSLeaveFrame = nullptr;
+  Function *CilkRTSRethrow = nullptr;
+  Function *CilkRTSSync = nullptr;
+  Function *CilkRTSGetNworkers = nullptr;
+  Function *CilkRTSGetTLSWorker = nullptr;
+  Function *CilkRTSGetTLSWorkerFast = nullptr;
+  Function *CilkRTSBindThread1 = nullptr;
+
+  // Accessors for Cilk RTS functions
+  Function *Get__cilkrts_init();
+  Function *Get__cilkrts_enter_frame_1();
+  Function *Get__cilkrts_enter_frame_fast_1();
+  Function *Get__cilkrts_leave_frame();
+  Function *Get__cilkrts_rethrow();
+  Function *Get__cilkrts_sync();
+  Function *Get__cilkrts_detach();
+  Function *Get__cilkrts_pop_frame();
+  Function *Get__cilkrts_get_nworkers();
+  Function *Get__cilkrts_get_tls_worker();
+  Function *Get__cilkrts_get_tls_worker_fast();
+  Function *Get__cilkrts_bind_thread_1();
+
+  // Helper functions for implementing the Cilk ABI protocol
+  Function *GetCilkSyncFn(bool instrument = false);
+  Function *GetCilkSyncNothrowFn(bool instrument = false);
+  Function *GetCilkParentEpilogueFn(bool instrument = false);
+  static void EmitSaveFloatingPointState(IRBuilder<> &B, Value *SF);
+  AllocaInst *CreateStackFrame(Function &F);
+  Value *GetOrInitCilkStackFrame(Function &F, bool Helper,
+                                 bool instrumet = false);
+  CallInst *EmitCilkSetJmp(IRBuilder<> &B, Value *SF);
+  bool makeFunctionDetachable(Function &Extracted, bool instrument = false);
+
 public:
-  CilkABI(Module &M) : TapirTarget(M) {}
+  CilkABI(Module &M);
   ~CilkABI() { DetachCtxToStackFrame.clear(); }
   Value *lowerGrainsizeCall(CallInst *GrainsizeCall) override final;
   void lowerSync(SyncInst &inst) override final;
@@ -56,11 +137,6 @@ public:
   void processSpawner(Function &F) override final;
   void processSubTaskCall(TaskOutlineInfo &TOI, DominatorTree &DT)
     override final;
-
-  struct __cilkrts_pedigree {};
-  struct __cilkrts_stack_frame {};
-  struct __cilkrts_worker {};
-
 };
 }  // end of llvm namespace
 

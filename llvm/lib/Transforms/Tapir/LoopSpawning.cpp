@@ -547,7 +547,7 @@ void DACLoopSpawning::implementDACIterSpawnOnHelper(
     CanonicalIVInput->replaceAllUsesWith(CanonicalIVStart);
     IterCount = Builder.CreateSub(Limit, CanonicalIVStart, "itercount");
     Value *IterCountCmp = Builder.CreateICmpUGT(IterCount, Grainsize);
-    TerminatorInst *RecurTerm =
+    Instruction *RecurTerm =
       SplitBlockAndInsertIfThen(IterCountCmp, PreheaderOrigFront,
                                 /*Unreachable=*/false,
                                 /*BranchWeights=*/nullptr, DT);

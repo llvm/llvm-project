@@ -145,7 +145,7 @@ while.body:                                       ; preds = %while.body.preheade
 pfor.cond.cleanup55:                              ; preds = %pfor.inc75
   sync within %syncreg45, label %pfor.cond.cleanup55.split
 
-; CHECK: indvars.iv.next299.lcssa.escape = add i64 0, %cast.count
+; CHECK: indvars.iv.next299.lcssa.escape = zext i32 %add43 to i64
 
 pfor.cond.cleanup55.split:                        ; preds = %pfor.cond.cleanup55
   br label %pfor.detach98

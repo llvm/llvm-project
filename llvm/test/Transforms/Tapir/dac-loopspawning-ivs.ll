@@ -477,7 +477,7 @@ pfor.detach122:                                   ; preds = %pfor.inc159, %invok
 ; CHECK-NOT: indvars.iv = phi
 ; CHECK: %__begin113.0663.ls1 = phi i64
 ; CHECK-NOT: phi
-; CHECK: mul i64 %add29.ls1, %__begin113.0663.ls1
+; CHECK: mul i64 {{%add29.ls1, %__begin113.0663.ls1|%__begin113.0663.ls1, %add29.ls1}}
 ; CHECK: br label %pfor.body126.ls1
 
 pfor.body126:                                     ; preds = %pfor.detach122

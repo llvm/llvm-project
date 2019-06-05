@@ -50,7 +50,7 @@ public:
 
   TapirLoopInfo(Loop *L, Task *T) : TheLoop(L), TheTask(T) {
     // Get the exit block for this loop.
-    TerminatorInst *TI = TheLoop->getLoopLatch()->getTerminator();
+    Instruction *TI = TheLoop->getLoopLatch()->getTerminator();
     ExitBlock = TI->getSuccessor(0);
     if (ExitBlock == TheLoop->getHeader())
       ExitBlock = TI->getSuccessor(1);
@@ -214,6 +214,12 @@ public:
   Argument *EndIterArg = nullptr;
   Argument *GrainsizeArg = nullptr;
 };
+
+/// Transforms an induction descriptor into a direct computation of its value at
+/// Index.
+Value *emitTransformedIndex(
+    IRBuilder<> &B, Value *Index, ScalarEvolution *SE, const DataLayout &DL,
+    const InductionDescriptor &ID);
 
 }  // end namepsace llvm
 

@@ -211,7 +211,7 @@ void TapirLoopInfo::replaceNonPrimaryIVs(PredicatedScalarEvolution &PSE) {
     Instruction::CastOps CastOp =
       CastInst::getCastOpcode(PrimaryInduction, true, StepType, true);
     Value *CRD = B.CreateCast(CastOp, PrimaryInduction, StepType, "cast.crd");
-    Value *PhiRepl = II.transform(B, CRD, PSE.getSE(), DL);
+    Value *PhiRepl = emitTransformedIndex(B, CRD, PSE.getSE(), DL, II);
     PhiRepl->setName(OrigPhi->getName() + ".tl.repl");
     OrigPhi->replaceAllUsesWith(PhiRepl);
     InductionsToRemove.push_back(InductionEntry);
@@ -261,7 +261,7 @@ static Value *getEscapeValue(Instruction *UI, const InductionDescriptor &II,
   else
     Count->setName("cast.cmo");
 
-  Value *Escape = II.transform(B, Count, PSE.getSE(), DL);
+  Value *Escape = emitTransformedIndex(B, Count, PSE.getSE(), DL, II);
   Escape->setName(UI->getName() + ".escape");
   return Escape;
 }
@@ -461,4 +461,96 @@ bool TapirLoopInfo::prepareForOutlining(
     fixupIVUsers(InductionEntry.first, InductionEntry.second, PSE);
 
   return true;
+}
+
+/// Transforms an induction descriptor into a direct computation of its value at
+/// Index.
+///
+/// Copied from lib/Transforms/Vectorize/LoopVectorize.cpp
+Value *llvm::emitTransformedIndex(
+    IRBuilder<> &B, Value *Index, ScalarEvolution *SE, const DataLayout &DL,
+    const InductionDescriptor &ID) {
+
+  SCEVExpander Exp(*SE, DL, "induction");
+  auto Step = ID.getStep();
+  auto StartValue = ID.getStartValue();
+  assert(Index->getType() == Step->getType() &&
+         "Index type does not match StepValue type");
+
+  // Note: the IR at this point is broken. We cannot use SE to create any new
+  // SCEV and then expand it, hoping that SCEV's simplification will give us
+  // a more optimal code. Unfortunately, attempt of doing so on invalid IR may
+  // lead to various SCEV crashes. So all we can do is to use builder and rely
+  // on InstCombine for future simplifications. Here we handle some trivial
+  // cases only.
+  auto CreateAdd = [&B](Value *X, Value *Y) {
+    assert(X->getType() == Y->getType() && "Types don't match!");
+    if (auto *CX = dyn_cast<ConstantInt>(X))
+      if (CX->isZero())
+        return Y;
+    if (auto *CY = dyn_cast<ConstantInt>(Y))
+      if (CY->isZero())
+        return X;
+    return B.CreateAdd(X, Y);
+  };
+
+  auto CreateMul = [&B](Value *X, Value *Y) {
+    assert(X->getType() == Y->getType() && "Types don't match!");
+    if (auto *CX = dyn_cast<ConstantInt>(X))
+      if (CX->isOne())
+        return Y;
+    if (auto *CY = dyn_cast<ConstantInt>(Y))
+      if (CY->isOne())
+        return X;
+    return B.CreateMul(X, Y);
+  };
+
+  switch (ID.getKind()) {
+  case InductionDescriptor::IK_IntInduction: {
+    assert(Index->getType() == StartValue->getType() &&
+           "Index type does not match StartValue type");
+    if (ID.getConstIntStepValue() && ID.getConstIntStepValue()->isMinusOne())
+      return B.CreateSub(StartValue, Index);
+    auto *Offset = CreateMul(
+        Index, Exp.expandCodeFor(Step, Index->getType(), &*B.GetInsertPoint()));
+    return CreateAdd(StartValue, Offset);
+  }
+  case InductionDescriptor::IK_PtrInduction: {
+    assert(isa<SCEVConstant>(Step) &&
+           "Expected constant step for pointer induction");
+    return B.CreateGEP(
+        nullptr, StartValue,
+        CreateMul(Index, Exp.expandCodeFor(Step, Index->getType(),
+                                           &*B.GetInsertPoint())));
+  }
+  case InductionDescriptor::IK_FpInduction: {
+    assert(Step->getType()->isFloatingPointTy() && "Expected FP Step value");
+    auto InductionBinOp = ID.getInductionBinOp();
+    assert(InductionBinOp &&
+           (InductionBinOp->getOpcode() == Instruction::FAdd ||
+            InductionBinOp->getOpcode() == Instruction::FSub) &&
+           "Original bin op should be defined for FP induction");
+
+    Value *StepValue = cast<SCEVUnknown>(Step)->getValue();
+
+    // Floating point operations had to be 'fast' to enable the induction.
+    FastMathFlags Flags;
+    Flags.setFast();
+
+    Value *MulExp = B.CreateFMul(StepValue, Index);
+    if (isa<Instruction>(MulExp))
+      // We have to check, the MulExp may be a constant.
+      cast<Instruction>(MulExp)->setFastMathFlags(Flags);
+
+    Value *BOp = B.CreateBinOp(InductionBinOp->getOpcode(), StartValue, MulExp,
+                               "induction");
+    if (isa<Instruction>(BOp))
+      cast<Instruction>(BOp)->setFastMathFlags(Flags);
+
+    return BOp;
+  }
+  case InductionDescriptor::IK_NoInduction:
+    return nullptr;
+  }
+  llvm_unreachable("invalid enum");
 }

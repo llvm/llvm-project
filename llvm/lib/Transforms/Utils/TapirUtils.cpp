@@ -793,7 +793,7 @@ const BasicBlock *llvm::GetDetachedCtx(const BasicBlock *BB) {
 /// detach-continue edge.  Critical detach-continue edges are critical edges -
 /// from a block with multiple successors to a block with multiple predecessors
 /// - even after ignoring all reattach edges.
-bool llvm::isCriticalContinueEdge(const TerminatorInst *TI, unsigned SuccNum) {
+bool llvm::isCriticalContinueEdge(const Instruction *TI, unsigned SuccNum) {
   assert(SuccNum < TI->getNumSuccessors() && "Illegal edge specification!");
   if (TI->getNumSuccessors() == 1) return false;
 
@@ -851,7 +851,7 @@ void llvm::GetDetachedCFG(const DetachInst &DI, const DominatorTree &DT,
 
     LLVM_DEBUG(dbgs() << "  Found block " << BB->getName() << "\n");
 
-    TerminatorInst *Term = BB->getTerminator();
+    Instruction *Term = BB->getTerminator();
     if (nullptr == Term)
       llvm_unreachable("BB with null terminator found.");
 

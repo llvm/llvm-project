@@ -686,7 +686,7 @@ Function *llvm::extractDetachBodyToFunction(
   // replacement prevents the outlining process from mistakenly finding the sync
   // region as a input to the task.
   for (BasicBlock *TaskRet : TaskReturns) {
-    TerminatorInst *TI = TaskRet->getTerminator();
+    Instruction *TI = TaskRet->getTerminator();
     if (isa<ReattachInst>(TI))
       ReplaceInstWithInst(TI, BranchInst::Create(Continue));
   }

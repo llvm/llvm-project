@@ -376,8 +376,8 @@ static FunctionAccessKind checkFunctionAccess(Function &F, bool ThisBody,
 
     // Some instructions can be ignored even if they read or write memory.
     // Detect these now, skipping to the next instruction if one is found.
-    CallSite CS(cast<Value>(I));
-    if (CS) {
+    // CallSite CS(cast<Value>(I));
+    if (CallBase *CS = dyn_cast<CallBase>(I)) {
       FunctionModRefBehavior MRB = AAR.getModRefBehavior(CS);
       ModRefInfo MRI = createModRefInfo(MRB);
 
@@ -386,12 +386,13 @@ static FunctionAccessKind checkFunctionAccess(Function &F, bool ThisBody,
         continue;
 
       if (!AliasAnalysis::onlyAccessesInaccessibleOrArgMem(MRB))
-        if (!CS.getCalledFunction() || !SCCNodes.count(CS.getCalledFunction()))
+        if (!CS->getCalledFunction() ||
+            !SCCNodes.count(CS->getCalledFunction()))
           // This call could access any memory.
           return FAK_AnyMem;
 
       if (AliasAnalysis::doesAccessInaccessibleMem(MRB) &&
-          CS.getCalledFunction() && !SCCNodes.count(CS.getCalledFunction()))
+          CS->getCalledFunction() && !SCCNodes.count(CS->getCalledFunction()))
         // Record the fact that this call can access inaccessible memory.
         AccessKind = FunctionAccessKind(AccessKind | FAK_InaccessibleMem);
 
@@ -402,7 +403,7 @@ static FunctionAccessKind checkFunctionAccess(Function &F, bool ThisBody,
 
       // Check whether all pointer arguments point to local memory, and
       // ignore calls that only access local memory.
-      for (CallSite::arg_iterator CI = CS.arg_begin(), CE = CS.arg_end();
+      for (CallSite::arg_iterator CI = CS->arg_begin(), CE = CS->arg_end();
            CI != CE; ++CI) {
         Value *Arg = *CI;
         if (!Arg->getType()->isPtrOrPtrVectorTy())

@@ -33,7 +33,7 @@ struct RedundantSpawn : public FunctionPass {
     bool effective = false;
     do {
       effective = false;
-      TerminatorInst* prior = nullptr;
+      Instruction* prior = nullptr;
       BasicBlock* start = nullptr;
       bool lookForDetach = false;
       int rank = 0;

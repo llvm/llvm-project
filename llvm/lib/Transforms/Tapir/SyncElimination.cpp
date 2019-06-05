@@ -185,16 +185,14 @@ private:
               continue;
             }
 
-            ImmutableCallSite RC(&RI), VC(&VI);
-
-            if (!!RC) {
+            if (const auto *RC = dyn_cast<CallBase>(&RI)) {
               // If RI is a call/invoke
               if (instTouchesMemory(VI) &&
                   isModOrRefSet(AA->getModRefInfo(const_cast<Instruction *>(&VI), RC))) {
                 errs() << "SyncElimination:     Conflict found between " << RI << " and " << VI << "\n";
                 return false;
               }
-            } else if (!!VC) {
+            } else if (const auto *VC = dyn_cast<CallBase>(&VI)) {
               // If VI is a call/invoke
               if (instTouchesMemory(RI) &&
                   isModOrRefSet(AA->getModRefInfo(const_cast<Instruction *>(&RI), VC))) {

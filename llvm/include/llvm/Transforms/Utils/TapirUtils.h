@@ -83,7 +83,7 @@ BasicBlock *GetDetachedCtx(BasicBlock *BB);
 /// detach-continue edge.  Critical detach-continue edges are critical edges -
 /// from a block with multiple successors to a block with multiple predecessors
 /// - even after ignoring all reattach edges.
-bool isCriticalContinueEdge(const TerminatorInst *TI, unsigned SuccNum);
+bool isCriticalContinueEdge(const Instruction *TI, unsigned SuccNum);
 
 /// GetDetachedCFG - Get the set of basic blocks in the CFG of the parallel task
 /// spawned by detach instruction DI.  The CFG will include the

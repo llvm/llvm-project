@@ -50,6 +50,7 @@
 ; MSSA-NEXT: Running analysis: TargetLibraryAnalysis on f
 ; MSSA-NEXT: Running analysis: ScalarEvolutionAnalysis on f
 ; MSSA-NEXT: Running analysis: TargetIRAnalysis on f
+; MSSA-NEXT: Running analysis: TaskAnalysis on f
 ; MSSA-NEXT: Running analysis: InnerAnalysisManagerProxy{{.*}} on f
 ; MSSA-NEXT: Starting Loop pass manager run.
 ; MSSA-NEXT: Running analysis: PassInstrumentationAnalysis on bb

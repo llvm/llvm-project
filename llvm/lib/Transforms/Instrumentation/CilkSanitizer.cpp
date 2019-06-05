@@ -287,129 +287,6 @@ struct CilkSanitizerImpl : public CSIImpl {
   bool instrumentAlloca(Instruction *I);
 
 private:
-  // List of all allocation function types.  This list needs to remain
-  // consistent with TargetLibraryInfo and with csan.h.
-  enum class AllocFnTy
-    {
-     malloc = 0,
-     valloc,
-     calloc,
-     realloc,
-     reallocf,
-     Znwj,
-     ZnwjRKSt9nothrow_t,
-     Znwm,
-     ZnwmRKSt9nothrow_t,
-     Znaj,
-     ZnajRKSt9nothrow_t,
-     Znam,
-     ZnamRKSt9nothrow_t,
-     msvc_new_int,
-     msvc_new_int_nothrow,
-     msvc_new_longlong,
-     msvc_new_longlong_nothrow,
-     msvc_new_array_int,
-     msvc_new_array_int_nothrow,
-     msvc_new_array_longlong,
-     msvc_new_array_longlong_nothrow,
-     LAST_ALLOCFNTY
-    };
-
-  static AllocFnTy getAllocFnTy(const LibFunc &F) {
-    switch (F) {
-    default: return AllocFnTy::LAST_ALLOCFNTY;
-    case LibFunc_malloc: return AllocFnTy::malloc;
-    case LibFunc_valloc: return AllocFnTy::valloc;
-    case LibFunc_calloc: return AllocFnTy::calloc;
-    case LibFunc_realloc: return AllocFnTy::realloc;
-    case LibFunc_reallocf: return AllocFnTy::reallocf;
-    case LibFunc_Znwj: return AllocFnTy::Znwj;
-    case LibFunc_ZnwjRKSt9nothrow_t: return AllocFnTy::ZnwjRKSt9nothrow_t;
-    case LibFunc_Znwm: return AllocFnTy::Znwm;
-    case LibFunc_ZnwmRKSt9nothrow_t: return AllocFnTy::ZnwmRKSt9nothrow_t;
-    case LibFunc_Znaj: return AllocFnTy::Znaj;
-    case LibFunc_ZnajRKSt9nothrow_t: return AllocFnTy::ZnajRKSt9nothrow_t;
-    case LibFunc_Znam: return AllocFnTy::Znam;
-    case LibFunc_ZnamRKSt9nothrow_t: return AllocFnTy::ZnamRKSt9nothrow_t;
-    case LibFunc_msvc_new_int: return AllocFnTy::msvc_new_int;
-    case LibFunc_msvc_new_int_nothrow: return AllocFnTy::msvc_new_int_nothrow;
-    case LibFunc_msvc_new_longlong: return AllocFnTy::msvc_new_longlong;
-    case LibFunc_msvc_new_longlong_nothrow:
-      return AllocFnTy::msvc_new_longlong_nothrow;
-    case LibFunc_msvc_new_array_int: return AllocFnTy::msvc_new_array_int;
-    case LibFunc_msvc_new_array_int_nothrow:
-      return AllocFnTy::msvc_new_array_int_nothrow;
-    case LibFunc_msvc_new_array_longlong:
-      return AllocFnTy::msvc_new_array_longlong;
-    case LibFunc_msvc_new_array_longlong_nothrow:
-      return AllocFnTy::msvc_new_array_longlong_nothrow;
-    }
-  }
-
-  // List of all free function types.  This list needs to remain consistent with
-  // TargetLibraryInfo and with csan.h.
-  enum class FreeTy
-    {
-     free = 0,
-     ZdlPv,
-     ZdlPvRKSt9nothrow_t,
-     ZdlPvj,
-     ZdlPvm,
-     ZdaPv,
-     ZdaPvRKSt9nothrow_t,
-     ZdaPvj,
-     ZdaPvm,
-     msvc_delete_ptr32,
-     msvc_delete_ptr32_nothrow,
-     msvc_delete_ptr32_int,
-     msvc_delete_ptr64,
-     msvc_delete_ptr64_nothrow,
-     msvc_delete_ptr64_longlong,
-     msvc_delete_array_ptr32,
-     msvc_delete_array_ptr32_nothrow,
-     msvc_delete_array_ptr32_int,
-     msvc_delete_array_ptr64,
-     msvc_delete_array_ptr64_nothrow,
-     msvc_delete_array_ptr64_longlong,
-     LAST_FREETY
-    };
-
-  static FreeTy getFreeTy(const LibFunc &F) {
-    switch (F) {
-    default: return FreeTy::LAST_FREETY;
-    case LibFunc_free: return FreeTy::free;
-    case LibFunc_ZdlPv: return FreeTy::ZdlPv;
-    case LibFunc_ZdlPvRKSt9nothrow_t: return FreeTy::ZdlPvRKSt9nothrow_t;
-    case LibFunc_ZdlPvj: return FreeTy::ZdlPvj;
-    case LibFunc_ZdlPvm: return FreeTy::ZdlPvm;
-    case LibFunc_ZdaPv: return FreeTy::ZdaPv;
-    case LibFunc_ZdaPvRKSt9nothrow_t: return FreeTy::ZdaPvRKSt9nothrow_t;
-    case LibFunc_ZdaPvj: return FreeTy::ZdaPvj;
-    case LibFunc_ZdaPvm: return FreeTy::ZdaPvm;
-    case LibFunc_msvc_delete_ptr32: return FreeTy::msvc_delete_ptr32;
-    case LibFunc_msvc_delete_ptr32_nothrow:
-      return FreeTy::msvc_delete_ptr32_nothrow;
-    case LibFunc_msvc_delete_ptr32_int: return FreeTy::msvc_delete_ptr32_int;
-    case LibFunc_msvc_delete_ptr64: return FreeTy::msvc_delete_ptr64;
-    case LibFunc_msvc_delete_ptr64_nothrow:
-      return FreeTy::msvc_delete_ptr64_nothrow;
-    case LibFunc_msvc_delete_ptr64_longlong:
-      return FreeTy::msvc_delete_ptr64_longlong;
-    case LibFunc_msvc_delete_array_ptr32:
-      return FreeTy::msvc_delete_array_ptr32;
-    case LibFunc_msvc_delete_array_ptr32_nothrow:
-      return FreeTy::msvc_delete_array_ptr32_nothrow;
-    case LibFunc_msvc_delete_array_ptr32_int:
-      return FreeTy::msvc_delete_array_ptr32_int;
-    case LibFunc_msvc_delete_array_ptr64:
-      return FreeTy::msvc_delete_array_ptr64;
-    case LibFunc_msvc_delete_array_ptr64_nothrow:
-      return FreeTy::msvc_delete_array_ptr64_nothrow;
-    case LibFunc_msvc_delete_array_ptr64_longlong:
-      return FreeTy::msvc_delete_array_ptr64_longlong;
-    }
-  }
-
   // Analysis results
   function_ref<LoopInfo &(Function &)> GetLoopInfo;
   function_ref<DependenceInfo &(Function &)> GetDepInfo;
@@ -524,7 +401,7 @@ uint64_t ObjectTable::add(Instruction &I, Value *Obj) {
   // Next, if this is an alloca instruction, look for a llvm.dbg.declare
   // intrinsic.
   if (AllocaInst *AI = dyn_cast<AllocaInst>(Obj)) {
-    TinyPtrVector<DbgInfoIntrinsic *> DbgDeclares = FindDbgAddrUses(AI);
+    TinyPtrVector<DbgVariableIntrinsic *> DbgDeclares = FindDbgAddrUses(AI);
     if (!DbgDeclares.empty()) {
       auto *LV = DbgDeclares.front()->getVariable();
       add(ID, LV->getLine(), LV->getFilename(), LV->getDirectory(),
@@ -973,14 +850,13 @@ static bool GetGeneralAccesses(
   }
 
   // Handle arbitrary call sites by examining pointee arguments.
-  ImmutableCallSite CS(I);
-  if (CS) {
-    for (auto AI = CS.arg_begin(), AE = CS.arg_end(); AI != AE; ++AI) {
+  if (const CallBase *CS = dyn_cast<CallBase>(I)) {
+    for (auto AI = CS->arg_begin(), AE = CS->arg_end(); AI != AE; ++AI) {
       const Value *Arg = *AI;
       if (!Arg->getType()->isPtrOrPtrVectorTy())
         continue;
 
-      unsigned ArgIdx = std::distance(CS.arg_begin(), AI);
+      unsigned ArgIdx = std::distance(CS->arg_begin(), AI);
       MemoryLocation Loc = MemoryLocation::getForArgument(CS, ArgIdx, *TLI);
       if (AA->pointsToConstantMemory(Loc))
         continue;
@@ -1389,11 +1265,11 @@ static bool LocalBaseObj(Value *Addr, const DataLayout &DL, LoopInfo *LI,
 
 /// Returns true if Addr can only refer to a locally allocated base object, that
 /// is, an object created via an AllocaInst or an AllocationFn.
-static bool LocalBaseObj(ImmutableCallSite &CS, const DataLayout &DL,
+static bool LocalBaseObj(const CallBase *CS, const DataLayout &DL,
                          LoopInfo *LI, const TargetLibraryInfo *TLI) {
   // Check whether all pointer arguments point to local memory, and
   // ignore calls that only access local memory.
-  for (auto CI = CS.arg_begin(), CE = CS.arg_end(); CI != CE; ++CI) {
+  for (auto CI = CS->arg_begin(), CE = CS->arg_end(); CI != CE; ++CI) {
     Value *Arg = *CI;
     if (!Arg->getType()->isPtrOrPtrVectorTy())
       continue;
@@ -1522,11 +1398,11 @@ static bool PossibleRaceByCapture(Value *Addr, const DataLayout &DL,
 
 /// Returns true if any address referenced by the callsite could race due to
 /// pointer capture.
-static bool PossibleRaceByCapture(ImmutableCallSite &CS, const DataLayout &DL,
+static bool PossibleRaceByCapture(const CallBase *CS, const DataLayout &DL,
                                   const TaskInfo &TI, LoopInfo *LI) {
   // Check whether all pointer arguments point to local memory, and
   // ignore calls that only access local memory.
-  for (auto CI = CS.arg_begin(), CE = CS.arg_end(); CI != CE; ++CI) {
+  for (auto CI = CS->arg_begin(), CE = CS->arg_end(); CI != CE; ++CI) {
     Value *Arg = *CI;
     if (!Arg->getType()->isPtrOrPtrVectorTy())
       continue;
@@ -1728,7 +1604,7 @@ bool CilkSanitizerImpl::GetMaybeRacingAccesses(
       continue;
 
     LLVM_DEBUG(dbgs() << "Looking for racing accesses with " << *I << "\n");
-    ImmutableCallSite CS(I);
+    const CallBase *CS = cast<CallBase>(I);
     if (AA->doesNotAccessMemory(CS)) {
       // The callsite I might invoke a function that contains an internal race,
       // so we can't exclude it just yet.
@@ -1748,7 +1624,7 @@ bool CilkSanitizerImpl::GetMaybeRacingAccesses(
 
     // If we don't have insight into the called function, then we must
     // instrument this call incase the called function itself contains a race.
-    const Function *Called = CS.getCalledFunction();
+    const Function *Called = CS->getCalledFunction();
     if (!Called) {
       LLVM_DEBUG(dbgs() << "Missing called function for call.\n");
       ToInstrument.insert(I);

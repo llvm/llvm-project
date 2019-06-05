@@ -66,7 +66,7 @@ struct SpawnUnswitch : public FunctionPass {
                     cmp->moveBefore(pi);
 
                     // branch now to detach or end
-                    TerminatorInst* temp = Pred->getTerminator();
+                    Instruction* temp = Pred->getTerminator();
                     BranchInst* replaceDetach = BranchInst::Create(Pred, end, ((BranchInst*)temp)->getCondition());
                     ReplaceInstWithInst(PredPred->getTerminator(), replaceDetach);
 

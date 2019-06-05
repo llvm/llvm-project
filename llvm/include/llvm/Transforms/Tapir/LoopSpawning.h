@@ -49,7 +49,7 @@ public:
         ExitBlock(nullptr)
   {
     // Use the loop latch to determine the canonical exit block for this loop.
-    TerminatorInst *TI = OrigLoop->getLoopLatch()->getTerminator();
+    Instruction *TI = OrigLoop->getLoopLatch()->getTerminator();
     if (2 != TI->getNumSuccessors())
       return;
     ExitBlock = TI->getSuccessor(0);

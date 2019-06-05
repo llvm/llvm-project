@@ -377,7 +377,7 @@ static void ConnectEpilog(TapirLoopInfo &TL, Value *EpilStartIter,
       ? B.CreateCast(Instruction::SIToFP, EpilStartIter,
                      II.getStep()->getType())
       : B.CreateSExtOrTrunc(EpilStartIter, II.getStep()->getType());
-    Value *NewPhiStart = II.transform(B, PhiIter, SE, DL);
+    Value *NewPhiStart = emitTransformedIndex(B, PhiIter, SE, DL, II);
 
     // Update the PHI node in the epilog loop.
     PHINode *PN = cast<PHINode>(VMap[InductionEntry.first]);
@@ -390,7 +390,7 @@ static void ConnectEpilog(TapirLoopInfo &TL, Value *EpilStartIter,
   assert(Exit && "Loop must have a single exit block only");
   // Split the epilogue exit to maintain loop canonicalization guarantees
   SmallVector<BasicBlock*, 4> Preds(predecessors(Exit));
-  SplitBlockPredecessors(Exit, Preds, ".epilog-lcssa", DT, LI,
+  SplitBlockPredecessors(Exit, Preds, ".epilog-lcssa", DT, LI, nullptr,
                          PreserveLCSSA);
   // Add the branch to the exit block (around the stripmining loop)
   B.CreateCondBr(BrLoopExit, EpilogPreheader, Exit);
@@ -402,7 +402,7 @@ static void ConnectEpilog(TapirLoopInfo &TL, Value *EpilStartIter,
   SmallVector<BasicBlock*, 4> NewExitPreds{LoopDet};
   if (LoopEnd != NewExit)
     NewExitPreds.push_back(LoopEnd);
-  SplitBlockPredecessors(NewExit, NewExitPreds, ".loopexit", DT, LI,
+  SplitBlockPredecessors(NewExit, NewExitPreds, ".loopexit", DT, LI, nullptr,
                          PreserveLCSSA);
 }
 
@@ -684,7 +684,7 @@ Loop *llvm::StripMineLoop(
     // Split LatchExit to create phi nodes from branch above.
     SmallVector<BasicBlock*, 4> Preds(predecessors(LatchExit));
     NewExit = SplitBlockPredecessors(LatchExit, Preds, ".strpm-lcssa",
-                                     DT, LI, PreserveLCSSA);
+                                     DT, LI, nullptr, PreserveLCSSA);
     // NewExit gets its DebugLoc from LatchExit, which is not part of the
     // original Loop.
     // Fix this by setting Loop's DebugLoc to NewExit.
@@ -888,7 +888,7 @@ Loop *llvm::StripMineLoop(
           HeaderPreds.push_back(Pred);
       LoopDetEntry =
         SplitBlockPredecessors(Header, HeaderPreds, ".strpm.detachloop.entry",
-                               DT, LI, PreserveLCSSA);
+                               DT, LI, nullptr, PreserveLCSSA);
       NewSyncReg = CallInst::Create(
           Intrinsic::getDeclaration(M, Intrinsic::syncregion_start), {},
           &*LoopDetEntry->getFirstInsertionPt());
@@ -914,7 +914,7 @@ Loop *llvm::StripMineLoop(
           UnwindDestPreds.push_back(Pred);
       SmallVector<BasicBlock *, 2> NewUnwinds;
       SplitLandingPadPredecessors(UnwindDest, UnwindDestPreds, "", ".strpm",
-                                  NewUnwinds, DT, LI, PreserveLCSSA);
+                                  NewUnwinds, DT, LI, nullptr, PreserveLCSSA);
       BasicBlock *OrigUW = NewUnwinds[0], *NewUW = NewUnwinds[1];
       BasicBlock *NewUnreachable =
         SplitBlock(OrigUW, OrigUW->getTerminator(), DT, LI);
@@ -997,7 +997,7 @@ Loop *llvm::StripMineLoop(
         HeaderPreds.push_back(Pred);
     NewHeader =
       SplitBlockPredecessors(Header, HeaderPreds, ".strpm.outer",
-                             DT, LI, PreserveLCSSA);
+                             DT, LI, nullptr, PreserveLCSSA);
   }
   BasicBlock *NewEntry =
     SplitBlock(NewHeader, NewHeader->getTerminator(), DT, LI);
@@ -1005,7 +1005,7 @@ Loop *llvm::StripMineLoop(
   SmallVector<BasicBlock *, 1> LoopReattachPreds{Latch};
   BasicBlock *NewReattB =
     SplitBlockPredecessors(LoopReattach, LoopReattachPreds, "", DT, LI,
-                           PreserveLCSSA);
+                           nullptr, PreserveLCSSA);
   NewReattB->setName(Latch->getName() + ".reattach");
   BasicBlock *NewLatch =
     SplitBlock(NewReattB, NewReattB->getTerminator(), DT, LI);
@@ -1186,7 +1186,7 @@ Loop *llvm::StripMineLoop(
       ? B2.CreateCast(Instruction::SIToFP, CountVal,
                       II.getStep()->getType())
       : B2.CreateSExtOrTrunc(CountVal, II.getStep()->getType());
-    Value *NewStart = II.transform(B2, PhiCount, SE, DL);
+    Value *NewStart = emitTransformedIndex(B2, PhiCount, SE, DL, II);
 
     // Get the old increment instruction for this Phi
     int Idx = OrigPhi->getBasicBlockIndex(NewEntry);
