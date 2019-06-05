@@ -32091,18 +32091,27 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       isa<ConstantSDNode>(V2.getOperand(1))) {
     SDValue Src1 = V1.getOperand(0);
     SDValue Src2 = V2.getOperand(0);
-    if (Src1 == Src2) {
+    if (Src1.getValueType() == Src2.getValueType()) {
       unsigned Offset1 = V1.getConstantOperandVal(1);
       unsigned Offset2 = V2.getConstantOperandVal(1);
       assert(((Offset1 % VT1.getVectorNumElements()) == 0 ||
               (Offset2 % VT2.getVectorNumElements()) == 0 ||
               (Src1.getValueSizeInBits() % RootSizeInBits) == 0) &&
              "Unexpected subvector extraction");
+      unsigned Scale = Src1.getValueSizeInBits() / RootSizeInBits;
+
       // Convert extraction indices to mask size.
       Offset1 /= VT1.getVectorNumElements();
       Offset2 /= VT2.getVectorNumElements();
       Offset1 *= NumMaskElts;
       Offset2 *= NumMaskElts;
+
+      SmallVector<SDValue, 2> NewInputs;
+      NewInputs.push_back(Src1);
+      if (Src1 != Src2) {
+        NewInputs.push_back(Src2);
+        Offset2 += Scale * NumMaskElts;
+      }
 
       // Create new mask for larger type.
       SmallVector<int, 64> NewMask(Mask);
@@ -32114,10 +32123,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
         else
           M = (M - NumMaskElts) + Offset2;
       }
-      unsigned Scale = Src1.getValueSizeInBits() / RootSizeInBits;
       NewMask.append((Scale - 1) * NumMaskElts, SM_SentinelUndef);
 
-      SDValue NewInputs[] = {Src1};
       if (SDValue Res = combineX86ShuffleChain(
               NewInputs, Src1, NewMask, Depth, HasVariableMask,
               AllowVariableMask, DAG, Subtarget)) {

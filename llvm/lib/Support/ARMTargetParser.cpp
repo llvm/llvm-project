@@ -485,20 +485,83 @@ StringRef ARM::getArchExtName(unsigned ArchExtKind) {
   return StringRef();
 }
 
-StringRef ARM::getArchExtFeature(StringRef ArchExt) {
-  if (ArchExt.startswith("no")) {
-    StringRef ArchExtBase(ArchExt.substr(2));
-    for (const auto AE : ARCHExtNames) {
-      if (AE.NegFeature && ArchExtBase == AE.getName())
-        return StringRef(AE.NegFeature);
-    }
+static bool stripNegationPrefix(StringRef &Name) {
+  if (Name.startswith("no")) {
+    Name = Name.substr(2);
+    return true;
   }
+  return false;
+}
+
+StringRef ARM::getArchExtFeature(StringRef ArchExt) {
+  bool Negated = stripNegationPrefix(ArchExt);
   for (const auto AE : ARCHExtNames) {
     if (AE.Feature && ArchExt == AE.getName())
-      return StringRef(AE.Feature);
+      return StringRef(Negated ? AE.NegFeature : AE.Feature);
   }
 
   return StringRef();
+}
+
+static unsigned findDoublePrecisionFPU(unsigned InputFPUKind) {
+  const ARM::FPUName &InputFPU = ARM::FPUNames[InputFPUKind];
+
+  // If the input FPU already supports double-precision, then there
+  // isn't any different FPU we can return here.
+  //
+  // The current available FPURestriction values are None (no
+  // restriction), D16 (only 16 d-regs) and SP_D16 (16 d-regs
+  // and single precision only); there's no value representing
+  // SP restriction without D16. So this test just means 'is it
+  // SP only?'.
+  if (InputFPU.Restriction != ARM::FPURestriction::SP_D16)
+    return ARM::FK_INVALID;
+
+  // Otherwise, look for an FPU entry with all the same fields, except
+  // that SP_D16 has been replaced with just D16, representing adding
+  // double precision and not changing anything else.
+  for (const ARM::FPUName &CandidateFPU : ARM::FPUNames) {
+    if (CandidateFPU.FPUVer == InputFPU.FPUVer &&
+        CandidateFPU.NeonSupport == InputFPU.NeonSupport &&
+        CandidateFPU.Restriction == ARM::FPURestriction::D16) {
+      return CandidateFPU.ID;
+    }
+  }
+
+  // nothing found
+  return ARM::FK_INVALID;
+}
+
+bool ARM::appendArchExtFeatures(
+  StringRef CPU, ARM::ArchKind AK, StringRef ArchExt,
+  std::vector<StringRef> &Features) {
+  StringRef StandardFeature = getArchExtFeature(ArchExt);
+  if (!StandardFeature.empty()) {
+    Features.push_back(StandardFeature);
+    return true;
+  }
+
+  const bool Negated = stripNegationPrefix(ArchExt);
+
+  if (CPU == "")
+    CPU = "generic";
+
+  if (ArchExt == "fp" || ArchExt == "fp.dp") {
+    unsigned FPUKind;
+    if (ArchExt == "fp.dp") {
+      if (Negated) {
+        Features.push_back("-fp64");
+        return true;
+      }
+      FPUKind = findDoublePrecisionFPU(getDefaultFPU(CPU, AK));
+    } else if (Negated) {
+      FPUKind = ARM::FK_NONE;
+    } else {
+      FPUKind = getDefaultFPU(CPU, AK);
+    }
+    return ARM::getFPUFeatures(FPUKind, Features);
+  }
+  return false;
 }
 
 StringRef ARM::getHWDivName(unsigned HWDivKind) {

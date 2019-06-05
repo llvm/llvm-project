@@ -1012,6 +1012,9 @@ public:
     /// Reference binding drops qualifiers.
     FK_ReferenceInitDropsQualifiers,
 
+    /// Reference with mismatching address space binding to temporary.
+    FK_ReferenceAddrspaceMismatchTemporary,
+
     /// Reference binding failed.
     FK_ReferenceInitFailed,
 
