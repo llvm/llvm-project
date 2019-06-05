@@ -1,3 +1,12 @@
+function(append_configuration_directories input_dir output_dirs)
+  set(dirs_list ${input_dir})
+  foreach(config_type ${LLVM_CONFIGURATION_TYPES})
+    string(REPLACE ${CMAKE_CFG_INTDIR} ${config_type} dir ${input_dir})
+    list(APPEND dirs_list ${dir})
+  endforeach()
+  set(${output_dirs} ${dirs_list} PARENT_SCOPE)
+endfunction()
+
 # If we are not building as a part of LLVM, build LLDB as an
 # standalone project, using LLVM as an external library:
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -27,7 +36,10 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   if(CMAKE_HOST_WIN32 AND NOT CYGWIN)
     set(lit_file_name "${lit_file_name}.py")
   endif()
-  set(LLVM_DEFAULT_EXTERNAL_LIT "${LLVM_TOOLS_BINARY_DIR}/${lit_file_name}" CACHE PATH "Path to llvm-lit")
+
+  append_configuration_directories(${LLVM_TOOLS_BINARY_DIR} config_dirs)
+  find_program(lit_full_path ${lit_file_name} ${config_dirs} NO_DEFAULT_PATH)
+  set(LLVM_DEFAULT_EXTERNAL_LIT ${lit_full_path} CACHE PATH "Path to llvm-lit")
 
   if(CMAKE_CROSSCOMPILING)
     set(LLVM_NATIVE_BUILD "${LLDB_PATH_TO_LLVM_BUILD}/NATIVE")
@@ -51,8 +63,9 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
         "${LLVM_NATIVE_BUILD}/Release/bin/llvm-tblgen${HOST_EXECUTABLE_SUFFIX}")
     endif()
   else()
-    find_program(LLVM_TABLEGEN_EXE "llvm-tblgen" ${LLVM_TOOLS_BINARY_DIR}
-      NO_DEFAULT_PATH)
+    set(tblgen_file_name "llvm-tblgen${CMAKE_EXECUTABLE_SUFFIX}")
+    append_configuration_directories(${LLVM_TOOLS_BINARY_DIR} config_dirs)
+    find_program(LLVM_TABLEGEN_EXE ${tblgen_file_name} ${config_dirs} NO_DEFAULT_PATH)
   endif()
 
   # They are used as destination of target generators.

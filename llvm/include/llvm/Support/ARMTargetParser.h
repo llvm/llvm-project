@@ -240,6 +240,8 @@ StringRef getCPUAttr(ArchKind AK);
 StringRef getSubArch(ArchKind AK);
 StringRef getArchExtName(unsigned ArchExtKind);
 StringRef getArchExtFeature(StringRef ArchExt);
+bool appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK, StringRef ArchExt,
+                           std::vector<StringRef> &Features);
 StringRef getHWDivName(unsigned HWDivKind);
 
 // Information by Name

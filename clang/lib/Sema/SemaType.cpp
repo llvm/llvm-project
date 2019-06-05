@@ -130,7 +130,6 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_Regparm:                                                 \
   case ParsedAttr::AT_AnyX86NoCallerSavedRegisters:                            \
   case ParsedAttr::AT_AnyX86NoCfCheck:                                         \
-  case ParsedAttr::AT_NoThrow:                                                 \
     CALLING_CONV_ATTRS_CASELIST
 
 // Microsoft-specific type qualifiers.
@@ -6947,23 +6946,17 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
   }
 
   if (attr.getKind() == ParsedAttr::AT_NoThrow) {
-    if (S.CheckAttrNoArgs(attr))
-      return true;
-
     // Delay if this is not a function type.
     if (!unwrapped.isFunctionType())
       return false;
 
+    if (S.CheckAttrNoArgs(attr)) {
+      attr.setInvalid();
+      return true;
+    }
+
     // Otherwise we can process right away.
-    auto *Proto = unwrapped.get()->getAs<FunctionProtoType>();
-
-    // In the case where this is a FunctionNoProtoType instead of a
-    // FunctionProtoType, let the existing NoThrowAttr implementation do its
-    // thing.
-    if (!Proto)
-      return false;
-
-    attr.setUsedAsTypeAttr();
+    auto *Proto = unwrapped.get()->castAs<FunctionProtoType>();
 
     // MSVC ignores nothrow if it is in conflict with an explicit exception
     // specification.
@@ -7408,6 +7401,9 @@ static void deduceOpenCLImplicitAddrSpace(TypeProcessingState &State,
       (D.getContext() == DeclaratorContext::MemberContext &&
        (!IsPointee &&
         D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_static)) ||
+      // Do not deduce addr space of non-pointee in type alias because it
+      // doesn't define any object.
+      (D.getContext() == DeclaratorContext::AliasDeclContext && !IsPointee) ||
       // Do not deduce addr space for types used to define a typedef and the
       // typedef itself, except the pointee type of a pointer type which is used
       // to define the typedef.
@@ -7668,6 +7664,12 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
         attr.setInvalid();
       break;
 
+    case ParsedAttr::AT_NoThrow:
+    // Exception Specifications aren't generally supported in C mode throughout
+    // clang, so revert to attribute-based handling for C.
+      if (!state.getSema().getLangOpts().CPlusPlus)
+        break;
+      LLVM_FALLTHROUGH;
     FUNCTION_TYPE_ATTRS_CASELIST:
       attr.setUsedAsTypeAttr();
 

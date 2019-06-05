@@ -1857,6 +1857,9 @@ def err_reference_bind_failed : Error<
   "reference %diff{to %select{type|incomplete type}1 $ could not bind to an "
   "%select{rvalue|lvalue}2 of type $|could not bind to %select{rvalue|lvalue}2 of "
   "incompatible type}0,3">;
+def err_reference_bind_temporary_addrspace : Error<
+  "reference of type %0 cannot bind to a temporary object because of "
+  "address space mismatch">;
 def err_reference_bind_init_list : Error<
   "reference to type %0 cannot bind to an initializer list">;
 def err_init_list_bad_dest_type : Error<

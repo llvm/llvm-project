@@ -2994,8 +2994,9 @@ define <32 x i8> @shuffle_v32i8_15_15_15_15_15_15_15_15_32_32_32_32_32_32_32_32_
 ;
 ; AVX512VLVBMI-LABEL: shuffle_v32i8_15_15_15_15_15_15_15_15_32_32_32_32_32_32_32_32_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
 ; AVX512VLVBMI:       # %bb.0:
-; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,16,16,16,16,16,16,16,16]
-; AVX512VLVBMI-NEXT:    vpermt2b %xmm1, %xmm2, %xmm0
+; AVX512VLVBMI-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [15,15,15,15,15,15,15,15,32,32,32,32,32,32,32,32,15,15,15,15,15,15,15,15,32,32,32,32,32,32,32,32]
+; AVX512VLVBMI-NEXT:    # ymm2 = mem[0,1,0,1]
+; AVX512VLVBMI-NEXT:    vpermt2b %ymm1, %ymm2, %ymm0
 ; AVX512VLVBMI-NEXT:    retq
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> %b, <32 x i32> <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <32 x i8> %shuffle
