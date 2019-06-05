@@ -21,6 +21,11 @@
 #define MIPS_DYNAMIC_TAG_DEFINED
 #endif
 
+#ifndef PPC_DYNAMIC_TAG
+#define PPC_DYNAMIC_TAG(name, value) DYNAMIC_TAG(name, value)
+#define PPC_DYNAMIC_TAG_DEFINED
+#endif
+
 #ifndef PPC64_DYNAMIC_TAG
 #define PPC64_DYNAMIC_TAG(name, value) DYNAMIC_TAG(name, value)
 #define PPC64_DYNAMIC_TAG_DEFINED
@@ -199,6 +204,10 @@ MIPS_DYNAMIC_TAG(MIPS_RWPLT, 0x70000034)        // Points to the base
 MIPS_DYNAMIC_TAG(MIPS_RLD_MAP_REL, 0x70000035)  // Relative offset of run time loader
                                                 // map, used for debugging.
 
+// PPC specific dynamic table entries.
+PPC_DYNAMIC_TAG(PPC_GOT, 0x70000000) // Uses Secure PLT ABI.
+PPC_DYNAMIC_TAG(PPC_OPT, 0x70000001) // Has TLS optimization.
+
 // PPC64 specific dynamic table entries.
 PPC64_DYNAMIC_TAG(PPC64_GLINK, 0x70000000) // Address of 32 bytes before the
                                            // first glink lazy resolver stub.
@@ -224,6 +233,10 @@ DYNAMIC_TAG(FILTER, 0x7FFFFFFF)    // Shared object to get values from
 #ifdef HEXAGON_DYNAMIC_TAG_DEFINED
 #undef HEXAGON_DYNAMIC_TAG
 #undef HEXAGON_DYNAMIC_TAG_DEFINED
+#endif
+#ifdef PPC_DYNAMIC_TAG_DEFINED
+#undef PPC_DYNAMIC_TAG
+#undef PPC_DYNAMIC_TAG_DEFINED
 #endif
 #ifdef PPC64_DYNAMIC_TAG_DEFINED
 #undef PPC64_DYNAMIC_TAG

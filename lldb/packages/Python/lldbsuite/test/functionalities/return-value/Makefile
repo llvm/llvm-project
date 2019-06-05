@@ -1,5 +1,5 @@
 LEVEL = ../../make
 
-C_SOURCES := call-func.c
+CXX_SOURCES := call-func.cpp
 
 include $(LEVEL)/Makefile.rules

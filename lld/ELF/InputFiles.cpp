@@ -25,6 +25,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -34,6 +35,7 @@ using namespace llvm::ELF;
 using namespace llvm::object;
 using namespace llvm::sys;
 using namespace llvm::sys::fs;
+using namespace llvm::support::endian;
 
 using namespace lld;
 using namespace lld::elf;
@@ -753,6 +755,68 @@ static void updateSupportedARMFeatures(const ARMAttributeParser &Attributes) {
   }
 }
 
+// If a source file is compiled with x86 hardware-assisted call flow control
+// enabled, the generated object file contains feature flags indicating that
+// fact. This function reads the feature flags and returns it.
+//
+// Essentially we want to read a single 32-bit value in this function, but this
+// function is rather complicated because the value is buried deep inside a
+// .note.gnu.property section.
+//
+// The section consists of one or more NOTE records. Each NOTE record consists
+// of zero or more type-length-value fields. We want to find a field of a
+// certain type. It seems a bit too much to just store a 32-bit value, perhaps
+// the ABI is unnecessarily complicated.
+template <class ELFT>
+static uint32_t readAndFeatures(ObjFile<ELFT> *Obj, ArrayRef<uint8_t> Data) {
+  using Elf_Nhdr = typename ELFT::Nhdr;
+  using Elf_Note = typename ELFT::Note;
+
+  while (!Data.empty()) {
+    // Read one NOTE record.
+    if (Data.size() < sizeof(Elf_Nhdr))
+      fatal(toString(Obj) + ": .note.gnu.property: section too short");
+
+    auto *Nhdr = reinterpret_cast<const Elf_Nhdr *>(Data.data());
+    if (Data.size() < Nhdr->getSize())
+      fatal(toString(Obj) + ": .note.gnu.property: section too short");
+
+    Elf_Note Note(*Nhdr);
+    if (Nhdr->n_type != NT_GNU_PROPERTY_TYPE_0 || Note.getName() != "GNU") {
+      Data = Data.slice(Nhdr->getSize());
+      continue;
+    }
+
+    // Read a body of a NOTE record, which consists of type-length-value fields.
+    ArrayRef<uint8_t> Desc = Note.getDesc();
+    while (!Desc.empty()) {
+      if (Desc.size() < 8)
+        fatal(toString(Obj) + ": .note.gnu.property: section too short");
+
+      uint32_t Type = read32le(Desc.data());
+      uint32_t Size = read32le(Desc.data() + 4);
+
+      if (Type == GNU_PROPERTY_X86_FEATURE_1_AND) {
+        // We found the field.
+        return read32le(Desc.data() + 8);
+      }
+
+      // On 64-bit, a payload may be followed by a 4-byte padding to make its
+      // size a multiple of 8.
+      if (ELFT::Is64Bits)
+        Size = alignTo(Size, 8);
+
+      Desc = Desc.slice(Size + 8); // +8 for Type and Size
+    }
+
+    // Go to next NOTE record if a note section didn't contain
+    // X86_FEATURES_1_AND description.
+    Data = Data.slice(Nhdr->getSize());
+  }
+
+  return 0;
+}
+
 template <class ELFT>
 InputSectionBase *ObjFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
   uint32_t Idx = Sec.sh_info;
@@ -900,6 +964,19 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   // .note.GNU-stack sections are simply ignored.
   if (Name == ".note.GNU-stack")
     return &InputSection::Discarded;
+
+  // If an object file is compatible with Intel Control-Flow Enforcement
+  // Technology (CET), it has a .note.gnu.property section containing the
+  // GNU_PROPERTY_X86_FEATURE_1_IBT flag. Read a bitmap containing the flag.
+  //
+  // Since we merge bitmaps from multiple object files to create a new
+  // .note.gnu.property containing a single AND'ed bitmap, we discard an input
+  // file's .note.gnu.property section.
+  if (Name == ".note.gnu.property") {
+    ArrayRef<uint8_t> Contents = check(this->getObj().getSectionContents(&Sec));
+    this->AndFeatures = readAndFeatures(this, Contents);
+    return &InputSection::Discarded;
+  }
 
   // Split stacks is a feature to support a discontiguous stack,
   // commonly used in the programming language Go. For the details,

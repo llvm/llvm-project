@@ -681,14 +681,12 @@ public:
 
   int getGEPCost(Type *PointeeType, const Value *Ptr,
                  ArrayRef<const Value *> Operands) {
-    const GlobalValue *BaseGV = nullptr;
-    if (Ptr != nullptr) {
-      // TODO: will remove this when pointers have an opaque type.
-      assert(Ptr->getType()->getScalarType()->getPointerElementType() ==
-                 PointeeType &&
-             "explicit pointee type doesn't match operand's pointee type");
-      BaseGV = dyn_cast<GlobalValue>(Ptr->stripPointerCasts());
-    }
+    assert(PointeeType && Ptr && "can't get GEPCost of nullptr");
+    // TODO: will remove this when pointers have an opaque type.
+    assert(Ptr->getType()->getScalarType()->getPointerElementType() ==
+               PointeeType &&
+           "explicit pointee type doesn't match operand's pointee type");
+    auto *BaseGV = dyn_cast<GlobalValue>(Ptr->stripPointerCasts());
     bool HasBaseReg = (BaseGV == nullptr);
 
     auto PtrSizeBits = DL.getPointerTypeSizeInBits(Ptr->getType());
@@ -731,13 +729,10 @@ public:
       }
     }
 
-    // Assumes the address space is 0 when Ptr is nullptr.
-    unsigned AS =
-        (Ptr == nullptr ? 0 : Ptr->getType()->getPointerAddressSpace());
-
     if (static_cast<T *>(this)->isLegalAddressingMode(
             TargetType, const_cast<GlobalValue *>(BaseGV),
-            BaseOffset.sextOrTrunc(64).getSExtValue(), HasBaseReg, Scale, AS))
+            BaseOffset.sextOrTrunc(64).getSExtValue(), HasBaseReg, Scale,
+            Ptr->getType()->getPointerAddressSpace()))
       return TTI::TCC_Free;
     return TTI::TCC_Basic;
   }

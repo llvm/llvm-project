@@ -177,8 +177,9 @@ private:
 
   ArrayTypeNode *demangleArrayType(StringView &MangledName);
 
+  NodeArrayNode *demangleFunctionParameterList(StringView &MangledName,
+                                               bool &IsVariadic);
   NodeArrayNode *demangleTemplateParameterList(StringView &MangledName);
-  NodeArrayNode *demangleFunctionParameterList(StringView &MangledName);
 
   std::pair<uint64_t, bool> demangleNumber(StringView &MangledName);
   uint64_t demangleUnsigned(StringView &MangledName);

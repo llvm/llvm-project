@@ -147,6 +147,13 @@ public:
   size_t getSize() const override { return 0; }
 };
 
+class GnuPropertySection : public SyntheticSection {
+public:
+  GnuPropertySection();
+  void writeTo(uint8_t *Buf) override;
+  size_t getSize() const override;
+};
+
 // .note.gnu.build-id section.
 class BuildIdSection : public SyntheticSection {
   // First 16 bytes are a header.

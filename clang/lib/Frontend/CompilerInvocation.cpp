@@ -682,6 +682,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     StringRef Name = A->getValue();
     if (Name == "Accelerate")
       Opts.setVecLib(CodeGenOptions::Accelerate);
+    else if (Name == "MASSV")
+      Opts.setVecLib(CodeGenOptions::MASSV);
     else if (Name == "SVML")
       Opts.setVecLib(CodeGenOptions::SVML);
     else if (Name == "none")

@@ -1,7 +1,7 @@
 // RUN: %clang -S -emit-llvm -o - -O0 %s | FileCheck %s -check-prefix=O0
-// RUN: %clang -S -emit-llvm -o - -O1 %s | FileCheck %s -check-prefix=O1
-// RUN: %clang -S -emit-llvm -o - -O2 %s | FileCheck %s -check-prefix=O2
-// RUN: %clang -S -emit-llvm -o - -O3 %s | FileCheck %s -check-prefix=O3
+// RUN: %clang -S -emit-llvm -o - -O1 -fno-experimental-new-pass-manager %s | FileCheck %s -check-prefix=O1
+// RUN: %clang -S -emit-llvm -o - -O2 -fno-experimental-new-pass-manager %s | FileCheck %s -check-prefix=O2
+// RUN: %clang -S -emit-llvm -o - -O3 -fno-experimental-new-pass-manager %s | FileCheck %s -check-prefix=O3
 
 extern void use(char *a);
 

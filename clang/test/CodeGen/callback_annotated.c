@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown -fopenmp -O1 %s -emit-llvm -o - | FileCheck %s --check-prefix=RUN1
-// RUN: %clang_cc1 -triple i386-unknown-unknown -fopenmp -O1 %s -emit-llvm -o - | FileCheck %s --check-prefix=RUN2
-// RUN: %clang_cc1 -triple i386-unknown-unknown -fopenmp -O1 %s -emit-llvm -o - | opt -ipconstprop -S | FileCheck --check-prefix=IPCP %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -fopenmp -O1 -fno-experimental-new-pass-manager %s -emit-llvm -o - | FileCheck %s --check-prefix=RUN1
+// RUN: %clang_cc1 -triple i386-unknown-unknown -fopenmp -O1 -fno-experimental-new-pass-manager %s -emit-llvm -o - | FileCheck %s --check-prefix=RUN2
+// RUN: %clang_cc1 -triple i386-unknown-unknown -fopenmp -O1 -fno-experimental-new-pass-manager %s -emit-llvm -o - | opt -ipconstprop -S | FileCheck --check-prefix=IPCP %s
 
 // RUN1-DAG: @broker0({{[^#]*#[0-9]+}} !callback ![[cid0:[0-9]+]]
 __attribute__((callback(1, 2))) void *broker0(void *(*callee)(void *), void *payload) {

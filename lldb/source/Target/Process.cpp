@@ -1598,16 +1598,6 @@ LanguageRuntime *Process::GetLanguageRuntime(lldb::LanguageType language,
   return runtime;
 }
 
-CPPLanguageRuntime *Process::GetCPPLanguageRuntime(bool retry_if_null) {
-  std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
-  LanguageRuntime *runtime =
-      GetLanguageRuntime(eLanguageTypeC_plus_plus, retry_if_null);
-  if (!runtime)
-    return nullptr;
-
-  return static_cast<CPPLanguageRuntime *>(runtime);
-}
-
 ObjCLanguageRuntime *Process::GetObjCLanguageRuntime(bool retry_if_null) {
   std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
   LanguageRuntime *runtime =

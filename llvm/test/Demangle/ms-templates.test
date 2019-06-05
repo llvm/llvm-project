@@ -4,6 +4,8 @@
 
 ; CHECK-NOT: Invalid mangled name
 
+?f@@3V?$C@H@@A
+; CHECK: class C<int> f
 
 ??0?$Class@VTypename@@@@QAE@XZ
 ; CHECK: __thiscall Class<class Typename>::Class<class Typename>(void)

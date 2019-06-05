@@ -93,66 +93,6 @@ void llvm::remapInstruction(Instruction *I, ValueToValueMapTy &VMap) {
   }
 }
 
-/// Folds a basic block into its predecessor if it only has one predecessor, and
-/// that predecessor only has one successor.
-/// The LoopInfo Analysis that is passed will be kept consistent.
-BasicBlock *llvm::foldBlockIntoPredecessor(BasicBlock *BB, LoopInfo *LI,
-                                           ScalarEvolution *SE,
-                                           DominatorTree *DT) {
-  // Merge basic blocks into their predecessor if there is only one distinct
-  // pred, and if there is only one distinct successor of the predecessor, and
-  // if there are no PHI nodes.
-  BasicBlock *OnlyPred = BB->getSinglePredecessor();
-  if (!OnlyPred) return nullptr;
-
-  if (OnlyPred->getTerminator()->getNumSuccessors() != 1)
-    return nullptr;
-
-  LLVM_DEBUG(dbgs() << "Merging: " << BB->getName() << " into "
-                    << OnlyPred->getName() << "\n");
-
-  // Resolve any PHI nodes at the start of the block.  They are all
-  // guaranteed to have exactly one entry if they exist, unless there are
-  // multiple duplicate (but guaranteed to be equal) entries for the
-  // incoming edges.  This occurs when there are multiple edges from
-  // OnlyPred to OnlySucc.
-  FoldSingleEntryPHINodes(BB);
-
-  // Delete the unconditional branch from the predecessor...
-  OnlyPred->getInstList().pop_back();
-
-  // Make all PHI nodes that referred to BB now refer to Pred as their
-  // source...
-  BB->replaceAllUsesWith(OnlyPred);
-
-  // Move all definitions in the successor to the predecessor...
-  OnlyPred->getInstList().splice(OnlyPred->end(), BB->getInstList());
-
-  // OldName will be valid until erased.
-  StringRef OldName = BB->getName();
-
-  // Erase the old block and update dominator info.
-  if (DT)
-    if (DomTreeNode *DTN = DT->getNode(BB)) {
-      DomTreeNode *PredDTN = DT->getNode(OnlyPred);
-      SmallVector<DomTreeNode *, 8> Children(DTN->begin(), DTN->end());
-      for (auto *DI : Children)
-        DT->changeImmediateDominator(DI, PredDTN);
-
-      DT->eraseNode(BB);
-    }
-
-  LI->removeBlock(BB);
-
-  // Inherit predecessor's name if it exists...
-  if (!OldName.empty() && !OnlyPred->hasName())
-    OnlyPred->setName(OldName);
-
-  BB->eraseFromParent();
-
-  return OnlyPred;
-}
-
 /// Check if unrolling created a situation where we need to insert phi nodes to
 /// preserve LCSSA form.
 /// \param Blocks is a vector of basic blocks representing unrolled loop.
@@ -818,12 +758,14 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   assert(!DT || !UnrollVerifyDomtree ||
       DT->verify(DominatorTree::VerificationLevel::Fast));
 
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   // Merge adjacent basic blocks, if possible.
   for (BasicBlock *Latch : Latches) {
     BranchInst *Term = cast<BranchInst>(Latch->getTerminator());
     if (Term->isUnconditional()) {
       BasicBlock *Dest = Term->getSuccessor(0);
-      if (BasicBlock *Fold = foldBlockIntoPredecessor(Dest, LI, SE, DT)) {
+      BasicBlock *Fold = Dest->getUniquePredecessor();
+      if (MergeBlockIntoPredecessor(Dest, &DTU, LI)) {
         // Dest has been folded into Fold. Update our worklists accordingly.
         std::replace(Latches.begin(), Latches.end(), Dest, Fold);
         UnrolledLoopBlocks.erase(std::remove(UnrolledLoopBlocks.begin(),

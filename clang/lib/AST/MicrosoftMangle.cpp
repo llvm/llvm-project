@@ -31,6 +31,7 @@
 #include "llvm/Support/xxhash.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/StringSaver.h"
 
 using namespace clang;
 
@@ -268,6 +269,11 @@ class MicrosoftCXXNameMangler {
   ArgBackRefMap FunArgBackReferences;
   ArgBackRefMap TemplateArgBackReferences;
 
+  typedef llvm::DenseMap<const void *, StringRef> TemplateArgStringMap;
+  TemplateArgStringMap TemplateArgStrings;
+  llvm::StringSaver TemplateArgStringStorage;
+  llvm::BumpPtrAllocator TemplateArgStringStorageAlloc;
+
   typedef std::set<std::pair<int, bool>> PassObjectSizeArgsSet;
   PassObjectSizeArgsSet PassObjectSizeArgs;
 
@@ -282,18 +288,21 @@ public:
 
   MicrosoftCXXNameMangler(MicrosoftMangleContextImpl &C, raw_ostream &Out_)
       : Context(C), Out(Out_), Structor(nullptr), StructorType(-1),
+        TemplateArgStringStorage(TemplateArgStringStorageAlloc),
         PointersAre64Bit(C.getASTContext().getTargetInfo().getPointerWidth(0) ==
                          64) {}
 
   MicrosoftCXXNameMangler(MicrosoftMangleContextImpl &C, raw_ostream &Out_,
                           const CXXConstructorDecl *D, CXXCtorType Type)
       : Context(C), Out(Out_), Structor(getStructor(D)), StructorType(Type),
+        TemplateArgStringStorage(TemplateArgStringStorageAlloc),
         PointersAre64Bit(C.getASTContext().getTargetInfo().getPointerWidth(0) ==
                          64) {}
 
   MicrosoftCXXNameMangler(MicrosoftMangleContextImpl &C, raw_ostream &Out_,
                           const CXXDestructorDecl *D, CXXDtorType Type)
       : Context(C), Out(Out_), Structor(getStructor(D)), StructorType(Type),
+        TemplateArgStringStorage(TemplateArgStringStorageAlloc),
         PointersAre64Bit(C.getASTContext().getTargetInfo().getPointerWidth(0) ==
                          64) {}
 
@@ -809,24 +818,34 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
     // TD / TemplateArg pairs.
     ArgBackRefMap::iterator Found = TemplateArgBackReferences.find(ND);
     if (Found == TemplateArgBackReferences.end()) {
-      // Mangle full template name into temporary buffer.
-      llvm::SmallString<64> TemplateMangling;
-      llvm::raw_svector_ostream Stream(TemplateMangling);
-      MicrosoftCXXNameMangler Extra(Context, Stream);
-      Extra.mangleTemplateInstantiationName(TD, *TemplateArgs);
 
-      // Use the string backref vector to possibly get a back reference.
-      mangleSourceName(TemplateMangling);
+      TemplateArgStringMap::iterator Found = TemplateArgStrings.find(ND);
+      if (Found == TemplateArgStrings.end()) {
+        // Mangle full template name into temporary buffer.
+        llvm::SmallString<64> TemplateMangling;
+        llvm::raw_svector_ostream Stream(TemplateMangling);
+        MicrosoftCXXNameMangler Extra(Context, Stream);
+        Extra.mangleTemplateInstantiationName(TD, *TemplateArgs);
 
-      // Memoize back reference for this type.
-      BackRefVec::iterator StringFound =
-          llvm::find(NameBackReferences, TemplateMangling);
-      if (StringFound != NameBackReferences.end()) {
-        TemplateArgBackReferences[ND] =
-            StringFound - NameBackReferences.begin();
+        // Use the string backref vector to possibly get a back reference.
+        mangleSourceName(TemplateMangling);
+
+        // Memoize back reference for this type if one exist, else memoize
+        // the mangling itself.
+        BackRefVec::iterator StringFound =
+            llvm::find(NameBackReferences, TemplateMangling);
+        if (StringFound != NameBackReferences.end()) {
+          TemplateArgBackReferences[ND] =
+              StringFound - NameBackReferences.begin();
+        } else {
+          TemplateArgStrings[ND] =
+              TemplateArgStringStorage.save(TemplateMangling.str());
+        }
+      } else {
+        Out << Found->second; // Outputs a StringRef.
       }
     } else {
-      Out << Found->second;
+      Out << Found->second; // Outputs a back reference (an int).
     }
     return;
   }

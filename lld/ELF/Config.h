@@ -82,6 +82,7 @@ struct VersionDefinition {
 // Most fields are initialized by the driver.
 struct Configuration {
   uint8_t OSABI = 0;
+  uint32_t AndFeatures = 0;
   llvm::CachePruningPolicy ThinLTOCachePolicy;
   llvm::StringMap<uint64_t> SectionStartMap;
   llvm::StringRef Chroot;
@@ -147,6 +148,7 @@ struct Configuration {
   bool ExportDynamic;
   bool FixCortexA53Errata843419;
   bool FormatBinary = false;
+  bool RequireCET;
   bool GcSections;
   bool GdbIndex;
   bool GnuHash = false;
