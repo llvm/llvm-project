@@ -35,7 +35,7 @@ llvm::Error ArchAndFile::createTempFile() {
   if (!T)
     return T.takeError();
 
-  File = llvm::Optional<sys::fs::TempFile>(std::move(*T));
+  File = llvm::make_unique<sys::fs::TempFile>(std::move(*T));
   return Error::success();
 }
 

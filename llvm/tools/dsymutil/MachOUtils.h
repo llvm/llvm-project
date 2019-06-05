@@ -26,13 +26,14 @@ namespace MachOUtils {
 struct ArchAndFile {
   std::string Arch;
   // Optional because TempFile has no default constructor.
-  Optional<llvm::sys::fs::TempFile> File;
+  std::unique_ptr<llvm::sys::fs::TempFile> File;
 
   llvm::Error createTempFile();
   llvm::StringRef path() const;
 
   ArchAndFile(StringRef Arch) : Arch(Arch) {}
   ArchAndFile(ArchAndFile &&A) = default;
+  ArchAndFile &operator=(ArchAndFile &&A) = default;
   ~ArchAndFile();
 };
 
