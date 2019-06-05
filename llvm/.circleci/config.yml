@@ -11,14 +11,11 @@ jobs:
           name: submodules
           command: |
             git clone git@github.com:wsmoses/Tapir-Clang.git tools/clang
-            git clone git@github.com:wsmoses/Tapir-Polly.git tools/polly
             git clone git@github.com:wsmoses/Tapir-compiler-rt.git projects/compiler-rt
             cd tools/clang
-            git checkout xla
-            cd ../polly
-            git checkout release_70
+            git checkout xla_8
             cd ../../projects/compiler-rt
-            git checkout xla
+            git checkout xla_8
             cd ../..
       - run:
           name: cmake
@@ -60,14 +57,11 @@ jobs:
           name: submodules
           command: |
             git clone git@github.com:wsmoses/Tapir-Clang.git tools/clang
-            git clone git@github.com:wsmoses/Tapir-Polly.git tools/polly
             git clone git@github.com:wsmoses/Tapir-compiler-rt.git projects/compiler-rt
             cd tools/clang
-            git checkout xla
-            cd ../polly
-            git checkout release_70
+            git checkout xla_8
             cd ../../projects/compiler-rt
-            git checkout xla
+            git checkout xla_8
             cd ../..
       - run:
           name: cmake
@@ -109,14 +103,11 @@ jobs:
           name: submodules
           command: |
             git clone git@github.com:wsmoses/Tapir-Clang.git tools/clang
-            git clone git@github.com:wsmoses/Tapir-Polly.git tools/polly
             git clone git@github.com:wsmoses/Tapir-compiler-rt.git projects/compiler-rt
             cd tools/clang
-            git checkout xla
-            cd ../polly
-            git checkout release_70
+            git checkout xla_8
             cd ../../projects/compiler-rt
-            git checkout xla
+            git checkout xla_8
             cd ../..
       - run:
           name: cmake
