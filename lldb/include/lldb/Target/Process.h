@@ -2184,8 +2184,6 @@ public:
   LanguageRuntime *GetLanguageRuntime(lldb::LanguageType language,
                                       bool retry_if_null = true);
 
-  CPPLanguageRuntime *GetCPPLanguageRuntime(bool retry_if_null = true);
-
   ObjCLanguageRuntime *GetObjCLanguageRuntime(bool retry_if_null = true);
 
   bool IsPossibleDynamicValue(ValueObject &in_value);

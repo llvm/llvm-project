@@ -1,0 +1,6 @@
+# RUN: llvm-objcopy - %t < %p/Inputs/alloc-symtab.o
+# RUN: llvm-objcopy %p/Inputs/alloc-symtab.o %t1
+# RUN: cmp %t %t1
+
+# RUN: llvm-objcopy %p/Inputs/alloc-symtab.o - > %t2
+# RUN: cmp %t1 %t2

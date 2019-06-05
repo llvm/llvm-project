@@ -23,6 +23,8 @@ static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
                           "No vector functions library"),
                clEnumValN(TargetLibraryInfoImpl::Accelerate, "Accelerate",
                           "Accelerate framework"),
+               clEnumValN(TargetLibraryInfoImpl::MASSV, "MASSV",
+                          "IBM MASS vector library"),
                clEnumValN(TargetLibraryInfoImpl::SVML, "SVML",
                           "Intel SVML library")));
 
@@ -1532,6 +1534,14 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
   case Accelerate: {
     const VecDesc VecFuncs[] = {
     #define TLI_DEFINE_ACCELERATE_VECFUNCS
+    #include "llvm/Analysis/VecFuncs.def"
+    };
+    addVectorizableFunctions(VecFuncs);
+    break;
+  }
+  case MASSV: {
+    const VecDesc VecFuncs[] = {
+    #define TLI_DEFINE_MASSV_VECFUNCS
     #include "llvm/Analysis/VecFuncs.def"
     };
     addVectorizableFunctions(VecFuncs);

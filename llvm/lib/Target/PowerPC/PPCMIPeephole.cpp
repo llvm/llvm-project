@@ -47,6 +47,8 @@ STATISTIC(NumFunctionsEnteredInMIPeephole,
 STATISTIC(NumFixedPointIterations,
           "Number of fixed-point iterations converting reg-reg instructions "
           "to reg-imm ones");
+STATISTIC(NumRotatesCollapsed,
+          "Number of pairs of rotate left, clear left/right collapsed");
 
 static cl::opt<bool>
 FixedPointRegToImm("ppc-reg-to-imm-fixed-point", cl::Hidden, cl::init(true),
@@ -755,6 +757,56 @@ bool PPCMIPeephole::simplifyCode(void) {
         ToErase = &MI;
         Simplified = true;
         NumOptADDLIs++;
+        break;
+      }
+      case PPC::RLDICR: {
+        // We miss the opportunity to emit an RLDIC when lowering jump tables
+        // since ISEL sees only a single basic block. When selecting, the clear
+        // and shift left will be in different blocks.
+        unsigned SrcReg = MI.getOperand(1).getReg();
+        if (!TargetRegisterInfo::isVirtualRegister(SrcReg))
+          break;
+
+        MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
+        if (SrcMI->getOpcode() != PPC::RLDICL)
+          break;
+        MachineOperand MOpSHSrc = SrcMI->getOperand(2);
+        MachineOperand MOpMBSrc = SrcMI->getOperand(3);
+        MachineOperand MOpSHMI = MI.getOperand(2);
+        MachineOperand MOpMEMI = MI.getOperand(3);
+        if (!(MOpSHSrc.isImm() && MOpMBSrc.isImm() &&
+              MOpSHMI.isImm() && MOpMEMI.isImm()))
+          break;
+        uint64_t SHSrc = MOpSHSrc.getImm();
+        uint64_t MBSrc = MOpMBSrc.getImm();
+        uint64_t SHMI = MOpSHMI.getImm();
+        uint64_t MEMI = MOpMEMI.getImm();
+        uint64_t NewSH = SHSrc + SHMI;
+        uint64_t NewMB = MBSrc - SHMI;
+        if (NewMB > 63 || NewSH > 63)
+          break;
+
+        // The bits cleared with RLDICL are [0, MBSrc).
+        // The bits cleared with RLDICR are (MEMI, 63].
+        // After the sequence, the bits cleared are:
+        // [0, MBSrc-SHMI) and (MEMI, 63).
+        //
+        // The bits cleared with RLDIC are [0, NewMB) and (63-NewSH, 63].
+        if ((63 - NewSH) != MEMI)
+          break;
+
+        LLVM_DEBUG(dbgs() << "Converting pair: ");
+        LLVM_DEBUG(SrcMI->dump());
+        LLVM_DEBUG(MI.dump());
+
+        MI.setDesc(TII->get(PPC::RLDIC));
+        MI.getOperand(1).setReg(SrcMI->getOperand(1).getReg());
+        MI.getOperand(2).setImm(NewSH);
+        MI.getOperand(3).setImm(NewMB);
+
+        LLVM_DEBUG(dbgs() << "To: ");
+        LLVM_DEBUG(MI.dump());
+        NumRotatesCollapsed++;
         break;
       }
       }

@@ -13864,17 +13864,10 @@ Expr *Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
       TemplateArgs = &TemplateArgsBuffer;
     }
 
-    DeclRefExpr *DRE = DeclRefExpr::Create(Context,
-                                           ULE->getQualifierLoc(),
-                                           ULE->getTemplateKeywordLoc(),
-                                           Fn,
-                                           /*enclosing*/ false, // FIXME?
-                                           ULE->getNameLoc(),
-                                           Fn->getType(),
-                                           VK_LValue,
-                                           Found.getDecl(),
-                                           TemplateArgs);
-    MarkDeclRefReferenced(DRE);
+    DeclRefExpr *DRE =
+        BuildDeclRefExpr(Fn, Fn->getType(), VK_LValue, ULE->getNameInfo(),
+                         ULE->getQualifierLoc(), Found.getDecl(),
+                         ULE->getTemplateKeywordLoc(), TemplateArgs);
     DRE->setHadMultipleCandidates(ULE->getNumDecls() > 1);
     return DRE;
   }
@@ -13893,17 +13886,10 @@ Expr *Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
     // implicit member access, rewrite to a simple decl ref.
     if (MemExpr->isImplicitAccess()) {
       if (cast<CXXMethodDecl>(Fn)->isStatic()) {
-        DeclRefExpr *DRE = DeclRefExpr::Create(Context,
-                                               MemExpr->getQualifierLoc(),
-                                               MemExpr->getTemplateKeywordLoc(),
-                                               Fn,
-                                               /*enclosing*/ false,
-                                               MemExpr->getMemberLoc(),
-                                               Fn->getType(),
-                                               VK_LValue,
-                                               Found.getDecl(),
-                                               TemplateArgs);
-        MarkDeclRefReferenced(DRE);
+        DeclRefExpr *DRE = BuildDeclRefExpr(
+            Fn, Fn->getType(), VK_LValue, MemExpr->getNameInfo(),
+            MemExpr->getQualifierLoc(), Found.getDecl(),
+            MemExpr->getTemplateKeywordLoc(), TemplateArgs);
         DRE->setHadMultipleCandidates(MemExpr->getNumDecls() > 1);
         return DRE;
       } else {
@@ -13926,14 +13912,11 @@ Expr *Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
       type = Context.BoundMemberTy;
     }
 
-    MemberExpr *ME = MemberExpr::Create(
-        Context, Base, MemExpr->isArrow(), MemExpr->getOperatorLoc(),
+    return BuildMemberExpr(
+        Base, MemExpr->isArrow(), MemExpr->getOperatorLoc(),
         MemExpr->getQualifierLoc(), MemExpr->getTemplateKeywordLoc(), Fn, Found,
-        MemExpr->getMemberNameInfo(), TemplateArgs, type, valueKind,
-        OK_Ordinary);
-    ME->setHadMultipleCandidates(true);
-    MarkMemberReferenced(ME);
-    return ME;
+        /*HadMultipleCandidates=*/true, MemExpr->getMemberNameInfo(),
+        type, valueKind, OK_Ordinary, TemplateArgs);
   }
 
   llvm_unreachable("Invalid reference to overloaded function");

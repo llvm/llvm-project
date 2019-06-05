@@ -41,6 +41,7 @@ MODULE_ALIAS_ANALYSIS("globals-aa", GlobalsAA())
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("always-inline", AlwaysInlinerPass())
+MODULE_PASS("attributor", AttributorPass())
 MODULE_PASS("called-value-propagation", CalledValuePropagationPass())
 MODULE_PASS("canonicalize-aliases", CanonicalizeAliasesPass())
 MODULE_PASS("cg-profile", CGProfilePass())

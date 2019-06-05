@@ -68,6 +68,7 @@
 // FLTOALL-NEXT: thin
 // RUN: %clang --autocomplete=-fveclib= | FileCheck %s -check-prefix=FVECLIBALL
 // FVECLIBALL: Accelerate
+// FVECLIBALL-NEXT: MASSV
 // FVECLIBALL-NEXT: none
 // FVECLIBALL-NEXT: SVML
 // RUN: %clang --autocomplete=-fshow-overloads= | FileCheck %s -check-prefix=FSOVERALL

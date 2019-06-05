@@ -433,6 +433,9 @@ template <class ELFT> static void createSyntheticSections() {
   In.Iplt = make<PltSection>(true);
   Add(In.Iplt);
 
+  if (Config->AndFeatures)
+    Add(make<GnuPropertySection>());
+
   // .note.GNU-stack is always added when we are creating a re-linkable
   // object file. Other linkers are using the presence of this marker
   // section to control the executable-ness of the stack area, but that
