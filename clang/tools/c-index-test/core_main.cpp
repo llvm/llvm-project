@@ -765,24 +765,23 @@ static int watchDirectory(StringRef dirPath) {
     OS << "-- " << Events.size() << " :\n";
     for (auto evt : Events) {
       switch (evt.Kind) {
-        case DirectoryWatcher::EventKind::Added:
-          OS << "added: "; break;
-        case DirectoryWatcher::EventKind::Modified:
+        case DirectoryWatcher::Event::EventKind::Modified:
           OS << "modified: "; break;
-        case DirectoryWatcher::EventKind::Removed:
+        case DirectoryWatcher::Event::EventKind::Removed:
           OS << "removed: "; break;
-        case DirectoryWatcher::EventKind::DirectoryDeleted:
+        case DirectoryWatcher::Event::EventKind::WatchedDirRemoved:
           OS << "dir deleted: "; break;
+        case DirectoryWatcher::Event::EventKind::WatcherGotInvalidated:
+          OS << "watcher got invalidated: "; break;
 
       }
       OS << evt.Filename << '\n';
     }
   };
-  std::string Error;
   auto watcher = DirectoryWatcher::create(dirPath, receiver,
-                                          /*waitInitialSync=*/true, Error);
+                                          /*waitInitialSync=*/true);
   if (!watcher) {
-    errs() << "failed creating directory watcher: " << Error << '\n';
+    errs() << "failed creating directory watcher" << '\n';
     return 1;
   }
 

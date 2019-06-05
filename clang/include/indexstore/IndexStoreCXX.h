@@ -152,19 +152,19 @@ public:
     UnitEvent(indexstore_unit_event_t obj) : obj(obj) {}
 
     enum class Kind {
-      Added,
       Removed,
       Modified,
       DirectoryDeleted,
+      Failure
     };
     Kind getKind() const {
       indexstore_unit_event_kind_t c_k = indexstore_unit_event_get_kind(obj);
       Kind K;
       switch (c_k) {
-      case INDEXSTORE_UNIT_EVENT_ADDED: K = Kind::Added; break;
       case INDEXSTORE_UNIT_EVENT_REMOVED: K = Kind::Removed; break;
       case INDEXSTORE_UNIT_EVENT_MODIFIED: K = Kind::Modified; break;
       case INDEXSTORE_UNIT_EVENT_DIRECTORY_DELETED: K = Kind::DirectoryDeleted; break;
+      case INDEXSTORE_UNIT_EVENT_FAILURE: K = Kind::Failure; break;
       }
       return K;
     }
