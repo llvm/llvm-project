@@ -88,7 +88,7 @@ typedef Boolean (*CFStringGetCStringFuncTy)(CFStringRef, char *, CFIndex,
 typedef void (*CFReleaseFuncTy)(CFTypeRef);
 
 /* Find and parse the SystemVersion.plist file. */
-static void parseSystemVersionPList(void *Unused) {
+static void initializeAvailabilityCheck(void *Unused) {
   (void)Unused;
 
   // Use the new API if it's is available. Still load the PLIST to ensure that the
