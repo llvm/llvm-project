@@ -31,14 +31,13 @@
 
 .section ".note.gnu.property", "a"
 .long 4
-.long 0x10
+.long 0xc
 .long 0x5
 .asciz "GNU"
 
 .long 0xc0000002
 .long 4
 .long 3
-.long 0
 
 .text
 .globl func1

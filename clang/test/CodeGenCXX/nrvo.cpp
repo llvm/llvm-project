@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -O1 -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -O1 -fcxx-exceptions -fexceptions -std=c++03 -o - %s | FileCheck --check-prefixes=CHECK-EH,CHECK-EH-03 %s
-// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -O1 -fcxx-exceptions -fexceptions -std=c++11 -o - %s | FileCheck --check-prefixes=CHECK-EH,CHECK-EH-11 %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -O1 -fno-experimental-new-pass-manager -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -O1 -fno-experimental-new-pass-manager -fcxx-exceptions -fexceptions -std=c++03 -o - %s | FileCheck --check-prefixes=CHECK-EH,CHECK-EH-03 %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -O1 -fno-experimental-new-pass-manager -fcxx-exceptions -fexceptions -std=c++11 -o - %s | FileCheck --check-prefixes=CHECK-EH,CHECK-EH-11 %s
 
 // Test code generation for the named return value optimization.
 class X {

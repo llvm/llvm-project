@@ -104,6 +104,7 @@ static unsigned getAttrIndex(AbstractAttribute::ManifestPosition MP,
   case AbstractAttribute::MP_RETURNED:
     return AttributeList::ReturnIndex;
   }
+  llvm_unreachable("Unknown manifest position!");
 }
 
 /// Return true if \p New is equal or worse than \p Old.
