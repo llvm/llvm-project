@@ -893,31 +893,18 @@ BuildMSPropertyRefExpr(Sema &S, Expr *BaseExpr, bool IsArrow,
                                            NameInfo.getLoc());
 }
 
-MemberExpr *Sema::BuildMemberExpr(
-    Expr *Base, bool IsArrow, SourceLocation OpLoc, const CXXScopeSpec *SS,
-    SourceLocation TemplateKWLoc, ValueDecl *Member, DeclAccessPair FoundDecl,
-    bool HadMultipleCandidates, const DeclarationNameInfo &MemberNameInfo,
-    QualType Ty, ExprValueKind VK, ExprObjectKind OK,
-    const TemplateArgumentListInfo *TemplateArgs) {
-  NestedNameSpecifierLoc NNS =
-      SS ? SS->getWithLocInContext(Context) : NestedNameSpecifierLoc();
-  return BuildMemberExpr(Base, IsArrow, OpLoc, NNS, TemplateKWLoc, Member,
-                         FoundDecl, HadMultipleCandidates, MemberNameInfo, Ty,
-                         VK, OK, TemplateArgs);
-}
-
-MemberExpr *Sema::BuildMemberExpr(
-    Expr *Base, bool IsArrow, SourceLocation OpLoc, NestedNameSpecifierLoc NNS,
-    SourceLocation TemplateKWLoc, ValueDecl *Member, DeclAccessPair FoundDecl,
-    bool HadMultipleCandidates, const DeclarationNameInfo &MemberNameInfo,
-    QualType Ty, ExprValueKind VK, ExprObjectKind OK,
-    const TemplateArgumentListInfo *TemplateArgs) {
-  assert((!IsArrow || Base->isRValue()) && "-> base must be a pointer rvalue");
-  MemberExpr *E = MemberExpr::Create(Context, Base, IsArrow, OpLoc, NNS,
-                                     TemplateKWLoc, Member, FoundDecl,
-                                     MemberNameInfo, TemplateArgs, Ty, VK, OK);
-  E->setHadMultipleCandidates(HadMultipleCandidates);
-  MarkMemberReferenced(E);
+/// Build a MemberExpr AST node.
+static MemberExpr *BuildMemberExpr(
+    Sema &SemaRef, ASTContext &C, Expr *Base, bool isArrow,
+    SourceLocation OpLoc, const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
+    ValueDecl *Member, DeclAccessPair FoundDecl,
+    const DeclarationNameInfo &MemberNameInfo, QualType Ty, ExprValueKind VK,
+    ExprObjectKind OK, const TemplateArgumentListInfo *TemplateArgs = nullptr) {
+  assert((!isArrow || Base->isRValue()) && "-> base must be a pointer rvalue");
+  MemberExpr *E = MemberExpr::Create(
+      C, Base, isArrow, OpLoc, SS.getWithLocInContext(C), TemplateKWLoc, Member,
+      FoundDecl, MemberNameInfo, TemplateArgs, Ty, VK, OK);
+  SemaRef.MarkMemberReferenced(E);
   return E;
 }
 
@@ -1128,10 +1115,10 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
                                                     OpLoc);
 
   if (VarDecl *Var = dyn_cast<VarDecl>(MemberDecl)) {
-    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc, Var,
-                           FoundDecl, /*MultipleCandidates=*/false,
-                           MemberNameInfo, Var->getType().getNonReferenceType(),
-                           VK_LValue, OK_Ordinary);
+    return BuildMemberExpr(*this, Context, BaseExpr, IsArrow, OpLoc, SS,
+                           TemplateKWLoc, Var, FoundDecl, MemberNameInfo,
+                           Var->getType().getNonReferenceType(), VK_LValue,
+                           OK_Ordinary);
   }
 
   if (CXXMethodDecl *MemberFn = dyn_cast<CXXMethodDecl>(MemberDecl)) {
@@ -1145,25 +1132,24 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
       type = MemberFn->getType();
     }
 
-    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc,
-                           MemberFn, FoundDecl, /*MultipleCandidates=*/false,
-                           MemberNameInfo, type, valueKind, OK_Ordinary);
+    return BuildMemberExpr(*this, Context, BaseExpr, IsArrow, OpLoc, SS,
+                           TemplateKWLoc, MemberFn, FoundDecl, MemberNameInfo,
+                           type, valueKind, OK_Ordinary);
   }
   assert(!isa<FunctionDecl>(MemberDecl) && "member function not C++ method?");
 
   if (EnumConstantDecl *Enum = dyn_cast<EnumConstantDecl>(MemberDecl)) {
-    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc, Enum,
-                           FoundDecl, /*MultipleCandidates=*/false,
-                           MemberNameInfo, Enum->getType(), VK_RValue,
-                           OK_Ordinary);
+    return BuildMemberExpr(*this, Context, BaseExpr, IsArrow, OpLoc, SS,
+                           TemplateKWLoc, Enum, FoundDecl, MemberNameInfo,
+                           Enum->getType(), VK_RValue, OK_Ordinary);
   }
   if (VarTemplateDecl *VarTempl = dyn_cast<VarTemplateDecl>(MemberDecl)) {
     if (VarDecl *Var = getVarTemplateSpecialization(
             *this, VarTempl, TemplateArgs, MemberNameInfo, TemplateKWLoc))
-      return BuildMemberExpr(
-          BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc, Var, FoundDecl,
-          /*MultipleCandidates=*/false, MemberNameInfo,
-          Var->getType().getNonReferenceType(), VK_LValue, OK_Ordinary);
+      return BuildMemberExpr(*this, Context, BaseExpr, IsArrow, OpLoc, SS,
+                             TemplateKWLoc, Var, FoundDecl, MemberNameInfo,
+                             Var->getType().getNonReferenceType(), VK_LValue,
+                             OK_Ordinary);
     return ExprError();
   }
 
@@ -1819,10 +1805,9 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     }
   }
 
-  return BuildMemberExpr(Base.get(), IsArrow, OpLoc, &SS,
+  return BuildMemberExpr(*this, Context, Base.get(), IsArrow, OpLoc, SS,
                          /*TemplateKWLoc=*/SourceLocation(), Field, FoundDecl,
-                         /*MultipleCandidates=*/false, MemberNameInfo,
-                         MemberType, VK, OK);
+                         MemberNameInfo, MemberType, VK, OK);
 }
 
 /// Builds an implicit member access expression.  The current context

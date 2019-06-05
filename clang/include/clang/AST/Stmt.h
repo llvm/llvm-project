@@ -453,7 +453,6 @@ protected:
   enum { NumCallExprBits = 32 };
 
   class MemberExprBitfields {
-    friend class ASTStmtReader;
     friend class MemberExpr;
 
     unsigned : NumExprBits;

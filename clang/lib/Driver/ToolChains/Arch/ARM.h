@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/TargetParser.h"
 #include <string>
 #include <vector>
 
@@ -25,6 +26,8 @@ std::string getARMTargetCPU(StringRef CPU, llvm::StringRef Arch,
                             const llvm::Triple &Triple);
 const std::string getARMArch(llvm::StringRef Arch, const llvm::Triple &Triple);
 StringRef getARMCPUForMArch(llvm::StringRef Arch, const llvm::Triple &Triple);
+llvm::ARM::ArchKind getLLVMArchKindForARM(StringRef CPU, StringRef Arch,
+                                          const llvm::Triple &Triple);
 StringRef getLLVMArchSuffixForARM(llvm::StringRef CPU, llvm::StringRef Arch,
                                   const llvm::Triple &Triple);
 
