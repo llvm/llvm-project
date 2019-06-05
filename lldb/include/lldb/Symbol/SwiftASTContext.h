@@ -463,6 +463,8 @@ public:
 
   bool IsVoidType(void *type) override;
 
+  bool CanPassInRegisters(const CompilerType &type) override;
+
   static bool IsGenericType(const CompilerType &compiler_type);
 
   bool IsErrorType(const CompilerType &compiler_type);
