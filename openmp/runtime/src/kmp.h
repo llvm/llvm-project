@@ -3263,6 +3263,7 @@ extern void __kmp_init_random(kmp_info_t *thread);
 
 extern kmp_r_sched_t __kmp_get_schedule_global(void);
 extern void __kmp_adjust_num_threads(int new_nproc);
+extern void __kmp_check_stksize(size_t *val);
 
 extern void *___kmp_allocate(size_t size KMP_SRC_LOC_DECL);
 extern void *___kmp_page_allocate(size_t size KMP_SRC_LOC_DECL);

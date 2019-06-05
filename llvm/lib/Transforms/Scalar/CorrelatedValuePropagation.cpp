@@ -308,11 +308,11 @@ static bool processCmp(CmpInst *Cmp, LazyValueInfo *LVI) {
 /// that cannot fire no matter what the incoming edge can safely be removed. If
 /// a case fires on every incoming edge then the entire switch can be removed
 /// and replaced with a branch to the case destination.
-static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI,
+static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
                           DominatorTree *DT) {
   DomTreeUpdater DTU(*DT, DomTreeUpdater::UpdateStrategy::Lazy);
-  Value *Cond = SI->getCondition();
-  BasicBlock *BB = SI->getParent();
+  Value *Cond = I->getCondition();
+  BasicBlock *BB = I->getParent();
 
   // If the condition was defined in same block as the switch then LazyValueInfo
   // currently won't say anything useful about it, though in theory it could.
@@ -329,67 +329,72 @@ static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI,
   for (auto *Succ : successors(BB))
     SuccessorsCount[Succ]++;
 
-  for (auto CI = SI->case_begin(), CE = SI->case_end(); CI != CE;) {
-    ConstantInt *Case = CI->getCaseValue();
+  { // Scope for SwitchInstProfUpdateWrapper. It must not live during
+    // ConstantFoldTerminator() as the underlying SwitchInst can be changed.
+    SwitchInstProfUpdateWrapper SI(*I);
 
-    // Check to see if the switch condition is equal to/not equal to the case
-    // value on every incoming edge, equal/not equal being the same each time.
-    LazyValueInfo::Tristate State = LazyValueInfo::Unknown;
-    for (pred_iterator PI = PB; PI != PE; ++PI) {
-      // Is the switch condition equal to the case value?
-      LazyValueInfo::Tristate Value = LVI->getPredicateOnEdge(CmpInst::ICMP_EQ,
-                                                              Cond, Case, *PI,
-                                                              BB, SI);
-      // Give up on this case if nothing is known.
-      if (Value == LazyValueInfo::Unknown) {
-        State = LazyValueInfo::Unknown;
-        break;
+    for (auto CI = SI->case_begin(), CE = SI->case_end(); CI != CE;) {
+      ConstantInt *Case = CI->getCaseValue();
+
+      // Check to see if the switch condition is equal to/not equal to the case
+      // value on every incoming edge, equal/not equal being the same each time.
+      LazyValueInfo::Tristate State = LazyValueInfo::Unknown;
+      for (pred_iterator PI = PB; PI != PE; ++PI) {
+        // Is the switch condition equal to the case value?
+        LazyValueInfo::Tristate Value = LVI->getPredicateOnEdge(CmpInst::ICMP_EQ,
+                                                                Cond, Case, *PI,
+                                                                BB, SI);
+        // Give up on this case if nothing is known.
+        if (Value == LazyValueInfo::Unknown) {
+          State = LazyValueInfo::Unknown;
+          break;
+        }
+
+        // If this was the first edge to be visited, record that all other edges
+        // need to give the same result.
+        if (PI == PB) {
+          State = Value;
+          continue;
+        }
+
+        // If this case is known to fire for some edges and known not to fire for
+        // others then there is nothing we can do - give up.
+        if (Value != State) {
+          State = LazyValueInfo::Unknown;
+          break;
+        }
       }
 
-      // If this was the first edge to be visited, record that all other edges
-      // need to give the same result.
-      if (PI == PB) {
-        State = Value;
+      if (State == LazyValueInfo::False) {
+        // This case never fires - remove it.
+        BasicBlock *Succ = CI->getCaseSuccessor();
+        Succ->removePredecessor(BB);
+        CI = SI.removeCase(CI);
+        CE = SI->case_end();
+
+        // The condition can be modified by removePredecessor's PHI simplification
+        // logic.
+        Cond = SI->getCondition();
+
+        ++NumDeadCases;
+        Changed = true;
+        if (--SuccessorsCount[Succ] == 0)
+          DTU.applyUpdatesPermissive({{DominatorTree::Delete, BB, Succ}});
         continue;
       }
-
-      // If this case is known to fire for some edges and known not to fire for
-      // others then there is nothing we can do - give up.
-      if (Value != State) {
-        State = LazyValueInfo::Unknown;
+      if (State == LazyValueInfo::True) {
+        // This case always fires.  Arrange for the switch to be turned into an
+        // unconditional branch by replacing the switch condition with the case
+        // value.
+        SI->setCondition(Case);
+        NumDeadCases += SI->getNumCases();
+        Changed = true;
         break;
       }
+
+      // Increment the case iterator since we didn't delete it.
+      ++CI;
     }
-
-    if (State == LazyValueInfo::False) {
-      // This case never fires - remove it.
-      BasicBlock *Succ = CI->getCaseSuccessor();
-      Succ->removePredecessor(BB);
-      CI = SI->removeCase(CI);
-      CE = SI->case_end();
-
-      // The condition can be modified by removePredecessor's PHI simplification
-      // logic.
-      Cond = SI->getCondition();
-
-      ++NumDeadCases;
-      Changed = true;
-      if (--SuccessorsCount[Succ] == 0)
-        DTU.applyUpdatesPermissive({{DominatorTree::Delete, BB, Succ}});
-      continue;
-    }
-    if (State == LazyValueInfo::True) {
-      // This case always fires.  Arrange for the switch to be turned into an
-      // unconditional branch by replacing the switch condition with the case
-      // value.
-      SI->setCondition(Case);
-      NumDeadCases += SI->getNumCases();
-      Changed = true;
-      break;
-    }
-
-    // Increment the case iterator since we didn't delete it.
-    ++CI;
   }
 
   if (Changed)

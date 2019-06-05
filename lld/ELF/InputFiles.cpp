@@ -772,6 +772,7 @@ static uint32_t readAndFeatures(ObjFile<ELFT> *Obj, ArrayRef<uint8_t> Data) {
   using Elf_Nhdr = typename ELFT::Nhdr;
   using Elf_Note = typename ELFT::Note;
 
+  uint32_t FeaturesSet = 0;
   while (!Data.empty()) {
     // Read one NOTE record.
     if (Data.size() < sizeof(Elf_Nhdr))
@@ -797,8 +798,10 @@ static uint32_t readAndFeatures(ObjFile<ELFT> *Obj, ArrayRef<uint8_t> Data) {
       uint32_t Size = read32le(Desc.data() + 4);
 
       if (Type == GNU_PROPERTY_X86_FEATURE_1_AND) {
-        // We found the field.
-        return read32le(Desc.data() + 8);
+        // We found a FEATURE_1_AND field. There may be more than one of these
+        // in a .note.gnu.propery section, for a relocatable object we
+        // accumulate the bits set.
+        FeaturesSet |= read32le(Desc.data() + 8);
       }
 
       // On 64-bit, a payload may be followed by a 4-byte padding to make its
@@ -809,12 +812,11 @@ static uint32_t readAndFeatures(ObjFile<ELFT> *Obj, ArrayRef<uint8_t> Data) {
       Desc = Desc.slice(Size + 8); // +8 for Type and Size
     }
 
-    // Go to next NOTE record if a note section didn't contain
-    // X86_FEATURES_1_AND description.
+    // Go to next NOTE record to look for more FEATURE_1_AND descriptions.
     Data = Data.slice(Nhdr->getSize());
   }
 
-  return 0;
+  return FeaturesSet;
 }
 
 template <class ELFT>

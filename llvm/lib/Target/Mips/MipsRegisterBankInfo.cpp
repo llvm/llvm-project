@@ -149,6 +149,17 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OperandsMapping = getOperandsMapping({FPRValueMapping, nullptr});
     break;
   }
+  case G_FCMP: {
+    unsigned Size = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
+    assert((Size == 32 || Size == 64) && "Unsupported floating point size");
+    const RegisterBankInfo::ValueMapping *FPRValueMapping =
+        Size == 32 ? &Mips::ValueMappings[Mips::SPRIdx]
+                   : &Mips::ValueMappings[Mips::DPRIdx];
+    OperandsMapping =
+        getOperandsMapping({&Mips::ValueMappings[Mips::GPRIdx], nullptr,
+                            FPRValueMapping, FPRValueMapping});
+    break;
+  }
   case G_CONSTANT:
   case G_FRAME_INDEX:
   case G_GLOBAL_VALUE:

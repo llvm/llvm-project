@@ -1153,16 +1153,16 @@ define void @interleaved_store_vf32_i8_stride3(<32 x i8> %a, <32 x i8> %b, <32 x
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [0,11,6,1,12,7,2,13,8,3,14,9,4,15,10,5]
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm6, %xmm6
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm1, %ymm1
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm5, %xmm5
-; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm2, %ymm2
-; AVX1-NEXT:    vpshufb %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; AVX1-NEXT:    vmovups %ymm0, 64(%rdi)
-; AVX1-NEXT:    vmovups %ymm2, 32(%rdi)
-; AVX1-NEXT:    vmovups %ymm1, (%rdi)
+; AVX1-NEXT:    vpshufb %xmm4, %xmm3, %xmm3
+; AVX1-NEXT:    vmovdqu %xmm3, 80(%rdi)
+; AVX1-NEXT:    vmovdqu %xmm0, 64(%rdi)
+; AVX1-NEXT:    vmovdqu %xmm5, 48(%rdi)
+; AVX1-NEXT:    vmovdqu %xmm2, 32(%rdi)
+; AVX1-NEXT:    vmovdqu %xmm6, 16(%rdi)
+; AVX1-NEXT:    vmovdqu %xmm1, (%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -1255,37 +1255,37 @@ define void @interleaved_store_vf64_i8_stride3(<64 x i8> %a, <64 x i8> %b, <64 x
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm5 = xmm9[5,6,7,8,9,10,11,12,13,14,15],xmm15[0,1,2,3,4]
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm9 = xmm15[5,6,7,8,9,10,11,12,13,14,15],xmm7[0,1,2,3,4]
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm0 = xmm4[5,6,7,8,9,10,11,12,13,14,15],xmm11[0,1,2,3,4]
-; AVX1-NEXT:    vpalignr {{.*#+}} xmm11 = xmm12[5,6,7,8,9,10,11,12,13,14,15],xmm6[0,1,2,3,4]
-; AVX1-NEXT:    vpalignr {{.*#+}} xmm4 = xmm6[5,6,7,8,9,10,11,12,13,14,15],xmm4[0,1,2,3,4]
+; AVX1-NEXT:    vpalignr {{.*#+}} xmm7 = xmm12[5,6,7,8,9,10,11,12,13,14,15],xmm6[0,1,2,3,4]
+; AVX1-NEXT:    vpalignr {{.*#+}} xmm11 = xmm6[5,6,7,8,9,10,11,12,13,14,15],xmm4[0,1,2,3,4]
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm2 = xmm14[5,6,7,8,9,10,11,12,13,14,15],xmm2[0,1,2,3,4]
 ; AVX1-NEXT:    vpalignr $5, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm6 # 16-byte Folded Reload
 ; AVX1-NEXT:    # xmm6 = mem[5,6,7,8,9,10,11,12,13,14,15],xmm1[0,1,2,3,4]
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm1 = xmm1[5,6,7,8,9,10,11,12,13,14,15],xmm14[0,1,2,3,4]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm7 = [0,11,6,1,12,7,2,13,8,3,14,9,4,15,10,5]
-; AVX1-NEXT:    vpshufb %xmm7, %xmm6, %xmm6
-; AVX1-NEXT:    vpshufb %xmm7, %xmm2, %xmm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm2, %ymm2
-; AVX1-NEXT:    vpshufb %xmm7, %xmm1, %xmm1
-; AVX1-NEXT:    vpshufb %xmm7, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    vpshufb %xmm7, %xmm4, %xmm1
-; AVX1-NEXT:    vpshufb %xmm7, %xmm11, %xmm4
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm4, %ymm1
-; AVX1-NEXT:    vpshufb %xmm7, %xmm5, %xmm4
-; AVX1-NEXT:    vpshufb %xmm7, %xmm3, %xmm3
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm3
-; AVX1-NEXT:    vpshufb %xmm7, %xmm9, %xmm4
-; AVX1-NEXT:    vpshufb %xmm7, %xmm10, %xmm5
-; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm4, %ymm4
-; AVX1-NEXT:    vpshufb %xmm7, %xmm13, %xmm5
-; AVX1-NEXT:    vpshufb %xmm7, %xmm8, %xmm6
-; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm6, %ymm5
-; AVX1-NEXT:    vmovups %ymm5, 160(%rdi)
-; AVX1-NEXT:    vmovups %ymm4, 128(%rdi)
-; AVX1-NEXT:    vmovups %ymm3, 96(%rdi)
-; AVX1-NEXT:    vmovups %ymm1, 64(%rdi)
-; AVX1-NEXT:    vmovups %ymm0, 32(%rdi)
-; AVX1-NEXT:    vmovups %ymm2, (%rdi)
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [0,11,6,1,12,7,2,13,8,3,14,9,4,15,10,5]
+; AVX1-NEXT:    vpshufb %xmm4, %xmm6, %xmm6
+; AVX1-NEXT:    vpshufb %xmm4, %xmm2, %xmm14
+; AVX1-NEXT:    vpshufb %xmm4, %xmm1, %xmm12
+; AVX1-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufb %xmm4, %xmm7, %xmm7
+; AVX1-NEXT:    vpshufb %xmm4, %xmm11, %xmm1
+; AVX1-NEXT:    vpshufb %xmm4, %xmm5, %xmm5
+; AVX1-NEXT:    vpshufb %xmm4, %xmm3, %xmm11
+; AVX1-NEXT:    vpshufb %xmm4, %xmm9, %xmm9
+; AVX1-NEXT:    vpshufb %xmm4, %xmm10, %xmm2
+; AVX1-NEXT:    vpshufb %xmm4, %xmm8, %xmm3
+; AVX1-NEXT:    vpshufb %xmm4, %xmm13, %xmm4
+; AVX1-NEXT:    vmovdqu %xmm1, 80(%rdi)
+; AVX1-NEXT:    vmovdqu %xmm7, 64(%rdi)
+; AVX1-NEXT:    vmovdqu %xmm6, 16(%rdi)
+; AVX1-NEXT:    vmovdqu %xmm14, (%rdi)
+; AVX1-NEXT:    vmovdqu %xmm0, 48(%rdi)
+; AVX1-NEXT:    vmovdqu %xmm12, 32(%rdi)
+; AVX1-NEXT:    vmovdqu %xmm4, 176(%rdi)
+; AVX1-NEXT:    vmovdqu %xmm3, 160(%rdi)
+; AVX1-NEXT:    vmovdqu %xmm5, 112(%rdi)
+; AVX1-NEXT:    vmovdqu %xmm11, 96(%rdi)
+; AVX1-NEXT:    vmovdqu %xmm2, 144(%rdi)
+; AVX1-NEXT:    vmovdqu %xmm9, 128(%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;

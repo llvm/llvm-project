@@ -1136,6 +1136,7 @@ bool TargetLowering::SimplifyDemandedBits(
       if (SA->getAPIntValue().uge(BitWidth))
         break;
 
+      EVT ShiftVT = Op1.getValueType();
       unsigned ShAmt = SA->getZExtValue();
       APInt InDemandedMask = (DemandedBits << ShAmt);
 
@@ -1160,7 +1161,7 @@ bool TargetLowering::SimplifyDemandedBits(
                 Opc = ISD::SHL;
               }
 
-              SDValue NewSA = TLO.DAG.getConstant(Diff, dl, Op1.getValueType());
+              SDValue NewSA = TLO.DAG.getConstant(Diff, dl, ShiftVT);
               return TLO.CombineTo(
                   Op, TLO.DAG.getNode(Opc, dl, VT, Op0.getOperand(0), NewSA));
             }

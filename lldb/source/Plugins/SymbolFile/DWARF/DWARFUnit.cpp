@@ -183,6 +183,17 @@ void DWARFUnit::ExtractDIEsRWLocked() {
 
       if (!m_first_die)
         AddUnitDIE(m_die_array.front());
+
+      // With -fsplit-dwarf-inlining, clang will emit non-empty skeleton compile
+      // units. We are not able to access these DIE *and* the dwo file
+      // simultaneously. We also don't need to do that as the dwo file will
+      // contain a superset of information. So, we don't even attempt to parse
+      // any remaining DIEs.
+      if (m_dwo_symbol_file) {
+        m_die_array.front().SetHasChildren(false);
+        break;
+      }
+
     } else {
       if (null_die) {
         if (prev_die_had_children) {
