@@ -30,6 +30,8 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
+#include <vector>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -1558,6 +1560,55 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectSimple(
   return return_valobj_sp;
 }
 
+// The compiler will flatten the nested aggregate type into single
+// layer and push the value to stack
+// This helper function will flatten an aggregate type
+// and return true if it can be returned in register(s) by value
+// return false if the aggregate is in memory
+static bool FlattenAggregateType(
+    Thread &thread, ExecutionContext &exe_ctx,
+    CompilerType &return_compiler_type,
+    uint32_t data_byte_offset,
+    std::vector<uint32_t> &aggregate_field_offsets,
+    std::vector<CompilerType> &aggregate_compiler_types) {
+
+  const uint32_t num_children = return_compiler_type.GetNumFields();
+  for (uint32_t idx = 0; idx < num_children; ++idx) {
+    std::string name;
+    bool is_signed;
+    uint32_t count;
+    bool is_complex;
+
+    uint64_t field_bit_offset = 0;
+    CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(
+        idx, name, &field_bit_offset, nullptr, nullptr);
+    llvm::Optional<uint64_t> field_bit_width =
+          field_compiler_type.GetBitSize(&thread);
+
+    // if we don't know the size of the field (e.g. invalid type), exit
+    if (!field_bit_width || *field_bit_width == 0) {
+      return false;
+    }
+
+    uint32_t field_byte_offset = field_bit_offset / 8 + data_byte_offset;
+
+    const uint32_t field_type_flags = field_compiler_type.GetTypeInfo();
+    if (field_compiler_type.IsIntegerOrEnumerationType(is_signed) ||
+        field_compiler_type.IsPointerType() ||
+        field_compiler_type.IsFloatingPointType(count, is_complex)) {
+      aggregate_field_offsets.push_back(field_byte_offset);
+      aggregate_compiler_types.push_back(field_compiler_type);
+    } else if (field_type_flags & eTypeHasChildren) {
+      if (!FlattenAggregateType(thread, exe_ctx, field_compiler_type,
+                                field_byte_offset, aggregate_field_offsets,
+                                aggregate_compiler_types)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
     Thread &thread, CompilerType &return_compiler_type) const {
   ValueObjectSP return_valobj_sp;
@@ -1580,10 +1631,17 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
   if (return_compiler_type.IsAggregateType()) {
     Target *target = exe_ctx.GetTargetPtr();
     bool is_memory = true;
-    if (*bit_width <= 128) {
-      ByteOrder target_byte_order = target->GetArchitecture().GetByteOrder();
+    std::vector<uint32_t> aggregate_field_offsets;
+    std::vector<CompilerType> aggregate_compiler_types;
+    if (return_compiler_type.GetTypeSystem()->CanPassInRegisters(
+          return_compiler_type) &&
+      *bit_width <= 128 &&
+      FlattenAggregateType(thread, exe_ctx, return_compiler_type,
+                          0, aggregate_field_offsets,
+                          aggregate_compiler_types)) {
+      ByteOrder byte_order = target->GetArchitecture().GetByteOrder();
       DataBufferSP data_sp(new DataBufferHeap(16, 0));
-      DataExtractor return_ext(data_sp, target_byte_order,
+      DataExtractor return_ext(data_sp, byte_order,
                                target->GetArchitecture().GetAddressByteSize());
 
       const RegisterInfo *rax_info =
@@ -1613,36 +1671,27 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
       uint32_t integer_bytes =
           0; // Tracks how much of the rax/rds registers we've consumed so far
 
-      const uint32_t num_children = return_compiler_type.GetNumFields();
+      // in case of the returned type is a subclass of non-abstract-base class
+      // it will have a padding to skip the base content
+      if (aggregate_field_offsets.size()) {
+        fp_bytes = aggregate_field_offsets[0];
+        integer_bytes = aggregate_field_offsets[0];
+      }
+
+      const uint32_t num_children = aggregate_compiler_types.size();
 
       // Since we are in the small struct regime, assume we are not in memory.
       is_memory = false;
-
       for (uint32_t idx = 0; idx < num_children; idx++) {
-        std::string name;
-        uint64_t field_bit_offset = 0;
         bool is_signed;
-        bool is_complex;
         uint32_t count;
+        bool is_complex;
 
-        CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(
-            idx, name, &field_bit_offset, nullptr, nullptr);
-        llvm::Optional<uint64_t> field_bit_width =
-            field_compiler_type.GetBitSize(&thread);
+        CompilerType field_compiler_type = aggregate_compiler_types[idx];
+        uint32_t field_byte_width = (uint32_t) (*field_compiler_type.GetByteSize(&thread));
+        uint32_t field_byte_offset = aggregate_field_offsets[idx];
 
-        // if we don't know the size of the field (e.g. invalid type), just
-        // bail out
-        if (!field_bit_width || *field_bit_width == 0)
-          break;
-
-        // If there are any unaligned fields, this is stored in memory.
-        if (field_bit_offset % *field_bit_width != 0) {
-          is_memory = true;
-          break;
-        }
-
-        uint32_t field_byte_width = *field_bit_width / 8;
-        uint32_t field_byte_offset = field_bit_offset / 8;
+        uint32_t field_bit_width = field_byte_width * 8;
 
         DataExtractor *copy_from_extractor = nullptr;
         uint32_t copy_from_offset = 0;
@@ -1674,10 +1723,10 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
           }
         } else if (field_compiler_type.IsFloatingPointType(count, is_complex)) {
           // Structs with long doubles are always passed in memory.
-          if (*field_bit_width == 128) {
+          if (field_bit_width == 128) {
             is_memory = true;
             break;
-          } else if (*field_bit_width == 64) {
+          } else if (field_bit_width == 64) {
             // These have to be in a single xmm register.
             if (fp_bytes == 0)
               copy_from_extractor = &xmm0_data;
@@ -1686,7 +1735,7 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
 
             copy_from_offset = 0;
             fp_bytes += field_byte_width;
-          } else if (*field_bit_width == 32) {
+          } else if (field_bit_width == 32) {
             // This one is kind of complicated.  If we are in an "eightbyte"
             // with another float, we'll be stuffed into an xmm register with
             // it.  If we are in an "eightbyte" with one or more ints, then we
@@ -1695,18 +1744,15 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
             if (field_byte_offset % 8 == 0) {
               // We are at the beginning of one of the eightbytes, so check the
               // next element (if any)
-              if (idx == num_children - 1)
+              if (idx == num_children - 1) {
                 in_gpr = false;
-              else {
-                uint64_t next_field_bit_offset = 0;
+              } else {
                 CompilerType next_field_compiler_type =
-                    return_compiler_type.GetFieldAtIndex(idx + 1, name,
-                                                         &next_field_bit_offset,
-                                                         nullptr, nullptr);
+                    aggregate_compiler_types[idx + 1];
                 if (next_field_compiler_type.IsIntegerOrEnumerationType(
-                        is_signed))
+                        is_signed)) {
                   in_gpr = true;
-                else {
+                } else {
                   copy_from_offset = 0;
                   in_gpr = false;
                 }
@@ -1715,18 +1761,15 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
               // We are inside of an eightbyte, so see if the field before us
               // is floating point: This could happen if somebody put padding
               // in the structure.
-              if (idx == 0)
+              if (idx == 0) {
                 in_gpr = false;
-              else {
-                uint64_t prev_field_bit_offset = 0;
+              } else {
                 CompilerType prev_field_compiler_type =
-                    return_compiler_type.GetFieldAtIndex(idx - 1, name,
-                                                         &prev_field_bit_offset,
-                                                         nullptr, nullptr);
+                    aggregate_compiler_types[idx - 1];
                 if (prev_field_compiler_type.IsIntegerOrEnumerationType(
-                        is_signed))
+                        is_signed)) {
                   in_gpr = true;
-                else {
+                } else {
                   copy_from_offset = 4;
                   in_gpr = false;
                 }
@@ -1759,7 +1802,6 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
             }
           }
         }
-
         // These two tests are just sanity checks.  If I somehow get the type
         // calculation wrong above it is better to just return nothing than to
         // assert or crash.
@@ -1768,13 +1810,11 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
         if (copy_from_offset + field_byte_width >
             copy_from_extractor->GetByteSize())
           return return_valobj_sp;
-
         copy_from_extractor->CopyByteOrderedData(
             copy_from_offset, field_byte_width,
             data_sp->GetBytes() + field_byte_offset, field_byte_width,
-            target_byte_order);
+            byte_order);
       }
-
       if (!is_memory) {
         // The result is in our data buffer.  Let's make a variable object out
         // of it:
