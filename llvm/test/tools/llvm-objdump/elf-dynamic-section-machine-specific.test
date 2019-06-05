@@ -1,4 +1,4 @@
-# Test that hexagon machine-specific tags can be dumped.
+## Test that hexagon machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=1 -o %t.hex \
 # RUN:          %S/../llvm-readobj/Inputs/elf-dynamic-tags-machine-specific.yaml
 # RUN: llvm-objdump -p %t.hex | FileCheck %s --check-prefix=HEXAGON
@@ -11,7 +11,7 @@
 # HEXAGON-NEXT:   <unknown:>0x1234abcd 0x0000000000000001
 
 
-# Test that MIPS machine-specific tags can be dumped.
+## Test that MIPS machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=2 -o %t.mips \
 # RUN:          %S/../llvm-readobj/Inputs/elf-dynamic-tags-machine-specific.yaml
 # RUN: llvm-objdump -p %t.mips | FileCheck %s --check-prefix=MIPS
@@ -66,12 +66,23 @@
 # MIPS-NEXT:   <unknown:>0x1234abcd 0x0000000000000001
 
 
-# Test that PPC64 machine-specific tags can be dumped.
+## Test that PPC machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=3 -o %t.ppc \
 # RUN:          %S/../llvm-readobj/Inputs/elf-dynamic-tags-machine-specific.yaml
 # RUN: llvm-objdump -p %t.ppc | FileCheck %s --check-prefix=PPC
 
 # PPC:      Dynamic Section:
-# PPC-NEXT:   HASH                 0x0000000000001000
-# PPC-NEXT:   PPC64_GLINK          0x0000000000001000
-# PPC-NEXT:   <unknown:>0x1234abcd 0x0000000000000001
+# PPC-NEXT:   PPC_GOT              0x000200c0
+# PPC-NEXT:   PPC_OPT              0x00000001
+# PPC-NEXT:   <unknown:>0x1234abcd 0x00000001
+
+
+## Test that PPC64 machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=4 -o %t.ppc64 \
+# RUN:          %S/../llvm-readobj/Inputs/elf-dynamic-tags-machine-specific.yaml
+# RUN: llvm-objdump -p %t.ppc64 | FileCheck %s --check-prefix=PPC64
+
+# PPC64:      Dynamic Section:
+# PPC64-NEXT:   HASH                 0x0000000000001000
+# PPC64-NEXT:   PPC64_GLINK          0x0000000000001000
+# PPC64-NEXT:   <unknown:>0x1234abcd 0x0000000000000001

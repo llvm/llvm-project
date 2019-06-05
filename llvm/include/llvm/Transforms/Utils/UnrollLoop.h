@@ -119,9 +119,6 @@ bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
                         TargetTransformInfo::UnrollingPreferences &UP,
                         bool &UseUpperBound);
 
-BasicBlock *foldBlockIntoPredecessor(BasicBlock *BB, LoopInfo *LI,
-                                     ScalarEvolution *SE, DominatorTree *DT);
-
 void remapInstruction(Instruction *I, ValueToValueMapTy &VMap);
 
 void simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,

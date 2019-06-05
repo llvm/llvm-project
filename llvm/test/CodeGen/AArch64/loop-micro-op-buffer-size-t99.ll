@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -mcpu=thunderx2t99 -loop-unroll --debug-only=loop-unroll -S -unroll-allow-partial < %s 2>&1 | FileCheck %s
+; RUN: opt -mcpu=thunderx2t99 -loop-unroll --debug-only=loop-unroll --debug-only=basicblock-utils -S -unroll-allow-partial < %s 2>&1 | FileCheck %s
 
 target triple = "aarch64-unknown-linux-gnu"
 

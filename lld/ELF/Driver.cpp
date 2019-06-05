@@ -334,6 +334,9 @@ static void checkOptions() {
     if (Config->SingleRoRx && !Script->HasSectionsCommand)
       error("-execute-only and -no-rosegment cannot be used together");
   }
+
+  if (Config->ZRetpolineplt && Config->RequireCET)
+    error("--require-cet may not be used with -z retpolineplt");
 }
 
 static const char *getReproduceOption(opt::InputArgList &Args) {
@@ -813,6 +816,7 @@ static void readConfigs(opt::InputArgList &Args) {
   Config->FilterList = args::getStrings(Args, OPT_filter);
   Config->Fini = Args.getLastArgValue(OPT_fini, "_fini");
   Config->FixCortexA53Errata843419 = Args.hasArg(OPT_fix_cortex_a53_843419);
+  Config->RequireCET = Args.hasArg(OPT_require_cet);
   Config->GcSections = Args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false);
   Config->GnuUnique = Args.hasFlag(OPT_gnu_unique, OPT_no_gnu_unique, true);
   Config->GdbIndex = Args.hasFlag(OPT_gdb_index, OPT_no_gdb_index, false);
@@ -1584,6 +1588,30 @@ static void wrapSymbols(ArrayRef<WrappedSymbol> Wrapped) {
     Symtab->wrap(W.Sym, W.Real, W.Wrap);
 }
 
+// To enable CET (x86's hardware-assited control flow enforcement), each
+// source file must be compiled with -fcf-protection. Object files compiled
+// with the flag contain feature flags indicating that they are compatible
+// with CET. We enable the feature only when all object files are compatible
+// with CET.
+//
+// This function returns the merged feature flags. If 0, we cannot enable CET.
+//
+// Note that the CET-aware PLT is not implemented yet. We do error
+// check only.
+template <class ELFT> static uint32_t getAndFeatures() {
+  if (Config->EMachine != EM_386 && Config->EMachine != EM_X86_64)
+    return 0;
+
+  uint32_t Ret = -1;
+  for (InputFile *F : ObjectFiles) {
+    uint32_t Features = cast<ObjFile<ELFT>>(F)->AndFeatures;
+    if (!Features && Config->RequireCET)
+      error(toString(F) + ": --require-cet: file is not compatible with CET");
+    Ret &= Features;
+  }
+  return Ret;
+}
+
 static const char *LibcallRoutineNames[] = {
 #define HANDLE_LIBCALL(code, name) name,
 #include "llvm/IR/RuntimeLibcalls.def"
@@ -1761,6 +1789,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     return Config->Strip != StripPolicy::None &&
            (S->Name.startswith(".debug") || S->Name.startswith(".zdebug"));
   });
+
+  // Read .note.gnu.property sections from input object files which
+  // contain a hint to tweak linker's and loader's behaviors.
+  Config->AndFeatures = getAndFeatures<ELFT>();
 
   Config->EFlags = Target->calcEFlags();
   // MaxPageSize (sometimes called abi page size) is the maximum page size that

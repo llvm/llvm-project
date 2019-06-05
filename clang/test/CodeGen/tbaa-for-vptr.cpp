@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - -fsanitize=thread %s | FileCheck %s --check-prefixes=CHECK,OLD-PATH
-// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - -O1 %s | FileCheck %s --check-prefixes=CHECK,OLD-PATH
-// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - -O1  -relaxed-aliasing -fsanitize=thread %s | FileCheck %s --check-prefixes=CHECK,OLD-PATH
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - -O1 -fno-experimental-new-pass-manager %s | FileCheck %s --check-prefixes=CHECK,OLD-PATH
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - -O1 -fno-experimental-new-pass-manager -relaxed-aliasing -fsanitize=thread %s | FileCheck %s --check-prefixes=CHECK,OLD-PATH
 //
 // RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -new-struct-path-tbaa -o - -fsanitize=thread %s | FileCheck %s --check-prefixes=CHECK,NEW-PATH
-// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -new-struct-path-tbaa -o - -O1 %s | FileCheck %s --check-prefixes=CHECK,NEW-PATH
-// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -new-struct-path-tbaa -o - -O1  -relaxed-aliasing -fsanitize=thread %s | FileCheck %s --check-prefixes=CHECK,NEW-PATH
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -new-struct-path-tbaa -o - -O1 -fno-experimental-new-pass-manager %s | FileCheck %s --check-prefixes=CHECK,NEW-PATH
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -new-struct-path-tbaa -o - -O1 -fno-experimental-new-pass-manager -relaxed-aliasing -fsanitize=thread %s | FileCheck %s --check-prefixes=CHECK,NEW-PATH
 //
 // RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s --check-prefix=NOTBAA
-// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - -O2  -relaxed-aliasing %s | FileCheck %s --check-prefix=NOTBAA
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - -O2 -fno-experimental-new-pass-manager -relaxed-aliasing %s | FileCheck %s --check-prefix=NOTBAA
 //
 // Check that we generate TBAA for vtable pointer loads and stores.
 // When -fsanitize=thread is used TBAA should be generated at all opt levels

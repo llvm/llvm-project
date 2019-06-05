@@ -538,12 +538,14 @@ LoopUnrollResult llvm::UnrollAndJamLoop(
   MergeBlocks.insert(ForeBlocksLast.begin(), ForeBlocksLast.end());
   MergeBlocks.insert(SubLoopBlocksLast.begin(), SubLoopBlocksLast.end());
   MergeBlocks.insert(AftBlocksLast.begin(), AftBlocksLast.end());
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   while (!MergeBlocks.empty()) {
     BasicBlock *BB = *MergeBlocks.begin();
     BranchInst *Term = dyn_cast<BranchInst>(BB->getTerminator());
     if (Term && Term->isUnconditional() && L->contains(Term->getSuccessor(0))) {
       BasicBlock *Dest = Term->getSuccessor(0);
-      if (BasicBlock *Fold = foldBlockIntoPredecessor(Dest, LI, SE, DT)) {
+      BasicBlock *Fold = Dest->getUniquePredecessor();
+      if (MergeBlockIntoPredecessor(Dest, &DTU, LI)) {
         // Don't remove BB and add Fold as they are the same BB
         assert(Fold == BB);
         (void)Fold;

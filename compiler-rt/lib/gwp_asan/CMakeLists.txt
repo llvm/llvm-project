@@ -77,7 +77,7 @@ if (COMPILER_RT_HAS_GWP_ASAN)
   foreach(arch ${GWP_ASAN_SUPPORTED_ARCH})
     add_compiler_rt_runtime(
       clang_rt.gwp_asan_options_parser
-      SHARED
+      STATIC
       ARCHS ${arch}
       SOURCES ${GWP_ASAN_OPTIONS_PARSER_SOURCES}
       ADDITIONAL_HEADERS ${GWP_ASAN_OPTIONS_PARSER_HEADERS}

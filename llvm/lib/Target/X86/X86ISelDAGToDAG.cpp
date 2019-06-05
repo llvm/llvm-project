@@ -790,28 +790,60 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       continue;
     }
 
-    // Replace vector shifts with their X86 specific equivalent so we don't
-    // need 2 sets of patterns.
     switch (N->getOpcode()) {
     case ISD::SHL:
     case ISD::SRA:
-    case ISD::SRL:
-      if (N->getValueType(0).isVector()) {
-        unsigned NewOpc;
-        switch (N->getOpcode()) {
-        default: llvm_unreachable("Unexpected opcode!");
-        case ISD::SHL: NewOpc = X86ISD::VSHLV; break;
-        case ISD::SRA: NewOpc = X86ISD::VSRAV; break;
-        case ISD::SRL: NewOpc = X86ISD::VSRLV; break;
-        }
-        SDValue Res = CurDAG->getNode(NewOpc, SDLoc(N), N->getValueType(0),
-                                      N->getOperand(0), N->getOperand(1));
-        --I;
-        CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
-        ++I;
-        CurDAG->DeleteNode(N);
-        continue;
+    case ISD::SRL: {
+      // Replace vector shifts with their X86 specific equivalent so we don't
+      // need 2 sets of patterns.
+      if (!N->getValueType(0).isVector())
+        break;
+
+      unsigned NewOpc;
+      switch (N->getOpcode()) {
+      default: llvm_unreachable("Unexpected opcode!");
+      case ISD::SHL: NewOpc = X86ISD::VSHLV; break;
+      case ISD::SRA: NewOpc = X86ISD::VSRAV; break;
+      case ISD::SRL: NewOpc = X86ISD::VSRLV; break;
       }
+      SDValue Res = CurDAG->getNode(NewOpc, SDLoc(N), N->getValueType(0),
+                                    N->getOperand(0), N->getOperand(1));
+      --I;
+      CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
+      ++I;
+      CurDAG->DeleteNode(N);
+      continue;
+    }
+    case ISD::FCEIL:
+    case ISD::FFLOOR:
+    case ISD::FTRUNC:
+    case ISD::FNEARBYINT:
+    case ISD::FRINT: {
+      // Replace vector rounding with their X86 specific equivalent so we don't
+      // need 2 sets of patterns.
+      if (!N->getValueType(0).isVector())
+        break;
+
+      unsigned Imm;
+      switch (N->getOpcode()) {
+      default: llvm_unreachable("Unexpected opcode!");
+      case ISD::FCEIL:      Imm = 0xA; break;
+      case ISD::FFLOOR:     Imm = 0x9; break;
+      case ISD::FTRUNC:     Imm = 0xB; break;
+      case ISD::FNEARBYINT: Imm = 0xC; break;
+      case ISD::FRINT:      Imm = 0x4; break;
+      }
+      SDLoc dl(N);
+      SDValue Res = CurDAG->getNode(X86ISD::VRNDSCALE, dl,
+                                    N->getValueType(0),
+                                    N->getOperand(0),
+                                    CurDAG->getConstant(Imm, dl, MVT::i8));
+      --I;
+      CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
+      ++I;
+      CurDAG->DeleteNode(N);
+      continue;
+    }
     }
 
     if (OptLevel != CodeGenOpt::None &&
@@ -4672,6 +4704,38 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     if (foldLoadStoreIntoMemOperand(Node))
       return;
     break;
+  case ISD::FCEIL:
+  case ISD::FFLOOR:
+  case ISD::FTRUNC:
+  case ISD::FNEARBYINT:
+  case ISD::FRINT: {
+    // Replace vector rounding with their X86 specific equivalent so we don't
+    // need 2 sets of patterns.
+    // FIXME: This can only happen when the nodes started as STRICT_* and have
+    // been mutated into their non-STRICT equivalents. Eventually this
+    // mutation will be removed and we should switch the STRICT_ nodes to a
+    // strict version of RNDSCALE in PreProcessISelDAG.
+    if (!Node->getValueType(0).isVector())
+      break;
+
+    unsigned Imm;
+    switch (Node->getOpcode()) {
+    default: llvm_unreachable("Unexpected opcode!");
+    case ISD::FCEIL:      Imm = 0xA; break;
+    case ISD::FFLOOR:     Imm = 0x9; break;
+    case ISD::FTRUNC:     Imm = 0xB; break;
+    case ISD::FNEARBYINT: Imm = 0xC; break;
+    case ISD::FRINT:      Imm = 0x4; break;
+    }
+    SDLoc dl(Node);
+    SDValue Res = CurDAG->getNode(X86ISD::VRNDSCALE, dl,
+                                  Node->getValueType(0),
+                                  Node->getOperand(0),
+                                  CurDAG->getConstant(Imm, dl, MVT::i8));
+    ReplaceNode(Node, Res.getNode());
+    SelectCode(Res.getNode());
+    return;
+  }
   }
 
   SelectCode(Node);

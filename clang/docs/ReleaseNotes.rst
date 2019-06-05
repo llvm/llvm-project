@@ -101,9 +101,11 @@ Windows Support
 C Language Changes in Clang
 ---------------------------
 
-- ...
+- ``__FILE_NAME__`` macro has been added as a Clang specific extension supported
+  in all C-family languages. This macro is similar to ``__FILE__`` except it
+  will always provide the last path component when possible.
 
-...
+- ...
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^

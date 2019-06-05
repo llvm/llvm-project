@@ -1366,6 +1366,76 @@ void ScopBuilder::collectCandidateReductionLoads(
       Loads.push_back(&Stmt->getArrayAccessFor(PossibleLoad1));
 }
 
+/// Find the canonical scop array info object for a set of invariant load
+/// hoisted loads. The canonical array is the one that corresponds to the
+/// first load in the list of accesses which is used as base pointer of a
+/// scop array.
+static const ScopArrayInfo *findCanonicalArray(Scop &S,
+                                               MemoryAccessList &Accesses) {
+  for (MemoryAccess *Access : Accesses) {
+    const ScopArrayInfo *CanonicalArray = S.getScopArrayInfoOrNull(
+        Access->getAccessInstruction(), MemoryKind::Array);
+    if (CanonicalArray)
+      return CanonicalArray;
+  }
+  return nullptr;
+}
+
+/// Check if @p Array severs as base array in an invariant load.
+static bool isUsedForIndirectHoistedLoad(Scop &S, const ScopArrayInfo *Array) {
+  for (InvariantEquivClassTy &EqClass2 : S.getInvariantAccesses())
+    for (MemoryAccess *Access2 : EqClass2.InvariantAccesses)
+      if (Access2->getScopArrayInfo() == Array)
+        return true;
+  return false;
+}
+
+/// Replace the base pointer arrays in all memory accesses referencing @p Old,
+/// with a reference to @p New.
+static void replaceBasePtrArrays(Scop &S, const ScopArrayInfo *Old,
+                                 const ScopArrayInfo *New) {
+  for (ScopStmt &Stmt : S)
+    for (MemoryAccess *Access : Stmt) {
+      if (Access->getLatestScopArrayInfo() != Old)
+        continue;
+
+      isl::id Id = New->getBasePtrId();
+      isl::map Map = Access->getAccessRelation();
+      Map = Map.set_tuple_id(isl::dim::out, Id);
+      Access->setAccessRelation(Map);
+    }
+}
+
+void ScopBuilder::canonicalizeDynamicBasePtrs() {
+  for (InvariantEquivClassTy &EqClass : scop->InvariantEquivClasses) {
+    MemoryAccessList &BasePtrAccesses = EqClass.InvariantAccesses;
+
+    const ScopArrayInfo *CanonicalBasePtrSAI =
+        findCanonicalArray(*scop, BasePtrAccesses);
+
+    if (!CanonicalBasePtrSAI)
+      continue;
+
+    for (MemoryAccess *BasePtrAccess : BasePtrAccesses) {
+      const ScopArrayInfo *BasePtrSAI = scop->getScopArrayInfoOrNull(
+          BasePtrAccess->getAccessInstruction(), MemoryKind::Array);
+      if (!BasePtrSAI || BasePtrSAI == CanonicalBasePtrSAI ||
+          !BasePtrSAI->isCompatibleWith(CanonicalBasePtrSAI))
+        continue;
+
+      // we currently do not canonicalize arrays where some accesses are
+      // hoisted as invariant loads. If we would, we need to update the access
+      // function of the invariant loads as well. However, as this is not a
+      // very common situation, we leave this for now to avoid further
+      // complexity increases.
+      if (isUsedForIndirectHoistedLoad(*scop, BasePtrSAI))
+        continue;
+
+      replaceBasePtrArrays(*scop, BasePtrSAI, CanonicalBasePtrSAI);
+    }
+  }
+}
+
 void ScopBuilder::buildAccessRelations(ScopStmt &Stmt) {
   for (MemoryAccess *Access : Stmt.MemAccs) {
     Type *ElementType = Access->getElementType();
@@ -1601,7 +1671,7 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC,
   }
 
   scop->hoistInvariantLoads();
-  scop->canonicalizeDynamicBasePtrs();
+  canonicalizeDynamicBasePtrs();
   verifyInvariantLoads();
   scop->simplifySCoP(true);
 

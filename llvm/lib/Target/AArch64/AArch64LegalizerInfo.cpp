@@ -201,6 +201,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .legalForTypesWithMemDesc({{s32, p0, 8, 8},
                                  {s32, p0, 16, 8},
                                  {s32, p0, 32, 8},
+                                 {s64, p0, 8, 2},
+                                 {s64, p0, 16, 2},
+                                 {s64, p0, 32, 4},
                                  {s64, p0, 64, 8},
                                  {p0, p0, 64, 8},
                                  {v2s32, p0, 64, 8}})

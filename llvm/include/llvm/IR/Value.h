@@ -493,7 +493,7 @@ public:
   /// swifterror attribute.
   bool isSwiftError() const;
 
-  /// Strip off pointer casts, all-zero GEPs, and aliases.
+  /// Strip off pointer casts, all-zero GEPs, address space casts, and aliases.
   ///
   /// Returns the original uncasted value.  If this is called on a non-pointer
   /// value, it returns 'this'.
@@ -501,6 +501,17 @@ public:
   Value *stripPointerCasts() {
     return const_cast<Value *>(
                          static_cast<const Value *>(this)->stripPointerCasts());
+  }
+
+  /// Strip off pointer casts, all-zero GEPs, address space casts, and aliases
+  /// but ensures the representation of the result stays the same.
+  ///
+  /// Returns the original uncasted value with the same representation. If this
+  /// is called on a non-pointer value, it returns 'this'.
+  const Value *stripPointerCastsSameRepresentation() const;
+  Value *stripPointerCastsSameRepresentation() {
+    return const_cast<Value *>(static_cast<const Value *>(this)
+                                   ->stripPointerCastsSameRepresentation());
   }
 
   /// Strip off pointer casts, all-zero GEPs, aliases and invariant group

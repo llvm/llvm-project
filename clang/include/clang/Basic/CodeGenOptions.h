@@ -53,6 +53,7 @@ public:
   enum VectorLibrary {
     NoLibrary,  // Don't use any vector library.
     Accelerate, // Use the Accelerate framework.
+    MASSV,      // IBM MASS vector library.
     SVML        // Intel short vector math library.
   };
 

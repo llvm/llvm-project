@@ -1,25 +1,25 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -O1 \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -O1 -fno-experimental-new-pass-manager \
 // RUN:   -fsanitize=cfi-icall -fsanitize-cfi-cross-dso \
 // RUN:   -emit-llvm -o - %s | FileCheck \
 // RUN:       --check-prefix=CHECK --check-prefix=CHECK-DIAG \
 // RUN:       --check-prefix=ITANIUM --check-prefix=ITANIUM-DIAG \
 // RUN:       %s
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -O1 \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -O1 -fno-experimental-new-pass-manager \
 // RUN:   -fsanitize=cfi-icall -fsanitize-cfi-cross-dso -fsanitize-trap=cfi-icall \
 // RUN:   -emit-llvm -o - %s | FileCheck \
 // RUN:       --check-prefix=CHECK \
 // RUN:       --check-prefix=ITANIUM --check-prefix=ITANIUM-TRAP \
 // RUN:       %s
 
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -O1 \
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -O1 -fno-experimental-new-pass-manager \
 // RUN:   -fsanitize=cfi-icall -fsanitize-cfi-cross-dso \
 // RUN:   -emit-llvm -o - %s | FileCheck \
 // RUN:       --check-prefix=CHECK --check-prefix=CHECK-DIAG \
 // RUN:       --check-prefix=MS --check-prefix=MS-DIAG \
 // RUN:       %s
 
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -O1 \
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -O1 -fno-experimental-new-pass-manager \
 // RUN:   -fsanitize=cfi-icall -fsanitize-cfi-cross-dso -fsanitize-trap=cfi-icall \
 // RUN:   -emit-llvm -o - %s | FileCheck \
 // RUN:       --check-prefix=CHECK \
