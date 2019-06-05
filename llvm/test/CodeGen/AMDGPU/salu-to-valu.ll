@@ -458,7 +458,7 @@ bb7:                                              ; preds = %bb3
 }
 
 ; GCN-LABEL: {{^}}phi_visit_order:
-; GCN: v_add_i32_e32 v{{[0-9]+}}, vcc, 1, v{{[0-9]+}}
+; GCN: v_add_i32_e64 v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, 1, v{{[0-9]+}}
 define amdgpu_kernel void @phi_visit_order() {
 bb:
   br label %bb1

@@ -515,16 +515,12 @@ let AddedComplexity = 1 in {
 }
 
 let SubtargetPredicate = HasAddNoCarryInsts in {
-  def : DivergentBinOp<add, V_ADD_U32_e32>;
-
+  def : DivergentBinOp<add, V_ADD_U32_e64>;
   def : DivergentBinOp<sub, V_SUB_U32_e64>;
 }
 
-
-def : DivergentBinOp<add, V_ADD_I32_e32>;
+def : DivergentBinOp<add, V_ADD_I32_e64>;
 def : DivergentBinOp<sub, V_SUB_I32_e64>;
-
-def : DivergentBinOp<sub, V_SUBREV_I32_e32>;
 
 def : DivergentBinOp<srl, V_LSHRREV_B32_e32>;
 def : DivergentBinOp<sra, V_ASHRREV_I32_e32>;
