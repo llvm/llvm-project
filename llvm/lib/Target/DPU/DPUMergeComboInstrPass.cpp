@@ -20,6 +20,9 @@
 #include "DPUISelLowering.h"
 #include "MCTargetDesc/DPUAsmCondition.h"
 
+#define GET_REGINFO_ENUM
+#include "DPUGenRegisterInfo.inc"
+
 #define DEBUG_TYPE "dpu-merge-combo-instr"
 
 using namespace llvm;
@@ -707,7 +710,7 @@ static bool mergeComboInstructionsInMBB(MachineBasicBlock *MBB,
       // todo: this is not optimal. One register has been allocated but not used
       // now. This can become an issue (unnecessary spilling)
       ComboInst = BuildMI(MBB, SecondLastInst->getDebugLoc(),
-                          InstrInfo.get(OpNullJumpOpc));
+                          InstrInfo.get(OpNullJumpOpc)).addReg(DPU::ZERO);
     } else {
       if (!ImmCanBeEncodedOn8Bits) {
         return false;

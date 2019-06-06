@@ -61,6 +61,8 @@ public:
   MCDisassembler::DecodeStatus Decode_dc(MCInst &MI, uint64_t Value);
 
   MCDisassembler::DecodeStatus Decode_shift(MCInst &MI, uint64_t Value);
+
+  MCDisassembler::DecodeStatus Decode_zero(MCInst &MI, uint64_t Value);
 };
 } // end namespace llvm
 

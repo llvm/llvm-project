@@ -104,6 +104,7 @@ def GPZ_REG   : RegisterClass<"DPU", [i32], 32, (add GP_REG, ZERO)>;
 def CONST_REG : RegisterClass<"DPU", [i32], 32, (add ZERO, ONE, LNEG, MNEG)>;
 def ID_REG    : RegisterClass<"DPU", [i32], 32, (add ID, ID2, ID4, ID8)>;
 def OP_REG    : RegisterClass<"DPU", [i32], 32, (add GP_REG, CONST_REG, ID_REG)>;
+def ZERO_REG  : RegisterClass<"DPU", [i32], 32, (add ZERO)>;
 
 // 64 bits registers are the combinations of 2 consecutive registers.
 def GP64_REG  : RegisterClass<"DPU", [i64], 64,
@@ -157,3 +158,4 @@ def SafeRegOrCst          : DPURegOperand<SAFE_OP_REG>;
 def SafeReg               : DPURegOperand<SAFE_REG>;
 def CstReg                : DPURegOperand<CST_REG>;
 def SimpleRegOrCstButZero : DPURegOperand<NZ_OP_REG>;
+def ZeroRegister          : DPURegOperand<ZERO_REG>;

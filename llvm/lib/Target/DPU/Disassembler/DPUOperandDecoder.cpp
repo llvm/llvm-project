@@ -219,3 +219,10 @@ MCDisassembler::DecodeStatus DPUOperandDecoder::Decode_shift(llvm::MCInst &MI,
   MI.addOperand(MCOperand::createImm(Value));
   return MCDisassembler::Success;
 }
+
+MCDisassembler::DecodeStatus DPUOperandDecoder::Decode_zero(llvm::MCInst &MI,
+                                                            uint64_t Value) {
+  LLVM_DEBUG(dbgs() << "zero << " << Value << "\n");
+  MI.addOperand(MCOperand::createReg(GP32RegisterMap[Value]));
+  return MCDisassembler::Success;
+}

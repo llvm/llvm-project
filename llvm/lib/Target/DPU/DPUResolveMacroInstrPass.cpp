@@ -275,9 +275,11 @@ static void resolveJcc64AsSub64(MachineBasicBlock *MBB,
   unsigned int MsbOp2Reg = TRI->getSubReg(Op2Reg, DPU::sub_32bit_hi);
 
   BuildMI(*MBB, MBBIter, MBBIter->getDebugLoc(), InstrInfo.get(DPU::SUBzrr))
+      .addReg(DPU::ZERO)
       .addReg(LsbOp1Reg)
       .addReg(LsbOp2Reg);
   BuildMI(*MBB, MBBIter, MBBIter->getDebugLoc(), InstrInfo.get(DPU::SUBCzrrci))
+      .addReg(DPU::ZERO)
       .addReg(MsbOp1Reg)
       .addReg(MsbOp2Reg)
       .addImm(Cond)
@@ -395,6 +397,7 @@ static bool resolveMacroInstructionsInMBB(MachineBasicBlock *MBB,
       unsigned int MSBOp2Reg = TRI->getSubReg(Op2Reg, DPU::sub_32bit_hi);
 
       BuildMI(*MBB, MBBIter, MBBIter->getDebugLoc(), InstrInfo.get(DPU::SUBzrr))
+          .addReg(DPU::ZERO)
           .addReg(LSBDOp1Reg)
           .addReg(LSBOp2Reg);
       BuildMI(*MBB, MBBIter, MBBIter->getDebugLoc(),

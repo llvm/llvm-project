@@ -404,6 +404,7 @@ public:
     return DPUMCRegisterClasses[RegClassID].contains(RegNum);
   }
 
+  bool isZERO_REG_AsmReg() const { return isRegOfClass(DPU::ZERO_REGRegClassID); }
   bool isGP_REG_AsmReg() const { return isRegOfClass(DPU::GP_REGRegClassID); }
   bool isGP64_REG_AsmReg() const {
     return isRegOfClass(DPU::GP64_REGRegClassID);

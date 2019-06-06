@@ -179,8 +179,8 @@ def ADDrri: DPUInstruction {
 
 def ADDzri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleReg:$rb, u32_imm:$imm);
-	let AsmString        = "add zero, $rb, $imm";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleReg:$rb, u32_imm:$imm);
+	let AsmString        = "add $zero, $rb, $imm";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isAdd            = 1;
@@ -226,8 +226,8 @@ def ADDrrici: DPUInstruction {
 
 def ADDzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s11_imm:$imm, add_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "add zero, $ra, $imm, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s11_imm:$imm, add_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "add $zero, $ra, $imm, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isAdd            = 1;
@@ -271,8 +271,8 @@ def ADDrric: DPUInstruction {
 
 def ADDzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s27_imm:$imm, log_set_cc:$cc);
-	let AsmString        = "add zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s27_imm:$imm, log_set_cc:$cc);
+	let AsmString        = "add $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isAdd            = 1;
@@ -316,8 +316,8 @@ def ADDrrif: DPUInstruction {
 
 def ADDzrif: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s27_imm:$imm, false_cc:$cc);
-	let AsmString        = "add zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s27_imm:$imm, false_cc:$cc);
+	let AsmString        = "add $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isAdd            = 1;
@@ -392,8 +392,8 @@ def ADDrrrci: DPUInstruction {
 
 def ADDzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, add_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "add zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, add_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "add $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isAdd            = 1;
@@ -435,8 +435,8 @@ def ADDrrrc: DPUInstruction {
 
 def ADDzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "add zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "add $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isAdd            = 1;
@@ -472,8 +472,8 @@ def ADDrrr: DPUInstruction {
 
 def ADDzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "add zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "add $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isAdd            = 1;
@@ -846,8 +846,8 @@ def ADDCrri: DPUInstruction {
 
 def ADDCzri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleReg:$rb, u32_imm:$imm);
-	let AsmString        = "addc zero, $rb, $imm";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleReg:$rb, u32_imm:$imm);
+	let AsmString        = "addc $zero, $rb, $imm";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<32> imm; bits<5> rb;
@@ -891,8 +891,8 @@ def ADDCrrici: DPUInstruction {
 
 def ADDCzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s11_imm:$imm, add_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "addc zero, $ra, $imm, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s11_imm:$imm, add_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "addc $zero, $ra, $imm, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -934,8 +934,8 @@ def ADDCrric: DPUInstruction {
 
 def ADDCzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s27_imm:$imm, log_set_cc:$cc);
-	let AsmString        = "addc zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s27_imm:$imm, log_set_cc:$cc);
+	let AsmString        = "addc $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<27> imm; bits<5> cc; bits<5> ra;
@@ -977,8 +977,8 @@ def ADDCrrif: DPUInstruction {
 
 def ADDCzrif: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s27_imm:$imm, false_cc:$cc);
-	let AsmString        = "addc zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s27_imm:$imm, false_cc:$cc);
+	let AsmString        = "addc $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<27> imm; bits<5> ra;
@@ -1021,8 +1021,8 @@ def ADDCrrrci: DPUInstruction {
 
 def ADDCzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, add_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "addc zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, add_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "addc $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -1062,8 +1062,8 @@ def ADDCrrrc: DPUInstruction {
 
 def ADDCzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "addc zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "addc $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> cc; bits<5> ra;
@@ -1097,8 +1097,8 @@ def ADDCrrr: DPUInstruction {
 
 def ADDCzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "addc zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "addc $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -1450,8 +1450,8 @@ def ANDrri: DPUInstruction {
 
 def ANDzri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleReg:$rb, u32_imm:$imm);
-	let AsmString        = "and zero, $rb, $imm";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleReg:$rb, u32_imm:$imm);
+	let AsmString        = "and $zero, $rb, $imm";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<32> imm; bits<5> rb;
@@ -1493,8 +1493,8 @@ def ANDrrici: DPUInstruction {
 
 def ANDzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s12_imm:$imm, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "and zero, $ra, $imm, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s12_imm:$imm, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "and $zero, $ra, $imm, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -1536,8 +1536,8 @@ def ANDrric: DPUInstruction {
 
 def ANDzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s28_imm:$imm, log_set_cc:$cc);
-	let AsmString        = "and zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s28_imm:$imm, log_set_cc:$cc);
+	let AsmString        = "and $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<28> imm; bits<4> cc; bits<5> ra;
@@ -1579,8 +1579,8 @@ def ANDrrif: DPUInstruction {
 
 def ANDzrif: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s28_imm:$imm, false_cc:$cc);
-	let AsmString        = "and zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s28_imm:$imm, false_cc:$cc);
+	let AsmString        = "and $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<28> imm; bits<5> ra;
@@ -1623,8 +1623,8 @@ def ANDrrrci: DPUInstruction {
 
 def ANDzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "and zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "and $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -1662,8 +1662,8 @@ def ANDrrrc: DPUInstruction {
 
 def ANDzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "and zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "and $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -1695,8 +1695,8 @@ def ANDrrr: DPUInstruction {
 
 def ANDzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "and zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "and $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -2068,8 +2068,8 @@ def ANDNrrici: DPUInstruction {
 
 def ANDNzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s12_imm:$imm, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "andn zero, $ra, $imm, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s12_imm:$imm, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "andn $zero, $ra, $imm, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -2111,8 +2111,8 @@ def ANDNrric: DPUInstruction {
 
 def ANDNzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s28_imm:$imm, log_set_cc:$cc);
-	let AsmString        = "andn zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s28_imm:$imm, log_set_cc:$cc);
+	let AsmString        = "andn $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<28> imm; bits<4> cc; bits<5> ra;
@@ -2154,8 +2154,8 @@ def ANDNrrif: DPUInstruction {
 
 def ANDNzrif: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s28_imm:$imm, false_cc:$cc);
-	let AsmString        = "andn zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s28_imm:$imm, false_cc:$cc);
+	let AsmString        = "andn $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<28> imm; bits<5> ra;
@@ -2198,8 +2198,8 @@ def ANDNrrrci: DPUInstruction {
 
 def ANDNzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "andn zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "andn $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -2237,8 +2237,8 @@ def ANDNrrrc: DPUInstruction {
 
 def ANDNzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "andn zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "andn $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -2270,8 +2270,8 @@ def ANDNrrr: DPUInstruction {
 
 def ANDNzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "andn zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "andn $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -2573,8 +2573,8 @@ def ASRrrici: DPUInstruction {
 
 def ASRzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "asr zero, $ra, $shift, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "asr $zero, $ra, $shift, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -2611,8 +2611,8 @@ def ASRrric: DPUInstruction {
 
 def ASRzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
-	let AsmString        = "asr zero, $ra, $shift, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
+	let AsmString        = "asr $zero, $ra, $shift, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<4> cc; bits<5> ra;
@@ -2644,8 +2644,8 @@ def ASRrri: DPUInstruction {
 
 def ASRzri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift);
-	let AsmString        = "asr zero, $ra, $shift";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift);
+	let AsmString        = "asr $zero, $ra, $shift";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<5> ra;
@@ -2684,8 +2684,8 @@ def ASRrrrci: DPUInstruction {
 
 def ASRzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "asr zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "asr $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -2725,8 +2725,8 @@ def ASRrrrc: DPUInstruction {
 
 def ASRzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "asr zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "asr $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -2758,8 +2758,8 @@ def ASRrrr: DPUInstruction {
 
 def ASRzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "asr zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "asr $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -3077,8 +3077,8 @@ def CALLrri: DPUInstruction {
 
 def CALLzri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, pc28:$off);
-	let AsmString        = "call zero, $ra, $off";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, pc28:$off);
+	let AsmString        = "call $zero, $ra, $off";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -3119,8 +3119,8 @@ def CALLrrr: DPUInstruction {
 
 def CALLzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "call zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "call $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isCall           = 1;
@@ -3188,8 +3188,8 @@ def CAOrrci: DPUInstruction {
 
 def CAOzrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, count_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "cao zero, $ra, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, count_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "cao $zero, $ra, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -3221,8 +3221,8 @@ def CAOrrc: DPUInstruction {
 
 def CAOzrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, log_set_cc:$cc);
-	let AsmString        = "cao zero, $ra, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, log_set_cc:$cc);
+	let AsmString        = "cao $zero, $ra, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<4> cc; bits<5> ra;
@@ -3248,8 +3248,8 @@ def CAOrr: DPUInstruction {
 
 def CAOzr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra);
-	let AsmString        = "cao zero, $ra";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra);
+	let AsmString        = "cao $zero, $ra";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> ra;
@@ -3379,8 +3379,8 @@ def CLOrrci: DPUInstruction {
 
 def CLOzrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, count_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "clo zero, $ra, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, count_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "clo $zero, $ra, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -3412,8 +3412,8 @@ def CLOrrc: DPUInstruction {
 
 def CLOzrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, log_set_cc:$cc);
-	let AsmString        = "clo zero, $ra, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, log_set_cc:$cc);
+	let AsmString        = "clo $zero, $ra, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<4> cc; bits<5> ra;
@@ -3439,8 +3439,8 @@ def CLOrr: DPUInstruction {
 
 def CLOzr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra);
-	let AsmString        = "clo zero, $ra";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra);
+	let AsmString        = "clo $zero, $ra";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> ra;
@@ -3589,8 +3589,8 @@ def CLSrrci: DPUInstruction {
 
 def CLSzrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, count_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "cls zero, $ra, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, count_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "cls $zero, $ra, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -3622,8 +3622,8 @@ def CLSrrc: DPUInstruction {
 
 def CLSzrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, log_set_cc:$cc);
-	let AsmString        = "cls zero, $ra, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, log_set_cc:$cc);
+	let AsmString        = "cls $zero, $ra, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<4> cc; bits<5> ra;
@@ -3649,8 +3649,8 @@ def CLSrr: DPUInstruction {
 
 def CLSzr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra);
-	let AsmString        = "cls zero, $ra";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra);
+	let AsmString        = "cls $zero, $ra";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> ra;
@@ -3780,8 +3780,8 @@ def CLZrrci: DPUInstruction {
 
 def CLZzrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, count_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "clz zero, $ra, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, count_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "clz $zero, $ra, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -3813,8 +3813,8 @@ def CLZrrc: DPUInstruction {
 
 def CLZzrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, log_set_cc:$cc);
-	let AsmString        = "clz zero, $ra, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, log_set_cc:$cc);
+	let AsmString        = "clz $zero, $ra, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<4> cc; bits<5> ra;
@@ -3840,8 +3840,8 @@ def CLZrr: DPUInstruction {
 
 def CLZzr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra);
-	let AsmString        = "clz zero, $ra";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra);
+	let AsmString        = "clz $zero, $ra";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> ra;
@@ -3974,8 +3974,8 @@ def CMPB4rrrci: DPUInstruction {
 
 def CMPB4zrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "cmpb4 zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "cmpb4 $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -4013,8 +4013,8 @@ def CMPB4rrrc: DPUInstruction {
 
 def CMPB4zrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "cmpb4 zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "cmpb4 $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -4046,8 +4046,8 @@ def CMPB4rrr: DPUInstruction {
 
 def CMPB4zrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "cmpb4 zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "cmpb4 $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -4240,8 +4240,8 @@ def EXTSBrrci: DPUInstruction {
 
 def EXTSBzrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "extsb zero, $ra, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "extsb $zero, $ra, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -4273,8 +4273,8 @@ def EXTSBrrc: DPUInstruction {
 
 def EXTSBzrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, log_set_cc:$cc);
-	let AsmString        = "extsb zero, $ra, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, log_set_cc:$cc);
+	let AsmString        = "extsb $zero, $ra, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<4> cc; bits<5> ra;
@@ -4300,8 +4300,8 @@ def EXTSBrr: DPUInstruction {
 
 def EXTSBzr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra);
-	let AsmString        = "extsb zero, $ra";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra);
+	let AsmString        = "extsb $zero, $ra";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> ra;
@@ -4381,8 +4381,8 @@ def EXTSHrrci: DPUInstruction {
 
 def EXTSHzrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "extsh zero, $ra, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "extsh $zero, $ra, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -4414,8 +4414,8 @@ def EXTSHrrc: DPUInstruction {
 
 def EXTSHzrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, log_set_cc:$cc);
-	let AsmString        = "extsh zero, $ra, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, log_set_cc:$cc);
+	let AsmString        = "extsh $zero, $ra, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<4> cc; bits<5> ra;
@@ -4441,8 +4441,8 @@ def EXTSHrr: DPUInstruction {
 
 def EXTSHzr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra);
-	let AsmString        = "extsh zero, $ra";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra);
+	let AsmString        = "extsh $zero, $ra";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> ra;
@@ -4522,8 +4522,8 @@ def EXTUBrrci: DPUInstruction {
 
 def EXTUBzrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "extub zero, $ra, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "extub $zero, $ra, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -4555,8 +4555,8 @@ def EXTUBrrc: DPUInstruction {
 
 def EXTUBzrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, log_set_cc:$cc);
-	let AsmString        = "extub zero, $ra, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, log_set_cc:$cc);
+	let AsmString        = "extub $zero, $ra, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<4> cc; bits<5> ra;
@@ -4582,8 +4582,8 @@ def EXTUBrr: DPUInstruction {
 
 def EXTUBzr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra);
-	let AsmString        = "extub zero, $ra";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra);
+	let AsmString        = "extub $zero, $ra";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> ra;
@@ -4663,8 +4663,8 @@ def EXTUHrrci: DPUInstruction {
 
 def EXTUHzrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "extuh zero, $ra, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "extuh $zero, $ra, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -4696,8 +4696,8 @@ def EXTUHrrc: DPUInstruction {
 
 def EXTUHzrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, log_set_cc:$cc);
-	let AsmString        = "extuh zero, $ra, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, log_set_cc:$cc);
+	let AsmString        = "extuh $zero, $ra, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<4> cc; bits<5> ra;
@@ -4723,8 +4723,8 @@ def EXTUHrr: DPUInstruction {
 
 def EXTUHzr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra);
-	let AsmString        = "extuh zero, $ra";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra);
+	let AsmString        = "extuh $zero, $ra";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> ra;
@@ -4822,8 +4822,8 @@ def HASHrrici: DPUInstruction {
 
 def HASHzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s12_imm:$imm, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "hash zero, $ra, $imm, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s12_imm:$imm, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "hash $zero, $ra, $imm, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -4865,8 +4865,8 @@ def HASHrric: DPUInstruction {
 
 def HASHzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s28_imm:$imm, log_set_cc:$cc);
-	let AsmString        = "hash zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s28_imm:$imm, log_set_cc:$cc);
+	let AsmString        = "hash $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<28> imm; bits<4> cc; bits<5> ra;
@@ -4908,8 +4908,8 @@ def HASHrrif: DPUInstruction {
 
 def HASHzrif: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s28_imm:$imm, false_cc:$cc);
-	let AsmString        = "hash zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s28_imm:$imm, false_cc:$cc);
+	let AsmString        = "hash $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<28> imm; bits<5> ra;
@@ -4952,8 +4952,8 @@ def HASHrrrci: DPUInstruction {
 
 def HASHzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "hash zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "hash $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -4991,8 +4991,8 @@ def HASHrrrc: DPUInstruction {
 
 def HASHzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "hash zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "hash $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -5024,8 +5024,8 @@ def HASHrrr: DPUInstruction {
 
 def HASHzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "hash zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "hash $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -6449,8 +6449,8 @@ def LSLrrici: DPUInstruction {
 
 def LSLzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lsl zero, $ra, $shift, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lsl $zero, $ra, $shift, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -6487,8 +6487,8 @@ def LSLrric: DPUInstruction {
 
 def LSLzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
-	let AsmString        = "lsl zero, $ra, $shift, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
+	let AsmString        = "lsl $zero, $ra, $shift, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<4> cc; bits<5> ra;
@@ -6520,8 +6520,8 @@ def LSLrri: DPUInstruction {
 
 def LSLzri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift);
-	let AsmString        = "lsl zero, $ra, $shift";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift);
+	let AsmString        = "lsl $zero, $ra, $shift";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<5> ra;
@@ -6560,8 +6560,8 @@ def LSLrrrci: DPUInstruction {
 
 def LSLzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lsl zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lsl $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -6601,8 +6601,8 @@ def LSLrrrc: DPUInstruction {
 
 def LSLzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "lsl zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "lsl $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -6634,8 +6634,8 @@ def LSLrrr: DPUInstruction {
 
 def LSLzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "lsl zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "lsl $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -6911,8 +6911,8 @@ def LSL1rrici: DPUInstruction {
 
 def LSL1zrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lsl1 zero, $ra, $shift, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lsl1 $zero, $ra, $shift, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -6949,8 +6949,8 @@ def LSL1rric: DPUInstruction {
 
 def LSL1zric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
-	let AsmString        = "lsl1 zero, $ra, $shift, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
+	let AsmString        = "lsl1 $zero, $ra, $shift, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<4> cc; bits<5> ra;
@@ -6982,8 +6982,8 @@ def LSL1rri: DPUInstruction {
 
 def LSL1zri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift);
-	let AsmString        = "lsl1 zero, $ra, $shift";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift);
+	let AsmString        = "lsl1 $zero, $ra, $shift";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<5> ra;
@@ -7022,8 +7022,8 @@ def LSL1rrrci: DPUInstruction {
 
 def LSL1zrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lsl1 zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lsl1 $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -7063,8 +7063,8 @@ def LSL1rrrc: DPUInstruction {
 
 def LSL1zrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "lsl1 zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "lsl1 $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -7096,8 +7096,8 @@ def LSL1rrr: DPUInstruction {
 
 def LSL1zrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "lsl1 zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "lsl1 $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -7373,8 +7373,8 @@ def LSL1Xrrici: DPUInstruction {
 
 def LSL1Xzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lsl1x zero, $ra, $shift, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lsl1x $zero, $ra, $shift, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -7411,8 +7411,8 @@ def LSL1Xrric: DPUInstruction {
 
 def LSL1Xzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
-	let AsmString        = "lsl1x zero, $ra, $shift, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
+	let AsmString        = "lsl1x $zero, $ra, $shift, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<4> cc; bits<5> ra;
@@ -7444,8 +7444,8 @@ def LSL1Xrri: DPUInstruction {
 
 def LSL1Xzri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift);
-	let AsmString        = "lsl1x zero, $ra, $shift";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift);
+	let AsmString        = "lsl1x $zero, $ra, $shift";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<5> ra;
@@ -7484,8 +7484,8 @@ def LSL1Xrrrci: DPUInstruction {
 
 def LSL1Xzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lsl1x zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lsl1x $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -7525,8 +7525,8 @@ def LSL1Xrrrc: DPUInstruction {
 
 def LSL1Xzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "lsl1x zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "lsl1x $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -7558,8 +7558,8 @@ def LSL1Xrrr: DPUInstruction {
 
 def LSL1Xzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "lsl1x zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "lsl1x $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -7836,8 +7836,8 @@ def LSL_ADDrrrici: DPUInstruction {
 
 def LSL_ADDzrrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift, div_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lsl_add zero, $rb, $ra, $shift, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift, div_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lsl_add $zero, $rb, $ra, $shift, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -7877,8 +7877,8 @@ def LSL_ADDrrri: DPUInstruction {
 
 def LSL_ADDzrri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift);
-	let AsmString        = "lsl_add zero, $rb, $ra, $shift";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift);
+	let AsmString        = "lsl_add $zero, $rb, $ra, $shift";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> shift; bits<5> ra;
@@ -8006,8 +8006,8 @@ def LSL_SUBrrrici: DPUInstruction {
 
 def LSL_SUBzrrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift, div_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lsl_sub zero, $rb, $ra, $shift, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift, div_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lsl_sub $zero, $rb, $ra, $shift, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -8047,8 +8047,8 @@ def LSL_SUBrrri: DPUInstruction {
 
 def LSL_SUBzrri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift);
-	let AsmString        = "lsl_sub zero, $rb, $ra, $shift";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift);
+	let AsmString        = "lsl_sub $zero, $rb, $ra, $shift";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> shift; bits<5> ra;
@@ -8175,8 +8175,8 @@ def LSLXrrici: DPUInstruction {
 
 def LSLXzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lslx zero, $ra, $shift, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lslx $zero, $ra, $shift, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -8213,8 +8213,8 @@ def LSLXrric: DPUInstruction {
 
 def LSLXzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
-	let AsmString        = "lslx zero, $ra, $shift, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
+	let AsmString        = "lslx $zero, $ra, $shift, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<4> cc; bits<5> ra;
@@ -8246,8 +8246,8 @@ def LSLXrri: DPUInstruction {
 
 def LSLXzri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift);
-	let AsmString        = "lslx zero, $ra, $shift";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift);
+	let AsmString        = "lslx $zero, $ra, $shift";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<5> ra;
@@ -8286,8 +8286,8 @@ def LSLXrrrci: DPUInstruction {
 
 def LSLXzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lslx zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lslx $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -8327,8 +8327,8 @@ def LSLXrrrc: DPUInstruction {
 
 def LSLXzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "lslx zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "lslx $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -8360,8 +8360,8 @@ def LSLXrrr: DPUInstruction {
 
 def LSLXzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "lslx zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "lslx $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -8637,8 +8637,8 @@ def LSRrrici: DPUInstruction {
 
 def LSRzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lsr zero, $ra, $shift, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lsr $zero, $ra, $shift, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -8675,8 +8675,8 @@ def LSRrric: DPUInstruction {
 
 def LSRzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
-	let AsmString        = "lsr zero, $ra, $shift, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
+	let AsmString        = "lsr $zero, $ra, $shift, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<4> cc; bits<5> ra;
@@ -8708,8 +8708,8 @@ def LSRrri: DPUInstruction {
 
 def LSRzri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift);
-	let AsmString        = "lsr zero, $ra, $shift";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift);
+	let AsmString        = "lsr $zero, $ra, $shift";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<5> ra;
@@ -8748,8 +8748,8 @@ def LSRrrrci: DPUInstruction {
 
 def LSRzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lsr zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lsr $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -8789,8 +8789,8 @@ def LSRrrrc: DPUInstruction {
 
 def LSRzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "lsr zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "lsr $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -8822,8 +8822,8 @@ def LSRrrr: DPUInstruction {
 
 def LSRzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "lsr zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "lsr $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -9099,8 +9099,8 @@ def LSR1rrici: DPUInstruction {
 
 def LSR1zrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lsr1 zero, $ra, $shift, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lsr1 $zero, $ra, $shift, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -9137,8 +9137,8 @@ def LSR1rric: DPUInstruction {
 
 def LSR1zric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
-	let AsmString        = "lsr1 zero, $ra, $shift, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
+	let AsmString        = "lsr1 $zero, $ra, $shift, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<4> cc; bits<5> ra;
@@ -9170,8 +9170,8 @@ def LSR1rri: DPUInstruction {
 
 def LSR1zri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift);
-	let AsmString        = "lsr1 zero, $ra, $shift";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift);
+	let AsmString        = "lsr1 $zero, $ra, $shift";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<5> ra;
@@ -9210,8 +9210,8 @@ def LSR1rrrci: DPUInstruction {
 
 def LSR1zrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lsr1 zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lsr1 $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -9251,8 +9251,8 @@ def LSR1rrrc: DPUInstruction {
 
 def LSR1zrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "lsr1 zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "lsr1 $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -9284,8 +9284,8 @@ def LSR1rrr: DPUInstruction {
 
 def LSR1zrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "lsr1 zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "lsr1 $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -9561,8 +9561,8 @@ def LSR1Xrrici: DPUInstruction {
 
 def LSR1Xzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lsr1x zero, $ra, $shift, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lsr1x $zero, $ra, $shift, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -9599,8 +9599,8 @@ def LSR1Xrric: DPUInstruction {
 
 def LSR1Xzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
-	let AsmString        = "lsr1x zero, $ra, $shift, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
+	let AsmString        = "lsr1x $zero, $ra, $shift, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<4> cc; bits<5> ra;
@@ -9632,8 +9632,8 @@ def LSR1Xrri: DPUInstruction {
 
 def LSR1Xzri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift);
-	let AsmString        = "lsr1x zero, $ra, $shift";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift);
+	let AsmString        = "lsr1x $zero, $ra, $shift";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<5> ra;
@@ -9672,8 +9672,8 @@ def LSR1Xrrrci: DPUInstruction {
 
 def LSR1Xzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lsr1x zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lsr1x $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -9713,8 +9713,8 @@ def LSR1Xrrrc: DPUInstruction {
 
 def LSR1Xzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "lsr1x zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "lsr1x $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -9746,8 +9746,8 @@ def LSR1Xrrr: DPUInstruction {
 
 def LSR1Xzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "lsr1x zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "lsr1x $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -10024,8 +10024,8 @@ def LSR_ADDrrrici: DPUInstruction {
 
 def LSR_ADDzrrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift, div_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lsr_add zero, $rb, $ra, $shift, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift, div_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lsr_add $zero, $rb, $ra, $shift, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -10065,8 +10065,8 @@ def LSR_ADDrrri: DPUInstruction {
 
 def LSR_ADDzrri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift);
-	let AsmString        = "lsr_add zero, $rb, $ra, $shift";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift);
+	let AsmString        = "lsr_add $zero, $rb, $ra, $shift";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> shift; bits<5> ra;
@@ -10193,8 +10193,8 @@ def LSRXrrici: DPUInstruction {
 
 def LSRXzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lsrx zero, $ra, $shift, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lsrx $zero, $ra, $shift, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -10231,8 +10231,8 @@ def LSRXrric: DPUInstruction {
 
 def LSRXzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
-	let AsmString        = "lsrx zero, $ra, $shift, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
+	let AsmString        = "lsrx $zero, $ra, $shift, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<4> cc; bits<5> ra;
@@ -10264,8 +10264,8 @@ def LSRXrri: DPUInstruction {
 
 def LSRXzri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift);
-	let AsmString        = "lsrx zero, $ra, $shift";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift);
+	let AsmString        = "lsrx $zero, $ra, $shift";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<5> ra;
@@ -10304,8 +10304,8 @@ def LSRXrrrci: DPUInstruction {
 
 def LSRXzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "lsrx zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "lsrx $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -10345,8 +10345,8 @@ def LSRXrrrc: DPUInstruction {
 
 def LSRXzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "lsrx zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "lsrx $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -10378,8 +10378,8 @@ def LSRXrrr: DPUInstruction {
 
 def LSRXzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "lsrx zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "lsrx $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -11006,8 +11006,8 @@ def MUL_SH_SHrrrci: DPUInstruction {
 
 def MUL_SH_SHzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "mul_sh_sh zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "mul_sh_sh $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -11047,8 +11047,8 @@ def MUL_SH_SHrrrc: DPUInstruction {
 
 def MUL_SH_SHzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "mul_sh_sh zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "mul_sh_sh $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -11082,8 +11082,8 @@ def MUL_SH_SHrrr: DPUInstruction {
 
 def MUL_SH_SHzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "mul_sh_sh zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "mul_sh_sh $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -11186,8 +11186,8 @@ def MUL_SH_SLrrrci: DPUInstruction {
 
 def MUL_SH_SLzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "mul_sh_sl zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "mul_sh_sl $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -11227,8 +11227,8 @@ def MUL_SH_SLrrrc: DPUInstruction {
 
 def MUL_SH_SLzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "mul_sh_sl zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "mul_sh_sl $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -11262,8 +11262,8 @@ def MUL_SH_SLrrr: DPUInstruction {
 
 def MUL_SH_SLzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "mul_sh_sl zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "mul_sh_sl $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -11366,8 +11366,8 @@ def MUL_SH_UHrrrci: DPUInstruction {
 
 def MUL_SH_UHzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "mul_sh_uh zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "mul_sh_uh $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -11407,8 +11407,8 @@ def MUL_SH_UHrrrc: DPUInstruction {
 
 def MUL_SH_UHzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "mul_sh_uh zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "mul_sh_uh $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -11442,8 +11442,8 @@ def MUL_SH_UHrrr: DPUInstruction {
 
 def MUL_SH_UHzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "mul_sh_uh zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "mul_sh_uh $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -11546,8 +11546,8 @@ def MUL_SH_ULrrrci: DPUInstruction {
 
 def MUL_SH_ULzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "mul_sh_ul zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "mul_sh_ul $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -11587,8 +11587,8 @@ def MUL_SH_ULrrrc: DPUInstruction {
 
 def MUL_SH_ULzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "mul_sh_ul zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "mul_sh_ul $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -11622,8 +11622,8 @@ def MUL_SH_ULrrr: DPUInstruction {
 
 def MUL_SH_ULzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "mul_sh_ul zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "mul_sh_ul $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -11726,8 +11726,8 @@ def MUL_SL_SHrrrci: DPUInstruction {
 
 def MUL_SL_SHzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "mul_sl_sh zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "mul_sl_sh $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -11767,8 +11767,8 @@ def MUL_SL_SHrrrc: DPUInstruction {
 
 def MUL_SL_SHzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "mul_sl_sh zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "mul_sl_sh $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -11802,8 +11802,8 @@ def MUL_SL_SHrrr: DPUInstruction {
 
 def MUL_SL_SHzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "mul_sl_sh zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "mul_sl_sh $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -11906,8 +11906,8 @@ def MUL_SL_SLrrrci: DPUInstruction {
 
 def MUL_SL_SLzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "mul_sl_sl zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "mul_sl_sl $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -11947,8 +11947,8 @@ def MUL_SL_SLrrrc: DPUInstruction {
 
 def MUL_SL_SLzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "mul_sl_sl zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "mul_sl_sl $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -11982,8 +11982,8 @@ def MUL_SL_SLrrr: DPUInstruction {
 
 def MUL_SL_SLzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "mul_sl_sl zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "mul_sl_sl $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -12086,8 +12086,8 @@ def MUL_SL_UHrrrci: DPUInstruction {
 
 def MUL_SL_UHzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "mul_sl_uh zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "mul_sl_uh $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -12127,8 +12127,8 @@ def MUL_SL_UHrrrc: DPUInstruction {
 
 def MUL_SL_UHzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "mul_sl_uh zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "mul_sl_uh $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -12162,8 +12162,8 @@ def MUL_SL_UHrrr: DPUInstruction {
 
 def MUL_SL_UHzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "mul_sl_uh zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "mul_sl_uh $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -12266,8 +12266,8 @@ def MUL_SL_ULrrrci: DPUInstruction {
 
 def MUL_SL_ULzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "mul_sl_ul zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "mul_sl_ul $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -12307,8 +12307,8 @@ def MUL_SL_ULrrrc: DPUInstruction {
 
 def MUL_SL_ULzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "mul_sl_ul zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "mul_sl_ul $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -12342,8 +12342,8 @@ def MUL_SL_ULrrr: DPUInstruction {
 
 def MUL_SL_ULzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "mul_sl_ul zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "mul_sl_ul $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -12488,8 +12488,8 @@ def MUL_UH_UHrrrci: DPUInstruction {
 
 def MUL_UH_UHzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "mul_uh_uh zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "mul_uh_uh $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -12529,8 +12529,8 @@ def MUL_UH_UHrrrc: DPUInstruction {
 
 def MUL_UH_UHzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "mul_uh_uh zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "mul_uh_uh $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -12564,8 +12564,8 @@ def MUL_UH_UHrrr: DPUInstruction {
 
 def MUL_UH_UHzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "mul_uh_uh zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "mul_uh_uh $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -12668,8 +12668,8 @@ def MUL_UH_ULrrrci: DPUInstruction {
 
 def MUL_UH_ULzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "mul_uh_ul zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "mul_uh_ul $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -12709,8 +12709,8 @@ def MUL_UH_ULrrrc: DPUInstruction {
 
 def MUL_UH_ULzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "mul_uh_ul zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "mul_uh_ul $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -12744,8 +12744,8 @@ def MUL_UH_ULrrr: DPUInstruction {
 
 def MUL_UH_ULzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "mul_uh_ul zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "mul_uh_ul $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -12848,8 +12848,8 @@ def MUL_UL_UHrrrci: DPUInstruction {
 
 def MUL_UL_UHzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "mul_ul_uh zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "mul_ul_uh $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -12889,8 +12889,8 @@ def MUL_UL_UHrrrc: DPUInstruction {
 
 def MUL_UL_UHzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "mul_ul_uh zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "mul_ul_uh $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -12924,8 +12924,8 @@ def MUL_UL_UHrrr: DPUInstruction {
 
 def MUL_UL_UHzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "mul_ul_uh zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "mul_ul_uh $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -13028,8 +13028,8 @@ def MUL_UL_ULrrrci: DPUInstruction {
 
 def MUL_UL_ULzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "mul_ul_ul zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, mul_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "mul_ul_ul $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -13069,8 +13069,8 @@ def MUL_UL_ULrrrc: DPUInstruction {
 
 def MUL_UL_ULzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "mul_ul_ul zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "mul_ul_ul $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -13104,8 +13104,8 @@ def MUL_UL_ULrrr: DPUInstruction {
 
 def MUL_UL_ULzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "mul_ul_ul zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "mul_ul_ul $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -13204,8 +13204,8 @@ def NANDrrici: DPUInstruction {
 
 def NANDzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s12_imm:$imm, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "nand zero, $ra, $imm, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s12_imm:$imm, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "nand $zero, $ra, $imm, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -13247,8 +13247,8 @@ def NANDrric: DPUInstruction {
 
 def NANDzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s28_imm:$imm, log_set_cc:$cc);
-	let AsmString        = "nand zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s28_imm:$imm, log_set_cc:$cc);
+	let AsmString        = "nand $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<28> imm; bits<4> cc; bits<5> ra;
@@ -13290,8 +13290,8 @@ def NANDrrif: DPUInstruction {
 
 def NANDzrif: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s28_imm:$imm, false_cc:$cc);
-	let AsmString        = "nand zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s28_imm:$imm, false_cc:$cc);
+	let AsmString        = "nand $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<28> imm; bits<5> ra;
@@ -13334,8 +13334,8 @@ def NANDrrrci: DPUInstruction {
 
 def NANDzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "nand zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "nand $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -13373,8 +13373,8 @@ def NANDrrrc: DPUInstruction {
 
 def NANDzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "nand zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "nand $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -13406,8 +13406,8 @@ def NANDrrr: DPUInstruction {
 
 def NANDzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "nand zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "nand $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -13750,8 +13750,8 @@ def NORrrici: DPUInstruction {
 
 def NORzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s12_imm:$imm, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "nor zero, $ra, $imm, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s12_imm:$imm, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "nor $zero, $ra, $imm, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -13793,8 +13793,8 @@ def NORrric: DPUInstruction {
 
 def NORzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s28_imm:$imm, log_set_cc:$cc);
-	let AsmString        = "nor zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s28_imm:$imm, log_set_cc:$cc);
+	let AsmString        = "nor $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<28> imm; bits<4> cc; bits<5> ra;
@@ -13836,8 +13836,8 @@ def NORrrif: DPUInstruction {
 
 def NORzrif: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s28_imm:$imm, false_cc:$cc);
-	let AsmString        = "nor zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s28_imm:$imm, false_cc:$cc);
+	let AsmString        = "nor $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<28> imm; bits<5> ra;
@@ -13880,8 +13880,8 @@ def NORrrrci: DPUInstruction {
 
 def NORzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "nor zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "nor $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -13919,8 +13919,8 @@ def NORrrrc: DPUInstruction {
 
 def NORzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "nor zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "nor $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -13952,8 +13952,8 @@ def NORrrr: DPUInstruction {
 
 def NORzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "nor zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "nor $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -14266,8 +14266,8 @@ def NXORrrici: DPUInstruction {
 
 def NXORzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s12_imm:$imm, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "nxor zero, $ra, $imm, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s12_imm:$imm, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "nxor $zero, $ra, $imm, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -14309,8 +14309,8 @@ def NXORrric: DPUInstruction {
 
 def NXORzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s28_imm:$imm, log_set_cc:$cc);
-	let AsmString        = "nxor zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s28_imm:$imm, log_set_cc:$cc);
+	let AsmString        = "nxor $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<28> imm; bits<4> cc; bits<5> ra;
@@ -14352,8 +14352,8 @@ def NXORrrif: DPUInstruction {
 
 def NXORzrif: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s28_imm:$imm, false_cc:$cc);
-	let AsmString        = "nxor zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s28_imm:$imm, false_cc:$cc);
+	let AsmString        = "nxor $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<28> imm; bits<5> ra;
@@ -14396,8 +14396,8 @@ def NXORrrrci: DPUInstruction {
 
 def NXORzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "nxor zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "nxor $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -14435,8 +14435,8 @@ def NXORrrrc: DPUInstruction {
 
 def NXORzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "nxor zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "nxor $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -14468,8 +14468,8 @@ def NXORrrr: DPUInstruction {
 
 def NXORzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "nxor zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "nxor $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -14770,8 +14770,8 @@ def ORrri: DPUInstruction {
 
 def ORzri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleReg:$rb, u32_imm:$imm);
-	let AsmString        = "or zero, $rb, $imm";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleReg:$rb, u32_imm:$imm);
+	let AsmString        = "or $zero, $rb, $imm";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<32> imm; bits<5> rb;
@@ -14813,8 +14813,8 @@ def ORrrici: DPUInstruction {
 
 def ORzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s12_imm:$imm, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "or zero, $ra, $imm, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s12_imm:$imm, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "or $zero, $ra, $imm, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -14856,8 +14856,8 @@ def ORrric: DPUInstruction {
 
 def ORzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s28_imm:$imm, log_set_cc:$cc);
-	let AsmString        = "or zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s28_imm:$imm, log_set_cc:$cc);
+	let AsmString        = "or $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<28> imm; bits<4> cc; bits<5> ra;
@@ -14899,8 +14899,8 @@ def ORrrif: DPUInstruction {
 
 def ORzrif: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s28_imm:$imm, false_cc:$cc);
-	let AsmString        = "or zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s28_imm:$imm, false_cc:$cc);
+	let AsmString        = "or $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<28> imm; bits<5> ra;
@@ -14943,8 +14943,8 @@ def ORrrrci: DPUInstruction {
 
 def ORzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "or zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "or $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -14982,8 +14982,8 @@ def ORrrrc: DPUInstruction {
 
 def ORzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "or zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "or $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -15015,8 +15015,8 @@ def ORrrr: DPUInstruction {
 
 def ORzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "or zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "or $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -15344,8 +15344,8 @@ def ORNrrici: DPUInstruction {
 
 def ORNzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s12_imm:$imm, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "orn zero, $ra, $imm, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s12_imm:$imm, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "orn $zero, $ra, $imm, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -15387,8 +15387,8 @@ def ORNrric: DPUInstruction {
 
 def ORNzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s28_imm:$imm, log_set_cc:$cc);
-	let AsmString        = "orn zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s28_imm:$imm, log_set_cc:$cc);
+	let AsmString        = "orn $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<28> imm; bits<4> cc; bits<5> ra;
@@ -15430,8 +15430,8 @@ def ORNrrif: DPUInstruction {
 
 def ORNzrif: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s28_imm:$imm, false_cc:$cc);
-	let AsmString        = "orn zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s28_imm:$imm, false_cc:$cc);
+	let AsmString        = "orn $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<28> imm; bits<5> ra;
@@ -15474,8 +15474,8 @@ def ORNrrrci: DPUInstruction {
 
 def ORNzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "orn zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "orn $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -15513,8 +15513,8 @@ def ORNrrrc: DPUInstruction {
 
 def ORNzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "orn zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "orn $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -15546,8 +15546,8 @@ def ORNrrr: DPUInstruction {
 
 def ORNzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "orn zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "orn $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -15923,8 +15923,8 @@ def ROLrrici: DPUInstruction {
 
 def ROLzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "rol zero, $ra, $shift, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "rol $zero, $ra, $shift, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -15961,8 +15961,8 @@ def ROLrric: DPUInstruction {
 
 def ROLzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
-	let AsmString        = "rol zero, $ra, $shift, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
+	let AsmString        = "rol $zero, $ra, $shift, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<4> cc; bits<5> ra;
@@ -15994,8 +15994,8 @@ def ROLrri: DPUInstruction {
 
 def ROLzri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift);
-	let AsmString        = "rol zero, $ra, $shift";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift);
+	let AsmString        = "rol $zero, $ra, $shift";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<5> ra;
@@ -16034,8 +16034,8 @@ def ROLrrrci: DPUInstruction {
 
 def ROLzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "rol zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "rol $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -16075,8 +16075,8 @@ def ROLrrrc: DPUInstruction {
 
 def ROLzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "rol zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "rol $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -16108,8 +16108,8 @@ def ROLrrr: DPUInstruction {
 
 def ROLzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "rol zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "rol $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -16386,8 +16386,8 @@ def ROL_ADDrrrici: DPUInstruction {
 
 def ROL_ADDzrrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift, div_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "rol_add zero, $rb, $ra, $shift, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift, div_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "rol_add $zero, $rb, $ra, $shift, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -16427,8 +16427,8 @@ def ROL_ADDrrri: DPUInstruction {
 
 def ROL_ADDzrri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift);
-	let AsmString        = "rol_add zero, $rb, $ra, $shift";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift);
+	let AsmString        = "rol_add $zero, $rb, $ra, $shift";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> shift; bits<5> ra;
@@ -16555,8 +16555,8 @@ def RORrrici: DPUInstruction {
 
 def RORzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "ror zero, $ra, $shift, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, imm_shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "ror $zero, $ra, $shift, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -16593,8 +16593,8 @@ def RORrric: DPUInstruction {
 
 def RORzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
-	let AsmString        = "ror zero, $ra, $shift, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift, log_set_cc:$cc);
+	let AsmString        = "ror $zero, $ra, $shift, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<4> cc; bits<5> ra;
@@ -16626,8 +16626,8 @@ def RORrri: DPUInstruction {
 
 def RORzri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, u5_imm:$shift);
-	let AsmString        = "ror zero, $ra, $shift";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, u5_imm:$shift);
+	let AsmString        = "ror $zero, $ra, $shift";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> shift; bits<5> ra;
@@ -16666,8 +16666,8 @@ def RORrrrci: DPUInstruction {
 
 def RORzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "ror zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, shift_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "ror $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -16707,8 +16707,8 @@ def RORrrrc: DPUInstruction {
 
 def RORzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "ror zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "ror $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -16740,8 +16740,8 @@ def RORrrr: DPUInstruction {
 
 def RORzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "ror zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "ror $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -17019,8 +17019,8 @@ def RSUBrrrci: DPUInstruction {
 
 def RSUBzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, sub_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "rsub zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, sub_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "rsub $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -17060,8 +17060,8 @@ def RSUBrrrc: DPUInstruction {
 
 def RSUBzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, sub_set_cc:$cc);
-	let AsmString        = "rsub zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, sub_set_cc:$cc);
+	let AsmString        = "rsub $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> cc; bits<5> ra;
@@ -17095,8 +17095,8 @@ def RSUBrrr: DPUInstruction {
 
 def RSUBzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "rsub zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "rsub $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -17264,8 +17264,8 @@ def RSUBCrrrci: DPUInstruction {
 
 def RSUBCzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, sub_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "rsubc zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, sub_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "rsubc $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -17305,8 +17305,8 @@ def RSUBCrrrc: DPUInstruction {
 
 def RSUBCzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, sub_set_cc:$cc);
-	let AsmString        = "rsubc zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, sub_set_cc:$cc);
+	let AsmString        = "rsubc $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> cc; bits<5> ra;
@@ -17340,8 +17340,8 @@ def RSUBCrrr: DPUInstruction {
 
 def RSUBCzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "rsubc zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "rsubc $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -17504,8 +17504,8 @@ def SATSrrci: DPUInstruction {
 
 def SATSzrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "sats zero, $ra, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "sats $zero, $ra, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -17537,8 +17537,8 @@ def SATSrrc: DPUInstruction {
 
 def SATSzrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, log_set_cc:$cc);
-	let AsmString        = "sats zero, $ra, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, log_set_cc:$cc);
+	let AsmString        = "sats $zero, $ra, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<4> cc; bits<5> ra;
@@ -17564,8 +17564,8 @@ def SATSrr: DPUInstruction {
 
 def SATSzr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra);
-	let AsmString        = "sats zero, $ra";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra);
+	let AsmString        = "sats $zero, $ra";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> ra;
@@ -18507,8 +18507,8 @@ def SUBrir: DPUInstruction {
 
 def SUBzir: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins u32_imm:$imm, SimpleReg:$rb);
-	let AsmString        = "sub zero, $imm, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, u32_imm:$imm, SimpleReg:$rb);
+	let AsmString        = "sub $zero, $imm, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<32> imm; bits<5> rb;
@@ -18552,8 +18552,8 @@ def SUBrirci: DPUInstruction {
 
 def SUBzirci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins s11_imm:$imm, SimpleRegOrCst:$ra, sub_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "sub zero, $imm, $ra, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, s11_imm:$imm, SimpleRegOrCst:$ra, sub_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "sub $zero, $imm, $ra, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -18595,8 +18595,8 @@ def SUBrirc: DPUInstruction {
 
 def SUBzirc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins s27_imm:$imm, SimpleRegOrCst:$ra, sub_set_cc:$cc);
-	let AsmString        = "sub zero, $imm, $ra, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, s27_imm:$imm, SimpleRegOrCst:$ra, sub_set_cc:$cc);
+	let AsmString        = "sub $zero, $imm, $ra, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<27> imm; bits<5> cc; bits<5> ra;
@@ -18638,8 +18638,8 @@ def SUBrirf: DPUInstruction {
 
 def SUBzirf: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins s27_imm:$imm, SimpleRegOrCst:$ra, false_cc:$cc);
-	let AsmString        = "sub zero, $imm, $ra, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, s27_imm:$imm, SimpleRegOrCst:$ra, false_cc:$cc);
+	let AsmString        = "sub $zero, $imm, $ra, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<27> imm; bits<5> ra;
@@ -18682,8 +18682,8 @@ def SUBrrici: DPUInstruction {
 
 def SUBzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s11_imm:$imm, sub_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "sub zero, $ra, $imm, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s11_imm:$imm, sub_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "sub $zero, $ra, $imm, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -18729,8 +18729,8 @@ def SUBrric: DPUInstruction {
 
 def SUBzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s27_imm:$imm, ext_sub_set_cc:$cc);
-	let AsmString        = "sub zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s27_imm:$imm, ext_sub_set_cc:$cc);
+	let AsmString        = "sub $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<27> imm; bits<6> cc; bits<5> ra;
@@ -18774,8 +18774,8 @@ def SUBrrif: DPUInstruction {
 
 def SUBzrif: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s27_imm:$imm, false_cc:$cc);
-	let AsmString        = "sub zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s27_imm:$imm, false_cc:$cc);
+	let AsmString        = "sub $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<27> imm; bits<5> ra;
@@ -18867,8 +18867,8 @@ def SUBrrrci: DPUInstruction {
 
 def SUBzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, sub_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "sub zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, sub_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "sub $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -18912,8 +18912,8 @@ def SUBrrrc: DPUInstruction {
 
 def SUBzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, ext_sub_set_cc:$cc);
-	let AsmString        = "sub zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, ext_sub_set_cc:$cc);
+	let AsmString        = "sub $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<6> cc; bits<5> ra;
@@ -18949,8 +18949,8 @@ def SUBrrr: DPUInstruction {
 
 def SUBzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "sub zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "sub $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -19411,8 +19411,8 @@ def SUBCrir: DPUInstruction {
 
 def SUBCzir: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins u32_imm:$imm, SimpleReg:$rb);
-	let AsmString        = "subc zero, $imm, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, u32_imm:$imm, SimpleReg:$rb);
+	let AsmString        = "subc $zero, $imm, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<32> imm; bits<5> rb;
@@ -19456,8 +19456,8 @@ def SUBCrirci: DPUInstruction {
 
 def SUBCzirci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins s11_imm:$imm, SimpleRegOrCst:$ra, sub_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "subc zero, $imm, $ra, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, s11_imm:$imm, SimpleRegOrCst:$ra, sub_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "subc $zero, $imm, $ra, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -19499,8 +19499,8 @@ def SUBCrirc: DPUInstruction {
 
 def SUBCzirc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins s27_imm:$imm, SimpleRegOrCst:$ra, sub_set_cc:$cc);
-	let AsmString        = "subc zero, $imm, $ra, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, s27_imm:$imm, SimpleRegOrCst:$ra, sub_set_cc:$cc);
+	let AsmString        = "subc $zero, $imm, $ra, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<27> imm; bits<5> cc; bits<5> ra;
@@ -19542,8 +19542,8 @@ def SUBCrirf: DPUInstruction {
 
 def SUBCzirf: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins s27_imm:$imm, SimpleRegOrCst:$ra, false_cc:$cc);
-	let AsmString        = "subc zero, $imm, $ra, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, s27_imm:$imm, SimpleRegOrCst:$ra, false_cc:$cc);
+	let AsmString        = "subc $zero, $imm, $ra, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<27> imm; bits<5> ra;
@@ -19586,8 +19586,8 @@ def SUBCrrici: DPUInstruction {
 
 def SUBCzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s11_imm:$imm, sub_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "subc zero, $ra, $imm, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s11_imm:$imm, sub_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "subc $zero, $ra, $imm, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -19633,8 +19633,8 @@ def SUBCrric: DPUInstruction {
 
 def SUBCzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s27_imm:$imm, ext_sub_set_cc:$cc);
-	let AsmString        = "subc zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s27_imm:$imm, ext_sub_set_cc:$cc);
+	let AsmString        = "subc $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<27> imm; bits<6> cc; bits<5> ra;
@@ -19678,8 +19678,8 @@ def SUBCrrif: DPUInstruction {
 
 def SUBCzrif: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s27_imm:$imm, false_cc:$cc);
-	let AsmString        = "subc zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s27_imm:$imm, false_cc:$cc);
+	let AsmString        = "subc $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<27> imm; bits<5> ra;
@@ -19724,8 +19724,8 @@ def SUBCrrrci: DPUInstruction {
 
 def SUBCzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, sub_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "subc zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, sub_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "subc $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -19769,8 +19769,8 @@ def SUBCrrrc: DPUInstruction {
 
 def SUBCzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, ext_sub_set_cc:$cc);
-	let AsmString        = "subc zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, ext_sub_set_cc:$cc);
+	let AsmString        = "subc $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<6> cc; bits<5> ra;
@@ -19806,8 +19806,8 @@ def SUBCrrr: DPUInstruction {
 
 def SUBCzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "subc zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "subc $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
@@ -20620,8 +20620,8 @@ def TIMErci: DPUInstruction {
 
 def TIMEzci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins true_cc:$cc, pc16:$pc);
-	let AsmString        = "time zero, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, true_cc:$cc, pc16:$pc);
+	let AsmString        = "time $zero, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -20650,8 +20650,8 @@ def TIMEr: DPUInstruction {
 
 def TIMEz: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins);
-	let AsmString        = "time zero";
+	let InOperandList    = (ins ZeroRegister:$zero);
+	let AsmString        = "time $zero";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let Inst{47-0} = 0b001111000110000000100000100000000000000000000000;
@@ -20751,8 +20751,8 @@ def TIME_CFGrrci: DPUInstruction {
 
 def TIME_CFGzrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleReg:$rb, true_cc:$cc, pc16:$pc);
-	let AsmString        = "time_cfg zero, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleReg:$rb, true_cc:$cc, pc16:$pc);
+	let AsmString        = "time_cfg $zero, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -20789,8 +20789,8 @@ def TIME_CFGrr: DPUInstruction {
 
 def TIME_CFGzr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleReg:$rb);
-	let AsmString        = "time_cfg zero, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleReg:$rb);
+	let AsmString        = "time_cfg $zero, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb;
@@ -20922,8 +20922,8 @@ def XORrri: DPUInstruction {
 
 def XORzri: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleReg:$rb, u32_imm:$imm);
-	let AsmString        = "xor zero, $rb, $imm";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleReg:$rb, u32_imm:$imm);
+	let AsmString        = "xor $zero, $rb, $imm";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<32> imm; bits<5> rb;
@@ -20965,8 +20965,8 @@ def XORrrici: DPUInstruction {
 
 def XORzrici: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s12_imm:$imm, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "xor zero, $ra, $imm, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s12_imm:$imm, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "xor $zero, $ra, $imm, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -21008,8 +21008,8 @@ def XORrric: DPUInstruction {
 
 def XORzric: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s28_imm:$imm, log_set_cc:$cc);
-	let AsmString        = "xor zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s28_imm:$imm, log_set_cc:$cc);
+	let AsmString        = "xor $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<28> imm; bits<4> cc; bits<5> ra;
@@ -21051,8 +21051,8 @@ def XORrrif: DPUInstruction {
 
 def XORzrif: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s28_imm:$imm, false_cc:$cc);
-	let AsmString        = "xor zero, $ra, $imm, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, s28_imm:$imm, false_cc:$cc);
+	let AsmString        = "xor $zero, $ra, $imm, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<28> imm; bits<5> ra;
@@ -21095,8 +21095,8 @@ def XORrrrci: DPUInstruction {
 
 def XORzrrci: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
-	let AsmString        = "xor zero, $ra, $rb, $cc, $pc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "xor $zero, $ra, $rb, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	let isBranch         = 1;
@@ -21134,8 +21134,8 @@ def XORrrrc: DPUInstruction {
 
 def XORzrrc: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
-	let AsmString        = "xor zero, $ra, $rb, $cc";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb, log_set_cc:$cc);
+	let AsmString        = "xor $zero, $ra, $rb, $cc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<4> cc; bits<5> ra;
@@ -21167,8 +21167,8 @@ def XORrrr: DPUInstruction {
 
 def XORzrr: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb);
-	let AsmString        = "xor zero, $ra, $rb";
+	let InOperandList    = (ins ZeroRegister:$zero, SimpleRegOrCst:$ra, SimpleReg:$rb);
+	let AsmString        = "xor $zero, $ra, $rb";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
 	bits<5> rb; bits<5> ra;
