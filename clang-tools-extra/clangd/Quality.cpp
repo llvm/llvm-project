@@ -497,8 +497,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   OS << llvm::formatv("\tNumber of parameters: {0}\n", S.NumberOfParameters);
   OS << llvm::formatv("\tNumber of optional parameters: {0}\n",
                       S.NumberOfOptionalParameters);
-  OS << llvm::formatv("\tContains active parameter: {0}\n",
-                      S.ContainsActiveParameter);
   OS << llvm::formatv("\tKind: {0}\n", S.Kind);
   return OS;
 }

@@ -298,6 +298,11 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     markSuperRegs(Reserved, PPC::R13); // Small Data Area pointer register
   }
 
+  // Always reserve r2 on AIX for now.
+  // TODO: Make r2 allocatable on AIX/XCOFF for some leaf functions.
+  if (Subtarget.isAIXABI())
+    markSuperRegs(Reserved, PPC::R2);  // System-reserved register
+
   // On PPC64, r13 is the thread pointer. Never allocate this register.
   if (TM.isPPC64())
     markSuperRegs(Reserved, PPC::R13);

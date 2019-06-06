@@ -34,6 +34,16 @@ define float @fadd_produce_zero(float %x) {
   ret float %r
 }
 
+define float @fadd_produce_zero_unary_fneg(float %x) {
+; ANY-LABEL: fadd_produce_zero_unary_fneg:
+; ANY:       # %bb.0:
+; ANY-NEXT:    xorps %xmm0, %xmm0
+; ANY-NEXT:    retq
+  %neg = fneg nsz float %x
+  %r = fadd nnan float %neg, %x
+  ret float %r
+}
+
 define float @fadd_reassociate(float %x) {
 ; ANY-LABEL: fadd_reassociate:
 ; ANY:       # %bb.0:
@@ -88,6 +98,17 @@ define float @fsub_neg_x_y(float %x, float %y) {
   ret float %r
 }
 
+define float @unary_neg_x_y(float %x, float %y) {
+; ANY-LABEL: unary_neg_x_y:
+; ANY:       # %bb.0:
+; ANY-NEXT:    subss %xmm0, %xmm1
+; ANY-NEXT:    movaps %xmm1, %xmm0
+; ANY-NEXT:    retq
+  %neg = fneg nsz float %x
+  %r = fadd nsz float %neg, %y
+  ret float %r
+}
+
 define float @fsub_neg_y(float %x, float %y) {
 ; ANY-LABEL: fsub_neg_y:
 ; ANY:       # %bb.0:
@@ -99,13 +120,25 @@ define float @fsub_neg_y(float %x, float %y) {
   ret float %r
 }
 
-define <4 x float> @fsub_neg_y_vector(<4 x float> %x, <4 x float>%y) {
+define <4 x float> @fsub_neg_y_vector(<4 x float> %x, <4 x float> %y) {
 ; ANY-LABEL: fsub_neg_y_vector:
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    mulps {{.*}}(%rip), %xmm0
 ; ANY-NEXT:    xorps {{.*}}(%rip), %xmm0
 ; ANY-NEXT:    retq
   %mul = fmul <4 x float> %x, <float 5.0, float 5.0, float 5.0, float 5.0>
+  %add = fadd <4 x float> %mul, %y
+  %r = fsub nsz reassoc <4 x float> %y, %add
+  ret <4 x float> %r
+}
+
+define <4 x float> @fsub_neg_y_vector_nonuniform(<4 x float> %x, <4 x float> %y) {
+; ANY-LABEL: fsub_neg_y_vector_nonuniform:
+; ANY:       # %bb.0:
+; ANY-NEXT:    mulps {{.*}}(%rip), %xmm0
+; ANY-NEXT:    xorps {{.*}}(%rip), %xmm0
+; ANY-NEXT:    retq
+  %mul = fmul <4 x float> %x, <float 5.0, float 6.0, float 7.0, float 8.0>
   %add = fadd <4 x float> %mul, %y
   %r = fsub nsz reassoc <4 x float> %y, %add
   ret <4 x float> %r

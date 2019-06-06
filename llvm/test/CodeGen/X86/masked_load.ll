@@ -6832,6 +6832,53 @@ define <8 x float> @mload_constmask_v8f32(<8 x float>* %addr, <8 x float> %dst) 
   ret <8 x float> %res
 }
 
+define <8 x float> @mload_constmask_v8f32_zero(<8 x float>* %addr, <8 x float> %dst) {
+; SSE2-LABEL: mload_constmask_v8f32_zero:
+; SSE2:       ## %bb.0:
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    xorps %xmm1, %xmm1
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: mload_constmask_v8f32_zero:
+; SSE42:       ## %bb.0:
+; SSE42-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE42-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],zero
+; SSE42-NEXT:    xorps %xmm1, %xmm1
+; SSE42-NEXT:    retq
+;
+; AVX1OR2-LABEL: mload_constmask_v8f32_zero:
+; AVX1OR2:       ## %bb.0:
+; AVX1OR2-NEXT:    vmovaps {{.*#+}} ymm0 = [4294967295,4294967295,4294967295,0,0,0,0,0]
+; AVX1OR2-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm0
+; AVX1OR2-NEXT:    retq
+;
+; AVX512F-LABEL: mload_constmask_v8f32_zero:
+; AVX512F:       ## %bb.0:
+; AVX512F-NEXT:    movw $7, %ax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovups (%rdi), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: mload_constmask_v8f32_zero:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    movb $7, %al
+; AVX512VLDQ-NEXT:    kmovw %eax, %k1
+; AVX512VLDQ-NEXT:    vmovups (%rdi), %ymm0 {%k1} {z}
+; AVX512VLDQ-NEXT:    retq
+;
+; AVX512VLBW-LABEL: mload_constmask_v8f32_zero:
+; AVX512VLBW:       ## %bb.0:
+; AVX512VLBW-NEXT:    movb $7, %al
+; AVX512VLBW-NEXT:    kmovd %eax, %k1
+; AVX512VLBW-NEXT:    vmovups (%rdi), %ymm0 {%k1} {z}
+; AVX512VLBW-NEXT:    retq
+  %res = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* %addr, i32 4, <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x float> zeroinitializer)
+  ret <8 x float> %res
+}
+
 define <4 x double> @mload_constmask_v4f64(<4 x double>* %addr, <4 x double> %dst) {
 ; SSE-LABEL: mload_constmask_v4f64:
 ; SSE:       ## %bb.0:
@@ -7228,20 +7275,20 @@ define i32 @pr38986(i1 %c, i32* %p) {
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    testb $1, %dil
 ; SSE-NEXT:    ## implicit-def: $eax
-; SSE-NEXT:    je LBB42_2
+; SSE-NEXT:    je LBB43_2
 ; SSE-NEXT:  ## %bb.1: ## %cond.load
 ; SSE-NEXT:    movl (%rsi), %eax
-; SSE-NEXT:  LBB42_2: ## %else
+; SSE-NEXT:  LBB43_2: ## %else
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: pr38986:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    testb $1, %dil
 ; AVX-NEXT:    ## implicit-def: $eax
-; AVX-NEXT:    je LBB42_2
+; AVX-NEXT:    je LBB43_2
 ; AVX-NEXT:  ## %bb.1: ## %cond.load
 ; AVX-NEXT:    movl (%rsi), %eax
-; AVX-NEXT:  LBB42_2: ## %else
+; AVX-NEXT:  LBB43_2: ## %else
 ; AVX-NEXT:    retq
  %vc = insertelement <1 x i1> undef, i1 %c, i32 0
  %vp = bitcast i32* %p to <1 x i32>*

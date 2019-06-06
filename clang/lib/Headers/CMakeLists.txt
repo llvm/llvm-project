@@ -50,6 +50,7 @@ set(files
   clflushoptintrin.h
   clwbintrin.h
   emmintrin.h
+  enqcmdintrin.h
   f16cintrin.h
   float.h
   fma4intrin.h

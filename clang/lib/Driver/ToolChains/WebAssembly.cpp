@@ -211,7 +211,7 @@ void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
 SanitizerMask WebAssembly::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   if (getTriple().isOSEmscripten()) {
-    Res |= SanitizerKind::Vptr;
+    Res |= SanitizerKind::Vptr | SanitizerKind::Leak;
   }
   return Res;
 }
