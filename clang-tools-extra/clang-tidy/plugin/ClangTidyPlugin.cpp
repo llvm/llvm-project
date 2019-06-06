@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../ClangTidy.h"
+#include "../ClangTidyDiagnosticConsumer.h"
 #include "../ClangTidyForceLinker.h"
 #include "../ClangTidyModule.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -19,29 +20,39 @@ namespace tidy {
 /// The core clang tidy plugin action. This just provides the AST consumer and
 /// command line flag parsing for using clang-tidy as a clang plugin.
 class ClangTidyPluginAction : public PluginASTAction {
-  /// Wrapper to grant the context the same lifetime as the action. We use
-  /// MultiplexConsumer to avoid writing out all the forwarding methods.
+  /// Wrapper to grant the context and diagnostics engine the same lifetime as
+  /// the action.
+  /// We use MultiplexConsumer to avoid writing out all the forwarding methods.
   class WrapConsumer : public MultiplexConsumer {
     std::unique_ptr<ClangTidyContext> Context;
+    std::unique_ptr<DiagnosticsEngine> DiagEngine;
 
   public:
     WrapConsumer(std::unique_ptr<ClangTidyContext> Context,
+                 std::unique_ptr<DiagnosticsEngine> DiagEngine,
                  std::vector<std::unique_ptr<ASTConsumer>> Consumer)
-        : MultiplexConsumer(std::move(Consumer)), Context(std::move(Context)) {}
+        : MultiplexConsumer(std::move(Consumer)), Context(std::move(Context)),
+          DiagEngine(std::move(DiagEngine)) {}
   };
 
 public:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &Compiler,
                                                  StringRef File) override {
-    // Insert the current diagnostics engine.
-    Context->setDiagnosticsEngine(&Compiler.getDiagnostics());
+    // Create and set diagnostics engine
+    auto ExternalDiagEngine = &Compiler.getDiagnostics();
+    auto DiagConsumer =
+        new ClangTidyDiagnosticConsumer(*Context, ExternalDiagEngine);
+    auto DiagEngine = llvm::make_unique<DiagnosticsEngine>(
+        new DiagnosticIDs, new DiagnosticOptions, DiagConsumer);
+    Context->setDiagnosticsEngine(DiagEngine.get());
 
     // Create the AST consumer.
     ClangTidyASTConsumerFactory Factory(*Context);
     std::vector<std::unique_ptr<ASTConsumer>> Vec;
     Vec.push_back(Factory.CreateASTConsumer(Compiler, File));
 
-    return llvm::make_unique<WrapConsumer>(std::move(Context), std::move(Vec));
+    return llvm::make_unique<WrapConsumer>(
+        std::move(Context), std::move(DiagEngine), std::move(Vec));
   }
 
   bool ParseArgs(const CompilerInstance &,
