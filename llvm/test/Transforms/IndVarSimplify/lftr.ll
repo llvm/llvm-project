@@ -202,7 +202,7 @@ define void @test_udiv_as_shift(i8* %a, i8 %n) nounwind uwtable ssp {
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[N]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i8 [[TMP1]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I1:%.*]] = phi i8 [ [[I1_INC:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]

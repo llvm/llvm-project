@@ -134,6 +134,7 @@ enum Flag {
   FoldableAsLoad,
   MayLoad,
   MayStore,
+  MayRaiseFPException,
   Predicable,
   NotDuplicable,
   UnmodeledSideEffects,
@@ -402,6 +403,11 @@ public:
   /// instructions, they may store a modified value based on their operands, or
   /// may not actually modify anything, for example.
   bool mayStore() const { return Flags & (1ULL << MCID::MayStore); }
+
+  /// Return true if this instruction may raise a floating-point exception.
+  bool mayRaiseFPException() const {
+    return Flags & (1ULL << MCID::MayRaiseFPException);
+  }
 
   /// Return true if this instruction has side
   /// effects that are not modeled by other flags.  This does not return true

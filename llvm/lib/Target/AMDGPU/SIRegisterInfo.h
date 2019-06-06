@@ -56,8 +56,6 @@ public:
   unsigned reservedPrivateSegmentWaveByteOffsetReg(
     const MachineFunction &MF) const;
 
-  unsigned reservedStackPtrOffsetReg(const MachineFunction &MF) const;
-
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;

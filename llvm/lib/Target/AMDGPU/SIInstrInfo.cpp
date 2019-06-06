@@ -928,7 +928,7 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       .addFrameIndex(FrameIndex)               // addr
       .addMemOperand(MMO)
       .addReg(MFI->getScratchRSrcReg(), RegState::Implicit)
-      .addReg(MFI->getFrameOffsetReg(), RegState::Implicit);
+      .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
     // Add the scratch resource registers as implicit uses because we may end up
     // needing them, and need to ensure that the reserved registers are
     // correctly handled.
@@ -950,7 +950,7 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     .addReg(SrcReg, getKillRegState(isKill)) // data
     .addFrameIndex(FrameIndex)               // addr
     .addReg(MFI->getScratchRSrcReg())        // scratch_rsrc
-    .addReg(MFI->getFrameOffsetReg())        // scratch_offset
+    .addReg(MFI->getStackPtrOffsetReg())     // scratch_offset
     .addImm(0)                               // offset
     .addMemOperand(MMO);
 }
@@ -1032,7 +1032,7 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       .addFrameIndex(FrameIndex) // addr
       .addMemOperand(MMO)
       .addReg(MFI->getScratchRSrcReg(), RegState::Implicit)
-      .addReg(MFI->getFrameOffsetReg(), RegState::Implicit);
+      .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
 
     if (ST.hasScalarStores()) {
       // m0 is used for offset to scalar stores if used to spill.
@@ -1046,10 +1046,10 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
   unsigned Opcode = getVGPRSpillRestoreOpcode(SpillSize);
   BuildMI(MBB, MI, DL, get(Opcode), DestReg)
-    .addFrameIndex(FrameIndex)        // vaddr
-    .addReg(MFI->getScratchRSrcReg()) // scratch_rsrc
-    .addReg(MFI->getFrameOffsetReg()) // scratch_offset
-    .addImm(0)                        // offset
+    .addFrameIndex(FrameIndex)           // vaddr
+    .addReg(MFI->getScratchRSrcReg())    // scratch_rsrc
+    .addReg(MFI->getStackPtrOffsetReg()) // scratch_offset
+    .addImm(0)                           // offset
     .addMemOperand(MMO);
 }
 
@@ -1532,7 +1532,7 @@ unsigned SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, get(AMDGPU::S_ADD_U32))
       .addReg(PCReg, RegState::Define, AMDGPU::sub0)
       .addReg(PCReg, 0, AMDGPU::sub0)
-      .addMBB(&DestBB, AMDGPU::TF_LONG_BRANCH_FORWARD);
+      .addMBB(&DestBB, MO_LONG_BRANCH_FORWARD);
     BuildMI(MBB, I, DL, get(AMDGPU::S_ADDC_U32))
       .addReg(PCReg, RegState::Define, AMDGPU::sub1)
       .addReg(PCReg, 0, AMDGPU::sub1)
@@ -1542,7 +1542,7 @@ unsigned SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, get(AMDGPU::S_SUB_U32))
       .addReg(PCReg, RegState::Define, AMDGPU::sub0)
       .addReg(PCReg, 0, AMDGPU::sub0)
-      .addMBB(&DestBB, AMDGPU::TF_LONG_BRANCH_BACKWARD);
+      .addMBB(&DestBB, MO_LONG_BRANCH_BACKWARD);
     BuildMI(MBB, I, DL, get(AMDGPU::S_SUBB_U32))
       .addReg(PCReg, RegState::Define, AMDGPU::sub1)
       .addReg(PCReg, 0, AMDGPU::sub1)

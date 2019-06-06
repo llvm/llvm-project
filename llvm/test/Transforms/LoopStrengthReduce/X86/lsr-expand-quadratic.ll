@@ -29,7 +29,7 @@ target triple = "x86_64-apple-macosx"
 ; CHECK-LABEL: for.end:
 ; CHECK:  %tobool.us = icmp eq i32 %lsr.iv.next, 0
 ; CHECK:  %sub.us = select i1 %tobool.us, i32 0, i32 0
-; CHECK:  %0 = sub i32 0, %sub.us
+; CHECK:  %0 = sub nuw nsw i32 0, %sub.us
 ; CHECK:  %1 = sub i32 %0, %lsr.iv.next
 ; CHECK:  %sext.us = mul i32 %lsr.iv.next2, %1
 ; CHECK:  %f = ashr i32 %sext.us, 24

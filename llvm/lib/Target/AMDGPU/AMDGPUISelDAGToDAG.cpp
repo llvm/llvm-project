@@ -1361,10 +1361,10 @@ std::pair<SDValue, SDValue> AMDGPUDAGToDAGISel::foldFrameIndex(SDValue N) const 
     SDValue TFI = CurDAG->getTargetFrameIndex(FI->getIndex(),
                                               FI->getValueType(0));
 
-    // If we can resolve this to a frame index access, this is relative to the
-    // frame pointer SGPR.
-    return std::make_pair(TFI, CurDAG->getRegister(Info->getFrameOffsetReg(),
-                                                   MVT::i32));
+    // If we can resolve this to a frame index access, this will be relative to
+    // either the stack or frame pointer SGPR.
+    return std::make_pair(
+        TFI, CurDAG->getRegister(Info->getStackPtrOffsetReg(), MVT::i32));
   }
 
   // If we don't know this private access is a local stack object, it needs to

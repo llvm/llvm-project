@@ -3,7 +3,7 @@
 ; Make sure that we generate correct runtime checks.
 
 ; CHECK: b7.old:
-; CHECK:   [[LEN:%[0-9]+]] = shl i32 %len, 3
+; CHECK:   [[LEN:%[0-9]+]] = shl nuw i32 %len, 3
 ; CHECK:   [[SRC:%[0-9]+]] = ptrtoint i8* %src to i32
 ; CHECK:   [[DST:%[0-9]+]] = ptrtoint i8* %dst to i32
 ; CHECK:   [[ULT:%[0-9]+]] = icmp ult i32 [[DST]], [[SRC]]

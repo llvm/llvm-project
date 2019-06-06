@@ -13,7 +13,7 @@ define void @test6_dest_align(i32* noalias align 1 %Base, i32* noalias align 4 %
 ; CHECK-NEXT:  bb.nph:
 ; CHECK-NEXT:    [[DEST1:%.*]] = bitcast i32* [[DEST:%.*]] to i8*
 ; CHECK-NEXT:    [[BASE2:%.*]] = bitcast i32* [[BASE:%.*]] to i8*
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[SIZE:%.*]], 2, !dbg !18
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[SIZE:%.*]], 2, !dbg !18
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[DEST1]], i8* align 1 [[BASE2]], i64 [[TMP0]], i1 false), !dbg !19
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]], !dbg !18
 ; CHECK:       for.body:

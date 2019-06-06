@@ -401,6 +401,24 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FSINCOS, VT, Expand);
       setOperationAction(ISD::FREM, VT, Expand);
       setOperationAction(ISD::FPOW, VT, Expand);
+
+      // Handle constrained floating-point operations.
+      setOperationAction(ISD::STRICT_FADD, VT, Legal);
+      setOperationAction(ISD::STRICT_FSUB, VT, Legal);
+      setOperationAction(ISD::STRICT_FMUL, VT, Legal);
+      setOperationAction(ISD::STRICT_FDIV, VT, Legal);
+      setOperationAction(ISD::STRICT_FMA, VT, Legal);
+      setOperationAction(ISD::STRICT_FSQRT, VT, Legal);
+      setOperationAction(ISD::STRICT_FRINT, VT, Legal);
+      setOperationAction(ISD::STRICT_FP_ROUND, VT, Legal);
+      setOperationAction(ISD::STRICT_FP_EXTEND, VT, Legal);
+      if (Subtarget.hasFPExtension()) {
+        setOperationAction(ISD::STRICT_FNEARBYINT, VT, Legal);
+        setOperationAction(ISD::STRICT_FFLOOR, VT, Legal);
+        setOperationAction(ISD::STRICT_FCEIL, VT, Legal);
+        setOperationAction(ISD::STRICT_FROUND, VT, Legal);
+        setOperationAction(ISD::STRICT_FTRUNC, VT, Legal);
+      }
     }
   }
 
@@ -432,6 +450,20 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCEIL, MVT::v2f64, Legal);
     setOperationAction(ISD::FTRUNC, MVT::v2f64, Legal);
     setOperationAction(ISD::FROUND, MVT::v2f64, Legal);
+
+    // Handle constrained floating-point operations.
+    setOperationAction(ISD::STRICT_FADD, MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FSUB, MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FMUL, MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FMA, MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FDIV, MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FSQRT, MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FRINT, MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FNEARBYINT, MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FFLOOR, MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FCEIL, MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FTRUNC, MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FROUND, MVT::v2f64, Legal);
   }
 
   // The vector enhancements facility 1 has instructions for these.
@@ -475,6 +507,25 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FMAXIMUM, MVT::f128, Legal);
     setOperationAction(ISD::FMINNUM, MVT::f128, Legal);
     setOperationAction(ISD::FMINIMUM, MVT::f128, Legal);
+
+    // Handle constrained floating-point operations.
+    setOperationAction(ISD::STRICT_FADD, MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_FSUB, MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_FMUL, MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_FMA, MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_FDIV, MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_FSQRT, MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_FRINT, MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_FNEARBYINT, MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_FFLOOR, MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_FCEIL, MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_FROUND, MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_FTRUNC, MVT::v4f32, Legal);
+    for (auto VT : { MVT::f32, MVT::f64, MVT::f128,
+                     MVT::v4f32, MVT::v2f64 }) {
+      setOperationAction(ISD::STRICT_FMAXNUM, VT, Legal);
+      setOperationAction(ISD::STRICT_FMINNUM, VT, Legal);
+    }
   }
 
   // We have fused multiply-addition for f32 and f64 but not f128.

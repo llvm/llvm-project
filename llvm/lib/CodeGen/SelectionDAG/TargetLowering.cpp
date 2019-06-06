@@ -112,7 +112,9 @@ void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
   IsSwiftSelf = Call->paramHasAttr(ArgIdx, Attribute::SwiftSelf);
   IsSwiftError = Call->paramHasAttr(ArgIdx, Attribute::SwiftError);
   Alignment = Call->getParamAlignment(ArgIdx);
-  ByValType = Call->getParamByValType(ArgIdx);
+  ByValType = nullptr;
+  if (Call->paramHasAttr(ArgIdx, Attribute::ByVal))
+    ByValType = Call->getParamByValType(ArgIdx);
 }
 
 /// Generate a libcall taking the given operands as arguments and returning a

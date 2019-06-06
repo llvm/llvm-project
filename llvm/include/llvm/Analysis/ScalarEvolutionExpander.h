@@ -318,7 +318,7 @@ namespace llvm {
     /// avoid inserting an obviously redundant operation, and hoisting to an
     /// outer loop when the opportunity is there and it is safe.
     Value *InsertBinop(Instruction::BinaryOps Opcode, Value *LHS, Value *RHS,
-                       bool IsSafeToHoist);
+                       SCEV::NoWrapFlags Flags, bool IsSafeToHoist);
 
     /// Arrange for there to be a cast of V to Ty at IP, reusing an existing
     /// cast if a suitable one exists, moving an existing cast if a suitable one

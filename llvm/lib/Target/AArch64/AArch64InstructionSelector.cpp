@@ -1392,8 +1392,12 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
 
+  case TargetOpcode::G_ZEXTLOAD:
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE: {
+    bool IsZExtLoad = I.getOpcode() == TargetOpcode::G_ZEXTLOAD;
+    MachineIRBuilder MIB(I);
+
     LLT PtrTy = MRI.getType(I.getOperand(1).getReg());
 
     if (PtrTy != LLT::pointer(0, 64)) {
@@ -1464,6 +1468,25 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
       }
     }
 
+    if (IsZExtLoad) {
+      // The zextload from a smaller type to i32 should be handled by the importer.
+      if (MRI.getType(ValReg).getSizeInBits() != 64)
+        return false;
+      // If we have a ZEXTLOAD then change the load's type to be a narrower reg
+      //and zero_extend with SUBREG_TO_REG.
+      unsigned LdReg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
+      unsigned DstReg = I.getOperand(0).getReg();
+      I.getOperand(0).setReg(LdReg);
+
+      MIB.setInsertPt(MIB.getMBB(), std::next(I.getIterator()));
+      MIB.buildInstr(AArch64::SUBREG_TO_REG, {DstReg}, {})
+          .addImm(0)
+          .addUse(LdReg)
+          .addImm(AArch64::sub_32);
+      constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+      return RBI.constrainGenericRegister(DstReg, AArch64::GPR64allRegClass,
+                                          MRI);
+    }
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
 
@@ -2853,6 +2876,11 @@ bool AArch64InstructionSelector::tryOptSelect(MachineInstr &I) const {
     unsigned Opc = CondDef->getOpcode();
     if (Opc != TargetOpcode::COPY && Opc != TargetOpcode::G_TRUNC)
       break;
+
+    // Can't see past copies from physregs.
+    if (Opc == TargetOpcode::COPY &&
+        TargetRegisterInfo::isPhysicalRegister(CondDef->getOperand(1).getReg()))
+      return false;
 
     CondDef = MRI.getVRegDef(CondDef->getOperand(1).getReg());
   }
