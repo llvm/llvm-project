@@ -49,7 +49,8 @@ int main(void) {
 
   __msan_poison(&b, sizeof(b));
   ssize_t res = process_vm_readv(getpid(), iov_b, 2, iov_a, 2, 0);
-  if (errno == ENOSYS) // Function not implemented 
+  if (errno == ENOSYS || // Function not implemented
+      errno == EPERM) // Function not permitted
     return exit_dummy();
 
   assert(res == 30);
