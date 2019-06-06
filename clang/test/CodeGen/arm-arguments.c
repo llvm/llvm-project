@@ -176,8 +176,8 @@ void f32(struct s32 s) { }
 // PR13350
 struct s33 { char buf[32*32]; };
 void f33(struct s33 s) { }
-// APCS-GNU-LABEL: define void @f33(%struct.s33* byval align 4 %s)
-// AAPCS-LABEL: define arm_aapcscc void @f33(%struct.s33* byval align 4 %s)
+// APCS-GNU-LABEL: define void @f33(%struct.s33* byval(%struct.s33) align 4 %s)
+// AAPCS-LABEL: define arm_aapcscc void @f33(%struct.s33* byval(%struct.s33) align 4 %s)
 
 // PR14048
 struct s34 { char c; };
@@ -204,7 +204,7 @@ float32x4_t f35(int i, s35_with_align s1, s35_with_align s2) {
                             *(float32x4_t *)&s2);
   return v;
 }
-// APCS-GNU-LABEL: define <4 x float> @f35(i32 %i, %struct.s35* byval align 4, %struct.s35* byval align 4)
+// APCS-GNU-LABEL: define <4 x float> @f35(i32 %i, %struct.s35* byval(%struct.s35) align 4, %struct.s35* byval(%struct.s35) align 4)
 // APCS-GNU: %[[a:.*]] = alloca %struct.s35, align 16
 // APCS-GNU: %[[b:.*]] = bitcast %struct.s35* %[[a]] to i8*
 // APCS-GNU: %[[c:.*]] = bitcast %struct.s35* %0 to i8*
@@ -212,7 +212,7 @@ float32x4_t f35(int i, s35_with_align s1, s35_with_align s2) {
 // APCS-GNU: %[[d:.*]] = bitcast %struct.s35* %[[a]] to <4 x float>*
 // APCS-GNU: load <4 x float>, <4 x float>* %[[d]], align 16
 
-// AAPCS-LABEL: define arm_aapcscc <4 x float> @f35(i32 %i, %struct.s35* byval align 4 %s1, %struct.s35* byval align 4 %s2)
+// AAPCS-LABEL: define arm_aapcscc <4 x float> @f35(i32 %i, %struct.s35* byval(%struct.s35) align 4 %s1, %struct.s35* byval(%struct.s35) align 4 %s2)
 // AAPCS: %[[a_addr:.*]] = alloca <4 x float>, align 16
 // AAPCS: %[[b_addr:.*]] = alloca <4 x float>, align 16
 // AAPCS: %[[p1:.*]] = bitcast %struct.s35* %s1 to <4 x float>*

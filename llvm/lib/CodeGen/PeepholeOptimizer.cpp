@@ -1825,7 +1825,7 @@ ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
   assert(Def->isBitcast() && "Invalid definition");
 
   // Bail if there are effects that a plain copy will not expose.
-  if (Def->hasUnmodeledSideEffects())
+  if (Def->mayRaiseFPException() || Def->hasUnmodeledSideEffects())
     return ValueTrackerResult();
 
   // Bitcasts with more than one def are not supported.

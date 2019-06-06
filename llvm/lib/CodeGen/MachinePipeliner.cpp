@@ -579,7 +579,8 @@ static bool isSuccOrder(SUnit *SUa, SUnit *SUb) {
 /// Return true if the instruction causes a chain between memory
 /// references before and after it.
 static bool isDependenceBarrier(MachineInstr &MI, AliasAnalysis *AA) {
-  return MI.isCall() || MI.hasUnmodeledSideEffects() ||
+  return MI.isCall() || MI.mayRaiseFPException() ||
+         MI.hasUnmodeledSideEffects() ||
          (MI.hasOrderedMemoryRef() &&
           (!MI.mayLoad() || !MI.isDereferenceableInvariantLoad(AA)));
 }
@@ -3238,6 +3239,7 @@ bool SwingSchedulerDAG::isLoopCarriedDep(SUnit *Source, const SDep &Dep,
 
   // Assume ordered loads and stores may have a loop carried dependence.
   if (SI->hasUnmodeledSideEffects() || DI->hasUnmodeledSideEffects() ||
+      SI->mayRaiseFPException() || DI->mayRaiseFPException() ||
       SI->hasOrderedMemoryRef() || DI->hasOrderedMemoryRef())
     return true;
 

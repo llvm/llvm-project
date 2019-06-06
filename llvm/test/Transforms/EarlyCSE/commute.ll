@@ -107,6 +107,24 @@ define i1 @smin_swapped(i8 %a, i8 %b) {
   ret i1 %r
 }
 
+; Min/max can also have an inverted predicate and select operands.
+; TODO: Ensure we always recognize this (currently depends on hash collision)
+
+define i1 @smin_inverted(i8 %a, i8 %b) {
+; CHECK-LABEL: @smin_inverted(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = xor i1 [[CMP1]], true
+; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[B]]
+; CHECK:         ret i1
+;
+  %cmp1 = icmp slt i8 %a, %b
+  %cmp2 = xor i1 %cmp1, -1
+  %m1 = select i1 %cmp1, i8 %a, i8 %b
+  %m2 = select i1 %cmp2, i8 %b, i8 %a
+  %r = icmp eq i8 %m1, %m2
+  ret i1 %r
+}
+
 define i8 @smax_commute(i8 %a, i8 %b) {
 ; CHECK-LABEL: @smax_commute(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
@@ -135,6 +153,22 @@ define i8 @smax_swapped(i8 %a, i8 %b) {
   %m2 = select i1 %cmp2, i8 %a, i8 %b
   %r = sdiv i8 %m1, %m2
   ret i8 %r
+}
+
+; TODO: Ensure we always recognize this (currently depends on hash collision)
+define i1 @smax_inverted(i8 %a, i8 %b) {
+; CHECK-LABEL: @smax_inverted(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = xor i1 [[CMP1]], true
+; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[B]]
+; CHECK:         ret i1
+;
+  %cmp1 = icmp sgt i8 %a, %b
+  %cmp2 = xor i1 %cmp1, -1
+  %m1 = select i1 %cmp1, i8 %a, i8 %b
+  %m2 = select i1 %cmp2, i8 %b, i8 %a
+  %r = icmp eq i8 %m1, %m2
+  ret i1 %r
 }
 
 define i8 @umin_commute(i8 %a, i8 %b) {
@@ -169,6 +203,22 @@ define <2 x i8> @umin_swapped(<2 x i8> %a, <2 x i8> %b) {
   ret <2 x i8> %r
 }
 
+; TODO: Ensure we always recognize this (currently depends on hash collision)
+define i1 @umin_inverted(i8 %a, i8 %b) {
+; CHECK-LABEL: @umin_inverted(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = xor i1 [[CMP1]], true
+; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[B]]
+; CHECK:         ret i1
+;
+  %cmp1 = icmp ult i8 %a, %b
+  %cmp2 = xor i1 %cmp1, -1
+  %m1 = select i1 %cmp1, i8 %a, i8 %b
+  %m2 = select i1 %cmp2, i8 %b, i8 %a
+  %r = icmp eq i8 %m1, %m2
+  ret i1 %r
+}
+
 define i8 @umax_commute(i8 %a, i8 %b) {
 ; CHECK-LABEL: @umax_commute(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i8 [[A:%.*]], [[B:%.*]]
@@ -198,6 +248,22 @@ define i8 @umax_swapped(i8 %a, i8 %b) {
   %m2 = select i1 %cmp2, i8 %a, i8 %b
   %r = add i8 %m2, %m1
   ret i8 %r
+}
+
+; TODO: Ensure we always recognize this (currently depends on hash collision)
+define i1 @umax_inverted(i8 %a, i8 %b) {
+; CHECK-LABEL: @umax_inverted(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = xor i1 [[CMP1]], true
+; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[B]]
+; CHECK:         ret i1
+;
+  %cmp1 = icmp ugt i8 %a, %b
+  %cmp2 = xor i1 %cmp1, -1
+  %m1 = select i1 %cmp1, i8 %a, i8 %b
+  %m2 = select i1 %cmp2, i8 %b, i8 %a
+  %r = icmp eq i8 %m1, %m2
+  ret i1 %r
 }
 
 ; Min/max may exist with non-canonical operands. Value tracking can match those.
@@ -236,6 +302,24 @@ define i8 @abs_swapped(i8 %a) {
   ret i8 %r
 }
 
+; TODO: Ensure we always recognize this (currently depends on hash collision)
+define i8 @abs_inverted(i8 %a) {
+; CHECK-LABEL: @abs_inverted(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[A]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = xor i1 [[CMP1]], true
+; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[NEG]]
+; CHECK:         ret i8
+;
+  %neg = sub i8 0, %a
+  %cmp1 = icmp sgt i8 %a, 0
+  %cmp2 = xor i1 %cmp1, -1
+  %m1 = select i1 %cmp1, i8 %a, i8 %neg
+  %m2 = select i1 %cmp2, i8 %neg, i8 %a
+  %r = or i8 %m2, %m1
+  ret i8 %r
+}
+
 define i8 @nabs_swapped(i8 %a) {
 ; CHECK-LABEL: @nabs_swapped(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
@@ -247,6 +331,24 @@ define i8 @nabs_swapped(i8 %a) {
   %neg = sub i8 0, %a
   %cmp1 = icmp slt i8 %a, 0
   %cmp2 = icmp sgt i8 %a, 0
+  %m1 = select i1 %cmp1, i8 %a, i8 %neg
+  %m2 = select i1 %cmp2, i8 %neg, i8 %a
+  %r = xor i8 %m2, %m1
+  ret i8 %r
+}
+
+; TODO: Ensure we always recognize this (currently depends on hash collision)
+define i8 @nabs_inverted(i8 %a) {
+; CHECK-LABEL: @nabs_inverted(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[A]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = xor i1 [[CMP1]], true
+; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[NEG]]
+; CHECK:         ret i8
+;
+  %neg = sub i8 0, %a
+  %cmp1 = icmp slt i8 %a, 0
+  %cmp2 = xor i1 %cmp1, -1
   %m1 = select i1 %cmp1, i8 %a, i8 %neg
   %m2 = select i1 %cmp2, i8 %neg, i8 %a
   %r = xor i8 %m2, %m1

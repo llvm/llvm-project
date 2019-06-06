@@ -468,3 +468,10 @@
 
 // NOVP2INTERSECT-NOT: #define __AVX512VP2INTERSECT__ 1
 
+// RUN: %clang -target i386-unknown-unknown -march=atom -menqcmd -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=ENQCMD %s
+
+// ENQCMD: #define __ENQCMD__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mno-enqcmd -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=NOENQCMD %s
+
+// NOENQCMD-NOT: #define __ENQCMD__ 1

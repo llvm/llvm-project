@@ -2657,6 +2657,8 @@ X86
 
 .. option:: -mcx16, -mno-cx16
 
+.. option:: -menqcmd, -mno-enqcmd
+
 .. option:: -mf16c, -mno-f16c
 
 .. option:: -mfma, -mno-fma

@@ -1041,6 +1041,17 @@ private:
   size_t Size = 0;
 };
 
+// Used to compute OutSecOff of .got2 in each object file. This is needed to
+// synthesize PLT entries for PPC32 Secure PLT ABI.
+class PPC32Got2Section final : public SyntheticSection {
+public:
+  PPC32Got2Section();
+  size_t getSize() const override { return 0; }
+  bool isNeeded() const override;
+  void finalizeContents() override;
+  void writeTo(uint8_t *Buf) override {}
+};
+
 // This section is used to store the addresses of functions that are called
 // in range-extending thunks on PowerPC64. When producing position dependant
 // code the addresses are link-time constants and the table is written out to
@@ -1100,6 +1111,7 @@ struct InStruct {
   MipsRldMapSection *MipsRldMap;
   PltSection *Plt;
   PltSection *Iplt;
+  PPC32Got2Section *PPC32Got2;
   RelocationBaseSection *RelaDyn;
   RelrBaseSection *RelrDyn;
   RelocationBaseSection *RelaPlt;

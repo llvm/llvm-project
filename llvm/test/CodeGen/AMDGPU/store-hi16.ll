@@ -481,10 +481,10 @@ entry:
 
 ; GCN-LABEL: {{^}}store_private_hi_v2i16_max_offset:
 ; GCN: s_waitcnt
-; GFX900: buffer_store_short_d16_hi v0, off, s[0:3], s5 offset:4094{{$}}
+; GFX900: buffer_store_short_d16_hi v0, off, s[0:3], s32 offset:4094{{$}}
 
 ; NO-D16-HI: v_lshrrev_b32_e32 v0, 16, v0
-; NO-D16-HI-NEXT: buffer_store_short v0, off, s[0:3], s5 offset:4094{{$}}
+; NO-D16-HI-NEXT: buffer_store_short v0, off, s[0:3], s32 offset:4094{{$}}
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -492,7 +492,7 @@ define void @store_private_hi_v2i16_max_offset(i16 addrspace(5)* byval %out, i32
 entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  %gep = getelementptr inbounds i16, i16 addrspace(5)* %out, i64 2045
+  %gep = getelementptr inbounds i16, i16 addrspace(5)* %out, i64 2047
   store i16 %hi, i16 addrspace(5)* %gep
   ret void
 }
@@ -635,7 +635,7 @@ entry:
 ; GCN-LABEL: {{^}}store_private_hi_v2i16_to_offset:
 ; GCN: s_waitcnt
 ; GFX900: buffer_store_dword
-; GFX900-NEXT: buffer_store_short_d16_hi v0, off, s[0:3], s5 offset:4094
+; GFX900-NEXT: buffer_store_short_d16_hi v0, off, s[0:3], s32 offset:4094
 define void @store_private_hi_v2i16_to_offset(i32 %arg) #0 {
 entry:
   %obj0 = alloca [10 x i32], align 4, addrspace(5)
@@ -644,7 +644,7 @@ entry:
   store volatile i32 123, i32 addrspace(5)* %bc
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  %gep = getelementptr inbounds [4096 x i16], [4096 x i16] addrspace(5)* %obj1, i32 0, i32 2025
+  %gep = getelementptr inbounds [4096 x i16], [4096 x i16] addrspace(5)* %obj1, i32 0, i32 2027
   store i16 %hi, i16 addrspace(5)* %gep
   ret void
 }
@@ -652,7 +652,7 @@ entry:
 ; GCN-LABEL: {{^}}store_private_hi_v2i16_i8_to_offset:
 ; GCN: s_waitcnt
 ; GFX900: buffer_store_dword
-; GFX900-NEXT: buffer_store_byte_d16_hi v0, off, s[0:3], s5 offset:4095
+; GFX900-NEXT: buffer_store_byte_d16_hi v0, off, s[0:3], s32 offset:4095
 define void @store_private_hi_v2i16_i8_to_offset(i32 %arg) #0 {
 entry:
   %obj0 = alloca [10 x i32], align 4, addrspace(5)
@@ -661,7 +661,7 @@ entry:
   store volatile i32 123, i32 addrspace(5)* %bc
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  %gep = getelementptr inbounds [4096 x i8], [4096 x i8] addrspace(5)* %obj1, i32 0, i32 4051
+  %gep = getelementptr inbounds [4096 x i8], [4096 x i8] addrspace(5)* %obj1, i32 0, i32 4055
   %trunc = trunc i16 %hi to i8
   store i8 %trunc, i8 addrspace(5)* %gep
   ret void

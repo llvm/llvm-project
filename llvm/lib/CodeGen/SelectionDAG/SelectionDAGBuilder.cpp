@@ -6955,6 +6955,13 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
                          { Chain, getValue(FPI.getArgOperand(0)),
                            getValue(FPI.getArgOperand(1))  });
 
+  if (FPI.getExceptionBehavior() !=
+      ConstrainedFPIntrinsic::ExceptionBehavior::ebIgnore) {
+    SDNodeFlags Flags;
+    Flags.setFPExcept(true);
+    Result->setFlags(Flags);
+  }
+
   assert(Result.getNode()->getNumValues() == 2);
   SDValue OutChain = Result.getValue(1);
   DAG.setRoot(OutChain);

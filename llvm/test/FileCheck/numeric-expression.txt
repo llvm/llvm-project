@@ -1,21 +1,42 @@
-RUN: FileCheck -D#VAR1=11 --input-file %s %s
+RUN: FileCheck --input-file %s %s
 
 ; We use CHECK-NEXT directives to force a match on all lines with digits.
 
-; Numeric expressions using variables defined on the command-line without
-; spaces
+; Numeric variable definition without spaces.
+DEF NO SPC
+11
+CHECK-LABEL: DEF NO SPC
+CHECK-NEXT: [[#VAR1:]]
+
+; Numeric variable definition with different spacing.
+DEF SPC
+11
+11
+11
+CHECK-LABEL: DEF SPC
+CHECK-NEXT: [[# VAR1a:]]
+CHECK-NEXT: [[# VAR1b :]]
+CHECK-NEXT: [[# VAR1c : ]]
+
+; Numeric expressions using variables defined on other lines without spaces.
 USE NO SPC
 11
 12
 10
-CHECK-LABEL: USE NO SPC
+11
+11
+11
+CHECK-LABEL: USE
 CHECK-NEXT: [[#VAR1]]
 CHECK-NEXT: [[#VAR1+1]]
 CHECK-NEXT: [[#VAR1-1]]
+CHECK-NEXT: [[#VAR1a]]
+CHECK-NEXT: [[#VAR1b]]
+CHECK-NEXT: [[#VAR1c]]
 
-; Numeric expressions using variables defined on the command-line in alternate
-; spacing
-USE ALT SPC
+; Numeric expressions using variables defined on other lines with different
+; spacing.
+USE SPC
 11
 11
 12
@@ -26,7 +47,7 @@ USE ALT SPC
 10
 10
 10
-CHECK-LABEL: USE ALT SPC
+CHECK-LABEL: USE SPC
 CHECK-NEXT: [[# VAR1]]
 CHECK-NEXT: [[# VAR1 ]]
 CHECK-NEXT: [[# VAR1+1]]
@@ -39,7 +60,7 @@ CHECK-NEXT: [[# VAR1 - 1]]
 CHECK-NEXT: [[# VAR1 - 1 ]]
 
 ; Numeric expressions using variables defined on the command-line and an
-; immediate interpreted as an unsigned value
+; immediate interpreted as an unsigned value.
 ; Note: 9223372036854775819 = 0x8000000000000000 + 11
 ;       9223372036854775808 = 0x8000000000000000
 USE UNSIGNED IMM
@@ -47,7 +68,7 @@ USE UNSIGNED IMM
 CHECK-LABEL: USE UNSIGNED IMM
 CHECK-NEXT: [[#VAR1+9223372036854775808]]
 
-; Numeric expression using undefined variable
+; Numeric expression using undefined variable.
 RUN: not FileCheck --check-prefix UNDEF-USE --input-file %s %s 2>&1 \
 RUN:   | FileCheck --strict-whitespace --check-prefix UNDEF-USE-MSG %s
 
@@ -59,37 +80,51 @@ UNDEF-USE-MSG: numeric-expression.txt:[[#@LINE-1]]:30: error: using undefined nu
 UNDEF-USE-MSG-NEXT: {{U}}NDEF-USE-NEXT: UNDEFVAR: {{\[\[#UNDEFVAR\]\]}}
 UNDEF-USE-MSG-NEXT: {{^                             \^$}}
 
-; Numeric expression with unsupported operator
-RUN: not FileCheck -D#VAR1=11 --check-prefixes CHECK,INVAL-OP --input-file %s %s 2>&1 \
+; Numeric expression with unsupported operator.
+RUN: not FileCheck -D#NUMVAR=10 --check-prefix INVAL-OP --input-file %s %s 2>&1 \
 RUN:   | FileCheck --strict-whitespace --check-prefix INVAL-OP-MSG %s
 
 INVALID OPERATOR
-VAR1*2: 22
+NUMVAR*2: 22
 INVAL-OP-LABEL: INVALID OPERATOR
-INVAL-OP-NEXT: VAR1*2: [[#VAR1*2]]
-INVAL-OP-MSG: numeric-expression.txt:[[#@LINE-1]]:31: error: unsupported numeric operation '*'
-INVAL-OP-MSG-NEXT: {{I}}NVAL-OP-NEXT: VAR1*2: {{\[\[#VAR1\*2\]\]}}
-INVAL-OP-MSG-NEXT: {{^                              \^$}}
+INVAL-OP-NEXT: NUMVAR*2: [[#NUMVAR*2]]
+INVAL-OP-MSG: numeric-expression.txt:[[#@LINE-1]]:35: error: unsupported numeric operation '*'
+INVAL-OP-MSG-NEXT: {{I}}NVAL-OP-NEXT: NUMVAR*2: {{\[\[#NUMVAR\*2\]\]}}
+INVAL-OP-MSG-NEXT: {{^                                  \^$}}
 
 ; Name conflict between Numeric variable definition and string variable
-; definition
-RUN: not FileCheck -D#VAR1=11 -D#NUMVAR=42 --check-prefixes CONFLICT,CONFLICT1 --input-file %s %s 2>&1 \
-RUN:   | FileCheck --strict-whitespace --check-prefix CLI-INPUT-PAT-CONFLICT %s
-RUN: not FileCheck -D#VAR1=11 -D#NUMVAR=42 -DNUMVAR=foobar --check-prefix CONFLICT --input-file %s %s 2>&1 \
-RUN:   | FileCheck --strict-whitespace --check-prefix CLI-CLI-PAT-CONFLICT %s
-RUN: not FileCheck -D#VAR1=11 -DPATVAR=foobar -D#PATVAR=42 --check-prefix CONFLICT --input-file %s %s 2>&1 \
-RUN:   | FileCheck --strict-whitespace --check-prefix CLI-CLI-NUM-CONFLICT %s
+; definition whether from the command-line or input text.
+RUN: not FileCheck --check-prefixes CONFLICT,CONFLICT1,CONFLICT2 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix INPUT-STR-CONFLICT %s
+RUN: not FileCheck -D#NUMVAR=42 --check-prefixes CONFLICT,CONFLICT2 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix INPUT-STR-CONFLICT %s
+RUN: not FileCheck -D#NUMVAR=42 -DNUMVAR=foobar --check-prefix CONFLICT --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix CLI-STR-CONFLICT %s
+RUN: not FileCheck --check-prefixes CONFLICT,CONFLICT3,CONFLICT4 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix INPUT-NUM-CONFLICT %s
+RUN: not FileCheck -DSTRVAR=foobar --check-prefixes CONFLICT,CONFLICT4 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix INPUT-NUM-CONFLICT %s
+RUN: not FileCheck -DSTRVAR=foobar -D#STRVAR=42 --check-prefix CONFLICT --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix CLI-NUM-CONFLICT %s
 
-PATVAR NUMVAR CONFLICT
+STRVAR NUMVAR CONFLICT
+redef1 42
 foobar
-CONFLICT-LABEL: PATVAR NUMVAR CONFLICT
-CONFLICT1-NEXT: [[NUMVAR:foo.*]]
-CLI-INPUT-PAT-CONFLICT: numeric-expression.txt:[[#@LINE-1]]:19: error: numeric variable with name 'NUMVAR' already exists
-CLI-INPUT-PAT-CONFLICT-NEXT: {{C}}ONFLICT1-NEXT: {{\[\[NUMVAR:foo\.\*\]\]}}
-CLI-INPUT-PAT-CONFLICT-NEXT: {{^                  \^$}}
-CLI-CLI-PAT-CONFLICT: Global defines:3:19: error: numeric variable with name 'NUMVAR' already exists
-CLI-CLI-PAT-CONFLICT-NEXT: Global define #3: NUMVAR=foobar
-CLI-CLI-PAT-CONFLICT-NEXT: {{^                  \^$}}
-CLI-CLI-NUM-CONFLICT: Global defines:3:20: error: string variable with name 'PATVAR' already exists
-CLI-CLI-NUM-CONFLICT-NEXT: Global define #3: #PATVAR=42
-CLI-CLI-NUM-CONFLICT-NEXT: {{^                   \^$}}
+redef2 42
+CONFLICT-LABEL: STRVAR NUMVAR CONFLICT
+CONFLICT1-NEXT: redef1 [[#NUMVAR:]]
+CONFLICT2: [[NUMVAR:foo.*]]
+CONFLICT3: [[STRVAR:foo.*]]
+CONFLICT4: redef2 [[#STRVAR:]]
+INPUT-STR-CONFLICT: numeric-expression.txt:[[#@LINE-3]]:14: error: numeric variable with name 'NUMVAR' already exists
+INPUT-STR-CONFLICT-NEXT: {{C}}ONFLICT2: {{\[\[NUMVAR:foo\.\*\]\]}}
+INPUT-STR-CONFLICT-NEXT: {{^             \^$}}
+CLI-STR-CONFLICT: Global defines:2:19: error: numeric variable with name 'NUMVAR' already exists
+CLI-STR-CONFLICT-NEXT: Global define #2: NUMVAR=foobar
+CLI-STR-CONFLICT-NEXT: {{^                  \^$}}
+INPUT-NUM-CONFLICT: numeric-expression.txt:[[#@LINE-7]]:22: error: string variable with name 'STRVAR' already exists
+INPUT-NUM-CONFLICT-NEXT: CONFLICT4: redef2 {{\[\[#STRVAR:\]\]}}
+INPUT-NUM-CONFLICT-NEXT: {{^                     \^$}}
+CLI-NUM-CONFLICT: Global defines:2:20: error: string variable with name 'STRVAR' already exists
+CLI-NUM-CONFLICT-NEXT: Global define #2: #STRVAR=42
+CLI-NUM-CONFLICT-NEXT: {{^                   \^$}}

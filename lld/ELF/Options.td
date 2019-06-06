@@ -537,6 +537,7 @@ def: F<"no-warn-mismatch">;
 def: Flag<["-"], "p">;
 def: Separate<["--", "-"], "rpath-link">;
 def: J<"rpath-link=">;
+def: F<"secure-plt">;
 def: F<"sort-common">;
 def: F<"stats">;
 def: F<"warn-execstack">;

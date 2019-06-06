@@ -274,6 +274,12 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     assert((Size == 32 || Size == 64 || Size == 128) && "Unsupported size");
     return Size == 128 ? RTLIB::LOG2_F128
                        : Size == 64 ? RTLIB::LOG2_F64 : RTLIB::LOG2_F32;
+  case TargetOpcode::G_FCEIL:
+    assert((Size == 32 || Size == 64) && "Unsupported size");
+    return Size == 64 ? RTLIB::CEIL_F64 : RTLIB::CEIL_F32;
+  case TargetOpcode::G_FFLOOR:
+    assert((Size == 32 || Size == 64) && "Unsupported size");
+    return Size == 64 ? RTLIB::FLOOR_F64 : RTLIB::FLOOR_F32;
   }
   llvm_unreachable("Unknown libcall function");
 }
@@ -372,7 +378,9 @@ LegalizerHelper::libcall(MachineInstr &MI) {
   case TargetOpcode::G_FLOG:
   case TargetOpcode::G_FLOG2:
   case TargetOpcode::G_FEXP:
-  case TargetOpcode::G_FEXP2: {
+  case TargetOpcode::G_FEXP2:
+  case TargetOpcode::G_FCEIL:
+  case TargetOpcode::G_FFLOOR: {
     if (Size > 64) {
       LLVM_DEBUG(dbgs() << "Size " << Size << " too large to legalize.\n");
       return UnableToLegalize;

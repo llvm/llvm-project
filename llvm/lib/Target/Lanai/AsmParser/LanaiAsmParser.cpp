@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Lanai.h"
 #include "LanaiAluCode.h"
 #include "LanaiCondCode.h"
 #include "LanaiInstrInfo.h"

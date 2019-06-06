@@ -523,10 +523,11 @@ static bool retrieveRelationalIntegerConstantExpr(
     if (canOverloadedOperatorArgsBeModified(OverloadedFunctionDecl, false))
       return false;
 
-    if (!OverloadedOperatorExpr->getArg(1)->isIntegerConstantExpr(
-            Value, *Result.Context))
-      return false;
-
+    if (const auto *Arg = OverloadedOperatorExpr->getArg(1)) {
+      if (!Arg->isValueDependent() &&
+          !Arg->isIntegerConstantExpr(Value, *Result.Context))
+        return false;
+    }
     Symbol = OverloadedOperatorExpr->getArg(0);
     OperandExpr = OverloadedOperatorExpr;
     Opcode = BinaryOperator::getOverloadedOpcode(OverloadedOperatorExpr->getOperator());

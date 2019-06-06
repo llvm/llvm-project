@@ -712,6 +712,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
   AAForDep = UseAA ? AA : nullptr;
 
   BarrierChain = nullptr;
+  SUnit *FPBarrierChain = nullptr;
 
   this->TrackLaneMasks = TrackLaneMasks;
   MISUnitMap.clear();
@@ -871,7 +872,19 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
       addBarrierChain(NonAliasStores);
       addBarrierChain(NonAliasLoads);
 
+      // Add dependency against previous FP barrier and reset FP barrier.
+      if (FPBarrierChain)
+        FPBarrierChain->addPredBarrier(BarrierChain);
+      FPBarrierChain = BarrierChain;
+
       continue;
+    }
+
+    // Instructions that may raise FP exceptions depend on each other.
+    if (MI.mayRaiseFPException()) {
+      if (FPBarrierChain)
+        FPBarrierChain->addPredBarrier(SU);
+      FPBarrierChain = SU;
     }
 
     // If it's not a store or a variant load, we're done.

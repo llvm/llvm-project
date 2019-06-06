@@ -2376,11 +2376,10 @@ Instruction *InstCombiner::visitBitCast(BitCastInst &CI) {
       }
 
       // Otherwise, see if our source is an insert. If so, then use the scalar
-      // component directly.
-      if (InsertElementInst *IEI =
-            dyn_cast<InsertElementInst>(CI.getOperand(0)))
-        return CastInst::Create(Instruction::BitCast, IEI->getOperand(1),
-                                DestTy);
+      // component directly:
+      // bitcast (inselt <1 x elt> V, X, 0) to <n x m> --> bitcast X to <n x m>
+      if (auto *InsElt = dyn_cast<InsertElementInst>(Src))
+        return new BitCastInst(InsElt->getOperand(1), DestTy);
     }
   }
 

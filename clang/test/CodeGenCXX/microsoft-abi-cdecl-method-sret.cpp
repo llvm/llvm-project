@@ -21,7 +21,7 @@ S C::byval_and_sret(S a) { return S(); }
 
 // CHECK: define dso_local void @"?variadic_sret@C@@QAA?AUS@@PBDZZ"(%struct.C* %this, %struct.S* noalias sret %agg.result, i8* %f, ...)
 // CHECK: define dso_local void @"?cdecl_sret@C@@QAA?AUS@@XZ"(%struct.C* %this, %struct.S* noalias sret %agg.result)
-// CHECK: define dso_local void @"?byval_and_sret@C@@QAA?AUS@@U2@@Z"(%struct.C* %this, %struct.S* noalias sret %agg.result, %struct.S* byval align 4 %a)
+// CHECK: define dso_local void @"?byval_and_sret@C@@QAA?AUS@@U2@@Z"(%struct.C* %this, %struct.S* noalias sret %agg.result, %struct.S* byval(%struct.S) align 4 %a)
 
 int main() {
   C c;

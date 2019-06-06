@@ -26,7 +26,7 @@ struct T1 {
 #pragma omp declare target
 T a = T();
 T f = a;
-// CHECK: define{{ dso_local | }}void @{{.+}}foo{{.+}}([[T]]* byval align {{.+}})
+// CHECK: define{{ dso_local | }}void @{{.+}}foo{{.+}}([[T]]* byval([[T]]) align {{.+}})
 void foo(T a = T()) {
   return;
 }
@@ -46,7 +46,7 @@ void baz() {
 }
 T1 a1 = T1();
 T1 f1 = a1;
-// CHECK: define{{ dso_local | }}void @{{.+}}foo1{{.+}}([[T1]]* byval align {{.+}})
+// CHECK: define{{ dso_local | }}void @{{.+}}foo1{{.+}}([[T1]]* byval([[T1]]) align {{.+}})
 void foo1(T1 a = T1()) {
   return;
 }

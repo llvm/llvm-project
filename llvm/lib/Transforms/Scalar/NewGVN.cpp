@@ -1166,9 +1166,9 @@ const Expression *NewGVN::createExpression(Instruction *I) const {
         SimplifyBinOp(E->getOpcode(), E->getOperand(0), E->getOperand(1), SQ);
     if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
       return SimplifiedE;
-  } else if (auto *BI = dyn_cast<BitCastInst>(I)) {
+  } else if (auto *CI = dyn_cast<CastInst>(I)) {
     Value *V =
-        SimplifyCastInst(BI->getOpcode(), BI->getOperand(0), BI->getType(), SQ);
+        SimplifyCastInst(CI->getOpcode(), E->getOperand(0), CI->getType(), SQ);
     if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
       return SimplifiedE;
   } else if (isa<GetElementPtrInst>(I)) {
@@ -1984,6 +1984,7 @@ NewGVN::performSymbolicEvaluation(Value *V,
       E = performSymbolicLoadEvaluation(I);
       break;
     case Instruction::BitCast:
+    case Instruction::AddrSpaceCast:
       E = createExpression(I);
       break;
     case Instruction::ICmp:
