@@ -96,12 +96,20 @@ template <int dim>
 struct id {
   template <typename... T>
   id(T... args) {} // fake constructor
+private:
+  // Some fake field added to see using of id arguments in the
+  // kernel wrapper
+  int Data;
 };
 
 template <int dim>
 struct range {
   template <typename... T>
   range(T... args) {} // fake constructor
+private:
+  // Some fake field added to see using of range arguments in the
+  // kernel wrapper
+  int Data;
 };
 
 template <int dim>

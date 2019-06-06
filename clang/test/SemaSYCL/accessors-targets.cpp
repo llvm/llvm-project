@@ -1,28 +1,41 @@
-// RUN: %clang -S --sycl -Xclang -ast-dump %s | FileCheck %s
-// XFAIL: *
-#include <CL/sycl.hpp>
+// RUN: %clang_cc1 -I %S/Inputs -fsycl-is-device -ast-dump %s | FileCheck %s
+
+// This test checks that compiler generates correct kernel wrapper arguments for
+// different accessors targets.
+
+#include <sycl.hpp>
 
 using namespace cl::sycl;
 
+template <typename name, typename Func>
+__attribute__((sycl_kernel)) void kernel(Func kernelFunc) {
+  kernelFunc();
+}
+
 int main() {
 
-  queue myQueue;
-  const int size = 64;
-  int data[size];
-  buffer<int, 1> buf(data, range<1>(size));
-
-  myQueue.submit([&](handler &cgh) {
-    auto ptr = buf.get_access<access::mode::read_write>(cgh);
-
-    accessor<int, 1, access::mode::read_write,
-             access::target::local>
-        tile(range<1>(2), cgh);
-    cgh.single_task<class kernel_function>([=]() {
-        tile[0] = 0;
-        ptr[0] = 0;
-    });
-  });
-
-  myQueue.wait();
+  accessor<int, 1, access::mode::read_write,
+           access::target::local>
+      local_acc;
+  accessor<int, 1, access::mode::read_write,
+           access::target::global_buffer>
+      global_acc;
+  accessor<int, 1, access::mode::read_write,
+           access::target::constant_buffer>
+      constant_acc;
+  kernel<class use_local>(
+      [=]() {
+        local_acc.use();
+      });
+  kernel<class use_global>(
+      [=]() {
+        global_acc.use();
+      });
+  kernel<class use_constant>(
+      [=]() {
+        constant_acc.use();
+      });
 }
-// CHECK: kernel_function 'void (__local int *__local, range<1>, __global int *__global, range<1>)'
+// CHECK: {{.*}}use_local 'void (__local int *, range<1>, range<1>, id<1>)'
+// CHECK: {{.*}}use_global 'void (__global int *, range<1>, range<1>, id<1>)'
+// CHECK: {{.*}}use_constant 'void (__constant int *, range<1>, range<1>, id<1>)'

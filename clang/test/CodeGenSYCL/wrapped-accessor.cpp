@@ -17,7 +17,7 @@
 // CHECK: static constexpr
 // CHECK-NEXT: const kernel_param_desc_t kernel_signatures[] = {
 // CHECK-NEXT: //--- _ZTSZ4mainE14wrapped_access
-// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 3, 0 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 12, 0 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 4062, 0 },
 // CHECK-EMPTY:
 // CHECK-NEXT: };

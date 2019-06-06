@@ -4,7 +4,7 @@
 // CHECK:     const kernel_param_desc_t kernel_signatures[] = {
 // CHECK-NEXT:  //--- _ZTSZZ5test0vENK3$_0clERN2cl4sycl7handlerEE8MyKernel
 // CHECK-NEXT:  { kernel_param_kind_t::kind_accessor, 4062, 0 },
-// CHECK-NEXT:  { kernel_param_kind_t::kind_std_layout, 24, 4 },
+// CHECK-NEXT:  { kernel_param_kind_t::kind_std_layout, 24, 12 },
 // CHECK-EMPTY:
 // CHECK-NEXT:};
 
