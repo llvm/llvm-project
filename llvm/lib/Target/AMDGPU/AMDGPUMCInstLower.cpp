@@ -112,10 +112,10 @@ const MCExpr *AMDGPUMCInstLower::getLongBranchBlockExpr(
   const MCConstantExpr *One = MCConstantExpr::create(4, Ctx);
   SrcBBSym = MCBinaryExpr::createAdd(SrcBBSym, One, Ctx);
 
-  if (MO.getTargetFlags() == AMDGPU::TF_LONG_BRANCH_FORWARD)
+  if (MO.getTargetFlags() == SIInstrInfo::MO_LONG_BRANCH_FORWARD)
     return MCBinaryExpr::createSub(DestBBSym, SrcBBSym, Ctx);
 
-  assert(MO.getTargetFlags() == AMDGPU::TF_LONG_BRANCH_BACKWARD);
+  assert(MO.getTargetFlags() == SIInstrInfo::MO_LONG_BRANCH_BACKWARD);
   return MCBinaryExpr::createSub(SrcBBSym, DestBBSym, Ctx);
 }
 

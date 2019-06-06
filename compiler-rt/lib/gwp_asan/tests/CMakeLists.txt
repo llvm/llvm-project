@@ -9,7 +9,8 @@ set(GWP_ASAN_UNITTEST_CFLAGS
 file(GLOB GWP_ASAN_HEADERS ../*.h)
 file(GLOB GWP_ASAN_UNITTESTS *.cpp)
 set(GWP_ASAN_UNIT_TEST_HEADERS
-  ${GWP_ASAN_HEADERS})
+  ${GWP_ASAN_HEADERS}
+  harness.h)
 
 add_custom_target(GwpAsanUnitTests)
 set_target_properties(GwpAsanUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
@@ -26,8 +27,11 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST GWP_ASAN_SUPPORTED_ARCH)
 
   set(GWP_ASAN_TEST_RUNTIME RTGwpAsanTest.${arch})
 
+  # RTSanitizerCommonNoTermination(NoLibc) required for __sanitizer::Printf.
   set(GWP_ASAN_TEST_RUNTIME_OBJECTS
-    $<TARGET_OBJECTS:RTGwpAsan.${arch}>)
+    $<TARGET_OBJECTS:RTGwpAsan.${arch}>
+    $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
+    $<TARGET_OBJECTS:RTSanitizerCommonNoLibc.${arch}>)
 
   add_library(${GWP_ASAN_TEST_RUNTIME} STATIC
     ${GWP_ASAN_TEST_RUNTIME_OBJECTS})

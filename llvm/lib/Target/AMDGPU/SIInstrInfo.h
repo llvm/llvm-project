@@ -157,7 +157,10 @@ public:
     MO_REL32 = 4,
     MO_REL32_LO = 4,
     // MO_REL32_HI -> symbol@rel32@hi -> R_AMDGPU_REL32_HI.
-    MO_REL32_HI = 5
+    MO_REL32_HI = 5,
+
+    MO_LONG_BRANCH_FORWARD = 6,
+    MO_LONG_BRANCH_BACKWARD = 7
   };
 
   explicit SIInstrInfo(const GCNSubtarget &ST);
@@ -1029,12 +1032,6 @@ namespace AMDGPU {
   const uint64_t RSRC_ELEMENT_SIZE_SHIFT = (32 + 19);
   const uint64_t RSRC_INDEX_STRIDE_SHIFT = (32 + 21);
   const uint64_t RSRC_TID_ENABLE = UINT64_C(1) << (32 + 23);
-
-  // For MachineOperands.
-  enum TargetFlags {
-    TF_LONG_BRANCH_FORWARD = 1 << 0,
-    TF_LONG_BRANCH_BACKWARD = 1 << 1
-  };
 
 } // end namespace AMDGPU
 

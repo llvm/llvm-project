@@ -84,16 +84,10 @@ PreserveAlignmentAssumptions("preserve-alignment-assumptions-during-inlining",
   cl::init(true), cl::Hidden,
   cl::desc("Convert align attributes to assumptions during inlining."));
 
-llvm::InlineResult llvm::InlineFunction(CallInst *CI, InlineFunctionInfo &IFI,
+llvm::InlineResult llvm::InlineFunction(CallBase *CB, InlineFunctionInfo &IFI,
                                         AAResults *CalleeAAR,
                                         bool InsertLifetime) {
-  return InlineFunction(CallSite(CI), IFI, CalleeAAR, InsertLifetime);
-}
-
-llvm::InlineResult llvm::InlineFunction(InvokeInst *II, InlineFunctionInfo &IFI,
-                                        AAResults *CalleeAAR,
-                                        bool InsertLifetime) {
-  return InlineFunction(CallSite(II), IFI, CalleeAAR, InsertLifetime);
+  return InlineFunction(CallSite(CB), IFI, CalleeAAR, InsertLifetime);
 }
 
 namespace {

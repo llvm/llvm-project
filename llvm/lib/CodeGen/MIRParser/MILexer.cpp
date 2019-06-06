@@ -204,6 +204,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("nuw" , MIToken::kw_nuw)
       .Case("nsw" , MIToken::kw_nsw)
       .Case("exact" , MIToken::kw_exact)
+      .Case("fpexcept", MIToken::kw_fpexcept)
       .Case("debug-location", MIToken::kw_debug_location)
       .Case("same_value", MIToken::kw_cfi_same_value)
       .Case("offset", MIToken::kw_cfi_offset)

@@ -16,7 +16,7 @@ void __vectorcall v3(int a, struct Small b, int c) {}
 
 struct Large { int a[5]; };
 void __vectorcall v4(int a, struct Large b, int c) {}
-// X32: define dso_local x86_vectorcallcc void @"\01v4@@28"(i32 inreg %a, %struct.Large* byval align 4 %b, i32 inreg %c)
+// X32: define dso_local x86_vectorcallcc void @"\01v4@@28"(i32 inreg %a, %struct.Large* byval(%struct.Large) align 4 %b, i32 inreg %c)
 // X64: define dso_local x86_vectorcallcc void @"\01v4@@40"(i32 %a, %struct.Large* %b, i32 %c)
 
 struct HFA2 { double x, y; };
@@ -44,7 +44,7 @@ void __vectorcall hfa3(double a, double b, double c, double d, double e, struct 
 // Because they are not classified as homogeneous, they don't get special
 // handling to ensure alignment.
 void __vectorcall hfa4(struct HFA5 a) {}
-// X32: define dso_local x86_vectorcallcc void @"\01hfa4@@40"(%struct.HFA5* byval align 4)
+// X32: define dso_local x86_vectorcallcc void @"\01hfa4@@40"(%struct.HFA5* byval(%struct.HFA5) align 4)
 // X64: define dso_local x86_vectorcallcc void @"\01hfa4@@40"(%struct.HFA5* %a)
 
 // Return HFAs of 4 or fewer elements in registers.

@@ -51,9 +51,6 @@ public:
   // Returns the filename.
   StringRef getName() const { return MB.getBufferIdentifier(); }
 
-  // Reads a file (the constructor doesn't do that).
-  virtual void parse(bool IgnoreComdats = false) = 0;
-
   Kind kind() const { return FileKind; }
 
   // An archive file name if this file is created from an archive.
@@ -82,7 +79,7 @@ public:
 
   void addMember(const llvm::object::Archive::Symbol *Sym);
 
-  void parse(bool IgnoreComdats) override;
+  void parse();
 
 private:
   std::unique_ptr<llvm::object::Archive> File;
@@ -98,7 +95,7 @@ public:
   }
   static bool classof(const InputFile *F) { return F->kind() == ObjectKind; }
 
-  void parse(bool IgnoreComdats) override;
+  void parse(bool IgnoreComdats = false);
 
   // Returns the underlying wasm file.
   const WasmObjectFile *getWasmObj() const { return WasmObj.get(); }
@@ -150,8 +147,6 @@ class SharedFile : public InputFile {
 public:
   explicit SharedFile(MemoryBufferRef M) : InputFile(SharedKind, M) {}
   static bool classof(const InputFile *F) { return F->kind() == SharedKind; }
-
-  void parse(bool IgnoreComdats) override {}
 };
 
 // .bc file
@@ -163,7 +158,7 @@ public:
   }
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
 
-  void parse(bool IgnoreComdats) override;
+  void parse();
   std::unique_ptr<llvm::lto::InputFile> Obj;
 };
 

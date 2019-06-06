@@ -32,7 +32,7 @@ struct S3 {
   } a;
 };
 __attribute((regparm(2))) void foo4(S3 a, int b);
-// CHECK: declare void @_Z4foo42S3i(%struct.S3* byval align 4, i32 inreg)
+// CHECK: declare void @_Z4foo42S3i(%struct.S3* byval(%struct.S3) align 4, i32 inreg)
 void bar3(S3 a, int b) {
   foo4(a, b);
 }

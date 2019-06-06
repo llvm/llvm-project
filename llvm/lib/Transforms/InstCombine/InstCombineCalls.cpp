@@ -4015,7 +4015,9 @@ static bool isSafeToEliminateVarargsCast(const CallBase &Call,
 
   Type* SrcTy =
             cast<PointerType>(CI->getOperand(0)->getType())->getElementType();
-  Type* DstTy = cast<PointerType>(CI->getType())->getElementType();
+  Type *DstTy = Call.isByValArgument(ix)
+                    ? Call.getParamByValType(ix)
+                    : cast<PointerType>(CI->getType())->getElementType();
   if (!SrcTy->isSized() || !DstTy->isSized())
     return false;
   if (DL.getTypeAllocSize(SrcTy) != DL.getTypeAllocSize(DstTy))
@@ -4223,6 +4225,15 @@ Instruction *InstCombiner::visitCallBase(CallBase &Call) {
       CastInst *CI = dyn_cast<CastInst>(*I);
       if (CI && isSafeToEliminateVarargsCast(Call, DL, CI, ix)) {
         *I = CI->getOperand(0);
+
+        // Update the byval type to match the argument type.
+        if (Call.isByValArgument(ix)) {
+          Call.removeParamAttr(ix, Attribute::ByVal);
+          Call.addParamAttr(
+              ix, Attribute::getWithByValType(
+                      Call.getContext(),
+                      CI->getOperand(0)->getType()->getPointerElementType()));
+        }
         Changed = true;
       }
     }
@@ -4353,7 +4364,7 @@ bool InstCombiner::transformConstExprCastCall(CallBase &Call) {
       if (!ParamPTy || !ParamPTy->getElementType()->isSized())
         return false;
 
-      Type *CurElTy = ActTy->getPointerElementType();
+      Type *CurElTy = Call.getParamByValType(i);
       if (DL.getTypeAllocSize(CurElTy) !=
           DL.getTypeAllocSize(ParamPTy->getElementType()))
         return false;
@@ -4407,6 +4418,7 @@ bool InstCombiner::transformConstExprCastCall(CallBase &Call) {
   // with the existing attributes.  Wipe out any problematic attributes.
   RAttrs.remove(AttributeFuncs::typeIncompatible(NewRetTy));
 
+  LLVMContext &Ctx = Call.getContext();
   AI = Call.arg_begin();
   for (unsigned i = 0; i != NumCommonArgs; ++i, ++AI) {
     Type *ParamTy = FT->getParamType(i);
@@ -4417,7 +4429,12 @@ bool InstCombiner::transformConstExprCastCall(CallBase &Call) {
     Args.push_back(NewArg);
 
     // Add any parameter attributes.
-    ArgAttrs.push_back(CallerPAL.getParamAttributes(i));
+    if (CallerPAL.hasParamAttribute(i, Attribute::ByVal)) {
+      AttrBuilder AB(CallerPAL.getParamAttributes(i));
+      AB.addByValAttr(NewArg->getType()->getPointerElementType());
+      ArgAttrs.push_back(AttributeSet::get(Ctx, AB));
+    } else
+      ArgAttrs.push_back(CallerPAL.getParamAttributes(i));
   }
 
   // If the function takes more arguments than the call was taking, add them
@@ -4456,7 +4473,6 @@ bool InstCombiner::transformConstExprCastCall(CallBase &Call) {
 
   assert((ArgAttrs.size() == FT->getNumParams() || FT->isVarArg()) &&
          "missing argument attributes");
-  LLVMContext &Ctx = Callee->getContext();
   AttributeList NewCallerPAL = AttributeList::get(
       Ctx, FnAttrs, AttributeSet::get(Ctx, RAttrs), ArgAttrs);
 

@@ -14965,7 +14965,7 @@ void DAGCombiner::getStoreMergeCandidates(
                             int64_t &Offset) -> bool {
     if (Other->isVolatile() || Other->isIndexed())
       return false;
-    SDValue Val = peekThroughBitcasts(Other->getValue());
+    SDValue OtherBC = peekThroughBitcasts(Other->getValue());
     // Allow merging constants of different types as integers.
     bool NoTypeMatch = (MemVT.isInteger()) ? !MemVT.bitsEq(Other->getMemoryVT())
                                            : Other->getMemoryVT() != MemVT;
@@ -14973,7 +14973,7 @@ void DAGCombiner::getStoreMergeCandidates(
       if (NoTypeMatch)
         return false;
       // The Load's Base Ptr must also match
-      if (LoadSDNode *OtherLd = dyn_cast<LoadSDNode>(Val)) {
+      if (LoadSDNode *OtherLd = dyn_cast<LoadSDNode>(OtherBC)) {
         auto LPtr = BaseIndexOffset::match(OtherLd, DAG);
         if (LoadVT != OtherLd->getMemoryVT())
           return false;
@@ -14991,17 +14991,17 @@ void DAGCombiner::getStoreMergeCandidates(
     if (IsConstantSrc) {
       if (NoTypeMatch)
         return false;
-      if (!(isa<ConstantSDNode>(Val) || isa<ConstantFPSDNode>(Val)))
+      if (!(isa<ConstantSDNode>(OtherBC) || isa<ConstantFPSDNode>(OtherBC)))
         return false;
     }
     if (IsExtractVecSrc) {
       // Do not merge truncated stores here.
       if (Other->isTruncatingStore())
         return false;
-      if (!MemVT.bitsEq(Val.getValueType()))
+      if (!MemVT.bitsEq(OtherBC.getValueType()))
         return false;
-      if (Val.getOpcode() != ISD::EXTRACT_VECTOR_ELT &&
-          Val.getOpcode() != ISD::EXTRACT_SUBVECTOR)
+      if (OtherBC.getOpcode() != ISD::EXTRACT_VECTOR_ELT &&
+          OtherBC.getOpcode() != ISD::EXTRACT_SUBVECTOR)
         return false;
     }
     Ptr = BaseIndexOffset::match(Other, DAG);

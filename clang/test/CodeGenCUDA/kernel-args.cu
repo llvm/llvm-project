@@ -9,14 +9,14 @@ struct A {
 };
 
 // AMDGCN: define amdgpu_kernel void @_Z6kernel1A(%struct.A %x.coerce)
-// NVPTX: define void @_Z6kernel1A(%struct.A* byval align 4 %x)
+// NVPTX: define void @_Z6kernel1A(%struct.A* byval(%struct.A) align 4 %x)
 __global__ void kernel(A x) {
 }
 
 class Kernel {
 public:
   // AMDGCN: define amdgpu_kernel void @_ZN6Kernel12memberKernelE1A(%struct.A %x.coerce)
-  // NVPTX: define void @_ZN6Kernel12memberKernelE1A(%struct.A* byval align 4 %x)
+  // NVPTX: define void @_ZN6Kernel12memberKernelE1A(%struct.A* byval(%struct.A) align 4 %x)
   static __global__ void memberKernel(A x){}
   template<typename T> static __global__ void templateMemberKernel(T x) {}
 };
@@ -30,10 +30,10 @@ void launch(void*);
 void test() {
   Kernel K;
   // AMDGCN: define amdgpu_kernel void @_Z14templateKernelI1AEvT_(%struct.A %x.coerce)
-  // NVPTX: define void @_Z14templateKernelI1AEvT_(%struct.A* byval align 4 %x)
+  // NVPTX: define void @_Z14templateKernelI1AEvT_(%struct.A* byval(%struct.A) align 4 %x)
   launch((void*)templateKernel<A>);
 
   // AMDGCN: define amdgpu_kernel void @_ZN6Kernel20templateMemberKernelI1AEEvT_(%struct.A %x.coerce)
-  // NVPTX: define void @_ZN6Kernel20templateMemberKernelI1AEEvT_(%struct.A* byval align 4 %x)
+  // NVPTX: define void @_ZN6Kernel20templateMemberKernelI1AEEvT_(%struct.A* byval(%struct.A) align 4 %x)
   launch((void*)Kernel::templateMemberKernel<A>);
 }
