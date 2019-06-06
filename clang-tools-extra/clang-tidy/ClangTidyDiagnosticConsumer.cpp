@@ -275,8 +275,10 @@ std::string ClangTidyContext::getCheckName(unsigned DiagnosticID) const {
 }
 
 ClangTidyDiagnosticConsumer::ClangTidyDiagnosticConsumer(
-    ClangTidyContext &Ctx, bool RemoveIncompatibleErrors)
-    : Context(Ctx), RemoveIncompatibleErrors(RemoveIncompatibleErrors),
+    ClangTidyContext &Ctx, DiagnosticsEngine *ExternalDiagEngine,
+    bool RemoveIncompatibleErrors)
+    : Context(Ctx), ExternalDiagEngine(ExternalDiagEngine),
+      RemoveIncompatibleErrors(RemoveIncompatibleErrors),
       LastErrorRelatesToUserCode(false), LastErrorPassesLineFilter(false),
       LastErrorWasIgnored(false) {}
 
@@ -461,16 +463,22 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
                         IsWarningAsError);
   }
 
-  ClangTidyDiagnosticRenderer Converter(
-      Context.getLangOpts(), &Context.DiagEngine->getDiagnosticOptions(),
-      Errors.back());
-  SmallString<100> Message;
-  Info.FormatDiagnostic(Message);
-  FullSourceLoc Loc;
-  if (Info.getLocation().isValid() && Info.hasSourceManager())
-    Loc = FullSourceLoc(Info.getLocation(), Info.getSourceManager());
-  Converter.emitDiagnostic(Loc, DiagLevel, Message, Info.getRanges(),
-                           Info.getFixItHints());
+  if (ExternalDiagEngine) {
+    // If there is an external diagnostics engine, like in the
+    // ClangTidyPluginAction case, forward the diagnostics to it.
+    forwardDiagnostic(Info);
+  } else {
+    ClangTidyDiagnosticRenderer Converter(
+        Context.getLangOpts(), &Context.DiagEngine->getDiagnosticOptions(),
+        Errors.back());
+    SmallString<100> Message;
+    Info.FormatDiagnostic(Message);
+    FullSourceLoc Loc;
+    if (Info.getLocation().isValid() && Info.hasSourceManager())
+      Loc = FullSourceLoc(Info.getLocation(), Info.getSourceManager());
+    Converter.emitDiagnostic(Loc, DiagLevel, Message, Info.getRanges(),
+                             Info.getFixItHints());
+  }
 
   if (Info.hasSourceManager())
     checkFilters(Info.getLocation(), Info.getSourceManager());
@@ -492,6 +500,68 @@ bool ClangTidyDiagnosticConsumer::passesLineFilter(StringRef FileName,
     }
   }
   return false;
+}
+
+void ClangTidyDiagnosticConsumer::forwardDiagnostic(const Diagnostic &Info) {
+  // Acquire a diagnostic ID also in the external diagnostics engine.
+  auto DiagLevelAndFormatString =
+      Context.getDiagLevelAndFormatString(Info.getID(), Info.getLocation());
+  unsigned ExternalID = ExternalDiagEngine->getDiagnosticIDs()->getCustomDiagID(
+      DiagLevelAndFormatString.first, DiagLevelAndFormatString.second);
+
+  // Forward the details.
+  auto builder = ExternalDiagEngine->Report(Info.getLocation(), ExternalID);
+  for (auto Hint : Info.getFixItHints())
+    builder << Hint;
+  for (auto Range : Info.getRanges())
+    builder << Range;
+  for (unsigned Index = 0; Index < Info.getNumArgs(); ++Index) {
+    DiagnosticsEngine::ArgumentKind kind = Info.getArgKind(Index);
+    switch (kind) {
+    case clang::DiagnosticsEngine::ak_std_string:
+      builder << Info.getArgStdStr(Index);
+      break;
+    case clang::DiagnosticsEngine::ak_c_string:
+      builder << Info.getArgCStr(Index);
+      break;
+    case clang::DiagnosticsEngine::ak_sint:
+      builder << Info.getArgSInt(Index);
+      break;
+    case clang::DiagnosticsEngine::ak_uint:
+      builder << Info.getArgUInt(Index);
+      break;
+    case clang::DiagnosticsEngine::ak_tokenkind:
+      builder << static_cast<tok::TokenKind>(Info.getRawArg(Index));
+      break;
+    case clang::DiagnosticsEngine::ak_identifierinfo:
+      builder << Info.getArgIdentifier(Index);
+      break;
+    case clang::DiagnosticsEngine::ak_qual:
+      builder << Qualifiers::fromOpaqueValue(Info.getRawArg(Index));
+      break;
+    case clang::DiagnosticsEngine::ak_qualtype:
+      builder << QualType::getFromOpaquePtr((void *)Info.getRawArg(Index));
+      break;
+    case clang::DiagnosticsEngine::ak_declarationname:
+      builder << DeclarationName::getFromOpaqueInteger(Info.getRawArg(Index));
+      break;
+    case clang::DiagnosticsEngine::ak_nameddecl:
+      builder << reinterpret_cast<const NamedDecl *>(Info.getRawArg(Index));
+      break;
+    case clang::DiagnosticsEngine::ak_nestednamespec:
+      builder << reinterpret_cast<NestedNameSpecifier *>(Info.getRawArg(Index));
+      break;
+    case clang::DiagnosticsEngine::ak_declcontext:
+      builder << reinterpret_cast<DeclContext *>(Info.getRawArg(Index));
+      break;
+    case clang::DiagnosticsEngine::ak_qualtype_pair:
+      assert(false); // This one is not passed around.
+      break;
+    case clang::DiagnosticsEngine::ak_attr:
+      builder << reinterpret_cast<Attr *>(Info.getRawArg(Index));
+      break;
+    }
+  }
 }
 
 void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,

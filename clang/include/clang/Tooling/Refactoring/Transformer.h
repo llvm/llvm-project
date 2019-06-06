@@ -193,6 +193,23 @@ inline ASTEdit change(TextGenerator Replacement) {
   return change(node(RewriteRule::RootID), std::move(Replacement));
 }
 
+/// Inserts \p Replacement before \p S, leaving the source selected by \S
+/// unchanged.
+inline ASTEdit insertBefore(RangeSelector S, TextGenerator Replacement) {
+  return change(before(std::move(S)), std::move(Replacement));
+}
+
+/// Inserts \p Replacement after \p S, leaving the source selected by \S
+/// unchanged.
+inline ASTEdit insertAfter(RangeSelector S, TextGenerator Replacement) {
+  return change(after(std::move(S)), std::move(Replacement));
+}
+
+/// Removes the source selected by \p S.
+inline ASTEdit remove(RangeSelector S) {
+  return change(std::move(S), text(""));
+}
+
 /// The following three functions are a low-level part of the RewriteRule
 /// API. We expose them for use in implementing the fixtures that interpret
 /// RewriteRule, like Transformer and TransfomerTidy, or for more advanced

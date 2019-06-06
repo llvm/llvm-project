@@ -906,8 +906,7 @@ public:
 
 private:
   void processParameterChunk(llvm::StringRef ChunkText,
-                             SignatureInformation &Signature,
-                             SignatureQualitySignals Signal) const {
+                             SignatureInformation &Signature) const {
     // (!) this is O(n), should still be fast compared to building ASTs.
     unsigned ParamStartOffset = lspLength(Signature.label);
     unsigned ParamEndOffset = ParamStartOffset + lspLength(ChunkText);
@@ -921,8 +920,6 @@ private:
     Info.labelString = ChunkText;
 
     Signature.parameters.push_back(std::move(Info));
-    // FIXME: this should only be set on CK_CurrentParameter.
-    Signal.ContainsActiveParameter = true;
   }
 
   void processOptionalChunk(const CodeCompletionString &CCS,
@@ -939,7 +936,7 @@ private:
         break;
       case CodeCompletionString::CK_CurrentParameter:
       case CodeCompletionString::CK_Placeholder:
-        processParameterChunk(Chunk.Text, Signature, Signal);
+        processParameterChunk(Chunk.Text, Signature);
         Signal.NumberOfOptionalParameters++;
         break;
       default:
@@ -971,7 +968,7 @@ private:
         break;
       case CodeCompletionString::CK_CurrentParameter:
       case CodeCompletionString::CK_Placeholder:
-        processParameterChunk(Chunk.Text, Signature, Signal);
+        processParameterChunk(Chunk.Text, Signature);
         Signal.NumberOfParameters++;
         break;
       case CodeCompletionString::CK_Optional: {

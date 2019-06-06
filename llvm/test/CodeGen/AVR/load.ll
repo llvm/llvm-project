@@ -45,9 +45,9 @@ define i16 @load16disp(i16* %x) {
 
 define i16 @load16nodisp(i16* %x) {
 ; CHECK-LABEL: load16nodisp:
+; CHECK: subi r24, 192
+; CHECK: sbci r25, 255
 ; CHECK: movw r30, r24
-; CHECK: subi r30, 192
-; CHECK: sbci r31, 255
 ; CHECK: ld r24,  [[PTR:[YZ]]]
 ; CHECK: ldd r25, [[PTR]]+1
   %1 = getelementptr inbounds i16, i16* %x, i64 32

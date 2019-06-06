@@ -135,7 +135,7 @@ public:
   // singleton pointer and call the internal version of this function. This
   // method is never thread safe, and should only be called when fatal errors
   // occur.
-  static void reportError(uintptr_t AccessPtr, Error Error = Error::UNKNOWN);
+  static void reportError(uintptr_t AccessPtr, Error E = Error::UNKNOWN);
 
 private:
   static constexpr size_t kInvalidSlotID = SIZE_MAX;
@@ -204,7 +204,7 @@ private:
   // responsible for the error is placed in *Meta.
   Error diagnoseUnknownError(uintptr_t AccessPtr, AllocationMetadata **Meta);
 
-  void reportErrorInternal(uintptr_t AccessPtr, Error Error);
+  void reportErrorInternal(uintptr_t AccessPtr, Error E);
 
   // Cached page size for this system in bytes.
   size_t PageSize = 0;

@@ -260,9 +260,9 @@ uintptr_t GuardedPoolAllocator::allocationSlotOffset(size_t Size) const {
   return Offset;
 }
 
-void GuardedPoolAllocator::reportError(uintptr_t AccessPtr, Error Error) {
+void GuardedPoolAllocator::reportError(uintptr_t AccessPtr, Error E) {
   if (SingletonPtr)
-    SingletonPtr->reportErrorInternal(AccessPtr, Error);
+    SingletonPtr->reportErrorInternal(AccessPtr, E);
 }
 
 size_t GuardedPoolAllocator::getNearestSlot(uintptr_t Ptr) const {
@@ -311,9 +311,9 @@ Error GuardedPoolAllocator::diagnoseUnknownError(uintptr_t AccessPtr,
 // Prints the provided error and metadata information. Returns true if there is
 // additional context that can be provided, false otherwise (i.e. returns false
 // if Error == {UNKNOWN, INVALID_FREE without metadata}).
-bool printErrorType(Error Error, uintptr_t AccessPtr, AllocationMetadata *Meta,
+bool printErrorType(Error E, uintptr_t AccessPtr, AllocationMetadata *Meta,
                     options::Printf_t Printf) {
-  switch (Error) {
+  switch (E) {
   case Error::UNKNOWN:
     Printf("GWP-ASan couldn't automatically determine the source of the "
            "memory error when accessing 0x%zx. It was likely caused by a wild "
@@ -361,7 +361,7 @@ bool printErrorType(Error Error, uintptr_t AccessPtr, AllocationMetadata *Meta,
   return true;
 }
 
-void printThreadInformation(Error Error, uintptr_t AccessPtr,
+void printThreadInformation(Error E, uintptr_t AccessPtr,
                             AllocationMetadata *Meta,
                             options::Printf_t Printf) {
   Printf("0x%zx was allocated by thread ", AccessPtr);
@@ -370,7 +370,7 @@ void printThreadInformation(Error Error, uintptr_t AccessPtr,
   else
     Printf("%zu.\n", Meta->AllocationTrace.ThreadID);
 
-  if (Error == Error::USE_AFTER_FREE || Error == Error::DOUBLE_FREE) {
+  if (E == Error::USE_AFTER_FREE || E == Error::DOUBLE_FREE) {
     Printf("0x%zx was freed by thread ", AccessPtr);
     if (Meta->AllocationTrace.ThreadID == UINT64_MAX)
       Printf("UNKNOWN.\n");
@@ -386,7 +386,7 @@ struct ScopedEndOfReportDecorator {
 };
 
 void GuardedPoolAllocator::reportErrorInternal(uintptr_t AccessPtr,
-                                               Error Error) {
+                                               Error E) {
   if (!pointerIsMine(reinterpret_cast<void *>(AccessPtr))) {
     return;
   }
@@ -401,8 +401,8 @@ void GuardedPoolAllocator::reportErrorInternal(uintptr_t AccessPtr,
 
   AllocationMetadata *Meta = nullptr;
 
-  if (Error == Error::UNKNOWN) {
-    Error = diagnoseUnknownError(AccessPtr, &Meta);
+  if (E == Error::UNKNOWN) {
+    E = diagnoseUnknownError(AccessPtr, &Meta);
   } else {
     size_t Slot = getNearestSlot(AccessPtr);
     Meta = addrToMetadata(slotToAddr(Slot));
@@ -412,7 +412,7 @@ void GuardedPoolAllocator::reportErrorInternal(uintptr_t AccessPtr,
   }
 
   // Print the error information, and if there is no valid metadata, stop here.
-  if (!printErrorType(Error, AccessPtr, Meta, Printf)) {
+  if (!printErrorType(E, AccessPtr, Meta, Printf)) {
     return;
   }
 
@@ -422,7 +422,7 @@ void GuardedPoolAllocator::reportErrorInternal(uintptr_t AccessPtr,
     return;
   }
 
-  printThreadInformation(Error, AccessPtr, Meta, Printf);
+  printThreadInformation(E, AccessPtr, Meta, Printf);
   // TODO(hctim): Implement stack unwinding here. Ask the caller to provide us
   // with the base pointer, and we unwind the stack to give a stack trace for
   // the access.

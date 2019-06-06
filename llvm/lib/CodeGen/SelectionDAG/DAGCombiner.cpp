@@ -771,18 +771,20 @@ static char isNegatibleForFree(SDValue Op, bool LegalOperations,
                                bool ForCodeSize,
                                unsigned Depth = 0) {
   // fneg is removable even if it has multiple uses.
-  if (Op.getOpcode() == ISD::FNEG) return 2;
+  if (Op.getOpcode() == ISD::FNEG)
+    return 2;
 
   // Don't allow anything with multiple uses unless we know it is free.
   EVT VT = Op.getValueType();
   const SDNodeFlags Flags = Op->getFlags();
-  if (!Op.hasOneUse())
-    if (!(Op.getOpcode() == ISD::FP_EXTEND &&
-          TLI.isFPExtFree(VT, Op.getOperand(0).getValueType())))
-      return 0;
+  if (!Op.hasOneUse() &&
+      !(Op.getOpcode() == ISD::FP_EXTEND &&
+        TLI.isFPExtFree(VT, Op.getOperand(0).getValueType())))
+    return 0;
 
   // Don't recurse exponentially.
-  if (Depth > 6) return 0;
+  if (Depth > 6)
+    return 0;
 
   switch (Op.getOpcode()) {
   default: return false;
@@ -793,8 +795,8 @@ static char isNegatibleForFree(SDValue Op, bool LegalOperations,
     // Don't invert constant FP values after legalization unless the target says
     // the negated constant is legal.
     return TLI.isOperationLegal(ISD::ConstantFP, VT) ||
-      TLI.isFPImmLegal(neg(cast<ConstantFPSDNode>(Op)->getValueAPF()), VT,
-                       ForCodeSize);
+           TLI.isFPImmLegal(neg(cast<ConstantFPSDNode>(Op)->getValueAPF()), VT,
+                            ForCodeSize);
   }
   case ISD::FADD:
     if (!Options->UnsafeFPMath && !Flags.hasNoSignedZeros())
@@ -813,8 +815,7 @@ static char isNegatibleForFree(SDValue Op, bool LegalOperations,
                               ForCodeSize, Depth + 1);
   case ISD::FSUB:
     // We can't turn -(A-B) into B-A when we honor signed zeros.
-    if (!Options->NoSignedZerosFPMath &&
-        !Flags.hasNoSignedZeros())
+    if (!Options->NoSignedZerosFPMath && !Flags.hasNoSignedZeros())
       return 0;
 
     // fold (fneg (fsub A, B)) -> (fsub B, A)
@@ -842,13 +843,13 @@ static char isNegatibleForFree(SDValue Op, bool LegalOperations,
 static SDValue GetNegatedExpression(SDValue Op, SelectionDAG &DAG,
                                     bool LegalOperations, bool ForCodeSize,
                                     unsigned Depth = 0) {
-  const TargetOptions &Options = DAG.getTarget().Options;
   // fneg is removable even if it has multiple uses.
-  if (Op.getOpcode() == ISD::FNEG) return Op.getOperand(0);
+  if (Op.getOpcode() == ISD::FNEG)
+    return Op.getOperand(0);
 
   assert(Depth <= 6 && "GetNegatedExpression doesn't match isNegatibleForFree");
-
-  const SDNodeFlags Flags = Op.getNode()->getFlags();
+  const TargetOptions &Options = DAG.getTarget().Options;
+  const SDNodeFlags Flags = Op->getFlags();
 
   switch (Op.getOpcode()) {
   default: llvm_unreachable("Unknown code");
@@ -877,7 +878,7 @@ static SDValue GetNegatedExpression(SDValue Op, SelectionDAG &DAG,
                        Op.getOperand(0), Flags);
   case ISD::FSUB:
     // fold (fneg (fsub 0, B)) -> B
-    if (ConstantFPSDNode *N0CFP = dyn_cast<ConstantFPSDNode>(Op.getOperand(0)))
+    if (auto *N0CFP = dyn_cast<ConstantFPSDNode>(Op.getOperand(0)))
       if (N0CFP->isZero())
         return Op.getOperand(1);
 
@@ -911,11 +912,11 @@ static SDValue GetNegatedExpression(SDValue Op, SelectionDAG &DAG,
                                             LegalOperations, ForCodeSize,
                                             Depth+1));
   case ISD::FP_ROUND:
-      return DAG.getNode(ISD::FP_ROUND, SDLoc(Op), Op.getValueType(),
-                         GetNegatedExpression(Op.getOperand(0), DAG,
-                                              LegalOperations, ForCodeSize,
-                                              Depth+1),
-                         Op.getOperand(1));
+    return DAG.getNode(ISD::FP_ROUND, SDLoc(Op), Op.getValueType(),
+                       GetNegatedExpression(Op.getOperand(0), DAG,
+                                            LegalOperations, ForCodeSize,
+                                            Depth+1),
+                       Op.getOperand(1));
   }
 }
 

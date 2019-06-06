@@ -10,6 +10,7 @@
 #define PROFILE_INSTRPROFILING_H_
 
 #include "InstrProfilingPort.h"
+#include <stdio.h>
 
 #define INSTR_PROF_VISIBILITY COMPILER_RT_VISIBILITY
 #include "InstrProfData.inc"
@@ -125,7 +126,7 @@ int __llvm_orderfile_write_file(void);
 /*!
  * \brief this is a wrapper interface to \c __llvm_profile_write_file.
  * After this interface is invoked, a arleady dumped flag will be set
- * so that profile won't be dumped again during program exit. 
+ * so that profile won't be dumped again during program exit.
  * Invocation of interface __llvm_profile_reset_counters will clear
  * the flag. This interface is designed to be used to collect profile
  * data from user selected hot regions. The use model is
@@ -156,6 +157,24 @@ int __llvm_orderfile_dump(void);
  * filename logic to the default behaviour.
  */
 void __llvm_profile_set_filename(const char *Name);
+
+/*!
+ * \brief Set the FILE object for writing instrumentation data.
+ *
+ * Sets the FILE object to be used for subsequent calls to
+ * \a __llvm_profile_write_file(). The profile file name set by environment
+ * variable, command-line option, or calls to \a  __llvm_profile_set_filename
+ * will be ignored.
+ *
+ * \c File will not be closed after a call to \a __llvm_profile_write_file() but
+ * it may be flushed. Passing NULL restores default behavior.
+ *
+ * If \c EnableMerge is nonzero, the runtime will always merge profiling data
+ * with the contents of the profiling file. If EnableMerge is zero, the runtime
+ * may still merge the data if it would have merged for another reason (for
+ * example, because of a %m specifier in the file name).
+ */
+void __llvm_profile_set_file_object(FILE *File, int EnableMerge);
 
 /*! \brief Register to write instrumentation data to file at exit. */
 int __llvm_profile_register_write_file_atexit(void);

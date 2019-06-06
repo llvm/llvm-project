@@ -1,5 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14,c++17 %s modernize-make-unique %t -- -- -I %S/Inputs/modernize-smart-ptr
-// FIXME: Fix the test code in C++2a mode.
+// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-make-unique %t -- -- -I %S/Inputs/modernize-smart-ptr
 
 #include "unique_ptr.h"
 #include "initializer_list.h"
@@ -32,37 +31,6 @@ struct MyVector {
 
 struct Empty {};
 
-struct NoCopyMoveCtor {
-  NoCopyMoveCtor(const NoCopyMoveCtor &) = delete; // implies move ctor is deleted
-};
-
-struct NoCopyMoveCtorVisible {
-private:
-  NoCopyMoveCtorVisible(const NoCopyMoveCtorVisible&) = default;
-  NoCopyMoveCtorVisible(NoCopyMoveCtorVisible&&) = default;
-};
-
-struct OnlyMoveCtor {
-  OnlyMoveCtor() = default;
-  OnlyMoveCtor(OnlyMoveCtor&&) = default;
-  OnlyMoveCtor(const OnlyMoveCtor &) = delete;
-};
-
-struct OnlyCopyCtor {
-  OnlyCopyCtor(const OnlyCopyCtor&) = default;
-  OnlyCopyCtor(OnlyCopyCtor&&) = delete;
-};
-
-struct OnlyCopyCtorVisible {
-  OnlyCopyCtorVisible(const OnlyCopyCtorVisible &) = default;
-
-private:
-  OnlyCopyCtorVisible(OnlyCopyCtorVisible &&) = default;
-};
-
-struct ImplicitDeletedCopyCtor {
-  const OnlyMoveCtor ctor;
-};
 
 struct E {
   E(std::initializer_list<int>);
@@ -313,33 +281,6 @@ void initialization(int T, Base b) {
   std::unique_ptr<Empty> PEmpty = std::unique_ptr<Empty>(new Empty{});
   // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: use std::make_unique instead
   // CHECK-FIXES: std::unique_ptr<Empty> PEmpty = std::make_unique<Empty>(Empty{});
-
-  // No fixes for classes with deleted copy&move constructors.
-  auto PNoCopyMoveCtor = std::unique_ptr<NoCopyMoveCtor>(new NoCopyMoveCtor{});
-  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: use std::make_unique instead
-  // CHECK-FIXES: auto PNoCopyMoveCtor = std::unique_ptr<NoCopyMoveCtor>(new NoCopyMoveCtor{});
-
-  auto PNoCopyMoveCtorVisible = std::unique_ptr<NoCopyMoveCtorVisible>(new NoCopyMoveCtorVisible{});
-  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: use std::make_unique instead
-  // CHECK-FIXES: auto PNoCopyMoveCtorVisible = std::unique_ptr<NoCopyMoveCtorVisible>(new NoCopyMoveCtorVisible{});
-
-  auto POnlyMoveCtor = std::unique_ptr<OnlyMoveCtor>(new OnlyMoveCtor{});
-  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use std::make_unique instead
-  // CHECK-FIXES: auto POnlyMoveCtor = std::unique_ptr<OnlyMoveCtor>(new OnlyMoveCtor{});
-
-  // Fix for classes with classes with move constructor.
-  auto POnlyCopyCtor = std::unique_ptr<OnlyCopyCtor>(new OnlyCopyCtor{});
-  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use std::make_unique instead
-  // CHECK-FIXES: auto POnlyCopyCtor = std::unique_ptr<OnlyCopyCtor>(new OnlyCopyCtor{});
-
-   // Fix for classes with classes with move constructor.
-  auto POnlyCopyCtorVisible = std::unique_ptr<OnlyCopyCtorVisible>(new OnlyCopyCtorVisible{});
-  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: use std::make_unique instead
-  // CHECK-FIXES: auto POnlyCopyCtorVisible = std::unique_ptr<OnlyCopyCtorVisible>(new OnlyCopyCtorVisible{});
-
-  auto PImplicitDeletedCopyCtor = std::unique_ptr<ImplicitDeletedCopyCtor>(new ImplicitDeletedCopyCtor{});
-  // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: use std::make_unique instead
-  // CHECK-FIXES: auto PImplicitDeletedCopyCtor = std::unique_ptr<ImplicitDeletedCopyCtor>(new ImplicitDeletedCopyCtor{});
 
   // Initialization with default constructor.
   std::unique_ptr<E> PE1 = std::unique_ptr<E>(new E{});
