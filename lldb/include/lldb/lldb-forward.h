@@ -43,7 +43,6 @@ class BreakpointSiteList;
 class BroadcastEventSpec;
 class Broadcaster;
 class BroadcasterManager;
-class CPPLanguageRuntime;
 class ClangASTContext;
 class ClangASTImporter;
 class ClangASTMetadata;
