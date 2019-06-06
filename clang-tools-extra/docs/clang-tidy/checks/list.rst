@@ -32,6 +32,8 @@ Clang-Tidy Checks
    android-cloexec-inotify-init1
    android-cloexec-memfd-create
    android-cloexec-open
+   android-cloexec-pipe
+   android-cloexec-pipe2
    android-cloexec-socket
    android-comparison-in-temp-failure-retry
    boost-use-to-string
