@@ -725,3 +725,15 @@ int operatorConfusion(int X, int Y, long Z)
 #undef FLAG1
 #undef FLAG2
 #undef FLAG3
+
+namespace no_crash {
+struct Foo {};
+bool operator<(const Foo&, const Foo&);
+template <class T>
+struct Bar {
+  static const Foo &GetFoo();
+  static bool Test(const T & maybe_foo, const Foo& foo) {
+    return foo < GetFoo() && foo < maybe_foo;
+  }
+};
+}

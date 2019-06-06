@@ -835,6 +835,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasPTWRITE = true;
     } else if (Feature == "+invpcid") {
       HasINVPCID = true;
+    } else if (Feature == "+enqcmd") {
+      HasENQCMD = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -1218,6 +1220,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__PTWRITE__");
   if (HasINVPCID)
     Builder.defineMacro("__INVPCID__");
+  if (HasENQCMD)
+    Builder.defineMacro("__ENQCMD__");
 
   // Each case falls through to the previous one here.
   switch (SSELevel) {
@@ -1334,6 +1338,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("clwb", true)
       .Case("clzero", true)
       .Case("cx16", true)
+      .Case("enqcmd", true)
       .Case("f16c", true)
       .Case("fma", true)
       .Case("fma4", true)
@@ -1415,6 +1420,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("clzero", HasCLZERO)
       .Case("cx8", HasCX8)
       .Case("cx16", HasCX16)
+      .Case("enqcmd", HasENQCMD)
       .Case("f16c", HasF16C)
       .Case("fma", HasFMA)
       .Case("fma4", XOPLevel >= FMA4)

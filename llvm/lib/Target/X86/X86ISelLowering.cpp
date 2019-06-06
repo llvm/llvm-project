@@ -39120,6 +39120,9 @@ combineMaskedLoadConstantMask(MaskedLoadSDNode *ML, SelectionDAG &DAG,
   if (ML->getPassThru().isUndef())
     return SDValue();
 
+  if (ISD::isBuildVectorAllZeros(ML->getPassThru().getNode()))
+    return SDValue();
+
   // The new masked load has an undef pass-through operand. The select uses the
   // original pass-through operand.
   SDValue NewML = DAG.getMaskedLoad(VT, DL, ML->getChain(), ML->getBasePtr(),

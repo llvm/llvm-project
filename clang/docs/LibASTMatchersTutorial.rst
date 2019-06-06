@@ -85,14 +85,14 @@ going on.
 
 First, we'll need to create a new directory for our tool and tell CMake
 that it exists. As this is not going to be a core clang tool, it will
-live in the ``tools/extra`` repository.
+live in the ``clang-tools-extra`` repository.
 
 .. code-block:: console
 
-      cd ~/clang-llvm/llvm/tools/clang
-      mkdir tools/extra/loop-convert
-      echo 'add_subdirectory(loop-convert)' >> tools/extra/CMakeLists.txt
-      vim tools/extra/loop-convert/CMakeLists.txt
+      cd ~/clang-llvm
+      mkdir clang-tools-extra/loop-convert
+      echo 'add_subdirectory(loop-convert)' >> clang-tools-extra/CMakeLists.txt
+      vim clang-tools-extra/loop-convert/CMakeLists.txt
 
 CMakeLists.txt should have the following contents:
 
@@ -112,7 +112,7 @@ CMakeLists.txt should have the following contents:
 
 With that done, Ninja will be able to compile our tool. Let's give it
 something to compile! Put the following into
-``tools/extra/loop-convert/LoopConvert.cpp``. A detailed explanation of
+``clang-tools-extra/loop-convert/LoopConvert.cpp``. A detailed explanation of
 why the different parts are needed can be found in the `LibTooling
 documentation <LibTooling.html>`_.
 

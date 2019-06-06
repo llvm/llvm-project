@@ -195,7 +195,6 @@ std::string sortText(float Score, llvm::StringRef Tiebreak = "");
 struct SignatureQualitySignals {
   uint32_t NumberOfParameters = 0;
   uint32_t NumberOfOptionalParameters = 0;
-  bool ContainsActiveParameter = false;
   CodeCompleteConsumer::OverloadCandidate::CandidateKind Kind =
       CodeCompleteConsumer::OverloadCandidate::CandidateKind::CK_Function;
 };

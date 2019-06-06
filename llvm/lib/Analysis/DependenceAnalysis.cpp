@@ -109,6 +109,14 @@ STATISTIC(BanerjeeSuccesses, "Banerjee successes");
 static cl::opt<bool>
     Delinearize("da-delinearize", cl::init(true), cl::Hidden, cl::ZeroOrMore,
                 cl::desc("Try to delinearize array references."));
+static cl::opt<bool> DisableDelinearizationChecks(
+    "da-disable-delinearization-checks", cl::init(false), cl::Hidden,
+    cl::ZeroOrMore,
+    cl::desc(
+        "Disable checks that try to statically verify validity of "
+        "delinearized subscripts. Enabling this option may result in incorrect "
+        "dependence vectors for languages that allow the subscript of one "
+        "dimension to underflow or overflow into another dimension."));
 
 //===----------------------------------------------------------------------===//
 // basics
@@ -3316,19 +3324,20 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
   // and dst.
   // FIXME: It may be better to record these sizes and add them as constraints
   // to the dependency checks.
-  for (int i = 1; i < size; ++i) {
-    if (!isKnownNonNegative(SrcSubscripts[i], SrcPtr))
-      return false;
+  if (!DisableDelinearizationChecks)
+    for (int i = 1; i < size; ++i) {
+      if (!isKnownNonNegative(SrcSubscripts[i], SrcPtr))
+        return false;
 
-    if (!isKnownLessThan(SrcSubscripts[i], Sizes[i - 1]))
-      return false;
+      if (!isKnownLessThan(SrcSubscripts[i], Sizes[i - 1]))
+        return false;
 
-    if (!isKnownNonNegative(DstSubscripts[i], DstPtr))
-      return false;
+      if (!isKnownNonNegative(DstSubscripts[i], DstPtr))
+        return false;
 
-    if (!isKnownLessThan(DstSubscripts[i], Sizes[i - 1]))
-      return false;
-  }
+      if (!isKnownLessThan(DstSubscripts[i], Sizes[i - 1]))
+        return false;
+    }
 
   LLVM_DEBUG({
     dbgs() << "\nSrcSubscripts: ";

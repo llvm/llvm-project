@@ -18,5 +18,12 @@ entry:
 	ret i32 %tmp210
 }
 
+define i32 @test3(float %x) nounwind  {
+entry:
+        %tmp2 = fneg float %x                           ; <float> [#uses=1]
+        %tmp210 = bitcast float %tmp2 to i32            ; <i32> [#uses=1]
+        ret i32 %tmp210
+}
+
 declare float @copysignf(float, float) nounwind readnone 
 

@@ -16,7 +16,6 @@
 #ifndef LLVM_LIB_TARGET_POWERPC_PPCTARGETTRANSFORMINFO_H
 #define LLVM_LIB_TARGET_POWERPC_PPCTARGETTRANSFORMINFO_H
 
-#include "PPC.h"
 #include "PPCTargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"

@@ -357,6 +357,16 @@ bool MipsInstructionSelector::select(MachineInstr &I,
     I.eraseFromParent();
     return true;
   }
+  case G_FABS: {
+    unsigned Size = MRI.getType(I.getOperand(0).getReg()).getSizeInBits();
+    unsigned FABSOpcode =
+        Size == 32 ? Mips::FABS_S
+                   : STI.isFP64bit() ? Mips::FABS_D64 : Mips::FABS_D32;
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(FABSOpcode))
+             .add(I.getOperand(0))
+             .add(I.getOperand(1));
+    break;
+  }
   case G_GLOBAL_VALUE: {
     const llvm::GlobalValue *GVal = I.getOperand(1).getGlobal();
     if (MF.getTarget().isPositionIndependent()) {

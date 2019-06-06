@@ -452,7 +452,7 @@ void PPC64::relaxTlsLdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   }
 }
 
-static unsigned getDFormOp(unsigned SecondaryOp) {
+unsigned elf::getPPCDFormOp(unsigned SecondaryOp) {
   switch (SecondaryOp) {
   case LBZX:
     return LBZ;
@@ -473,7 +473,6 @@ static unsigned getDFormOp(unsigned SecondaryOp) {
   case ADD:
     return ADDI;
   default:
-    error("unrecognized instruction for IE to LE R_PPC64_TLS");
     return 0;
   }
 }
@@ -515,7 +514,9 @@ void PPC64::relaxTlsIeToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
     if (PrimaryOp != 31)
       error("unrecognized instruction for IE to LE R_PPC64_TLS");
     uint32_t SecondaryOp = (read32(Loc) & 0x000007FE) >> 1; // bits 21-30
-    uint32_t DFormOp = getDFormOp(SecondaryOp);
+    uint32_t DFormOp = getPPCDFormOp(SecondaryOp);
+    if (DFormOp == 0)
+      error("unrecognized instruction for IE to LE R_PPC64_TLS");
     write32(Loc, ((DFormOp << 26) | (read32(Loc) & 0x03FFFFFF)));
     relocateOne(Loc + Offset, R_PPC64_TPREL16_LO, Val);
     break;

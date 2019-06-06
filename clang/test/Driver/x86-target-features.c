@@ -188,3 +188,8 @@
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-avx512bf16 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AVX512BF16 %s
 // AVX512BF16: "-target-feature" "+avx512bf16"
 // NO-AVX512BF16: "-target-feature" "-avx512bf16"
+
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -menqcmd %s -### -o %t.o 2>&1 | FileCheck --check-prefix=ENQCMD %s
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-enqcmd %s -### -o %t.o 2>&1 | FileCheck --check-prefix=NO-ENQCMD %s
+// ENQCMD: "-target-feature" "+enqcmd"
+// NO-ENQCMD: "-target-feature" "-enqcmd"

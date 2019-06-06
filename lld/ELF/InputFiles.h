@@ -117,6 +117,10 @@ public:
   // True if this is an argument for --just-symbols. Usually false.
   bool JustSymbols = false;
 
+  // OutSecOff of .got2 in the current file. This is used by PPC32 -fPIC/-fPIE
+  // to compute offsets in PLT call stubs.
+  uint32_t PPC32Got2OutSecOff = 0;
+
   // On PPC64 we need to keep track of which files contain small code model
   // relocations that access the .toc section. To minimize the chance of a
   // relocation overflow, files that do contain said relocations should have
