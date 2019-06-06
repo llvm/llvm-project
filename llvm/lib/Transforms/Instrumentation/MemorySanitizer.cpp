@@ -2110,6 +2110,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     SC.Done(&I);
   }
 
+  void visitFNeg(UnaryOperator &I) { handleShadowOr(I); }
+
   // Handle multiplication by constant.
   //
   // Handle a special case of multiplication by constant that may have one or

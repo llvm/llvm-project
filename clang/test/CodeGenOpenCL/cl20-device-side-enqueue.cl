@@ -81,7 +81,7 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // B64: [[BL:%[0-9]+]] = bitcast <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 }>* %block to %struct.__opencl_block_literal_generic*
   // COMMON: [[BL_I8:%[0-9]+]] = addrspacecast %struct.__opencl_block_literal_generic* [[BL]] to i8 addrspace(4)*
   // COMMON-LABEL: call i32 @__enqueue_kernel_basic(
-  // COMMON-SAME: %opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* byval [[NDR]]{{([0-9]+)?}},
+  // COMMON-SAME: %opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* byval(%struct.ndrange_t) [[NDR]]{{([0-9]+)?}},
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8* bitcast ({{.*}} [[INVLK1:[^ ]+_kernel]] to i8*) to i8 addrspace(4)*),
   // COMMON-SAME: i8 addrspace(4)* [[BL_I8]])
   enqueue_kernel(default_queue, flags, ndrange,
@@ -319,7 +319,7 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // COMMON: [[DEF_Q:%[0-9]+]] = load %opencl.queue_t{{.*}}*, %opencl.queue_t{{.*}}** %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, i32* %flags
   // COMMON-LABEL: call i32 @__enqueue_kernel_basic(
-  // COMMON-SAME: %opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* byval [[NDR]]{{([0-9]+)?}},
+  // COMMON-SAME: %opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* byval(%struct.ndrange_t) [[NDR]]{{([0-9]+)?}},
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8* bitcast ({{.*}} [[INVGK8:[^ ]+_kernel]] to i8*) to i8 addrspace(4)*),
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i32, i32, i8 addrspace(4)* } addrspace(1)* [[BLG8]] to i8 addrspace(1)*) to i8 addrspace(4)*))
   enqueue_kernel(default_queue, flags, ndrange, block_A);
@@ -366,7 +366,7 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, i32* %flags
   // COMMON: [[BL_I8:%[0-9]+]] = addrspacecast %struct.__opencl_block_literal_generic* {{.*}} to i8 addrspace(4)*
   // COMMON-LABEL: call i32 @__enqueue_kernel_basic(
-  // COMMON-SAME: %opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* byval [[NDR]]{{([0-9]+)?}},
+  // COMMON-SAME: %opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* byval(%struct.ndrange_t) [[NDR]]{{([0-9]+)?}},
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8* bitcast ({{.*}} [[INVLK3:[^ ]+_kernel]] to i8*) to i8 addrspace(4)*),
   // COMMON-SAME: i8 addrspace(4)* [[BL_I8]])
   enqueue_kernel(default_queue, flags, ndrange, block_C);

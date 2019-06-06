@@ -18,7 +18,7 @@
 ; CHECK-NEXT: scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
 ; CHECK-NEXT: scratchWaveOffsetReg: '$sgpr101'
 ; CHECK-NEXT: frameOffsetReg:  '$sgpr101'
-; CHECK-NEXT: stackPtrOffsetReg: '$sp_reg'
+; CHECK-NEXT: stackPtrOffsetReg: '$sgpr101'
 ; CHECK-NEXT: body:
 define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
   %gep = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %arg0
@@ -38,7 +38,7 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-NEXT: scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
 ; CHECK-NEXT: scratchWaveOffsetReg: '$sgpr101'
 ; CHECK-NEXT: frameOffsetReg:  '$sgpr101'
-; CHECK-NEXT: stackPtrOffsetReg: '$sp_reg'
+; CHECK-NEXT: stackPtrOffsetReg: '$sgpr101'
 ; CHECK-NEXT: body:
 define amdgpu_ps void @ps_shader(i32 %arg0, i32 inreg %arg1) {
   ret void

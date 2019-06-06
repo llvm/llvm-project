@@ -662,21 +662,21 @@ def z_usub : PatFrags<(ops node:$src1, node:$src2),
                        (sub node:$src1, node:$src2)]>;
 
 // Fused multiply-subtract, using the natural operand order.
-def fms : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-                  (fma node:$src1, node:$src2, (fneg node:$src3))>;
+def any_fms : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+                      (any_fma node:$src1, node:$src2, (fneg node:$src3))>;
 
 // Fused multiply-add and multiply-subtract, but with the order of the
 // operands matching SystemZ's MA and MS instructions.
-def z_fma : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-                    (fma node:$src2, node:$src3, node:$src1)>;
-def z_fms : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-                    (fma node:$src2, node:$src3, (fneg node:$src1))>;
+def z_any_fma : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+                        (any_fma node:$src2, node:$src3, node:$src1)>;
+def z_any_fms : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+                        (any_fma node:$src2, node:$src3, (fneg node:$src1))>;
 
 // Negative fused multiply-add and multiply-subtract.
-def fnma : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-                   (fneg (fma node:$src1, node:$src2, node:$src3))>;
-def fnms : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-                   (fneg (fms node:$src1, node:$src2, node:$src3))>;
+def any_fnma : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+                       (fneg (any_fma node:$src1, node:$src2, node:$src3))>;
+def any_fnms : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+                       (fneg (any_fms node:$src1, node:$src2, node:$src3))>;
 
 // Floating-point negative absolute.
 def fnabs : PatFrag<(ops node:$ptr), (fneg (fabs node:$ptr))>;

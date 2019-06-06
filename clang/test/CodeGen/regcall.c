@@ -32,9 +32,9 @@ void __regcall v3(int a, struct Small b, int c) {}
 
 struct Large { int a[5]; };
 void __regcall v4(int a, struct Large b, int c) {}
-// Win32: define dso_local x86_regcallcc void @__regcall3__v4(i32 inreg %a, %struct.Large* byval align 4 %b, i32 inreg %c)
+// Win32: define dso_local x86_regcallcc void @__regcall3__v4(i32 inreg %a, %struct.Large* byval(%struct.Large) align 4 %b, i32 inreg %c)
 // Win64: define dso_local x86_regcallcc void @__regcall3__v4(i32 %a, %struct.Large* %b, i32 %c)
-// Lin32: define x86_regcallcc void @__regcall3__v4(i32 inreg %a, %struct.Large* byval align 4 %b, i32 %c)
+// Lin32: define x86_regcallcc void @__regcall3__v4(i32 inreg %a, %struct.Large* byval(%struct.Large) align 4 %b, i32 %c)
 // Lin64: define x86_regcallcc void @__regcall3__v4(i32 %a, [5 x i32] %b.coerce, i32 %c)
 
 struct HFA2 { double x, y; };
@@ -64,13 +64,13 @@ void __regcall hfa3(double a, double b, double c, double d, double e, struct HFA
 // Lin32: define x86_regcallcc void @__regcall3__hfa3(double %a, double %b, double %c, double %d, double %e, double %f.0, double %f.1)
 // Lin64: define x86_regcallcc void @__regcall3__hfa3(double %a, double %b, double %c, double %d, double %e, double %f.coerce0, double %f.coerce1)
 
-// Aggregates with more than four elements are not HFAs and are passed byval.
+// Aggregates with more than four elements are not HFAs and are passed byval(%b.3, double).
 // Because they are not classified as homogeneous, they don't get special
 // handling to ensure alignment.
 void __regcall hfa4(struct HFA5 a) {}
-// Win32: define dso_local x86_regcallcc void @__regcall3__hfa4(%struct.HFA5* byval align 4)
+// Win32: define dso_local x86_regcallcc void @__regcall3__hfa4(%struct.HFA5* byval(%struct.HFA5) align 4)
 // Win64: define dso_local x86_regcallcc void @__regcall3__hfa4(%struct.HFA5* %a)
-// Lin32: define x86_regcallcc void @__regcall3__hfa4(%struct.HFA5* byval align 4 %a)
+// Lin32: define x86_regcallcc void @__regcall3__hfa4(%struct.HFA5* byval(%struct.HFA5) align 4 %a)
 // Lin64: define x86_regcallcc void @__regcall3__hfa4(double %a.coerce0, double %a.coerce1, double %a.coerce2, double %a.coerce3, double %a.coerce4)
 
 // Return HFAs of 4 or fewer elements in registers.

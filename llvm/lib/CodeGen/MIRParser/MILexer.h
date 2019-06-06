@@ -73,6 +73,7 @@ struct MIToken {
     kw_nuw,
     kw_nsw,
     kw_exact,
+    kw_fpexcept,
     kw_debug_location,
     kw_cfi_same_value,
     kw_cfi_offset,

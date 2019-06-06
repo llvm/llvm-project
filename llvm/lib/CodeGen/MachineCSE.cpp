@@ -382,7 +382,7 @@ bool MachineCSE::isCSECandidate(MachineInstr *MI) {
 
   // Ignore stuff that we obviously can't move.
   if (MI->mayStore() || MI->isCall() || MI->isTerminator() ||
-      MI->hasUnmodeledSideEffects())
+      MI->mayRaiseFPException() || MI->hasUnmodeledSideEffects())
     return false;
 
   if (MI->mayLoad()) {

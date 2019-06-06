@@ -401,6 +401,7 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   mayLoad_Unset = Unset;
   mayStore     = R->getValueAsBitOrUnset("mayStore", Unset);
   mayStore_Unset = Unset;
+  mayRaiseFPException = R->getValueAsBit("mayRaiseFPException");
   hasSideEffects = R->getValueAsBitOrUnset("hasSideEffects", Unset);
   hasSideEffects_Unset = Unset;
 

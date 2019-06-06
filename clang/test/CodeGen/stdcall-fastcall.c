@@ -89,7 +89,7 @@ struct S2 {
 void __attribute__((fastcall)) foo5(struct S2 y);
 void bar5(struct S2 y) {
   // CHECK-LABEL: define void @bar5
-  // CHECK: call x86_fastcallcc void @foo5(%struct.S2* byval align 4 %
+  // CHECK: call x86_fastcallcc void @foo5(%struct.S2* byval(%struct.S2) align 4 %
   foo5(y);
 }
 
@@ -117,7 +117,7 @@ void bar8(struct S1 a, int b) {
 void __attribute__((fastcall)) foo9(struct S2 a, int b);
 void bar9(struct S2 a, int b) {
   // CHECK-LABEL: define void @bar9
-  // CHECK: call x86_fastcallcc void @foo9(%struct.S2* byval align 4 %{{.*}}, i32 %
+  // CHECK: call x86_fastcallcc void @foo9(%struct.S2* byval(%struct.S2) align 4 %{{.*}}, i32 %
   foo9(a, b);
 }
 

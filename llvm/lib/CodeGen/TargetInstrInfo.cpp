@@ -899,7 +899,8 @@ bool TargetInstrInfo::isReallyTriviallyReMaterializableGeneric(
     return true;
 
   // Avoid instructions obviously unsafe for remat.
-  if (MI.isNotDuplicable() || MI.mayStore() || MI.hasUnmodeledSideEffects())
+  if (MI.isNotDuplicable() || MI.mayStore() || MI.mayRaiseFPException() ||
+      MI.hasUnmodeledSideEffects())
     return false;
 
   // Don't remat inline asm. We have no idea how expensive it is

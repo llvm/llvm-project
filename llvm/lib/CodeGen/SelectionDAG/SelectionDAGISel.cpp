@@ -1122,16 +1122,14 @@ void SelectionDAGISel::DoInstructionSelection() {
 #endif
 
       // When we are using non-default rounding modes or FP exception behavior
-      // FP operations are represented by StrictFP pseudo-operations.  They
-      // need to be simplified here so that the target-specific instruction
-      // selectors know how to handle them.
-      //
-      // If the current node is a strict FP pseudo-op, the isStrictFPOp()
-      // function will provide the corresponding normal FP opcode to which the
-      // node should be mutated.
-      //
-      // FIXME: The backends need a way to handle FP constraints.
-      if (Node->isStrictFPOpcode())
+      // FP operations are represented by StrictFP pseudo-operations.  For
+      // targets that do not (yet) understand strict FP operations directly,
+      // we convert them to normal FP opcodes instead at this point.  This
+      // will allow them to be handled by existing target-specific instruction
+      // selectors.
+      if (Node->isStrictFPOpcode() &&
+          (TLI->getOperationAction(Node->getOpcode(), Node->getValueType(0))
+           != TargetLowering::Legal))
         Node = CurDAG->mutateStrictFPToFP(Node);
 
       LLVM_DEBUG(dbgs() << "\nISEL: Starting selection on root node: ";

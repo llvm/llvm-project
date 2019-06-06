@@ -289,6 +289,20 @@ static void __kmp_stg_parse_bool(char const *name, char const *value,
   }
 } // __kmp_stg_parse_bool
 
+// placed here in order to use __kmp_round4k static function
+void __kmp_check_stksize(size_t *val) {
+  // if system stack size is too big then limit the size for worker threads
+  if (*val > KMP_DEFAULT_STKSIZE * 16) // just a heuristics...
+    *val = KMP_DEFAULT_STKSIZE * 16;
+  if (*val < KMP_MIN_STKSIZE)
+    *val = KMP_MIN_STKSIZE;
+  if (*val > KMP_MAX_STKSIZE)
+    *val = KMP_MAX_STKSIZE; // dead code currently, but may work in future
+#if KMP_OS_DARWIN
+  *val = __kmp_round4k(*val);
+#endif // KMP_OS_DARWIN
+}
+
 static void __kmp_stg_parse_size(char const *name, char const *value,
                                  size_t size_min, size_t size_max,
                                  int *is_specified, size_t *out,

@@ -229,7 +229,8 @@ public:
 } // end anonymous namespace
 
 bool ImplicitNullChecks::canHandle(const MachineInstr *MI) {
-  if (MI->isCall() || MI->hasUnmodeledSideEffects())
+  if (MI->isCall() || MI->mayRaiseFPException() ||
+      MI->hasUnmodeledSideEffects())
     return false;
   auto IsRegMask = [](const MachineOperand &MO) { return MO.isRegMask(); };
   (void)IsRegMask;

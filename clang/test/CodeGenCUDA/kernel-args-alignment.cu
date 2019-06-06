@@ -53,6 +53,6 @@ static_assert(alignof(S) == 8, "Unexpected alignment.");
 // HOST-AMD: call i32 @hipSetupArgument({{[^,]*}}, i64 8, i64 24)
 
 // DEVICE-LABEL: @_Z6kernelc1SPi
-// DEVICE-NV-SAME: i8{{[^,]*}}, %struct.S* byval align 8{{[^,]*}}, i32*
+// DEVICE-NV-SAME: i8{{[^,]*}}, %struct.S* byval(%struct.S) align 8{{[^,]*}}, i32*
 // DEVICE-AMD-SAME: i8{{[^,]*}}, %struct.S{{[^,*]*}}, i32*
 __global__ void kernel(char a, S s, int *b) {}
