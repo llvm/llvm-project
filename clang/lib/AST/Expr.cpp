@@ -1538,44 +1538,29 @@ UnaryExprOrTypeTraitExpr::UnaryExprOrTypeTraitExpr(
   }
 }
 
-MemberExpr::MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
-                       ValueDecl *MemberDecl,
-                       const DeclarationNameInfo &NameInfo, QualType T,
-                       ExprValueKind VK, ExprObjectKind OK)
-    : Expr(MemberExprClass, T, VK, OK, Base->isTypeDependent(),
-           Base->isValueDependent(), Base->isInstantiationDependent(),
-           Base->containsUnexpandedParameterPack()),
-      Base(Base), MemberDecl(MemberDecl), MemberDNLoc(NameInfo.getInfo()),
-      MemberLoc(NameInfo.getLoc()) {
-  assert(!NameInfo.getName() ||
-         MemberDecl->getDeclName() == NameInfo.getName());
-  MemberExprBits.IsArrow = IsArrow;
-  MemberExprBits.HasQualifierOrFoundDecl = false;
-  MemberExprBits.HasTemplateKWAndArgsInfo = false;
-  MemberExprBits.HadMultipleCandidates = false;
-  MemberExprBits.OperatorLoc = OperatorLoc;
-}
-
 MemberExpr *MemberExpr::Create(
-    const ASTContext &C, Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
+    const ASTContext &C, Expr *base, bool isarrow, SourceLocation OperatorLoc,
     NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
-    ValueDecl *MemberDecl, DeclAccessPair FoundDecl,
-    DeclarationNameInfo NameInfo, const TemplateArgumentListInfo *TemplateArgs,
-    QualType T, ExprValueKind VK, ExprObjectKind OK) {
-  bool HasQualOrFound = QualifierLoc || FoundDecl.getDecl() != MemberDecl ||
-                        FoundDecl.getAccess() != MemberDecl->getAccess();
-  bool HasTemplateKWAndArgsInfo = TemplateArgs || TemplateKWLoc.isValid();
+    ValueDecl *memberdecl, DeclAccessPair founddecl,
+    DeclarationNameInfo nameinfo, const TemplateArgumentListInfo *targs,
+    QualType ty, ExprValueKind vk, ExprObjectKind ok) {
+
+  bool hasQualOrFound = (QualifierLoc ||
+                         founddecl.getDecl() != memberdecl ||
+                         founddecl.getAccess() != memberdecl->getAccess());
+
+  bool HasTemplateKWAndArgsInfo = targs || TemplateKWLoc.isValid();
   std::size_t Size =
       totalSizeToAlloc<MemberExprNameQualifier, ASTTemplateKWAndArgsInfo,
-                       TemplateArgumentLoc>(
-          HasQualOrFound ? 1 : 0, HasTemplateKWAndArgsInfo ? 1 : 0,
-          TemplateArgs ? TemplateArgs->size() : 0);
+                       TemplateArgumentLoc>(hasQualOrFound ? 1 : 0,
+                                            HasTemplateKWAndArgsInfo ? 1 : 0,
+                                            targs ? targs->size() : 0);
 
   void *Mem = C.Allocate(Size, alignof(MemberExpr));
   MemberExpr *E = new (Mem)
-      MemberExpr(Base, IsArrow, OperatorLoc, MemberDecl, NameInfo, T, VK, OK);
+      MemberExpr(base, isarrow, OperatorLoc, memberdecl, nameinfo, ty, vk, ok);
 
-  if (HasQualOrFound) {
+  if (hasQualOrFound) {
     // FIXME: Wrong. We should be looking at the member declaration we found.
     if (QualifierLoc && QualifierLoc.getNestedNameSpecifier()->isDependent()) {
       E->setValueDependent(true);
@@ -1591,20 +1576,19 @@ MemberExpr *MemberExpr::Create(
     MemberExprNameQualifier *NQ =
         E->getTrailingObjects<MemberExprNameQualifier>();
     NQ->QualifierLoc = QualifierLoc;
-    NQ->FoundDecl = FoundDecl;
+    NQ->FoundDecl = founddecl;
   }
 
   E->MemberExprBits.HasTemplateKWAndArgsInfo =
-      TemplateArgs || TemplateKWLoc.isValid();
+      (targs || TemplateKWLoc.isValid());
 
-  if (TemplateArgs) {
+  if (targs) {
     bool Dependent = false;
     bool InstantiationDependent = false;
     bool ContainsUnexpandedParameterPack = false;
     E->getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-        TemplateKWLoc, *TemplateArgs,
-        E->getTrailingObjects<TemplateArgumentLoc>(), Dependent,
-        InstantiationDependent, ContainsUnexpandedParameterPack);
+        TemplateKWLoc, *targs, E->getTrailingObjects<TemplateArgumentLoc>(),
+        Dependent, InstantiationDependent, ContainsUnexpandedParameterPack);
     if (InstantiationDependent)
       E->setInstantiationDependent(true);
   } else if (TemplateKWLoc.isValid()) {
@@ -1613,22 +1597,6 @@ MemberExpr *MemberExpr::Create(
   }
 
   return E;
-}
-
-MemberExpr *MemberExpr::CreateEmpty(const ASTContext &Context,
-                                    bool HasQualifier, bool HasFoundDecl,
-                                    bool HasTemplateKWAndArgsInfo,
-                                    unsigned NumTemplateArgs) {
-  assert((!NumTemplateArgs || HasTemplateKWAndArgsInfo) &&
-         "template args but no template arg info?");
-  bool HasQualOrFound = HasQualifier || HasFoundDecl;
-  std::size_t Size =
-      totalSizeToAlloc<MemberExprNameQualifier, ASTTemplateKWAndArgsInfo,
-                       TemplateArgumentLoc>(HasQualOrFound ? 1 : 0,
-                                            HasTemplateKWAndArgsInfo ? 1 : 0,
-                                            NumTemplateArgs);
-  void *Mem = Context.Allocate(Size, alignof(MemberExpr));
-  return new (Mem) MemberExpr(EmptyShell());
 }
 
 SourceLocation MemberExpr::getBeginLoc() const {

@@ -3344,6 +3344,7 @@ bool InitializationSequence::isAmbiguous() const {
   case FK_NonConstLValueReferenceBindingToVectorElement:
   case FK_NonConstLValueReferenceBindingToUnrelated:
   case FK_RValueReferenceBindingToLValue:
+  case FK_ReferenceAddrspaceMismatchTemporary:
   case FK_ReferenceInitDropsQualifiers:
   case FK_ReferenceInitFailed:
   case FK_ConversionFailed:
@@ -4837,9 +4838,16 @@ static void TryReferenceInitializationCore(Sema &S,
 
   Sequence.AddReferenceBindingStep(cv1T1IgnoreAS, /*bindingTemporary=*/true);
 
-  if (T1Quals.hasAddressSpace())
+  if (T1Quals.hasAddressSpace()) {
+    if (!Qualifiers::isAddressSpaceSupersetOf(T1Quals.getAddressSpace(),
+                                              LangAS::Default)) {
+      Sequence.SetFailed(
+          InitializationSequence::FK_ReferenceAddrspaceMismatchTemporary);
+      return;
+    }
     Sequence.AddQualificationConversionStep(cv1T1, isLValueRef ? VK_LValue
                                                                : VK_XValue);
+  }
 }
 
 /// Attempt character array initialization from a string literal
@@ -8516,6 +8524,11 @@ bool InitializationSequence::Diagnose(Sema &S,
       << Args[0]->getSourceRange();
     break;
 
+  case FK_ReferenceAddrspaceMismatchTemporary:
+    S.Diag(Kind.getLocation(), diag::err_reference_bind_temporary_addrspace)
+        << DestType << Args[0]->getSourceRange();
+    break;
+
   case FK_ReferenceInitDropsQualifiers: {
     QualType SourceType = OnlyArg->getType();
     QualType NonRefType = DestType.getNonReferenceType();
@@ -8849,6 +8862,10 @@ void InitializationSequence::dump(raw_ostream &OS) const {
 
     case FK_ReferenceInitDropsQualifiers:
       OS << "reference initialization drops qualifiers";
+      break;
+
+    case FK_ReferenceAddrspaceMismatchTemporary:
+      OS << "reference with mismatching address space bound to temporary";
       break;
 
     case FK_ReferenceInitFailed:

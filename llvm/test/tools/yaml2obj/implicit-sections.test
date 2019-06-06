@@ -1,0 +1,86 @@
+## Check the section header properties of ".dynsym",
+## ".dynstr", ".symtab", ".strtab", ".shstrtab".
+## These sections sections are usually added implicitly,
+## but here we add them explicitly in YAML and verify.
+## We check their order matches YAML and that file offset is
+## ascending. This is a natural default behavior.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readelf -S %t1 | FileCheck %s
+
+# CHECK:      Section Headers:
+# CHECK-NEXT:  [Nr] Name      Type     Address          Off    Size
+# CHECK-NEXT:  [ 0]           NULL     0000000000000000 000000 000000
+# CHECK-NEXT:  [ 1] .dynstr   STRTAB   0000000000000100 000200 000009
+# CHECK-NEXT:  [ 2] .dynsym   DYNSYM   0000000000000150 000209 000030
+# CHECK-NEXT:  [ 3] .symtab   SYMTAB   0000000000000000 000239 000018
+# CHECK-NEXT:  [ 4] .strtab   STRTAB   0000000000000000 000251 000001
+# CHECK-NEXT:  [ 5] .shstrtab STRTAB   0000000000000000 000252 000035
+# CHECK-NEXT:  [ 6] .text.foo PROGBITS 0000000000000200 000287 000000
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x100
+  - Name:    .dynsym
+    Type:    SHT_DYNSYM
+    Address: 0x150
+  - Name:    .symtab
+    Type:    SHT_SYMTAB
+  - Name:    .strtab
+    Type:    SHT_STRTAB
+  - Name:    .shstrtab
+    Type:    SHT_STRTAB
+  - Name:    .text.foo
+    Type:    SHT_PROGBITS
+    Address: 0x200
+## Symbol is required for the .dynsym to be generated.
+DynamicSymbols:
+  - Name:    _Z3fooi
+    Binding: STB_GLOBAL
+
+## Check that yaml2obj creates empty .dynstr and .dynsym sections for
+## the case when no dynamic symbols were specified and Content wasn't set,
+## but the sections were explicitly listed. Check their VAs are correct.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readelf -S %t2 | FileCheck %s --check-prefix=NODYNSYM
+
+# NODYNSYM:      Section Headers:
+# NODYNSYM-NEXT: [Nr] Name      Type      Address          Off    Size
+# NODYNSYM-NEXT: [ 0]           NULL      0000000000000000 000000 000000
+# NODYNSYM-NEXT: [ 1] .dynstr   STRTAB    0000000000000100 000200 000001
+# NODYNSYM-NEXT: [ 2] .dynsym   DYNSYM    0000000000000150 000201 000018
+# NODYNSYM-NEXT: [ 3] .symtab   SYMTAB    0000000000000000 000219 000018
+# NODYNSYM-NEXT: [ 4] .strtab   STRTAB    0000000000000000 000231 000001
+# NODYNSYM-NEXT: [ 5] .shstrtab STRTAB    0000000000000000 000232 000035
+# NODYNSYM-NEXT: [ 6] .text.foo PROGBITS  0000000000000200 000267 000000
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x100
+  - Name:    .dynsym
+    Type:    SHT_DYNSYM
+    Address: 0x150
+  - Name:    .symtab
+    Type:    SHT_SYMTAB
+  - Name:    .strtab
+    Type:    SHT_STRTAB
+  - Name:    .shstrtab
+    Type:    SHT_STRTAB
+  - Name:    .text.foo
+    Type:    SHT_PROGBITS
+    Address: 0x200

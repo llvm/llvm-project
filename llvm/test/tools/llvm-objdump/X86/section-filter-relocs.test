@@ -1,16 +1,11 @@
 ## Test that --section works correctly for -d with -r.
 # RUN: yaml2obj %s -o %t.o
 
-## Show non-executable sections are not disassembled even if specified,
-## and that only the specified executable sections are disassembled.
+## Show that only the specified sections are disassembled.
 ## Also show that no relocation sections are dumped because none are
 ## specified.
-## FIXME: This is different behaviour to GNU objdump, which dumps the non-
-##        executable sections if requested explicitly.
-##        See https://bugs.llvm.org/show_bug.cgi?id=41897.
 # RUN: llvm-objdump -d -r %t.o --section=.text --section=.rodata \
-# RUN:   | FileCheck %s --check-prefixes=DISASM,RELOC --implicit-check-not=.text2 \
-# RUN:           --implicit-check-not=.rodata
+# RUN:   | FileCheck %s --check-prefixes=DISASM,RELOC --implicit-check-not=.text2
 
 # DISASM:       Disassembly of section .text:
 # DISASM-EMPTY:
@@ -18,6 +13,12 @@
 # DISASM-NEXT:  400: e8 00 00 00 00                callq   0 <.text+0x5>
 # RELOC-NEXT:                      00000401:  R_X86_64_PC32        foo+1
 # RELOC-NEXT:                      00000401:  R_X86_64_GOT32       foo
+# DISASM:       Disassembly of section .rodata:
+# DISASM-EMPTY:
+# DISASM-NEXT:  0000000000000000 .rodata:
+# DISASM-NEXT:  0: 00 00                           addb    %al, (%rax)
+# RELOC-NEXT:              0000000000000000:  R_X86_64_NONE        foo
+# DISASM-NEXT:  2: 00 00                           addb    %al, (%rax)
 
 --- !ELF
 FileHeader:

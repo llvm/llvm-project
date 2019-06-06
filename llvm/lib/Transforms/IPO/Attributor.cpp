@@ -86,10 +86,10 @@ static void bookkeeping(AbstractAttribute::ManifestPosition MP,
 
   if (!Attr.isEnumAttribute())
     return;
-  switch (Attr.getKindAsEnum()) {
-  default:
-    return;
-  }
+  //switch (Attr.getKindAsEnum()) {
+  //default:
+  //  return;
+  //}
 }
 
 /// Helper to identify the correct offset into an attribute list.
@@ -397,10 +397,10 @@ void Attributor::identifyDefaultAbstractAttributes(
     // to concrete attributes we only cache the ones that are as identified in
     // the following switch.
     // Note: There are no concrete attributes now so this is initially empty.
-    switch (I.getOpcode()) {
-    default:
-      break;
-    }
+    //switch (I.getOpcode()) {
+    //default:
+    //  break;
+    //}
     if (IsInterestingOpcode)
       InstOpcodeMap[I.getOpcode()].push_back(&I);
     if (I.mayReadOrWriteMemory())

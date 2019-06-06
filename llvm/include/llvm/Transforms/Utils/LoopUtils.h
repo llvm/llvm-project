@@ -299,10 +299,10 @@ getOrderedReduction(IRBuilder<> &Builder, Value *Acc, Value *Src, unsigned Op,
                     ArrayRef<Value *> RedOps = None);
 
 /// Generates a vector reduction using shufflevectors to reduce the value.
+/// Fast-math-flags are propagated using the IRBuilder's setting.
 Value *getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
                            RecurrenceDescriptor::MinMaxRecurrenceKind
                                MinMaxKind = RecurrenceDescriptor::MRK_Invalid,
-                           FastMathFlags FMF = FastMathFlags(),
                            ArrayRef<Value *> RedOps = None);
 
 /// Create a target reduction of the given vector. The reduction operation
@@ -310,17 +310,18 @@ Value *getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
 /// additional information supplied in \p Flags.
 /// The target is queried to determine if intrinsics or shuffle sequences are
 /// required to implement the reduction.
+/// Fast-math-flags are propagated using the IRBuilder's setting.
 Value *createSimpleTargetReduction(IRBuilder<> &B,
                                    const TargetTransformInfo *TTI,
                                    unsigned Opcode, Value *Src,
                                    TargetTransformInfo::ReductionFlags Flags =
                                        TargetTransformInfo::ReductionFlags(),
-                                   FastMathFlags FMF = FastMathFlags(),
                                    ArrayRef<Value *> RedOps = None);
 
 /// Create a generic target reduction using a recurrence descriptor \p Desc
 /// The target is queried to determine if intrinsics or shuffle sequences are
 /// required to implement the reduction.
+/// Fast-math-flags are propagated using the RecurrenceDescriptor.
 Value *createTargetReduction(IRBuilder<> &B, const TargetTransformInfo *TTI,
                              RecurrenceDescriptor &Desc, Value *Src,
                              bool NoNaN = false);

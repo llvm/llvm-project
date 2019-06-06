@@ -259,9 +259,8 @@ define void @memset_32_nonconst_bytes(i8* %x, i8 %c) {
 ; AVX1-NEXT:    vmovd %esi, %xmm0
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovups %ymm0, (%rdi)
-; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    vmovdqu %xmm0, 16(%rdi)
+; AVX1-NEXT:    vmovdqu %xmm0, (%rdi)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: memset_32_nonconst_bytes:

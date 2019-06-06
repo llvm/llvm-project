@@ -9584,8 +9584,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         // For ByVal, size and alignment should be passed from FE.  BE will
         // guess if this info is not there but there are cases it cannot get
         // right.
-        unsigned FrameSize = DL.getTypeAllocSize(
-            Arg.getParamByValType() ? Arg.getParamByValType() : ElementTy);
+        unsigned FrameSize = DL.getTypeAllocSize(Arg.getParamByValType());
         Flags.setByValSize(FrameSize);
 
         unsigned FrameAlign;

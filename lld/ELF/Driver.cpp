@@ -1506,9 +1506,8 @@ template <class ELFT> void LinkerDriver::compileBitcodeFiles() {
     LTO->add(*File);
 
   for (InputFile *File : LTO->compile()) {
-    DenseMap<CachedHashStringRef, const InputFile *> DummyGroups;
     auto *Obj = cast<ObjFile<ELFT>>(File);
-    Obj->parse(DummyGroups);
+    Obj->parse(/*IgnoreComdats=*/true);
     for (Symbol *Sym : Obj->getGlobalSymbols())
       Sym->parseSymbolVersion();
     ObjectFiles.push_back(File);

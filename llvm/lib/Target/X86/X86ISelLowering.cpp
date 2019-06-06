@@ -21016,10 +21016,12 @@ static SDValue LowerSIGN_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
   return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, OpLo, OpHi);
 }
 
-/// Change a 256-bit vector store into a pair of 128-bit vector stores.
-static SDValue split256BitStore(StoreSDNode *Store, SelectionDAG &DAG) {
+/// Change a vector store into a pair of half-size vector stores.
+static SDValue splitVectorStore(StoreSDNode *Store, SelectionDAG &DAG) {
   SDValue StoredVal = Store->getValue();
-  assert(StoredVal.getValueType().is256BitVector() && "Expecting 256-bit op");
+  assert((StoredVal.getValueType().is256BitVector() ||
+          StoredVal.getValueType().is512BitVector()) &&
+         "Expecting 256/512-bit op");
 
   // Splitting volatile memory ops is not allowed unless the operation was not
   // legal to begin with. We are assuming the input op is legal (this transform
@@ -21029,19 +21031,22 @@ static SDValue split256BitStore(StoreSDNode *Store, SelectionDAG &DAG) {
 
   MVT StoreVT = StoredVal.getSimpleValueType();
   unsigned NumElems = StoreVT.getVectorNumElements();
+  unsigned HalfSize = StoredVal.getValueSizeInBits() / 2;
+  unsigned HalfAlign = (128 == HalfSize ? 16 : 32);
+
   SDLoc DL(Store);
-  SDValue Value0 = extract128BitVector(StoredVal, 0, DAG, DL);
-  SDValue Value1 = extract128BitVector(StoredVal, NumElems / 2, DAG, DL);
+  SDValue Value0 = extractSubVector(StoredVal, 0, DAG, DL, HalfSize);
+  SDValue Value1 = extractSubVector(StoredVal, NumElems / 2, DAG, DL, HalfSize);
   SDValue Ptr0 = Store->getBasePtr();
-  SDValue Ptr1 = DAG.getMemBasePlusOffset(Ptr0, 16, DL);
+  SDValue Ptr1 = DAG.getMemBasePlusOffset(Ptr0, HalfAlign, DL);
   unsigned Alignment = Store->getAlignment();
   SDValue Ch0 =
       DAG.getStore(Store->getChain(), DL, Value0, Ptr0, Store->getPointerInfo(),
                    Alignment, Store->getMemOperand()->getFlags());
-  SDValue Ch1 =
-      DAG.getStore(Store->getChain(), DL, Value1, Ptr1,
-                   Store->getPointerInfo().getWithOffset(16),
-                   MinAlign(Alignment, 16), Store->getMemOperand()->getFlags());
+  SDValue Ch1 = DAG.getStore(Store->getChain(), DL, Value1, Ptr1,
+                             Store->getPointerInfo().getWithOffset(HalfAlign),
+                             MinAlign(Alignment, HalfAlign),
+                             Store->getMemOperand()->getFlags());
   return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Ch0, Ch1);
 }
 
@@ -21080,9 +21085,10 @@ static SDValue LowerStore(SDValue Op, const X86Subtarget &Subtarget,
   // halves anyway, so the concat (vinsertf128) is purely an extra op.
   MVT StoreVT = StoredVal.getSimpleValueType();
   if (StoreVT.is256BitVector()) {
-    if (StoredVal.getOpcode() != ISD::CONCAT_VECTORS || !StoredVal.hasOneUse())
-      return SDValue();
-    return split256BitStore(St, DAG);
+    SmallVector<SDValue, 4> CatOps;
+    if (StoredVal.hasOneUse() && collectConcatOps(StoredVal.getNode(), CatOps))
+      return splitVectorStore(St, DAG);
+    return SDValue();
   }
 
   assert(StoreVT.isVector() && StoreVT.getSizeInBits() == 64 &&
@@ -32091,18 +32097,27 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       isa<ConstantSDNode>(V2.getOperand(1))) {
     SDValue Src1 = V1.getOperand(0);
     SDValue Src2 = V2.getOperand(0);
-    if (Src1 == Src2) {
+    if (Src1.getValueType() == Src2.getValueType()) {
       unsigned Offset1 = V1.getConstantOperandVal(1);
       unsigned Offset2 = V2.getConstantOperandVal(1);
       assert(((Offset1 % VT1.getVectorNumElements()) == 0 ||
               (Offset2 % VT2.getVectorNumElements()) == 0 ||
               (Src1.getValueSizeInBits() % RootSizeInBits) == 0) &&
              "Unexpected subvector extraction");
+      unsigned Scale = Src1.getValueSizeInBits() / RootSizeInBits;
+
       // Convert extraction indices to mask size.
       Offset1 /= VT1.getVectorNumElements();
       Offset2 /= VT2.getVectorNumElements();
       Offset1 *= NumMaskElts;
       Offset2 *= NumMaskElts;
+
+      SmallVector<SDValue, 2> NewInputs;
+      NewInputs.push_back(Src1);
+      if (Src1 != Src2) {
+        NewInputs.push_back(Src2);
+        Offset2 += Scale * NumMaskElts;
+      }
 
       // Create new mask for larger type.
       SmallVector<int, 64> NewMask(Mask);
@@ -32114,10 +32129,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
         else
           M = (M - NumMaskElts) + Offset2;
       }
-      unsigned Scale = Src1.getValueSizeInBits() / RootSizeInBits;
       NewMask.append((Scale - 1) * NumMaskElts, SM_SentinelUndef);
 
-      SDValue NewInputs[] = {Src1};
       if (SDValue Res = combineX86ShuffleChain(
               NewInputs, Src1, NewMask, Depth, HasVariableMask,
               AllowVariableMask, DAG, Subtarget)) {
@@ -39457,7 +39470,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
     if (NumElems < 2)
       return SDValue();
 
-    return split256BitStore(St, DAG);
+    return splitVectorStore(St, DAG);
   }
 
   // Optimize trunc store (of multiple scalars) to shuffle and store.

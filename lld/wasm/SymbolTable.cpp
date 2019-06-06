@@ -28,17 +28,33 @@ SymbolTable *lld::wasm::Symtab;
 
 void SymbolTable::addFile(InputFile *File) {
   log("Processing: " + toString(File));
+
+  // .a file
+  if (auto *F = dyn_cast<ArchiveFile>(File)) {
+    F->parse();
+    return;
+  }
+
+  // .so file
+  if (auto *F = dyn_cast<SharedFile>(File)) {
+    SharedFiles.push_back(F);
+    return;
+  }
+
   if (Config->Trace)
     message(toString(File));
-  File->parse();
 
   // LLVM bitcode file
-  if (auto *F = dyn_cast<BitcodeFile>(File))
+  if (auto *F = dyn_cast<BitcodeFile>(File)) {
+    F->parse();
     BitcodeFiles.push_back(F);
-  else if (auto *F = dyn_cast<ObjFile>(File))
-    ObjectFiles.push_back(F);
-  else if (auto *F = dyn_cast<SharedFile>(File))
-    SharedFiles.push_back(F);
+    return;
+  }
+
+  // Regular object file
+  auto *F = cast<ObjFile>(File);
+  F->parse(false);
+  ObjectFiles.push_back(F);
 }
 
 // This function is where all the optimizations of link-time

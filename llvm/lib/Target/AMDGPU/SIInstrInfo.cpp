@@ -1532,7 +1532,7 @@ unsigned SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, get(AMDGPU::S_ADD_U32))
       .addReg(PCReg, RegState::Define, AMDGPU::sub0)
       .addReg(PCReg, 0, AMDGPU::sub0)
-      .addMBB(&DestBB, AMDGPU::TF_LONG_BRANCH_FORWARD);
+      .addMBB(&DestBB, MO_LONG_BRANCH_FORWARD);
     BuildMI(MBB, I, DL, get(AMDGPU::S_ADDC_U32))
       .addReg(PCReg, RegState::Define, AMDGPU::sub1)
       .addReg(PCReg, 0, AMDGPU::sub1)
@@ -1542,7 +1542,7 @@ unsigned SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, get(AMDGPU::S_SUB_U32))
       .addReg(PCReg, RegState::Define, AMDGPU::sub0)
       .addReg(PCReg, 0, AMDGPU::sub0)
-      .addMBB(&DestBB, AMDGPU::TF_LONG_BRANCH_BACKWARD);
+      .addMBB(&DestBB, MO_LONG_BRANCH_BACKWARD);
     BuildMI(MBB, I, DL, get(AMDGPU::S_SUBB_U32))
       .addReg(PCReg, RegState::Define, AMDGPU::sub1)
       .addReg(PCReg, 0, AMDGPU::sub1)

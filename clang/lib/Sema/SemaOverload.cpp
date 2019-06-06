@@ -13912,11 +13912,14 @@ Expr *Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
       type = Context.BoundMemberTy;
     }
 
-    return BuildMemberExpr(
-        Base, MemExpr->isArrow(), MemExpr->getOperatorLoc(),
+    MemberExpr *ME = MemberExpr::Create(
+        Context, Base, MemExpr->isArrow(), MemExpr->getOperatorLoc(),
         MemExpr->getQualifierLoc(), MemExpr->getTemplateKeywordLoc(), Fn, Found,
-        /*HadMultipleCandidates=*/true, MemExpr->getMemberNameInfo(),
-        type, valueKind, OK_Ordinary, TemplateArgs);
+        MemExpr->getMemberNameInfo(), TemplateArgs, type, valueKind,
+        OK_Ordinary);
+    ME->setHadMultipleCandidates(true);
+    MarkMemberReferenced(ME);
+    return ME;
   }
 
   llvm_unreachable("Invalid reference to overloaded function");
