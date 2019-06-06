@@ -52,7 +52,7 @@ void f8_2(struct s8 a0) {}
 
 // FIXME: llvm-gcc expands this, this may have some value for the
 // backend in terms of optimization but doesn't change the ABI.
-// CHECK-LABEL: define void @f9_2(%struct.s9* byval align 4 %a0)
+// CHECK-LABEL: define void @f9_2(%struct.s9* byval(%struct.s9) align 4 %a0)
 struct s9 {
   int a : 17;
   int b;
@@ -153,7 +153,7 @@ struct s37 { float c[1][1]; } f37(void) { while (1) {} }
 // CHECK-LABEL: define void @f38(%struct.s38* noalias sret %agg.result)
 struct s38 { char a[3]; short b; } f38(void) { while (1) {} }
 
-// CHECK-LABEL: define void @f39(%struct.s39* byval align 16 %x)
+// CHECK-LABEL: define void @f39(%struct.s39* byval(%struct.s39) align 16 %x)
 typedef int v39 __attribute((vector_size(16)));
 struct s39 { v39 x; };
 void f39(struct s39 x) {}
@@ -201,13 +201,13 @@ void f50(struct s50 a0) { }
 struct s51 { vvbp f0; int f1; };
 void f51(struct s51 a0) { }
 
-// CHECK-LABEL: define void @f52(%struct.s52* byval align 4)
+// CHECK-LABEL: define void @f52(%struct.s52* byval(%struct.s52) align 4)
 struct s52 {
   long double a;
 };
 void f52(struct s52 x) {}
 
-// CHECK-LABEL: define void @f53(%struct.s53* byval align 4)
+// CHECK-LABEL: define void @f53(%struct.s53* byval(%struct.s53) align 4)
 struct __attribute__((aligned(32))) s53 {
   int x;
   int y;
@@ -228,22 +228,22 @@ typedef int v4i32 __attribute__((__vector_size__(16)));
 v4i32 f55(v4i32 arg) { return arg+arg; }
 
 // CHECK-LABEL: define void @f56(
-// CHECK: i8 signext %a0, %struct.s56_0* byval align 4 %a1,
-// CHECK: i64 %a2.coerce, %struct.s56_1* byval align 4,
-// CHECK: i64 %a4.coerce, %struct.s56_2* byval align 4,
-// CHECK: <4 x i32> %a6, %struct.s56_3* byval align 16 %a7,
-// CHECK: <2 x double> %a8, %struct.s56_4* byval align 16 %a9,
-// CHECK: <8 x i32> %a10, %struct.s56_5* byval align 4,
-// CHECK: <4 x double> %a12, %struct.s56_6* byval align 4)
+// CHECK: i8 signext %a0, %struct.s56_0* byval(%struct.s56_0) align 4 %a1,
+// CHECK: i64 %a2.coerce, %struct.s56_1* byval(%struct.s56_1) align 4,
+// CHECK: i64 %a4.coerce, %struct.s56_2* byval(%struct.s56_2) align 4,
+// CHECK: <4 x i32> %a6, %struct.s56_3* byval(%struct.s56_3) align 16 %a7,
+// CHECK: <2 x double> %a8, %struct.s56_4* byval(%struct.s56_4) align 16 %a9,
+// CHECK: <8 x i32> %a10, %struct.s56_5* byval(%struct.s56_5) align 4,
+// CHECK: <4 x double> %a12, %struct.s56_6* byval(%struct.s56_6) align 4)
 
 // CHECK:   call void (i32, ...) @f56_0(i32 1,
-// CHECK: i32 %{{[^ ]*}}, %struct.s56_0* byval align 4 %{{[^ ]*}},
-// CHECK: i64 %{{[^ ]*}}, %struct.s56_1* byval align 4 %{{[^ ]*}},
-// CHECK: i64 %{{[^ ]*}}, %struct.s56_2* byval align 4 %{{[^ ]*}},
-// CHECK: <4 x i32> %{{[^ ]*}}, %struct.s56_3* byval align 16 %{{[^ ]*}},
-// CHECK: <2 x double> %{{[^ ]*}}, %struct.s56_4* byval align 16 %{{[^ ]*}},
-// CHECK: <8 x i32> {{[^ ]*}}, %struct.s56_5* byval align 4 %{{[^ ]*}},
-// CHECK: <4 x double> {{[^ ]*}}, %struct.s56_6* byval align 4 %{{[^ ]*}})
+// CHECK: i32 %{{[^ ]*}}, %struct.s56_0* byval(%struct.s56_0) align 4 %{{[^ ]*}},
+// CHECK: i64 %{{[^ ]*}}, %struct.s56_1* byval(%struct.s56_1) align 4 %{{[^ ]*}},
+// CHECK: i64 %{{[^ ]*}}, %struct.s56_2* byval(%struct.s56_2) align 4 %{{[^ ]*}},
+// CHECK: <4 x i32> %{{[^ ]*}}, %struct.s56_3* byval(%struct.s56_3) align 16 %{{[^ ]*}},
+// CHECK: <2 x double> %{{[^ ]*}}, %struct.s56_4* byval(%struct.s56_4) align 16 %{{[^ ]*}},
+// CHECK: <8 x i32> {{[^ ]*}}, %struct.s56_5* byval(%struct.s56_5) align 4 %{{[^ ]*}},
+// CHECK: <4 x double> {{[^ ]*}}, %struct.s56_6* byval(%struct.s56_6) align 4 %{{[^ ]*}})
 // CHECK: }
 //
 // <rdar://problem/7964854> [i386] clang misaligns long double in structures
@@ -289,16 +289,16 @@ void f58(union u58 x) {}
 struct s59 { float x __attribute((aligned(8))); };
 struct s59 f59() { while (1) {} }
 
-// CHECK-LABEL: define void @f60(%struct.s60* byval align 4, i32 %y)
+// CHECK-LABEL: define void @f60(%struct.s60* byval(%struct.s60) align 4, i32 %y)
 struct s60 { int x __attribute((aligned(8))); };
 void f60(struct s60 x, int y) {}
 
-// CHECK-LABEL: define void @f61(i32 %x, %struct.s61* byval align 16 %y)
+// CHECK-LABEL: define void @f61(i32 %x, %struct.s61* byval(%struct.s61) align 16 %y)
 typedef int T61 __attribute((vector_size(16)));
 struct s61 { T61 x; int y; };
 void f61(int x, struct s61 y) {}
 
-// CHECK-LABEL: define void @f62(i32 %x, %struct.s62* byval align 4)
+// CHECK-LABEL: define void @f62(i32 %x, %struct.s62* byval(%struct.s62) align 4)
 typedef int T62 __attribute((vector_size(16)));
 struct s62 { T62 x; int y; } __attribute((packed, aligned(8)));
 void f62(int x, struct s62 y) {}
@@ -317,7 +317,7 @@ int f63(int i, ...) {
   return s.y;
 }
 
-// CHECK-LABEL: define void @f64(%struct.s64* byval align 4 %x)
+// CHECK-LABEL: define void @f64(%struct.s64* byval(%struct.s64) align 4 %x)
 struct s64 { signed char a[0]; signed char b[]; };
 void f64(struct s64 x) {}
 
@@ -341,4 +341,4 @@ T66 f66(int i, ...) {
 // PR14453
 struct s67 { _Complex unsigned short int a; };
 void f67(struct s67 x) {}
-// CHECK-LABEL: define void @f67(%struct.s67* byval align 4 %x)
+// CHECK-LABEL: define void @f67(%struct.s67* byval(%struct.s67) align 4 %x)

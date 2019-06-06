@@ -2055,7 +2055,7 @@ void CodeGenModule::ConstructAttributeList(
         Attrs.addAttribute(llvm::Attribute::InReg);
 
       if (AI.getIndirectByVal())
-        Attrs.addAttribute(llvm::Attribute::ByVal);
+        Attrs.addByValAttr(getTypes().ConvertTypeForMem(ParamType));
 
       CharUnits Align = AI.getIndirectAlign();
 

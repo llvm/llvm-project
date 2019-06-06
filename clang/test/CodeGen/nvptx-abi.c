@@ -21,14 +21,14 @@ float bar(void) {
 
 void foo(float4_t x) {
 // CHECK-LABEL: @foo
-// CHECK: %struct.float4_s* byval align 4 %x
+// CHECK: %struct.float4_s* byval(%struct.float4_s) align 4 %x
 }
 
 void fooN(float4_t x, float4_t y, float4_t z) {
 // CHECK-LABEL: @fooN
-// CHECK: %struct.float4_s* byval align 4 %x
-// CHECK: %struct.float4_s* byval align 4 %y
-// CHECK: %struct.float4_s* byval align 4 %z
+// CHECK: %struct.float4_s* byval(%struct.float4_s) align 4 %x
+// CHECK: %struct.float4_s* byval(%struct.float4_s) align 4 %y
+// CHECK: %struct.float4_s* byval(%struct.float4_s) align 4 %z
 }
 
 typedef struct nested_s {
@@ -39,5 +39,5 @@ typedef struct nested_s {
 
 void baz(nested_t x) {
 // CHECK-LABEL: @baz
-// CHECK: %struct.nested_s* byval align 8 %x)
+// CHECK: %struct.nested_s* byval(%struct.nested_s) align 8 %x)
 }
