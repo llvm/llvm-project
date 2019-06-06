@@ -1770,6 +1770,7 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
   // should reserve the arguments and use them directly.
   MachineFrameInfo &MFI = MF.getFrameInfo();
   bool HasStackObjects = MFI.hasStackObjects();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   // Record that we know we have non-spill stack objects so we don't need to
   // check all stack objects later.
@@ -1785,65 +1786,85 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
   // the scratch registers to pass in.
   bool RequiresStackAccess = HasStackObjects || MFI.hasCalls();
 
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  if (ST.isAmdHsaOrMesa(MF.getFunction())) {
-    if (RequiresStackAccess) {
-      // If we have stack objects, we unquestionably need the private buffer
-      // resource. For the Code Object V2 ABI, this will be the first 4 user
-      // SGPR inputs. We can reserve those and use them directly.
+  if (RequiresStackAccess && ST.isAmdHsaOrMesa(MF.getFunction())) {
+    // If we have stack objects, we unquestionably need the private buffer
+    // resource. For the Code Object V2 ABI, this will be the first 4 user
+    // SGPR inputs. We can reserve those and use them directly.
 
-      unsigned PrivateSegmentBufferReg = Info.getPreloadedReg(
-        AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_BUFFER);
-      Info.setScratchRSrcReg(PrivateSegmentBufferReg);
-
-      if (MFI.hasCalls()) {
-        // If we have calls, we need to keep the frame register in a register
-        // that won't be clobbered by a call, so ensure it is copied somewhere.
-
-        // This is not a problem for the scratch wave offset, because the same
-        // registers are reserved in all functions.
-
-        // FIXME: Nothing is really ensuring this is a call preserved register,
-        // it's just selected from the end so it happens to be.
-        unsigned ReservedOffsetReg
-          = TRI.reservedPrivateSegmentWaveByteOffsetReg(MF);
-        Info.setScratchWaveOffsetReg(ReservedOffsetReg);
-      } else {
-        unsigned PrivateSegmentWaveByteOffsetReg = Info.getPreloadedReg(
-          AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
-        Info.setScratchWaveOffsetReg(PrivateSegmentWaveByteOffsetReg);
-      }
-    } else {
-      unsigned ReservedBufferReg
-        = TRI.reservedPrivateSegmentBufferReg(MF);
-      unsigned ReservedOffsetReg
-        = TRI.reservedPrivateSegmentWaveByteOffsetReg(MF);
-
-      // We tentatively reserve the last registers (skipping the last two
-      // which may contain VCC). After register allocation, we'll replace
-      // these with the ones immediately after those which were really
-      // allocated. In the prologue copies will be inserted from the argument
-      // to these reserved registers.
-      Info.setScratchRSrcReg(ReservedBufferReg);
-      Info.setScratchWaveOffsetReg(ReservedOffsetReg);
-    }
+    unsigned PrivateSegmentBufferReg =
+        Info.getPreloadedReg(AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_BUFFER);
+    Info.setScratchRSrcReg(PrivateSegmentBufferReg);
   } else {
     unsigned ReservedBufferReg = TRI.reservedPrivateSegmentBufferReg(MF);
+    // We tentatively reserve the last registers (skipping the last registers
+    // which may contain VCC, FLAT_SCR, and XNACK). After register allocation,
+    // we'll replace these with the ones immediately after those which were
+    // really allocated. In the prologue copies will be inserted from the
+    // argument to these reserved registers.
 
     // Without HSA, relocations are used for the scratch pointer and the
     // buffer resource setup is always inserted in the prologue. Scratch wave
     // offset is still in an input SGPR.
     Info.setScratchRSrcReg(ReservedBufferReg);
+  }
 
-    if (HasStackObjects && !MFI.hasCalls()) {
-      unsigned ScratchWaveOffsetReg = Info.getPreloadedReg(
-        AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
-      Info.setScratchWaveOffsetReg(ScratchWaveOffsetReg);
+  // This should be accurate for kernels even before the frame is finalized.
+  const bool HasFP = ST.getFrameLowering()->hasFP(MF);
+  if (HasFP) {
+    unsigned ReservedOffsetReg =
+        TRI.reservedPrivateSegmentWaveByteOffsetReg(MF);
+    MachineRegisterInfo &MRI = MF.getRegInfo();
+
+    // Try to use s32 as the SP, but move it if it would interfere with input
+    // arguments. This won't work with calls though.
+    //
+    // FIXME: Move SP to avoid any possible inputs, or find a way to spill input
+    // registers.
+    if (!MRI.isLiveIn(AMDGPU::SGPR32)) {
+      Info.setStackPtrOffsetReg(AMDGPU::SGPR32);
     } else {
-      unsigned ReservedOffsetReg
-        = TRI.reservedPrivateSegmentWaveByteOffsetReg(MF);
-      Info.setScratchWaveOffsetReg(ReservedOffsetReg);
+      assert(AMDGPU::isShader(MF.getFunction().getCallingConv()));
+
+      if (MFI.hasCalls())
+        report_fatal_error("call in graphics shader with too many input SGPRs");
+
+      for (unsigned Reg : AMDGPU::SGPR_32RegClass) {
+        if (!MRI.isLiveIn(Reg)) {
+          Info.setStackPtrOffsetReg(Reg);
+          break;
+        }
+      }
+
+      if (Info.getStackPtrOffsetReg() == AMDGPU::SP_REG)
+        report_fatal_error("failed to find register for SP");
     }
+
+    Info.setScratchWaveOffsetReg(ReservedOffsetReg);
+    Info.setFrameOffsetReg(ReservedOffsetReg);
+  } else if (RequiresStackAccess) {
+    assert(!MFI.hasCalls());
+    // We know there are accesses and they will be done relative to SP, so just
+    // pin it to the input.
+    //
+    // FIXME: Should not do this if inline asm is reading/writing these
+    // registers.
+    unsigned PreloadedSP = Info.getPreloadedReg(
+        AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
+
+    Info.setStackPtrOffsetReg(PreloadedSP);
+    Info.setScratchWaveOffsetReg(PreloadedSP);
+    Info.setFrameOffsetReg(PreloadedSP);
+  } else {
+    assert(!MFI.hasCalls());
+
+    // There may not be stack access at all. There may still be spills, or
+    // access of a constant pointer (in which cases an extra copy will be
+    // emitted in the prolog).
+    unsigned ReservedOffsetReg
+      = TRI.reservedPrivateSegmentWaveByteOffsetReg(MF);
+    Info.setStackPtrOffsetReg(ReservedOffsetReg);
+    Info.setScratchWaveOffsetReg(ReservedOffsetReg);
+    Info.setFrameOffsetReg(ReservedOffsetReg);
   }
 }
 
@@ -1918,12 +1939,6 @@ SDValue SITargetLowering::LowerFormalArguments(
   bool IsShader = AMDGPU::isShader(CallConv);
   bool IsKernel = AMDGPU::isKernel(CallConv);
   bool IsEntryFunc = AMDGPU::isEntryFunctionCC(CallConv);
-
-  if (!IsEntryFunc) {
-    // 4 bytes are reserved at offset 0 for the emergency stack slot. Skip over
-    // this when allocating argument fixed offsets.
-    CCInfo.AllocateStack(4, 4);
-  }
 
   if (IsShader) {
     processShaderInputArgs(Splits, CallConv, Ins, Skipped, FType, Info);
@@ -2530,7 +2545,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
                           "unsupported call from graphics shader of function ");
   }
 
-  // The first 4 bytes are reserved for the callee's emergency stack slot.
   if (IsTailCall) {
     IsTailCall = isEligibleForTailCallOptimization(
       Callee, CallConv, IsVarArg, Outs, OutVals, Ins, DAG);
@@ -2556,9 +2570,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
   CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, IsVarArg);
-
-  // The first 4 bytes are reserved for the callee's emergency stack slot.
-  CCInfo.AllocateStack(4, 4);
 
   CCInfo.AnalyzeCallOperands(Outs, AssignFn);
 
@@ -9939,7 +9950,6 @@ SITargetLowering::getConstraintType(StringRef Constraint) const {
 void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
 
   if (Info->isEntryFunction()) {
@@ -9947,24 +9957,10 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
     reservePrivateMemoryRegs(getTargetMachine(), MF, *TRI, *Info);
   }
 
-  // We have to assume the SP is needed in case there are calls in the function
-  // during lowering. Calls are only detected after the function is
-  // lowered. We're about to reserve registers, so don't bother using it if we
-  // aren't really going to use it.
-  bool NeedSP = !Info->isEntryFunction() ||
-    MFI.hasVarSizedObjects() ||
-    MFI.hasCalls();
-
-  if (NeedSP) {
-    unsigned ReservedStackPtrOffsetReg = TRI->reservedStackPtrOffsetReg(MF);
-    Info->setStackPtrOffsetReg(ReservedStackPtrOffsetReg);
-
-    assert(Info->getStackPtrOffsetReg() != Info->getFrameOffsetReg());
-    assert(!TRI->isSubRegister(Info->getScratchRSrcReg(),
-                               Info->getStackPtrOffsetReg()));
-    if (Info->getStackPtrOffsetReg() != AMDGPU::SP_REG)
-      MRI.replaceRegWith(AMDGPU::SP_REG, Info->getStackPtrOffsetReg());
-  }
+  assert(!TRI->isSubRegister(Info->getScratchRSrcReg(),
+                             Info->getStackPtrOffsetReg()));
+  if (Info->getStackPtrOffsetReg() != AMDGPU::SP_REG)
+    MRI.replaceRegWith(AMDGPU::SP_REG, Info->getStackPtrOffsetReg());
 
   // We need to worry about replacing the default register with itself in case
   // of MIR testcases missing the MFI.

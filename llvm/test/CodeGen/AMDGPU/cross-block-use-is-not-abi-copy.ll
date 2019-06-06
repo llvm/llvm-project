@@ -30,7 +30,7 @@ define float @call_split_type_used_outside_block_v2f32() #0 {
 ; GCN-NEXT:    s_mov_b32 s5, s32
 ; GCN-NEXT:    s_add_u32 s32, s32, 0x400
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
-; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s5 offset:4 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s5 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
 ; GCN-NEXT:    v_writelane_b32 v32, s33, 0
 ; GCN-NEXT:    v_writelane_b32 v32, s34, 1
@@ -47,7 +47,7 @@ define float @call_split_type_used_outside_block_v2f32() #0 {
 ; GCN-NEXT:    v_readlane_b32 s34, v32, 1
 ; GCN-NEXT:    v_readlane_b32 s33, v32, 0
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
-; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], s5 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], s5 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
 ; GCN-NEXT:    s_sub_u32 s32, s32, 0x400
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -68,7 +68,7 @@ define float @call_split_type_used_outside_block_v3f32() #0 {
 ; GCN-NEXT:    s_mov_b32 s5, s32
 ; GCN-NEXT:    s_add_u32 s32, s32, 0x400
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
-; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s5 offset:4 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s5 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
 ; GCN-NEXT:    v_writelane_b32 v32, s33, 0
 ; GCN-NEXT:    v_writelane_b32 v32, s34, 1
@@ -85,7 +85,7 @@ define float @call_split_type_used_outside_block_v3f32() #0 {
 ; GCN-NEXT:    v_readlane_b32 s34, v32, 1
 ; GCN-NEXT:    v_readlane_b32 s33, v32, 0
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
-; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], s5 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], s5 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
 ; GCN-NEXT:    s_sub_u32 s32, s32, 0x400
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -106,7 +106,7 @@ define half @call_split_type_used_outside_block_v4f16() #0 {
 ; GCN-NEXT:    s_mov_b32 s5, s32
 ; GCN-NEXT:    s_add_u32 s32, s32, 0x400
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
-; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s5 offset:4 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s5 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
 ; GCN-NEXT:    v_writelane_b32 v32, s33, 0
 ; GCN-NEXT:    v_writelane_b32 v32, s34, 1
@@ -123,7 +123,7 @@ define half @call_split_type_used_outside_block_v4f16() #0 {
 ; GCN-NEXT:    v_readlane_b32 s34, v32, 1
 ; GCN-NEXT:    v_readlane_b32 s33, v32, 0
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
-; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], s5 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], s5 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
 ; GCN-NEXT:    s_sub_u32 s32, s32, 0x400
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -144,7 +144,7 @@ define { i32, half } @call_split_type_used_outside_block_struct() #0 {
 ; GCN-NEXT:    s_mov_b32 s5, s32
 ; GCN-NEXT:    s_add_u32 s32, s32, 0x400
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
-; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s5 offset:4 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s5 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
 ; GCN-NEXT:    v_writelane_b32 v32, s33, 0
 ; GCN-NEXT:    v_writelane_b32 v32, s34, 1
@@ -162,7 +162,7 @@ define { i32, half } @call_split_type_used_outside_block_struct() #0 {
 ; GCN-NEXT:    v_mov_b32_e32 v1, v4
 ; GCN-NEXT:    v_readlane_b32 s33, v32, 0
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
-; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], s5 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], s5 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
 ; GCN-NEXT:    s_sub_u32 s32, s32, 0x400
 ; GCN-NEXT:    s_waitcnt vmcnt(0)

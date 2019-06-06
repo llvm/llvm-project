@@ -146,7 +146,7 @@ extern "C" int cleanup_exit_lvalue_byval(bool cond, ByVal arg) {
   ByVal &r = (A(1), ({ if (cond) return 0; (void)ByVal(); }), arg);
   return r.x[0];
 }
-// CHECK-LABEL: define{{.*}} i32 @cleanup_exit_lvalue_byval({{.*}}, %struct.ByVal* byval align 4 %arg)
+// CHECK-LABEL: define{{.*}} i32 @cleanup_exit_lvalue_byval({{.*}}, %struct.ByVal* byval(%struct.ByVal) align 4 %arg)
 // CHECK: call {{.*}} @_ZN1AC1Ei
 // CHECK: call {{.*}} @_ZN1AD1Ev
 // CHECK: switch

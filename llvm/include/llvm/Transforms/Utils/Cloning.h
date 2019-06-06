@@ -229,10 +229,7 @@ public:
 /// and all varargs at the callsite will be passed to any calls to
 /// ForwardVarArgsTo. The caller of InlineFunction has to make sure any varargs
 /// are only used by ForwardVarArgsTo.
-InlineResult InlineFunction(CallInst *C, InlineFunctionInfo &IFI,
-                            AAResults *CalleeAAR = nullptr,
-                            bool InsertLifetime = true);
-InlineResult InlineFunction(InvokeInst *II, InlineFunctionInfo &IFI,
+InlineResult InlineFunction(CallBase *CB, InlineFunctionInfo &IFI,
                             AAResults *CalleeAAR = nullptr,
                             bool InsertLifetime = true);
 InlineResult InlineFunction(CallSite CS, InlineFunctionInfo &IFI,

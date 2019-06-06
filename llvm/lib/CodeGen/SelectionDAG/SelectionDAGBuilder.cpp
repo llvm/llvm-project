@@ -6955,6 +6955,13 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
                          { Chain, getValue(FPI.getArgOperand(0)),
                            getValue(FPI.getArgOperand(1))  });
 
+  if (FPI.getExceptionBehavior() !=
+      ConstrainedFPIntrinsic::ExceptionBehavior::ebIgnore) {
+    SDNodeFlags Flags;
+    Flags.setFPExcept(true);
+    Result->setFlags(Flags);
+  }
+
   assert(Result.getNode()->getNumValues() == 2);
   SDValue OutChain = Result.getValue(1);
   DAG.setRoot(OutChain);
@@ -9584,8 +9591,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         // For ByVal, size and alignment should be passed from FE.  BE will
         // guess if this info is not there but there are cases it cannot get
         // right.
-        unsigned FrameSize = DL.getTypeAllocSize(
-            Arg.getParamByValType() ? Arg.getParamByValType() : ElementTy);
+        unsigned FrameSize = DL.getTypeAllocSize(Arg.getParamByValType());
         Flags.setByValSize(FrameSize);
 
         unsigned FrameAlign;

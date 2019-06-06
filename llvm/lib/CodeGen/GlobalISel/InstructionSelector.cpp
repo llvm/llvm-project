@@ -78,6 +78,6 @@ bool InstructionSelector::isObviouslySafeToFold(MachineInstr &MI,
       std::next(MI.getIterator()) == IntoMI.getIterator())
     return true;
 
-  return !MI.mayLoadOrStore() && !MI.hasUnmodeledSideEffects() &&
-         empty(MI.implicit_operands());
+  return !MI.mayLoadOrStore() && !MI.mayRaiseFPException() &&
+         !MI.hasUnmodeledSideEffects() && empty(MI.implicit_operands());
 }

@@ -444,7 +444,8 @@ public:
   }
 
   unsigned getPreloadedReg(AMDGPUFunctionArgInfo::PreloadedValue Value) const {
-    return ArgInfo.getPreloadedValue(Value).first->getRegister();
+    auto Arg = ArgInfo.getPreloadedValue(Value).first;
+    return Arg ? Arg->getRegister() : 0;
   }
 
   unsigned getGITPtrHigh() const {
@@ -486,6 +487,11 @@ public:
     return FrameOffsetReg;
   }
 
+  void setFrameOffsetReg(unsigned Reg) {
+    assert(Reg != 0 && "Should never be unset");
+    FrameOffsetReg = Reg;
+  }
+
   void setStackPtrOffsetReg(unsigned Reg) {
     assert(Reg != 0 && "Should never be unset");
     StackPtrOffsetReg = Reg;
@@ -502,8 +508,6 @@ public:
   void setScratchWaveOffsetReg(unsigned Reg) {
     assert(Reg != 0 && "Should never be unset");
     ScratchWaveOffsetReg = Reg;
-    if (isEntryFunction())
-      FrameOffsetReg = ScratchWaveOffsetReg;
   }
 
   unsigned getQueuePtrUserSGPR() const {

@@ -3049,7 +3049,8 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
   // pointee type. There should be no opaque pointers where the byval type is
   // implicit.
   for (auto &Arg : Func->args()) {
-    if (Arg.hasByValAttr() && !Arg.getParamByValType()) {
+    if (Arg.hasByValAttr() &&
+        !Arg.getAttribute(Attribute::ByVal).getValueAsType()) {
       Arg.removeAttr(Attribute::ByVal);
       Arg.addAttr(Attribute::getWithByValType(
           Context, Arg.getType()->getPointerElementType()));

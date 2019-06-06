@@ -6,7 +6,7 @@
 ; We test here both with and without fast-isel.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown"
+target triple = "wasm32-unknown-emscripten"
 
 @hidden_global         = external hidden global i32
 @hidden_global_array   = external hidden global [10 x i32]

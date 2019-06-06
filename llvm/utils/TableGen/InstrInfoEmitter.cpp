@@ -603,6 +603,7 @@ void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
   if (Inst.canFoldAsLoad)      OS << "|(1ULL<<MCID::FoldableAsLoad)";
   if (Inst.mayLoad)            OS << "|(1ULL<<MCID::MayLoad)";
   if (Inst.mayStore)           OS << "|(1ULL<<MCID::MayStore)";
+  if (Inst.mayRaiseFPException) OS << "|(1ULL<<MCID::MayRaiseFPException)";
   if (Inst.isPredicable)       OS << "|(1ULL<<MCID::Predicable)";
   if (Inst.isConvertibleToThreeAddress) OS << "|(1ULL<<MCID::ConvertibleTo3Addr)";
   if (Inst.isCommutable)       OS << "|(1ULL<<MCID::Commutable)";

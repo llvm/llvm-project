@@ -642,19 +642,28 @@ struct FormatStyle {
     BS_Stroustrup,
     /// Always break before braces.
     /// \code
-    ///   try {
+    ///   try
+    ///   {
     ///     foo();
     ///   }
-    ///   catch () {
+    ///   catch ()
+    ///   {
     ///   }
     ///   void foo() { bar(); }
-    ///   class foo {
+    ///   class foo
+    ///   {
     ///   };
-    ///   if (foo()) {
+    ///   if (foo())
+    ///   {
     ///   }
-    ///   else {
+    ///   else
+    ///   {
     ///   }
-    ///   enum X : int { A, B };
+    ///   enum X : int
+    ///   {
+    ///     A,
+    ///     B
+    ///   };
     /// \endcode
     BS_Allman,
     /// Always break before braces and add an extra level of indentation to
