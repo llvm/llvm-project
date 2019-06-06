@@ -3,15 +3,19 @@ add_compiler_rt_component(gwp_asan)
 include_directories(..)
 
 set(GWP_ASAN_SOURCES
+  platform_specific/guarded_pool_allocator_posix.cpp
   platform_specific/mutex_posix.cpp
+  guarded_pool_allocator.cpp
   random.cpp
 )
 
 set(GWP_ASAN_HEADERS
+  definitions.h
+  guarded_pool_allocator.h
   mutex.h
-  random.h
   options.h
   options.inc
+  random.h
 )
 
 # Ensure that GWP-ASan meets the delegated requirements of some supporting
