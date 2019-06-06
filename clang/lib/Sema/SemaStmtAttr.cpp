@@ -84,8 +84,8 @@ static Attr *handleIntelFPGALoopAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
   }
 
   if (NumArgs == 0) {
-    if (A.getKind() == ParsedAttr::AT_IntelFPGAII ||
-        A.getKind() == ParsedAttr::AT_IntelFPGAMaxConcurrency) {
+    if (A.getKind() == ParsedAttr::AT_SYCLIntelFPGAII ||
+        A.getKind() == ParsedAttr::AT_SYCLIntelFPGAMaxConcurrency) {
       S.Diag(A.getLoc(), diag::err_attribute_too_few_arguments) << A << 1;
       return nullptr;
     }
@@ -351,10 +351,10 @@ static void
 CheckForIncompatibleFPGALoopAttributes(Sema &S,
                                        const SmallVectorImpl<const Attr *>
                                        &Attrs, SourceRange Range) {
-  CheckForDuplicationFPGALoopAttribute<IntelFPGAIVDepAttr>(S, Attrs, Range);
-  CheckForDuplicationFPGALoopAttribute<IntelFPGAIIAttr>(S, Attrs, Range);
+  CheckForDuplicationFPGALoopAttribute<SYCLIntelFPGAIVDepAttr>(S, Attrs, Range);
+  CheckForDuplicationFPGALoopAttribute<SYCLIntelFPGAIIAttr>(S, Attrs, Range);
   CheckForDuplicationFPGALoopAttribute<
-    IntelFPGAMaxConcurrencyAttr>(S, Attrs, Range);
+    SYCLIntelFPGAMaxConcurrencyAttr>(S, Attrs, Range);
 }
 
 static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
@@ -411,12 +411,12 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleFallThroughAttr(S, St, A, Range);
   case ParsedAttr::AT_LoopHint:
     return handleLoopHintAttr(S, St, A, Range);
-  case ParsedAttr::AT_IntelFPGAIVDep:
-    return handleIntelFPGALoopAttr<IntelFPGAIVDepAttr>(S, St, A);
-  case ParsedAttr::AT_IntelFPGAII:
-    return handleIntelFPGALoopAttr<IntelFPGAIIAttr>(S, St, A);
-  case ParsedAttr::AT_IntelFPGAMaxConcurrency:
-    return handleIntelFPGALoopAttr<IntelFPGAMaxConcurrencyAttr>(S, St, A);
+  case ParsedAttr::AT_SYCLIntelFPGAIVDep:
+    return handleIntelFPGALoopAttr<SYCLIntelFPGAIVDepAttr>(S, St, A);
+  case ParsedAttr::AT_SYCLIntelFPGAII:
+    return handleIntelFPGALoopAttr<SYCLIntelFPGAIIAttr>(S, St, A);
+  case ParsedAttr::AT_SYCLIntelFPGAMaxConcurrency:
+    return handleIntelFPGALoopAttr<SYCLIntelFPGAMaxConcurrencyAttr>(S, St, A);
   case ParsedAttr::AT_OpenCLUnrollHint:
     return handleOpenCLUnrollHint(S, St, A, Range);
   case ParsedAttr::AT_Suppress:

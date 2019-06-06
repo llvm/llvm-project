@@ -1714,7 +1714,7 @@ threads or loop iterations.
   }];
 }
 
-def IntelFPGAIVDepAttrDocs : Documentation {
+def SYCLIntelFPGAIVDepAttrDocs : Documentation {
   let Category = DocCatVariable;
   let Heading = "ivdep";
   let Content = [{
@@ -1725,7 +1725,7 @@ dependences have a dependence distance of at least that length.
   }];
 }
 
-def IntelFPGAIIAttrDocs : Documentation {
+def SYCLIntelFPGAIIAttrDocs : Documentation {
   let Category = DocCatVariable;
   let Heading = "ii";
   let Content = [{
@@ -1735,7 +1735,7 @@ applied multiple times to the same loop.
   }];
 }
 
-def IntelFPGAMaxConcurrencyAttrDocs : Documentation {
+def SYCLIntelFPGAMaxConcurrencyAttrDocs : Documentation {
   let Category = DocCatVariable;
   let Heading = "max_concurrency";
   let Content = [{

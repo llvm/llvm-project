@@ -404,37 +404,38 @@ MDNode *LoopInfo::createMetadata(
   }
 
   // Setting ivdep attribute
-  if (Attrs.IVDepEnable) {
+  if (Attrs.SYCLIVDepEnable) {
     LLVMContext &Ctx = Header->getContext();
     Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.ivdep.enable")};
     LoopProperties.push_back(MDNode::get(Ctx, Vals));
   }
 
   // Setting ivdep attribute with safelen
-  if (Attrs.IVDepSafelen > 0) {
+  if (Attrs.SYCLIVDepSafelen > 0) {
     LLVMContext &Ctx = Header->getContext();
-    Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.ivdep.safelen"),
-                        ConstantAsMetadata::get(ConstantInt::get(
-                            llvm::Type::getInt32Ty(Ctx), Attrs.IVDepSafelen))};
+    Metadata *Vals[] = {
+        MDString::get(Ctx, "llvm.loop.ivdep.safelen"),
+        ConstantAsMetadata::get(ConstantInt::get(llvm::Type::getInt32Ty(Ctx),
+                                                 Attrs.SYCLIVDepSafelen))};
     LoopProperties.push_back(MDNode::get(Ctx, Vals));
   }
 
   // Setting ii attribute with an initiation interval
-  if (Attrs.IInterval > 0) {
+  if (Attrs.SYCLIInterval > 0) {
     LLVMContext &Ctx = Header->getContext();
     Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.ii.count"),
                         ConstantAsMetadata::get(ConstantInt::get(
-                            llvm::Type::getInt32Ty(Ctx), Attrs.IInterval))};
+                            llvm::Type::getInt32Ty(Ctx), Attrs.SYCLIInterval))};
     LoopProperties.push_back(MDNode::get(Ctx, Vals));
   }
 
   // Setting max_concurrency attribute with number of threads
-  if (Attrs.MaxConcurrencyNThreads > 0) {
+  if (Attrs.SYCLMaxConcurrencyNThreads > 0) {
     LLVMContext &Ctx = Header->getContext();
     Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.max_concurrency.count"),
                         ConstantAsMetadata::get(ConstantInt::get(
                             llvm::Type::getInt32Ty(Ctx),
-                            Attrs.MaxConcurrencyNThreads))};
+                            Attrs.SYCLMaxConcurrencyNThreads))};
     LoopProperties.push_back(MDNode::get(Ctx, Vals));
   }
 
@@ -445,8 +446,8 @@ MDNode *LoopInfo::createMetadata(
 
 LoopAttributes::LoopAttributes(bool IsParallel)
     : IsParallel(IsParallel), VectorizeEnable(LoopAttributes::Unspecified),
-      IVDepEnable(false), IVDepSafelen(0), IInterval(0),
-      MaxConcurrencyNThreads(0),
+      SYCLIVDepEnable(false), SYCLIVDepSafelen(0), SYCLIInterval(0),
+      SYCLMaxConcurrencyNThreads(0),
       UnrollEnable(LoopAttributes::Unspecified),
       UnrollAndJamEnable(LoopAttributes::Unspecified), VectorizeWidth(0),
       InterleaveCount(0), UnrollCount(0), UnrollAndJamCount(0),
@@ -456,10 +457,10 @@ LoopAttributes::LoopAttributes(bool IsParallel)
 void LoopAttributes::clear() {
   IsParallel = false;
   VectorizeWidth = 0;
-  IVDepEnable = false;
-  IVDepSafelen = 0;
-  IInterval = 0;
-  MaxConcurrencyNThreads = 0;
+  SYCLIVDepEnable = false;
+  SYCLIVDepSafelen = 0;
+  SYCLIInterval = 0;
+  SYCLMaxConcurrencyNThreads = 0;
   InterleaveCount = 0;
   UnrollCount = 0;
   UnrollAndJamCount = 0;
@@ -484,9 +485,9 @@ LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
   }
 
   if (!Attrs.IsParallel && Attrs.VectorizeWidth == 0 &&
-      Attrs.InterleaveCount == 0 && Attrs.IVDepEnable == false &&
-      Attrs.IVDepSafelen == 0 && Attrs.IInterval == 0 &&
-      Attrs.MaxConcurrencyNThreads == 0 && Attrs.UnrollCount == 0 &&
+      Attrs.InterleaveCount == 0 && Attrs.SYCLIVDepEnable == false &&
+      Attrs.SYCLIVDepSafelen == 0 && Attrs.SYCLIInterval == 0 &&
+      Attrs.SYCLMaxConcurrencyNThreads == 0 && Attrs.UnrollCount == 0 &&
       Attrs.UnrollAndJamCount == 0 && !Attrs.PipelineDisabled &&
       Attrs.PipelineInitiationInterval == 0 &&
       Attrs.VectorizeEnable == LoopAttributes::Unspecified &&
@@ -770,12 +771,12 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
   // For attribute max_concurrency:
   // n - 'llvm.loop.max_concurrency.count, i32 n' metadata will be emitted
   for (const auto *Attr : Attrs) {
-    const IntelFPGAIVDepAttr *IntelFPGAIVDep =
-      dyn_cast<IntelFPGAIVDepAttr>(Attr);
-    const IntelFPGAIIAttr *IntelFPGAII =
-      dyn_cast<IntelFPGAIIAttr>(Attr);
-    const IntelFPGAMaxConcurrencyAttr *IntelFPGAMaxConcurrency =
-      dyn_cast<IntelFPGAMaxConcurrencyAttr>(Attr);
+    const SYCLIntelFPGAIVDepAttr *IntelFPGAIVDep =
+      dyn_cast<SYCLIntelFPGAIVDepAttr>(Attr);
+    const SYCLIntelFPGAIIAttr *IntelFPGAII =
+      dyn_cast<SYCLIntelFPGAIIAttr>(Attr);
+    const SYCLIntelFPGAMaxConcurrencyAttr *IntelFPGAMaxConcurrency =
+      dyn_cast<SYCLIntelFPGAMaxConcurrencyAttr>(Attr);
 
     if (!IntelFPGAIVDep && !IntelFPGAII && !IntelFPGAMaxConcurrency)
       continue;
@@ -783,21 +784,21 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
     if (IntelFPGAIVDep) {
       unsigned ValueInt = IntelFPGAIVDep->getSafelen();
       if (ValueInt == 0)
-        setIVDepEnable();
+        setSYCLIVDepEnable();
       else if (ValueInt > 1)
-        setIVDepSafelen(ValueInt);
+        setSYCLIVDepSafelen(ValueInt);
     }
 
     if (IntelFPGAII) {
       unsigned ValueInt = IntelFPGAII->getInterval();
       if (ValueInt > 1)
-        setIInterval(ValueInt);
+        setSYCLIInterval(ValueInt);
     }
 
     if (IntelFPGAMaxConcurrency) {
       unsigned ValueInt = IntelFPGAMaxConcurrency->getNThreads();
       if (ValueInt > 1)
-        setMaxConcurrencyNThreads(ValueInt);
+        setSYCLMaxConcurrencyNThreads(ValueInt);
     }
   }
 

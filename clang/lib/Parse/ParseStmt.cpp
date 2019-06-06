@@ -2382,9 +2382,9 @@ bool Parser::ParseIntelFPGALoopAttributes(ParsedAttributes &Attrs) {
   if (Attrs.empty())
     return true;
 
-  if (Attrs.begin()->getKind() != ParsedAttr::AT_IntelFPGAIVDep &&
-      Attrs.begin()->getKind() != ParsedAttr::AT_IntelFPGAII &&
-      Attrs.begin()->getKind() != ParsedAttr::AT_IntelFPGAMaxConcurrency)
+  if (Attrs.begin()->getKind() != ParsedAttr::AT_SYCLIntelFPGAIVDep &&
+      Attrs.begin()->getKind() != ParsedAttr::AT_SYCLIntelFPGAII &&
+      Attrs.begin()->getKind() != ParsedAttr::AT_SYCLIntelFPGAMaxConcurrency)
     return true;
 
   if (!(Tok.is(tok::kw_for) || Tok.is(tok::kw_while) || Tok.is(tok::kw_do))) {

@@ -1397,7 +1397,7 @@ def Mode : Attr {
   let PragmaAttributeSupport = 0;
 }
 
-def IntelFPGAIVDep : Attr {
+def SYCLIntelFPGAIVDep : Attr {
   let Spellings = [CXX11<"intelfpga","ivdep">];
   let Args = [IntArgument<"Safelen">];
   let LangOpts = [SYCL];
@@ -1406,10 +1406,10 @@ def IntelFPGAIVDep : Attr {
       return "ivdep";
     }
   }];
-  let Documentation = [IntelFPGAIVDepAttrDocs];
+  let Documentation = [SYCLIntelFPGAIVDepAttrDocs];
 }
 
-def IntelFPGAII : Attr {
+def SYCLIntelFPGAII : Attr {
   let Spellings = [CXX11<"intelfpga","ii">];
   let Args = [IntArgument<"Interval">];
   let LangOpts = [SYCL];
@@ -1418,10 +1418,10 @@ def IntelFPGAII : Attr {
       return "ii";
     }
   }];
-  let Documentation = [IntelFPGAIIAttrDocs];
+  let Documentation = [SYCLIntelFPGAIIAttrDocs];
 }
 
-def IntelFPGAMaxConcurrency : Attr {
+def SYCLIntelFPGAMaxConcurrency : Attr {
   let Spellings = [CXX11<"intelfpga","max_concurrency">];
   let Args = [IntArgument<"NThreads">];
   let LangOpts = [SYCL];
@@ -1430,7 +1430,7 @@ def IntelFPGAMaxConcurrency : Attr {
       return "max_concurrency";
     }
   }];
-  let Documentation = [IntelFPGAMaxConcurrencyAttrDocs];
+  let Documentation = [SYCLIntelFPGAMaxConcurrencyAttrDocs];
 }
 
 def IntelFPGALocalNonConstVar : SubsetSubject<Var,
