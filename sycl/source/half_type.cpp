@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <CL/sycl/half_type.hpp>
+// This is included to enable __builtin_expect()
+#include <CL/sycl/detail/platform_util.hpp>
 #include <iostream>
 
 namespace cl {
