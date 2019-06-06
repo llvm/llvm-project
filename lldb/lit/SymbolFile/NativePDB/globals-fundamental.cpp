@@ -1,5 +1,5 @@
 // clang-format off
-// REQUIRES: lld
+// REQUIRES: lld, python
 
 // Test that we can display tag types.
 // RUN: %build --compiler=clang-cl --nodefaultlib -o %t.exe -- %s 
