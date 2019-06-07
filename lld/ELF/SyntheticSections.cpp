@@ -290,8 +290,9 @@ static size_t getHashSize() {
 
 // This class represents a linker-synthesized .note.gnu.property section.
 //
-// In x86, object files may contain feature flags indicating the features that
-// they are using. The flags are stored in a .note.gnu.property section.
+// In x86 and AArch64, object files may contain feature flags indicating the
+// features that they have used. The flags are stored in a .note.gnu.property
+// section.
 //
 // lld reads the sections from input files and merges them by computing AND of
 // the flags. The result is written as a new .note.gnu.property section.
@@ -304,11 +305,15 @@ GnuPropertySection::GnuPropertySection()
                        ".note.gnu.property") {}
 
 void GnuPropertySection::writeTo(uint8_t *Buf) {
+  uint32_t FeatureAndType = Config->EMachine == EM_AARCH64
+                                ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
+                                : GNU_PROPERTY_X86_FEATURE_1_AND;
+
   write32(Buf, 4);                                   // Name size
   write32(Buf + 4, Config->Is64 ? 16 : 12);          // Content size
   write32(Buf + 8, NT_GNU_PROPERTY_TYPE_0);          // Type
   memcpy(Buf + 12, "GNU", 4);                        // Name string
-  write32(Buf + 16, GNU_PROPERTY_X86_FEATURE_1_AND); // Feature type
+  write32(Buf + 16, FeatureAndType);                 // Feature type
   write32(Buf + 20, 4);                              // Feature size
   write32(Buf + 24, Config->AndFeatures);            // Feature flags
   if (Config->Is64)
@@ -1338,6 +1343,13 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
       break;
     }
     addInt(DT_PLTREL, Config->IsRela ? DT_RELA : DT_REL);
+  }
+
+  if (Config->EMachine == EM_AARCH64) {
+    if (Config->AndFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)
+      addInt(DT_AARCH64_BTI_PLT, 0);
+    if (Config->AndFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_PAC)
+      addInt(DT_AARCH64_PAC_PLT, 0);
   }
 
   addInSec(DT_SYMTAB, In.DynSymTab);

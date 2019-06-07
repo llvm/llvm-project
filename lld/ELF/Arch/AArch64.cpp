@@ -28,7 +28,7 @@ uint64_t elf::getAArch64Page(uint64_t Expr) {
 }
 
 namespace {
-class AArch64 final : public TargetInfo {
+class AArch64 : public TargetInfo {
 public:
   AArch64();
   RelExpr getRelExpr(RelType Type, const Symbol &S,
@@ -431,7 +431,157 @@ void AArch64::relaxTlsIeToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   llvm_unreachable("invalid relocation for TLS IE to LE relaxation");
 }
 
-TargetInfo *elf::getAArch64TargetInfo() {
-  static AArch64 Target;
-  return &Target;
+// AArch64 may use security features in variant PLT sequences. These are:
+// Pointer Authentication (PAC), introduced in armv8.3-a and Branch Target
+// Indicator (BTI) introduced in armv8.5-a. The additional instructions used
+// in the variant Plt sequences are encoded in the Hint space so they can be
+// deployed on older architectures, which treat the instructions as a nop.
+// PAC and BTI can be combined leading to the following combinations:
+// writePltHeader
+// writePltHeaderBti (no PAC Header needed)
+// writePlt
+// writePltBti (BTI only)
+// writePltPac (PAC only)
+// writePltBtiPac (BTI and PAC)
+//
+// When PAC is enabled the dynamic loader encrypts the address that it places
+// in the .got.plt using the pacia1716 instruction which encrypts the value in
+// x17 using the modifier in x16. The static linker places autia1716 before the
+// indirect branch to x17 to authenticate the address in x17 with the modifier
+// in x16. This makes it more difficult for an attacker to modify the value in
+// the .got.plt.
+//
+// When BTI is enabled all indirect branches must land on a bti instruction.
+// The static linker must place a bti instruction at the start of any PLT entry
+// that may be the target of an indirect branch. As the PLT entries call the
+// lazy resolver indirectly this must have a bti instruction at start. In
+// general a bti instruction is not needed for a PLT entry as indirect calls
+// are resolved to the function address and not the PLT entry for the function.
+// There are a small number of cases where the PLT address can escape, such as
+// taking the address of a function or ifunc via a non got-generating
+// relocation, and a shared library refers to that symbol.
+//
+// We use the bti c variant of the instruction which permits indirect branches
+// (br) via x16/x17 and indirect function calls (blr) via any register. The ABI
+// guarantees that all indirect branches from code requiring BTI protection
+// will go via x16/x17
+
+namespace {
+class AArch64BtiPac final : public AArch64 {
+public:
+  AArch64BtiPac();
+  void writePltHeader(uint8_t *Buf) const override;
+  void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
+                int32_t Index, unsigned RelOff) const override;
+
+private:
+  bool BtiHeader; // bti instruction needed in PLT Header
+  bool BtiEntry;  // bti instruction needed in PLT Entry
+  bool PacEntry;  // autia1716 instruction needed in PLT Entry
+};
+} // namespace
+
+AArch64BtiPac::AArch64BtiPac() {
+  BtiHeader = (Config->AndFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI);
+  // A BTI (Branch Target Indicator) Plt Entry is only required if the
+  // address of the PLT entry can be taken by the program, which permits an
+  // indirect jump to the PLT entry. This can happen when the address
+  // of the PLT entry for a function is canonicalised due to the address of
+  // the function in an executable being taken by a shared library.
+  // FIXME: There is a potential optimization to omit the BTI if we detect
+  // that the address of the PLT entry isn't taken.
+  BtiEntry = BtiHeader && !Config->Shared;
+  PacEntry = (Config->AndFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_PAC);
+
+  if (BtiEntry || PacEntry)
+    PltEntrySize = 24;
 }
+
+void AArch64BtiPac::writePltHeader(uint8_t *Buf) const {
+  const uint8_t BtiData[] = { 0x5f, 0x24, 0x03, 0xd5 }; // bti c
+  const uint8_t PltData[] = {
+      0xf0, 0x7b, 0xbf, 0xa9, // stp    x16, x30, [sp,#-16]!
+      0x10, 0x00, 0x00, 0x90, // adrp   x16, Page(&(.plt.got[2]))
+      0x11, 0x02, 0x40, 0xf9, // ldr    x17, [x16, Offset(&(.plt.got[2]))]
+      0x10, 0x02, 0x00, 0x91, // add    x16, x16, Offset(&(.plt.got[2]))
+      0x20, 0x02, 0x1f, 0xd6, // br     x17
+      0x1f, 0x20, 0x03, 0xd5, // nop
+      0x1f, 0x20, 0x03, 0xd5  // nop
+  };
+  const uint8_t NopData[] = { 0x1f, 0x20, 0x03, 0xd5 }; // nop
+
+  uint64_t Got = In.GotPlt->getVA();
+  uint64_t Plt = In.Plt->getVA();
+
+  if (BtiHeader) {
+    // PltHeader is called indirectly by Plt[N]. Prefix PltData with a BTI C
+    // instruction.
+    memcpy(Buf, BtiData, sizeof(BtiData));
+    Buf += sizeof(BtiData);
+    Plt += sizeof(BtiData);
+  }
+  memcpy(Buf, PltData, sizeof(PltData));
+
+  relocateOne(Buf + 4, R_AARCH64_ADR_PREL_PG_HI21,
+              getAArch64Page(Got + 16) - getAArch64Page(Plt + 8));
+  relocateOne(Buf + 8, R_AARCH64_LDST64_ABS_LO12_NC, Got + 16);
+  relocateOne(Buf + 12, R_AARCH64_ADD_ABS_LO12_NC, Got + 16);
+  if (!BtiHeader)
+    // We didn't add the BTI c instruction so round out size with NOP.
+    memcpy(Buf + sizeof(PltData), NopData, sizeof(NopData));
+}
+
+void AArch64BtiPac::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
+                             uint64_t PltEntryAddr, int32_t Index,
+                             unsigned RelOff) const {
+  // The PLT entry is of the form:
+  // [BtiData] AddrInst (PacBr | StdBr) [NopData]
+  const uint8_t BtiData[] = { 0x5f, 0x24, 0x03, 0xd5 }; // bti c
+  const uint8_t AddrInst[] = {
+      0x10, 0x00, 0x00, 0x90,  // adrp x16, Page(&(.plt.got[n]))
+      0x11, 0x02, 0x40, 0xf9,  // ldr  x17, [x16, Offset(&(.plt.got[n]))]
+      0x10, 0x02, 0x00, 0x91   // add  x16, x16, Offset(&(.plt.got[n]))
+  };
+  const uint8_t PacBr[] = {
+      0x9f, 0x21, 0x03, 0xd5,  // autia1716
+      0x20, 0x02, 0x1f, 0xd6   // br   x17
+  };
+  const uint8_t StdBr[] = {
+      0x20, 0x02, 0x1f, 0xd6,  // br   x17
+      0x1f, 0x20, 0x03, 0xd5   // nop
+  };
+  const uint8_t NopData[] = { 0x1f, 0x20, 0x03, 0xd5 }; // nop
+
+  if (BtiEntry) {
+    memcpy(Buf, BtiData, sizeof(BtiData));
+    Buf += sizeof(BtiData);
+    PltEntryAddr += sizeof(BtiData);
+  }
+
+  memcpy(Buf, AddrInst, sizeof(AddrInst));
+  relocateOne(Buf, R_AARCH64_ADR_PREL_PG_HI21,
+              getAArch64Page(GotPltEntryAddr) -
+                  getAArch64Page(PltEntryAddr));
+  relocateOne(Buf + 4, R_AARCH64_LDST64_ABS_LO12_NC, GotPltEntryAddr);
+  relocateOne(Buf + 8, R_AARCH64_ADD_ABS_LO12_NC, GotPltEntryAddr);
+
+  if (PacEntry)
+    memcpy(Buf + sizeof(AddrInst), PacBr, sizeof(PacBr));
+  else
+    memcpy(Buf + sizeof(AddrInst), StdBr, sizeof(StdBr));
+  if (!BtiEntry)
+    // We didn't add the BTI c instruction so round out size with NOP.
+    memcpy(Buf + sizeof(AddrInst) + sizeof(StdBr), NopData, sizeof(NopData));
+}
+
+static TargetInfo *getTargetInfo() {
+  if (Config->AndFeatures & (GNU_PROPERTY_AARCH64_FEATURE_1_BTI |
+                             GNU_PROPERTY_AARCH64_FEATURE_1_PAC)) {
+    static AArch64BtiPac T;
+    return &T;
+  }
+  static AArch64 T;
+  return &T;
+}
+
+TargetInfo *elf::getAArch64TargetInfo() { return getTargetInfo(); }

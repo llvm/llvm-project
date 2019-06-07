@@ -147,6 +147,7 @@ struct Configuration {
   bool ExecuteOnly;
   bool ExportDynamic;
   bool FixCortexA53Errata843419;
+  bool ForceBTI;
   bool FormatBinary = false;
   bool RequireCET;
   bool GcSections;
@@ -168,6 +169,7 @@ struct Configuration {
   bool OFormatBinary;
   bool Omagic;
   bool OptRemarksWithHotness;
+  bool PacPlt;
   bool PicThunk;
   bool Pie;
   bool PrintGcSections;
