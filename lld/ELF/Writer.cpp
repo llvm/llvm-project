@@ -138,7 +138,8 @@ StringRef elf::getOutputSectionName(const InputSectionBase *S) {
 }
 
 static bool needsInterpSection() {
-  return !Config->DynamicLinker.empty() && Script->needsInterpSection();
+  return !SharedFiles.empty() && !Config->DynamicLinker.empty() &&
+         Script->needsInterpSection();
 }
 
 template <class ELFT> void elf::writeResult() { Writer<ELFT>().run(); }
@@ -212,6 +213,10 @@ void elf::addReservedSymbols() {
     // https://sourceware.org/ml/binutils/2004-12/msg00094.html
     if (Symtab->find("__gnu_local_gp"))
       ElfSym::MipsLocalGp = addAbsolute("__gnu_local_gp");
+  } else if (Config->EMachine == EM_PPC) {
+    // glibc *crt1.o has a undefined reference to _SDA_BASE_. Since we don't
+    // support Small Data Area, define it arbitrarily as 0.
+    addOptionalRegular("_SDA_BASE_", nullptr, 0, STV_HIDDEN);
   }
 
   // The Power Architecture 64-bit v2 ABI defines a TableOfContents (TOC) which
@@ -233,7 +238,7 @@ void elf::addReservedSymbols() {
     }
 
     uint64_t GotOff = 0;
-    if (Config->EMachine == EM_PPC || Config->EMachine == EM_PPC64)
+    if (Config->EMachine == EM_PPC64)
       GotOff = 0x8000;
 
     S->resolve(Defined{/*File=*/nullptr, GotSymName, STB_GLOBAL, STV_HIDDEN,
@@ -385,6 +390,11 @@ template <class ELFT> static void createSyntheticSections() {
   } else {
     In.Got = make<GotSection>();
     Add(In.Got);
+  }
+
+  if (Config->EMachine == EM_PPC) {
+    In.PPC32Got2 = make<PPC32Got2Section>();
+    Add(In.PPC32Got2);
   }
 
   if (Config->EMachine == EM_PPC64) {
@@ -1773,6 +1783,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   finalizeSynthetic(In.RelaPlt);
   finalizeSynthetic(In.Plt);
   finalizeSynthetic(In.Iplt);
+  finalizeSynthetic(In.PPC32Got2);
   finalizeSynthetic(In.EhFrameHdr);
   finalizeSynthetic(In.VerSym);
   finalizeSynthetic(In.VerNeed);

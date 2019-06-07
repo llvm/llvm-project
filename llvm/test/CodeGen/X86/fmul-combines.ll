@@ -251,6 +251,39 @@ define float @fmul_fneg_fneg_f32(float %x, float %y) {
   ret float %mul
 }
 
+define float @fmul_unary_fneg_unary_fneg_f32(float %x, float %y) {
+; CHECK-LABEL: fmul_unary_fneg_unary_fneg_f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulss %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %x.neg = fneg float %x
+  %y.neg = fneg float %y
+  %mul = fmul float %x.neg, %y.neg
+  ret float %mul
+}
+
+define float @fmul_unary_fneg_fneg_f32(float %x, float %y) {
+; CHECK-LABEL: fmul_unary_fneg_fneg_f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulss %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %x.neg = fneg float %x
+  %y.neg = fsub float -0.0, %y
+  %mul = fmul float %x.neg, %y.neg
+  ret float %mul
+}
+
+define float @fmul_fneg_unary_fneg_f32(float %x, float %y) {
+; CHECK-LABEL: fmul_fneg_unary_fneg_f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulss %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %x.neg = fsub float -0.0, %x
+  %y.neg = fneg float %y
+  %mul = fmul float %x.neg, %y.neg
+  ret float %mul
+}
+
 define <4 x float> @fmul_fneg_fneg_v4f32(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: fmul_fneg_fneg_v4f32:
 ; CHECK:       # %bb.0:
@@ -258,6 +291,39 @@ define <4 x float> @fmul_fneg_fneg_v4f32(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:    retq
   %x.neg = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %x
   %y.neg = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %y
+  %mul = fmul <4 x float> %x.neg, %y.neg
+  ret <4 x float> %mul
+}
+
+define <4 x float> @fmul_unary_fneg_unary_fneg_v4f32(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: fmul_unary_fneg_unary_fneg_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %x.neg = fneg <4 x float> %x
+  %y.neg = fneg <4 x float> %y
+  %mul = fmul <4 x float> %x.neg, %y.neg
+  ret <4 x float> %mul
+}
+
+define <4 x float> @fmul_unary_fneg_fneg_v4f32(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: fmul_unary_fneg_fneg_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %x.neg = fneg <4 x float> %x
+  %y.neg = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %y
+  %mul = fmul <4 x float> %x.neg, %y.neg
+  ret <4 x float> %mul
+}
+
+define <4 x float> @fmul_fneg_unary_fneg_v4f32(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: fmul_fneg_unary_fneg_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %x.neg = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %x
+  %y.neg = fneg <4 x float> %y
   %mul = fmul <4 x float> %x.neg, %y.neg
   ret <4 x float> %mul
 }

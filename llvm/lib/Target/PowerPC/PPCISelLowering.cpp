@@ -44,6 +44,7 @@
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
@@ -69,8 +70,10 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
@@ -4402,9 +4405,23 @@ static bool isFunctionGlobalAddress(SDValue Callee);
 static bool
 callsShareTOCBase(const Function *Caller, SDValue Callee,
                     const TargetMachine &TM) {
-  // If !G, Callee can be an external symbol.
-  GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
-  if (!G)
+  // Need a GlobalValue to determine if a Caller and Callee share the same
+  // TOCBase.
+  const GlobalValue *GV = nullptr;
+
+  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
+    GV = G->getGlobal();
+  } else if (MCSymbolSDNode *M = dyn_cast<MCSymbolSDNode>(Callee)) {
+    // On AIX only, we replace GlobalAddressSDNode with MCSymbolSDNode for
+    // the callee of a direct function call. The MCSymbolSDNode contains the
+    // MCSymbol for the funtion entry point.
+    const auto *S = cast<MCSymbolXCOFF>(M->getMCSymbol());
+    GV = S->getGlobalValue();
+  }
+
+  // If we failed to get a GlobalValue, then pessimistically assume they do not
+  // share a TOCBase.
+  if (!GV)
     return false;
 
   // The medium and large code models are expected to provide a sufficiently
@@ -4413,13 +4430,12 @@ callsShareTOCBase(const Function *Caller, SDValue Callee,
   // only need to check that caller and callee don't cross dso boundaries.
   if (CodeModel::Medium == TM.getCodeModel() ||
       CodeModel::Large == TM.getCodeModel())
-    return TM.shouldAssumeDSOLocal(*Caller->getParent(), G->getGlobal());
+    return TM.shouldAssumeDSOLocal(*Caller->getParent(), GV);
 
   // Otherwise we need to ensure callee and caller are in the same section,
   // since the linker may allocate multiple TOCs, and we don't know which
   // sections will belong to the same TOC base.
 
-  const GlobalValue *GV = G->getGlobal();
   if (!GV->isStrongDefinitionForLinker())
     return false;
 
@@ -4871,6 +4887,7 @@ PrepareCall(SelectionDAG &DAG, SDValue &Callee, SDValue &InFlag, SDValue &Chain,
   bool isPPC64 = Subtarget.isPPC64();
   bool isSVR4ABI = Subtarget.isSVR4ABI();
   bool isELFv2ABI = Subtarget.isELFv2ABI();
+  bool isAIXABI = Subtarget.isAIXABI();
 
   EVT PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
   NodeTys.push_back(MVT::Other);   // Returns a chain
@@ -4890,7 +4907,8 @@ PrepareCall(SelectionDAG &DAG, SDValue &Callee, SDValue &InFlag, SDValue &Chain,
   // we're building with the leopard linker or later, which automatically
   // synthesizes these stubs.
   const TargetMachine &TM = DAG.getTarget();
-  const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
+  MachineFunction &MF = DAG.getMachineFunction();
+  const Module *Mod = MF.getFunction().getParent();
   const GlobalValue *GV = nullptr;
   if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee))
     GV = G->getGlobal();
@@ -4899,17 +4917,29 @@ PrepareCall(SelectionDAG &DAG, SDValue &Callee, SDValue &InFlag, SDValue &Chain,
 
   if (isFunctionGlobalAddress(Callee)) {
     GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Callee);
-    // A call to a TLS address is actually an indirect call to a
-    // thread-specific pointer.
-    unsigned OpFlags = 0;
-    if (UsePlt)
-      OpFlags = PPCII::MO_PLT;
 
-    // If the callee is a GlobalAddress/ExternalSymbol node (quite common,
-    // every direct call is) turn it into a TargetGlobalAddress /
-    // TargetExternalSymbol node so that legalize doesn't hack it.
-    Callee = DAG.getTargetGlobalAddress(G->getGlobal(), dl,
-                                        Callee.getValueType(), 0, OpFlags);
+    if (TM.getTargetTriple().isOSAIX()) {
+      // Direct function calls reference the symbol for the function's entry
+      // point, which is named by inserting a "." before the function's
+      // C-linkage name.
+      auto &Context = MF.getMMI().getContext();
+      MCSymbol *S = Context.getOrCreateSymbol(Twine(".") +
+                                              Twine(G->getGlobal()->getName()));
+      cast<MCSymbolXCOFF>(S)->setGlobalValue(GV);
+      Callee = DAG.getMCSymbol(S, PtrVT);
+    } else {
+      // A call to a TLS address is actually an indirect call to a
+      // thread-specific pointer.
+      unsigned OpFlags = 0;
+      if (UsePlt)
+        OpFlags = PPCII::MO_PLT;
+
+      // If the callee is a GlobalAddress/ExternalSymbol node (quite common,
+      // every direct call is) turn it into a TargetGlobalAddress /
+      // TargetExternalSymbol node so that legalize doesn't hack it.
+      Callee = DAG.getTargetGlobalAddress(G->getGlobal(), dl,
+                                          Callee.getValueType(), 0, OpFlags);
+    }
     needIndirectCall = false;
   }
 
@@ -5049,17 +5079,18 @@ PrepareCall(SelectionDAG &DAG, SDValue &Callee, SDValue &InFlag, SDValue &Chain,
     Ops.push_back(DAG.getRegister(RegsToPass[i].first,
                                   RegsToPass[i].second.getValueType()));
 
-  // All calls, in both the ELF V1 and V2 ABIs, need the TOC register live
-  // into the call.
-  // We do need to reserve X2 to appease the verifier for the PATCHPOINT.
-  if (isSVR4ABI && isPPC64) {
+  // All calls, in the AIX ABI and 64-bit ELF ABIs, need the TOC register
+  // live into the call.
+  // We do need to reserve R2/X2 to appease the verifier for the PATCHPOINT.
+  if ((isSVR4ABI && isPPC64) || isAIXABI) {
     setUsesTOCBasePtr(DAG);
 
-    // We cannot add X2 as an operand here for PATCHPOINT, because there is no
-    // way to mark dependencies as implicit here. We will add the X2 dependency
-    // in EmitInstrWithCustomInserter.
+    // We cannot add R2/X2 as an operand here for PATCHPOINT, because there is
+    // no way to mark dependencies as implicit here.
+    // We will add the R2/X2 dependency in EmitInstrWithCustomInserter.
     if (!isPatchPoint) 
-      Ops.push_back(DAG.getRegister(PPC::X2, PtrVT));
+      Ops.push_back(DAG.getRegister(isPPC64 ? PPC::X2
+                                            : PPC::R2, PtrVT));
   }
 
   return CallOpc;
@@ -6596,9 +6627,6 @@ SDValue PPCTargetLowering::LowerCall_AIX(
   unsigned PtrByteSize = isPPC64 ? 8 : 4;
   unsigned NumOps = Outs.size();
 
-  if (NumOps != 0)
-    report_fatal_error("Call lowering with parameters is not implemented "
-                       "on AIX yet.");
 
   // Count how many bytes are to be pushed on the stack, including the linkage
   // area, parameter list area.
@@ -6620,16 +6648,80 @@ SDValue PPCTargetLowering::LowerCall_AIX(
   Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
   SDValue CallSeqStart = Chain;
 
-  if (!isFunctionGlobalAddress(Callee) &&
-      !isa<ExternalSymbolSDNode>(Callee))
-    report_fatal_error("Handling of indirect call is unimplemented!");
+  static const MCPhysReg GPR_32[] = {           // 32-bit registers.
+    PPC::R3, PPC::R4, PPC::R5, PPC::R6,
+    PPC::R7, PPC::R8, PPC::R9, PPC::R10
+  };
+  static const MCPhysReg GPR_64[] = {           // 64-bit registers.
+    PPC::X3, PPC::X4, PPC::X5, PPC::X6,
+    PPC::X7, PPC::X8, PPC::X9, PPC::X10
+  };
+
+  const unsigned NumGPRs = isPPC64 ? array_lengthof(GPR_64)
+                                   : array_lengthof(GPR_32);
+  const MCPhysReg *GPR = isPPC64 ? GPR_64 : GPR_32;
+  unsigned GPR_idx = 0;
 
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
-  SDValue InFlag;
 
   if (isTailCall)
     report_fatal_error("Handling of tail call is unimplemented!");
   int SPDiff = 0;
+
+  for (unsigned i = 0; i != NumOps; ++i) {
+    SDValue Arg = OutVals[i];
+    ISD::ArgFlagsTy Flags = Outs[i].Flags;
+
+    // Promote integers if needed.
+    if (Arg.getValueType() == MVT::i1 ||
+        (isPPC64 && Arg.getValueType() == MVT::i32)) {
+      unsigned ExtOp = Flags.isSExt() ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+      Arg = DAG.getNode(ExtOp, dl, PtrVT, Arg);
+    }
+
+    // Note: "by value" is code for passing a structure by value, not
+    // basic types.
+    if (Flags.isByVal())
+      report_fatal_error("Passing structure by value is unimplemented!");
+
+    switch (Arg.getSimpleValueType().SimpleTy) {
+    default: llvm_unreachable("Unexpected ValueType for argument!");
+    case MVT::i1:
+    case MVT::i32:
+    case MVT::i64:
+      if (GPR_idx != NumGPRs)
+        RegsToPass.push_back(std::make_pair(GPR[GPR_idx++], Arg));
+      else
+        report_fatal_error("Handling of placing parameters on the stack is "
+                           "unimplemented!");
+      break;
+    case MVT::f32:
+    case MVT::f64:
+    case MVT::v4f32:
+    case MVT::v4i32:
+    case MVT::v8i16:
+    case MVT::v16i8:
+    case MVT::v2f64:
+    case MVT::v2i64:
+    case MVT::v1i128:
+    case MVT::f128:
+    case MVT::v4f64:
+    case MVT::v4i1:
+      report_fatal_error("Handling of this parameter type is unimplemented!");
+    }
+  }
+
+  if (!isFunctionGlobalAddress(Callee) &&
+      !isa<ExternalSymbolSDNode>(Callee))
+    report_fatal_error("Handling of indirect call is unimplemented!");
+
+  // Build a sequence of copy-to-reg nodes chained together with token chain
+  // and flag operands which copy the outgoing args into the appropriate regs.
+  SDValue InFlag;
+  for (auto Reg : RegsToPass) {
+    Chain = DAG.getCopyToReg(Chain, dl, Reg.first, Reg.second, InFlag);
+    InFlag = Chain.getValue(1);
+  }
 
   return FinishCall(CallConv, dl, isTailCall, isVarArg, isPatchPoint,
                     /* unused except on PPC64 ELFv1 */ false, DAG,

@@ -52,6 +52,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
                                     "int i;\n"
                                     "int j;\n"
                                     "}"));
+
   EXPECT_EQ("namespace {\n"
             "int i;\n"
             "int j;\n"
@@ -248,6 +249,85 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
                                     "// unrelated"));
 }
 
+TEST_F(NamespaceEndCommentsFixerTest, AddsMacroEndComment) {
+  FormatStyle Style = getLLVMStyle();
+  Style.NamespaceMacros.push_back("TESTSUITE");
+
+  EXPECT_EQ("TESTSUITE() {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// TESTSUITE()",
+            fixNamespaceEndComments("TESTSUITE() {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}",
+                                    Style));
+
+  EXPECT_EQ("TESTSUITE(A) {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A) {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}",
+                                    Style));
+  EXPECT_EQ("inline TESTSUITE(A) {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// TESTSUITE(A)",
+            fixNamespaceEndComments("inline TESTSUITE(A) {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(::A) {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// TESTSUITE(::A)",
+            fixNamespaceEndComments("TESTSUITE(::A) {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(::A::B) {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// TESTSUITE(::A::B)",
+            fixNamespaceEndComments("TESTSUITE(::A::B) {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(/**/::/**/A/**/::/**/B/**/) {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// TESTSUITE(::A::B)",
+            fixNamespaceEndComments("TESTSUITE(/**/::/**/A/**/::/**/B/**/) {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(A, B) {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A, B) {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(\"Test1\") {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// TESTSUITE(\"Test1\")",
+            fixNamespaceEndComments("TESTSUITE(\"Test1\") {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}",
+                                    Style));
+}
+
 TEST_F(NamespaceEndCommentsFixerTest, AddsNewlineIfNeeded) {
   EXPECT_EQ("namespace A {\n"
             "int i;\n"
@@ -380,6 +460,54 @@ TEST_F(NamespaceEndCommentsFixerTest, KeepsValidEndComment) {
                                     "}; /* unnamed namespace */"));
 }
 
+TEST_F(NamespaceEndCommentsFixerTest, KeepsValidMacroEndComment) {
+  FormatStyle Style = getLLVMStyle();
+  Style.NamespaceMacros.push_back("TESTSUITE");
+
+  EXPECT_EQ("TESTSUITE() {\n"
+            "int i;\n"
+            "} // end anonymous TESTSUITE()",
+            fixNamespaceEndComments("TESTSUITE() {\n"
+                                    "int i;\n"
+                                    "} // end anonymous TESTSUITE()",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(A) {\n"
+            "int i;\n"
+            "} /* end of TESTSUITE(A) */",
+            fixNamespaceEndComments("TESTSUITE(A) {\n"
+                                    "int i;\n"
+                                    "} /* end of TESTSUITE(A) */",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(A) {\n"
+            "int i;\n"
+            "}   //   TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A) {\n"
+                                    "int i;\n"
+                                    "}   //   TESTSUITE(A)",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(A::B) {\n"
+            "int i;\n"
+            "} // end TESTSUITE(A::B)",
+            fixNamespaceEndComments("TESTSUITE(A::B) {\n"
+                                    "int i;\n"
+                                    "} // end TESTSUITE(A::B)",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(A) {\n"
+            "int i;\n"
+            "}; // end TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A) {\n"
+                                    "int i;\n"
+                                    "}; // end TESTSUITE(A)",
+                                    Style));
+  EXPECT_EQ("TESTSUITE() {\n"
+            "int i;\n"
+            "}; /* unnamed TESTSUITE() */",
+            fixNamespaceEndComments("TESTSUITE() {\n"
+                                    "int i;\n"
+                                    "}; /* unnamed TESTSUITE() */",
+                                    Style));
+}
+
 TEST_F(NamespaceEndCommentsFixerTest, UpdatesInvalidEndLineComment) {
   EXPECT_EQ("namespace {\n"
             "int i;\n"
@@ -446,6 +574,96 @@ TEST_F(NamespaceEndCommentsFixerTest, UpdatesInvalidEndLineComment) {
                                     CompactNamespacesStyle));
 }
 
+TEST_F(NamespaceEndCommentsFixerTest, UpdatesInvalidMacroEndLineComment) {
+  FormatStyle Style = getLLVMStyle();
+  Style.NamespaceMacros.push_back("TESTSUITE");
+
+  EXPECT_EQ("TESTSUITE() {\n"
+            "int i;\n"
+            "} // TESTSUITE()",
+            fixNamespaceEndComments("TESTSUITE() {\n"
+                                    "int i;\n"
+                                    "} // TESTSUITE(A)",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(A) {\n"
+            "int i;\n"
+            "} // TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A) {\n"
+                                    "int i;\n"
+                                    "} // TESTSUITE()",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(A) {\n"
+            "int i;\n"
+            "} // TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A) {\n"
+                                    "int i;\n"
+                                    "} //",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(A) {\n"
+            "int i;\n"
+            "}; // TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A) {\n"
+                                    "int i;\n"
+                                    "}; //",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(A) {\n"
+            "int i;\n"
+            "} // TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A) {\n"
+                                    "int i;\n"
+                                    "} // TESTSUITE A",
+                                    Style));
+  EXPECT_EQ("TESTSUITE() {\n"
+            "int i;\n"
+            "} // TESTSUITE()",
+            fixNamespaceEndComments("TESTSUITE() {\n"
+                                    "int i;\n"
+                                    "} // TESTSUITE",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(A) {\n"
+            "int i;\n"
+            "} // TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A) {\n"
+                                    "int i;\n"
+                                    "} // TOASTSUITE(A)",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(A) {\n"
+            "int i;\n"
+            "}; // TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A) {\n"
+                                    "int i;\n"
+                                    "}; // TOASTSUITE(A)",
+                                    Style));
+  // Updates invalid line comments even for short namespaces.
+  EXPECT_EQ("TESTSUITE(A) {} // TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A) {} // TESTSUITE()", Style));
+  EXPECT_EQ("TESTSUITE(A) {}; // TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A) {}; // TESTSUITE()", Style));
+
+  // Update invalid comments for compacted namespaces.
+  FormatStyle CompactNamespacesStyle = getLLVMStyle();
+  CompactNamespacesStyle.CompactNamespaces = true;
+  CompactNamespacesStyle.NamespaceMacros.push_back("TESTSUITE");
+
+  EXPECT_EQ("TESTSUITE(out) { TESTSUITE(in) {\n"
+            "}} // TESTSUITE(out::in)",
+            fixNamespaceEndComments("TESTSUITE(out) { TESTSUITE(in) {\n"
+                                    "}} // TESTSUITE(out)",
+                                    CompactNamespacesStyle));
+  EXPECT_EQ("TESTSUITE(out) { TESTSUITE(in) {\n"
+            "}} // TESTSUITE(out::in)",
+            fixNamespaceEndComments("TESTSUITE(out) { TESTSUITE(in) {\n"
+                                    "}} // TESTSUITE(in)",
+                                    CompactNamespacesStyle));
+  EXPECT_EQ("TESTSUITE(out) { TESTSUITE(in) {\n"
+            "}\n"
+            "} // TESTSUITE(out::in)",
+            fixNamespaceEndComments("TESTSUITE(out) { TESTSUITE(in) {\n"
+                                    "}// TAOSTSUITE(in)\n"
+                                    "} // TESTSUITE(out)",
+                                    CompactNamespacesStyle));
+}
+
 TEST_F(NamespaceEndCommentsFixerTest, UpdatesInvalidEndBlockComment) {
   EXPECT_EQ("namespace {\n"
             "int i;\n"
@@ -487,6 +705,58 @@ TEST_F(NamespaceEndCommentsFixerTest, UpdatesInvalidEndBlockComment) {
             fixNamespaceEndComments("namespace A {} /**/"));
   EXPECT_EQ("namespace A {}; // namespace A",
             fixNamespaceEndComments("namespace A {}; /**/"));
+}
+
+TEST_F(NamespaceEndCommentsFixerTest, UpdatesInvalidMacroEndBlockComment) {
+  FormatStyle Style = getLLVMStyle();
+  Style.NamespaceMacros.push_back("TESTSUITE");
+
+  EXPECT_EQ("TESTSUITE() {\n"
+            "int i;\n"
+            "} // TESTSUITE()",
+            fixNamespaceEndComments("TESTSUITE() {\n"
+                                    "int i;\n"
+                                    "} /* TESTSUITE(A) */",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(A) {\n"
+            "int i;\n"
+            "}  // TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A) {\n"
+                                    "int i;\n"
+                                    "}  /* end TESTSUITE() */",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(A) {\n"
+            "int i;\n"
+            "} // TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A) {\n"
+                                    "int i;\n"
+                                    "} /**/",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(A) {\n"
+            "int i;\n"
+            "} // TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A) {\n"
+                                    "int i;\n"
+                                    "} /* end unnamed TESTSUITE() */",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(A) {\n"
+            "int i;\n"
+            "} // TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A) {\n"
+                                    "int i;\n"
+                                    "} /* TOASTSUITE(A) */",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(A) {\n"
+            "int i;\n"
+            "}; // TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A) {\n"
+                                    "int i;\n"
+                                    "}; /* TAOSTSUITE(A) */",
+                                    Style));
+  EXPECT_EQ("TESTSUITE(A) {} // TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A) {} /**/", Style));
+  EXPECT_EQ("TESTSUITE(A) {}; // TESTSUITE(A)",
+            fixNamespaceEndComments("TESTSUITE(A) {}; /**/", Style));
 }
 
 TEST_F(NamespaceEndCommentsFixerTest,

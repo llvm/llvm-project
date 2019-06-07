@@ -10,10 +10,6 @@
 ; PR42123
 ;
 
-; FIXME: AVX doesn't retain NT flag on load/store.
-; AVX1 load should be 2 x VMOVNTDQA xmm.
-; AVX2 load should be VMOVNTDQA ymm.
-; AVX store should be VMOVNTPS ymm.
 define void @merge_2_v4f32_align32(<4 x float>* %a0, <4 x float>* %a1)  {
 ; X86-LABEL: merge_2_v4f32_align32:
 ; X86:       # %bb.0:
@@ -49,12 +45,20 @@ define void @merge_2_v4f32_align32(<4 x float>* %a0, <4 x float>* %a1)  {
 ; X64-SSE41-NEXT:    movntdq %xmm1, 16(%rsi)
 ; X64-SSE41-NEXT:    retq
 ;
-; X64-AVX-LABEL: merge_2_v4f32_align32:
-; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovaps (%rdi), %ymm0
-; X64-AVX-NEXT:    vmovaps %ymm0, (%rsi)
-; X64-AVX-NEXT:    vzeroupper
-; X64-AVX-NEXT:    retq
+; X64-AVX1-LABEL: merge_2_v4f32_align32:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
+; X64-AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm1
+; X64-AVX1-NEXT:    vmovntdq %xmm1, 16(%rsi)
+; X64-AVX1-NEXT:    vmovntdq %xmm0, (%rsi)
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX2-LABEL: merge_2_v4f32_align32:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vmovntdqa (%rdi), %ymm0
+; X64-AVX2-NEXT:    vmovntdq %ymm0, (%rsi)
+; X64-AVX2-NEXT:    vzeroupper
+; X64-AVX2-NEXT:    retq
   %1 = getelementptr inbounds <4 x float>, <4 x float>* %a0, i64 1, i64 0
   %2 = bitcast float* %1 to <4 x float>*
   %3 = load <4 x float>, <4 x float>* %a0, align 32, !nontemporal !0
@@ -66,8 +70,7 @@ define void @merge_2_v4f32_align32(<4 x float>* %a0, <4 x float>* %a1)  {
   ret void
 }
 
-; FIXME: shouldn't attempt to merge nt and non-nt loads even if aligned.
-; Must be kept seperate as VMOVNTDQA xmm + VMOVDQA xmm.
+; Don't merge nt and non-nt loads even if aligned.
 define void @merge_2_v4f32_align32_mix_ntload(<4 x float>* %a0, <4 x float>* %a1)  {
 ; X86-LABEL: merge_2_v4f32_align32_mix_ntload:
 ; X86:       # %bb.0:
@@ -105,9 +108,10 @@ define void @merge_2_v4f32_align32_mix_ntload(<4 x float>* %a0, <4 x float>* %a1
 ;
 ; X64-AVX-LABEL: merge_2_v4f32_align32_mix_ntload:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovaps (%rdi), %ymm0
-; X64-AVX-NEXT:    vmovaps %ymm0, (%rsi)
-; X64-AVX-NEXT:    vzeroupper
+; X64-AVX-NEXT:    vmovntdqa (%rdi), %xmm0
+; X64-AVX-NEXT:    vmovaps 16(%rdi), %xmm1
+; X64-AVX-NEXT:    vmovdqa %xmm0, (%rsi)
+; X64-AVX-NEXT:    vmovaps %xmm1, 16(%rsi)
 ; X64-AVX-NEXT:    retq
   %1 = getelementptr inbounds <4 x float>, <4 x float>* %a0, i64 1, i64 0
   %2 = bitcast float* %1 to <4 x float>*
@@ -120,8 +124,7 @@ define void @merge_2_v4f32_align32_mix_ntload(<4 x float>* %a0, <4 x float>* %a1
   ret void
 }
 
-; FIXME: shouldn't attempt to merge nt and non-nt stores even if aligned.
-; Must be kept seperate as VMOVNTPS xmm + VMOVAPS xmm.
+; Don't merge nt and non-nt stores even if aligned.
 define void @merge_2_v4f32_align32_mix_ntstore(<4 x float>* %a0, <4 x float>* %a1)  {
 ; X86-LABEL: merge_2_v4f32_align32_mix_ntstore:
 ; X86:       # %bb.0:
@@ -143,9 +146,10 @@ define void @merge_2_v4f32_align32_mix_ntstore(<4 x float>* %a0, <4 x float>* %a
 ;
 ; X64-AVX-LABEL: merge_2_v4f32_align32_mix_ntstore:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovaps (%rdi), %ymm0
-; X64-AVX-NEXT:    vmovaps %ymm0, (%rsi)
-; X64-AVX-NEXT:    vzeroupper
+; X64-AVX-NEXT:    vmovaps (%rdi), %xmm0
+; X64-AVX-NEXT:    vmovaps 16(%rdi), %xmm1
+; X64-AVX-NEXT:    vmovntps %xmm0, (%rsi)
+; X64-AVX-NEXT:    vmovaps %xmm1, 16(%rsi)
 ; X64-AVX-NEXT:    retq
   %1 = getelementptr inbounds <4 x float>, <4 x float>* %a0, i64 1, i64 0
   %2 = bitcast float* %1 to <4 x float>*
@@ -158,7 +162,7 @@ define void @merge_2_v4f32_align32_mix_ntstore(<4 x float>* %a0, <4 x float>* %a
   ret void
 }
 
-; FIXME: AVX can't perform NT-load-ymm on 16-byte aligned memory.
+; FIXME: AVX2 can't perform NT-load-ymm on 16-byte aligned memory.
 ; Must be kept seperate as VMOVNTDQA xmm.
 define void @merge_2_v4f32_align16_ntload(<4 x float>* %a0, <4 x float>* %a1)  {
 ; X86-LABEL: merge_2_v4f32_align16_ntload:
@@ -195,12 +199,20 @@ define void @merge_2_v4f32_align16_ntload(<4 x float>* %a0, <4 x float>* %a1)  {
 ; X64-SSE41-NEXT:    movdqa %xmm1, 16(%rsi)
 ; X64-SSE41-NEXT:    retq
 ;
-; X64-AVX-LABEL: merge_2_v4f32_align16_ntload:
-; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovups (%rdi), %ymm0
-; X64-AVX-NEXT:    vmovups %ymm0, (%rsi)
-; X64-AVX-NEXT:    vzeroupper
-; X64-AVX-NEXT:    retq
+; X64-AVX1-LABEL: merge_2_v4f32_align16_ntload:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
+; X64-AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm1
+; X64-AVX1-NEXT:    vmovdqa %xmm1, 16(%rsi)
+; X64-AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX2-LABEL: merge_2_v4f32_align16_ntload:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX2-NEXT:    vmovups %ymm0, (%rsi)
+; X64-AVX2-NEXT:    vzeroupper
+; X64-AVX2-NEXT:    retq
   %1 = getelementptr inbounds <4 x float>, <4 x float>* %a0, i64 1, i64 0
   %2 = bitcast float* %1 to <4 x float>*
   %3 = load <4 x float>, <4 x float>* %a0, align 16, !nontemporal !0

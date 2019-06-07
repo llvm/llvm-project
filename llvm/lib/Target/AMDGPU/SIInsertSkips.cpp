@@ -109,9 +109,6 @@ static bool opcodeEmitsNoInsts(unsigned Opc) {
 
 bool SIInsertSkips::shouldSkip(const MachineBasicBlock &From,
                                const MachineBasicBlock &To) const {
-  if (From.succ_empty())
-    return false;
-
   unsigned NumInstr = 0;
   const MachineFunction *MF = From.getParent();
 

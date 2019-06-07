@@ -850,7 +850,7 @@ Optional<LoopICmp> LoopPredication::parseLoopLatchICmp() {
   }
 
   auto *BI = dyn_cast<BranchInst>(LoopLatch->getTerminator());
-  if (!BI) {
+  if (!BI || !BI->isConditional()) {
     LLVM_DEBUG(dbgs() << "Failed to match the latch terminator!\n");
     return None;
   }
@@ -860,7 +860,7 @@ Optional<LoopICmp> LoopPredication::parseLoopLatchICmp() {
       "One of the latch's destinations must be the header");
 
   auto *ICI = dyn_cast<ICmpInst>(BI->getCondition());
-  if (!ICI || !BI->isConditional()) {
+  if (!ICI) {
     LLVM_DEBUG(dbgs() << "Failed to match the latch condition!\n");
     return None;
   }

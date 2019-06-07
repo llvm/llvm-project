@@ -439,7 +439,7 @@ struct ApplyASTBuildOptions
   BaseTy &getBase() { return *this; }
   const BaseTy &getBase() const { return *this; }
 
-  int Pos;
+  size_t Pos;
   llvm::ArrayRef<isl::union_set> ASTBuildOptions;
 
   ApplyASTBuildOptions(llvm::ArrayRef<isl::union_set> ASTBuildOptions)

@@ -14958,13 +14958,17 @@ void DAGCombiner::getStoreMergeCandidates(
     // Loads must only have one use.
     if (!Ld->hasNUsesOfValue(1, 0))
       return;
-    // The memory operands must not be volatile.
+    // The memory operands must not be volatile/indexed.
     if (Ld->isVolatile() || Ld->isIndexed())
       return;
   }
   auto CandidateMatch = [&](StoreSDNode *Other, BaseIndexOffset &Ptr,
                             int64_t &Offset) -> bool {
+    // The memory operands must not be volatile/indexed.
     if (Other->isVolatile() || Other->isIndexed())
+      return false;
+    // Don't mix temporal stores with non-temporal stores.
+    if (St->isNonTemporal() != Other->isNonTemporal())
       return false;
     SDValue OtherBC = peekThroughBitcasts(Other->getValue());
     // Allow merging constants of different types as integers.
@@ -14975,14 +14979,17 @@ void DAGCombiner::getStoreMergeCandidates(
         return false;
       // The Load's Base Ptr must also match
       if (LoadSDNode *OtherLd = dyn_cast<LoadSDNode>(OtherBC)) {
-        auto LPtr = BaseIndexOffset::match(OtherLd, DAG);
+        BaseIndexOffset LPtr = BaseIndexOffset::match(OtherLd, DAG);
         if (LoadVT != OtherLd->getMemoryVT())
           return false;
         // Loads must only have one use.
         if (!OtherLd->hasNUsesOfValue(1, 0))
           return false;
-        // The memory operands must not be volatile.
+        // The memory operands must not be volatile/indexed.
         if (OtherLd->isVolatile() || OtherLd->isIndexed())
+          return false;
+        // Don't mix temporal loads with non-temporal loads.
+        if (cast<LoadSDNode>(Val)->isNonTemporal() != OtherLd->isNonTemporal())
           return false;
         if (!(LBasePtr.equalBaseIndex(LPtr, DAG)))
           return false;
@@ -15140,6 +15147,9 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
                        isa<ConstantFPSDNode>(StoredVal);
   bool IsExtractVecSrc = (StoredVal.getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
                           StoredVal.getOpcode() == ISD::EXTRACT_SUBVECTOR);
+  bool IsNonTemporalStore = St->isNonTemporal();
+  bool IsNonTemporalLoad =
+      IsLoadSrc && cast<LoadSDNode>(StoredVal)->isNonTemporal();
 
   if (!IsConstantSrc && !IsLoadSrc && !IsExtractVecSrc)
     return false;
@@ -15583,26 +15593,32 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
       SDValue NewStoreChain = getMergeStoreChains(StoreNodes, NumElem);
       AddToWorklist(NewStoreChain.getNode());
 
-      MachineMemOperand::Flags MMOFlags =
+      MachineMemOperand::Flags LdMMOFlags =
           isDereferenceable ? MachineMemOperand::MODereferenceable
                             : MachineMemOperand::MONone;
+      if (IsNonTemporalLoad)
+        LdMMOFlags |= MachineMemOperand::MONonTemporal;
+
+      MachineMemOperand::Flags StMMOFlags =
+          IsNonTemporalStore ? MachineMemOperand::MONonTemporal
+                             : MachineMemOperand::MONone;
 
       SDValue NewLoad, NewStore;
       if (UseVectorTy || !DoIntegerTruncate) {
         NewLoad =
             DAG.getLoad(JointMemOpVT, LoadDL, FirstLoad->getChain(),
                         FirstLoad->getBasePtr(), FirstLoad->getPointerInfo(),
-                        FirstLoadAlign, MMOFlags);
+                        FirstLoadAlign, LdMMOFlags);
         NewStore = DAG.getStore(
             NewStoreChain, StoreDL, NewLoad, FirstInChain->getBasePtr(),
-            FirstInChain->getPointerInfo(), FirstStoreAlign);
+            FirstInChain->getPointerInfo(), FirstStoreAlign, StMMOFlags);
       } else { // This must be the truncstore/extload case
         EVT ExtendedTy =
             TLI.getTypeToTransformTo(*DAG.getContext(), JointMemOpVT);
         NewLoad = DAG.getExtLoad(ISD::EXTLOAD, LoadDL, ExtendedTy,
                                  FirstLoad->getChain(), FirstLoad->getBasePtr(),
                                  FirstLoad->getPointerInfo(), JointMemOpVT,
-                                 FirstLoadAlign, MMOFlags);
+                                 FirstLoadAlign, LdMMOFlags);
         NewStore = DAG.getTruncStore(NewStoreChain, StoreDL, NewLoad,
                                      FirstInChain->getBasePtr(),
                                      FirstInChain->getPointerInfo(),

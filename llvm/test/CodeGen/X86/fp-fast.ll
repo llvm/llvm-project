@@ -110,8 +110,7 @@ define float @test11(float %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %t1 = fsub float -0.0, %a
+  %t1 = fneg float %a
   %t2 = fadd float %a, %t1
   ret float %t2
 }
-

@@ -14,7 +14,6 @@
 #ifndef LLVM_LIB_TARGET_POWERPC_PPCISELLOWERING_H
 #define LLVM_LIB_TARGET_POWERPC_PPCISELLOWERING_H
 
-#include "PPC.h"
 #include "PPCInstrInfo.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFunction.h"
