@@ -302,6 +302,52 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
   return true;
 }
 
+static bool phiHasVGPROperands(const MachineInstr &PHI,
+                               const MachineRegisterInfo &MRI,
+                               const SIRegisterInfo *TRI,
+                               const SIInstrInfo *TII) {
+  for (unsigned i = 1; i < PHI.getNumOperands(); i += 2) {
+    unsigned Reg = PHI.getOperand(i).getReg();
+    if (TRI->hasVGPRs(MRI.getRegClass(Reg)))
+      return true;
+  }
+  return false;
+}
+
+static bool phiHasBreakDef(const MachineInstr &PHI,
+                           const MachineRegisterInfo &MRI,
+                           SmallSet<unsigned, 8> &Visited) {
+  for (unsigned i = 1; i < PHI.getNumOperands(); i += 2) {
+    unsigned Reg = PHI.getOperand(i).getReg();
+    if (Visited.count(Reg))
+      continue;
+
+    Visited.insert(Reg);
+
+    MachineInstr *DefInstr = MRI.getVRegDef(Reg);
+    switch (DefInstr->getOpcode()) {
+    default:
+      break;
+    case AMDGPU::SI_IF_BREAK:
+      return true;
+    case AMDGPU::PHI:
+      if (phiHasBreakDef(*DefInstr, MRI, Visited))
+        return true;
+    }
+  }
+  return false;
+}
+
+static bool hasTerminatorThatModifiesExec(const MachineBasicBlock &MBB,
+                                          const TargetRegisterInfo &TRI) {
+  for (MachineBasicBlock::const_iterator I = MBB.getFirstTerminator(),
+       E = MBB.end(); I != E; ++I) {
+    if (I->modifiesRegister(AMDGPU::EXEC, &TRI))
+      return true;
+  }
+  return false;
+}
+
 static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
                                     const MachineInstr *MoveImm,
                                     const SIInstrInfo *TII,
@@ -361,6 +407,12 @@ bool searchPredecessors(const MachineBasicBlock *MBB,
   }
 
   return false;
+}
+
+static bool predsHasDivergentTerminator(MachineBasicBlock *MBB,
+                                        const TargetRegisterInfo *TRI) {
+  return searchPredecessors(MBB, nullptr, [TRI](MachineBasicBlock *MBB) {
+           return hasTerminatorThatModifiesExec(*MBB, *TRI); });
 }
 
 // Checks if there is potential path From instruction To instruction.
@@ -569,77 +621,62 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         break;
       }
       case AMDGPU::PHI: {
-        unsigned hasVGPRUses = 0;
-        SetVector<const MachineInstr *> worklist;
-        worklist.insert(&MI);
-        while (!worklist.empty()) {
-          const MachineInstr *Instr = worklist.pop_back_val();
-          unsigned Reg = Instr->getOperand(0).getReg();
-          for (const auto &Use : MRI.use_operands(Reg)) {
-            const MachineInstr *UseMI = Use.getParent();
-            if (UseMI->isCopy() || UseMI->isRegSequence()) {
-              if (UseMI->isCopy() &&
-                  TRI->isPhysicalRegister(UseMI->getOperand(0).getReg()) &&
-                  !TRI->isSGPRReg(MRI, UseMI->getOperand(0).getReg())) {
-                hasVGPRUses++;
-              }
-              worklist.insert(UseMI);
-              continue;
-            }
+        unsigned Reg = MI.getOperand(0).getReg();
+        if (!TRI->isSGPRClass(MRI.getRegClass(Reg)))
+          break;
 
-            if (UseMI->isPHI()) {
-              const TargetRegisterClass *UseRC = MRI.getRegClass(Use.getReg());
-              if (!TRI->isSGPRReg(MRI, Use.getReg()) &&
-                  UseRC != &AMDGPU::VReg_1RegClass)
-                hasVGPRUses++;
-              continue;
-            }
+        // We don't need to fix the PHI if the common dominator of the
+        // two incoming blocks terminates with a uniform branch.
+        bool HasVGPROperand = phiHasVGPROperands(MI, MRI, TRI, TII);
+        if (MI.getNumExplicitOperands() == 5 && !HasVGPROperand) {
+          MachineBasicBlock *MBB0 = MI.getOperand(2).getMBB();
+          MachineBasicBlock *MBB1 = MI.getOperand(4).getMBB();
 
-            unsigned OpNo = UseMI->getOperandNo(&Use);
-            const MCInstrDesc &Desc = TII->get(UseMI->getOpcode());
-            if (!Desc.isPseudo() && Desc.OpInfo &&
-                OpNo < Desc.getNumOperands() &&
-                Desc.OpInfo[OpNo].RegClass != -1) {
-              const TargetRegisterClass *OpRC =
-                  TRI->getRegClass(Desc.OpInfo[OpNo].RegClass);
-              if (!TRI->isSGPRClass(OpRC) && OpRC != &AMDGPU::VS_32RegClass &&
-                  OpRC != &AMDGPU::VS_64RegClass) {
-                hasVGPRUses++;
-              }
-            }
-          }
-        }
-        bool hasVGPRInput = false;
-        for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
-          unsigned InputReg = MI.getOperand(i).getReg();
-          MachineInstr *Def = MRI.getVRegDef(InputReg);
-          if (TRI->isVGPR(MRI, InputReg)) {
-            if (Def->isCopy()) {
-              unsigned SrcReg = Def->getOperand(1).getReg();
-              const TargetRegisterClass *RC =
-                  TRI->isVirtualRegister(SrcReg) ? MRI.getRegClass(SrcReg)
-                                                 : TRI->getPhysRegClass(SrcReg);
-              if (TRI->isSGPRClass(RC))
-                continue;
-            }
-            hasVGPRInput = true;
-            break;
-          } else if (Def->isCopy() &&
-                     TRI->isVGPR(MRI, Def->getOperand(1).getReg())) {
-            hasVGPRInput = true;
+          if (!predsHasDivergentTerminator(MBB0, TRI) &&
+              !predsHasDivergentTerminator(MBB1, TRI)) {
+            LLVM_DEBUG(dbgs()
+                       << "Not fixing PHI for uniform branch: " << MI << '\n');
             break;
           }
         }
-        unsigned PHIRes = MI.getOperand(0).getReg();
-        const TargetRegisterClass *RC0 = MRI.getRegClass(PHIRes);
 
-        if ((!TRI->isVGPR(MRI, PHIRes) && RC0 != &AMDGPU::VReg_1RegClass) &&
-            (hasVGPRInput || hasVGPRUses > 1)) {
+        // If a PHI node defines an SGPR and any of its operands are VGPRs,
+        // then we need to move it to the VALU.
+        //
+        // Also, if a PHI node defines an SGPR and has all SGPR operands
+        // we must move it to the VALU, because the SGPR operands will
+        // all end up being assigned the same register, which means
+        // there is a potential for a conflict if different threads take
+        // different control flow paths.
+        //
+        // For Example:
+        //
+        // sgpr0 = def;
+        // ...
+        // sgpr1 = def;
+        // ...
+        // sgpr2 = PHI sgpr0, sgpr1
+        // use sgpr2;
+        //
+        // Will Become:
+        //
+        // sgpr2 = def;
+        // ...
+        // sgpr2 = def;
+        // ...
+        // use sgpr2
+        //
+        // The one exception to this rule is when one of the operands
+        // is defined by a SI_BREAK, SI_IF_BREAK, or SI_ELSE_BREAK
+        // instruction.  In this case, there we know the program will
+        // never enter the second block (the loop) without entering
+        // the first block (where the condition is computed), so there
+        // is no chance for values to be over-written.
+
+        SmallSet<unsigned, 8> Visited;
+        if (HasVGPROperand || !phiHasBreakDef(MI, MRI, Visited)) {
           LLVM_DEBUG(dbgs() << "Fixing PHI: " << MI);
-          TII->moveToVALU(MI);
-        } else {
-          LLVM_DEBUG(dbgs() << "Legalizing PHI: " << MI);
-          TII->legalizeOperands(MI, MDT);
+          TII->moveToVALU(MI, MDT);
         }
 
         break;

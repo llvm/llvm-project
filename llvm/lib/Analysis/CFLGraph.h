@@ -291,6 +291,11 @@ template <typename CFLAA> class CFLGraphBuilder {
       addAssignEdge(Op2, &Inst);
     }
 
+    void visitUnaryOperator(UnaryOperator &Inst) {
+      auto *Src = Inst.getOperand(0);
+      addAssignEdge(Src, &Inst);
+    }
+
     void visitAtomicCmpXchgInst(AtomicCmpXchgInst &Inst) {
       auto *Ptr = Inst.getPointerOperand();
       auto *Val = Inst.getNewValOperand();
@@ -576,6 +581,11 @@ template <typename CFLAA> class CFLGraphBuilder {
       case Instruction::ShuffleVector: {
         addAssignEdge(CE->getOperand(0), CE);
         addAssignEdge(CE->getOperand(1), CE);
+        break;
+      }
+
+      case Instruction::FNeg: {
+        addAssignEdge(CE->getOperand(0), CE);
         break;
       }
 

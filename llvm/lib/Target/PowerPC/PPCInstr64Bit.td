@@ -192,6 +192,12 @@ def : Pat<(PPCcall (i64 texternalsym:$dst)),
 def : Pat<(PPCcall_nop (i64 texternalsym:$dst)),
           (BL8_NOP texternalsym:$dst)>;
 
+// Calls for AIX
+def : Pat<(PPCcall (i64 mcsym:$dst)),
+          (BL8 mcsym:$dst)>;
+def : Pat<(PPCcall_nop (i64 mcsym:$dst)),
+          (BL8_NOP mcsym:$dst)>;
+
 // Atomic operations
 // FIXME: some of these might be used with constant operands. This will result
 // in constant materialization instructions that may be redundant. We currently

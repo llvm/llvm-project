@@ -660,39 +660,45 @@ void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
 }
 
 void ASTStmtWriter::VisitMemberExpr(MemberExpr *E) {
-  // Don't call VisitExpr, we'll write everything here.
+  VisitExpr(E);
 
-  Record.push_back(E->hasQualifier());
-  if (E->hasQualifier())
-    Record.AddNestedNameSpecifierLoc(E->getQualifierLoc());
+  bool HasQualifier = E->hasQualifier();
+  bool HasFoundDecl =
+      E->hasQualifierOrFoundDecl() &&
+      (E->getFoundDecl().getDecl() != E->getMemberDecl() ||
+       E->getFoundDecl().getAccess() != E->getMemberDecl()->getAccess());
+  bool HasTemplateInfo = E->hasTemplateKWAndArgsInfo();
+  unsigned NumTemplateArgs = E->getNumTemplateArgs();
 
-  Record.push_back(E->hasTemplateKWAndArgsInfo());
-  if (E->hasTemplateKWAndArgsInfo()) {
-    Record.AddSourceLocation(E->getTemplateKeywordLoc());
-    unsigned NumTemplateArgs = E->getNumTemplateArgs();
-    Record.push_back(NumTemplateArgs);
-    Record.AddSourceLocation(E->getLAngleLoc());
-    Record.AddSourceLocation(E->getRAngleLoc());
-    for (unsigned i=0; i != NumTemplateArgs; ++i)
-      Record.AddTemplateArgumentLoc(E->getTemplateArgs()[i]);
-  }
+  // Write these first for easy access when deserializing, as they affect the
+  // size of the MemberExpr.
+  Record.push_back(HasQualifier);
+  Record.push_back(HasFoundDecl);
+  Record.push_back(HasTemplateInfo);
+  Record.push_back(NumTemplateArgs);
 
-  Record.push_back(E->hadMultipleCandidates());
-
-  DeclAccessPair FoundDecl = E->getFoundDecl();
-  Record.AddDeclRef(FoundDecl.getDecl());
-  Record.push_back(FoundDecl.getAccess());
-
-  Record.AddTypeRef(E->getType());
-  Record.push_back(E->getValueKind());
-  Record.push_back(E->getObjectKind());
   Record.AddStmt(E->getBase());
   Record.AddDeclRef(E->getMemberDecl());
-  Record.AddSourceLocation(E->getMemberLoc());
-  Record.push_back(E->isArrow());
-  Record.AddSourceLocation(E->getOperatorLoc());
   Record.AddDeclarationNameLoc(E->MemberDNLoc,
                                E->getMemberDecl()->getDeclName());
+  Record.AddSourceLocation(E->getMemberLoc());
+  Record.push_back(E->isArrow());
+  Record.push_back(E->hadMultipleCandidates());
+  Record.AddSourceLocation(E->getOperatorLoc());
+
+  if (HasFoundDecl) {
+    DeclAccessPair FoundDecl = E->getFoundDecl();
+    Record.AddDeclRef(FoundDecl.getDecl());
+    Record.push_back(FoundDecl.getAccess());
+  }
+
+  if (HasQualifier)
+    Record.AddNestedNameSpecifierLoc(E->getQualifierLoc());
+
+  if (HasTemplateInfo)
+    AddTemplateKWAndArgsInfo(*E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
+                             E->getTrailingObjects<TemplateArgumentLoc>());
+
   Code = serialization::EXPR_MEMBER;
 }
 

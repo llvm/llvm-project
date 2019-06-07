@@ -752,9 +752,46 @@ void ASTStmtReader::VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {
 }
 
 void ASTStmtReader::VisitMemberExpr(MemberExpr *E) {
-  // Don't call VisitExpr, this is fully initialized at creation.
-  assert(E->getStmtClass() == Stmt::MemberExprClass &&
-         "It's a subclass, we must advance Idx!");
+  VisitExpr(E);
+
+  bool HasQualifier = Record.readInt();
+  bool HasFoundDecl = Record.readInt();
+  bool HasTemplateInfo = Record.readInt();
+  unsigned NumTemplateArgs = Record.readInt();
+
+  E->Base = Record.readSubExpr();
+  E->MemberDecl = Record.readDeclAs<ValueDecl>();
+  Record.readDeclarationNameLoc(E->MemberDNLoc, E->MemberDecl->getDeclName());
+  E->MemberLoc = Record.readSourceLocation();
+  E->MemberExprBits.IsArrow = Record.readInt();
+  E->MemberExprBits.HasQualifierOrFoundDecl = HasQualifier || HasFoundDecl;
+  E->MemberExprBits.HasTemplateKWAndArgsInfo = HasTemplateInfo;
+  E->MemberExprBits.HadMultipleCandidates = Record.readInt();
+  E->MemberExprBits.OperatorLoc = Record.readSourceLocation();
+
+  if (HasQualifier || HasFoundDecl) {
+    DeclAccessPair FoundDecl;
+    if (HasFoundDecl) {
+      auto *FoundD = Record.readDeclAs<NamedDecl>();
+      auto AS = (AccessSpecifier)Record.readInt();
+      FoundDecl = DeclAccessPair::make(FoundD, AS);
+    } else {
+      FoundDecl = DeclAccessPair::make(E->MemberDecl,
+                                       E->MemberDecl->getAccess());
+    }
+    E->getTrailingObjects<MemberExprNameQualifier>()->FoundDecl = FoundDecl;
+
+    NestedNameSpecifierLoc QualifierLoc;
+    if (HasQualifier)
+      QualifierLoc = Record.readNestedNameSpecifierLoc();
+    E->getTrailingObjects<MemberExprNameQualifier>()->QualifierLoc =
+        QualifierLoc;
+  }
+
+  if (HasTemplateInfo)
+    ReadTemplateKWAndArgsInfo(
+        *E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
+        E->getTrailingObjects<TemplateArgumentLoc>(), NumTemplateArgs);
 }
 
 void ASTStmtReader::VisitObjCIsaExpr(ObjCIsaExpr *E) {
@@ -2551,55 +2588,12 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
           Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields], Empty);
       break;
 
-    case EXPR_MEMBER: {
-      // We load everything here and fully initialize it at creation.
-      // That way we can use MemberExpr::Create and don't have to duplicate its
-      // logic with a MemberExpr::CreateEmpty.
-
-      assert(Record.getIdx() == 0);
-      NestedNameSpecifierLoc QualifierLoc;
-      if (Record.readInt()) { // HasQualifier.
-        QualifierLoc = Record.readNestedNameSpecifierLoc();
-      }
-
-      SourceLocation TemplateKWLoc;
-      TemplateArgumentListInfo ArgInfo;
-      bool HasTemplateKWAndArgsInfo = Record.readInt();
-      if (HasTemplateKWAndArgsInfo) {
-        TemplateKWLoc = Record.readSourceLocation();
-        unsigned NumTemplateArgs = Record.readInt();
-        ArgInfo.setLAngleLoc(Record.readSourceLocation());
-        ArgInfo.setRAngleLoc(Record.readSourceLocation());
-        for (unsigned i = 0; i != NumTemplateArgs; ++i)
-          ArgInfo.addArgument(Record.readTemplateArgumentLoc());
-      }
-
-      bool HadMultipleCandidates = Record.readInt();
-
-      auto *FoundD = Record.readDeclAs<NamedDecl>();
-      auto AS = (AccessSpecifier)Record.readInt();
-      DeclAccessPair FoundDecl = DeclAccessPair::make(FoundD, AS);
-
-      QualType T = Record.readType();
-      auto VK = static_cast<ExprValueKind>(Record.readInt());
-      auto OK = static_cast<ExprObjectKind>(Record.readInt());
-      Expr *Base = ReadSubExpr();
-      auto *MemberD = Record.readDeclAs<ValueDecl>();
-      SourceLocation MemberLoc = Record.readSourceLocation();
-      DeclarationNameInfo MemberNameInfo(MemberD->getDeclName(), MemberLoc);
-      bool IsArrow = Record.readInt();
-      SourceLocation OperatorLoc = Record.readSourceLocation();
-
-      S = MemberExpr::Create(Context, Base, IsArrow, OperatorLoc, QualifierLoc,
-                             TemplateKWLoc, MemberD, FoundDecl, MemberNameInfo,
-                             HasTemplateKWAndArgsInfo ? &ArgInfo : nullptr, T,
-                             VK, OK);
-      Record.readDeclarationNameLoc(cast<MemberExpr>(S)->MemberDNLoc,
-                                    MemberD->getDeclName());
-      if (HadMultipleCandidates)
-        cast<MemberExpr>(S)->setHadMultipleCandidates(true);
+    case EXPR_MEMBER:
+      S = MemberExpr::CreateEmpty(Context, Record[ASTStmtReader::NumExprFields],
+                                  Record[ASTStmtReader::NumExprFields + 1],
+                                  Record[ASTStmtReader::NumExprFields + 2],
+                                  Record[ASTStmtReader::NumExprFields + 3]);
       break;
-    }
 
     case EXPR_BINARY_OPERATOR:
       S = new (Context) BinaryOperator(Empty);
