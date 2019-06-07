@@ -6,11 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Define _USE_MATH_DEFINES to enforce math defines of macros like M_PI in
+// <cmath>. _USE_MATH_DEFINES is defined here before includes of SYCL header
+// files to avoid include of <cmath> via those SYCL headers with unset
+// _USE_MATH_DEFINES.
+#define _USE_MATH_DEFINES
+
 #include <CL/sycl/detail/generic_type_traits.hpp>
 #include <CL/sycl/exception.hpp>
 #include <CL/sycl/pointers.hpp>
 #include <CL/sycl/types.hpp>
 
+#include <algorithm>
 #include <cmath>
 
 // TODO Decide whether to mark functions with this attribute.
