@@ -1,6 +1,7 @@
 # Test runner infrastructure for LLDB. This configures the LLDB test trees
 # for use by Lit, and delegates to LLVM's lit test handlers.
 
+# LLVM_BUILD_MODE is used in lit.site.cfg
 if (CMAKE_CFG_INTDIR STREQUAL ".")
   set(LLVM_BUILD_MODE ".")
 else ()
@@ -12,10 +13,35 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
 endif()
 
 get_property(LLDB_DOTEST_ARGS GLOBAL PROPERTY LLDB_DOTEST_ARGS_PROPERTY)
+set(dotest_args_replacement ${LLVM_BUILD_MODE})
 
+if(LLDB_BUILT_STANDALONE)
+  # In paths to our build-tree, replace CMAKE_CFG_INTDIR with our configuration name placeholder.
+  string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} config_runtime_output_dir ${LLVM_RUNTIME_OUTPUT_INTDIR})
+  string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_DOTEST_ARGS "${LLDB_DOTEST_ARGS}")
+
+  # Remaining ones must be paths to the provided LLVM build-tree.
+  if(LLVM_CONFIGURATION_TYPES)
+    # LLDB uses single-config; LLVM multi-config; pick one and prefer Release types.
+    # Otherwise, if both use multi-config the default is fine.
+    if(NOT CMAKE_CONFIGURATION_TYPES)
+      if(RelWithDebInfo IN_LIST LLVM_CONFIGURATION_TYPES)
+        set(dotest_args_replacement RelWithDebInfo)
+      elseif(Release IN_LIST LLVM_CONFIGURATION_TYPES)
+        set(dotest_args_replacement Release)
+      else()
+        list(GET LLVM_CONFIGURATION_TYPES 0 dotest_args_replacement)
+      endif()
+    endif()
+  else()
+    # Common case: LLVM used a single-configuration generator like Ninja.
+    set(dotest_args_replacement ".")
+  endif()
+endif()
+
+string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_DOTEST_ARGS "${LLDB_DOTEST_ARGS}")
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_LIBS_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_TOOLS_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
-string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_DOTEST_ARGS "${LLDB_DOTEST_ARGS}")
 
 list(APPEND LLDB_TEST_DEPS
   LLDBUnitTests
