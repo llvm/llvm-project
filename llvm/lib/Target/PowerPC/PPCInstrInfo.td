@@ -2605,7 +2605,7 @@ def MTCTR : XFXForm_7_ext<31, 467, 9, (outs), (ins gprc:$rS),
             PPC970_DGroup_First, PPC970_Unit_FXU;
 }
 let hasSideEffects = 1, isCodeGenOnly = 1, Defs = [CTR] in {
-let Pattern = [(int_ppc_mtctr i32:$rS)] in
+let Pattern = [(int_set_loop_iterations i32:$rS)] in
 def MTCTRloop : XFXForm_7_ext<31, 467, 9, (outs), (ins gprc:$rS),
                               "mtctr $rS", IIC_SprMTSPR>,
                 PPC970_DGroup_First, PPC970_Unit_FXU;
@@ -3032,11 +3032,15 @@ def : Pat<(and (rotl i32:$in, i32:$sh), maskimm32:$imm),
 // Calls
 def : Pat<(PPCcall (i32 tglobaladdr:$dst)),
           (BL tglobaladdr:$dst)>;
-def : Pat<(PPCcall_nop (i32 tglobaladdr:$dst)),
-          (BL_NOP tglobaladdr:$dst)>;
 
 def : Pat<(PPCcall (i32 texternalsym:$dst)),
           (BL texternalsym:$dst)>;
+
+// Calls for AIX only
+def : Pat<(PPCcall (i32 mcsym:$dst)),
+          (BL mcsym:$dst)>;
+def : Pat<(PPCcall_nop (i32 mcsym:$dst)),
+          (BL_NOP mcsym:$dst)>;
 
 def : Pat<(PPCtc_return (i32 tglobaladdr:$dst),  imm:$imm),
           (TCRETURNdi tglobaladdr:$dst, imm:$imm)>;

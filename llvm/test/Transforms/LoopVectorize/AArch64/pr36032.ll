@@ -29,7 +29,7 @@ define void @_Z1dv() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i64 3, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 3, [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[G_0]], [[CONV]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 [[TMP4]])

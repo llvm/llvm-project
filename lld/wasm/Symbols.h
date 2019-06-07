@@ -69,6 +69,9 @@ public:
   bool isWeak() const;
   bool isHidden() const;
 
+  // Returns true if this symbol exists in a discarded (due to COMDAT) section
+  bool isDiscarded() const;
+
   // True if this is an undefined weak symbol. This only works once
   // all input files have been added.
   bool isUndefWeak() const {

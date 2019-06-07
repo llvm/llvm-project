@@ -571,15 +571,26 @@ FileCheck Numeric Substitution Blocks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 :program:`FileCheck` also supports numeric substitution blocks that allow
-checking for numeric values that satisfy a numeric expression constraint based
-on numeric variables. This allows ``CHECK:`` directives to verify a numeric
-relation between two numbers, such as the need for consecutive registers to be
-used.
+defining numeric variables and checking for numeric values that satisfy a
+numeric expression constraint based on those variables via a numeric
+substitution. This allows ``CHECK:`` directives to verify a numeric relation
+between two numbers, such as the need for consecutive registers to be used.
 
-The syntax of a numeric substitution block is ``[[#<NUMVAR><op><offset>]]``
-where:
+The syntax to define a numeric variable is ``[[#<NUMVAR>:]]`` where
+``<NUMVAR>`` is the name of the numeric variable to define to the matching
+value.
 
-* ``<NUMVAR>`` is the name of a numeric variable defined on the command line.
+For example:
+
+.. code-block:: llvm
+
+    ; CHECK: mov r[[#REG:]], 42
+
+would match ``mov r5, 42`` and set ``REG`` to the value ``5``.
+
+The syntax of a numeric substitution is ``[[#<NUMVAR><op><offset>]]`` where:
+
+* ``<NUMVAR>`` is the name of a defined numeric variable.
 
 * ``<op>`` is an optional numeric operation to perform on the value of
   ``<NUMVAR>``. Currently supported numeric operations are ``+`` and ``-``.
@@ -590,30 +601,34 @@ where:
 
 Spaces are accepted before, after and between any of these elements.
 
-Unlike string substitution blocks, numeric substitution blocks only introduce
-numeric substitutions which substitute a numeric expression for its value.
 For example:
 
 .. code-block:: llvm
 
-    ; CHECK: add r[[#REG]], r[[#REG]], r[[#REG+1]]
+    ; CHECK: load r[[#REG:]], [r0]
+    ; CHECK: load r[[#REG+1]], [r1]
 
-The above example would match the line:
-
-.. code-block:: gas
-
-    add r5, r5, r6
-
-but would not match the line:
+The above example would match the text:
 
 .. code-block:: gas
 
-    add r5, r5, r7
+    load r5, [r0]
+    load r6, [r1]
+
+but would not match the text:
+
+.. code-block:: gas
+
+    load r5, [r0]
+    load r7, [r1]
 
 due to ``7`` being unequal to ``5 + 1``.
 
 The ``--enable-var-scope`` option has the same effect on numeric variables as
 on string variables.
+
+Important note: In its current implementation, a numeric expression cannot use
+a numeric variable defined on the same line.
 
 FileCheck Pseudo Numeric Variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -624,9 +639,9 @@ fragility of the match file structure, as "``CHECK:``" lines contain absolute
 line numbers in the same file, which have to be updated whenever line numbers
 change due to text addition or deletion.
 
-To support this case, FileCheck understands the ``@LINE`` pseudo numeric
-variable which evaluates to the line number of the CHECK pattern where it is
-found.
+To support this case, FileCheck numeric expressions understand the ``@LINE``
+pseudo numeric variable which evaluates to the line number of the CHECK pattern
+where it is found.
 
 This way match patterns can be put near the relevant test lines and include
 relative line number references, for example:

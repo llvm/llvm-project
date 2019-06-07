@@ -96,6 +96,7 @@ ENDIF:                                            ; preds = %LOOP
 ; GCN:      s_mov_b64          [[OLD_LEFT:s\[[0-9]+:[0-9]+\]]], [[LEFT]]
 
 ; GCN: ; %LeafBlock1
+; GCN:      s_mov_b64
 ; GCN:      s_mov_b64          [[BREAK:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 
 ; GCN: ; %case1
@@ -108,6 +109,8 @@ ENDIF:                                            ; preds = %LOOP
 
 ; GCN:      s_mov_b64          [[BREAK]], -1{{$}}
 
+; GCN: [[FLOW]]: ; %Flow
+
 ; GCN: ; %case0
 ; GCN:      buffer_load_dword  [[LOAD1:v[0-9]+]],
 ; GCN-DAG:  s_andn2_b64        [[BREAK]], [[BREAK]], exec
@@ -115,7 +118,7 @@ ENDIF:                                            ; preds = %LOOP
 ; GCN-DAG:  s_and_b64          [[TMP:s\[[0-9]+:[0-9]+\]]], vcc, exec
 ; GCN:      s_or_b64           [[BREAK]], [[BREAK]], [[TMP]]
 
-; GCN: [[FLOW]]: ; %Flow4
+; GCN: ; %Flow4
 ; GCN:      s_and_b64          [[BREAK]], exec, [[BREAK]]
 ; GCN:      s_or_b64           [[LEFT]], [[BREAK]], [[OLD_LEFT]]
 ; GCN:      s_andn2_b64        exec, exec, [[LEFT]]

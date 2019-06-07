@@ -16,7 +16,6 @@
 #ifndef LLVM_LIB_TARGET_POWERPC_PPCTARGETTRANSFORMINFO_H
 #define LLVM_LIB_TARGET_POWERPC_PPCTARGETTRANSFORMINFO_H
 
-#include "PPC.h"
 #include "PPCTargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
@@ -34,6 +33,7 @@ class PPCTTIImpl : public BasicTTIImplBase<PPCTTIImpl> {
 
   const PPCSubtarget *getST() const { return ST; }
   const PPCTargetLowering *getTLI() const { return TLI; }
+  bool mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo);
 
 public:
   explicit PPCTTIImpl(const PPCTargetMachine *TM, const Function &F)
@@ -53,6 +53,10 @@ public:
   unsigned getUserCost(const User *U, ArrayRef<const Value *> Operands);
 
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth);
+  bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
+                                AssumptionCache &AC,
+                                TargetLibraryInfo *LibInfo,
+                                TTI::HardwareLoopInfo &HWLoopInfo);
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);
 

@@ -104,8 +104,7 @@ endif:
 
 ; SI: ; %else
 ; SI:      buffer_load_dword  [[AVAL:v[0-9]+]]
-; SI:      v_cmp_gt_i32_e32   vcc, 0, [[AVAL]]
-; SI:      s_and_b64 [[PHI:s\[[0-9]+:[0-9]+\]]], vcc, exec
+; SI:      v_cmp_gt_i32_e64   [[PHI:s\[[0-9]+:[0-9]+\]]], 0, [[AVAL]]
 
 ; SI: ; %if
 ; SI:      buffer_load_dword  [[AVAL:v[0-9]+]]

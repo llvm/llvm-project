@@ -201,6 +201,15 @@ bool LLVMTargetMachine::addPassesToEmitFile(PassManagerBase &PM,
     return true;
 
   if (!TargetPassConfig::willCompleteCodeGenPipeline()) {
+    if (this->getTargetTriple().isOSAIX()) {
+      // On AIX, we might manifest MCSymbols during SDAG lowering. For MIR
+      // testing to be meaningful, we need to ensure that the symbols created
+      // are MCSymbolXCOFF variants, which requires that
+      // the TargetLoweringObjectFile instance has been initialized.
+      MCContext &Ctx = MMI->getContext();
+      const_cast<TargetLoweringObjectFile &>(*this->getObjFileLowering())
+          .Initialize(Ctx, *this);
+    }
     PM.add(createPrintMIRPass(Out));
   } else if (addAsmPrinter(PM, Out, DwoOut, FileType, MMI->getContext()))
     return true;

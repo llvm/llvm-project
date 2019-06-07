@@ -1188,6 +1188,15 @@ def : Pat<(vselect v4i32:$vA, v4f32:$vB, v4f32:$vC),
 def : Pat<(vselect v2i64:$vA, v2f64:$vB, v2f64:$vC),
           (XXSEL $vC, $vB, $vA)>;
 
+def : Pat<(v4f32 (fmaxnum v4f32:$src1, v4f32:$src2)),
+          (v4f32 (XVMAXSP $src1, $src2))>;
+def : Pat<(v4f32 (fminnum v4f32:$src1, v4f32:$src2)),
+          (v4f32 (XVMINSP $src1, $src2))>;
+def : Pat<(v2f64 (fmaxnum v2f64:$src1, v2f64:$src2)),
+          (v2f64 (XVMAXDP $src1, $src2))>;
+def : Pat<(v2f64 (fminnum v2f64:$src1, v2f64:$src2)),
+          (v2f64 (XVMINDP $src1, $src2))>;
+
 let Predicates = [IsLittleEndian] in {
 def : Pat<(f64 (PPCfcfid (PPCmtvsra (i64 (vector_extract v2i64:$S, 0))))),
           (f64 (XSCVSXDDP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
@@ -1522,6 +1531,18 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
               (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), xoaddr:$dst, 4),
             (STIWX (XSCVDPUXWS f64:$src), xoaddr:$dst)>;
 
+  def : Pat<(v2i64 (smax v2i64:$src1, v2i64:$src2)),
+            (v2i64 (VMAXSD (COPY_TO_REGCLASS $src1, VRRC),
+                           (COPY_TO_REGCLASS $src2, VRRC)))>;
+  def : Pat<(v2i64 (umax v2i64:$src1, v2i64:$src2)),
+            (v2i64 (VMAXUD (COPY_TO_REGCLASS $src1, VRRC),
+                           (COPY_TO_REGCLASS $src2, VRRC)))>;
+  def : Pat<(v2i64 (smin v2i64:$src1, v2i64:$src2)),
+            (v2i64 (VMINSD (COPY_TO_REGCLASS $src1, VRRC),
+                           (COPY_TO_REGCLASS $src2, VRRC)))>;
+  def : Pat<(v2i64 (umin v2i64:$src1, v2i64:$src2)),
+            (v2i64 (VMINUD (COPY_TO_REGCLASS $src1, VRRC),
+                           (COPY_TO_REGCLASS $src2, VRRC)))>;
 } // AddedComplexity = 400
 } // HasP8Vector
 

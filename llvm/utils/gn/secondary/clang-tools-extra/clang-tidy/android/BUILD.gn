@@ -24,6 +24,8 @@ static_library("android") {
     "CloexecInotifyInitCheck.cpp",
     "CloexecMemfdCreateCheck.cpp",
     "CloexecOpenCheck.cpp",
+    "CloexecPipeCheck.cpp",
+    "CloexecPipe2Check.cpp",
     "CloexecSocketCheck.cpp",
     "ComparisonInTempFailureRetryCheck.cpp",
   ]

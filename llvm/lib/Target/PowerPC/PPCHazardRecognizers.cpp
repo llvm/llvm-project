@@ -11,9 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCHazardRecognizers.h"
-#include "PPC.h"
 #include "PPCInstrInfo.h"
-#include "PPCTargetMachine.h"
+#include "PPCSubtarget.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"

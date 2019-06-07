@@ -41,7 +41,9 @@ struct FileCheckRequest {
 //===----------------------------------------------------------------------===//
 
 /// Class representing a numeric variable with a given value in a numeric
-/// expression.
+/// expression. Each definition of a variable gets its own instance of this
+/// class. Variable uses share the same instance as their respective
+/// definition.
 class FileCheckNumericVariable {
 private:
   /// Name of the numeric variable.
@@ -50,11 +52,19 @@ private:
   /// Value of numeric variable, if defined, or None otherwise.
   Optional<uint64_t> Value;
 
+  /// Line number where this variable is defined. Used to determine whether a
+  /// variable is defined on the same line as a given use.
+  size_t DefLineNumber;
+
 public:
+  /// Constructor for a variable \p Name defined at line \p DefLineNumber.
+  FileCheckNumericVariable(size_t DefLineNumber, StringRef Name)
+      : Name(Name), DefLineNumber(DefLineNumber) {}
+
   /// Constructor for numeric variable \p Name with a known \p Value at parse
   /// time (e.g. the @LINE numeric variable).
   FileCheckNumericVariable(StringRef Name, uint64_t Value)
-      : Name(Name), Value(Value) {}
+      : Name(Name), Value(Value), DefLineNumber(0) {}
 
   /// \returns name of that numeric variable.
   StringRef getName() const { return Name; }
@@ -69,6 +79,9 @@ public:
   /// Clears value of this numeric variable. \returns whether the variable was
   /// already undefined.
   bool clearValue();
+
+  /// \returns the line number where this variable is defined.
+  size_t getDefLineNumber() { return DefLineNumber; }
 };
 
 /// Type of functions evaluating a given binary operation.
@@ -248,8 +261,11 @@ private:
 
   /// When matching a given pattern, this holds the pointers to the classes
   /// representing the last definitions of numeric variables defined in
-  /// previous patterns. Earlier definition of the variables, if any, have
-  /// their own class instance not referenced by this table.
+  /// previous patterns. Earlier definitions of the variables, if any, have
+  /// their own class instance not referenced by this table. When matching a
+  /// pattern all definitions for that pattern are recorded in the
+  /// NumericVariableDefs table in the FileCheckPattern instance of that
+  /// pattern.
   StringMap<FileCheckNumericVariable *> GlobalNumericVariableTable;
 
   /// Vector holding pointers to all parsed numeric expressions. Used to
@@ -292,7 +308,8 @@ private:
 
   /// Makes a new numeric variable and registers it for destruction when the
   /// context is destroyed.
-  FileCheckNumericVariable *makeNumericVariable(StringRef Name, uint64_t Value);
+  template <class... Types>
+  FileCheckNumericVariable *makeNumericVariable(Types... args);
 
   /// Makes a new string substitution and registers it for destruction when the
   /// context is destroyed.
@@ -325,16 +342,38 @@ class FileCheckPattern {
   /// and the value of numeric expression "N+1" at offset 6.
   std::vector<FileCheckSubstitution *> Substitutions;
 
-  /// Maps names of string variables defined in a pattern to the parenthesized
-  /// capture numbers of their last definition.
+  /// Maps names of string variables defined in a pattern to the number of
+  /// their parenthesis group in RegExStr capturing their last definition.
   ///
-  /// E.g. for the pattern "foo[[bar:.*]]baz[[bar]]quux[[bar:.*]]",
-  /// VariableDefs will map "bar" to 2 corresponding to the second definition
-  /// of "bar".
+  /// E.g. for the pattern "foo[[bar:.*]]baz([[bar]][[QUUX]][[bar:.*]])",
+  /// RegExStr will be "foo(.*)baz(\1<quux value>(.*))" where <quux value> is
+  /// the value captured for QUUX on the earlier line where it was defined, and
+  /// VariableDefs will map "bar" to the third parenthesis group which captures
+  /// the second definition of "bar".
   ///
   /// Note: uses std::map rather than StringMap to be able to get the key when
   /// iterating over values.
   std::map<StringRef, unsigned> VariableDefs;
+
+  /// Structure representing the definition of a numeric variable in a pattern.
+  /// It holds the pointer to the class representing the numeric variable whose
+  /// value is being defined and the number of the parenthesis group in
+  /// RegExStr to capture that value.
+  struct FileCheckNumExprMatch {
+    /// Pointer to class representing the numeric variable whose value is being
+    /// defined.
+    FileCheckNumericVariable *DefinedNumericVariable;
+
+    /// Number of the parenthesis group in RegExStr that captures the value of
+    /// this numeric variable definition.
+    unsigned CaptureParenGroup;
+  };
+
+  /// Holds the number of the parenthesis group in RegExStr and pointer to the
+  /// corresponding FileCheckNumericVariable class instance of all numeric
+  /// variable definitions. Used to set the matched value of all those
+  /// variables.
+  StringMap<FileCheckNumExprMatch> NumericVariableDefs;
 
   /// Pointer to a class instance holding the global state shared by all
   /// patterns:
@@ -346,13 +385,14 @@ class FileCheckPattern {
 
   Check::FileCheckType CheckTy;
 
-  /// Contains the number of line this pattern is in.
-  unsigned LineNumber;
+  /// Line number for this CHECK pattern. Used to determine whether a variable
+  /// definition is made on an earlier line to the one with this CHECK.
+  size_t LineNumber;
 
 public:
-  explicit FileCheckPattern(Check::FileCheckType Ty,
-                            FileCheckPatternContext *Context)
-      : Context(Context), CheckTy(Ty) {}
+  FileCheckPattern(Check::FileCheckType Ty, FileCheckPatternContext *Context,
+                   size_t Line)
+      : Context(Context), CheckTy(Ty), LineNumber(Line) {}
 
   /// \returns the location in source code.
   SMLoc getLoc() const { return PatternLoc; }
@@ -363,31 +403,37 @@ public:
 
   /// \returns whether \p C is a valid first character for a variable name.
   static bool isValidVarNameStart(char C);
-  /// Verifies that the string at the start of \p Str is a well formed
-  /// variable. \returns false if it is and sets \p IsPseudo to indicate if it
-  /// is a pseudo variable and \p TrailIdx to the position of the last
-  /// character that is part of the variable name. Otherwise, only
-  /// \returns true.
-  static bool parseVariable(StringRef Str, bool &IsPseudo, unsigned &TrailIdx);
-  /// Parses a numeric substitution involving (pseudo if \p IsPseudo is true)
-  /// variable \p Name with the string corresponding to the operation being
-  /// performed in \p Trailer. \returns the class representing the numeric
-  /// expression being substituted or nullptr if parsing fails, in which case
-  /// errors are reported on \p SM.
-  FileCheckNumExpr *parseNumericSubstitution(StringRef Name, bool IsPseudo,
-                                             StringRef Trailer,
-                                             const SourceMgr &SM) const;
+  /// Parses the string at the start of \p Str for a variable name and \returns
+  /// whether the variable name is ill-formed. If parsing succeeded, sets
+  /// \p IsPseudo to indicate if it is a pseudo variable, sets \p Name to the
+  /// parsed variable name and strips \p Str from the variable name.
+  static bool parseVariable(StringRef &Str, StringRef &Name, bool &IsPseudo);
+  /// Parses \p Expr for the definition of a numeric variable, returning an
+  /// error if \p Context already holds a string variable with the same name.
+  /// \returns whether parsing fails, in which case errors are reported on
+  /// \p SM. Otherwise, sets \p Name to the name of the parsed numeric
+  /// variable.
+  static bool parseNumericVariableDefinition(StringRef &Expr, StringRef &Name,
+                                             FileCheckPatternContext *Context,
+                                             const SourceMgr &SM);
+  /// Parses \p Expr for a numeric substitution block. \returns the class
+  /// representing the AST of the numeric expression whose value must be
+  /// substituted, or nullptr if parsing fails, in which case errors are
+  /// reported on \p SM. Sets \p DefinedNumericVariable to point to the class
+  /// representing the numeric variable defined in this numeric substitution
+  /// block, or nullptr if this block does not define any variable.
+  FileCheckNumExpr *parseNumericSubstitutionBlock(
+      StringRef Expr, FileCheckNumericVariable *&DefinedNumericVariable,
+      const SourceMgr &SM) const;
   /// Parses the pattern in \p PatternStr and initializes this FileCheckPattern
   /// instance accordingly.
   ///
   /// \p Prefix provides which prefix is being matched, \p Req describes the
   /// global options that influence the parsing such as whitespace
-  /// canonicalization, \p SM provides the SourceMgr used for error reports,
-  /// and \p LineNumber is the line number in the input file from which the
-  /// pattern string was read. \returns true in case of an error, false
-  /// otherwise.
-  bool ParsePattern(StringRef PatternStr, StringRef Prefix, SourceMgr &SM,
-                    unsigned LineNumber, const FileCheckRequest &Req);
+  /// canonicalization, \p SM provides the SourceMgr used for error reports.
+  /// \returns true in case of an error, false otherwise.
+  bool parsePattern(StringRef PatternStr, StringRef Prefix, SourceMgr &SM,
+                    const FileCheckRequest &Req);
   /// Matches the pattern string against the input buffer \p Buffer
   ///
   /// \returns the position that is matched or npos if there is no match. If
@@ -396,8 +442,11 @@ public:
   ///
   /// The GlobalVariableTable StringMap in the FileCheckPatternContext class
   /// instance provides the current values of FileCheck string variables and
-  /// is updated if this match defines new values.
-  size_t match(StringRef Buffer, size_t &MatchLen) const;
+  /// is updated if this match defines new values. Likewise, the
+  /// GlobalNumericVariableTable StringMap in the same class provides the
+  /// current values of FileCheck numeric variables and is updated if this
+  /// match defines new numeric values.
+  size_t match(StringRef Buffer, size_t &MatchLen, const SourceMgr &SM) const;
   /// Prints the value of successful substitutions or the name of the undefined
   /// string or numeric variable preventing a successful substitution.
   void printSubstitutions(const SourceMgr &SM, StringRef Buffer,
@@ -427,6 +476,17 @@ private:
   ///  \returns the offset of the closing sequence within Str, or npos if it
   /// was not found.
   size_t FindRegexVarEnd(StringRef Str, SourceMgr &SM);
+
+  /// Parses \p Expr for the use of a numeric variable. \returns the pointer to
+  /// the class instance representing that variable if successful, or nullptr
+  /// otherwise, in which case errors are reported on \p SM.
+  FileCheckNumericVariable *parseNumericVariableUse(StringRef &Expr,
+                                                    const SourceMgr &SM) const;
+  /// Parses \p Expr for a binary operation.
+  /// \returns the class representing the binary operation of the numeric
+  /// expression, or nullptr if parsing fails, in which case errors are
+  /// reported on \p SM.
+  FileCheckNumExpr *parseBinop(StringRef &Expr, const SourceMgr &SM) const;
 };
 
 //===----------------------------------------------------------------------===//

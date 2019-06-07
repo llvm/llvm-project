@@ -1104,6 +1104,11 @@ template <class ELFT> void ELFBuilder<ELFT>::setParentSegment(Segment &Child) {
 template <class ELFT> void ELFBuilder<ELFT>::readProgramHeaders() {
   uint32_t Index = 0;
   for (const auto &Phdr : unwrapOrError(ElfFile.program_headers())) {
+    if (Phdr.p_offset + Phdr.p_filesz > ElfFile.getBufSize())
+      error("program header with offset 0x" + Twine::utohexstr(Phdr.p_offset) +
+            " and file size 0x" + Twine::utohexstr(Phdr.p_filesz) +
+            " goes past the end of the file");
+
     ArrayRef<uint8_t> Data{ElfFile.base() + Phdr.p_offset,
                            (size_t)Phdr.p_filesz};
     Segment &Seg = Obj.addSegment(Data);

@@ -59,10 +59,10 @@ ld3w { z0.s, z1.s, z2.s }, p0/z, [x0, w0, uxtw]
 
 
 // --------------------------------------------------------------------------//
-// error: restricted predicate has range [0, 7].
+// error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 
 ld3w {z2.s, z3.s, z4.s}, p8/z, [x15, #10, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 // CHECK-NEXT: ld3w {z2.s, z3.s, z4.s}, p8/z, [x15, #10, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

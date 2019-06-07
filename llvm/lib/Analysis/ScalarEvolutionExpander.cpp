@@ -169,8 +169,7 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
 /// of work to avoid inserting an obviously redundant operation, and hoisting
 /// to an outer loop when the opportunity is there and it is safe.
 Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
-                                 Value *LHS, Value *RHS,
-                                 SCEV::NoWrapFlags Flags, bool IsSafeToHoist) {
+                                 Value *LHS, Value *RHS, bool IsSafeToHoist) {
   // Fold a binop with constant operands.
   if (Constant *CLHS = dyn_cast<Constant>(LHS))
     if (Constant *CRHS = dyn_cast<Constant>(RHS))
@@ -189,22 +188,20 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
       if (isa<DbgInfoIntrinsic>(IP))
         ScanLimit++;
 
-      auto canGenerateIncompatiblePoison = [&Flags](Instruction *I) {
-        // Ensure that no-wrap flags match.
-        if (isa<OverflowingBinaryOperator>(I)) {
-          if (I->hasNoSignedWrap() != (Flags & SCEV::FlagNSW))
-            return true;
-          if (I->hasNoUnsignedWrap() != (Flags & SCEV::FlagNUW))
-            return true;
-        }
-        // Conservatively, do not use any instruction which has any of exact
-        // flags installed.
+      // Conservatively, do not use any instruction which has any of wrap/exact
+      // flags installed.
+      // TODO: Instead of simply disable poison instructions we can be clever
+      //       here and match SCEV to this instruction.
+      auto canGeneratePoison = [](Instruction *I) {
+        if (isa<OverflowingBinaryOperator>(I) &&
+            (I->hasNoSignedWrap() || I->hasNoUnsignedWrap()))
+          return true;
         if (isa<PossiblyExactOperator>(I) && I->isExact())
           return true;
         return false;
       };
       if (IP->getOpcode() == (unsigned)Opcode && IP->getOperand(0) == LHS &&
-          IP->getOperand(1) == RHS && !canGenerateIncompatiblePoison(&*IP))
+          IP->getOperand(1) == RHS && !canGeneratePoison(&*IP))
         return &*IP;
       if (IP == BlockBegin) break;
     }
@@ -229,10 +226,6 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
   // If we haven't found this binop, insert it.
   Instruction *BO = cast<Instruction>(Builder.CreateBinOp(Opcode, LHS, RHS));
   BO->setDebugLoc(Loc);
-  if (Flags & SCEV::FlagNUW)
-    BO->setHasNoUnsignedWrap();
-  if (Flags & SCEV::FlagNSW)
-    BO->setHasNoSignedWrap();
   rememberInstruction(BO);
 
   return BO;
@@ -744,8 +737,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
       // Instead of doing a negate and add, just do a subtract.
       Value *W = expandCodeFor(SE.getNegativeSCEV(Op), Ty);
       Sum = InsertNoopCastOfTo(Sum, Ty);
-      Sum = InsertBinop(Instruction::Sub, Sum, W, S->getNoWrapFlags(),
-                        /*IsSafeToHoist*/ true);
+      Sum = InsertBinop(Instruction::Sub, Sum, W, /*IsSafeToHoist*/ true);
       ++I;
     } else {
       // A simple add.
@@ -753,8 +745,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
       Sum = InsertNoopCastOfTo(Sum, Ty);
       // Canonicalize a constant to the RHS.
       if (isa<Constant>(Sum)) std::swap(Sum, W);
-      Sum = InsertBinop(Instruction::Add, Sum, W, S->getNoWrapFlags(),
-                        /*IsSafeToHoist*/ true);
+      Sum = InsertBinop(Instruction::Add, Sum, W, /*IsSafeToHoist*/ true);
       ++I;
     }
   }
@@ -783,7 +774,7 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
   // Expand the calculation of X pow N in the following manner:
   // Let N = P1 + P2 + ... + PK, where all P are powers of 2. Then:
   // X pow N = (X pow P1) * (X pow P2) * ... * (X pow PK).
-  const auto ExpandOpBinPowN = [this, &I, &OpsAndLoops, &Ty, &S]() {
+  const auto ExpandOpBinPowN = [this, &I, &OpsAndLoops, &Ty]() {
     auto E = I;
     // Calculate how many times the same operand from the same loop is included
     // into this power.
@@ -806,11 +797,9 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
     if (Exponent & 1)
       Result = P;
     for (uint64_t BinExp = 2; BinExp <= Exponent; BinExp <<= 1) {
-      P = InsertBinop(Instruction::Mul, P, P, S->getNoWrapFlags(),
-                      /*IsSafeToHoist*/ true);
+      P = InsertBinop(Instruction::Mul, P, P, /*IsSafeToHoist*/ true);
       if (Exponent & BinExp)
         Result = Result ? InsertBinop(Instruction::Mul, Result, P,
-                                      S->getNoWrapFlags(),
                                       /*IsSafeToHoist*/ true)
                         : P;
     }
@@ -828,7 +817,6 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
       // Instead of doing a multiply by negative one, just do a negate.
       Prod = InsertNoopCastOfTo(Prod, Ty);
       Prod = InsertBinop(Instruction::Sub, Constant::getNullValue(Ty), Prod,
-                         S->getNoWrapFlags(),
                          /*IsSafeToHoist*/ true);
       ++I;
     } else {
@@ -843,10 +831,9 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
         assert(!Ty->isVectorTy() && "vector types are not SCEVable");
         Prod = InsertBinop(Instruction::Shl, Prod,
                            ConstantInt::get(Ty, RHS->logBase2()),
-                           S->getNoWrapFlags(), /*IsSafeToHoist*/ true);
-      } else {
-        Prod = InsertBinop(Instruction::Mul, Prod, W, S->getNoWrapFlags(),
                            /*IsSafeToHoist*/ true);
+      } else {
+        Prod = InsertBinop(Instruction::Mul, Prod, W, /*IsSafeToHoist*/ true);
       }
     }
   }
@@ -863,11 +850,11 @@ Value *SCEVExpander::visitUDivExpr(const SCEVUDivExpr *S) {
     if (RHS.isPowerOf2())
       return InsertBinop(Instruction::LShr, LHS,
                          ConstantInt::get(Ty, RHS.logBase2()),
-                         SCEV::FlagAnyWrap, /*IsSafeToHoist*/ true);
+                         /*IsSafeToHoist*/ true);
   }
 
   Value *RHS = expandCodeFor(S->getRHS(), Ty);
-  return InsertBinop(Instruction::UDiv, LHS, RHS, SCEV::FlagAnyWrap,
+  return InsertBinop(Instruction::UDiv, LHS, RHS,
                      /*IsSafeToHoist*/ SE.isKnownNonZero(S->getRHS()));
 }
 

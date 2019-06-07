@@ -45,6 +45,12 @@ namespace llvm {
       for (auto It = Begin; It != End; ++It)
         base::insert(std::make_pair(*It, '\0'));
     }
+
+    template <typename ValueTy>
+    std::pair<typename base::iterator, bool>
+    insert(const StringMapEntry<ValueTy> &MapEntry) {
+      return insert(MapEntry.getKey());
+    }
   };
 
 } // end namespace llvm
