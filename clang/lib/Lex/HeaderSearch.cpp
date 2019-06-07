@@ -1715,6 +1715,11 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
         break;
       }
 
+      // Consider all path separators equal.
+      if (NI->size() == 1 && DI->size() == 1 &&
+          path::is_separator(NI->front()) && path::is_separator(DI->front()))
+        continue;
+
       if (*NI != *DI)
         break;
     }
