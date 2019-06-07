@@ -1,4 +1,4 @@
-# REQUIES: ppc
+# REQUIRES: ppc
 # RUN: llvm-mc -filetype=obj -triple=powerpc %s -o %t.o
 
 # RUN: ld.lld -shared %t.o -o %t.so

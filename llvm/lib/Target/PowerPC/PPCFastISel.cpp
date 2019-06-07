@@ -1964,6 +1964,13 @@ bool PPCFastISel::fastSelectInstruction(const Instruction *I) {
     case Instruction::Sub:
       return SelectBinaryIntOp(I, ISD::SUB);
     case Instruction::Call:
+      // On AIX, call lowering uses the DAG-ISEL path currently so that the
+      // callee of the direct function call instruction will be mapped to the
+      // symbol for the function's entry point, which is distinct from the
+      // function descriptor symbol. The latter is the symbol whose XCOFF symbol
+      // name is the C-linkage name of the source level function.
+      if (TM.getTargetTriple().isOSAIX())
+        break;
       return selectCall(I);
     case Instruction::Ret:
       return SelectRet(I);

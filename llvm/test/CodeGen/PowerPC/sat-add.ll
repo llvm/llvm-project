@@ -382,8 +382,7 @@ define <16 x i8> @unsigned_sat_constant_v16i8_using_min(<16 x i8> %x) {
 ; CHECK-NEXT:    lvx 3, 0, 3
 ; CHECK-NEXT:    addis 3, 2, .LCPI24_1@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI24_1@toc@l
-; CHECK-NEXT:    vcmpgtub 4, 3, 2
-; CHECK-NEXT:    xxsel 34, 35, 34, 36
+; CHECK-NEXT:    vminub 2, 2, 3
 ; CHECK-NEXT:    lvx 3, 0, 3
 ; CHECK-NEXT:    vaddubm 2, 2, 3
 ; CHECK-NEXT:    blr
@@ -438,8 +437,7 @@ define <8 x i16> @unsigned_sat_constant_v8i16_using_min(<8 x i16> %x) {
 ; CHECK-NEXT:    lvx 3, 0, 3
 ; CHECK-NEXT:    addis 3, 2, .LCPI27_1@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI27_1@toc@l
-; CHECK-NEXT:    vcmpgtuh 4, 3, 2
-; CHECK-NEXT:    xxsel 34, 35, 34, 36
+; CHECK-NEXT:    vminuh 2, 2, 3
 ; CHECK-NEXT:    lvx 3, 0, 3
 ; CHECK-NEXT:    vadduhm 2, 2, 3
 ; CHECK-NEXT:    blr
@@ -494,8 +492,7 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_min(<4 x i32> %x) {
 ; CHECK-NEXT:    lvx 3, 0, 3
 ; CHECK-NEXT:    addis 3, 2, .LCPI30_1@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI30_1@toc@l
-; CHECK-NEXT:    vcmpgtuw 4, 3, 2
-; CHECK-NEXT:    xxsel 34, 35, 34, 36
+; CHECK-NEXT:    vminuw 2, 2, 3
 ; CHECK-NEXT:    lvx 3, 0, 3
 ; CHECK-NEXT:    vadduwm 2, 2, 3
 ; CHECK-NEXT:    blr
@@ -552,8 +549,7 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_min(<2 x i64> %x) {
 ; CHECK-NEXT:    addi 3, 3, .LCPI33_1@toc@l
 ; CHECK-NEXT:    xxswapd 35, 0
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    vcmpgtud 4, 3, 2
-; CHECK-NEXT:    xxsel 34, 35, 34, 36
+; CHECK-NEXT:    vminud 2, 2, 3
 ; CHECK-NEXT:    xxswapd 35, 0
 ; CHECK-NEXT:    vaddudm 2, 2, 3
 ; CHECK-NEXT:    blr
@@ -607,8 +603,7 @@ define <16 x i8> @unsigned_sat_variable_v16i8_using_min(<16 x i8> %x, <16 x i8> 
 ; CHECK-LABEL: unsigned_sat_variable_v16i8_using_min:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxlnor 36, 35, 35
-; CHECK-NEXT:    vcmpgtub 5, 4, 2
-; CHECK-NEXT:    xxsel 34, 36, 34, 37
+; CHECK-NEXT:    vminub 2, 2, 4
 ; CHECK-NEXT:    vaddubm 2, 2, 3
 ; CHECK-NEXT:    blr
   %noty = xor <16 x i8> %y, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
@@ -652,8 +647,7 @@ define <8 x i16> @unsigned_sat_variable_v8i16_using_min(<8 x i16> %x, <8 x i16> 
 ; CHECK-LABEL: unsigned_sat_variable_v8i16_using_min:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxlnor 36, 35, 35
-; CHECK-NEXT:    vcmpgtuh 5, 4, 2
-; CHECK-NEXT:    xxsel 34, 36, 34, 37
+; CHECK-NEXT:    vminuh 2, 2, 4
 ; CHECK-NEXT:    vadduhm 2, 2, 3
 ; CHECK-NEXT:    blr
   %noty = xor <8 x i16> %y, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
@@ -697,8 +691,7 @@ define <4 x i32> @unsigned_sat_variable_v4i32_using_min(<4 x i32> %x, <4 x i32> 
 ; CHECK-LABEL: unsigned_sat_variable_v4i32_using_min:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxlnor 36, 35, 35
-; CHECK-NEXT:    vcmpgtuw 5, 4, 2
-; CHECK-NEXT:    xxsel 34, 36, 34, 37
+; CHECK-NEXT:    vminuw 2, 2, 4
 ; CHECK-NEXT:    vadduwm 2, 2, 3
 ; CHECK-NEXT:    blr
   %noty = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -742,8 +735,7 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_min(<2 x i64> %x, <2 x i64> 
 ; CHECK-LABEL: unsigned_sat_variable_v2i64_using_min:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxlnor 36, 35, 35
-; CHECK-NEXT:    vcmpgtud 5, 4, 2
-; CHECK-NEXT:    xxsel 34, 36, 34, 37
+; CHECK-NEXT:    vminud 2, 2, 4
 ; CHECK-NEXT:    vaddudm 2, 2, 3
 ; CHECK-NEXT:    blr
   %noty = xor <2 x i64> %y, <i64 -1, i64 -1>

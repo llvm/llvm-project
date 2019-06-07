@@ -92,15 +92,13 @@ INITIALIZE_PASS(SIInsertSkips, DEBUG_TYPE,
 
 char &llvm::SIInsertSkipsPassID = SIInsertSkips::ID;
 
-static bool opcodeEmitsNoInsts(unsigned Opc) {
-  switch (Opc) {
-  case TargetOpcode::IMPLICIT_DEF:
-  case TargetOpcode::KILL:
-  case TargetOpcode::BUNDLE:
-  case TargetOpcode::CFI_INSTRUCTION:
-  case TargetOpcode::EH_LABEL:
-  case TargetOpcode::GC_LABEL:
-  case TargetOpcode::DBG_VALUE:
+static bool opcodeEmitsNoInsts(const MachineInstr &MI) {
+  if (MI.isMetaInstruction())
+    return true;
+
+  // Handle target specific opcodes.
+  switch (MI.getOpcode()) {
+  case AMDGPU::SI_MASK_BRANCH:
     return true;
   default:
     return false;
@@ -109,9 +107,6 @@ static bool opcodeEmitsNoInsts(unsigned Opc) {
 
 bool SIInsertSkips::shouldSkip(const MachineBasicBlock &From,
                                const MachineBasicBlock &To) const {
-  if (From.succ_empty())
-    return false;
-
   unsigned NumInstr = 0;
   const MachineFunction *MF = From.getParent();
 
@@ -121,7 +116,7 @@ bool SIInsertSkips::shouldSkip(const MachineBasicBlock &From,
 
     for (MachineBasicBlock::const_iterator I = MBB.begin(), E = MBB.end();
          NumInstr < SkipThreshold && I != E; ++I) {
-      if (opcodeEmitsNoInsts(I->getOpcode()))
+      if (opcodeEmitsNoInsts(*I))
         continue;
 
       // FIXME: Since this is required for correctness, this should be inserted
@@ -138,7 +133,8 @@ bool SIInsertSkips::shouldSkip(const MachineBasicBlock &From,
         return true;
 
       // These instructions are potentially expensive even if EXEC = 0.
-      if (TII->isSMRD(*I) || TII->isVMEM(*I) || I->getOpcode() == AMDGPU::S_WAITCNT)
+      if (TII->isSMRD(*I) || TII->isVMEM(*I) || TII->isFLAT(*I) ||
+          I->getOpcode() == AMDGPU::S_WAITCNT)
         return true;
 
       ++NumInstr;

@@ -1,4 +1,4 @@
-# REQUIES: ppc
+# REQUIRES: ppc
 # RUN: llvm-mc -filetype=obj -triple=powerpc %s -o %t.o
 # RUN: echo '.tbss; .globl b, c; b: .zero 4; c:' | llvm-mc -filetype=obj -triple=powerpc - -o %t1.o
 # RUN: ld.lld -shared -soname=t1.so %t1.o -o %t1.so

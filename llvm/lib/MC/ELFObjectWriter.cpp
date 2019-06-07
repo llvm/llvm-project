@@ -1373,6 +1373,12 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
     return true;
   }
 
+  // Keep symbol type for a local ifunc because it may result in an IRELATIVE
+  // reloc that the dynamic loader will use to resolve the address at startup
+  // time.
+  if (Sym->getType() == ELF::STT_GNU_IFUNC)
+    return true;
+
   // If a relocation points to a mergeable section, we have to be careful.
   // If the offset is zero, a relocation with the section will encode the
   // same information. With a non-zero offset, the situation is different.

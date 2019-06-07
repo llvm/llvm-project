@@ -371,18 +371,6 @@ private:
   void addInductionPhi(PHINode *Phi, const InductionDescriptor &ID,
                        SmallPtrSetImpl<Value *> &AllowedExit);
 
-  /// Create an analysis remark that explains why vectorization failed
-  ///
-  /// \p RemarkName is the identifier for the remark.  If \p I is passed it is
-  /// an instruction that prevents vectorization.  Otherwise the loop is used
-  /// for the location of the remark.  \return the remark object that can be
-  /// streamed to.
-  OptimizationRemarkAnalysis
-  createMissedAnalysis(StringRef RemarkName, Instruction *I = nullptr) const {
-    return createLVMissedAnalysis(Hints->vectorizeAnalysisPassName(),
-                                  RemarkName, TheLoop, I);
-  }
-
   /// If an access has a symbolic strides, this maps the pointer value to
   /// the stride symbol.
   const ValueToValueMap *getSymbolicStrides() {
@@ -392,6 +380,14 @@ private:
     // masked access.
     return LAI ? &LAI->getSymbolicStrides() : nullptr;
   }
+
+  /// Reports a vectorization illegality: print \p DebugMsg for debugging
+  /// purposes along with the corresponding optimization remark \p RemarkName.
+  /// If \p I is passed it is an instruction that prevents vectorization.
+  /// Otherwise the loop is used for the location of the remark.
+  void reportVectorizationFailure(const StringRef DebugMsg,
+      const StringRef OREMsg, const StringRef ORETag,
+      Instruction *I = nullptr) const;
 
   /// The loop that we evaluate.
   Loop *TheLoop;

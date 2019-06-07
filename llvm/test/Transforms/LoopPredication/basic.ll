@@ -1853,3 +1853,29 @@ exit:
   ret i32 0
 }
 
+; Negative test, make sure we don't crash on unconditional latches
+; TODO: there's no reason we shouldn't be able to predicate the
+; condition for an statically infinite loop.
+define i32 @unconditional_latch(i32* %a, i32 %length) {
+; CHECK-LABEL: @unconditional_latch(
+; CHECK-NEXT:  loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 400, [[LOOP_PREHEADER:%.*]] ]
+; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH:%.*]]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_BOUNDS]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    store volatile i32 0, i32* [[A:%.*]]
+; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; CHECK-NEXT:    br label [[LOOP]]
+;
+loop.preheader:
+  br label %loop
+
+loop:
+  %i = phi i32 [ %i.next, %loop ], [ 400, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+  store volatile i32 0, i32* %a
+  %i.next = add i32 %i, 1
+  br label %loop
+}

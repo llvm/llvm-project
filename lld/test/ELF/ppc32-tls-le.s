@@ -1,4 +1,4 @@
-# REQUIES: ppc
+# REQUIRES: ppc
 # RUN: llvm-mc -filetype=obj -triple=powerpc %s -o %t.o
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=LE %s

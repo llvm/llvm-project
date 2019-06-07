@@ -49,6 +49,7 @@ define void @testr2(double* nocapture readonly %A, double* nocapture readonly %I
   %1 = load double, double* %arrayidx22
   %arrayidx25 = getelementptr inbounds double, double* %A, i64 2
   %2 = load double, double* %arrayidx25
-  %mul26 = fmul double %1, %2
+  %3 = fneg double %1
+  %mul26 = fmul double %3, %2
   ret void
 }

@@ -4510,6 +4510,23 @@ public:
                                    UnqualifiedId &Member,
                                    Decl *ObjCImpDecl);
 
+  MemberExpr *
+  BuildMemberExpr(Expr *Base, bool IsArrow, SourceLocation OpLoc,
+                  const CXXScopeSpec *SS, SourceLocation TemplateKWLoc,
+                  ValueDecl *Member, DeclAccessPair FoundDecl,
+                  bool HadMultipleCandidates,
+                  const DeclarationNameInfo &MemberNameInfo, QualType Ty,
+                  ExprValueKind VK, ExprObjectKind OK,
+                  const TemplateArgumentListInfo *TemplateArgs = nullptr);
+  MemberExpr *
+  BuildMemberExpr(Expr *Base, bool IsArrow, SourceLocation OpLoc,
+                  NestedNameSpecifierLoc NNS, SourceLocation TemplateKWLoc,
+                  ValueDecl *Member, DeclAccessPair FoundDecl,
+                  bool HadMultipleCandidates,
+                  const DeclarationNameInfo &MemberNameInfo, QualType Ty,
+                  ExprValueKind VK, ExprObjectKind OK,
+                  const TemplateArgumentListInfo *TemplateArgs = nullptr);
+
   void ActOnDefaultCtorInitializers(Decl *CDtorDecl);
   bool ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
                                FunctionDecl *FDecl,

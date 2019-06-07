@@ -98,6 +98,13 @@ TEST_F(HeaderSearchTest, BackSlash) {
                                                    /*WorkingDir=*/""),
             "z/t");
 }
+
+TEST_F(HeaderSearchTest, BackSlashWithDotDot) {
+  addSearchDir("..\\y");
+  EXPECT_EQ(Search.suggestPathToFileForDiagnostics("C:\\x\\y\\z\\t",
+                                                   /*WorkingDir=*/"C:/x/y/"),
+            "z/t");
+}
 #endif
 
 TEST_F(HeaderSearchTest, DotDotsWithAbsPath) {

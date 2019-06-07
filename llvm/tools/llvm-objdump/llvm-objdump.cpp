@@ -18,6 +18,7 @@
 #include "llvm-objdump.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
@@ -373,6 +374,10 @@ LLVM_ATTRIBUTE_NORETURN void error(Twine Message) {
 void warn(StringRef Message) {
   WithColor::warning(errs(), ToolName) << Message << ".\n";
   errs().flush();
+}
+
+void warn(Twine Message) {
+  WithColor::warning(errs(), ToolName) << Message << "\n";
 }
 
 LLVM_ATTRIBUTE_NORETURN void report_error(StringRef File, Twine Message) {
@@ -1090,6 +1095,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 
   // Sort all the symbols, this allows us to use a simple binary search to find
   // a symbol near an address.
+  StringSet<> FoundDisasmFuncsSet;
   for (std::pair<const SectionRef, SectionSymbolsTy> &SecSyms : AllSymbols)
     array_pod_sort(SecSyms.second.begin(), SecSyms.second.end());
   array_pod_sort(AbsoluteSymbols.begin(), AbsoluteSymbols.end());
@@ -1181,6 +1187,8 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
       uint64_t Start = std::get<0>(Symbols[SI]);
       if (Start < SectionAddr || StopAddress <= Start)
         continue;
+      else
+        FoundDisasmFuncsSet.insert(std::get<1>(Symbols[SI]));
 
       // The end is the section end, the beginning of the next symbol, or
       // --stop-address.
@@ -1401,6 +1409,10 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
       }
     }
   }
+  StringSet<> MissingDisasmFuncsSet =
+      set_difference(DisasmFuncsSet, FoundDisasmFuncsSet);
+  for (StringRef MissingDisasmFunc : MissingDisasmFuncsSet.keys())
+    warn("failed to disassemble missing function " + MissingDisasmFunc);
 }
 
 static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {

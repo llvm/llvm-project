@@ -1,4 +1,4 @@
-// RUN: %clangxx_hwasan %s
+// RUN: %clangxx_hwasan %s -o %t
 #include <stddef.h>
 #include <new>
 
