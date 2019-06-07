@@ -1782,6 +1782,19 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+**NamespaceMacros** (``std::vector<std::string>``)
+  A vector of macros which are used to open namespace blocks.
+
+  These are expected to be macros of the form:
+
+  .. code-block:: c++
+
+    NAMESPACE(<namespace-name>, ...) {
+      <namespace-content>
+    }
+
+  For example: TESTSUITE
+
 **ObjCBinPackProtocolList** (``BinPackStyle``)
   Controls bin-packing Objective-C protocol conformance list
   items into as few lines as possible when they go over ``ColumnLimit``.

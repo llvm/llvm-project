@@ -48,6 +48,7 @@ protected:
     SymbolKindELF,
     SymbolKindMachO,
     SymbolKindWasm,
+    SymbolKindXCOFF,
   };
 
   /// A symbol can contain an Offset, or Value, or be Common, but never more
@@ -284,6 +285,8 @@ public:
   bool isMachO() const { return Kind == SymbolKindMachO; }
 
   bool isWasm() const { return Kind == SymbolKindWasm; }
+
+  bool isXCOFF() const { return Kind == SymbolKindXCOFF; }
 
   /// @}
   /// \name Variable Symbols
