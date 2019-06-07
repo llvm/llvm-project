@@ -81,18 +81,23 @@ public:
                      accessMode == access::mode::read_write,
                      access::fence_space>::type accessSpace =
                      access::fence_space::global_and_local) const {
-    uint32_t flags = MemorySemantics::SequentiallyConsistent;
+    uint32_t flags = static_cast<uint32_t>(
+        __spv::MemorySemanticsMask::SequentiallyConsistent);
     switch (accessSpace) {
     case access::fence_space::global_space:
-      flags |= MemorySemantics::CrossWorkgroupMemory;
+      flags |= static_cast<uint32_t>(
+          __spv::MemorySemanticsMask::CrossWorkgroupMemory);
       break;
     case access::fence_space::local_space:
-      flags |= MemorySemantics::WorkgroupMemory;
+      flags |=
+          static_cast<uint32_t>(__spv::MemorySemanticsMask::WorkgroupMemory);
       break;
     case access::fence_space::global_and_local:
     default:
-      flags |= MemorySemantics::CrossWorkgroupMemory |
-               MemorySemantics::WorkgroupMemory;
+      flags |=
+          static_cast<uint32_t>(
+              __spv::MemorySemanticsMask::CrossWorkgroupMemory) |
+          static_cast<uint32_t>(__spv::MemorySemanticsMask::WorkgroupMemory);
       break;
     }
     // TODO: currently, there is no good way in SPIRV to set the memory
@@ -103,7 +108,7 @@ public:
     // or if we decide that 'accessMode' is the important feature then
     // we can fix this later, for example, by using OpenCL 1.2 functions
     // read_mem_fence() and write_mem_fence().
-    __spirv_MemoryBarrier(Scope::Workgroup, flags);
+    __spirv_MemoryBarrier(__spv::Scope::Workgroup, flags);
   }
 
   template <typename dataT>
@@ -112,7 +117,7 @@ public:
                                      size_t numElements) const {
     __ocl_event_t e =
         OpGroupAsyncCopyGlobalToLocal<dataT>(
-            Scope::Workgroup,
+            __spv::Scope::Workgroup,
             dest.get(), src.get(), numElements, 1, 0);
     return device_event(&e);
   }
@@ -123,7 +128,7 @@ public:
                                      size_t numElements) const {
     __ocl_event_t e =
         OpGroupAsyncCopyLocalToGlobal<dataT>(
-            Scope::Workgroup,
+            __spv::Scope::Workgroup,
             dest.get(), src.get(), numElements, 1, 0);
     return device_event(&e);
   }
@@ -135,7 +140,7 @@ public:
                                      size_t srcStride) const {
     __ocl_event_t e =
         OpGroupAsyncCopyGlobalToLocal<dataT>(
-            Scope::Workgroup,
+            __spv::Scope::Workgroup,
             dest.get(), src.get(), numElements, srcStride, 0);
     return device_event(&e);
   }
@@ -147,7 +152,7 @@ public:
                                      size_t destStride) const {
     __ocl_event_t e =
         OpGroupAsyncCopyLocalToGlobal<dataT>(
-            Scope::Workgroup,
+            __spv::Scope::Workgroup,
             dest.get(), src.get(), numElements, destStride, 0);
     return device_event(&e);
   }

@@ -82,7 +82,7 @@ else()
   add_custom_target(ocl-icd DEPENDS ${OpenCL_LIBRARIES} COMMENT "Copying OpenCL ICD Loader ...")
 endif()
 
-set(SYCL_INCLUDE "${CMAKE_CURRENT_BINARY_DIR}/include/")
+set(SYCL_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include/")
 set(OPENCL_INCLUDE "${OpenCL_INCLUDE_DIRS}")
 
 # Configure SYCL version macro

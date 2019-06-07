@@ -27,8 +27,7 @@ public:
   device_event(__ocl_event_t *Event) : m_Event(Event) {}
 
   void wait() {
-    __spirv_GroupWaitEvents(Scope::Workgroup, 1,
-                                   m_Event);
+    __spirv_GroupWaitEvents(__spv::Scope::Workgroup, 1, m_Event);
   }
 };
 

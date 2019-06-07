@@ -81,22 +81,27 @@ template <int dimensions = 1> struct nd_item {
 
   void barrier(access::fence_space accessSpace =
                    access::fence_space::global_and_local) const {
-    uint32_t flags = MemorySemantics::SequentiallyConsistent;
+    uint32_t flags = static_cast<uint32_t>(
+        __spv::MemorySemanticsMask::SequentiallyConsistent);
     switch (accessSpace) {
     case access::fence_space::global_space:
-      flags |= MemorySemantics::CrossWorkgroupMemory;
+      flags |= static_cast<uint32_t>(
+          __spv::MemorySemanticsMask::CrossWorkgroupMemory);
       break;
     case access::fence_space::local_space:
-      flags |= MemorySemantics::WorkgroupMemory;
+      flags |=
+          static_cast<uint32_t>(__spv::MemorySemanticsMask::WorkgroupMemory);
       break;
     case access::fence_space::global_and_local:
     default:
-      flags |= MemorySemantics::CrossWorkgroupMemory |
-               MemorySemantics::WorkgroupMemory;
+      flags |=
+          static_cast<uint32_t>(
+              __spv::MemorySemanticsMask::CrossWorkgroupMemory) |
+          static_cast<uint32_t>(__spv::MemorySemanticsMask::WorkgroupMemory);
       break;
     }
-    __spirv_ControlBarrier(Scope::Workgroup,
-                                  Scope::Workgroup, flags);
+    __spirv_ControlBarrier(__spv::Scope::Workgroup, __spv::Scope::Workgroup,
+                           flags);
   }
 
   /// Executes a work-group mem-fence with memory ordering on the local address
