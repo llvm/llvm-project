@@ -4780,14 +4780,14 @@ static SDValue constructRetValue(SelectionDAG &DAG,
   EVT CastVT = NumElts > 1 ? EVT::getVectorVT(Context, AdjEltVT, NumElts)
                            : AdjEltVT;
 
-  // Special case for v6f16. Rather than add support for this, use v3i32 to
+  // Special case for v8f16. Rather than add support for this, use v4i32 to
   // extract the data elements
-  bool V6F16Special = false;
-  if (NumElts == 6) {
-    CastVT = EVT::getVectorVT(Context, MVT::i32, NumElts / 2);
+  bool V8F16Special = false;
+  if (CastVT == MVT::v8f16) {
+    CastVT = MVT::v4i32;
     DMaskPop >>= 1;
     ReqRetNumElts >>= 1;
-    V6F16Special = true;
+    V8F16Special = true;
     AdjVT = MVT::v2i32;
   }
 
@@ -4817,7 +4817,7 @@ static SDValue constructRetValue(SelectionDAG &DAG,
     PreTFCRes = BVElts[0];
   }
 
-  if (V6F16Special)
+  if (V8F16Special)
     PreTFCRes = DAG.getNode(ISD::BITCAST, DL, MVT::v4f16, PreTFCRes);
 
   if (!IsTexFail) {
@@ -5078,6 +5078,9 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
         return DAG.getMergeValues({Undef, Op.getOperand(0)}, DL);
       return Undef;
     }
+
+    // Have to use a power of 2 number of dwords
+    NumVDataDwords = 1 << Log2_32_Ceil(NumVDataDwords);
 
     EVT NewVT = NumVDataDwords > 1 ?
                   EVT::getVectorVT(*DAG.getContext(), MVT::f32, NumVDataDwords)
