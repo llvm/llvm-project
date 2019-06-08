@@ -33,6 +33,7 @@ add_llvm_library(LLVMCodeGen
   GCRootLowering.cpp
   GCStrategy.cpp
   GlobalMerge.cpp
+  HardwareLoops.cpp
   IfConversion.cpp
   ImplicitNullChecks.cpp
   IndirectBrExpandPass.cpp

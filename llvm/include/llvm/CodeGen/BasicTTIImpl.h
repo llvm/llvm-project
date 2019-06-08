@@ -491,6 +491,13 @@ public:
     UP.BEInsns = 2;
   }
 
+  bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
+                                AssumptionCache &AC,
+                                TargetLibraryInfo *LibInfo,
+                                TTI::HardwareLoopInfo &HWLoopInfo) {
+    return BaseT::isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
+  }
+
   int getInstructionLatency(const Instruction *I) {
     if (isa<LoadInst>(I))
       return getST()->getSchedModel().DefaultLoadLatency;

@@ -935,6 +935,8 @@ def fno_cxx_static_destructors : Flag<["-"], "fno-c++-static-destructors">,
   Group<f_Group>,
   Flags<[CC1Option]>,
   HelpText<"Disable C++ static destructor registration">;
+def fsymbol_partition_EQ : Joined<["-"], "fsymbol-partition=">, Group<f_Group>,
+  Flags<[CC1Option]>;
 
 // Begin sanitizer flags. These should all be core options exposed in all driver
 // modes.

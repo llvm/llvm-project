@@ -306,14 +306,17 @@ void ObjFile::parse(bool IgnoreComdats) {
   TypeIsUsed.resize(getWasmObj()->types().size(), false);
 
   ArrayRef<StringRef> Comdats = WasmObj->linkingData().Comdats;
-  for (unsigned I = 0; I < Comdats.size(); ++I) {
-    bool IsNew = IgnoreComdats || Symtab->addComdat(Comdats[I]);
+  for (StringRef Comdat : Comdats) {
+    bool IsNew = IgnoreComdats || Symtab->addComdat(Comdat);
     KeptComdats.push_back(IsNew);
   }
 
   // Populate `Segments`.
-  for (const WasmSegment &S : WasmObj->dataSegments())
-    Segments.emplace_back(make<InputSegment>(S, this));
+  for (const WasmSegment &S : WasmObj->dataSegments()) {
+    auto* Seg = make<InputSegment>(S, this);
+    Seg->Discarded = isExcludedByComdat(Seg);
+    Segments.emplace_back(Seg);
+  }
   setRelocs(Segments, DataSection);
 
   // Populate `Functions`.
@@ -322,9 +325,11 @@ void ObjFile::parse(bool IgnoreComdats) {
   ArrayRef<WasmSignature> Types = WasmObj->types();
   Functions.reserve(Funcs.size());
 
-  for (size_t I = 0, E = Funcs.size(); I != E; ++I)
-    Functions.emplace_back(
-        make<InputFunction>(Types[FuncTypes[I]], &Funcs[I], this));
+  for (size_t I = 0, E = Funcs.size(); I != E; ++I) {
+    auto* Func = make<InputFunction>(Types[FuncTypes[I]], &Funcs[I], this);
+    Func->Discarded = isExcludedByComdat(Func);
+    Functions.emplace_back(Func);
+  }
   setRelocs(Functions, CodeSection);
 
   // Populate `Globals`.
@@ -387,21 +392,16 @@ Symbol *ObjFile::createDefined(const WasmSymbol &Sym) {
   case WASM_SYMBOL_TYPE_FUNCTION: {
     InputFunction *Func =
         Functions[Sym.Info.ElementIndex - WasmObj->getNumImportedFunctions()];
-    if (isExcludedByComdat(Func)) {
-      Func->Live = false;
+    if (Func->Discarded)
       return nullptr;
-    }
-
     if (Sym.isBindingLocal())
       return make<DefinedFunction>(Name, Flags, this, Func);
     return Symtab->addDefinedFunction(Name, Flags, this, Func);
   }
   case WASM_SYMBOL_TYPE_DATA: {
     InputSegment *Seg = Segments[Sym.Info.DataRef.Segment];
-    if (isExcludedByComdat(Seg)) {
-      Seg->Live = false;
+    if (Seg->Discarded)
       return nullptr;
-    }
 
     uint32_t Offset = Sym.Info.DataRef.Offset;
     uint32_t Size = Sym.Info.DataRef.Size;
@@ -439,12 +439,22 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &Sym, bool IsCalledDirectly) {
 
   switch (Sym.Info.Kind) {
   case WASM_SYMBOL_TYPE_FUNCTION:
+    if (Sym.isBindingLocal())
+      return make<UndefinedFunction>(Name, Sym.Info.ImportName,
+                                     Sym.Info.ImportModule, Flags, this,
+                                     Sym.Signature, IsCalledDirectly);
     return Symtab->addUndefinedFunction(Name, Sym.Info.ImportName,
                                         Sym.Info.ImportModule, Flags, this,
                                         Sym.Signature, IsCalledDirectly);
   case WASM_SYMBOL_TYPE_DATA:
+    if (Sym.isBindingLocal())
+      return make<UndefinedData>(Name, Flags, this);
     return Symtab->addUndefinedData(Name, Flags, this);
   case WASM_SYMBOL_TYPE_GLOBAL:
+    if (Sym.isBindingLocal())
+      return make<UndefinedGlobal>(Name, Sym.Info.ImportName,
+                                   Sym.Info.ImportModule, Flags, this,
+                                   Sym.GlobalType);
     return Symtab->addUndefinedGlobal(Name, Sym.Info.ImportName,
                                       Sym.Info.ImportModule, Flags, this,
                                       Sym.GlobalType);

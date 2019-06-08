@@ -1182,6 +1182,27 @@ def int_experimental_vector_reduce_fmin : Intrinsic<[llvm_anyfloat_ty],
                                                     [llvm_anyvector_ty],
                                                     [IntrNoMem]>;
 
+//===---------- Intrinsics to control hardware supported loops ----------===//
+
+// Specify that the value given is the number of iterations that the next loop
+// will execute.
+def int_set_loop_iterations :
+  Intrinsic<[], [llvm_anyint_ty], [IntrNoDuplicate]>;
+
+// Decrement loop counter by the given argument. Return false if the loop
+// should exit.
+def int_loop_decrement :
+  Intrinsic<[llvm_i1_ty], [llvm_anyint_ty], [IntrNoDuplicate]>;
+
+// Decrement the first operand (the loop counter) by the second operand (the
+// maximum number of elements processed in an iteration). Return the remaining
+// number of iterations still to be executed. This is effectively a sub which
+// can be used with a phi, icmp and br to control the number of iterations
+// executed, as usual.
+def int_loop_decrement_reg :
+  Intrinsic<[llvm_anyint_ty],
+            [llvm_anyint_ty, llvm_anyint_ty], [IntrNoDuplicate]>;
+
 //===----- Intrinsics that are used to provide predicate information -----===//
 
 def int_ssa_copy : Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],

@@ -33,6 +33,7 @@ class ExecutionSession;
 class MaterializationUnit;
 class MaterializationResponsibility;
 class JITDylib;
+enum class SymbolState : uint8_t;
 
 /// VModuleKey provides a unique identifier (allocated and managed by
 /// ExecutionSessions) for a module added to the JIT.
@@ -55,6 +56,18 @@ using SymbolDependenceMap = DenseMap<JITDylib *, SymbolNameSet>;
 
 /// A list of (JITDylib*, bool) pairs.
 using JITDylibSearchList = std::vector<std::pair<JITDylib *, bool>>;
+
+struct SymbolAliasMapEntry {
+  SymbolAliasMapEntry() = default;
+  SymbolAliasMapEntry(SymbolStringPtr Aliasee, JITSymbolFlags AliasFlags)
+      : Aliasee(std::move(Aliasee)), AliasFlags(AliasFlags) {}
+
+  SymbolStringPtr Aliasee;
+  JITSymbolFlags AliasFlags;
+};
+
+/// A map of Symbols to (Symbol, Flags) pairs.
+using SymbolAliasMap = DenseMap<SymbolStringPtr, SymbolAliasMapEntry>;
 
 /// Render a SymbolStringPtr.
 raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPtr &Sym);
@@ -87,11 +100,14 @@ raw_ostream &operator<<(raw_ostream &OS, const MaterializationUnit &MU);
 /// Render a JITDylibSearchList.
 raw_ostream &operator<<(raw_ostream &OS, const JITDylibSearchList &JDs);
 
+/// Render a SymbolAliasMap.
+raw_ostream &operator<<(raw_ostream &OS, const SymbolAliasMap &Aliases);
+
+/// Render a SymbolState.
+raw_ostream &operator<<(raw_ostream &OS, const SymbolState &S);
+
 /// Callback to notify client that symbols have been resolved.
 using SymbolsResolvedCallback = std::function<void(Expected<SymbolMap>)>;
-
-/// Callback to notify client that symbols are ready for execution.
-using SymbolsReadyCallback = std::function<void(Error)>;
 
 /// Callback to register the dependencies for a given query.
 using RegisterDependenciesFunction =
@@ -333,18 +349,6 @@ absoluteSymbols(SymbolMap Symbols, VModuleKey K = VModuleKey()) {
       std::move(Symbols), std::move(K));
 }
 
-struct SymbolAliasMapEntry {
-  SymbolAliasMapEntry() = default;
-  SymbolAliasMapEntry(SymbolStringPtr Aliasee, JITSymbolFlags AliasFlags)
-      : Aliasee(std::move(Aliasee)), AliasFlags(AliasFlags) {}
-
-  SymbolStringPtr Aliasee;
-  JITSymbolFlags AliasFlags;
-};
-
-/// A map of Symbols to (Symbol, Flags) pairs.
-using SymbolAliasMap = DenseMap<SymbolStringPtr, SymbolAliasMapEntry>;
-
 /// A materialization unit for symbol aliases. Allows existing symbols to be
 /// aliased with alternate flags.
 class ReExportsMaterializationUnit : public MaterializationUnit {
@@ -426,6 +430,15 @@ private:
   SymbolPredicate Allow;
 };
 
+/// Represents the state that a symbol has reached during materialization.
+enum class SymbolState : uint8_t {
+  Invalid,       /// No symbol should be in this state.
+  NeverSearched, /// Added to the symbol table, never queried.
+  Materializing, /// Queried, materialization begun.
+  Resolved,      /// Assigned address, still materializing.
+  Ready = 0x3f   /// Ready and safe for clients to access.
+};
+
 /// A symbol query that returns results via a callback when results are
 ///        ready.
 ///
@@ -436,38 +449,30 @@ class AsynchronousSymbolQuery {
   friend class JITSymbolResolverAdapter;
 
 public:
-
-  /// Create a query for the given symbols, notify-resolved and
-  ///        notify-ready callbacks.
+  /// Create a query for the given symbols. The NotifyComplete
+  /// callback will be called once all queried symbols reach the given
+  /// minimum state.
   AsynchronousSymbolQuery(const SymbolNameSet &Symbols,
-                          SymbolsResolvedCallback NotifySymbolsResolved,
-                          SymbolsReadyCallback NotifySymbolsReady);
+                          SymbolState RequiredState,
+                          SymbolsResolvedCallback NotifyComplete);
 
-  /// Set the resolved symbol information for the given symbol name.
-  void resolve(const SymbolStringPtr &Name, JITEvaluatedSymbol Sym);
+  /// Notify the query that a requested symbol has reached the required state.
+  void notifySymbolMetRequiredState(const SymbolStringPtr &Name,
+                                    JITEvaluatedSymbol Sym);
 
   /// Returns true if all symbols covered by this query have been
   ///        resolved.
-  bool isFullyResolved() const { return NotYetResolvedCount == 0; }
+  bool isComplete() const { return OutstandingSymbolsCount == 0; }
 
-  /// Call the NotifySymbolsResolved callback.
+  /// Call the NotifyComplete callback.
   ///
-  /// This should only be called if all symbols covered by the query have been
-  /// resolved.
-  void handleFullyResolved();
-
-  /// Notify the query that a requested symbol is ready for execution.
-  void notifySymbolReady();
-
-  /// Returns true if all symbols covered by this query are ready.
-  bool isFullyReady() const { return NotYetReadyCount == 0; }
-
-  /// Calls the NotifySymbolsReady callback.
-  ///
-  /// This should only be called if all symbols covered by this query are ready.
-  void handleFullyReady();
+  /// This should only be called if all symbols covered by the query have
+  /// reached the specified state.
+  void handleComplete();
 
 private:
+  SymbolState getRequiredState() { return RequiredState; }
+
   void addQueryDependence(JITDylib &JD, SymbolStringPtr Name);
 
   void removeQueryDependence(JITDylib &JD, const SymbolStringPtr &Name);
@@ -478,12 +483,11 @@ private:
 
   void detach();
 
-  SymbolsResolvedCallback NotifySymbolsResolved;
-  SymbolsReadyCallback NotifySymbolsReady;
+  SymbolsResolvedCallback NotifyComplete;
   SymbolDependenceMap QueryRegistrations;
   SymbolMap ResolvedSymbols;
-  size_t NotYetResolvedCount;
-  size_t NotYetReadyCount;
+  size_t OutstandingSymbolsCount;
+  SymbolState RequiredState;
 };
 
 /// A symbol table that supports asynchoronous symbol queries.
@@ -626,28 +630,24 @@ private:
       DenseMap<SymbolStringPtr, std::shared_ptr<UnmaterializedInfo>>;
 
   struct MaterializingInfo {
-    AsynchronousSymbolQueryList PendingQueries;
     SymbolDependenceMap Dependants;
     SymbolDependenceMap UnemittedDependencies;
     bool IsEmitted = false;
+
+    void addQuery(std::shared_ptr<AsynchronousSymbolQuery> Q);
+    void removeQuery(const AsynchronousSymbolQuery &Q);
+    AsynchronousSymbolQueryList takeQueriesMeeting(SymbolState RequiredState);
+    AsynchronousSymbolQueryList takeAllQueries();
+    bool hasQueriesPending() const { return !PendingQueries.empty(); }
+    const AsynchronousSymbolQueryList &pendingQueries() const {
+      return PendingQueries;
+    }
+
+  private:
+    AsynchronousSymbolQueryList PendingQueries;
   };
 
   using MaterializingInfosMap = DenseMap<SymbolStringPtr, MaterializingInfo>;
-
-  using LookupImplActionFlags = enum {
-    None = 0,
-    NotifyFullyResolved = 1 << 0U,
-    NotifyFullyReady = 1 << 1U,
-    LLVM_MARK_AS_BITMASK_ENUM(NotifyFullyReady)
-  };
-
-  enum class SymbolState : uint8_t {
-    Invalid,       // No symbol should be in this state.
-    NeverSearched, // Added to the symbol table, never queried.
-    Materializing, // Queried, materialization begun.
-    Resolved,      // Assigned address, still materializing.
-    Ready = 0x3f   // Ready and safe for clients to access.
-  };
 
   class SymbolTableEntry {
   public:
@@ -713,10 +713,9 @@ private:
                       SymbolNameSet &Unresolved, bool MatchNonExported,
                       MaterializationUnitList &MUs);
 
-  LookupImplActionFlags
-  lookupImpl(std::shared_ptr<AsynchronousSymbolQuery> &Q,
-             std::vector<std::unique_ptr<MaterializationUnit>> &MUs,
-             SymbolNameSet &Unresolved);
+  bool lookupImpl(std::shared_ptr<AsynchronousSymbolQuery> &Q,
+                  std::vector<std::unique_ptr<MaterializationUnit>> &MUs,
+                  SymbolNameSet &Unresolved);
 
   void detachQueryHelper(AsynchronousSymbolQuery &Q,
                          const SymbolNameSet &QuerySymbols);
@@ -833,7 +832,7 @@ public:
   /// Do not use -- this will be removed soon.
   Expected<SymbolMap>
   legacyLookup(LegacyAsyncLookupFunction AsyncLookup, SymbolNameSet Names,
-               bool WaiUntilReady,
+               SymbolState RequiredState,
                RegisterDependenciesFunction RegisterDependencies);
 
   /// Search the given JITDylib list for the given symbols.
@@ -843,11 +842,8 @@ public:
   /// (hidden visibility) symbols in that dylib (true means match against
   /// non-exported symbols, false means do not match).
   ///
-  /// The OnResolve callback will be called once all requested symbols are
-  /// resolved, or if an error occurs prior to resolution.
-  ///
-  /// The OnReady callback will be called once all requested symbols are ready,
-  /// or if an error occurs after resolution but before all symbols are ready.
+  /// The NotifyComplete callback will be called once all requested symbols
+  /// reach the required state.
   ///
   /// If all symbols are found, the RegisterDependencies function will be called
   /// while the session lock is held. This gives clients a chance to register
@@ -859,7 +855,7 @@ public:
   /// client to get an address to call) then the value NoDependenciesToRegister
   /// can be used.
   void lookup(const JITDylibSearchList &SearchOrder, SymbolNameSet Symbols,
-              SymbolsResolvedCallback OnResolve, SymbolsReadyCallback OnReady,
+              SymbolState RequiredState, SymbolsResolvedCallback NotifyComplete,
               RegisterDependenciesFunction RegisterDependencies);
 
   /// Blocking version of lookup above. Returns the resolved symbol map.
@@ -871,9 +867,9 @@ public:
   /// error will be reported via reportErrors.
   Expected<SymbolMap> lookup(const JITDylibSearchList &SearchOrder,
                              const SymbolNameSet &Symbols,
+                             SymbolState RequiredState = SymbolState::Ready,
                              RegisterDependenciesFunction RegisterDependencies =
-                                 NoDependenciesToRegister,
-                             bool WaitUntilReady = true);
+                                 NoDependenciesToRegister);
 
   /// Convenience version of blocking lookup.
   /// Searches each of the JITDylibs in the search order in turn for the given
@@ -896,10 +892,11 @@ public:
   /// Materialize the given unit.
   void dispatchMaterialization(JITDylib &JD,
                                std::unique_ptr<MaterializationUnit> MU) {
-    LLVM_DEBUG(runSessionLocked([&]() {
-                 dbgs() << "Compiling, for " << JD.getName() << ", " << *MU
-                        << "\n";
-               }););
+    LLVM_DEBUG({
+      runSessionLocked([&]() {
+        dbgs() << "Dispatching " << *MU << " for " << JD.getName() << "\n";
+      });
+    });
     DispatchMaterialization(JD, std::move(MU));
   }
 

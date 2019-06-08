@@ -4,7 +4,7 @@
 // Restricted predicate out of range.
 
 fcmla z0.d, p8/m, z1.d, z2.d, #0
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 // CHECK-NEXT: fcmla z0.d, p8/m, z1.d, z2.d, #0
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

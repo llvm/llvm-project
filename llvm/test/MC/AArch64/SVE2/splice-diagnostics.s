@@ -62,7 +62,7 @@ splice z0.b, p0/m, { z1.b, z2.b }
 // Predicate not in restricted predicate range
 
 splice z0.b, p8, { z1.b, z2.b }
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 // CHECK-NEXT: splice z0.b, p8, { z1.b, z2.b }
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

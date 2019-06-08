@@ -120,6 +120,7 @@ struct CopyConfig {
   StringRef BuildIdLinkDir;
   Optional<StringRef> BuildIdLinkInput;
   Optional<StringRef> BuildIdLinkOutput;
+  Optional<StringRef> ExtractPartition;
   StringRef SplitDWO;
   StringRef SymbolsPrefix;
   StringRef AllocSectionsPrefix;
@@ -155,6 +156,7 @@ struct CopyConfig {
   bool AllowBrokenLinks = false;
   bool DeterministicArchives = true;
   bool ExtractDWO = false;
+  bool ExtractMainPartition = false;
   bool KeepFileSymbols = false;
   bool LocalizeHidden = false;
   bool OnlyKeepDebug = false;

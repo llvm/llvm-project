@@ -1,4 +1,4 @@
-; NOTE: To be able to use this file as an input, the string SRC_CMPDIR needs
+; NOTE: To be able to use this file as an input, the string SRC_COMPDIR needs
 ;       replacing with a directory path by using sed or similar.
 
 ; ModuleID = 'source-interleave-x86_64.bc'

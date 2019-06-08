@@ -787,6 +787,10 @@ static uint32_t readAndFeatures(ObjFile<ELFT> *Obj, ArrayRef<uint8_t> Data) {
       continue;
     }
 
+    uint32_t FeatureAndType = Config->EMachine == EM_AARCH64
+                                  ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
+                                  : GNU_PROPERTY_X86_FEATURE_1_AND;
+
     // Read a body of a NOTE record, which consists of type-length-value fields.
     ArrayRef<uint8_t> Desc = Note.getDesc();
     while (!Desc.empty()) {
@@ -796,7 +800,7 @@ static uint32_t readAndFeatures(ObjFile<ELFT> *Obj, ArrayRef<uint8_t> Data) {
       uint32_t Type = read32le(Desc.data());
       uint32_t Size = read32le(Desc.data() + 4);
 
-      if (Type == GNU_PROPERTY_X86_FEATURE_1_AND) {
+      if (Type == FeatureAndType) {
         // We found a FEATURE_1_AND field. There may be more than one of these
         // in a .note.gnu.propery section, for a relocatable object we
         // accumulate the bits set.
@@ -966,8 +970,9 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   if (Name == ".note.GNU-stack")
     return &InputSection::Discarded;
 
-  // If an object file is compatible with Intel Control-Flow Enforcement
-  // Technology (CET), it has a .note.gnu.property section containing the
+  // Object files that use processor features such as Intel Control-Flow
+  // Enforcement (CET) or AArch64 Branch Target Identification BTI, use a
+  // .note.gnu.property section containing a bitfield of feature bits like the
   // GNU_PROPERTY_X86_FEATURE_1_IBT flag. Read a bitmap containing the flag.
   //
   // Since we merge bitmaps from multiple object files to create a new

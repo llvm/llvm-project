@@ -9,7 +9,7 @@ sqneg z0.s, p0/z, z1.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 sqneg z0.s, p8/m, z1.s
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 // CHECK-NEXT: sqneg z0.s, p8/m, z1.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

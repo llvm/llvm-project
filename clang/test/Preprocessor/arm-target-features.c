@@ -748,6 +748,27 @@
 // KRAIT-ALLOW-FP-INSTR:#define __ARM_FEATURE_DSP 1
 // KRAIT-ALLOW-FP-INSTR:#define  __ARM_VFPV4__ 1
 
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M %s
+// CHECK-V81M: #define __ARM_ARCH 8
+// CHECK-V81M: #define __ARM_ARCH_8_1M_MAIN__ 1
+// CHECK-V81M: #define __ARM_ARCH_ISA_THUMB 2
+// CHECK-V81M: #define __ARM_ARCH_PROFILE 'M'
+// CHECK-V81M-NOT: #define __ARM_FEATURE_DSP
+// CHECK-V81M-NOT: #define __ARM_FEATURE_MVE
+// CHECK-V81M-NOT: #define __ARM_FEATURE_SIMD32
+
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVE %s
+// CHECK-V81M-MVE: #define __ARM_FEATURE_DSP 1
+// CHECK-V81M-MVE: #define __ARM_FEATURE_MVE 1
+// CHECK-V81M-MVE: #define __ARM_FEATURE_SIMD32 1
+
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve.fp -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVE-FP %s
+// CHECK-V81M-MVE-FP: #define __ARM_FEATURE_DSP 1
+// CHECK-V81M-MVE-FP: #define __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
+// CHECK-V81M-MVE-FP: #define __ARM_FEATURE_MVE 3
+// CHECK-V81M-MVE-FP: #define __ARM_FEATURE_SIMD32 1
+// CHECK-V81M-MVE-FP: #define __ARM_FPV5__ 1
+
 // RUN: %clang -target armv8.1a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81A %s
 // CHECK-V81A: #define __ARM_ARCH 8
 // CHECK-V81A: #define __ARM_ARCH_8_1A__ 1
@@ -776,3 +797,6 @@
 // CHECK-V85A: #define __ARM_ARCH 8
 // CHECK-V85A: #define __ARM_ARCH_8_5A__ 1
 // CHECK-V85A: #define __ARM_ARCH_PROFILE 'A'
+
+// RUN: %clang -target arm-none-none-eabi -march=armv7-m -mfpu=softvfp -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SOFTVFP %s
+// CHECK-SOFTVFP-NOT: #define __ARM_FP 0x

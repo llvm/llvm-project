@@ -2024,8 +2024,8 @@ define <4 x i32> @fromDiffMemConsDConvdtoi(double* nocapture readonly %ptr) {
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lfd f0, 24(r3)
 ; P9LE-NEXT:    lfd f2, 8(r3)
-; P9LE-NEXT:    lfd f1, 16(r3)
 ; P9LE-NEXT:    xxmrghd vs0, vs2, vs0
+; P9LE-NEXT:    lfd f1, 16(r3)
 ; P9LE-NEXT:    lfd f3, 0(r3)
 ; P9LE-NEXT:    xvcvdpsxws v2, vs0
 ; P9LE-NEXT:    xxmrghd vs0, vs3, vs1
@@ -3608,8 +3608,8 @@ define <4 x i32> @fromDiffMemConsDConvdtoui(double* nocapture readonly %ptr) {
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lfd f0, 24(r3)
 ; P9LE-NEXT:    lfd f2, 8(r3)
-; P9LE-NEXT:    lfd f1, 16(r3)
 ; P9LE-NEXT:    xxmrghd vs0, vs2, vs0
+; P9LE-NEXT:    lfd f1, 16(r3)
 ; P9LE-NEXT:    lfd f3, 0(r3)
 ; P9LE-NEXT:    xvcvdpuxws v2, vs0
 ; P9LE-NEXT:    xxmrghd vs0, vs3, vs1

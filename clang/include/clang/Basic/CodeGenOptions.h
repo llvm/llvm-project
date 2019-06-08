@@ -243,6 +243,10 @@ public:
   /// records.
   std::string OptRecordPasses;
 
+  /// The name of the partition that symbols are assigned to, specified with
+  /// -fsymbol-partition (see https://lld.llvm.org/Partitions.html).
+  std::string SymbolPartition;
+
   /// Regular expression to select optimizations for which we should enable
   /// optimization remarks. Transformation passes whose name matches this
   /// expression (and support this feature), will emit a diagnostic

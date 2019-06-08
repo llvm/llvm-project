@@ -843,6 +843,8 @@ enum : unsigned {
                                         // for safe ICF.
   SHT_LLVM_DEPENDENT_LIBRARIES = 0x6fff4c04, // LLVM Dependent Library Specifiers.
   SHT_LLVM_SYMPART = 0x6fff4c05,        // Symbol partition specification.
+  SHT_LLVM_PART_EHDR = 0x6fff4c06,      // ELF header for loadable partition.
+  SHT_LLVM_PART_PHDR = 0x6fff4c07,      // Phdrs for loadable partition.
   // Android's experimental support for SHT_RELR sections.
   // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
   SHT_ANDROID_RELR = 0x6fffff00,        // Relocation entries; only offsets.

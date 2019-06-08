@@ -100,6 +100,7 @@ static void DecodeARMFeaturesFromCPU(const Driver &D, StringRef CPU,
 static void checkARMArchName(const Driver &D, const Arg *A, const ArgList &Args,
                              llvm::StringRef ArchName, llvm::StringRef CPUName,
                              std::vector<StringRef> &Features,
+                             std::vector<StringRef> &ExtensionFeatures,
                              const llvm::Triple &Triple) {
   std::pair<StringRef, StringRef> Split = ArchName.split("+");
 
@@ -107,7 +108,7 @@ static void checkARMArchName(const Driver &D, const Arg *A, const ArgList &Args,
   llvm::ARM::ArchKind ArchKind = llvm::ARM::parseArch(MArch);
   if (ArchKind == llvm::ARM::ArchKind::INVALID ||
       (Split.second.size() && !DecodeARMFeatures(
-        D, Split.second, CPUName, ArchKind, Features)))
+        D, Split.second, CPUName, ArchKind, ExtensionFeatures)))
     D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
 }
 
@@ -115,6 +116,7 @@ static void checkARMArchName(const Driver &D, const Arg *A, const ArgList &Args,
 static void checkARMCPUName(const Driver &D, const Arg *A, const ArgList &Args,
                             llvm::StringRef CPUName, llvm::StringRef ArchName,
                             std::vector<StringRef> &Features,
+                            std::vector<StringRef> &ExtensionFeatures,
                             const llvm::Triple &Triple) {
   std::pair<StringRef, StringRef> Split = CPUName.split("+");
 
@@ -123,7 +125,7 @@ static void checkARMCPUName(const Driver &D, const Arg *A, const ArgList &Args,
     arm::getLLVMArchKindForARM(CPU, ArchName, Triple);
   if (ArchKind == llvm::ARM::ArchKind::INVALID ||
       (Split.second.size() && !DecodeARMFeatures(
-        D, Split.second, CPU, ArchKind, Features)))
+        D, Split.second, CPU, ArchKind, ExtensionFeatures)))
     D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
 }
 
@@ -289,6 +291,13 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
   const Arg *WaCPU = nullptr, *WaFPU = nullptr;
   const Arg *WaHDiv = nullptr, *WaArch = nullptr;
 
+  // This vector will accumulate features from the architecture
+  // extension suffixes on -mcpu and -march (e.g. the 'bar' in
+  // -mcpu=foo+bar). We want to apply those after the features derived
+  // from the FPU, in case -mfpu generates a negative feature which
+  // the +bar is supposed to override.
+  std::vector<StringRef> ExtensionFeatures;
+
   if (!ForAS) {
     // FIXME: Note, this is a hack, the LLVM backend doesn't actually use these
     // yet (it uses the -mfloat-abi and -msoft-float options), and it is
@@ -351,12 +360,14 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
       D.Diag(clang::diag::warn_drv_unused_argument)
           << ArchArg->getAsString(Args);
     ArchName = StringRef(WaArch->getValue()).substr(7);
-    checkARMArchName(D, WaArch, Args, ArchName, CPUName, Features, Triple);
+    checkARMArchName(D, WaArch, Args, ArchName, CPUName,
+                     Features, ExtensionFeatures, Triple);
     // FIXME: Set Arch.
     D.Diag(clang::diag::warn_drv_unused_argument) << WaArch->getAsString(Args);
   } else if (ArchArg) {
     ArchName = ArchArg->getValue();
-    checkARMArchName(D, ArchArg, Args, ArchName, CPUName, Features, Triple);
+    checkARMArchName(D, ArchArg, Args, ArchName, CPUName,
+                     Features, ExtensionFeatures, Triple);
   }
 
   // Add CPU features for generic CPUs
@@ -367,11 +378,12 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
         Features.push_back(
             Args.MakeArgString((F.second ? "+" : "-") + F.first()));
   } else if (!CPUName.empty()) {
-    DecodeARMFeaturesFromCPU(D, CPUName, Features);
+    DecodeARMFeaturesFromCPU(D, CPUName, ExtensionFeatures);
   }
 
   if (CPUArg)
-    checkARMCPUName(D, CPUArg, Args, CPUName, ArchName, Features, Triple);
+    checkARMCPUName(D, CPUArg, Args, CPUName, ArchName,
+                    Features, ExtensionFeatures, Triple);
   // Honor -mfpu=. ClangAs gives preference to -Wa,-mfpu=.
   const Arg *FPUArg = Args.getLastArg(options::OPT_mfpu_EQ);
   if (WaFPU) {
@@ -388,6 +400,12 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
       D.Diag(clang::diag::err_drv_clang_unsupported)
           << std::string("-mfpu=") + AndroidFPU;
   }
+
+  // Now we've finished accumulating features from arch, cpu and fpu,
+  // we can append the ones for architecture extensions that we
+  // collected separately.
+  Features.insert(std::end(Features),
+                  std::begin(ExtensionFeatures), std::end(ExtensionFeatures));
 
   // Honor -mhwdiv=. ClangAs gives preference to -Wa,-mhwdiv=.
   const Arg *HDivArg = Args.getLastArg(options::OPT_mhwdiv_EQ);
@@ -433,21 +451,20 @@ fp16_fml_fallthrough:
   if (ABI == arm::FloatABI::Soft) {
     llvm::ARM::getFPUFeatures(llvm::ARM::FK_NONE, Features);
 
-    // Disable hardware FP features which have been enabled.
+    // Disable all features relating to hardware FP.
     // FIXME: Disabling fpregs should be enough all by itself, since all
     //        the other FP features are dependent on it. However
     //        there is currently no easy way to test this in clang, so for
     //        now just be explicit and disable all known dependent features
     //        as well.
-    for (std::string Feature : {"vfp2", "vfp3", "vfp4", "fp-armv8", "fullfp16",
-                                "neon", "crypto", "dotprod", "fp16fml"})
-      if (std::find(std::begin(Features), std::end(Features), "+" + Feature) != std::end(Features))
-        Features.push_back(Args.MakeArgString("-" + Feature));
-
-    // Disable the base feature unconditionally, even if it was not
-    // explicitly in the features list (e.g. if we had +vfp3, which
-    // implies it).
-    Features.push_back("-fpregs");
+    for (std::string Feature : {
+            "vfp2", "vfp2sp", "vfp2d16", "vfp2d16sp",
+            "vfp3", "vfp3sp", "vfp3d16", "vfp3d16sp",
+            "vfp4", "vfp4sp", "vfp4d16", "vfp4d16sp",
+            "fp-armv8", "fp-armv8sp", "fp-armv8d16", "fp-armv8d16sp",
+            "fullfp16", "neon", "crypto", "dotprod", "fp16fml",
+            "fp64", "d32", "fpregs"})
+      Features.push_back(Args.MakeArgString("-" + Feature));
   }
 
   // En/disable crc code generation.

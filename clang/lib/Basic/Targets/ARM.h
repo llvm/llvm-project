@@ -33,6 +33,11 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
     FPARMV8 = (1 << 4)
   };
 
+  enum MVEMode {
+      MVE_INT = (1 << 0),
+      MVE_FP  = (1 << 1)
+  };
+
   // Possible HWDiv features.
   enum HWDivMode { HWDivThumb = (1 << 0), HWDivARM = (1 << 1) };
 
@@ -56,6 +61,7 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   unsigned ArchVersion;
 
   unsigned FPU : 5;
+  unsigned MVE : 2;
 
   unsigned IsAAPCS : 1;
   unsigned HWDiv : 2;
@@ -100,6 +106,8 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   bool isThumb() const;
   bool supportsThumb() const;
   bool supportsThumb2() const;
+  bool hasMVE() const;
+  bool hasMVEFloat() const;
 
   StringRef getCPUAttr() const;
   StringRef getCPUProfile() const;

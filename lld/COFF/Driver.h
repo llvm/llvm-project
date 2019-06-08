@@ -108,6 +108,8 @@ private:
 
   Symbol *addUndefined(StringRef Sym);
 
+  StringRef mangleMaybe(Symbol *S);
+
   // Windows specific -- "main" is not the only main function in Windows.
   // You can choose one from these four -- {w,}{WinMain,main}.
   // There are four different entry point functions for them,

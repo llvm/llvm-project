@@ -608,15 +608,7 @@ SymbolFileDWARF::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
   if (!comp_unit)
     return nullptr;
 
-  DWARFDebugInfo *info = DebugInfo();
-  if (info) {
-    // The compile unit ID is the index of the DWARF unit.
-    DWARFUnit *dwarf_cu = info->GetUnitAtIndex(comp_unit->GetID());
-    if (dwarf_cu && dwarf_cu->GetUserData() == nullptr)
-      dwarf_cu->SetUserData(comp_unit);
-    return dwarf_cu;
-  }
-  return nullptr;
+  return static_cast<DWARFUnit *>(comp_unit->GetUserData());
 }
 
 DWARFDebugRangesBase *SymbolFileDWARF::GetDebugRanges() {
