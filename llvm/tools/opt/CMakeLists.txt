@@ -33,12 +33,10 @@ add_llvm_tool(opt
   PrintSCC.cpp
   opt.cpp
 
+  ENABLE_PLUGINS
+
   DEPENDS
   intrinsics_gen
   SUPPORT_PLUGINS
   )
 export_executable_symbols(opt)
-
-if(WITH_POLLY AND LINK_POLLY_INTO_TOOLS)
-  target_link_libraries(opt PRIVATE Polly)
-endif(WITH_POLLY AND LINK_POLLY_INTO_TOOLS)
