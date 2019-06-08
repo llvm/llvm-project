@@ -1083,6 +1083,105 @@
 // CHECK_CLX_M64: #define __x86_64 1
 // CHECK_CLX_M64: #define __x86_64__ 1
 
+// RUN: %clang -march=cooperlake -m32 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_CPX_M32
+// CHECK_CPX_M32: #define __AES__ 1
+// CHECK_CPX_M32: #define __AVX2__ 1
+// CHECK_CPX_M32: #define __AVX512BF16__ 1
+// CHECK_CPX_M32: #define __AVX512BW__ 1
+// CHECK_CPX_M32: #define __AVX512CD__ 1
+// CHECK_CPX_M32: #define __AVX512DQ__ 1
+// CHECK_CPX_M32: #define __AVX512F__ 1
+// CHECK_CPX_M32: #define __AVX512VL__ 1
+// CHECK_CPX_M32: #define __AVX512VNNI__ 1
+// CHECK_CPX_M32: #define __AVX__ 1
+// CHECK_CPX_M32: #define __BMI2__ 1
+// CHECK_CPX_M32: #define __BMI__ 1
+// CHECK_CPX_M32: #define __CLFLUSHOPT__ 1
+// CHECK_CPX_M32: #define __CLWB__ 1
+// CHECK_CPX_M32: #define __F16C__ 1
+// CHECK_CPX_M32: #define __FMA__ 1
+// CHECK_CPX_M32: #define __INVPCID__ 1
+// CHECK_CPX_M32: #define __LZCNT__ 1
+// CHECK_CPX_M32: #define __MMX__ 1
+// CHECK_CPX_M32: #define __MOVBE__ 1
+// CHECK_CPX_M32: #define __MPX__ 1
+// CHECK_CPX_M32: #define __PCLMUL__ 1
+// CHECK_CPX_M32: #define __PKU__ 1
+// CHECK_CPX_M32: #define __POPCNT__ 1
+// CHECK_CPX_M32: #define __PRFCHW__ 1
+// CHECK_CPX_M32: #define __RDRND__ 1
+// CHECK_CPX_M32: #define __RDSEED__ 1
+// CHECK_CPX_M32-NOT: #define __SGX__ 1
+// CHECK_CPX_M32: #define __SSE2__ 1
+// CHECK_CPX_M32: #define __SSE3__ 1
+// CHECK_CPX_M32: #define __SSE4_1__ 1
+// CHECK_CPX_M32: #define __SSE4_2__ 1
+// CHECK_CPX_M32: #define __SSE__ 1
+// CHECK_CPX_M32: #define __SSSE3__ 1
+// CHECK_CPX_M32: #define __XSAVEC__ 1
+// CHECK_CPX_M32: #define __XSAVEOPT__ 1
+// CHECK_CPX_M32: #define __XSAVES__ 1
+// CHECK_CPX_M32: #define __XSAVE__ 1
+// CHECK_CPX_M32: #define __corei7 1
+// CHECK_CPX_M32: #define __corei7__ 1
+// CHECK_CPX_M32: #define __i386 1
+// CHECK_CPX_M32: #define __i386__ 1
+// CHECK_CPX_M32: #define __tune_corei7__ 1
+// CHECK_CPX_M32: #define i386 1
+
+// RUN: %clang -march=cooperlake -m64 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_CPX_M64
+// CHECK_CPX_M64: #define __AES__ 1
+// CHECK_CPX_M64: #define __AVX2__ 1
+// CHECK_CPX_M64: #define __AVX512BF16__ 1
+// CHECK_CPX_M64: #define __AVX512BW__ 1
+// CHECK_CPX_M64: #define __AVX512CD__ 1
+// CHECK_CPX_M64: #define __AVX512DQ__ 1
+// CHECK_CPX_M64: #define __AVX512F__ 1
+// CHECK_CPX_M64: #define __AVX512VL__ 1
+// CHECK_CPX_M64: #define __AVX512VNNI__ 1
+// CHECK_CPX_M64: #define __AVX__ 1
+// CHECK_CPX_M64: #define __BMI2__ 1
+// CHECK_CPX_M64: #define __BMI__ 1
+// CHECK_CPX_M64: #define __CLFLUSHOPT__ 1
+// CHECK_CPX_M64: #define __CLWB__ 1
+// CHECK_CPX_M64: #define __F16C__ 1
+// CHECK_CPX_M64: #define __FMA__ 1
+// CHECK_CPX_M64: #define __INVPCID__ 1
+// CHECK_CPX_M64: #define __LZCNT__ 1
+// CHECK_CPX_M64: #define __MMX__ 1
+// CHECK_CPX_M64: #define __MOVBE__ 1
+// CHECK_CPX_M64: #define __MPX__ 1
+// CHECK_CPX_M64: #define __PCLMUL__ 1
+// CHECK_CPX_M64: #define __PKU__ 1
+// CHECK_CPX_M64: #define __POPCNT__ 1
+// CHECK_CPX_M64: #define __PRFCHW__ 1
+// CHECK_CPX_M64: #define __RDRND__ 1
+// CHECK_CPX_M64: #define __RDSEED__ 1
+// CHECK_CPX_M64-NOT: #define __SGX__ 1
+// CHECK_CPX_M64: #define __SSE2_MATH__ 1
+// CHECK_CPX_M64: #define __SSE2__ 1
+// CHECK_CPX_M64: #define __SSE3__ 1
+// CHECK_CPX_M64: #define __SSE4_1__ 1
+// CHECK_CPX_M64: #define __SSE4_2__ 1
+// CHECK_CPX_M64: #define __SSE_MATH__ 1
+// CHECK_CPX_M64: #define __SSE__ 1
+// CHECK_CPX_M64: #define __SSSE3__ 1
+// CHECK_CPX_M64: #define __XSAVEC__ 1
+// CHECK_CPX_M64: #define __XSAVEOPT__ 1
+// CHECK_CPX_M64: #define __XSAVES__ 1
+// CHECK_CPX_M64: #define __XSAVE__ 1
+// CHECK_CPX_M64: #define __amd64 1
+// CHECK_CPX_M64: #define __amd64__ 1
+// CHECK_CPX_M64: #define __corei7 1
+// CHECK_CPX_M64: #define __corei7__ 1
+// CHECK_CPX_M64: #define __tune_corei7__ 1
+// CHECK_CPX_M64: #define __x86_64 1
+// CHECK_CPX_M64: #define __x86_64__ 1
+
 // RUN: %clang -march=cannonlake -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_CNL_M32

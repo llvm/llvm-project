@@ -35,6 +35,8 @@ namespace Intrinsic {
 enum ID : unsigned;
 }
 
+class AssumptionCache;
+class BranchInst;
 class Function;
 class GlobalValue;
 class IntrinsicInst;
@@ -44,6 +46,7 @@ class SCEV;
 class ScalarEvolution;
 class StoreInst;
 class SwitchInst;
+class TargetLibraryInfo;
 class Type;
 class User;
 class Value;
@@ -444,6 +447,32 @@ public:
   /// target-independent defaults.
   void getUnrollingPreferences(Loop *L, ScalarEvolution &,
                                UnrollingPreferences &UP) const;
+
+  /// Attributes of a target dependent hardware loop. Here, the term 'element'
+  /// describes the work performed by an IR loop that has not been vectorized
+  /// by the compiler.
+  struct HardwareLoopInfo {
+    HardwareLoopInfo()        = delete;
+    HardwareLoopInfo(Loop *L) : L(L) { }
+    Loop *L                   = nullptr;
+    BasicBlock *ExitBlock     = nullptr;
+    BranchInst *ExitBranch    = nullptr;
+    const SCEV *ExitCount     = nullptr;
+    IntegerType *CountType    = nullptr;
+    Value *LoopDecrement      = nullptr;  // The maximum number of elements
+                                          // processed in the loop body.
+    bool IsNestingLegal       = false;    // Can a hardware loop be a parent to
+                                          // another hardware loop.
+    bool CounterInReg         = false;    // Should loop counter be updated in
+                                          // the loop via a phi?
+  };
+
+  /// Query the target whether it would be profitable to convert the given loop
+  /// into a hardware loop.
+  bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
+                                AssumptionCache &AC,
+                                TargetLibraryInfo *LibInfo,
+                                HardwareLoopInfo &HWLoopInfo) const;
 
   /// @}
 
@@ -1073,6 +1102,10 @@ public:
   virtual bool isLoweredToCall(const Function *F) = 0;
   virtual void getUnrollingPreferences(Loop *L, ScalarEvolution &,
                                        UnrollingPreferences &UP) = 0;
+  virtual bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
+                                        AssumptionCache &AC,
+                                        TargetLibraryInfo *LibInfo,
+                                        HardwareLoopInfo &HWLoopInfo) = 0;
   virtual bool isLegalAddImmediate(int64_t Imm) = 0;
   virtual bool isLegalICmpImmediate(int64_t Imm) = 0;
   virtual bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
@@ -1303,6 +1336,12 @@ public:
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                UnrollingPreferences &UP) override {
     return Impl.getUnrollingPreferences(L, SE, UP);
+  }
+  bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
+                                AssumptionCache &AC,
+                                TargetLibraryInfo *LibInfo,
+                                HardwareLoopInfo &HWLoopInfo) override {
+    return Impl.isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
   }
   bool isLegalAddImmediate(int64_t Imm) override {
     return Impl.isLegalAddImmediate(Imm);

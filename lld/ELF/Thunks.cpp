@@ -300,9 +300,10 @@ public:
       return;
 
     In.PPC64LongBranchTarget->addEntry(Dest);
-    In.RelaDyn->addReloc({Target->RelativeRel, In.PPC64LongBranchTarget,
-                          Dest.getPPC64LongBranchOffset(), true, &Dest,
-                          getPPC64GlobalEntryToLocalEntryOffset(Dest.StOther)});
+    Main->RelaDyn->addReloc(
+        {Target->RelativeRel, In.PPC64LongBranchTarget,
+         Dest.getPPC64LongBranchOffset(), true, &Dest,
+         getPPC64GlobalEntryToLocalEntryOffset(Dest.StOther)});
   }
 };
 

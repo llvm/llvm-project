@@ -875,19 +875,20 @@ void CodeGenModule::setDLLImportDLLExport(llvm::GlobalValue *GV,
 void CodeGenModule::setGVProperties(llvm::GlobalValue *GV,
                                     GlobalDecl GD) const {
   setDLLImportDLLExport(GV, GD);
-  setGlobalVisibilityAndLocal(GV, dyn_cast<NamedDecl>(GD.getDecl()));
+  setGVPropertiesAux(GV, dyn_cast<NamedDecl>(GD.getDecl()));
 }
 
 void CodeGenModule::setGVProperties(llvm::GlobalValue *GV,
                                     const NamedDecl *D) const {
   setDLLImportDLLExport(GV, D);
-  setGlobalVisibilityAndLocal(GV, D);
+  setGVPropertiesAux(GV, D);
 }
 
-void CodeGenModule::setGlobalVisibilityAndLocal(llvm::GlobalValue *GV,
-                                                const NamedDecl *D) const {
+void CodeGenModule::setGVPropertiesAux(llvm::GlobalValue *GV,
+                                       const NamedDecl *D) const {
   setGlobalVisibility(GV, D);
   setDSOLocal(GV);
+  GV->setPartition(CodeGenOpts.SymbolPartition);
 }
 
 static llvm::GlobalVariable::ThreadLocalMode GetLLVMTLSModel(StringRef S) {

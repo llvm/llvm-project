@@ -68,8 +68,7 @@ public:
   // mangled symbol. This function tries to find a mangled name
   // for U from the symbol table, and if found, set the symbol as
   // a weak alias for U.
-  void mangleMaybe(Symbol *B);
-  StringRef findMangle(StringRef Name);
+  Symbol *findMangle(StringRef Name);
 
   // Build a set of COFF objects representing the combined contents of
   // BitcodeFiles and add them to the symbol table. Called after all files are
@@ -115,7 +114,8 @@ private:
   std::pair<Symbol *, bool> insert(StringRef Name);
   /// Same as insert(Name), but also sets IsUsedInRegularObj.
   std::pair<Symbol *, bool> insert(StringRef Name, InputFile *F);
-  StringRef findByPrefix(StringRef Prefix);
+
+  std::vector<Symbol *> getSymsWithPrefix(StringRef Prefix);
 
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> SymMap;
   std::unique_ptr<BitcodeCompiler> LTO;

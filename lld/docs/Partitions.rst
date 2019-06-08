@@ -3,9 +3,8 @@ Partitions
 
 .. warning::
 
-  This feature has not yet fully landed in LLD. This document describes how
-  the feature is intended to work once it lands. Furthermore, the feature
-  is currently experimental, and its interface is subject to change.
+  This feature is currently experimental, and its interface is subject
+  to change.
 
 LLD's partitioning feature allows a program (which may be an executable
 or a shared library) to be split into multiple pieces, or partitions. A

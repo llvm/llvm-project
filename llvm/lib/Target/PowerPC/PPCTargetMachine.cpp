@@ -101,7 +101,6 @@ extern "C" void LLVMInitializePowerPCTarget() {
   RegisterTargetMachine<PPCTargetMachine> C(getThePPC64LETarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-  initializePPCCTRLoopsPass(PR);
 #ifndef NDEBUG
   initializePPCCTRLoopsVerifyPass(PR);
 #endif
@@ -422,7 +421,7 @@ bool PPCPassConfig::addPreISel() {
     addPass(createPPCLoopPreIncPrepPass(getPPCTargetMachine()));
 
   if (!DisableCTRLoops && getOptLevel() != CodeGenOpt::None)
-    addPass(createPPCCTRLoops());
+    addPass(createHardwareLoopsPass());
 
   return false;
 }

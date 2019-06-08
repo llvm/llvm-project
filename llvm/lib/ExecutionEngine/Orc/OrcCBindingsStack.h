@@ -153,8 +153,8 @@ private:
       for (auto &S : Symbols) {
         if (auto Sym = findSymbol(*S)) {
           if (auto Addr = Sym.getAddress()) {
-            Query->resolve(S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
-            Query->notifySymbolReady();
+            Query->notifySymbolMetRequiredState(
+                S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
           } else {
             Stack.ES.legacyFailQuery(*Query, Addr.takeError());
             return orc::SymbolNameSet();
@@ -166,11 +166,8 @@ private:
           UnresolvedSymbols.insert(S);
       }
 
-      if (Query->isFullyResolved())
-        Query->handleFullyResolved();
-
-      if (Query->isFullyReady())
-        Query->handleFullyReady();
+      if (Query->isComplete())
+        Query->handleComplete();
 
       return UnresolvedSymbols;
     }

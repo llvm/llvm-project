@@ -176,8 +176,8 @@ class OrcMCJITReplacement : public ExecutionEngine {
       for (auto &S : Symbols) {
         if (auto Sym = M.findMangledSymbol(*S)) {
           if (auto Addr = Sym.getAddress()) {
-            Query->resolve(S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
-            Query->notifySymbolReady();
+            Query->notifySymbolMetRequiredState(
+                S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
             NewSymbolsResolved = true;
           } else {
             M.ES.legacyFailQuery(*Query, Addr.takeError());
@@ -189,8 +189,8 @@ class OrcMCJITReplacement : public ExecutionEngine {
         } else {
           if (auto Sym2 = M.ClientResolver->findSymbol(*S)) {
             if (auto Addr = Sym2.getAddress()) {
-              Query->resolve(S, JITEvaluatedSymbol(*Addr, Sym2.getFlags()));
-              Query->notifySymbolReady();
+              Query->notifySymbolMetRequiredState(
+                  S, JITEvaluatedSymbol(*Addr, Sym2.getFlags()));
               NewSymbolsResolved = true;
             } else {
               M.ES.legacyFailQuery(*Query, Addr.takeError());
@@ -204,11 +204,8 @@ class OrcMCJITReplacement : public ExecutionEngine {
         }
       }
 
-      if (NewSymbolsResolved && Query->isFullyResolved())
-        Query->handleFullyResolved();
-
-      if (NewSymbolsResolved && Query->isFullyReady())
-        Query->handleFullyReady();
+      if (NewSymbolsResolved && Query->isComplete())
+        Query->handleComplete();
 
       return UnresolvedSymbols;
     }

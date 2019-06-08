@@ -61,12 +61,11 @@ static bool testSetProcessAllSections(std::unique_ptr<MemoryBuffer> Obj,
     cantFail(std::move(R));
   };
 
-  auto OnReadyDoNothing = [](Error Err) { cantFail(std::move(Err)); };
-
   ObjLayer.setProcessAllSections(ProcessAllSections);
   cantFail(ObjLayer.add(JD, std::move(Obj), ES.allocateVModule()));
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo}, OnResolveDoNothing,
-            OnReadyDoNothing, NoDependenciesToRegister);
+  ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Resolved,
+            OnResolveDoNothing, NoDependenciesToRegister);
+
   return DebugSectionSeen;
 }
 
@@ -160,10 +159,10 @@ TEST(RTDyldObjectLinkingLayerTest, TestOverrideObjectFlags) {
   ObjLayer.setOverrideObjectFlagsWithResponsibilityFlags(true);
 
   cantFail(CompileLayer.add(JD, std::move(M), ES.allocateVModule()));
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo},
-            [](Expected<SymbolMap> R) { cantFail(std::move(R)); },
-            [](Error Err) { cantFail(std::move(Err)); },
-            NoDependenciesToRegister);
+  ES.lookup(
+      JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Resolved,
+      [](Expected<SymbolMap> R) { cantFail(std::move(R)); },
+      NoDependenciesToRegister);
 }
 
 TEST(RTDyldObjectLinkingLayerTest, TestAutoClaimResponsibilityForSymbols) {
@@ -225,10 +224,10 @@ TEST(RTDyldObjectLinkingLayerTest, TestAutoClaimResponsibilityForSymbols) {
   ObjLayer.setAutoClaimResponsibilityForObjectSymbols(true);
 
   cantFail(CompileLayer.add(JD, std::move(M), ES.allocateVModule()));
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo},
-            [](Expected<SymbolMap> R) { cantFail(std::move(R)); },
-            [](Error Err) { cantFail(std::move(Err)); },
-            NoDependenciesToRegister);
+  ES.lookup(
+      JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Resolved,
+      [](Expected<SymbolMap> R) { cantFail(std::move(R)); },
+      NoDependenciesToRegister);
 }
 
 } // end anonymous namespace

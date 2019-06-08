@@ -9944,7 +9944,7 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::INTRINSIC_W_CHAIN: {
     if (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue() !=
-        Intrinsic::ppc_is_decremented_ctr_nonzero)
+        Intrinsic::loop_decrement)
       break;
 
     assert(N->getValueType(0) == MVT::i1 &&
@@ -13636,7 +13636,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
 
     if (Cond.getOpcode() == ISD::INTRINSIC_W_CHAIN &&
         cast<ConstantSDNode>(Cond.getOperand(1))->getZExtValue() ==
-          Intrinsic::ppc_is_decremented_ctr_nonzero) {
+          Intrinsic::loop_decrement) {
 
       // We now need to make the intrinsic dead (it cannot be instruction
       // selected).
@@ -13662,14 +13662,14 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     if (LHS.getOpcode() == ISD::AND &&
         LHS.getOperand(0).getOpcode() == ISD::INTRINSIC_W_CHAIN &&
         cast<ConstantSDNode>(LHS.getOperand(0).getOperand(1))->getZExtValue() ==
-          Intrinsic::ppc_is_decremented_ctr_nonzero &&
+          Intrinsic::loop_decrement &&
         isa<ConstantSDNode>(LHS.getOperand(1)) &&
         !isNullConstant(LHS.getOperand(1)))
       LHS = LHS.getOperand(0);
 
     if (LHS.getOpcode() == ISD::INTRINSIC_W_CHAIN &&
         cast<ConstantSDNode>(LHS.getOperand(1))->getZExtValue() ==
-          Intrinsic::ppc_is_decremented_ctr_nonzero &&
+          Intrinsic::loop_decrement &&
         isa<ConstantSDNode>(RHS)) {
       assert((CC == ISD::SETEQ || CC == ISD::SETNE) &&
              "Counter decrement comparison is not EQ or NE");

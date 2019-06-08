@@ -166,6 +166,9 @@ def analyzer_config_compatibility_mode : Separate<["-"], "analyzer-config-compat
 def analyzer_config_compatibility_mode_EQ : Joined<["-"], "analyzer-config-compatibility-mode=">,
   Alias<analyzer_config_compatibility_mode>;
 
+def analyzer_werror : Flag<["-"], "analyzer-werror">,
+  HelpText<"Emit analyzer results as errors rather than warnings">;
+
 //===----------------------------------------------------------------------===//
 // Migrator Options
 //===----------------------------------------------------------------------===//

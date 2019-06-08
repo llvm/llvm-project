@@ -190,6 +190,13 @@ public:
     return true;
   }
 
+  bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
+                                AssumptionCache &AC,
+                                TargetLibraryInfo *LibInfo,
+                                TTI::HardwareLoopInfo &HWLoopInfo) {
+    return false;
+  }
+
   void getUnrollingPreferences(Loop *, ScalarEvolution &,
                                TTI::UnrollingPreferences &) {}
 

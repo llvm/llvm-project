@@ -655,18 +655,6 @@ void fixupExports() {
   }
 
   for (Export &E : Config->Exports) {
-    Symbol *Sym = E.Sym;
-    if (!E.ForwardTo.empty() || !Sym) {
-      E.SymbolName = E.Name;
-    } else {
-      if (auto *U = dyn_cast<Undefined>(Sym))
-        if (U->WeakAlias)
-          Sym = U->WeakAlias;
-      E.SymbolName = Sym->getName();
-    }
-  }
-
-  for (Export &E : Config->Exports) {
     if (!E.ForwardTo.empty()) {
       E.ExportName = undecorate(E.Name);
     } else {

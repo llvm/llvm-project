@@ -162,6 +162,8 @@ static void dfsan_check_label(dfsan_label label) {
 // this function (the instrumentation pass inlines the equality test).
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 dfsan_label __dfsan_union(dfsan_label l1, dfsan_label l2) {
+  if (flags().fast16labels)
+    return l1 | l2;
   DCHECK_NE(l1, l2);
 
   if (l1 == 0)

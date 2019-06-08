@@ -22,6 +22,7 @@ Basic Commands
    llvm-link
    llvm-ar
    llvm-lib
+   llvm-lipo
    llvm-nm
    llvm-objdump
    llvm-config
@@ -35,6 +36,7 @@ Basic Commands
    llvm-dwarfdump
    dsymutil
    llvm-mca
+   llvm-readobj
 
 Debugging Tools
 ~~~~~~~~~~~~~~~
@@ -58,4 +60,3 @@ Developer Tools
    llvm-build
    llvm-exegesis
    llvm-pdbutil
-   llvm-readobj

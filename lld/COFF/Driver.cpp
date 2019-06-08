@@ -138,8 +138,8 @@ static StringRef mangle(StringRef Sym) {
 }
 
 static bool findUnderscoreMangle(StringRef Sym) {
-  StringRef Entry = Symtab->findMangle(mangle(Sym));
-  return !Entry.empty() && !isa<Undefined>(Symtab->find(Entry));
+  Symbol *S = Symtab->findMangle(mangle(Sym));
+  return S && !isa<Undefined>(S);
 }
 
 MemoryBufferRef LinkerDriver::takeBuffer(std::unique_ptr<MemoryBuffer> MB) {
@@ -484,6 +484,24 @@ Symbol *LinkerDriver::addUndefined(StringRef Name) {
     Config->GCRoot.push_back(B);
   }
   return B;
+}
+
+StringRef LinkerDriver::mangleMaybe(Symbol *S) {
+  // If the plain symbol name has already been resolved, do nothing.
+  Undefined *Unmangled = dyn_cast<Undefined>(S);
+  if (!Unmangled)
+    return "";
+
+  // Otherwise, see if a similar, mangled symbol exists in the symbol table.
+  Symbol *Mangled = Symtab->findMangle(Unmangled->getName());
+  if (!Mangled)
+    return "";
+
+  // If we find a similar mangled symbol, make this an alias to it and return
+  // its name.
+  log(Unmangled->getName() + " aliased to " + Mangled->getName());
+  Unmangled->WeakAlias = Symtab->addUndefined(Mangled->getName());
+  return Mangled->getName();
 }
 
 // Windows specific -- find default entry point name.
@@ -1644,7 +1662,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     // Windows specific -- if entry point is not found,
     // search for its mangled names.
     if (Config->Entry)
-      Symtab->mangleMaybe(Config->Entry);
+      mangleMaybe(Config->Entry);
 
     // Windows specific -- Make sure we resolve all dllexported symbols.
     for (Export &E : Config->Exports) {
@@ -1652,7 +1670,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
         continue;
       E.Sym = addUndefined(E.Name);
       if (!E.Directives)
-        Symtab->mangleMaybe(E.Sym);
+        E.SymbolName = mangleMaybe(E.Sym);
     }
 
     // Add weak aliases. Weak aliases is a mechanism to give remaining

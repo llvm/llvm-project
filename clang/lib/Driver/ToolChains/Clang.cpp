@@ -5410,6 +5410,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        TC.useIntegratedAs()))
     CmdArgs.push_back("-faddrsig");
 
+  if (Arg *A = Args.getLastArg(options::OPT_fsymbol_partition_EQ)) {
+    std::string Str = A->getAsString(Args);
+    if (!TC.getTriple().isOSBinFormatELF())
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << Str << TC.getTripleString();
+    CmdArgs.push_back(Args.MakeArgString(Str));
+  }
+
   // Add the "-o out -x type src.c" flags last. This is done primarily to make
   // the -cc1 command easier to edit when reproducing compiler crashes.
   if (Output.getType() == types::TY_Dependencies) {

@@ -302,6 +302,11 @@ bool RISCVTargetLowering::isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const {
   return Subtarget.is64Bit() && SrcVT == MVT::i32 && DstVT == MVT::i64;
 }
 
+bool RISCVTargetLowering::hasBitPreservingFPLogic(EVT VT) const {
+  return (VT == MVT::f32 && Subtarget.hasStdExtF()) ||
+         (VT == MVT::f64 && Subtarget.hasStdExtD());
+}
+
 // Changes the condition code and swaps operands if necessary, so the SetCC
 // operation matches one of the comparisons supported directly in the RISC-V
 // ISA.

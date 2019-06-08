@@ -212,13 +212,19 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   std::vector<DominatorTree::UpdateType> Updates;
   if (DTU) {
     Updates.reserve(1 + (2 * succ_size(BB)));
-    Updates.push_back({DominatorTree::Delete, PredBB, BB});
-    for (auto I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
-      Updates.push_back({DominatorTree::Delete, BB, *I});
+    // Add insert edges first. Experimentally, for the particular case of two
+    // blocks that can be merged, with a single successor and single predecessor
+    // respectively, it is beneficial to have all insert updates first. Deleting
+    // edges first may lead to unreachable blocks, followed by inserting edges
+    // making the blocks reachable again. Such DT updates lead to high compile
+    // times. We add inserts before deletes here to reduce compile time.
+    for (auto I = succ_begin(BB), E = succ_end(BB); I != E; ++I)
       // This successor of BB may already have PredBB as a predecessor.
       if (llvm::find(successors(PredBB), *I) == succ_end(PredBB))
         Updates.push_back({DominatorTree::Insert, PredBB, *I});
-    }
+    for (auto I = succ_begin(BB), E = succ_end(BB); I != E; ++I)
+      Updates.push_back({DominatorTree::Delete, BB, *I});
+    Updates.push_back({DominatorTree::Delete, PredBB, BB});
   }
 
   if (MSSAU)

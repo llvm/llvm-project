@@ -1,0 +1,187 @@
+partitions.elf is a file containing a main partition and two loadable
+partitions "part1" and "part2" (see https://lld.llvm.org/Partitions.html
+for a description of partitions). This file tests that extracting the main
+and loadable partitions produces a file with the correct headers and sections.
+
+RUN: llvm-objcopy --extract-main-partition %p/Inputs/partitions.elf %t1
+RUN: llvm-objcopy --extract-partition=part1 %p/Inputs/partitions.elf %t2
+RUN: llvm-objcopy --extract-partition=part2 %p/Inputs/partitions.elf %t3
+
+RUN: llvm-readelf --headers --sections --symbols %t1 | FileCheck --check-prefix=MAIN %s
+RUN: llvm-readelf --headers --sections --symbols %t2 | FileCheck --check-prefix=PART1 %s
+RUN: llvm-readelf --headers --sections --symbols %t3 | FileCheck --check-prefix=PART2 %s
+
+MAIN:      ELF Header:
+MAIN-NEXT:   Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00
+MAIN-NEXT:   Class:                             ELF64
+MAIN-NEXT:   Data:                              2's complement, little endian
+MAIN-NEXT:   Version:                           1 (current)
+MAIN-NEXT:   OS/ABI:                            UNIX - System V
+MAIN-NEXT:   ABI Version:                       0x0
+MAIN-NEXT:   Type:                              EXEC (Executable file)
+MAIN-NEXT:   Machine:                           Advanced Micro Devices X86-64
+MAIN-NEXT:   Version:                           0x1
+MAIN-NEXT:   Entry point address:               0x201000
+MAIN-NEXT:   Start of program headers:          64 (bytes into file)
+MAIN-NEXT:   Start of section headers:          12488 (bytes into file)
+MAIN-NEXT:   Flags:                             0x0
+MAIN-NEXT:   Size of this header:               64 (bytes)
+MAIN-NEXT:   Size of program headers:           56 (bytes)
+MAIN-NEXT:   Number of program headers:         8
+MAIN-NEXT:   Size of section headers:           64 (bytes)
+MAIN-NEXT:   Number of section headers:         13
+MAIN-NEXT:   Section header string table index: 11
+
+MAIN: Section Headers:
+MAIN-NEXT:   [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+MAIN-NEXT:   [ 0]                   NULL            0000000000000000 000000 000000 00      0   0  0
+MAIN-NEXT:   [ 1] .dynsym           DYNSYM          0000000000200200 000200 000030 18   A  4   1  8
+MAIN-NEXT:   [ 2] .gnu.hash         GNU_HASH        0000000000200230 000230 000020 00   A  1   0  8
+MAIN-NEXT:   [ 3] .hash             HASH            0000000000200250 000250 000018 04   A  1   0  4
+MAIN-NEXT:   [ 4] .dynstr           STRTAB          0000000000200268 000268 000014 00   A  0   0  1
+MAIN-NEXT:   [ 5] .rodata           PROGBITS        000000000020027c 00027c 000018 00   A  0   0  4
+MAIN-NEXT:   [ 6] .text0            PROGBITS        0000000000201000 001000 000001 00  AX  0   0  1
+MAIN-NEXT:   [ 7] .dynamic          DYNAMIC         0000000000202000 002000 000080 10  WA  4   0  8
+MAIN-NEXT:   [ 8] .part.end         NOBITS          0000000000209000 003000 001000 00  WA  0   0  1
+MAIN-NEXT:   [ 9] .comment          PROGBITS        0000000000000000 003000 000008 01  MS  0   0  1
+MAIN-NEXT:   [10] .symtab           SYMTAB          0000000000000000 003008 000048 18     12   2  8
+MAIN-NEXT:   [11] .shstrtab         STRTAB          0000000000000000 003050 000060 00      0   0  1
+MAIN-NEXT:   [12] .strtab           STRTAB          0000000000000000 0030b0 000011 00      0   0  1
+
+MAIN: Symbol table '.dynsym' contains 2 entries:
+MAIN-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
+MAIN-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
+MAIN-NEXT:      1: 0000000000201000     0 NOTYPE  GLOBAL DEFAULT    6 _start
+
+MAIN: Symbol table '.symtab' contains 3 entries:
+MAIN-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
+MAIN-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
+MAIN-NEXT:      1: 0000000000202000     0 NOTYPE  LOCAL  HIDDEN     7 _DYNAMIC
+MAIN-NEXT:      2: 0000000000201000     0 NOTYPE  GLOBAL DEFAULT    6 _start
+
+MAIN: Program Headers:
+MAIN-NEXT:   Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+MAIN-NEXT:   PHDR           0x000040 0x0000000000200040 0x0000000000200040 0x0001c0 0x0001c0 R   0x8
+MAIN-NEXT:   LOAD           0x000000 0x0000000000200000 0x0000000000200000 0x000294 0x000294 R   0x1000
+MAIN-NEXT:   LOAD           0x001000 0x0000000000201000 0x0000000000201000 0x000001 0x000001 R E 0x1000
+MAIN-NEXT:   LOAD           0x002000 0x0000000000202000 0x0000000000202000 0x000080 0x000080 RW  0x1000
+MAIN-NEXT:   LOAD           0x003000 0x0000000000209000 0x0000000000209000 0x000000 0x001000 RW  0x1000
+MAIN-NEXT:   DYNAMIC        0x002000 0x0000000000202000 0x0000000000202000 0x000080 0x000080 RW  0x8
+MAIN-NEXT:   GNU_RELRO      0x002000 0x0000000000202000 0x0000000000202000 0x000080 0x001000 R   0x1
+MAIN-NEXT:   GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0x0
+
+PART1: ELF Header:
+PART1-NEXT:   Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00
+PART1-NEXT:   Class:                             ELF64
+PART1-NEXT:   Data:                              2's complement, little endian
+PART1-NEXT:   Version:                           1 (current)
+PART1-NEXT:   OS/ABI:                            UNIX - System V
+PART1-NEXT:   ABI Version:                       0x0
+PART1-NEXT:   Type:                              DYN (Shared object file)
+PART1-NEXT:   Machine:                           Advanced Micro Devices X86-64
+PART1-NEXT:   Version:                           0x1
+PART1-NEXT:   Entry point address:               0x0
+PART1-NEXT:   Start of program headers:          64 (bytes into file)
+PART1-NEXT:   Start of section headers:          8336 (bytes into file)
+PART1-NEXT:   Flags:                             0x0
+PART1-NEXT:   Size of this header:               64 (bytes)
+PART1-NEXT:   Size of program headers:           56 (bytes)
+PART1-NEXT:   Number of program headers:         7
+PART1-NEXT:   Size of section headers:           64 (bytes)
+PART1-NEXT:   Number of section headers:         11
+PART1-NEXT:   Section header string table index: 9
+
+PART1: Section Headers:
+PART1-NEXT:   [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+PART1-NEXT:   [ 0]                   NULL            0000000000000000 000000 000000 00      0   0  0
+PART1-NEXT:   [ 1] .dynsym           DYNSYM          00000000002031c8 0001c8 000030 18   A  4   1  8
+PART1-NEXT:   [ 2] .gnu.hash         GNU_HASH        00000000002031f8 0001f8 000020 00   A  1   0  8
+PART1-NEXT:   [ 3] .hash             HASH            0000000000203218 000218 000018 04   A  1   0  4
+PART1-NEXT:   [ 4] .dynstr           STRTAB          0000000000203230 000230 00000a 00   A  0   0  1
+PART1-NEXT:   [ 5] .dynamic          DYNAMIC         0000000000204000 001000 000090 10  WA  4   0  8
+PART1-NEXT:   [ 6] .bss1             NOBITS          0000000000205000 002000 000008 00  WA  0   0  1
+PART1-NEXT:   [ 7] .comment          PROGBITS        0000000000000000 002000 000008 01  MS  0   0  1
+PART1-NEXT:   [ 8] .symtab           SYMTAB          0000000000000000 002008 000030 18     10   1  8
+PART1-NEXT:   [ 9] .shstrtab         STRTAB          0000000000000000 002038 00004d 00      0   0  1
+PART1-NEXT:   [10] .strtab           STRTAB          0000000000000000 002085 000004 00      0   0  1
+
+PART1: Symbol table '.dynsym' contains 2 entries:
+PART1-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
+PART1-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND 
+PART1-NEXT:      1: 0000000000205000     0 NOTYPE  GLOBAL DEFAULT   15 g1
+
+PART1: Symbol table '.symtab' contains 2 entries:
+PART1-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
+PART1-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND 
+PART1-NEXT:      1: 0000000000205000     0 NOTYPE  GLOBAL DEFAULT    6 g1
+
+PART1: Program Headers:
+PART1-NEXT:   Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+PART1-NEXT:   PHDR           0x000040 0x0000000000203040 0x0000000000203040 0x000188 0x000188 R   0x1
+PART1-NEXT:   LOAD           0x000000 0x0000000000203000 0x0000000000203000 0x00023a 0x00023a R   0x1000
+PART1-NEXT:   LOAD           0x001000 0x0000000000204000 0x0000000000204000 0x000090 0x000090 RW  0x1000
+PART1-NEXT:   LOAD           0x002000 0x0000000000205000 0x0000000000205000 0x000000 0x000008 RW  0x1000
+PART1-NEXT:   DYNAMIC        0x001000 0x0000000000204000 0x0000000000204000 0x000090 0x000090 RW  0x8
+PART1-NEXT:   GNU_RELRO      0x001000 0x0000000000204000 0x0000000000204000 0x000090 0x001000 R   0x1
+PART1-NEXT:   GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0x0
+
+PART2: ELF Header:
+PART2-NEXT:   Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00
+PART2-NEXT:   Class:                             ELF64
+PART2-NEXT:   Data:                              2's complement, little endian
+PART2-NEXT:   Version:                           1 (current)
+PART2-NEXT:   OS/ABI:                            UNIX - System V
+PART2-NEXT:   ABI Version:                       0x0
+PART2-NEXT:   Type:                              DYN (Shared object file)
+PART2-NEXT:   Machine:                           Advanced Micro Devices X86-64
+PART2-NEXT:   Version:                           0x1
+PART2-NEXT:   Entry point address:               0x0
+PART2-NEXT:   Start of program headers:          64 (bytes into file)
+PART2-NEXT:   Start of section headers:          8336 (bytes into file)
+PART2-NEXT:   Flags:                             0x0
+PART2-NEXT:   Size of this header:               64 (bytes)
+PART2-NEXT:   Size of program headers:           56 (bytes)
+PART2-NEXT:   Number of program headers:         7
+PART2-NEXT:   Size of section headers:           64 (bytes)
+PART2-NEXT:   Number of section headers:         11
+PART2-NEXT:   Section header string table index: 9
+
+PART2: Section Headers:
+PART2-NEXT:   [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+PART2-NEXT:   [ 0]                   NULL            0000000000000000 000000 000000 00      0   0  0
+PART2-NEXT:   [ 1] .dynsym           DYNSYM          00000000002061c8 0001c8 000030 18   A  4   1  8
+PART2-NEXT:   [ 2] .gnu.hash         GNU_HASH        00000000002061f8 0001f8 000020 00   A  1   0  8
+PART2-NEXT:   [ 3] .hash             HASH            0000000000206218 000218 000018 04   A  1   0  4
+PART2-NEXT:   [ 4] .dynstr           STRTAB          0000000000206230 000230 00000a 00   A  0   0  1
+PART2-NEXT:   [ 5] .dynamic          DYNAMIC         0000000000207000 001000 000090 10  WA  4   0  8
+PART2-NEXT:   [ 6] .bss2             NOBITS          0000000000208000 002000 000010 00  WA  0   0  1
+PART2-NEXT:   [ 7] .comment          PROGBITS        0000000000000000 002000 000008 01  MS  0   0  1
+PART2-NEXT:   [ 8] .symtab           SYMTAB          0000000000000000 002008 000030 18     10   1  8
+PART2-NEXT:   [ 9] .shstrtab         STRTAB          0000000000000000 002038 00004d 00      0   0  1
+PART2-NEXT:   [10] .strtab           STRTAB          0000000000000000 002085 000004 00      0   0  1
+
+PART2: Symbol table '.dynsym' contains 2 entries:
+PART2-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
+PART2-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND 
+PART2-NEXT:      1: 0000000000208000     0 NOTYPE  GLOBAL DEFAULT   23 g2
+
+PART2: Symbol table '.symtab' contains 2 entries:
+PART2-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
+PART2-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND 
+PART2-NEXT:      1: 0000000000208000     0 NOTYPE  GLOBAL DEFAULT    6 g2
+
+PART2: Program Headers:
+PART2-NEXT:   Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+PART2-NEXT:   PHDR           0x000040 0x0000000000206040 0x0000000000206040 0x000188 0x000188 R   0x1
+PART2-NEXT:   LOAD           0x000000 0x0000000000206000 0x0000000000206000 0x00023a 0x00023a R   0x1000
+PART2-NEXT:   LOAD           0x001000 0x0000000000207000 0x0000000000207000 0x000090 0x000090 RW  0x1000
+PART2-NEXT:   LOAD           0x002000 0x0000000000208000 0x0000000000208000 0x000000 0x000010 RW  0x1000
+PART2-NEXT:   DYNAMIC        0x001000 0x0000000000207000 0x0000000000207000 0x000090 0x000090 RW  0x8
+PART2-NEXT:   GNU_RELRO      0x001000 0x0000000000207000 0x0000000000207000 0x000090 0x001000 R   0x1
+PART2-NEXT:   GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0x0
+
+RUN: not llvm-objcopy --extract-partition=part3 %p/Inputs/partitions.elf %t4 2>&1 | FileCheck --check-prefix=ERROR1 %s
+ERROR1: error: could not find partition named 'part3'
+
+RUN: not llvm-objcopy --extract-main-partition --extract-partition=part2 %p/Inputs/partitions.elf %t4 2>&1 | FileCheck --check-prefix=ERROR2 %s
+ERROR2: error: cannot specify --extract-partition together with --extract-main-partition

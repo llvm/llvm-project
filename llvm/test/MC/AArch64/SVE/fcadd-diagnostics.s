@@ -13,7 +13,7 @@ fcadd z0.d, p2/m, z1.d, z2.d, #90
 // Restricted predicate out of range.
 
 fcadd z0.d, p8/m, z0.d, z1.d, #90
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 // CHECK-NEXT: fcadd z0.d, p8/m, z0.d, z1.d, #90
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

@@ -4991,24 +4991,22 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
         // the first vector value and FF for the rest, repeating. We need a mask
         // that will apply equally to all members of the vector, so AND all the
         // lanes of the constant together.
-        EVT VT = Vector->getValueType(0);
-        unsigned BitWidth = VT.getScalarSizeInBits();
+        unsigned EltBitWidth = Vector->getValueType(0).getScalarSizeInBits();
 
         // If the splat value has been compressed to a bitlength lower
         // than the size of the vector lane, we need to re-expand it to
         // the lane size.
-        if (BitWidth > SplatBitSize)
-          for (SplatValue = SplatValue.zextOrTrunc(BitWidth);
-               SplatBitSize < BitWidth;
-               SplatBitSize = SplatBitSize * 2)
+        if (EltBitWidth > SplatBitSize)
+          for (SplatValue = SplatValue.zextOrTrunc(EltBitWidth);
+               SplatBitSize < EltBitWidth; SplatBitSize = SplatBitSize * 2)
             SplatValue |= SplatValue.shl(SplatBitSize);
 
         // Make sure that variable 'Constant' is only set if 'SplatBitSize' is a
         // multiple of 'BitWidth'. Otherwise, we could propagate a wrong value.
-        if (SplatBitSize % BitWidth == 0) {
-          Constant = APInt::getAllOnesValue(BitWidth);
-          for (unsigned i = 0, n = SplatBitSize/BitWidth; i < n; ++i)
-            Constant &= SplatValue.lshr(i*BitWidth).zextOrTrunc(BitWidth);
+        if ((SplatBitSize % EltBitWidth) == 0) {
+          Constant = APInt::getAllOnesValue(EltBitWidth);
+          for (unsigned i = 0, n = (SplatBitSize / EltBitWidth); i < n; ++i)
+            Constant &= SplatValue.extractBits(EltBitWidth, i * EltBitWidth);
         }
       }
     }
@@ -5125,17 +5123,18 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     EVT MemVT = LN0->getMemoryVT();
     // If we zero all the possible extended bits, then we can turn this into
     // a zextload if we are running before legalize or the operation is legal.
-    unsigned BitWidth = N1.getScalarValueSizeInBits();
-    if (DAG.MaskedValueIsZero(N1, APInt::getHighBitsSet(BitWidth,
-                           BitWidth - MemVT.getScalarSizeInBits())) &&
+    unsigned ExtBitSize = N1.getScalarValueSizeInBits();
+    unsigned MemBitSize = MemVT.getScalarSizeInBits();
+    APInt ExtBits = APInt::getHighBitsSet(ExtBitSize, ExtBitSize - MemBitSize);
+    if (DAG.MaskedValueIsZero(N1, ExtBits) &&
         ((!LegalOperations && !LN0->isVolatile()) ||
          TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, MemVT))) {
-      SDValue ExtLoad = DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(N0), VT,
-                                       LN0->getChain(), LN0->getBasePtr(),
-                                       MemVT, LN0->getMemOperand());
+      SDValue ExtLoad =
+          DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(N0), VT, LN0->getChain(),
+                         LN0->getBasePtr(), MemVT, LN0->getMemOperand());
       AddToWorklist(N);
       CombineTo(N0.getNode(), ExtLoad, ExtLoad.getValue(1));
-      return SDValue(N, 0);   // Return N so it doesn't get rechecked!
+      return SDValue(N, 0); // Return N so it doesn't get rechecked!
     }
   }
   // fold (zext_inreg (sextload x)) -> (zextload x) iff load has one use
@@ -5145,17 +5144,18 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     EVT MemVT = LN0->getMemoryVT();
     // If we zero all the possible extended bits, then we can turn this into
     // a zextload if we are running before legalize or the operation is legal.
-    unsigned BitWidth = N1.getScalarValueSizeInBits();
-    if (DAG.MaskedValueIsZero(N1, APInt::getHighBitsSet(BitWidth,
-                           BitWidth - MemVT.getScalarSizeInBits())) &&
+    unsigned ExtBitSize = N1.getScalarValueSizeInBits();
+    unsigned MemBitSize = MemVT.getScalarSizeInBits();
+    APInt ExtBits = APInt::getHighBitsSet(ExtBitSize, ExtBitSize - MemBitSize);
+    if (DAG.MaskedValueIsZero(N1, ExtBits) &&
         ((!LegalOperations && !LN0->isVolatile()) ||
          TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, MemVT))) {
-      SDValue ExtLoad = DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(N0), VT,
-                                       LN0->getChain(), LN0->getBasePtr(),
-                                       MemVT, LN0->getMemOperand());
+      SDValue ExtLoad =
+          DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(N0), VT, LN0->getChain(),
+                         LN0->getBasePtr(), MemVT, LN0->getMemOperand());
       AddToWorklist(N);
       CombineTo(N0.getNode(), ExtLoad, ExtLoad.getValue(1));
-      return SDValue(N, 0);   // Return N so it doesn't get rechecked!
+      return SDValue(N, 0); // Return N so it doesn't get rechecked!
     }
   }
   // fold (and (or (srl N, 8), (shl N, 8)), 0xffff) -> (srl (bswap N), const)
