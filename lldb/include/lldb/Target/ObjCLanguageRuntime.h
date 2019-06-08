@@ -189,6 +189,16 @@ public:
 
   ~ObjCLanguageRuntime() override;
 
+  static char ID;
+
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || LanguageRuntime::isA(ClassID);
+  }
+
+  static bool classof(const LanguageRuntime *runtime) {
+    return runtime->isA(&ID);
+  }
+
   virtual TaggedPointerVendor *GetTaggedPointerVendor() { return nullptr; }
 
   typedef std::shared_ptr<EncodingToType> EncodingToTypeSP;

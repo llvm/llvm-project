@@ -48,6 +48,8 @@ using namespace lldb_renderscript;
 
 #define FMT_COORD "(%" PRIu32 ", %" PRIu32 ", %" PRIu32 ")"
 
+char RenderScriptRuntime::ID = 0;
+
 namespace {
 
 // The empirical_type adds a basic level of validation to arbitrary data
@@ -1127,9 +1129,9 @@ bool RenderScriptRuntime::HookCallback(void *baton,
   RuntimeHook *hook = (RuntimeHook *)baton;
   ExecutionContext exe_ctx(ctx->exe_ctx_ref);
 
-  RenderScriptRuntime *lang_rt =
-      (RenderScriptRuntime *)exe_ctx.GetProcessPtr()->GetLanguageRuntime(
-          eLanguageTypeExtRenderScript);
+  RenderScriptRuntime *lang_rt = llvm::cast<RenderScriptRuntime>(
+      exe_ctx.GetProcessPtr()->GetLanguageRuntime(
+          eLanguageTypeExtRenderScript));
 
   lang_rt->HookCallback(hook, exe_ctx);
 
@@ -4126,9 +4128,9 @@ public:
   ~CommandObjectRenderScriptRuntimeModuleDump() override = default;
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    RenderScriptRuntime *runtime =
-        (RenderScriptRuntime *)m_exe_ctx.GetProcessPtr()->GetLanguageRuntime(
-            eLanguageTypeExtRenderScript);
+    RenderScriptRuntime *runtime = llvm::cast<RenderScriptRuntime>(
+        m_exe_ctx.GetProcessPtr()->GetLanguageRuntime(
+            eLanguageTypeExtRenderScript));
     runtime->DumpModules(result.GetOutputStream());
     result.SetStatus(eReturnStatusSuccessFinishResult);
     return true;
@@ -4161,9 +4163,9 @@ public:
   ~CommandObjectRenderScriptRuntimeKernelList() override = default;
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    RenderScriptRuntime *runtime =
-        (RenderScriptRuntime *)m_exe_ctx.GetProcessPtr()->GetLanguageRuntime(
-            eLanguageTypeExtRenderScript);
+    RenderScriptRuntime *runtime = llvm::cast<RenderScriptRuntime>(
+        m_exe_ctx.GetProcessPtr()->GetLanguageRuntime(
+            eLanguageTypeExtRenderScript));
     runtime->DumpKernels(result.GetOutputStream());
     result.SetStatus(eReturnStatusSuccessFinishResult);
     return true;
@@ -4408,9 +4410,9 @@ public:
       return false;
     }
 
-    RenderScriptRuntime *runtime =
-        (RenderScriptRuntime *)m_exe_ctx.GetProcessPtr()->GetLanguageRuntime(
-            eLanguageTypeExtRenderScript);
+    RenderScriptRuntime *runtime = llvm::cast<RenderScriptRuntime>(
+        m_exe_ctx.GetProcessPtr()->GetLanguageRuntime(
+            eLanguageTypeExtRenderScript));
 
     auto &outstream = result.GetOutputStream();
     auto &target = m_exe_ctx.GetTargetSP();
@@ -4592,9 +4594,9 @@ public:
   ~CommandObjectRenderScriptRuntimeContextDump() override = default;
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    RenderScriptRuntime *runtime =
-        (RenderScriptRuntime *)m_exe_ctx.GetProcessPtr()->GetLanguageRuntime(
-            eLanguageTypeExtRenderScript);
+    RenderScriptRuntime *runtime = llvm::cast<RenderScriptRuntime>(
+        m_exe_ctx.GetProcessPtr()->GetLanguageRuntime(
+            eLanguageTypeExtRenderScript));
     runtime->DumpContexts(result.GetOutputStream());
     result.SetStatus(eReturnStatusSuccessFinishResult);
     return true;
@@ -4984,9 +4986,9 @@ public:
   ~CommandObjectRenderScriptRuntimeStatus() override = default;
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    RenderScriptRuntime *runtime =
-        (RenderScriptRuntime *)m_exe_ctx.GetProcessPtr()->GetLanguageRuntime(
-            eLanguageTypeExtRenderScript);
+    RenderScriptRuntime *runtime = llvm::cast<RenderScriptRuntime>(
+        m_exe_ctx.GetProcessPtr()->GetLanguageRuntime(
+            eLanguageTypeExtRenderScript));
     runtime->DumpStatus(result.GetOutputStream());
     result.SetStatus(eReturnStatusSuccessFinishResult);
     return true;
