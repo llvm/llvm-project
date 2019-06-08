@@ -31,25 +31,25 @@ add z29.d, p7, z29.d, z8.d
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
-// error: restricted predicate has range [0, 7].
+// error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 
 add z22.b, p8/m, z22.b, z11.b
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 // CHECK-NEXT: add z22.b, p8/m, z22.b, z11.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 add z22.h, p8/m, z22.h, z6.h
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 // CHECK-NEXT: add z22.h, p8/m, z22.h, z6.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 add z30.s, p8/m, z30.s, z13.s
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 // CHECK-NEXT: add z30.s, p8/m, z30.s, z13.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 add z29.d, p8/m, z29.d, z8.d
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 // CHECK-NEXT: add z29.d, p8/m, z29.d, z8.d
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

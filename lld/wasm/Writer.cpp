@@ -701,6 +701,9 @@ void Writer::calculateInitFunctions() {
     const WasmLinkingData &L = File->getWasmObj()->linkingData();
     for (const WasmInitFunc &F : L.InitFunctions) {
       FunctionSymbol *Sym = File->getFunctionSymbol(F.Symbol);
+      // comdat exclusions can cause init functions be discarded.
+      if (Sym->isDiscarded())
+        continue;
       assert(Sym->isLive());
       if (*Sym->Signature != WasmSignature{{}, {}})
         error("invalid signature for init func: " + toString(*Sym));

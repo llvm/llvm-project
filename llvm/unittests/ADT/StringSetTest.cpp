@@ -33,11 +33,12 @@ TEST_F(StringSetTest, InsertAndCountStringMapEntry) {
   // Test insert(StringMapEntry) and count(StringMapEntry)
   // which are required for set_difference(StringSet, StringSet).
   StringSet<> Set;
-  StringMapEntry<StringRef> Element(1, "A");
-  Set.insert(Element);
-  size_t Count = Set.count(Element);
+  StringMapEntry<StringRef> *Element = StringMapEntry<StringRef>::Create("A");
+  Set.insert(*Element);
+  size_t Count = Set.count(*Element);
   size_t Expected = 1;
   EXPECT_EQ(Expected, Count);
+  Element->Destroy();
 }
 
 } // end anonymous namespace

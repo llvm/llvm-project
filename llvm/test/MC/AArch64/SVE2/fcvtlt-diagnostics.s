@@ -48,7 +48,7 @@ fcvtlt z0.s, p0/z, z0.h
 // Predicate not in restricted predicate range
 
 fcvtlt z0.s, p8/m, z0.h
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 // CHECK-NEXT: fcvtlt z0.s, p8/m, z0.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

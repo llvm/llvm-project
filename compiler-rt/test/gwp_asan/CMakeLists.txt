@@ -8,7 +8,12 @@ set(GWP_ASAN_TEST_DEPS
   ${SANITIZER_COMMON_LIT_TEST_DEPS}
   gwp_asan)
 
-if (COMPILER_RT_INCLUDE_TESTS)
+# Longstanding issues in the Android test runner means that compiler-rt unit
+# tests don't work on Android due to libc++ link-time issues. Looks like the
+# exported libc++ from the Android NDK is x86-64, even though it's part of the
+# ARM[64] toolchain... See similar measures for ASan and sanitizer-common that
+# disable unit tests for Android.
+if (COMPILER_RT_INCLUDE_TESTS AND COMPILER_RT_HAS_GWP_ASAN AND NOT ANDROID)
   list(APPEND GWP_ASAN_TEST_DEPS GwpAsanUnitTests)
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/unit/lit.site.cfg.in

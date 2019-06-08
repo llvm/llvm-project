@@ -51,18 +51,15 @@ LazyCallThroughManager::callThroughToSymbol(JITTargetAddress TrampolineAddr) {
     SymbolName = I->second.second;
   }
 
-  auto LookupResult = ES.lookup(JITDylibSearchList({{SourceJD, true}}),
-                                {SymbolName}, NoDependenciesToRegister, true);
+  auto LookupResult =
+      ES.lookup(JITDylibSearchList({{SourceJD, true}}), SymbolName);
 
   if (!LookupResult) {
     ES.reportError(LookupResult.takeError());
     return ErrorHandlerAddr;
   }
 
-  assert(LookupResult->size() == 1 && "Unexpected number of results");
-  assert(LookupResult->count(SymbolName) && "Unexpected result");
-
-  auto ResolvedAddr = LookupResult->begin()->second.getAddress();
+  auto ResolvedAddr = LookupResult->getAddress();
 
   std::shared_ptr<NotifyResolvedFunction> NotifyResolved = nullptr;
   {

@@ -6,4 +6,10 @@
 # RUN: llvm-objcopy %t.64.o %t.64.copy.o
 # RUN: cmp %t.64.o %t.64.copy.o
 
+# Make sure that it properly constructs LC_DYSYMTAB and handles virtual sections
+# (the bss section for example).
+# RUN: llvm-mc -assemble -triple x86_64-apple-darwin9 -filetype=obj %p/Inputs/various-symbols.s -o %t.various-symbols.o
+# RUN: llvm-objcopy %t.various-symbols.o %t.various-symbols.copy.o
+# RUN: cmp %t.various-symbols.o %t.various-symbols.copy.o
+
 # REQUIRES: x86-registered-target

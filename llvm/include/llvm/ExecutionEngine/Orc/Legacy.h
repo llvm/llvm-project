@@ -148,8 +148,8 @@ lookupWithLegacyFn(ExecutionSession &ES, AsynchronousSymbolQuery &Query,
   for (auto &S : Symbols) {
     if (JITSymbol Sym = FindSymbol(*S)) {
       if (auto Addr = Sym.getAddress()) {
-        Query.resolve(S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
-        Query.notifySymbolReady();
+        Query.notifySymbolMetRequiredState(
+            S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
         NewSymbolsResolved = true;
       } else {
         ES.legacyFailQuery(Query, Addr.takeError());
@@ -162,11 +162,8 @@ lookupWithLegacyFn(ExecutionSession &ES, AsynchronousSymbolQuery &Query,
       SymbolsNotFound.insert(S);
   }
 
-  if (NewSymbolsResolved && Query.isFullyResolved())
-    Query.handleFullyResolved();
-
-  if (NewSymbolsResolved && Query.isFullyReady())
-    Query.handleFullyReady();
+  if (NewSymbolsResolved && Query.isComplete())
+    Query.handleComplete();
 
   return SymbolsNotFound;
 }

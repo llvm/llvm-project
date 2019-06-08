@@ -1837,9 +1837,15 @@ SchedBoundary::~SchedBoundary() { delete HazardRec; }
 
 /// Given a Count of resource usage and a Latency value, return true if a
 /// SchedBoundary becomes resource limited.
+/// If we are checking after scheduling a node, we should return true when
+/// we just reach the resource limit.
 static bool checkResourceLimit(unsigned LFactor, unsigned Count,
-                               unsigned Latency) {
-  return (int)(Count - (Latency * LFactor)) > (int)LFactor;
+                               unsigned Latency, bool AfterSchedNode) {
+  int ResCntFactor = (int)(Count - (Latency * LFactor));
+  if (AfterSchedNode)
+    return ResCntFactor >= (int)LFactor;
+  else
+    return ResCntFactor > (int)LFactor;
 }
 
 void SchedBoundary::reset() {
@@ -2134,7 +2140,7 @@ void SchedBoundary::bumpCycle(unsigned NextCycle) {
   CheckPending = true;
   IsResourceLimited =
       checkResourceLimit(SchedModel->getLatencyFactor(), getCriticalCount(),
-                         getScheduledLatency());
+                         getScheduledLatency(), true);
 
   LLVM_DEBUG(dbgs() << "Cycle: " << CurrCycle << ' ' << Available.getName()
                     << '\n');
@@ -2302,7 +2308,7 @@ void SchedBoundary::bumpNode(SUnit *SU) {
     // resource limited. If a stall occurred, bumpCycle does this.
     IsResourceLimited =
         checkResourceLimit(SchedModel->getLatencyFactor(), getCriticalCount(),
-                           getScheduledLatency());
+                           getScheduledLatency(), true);
 
   // Update CurrMOps after calling bumpCycle to handle stalls, since bumpCycle
   // resets CurrMOps. Loop to handle instructions with more MOps than issue in
@@ -2521,7 +2527,7 @@ void GenericSchedulerBase::setPolicy(CandPolicy &Policy, bool IsPostRA,
     RemLatency = computeRemLatency(CurrZone);
     RemLatencyComputed = true;
     OtherResLimited = checkResourceLimit(SchedModel->getLatencyFactor(),
-                                         OtherCount, RemLatency);
+                                         OtherCount, RemLatency, false);
   }
 
   // Schedule aggressively for latency in PostRA mode. We don't check for

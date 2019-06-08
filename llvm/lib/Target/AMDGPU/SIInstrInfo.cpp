@@ -2491,7 +2491,7 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
   //       given the typical code patterns.
   if (Opcode == AMDGPU::S_SENDMSG || Opcode == AMDGPU::S_SENDMSGHALT ||
       Opcode == AMDGPU::EXP || Opcode == AMDGPU::EXP_DONE ||
-      Opcode == AMDGPU::DS_ORDERED_COUNT)
+      Opcode == AMDGPU::DS_ORDERED_COUNT || Opcode == AMDGPU::S_TRAP)
     return true;
 
   if (MI.isCall() || MI.isInlineAsm())

@@ -285,15 +285,36 @@ template <class ELFT>
 bool ELFState<ELFT>::initSectionHeaders(ELFState<ELFT> &State,
                                         std::vector<Elf_Shdr> &SHeaders,
                                         ContiguousBlobAccumulator &CBA) {
+  // Build a list of sections we are going to add implicitly.
+  std::vector<StringRef> ImplicitSections;
+  for (StringRef Name : State.implicitSectionNames())
+    if (State.SN2I.get(Name) > Doc.Sections.size())
+      ImplicitSections.push_back(Name);
+
   // Ensure SHN_UNDEF entry is present. An all-zero section header is a
   // valid SHN_UNDEF entry since SHT_NULL == 0.
-  Elf_Shdr SHeader;
-  zero(SHeader);
-  SHeaders.push_back(SHeader);
+  SHeaders.resize(Doc.Sections.size() + ImplicitSections.size() + 1);
+  zero(SHeaders[0]);
 
-  for (const auto &Sec : Doc.Sections) {
+  for (size_t I = 1; I < Doc.Sections.size() + ImplicitSections.size() + 1; ++I) {
+    Elf_Shdr &SHeader = SHeaders[I];
     zero(SHeader);
-    SHeader.sh_name = DotShStrtab.getOffset(Sec->Name);
+    ELFYAML::Section *Sec =
+        I > Doc.Sections.size() ? nullptr : Doc.Sections[I - 1].get();
+
+    // We have a few sections like string or symbol tables that are usually
+    // added implicitly to the end. However, if they are explicitly specified
+    // in the YAML, we need to write them here. This ensures the file offset
+    // remains correct.
+    StringRef SecName =
+        Sec ? Sec->Name : ImplicitSections[I - Doc.Sections.size() - 1];
+    if (initImplicitHeader(State, CBA, SHeader, SecName, Sec))
+      continue;
+
+    assert(Sec && "It can't be null unless it is an implicit section. But all "
+                  "implicit sections should already have been handled above.");
+
+    SHeader.sh_name = DotShStrtab.getOffset(SecName);
     SHeader.sh_type = Sec->Type;
     SHeader.sh_flags = Sec->Flags;
     SHeader.sh_addr = Sec->Address;
@@ -306,68 +327,38 @@ bool ELFState<ELFT>::initSectionHeaders(ELFState<ELFT> &State,
       SHeader.sh_link = Index;
     }
 
-    // We have a few sections like string or symbol tables that are added
-    // implicitly later. However, if they are explicitly specified in the YAML,
-    // we want to write them right now. This ensures the file offset remains
-    // correct.
-    if (initImplicitHeader(State, CBA, SHeader, Sec->Name, Sec.get())) {
-      SHeaders.push_back(SHeader);
-      continue;
-    }
-
-    if (auto S = dyn_cast<ELFYAML::RawContentSection>(Sec.get())) {
+    if (auto S = dyn_cast<ELFYAML::RawContentSection>(Sec)) {
       if (!writeSectionContent(SHeader, *S, CBA))
         return false;
-    } else if (auto S = dyn_cast<ELFYAML::RelocationSection>(Sec.get())) {
+    } else if (auto S = dyn_cast<ELFYAML::RelocationSection>(Sec)) {
       if (!writeSectionContent(SHeader, *S, CBA))
         return false;
-    } else if (auto S = dyn_cast<ELFYAML::Group>(Sec.get())) {
+    } else if (auto S = dyn_cast<ELFYAML::Group>(Sec)) {
       if (!writeSectionContent(SHeader, *S, CBA))
         return false;
-    } else if (auto S = dyn_cast<ELFYAML::MipsABIFlags>(Sec.get())) {
+    } else if (auto S = dyn_cast<ELFYAML::MipsABIFlags>(Sec)) {
       if (!writeSectionContent(SHeader, *S, CBA))
         return false;
-    } else if (auto S = dyn_cast<ELFYAML::NoBitsSection>(Sec.get())) {
+    } else if (auto S = dyn_cast<ELFYAML::NoBitsSection>(Sec)) {
       SHeader.sh_entsize = 0;
       SHeader.sh_size = S->Size;
       // SHT_NOBITS section does not have content
       // so just to setup the section offset.
       CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
-    } else if (auto S = dyn_cast<ELFYAML::DynamicSection>(Sec.get())) {
+    } else if (auto S = dyn_cast<ELFYAML::DynamicSection>(Sec)) {
       if (!writeSectionContent(SHeader, *S, CBA))
         return false;
-    } else if (auto S = dyn_cast<ELFYAML::SymverSection>(Sec.get())) {
+    } else if (auto S = dyn_cast<ELFYAML::SymverSection>(Sec)) {
       if (!writeSectionContent(SHeader, *S, CBA))
         return false;
-    } else if (auto S = dyn_cast<ELFYAML::VerneedSection>(Sec.get())) {
+    } else if (auto S = dyn_cast<ELFYAML::VerneedSection>(Sec)) {
       if (!writeSectionContent(SHeader, *S, CBA))
         return false;
-    } else if (auto S = dyn_cast<ELFYAML::VerdefSection>(Sec.get())) {
+    } else if (auto S = dyn_cast<ELFYAML::VerdefSection>(Sec)) {
       if (!writeSectionContent(SHeader, *S, CBA))
         return false;
     } else
       llvm_unreachable("Unknown section type");
-
-    SHeaders.push_back(SHeader);
-  }
-
-  // Populate SHeaders with implicit sections not present in the Doc.
-  for (StringRef Name : State.implicitSectionNames())
-    if (State.SN2I.get(Name) >= SHeaders.size())
-      SHeaders.push_back({});
-
-  // Initialize the implicit sections.
-  initImplicitHeader(State, CBA, SHeaders[State.SN2I.get(".symtab")], ".symtab",
-                     nullptr /*DocSec*/);
-  initImplicitHeader(State, CBA, SHeaders[State.SN2I.get(".strtab")], ".strtab",
-                     nullptr /*DocSec*/);
-  initImplicitHeader(State, CBA, SHeaders[State.SN2I.get(".shstrtab")],
-                     ".shstrtab", nullptr /*DocSec*/);
-  if (!Doc.DynamicSymbols.empty()) {
-    initImplicitHeader(State, CBA, SHeaders[State.SN2I.get(".dynsym")],
-                       ".dynsym", nullptr /*DocSec*/);
-    initImplicitHeader(State, CBA, SHeaders[State.SN2I.get(".dynstr")],
-                       ".dynstr", nullptr /*DocSec*/);
   }
 
   return true;

@@ -73,7 +73,6 @@ struct VersionDefinition {
   llvm::StringRef Name;
   uint16_t Id = 0;
   std::vector<SymbolVersion> Globals;
-  size_t NameOff = 0; // Offset in the string table
 };
 
 // This struct contains the global configuration for the linker.
@@ -147,6 +146,7 @@ struct Configuration {
   bool ExecuteOnly;
   bool ExportDynamic;
   bool FixCortexA53Errata843419;
+  bool ForceBTI;
   bool FormatBinary = false;
   bool RequireCET;
   bool GcSections;
@@ -168,6 +168,7 @@ struct Configuration {
   bool OFormatBinary;
   bool Omagic;
   bool OptRemarksWithHotness;
+  bool PacPlt;
   bool PicThunk;
   bool Pie;
   bool PrintGcSections;

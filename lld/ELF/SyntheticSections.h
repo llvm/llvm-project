@@ -31,7 +31,9 @@
 namespace lld {
 namespace elf {
 class Defined;
-struct Partition;
+struct PhdrEntry;
+class SymbolTableBaseSection;
+class VersionNeedBaseSection;
 
 class SyntheticSection : public InputSection {
 public:
@@ -429,7 +431,7 @@ public:
         UseSymVA(false), Addend(Addend), OutputSec(OutputSec) {}
 
   uint64_t getOffset() const;
-  uint32_t getSymIndex() const;
+  uint32_t getSymIndex(SymbolTableBaseSection *SymTab) const;
 
   // Computes the addend of the dynamic relocation. Note that this is not the
   // same as the Addend member variable as it also includes the symbol address
@@ -438,7 +440,6 @@ public:
 
   RelType Type;
 
-private:
   Symbol *Sym;
   const InputSectionBase *InputSec = nullptr;
   uint64_t OffsetInSec;
@@ -497,9 +498,9 @@ public:
   size_t getRelativeRelocCount() const { return NumRelativeRelocs; }
   void finalizeContents() override;
   int32_t DynamicTag, SizeDynamicTag;
+  std::vector<DynamicReloc> Relocs;
 
 protected:
-  std::vector<DynamicReloc> Relocs;
   size_t NumRelativeRelocs = 0;
 };
 
@@ -776,8 +777,10 @@ public:
 private:
   enum { EntrySize = 28 };
   void writeOne(uint8_t *Buf, uint32_t Index, StringRef Name, size_t NameOff);
+  StringRef getFileDefName();
 
   unsigned FileDefNameOff;
+  std::vector<unsigned> VerDefNameOffs;
 };
 
 // The .gnu.version section specifies the required version of each symbol in the
@@ -1071,58 +1074,100 @@ private:
   bool Finalized = false;
 };
 
+template <typename ELFT>
+class PartitionElfHeaderSection : public SyntheticSection {
+public:
+  PartitionElfHeaderSection();
+  size_t getSize() const override;
+  void writeTo(uint8_t *Buf) override;
+};
+
+template <typename ELFT>
+class PartitionProgramHeadersSection : public SyntheticSection {
+public:
+  PartitionProgramHeadersSection();
+  size_t getSize() const override;
+  void writeTo(uint8_t *Buf) override;
+};
+
+class PartitionIndexSection : public SyntheticSection {
+public:
+  PartitionIndexSection();
+  size_t getSize() const override;
+  void finalizeContents() override;
+  void writeTo(uint8_t *Buf) override;
+};
+
 InputSection *createInterpSection();
 MergeInputSection *createCommentSection();
 template <class ELFT> void splitSections();
 void mergeSections();
+
+template <typename ELFT> void writeEhdr(uint8_t *Buf, Partition &Part);
+template <typename ELFT> void writePhdrs(uint8_t *Buf, Partition &Part);
 
 Defined *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
                            uint64_t Size, InputSectionBase &Section);
 
 void addVerneed(Symbol *SS);
 
-extern std::vector<Partition> Partitions;
-
 // Linker generated per-partition sections.
 struct Partition {
   StringRef Name;
-  unsigned getNumber() const { return this - &Partitions[0] + 1; }
-};
+  uint64_t NameStrTab;
 
-// Linker generated sections which can be used as inputs.
-struct InStruct {
-  InputSection *ARMAttributes;
+  SyntheticSection *ElfHeader;
+  SyntheticSection *ProgramHeaders;
+  std::vector<PhdrEntry *> Phdrs;
+
   ARMExidxSyntheticSection *ARMExidx;
-  BssSection *Bss;
-  BssSection *BssRelRo;
   BuildIdSection *BuildId;
-  EhFrameHeader *EhFrameHdr;
-  EhFrameSection *EhFrame;
   SyntheticSection *Dynamic;
   StringTableSection *DynStrTab;
   SymbolTableBaseSection *DynSymTab;
+  EhFrameHeader *EhFrameHdr;
+  EhFrameSection *EhFrame;
   GnuHashTableSection *GnuHashTab;
   HashTableSection *HashTab;
+  RelocationBaseSection *RelaDyn;
+  RelrBaseSection *RelrDyn;
+  VersionDefinitionSection *VerDef;
+  SyntheticSection *VerNeed;
+  VersionTableSection *VerSym;
+
+  unsigned getNumber() const { return this - &Partitions[0] + 1; }
+};
+
+extern Partition *Main;
+
+inline Partition &SectionBase::getPartition() const {
+  assert(isLive());
+  return Partitions[Partition - 1];
+}
+
+// Linker generated sections which can be used as inputs and are not specific to
+// a partition.
+struct InStruct {
+  InputSection *ARMAttributes;
+  BssSection *Bss;
+  BssSection *BssRelRo;
   GotSection *Got;
   GotPltSection *GotPlt;
   IgotPltSection *IgotPlt;
   PPC64LongBranchTargetSection *PPC64LongBranchTarget;
   MipsGotSection *MipsGot;
   MipsRldMapSection *MipsRldMap;
+  SyntheticSection *PartEnd;
+  SyntheticSection *PartIndex;
   PltSection *Plt;
   PltSection *Iplt;
   PPC32Got2Section *PPC32Got2;
-  RelocationBaseSection *RelaDyn;
-  RelrBaseSection *RelrDyn;
   RelocationBaseSection *RelaPlt;
   RelocationBaseSection *RelaIplt;
   StringTableSection *ShStrTab;
   StringTableSection *StrTab;
   SymbolTableBaseSection *SymTab;
   SymtabShndxSection *SymTabShndx;
-  VersionDefinitionSection *VerDef;
-  SyntheticSection *VerNeed;
-  VersionTableSection *VerSym;
 };
 
 extern InStruct In;

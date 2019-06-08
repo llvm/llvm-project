@@ -1647,10 +1647,11 @@ static bool getConstIntOrUndef(Value *Op, const APInt *&C) {
   return false;
 }
 
-Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
-                                 ArrayRef<Constant *> Operands,
-                                 const TargetLibraryInfo *TLI,
-                                 const CallBase *Call) {
+static Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID,
+                                        Type *Ty,
+                                        ArrayRef<Constant *> Operands,
+                                        const TargetLibraryInfo *TLI,
+                                        const CallBase *Call) {
   if (Operands.size() == 1) {
     if (IntrinsicID == Intrinsic::is_constant) {
       // We know we have a "Constant" argument. But we want to only
@@ -2219,11 +2220,12 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
   return nullptr;
 }
 
-Constant *ConstantFoldVectorCall(StringRef Name, unsigned IntrinsicID,
-                                 VectorType *VTy, ArrayRef<Constant *> Operands,
-                                 const DataLayout &DL,
-                                 const TargetLibraryInfo *TLI,
-                                 const CallBase *Call) {
+static Constant *ConstantFoldVectorCall(StringRef Name, unsigned IntrinsicID,
+                                        VectorType *VTy,
+                                        ArrayRef<Constant *> Operands,
+                                        const DataLayout &DL,
+                                        const TargetLibraryInfo *TLI,
+                                        const CallBase *Call) {
   SmallVector<Constant *, 4> Result(VTy->getNumElements());
   SmallVector<Constant *, 4> Lane(Operands.size());
   Type *Ty = VTy->getElementType();

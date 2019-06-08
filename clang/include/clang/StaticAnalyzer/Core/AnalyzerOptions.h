@@ -245,6 +245,9 @@ public:
   /// strategy. We get better code coverage when retry is enabled.
   unsigned NoRetryExhausted : 1;
 
+  /// Emit analyzer warnings as errors.
+  unsigned AnalyzerWerror : 1;
+
   /// The inlining stack depth limit.
   // Cap the stack depth at 4 calls (5 stack frames, base + 4 calls).
   unsigned InlineMaxStackDepth = 5;
@@ -297,7 +300,7 @@ public:
         AnalyzerDisplayProgress(false), AnalyzeNestedBlocks(false),
         eagerlyAssumeBinOpBifurcation(false), TrimGraph(false),
         visualizeExplodedGraphWithGraphViz(false), UnoptimizedCFG(false),
-        PrintStats(false), NoRetryExhausted(false) {
+        PrintStats(false), NoRetryExhausted(false), AnalyzerWerror(false) {
     llvm::sort(AnalyzerConfigCmdFlags);
   }
 

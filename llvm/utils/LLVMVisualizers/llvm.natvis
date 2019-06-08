@@ -8,20 +8,6 @@ For Visual Studio 2013 only, put this file into
 For later versions of Visual Studio, no setup is required.
 -->
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
-  <!-- VS2013 -->
-  <Type Name="llvm::SmallVectorImpl&lt;*&gt;" Priority="MediumLow">
-    <DisplayString Condition="Size == 0">empty</DisplayString>
-    <DisplayString Condition="Size != 0">{{ size={Size} }}</DisplayString>
-    <Expand>
-      <Item Name="[size]">Size</Item>
-      <Item Name="[capacity]">Capacity</Item>
-      <ArrayItems>
-        <Size>Size</Size>
-        <ValuePointer>($T1*)BeginX</ValuePointer>
-      </ArrayItems>
-    </Expand>
-  </Type>
-  <!-- VS2015 and up -->
   <Type Name="llvm::SmallVectorImpl&lt;*&gt;">
     <DisplayString IncludeView ="elt0" Condition="Size == 0"></DisplayString>
     <DisplayString IncludeView ="elt0">{(($T1*)BeginX)[0]}{*this,view(elt1)}</DisplayString>
@@ -44,6 +30,11 @@ For later versions of Visual Studio, no setup is required.
         <ValuePointer>($T1*)BeginX</ValuePointer>
       </ArrayItems>
     </Expand>
+  </Type>
+  <Type Name="llvm::APInt">
+    <!-- For now, only handle up to 64-bit unsigned ints -->
+    <DisplayString Condition="BitWidth &lt;= 64">{U.VAL}</DisplayString>
+    <DisplayString>Cannot visualize APInts longer than 64 bits</DisplayString>
   </Type>
   <Type Name="llvm::ArrayRef&lt;*&gt;">
     <DisplayString Condition="Length == 0">empty</DisplayString>

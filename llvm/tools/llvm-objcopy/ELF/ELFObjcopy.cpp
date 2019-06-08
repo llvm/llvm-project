@@ -507,6 +507,16 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
       return (Sec.Flags & SHF_ALLOC) == 0;
     };
 
+  if (Config.ExtractPartition || Config.ExtractMainPartition) {
+    RemovePred = [RemovePred](const SectionBase &Sec) {
+      if (RemovePred(Sec))
+        return true;
+      if (Sec.Type == SHT_LLVM_PART_EHDR || Sec.Type == SHT_LLVM_PART_PHDR)
+        return true;
+      return (Sec.Flags & SHF_ALLOC) != 0 && !Sec.ParentSegment;
+    };
+  }
+
   // Explicit copies:
   if (!Config.OnlySection.empty()) {
     RemovePred = [&Config, RemovePred, &Obj](const SectionBase &Sec) {
@@ -747,7 +757,7 @@ Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
 
 Error executeObjcopyOnBinary(const CopyConfig &Config,
                              object::ELFObjectFileBase &In, Buffer &Out) {
-  ELFReader Reader(&In);
+  ELFReader Reader(&In, Config.ExtractPartition);
   std::unique_ptr<Object> Obj = Reader.create();
   // Prefer OutputArch (-O<format>) if set, otherwise infer it from the input.
   const ElfType OutputElfType =

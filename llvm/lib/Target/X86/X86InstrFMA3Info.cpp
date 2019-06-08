@@ -56,7 +56,7 @@ using namespace llvm;
 
 #define FMA3GROUP_SCALAR(Name, Attrs) \
   FMA3GROUP_SCALAR_WIDTHS(Name, SD, Attrs) \
-  FMA3GROUP_SCALAR_WIDTHS(Name, SS, Attrs) \
+  FMA3GROUP_SCALAR_WIDTHS(Name, SS, Attrs)
 
 #define FMA3GROUP_FULL(Name, Attrs) \
   FMA3GROUP_PACKED(Name, Attrs) \

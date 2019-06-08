@@ -10,15 +10,30 @@ fadda h0, p7, h1, z31.h
 // CHECK-NEXT: fadda h0, p7, h1, z31.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
-fadda h0, p8, h0, z31.h
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
-// CHECK-NEXT: fadda h0, p8, h0, z31.h
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
 fadda v0.8h, p7, v0.8h, z31.h
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: fadda v0.8h, p7, v0.8h, z31.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// ------------------------------------------------------------------------- //
+// Invalid predicate operand
+
+fadda h0, p8, h0, z31.h
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
+// CHECK-NEXT: fadda h0, p8, h0, z31.h
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+fadda h0, p7.b, h0, z31.h
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
+// CHECK-NEXT: fadda h0, p7.b, h0, z31.h
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+fadda h0, p7.q, h0, z31.h
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
+// CHECK-NEXT: fadda h0, p7.q, h0, z31.h
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
 
 // --------------------------------------------------------------------------//
 // Negative tests for instructions that are incompatible with movprfx
