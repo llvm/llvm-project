@@ -465,29 +465,6 @@ set(LLVM_LIB_FUZZING_ENGINE "" CACHE PATH
 option(LLVM_USE_SPLIT_DWARF
   "Use -gsplit-dwarf when compiling llvm." OFF)
 
-option(LLVM_POLLY_LINK_INTO_TOOLS "Statically link Polly into tools (if available)" ON)
-option(LLVM_POLLY_BUILD "Build LLVM with Polly" ON)
-
-if (EXISTS ${LLVM_MAIN_SRC_DIR}/tools/polly/CMakeLists.txt)
-  set(POLLY_IN_TREE TRUE)
-elseif(LLVM_EXTERNAL_POLLY_SOURCE_DIR)
-  set(POLLY_IN_TREE TRUE)
-else()
-  set(POLLY_IN_TREE FALSE)
-endif()
-
-if (LLVM_POLLY_BUILD AND POLLY_IN_TREE)
-  set(WITH_POLLY ON)
-else()
-  set(WITH_POLLY OFF)
-endif()
-
-if (LLVM_POLLY_LINK_INTO_TOOLS AND WITH_POLLY)
-  set(LINK_POLLY_INTO_TOOLS ON)
-else()
-  set(LINK_POLLY_INTO_TOOLS OFF)
-endif()
-
 # Define an option controlling whether we should build for 32-bit on 64-bit
 # platforms, where supported.
 if( CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32 )
@@ -1109,3 +1086,5 @@ endif()
 if (LLVM_INCLUDE_UTILS AND LLVM_INCLUDE_TOOLS)
   add_subdirectory(utils/llvm-locstats)
 endif()
+
+process_llvm_pass_plugins()

@@ -8,7 +8,7 @@ config.polly_obj_root = "@POLLY_BINARY_DIR@"
 config.polly_lib_dir = "@POLLY_LIB_DIR@"
 config.target_triple = "@TARGET_TRIPLE@"
 config.enable_gpgpu_codegen = "@GPU_CODEGEN@"
-config.link_polly_into_tools = "@LINK_POLLY_INTO_TOOLS@"
+config.llvm_polly_link_into_tools = "@LLVM_POLLY_LINK_INTO_TOOLS@"
 config.targets_to_build = "@TARGETS_TO_BUILD@"
 config.extra_paths = "@POLLY_TEST_EXTRA_PATHS@".split(";")
 
@@ -36,14 +36,14 @@ except KeyError:
 # directories.
 config.excludes = ['Inputs']
 
-if config.link_polly_into_tools == '' or \
-   config.link_polly_into_tools.lower() == '0' or \
-   config.link_polly_into_tools.lower() == 'n' or \
-   config.link_polly_into_tools.lower() == 'no' or \
-   config.link_polly_into_tools.lower() == 'off' or \
-   config.link_polly_into_tools.lower() == 'false' or \
-   config.link_polly_into_tools.lower() == 'notfound' or \
-   config.link_polly_into_tools.lower() == 'link_polly_into_tools-notfound':
+if config.llvm_polly_link_into_tools == '' or \
+   config.llvm_polly_link_into_tools.lower() == '0' or \
+   config.llvm_polly_link_into_tools.lower() == 'n' or \
+   config.llvm_polly_link_into_tools.lower() == 'no' or \
+   config.llvm_polly_link_into_tools.lower() == 'off' or \
+   config.llvm_polly_link_into_tools.lower() == 'false' or \
+   config.llvm_polly_link_into_tools.lower() == 'notfound' or \
+   config.llvm_polly_link_into_tools.lower() == 'llvm_polly_link_into_tools-notfound':
     config.substitutions.append(('%loadPolly', '-load '
                                  + config.polly_lib_dir + '/LLVMPolly@LLVM_SHLIBEXT@'
                                  + ' -load-pass-plugin '

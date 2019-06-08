@@ -1175,6 +1175,32 @@ implement ``releaseMemory`` to, well, release the memory allocated to maintain
 this internal state.  This method is called after the ``run*`` method for the
 class, before the next call of ``run*`` in your pass.
 
+Building pass plugins
+=====================
+
+As an alternative to using ``PLUGIN_TOOL``, LLVM provides a mechanism to
+automatically register pass plugins within ``clang``, ``opt`` and ``bugpoint``.
+One first needs to create an independent project and add it to either ``tools/``
+or, using the MonoRepo layout, at the root of the repo alongside other projects.
+This project must contain the following minimal ``CMakeLists.txt``:
+
+.. code-block:: cmake
+
+    add_llvm_pass_plugin(Name source0.cpp)
+
+The pass must provide two entry points for the new pass manager, one for static
+registration and one for dynamically loaded plugins:
+
+- ``llvm::PassPluginLibraryInfo get##Name##PluginInfo();``
+- ``extern "C" ::llvm::PassPluginLibraryInfo llvmGetPassPluginInfo() LLVM_ATTRIBUTE_WEAK;``
+
+Pass plugins are compiled and link dynamically by default, but it's
+possible to set the following variables to change this behavior:
+
+- ``LLVM_${NAME}_LINK_INTO_TOOLS``, when sets to ``ON``, turns the project into
+  a statically linked extension
+
+
 Registering dynamically loaded passes
 =====================================
 

@@ -195,6 +195,14 @@ else:
 if config.has_plugins:
     config.available_features.add('plugins')
 
+if config.linked_bye_extension:
+    config.substitutions.append(('%llvmcheckext', 'CHECK-EXT'))
+    config.substitutions.append(('%loadbye', ''))
+else:
+    config.substitutions.append(('%llvmcheckext', 'CHECK-NOEXT'))
+    config.substitutions.append(('%loadbye',
+                                 '-load=%llvmshlibdir/libBye%shlibext'))
+
 # Static libraries are not built if BUILD_SHARED_LIBS is ON.
 if not config.build_shared_libs and not config.link_llvm_dylib:
     config.available_features.add('static-libs')

@@ -400,7 +400,7 @@ endfunction(set_windows_version_resource_properties)
 #   )
 function(llvm_add_library name)
   cmake_parse_arguments(ARG
-    "MODULE;SHARED;STATIC;OBJECT;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME;NO_INSTALL_RPATH"
+    "MODULE;SHARED;STATIC;OBJECT;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME;NO_INSTALL_RPATH;ENABLE_PLUGINS"
     "OUTPUT_NAME;PLUGIN_TOOL;ENTITLEMENTS;BUNDLE_PATH"
     "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS;OBJLIBS"
     ${ARGN})
@@ -413,6 +413,9 @@ function(llvm_add_library name)
     set(ALL_FILES ${ARG_OBJLIBS})
   else()
     llvm_process_sources(ALL_FILES ${ARG_UNPARSED_ARGUMENTS} ${ARG_ADDITIONAL_HEADERS})
+  endif()
+  if(ARG_ENABLE_PLUGINS)
+    set_property(GLOBAL APPEND PROPERTY LLVM_PLUGIN_TARGETS ${name})
   endif()
 
   if(ARG_MODULE)
@@ -732,7 +735,7 @@ endmacro(add_llvm_library name)
 
 macro(add_llvm_executable name)
   cmake_parse_arguments(ARG
-    "DISABLE_LLVM_LINK_LLVM_DYLIB;IGNORE_EXTERNALIZE_DEBUGINFO;NO_INSTALL_RPATH;SUPPORT_PLUGINS"
+    "DISABLE_LLVM_LINK_LLVM_DYLIB;IGNORE_EXTERNALIZE_DEBUGINFO;NO_INSTALL_RPATH;SUPPORT_PLUGINS;ENABLE_PLUGINS"
     "ENTITLEMENTS;BUNDLE_PATH"
     "DEPENDS"
     ${ARGN})
@@ -819,9 +822,77 @@ macro(add_llvm_executable name)
     # API for all shared libaries loaded by this executable.
     target_link_libraries(${name} PRIVATE ${LLVM_PTHREAD_LIB})
   endif()
+  if(ARG_ENABLE_PLUGINS)
+    set_property(GLOBAL APPEND PROPERTY LLVM_PLUGIN_TARGETS ${name})
+  endif()
 
   llvm_codesign(${name} ENTITLEMENTS ${ARG_ENTITLEMENTS} BUNDLE_PATH ${ARG_BUNDLE_PATH})
 endmacro(add_llvm_executable name)
+
+# add_llvm_pass_plugin(name)
+#   Add ${name} as an llvm plugin.
+#   If option LLVM_${name_upper}_LINK_INTO_TOOLS is set to ON, the plugin is registered statically.
+#   Otherwise a pluggable shared library is registered.
+function(add_llvm_pass_plugin name)
+
+  string(TOUPPER ${name} name_upper)
+
+  option(LLVM_${name_upper}_LINK_INTO_TOOLS "Statically link ${name} into tools (if available)" OFF)
+
+  # process_llvm_pass_plugins takes care of the actual linking, just create an
+  # object library as of now
+  add_llvm_library(${name} OBJECT ${ARGN})
+
+  if(LLVM_${name_upper}_LINK_INTO_TOOLS)
+      target_compile_definitions(${name} PRIVATE LLVM_${name_upper}_LINK_INTO_TOOLS)
+      set_property(TARGET ${name} APPEND PROPERTY COMPILE_DEFINITIONS LLVM_LINK_INTO_TOOLS)
+      if (TARGET intrinsics_gen)
+        add_dependencies(obj.${name} intrinsics_gen)
+      endif()
+  endif()
+
+  message(STATUS "Registering ${name} as a pass plugin (static build: ${LLVM_${name_upper}_LINK_INTO_TOOLS})")
+  if(LLVM_${name_upper}_LINK_INTO_TOOLS)
+    set_property(GLOBAL APPEND PROPERTY LLVM_COMPILE_EXTENSIONS ${name})
+  endif()
+endfunction(add_llvm_pass_plugin)
+
+# Generate X Macro file for extension handling. It provides a
+# HANDLE_EXTENSION(extension_namespace, ExtensionProject) call for each extension
+# allowing client code to define HANDLE_EXTENSION to have a specific code be run for
+# each extension.
+#
+# Also correctly set lib dependencies between plugins and tools.
+function(process_llvm_pass_plugins)
+  get_property(LLVM_EXTENSIONS GLOBAL PROPERTY LLVM_COMPILE_EXTENSIONS)
+  file(WRITE "${CMAKE_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "//extension handlers\n")
+  foreach(llvm_extension ${LLVM_EXTENSIONS})
+    string(TOLOWER ${llvm_extension} llvm_extension_lower)
+
+    string(TOUPPER ${llvm_extension} llvm_extension_upper)
+    string(SUBSTRING ${llvm_extension_upper} 0 1 llvm_extension_upper_first)
+    string(SUBSTRING ${llvm_extension_lower} 1 -1 llvm_extension_lower_tail)
+    string(CONCAT llvm_extension_project ${llvm_extension_upper_first} ${llvm_extension_lower_tail})
+
+    if(LLVM_${llvm_extension_upper}_LINK_INTO_TOOLS)
+        file(APPEND "${CMAKE_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "HANDLE_EXTENSION(${llvm_extension_project})\n")
+
+        get_property(llvm_plugin_targets GLOBAL PROPERTY LLVM_PLUGIN_TARGETS)
+        foreach(llvm_plugin_target ${llvm_plugin_targets})
+          set_property(TARGET ${llvm_plugin_target} APPEND PROPERTY LINK_LIBRARIES ${llvm_extension})
+          set_property(TARGET ${llvm_plugin_target} APPEND PROPERTY INTERFACE_LINK_LIBRARIES ${llvm_extension})
+        endforeach()
+    else()
+      add_llvm_library(${llvm_extension_lower} MODULE obj.${llvm_extension_lower})
+    endif()
+
+  endforeach()
+  file(APPEND "${CMAKE_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "#undef HANDLE_EXTENSION\n")
+
+  # only replace if there's an actual change
+  execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "${CMAKE_BINARY_DIR}/include/llvm/Support/Extension.def")
+  file(REMOVE "${CMAKE_BINARY_DIR}/include/llvm/Support/Extension.def.tmp")
+endfunction()
 
 function(export_executable_symbols target)
   if (LLVM_EXPORTED_SYMBOL_FILE)
