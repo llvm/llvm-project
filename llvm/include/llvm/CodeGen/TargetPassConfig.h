@@ -386,6 +386,10 @@ protected:
     return false;
   }
 
+  /// Add passes to be run immediately after virtual registers are rewritten
+  /// to physical registers.
+  virtual void addPostRewrite() { }
+
   /// This method may be implemented by targets that want to run passes after
   /// register allocation pass pipeline but before prolog-epilog insertion.
   virtual void addPostRegAlloc() { }

@@ -358,7 +358,7 @@ readSnippets(const LLVMState &State, llvm::StringRef Filename) {
 void benchmarkMain() {
 #ifndef HAVE_LIBPFM
   llvm::report_fatal_error(
-      "benchmarking unavaliable, LLVM was built without libpfm.");
+      "benchmarking unavailable, LLVM was built without libpfm.");
 #endif
 
   if (exegesis::pfm::pfmInitialize())

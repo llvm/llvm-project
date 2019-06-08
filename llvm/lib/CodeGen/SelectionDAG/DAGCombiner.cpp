@@ -5118,28 +5118,10 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     return SDValue(N, 0);
 
   // fold (zext_inreg (extload x)) -> (zextload x)
-  if (ISD::isEXTLoad(N0.getNode()) && ISD::isUNINDEXEDLoad(N0.getNode())) {
-    LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-    EVT MemVT = LN0->getMemoryVT();
-    // If we zero all the possible extended bits, then we can turn this into
-    // a zextload if we are running before legalize or the operation is legal.
-    unsigned ExtBitSize = N1.getScalarValueSizeInBits();
-    unsigned MemBitSize = MemVT.getScalarSizeInBits();
-    APInt ExtBits = APInt::getHighBitsSet(ExtBitSize, ExtBitSize - MemBitSize);
-    if (DAG.MaskedValueIsZero(N1, ExtBits) &&
-        ((!LegalOperations && !LN0->isVolatile()) ||
-         TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, MemVT))) {
-      SDValue ExtLoad =
-          DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(N0), VT, LN0->getChain(),
-                         LN0->getBasePtr(), MemVT, LN0->getMemOperand());
-      AddToWorklist(N);
-      CombineTo(N0.getNode(), ExtLoad, ExtLoad.getValue(1));
-      return SDValue(N, 0); // Return N so it doesn't get rechecked!
-    }
-  }
   // fold (zext_inreg (sextload x)) -> (zextload x) iff load has one use
-  if (ISD::isSEXTLoad(N0.getNode()) && ISD::isUNINDEXEDLoad(N0.getNode()) &&
-      N0.hasOneUse()) {
+  if (ISD::isUNINDEXEDLoad(N0.getNode()) &&
+      (ISD::isEXTLoad(N0.getNode()) ||
+       (ISD::isSEXTLoad(N0.getNode()) && N0.hasOneUse()))) {
     LoadSDNode *LN0 = cast<LoadSDNode>(N0);
     EVT MemVT = LN0->getMemoryVT();
     // If we zero all the possible extended bits, then we can turn this into
@@ -5158,6 +5140,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
       return SDValue(N, 0); // Return N so it doesn't get rechecked!
     }
   }
+
   // fold (and (or (srl N, 8), (shl N, 8)), 0xffff) -> (srl (bswap N), const)
   if (N1C && N1C->getAPIntValue() == 0xffff && N0.getOpcode() == ISD::OR) {
     if (SDValue BSwap = MatchBSwapHWordLow(N0.getNode(), N0.getOperand(0),

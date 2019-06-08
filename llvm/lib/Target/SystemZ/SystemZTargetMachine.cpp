@@ -183,6 +183,7 @@ public:
   void addIRPasses() override;
   bool addInstSelector() override;
   bool addILPOpts() override;
+  void addPostRewrite() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
 };
@@ -212,7 +213,16 @@ bool SystemZPassConfig::addILPOpts() {
   return true;
 }
 
+void SystemZPassConfig::addPostRewrite() {
+  addPass(createSystemZPostRewritePass(getSystemZTargetMachine()));
+}
+
 void SystemZPassConfig::addPreSched2() {
+  // PostRewrite needs to be run at -O0 also (in which case addPostRewrite()
+  // is not called).
+  if (getOptLevel() == CodeGenOpt::None)
+    addPass(createSystemZPostRewritePass(getSystemZTargetMachine()));
+
   addPass(createSystemZExpandPseudoPass(getSystemZTargetMachine()));
 
   if (getOptLevel() != CodeGenOpt::None)

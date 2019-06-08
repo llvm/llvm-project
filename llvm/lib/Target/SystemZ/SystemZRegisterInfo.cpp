@@ -81,7 +81,8 @@ SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
                                            const VirtRegMap *VRM,
                                            const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const SystemZSubtarget &Subtarget = MF.getSubtarget<SystemZSubtarget>();
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
 
   bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
       VirtReg, Order, Hints, MF, VRM, Matrix);
@@ -137,6 +138,51 @@ SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
       }
     }
   }
+
+  if (VRM == nullptr)
+    return BaseImplRetVal;
+
+  // Add any two address hints after any copy hints.
+  SmallSet<unsigned, 4> TwoAddrHints;
+  for (auto &Use : MRI->reg_nodbg_instructions(VirtReg))
+    if (SystemZ::getTwoOperandOpcode(Use.getOpcode()) != -1) {
+      const MachineOperand *VRRegMO = nullptr;
+      const MachineOperand *OtherMO = nullptr;
+      const MachineOperand *CommuMO = nullptr;
+      if (VirtReg == Use.getOperand(0).getReg()) {
+        VRRegMO = &Use.getOperand(0);
+        OtherMO = &Use.getOperand(1);
+        if (Use.isCommutable())
+          CommuMO = &Use.getOperand(2);
+      } else if (VirtReg == Use.getOperand(1).getReg()) {
+        VRRegMO = &Use.getOperand(1);
+        OtherMO = &Use.getOperand(0);
+      } else if (VirtReg == Use.getOperand(2).getReg() && Use.isCommutable()) {
+        VRRegMO = &Use.getOperand(2);
+        OtherMO = &Use.getOperand(0);
+      } else
+        continue;
+
+      auto tryAddHint = [&](const MachineOperand *MO) -> void {
+        unsigned Reg = MO->getReg();
+        unsigned PhysReg = isPhysicalRegister(Reg) ? Reg : VRM->getPhys(Reg);
+        if (PhysReg) {
+          if (MO->getSubReg())
+            PhysReg = getSubReg(PhysReg, MO->getSubReg());
+          if (VRRegMO->getSubReg())
+            PhysReg = getMatchingSuperReg(PhysReg, VRRegMO->getSubReg(),
+                                          MRI->getRegClass(VirtReg));
+          if (!MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
+            TwoAddrHints.insert(PhysReg);
+        }
+      };
+      tryAddHint(OtherMO);
+      if (CommuMO)
+        tryAddHint(CommuMO);
+    }
+  for (MCPhysReg OrderReg : Order)
+    if (TwoAddrHints.count(OrderReg))
+      Hints.push_back(OrderReg);
 
   return BaseImplRetVal;
 }

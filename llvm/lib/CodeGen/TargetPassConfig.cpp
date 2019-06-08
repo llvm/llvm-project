@@ -1168,6 +1168,10 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   addPass(&MachineSchedulerID);
 
   if (addRegAssignmentOptimized()) {
+    // Allow targets to expand pseudo instructions depending on the choice of
+    // registers before MachineCopyPropagation.
+    addPostRewrite();
+
     // Copy propagate to forward register uses and try to eliminate COPYs that
     // were not coalesced.
     addPass(&MachineCopyPropagationID);

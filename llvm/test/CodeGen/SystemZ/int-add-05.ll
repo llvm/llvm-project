@@ -1,7 +1,7 @@
 ; Test 64-bit addition in which the second operand is variable.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 | FileCheck %s
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z196 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 | FileCheck %s --check-prefixes=CHECK,Z10
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z196 | FileCheck %s --check-prefixes=CHECK,Z196
 
 declare i64 @foo()
 
@@ -97,10 +97,12 @@ define i64 @f8(i64 %a, i64 %src, i64 %index) {
 }
 
 ; Check that additions of spilled values can use AG rather than AGR.
+; Note: Z196 is suboptimal with one unfolded reload.
 define i64 @f9(i64 *%ptr0) {
 ; CHECK-LABEL: f9:
 ; CHECK: brasl %r14, foo@PLT
-; CHECK: ag %r2, 160(%r15)
+; Z10:  ag %r2, 168(%r15)
+; Z196: ag %r0, 168(%r15)
 ; CHECK: br %r14
   %ptr1 = getelementptr i64, i64 *%ptr0, i64 2
   %ptr2 = getelementptr i64, i64 *%ptr0, i64 4
