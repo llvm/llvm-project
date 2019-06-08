@@ -2390,3 +2390,30 @@ define float @test_rint_f32(float %x) {
   %y = call float @llvm.rint.f32(float %x)
   ret float %y
 }
+
+declare void @llvm.assume(i1)
+define void @test_assume(i1 %x) {
+  ; CHECK-LABEL: name:            test_assume
+  ; CHECK-NOT: llvm.assume
+  ; CHECK: RET_ReallyLR
+  call void @llvm.assume(i1 %x)
+  ret void
+}
+
+declare void @llvm.sideeffect()
+define void @test_sideeffect() {
+  ; CHECK-LABEL: name:            test_sideeffect
+  ; CHECK-NOT: llvm.sideeffect
+  ; CHECK: RET_ReallyLR
+  call void @llvm.sideeffect()
+  ret void
+}
+
+declare void @llvm.var.annotation(i8*, i8*, i8*, i32)
+define void @test_var_annotation(i8*, i8*, i8*, i32) {
+  ; CHECK-LABEL: name:            test_var_annotation
+  ; CHECK-NOT: llvm.var.annotation
+  ; CHECK: RET_ReallyLR
+  call void @llvm.var.annotation(i8* %0, i8* %1, i8* %2, i32 %3)
+  ret void
+}

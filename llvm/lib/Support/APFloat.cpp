@@ -4418,8 +4418,9 @@ APFloat::Storage::Storage(IEEEFloat F, const fltSemantics &Semantics) {
     return;
   }
   if (usesLayout<DoubleAPFloat>(Semantics)) {
+    const fltSemantics& S = F.getSemantics();
     new (&Double)
-        DoubleAPFloat(Semantics, APFloat(std::move(F), F.getSemantics()),
+        DoubleAPFloat(Semantics, APFloat(std::move(F), S),
                       APFloat(semIEEEdouble));
     return;
   }

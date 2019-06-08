@@ -819,6 +819,13 @@ if(APPLE AND DARWIN_LTO_LIBRARY)
     "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-lto_library -Wl,${DARWIN_LTO_LIBRARY}")
 endif()
 
+# Build with _XOPEN_SOURCE on AIX, as stray macros in _ALL_SOURCE mode tend to
+# break things. In this case we need to enable the large-file API as well.
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+          add_definitions("-D_XOPEN_SOURCE=700")
+          add_definitions("-D_LARGE_FILE_API")
+endif()
+
 # Work around a broken bfd ld behavior. When linking a binary with a
 # foo.so library, it will try to find any library that foo.so uses and
 # check its symbols. This is wasteful (the check was done when foo.so

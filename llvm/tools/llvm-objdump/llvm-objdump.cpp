@@ -1417,8 +1417,8 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 }
 
 static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
-  if (StartAddress > StopAddress)
-    error("Start address should be less than stop address");
+  if (StartAddress >= StopAddress)
+    error("start address should be less than stop address");
 
   const Target *TheTarget = getTarget(Obj);
 

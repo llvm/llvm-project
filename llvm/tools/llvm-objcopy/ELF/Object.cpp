@@ -1101,21 +1101,36 @@ template <class ELFT> void ELFBuilder<ELFT>::setParentSegment(Segment &Child) {
   }
 }
 
-template <class ELFT> void ELFBuilder<ELFT>::readProgramHeaders() {
+template <class ELFT> void ELFBuilder<ELFT>::findEhdrOffset() {
+  if (!ExtractPartition)
+    return;
+
+  for (const SectionBase &Section : Obj.sections()) {
+    if (Section.Type == SHT_LLVM_PART_EHDR &&
+        Section.Name == *ExtractPartition) {
+      EhdrOffset = Section.Offset;
+      return;
+    }
+  }
+  error("could not find partition named '" + *ExtractPartition + "'");
+}
+
+template <class ELFT>
+void ELFBuilder<ELFT>::readProgramHeaders(const ELFFile<ELFT> &HeadersFile) {
   uint32_t Index = 0;
-  for (const auto &Phdr : unwrapOrError(ElfFile.program_headers())) {
-    if (Phdr.p_offset + Phdr.p_filesz > ElfFile.getBufSize())
+  for (const auto &Phdr : unwrapOrError(HeadersFile.program_headers())) {
+    if (Phdr.p_offset + Phdr.p_filesz > HeadersFile.getBufSize())
       error("program header with offset 0x" + Twine::utohexstr(Phdr.p_offset) +
             " and file size 0x" + Twine::utohexstr(Phdr.p_filesz) +
             " goes past the end of the file");
 
-    ArrayRef<uint8_t> Data{ElfFile.base() + Phdr.p_offset,
+    ArrayRef<uint8_t> Data{HeadersFile.base() + Phdr.p_offset,
                            (size_t)Phdr.p_filesz};
     Segment &Seg = Obj.addSegment(Data);
     Seg.Type = Phdr.p_type;
     Seg.Flags = Phdr.p_flags;
-    Seg.OriginalOffset = Phdr.p_offset;
-    Seg.Offset = Phdr.p_offset;
+    Seg.OriginalOffset = Phdr.p_offset + EhdrOffset;
+    Seg.Offset = Phdr.p_offset + EhdrOffset;
     Seg.VAddr = Phdr.p_vaddr;
     Seg.PAddr = Phdr.p_paddr;
     Seg.FileSize = Phdr.p_filesz;
@@ -1135,8 +1150,9 @@ template <class ELFT> void ELFBuilder<ELFT>::readProgramHeaders() {
 
   auto &ElfHdr = Obj.ElfHdrSegment;
   ElfHdr.Index = Index++;
+  ElfHdr.OriginalOffset = ElfHdr.Offset = EhdrOffset;
 
-  const auto &Ehdr = *ElfFile.getHeader();
+  const auto &Ehdr = *HeadersFile.getHeader();
   auto &PrHdr = Obj.ProgramHdrSegment;
   PrHdr.Type = PT_PHDR;
   PrHdr.Flags = 0;
@@ -1144,7 +1160,7 @@ template <class ELFT> void ELFBuilder<ELFT>::readProgramHeaders() {
   // Whereas this works automatically for ElfHdr, here OriginalOffset is
   // always non-zero and to ensure the equation we assign the same value to
   // VAddr as well.
-  PrHdr.OriginalOffset = PrHdr.Offset = PrHdr.VAddr = Ehdr.e_phoff;
+  PrHdr.OriginalOffset = PrHdr.Offset = PrHdr.VAddr = EhdrOffset + Ehdr.e_phoff;
   PrHdr.PAddr = 0;
   PrHdr.FileSize = PrHdr.MemSize = Ehdr.e_phentsize * Ehdr.e_phnum;
   // The spec requires us to naturally align all the fields.
@@ -1363,7 +1379,9 @@ template <class ELFT> void ELFBuilder<ELFT>::readSectionHeaders() {
         ArrayRef<uint8_t>(ElfFile.base() + Shdr.sh_offset,
                           (Shdr.sh_type == SHT_NOBITS) ? 0 : Shdr.sh_size);
   }
+}
 
+template <class ELFT> void ELFBuilder<ELFT>::readSections() {
   // If a section index table exists we'll need to initialize it before we
   // initialize the symbol table because the symbol table might need to
   // reference it.
@@ -1397,23 +1415,8 @@ template <class ELFT> void ELFBuilder<ELFT>::readSectionHeaders() {
       initGroupSection(GroupSec);
     }
   }
-}
 
-template <class ELFT> void ELFBuilder<ELFT>::build() {
-  const auto &Ehdr = *ElfFile.getHeader();
-
-  Obj.OSABI = Ehdr.e_ident[EI_OSABI];
-  Obj.ABIVersion = Ehdr.e_ident[EI_ABIVERSION];
-  Obj.Type = Ehdr.e_type;
-  Obj.Machine = Ehdr.e_machine;
-  Obj.Version = Ehdr.e_version;
-  Obj.Entry = Ehdr.e_entry;
-  Obj.Flags = Ehdr.e_flags;
-
-  readSectionHeaders();
-  readProgramHeaders();
-
-  uint32_t ShstrIndex = Ehdr.e_shstrndx;
+  uint32_t ShstrIndex = ElfFile.getHeader()->e_shstrndx;
   if (ShstrIndex == SHN_XINDEX)
     ShstrIndex = unwrapOrError(ElfFile.getSection(0))->sh_link;
 
@@ -1423,10 +1426,33 @@ template <class ELFT> void ELFBuilder<ELFT>::build() {
     Obj.SectionNames =
         Obj.sections().template getSectionOfType<StringTableSection>(
             ShstrIndex,
-            "e_shstrndx field value " + Twine(Ehdr.e_shstrndx) +
-                " in elf header is invalid",
-            "e_shstrndx field value " + Twine(Ehdr.e_shstrndx) +
-                " in elf header is not a string table");
+            "e_shstrndx field value " + Twine(ShstrIndex) + " in elf header " +
+                " is invalid",
+            "e_shstrndx field value " + Twine(ShstrIndex) + " in elf header " +
+                " is not a string table");
+}
+
+template <class ELFT> void ELFBuilder<ELFT>::build() {
+  readSectionHeaders();
+  findEhdrOffset();
+
+  // The ELFFile whose ELF headers and program headers are copied into the
+  // output file. Normally the same as ElfFile, but if we're extracting a
+  // loadable partition it will point to the partition's headers.
+  ELFFile<ELFT> HeadersFile = unwrapOrError(ELFFile<ELFT>::create(toStringRef(
+      {ElfFile.base() + EhdrOffset, ElfFile.getBufSize() - EhdrOffset})));
+
+  auto &Ehdr = *HeadersFile.getHeader();
+  Obj.OSABI = Ehdr.e_ident[EI_OSABI];
+  Obj.ABIVersion = Ehdr.e_ident[EI_ABIVERSION];
+  Obj.Type = Ehdr.e_type;
+  Obj.Machine = Ehdr.e_machine;
+  Obj.Version = Ehdr.e_version;
+  Obj.Entry = Ehdr.e_entry;
+  Obj.Flags = Ehdr.e_flags;
+
+  readSections();
+  readProgramHeaders(HeadersFile);
 }
 
 Writer::~Writer() {}
@@ -1440,19 +1466,19 @@ std::unique_ptr<Object> BinaryReader::create() const {
 std::unique_ptr<Object> ELFReader::create() const {
   auto Obj = llvm::make_unique<Object>();
   if (auto *O = dyn_cast<ELFObjectFile<ELF32LE>>(Bin)) {
-    ELFBuilder<ELF32LE> Builder(*O, *Obj);
+    ELFBuilder<ELF32LE> Builder(*O, *Obj, ExtractPartition);
     Builder.build();
     return Obj;
   } else if (auto *O = dyn_cast<ELFObjectFile<ELF64LE>>(Bin)) {
-    ELFBuilder<ELF64LE> Builder(*O, *Obj);
+    ELFBuilder<ELF64LE> Builder(*O, *Obj, ExtractPartition);
     Builder.build();
     return Obj;
   } else if (auto *O = dyn_cast<ELFObjectFile<ELF32BE>>(Bin)) {
-    ELFBuilder<ELF32BE> Builder(*O, *Obj);
+    ELFBuilder<ELF32BE> Builder(*O, *Obj, ExtractPartition);
     Builder.build();
     return Obj;
   } else if (auto *O = dyn_cast<ELFObjectFile<ELF64BE>>(Bin)) {
-    ELFBuilder<ELF64BE> Builder(*O, *Obj);
+    ELFBuilder<ELF64BE> Builder(*O, *Obj, ExtractPartition);
     Builder.build();
     return Obj;
   }
@@ -1732,7 +1758,6 @@ template <class ELFT> void ELFWriter<ELFT>::initEhdrSegment() {
   Segment &ElfHdr = Obj.ElfHdrSegment;
   ElfHdr.Type = PT_PHDR;
   ElfHdr.Flags = 0;
-  ElfHdr.OriginalOffset = ElfHdr.Offset = 0;
   ElfHdr.VAddr = 0;
   ElfHdr.PAddr = 0;
   ElfHdr.FileSize = ElfHdr.MemSize = sizeof(Elf_Ehdr);

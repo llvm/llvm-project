@@ -29,8 +29,14 @@ class MachOWriter {
   size_t symTableSize() const;
   size_t strTableSize() const;
 
+  void updateDySymTab(MachO::macho_load_command &MLC);
+  void updateSizeOfCmds();
+  Error layout();
+
   void writeHeader();
   void writeLoadCommands();
+  template <typename StructType>
+  void writeSectionInLoadCommand(const Section &Sec, uint8_t *&Out);
   void writeSections();
   void writeSymbolTable();
   void writeStringTable();
@@ -46,6 +52,7 @@ public:
       : O(O), Is64Bit(Is64Bit), IsLittleEndian(IsLittleEndian), B(B) {}
 
   size_t totalSize() const;
+  Error finalize();
   Error write();
 };
 

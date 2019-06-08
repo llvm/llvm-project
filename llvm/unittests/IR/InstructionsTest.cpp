@@ -1081,5 +1081,23 @@ TEST(InstructionsTest, PhiIsNotFPMathOperator) {
   I->deleteValue();
 }
 
+TEST(InstructionsTest, FNegInstruction) {
+  LLVMContext Context;
+  Type *FltTy = Type::getFloatTy(Context);
+  Constant *One = ConstantFP::get(FltTy, 1.0);
+  BinaryOperator *FAdd = BinaryOperator::CreateFAdd(One, One);
+  FAdd->setHasNoNaNs(true);
+  UnaryOperator *FNeg = UnaryOperator::CreateFNegFMF(One, FAdd);
+  EXPECT_TRUE(FNeg->hasNoNaNs());
+  EXPECT_FALSE(FNeg->hasNoInfs());
+  EXPECT_FALSE(FNeg->hasNoSignedZeros());
+  EXPECT_FALSE(FNeg->hasAllowReciprocal());
+  EXPECT_FALSE(FNeg->hasAllowContract());
+  EXPECT_FALSE(FNeg->hasAllowReassoc());
+  EXPECT_FALSE(FNeg->hasApproxFunc());
+  FAdd->deleteValue();
+  FNeg->deleteValue();
+}
+
 } // end anonymous namespace
 } // end namespace llvm
