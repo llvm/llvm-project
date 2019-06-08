@@ -6141,24 +6141,28 @@ ExpectedStmt ASTNodeImporter::VisitCilkSyncStmt(CilkSyncStmt *S) {
 
 ExpectedStmt ASTNodeImporter::VisitCilkForStmt(CilkForStmt *S) {
   auto Imp = importSeq(
-      S->getInit(), S->getCond(), /*S->getConditionVariable(),*/ S->getInc(),
+      S->getInit(), S->getLimitStmt(), S->getInitCond(), S->getBeginStmt(),
+      S->getEndStmt(), S->getCond(), /*S->getConditionVariable(),*/ S->getInc(),
       S->getLoopVariable(), S->getBody(), S->getCilkForLoc(), S->getLParenLoc(),
       S->getRParenLoc());
   if (!Imp)
     return Imp.takeError();
 
   Stmt *ToInit;
-  Expr *ToCond, *ToInc;
+  DeclStmt *ToLimitStmt, *ToBeginStmt, *ToEndStmt;
+  Expr *ToInitCond, *ToCond, *ToInc;
   // VarDecl *ToConditionVariable;
   VarDecl *ToLoopVariable;
   Stmt *ToBody;
   SourceLocation ToCilkForLoc, ToLParenLoc, ToRParenLoc;
   std::tie(
-      ToInit, ToCond, /*ToConditionVariable,*/ ToInc, ToLoopVariable, ToBody,
+      ToInit, ToLimitStmt, ToInitCond, ToBeginStmt, ToEndStmt, ToCond,
+      /*ToConditionVariable,*/ ToInc, ToLoopVariable, ToBody,
       ToCilkForLoc, ToLParenLoc, ToRParenLoc) = *Imp;
 
   return new (Importer.getToContext()) CilkForStmt(
-      Importer.getToContext(), ToInit, ToCond, /*ToConditionVariable,*/ ToInc,
+      Importer.getToContext(), ToInit, ToLimitStmt, ToInitCond, ToBeginStmt,
+      ToEndStmt, ToCond, /*ToConditionVariable,*/ ToInc,
       ToLoopVariable, ToBody, ToCilkForLoc, ToLParenLoc, ToRParenLoc);
 }
 

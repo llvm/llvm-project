@@ -29,15 +29,13 @@ class CilkSpawnStmt : public Stmt {
   Stmt *SpawnedStmt;
 
 public:
-  explicit CilkSpawnStmt(SourceLocation SL)
-      : CilkSpawnStmt(SL, nullptr) {}
+  explicit CilkSpawnStmt(SourceLocation SL) : CilkSpawnStmt(SL, nullptr) {}
 
   CilkSpawnStmt(SourceLocation SL, Stmt *S)
       : Stmt(CilkSpawnStmtClass), SpawnLoc(SL), SpawnedStmt(S) { }
 
   // \brief Build an empty _Cilk_spawn statement.
-  explicit CilkSpawnStmt(EmptyShell Empty)
-      : Stmt(CilkSpawnStmtClass, Empty) { }
+  explicit CilkSpawnStmt(EmptyShell Empty) : Stmt(CilkSpawnStmtClass, Empty) {}
 
   const Stmt *getSpawnedStmt() const;
   Stmt *getSpawnedStmt();
@@ -93,15 +91,15 @@ public:
 /// CilkForStmt - This represents a '_Cilk_for(init;cond;inc)' stmt.
 class CilkForStmt : public Stmt {
   SourceLocation CilkForLoc;
-  enum { INIT, COND, INC, LOOPVAR, BODY,
-         END_EXPR };
-  Stmt* SubExprs[END_EXPR]; // SubExprs[INIT] is an expression or declstmt.
+  enum { INIT, LIMIT, INITCOND, BEGINSTMT, ENDSTMT, COND, INC, LOOPVAR, BODY, END };
+  Stmt* SubExprs[END]; // SubExprs[INIT] is an expression or declstmt.
   SourceLocation LParenLoc, RParenLoc;
 
 public:
-  CilkForStmt(const ASTContext &C, Stmt *Init,
-              Expr *Cond, Expr *Inc, VarDecl *LoopVar, Stmt *Body,
-              SourceLocation CFL, SourceLocation LP, SourceLocation RP);
+  CilkForStmt(const ASTContext &C, Stmt *Init, DeclStmt *Limit, Expr *InitCond,
+              DeclStmt *Begin, DeclStmt *End, Expr *Cond, Expr *Inc,
+              VarDecl *LoopVar, Stmt *Body, SourceLocation CFL,
+              SourceLocation LP, SourceLocation RP);
 
   /// \brief Build an empty for statement.
   explicit CilkForStmt(EmptyShell Empty) : Stmt(CilkForStmtClass, Empty) { }
@@ -127,12 +125,31 @@ public:
 
   VarDecl *getLoopVariable() const;
   void setLoopVariable(const ASTContext &C, VarDecl *V);
-
+  DeclStmt *getLimitStmt() {
+    return cast_or_null<DeclStmt>(SubExprs[LIMIT]);
+  }
+  Expr *getInitCond() { return cast_or_null<Expr>(SubExprs[INITCOND]); }
+  DeclStmt *getBeginStmt() {
+    return cast_or_null<DeclStmt>(SubExprs[BEGINSTMT]);
+  }
+  DeclStmt *getEndStmt() { return cast_or_null<DeclStmt>(SubExprs[ENDSTMT]); }
   Expr *getCond() { return reinterpret_cast<Expr*>(SubExprs[COND]); }
   Expr *getInc()  { return reinterpret_cast<Expr*>(SubExprs[INC]); }
   Stmt *getBody() { return SubExprs[BODY]; }
 
   const Stmt *getInit() const { return SubExprs[INIT]; }
+  const DeclStmt *getLimitStmt() const {
+    return cast_or_null<DeclStmt>(SubExprs[LIMIT]);
+  }
+  const Expr *getInitCond() const {
+    return cast_or_null<Expr>(SubExprs[INITCOND]);
+  }
+  const DeclStmt *getBeginStmt() const {
+    return cast_or_null<DeclStmt>(SubExprs[BEGINSTMT]);
+  }
+  const DeclStmt *getEndStmt() const {
+    return cast_or_null<DeclStmt>(SubExprs[ENDSTMT]);
+  }
   const Expr *getCond() const { return reinterpret_cast<Expr*>(SubExprs[COND]);}
   const Expr *getInc()  const { return reinterpret_cast<Expr*>(SubExprs[INC]); }
   const DeclStmt *getLoopVarDecl() const {
@@ -141,6 +158,10 @@ public:
   const Stmt *getBody() const { return SubExprs[BODY]; }
 
   void setInit(Stmt *S) { SubExprs[INIT] = S; }
+  void setLimitStmt(Stmt *S) { SubExprs[LIMIT] = S; }
+  void setInitCond(Expr *E) { SubExprs[INITCOND] = reinterpret_cast<Stmt*>(E); }
+  void setBeginStmt(Stmt *S) { SubExprs[BEGINSTMT] = S; }
+  void setEndStmt(Stmt *S) { SubExprs[ENDSTMT] = S; }
   void setCond(Expr *E) { SubExprs[COND] = reinterpret_cast<Stmt*>(E); }
   void setInc(Expr *E) { SubExprs[INC] = reinterpret_cast<Stmt*>(E); }
   void setBody(Stmt *S) { SubExprs[BODY] = S; }
@@ -163,7 +184,7 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(&SubExprs[0], &SubExprs[0]+END_EXPR);
+    return child_range(&SubExprs[0], &SubExprs[END]);
   }
 };
 

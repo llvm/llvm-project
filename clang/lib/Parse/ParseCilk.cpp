@@ -343,6 +343,7 @@ StmtResult Parser::ParseCilkForStatement(SourceLocation *TrailingElseLoc) {
   //   return Actions.FinishCXXForRangeStmt(ForRangeStmt.get(), Body.get());
 
   return Actions.ActOnCilkForStmt(ForLoc, T.getOpenLocation(), FirstPart.get(),
-                                  SecondPart, ThirdPart, T.getCloseLocation(),
-                                  Body.get());
+                                  nullptr, Sema::ConditionResult(), nullptr,
+                                  nullptr, SecondPart, ThirdPart,
+                                  T.getCloseLocation(), Body.get());
 }

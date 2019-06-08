@@ -336,6 +336,38 @@ void CodeGenFunction::EmitCilkForStmt(const CilkForStmt &S,
   if (S.getInit())
     EmitStmt(S.getInit());
 
+  llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
+  // If there are any cleanups between here and the loop-exit scope,
+  // create a block to stage a loop exit along.
+  if (ForScope.requiresCleanups())
+    ExitBlock = createBasicBlock("pfor.initcond.cleanup");
+
+  if (S.getLimitStmt()) {
+    EmitStmt(S.getLimitStmt());
+
+    // As long as the condition is true, iterate the loop.
+    llvm::BasicBlock *PForPH = createBasicBlock("pfor.ph");
+
+    // C99 6.8.5p2/p4: The first substatement is executed if the expression
+    // compares unequal to 0.  The condition must be a scalar type.
+    llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getInitCond());
+    Builder.CreateCondBr(
+        BoolCondVal, PForPH, ExitBlock,
+        createProfileWeightsForLoop(S.getInitCond(),
+                                    getProfileCount(S.getBody())));
+
+    if (ExitBlock != LoopExit.getBlock()) {
+      EmitBlock(ExitBlock);
+      EmitBranchThroughCleanup(LoopExit);
+    }
+
+    EmitBlock(PForPH);
+  }
+  if (S.getBeginStmt())
+    EmitStmt(S.getBeginStmt());
+  if (S.getEndStmt())
+    EmitStmt(S.getEndStmt());
+
   assert(S.getCond() && "_Cilk_for loop has no condition");
 
   // Start the loop with a block that tests the condition.  If there's an
@@ -386,7 +418,7 @@ void CodeGenFunction::EmitCilkForStmt(const CilkForStmt &S,
     //   EmitAutoVarDecl(*S.getConditionVariable());
     // }
 
-    llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
+    // llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
     // If there are any cleanups between here and the loop-exit scope,
     // create a block to stage a loop exit along.
     if (ForScope.requiresCleanups())
@@ -399,17 +431,20 @@ void CodeGenFunction::EmitCilkForStmt(const CilkForStmt &S,
     ForBodyEntry = createBasicBlock("pfor.body.entry");
     ForBody = createBasicBlock("pfor.body");
 
-    // C99 6.8.5p2/p4: The first substatement is executed if the expression
-    // compares unequal to 0.  The condition must be a scalar type.
-    llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
-    Builder.CreateCondBr(
-        BoolCondVal, DetachBlock, ExitBlock,
-        createProfileWeightsForLoop(S.getCond(), getProfileCount(S.getBody())));
+    // // C99 6.8.5p2/p4: The first substatement is executed if the expression
+    // // compares unequal to 0.  The condition must be a scalar type.
+    // //
+    // // TODO: Move this check to the increment block.
+    // llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
+    // Builder.CreateCondBr(
+    //     BoolCondVal, DetachBlock, ExitBlock,
+    //     createProfileWeightsForLoop(S.getCond(), getProfileCount(S.getBody())));
 
-    if (ExitBlock != LoopExit.getBlock()) {
-      EmitBlock(ExitBlock);
-      EmitBranchThroughCleanup(LoopExit);
-    }
+    // if (ExitBlock != LoopExit.getBlock()) {
+    //   EmitBlock(ExitBlock);
+    //   EmitBranchThroughCleanup(LoopExit);
+    // }
+    EmitBranch(DetachBlock);
 
     EmitBlock(DetachBlock);
 
@@ -526,7 +561,19 @@ void CodeGenFunction::EmitCilkForStmt(const CilkForStmt &S,
   ConditionScope.ForceCleanup();
 
   EmitStopPoint(&S);
-  EmitBranch(CondBlock);
+
+  // EmitBranch(CondBlock);
+  // C99 6.8.5p2/p4: The first substatement is executed if the expression
+  // compares unequal to 0.  The condition must be a scalar type.
+  llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
+  Builder.CreateCondBr(
+      BoolCondVal, CondBlock, ExitBlock,
+      createProfileWeightsForLoop(S.getCond(), getProfileCount(S.getBody())));
+
+  if (ExitBlock != LoopExit.getBlock()) {
+    EmitBlock(ExitBlock);
+    EmitBranchThroughCleanup(LoopExit);
+  }
 
   ForScope.ForceCleanup();
 

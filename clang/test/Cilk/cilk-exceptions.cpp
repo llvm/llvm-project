@@ -78,7 +78,6 @@ void parallelfor_noexcept(int n) {
 
 // CHECK-LABEL: @_Z18parallelfor_excepti(
 // CHECK: %[[SYNCREG:.+]] = call token @llvm.syncregion.start()
-// CHECK-DAG: sync within %[[SYNCREG]]
 // CHECK: detach within %[[SYNCREG]], label %[[DETACHED:.+]], label %[[CONTINUE:.+]] unwind label %[[DUNWIND:.+]]
 // CHECK: invoke i8* @_Znwm(i64 1)
 // CHECK-NEXT: to label %[[INVOKECONT1:.+]] unwind label %[[TASKLPAD1:.+]]
@@ -88,6 +87,7 @@ void parallelfor_noexcept(int n) {
 // CHECK: [[INVOKECONT2]]:
 // CHECK: invoke i32 @_Z3barP3Foo(
 // CHECK-NEXT: to label %[[INVOKECONT3:.+]] unwind label %[[TASKLPAD1]]
+// CHECK-DAG: sync within %[[SYNCREG]]
 // CHECK: [[TASKLPAD1]]:
 // CHECK-NEXT: landingpad [[LPADTYPE:.+]]
 // CHECK-NEXT: catch {{.+}} null

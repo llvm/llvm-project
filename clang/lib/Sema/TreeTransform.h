@@ -1345,11 +1345,16 @@ public:
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
   StmtResult RebuildCilkForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
-                                Stmt *Init, Sema::ConditionResult Cond,
+                                Stmt *Init, Stmt *Limit,
+                                Sema::ConditionResult InitCond, Stmt *Begin,
+                                Stmt *End,  Sema::ConditionResult Cond,
                                 Sema::FullExprArg Inc, SourceLocation RParenLoc,
                                 VarDecl *LoopVar, Stmt *Body) {
-    return getSema().ActOnCilkForStmt(ForLoc, LParenLoc, Init, Cond,
-                                      Inc, RParenLoc, Body, LoopVar);
+    return getSema().ActOnCilkForStmt(ForLoc, LParenLoc, Init,
+                                      cast_or_null<DeclStmt>(Limit), InitCond,
+                                      cast_or_null<DeclStmt>(Begin),
+                                      cast_or_null<DeclStmt>(End), Cond, Inc,
+                                      RParenLoc, Body, LoopVar);
   }
 
   /// Build a new goto statement.
@@ -13325,6 +13330,40 @@ TreeTransform<Derived>::TransformCilkForStmt(CilkForStmt *S) {
   if (Init.isInvalid())
     return StmtError();
 
+  // Transform the limit statement
+  StmtResult Limit;
+  if (S->getLimitStmt()) {
+    Limit = getDerived().TransformStmt(S->getLimitStmt());
+    if (Limit.isInvalid())
+      return StmtError();
+  }
+
+  // Transform the init-condition statement
+  Sema::ConditionResult InitCond;
+  if (S->getInitCond()) {
+    InitCond = getDerived().TransformCondition(
+        S->getCilkForLoc(), nullptr, S->getInitCond(),
+        Sema::ConditionKind::Boolean);
+    if (InitCond.isInvalid())
+      return StmtError();
+  }
+
+  // Transform the begin statement
+  StmtResult Begin;
+  if (S->getBeginStmt()) {
+    Begin = getDerived().TransformStmt(S->getBeginStmt());
+    if (Begin.isInvalid())
+      return StmtError();
+  }
+
+  // Transform the end statement
+  StmtResult End;
+  if (S->getEndStmt()) {
+    End = getDerived().TransformStmt(S->getEndStmt());
+    if (End.isInvalid())
+      return StmtError();
+  }
+
   // // In OpenMP loop region loop control variable must be captured and be
   // // private. Perform analysis of first part (if any).
   // if (getSema().getLangOpts().OpenMP && Init.isUsable())
@@ -13362,16 +13401,21 @@ TreeTransform<Derived>::TransformCilkForStmt(CilkForStmt *S) {
 
   if (!getDerived().AlwaysRebuild() &&
       Init.get() == S->getInit() &&
+      Limit.get() == S->getLimitStmt() &&
+      InitCond.get() == std::make_pair((clang::VarDecl*)nullptr,
+                                       S->getInitCond()) &&
+      Begin.get() == S->getBeginStmt() &&
+      End.get() == S->getEndStmt() &&
       Cond.get() == std::make_pair((clang::VarDecl*)nullptr, S->getCond()) &&
       Inc.get() == S->getInc() &&
       LoopVar == S->getLoopVariable() &&
       Body.get() == S->getBody())
     return S;
 
-  return getDerived().RebuildCilkForStmt(S->getCilkForLoc(), S->getLParenLoc(),
-                                         Init.get(), Cond, FullInc,
-                                         S->getRParenLoc(), LoopVar,
-                                         Body.get());
+  return getDerived().RebuildCilkForStmt(
+      S->getCilkForLoc(), S->getLParenLoc(), Init.get(), Limit.get(),
+      InitCond, Begin.get(), End.get(), Cond, FullInc, S->getRParenLoc(),
+      LoopVar, Body.get());
 }
 
 } // end namespace clang
