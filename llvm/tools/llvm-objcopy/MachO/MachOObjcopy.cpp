@@ -58,6 +58,8 @@ Error executeObjcopyOnBinary(const CopyConfig &Config,
     return createFileError(Config.InputFilename, std::move(E));
 
   MachOWriter Writer(*O, In.is64Bit(), In.isLittleEndian(), Out);
+  if (auto E = Writer.finalize())
+    return E;
   return Writer.write();
 }
 

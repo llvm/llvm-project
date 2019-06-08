@@ -47,6 +47,7 @@ static const unsigned MaxInterleaveFactor = 16;
 
 namespace llvm {
 
+#ifndef NDEBUG
 static void debugVectorizationFailure(const StringRef DebugMsg,
     Instruction *I) {
   dbgs() << "LV: Not vectorizing: " << DebugMsg;
@@ -56,6 +57,7 @@ static void debugVectorizationFailure(const StringRef DebugMsg,
     dbgs() << '.';
   dbgs() << '\n';
 }
+#endif
 
 OptimizationRemarkAnalysis createLVMissedAnalysis(const char *PassName,
                                                   StringRef RemarkName,

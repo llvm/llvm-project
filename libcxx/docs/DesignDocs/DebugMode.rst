@@ -28,41 +28,32 @@ they can be enabled using the ``_LIBCPP_DEBUG`` macro.
   which provides additional assertions about the validity of iterators used by
   the program.
 
-  Note that this option has no effect on libc++'s ABI
-
-**_LIBCPP_DEBUG_USE_EXCEPTIONS**:
-  When this macro is defined ``_LIBCPP_ASSERT`` failures throw
-  ``__libcpp_debug_exception`` instead of aborting. Additionally this macro
-  disables exception specifications on functions containing ``_LIBCPP_ASSERT``
-  checks. This allows assertion failures to correctly throw through these
-  functions.
+  Note that this option has no effect on libc++'s ABI; but it does have broad
+  ODR implications. Users should compile their whole program at the same
+  debugging level.
 
 Handling Assertion Failures
 ---------------------------
 
 When a debug assertion fails the assertion handler is called via the
 ``std::__libcpp_debug_function`` function pointer. It is possible to override
-this function pointer using a different handler function. Libc++ provides two
-different assertion handlers, the default handler
-``std::__libcpp_abort_debug_handler`` which aborts the program, and
-``std::__libcpp_throw_debug_handler`` which throws an instance of
-``std::__libcpp_debug_exception``. Libc++ can be changed to use the throwing
-assertion handler as follows:
+this function pointer using a different handler function. Libc++ provides a
+the default handler, ``std::__libcpp_abort_debug_handler``, which aborts the
+program. The handler may not return. Libc++ can be changed to use a custom
+assertion handler as follows.
 
 .. code-block:: cpp
 
   #define _LIBCPP_DEBUG 1
   #include <string>
+  void my_handler(std::__libcpp_debug_info const&);
   int main(int, char**) {
-    std::__libcpp_debug_function = std::__libcpp_throw_debug_function;
-    try {
-      std::string::iterator bad_it;
-      std::string str("hello world");
-      str.insert(bad_it, '!'); // causes debug assertion
-    } catch (std::__libcpp_debug_exception const&) {
-      return EXIT_SUCCESS;
-    }
-    return EXIT_FAILURE;
+    std::__libcpp_debug_function = &my_handler;
+
+    std::string::iterator bad_it;
+    std::string str("hello world");
+    str.insert(bad_it, '!'); // causes debug assertion
+    // control flow doesn't return
   }
 
 Debug Mode Checks

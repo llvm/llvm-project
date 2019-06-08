@@ -2,6 +2,20 @@
 
 
 // ------------------------------------------------------------------------- //
+// Unexpected type suffix
+
+pnext p0.b, p15.b, p0.b
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate register.
+// CHECK-NEXT: pnext p0.b, p15.b, p0.b
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+pnext p0.b, p15.q, p0.b
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate register.
+// CHECK-NEXT: pnext p0.b, p15.q, p0.b
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// ------------------------------------------------------------------------- //
 // Tied operands must match
 
 pnext p0.b, p15, p1.b

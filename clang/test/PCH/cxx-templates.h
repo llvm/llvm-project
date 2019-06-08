@@ -439,3 +439,12 @@ namespace ClassScopeExplicitSpecializations {
   template<> template<> constexpr int B<0>::w<int> = 7;
   template<> template<> constexpr int B<0>::w<float> = 8;
 }
+
+namespace DependentMemberExpr {
+  struct Base {
+    constexpr int setstate() { return 0; }
+  };
+  template<typename T> struct A : Base {
+    constexpr int f() { return Base::setstate(); }
+  };
+}

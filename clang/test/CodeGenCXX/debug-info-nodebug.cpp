@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -DSETNODEBUG=0 -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s --check-prefix=YESINFO
-// RUN: %clang_cc1 -DSETNODEBUG=1 -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s --check-prefix=NOINFO
+// RUN: %clang_cc1 -DSETNODEBUG=0 -emit-llvm -std=c++14 -debug-info-kind=limited %s -o - | FileCheck %s --check-prefix=YESINFO
+// RUN: %clang_cc1 -DSETNODEBUG=1 -emit-llvm -std=c++14 -debug-info-kind=limited %s -o - | FileCheck %s --check-prefix=NOINFO
 
 #if SETNODEBUG
 #define NODEBUG __attribute__((nodebug))
@@ -53,3 +53,15 @@ void func4() {
 // NOINFO-NOT:  !DIGlobalVariable(name: "static_local"
 // YESINFO-DAG: !DILocalVariable(name: "normal_local"
 // NOINFO-NOT:  !DILocalVariable(name: "normal_local"
+
+template <typename T>
+using y NODEBUG = int;
+void func5() {
+  NODEBUG typedef int x;
+  x a;
+  y<int> b;
+}
+// YESINFO-DAG: !DIDerivedType(tag: DW_TAG_typedef, name: "x"
+// NOINFO-NOT:  !DIDerivedType(tag: DW_TAG_typedef, name: "x"
+// YESINFO-DAG: !DIDerivedType(tag: DW_TAG_typedef, name: "y<int>"
+// NOINFO-NOT:  !DIDerivedType(tag: DW_TAG_typedef, name: "y<int>"

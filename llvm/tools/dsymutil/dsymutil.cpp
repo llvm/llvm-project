@@ -367,6 +367,8 @@ static Expected<LinkOptions> getOptions() {
 
   if (NumThreads == 0)
     Options.Threads = llvm::thread::hardware_concurrency();
+  else
+    Options.Threads = NumThreads;
   if (DumpDebugMap || Verbose)
     Options.Threads = 1;
 
@@ -526,9 +528,9 @@ int main(int argc, char **argv) {
     // Shared a single binary holder for all the link steps.
     BinaryHolder BinHolder;
 
-    NumThreads =
+    unsigned ThreadCount =
         std::min<unsigned>(OptionsOrErr->Threads, DebugMapPtrsOrErr->size());
-    llvm::ThreadPool Threads(NumThreads);
+    llvm::ThreadPool Threads(ThreadCount);
 
     // If there is more than one link to execute, we need to generate
     // temporary files.
@@ -600,7 +602,7 @@ int main(int argc, char **argv) {
       // FIXME: The DwarfLinker can have some very deep recursion that can max
       // out the (significantly smaller) stack when using threads. We don't
       // want this limitation when we only have a single thread.
-      if (NumThreads == 1)
+      if (ThreadCount == 1)
         LinkLambda(OS);
       else
         Threads.async(LinkLambda, OS);

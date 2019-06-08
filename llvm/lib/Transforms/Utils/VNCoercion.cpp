@@ -14,13 +14,17 @@ namespace VNCoercion {
 /// Return true if coerceAvailableValueToLoadType will succeed.
 bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
                                      const DataLayout &DL) {
+  Type *StoredTy = StoredVal->getType();
+  if (StoredTy == LoadTy)
+    return true;
+
   // If the loaded or stored value is an first class array or struct, don't try
   // to transform them.  We need to be able to bitcast to integer.
-  if (LoadTy->isStructTy() || LoadTy->isArrayTy() ||
-      StoredVal->getType()->isStructTy() || StoredVal->getType()->isArrayTy())
+  if (LoadTy->isStructTy() || LoadTy->isArrayTy() || StoredTy->isStructTy() ||
+      StoredTy->isArrayTy())
     return false;
 
-  uint64_t StoreSize = DL.getTypeSizeInBits(StoredVal->getType());
+  uint64_t StoreSize = DL.getTypeSizeInBits(StoredTy);
 
   // The store size must be byte-aligned to support future type casts.
   if (llvm::alignTo(StoreSize, 8) != StoreSize)
@@ -306,7 +310,7 @@ int analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
     return -1;
 
   GlobalVariable *GV = dyn_cast<GlobalVariable>(GetUnderlyingObject(Src, DL));
-  if (!GV || !GV->isConstant())
+  if (!GV || !GV->isConstant() || !GV->hasDefinitiveInitializer())
     return -1;
 
   // See if the access is within the bounds of the transfer.

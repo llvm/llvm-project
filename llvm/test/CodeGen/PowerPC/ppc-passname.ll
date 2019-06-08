@@ -1,15 +1,3 @@
-; Test pass name: ppc-ctr-loops.
-; RUN: llc -mtriple=powerpc64le-unknown-unknown < %s -debug-pass=Structure -stop-before=ppc-ctr-loops -o /dev/null 2>&1 | FileCheck %s -check-prefix=STOP-BEFORE-CTR-LOOPS
-; STOP-BEFORE-CTR-LOOPS-NOT: -ppc-ctr-loops
-; STOP-BEFORE-CTR-LOOPS-NOT: "ppc-ctr-loops" pass is not registered.
-; STOP-BEFORE-CTR-LOOPS-NOT: PowerPC CTR Loops 
-
-; RUN: llc -mtriple=powerpc64le-unknown-unknown < %s -debug-pass=Structure -stop-after=ppc-ctr-loops -o /dev/null 2>&1 | FileCheck %s -check-prefix=STOP-AFTER-CTR-LOOPS
-; STOP-AFTER-CTR-LOOPS: -ppc-ctr-loops
-; STOP-AFTER-CTR-LOOPS-NOT: "ppc-ctr-loops" pass is not registered.
-; STOP-AFTER-CTR-LOOPS: PowerPC CTR Loops 
-
-
 ; Test pass name: ppc-loop-preinc-prep.
 ; RUN: llc -mtriple=powerpc64le-unknown-unknown < %s -debug-pass=Structure -stop-before=ppc-loop-preinc-prep -o /dev/null 2>&1 | FileCheck %s -check-prefix=STOP-BEFORE-LOOP-PREINC-PREP
 ; STOP-BEFORE-LOOP-PREINC-PREP-NOT: -ppc-loop-preinc-prep

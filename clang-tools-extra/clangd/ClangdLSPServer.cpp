@@ -25,16 +25,6 @@
 namespace clang {
 namespace clangd {
 namespace {
-class IgnoreCompletionError : public llvm::ErrorInfo<CancelledError> {
-public:
-  void log(llvm::raw_ostream &OS) const override {
-    OS << "ignored auto-triggered completion, preceding char did not match";
-  }
-  std::error_code convertToErrorCode() const override {
-    return std::make_error_code(std::errc::operation_canceled);
-  }
-};
-
 /// Transforms a tweak into a code action that would apply it if executed.
 /// EXPECTS: T.prepare() was called and returned true.
 CodeAction toCodeAction(const ClangdServer::TweakRef &T, const URIForFile &File,
@@ -738,8 +728,12 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
 
 void ClangdLSPServer::onCompletion(const CompletionParams &Params,
                                    Callback<CompletionList> Reply) {
-  if (!shouldRunCompletion(Params))
-    return Reply(llvm::make_error<IgnoreCompletionError>());
+  if (!shouldRunCompletion(Params)) {
+    // Clients sometimes auto-trigger completions in undesired places (e.g.
+    // 'a >^ '), we return empty results in those cases.
+    vlog("ignored auto-triggered completion, preceding char did not match");
+    return Reply(CompletionList());
+  }
   Server->codeComplete(Params.textDocument.uri.file(), Params.position, CCOpts,
                        Bind(
                            [this](decltype(Reply) Reply,

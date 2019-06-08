@@ -49,6 +49,12 @@ static cl::opt<unsigned>
 ArgAllocaCutoff("amdgpu-inline-arg-alloca-cutoff", cl::Hidden, cl::init(256),
                 cl::desc("Maximum alloca size to use for inline cost"));
 
+// Inliner constraint to achieve reasonable compilation time
+static cl::opt<size_t>
+MaxBB("amdgpu-inline-max-bb", cl::Hidden, cl::init(300),
+      cl::desc("Maximum BB number allowed in a function after inlining"
+               " (compile time constraint)"));
+
 namespace {
 
 class AMDGPUInliner : public LegacyInlinerBase {
@@ -208,7 +214,15 @@ InlineCost AMDGPUInliner::getInlineCost(CallSite CS) {
     return ACT->getAssumptionCache(F);
   };
 
-  return llvm::getInlineCost(cast<CallBase>(*CS.getInstruction()), Callee,
+  auto IC = llvm::getInlineCost(cast<CallBase>(*CS.getInstruction()), Callee,
                              LocalParams, TTI, GetAssumptionCache, None, PSI,
                              RemarksEnabled ? &ORE : nullptr);
+
+  if (IC && !IC.isAlways()) {
+    // Single BB does not increase total BB amount, thus subtract 1
+    size_t Size = Caller->size() + Callee->size() - 1;
+    if (MaxBB && Size > MaxBB)
+      return llvm::InlineCost::getNever("max number of bb exceeded");
+  }
+  return IC;
 }

@@ -157,6 +157,10 @@ PROC_ALIAS(SkylakeServer, "skx")
 /// Cascadelake Server microarchitecture based processors.
 PROC_WITH_FEAT(Cascadelake, "cascadelake", PROC_64_BIT, FEATURE_AVX512VNNI)
 
+/// \name Cooperlake Server
+/// Cooperlake Server microarchitecture based processors.
+PROC_WITH_FEAT(Cooperlake, "cooperlake", PROC_64_BIT, FEATURE_AVX512BF16)
+
 /// \name Cannonlake Client
 /// Cannonlake client microarchitecture based processors.
 PROC_WITH_FEAT(Cannonlake, "cannonlake", PROC_64_BIT, FEATURE_AVX512VBMI)
@@ -292,6 +296,7 @@ FEATURE(FEATURE_GFNI)
 FEATURE(FEATURE_VPCLMULQDQ)
 FEATURE(FEATURE_AVX512VNNI)
 FEATURE(FEATURE_AVX512BITALG)
+FEATURE(FEATURE_AVX512BF16)
 
 
 // FIXME: When commented out features are supported in LLVM, enable them here.

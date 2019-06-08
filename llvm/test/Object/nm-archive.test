@@ -19,7 +19,7 @@ COFF-o: {{.*}}/archive-test.a-coff-i386:trivial-object-test.coff-i386:          
 COFF-o: {{.*}}/archive-test.a-coff-i386:trivial-object-test.coff-i386: 00000000 T _main
 COFF-o: {{.*}}/archive-test.a-coff-i386:trivial-object-test.coff-i386:          U _puts
 
-RUN: llvm-as %p/Inputs/trivial.ll -o=%t1
+RUN: llvm-as %p/Inputs/small.ll -o=%t1
 RUN: rm -f %t2
 RUN: llvm-ar rcs %t2 %t1
 RUN: llvm-nm %t2 | FileCheck %s -check-prefix BITCODE

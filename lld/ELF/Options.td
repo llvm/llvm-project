@@ -175,6 +175,9 @@ def fix_cortex_a53_843419: F<"fix-cortex-a53-843419">,
 // is not complete.
 def require_cet: F<"require-cet">;
 
+def force_bti: F<"force-bti">,
+  HelpText<"Force enable AArch64 BTI in PLT, warn if Input ELF file does not have GNU_PROPERTY_AARCH64_FEATURE_1_BTI property">;
+
 defm format: Eq<"format", "Change the input format of the inputs following this option">,
   MetaVarName<"[default,elf,binary]">;
 
@@ -268,6 +271,9 @@ defm orphan_handling:
 defm pack_dyn_relocs:
   Eq<"pack-dyn-relocs", "Pack dynamic relocations in the given format">,
   MetaVarName<"[none,android,relr,android+relr]">;
+
+def pac_plt: F<"pac-plt">,
+  HelpText<"AArch64 only, use pointer authentication in PLT">;
 
 defm use_android_relr_tags: B<"use-android-relr-tags",
     "Use SHT_ANDROID_RELR / DT_ANDROID_RELR* tags instead of SHT_RELR / DT_RELR*",

@@ -181,7 +181,7 @@ function(find_python_libs_windows)
   set (PYTHON_DLL ${PYTHON_DLL} PARENT_SCOPE)
   set (PYTHON_INCLUDE_DIR ${PYTHON_INCLUDE_DIR} PARENT_SCOPE)
 
-  message("-- LLDB Found PythonExecutable: ${PYTHON_EXE}}")
+  message("-- LLDB Found PythonExecutable: ${PYTHON_EXE}")
   message("-- LLDB Found PythonLibs: ${PYTHON_LIB}")
   message("-- LLDB Found PythonDLL: ${PYTHON_DLL}")
   message("-- LLDB Found PythonIncludeDirs: ${PYTHON_INCLUDE_DIR}")

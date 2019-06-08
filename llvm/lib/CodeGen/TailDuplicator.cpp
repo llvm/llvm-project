@@ -856,11 +856,6 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
     }
     appendCopies(PredBB, CopyInfos, Copies);
 
-    // Simplify
-    MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
-    SmallVector<MachineOperand, 4> PredCond;
-    TII->analyzeBranch(*PredBB, PredTBB, PredFBB, PredCond);
-
     NumTailDupAdded += TailBB->size() - 1; // subtract one for removed branch
 
     // Update the CFG.

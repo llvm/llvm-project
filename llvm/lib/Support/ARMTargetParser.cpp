@@ -162,87 +162,63 @@ bool ARM::getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features) {
   if (FPUKind >= FK_LAST || FPUKind == FK_INVALID)
     return false;
 
-  // FPU version subtarget features are inclusive of lower-numbered ones, so
-  // enable the one corresponding to this version and disable all that are
-  // higher. We also have to make sure to disable fp16 when vfp4 is disabled,
-  // as +vfp4 implies +fp16 but -vfp4 does not imply -fp16.
-  switch (FPUNames[FPUKind].FPUVer) {
-  case FPUVersion::VFPV5_FULLFP16:
-    Features.push_back("+fp-armv8");
-    Features.push_back("+fullfp16");
-    break;
-  case FPUVersion::VFPV5:
-    Features.push_back("+fp-armv8");
-    break;
-  case FPUVersion::VFPV4:
-    Features.push_back("+vfp4");
-    Features.push_back("-fp-armv8");
-    break;
-  case FPUVersion::VFPV3_FP16:
-    Features.push_back("+vfp3");
-    Features.push_back("+fp16");
-    Features.push_back("-vfp4");
-    Features.push_back("-fp-armv8");
-    break;
-  case FPUVersion::VFPV3:
-    Features.push_back("+vfp3");
-    Features.push_back("-fp16");
-    Features.push_back("-vfp4");
-    Features.push_back("-fp-armv8");
-    break;
-  case FPUVersion::VFPV2:
-    Features.push_back("+vfp2");
-    Features.push_back("-vfp3");
-    Features.push_back("-fp16");
-    Features.push_back("-vfp4");
-    Features.push_back("-fp-armv8");
-    break;
-  case FPUVersion::NONE:
-    Features.push_back("-fpregs");
-    Features.push_back("-vfp2");
-    Features.push_back("-vfp3");
-    Features.push_back("-fp16");
-    Features.push_back("-vfp4");
-    Features.push_back("-fp-armv8");
-    break;
+  static const struct FPUFeatureNameInfo {
+    const char *PlusName, *MinusName;
+    FPUVersion MinVersion;
+    FPURestriction MaxRestriction;
+  } FPUFeatureInfoList[] = {
+    // We have to specify the + and - versions of the name in full so
+    // that we can return them as static StringRefs.
+    //
+    // Also, the SubtargetFeatures ending in just "sp" are listed here
+    // under FPURestriction::None, which is the only FPURestriction in
+    // which they would be valid (since FPURestriction::SP doesn't
+    // exist).
+
+    {"+fpregs", "-fpregs", FPUVersion::VFPV2, FPURestriction::SP_D16},
+    {"+vfp2", "-vfp2", FPUVersion::VFPV2, FPURestriction::None},
+    {"+vfp2d16", "-vfp2d16", FPUVersion::VFPV2, FPURestriction::D16},
+    {"+vfp2d16sp", "-vfp2d16sp", FPUVersion::VFPV2, FPURestriction::SP_D16},
+    {"+vfp2sp", "-vfp2sp", FPUVersion::VFPV2, FPURestriction::None},
+    {"+vfp3", "-vfp3", FPUVersion::VFPV3, FPURestriction::None},
+    {"+vfp3d16", "-vfp3d16", FPUVersion::VFPV3, FPURestriction::D16},
+    {"+vfp3d16sp", "-vfp3d16sp", FPUVersion::VFPV3, FPURestriction::SP_D16},
+    {"+vfp3sp", "-vfp3sp", FPUVersion::VFPV3, FPURestriction::None},
+    {"+fp16", "-fp16", FPUVersion::VFPV3_FP16, FPURestriction::SP_D16},
+    {"+vfp4", "-vfp4", FPUVersion::VFPV4, FPURestriction::None},
+    {"+vfp4d16", "-vfp4d16", FPUVersion::VFPV4, FPURestriction::D16},
+    {"+vfp4d16sp", "-vfp4d16sp", FPUVersion::VFPV4, FPURestriction::SP_D16},
+    {"+vfp4sp", "-vfp4sp", FPUVersion::VFPV4, FPURestriction::None},
+    {"+fp-armv8", "-fp-armv8", FPUVersion::VFPV5, FPURestriction::None},
+    {"+fp-armv8d16", "-fp-armv8d16", FPUVersion::VFPV5, FPURestriction::D16},
+    {"+fp-armv8d16sp", "-fp-armv8d16sp", FPUVersion::VFPV5, FPURestriction::SP_D16},
+    {"+fp-armv8sp", "-fp-armv8sp", FPUVersion::VFPV5, FPURestriction::None},
+    {"+fullfp16", "-fullfp16", FPUVersion::VFPV5_FULLFP16, FPURestriction::SP_D16},
+    {"+fp64", "-fp64", FPUVersion::VFPV2, FPURestriction::D16},
+    {"+d32", "-d32", FPUVersion::VFPV2, FPURestriction::None},
+  };
+
+  for (const auto &Info: FPUFeatureInfoList) {
+    if (FPUNames[FPUKind].FPUVer >= Info.MinVersion &&
+        FPUNames[FPUKind].Restriction <= Info.MaxRestriction)
+      Features.push_back(Info.PlusName);
+    else
+      Features.push_back(Info.MinusName);
   }
 
-  // fp64 and d32 subtarget features are independent of each other, so we
-  // must disable/enable both.
-  if (FPUKind == FK_NONE) {
-    Features.push_back("-fp64");
-    Features.push_back("-d32");
-  } else {
-    switch (FPUNames[FPUKind].Restriction) {
-    case FPURestriction::SP_D16:
-      Features.push_back("-fp64");
-      Features.push_back("-d32");
-      break;
-    case FPURestriction::D16:
-      Features.push_back("+fp64");
-      Features.push_back("-d32");
-      break;
-    case FPURestriction::None:
-      Features.push_back("+fp64");
-      Features.push_back("+d32");
-      break;
-    }
-  }
+  static const struct NeonFeatureNameInfo {
+    const char *PlusName, *MinusName;
+    NeonSupportLevel MinSupportLevel;
+  } NeonFeatureInfoList[] = {
+    {"+neon", "-neon", NeonSupportLevel::Neon},
+    {"+crypto", "-crypto", NeonSupportLevel::Crypto},
+  };
 
-  // crypto includes neon, so we handle this similarly to FPU version.
-  switch (FPUNames[FPUKind].NeonSupport) {
-  case NeonSupportLevel::Crypto:
-    Features.push_back("+neon");
-    Features.push_back("+crypto");
-    break;
-  case NeonSupportLevel::Neon:
-    Features.push_back("+neon");
-    Features.push_back("-crypto");
-    break;
-  case NeonSupportLevel::None:
-    Features.push_back("-neon");
-    Features.push_back("-crypto");
-    break;
+  for (const auto &Info: NeonFeatureInfoList) {
+    if (FPUNames[FPUKind].NeonSupport >= Info.MinSupportLevel)
+      Features.push_back(Info.PlusName);
+    else
+      Features.push_back(Info.MinusName);
   }
 
   return true;

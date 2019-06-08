@@ -63,6 +63,12 @@ InputChunk *Symbol::getChunk() const {
   return nullptr;
 }
 
+bool Symbol::isDiscarded() const {
+  if (InputChunk *C = getChunk())
+    return C->Discarded;
+  return false;
+}
+
 bool Symbol::isLive() const {
   if (auto *G = dyn_cast<DefinedGlobal>(this))
     return G->Global->Live;
@@ -74,6 +80,7 @@ bool Symbol::isLive() const {
 }
 
 void Symbol::markLive() {
+  assert(!isDiscarded());
   if (auto *G = dyn_cast<DefinedGlobal>(this))
     G->Global->Live = true;
   if (auto *E = dyn_cast<DefinedEvent>(this))

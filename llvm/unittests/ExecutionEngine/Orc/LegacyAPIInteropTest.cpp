@@ -42,10 +42,10 @@ TEST_F(LegacyAPIsStandardTest, TestLambdaSymbolResolver) {
   EXPECT_EQ(RS.count(Bar), 1U)
       << "getResponsibilitySet result incorrect. Should be {'bar'}";
 
-  bool OnResolvedRun = false;
+  bool OnCompletionRun = false;
 
-  auto OnResolved = [&](Expected<SymbolMap> Result) {
-    OnResolvedRun = true;
+  auto OnCompletion = [&](Expected<SymbolMap> Result) {
+    OnCompletionRun = true;
     EXPECT_TRUE(!!Result) << "Unexpected error";
     EXPECT_EQ(Result->size(), 2U) << "Unexpected number of resolved symbols";
     EXPECT_EQ(Result->count(Foo), 1U) << "Missing lookup result for foo";
@@ -55,18 +55,15 @@ TEST_F(LegacyAPIsStandardTest, TestLambdaSymbolResolver) {
     EXPECT_EQ((*Result)[Bar].getAddress(), BarSym.getAddress())
         << "Incorrect address for bar";
   };
-  auto OnReady = [&](Error Err) {
-    EXPECT_FALSE(!!Err) << "Finalization should never fail in this test";
-  };
 
-  auto Q = std::make_shared<AsynchronousSymbolQuery>(SymbolNameSet({Foo, Bar}),
-                                                     OnResolved, OnReady);
+  auto Q = std::make_shared<AsynchronousSymbolQuery>(
+      SymbolNameSet({Foo, Bar}), SymbolState::Resolved, OnCompletion);
   auto Unresolved =
       Resolver->lookup(std::move(Q), SymbolNameSet({Foo, Bar, Baz}));
 
   EXPECT_EQ(Unresolved.size(), 1U) << "Expected one unresolved symbol";
   EXPECT_EQ(Unresolved.count(Baz), 1U) << "Expected baz to not be resolved";
-  EXPECT_TRUE(OnResolvedRun) << "OnResolved was never run";
+  EXPECT_TRUE(OnCompletionRun) << "OnCompletion was never run";
 }
 
 TEST_F(LegacyAPIsStandardTest, LegacyLookupHelpersFn) {
@@ -98,10 +95,9 @@ TEST_F(LegacyAPIsStandardTest, LegacyLookupHelpersFn) {
   EXPECT_FALSE(BarMaterialized)
       << "lookupFlags should not have materialized bar";
 
-  bool OnResolvedRun = false;
-  bool OnReadyRun = false;
-  auto OnResolved = [&](Expected<SymbolMap> Result) {
-    OnResolvedRun = true;
+  bool OnCompletionRun = false;
+  auto OnCompletion = [&](Expected<SymbolMap> Result) {
+    OnCompletionRun = true;
     EXPECT_TRUE(!!Result) << "lookuWithLegacy failed to resolve";
 
     EXPECT_EQ(Result->size(), 2U) << "Wrong number of symbols resolved";
@@ -114,17 +110,12 @@ TEST_F(LegacyAPIsStandardTest, LegacyLookupHelpersFn) {
     EXPECT_EQ((*Result)[Bar].getFlags(), BarSym.getFlags())
         << "Wrong flags for bar";
   };
-  auto OnReady = [&](Error Err) {
-    EXPECT_FALSE(!!Err) << "Finalization unexpectedly failed";
-    OnReadyRun = true;
-  };
 
-  AsynchronousSymbolQuery Q({Foo, Bar}, OnResolved, OnReady);
+  AsynchronousSymbolQuery Q({Foo, Bar}, SymbolState::Resolved, OnCompletion);
   auto Unresolved =
       lookupWithLegacyFn(ES, Q, SymbolNameSet({Foo, Bar, Baz}), LegacyLookup);
 
-  EXPECT_TRUE(OnResolvedRun) << "OnResolved was not run";
-  EXPECT_TRUE(OnReadyRun) << "OnReady was not run";
+  EXPECT_TRUE(OnCompletionRun) << "OnCompletion was not run";
   EXPECT_EQ(Unresolved.size(), 1U) << "Expected one unresolved symbol";
   EXPECT_EQ(Unresolved.count(Baz), 1U) << "Expected baz to be unresolved";
 }

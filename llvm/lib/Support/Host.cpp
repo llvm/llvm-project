@@ -672,7 +672,9 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     // Skylake Xeon:
     case 0x55:
       *Type = X86::INTEL_COREI7;
-      if (Features2 & (1 << (X86::FEATURE_AVX512VNNI - 32)))
+      if (Features3 & (1 << (X86::FEATURE_AVX512BF16 - 64)))
+        *Subtype = X86::INTEL_COREI7_COOPERLAKE; // "cooperlake"
+      else if (Features2 & (1 << (X86::FEATURE_AVX512VNNI - 32)))
         *Subtype = X86::INTEL_COREI7_CASCADELAKE; // "cascadelake"
       else
         *Subtype = X86::INTEL_COREI7_SKYLAKE_AVX512; // "skylake-avx512"
@@ -745,6 +747,12 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       if (Features & (1 << X86::FEATURE_AVX512VBMI)) {
         *Type = X86::INTEL_COREI7;
         *Subtype = X86::INTEL_COREI7_CANNONLAKE;
+        break;
+      }
+
+      if (Features3 & (1 << (X86::FEATURE_AVX512BF16 - 64))) {
+        *Type = X86::INTEL_COREI7;
+        *Subtype = X86::INTEL_COREI7_COOPERLAKE;
         break;
       }
 

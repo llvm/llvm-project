@@ -10,9 +10,10 @@
 
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/IR/GlobalValue.h"
 
 namespace llvm {
+
+class GlobalValue;
 
 class MCSymbolXCOFF : public MCSymbol {
   // The IR symbol this MCSymbolXCOFF is based on. It is set on function

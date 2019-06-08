@@ -881,9 +881,8 @@ RewriteModernObjC::getIvarAccessString(ObjCIvarDecl *D) {
                                         IvarT, nullptr,
                                         /*BitWidth=*/nullptr, /*Mutable=*/true,
                                         ICIS_NoInit);
-      MemberExpr *ME = new (Context)
-          MemberExpr(PE, true, SourceLocation(), FD, SourceLocation(),
-                     FD->getType(), VK_LValue, OK_Ordinary);
+      MemberExpr *ME = MemberExpr::CreateImplicit(
+          *Context, PE, true, FD, FD->getType(), VK_LValue, OK_Ordinary);
       IvarT = Context->getDecltypeType(ME, ME->getType());
     }
   }
@@ -2736,9 +2735,9 @@ Stmt *RewriteModernObjC::RewriteObjCArrayLiteralExpr(ObjCArrayLiteral *Exp) {
                                     Context->getPointerType(Context->VoidPtrTy),
                                     nullptr, /*BitWidth=*/nullptr,
                                     /*Mutable=*/true, ICIS_NoInit);
-  MemberExpr *ArrayLiteralME = new (Context)
-      MemberExpr(NSArrayCallExpr, false, SourceLocation(), ARRFD,
-                 SourceLocation(), ARRFD->getType(), VK_LValue, OK_Ordinary);
+  MemberExpr *ArrayLiteralME =
+      MemberExpr::CreateImplicit(*Context, NSArrayCallExpr, false, ARRFD,
+                                 ARRFD->getType(), VK_LValue, OK_Ordinary);
   QualType ConstIdT = Context->getObjCIdType().withConst();
   CStyleCastExpr * ArrayLiteralObjects =
     NoTypeInfoCStyleCastExpr(Context,
@@ -2865,9 +2864,9 @@ Stmt *RewriteModernObjC::RewriteObjCDictionaryLiteralExpr(ObjCDictionaryLiteral 
                                        Context->getPointerType(Context->VoidPtrTy),
                                        nullptr, /*BitWidth=*/nullptr,
                                        /*Mutable=*/true, ICIS_NoInit);
-  MemberExpr *DictLiteralValueME = new (Context)
-      MemberExpr(NSValueCallExpr, false, SourceLocation(), ARRFD,
-                 SourceLocation(), ARRFD->getType(), VK_LValue, OK_Ordinary);
+  MemberExpr *DictLiteralValueME =
+      MemberExpr::CreateImplicit(*Context, NSValueCallExpr, false, ARRFD,
+                                 ARRFD->getType(), VK_LValue, OK_Ordinary);
   QualType ConstIdT = Context->getObjCIdType().withConst();
   CStyleCastExpr * DictValueObjects =
     NoTypeInfoCStyleCastExpr(Context,
@@ -2878,9 +2877,9 @@ Stmt *RewriteModernObjC::RewriteObjCDictionaryLiteralExpr(ObjCDictionaryLiteral 
   Expr *NSKeyCallExpr = CallExpr::Create(
       *Context, NSDictDRE, KeyExprs, NSDictFType, VK_LValue, SourceLocation());
 
-  MemberExpr *DictLiteralKeyME = new (Context)
-      MemberExpr(NSKeyCallExpr, false, SourceLocation(), ARRFD,
-                 SourceLocation(), ARRFD->getType(), VK_LValue, OK_Ordinary);
+  MemberExpr *DictLiteralKeyME =
+      MemberExpr::CreateImplicit(*Context, NSKeyCallExpr, false, ARRFD,
+                                 ARRFD->getType(), VK_LValue, OK_Ordinary);
 
   CStyleCastExpr * DictKeyObjects =
     NoTypeInfoCStyleCastExpr(Context,
@@ -3180,9 +3179,8 @@ Expr *RewriteModernObjC::SynthMsgSendStretCallExpr(FunctionDecl *MsgSendStretFla
                                     returnType, nullptr,
                                     /*BitWidth=*/nullptr,
                                     /*Mutable=*/true, ICIS_NoInit);
-  MemberExpr *ME = new (Context)
-      MemberExpr(STCE, false, SourceLocation(), FieldD, SourceLocation(),
-                 FieldD->getType(), VK_LValue, OK_Ordinary);
+  MemberExpr *ME = MemberExpr::CreateImplicit(
+      *Context, STCE, false, FieldD, FieldD->getType(), VK_LValue, OK_Ordinary);
 
   return ME;
 }
@@ -4629,9 +4627,8 @@ Stmt *RewriteModernObjC::SynthesizeBlockCall(CallExpr *Exp, const Expr *BlockExp
                                     Context->VoidPtrTy, nullptr,
                                     /*BitWidth=*/nullptr, /*Mutable=*/true,
                                     ICIS_NoInit);
-  MemberExpr *ME =
-      new (Context) MemberExpr(PE, true, SourceLocation(), FD, SourceLocation(),
-                               FD->getType(), VK_LValue, OK_Ordinary);
+  MemberExpr *ME = MemberExpr::CreateImplicit(
+      *Context, PE, true, FD, FD->getType(), VK_LValue, OK_Ordinary);
 
   CastExpr *FunkCast = NoTypeInfoCStyleCastExpr(Context, PtrToFuncCastType,
                                                 CK_BitCast, ME);
@@ -4676,9 +4673,8 @@ Stmt *RewriteModernObjC::RewriteBlockDeclRefExpr(DeclRefExpr *DeclRefExp) {
                                     Context->VoidPtrTy, nullptr,
                                     /*BitWidth=*/nullptr, /*Mutable=*/true,
                                     ICIS_NoInit);
-  MemberExpr *ME = new (Context)
-      MemberExpr(DeclRefExp, isArrow, SourceLocation(), FD, SourceLocation(),
-                 FD->getType(), VK_LValue, OK_Ordinary);
+  MemberExpr *ME = MemberExpr::CreateImplicit(
+      *Context, DeclRefExp, isArrow, FD, FD->getType(), VK_LValue, OK_Ordinary);
 
   StringRef Name = VD->getName();
   FD = FieldDecl::Create(*Context, nullptr, SourceLocation(), SourceLocation(),
@@ -4686,9 +4682,8 @@ Stmt *RewriteModernObjC::RewriteBlockDeclRefExpr(DeclRefExpr *DeclRefExp) {
                          Context->VoidPtrTy, nullptr,
                          /*BitWidth=*/nullptr, /*Mutable=*/true,
                          ICIS_NoInit);
-  ME =
-      new (Context) MemberExpr(ME, true, SourceLocation(), FD, SourceLocation(),
-                               DeclRefExp->getType(), VK_LValue, OK_Ordinary);
+  ME = MemberExpr::CreateImplicit(*Context, ME, true, FD, DeclRefExp->getType(),
+                                  VK_LValue, OK_Ordinary);
 
   // Need parens to enforce precedence.
   ParenExpr *PE = new (Context) ParenExpr(DeclRefExp->getExprLoc(),
@@ -7528,9 +7523,8 @@ Stmt *RewriteModernObjC::RewriteObjCIvarRefExpr(ObjCIvarRefExpr *IV) {
                                             IvarT, nullptr,
                                             /*BitWidth=*/nullptr,
                                             /*Mutable=*/true, ICIS_NoInit);
-          MemberExpr *ME = new (Context)
-              MemberExpr(PE, true, SourceLocation(), FD, SourceLocation(),
-                         FD->getType(), VK_LValue, OK_Ordinary);
+          MemberExpr *ME = MemberExpr::CreateImplicit(
+              *Context, PE, true, FD, FD->getType(), VK_LValue, OK_Ordinary);
           IvarT = Context->getDecltypeType(ME, ME->getType());
         }
       }
@@ -7557,9 +7551,9 @@ Stmt *RewriteModernObjC::RewriteObjCIvarRefExpr(ObjCIvarRefExpr *IV) {
                                           D->getType(), nullptr,
                                           /*BitWidth=*/D->getBitWidth(),
                                           /*Mutable=*/true, ICIS_NoInit);
-        MemberExpr *ME = new (Context)
-            MemberExpr(PE, /*isArrow*/ false, SourceLocation(), FD,
-                       SourceLocation(), FD->getType(), VK_LValue, OK_Ordinary);
+        MemberExpr *ME =
+            MemberExpr::CreateImplicit(*Context, PE, /*isArrow*/ false, FD,
+                                       FD->getType(), VK_LValue, OK_Ordinary);
         Replacement = ME;
 
       }

@@ -167,7 +167,7 @@ RelExpr X86::adjustRelaxExpr(RelType Type, const uint8_t *Data,
 }
 
 void X86::writeGotPltHeader(uint8_t *Buf) const {
-  write32le(Buf, In.Dynamic->getVA());
+  write32le(Buf, Main->Dynamic->getVA());
 }
 
 void X86::writeGotPlt(uint8_t *Buf, const Symbol &S) const {

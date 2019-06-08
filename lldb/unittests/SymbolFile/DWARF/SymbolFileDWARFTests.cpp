@@ -118,16 +118,16 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevOrder1Start1) {
   EXPECT_FALSE(bool(error));
   // Make sure we have O(1) access to each abbreviation by making sure the
   // index offset is 1 and not UINT32_MAX
-  EXPECT_EQ(abbrev_set.GetIndexOffset(), 1);
+  EXPECT_EQ(abbrev_set.GetIndexOffset(), 1u);
   
   auto abbrev1 = abbrev_set.GetAbbreviationDeclaration(1);
   EXPECT_EQ(abbrev1->Tag(), DW_TAG_compile_unit);
   EXPECT_TRUE(abbrev1->HasChildren());
-  EXPECT_EQ(abbrev1->NumAttributes(), 1);
+  EXPECT_EQ(abbrev1->NumAttributes(), 1u);
   auto abbrev2 = abbrev_set.GetAbbreviationDeclaration(2);
   EXPECT_EQ(abbrev2->Tag(), DW_TAG_subprogram);
   EXPECT_FALSE(abbrev2->HasChildren());
-  EXPECT_EQ(abbrev2->NumAttributes(), 1);
+  EXPECT_EQ(abbrev2->NumAttributes(), 1u);
 }
 
 TEST_F(SymbolFileDWARFTests, TestAbbrevOrder1Start5) {
@@ -163,16 +163,16 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevOrder1Start5) {
   EXPECT_FALSE(bool(error));
   // Make sure we have O(1) access to each abbreviation by making sure the
   // index offset is 5 and not UINT32_MAX
-  EXPECT_EQ(abbrev_set.GetIndexOffset(), 5);
+  EXPECT_EQ(abbrev_set.GetIndexOffset(), 5u);
   
   auto abbrev1 = abbrev_set.GetAbbreviationDeclaration(5);
   EXPECT_EQ(abbrev1->Tag(), DW_TAG_compile_unit);
   EXPECT_TRUE(abbrev1->HasChildren());
-  EXPECT_EQ(abbrev1->NumAttributes(), 1);
+  EXPECT_EQ(abbrev1->NumAttributes(), 1u);
   auto abbrev2 = abbrev_set.GetAbbreviationDeclaration(6);
   EXPECT_EQ(abbrev2->Tag(), DW_TAG_subprogram);
   EXPECT_FALSE(abbrev2->HasChildren());
-  EXPECT_EQ(abbrev2->NumAttributes(), 1);
+  EXPECT_EQ(abbrev2->NumAttributes(), 1u);
 }
 
 TEST_F(SymbolFileDWARFTests, TestAbbrevOutOfOrder) {
@@ -213,11 +213,11 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevOutOfOrder) {
   auto abbrev1 = abbrev_set.GetAbbreviationDeclaration(2);
   EXPECT_EQ(abbrev1->Tag(), DW_TAG_compile_unit);
   EXPECT_TRUE(abbrev1->HasChildren());
-  EXPECT_EQ(abbrev1->NumAttributes(), 1);
+  EXPECT_EQ(abbrev1->NumAttributes(), 1u);
   auto abbrev2 = abbrev_set.GetAbbreviationDeclaration(1);
   EXPECT_EQ(abbrev2->Tag(), DW_TAG_subprogram);
   EXPECT_FALSE(abbrev2->HasChildren());
-  EXPECT_EQ(abbrev2->NumAttributes(), 1);
+  EXPECT_EQ(abbrev2->NumAttributes(), 1u);
 }
 
 TEST_F(SymbolFileDWARFTests, TestAbbrevInvalidNULLTag) {
