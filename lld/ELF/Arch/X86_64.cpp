@@ -132,7 +132,7 @@ void X86_64::writeGotPltHeader(uint8_t *Buf) const {
   // required, but it is documented in the psabi and the glibc dynamic linker
   // seems to use it (note that this is relevant for linking ld.so, not any
   // other program).
-  write64le(Buf, In.Dynamic->getVA());
+  write64le(Buf, Main->Dynamic->getVA());
 }
 
 void X86_64::writeGotPlt(uint8_t *Buf, const Symbol &S) const {

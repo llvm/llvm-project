@@ -29,7 +29,8 @@ class DWARFDebugLine {
 public:
   // FileNameEntry
   struct FileNameEntry {
-    FileNameEntry() : name(nullptr), dir_idx(0), mod_time(0), length(0) {}
+    FileNameEntry()
+        : name(nullptr), dir_idx(0), mod_time(0), length(0), checksum() {}
 
     const char *name;
     dw_sleb128_t dir_idx;

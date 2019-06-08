@@ -16,9 +16,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/QualTypeNames.h"
-#include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
-#include "clang/Basic/Specifiers.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
@@ -154,16 +152,9 @@ private:
   /// different levels of, e.g., the inheritance hierarchy.
   std::list<ShadowMap> ShadowMaps;
 
-  /// Overloaded C++ member functions found by SemaLookup.
-  /// Used to determine when one overload is dominated by another.
-  llvm::DenseMap<std::pair<DeclContext *, /*Name*/uintptr_t>, ShadowMapEntry>
-      OverloadMap;
-
   /// If we're potentially referring to a C++ member function, the set
   /// of qualifiers applied to the object type.
   Qualifiers ObjectTypeQualifiers;
-  /// The kind of the object expression, for rvalue/lvalue overloads.
-  ExprValueKind ObjectKind;
 
   /// Whether the \p ObjectTypeQualifiers field is active.
   bool HasObjectTypeQualifiers;
@@ -239,9 +230,8 @@ public:
   /// out member functions that aren't available (because there will be a
   /// cv-qualifier mismatch) or prefer functions with an exact qualifier
   /// match.
-  void setObjectTypeQualifiers(Qualifiers Quals, ExprValueKind Kind) {
+  void setObjectTypeQualifiers(Qualifiers Quals) {
     ObjectTypeQualifiers = Quals;
-    ObjectKind = Kind;
     HasObjectTypeQualifiers = true;
   }
 
@@ -1124,53 +1114,6 @@ static void setInBaseClass(ResultBuilder::Result &R) {
   R.InBaseClass = true;
 }
 
-enum class OverloadCompare { BothViable, Dominates, Dominated };
-// Will Candidate ever be called on the object, when overloaded with Incumbent?
-// Returns Dominates if Candidate is always called, Dominated if Incumbent is
-// always called, BothViable if either may be called dependending on arguments.
-// Precondition: must actually be overloads!
-static OverloadCompare compareOverloads(const CXXMethodDecl &Candidate,
-                                        const CXXMethodDecl &Incumbent,
-                                        const Qualifiers &ObjectQuals,
-                                        ExprValueKind ObjectKind) {
-  if (Candidate.isVariadic() != Incumbent.isVariadic() ||
-      Candidate.getNumParams() != Incumbent.getNumParams() ||
-      Candidate.getMinRequiredArguments() !=
-          Incumbent.getMinRequiredArguments())
-    return OverloadCompare::BothViable;
-  for (unsigned I = 0, E = Candidate.getNumParams(); I != E; ++I)
-    if (Candidate.parameters()[I]->getType().getCanonicalType() !=
-        Incumbent.parameters()[I]->getType().getCanonicalType())
-      return OverloadCompare::BothViable;
-  if (!llvm::empty(Candidate.specific_attrs<EnableIfAttr>()) ||
-      !llvm::empty(Incumbent.specific_attrs<EnableIfAttr>()))
-    return OverloadCompare::BothViable;
-  // At this point, we know calls can't pick one or the other based on
-  // arguments, so one of the two must win. (Or both fail, handled elsewhere).
-  RefQualifierKind CandidateRef = Candidate.getRefQualifier();
-  RefQualifierKind IncumbentRef = Incumbent.getRefQualifier();
-  if (CandidateRef != IncumbentRef) {
-    // If the object kind is LValue/RValue, there's one acceptable ref-qualifier
-    // and it can't be mixed with ref-unqualified overloads (in valid code).
-
-    // For xvalue objects, we prefer the rvalue overload even if we have to
-    // add qualifiers (which is rare, because const&& is rare).
-    if (ObjectKind == clang::VK_XValue)
-      return CandidateRef == RQ_RValue ? OverloadCompare::Dominates
-                                       : OverloadCompare::Dominated;
-  }
-  // Now the ref qualifiers are the same (or we're in some invalid state).
-  // So make some decision based on the qualifiers.
-  Qualifiers CandidateQual = Candidate.getMethodQualifiers();
-  Qualifiers IncumbentQual = Incumbent.getMethodQualifiers();
-  bool CandidateSuperset = CandidateQual.compatiblyIncludes(IncumbentQual);
-  bool IncumbentSuperset = IncumbentQual.compatiblyIncludes(CandidateQual);
-  if (CandidateSuperset == IncumbentSuperset)
-    return OverloadCompare::BothViable;
-  return IncumbentSuperset ? OverloadCompare::Dominates
-                           : OverloadCompare::Dominated;
-}
-
 void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
                               NamedDecl *Hiding, bool InBaseClass = false) {
   if (R.Kind != Result::RK_Declaration) {
@@ -1247,44 +1190,6 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
           // qualifiers.
           return;
         }
-        // Detect cases where a ref-qualified method cannot be invoked.
-        switch (Method->getRefQualifier()) {
-          case RQ_LValue:
-            if (ObjectKind != VK_LValue && !MethodQuals.hasConst())
-              return;
-            break;
-          case RQ_RValue:
-            if (ObjectKind == VK_LValue)
-              return;
-            break;
-          case RQ_None:
-            break;
-        }
-
-        /// Check whether this dominates another overloaded method, which should
-        /// be suppressed (or vice versa).
-        /// Motivating case is const_iterator begin() const vs iterator begin().
-        auto &OverloadSet = OverloadMap[std::make_pair(
-            CurContext, Method->getDeclName().getAsOpaqueInteger())];
-        for (const DeclIndexPair& Entry : OverloadSet) {
-          Result &Incumbent = Results[Entry.second];
-          switch (compareOverloads(*Method,
-                                   *cast<CXXMethodDecl>(Incumbent.Declaration),
-                                   ObjectTypeQualifiers, ObjectKind)) {
-          case OverloadCompare::Dominates:
-            // Replace the dominated overload with this one.
-            // FIXME: if the overload dominates multiple incumbents then we
-            // should remove all. But two overloads is by far the common case.
-            Incumbent = std::move(R);
-            return;
-          case OverloadCompare::Dominated:
-            // This overload can't be called, drop it.
-            return;
-          case OverloadCompare::BothViable:
-            break;
-          }
-        }
-        OverloadSet.Add(Method, Results.size());
       }
 
   // Insert this result into the set of results.
@@ -4049,8 +3954,7 @@ void Sema::CodeCompleteOrdinaryName(Scope *S,
   // the member function to filter/prioritize the results list.
   auto ThisType = getCurrentThisType();
   if (!ThisType.isNull())
-    Results.setObjectTypeQualifiers(ThisType->getPointeeType().getQualifiers(),
-                                    VK_LValue);
+    Results.setObjectTypeQualifiers(ThisType->getPointeeType().getQualifiers());
 
   CodeCompletionDeclConsumer Consumer(Results, CurContext);
   LookupVisibleDecls(S, LookupOrdinaryName, Consumer,
@@ -4605,12 +4509,13 @@ AddObjCProperties(const CodeCompletionContext &CCContext,
   }
 }
 
-static void AddRecordMembersCompletionResults(
-    Sema &SemaRef, ResultBuilder &Results, Scope *S, QualType BaseType,
-    ExprValueKind BaseKind, RecordDecl *RD, Optional<FixItHint> AccessOpFixIt) {
+static void
+AddRecordMembersCompletionResults(Sema &SemaRef, ResultBuilder &Results,
+                                  Scope *S, QualType BaseType, RecordDecl *RD,
+                                  Optional<FixItHint> AccessOpFixIt) {
   // Indicate that we are performing a member access, and the cv-qualifiers
   // for the base object type.
-  Results.setObjectTypeQualifiers(BaseType.getQualifiers(), BaseKind);
+  Results.setObjectTypeQualifiers(BaseType.getQualifiers());
 
   // Access to a C/C++ class, struct, or union.
   Results.allowNestedNameSpecifiers();
@@ -4691,20 +4596,18 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
     Base = ConvertedBase.get();
 
     QualType BaseType = Base->getType();
-    ExprValueKind BaseKind = Base->getValueKind();
 
     if (IsArrow) {
-      if (const PointerType *Ptr = BaseType->getAs<PointerType>()) {
+      if (const PointerType *Ptr = BaseType->getAs<PointerType>())
         BaseType = Ptr->getPointeeType();
-        BaseKind = VK_LValue;
-      } else if (BaseType->isObjCObjectPointerType())
+      else if (BaseType->isObjCObjectPointerType())
         /*Do nothing*/;
       else
         return false;
     }
 
     if (const RecordType *Record = BaseType->getAs<RecordType>()) {
-      AddRecordMembersCompletionResults(*this, Results, S, BaseType, BaseKind,
+      AddRecordMembersCompletionResults(*this, Results, S, BaseType,
                                         Record->getDecl(),
                                         std::move(AccessOpFixIt));
     } else if (const auto *TST =
@@ -4713,13 +4616,13 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
       if (const auto *TD =
               dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl())) {
         CXXRecordDecl *RD = TD->getTemplatedDecl();
-        AddRecordMembersCompletionResults(*this, Results, S, BaseType, BaseKind,
-                                          RD, std::move(AccessOpFixIt));
+        AddRecordMembersCompletionResults(*this, Results, S, BaseType, RD,
+                                          std::move(AccessOpFixIt));
       }
     } else if (const auto *ICNT = BaseType->getAs<InjectedClassNameType>()) {
       if (auto *RD = ICNT->getDecl())
-        AddRecordMembersCompletionResults(*this, Results, S, BaseType, BaseKind,
-                                          RD, std::move(AccessOpFixIt));
+        AddRecordMembersCompletionResults(*this, Results, S, BaseType, RD,
+                                          std::move(AccessOpFixIt));
     } else if (!IsArrow && BaseType->isObjCObjectPointerType()) {
       // Objective-C property reference.
       AddedPropertiesSet AddedProperties;

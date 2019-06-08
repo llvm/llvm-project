@@ -73,7 +73,6 @@ struct VersionDefinition {
   llvm::StringRef Name;
   uint16_t Id = 0;
   std::vector<SymbolVersion> Globals;
-  size_t NameOff = 0; // Offset in the string table
 };
 
 // This struct contains the global configuration for the linker.

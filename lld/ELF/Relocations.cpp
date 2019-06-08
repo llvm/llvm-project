@@ -172,7 +172,7 @@ static unsigned handleARMTlsRelocation(RelType Type, Symbol &Sym,
 
   auto AddTlsReloc = [&](uint64_t Off, RelType Type, Symbol *Dest, bool Dyn) {
     if (Dyn)
-      In.RelaDyn->addReloc(Type, In.Got, Off, Dest);
+      Main->RelaDyn->addReloc(Type, In.Got, Off, Dest);
     else
       In.Got->Relocations.push_back({R_ABS, Type, Off, 0, Dest});
   };
@@ -222,7 +222,7 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
       Config->Shared) {
     if (In.Got->addDynTlsEntry(Sym)) {
       uint64_t Off = In.Got->getGlobalDynOffset(Sym);
-      In.RelaDyn->addReloc(
+      Main->RelaDyn->addReloc(
           {Target->TlsDescRel, In.Got, Off, !Sym.IsPreemptible, &Sym, 0});
     }
     if (Expr != R_TLSDESC_CALL)
@@ -242,8 +242,8 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
     if (Expr == R_TLSLD_HINT)
       return 1;
     if (In.Got->addTlsIndex())
-      In.RelaDyn->addReloc(Target->TlsModuleIndexRel, In.Got,
-                           In.Got->getTlsIndexOff(), nullptr);
+      Main->RelaDyn->addReloc(Target->TlsModuleIndexRel, In.Got,
+                              In.Got->getTlsIndexOff(), nullptr);
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
     return 1;
   }
@@ -274,13 +274,14 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
     if (Config->Shared) {
       if (In.Got->addDynTlsEntry(Sym)) {
         uint64_t Off = In.Got->getGlobalDynOffset(Sym);
-        In.RelaDyn->addReloc(Target->TlsModuleIndexRel, In.Got, Off, &Sym);
+        Main->RelaDyn->addReloc(Target->TlsModuleIndexRel, In.Got, Off, &Sym);
 
         // If the symbol is preemptible we need the dynamic linker to write
         // the offset too.
         uint64_t OffsetOff = Off + Config->Wordsize;
         if (Sym.IsPreemptible)
-          In.RelaDyn->addReloc(Target->TlsOffsetRel, In.Got, OffsetOff, &Sym);
+          Main->RelaDyn->addReloc(Target->TlsOffsetRel, In.Got, OffsetOff,
+                                  &Sym);
         else
           In.Got->Relocations.push_back(
               {R_ABS, Target->TlsOffsetRel, OffsetOff, 0, &Sym});
@@ -297,8 +298,8 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
            Offset, Addend, &Sym});
       if (!Sym.isInGot()) {
         In.Got->addEntry(Sym);
-        In.RelaDyn->addReloc(Target->TlsGotRel, In.Got, Sym.getGotOffset(),
-                             &Sym);
+        Main->RelaDyn->addReloc(Target->TlsGotRel, In.Got, Sym.getGotOffset(),
+                                &Sym);
       }
     } else {
       C.Relocations.push_back(
@@ -604,7 +605,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol &SS) {
   for (SharedSymbol *Sym : getSymbolsAt<ELFT>(SS))
     replaceWithDefined(*Sym, Sec, 0, Sym->Size);
 
-  In.RelaDyn->addReloc(Target->CopyRel, Sec, 0, &SS);
+  Main->RelaDyn->addReloc(Target->CopyRel, Sec, 0, &SS);
 }
 
 // MIPS has an odd notion of "paired" relocations to calculate addends.
@@ -818,19 +819,21 @@ private:
 static void addRelativeReloc(InputSectionBase *IS, uint64_t OffsetInSec,
                              Symbol *Sym, int64_t Addend, RelExpr Expr,
                              RelType Type) {
+  Partition &Part = IS->getPartition();
+
   // Add a relative relocation. If RelrDyn section is enabled, and the
   // relocation offset is guaranteed to be even, add the relocation to
   // the RelrDyn section, otherwise add it to the RelaDyn section.
   // RelrDyn sections don't support odd offsets. Also, RelrDyn sections
   // don't store the addend values, so we must write it to the relocated
   // address.
-  if (In.RelrDyn && IS->Alignment >= 2 && OffsetInSec % 2 == 0) {
+  if (Part.RelrDyn && IS->Alignment >= 2 && OffsetInSec % 2 == 0) {
     IS->Relocations.push_back({Expr, Type, OffsetInSec, Addend, Sym});
-    In.RelrDyn->Relocs.push_back({IS, OffsetInSec});
+    Part.RelrDyn->Relocs.push_back({IS, OffsetInSec});
     return;
   }
-  In.RelaDyn->addReloc(Target->RelativeRel, IS, OffsetInSec, Sym, Addend, Expr,
-                       Type);
+  Part.RelaDyn->addReloc(Target->RelativeRel, IS, OffsetInSec, Sym, Addend,
+                         Expr, Type);
 }
 
 template <class ELFT, class GotPltSection>
@@ -868,9 +871,9 @@ static void addGotEntry(Symbol &Sym) {
     addRelativeReloc(In.Got, Off, &Sym, 0, R_ABS, Target->GotRel);
     return;
   }
-  In.RelaDyn->addReloc(Sym.isTls() ? Target->TlsGotRel : Target->GotRel, In.Got,
-                       Off, &Sym, 0, Sym.IsPreemptible ? R_ADDEND : R_ABS,
-                       Target->GotRel);
+  Main->RelaDyn->addReloc(Sym.isTls() ? Target->TlsGotRel : Target->GotRel,
+                          In.Got, Off, &Sym, 0,
+                          Sym.IsPreemptible ? R_ADDEND : R_ABS, Target->GotRel);
 }
 
 // Return true if we can define a symbol in the executable that
@@ -923,7 +926,8 @@ static void processRelocAux(InputSectionBase &Sec, RelExpr Expr, RelType Type,
       addRelativeReloc(&Sec, Offset, &Sym, Addend, Expr, Type);
       return;
     } else if (RelType Rel = Target->getDynRel(Type)) {
-      In.RelaDyn->addReloc(Rel, &Sec, Offset, &Sym, Addend, R_ADDEND, Type);
+      Sec.getPartition().RelaDyn->addReloc(Rel, &Sec, Offset, &Sym, Addend,
+                                           R_ADDEND, Type);
 
       // MIPS ABI turns using of GOT and dynamic relocations inside out.
       // While regular ABI uses dynamic relocations to fill up GOT entries
@@ -1151,7 +1155,7 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
   // direct relocation on through.
   if (Sym.isGnuIFunc() && Config->ZIfuncNoplt) {
     Sym.ExportDynamic = true;
-    In.RelaDyn->addReloc(Type, &Sec, Offset, &Sym, Addend, R_ADDEND, Type);
+    Main->RelaDyn->addReloc(Type, &Sec, Offset, &Sym, Addend, R_ADDEND, Type);
     return;
   }
 

@@ -1091,14 +1091,17 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
   assert(Ty->isTypeAlias());
   llvm::DIType *Src = getOrCreateType(Ty->getAliasedType(), Unit);
 
+  auto *AliasDecl =
+      cast<TypeAliasTemplateDecl>(Ty->getTemplateName().getAsTemplateDecl())
+          ->getTemplatedDecl();
+
+  if (AliasDecl->hasAttr<NoDebugAttr>())
+    return Src;
+
   SmallString<128> NS;
   llvm::raw_svector_ostream OS(NS);
   Ty->getTemplateName().print(OS, getPrintingPolicy(), /*qualified*/ false);
   printTemplateArgumentList(OS, Ty->template_arguments(), getPrintingPolicy());
-
-  auto *AliasDecl =
-      cast<TypeAliasTemplateDecl>(Ty->getTemplateName().getAsTemplateDecl())
-          ->getTemplatedDecl();
 
   SourceLocation Loc = AliasDecl->getLocation();
   return DBuilder.createTypedef(Src, OS.str(), getOrCreateFile(Loc),
@@ -1108,15 +1111,20 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
 
 llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
                                       llvm::DIFile *Unit) {
+  llvm::DIType *Underlying =
+      getOrCreateType(Ty->getDecl()->getUnderlyingType(), Unit);
+
+  if (Ty->getDecl()->hasAttr<NoDebugAttr>())
+    return Underlying;
+
   // We don't set size information, but do specify where the typedef was
   // declared.
   SourceLocation Loc = Ty->getDecl()->getLocation();
 
   // Typedefs are derived from some other type.
-  return DBuilder.createTypedef(
-      getOrCreateType(Ty->getDecl()->getUnderlyingType(), Unit),
-      Ty->getDecl()->getName(), getOrCreateFile(Loc), getLineNumber(Loc),
-      getDeclContextDescriptor(Ty->getDecl()));
+  return DBuilder.createTypedef(Underlying, Ty->getDecl()->getName(),
+                                getOrCreateFile(Loc), getLineNumber(Loc),
+                                getDeclContextDescriptor(Ty->getDecl()));
 }
 
 static unsigned getDwarfCC(CallingConv CC) {

@@ -312,7 +312,7 @@ int opts::breakpoint::evaluateBreakpoints(Debugger &Dbg) {
   while (!Rest.empty()) {
     StringRef Line;
     std::tie(Line, Rest) = Rest.split('\n');
-    Line = Line.ltrim();
+    Line = Line.ltrim().rtrim();
     if (Line.empty() || Line[0] == '#')
       continue;
 
@@ -939,7 +939,7 @@ int opts::irmemorymap::evaluateMemoryMapCommands(Debugger &Dbg) {
   while (!Rest.empty()) {
     StringRef Line;
     std::tie(Line, Rest) = Rest.split('\n');
-    Line = Line.ltrim();
+    Line = Line.ltrim().rtrim();
 
     if (Line.empty() || Line[0] == '#')
       continue;

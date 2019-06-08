@@ -472,48 +472,56 @@ Symbol *SymbolTable::findUnderscore(StringRef Name) {
   return find(Name);
 }
 
-StringRef SymbolTable::findByPrefix(StringRef Prefix) {
+// Return all symbols that start with Prefix, possibly ignoring the first
+// character of Prefix or the first character symbol.
+std::vector<Symbol *> SymbolTable::getSymsWithPrefix(StringRef Prefix) {
+  std::vector<Symbol *> Syms;
   for (auto Pair : SymMap) {
     StringRef Name = Pair.first.val();
-    if (Name.startswith(Prefix))
-      return Name;
+    if (Name.startswith(Prefix) || Name.startswith(Prefix.drop_front()) ||
+        Name.drop_front().startswith(Prefix) ||
+        Name.drop_front().startswith(Prefix.drop_front())) {
+      Syms.push_back(Pair.second);
+    }
   }
-  return "";
+  return Syms;
 }
 
-StringRef SymbolTable::findMangle(StringRef Name) {
+Symbol *SymbolTable::findMangle(StringRef Name) {
   if (Symbol *Sym = find(Name))
     if (!isa<Undefined>(Sym))
-      return Name;
+      return Sym;
+
+  // Efficient fuzzy string lookup is impossible with a hash table, so iterate
+  // the symbol table once and collect all possibly matching symbols into this
+  // vector. Then compare each possibly matching symbol with each possible
+  // mangling.
+  std::vector<Symbol *> Syms = getSymsWithPrefix(Name);
+  auto FindByPrefix = [&Syms](const Twine &T) -> Symbol * {
+    std::string Prefix = T.str();
+    for (auto *S : Syms)
+      if (S->getName().startswith(Prefix))
+        return S;
+    return nullptr;
+  };
+
+  // For non-x86, just look for C++ functions.
   if (Config->Machine != I386)
-    return findByPrefix(("?" + Name + "@@Y").str());
+    return FindByPrefix("?" + Name + "@@Y");
+
   if (!Name.startswith("_"))
-    return "";
+    return nullptr;
   // Search for x86 stdcall function.
-  StringRef S = findByPrefix((Name + "@").str());
-  if (!S.empty())
+  if (Symbol *S = FindByPrefix(Name + "@"))
     return S;
   // Search for x86 fastcall function.
-  S = findByPrefix(("@" + Name.substr(1) + "@").str());
-  if (!S.empty())
+  if (Symbol *S = FindByPrefix("@" + Name.substr(1) + "@"))
     return S;
   // Search for x86 vectorcall function.
-  S = findByPrefix((Name.substr(1) + "@@").str());
-  if (!S.empty())
+  if (Symbol *S = FindByPrefix(Name.substr(1) + "@@"))
     return S;
   // Search for x86 C++ non-member function.
-  return findByPrefix(("?" + Name.substr(1) + "@@Y").str());
-}
-
-void SymbolTable::mangleMaybe(Symbol *B) {
-  auto *U = dyn_cast<Undefined>(B);
-  if (!U || U->WeakAlias)
-    return;
-  StringRef Alias = findMangle(U->getName());
-  if (!Alias.empty()) {
-    log(U->getName() + " aliased to " + Alias);
-    U->WeakAlias = addUndefined(Alias);
-  }
+  return FindByPrefix("?" + Name.substr(1) + "@@Y");
 }
 
 Symbol *SymbolTable::addUndefined(StringRef Name) {

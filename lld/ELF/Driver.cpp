@@ -1810,6 +1810,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
            (S->Name.startswith(".debug") || S->Name.startswith(".zdebug"));
   });
 
+  // Now that the number of partitions is fixed, save a pointer to the main
+  // partition.
+  Main = &Partitions[0];
+
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.
   Config->AndFeatures = getAndFeatures<ELFT>();

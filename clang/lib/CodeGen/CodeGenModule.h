@@ -759,9 +759,6 @@ public:
   /// Set the visibility for the given LLVM GlobalValue.
   void setGlobalVisibility(llvm::GlobalValue *GV, const NamedDecl *D) const;
 
-  void setGlobalVisibilityAndLocal(llvm::GlobalValue *GV,
-                                   const NamedDecl *D) const;
-
   void setDSOLocal(llvm::GlobalValue *GV) const;
 
   void setDLLImportDLLExport(llvm::GlobalValue *GV, GlobalDecl D) const;
@@ -770,6 +767,8 @@ public:
   /// This must be called after dllimport/dllexport is set.
   void setGVProperties(llvm::GlobalValue *GV, GlobalDecl GD) const;
   void setGVProperties(llvm::GlobalValue *GV, const NamedDecl *D) const;
+
+  void setGVPropertiesAux(llvm::GlobalValue *GV, const NamedDecl *D) const;
 
   /// Set the TLS mode for the given LLVM GlobalValue for the thread-local
   /// variable declaration D.

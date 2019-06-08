@@ -309,6 +309,7 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
     Args.hasArg(OPT_analyzer_viz_egraph_graphviz);
   Opts.DumpExplodedGraphTo = Args.getLastArgValue(OPT_analyzer_dump_egraph);
   Opts.NoRetryExhausted = Args.hasArg(OPT_analyzer_disable_retry_exhausted);
+  Opts.AnalyzerWerror = Args.hasArg(OPT_analyzer_werror);
   Opts.AnalyzeAll = Args.hasArg(OPT_analyzer_opt_analyze_headers);
   Opts.AnalyzerDisplayProgress = Args.hasArg(OPT_analyzer_display_progress);
   Opts.AnalyzeNestedBlocks =
@@ -1353,6 +1354,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       Args.hasFlag(OPT_fsplit_cold_code, OPT_fno_split_cold_code, true);
 
   Opts.PassPlugins = Args.getAllArgValues(OPT_fpass_plugin_EQ);
+
+  Opts.SymbolPartition = Args.getLastArgValue(OPT_fsymbol_partition_EQ);
 
   return Success;
 }
