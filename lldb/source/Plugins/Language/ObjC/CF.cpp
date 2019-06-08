@@ -50,9 +50,7 @@ bool lldb_private::formatters::CFBagSummaryProvider(
   if (!process_sp)
     return false;
 
-  ObjCLanguageRuntime *runtime =
-      (ObjCLanguageRuntime *)process_sp->GetLanguageRuntime(
-          lldb::eLanguageTypeObjC);
+  ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
 
   if (!runtime)
     return false;
@@ -114,9 +112,7 @@ bool lldb_private::formatters::CFBitVectorSummaryProvider(
   if (!process_sp)
     return false;
 
-  ObjCLanguageRuntime *runtime =
-      (ObjCLanguageRuntime *)process_sp->GetLanguageRuntime(
-          lldb::eLanguageTypeObjC);
+  ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
 
   if (!runtime)
     return false;
@@ -236,9 +232,7 @@ bool lldb_private::formatters::CFBinaryHeapSummaryProvider(
   if (!process_sp)
     return false;
 
-  ObjCLanguageRuntime *runtime =
-      (ObjCLanguageRuntime *)process_sp->GetLanguageRuntime(
-          lldb::eLanguageTypeObjC);
+  ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
 
   if (!runtime)
     return false;

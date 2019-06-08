@@ -180,7 +180,7 @@ uint32_t PPC::getThunkSectionSpacing() const { return 0x2000000; }
 
 bool PPC::inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const {
   uint64_t Offset = Dst - Src;
-  if (Type == R_PPC_REL24 || R_PPC_PLTREL24)
+  if (Type == R_PPC_REL24 || Type == R_PPC_PLTREL24)
     return isInt<26>(Offset);
   llvm_unreachable("unsupported relocation type used in branch");
 }

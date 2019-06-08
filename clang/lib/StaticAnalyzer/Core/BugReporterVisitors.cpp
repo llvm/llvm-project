@@ -197,7 +197,7 @@ getConcreteIntegerValue(const Expr *CondVarExpr, const ExplodedNode *N) {
 }
 
 //===----------------------------------------------------------------------===//
-// Definitions for bug reporter visitors.
+// Implementation of BugReporterVisitor.
 //===----------------------------------------------------------------------===//
 
 std::shared_ptr<PathDiagnosticPiece>
@@ -694,6 +694,10 @@ private:
   }
 };
 
+} // end of anonymous namespace
+
+namespace {
+
 /// Suppress null-pointer-dereference bugs where dereferenced null was returned
 /// the macro.
 class MacroNullReturnSuppressionVisitor final : public BugReporterVisitor {
@@ -781,6 +785,10 @@ private:
     return None;
   }
 };
+
+} // end of anonymous namespace
+
+namespace {
 
 /// Emits an extra note at the return statement of an interesting stack frame.
 ///
@@ -1057,7 +1065,11 @@ public:
   }
 };
 
-} // namespace
+} // end of anonymous namespace
+
+//===----------------------------------------------------------------------===//
+// Implementation of FindLastStoreBRVisitor.
+//===----------------------------------------------------------------------===//
 
 void FindLastStoreBRVisitor::Profile(llvm::FoldingSetNodeID &ID) const {
   static int tag = 0;
@@ -1367,6 +1379,10 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
   return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
 }
 
+//===----------------------------------------------------------------------===//
+// Implementation of TrackConstraintBRVisitor.
+//===----------------------------------------------------------------------===//
+
 void TrackConstraintBRVisitor::Profile(llvm::FoldingSetNodeID &ID) const {
   static int tag = 0;
   ID.AddPointer(&tag);
@@ -1438,6 +1454,10 @@ TrackConstraintBRVisitor::VisitNode(const ExplodedNode *N,
 
   return nullptr;
 }
+
+//===----------------------------------------------------------------------===//
+// Implementation of SuppressInlineDefensiveChecksVisitor.
+//===----------------------------------------------------------------------===//
 
 SuppressInlineDefensiveChecksVisitor::
 SuppressInlineDefensiveChecksVisitor(DefinedSVal Value, const ExplodedNode *N)
@@ -1533,6 +1553,10 @@ SuppressInlineDefensiveChecksVisitor::VisitNode(const ExplodedNode *Succ,
   }
   return nullptr;
 }
+
+//===----------------------------------------------------------------------===//
+// Implementation of trackExpressionValue.
+//===----------------------------------------------------------------------===//
 
 static const MemRegion *getLocationRegionIfReference(const Expr *E,
                                                      const ExplodedNode *N) {
@@ -1753,6 +1777,10 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
   return true;
 }
 
+//===----------------------------------------------------------------------===//
+// Implementation of NulReceiverBRVisitor.
+//===----------------------------------------------------------------------===//
+
 const Expr *NilReceiverBRVisitor::getNilReceiver(const Stmt *S,
                                                  const ExplodedNode *N) {
   const auto *ME = dyn_cast<ObjCMessageExpr>(S);
@@ -1802,6 +1830,10 @@ NilReceiverBRVisitor::VisitNode(const ExplodedNode *N,
                                      N->getLocationContext());
   return std::make_shared<PathDiagnosticEventPiece>(L, OS.str());
 }
+
+//===----------------------------------------------------------------------===//
+// Implementation of FindLastStoreBRVisitor.
+//===----------------------------------------------------------------------===//
 
 // Registers every VarDecl inside a Stmt with a last store visitor.
 void FindLastStoreBRVisitor::registerStatementVarDecls(BugReport &BR,
@@ -2349,6 +2381,10 @@ bool ConditionBRVisitor::isPieceMessageGeneric(
          Piece->getString() == GenericFalseMessage;
 }
 
+//===----------------------------------------------------------------------===//
+// Implementation of LikelyFalsePositiveSuppressionBRVisitor.
+//===----------------------------------------------------------------------===//
+
 void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
     BugReporterContext &BRC, const ExplodedNode *N, BugReport &BR) {
   // Here we suppress false positives coming from system headers. This list is
@@ -2431,6 +2467,10 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
   }
 }
 
+//===----------------------------------------------------------------------===//
+// Implementation of UndefOrNullArgVisitor.
+//===----------------------------------------------------------------------===//
+
 std::shared_ptr<PathDiagnosticPiece>
 UndefOrNullArgVisitor::VisitNode(const ExplodedNode *N,
                                  BugReporterContext &BRC, BugReport &BR) {
@@ -2480,6 +2520,10 @@ UndefOrNullArgVisitor::VisitNode(const ExplodedNode *N,
   }
   return nullptr;
 }
+
+//===----------------------------------------------------------------------===//
+// Implementation of FalsePositiveRefutationBRVisitor.
+//===----------------------------------------------------------------------===//
 
 FalsePositiveRefutationBRVisitor::FalsePositiveRefutationBRVisitor()
     : Constraints(ConstraintRangeTy::Factory().getEmptyMap()) {}
@@ -2540,6 +2584,16 @@ FalsePositiveRefutationBRVisitor::VisitNode(const ExplodedNode *N,
   return nullptr;
 }
 
+void FalsePositiveRefutationBRVisitor::Profile(
+    llvm::FoldingSetNodeID &ID) const {
+  static int Tag = 0;
+  ID.AddPointer(&Tag);
+}
+
+//===----------------------------------------------------------------------===//
+// Implementation of TagVisitor.
+//===----------------------------------------------------------------------===//
+
 int NoteTag::Kind = 0;
 
 void TagVisitor::Profile(llvm::FoldingSetNodeID &ID) const {
@@ -2564,10 +2618,4 @@ TagVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   }
 
   return nullptr;
-}
-
-void FalsePositiveRefutationBRVisitor::Profile(
-    llvm::FoldingSetNodeID &ID) const {
-  static int Tag = 0;
-  ID.AddPointer(&Tag);
 }

@@ -344,9 +344,7 @@ bool lldb_private::formatters::NSArraySummaryProvider(
   if (!process_sp)
     return false;
 
-  ObjCLanguageRuntime *runtime =
-      (ObjCLanguageRuntime *)process_sp->GetLanguageRuntime(
-          lldb::eLanguageTypeObjC);
+  ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
 
   if (!runtime)
     return false;

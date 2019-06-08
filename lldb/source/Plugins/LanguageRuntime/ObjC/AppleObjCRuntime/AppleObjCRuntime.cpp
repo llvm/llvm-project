@@ -45,6 +45,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+char AppleObjCRuntime::ID = 0;
+
 AppleObjCRuntime::~AppleObjCRuntime() {}
 
 AppleObjCRuntime::AppleObjCRuntime(Process *process)

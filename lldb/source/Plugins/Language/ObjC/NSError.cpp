@@ -187,9 +187,7 @@ lldb_private::formatters::NSErrorSyntheticFrontEndCreator(
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
     return nullptr;
-  ObjCLanguageRuntime *runtime =
-      (ObjCLanguageRuntime *)process_sp->GetLanguageRuntime(
-          lldb::eLanguageTypeObjC);
+  ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
   if (!runtime)
     return nullptr;
 

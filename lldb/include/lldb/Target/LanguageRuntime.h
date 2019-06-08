@@ -175,6 +175,9 @@ public:
     return LLDB_INVALID_ADDRESS;
   }
 
+  virtual bool isA(const void *ClassID) const { return ClassID == &ID; }
+  static char ID;
+
 protected:
   // Classes that inherit from LanguageRuntime can see and modify these
 

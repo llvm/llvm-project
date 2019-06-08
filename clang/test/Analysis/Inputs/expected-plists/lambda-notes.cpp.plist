@@ -199,7 +199,6 @@
  </array>
  <key>files</key>
  <array>
-  <string>/clang/test/Analysis/lambda-notes.cpp</string>
  </array>
 </dict>
 </plist>

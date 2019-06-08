@@ -3,7 +3,6 @@
 <plist version="1.0">
 <dict>
  <key>clang_version</key>
-<string>clang version 8.0.0</string>
  <key>diagnostics</key>
  <array>
   <dict>
@@ -3015,7 +3014,6 @@
  </array>
  <key>files</key>
  <array>
-  <string>/home/szelethus/Documents/analyzer_opts/clang/test/Analysis/unix-fns.c</string>
  </array>
 </dict>
 </plist>
