@@ -17,6 +17,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+char LanguageRuntime::ID = 0;
+
 ExceptionSearchFilter::ExceptionSearchFilter(const lldb::TargetSP &target_sp,
                                              lldb::LanguageType language,
                                              bool update_module_list)

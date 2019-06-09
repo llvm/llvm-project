@@ -837,7 +837,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
 
   MachineInstr *FoldMI =
       LoadMI ? TII.foldMemoryOperand(*MI, FoldOps, *LoadMI, &LIS)
-             : TII.foldMemoryOperand(*MI, FoldOps, StackSlot, &LIS);
+             : TII.foldMemoryOperand(*MI, FoldOps, StackSlot, &LIS, &VRM);
   if (!FoldMI)
     return false;
 

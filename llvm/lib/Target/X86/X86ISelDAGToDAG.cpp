@@ -819,11 +819,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     case ISD::FTRUNC:
     case ISD::FNEARBYINT:
     case ISD::FRINT: {
-      // Replace vector rounding with their X86 specific equivalent so we don't
+      // Replace fp rounding with their X86 specific equivalent so we don't
       // need 2 sets of patterns.
-      if (!N->getValueType(0).isVector())
-        break;
-
       unsigned Imm;
       switch (N->getOpcode()) {
       default: llvm_unreachable("Unexpected opcode!");
@@ -4709,15 +4706,12 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   case ISD::FTRUNC:
   case ISD::FNEARBYINT:
   case ISD::FRINT: {
-    // Replace vector rounding with their X86 specific equivalent so we don't
+    // Replace fp rounding with their X86 specific equivalent so we don't
     // need 2 sets of patterns.
     // FIXME: This can only happen when the nodes started as STRICT_* and have
     // been mutated into their non-STRICT equivalents. Eventually this
     // mutation will be removed and we should switch the STRICT_ nodes to a
     // strict version of RNDSCALE in PreProcessISelDAG.
-    if (!Node->getValueType(0).isVector())
-      break;
-
     unsigned Imm;
     switch (Node->getOpcode()) {
     default: llvm_unreachable("Unexpected opcode!");

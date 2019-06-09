@@ -1699,6 +1699,14 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Symtab->addCombinedLTOObjects();
   run();
 
+  if (Args.hasArg(OPT_include_optional)) {
+    // Handle /includeoptional
+    for (auto *Arg : Args.filtered(OPT_include_optional))
+      if (dyn_cast_or_null<Lazy>(Symtab->find(Arg->getValue())))
+        addUndefined(Arg->getValue());
+    while (run());
+  }
+
   if (Config->MinGW) {
     // Load any further object files that might be needed for doing automatic
     // imports.

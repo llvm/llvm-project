@@ -1272,6 +1272,12 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_FALLTHROUGH() ((void)0)
 #endif
 
+#if defined(_LIBCPP_COMPILER_CLANG) || defined(_LIBCPP_COMPILER_GCC)
+#define _LIBCPP_NODEBUG __attribute__((nodebug))
+#else
+#define _LIBCPP_NODEBUG
+#endif
+
 #if defined(_LIBCPP_ABI_MICROSOFT) && \
     (defined(_LIBCPP_COMPILER_MSVC) || __has_declspec_attribute(empty_bases))
 #  define _LIBCPP_DECLSPEC_EMPTY_BASES __declspec(empty_bases)

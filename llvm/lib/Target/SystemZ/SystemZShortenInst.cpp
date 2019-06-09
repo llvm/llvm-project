@@ -299,6 +299,31 @@ bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
     case SystemZ::VST64:
       Changed |= shortenOn0(MI, SystemZ::STD);
       break;
+
+    default: {
+      int TwoOperandOpcode = SystemZ::getTwoOperandOpcode(MI.getOpcode());
+      if (TwoOperandOpcode == -1)
+        break;
+
+      if ((MI.getOperand(0).getReg() != MI.getOperand(1).getReg()) &&
+          (!MI.isCommutable() ||
+           MI.getOperand(0).getReg() != MI.getOperand(2).getReg() ||
+           !TII->commuteInstruction(MI, false, 1, 2)))
+          break;
+
+      MI.setDesc(TII->get(TwoOperandOpcode));
+      MI.tieOperands(0, 1);
+      if (TwoOperandOpcode == SystemZ::SLL ||
+          TwoOperandOpcode == SystemZ::SLA ||
+          TwoOperandOpcode == SystemZ::SRL ||
+          TwoOperandOpcode == SystemZ::SRA) {
+        // These shifts only use the low 6 bits of the shift count.
+        MachineOperand &ImmMO = MI.getOperand(3);
+        ImmMO.setImm(ImmMO.getImm() & 0xfff);
+      }
+      Changed = true;
+      break;
+    }
     }
 
     LiveRegs.stepBackward(MI);
