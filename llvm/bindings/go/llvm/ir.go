@@ -65,6 +65,8 @@ type (
 		C C.LLVMAttributeRef
 	}
 	Opcode              C.LLVMOpcode
+	AtomicRMWBinOp      C.LLVMAtomicRMWBinOp
+	AtomicOrdering      C.LLVMAtomicOrdering
 	TypeKind            C.LLVMTypeKind
 	Linkage             C.LLVMLinkage
 	Visibility          C.LLVMVisibility
@@ -190,6 +192,30 @@ const (
 	ShuffleVector  Opcode = C.LLVMShuffleVector
 	ExtractValue   Opcode = C.LLVMExtractValue
 	InsertValue    Opcode = C.LLVMInsertValue
+)
+
+const (
+	AtomicRMWBinOpXchg AtomicRMWBinOp = C.LLVMAtomicRMWBinOpXchg
+	AtomicRMWBinOpAdd  AtomicRMWBinOp = C.LLVMAtomicRMWBinOpAdd
+	AtomicRMWBinOpSub  AtomicRMWBinOp = C.LLVMAtomicRMWBinOpSub
+	AtomicRMWBinOpAnd  AtomicRMWBinOp = C.LLVMAtomicRMWBinOpAnd
+	AtomicRMWBinOpNand AtomicRMWBinOp = C.LLVMAtomicRMWBinOpNand
+	AtomicRMWBinOpOr   AtomicRMWBinOp = C.LLVMAtomicRMWBinOpOr
+	AtomicRMWBinOpXor  AtomicRMWBinOp = C.LLVMAtomicRMWBinOpXor
+	AtomicRMWBinOpMax  AtomicRMWBinOp = C.LLVMAtomicRMWBinOpMax
+	AtomicRMWBinOpMin  AtomicRMWBinOp = C.LLVMAtomicRMWBinOpMin
+	AtomicRMWBinOpUMax AtomicRMWBinOp = C.LLVMAtomicRMWBinOpUMax
+	AtomicRMWBinOpUMin AtomicRMWBinOp = C.LLVMAtomicRMWBinOpUMin
+)
+
+const (
+	AtomicOrderingNotAtomic              AtomicOrdering = C.LLVMAtomicOrderingNotAtomic
+	AtomicOrderingUnordered              AtomicOrdering = C.LLVMAtomicOrderingUnordered
+	AtomicOrderingMonotonic              AtomicOrdering = C.LLVMAtomicOrderingMonotonic
+	AtomicOrderingAcquire                AtomicOrdering = C.LLVMAtomicOrderingAcquire
+	AtomicOrderingRelease                AtomicOrdering = C.LLVMAtomicOrderingRelease
+	AtomicOrderingAcquireRelease         AtomicOrdering = C.LLVMAtomicOrderingAcquireRelease
+	AtomicOrderingSequentiallyConsistent AtomicOrdering = C.LLVMAtomicOrderingSequentiallyConsistent
 )
 
 //-------------------------------------------------------------------------
@@ -1044,6 +1070,26 @@ func (v Value) IsGlobalConstant() bool    { return C.LLVMIsGlobalConstant(v.C) !
 func (v Value) SetGlobalConstant(gc bool) { C.LLVMSetGlobalConstant(v.C, boolToLLVMBool(gc)) }
 func (v Value) IsVolatile() bool          { return C.LLVMGetVolatile(v.C) != 0 }
 func (v Value) SetVolatile(volatile bool) { C.LLVMSetVolatile(v.C, boolToLLVMBool(volatile)) }
+func (v Value) Ordering() AtomicOrdering  { return AtomicOrdering(C.LLVMGetOrdering(v.C)) }
+func (v Value) SetOrdering(ordering AtomicOrdering) {
+	C.LLVMSetOrdering(v.C, C.LLVMAtomicOrdering(ordering))
+}
+func (v Value) IsAtomicSingleThread() bool { return C.LLVMIsAtomicSingleThread(v.C) != 0 }
+func (v Value) SetAtomicSingleThread(singleThread bool) {
+	C.LLVMSetAtomicSingleThread(v.C, boolToLLVMBool(singleThread))
+}
+func (v Value) CmpXchgSuccessOrdering() AtomicOrdering {
+	return AtomicOrdering(C.LLVMGetCmpXchgSuccessOrdering(v.C))
+}
+func (v Value) SetCmpXchgSuccessOrdering(ordering AtomicOrdering) {
+	C.LLVMSetCmpXchgSuccessOrdering(v.C, C.LLVMAtomicOrdering(ordering))
+}
+func (v Value) CmpXchgFailureOrdering() AtomicOrdering {
+	return AtomicOrdering(C.LLVMGetCmpXchgFailureOrdering(v.C))
+}
+func (v Value) SetCmpXchgFailureOrdering(ordering AtomicOrdering) {
+	C.LLVMSetCmpXchgFailureOrdering(v.C, C.LLVMAtomicOrdering(ordering))
+}
 
 // Operations on aliases
 func AddAlias(m Module, t Type, aliasee Value, name string) (v Value) {
@@ -1630,6 +1676,14 @@ func (b Builder) CreateGlobalStringPtr(str, name string) (v Value) {
 	cname := C.CString(name)
 	defer C.free(unsafe.Pointer(cname))
 	v.C = C.LLVMBuildGlobalStringPtr(b.C, cstr, cname)
+	return
+}
+func (b Builder) CreateAtomicRMW(op AtomicRMWBinOp, ptr, val Value, ordering AtomicOrdering, singleThread bool) (v Value) {
+	v.C = C.LLVMBuildAtomicRMW(b.C, C.LLVMAtomicRMWBinOp(op), ptr.C, val.C, C.LLVMAtomicOrdering(ordering), boolToLLVMBool(singleThread))
+	return
+}
+func (b Builder) CreateAtomicCmpXchg(ptr, cmp, newVal Value, successOrdering, failureOrdering AtomicOrdering, singleThread bool) (v Value) {
+	v.C = C.LLVMBuildAtomicCmpXchg(b.C, ptr.C, cmp.C, newVal.C, C.LLVMAtomicOrdering(successOrdering), C.LLVMAtomicOrdering(failureOrdering), boolToLLVMBool(singleThread))
 	return
 }
 

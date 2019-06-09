@@ -1883,20 +1883,32 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
         Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, FCI);
         return replaceInstUsesWith(SI, Fabs);
       }
-      // With nsz:
-      // (X <  +/-0.0) ? -X : X --> fabs(X)
-      // (X <= +/-0.0) ? -X : X --> fabs(X)
-      // (X >  +/-0.0) ? X : -X --> fabs(X)
-      // (X >= +/-0.0) ? X : -X --> fabs(X)
-      if (FCI->hasNoSignedZeros() &&
-          ((X == FalseVal && match(TrueVal, m_FNeg(m_Specific(X))) &&
-            (Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_OLE)) ||
-           (X == TrueVal && match(FalseVal, m_FNeg(m_Specific(X))) &&
-            (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_OGE)))) {
-        Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, FCI);
-        return replaceInstUsesWith(SI, Fabs);
-      }
     }
+  }
+
+  // FIXME: These folds should test/propagate FMF from the select, not the fneg.
+  // With nnan and nsz:
+  // (X <  +/-0.0) ? -X : X --> fabs(X)
+  // (X <= +/-0.0) ? -X : X --> fabs(X)
+  Instruction *FNeg;
+  if (match(CondVal, m_FCmp(Pred, m_Specific(FalseVal), m_AnyZeroFP())) &&
+      match(TrueVal, m_FNeg(m_Specific(FalseVal))) &&
+      match(TrueVal, m_Instruction(FNeg)) &&
+      FNeg->hasNoNaNs() && FNeg->hasNoSignedZeros() &&
+      (Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_OLE)) {
+    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FalseVal, FNeg);
+    return replaceInstUsesWith(SI, Fabs);
+  }
+  // With nnan and nsz:
+  // (X >  +/-0.0) ? X : -X --> fabs(X)
+  // (X >= +/-0.0) ? X : -X --> fabs(X)
+  if (match(CondVal, m_FCmp(Pred, m_Specific(TrueVal), m_AnyZeroFP())) &&
+      match(FalseVal, m_FNeg(m_Specific(TrueVal))) &&
+      match(FalseVal, m_Instruction(FNeg)) &&
+      FNeg->hasNoNaNs() && FNeg->hasNoSignedZeros() &&
+      (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_OGE)) {
+    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, TrueVal, FNeg);
+    return replaceInstUsesWith(SI, Fabs);
   }
 
   // See if we are selecting two values based on a comparison of the two values.

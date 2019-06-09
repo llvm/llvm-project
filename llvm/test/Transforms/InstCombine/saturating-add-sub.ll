@@ -1042,6 +1042,120 @@ define <2 x i8> @test_vector_ssub_add_nsw_no_ov_nonsplat3(<2 x i8> %a, <2 x i8> 
   ret <2 x i8> %r
 }
 
+define i8 @test_scalar_usub_add(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_scalar_usub_add(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = add i8 [[SAT]], [[B]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.usub.sat.i8(i8 %a, i8 %b)
+  %res = add i8 %sat, %b
+  ret i8 %res
+}
+
+define i8 @test_scalar_usub_add_extra_use(i8 %a, i8 %b, i8* %p) {
+; CHECK-LABEL: @test_scalar_usub_add_extra_use(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    store i8 [[SAT]], i8* [[P:%.*]], align 1
+; CHECK-NEXT:    [[RES:%.*]] = add i8 [[SAT]], [[B]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.usub.sat.i8(i8 %a, i8 %b)
+  store i8 %sat, i8* %p
+  %res = add i8 %sat, %b
+  ret i8 %res
+}
+
+define i8 @test_scalar_usub_add_commuted(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_scalar_usub_add_commuted(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = add i8 [[SAT]], [[B]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.usub.sat.i8(i8 %a, i8 %b)
+  %res = add i8 %b, %sat
+  ret i8 %res
+}
+
+define i8 @test_scalar_usub_add_commuted_wrong(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_scalar_usub_add_commuted_wrong(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[B:%.*]], i8 [[A:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = add i8 [[SAT]], [[B]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.usub.sat.i8(i8 %b, i8 %a)
+  %res = add i8 %sat, %b
+  ret i8 %res
+}
+
+define i8 @test_scalar_usub_add_const(i8 %a) {
+; CHECK-LABEL: @test_scalar_usub_add_const(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 42)
+; CHECK-NEXT:    [[RES:%.*]] = add nuw i8 [[SAT]], 42
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.usub.sat.i8(i8 %a, i8 42)
+  %res = add i8 %sat, 42
+  ret i8 %res
+}
+
+define i8 @test_scalar_uadd_sub(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_scalar_uadd_sub(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = sub i8 [[SAT]], [[B]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 %b)
+  %res = sub i8 %sat, %b
+  ret i8 %res
+}
+
+define i8 @test_scalar_uadd_sub_extra_use(i8 %a, i8 %b, i8* %p) {
+; CHECK-LABEL: @test_scalar_uadd_sub_extra_use(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    store i8 [[SAT]], i8* [[P:%.*]], align 1
+; CHECK-NEXT:    [[RES:%.*]] = sub i8 [[SAT]], [[B]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 %b)
+  store i8 %sat, i8* %p
+  %res = sub i8 %sat, %b
+  ret i8 %res
+}
+
+define i8 @test_scalar_uadd_sub_commuted(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_scalar_uadd_sub_commuted(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[B:%.*]], i8 [[A:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = sub i8 [[SAT]], [[B]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %b, i8 %a)
+  %res = sub i8 %sat, %b
+  ret i8 %res
+}
+
+define i8 @test_scalar_uadd_sub_commuted_wrong(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_scalar_uadd_sub_commuted_wrong(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = sub i8 [[B]], [[SAT]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 %b)
+  %res = sub i8 %b, %sat
+  ret i8 %res
+}
+
+define i8 @test_scalar_uadd_sub_const(i8 %a) {
+; CHECK-LABEL: @test_scalar_uadd_sub_const(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 42)
+; CHECK-NEXT:    [[RES:%.*]] = add i8 [[SAT]], -42
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 42)
+  %res = sub i8 %sat, 42
+  ret i8 %res
+}
+
 ; Raw IR tests
 
 define i32 @uadd_sat(i32 %x, i32 %y) {

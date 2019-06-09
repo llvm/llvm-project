@@ -4663,9 +4663,7 @@ bool DAGCombiner::SearchForAndLoads(SDNode *N,
                                     SDNode *&NodeToMask) {
   // Recursively search for the operands, looking for loads which can be
   // narrowed.
-  for (unsigned i = 0, e = N->getNumOperands(); i < e; ++i) {
-    SDValue Op = N->getOperand(i);
-
+  for (SDValue Op : N->op_values()) {
     if (Op.getValueType().isVector())
       return false;
 

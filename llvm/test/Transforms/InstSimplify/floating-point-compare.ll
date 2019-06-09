@@ -309,6 +309,26 @@ define <2 x i1> @UIToFP_is_not_negative_vec(<2 x i32> %x) {
   ret <2 x i1> %r
 }
 
+; No FMF are required for this transform.
+
+define i1 @UIToFP_is_not_negative_or_nan(i32 %x) {
+; CHECK-LABEL: @UIToFP_is_not_negative_or_nan(
+; CHECK-NEXT:    ret i1 false
+;
+  %a = uitofp i32 %x to float
+  %r = fcmp ult float %a, 0.000000e+00
+  ret i1 %r
+}
+
+define <2 x i1> @UIToFP_is_not_negative_or_nan_vec(<2 x i32> %x) {
+; CHECK-LABEL: @UIToFP_is_not_negative_or_nan_vec(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %a = uitofp <2 x i32> %x to <2 x float>
+  %r = fcmp ult <2 x float> %a, zeroinitializer
+  ret <2 x i1> %r
+}
+
 define i1 @UIToFP_nnan_is_not_negative(i32 %x) {
 ; CHECK-LABEL: @UIToFP_nnan_is_not_negative(
 ; CHECK-NEXT:    ret i1 false
@@ -403,13 +423,31 @@ define i1 @fabs_nnan_is_not_negative(double %x) {
 ; CHECK-LABEL: @fabs_nnan_is_not_negative(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %fabs = tail call double @llvm.fabs.f64(double %x)
-  %cmp = fcmp nnan ult double %fabs, 0.0
+  %fabs = tail call nnan double @llvm.fabs.f64(double %x)
+  %cmp = fcmp ult double %fabs, 0.0
   ret i1 %cmp
 }
 
 define <2 x i1> @fabs_nnan_is_not_negative_vec(<2 x double> %x) {
 ; CHECK-LABEL: @fabs_nnan_is_not_negative_vec(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %fabs = tail call nnan <2 x double> @llvm.fabs.v2f64(<2 x double> %x)
+  %cmp = fcmp ult <2 x double> %fabs, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+define i1 @fabs_fcmp-nnan_is_not_negative(double %x) {
+; CHECK-LABEL: @fabs_fcmp-nnan_is_not_negative(
+; CHECK-NEXT:    ret i1 false
+;
+  %fabs = tail call double @llvm.fabs.f64(double %x)
+  %cmp = fcmp nnan ult double %fabs, 0.0
+  ret i1 %cmp
+}
+
+define <2 x i1> @fabs_fcmp-nnan_is_not_negative_vec(<2 x double> %x) {
+; CHECK-LABEL: @fabs_fcmp-nnan_is_not_negative_vec(
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %fabs = tail call <2 x double> @llvm.fabs.v2f64(<2 x double> %x)
