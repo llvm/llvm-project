@@ -3,7 +3,6 @@
 <plist version="1.0">
 <dict>
  <key>clang_version</key>
-<string>clang version 8.0.0 </string>
  <key>diagnostics</key>
  <array>
   <dict>
@@ -302,8 +301,6 @@
  </array>
  <key>files</key>
  <array>
-   <string>/clang/test/Analysis/model-file.cpp</string>
-   <string>/clang/test/Analysis/Inputs/Models/notzero.model</string>
  </array>
 </dict>
 </plist>

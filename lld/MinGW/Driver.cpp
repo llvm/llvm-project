@@ -269,6 +269,8 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
 
   for (auto *A : Args.filtered(OPT_require_defined))
     Add("-include:" + StringRef(A->getValue()));
+  for (auto *A : Args.filtered(OPT_undefined))
+    Add("-includeoptional:" + StringRef(A->getValue()));
 
   std::vector<StringRef> SearchPaths;
   for (auto *A : Args.filtered(OPT_L)) {

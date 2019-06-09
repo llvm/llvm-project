@@ -9,10 +9,10 @@ define i32 @f1(i32 %a) {
 ; CHECK-LABEL: f1:
 ; CHECK: popcnt  %r0, %r2
 ; CHECK: sllk    %r1, %r0, 16
-; CHECK: ar      %r1, %r0
-; CHECK: sllk    %r2, %r1, 8
-; CHECK: ar      %r2, %r1
-; CHECK: srl     %r2, 24
+; CHECK: ar      %r0, %r1
+; CHECK: sllk    %r1, %r0, 8
+; CHECK: ar      %r0, %r1
+; CHECK: srlk    %r2, %r0, 24
 ; CHECK: br      %r14
 
   %popcnt = call i32 @llvm.ctpop.i32(i32 %a)
@@ -23,9 +23,9 @@ define i32 @f2(i32 %a) {
 ; CHECK-LABEL: f2:
 ; CHECK: llhr    %r0, %r2
 ; CHECK: popcnt  %r0, %r0
-; CHECK: risblg  %r2, %r0, 16, 151, 8
-; CHECK: ar      %r2, %r0
-; CHECK: srl     %r2, 8
+; CHECK: risblg  %r1, %r0, 16, 151, 8
+; CHECK: ar      %r0, %r1
+; CHECK: srlk    %r2, %r0, 8
 ; CHECK: br      %r14
   %and = and i32 %a, 65535
   %popcnt = call i32 @llvm.ctpop.i32(i32 %and)
@@ -46,12 +46,12 @@ define i64 @f4(i64 %a) {
 ; CHECK-LABEL: f4:
 ; CHECK: popcnt  %r0, %r2
 ; CHECK: sllg    %r1, %r0, 32
-; CHECK: agr     %r1, %r0
-; CHECK: sllg    %r0, %r1, 16
+; CHECK: agr     %r0, %r1
+; CHECK: sllg    %r1, %r0, 16
 ; CHECK: agr     %r0, %r1
 ; CHECK: sllg    %r1, %r0, 8
-; CHECK: agr     %r1, %r0
-; CHECK: srlg    %r2, %r1, 56
+; CHECK: agr     %r0, %r1
+; CHECK: srlg    %r2, %r0, 56
 ; CHECK: br      %r14
   %popcnt = call i64 @llvm.ctpop.i64(i64 %a)
   ret i64 %popcnt
@@ -76,8 +76,8 @@ define i64 @f6(i64 %a) {
 ; CHECK: llghr   %r0, %r2
 ; CHECK: popcnt  %r0, %r0
 ; CHECK: risbg   %r1, %r0, 48, 183, 8
-; CHECK: agr     %r1, %r0
-; CHECK: srlg    %r2, %r1, 8
+; CHECK: agr     %r0, %r1
+; CHECK: srlg    %r2, %r0, 8
 ; CHECK: br      %r14
   %and = and i64 %a, 65535
   %popcnt = call i64 @llvm.ctpop.i64(i64 %and)

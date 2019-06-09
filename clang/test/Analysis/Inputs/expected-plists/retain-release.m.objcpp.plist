@@ -3,7 +3,6 @@
 <plist version="1.0">
 <dict>
  <key>clang_version</key>
-<string>clang version 9.0.0 </string>
  <key>diagnostics</key>
  <array>
   <dict>
@@ -26300,7 +26299,6 @@
  </array>
  <key>files</key>
  <array>
-  <string>/Volumes/Transcend/code/monorepo/llvm-project/clang/test/Analysis/retain-release.m</string>
  </array>
 </dict>
 </plist>

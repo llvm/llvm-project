@@ -163,6 +163,7 @@ static_library("CodeGen") {
     "StackProtector.cpp",
     "StackSlotColoring.cpp",
     "SwiftErrorValueTracking.cpp",
+    "SwitchLoweringUtils.cpp",
     "TailDuplication.cpp",
     "TailDuplicator.cpp",
     "TargetFrameLoweringImpl.cpp",

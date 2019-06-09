@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/CallSite.h"
@@ -146,239 +147,27 @@ private:
   /// create.
   unsigned SDNodeOrder;
 
-  enum CaseClusterKind {
-    /// A cluster of adjacent case labels with the same destination, or just one
-    /// case.
-    CC_Range,
-    /// A cluster of cases suitable for jump table lowering.
-    CC_JumpTable,
-    /// A cluster of cases suitable for bit test lowering.
-    CC_BitTests
-  };
-
-  /// A cluster of case labels.
-  struct CaseCluster {
-    CaseClusterKind Kind;
-    const ConstantInt *Low, *High;
-    union {
-      MachineBasicBlock *MBB;
-      unsigned JTCasesIndex;
-      unsigned BTCasesIndex;
-    };
-    BranchProbability Prob;
-
-    static CaseCluster range(const ConstantInt *Low, const ConstantInt *High,
-                             MachineBasicBlock *MBB, BranchProbability Prob) {
-      CaseCluster C;
-      C.Kind = CC_Range;
-      C.Low = Low;
-      C.High = High;
-      C.MBB = MBB;
-      C.Prob = Prob;
-      return C;
-    }
-
-    static CaseCluster jumpTable(const ConstantInt *Low,
-                                 const ConstantInt *High, unsigned JTCasesIndex,
-                                 BranchProbability Prob) {
-      CaseCluster C;
-      C.Kind = CC_JumpTable;
-      C.Low = Low;
-      C.High = High;
-      C.JTCasesIndex = JTCasesIndex;
-      C.Prob = Prob;
-      return C;
-    }
-
-    static CaseCluster bitTests(const ConstantInt *Low, const ConstantInt *High,
-                                unsigned BTCasesIndex, BranchProbability Prob) {
-      CaseCluster C;
-      C.Kind = CC_BitTests;
-      C.Low = Low;
-      C.High = High;
-      C.BTCasesIndex = BTCasesIndex;
-      C.Prob = Prob;
-      return C;
-    }
-  };
-
-  using CaseClusterVector = std::vector<CaseCluster>;
-  using CaseClusterIt = CaseClusterVector::iterator;
-
-  struct CaseBits {
-    uint64_t Mask = 0;
-    MachineBasicBlock* BB = nullptr;
-    unsigned Bits = 0;
-    BranchProbability ExtraProb;
-
-    CaseBits() = default;
-    CaseBits(uint64_t mask, MachineBasicBlock* bb, unsigned bits,
-             BranchProbability Prob):
-      Mask(mask), BB(bb), Bits(bits), ExtraProb(Prob) {}
-  };
-
-  using CaseBitsVector = std::vector<CaseBits>;
-
-  /// Sort Clusters and merge adjacent cases.
-  void sortAndRangeify(CaseClusterVector &Clusters);
-
-  /// This structure is used to communicate between SelectionDAGBuilder and
-  /// SDISel for the code generation of additional basic blocks needed by
-  /// multi-case switch statements.
-  struct CaseBlock {
-    // The condition code to use for the case block's setcc node.
-    // Besides the integer condition codes, this can also be SETTRUE, in which
-    // case no comparison gets emitted.
-    ISD::CondCode CC;
-
-    // The LHS/MHS/RHS of the comparison to emit.
-    // Emit by default LHS op RHS. MHS is used for range comparisons:
-    // If MHS is not null: (LHS <= MHS) and (MHS <= RHS).
-    const Value *CmpLHS, *CmpMHS, *CmpRHS;
-
-    // The block to branch to if the setcc is true/false.
-    MachineBasicBlock *TrueBB, *FalseBB;
-
-    // The block into which to emit the code for the setcc and branches.
-    MachineBasicBlock *ThisBB;
-
-    /// The debug location of the instruction this CaseBlock was
-    /// produced from.
-    SDLoc DL;
-
-    // Branch weights.
-    BranchProbability TrueProb, FalseProb;
-
-    CaseBlock(ISD::CondCode cc, const Value *cmplhs, const Value *cmprhs,
-              const Value *cmpmiddle, MachineBasicBlock *truebb,
-              MachineBasicBlock *falsebb, MachineBasicBlock *me,
-              SDLoc dl,
-              BranchProbability trueprob = BranchProbability::getUnknown(),
-              BranchProbability falseprob = BranchProbability::getUnknown())
-        : CC(cc), CmpLHS(cmplhs), CmpMHS(cmpmiddle), CmpRHS(cmprhs),
-          TrueBB(truebb), FalseBB(falsebb), ThisBB(me), DL(dl),
-          TrueProb(trueprob), FalseProb(falseprob) {}
-  };
-
-  struct JumpTable {
-    /// The virtual register containing the index of the jump table entry
-    /// to jump to.
-    unsigned Reg;
-    /// The JumpTableIndex for this jump table in the function.
-    unsigned JTI;
-    /// The MBB into which to emit the code for the indirect jump.
-    MachineBasicBlock *MBB;
-    /// The MBB of the default bb, which is a successor of the range
-    /// check MBB.  This is when updating PHI nodes in successors.
-    MachineBasicBlock *Default;
-
-    JumpTable(unsigned R, unsigned J, MachineBasicBlock *M,
-              MachineBasicBlock *D): Reg(R), JTI(J), MBB(M), Default(D) {}
-  };
-  struct JumpTableHeader {
-    APInt First;
-    APInt Last;
-    const Value *SValue;
-    MachineBasicBlock *HeaderBB;
-    bool Emitted;
-    bool OmitRangeCheck;
-
-    JumpTableHeader(APInt F, APInt L, const Value *SV, MachineBasicBlock *H,
-                    bool E = false)
-        : First(std::move(F)), Last(std::move(L)), SValue(SV), HeaderBB(H),
-          Emitted(E), OmitRangeCheck(false) {}
-  };
-  using JumpTableBlock = std::pair<JumpTableHeader, JumpTable>;
-
-  struct BitTestCase {
-    uint64_t Mask;
-    MachineBasicBlock *ThisBB;
-    MachineBasicBlock *TargetBB;
-    BranchProbability ExtraProb;
-
-    BitTestCase(uint64_t M, MachineBasicBlock* T, MachineBasicBlock* Tr,
-                BranchProbability Prob):
-      Mask(M), ThisBB(T), TargetBB(Tr), ExtraProb(Prob) {}
-  };
-
-  using BitTestInfo = SmallVector<BitTestCase, 3>;
-
-  struct BitTestBlock {
-    APInt First;
-    APInt Range;
-    const Value *SValue;
-    unsigned Reg;
-    MVT RegVT;
-    bool Emitted;
-    bool ContiguousRange;
-    MachineBasicBlock *Parent;
-    MachineBasicBlock *Default;
-    BitTestInfo Cases;
-    BranchProbability Prob;
-    BranchProbability DefaultProb;
-
-    BitTestBlock(APInt F, APInt R, const Value *SV, unsigned Rg, MVT RgVT,
-                 bool E, bool CR, MachineBasicBlock *P, MachineBasicBlock *D,
-                 BitTestInfo C, BranchProbability Pr)
-        : First(std::move(F)), Range(std::move(R)), SValue(SV), Reg(Rg),
-          RegVT(RgVT), Emitted(E), ContiguousRange(CR), Parent(P), Default(D),
-          Cases(std::move(C)), Prob(Pr) {}
-  };
-
-  /// Return the range of value in [First..Last].
-  uint64_t getJumpTableRange(const CaseClusterVector &Clusters, unsigned First,
-                             unsigned Last) const;
-
-  /// Return the number of cases in [First..Last].
-  uint64_t getJumpTableNumCases(const SmallVectorImpl<unsigned> &TotalCases,
-                                unsigned First, unsigned Last) const;
-
-  /// Build a jump table cluster from Clusters[First..Last]. Returns false if it
-  /// decides it's not a good idea.
-  bool buildJumpTable(const CaseClusterVector &Clusters, unsigned First,
-                      unsigned Last, const SwitchInst *SI,
-                      MachineBasicBlock *DefaultMBB, CaseCluster &JTCluster);
-
-  /// Find clusters of cases suitable for jump table lowering.
-  void findJumpTables(CaseClusterVector &Clusters, const SwitchInst *SI,
-                      MachineBasicBlock *DefaultMBB);
-
-  /// Build a bit test cluster from Clusters[First..Last]. Returns false if it
-  /// decides it's not a good idea.
-  bool buildBitTests(CaseClusterVector &Clusters, unsigned First, unsigned Last,
-                     const SwitchInst *SI, CaseCluster &BTCluster);
-
-  /// Find clusters of cases suitable for bit test lowering.
-  void findBitTestClusters(CaseClusterVector &Clusters, const SwitchInst *SI);
-
-  struct SwitchWorkListItem {
-    MachineBasicBlock *MBB;
-    CaseClusterIt FirstCluster;
-    CaseClusterIt LastCluster;
-    const ConstantInt *GE;
-    const ConstantInt *LT;
-    BranchProbability DefaultProb;
-  };
-  using SwitchWorkList = SmallVector<SwitchWorkListItem, 4>;
-
   /// Determine the rank by weight of CC in [First,Last]. If CC has more weight
   /// than each cluster in the range, its rank is 0.
-  static unsigned caseClusterRank(const CaseCluster &CC, CaseClusterIt First,
-                                  CaseClusterIt Last);
+  unsigned caseClusterRank(const SwitchCG::CaseCluster &CC,
+                           SwitchCG::CaseClusterIt First,
+                           SwitchCG::CaseClusterIt Last);
 
   /// Emit comparison and split W into two subtrees.
-  void splitWorkItem(SwitchWorkList &WorkList, const SwitchWorkListItem &W,
-                     Value *Cond, MachineBasicBlock *SwitchMBB);
+  void splitWorkItem(SwitchCG::SwitchWorkList &WorkList,
+                     const SwitchCG::SwitchWorkListItem &W, Value *Cond,
+                     MachineBasicBlock *SwitchMBB);
 
   /// Lower W.
-  void lowerWorkItem(SwitchWorkListItem W, Value *Cond,
+  void lowerWorkItem(SwitchCG::SwitchWorkListItem W, Value *Cond,
                      MachineBasicBlock *SwitchMBB,
                      MachineBasicBlock *DefaultMBB);
 
   /// Peel the top probability case if it exceeds the threshold
-  MachineBasicBlock *peelDominantCaseCluster(const SwitchInst &SI,
-                                             CaseClusterVector &Clusters,
-                                             BranchProbability &PeeledCaseProb);
+  MachineBasicBlock *
+  peelDominantCaseCluster(const SwitchInst &SI,
+                          SwitchCG::CaseClusterVector &Clusters,
+                          BranchProbability &PeeledCaseProb);
 
   /// A class which encapsulates all of the information needed to generate a
   /// stack protector check and signals to isel via its state being initialized
@@ -591,17 +380,22 @@ public:
   AliasAnalysis *AA = nullptr;
   const TargetLibraryInfo *LibInfo;
 
-  /// Vector of CaseBlock structures used to communicate SwitchInst code
-  /// generation information.
-  std::vector<CaseBlock> SwitchCases;
+  class SDAGSwitchLowering : public SwitchCG::SwitchLowering {
+  public:
+    SDAGSwitchLowering(SelectionDAGBuilder *sdb, FunctionLoweringInfo &funcinfo)
+        : SwitchCG::SwitchLowering(funcinfo), SDB(sdb) {}
 
-  /// Vector of JumpTable structures used to communicate SwitchInst code
-  /// generation information.
-  std::vector<JumpTableBlock> JTCases;
+    virtual void addSuccessorWithProb(
+        MachineBasicBlock *Src, MachineBasicBlock *Dst,
+        BranchProbability Prob = BranchProbability::getUnknown()) override {
+      SDB->addSuccessorWithProb(Src, Dst, Prob);
+    }
 
-  /// Vector of BitTestBlock structures used to communicate SwitchInst code
-  /// generation information.
-  std::vector<BitTestBlock> BitTestCases;
+  private:
+    SelectionDAGBuilder *SDB;
+  };
+
+  std::unique_ptr<SDAGSwitchLowering> SL;
 
   /// A StackProtectorDescriptor structure used to communicate stack protector
   /// information in between SelectBasicBlock and FinishBasicBlock.
@@ -632,7 +426,8 @@ public:
   SelectionDAGBuilder(SelectionDAG &dag, FunctionLoweringInfo &funcinfo,
                       SwiftErrorValueTracking &swifterror, CodeGenOpt::Level ol)
       : SDNodeOrder(LowestSDNodeOrder), TM(dag.getTarget()), DAG(dag),
-        FuncInfo(funcinfo), SwiftError(swifterror) {}
+        SL(make_unique<SDAGSwitchLowering>(this, funcinfo)), FuncInfo(funcinfo),
+        SwiftError(swifterror) {}
 
   void init(GCFunctionInfo *gfi, AliasAnalysis *AA,
             const TargetLibraryInfo *li);
@@ -738,7 +533,7 @@ public:
                                     MachineBasicBlock *SwitchBB,
                                     BranchProbability TProb, BranchProbability FProb,
                                     bool InvertCond);
-  bool ShouldEmitAsBranches(const std::vector<CaseBlock> &Cases);
+  bool ShouldEmitAsBranches(const std::vector<SwitchCG::CaseBlock> &Cases);
   bool isExportableFromCurrentBlock(const Value *V, const BasicBlock *FromBB);
   void CopyToExportRegsIfNeeded(const Value *V);
   void ExportFromCurrentBlock(const Value *V);
@@ -851,20 +646,18 @@ private:
       BranchProbability Prob = BranchProbability::getUnknown());
 
 public:
-  void visitSwitchCase(CaseBlock &CB,
-                       MachineBasicBlock *SwitchBB);
+  void visitSwitchCase(SwitchCG::CaseBlock &CB, MachineBasicBlock *SwitchBB);
   void visitSPDescriptorParent(StackProtectorDescriptor &SPD,
                                MachineBasicBlock *ParentBB);
   void visitSPDescriptorFailure(StackProtectorDescriptor &SPD);
-  void visitBitTestHeader(BitTestBlock &B, MachineBasicBlock *SwitchBB);
-  void visitBitTestCase(BitTestBlock &BB,
-                        MachineBasicBlock* NextMBB,
-                        BranchProbability BranchProbToNext,
-                        unsigned Reg,
-                        BitTestCase &B,
-                        MachineBasicBlock *SwitchBB);
-  void visitJumpTable(JumpTable &JT);
-  void visitJumpTableHeader(JumpTable &JT, JumpTableHeader &JTH,
+  void visitBitTestHeader(SwitchCG::BitTestBlock &B,
+                          MachineBasicBlock *SwitchBB);
+  void visitBitTestCase(SwitchCG::BitTestBlock &BB, MachineBasicBlock *NextMBB,
+                        BranchProbability BranchProbToNext, unsigned Reg,
+                        SwitchCG::BitTestCase &B, MachineBasicBlock *SwitchBB);
+  void visitJumpTable(SwitchCG::JumpTable &JT);
+  void visitJumpTableHeader(SwitchCG::JumpTable &JT,
+                            SwitchCG::JumpTableHeader &JTH,
                             MachineBasicBlock *SwitchBB);
 
 private:

@@ -35,6 +35,8 @@ using namespace lldb_private;
 
 static ConstString g_this = ConstString("this");
 
+char CPPLanguageRuntime::ID = 0;
+
 // Destructor
 CPPLanguageRuntime::~CPPLanguageRuntime() {}
 

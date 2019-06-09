@@ -39,7 +39,6 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ABI.h"
-#include "lldb/Target/CPPLanguageRuntime.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/InstrumentationRuntime.h"
 #include "lldb/Target/JITLoader.h"
@@ -1602,10 +1601,7 @@ ObjCLanguageRuntime *Process::GetObjCLanguageRuntime(bool retry_if_null) {
   std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
   LanguageRuntime *runtime =
       GetLanguageRuntime(eLanguageTypeObjC, retry_if_null);
-  if (!runtime)
-    return nullptr;
-
-  return static_cast<ObjCLanguageRuntime *>(runtime);
+  return llvm::cast_or_null<ObjCLanguageRuntime>(runtime);
 }
 
 bool Process::IsPossibleDynamicValue(ValueObject &in_value) {

@@ -5256,7 +5256,6 @@
  </array>
  <key>files</key>
  <array>
-  <string>/clang/test/Analysis/malloc-plist.c</string>
  </array>
 </dict>
 </plist>

@@ -3477,7 +3477,8 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   if (match(RHS, m_AnyZeroFP())) {
     switch (Pred) {
     case FCmpInst::FCMP_OGE:
-      if (FMF.noNaNs() && CannotBeOrderedLessThanZero(LHS, Q.TLI))
+      if ((FMF.noNaNs() || isKnownNeverNaN(LHS, Q.TLI)) &&
+          CannotBeOrderedLessThanZero(LHS, Q.TLI))
         return getTrue(RetTy);
       break;
     case FCmpInst::FCMP_UGE:
@@ -3485,6 +3486,7 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
         return getTrue(RetTy);
       break;
     case FCmpInst::FCMP_ULT:
+      // TODO: This should match 'oge'.
       if (FMF.noNaNs() && CannotBeOrderedLessThanZero(LHS, Q.TLI))
         return getFalse(RetTy);
       break;
