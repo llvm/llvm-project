@@ -4783,7 +4783,8 @@ MachineInstr *
 X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                                     ArrayRef<unsigned> Ops,
                                     MachineBasicBlock::iterator InsertPt,
-                                    int FrameIndex, LiveIntervals *LIS) const {
+                                    int FrameIndex, LiveIntervals *LIS,
+                                    VirtRegMap *VRM) const {
   // Check switch flag
   if (NoFusing)
     return nullptr;

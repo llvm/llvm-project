@@ -201,8 +201,6 @@
  </array>
  <key>files</key>
  <array>
-  <string>/clang/test/Analysis/diagnostics/plist-multi-file.c</string>
-  <string>/clang/test/Analysis/diagnostics/plist-multi-file.h</string>
  </array>
 </dict>
 </plist>

@@ -916,11 +916,11 @@ let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0x8 in {
 
   // Addition of memory.
   defm AH  : BinaryRXPair<"ah", 0x4A, 0xE37A, z_sadd, GR32, asextloadi16, 2>;
-  defm A   : BinaryRXPair<"a",  0x5A, 0xE35A, z_sadd, GR32, load, 4>;
+  defm A   : BinaryRXPairAndPseudo<"a",  0x5A, 0xE35A, z_sadd, GR32, load, 4>;
   def  AGH : BinaryRXY<"agh", 0xE338, z_sadd, GR64, asextloadi16, 2>,
              Requires<[FeatureMiscellaneousExtensions2]>;
   def  AGF : BinaryRXY<"agf", 0xE318, z_sadd, GR64, asextloadi32, 4>;
-  def  AG  : BinaryRXY<"ag",  0xE308, z_sadd, GR64, load, 8>;
+  defm AG  : BinaryRXYAndPseudo<"ag",  0xE308, z_sadd, GR64, load, 8>;
 
   // Addition to memory.
   def ASI  : BinarySIY<"asi",  0xEB6A, add, imm32sx8>;
@@ -958,9 +958,9 @@ let Defs = [CC] in {
               Requires<[FeatureHighWord]>;
 
   // Addition of memory.
-  defm AL   : BinaryRXPair<"al", 0x5E, 0xE35E, z_uadd, GR32, load, 4>;
+  defm AL   : BinaryRXPairAndPseudo<"al", 0x5E, 0xE35E, z_uadd, GR32, load, 4>;
   def  ALGF : BinaryRXY<"algf", 0xE31A, z_uadd, GR64, azextloadi32, 4>;
-  def  ALG  : BinaryRXY<"alg",  0xE30A, z_uadd, GR64, load, 8>;
+  defm ALG  : BinaryRXYAndPseudo<"alg",  0xE30A, z_uadd, GR64, load, 8>;
 
   // Addition to memory.
   def ALSI  : BinarySIY<"alsi",  0xEB6E, null_frag, imm32sx8>;
@@ -1003,11 +1003,11 @@ let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0x8 in {
 
   // Subtraction of memory.
   defm SH  : BinaryRXPair<"sh", 0x4B, 0xE37B, z_ssub, GR32, asextloadi16, 2>;
-  defm S   : BinaryRXPair<"s", 0x5B, 0xE35B, z_ssub, GR32, load, 4>;
+  defm S   : BinaryRXPairAndPseudo<"s", 0x5B, 0xE35B, z_ssub, GR32, load, 4>;
   def  SGH : BinaryRXY<"sgh", 0xE339, z_ssub, GR64, asextloadi16, 2>,
              Requires<[FeatureMiscellaneousExtensions2]>;
   def  SGF : BinaryRXY<"sgf", 0xE319, z_ssub, GR64, asextloadi32, 4>;
-  def  SG  : BinaryRXY<"sg",  0xE309, z_ssub, GR64, load, 8>;
+  defm SG  : BinaryRXYAndPseudo<"sg",  0xE309, z_ssub, GR64, load, 8>;
 }
 defm : SXB<z_ssub, GR64, SGFR>;
 
@@ -1055,9 +1055,9 @@ let Defs = [CC] in {
   def SLGFI : BinaryRIL<"slgfi", 0xC24, z_usub, GR64, imm64zx32>;
 
   // Subtraction of memory.
-  defm SL   : BinaryRXPair<"sl", 0x5F, 0xE35F, z_usub, GR32, load, 4>;
+  defm SL   : BinaryRXPairAndPseudo<"sl", 0x5F, 0xE35F, z_usub, GR32, load, 4>;
   def  SLGF : BinaryRXY<"slgf", 0xE31B, z_usub, GR64, azextloadi32, 4>;
-  def  SLG  : BinaryRXY<"slg",  0xE30B, z_usub, GR64, load, 8>;
+  defm SLG  : BinaryRXYAndPseudo<"slg",  0xE30B, z_usub, GR64, load, 8>;
 }
 defm : ZXB<z_usub, GR64, SLGFR>;
 
@@ -1132,8 +1132,8 @@ let Defs = [CC] in {
 
   // ANDs of memory.
   let CCValues = 0xC, CompareZeroCCMask = 0x8 in {
-    defm N  : BinaryRXPair<"n", 0x54, 0xE354, and, GR32, load, 4>;
-    def  NG : BinaryRXY<"ng", 0xE380, and, GR64, load, 8>;
+    defm N  : BinaryRXPairAndPseudo<"n", 0x54, 0xE354, and, GR32, load, 4>;
+    defm NG : BinaryRXYAndPseudo<"ng", 0xE380, and, GR64, load, 8>;
   }
 
   // AND to memory
@@ -1189,8 +1189,8 @@ let Defs = [CC] in {
 
   // ORs of memory.
   let CCValues = 0xC, CompareZeroCCMask = 0x8 in {
-    defm O  : BinaryRXPair<"o", 0x56, 0xE356, or, GR32, load, 4>;
-    def  OG : BinaryRXY<"og", 0xE381, or, GR64, load, 8>;
+    defm O  : BinaryRXPairAndPseudo<"o", 0x56, 0xE356, or, GR32, load, 4>;
+    defm OG : BinaryRXYAndPseudo<"og", 0xE381, or, GR64, load, 8>;
   }
 
   // OR to memory
@@ -1229,8 +1229,8 @@ let Defs = [CC] in {
 
   // XORs of memory.
   let CCValues = 0xC, CompareZeroCCMask = 0x8 in {
-    defm X  : BinaryRXPair<"x",0x57, 0xE357, xor, GR32, load, 4>;
-    def  XG : BinaryRXY<"xg", 0xE382, xor, GR64, load, 8>;
+    defm X  : BinaryRXPairAndPseudo<"x",0x57, 0xE357, xor, GR32, load, 4>;
+    defm XG : BinaryRXYAndPseudo<"xg", 0xE382, xor, GR64, load, 8>;
   }
 
   // XOR to memory

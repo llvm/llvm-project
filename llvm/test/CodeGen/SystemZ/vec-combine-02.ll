@@ -408,7 +408,7 @@ define i32 @f9(double %scalar0, double %scalar1, double %scalar2,
 ; CHECK-NOT: vmrh
 ; CHECK: ar {{%r[0-5]}},
 ; CHECK: ar {{%r[0-5]}},
-; CHECK: or %r2,
+; CHECK: ork %r2,
 ; CHECK: br %r14
   %vec0 = insertelement <2 x double> undef, double %scalar0, i32 0
   %vec1 = insertelement <2 x double> undef, double %scalar1, i32 0
