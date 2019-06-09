@@ -1208,6 +1208,7 @@ func (bb BasicBlock) MoveBefore(pos BasicBlock) { C.LLVMMoveBasicBlockBefore(bb.
 func (bb BasicBlock) MoveAfter(pos BasicBlock)  { C.LLVMMoveBasicBlockAfter(bb.C, pos.C) }
 
 // Operations on instructions
+func (v Value) EraseFromParentAsInstruction()      { C.LLVMInstructionEraseFromParent(v.C) }
 func (v Value) InstructionParent() (bb BasicBlock) { bb.C = C.LLVMGetInstructionParent(v.C); return }
 func (bb BasicBlock) FirstInstruction() (v Value)  { v.C = C.LLVMGetFirstInstruction(bb.C); return }
 func (bb BasicBlock) LastInstruction() (v Value)   { v.C = C.LLVMGetLastInstruction(bb.C); return }
@@ -1226,6 +1227,10 @@ func (v Value) AddCallSiteAttribute(i int, a Attribute) {
 }
 func (v Value) SetInstrParamAlignment(i int, align int) {
 	C.LLVMSetInstrParamAlignment(v.C, C.unsigned(i), C.unsigned(align))
+}
+func (v Value) CalledValue() (rv Value) {
+	rv.C = C.LLVMGetCalledValue(v.C)
+	return
 }
 
 // Operations on call instructions (only)
@@ -1270,6 +1275,10 @@ func (v Value) Indices() []uint32 {
 	return indices
 }
 
+// Operations on comparisons
+func (v Value) IntPredicate() IntPredicate     { return IntPredicate(C.LLVMGetICmpPredicate(v.C)) }
+func (v Value) FloatPredicate() FloatPredicate { return FloatPredicate(C.LLVMGetFCmpPredicate(v.C)) }
+
 //-------------------------------------------------------------------------
 // llvm.Builder
 //-------------------------------------------------------------------------
@@ -1303,6 +1312,7 @@ type DebugLoc struct {
 func (b Builder) SetCurrentDebugLocation(line, col uint, scope, inlinedAt Metadata) {
 	C.LLVMGoSetCurrentDebugLocation(b.C, C.unsigned(line), C.unsigned(col), scope.C, inlinedAt.C)
 }
+
 // Get current debug location. Please do not call this function until setting debug location with SetCurrentDebugLocation()
 func (b Builder) GetCurrentDebugLocation() (loc DebugLoc) {
 	md := C.LLVMGoGetCurrentDebugLocation(b.C)

@@ -12,9 +12,9 @@
 /// are encoded using the EVEX prefix and if possible replaces them by their
 /// corresponding VEX encoding which is usually shorter by 2 bytes.
 /// EVEX instructions may be encoded via the VEX prefix when the AVX-512
-/// instruction has a corresponding AVX/AVX2 opcode and when it does not
-/// use the xmm or the mask registers or xmm/ymm registers with indexes
-/// higher than 15.
+/// instruction has a corresponding AVX/AVX2 opcode, when vector length 
+/// accessed by instruction is less than 512 bits and when it does not use 
+//  the xmm or the mask registers or xmm/ymm registers with indexes higher than 15.
 /// The pass applies code reduction on the generated code for AVX-512 instrs.
 //
 //===----------------------------------------------------------------------===//
