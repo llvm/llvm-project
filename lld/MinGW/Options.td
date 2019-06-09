@@ -46,6 +46,10 @@ def strip_all: F<"strip-all">,
     HelpText<"Omit all symbol information from the output binary">;
 def strip_debug: F<"strip-debug">,
     HelpText<"Omit all debug information, but keep symbol information">;
+def undefined: S<"u">,
+    HelpText<"Include symbol in the link, if available">;
+def undefined_long: S<"undefined">, Alias<undefined>;
+def undefined_eq: J<"undefined=">, Alias<undefined>;
 def whole_archive: F<"whole-archive">,
     HelpText<"Include all object files for following archives">;
 def v: Flag<["-"], "v">, HelpText<"Display the version number">;

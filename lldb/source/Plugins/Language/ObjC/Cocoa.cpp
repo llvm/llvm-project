@@ -43,9 +43,7 @@ bool lldb_private::formatters::NSBundleSummaryProvider(
   if (!process_sp)
     return false;
 
-  ObjCLanguageRuntime *runtime =
-      (ObjCLanguageRuntime *)process_sp->GetLanguageRuntime(
-          lldb::eLanguageTypeObjC);
+  ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
 
   if (!runtime)
     return false;
@@ -93,9 +91,7 @@ bool lldb_private::formatters::NSTimeZoneSummaryProvider(
   if (!process_sp)
     return false;
 
-  ObjCLanguageRuntime *runtime =
-      (ObjCLanguageRuntime *)process_sp->GetLanguageRuntime(
-          lldb::eLanguageTypeObjC);
+  ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
 
   if (!runtime)
     return false;
@@ -140,9 +136,7 @@ bool lldb_private::formatters::NSNotificationSummaryProvider(
   if (!process_sp)
     return false;
 
-  ObjCLanguageRuntime *runtime =
-      (ObjCLanguageRuntime *)process_sp->GetLanguageRuntime(
-          lldb::eLanguageTypeObjC);
+  ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
 
   if (!runtime)
     return false;
@@ -187,9 +181,7 @@ bool lldb_private::formatters::NSMachPortSummaryProvider(
   if (!process_sp)
     return false;
 
-  ObjCLanguageRuntime *runtime =
-      (ObjCLanguageRuntime *)process_sp->GetLanguageRuntime(
-          lldb::eLanguageTypeObjC);
+  ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
 
   if (!runtime)
     return false;
@@ -235,9 +227,7 @@ bool lldb_private::formatters::NSIndexSetSummaryProvider(
   if (!process_sp)
     return false;
 
-  ObjCLanguageRuntime *runtime =
-      (ObjCLanguageRuntime *)process_sp->GetLanguageRuntime(
-          lldb::eLanguageTypeObjC);
+  ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
 
   if (!runtime)
     return false;
@@ -426,9 +416,7 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
   if (!process_sp)
     return false;
 
-  ObjCLanguageRuntime *runtime =
-      (ObjCLanguageRuntime *)process_sp->GetLanguageRuntime(
-          lldb::eLanguageTypeObjC);
+  ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
 
   if (!runtime)
     return false;
@@ -679,9 +667,7 @@ bool lldb_private::formatters::NSURLSummaryProvider(
   if (!process_sp)
     return false;
 
-  ObjCLanguageRuntime *runtime =
-      (ObjCLanguageRuntime *)process_sp->GetLanguageRuntime(
-          lldb::eLanguageTypeObjC);
+  ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
 
   if (!runtime)
     return false;
@@ -795,9 +781,7 @@ bool lldb_private::formatters::NSDateSummaryProvider(
   if (!process_sp)
     return false;
 
-  ObjCLanguageRuntime *runtime =
-      (ObjCLanguageRuntime *)process_sp->GetLanguageRuntime(
-          lldb::eLanguageTypeObjC);
+  ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
 
   if (!runtime)
     return false;
@@ -892,9 +876,7 @@ bool lldb_private::formatters::ObjCClassSummaryProvider(
   if (!process_sp)
     return false;
 
-  ObjCLanguageRuntime *runtime =
-      (ObjCLanguageRuntime *)process_sp->GetLanguageRuntime(
-          lldb::eLanguageTypeObjC);
+  ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
 
   if (!runtime)
     return false;
@@ -953,9 +935,7 @@ bool lldb_private::formatters::NSDataSummaryProvider(
   if (!process_sp)
     return false;
 
-  ObjCLanguageRuntime *runtime =
-      (ObjCLanguageRuntime *)process_sp->GetLanguageRuntime(
-          lldb::eLanguageTypeObjC);
+  ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
 
   if (!runtime)
     return false;
@@ -1054,8 +1034,8 @@ bool lldb_private::formatters::ObjCBooleanSummaryProvider(
   if (!process_sp)
     return false;
 
-  if (AppleObjCRuntime *objc_runtime =
-          (AppleObjCRuntime *)process_sp->GetObjCLanguageRuntime()) {
+  if (AppleObjCRuntime *objc_runtime = llvm::dyn_cast_or_null<AppleObjCRuntime>(
+          process_sp->GetObjCLanguageRuntime())) {
     lldb::addr_t cf_true = LLDB_INVALID_ADDRESS,
                  cf_false = LLDB_INVALID_ADDRESS;
     objc_runtime->GetValuesForGlobalCFBooleans(cf_true, cf_false);

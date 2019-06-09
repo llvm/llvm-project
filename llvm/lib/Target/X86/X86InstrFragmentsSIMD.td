@@ -307,7 +307,7 @@ def SDTFPTernaryOpImm: SDTypeProfile<1, 4, [SDTCisFP<0>, SDTCisSameAs<0,1>,
                                             SDTCisSameSizeAs<0, 3>,
                                             SDTCisSameNumEltsAs<0, 3>,
                                             SDTCisVT<4, i32>]>;
-def SDTFPUnaryOpImm: SDTypeProfile<1, 2, [SDTCisFP<0>, SDTCisVec<0>,
+def SDTFPUnaryOpImm: SDTypeProfile<1, 2, [SDTCisFP<0>,
                                           SDTCisSameAs<0,1>,
                                           SDTCisVT<2, i32>]>;
 
