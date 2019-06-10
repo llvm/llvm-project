@@ -15,6 +15,7 @@
 
 #include "AddressPool.h"
 #include "DebugLocStream.h"
+#include "DebugLocEntry.h"
 #include "DwarfFile.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -110,12 +111,14 @@ public:
 ///
 /// Variables can be created from \c DBG_VALUE instructions.  Those whose
 /// location changes over time use \a DebugLocListIndex, while those with a
-/// single instruction use \a MInsn and (optionally) a single entry of \a Expr.
+/// single location use \a ValueLoc and (optionally) a single entry of \a Expr.
 ///
 /// Variables that have been optimized out use none of these fields.
 class DbgVariable : public DbgEntity {
-  unsigned DebugLocListIndex = ~0u;          /// Offset in DebugLocs.
-  const MachineInstr *MInsn = nullptr;       /// DBG_VALUE instruction.
+  /// Offset in DebugLocs.
+  unsigned DebugLocListIndex = ~0u;
+  /// Single value location description.
+  std::unique_ptr<DebugLocEntry::Value> ValueLoc = nullptr;
 
   struct FrameIndexExpr {
     int FI;
@@ -135,7 +138,7 @@ public:
   /// Initialize from the MMI table.
   void initializeMMI(const DIExpression *E, int FI) {
     assert(FrameIndexExprs.empty() && "Already initialized?");
-    assert(!MInsn && "Already initialized?");
+    assert(!ValueLoc.get() && "Already initialized?");
 
     assert((!E || E->isValid()) && "Expected valid expression");
     assert(FI != std::numeric_limits<int>::max() && "Expected valid index");
@@ -143,20 +146,20 @@ public:
     FrameIndexExprs.push_back({FI, E});
   }
 
-  /// Initialize from a DBG_VALUE instruction.
-  void initializeDbgValue(const MachineInstr *DbgValue) {
+  // Initialize variable's location.
+  void initializeDbgValue(DebugLocEntry::Value Value) {
     assert(FrameIndexExprs.empty() && "Already initialized?");
-    assert(!MInsn && "Already initialized?");
+    assert(!ValueLoc && "Already initialized?");
+    assert(!Value.getExpression()->isFragment() && "Fragments not supported.");
 
-    assert(getVariable() == DbgValue->getDebugVariable() && "Wrong variable");
-    assert(getInlinedAt() == DbgValue->getDebugLoc()->getInlinedAt() &&
-           "Wrong inlined-at");
-
-    MInsn = DbgValue;
-    if (auto *E = DbgValue->getDebugExpression())
+    ValueLoc = llvm::make_unique<DebugLocEntry::Value>(Value);
+    if (auto *E = ValueLoc->getExpression())
       if (E->getNumElements())
         FrameIndexExprs.push_back({0, E});
   }
+
+  /// Initialize from a DBG_VALUE instruction.
+  void initializeDbgValue(const MachineInstr *DbgValue);
 
   // Accessors.
   const DILocalVariable *getVariable() const {
@@ -164,14 +167,14 @@ public:
   }
 
   const DIExpression *getSingleExpression() const {
-    assert(MInsn && FrameIndexExprs.size() <= 1);
+    assert(ValueLoc.get() && FrameIndexExprs.size() <= 1);
     return FrameIndexExprs.size() ? FrameIndexExprs[0].Expr : nullptr;
   }
 
   void setDebugLocListIndex(unsigned O) { DebugLocListIndex = O; }
   unsigned getDebugLocListIndex() const { return DebugLocListIndex; }
   StringRef getName() const { return getVariable()->getName(); }
-  const MachineInstr *getMInsn() const { return MInsn; }
+  const DebugLocEntry::Value *getValueLoc() const { return ValueLoc.get(); }
   /// Get the FI entries, sorted by fragment offset.
   ArrayRef<FrameIndexExpr> getFrameIndexExprs() const;
   bool hasFrameIndexExprs() const { return !FrameIndexExprs.empty(); }
@@ -204,7 +207,7 @@ public:
   }
 
   bool hasComplexAddress() const {
-    assert(MInsn && "Expected DBG_VALUE, not MMI variable");
+    assert(ValueLoc.get() && "Expected DBG_VALUE, not MMI variable");
     assert((FrameIndexExprs.empty() ||
             (FrameIndexExprs.size() == 1 &&
              FrameIndexExprs[0].Expr->getNumElements())) &&
@@ -547,8 +550,10 @@ class DwarfDebug : public DebugHandlerBase {
                          DenseSet<InlinedEntity> &ProcessedVars);
 
   /// Build the location list for all DBG_VALUEs in the
-  /// function that describe the same variable.
-  void buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
+  /// function that describe the same variable. If the resulting 
+  /// list has only one entry that is valid for entire variable's
+  /// scope return true.
+  bool buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
                          const DbgValueHistoryMap::Entries &Entries);
 
   /// Collect variable information from the side table maintained by MF.

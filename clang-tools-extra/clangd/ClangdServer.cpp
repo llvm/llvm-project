@@ -10,6 +10,7 @@
 #include "ClangdUnit.h"
 #include "CodeComplete.h"
 #include "FindSymbols.h"
+#include "Format.h"
 #include "FormattedString.h"
 #include "Headers.h"
 #include "Protocol.h"
@@ -250,20 +251,23 @@ ClangdServer::formatFile(llvm::StringRef Code, PathRef File) {
   return formatCode(Code, File, {tooling::Range(0, Code.size())});
 }
 
-llvm::Expected<tooling::Replacements>
-ClangdServer::formatOnType(llvm::StringRef Code, PathRef File, Position Pos) {
-  // Look for the previous opening brace from the character position and
-  // format starting from there.
+llvm::Expected<std::vector<TextEdit>>
+ClangdServer::formatOnType(llvm::StringRef Code, PathRef File, Position Pos,
+                           StringRef TriggerText) {
   llvm::Expected<size_t> CursorPos = positionToOffset(Code, Pos);
   if (!CursorPos)
     return CursorPos.takeError();
-  size_t PreviousLBracePos =
-      llvm::StringRef(Code).find_last_of('{', *CursorPos);
-  if (PreviousLBracePos == llvm::StringRef::npos)
-    PreviousLBracePos = *CursorPos;
-  size_t Len = *CursorPos - PreviousLBracePos;
+  auto FS = FSProvider.getFileSystem();
+  auto Style = format::getStyle(format::DefaultFormatStyle, File,
+                                format::DefaultFallbackStyle, Code, FS.get());
+  if (!Style)
+    return Style.takeError();
 
-  return formatCode(Code, File, {tooling::Range(PreviousLBracePos, Len)});
+  std::vector<TextEdit> Result;
+  for (const tooling::Replacement &R :
+       formatIncremental(Code, *CursorPos, TriggerText, *Style))
+    Result.push_back(replacementToEdit(Code, R));
+  return Result;
 }
 
 void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,

@@ -17,7 +17,7 @@
 #define SCUDO_DEBUG 0
 #endif
 
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+#define ARRAY_SIZE(A) (sizeof(A) / sizeof((A)[0]))
 
 // String related macros.
 

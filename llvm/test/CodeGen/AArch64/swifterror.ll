@@ -235,8 +235,6 @@ define void @foo_sret(%struct.S* sret %agg.result, i32 %val1, %swift_error** swi
 ; CHECK-O0: mov w{{.*}}, #16
 ; spill x8
 ; CHECK-O0-DAG: str x8
-; spill x21
-; CHECK-O0-DAG: str x21
 ; CHECK-O0: malloc
 ; CHECK-O0: mov [[ID:w[0-9]+]], #1
 ; CHECK-O0: strb [[ID]], [x0, #8]

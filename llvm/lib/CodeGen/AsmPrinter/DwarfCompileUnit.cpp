@@ -607,36 +607,27 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
     return VariableDie;
   }
 
-  // Check if variable is described by a DBG_VALUE instruction.
-  if (const MachineInstr *DVInsn = DV.getMInsn()) {
-    assert(DVInsn->getNumOperands() == 4);
-    if (DVInsn->getOperand(0).isReg()) {
-      auto RegOp = DVInsn->getOperand(0);
-      auto Op1 = DVInsn->getOperand(1);
-      // If the second operand is an immediate, this is an indirect value.
-      assert((!Op1.isImm() || (Op1.getImm() == 0)) && "unexpected offset");
-      MachineLocation Location(RegOp.getReg(), Op1.isImm());
-      addVariableAddress(DV, *VariableDie, Location);
-    } else if (DVInsn->getOperand(0).isImm()) {
-      // This variable is described by a single constant.
-      // Check whether it has a DIExpression.
+  // Check if variable has a single location description.
+  if (auto *DVal = DV.getValueLoc()) {
+    if (DVal->isLocation())
+      addVariableAddress(DV, *VariableDie, DVal->getLoc());
+    else if (DVal->isInt()) {
       auto *Expr = DV.getSingleExpression();
       if (Expr && Expr->getNumElements()) {
         DIELoc *Loc = new (DIEValueAllocator) DIELoc;
         DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
         // If there is an expression, emit raw unsigned bytes.
         DwarfExpr.addFragmentOffset(Expr);
-        DwarfExpr.addUnsignedConstant(DVInsn->getOperand(0).getImm());
+        DwarfExpr.addUnsignedConstant(DVal->getInt());
         DwarfExpr.addExpression(Expr);
         addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
       } else
-        addConstantValue(*VariableDie, DVInsn->getOperand(0), DV.getType());
-    } else if (DVInsn->getOperand(0).isFPImm())
-      addConstantFPValue(*VariableDie, DVInsn->getOperand(0));
-    else if (DVInsn->getOperand(0).isCImm())
-      addConstantValue(*VariableDie, DVInsn->getOperand(0).getCImm(),
-                       DV.getType());
-
+        addConstantValue(*VariableDie, DVal->getInt(), DV.getType());
+    } else if (DVal->isConstantFP()) {
+      addConstantFPValue(*VariableDie, DVal->getConstantFP());
+    } else if (DVal->isConstantInt()) {
+      addConstantValue(*VariableDie, DVal->getConstantInt(), DV.getType());
+    }
     return VariableDie;
   }
 

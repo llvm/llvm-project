@@ -378,6 +378,12 @@ void reportWarning(Twine Msg) {
   WithColor::warning(errs()) << Msg << "\n";
 }
 
+void warn(Error Err) {
+  handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
+    reportWarning(EI.message());
+  });
+}
+
 void error(Error EC) {
   if (!EC)
     return;

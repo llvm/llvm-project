@@ -1423,7 +1423,11 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> *ObjF,
         // This is only used (if Elf_Shdr present)for naming section in GNU
         // style
         DynSymtabName = unwrapOrError(Obj->getSectionName(&Sec));
-        DynamicStringTable = unwrapOrError(Obj->getStringTableForSymtab(Sec));
+
+        if (Expected<StringRef> E = Obj->getStringTableForSymtab(Sec))
+          DynamicStringTable = *E;
+        else
+          warn(E.takeError());
       }
       break;
     case ELF::SHT_SYMTAB_SHNDX:

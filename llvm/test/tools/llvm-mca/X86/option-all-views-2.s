@@ -17,6 +17,13 @@ add %eax, %eax
 # ALL-NEXT:        IPC:               0.97
 # ALL-NEXT:        Block RThroughput: 0.5
 
+# ALL:             Cycles with backend pressure increase [ 76.70% ]
+# ALL-NEXT:        Throughput Bottlenecks:
+# ALL-NEXT:          Resource Pressure       [ 0.00% ]
+# ALL-NEXT:          Data Dependencies:      [ 76.70% ]
+# ALL-NEXT:          - Register Dependencies [ 76.70% ]
+# ALL-NEXT:          - Memory Dependencies   [ 0.00% ]
+
 # ALL:             Instruction Info:
 # ALL-NEXT:        [1]: #uOps
 # ALL-NEXT:        [2]: Latency

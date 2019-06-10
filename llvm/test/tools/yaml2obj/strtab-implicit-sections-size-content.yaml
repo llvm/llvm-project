@@ -1,0 +1,167 @@
+## For implicit string table sections, `Size` and/or `Content` fields can also
+## be specified in YAML. Here we test the behavior in different cases.
+
+## When no `Size` or `Content` is specified for a string table section,
+## yaml2obj writes the default content.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-objdump %t1 -s | FileCheck %s --check-prefix=CASE1
+
+# CASE1:      Contents of section .strtab:
+# CASE1-NEXT:  0000 00666f6f 00 .foo.
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .strtab
+    Type:    SHT_STRTAB
+## Used to trigger adding string `foo` to the string table section.
+Symbols:
+  - Name:    foo
+
+## For string table sections, `Size` can be used to override the
+## implicit string table data. The content is filled with zeroes in this case.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj --section-data -S %t2 | FileCheck %s --check-prefix=CASE2
+
+# CASE2:      Name: .strtab
+# CASE2-NEXT: Type: SHT_STRTAB
+# CASE2-NEXT: Flags [
+# CASE2-NEXT: ]
+# CASE2-NEXT: Address: 0x0
+# CASE2-NEXT: Offset: 0x140
+# CASE2-NEXT: Size: 2
+# CASE2-NEXT: Link: 0
+# CASE2-NEXT: Info: 0
+# CASE2-NEXT: AddressAlignment: 0
+# CASE2-NEXT: EntrySize: 0
+# CASE2-NEXT: SectionData (
+# CASE2-NEXT:   0000: 0000
+# CASE2-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .strtab
+    Type:    SHT_STRTAB
+    Size:    2
+## Used to trigger adding string `foo` to the string table section.
+Symbols:
+  - Name:    foo
+
+## For string table sections, `Content` can be used to override the
+## implicit string table data.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readobj --section-data -S %t3 | FileCheck %s --check-prefix=CASE3
+
+# CASE3:      Name: .strtab
+# CASE3-NEXT: Type: SHT_STRTAB
+# CASE3-NEXT: Flags [
+# CASE3-NEXT: ]
+# CASE3-NEXT: Address: 0x0
+# CASE3-NEXT: Offset: 0x140
+# CASE3-NEXT: Size: 2
+# CASE3-NEXT: Link: 0
+# CASE3-NEXT: Info: 0
+# CASE3-NEXT: AddressAlignment: 0
+# CASE3-NEXT: EntrySize: 0
+# CASE3-NEXT: SectionData (
+# CASE3-NEXT:   0000: 0102
+# CASE3-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .strtab
+    Type:    SHT_STRTAB
+    Content: "0102"
+## Used to trigger adding string `foo` to the string table section.
+Symbols:
+  - Name:    foo
+
+## For string table sections, check we can specify both `Size` and `Content`
+## when size is greater than content size. In this case zeroes are
+## added as padding after the specified content.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-readobj --section-data -S %t4 | FileCheck %s --check-prefix=CASE4
+
+# CASE4:      Name: .strtab
+# CASE4-NEXT: Type: SHT_STRTAB
+# CASE4-NEXT: Flags [
+# CASE4-NEXT: ]
+# CASE4-NEXT: Address: 0x0
+# CASE4-NEXT: Offset: 0x140
+# CASE4-NEXT: Size: 3
+# CASE4-NEXT: Link: 0
+# CASE4-NEXT: Info: 0
+# CASE4-NEXT: AddressAlignment: 0
+# CASE4-NEXT: EntrySize: 0
+# CASE4-NEXT: SectionData (
+# CASE4-NEXT:   0000: 010200
+# CASE4-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .strtab
+    Type:    SHT_STRTAB
+    Content: "0102"
+    Size:    3
+## Used to trigger adding string `foo` to the string table section.
+Symbols:
+  - Name:    foo
+
+## For string table sections, check we can specify both `Size` and `Content`
+## when size is equal to content size.
+
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: llvm-readobj --section-data -S %t5 | FileCheck %s --check-prefix=CASE5
+
+# CASE5:      Name: .strtab
+# CASE5-NEXT: Type: SHT_STRTAB
+# CASE5-NEXT: Flags [ (0x0)
+# CASE5-NEXT: ]
+# CASE5-NEXT: Address: 0x0
+# CASE5-NEXT: Offset: 0x140
+# CASE5-NEXT: Size: 2
+# CASE5-NEXT: Link: 0
+# CASE5-NEXT: Info: 0
+# CASE5-NEXT: AddressAlignment: 0
+# CASE5-NEXT: EntrySize: 0
+# CASE5-NEXT: SectionData (
+# CASE5-NEXT:   0000: 0102
+# CASE5-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .strtab
+    Type:    SHT_STRTAB
+    Content: "0102"
+    Size:    2
+## Used to trigger adding string `foo` to the string table section.
+Symbols:
+  - Name:    foo
