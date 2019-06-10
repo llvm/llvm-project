@@ -416,7 +416,7 @@ def : Pat<(f128 (X86fxor VR128:$src1, VR128:$src2)),
           (XORPSrr VR128:$src1, VR128:$src2)>;
 }
 
-let Predicates = [HasAVX] in {
+let Predicates = [HasAVX, NoVLX] in {
 // andps is shorter than andpd or pand. andps is SSE and andpd/pand are in SSE2
 def : Pat<(f128 (X86fand VR128:$src1, (loadf128 addr:$src2))),
           (VANDPSrm VR128:$src1, f128mem:$src2)>;
@@ -435,4 +435,25 @@ def : Pat<(f128 (X86fxor VR128:$src1, (loadf128 addr:$src2))),
 
 def : Pat<(f128 (X86fxor VR128:$src1, VR128:$src2)),
           (VXORPSrr VR128:$src1, VR128:$src2)>;
+}
+
+let Predicates = [HasVLX] in {
+// andps is shorter than andpd or pand. andps is SSE and andpd/pand are in SSE2
+def : Pat<(f128 (X86fand VR128X:$src1, (loadf128 addr:$src2))),
+          (VANDPSZ128rm VR128X:$src1, f128mem:$src2)>;
+
+def : Pat<(f128 (X86fand VR128X:$src1, VR128X:$src2)),
+          (VANDPSZ128rr VR128X:$src1, VR128X:$src2)>;
+
+def : Pat<(f128 (X86for VR128X:$src1, (loadf128 addr:$src2))),
+          (VORPSZ128rm VR128X:$src1, f128mem:$src2)>;
+
+def : Pat<(f128 (X86for VR128X:$src1, VR128X:$src2)),
+          (VORPSZ128rr VR128X:$src1, VR128X:$src2)>;
+
+def : Pat<(f128 (X86fxor VR128X:$src1, (loadf128 addr:$src2))),
+          (VXORPSZ128rm VR128X:$src1, f128mem:$src2)>;
+
+def : Pat<(f128 (X86fxor VR128X:$src1, VR128X:$src2)),
+          (VXORPSZ128rr VR128X:$src1, VR128X:$src2)>;
 }

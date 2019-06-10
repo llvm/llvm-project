@@ -122,28 +122,13 @@ define i32 @ctpop_eq_one(i64 %x) nounwind readnone {
 ;
 ; NO-POPCOUNT-LABEL: ctpop_eq_one:
 ; NO-POPCOUNT:       # %bb.0:
-; NO-POPCOUNT-NEXT:    movq %rdi, %rax
-; NO-POPCOUNT-NEXT:    shrq %rax
-; NO-POPCOUNT-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
-; NO-POPCOUNT-NEXT:    andq %rax, %rcx
-; NO-POPCOUNT-NEXT:    subq %rcx, %rdi
-; NO-POPCOUNT-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
-; NO-POPCOUNT-NEXT:    movq %rdi, %rcx
-; NO-POPCOUNT-NEXT:    andq %rax, %rcx
-; NO-POPCOUNT-NEXT:    shrq $2, %rdi
-; NO-POPCOUNT-NEXT:    andq %rax, %rdi
-; NO-POPCOUNT-NEXT:    addq %rcx, %rdi
-; NO-POPCOUNT-NEXT:    movq %rdi, %rax
-; NO-POPCOUNT-NEXT:    shrq $4, %rax
-; NO-POPCOUNT-NEXT:    addq %rdi, %rax
-; NO-POPCOUNT-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
-; NO-POPCOUNT-NEXT:    andq %rax, %rcx
-; NO-POPCOUNT-NEXT:    movabsq $72340172838076673, %rdx # imm = 0x101010101010101
-; NO-POPCOUNT-NEXT:    imulq %rcx, %rdx
-; NO-POPCOUNT-NEXT:    shrq $56, %rdx
-; NO-POPCOUNT-NEXT:    xorl %eax, %eax
-; NO-POPCOUNT-NEXT:    cmpq $1, %rdx
+; NO-POPCOUNT-NEXT:    leaq -1(%rdi), %rax
+; NO-POPCOUNT-NEXT:    testq %rax, %rdi
 ; NO-POPCOUNT-NEXT:    sete %al
+; NO-POPCOUNT-NEXT:    testq %rdi, %rdi
+; NO-POPCOUNT-NEXT:    setne %cl
+; NO-POPCOUNT-NEXT:    andb %al, %cl
+; NO-POPCOUNT-NEXT:    movzbl %cl, %eax
 ; NO-POPCOUNT-NEXT:    retq
   %count = tail call i64 @llvm.ctpop.i64(i64 %x)
   %cmp = icmp eq i64 %count, 1

@@ -5657,51 +5657,6 @@ defm VOR   : avx512_fp_binop_p<0x56, "vor", null_frag, HasDQI,
 defm VXOR  : avx512_fp_binop_p<0x57, "vxor", null_frag, HasDQI,
                                SchedWriteFLogicSizes, 1>;
 
-let Predicates = [HasVLX,HasDQI] in {
-  // Use packed logical operations for scalar ops.
-  def : Pat<(f64 (X86fand FR64X:$src1, FR64X:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (VANDPDZ128rr (v2f64 (COPY_TO_REGCLASS FR64X:$src1, VR128X)),
-                                  (v2f64 (COPY_TO_REGCLASS FR64X:$src2, VR128X)))),
-             FR64X)>;
-  def : Pat<(f64 (X86for FR64X:$src1, FR64X:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (VORPDZ128rr (v2f64 (COPY_TO_REGCLASS FR64X:$src1, VR128X)),
-                                 (v2f64 (COPY_TO_REGCLASS FR64X:$src2, VR128X)))),
-             FR64X)>;
-  def : Pat<(f64 (X86fxor FR64X:$src1, FR64X:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (VXORPDZ128rr (v2f64 (COPY_TO_REGCLASS FR64X:$src1, VR128X)),
-                                  (v2f64 (COPY_TO_REGCLASS FR64X:$src2, VR128X)))),
-             FR64X)>;
-  def : Pat<(f64 (X86fandn FR64X:$src1, FR64X:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (VANDNPDZ128rr (v2f64 (COPY_TO_REGCLASS FR64X:$src1, VR128X)),
-                                   (v2f64 (COPY_TO_REGCLASS FR64X:$src2, VR128X)))),
-             FR64X)>;
-
-  def : Pat<(f32 (X86fand FR32X:$src1, FR32X:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (VANDPSZ128rr (v4f32 (COPY_TO_REGCLASS FR32X:$src1, VR128X)),
-                                  (v4f32 (COPY_TO_REGCLASS FR32X:$src2, VR128X)))),
-             FR32X)>;
-  def : Pat<(f32 (X86for FR32X:$src1, FR32X:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (VORPSZ128rr (v4f32 (COPY_TO_REGCLASS FR32X:$src1, VR128X)),
-                                 (v4f32 (COPY_TO_REGCLASS FR32X:$src2, VR128X)))),
-             FR32X)>;
-  def : Pat<(f32 (X86fxor FR32X:$src1, FR32X:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (VXORPSZ128rr (v4f32 (COPY_TO_REGCLASS FR32X:$src1, VR128X)),
-                                  (v4f32 (COPY_TO_REGCLASS FR32X:$src2, VR128X)))),
-             FR32X)>;
-  def : Pat<(f32 (X86fandn FR32X:$src1, FR32X:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (VANDNPSZ128rr (v4f32 (COPY_TO_REGCLASS FR32X:$src1, VR128X)),
-                                   (v4f32 (COPY_TO_REGCLASS FR32X:$src2, VR128X)))),
-             FR32X)>;
-}
-
 multiclass avx512_fp_scalef_p<bits<8> opc, string OpcodeStr, SDNode OpNode,
                               X86FoldableSchedWrite sched, X86VectorVTInfo _> {
   let ExeDomain = _.ExeDomain in {
