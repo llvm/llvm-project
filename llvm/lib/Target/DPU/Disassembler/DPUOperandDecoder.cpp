@@ -27,8 +27,10 @@
 
 using namespace llvm;
 
-#define GET_REGINFO_ENUM
+#define GET_INSTRINFO_ENUM
+#include "DPUGenInstrInfo.inc"
 
+#define GET_REGINFO_ENUM
 #include "DPUGenRegisterInfo.inc"
 
 // Decoded registers, with respect to their indexing in the DPU. See
@@ -176,12 +178,30 @@ MCDisassembler::DecodeStatus DPUOperandDecoder::Decode_false_cc(MCInst &MI) {
   return MCDisassembler::Success;
 }
 
+#define FIXUP_PC(pc) (0x80000000 | (unsigned)((pc) * 8))
+
 MCDisassembler::DecodeStatus DPUOperandDecoder::Decode_pc(llvm::MCInst &MI,
                                                           uint64_t Value) {
   LLVM_DEBUG(dbgs() << "PC << " << Value << "\n");
-  // Re-adjust PC to linker fixup
-  unsigned fixedUp = 0x80000000 | (unsigned)(Value * 8);
-  DecodePC(MI, fixedUp, Address, Decoder);
+  DecodePC(MI, FIXUP_PC(Value), Address, Decoder);
+  return MCDisassembler::Success;
+}
+
+static MCDisassembler::DecodeStatus DecodeOff(MCInst &MI, int32_t Value,
+                                              const MCDisassembler *Decoder) {
+  switch (MI.getOpcode()) {
+  case DPU::CALLrri:
+  case DPU::JUMPri:
+  case DPU::CALLzri: {
+    const MCOperand &lastOperand = MI.getOperand(MI.getNumOperands() - 1);
+    if (lastOperand.isReg() && lastOperand.getReg() == DPU::ZERO &&
+        tryAddingSymbolicOperand(FIXUP_PC(Value), true, 0, 2, 23, MI, Decoder))
+      return MCDisassembler::Success;
+  }
+  default:
+    break;
+  }
+  MI.addOperand(MCOperand::createImm(Value));
   return MCDisassembler::Success;
 }
 
@@ -190,14 +210,14 @@ MCDisassembler::DecodeStatus DPUOperandDecoder::Decode_off(llvm::MCInst &MI,
                                                            int32_t ValueSize) {
   LLVM_DEBUG(dbgs() << "off << " << Value << "\n");
   Value = Value | ((-(Value >> (ValueSize - 1))) << ValueSize);
-  MI.addOperand(MCOperand::createImm(Value));
+  DecodeOff(MI, Value, Decoder);
   return MCDisassembler::Success;
 }
 
 MCDisassembler::DecodeStatus DPUOperandDecoder::Decode_off(llvm::MCInst &MI,
                                                            int32_t Value) {
   LLVM_DEBUG(dbgs() << "off << " << Value << "\n");
-  MI.addOperand(MCOperand::createImm(Value));
+  DecodeOff(MI, Value, Decoder);
   return MCDisassembler::Success;
 }
 
