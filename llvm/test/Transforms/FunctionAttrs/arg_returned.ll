@@ -308,17 +308,11 @@ define i32* @calls_unknown_fn(i32* %r) #0 {
 ;
 ; Verify the maybe-redefined function is not annotated:
 ;
-; CHECK: Function Attrs: noinline norecurse nounwind uwtable
+; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK: define linkonce_odr i32* @maybe_redefined_fn(i32* %r)
-; FIXME: We should not derive norecurse for potentially redefined functions!
-;        Function Attrs: noinline nounwind uwtable
-;        define linkonce_odr i32* @maybe_redefined_fn(i32* %r)
 ;
-; CHECK: Function Attrs: noinline norecurse nounwind uwtable
+; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK: define i32* @calls_maybe_redefined_fn(i32* returned %r)
-; FIXME: We should not derive norecurse for potentially redefined functions!
-;        Function Attrs: noinline nounwind uwtable
-;        define i32* @calls_maybe_redefined_fn(i32* returned %r)
 define linkonce_odr i32* @maybe_redefined_fn(i32* %r) #0 {
 entry:
   ret i32* %r
@@ -586,5 +580,4 @@ attributes #0 = { noinline nounwind uwtable }
 ; CHECK-DAG: attributes #{{[0-9]*}} = { noinline nounwind readnone uwtable }
 ; CHECK-DAG: attributes #{{[0-9]*}} = { noinline nounwind readonly uwtable }
 ; CHECK-DAG: attributes #{{[0-9]*}} = { noinline nounwind uwtable }
-; CHECK-DAG: attributes #{{[0-9]*}} = { noinline norecurse nounwind uwtable }
 ; CHECK-NOT: attributes #

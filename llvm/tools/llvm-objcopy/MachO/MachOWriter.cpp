@@ -462,7 +462,7 @@ Error MachOWriter::layout() {
     for (auto &Sec : LC.Sections) {
       if (!Sec.isVirtualSection()) {
         auto FilePaddingSize =
-            OffsetToAlignment(FileOffsetInSegment, 1 << Sec.Align);
+            OffsetToAlignment(FileOffsetInSegment, 1ull << Sec.Align);
         Sec.Offset = Offset + FileOffsetInSegment + FilePaddingSize;
         Sec.Size = Sec.Content.size();
         FileOffsetInSegment += FilePaddingSize + Sec.Size;

@@ -4409,11 +4409,6 @@ let Predicates = [HasAVX512] in {
   def : Pat<(v4i64 (X86vzmovl (insert_subvector undef,
                    (v2i64 (scalar_to_vector (loadi64 addr:$src))), (iPTR 0)))),
             (SUBREG_TO_REG (i64 0), (v2i64 (VMOVQI2PQIZrm addr:$src)), sub_xmm)>;
-
-  // Extract and store.
-  def : Pat<(store (f32 (extractelt (v4f32 VR128X:$src), (iPTR 0))),
-                   addr:$dst),
-            (VMOVSSZmr addr:$dst, (COPY_TO_REGCLASS (v4f32 VR128X:$src), FR32X))>;
 }
 
 let ExeDomain = SSEPackedInt, SchedRW = [SchedWriteVecLogic.XMM] in {
@@ -5661,51 +5656,6 @@ defm VOR   : avx512_fp_binop_p<0x56, "vor", null_frag, HasDQI,
                                SchedWriteFLogicSizes, 1>;
 defm VXOR  : avx512_fp_binop_p<0x57, "vxor", null_frag, HasDQI,
                                SchedWriteFLogicSizes, 1>;
-
-let Predicates = [HasVLX,HasDQI] in {
-  // Use packed logical operations for scalar ops.
-  def : Pat<(f64 (X86fand FR64X:$src1, FR64X:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (VANDPDZ128rr (v2f64 (COPY_TO_REGCLASS FR64X:$src1, VR128X)),
-                                  (v2f64 (COPY_TO_REGCLASS FR64X:$src2, VR128X)))),
-             FR64X)>;
-  def : Pat<(f64 (X86for FR64X:$src1, FR64X:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (VORPDZ128rr (v2f64 (COPY_TO_REGCLASS FR64X:$src1, VR128X)),
-                                 (v2f64 (COPY_TO_REGCLASS FR64X:$src2, VR128X)))),
-             FR64X)>;
-  def : Pat<(f64 (X86fxor FR64X:$src1, FR64X:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (VXORPDZ128rr (v2f64 (COPY_TO_REGCLASS FR64X:$src1, VR128X)),
-                                  (v2f64 (COPY_TO_REGCLASS FR64X:$src2, VR128X)))),
-             FR64X)>;
-  def : Pat<(f64 (X86fandn FR64X:$src1, FR64X:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (VANDNPDZ128rr (v2f64 (COPY_TO_REGCLASS FR64X:$src1, VR128X)),
-                                   (v2f64 (COPY_TO_REGCLASS FR64X:$src2, VR128X)))),
-             FR64X)>;
-
-  def : Pat<(f32 (X86fand FR32X:$src1, FR32X:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (VANDPSZ128rr (v4f32 (COPY_TO_REGCLASS FR32X:$src1, VR128X)),
-                                  (v4f32 (COPY_TO_REGCLASS FR32X:$src2, VR128X)))),
-             FR32X)>;
-  def : Pat<(f32 (X86for FR32X:$src1, FR32X:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (VORPSZ128rr (v4f32 (COPY_TO_REGCLASS FR32X:$src1, VR128X)),
-                                 (v4f32 (COPY_TO_REGCLASS FR32X:$src2, VR128X)))),
-             FR32X)>;
-  def : Pat<(f32 (X86fxor FR32X:$src1, FR32X:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (VXORPSZ128rr (v4f32 (COPY_TO_REGCLASS FR32X:$src1, VR128X)),
-                                  (v4f32 (COPY_TO_REGCLASS FR32X:$src2, VR128X)))),
-             FR32X)>;
-  def : Pat<(f32 (X86fandn FR32X:$src1, FR32X:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (VANDNPSZ128rr (v4f32 (COPY_TO_REGCLASS FR32X:$src1, VR128X)),
-                                   (v4f32 (COPY_TO_REGCLASS FR32X:$src2, VR128X)))),
-             FR32X)>;
-}
 
 multiclass avx512_fp_scalef_p<bits<8> opc, string OpcodeStr, SDNode OpNode,
                               X86FoldableSchedWrite sched, X86VectorVTInfo _> {
@@ -7571,14 +7521,6 @@ def : Pat<(f64 (fpextend (loadf32 addr:$src))),
           (VCVTSS2SDZrm (f64 (IMPLICIT_DEF)), addr:$src)>,
           Requires<[HasAVX512, OptForSize]>;
 
-def : Pat<(f64 (extloadf32 addr:$src)),
-          (VCVTSS2SDZrm (f64 (IMPLICIT_DEF)), addr:$src)>,
-      Requires<[HasAVX512, OptForSize]>;
-
-def : Pat<(f64 (extloadf32 addr:$src)),
-          (VCVTSS2SDZrr (f64 (IMPLICIT_DEF)), (VMOVSSZrm addr:$src))>,
-          Requires<[HasAVX512, OptForSpeed]>;
-
 def : Pat<(f32 (fpround FR64X:$src)),
           (VCVTSD2SSZrr (f32 (IMPLICIT_DEF)), FR64X:$src)>,
            Requires<[HasAVX512]>;
@@ -9259,39 +9201,15 @@ multiclass avx512_rndscale_scalar<bits<8> opc, string OpcodeStr,
   }
 
   let Predicates = [HasAVX512] in {
-    def : Pat<(ffloor _.FRC:$src),
+    def : Pat<(X86VRndScale _.FRC:$src1, imm:$src2),
               (_.EltVT (!cast<Instruction>(NAME##r) (_.EltVT (IMPLICIT_DEF)),
-               _.FRC:$src, (i32 0x9)))>;
-    def : Pat<(fceil _.FRC:$src),
-              (_.EltVT (!cast<Instruction>(NAME##r) (_.EltVT (IMPLICIT_DEF)),
-               _.FRC:$src, (i32 0xa)))>;
-    def : Pat<(ftrunc _.FRC:$src),
-              (_.EltVT (!cast<Instruction>(NAME##r) (_.EltVT (IMPLICIT_DEF)),
-               _.FRC:$src, (i32 0xb)))>;
-    def : Pat<(frint _.FRC:$src),
-              (_.EltVT (!cast<Instruction>(NAME##r) (_.EltVT (IMPLICIT_DEF)),
-               _.FRC:$src, (i32 0x4)))>;
-    def : Pat<(fnearbyint _.FRC:$src),
-              (_.EltVT (!cast<Instruction>(NAME##r) (_.EltVT (IMPLICIT_DEF)),
-               _.FRC:$src, (i32 0xc)))>;
+               _.FRC:$src1, imm:$src2))>;
   }
 
   let Predicates = [HasAVX512, OptForSize] in {
-    def : Pat<(ffloor (_.ScalarLdFrag addr:$src)),
+    def : Pat<(X86VRndScale (_.ScalarLdFrag addr:$src1), imm:$src2),
               (_.EltVT (!cast<Instruction>(NAME##m) (_.EltVT (IMPLICIT_DEF)),
-               addr:$src, (i32 0x9)))>;
-    def : Pat<(fceil (_.ScalarLdFrag addr:$src)),
-              (_.EltVT (!cast<Instruction>(NAME##m) (_.EltVT (IMPLICIT_DEF)),
-               addr:$src, (i32 0xa)))>;
-    def : Pat<(ftrunc (_.ScalarLdFrag addr:$src)),
-              (_.EltVT (!cast<Instruction>(NAME##m) (_.EltVT (IMPLICIT_DEF)),
-               addr:$src, (i32 0xb)))>;
-    def : Pat<(frint (_.ScalarLdFrag addr:$src)),
-              (_.EltVT (!cast<Instruction>(NAME##m) (_.EltVT (IMPLICIT_DEF)),
-               addr:$src, (i32 0x4)))>;
-    def : Pat<(fnearbyint (_.ScalarLdFrag addr:$src)),
-              (_.EltVT (!cast<Instruction>(NAME##m) (_.EltVT (IMPLICIT_DEF)),
-               addr:$src, (i32 0xc)))>;
+               addr:$src1, imm:$src2))>;
   }
 }
 

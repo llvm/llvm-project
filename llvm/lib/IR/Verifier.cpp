@@ -43,7 +43,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LLVMContextImpl.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -308,7 +307,6 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   TBAAVerifier TBAAVerifyHelper;
 
   void checkAtomicMemAccessSize(Type *Ty, const Instruction *I);
-  static bool containsScalableVectorValue(const Type *Ty);
 
 public:
   explicit Verifier(raw_ostream *OS, bool ShouldTreatBrokenDebugInfoAsError,
@@ -319,33 +317,6 @@ public:
   }
 
   bool hasBrokenDebugInfo() const { return BrokenDebugInfo; }
-
-  bool verifyTypes(const Module &M) {
-    LLVMContext &Ctx = M.getContext();
-    for (auto &Entry : Ctx.pImpl->ArrayTypes) {
-      ArrayType *ATy = Entry.second;
-      if (containsScalableVectorValue(ATy)) {
-        CheckFailed("Arrays cannot contain scalable vectors", ATy, &M);
-        Broken = true;
-      }
-    }
-
-    for (StructType* STy : Ctx.pImpl->AnonStructTypes)
-      if (containsScalableVectorValue(STy)) {
-        CheckFailed("Structs cannot contain scalable vectors", STy, &M);
-        Broken = true;
-      }
-
-    for (auto &Entry : Ctx.pImpl->NamedStructTypes) {
-      StructType *STy = Entry.second;
-      if (containsScalableVectorValue(STy)) {
-        CheckFailed("Structs cannot contain scalable vectors", STy, &M);
-        Broken = true;
-      }
-    }
-
-    return !Broken;
-  }
 
   bool verify(const Function &F) {
     assert(F.getParent() == &M &&
@@ -415,8 +386,6 @@ public:
     visitModuleCommandLines(M);
 
     verifyCompileUnits();
-
-    verifyTypes(M);
 
     verifyDeoptimizeCallingConvs();
     DISubprogramAttachments.clear();
@@ -644,35 +613,6 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
   });
 }
 
-// Check for a scalable vector type, making sure to look through arrays and
-// structs. Pointers to scalable vectors don't count, since we know what the
-// size of a pointer is.
-static bool containsScalableVectorValueRecursive(const Type *Ty,
-                                        SmallVectorImpl<const Type*> &Visited) {
-  if (is_contained(Visited, Ty))
-    return false;
-
-  Visited.push_back(Ty);
-
-  if (auto *VTy = dyn_cast<VectorType>(Ty))
-    return VTy->isScalable();
-
-  if (auto *ATy = dyn_cast<ArrayType>(Ty))
-    return containsScalableVectorValueRecursive(ATy->getElementType(), Visited);
-
-  if (auto *STy = dyn_cast<StructType>(Ty))
-    for (Type *EltTy : STy->elements())
-      if (containsScalableVectorValueRecursive(EltTy, Visited))
-        return true;
-
-  return false;
-}
-
-bool Verifier::containsScalableVectorValue(const Type *Ty) {
-  SmallVector<const Type*, 16> VisitedList = {};
-  return containsScalableVectorValueRecursive(Ty, VisitedList);
-}
-
 void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
   if (GV.hasInitializer()) {
     Assert(GV.getInitializer()->getType() == GV.getValueType(),
@@ -750,12 +690,6 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
       AssertDI(false, "!dbg attachment of global variable must be a "
                       "DIGlobalVariableExpression");
   }
-
-  // Scalable vectors cannot be global variables, since we don't know
-  // the runtime size. Need to look inside structs/arrays to find the
-  // underlying element type as well.
-  if (containsScalableVectorValue(GV.getValueType()))
-    CheckFailed("Globals cannot contain scalable vectors", &GV);
 
   if (!GV.hasInitializer()) {
     visitGlobalValue(GV);

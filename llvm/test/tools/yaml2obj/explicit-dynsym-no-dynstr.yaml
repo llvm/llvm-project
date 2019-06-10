@@ -1,0 +1,22 @@
+## Check we do not crash/assert when .dynsym is specified
+## explicitly, but .dynstr is not present.
+
+# RUN: yaml2obj %s -o %t
+# RUN: not llvm-readelf --section-headers %t 2>&1 | FileCheck %s
+
+## TODO: Check that .dynsym has Link field set to 0.
+##       GNU readelf is able to dump sections headers,
+##       but llvm-readelf reports an error below too early.
+##       See https://bugs.llvm.org/show_bug.cgi?id=42215.
+
+# CHECK: error: invalid sh_type for string table, expected SHT_STRTAB
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynsym
+    Type: SHT_SYMTAB

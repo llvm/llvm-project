@@ -61,11 +61,10 @@ body:             |
 
     ; CHECK-LABEL: name: using_icmp
     ; CHECK: liveins: $s0, $w0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32sp = COPY $w0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 0
     ; CHECK: [[FMOVS0_:%[0-9]+]]:fpr32 = FMOVS0
-    ; CHECK: $wzr = SUBSWrr [[COPY]], [[MOVi32imm]], implicit-def $nzcv
+    ; CHECK: $wzr = SUBSWri [[COPY]], 0, 0, implicit-def $nzcv
     ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK: [[COPY2:%[0-9]+]]:fpr32 = COPY [[CSINCWr]]
     ; CHECK: [[COPY3:%[0-9]+]]:gpr32 = COPY [[COPY2]]

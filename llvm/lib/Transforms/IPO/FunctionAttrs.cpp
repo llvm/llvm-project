@@ -1300,7 +1300,7 @@ static bool addNoRecurseAttrs(const SCCNodeSet &SCCNodes) {
     return false;
 
   Function *F = *SCCNodes.begin();
-  if (!F || F->isDeclaration() || F->doesNotRecurse())
+  if (!F || !F->hasExactDefinition() || F->doesNotRecurse())
     return false;
 
   // If all of the calls in F are identifiable and are to norecurse functions, F

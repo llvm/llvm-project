@@ -1775,8 +1775,7 @@ Error BitcodeReader::parseTypeTableBody() {
         return error("Invalid type");
       ResultTy = ArrayType::get(ResultTy, Record[0]);
       break;
-    case bitc::TYPE_CODE_VECTOR:    // VECTOR: [numelts, eltty] or
-                                    //         [numelts, eltty, scalable]
+    case bitc::TYPE_CODE_VECTOR:    // VECTOR: [numelts, eltty]
       if (Record.size() < 2)
         return error("Invalid record");
       if (Record[0] == 0)
@@ -1784,8 +1783,7 @@ Error BitcodeReader::parseTypeTableBody() {
       ResultTy = getTypeByID(Record[1]);
       if (!ResultTy || !StructType::isValidElementType(ResultTy))
         return error("Invalid type");
-      bool Scalable = Record.size() > 2 ? Record[2] : false;
-      ResultTy = VectorType::get(ResultTy, Record[0], Scalable);
+      ResultTy = VectorType::get(ResultTy, Record[0]);
       break;
     }
 

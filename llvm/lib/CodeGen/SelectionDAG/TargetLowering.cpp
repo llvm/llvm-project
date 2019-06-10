@@ -2691,7 +2691,18 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         return DAG.getSetCC(dl, VT, And, DAG.getConstant(0, dl, CTVT), CC);
       }
 
-      // TODO: (ctpop x) == 1 -> x && (x & x-1) == 0 iff ctpop is illegal.
+      // (ctpop x) == 1 -> x && (x & x-1) == 0 iff ctpop is illegal.
+      if (Cond == ISD::SETEQ && C1 == 1 &&
+          !isOperationLegalOrCustom(ISD::CTPOP, CTVT)) {
+        SDValue Sub =
+            DAG.getNode(ISD::SUB, dl, CTVT, CTOp, DAG.getConstant(1, dl, CTVT));
+        SDValue And = DAG.getNode(ISD::AND, dl, CTVT, CTOp, Sub);
+        SDValue LHS = DAG.getSetCC(dl, VT, CTOp, DAG.getConstant(0, dl, CTVT),
+                                   ISD::SETUGT);
+        SDValue RHS =
+            DAG.getSetCC(dl, VT, And, DAG.getConstant(0, dl, CTVT), ISD::SETEQ);
+        return DAG.getNode(ISD::AND, dl, VT, LHS, RHS);
+      }
     }
 
     // (zext x) == C --> x == (trunc C)

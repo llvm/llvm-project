@@ -8,6 +8,7 @@
 ; Should be transformed into:
 ;   x u<= C
 ; Iff: isPowerOf2(C + 1)
+; C can be 0 and -1.
 
 declare i8 @gen8()
 declare <2 x i8> @gen2x8()
@@ -67,6 +68,30 @@ define <2 x i1> @p2_vec_nonsplat() {
 ;
   %x = call <2 x i8> @gen2x8()
   %tmp0 = and <2 x i8> %x, <i8 3, i8 15> ; doesn't have to be splat.
+  %ret = icmp ule <2 x i8> %x, %tmp0
+  ret <2 x i1> %ret
+}
+
+define <2 x i1> @p2_vec_nonsplat_edgecase0() {
+; CHECK-LABEL: @p2_vec_nonsplat_edgecase0(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x i8> @gen2x8()
+; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i8> [[X]], <i8 3, i8 0>
+; CHECK-NEXT:    [[RET:%.*]] = icmp ule <2 x i8> [[X]], [[TMP0]]
+; CHECK-NEXT:    ret <2 x i1> [[RET]]
+;
+  %x = call <2 x i8> @gen2x8()
+  %tmp0 = and <2 x i8> %x, <i8 3, i8 0>
+  %ret = icmp ule <2 x i8> %x, %tmp0
+  ret <2 x i1> %ret
+}
+define <2 x i1> @p2_vec_nonsplat_edgecase1() {
+; CHECK-LABEL: @p2_vec_nonsplat_edgecase1(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x i8> @gen2x8()
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i8> [[X]], <i8 3, i8 -1>
+; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+;
+  %x = call <2 x i8> @gen2x8()
+  %tmp0 = and <2 x i8> %x, <i8 3, i8 -1>
   %ret = icmp ule <2 x i8> %x, %tmp0
   ret <2 x i1> %ret
 }

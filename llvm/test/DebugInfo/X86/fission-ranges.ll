@@ -161,7 +161,7 @@ for.inc10:                                        ; preds = %for.body9
 
 for.inc13:                                        ; preds = %for.inc10
   %inc14 = add i32 %d.06, 1, !dbg !37
-  tail call void @llvm.dbg.value(metadata i32 %inc14, metadata !16, metadata !DIExpression()), !dbg !37
+  tail call void @llvm.dbg.value(metadata i32 %inc14, metadata !16, metadata !DIExpression()), !dbg !42
   %exitcond12 = icmp eq i32 %inc14, 30, !dbg !37
   br i1 %exitcond12, label %for.inc16, label %for.cond4.preheader, !dbg !37
 

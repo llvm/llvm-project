@@ -314,6 +314,16 @@ public:
 
   static lldb_private::ConstString GetPluginNameStatic();
 
+  static char ID;
+
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || CPPLanguageRuntime::isA(ClassID);
+  }
+
+  static bool classof(const LanguageRuntime *runtime) {
+    return runtime->isA(&ID);
+  }
+
   static bool IsRenderScriptModule(const lldb::ModuleSP &module_sp);
 
   static ModuleKind GetModuleKind(const lldb::ModuleSP &module_sp);
