@@ -4533,6 +4533,39 @@ static void handleSuppressAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       DiagnosticIdentifiers.size(), AL.getAttributeSpellingListIndex()));
 }
 
+static void handleLifetimeCategoryAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+ // if (!checkAttributeAtLeastNumArgs(S, AL, 1))
+  //  return;
+
+  if (checkAttrMutualExclusion<OwnerAttr>(S, D, AL))
+    return;
+  if (checkAttrMutualExclusion<PointerAttr>(S, D, AL))
+    return;
+
+  if (!AL.hasParsedType()) {
+    S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
+    return;
+  }
+
+  TypeSourceInfo *DerefTypeLoc = nullptr;
+  QualType ParmType = S.GetTypeFromParser(AL.getTypeArg(), &DerefTypeLoc);
+  assert(DerefTypeLoc && "no type source info for attribute argument");
+
+  if (ParmType->isVoidType()) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_type_not_supported) << AL << "'void'";
+    return;
+  }
+
+  if(AL.getKind() ==  ParsedAttr::AT_Owner) {
+    D->addAttr(::new (S.Context) OwnerAttr(
+      AL.getRange(), S.Context, DerefTypeLoc, AL.getAttributeSpellingListIndex()));
+  }
+  else {
+    D->addAttr(::new (S.Context) PointerAttr(
+      AL.getRange(), S.Context, DerefTypeLoc, AL.getAttributeSpellingListIndex()));
+  }
+}
+
 bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
                                 const FunctionDecl *FD) {
   if (Attrs.isInvalid())
@@ -7109,6 +7142,12 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case ParsedAttr::AT_Suppress:
     handleSuppressAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_Owner:
+    handleLifetimeCategoryAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_Pointer:
+    handleLifetimeCategoryAttr(S, D, AL);
     break;
   case ParsedAttr::AT_OpenCLKernel:
     handleSimpleAttribute<OpenCLKernelAttr>(S, D, AL);

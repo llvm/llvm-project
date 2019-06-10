@@ -211,6 +211,15 @@ namespace TestSuppress {
     }
 }
 
+namespace TestLifetimeCategories {
+  class [[gsl::Owner(int)]] AOwner {};
+  // CHECK: CXXRecordDecl{{.*}} struct AOwner
+  // CHECK-NEXT: ObjCBridgeRelatedAttr{{.*}} NSParagraphStyle
+  class [[gsl::Pointer(int)]] APointer {};
+  // CHECK: CXXRecordDecl{{.*}} struct APointer
+  // CHECK-NEXT: ObjCBridgeRelatedAttr{{.*}} NSParagraphStyle
+}
+
 // Verify the order of attributes in the Ast. It must reflect the order
 // in the parsed source.
 int mergeAttrTest() __attribute__((deprecated)) __attribute__((warn_unused_result));
