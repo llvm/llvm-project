@@ -7521,14 +7521,6 @@ def : Pat<(f64 (fpextend (loadf32 addr:$src))),
           (VCVTSS2SDZrm (f64 (IMPLICIT_DEF)), addr:$src)>,
           Requires<[HasAVX512, OptForSize]>;
 
-def : Pat<(f64 (extloadf32 addr:$src)),
-          (VCVTSS2SDZrm (f64 (IMPLICIT_DEF)), addr:$src)>,
-      Requires<[HasAVX512, OptForSize]>;
-
-def : Pat<(f64 (extloadf32 addr:$src)),
-          (VCVTSS2SDZrr (f64 (IMPLICIT_DEF)), (VMOVSSZrm addr:$src))>,
-          Requires<[HasAVX512, OptForSpeed]>;
-
 def : Pat<(f32 (fpround FR64X:$src)),
           (VCVTSD2SSZrr (f32 (IMPLICIT_DEF)), FR64X:$src)>,
            Requires<[HasAVX512]>;

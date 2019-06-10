@@ -178,19 +178,6 @@ class ELFState {
                            ContiguousBlobAccumulator &CBA);
   std::vector<StringRef> implicitSectionNames() const;
 
-  // - SHT_NULL entry (placed first, i.e. 0'th entry)
-  // - symbol table (.symtab) (defaults to after last yaml section)
-  // - string table (.strtab) (defaults to after .symtab)
-  // - section header string table (.shstrtab) (defaults to after .strtab)
-  // - dynamic symbol table (.dynsym) (defaults to after .shstrtab)
-  // - dynamic string table (.dynstr) (defaults to after .dynsym)
-  unsigned getDotSymTabSecNo() const { return SN2I.get(".symtab"); }
-  unsigned getDotStrTabSecNo() const { return SN2I.get(".strtab"); }
-  unsigned getDotShStrTabSecNo() const { return SN2I.get(".shstrtab"); }
-  unsigned getDotDynSymSecNo() const { return SN2I.get(".dynsym"); }
-  unsigned getDotDynStrSecNo() const { return SN2I.get(".dynstr"); }
-  unsigned getSectionCount() const { return SN2I.size() + 1; }
-
   ELFState(const ELFYAML::Object &D) : Doc(D) {}
 
 public:
@@ -227,8 +214,8 @@ void ELFState<ELFT>::initELFHeader(Elf_Ehdr &Header) {
   // Immediately following the ELF header and program headers.
   Header.e_shoff =
       sizeof(Header) + sizeof(Elf_Phdr) * Doc.ProgramHeaders.size();
-  Header.e_shnum = getSectionCount();
-  Header.e_shstrndx = getDotShStrTabSecNo();
+  Header.e_shnum = SN2I.size() + 1;
+  Header.e_shstrndx = SN2I.get(".shstrtab");
 }
 
 template <class ELFT>
@@ -380,7 +367,7 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
   bool IsStatic = STType == SymtabType::Static;
   SHeader.sh_name = DotShStrtab.getOffset(IsStatic ? ".symtab" : ".dynsym");
   SHeader.sh_type = IsStatic ? ELF::SHT_SYMTAB : ELF::SHT_DYNSYM;
-  SHeader.sh_link = IsStatic ? getDotStrTabSecNo() : getDotDynStrSecNo();
+  SHeader.sh_link = IsStatic ? SN2I.get(".strtab") : SN2I.get(".dynstr");
   if (!IsStatic)
     SHeader.sh_flags |= ELF::SHF_ALLOC;
 
@@ -610,7 +597,7 @@ ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
 
   // For relocation section set link to .symtab by default.
   if (Section.Link.empty())
-    SHeader.sh_link = getDotSymTabSecNo();
+    SHeader.sh_link = SN2I.get(".symtab");
 
   unsigned Index = 0;
   if (!Section.RelocatableSec.empty() &&

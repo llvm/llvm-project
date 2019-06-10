@@ -287,6 +287,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
 
   const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
   unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
+  unsigned FrameReg = TRI->getFrameRegister(*MF);
   RegDescribedVarsMap RegVars;
   DbgValueEntriesMap LiveEntries;
   for (const auto &MBB : *MF) {
@@ -359,7 +360,8 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
       for (auto I = RegVars.begin(), E = RegVars.end(); I != E;) {
         auto CurElem = I++; // CurElem can be erased below.
         if (TRI->isVirtualRegister(CurElem->first) ||
-            ChangingRegs.test(CurElem->first))
+            ChangingRegs.test(CurElem->first) ||
+            CurElem->first == FrameReg)
           clobberRegisterUses(RegVars, CurElem, DbgValues, LiveEntries,
                               MBB.back());
       }

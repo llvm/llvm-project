@@ -1251,13 +1251,6 @@ def : Pat<(f64 (fpextend FR32:$src)),
 def : Pat<(fpextend (loadf32 addr:$src)),
     (VCVTSS2SDrm (f64 (IMPLICIT_DEF)), addr:$src)>, Requires<[UseAVX, OptForSize]>;
 
-def : Pat<(extloadf32 addr:$src),
-    (VCVTSS2SDrm (f64 (IMPLICIT_DEF)), addr:$src)>,
-    Requires<[UseAVX, OptForSize]>;
-def : Pat<(extloadf32 addr:$src),
-    (VCVTSS2SDrr (f64 (IMPLICIT_DEF)), (VMOVSSrm addr:$src))>,
-    Requires<[UseAVX, OptForSpeed]>;
-
 let isCodeGenOnly = 1 in {
 def CVTSS2SDrr : I<0x5A, MRMSrcReg, (outs FR64:$dst), (ins FR32:$src),
                    "cvtss2sd\t{$src, $dst|$dst, $src}",
@@ -1265,20 +1258,10 @@ def CVTSS2SDrr : I<0x5A, MRMSrcReg, (outs FR64:$dst), (ins FR32:$src),
                    XS, Requires<[UseSSE2]>, Sched<[WriteCvtSS2SD]>;
 def CVTSS2SDrm : I<0x5A, MRMSrcMem, (outs FR64:$dst), (ins f32mem:$src),
                    "cvtss2sd\t{$src, $dst|$dst, $src}",
-                   [(set FR64:$dst, (extloadf32 addr:$src))]>,
+                   [(set FR64:$dst, (fpextend (loadf32 addr:$src)))]>,
                    XS, Requires<[UseSSE2, OptForSize]>,
                    Sched<[WriteCvtSS2SD.Folded]>;
 } // isCodeGenOnly = 1
-
-// extload f32 -> f64.  This matches load+fpextend because we have a hack in
-// the isel (PreprocessForFPConvert) that can introduce loads after dag
-// combine.
-// Since these loads aren't folded into the fpextend, we have to match it
-// explicitly here.
-def : Pat<(fpextend (loadf32 addr:$src)),
-          (CVTSS2SDrm addr:$src)>, Requires<[UseSSE2, OptForSize]>;
-def : Pat<(extloadf32 addr:$src),
-          (CVTSS2SDrr (MOVSSrm addr:$src))>, Requires<[UseSSE2, OptForSpeed]>;
 
 let hasSideEffects = 0 in {
 def VCVTSS2SDrr_Int: I<0x5A, MRMSrcReg,

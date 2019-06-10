@@ -531,6 +531,10 @@ void DwarfUnit::addConstantValue(DIE &Die, const MachineOperand &MO,
   addConstantValue(Die, isUnsignedDIType(DD, Ty), MO.getImm());
 }
 
+void DwarfUnit::addConstantValue(DIE &Die, uint64_t Val, const DIType *Ty) {
+  addConstantValue(Die, isUnsignedDIType(DD, Ty), Val);
+}
+
 void DwarfUnit::addConstantValue(DIE &Die, bool Unsigned, uint64_t Val) {
   // FIXME: This is a bit conservative/simple - it emits negative values always
   // sign extended to 64 bits rather than minimizing the number of bytes.
