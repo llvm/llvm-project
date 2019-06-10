@@ -48,7 +48,7 @@ static MCDisassembler *createSparcDisassembler(const Target &T,
 }
 
 
-extern "C" void LLVMInitializeSparcDisassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheSparcTarget(),
                                          createSparcDisassembler);

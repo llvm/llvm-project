@@ -15,6 +15,6 @@ set(LLVM_LINK_COMPONENTS
   Target
 )
 
-add_llvm_unittest(ARMTests
+add_llvm_target_unittest(ARMTests
   MachineInstrTest.cpp
   )

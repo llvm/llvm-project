@@ -6940,7 +6940,7 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultABID() const {
 }
 
 /// Force static initialization.
-extern "C" void LLVMInitializeAMDGPUAsmParser() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUAsmParser() {
   RegisterMCAsmParser<AMDGPUAsmParser> A(getTheAMDGPUTarget());
   RegisterMCAsmParser<AMDGPUAsmParser> B(getTheGCNTarget());
 }

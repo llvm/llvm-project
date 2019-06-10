@@ -62,7 +62,7 @@ static MCDisassembler *createMSP430Disassembler(const Target &T,
   return new MSP430Disassembler(STI, Ctx);
 }
 
-extern "C" void LLVMInitializeMSP430Disassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMSP430Disassembler() {
   TargetRegistry::RegisterMCDisassembler(getTheMSP430Target(),
                                          createMSP430Disassembler);
 }

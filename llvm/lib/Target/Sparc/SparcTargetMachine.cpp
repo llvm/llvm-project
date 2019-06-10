@@ -20,7 +20,7 @@
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
-extern "C" void LLVMInitializeSparcTarget() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTarget() {
   // Register the target.
   RegisterTargetMachine<SparcV8TargetMachine> X(getTheSparcTarget());
   RegisterTargetMachine<SparcV9TargetMachine> Y(getTheSparcV9Target());
