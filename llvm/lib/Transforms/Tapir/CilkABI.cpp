@@ -842,6 +842,161 @@ Function *CilkABI::GetCilkSyncNothrowFn(bool instrument) {
   return Fn;
 }
 
+/// Get or create a LLVM function for __cilk_sync.  Calls to this function is
+/// always inlined, as it saves the current stack/frame pointer values. This
+/// function must be marked as returns_twice to allow it to be inlined, since
+/// the call to setjmp is marked returns_twice.
+///
+/// It is equivalent to the following C code:
+///
+/// void *__cilk_catch_exception(struct __cilkrts_stack_frame *sf, void *Exn) {
+///   if (sf->flags & CILK_FRAME_UNSYNCHED) {
+///     if (!CILK_SETJMP(sf->ctx)) {
+///       sf->except_data = Exn;
+///       sf->flags |= CILK_FRAME_EXCEPTING;
+///       __cilkrts_sync(sf);
+///     }
+///     sf->flags &= ~CILK_FRAME_EXCEPTING
+///     Exn = sf->except_data;
+///   }
+///   ++sf->worker->pedigree.rank;
+///   return Exn;
+/// }
+///
+/// With exceptions disabled in the compiler, the function
+/// does not call __cilkrts_rethrow()
+Function *CilkABI::GetCilkCatchExceptionFn(Type *ExnTy) {
+  // Get or create the __cilk_catch_exception function.
+  LLVMContext &Ctx = M.getContext();
+
+  Type *VoidTy = Type::getVoidTy(Ctx);
+  PointerType *StackFramePtrTy = PointerType::getUnqual(StackFrameTy);
+  Function *Fn = nullptr;
+  if (GetOrCreateFunction(M, "__cilk_catch_exception",
+                          FunctionType::get(ExnTy,
+                                            {StackFramePtrTy, ExnTy},
+                                            false), Fn))
+    return Fn;
+
+  // Create the body of __cilk_catch_exeption
+  const DataLayout &DL = M.getDataLayout();
+
+  Function::arg_iterator args = Fn->arg_begin();
+  Value *SF = &*args++;
+  Value *Exn = &*args;
+
+  BasicBlock *Entry = BasicBlock::Create(Ctx, "cilk.catch.test", Fn);
+  BasicBlock *SetJmp = BasicBlock::Create(Ctx, "cilk.catch.setjmp", Fn);
+  BasicBlock *SyncCall = BasicBlock::Create(Ctx, "cilk.catch.runtimecall", Fn);
+  BasicBlock *Catch = BasicBlock::Create(Ctx, "cilk.catch.catch", Fn);
+  BasicBlock *Exit = BasicBlock::Create(Ctx, "cilk.catch.end", Fn);
+
+  Value *NewExn;
+
+  // Entry
+  {
+    IRBuilder<> B(Entry);
+
+    // if (sf->flags & CILK_FRAME_UNSYNCHED)
+    Value *Flags = LoadSTyField(B, DL, StackFrameTy, SF,
+                                StackFrameFields::flags, /*isVolatile=*/false,
+                                AtomicOrdering::Acquire);
+    Flags = B.CreateAnd(Flags,
+                        ConstantInt::get(Flags->getType(),
+                                         CILK_FRAME_UNSYNCHED));
+    Value *Zero = ConstantInt::get(Flags->getType(), 0);
+    Value *Unsynced = B.CreateICmpEQ(Flags, Zero);
+    B.CreateCondBr(Unsynced, Exit, SetJmp);
+  }
+
+  // SetJmp
+  {
+    IRBuilder<> B(SetJmp);
+
+    // if (!CILK_SETJMP(sf.ctx))
+    Value *C = EmitCilkSetJmp(B, SF);
+    C = B.CreateICmpEQ(C, ConstantInt::get(C->getType(), 0));
+    B.CreateCondBr(C, SyncCall, Catch);
+  }
+
+  // SyncCall
+  {
+    IRBuilder<> B(SyncCall);
+
+    // sf->except_data = Exn;
+    // sf->flags = sf->flags | CILK_FRAME_EXCEPTING;
+    StoreSTyField(B, DL, StackFrameTy, Exn, SF,
+                  StackFrameFields::except_data, /*isVolatile=*/false,
+                  AtomicOrdering::Release);
+    Value *Flags = LoadSTyField(B, DL, StackFrameTy, SF,
+                                StackFrameFields::flags,
+                                /*isVolatile=*/false,
+                                AtomicOrdering::Acquire);
+    Flags = B.CreateOr(Flags, ConstantInt::get(Flags->getType(),
+                                               CILK_FRAME_EXCEPTING));
+    StoreSTyField(B, DL, StackFrameTy, Flags, SF,
+                  StackFrameFields::flags, /*isVolatile=*/false,
+                  AtomicOrdering::Release);
+
+    // __cilkrts_sync(sf);
+    B.CreateCall(CILKRTS_FUNC(sync), SF);
+    B.CreateBr(Catch);
+  }
+
+  // Catch
+  {
+    IRBuilder<> B(Catch);
+    // sf->flags = sf->flags & ~CILK_FRAME_EXCEPTING;
+    Value *Flags = LoadSTyField(B, DL, StackFrameTy, SF,
+                                StackFrameFields::flags,
+                                /*isVolatile=*/false,
+                                AtomicOrdering::Acquire);
+    Flags = B.CreateAnd(Flags, ConstantInt::get(Flags->getType(),
+                                                ~CILK_FRAME_EXCEPTING));
+    StoreSTyField(B, DL, StackFrameTy, Flags, SF,
+                  StackFrameFields::flags, /*isVolatile=*/false,
+                  AtomicOrdering::Release);
+
+    // Exn = sf->except_data;
+    NewExn = LoadSTyField(B, DL, StackFrameTy, SF,
+                          StackFrameFields::except_data, /*isVolatile=*/false,
+                          AtomicOrdering::Acquire);
+    B.CreateBr(Exit);
+  }
+
+  // Exit
+  {
+    IRBuilder<> B(Exit);
+
+    PHINode *ExnPN = B.CreatePHI(ExnTy, 2);
+    ExnPN->addIncoming(Exn, Entry);
+    ExnPN->addIncoming(NewExn, Catch);
+
+    // ++sf.worker->pedigree.rank;
+    Value *Worker = LoadSTyField(B, DL, StackFrameTy, SF,
+                                 StackFrameFields::worker,
+                                 /*isVolatile=*/false,
+                                 AtomicOrdering::Acquire);
+    Value *Pedigree = GEP(B, Worker, WorkerFields::pedigree);
+    Value *Rank = GEP(B, Pedigree, PedigreeFields::rank);
+    unsigned RankAlignment = GetAlignment(DL, PedigreeTy,
+                                          PedigreeFields::rank);
+    B.CreateAlignedStore(B.CreateAdd(
+                             B.CreateAlignedLoad(Rank, RankAlignment),
+                             ConstantInt::get(
+                                 Rank->getType()->getPointerElementType(), 1)),
+                         Rank, RankAlignment);
+
+    B.CreateRet(ExnPN);
+  }
+
+  Fn->setLinkage(Function::InternalLinkage);
+  Fn->addFnAttr(Attribute::AlwaysInline);
+  Fn->addFnAttr(Attribute::ReturnsTwice);
+
+  return Fn;
+}
+
 /// Get or create a LLVM function for __cilkrts_enter_frame.  It is equivalent
 /// to the following C code:
 ///
@@ -1294,8 +1449,7 @@ bool CilkABI::makeFunctionDetachable(Function &Extracted, bool instrument) {
         sf.except_data = Exn;
       */
       IRBuilder<> B(RI);
-      Value *Exn = AtExit->CreateExtractValue(RI->getValue(),
-                                              ArrayRef<unsigned>(0));
+      Value *Exn = AtExit->CreateExtractValue(RI->getValue(), { 0 });
       Value *Flags = LoadSTyField(*AtExit, DL, StackFrameTy, SF,
                                   StackFrameFields::flags,
                                   /*isVolatile=*/false,
@@ -1394,7 +1548,15 @@ void CilkABI::processSubTaskCall(TaskOutlineInfo &TOI, DominatorTree &DT) {
   assert(DetachCtxToStackFrame.count(&F) &&
          "No frame found for spawning task.");
   Value *SF = DetachCtxToStackFrame[&F];
-  // assert(SF && "No frame found for spawning task");
+
+  if (InvokeInst *II = dyn_cast<InvokeInst>(ReplCall)) {
+    LandingPadInst *LPI = II->getLandingPadInst();
+    IRBuilder<> B(&*II->getUnwindDest()->getFirstInsertionPt());
+    Value *Exn = B.CreateExtractValue(LPI, { 0 });
+    Value *NewExn = B.CreateCall(GetCilkCatchExceptionFn(Exn->getType()),
+                                 { SF, Exn });
+    B.CreateInsertValue(LPI, NewExn, { 0 });
+  }
 
   // Split the basic block containing the detach replacement just before the
   // start of the detach-replacement instructions.

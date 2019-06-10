@@ -115,6 +115,7 @@ class CilkABI : public TapirTarget {
   // Helper functions for implementing the Cilk ABI protocol
   Function *GetCilkSyncFn(bool instrument = false);
   Function *GetCilkSyncNothrowFn(bool instrument = false);
+  Function *GetCilkCatchExceptionFn(Type *ExnTy);
   Function *GetCilkParentEpilogueFn(bool instrument = false);
   static void EmitSaveFloatingPointState(IRBuilder<> &B, Value *SF);
   AllocaInst *CreateStackFrame(Function &F);
