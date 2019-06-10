@@ -1,7 +1,7 @@
 # Test that we properly determine the path syntax of a compile unit even if the
 # compile unit does not have a DW_AT_comp_dir attribute.
 
-# REQUIRES: lld
+# REQUIRES: lld, x86
 
 # RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj > %t.o
 # RUN: ld.lld %t.o -o %t

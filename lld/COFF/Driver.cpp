@@ -81,6 +81,7 @@ bool link(ArrayRef<const char *> Args, bool CanExitEarly, raw_ostream &Diag) {
   ObjFile::Instances.clear();
   ImportFile::Instances.clear();
   BitcodeFile::Instances.clear();
+  memset(MergeChunk::Instances, 0, sizeof(MergeChunk::Instances));
   return !errorCount();
 }
 

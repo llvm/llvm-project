@@ -3,7 +3,7 @@
 # misinterpreted that value as a reference to a DIE specifying the VLA size even
 # though the form was a data form (as it should be).
 
-# REQUIRES: lld
+# REQUIRES: lld, x86
 
 # RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj > %t.o
 # RUN: ld.lld %t.o -o %t
