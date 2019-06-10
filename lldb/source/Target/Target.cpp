@@ -2506,9 +2506,10 @@ SwiftASTContextReader Target::GetScratchSwiftASTContext(
     if (auto *global_scratch_ctx = llvm::cast_or_null<SwiftASTContext>(
             GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift, false)))
       DisplayFallbackSwiftContextErrors(global_scratch_ctx);
-    
+
+    bool fallback = true;
     auto typesystem_sp = SwiftASTContext::CreateInstance(
-        lldb::eLanguageTypeSwift, *lldb_module, this);
+        lldb::eLanguageTypeSwift, *lldb_module, this, fallback);
     auto *swift_ast_ctx = cast<SwiftASTContext>(typesystem_sp.get());
     m_scratch_typesystem_for_module.insert({idx, typesystem_sp});
     GetSwiftScratchContextLock().unlock();
@@ -3643,6 +3644,8 @@ static constexpr PropertyDefinition g_properties[] = {
     {"swift-module-search-paths", OptionValue::eTypeFileSpecList, false, 0,
      nullptr, {},
      "List of directories to be searched when locating modules for Swift."},
+    {"swift-extra-clang-flags", OptionValue::eTypeString, false, 0, nullptr, {},
+     "Additional -Xcc flags to be passed to the Swift ClangImporter."},
     {"auto-import-clang-modules", OptionValue::eTypeBoolean, false, true,
      nullptr, {},
      "Automatically load Clang modules referred to by the program."},
@@ -3790,6 +3793,7 @@ enum {
   ePropertyClangModuleSearchPaths,
   ePropertySwiftFrameworkSearchPaths,
   ePropertySwiftModuleSearchPaths,
+  ePropertySwiftExtraClangFlags,
   ePropertyAutoImportClangModules,
   ePropertyUseAllCompilerFlags,
   ePropertyAutoApplyFixIts,
@@ -4253,6 +4257,12 @@ FileSpecList TargetProperties::GetSwiftModuleSearchPaths() {
                                                                    idx);
   assert(option_value);
   return option_value->GetCurrentValue();
+}
+
+llvm::StringRef TargetProperties::GetSwiftExtraClangFlags() const {
+  const uint32_t idx = ePropertySwiftExtraClangFlags;
+  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx,
+                                                     llvm::StringRef());
 }
 
 FileSpecList TargetProperties::GetClangModuleSearchPaths() {
