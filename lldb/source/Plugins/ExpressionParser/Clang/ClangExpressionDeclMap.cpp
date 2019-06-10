@@ -698,7 +698,7 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(Target &target,
   }
 
   if (symbol_load_addr == LLDB_INVALID_ADDRESS && process) {
-    ObjCLanguageRuntime *runtime = process->GetObjCLanguageRuntime();
+    ObjCLanguageRuntime *runtime = ObjCLanguageRuntime::Get(*process);
 
     if (runtime) {
       symbol_load_addr = runtime->LookupRuntimeSymbol(name);

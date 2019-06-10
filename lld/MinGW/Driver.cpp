@@ -30,11 +30,13 @@
 
 #include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Memory.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -86,11 +88,18 @@ static void printHelp(const char *Argv0) {
   outs() << "\n";
 }
 
+static cl::TokenizerCallback getQuotingStyle() {
+  if (Triple(sys::getProcessTriple()).getOS() == Triple::Win32)
+    return cl::TokenizeWindowsCommandLine;
+  return cl::TokenizeGNUCommandLine;
+}
+
 opt::InputArgList MinGWOptTable::parse(ArrayRef<const char *> Argv) {
   unsigned MissingIndex;
   unsigned MissingCount;
 
   SmallVector<const char *, 256> Vec(Argv.data(), Argv.data() + Argv.size());
+  cl::ExpandResponseFiles(Saver, getQuotingStyle(), Vec);
   opt::InputArgList Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
 
   if (MissingCount)

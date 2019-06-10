@@ -8,9 +8,11 @@
 #ifndef lldb_unittests_Process_gdb_remote_GDBRemoteTestUtils_h
 #define lldb_unittests_Process_gdb_remote_GDBRemoteTestUtils_h
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServer.h"
+#include "lldb/Utility/Connection.h"
 
 namespace lldb_private {
 namespace process_gdb_remote {
@@ -21,10 +23,38 @@ public:
   static void TearDownTestCase();
 };
 
-struct MockServer : public GDBRemoteCommunicationServer {
+class MockConnection : public lldb_private::Connection {
+public:
+  MockConnection(std::vector<std::string> &packets) { m_packets = &packets; };
+
+  MOCK_METHOD2(Connect,
+               lldb::ConnectionStatus(llvm::StringRef url, Status *error_ptr));
+  MOCK_METHOD5(Read, size_t(void *dst, size_t dst_len,
+                            const Timeout<std::micro> &timeout,
+                            lldb::ConnectionStatus &status, Status *error_ptr));
+  MOCK_METHOD0(GetURI, std::string());
+  MOCK_METHOD0(InterruptRead, bool());
+
+  lldb::ConnectionStatus Disconnect(Status *error_ptr) {
+    return lldb::eConnectionStatusSuccess;
+  };
+
+  bool IsConnected() const { return true; };
+  size_t Write(const void *dst, size_t dst_len, lldb::ConnectionStatus &status,
+               Status *error_ptr) {
+    m_packets->emplace_back(static_cast<const char *>(dst), dst_len);
+    return dst_len;
+  };
+
+  std::vector<std::string> *m_packets;
+};
+
+class MockServer : public GDBRemoteCommunicationServer {
+public:
   MockServer()
       : GDBRemoteCommunicationServer("mock-server", "mock-server.listener") {
     m_send_acks = false;
+    m_send_error_strings = true;
   }
 
   PacketResult SendPacket(llvm::StringRef payload) {
@@ -37,8 +67,20 @@ struct MockServer : public GDBRemoteCommunicationServer {
                                sync_on_timeout);
   }
 
+  using GDBRemoteCommunicationServer::SendErrorResponse;
   using GDBRemoteCommunicationServer::SendOKResponse;
   using GDBRemoteCommunicationServer::SendUnimplementedResponse;
+};
+
+class MockServerWithMockConnection : public MockServer {
+public:
+  MockServerWithMockConnection() : MockServer() {
+    SetConnection(new MockConnection(m_packets));
+  }
+
+  llvm::ArrayRef<std::string> GetPackets() { return m_packets; };
+
+  std::vector<std::string> m_packets;
 };
 
 } // namespace process_gdb_remote

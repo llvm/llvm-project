@@ -693,7 +693,7 @@ bool DynamicLoaderDarwin::AlwaysRelyOnEHUnwindInfo(SymbolContext &sym_ctx) {
   if (module_sp.get() == nullptr)
     return false;
 
-  ObjCLanguageRuntime *objc_runtime = m_process->GetObjCLanguageRuntime();
+  ObjCLanguageRuntime *objc_runtime = ObjCLanguageRuntime::Get(*m_process);
   return objc_runtime != nullptr &&
          objc_runtime->IsModuleObjCLibrary(module_sp);
 }

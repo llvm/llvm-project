@@ -90,7 +90,7 @@ void ClangASTSource::InstallASTContext(clang::ASTContext &ast_context,
       if (!process)
         break;
 
-      ObjCLanguageRuntime *language_runtime(process->GetObjCLanguageRuntime());
+      ObjCLanguageRuntime *language_runtime(ObjCLanguageRuntime::Get(*process));
 
       if (!language_runtime)
         break;
@@ -479,7 +479,7 @@ clang::ObjCInterfaceDecl *ClangASTSource::GetCompleteObjCInterface(
   if (!process)
     return nullptr;
 
-  ObjCLanguageRuntime *language_runtime(process->GetObjCLanguageRuntime());
+  ObjCLanguageRuntime *language_runtime(ObjCLanguageRuntime::Get(*process));
 
   if (!language_runtime)
     return nullptr;
@@ -950,7 +950,7 @@ void ClangASTSource::FindExternalVisibleDecls(
           break;
 
         ObjCLanguageRuntime *language_runtime(
-            process->GetObjCLanguageRuntime());
+            ObjCLanguageRuntime::Get(*process));
 
         if (!language_runtime)
           break;
@@ -1401,7 +1401,7 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
     if (!process)
       break;
 
-    ObjCLanguageRuntime *language_runtime(process->GetObjCLanguageRuntime());
+    ObjCLanguageRuntime *language_runtime(ObjCLanguageRuntime::Get(*process));
 
     if (!language_runtime)
       break;
@@ -1593,7 +1593,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
     if (!process)
       return;
 
-    ObjCLanguageRuntime *language_runtime(process->GetObjCLanguageRuntime());
+    ObjCLanguageRuntime *language_runtime(ObjCLanguageRuntime::Get(*process));
 
     if (!language_runtime)
       return;
