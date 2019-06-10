@@ -199,6 +199,11 @@ public:
     return runtime->isA(&ID);
   }
 
+  static ObjCLanguageRuntime *Get(Process &process) {
+    return llvm::cast_or_null<ObjCLanguageRuntime>(
+        process.GetLanguageRuntime(lldb::eLanguageTypeObjC));
+  }
+
   virtual TaggedPointerVendor *GetTaggedPointerVendor() { return nullptr; }
 
   typedef std::shared_ptr<EncodingToType> EncodingToTypeSP;

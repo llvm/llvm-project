@@ -1228,7 +1228,7 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
     lldb::ProcessSP process_sp(this_frame_sp->CalculateProcess());
     if (!process_sp)
       return false;
-    return !process_sp->GetObjCLanguageRuntime();
+    return !ObjCLanguageRuntime::Get(*process_sp);
   };
 
   swift::ASTContext *ast_context =

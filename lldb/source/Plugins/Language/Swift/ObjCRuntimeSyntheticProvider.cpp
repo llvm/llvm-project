@@ -68,7 +68,7 @@ ObjCRuntimeSyntheticProvider::FrontEnd::GetChildAtIndex(size_t idx) {
           ProcessSP process_sp(m_backend.GetProcessSP());
           if (!process_sp)
             break;
-          ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
+          ObjCLanguageRuntime *runtime = ObjCLanguageRuntime::Get(*process_sp);
           if (!runtime)
             break;
           DeclVendor *vendor = runtime->GetDeclVendor();
