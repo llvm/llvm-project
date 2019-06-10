@@ -1,5 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx600 -verify-machineinstrs <%s | FileCheck -enable-var-scope -check-prefixes=GCN,SICI,SI %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx700 -verify-machineinstrs <%s | FileCheck -enable-var-scope -check-prefixes=GCN,SICI,CI %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx700 -verify-machineinstrs <%s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SICI %s
 
 ; Check that an addrspace(1) (const) load with various combinations of
 ; uniform, nonuniform and constant address components all load with an
@@ -9,8 +8,7 @@
 
 ; GCN-LABEL: {{^}}nonuniform_uniform:
 ; GCN-NOT: readfirstlane
-; SI: buffer_load_dwordx4 {{.*}} addr64
-; CI: buffer_load_dwordx3 {{.*}} addr64
+; SICI: buffer_load_dwordx4 {{.*}} addr64
 
 define amdgpu_ps float @nonuniform_uniform(i32 %arg18) {
 .entry:
@@ -23,8 +21,7 @@ define amdgpu_ps float @nonuniform_uniform(i32 %arg18) {
 
 ; GCN-LABEL: {{^}}uniform_nonuniform:
 ; GCN-NOT: readfirstlane
-; SI: buffer_load_dwordx4 {{.*}} addr64
-; CI: buffer_load_dwordx3 {{.*}} addr64
+; SICI: buffer_load_dwordx4 {{.*}} addr64
 
 define amdgpu_ps float @uniform_nonuniform(i32 inreg %offset, i32 %arg18) {
 .entry:
@@ -38,8 +35,7 @@ define amdgpu_ps float @uniform_nonuniform(i32 inreg %offset, i32 %arg18) {
 
 ; GCN-LABEL: {{^}}const_nonuniform:
 ; GCN-NOT: readfirstlane
-; SI: buffer_load_dwordx4 {{.*}} addr64
-; CI: buffer_load_dwordx3 {{.*}} addr64
+; SICI: buffer_load_dwordx4 {{.*}} addr64
 
 define amdgpu_ps float @const_nonuniform(i32 %arg18) {
 .entry:
@@ -53,8 +49,7 @@ define amdgpu_ps float @const_nonuniform(i32 %arg18) {
 
 ; GCN-LABEL: {{^}}nonuniform_nonuniform:
 ; GCN-NOT: readfirstlane
-; SI: buffer_load_dwordx4 {{.*}} addr64
-; CI: buffer_load_dwordx3 {{.*}} addr64
+; SICI: buffer_load_dwordx4 {{.*}} addr64
 
 define amdgpu_ps float @nonuniform_nonuniform(i32 %offset, i32 %arg18) {
 .entry:
