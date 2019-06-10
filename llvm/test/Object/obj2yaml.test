@@ -389,7 +389,6 @@ ELF-MIPSEL-NEXT:   - Name:            .data
 ELF-MIPSEL-NEXT:     Type:            SHT_PROGBITS
 ELF-MIPSEL-NEXT:     Flags:           [ SHF_WRITE, SHF_ALLOC ]
 ELF-MIPSEL-NEXT:     AddressAlign:    0x0000000000000004
-ELF-MIPSEL-NEXT:     Content:         ''
 ELF-MIPSEL-NEXT:   - Name:            .bss
 ELF-MIPSEL-NEXT:     Type:            SHT_NOBITS
 ELF-MIPSEL-NEXT:     Flags:           [ SHF_WRITE, SHF_ALLOC ]
@@ -398,7 +397,6 @@ ELF-MIPSEL-NEXT:     Size:            0x0000000000000004
 ELF-MIPSEL-NEXT:   - Name:            .mdebug.abi32
 ELF-MIPSEL-NEXT:     Type:            SHT_PROGBITS
 ELF-MIPSEL-NEXT:     AddressAlign:    0x0000000000000001
-ELF-MIPSEL-NEXT:     Content:         ''
 ELF-MIPSEL-NEXT:   - Name:            .rodata.str1.1
 ELF-MIPSEL-NEXT:     Type:            SHT_PROGBITS
 ELF-MIPSEL-NEXT:     Flags:           [ SHF_ALLOC, SHF_MERGE, SHF_STRINGS ]
@@ -477,7 +475,6 @@ ELF-MIPS64EL-NEXT:   - Name:            .text
 ELF-MIPS64EL-NEXT:     Type:            SHT_PROGBITS
 ELF-MIPS64EL-NEXT:     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
 ELF-MIPS64EL-NEXT:     AddressAlign:    0x0000000000000010
-ELF-MIPS64EL-NEXT:     Content:         ''
 ELF-MIPS64EL-NEXT:   - Name:            .data
 ELF-MIPS64EL-NEXT:     Type:            SHT_PROGBITS
 ELF-MIPS64EL-NEXT:     Flags:           [ SHF_WRITE, SHF_ALLOC ]
@@ -506,7 +503,6 @@ ELF-MIPS64EL-NEXT:     Content:         '012800000000000000000000000000000000000
 ELF-MIPS64EL-NEXT:   - Name:            .pdr
 ELF-MIPS64EL-NEXT:     Type:            SHT_PROGBITS
 ELF-MIPS64EL-NEXT:     AddressAlign:    0x0000000000000004
-ELF-MIPS64EL-NEXT:     Content:         ''
 ELF-MIPS64EL-NEXT: Symbols:
 ELF-MIPS64EL-NEXT:     - Name:            .text
 ELF-MIPS64EL-NEXT:       Type:            STT_SECTION
@@ -550,7 +546,6 @@ ELF-X86-64-NEXT:   - Name:            .note.GNU-stack
 ELF-X86-64-NEXT:     Type:            SHT_PROGBITS
 ELF-X86-64-NEXT:     Address:         0x0000000000000033
 ELF-X86-64-NEXT:     AddressAlign:    0x0000000000000001
-ELF-X86-64-NEXT:     Content:         ''
 ELF-X86-64-NEXT:   - Name:            .rela.text
 ELF-X86-64-NEXT:     Type:            SHT_RELA
 ELF-X86-64-NEXT:     Address:         0x0000000000000038
@@ -610,7 +605,6 @@ ELF-AVR-NEXT:     Type:            SHT_PROGBITS
 ELF-AVR-NEXT:     Flags:           [ SHF_WRITE, SHF_ALLOC ]
 ELF-AVR-NEXT:     Address:         0x0000000000800060
 ELF-AVR-NEXT:     AddressAlign:    0x0000000000000001
-ELF-AVR-NEXT:     Content:         ''
 ELF-AVR-NEXT: Symbols:
 ELF-AVR-NEXT:     - Name:           .text
 ELF-AVR-NEXT:       Type:            STT_SECTION
@@ -706,7 +700,6 @@ ELF-X86-64-UNWIND:      - Name:            .eh_frame
 ELF-X86-64-UNWIND-NEXT:   Type:            SHT_X86_64_UNWIND
 ELF-X86-64-UNWIND-NEXT:   Flags:           [ SHF_ALLOC ]
 ELF-X86-64-UNWIND-NEXT:   AddressAlign:    0x0000000000000001
-ELF-X86-64-UNWIND-NEXT:   Content:         ''
 
 RUN: not obj2yaml %t.blah 2>&1 | FileCheck --check-prefix=ENOENT %s
 ENOENT: Error reading file: {{.*}}.blah: {{[Nn]}}o such file or directory

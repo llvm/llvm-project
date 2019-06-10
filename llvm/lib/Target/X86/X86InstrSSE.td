@@ -281,11 +281,6 @@ let Predicates = [UseAVX] in {
             (SUBREG_TO_REG (i32 0), (VMOVSDrm addr:$src), sub_xmm)>;
   def : Pat<(v4f64 (X86vzload addr:$src)),
             (SUBREG_TO_REG (i32 0), (VMOVSDrm addr:$src), sub_xmm)>;
-
-  // Extract and store.
-  def : Pat<(store (f32 (extractelt (v4f32 VR128:$src), (iPTR 0))),
-                   addr:$dst),
-            (VMOVSSmr addr:$dst, (COPY_TO_REGCLASS (v4f32 VR128:$src), FR32))>;
 }
 
 let Predicates = [UseAVX, OptForSize] in {
@@ -335,11 +330,6 @@ let Predicates = [UseSSE1] in {
             (COPY_TO_REGCLASS (MOVSSrm addr:$src), VR128)>;
   def : Pat<(v4f32 (X86vzload addr:$src)),
             (COPY_TO_REGCLASS (MOVSSrm addr:$src), VR128)>;
-
-  // Extract and store.
-  def : Pat<(store (f32 (extractelt (v4f32 VR128:$src), (iPTR 0))),
-                   addr:$dst),
-            (MOVSSmr addr:$dst, (COPY_TO_REGCLASS VR128:$src, FR32))>;
 }
 
 let Predicates = [UseSSE2] in {
@@ -1261,13 +1251,6 @@ def : Pat<(f64 (fpextend FR32:$src)),
 def : Pat<(fpextend (loadf32 addr:$src)),
     (VCVTSS2SDrm (f64 (IMPLICIT_DEF)), addr:$src)>, Requires<[UseAVX, OptForSize]>;
 
-def : Pat<(extloadf32 addr:$src),
-    (VCVTSS2SDrm (f64 (IMPLICIT_DEF)), addr:$src)>,
-    Requires<[UseAVX, OptForSize]>;
-def : Pat<(extloadf32 addr:$src),
-    (VCVTSS2SDrr (f64 (IMPLICIT_DEF)), (VMOVSSrm addr:$src))>,
-    Requires<[UseAVX, OptForSpeed]>;
-
 let isCodeGenOnly = 1 in {
 def CVTSS2SDrr : I<0x5A, MRMSrcReg, (outs FR64:$dst), (ins FR32:$src),
                    "cvtss2sd\t{$src, $dst|$dst, $src}",
@@ -1275,20 +1258,10 @@ def CVTSS2SDrr : I<0x5A, MRMSrcReg, (outs FR64:$dst), (ins FR32:$src),
                    XS, Requires<[UseSSE2]>, Sched<[WriteCvtSS2SD]>;
 def CVTSS2SDrm : I<0x5A, MRMSrcMem, (outs FR64:$dst), (ins f32mem:$src),
                    "cvtss2sd\t{$src, $dst|$dst, $src}",
-                   [(set FR64:$dst, (extloadf32 addr:$src))]>,
+                   [(set FR64:$dst, (fpextend (loadf32 addr:$src)))]>,
                    XS, Requires<[UseSSE2, OptForSize]>,
                    Sched<[WriteCvtSS2SD.Folded]>;
 } // isCodeGenOnly = 1
-
-// extload f32 -> f64.  This matches load+fpextend because we have a hack in
-// the isel (PreprocessForFPConvert) that can introduce loads after dag
-// combine.
-// Since these loads aren't folded into the fpextend, we have to match it
-// explicitly here.
-def : Pat<(fpextend (loadf32 addr:$src)),
-          (CVTSS2SDrm addr:$src)>, Requires<[UseSSE2, OptForSize]>;
-def : Pat<(extloadf32 addr:$src),
-          (CVTSS2SDrr (MOVSSrm addr:$src))>, Requires<[UseSSE2, OptForSpeed]>;
 
 let hasSideEffects = 0 in {
 def VCVTSS2SDrr_Int: I<0x5A, MRMSrcReg,
@@ -2425,99 +2398,6 @@ let Predicates = [HasAVX1Only] in {
             (VANDNPSYrm VR256:$src1, addr:$src2)>;
   def : Pat<(X86andnp VR256:$src1, (loadv4i64 addr:$src2)),
             (VANDNPSYrm VR256:$src1, addr:$src2)>;
-}
-
-let Predicates = [HasAVX, NoVLX_Or_NoDQI] in {
-  // Use packed logical operations for scalar ops.
-  def : Pat<(f64 (X86fand FR64:$src1, FR64:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (VANDPDrr (v2f64 (COPY_TO_REGCLASS FR64:$src1, VR128)),
-                              (v2f64 (COPY_TO_REGCLASS FR64:$src2, VR128)))),
-             FR64)>;
-  def : Pat<(f64 (X86for FR64:$src1, FR64:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (VORPDrr (v2f64 (COPY_TO_REGCLASS FR64:$src1, VR128)),
-                             (v2f64 (COPY_TO_REGCLASS FR64:$src2, VR128)))),
-             FR64)>;
-  def : Pat<(f64 (X86fxor FR64:$src1, FR64:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (VXORPDrr (v2f64 (COPY_TO_REGCLASS FR64:$src1, VR128)),
-                              (v2f64 (COPY_TO_REGCLASS FR64:$src2, VR128)))),
-             FR64)>;
-  def : Pat<(f64 (X86fandn FR64:$src1, FR64:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (VANDNPDrr (v2f64 (COPY_TO_REGCLASS FR64:$src1, VR128)),
-                               (v2f64 (COPY_TO_REGCLASS FR64:$src2, VR128)))),
-             FR64)>;
-
-  def : Pat<(f32 (X86fand FR32:$src1, FR32:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (VANDPSrr (v4f32 (COPY_TO_REGCLASS FR32:$src1, VR128)),
-                              (v4f32 (COPY_TO_REGCLASS FR32:$src2, VR128)))),
-             FR32)>;
-  def : Pat<(f32 (X86for FR32:$src1, FR32:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (VORPSrr (v4f32 (COPY_TO_REGCLASS FR32:$src1, VR128)),
-                             (v4f32 (COPY_TO_REGCLASS FR32:$src2, VR128)))),
-             FR32)>;
-  def : Pat<(f32 (X86fxor FR32:$src1, FR32:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (VXORPSrr (v4f32 (COPY_TO_REGCLASS FR32:$src1, VR128)),
-                              (v4f32 (COPY_TO_REGCLASS FR32:$src2, VR128)))),
-             FR32)>;
-  def : Pat<(f32 (X86fandn FR32:$src1, FR32:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (VANDNPSrr (v4f32 (COPY_TO_REGCLASS FR32:$src1, VR128)),
-                               (v4f32 (COPY_TO_REGCLASS FR32:$src2, VR128)))),
-             FR32)>;
-}
-
-let Predicates = [UseSSE1] in {
-  // Use packed logical operations for scalar ops.
-  def : Pat<(f32 (X86fand FR32:$src1, FR32:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (ANDPSrr (v4f32 (COPY_TO_REGCLASS FR32:$src1, VR128)),
-                             (v4f32 (COPY_TO_REGCLASS FR32:$src2, VR128)))),
-             FR32)>;
-  def : Pat<(f32 (X86for FR32:$src1, FR32:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (ORPSrr (v4f32 (COPY_TO_REGCLASS FR32:$src1, VR128)),
-                            (v4f32 (COPY_TO_REGCLASS FR32:$src2, VR128)))),
-             FR32)>;
-  def : Pat<(f32 (X86fxor FR32:$src1, FR32:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (XORPSrr (v4f32 (COPY_TO_REGCLASS FR32:$src1, VR128)),
-                             (v4f32 (COPY_TO_REGCLASS FR32:$src2, VR128)))),
-             FR32)>;
-  def : Pat<(f32 (X86fandn FR32:$src1, FR32:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (ANDNPSrr (v4f32 (COPY_TO_REGCLASS FR32:$src1, VR128)),
-                              (v4f32 (COPY_TO_REGCLASS FR32:$src2, VR128)))),
-             FR32)>;
-}
-
-let Predicates = [UseSSE2] in {
-  // Use packed logical operations for scalar ops.
-  def : Pat<(f64 (X86fand FR64:$src1, FR64:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (ANDPDrr (v2f64 (COPY_TO_REGCLASS FR64:$src1, VR128)),
-                             (v2f64 (COPY_TO_REGCLASS FR64:$src2, VR128)))),
-             FR64)>;
-  def : Pat<(f64 (X86for FR64:$src1, FR64:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (ORPDrr (v2f64 (COPY_TO_REGCLASS FR64:$src1, VR128)),
-                            (v2f64 (COPY_TO_REGCLASS FR64:$src2, VR128)))),
-             FR64)>;
-  def : Pat<(f64 (X86fxor FR64:$src1, FR64:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (XORPDrr (v2f64 (COPY_TO_REGCLASS FR64:$src1, VR128)),
-                             (v2f64 (COPY_TO_REGCLASS FR64:$src2, VR128)))),
-             FR64)>;
-  def : Pat<(f64 (X86fandn FR64:$src1, FR64:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (ANDNPDrr (v2f64 (COPY_TO_REGCLASS FR64:$src1, VR128)),
-                              (v2f64 (COPY_TO_REGCLASS FR64:$src2, VR128)))),
-             FR64)>;
 }
 
 let Predicates = [HasAVX, NoVLX] in {
@@ -5725,51 +5605,17 @@ let Predicates = [UseAVX] in {
 }
 
 let Predicates = [UseAVX] in {
-  def : Pat<(ffloor FR32:$src),
-            (VROUNDSSr (f32 (IMPLICIT_DEF)), FR32:$src, (i32 0x9))>;
-  def : Pat<(f32 (fnearbyint FR32:$src)),
-            (VROUNDSSr (f32 (IMPLICIT_DEF)), FR32:$src, (i32 0xC))>;
-  def : Pat<(f32 (fceil FR32:$src)),
-            (VROUNDSSr (f32 (IMPLICIT_DEF)), FR32:$src, (i32 0xA))>;
-  def : Pat<(f32 (frint FR32:$src)),
-            (VROUNDSSr (f32 (IMPLICIT_DEF)), FR32:$src, (i32 0x4))>;
-  def : Pat<(f32 (ftrunc FR32:$src)),
-            (VROUNDSSr (f32 (IMPLICIT_DEF)), FR32:$src, (i32 0xB))>;
-
-  def : Pat<(f64 (ffloor FR64:$src)),
-            (VROUNDSDr (f64 (IMPLICIT_DEF)), FR64:$src, (i32 0x9))>;
-  def : Pat<(f64 (fnearbyint FR64:$src)),
-            (VROUNDSDr (f64 (IMPLICIT_DEF)), FR64:$src, (i32 0xC))>;
-  def : Pat<(f64 (fceil FR64:$src)),
-            (VROUNDSDr (f64 (IMPLICIT_DEF)), FR64:$src, (i32 0xA))>;
-  def : Pat<(f64 (frint FR64:$src)),
-            (VROUNDSDr (f64 (IMPLICIT_DEF)), FR64:$src, (i32 0x4))>;
-  def : Pat<(f64 (ftrunc FR64:$src)),
-            (VROUNDSDr (f64 (IMPLICIT_DEF)), FR64:$src, (i32 0xB))>;
+  def : Pat<(X86VRndScale FR32:$src1, imm:$src2),
+            (VROUNDSSr (f32 (IMPLICIT_DEF)), FR32:$src1, imm:$src2)>;
+  def : Pat<(X86VRndScale FR64:$src1, imm:$src2),
+            (VROUNDSDr (f64 (IMPLICIT_DEF)), FR64:$src1, imm:$src2)>;
 }
 
 let Predicates = [UseAVX, OptForSize] in {
-  def : Pat<(ffloor (loadf32 addr:$src)),
-            (VROUNDSSm (f32 (IMPLICIT_DEF)), addr:$src, (i32 0x9))>;
-  def : Pat<(f32 (fnearbyint (loadf32 addr:$src))),
-            (VROUNDSSm (f32 (IMPLICIT_DEF)), addr:$src, (i32 0xC))>;
-  def : Pat<(f32 (fceil (loadf32 addr:$src))),
-            (VROUNDSSm (f32 (IMPLICIT_DEF)), addr:$src, (i32 0xA))>;
-  def : Pat<(f32 (frint (loadf32 addr:$src))),
-            (VROUNDSSm (f32 (IMPLICIT_DEF)), addr:$src, (i32 0x4))>;
-  def : Pat<(f32 (ftrunc (loadf32 addr:$src))),
-            (VROUNDSSm (f32 (IMPLICIT_DEF)), addr:$src, (i32 0xB))>;
-
-  def : Pat<(f64 (ffloor (loadf64 addr:$src))),
-            (VROUNDSDm (f64 (IMPLICIT_DEF)), addr:$src, (i32 0x9))>;
-  def : Pat<(f64 (fnearbyint (loadf64 addr:$src))),
-            (VROUNDSDm (f64 (IMPLICIT_DEF)), addr:$src, (i32 0xC))>;
-  def : Pat<(f64 (fceil (loadf64 addr:$src))),
-            (VROUNDSDm (f64 (IMPLICIT_DEF)), addr:$src, (i32 0xA))>;
-  def : Pat<(f64 (frint (loadf64 addr:$src))),
-            (VROUNDSDm (f64 (IMPLICIT_DEF)), addr:$src, (i32 0x4))>;
-  def : Pat<(f64 (ftrunc (loadf64 addr:$src))),
-            (VROUNDSDm (f64 (IMPLICIT_DEF)), addr:$src, (i32 0xB))>;
+  def : Pat<(X86VRndScale (loadf32 addr:$src1), imm:$src2),
+            (VROUNDSSm (f32 (IMPLICIT_DEF)), addr:$src1, imm:$src2)>;
+  def : Pat<(X86VRndScale (loadf64 addr:$src1), imm:$src2),
+            (VROUNDSDm (f64 (IMPLICIT_DEF)), addr:$src1, imm:$src2)>;
 }
 
 let ExeDomain = SSEPackedSingle in
@@ -5786,51 +5632,17 @@ defm ROUND  : sse41_fp_binop_s<0x0A, 0x0B, "round", SchedWriteFRnd.Scl,
                                v4f32, v2f64, X86RndScales>;
 
 let Predicates = [UseSSE41] in {
-  def : Pat<(ffloor FR32:$src),
-            (ROUNDSSr FR32:$src, (i32 0x9))>;
-  def : Pat<(f32 (fnearbyint FR32:$src)),
-            (ROUNDSSr FR32:$src, (i32 0xC))>;
-  def : Pat<(f32 (fceil FR32:$src)),
-            (ROUNDSSr FR32:$src, (i32 0xA))>;
-  def : Pat<(f32 (frint FR32:$src)),
-            (ROUNDSSr FR32:$src, (i32 0x4))>;
-  def : Pat<(f32 (ftrunc FR32:$src)),
-            (ROUNDSSr FR32:$src, (i32 0xB))>;
-
-  def : Pat<(f64 (ffloor FR64:$src)),
-            (ROUNDSDr FR64:$src, (i32 0x9))>;
-  def : Pat<(f64 (fnearbyint FR64:$src)),
-            (ROUNDSDr FR64:$src, (i32 0xC))>;
-  def : Pat<(f64 (fceil FR64:$src)),
-            (ROUNDSDr FR64:$src, (i32 0xA))>;
-  def : Pat<(f64 (frint FR64:$src)),
-            (ROUNDSDr FR64:$src, (i32 0x4))>;
-  def : Pat<(f64 (ftrunc FR64:$src)),
-            (ROUNDSDr FR64:$src, (i32 0xB))>;
+  def : Pat<(X86VRndScale FR32:$src1, imm:$src2),
+            (ROUNDSSr FR32:$src1, imm:$src2)>;
+  def : Pat<(X86VRndScale FR64:$src1, imm:$src2),
+            (ROUNDSDr FR64:$src1, imm:$src2)>;
 }
 
 let Predicates = [UseSSE41, OptForSize] in {
-  def : Pat<(ffloor (loadf32 addr:$src)),
-            (ROUNDSSm addr:$src, (i32 0x9))>;
-  def : Pat<(f32 (fnearbyint (loadf32 addr:$src))),
-            (ROUNDSSm addr:$src, (i32 0xC))>;
-  def : Pat<(f32 (fceil (loadf32 addr:$src))),
-            (ROUNDSSm addr:$src, (i32 0xA))>;
-  def : Pat<(f32 (frint (loadf32 addr:$src))),
-            (ROUNDSSm addr:$src, (i32 0x4))>;
-  def : Pat<(f32 (ftrunc (loadf32 addr:$src))),
-            (ROUNDSSm addr:$src, (i32 0xB))>;
-
-  def : Pat<(f64 (ffloor (loadf64 addr:$src))),
-            (ROUNDSDm addr:$src, (i32 0x9))>;
-  def : Pat<(f64 (fnearbyint (loadf64 addr:$src))),
-            (ROUNDSDm addr:$src, (i32 0xC))>;
-  def : Pat<(f64 (fceil (loadf64 addr:$src))),
-            (ROUNDSDm addr:$src, (i32 0xA))>;
-  def : Pat<(f64 (frint (loadf64 addr:$src))),
-            (ROUNDSDm addr:$src, (i32 0x4))>;
-  def : Pat<(f64 (ftrunc (loadf64 addr:$src))),
-            (ROUNDSDm addr:$src, (i32 0xB))>;
+  def : Pat<(X86VRndScale (loadf32 addr:$src1), imm:$src2),
+            (ROUNDSSm addr:$src1, imm:$src2)>;
+  def : Pat<(X86VRndScale (loadf64 addr:$src1), imm:$src2),
+            (ROUNDSDm addr:$src1, imm:$src2)>;
 }
 
 //===----------------------------------------------------------------------===//

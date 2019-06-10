@@ -8,6 +8,7 @@ define i32 @main() {
     %C_float = fmul <4 x float> %B_float, %B_float
     %D_float = fdiv <4 x float> %C_float, %B_float
     %E_float = frem <4 x float> %D_float, %A_float
+    %F_float = fneg <4 x float> %E_float
 
 
     %A_double = fadd <3 x double> <double 0.0, double 111.0, double 222.0>, <double 444.0, double 555.0, double 665.0>
@@ -15,6 +16,7 @@ define i32 @main() {
     %C_double = fmul <3 x double> %B_double, %B_double
     %D_double = fdiv <3 x double> %C_double, %B_double
     %E_double = frem <3 x double> %D_double, %A_double
+    %F_double = fneg <3 x double> %E_double
 
     ret i32 0
 }

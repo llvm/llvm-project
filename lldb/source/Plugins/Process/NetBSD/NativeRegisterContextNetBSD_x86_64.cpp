@@ -210,37 +210,28 @@ int NativeRegisterContextNetBSD_x86_64::GetSetForNativeRegNum(
     return -1;
 }
 
-int NativeRegisterContextNetBSD_x86_64::ReadRegisterSet(uint32_t set) {
+Status NativeRegisterContextNetBSD_x86_64::ReadRegisterSet(uint32_t set) {
   switch (set) {
   case GPRegSet:
-    ReadGPR();
-    return 0;
+    return ReadGPR();
   case FPRegSet:
-    ReadFPR();
-    return 0;
+    return ReadFPR();
   case DBRegSet:
-    ReadDBR();
-    return 0;
-  default:
-    break;
+    return ReadDBR();
   }
-  return -1;
+  llvm_unreachable("NativeRegisterContextNetBSD_x86_64::ReadRegisterSet");
 }
-int NativeRegisterContextNetBSD_x86_64::WriteRegisterSet(uint32_t set) {
+
+Status NativeRegisterContextNetBSD_x86_64::WriteRegisterSet(uint32_t set) {
   switch (set) {
   case GPRegSet:
-    WriteGPR();
-    return 0;
+    return WriteGPR();
   case FPRegSet:
-    WriteFPR();
-    return 0;
+    return WriteFPR();
   case DBRegSet:
-    WriteDBR();
-    return 0;
-  default:
-    break;
+    return WriteDBR();
   }
-  return -1;
+  llvm_unreachable("NativeRegisterContextNetBSD_x86_64::WriteRegisterSet");
 }
 
 Status
@@ -272,13 +263,9 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
     return error;
   }
 
-  if (ReadRegisterSet(set) != 0) {
-    // This is likely an internal register for lldb use only and should not be
-    // directly queried.
-    error.SetErrorStringWithFormat(
-        "reading register set for register \"%s\" failed", reg_info->name);
+  error = ReadRegisterSet(set);
+  if (error.Fail())
     return error;
-  }
 
   switch (reg) {
   case lldb_rax_x86_64:
@@ -468,13 +455,9 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
     return error;
   }
 
-  if (ReadRegisterSet(set) != 0) {
-    // This is likely an internal register for lldb use only and should not be
-    // directly queried.
-    error.SetErrorStringWithFormat(
-        "reading register set for register \"%s\" failed", reg_info->name);
+  error = ReadRegisterSet(set);
+  if (error.Fail())
     return error;
-  }
 
   switch (reg) {
   case lldb_rax_x86_64:
@@ -632,10 +615,7 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
     break;
   }
 
-  if (WriteRegisterSet(set) != 0)
-    error.SetErrorStringWithFormat("failed to write register set");
-
-  return error;
+  return WriteRegisterSet(set);
 }
 
 Status NativeRegisterContextNetBSD_x86_64::ReadAllRegisterValues(

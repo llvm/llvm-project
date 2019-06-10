@@ -16,8 +16,8 @@ RUN: llvm-lib %t/x86_64.obj %t/x86_64.bc
 
 As is including resource files:
 
-RUN: llvm-lib %S/Inputs/resource.res %t/i386.obj %t/i386.bc
-RUN: llvm-lib %t/x86_64.obj %S/Inputs/resource.res %t/x86_64.bc
+RUN: llvm-lib /out:%t.lib %S/Inputs/resource.res %t/i386.obj %t/i386.bc
+RUN: llvm-lib /out:%t.lib %t/x86_64.obj %S/Inputs/resource.res %t/x86_64.bc
 
 
 Mixing object files with different machine type is not ok:

@@ -1866,37 +1866,55 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
 
       // NOTE: if we wanted to, this is where to detect MIN/MAX
     }
+  }
 
-    // Canonicalize select with fcmp to fabs(). -0.0 makes this tricky. We need
-    // fast-math-flags (nsz) or fsub with +0.0 (not fneg) for this to work. We
-    // also require nnan because we do not want to unintentionally change the
-    // sign of a NaN value.
-    Value *X = FCI->getOperand(0);
-    FCmpInst::Predicate Pred = FCI->getPredicate();
-    if (match(FCI->getOperand(1), m_AnyZeroFP()) && FCI->hasNoNaNs()) {
-      // (X <= +/-0.0) ? (0.0 - X) : X --> fabs(X)
-      // (X >  +/-0.0) ? X : (0.0 - X) --> fabs(X)
-      if ((X == FalseVal && Pred == FCmpInst::FCMP_OLE &&
-           match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(X)))) ||
-          (X == TrueVal && Pred == FCmpInst::FCMP_OGT &&
-           match(FalseVal, m_FSub(m_PosZeroFP(), m_Specific(X))))) {
-        Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, FCI);
-        return replaceInstUsesWith(SI, Fabs);
-      }
-      // With nsz:
-      // (X <  +/-0.0) ? -X : X --> fabs(X)
-      // (X <= +/-0.0) ? -X : X --> fabs(X)
-      // (X >  +/-0.0) ? X : -X --> fabs(X)
-      // (X >= +/-0.0) ? X : -X --> fabs(X)
-      if (FCI->hasNoSignedZeros() &&
-          ((X == FalseVal && match(TrueVal, m_FNeg(m_Specific(X))) &&
-            (Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_OLE)) ||
-           (X == TrueVal && match(FalseVal, m_FNeg(m_Specific(X))) &&
-            (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_OGE)))) {
-        Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, FCI);
-        return replaceInstUsesWith(SI, Fabs);
-      }
-    }
+  // Canonicalize select with fcmp to fabs(). -0.0 makes this tricky. We need
+  // fast-math-flags (nsz) or fsub with +0.0 (not fneg) for this to work. We
+  // also require nnan because we do not want to unintentionally change the
+  // sign of a NaN value.
+  // FIXME: These folds should test/propagate FMF from the select, not the
+  //        fsub or fneg.
+  // (X <= +/-0.0) ? (0.0 - X) : X --> fabs(X)
+  Instruction *FSub;
+  if (match(CondVal, m_FCmp(Pred, m_Specific(FalseVal), m_AnyZeroFP())) &&
+      match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(FalseVal))) &&
+      match(TrueVal, m_Instruction(FSub)) && FSub->hasNoNaNs() &&
+      (Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)) {
+    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FalseVal, FSub);
+    return replaceInstUsesWith(SI, Fabs);
+  }
+  // (X >  +/-0.0) ? X : (0.0 - X) --> fabs(X)
+  if (match(CondVal, m_FCmp(Pred, m_Specific(TrueVal), m_AnyZeroFP())) &&
+      match(FalseVal, m_FSub(m_PosZeroFP(), m_Specific(TrueVal))) &&
+      match(FalseVal, m_Instruction(FSub)) && FSub->hasNoNaNs() &&
+      (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT)) {
+    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, TrueVal, FSub);
+    return replaceInstUsesWith(SI, Fabs);
+  }
+  // With nnan and nsz:
+  // (X <  +/-0.0) ? -X : X --> fabs(X)
+  // (X <= +/-0.0) ? -X : X --> fabs(X)
+  Instruction *FNeg;
+  if (match(CondVal, m_FCmp(Pred, m_Specific(FalseVal), m_AnyZeroFP())) &&
+      match(TrueVal, m_FNeg(m_Specific(FalseVal))) &&
+      match(TrueVal, m_Instruction(FNeg)) &&
+      FNeg->hasNoNaNs() && FNeg->hasNoSignedZeros() &&
+      (Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_OLE ||
+       Pred == FCmpInst::FCMP_ULT || Pred == FCmpInst::FCMP_ULE)) {
+    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FalseVal, FNeg);
+    return replaceInstUsesWith(SI, Fabs);
+  }
+  // With nnan and nsz:
+  // (X >  +/-0.0) ? X : -X --> fabs(X)
+  // (X >= +/-0.0) ? X : -X --> fabs(X)
+  if (match(CondVal, m_FCmp(Pred, m_Specific(TrueVal), m_AnyZeroFP())) &&
+      match(FalseVal, m_FNeg(m_Specific(TrueVal))) &&
+      match(FalseVal, m_Instruction(FNeg)) &&
+      FNeg->hasNoNaNs() && FNeg->hasNoSignedZeros() &&
+      (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_OGE ||
+       Pred == FCmpInst::FCMP_UGT || Pred == FCmpInst::FCMP_UGE)) {
+    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, TrueVal, FNeg);
+    return replaceInstUsesWith(SI, Fabs);
   }
 
   // See if we are selecting two values based on a comparison of the two values.

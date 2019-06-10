@@ -206,12 +206,22 @@ TEST_F(IRBuilderTest, UnaryOperators) {
   IRBuilder<NoFolder> Builder(BB);
   Value *V = Builder.CreateLoad(GV->getValueType(), GV);
 
-  // Test CreateUnOp
+  // Test CreateUnOp(X)
   Value *U = Builder.CreateUnOp(Instruction::FNeg, V);
   ASSERT_TRUE(isa<Instruction>(U));
   ASSERT_TRUE(isa<FPMathOperator>(U));
   ASSERT_TRUE(isa<UnaryOperator>(U));
   ASSERT_FALSE(isa<BinaryOperator>(U));
+
+  // Test CreateFNegFMF(X)
+  Instruction *I = cast<Instruction>(V);
+  I->setHasNoSignedZeros(true);
+  I->setHasNoNaNs(true);
+  Value *VFMF = Builder.CreateFNegFMF(V, I);
+  Instruction *IFMF = cast<Instruction>(VFMF);
+  EXPECT_TRUE(IFMF->hasNoSignedZeros());
+  EXPECT_TRUE(IFMF->hasNoNaNs());
+  EXPECT_FALSE(IFMF->hasAllowReassoc());
 }
 
 TEST_F(IRBuilderTest, FastMathFlags) {

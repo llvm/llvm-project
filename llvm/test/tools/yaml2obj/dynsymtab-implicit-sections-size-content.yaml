@@ -1,0 +1,198 @@
+## For implicit dynamic symbol table sections, `Size` and/or `Content`
+## fields can also be specified in YAML. Here we test the behavior in
+## different cases.
+
+## When no `Size` or `Content` is specified for a dynamic symbol table section,
+## yaml2obj writes the default content.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readelf %t1 --dyn-symbols | FileCheck %s --check-prefix=CASE1
+
+# CASE1:      Symbol table '.dynsym' contains 2 entries:
+# CASE1-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
+# CASE1-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
+# CASE1-NEXT:      1: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND foo
+# CASE1-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+DynamicSymbols:
+  - Name:    foo
+    Binding: STB_GLOBAL
+
+## Specifying both `Size` and symbols at the same time is not allowed.
+# RUN: not yaml2obj --docnum=2 %s -o %t2 2>&1 | FileCheck %s --check-prefix=CASE2
+
+# CASE2: error: Cannot specify both `Size` and `DynamicSymbols` for symbol table section '.dynsym'.
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Size: 0x100
+DynamicSymbols:
+  - Name:    foo
+    Binding: STB_GLOBAL
+
+## Specifying both `Content` and symbols at the same time is not allowed.
+# RUN: not yaml2obj --docnum=3 %s -o %t3 2>&1 | FileCheck %s --check-prefix=CASE3
+
+# CASE3: error: Cannot specify both `Content` and `DynamicSymbols` for symbol table section '.dynsym'.
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Content: "00"
+DynamicSymbols:
+  - Name:    foo
+    Binding: STB_GLOBAL
+
+## Check we can use just `Content` to emit custom data in the symbol table section.
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-readobj --section-data -S %t4 | FileCheck %s --check-prefix=CASE4
+
+# CASE4:      Name: .dynsym
+# CASE4-NEXT: Type: SHT_DYNSYM
+# CASE4-NEXT: Flags [
+# CASE4-NEXT:   SHF_ALLOC
+# CASE4-NEXT: ]
+# CASE4-NEXT: Address: 0x0
+# CASE4-NEXT: Offset: 0x180
+# CASE4-NEXT: Size: 2
+# CASE4-NEXT: Link: 0
+# CASE4-NEXT: Info: 0
+# CASE4-NEXT: AddressAlignment: 0
+# CASE4-NEXT: EntrySize: 24
+# CASE4-NEXT: SectionData (
+# CASE4-NEXT:   0000: 0123
+# CASE4-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Content: "0123"
+
+## Check we can use just `Size` to emit custom data filled with zeroes
+## in the symbol table section.
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: llvm-readobj --section-data -S %t5 | FileCheck %s --check-prefix=CASE5
+
+# CASE5:      Name: .dynsym
+# CASE5-NEXT: Type: SHT_DYNSYM
+# CASE5-NEXT: Flags [
+# CASE5-NEXT:   SHF_ALLOC
+# CASE5-NEXT: ]
+# CASE5-NEXT: Address: 0x0
+# CASE5-NEXT: Offset: 0x180
+# CASE5-NEXT: Size: 5
+# CASE5-NEXT: Link: 0
+# CASE5-NEXT: Info: 0
+# CASE5-NEXT: AddressAlignment: 0
+# CASE5-NEXT: EntrySize: 24
+# CASE5-NEXT: SectionData (
+# CASE5-NEXT:   0000: 00000000 00
+# CASE5-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Size: 5
+
+## Check we can specify both `Size` and `Content` when size is greater
+## than content size. In this case zeroes are added as padding
+## after after the specified content.
+
+# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: llvm-readobj %t6 --section-data -S | FileCheck %s --check-prefix=CASE6
+
+# CASE6:      Name: .dynsym
+# CASE6-NEXT: Type: SHT_DYNSYM
+# CASE6-NEXT: Flags [
+# CASE6-NEXT:   SHF_ALLOC
+# CASE6-NEXT: ]
+# CASE6-NEXT: Address: 0x0
+# CASE6-NEXT: Offset: 0x180
+# CASE6-NEXT: Size: 4
+# CASE6-NEXT: Link: 0
+# CASE6-NEXT: Info: 0
+# CASE6-NEXT: AddressAlignment: 0
+# CASE6-NEXT: EntrySize: 24
+# CASE6-NEXT: SectionData (
+# CASE6-NEXT:   0000: 01230000
+# CASE6-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Content: "0123"
+    Size: 4
+
+## Check we can specify both `Size` and `Content` when size is
+## equal to content size.
+
+# RUN: yaml2obj --docnum=7 %s -o %t7
+# RUN: llvm-readobj --section-data -S %t7 | FileCheck %s --check-prefix=CASE7
+
+# CASE7:       Name: .dynsym
+# CASE7-NEXT:  Type: SHT_DYNSYM
+# CASE7-NEXT:  Flags [
+# CASE7-NEXT:    SHF_ALLOC
+# CASE7-NEXT:  ]
+# CASE7-NEXT:  Address: 0x0
+# CASE7-NEXT:  Offset: 0x180
+# CASE7-NEXT:  Size: 2
+# CASE7-NEXT:  Link: 0
+# CASE7-NEXT:  Info: 0
+# CASE7-NEXT:  AddressAlignment: 0
+# CASE7-NEXT:  EntrySize: 24
+# CASE7-NEXT:  SectionData (
+# CASE7-NEXT:    0000: 0123
+# CASE7-NEXT:  )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Content: "0123"
+    Size: 2

@@ -19,7 +19,7 @@ define float @foo(float %f) #0 {
 ; CHECK:     %12:fr32 = VMULSSrr killed %11, killed %10
 ; CHECK:     %14:fr32 = FsFLD0SS
 ; CHECK:     %15:fr32 = VCMPSSrr %0, killed %14, 0
-; CHECK:     %17:vr128 = VANDNPSrr killed %16, killed %13
+; CHECK:     %17:vr128 = VPANDNrr killed %16, killed %13
 ; CHECK:     $xmm0 = COPY %18
 ; CHECK:     RET 0, $xmm0
   %call = tail call float @llvm.sqrt.f32(float %f) #1

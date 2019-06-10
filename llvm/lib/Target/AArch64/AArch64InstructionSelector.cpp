@@ -1858,6 +1858,11 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
       return false;
     }
 
+    // Try to match immediate forms.
+    auto ImmFns = selectArithImmed(I.getOperand(3));
+    if (ImmFns)
+      CmpOpc = CmpOpc == AArch64::SUBSWrr ? AArch64::SUBSWri : AArch64::SUBSXri;
+
     // CSINC increments the result by one when the condition code is false.
     // Therefore, we have to invert the predicate to get an increment by 1 when
     // the predicate is true.
@@ -1865,10 +1870,17 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
         changeICMPPredToAArch64CC(CmpInst::getInversePredicate(
             (CmpInst::Predicate)I.getOperand(1).getPredicate()));
 
-    MachineInstr &CmpMI = *BuildMI(MBB, I, I.getDebugLoc(), TII.get(CmpOpc))
-                               .addDef(ZReg)
-                               .addUse(I.getOperand(2).getReg())
-                               .addUse(I.getOperand(3).getReg());
+    auto CmpMI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(CmpOpc))
+                     .addDef(ZReg)
+                     .addUse(I.getOperand(2).getReg());
+
+    // If we matched a valid constant immediate, add those operands.
+    if (ImmFns) {
+      for (auto &RenderFn : *ImmFns)
+        RenderFn(CmpMI);
+    } else {
+      CmpMI.addUse(I.getOperand(3).getReg());
+    }
 
     MachineInstr &CSetMI =
         *BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::CSINCWr))
@@ -1877,7 +1889,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
              .addUse(AArch64::WZR)
              .addImm(invCC);
 
-    constrainSelectedInstRegOperands(CmpMI, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*CmpMI, TII, TRI, RBI);
     constrainSelectedInstRegOperands(CSetMI, TII, TRI, RBI);
 
     I.eraseFromParent();

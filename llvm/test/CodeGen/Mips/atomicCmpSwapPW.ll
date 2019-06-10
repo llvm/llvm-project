@@ -11,21 +11,19 @@
 define void @foo(i32 %new, i32 %old) {
 ; O32-LABEL: foo:
 ; O32:       # %bb.0: # %entry
-; O32-NEXT:    move $1, $5
-; O32-NEXT:    move $2, $4
-; O32-NEXT:    lui $3, %hi(sym)
-; O32-NEXT:    lw $3, %lo(sym)($3)
+; O32-NEXT:    lui $1, %hi(sym)
+; O32-NEXT:    lw $1, %lo(sym)($1)
 ; O32-NEXT:    sync
 ; O32-NEXT:  $BB0_1: # %entry
 ; O32-NEXT:    # =>This Inner Loop Header: Depth=1
-; O32-NEXT:    ll $6, 0($3)
-; O32-NEXT:    bne $6, $4, $BB0_3
+; O32-NEXT:    ll $2, 0($1)
+; O32-NEXT:    bne $2, $4, $BB0_3
 ; O32-NEXT:    nop
 ; O32-NEXT:  # %bb.2: # %entry
 ; O32-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; O32-NEXT:    move $7, $5
-; O32-NEXT:    sc $7, 0($3)
-; O32-NEXT:    beqz $7, $BB0_1
+; O32-NEXT:    move $3, $5
+; O32-NEXT:    sc $3, 0($1)
+; O32-NEXT:    beqz $3, $BB0_1
 ; O32-NEXT:    nop
 ; O32-NEXT:  $BB0_3: # %entry
 ; O32-NEXT:    sync

@@ -185,8 +185,6 @@ public:
     atomic_store_relaxed(&MaxCacheSize, CacheSize);
 
     Cache.initLinkerInitialized();
-    CacheMutex.initLinkerInitialized();
-    RecyleMutex.initLinkerInitialized();
   }
   void init(uptr Size, uptr CacheSize) {
     memset(this, 0, sizeof(*this));

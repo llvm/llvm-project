@@ -359,7 +359,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
             {"documentRangeFormattingProvider", true},
             {"documentOnTypeFormattingProvider",
              llvm::json::Object{
-                 {"firstTriggerCharacter", "}"},
+                 {"firstTriggerCharacter", "\n"},
                  {"moreTriggerCharacter", {}},
              }},
             {"codeActionProvider", true},
@@ -576,11 +576,7 @@ void ClangdLSPServer::onDocumentOnTypeFormatting(
         "onDocumentOnTypeFormatting called for non-added file",
         ErrorCode::InvalidParams));
 
-  auto ReplacementsOrError = Server->formatOnType(*Code, File, Params.position);
-  if (ReplacementsOrError)
-    Reply(replacementsToEdits(*Code, ReplacementsOrError.get()));
-  else
-    Reply(ReplacementsOrError.takeError());
+  Reply(Server->formatOnType(*Code, File, Params.position, Params.ch));
 }
 
 void ClangdLSPServer::onDocumentRangeFormatting(

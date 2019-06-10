@@ -435,7 +435,6 @@ define swiftcc float @conditionally_forward_swifterror(%swift_error** swifterror
 
 ; CHECK-O0-LABEL: conditionally_forward_swifterror:
 ; CHECK-O0: pushq [[REG1:%[a-z0-9]+]]
-; CHECK-O0:  movq %r12, [[REG1]]
 ; CHECK-O0:  cmpl $0, %edi
 ; CHECK-O0-DAG:  movq %r12, (%rsp)
 ; CHECK-O0:  je
@@ -744,7 +743,6 @@ a:
 }
 
 ; CHECK-O0-LABEL: testAssign2
-; CHECK-O0:        movq    %r12, {{.*}}
 ; CHECK-O0:        movq    %r12, [[SLOT:[-a-z0-9\(\)\%]*]]
 ; CHECK-O0:        jmp
 ; CHECK-O0:        movq    [[SLOT]], %rax
@@ -791,9 +789,9 @@ a:
 
 ; CHECK-O0-LABEL: testAssign4
 ; CHECK-O0:        callq   _foo2
-; CHECK-O0:        xorl    %ecx, %ecx
-; CHECK-O0:        movl    %ecx, %eax
-; CHECK-O0:        movq    %rax, [[SLOT:[-a-z0-9\(\)\%]*]]
+; CHECK-O0:        xorl    %eax, %eax
+; CHECK-O0:        movl    %eax, %ecx
+; CHECK-O0:        movq    %rcx, [[SLOT:[-a-z0-9\(\)\%]*]]
 ; CHECK-O0:        movq    [[SLOT]], %rax
 ; CHECK-O0:        movq    %rax, [[SLOT2:[-a-z0-9\(\)\%]*]]
 ; CHECK-O0:        movq    [[SLOT2]], %r12
