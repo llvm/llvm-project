@@ -522,7 +522,7 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
     if (MatchingEpilog) {
       assert(EpilogInfo.find(MatchingEpilog) != EpilogInfo.end() &&
              "Duplicate epilog not found");
-      EpilogInfo[EpilogStart] = EpilogInfo[MatchingEpilog];
+      EpilogInfo[EpilogStart] = EpilogInfo.lookup(MatchingEpilog);
       // Clear the unwind codes in the EpilogMap, so that they don't get output
       // in the logic below.
       EpilogInstrs.clear();
