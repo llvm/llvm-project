@@ -1727,6 +1727,8 @@ namespace {
       // has a different break/continue scope.
       if (const Stmt *Init = S->getInit())
         Visit(Init);
+      if (const Stmt *Limit = S->getLimitStmt())
+        Visit(Limit);
       if (const Stmt *Begin = S->getBeginStmt())
         Visit(Begin);
       if (const Stmt *End = S->getEndStmt())
@@ -3148,37 +3150,39 @@ StmtResult Sema::HandleSimpleCilkForStmt(SourceLocation CilkForLoc,
   // Create a declaration for the initialization of this loop, to ensure its
   // evaluated just once.
   QualType LoopVarTy = LoopVar->getType();
+  SourceLocation InitLoc = LoopVarInit->getBeginLoc();
   // Add declaration to store the old loop var initialization.
-  VarDecl *InitVar = BuildForRangeVarDecl(*this, CilkForLoc, LoopVarTy,
-                                           "__init");
+  VarDecl *InitVar = BuildForRangeVarDecl(*this, InitLoc,
+                                          LoopVarTy, "__init");
   AddInitializerToDecl(InitVar, LoopVarInit, /*DirectInit=*/false);
   FinalizeDeclaration(InitVar);
   CurContext->addHiddenDecl(InitVar);
 
   // Create a declaration for the limit of this loop, to ensure its evaluated
   // just once.
-  VarDecl *LimitVar = BuildForRangeVarDecl(*this, CilkForLoc,
-                                           LimitExpr->getType(), "__limit");
+  SourceLocation LimitLoc = LimitExpr->getBeginLoc();
+  VarDecl *LimitVar = BuildForRangeVarDecl(*this, LimitLoc,
+                                           LoopVarTy, "__limit");
   AddInitializerToDecl(LimitVar, LimitExpr, /*DirectInit=*/false);
   FinalizeDeclaration(LimitVar);
   CurContext->addHiddenDecl(LimitVar);
 
   DeclGroupPtrTy InitGroup =
     BuildDeclaratorGroup(MutableArrayRef<Decl *>((Decl **)&InitVar, 1));
-  StmtResult NewInit = ActOnDeclStmt(InitGroup, CilkForLoc, CilkForLoc);
+  StmtResult NewInit = ActOnDeclStmt(InitGroup, InitLoc, InitLoc);
   if (NewInit.isInvalid())
     return StmtError();
 
   DeclGroupPtrTy LimitGroup =
     BuildDeclaratorGroup(MutableArrayRef<Decl *>((Decl **)&LimitVar, 1));
-  StmtResult LimitDecl = ActOnDeclStmt(LimitGroup, CilkForLoc, CilkForLoc);
+  StmtResult LimitDecl = ActOnDeclStmt(LimitGroup, LimitLoc, LimitLoc);
   if (LimitDecl.isInvalid())
     return StmtError();
 
   ExprResult InitRef = BuildDeclRefExpr(InitVar, LoopVarTy, VK_LValue,
-                                        CilkForLoc);
+                                        InitLoc);
   ExprResult LimitRef = BuildDeclRefExpr(LimitVar, LimitVar->getType(),
-                                         VK_LValue, CilkForLoc);
+                                         VK_LValue, LimitLoc);
 
   // LimitVar should have the correct type, because it's derived from the
   // original condition.  Hence we only need to cast InitRef.
@@ -3187,12 +3191,13 @@ StmtResult Sema::HandleSimpleCilkForStmt(SourceLocation CilkForLoc,
                                                  nullptr, VK_RValue);
 
   // Compute a check that this _Cilk_for loop executes at all.
+  SourceLocation CondLoc = Cond->getExprLoc();
   ExprResult InitCond;
   if (DeclUseInLHS)
-    InitCond = BuildBinOp(S, CilkForLoc, Cond->getOpcode(), CastInit.get(),
+    InitCond = BuildBinOp(S, CondLoc, Cond->getOpcode(), CastInit.get(),
                           LimitRef.get());
   else // DeclUseInRHS
-    InitCond = BuildBinOp(S, CilkForLoc, Cond->getOpcode(), LimitRef.get(),
+    InitCond = BuildBinOp(S, CondLoc, Cond->getOpcode(), LimitRef.get(),
                           CastInit.get());
   assert(!InitCond.isInvalid());
   if (InitCond.isInvalid())
@@ -3202,55 +3207,52 @@ StmtResult Sema::HandleSimpleCilkForStmt(SourceLocation CilkForLoc,
   ExprResult Range;
   if (!StrideIsNegative)
     // range = limit - init.
-    Range = BuildBinOp(S, CilkForLoc, BO_Sub, LimitRef.get(), CastInit.get());
+    Range = BuildBinOp(S, CondLoc, BO_Sub, LimitRef.get(), CastInit.get());
   else
     // range = init - limit.
-    Range = BuildBinOp(S, CilkForLoc, BO_Sub, CastInit.get(), LimitRef.get());
+    Range = BuildBinOp(S, CondLoc, BO_Sub, CastInit.get(), LimitRef.get());
   if (Range.isInvalid())
     return StmtError();
 
   // At this point, we have confirmed that this loop is a simple _Cilk_for loop.
   // Now rewrite the loop control.
-  //
-  // TODO: Check the behavior of this routine in handling loops with negative
-  // strides, and fix it accordingly.
 
   // If the comparison is not inclusive, reduce the Range by 1.
   if (!CompareInclusive)
-    Range = BuildBinOp(S, CilkForLoc, BO_Sub, Range.get(),
+    Range = BuildBinOp(S, CondLoc, BO_Sub, Range.get(),
                        ActOnIntegerConstant(CilkForLoc, 1).get());
 
   // Build Range/Stride.
-  ExprResult NewLimit = BuildBinOp(S, CilkForLoc, BO_Div, Range.get(), Stride);
+  ExprResult NewLimit = BuildBinOp(S, CondLoc, BO_Div, Range.get(), Stride);
 
   // If the comparison is not an equality, build Range/Stride + 1
   if (!CompareEqual)
-    NewLimit = BuildBinOp(S, CilkForLoc, BO_Add, NewLimit.get(),
+    NewLimit = BuildBinOp(S, CondLoc, BO_Add, NewLimit.get(),
                           ActOnIntegerConstant(CilkForLoc, 1).get());
 
   // Create new declarations for replacement loop control variables.
   // Declaration for new beginning loop control variable.
-  VarDecl *BeginVar = BuildForRangeVarDecl(*this, CilkForLoc, LoopVarTy,
+  VarDecl *BeginVar = BuildForRangeVarDecl(*this, CondLoc, LoopVarTy,
                                            "__begin");
-  AddInitializerToDecl(BeginVar, ActOnIntegerConstant(CilkForLoc, 0).get(),
+  AddInitializerToDecl(BeginVar, ActOnIntegerConstant(CondLoc, 0).get(),
                        /*DirectInit=*/false);
   FinalizeDeclaration(BeginVar);
   CurContext->addHiddenDecl(BeginVar);
   // Declaration for new end loop control variable.
-  VarDecl *EndVar = BuildForRangeVarDecl(*this, CilkForLoc, LoopVarTy, "__end");
+  VarDecl *EndVar = BuildForRangeVarDecl(*this, CondLoc, LoopVarTy, "__end");
   AddInitializerToDecl(EndVar, NewLimit.get(), /*DirectInit=*/false);
   FinalizeDeclaration(EndVar);
   CurContext->addHiddenDecl(EndVar);
 
   DeclGroupPtrTy BeginGroup =
     BuildDeclaratorGroup(MutableArrayRef<Decl *>((Decl **)&BeginVar, 1));
-  StmtResult BeginStmt = ActOnDeclStmt(BeginGroup, CilkForLoc, CilkForLoc);
+  StmtResult BeginStmt = ActOnDeclStmt(BeginGroup, CondLoc, CondLoc);
   if (BeginStmt.isInvalid())
     return StmtError();
 
   DeclGroupPtrTy EndGroup =
     BuildDeclaratorGroup(MutableArrayRef<Decl *>((Decl **)&EndVar, 1));
-  StmtResult EndStmt = ActOnDeclStmt(EndGroup, CilkForLoc, CilkForLoc);
+  StmtResult EndStmt = ActOnDeclStmt(EndGroup, CondLoc, CondLoc);
   if (EndStmt.isInvalid())
     return StmtError();
 
@@ -3260,15 +3262,15 @@ StmtResult Sema::HandleSimpleCilkForStmt(SourceLocation CilkForLoc,
   // Create a new condition expression that uses the new VarDecl
   // in place of the lifted expression.
   ExprResult BeginRef = BuildDeclRefExpr(BeginVar, LoopVarTy, VK_LValue,
-                                         CilkForLoc);
+                                         CondLoc);
   ExprResult EndRef = BuildDeclRefExpr(EndVar, LoopVarTy, VK_LValue,
-                                       CilkForLoc);
+                                       CondLoc);
   ExprResult NewCond;
   if (CompareUpperLimit == DeclUseInLHS)
-    NewCond = BuildBinOp(S, CilkForLoc, Cond->getOpcode(), BeginRef.get(),
+    NewCond = BuildBinOp(S, CondLoc, Cond->getOpcode(), BeginRef.get(),
                          EndRef.get());
   else
-    NewCond = BuildBinOp(S, CilkForLoc, Cond->getOpcode(), EndRef.get(),
+    NewCond = BuildBinOp(S, CondLoc, Cond->getOpcode(), EndRef.get(),
                          BeginRef.get());
   if (NewCond.isInvalid())
     return StmtError();
@@ -3276,31 +3278,33 @@ StmtResult Sema::HandleSimpleCilkForStmt(SourceLocation CilkForLoc,
   // Create a new increment operation on the new beginning variable, and add it
   // to the existing increment operation.
   ExprResult NewInc;
+  SourceLocation IncLoc = Increment->getExprLoc();
   if (const CompoundAssignOperator *CAO =
       dyn_cast<CompoundAssignOperator>(Increment)) {
     switch (CAO->getOpcode()) {
     default: break;  // Should not reach this case if we have a Stride.
     case BO_AddAssign:
-      NewInc = BuildUnaryOp(S, CilkForLoc, UO_PreInc, BeginRef.get());
+      NewInc = BuildUnaryOp(S, IncLoc, UO_PreInc, BeginRef.get());
       break;
     case BO_SubAssign:
-      NewInc = BuildUnaryOp(S, CilkForLoc, UO_PreInc, BeginRef.get());
+      NewInc = BuildUnaryOp(S, IncLoc, UO_PreInc, BeginRef.get());
       break;
     }
   } else if (const UnaryOperator *UO =
              dyn_cast_or_null<UnaryOperator>(Increment)) {
     if (UO->isIncrementOp())
-      NewInc = BuildUnaryOp(S, CilkForLoc, UO_PreInc, BeginRef.get());
+      NewInc = BuildUnaryOp(S, IncLoc, UO_PreInc, BeginRef.get());
     else if (UO->isDecrementOp())
-      NewInc = BuildUnaryOp(S, CilkForLoc, UO_PreInc, BeginRef.get());
+      NewInc = BuildUnaryOp(S, IncLoc, UO_PreInc, BeginRef.get());
   }
   if (NewInc.isInvalid())
     return StmtError();
 
   // Return a new statement for initializing the old loop variable.
+  SourceLocation LoopVarLoc = LoopVar->getBeginLoc();
   ExprResult NewLoopVarInit =
-    BuildBinOp(S, CilkForLoc, StrideIsNegative ? BO_Sub : BO_Add, InitRef.get(),
-               BuildBinOp(S, CilkForLoc, BO_Mul,
+    BuildBinOp(S, LoopVarLoc, StrideIsNegative ? BO_Sub : BO_Add, InitRef.get(),
+               BuildBinOp(S, LoopVarLoc, BO_Mul,
                           BeginRef.get(), Stride).get());
   AddInitializerToDecl(LoopVar, NewLoopVarInit.get(), /*DirectInit=*/false);
 
