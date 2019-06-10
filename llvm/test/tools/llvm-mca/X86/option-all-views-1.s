@@ -18,6 +18,13 @@ add %eax, %eax
 # DEFAULTREPORT-NEXT: IPC:               0.97
 # DEFAULTREPORT-NEXT: Block RThroughput: 0.5
 
+# FULLREPORT:         Cycles with backend pressure increase [ 76.70% ]
+# FULLREPORT-NEXT:    Throughput Bottlenecks:
+# FULLREPORT-NEXT:      Resource Pressure       [ 0.00% ]
+# FULLREPORT-NEXT:      Data Dependencies:      [ 76.70% ]
+# FULLREPORT-NEXT:      - Register Dependencies [ 76.70% ]
+# FULLREPORT-NEXT:      - Memory Dependencies   [ 0.00% ]
+
 # DEFAULTREPORT:      Instruction Info:
 # DEFAULTREPORT-NEXT: [1]: #uOps
 # DEFAULTREPORT-NEXT: [2]: Latency

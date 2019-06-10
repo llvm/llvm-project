@@ -23,6 +23,7 @@ namespace llvm {
   // Various helper functions.
   LLVM_ATTRIBUTE_NORETURN void reportError(Twine Msg);
   void reportWarning(Twine Msg);
+  void warn(llvm::Error Err);
   void error(std::error_code EC);
   void error(llvm::Error EC);
   template <typename T> T error(llvm::Expected<T> &&E) {

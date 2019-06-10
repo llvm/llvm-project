@@ -210,3 +210,66 @@ void test3(const Proxy2 &p) {
 // CHECK-CC9: memfun2 (InBase) : [#void#][#Base3::#]memfun2(<#int#>) (requires fix-it: {181:4-181:5} to "->")
 // CHECK-CC9: memfun3 : [#int#]memfun3(<#int#>) (requires fix-it: {181:4-181:5} to "->")
 // CHECK-CC9: operator-> : [#Derived *#]operator->()[# const#]
+
+// These overload sets differ only by return type and this-qualifiers.
+// So for any given callsite, only one is available.
+struct Overloads {
+  double ConstOverload(char);
+  int ConstOverload(char) const;
+
+  int RefOverload(char) &;
+  double RefOverload(char) const&;
+  char RefOverload(char) &&;
+};
+void testLValue(Overloads& Ref) {
+  Ref.
+}
+void testConstLValue(const Overloads& ConstRef) {
+  ConstRef.
+}
+void testRValue() {
+  Overloads().
+}
+void testXValue(Overloads& X) {
+  static_cast<Overloads&&>(X).
+}
+
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:225:7 %s -o - | FileCheck -check-prefix=CHECK-LVALUE %s \
+// RUN: --implicit-check-not="[#int#]ConstOverload(" \
+// RUN: --implicit-check-not="[#double#]RefOverload(" \
+// RUN: --implicit-check-not="[#char#]RefOverload("
+// CHECK-LVALUE-DAG: [#double#]ConstOverload(
+// CHECK-LVALUE-DAG: [#int#]RefOverload(
+
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:228:12 %s -o - | FileCheck -check-prefix=CHECK-CONSTLVALUE %s \
+// RUN: --implicit-check-not="[#double#]ConstOverload(" \
+// RUN: --implicit-check-not="[#int#]RefOverload(" \
+// RUN: --implicit-check-not="[#char#]RefOverload("
+// CHECK-CONSTLVALUE: [#int#]ConstOverload(
+// CHECK-CONSTLVALUE: [#double#]RefOverload(
+
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:231:15 %s -o - | FileCheck -check-prefix=CHECK-PRVALUE %s \
+// RUN: --implicit-check-not="[#int#]ConstOverload(" \
+// RUN: --implicit-check-not="[#int#]RefOverload(" \
+// RUN: --implicit-check-not="[#double#]RefOverload("
+// CHECK-PRVALUE: [#double#]ConstOverload(
+// CHECK-PRVALUE: [#char#]RefOverload(
+
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:234:31 %s -o - | FileCheck -check-prefix=CHECK-XVALUE %s \
+// RUN: --implicit-check-not="[#int#]ConstOverload(" \
+// RUN: --implicit-check-not="[#int#]RefOverload(" \
+// RUN: --implicit-check-not="[#double#]RefOverload("
+// CHECK-XVALUE: [#double#]ConstOverload(
+// CHECK-XVALUE: [#char#]RefOverload(
+
+void testOverloadOperator() {
+  struct S {
+    char operator=(int) const;
+    int operator=(int);
+  } s;
+  return s.
+}
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:270:12 %s -o - | FileCheck -check-prefix=CHECK-OPER %s \
+// RUN: --implicit-check-not="[#char#]operator=("
+// CHECK-OPER: [#int#]operator=(
+

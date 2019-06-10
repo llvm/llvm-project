@@ -1,3 +1,5 @@
+# REQUIRES: x86
+
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj %s > %t
 # RUN: %lldb %t -o "image lookup -v -s lookup_ranges" -o exit | FileCheck %s
 

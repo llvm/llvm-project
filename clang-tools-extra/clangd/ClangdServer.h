@@ -214,10 +214,11 @@ public:
   llvm::Expected<tooling::Replacements> formatFile(StringRef Code,
                                                    PathRef File);
 
-  /// Run formatting after a character was typed at \p Pos in \p File with
+  /// Run formatting after \p TriggerText was typed at \p Pos in \p File with
   /// content \p Code.
-  llvm::Expected<tooling::Replacements>
-  formatOnType(StringRef Code, PathRef File, Position Pos);
+  llvm::Expected<std::vector<TextEdit>> formatOnType(StringRef Code,
+                                                     PathRef File, Position Pos,
+                                                     StringRef TriggerText);
 
   /// Rename all occurrences of the symbol at the \p Pos in \p File to
   /// \p NewName.

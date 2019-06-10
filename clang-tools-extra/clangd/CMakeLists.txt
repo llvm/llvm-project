@@ -48,6 +48,7 @@ add_clang_library(clangDaemon
   ExpectedTypes.cpp
   FindSymbols.cpp
   FileDistance.cpp
+  Format.cpp
   FS.cpp
   FSProvider.cpp
   FormattedString.cpp
