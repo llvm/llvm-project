@@ -1251,13 +1251,6 @@ def : Pat<(f64 (fpextend FR32:$src)),
 def : Pat<(fpextend (loadf32 addr:$src)),
     (VCVTSS2SDrm (f64 (IMPLICIT_DEF)), addr:$src)>, Requires<[UseAVX, OptForSize]>;
 
-def : Pat<(extloadf32 addr:$src),
-    (VCVTSS2SDrm (f64 (IMPLICIT_DEF)), addr:$src)>,
-    Requires<[UseAVX, OptForSize]>;
-def : Pat<(extloadf32 addr:$src),
-    (VCVTSS2SDrr (f64 (IMPLICIT_DEF)), (VMOVSSrm addr:$src))>,
-    Requires<[UseAVX, OptForSpeed]>;
-
 let isCodeGenOnly = 1 in {
 def CVTSS2SDrr : I<0x5A, MRMSrcReg, (outs FR64:$dst), (ins FR32:$src),
                    "cvtss2sd\t{$src, $dst|$dst, $src}",
@@ -1265,20 +1258,10 @@ def CVTSS2SDrr : I<0x5A, MRMSrcReg, (outs FR64:$dst), (ins FR32:$src),
                    XS, Requires<[UseSSE2]>, Sched<[WriteCvtSS2SD]>;
 def CVTSS2SDrm : I<0x5A, MRMSrcMem, (outs FR64:$dst), (ins f32mem:$src),
                    "cvtss2sd\t{$src, $dst|$dst, $src}",
-                   [(set FR64:$dst, (extloadf32 addr:$src))]>,
+                   [(set FR64:$dst, (fpextend (loadf32 addr:$src)))]>,
                    XS, Requires<[UseSSE2, OptForSize]>,
                    Sched<[WriteCvtSS2SD.Folded]>;
 } // isCodeGenOnly = 1
-
-// extload f32 -> f64.  This matches load+fpextend because we have a hack in
-// the isel (PreprocessForFPConvert) that can introduce loads after dag
-// combine.
-// Since these loads aren't folded into the fpextend, we have to match it
-// explicitly here.
-def : Pat<(fpextend (loadf32 addr:$src)),
-          (CVTSS2SDrm addr:$src)>, Requires<[UseSSE2, OptForSize]>;
-def : Pat<(extloadf32 addr:$src),
-          (CVTSS2SDrr (MOVSSrm addr:$src))>, Requires<[UseSSE2, OptForSpeed]>;
 
 let hasSideEffects = 0 in {
 def VCVTSS2SDrr_Int: I<0x5A, MRMSrcReg,
@@ -2415,99 +2398,6 @@ let Predicates = [HasAVX1Only] in {
             (VANDNPSYrm VR256:$src1, addr:$src2)>;
   def : Pat<(X86andnp VR256:$src1, (loadv4i64 addr:$src2)),
             (VANDNPSYrm VR256:$src1, addr:$src2)>;
-}
-
-let Predicates = [HasAVX, NoVLX_Or_NoDQI] in {
-  // Use packed logical operations for scalar ops.
-  def : Pat<(f64 (X86fand FR64:$src1, FR64:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (VANDPDrr (v2f64 (COPY_TO_REGCLASS FR64:$src1, VR128)),
-                              (v2f64 (COPY_TO_REGCLASS FR64:$src2, VR128)))),
-             FR64)>;
-  def : Pat<(f64 (X86for FR64:$src1, FR64:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (VORPDrr (v2f64 (COPY_TO_REGCLASS FR64:$src1, VR128)),
-                             (v2f64 (COPY_TO_REGCLASS FR64:$src2, VR128)))),
-             FR64)>;
-  def : Pat<(f64 (X86fxor FR64:$src1, FR64:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (VXORPDrr (v2f64 (COPY_TO_REGCLASS FR64:$src1, VR128)),
-                              (v2f64 (COPY_TO_REGCLASS FR64:$src2, VR128)))),
-             FR64)>;
-  def : Pat<(f64 (X86fandn FR64:$src1, FR64:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (VANDNPDrr (v2f64 (COPY_TO_REGCLASS FR64:$src1, VR128)),
-                               (v2f64 (COPY_TO_REGCLASS FR64:$src2, VR128)))),
-             FR64)>;
-
-  def : Pat<(f32 (X86fand FR32:$src1, FR32:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (VANDPSrr (v4f32 (COPY_TO_REGCLASS FR32:$src1, VR128)),
-                              (v4f32 (COPY_TO_REGCLASS FR32:$src2, VR128)))),
-             FR32)>;
-  def : Pat<(f32 (X86for FR32:$src1, FR32:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (VORPSrr (v4f32 (COPY_TO_REGCLASS FR32:$src1, VR128)),
-                             (v4f32 (COPY_TO_REGCLASS FR32:$src2, VR128)))),
-             FR32)>;
-  def : Pat<(f32 (X86fxor FR32:$src1, FR32:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (VXORPSrr (v4f32 (COPY_TO_REGCLASS FR32:$src1, VR128)),
-                              (v4f32 (COPY_TO_REGCLASS FR32:$src2, VR128)))),
-             FR32)>;
-  def : Pat<(f32 (X86fandn FR32:$src1, FR32:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (VANDNPSrr (v4f32 (COPY_TO_REGCLASS FR32:$src1, VR128)),
-                               (v4f32 (COPY_TO_REGCLASS FR32:$src2, VR128)))),
-             FR32)>;
-}
-
-let Predicates = [UseSSE1] in {
-  // Use packed logical operations for scalar ops.
-  def : Pat<(f32 (X86fand FR32:$src1, FR32:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (ANDPSrr (v4f32 (COPY_TO_REGCLASS FR32:$src1, VR128)),
-                             (v4f32 (COPY_TO_REGCLASS FR32:$src2, VR128)))),
-             FR32)>;
-  def : Pat<(f32 (X86for FR32:$src1, FR32:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (ORPSrr (v4f32 (COPY_TO_REGCLASS FR32:$src1, VR128)),
-                            (v4f32 (COPY_TO_REGCLASS FR32:$src2, VR128)))),
-             FR32)>;
-  def : Pat<(f32 (X86fxor FR32:$src1, FR32:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (XORPSrr (v4f32 (COPY_TO_REGCLASS FR32:$src1, VR128)),
-                             (v4f32 (COPY_TO_REGCLASS FR32:$src2, VR128)))),
-             FR32)>;
-  def : Pat<(f32 (X86fandn FR32:$src1, FR32:$src2)),
-            (COPY_TO_REGCLASS
-             (v4f32 (ANDNPSrr (v4f32 (COPY_TO_REGCLASS FR32:$src1, VR128)),
-                              (v4f32 (COPY_TO_REGCLASS FR32:$src2, VR128)))),
-             FR32)>;
-}
-
-let Predicates = [UseSSE2] in {
-  // Use packed logical operations for scalar ops.
-  def : Pat<(f64 (X86fand FR64:$src1, FR64:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (ANDPDrr (v2f64 (COPY_TO_REGCLASS FR64:$src1, VR128)),
-                             (v2f64 (COPY_TO_REGCLASS FR64:$src2, VR128)))),
-             FR64)>;
-  def : Pat<(f64 (X86for FR64:$src1, FR64:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (ORPDrr (v2f64 (COPY_TO_REGCLASS FR64:$src1, VR128)),
-                            (v2f64 (COPY_TO_REGCLASS FR64:$src2, VR128)))),
-             FR64)>;
-  def : Pat<(f64 (X86fxor FR64:$src1, FR64:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (XORPDrr (v2f64 (COPY_TO_REGCLASS FR64:$src1, VR128)),
-                             (v2f64 (COPY_TO_REGCLASS FR64:$src2, VR128)))),
-             FR64)>;
-  def : Pat<(f64 (X86fandn FR64:$src1, FR64:$src2)),
-            (COPY_TO_REGCLASS
-             (v2f64 (ANDNPDrr (v2f64 (COPY_TO_REGCLASS FR64:$src1, VR128)),
-                              (v2f64 (COPY_TO_REGCLASS FR64:$src2, VR128)))),
-             FR64)>;
 }
 
 let Predicates = [HasAVX, NoVLX] in {

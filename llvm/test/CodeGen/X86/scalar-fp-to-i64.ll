@@ -631,7 +631,7 @@ define i64 @d_to_u64(double %a) nounwind {
 ; SSE3_32_WIN-NEXT:    subsd %xmm1, %xmm0
 ; SSE3_32_WIN-NEXT:    andnpd %xmm0, %xmm3
 ; SSE3_32_WIN-NEXT:    orpd %xmm3, %xmm2
-; SSE3_32_WIN-NEXT:    movsd %xmm2, (%esp)
+; SSE3_32_WIN-NEXT:    movlpd %xmm2, (%esp)
 ; SSE3_32_WIN-NEXT:    fldl (%esp)
 ; SSE3_32_WIN-NEXT:    fisttpll (%esp)
 ; SSE3_32_WIN-NEXT:    setbe %dl
@@ -656,7 +656,7 @@ define i64 @d_to_u64(double %a) nounwind {
 ; SSE3_32_LIN-NEXT:    subsd %xmm1, %xmm0
 ; SSE3_32_LIN-NEXT:    andnpd %xmm0, %xmm3
 ; SSE3_32_LIN-NEXT:    orpd %xmm3, %xmm2
-; SSE3_32_LIN-NEXT:    movsd %xmm2, (%esp)
+; SSE3_32_LIN-NEXT:    movlpd %xmm2, (%esp)
 ; SSE3_32_LIN-NEXT:    fldl (%esp)
 ; SSE3_32_LIN-NEXT:    fisttpll (%esp)
 ; SSE3_32_LIN-NEXT:    setbe %dl
@@ -695,7 +695,7 @@ define i64 @d_to_u64(double %a) nounwind {
 ; SSE2_32_WIN-NEXT:    andnpd %xmm2, %xmm4
 ; SSE2_32_WIN-NEXT:    andpd %xmm0, %xmm3
 ; SSE2_32_WIN-NEXT:    orpd %xmm4, %xmm3
-; SSE2_32_WIN-NEXT:    movsd %xmm3, {{[0-9]+}}(%esp)
+; SSE2_32_WIN-NEXT:    movlpd %xmm3, {{[0-9]+}}(%esp)
 ; SSE2_32_WIN-NEXT:    fldl {{[0-9]+}}(%esp)
 ; SSE2_32_WIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; SSE2_32_WIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
@@ -727,7 +727,7 @@ define i64 @d_to_u64(double %a) nounwind {
 ; SSE2_32_LIN-NEXT:    andnpd %xmm2, %xmm4
 ; SSE2_32_LIN-NEXT:    andpd %xmm0, %xmm3
 ; SSE2_32_LIN-NEXT:    orpd %xmm4, %xmm3
-; SSE2_32_LIN-NEXT:    movsd %xmm3, {{[0-9]+}}(%esp)
+; SSE2_32_LIN-NEXT:    movlpd %xmm3, {{[0-9]+}}(%esp)
 ; SSE2_32_LIN-NEXT:    fldl {{[0-9]+}}(%esp)
 ; SSE2_32_LIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; SSE2_32_LIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax

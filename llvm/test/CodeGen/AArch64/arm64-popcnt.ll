@@ -326,37 +326,17 @@ define i32 @ctpop_eq_one(i64 %x) nounwind readnone {
 ;
 ; CHECK-ARM8A-NEON-LABEL: ctpop_eq_one:
 ; CHECK-ARM8A-NEON:       @ %bb.0:
-; CHECK-ARM8A-NEON-NEXT:    push {r11, lr}
-; CHECK-ARM8A-NEON-NEXT:    movw r12, #21845
-; CHECK-ARM8A-NEON-NEXT:    movw lr, #3855
-; CHECK-ARM8A-NEON-NEXT:    movt r12, #21845
-; CHECK-ARM8A-NEON-NEXT:    and r3, r12, r0, lsr #1
-; CHECK-ARM8A-NEON-NEXT:    sub r0, r0, r3
-; CHECK-ARM8A-NEON-NEXT:    movw r3, #13107
-; CHECK-ARM8A-NEON-NEXT:    movt r3, #13107
-; CHECK-ARM8A-NEON-NEXT:    and r2, r0, r3
-; CHECK-ARM8A-NEON-NEXT:    and r0, r3, r0, lsr #2
-; CHECK-ARM8A-NEON-NEXT:    movt lr, #3855
-; CHECK-ARM8A-NEON-NEXT:    add r0, r2, r0
-; CHECK-ARM8A-NEON-NEXT:    and r2, r12, r1, lsr #1
-; CHECK-ARM8A-NEON-NEXT:    sub r1, r1, r2
-; CHECK-ARM8A-NEON-NEXT:    and r2, r1, r3
-; CHECK-ARM8A-NEON-NEXT:    add r0, r0, r0, lsr #4
-; CHECK-ARM8A-NEON-NEXT:    and r1, r3, r1, lsr #2
-; CHECK-ARM8A-NEON-NEXT:    and r0, r0, lr
-; CHECK-ARM8A-NEON-NEXT:    add r1, r2, r1
-; CHECK-ARM8A-NEON-NEXT:    movw r2, #257
-; CHECK-ARM8A-NEON-NEXT:    movt r2, #257
-; CHECK-ARM8A-NEON-NEXT:    add r1, r1, r1, lsr #4
-; CHECK-ARM8A-NEON-NEXT:    mul r0, r0, r2
-; CHECK-ARM8A-NEON-NEXT:    and r1, r1, lr
-; CHECK-ARM8A-NEON-NEXT:    mul r1, r1, r2
-; CHECK-ARM8A-NEON-NEXT:    lsr r0, r0, #24
-; CHECK-ARM8A-NEON-NEXT:    add r0, r0, r1, lsr #24
-; CHECK-ARM8A-NEON-NEXT:    eor r0, r0, #1
-; CHECK-ARM8A-NEON-NEXT:    clz r0, r0
-; CHECK-ARM8A-NEON-NEXT:    lsr r0, r0, #5
-; CHECK-ARM8A-NEON-NEXT:    pop {r11, pc}
+; CHECK-ARM8A-NEON-NEXT:    subs r2, r0, #1
+; CHECK-ARM8A-NEON-NEXT:    sbc r3, r1, #0
+; CHECK-ARM8A-NEON-NEXT:    and r2, r0, r2
+; CHECK-ARM8A-NEON-NEXT:    and r3, r1, r3
+; CHECK-ARM8A-NEON-NEXT:    orrs r0, r0, r1
+; CHECK-ARM8A-NEON-NEXT:    orr r2, r2, r3
+; CHECK-ARM8A-NEON-NEXT:    movwne r0, #1
+; CHECK-ARM8A-NEON-NEXT:    clz r2, r2
+; CHECK-ARM8A-NEON-NEXT:    lsr r2, r2, #5
+; CHECK-ARM8A-NEON-NEXT:    and r0, r0, r2
+; CHECK-ARM8A-NEON-NEXT:    bx lr
   %count = tail call i64 @llvm.ctpop.i64(i64 %x)
   %cmp = icmp eq i64 %count, 1
   %conv = zext i1 %cmp to i32

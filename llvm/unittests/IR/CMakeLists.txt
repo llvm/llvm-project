@@ -37,7 +37,6 @@ add_llvm_unittest(IRTests
   ValueHandleTest.cpp
   ValueMapTest.cpp
   ValueTest.cpp
-  VectorTypesTest.cpp
   VerifierTest.cpp
   WaymarkTest.cpp
   )

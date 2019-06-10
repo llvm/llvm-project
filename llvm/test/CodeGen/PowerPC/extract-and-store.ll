@@ -514,6 +514,7 @@ define dso_local void @test_consecutive_i32(<4 x i32> %a, i32* nocapture %b) loc
 ; CHECK-P9-BE-NEXT:    stfiwx f0, r5, r3
 ; CHECK-P9-BE-NEXT:    blr
 entry:
+
   %vecext = extractelement <4 x i32> %a, i32 0
   store i32 %vecext, i32* %b, align 4
   %vecext1 = extractelement <4 x i32> %a, i32 2
