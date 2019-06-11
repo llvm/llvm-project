@@ -453,13 +453,11 @@ bool AppleObjCRuntime::CalculateHasNewLiteralsAndIndexing() {
 lldb::SearchFilterSP AppleObjCRuntime::CreateExceptionSearchFilter() {
   Target &target = m_process->GetTarget();
 
+  FileSpecList filter_modules;
   if (target.GetArchitecture().GetTriple().getVendor() == llvm::Triple::Apple) {
-    FileSpecList filter_modules;
     filter_modules.Append(std::get<0>(GetExceptionThrowLocation()));
-    return target.GetSearchFilterForModuleList(&filter_modules);
-  } else {
-    return LanguageRuntime::CreateExceptionSearchFilter();
   }
+  return target.GetSearchFilterForModuleList(&filter_modules);
 }
 
 ValueObjectSP AppleObjCRuntime::GetExceptionObjectForThread(

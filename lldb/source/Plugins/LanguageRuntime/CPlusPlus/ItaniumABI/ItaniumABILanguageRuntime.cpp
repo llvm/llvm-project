@@ -475,16 +475,14 @@ BreakpointResolverSP ItaniumABILanguageRuntime::CreateExceptionResolver(
 lldb::SearchFilterSP ItaniumABILanguageRuntime::CreateExceptionSearchFilter() {
   Target &target = m_process->GetTarget();
 
+  FileSpecList filter_modules;
   if (target.GetArchitecture().GetTriple().getVendor() == llvm::Triple::Apple) {
     // Limit the number of modules that are searched for these breakpoints for
     // Apple binaries.
-    FileSpecList filter_modules;
     filter_modules.Append(FileSpec("libc++abi.dylib"));
     filter_modules.Append(FileSpec("libSystem.B.dylib"));
-    return target.GetSearchFilterForModuleList(&filter_modules);
-  } else {
-    return LanguageRuntime::CreateExceptionSearchFilter();
   }
+  return target.GetSearchFilterForModuleList(&filter_modules);
 }
 
 lldb::BreakpointSP ItaniumABILanguageRuntime::CreateExceptionBreakpoint(
