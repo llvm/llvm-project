@@ -82,8 +82,8 @@ private:
 
   int GetSetForNativeRegNum(int reg_num) const;
 
-  int ReadRegisterSet(uint32_t set);
-  int WriteRegisterSet(uint32_t set);
+  Status ReadRegisterSet(uint32_t set);
+  Status WriteRegisterSet(uint32_t set);
 };
 
 } // namespace process_netbsd

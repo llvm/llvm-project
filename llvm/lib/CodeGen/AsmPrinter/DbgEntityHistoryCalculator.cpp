@@ -224,67 +224,10 @@ static void clobberRegisterUses(RegDescribedVarsMap &RegVars, unsigned RegNo,
   clobberRegisterUses(RegVars, I, HistMap, LiveEntries, ClobberingInstr);
 }
 
-// Returns the first instruction in @MBB which corresponds to
-// the function epilogue, or nullptr if @MBB doesn't contain an epilogue.
-static const MachineInstr *getFirstEpilogueInst(const MachineBasicBlock &MBB) {
-  auto LastMI = MBB.getLastNonDebugInstr();
-  if (LastMI == MBB.end() || !LastMI->isReturn())
-    return nullptr;
-  // Assume that epilogue starts with instruction having the same debug location
-  // as the return instruction.
-  DebugLoc LastLoc = LastMI->getDebugLoc();
-  auto Res = LastMI;
-  for (MachineBasicBlock::const_reverse_iterator I = LastMI.getReverse(),
-                                                 E = MBB.rend();
-       I != E; ++I) {
-    if (I->getDebugLoc() != LastLoc)
-      return &*Res;
-    Res = &*I;
-  }
-  // If all instructions have the same debug location, assume whole MBB is
-  // an epilogue.
-  return &*MBB.begin();
-}
-
-// Collect registers that are modified in the function body (their
-// contents is changed outside of the prologue and epilogue).
-static void collectChangingRegs(const MachineFunction *MF,
-                                const TargetRegisterInfo *TRI,
-                                BitVector &Regs) {
-  for (const auto &MBB : *MF) {
-    auto FirstEpilogueInst = getFirstEpilogueInst(MBB);
-
-    for (const auto &MI : MBB) {
-      // Avoid looking at prologue or epilogue instructions.
-      if (&MI == FirstEpilogueInst)
-        break;
-      if (MI.getFlag(MachineInstr::FrameSetup))
-        continue;
-
-      // Look for register defs and register masks. Register masks are
-      // typically on calls and they clobber everything not in the mask.
-      for (const MachineOperand &MO : MI.operands()) {
-        // Skip virtual registers since they are handled by the parent.
-        if (MO.isReg() && MO.isDef() && MO.getReg() &&
-            !TRI->isVirtualRegister(MO.getReg())) {
-          for (MCRegAliasIterator AI(MO.getReg(), TRI, true); AI.isValid();
-               ++AI)
-            Regs.set(*AI);
-        } else if (MO.isRegMask()) {
-          Regs.setBitsNotInMask(MO.getRegMask());
-        }
-      }
-    }
-  }
-}
-
 void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
                                      const TargetRegisterInfo *TRI,
                                      DbgValueHistoryMap &DbgValues,
                                      DbgLabelInstrMap &DbgLabels) {
-  BitVector ChangingRegs(TRI->getNumRegs());
-  collectChangingRegs(MF, TRI, ChangingRegs);
-
   const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
   unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
   unsigned FrameReg = TRI->getFrameRegister(*MF);
@@ -292,43 +235,6 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
   DbgValueEntriesMap LiveEntries;
   for (const auto &MBB : *MF) {
     for (const auto &MI : MBB) {
-      if (!MI.isDebugInstr()) {
-        // Not a DBG_VALUE instruction. It may clobber registers which describe
-        // some variables.
-        for (const MachineOperand &MO : MI.operands()) {
-          if (MO.isReg() && MO.isDef() && MO.getReg()) {
-            // Ignore call instructions that claim to clobber SP. The AArch64
-            // backend does this for aggregate function arguments.
-            if (MI.isCall() && MO.getReg() == SP)
-              continue;
-            // If this is a virtual register, only clobber it since it doesn't
-            // have aliases.
-            if (TRI->isVirtualRegister(MO.getReg()))
-              clobberRegisterUses(RegVars, MO.getReg(), DbgValues, LiveEntries,
-                                  MI);
-            // If this is a register def operand, it may end a debug value
-            // range.
-            else {
-              for (MCRegAliasIterator AI(MO.getReg(), TRI, true); AI.isValid();
-                   ++AI)
-                if (ChangingRegs.test(*AI))
-                  clobberRegisterUses(RegVars, *AI, DbgValues, LiveEntries, MI);
-            }
-          } else if (MO.isRegMask()) {
-            // If this is a register mask operand, clobber all debug values in
-            // non-CSRs.
-            for (unsigned I : ChangingRegs.set_bits()) {
-              // Don't consider SP to be clobbered by register masks.
-              if (unsigned(I) != SP && TRI->isPhysicalRegister(I) &&
-                  MO.clobbersPhysReg(I)) {
-                clobberRegisterUses(RegVars, I, DbgValues, LiveEntries, MI);
-              }
-            }
-          }
-        }
-        continue;
-      }
-
       if (MI.isDebugValue()) {
         assert(MI.getNumOperands() > 1 && "Invalid DBG_VALUE instruction!");
         // Use the base variable (without any DW_OP_piece expressions)
@@ -351,20 +257,72 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
         InlinedEntity L(RawLabel, MI.getDebugLoc()->getInlinedAt());
         DbgLabels.addInstr(L, MI);
       }
-    }
 
-    // Make sure locations for register-described variables are valid only
-    // until the end of the basic block (unless it's the last basic block, in
-    // which case let their liveness run off to the end of the function).
+      if (MI.isDebugInstr())
+        continue;
+
+      // Not a DBG_VALUE instruction. It may clobber registers which describe
+      // some variables.
+      for (const MachineOperand &MO : MI.operands()) {
+        if (MO.isReg() && MO.isDef() && MO.getReg()) {
+          // Ignore call instructions that claim to clobber SP. The AArch64
+          // backend does this for aggregate function arguments.
+          if (MI.isCall() && MO.getReg() == SP)
+            continue;
+          // If this is a virtual register, only clobber it since it doesn't
+          // have aliases.
+          if (TRI->isVirtualRegister(MO.getReg()))
+            clobberRegisterUses(RegVars, MO.getReg(), DbgValues, LiveEntries,
+                                MI);
+          // If this is a register def operand, it may end a debug value
+          // range. Ignore defs of the frame register in the prologue.
+          else if (MO.getReg() != FrameReg ||
+                   !MI.getFlag(MachineInstr::FrameSetup)) {
+            for (MCRegAliasIterator AI(MO.getReg(), TRI, true); AI.isValid();
+                 ++AI)
+              clobberRegisterUses(RegVars, *AI, DbgValues, LiveEntries, MI);
+          }
+        } else if (MO.isRegMask()) {
+          // If this is a register mask operand, clobber all debug values in
+          // non-CSRs.
+          SmallVector<unsigned, 32> RegsToClobber;
+          // Don't consider SP to be clobbered by register masks.
+          for (auto It : RegVars) {
+            unsigned int Reg = It.first;
+            if (Reg != SP && TRI->isPhysicalRegister(Reg) &&
+                MO.clobbersPhysReg(Reg))
+              RegsToClobber.push_back(Reg);
+          }
+
+          for (unsigned Reg : RegsToClobber) {
+            clobberRegisterUses(RegVars, Reg, DbgValues, LiveEntries, MI);
+          }
+        }
+      } // End MO loop.
+    }   // End instr loop.
+
+    // Make sure locations for all variables are valid only until the end of
+    // the basic block (unless it's the last basic block, in which case let
+    // their liveness run off to the end of the function).
     if (!MBB.empty() && &MBB != &MF->back()) {
-      for (auto I = RegVars.begin(), E = RegVars.end(); I != E;) {
-        auto CurElem = I++; // CurElem can be erased below.
-        if (TRI->isVirtualRegister(CurElem->first) ||
-            ChangingRegs.test(CurElem->first) ||
-            CurElem->first == FrameReg)
-          clobberRegisterUses(RegVars, CurElem, DbgValues, LiveEntries,
-                              MBB.back());
+      // Iterate over all variables that have open debug values.
+      for (auto &Pair : LiveEntries) {
+        if (Pair.second.empty())
+          continue;
+
+        // Create a clobbering entry.
+        EntryIndex ClobIdx = DbgValues.startClobber(Pair.first, MBB.back());
+
+        // End all entries.
+        for (EntryIndex Idx : Pair.second) {
+          DbgValueHistoryMap::Entry &Ent = DbgValues.getEntry(Pair.first, Idx);
+          assert(Ent.isDbgValue() && !Ent.isClosed());
+          Ent.endEntry(ClobIdx);
+        }
       }
+
+      LiveEntries.clear();
+      RegVars.clear();
     }
   }
 }

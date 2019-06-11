@@ -57,6 +57,8 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
+#include "llvm/ADT/ScopeExit.h"
+
 #include <memory>
 #include <mutex>
 
@@ -2380,10 +2382,11 @@ ExpressionResults Target::EvaluateExpression(
   if (expr.empty())
     return execution_results;
 
-  // We shouldn't run stop hooks in expressions. Be sure to reset this if you
-  // return anywhere within this function.
+  // We shouldn't run stop hooks in expressions.
   bool old_suppress_value = m_suppress_stop_hooks;
   m_suppress_stop_hooks = true;
+  auto on_exit = llvm::make_scope_exit([this, old_suppress_value]() {
+      m_suppress_stop_hooks = old_suppress_value; });
 
   ExecutionContext exe_ctx;
 
@@ -2416,8 +2419,6 @@ ExpressionResults Target::EvaluateExpression(
                                  nullptr, // Module
                                  ctx_obj);
   }
-
-  m_suppress_stop_hooks = old_suppress_value;
 
   return execution_results;
 }

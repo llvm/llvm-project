@@ -86,9 +86,7 @@ static CommandRegistration Unused(&Extract, []() -> Error {
         Twine("Cannot open file '") + ExtractOutput + "' for writing.", EC);
   const auto &FunctionAddresses =
       InstrumentationMapOrError->getFunctionAddresses();
-  symbolize::LLVMSymbolizer::Options Opts(
-      symbolize::FunctionNameKind::LinkageName, true, true, false, "");
-  symbolize::LLVMSymbolizer Symbolizer(Opts);
+  symbolize::LLVMSymbolizer Symbolizer;
   llvm::xray::FuncIdConversionHelper FuncIdHelper(ExtractInput, Symbolizer,
                                                   FunctionAddresses);
   exportAsYAML(*InstrumentationMapOrError, OS, FuncIdHelper);

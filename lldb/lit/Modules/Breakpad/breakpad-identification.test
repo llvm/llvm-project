@@ -1,5 +1,6 @@
 RUN: lldb-test object-file %p/Inputs/identification-linux.syms | FileCheck %s --check-prefix=LINUX
 RUN: lldb-test object-file %p/Inputs/identification-macosx.syms | FileCheck %s --check-prefix=MAC
+RUN: lldb-test object-file %p/Inputs/identification-macosx-arm64e.syms | FileCheck %s --check-prefix=ARM64E
 RUN: lldb-test object-file %p/Inputs/identification-windows.syms | FileCheck %s --check-prefix=WINDOWS
 RUN: not lldb-test object-file %p/Inputs/bad-module-id-1.syms 2>&1 | FileCheck %s --check-prefix=ERROR
 RUN: not lldb-test object-file %p/Inputs/bad-module-id-2.syms 2>&1 | FileCheck %s --check-prefix=ERROR
@@ -20,6 +21,8 @@ MAC: Executable: false
 MAC: Stripped: false
 MAC: Type: debug info
 MAC: Strata: user
+
+ARM64E: Architecture: aarch64--macosx
 
 WINDOWS: Plugin name: breakpad
 WINDOWS: Architecture: i386--windows

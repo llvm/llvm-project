@@ -2,14 +2,14 @@
 ## explicitly, but .dynstr is not present.
 
 # RUN: yaml2obj %s -o %t
-# RUN: not llvm-readelf --section-headers %t 2>&1 | FileCheck %s
+# RUN: llvm-readelf --section-headers %t | FileCheck %s
 
-## TODO: Check that .dynsym has Link field set to 0.
-##       GNU readelf is able to dump sections headers,
-##       but llvm-readelf reports an error below too early.
-##       See https://bugs.llvm.org/show_bug.cgi?id=42215.
+## Check that .dynsym has Link field set to 0.
 
-# CHECK: error: invalid sh_type for string table, expected SHT_STRTAB
+# CHECK:      Section Headers:
+# CHECK-NEXT:  [Nr] Name    Type   Address          Off    Size   ES Flg Lk
+# CHECK-NEXT:  [ 0]         NULL   0000000000000000 000000 000000 00 0   0
+# CHECK-NEXT:  [ 1] .dynsym DYNSYM 0000000000000000 000180 000018 18 A   0
 
 --- !ELF
 FileHeader:

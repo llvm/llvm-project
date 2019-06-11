@@ -241,8 +241,8 @@ Example of overlapping regions:
 Note that multiple anonymous regions cannot overlap. Also, overlapping regions
 cannot have the same name.
 
-Inline assembly directives may be used from source code to annotate the
-assembly text:
+There is no support for marking regions from high-level source code, like C or
+C++. As a workaround, inline assembly directives may be used:
 
 .. code-block:: c++
 
@@ -253,6 +253,15 @@ assembly text:
     a *= b;
     return a;
   }
+
+However, this interferes with optimizations like loop vectorization and may have
+an impact on the code generated. This is because the ``__asm`` statements are
+seen as real code having important side effects, which limits how the code
+around them can be transformed. If users want to make use of inline assembly
+to emit markers, then the recommendation is to always verify that the output
+assembly is equivalent to the assembly generated in the absence of markers.
+The `Clang options to emit optimization reports <https://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports>`_
+can also help in detecting missed optimizations.
 
 HOW LLVM-MCA WORKS
 ------------------

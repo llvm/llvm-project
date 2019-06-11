@@ -438,10 +438,10 @@ ELFDumper<ELFT>::dumpContentSection(const Elf_Shdr *Shdr) {
   auto ContentOrErr = Obj.getSectionContents(Shdr);
   if (!ContentOrErr)
     return errorToErrorCode(ContentOrErr.takeError());
-  S->Content = yaml::BinaryRef(ContentOrErr.get());
-  S->Size = S->Content.binary_size();
+  ArrayRef<uint8_t> Content = *ContentOrErr;
+  if (!Content.empty())
+    S->Content = yaml::BinaryRef(Content);
   S->Info = Shdr->sh_info;
-
   return S.release();
 }
 

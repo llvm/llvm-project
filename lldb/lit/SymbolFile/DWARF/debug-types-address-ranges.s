@@ -4,7 +4,7 @@
 # compute address range for the type unit as type units don't describe any
 # addresses. The addresses should always resolve to the relevant compile units.
 
-# REQUIRES: lld
+# REQUIRES: lld, x86
 
 # RUN: llvm-mc -dwarf-version=5 -triple x86_64-pc-linux %s -filetype=obj >%t.o
 # RUN: ld.lld %t.o -o %t -image-base=0x47000

@@ -1,5 +1,7 @@
 # Test that an empty .debug_aranges section doesn't confuse (or crash) us.
 
+# REQUIRES: x86
+
 # RUN: llvm-mc %s -triple x86_64-pc-linux -filetype=obj >%t
 # RUN: lldb %t -o "breakpoint set -n f" -b | FileCheck %s
 

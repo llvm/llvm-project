@@ -84,7 +84,7 @@ static MCDisassembler *createBPFDisassembler(const Target &T,
 }
 
 
-extern "C" void LLVMInitializeBPFDisassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheBPFTarget(),
                                          createBPFDisassembler);

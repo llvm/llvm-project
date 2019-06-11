@@ -523,6 +523,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   // vector compares until that is fixed.
   setHasMultipleConditionRegisters(true);
 
+  setMinCmpXchgSizeInBits(32);
+  setSupportsUnalignedAtomics(false);
+
   PredictableSelectIsExpensive = false;
 
   // We want to find all load dependencies for long chains of stores to enable

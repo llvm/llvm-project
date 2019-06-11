@@ -1246,9 +1246,9 @@ def VMOVSRR : AVConv5I<0b11000100, 0b1010,
 
 // Move H->R, clearing top 16 bits
 def VMOVRH : AVConv2I<0b11100001, 0b1001,
-                      (outs GPR:$Rt), (ins HPR:$Sn),
+                      (outs rGPR:$Rt), (ins HPR:$Sn),
                       IIC_fpMOVSI, "vmov", ".f16\t$Rt, $Sn",
-                      [(set GPR:$Rt, (arm_vmovrh HPR:$Sn))]>,
+                      [(set rGPR:$Rt, (arm_vmovrh HPR:$Sn))]>,
              Requires<[HasFPRegs16]>,
              Sched<[WriteFPMOV]> {
   // Instruction operands.
@@ -1268,9 +1268,9 @@ def VMOVRH : AVConv2I<0b11100001, 0b1001,
 
 // Move R->H, clearing top 16 bits
 def VMOVHR : AVConv4I<0b11100000, 0b1001,
-                      (outs HPR:$Sn), (ins GPR:$Rt),
+                      (outs HPR:$Sn), (ins rGPR:$Rt),
                       IIC_fpMOVIS, "vmov", ".f16\t$Sn, $Rt",
-                      [(set HPR:$Sn, (arm_vmovhr GPR:$Rt))]>,
+                      [(set HPR:$Sn, (arm_vmovhr rGPR:$Rt))]>,
              Requires<[HasFPRegs16]>,
              Sched<[WriteFPMOV]> {
   // Instruction operands.

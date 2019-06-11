@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instruction.h"
@@ -520,6 +521,12 @@ class Value;
   /// undefined behavior if I is executed and that operand has a full-poison
   /// value (all bits poison).
   const Value *getGuaranteedNonFullPoisonOp(const Instruction *I);
+
+  /// Return true if the given instruction must trigger undefined behavior.
+  /// when I is executed with any operands which appear in KnownPoison holding
+  /// a full-poison value at the point of execution.
+  bool mustTriggerUB(const Instruction *I,
+                     const SmallSet<const Value *, 16>& KnownPoison);
 
   /// Return true if this function can prove that if PoisonI is executed
   /// and yields a full-poison value (all bits poison), then that will

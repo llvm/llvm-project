@@ -890,7 +890,7 @@ ObjCLanguage::GetPossibleFormattersMatches(ValueObject &valobj,
       lldb::ProcessSP process_sp = valobj.GetProcessSP();
       if (!process_sp)
         break;
-      ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
+      ObjCLanguageRuntime *runtime = ObjCLanguageRuntime::Get(*process_sp);
       if (runtime == nullptr)
         break;
       ObjCLanguageRuntime::ClassDescriptorSP objc_class_sp(
@@ -934,8 +934,7 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
 
       Process *process = exe_scope->CalculateProcess().get();
       if (process) {
-        const bool create_on_demand = false;
-        auto objc_runtime = process->GetObjCLanguageRuntime(create_on_demand);
+        auto objc_runtime = ObjCLanguageRuntime::Get(*process);
         if (objc_runtime) {
           auto decl_vendor = objc_runtime->GetDeclVendor();
           if (decl_vendor) {

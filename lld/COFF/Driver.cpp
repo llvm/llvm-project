@@ -1205,8 +1205,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       Args.hasFlag(OPT_appcontainer, OPT_appcontainer_no, false);
 
   // Handle /machine
-  if (auto *Arg = Args.getLastArg(OPT_machine))
+  if (auto *Arg = Args.getLastArg(OPT_machine)) {
     Config->Machine = getMachineType(Arg->getValue());
+    if (Config->Machine == IMAGE_FILE_MACHINE_UNKNOWN)
+      fatal(Twine("unknown /machine argument: ") + Arg->getValue());
+  }
 
   // Handle /nodefaultlib:<filename>
   for (auto *Arg : Args.filtered(OPT_nodefaultlib))

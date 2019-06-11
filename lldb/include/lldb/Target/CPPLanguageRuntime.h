@@ -53,7 +53,7 @@ public:
     return lldb::eLanguageTypeC_plus_plus;
   }
 
-  static CPPLanguageRuntime *GetCPPLanguageRuntime(Process &process) {
+  static CPPLanguageRuntime *Get(Process &process) {
     return llvm::cast_or_null<CPPLanguageRuntime>(
         process.GetLanguageRuntime(lldb::eLanguageTypeC_plus_plus));
   }

@@ -19,7 +19,7 @@
 # CHECK-NEXT:      "documentFormattingProvider": true,
 # CHECK-NEXT:      "documentHighlightProvider": true,
 # CHECK-NEXT:      "documentOnTypeFormattingProvider": {
-# CHECK-NEXT:        "firstTriggerCharacter": "}",
+# CHECK-NEXT:        "firstTriggerCharacter": "\n",
 # CHECK-NEXT:        "moreTriggerCharacter": []
 # CHECK-NEXT:      },
 # CHECK-NEXT:      "documentRangeFormattingProvider": true,

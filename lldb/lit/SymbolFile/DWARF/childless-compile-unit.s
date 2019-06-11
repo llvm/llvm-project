@@ -2,6 +2,8 @@
 # unit in this file sets DW_CHILDREN_no, but it still includes an
 # end-of-children marker in its contribution.
 
+# REQUIRES: x86
+
 # RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj > %t.o
 # RUN: lldb-test symbols %t.o
 

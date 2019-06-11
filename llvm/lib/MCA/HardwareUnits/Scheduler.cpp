@@ -198,7 +198,8 @@ InstRef Scheduler::select() {
         Strategy->compare(IR, ReadySet[QueueIndex])) {
       Instruction &IS = *IR.getInstruction();
       uint64_t BusyResourceMask = Resources->checkAvailability(IS.getDesc());
-      IS.setCriticalResourceMask(BusyResourceMask);
+      if (BusyResourceMask)
+        IS.setCriticalResourceMask(BusyResourceMask);
       BusyResourceUnits |= BusyResourceMask;
       if (!BusyResourceMask)
         QueueIndex = I;

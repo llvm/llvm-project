@@ -365,7 +365,7 @@ static MCDisassembler *createARCDisassembler(const Target &T,
   return new ARCDisassembler(STI, Ctx, T.createMCInstrInfo());
 }
 
-extern "C" void LLVMInitializeARCDisassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARCDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheARCTarget(),
                                          createARCDisassembler);

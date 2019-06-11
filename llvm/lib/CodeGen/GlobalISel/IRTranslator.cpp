@@ -728,6 +728,19 @@ bool IRTranslator::translateGetElementPtr(const User &U,
 bool IRTranslator::translateMemfunc(const CallInst &CI,
                                     MachineIRBuilder &MIRBuilder,
                                     unsigned ID) {
+
+  // If the source is undef, then just emit a nop.
+  if (isa<UndefValue>(CI.getArgOperand(1))) {
+    switch (ID) {
+    case Intrinsic::memmove:
+    case Intrinsic::memcpy:
+    case Intrinsic::memset:
+      return true;
+    default:
+      break;
+    }
+  }
+
   LLT SizeTy = getLLTForType(*CI.getArgOperand(2)->getType(), *DL);
   Type *DstTy = CI.getArgOperand(0)->getType();
   if (cast<PointerType>(DstTy)->getAddressSpace() != 0 ||

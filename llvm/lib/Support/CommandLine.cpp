@@ -1097,43 +1097,84 @@ static bool ExpandResponseFile(StringRef FName, StringSaver &Saver,
 bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
                              SmallVectorImpl<const char *> &Argv,
                              bool MarkEOLs, bool RelativeNames) {
-  unsigned ExpandedRspFiles = 0;
   bool AllExpanded = true;
+  struct ResponseFileRecord {
+    const char *File;
+    size_t End;
+  };
+
+  // To detect recursive response files, we maintain a stack of files and the
+  // position of the last argument in the file. This position is updated
+  // dynamically as we recursively expand files.
+  SmallVector<ResponseFileRecord, 3> FileStack;
+
+  // Push a dummy entry that represents the initial command line, removing
+  // the need to check for an empty list.
+  FileStack.push_back({"", Argv.size()});
 
   // Don't cache Argv.size() because it can change.
   for (unsigned I = 0; I != Argv.size();) {
+    while (I == FileStack.back().End) {
+      // Passing the end of a file's argument list, so we can remove it from the
+      // stack.
+      FileStack.pop_back();
+    }
+
     const char *Arg = Argv[I];
     // Check if it is an EOL marker
     if (Arg == nullptr) {
       ++I;
       continue;
     }
+
     if (Arg[0] != '@') {
       ++I;
       continue;
     }
 
-    // If we have too many response files, leave some unexpanded.  This avoids
-    // crashing on self-referential response files.
-    if (ExpandedRspFiles > 20)
-      return false;
+    const char *FName = Arg + 1;
+    auto IsEquivalent = [FName](const ResponseFileRecord &RFile) {
+      return sys::fs::equivalent(RFile.File, FName);
+    };
+
+    // Check for recursive response files.
+    if (std::any_of(FileStack.begin() + 1, FileStack.end(), IsEquivalent)) {
+      // This file is recursive, so we leave it in the argument stream and
+      // move on.
+      AllExpanded = false;
+      ++I;
+      continue;
+    }
 
     // Replace this response file argument with the tokenization of its
     // contents.  Nested response files are expanded in subsequent iterations.
     SmallVector<const char *, 0> ExpandedArgv;
-    if (ExpandResponseFile(Arg + 1, Saver, Tokenizer, ExpandedArgv, MarkEOLs,
-                           RelativeNames)) {
-      ++ExpandedRspFiles;
-    } else {
+    if (!ExpandResponseFile(FName, Saver, Tokenizer, ExpandedArgv, MarkEOLs,
+                            RelativeNames)) {
       // We couldn't read this file, so we leave it in the argument stream and
       // move on.
       AllExpanded = false;
       ++I;
       continue;
     }
+
+    for (ResponseFileRecord &Record : FileStack) {
+      // Increase the end of all active records by the number of newly expanded
+      // arguments, minus the response file itself.
+      Record.End += ExpandedArgv.size() - 1;
+    }
+
+    FileStack.push_back({FName, I + ExpandedArgv.size()});
     Argv.erase(Argv.begin() + I);
     Argv.insert(Argv.begin() + I, ExpandedArgv.begin(), ExpandedArgv.end());
   }
+
+  // If successful, the top of the file stack will mark the end of the Argv
+  // stream. A failure here indicates a bug in the stack popping logic above.
+  // Note that FileStack may have more than one element at this point because we
+  // don't have a chance to pop the stack when encountering recursive files at
+  // the end of the stream, so seeing that doesn't indicate a bug.
+  assert(FileStack.size() > 0 && Argv.size() == FileStack.back().End);
   return AllExpanded;
 }
 

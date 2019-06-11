@@ -1,5 +1,7 @@
 # Stress-test the parallel indexing of compile units.
 
+# REQUIRES: x86
+
 # RUN: llvm-mc -triple x86_64-pc-linux %s -o %t -filetype=obj
 # RUN: %lldb %t -o "target variable A" -b | FileCheck %s
 
