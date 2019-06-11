@@ -12,6 +12,7 @@
 #include <csignal>
 #include <unordered_set>
 
+#include "Plugins/Process/Utility/AuxVector.h"
 #include "lldb/Host/Debug.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/linux/Support.h"
@@ -102,6 +103,8 @@ public:
     return getProcFile(GetID(), "auxv");
   }
 
+  llvm::Optional<uint64_t> GetAuxValue(enum AuxVector::EntryType type);
+
   lldb::user_id_t StartTrace(const TraceOptions &config,
                              Status &error) override;
 
@@ -132,6 +135,7 @@ protected:
 private:
   MainLoop::SignalHandleUP m_sigchld_handle;
   ArchSpec m_arch;
+  std::unique_ptr<AuxVector> m_aux_vector;
 
   LazyBool m_supports_mem_region = eLazyBoolCalculate;
   std::vector<std::pair<MemoryRegionInfo, FileSpec>> m_mem_region_cache;

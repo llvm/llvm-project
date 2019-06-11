@@ -133,6 +133,10 @@ public:
     return GetArchitecture().GetByteOrder();
   }
 
+  uint32_t GetAddressByteSize() const {
+    return GetArchitecture().GetAddressByteSize();
+  }
+
   virtual llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   GetAuxvData() const = 0;
 
