@@ -799,6 +799,23 @@ static char isNegatibleForFree(SDValue Op, bool LegalOperations,
            TLI.isFPImmLegal(neg(cast<ConstantFPSDNode>(Op)->getValueAPF()), VT,
                             ForCodeSize);
   }
+  case ISD::BUILD_VECTOR: {
+    // Only permit BUILD_VECTOR of constants.
+    if (llvm::any_of(Op->op_values(), [&](SDValue N) {
+          return !N.isUndef() && !isa<ConstantFPSDNode>(N);
+        }))
+      return 0;
+    if (!LegalOperations)
+      return 1;
+    if (TLI.isOperationLegal(ISD::ConstantFP, VT) &&
+        TLI.isOperationLegal(ISD::BUILD_VECTOR, VT))
+      return 1;
+    return llvm::all_of(Op->op_values(), [&](SDValue N) {
+      return N.isUndef() ||
+             TLI.isFPImmLegal(neg(cast<ConstantFPSDNode>(N)->getValueAPF()), VT,
+                              ForCodeSize);
+    });
+  }
   case ISD::FADD:
     if (!Options->UnsafeFPMath && !Flags.hasNoSignedZeros())
       return 0;
@@ -859,27 +876,41 @@ static SDValue GetNegatedExpression(SDValue Op, SelectionDAG &DAG,
     V.changeSign();
     return DAG.getConstantFP(V, SDLoc(Op), Op.getValueType());
   }
+  case ISD::BUILD_VECTOR: {
+    SmallVector<SDValue, 4> Ops;
+    for (SDValue C : Op->op_values()) {
+      if (C.isUndef()) {
+        Ops.push_back(C);
+        continue;
+      }
+      APFloat V = cast<ConstantFPSDNode>(C)->getValueAPF();
+      V.changeSign();
+      Ops.push_back(DAG.getConstantFP(V, SDLoc(Op), C.getValueType()));
+    }
+    return DAG.getBuildVector(Op.getValueType(), SDLoc(Op), Ops);
+  }
   case ISD::FADD:
     assert(Options.UnsafeFPMath || Flags.hasNoSignedZeros());
 
     // fold (fneg (fadd A, B)) -> (fsub (fneg A), B)
     if (isNegatibleForFree(Op.getOperand(0), LegalOperations,
                            DAG.getTargetLoweringInfo(), &Options, ForCodeSize,
-                           Depth+1))
+                           Depth + 1))
       return DAG.getNode(ISD::FSUB, SDLoc(Op), Op.getValueType(),
                          GetNegatedExpression(Op.getOperand(0), DAG,
                                               LegalOperations, ForCodeSize,
-                                              Depth+1),
+                                              Depth + 1),
                          Op.getOperand(1), Flags);
     // fold (fneg (fadd A, B)) -> (fsub (fneg B), A)
     return DAG.getNode(ISD::FSUB, SDLoc(Op), Op.getValueType(),
                        GetNegatedExpression(Op.getOperand(1), DAG,
                                             LegalOperations, ForCodeSize,
-                                            Depth+1),
+                                            Depth + 1),
                        Op.getOperand(0), Flags);
   case ISD::FSUB:
     // fold (fneg (fsub 0, B)) -> B
-    if (auto *N0CFP = dyn_cast<ConstantFPSDNode>(Op.getOperand(0)))
+    if (ConstantFPSDNode *N0CFP =
+            isConstOrConstSplatFP(Op.getOperand(0), /*AllowUndefs*/ true))
       if (N0CFP->isZero())
         return Op.getOperand(1);
 
@@ -892,11 +923,11 @@ static SDValue GetNegatedExpression(SDValue Op, SelectionDAG &DAG,
     // fold (fneg (fmul X, Y)) -> (fmul (fneg X), Y)
     if (isNegatibleForFree(Op.getOperand(0), LegalOperations,
                            DAG.getTargetLoweringInfo(), &Options, ForCodeSize,
-                           Depth+1))
+                           Depth + 1))
       return DAG.getNode(Op.getOpcode(), SDLoc(Op), Op.getValueType(),
                          GetNegatedExpression(Op.getOperand(0), DAG,
                                               LegalOperations, ForCodeSize,
-                                              Depth+1),
+                                              Depth + 1),
                          Op.getOperand(1), Flags);
 
     // fold (fneg (fmul X, Y)) -> (fmul X, (fneg Y))
@@ -904,19 +935,19 @@ static SDValue GetNegatedExpression(SDValue Op, SelectionDAG &DAG,
                        Op.getOperand(0),
                        GetNegatedExpression(Op.getOperand(1), DAG,
                                             LegalOperations, ForCodeSize,
-                                            Depth+1), Flags);
+                                            Depth + 1), Flags);
 
   case ISD::FP_EXTEND:
   case ISD::FSIN:
     return DAG.getNode(Op.getOpcode(), SDLoc(Op), Op.getValueType(),
                        GetNegatedExpression(Op.getOperand(0), DAG,
                                             LegalOperations, ForCodeSize,
-                                            Depth+1));
+                                            Depth + 1));
   case ISD::FP_ROUND:
     return DAG.getNode(ISD::FP_ROUND, SDLoc(Op), Op.getValueType(),
                        GetNegatedExpression(Op.getOperand(0), DAG,
                                             LegalOperations, ForCodeSize,
-                                            Depth+1),
+                                            Depth + 1),
                        Op.getOperand(1));
   }
 }

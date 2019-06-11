@@ -21,6 +21,20 @@ define <4 x float> @t1(<4 x float> %Q) nounwind {
   ret <4 x float> %tmp
 }
 
+define <4 x float> @t1_unary(<4 x float> %Q) nounwind {
+; X32-SSE-LABEL: t1_unary:
+; X32-SSE:       # %bb.0:
+; X32-SSE-NEXT:    xorps {{\.LCPI.*}}, %xmm0
+; X32-SSE-NEXT:    retl
+;
+; X64-SSE-LABEL: t1_unary:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    xorps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    retq
+  %tmp = fneg <4 x float> %Q
+  ret <4 x float> %tmp
+}
+
 ; Possibly misplaced test, but since we're checking undef scenarios...
 
 define float @scalar_fsub_neg0_undef(float %x) nounwind {

@@ -180,6 +180,8 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
   }
 
   std::map<MachineInstr *, std::vector<MachineInstr *>> MultiUsers;
+  std::map<unsigned, MachineInstr *> MultiUserLookup;
+  unsigned UseToBringDefCloserToCount = 0;
   std::vector<MachineInstr *> PseudoIdempotentInstructions;
   std::vector<unsigned> PhysRegDefs;
   for (auto *II : Instructions) {
@@ -255,6 +257,7 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
       if (Delta < Distance) {
         Distance = Delta;
         UseToBringDefCloserTo = UseInst;
+        MultiUserLookup[UseToBringDefCloserToCount++] = UseToBringDefCloserTo;
       }
     }
 
@@ -294,11 +297,11 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
   }
 
   // Sort the defs for users of multiple defs lexographically.
-  for (const auto &E : MultiUsers) {
+  for (const auto &E : MultiUserLookup) {
 
     auto UseI =
         std::find_if(MBB->instr_begin(), MBB->instr_end(),
-                     [&](MachineInstr &MI) -> bool { return &MI == E.first; });
+                     [&](MachineInstr &MI) -> bool { return &MI == E.second; });
 
     if (UseI == MBB->instr_end())
       continue;
@@ -306,7 +309,8 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
     LLVM_DEBUG(
         dbgs() << "Rescheduling Multi-Use Instructions Lexographically.";);
     Changed |= rescheduleLexographically(
-        E.second, MBB, [&]() -> MachineBasicBlock::iterator { return UseI; });
+        MultiUsers[E.second], MBB,
+        [&]() -> MachineBasicBlock::iterator { return UseI; });
   }
 
   PseudoIdempotentInstCount = PseudoIdempotentInstructions.size();

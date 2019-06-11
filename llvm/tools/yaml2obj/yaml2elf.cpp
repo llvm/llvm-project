@@ -358,26 +358,77 @@ static size_t findFirstNonGlobal(ArrayRef<ELFYAML::Symbol> Symbols) {
   return Symbols.size();
 }
 
+static uint64_t writeRawSectionData(raw_ostream &OS,
+                                    const ELFYAML::RawContentSection &RawSec) {
+  size_t ContentSize = 0;
+  if (RawSec.Content) {
+    RawSec.Content->writeAsBinary(OS);
+    ContentSize = RawSec.Content->binary_size();
+  }
+
+  if (!RawSec.Size)
+    return ContentSize;
+
+  OS.write_zeros(*RawSec.Size - ContentSize);
+  return *RawSec.Size;
+}
+
 template <class ELFT>
 void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
                                              SymtabType STType,
                                              ContiguousBlobAccumulator &CBA,
                                              ELFYAML::Section *YAMLSec) {
-  zero(SHeader);
+
   bool IsStatic = STType == SymtabType::Static;
+  const auto &Symbols = IsStatic ? Doc.Symbols : Doc.DynamicSymbols;
+
+  ELFYAML::RawContentSection *RawSec =
+      dyn_cast_or_null<ELFYAML::RawContentSection>(YAMLSec);
+  if (RawSec && !Symbols.empty() && (RawSec->Content || RawSec->Size)) {
+    if (RawSec->Content)
+      WithColor::error() << "Cannot specify both `Content` and " +
+                                (IsStatic ? Twine("`Symbols`")
+                                          : Twine("`DynamicSymbols`")) +
+                                " for symbol table section '"
+                         << RawSec->Name << "'.\n";
+    if (RawSec->Size)
+      WithColor::error() << "Cannot specify both `Size` and " +
+                                (IsStatic ? Twine("`Symbols`")
+                                          : Twine("`DynamicSymbols`")) +
+                                " for symbol table section '"
+                         << RawSec->Name << "'.\n";
+    exit(1);
+  }
+
+  zero(SHeader);
   SHeader.sh_name = DotShStrtab.getOffset(IsStatic ? ".symtab" : ".dynsym");
   SHeader.sh_type = IsStatic ? ELF::SHT_SYMTAB : ELF::SHT_DYNSYM;
-  SHeader.sh_link = IsStatic ? SN2I.get(".strtab") : SN2I.get(".dynstr");
+
+  if (RawSec && !RawSec->Link.empty()) {
+    // If the Link field is explicitly defined in the document,
+    // we should use it.
+    unsigned Index;
+    if (!convertSectionIndex(SN2I, RawSec->Name, RawSec->Link, Index))
+      return;
+    SHeader.sh_link = Index;
+  } else {
+    // When we describe the .dynsym section in the document explicitly, it is
+    // allowed to omit the "DynamicSymbols" tag. In this case .dynstr is not
+    // added implicitly and we should be able to leave the Link zeroed if
+    // .dynstr is not defined.
+    unsigned Link = 0;
+    if (IsStatic)
+      Link = SN2I.get(".strtab");
+    else
+      SN2I.lookup(".dynstr", Link);
+    SHeader.sh_link = Link;
+  }
+
   if (!IsStatic)
     SHeader.sh_flags |= ELF::SHF_ALLOC;
 
-  // One greater than symbol table index of the last local symbol.
-  const auto &Symbols = IsStatic ? Doc.Symbols : Doc.DynamicSymbols;
-
   // If the symbol table section is explicitly described in the YAML
   // then we should set the fields requested.
-  ELFYAML::RawContentSection *RawSec =
-      dyn_cast_or_null<ELFYAML::RawContentSection>(YAMLSec);
   SHeader.sh_info =
       RawSec ? (unsigned)RawSec->Info : findFirstNonGlobal(Symbols) + 1;
   SHeader.sh_entsize = (YAMLSec && YAMLSec->EntSize)
@@ -386,26 +437,24 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
   SHeader.sh_addralign = YAMLSec ? (uint64_t)YAMLSec->AddressAlign : 8;
   SHeader.sh_addr = YAMLSec ? (uint64_t)YAMLSec->Address : 0;
 
-  if (RawSec && RawSec->Content.binary_size()) {
-    RawSec->Content.writeAsBinary(
-        CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign));
-    SHeader.sh_size = RawSec->Size;
-  } else {
-    std::vector<Elf_Sym> Syms;
-    {
-      // Ensure STN_UNDEF is present
-      Elf_Sym Sym;
-      zero(Sym);
-      Syms.push_back(Sym);
-    }
-
-    addSymbols(Symbols, Syms, IsStatic ? DotStrtab : DotDynstr);
-
-    writeArrayData(
-        CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign),
-        makeArrayRef(Syms));
-    SHeader.sh_size = arrayDataSize(makeArrayRef(Syms));
+  auto &OS = CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+  if (RawSec && (RawSec->Content || RawSec->Size)) {
+    assert(Symbols.empty());
+    SHeader.sh_size = writeRawSectionData(OS, *RawSec);
+    return;
   }
+
+  std::vector<Elf_Sym> Syms;
+  {
+    // Ensure STN_UNDEF is present
+    Elf_Sym Sym;
+    zero(Sym);
+    Syms.push_back(Sym);
+  }
+
+  addSymbols(Symbols, Syms, IsStatic ? DotStrtab : DotDynstr);
+  writeArrayData(OS, makeArrayRef(Syms));
+  SHeader.sh_size = arrayDataSize(makeArrayRef(Syms));
 }
 
 template <class ELFT>
@@ -420,13 +469,12 @@ void ELFState<ELFT>::initStrtabSectionHeader(Elf_Shdr &SHeader, StringRef Name,
 
   ELFYAML::RawContentSection *RawSec =
       dyn_cast_or_null<ELFYAML::RawContentSection>(YAMLSec);
-  if (RawSec && RawSec->Content.binary_size()) {
-    RawSec->Content.writeAsBinary(
-        CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign));
-    SHeader.sh_size = RawSec->Size;
+
+  auto &OS = CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+  if (RawSec && (RawSec->Content || RawSec->Size)) {
+    SHeader.sh_size = writeRawSectionData(OS, *RawSec);
   } else {
-    STB.write(
-        CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign));
+    STB.write(OS);
     SHeader.sh_size = STB.getSize();
   }
 
@@ -558,12 +606,9 @@ template <class ELFT>
 bool ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::RawContentSection &Section,
     ContiguousBlobAccumulator &CBA) {
-  assert(Section.Size >= Section.Content.binary_size() &&
-         "Section size and section content are inconsistent");
   raw_ostream &OS =
       CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
-  Section.Content.writeAsBinary(OS);
-  OS.write_zeros(Section.Size - Section.Content.binary_size());
+  SHeader.sh_size = writeRawSectionData(OS, Section);
 
   if (Section.EntSize)
     SHeader.sh_entsize = *Section.EntSize;
@@ -571,7 +616,6 @@ bool ELFState<ELFT>::writeSectionContent(
     SHeader.sh_entsize = sizeof(Elf_Relr);
   else
     SHeader.sh_entsize = 0;
-  SHeader.sh_size = Section.Size;
   SHeader.sh_info = Section.Info;
   return true;
 }

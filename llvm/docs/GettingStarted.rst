@@ -525,6 +525,26 @@ through all the steps of committing _without_ actually doing the commit, and
 tell you what it would have done. That can be useful if you're unsure whether
 the right thing will happen.
 
+Reverting a change when using Git
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you're using Git and need to revert a patch, Git needs to be supplied a
+commit hash, not an svn revision. To make things easier, you can use
+``git llvm revert`` to revert with either an SVN revision or a Git hash instead.
+
+Additionally, you can first run with ``git llvm revert -n`` to print which Git
+commands will run, without doing anything.
+
+Running ``git llvm revert`` will only revert things in your local repository. To
+push the revert upstream, you still need to run ``git llvm push`` as described
+earlier.
+
+.. code-block:: console
+
+  % git llvm revert rNNNNNN       # Revert by SVN id
+  % git llvm revert abcdef123456  # Revert by Git commit hash
+  % git llvm revert -n rNNNNNN    # Print the commands without doing anything
+
 Checkout via SVN (deprecated)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -192,6 +192,8 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
             .Case("0xd07", "cortex-a57")
             .Case("0xd08", "cortex-a72")
             .Case("0xd09", "cortex-a73")
+            .Case("0xd0a", "cortex-a75")
+            .Case("0xd0b", "cortex-a76")
             .Default("generic");
   }
 
@@ -235,6 +237,10 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
             .Case("0x211", "kryo")
             .Case("0x800", "cortex-a73")
             .Case("0x801", "cortex-a73")
+            .Case("0x802", "cortex-a73")
+            .Case("0x803", "cortex-a73")
+            .Case("0x804", "cortex-a73")
+            .Case("0x805", "cortex-a73")
             .Case("0xc00", "falkor")
             .Case("0xc01", "saphira")
             .Default("generic");

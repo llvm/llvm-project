@@ -277,14 +277,29 @@ class ThumbMCInstrAnalysis : public ARMMCInstrAnalysis {
 public:
   ThumbMCInstrAnalysis(const MCInstrInfo *Info) : ARMMCInstrAnalysis(Info) {}
 
-  bool evaluateBranch(const MCInst &Inst, uint64_t Addr,
-                      uint64_t Size, uint64_t &Target) const override {
+  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                      uint64_t &Target) const override {
+    unsigned OpId;
+    switch (Inst.getOpcode()) {
+    default:
+      OpId = 0;
+      break;
+    case ARM::t2WLS:
+    case ARM::t2LEUpdate:
+      OpId = 2;
+      break;
+    case ARM::t2LE:
+      OpId = 1;
+      break;
+    }
+
     // We only handle PCRel branches for now.
-    if (Info->get(Inst.getOpcode()).OpInfo[0].OperandType!=MCOI::OPERAND_PCREL)
+    if (Info->get(Inst.getOpcode()).OpInfo[OpId].OperandType !=
+        MCOI::OPERAND_PCREL)
       return false;
 
-    int64_t Imm = Inst.getOperand(0).getImm();
-    Target = Addr+Imm+4; // In Thumb mode the PC is always off by 4 bytes.
+    // In Thumb mode the PC is always off by 4 bytes.
+    Target = Addr + Inst.getOperand(OpId).getImm() + 4;
     return true;
   }
 };

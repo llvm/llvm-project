@@ -20,7 +20,7 @@ Sections:
     Content: 0000000000000000
     Size: 2
 
-# CHECK: YAML:17:5: error: Section size must be greater or equal to the content size
+# CHECK: YAML:17:5: error: Section size must be greater than or equal to the content size
 # CHECK-NEXT: - Name: .data
 # CHECK-NEXT:   ^
 # CHECK-NEXT: yaml2obj: Failed to parse YAML file!

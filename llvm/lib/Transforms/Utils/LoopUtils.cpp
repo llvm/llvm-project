@@ -801,13 +801,9 @@ Value *llvm::createSimpleTargetReduction(
     ArrayRef<Value *> RedOps) {
   assert(isa<VectorType>(Src->getType()) && "Type must be a vector");
 
-  Value *ScalarUdf = UndefValue::get(Src->getType()->getVectorElementType());
   std::function<Value *()> BuildFunc;
   using RD = RecurrenceDescriptor;
   RD::MinMaxRecurrenceKind MinMaxKind = RD::MRK_Invalid;
-  // TODO: Support creating ordered reductions.
-  FastMathFlags FMFFast;
-  FMFFast.setFast();
 
   switch (Opcode) {
   case Instruction::Add:
@@ -827,15 +823,15 @@ Value *llvm::createSimpleTargetReduction(
     break;
   case Instruction::FAdd:
     BuildFunc = [&]() {
-      auto Rdx = Builder.CreateFAddReduce(ScalarUdf, Src);
-      cast<CallInst>(Rdx)->setFastMathFlags(FMFFast);
+      auto Rdx = Builder.CreateFAddReduce(
+          Constant::getNullValue(Src->getType()->getVectorElementType()), Src);
       return Rdx;
     };
     break;
   case Instruction::FMul:
     BuildFunc = [&]() {
-      auto Rdx = Builder.CreateFMulReduce(ScalarUdf, Src);
-      cast<CallInst>(Rdx)->setFastMathFlags(FMFFast);
+      Type *Ty = Src->getType()->getVectorElementType();
+      auto Rdx = Builder.CreateFMulReduce(ConstantFP::get(Ty, 1.0), Src);
       return Rdx;
     };
     break;

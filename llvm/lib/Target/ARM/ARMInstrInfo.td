@@ -367,6 +367,16 @@ def reglist : Operand<i32> {
   let DecoderMethod = "DecodeRegListOperand";
 }
 
+// A list of general purpose registers and APSR separated by comma.
+// Used by CLRM
+def RegListWithAPSRAsmOperand : AsmOperandClass { let Name = "RegListWithAPSR"; }
+def reglist_with_apsr : Operand<i32> {
+  let EncoderMethod = "getRegisterListOpValue";
+  let ParserMatchClass = RegListWithAPSRAsmOperand;
+  let PrintMethod = "printRegisterList";
+  let DecoderMethod = "DecodeRegListOperand";
+}
+
 def GPRPairOp : RegisterOperand<GPRPair, "printGPRPairOperand">;
 
 def DPRRegListAsmOperand : AsmOperandClass {
@@ -389,6 +399,21 @@ def spr_reglist : Operand<i32> {
   let ParserMatchClass = SPRRegListAsmOperand;
   let PrintMethod = "printRegisterList";
   let DecoderMethod = "DecodeSPRRegListOperand";
+}
+
+def FPSRegListWithVPRAsmOperand : AsmOperandClass { let Name =
+    "FPSRegListWithVPR"; }
+def fp_sreglist_with_vpr : Operand<i32> {
+  let EncoderMethod = "getRegisterListOpValue";
+  let ParserMatchClass = FPSRegListWithVPRAsmOperand;
+  let PrintMethod = "printRegisterList";
+}
+def FPDRegListWithVPRAsmOperand : AsmOperandClass { let Name =
+    "FPDRegListWithVPR"; }
+def fp_dreglist_with_vpr : Operand<i32> {
+  let EncoderMethod = "getRegisterListOpValue";
+  let ParserMatchClass = FPDRegListWithVPRAsmOperand;
+  let PrintMethod = "printRegisterList";
 }
 
 // An operand for the CONSTPOOL_ENTRY pseudo-instruction.

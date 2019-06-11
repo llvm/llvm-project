@@ -1,10 +1,12 @@
 ; A by-value struct is a register-indirect value (breg).
-; RUN: llc %s -filetype=asm -o - | FileCheck %s
+; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
+; REQUIRES: object-emission
 
-; CHECK: Lsection_info:
-; CHECK: DW_AT_location
-; CHECK-NEXT: .byte 112
-; 112 = 0x70 = DW_OP_breg0
+; Test that the 'f' parameter is present, with a location, and that the
+; expression for the location contains a DW_OP_breg
+; CHECK: DW_TAG_formal_parameter
+; CHECK-NEXT: DW_AT_location
+; CHECK-NEXT: DW_OP_breg
 
 ; rdar://problem/13658587
 ;

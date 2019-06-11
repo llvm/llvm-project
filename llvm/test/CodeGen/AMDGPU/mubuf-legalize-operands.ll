@@ -125,8 +125,10 @@ entry:
 
 ; CHECK-O0-DAG: s_mov_b32 [[IDX_S:s[0-9]+]], s4
 ; CHECK-O0-DAG: v_mov_b32_e32 [[IDX_V:v[0-9]+]], [[IDX_S]]
-; CHECK-O0-DAG: s_mov_b64 [[SAVEEXEC:s\[[0-9]+:[0-9]+\]]], exec
+; CHECK-O0-DAG: s_mov_b64 s{{\[}}[[SAVEEXEC0:[0-9]+]]:[[SAVEEXEC1:[0-9]+]]{{\]}}, exec
 ; CHECK-O0-DAG: buffer_store_dword [[IDX_V]], off, s[0:3], s32 offset:[[IDX_OFF:[0-9]+]] ; 4-byte Folded Spill
+; CHECK-O0-DAG: v_writelane_b32 [[VSAVEEXEC:v[0-9]+]], s[[SAVEEXEC0]], [[SAVEEXEC_IDX0:[0-9]+]]
+; CHECK-O0-DAG: v_writelane_b32 [[VSAVEEXEC:v[0-9]+]], s[[SAVEEXEC1]], [[SAVEEXEC_IDX1:[0-9]+]]
 
 ; CHECK-O0: [[LOOPBB0:BB[0-9]+_[0-9]+]]:
 ; CHECK-O0: buffer_load_dword v[[VRSRC0:[0-9]+]], {{.*}} ; 4-byte Folded Reload
@@ -156,7 +158,9 @@ entry:
 ; CHECK-O0: s_xor_b64 exec, exec, [[CMP]]
 ; CHECK-O0-NEXT: s_cbranch_execnz [[LOOPBB0]]
 
-; CHECK-O0: s_mov_b64 exec, [[SAVEEXEC]]
+; CHECK-O0: v_readlane_b32 s[[SAVEEXEC0:[0-9]+]], [[VSAVEEXEC]], [[SAVEEXEC_IDX0]]
+; CHECK-O0: v_readlane_b32 s[[SAVEEXEC1:[0-9]+]], [[VSAVEEXEC]], [[SAVEEXEC_IDX1]]
+; CHECK-O0: s_mov_b64 exec, s{{\[}}[[SAVEEXEC0]]:[[SAVEEXEC1]]{{\]}}
 ; CHECK-O0: buffer_load_dword [[RES:v[0-9]+]], off, s[0:3], s32 offset:[[RES_OFF_TMP]] ; 4-byte Folded Reload
 ; CHECK-O0: buffer_store_dword [[RES]], off, s[0:3], s32 offset:[[RES_OFF:[0-9]+]] ; 4-byte Folded Spill
 ; CHECK-O0: s_cbranch_execz [[TERMBB:BB[0-9]+_[0-9]+]]

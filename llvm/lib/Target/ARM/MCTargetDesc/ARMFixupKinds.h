@@ -103,6 +103,15 @@ enum Fixups {
   // Fixup for Thumb2 8-bit rotated operand
   fixup_t2_so_imm,
 
+  // Fixups for Branch Future.
+  fixup_bf_branch,
+  fixup_bf_target,
+  fixup_bfl_target,
+  fixup_bfc_target,
+  fixup_bfcsel_else_target,
+  fixup_wls,
+  fixup_le,
+
   // Marker
   LastTargetFixupKind,
   NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind

@@ -762,6 +762,14 @@ void ARMAsmPrinter::emitAttributes() {
 
 //===----------------------------------------------------------------------===//
 
+static MCSymbol *getBFLabel(StringRef Prefix, unsigned FunctionNumber,
+                             unsigned LabelId, MCContext &Ctx) {
+
+  MCSymbol *Label = Ctx.getOrCreateSymbol(Twine(Prefix)
+                       + "BF" + Twine(FunctionNumber) + "_" + Twine(LabelId));
+  return Label;
+}
+
 static MCSymbol *getPICLabel(StringRef Prefix, unsigned FunctionNumber,
                              unsigned LabelId, MCContext &Ctx) {
 
@@ -1434,6 +1442,65 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     // Add 's' bit operand (always reg0 for this)
     TmpInst.addOperand(MCOperand::createReg(0));
     EmitToStreamer(*OutStreamer, TmpInst);
+    return;
+  }
+  case ARM::t2BFi:
+  case ARM::t2BFic:
+  case ARM::t2BFLi:
+  case ARM::t2BFr:
+  case ARM::t2BFLr: {
+    // This is a Branch Future instruction.
+
+    const MCExpr *BranchLabel = MCSymbolRefExpr::create(
+        getBFLabel(DL.getPrivateGlobalPrefix(), getFunctionNumber(),
+                   MI->getOperand(0).getIndex(), OutContext),
+        OutContext);
+
+    auto MCInst = MCInstBuilder(Opc).addExpr(BranchLabel);
+    if (MI->getOperand(1).isReg()) {
+      // For BFr/BFLr
+      MCInst.addReg(MI->getOperand(1).getReg());
+    } else {
+      // For BFi/BFLi/BFic
+      const MCExpr *BranchTarget;
+      if (MI->getOperand(1).isMBB())
+        BranchTarget = MCSymbolRefExpr::create(
+            MI->getOperand(1).getMBB()->getSymbol(), OutContext);
+      else if (MI->getOperand(1).isGlobal()) {
+        const GlobalValue *GV = MI->getOperand(1).getGlobal();
+        BranchTarget = MCSymbolRefExpr::create(
+            GetARMGVSymbol(GV, MI->getOperand(1).getTargetFlags()), OutContext);
+      } else if (MI->getOperand(1).isSymbol()) {
+        BranchTarget = MCSymbolRefExpr::create(
+            GetExternalSymbolSymbol(MI->getOperand(1).getSymbolName()),
+            OutContext);
+      }
+
+      MCInst.addExpr(BranchTarget);
+    }
+
+      if (Opc == ARM::t2BFic) {
+        const MCExpr *ElseLabel = MCSymbolRefExpr::create(
+            getBFLabel(DL.getPrivateGlobalPrefix(), getFunctionNumber(),
+                       MI->getOperand(2).getIndex(), OutContext),
+            OutContext);
+        MCInst.addExpr(ElseLabel);
+        MCInst.addImm(MI->getOperand(3).getImm());
+      } else {
+        MCInst.addImm(MI->getOperand(2).getImm())
+            .addReg(MI->getOperand(3).getReg());
+      }
+
+    EmitToStreamer(*OutStreamer, MCInst);
+    return;
+  }
+  case ARM::t2BF_LabelPseudo: {
+    // This is a pseudo op for a label used by a branch future instruction
+
+    // Emit the label.
+    OutStreamer->EmitLabel(getBFLabel(DL.getPrivateGlobalPrefix(),
+                                       getFunctionNumber(),
+                                       MI->getOperand(0).getIndex(), OutContext));
     return;
   }
   case ARM::tPICADD: {

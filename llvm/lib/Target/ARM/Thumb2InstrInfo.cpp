@@ -161,7 +161,7 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     // otherwise).
     if (TargetRegisterInfo::isVirtualRegister(SrcReg)) {
       MachineRegisterInfo *MRI = &MF.getRegInfo();
-      MRI->constrainRegClass(SrcReg, &ARM::GPRPair_with_gsub_1_in_rGPRRegClass);
+      MRI->constrainRegClass(SrcReg, &ARM::GPRPair_with_gsub_1_in_GPRwithAPSRnospRegClass);
     }
 
     MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::t2STRDi8));
@@ -203,7 +203,7 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     if (TargetRegisterInfo::isVirtualRegister(DestReg)) {
       MachineRegisterInfo *MRI = &MF.getRegInfo();
       MRI->constrainRegClass(DestReg,
-                             &ARM::GPRPair_with_gsub_1_in_rGPRRegClass);
+                             &ARM::GPRPair_with_gsub_1_in_GPRwithAPSRnospRegClass);
     }
 
     MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::t2LDRDi8));
@@ -610,6 +610,13 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
         Offset = -Offset;
         isSub = true;
       }
+    } else if (AddrMode == ARMII::AddrModeT2_i7s4) {
+      Offset += MI.getOperand(FrameRegIdx + 1).getImm();
+      NumBits = 9; // 7 bits scaled by 4
+      unsigned OffsetMask = 0x3;
+      // MCInst operand expects already scaled value.
+      Scale = 1;
+      assert((Offset & OffsetMask) == 0 && "Can't encode this offset!");
     } else if (AddrMode == ARMII::AddrModeT2_i8s4) {
       Offset += MI.getOperand(FrameRegIdx + 1).getImm() * 4;
       NumBits = 10; // 8 bits scaled by 4

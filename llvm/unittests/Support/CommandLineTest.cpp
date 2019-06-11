@@ -790,7 +790,9 @@ TEST(CommandLineTest, ResponseFiles) {
   EXPECT_TRUE(IncludedFile.is_open());
   IncludedFile << "-option_1 -option_2\n"
                   "@incdir/resp2\n"
-                  "-option_3=abcd\n";
+                  "-option_3=abcd\n"
+                  "@incdir/resp3\n"
+                  "-option_4=efjk\n";
   IncludedFile.close();
 
   // Directory for included file.
@@ -808,6 +810,15 @@ TEST(CommandLineTest, ResponseFiles) {
   IncludedFile2 << "-option_23=abcd\n";
   IncludedFile2.close();
 
+  // Create second included response file of second level.
+  llvm::SmallString<128> IncludedFileName3;
+  llvm::sys::path::append(IncludedFileName3, IncDir, "resp3");
+  std::ofstream IncludedFile3(IncludedFileName3.c_str());
+  EXPECT_TRUE(IncludedFile3.is_open());
+  IncludedFile3 << "-option_31 -option_32\n";
+  IncludedFile3 << "-option_33=abcd\n";
+  IncludedFile3.close();
+
   // Prepare 'file' with reference to response file.
   SmallString<128> IncRef;
   IncRef.append(1, '@');
@@ -821,7 +832,7 @@ TEST(CommandLineTest, ResponseFiles) {
   bool Res = llvm::cl::ExpandResponseFiles(
                     Saver, llvm::cl::TokenizeGNUCommandLine, Argv, false, true);
   EXPECT_TRUE(Res);
-  EXPECT_EQ(Argv.size(), 9U);
+  EXPECT_EQ(Argv.size(), 13U);
   EXPECT_STREQ(Argv[0], "test/test");
   EXPECT_STREQ(Argv[1], "-flag_1");
   EXPECT_STREQ(Argv[2], "-option_1");
@@ -830,8 +841,13 @@ TEST(CommandLineTest, ResponseFiles) {
   EXPECT_STREQ(Argv[5], "-option_22");
   EXPECT_STREQ(Argv[6], "-option_23=abcd");
   EXPECT_STREQ(Argv[7], "-option_3=abcd");
-  EXPECT_STREQ(Argv[8], "-flag_2");
+  EXPECT_STREQ(Argv[8], "-option_31");
+  EXPECT_STREQ(Argv[9], "-option_32");
+  EXPECT_STREQ(Argv[10], "-option_33=abcd");
+  EXPECT_STREQ(Argv[11], "-option_4=efjk");
+  EXPECT_STREQ(Argv[12], "-flag_2");
 
+  llvm::sys::fs::remove(IncludedFileName3);
   llvm::sys::fs::remove(IncludedFileName2);
   llvm::sys::fs::remove(IncDir);
   llvm::sys::fs::remove(IncludedFileName);
@@ -843,18 +859,45 @@ TEST(CommandLineTest, RecursiveResponseFiles) {
   std::error_code EC = sys::fs::createUniqueDirectory("unittest", TestDir);
   EXPECT_TRUE(!EC);
 
-  SmallString<128> ResponseFilePath;
-  sys::path::append(ResponseFilePath, TestDir, "recursive.rsp");
-  std::string ResponseFileRef = std::string("@") + ResponseFilePath.c_str();
+  SmallString<128> SelfFilePath;
+  sys::path::append(SelfFilePath, TestDir, "self.rsp");
+  std::string SelfFileRef = std::string("@") + SelfFilePath.c_str();
 
-  std::ofstream ResponseFile(ResponseFilePath.str());
-  EXPECT_TRUE(ResponseFile.is_open());
-  ResponseFile << ResponseFileRef << "\n";
-  ResponseFile << ResponseFileRef << "\n";
-  ResponseFile.close();
+  SmallString<128> NestedFilePath;
+  sys::path::append(NestedFilePath, TestDir, "nested.rsp");
+  std::string NestedFileRef = std::string("@") + NestedFilePath.c_str();
 
-  // Ensure the recursive expansion terminates.
-  SmallVector<const char *, 4> Argv = {"test/test", ResponseFileRef.c_str()};
+  SmallString<128> FlagFilePath;
+  sys::path::append(FlagFilePath, TestDir, "flag.rsp");
+  std::string FlagFileRef = std::string("@") + FlagFilePath.c_str();
+
+  std::ofstream SelfFile(SelfFilePath.str());
+  EXPECT_TRUE(SelfFile.is_open());
+  SelfFile << "-option_1\n";
+  SelfFile << FlagFileRef << "\n";
+  SelfFile << NestedFileRef << "\n";
+  SelfFile << SelfFileRef << "\n";
+  SelfFile.close();
+
+  std::ofstream NestedFile(NestedFilePath.str());
+  EXPECT_TRUE(NestedFile.is_open());
+  NestedFile << "-option_2\n";
+  NestedFile << FlagFileRef << "\n";
+  NestedFile << SelfFileRef << "\n";
+  NestedFile << NestedFileRef << "\n";
+  NestedFile.close();
+
+  std::ofstream FlagFile(FlagFilePath.str());
+  EXPECT_TRUE(FlagFile.is_open());
+  FlagFile << "-option_x\n";
+  FlagFile.close();
+
+  // Ensure:
+  // Recursive expansion terminates
+  // Recursive files never expand
+  // Non-recursive repeats are allowed
+  SmallVector<const char *, 4> Argv = {"test/test", SelfFileRef.c_str(),
+                                       "-option_3"};
   BumpPtrAllocator A;
   StringSaver Saver(A);
 #ifdef _WIN32
@@ -865,11 +908,16 @@ TEST(CommandLineTest, RecursiveResponseFiles) {
   bool Res = cl::ExpandResponseFiles(Saver, Tokenizer, Argv, false, false);
   EXPECT_FALSE(Res);
 
-  // Ensure some expansion took place.
-  EXPECT_GT(Argv.size(), 2U);
+  EXPECT_EQ(Argv.size(), 9U);
   EXPECT_STREQ(Argv[0], "test/test");
-  for (size_t i = 1; i < Argv.size(); ++i)
-    EXPECT_STREQ(Argv[i], ResponseFileRef.c_str());
+  EXPECT_STREQ(Argv[1], "-option_1");
+  EXPECT_STREQ(Argv[2], "-option_x");
+  EXPECT_STREQ(Argv[3], "-option_2");
+  EXPECT_STREQ(Argv[4], "-option_x");
+  EXPECT_STREQ(Argv[5], SelfFileRef.c_str());
+  EXPECT_STREQ(Argv[6], NestedFileRef.c_str());
+  EXPECT_STREQ(Argv[7], SelfFileRef.c_str());
+  EXPECT_STREQ(Argv[8], "-option_3");
 }
 
 TEST(CommandLineTest, ResponseFilesAtArguments) {

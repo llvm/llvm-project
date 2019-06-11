@@ -29,6 +29,9 @@
 ; CHECK-NEXT: DW_AT_GNU_addr_base [DW_FORM_sec_offset]                   (0x00000000)
 
 ; CHECK: .debug_info.dwo contents:
+; CHECK:      DW_TAG_formal_parameter
+; CHECK-NEXT:   DW_AT_const_value [DW_FORM_sdata] (1)
+; CHECK-NEXT:   DW_AT_name {{.*}} "p")
 ; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[A:0x[0-9a-z]*]]
 ; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[E:0x[0-9a-z]*]]
 ; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[B:0x[0-9a-z]*]]
@@ -46,22 +49,23 @@
 ; CHECK-NEXT:   Addr idx 3 (w/ length 15): DW_OP_reg0 RAX
 ; CHECK-NEXT:   Addr idx 4 (w/ length 18): DW_OP_breg7 RSP-8
 ; CHECK:      [[E]]:
-; CHECK-NEXT:   Addr idx 5 (w/ length 23): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 5 (w/ length 9): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 6 (w/ length 98): DW_OP_breg7 RSP-44
 ; CHECK:      [[B]]:
-; CHECK-NEXT:   Addr idx 6 (w/ length 15): DW_OP_reg0 RAX
-; CHECK-NEXT:   Addr idx 7 (w/ length 66): DW_OP_breg7 RSP-32
+; CHECK-NEXT:   Addr idx 7 (w/ length 15): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 8 (w/ length 66): DW_OP_breg7 RSP-32
 ; CHECK:      [[D]]:
-; CHECK-NEXT:   Addr idx 8 (w/ length 15): DW_OP_reg0 RAX
-; CHECK-NEXT:   Addr idx 9 (w/ length 42): DW_OP_breg7 RSP-20
+; CHECK-NEXT:   Addr idx 9 (w/ length 15): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 10 (w/ length 42): DW_OP_breg7 RSP-20
 
 ; Make sure we don't produce any relocations in any .dwo section (though in particular, debug_info.dwo)
 ; HDR-NOT: .rela.{{.*}}.dwo
 
 ; Make sure we have enough stuff in the debug_addr to cover the address indexes
-; (9 is the last index in debug_loc.dwo, making 10 entries of 8 bytes each,
-; 10 * 8 == 80 base 10 == 50 base 16)
+; (10 is the last index in debug_loc.dwo, making 11 entries of 8 bytes each,
+; 11 * 8 == 88 base 10 == 58 base 16)
 
-; HDR: .debug_addr 00000050
+; HDR: .debug_addr 00000058
 ; HDR-NOT: .rela.{{.*}}.dwo
 
 ; Check for the existence of a DWARF v5-style range list table in the .debug_rnglists

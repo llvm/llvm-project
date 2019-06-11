@@ -683,6 +683,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 
   UP.Partial = true;
   UP.Runtime = true;
+  UP.UpperBound = true;
   UP.UnrollRemainder = true;
   UP.DefaultUnrollRuntimeCount = 4;
   UP.UnrollAndJam = true;
