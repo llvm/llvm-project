@@ -138,6 +138,25 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "mmx", true);
     break;
 
+  case CK_Cooperlake:
+    // CPX inherits all CLX features plus AVX512BF16
+    setFeatureEnabledImpl(Features, "avx512bf16", true);
+    LLVM_FALLTHROUGH;
+  case CK_Cascadelake:
+    // CLX inherits all SKX features plus AVX512VNNI
+    setFeatureEnabledImpl(Features, "avx512vnni", true);
+    LLVM_FALLTHROUGH;
+  case CK_SkylakeServer:
+    setFeatureEnabledImpl(Features, "avx512f", true);
+    setFeatureEnabledImpl(Features, "avx512cd", true);
+    setFeatureEnabledImpl(Features, "avx512dq", true);
+    setFeatureEnabledImpl(Features, "avx512bw", true);
+    setFeatureEnabledImpl(Features, "avx512vl", true);
+    setFeatureEnabledImpl(Features, "clwb", true);
+    setFeatureEnabledImpl(Features, "pku", true);
+    // SkylakeServer cores inherits all SKL features, except SGX
+    goto SkylakeCommon;
+
   case CK_IcelakeServer:
     setFeatureEnabledImpl(Features, "pconfig", true);
     setFeatureEnabledImpl(Features, "wbnoinvd", true);
@@ -148,45 +167,29 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "vpclmulqdq", true);
     setFeatureEnabledImpl(Features, "avx512bitalg", true);
     setFeatureEnabledImpl(Features, "avx512vbmi2", true);
+    setFeatureEnabledImpl(Features, "avx512vnni", true);
     setFeatureEnabledImpl(Features, "avx512vpopcntdq", true);
     setFeatureEnabledImpl(Features, "rdpid", true);
+    setFeatureEnabledImpl(Features, "clwb", true);
     LLVM_FALLTHROUGH;
   case CK_Cannonlake:
-    setFeatureEnabledImpl(Features, "avx512ifma", true);
-    setFeatureEnabledImpl(Features, "avx512vbmi", true);
-    setFeatureEnabledImpl(Features, "sha", true);
-    LLVM_FALLTHROUGH;
-  case CK_Cooperlake:
-    // Cannonlake, IcelakeClient and IcelakeServer have no AVX512BF16 feature
-    if (Kind != CK_Cannonlake && Kind != CK_IcelakeClient &&
-        Kind != CK_IcelakeServer)
-      // CPX inherits all CLX features plus AVX512BF16
-      setFeatureEnabledImpl(Features, "avx512bf16", true);
-    LLVM_FALLTHROUGH;
-  case CK_Cascadelake:
-    //Cannonlake has no VNNI feature inside while Icelake has
-    if (Kind != CK_Cannonlake)
-      // CLK inherits all SKX features plus AVX512_VNNI
-      setFeatureEnabledImpl(Features, "avx512vnni", true);
-    LLVM_FALLTHROUGH;
-  case CK_SkylakeServer:
     setFeatureEnabledImpl(Features, "avx512f", true);
     setFeatureEnabledImpl(Features, "avx512cd", true);
     setFeatureEnabledImpl(Features, "avx512dq", true);
     setFeatureEnabledImpl(Features, "avx512bw", true);
     setFeatureEnabledImpl(Features, "avx512vl", true);
+    setFeatureEnabledImpl(Features, "avx512ifma", true);
+    setFeatureEnabledImpl(Features, "avx512vbmi", true);
     setFeatureEnabledImpl(Features, "pku", true);
-    if (Kind != CK_Cannonlake) // CNL inherits all SKX features, except CLWB
-      setFeatureEnabledImpl(Features, "clwb", true);
+    setFeatureEnabledImpl(Features, "sha", true);
     LLVM_FALLTHROUGH;
   case CK_SkylakeClient:
+    setFeatureEnabledImpl(Features, "sgx", true);
+    // SkylakeServer cores inherits all SKL features, except SGX
+SkylakeCommon:
     setFeatureEnabledImpl(Features, "xsavec", true);
     setFeatureEnabledImpl(Features, "xsaves", true);
     setFeatureEnabledImpl(Features, "mpx", true);
-    if (Kind != CK_SkylakeServer && Kind != CK_Cascadelake &&
-        Kind != CK_Cooperlake)
-      // SKX/CLX/CPX inherits all SKL features, except SGX
-      setFeatureEnabledImpl(Features, "sgx", true);
     setFeatureEnabledImpl(Features, "clflushopt", true);
     setFeatureEnabledImpl(Features, "aes", true);
     LLVM_FALLTHROUGH;

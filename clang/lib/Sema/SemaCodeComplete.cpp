@@ -84,6 +84,15 @@ private:
 
   public:
     ShadowMapEntry() : DeclOrVector(), SingleDeclIndex(0) {}
+    ShadowMapEntry(const ShadowMapEntry &) = delete;
+    ShadowMapEntry(ShadowMapEntry &&Move) { *this = std::move(Move); }
+    ShadowMapEntry &operator=(const ShadowMapEntry &) = delete;
+    ShadowMapEntry &operator=(ShadowMapEntry &&Move) {
+      SingleDeclIndex = Move.SingleDeclIndex;
+      DeclOrVector = Move.DeclOrVector;
+      Move.DeclOrVector = nullptr;
+      return *this;
+    }
 
     void Add(const NamedDecl *ND, unsigned Index) {
       if (DeclOrVector.isNull()) {
