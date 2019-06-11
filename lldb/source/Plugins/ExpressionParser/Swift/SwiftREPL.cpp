@@ -250,8 +250,8 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   TypeSystem *type_system = target_sp->GetScratchTypeSystemForLanguage(
       nullptr, eLanguageTypeSwift, true, repl_options);
   if (!type_system) {
-    err.SetErrorString("Could not construct an expression"
-                       " context for the REPL.\n");
+    err.SetErrorString("Could not construct an expression "
+                       "context for the REPL.\n");
     return nullptr;
   }
 
