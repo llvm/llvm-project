@@ -110,6 +110,26 @@ updated to use LLJIT.
 MCJIT and ExecutionEngine continue to be supported, though ORC should be
 preferred for new projects.
 
+Changes to the C++ APIs
+-----------------------
+
+Three of the IR library methods related to debugging information for
+functions and methods have changed their prototypes:
+
+  DIBuilder::createMethod
+  DIBuilder::createFunction
+  DIBuilder::createTempFunctionFwdDecl
+
+In all cases, several individual parameters were removed, and replaced
+by a single 'SPFlags' (subprogram flags) parameter. The individual
+parameters are: 'isLocalToUnit'; 'isDefinition'; 'isOptimized'; and
+for 'createMethod', 'Virtuality'.  The new 'SPFlags' parameter has a
+default value equivalent to passing 'false' for the three 'bool'
+parameters, and zero (non-virtual) to the 'Virtuality' parameter.  For
+any old-style API call that passed 'true' or a non-zero virtuality to
+these methods, you will need to substitute the correct 'SPFlags' value.
+The helper method 'DISubprogram::toSPFlags()' might be useful in making
+this conversion.
 
 Changes to the AArch64 Target
 -----------------------------
