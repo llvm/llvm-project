@@ -821,9 +821,11 @@ static bool IsDeviceSupport(const char *path) {
 }
 } // namespace
 
-SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
+SwiftASTContext::SwiftASTContext(std::string description, llvm::Triple triple,
+                                 Target *target)
     : TypeSystem(TypeSystem::eKindSwift),
-      m_compiler_invocation_ap(new swift::CompilerInvocation()) {
+      m_compiler_invocation_ap(new swift::CompilerInvocation()),
+      m_description(description) {
   // Set the clang modules cache path.
   llvm::SmallString<128> path;
   auto props = ModuleList::GetGlobalModuleListProperties();
@@ -833,8 +835,7 @@ SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
   if (target)
     m_target_wp = target->shared_from_this();
 
-  if (triple)
-    SetTriple(triple);
+  SetTriple(triple);
   swift::IRGenOptions &ir_gen_opts =
       m_compiler_invocation_ap->getIRGenOptions();
   ir_gen_opts.OutputKind = swift::IRGenOutputKind::Module;
@@ -844,12 +845,10 @@ SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
 
 SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
     : TypeSystem(rhs.getKind()),
-      m_compiler_invocation_ap(new swift::CompilerInvocation()) {
+      m_compiler_invocation_ap(new swift::CompilerInvocation()),
+      m_description(rhs.m_description) {
   if (rhs.m_compiler_invocation_ap) {
-    std::string rhs_triple = rhs.GetTriple();
-    if (!rhs_triple.empty()) {
-      SetTriple(rhs_triple.c_str());
-    }
+    SetTriple(rhs.GetTriple());
     llvm::StringRef module_cache_path =
         rhs.m_compiler_invocation_ap->getClangModuleCachePath();
     m_compiler_invocation_ap->setClangModuleCachePath(module_cache_path);
@@ -866,14 +865,23 @@ SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
 
   m_platform_sdk_path = rhs.m_platform_sdk_path;
 
-  swift::ASTContext *lhs_ast = GetASTContext();
-  swift::ASTContext *rhs_ast =
-      const_cast<SwiftASTContext &>(rhs).GetASTContext();
+  // Initialize search paths and clang importer options, we need
+  // them to grab a SwiftASTContext without asserting.
+  std::vector<std::string> module_search_paths;
+  std::vector<std::pair<std::string, bool>> framework_search_paths;
+  const auto &opts = rhs.m_compiler_invocation_ap->getSearchPathOptions();
+  module_search_paths.insert(module_search_paths.end(),
+                             opts.ImportSearchPaths.begin(),
+                             opts.ImportSearchPaths.end());
+  for (const auto &fwsp : opts.FrameworkSearchPaths)
+      framework_search_paths.push_back({fwsp.Path, fwsp.IsSystem});
+  InitializeSearchPathOptions(module_search_paths, framework_search_paths);
+  GetClangImporterOptions();
 
-  if (lhs_ast && rhs_ast) {
-    lhs_ast->SearchPathOpts = rhs_ast->SearchPathOpts;
-  }
-  GetClangImporter();
+  // As this is a copy constructor, make sure we copy the clang importer
+  // options from RHS to LHS.
+  GetCompilerInvocation().getClangImporterOptions() =
+      rhs.m_compiler_invocation_ap->getClangImporterOptions();
 }
 
 SwiftASTContext::~SwiftASTContext() {
@@ -1276,6 +1284,44 @@ static void ConfigureResourceDirs(swift::CompilerInvocation &invocation,
   invocation.setRuntimeResourcePath(resource_dir.GetPath().c_str());
 }
 
+
+static const char *getImportFailureString(swift::serialization::Status status) {
+  switch (status) {
+  case swift::serialization::Status::Valid:
+    return "The module is valid.";
+  case swift::serialization::Status::FormatTooOld:
+    return "The module file format is too old to be used by this version of "
+           "the debugger.";
+  case swift::serialization::Status::FormatTooNew:
+    return "The module file format is too new to be used by this version of "
+           "the debugger.";
+  case swift::serialization::Status::MissingDependency:
+    return "The module file depends on another module that can't be loaded.";
+  case swift::serialization::Status::MissingUnderlyingModule:
+    return "The module file is an overlay for a Clang module, which can't be "
+           "found.";
+  case swift::serialization::Status::CircularDependency:
+    return "The module file depends on a module that is still being loaded, "
+           "i.e. there is a circular dependency.";
+  case swift::serialization::Status::FailedToLoadBridgingHeader:
+    return "The module file depends on a bridging header that can't be loaded.";
+  case swift::serialization::Status::Malformed:
+    return "The module file is malformed in some way.";
+  case swift::serialization::Status::MalformedDocumentation:
+    return "The module documentation file is malformed in some way.";
+  case swift::serialization::Status::NameMismatch:
+    return "The module file's name does not match the module it is being "
+           "loaded into.";
+  case swift::serialization::Status::TargetIncompatible:
+    return "The module file was built for a different target platform.";
+  case swift::serialization::Status::TargetTooNew:
+    return "The module file was built for a target newer than the current "
+           "target.";
+  default:
+    return "An unknown error occurred.";
+  }
+}
+
 /// Initialize the compiler invocation with it the search paths from a
 /// serialized AST.
 /// \returns true on success.
@@ -1286,62 +1332,43 @@ static bool DeserializeCompilerFlags(swift::CompilerInvocation &invocation,
   if (result == swift::serialization::Status::Valid)
     return true;
 
-  error << "While deserializing" << name << ":\n";
-  switch (result) {
-  case swift::serialization::Status::Valid:
-    llvm_unreachable("already checked");
-  case swift::serialization::Status::FormatTooOld:
-    error << "The swift module file format is too old to be used by the "
-             "version of the swift compiler in LLDB\n";
-    break;
-
-  case swift::serialization::Status::FormatTooNew:
-    error << "the swift module file format is too new to be used by this "
-             "version of the swift compiler in LLDB\n";
-    break;
-
-  case swift::serialization::Status::MissingDependency:
-    error << "the swift module file depends on another module that can't be "
-             "loaded\n";
-    break;
-
-  case swift::serialization::Status::MissingUnderlyingModule:
-    error << "the swift module file is an overlay for a clang module, which "
-             "can't be found\n";
-    break;
-
-  case swift::serialization::Status::FailedToLoadBridgingHeader:
-    error << "the swift module file depends on a bridging header that can't "
-             "be loaded\n";
-    break;
-
-  case swift::serialization::Status::Malformed:
-    error << "the swift module file is malformed\n";
-    break;
-
-  case swift::serialization::Status::MalformedDocumentation:
-    error << "the swift module documentation file is malformed in some way\n";
-    break;
-
-  case swift::serialization::Status::NameMismatch:
-    error << "the swift module file's name does not match the module it is "
-             "being loaded into\n";
-    break;
-
-  case swift::serialization::Status::TargetIncompatible:
-    error << "the swift module file was built for a different target "
-             "platform\n";
-    break;
-
-  case swift::serialization::Status::TargetTooNew:
-    error << "the swift module file was built for a target newer than the "
-             "current target\n";
-    break;
-
-  case swift::serialization::Status::CircularDependency:
-    break;
-  }
+  error << "Could not deserialize " << name << ":\n"
+        << getImportFailureString(result) << "\n";
   return false;
+}
+
+static void printASTValidationInfo(
+    llvm::raw_ostream &errs,
+    const swift::serialization::ValidationInfo &ast_info,
+    const swift::serialization::ExtendedValidationInfo &ext_ast_info,
+    const Module &module, StringRef module_buf, bool invalid_name,
+    bool invalid_size) {
+  const char *error = getImportFailureString(ast_info.status);
+  errs << error;
+  if (invalid_name) {
+    error = "The module has an invalid name.";
+    errs << ' ' << error;
+  }
+  if (invalid_size) {
+    error = "The module has an invalid file size.";
+    errs << ' ' << error;
+  }
+
+  llvm::SmallString<1> m_description;
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  LLDB_LOG(log, R"(Unable to load Swift AST for module "{0}" from library "{1}".
+  {2}
+  - targetTriple: {3}
+  - shortVersion: {4}
+  - bytes: {5} (module_buf bytes: {6})
+  - SDK path: {7}
+  - Clang Importer Options:
+)",
+           ast_info.name, module.GetSpecificationDescription(), error,
+           ast_info.targetTriple, ast_info.shortVersion, ast_info.bytes,
+           module_buf.size(), ext_ast_info.getSDKPath());
+  for (StringRef ExtraOpt : ext_ast_info.getExtraClangImporterOptions())
+    LLDB_LOG(log, "  -- {0}", ExtraOpt);
 }
 
 /// Retrieve the serialized AST data blobs and initialize the compiler
@@ -1373,36 +1400,23 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
   for (auto ast_file_data_sp : ast_file_datas) {
     llvm::StringRef buf((const char *)ast_file_data_sp->GetBytes(),
                         ast_file_data_sp->GetByteSize());
-    while (!buf.empty()) {
+    swift::serialization::ValidationInfo info;
+    for (; !buf.empty(); buf = buf.substr(info.bytes)) {
       swift::serialization::ExtendedValidationInfo extended_validation_info;
-      swift::serialization::ValidationInfo info =
-          swift::serialization::validateSerializedAST(
-              buf, &extended_validation_info);
-      bool InvalidAST = info.status != swift::serialization::Status::Valid;
-      bool InvalidSize = (info.bytes == 0) || (info.bytes > buf.size());
-      if (InvalidAST) {
-        swift::ASTContext &ast_ctx = *swift_ast.GetASTContext();
-        std::string module_spec = module.GetSpecificationDescription();
-        swift::Identifier module_id = ast_ctx.getIdentifier(module_spec);
-        std::unique_ptr<swift::ModuleFile> loaded_module_file;
-        std::unique_ptr<llvm::MemoryBuffer> module_input_buffer =
-            llvm::MemoryBuffer::getMemBuffer(buf, module_spec,
-                                             /*NullTerminator=*/false);
-        swift::ModuleFile::load(std::move(module_input_buffer), {}, false,
-                                loaded_module_file);
-
-        swift::serialization::diagnoseSerializedASTLoadFailure(
-            ast_ctx, swift::SourceLoc(), info, extended_validation_info,
-            module_spec, "<invalid-doc-id>", loaded_module_file.get(),
-            module_id);
-      }
-      if (InvalidAST || InvalidSize) {
-        printASTValidationInfo(info, extended_validation_info, module, buf);
-        return true;
-      }
-
-      if (info.name.empty())
+      info = swift::serialization::validateSerializedAST(
+          buf, &extended_validation_info);
+      bool invalid_ast = info.status != swift::serialization::Status::Valid;
+      bool invalid_size = (info.bytes == 0) || (info.bytes > buf.size());
+      bool invalid_name = info.name.empty();
+      if (invalid_ast || invalid_size || invalid_name) {
+        // Validation errors are diagnosed, but not fatal for the context.
+        printASTValidationInfo(error, info, extended_validation_info, module,
+                               buf, invalid_name, invalid_size);
+        // If there's a size error, quit the loop early, otherwise try the next.
+        if (invalid_size)
+          break;
         continue;
+      }
 
       StringRef moduleData = buf.substr(0, info.bytes);
       got_serialized_options |=
@@ -1417,7 +1431,6 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
             invocation.setSDKPath(last_sdk_path);
       }
       last_sdk_path = invocation.getSDKPath();
-      buf = buf.substr(info.bytes);
     }
   }
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "Picking SDK path \"%s\".",
@@ -1514,6 +1527,14 @@ void SwiftASTContext::AddExtraClangArgs(std::vector<std::string> ExtraArgs) {
   }
 }
 
+void SwiftASTContext::AddUserClangArgs(TargetProperties &props) {
+  Args args(props.GetSwiftExtraClangFlags());
+  std::vector<std::string> user_clang_flags;
+  for (const auto &arg : args.entries())
+    user_clang_flags.push_back(arg.ref);
+  AddExtraClangArgs(user_clang_flags);
+}
+
 void SwiftASTContext::RemapClangImporterOptions(
     const PathMappingList &path_map) {
   auto &options = GetClangImporterOptions();
@@ -1590,7 +1611,8 @@ static llvm::Optional<StringRef> GetDSYMBundle(Module &module) {
 
 lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                                                    Module &module,
-                                                   Target *target) {
+                                                   Target *target,
+                                                   bool fallback) {
   std::vector<std::string> module_search_paths;
   std::vector<std::pair<std::string, bool>> framework_search_paths;
 
@@ -1598,7 +1620,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     return lldb::TypeSystemSP();
 
   StreamString ss;
-  ss << "SwiftASTContext(" << '"';
+  ss << "SwiftASTContext";
+  if (fallback)
+    ss << "ForExpressions";
+  ss << '(' << '"';
   module.GetDescription(&ss, eDescriptionLevelBrief);
   ss << '"' << ')';
   ss.Flush();
@@ -1624,21 +1649,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                "is unlikely to succeed",
                main_compile_unit_sp->GetCString());
   }
-
-  std::shared_ptr<SwiftASTContext> swift_ast_sp(
-      target ? (new SwiftASTContextForExpressions(*target))
-             : new SwiftASTContext());
-
-  // This is a module AST context, mark it as such.
-  swift_ast_sp->m_is_scratch_context = false;
-
-  swift_ast_sp->SetDescription(m_description);
-  swift_ast_sp->GetLanguageOptions().DebuggerSupport = true;
-  swift_ast_sp->GetLanguageOptions().EnableAccessControl = false;
-  swift_ast_sp->GetLanguageOptions().EnableTargetOSChecking = false;
-
-  if (!arch.IsValid())
-    return TypeSystemSP();
 
   llvm::Triple triple = arch.GetTriple();
 
@@ -1667,7 +1677,25 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 #endif
   }
 
-  swift_ast_sp->SetTriple(triple.getTriple().c_str(), &module);
+  // If there is a target this may be a fallback scratch context.
+  assert((!fallback || target) && "fallback context must specify a target");
+  std::shared_ptr<SwiftASTContext> swift_ast_sp(
+      fallback ? (new SwiftASTContextForExpressions(m_description, *target))
+               : (new SwiftASTContext(
+                     m_description,
+                     target ? target->GetArchitecture().GetTriple() : triple,
+                     target)));
+
+  // This is a module AST context, mark it as such.
+  swift_ast_sp->m_is_scratch_context = false;
+  swift_ast_sp->GetLanguageOptions().DebuggerSupport = true;
+  swift_ast_sp->GetLanguageOptions().EnableAccessControl = false;
+  swift_ast_sp->GetLanguageOptions().EnableTargetOSChecking = false;
+
+  if (!arch.IsValid())
+    return TypeSystemSP();
+
+  swift_ast_sp->SetTriple(triple, &module);
 
   bool set_triple = false;
 
@@ -1683,6 +1711,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     if (DeserializeAllCompilerFlags(*swift_ast_sp, module, m_description, errs,
                                     got_serialized_options)) {
       swift_ast_sp->m_fatal_errors.SetErrorString(error.str());
+      assert(swift_ast_sp->HasFatalErrors() && "error string was empty");
       return swift_ast_sp;
     }
 
@@ -1694,8 +1723,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       LOG_PRINTF(LIBLLDB_LOG_TYPES, "Serialized triple was empty.");
     } else {
       LOG_PRINTF(LIBLLDB_LOG_TYPES, "Found serialized triple %s.",
-                 serialized_triple.data());
-      swift_ast_sp->SetTriple(serialized_triple.data(), &module);
+                 serialized_triple.str().c_str());
+      swift_ast_sp->SetTriple(llvm::Triple(serialized_triple), &module);
       set_triple = true;
     }
 
@@ -1721,9 +1750,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
         }
 
         if (sym_vendor->GetCompileOption("-target", target_triple)) {
-          llvm::StringRef parsed_triple(target_triple);
-
-          swift_ast_sp->SetTriple(target_triple.c_str(), &module);
+          swift_ast_sp->SetTriple(llvm::Triple(target_triple), &module);
           set_triple = true;
         }
       }
@@ -1768,7 +1795,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   }
 
   if (!set_triple) {
-    llvm::Triple llvm_triple(swift_ast_sp->GetTriple());
+    llvm::Triple llvm_triple = swift_ast_sp->GetTriple();
 
     // LLVM wants this to be set to iOS or MacOSX; if we're working on
     // a bare-boards type image, change the triple for LLVM's benefit.
@@ -1780,7 +1807,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       } else {
         llvm_triple.setOS(llvm::Triple::MacOSX);
       }
-      swift_ast_sp->SetTriple(llvm_triple.str().c_str(), &module);
+      swift_ast_sp->SetTriple(llvm_triple, &module);
     }
   }
 
@@ -1792,6 +1819,11 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   std::vector<std::string> DeserializedArgs = swift_ast_sp->GetClangArguments();
   swift_ast_sp->GetClangImporterOptions().ExtraArgs.clear();
   swift_ast_sp->AddExtraClangArgs(DeserializedArgs);
+  if (target)
+    swift_ast_sp->AddUserClangArgs(*target);
+  else if (auto &global_target_properties = Target::GetGlobalProperties())
+    swift_ast_sp->AddUserClangArgs(*global_target_properties);
+
   // Apply source path remappings found in the module's dSYM.
   swift_ast_sp->RemapClangImporterOptions(module.GetSourceMappingList());
 
@@ -1841,21 +1873,18 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                                                    Target &target,
                                                    const char *extra_options) {
-  std::vector<std::string> module_search_paths;
-  std::vector<std::pair<std::string, bool>> framework_search_paths;
-
   if (!SwiftASTContextSupportsLanguage(language))
     return lldb::TypeSystemSP();
 
-  ArchSpec arch = target.GetArchitecture();
+  std::string m_description = "SwiftASTContextForExpressions";
+  std::vector<std::string> module_search_paths;
+  std::vector<std::pair<std::string, bool>> framework_search_paths;
 
   // Make an AST but don't set the triple yet. We need to try and
   // detect if we have a iOS simulator.
   std::shared_ptr<SwiftASTContextForExpressions> swift_ast_sp(
-      new SwiftASTContextForExpressions(target));
+      new SwiftASTContextForExpressions(m_description, target));
 
-  std::string m_description = "SwiftASTContextForExpressions";
-  swift_ast_sp->SetDescription(m_description);
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "(Target)");
 
   auto logError = [&](const char *message) {
@@ -1863,6 +1892,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                message);
   };
 
+  ArchSpec arch = target.GetArchitecture();
   if (!arch.IsValid()) {
     logError("invalid target architecture");
     return TypeSystemSP();
@@ -1985,7 +2015,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   // Now if the user fully specified the triple, let that override the one
   // we got from executable's options:
   if (target.GetArchitecture().IsFullySpecifiedTriple()) {
-    swift_ast_sp->SetTriple(target.GetArchitecture().GetTriple().str().c_str());
+    swift_ast_sp->SetTriple(target.GetArchitecture().GetTriple());
   } else {
     // Always run using the Host OS triple...
     bool set_triple = false;
@@ -1999,24 +2029,17 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
           << target_triple.getArchName() << '-' << target_triple.getVendorName()
           << '-' << llvm::Triple::getOSTypeName(target_triple.getOS())
           << version.getAsString();
-      swift_ast_sp->SetTriple(buffer.c_str());
+      swift_ast_sp->SetTriple(llvm::Triple(buffer));
       set_triple = true;
     }
 
-    if (!set_triple) {
-      ModuleSP exe_module_sp(target.GetExecutableModule());
-      if (exe_module_sp) {
-        Status exe_error;
-        SwiftASTContext *exe_swift_ctx =
-            llvm::dyn_cast_or_null<SwiftASTContext>(
-                exe_module_sp->GetTypeSystemForLanguage(
-                    lldb::eLanguageTypeSwift));
-        if (exe_swift_ctx) {
-          swift_ast_sp->SetTriple(
-              exe_swift_ctx->GetLanguageOptions().Target.str().c_str());
-        }
+    if (!set_triple)
+      if (ModuleSP exe_module_sp = target.GetExecutableModule()) {
+        auto *exe_swift_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(
+            exe_module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
+        if (exe_swift_ctx)
+          swift_ast_sp->SetTriple(exe_swift_ctx->GetLanguageOptions().Target);
       }
-    }
   }
 
   llvm::Triple triple(swift_ast_sp->GetTriple());
@@ -2138,6 +2161,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   // BEFORE the ClangImporter is made by calling GetClangImporter or
   // these options will be ignored.
 
+  swift_ast_sp->AddUserClangArgs(target);
+
   if (extra_options) {
     swift::CompilerInvocation &compiler_invocation =
         swift_ast_sp->GetCompilerInvocation();
@@ -2254,8 +2279,9 @@ swift::IRGenOptions &SwiftASTContext::GetIRGenOptions() {
   return m_compiler_invocation_ap->getIRGenOptions();
 }
 
-std::string SwiftASTContext::GetTriple() const {
-  return m_compiler_invocation_ap->getTargetTriple();
+llvm::Triple SwiftASTContext::GetTriple() const {
+  VALID_OR_RETURN(llvm::Triple());
+  return llvm::Triple(m_compiler_invocation_ap->getTargetTriple());
 }
 
 /// Conditions a triple string to be safe for use with Swift.  Right
@@ -2268,31 +2294,32 @@ static std::string GetSwiftFriendlyTriple(StringRef triple) {
   return triple.str();
 }
 
-bool SwiftASTContext::SetTriple(std::string raw_triple, Module *module) {
-  if (raw_triple.empty())
+bool SwiftASTContext::SetTriple(const llvm::Triple triple, Module *module) {
+  VALID_OR_RETURN(false);
+  if (triple.str().empty())
     return false;
-  // We can change our triple up until we create the
-  // swift::irgen::IRGenModule.
+
+  // The triple may change up until a swift::irgen::IRGenModule is created.
   if (m_ir_gen_module_ap.get()) {
     LOG_PRINTF(LIBLLDB_LOG_TYPES,
                "(\"%s\") ignoring triple "
                "since the IRGenModule has already been created",
-               raw_triple.c_str());
+               triple.str().c_str());
     return false;
   }
 
-  std::string triple = GetSwiftFriendlyTriple(raw_triple);
-  llvm::Triple llvm_triple(triple);
   const unsigned unspecified = 0;
+  std::string adjusted_triple = GetSwiftFriendlyTriple(triple.str());
   // If the OS version is unspecified, do fancy things.
-  if (llvm_triple.getOSMajorVersion() == unspecified) {
+  if (triple.getOSMajorVersion() == unspecified) {
     // If a triple is "<arch>-apple-darwin" change it to be
     // "<arch>-apple-macosx" otherwise the major and minor OS
     // version we append below would be wrong.
-    if (llvm_triple.getVendor() == llvm::Triple::VendorType::Apple &&
-        llvm_triple.getOS() == llvm::Triple::OSType::Darwin) {
-      llvm_triple.setOS(llvm::Triple::OSType::MacOSX);
-      triple = llvm_triple.str();
+    if (triple.getVendor() == llvm::Triple::VendorType::Apple &&
+        triple.getOS() == llvm::Triple::OSType::Darwin) {
+      llvm::Triple mac_triple(adjusted_triple);
+      mac_triple.setOS(llvm::Triple::OSType::MacOSX);
+      adjusted_triple = mac_triple.str();
     }
 
     // Append the min OS to the triple if we have a target
@@ -2307,34 +2334,35 @@ bool SwiftASTContext::SetTriple(std::string raw_triple, Module *module) {
     }
 
     if (module) {
-      ObjectFile *objfile = module->GetObjectFile();
-      if (objfile) {
-        StreamString strm;
+      if (ObjectFile *objfile = module->GetObjectFile())
         if (llvm::VersionTuple version = objfile->GetMinimumOSVersion()) {
-          strm.PutCString(llvm_triple.getOSName().str());
-          strm.PutCString(version.getAsString());
-          llvm_triple.setOSName(strm.GetString());
-          triple = llvm_triple.str();
+          llvm::Triple vers_triple(adjusted_triple);
+          vers_triple.setOSName(vers_triple.getOSName().str() +
+                                version.getAsString());
+          adjusted_triple = vers_triple.str();
         }
-      }
     }
   }
-  LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") setting to \"%s\"%s",
-             raw_triple.c_str(), triple.c_str(),
-             m_target_wp.lock() ? " (target)" : "");
-
   if (llvm::Triple(triple).getOS() == llvm::Triple::UnknownOS) {
     // This case triggers an llvm_unreachable() in the Swift compiler.
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "Cannot initialize Swift with an unknown OS");
     return false;
   }
-  m_compiler_invocation_ap->setTargetTriple(triple);
+  LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") setting to \"%s\"",
+             triple.str().c_str(), adjusted_triple.c_str());
+
+  llvm::Triple adjusted_llvm_triple(adjusted_triple);
+  m_compiler_invocation_ap->setTargetTriple(adjusted_llvm_triple);
+
+  assert(GetTriple() == adjusted_llvm_triple);
+  assert(!m_ast_context_ap ||
+         (llvm::Triple(m_ast_context_ap->LangOpts.Target.getTriple()) ==
+          adjusted_llvm_triple));
 
   // Every time the triple is changed the LangOpts must be updated
   // too, because Swift default-initializes the EnableObjCInterop
   // flag based on the triple.
-  GetLanguageOptions().EnableObjCInterop = llvm_triple.isOSDarwin();
-
+  GetLanguageOptions().EnableObjCInterop = triple.isOSDarwin();
   return true;
 }
 
@@ -4534,15 +4562,15 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
     swift::IRGenOptions &ir_gen_opts = GetIRGenOptions();
 
     std::string error_str;
-    std::string triple = GetTriple();
+    llvm::Triple llvm_triple = GetTriple();
     const llvm::Target *llvm_target =
-        llvm::TargetRegistry::lookupTarget(triple, error_str);
+      llvm::TargetRegistry::lookupTarget(llvm_triple.str(), error_str);
 
     llvm::CodeGenOpt::Level optimization_level = llvm::CodeGenOpt::Level::None;
 
     // Create a target machine.
     llvm::TargetMachine *target_machine = llvm_target->createTargetMachine(
-        triple,
+        llvm_triple.str(),
         "generic", // cpu
         "",        // features
         *getTargetOptions(),
@@ -4552,7 +4580,6 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
       // Set the module's string representation.
       const llvm::DataLayout data_layout = target_machine->createDataLayout();
 
-      llvm::Triple llvm_triple(triple);
       swift::SILModule *sil_module = GetSILModule();
       if (sil_module != nullptr) {
         swift::irgen::IRGenerator &ir_generator =
@@ -4570,7 +4597,7 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
             PSPs.MainInputFilenameForDebugInfo));
         llvm::Module *llvm_module = m_ir_gen_module_ap->getModule();
         llvm_module->setDataLayout(data_layout.getStringRepresentation());
-        llvm_module->setTargetTriple(triple);
+        llvm_module->setTargetTriple(llvm_triple.str());
       }
     }
   });
@@ -8055,9 +8082,10 @@ SwiftASTContext::GetASTVectorForModule(const Module *module) {
   return m_ast_file_data_map[const_cast<Module *>(module)];
 }
 
-SwiftASTContextForExpressions::SwiftASTContextForExpressions(Target &target)
-    : SwiftASTContext(target.GetArchitecture().GetTriple().getTriple().c_str(),
-                      &target),
+SwiftASTContextForExpressions::SwiftASTContextForExpressions(
+    std::string description, Target &target)
+    : SwiftASTContext(std::move(description),
+                      target.GetArchitecture().GetTriple(), &target),
       m_persistent_state_up(new SwiftPersistentExpressionState) {}
 
 UserExpression *SwiftASTContextForExpressions::GetUserExpression(
@@ -8082,65 +8110,6 @@ UserExpression *SwiftASTContextForExpressions::GetUserExpression(
 PersistentExpressionState *
 SwiftASTContextForExpressions::GetPersistentExpressionState() {
   return m_persistent_state_up.get();
-}
-
-static const char *getImportFailureString(swift::serialization::Status status) {
-  switch (status) {
-  case swift::serialization::Status::Valid:
-    return "The module is valid.";
-  case swift::serialization::Status::FormatTooOld:
-    return "The module file format is too old to be used by this version of "
-           "the debugger.";
-  case swift::serialization::Status::FormatTooNew:
-    return "The module file format is too new to be used by this version of "
-           "the debugger.";
-  case swift::serialization::Status::MissingDependency:
-    return "The module file depends on another module that can't be loaded.";
-  case swift::serialization::Status::MissingUnderlyingModule:
-    return "The module file is an overlay for a Clang module, which can't be "
-           "found.";
-  case swift::serialization::Status::CircularDependency:
-    return "The module file depends on a module that is still being loaded, "
-           "i.e. there is a circular dependency.";
-  case swift::serialization::Status::FailedToLoadBridgingHeader:
-    return "The module file depends on a bridging header that can't be loaded.";
-  case swift::serialization::Status::Malformed:
-    return "The module file is malformed in some way.";
-  case swift::serialization::Status::MalformedDocumentation:
-    return "The module documentation file is malformed in some way.";
-  case swift::serialization::Status::NameMismatch:
-    return "The module file's name does not match the module it is being "
-           "loaded into.";
-  case swift::serialization::Status::TargetIncompatible:
-    return "The module file was built for a different target platform.";
-  case swift::serialization::Status::TargetTooNew:
-    return "The module file was built for a target newer than the current "
-           "target.";
-  default:
-    return "An unknown error occurred.";
-  }
-}
-
-void lldb_private::printASTValidationInfo(
-    const swift::serialization::ValidationInfo &ast_info,
-    const swift::serialization::ExtendedValidationInfo &ext_ast_info,
-    const Module &module, StringRef module_buf) {
-  llvm::SmallString<1> m_description;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
-  LLDB_LOG(log, R"(Unable to load Swift AST for module {0} from library: {1}.
-  {2}
-  - targetTriple: {3}
-  - shortVersion: {4}
-  - bytes: {5} (module_buf bytes: {6})
-  - SDK path: {7}
-  - Clang Importer Options:
-)",
-           ast_info.name, module.GetSpecificationDescription(),
-           getImportFailureString(ast_info.status), ast_info.targetTriple,
-           ast_info.shortVersion, ast_info.bytes, module_buf.size(),
-           ext_ast_info.getSDKPath());
-  for (StringRef ExtraOpt : ext_ast_info.getExtraClangImporterOptions())
-    LLDB_LOG(log, "  -- {0}", ExtraOpt);
 }
 
 static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {

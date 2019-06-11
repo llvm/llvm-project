@@ -143,6 +143,8 @@ public:
 
   FileSpecList GetSwiftModuleSearchPaths();
 
+  llvm::StringRef GetSwiftExtraClangFlags() const;
+
   bool GetSwiftCreateModuleContextsInParallel() const;
 
   bool GetEnableAutoImportClangModules() const;
