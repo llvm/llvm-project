@@ -51,8 +51,8 @@ protected:
     PCHContainerOps = std::make_shared<PCHContainerOperations>();
 
     return ASTUnit::LoadFromCompilerInvocation(
-        CInvok, PCHContainerOps, Diags, FileMgr, false, false, 0, TU_Complete,
-        false, false, isVolatile);
+        CInvok, PCHContainerOps, Diags, FileMgr, false, CaptureDiagsKind::None,
+        0, TU_Complete, false, false, isVolatile);
   }
 };
 

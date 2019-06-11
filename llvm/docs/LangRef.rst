@@ -13733,37 +13733,34 @@ Arguments:
 """"""""""
 The argument to this intrinsic must be a vector of integer values.
 
-'``llvm.experimental.vector.reduce.fadd.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.experimental.vector.reduce.v2.fadd.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
 ::
 
-      declare float @llvm.experimental.vector.reduce.fadd.f32.v4f32(float %acc, <4 x float> %a)
-      declare double @llvm.experimental.vector.reduce.fadd.f64.v2f64(double %acc, <2 x double> %a)
+      declare float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float %start_value, <4 x float> %a)
+      declare double @llvm.experimental.vector.reduce.v2.fadd.f64.v2f64(double %start_value, <2 x double> %a)
 
 Overview:
 """""""""
 
-The '``llvm.experimental.vector.reduce.fadd.*``' intrinsics do a floating-point
+The '``llvm.experimental.vector.reduce.v2.fadd.*``' intrinsics do a floating-point
 ``ADD`` reduction of a vector, returning the result as a scalar. The return type
 matches the element-type of the vector input.
 
-If the intrinsic call has fast-math flags, then the reduction will not preserve
-the associativity of an equivalent scalarized counterpart. If it does not have
-fast-math flags, then the reduction will be *ordered*, implying that the
-operation respects the associativity of a scalarized reduction.
+If the intrinsic call has the 'reassoc' or 'fast' flags set, then the
+reduction will not preserve the associativity of an equivalent scalarized
+counterpart. Otherwise the reduction will be *ordered*, thus implying that
+the operation respects the associativity of a scalarized reduction.
 
 
 Arguments:
 """"""""""
-The first argument to this intrinsic is a scalar accumulator value, which is
-only used when there are no fast-math flags attached. This argument may be undef
-when fast-math flags are used. The type of the accumulator matches the
-element-type of the vector input.
-
+The first argument to this intrinsic is a scalar start value for the reduction.
+The type of the start value matches the element-type of the vector input.
 The second argument must be a vector of floating-point values.
 
 Examples:
@@ -13771,8 +13768,8 @@ Examples:
 
 .. code-block:: llvm
 
-      %fast = call fast float @llvm.experimental.vector.reduce.fadd.f32.v4f32(float undef, <4 x float> %input) ; fast reduction
-      %ord = call float @llvm.experimental.vector.reduce.fadd.f32.v4f32(float %acc, <4 x float> %input) ; ordered reduction
+      %unord = call reassoc float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.0, <4 x float> %input) ; unordered reduction
+      %ord = call float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float %start_value, <4 x float> %input) ; ordered reduction
 
 
 '``llvm.experimental.vector.reduce.mul.*``' Intrinsic
@@ -13797,37 +13794,34 @@ Arguments:
 """"""""""
 The argument to this intrinsic must be a vector of integer values.
 
-'``llvm.experimental.vector.reduce.fmul.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.experimental.vector.reduce.v2.fmul.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
 ::
 
-      declare float @llvm.experimental.vector.reduce.fmul.f32.v4f32(float %acc, <4 x float> %a)
-      declare double @llvm.experimental.vector.reduce.fmul.f64.v2f64(double %acc, <2 x double> %a)
+      declare float @llvm.experimental.vector.reduce.v2.fmul.f32.v4f32(float %start_value, <4 x float> %a)
+      declare double @llvm.experimental.vector.reduce.v2.fmul.f64.v2f64(double %start_value, <2 x double> %a)
 
 Overview:
 """""""""
 
-The '``llvm.experimental.vector.reduce.fmul.*``' intrinsics do a floating-point
+The '``llvm.experimental.vector.reduce.v2.fmul.*``' intrinsics do a floating-point
 ``MUL`` reduction of a vector, returning the result as a scalar. The return type
 matches the element-type of the vector input.
 
-If the intrinsic call has fast-math flags, then the reduction will not preserve
-the associativity of an equivalent scalarized counterpart. If it does not have
-fast-math flags, then the reduction will be *ordered*, implying that the
-operation respects the associativity of a scalarized reduction.
+If the intrinsic call has the 'reassoc' or 'fast' flags set, then the
+reduction will not preserve the associativity of an equivalent scalarized
+counterpart. Otherwise the reduction will be *ordered*, thus implying that
+the operation respects the associativity of a scalarized reduction.
 
 
 Arguments:
 """"""""""
-The first argument to this intrinsic is a scalar accumulator value, which is
-only used when there are no fast-math flags attached. This argument may be undef
-when fast-math flags are used. The type of the accumulator matches the
-element-type of the vector input.
-
+The first argument to this intrinsic is a scalar start value for the reduction.
+The type of the start value matches the element-type of the vector input.
 The second argument must be a vector of floating-point values.
 
 Examples:
@@ -13835,8 +13829,8 @@ Examples:
 
 .. code-block:: llvm
 
-      %fast = call fast float @llvm.experimental.vector.reduce.fmul.f32.v4f32(float undef, <4 x float> %input) ; fast reduction
-      %ord = call float @llvm.experimental.vector.reduce.fmul.f32.v4f32(float %acc, <4 x float> %input) ; ordered reduction
+      %unord = call reassoc float @llvm.experimental.vector.reduce.v2.fmul.f32.v4f32(float 1.0, <4 x float> %input) ; unordered reduction
+      %ord = call float @llvm.experimental.vector.reduce.v2.fmul.f32.v4f32(float %start_value, <4 x float> %input) ; ordered reduction
 
 '``llvm.experimental.vector.reduce.and.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

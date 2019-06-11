@@ -46,7 +46,7 @@
 // CHECK-NEXT:    ]
 // CHECK-NEXT:    Address: 0x10004
 // CHECK-NEXT:    Offset: 0x10004
-// CHECK-NEXT:    Size: 12
+// CHECK-NEXT:    Size: 24
 
 
 .data
@@ -54,9 +54,9 @@
 
 .section foo,"aw"
 foof:
-.long foof
-.long bar-53
-.long bar
+.quad foof
+.quad bar-53
+.quad bar
 
 .section x,"a"
 .zero 65036

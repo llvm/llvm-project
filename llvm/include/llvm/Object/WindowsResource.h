@@ -232,7 +232,8 @@ private:
 
 Expected<std::unique_ptr<MemoryBuffer>>
 writeWindowsResourceCOFF(llvm::COFF::MachineTypes MachineType,
-                         const WindowsResourceParser &Parser);
+                         const WindowsResourceParser &Parser,
+                         uint32_t TimeDateStamp);
 
 void printResourceTypeName(uint16_t TypeID, raw_ostream &OS);
 } // namespace object

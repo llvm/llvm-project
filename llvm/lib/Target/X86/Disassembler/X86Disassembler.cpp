@@ -844,7 +844,7 @@ static MCDisassembler *createX86Disassembler(const Target &T,
   return new X86GenericDisassembler(STI, Ctx, std::move(MII));
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Disassembler() {
+extern "C" void LLVMInitializeX86Disassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheX86_32Target(),
                                          createX86Disassembler);

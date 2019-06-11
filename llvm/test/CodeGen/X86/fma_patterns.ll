@@ -1163,19 +1163,19 @@ define <4 x float> @test_v4f32_mul_y_sub_negone_x_undefs(<4 x float> %x, <4 x fl
 define <4 x float> @test_v4f32_mul_sub_x_one_y(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_sub_x_one_y:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vsubps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_sub_x_one_y:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vsubps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v4f32_mul_sub_x_one_y:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vsubps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-INFS-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    retq
 ;
@@ -1201,19 +1201,19 @@ define <4 x float> @test_v4f32_mul_sub_x_one_y(<4 x float> %x, <4 x float> %y) {
 define <4 x float> @test_v4f32_mul_y_sub_x_one(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_y_sub_x_one:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vsubps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_y_sub_x_one:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vsubps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v4f32_mul_y_sub_x_one:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vsubps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-INFS-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; AVX512-INFS-NEXT:    retq
 ;
@@ -1239,19 +1239,19 @@ define <4 x float> @test_v4f32_mul_y_sub_x_one(<4 x float> %x, <4 x float> %y) {
 define <4 x float> @test_v4f32_mul_y_sub_x_one_undefs(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_y_sub_x_one_undefs:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vsubps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_y_sub_x_one_undefs:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vsubps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v4f32_mul_y_sub_x_one_undefs:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vsubps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-INFS-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; AVX512-INFS-NEXT:    retq
 ;
@@ -1277,19 +1277,19 @@ define <4 x float> @test_v4f32_mul_y_sub_x_one_undefs(<4 x float> %x, <4 x float
 define <4 x float> @test_v4f32_mul_sub_x_negone_y(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_sub_x_negone_y:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vsubps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_sub_x_negone_y:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vsubps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v4f32_mul_sub_x_negone_y:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vsubps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-INFS-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    retq
 ;
@@ -1315,19 +1315,19 @@ define <4 x float> @test_v4f32_mul_sub_x_negone_y(<4 x float> %x, <4 x float> %y
 define <4 x float> @test_v4f32_mul_y_sub_x_negone(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_y_sub_x_negone:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vsubps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_y_sub_x_negone:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vsubps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v4f32_mul_y_sub_x_negone:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vsubps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-INFS-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; AVX512-INFS-NEXT:    retq
 ;
@@ -1353,19 +1353,19 @@ define <4 x float> @test_v4f32_mul_y_sub_x_negone(<4 x float> %x, <4 x float> %y
 define <4 x float> @test_v4f32_mul_y_sub_x_negone_undefs(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_y_sub_x_negone_undefs:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vsubps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_y_sub_x_negone_undefs:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vsubps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v4f32_mul_y_sub_x_negone_undefs:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vsubps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-INFS-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; AVX512-INFS-NEXT:    retq
 ;

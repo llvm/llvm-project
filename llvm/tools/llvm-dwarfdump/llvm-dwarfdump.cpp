@@ -141,10 +141,9 @@ static list<std::string>
               "-name option can be used instead."),
          value_desc("name"), cat(DwarfDumpCategory));
 static alias FindAlias("f", desc("Alias for -find."), aliasopt(Find));
-static opt<bool>
-    IgnoreCase("ignore-case",
-               desc("Ignore case distinctions in when searching by name."),
-               value_desc("i"), cat(DwarfDumpCategory));
+static opt<bool> IgnoreCase("ignore-case",
+                            desc("Ignore case distinctions when searching."),
+                            value_desc("i"), cat(DwarfDumpCategory));
 static alias IgnoreCaseAlias("i", desc("Alias for -ignore-case."),
                              aliasopt(IgnoreCase));
 static list<std::string> Name(
@@ -160,12 +159,11 @@ static opt<uint64_t>
                 "available file, function, block and line table details."),
            value_desc("address"), cat(DwarfDumpCategory));
 static opt<std::string>
-    OutputFilename("out-file", cl::init("-"),
+    OutputFilename("o", cl::init("-"),
                    cl::desc("Redirect output to the specified file."),
-                   cl::value_desc("filename"));
-static alias OutputFilenameAlias("o", desc("Alias for -out-file."),
-                                 aliasopt(OutputFilename),
-                                 cat(DwarfDumpCategory));
+                   cl::value_desc("filename"), cat(DwarfDumpCategory));
+static alias OutputFilenameAlias("out-file", desc("Alias for -o."),
+                                 aliasopt(OutputFilename));
 static opt<bool>
     UseRegex("regex",
              desc("Treat any <pattern> strings as regular expressions when "

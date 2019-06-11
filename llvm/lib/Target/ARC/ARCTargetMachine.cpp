@@ -81,7 +81,7 @@ void ARCPassConfig::addPreRegAlloc() {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARCTarget() {
+extern "C" void LLVMInitializeARCTarget() {
   RegisterTargetMachine<ARCTargetMachine> X(getTheARCTarget());
 }
 

@@ -27,7 +27,7 @@ Target &llvm::getTheThumbBETarget() {
   return TheThumbBETarget;
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTargetInfo() {
+extern "C" void LLVMInitializeARMTargetInfo() {
   RegisterTarget<Triple::arm, /*HasJIT=*/true> X(getTheARMLETarget(), "arm",
                                                  "ARM", "ARM");
   RegisterTarget<Triple::armeb, /*HasJIT=*/true> Y(getTheARMBETarget(), "armeb",

@@ -1,0 +1,1 @@
+void f(int unusedInHeader) {}

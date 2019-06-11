@@ -17,8 +17,8 @@
 // RUN:     -Wno-objc-root-class -x objective-c++ -std=gnu++98\
 // RUN:     -analyzer-config osx.cocoa.RetainCount:TrackNSCFStartParam=true\
 // RUN:     -DTRACK_START_PARAM
-// RUN: cat %t.objcpp.plist | %diff_plist %S/Inputs/expected-plists/retain-release.m.objcpp.plist -
-// RUN: cat %t.objc.plist | %diff_plist %S/Inputs/expected-plists/retain-release.m.objc.plist -
+// RUN: %normalize_plist <%t.objcpp.plist | diff -ub %S/Inputs/expected-plists/retain-release.m.objcpp.plist -
+// RUN: %normalize_plist <%t.objc.plist | diff -ub %S/Inputs/expected-plists/retain-release.m.objc.plist -
 
 void clang_analyzer_eval(int);
 

@@ -403,9 +403,24 @@ static SDValue getTargetNode(ConstantPoolSDNode *N, SDLoc DL, EVT Ty,
 }
 
 template <class NodeTy>
-SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG) const {
+SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
+                                     bool IsLocal) const {
   SDLoc DL(N);
   EVT Ty = getPointerTy(DAG.getDataLayout());
+
+  if (isPositionIndependent()) {
+    SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
+    if (IsLocal)
+      // Use PC-relative addressing to access the symbol. This generates the
+      // pattern (PseudoLLA sym), which expands to (addi (auipc %pcrel_hi(sym))
+      // %pcrel_lo(auipc)).
+      return SDValue(DAG.getMachineNode(RISCV::PseudoLLA, DL, Ty, Addr), 0);
+
+    // Use PC-relative addressing to access the GOT for this symbol, then load
+    // the address from the GOT. This generates the pattern (PseudoLA sym),
+    // which expands to (ld (addi (auipc %got_pcrel_hi(sym)) %pcrel_lo(auipc))).
+    return SDValue(DAG.getMachineNode(RISCV::PseudoLA, DL, Ty, Addr), 0);
+  }
 
   switch (getTargetMachine().getCodeModel()) {
   default:
@@ -436,10 +451,9 @@ SDValue RISCVTargetLowering::lowerGlobalAddress(SDValue Op,
   int64_t Offset = N->getOffset();
   MVT XLenVT = Subtarget.getXLenVT();
 
-  if (isPositionIndependent())
-    report_fatal_error("Unable to lowerGlobalAddress");
-
-  SDValue Addr = getAddr(N, DAG);
+  const GlobalValue *GV = N->getGlobal();
+  bool IsLocal = getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV);
+  SDValue Addr = getAddr(N, DAG, IsLocal);
 
   // In order to maximise the opportunity for common subexpression elimination,
   // emit a separate ADD node for the global address offset instead of folding
@@ -455,18 +469,12 @@ SDValue RISCVTargetLowering::lowerBlockAddress(SDValue Op,
                                                SelectionDAG &DAG) const {
   BlockAddressSDNode *N = cast<BlockAddressSDNode>(Op);
 
-  if (isPositionIndependent())
-    report_fatal_error("Unable to lowerBlockAddress");
-
   return getAddr(N, DAG);
 }
 
 SDValue RISCVTargetLowering::lowerConstantPool(SDValue Op,
                                                SelectionDAG &DAG) const {
   ConstantPoolSDNode *N = cast<ConstantPoolSDNode>(Op);
-
-  if (isPositionIndependent())
-    report_fatal_error("Unable to lowerConstantPool");
 
   return getAddr(N, DAG);
 }
@@ -2149,6 +2157,44 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   }
 
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+}
+
+void RISCVTargetLowering::LowerAsmOperandForConstraint(
+    SDValue Op, std::string &Constraint, std::vector<SDValue> &Ops,
+    SelectionDAG &DAG) const {
+  // Currently only support length 1 constraints.
+  if (Constraint.length() == 1) {
+    switch (Constraint[0]) {
+    case 'I':
+      // Validate & create a 12-bit signed immediate operand.
+      if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
+        uint64_t CVal = C->getSExtValue();
+        if (isInt<12>(CVal))
+          Ops.push_back(
+              DAG.getTargetConstant(CVal, SDLoc(Op), Subtarget.getXLenVT()));
+      }
+      return;
+    case 'J':
+      // Validate & create an integer zero operand.
+      if (auto *C = dyn_cast<ConstantSDNode>(Op))
+        if (C->getZExtValue() == 0)
+          Ops.push_back(
+              DAG.getTargetConstant(0, SDLoc(Op), Subtarget.getXLenVT()));
+      return;
+    case 'K':
+      // Validate & create a 5-bit unsigned immediate operand.
+      if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
+        uint64_t CVal = C->getZExtValue();
+        if (isUInt<5>(CVal))
+          Ops.push_back(
+              DAG.getTargetConstant(CVal, SDLoc(Op), Subtarget.getXLenVT()));
+      }
+      return;
+    default:
+      break;
+    }
+  }
+  TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
 }
 
 Instruction *RISCVTargetLowering::emitLeadingFence(IRBuilder<> &Builder,

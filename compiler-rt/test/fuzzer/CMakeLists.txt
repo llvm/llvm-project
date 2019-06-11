@@ -19,6 +19,7 @@ endif()
 
 if(COMPILER_RT_INCLUDE_TESTS)
   list(APPEND LIBFUZZER_TEST_DEPS FuzzerUnitTests)
+  list(APPEND LIBFUZZER_TEST_DEPS FuzzedDataProviderUnitTests)
 endif()
 
 add_custom_target(check-fuzzer)

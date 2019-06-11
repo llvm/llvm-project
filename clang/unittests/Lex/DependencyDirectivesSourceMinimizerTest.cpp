@@ -405,25 +405,27 @@ TEST(MinimizeSourceToDependencyDirectivesTest, RawStringLiteral) {
                "#endif\n",
                Out.data());
 
-  ASSERT_FALSE(minimizeSourceToDependencyDirectives(
+  bool RawStringLiteralResult = minimizeSourceToDependencyDirectives(
       "#ifndef GUARD\n"
       "#define GUARD\n"
       R"raw(static constexpr char bytes[] = R"(-?:\,[]{}#&*!|>'"%@`)";)raw"
       "\n"
       "#endif\n",
-      Out));
+      Out);
+  ASSERT_FALSE(RawStringLiteralResult);
   EXPECT_STREQ("#ifndef GUARD\n"
                "#define GUARD\n"
                "#endif\n",
                Out.data());
 
-  ASSERT_FALSE(minimizeSourceToDependencyDirectives(
+  bool RawStringLiteralResult2 = minimizeSourceToDependencyDirectives(
       "#ifndef GUARD\n"
       "#define GUARD\n"
       R"raw(static constexpr char bytes[] = R"abc(-?:\,[]{}#&*!|>'"%@`)abc";)raw"
       "\n"
       "#endif\n",
-      Out));
+      Out);
+  ASSERT_FALSE(RawStringLiteralResult2);
   EXPECT_STREQ("#ifndef GUARD\n"
                "#define GUARD\n"
                "#endif\n",

@@ -39,6 +39,26 @@ ArrayRef<TargetInfo::GCCRegAlias> RISCVTargetInfo::getGCCRegAliases() const {
   return llvm::makeArrayRef(GCCRegAliases);
 }
 
+bool RISCVTargetInfo::validateAsmConstraint(
+    const char *&Name, TargetInfo::ConstraintInfo &Info) const {
+  switch (*Name) {
+  default:
+    return false;
+  case 'I':
+    // A 12-bit signed immediate.
+    Info.setRequiresImmediate(-2048, 2047);
+    return true;
+  case 'J':
+    // Integer zero.
+    Info.setRequiresImmediate(0);
+    return true;
+  case 'K':
+    // A 5-bit unsigned immediate for CSR access instructions.
+    Info.setRequiresImmediate(0, 31);
+    return true;
+  }
+}
+
 void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
                                        MacroBuilder &Builder) const {
   Builder.defineMacro("__ELF__");

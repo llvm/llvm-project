@@ -771,6 +771,6 @@ void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   OutStreamer->EmitInstruction(MCB, getSubtargetInfo());
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonAsmPrinter() {
+extern "C" void LLVMInitializeHexagonAsmPrinter() {
   RegisterAsmPrinter<HexagonAsmPrinter> X(getTheHexagonTarget());
 }

@@ -16,7 +16,7 @@ Target &llvm::getTheLanaiTarget() {
   return TheLanaiTarget;
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLanaiTargetInfo() {
+extern "C" void LLVMInitializeLanaiTargetInfo() {
   RegisterTarget<Triple::lanai> X(getTheLanaiTarget(), "lanai", "Lanai",
                                   "Lanai");
 }

@@ -162,10 +162,13 @@ public:
   // precompiled object. Any difference indicates out-of-date objects.
   llvm::Optional<uint32_t> PCHSignature;
 
-  // Tells whether this file was compiled with /hotpatch
+  // Whether this is an object file created from .res files.
+  bool IsResourceObjFile = false;
+
+  // Whether this file was compiled with /hotpatch.
   bool HotPatchable = false;
 
-  // Whether the object was already merged into the final PDB or not
+  // Whether the object was already merged into the final PDB.
   bool MergedIntoPDB = false;
 
   // If the OBJ has a .debug$T stream, this tells how it will be handled.

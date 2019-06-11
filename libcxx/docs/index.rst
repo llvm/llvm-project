@@ -137,6 +137,7 @@ Design Documents
    DesignDocs/DebugMode
    DesignDocs/CapturingConfigInfo
    DesignDocs/ABIVersioning
+   DesignDocs/ExperimentalFeatures
    DesignDocs/VisibilityMacros
    DesignDocs/ThreadingSupportAPI
    DesignDocs/FileTimeType

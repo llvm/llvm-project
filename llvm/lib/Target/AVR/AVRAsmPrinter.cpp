@@ -178,7 +178,7 @@ void AVRAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
 } // end of namespace llvm
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRAsmPrinter() {
+extern "C" void LLVMInitializeAVRAsmPrinter() {
   llvm::RegisterAsmPrinter<llvm::AVRAsmPrinter> X(llvm::getTheAVRTarget());
 }
 

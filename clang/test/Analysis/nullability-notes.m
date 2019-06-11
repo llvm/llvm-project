@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -fblocks -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull,nullability.NullablePassedToNonnull,nullability.NullableReturnedFromNonnull,nullability.NullableDereferenced -analyzer-output=text -verify %s
 // RUN: %clang_analyze_cc1 -fblocks -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull,nullability.NullablePassedToNonnull,nullability.NullableReturnedFromNonnull,nullability.NullableDereferenced -analyzer-output=plist -o %t.plist %s
-// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/nullability-notes.m.plist -
+// RUN: %normalize_plist <%t.plist | diff -ub %S/Inputs/expected-plists/nullability-notes.m.plist -
 
 #include "Inputs/system-header-simulator-for-nullability.h"
 

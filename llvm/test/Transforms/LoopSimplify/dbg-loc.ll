@@ -72,7 +72,7 @@ eh.resume:                                        ; preds = %catch
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
-; CHECK-DAG: [[PREHEADER_LOC]] = !DILocation(line: 73, column: 27, scope: !{{[0-9]+}})
+; CHECK-DAG: [[PREHEADER_LOC]] = !DILocation(line: 73, column: 13, scope: !{{[0-9]+}})
 ; CHECK-DAG: [[LOOPEXIT_LOC]] = !DILocation(line: 75, column: 9, scope: !{{[0-9]+}})
 ; CHECK-DAG: [[LPAD_PREHEADER_LOC]] = !DILocation(line: 85, column: 1, scope: !{{[0-9]+}})
 

@@ -37,6 +37,7 @@ SPARCV9::SPARCV9() {
   NoneRel = R_SPARC_NONE;
   PltRel = R_SPARC_JMP_SLOT;
   RelativeRel = R_SPARC_RELATIVE;
+  SymbolicRel = R_SPARC_64;
   PltEntrySize = 32;
   PltHeaderSize = 4 * PltEntrySize;
 
@@ -114,7 +115,6 @@ void SPARCV9::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   case R_SPARC_64:
   case R_SPARC_UA64:
-  case R_SPARC_GLOB_DAT:
     // V-xword64
     write64be(Loc, Val);
     break;

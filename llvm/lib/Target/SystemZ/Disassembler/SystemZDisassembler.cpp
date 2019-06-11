@@ -46,7 +46,7 @@ static MCDisassembler *createSystemZDisassembler(const Target &T,
   return new SystemZDisassembler(STI, Ctx);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZDisassembler() {
+extern "C" void LLVMInitializeSystemZDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheSystemZTarget(),
                                          createSystemZDisassembler);
