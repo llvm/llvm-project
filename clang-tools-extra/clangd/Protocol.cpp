@@ -402,38 +402,23 @@ bool fromJSON(const llvm::json::Value &Params,
          O.map("text", R.text);
 }
 
-bool fromJSON(const llvm::json::Value &Params, FormattingOptions &R) {
-  llvm::json::ObjectMapper O(Params);
-  return O && O.map("tabSize", R.tabSize) &&
-         O.map("insertSpaces", R.insertSpaces);
-}
-
-llvm::json::Value toJSON(const FormattingOptions &P) {
-  return llvm::json::Object{
-      {"tabSize", P.tabSize},
-      {"insertSpaces", P.insertSpaces},
-  };
-}
-
 bool fromJSON(const llvm::json::Value &Params,
               DocumentRangeFormattingParams &R) {
   llvm::json::ObjectMapper O(Params);
   return O && O.map("textDocument", R.textDocument) &&
-         O.map("range", R.range) && O.map("options", R.options);
+         O.map("range", R.range);
 }
 
 bool fromJSON(const llvm::json::Value &Params,
               DocumentOnTypeFormattingParams &R) {
   llvm::json::ObjectMapper O(Params);
   return O && O.map("textDocument", R.textDocument) &&
-         O.map("position", R.position) && O.map("ch", R.ch) &&
-         O.map("options", R.options);
+         O.map("position", R.position) && O.map("ch", R.ch);
 }
 
 bool fromJSON(const llvm::json::Value &Params, DocumentFormattingParams &R) {
   llvm::json::ObjectMapper O(Params);
-  return O && O.map("textDocument", R.textDocument) &&
-         O.map("options", R.options);
+  return O && O.map("textDocument", R.textDocument);
 }
 
 bool fromJSON(const llvm::json::Value &Params, DocumentSymbolParams &R) {

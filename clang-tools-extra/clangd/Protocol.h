@@ -548,15 +548,13 @@ struct DidChangeConfigurationParams {
 };
 bool fromJSON(const llvm::json::Value &, DidChangeConfigurationParams &);
 
-struct FormattingOptions {
-  /// Size of a tab in spaces.
-  int tabSize = 0;
-
-  /// Prefer spaces over tabs.
-  bool insertSpaces = false;
-};
-bool fromJSON(const llvm::json::Value &, FormattingOptions &);
-llvm::json::Value toJSON(const FormattingOptions &);
+// Note: we do not parse FormattingOptions for *FormattingParams.
+// In general, we use a clang-format style detected from common mechanisms
+// (.clang-format files and the -fallback-style flag).
+// It would be possible to override these with FormatOptions, but:
+//  - the protocol makes FormatOptions mandatory, so many clients set them to
+//    useless values, and we can't tell when to respect them
+// - we also format in other places, where FormatOptions aren't available.
 
 struct DocumentRangeFormattingParams {
   /// The document to format.
@@ -564,9 +562,6 @@ struct DocumentRangeFormattingParams {
 
   /// The range to format
   Range range;
-
-  /// The format options
-  FormattingOptions options;
 };
 bool fromJSON(const llvm::json::Value &, DocumentRangeFormattingParams &);
 
@@ -579,18 +574,12 @@ struct DocumentOnTypeFormattingParams {
 
   /// The character that has been typed.
   std::string ch;
-
-  /// The format options.
-  FormattingOptions options;
 };
 bool fromJSON(const llvm::json::Value &, DocumentOnTypeFormattingParams &);
 
 struct DocumentFormattingParams {
   /// The document to format.
   TextDocumentIdentifier textDocument;
-
-  /// The format options
-  FormattingOptions options;
 };
 bool fromJSON(const llvm::json::Value &, DocumentFormattingParams &);
 

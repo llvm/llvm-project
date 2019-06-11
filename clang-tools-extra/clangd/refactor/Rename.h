@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_RENAME_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_RENAME_H
+
 #include "ClangdUnit.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/Error.h"
@@ -22,3 +25,5 @@ llvm::Expected<tooling::Replacements> renameWithinFile(ParsedAST &AST,
 
 } // namespace clangd
 } // namespace clang
+
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_RENAME_H
