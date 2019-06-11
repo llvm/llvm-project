@@ -47,7 +47,6 @@
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/MemoryHistory.h"
 #include "lldb/Target/MemoryRegionInfo.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
@@ -1595,13 +1594,6 @@ LanguageRuntime *Process::GetLanguageRuntime(lldb::LanguageType language,
     assert(runtime->GetLanguageType() == Language::GetPrimaryLanguage(language));
 
   return runtime;
-}
-
-ObjCLanguageRuntime *Process::GetObjCLanguageRuntime(bool retry_if_null) {
-  std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
-  LanguageRuntime *runtime =
-      GetLanguageRuntime(eLanguageTypeObjC, retry_if_null);
-  return llvm::cast_or_null<ObjCLanguageRuntime>(runtime);
 }
 
 bool Process::IsPossibleDynamicValue(ValueObject &in_value) {

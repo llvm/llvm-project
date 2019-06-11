@@ -232,9 +232,13 @@ static void SetUpDiagnosticLog(DiagnosticOptions *DiagOpts,
                                                         std::move(StreamOwner));
   if (CodeGenOpts)
     Logger->setDwarfDebugFlags(CodeGenOpts->DwarfDebugFlags);
-  assert(Diags.ownsClient());
-  Diags.setClient(
-      new ChainedDiagnosticConsumer(Diags.takeClient(), std::move(Logger)));
+  if (Diags.ownsClient()) {
+    Diags.setClient(
+        new ChainedDiagnosticConsumer(Diags.takeClient(), std::move(Logger)));
+  } else {
+    Diags.setClient(
+        new ChainedDiagnosticConsumer(Diags.getClient(), std::move(Logger)));
+  }
 }
 
 static void SetupSerializedDiagnostics(DiagnosticOptions *DiagOpts,

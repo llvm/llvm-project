@@ -2692,7 +2692,8 @@ let isCodeGenOnly = 1 in {
 // patterns we have to try to match.
 multiclass scalar_math_patterns<SDNode Op, string OpcPrefix, SDNode Move,
                                     ValueType VT, ValueType EltTy,
-                                    RegisterClass RC, Predicate BasePredicate> {
+                                    RegisterClass RC, PatFrag ld_frag,
+                                    Predicate BasePredicate> {
   let Predicates = [BasePredicate] in {
     // extracted scalar math op with insert via movss/movsd
     def : Pat<(VT (Move (VT VR128:$dst),
@@ -2701,6 +2702,11 @@ multiclass scalar_math_patterns<SDNode Op, string OpcPrefix, SDNode Move,
                                  RC:$src))))),
               (!cast<Instruction>(OpcPrefix#rr_Int) VT:$dst,
                (VT (COPY_TO_REGCLASS RC:$src, VR128)))>;
+    def : Pat<(VT (Move (VT VR128:$dst),
+                        (VT (scalar_to_vector
+                             (Op (EltTy (extractelt (VT VR128:$dst), (iPTR 0))),
+                                 (ld_frag addr:$src)))))),
+              (!cast<Instruction>(OpcPrefix#rm_Int) VT:$dst, addr:$src)>;
   }
 
   // Repeat for AVX versions of the instructions.
@@ -2712,18 +2718,23 @@ multiclass scalar_math_patterns<SDNode Op, string OpcPrefix, SDNode Move,
                                  RC:$src))))),
               (!cast<Instruction>("V"#OpcPrefix#rr_Int) VT:$dst,
                (VT (COPY_TO_REGCLASS RC:$src, VR128)))>;
+    def : Pat<(VT (Move (VT VR128:$dst),
+                        (VT (scalar_to_vector
+                             (Op (EltTy (extractelt (VT VR128:$dst), (iPTR 0))),
+                                 (ld_frag addr:$src)))))),
+              (!cast<Instruction>("V"#OpcPrefix#rm_Int) VT:$dst, addr:$src)>;
   }
 }
 
-defm : scalar_math_patterns<fadd, "ADDSS", X86Movss, v4f32, f32, FR32, UseSSE1>;
-defm : scalar_math_patterns<fsub, "SUBSS", X86Movss, v4f32, f32, FR32, UseSSE1>;
-defm : scalar_math_patterns<fmul, "MULSS", X86Movss, v4f32, f32, FR32, UseSSE1>;
-defm : scalar_math_patterns<fdiv, "DIVSS", X86Movss, v4f32, f32, FR32, UseSSE1>;
+defm : scalar_math_patterns<fadd, "ADDSS", X86Movss, v4f32, f32, FR32, loadf32, UseSSE1>;
+defm : scalar_math_patterns<fsub, "SUBSS", X86Movss, v4f32, f32, FR32, loadf32, UseSSE1>;
+defm : scalar_math_patterns<fmul, "MULSS", X86Movss, v4f32, f32, FR32, loadf32, UseSSE1>;
+defm : scalar_math_patterns<fdiv, "DIVSS", X86Movss, v4f32, f32, FR32, loadf32, UseSSE1>;
 
-defm : scalar_math_patterns<fadd, "ADDSD", X86Movsd, v2f64, f64, FR64, UseSSE2>;
-defm : scalar_math_patterns<fsub, "SUBSD", X86Movsd, v2f64, f64, FR64, UseSSE2>;
-defm : scalar_math_patterns<fmul, "MULSD", X86Movsd, v2f64, f64, FR64, UseSSE2>;
-defm : scalar_math_patterns<fdiv, "DIVSD", X86Movsd, v2f64, f64, FR64, UseSSE2>;
+defm : scalar_math_patterns<fadd, "ADDSD", X86Movsd, v2f64, f64, FR64, loadf64, UseSSE2>;
+defm : scalar_math_patterns<fsub, "SUBSD", X86Movsd, v2f64, f64, FR64, loadf64, UseSSE2>;
+defm : scalar_math_patterns<fmul, "MULSD", X86Movsd, v2f64, f64, FR64, loadf64, UseSSE2>;
+defm : scalar_math_patterns<fdiv, "DIVSD", X86Movsd, v2f64, f64, FR64, loadf64, UseSSE2>;
  
 /// Unop Arithmetic
 /// In addition, we also have a special variant of the scalar form here to

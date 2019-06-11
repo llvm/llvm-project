@@ -776,7 +776,7 @@ ELFObjectFile<ELFT>::dynamic_relocation_sections() const {
     }
   }
   for (const Elf_Shdr &Sec : *SectionsOrErr) {
-    if (is_contained(Offsets, Sec.sh_offset))
+    if (is_contained(Offsets, Sec.sh_addr))
       Res.emplace_back(toDRI(&Sec), this);
   }
   return Res;

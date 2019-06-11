@@ -166,6 +166,6 @@ def : Pat<(int_ppc_tsuspend),
           (TSR 0)>;
 
 def : Pat<(i64 (int_ppc_ttest)),
-          (RLDICL (i64 (COPY (TABORTWCI 0, ZERO, 0))), 36, 28)>;
+          (RLDICL (i64 (COPY (TABORTWCI 0, (LI 0), 0))), 36, 28)>;
 
 } // [HasHTM]

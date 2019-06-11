@@ -161,3 +161,39 @@ __m256 test_mm256_mask_dpbf16_ps(__m256 D, __m256bh A, __m256bh B, __mmask8 U) {
   // CHECK: ret <8 x float> %{{.*}}
   return _mm256_mask_dpbf16_ps(D, U, A, B);
 }
+
+__bfloat16 test_mm_cvtness_sbh(float A) {
+  // CHECK-LABEL: @test_mm_cvtness_sbh
+  // CHECK: @llvm.x86.avx512bf16.mask.cvtneps2bf16.128
+  // CHECK: ret i16 %{{.*}}
+  return _mm_cvtness_sbh(A);
+}
+
+__m256 test_mm256_cvtpbh_ps(__m128bh A) {
+  // CHECK-LABEL: @test_mm256_cvtpbh_ps
+  // CHECK: sext <8 x i16> %{{.*}} to <8 x i32>
+  // CHECK: @llvm.x86.avx2.pslli.d
+  // CHECK: bitcast <4 x i64> %{{.*}} to <8 x float>
+  // CHECK: ret <8 x float> %{{.*}}
+  return _mm256_cvtpbh_ps(A);
+}
+
+__m256 test_mm256_maskz_cvtpbh_ps(__mmask8 M, __m128bh A) {
+  // CHECK-LABEL: @test_mm256_maskz_cvtpbh_ps
+  // CHECK: sext <8 x i16> %{{.*}} to <8 x i32>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
+  // CHECK: @llvm.x86.avx2.pslli.d
+  // CHECK: bitcast <4 x i64> %{{.*}} to <8 x float>
+  // CHECK: ret <8 x float> %{{.*}}
+  return _mm256_maskz_cvtpbh_ps(M, A);
+}
+
+__m256 test_mm256_mask_cvtpbh_ps(__m256 S, __mmask8 M, __m128bh A) {
+  // CHECK-LABEL: @test_mm256_mask_cvtpbh_ps
+  // CHECK: sext <8 x i16> %{{.*}} to <8 x i32>
+  // CHECK: @llvm.x86.avx2.pslli.d
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
+  // CHECK: bitcast <4 x i64> %{{.*}} to <8 x float>
+  // CHECK: ret <8 x float> %{{.*}}
+  return _mm256_mask_cvtpbh_ps(S, M, A);
+}

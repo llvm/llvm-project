@@ -1,0 +1,64 @@
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-objcopy %t.o %t.2.o
+# RUN: llvm-readelf --elf-section-groups --sections %t.o | FileCheck %s --check-prefix=IN
+# RUN: llvm-readelf --elf-section-groups --sections %t.2.o | FileCheck %s --check-prefix=OUT
+
+# In this test, .group gets moved to the beginning. Run readelf -gS on input as
+# well as output to make sure it really moved, as well as to verify that we
+# aren't purely sorting based on offsets (it gets moved to the beginning
+# despite having a larger offset).
+
+# IN:      There are 7 section headers, starting at offset 0x40:
+# IN:        [Nr] Name              Type            Address          Off    Size
+# IN-NEXT:   [ 0]                   NULL            0000000000000000 000000 000000
+# IN-NEXT:   [ 1] .foo              PROGBITS        0000000000000000 000200 000040
+# IN-NEXT:   [ 2] .group            GROUP           0000000000000000 000240 000008
+# IN-NEXT:   [ 3] .bar              PROGBITS        0000000000000000 000248 000040
+
+# IN:      COMDAT group section [    2] `.group' [bar] contains 1 sections:
+# IN-NEXT:    [Index]    Name
+# IN-NEXT:    [    3]   .bar
+
+# OUT:      There are 7 section headers, starting at offset 0x160:
+# OUT:        [Nr] Name              Type            Address          Off    Size
+# OUT-NEXT:   [ 0]                   NULL            0000000000000000 000000 000000
+# OUT-NEXT:   [ 1] .group            GROUP           0000000000000000 000040 000008
+# OUT-NEXT:   [ 2] .foo              PROGBITS        0000000000000000 000048 000040
+# OUT-NEXT:   [ 3] .bar              PROGBITS        0000000000000000 000088 000040
+
+# OUT:      COMDAT group section [    1] `.group' [bar] contains 1 sections:
+# OUT-NEXT:    [Index]    Name
+# OUT-NEXT:    [    3]   .bar
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .foo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:            64
+  - Name:            .group
+    Type:            SHT_GROUP
+    Link:            .symtab
+    Info:            bar
+    Members:
+      - SectionOrType:   GRP_COMDAT
+      - SectionOrType:   .bar
+  - Name:            .bar
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
+    Size:            64
+Symbols:
+  - Name:            .foo
+    Type:            STT_SECTION
+    Section:         .foo
+  - Name:            .bar
+    Type:            STT_SECTION
+    Section:         .bar
+  - Name:            bar
+    Type:            STT_FUNC
+    Section:         .foo

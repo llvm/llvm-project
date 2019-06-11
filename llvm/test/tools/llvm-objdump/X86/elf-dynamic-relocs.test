@@ -1,0 +1,113 @@
+## Show that llvm-objdump can dump dynamic relocations.
+## Specifically, we are checking that the tags DT_RELA, DT_REL and DT_JMPREL
+## properly identify relocation tables.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump --dynamic-reloc %t | FileCheck --implicit-check-not=R_X86 %s
+
+# CHECK:      file format ELF64-x86-64
+# CHECK:      DYNAMIC RELOCATION RECORDS
+# CHECK-NEXT: 0000000000000000 R_X86_64_RELATIVE *ABS*
+# CHECK-NEXT: 0000000000000000 R_X86_64_JUMP_SLOT bar
+# CHECK-NEXT: 0000000000000008 R_X86_64_NONE foo
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:         .foo
+    Type:         SHT_PROGBITS
+    Size:         16
+    Flags:        [SHF_ALLOC]
+    Address:      0x100000
+    AddressAlign: 0x100
+  - Name:         .got.plt
+    Type:         SHT_PROGBITS
+    Flags:        [SHF_WRITE, SHF_ALLOC]
+    Address:      0x100100
+    AddressAlign: 0x1000
+  - Name:         .rela.dyn
+    Type:         SHT_RELA
+    Address:      0x100200
+    AddressAlign: 0x100
+    Info:         .foo
+    Link:         .dynsym
+    Flags:        [SHF_ALLOC]
+    Relocations:
+      - Offset: 0
+        Type:   R_X86_64_RELATIVE
+        Addend: 0
+  - Name:         .rela.plt
+    Type:         SHT_RELA
+    Address:      0x100300
+    AddressAlign: 0x100
+    Info:         .got.plt
+    Link:         .dynsym
+    Flags:        [SHF_ALLOC]
+    Relocations:
+      - Offset: 0
+        Symbol: 2 # bar
+        Type:   R_X86_64_JUMP_SLOT
+  - Name:         .rel.dyn
+    Type:         SHT_REL
+    Address:      0x100400
+    AddressAlign: 0x100
+    Info:         .foo
+    Link:         .dynsym
+    Flags:        [SHF_ALLOC]
+    Relocations:
+      - Offset: 8
+        Symbol: 1 # foo
+        Type:   R_X86_64_NONE
+  - Name:         .dynamic
+    Type:         SHT_DYNAMIC
+    Address:      0x100500
+    AddressAlign: 0x100
+    Link:         .dynstr
+    Flags:        [SHF_ALLOC]
+    Entries:
+      - Tag: DT_RELA
+        Value: 0x100200
+      - Tag: DT_RELASZ
+        Value: 24
+      - Tag: DT_RELAENT
+        Value: 24
+      - Tag: DT_JMPREL
+        Value: 0x100300
+      - Tag: DT_PLTREL
+        Value: 7
+      - Tag: DT_PLTRELSZ
+        Value: 24
+      - Tag: DT_REL
+        Value: 0x100400
+      - Tag: DT_RELSZ
+        Value: 16
+      - Tag: DT_RELENT
+        Value: 16
+      - Tag: DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x100000
+    Align:    0x100
+    Sections:
+      - Section: .foo
+      - Section: .rela.dyn
+      - Section: .rela.plt
+      - Section: .rel.dyn
+      - Section: .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x100500
+    Align:    0x100
+    Sections:
+      - Section: .dynamic
+DynamicSymbols:
+  - Name:    foo
+    Section: .foo
+    Binding: STB_GLOBAL
+  - Name:    bar
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL

@@ -19,6 +19,23 @@ define void @t(<4 x float> %A) {
   ret void
 }
 
+define void @t_unary(<4 x float> %A) {
+; SSE-LABEL: t_unary:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps {{\.LCPI.*}}, %xmm0
+; SSE-NEXT:    movaps %xmm0, 0
+; SSE-NEXT:    retl
+;
+; AVX-LABEL: t_unary:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps {{\.LCPI.*}}, %xmm0, %xmm0
+; AVX-NEXT:    vmovaps %xmm0, 0
+; AVX-NEXT:    retl
+  %tmp1277 = fneg <4 x float> %A
+  store <4 x float> %tmp1277, <4 x float>* null
+  ret void
+}
+
 define <4 x float> @t1(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: t1:
 ; SSE:       # %bb.0: # %entry
