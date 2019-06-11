@@ -80,6 +80,9 @@ set(SCUDO_HEADERS
   size_class_map.h
   stats.h
   string_utils.h
+  tsd.h
+  tsd_exclusive.h
+  tsd_shared.h
   vector.h)
 
 if(COMPILER_RT_HAS_SCUDO_STANDALONE)
