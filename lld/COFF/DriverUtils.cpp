@@ -697,6 +697,7 @@ void checkFailIfMismatch(StringRef Arg, InputFile *Source) {
 }
 
 // Convert Windows resource files (.res files) to a .obj file.
+// Does what cvtres.exe does, but in-process and cross-platform.
 MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> MBs) {
   object::WindowsResourceParser Parser;
 
