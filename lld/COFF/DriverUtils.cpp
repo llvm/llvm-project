@@ -72,34 +72,6 @@ private:
 
 } // anonymous namespace
 
-// Returns /machine's value.
-MachineTypes getMachineType(StringRef S) {
-  MachineTypes MT = StringSwitch<MachineTypes>(S.lower())
-                        .Cases("x64", "amd64", AMD64)
-                        .Cases("x86", "i386", I386)
-                        .Case("arm", ARMNT)
-                        .Case("arm64", ARM64)
-                        .Default(IMAGE_FILE_MACHINE_UNKNOWN);
-  if (MT != IMAGE_FILE_MACHINE_UNKNOWN)
-    return MT;
-  fatal("unknown /machine argument: " + S);
-}
-
-StringRef machineToStr(MachineTypes MT) {
-  switch (MT) {
-  case ARMNT:
-    return "arm";
-  case ARM64:
-    return "arm64";
-  case AMD64:
-    return "x64";
-  case I386:
-    return "x86";
-  default:
-    llvm_unreachable("unknown machine type");
-  }
-}
-
 // Parses a string in the form of "<integer>[,<integer>]".
 void parseNumbers(StringRef Arg, uint64_t *Addr, uint64_t *Size) {
   StringRef S1, S2;
