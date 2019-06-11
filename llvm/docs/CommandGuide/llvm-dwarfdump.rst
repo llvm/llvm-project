@@ -53,8 +53,7 @@ OPTIONS
 
 .. option:: -i, --ignore-case
 
-            Ignore case distinctions in when searching entries by name
-            or by regular expression.
+            Ignore case distinctions when searching.
 
 .. option:: -n <pattern>, --name=<pattern>
 
@@ -69,7 +68,7 @@ OPTIONS
             Lookup <address> in the debug information and print out the file,
             function, block, and line table details.
 
-.. option:: -o <path>, --out-file=<path>
+.. option:: -o <path>
 
             Redirect output to a file specified by <path>.
 

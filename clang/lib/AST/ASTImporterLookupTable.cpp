@@ -26,17 +26,30 @@ struct Builder : RecursiveASTVisitor<Builder> {
     LT.add(D);
     return true;
   }
+  // In most cases the FriendDecl contains the declaration of the befriended
+  // class as a child node, so it is discovered during the recursive
+  // visitation. However, there are cases when the befriended class is not a
+  // child, thus it must be fetched explicitly from the FriendDecl, and only
+  // then can we add it to the lookup table.
   bool VisitFriendDecl(FriendDecl *D) {
     if (D->getFriendType()) {
       QualType Ty = D->getFriendType()->getType();
-      // FIXME Can this be other than elaborated?
-      QualType NamedTy = cast<ElaboratedType>(Ty)->getNamedType();
-      if (!NamedTy->isDependentType()) {
-        if (const auto *RTy = dyn_cast<RecordType>(NamedTy))
+      if (isa<ElaboratedType>(Ty))
+        Ty = cast<ElaboratedType>(Ty)->getNamedType();
+      // A FriendDecl with a dependent type (e.g. ClassTemplateSpecialization)
+      // always has that decl as child node.
+      // However, there are non-dependent cases which does not have the
+      // type as a child node. We have to dig up that type now.
+      if (!Ty->isDependentType()) {
+        if (const auto *RTy = dyn_cast<RecordType>(Ty))
           LT.add(RTy->getAsCXXRecordDecl());
-        else if (const auto *SpecTy =
-                     dyn_cast<TemplateSpecializationType>(NamedTy)) {
+        else if (const auto *SpecTy = dyn_cast<TemplateSpecializationType>(Ty))
           LT.add(SpecTy->getAsCXXRecordDecl());
+        else if (isa<TypedefType>(Ty)) {
+          // We do not put friend typedefs to the lookup table because
+          // ASTImporter does not organize typedefs into redecl chains.
+        } else {
+          llvm_unreachable("Unhandled type of friend class");
         }
       }
     }

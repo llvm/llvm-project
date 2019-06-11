@@ -81,7 +81,7 @@ static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARCTargetMC() {
+extern "C" void LLVMInitializeARCTargetMC() {
   // Register the MC asm info.
   Target &TheARCTarget = getTheARCTarget();
   RegisterMCAsmInfoFn X(TheARCTarget, createARCMCAsmInfo);

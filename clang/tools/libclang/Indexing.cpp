@@ -443,10 +443,14 @@ static CXErrorCode clang_indexSourceFile_Impl(
   if (CXXIdx->isOptEnabled(CXGlobalOpt_ThreadBackgroundPriorityForIndexing))
     setThreadBackgroundPriority();
 
-  bool CaptureDiagnostics = !Logger::isLoggingEnabled();
+  CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::All;
+  if (TU_options & CXTranslationUnit_IgnoreNonErrorsFromIncludedFiles)
+    CaptureDiagnostics = CaptureDiagsKind::AllWithoutNonErrorsFromIncludes;
+  if (Logger::isLoggingEnabled())
+    CaptureDiagnostics = CaptureDiagsKind::None;
 
   CaptureDiagnosticConsumer *CaptureDiag = nullptr;
-  if (CaptureDiagnostics)
+  if (CaptureDiagnostics != CaptureDiagsKind::None)
     CaptureDiag = new CaptureDiagnosticConsumer();
 
   // Configure the diagnostics.

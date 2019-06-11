@@ -65,7 +65,7 @@ static MCDisassembler *createWebAssemblyDisassembler(const Target &T,
   return new WebAssemblyDisassembler(STI, Ctx, std::move(MCII));
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyDisassembler() {
+extern "C" void LLVMInitializeWebAssemblyDisassembler() {
   // Register the disassembler for each target.
   TargetRegistry::RegisterMCDisassembler(getTheWebAssemblyTarget32(),
                                          createWebAssemblyDisassembler);

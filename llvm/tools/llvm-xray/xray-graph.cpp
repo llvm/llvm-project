@@ -436,9 +436,7 @@ Expected<GraphRenderer> GraphRenderer::Factory::getGraphRenderer() {
 
   const auto &FunctionAddresses = Map.getFunctionAddresses();
 
-  symbolize::LLVMSymbolizer::Options Opts(
-      symbolize::FunctionNameKind::LinkageName, true, true, false, "");
-  symbolize::LLVMSymbolizer Symbolizer(Opts);
+  symbolize::LLVMSymbolizer Symbolizer;
   const auto &Header = Trace.getFileHeader();
 
   llvm::xray::FuncIdConversionHelper FuncIdHelper(InstrMap, Symbolizer,

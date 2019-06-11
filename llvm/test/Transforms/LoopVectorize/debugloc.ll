@@ -14,8 +14,11 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK:   add i64 %index, 2, !dbg ![[LOC]]
 ; CHECK:   icmp eq i64 %index.next, %n.vec, !dbg ![[LOC]]
 ; CHECK: middle.block
-; CHECK:   add <2 x i32> %{{.*}}, %rdx.shuf, !dbg ![[LOC]]
-; CHECK:   extractelement <2 x i32> %bin.rdx, i32 0, !dbg ![[LOC]]
+; CHECK:   add <2 x i32> %{{.*}}, %rdx.shuf, !dbg ![[BR_LOC:[0-9]+]]
+; CHECK:   extractelement <2 x i32> %bin.rdx, i32 0, !dbg ![[BR_LOC]]
+; CHECK: for.body
+; CHECK br i1{{.*}}, label %for.body,{{.*}}, !dbg ![[BR_LOC]],
+; CHECK: ![[BR_LOC]] = !DILocation(line: 5,
 
 define i32 @f(i32* nocapture %a, i32 %size) #0 !dbg !4 {
 entry:
@@ -38,7 +41,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %indvars.iv.next = add i64 %indvars.iv, 1, !dbg !22
   call void @llvm.dbg.value(metadata !{null}, metadata !16, metadata !DIExpression()), !dbg !22
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !22
-  %exitcond = icmp ne i32 %lftr.wideiv, %size, !dbg !22
+  %exitcond = icmp ne i32 %lftr.wideiv, %size, !dbg !21
   br i1 %exitcond, label %for.body, label %for.cond.for.end_crit_edge, !dbg !21
 
 for.cond.for.end_crit_edge:                       ; preds = %for.body

@@ -8190,7 +8190,7 @@ bool MipsAsmParser::parseInternalDirectiveReallowModule() {
   return false;
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsAsmParser() {
+extern "C" void LLVMInitializeMipsAsmParser() {
   RegisterMCAsmParser<MipsAsmParser> X(getTheMipsTarget());
   RegisterMCAsmParser<MipsAsmParser> Y(getTheMipselTarget());
   RegisterMCAsmParser<MipsAsmParser> A(getTheMips64Target());

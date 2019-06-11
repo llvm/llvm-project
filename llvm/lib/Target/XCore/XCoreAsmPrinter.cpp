@@ -292,6 +292,6 @@ void XCoreAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXCoreAsmPrinter() {
+extern "C" void LLVMInitializeXCoreAsmPrinter() {
   RegisterAsmPrinter<XCoreAsmPrinter> X(getTheXCoreTarget());
 }

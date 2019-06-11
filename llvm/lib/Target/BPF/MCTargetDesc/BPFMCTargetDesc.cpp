@@ -97,7 +97,7 @@ static MCInstrAnalysis *createBPFInstrAnalysis(const MCInstrInfo *Info) {
   return new BPFMCInstrAnalysis(Info);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTargetMC() {
+extern "C" void LLVMInitializeBPFTargetMC() {
   for (Target *T :
        {&getTheBPFleTarget(), &getTheBPFbeTarget(), &getTheBPFTarget()}) {
     // Register the MC asm info.

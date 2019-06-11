@@ -181,6 +181,13 @@ const RegisterBank &ARMRegisterBankInfo::getRegBankFromRegClass(
   case tGPR_and_tcGPRRegClassID:
   case tcGPRRegClassID:
   case tGPRRegClassID:
+  case tGPREvenRegClassID:
+  case tGPROddRegClassID:
+  case tGPR_and_tGPREvenRegClassID:
+  case tGPR_and_tGPROddRegClassID:
+  case tGPREven_and_tcGPRRegClassID:
+  case tGPREven_and_tGPR_and_tcGPRRegClassID:
+  case tGPROdd_and_tcGPRRegClassID:
     return getRegBank(ARM::GPRRegBankID);
   case HPRRegClassID:
   case SPR_8RegClassID:

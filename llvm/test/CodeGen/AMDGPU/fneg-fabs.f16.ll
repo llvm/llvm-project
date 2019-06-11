@@ -110,18 +110,17 @@ define amdgpu_kernel void @fneg_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x h
 
 ; GCN-LABEL: {{^}}fold_user_fneg_fabs_v2f16:
 ; CI: s_load_dword [[IN:s[0-9]+]]
-; CI: s_or_b32 [[FNEG_FABS:s[0-9]+]], [[IN]], 0x80008000
 ; CI: s_lshr_b32
-; CI: v_cvt_f32_f16_e32 v{{[0-9]+}}, s{{[0-9]+}}
-; CI: v_cvt_f32_f16_e32 v{{[0-9]+}}, s{{[0-9]+}}
-; CI: v_mul_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
-; CI: v_mul_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
+; CI: v_cvt_f32_f16_e64 v{{[0-9]+}}, |s{{[0-9]+}}|
+; CI: v_cvt_f32_f16_e64 v{{[0-9]+}}, |s{{[0-9]+}}|
+; CI: v_mul_f32_e32 v{{[0-9]+}}, -4.0, v{{[0-9]+}}
+; CI: v_mul_f32_e32 v{{[0-9]+}}, -4.0, v{{[0-9]+}}
 
-; VI: v_mul_f16_e64 v{{[0-9]+}}, -|s{{[0-9]+}}|, 4.0
-; VI: v_mul_f16_sdwa v{{[0-9]+}}, -|v{{[0-9]+}}|, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI: v_mul_f16_e64 v{{[0-9]+}}, |s{{[0-9]+}}|, -4.0
+; VI: v_mul_f16_sdwa v{{[0-9]+}}, |v{{[0-9]+}}|, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 
 ; GFX9: s_and_b32 [[ABS:s[0-9]+]], s{{[0-9]+}}, 0x7fff7fff
-; GFX9: v_pk_mul_f16 v{{[0-9]+}}, [[ABS]], 4.0 op_sel_hi:[1,0] neg_lo:[1,0] neg_hi:[1,0]
+; GFX9: v_pk_mul_f16 v{{[0-9]+}}, [[ABS]], -4.0 op_sel_hi:[1,0]
 define amdgpu_kernel void @fold_user_fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) #0 {
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fneg.fabs = fsub <2 x half> <half -0.0, half -0.0>, %fabs
@@ -147,7 +146,7 @@ define amdgpu_kernel void @s_fneg_multi_use_fabs_v2f16(<2 x half> addrspace(1)* 
 
 ; GCN-LABEL: {{^}}s_fneg_multi_use_fabs_foldable_neg_v2f16:
 ; GFX9: s_and_b32 [[ABS:s[0-9]+]], s{{[0-9]+}}, 0x7fff7fff
-; GFX9: v_pk_mul_f16 v{{[0-9]+}}, [[ABS]], 4.0 op_sel_hi:[1,0] neg_lo:[1,0] neg_hi:[1,0]
+; GFX9: v_pk_mul_f16 v{{[0-9]+}}, [[ABS]], -4.0 op_sel_hi:[1,0]
 define amdgpu_kernel void @s_fneg_multi_use_fabs_foldable_neg_v2f16(<2 x half> addrspace(1)* %out0, <2 x half> addrspace(1)* %out1, <2 x half> %in) {
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fneg = fsub <2 x half> <half -0.0, half -0.0>, %fabs

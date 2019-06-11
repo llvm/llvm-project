@@ -718,7 +718,8 @@ MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> MBs) {
   }
 
   Expected<std::unique_ptr<MemoryBuffer>> E =
-      llvm::object::writeWindowsResourceCOFF(Config->Machine, Parser);
+      llvm::object::writeWindowsResourceCOFF(Config->Machine, Parser,
+                                             Config->Timestamp);
   if (!E)
     fatal("failed to write .res to COFF: " + toString(E.takeError()));
 

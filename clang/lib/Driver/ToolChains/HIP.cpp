@@ -130,7 +130,7 @@ const char *AMDGCN::Linker::constructLlcCommand(
   // AMDGPUPromoteAlloca pass which cause invalid memory access in PyTorch.
   // Remove this once the issue is fixed.
   ArgStringList LlcArgs{InputFileName, "-mtriple=amdgcn-amd-amdhsa",
-                        "-filetype=obj", "-mattr=-code-object-v3",
+                        "-filetype=obj",
                         "-disable-promote-alloca-to-lds",
                         Args.MakeArgString("-mcpu=" + SubArchName)};
 

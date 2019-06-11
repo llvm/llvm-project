@@ -493,7 +493,7 @@ bool BPFAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
 bool BPFAsmParser::ParseDirective(AsmToken DirectiveID) { return true; }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFAsmParser() {
+extern "C" void LLVMInitializeBPFAsmParser() {
   RegisterMCAsmParser<BPFAsmParser> X(getTheBPFTarget());
   RegisterMCAsmParser<BPFAsmParser> Y(getTheBPFleTarget());
   RegisterMCAsmParser<BPFAsmParser> Z(getTheBPFbeTarget());

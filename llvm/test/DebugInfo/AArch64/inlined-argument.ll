@@ -38,66 +38,59 @@
 ;     if (__builtin_expect(enable, 0)) {  }
 ; }
 
-
-source_filename = "test.i"
+; ModuleID = 'inlined-arg.c'
+source_filename = "inlined-arg.c"
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios5.0.0"
 
 %struct.t = type { %struct.q* }
 %struct.q = type { %struct.q*, i64 }
 
-@tt = local_unnamed_addr global %struct.t* null, align 8, !dbg !0
+@tt = common local_unnamed_addr global %struct.t* null, align 8, !dbg !0
 
-; Function Attrs: noredzone nounwind readonly ssp
-define i32 @g(%struct.t* nocapture readonly %t, i64 %r) local_unnamed_addr #0 !dbg !20 {
+; Function Attrs: norecurse nounwind readonly ssp uwtable
+define i32 @g(%struct.t* nocapture readonly %t, i64 %r) local_unnamed_addr !dbg !21 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.t* %t, metadata !26, metadata !DIExpression()), !dbg !29
-  tail call void @llvm.dbg.value(metadata i64 %r, metadata !27, metadata !DIExpression()), !dbg !30
-  tail call void @llvm.dbg.value(metadata %struct.t* %t, metadata !31, metadata !DIExpression()), !dbg !39
-  tail call void @llvm.dbg.value(metadata i64 %r, metadata !37, metadata !DIExpression()), !dbg !41
-  %s.i5 = bitcast %struct.t* %t to %struct.q**
-  tail call void @llvm.dbg.value(metadata %struct.q** %s.i5, metadata !38, metadata !DIExpression(DW_OP_deref)), !dbg !42
-  %q.06.i = load %struct.q*, %struct.q** %s.i5, align 8
-  tail call void @llvm.dbg.value(metadata %struct.q* %q.06.i, metadata !38, metadata !DIExpression()), !dbg !42
-  %tobool7.i = icmp eq %struct.q* %q.06.i, null, !dbg !43
-  br i1 %tobool7.i, label %find.exit, label %while.body.i.preheader, !dbg !43
+  call void @llvm.dbg.value(metadata %struct.t* %t, metadata !27, metadata !DIExpression()), !dbg !30
+  call void @llvm.dbg.value(metadata i64 %r, metadata !28, metadata !DIExpression()), !dbg !31
+  call void @llvm.dbg.value(metadata %struct.t* %t, metadata !32, metadata !DIExpression()), !dbg !39
+  call void @llvm.dbg.value(metadata i64 %r, metadata !37, metadata !DIExpression()), !dbg !41
+  %s.i = getelementptr inbounds %struct.t, %struct.t* %t, i64 0, i32 0, !dbg !42
+  %q.05.i = load %struct.q*, %struct.q** %s.i, align 8, !dbg !43, !tbaa !44
+  call void @llvm.dbg.value(metadata %struct.q* %q.05.i, metadata !38, metadata !DIExpression()), !dbg !48
+  %tobool6.i = icmp eq %struct.q* %q.05.i, null, !dbg !49
+  br i1 %tobool6.i, label %find.exit, label %while.body.i, !dbg !49
 
-while.body.i.preheader:                           ; preds = %entry
-  br label %while.body.i, !dbg !44
-
-while.body.i:                                     ; preds = %while.body.i.preheader, %if.end.i
-  %q.08.i = phi %struct.q* [ %q.0.i, %if.end.i ], [ %q.06.i, %while.body.i.preheader ]
-  %resource1.i = getelementptr inbounds %struct.q, %struct.q* %q.08.i, i64 0, i32 1, !dbg !44
-  %0 = load i64, i64* %resource1.i, align 8, !dbg !44
-  %cmp.i = icmp eq i64 %0, %r, !dbg !47
-  br i1 %cmp.i, label %find.exit, label %if.end.i, !dbg !48
+while.body.i:                                     ; preds = %entry, %if.end.i
+  %q.07.i = phi %struct.q* [ %q.0.i, %if.end.i ], [ %q.05.i, %entry ]
+  %resource1.i = getelementptr inbounds %struct.q, %struct.q* %q.07.i, i64 0, i32 1, !dbg !50
+  %0 = load i64, i64* %resource1.i, align 8, !dbg !50, !tbaa !53
+  %cmp.i = icmp eq i64 %0, %r, !dbg !56
+  br i1 %cmp.i, label %find.exit, label %if.end.i, !dbg !57
 
 if.end.i:                                         ; preds = %while.body.i
-  %next.i6 = bitcast %struct.q* %q.08.i to %struct.q**
-  tail call void @llvm.dbg.value(metadata %struct.q** %next.i6, metadata !38, metadata !DIExpression(DW_OP_deref)), !dbg !42
-  %q.0.i = load %struct.q*, %struct.q** %next.i6, align 8
-  tail call void @llvm.dbg.value(metadata %struct.q* %q.0.i, metadata !38, metadata !DIExpression()), !dbg !42
-  %tobool.i = icmp eq %struct.q* %q.0.i, null, !dbg !43
-  br i1 %tobool.i, label %find.exit, label %while.body.i, !dbg !43, !llvm.loop !49
+  %next.i = getelementptr inbounds %struct.q, %struct.q* %q.07.i, i64 0, i32 0, !dbg !58
+  %q.0.i = load %struct.q*, %struct.q** %next.i, align 8, !dbg !43, !tbaa !44
+  call void @llvm.dbg.value(metadata %struct.q* %q.0.i, metadata !38, metadata !DIExpression()), !dbg !48
+  %tobool.i = icmp eq %struct.q* %q.0.i, null, !dbg !49
+  br i1 %tobool.i, label %find.exit, label %while.body.i, !dbg !49, !llvm.loop !59
 
 find.exit:                                        ; preds = %while.body.i, %if.end.i, %entry
-  ret i32 undef, !dbg !52
+  call void @llvm.dbg.value(metadata %struct.q* undef, metadata !29, metadata !DIExpression()), !dbg !61
+  ret i32 undef, !dbg !62
 }
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-
-attributes #0 = { noredzone nounwind readonly ssp }
-attributes #1 = { nounwind readnone speculatable }
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!16, !17, !18}
-!llvm.ident = !{!19}
+!llvm.module.flags = !{!16, !17, !18, !19}
+!llvm.ident = !{!20}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "tt", scope: !2, file: !3, line: 8, type: !6, isLocal: false, isDefinition: true)
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 6.0.0 (trunk 317516) (llvm/trunk 317518)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
-!3 = !DIFile(filename: "test.i", directory: "/")
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 9.0.0 (https://github.com/llvm/llvm-project.git cd3671d5dabc8848619d872f994770167a44ac5a)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5, nameTableKind: GNU)
+!3 = !DIFile(filename: "inlined-arg.c", directory: "")
 !4 = !{}
 !5 = !{!0}
 !6 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 64)
@@ -113,37 +106,47 @@ attributes #1 = { nounwind readnone speculatable }
 !16 = !{i32 2, !"Dwarf Version", i32 2}
 !17 = !{i32 2, !"Debug Info Version", i32 3}
 !18 = !{i32 1, !"wchar_size", i32 4}
-!19 = !{!"clang version 6.0.0 (trunk 317516) (llvm/trunk 317518)"}
-!20 = distinct !DISubprogram(name: "g", scope: !3, file: !3, line: 18, type: !21, isLocal: false, isDefinition: true, scopeLine: 18, flags: DIFlagPrototyped, isOptimized: true, unit: !2, retainedNodes: !25)
-!21 = !DISubroutineType(types: !22)
-!22 = !{!23, !24, !15}
-!23 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!24 = !DIDerivedType(tag: DW_TAG_typedef, name: "t_t", file: !3, line: 1, baseType: !6)
-!25 = !{!26, !27, !28}
-!26 = !DILocalVariable(name: "t", arg: 1, scope: !20, file: !3, line: 18, type: !24)
-!27 = !DILocalVariable(name: "r", arg: 2, scope: !20, file: !3, line: 18, type: !15)
-!28 = !DILocalVariable(name: "q", scope: !20, file: !3, line: 19, type: !10)
-!29 = !DILocation(line: 18, column: 11, scope: !20)
-!30 = !DILocation(line: 18, column: 33, scope: !20)
-!31 = !DILocalVariable(name: "t", arg: 1, scope: !32, file: !3, line: 9, type: !24)
-!32 = distinct !DISubprogram(name: "find", scope: !3, file: !3, line: 9, type: !33, isLocal: true, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: true, unit: !2, retainedNodes: !36)
-!33 = !DISubroutineType(types: !34)
-!34 = !{!35, !24, !15}
-!35 = !DIBasicType(name: "long unsigned int", size: 64, encoding: DW_ATE_unsigned)
-!36 = !{!31, !37, !38}
-!37 = !DILocalVariable(name: "resource", arg: 2, scope: !32, file: !3, line: 9, type: !15)
-!38 = !DILocalVariable(name: "q", scope: !32, file: !3, line: 10, type: !10)
-!39 = !DILocation(line: 9, column: 31, scope: !32, inlinedAt: !40)
-!40 = distinct !DILocation(line: 20, column: 7, scope: !20)
-!41 = !DILocation(line: 9, column: 53, scope: !32, inlinedAt: !40)
-!42 = !DILocation(line: 10, column: 13, scope: !32, inlinedAt: !40)
-!43 = !DILocation(line: 12, column: 3, scope: !32, inlinedAt: !40)
-!44 = !DILocation(line: 13, column: 12, scope: !45, inlinedAt: !40)
-!45 = distinct !DILexicalBlock(scope: !46, file: !3, line: 13, column: 9)
-!46 = distinct !DILexicalBlock(scope: !32, file: !3, line: 12, column: 13)
-!47 = !DILocation(line: 13, column: 21, scope: !45, inlinedAt: !40)
-!48 = !DILocation(line: 13, column: 9, scope: !46, inlinedAt: !40)
-!49 = distinct !{!49, !50, !51}
-!50 = !DILocation(line: 12, column: 3, scope: !32)
-!51 = !DILocation(line: 16, column: 3, scope: !32)
-!52 = !DILocation(line: 24, column: 1, scope: !20)
+!19 = !{i32 7, !"PIC Level", i32 2}
+!20 = !{!"clang version 9.0.0 (https://github.com/llvm/llvm-project.git cd3671d5dabc8848619d872f994770167a44ac5a)"}
+!21 = distinct !DISubprogram(name: "g", scope: !3, file: !3, line: 19, type: !22, scopeLine: 19, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !26)
+!22 = !DISubroutineType(types: !23)
+!23 = !{!24, !25, !15}
+!24 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!25 = !DIDerivedType(tag: DW_TAG_typedef, name: "t_t", file: !3, line: 1, baseType: !6)
+!26 = !{!27, !28, !29}
+!27 = !DILocalVariable(name: "t", arg: 1, scope: !21, file: !3, line: 19, type: !25)
+!28 = !DILocalVariable(name: "r", arg: 2, scope: !21, file: !3, line: 19, type: !15)
+!29 = !DILocalVariable(name: "q", scope: !21, file: !3, line: 20, type: !10)
+!30 = !DILocation(line: 19, column: 11, scope: !21)
+!31 = !DILocation(line: 19, column: 33, scope: !21)
+!32 = !DILocalVariable(name: "t", arg: 1, scope: !33, file: !3, line: 10, type: !25)
+!33 = distinct !DISubprogram(name: "find", scope: !3, file: !3, line: 10, type: !34, scopeLine: 10, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !36)
+!34 = !DISubroutineType(types: !35)
+!35 = !{!10, !25, !15}
+!36 = !{!32, !37, !38}
+!37 = !DILocalVariable(name: "resource", arg: 2, scope: !33, file: !3, line: 10, type: !15)
+!38 = !DILocalVariable(name: "q", scope: !33, file: !3, line: 11, type: !10)
+!39 = !DILocation(line: 10, column: 27, scope: !33, inlinedAt: !40)
+!40 = distinct !DILocation(line: 21, column: 7, scope: !21)
+!41 = !DILocation(line: 10, column: 49, scope: !33, inlinedAt: !40)
+!42 = !DILocation(line: 12, column: 10, scope: !33, inlinedAt: !40)
+!43 = !DILocation(line: 0, scope: !33, inlinedAt: !40)
+!44 = !{!45, !45, i64 0}
+!45 = !{!"any pointer", !46, i64 0}
+!46 = !{!"omnipotent char", !47, i64 0}
+!47 = !{!"Simple C/C++ TBAA"}
+!48 = !DILocation(line: 11, column: 13, scope: !33, inlinedAt: !40)
+!49 = !DILocation(line: 13, column: 3, scope: !33, inlinedAt: !40)
+!50 = !DILocation(line: 14, column: 12, scope: !51, inlinedAt: !40)
+!51 = distinct !DILexicalBlock(scope: !52, file: !3, line: 14, column: 9)
+!52 = distinct !DILexicalBlock(scope: !33, file: !3, line: 13, column: 13)
+!53 = !{!54, !55, i64 8}
+!54 = !{!"q", !45, i64 0, !55, i64 8}
+!55 = !{!"long long", !46, i64 0}
+!56 = !DILocation(line: 14, column: 21, scope: !51, inlinedAt: !40)
+!57 = !DILocation(line: 14, column: 9, scope: !52, inlinedAt: !40)
+!58 = !DILocation(line: 16, column: 12, scope: !52, inlinedAt: !40)
+!59 = distinct !{!59, !49, !60}
+!60 = !DILocation(line: 17, column: 3, scope: !33, inlinedAt: !40)
+!61 = !DILocation(line: 20, column: 13, scope: !21)
+!62 = !DILocation(line: 24, column: 1, scope: !21)

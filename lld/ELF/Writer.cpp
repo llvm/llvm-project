@@ -178,7 +178,9 @@ template <class ELFT> static void copySectionsIntoPartitions() {
 
 template <class ELFT> static void combineEhSections() {
   for (InputSectionBase *&S : InputSections) {
-    if (!S->isLive())
+    // Ignore dead sections and the partition end marker (.part.end),
+    // whose partition number is out of bounds.
+    if (!S->isLive() || S->Partition == 255)
       continue;
 
     Partition &Part = S->getPartition();
@@ -442,7 +444,7 @@ template <class ELFT> static void createSyntheticSections() {
   if (Partitions.size() != 1) {
     // Create the partition end marker. This needs to be in partition number 255
     // so that it is sorted after all other partitions. It also has other
-    // special handling (see createPhdrs()).
+    // special handling (see createPhdrs() and combineEhSections()).
     In.PartEnd = make<BssSection>(".part.end", Config->MaxPageSize, 1);
     In.PartEnd->Partition = 255;
     Add(In.PartEnd);

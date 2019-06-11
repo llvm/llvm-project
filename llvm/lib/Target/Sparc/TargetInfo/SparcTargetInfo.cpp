@@ -23,7 +23,7 @@ Target &llvm::getTheSparcelTarget() {
   return TheSparcelTarget;
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTargetInfo() {
+extern "C" void LLVMInitializeSparcTargetInfo() {
   RegisterTarget<Triple::sparc, /*HasJIT=*/true> X(getTheSparcTarget(), "sparc",
                                                    "Sparc", "Sparc");
   RegisterTarget<Triple::sparcv9, /*HasJIT=*/true> Y(

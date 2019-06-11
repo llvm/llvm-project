@@ -53,11 +53,11 @@ static uint16_t lo(uint32_t V) { return V; }
 static uint16_t ha(uint32_t V) { return (V + 0x8000) >> 16; }
 
 static uint32_t readFromHalf16(const uint8_t *Loc) {
-  return read32(Config->IsLE ? Loc : Loc - 2);
+  return read32(Loc - (Config->EKind == ELF32BEKind ? 2 : 0));
 }
 
 static void writeFromHalf16(uint8_t *Loc, uint32_t Insn) {
-  write32(Config->IsLE ? Loc : Loc - 2, Insn);
+  write32(Loc - (Config->EKind == ELF32BEKind ? 2 : 0), Insn);
 }
 
 void elf::writePPC32GlinkSection(uint8_t *Buf, size_t NumEntries) {
@@ -135,6 +135,7 @@ PPC::PPC() {
   PltRel = R_PPC_JMP_SLOT;
   RelativeRel = R_PPC_RELATIVE;
   IRelativeRel = R_PPC_IRELATIVE;
+  SymbolicRel = R_PPC_ADDR32;
   GotBaseSymInGotPlt = false;
   GotHeaderEntriesNum = 3;
   GotPltHeaderEntriesNum = 0;
@@ -288,7 +289,6 @@ void PPC::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     write16(Loc, Val);
     break;
   case R_PPC_ADDR32:
-  case R_PPC_GLOB_DAT:
   case R_PPC_REL32:
     write32(Loc, Val);
     break;
