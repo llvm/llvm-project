@@ -4562,15 +4562,15 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
     swift::IRGenOptions &ir_gen_opts = GetIRGenOptions();
 
     std::string error_str;
-    const std::string &triple = GetTriple().str();
+    llvm::Triple llvm_triple = GetTriple();
     const llvm::Target *llvm_target =
-        llvm::TargetRegistry::lookupTarget(triple, error_str);
+      llvm::TargetRegistry::lookupTarget(llvm_triple.str(), error_str);
 
     llvm::CodeGenOpt::Level optimization_level = llvm::CodeGenOpt::Level::None;
 
     // Create a target machine.
     llvm::TargetMachine *target_machine = llvm_target->createTargetMachine(
-        triple,
+        llvm_triple.str(),
         "generic", // cpu
         "",        // features
         *getTargetOptions(),
@@ -4580,7 +4580,6 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
       // Set the module's string representation.
       const llvm::DataLayout data_layout = target_machine->createDataLayout();
 
-      llvm::Triple llvm_triple(triple);
       swift::SILModule *sil_module = GetSILModule();
       if (sil_module != nullptr) {
         swift::irgen::IRGenerator &ir_generator =
@@ -4598,7 +4597,7 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
             PSPs.MainInputFilenameForDebugInfo));
         llvm::Module *llvm_module = m_ir_gen_module_ap->getModule();
         llvm_module->setDataLayout(data_layout.getStringRepresentation());
-        llvm_module->setTargetTriple(triple);
+        llvm_module->setTargetTriple(llvm_triple.str());
       }
     }
   });
