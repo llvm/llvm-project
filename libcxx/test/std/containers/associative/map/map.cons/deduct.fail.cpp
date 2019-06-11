@@ -9,6 +9,8 @@
 // <map>
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // UNSUPPORTED: libcpp-no-deduction-guides
+// XFAIL: clang-6
+//  clang-6 gives different error messages.
 
 // template<class InputIterator,
 //          class Compare = less<iter-value-type<InputIterator>>,
