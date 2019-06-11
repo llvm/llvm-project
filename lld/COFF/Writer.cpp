@@ -849,9 +849,9 @@ void Writer::createSections() {
 
   // Finally, move some output sections to the end.
   auto SectionOrder = [&](const OutputSection *S) {
-    // Move DISCARDABLE (or non-memory-mapped) sections to the end of file because
-    // the loader cannot handle holes. Stripping can remove other discardable ones
-    // than .reloc, which is first of them (created early).
+    // Move DISCARDABLE (or non-memory-mapped) sections to the end of file
+    // because the loader cannot handle holes. Stripping can remove other
+    // discardable ones than .reloc, which is first of them (created early).
     if (S->Header.Characteristics & IMAGE_SCN_MEM_DISCARDABLE)
       return 2;
     // .rsrc should come at the end of the non-discardable sections because its

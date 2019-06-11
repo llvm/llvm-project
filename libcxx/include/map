@@ -903,7 +903,7 @@ public:
     typedef _Tp                                      mapped_type;
     typedef pair<const key_type, mapped_type>        value_type;
     typedef _Compare                                 key_compare;
-    typedef _Allocator                               allocator_type;
+    typedef typename __identity<_Allocator>::type    allocator_type;
     typedef value_type&                              reference;
     typedef const value_type&                        const_reference;
 
@@ -1465,6 +1465,32 @@ private:
 #endif
 };
 
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template<class _InputIterator, class _Compare = less<__iter_key_type<_InputIterator>>,
+         class _Allocator = allocator<__iter_to_alloc_type<_InputIterator>>,
+         class = typename enable_if<!__is_allocator<_Compare>::value, void>::type,
+         class = typename enable_if<__is_allocator<_Allocator>::value, void>::type>
+map(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocator())
+  -> map<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Compare, _Allocator>;
+
+template<class _Key, class _Tp, class _Compare = less<typename remove_const<_Key>::type>,
+         class _Allocator = allocator<pair<const _Key, _Tp>>,
+         class = typename enable_if<!__is_allocator<_Compare>::value, void>::type,
+         class = typename enable_if<__is_allocator<_Allocator>::value, void>::type>
+map(initializer_list<pair<_Key, _Tp>>, _Compare = _Compare(), _Allocator = _Allocator())
+  -> map<typename remove_const<_Key>::type, _Tp, _Compare, _Allocator>;
+
+template<class _InputIterator, class _Allocator,
+         class = typename enable_if<__is_allocator<_Allocator>::value, void>::type>
+map(_InputIterator, _InputIterator, _Allocator)
+  -> map<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>,
+         less<__iter_key_type<_InputIterator>>, _Allocator>;
+
+template<class _Key, class _Tp, class _Allocator,
+         class = typename enable_if<__is_allocator<_Allocator>::value, void>::type>
+map(initializer_list<pair<_Key, _Tp>>, _Allocator)
+  -> map<typename remove_const<_Key>::type, _Tp, less<typename remove_const<_Key>::type>, _Allocator>;
+#endif
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Key, class _Tp, class _Compare, class _Allocator>
@@ -1638,7 +1664,7 @@ public:
     typedef _Tp                                      mapped_type;
     typedef pair<const key_type, mapped_type>        value_type;
     typedef _Compare                                 key_compare;
-    typedef _Allocator                               allocator_type;
+    typedef typename __identity<_Allocator>::type    allocator_type;
     typedef value_type&                              reference;
     typedef const value_type&                        const_reference;
 
@@ -2089,6 +2115,33 @@ private:
     typedef __map_node_destructor<__node_allocator> _Dp;
     typedef unique_ptr<__node, _Dp> __node_holder;
 };
+
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template<class _InputIterator, class _Compare = less<__iter_key_type<_InputIterator>>,
+         class _Allocator = allocator<__iter_to_alloc_type<_InputIterator>>,
+         class = typename enable_if<!__is_allocator<_Compare>::value, void>::type,
+         class = typename enable_if<__is_allocator<_Allocator>::value, void>::type>
+multimap(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocator())
+  -> multimap<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Compare, _Allocator>;
+
+template<class _Key, class _Tp, class _Compare = less<typename remove_const<_Key>::type>,
+         class _Allocator = allocator<pair<const _Key, _Tp>>,
+         class = typename enable_if<!__is_allocator<_Compare>::value, void>::type,
+         class = typename enable_if<__is_allocator<_Allocator>::value, void>::type>
+multimap(initializer_list<pair<_Key, _Tp>>, _Compare = _Compare(), _Allocator = _Allocator())
+  -> multimap<typename remove_const<_Key>::type, _Tp, _Compare, _Allocator>;
+
+template<class _InputIterator, class _Allocator,
+         class = typename enable_if<__is_allocator<_Allocator>::value, void>::type>
+multimap(_InputIterator, _InputIterator, _Allocator)
+  -> multimap<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>,
+         less<__iter_key_type<_InputIterator>>, _Allocator>;
+
+template<class _Key, class _Tp, class _Allocator,
+         class = typename enable_if<__is_allocator<_Allocator>::value, void>::type>
+multimap(initializer_list<pair<_Key, _Tp>>, _Allocator)
+  -> multimap<typename remove_const<_Key>::type, _Tp, less<typename remove_const<_Key>::type>, _Allocator>;
+#endif
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Key, class _Tp, class _Compare, class _Allocator>

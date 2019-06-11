@@ -130,7 +130,6 @@ class ModuleList;
 class ModuleSpec;
 class ModuleSpecList;
 struct NameSearchContext;
-class ObjCLanguageRuntime;
 class ObjectContainer;
 class OptionGroup;
 class OptionGroupOptions;

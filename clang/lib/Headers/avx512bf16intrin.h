@@ -15,10 +15,27 @@
 
 typedef short __m512bh __attribute__((__vector_size__(64), __aligned__(64)));
 typedef short __m256bh __attribute__((__vector_size__(32), __aligned__(32)));
+typedef unsigned short __bfloat16;
 
 #define __DEFAULT_FN_ATTRS512 \
   __attribute__((__always_inline__, __nodebug__, __target__("avx512bf16"), \
                  __min_vector_width__(512)))
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__, __target__("avx512bf16")))
+
+/// Convert One BF16 Data to One Single Float Data.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic does not correspond to a specific instruction.
+///
+/// \param __A
+///    A bfloat data.
+/// \returns A float data whose sign field and exponent field keep unchanged,
+///    and fraction field is extended to 23 bits.
+static __inline__ float __DEFAULT_FN_ATTRS _mm_cvtsbh_ss(__bfloat16 __A) {
+  return __builtin_ia32_cvtsbf162ss_32(__A);
+}
 
 /// Convert Two Packed Single Data to One Packed BF16 Data.
 ///
@@ -209,6 +226,54 @@ _mm512_maskz_dpbf16_ps(__mmask16 __U, __m512 __D, __m512bh __A, __m512bh __B) {
                                        (__v16sf)_mm512_setzero_si512());
 }
 
+/// Convert Packed BF16 Data to Packed float Data.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \param __A
+///    A 256-bit vector of [16 x bfloat].
+/// \returns A 512-bit vector of [16 x float] come from convertion of __A
+static __inline__ __m512 __DEFAULT_FN_ATTRS512 _mm512_cvtpbh_ps(__m256bh __A) {
+  return _mm512_castsi512_ps((__m512i)_mm512_slli_epi32(
+      (__m512i)_mm512_cvtepi16_epi32((__m256i)__A), 16));
+}
+
+/// Convert Packed BF16 Data to Packed float Data using zeroing mask.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \param __U
+///    A 16-bit mask. Elements are zeroed out when the corresponding mask
+///    bit is not set.
+/// \param __A
+///    A 256-bit vector of [16 x bfloat].
+/// \returns A 512-bit vector of [16 x float] come from convertion of __A
+static __inline__ __m512 __DEFAULT_FN_ATTRS512
+_mm512_maskz_cvtpbh_ps(__mmask16 __U, __m256bh __A) {
+  return _mm512_castsi512_ps((__m512i)_mm512_slli_epi32(
+      (__m512i)_mm512_maskz_cvtepi16_epi32((__mmask16)__U, (__m256i)__A), 16));
+}
+
+/// Convert Packed BF16 Data to Packed float Data using merging mask.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \param __S
+///    A 512-bit vector of [16 x float]. Elements are copied from __S when
+///     the corresponding mask bit is not set.
+/// \param __U
+///    A 16-bit mask.
+/// \param __A
+///    A 256-bit vector of [16 x bfloat].
+/// \returns A 512-bit vector of [16 x float] come from convertion of __A
+static __inline__ __m512 __DEFAULT_FN_ATTRS512
+_mm512_mask_cvtpbh_ps(__m512 __S, __mmask16 __U, __m256bh __A) {
+  return _mm512_castsi512_ps((__m512i)_mm512_mask_slli_epi32(
+      (__m512i)__S, (__mmask16)__U,
+      (__m512i)_mm512_cvtepi16_epi32((__m256i)__A), 16));
+}
+
+#undef __DEFAULT_FN_ATTRS
 #undef __DEFAULT_FN_ATTRS512
 
 #endif

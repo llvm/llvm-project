@@ -120,5 +120,5 @@ void arcmt::writeARCDiagsToPlist(const std::string &outPath,
   o << " </array>\n";
 
   // Finish.
-  o << "</dict>\n</plist>";
+  o << "</dict>\n</plist>\n";
 }

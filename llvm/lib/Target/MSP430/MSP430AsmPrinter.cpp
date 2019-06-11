@@ -183,6 +183,6 @@ bool MSP430AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 }
 
 // Force static initialization.
-extern "C" void LLVMInitializeMSP430AsmPrinter() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMSP430AsmPrinter() {
   RegisterAsmPrinter<MSP430AsmPrinter> X(getTheMSP430Target());
 }

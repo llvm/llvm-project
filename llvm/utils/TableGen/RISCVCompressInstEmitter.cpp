@@ -64,6 +64,7 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <set>
 #include <vector>
 using namespace llvm;
 
@@ -474,7 +475,7 @@ void RISCVCompressInstEmitter::evaluateCompressPat(Record *Rec) {
                                          SourceOperandMap, DestOperandMap));
 }
 
-static void getReqFeatures(std::map<StringRef, int> &FeaturesMap,
+static void getReqFeatures(std::set<StringRef> &FeaturesSet,
                            const std::vector<Record *> &ReqFeatures) {
   for (auto &R : ReqFeatures) {
     StringRef AsmCondString = R->getValueAsString("AssemblerCondString");
@@ -483,11 +484,9 @@ static void getReqFeatures(std::map<StringRef, int> &FeaturesMap,
     SmallVector<StringRef, 4> Ops;
     SplitString(AsmCondString, Ops, ",");
     assert(!Ops.empty() && "AssemblerCondString cannot be empty");
-
     for (auto &Op : Ops) {
       assert(!Op.empty() && "Empty operator");
-      if (FeaturesMap.find(Op) == FeaturesMap.end())
-        FeaturesMap[Op] = FeaturesMap.size();
+      FeaturesSet.insert(Op);
     }
   }
 }
@@ -620,9 +619,9 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
       CaseStream.indent(4) << "case " + Namespace + "::" + CurOp + ": {\n";
     }
 
-    std::map<StringRef, int> FeaturesMap;
+    std::set<StringRef> FeaturesSet;
     // Add CompressPat required features.
-    getReqFeatures(FeaturesMap, CompressPat.PatReqFeatures);
+    getReqFeatures(FeaturesSet, CompressPat.PatReqFeatures);
 
     // Add Dest instruction required features.
     std::vector<Record *> ReqFeatures;
@@ -630,11 +629,10 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
     copy_if(RF, std::back_inserter(ReqFeatures), [](Record *R) {
       return R->getValueAsBit("AssemblerMatcherPredicate");
     });
-    getReqFeatures(FeaturesMap, ReqFeatures);
+    getReqFeatures(FeaturesSet, ReqFeatures);
 
     // Emit checks for all required features.
-    for (auto &F : FeaturesMap) {
-      StringRef Op = F.first;
+    for (auto &Op : FeaturesSet) {
       if (Op[0] == '!')
         CondStream.indent(6) << ("!STI.getFeatureBits()[" + Namespace +
                                  "::" + Op.substr(1) + "]")

@@ -748,7 +748,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
   }
 
   // Finish.
-  o << "</dict>\n</plist>";
+  o << "</dict>\n</plist>\n";
 }
 
 //===----------------------------------------------------------------------===//

@@ -61,7 +61,7 @@ bool DynamicCheckerFunctions::Install(DiagnosticManager &diagnostic_manager,
 
   if (process) {
     ObjCLanguageRuntime *objc_language_runtime =
-        process->GetObjCLanguageRuntime();
+        ObjCLanguageRuntime::Get(*process);
 
     if (objc_language_runtime) {
       m_objc_object_check.reset(objc_language_runtime->CreateObjectChecker(

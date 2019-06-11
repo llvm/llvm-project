@@ -1,5 +1,7 @@
 set(LLVM_LINK_COMPONENTS
-  ${LLVM_TARGETS_TO_BUILD}
+  AllTargetsDescs
+  AllTargetsDisassemblers
+  AllTargetsInfos
   BinaryFormat
   ExecutionEngine
   JITLink

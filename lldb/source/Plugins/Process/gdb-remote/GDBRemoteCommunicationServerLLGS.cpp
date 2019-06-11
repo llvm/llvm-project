@@ -144,8 +144,8 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       StringExtractorGDBRemote::eServerPacketType_qWatchpointSupportInfo,
       &GDBRemoteCommunicationServerLLGS::Handle_qWatchpointSupportInfo);
   RegisterMemberFunctionHandler(
-      StringExtractorGDBRemote::eServerPacketType_qXfer_auxv_read,
-      &GDBRemoteCommunicationServerLLGS::Handle_qXfer_auxv_read);
+      StringExtractorGDBRemote::eServerPacketType_qXfer,
+      &GDBRemoteCommunicationServerLLGS::Handle_qXfer);
   RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_s,
                                 &GDBRemoteCommunicationServerLLGS::Handle_s);
   RegisterMemberFunctionHandler(
@@ -2747,94 +2747,99 @@ GDBRemoteCommunicationServerLLGS::Handle_s(StringExtractorGDBRemote &packet) {
   return PacketResult::Success;
 }
 
-GDBRemoteCommunication::PacketResult
-GDBRemoteCommunicationServerLLGS::Handle_qXfer_auxv_read(
-    StringExtractorGDBRemote &packet) {
-// *BSD impls should be able to do this too.
-#if defined(__linux__) || defined(__NetBSD__)
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
-
-  // Parse out the offset.
-  packet.SetFilePos(strlen("qXfer:auxv:read::"));
-  if (packet.GetBytesLeft() < 1)
-    return SendIllFormedResponse(packet,
-                                 "qXfer:auxv:read:: packet missing offset");
-
-  const uint64_t auxv_offset =
-      packet.GetHexMaxU64(false, std::numeric_limits<uint64_t>::max());
-  if (auxv_offset == std::numeric_limits<uint64_t>::max())
-    return SendIllFormedResponse(packet,
-                                 "qXfer:auxv:read:: packet missing offset");
-
-  // Parse out comma.
-  if (packet.GetBytesLeft() < 1 || packet.GetChar() != ',')
-    return SendIllFormedResponse(
-        packet, "qXfer:auxv:read:: packet missing comma after offset");
-
-  // Parse out the length.
-  const uint64_t auxv_length =
-      packet.GetHexMaxU64(false, std::numeric_limits<uint64_t>::max());
-  if (auxv_length == std::numeric_limits<uint64_t>::max())
-    return SendIllFormedResponse(packet,
-                                 "qXfer:auxv:read:: packet missing length");
-
-  // Grab the auxv data if we need it.
-  if (!m_active_auxv_buffer_up) {
+llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+GDBRemoteCommunicationServerLLGS::ReadXferObject(llvm::StringRef object,
+                                                 llvm::StringRef annex) {
+  if (object == "auxv") {
     // Make sure we have a valid process.
     if (!m_debugged_process_up ||
         (m_debugged_process_up->GetID() == LLDB_INVALID_PROCESS_ID)) {
-      if (log)
-        log->Printf(
-            "GDBRemoteCommunicationServerLLGS::%s failed, no process available",
-            __FUNCTION__);
-      return SendErrorResponse(0x10);
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "No process available");
     }
 
     // Grab the auxv data.
     auto buffer_or_error = m_debugged_process_up->GetAuxvData();
-    if (!buffer_or_error) {
-      std::error_code ec = buffer_or_error.getError();
-      LLDB_LOG(log, "no auxv data retrieved: {0}", ec.message());
-      return SendErrorResponse(ec.value());
-    }
-    m_active_auxv_buffer_up = std::move(*buffer_or_error);
+    if (!buffer_or_error)
+      return llvm::errorCodeToError(buffer_or_error.getError());
+    return std::move(*buffer_or_error);
   }
 
+  return llvm::make_error<PacketUnimplementedError>(
+      "Xfer object not supported");
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_qXfer(
+    StringExtractorGDBRemote &packet) {
+  SmallVector<StringRef, 5> fields;
+  // The packet format is "qXfer:<object>:<action>:<annex>:offset,length"
+  StringRef(packet.GetStringRef()).split(fields, ':', 4);
+  if (fields.size() != 5)
+    return SendIllFormedResponse(packet, "malformed qXfer packet");
+  StringRef &xfer_object = fields[1];
+  StringRef &xfer_action = fields[2];
+  StringRef &xfer_annex = fields[3];
+  StringExtractor offset_data(fields[4]);
+  if (xfer_action != "read")
+    return SendUnimplementedResponse("qXfer action not supported");
+  // Parse offset.
+  const uint64_t xfer_offset =
+      offset_data.GetHexMaxU64(false, std::numeric_limits<uint64_t>::max());
+  if (xfer_offset == std::numeric_limits<uint64_t>::max())
+    return SendIllFormedResponse(packet, "qXfer packet missing offset");
+  // Parse out comma.
+  if (offset_data.GetChar() != ',')
+    return SendIllFormedResponse(packet,
+                                 "qXfer packet missing comma after offset");
+  // Parse out the length.
+  const uint64_t xfer_length =
+      offset_data.GetHexMaxU64(false, std::numeric_limits<uint64_t>::max());
+  if (xfer_length == std::numeric_limits<uint64_t>::max())
+    return SendIllFormedResponse(packet, "qXfer packet missing length");
+
+  // Get a previously constructed buffer if it exists or create it now.
+  std::string buffer_key = (xfer_object + xfer_action + xfer_annex).str();
+  auto buffer_it = m_xfer_buffer_map.find(buffer_key);
+  if (buffer_it == m_xfer_buffer_map.end()) {
+    auto buffer_up = ReadXferObject(xfer_object, xfer_annex);
+    if (!buffer_up)
+      return SendErrorResponse(buffer_up.takeError());
+    buffer_it = m_xfer_buffer_map
+                    .insert(std::make_pair(buffer_key, std::move(*buffer_up)))
+                    .first;
+  }
+
+  // Send back the response
   StreamGDBRemote response;
   bool done_with_buffer = false;
-
-  llvm::StringRef buffer = m_active_auxv_buffer_up->getBuffer();
-  if (auxv_offset >= buffer.size()) {
+  llvm::StringRef buffer = buffer_it->second->getBuffer();
+  if (xfer_offset >= buffer.size()) {
     // We have nothing left to send.  Mark the buffer as complete.
     response.PutChar('l');
     done_with_buffer = true;
   } else {
     // Figure out how many bytes are available starting at the given offset.
-    buffer = buffer.drop_front(auxv_offset);
-
+    buffer = buffer.drop_front(xfer_offset);
     // Mark the response type according to whether we're reading the remainder
-    // of the auxv data.
-    if (auxv_length >= buffer.size()) {
+    // of the data.
+    if (xfer_length >= buffer.size()) {
       // There will be nothing left to read after this
       response.PutChar('l');
       done_with_buffer = true;
     } else {
       // There will still be bytes to read after this request.
       response.PutChar('m');
-      buffer = buffer.take_front(auxv_length);
+      buffer = buffer.take_front(xfer_length);
     }
-
     // Now write the data in encoded binary form.
     response.PutEscapedBytes(buffer.data(), buffer.size());
   }
 
   if (done_with_buffer)
-    m_active_auxv_buffer_up.reset();
+    m_xfer_buffer_map.erase(buffer_it);
 
   return SendPacketNoLock(response.GetString());
-#else
-  return SendUnimplementedResponse("not implemented on this platform");
-#endif
 }
 
 GDBRemoteCommunication::PacketResult
@@ -3259,8 +3264,8 @@ uint32_t GDBRemoteCommunicationServerLLGS::GetNextSavedRegistersID() {
 void GDBRemoteCommunicationServerLLGS::ClearProcessSpecificData() {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
 
-  LLDB_LOG(log, "clearing auxv buffer: {0}", m_active_auxv_buffer_up.get());
-  m_active_auxv_buffer_up.reset();
+  LLDB_LOG(log, "clearing {0} xfer buffers", m_xfer_buffer_map.size());
+  m_xfer_buffer_map.clear();
 }
 
 FileSpec

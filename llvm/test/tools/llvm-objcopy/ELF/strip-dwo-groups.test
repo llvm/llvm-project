@@ -27,14 +27,14 @@
 // Link, Info and the content of this section.
 
 CHECK:          Name: .group (179)
-CHECK-NEXT:     Index: 17
+CHECK-NEXT:     Index: 1{{$}}
 CHECK-NEXT:     Link: 19
 CHECK-NEXT:     Info: 14
-CHECK:          .text._ZN1SIiE4getXEv (2)
+CHECK:          .text._ZN1SIiE4getXEv
 
 CHECK:          Name: .group (179)
-CHECK-NEXT:     Index: 18
+CHECK-NEXT:     Index: 2{{$}}
 CHECK-NEXT:     Link: 19
 CHECK-NEXT:     Info: 13
-CHECK:          .text._ZN1SIdE4getXEv (4)
-CHECK-NEXT:     .rela.text._ZN1SIdE4getXEv (21)
+CHECK:          .text._ZN1SIdE4getXEv
+CHECK-NEXT:     .rela.text._ZN1SIdE4getXEv

@@ -140,7 +140,17 @@ static void doList(opt::InputArgList& Args) {
   fatalOpenError(std::move(Err), B->getBufferIdentifier());
 }
 
-static StringRef machineToStr(COFF::MachineTypes MT) {
+// Returns /machine's value.
+COFF::MachineTypes llvm::getMachineType(StringRef S) {
+  return StringSwitch<COFF::MachineTypes>(S.lower())
+      .Cases("x64", "amd64", COFF::IMAGE_FILE_MACHINE_AMD64)
+      .Cases("x86", "i386", COFF::IMAGE_FILE_MACHINE_I386)
+      .Case("arm", COFF::IMAGE_FILE_MACHINE_ARMNT)
+      .Case("arm64", COFF::IMAGE_FILE_MACHINE_ARM64)
+      .Default(COFF::IMAGE_FILE_MACHINE_UNKNOWN);
+}
+
+StringRef llvm::machineToStr(COFF::MachineTypes MT) {
   switch (MT) {
   case COFF::IMAGE_FILE_MACHINE_ARMNT:
     return "arm";
@@ -196,9 +206,20 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
 
   std::vector<StringRef> SearchPaths = getSearchPaths(&Args, Saver);
 
+  COFF::MachineTypes LibMachine = COFF::IMAGE_FILE_MACHINE_UNKNOWN;
+  std::string LibMachineSource;
+  if (auto *Arg = Args.getLastArg(OPT_machine)) {
+    LibMachine = getMachineType(Arg->getValue());
+    if (LibMachine == COFF::IMAGE_FILE_MACHINE_UNKNOWN) {
+      llvm::errs() << "unknown /machine: arg " << Arg->getValue() << '\n';
+      return 1;
+    }
+    LibMachineSource =
+        std::string(" (from '/machine:") + Arg->getValue() + "' flag)";
+  }
+
   // Create a NewArchiveMember for each input file.
   std::vector<NewArchiveMember> Members;
-  COFF::MachineTypes LibMachine = COFF::IMAGE_FILE_MACHINE_UNKNOWN;
   for (auto *Arg : Args.filtered(OPT_INPUT)) {
     std::string Path = findInputFile(Arg->getValue(), SearchPaths);
     if (Path.empty()) {
@@ -276,14 +297,20 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
       }
     }
 
+    // FIXME: Once lld-link rejects multiple resource .obj files:
+    // Call convertResToCOFF() on .res files and add the resulting
+    // COFF file to the .lib output instead of adding the .res file, and remove
+    // this check. See PR42180.
     if (FileMachine != COFF::IMAGE_FILE_MACHINE_UNKNOWN) {
-      if (LibMachine == COFF::IMAGE_FILE_MACHINE_UNKNOWN)
+      if (LibMachine == COFF::IMAGE_FILE_MACHINE_UNKNOWN) {
         LibMachine = FileMachine;
-      else if (LibMachine != FileMachine) {
+        LibMachineSource = std::string(" (inferred from earlier file '") +
+                           Arg->getValue() + "')";
+      } else if (LibMachine != FileMachine) {
         llvm::errs() << Arg->getValue() << ": file machine type "
                      << machineToStr(FileMachine)
                      << " conflicts with library machine type "
-                     << machineToStr(LibMachine) << '\n';
+                     << machineToStr(LibMachine) << LibMachineSource << '\n';
         return 1;
       }
     }
