@@ -4237,13 +4237,13 @@ TEST_P(ASTImporterLookupTableTest, LookupDeclNamesFromDifferentTUs) {
   ASSERT_EQ(Res.size(), 0u);
 }
 
-static const RecordDecl * getRecordDeclOfFriend(FriendDecl *FD) {
-  QualType Ty = FD->getFriendType()->getType();
-  QualType NamedTy = cast<ElaboratedType>(Ty)->getNamedType();
-  return cast<RecordType>(NamedTy)->getDecl();
+static const RecordDecl *getRecordDeclOfFriend(FriendDecl *FD) {
+  QualType Ty = FD->getFriendType()->getType().getCanonicalType();
+  return cast<RecordType>(Ty)->getDecl();
 }
 
-TEST_P(ASTImporterLookupTableTest, LookupFindsFwdFriendClassDecl) {
+TEST_P(ASTImporterLookupTableTest,
+       LookupFindsFwdFriendClassDeclWithElaboratedType) {
   TranslationUnitDecl *ToTU = getToTuDecl(
       R"(
       class Y { friend class F; };
@@ -4265,6 +4265,52 @@ TEST_P(ASTImporterLookupTableTest, LookupFindsFwdFriendClassDecl) {
 
   Res = LT.lookup(Y, Name);
   EXPECT_EQ(Res.size(), 0u);
+}
+
+TEST_P(ASTImporterLookupTableTest,
+       LookupFindsFwdFriendClassDeclWithUnelaboratedType) {
+  TranslationUnitDecl *ToTU = getToTuDecl(
+      R"(
+      class F;
+      class Y { friend F; };
+      )",
+      Lang_CXX11);
+
+  // In this case, the CXXRecordDecl is hidden, the FriendDecl is not a parent.
+  // So we must dig up the underlying CXXRecordDecl.
+  ASTImporterLookupTable LT(*ToTU);
+  auto *FriendD = FirstDeclMatcher<FriendDecl>().match(ToTU, friendDecl());
+  const RecordDecl *RD = getRecordDeclOfFriend(FriendD);
+  auto *Y = FirstDeclMatcher<CXXRecordDecl>().match(ToTU, cxxRecordDecl(hasName("Y")));
+
+  DeclarationName Name = RD->getDeclName();
+  auto Res = LT.lookup(ToTU, Name);
+  EXPECT_EQ(Res.size(), 1u);
+  EXPECT_EQ(*Res.begin(), RD);
+
+  Res = LT.lookup(Y, Name);
+  EXPECT_EQ(Res.size(), 0u);
+}
+
+TEST_P(ASTImporterLookupTableTest,
+       LookupFindsFriendClassDeclWithTypeAliasDoesNotAssert) {
+  TranslationUnitDecl *ToTU = getToTuDecl(
+      R"(
+      class F;
+      using alias_of_f = F;
+      class Y { friend alias_of_f; };
+      )",
+      Lang_CXX11);
+
+  // ASTImporterLookupTable constructor handles using declarations correctly,
+  // no assert is expected.
+  ASTImporterLookupTable LT(*ToTU);
+
+  auto *Alias = FirstDeclMatcher<TypeAliasDecl>().match(
+      ToTU, typeAliasDecl(hasName("alias_of_f")));
+  DeclarationName Name = Alias->getDeclName();
+  auto Res = LT.lookup(ToTU, Name);
+  EXPECT_EQ(Res.count(Alias), 1u);
 }
 
 TEST_P(ASTImporterLookupTableTest, LookupFindsFwdFriendClassTemplateDecl) {

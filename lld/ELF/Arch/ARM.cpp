@@ -52,6 +52,7 @@ ARM::ARM() {
   GotRel = R_ARM_GLOB_DAT;
   NoneRel = R_ARM_NONE;
   PltRel = R_ARM_JUMP_SLOT;
+  SymbolicRel = R_ARM_ABS32;
   TlsGotRel = R_ARM_TLS_TPOFF32;
   TlsModuleIndexRel = R_ARM_TLS_DTPMOD32;
   TlsOffsetRel = R_ARM_TLS_DTPOFF32;
@@ -377,7 +378,6 @@ void ARM::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   switch (Type) {
   case R_ARM_ABS32:
   case R_ARM_BASE_PREL:
-  case R_ARM_GLOB_DAT:
   case R_ARM_GOTOFF32:
   case R_ARM_GOT_BREL:
   case R_ARM_GOT_PREL:

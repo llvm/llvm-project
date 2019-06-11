@@ -59,6 +59,7 @@ AArch64::AArch64() {
   GotRel = R_AARCH64_GLOB_DAT;
   NoneRel = R_AARCH64_NONE;
   PltRel = R_AARCH64_JUMP_SLOT;
+  SymbolicRel = R_AARCH64_ABS64;
   TlsDescRel = R_AARCH64_TLSDESC;
   TlsGotRel = R_AARCH64_TLS_TPREL64;
   PltEntrySize = 16;
@@ -258,7 +259,6 @@ void AArch64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     write32le(Loc, Val);
     break;
   case R_AARCH64_ABS64:
-  case R_AARCH64_GLOB_DAT:
   case R_AARCH64_PREL64:
     write64le(Loc, Val);
     break;

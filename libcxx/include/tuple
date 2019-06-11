@@ -907,7 +907,7 @@ class _LIBCPP_TEMPLATE_VIS tuple<>
 {
 public:
     _LIBCPP_INLINE_VISIBILITY
-    _LIBCPP_CONSTEXPR tuple() _NOEXCEPT {}
+    _LIBCPP_CONSTEXPR tuple() _NOEXCEPT = default;
     template <class _Alloc>
     _LIBCPP_INLINE_VISIBILITY
         tuple(allocator_arg_t, const _Alloc&) _NOEXCEPT {}

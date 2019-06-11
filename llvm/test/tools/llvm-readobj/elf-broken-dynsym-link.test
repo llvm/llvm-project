@@ -2,7 +2,7 @@
 ## .dynsym section's sh_link field is broken.
 
 ## Case 1: sh_link is set to 0.
-# RUN: yaml2obj %s -o %t1
+# RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-readobj -S %t1 2>&1 | FileCheck %s --check-prefixes=LLVM,ERR
 # RUN: llvm-readelf -S %t1 2>&1 | FileCheck %s --check-prefixes=GNU,ERR
 
@@ -33,16 +33,24 @@ Sections:
   - Name: .dynsym
     Type: SHT_DYNSYM
 
-## TODO: Remove precompiled input object after fixing yaml2obj.
-##       See https://bugs.llvm.org/show_bug.cgi?id=42216.
-
 ## Case 2: sh_link is set to 255, which is larger than the number of the sections.
-# RUN: llvm-readobj -S %p/Inputs/elf-broken-dynsym-link.elf-x86-64 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=LLVM2,ERR2
-# RUN: llvm-readelf -S %p/Inputs/elf-broken-dynsym-link.elf-x86-64 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=GNU2,ERR2
+# RUN: yaml2obj --docnum=2 %s -o %t2
+
+# RUN: llvm-readobj -S %t2 2>&1 | FileCheck %s --check-prefixes=LLVM2,ERR2
+# RUN: llvm-readelf -S %t2 2>&1 | FileCheck %s --check-prefixes=GNU2,ERR2
 
 # ERR2: warning: invalid section index
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Link: 255
 
 # LLVM2:      Name: .dynsym
 # LLVM2-NEXT:  Type: SHT_DYNSYM
@@ -51,10 +59,10 @@ Sections:
 # LLVM2-NEXT:  ]
 # LLVM2-NEXT:  Address: 0x0
 # LLVM2-NEXT:  Offset: 0x180
-# LLVM2-NEXT:  Size: 2
+# LLVM2-NEXT:  Size: 24
 # LLVM2-NEXT:  Link: 255
 
 # GNU2:      Section Headers:
 # GNU2-NEXT:  [Nr] Name    Type   Address          Off    Size   ES Flg Lk
 # GNU2-NEXT:  [ 0]         NULL   0000000000000000 000000 000000 00 0   0
-# GNU2-NEXT:  [ 1] .dynsym DYNSYM 0000000000000000 000180 000002 18 A   255
+# GNU2-NEXT:  [ 1] .dynsym DYNSYM 0000000000000000 000180 000018 18 A   255

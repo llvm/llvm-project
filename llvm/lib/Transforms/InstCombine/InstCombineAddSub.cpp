@@ -1857,12 +1857,21 @@ static Instruction *foldFNegIntoConstant(Instruction &I) {
 }
 
 Instruction *InstCombiner::visitFNeg(UnaryOperator &I) {
-  if (Value *V = SimplifyFNegInst(I.getOperand(0), I.getFastMathFlags(),
+  Value *Op = I.getOperand(0);
+
+  if (Value *V = SimplifyFNegInst(Op, I.getFastMathFlags(),
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *X = foldFNegIntoConstant(I))
     return X;
+
+  Value *X, *Y;
+
+  // If we can ignore the sign of zeros: -(X - Y) --> (Y - X)
+  if (I.hasNoSignedZeros() &&
+      match(Op, m_OneUse(m_FSub(m_Value(X), m_Value(Y)))))
+    return BinaryOperator::CreateFSubFMF(Y, X, &I);
 
   return nullptr;
 }

@@ -95,6 +95,8 @@ def HasCRC           : Predicate<"Subtarget->hasCRC()">,
                                  AssemblerPredicate<"FeatureCRC", "crc">;
 def HasRAS           : Predicate<"Subtarget->hasRAS()">,
                                  AssemblerPredicate<"FeatureRAS", "ras">;
+def HasLOB           : Predicate<"Subtarget->hasLOB()">,
+                                 AssemblerPredicate<"FeatureLOB", "lob">;
 def HasFP16          : Predicate<"Subtarget->hasFP16()">,
                                  AssemblerPredicate<"FeatureFP16","half-float conversions">;
 def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,

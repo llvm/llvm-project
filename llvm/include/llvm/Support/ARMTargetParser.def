@@ -121,7 +121,7 @@ ARM_ARCH("armv8-m.base", ARMV8MBaseline, "8-M.Baseline", "v8m.base",
 ARM_ARCH("armv8-m.main", ARMV8MMainline, "8-M.Mainline", "v8m.main",
           ARMBuildAttrs::CPUArch::v8_M_Main, FK_FPV5_D16, ARM::AEK_HWDIVTHUMB)
 ARM_ARCH("armv8.1-m.main", ARMV8_1MMainline, "8.1-M.Mainline", "v8.1m.main",
-         ARMBuildAttrs::CPUArch::v8_1_M_Main, FK_FP_ARMV8_FULLFP16_SP_D16, ARM::AEK_HWDIVTHUMB | ARM::AEK_RAS)
+          ARMBuildAttrs::CPUArch::v8_1_M_Main, FK_FP_ARMV8_FULLFP16_SP_D16, ARM::AEK_HWDIVTHUMB | ARM::AEK_RAS | ARM::AEK_LOB)
 // Non-standard Arch names.
 ARM_ARCH("iwmmxt", IWMMXT, "iwmmxt", "", ARMBuildAttrs::CPUArch::v5TE,
           FK_NONE, ARM::AEK_NONE)
@@ -164,6 +164,7 @@ ARM_ARCH_EXT_NAME("maverick", ARM::AEK_MAVERICK, nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("xscale",   ARM::AEK_XSCALE,   nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("fp16fml",  ARM::AEK_FP16FML,  "+fp16fml", "-fp16fml")
 ARM_ARCH_EXT_NAME("sb",       ARM::AEK_SB,       "+sb",      "-sb")
+ARM_ARCH_EXT_NAME("lob",      ARM::AEK_LOB,      "+lob",   "-lob")
 #undef ARM_ARCH_EXT_NAME
 
 #ifndef ARM_HW_DIV_NAME

@@ -264,7 +264,7 @@ static bool printSourceSymbolsFromModule(StringRef modulePath,
       modulePath, *pchRdr, ASTUnit::LoadASTOnly, Diags,
       FileSystemOpts, /*UseDebugInfo=*/false,
       /*OnlyLocalDecls=*/true, None,
-      /*CaptureDiagnostics=*/false,
+      CaptureDiagsKind::None,
       /*AllowPCHWithCompilerErrors=*/true,
       /*UserFilesAreVolatile=*/false);
   if (!AU) {

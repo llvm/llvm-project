@@ -170,6 +170,13 @@ public:
   void printMandatoryPredicateOperand(const MCInst *MI, unsigned OpNum,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O);
+  void printMandatoryRestrictedPredicateOperand(const MCInst *MI,
+                                                unsigned OpNum,
+                                                const MCSubtargetInfo &STI,
+                                                raw_ostream &O);
+  void printMandatoryInvertedPredicateOperand(const MCInst *MI, unsigned OpNum,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O);
   void printSBitModifierOperand(const MCInst *MI, unsigned OpNum,
                                 const MCSubtargetInfo &STI, raw_ostream &O);
   void printRegisterList(const MCInst *MI, unsigned OpNum,

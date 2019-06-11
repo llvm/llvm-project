@@ -6769,14 +6769,15 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   assert(Op.getValueType().getVectorElementType() == MVT::i32 &&
          "Custom lowering for non-i32 vectors hasn't been implemented.");
 
-  unsigned Alignment = Load->getAlignment();
-  unsigned AS = Load->getAddressSpace();
   if (!allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), MemVT,
-                          AS, Alignment)) {
+                          *Load->getMemOperand())) {
     SDValue Ops[2];
     std::tie(Ops[0], Ops[1]) = expandUnalignedLoad(Load, DAG);
     return DAG.getMergeValues(Ops, DL);
   }
+
+  unsigned Alignment = Load->getAlignment();
+  unsigned AS = Load->getAddressSpace();
   if (Subtarget->hasLDSMisalignedBug() &&
       AS == AMDGPUAS::FLAT_ADDRESS &&
       Alignment < MemVT.getStoreSize() && MemVT.getSizeInBits() > 32) {
@@ -7237,12 +7238,12 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   assert(VT.isVector() &&
          Store->getValue().getValueType().getScalarType() == MVT::i32);
 
-  unsigned AS = Store->getAddressSpace();
   if (!allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
-                          AS, Store->getAlignment())) {
+                          *Store->getMemOperand())) {
     return expandUnalignedStore(Store, DAG);
   }
 
+  unsigned AS = Store->getAddressSpace();
   if (Subtarget->hasLDSMisalignedBug() &&
       AS == AMDGPUAS::FLAT_ADDRESS &&
       Store->getAlignment() < VT.getStoreSize() && VT.getSizeInBits() > 32) {

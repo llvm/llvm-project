@@ -2256,7 +2256,8 @@ ASTNodeImporter::VisitTypedefNameDecl(TypedefNameDecl *D, bool IsAlias) {
           if (!FromUT->isIncompleteType() && !FoundUT->isIncompleteType())
             return Importer.MapImported(D, FoundTypedef);
         }
-        // FIXME Handle redecl chain.
+        // FIXME Handle redecl chain. When you do that make consistent changes
+        // in ASTImporterLookupTable too.
         break;
       }
 

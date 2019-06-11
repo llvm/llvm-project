@@ -95,6 +95,7 @@ public:
   RelType PltRel;
   RelType RelativeRel;
   RelType IRelativeRel;
+  RelType SymbolicRel;
   RelType TlsDescRel;
   RelType TlsGotRel;
   RelType TlsModuleIndexRel;

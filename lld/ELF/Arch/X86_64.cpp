@@ -55,6 +55,7 @@ X86_64::X86_64() {
   PltRel = R_X86_64_JUMP_SLOT;
   RelativeRel = R_X86_64_RELATIVE;
   IRelativeRel = R_X86_64_IRELATIVE;
+  SymbolicRel = R_X86_64_64;
   TlsDescRel = R_X86_64_TLSDESC;
   TlsGotRel = R_X86_64_TPOFF64;
   TlsModuleIndexRel = R_X86_64_DTPMOD64;
@@ -387,7 +388,6 @@ void X86_64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   case R_X86_64_64:
   case R_X86_64_DTPOFF64:
-  case R_X86_64_GLOB_DAT:
   case R_X86_64_PC64:
   case R_X86_64_SIZE64:
   case R_X86_64_GOT64:

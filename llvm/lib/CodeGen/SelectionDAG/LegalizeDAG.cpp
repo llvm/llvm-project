@@ -492,10 +492,9 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
       // If this is an unaligned store and the target doesn't support it,
       // expand it.
       EVT MemVT = ST->getMemoryVT();
-      unsigned AS = ST->getAddressSpace();
-      unsigned Align = ST->getAlignment();
       const DataLayout &DL = DAG.getDataLayout();
-      if (!TLI.allowsMemoryAccess(*DAG.getContext(), DL, MemVT, AS, Align)) {
+      if (!TLI.allowsMemoryAccess(*DAG.getContext(), DL, MemVT,
+                                  *ST->getMemOperand())) {
         LLVM_DEBUG(dbgs() << "Expanding unsupported unaligned store\n");
         SDValue Result = TLI.expandUnalignedStore(ST, DAG);
         ReplaceNode(SDValue(ST, 0), Result);
@@ -607,11 +606,10 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
     default: llvm_unreachable("This action is not supported yet!");
     case TargetLowering::Legal: {
       EVT MemVT = ST->getMemoryVT();
-      unsigned AS = ST->getAddressSpace();
-      unsigned Align = ST->getAlignment();
       // If this is an unaligned store and the target doesn't support it,
       // expand it.
-      if (!TLI.allowsMemoryAccess(*DAG.getContext(), DL, MemVT, AS, Align)) {
+      if (!TLI.allowsMemoryAccess(*DAG.getContext(), DL, MemVT,
+                                  *ST->getMemOperand())) {
         SDValue Result = TLI.expandUnalignedStore(ST, DAG);
         ReplaceNode(SDValue(ST, 0), Result);
       }
@@ -668,13 +666,12 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
     default: llvm_unreachable("This action is not supported yet!");
     case TargetLowering::Legal: {
       EVT MemVT = LD->getMemoryVT();
-      unsigned AS = LD->getAddressSpace();
-      unsigned Align = LD->getAlignment();
       const DataLayout &DL = DAG.getDataLayout();
       // If this is an unaligned load and the target doesn't support it,
       // expand it.
-      if (!TLI.allowsMemoryAccess(*DAG.getContext(), DL, MemVT, AS, Align)) {
-        std::tie(RVal, RChain) =  TLI.expandUnalignedLoad(LD, DAG);
+      if (!TLI.allowsMemoryAccess(*DAG.getContext(), DL, MemVT,
+                                  *LD->getMemOperand())) {
+        std::tie(RVal, RChain) = TLI.expandUnalignedLoad(LD, DAG);
       }
       break;
     }
@@ -860,10 +857,9 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
         // If this is an unaligned load and the target doesn't support it,
         // expand it.
         EVT MemVT = LD->getMemoryVT();
-        unsigned AS = LD->getAddressSpace();
-        unsigned Align = LD->getAlignment();
         const DataLayout &DL = DAG.getDataLayout();
-        if (!TLI.allowsMemoryAccess(*DAG.getContext(), DL, MemVT, AS, Align)) {
+        if (!TLI.allowsMemoryAccess(*DAG.getContext(), DL, MemVT,
+                                    *LD->getMemOperand())) {
           std::tie(Value, Chain) = TLI.expandUnalignedLoad(LD, DAG);
         }
       }

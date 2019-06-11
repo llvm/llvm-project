@@ -202,6 +202,7 @@ namespace ARMII {
     AddrMode_i12    = 16,
     AddrMode5FP16   = 17,  // i8 * 2
     AddrModeT2_ldrex = 18, // i8 * 4, with unscaled offset in MCInst
+    AddrModeT2_i7s4 = 19, // i7 * 4
   };
 
   inline static const char *AddrModeToString(AddrMode addrmode) {
@@ -225,6 +226,7 @@ namespace ARMII {
     case AddrModeT2_i8s4: return "AddrModeT2_i8s4";
     case AddrMode_i12:    return "AddrMode_i12";
     case AddrModeT2_ldrex:return "AddrModeT2_ldrex";
+    case AddrModeT2_i7s4: return "AddrModeT2_i7s4";
     }
   }
 

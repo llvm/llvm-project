@@ -38976,13 +38976,12 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
   // pre-AVX2 targets as 32-byte loads will lower to regular temporal loads.
   ISD::LoadExtType Ext = Ld->getExtensionType();
   bool Fast;
-  unsigned AddressSpace = Ld->getAddressSpace();
   unsigned Alignment = Ld->getAlignment();
   if (RegVT.is256BitVector() && !DCI.isBeforeLegalizeOps() &&
       Ext == ISD::NON_EXTLOAD &&
       ((Ld->isNonTemporal() && !Subtarget.hasInt256() && Alignment >= 16) ||
        (TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), RegVT,
-                               AddressSpace, Alignment, &Fast) && !Fast))) {
+                               *Ld->getMemOperand(), &Fast) && !Fast))) {
     unsigned NumElems = RegVT.getVectorNumElements();
     if (NumElems < 2)
       return SDValue();
@@ -39492,11 +39491,9 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   // If we are saving a concatenation of two XMM registers and 32-byte stores
   // are slow, such as on Sandy Bridge, perform two 16-byte stores.
   bool Fast;
-  unsigned AddressSpace = St->getAddressSpace();
-  unsigned Alignment = St->getAlignment();
   if (VT.is256BitVector() && StVT == VT &&
       TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
-                             AddressSpace, Alignment, &Fast) &&
+                             *St->getMemOperand(), &Fast) &&
       !Fast) {
     unsigned NumElems = VT.getVectorNumElements();
     if (NumElems < 2)
@@ -42990,11 +42987,9 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
   // If needed, look through bitcasts to get to the load.
   if (auto *FirstLd = dyn_cast<LoadSDNode>(peekThroughBitcasts(Op0))) {
     bool Fast;
-    unsigned Alignment = FirstLd->getAlignment();
-    unsigned AS = FirstLd->getAddressSpace();
     const X86TargetLowering *TLI = Subtarget.getTargetLowering();
-    if (TLI->allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT, AS,
-                                Alignment, &Fast) &&
+    if (TLI->allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
+                                *FirstLd->getMemOperand(), &Fast) &&
         Fast) {
       if (SDValue Ld =
               EltsFromConsecutiveLoads(VT, Ops, DL, DAG, Subtarget, false))

@@ -39,11 +39,11 @@ void Test() {
   std::string q1(kText, -4);
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: negative value used as length parameter
   std::string q2("test", 200);
-  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger then string literal size
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger than string literal size
   std::string q3(kText, 200);
-  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger then string literal size
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger than string literal size
   std::string q4(kText2, 200);
-  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger then string literal size
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger than string literal size
   std::string q5(kText3,  0x1000000);
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: suspicious large length parameter
   std::string q6(nullptr);
