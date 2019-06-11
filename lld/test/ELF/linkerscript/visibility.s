@@ -19,4 +19,4 @@
 
         .data
         .hidden foo
-        .long foo
+        .quad foo

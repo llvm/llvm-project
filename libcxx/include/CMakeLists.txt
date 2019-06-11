@@ -65,8 +65,6 @@ set(files
   experimental/__config
   experimental/__memory
   experimental/algorithm
-  experimental/any
-  experimental/chrono
   experimental/coroutine
   experimental/deque
   experimental/filesystem
@@ -76,17 +74,11 @@ set(files
   experimental/list
   experimental/map
   experimental/memory_resource
-  experimental/numeric
-  experimental/optional
   experimental/propagate_const
-  experimental/ratio
   experimental/regex
   experimental/set
   experimental/simd
   experimental/string
-  experimental/string_view
-  experimental/system_error
-  experimental/tuple
   experimental/type_traits
   experimental/unordered_map
   experimental/unordered_set
