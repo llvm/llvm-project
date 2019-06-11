@@ -94,6 +94,9 @@ def CortexA57Model : SchedMachineModel {
 
   // FIXME: Remove when all errors have been fixed.
   let FullInstRWOverlapCheck = 0;
+
+  let UnsupportedFeatures = [HasV8_1MMainline, HasMVEInt, HasMVEFloat,
+                             HasFPRegsV8_1M];
 }
 
 //===----------------------------------------------------------------------===//

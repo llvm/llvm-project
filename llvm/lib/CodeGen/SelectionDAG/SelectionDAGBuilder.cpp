@@ -6736,8 +6736,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     LowerDeoptimizeCall(&I);
     return;
 
-  case Intrinsic::experimental_vector_reduce_fadd:
-  case Intrinsic::experimental_vector_reduce_fmul:
+  case Intrinsic::experimental_vector_reduce_v2_fadd:
+  case Intrinsic::experimental_vector_reduce_v2_fmul:
   case Intrinsic::experimental_vector_reduce_add:
   case Intrinsic::experimental_vector_reduce_mul:
   case Intrinsic::experimental_vector_reduce_and:
@@ -8795,15 +8795,17 @@ void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
     FMF = I.getFastMathFlags();
 
   switch (Intrinsic) {
-  case Intrinsic::experimental_vector_reduce_fadd:
-    if (FMF.isFast())
-      Res = DAG.getNode(ISD::VECREDUCE_FADD, dl, VT, Op2);
+  case Intrinsic::experimental_vector_reduce_v2_fadd:
+    if (FMF.allowReassoc())
+      Res = DAG.getNode(ISD::FADD, dl, VT, Op1,
+                        DAG.getNode(ISD::VECREDUCE_FADD, dl, VT, Op2));
     else
       Res = DAG.getNode(ISD::VECREDUCE_STRICT_FADD, dl, VT, Op1, Op2);
     break;
-  case Intrinsic::experimental_vector_reduce_fmul:
-    if (FMF.isFast())
-      Res = DAG.getNode(ISD::VECREDUCE_FMUL, dl, VT, Op2);
+  case Intrinsic::experimental_vector_reduce_v2_fmul:
+    if (FMF.allowReassoc())
+      Res = DAG.getNode(ISD::FMUL, dl, VT, Op1,
+                        DAG.getNode(ISD::VECREDUCE_FMUL, dl, VT, Op2));
     else
       Res = DAG.getNode(ISD::VECREDUCE_STRICT_FMUL, dl, VT, Op1, Op2);
     break;

@@ -109,6 +109,7 @@ def AddrModeT2_i8s4 : AddrMode<15>;
 def AddrMode_i12    : AddrMode<16>;
 def AddrMode5FP16   : AddrMode<17>;
 def AddrModeT2_ldrex : AddrMode<18>;
+def AddrModeT2_i7s4 : AddrMode<19>;
 
 // Load / store index mode.
 class IndexMode<bits<2> val> {

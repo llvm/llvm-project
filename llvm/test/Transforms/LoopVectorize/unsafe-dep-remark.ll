@@ -11,7 +11,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ;     5	  }
 ;     6	}
 
-; CHECK: remark: /tmp/kk.c:3:16: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK: remark: /tmp/kk.c:2:3: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 
 define void @success(i8* nocapture %A, i8* nocapture readonly %B, i8* nocapture %C, i8* nocapture readonly %D, i8* nocapture readonly %E, i32 %N) !dbg !6 {
 entry:

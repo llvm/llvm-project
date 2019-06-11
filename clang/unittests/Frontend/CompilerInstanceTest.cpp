@@ -73,7 +73,6 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
 
 TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
   auto DiagOpts = new DiagnosticOptions();
-  DiagOpts->DiagnosticLogFile = "log.diags";
 
   // Create the diagnostic engine with unowned consumer.
   std::string DiagnosticOutput;

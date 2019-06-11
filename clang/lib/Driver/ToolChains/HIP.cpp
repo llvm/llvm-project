@@ -127,7 +127,7 @@ const char *AMDGCN::Linker::constructLlcCommand(
     llvm::StringRef OutputFilePrefix, const char *InputFileName) const {
   // Construct llc command.
   ArgStringList LlcArgs{InputFileName, "-mtriple=amdgcn-amd-amdhsa",
-                        "-filetype=obj", "-mattr=-code-object-v3",
+                        "-filetype=obj",
                         Args.MakeArgString("-mcpu=" + SubArchName)};
 
   // Extract all the -m options

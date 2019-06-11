@@ -405,6 +405,12 @@ def FeatureUseAA : SubtargetFeature<"use-aa", "UseAA", "true",
 def FeatureSB       : SubtargetFeature<"sb", "HasSB", "true",
   "Enable v8.5a Speculation Barrier" >;
 
+// Armv8.1-M extensions
+
+def FeatureLOB            : SubtargetFeature<"lob", "HasLOB", "true",
+                                             "Enable Low Overhead Branch "
+                                             "extensions">;
+
 //===----------------------------------------------------------------------===//
 // ARM architecture class
 //
@@ -805,7 +811,8 @@ def ARMv81mMainline : Architecture<"armv8.1-m.main", "ARMv81mMainline",
                                                        Feature8MSecExt,
                                                        FeatureAcquireRelease,
                                                        FeatureMClass,
-                                                       FeatureRAS]>;
+                                                       FeatureRAS,
+                                                       FeatureLOB]>;
 
 // Aliases
 def IWMMXT   : Architecture<"iwmmxt",      "ARMv5te",  [ARMv5te]>;

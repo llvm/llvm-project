@@ -1482,6 +1482,14 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
   return allowsMisalignedMemoryAccesses(VT, AddrSpace, Alignment, Fast);
 }
 
+bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
+                                            const DataLayout &DL, EVT VT,
+                                            const MachineMemOperand &MMO,
+                                            bool *Fast) const {
+  return allowsMemoryAccess(Context, DL, VT, MMO.getAddrSpace(),
+                            MMO.getAlignment(), Fast);
+}
+
 BranchProbability TargetLoweringBase::getPredictableBranchThreshold() const {
   return BranchProbability(MinPercentageForPredictableBranch, 100);
 }

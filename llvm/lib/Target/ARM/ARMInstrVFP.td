@@ -2299,14 +2299,14 @@ class MovFromVFP<bits<4> opc19_16, dag oops, dag iops, string opc, string asm,
   let Inst{3-0}   = 0b0000;
 }
 
-// APSR is the application level alias of CPSR. This FPSCR N, Z, C, V flags
-// to APSR.
-let Defs = [CPSR], Uses = [FPSCR_NZCV], Predicates = [HasFPRegs],
-    Rt = 0b1111 /* apsr_nzcv */ in
-def FMSTAT : MovFromVFP<0b0001 /* fpscr */, (outs), (ins),
-                        "vmrs", "\tAPSR_nzcv, fpscr", [(arm_fmstat)]>;
-
 let DecoderMethod = "DecodeForVMRSandVMSR" in {
+ // APSR is the application level alias of CPSR. This FPSCR N, Z, C, V flags
+ // to APSR.
+ let Defs = [CPSR], Uses = [FPSCR_NZCV], Predicates = [HasFPRegs],
+     Rt = 0b1111 /* apsr_nzcv */ in
+ def FMSTAT : MovFromVFP<0b0001 /* fpscr */, (outs), (ins),
+                         "vmrs", "\tAPSR_nzcv, fpscr", [(arm_fmstat)]>;
+
  // Application level FPSCR -> GPR
  let hasSideEffects = 1, Uses = [FPSCR], Predicates = [HasFPRegs] in
  def VMRS :  MovFromVFP<0b0001 /* fpscr */, (outs GPRnopc:$Rt), (ins),
@@ -2331,6 +2331,33 @@ let DecoderMethod = "DecodeForVMRSandVMSR" in {
                                 "vmrs", "\t$Rt, fpinst", []>;
    def VMRS_FPINST2 : MovFromVFP<0b1010 /* fpinst2 */, (outs GPRnopc:$Rt),
                                  (ins), "vmrs", "\t$Rt, fpinst2", []>;
+   let Predicates = [HasV8_1MMainline, HasFPRegs] in {
+     // System level FPSCR_NZCVQC -> GPR
+     def VMRS_FPSCR_NZCVQC
+       : MovFromVFP<0b0010 /* fpscr_nzcvqc */,
+                    (outs GPR:$Rt), (ins cl_FPSCR_NZCV:$fpscr_in),
+                    "vmrs", "\t$Rt, fpscr_nzcvqc", []>;
+   }
+ }
+ let Predicates = [HasV8_1MMainline, Has8MSecExt] in {
+   // System level FPSCR -> GPR, with context saving for security extensions
+   def VMRS_FPCXTNS : MovFromVFP<0b1110 /* fpcxtns */, (outs GPR:$Rt), (ins),
+                                 "vmrs", "\t$Rt, fpcxtns", []>;
+ }
+ let Predicates = [HasV8_1MMainline, Has8MSecExt] in {
+   // System level FPSCR -> GPR, with context saving for security extensions
+   def VMRS_FPCXTS : MovFromVFP<0b1111 /* fpcxts */, (outs GPR:$Rt), (ins),
+                                "vmrs", "\t$Rt, fpcxts", []>;
+ }
+
+ let Predicates = [HasV8_1MMainline, HasMVEInt] in {
+   // System level VPR/P0 -> GPR
+   let Uses = [VPR] in
+   def VMRS_VPR : MovFromVFP<0b1100 /* vpr */, (outs GPR:$Rt), (ins),
+                             "vmrs", "\t$Rt, vpr", []>;
+
+   def VMRS_P0  : MovFromVFP<0b1101 /* p0 */, (outs GPR:$Rt), (ins VCCR:$cond),
+                             "vmrs", "\t$Rt, p0", []>;
  }
 }
 
@@ -2353,6 +2380,7 @@ class MovToVFP<bits<4> opc19_16, dag oops, dag iops, string opc, string asm,
   let Inst{11-8}  = 0b1010;
   let Inst{7}     = 0;
   let Inst{4}     = 1;
+  let Predicates = [HasVFP2];
 }
 
 let DecoderMethod = "DecodeForVMRSandVMSR" in {
@@ -2372,6 +2400,33 @@ let DecoderMethod = "DecodeForVMRSandVMSR" in {
                               "vmsr", "\tfpinst, $src", []>;
    def VMSR_FPINST2 : MovToVFP<0b1010 /* fpinst2 */, (outs), (ins GPRnopc:$src),
                                "vmsr", "\tfpinst2, $src", []>;
+ }
+ let Predicates = [HasV8_1MMainline, Has8MSecExt] in {
+   // System level GPR -> FPSCR with context saving for security extensions
+   def VMSR_FPCXTNS : MovToVFP<0b1110 /* fpcxtns */, (outs), (ins GPR:$src),
+                               "vmsr", "\tfpcxtns, $src", []>;
+ }
+ let Predicates = [HasV8_1MMainline, Has8MSecExt] in {
+   // System level GPR -> FPSCR with context saving for security extensions
+   def VMSR_FPCXTS : MovToVFP<0b1111 /* fpcxts */, (outs), (ins GPR:$src),
+                              "vmsr", "\tfpcxts, $src", []>;
+ }
+ let Predicates = [HasV8_1MMainline, HasFPRegs] in {
+   // System level GPR -> FPSCR_NZCVQC
+   def VMSR_FPSCR_NZCVQC
+     : MovToVFP<0b0010 /* fpscr_nzcvqc */,
+                (outs cl_FPSCR_NZCV:$fpscr_out), (ins GPR:$src),
+                "vmsr", "\tfpscr_nzcvqc, $src", []>;
+ }
+
+ let Predicates = [HasV8_1MMainline, HasMVEInt] in {
+   // System level GPR -> VPR/P0
+   let Defs = [VPR] in
+   def VMSR_VPR : MovToVFP<0b1100 /* vpr */, (outs), (ins GPR:$src),
+                           "vmsr", "\tvpr, $src", []>;
+
+   def VMSR_P0  : MovToVFP<0b1101 /* p0 */, (outs VCCR:$cond), (ins GPR:$src),
+                           "vmsr", "\tp0, $src", []>;
  }
 }
 
@@ -2549,3 +2604,126 @@ def : VFP3InstAlias<"fconstd${p} $Dd, $val",
                     (FCONSTD DPR:$Dd, vfp_f64imm:$val, pred:$p)>;
 def : VFP3InstAlias<"fconsts${p} $Sd, $val",
                     (FCONSTS SPR:$Sd, vfp_f32imm:$val, pred:$p)>;
+
+def VSCCLRMD : VFPXI<(outs), (ins pred:$p, fp_dreglist_with_vpr:$regs, variable_ops),
+                      AddrModeNone, 4, IndexModeNone, VFPMiscFrm, NoItinerary,
+                      "vscclrm{$p}\t$regs", "", []>, Sched<[]> {
+  bits<13> regs;
+  let Inst{31-23} = 0b111011001;
+  let Inst{22} = regs{12};
+  let Inst{21-16} = 0b011111;
+  let Inst{15-12} = regs{11-8};
+  let Inst{11-8} = 0b1011;
+  let Inst{7-0} = regs{7-0};
+
+  let DecoderMethod = "DecodeVSCCLRM";
+
+  list<Predicate> Predicates = [HasV8_1MMainline, Has8MSecExt];
+}
+
+def VSCCLRMS : VFPXI<(outs), (ins pred:$p, fp_sreglist_with_vpr:$regs, variable_ops),
+                      AddrModeNone, 4, IndexModeNone, VFPMiscFrm, NoItinerary,
+                      "vscclrm{$p}\t$regs", "", []>, Sched<[]> {
+  bits<13> regs;
+  let Inst{31-23} = 0b111011001;
+  let Inst{22} = regs{8};
+  let Inst{21-16} = 0b011111;
+  let Inst{15-12} = regs{12-9};
+  let Inst{11-8} = 0b1010;
+  let Inst{7-0} = regs{7-0};
+
+  let DecoderMethod = "DecodeVSCCLRM";
+
+  list<Predicate> Predicates = [HasV8_1MMainline, Has8MSecExt];
+}
+
+//===----------------------------------------------------------------------===//
+// Store VFP System Register to memory.
+//
+
+class vfp_vstrldr<bit opc, bit P, bit W, bits<4> SysReg, string sysreg,
+                  dag oops, dag iops, IndexMode im, string Dest, string cstr>
+    : VFPI<oops, iops, AddrModeT2_i7s4, 4, im, VFPLdStFrm, IIC_fpSTAT,
+           !if(opc,"vldr","vstr"), !strconcat("\t", sysreg, ", ", Dest), cstr, []>,
+      Sched<[]> {
+  bits<12> addr;
+  let Inst{27-25} = 0b110;
+  let Inst{24} = P;
+  let Inst{23} = addr{7};
+  let Inst{22} = SysReg{3};
+  let Inst{21} = W;
+  let Inst{20} = opc;
+  let Inst{19-16} = addr{11-8};
+  let Inst{15-13} = SysReg{2-0};
+  let Inst{12-7} = 0b011111;
+  let Inst{6-0} = addr{6-0};
+  list<Predicate> Predicates = [HasFPRegs, HasV8_1MMainline];
+  let mayLoad = opc;
+  let mayStore = !if(opc, 0b0, 0b1);
+  let hasSideEffects = 1;
+}
+
+multiclass vfp_vstrldr_sysreg<bit opc, bits<4> SysReg, string sysreg,
+                              dag oops=(outs), dag iops=(ins)> {
+  def _off :
+    vfp_vstrldr<opc, 1, 0, SysReg, sysreg,
+                oops, !con(iops, (ins t2addrmode_imm7s4:$addr)),
+                IndexModePost, "$addr", "" > {
+    let DecoderMethod = "DecodeVSTRVLDR_SYSREG<false>";
+  }
+
+  def _pre :
+    vfp_vstrldr<opc, 1, 1, SysReg, sysreg,
+                !con(oops, (outs GPRnopc:$wb)),
+                !con(iops, (ins t2addrmode_imm7s4_pre:$addr)),
+                IndexModePre, "$addr!", "$addr.base = $wb"> {
+    let DecoderMethod = "DecodeVSTRVLDR_SYSREG<true>";
+  }
+
+  def _post :
+    vfp_vstrldr<opc, 0, 1, SysReg, sysreg,
+                !con(oops, (outs GPRnopc:$wb)),
+                !con(iops, (ins t2_addr_offset_none:$Rn,
+                                t2am_imm7s4_offset:$addr)),
+                IndexModePost, "$Rn$addr", "$Rn.base = $wb"> {
+   bits<4> Rn;
+   let Inst{19-16} = Rn{3-0};
+   let DecoderMethod = "DecodeVSTRVLDR_SYSREG<true>";
+ }
+}
+
+let Defs = [FPSCR] in {
+  defm VSTR_FPSCR          : vfp_vstrldr_sysreg<0b0,0b0001, "fpscr">;
+  defm VSTR_FPSCR_NZCVQC   : vfp_vstrldr_sysreg<0b0,0b0010, "fpscr_nzcvqc">;
+
+  let Predicates = [HasV8_1MMainline, Has8MSecExt] in {
+    defm VSTR_FPCXTNS      : vfp_vstrldr_sysreg<0b0,0b1110, "fpcxtns">;
+    defm VSTR_FPCXTS       : vfp_vstrldr_sysreg<0b0,0b1111, "fpcxts">;
+  }
+}
+
+let Predicates = [HasV8_1MMainline, HasMVEInt] in {
+  let Uses = [VPR] in {
+    defm VSTR_VPR          : vfp_vstrldr_sysreg<0b0,0b1100, "vpr">;
+  }
+  defm VSTR_P0             : vfp_vstrldr_sysreg<0b0,0b1101, "p0",
+                                                (outs), (ins VCCR:$P0)>;
+}
+
+let Uses = [FPSCR] in {
+  defm VLDR_FPSCR          : vfp_vstrldr_sysreg<0b1,0b0001, "fpscr">;
+  defm VLDR_FPSCR_NZCVQC   : vfp_vstrldr_sysreg<0b1,0b0010, "fpscr_nzcvqc">;
+
+  let Predicates = [HasV8_1MMainline, Has8MSecExt] in {
+    defm VLDR_FPCXTNS      : vfp_vstrldr_sysreg<0b1,0b1110, "fpcxtns">;
+    defm VLDR_FPCXTS       : vfp_vstrldr_sysreg<0b1,0b1111, "fpcxts">;
+  }
+}
+
+let Predicates = [HasV8_1MMainline, HasMVEInt] in {
+  let Defs = [VPR] in {
+    defm VLDR_VPR          : vfp_vstrldr_sysreg<0b1,0b1100, "vpr">;
+  }
+  defm VLDR_P0             : vfp_vstrldr_sysreg<0b1,0b1101, "p0",
+                                                (outs VCCR:$P0), (ins)>;
+}

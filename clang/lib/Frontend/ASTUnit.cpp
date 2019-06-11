@@ -608,17 +608,20 @@ private:
 };
 
 /// Diagnostic consumer that saves each diagnostic it is given.
-class StoredDiagnosticConsumer : public DiagnosticConsumer {
+class FilterAndStoreDiagnosticConsumer : public DiagnosticConsumer {
   SmallVectorImpl<StoredDiagnostic> *StoredDiags;
   SmallVectorImpl<ASTUnit::StandaloneDiagnostic> *StandaloneDiags;
+  bool CaptureNonErrorsFromIncludes = true;
   const LangOptions *LangOpts = nullptr;
   SourceManager *SourceMgr = nullptr;
 
 public:
-  StoredDiagnosticConsumer(
+  FilterAndStoreDiagnosticConsumer(
       SmallVectorImpl<StoredDiagnostic> *StoredDiags,
-      SmallVectorImpl<ASTUnit::StandaloneDiagnostic> *StandaloneDiags)
-      : StoredDiags(StoredDiags), StandaloneDiags(StandaloneDiags) {
+      SmallVectorImpl<ASTUnit::StandaloneDiagnostic> *StandaloneDiags,
+      bool CaptureNonErrorsFromIncludes)
+      : StoredDiags(StoredDiags), StandaloneDiags(StandaloneDiags),
+        CaptureNonErrorsFromIncludes(CaptureNonErrorsFromIncludes) {
     assert((StoredDiags || StandaloneDiags) &&
            "No output collections were passed to StoredDiagnosticConsumer.");
   }
@@ -634,21 +637,25 @@ public:
                         const Diagnostic &Info) override;
 };
 
-/// RAII object that optionally captures diagnostics, if
+/// RAII object that optionally captures and filters diagnostics, if
 /// there is no diagnostic client to capture them already.
 class CaptureDroppedDiagnostics {
   DiagnosticsEngine &Diags;
-  StoredDiagnosticConsumer Client;
+  FilterAndStoreDiagnosticConsumer Client;
   DiagnosticConsumer *PreviousClient = nullptr;
   std::unique_ptr<DiagnosticConsumer> OwningPreviousClient;
 
 public:
   CaptureDroppedDiagnostics(
-      bool RequestCapture, DiagnosticsEngine &Diags,
+      CaptureDiagsKind CaptureDiagnostics, DiagnosticsEngine &Diags,
       SmallVectorImpl<StoredDiagnostic> *StoredDiags,
       SmallVectorImpl<ASTUnit::StandaloneDiagnostic> *StandaloneDiags)
-      : Diags(Diags), Client(StoredDiags, StandaloneDiags) {
-    if (RequestCapture || Diags.getClient() == nullptr) {
+      : Diags(Diags),
+        Client(StoredDiags, StandaloneDiags,
+               CaptureDiagnostics !=
+                   CaptureDiagsKind::AllWithoutNonErrorsFromIncludes) {
+    if (CaptureDiagnostics != CaptureDiagsKind::None ||
+        Diags.getClient() == nullptr) {
       OwningPreviousClient = Diags.takeClient();
       PreviousClient = Diags.getClient();
       Diags.setClient(&Client, false);
@@ -667,8 +674,16 @@ static ASTUnit::StandaloneDiagnostic
 makeStandaloneDiagnostic(const LangOptions &LangOpts,
                          const StoredDiagnostic &InDiag);
 
-void StoredDiagnosticConsumer::HandleDiagnostic(DiagnosticsEngine::Level Level,
-                                                const Diagnostic &Info) {
+static bool isInMainFile(const clang::Diagnostic &D) {
+  if (!D.hasSourceManager() || !D.getLocation().isValid())
+    return false;
+
+  auto &M = D.getSourceManager();
+  return M.isWrittenInMainFile(M.getExpansionLoc(D.getLocation()));
+}
+
+void FilterAndStoreDiagnosticConsumer::HandleDiagnostic(
+    DiagnosticsEngine::Level Level, const Diagnostic &Info) {
   // Default implementation (Warnings/errors count).
   DiagnosticConsumer::HandleDiagnostic(Level, Info);
 
@@ -676,6 +691,11 @@ void StoredDiagnosticConsumer::HandleDiagnostic(DiagnosticsEngine::Level Level,
   // about. This effectively drops diagnostics from modules we're building.
   // FIXME: In the long run, ee don't want to drop source managers from modules.
   if (!Info.hasSourceManager() || &Info.getSourceManager() == SourceMgr) {
+    if (!CaptureNonErrorsFromIncludes && Level <= DiagnosticsEngine::Warning &&
+        !isInMainFile(Info)) {
+      return;
+    }
+
     StoredDiagnostic *ResultDiag = nullptr;
     if (StoredDiags) {
       StoredDiags->emplace_back(Level, Info);
@@ -723,10 +743,13 @@ ASTUnit::getBufferForFile(StringRef Filename, std::string *ErrorStr) {
 
 /// Configure the diagnostics object for use with ASTUnit.
 void ASTUnit::ConfigureDiags(IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
-                             ASTUnit &AST, bool CaptureDiagnostics) {
+                             ASTUnit &AST,
+                             CaptureDiagsKind CaptureDiagnostics) {
   assert(Diags.get() && "no DiagnosticsEngine was provided");
-  if (CaptureDiagnostics)
-    Diags->setClient(new StoredDiagnosticConsumer(&AST.StoredDiagnostics, nullptr));
+  if (CaptureDiagnostics != CaptureDiagsKind::None)
+    Diags->setClient(new FilterAndStoreDiagnosticConsumer(
+        &AST.StoredDiagnostics, nullptr,
+        CaptureDiagnostics != CaptureDiagsKind::AllWithoutNonErrorsFromIncludes));
 }
 
 std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
@@ -734,7 +757,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
     WhatToLoad ToLoad, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
     const FileSystemOptions &FileSystemOpts, bool UseDebugInfo,
     bool OnlyLocalDecls, ArrayRef<RemappedFile> RemappedFiles,
-    bool CaptureDiagnostics, bool AllowPCHWithCompilerErrors,
+    CaptureDiagsKind CaptureDiagnostics, bool AllowPCHWithCompilerErrors,
     bool UserFilesAreVolatile) {
   std::unique_ptr<ASTUnit> AST(new ASTUnit(true));
 
@@ -1336,8 +1359,8 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
   ASTUnitPreambleCallbacks Callbacks;
   {
     llvm::Optional<CaptureDroppedDiagnostics> Capture;
-    if (CaptureDiagnostics)
-      Capture.emplace(/*RequestCapture=*/true, *Diagnostics, &NewPreambleDiags,
+    if (CaptureDiagnostics != CaptureDiagsKind::None)
+      Capture.emplace(CaptureDiagnostics, *Diagnostics, &NewPreambleDiags,
                       &NewPreambleDiagsStandalone);
 
     // We did not previously compute a preamble, or it can't be reused anyway.
@@ -1465,7 +1488,8 @@ StringRef ASTUnit::getASTFileName() const {
 std::unique_ptr<ASTUnit>
 ASTUnit::create(std::shared_ptr<CompilerInvocation> CI,
                 IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
-                bool CaptureDiagnostics, bool UserFilesAreVolatile) {
+                CaptureDiagsKind CaptureDiagnostics,
+                bool UserFilesAreVolatile) {
   std::unique_ptr<ASTUnit> AST(new ASTUnit(false));
   ConfigureDiags(Diags, *AST, CaptureDiagnostics);
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
@@ -1487,7 +1511,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags, FrontendAction *Action,
     ASTUnit *Unit, bool Persistent, StringRef ResourceFilesPath,
-    bool OnlyLocalDecls, bool CaptureDiagnostics,
+    bool OnlyLocalDecls, CaptureDiagsKind CaptureDiagnostics,
     unsigned PrecompilePreambleAfterNParses, bool CacheCodeCompletionResults,
     bool IncludeBriefCommentsInCodeCompletion, bool UserFilesAreVolatile,
     std::unique_ptr<ASTUnit> *ErrAST) {
@@ -1665,7 +1689,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(
     std::shared_ptr<CompilerInvocation> CI,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags, FileManager *FileMgr,
-    bool OnlyLocalDecls, bool CaptureDiagnostics,
+    bool OnlyLocalDecls, CaptureDiagsKind CaptureDiagnostics,
     unsigned PrecompilePreambleAfterNParses, TranslationUnitKind TUKind,
     bool CacheCodeCompletionResults, bool IncludeBriefCommentsInCodeCompletion,
     bool UserFilesAreVolatile) {
@@ -1702,7 +1726,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
     const char **ArgBegin, const char **ArgEnd,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags, StringRef ResourceFilesPath,
-    bool OnlyLocalDecls, bool CaptureDiagnostics,
+    bool OnlyLocalDecls, CaptureDiagsKind CaptureDiagnostics,
     ArrayRef<RemappedFile> RemappedFiles, bool RemappedFilesKeepOriginalName,
     unsigned PrecompilePreambleAfterNParses, TranslationUnitKind TUKind,
     bool CacheCodeCompletionResults, bool IncludeBriefCommentsInCodeCompletion,
@@ -2159,7 +2183,7 @@ void ASTUnit::CodeComplete(
 
   // Set up diagnostics, capturing any diagnostics produced.
   Clang->setDiagnostics(&Diag);
-  CaptureDroppedDiagnostics Capture(true,
+  CaptureDroppedDiagnostics Capture(CaptureDiagsKind::All,
                                     Clang->getDiagnostics(),
                                     &StoredDiagnostics, nullptr);
   ProcessWarningOptions(Diag, Inv.getDiagnosticOpts());

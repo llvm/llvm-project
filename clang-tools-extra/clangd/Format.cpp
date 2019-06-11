@@ -91,7 +91,7 @@ tooling::Replacement replacement(llvm::StringRef Code, llvm::StringRef From,
   // The filename is required but ignored.
   return tooling::Replacement(Filename, From.data() - Code.data(),
                               From.size(), To);
-};
+}
 
 // High-level representation of incremental formatting changes.
 // The changes are made in two steps.

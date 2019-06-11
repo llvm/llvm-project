@@ -1615,12 +1615,20 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &FPT) {
         return CastInst::CreateFPCast(ExactResult, Ty);
       }
     }
+  }
 
-    // (fptrunc (fneg x)) -> (fneg (fptrunc x))
-    Value *X;
-    if (match(OpI, m_FNeg(m_Value(X)))) {
+  // (fptrunc (fneg x)) -> (fneg (fptrunc x))
+  Value *X;
+  Instruction *Op = dyn_cast<Instruction>(FPT.getOperand(0));
+  if (Op && Op->hasOneUse()) {
+    if (match(Op, m_FNeg(m_Value(X)))) {
       Value *InnerTrunc = Builder.CreateFPTrunc(X, Ty);
-      return BinaryOperator::CreateFNegFMF(InnerTrunc, OpI);
+
+      // FIXME: Once we're sure that unary FNeg optimizations are on par with
+      // binary FNeg, this should always return a unary operator.
+      if (isa<BinaryOperator>(Op))
+        return BinaryOperator::CreateFNegFMF(InnerTrunc, Op);
+      return UnaryOperator::CreateFNegFMF(InnerTrunc, Op);
     }
   }
 

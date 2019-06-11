@@ -38,11 +38,9 @@ define float @neg_sub_nsz(float %x, float %y) {
   ret float %t2
 }
 
-; FIXME: This combine isn't working.
 define float @unary_neg_sub_nsz(float %x, float %y) {
 ; CHECK-LABEL: @unary_neg_sub_nsz(
-; CHECK-NEXT:    [[T1:%.*]] = fsub float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fneg nsz float [[T1]]
+; CHECK-NEXT:    [[T2:%.*]] = fsub nsz float [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret float [[T2]]
 ;
   %t1 = fsub float %x, %y
@@ -345,12 +343,11 @@ define float @neg_trunc_op1_extra_use(double %a, float %b) {
   ret float %t3
 }
 
-; FIXME: This combine isn't working.
 define float @unary_neg_trunc_op1_extra_use(double %a, float %b) {
 ; CHECK-LABEL: @unary_neg_trunc_op1_extra_use(
-; CHECK-NEXT:    [[T1:%.*]] = fneg double [[A:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fptrunc double [[T1]] to float
-; CHECK-NEXT:    [[T3:%.*]] = fsub float [[B:%.*]], [[T2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc double [[A:%.*]] to float
+; CHECK-NEXT:    [[T2:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    [[T3:%.*]] = fadd float [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    call void @use(float [[T2]])
 ; CHECK-NEXT:    ret float [[T3]]
 ;

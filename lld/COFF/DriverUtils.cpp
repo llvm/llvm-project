@@ -697,6 +697,7 @@ void checkFailIfMismatch(StringRef Arg, InputFile *Source) {
 }
 
 // Convert Windows resource files (.res files) to a .obj file.
+// Does what cvtres.exe does, but in-process and cross-platform.
 MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> MBs) {
   object::WindowsResourceParser Parser;
 
@@ -718,7 +719,8 @@ MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> MBs) {
   }
 
   Expected<std::unique_ptr<MemoryBuffer>> E =
-      llvm::object::writeWindowsResourceCOFF(Config->Machine, Parser);
+      llvm::object::writeWindowsResourceCOFF(Config->Machine, Parser,
+                                             Config->Timestamp);
   if (!E)
     fatal("failed to write .res to COFF: " + toString(E.takeError()));
 

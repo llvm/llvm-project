@@ -7,8 +7,8 @@ declare i64 @llvm.experimental.vector.reduce.and.i64.v2i64(<2 x i64>)
 declare i64 @llvm.experimental.vector.reduce.or.i64.v2i64(<2 x i64>)
 declare i64 @llvm.experimental.vector.reduce.xor.i64.v2i64(<2 x i64>)
 
-declare float @llvm.experimental.vector.reduce.fadd.f32.v4f32(float, <4 x float>)
-declare float @llvm.experimental.vector.reduce.fmul.f32.v4f32(float, <4 x float>)
+declare float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float, <4 x float>)
+declare float @llvm.experimental.vector.reduce.v2.fmul.f32.v4f32(float, <4 x float>)
 
 declare i64 @llvm.experimental.vector.reduce.smax.i64.v2i64(<2 x i64>)
 declare i64 @llvm.experimental.vector.reduce.smin.i64.v2i64(<2 x i64>)
@@ -92,10 +92,11 @@ define float @fadd_f32(<4 x float> %vec) {
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
-; CHECK-NEXT:    ret float [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast float 0.000000e+00, [[TMP0]]
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
 entry:
-  %r = call fast float @llvm.experimental.vector.reduce.fadd.f32.v4f32(float undef, <4 x float> %vec)
+  %r = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.0, <4 x float> %vec)
   ret float %r
 }
 
@@ -107,10 +108,11 @@ define float @fadd_f32_accum(float %accum, <4 x float> %vec) {
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
-; CHECK-NEXT:    ret float [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast float %accum, [[TMP0]]
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
 entry:
-  %r = call fast float @llvm.experimental.vector.reduce.fadd.f32.v4f32(float %accum, <4 x float> %vec)
+  %r = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float %accum, <4 x float> %vec)
   ret float %r
 }
 
@@ -128,7 +130,7 @@ define float @fadd_f32_strict(<4 x float> %vec) {
 ; CHECK-NEXT:    ret float [[BIN_RDX3]]
 ;
 entry:
-  %r = call float @llvm.experimental.vector.reduce.fadd.f32.v4f32(float undef, <4 x float> %vec)
+  %r = call float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float undef, <4 x float> %vec)
   ret float %r
 }
 
@@ -146,7 +148,7 @@ define float @fadd_f32_strict_accum(float %accum, <4 x float> %vec) {
 ; CHECK-NEXT:    ret float [[BIN_RDX3]]
 ;
 entry:
-  %r = call float @llvm.experimental.vector.reduce.fadd.f32.v4f32(float %accum, <4 x float> %vec)
+  %r = call float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float %accum, <4 x float> %vec)
   ret float %r
 }
 
@@ -158,10 +160,11 @@ define float @fmul_f32(<4 x float> %vec) {
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fmul fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
-; CHECK-NEXT:    ret float [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float 1.000000e+00, [[TMP0]]
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
 entry:
-  %r = call fast float @llvm.experimental.vector.reduce.fmul.f32.v4f32(float undef, <4 x float> %vec)
+  %r = call fast float @llvm.experimental.vector.reduce.v2.fmul.f32.v4f32(float 1.0, <4 x float> %vec)
   ret float %r
 }
 
@@ -173,10 +176,11 @@ define float @fmul_f32_accum(float %accum, <4 x float> %vec) {
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fmul fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
-; CHECK-NEXT:    ret float [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float %accum, [[TMP0]]
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
 entry:
-  %r = call fast float @llvm.experimental.vector.reduce.fmul.f32.v4f32(float %accum, <4 x float> %vec)
+  %r = call fast float @llvm.experimental.vector.reduce.v2.fmul.f32.v4f32(float %accum, <4 x float> %vec)
   ret float %r
 }
 
@@ -194,7 +198,7 @@ define float @fmul_f32_strict(<4 x float> %vec) {
 ; CHECK-NEXT:    ret float [[BIN_RDX3]]
 ;
 entry:
-  %r = call float @llvm.experimental.vector.reduce.fmul.f32.v4f32(float undef, <4 x float> %vec)
+  %r = call float @llvm.experimental.vector.reduce.v2.fmul.f32.v4f32(float undef, <4 x float> %vec)
   ret float %r
 }
 
@@ -212,7 +216,7 @@ define float @fmul_f32_strict_accum(float %accum, <4 x float> %vec) {
 ; CHECK-NEXT:    ret float [[BIN_RDX3]]
 ;
 entry:
-  %r = call float @llvm.experimental.vector.reduce.fmul.f32.v4f32(float %accum, <4 x float> %vec)
+  %r = call float @llvm.experimental.vector.reduce.v2.fmul.f32.v4f32(float %accum, <4 x float> %vec)
   ret float %r
 }
 
