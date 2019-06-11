@@ -29,8 +29,6 @@
 #ifdef _ARCH_PWR8
 #define PPC64_HAS_VMX
 #endif
-#elif defined(__POWERPC__) || defined(__powerpc__) || defined(__ppc__)
-#define SEPARATOR @
 #elif defined(__arm64__)
 #define SEPARATOR %%
 #else

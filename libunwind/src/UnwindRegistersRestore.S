@@ -396,119 +396,119 @@ Lnovec:
 #elif defined(__ppc__)
 
 DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_ppc6jumptoEv)
-;
-; void libunwind::Registers_ppc::jumpto()
-;
-; On entry:
-;  thread_state pointer is in r3
-;
+//
+// void libunwind::Registers_ppc::jumpto()
+//
+// On entry:
+//  thread_state pointer is in r3
+//
 
-  ; restore integral registerrs
-  ; skip r0 for now
-  ; skip r1 for now
-  lwz     r2, 16(r3)
-  ; skip r3 for now
-  ; skip r4 for now
-  ; skip r5 for now
-  lwz     r6, 32(r3)
-  lwz     r7, 36(r3)
-  lwz     r8, 40(r3)
-  lwz     r9, 44(r3)
-  lwz    r10, 48(r3)
-  lwz    r11, 52(r3)
-  lwz    r12, 56(r3)
-  lwz    r13, 60(r3)
-  lwz    r14, 64(r3)
-  lwz    r15, 68(r3)
-  lwz    r16, 72(r3)
-  lwz    r17, 76(r3)
-  lwz    r18, 80(r3)
-  lwz    r19, 84(r3)
-  lwz    r20, 88(r3)
-  lwz    r21, 92(r3)
-  lwz    r22, 96(r3)
-  lwz    r23,100(r3)
-  lwz    r24,104(r3)
-  lwz    r25,108(r3)
-  lwz    r26,112(r3)
-  lwz    r27,116(r3)
-  lwz    r28,120(r3)
-  lwz    r29,124(r3)
-  lwz    r30,128(r3)
-  lwz    r31,132(r3)
+  // restore integral registerrs
+  // skip r0 for now
+  // skip r1 for now
+  lwz     %r2,  16(%r3)
+  // skip r3 for now
+  // skip r4 for now
+  // skip r5 for now
+  lwz     %r6,  32(%r3)
+  lwz     %r7,  36(%r3)
+  lwz     %r8,  40(%r3)
+  lwz     %r9,  44(%r3)
+  lwz     %r10, 48(%r3)
+  lwz     %r11, 52(%r3)
+  lwz     %r12, 56(%r3)
+  lwz     %r13, 60(%r3)
+  lwz     %r14, 64(%r3)
+  lwz     %r15, 68(%r3)
+  lwz     %r16, 72(%r3)
+  lwz     %r17, 76(%r3)
+  lwz     %r18, 80(%r3)
+  lwz     %r19, 84(%r3)
+  lwz     %r20, 88(%r3)
+  lwz     %r21, 92(%r3)
+  lwz     %r22, 96(%r3)
+  lwz     %r23,100(%r3)
+  lwz     %r24,104(%r3)
+  lwz     %r25,108(%r3)
+  lwz     %r26,112(%r3)
+  lwz     %r27,116(%r3)
+  lwz     %r28,120(%r3)
+  lwz     %r29,124(%r3)
+  lwz     %r30,128(%r3)
+  lwz     %r31,132(%r3)
 
-  ; restore float registers
-  lfd    f0, 160(r3)
-  lfd    f1, 168(r3)
-  lfd    f2, 176(r3)
-  lfd    f3, 184(r3)
-  lfd    f4, 192(r3)
-  lfd    f5, 200(r3)
-  lfd    f6, 208(r3)
-  lfd    f7, 216(r3)
-  lfd    f8, 224(r3)
-  lfd    f9, 232(r3)
-  lfd    f10,240(r3)
-  lfd    f11,248(r3)
-  lfd    f12,256(r3)
-  lfd    f13,264(r3)
-  lfd    f14,272(r3)
-  lfd    f15,280(r3)
-  lfd    f16,288(r3)
-  lfd    f17,296(r3)
-  lfd    f18,304(r3)
-  lfd    f19,312(r3)
-  lfd    f20,320(r3)
-  lfd    f21,328(r3)
-  lfd    f22,336(r3)
-  lfd    f23,344(r3)
-  lfd    f24,352(r3)
-  lfd    f25,360(r3)
-  lfd    f26,368(r3)
-  lfd    f27,376(r3)
-  lfd    f28,384(r3)
-  lfd    f29,392(r3)
-  lfd    f30,400(r3)
-  lfd    f31,408(r3)
+  // restore float registers
+  lfd     %f0, 160(%r3)
+  lfd     %f1, 168(%r3)
+  lfd     %f2, 176(%r3)
+  lfd     %f3, 184(%r3)
+  lfd     %f4, 192(%r3)
+  lfd     %f5, 200(%r3)
+  lfd     %f6, 208(%r3)
+  lfd     %f7, 216(%r3)
+  lfd     %f8, 224(%r3)
+  lfd     %f9, 232(%r3)
+  lfd     %f10,240(%r3)
+  lfd     %f11,248(%r3)
+  lfd     %f12,256(%r3)
+  lfd     %f13,264(%r3)
+  lfd     %f14,272(%r3)
+  lfd     %f15,280(%r3)
+  lfd     %f16,288(%r3)
+  lfd     %f17,296(%r3)
+  lfd     %f18,304(%r3)
+  lfd     %f19,312(%r3)
+  lfd     %f20,320(%r3)
+  lfd     %f21,328(%r3)
+  lfd     %f22,336(%r3)
+  lfd     %f23,344(%r3)
+  lfd     %f24,352(%r3)
+  lfd     %f25,360(%r3)
+  lfd     %f26,368(%r3)
+  lfd     %f27,376(%r3)
+  lfd     %f28,384(%r3)
+  lfd     %f29,392(%r3)
+  lfd     %f30,400(%r3)
+  lfd     %f31,408(%r3)
 
-  ; restore vector registers if any are in use
-  lwz    r5,156(r3)  ; test VRsave
-  cmpwi  r5,0
-  beq    Lnovec
+  // restore vector registers if any are in use
+  lwz     %r5, 156(%r3)       // test VRsave
+  cmpwi   %r5, 0
+  beq     Lnovec
 
-  subi  r4,r1,16
-  rlwinm  r4,r4,0,0,27  ; mask low 4-bits
-  ; r4 is now a 16-byte aligned pointer into the red zone
-  ; the _vectorRegisters may not be 16-byte aligned so copy via red zone temp buffer
-
+  subi    %r4, %r1, 16
+  rlwinm  %r4, %r4, 0, 0, 27  // mask low 4-bits
+  // r4 is now a 16-byte aligned pointer into the red zone
+  // the _vectorRegisters may not be 16-byte aligned so copy via red zone temp buffer
+ 
 
 #define LOAD_VECTOR_UNALIGNEDl(_index) \
-  andis.  r0,r5,(1<<(15-_index))  @\
-  beq    Ldone  ## _index     @\
-  lwz    r0, 424+_index*16(r3)  @\
-  stw    r0, 0(r4)        @\
-  lwz    r0, 424+_index*16+4(r3)  @\
-  stw    r0, 4(r4)        @\
-  lwz    r0, 424+_index*16+8(r3)  @\
-  stw    r0, 8(r4)        @\
-  lwz    r0, 424+_index*16+12(r3)@\
-  stw    r0, 12(r4)        @\
-  lvx    v ## _index,0,r4    @\
-Ldone  ## _index:
+  andis.  %r0, %r5, (1<<(15-_index))  SEPARATOR \
+  beq     Ldone ## _index             SEPARATOR \
+  lwz     %r0, 424+_index*16(%r3)     SEPARATOR \
+  stw     %r0, 0(%r4)                 SEPARATOR \
+  lwz     %r0, 424+_index*16+4(%r3)   SEPARATOR \
+  stw     %r0, 4(%r4)                 SEPARATOR \
+  lwz     %r0, 424+_index*16+8(%r3)   SEPARATOR \
+  stw     %r0, 8(%r4)                 SEPARATOR \
+  lwz     %r0, 424+_index*16+12(%r3)  SEPARATOR \
+  stw     %r0, 12(%r4)                SEPARATOR \
+  lvx     %v ## _index, 0, %r4        SEPARATOR \
+  Ldone ## _index:
 
 #define LOAD_VECTOR_UNALIGNEDh(_index) \
-  andi.  r0,r5,(1<<(31-_index))  @\
-  beq    Ldone  ## _index    @\
-  lwz    r0, 424+_index*16(r3)  @\
-  stw    r0, 0(r4)        @\
-  lwz    r0, 424+_index*16+4(r3)  @\
-  stw    r0, 4(r4)        @\
-  lwz    r0, 424+_index*16+8(r3)  @\
-  stw    r0, 8(r4)        @\
-  lwz    r0, 424+_index*16+12(r3)@\
-  stw    r0, 12(r4)        @\
-  lvx    v ## _index,0,r4    @\
-  Ldone  ## _index:
+  andi.   %r0, %r5, (1<<(31-_index))  SEPARATOR \
+  beq     Ldone ## _index             SEPARATOR \
+  lwz     %r0, 424+_index*16(%r3)     SEPARATOR \
+  stw     %r0, 0(%r4)                 SEPARATOR \
+  lwz     %r0, 424+_index*16+4(%r3)   SEPARATOR \
+  stw     %r0, 4(%r4)                 SEPARATOR \
+  lwz     %r0, 424+_index*16+8(%r3)   SEPARATOR \
+  stw     %r0, 8(%r4)                 SEPARATOR \
+  lwz     %r0, 424+_index*16+12(%r3)  SEPARATOR \
+  stw     %r0, 12(%r4)                SEPARATOR \
+  lvx     %v ## _index, 0, %r4        SEPARATOR \
+  Ldone ## _index:
 
 
   LOAD_VECTOR_UNALIGNEDl(0)
@@ -545,17 +545,17 @@ Ldone  ## _index:
   LOAD_VECTOR_UNALIGNEDh(31)
 
 Lnovec:
-  lwz    r0, 136(r3) ; __cr
-  mtocrf  255,r0
-  lwz    r0, 148(r3) ; __ctr
-  mtctr  r0
-  lwz    r0, 0(r3)  ; __ssr0
-  mtctr  r0
-  lwz    r0, 8(r3)  ; do r0 now
-  lwz    r5,28(r3)  ; do r5 now
-  lwz    r4,24(r3)  ; do r4 now
-  lwz    r1,12(r3)  ; do sp now
-  lwz    r3,20(r3)  ; do r3 last
+  lwz     %r0, 136(%r3)   // __cr
+  mtcr    %r0
+  lwz     %r0, 148(%r3)   // __ctr
+  mtctr   %r0
+  lwz     %r0,   0(%r3)   // __ssr0
+  mtctr   %r0
+  lwz     %r0,   8(%r3)   // do r0 now
+  lwz     %r5,  28(%r3)   // do r5 now
+  lwz     %r4,  24(%r3)   // do r4 now
+  lwz     %r1,  12(%r3)   // do sp now
+  lwz     %r3,  20(%r3)   // do r3 last
   bctr
 
 #elif defined(__arm64__) || defined(__aarch64__)
