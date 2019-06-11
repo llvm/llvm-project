@@ -157,6 +157,16 @@ __lldb_apple_objc_v2_get_dynamic_class_info (void *gdb_objc_realized_classes_ptr
 
 )";
 
+// We'll substitute in class_getName or class_getNameRaw depending
+// on which is present.
+static const char *g_shared_cache_class_name_funcptr = R"(
+extern "C"
+{
+    const char *%s(void *objc_class);
+    const char *(*class_name_lookup_func)(void *) = %s;
+}
+)";
+
 static const char *g_get_shared_cache_class_info_name =
     "__lldb_apple_objc_v2_get_shared_cache_class_info";
 // Testing using the new C++11 raw string literals. If this breaks GCC then we
@@ -165,7 +175,6 @@ static const char *g_get_shared_cache_class_info_body = R"(
 
 extern "C"
 {
-    const char *class_getName(void *objc_class);
     size_t strlen(const char *);
     char *strncpy (char * s1, const char * s2, size_t n);
     int printf(const char * format, ...);
@@ -286,7 +295,7 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
                 if (class_infos && idx < max_class_infos)
                 {
                     class_infos[idx].isa = (Class)((uint8_t *)clsopt + clsOffset);
-                    const char *name = class_getName (class_infos[idx].isa);
+                    const char *name = class_name_lookup_func (class_infos[idx].isa);
                     DEBUG_PRINTF ("[%u] isa = %8p %s\n", idx, class_infos[idx].isa, name);
                     // Hash the class name so we don't have to read it
                     const char *s = name;
@@ -329,7 +338,7 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
                 if (class_infos && idx < max_class_infos)
                 {
                     class_infos[idx].isa = (Class)((uint8_t *)clsopt + clsOffset);
-                    const char *name = class_getName (class_infos[idx].isa);
+                    const char *name = class_name_lookup_func (class_infos[idx].isa);
                     DEBUG_PRINTF ("[%u] isa = %8p %s\n", idx, class_infos[idx].isa, name);
                     // Hash the class name so we don't have to read it
                     const char *s = name;
@@ -1589,9 +1598,46 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
 
   if (!m_get_shared_cache_class_info_code) {
     Status error;
+
+    // If the inferior objc.dylib has the class_getNameRaw function,
+    // use that in our jitted expression.  Else fall back to the old
+    // class_getName.
+    static ConstString g_class_getName_symbol_name("class_getName");
+    static ConstString g_class_getNameRaw_symbol_name("class_getNameRaw");
+    ConstString class_name_getter_function_name = g_class_getName_symbol_name;
+
+    ObjCLanguageRuntime *objc_runtime = ObjCLanguageRuntime::Get(*process);
+    if (objc_runtime) {
+      const ModuleList &images = process->GetTarget().GetImages();
+      std::lock_guard<std::recursive_mutex> guard(images.GetMutex());
+      for (size_t i = 0; i < images.GetSize(); ++i) {
+        lldb::ModuleSP mod_sp = images.GetModuleAtIndexUnlocked(i);
+        if (objc_runtime->IsModuleObjCLibrary(mod_sp)) {
+          const Symbol *symbol =
+              mod_sp->FindFirstSymbolWithNameAndType(g_class_getNameRaw_symbol_name, 
+                                                lldb::eSymbolTypeCode);
+          if (symbol && 
+              (symbol->ValueIsAddress() || symbol->GetAddressRef().IsValid())) {
+            class_name_getter_function_name = g_class_getNameRaw_symbol_name;
+          }
+        }
+      }
+    }
+
+    // Substitute in the correct class_getName / class_getNameRaw function name,
+    // concatenate the two parts of our expression text.  The format string
+    // has two %s's, so provide the name twice.
+    char *class_name_func_ptr_expr = nullptr;
+    asprintf (&class_name_func_ptr_expr, g_shared_cache_class_name_funcptr,
+              class_name_getter_function_name.AsCString(),
+              class_name_getter_function_name.AsCString());
+    std::string shared_class_expression = class_name_func_ptr_expr;
+    shared_class_expression += g_get_shared_cache_class_info_body;
+    free (class_name_func_ptr_expr);
+    
     m_get_shared_cache_class_info_code.reset(
         GetTargetRef().GetUtilityFunctionForLanguage(
-            g_get_shared_cache_class_info_body, eLanguageTypeObjC,
+            shared_class_expression.c_str(), eLanguageTypeObjC,
             g_get_shared_cache_class_info_name, error));
     if (error.Fail()) {
       if (log)
