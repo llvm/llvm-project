@@ -24,15 +24,22 @@ Mixing object files with different machine type is not ok:
 
 RUN: not llvm-lib %t/x86_64.obj %t/i386.obj 2>&1 | \
 RUN:     FileCheck --check-prefix=OBJ32 %s
-OBJ32: i386.obj: file machine type x86 conflicts with library machine type x64
+OBJ32: i386.obj: file machine type x86 conflicts with library machine type x64 (inferred from earlier file '{{.*}}x86_64.obj')
 
 
 Neither is mixing object and bitcode files with different machine type:
 
 RUN: not llvm-lib %t/x86_64.obj %t/i386.bc 2>&1 | \
 RUN:     FileCheck --check-prefix=BC32 %s
-BC32: i386.bc: file machine type x86 conflicts with library machine type x64
+BC32: i386.bc: file machine type x86 conflicts with library machine type x64 (inferred from earlier file '{{.*}}x86_64.obj')
 
 RUN: not llvm-lib %t/arm64.bc %t/x86_64.bc 2>&1 | \
 RUN:     FileCheck --check-prefix=BC64 %s
-BC64: x86_64.bc: file machine type x64 conflicts with library machine type arm64
+BC64: x86_64.bc: file machine type x64 conflicts with library machine type arm64 (inferred from earlier file '{{.*}}arm64.bc')
+
+
+If /machine: is passed, its value is authoritative.
+
+RUN: not llvm-lib /machine:X86 %t/x86_64.obj %t/i386.obj 2>&1 | \
+RUN:     FileCheck --check-prefix=OBJ64 %s
+OBJ64: x86_64.obj: file machine type x64 conflicts with library machine type x86 (from '/machine:X86' flag)

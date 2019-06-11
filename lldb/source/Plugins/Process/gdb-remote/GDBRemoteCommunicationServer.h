@@ -15,6 +15,9 @@
 #include "GDBRemoteCommunication.h"
 #include "lldb/lldb-private-forward.h"
 
+#include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
+
 class StringExtractorGDBRemote;
 
 namespace lldb_private {
@@ -59,6 +62,8 @@ protected:
 
   PacketResult SendErrorResponse(const Status &error);
 
+  PacketResult SendErrorResponse(llvm::Error error);
+
   PacketResult SendUnimplementedResponse(const char *packet);
 
   PacketResult SendErrorResponse(uint8_t error);
@@ -70,6 +75,18 @@ protected:
 
 private:
   DISALLOW_COPY_AND_ASSIGN(GDBRemoteCommunicationServer);
+};
+
+class PacketUnimplementedError
+    : public llvm::ErrorInfo<PacketUnimplementedError, llvm::StringError> {
+public:
+  static char ID;
+  using llvm::ErrorInfo<PacketUnimplementedError,
+                        llvm::StringError>::ErrorInfo; // inherit constructors
+  PacketUnimplementedError(const llvm::Twine &S)
+      : ErrorInfo(S, llvm::errc::not_supported) {}
+
+  PacketUnimplementedError() : ErrorInfo(llvm::errc::not_supported) {}
 };
 
 } // namespace process_gdb_remote

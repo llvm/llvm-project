@@ -14,8 +14,7 @@
 # CHECK: .debug_foo:
 # CHECK-NEXT: 0000 00000000 00000000
 
-# CHECK-HEADER: Index: 1
-# CHECK-HEADER-NEXT: Name: .debug_foo
+# CHECK-HEADER:      Name: .debug_foo
 # CHECK-HEADER-NEXT: Type: SHT_PROGBITS
 # CHECK-HEADER-NEXT: Flags [
 # CHECK-HEADER-NEXT: ]
@@ -26,8 +25,7 @@
 # CHECK-COMPRESSED: .debug_foo:
 # CHECK-COMPRESSED: .notdebug_foo:
 
-# CHECK-FLAGS: Index: 1
-# CHECK-FLAGS-NEXT: Name: .debug_foo
+# CHECK-FLAGS:      Name: .debug_foo
 # CHECK-FLAGS-NEXT: Type: SHT_PROGBITS
 # CHECK-FLAGS-NEXT: Flags [
 # CHECK-FLAGS-NEXT: SHF_COMPRESSED
@@ -53,7 +51,6 @@
 # CHECK-FLAGS-NEXT: Offset:
 # CHECK-FLAGS-NEXT: Size:
 # CHECK-FLAGS-NEXT: Link:
-# CHECK-FLAGS-NEXT: Info: 1
 
 # CHECK-FLAGS: Relocations [
 # CHECK-FLAGS-NEXT:   .rela.debug_foo {

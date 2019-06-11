@@ -1668,9 +1668,15 @@ Error Object::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
 }
 
 void Object::sortSections() {
-  // Put all sections in offset order. Maintain the ordering as closely as
-  // possible while meeting that demand however.
+  // Use stable_sort to maintain the original ordering as closely as possible.
   llvm::stable_sort(Sections, [](const SecPtr &A, const SecPtr &B) {
+    // Put SHT_GROUP sections first, since group section headers must come
+    // before the sections they contain. This also matches what GNU objcopy
+    // does.
+    if (A->Type != B->Type &&
+        (A->Type == ELF::SHT_GROUP || B->Type == ELF::SHT_GROUP))
+      return A->Type == ELF::SHT_GROUP;
+    // For all other sections, sort by offset order.
     return A->OriginalOffset < B->OriginalOffset;
   });
 }

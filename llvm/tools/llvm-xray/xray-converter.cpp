@@ -380,9 +380,7 @@ static CommandRegistration Unused(&Convert, []() -> Error {
   }
 
   const auto &FunctionAddresses = Map.getFunctionAddresses();
-  symbolize::LLVMSymbolizer::Options Opts(
-      symbolize::FunctionNameKind::LinkageName, true, true, false, "");
-  symbolize::LLVMSymbolizer Symbolizer(Opts);
+  symbolize::LLVMSymbolizer Symbolizer;
   llvm::xray::FuncIdConversionHelper FuncIdHelper(ConvertInstrMap, Symbolizer,
                                                   FunctionAddresses);
   llvm::xray::TraceConverter TC(FuncIdHelper, ConvertSymbolize);

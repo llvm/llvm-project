@@ -18,6 +18,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/ToolDrivers/llvm-lib/LibDriver.h"
 #include <utility>
 
 using namespace llvm;

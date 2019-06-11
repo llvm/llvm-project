@@ -4392,6 +4392,13 @@ const Value *llvm::getGuaranteedNonFullPoisonOp(const Instruction *I) {
   }
 }
 
+bool llvm::mustTriggerUB(const Instruction *I,
+                         const SmallSet<const Value *, 16>& KnownPoison) {
+  auto *NotPoison = getGuaranteedNonFullPoisonOp(I);
+  return (NotPoison && KnownPoison.count(NotPoison));
+}
+
+
 bool llvm::programUndefinedIfFullPoison(const Instruction *PoisonI) {
   // We currently only look for uses of poison values within the same basic
   // block, as that makes it easier to guarantee that the uses will be
@@ -4415,8 +4422,7 @@ bool llvm::programUndefinedIfFullPoison(const Instruction *PoisonI) {
   while (Iter++ < MaxDepth) {
     for (auto &I : make_range(Begin, End)) {
       if (&I != PoisonI) {
-        const Value *NotPoison = getGuaranteedNonFullPoisonOp(&I);
-        if (NotPoison != nullptr && YieldsPoison.count(NotPoison))
+        if (mustTriggerUB(&I, YieldsPoison))
           return true;
         if (!isGuaranteedToTransferExecutionToSuccessor(&I))
           return false;

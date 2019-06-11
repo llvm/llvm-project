@@ -70,21 +70,8 @@ define float @test_atomicrmw_fsub_f32_local(float addrspace(3)* %ptr, float %val
 
 define half @test_atomicrmw_fsub_f16_flat(half* %ptr, half %value) {
 ; GCN-LABEL: @test_atomicrmw_fsub_f16_flat(
-; GCN-NEXT:    [[TMP1:%.*]] = load half, half* [[PTR:%.*]], align 2
-; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GCN:       atomicrmw.start:
-; GCN-NEXT:    [[LOADED:%.*]] = phi half [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GCN-NEXT:    [[NEW:%.*]] = fsub half [[LOADED]], [[VALUE:%.*]]
-; GCN-NEXT:    [[TMP2:%.*]] = bitcast half* [[PTR]] to i16*
-; GCN-NEXT:    [[TMP3:%.*]] = bitcast half [[NEW]] to i16
-; GCN-NEXT:    [[TMP4:%.*]] = bitcast half [[LOADED]] to i16
-; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg i16* [[TMP2]], i16 [[TMP4]], i16 [[TMP3]] seq_cst seq_cst
-; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP5]], 1
-; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i16, i1 } [[TMP5]], 0
-; GCN-NEXT:    [[TMP6]] = bitcast i16 [[NEWLOADED]] to half
-; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GCN:       atomicrmw.end:
-; GCN-NEXT:    ret half [[TMP6]]
+; GCN-NEXT:    [[RES:%.*]] = atomicrmw fsub half* [[PTR:%.*]], half [[VALUE:%.*]] seq_cst
+; GCN-NEXT:    ret half [[RES]]
 ;
   %res = atomicrmw fsub half* %ptr, half %value seq_cst
   ret half %res
@@ -92,21 +79,8 @@ define half @test_atomicrmw_fsub_f16_flat(half* %ptr, half %value) {
 
 define half @test_atomicrmw_fsub_f16_global(half addrspace(1)* %ptr, half %value) {
 ; GCN-LABEL: @test_atomicrmw_fsub_f16_global(
-; GCN-NEXT:    [[TMP1:%.*]] = load half, half addrspace(1)* [[PTR:%.*]], align 2
-; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GCN:       atomicrmw.start:
-; GCN-NEXT:    [[LOADED:%.*]] = phi half [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GCN-NEXT:    [[NEW:%.*]] = fsub half [[LOADED]], [[VALUE:%.*]]
-; GCN-NEXT:    [[TMP2:%.*]] = bitcast half addrspace(1)* [[PTR]] to i16 addrspace(1)*
-; GCN-NEXT:    [[TMP3:%.*]] = bitcast half [[NEW]] to i16
-; GCN-NEXT:    [[TMP4:%.*]] = bitcast half [[LOADED]] to i16
-; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg i16 addrspace(1)* [[TMP2]], i16 [[TMP4]], i16 [[TMP3]] seq_cst seq_cst
-; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP5]], 1
-; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i16, i1 } [[TMP5]], 0
-; GCN-NEXT:    [[TMP6]] = bitcast i16 [[NEWLOADED]] to half
-; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GCN:       atomicrmw.end:
-; GCN-NEXT:    ret half [[TMP6]]
+; GCN-NEXT:    [[RES:%.*]] = atomicrmw fsub half addrspace(1)* [[PTR:%.*]], half [[VALUE:%.*]] seq_cst
+; GCN-NEXT:    ret half [[RES]]
 ;
   %res = atomicrmw fsub half addrspace(1)* %ptr, half %value seq_cst
   ret half %res
@@ -114,21 +88,8 @@ define half @test_atomicrmw_fsub_f16_global(half addrspace(1)* %ptr, half %value
 
 define half @test_atomicrmw_fsub_f16_local(half addrspace(3)* %ptr, half %value) {
 ; GCN-LABEL: @test_atomicrmw_fsub_f16_local(
-; GCN-NEXT:    [[TMP1:%.*]] = load half, half addrspace(3)* [[PTR:%.*]], align 2
-; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GCN:       atomicrmw.start:
-; GCN-NEXT:    [[LOADED:%.*]] = phi half [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GCN-NEXT:    [[NEW:%.*]] = fsub half [[LOADED]], [[VALUE:%.*]]
-; GCN-NEXT:    [[TMP2:%.*]] = bitcast half addrspace(3)* [[PTR]] to i16 addrspace(3)*
-; GCN-NEXT:    [[TMP3:%.*]] = bitcast half [[NEW]] to i16
-; GCN-NEXT:    [[TMP4:%.*]] = bitcast half [[LOADED]] to i16
-; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg i16 addrspace(3)* [[TMP2]], i16 [[TMP4]], i16 [[TMP3]] seq_cst seq_cst
-; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP5]], 1
-; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i16, i1 } [[TMP5]], 0
-; GCN-NEXT:    [[TMP6]] = bitcast i16 [[NEWLOADED]] to half
-; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GCN:       atomicrmw.end:
-; GCN-NEXT:    ret half [[TMP6]]
+; GCN-NEXT:    [[RES:%.*]] = atomicrmw fsub half addrspace(3)* [[PTR:%.*]], half [[VALUE:%.*]] seq_cst
+; GCN-NEXT:    ret half [[RES]]
 ;
   %res = atomicrmw fsub half addrspace(3)* %ptr, half %value seq_cst
   ret half %res

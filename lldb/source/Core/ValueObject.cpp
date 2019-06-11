@@ -302,7 +302,7 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
 
       if (process_sp) {
         ObjCLanguageRuntime *objc_language_runtime(
-            process_sp->GetObjCLanguageRuntime());
+            ObjCLanguageRuntime::Get(*process_sp));
 
         if (objc_language_runtime) {
           TypeSP complete_objc_class_type_sp =
@@ -1699,7 +1699,7 @@ bool ValueObject::IsRuntimeSupportValue() {
     LanguageRuntime *runtime =
         process->GetLanguageRuntime(GetObjectRuntimeLanguage());
     if (!runtime)
-      runtime = process->GetObjCLanguageRuntime();
+      runtime = ObjCLanguageRuntime::Get(*process);
     if (runtime)
       return runtime->IsRuntimeSupportValue(*this);
     // If there is no language runtime, trust the compiler to mark all
@@ -3399,4 +3399,3 @@ lldb::StackFrameSP ValueObjectManager::GetFrameSP() const {
     return m_root_valobj_sp->GetFrameSP();
   return lldb::StackFrameSP();
 }
-

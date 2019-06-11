@@ -457,8 +457,9 @@ bool AppleObjCTrampolineHandler::AppleObjCVTables::InitializeVTableSymbols() {
     size_t num_modules = target_modules.GetSize();
     if (!m_objc_module_sp) {
       for (size_t i = 0; i < num_modules; i++) {
-        if (process_sp->GetObjCLanguageRuntime()->IsModuleObjCLibrary(
-                target_modules.GetModuleAtIndexUnlocked(i))) {
+        if (ObjCLanguageRuntime::Get(*process_sp)
+                ->IsModuleObjCLibrary(
+                    target_modules.GetModuleAtIndexUnlocked(i))) {
           m_objc_module_sp = target_modules.GetModuleAtIndexUnlocked(i);
           break;
         }
@@ -1036,7 +1037,7 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
                     isa_addr, sel_addr);
       }
       ObjCLanguageRuntime *objc_runtime =
-          thread.GetProcess()->GetObjCLanguageRuntime();
+          ObjCLanguageRuntime::Get(*thread.GetProcess());
       assert(objc_runtime != nullptr);
 
       impl_addr = objc_runtime->LookupInMethodCache(isa_addr, sel_addr);

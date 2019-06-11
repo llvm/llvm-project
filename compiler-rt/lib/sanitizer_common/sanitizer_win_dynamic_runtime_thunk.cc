@@ -18,3 +18,9 @@
 #define INTERFACE_WEAK_FUNCTION(Name) WIN_WEAK_IMPORT_DEF(Name)
 #include "sanitizer_common_interface.inc"
 #endif // SANITIZER_DYNAMIC_RUNTIME_THUNK
+
+namespace __sanitizer {
+// Add one, otherwise unused, external symbol to this object file so that the
+// Visual C++ linker includes it and reads the .drective section.
+void ForceWholeArchiveIncludeForSanitizerCommon() {}
+}

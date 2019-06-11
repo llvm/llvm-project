@@ -3,8 +3,9 @@ RUN: mkdir -p %t
 
 RUN: cp %p/Inputs/split-dwarf-dwp.o %t/split-dwarf-dwp-different-name.o
 
-RUN: llvm-symbolizer --dwp=%p/Inputs/split-dwarf-dwp.o.dwp \
-RUN:     --obj=%t/split-dwarf-dwp-different-name.o 0x54 | FileCheck %s
+RUN: echo -e 'DATA 0\n0x54' | \
+RUN:     llvm-symbolizer --dwp=%p/Inputs/split-dwarf-dwp.o.dwp \
+RUN:     --obj=%t/split-dwarf-dwp-different-name.o | FileCheck %s
 
 CHECK:      f2
 CHECK-NEXT: split-dwarf-dwp.cpp:3:3

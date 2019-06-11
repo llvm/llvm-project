@@ -138,10 +138,6 @@ private:
 
 void printHelp(const char *Argv0);
 
-// For /machine option.
-MachineTypes getMachineType(StringRef Arg);
-StringRef machineToStr(MachineTypes MT);
-
 // Parses a string in the form of "<integer>[,<integer>]".
 void parseNumbers(StringRef Arg, uint64_t *Addr, uint64_t *Size = nullptr);
 
