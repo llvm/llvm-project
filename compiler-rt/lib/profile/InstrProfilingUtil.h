@@ -23,8 +23,6 @@ unsigned __llvm_profile_get_dir_mode(void);
 
 int lprofLockFd(int fd);
 int lprofUnlockFd(int fd);
-int lprofLockFileHandle(FILE *F);
-int lprofUnlockFileHandle(FILE *F);
 
 /*! Open file \c Filename for read+write with write
  * lock for exclusive access. The caller will block
