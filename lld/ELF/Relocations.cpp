@@ -718,6 +718,15 @@ static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore && CanBeExternal)
     return false;
 
+  // clang (as of 2019-06-12) / gcc (as of 8.2.1) PPC64 may emit a .rela.toc
+  // which references a switch table in a discarded .rodata/.text section. The
+  // .toc and the .rela.toc are incorrectly not placed in the comdat. The ELF
+  // spec says references from outside the group to a STB_LOCAL symbol are not
+  // allowed. Work around the bug.
+  if (Config->EMachine == EM_PPC64 &&
+      cast<Undefined>(Sym).DiscardedSecIdx != 0 && Sec.Name == ".toc")
+    return false;
+
   auto Visibility = [&]() -> std::string {
     switch (Sym.Visibility) {
     case STV_INTERNAL:

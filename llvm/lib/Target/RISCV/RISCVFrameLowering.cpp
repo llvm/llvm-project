@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/MC/MCDwarf.h"
 
 using namespace llvm;
 
@@ -96,6 +97,8 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  const RISCVRegisterInfo *RI = STI.getRegisterInfo();
+  const RISCVInstrInfo *TII = STI.getInstrInfo();
   MachineBasicBlock::iterator MBBI = MBB.begin();
 
   unsigned FPReg = getFPReg(STI);
@@ -119,6 +122,12 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   // Allocate space on the stack if necessary.
   adjustReg(MBB, MBBI, DL, SPReg, SPReg, -StackSize, MachineInstr::FrameSetup);
 
+  // Emit ".cfi_def_cfa_offset StackSize"
+  unsigned CFIIndex = MF.addFrameInst(
+      MCCFIInstruction::createDefCfaOffset(nullptr, -StackSize));
+  BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+      .addCFIIndex(CFIIndex);
+
   // The frame pointer is callee-saved, and code has been generated for us to
   // save it to the stack. We need to skip over the storing of callee-saved
   // registers as the frame pointer must be modified after it has been saved
@@ -128,10 +137,28 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   std::advance(MBBI, CSI.size());
 
+  // Iterate over list of callee-saved registers and emit .cfi_offset
+  // directives.
+  for (const auto &Entry : CSI) {
+    int64_t Offset = MFI.getObjectOffset(Entry.getFrameIdx());
+    unsigned Reg = Entry.getReg();
+    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
+        nullptr, RI->getDwarfRegNum(Reg, true), Offset));
+    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex);
+  }
+
   // Generate new FP.
-  if (hasFP(MF))
+  if (hasFP(MF)) {
     adjustReg(MBB, MBBI, DL, FPReg, SPReg,
               StackSize - RVFI->getVarArgsSaveSize(), MachineInstr::FrameSetup);
+
+    // Emit ".cfi_def_cfa $fp, 0"
+    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createDefCfa(
+        nullptr, RI->getDwarfRegNum(FPReg, true), 0));
+    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex);
+  }
 }
 
 void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
@@ -141,6 +168,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
   DebugLoc DL = MBBI->getDebugLoc();
+  const RISCVInstrInfo *TII = STI.getInstrInfo();
   unsigned FPReg = getFPReg(STI);
   unsigned SPReg = getSPReg(STI);
 
@@ -150,19 +178,58 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   auto LastFrameDestroy = std::prev(MBBI, MFI.getCalleeSavedInfo().size());
 
   uint64_t StackSize = MFI.getStackSize();
+  uint64_t FPOffset = StackSize - RVFI->getVarArgsSaveSize();
 
   // Restore the stack pointer using the value of the frame pointer. Only
   // necessary if the stack pointer was modified, meaning the stack size is
   // unknown.
   if (RI->needsStackRealignment(MF) || MFI.hasVarSizedObjects()) {
     assert(hasFP(MF) && "frame pointer should not have been eliminated");
-    adjustReg(MBB, LastFrameDestroy, DL, SPReg, FPReg,
-              -StackSize + RVFI->getVarArgsSaveSize(),
+    adjustReg(MBB, LastFrameDestroy, DL, SPReg, FPReg, -FPOffset,
               MachineInstr::FrameDestroy);
+  }
+
+  if (hasFP(MF)) {
+    // To find the instruction restoring FP from stack.
+    for (auto &I = LastFrameDestroy; I != MBBI; ++I) {
+      if (I->mayLoad() && I->getOperand(0).isReg()) {
+        unsigned DestReg = I->getOperand(0).getReg();
+        if (DestReg == FPReg) {
+          // If there is frame pointer, after restoring $fp registers, we
+          // need adjust CFA to ($sp - FPOffset).
+          // Emit ".cfi_def_cfa $sp, -FPOffset"
+          unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createDefCfa(
+              nullptr, RI->getDwarfRegNum(SPReg, true), -FPOffset));
+          BuildMI(MBB, std::next(I), DL,
+                  TII->get(TargetOpcode::CFI_INSTRUCTION))
+              .addCFIIndex(CFIIndex);
+          break;
+        }
+      }
+    }
+  }
+
+  // Add CFI directives for callee-saved registers.
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+  // Iterate over list of callee-saved registers and emit .cfi_restore
+  // directives.
+  for (const auto &Entry : CSI) {
+    unsigned Reg = Entry.getReg();
+    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createRestore(
+        nullptr, RI->getDwarfRegNum(Reg, true)));
+    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex);
   }
 
   // Deallocate stack
   adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackSize, MachineInstr::FrameDestroy);
+
+  // After restoring $sp, we need to adjust CFA to $(sp + 0)
+  // Emit ".cfi_def_cfa_offset 0"
+  unsigned CFIIndex =
+      MF.addFrameInst(MCCFIInstruction::createDefCfaOffset(nullptr, 0));
+  BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+      .addCFIIndex(CFIIndex);
 }
 
 int RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF,

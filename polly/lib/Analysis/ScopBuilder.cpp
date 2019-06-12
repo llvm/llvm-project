@@ -1320,6 +1320,25 @@ void ScopBuilder::verifyInvariantLoads() {
   }
 }
 
+void ScopBuilder::hoistInvariantLoads() {
+  if (!PollyInvariantLoadHoisting)
+    return;
+
+  isl::union_map Writes = scop->getWrites();
+  for (ScopStmt &Stmt : *scop) {
+    InvariantAccessesTy InvariantAccesses;
+
+    for (MemoryAccess *Access : Stmt)
+      if (isl::set NHCtx = scop->getNonHoistableCtx(Access, Writes))
+        InvariantAccesses.push_back({Access, NHCtx});
+
+    // Transfer the memory access from the statement to the SCoP.
+    for (auto InvMA : InvariantAccesses)
+      Stmt.removeMemoryAccess(InvMA.MA);
+    scop->addInvariantLoads(Stmt, InvariantAccesses);
+  }
+}
+
 void ScopBuilder::collectCandidateReductionLoads(
     MemoryAccess *StoreMA, SmallVectorImpl<MemoryAccess *> &Loads) {
   ScopStmt *Stmt = StoreMA->getStatement();
@@ -1670,7 +1689,7 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC,
     return;
   }
 
-  scop->hoistInvariantLoads();
+  hoistInvariantLoads();
   canonicalizeDynamicBasePtrs();
   verifyInvariantLoads();
   scop->simplifySCoP(true);

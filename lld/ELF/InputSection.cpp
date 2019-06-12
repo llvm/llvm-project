@@ -438,11 +438,13 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       // relocation in it pointing to discarded sections with R_*_NONE, which
       // hopefully creates a frame that is ignored at runtime. Also, don't warn
       // on .gcc_except_table and debug sections.
+      //
+      // See the comment in maybeReportUndefined for PPC64 .toc .
       auto *D = dyn_cast<Defined>(&Sym);
       if (!D) {
         if (!Sec->Name.startswith(".debug") &&
             !Sec->Name.startswith(".zdebug") && Sec->Name != ".eh_frame" &&
-            Sec->Name != ".gcc_except_table") {
+            Sec->Name != ".gcc_except_table" && Sec->Name != ".toc") {
           uint32_t SecIdx = cast<Undefined>(Sym).DiscardedSecIdx;
           Elf_Shdr_Impl<ELFT> Sec =
               CHECK(File->getObj().sections(), File)[SecIdx];

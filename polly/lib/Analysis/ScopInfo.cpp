@@ -3778,25 +3778,6 @@ isl::set Scop::getNonHoistableCtx(MemoryAccess *Access, isl::union_map Writes) {
   return WrittenCtx;
 }
 
-void Scop::hoistInvariantLoads() {
-  if (!PollyInvariantLoadHoisting)
-    return;
-
-  isl::union_map Writes = getWrites();
-  for (ScopStmt &Stmt : *this) {
-    InvariantAccessesTy InvariantAccesses;
-
-    for (MemoryAccess *Access : Stmt)
-      if (isl::set NHCtx = getNonHoistableCtx(Access, Writes))
-        InvariantAccesses.push_back({Access, NHCtx});
-
-    // Transfer the memory access from the statement to the SCoP.
-    for (auto InvMA : InvariantAccesses)
-      Stmt.removeMemoryAccess(InvMA.MA);
-    addInvariantLoads(Stmt, InvariantAccesses);
-  }
-}
-
 ScopArrayInfo *Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *ElementType,
                                               ArrayRef<const SCEV *> Sizes,
                                               MemoryKind Kind,
