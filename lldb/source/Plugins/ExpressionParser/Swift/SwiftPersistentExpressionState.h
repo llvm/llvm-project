@@ -73,7 +73,7 @@ public:
   // llvm casting support
   //------------------------------------------------------------------
   static bool classof(const PersistentExpressionState *pv) {
-    return pv->getKind() == PersistentExpressionState::eKindClang;
+    return pv->getKind() == PersistentExpressionState::eKindSwift;
   }
 
   lldb::ExpressionVariableSP
