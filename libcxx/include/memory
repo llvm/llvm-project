@@ -743,7 +743,7 @@ struct __pointer_traits_element_type;
 template <class _Ptr>
 struct __pointer_traits_element_type<_Ptr, true>
 {
-    typedef typename _Ptr::element_type type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Ptr::element_type type;
 };
 
 #ifndef _LIBCPP_HAS_NO_VARIADICS
@@ -751,13 +751,13 @@ struct __pointer_traits_element_type<_Ptr, true>
 template <template <class, class...> class _Sp, class _Tp, class ..._Args>
 struct __pointer_traits_element_type<_Sp<_Tp, _Args...>, true>
 {
-    typedef typename _Sp<_Tp, _Args...>::element_type type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Sp<_Tp, _Args...>::element_type type;
 };
 
 template <template <class, class...> class _Sp, class _Tp, class ..._Args>
 struct __pointer_traits_element_type<_Sp<_Tp, _Args...>, false>
 {
-    typedef _Tp type;
+    typedef _LIBCPP_NODEBUG_TYPE _Tp type;
 };
 
 #else  // _LIBCPP_HAS_NO_VARIADICS
@@ -824,13 +824,13 @@ struct __has_difference_type<_Tp,
 template <class _Ptr, bool = __has_difference_type<_Ptr>::value>
 struct __pointer_traits_difference_type
 {
-    typedef ptrdiff_t type;
+    typedef _LIBCPP_NODEBUG_TYPE ptrdiff_t type;
 };
 
 template <class _Ptr>
 struct __pointer_traits_difference_type<_Ptr, true>
 {
-    typedef typename _Ptr::difference_type type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Ptr::difference_type type;
 };
 
 template <class _Tp, class _Up>
@@ -848,9 +848,9 @@ template <class _Tp, class _Up, bool = __has_rebind<_Tp, _Up>::value>
 struct __pointer_traits_rebind
 {
 #ifndef _LIBCPP_CXX03_LANG
-    typedef typename _Tp::template rebind<_Up> type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Tp::template rebind<_Up> type;
 #else
-    typedef typename _Tp::template rebind<_Up>::other type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Tp::template rebind<_Up>::other type;
 #endif
 };
 
@@ -860,9 +860,9 @@ template <template <class, class...> class _Sp, class _Tp, class ..._Args, class
 struct __pointer_traits_rebind<_Sp<_Tp, _Args...>, _Up, true>
 {
 #ifndef _LIBCPP_CXX03_LANG
-    typedef typename _Sp<_Tp, _Args...>::template rebind<_Up> type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Sp<_Tp, _Args...>::template rebind<_Up> type;
 #else
-    typedef typename _Sp<_Tp, _Args...>::template rebind<_Up>::other type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Sp<_Tp, _Args...>::template rebind<_Up>::other type;
 #endif
 };
 
@@ -1013,13 +1013,13 @@ namespace __pointer_type_imp
 template <class _Tp, class _Dp, bool = __has_pointer_type<_Dp>::value>
 struct __pointer_type
 {
-    typedef typename _Dp::pointer type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Dp::pointer type;
 };
 
 template <class _Tp, class _Dp>
 struct __pointer_type<_Tp, _Dp, false>
 {
-    typedef _Tp* type;
+    typedef _LIBCPP_NODEBUG_TYPE _Tp* type;
 };
 
 }  // __pointer_type_imp
@@ -1027,7 +1027,7 @@ struct __pointer_type<_Tp, _Dp, false>
 template <class _Tp, class _Dp>
 struct __pointer_type
 {
-    typedef typename __pointer_type_imp::__pointer_type<_Tp, typename remove_reference<_Dp>::type>::type type;
+    typedef _LIBCPP_NODEBUG_TYPE typename __pointer_type_imp::__pointer_type<_Tp, typename remove_reference<_Dp>::type>::type type;
 };
 
 template <class _Tp, class = void>
@@ -1040,14 +1040,14 @@ struct __has_const_pointer<_Tp,
 template <class _Tp, class _Ptr, class _Alloc, bool = __has_const_pointer<_Alloc>::value>
 struct __const_pointer
 {
-    typedef typename _Alloc::const_pointer type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Alloc::const_pointer type;
 };
 
 template <class _Tp, class _Ptr, class _Alloc>
 struct __const_pointer<_Tp, _Ptr, _Alloc, false>
 {
 #ifndef _LIBCPP_CXX03_LANG
-    typedef typename pointer_traits<_Ptr>::template rebind<const _Tp> type;
+    typedef _LIBCPP_NODEBUG_TYPE typename pointer_traits<_Ptr>::template rebind<const _Tp> type;
 #else
     typedef typename pointer_traits<_Ptr>::template rebind<const _Tp>::other type;
 #endif
@@ -1063,16 +1063,16 @@ struct __has_void_pointer<_Tp,
 template <class _Ptr, class _Alloc, bool = __has_void_pointer<_Alloc>::value>
 struct __void_pointer
 {
-    typedef typename _Alloc::void_pointer type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Alloc::void_pointer type;
 };
 
 template <class _Ptr, class _Alloc>
 struct __void_pointer<_Ptr, _Alloc, false>
 {
 #ifndef _LIBCPP_CXX03_LANG
-    typedef typename pointer_traits<_Ptr>::template rebind<void> type;
+    typedef _LIBCPP_NODEBUG_TYPE typename pointer_traits<_Ptr>::template rebind<void> type;
 #else
-    typedef typename pointer_traits<_Ptr>::template rebind<void>::other type;
+    typedef _LIBCPP_NODEBUG_TYPE typename pointer_traits<_Ptr>::template rebind<void>::other type;
 #endif
 };
 
@@ -1086,16 +1086,16 @@ struct __has_const_void_pointer<_Tp,
 template <class _Ptr, class _Alloc, bool = __has_const_void_pointer<_Alloc>::value>
 struct __const_void_pointer
 {
-    typedef typename _Alloc::const_void_pointer type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Alloc::const_void_pointer type;
 };
 
 template <class _Ptr, class _Alloc>
 struct __const_void_pointer<_Ptr, _Alloc, false>
 {
 #ifndef _LIBCPP_CXX03_LANG
-    typedef typename pointer_traits<_Ptr>::template rebind<const void> type;
+    typedef _LIBCPP_NODEBUG_TYPE typename pointer_traits<_Ptr>::template rebind<const void> type;
 #else
-    typedef typename pointer_traits<_Ptr>::template rebind<const void>::other type;
+    typedef _LIBCPP_NODEBUG_TYPE typename pointer_traits<_Ptr>::template rebind<const void>::other type;
 #endif
 };
 
@@ -1161,13 +1161,13 @@ struct __has_size_type<_Tp,
 template <class _Alloc, class _DiffType, bool = __has_size_type<_Alloc>::value>
 struct __size_type
 {
-    typedef typename make_unsigned<_DiffType>::type type;
+    typedef _LIBCPP_NODEBUG_TYPE typename make_unsigned<_DiffType>::type type;
 };
 
 template <class _Alloc, class _DiffType>
 struct __size_type<_Alloc, _DiffType, true>
 {
-    typedef typename _Alloc::size_type type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Alloc::size_type type;
 };
 
 template <class _Tp, class = void>
@@ -1181,13 +1181,13 @@ struct __has_propagate_on_container_copy_assignment<_Tp,
 template <class _Alloc, bool = __has_propagate_on_container_copy_assignment<_Alloc>::value>
 struct __propagate_on_container_copy_assignment
 {
-    typedef false_type type;
+    typedef _LIBCPP_NODEBUG_TYPE false_type type;
 };
 
 template <class _Alloc>
 struct __propagate_on_container_copy_assignment<_Alloc, true>
 {
-    typedef typename _Alloc::propagate_on_container_copy_assignment type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Alloc::propagate_on_container_copy_assignment type;
 };
 
 template <class _Tp, class = void>
@@ -1207,7 +1207,7 @@ struct __propagate_on_container_move_assignment
 template <class _Alloc>
 struct __propagate_on_container_move_assignment<_Alloc, true>
 {
-    typedef typename _Alloc::propagate_on_container_move_assignment type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Alloc::propagate_on_container_move_assignment type;
 };
 
 template <class _Tp, class = void>
@@ -1227,7 +1227,7 @@ struct __propagate_on_container_swap
 template <class _Alloc>
 struct __propagate_on_container_swap<_Alloc, true>
 {
-    typedef typename _Alloc::propagate_on_container_swap type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Alloc::propagate_on_container_swap type;
 };
 
 template <class _Tp, class = void>
@@ -1241,13 +1241,13 @@ struct __has_is_always_equal<_Tp,
 template <class _Alloc, bool = __has_is_always_equal<_Alloc>::value>
 struct __is_always_equal
 {
-    typedef typename _VSTD::is_empty<_Alloc>::type type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _VSTD::is_empty<_Alloc>::type type;
 };
 
 template <class _Alloc>
 struct __is_always_equal<_Alloc, true>
 {
-    typedef typename _Alloc::is_always_equal type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Alloc::is_always_equal type;
 };
 
 template <class _Tp, class _Up, bool = __has_rebind<_Tp, _Up>::value>
@@ -1270,7 +1270,7 @@ struct __has_rebind_other<_Tp, _Up, false>
 template <class _Tp, class _Up, bool = __has_rebind_other<_Tp, _Up>::value>
 struct __allocator_traits_rebind
 {
-    typedef typename _Tp::template rebind<_Up>::other type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Tp::template rebind<_Up>::other type;
 };
 
 #ifndef _LIBCPP_HAS_NO_VARIADICS
@@ -1278,13 +1278,13 @@ struct __allocator_traits_rebind
 template <template <class, class...> class _Alloc, class _Tp, class ..._Args, class _Up>
 struct __allocator_traits_rebind<_Alloc<_Tp, _Args...>, _Up, true>
 {
-    typedef typename _Alloc<_Tp, _Args...>::template rebind<_Up>::other type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Alloc<_Tp, _Args...>::template rebind<_Up>::other type;
 };
 
 template <template <class, class...> class _Alloc, class _Tp, class ..._Args, class _Up>
 struct __allocator_traits_rebind<_Alloc<_Tp, _Args...>, _Up, false>
 {
-    typedef _Alloc<_Up, _Args...> type;
+    typedef _LIBCPP_NODEBUG_TYPE _Alloc<_Up, _Args...> type;
 };
 
 #else  // _LIBCPP_HAS_NO_VARIADICS
@@ -1492,13 +1492,13 @@ struct __has_select_on_container_copy_construction
 template <class _Alloc, class _Ptr, bool = __has_difference_type<_Alloc>::value>
 struct __alloc_traits_difference_type
 {
-    typedef typename pointer_traits<_Ptr>::difference_type type;
+    typedef _LIBCPP_NODEBUG_TYPE typename pointer_traits<_Ptr>::difference_type type;
 };
 
 template <class _Alloc, class _Ptr>
 struct __alloc_traits_difference_type<_Alloc, _Ptr, true>
 {
-    typedef typename _Alloc::difference_type type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Alloc::difference_type type;
 };
 
 template <class _Tp>
@@ -1768,7 +1768,7 @@ template <class _Traits, class _Tp>
 struct __rebind_alloc_helper
 {
 #ifndef _LIBCPP_CXX03_LANG
-    typedef typename _Traits::template rebind_alloc<_Tp>        type;
+    typedef _LIBCPP_NODEBUG_TYPE typename _Traits::template rebind_alloc<_Tp>        type;
 #else
     typedef typename _Traits::template rebind_alloc<_Tp>::other type;
 #endif
@@ -2209,8 +2209,8 @@ struct __second_tag {};
 template <class _T1, class _T2>
 class __compressed_pair : private __compressed_pair_elem<_T1, 0>,
                           private __compressed_pair_elem<_T2, 1> {
-  typedef __compressed_pair_elem<_T1, 0> _Base1;
-  typedef __compressed_pair_elem<_T2, 1> _Base2;
+  typedef _LIBCPP_NODEBUG_TYPE __compressed_pair_elem<_T1, 0> _Base1;
+  typedef _LIBCPP_NODEBUG_TYPE __compressed_pair_elem<_T2, 1> _Base2;
 
   // NOTE: This static assert should never fire because __compressed_pair
   // is *almost never* used in a scenario where it's possible for T1 == T2.
@@ -2401,7 +2401,7 @@ class _LIBCPP_TEMPLATE_VIS unique_ptr {
 public:
   typedef _Tp element_type;
   typedef _Dp deleter_type;
-  typedef typename __pointer_type<_Tp, deleter_type>::type pointer;
+  typedef _LIBCPP_NODEBUG_TYPE typename __pointer_type<_Tp, deleter_type>::type pointer;
 
   static_assert(!is_rvalue_reference<deleter_type>::value,
                 "the specified deleter type cannot be an rvalue reference");
@@ -2412,38 +2412,38 @@ private:
   struct __nat { int __for_bool_; };
 
 #ifndef _LIBCPP_CXX03_LANG
-  typedef __unique_ptr_deleter_sfinae<_Dp> _DeleterSFINAE;
+  typedef _LIBCPP_NODEBUG_TYPE __unique_ptr_deleter_sfinae<_Dp> _DeleterSFINAE;
 
   template <bool _Dummy>
-  using _LValRefType =
+  using _LValRefType _LIBCPP_NODEBUG_TYPE =
       typename __dependent_type<_DeleterSFINAE, _Dummy>::__lval_ref_type;
 
   template <bool _Dummy>
-  using _GoodRValRefType =
+  using _GoodRValRefType _LIBCPP_NODEBUG_TYPE =
       typename __dependent_type<_DeleterSFINAE, _Dummy>::__good_rval_ref_type;
 
   template <bool _Dummy>
-  using _BadRValRefType =
+  using _BadRValRefType _LIBCPP_NODEBUG_TYPE  =
       typename __dependent_type<_DeleterSFINAE, _Dummy>::__bad_rval_ref_type;
 
   template <bool _Dummy, class _Deleter = typename __dependent_type<
                              __identity<deleter_type>, _Dummy>::type>
-  using _EnableIfDeleterDefaultConstructible =
+  using _EnableIfDeleterDefaultConstructible _LIBCPP_NODEBUG_TYPE =
       typename enable_if<is_default_constructible<_Deleter>::value &&
                          !is_pointer<_Deleter>::value>::type;
 
   template <class _ArgType>
-  using _EnableIfDeleterConstructible =
+  using _EnableIfDeleterConstructible _LIBCPP_NODEBUG_TYPE  =
       typename enable_if<is_constructible<deleter_type, _ArgType>::value>::type;
 
   template <class _UPtr, class _Up>
-  using _EnableIfMoveConvertible = typename enable_if<
+  using _EnableIfMoveConvertible _LIBCPP_NODEBUG_TYPE  = typename enable_if<
       is_convertible<typename _UPtr::pointer, pointer>::value &&
       !is_array<_Up>::value
   >::type;
 
   template <class _UDel>
-  using _EnableIfDeleterConvertible = typename enable_if<
+  using _EnableIfDeleterConvertible _LIBCPP_NODEBUG_TYPE  = typename enable_if<
       (is_reference<_Dp>::value && is_same<_Dp, _UDel>::value) ||
       (!is_reference<_Dp>::value && is_convertible<_UDel, _Dp>::value)
     >::type;
@@ -2684,35 +2684,35 @@ private:
   typedef __unique_ptr_deleter_sfinae<_Dp> _DeleterSFINAE;
 
   template <bool _Dummy>
-  using _LValRefType =
+  using _LValRefType _LIBCPP_NODEBUG_TYPE =
       typename __dependent_type<_DeleterSFINAE, _Dummy>::__lval_ref_type;
 
   template <bool _Dummy>
-  using _GoodRValRefType =
+  using _GoodRValRefType _LIBCPP_NODEBUG_TYPE =
       typename __dependent_type<_DeleterSFINAE, _Dummy>::__good_rval_ref_type;
 
   template <bool _Dummy>
-  using _BadRValRefType =
+  using _BadRValRefType _LIBCPP_NODEBUG_TYPE =
       typename __dependent_type<_DeleterSFINAE, _Dummy>::__bad_rval_ref_type;
 
   template <bool _Dummy, class _Deleter = typename __dependent_type<
                              __identity<deleter_type>, _Dummy>::type>
-  using _EnableIfDeleterDefaultConstructible =
+  using _EnableIfDeleterDefaultConstructible _LIBCPP_NODEBUG_TYPE  =
       typename enable_if<is_default_constructible<_Deleter>::value &&
                          !is_pointer<_Deleter>::value>::type;
 
   template <class _ArgType>
-  using _EnableIfDeleterConstructible =
+  using _EnableIfDeleterConstructible _LIBCPP_NODEBUG_TYPE  =
       typename enable_if<is_constructible<deleter_type, _ArgType>::value>::type;
 
   template <class _Pp>
-  using _EnableIfPointerConvertible = typename enable_if<
+  using _EnableIfPointerConvertible _LIBCPP_NODEBUG_TYPE  = typename enable_if<
       _CheckArrayPointerConversion<_Pp>::value
   >::type;
 
   template <class _UPtr, class _Up,
         class _ElemT = typename _UPtr::element_type>
-  using _EnableIfMoveConvertible = typename enable_if<
+  using _EnableIfMoveConvertible _LIBCPP_NODEBUG_TYPE  = typename enable_if<
       is_array<_Up>::value &&
       is_same<pointer, element_type*>::value &&
       is_same<typename _UPtr::pointer, _ElemT*>::value &&
@@ -2720,13 +2720,13 @@ private:
     >::type;
 
   template <class _UDel>
-  using _EnableIfDeleterConvertible = typename enable_if<
+  using _EnableIfDeleterConvertible _LIBCPP_NODEBUG_TYPE  = typename enable_if<
       (is_reference<_Dp>::value && is_same<_Dp, _UDel>::value) ||
       (!is_reference<_Dp>::value && is_convertible<_UDel, _Dp>::value)
     >::type;
 
   template <class _UDel>
-  using _EnableIfDeleterAssignable = typename enable_if<
+  using _EnableIfDeleterAssignable _LIBCPP_NODEBUG_TYPE  = typename enable_if<
       is_assignable<_Dp&, _UDel&&>::value
     >::type;
 
@@ -3206,10 +3206,10 @@ public:
 template <class _Alloc>
 class __allocator_destructor
 {
-    typedef allocator_traits<_Alloc> __alloc_traits;
+    typedef _LIBCPP_NODEBUG_TYPE allocator_traits<_Alloc> __alloc_traits;
 public:
-    typedef typename __alloc_traits::pointer pointer;
-    typedef typename __alloc_traits::size_type size_type;
+    typedef _LIBCPP_NODEBUG_TYPE typename __alloc_traits::pointer pointer;
+    typedef _LIBCPP_NODEBUG_TYPE typename __alloc_traits::size_type size_type;
 private:
     _Alloc& __alloc_;
     size_type __s_;
