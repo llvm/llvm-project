@@ -22,6 +22,8 @@ public:
   }
   void init() { initLinkerInitialized(); }
 
+  void unmapTestOnly() { unmap(reinterpret_cast<void *>(Map), Size); }
+
   void set(uptr Index, u8 Value) {
     DCHECK_LT(Index, Size);
     DCHECK_EQ(0U, Map[Index]);
@@ -55,6 +57,12 @@ public:
       unmap(P, Level2Size);
     }
     memset(Level1Map, 0, sizeof(atomic_uptr) * Level1Size);
+  }
+
+  void unmapTestOnly() {
+    reset();
+    unmap(reinterpret_cast<void *>(Level1Map),
+          sizeof(atomic_uptr) * Level1Size);
   }
 
   uptr size() const { return Level1Size * Level2Size; }

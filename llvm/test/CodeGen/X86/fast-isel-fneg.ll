@@ -74,6 +74,31 @@ define void @goo(double* %x, double* %y) nounwind {
   ret void
 }
 
+define void @goo_unary_fneg(double* %x, double* %y) nounwind {
+; CHECK-LABEL: goo_unary_fneg:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movq %xmm0, %rax
+; CHECK-NEXT:    movabsq $-9223372036854775808, %rcx ## imm = 0x8000000000000000
+; CHECK-NEXT:    xorq %rax, %rcx
+; CHECK-NEXT:    movq %rcx, %xmm0
+; CHECK-NEXT:    movq %xmm0, (%rsi)
+; CHECK-NEXT:    retq
+;
+; SSE2-LABEL: goo_unary_fneg:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    xorps {{\.LCPI.*}}, %xmm0
+; SSE2-NEXT:    movsd %xmm0, (%eax)
+; SSE2-NEXT:    retl
+  %a = load double, double* %x
+  %b = fneg double %a
+  store double %b, double* %y
+  ret void
+}
+
 define void @loo(float* %x, float* %y) nounwind {
 ; CHECK-LABEL: loo:
 ; CHECK:       ## %bb.0:
@@ -96,6 +121,32 @@ define void @loo(float* %x, float* %y) nounwind {
 ; SSE2-NEXT:    retl
   %a = load float, float* %x
   %b = fsub float -0.0, %a
+  store float %b, float* %y
+  ret void
+}
+
+define void @loo_unary_fneg(float* %x, float* %y) nounwind {
+; CHECK-LABEL: loo_unary_fneg:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    xorl $2147483648, %eax ## imm = 0x80000000
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    movd %xmm0, (%rsi)
+; CHECK-NEXT:    retq
+;
+; SSE2-LABEL: loo_unary_fneg:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd %xmm0, %ecx
+; SSE2-NEXT:    xorl $2147483648, %ecx # imm = 0x80000000
+; SSE2-NEXT:    movd %ecx, %xmm0
+; SSE2-NEXT:    movd %xmm0, (%eax)
+; SSE2-NEXT:    retl
+  %a = load float, float* %x
+  %b = fneg float %a
   store float %b, float* %y
   ret void
 }

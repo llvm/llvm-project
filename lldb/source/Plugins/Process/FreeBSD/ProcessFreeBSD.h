@@ -127,7 +127,7 @@ public:
   size_t PutSTDIN(const char *buf, size_t len,
                   lldb_private::Status &error) override;
 
-  const lldb::DataBufferSP GetAuxvData() override;
+  const lldb_private::DataExtractor GetAuxvData() override;
 
   // ProcessFreeBSD internal API.
 

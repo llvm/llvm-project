@@ -396,11 +396,13 @@ TEST_F(LoopPassManagerTest, FunctionPassInvalidationOfLoopAnalyses) {
   // No need to re-run if we require again from a fresh loop pass manager.
   FPM.addPass(createFunctionToLoopPassAdaptor(
       RequireAnalysisLoopPass<MockLoopAnalysisHandle::Analysis>()));
-
   // For 'f', preserve most things but not the specific loop analyses.
+  auto PA = getLoopPassPreservedAnalyses();
+  if (EnableMSSALoopDependency)
+    PA.preserve<MemorySSAAnalysis>();
   EXPECT_CALL(MFPHandle, run(HasName("f"), _))
       .InSequence(FSequence)
-      .WillOnce(Return(getLoopPassPreservedAnalyses()));
+      .WillOnce(Return(PA));
   EXPECT_CALL(MLAHandle, invalidate(HasName("loop.0.0"), _, _))
       .InSequence(FSequence)
       .WillOnce(DoDefault());
@@ -475,6 +477,8 @@ TEST_F(LoopPassManagerTest, ModulePassInvalidationOfLoopAnalyses) {
   EXPECT_CALL(MMPHandle, run(_, _)).WillOnce(InvokeWithoutArgs([] {
     auto PA = getLoopPassPreservedAnalyses();
     PA.preserve<FunctionAnalysisManagerModuleProxy>();
+    if (EnableMSSALoopDependency)
+      PA.preserve<MemorySSAAnalysis>();
     return PA;
   }));
   // All the loop analyses from both functions get invalidated before we
@@ -803,6 +807,8 @@ TEST_F(LoopPassManagerTest, IndirectOuterPassInvalidation) {
   // the fact that they were preserved.
   EXPECT_CALL(MFPHandle, run(HasName("f"), _)).WillOnce(InvokeWithoutArgs([] {
     auto PA = getLoopPassPreservedAnalyses();
+    if (EnableMSSALoopDependency)
+      PA.preserve<MemorySSAAnalysis>();
     PA.preserveSet<AllAnalysesOn<Loop>>();
     return PA;
   }));
@@ -824,6 +830,8 @@ TEST_F(LoopPassManagerTest, IndirectOuterPassInvalidation) {
   // Which means that no extra invalidation occurs and cached values are used.
   EXPECT_CALL(MFPHandle, run(HasName("g"), _)).WillOnce(InvokeWithoutArgs([] {
     auto PA = getLoopPassPreservedAnalyses();
+    if (EnableMSSALoopDependency)
+      PA.preserve<MemorySSAAnalysis>();
     PA.preserveSet<AllAnalysesOn<Loop>>();
     return PA;
   }));

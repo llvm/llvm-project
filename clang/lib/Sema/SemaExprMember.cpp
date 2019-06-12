@@ -913,9 +913,10 @@ MemberExpr *Sema::BuildMemberExpr(
     QualType Ty, ExprValueKind VK, ExprObjectKind OK,
     const TemplateArgumentListInfo *TemplateArgs) {
   assert((!IsArrow || Base->isRValue()) && "-> base must be a pointer rvalue");
-  MemberExpr *E = MemberExpr::Create(Context, Base, IsArrow, OpLoc, NNS,
-                                     TemplateKWLoc, Member, FoundDecl,
-                                     MemberNameInfo, TemplateArgs, Ty, VK, OK);
+  MemberExpr *E =
+      MemberExpr::Create(Context, Base, IsArrow, OpLoc, NNS, TemplateKWLoc,
+                         Member, FoundDecl, MemberNameInfo, TemplateArgs, Ty,
+                         VK, OK, getNonOdrUseReasonInCurrentContext(Member));
   E->setHadMultipleCandidates(HadMultipleCandidates);
   MarkMemberReferenced(E);
   return E;

@@ -37,6 +37,10 @@ template <class Allocator> struct TSDRegistryExT {
     initLinkerInitialized(Instance);
   }
 
+  void unmapTestOnly() {
+    unmap(reinterpret_cast<void *>(FallbackTSD), sizeof(TSD<Allocator>));
+  }
+
   ALWAYS_INLINE void initThreadMaybe(Allocator *Instance, bool MinimalInit) {
     if (LIKELY(State != ThreadState::NotInitialized))
       return;

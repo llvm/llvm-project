@@ -7,98 +7,53 @@
 //===----------------------------------------------------------------------===//
 
 #include "AuxVector.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Log.h"
 
-using namespace lldb;
-using namespace lldb_private;
-
-static bool GetMaxU64(DataExtractor &data, lldb::offset_t *offset_ptr,
-                      uint64_t *value, unsigned int byte_size) {
-  lldb::offset_t saved_offset = *offset_ptr;
-  *value = data.GetMaxU64(offset_ptr, byte_size);
-  return *offset_ptr != saved_offset;
+AuxVector::AuxVector(const lldb_private::DataExtractor &data) {
+  ParseAuxv(data);
 }
 
-static bool ParseAuxvEntry(DataExtractor &data, AuxVector::Entry &entry,
-                           lldb::offset_t *offset_ptr, unsigned int byte_size) {
-  if (!GetMaxU64(data, offset_ptr, &entry.type, byte_size))
-    return false;
-
-  if (!GetMaxU64(data, offset_ptr, &entry.value, byte_size))
-    return false;
-
-  return true;
-}
-
-DataBufferSP AuxVector::GetAuxvData() {
-  if (m_process)
-    return m_process->GetAuxvData();
-  else
-    return DataBufferSP();
-}
-
-void AuxVector::ParseAuxv(DataExtractor &data) {
-  const unsigned int byte_size = m_process->GetAddressByteSize();
+void AuxVector::ParseAuxv(const lldb_private::DataExtractor &data) {
   lldb::offset_t offset = 0;
-
-  for (;;) {
-    Entry entry;
-
-    if (!ParseAuxvEntry(data, entry, &offset, byte_size))
+  const size_t value_type_size = data.GetAddressByteSize() * 2;
+  while (data.ValidOffsetForDataOfSize(offset, value_type_size)) {
+    // We're not reading an address but an int that could be 32 or 64 bit
+    // depending on the address size, which is what GetAddress does.
+    const uint64_t type = data.GetAddress(&offset);
+    const uint64_t value = data.GetAddress(&offset);
+    if (type == AUXV_AT_NULL)
       break;
-
-    if (entry.type == AUXV_AT_NULL)
-      break;
-
-    if (entry.type == AUXV_AT_IGNORE)
+    if (type == AUXV_AT_IGNORE)
       continue;
 
-    m_auxv.push_back(entry);
+    m_auxv_entries[type] = value;
   }
 }
 
-AuxVector::AuxVector(Process *process) : m_process(process) {
-  DataExtractor data;
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
-
-  data.SetData(GetAuxvData());
-  data.SetByteOrder(m_process->GetByteOrder());
-  data.SetAddressByteSize(m_process->GetAddressByteSize());
-
-  ParseAuxv(data);
-
-  if (log)
-    DumpToLog(log);
+llvm::Optional<uint64_t>
+AuxVector::GetAuxValue(enum EntryType entry_type) const {
+  auto it = m_auxv_entries.find(static_cast<uint64_t>(entry_type));
+  if (it != m_auxv_entries.end())
+    return it->second;
+  return llvm::None;
 }
 
-AuxVector::iterator AuxVector::FindEntry(EntryType type) const {
-  for (iterator I = begin(); I != end(); ++I) {
-    if (I->type == static_cast<uint64_t>(type))
-      return I;
-  }
-
-  return end();
-}
-
-void AuxVector::DumpToLog(Log *log) const {
+void AuxVector::DumpToLog(lldb_private::Log *log) const {
   if (!log)
     return;
 
   log->PutCString("AuxVector: ");
-  for (iterator I = begin(); I != end(); ++I) {
-    log->Printf("   %s [%" PRIu64 "]: %" PRIx64, GetEntryName(*I), I->type,
-                I->value);
+  for (auto entry : m_auxv_entries) {
+    log->Printf("   %s [%" PRIu64 "]: %" PRIx64,
+                GetEntryName(static_cast<EntryType>(entry.first)), entry.first,
+                entry.second);
   }
 }
 
-const char *AuxVector::GetEntryName(EntryType type) {
+const char *AuxVector::GetEntryName(EntryType type) const {
   const char *name = "AT_???";
 
-#define ENTRY_NAME(_type) \
-  _type:                  \
+#define ENTRY_NAME(_type)                                                      \
+  _type:                                                                       \
   name = &#_type[5]
   switch (type) {
     case ENTRY_NAME(AUXV_AT_NULL);           break;
