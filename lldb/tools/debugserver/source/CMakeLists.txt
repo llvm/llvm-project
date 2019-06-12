@@ -120,6 +120,8 @@ if(use_system_debugserver)
             ${system_debugserver} ${LLVM_RUNTIME_OUTPUT_INTDIR}
     COMMENT "Copying the system debugserver to LLDB's binaries directory.")
 
+  set_target_properties(debugserver PROPERTIES FOLDER "lldb libraries/debugserver")
+
   # Don't test debugserver itself.
   # Tests that require debugserver will use the copy.
   set(DEBUGSERVER_PATH ${default_debugserver_path} CACHE FILEPATH "" FORCE)
@@ -264,6 +266,8 @@ if(build_and_sign_debugserver)
     ENTITLEMENTS
       ${entitlements}
     )
+
+  set_target_properties(debugserver PROPERTIES FOLDER "lldb libraries/debugserver")
 
   if(LLDB_BUILD_FRAMEWORK)
     lldb_add_to_framework(debugserver)
