@@ -134,7 +134,7 @@ void StringConstructorCheck::check(const MatchFinder::MatchResult &Result) {
     const auto *Str = Result.Nodes.getNodeAs<StringLiteral>("str");
     const auto *Lit = Result.Nodes.getNodeAs<IntegerLiteral>("int");
     if (Lit->getValue().ugt(Str->getLength())) {
-      diag(Loc, "length is bigger then string literal size");
+      diag(Loc, "length is bigger than string literal size");
     }
   } else if (const auto *Ptr = Result.Nodes.getNodeAs<Expr>("from-ptr")) {
     Expr::EvalResult ConstPtr;

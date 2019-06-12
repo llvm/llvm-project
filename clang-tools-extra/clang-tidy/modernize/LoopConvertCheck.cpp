@@ -44,18 +44,22 @@ static const char DerefByValueResultName[] = "derefByValueResult";
 static const char DerefByRefResultName[] = "derefByRefResult";
 
 // shared matchers
-static const TypeMatcher AnyType = anything();
+static const TypeMatcher AnyType() { return anything(); }
 
-static const StatementMatcher IntegerComparisonMatcher =
-    expr(ignoringParenImpCasts(
-        declRefExpr(to(varDecl(hasType(isInteger())).bind(ConditionVarName)))));
+static const StatementMatcher IntegerComparisonMatcher() {
+  return expr(ignoringParenImpCasts(
+      declRefExpr(to(varDecl(hasType(isInteger())).bind(ConditionVarName)))));
+}
 
-static const DeclarationMatcher InitToZeroMatcher =
-    varDecl(hasInitializer(ignoringParenImpCasts(integerLiteral(equals(0)))))
-        .bind(InitVarName);
+static const DeclarationMatcher InitToZeroMatcher() {
+  return varDecl(
+             hasInitializer(ignoringParenImpCasts(integerLiteral(equals(0)))))
+      .bind(InitVarName);
+}
 
-static const StatementMatcher IncrementVarMatcher =
-    declRefExpr(to(varDecl(hasType(isInteger())).bind(IncrementVarName)));
+static const StatementMatcher IncrementVarMatcher() {
+  return declRefExpr(to(varDecl(hasType(isInteger())).bind(IncrementVarName)));
+}
 
 /// \brief The matcher for loops over arrays.
 ///
@@ -81,15 +85,15 @@ StatementMatcher makeArrayLoopMatcher() {
 
   return forStmt(
              unless(isInTemplateInstantiation()),
-             hasLoopInit(declStmt(hasSingleDecl(InitToZeroMatcher))),
+             hasLoopInit(declStmt(hasSingleDecl(InitToZeroMatcher()))),
              hasCondition(anyOf(
                  binaryOperator(hasOperatorName("<"),
-                                hasLHS(IntegerComparisonMatcher),
+                                hasLHS(IntegerComparisonMatcher()),
                                 hasRHS(ArrayBoundMatcher)),
                  binaryOperator(hasOperatorName(">"), hasLHS(ArrayBoundMatcher),
-                                hasRHS(IntegerComparisonMatcher)))),
+                                hasRHS(IntegerComparisonMatcher())))),
              hasIncrement(unaryOperator(hasOperatorName("++"),
-                                        hasUnaryOperand(IncrementVarMatcher))))
+                                        hasUnaryOperand(IncrementVarMatcher()))))
       .bind(LoopNameArray);
 }
 
@@ -190,7 +194,7 @@ StatementMatcher makeIteratorLoopMatcher() {
              hasIncrement(anyOf(
                  unaryOperator(hasOperatorName("++"),
                                hasUnaryOperand(declRefExpr(
-                                   to(varDecl(hasType(pointsTo(AnyType)))
+                                   to(varDecl(hasType(pointsTo(AnyType())))
                                           .bind(IncrementVarName))))),
                  cxxOperatorCallExpr(
                      hasOverloadedOperatorName("++"),
@@ -278,17 +282,17 @@ StatementMatcher makePseudoArrayLoopMatcher() {
              unless(isInTemplateInstantiation()),
              hasLoopInit(
                  anyOf(declStmt(declCountIs(2),
-                                containsDeclaration(0, InitToZeroMatcher),
+                                containsDeclaration(0, InitToZeroMatcher()),
                                 containsDeclaration(1, EndDeclMatcher)),
-                       declStmt(hasSingleDecl(InitToZeroMatcher)))),
+                       declStmt(hasSingleDecl(InitToZeroMatcher())))),
              hasCondition(anyOf(
                  binaryOperator(hasOperatorName("<"),
-                                hasLHS(IntegerComparisonMatcher),
+                                hasLHS(IntegerComparisonMatcher()),
                                 hasRHS(IndexBoundMatcher)),
                  binaryOperator(hasOperatorName(">"), hasLHS(IndexBoundMatcher),
-                                hasRHS(IntegerComparisonMatcher)))),
+                                hasRHS(IntegerComparisonMatcher())))),
              hasIncrement(unaryOperator(hasOperatorName("++"),
-                                        hasUnaryOperand(IncrementVarMatcher))))
+                                        hasUnaryOperand(IncrementVarMatcher()))))
       .bind(LoopNamePseudoArray);
 }
 
