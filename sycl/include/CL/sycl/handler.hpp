@@ -12,7 +12,6 @@
 
 #include <CL/__spirv/spirv_vars.hpp>
 #include <CL/sycl/access/access.hpp>
-#include <CL/sycl/accessor.hpp>
 #include <CL/sycl/context.hpp>
 #include <CL/sycl/detail/cg.hpp>
 #include <CL/sycl/detail/common.hpp>
