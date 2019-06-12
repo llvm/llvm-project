@@ -3356,7 +3356,7 @@ enum CXErrorCode clang_createTranslationUnit2(CXIndex CIdx,
       ASTUnit::LoadEverything, Diags,
       FileSystemOpts, /*UseDebugInfo=*/false,
       CXXIdx->getOnlyLocalDecls(), None,
-      /*CaptureDiagnostics=*/true,
+      CaptureDiagsKind::All,
       /*AllowPCHWithCompilerErrors=*/true,
       /*UserFilesAreVolatile=*/true);
   *out_TU = MakeCXTranslationUnit(CXXIdx, std::move(AU));
@@ -3428,6 +3428,10 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
 
   if (options & CXTranslationUnit_KeepGoing)
     Diags->setFatalsAsError(true);
+
+  CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::All;
+  if (options & CXTranslationUnit_IgnoreNonErrorsFromIncludedFiles)
+    CaptureDiagnostics = CaptureDiagsKind::AllWithoutNonErrorsFromIncludes;
 
   // Recover resources if we crash before exiting this function.
   llvm::CrashRecoveryContextCleanupRegistrar<DiagnosticsEngine,
@@ -3506,7 +3510,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
       Args->data(), Args->data() + Args->size(),
       CXXIdx->getPCHContainerOperations(), Diags,
       CXXIdx->getClangResourcesPath(), CXXIdx->getOnlyLocalDecls(),
-      /*CaptureDiagnostics=*/true, *RemappedFiles.get(),
+      CaptureDiagnostics, *RemappedFiles.get(),
       /*RemappedFilesKeepOriginalName=*/true, PrecompilePreambleAfterNParses,
       TUKind, CacheCodeCompletionResults, IncludeBriefCommentsInCodeCompletion,
       /*AllowPCHWithCompilerErrors=*/true, SkipFunctionBodies, SingleFileParse,

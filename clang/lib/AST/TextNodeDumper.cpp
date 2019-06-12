@@ -715,6 +715,12 @@ void TextNodeDumper::VisitDeclRefExpr(const DeclRefExpr *Node) {
     dumpBareDeclRef(Node->getFoundDecl());
     OS << ")";
   }
+  switch (Node->isNonOdrUse()) {
+  case NOUR_None: break;
+  case NOUR_Unevaluated: OS << " non_odr_use_unevaluated"; break;
+  case NOUR_Constant: OS << " non_odr_use_constant"; break;
+  case NOUR_Discarded: OS << " non_odr_use_discarded"; break;
+  }
 }
 
 void TextNodeDumper::VisitUnresolvedLookupExpr(
@@ -819,6 +825,12 @@ void TextNodeDumper::VisitUnaryExprOrTypeTraitExpr(
 void TextNodeDumper::VisitMemberExpr(const MemberExpr *Node) {
   OS << " " << (Node->isArrow() ? "->" : ".") << *Node->getMemberDecl();
   dumpPointer(Node->getMemberDecl());
+  switch (Node->isNonOdrUse()) {
+  case NOUR_None: break;
+  case NOUR_Unevaluated: OS << " non_odr_use_unevaluated"; break;
+  case NOUR_Constant: OS << " non_odr_use_constant"; break;
+  case NOUR_Discarded: OS << " non_odr_use_discarded"; break;
+  }
 }
 
 void TextNodeDumper::VisitExtVectorElementExpr(

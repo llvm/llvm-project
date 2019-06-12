@@ -375,6 +375,25 @@ class ScopBuilder {
   ///     ...
   void verifyInvariantLoads();
 
+  /// Hoist invariant memory loads and check for required ones.
+  ///
+  /// We first identify "common" invariant loads, thus loads that are invariant
+  /// and can be hoisted. Then we check if all required invariant loads have
+  /// been identified as (common) invariant. A load is a required invariant load
+  /// if it was assumed to be invariant during SCoP detection, e.g., to assume
+  /// loop bounds to be affine or runtime alias checks to be placeable. In case
+  /// a required invariant load was not identified as (common) invariant we will
+  /// drop this SCoP. An example for both "common" as well as required invariant
+  /// loads is given below:
+  ///
+  /// for (int i = 1; i < *LB[0]; i++)
+  ///   for (int j = 1; j < *LB[1]; j++)
+  ///     A[i][j] += A[0][0] + (*V);
+  ///
+  /// Common inv. loads: V, A[0][0], LB[0], LB[1]
+  /// Required inv. loads: LB[0], LB[1], (V, if it may alias with A or LB)
+  void hoistInvariantLoads();
+
   /// Collect loads which might form a reduction chain with @p StoreMA.
   ///
   /// Check if the stored value for @p StoreMA is a binary operator with one or

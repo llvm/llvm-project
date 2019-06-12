@@ -351,6 +351,7 @@ protected:
     unsigned HasFoundDecl : 1;
     unsigned HadMultipleCandidates : 1;
     unsigned RefersToEnclosingVariableOrCapture : 1;
+    unsigned NonOdrUseReason : 2;
 
     /// The location of the declaration name itself.
     SourceLocation Loc;
@@ -477,6 +478,11 @@ protected:
     /// True if this member expression refers to a method that
     /// was resolved from an overloaded set having size greater than 1.
     unsigned HadMultipleCandidates : 1;
+
+    /// Value of type NonOdrUseReason indicating why this MemberExpr does
+    /// not constitute an odr-use of the named declaration. Meaningful only
+    /// when naming a static member.
+    unsigned NonOdrUseReason : 2;
 
     /// This is the location of the -> or . in the expression.
     SourceLocation OperatorLoc;

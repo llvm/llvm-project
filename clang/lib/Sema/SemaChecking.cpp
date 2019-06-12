@@ -5231,15 +5231,10 @@ Sema::SemaBuiltinAtomicOverloaded(ExprResult TheCallResult) {
   }
 
   // Create a new DeclRefExpr to refer to the new decl.
-  DeclRefExpr* NewDRE = DeclRefExpr::Create(
-      Context,
-      DRE->getQualifierLoc(),
-      SourceLocation(),
-      NewBuiltinDecl,
-      /*enclosing*/ false,
-      DRE->getLocation(),
-      Context.BuiltinFnTy,
-      DRE->getValueKind());
+  DeclRefExpr *NewDRE = DeclRefExpr::Create(
+      Context, DRE->getQualifierLoc(), SourceLocation(), NewBuiltinDecl,
+      /*enclosing*/ false, DRE->getLocation(), Context.BuiltinFnTy,
+      DRE->getValueKind(), nullptr, nullptr, DRE->isNonOdrUse());
 
   // Set the callee in the CallExpr.
   // FIXME: This loses syntactic information.

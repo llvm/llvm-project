@@ -1342,7 +1342,8 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:         "type": {
 // CHECK-NEXT:          "qualType": "int"
 // CHECK-NEXT:         }
-// CHECK-NEXT:        }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "nonOdrUseReason": "unevaluated"
 // CHECK-NEXT:       }
 // CHECK-NEXT:      ]
 // CHECK-NEXT:     },
@@ -1456,7 +1457,8 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:         "type": {
 // CHECK-NEXT:          "qualType": "int"
 // CHECK-NEXT:         }
-// CHECK-NEXT:        }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "nonOdrUseReason": "unevaluated"
 // CHECK-NEXT:       }
 // CHECK-NEXT:      ]
 // CHECK-NEXT:     },
@@ -1596,7 +1598,8 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:         "type": {
 // CHECK-NEXT:          "qualType": "int"
 // CHECK-NEXT:         }
-// CHECK-NEXT:        }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "nonOdrUseReason": "unevaluated"
 // CHECK-NEXT:       }
 // CHECK-NEXT:      ]
 // CHECK-NEXT:     },
@@ -1736,7 +1739,8 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:         "type": {
 // CHECK-NEXT:          "qualType": "int"
 // CHECK-NEXT:         }
-// CHECK-NEXT:        }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "nonOdrUseReason": "unevaluated"
 // CHECK-NEXT:       }
 // CHECK-NEXT:      ]
 // CHECK-NEXT:     },
@@ -1951,7 +1955,8 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:             "type": {
 // CHECK-NEXT:              "qualType": "int"
 // CHECK-NEXT:             }
-// CHECK-NEXT:            }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "nonOdrUseReason": "unevaluated"
 // CHECK-NEXT:           }
 // CHECK-NEXT:          ]
 // CHECK-NEXT:         },

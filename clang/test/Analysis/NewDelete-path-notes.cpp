@@ -11,7 +11,7 @@
 // RUN:   -analyzer-checker=cplusplus.NewDelete,unix.Malloc \
 // RUN:   -analyzer-config add-pop-up-notes=false \
 // RUN:   -analyzer-output=plist %s -o %t.plist
-// RUN: cat %t.plist | %diff_plist \
+// RUN: %normalize_plist <%t.plist | diff -ub \
 // RUN:   %S/Inputs/expected-plists/NewDelete-path-notes.cpp.plist -
 
 void test() {

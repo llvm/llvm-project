@@ -88,6 +88,8 @@ static unsigned getDefaultParsingOptions() {
     options |= CXTranslationUnit_IncludeAttributedTypes;
   if (getenv("CINDEXTEST_VISIT_IMPLICIT_ATTRIBUTES"))
     options |= CXTranslationUnit_VisitImplicitAttributes;
+  if (getenv("CINDEXTEST_IGNORE_NONERRORS_FROM_INCLUDED_FILES"))
+    options |= CXTranslationUnit_IgnoreNonErrorsFromIncludedFiles;
 
   return options;
 }

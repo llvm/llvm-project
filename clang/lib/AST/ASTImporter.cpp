@@ -2256,7 +2256,8 @@ ASTNodeImporter::VisitTypedefNameDecl(TypedefNameDecl *D, bool IsAlias) {
           if (!FromUT->isIncompleteType() && !FoundUT->isIncompleteType())
             return Importer.MapImported(D, FoundTypedef);
         }
-        // FIXME Handle redecl chain.
+        // FIXME Handle redecl chain. When you do that make consistent changes
+        // in ASTImporterLookupTable too.
         break;
       }
 
@@ -6188,7 +6189,7 @@ ExpectedStmt ASTNodeImporter::VisitDeclRefExpr(DeclRefExpr *E) {
   auto *ToE = DeclRefExpr::Create(
       Importer.getToContext(), ToQualifierLoc, ToTemplateKeywordLoc, ToDecl,
       E->refersToEnclosingVariableOrCapture(), ToLocation, ToType,
-      E->getValueKind(), ToFoundD, ToResInfo);
+      E->getValueKind(), ToFoundD, ToResInfo, E->isNonOdrUse());
   if (E->hadMultipleCandidates())
     ToE->setHadMultipleCandidates(true);
   return ToE;
@@ -7112,10 +7113,11 @@ ExpectedStmt ASTNodeImporter::VisitMemberExpr(MemberExpr *E) {
     ResInfo = &ToTAInfo;
   }
 
-  return MemberExpr::Create(
-      Importer.getToContext(), ToBase, E->isArrow(), ToOperatorLoc,
-      ToQualifierLoc, ToTemplateKeywordLoc, ToMemberDecl, ToFoundDecl,
-      ToMemberNameInfo, ResInfo, ToType, E->getValueKind(), E->getObjectKind());
+  return MemberExpr::Create(Importer.getToContext(), ToBase, E->isArrow(),
+                            ToOperatorLoc, ToQualifierLoc, ToTemplateKeywordLoc,
+                            ToMemberDecl, ToFoundDecl, ToMemberNameInfo,
+                            ResInfo, ToType, E->getValueKind(),
+                            E->getObjectKind(), E->isNonOdrUse());
 }
 
 ExpectedStmt

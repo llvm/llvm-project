@@ -2031,41 +2031,10 @@ private:
   /// Check if the base ptr of @p MA is in the SCoP but not hoistable.
   bool hasNonHoistableBasePtrInScop(MemoryAccess *MA, isl::union_map Writes);
 
-  /// Return the context under which the access cannot be hoisted.
-  ///
-  /// @param Access The access to check.
-  /// @param Writes The set of all memory writes in the scop.
-  ///
-  /// @return Return the context under which the access cannot be hoisted or a
-  ///         nullptr if it cannot be hoisted at all.
-  isl::set getNonHoistableCtx(MemoryAccess *Access, isl::union_map Writes);
-
-  /// Hoist invariant memory loads and check for required ones.
-  ///
-  /// We first identify "common" invariant loads, thus loads that are invariant
-  /// and can be hoisted. Then we check if all required invariant loads have
-  /// been identified as (common) invariant. A load is a required invariant load
-  /// if it was assumed to be invariant during SCoP detection, e.g., to assume
-  /// loop bounds to be affine or runtime alias checks to be placeable. In case
-  /// a required invariant load was not identified as (common) invariant we will
-  /// drop this SCoP. An example for both "common" as well as required invariant
-  /// loads is given below:
-  ///
-  /// for (int i = 1; i < *LB[0]; i++)
-  ///   for (int j = 1; j < *LB[1]; j++)
-  ///     A[i][j] += A[0][0] + (*V);
-  ///
-  /// Common inv. loads: V, A[0][0], LB[0], LB[1]
-  /// Required inv. loads: LB[0], LB[1], (V, if it may alias with A or LB)
-  void hoistInvariantLoads();
-
   /// Check if @p MA can always be hoisted without execution context.
   bool canAlwaysBeHoisted(MemoryAccess *MA, bool StmtInvalidCtxIsEmpty,
                           bool MAInvalidCtxIsEmpty,
                           bool NonHoistableCtxIsEmpty);
-
-  /// Add invariant loads listed in @p InvMAs with the domain of @p Stmt.
-  void addInvariantLoads(ScopStmt &Stmt, InvariantAccessesTy &InvMAs);
 
   /// Create an id for @p Param and store it in the ParameterIds map.
   void createParameterId(const SCEV *Param);
@@ -2340,6 +2309,9 @@ public:
   void addInvariantLoadMapping(const Value *LoadInst, Value *ClassRep) {
     InvEquivClassVMap[LoadInst] = ClassRep;
   }
+
+  /// Add invariant loads listed in @p InvMAs with the domain of @p Stmt.
+  void addInvariantLoads(ScopStmt &Stmt, InvariantAccessesTy &InvMAs);
 
   /// Remove the metadata stored for @p Access.
   void removeAccessData(MemoryAccess *Access);
@@ -2662,6 +2634,15 @@ public:
   const MinMaxVectorPairVectorTy &getAliasGroups() const {
     return MinMaxAliasGroups;
   }
+
+  /// Return the context under which the access cannot be hoisted.
+  ///
+  /// @param Access The access to check.
+  /// @param Writes The set of all memory writes in the scop.
+  ///
+  /// @return Return the context under which the access cannot be hoisted or a
+  ///         nullptr if it cannot be hoisted at all.
+  isl::set getNonHoistableCtx(MemoryAccess *Access, isl::union_map Writes);
 
   /// Get an isl string representing the context.
   std::string getContextStr() const;
