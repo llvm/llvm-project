@@ -47,6 +47,11 @@ template <class Allocator, u32 MaxTSDCount> struct TSDRegistrySharedT {
     initLinkerInitialized(Instance);
   }
 
+  void unmapTestOnly() {
+    unmap(reinterpret_cast<void *>(TSDs),
+          sizeof(TSD<Allocator>) * NumberOfTSDs);
+  }
+
   ALWAYS_INLINE void initThreadMaybe(Allocator *Instance,
                                      UNUSED bool MinimalInit) {
     if (LIKELY(getCurrentTSD()))

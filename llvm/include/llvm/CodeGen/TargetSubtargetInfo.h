@@ -193,6 +193,9 @@ public:
   /// for preRA scheduling with the source level scheduler.
   virtual bool enableMachineSchedDefaultSched() const { return true; }
 
+  /// True if the subtarget should run MachinePipeliner
+  virtual bool enableMachinePipeliner() const { return true; };
+
   /// True if the subtarget should enable joining global copies.
   ///
   /// By default this is enabled if the machine scheduler is enabled, but

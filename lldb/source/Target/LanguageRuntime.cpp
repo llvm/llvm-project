@@ -293,6 +293,3 @@ void LanguageRuntime::InitializeCommands(CommandObject *parent) {
   }
 }
 
-lldb::SearchFilterSP LanguageRuntime::CreateExceptionSearchFilter() {
-  return m_process->GetTarget().GetSearchFilterForModule(nullptr);
-}

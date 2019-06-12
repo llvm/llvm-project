@@ -187,6 +187,9 @@ bool MachinePipeliner::runOnMachineFunction(MachineFunction &mf) {
       !EnableSWPOptSize.getPosition())
     return false;
 
+  if (!mf.getSubtarget().enableMachinePipeliner())
+    return false;
+
   // Cannot pipeline loops without instruction itineraries if we are using
   // DFA for the pipeliner.
   if (mf.getSubtarget().useDFAforSMS() &&
@@ -2026,6 +2029,10 @@ void SwingSchedulerDAG::generatePipelinedLoop(SMSchedule &Schedule) {
   InstrMapTy InstrMap;
 
   SmallVector<MachineBasicBlock *, 4> PrologBBs;
+
+  MachineBasicBlock *PreheaderBB = MLI->getLoopFor(BB)->getLoopPreheader();
+  assert(PreheaderBB != nullptr &&
+         "Need to add code to handle loops w/o preheader");
   // Generate the prolog instructions that set up the pipeline.
   generateProlog(Schedule, MaxStageCount, KernelBB, VRMap, PrologBBs);
   MF.insert(BB->getIterator(), KernelBB);
@@ -2082,7 +2089,7 @@ void SwingSchedulerDAG::generatePipelinedLoop(SMSchedule &Schedule) {
   removeDeadInstructions(KernelBB, EpilogBBs);
 
   // Add branches between prolog and epilog blocks.
-  addBranches(PrologBBs, KernelBB, EpilogBBs, Schedule, VRMap);
+  addBranches(*PreheaderBB, PrologBBs, KernelBB, EpilogBBs, Schedule, VRMap);
 
   // Remove the original loop since it's no longer referenced.
   for (auto &I : *BB)
@@ -2767,7 +2774,8 @@ static void removePhis(MachineBasicBlock *BB, MachineBasicBlock *Incoming) {
 /// Create branches from each prolog basic block to the appropriate epilog
 /// block.  These edges are needed if the loop ends before reaching the
 /// kernel.
-void SwingSchedulerDAG::addBranches(MBBVectorTy &PrologBBs,
+void SwingSchedulerDAG::addBranches(MachineBasicBlock &PreheaderBB,
+                                    MBBVectorTy &PrologBBs,
                                     MachineBasicBlock *KernelBB,
                                     MBBVectorTy &EpilogBBs,
                                     SMSchedule &Schedule, ValueMapTy *VRMap) {
@@ -2794,8 +2802,8 @@ void SwingSchedulerDAG::addBranches(MBBVectorTy &PrologBBs,
     // Check if the LOOP0 has already been removed. If so, then there is no need
     // to reduce the trip count.
     if (LC != 0)
-      LC = TII->reduceLoopCount(*Prolog, IndVar, *Cmp, Cond, PrevInsts, j,
-                                MaxIter);
+      LC = TII->reduceLoopCount(*Prolog, PreheaderBB, IndVar, *Cmp, Cond,
+                                PrevInsts, j, MaxIter);
 
     // Record the value of the first trip count, which is used to determine if
     // branches and blocks can be removed for constant trip counts.

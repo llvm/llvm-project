@@ -2708,7 +2708,7 @@ DynamicLoader *Process::GetDynamicLoader() {
   return m_dyld_up.get();
 }
 
-const lldb::DataBufferSP Process::GetAuxvData() { return DataBufferSP(); }
+DataExtractor Process::GetAuxvData() { return DataExtractor(); }
 
 JITLoaderList &Process::GetJITLoaders() {
   if (!m_jit_loaders_up) {

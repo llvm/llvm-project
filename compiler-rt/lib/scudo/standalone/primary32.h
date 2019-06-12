@@ -83,6 +83,17 @@ public:
     initLinkerInitialized(ReleaseToOsInterval);
   }
 
+  void unmapTestOnly() {
+    while (NumberOfStashedRegions > 0)
+      unmap(reinterpret_cast<void *>(RegionsStash[--NumberOfStashedRegions]),
+            RegionSize);
+    // TODO(kostyak): unmap the TransferBatch regions as well.
+    for (uptr I = 0; I < NumRegions; I++)
+      if (PossibleRegions[I])
+        unmap(reinterpret_cast<void *>(I * RegionSize), RegionSize);
+    PossibleRegions.unmapTestOnly();
+  }
+
   TransferBatch *popBatch(CacheT *C, uptr ClassId) {
     DCHECK_LT(ClassId, NumClasses);
     SizeClassInfo *Sci = getSizeClassInfo(ClassId);

@@ -860,13 +860,14 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
 
   SmallVector<BasicBlock *, 8> BlocksToProcess;
   SmallVector<BasicBlock *, 16> BlocksWithDefsToReplace;
+  SmallVector<WeakVH, 8> InsertedPhis;
 
   // First create MemoryPhis in all blocks that don't have one. Create in the
   // order found in Updates, not in PredMap, to get deterministic numbering.
   for (auto &Edge : Updates) {
     BasicBlock *BB = Edge.getTo();
     if (PredMap.count(BB) && !MSSA->getMemoryAccess(BB))
-      MSSA->createMemoryPhi(BB);
+      InsertedPhis.push_back(MSSA->createMemoryPhi(BB));
   }
 
   // Now we'll fill in the MemoryPhis with the right incoming values.
@@ -967,6 +968,7 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
           IDFPhi->setIncomingValue(I, GetLastDef(IDFPhi->getIncomingBlock(I)));
       } else {
         IDFPhi = MSSA->createMemoryPhi(BBIDF);
+        InsertedPhis.push_back(IDFPhi);
         for (auto &Pair : children<GraphDiffInvBBPair>({GD, BBIDF})) {
           BasicBlock *Pi = Pair.second;
           IDFPhi->addIncoming(GetLastDef(Pi), Pi);
@@ -1009,6 +1011,7 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
       }
     }
   }
+  tryRemoveTrivialPhis(InsertedPhis);
 }
 
 // Move What before Where in the MemorySSA IR.

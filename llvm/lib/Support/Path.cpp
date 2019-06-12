@@ -1125,6 +1125,7 @@ TempFile &TempFile::operator=(TempFile &&Other) {
   TmpName = std::move(Other.TmpName);
   FD = Other.FD;
   Other.Done = true;
+  Other.FD = -1;
   return *this;
 }
 

@@ -9,8 +9,6 @@
 // Main header include
 #include "DynamicLoaderPOSIXDYLD.h"
 
-#include "AuxVector.h"
-
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -90,8 +88,8 @@ void DynamicLoaderPOSIXDYLD::DidAttach() {
   if (log)
     log->Printf("DynamicLoaderPOSIXDYLD::%s() pid %" PRIu64, __FUNCTION__,
                 m_process ? m_process->GetID() : LLDB_INVALID_PROCESS_ID);
+  m_auxv = llvm::make_unique<AuxVector>(m_process->GetAuxvData());
 
-  m_auxv.reset(new AuxVector(m_process));
   if (log)
     log->Printf("DynamicLoaderPOSIXDYLD::%s pid %" PRIu64 " reloaded auxv data",
                 __FUNCTION__,
@@ -182,7 +180,7 @@ void DynamicLoaderPOSIXDYLD::DidLaunch() {
   ModuleSP executable;
   addr_t load_offset;
 
-  m_auxv.reset(new AuxVector(m_process));
+  m_auxv = llvm::make_unique<AuxVector>(m_process->GetAuxvData());
 
   executable = GetTargetExecutable();
   load_offset = ComputeLoadOffset();
@@ -628,13 +626,13 @@ addr_t DynamicLoaderPOSIXDYLD::ComputeLoadOffset() {
 }
 
 void DynamicLoaderPOSIXDYLD::EvalSpecialModulesStatus() {
-  auto I = m_auxv->FindEntry(AuxVector::AUXV_AT_SYSINFO_EHDR);
-  if (I != m_auxv->end() && I->value != 0)
-    m_vdso_base = I->value;
+  if (llvm::Optional<uint64_t> vdso_base =
+          m_auxv->GetAuxValue(AuxVector::AUXV_AT_SYSINFO_EHDR))
+    m_vdso_base = *vdso_base;
 
-  I = m_auxv->FindEntry(AuxVector::AUXV_AT_BASE);
-  if (I != m_auxv->end() && I->value != 0)
-    m_interpreter_base = I->value;
+  if (llvm::Optional<uint64_t> interpreter_base =
+          m_auxv->GetAuxValue(AuxVector::AUXV_AT_BASE))
+    m_interpreter_base = *interpreter_base;
 }
 
 addr_t DynamicLoaderPOSIXDYLD::GetEntryPoint() {
@@ -644,12 +642,12 @@ addr_t DynamicLoaderPOSIXDYLD::GetEntryPoint() {
   if (m_auxv == nullptr)
     return LLDB_INVALID_ADDRESS;
 
-  AuxVector::iterator I = m_auxv->FindEntry(AuxVector::AUXV_AT_ENTRY);
-
-  if (I == m_auxv->end())
+  llvm::Optional<uint64_t> entry_point =
+      m_auxv->GetAuxValue(AuxVector::AUXV_AT_ENTRY);
+  if (!entry_point)
     return LLDB_INVALID_ADDRESS;
 
-  m_entry_point = static_cast<addr_t>(I->value);
+  m_entry_point = static_cast<addr_t>(*entry_point);
 
   const ArchSpec &arch = m_process->GetTarget().GetArchitecture();
 

@@ -142,6 +142,7 @@ Design Documents
    DesignDocs/ThreadingSupportAPI
    DesignDocs/FileTimeType
    DesignDocs/FeatureTestMacros
+   DesignDocs/ExtendedCXX03Support
 
 * `<atomic> design <http://libcxx.llvm.org/atomic_design.html>`_
 * `<type_traits> design <http://libcxx.llvm.org/type_traits_design.html>`_

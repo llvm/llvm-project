@@ -70,7 +70,7 @@ void TestSwitch(int i) {
 }
 
 void TestIf(bool b) {
-  if (int i = 12; b)
+  if (const int i = 12; i)
     ;
 
   if constexpr (sizeof(b) == 1)
@@ -2719,7 +2719,7 @@ void TestIteration() {
 // CHECK-NEXT:      "line": 72
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
-// CHECK-NEXT:    "isUsed": true,
+// CHECK-NEXT:    "isReferenced": true,
 // CHECK-NEXT:    "name": "b",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "bool"
@@ -2768,7 +2768,7 @@ void TestIteration() {
 // CHECK-NEXT:          "line": 73
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:          "col": 17,
+// CHECK-NEXT:          "col": 23,
 // CHECK-NEXT:          "file": "{{.*}}",
 // CHECK-NEXT:          "line": 73
 // CHECK-NEXT:         }
@@ -2778,7 +2778,7 @@ void TestIteration() {
 // CHECK-NEXT:          "id": "0x{{.*}}",
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
-// CHECK-NEXT:           "col": 11,
+// CHECK-NEXT:           "col": 17,
 // CHECK-NEXT:           "file": "{{.*}}",
 // CHECK-NEXT:           "line": 73
 // CHECK-NEXT:          },
@@ -2789,14 +2789,15 @@ void TestIteration() {
 // CHECK-NEXT:            "line": 73
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:            "col": 15,
+// CHECK-NEXT:            "col": 21,
 // CHECK-NEXT:            "file": "{{.*}}",
 // CHECK-NEXT:            "line": 73
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
+// CHECK-NEXT:          "isReferenced": true,
 // CHECK-NEXT:          "name": "i",
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "qualType": "int"
+// CHECK-NEXT:           "qualType": "const int"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "init": "c",
 // CHECK-NEXT:          "inner": [
@@ -2805,12 +2806,12 @@ void TestIteration() {
 // CHECK-NEXT:            "kind": "IntegerLiteral",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
-// CHECK-NEXT:              "col": 15,
+// CHECK-NEXT:              "col": 21,
 // CHECK-NEXT:              "file": "{{.*}}",
 // CHECK-NEXT:              "line": 73
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:              "col": 15,
+// CHECK-NEXT:              "col": 21,
 // CHECK-NEXT:              "file": "{{.*}}",
 // CHECK-NEXT:              "line": 73
 // CHECK-NEXT:             }
@@ -2830,12 +2831,12 @@ void TestIteration() {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
-// CHECK-NEXT:          "col": 19,
+// CHECK-NEXT:          "col": 25,
 // CHECK-NEXT:          "file": "{{.*}}",
 // CHECK-NEXT:          "line": 73
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:          "col": 19,
+// CHECK-NEXT:          "col": 25,
 // CHECK-NEXT:          "file": "{{.*}}",
 // CHECK-NEXT:          "line": 73
 // CHECK-NEXT:         }
@@ -2844,35 +2845,59 @@ void TestIteration() {
 // CHECK-NEXT:         "qualType": "bool"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
-// CHECK-NEXT:        "castKind": "LValueToRValue",
+// CHECK-NEXT:        "castKind": "IntegralToBoolean",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
-// CHECK-NEXT:          "kind": "DeclRefExpr",
+// CHECK-NEXT:          "kind": "ImplicitCastExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
-// CHECK-NEXT:            "col": 19,
+// CHECK-NEXT:            "col": 25,
 // CHECK-NEXT:            "file": "{{.*}}",
 // CHECK-NEXT:            "line": 73
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:            "col": 19,
+// CHECK-NEXT:            "col": 25,
 // CHECK-NEXT:            "file": "{{.*}}",
 // CHECK-NEXT:            "line": 73
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "qualType": "bool"
+// CHECK-NEXT:           "qualType": "int"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "lvalue",
-// CHECK-NEXT:          "referencedDecl": {
-// CHECK-NEXT:           "id": "0x{{.*}}",
-// CHECK-NEXT:           "kind": "ParmVarDecl",
-// CHECK-NEXT:           "name": "b",
-// CHECK-NEXT:           "type": {
-// CHECK-NEXT:            "qualType": "bool"
+// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "castKind": "LValueToRValue",
+// CHECK-NEXT:          "inner": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "DeclRefExpr",
+// CHECK-NEXT:            "range": {
+// CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "col": 25,
+// CHECK-NEXT:              "file": "{{.*}}",
+// CHECK-NEXT:              "line": 73
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "col": 25,
+// CHECK-NEXT:              "file": "{{.*}}",
+// CHECK-NEXT:              "line": 73
+// CHECK-NEXT:             }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "const int"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "valueCategory": "lvalue",
+// CHECK-NEXT:            "referencedDecl": {
+// CHECK-NEXT:             "id": "0x{{.*}}",
+// CHECK-NEXT:             "kind": "VarDecl",
+// CHECK-NEXT:             "name": "i",
+// CHECK-NEXT:             "type": {
+// CHECK-NEXT:              "qualType": "const int"
+// CHECK-NEXT:             }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "nonOdrUseReason": "constant"
 // CHECK-NEXT:           }
-// CHECK-NEXT:          }
+// CHECK-NEXT:          ]
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:       },
@@ -3019,7 +3044,8 @@ void TestIteration() {
 // CHECK-NEXT:                 "type": {
 // CHECK-NEXT:                  "qualType": "bool"
 // CHECK-NEXT:                 }
-// CHECK-NEXT:                }
+// CHECK-NEXT:                },
+// CHECK-NEXT:                "nonOdrUseReason": "unevaluated"
 // CHECK-NEXT:               }
 // CHECK-NEXT:              ]
 // CHECK-NEXT:             }
@@ -3217,7 +3243,8 @@ void TestIteration() {
 // CHECK-NEXT:                 "type": {
 // CHECK-NEXT:                  "qualType": "bool"
 // CHECK-NEXT:                 }
-// CHECK-NEXT:                }
+// CHECK-NEXT:                },
+// CHECK-NEXT:                "nonOdrUseReason": "unevaluated"
 // CHECK-NEXT:               }
 // CHECK-NEXT:              ]
 // CHECK-NEXT:             }

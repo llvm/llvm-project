@@ -32,6 +32,7 @@ public:
   }
   void reset() { memset(this, 0, sizeof(*this)); }
 
+  void unmapTestOnly() { TSDRegistry.unmapTestOnly(); }
   void initCache(CacheT *Cache) { memset(Cache, 0, sizeof(*Cache)); }
   void commitBack(scudo::TSD<MockAllocator> *TSD) {}
   TSDRegistryT *getTSDRegistry() { return &TSDRegistry; }
@@ -60,7 +61,12 @@ struct ExclusiveCaches {
 
 TEST(ScudoTSDTest, TSDRegistryInit) {
   using AllocatorT = MockAllocator<OneCache>;
-  std::unique_ptr<AllocatorT> Allocator(new AllocatorT);
+  auto Deleter = [](AllocatorT *A) {
+    A->unmapTestOnly();
+    delete A;
+  };
+  std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
+                                                           Deleter);
   Allocator->reset();
   EXPECT_FALSE(Allocator->isInitialized());
 
@@ -70,7 +76,12 @@ TEST(ScudoTSDTest, TSDRegistryInit) {
 }
 
 template <class AllocatorT> static void testRegistry() {
-  std::unique_ptr<AllocatorT> Allocator(new AllocatorT);
+  auto Deleter = [](AllocatorT *A) {
+    A->unmapTestOnly();
+    delete A;
+  };
+  std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
+                                                           Deleter);
   Allocator->reset();
   EXPECT_FALSE(Allocator->isInitialized());
 
@@ -131,7 +142,12 @@ template <typename AllocatorT> static void stressCache(AllocatorT *Allocator) {
 }
 
 template <class AllocatorT> static void testRegistryThreaded() {
-  std::unique_ptr<AllocatorT> Allocator(new AllocatorT);
+  auto Deleter = [](AllocatorT *A) {
+    A->unmapTestOnly();
+    delete A;
+  };
+  std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
+                                                           Deleter);
   Allocator->reset();
   std::thread Threads[32];
   for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); I++)

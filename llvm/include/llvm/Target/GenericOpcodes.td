@@ -169,6 +169,12 @@ def G_BLOCK_ADDR : GenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_JUMP_TABLE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$jti);
+  let hasSideEffects = 0;
+}
+
 //------------------------------------------------------------------------------
 // Binary ops.
 //------------------------------------------------------------------------------

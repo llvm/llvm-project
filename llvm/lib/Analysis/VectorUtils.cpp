@@ -321,6 +321,45 @@ const llvm::Value *llvm::getSplatValue(const Value *V) {
   return nullptr;
 }
 
+// This setting is based on its counterpart in value tracking, but it could be
+// adjusted if needed.
+const unsigned MaxDepth = 6;
+
+bool llvm::isSplatValue(const Value *V, unsigned Depth) {
+  assert(Depth <= MaxDepth && "Limit Search Depth");
+
+  if (isa<VectorType>(V->getType())) {
+    if (isa<UndefValue>(V))
+      return true;
+    // FIXME: Constant splat analysis does not allow undef elements.
+    if (auto *C = dyn_cast<Constant>(V))
+      return C->getSplatValue() != nullptr;
+  }
+
+  // FIXME: Constant splat analysis does not allow undef elements.
+  Constant *Mask;
+  if (match(V, m_ShuffleVector(m_Value(), m_Value(), m_Constant(Mask))))
+    return Mask->getSplatValue() != nullptr;
+
+  // The remaining tests are all recursive, so bail out if we hit the limit.
+  if (Depth++ == MaxDepth)
+    return false;
+
+  // If both operands of a binop are splats, the result is a splat.
+  Value *X, *Y, *Z;
+  if (match(V, m_BinOp(m_Value(X), m_Value(Y))))
+    return isSplatValue(X, Depth) && isSplatValue(Y, Depth);
+
+  // If all operands of a select are splats, the result is a splat.
+  if (match(V, m_Select(m_Value(X), m_Value(Y), m_Value(Z))))
+    return isSplatValue(X, Depth) && isSplatValue(Y, Depth) &&
+           isSplatValue(Z, Depth);
+
+  // TODO: Add support for unary ops (fneg), casts, intrinsics (overflow ops).
+
+  return false;
+}
+
 MapVector<Instruction *, uint64_t>
 llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
                                const TargetTransformInfo *TTI) {
