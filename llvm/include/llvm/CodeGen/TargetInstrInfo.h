@@ -670,8 +670,9 @@ public:
   /// is finished.  Return the value/register of the new loop count.  We need
   /// this function when peeling off one or more iterations of a loop. This
   /// function assumes the nth iteration is peeled first.
-  virtual unsigned reduceLoopCount(MachineBasicBlock &MBB, MachineInstr *IndVar,
-                                   MachineInstr &Cmp,
+  virtual unsigned reduceLoopCount(MachineBasicBlock &MBB,
+                                   MachineBasicBlock &PreHeader,
+                                   MachineInstr *IndVar, MachineInstr &Cmp,
                                    SmallVectorImpl<MachineOperand> &Cond,
                                    SmallVectorImpl<MachineInstr *> &PrevInsts,
                                    unsigned Iter, unsigned MaxIter) const {

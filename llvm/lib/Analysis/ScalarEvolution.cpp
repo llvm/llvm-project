@@ -8126,9 +8126,9 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
                     break;
                   }
                 }
-                if (!MultipleInitValues && InitValue)
-                  return getSCEV(InitValue);
               }
+              if (!MultipleInitValues && InitValue)
+                return getSCEV(InitValue);
             }
             // Okay, we know how many times the containing loop executes.  If
             // this is a constant evolving PHI node, get the final value at

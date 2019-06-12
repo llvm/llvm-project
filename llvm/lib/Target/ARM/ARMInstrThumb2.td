@@ -39,6 +39,16 @@ def t2_shift_imm : Operand<i32> {
   let DecoderMethod = "DecodeT2ShifterImmOperand";
 }
 
+def mve_shift_imm : AsmOperandClass {
+  let Name = "MVELongShift";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticString = "operand must be an immediate in the range [1,32]";
+}
+def long_shift : Operand<i32> {
+  let ParserMatchClass = mve_shift_imm;
+  let DecoderMethod = "DecodeLongShiftOperand";
+}
+
 // Shifted operands. No register controlled shifts for Thumb2.
 // Note: We do not support rrx shifted operands yet.
 def t2_so_reg : Operand<i32>,    // reg imm

@@ -400,13 +400,13 @@ class WindowsResourceCOFFWriter {
 public:
   WindowsResourceCOFFWriter(COFF::MachineTypes MachineType,
                             const WindowsResourceParser &Parser, Error &E);
-  std::unique_ptr<MemoryBuffer> write();
+  std::unique_ptr<MemoryBuffer> write(uint32_t TimeDateStamp);
 
 private:
   void performFileLayout();
   void performSectionOneLayout();
   void performSectionTwoLayout();
-  void writeCOFFHeader();
+  void writeCOFFHeader(uint32_t TimeDateStamp);
   void writeFirstSectionHeader();
   void writeSecondSectionHeader();
   void writeFirstSection();
@@ -442,7 +442,8 @@ WindowsResourceCOFFWriter::WindowsResourceCOFFWriter(
       Data(Parser.getData()), StringTable(Parser.getStringTable()) {
   performFileLayout();
 
-  OutputBuffer = WritableMemoryBuffer::getNewMemBuffer(FileSize);
+  OutputBuffer = WritableMemoryBuffer::getNewMemBuffer(
+      FileSize, "internal .obj file created from .res files");
 }
 
 void WindowsResourceCOFFWriter::performFileLayout() {
@@ -499,17 +500,11 @@ void WindowsResourceCOFFWriter::performSectionTwoLayout() {
   FileSize = alignTo(FileSize, SECTION_ALIGNMENT);
 }
 
-static std::time_t getTime() {
-  std::time_t Now = time(nullptr);
-  if (Now < 0 || !isUInt<32>(Now))
-    return UINT32_MAX;
-  return Now;
-}
-
-std::unique_ptr<MemoryBuffer> WindowsResourceCOFFWriter::write() {
+std::unique_ptr<MemoryBuffer>
+WindowsResourceCOFFWriter::write(uint32_t TimeDateStamp) {
   BufferStart = OutputBuffer->getBufferStart();
 
-  writeCOFFHeader();
+  writeCOFFHeader(TimeDateStamp);
   writeFirstSectionHeader();
   writeSecondSectionHeader();
   writeFirstSection();
@@ -520,16 +515,17 @@ std::unique_ptr<MemoryBuffer> WindowsResourceCOFFWriter::write() {
   return std::move(OutputBuffer);
 }
 
-void WindowsResourceCOFFWriter::writeCOFFHeader() {
+void WindowsResourceCOFFWriter::writeCOFFHeader(uint32_t TimeDateStamp) {
   // Write the COFF header.
   auto *Header = reinterpret_cast<coff_file_header *>(BufferStart);
   Header->Machine = MachineType;
   Header->NumberOfSections = 2;
-  Header->TimeDateStamp = getTime();
+  Header->TimeDateStamp = TimeDateStamp;
   Header->PointerToSymbolTable = SymbolTableOffset;
-  // One symbol for every resource plus 2 for each section and @feat.00
+  // One symbol for every resource plus 2 for each section and 1 for @feat.00
   Header->NumberOfSymbols = Data.size() + 5;
   Header->SizeOfOptionalHeader = 0;
+  // cvtres.exe sets 32BIT_MACHINE even for 64-bit machine types. Match it.
   Header->Characteristics = COFF::IMAGE_FILE_32BIT_MACHINE;
 }
 
@@ -794,12 +790,13 @@ void WindowsResourceCOFFWriter::writeFirstSectionRelocations() {
 
 Expected<std::unique_ptr<MemoryBuffer>>
 writeWindowsResourceCOFF(COFF::MachineTypes MachineType,
-                         const WindowsResourceParser &Parser) {
+                         const WindowsResourceParser &Parser,
+                         uint32_t TimeDateStamp) {
   Error E = Error::success();
   WindowsResourceCOFFWriter Writer(MachineType, Parser, E);
   if (E)
     return std::move(E);
-  return Writer.write();
+  return Writer.write(TimeDateStamp);
 }
 
 } // namespace object

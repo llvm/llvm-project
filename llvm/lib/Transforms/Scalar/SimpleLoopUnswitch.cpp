@@ -2861,7 +2861,11 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
   // Historically this pass has had issues with the dominator tree so verify it
   // in asserts builds.
   assert(AR.DT.verify(DominatorTree::VerificationLevel::Fast));
-  return getLoopPassPreservedAnalyses();
+
+  auto PA = getLoopPassPreservedAnalyses();
+  if (EnableMSSALoopDependency)
+    PA.preserve<MemorySSAAnalysis>();
+  return PA;
 }
 
 namespace {

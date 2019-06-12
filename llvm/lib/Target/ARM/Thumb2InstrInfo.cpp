@@ -617,6 +617,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
       // MCInst operand expects already scaled value.
       Scale = 1;
       assert((Offset & OffsetMask) == 0 && "Can't encode this offset!");
+      (void)OffsetMask; // squash unused-variable warning at -NDEBUG
     } else if (AddrMode == ARMII::AddrModeT2_i8s4) {
       Offset += MI.getOperand(FrameRegIdx + 1).getImm() * 4;
       NumBits = 10; // 8 bits scaled by 4

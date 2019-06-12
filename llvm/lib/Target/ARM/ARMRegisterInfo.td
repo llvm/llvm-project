@@ -331,6 +331,20 @@ def tcGPR : RegisterClass<"ARM", [i32], 32, (add R0, R1, R2, R3, R12)> {
   }];
 }
 
+def tGPROdd : RegisterClass<"ARM", [i32], 32, (add R1, R3, R5, R7, R9, R11)> {
+  let AltOrders = [(and tGPROdd, tGPR)];
+  let AltOrderSelect = [{
+      return MF.getSubtarget<ARMSubtarget>().isThumb1Only();
+  }];
+}
+
+def tGPREven : RegisterClass<"ARM", [i32], 32, (add R0, R2, R4, R6, R8, R10, R12, LR)> {
+  let AltOrders = [(and tGPREven, tGPR)];
+  let AltOrderSelect = [{
+      return MF.getSubtarget<ARMSubtarget>().isThumb1Only();
+  }];
+}
+
 // Condition code registers.
 def CCR : RegisterClass<"ARM", [i32], 32, (add CPSR)> {
   let CopyCost = -1;  // Don't allow copying of status registers.

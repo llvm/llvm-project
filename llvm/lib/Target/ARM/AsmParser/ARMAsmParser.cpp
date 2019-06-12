@@ -2048,6 +2048,15 @@ public:
     return (Value % Angle == Remainder && Value <= 270);
   }
 
+  bool isMVELongShift() const {
+    if (!isImm()) return false;
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    // Must be a constant.
+    if (!CE) return false;
+    uint64_t Value = CE->getValue();
+    return Value >= 1 && Value <= 32;
+  }
+
   bool isITCondCodeNoAL() const {
     if (!isITCondCode()) return false;
     auto CC = (ARMCC::CondCodes) getCondCode();

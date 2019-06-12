@@ -146,6 +146,10 @@ static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeCLRMGPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
+static DecodeStatus DecodetGPROddRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder);
+static DecodeStatus DecodetGPREvenRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeGPRnopcRegisterClass(MCInst &Inst,
                                                unsigned RegNo, uint64_t Address,
                                                const void *Decoder);
@@ -432,12 +436,18 @@ static DecodeStatus DecodePredNoALOperand(MCInst &Inst, unsigned Val,
                                           const void *Decoder);
 static DecodeStatus DecodeLOLoop(MCInst &Inst, unsigned Insn, uint64_t Address,
                                  const void *Decoder);
+static DecodeStatus DecodeLongShiftOperand(MCInst &Inst, unsigned Val,
+                                           uint64_t Address,
+                                           const void *Decoder);
 static DecodeStatus DecodeVSCCLRM(MCInst &Inst, unsigned Insn, uint64_t Address,
                                   const void *Decoder);
 template<bool Writeback>
 static DecodeStatus DecodeVSTRVLDR_SYSREG(MCInst &Inst, unsigned Insn,
                                           uint64_t Address,
                                           const void *Decoder);
+static DecodeStatus DecodeMVEOverlappingLongShift(MCInst &Inst, unsigned Insn,
+                                                  uint64_t Address,
+                                                  const void *Decoder);
 #include "ARMGenDisassemblerTables.inc"
 
 static MCDisassembler *createARMDisassembler(const Target &T,
@@ -801,6 +811,15 @@ DecodeStatus ThumbDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
   uint32_t Insn32 =
       (Bytes[3] << 8) | (Bytes[2] << 0) | (Bytes[1] << 24) | (Bytes[0] << 16);
+
+  Result =
+      decodeInstruction(DecoderTableMVE32, MI, Insn32, Address, this, STI);
+  if (Result != MCDisassembler::Fail) {
+    Size = 4;
+    Check(Result, AddThumbPredicate(MI));
+    return Result;
+  }
+
   Result =
       decodeInstruction(DecoderTableThumb32, MI, Insn32, Address, this, STI);
   if (Result != MCDisassembler::Fail) {
@@ -5643,6 +5662,39 @@ static DecodeStatus DecodeLOLoop(MCInst &Inst, unsigned Insn, uint64_t Address,
   return S;
 }
 
+static DecodeStatus DecodeLongShiftOperand(MCInst &Inst, unsigned Val,
+                                           uint64_t Address,
+                                           const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  if (Val == 0)
+    Val = 32;
+
+  Inst.addOperand(MCOperand::createImm(Val));
+
+  return S;
+}
+
+static DecodeStatus DecodetGPROddRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder) {
+  if ((RegNo) + 1 > 11)
+    return MCDisassembler::Fail;
+
+  unsigned Register = GPRDecoderTable[(RegNo) + 1];
+  Inst.addOperand(MCOperand::createReg(Register));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodetGPREvenRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder) {
+  if ((RegNo) > 14)
+    return MCDisassembler::Fail;
+
+  unsigned Register = GPRDecoderTable[(RegNo)];
+  Inst.addOperand(MCOperand::createReg(Register));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus DecodeVSCCLRM(MCInst &Inst, unsigned Insn, uint64_t Address,
                                   const void *Decoder) {
   DecodeStatus S = MCDisassembler::Success;
@@ -5723,6 +5775,72 @@ static DecodeStatus DecodeVSTRVLDR_SYSREG(MCInst &Inst, unsigned Val,
 
   Inst.addOperand(MCOperand::createImm(ARMCC::AL));
   Inst.addOperand(MCOperand::createReg(0));
+
+  return S;
+}
+
+static DecodeStatus DecodeMVEOverlappingLongShift(
+  MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned RdaLo = fieldFromInstruction(Insn, 17, 3) << 1;
+  unsigned RdaHi = fieldFromInstruction(Insn, 9, 3) << 1;
+  unsigned Rm = fieldFromInstruction(Insn, 12, 4);
+
+  if (RdaHi == 14) {
+    // This value of RdaHi (really indicating pc, because RdaHi has to
+    // be an odd-numbered register, so the low bit will be set by the
+    // decode function below) indicates that we must decode as SQRSHR
+    // or UQRSHL, which both have a single Rda register field with all
+    // four bits.
+    unsigned Rda = fieldFromInstruction(Insn, 16, 4);
+
+    switch (Inst.getOpcode()) {
+      case ARM::t2ASRLr:
+      case ARM::t2SQRSHRL:
+        Inst.setOpcode(ARM::t2SQRSHR);
+        break;
+      case ARM::t2LSLLr:
+      case ARM::t2UQRSHLL:
+        Inst.setOpcode(ARM::t2UQRSHL);
+        break;
+      default:
+        llvm_unreachable("Unexpected starting opcode!");
+    }
+
+    // Rda as output parameter
+    if (!Check(S, DecoderGPRRegisterClass(Inst, Rda, Address, Decoder)))
+      return MCDisassembler::Fail;
+
+    // Rda again as input parameter
+    if (!Check(S, DecoderGPRRegisterClass(Inst, Rda, Address, Decoder)))
+      return MCDisassembler::Fail;
+
+    // Rm, the amount to shift by
+    if (!Check(S, DecoderGPRRegisterClass(Inst, Rm, Address, Decoder)))
+      return MCDisassembler::Fail;
+
+    return S;
+  }
+
+  // Otherwise, we decode as whichever opcode our caller has already
+  // put into Inst. Those all look the same:
+
+  // RdaLo,RdaHi as output parameters
+  if (!Check(S, DecodetGPREvenRegisterClass(Inst, RdaLo, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodetGPROddRegisterClass(Inst, RdaHi, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  // RdaLo,RdaHi again as input parameters
+  if (!Check(S, DecodetGPREvenRegisterClass(Inst, RdaLo, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodetGPROddRegisterClass(Inst, RdaHi, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  // Rm, the amount to shift by
+  if (!Check(S, DecoderGPRRegisterClass(Inst, Rm, Address, Decoder)))
+    return MCDisassembler::Fail;
 
   return S;
 }

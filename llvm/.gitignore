@@ -45,6 +45,8 @@ autoconf/autom4te.cache
 /CMakeSettings.json
 # CLion project configuration
 /.idea
+# Qt Creator project configuration
+/CMakeLists.txt.user
 
 #==============================================================================#
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).

@@ -88,6 +88,13 @@ void error(Error EC) {
                   [&](const ErrorInfoBase &EI) { reportError(EI.message()); });
 }
 
+static uint32_t getTime() {
+  std::time_t Now = time(nullptr);
+  if (Now < 0 || !isUInt<32>(Now))
+    return UINT32_MAX;
+  return static_cast<uint32_t>(Now);
+}
+
 template <typename T> T error(Expected<T> EC) {
   if (!EC)
     error(EC.takeError());
@@ -142,6 +149,16 @@ int main(int Argc, const char **Argv) {
     sys::path::replace_extension(OutputFile, ".obj");
   }
 
+  uint32_t DateTimeStamp;
+  if (llvm::opt::Arg *Arg = InputArgs.getLastArg(OPT_TIMESTAMP)) {
+    StringRef Value(Arg->getValue());
+    if (Value.getAsInteger(0, DateTimeStamp))
+      reportError(Twine("invalid timestamp: ") + Value +
+            ".  Expected 32-bit integer\n");
+  } else {
+    DateTimeStamp = getTime();
+  }
+
   if (Verbose) {
     outs() << "Machine: ";
     switch (MachineType) {
@@ -194,7 +211,8 @@ int main(int Argc, const char **Argv) {
   }
 
   std::unique_ptr<MemoryBuffer> OutputBuffer =
-      error(llvm::object::writeWindowsResourceCOFF(MachineType, Parser));
+      error(llvm::object::writeWindowsResourceCOFF(MachineType, Parser,
+                                                   DateTimeStamp));
   auto FileOrErr =
       FileOutputBuffer::create(OutputFile, OutputBuffer->getBufferSize());
   if (!FileOrErr)

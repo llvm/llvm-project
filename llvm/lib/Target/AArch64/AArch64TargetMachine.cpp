@@ -462,7 +462,20 @@ bool AArch64PassConfig::addPreISel() {
       EnableGlobalMerge == cl::BOU_TRUE) {
     bool OnlyOptimizeForSize = (TM->getOptLevel() < CodeGenOpt::Aggressive) &&
                                (EnableGlobalMerge == cl::BOU_UNSET);
-    addPass(createGlobalMergePass(TM, 4095, OnlyOptimizeForSize));
+
+    // Merging of extern globals is enabled by default on non-Mach-O as we
+    // expect it to be generally either beneficial or harmless. On Mach-O it
+    // is disabled as we emit the .subsections_via_symbols directive which
+    // means that merging extern globals is not safe.
+    bool MergeExternalByDefault = !TM->getTargetTriple().isOSBinFormatMachO();
+
+    // FIXME: extern global merging is only enabled when we optimise for size
+    // because there are some regressions with it also enabled for performance.
+    if (!OnlyOptimizeForSize)
+      MergeExternalByDefault = false;
+
+    addPass(createGlobalMergePass(TM, 4095, OnlyOptimizeForSize,
+                                  MergeExternalByDefault));
   }
 
   return false;

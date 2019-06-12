@@ -6439,9 +6439,9 @@ SDValue DAGCombiner::MatchStoreCombine(StoreSDNode *N) {
 
   // Check that a store of the wide type is both allowed and fast on the target
   bool Fast = false;
-  bool Allowed = TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(),
-                                        VT, FirstStore->getAddressSpace(),
-                                        FirstStore->getAlignment(), &Fast);
+  bool Allowed =
+      TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
+                             *FirstStore->getMemOperand(), &Fast);
   if (!Allowed || !Fast)
     return SDValue();
 
@@ -6604,8 +6604,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // Check that a load of the wide type is both allowed and fast on the target
   bool Fast = false;
   bool Allowed = TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(),
-                                        VT, FirstLoad->getAddressSpace(),
-                                        FirstLoad->getAlignment(), &Fast);
+                                        VT, *FirstLoad->getMemOperand(), &Fast);
   if (!Allowed || !Fast)
     return SDValue();
 
@@ -10828,15 +10827,14 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
        TLI.isOperationLegal(ISD::LOAD, VT)) &&
       TLI.isLoadBitCastBeneficial(N0.getValueType(), VT)) {
     LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-    unsigned OrigAlign = LN0->getAlignment();
 
     bool Fast = false;
     if (TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
-                               LN0->getAddressSpace(), OrigAlign, &Fast) &&
+                               *LN0->getMemOperand(), &Fast) &&
         Fast) {
       SDValue Load =
           DAG.getLoad(VT, SDLoc(N), LN0->getChain(), LN0->getBasePtr(),
-                      LN0->getPointerInfo(), OrigAlign,
+                      LN0->getPointerInfo(), LN0->getAlignment(),
                       LN0->getMemOperand()->getFlags(), LN0->getAAInfo());
       DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), Load.getValue(1));
       return Load;
@@ -15439,8 +15437,8 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
 
           if (TLI.isTypeLegal(StoreTy) &&
               TLI.canMergeStoresTo(FirstStoreAS, StoreTy, DAG) &&
-              TLI.allowsMemoryAccess(Context, DL, StoreTy, FirstStoreAS,
-                                     FirstStoreAlign, &IsFast) &&
+              TLI.allowsMemoryAccess(Context, DL, StoreTy,
+                                     *FirstInChain->getMemOperand(), &IsFast) &&
               IsFast) {
             LastIntegerTrunc = false;
             LastLegalType = i + 1;
@@ -15451,8 +15449,9 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
                 TLI.getTypeToTransformTo(Context, StoredVal.getValueType());
             if (TLI.isTruncStoreLegal(LegalizedStoredValTy, StoreTy) &&
                 TLI.canMergeStoresTo(FirstStoreAS, LegalizedStoredValTy, DAG) &&
-                TLI.allowsMemoryAccess(Context, DL, StoreTy, FirstStoreAS,
-                                       FirstStoreAlign, &IsFast) &&
+                TLI.allowsMemoryAccess(Context, DL, StoreTy,
+                                       *FirstInChain->getMemOperand(),
+                                       &IsFast) &&
                 IsFast) {
               LastIntegerTrunc = true;
               LastLegalType = i + 1;
@@ -15470,8 +15469,8 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
             EVT Ty = EVT::getVectorVT(Context, MemVT.getScalarType(), Elts);
             if (TLI.isTypeLegal(Ty) && TLI.isTypeLegal(MemVT) &&
                 TLI.canMergeStoresTo(FirstStoreAS, Ty, DAG) &&
-                TLI.allowsMemoryAccess(Context, DL, Ty, FirstStoreAS,
-                                       FirstStoreAlign, &IsFast) &&
+                TLI.allowsMemoryAccess(
+                    Context, DL, Ty, *FirstInChain->getMemOperand(), &IsFast) &&
                 IsFast)
               LastLegalVectorType = i + 1;
           }
@@ -15542,8 +15541,8 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
 
           if (TLI.isTypeLegal(Ty) &&
               TLI.canMergeStoresTo(FirstStoreAS, Ty, DAG) &&
-              TLI.allowsMemoryAccess(Context, DL, Ty, FirstStoreAS,
-                                     FirstStoreAlign, &IsFast) &&
+              TLI.allowsMemoryAccess(Context, DL, Ty,
+                                     *FirstInChain->getMemOperand(), &IsFast) &&
               IsFast)
             NumStoresToMerge = i + 1;
         }
@@ -15634,7 +15633,6 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
       unsigned FirstStoreAS = FirstInChain->getAddressSpace();
       unsigned FirstStoreAlign = FirstInChain->getAlignment();
       LoadSDNode *FirstLoad = cast<LoadSDNode>(LoadNodes[0].MemNode);
-      unsigned FirstLoadAS = FirstLoad->getAddressSpace();
       unsigned FirstLoadAlign = FirstLoad->getAlignment();
 
       // Scan the memory operations on the chain and find the first
@@ -15674,11 +15672,11 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
         bool IsFastSt, IsFastLd;
         if (TLI.isTypeLegal(StoreTy) &&
             TLI.canMergeStoresTo(FirstStoreAS, StoreTy, DAG) &&
-            TLI.allowsMemoryAccess(Context, DL, StoreTy, FirstStoreAS,
-                                   FirstStoreAlign, &IsFastSt) &&
+            TLI.allowsMemoryAccess(Context, DL, StoreTy,
+                                   *FirstInChain->getMemOperand(), &IsFastSt) &&
             IsFastSt &&
-            TLI.allowsMemoryAccess(Context, DL, StoreTy, FirstLoadAS,
-                                   FirstLoadAlign, &IsFastLd) &&
+            TLI.allowsMemoryAccess(Context, DL, StoreTy,
+                                   *FirstLoad->getMemOperand(), &IsFastLd) &&
             IsFastLd) {
           LastLegalVectorType = i + 1;
         }
@@ -15688,11 +15686,11 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
         StoreTy = EVT::getIntegerVT(Context, SizeInBits);
         if (TLI.isTypeLegal(StoreTy) &&
             TLI.canMergeStoresTo(FirstStoreAS, StoreTy, DAG) &&
-            TLI.allowsMemoryAccess(Context, DL, StoreTy, FirstStoreAS,
-                                   FirstStoreAlign, &IsFastSt) &&
+            TLI.allowsMemoryAccess(Context, DL, StoreTy,
+                                   *FirstInChain->getMemOperand(), &IsFastSt) &&
             IsFastSt &&
-            TLI.allowsMemoryAccess(Context, DL, StoreTy, FirstLoadAS,
-                                   FirstLoadAlign, &IsFastLd) &&
+            TLI.allowsMemoryAccess(Context, DL, StoreTy,
+                                   *FirstLoad->getMemOperand(), &IsFastLd) &&
             IsFastLd) {
           LastLegalIntegerType = i + 1;
           DoIntegerTruncate = false;
@@ -15707,11 +15705,12 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
               TLI.isLoadExtLegal(ISD::SEXTLOAD, LegalizedStoredValTy,
                                  StoreTy) &&
               TLI.isLoadExtLegal(ISD::EXTLOAD, LegalizedStoredValTy, StoreTy) &&
-              TLI.allowsMemoryAccess(Context, DL, StoreTy, FirstStoreAS,
-                                     FirstStoreAlign, &IsFastSt) &&
+              TLI.allowsMemoryAccess(Context, DL, StoreTy,
+                                     *FirstInChain->getMemOperand(),
+                                     &IsFastSt) &&
               IsFastSt &&
-              TLI.allowsMemoryAccess(Context, DL, StoreTy, FirstLoadAS,
-                                     FirstLoadAlign, &IsFastLd) &&
+              TLI.allowsMemoryAccess(Context, DL, StoreTy,
+                                     *FirstLoad->getMemOperand(), &IsFastLd) &&
               IsFastLd) {
             LastLegalIntegerType = i + 1;
             DoIntegerTruncate = true;
@@ -15962,13 +15961,12 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
     if (((!LegalOperations && !ST->isVolatile()) ||
          TLI.isOperationLegal(ISD::STORE, SVT)) &&
         TLI.isStoreBitCastBeneficial(Value.getValueType(), SVT)) {
-      unsigned OrigAlign = ST->getAlignment();
       bool Fast = false;
       if (TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), SVT,
-                                 ST->getAddressSpace(), OrigAlign, &Fast) &&
+                                 *ST->getMemOperand(), &Fast) &&
           Fast) {
         return DAG.getStore(Chain, SDLoc(N), Value.getOperand(0), Ptr,
-                            ST->getPointerInfo(), OrigAlign,
+                            ST->getPointerInfo(), ST->getAlignment(),
                             ST->getMemOperand()->getFlags(), ST->getAAInfo());
       }
     }

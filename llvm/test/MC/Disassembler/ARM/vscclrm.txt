@@ -1,4 +1,4 @@
-# RUN: llvm-mc -disassemble -triple=thumbv8.1m.main-none-eabi -mattr=+8msecext -show-encoding %s 2>1 | FileCheck %s
+# RUN: llvm-mc -disassemble -triple=thumbv8.1m.main-none-eabi -mattr=+8msecext -show-encoding %s 2>&1 | FileCheck %s
 
 
 [0x9f 0xec 0x04 0x0a]

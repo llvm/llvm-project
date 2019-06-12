@@ -1430,6 +1430,14 @@ public:
                           unsigned AddrSpace = 0, unsigned Alignment = 1,
                           bool *Fast = nullptr) const;
 
+  /// Return true if the target supports a memory access of this type for the
+  /// given MachineMemOperand. If the access is allowed, the optional
+  /// final parameter returns if the access is also fast (as defined by the
+  /// target).
+  bool allowsMemoryAccess(LLVMContext &Context, const DataLayout &DL, EVT VT,
+                          const MachineMemOperand &MMO,
+                          bool *Fast = nullptr) const;
+
   /// Returns the target specific optimal type for load and store operations as
   /// a result of memset, memcpy, and memmove lowering.
   ///

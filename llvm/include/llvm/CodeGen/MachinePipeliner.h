@@ -318,9 +318,9 @@ private:
                               MBBVectorTy &EpilogBBs);
   void splitLifetimes(MachineBasicBlock *KernelBB, MBBVectorTy &EpilogBBs,
                       SMSchedule &Schedule);
-  void addBranches(MBBVectorTy &PrologBBs, MachineBasicBlock *KernelBB,
-                   MBBVectorTy &EpilogBBs, SMSchedule &Schedule,
-                   ValueMapTy *VRMap);
+  void addBranches(MachineBasicBlock &PreheaderBB, MBBVectorTy &PrologBBs,
+                   MachineBasicBlock *KernelBB, MBBVectorTy &EpilogBBs,
+                   SMSchedule &Schedule, ValueMapTy *VRMap);
   bool computeDelta(MachineInstr &MI, unsigned &Delta);
   void updateMemOperands(MachineInstr &NewMI, MachineInstr &OldMI,
                          unsigned Num);

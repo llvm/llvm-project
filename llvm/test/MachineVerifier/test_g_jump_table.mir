@@ -1,0 +1,26 @@
+# RUN: not llc -march=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: global-isel, aarch64-registered-target
+
+---
+name:            test_jump_table
+legalized:       true
+tracksRegLiveness: true
+jumpTable:
+  kind:            block-address
+  entries:
+    - id:              0
+      blocks:          [ '%bb.0' ]
+liveins:
+body:             |
+  bb.0:
+
+    ; CHECK: Bad machine code: Too few operands
+    %0:_(s32) = G_JUMP_TABLE
+
+    ; CHECK: G_JUMP_TABLE source operand must be a jump table index
+    %2:_(s32) = G_JUMP_TABLE %0
+
+    ; CHECK: G_JUMP_TABLE dest operand must have a pointer type
+    %3:_(s32) = G_JUMP_TABLE %jump-table.0
+
+...
