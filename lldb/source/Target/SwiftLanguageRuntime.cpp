@@ -85,6 +85,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+char SwiftLanguageRuntime::ID = 0;
+
 static constexpr std::chrono::seconds g_po_function_timeout(15);
 static const char *g_dollar_tau_underscore = u8"$\u03C4_";
 static ConstString g_self = ConstString("self");

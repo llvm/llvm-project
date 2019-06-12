@@ -1905,20 +1905,14 @@ ObjCLanguageRuntime *Process::GetObjCLanguageRuntime(bool retry_if_null) {
   std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
   LanguageRuntime *runtime =
       GetLanguageRuntime(eLanguageTypeObjC, retry_if_null);
-  if (!runtime)
-    return nullptr;
-
-  return static_cast<ObjCLanguageRuntime *>(runtime);
+  return llvm::cast_or_null<ObjCLanguageRuntime>(runtime);
 }
 
 SwiftLanguageRuntime *Process::GetSwiftLanguageRuntime(bool retry_if_null) {
   std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
   LanguageRuntime *runtime =
       GetLanguageRuntime(eLanguageTypeSwift, retry_if_null);
-  if (!runtime)
-    return nullptr;
-
-  return static_cast<SwiftLanguageRuntime *>(runtime);
+  return llvm::cast_or_null<SwiftLanguageRuntime>(runtime);
 }
 
 bool Process::IsPossibleDynamicValue(ValueObject &in_value) {
