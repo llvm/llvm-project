@@ -17,7 +17,7 @@ package llvm
 */
 import "C"
 
-func (pm PassManager) AddCoroEarlyPass()      { C.LLVMAddCoroEarlyPass(pm.C) }
-func (pm PassManager) AddCoroSplitPass()      { C.LLVMAddCoroSplitPass(pm.C) }
-func (pm PassManager) AddCoroElidePass()      { C.LLVMAddCoroElidePass(pm.C) }
-func (pm PassManager) AddCoroCleanupPass()    { C.LLVMAddCoroCleanupPass(pm.C) }
+func (pm PassManager) AddCoroEarlyPass()   { C.LLVMAddCoroEarlyPass(pm.C) }
+func (pm PassManager) AddCoroSplitPass()   { C.LLVMAddCoroSplitPass(pm.C) }
+func (pm PassManager) AddCoroElidePass()   { C.LLVMAddCoroElidePass(pm.C) }
+func (pm PassManager) AddCoroCleanupPass() { C.LLVMAddCoroCleanupPass(pm.C) }

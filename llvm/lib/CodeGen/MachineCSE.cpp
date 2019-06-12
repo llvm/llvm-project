@@ -799,6 +799,8 @@ bool MachineCSE::ProcessBlockPRE(MachineDominatorTree *DT,
         !DT->properlyDominates(MBB, MBB1) &&
         "MBB cannot properly dominate MBB1 while DFS through dominators tree!");
     auto CMBB = DT->findNearestCommonDominator(MBB, MBB1);
+    if (!CMBB->isLegalToHoistInto())
+      continue;
 
     // Two instrs are partial redundant if their basic blocks are reachable
     // from one to another but one doesn't dominate another.

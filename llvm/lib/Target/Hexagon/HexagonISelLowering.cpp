@@ -3064,8 +3064,9 @@ EVT HexagonTargetLowering::getOptimalMemOpType(uint64_t Size,
   return MVT::Other;
 }
 
-bool HexagonTargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
-      unsigned AS, unsigned Align, bool *Fast) const {
+bool HexagonTargetLowering::allowsMisalignedMemoryAccesses(
+    EVT VT, unsigned AS, unsigned Align, MachineMemOperand::Flags Flags,
+    bool *Fast) const {
   if (Fast)
     *Fast = false;
   return Subtarget.isHVXVectorType(VT.getSimpleVT());

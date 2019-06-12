@@ -10,6 +10,9 @@
 # CHECK-LABEL: Name: .debug_types
 # CHECK-NEXT: Type: dwarf-types
 
+# CHECK-LABEL: Name: .debug_types.dwo
+# CHECK-NEXT: Type: dwarf-types-dwo
+
 # CHECK-LABEL: Name: .debug_names
 # CHECK-NEXT: Type: dwarf-names
 
@@ -48,6 +51,10 @@ Sections:
     AddressAlign:    0x0000000000000001
     Content:         DEADBEEFBAADF00D
   - Name:            .debug_types
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_types.dwo
     Type:            SHT_PROGBITS
     AddressAlign:    0x0000000000000001
     Content:         DEADBEEFBAADF00D

@@ -131,6 +131,50 @@ for.cond.cleanup:
   ret void, !dbg !34
 }
 
+; MISSED_REMARKS: /tmp/t.c:27:5: loop not distributed: use -Rpass-analysis=loop-distribute for more info
+; ANALYSIS_REMARKS: /tmp/t.c:27:5: loop not distributed: may not insert runtime check with convergent operation
+; ALWAYS: warning: /tmp/t.c:27:5: loop not distributed: failed explicitly specified loop distribution
+define void @convergent(i8* %A, i8* %B, i8* %C, i8* %D, i8* %E, i32 %N) #1 !dbg !45 {
+entry:
+  %cmp28 = icmp sgt i32 %N, 0, !dbg !46
+  br i1 %cmp28, label %ph, label %for.cond.cleanup, !dbg !47
+
+ph:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %ph ]
+  %arrayidx = getelementptr inbounds i8, i8* %A, i64 %indvars.iv, !dbg !49
+  %0 = load i8, i8* %arrayidx, align 1, !dbg !49, !tbaa !13
+  %arrayidx2 = getelementptr inbounds i8, i8* %B, i64 %indvars.iv, !dbg !50
+  %1 = load i8, i8* %arrayidx2, align 1, !dbg !50, !tbaa !13
+  %add = add i8 %1, %0, !dbg !51
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !57
+  %arrayidx7 = getelementptr inbounds i8, i8* %A, i64 %indvars.iv.next, !dbg !52
+  store i8 %add, i8* %arrayidx7, align 1, !dbg !53, !tbaa !13
+  %arrayidx9 = getelementptr inbounds i8, i8* %D, i64 %indvars.iv, !dbg !54
+  %2 = load i8, i8* %arrayidx9, align 1, !dbg !54, !tbaa !13
+  %arrayidx12 = getelementptr inbounds i8, i8* %E, i64 %indvars.iv, !dbg !55
+  %3 = load i8, i8* %arrayidx12, align 1, !dbg !55, !tbaa !13
+  %mul = mul i8 %3, %2, !dbg !56
+  %arrayidx16 = getelementptr inbounds i8, i8* %C, i64 %indvars.iv, !dbg !57
+  store i8 %mul, i8* %arrayidx16, align 1, !dbg !58, !tbaa !13
+  call void @llvm.convergent()
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !57
+  %exitcond = icmp eq i32 %lftr.wideiv, %N, !dbg !57
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body, !llvm.loop !20, !dbg !57
+
+for.cond.cleanup:
+  ret void, !dbg !58
+}
+
+
+declare void @llvm.convergent() #0
+
+attributes #0 = { nounwind readnone convergent }
+attributes #1 = { nounwind convergent }
+
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
 
@@ -177,3 +221,17 @@ for.cond.cleanup:
 !42 = !DILocation(line: 17, column: 17, scope: !31)
 !43 = !DILocation(line: 17, column: 5, scope: !31)
 !44 = !DILocation(line: 17, column: 10, scope: !31)
+!45 = distinct !DISubprogram(name: "convergent", scope: !1, file: !1, line: 24, type: !8, isLocal: false, isDefinition: true, scopeLine: 24, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
+!46 = !DILocation(line: 25, column: 20, scope: !45)
+!47 = !DILocation(line: 25, column: 3, scope: !45)
+!48 = !DILocation(line: 29, column: 1, scope: !45)
+!49 = !DILocation(line: 26, column: 16, scope: !45)
+!50 = !DILocation(line: 26, column: 23, scope: !45)
+!51 = !DILocation(line: 26, column: 21, scope: !45)
+!52 = !DILocation(line: 26, column: 5, scope: !45)
+!53 = !DILocation(line: 26, column: 14, scope: !45)
+!54 = !DILocation(line: 27, column: 12, scope: !45)
+!55 = !DILocation(line: 27, column: 19, scope: !45)
+!56 = !DILocation(line: 27, column: 17, scope: !45)
+!57 = !DILocation(line: 27, column: 5, scope: !45)
+!58 = !DILocation(line: 27, column: 10, scope: !45)

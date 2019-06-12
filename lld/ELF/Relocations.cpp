@@ -401,8 +401,9 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
             R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC, R_MIPS_TLSGD,
             R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,
             R_PLT_PC, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC, R_PPC32_PLTREL,
-            R_PPC64_CALL_PLT, R_PPC64_RELAX_TOC, R_TLSDESC_CALL, R_TLSDESC_PC,
-            R_AARCH64_TLSDESC_PAGE, R_HINT, R_TLSLD_HINT, R_TLSIE_HINT>(E))
+            R_PPC64_CALL_PLT, R_PPC64_RELAX_TOC, R_RISCV_ADD, R_TLSDESC_CALL,
+            R_TLSDESC_PC, R_AARCH64_TLSDESC_PAGE, R_HINT, R_TLSLD_HINT,
+            R_TLSIE_HINT>(E))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -716,6 +717,15 @@ static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
   bool CanBeExternal = !Sym.isLocal() && Sym.computeBinding() != STB_LOCAL &&
                        Sym.Visibility == STV_DEFAULT;
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore && CanBeExternal)
+    return false;
+
+  // clang (as of 2019-06-12) / gcc (as of 8.2.1) PPC64 may emit a .rela.toc
+  // which references a switch table in a discarded .rodata/.text section. The
+  // .toc and the .rela.toc are incorrectly not placed in the comdat. The ELF
+  // spec says references from outside the group to a STB_LOCAL symbol are not
+  // allowed. Work around the bug.
+  if (Config->EMachine == EM_PPC64 &&
+      cast<Undefined>(Sym).DiscardedSecIdx != 0 && Sec.Name == ".toc")
     return false;
 
   auto Visibility = [&]() -> std::string {

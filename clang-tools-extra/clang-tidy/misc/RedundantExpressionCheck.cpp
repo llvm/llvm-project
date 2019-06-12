@@ -555,10 +555,14 @@ static bool areSidesBinaryConstExpressions(const BinaryOperator *&BinOp, const A
   if (!LhsBinOp || !RhsBinOp)
     return false;
 
-  if ((LhsBinOp->getLHS()->isIntegerConstantExpr(*AstCtx) ||
-       LhsBinOp->getRHS()->isIntegerConstantExpr(*AstCtx)) &&
-      (RhsBinOp->getLHS()->isIntegerConstantExpr(*AstCtx) ||
-       RhsBinOp->getRHS()->isIntegerConstantExpr(*AstCtx)))
+  auto IsIntegerConstantExpr = [AstCtx](const Expr *E) {
+    return !E->isValueDependent() && E->isIntegerConstantExpr(*AstCtx);
+  };
+
+  if ((IsIntegerConstantExpr(LhsBinOp->getLHS()) ||
+       IsIntegerConstantExpr(LhsBinOp->getRHS())) &&
+      (IsIntegerConstantExpr(RhsBinOp->getLHS()) ||
+       IsIntegerConstantExpr(RhsBinOp->getRHS())))
     return true;
   return false;
 }
@@ -580,12 +584,14 @@ static bool retrieveConstExprFromBothSides(const BinaryOperator *&BinOp,
   const auto *BinOpLhs = cast<BinaryOperator>(BinOp->getLHS());
   const auto *BinOpRhs = cast<BinaryOperator>(BinOp->getRHS());
 
-  LhsConst = BinOpLhs->getLHS()->isIntegerConstantExpr(*AstCtx)
-                 ? BinOpLhs->getLHS()
-                 : BinOpLhs->getRHS();
-  RhsConst = BinOpRhs->getLHS()->isIntegerConstantExpr(*AstCtx)
-                 ? BinOpRhs->getLHS()
-                 : BinOpRhs->getRHS();
+  auto IsIntegerConstantExpr = [AstCtx](const Expr *E) {
+    return !E->isValueDependent() && E->isIntegerConstantExpr(*AstCtx);
+  };
+
+  LhsConst = IsIntegerConstantExpr(BinOpLhs->getLHS()) ? BinOpLhs->getLHS()
+                                                       : BinOpLhs->getRHS();
+  RhsConst = IsIntegerConstantExpr(BinOpRhs->getLHS()) ? BinOpRhs->getLHS()
+                                                       : BinOpRhs->getRHS();
 
   if (!LhsConst || !RhsConst)
     return false;

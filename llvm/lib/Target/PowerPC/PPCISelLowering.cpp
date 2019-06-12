@@ -14566,6 +14566,7 @@ bool PPCTargetLowering::isLegalAddImmediate(int64_t Imm) const {
 bool PPCTargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
                                                        unsigned,
                                                        unsigned,
+                                                       MachineMemOperand::Flags,
                                                        bool *Fast) const {
   if (DisablePPCUnaligned)
     return false;

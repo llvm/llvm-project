@@ -18,6 +18,8 @@ public:
 
   void Dump(lldb_private::Stream *s) const override;
 
+  static bool classof(const DWARFUnit *unit) { return !unit->IsTypeUnit(); }
+
 private:
   DWARFCompileUnit(SymbolFileDWARF *dwarf, lldb::user_id_t uid,
                    const DWARFUnitHeader &header,
