@@ -82,7 +82,7 @@ define i32 @constraint_m2(i32* %a) nounwind {
   ret i32 %1
 }
 
-define void @constraint_I() {
+define void @constraint_I() nounwind {
 ; RV32I-LABEL: constraint_I:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    #APP
@@ -107,7 +107,7 @@ define void @constraint_I() {
   ret void
 }
 
-define void @constraint_J() {
+define void @constraint_J() nounwind {
 ; RV32I-LABEL: constraint_J:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    #APP
@@ -125,7 +125,7 @@ define void @constraint_J() {
   ret void
 }
 
-define void @constraint_K() {
+define void @constraint_K() nounwind {
 ; RV32I-LABEL: constraint_K:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    #APP

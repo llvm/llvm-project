@@ -102,6 +102,23 @@ define <4 x float> @combine_vec_fcopysign_fneg_fabs_sgn(<4 x float> %x, <4 x flo
   ret <4 x float> %3
 }
 
+define <4 x float> @combine_vec_fcopysign_unary_fneg_fabs_sgn(<4 x float> %x, <4 x float> %y) {
+; SSE-LABEL: combine_vec_fcopysign_unary_fneg_fabs_sgn:
+; SSE:       # %bb.0:
+; SSE-NEXT:    orps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_fcopysign_unary_fneg_fabs_sgn:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = call <4 x float> @llvm.fabs.v4f32(<4 x float> %y)
+  %2 = fneg <4 x float> %1
+  %3 = call <4 x float> @llvm.copysign.v4f32(<4 x float> %x, <4 x float> %2)
+  ret <4 x float> %3
+}
+
 ; copysign(fabs(x), y) -> copysign(x, y)
 define <4 x float> @combine_vec_fcopysign_fabs_mag(<4 x float> %x, <4 x float> %y) {
 ; SSE-LABEL: combine_vec_fcopysign_fabs_mag:
@@ -142,6 +159,27 @@ define <4 x float> @combine_vec_fcopysign_fneg_mag(<4 x float> %x, <4 x float> %
 ; AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %x
+  %2 = call <4 x float> @llvm.copysign.v4f32(<4 x float> %1, <4 x float> %y)
+  ret <4 x float> %2
+}
+
+define <4 x float> @combine_vec_fcopysign_unary_fneg_mag(<4 x float> %x, <4 x float> %y) {
+; SSE-LABEL: combine_vec_fcopysign_unary_fneg_mag:
+; SSE:       # %bb.0:
+; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
+; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    orps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_fcopysign_unary_fneg_mag:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX-NEXT:    vandps %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
+; AVX-NEXT:    vandps %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = fneg <4 x float> %x
   %2 = call <4 x float> @llvm.copysign.v4f32(<4 x float> %1, <4 x float> %y)
   ret <4 x float> %2
 }

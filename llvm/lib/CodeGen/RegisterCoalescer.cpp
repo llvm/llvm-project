@@ -970,7 +970,7 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
 
 /// For copy B = A in BB2, if A is defined by A = B in BB0 which is a
 /// predecessor of BB2, and if B is not redefined on the way from A = B
-/// in BB2 to B = A in BB2, B = A in BB2 is partially redundant if the
+/// in BB0 to B = A in BB2, B = A in BB2 is partially redundant if the
 /// execution goes through the path from BB0 to BB2. We may move B = A
 /// to the predecessor without such reversed copy.
 /// So we will transform the program from:
@@ -2018,19 +2018,19 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
   if (CP.isFlipped()) {
     // Physreg is copied into vreg
     //   %y = COPY %physreg_x
-    //   ...  //< no other def of %x here
+    //   ...  //< no other def of %physreg_x here
     //   use %y
     // =>
     //   ...
-    //   use %x
+    //   use %physreg_x
     CopyMI = MRI->getVRegDef(SrcReg);
   } else {
     // VReg is copied into physreg:
     //   %y = def
-    //   ... //< no other def or use of %y here
-    //   %y = COPY %physreg_x
+    //   ... //< no other def or use of %physreg_x here
+    //   %physreg_x = COPY %y
     // =>
-    //   %y = def
+    //   %physreg_x = def
     //   ...
     if (!MRI->hasOneNonDBGUse(SrcReg)) {
       LLVM_DEBUG(dbgs() << "\t\tMultiple vreg uses!\n");

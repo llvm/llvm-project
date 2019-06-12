@@ -121,7 +121,7 @@ OPTIONS
 
 .. option:: --print-size, -S
 
- Show symbol size instead of address.
+ Show symbol size as well as address (not applicable for Mach-O).
 
 .. option:: --size-sort
 
@@ -134,7 +134,7 @@ OPTIONS
 .. option:: --radix=RADIX, -t
 
  Specify the radix of the symbol address(es). Values accepted d(decimal),
- x(hexadecomal) and o(octal).
+ x(hexadecimal) and o(octal).
 
 BUGS
 ----

@@ -97,7 +97,7 @@ public:
   lldb_private::ArchSpec GetArchitecture();
 
   // Returns AUXV structure found in the core file
-  const lldb::DataBufferSP GetAuxvData() override;
+  lldb_private::DataExtractor GetAuxvData() override;
 
   bool GetProcessInfo(lldb_private::ProcessInstanceInfo &info) override;
 

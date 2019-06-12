@@ -16,15 +16,15 @@
 ;   }
 ; }
 ; File, line, and column should match those specified in the metadata
-; CHECK: remark: source.cpp:5:9: loop not vectorized: could not determine number of loop iterations
-; CHECK: remark: source.cpp:5:9: loop not vectorized
+; CHECK: remark: source.cpp:4:5: loop not vectorized: could not determine number of loop iterations
+; CHECK: remark: source.cpp:4:5: loop not vectorized
 
 ; void test_disabled(int *A, int Length) {
 ; #pragma clang loop vectorize(disable) interleave(disable)
 ;   for (int i = 0; i < Length; i++)
 ;     A[i] = i;
 ; }
-; CHECK: remark: source.cpp:12:8: loop not vectorized: vectorization and interleaving are explicitly disabled, or the loop has already been vectorized
+; CHECK: remark: source.cpp:13:5: loop not vectorized: vectorization and interleaving are explicitly disabled, or the loop has already been vectorized
 
 ; void test_array_bounds(int *A, int *B, int Length) {
 ; #pragma clang loop vectorize(enable)
@@ -51,7 +51,7 @@
 ; YAML:       --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize
 ; YAML-NEXT: Name:            CantComputeNumberOfIterations
-; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 5, Column: 9 }
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 4, Column: 5 }
 ; YAML-NEXT: Function:        _Z4testPii
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: '
@@ -60,7 +60,7 @@
 ; YAML-NEXT: --- !Missed
 ; YAML-NEXT: Pass:            loop-vectorize
 ; YAML-NEXT: Name:            MissedDetails
-; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 5, Column: 9 }
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 4, Column: 5 }
 ; YAML-NEXT: Function:        _Z4testPii
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          loop not vectorized
@@ -68,7 +68,7 @@
 ; YAML-NEXT: --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize
 ; YAML-NEXT: Name:            AllDisabled
-; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 12, Column: 8 }
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 13, Column: 5 }
 ; YAML-NEXT: Function:        _Z13test_disabledPii
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: vectorization and interleaving are explicitly disabled, or the loop has already been vectorized

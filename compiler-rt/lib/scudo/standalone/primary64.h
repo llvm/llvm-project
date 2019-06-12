@@ -91,6 +91,12 @@ public:
     initLinkerInitialized(ReleaseToOsInterval);
   }
 
+  void unmapTestOnly() {
+    unmap(reinterpret_cast<void *>(PrimaryBase), PrimarySize, UNMAP_ALL, &Data);
+    unmap(reinterpret_cast<void *>(RegionInfoArray),
+          sizeof(RegionInfo) * NumClasses);
+  }
+
   TransferBatch *popBatch(CacheT *C, uptr ClassId) {
     DCHECK_LT(ClassId, NumClasses);
     RegionInfo *Region = getRegionInfo(ClassId);

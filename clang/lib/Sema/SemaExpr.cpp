@@ -4855,6 +4855,8 @@ bool Sema::CheckCXXDefaultArgExpr(SourceLocation CallLoc, FunctionDecl *FD,
   // We already type-checked the argument, so we know it works.
   // Just mark all of the declarations in this potentially-evaluated expression
   // as being "referenced".
+  EnterExpressionEvaluationContext EvalContext(
+      *this, ExpressionEvaluationContext::PotentiallyEvaluated, Param);
   MarkDeclarationsReferencedInExpr(Param->getDefaultArg(),
                                    /*SkipLocalVariables=*/true);
   return false;

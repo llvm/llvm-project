@@ -78,6 +78,12 @@ Value *findScalarElement(Value *V, unsigned EltNo);
 /// a sequence of instructions that broadcast a single value into a vector.
 const Value *getSplatValue(const Value *V);
 
+/// Return true if the input value is known to be a vector with all identical
+/// elements (potentially including undefined elements).
+/// This may be more powerful than the related getSplatValue() because it is
+/// not limited by finding a scalar source value to a splatted vector.
+bool isSplatValue(const Value *V, unsigned Depth = 0);
+
 /// Compute a map of integer instructions to their minimum legal type
 /// size.
 ///

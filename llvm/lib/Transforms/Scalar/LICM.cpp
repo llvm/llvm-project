@@ -294,6 +294,8 @@ PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
 
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<LoopAnalysis>();
+  if (EnableMSSALoopDependency)
+    PA.preserve<MemorySSAAnalysis>();
 
   return PA;
 }

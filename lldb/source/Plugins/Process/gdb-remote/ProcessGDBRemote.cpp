@@ -4046,7 +4046,7 @@ Status ProcessGDBRemote::SendEventData(const char *data) {
   return error;
 }
 
-const DataBufferSP ProcessGDBRemote::GetAuxvData() {
+DataExtractor ProcessGDBRemote::GetAuxvData() {
   DataBufferSP buf;
   if (m_gdb_comm.GetQXferAuxvReadSupported()) {
     std::string response_string;
@@ -4056,7 +4056,7 @@ const DataBufferSP ProcessGDBRemote::GetAuxvData() {
       buf = std::make_shared<DataBufferHeap>(response_string.c_str(),
                                              response_string.length());
   }
-  return buf;
+  return DataExtractor(buf, GetByteOrder(), GetAddressByteSize());
 }
 
 StructuredData::ObjectSP

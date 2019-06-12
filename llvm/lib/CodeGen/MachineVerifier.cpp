@@ -1312,6 +1312,14 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     break;
   }
+  case TargetOpcode::G_JUMP_TABLE: {
+    if (!MI->getOperand(1).isJTI())
+      report("G_JUMP_TABLE source operand must be a jump table index", MI);
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    if (!DstTy.isPointer())
+      report("G_JUMP_TABLE dest operand must have a pointer type", MI);
+    break;
+  }
   default:
     break;
   }

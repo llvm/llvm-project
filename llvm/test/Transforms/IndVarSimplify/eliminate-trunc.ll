@@ -561,4 +561,108 @@ exit:
   ret void
 }
 
+define void @test_13a(i32 %n) {
+;
+; CHECK-LABEL: @test_13a(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 1024 to i64
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i64 [[IV]], [[ZEXT]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nsw nuw i64 %iv, 2
+  %narrow.iv = trunc i64 %iv to i32
+  %cmp = icmp ne i32 1024, %narrow.iv
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+define void @test_13b(i32 %n) {
+;
+; CHECK-LABEL: @test_13b(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 1024 to i64
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[IV]], [[ZEXT]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nsw nuw i64 %iv, 2
+  %narrow.iv = trunc i64 %iv to i32
+  %cmp = icmp ugt i32 1024, %narrow.iv
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+define void @test_13c(i32 %n) {
+;
+; CHECK-LABEL: @test_13c(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 1024 to i64
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[IV]], [[ZEXT]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nsw nuw i64 %iv, 2
+  %narrow.iv = trunc i64 %iv to i32
+  %cmp = icmp sgt i32 1024, %narrow.iv
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+define void @test_13d(i32 %n) {
+;
+; CHECK-LABEL: @test_13d(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 1024 to i64
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ -20, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i64 [[IV]], [[SEXT]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [ -20, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nsw i64 %iv, 2
+  %narrow.iv = trunc i64 %iv to i32
+  %cmp = icmp sgt i32 1024, %narrow.iv
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
 !0 = !{i32 0, i32 1000}
