@@ -75,21 +75,19 @@ public:
 
   const void *DynamicClassID() const override { return &ThisProviderT::ID; }
 
-  llvm::StringRef GetName() const override { return ThisProviderT::info::name; }
-  llvm::StringRef GetFile() const override { return ThisProviderT::info::file; }
+  llvm::StringRef GetName() const override { return ThisProviderT::Info::name; }
+  llvm::StringRef GetFile() const override { return ThisProviderT::Info::file; }
 
 protected:
   using ProviderBase::ProviderBase; // Inherit constructor.
 };
 
-struct FileInfo {
-  static const char *name;
-  static const char *file;
-};
-
 class FileProvider : public Provider<FileProvider> {
 public:
-  typedef FileInfo info;
+  struct Info {
+    static const char *name;
+    static const char *file;
+  };
 
   FileProvider(const FileSpec &directory)
       : Provider(directory),
@@ -98,7 +96,7 @@ public:
   FileCollector &GetFileCollector() { return m_collector; }
 
   void Keep() override {
-    auto mapping = GetRoot().CopyByAppendingPathComponent(info::file);
+    auto mapping = GetRoot().CopyByAppendingPathComponent(Info::file);
     // Temporary files that are removed during execution can cause copy errors.
     if (auto ec = m_collector.CopyFiles(/*stop_on_error=*/false))
       return;
@@ -141,14 +139,12 @@ private:
   bool m_record;
 };
 
-struct CommandInfo {
-  static const char *name;
-  static const char *file;
-};
-
 class CommandProvider : public Provider<CommandProvider> {
 public:
-  typedef CommandInfo info;
+  struct Info {
+    static const char *name;
+    static const char *file;
+  };
 
   CommandProvider(const FileSpec &directory) : Provider(directory) {}
 

@@ -69,7 +69,7 @@ llvm::Error SystemInitializerCommon::Initialize() {
   // Initialize the file system.
   auto &r = repro::Reproducer::Instance();
   if (repro::Loader *loader = r.GetLoader()) {
-    FileSpec vfs_mapping = loader->GetFile<FileInfo>();
+    FileSpec vfs_mapping = loader->GetFile<FileProvider::Info>();
     if (vfs_mapping) {
       if (llvm::Error e = FileSystem::Initialize(vfs_mapping))
         return e;
