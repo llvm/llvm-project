@@ -30,7 +30,7 @@ using namespace llvm::pdb;
 using namespace llvm::codeview;
 
 struct llvm::pdb::GSIHashStreamBuilder {
-  struct UdtDenseMapInfo {
+  struct SymbolDenseMapInfo {
     static inline CVSymbol getEmptyKey() {
       static CVSymbol Empty;
       return Empty;
@@ -50,7 +50,7 @@ struct llvm::pdb::GSIHashStreamBuilder {
 
   std::vector<CVSymbol> Records;
   uint32_t StreamIndex;
-  llvm::DenseSet<CVSymbol, UdtDenseMapInfo> UdtHashes;
+  llvm::DenseSet<CVSymbol, SymbolDenseMapInfo> SymbolHashes;
   std::vector<PSHashRecord> HashRecords;
   std::array<support::ulittle32_t, (IPHR_HASH + 32) / 32> HashBitmap;
   std::vector<support::ulittle32_t> HashBuckets;
@@ -66,8 +66,8 @@ struct llvm::pdb::GSIHashStreamBuilder {
                                                CodeViewContainer::Pdb));
   }
   void addSymbol(const CVSymbol &Symbol) {
-    if (Symbol.kind() == S_UDT) {
-      auto Iter = UdtHashes.insert(Symbol);
+    if (Symbol.kind() == S_UDT || Symbol.kind() == S_CONSTANT) {
+      auto Iter = SymbolHashes.insert(Symbol);
       if (!Iter.second)
         return;
     }

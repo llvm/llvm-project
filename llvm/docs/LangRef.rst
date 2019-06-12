@@ -13766,7 +13766,7 @@ The second argument must be a vector of floating-point values.
 Examples:
 """""""""
 
-.. code-block:: llvm
+::
 
       %unord = call reassoc float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.0, <4 x float> %input) ; unordered reduction
       %ord = call float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float %start_value, <4 x float> %input) ; ordered reduction
@@ -13827,7 +13827,7 @@ The second argument must be a vector of floating-point values.
 Examples:
 """""""""
 
-.. code-block:: llvm
+::
 
       %unord = call reassoc float @llvm.experimental.vector.reduce.v2.fmul.f32.v4f32(float 1.0, <4 x float> %input) ; unordered reduction
       %ord = call float @llvm.experimental.vector.reduce.v2.fmul.f32.v4f32(float %start_value, <4 x float> %input) ; ordered reduction

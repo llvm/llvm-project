@@ -100,8 +100,8 @@ OPTIONS
 
 .. option:: --format=format, -f format
 
- Select an output format; *format* may be *sysv*, *posix*, or *bsd*.  The default
- is *bsd*.
+ Select an output format; *format* may be *sysv*, *posix*, *darwin*, or *bsd*.
+ The default is *bsd*.
 
 .. option:: --help, -h
 

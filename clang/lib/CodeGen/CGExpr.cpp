@@ -1398,7 +1398,7 @@ static bool isConstantEmittableObjectType(QualType type) {
 
 /// Can we constant-emit a load of a reference to a variable of the
 /// given type?  This is different from predicates like
-/// Decl::isUsableInConstantExpressions because we do want it to apply
+/// Decl::mightBeUsableInConstantExpressions because we do want it to apply
 /// in situations that don't necessarily satisfy the language's rules
 /// for this (e.g. C++'s ODR-use rules).  For example, we want to able
 /// to do this with const float variables even if those variables
@@ -1496,7 +1496,7 @@ static DeclRefExpr *tryToConvertMemberExprToDeclRefExpr(CodeGenFunction &CGF,
     return DeclRefExpr::Create(
         CGF.getContext(), NestedNameSpecifierLoc(), SourceLocation(), VD,
         /*RefersToEnclosingVariableOrCapture=*/false, ME->getExprLoc(),
-        ME->getType(), ME->getValueKind());
+        ME->getType(), ME->getValueKind(), nullptr, nullptr, ME->isNonOdrUse());
   }
   return nullptr;
 }
@@ -2462,18 +2462,8 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
 
     // A DeclRefExpr for a reference initialized by a constant expression can
     // appear without being odr-used. Directly emit the constant initializer.
-    const Expr *Init = VD->getAnyInitializer(VD);
-    const auto *BD = dyn_cast_or_null<BlockDecl>(CurCodeDecl);
-    if (Init && !isa<ParmVarDecl>(VD) && VD->getType()->isReferenceType() &&
-        VD->isUsableInConstantExpressions(getContext()) &&
-        VD->checkInitIsICE() &&
-        // Do not emit if it is private OpenMP variable.
-        !(E->refersToEnclosingVariableOrCapture() &&
-          ((CapturedStmtInfo &&
-            (LocalDeclMap.count(VD->getCanonicalDecl()) ||
-             CapturedStmtInfo->lookup(VD->getCanonicalDecl()))) ||
-           LambdaCaptureFields.lookup(VD->getCanonicalDecl()) ||
-           (BD && BD->capturesVariable(VD))))) {
+    VD->getAnyInitializer(VD);
+    if (E->isNonOdrUse() == NOUR_Constant && VD->getType()->isReferenceType()) {
       llvm::Constant *Val =
         ConstantEmitter(*this).emitAbstract(E->getLocation(),
                                             *VD->evaluateValue(),
@@ -2488,6 +2478,8 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
                                                     /* forPointeeType= */ true);
       return MakeAddrLValue(Address(Val, Alignment), T, AlignmentSource::Decl);
     }
+
+    // FIXME: Handle other kinds of non-odr-use DeclRefExprs.
 
     // Check for captured variables.
     if (E->refersToEnclosingVariableOrCapture()) {
