@@ -2082,3 +2082,18 @@ Status NativeProcessLinux::StopProcessorTracingOnThread(lldb::user_id_t traceid,
 
   return error;
 }
+
+llvm::Optional<uint64_t>
+NativeProcessLinux::GetAuxValue(enum AuxVector::EntryType type) {
+  if (m_aux_vector == nullptr) {
+    auto buffer_or_error = GetAuxvData();
+    if (!buffer_or_error)
+      return llvm::None;
+    DataExtractor auxv_data(buffer_or_error.get()->getBufferStart(),
+                            buffer_or_error.get()->getBufferSize(),
+                            GetByteOrder(), GetAddressByteSize());
+    m_aux_vector = llvm::make_unique<AuxVector>(auxv_data);
+  }
+
+  return m_aux_vector->GetAuxValue(type);
+}

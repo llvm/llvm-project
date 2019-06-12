@@ -206,6 +206,10 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
   if (Def)
     C->Checksum = Def->CheckSum;
 
+  // link.exe uses the presence of .rsrc$01 for LNK4078, so match that.
+  if (Name == ".rsrc$01")
+    IsResourceObjFile = true;
+
   // CodeView sections are stored to a different vector because they are not
   // linked in the regular manner.
   if (C->isCodeView())
@@ -667,7 +671,8 @@ void ObjFile::initializeFlags() {
 // types of external files: Precomp/PCH OBJs, when compiling with /Yc and /Yu.
 // And PDB type servers, when compiling with /Zi. This function extracts these
 // dependencies and makes them available as a TpiSource interface (see
-// DebugTypes.h).
+// DebugTypes.h). Both cases only happen with cl.exe: clang-cl produces regular
+// output even with /Yc and /Yu and with /Zi.
 void ObjFile::initializeDependencies() {
   if (!Config->Debug)
     return;

@@ -20,11 +20,8 @@ Basic Commands
    llc
    lli
    llvm-link
-   llvm-ar
    llvm-lib
    llvm-lipo
-   llvm-nm
-   llvm-objdump
    llvm-config
    llvm-cxxmap
    llvm-diff
@@ -32,11 +29,28 @@ Basic Commands
    llvm-profdata
    llvm-stress
    llvm-symbolizer
-   llvm-addr2line
    llvm-dwarfdump
    dsymutil
    llvm-mca
    llvm-readobj
+
+GNU binutils replacements
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. toctree::
+   :maxdepth: 1
+
+   llvm-addr2line
+   llvm-ar
+   llvm-cxxfilt
+   llvm-nm
+   llvm-objcopy
+   llvm-objdump
+   llvm-ranlib
+   llvm-readelf
+   llvm-size
+   llvm-strings
+   llvm-strip
 
 Debugging Tools
 ~~~~~~~~~~~~~~~

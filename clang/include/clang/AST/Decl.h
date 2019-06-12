@@ -1226,10 +1226,15 @@ public:
 
   void setInit(Expr *I);
 
-  /// Determine whether this variable's value can be used in a
+  /// Determine whether this variable's value might be usable in a
   /// constant expression, according to the relevant language standard.
   /// This only checks properties of the declaration, and does not check
   /// whether the initializer is in fact a constant expression.
+  bool mightBeUsableInConstantExpressions(ASTContext &C) const;
+
+  /// Determine whether this variable's value can be used in a
+  /// constant expression, according to the relevant language standard,
+  /// including checking whether it was initialized by a constant expression.
   bool isUsableInConstantExpressions(ASTContext &C) const;
 
   EvaluatedStmt *ensureEvaluatedStmt() const;

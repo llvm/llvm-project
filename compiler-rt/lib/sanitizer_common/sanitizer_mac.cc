@@ -558,8 +558,8 @@ MacosVersion GetMacosVersionInternal() {
       if (minor >= 5)
         return MACOS_VERSION_HIGH_SIERRA_DOT_RELEASE_4;
       return MACOS_VERSION_HIGH_SIERRA;
-    case 18:
-      return MACOS_VERSION_MOJAVE;
+    case 18: return MACOS_VERSION_MOJAVE;
+    case 19: return MACOS_VERSION_CATALINA;
     default:
       if (major < 9) return MACOS_VERSION_UNKNOWN;
       return MACOS_VERSION_UNKNOWN_NEWER;

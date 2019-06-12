@@ -233,6 +233,8 @@ PreservedAnalyses LoopInstSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
 
   auto PA = getLoopPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
+  if (EnableMSSALoopDependency)
+    PA.preserve<MemorySSAAnalysis>();
   return PA;
 }
 

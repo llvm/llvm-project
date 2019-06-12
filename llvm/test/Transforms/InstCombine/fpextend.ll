@@ -55,13 +55,10 @@ entry:
   ret float %tmp34
 }
 
-; FIXME: This combine isn't working.
 define float @test4_unary_fneg(float %x) nounwind  {
 ; CHECK-LABEL: @test4_unary_fneg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = fpext float [[X:%.*]] to double
-; CHECK-NEXT:    [[TMP2:%.*]] = fneg double [[TMP1]]
-; CHECK-NEXT:    [[TMP34:%.*]] = fptrunc double [[TMP2]] to float
+; CHECK-NEXT:    [[TMP34:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    ret float [[TMP34]]
 ;
 entry:

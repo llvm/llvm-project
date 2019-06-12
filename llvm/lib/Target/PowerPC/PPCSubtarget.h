@@ -322,9 +322,13 @@ public:
   /// but may expand the ISEL instruction later.
   bool enableEarlyIfConversion() const override { return true; }
 
-  // Scheduling customization.
+  /// Scheduling customization.
   bool enableMachineScheduler() const override;
-  // This overrides the PostRAScheduler bit in the SchedModel for each CPU.
+  /// Pipeliner customization.
+  bool enableMachinePipeliner() const override;
+  /// Machine Pipeliner customization
+  bool useDFAforSMS() const override;
+  /// This overrides the PostRAScheduler bit in the SchedModel for each CPU.
   bool enablePostRAScheduler() const override;
   AntiDepBreakMode getAntiDepBreakMode() const override;
   void getCriticalPathRCs(RegClassVector &CriticalPathRCs) const override;

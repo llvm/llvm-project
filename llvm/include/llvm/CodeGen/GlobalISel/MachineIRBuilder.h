@@ -1359,6 +1359,14 @@ public:
     return buildInstr(TargetOpcode::G_UMAX, {Dst}, {Src0, Src1});
   }
 
+  /// Build and insert \p Res = G_JUMP_TABLE \p JTI
+  ///
+  /// G_JUMP_TABLE sets \p Res to the address of the jump table specified by
+  /// the jump table index \p JTI.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildJumpTable(const LLT PtrTy, unsigned JTI);
+
   virtual MachineInstrBuilder buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
                                          ArrayRef<SrcOp> SrcOps,
                                          Optional<unsigned> Flags = None);

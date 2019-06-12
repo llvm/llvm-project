@@ -129,7 +129,7 @@
 		2689007D13353E2200698AC0 /* Args.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E6C10F1B85900F91463 /* Args.cpp */; };
 		23CB153C1D66DA9300EDDDE1 /* ArgsTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F93E1BDD33CE00BA9A93 /* ArgsTest.cpp */; };
 		6D99A3631BBC2F3200979793 /* ArmUnwindInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D99A3621BBC2F3200979793 /* ArmUnwindInfo.cpp */; };
-		26FFC19914FC072100087D58 /* AuxVector.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26FFC19314FC072100087D58 /* AuxVector.cpp */; };
+		AF7BD81B22B04E20008E78D1 /* AuxVector.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF7BD81A22B04E20008E78D1 /* AuxVector.cpp */; };
 		AFC2DCE91E6E2F2C00283714 /* Baton.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFC2DCE81E6E2F2C00283714 /* Baton.cpp */; };
 		268900D013353E6F00698AC0 /* Block.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F1310F1B8EC00F91463 /* Block.cpp */; };
 		49DEF1251CD7C6DF006A7C7D /* BlockPointer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DEF11F1CD7BD90006A7C7D /* BlockPointer.cpp */; };
@@ -1493,8 +1493,7 @@
 		6D99A3621BBC2F3200979793 /* ArmUnwindInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ArmUnwindInfo.cpp; path = source/Symbol/ArmUnwindInfo.cpp; sourceTree = "<group>"; };
 		6D99A3611BBC2F1600979793 /* ArmUnwindInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ArmUnwindInfo.h; path = include/lldb/Symbol/ArmUnwindInfo.h; sourceTree = "<group>"; };
 		3FDFE54719A2946B009756A7 /* AutoHandle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AutoHandle.h; path = include/lldb/Host/windows/AutoHandle.h; sourceTree = "<group>"; };
-		26FFC19314FC072100087D58 /* AuxVector.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AuxVector.cpp; sourceTree = "<group>"; };
-		26FFC19414FC072100087D58 /* AuxVector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AuxVector.h; sourceTree = "<group>"; };
+		AF7BD81A22B04E20008E78D1 /* AuxVector.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = AuxVector.cpp; path = Utility/AuxVector.cpp; sourceTree = "<group>"; };
 		AFC2DCE81E6E2F2C00283714 /* Baton.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Baton.cpp; path = source/Utility/Baton.cpp; sourceTree = "<group>"; };
 		AFC2DCEE1E6E2FA300283714 /* Baton.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Baton.h; path = include/lldb/Utility/Baton.h; sourceTree = "<group>"; };
 		26BC7F1310F1B8EC00F91463 /* Block.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Block.cpp; path = source/Symbol/Block.cpp; sourceTree = "<group>"; };
@@ -5009,6 +5008,7 @@
 		26B4666E11A2080F00CF6220 /* Utility */ = {
 			isa = PBXGroup;
 			children = (
+				AF7BD81A22B04E20008E78D1 /* AuxVector.cpp */,
 				9A0FDE951E8EF5010086B2F5 /* RegisterContext_mips.h */,
 				9A0FDE961E8EF5010086B2F5 /* RegisterContext_s390x.h */,
 				9A0FDE971E8EF5010086B2F5 /* RegisterContextLinux_mips.cpp */,
@@ -6069,8 +6069,6 @@
 		26FFC19214FC072100087D58 /* POSIX-DYLD */ = {
 			isa = PBXGroup;
 			children = (
-				26FFC19314FC072100087D58 /* AuxVector.cpp */,
-				26FFC19414FC072100087D58 /* AuxVector.h */,
 				26FFC19514FC072100087D58 /* DYLDRendezvous.cpp */,
 				26FFC19614FC072100087D58 /* DYLDRendezvous.h */,
 				26FFC19714FC072100087D58 /* DynamicLoaderPOSIXDYLD.cpp */,
@@ -8314,6 +8312,7 @@
 				268900D913353E6F00698AC0 /* FuncUnwinders.cpp in Sources */,
 				268900DA13353E6F00698AC0 /* LineEntry.cpp in Sources */,
 				268900DB13353E6F00698AC0 /* LineTable.cpp in Sources */,
+				AF7BD81B22B04E20008E78D1 /* AuxVector.cpp in Sources */,
 				268900DC13353E6F00698AC0 /* ObjectFile.cpp in Sources */,
 				268900DD13353E6F00698AC0 /* Symbol.cpp in Sources */,
 				AF26703A1852D01E00B6CC36 /* Queue.cpp in Sources */,
@@ -8552,7 +8551,6 @@
 				26A527C314E24F5F00F3A14A /* ThreadMachCore.cpp in Sources */,
 				B299580B14F2FA1400050A04 /* DisassemblerLLVMC.cpp in Sources */,
 				26B7564E14F89356008D9CB3 /* PlatformiOSSimulator.cpp in Sources */,
-				26FFC19914FC072100087D58 /* AuxVector.cpp in Sources */,
 				26FFC19B14FC072100087D58 /* DYLDRendezvous.cpp in Sources */,
 				AF0F6E501739A76D009180FE /* RegisterContextKDP_arm64.cpp in Sources */,
 				26FFC19D14FC072100087D58 /* DynamicLoaderPOSIXDYLD.cpp in Sources */,

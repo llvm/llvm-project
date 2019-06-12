@@ -65,6 +65,39 @@ define float @double_negative(float %x, float %y) #0 {
   ret float %div
 }
 
+define float @double_negative_unary_fneg_x_unary_fneg_y(float %x, float %y) #0 {
+; CHECK-LABEL: double_negative_unary_fneg_x_unary_fneg_y:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    divss %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %neg1 = fneg float %x
+  %neg2 = fneg float %y
+  %div = fdiv float %neg1, %neg2
+  ret float %div
+}
+
+define float @double_negative_unary_fneg_x(float %x, float %y) #0 {
+; CHECK-LABEL: double_negative_unary_fneg_x:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    divss %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %neg1 = fneg float %x
+  %neg2 = fsub float -0.0, %y
+  %div = fdiv float %neg1, %neg2
+  ret float %div
+}
+
+define float @double_negative_unary_fneg_y(float %x, float %y) #0 {
+; CHECK-LABEL: double_negative_unary_fneg_y:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    divss %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %neg1 = fsub float -0.0, %x
+  %neg2 = fneg float %y
+  %div = fdiv float %neg1, %neg2
+  ret float %div
+}
+
 define <4 x float> @double_negative_vector(<4 x float> %x, <4 x float> %y) #0 {
 ; CHECK-LABEL: double_negative_vector:
 ; CHECK:       # %bb.0:
@@ -72,6 +105,39 @@ define <4 x float> @double_negative_vector(<4 x float> %x, <4 x float> %y) #0 {
 ; CHECK-NEXT:    retq
   %neg1 = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %x
   %neg2 = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %y
+  %div = fdiv <4 x float> %neg1, %neg2
+  ret <4 x float> %div
+}
+
+define <4 x float> @double_negative_vector_unary_fneg_x_unary_fneg_y(<4 x float> %x, <4 x float> %y) #0 {
+; CHECK-LABEL: double_negative_vector_unary_fneg_x_unary_fneg_y:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    divps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %neg1 = fneg <4 x float> %x
+  %neg2 = fneg <4 x float> %y
+  %div = fdiv <4 x float> %neg1, %neg2
+  ret <4 x float> %div
+}
+
+define <4 x float> @double_negative_vector_unary_fneg_x(<4 x float> %x, <4 x float> %y) #0 {
+; CHECK-LABEL: double_negative_vector_unary_fneg_x:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    divps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %neg1 = fneg <4 x float> %x
+  %neg2 = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %y
+  %div = fdiv <4 x float> %neg1, %neg2
+  ret <4 x float> %div
+}
+
+define <4 x float> @double_negative_vector_unary_fneg_y(<4 x float> %x, <4 x float> %y) #0 {
+; CHECK-LABEL: double_negative_vector_unary_fneg_y:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    divps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %neg1 = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %x
+  %neg2 = fneg <4 x float> %y
   %div = fdiv <4 x float> %neg1, %neg2
   ret <4 x float> %div
 }

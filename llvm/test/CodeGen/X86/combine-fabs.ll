@@ -85,6 +85,22 @@ define float @combine_fabs_fneg(float %a) {
   ret float %2
 }
 
+define float @combine_fabs_unary_fneg(float %a) {
+; SSE-LABEL: combine_fabs_unary_fneg:
+; SSE:       # %bb.0:
+; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_fabs_unary_fneg:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
+; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = fneg float %a
+  %2 = call float @llvm.fabs.f32(float %1)
+  ret float %2
+}
+
 define <4 x float> @combine_vec_fabs_fneg(<4 x float> %a) {
 ; SSE-LABEL: combine_vec_fabs_fneg:
 ; SSE:       # %bb.0:
@@ -97,6 +113,22 @@ define <4 x float> @combine_vec_fabs_fneg(<4 x float> %a) {
 ; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %a
+  %2 = call <4 x float> @llvm.fabs.v4f32(<4 x float> %1)
+  ret <4 x float> %2
+}
+
+define <4 x float> @combine_vec_fabs_unary_fneg(<4 x float> %a) {
+; SSE-LABEL: combine_vec_fabs_unary_fneg:
+; SSE:       # %bb.0:
+; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_fabs_unary_fneg:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
+; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = fneg <4 x float> %a
   %2 = call <4 x float> @llvm.fabs.v4f32(<4 x float> %1)
   ret <4 x float> %2
 }

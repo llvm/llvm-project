@@ -22,7 +22,11 @@
 
 template <typename Primary> static void testPrimary() {
   const scudo::uptr NumberOfAllocations = 32U;
-  std::unique_ptr<Primary> Allocator(new Primary);
+  auto Deleter = [](Primary *P) {
+    P->unmapTestOnly();
+    delete P;
+  };
+  std::unique_ptr<Primary, decltype(Deleter)> Allocator(new Primary, Deleter);
   Allocator->init(/*ReleaseToOsInterval=*/-1);
   typename Primary::CacheT Cache;
   Cache.init(nullptr, Allocator.get());
@@ -84,10 +88,15 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
   Allocator.releaseToOS();
   Allocator.printStats();
   EXPECT_EQ(AllocationFailed, true);
+  Allocator.unmapTestOnly();
 }
 
 template <typename Primary> static void testIteratePrimary() {
-  std::unique_ptr<Primary> Allocator(new Primary);
+  auto Deleter = [](Primary *P) {
+    P->unmapTestOnly();
+    delete P;
+  };
+  std::unique_ptr<Primary, decltype(Deleter)> Allocator(new Primary, Deleter);
   Allocator->init(/*ReleaseToOsInterval=*/-1);
   typename Primary::CacheT Cache;
   Cache.init(nullptr, Allocator.get());
@@ -125,10 +134,6 @@ TEST(ScudoPrimaryTest, PrimaryIterate) {
   testIteratePrimary<scudo::SizeClassAllocator64<SizeClassMap, 24U>>();
 }
 
-// TODO(kostyak): reenable on 32-bit after implementing unmapTestOnly for the
-//                primary: we are running out of addressable space without.
-#if SCUDO_WORDSIZE == 64U
-
 static std::mutex Mutex;
 static std::condition_variable Cv;
 static bool Ready = false;
@@ -143,7 +148,7 @@ template <typename Primary> static void performAllocations(Primary *Allocator) {
       Cv.wait(Lock);
   }
   for (scudo::uptr I = 0; I < 256U; I++) {
-    const scudo::uptr Size = std::rand() % Primary::SizeClassMap::MaxSize;
+    const scudo::uptr Size = std::rand() % Primary::SizeClassMap::MaxSize / 4;
     const scudo::uptr ClassId = Primary::SizeClassMap::getClassIdBySize(Size);
     void *P = Cache.allocate(ClassId);
     if (P)
@@ -158,7 +163,11 @@ template <typename Primary> static void performAllocations(Primary *Allocator) {
 }
 
 template <typename Primary> static void testPrimaryThreaded() {
-  std::unique_ptr<Primary> Allocator(new Primary);
+  auto Deleter = [](Primary *P) {
+    P->unmapTestOnly();
+    delete P;
+  };
+  std::unique_ptr<Primary, decltype(Deleter)> Allocator(new Primary, Deleter);
   Allocator->init(/*ReleaseToOsInterval=*/-1);
   std::thread Threads[32];
   for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); I++)
@@ -177,7 +186,5 @@ template <typename Primary> static void testPrimaryThreaded() {
 TEST(ScudoPrimaryTest, PrimaryThreaded) {
   using SizeClassMap = scudo::SvelteSizeClassMap;
   testPrimaryThreaded<scudo::SizeClassAllocator32<SizeClassMap, 18U>>();
-  testPrimaryThreaded<scudo::SizeClassAllocator64<SizeClassMap, 28U>>();
+  testPrimaryThreaded<scudo::SizeClassAllocator64<SizeClassMap, 24U>>();
 }
-
-#endif // SCUDO_WORDSIZE == 64U

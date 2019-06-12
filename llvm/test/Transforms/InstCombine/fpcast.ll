@@ -40,11 +40,10 @@ define half @fneg_fptrunc(float %a) {
   ret half %c
 }
 
-; FIXME: This combine isn't working.
 define half @unary_fneg_fptrunc(float %a) {
 ; CHECK-LABEL: @unary_fneg_fptrunc(
-; CHECK-NEXT:    [[B:%.*]] = fneg float [[A:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = fptrunc float [[B]] to half
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = fneg half [[TMP1]]
 ; CHECK-NEXT:    ret half [[C]]
 ;
   %b = fneg float %a
@@ -63,11 +62,10 @@ define <2 x half> @fneg_fptrunc_vec_undef(<2 x float> %a) {
   ret <2 x half> %c
 }
 
-; FIXME: This combine isn't working.
 define <2 x half> @unary_fneg_fptrunc_vec(<2 x float> %a) {
 ; CHECK-LABEL: @unary_fneg_fptrunc_vec(
-; CHECK-NEXT:    [[B:%.*]] = fneg <2 x float> [[A:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = fptrunc <2 x float> [[B]] to <2 x half>
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc <2 x float> [[A:%.*]] to <2 x half>
+; CHECK-NEXT:    [[C:%.*]] = fneg <2 x half> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x half> [[C]]
 ;
   %b = fneg <2 x float> %a
@@ -86,11 +84,10 @@ define half @test4-fast(float %a) {
   ret half %c
 }
 
-; FIXME: This combine isn't working.
 define half @test4_unary_fneg-fast(float %a) {
 ; CHECK-LABEL: @test4_unary_fneg-fast(
-; CHECK-NEXT:    [[B:%.*]] = fneg fast float [[A:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = fptrunc float [[B]] to half
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = fneg fast half [[TMP1]]
 ; CHECK-NEXT:    ret half [[C]]
 ;
   %b = fneg fast float %a

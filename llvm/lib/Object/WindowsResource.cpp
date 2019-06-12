@@ -442,7 +442,8 @@ WindowsResourceCOFFWriter::WindowsResourceCOFFWriter(
       Data(Parser.getData()), StringTable(Parser.getStringTable()) {
   performFileLayout();
 
-  OutputBuffer = WritableMemoryBuffer::getNewMemBuffer(FileSize);
+  OutputBuffer = WritableMemoryBuffer::getNewMemBuffer(
+      FileSize, "internal .obj file created from .res files");
 }
 
 void WindowsResourceCOFFWriter::performFileLayout() {
@@ -521,7 +522,7 @@ void WindowsResourceCOFFWriter::writeCOFFHeader(uint32_t TimeDateStamp) {
   Header->NumberOfSections = 2;
   Header->TimeDateStamp = TimeDateStamp;
   Header->PointerToSymbolTable = SymbolTableOffset;
-  // One symbol for every resource plus 2 for each section and @feat.00
+  // One symbol for every resource plus 2 for each section and 1 for @feat.00
   Header->NumberOfSymbols = Data.size() + 5;
   Header->SizeOfOptionalHeader = 0;
   // cvtres.exe sets 32BIT_MACHINE even for 64-bit machine types. Match it.
