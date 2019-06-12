@@ -54,6 +54,7 @@
 #include "AppleDWARFIndex.h"
 #include "DWARFASTParser.h"
 #include "DWARFASTParserClang.h"
+#include "DWARFCompileUnit.h"
 #include "DWARFDebugAbbrev.h"
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
@@ -62,6 +63,7 @@
 #include "DWARFDebugRanges.h"
 #include "DWARFDeclContext.h"
 #include "DWARFFormValue.h"
+#include "DWARFTypeUnit.h"
 #include "DWARFUnit.h"
 #include "DebugNamesDWARFIndex.h"
 #include "LogChannelDWARF.h"
@@ -775,24 +777,53 @@ size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
 bool SymbolFileDWARF::ParseSupportFiles(CompileUnit &comp_unit,
                                         FileSpecList &support_files) {
   ASSERT_MODULE_LOCK(this);
-  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
-  if (dwarf_cu) {
-    const DWARFBaseDIE cu_die = dwarf_cu->GetUnitDIEOnly();
+  DWARFUnit *unit = GetDWARFCompileUnit(&comp_unit);
+  if (auto *tu = llvm::dyn_cast_or_null<DWARFTypeUnit>(unit)) {
+    support_files = GetTypeUnitSupportFiles(*tu);
+    return true;
+  }
 
-    if (cu_die) {
-      const dw_offset_t stmt_list = cu_die.GetAttributeValueAsUnsigned(
-          DW_AT_stmt_list, DW_INVALID_OFFSET);
-      if (stmt_list != DW_INVALID_OFFSET) {
-        // All file indexes in DWARF are one based and a file of index zero is
-        // supposed to be the compile unit itself.
-        support_files.Append(comp_unit);
-        return DWARFDebugLine::ParseSupportFiles(
-            comp_unit.GetModule(), m_context.getOrLoadLineData(), stmt_list,
-            support_files, dwarf_cu);
-      }
+  if (unit) {
+    const dw_offset_t stmt_list = unit->GetLineTableOffset();
+    if (stmt_list != DW_INVALID_OFFSET) {
+      // All file indexes in DWARF are one based and a file of index zero is
+      // supposed to be the compile unit itself.
+      support_files.Append(comp_unit);
+      return DWARFDebugLine::ParseSupportFiles(comp_unit.GetModule(),
+                                               m_context.getOrLoadLineData(),
+                                               stmt_list, support_files, unit);
     }
   }
   return false;
+}
+
+FileSpec SymbolFileDWARF::GetFile(DWARFUnit &unit, size_t file_idx) {
+  if (CompileUnit *lldb_cu = GetCompUnitForDWARFCompUnit(&unit))
+    return lldb_cu->GetSupportFiles().GetFileSpecAtIndex(file_idx);
+  return FileSpec();
+}
+
+const FileSpecList &
+SymbolFileDWARF::GetTypeUnitSupportFiles(DWARFTypeUnit &tu) {
+  static FileSpecList empty_list;
+
+  dw_offset_t offset = tu.GetLineTableOffset();
+  if (offset == DW_INVALID_OFFSET ||
+      offset == llvm::DenseMapInfo<dw_offset_t>::getEmptyKey() ||
+      offset == llvm::DenseMapInfo<dw_offset_t>::getTombstoneKey())
+    return empty_list;
+
+  // Many type units can share a line table, so parse the support file list
+  // once, and cache it based on the offset field.
+  auto iter_bool = m_type_unit_support_files.try_emplace(offset);
+  FileSpecList &list = iter_bool.first->second;
+  if (iter_bool.second) {
+    list.Append(FileSpec());
+    DWARFDebugLine::ParseSupportFiles(GetObjectFile()->GetModule(),
+                                      m_context.getOrLoadLineData(), offset,
+                                      list, &tu);
+  }
+  return list;
 }
 
 bool SymbolFileDWARF::ParseIsOptimized(CompileUnit &comp_unit) {

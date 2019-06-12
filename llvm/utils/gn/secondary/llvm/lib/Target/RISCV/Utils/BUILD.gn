@@ -1,0 +1,25 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("RISCVGenSystemOperands") {
+  visibility = [ ":Utils" ]
+  args = [ "-gen-searchable-tables" ]
+  td_file = "../RISCV.td"
+}
+
+static_library("Utils") {
+  output_name = "LLVMRISCVUtils"
+  public_deps = [
+    ":RISCVGenSystemOperands",
+  ]
+  deps = [
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target/RISCV/MCTargetDesc:tablegen",
+  ]
+
+  include_dirs = [ ".." ]
+  sources = [
+    "RISCVBaseInfo.cpp",
+    "RISCVMatInt.cpp",
+  ]
+}

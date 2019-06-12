@@ -147,7 +147,7 @@ cl::alias ReverseSortr("r", cl::desc("Alias for --reverse-sort"),
                        cl::aliasopt(ReverseSort), cl::Grouping);
 
 cl::opt<bool> PrintSize("print-size",
-                        cl::desc("Show symbol size instead of address"),
+                        cl::desc("Show symbol size as well as address"),
                         cl::cat(NMCat));
 cl::alias PrintSizeS("S", cl::desc("Alias for --print-size"),
                      cl::aliasopt(PrintSize), cl::Grouping);

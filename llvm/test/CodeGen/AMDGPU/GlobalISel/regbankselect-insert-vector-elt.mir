@@ -36,12 +36,12 @@ body: |
     ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; CHECK: [[IVEC:%[0-9]+]]:vgpr(<4 x s32>) = G_INSERT_VECTOR_ELT [[COPY]], [[COPY1]](s32), [[COPY2]](s32)
-    ; CHECK: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[IVEC]](<4 x s32>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[IVEC]](<4 x s32>)
     %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(s32) = COPY $sgpr0
     %2:_(s32) = COPY $sgpr1
     %3:_(<4 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
-    $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %3
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %3
 ...
 
 ---
@@ -58,12 +58,12 @@ body: |
     ; CHECK: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr4
     ; CHECK: [[COPY3:%[0-9]+]]:vgpr(<4 x s32>) = COPY [[COPY]](<4 x s32>)
     ; CHECK: [[IVEC:%[0-9]+]]:vgpr(<4 x s32>) = G_INSERT_VECTOR_ELT [[COPY3]], [[COPY1]](s32), [[COPY2]](s32)
-    ; CHECK: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[IVEC]](<4 x s32>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[IVEC]](<4 x s32>)
     %0:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:_(s32) = COPY $vgpr0
     %2:_(s32) = COPY $sgpr4
     %3:_(<4 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
-    $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %3
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %3
 ...
 
 ---
@@ -80,12 +80,12 @@ body: |
     ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK: [[COPY3:%[0-9]+]]:vgpr(<4 x s32>) = COPY [[COPY]](<4 x s32>)
     ; CHECK: [[IVEC:%[0-9]+]]:vgpr(<4 x s32>) = G_INSERT_VECTOR_ELT [[COPY3]], [[COPY1]](s32), [[COPY2]](s32)
-    ; CHECK: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[IVEC]](<4 x s32>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[IVEC]](<4 x s32>)
     %0:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:_(s32) = COPY $sgpr4
     %2:_(s32) = COPY $vgpr0
     %3:_(<4 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
-    $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %3
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %3
 ...
 
 ---
@@ -102,12 +102,12 @@ body: |
     ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
     ; CHECK: [[COPY3:%[0-9]+]]:vgpr(<4 x s32>) = COPY [[COPY]](<4 x s32>)
     ; CHECK: [[IVEC:%[0-9]+]]:vgpr(<4 x s32>) = G_INSERT_VECTOR_ELT [[COPY3]], [[COPY1]](s32), [[COPY2]](s32)
-    ; CHECK: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[IVEC]](<4 x s32>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[IVEC]](<4 x s32>)
     %0:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:_(s32) = COPY $vgpr0
     %2:_(s32) = COPY $vgpr1
     %3:_(<4 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
-    $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %3
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %3
 ...
 
 ---
@@ -123,12 +123,12 @@ body: |
     ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr4
     ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK: [[IVEC:%[0-9]+]]:vgpr(<4 x s32>) = G_INSERT_VECTOR_ELT [[COPY]], [[COPY1]](s32), [[COPY2]](s32)
-    ; CHECK: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[IVEC]](<4 x s32>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[IVEC]](<4 x s32>)
     %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(s32) = COPY $sgpr4
     %2:_(s32) = COPY $vgpr0
     %3:_(<4 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
-    $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %3
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %3
 ...
 
 ---
@@ -144,12 +144,12 @@ body: |
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK: [[IVEC:%[0-9]+]]:vgpr(<4 x s32>) = G_INSERT_VECTOR_ELT [[COPY]], [[COPY1]](s32), [[COPY2]](s32)
-    ; CHECK: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[IVEC]](<4 x s32>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[IVEC]](<4 x s32>)
     %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(s32) = COPY $vgpr0
     %2:_(s32) = COPY $sgpr0
     %3:_(<4 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
-    $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %3
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %3
 ...
 
 ---

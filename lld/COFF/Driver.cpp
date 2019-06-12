@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DebugTypes.h"
 #include "Driver.h"
 #include "Config.h"
+#include "DebugTypes.h"
 #include "ICF.h"
 #include "InputFiles.h"
 #include "MarkLive.h"
@@ -30,6 +30,7 @@
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/COFFModuleDefinition.h"
+#include "llvm/Object/WindowsMachineFlag.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"

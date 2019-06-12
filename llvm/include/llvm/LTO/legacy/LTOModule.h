@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Module.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Target/TargetMachine.h"
@@ -155,13 +156,19 @@ public:
 
   StringRef getLinkerOpts() { return LinkerOpts; }
 
-  StringRef getDependentLibraries() { return DependentLibraries; }
-
   const std::vector<StringRef> &getAsmUndefinedRefs() { return _asm_undefines; }
+
+  static lto::InputFile *createInputFile(const void *buffer, size_t buffer_size,
+                                         const char *path, std::string &out_error);
+
+  static size_t getDependentLibraryCount(lto::InputFile *input);
+
+  static const char *getDependentLibrary(lto::InputFile *input, size_t index, size_t *size);
 
 private:
   /// Parse metadata from the module
   // FIXME: it only parses "llvm.linker.options" metadata at the moment
+  // FIXME: can't access metadata in lazily loaded modules
   void parseMetadata();
 
   /// Parse the symbols from the module and model-level ASM and add them to

@@ -49,6 +49,7 @@ class DWARFDebugLine;
 class DWARFDebugRangesBase;
 class DWARFDeclContext;
 class DWARFFormValue;
+class DWARFTypeUnit;
 class SymbolFileDWARFDebugMap;
 class SymbolFileDWARFDwo;
 class SymbolFileDWARFDwp;
@@ -299,6 +300,8 @@ public:
 
   lldb_private::DWARFContext &GetDWARFContext() { return m_context; }
 
+  lldb_private::FileSpec GetFile(DWARFUnit &unit, size_t file_idx);
+
 protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *>
       DIEToTypePtr;
@@ -438,6 +441,8 @@ protected:
 
   SymbolFileDWARFDwp *GetDwpSymbolFile();
 
+  const lldb_private::FileSpecList &GetTypeUnitSupportFiles(DWARFTypeUnit &tu);
+
   lldb::ModuleWP m_debug_map_module_wp;
   SymbolFileDWARFDebugMap *m_debug_map_symfile;
 
@@ -476,6 +481,8 @@ protected:
   DIEToVariableSP m_die_to_variable_sp;
   DIEToClangType m_forward_decl_die_to_clang_type;
   ClangTypeToDIE m_forward_decl_clang_type_to_die;
+  llvm::DenseMap<dw_offset_t, lldb_private::FileSpecList>
+      m_type_unit_support_files;
 };
 
 #endif // SymbolFileDWARF_SymbolFileDWARF_h_

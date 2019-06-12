@@ -534,6 +534,12 @@ public:
     }
 
     if (!Checks.empty() || !LAI.getPSE().getUnionPredicate().isAlwaysTrue()) {
+      if (LAI.hasConvergentOp()) {
+        LLVM_DEBUG(dbgs() << "Versioning is needed but not allowed with "
+                             "convergent calls\n");
+        return false;
+      }
+
       auto *HeaderBB = L->getHeader();
       auto *F = HeaderBB->getParent();
       bool OptForSize = F->hasOptSize() ||

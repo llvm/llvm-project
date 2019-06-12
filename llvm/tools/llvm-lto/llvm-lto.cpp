@@ -204,6 +204,10 @@ static cl::opt<bool> ListSymbolsOnly(
     "list-symbols-only", cl::init(false),
     cl::desc("Instead of running LTO, list the symbols in each IR file"));
 
+static cl::opt<bool> ListDependentLibrariesOnly(
+    "list-dependent-libraries-only", cl::init(false),
+    cl::desc("Instead of running LTO, list the dependent libraries in each IR file"));
+
 static cl::opt<bool> SetMergedModule(
     "set-merged-module", cl::init(false),
     cl::desc("Use the first input module as the merged module"));
@@ -372,6 +376,34 @@ static void listSymbols(const TargetOptions &Options) {
   }
 }
 
+static std::unique_ptr<MemoryBuffer> loadFile(StringRef Filename) {
+    ExitOnError ExitOnErr("llvm-lto: error loading file '" + Filename.str() +
+        "': ");
+    return ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(Filename)));
+}
+
+static void listDependentLibraries() {
+  for (auto &Filename : InputFilenames) {
+    auto Buffer = loadFile(Filename);
+    std::string E;
+    std::unique_ptr<lto::InputFile> Input(LTOModule::createInputFile(
+        Buffer->getBufferStart(), Buffer->getBufferSize(), Filename.c_str(),
+        E));
+    if (!Input)
+      error(E);
+
+    // List the dependent libraries.
+    outs() << Filename << ":\n";
+    for (size_t I = 0, C = LTOModule::getDependentLibraryCount(Input.get());
+         I != C; ++I) {
+      size_t L = 0;
+      const char *S = LTOModule::getDependentLibrary(Input.get(), I, &L);
+      assert(S);
+      outs() << StringRef(S, L) << "\n";
+    }
+  }
+}
+
 /// Create a combined index file from the input IR files and write it.
 ///
 /// This is meant to enable testing of ThinLTO combined index generation,
@@ -447,12 +479,6 @@ std::unique_ptr<ModuleSummaryIndex> loadCombinedIndex() {
   ExitOnError ExitOnErr("llvm-lto: error loading file '" + ThinLTOIndex +
                         "': ");
   return ExitOnErr(getModuleSummaryIndexForFile(ThinLTOIndex));
-}
-
-static std::unique_ptr<MemoryBuffer> loadFile(StringRef Filename) {
-  ExitOnError ExitOnErr("llvm-lto: error loading file '" + Filename.str() +
-                        "': ");
-  return ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(Filename)));
 }
 
 static std::unique_ptr<lto::InputFile> loadInputFile(MemoryBufferRef Buffer) {
@@ -851,6 +877,11 @@ int main(int argc, char **argv) {
 
   if (ListSymbolsOnly) {
     listSymbols(Options);
+    return 0;
+  }
+
+  if (ListDependentLibrariesOnly) {
+    listDependentLibraries();
     return 0;
   }
 

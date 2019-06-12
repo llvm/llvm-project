@@ -22,6 +22,7 @@ add_llvm_library(LLVMObject
   SymbolicFile.cpp
   SymbolSize.cpp
   WasmObjectFile.cpp
+  WindowsMachineFlag.cpp
   WindowsResource.cpp
   XCOFFObjectFile.cpp
 

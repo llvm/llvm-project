@@ -1157,10 +1157,9 @@ bool SITargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
   return true;
 }
 
-bool SITargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
-                                                      unsigned AddrSpace,
-                                                      unsigned Align,
-                                                      bool *IsFast) const {
+bool SITargetLowering::allowsMisalignedMemoryAccesses(
+    EVT VT, unsigned AddrSpace, unsigned Align, MachineMemOperand::Flags Flags,
+    bool *IsFast) const {
   if (IsFast)
     *IsFast = false;
 

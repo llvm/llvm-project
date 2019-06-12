@@ -180,6 +180,12 @@ public:
                                  bool UseMaskForCond = false,
                                  bool UseMaskForGaps = false);
 
+  bool isLoweredToCall(const Function *F);
+  bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
+                                AssumptionCache &AC,
+                                TargetLibraryInfo *LibInfo,
+                                TTI::HardwareLoopInfo &HWLoopInfo);
+
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);
 

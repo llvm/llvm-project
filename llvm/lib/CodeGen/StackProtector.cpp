@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/Passes.h"
@@ -156,40 +157,6 @@ bool StackProtector::ContainsProtectableArray(Type *Ty, bool &IsLarge,
   return NeedsProtector;
 }
 
-bool StackProtector::HasAddressTaken(const Instruction *AI) {
-  for (const User *U : AI->users()) {
-    if (const StoreInst *SI = dyn_cast<StoreInst>(U)) {
-      if (AI == SI->getValueOperand())
-        return true;
-    } else if (const PtrToIntInst *SI = dyn_cast<PtrToIntInst>(U)) {
-      if (AI == SI->getOperand(0))
-        return true;
-    } else if (const CallInst *CI = dyn_cast<CallInst>(U)) {
-      // Ignore intrinsics that are not calls. TODO: Use isLoweredToCall().
-      if (!isa<DbgInfoIntrinsic>(CI) && !CI->isLifetimeStartOrEnd())
-        return true;
-    } else if (isa<InvokeInst>(U)) {
-      return true;
-    } else if (const SelectInst *SI = dyn_cast<SelectInst>(U)) {
-      if (HasAddressTaken(SI))
-        return true;
-    } else if (const PHINode *PN = dyn_cast<PHINode>(U)) {
-      // Keep track of what PHI nodes we have already visited to ensure
-      // they are only visited once.
-      if (VisitedPHIs.insert(PN).second)
-        if (HasAddressTaken(PN))
-          return true;
-    } else if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(U)) {
-      if (HasAddressTaken(GEP))
-        return true;
-    } else if (const BitCastInst *BI = dyn_cast<BitCastInst>(U)) {
-      if (HasAddressTaken(BI))
-        return true;
-    }
-  }
-  return false;
-}
-
 /// Search for the first call to the llvm.stackprotector intrinsic and return it
 /// if present.
 static const CallInst *findStackProtectorIntrinsic(Function &F) {
@@ -297,7 +264,9 @@ bool StackProtector::RequiresStackProtector() {
           continue;
         }
 
-        if (Strong && HasAddressTaken(AI)) {
+        if (Strong && PointerMayBeCaptured(AI,
+                                           /* ReturnCaptures */ false,
+                                           /* StoreCaptures */ true)) {
           ++NumAddrTaken;
           Layout.insert(std::make_pair(AI, MachineFrameInfo::SSPLK_AddrOf));
           ORE.emit([&]() {

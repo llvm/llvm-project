@@ -61,12 +61,6 @@ private:
   /// protection when -fstack-protection is used.
   unsigned SSPBufferSize = 0;
 
-  /// VisitedPHIs - The set of PHI nodes visited when determining
-  /// if a variable's reference has been taken.  This set
-  /// is maintained to ensure we don't visit the same PHI node multiple
-  /// times.
-  SmallPtrSet<const PHINode *, 16> VisitedPHIs;
-
   // A prologue is generated.
   bool HasPrologue = false;
 

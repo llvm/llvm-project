@@ -84,6 +84,14 @@ int TestSimpleEquivalent(int X, int Y) {
   return 0;
 }
 
+template <int DX>
+int TestSimpleEquivalentDependent() {
+  if (DX > 0 && DX > 0) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: both sides of operator are equivalent
+
+  return 0;
+}
+
 int Valid(int X, int Y) {
   if (X != Y) return 1;
   if (X == Y + 0) return 1;
@@ -670,7 +678,7 @@ int TestWithMinMaxInt(int X) {
 #define FLAG3 4
 #define FLAGS (FLAG1 | FLAG2 | FLAG3)
 #define NOTFLAGS !(FLAG1 | FLAG2 | FLAG3)
-int operatorConfusion(int X, int Y, long Z)
+int TestOperatorConfusion(int X, int Y, long Z)
 {
   // Ineffective & expressions.
   Y = (Y << 8) & 0xff;
@@ -721,6 +729,12 @@ int operatorConfusion(int X, int Y, long Z)
   return !(1 | 2 | 4);
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: ineffective logical negation operator
   // CHECK-FIXES: {{^}}  return ~(1 | 2 | 4);{{$}}
+}
+
+template <int Shift, int Mask>
+int TestOperatorConfusionDependent(int Y) {
+  int r1 = (Y << Shift) & 0xff;
+  int r2 = (Y << 8) & Mask;
 }
 #undef FLAG1
 #undef FLAG2

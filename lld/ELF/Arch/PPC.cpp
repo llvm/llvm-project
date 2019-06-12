@@ -53,11 +53,11 @@ static uint16_t lo(uint32_t V) { return V; }
 static uint16_t ha(uint32_t V) { return (V + 0x8000) >> 16; }
 
 static uint32_t readFromHalf16(const uint8_t *Loc) {
-  return read32(Loc - (Config->EKind == ELF32BEKind ? 2 : 0));
+  return read32(Config->IsLE ? Loc : Loc - 2);
 }
 
 static void writeFromHalf16(uint8_t *Loc, uint32_t Insn) {
-  write32(Loc - (Config->EKind == ELF32BEKind ? 2 : 0), Insn);
+  write32(Config->IsLE ? Loc : Loc - 2, Insn);
 }
 
 void elf::writePPC32GlinkSection(uint8_t *Buf, size_t NumEntries) {

@@ -482,13 +482,13 @@ void ClangdLSPServer::onCommand(const ExecuteCommandParams &Params,
 
     auto Action = [ApplyEdit](decltype(Reply) Reply, URIForFile File,
                               std::string Code,
-                              llvm::Expected<tooling::Replacements> R) {
+                              llvm::Expected<std::vector<TextEdit>> R) {
       if (!R)
         return Reply(R.takeError());
 
       WorkspaceEdit WE;
       WE.changes.emplace();
-      (*WE.changes)[File.uri()] = replacementsToEdits(Code, *R);
+      (*WE.changes)[File.uri()] = std::move(*R);
 
       Reply("Fix applied.");
       ApplyEdit(std::move(WE));

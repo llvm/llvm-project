@@ -234,7 +234,7 @@ public:
 
   /// Apply the code tweak with a specified \p ID.
   void applyTweak(PathRef File, Range Sel, StringRef ID,
-                  Callback<tooling::Replacements> CB);
+                  Callback<std::vector<TextEdit>> CB);
 
   /// Only for testing purposes.
   /// Waits until all requests to worker thread are finished and dumps AST for
