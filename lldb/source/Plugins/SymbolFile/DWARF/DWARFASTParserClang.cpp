@@ -233,7 +233,7 @@ namespace {
 /// Some attributes are relevant for all kinds of types (declaration), while
 /// others are only meaningful to a specific type (is_virtual)
 struct ParsedTypeAttributes {
-  ParsedTypeAttributes(const DWARFDIE &die, CompileUnit &comp_unit);
+  explicit ParsedTypeAttributes(const DWARFDIE &die);
 
   AccessType accessibility = eAccessNone;
   bool is_artificial = false;
@@ -263,8 +263,7 @@ struct ParsedTypeAttributes {
 };
 } // namespace
 
-ParsedTypeAttributes::ParsedTypeAttributes(const DWARFDIE &die,
-                                           CompileUnit &comp_unit) {
+ParsedTypeAttributes::ParsedTypeAttributes(const DWARFDIE &die) {
   DWARFAttributes attributes;
   size_t num_attributes = die.GetAttributes(attributes);
   for (size_t i = 0; i < num_attributes; ++i) {
@@ -306,8 +305,7 @@ ParsedTypeAttributes::ParsedTypeAttributes(const DWARFDIE &die,
       break;
 
     case DW_AT_decl_file:
-      decl.SetFile(comp_unit.GetSupportFiles().GetFileSpecAtIndex(
-          form_value.Unsigned()));
+      decl.SetFile(die.GetCU()->GetFile(form_value.Unsigned()));
       break;
     case DW_AT_decl_line:
       decl.SetLine(form_value.Unsigned());
@@ -385,6 +383,12 @@ ParsedTypeAttributes::ParsedTypeAttributes(const DWARFDIE &die,
   }
 }
 
+static std::string GetUnitName(const DWARFDIE &die) {
+  if (DWARFUnit *unit = die.GetCU())
+    return unit->GetAbsolutePath().GetPath();
+  return "<missing DWARF unit path>";
+}
+
 TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                                                const DWARFDIE &die, Log *log,
                                                bool *type_is_new_ptr) {
@@ -416,7 +420,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   // Set a bit that lets us know that we are currently parsing this
   dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
 
-  ParsedTypeAttributes attrs(die, *sc.comp_unit);
+  ParsedTypeAttributes attrs(die);
 
   if (DWARFDIE signature_die = attrs.signature.Reference()) {
     if (TypeSP type_sp =
@@ -1107,10 +1111,9 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
     if (ClangASTContext::StartTagDeclarationDefinition(clang_type)) {
       if (die.HasChildren()) {
-        SymbolContext cu_sc(die.GetLLDBCompileUnit());
         bool is_signed = false;
         enumerator_clang_type.IsIntegerType(is_signed);
-        ParseChildEnumerators(cu_sc, clang_type, is_signed,
+        ParseChildEnumerators(clang_type, is_signed,
                               type_sp->GetByteSize().getValueOr(0), die);
       }
       ClangASTContext::CompleteTagDeclarationDefinition(clang_type);
@@ -1174,10 +1177,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
     if (die.HasChildren()) {
       bool skip_artificial = true;
-      ParseChildParameters(*sc.comp_unit, containing_decl_ctx, die,
-                           skip_artificial, is_static, is_variadic,
-                           has_template_params, function_param_types,
-                           function_param_decls, type_quals);
+      ParseChildParameters(containing_decl_ctx, die, skip_artificial, is_static,
+                           is_variadic, has_template_params,
+                           function_param_types, function_param_decls,
+                           type_quals);
     }
 
     bool ignore_containing_context = false;
@@ -1464,8 +1467,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         if (attrs.abstract_origin.IsValid()) {
           DWARFDIE abs_die = attrs.abstract_origin.Reference();
 
-          SymbolContext sc;
-
           if (dwarf->ResolveType(abs_die)) {
             function_decl = llvm::dyn_cast_or_null<clang::FunctionDecl>(
                 GetCachedClangDeclContextForDIE(abs_die));
@@ -1574,9 +1575,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                 "file a bug against the compiler and include the "
                 "preprocessed output for %s",
                 die.GetOffset(), type_die_ref.die_offset,
-                die.GetLLDBCompileUnit()
-                    ? die.GetLLDBCompileUnit()->GetPath().c_str()
-                    : "the source file");
+                GetUnitName(die).c_str());
         }
 
         // We have no choice other than to pretend that the element class
@@ -1665,7 +1664,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
           sc.function->GetBlock(true).FindBlockByID(sc_parent_die.GetID());
       if (symbol_context_scope == NULL)
         symbol_context_scope = sc.function;
-    }
+    } else
+      symbol_context_scope = sc.module_sp.get();
 
     if (symbol_context_scope != NULL) {
       type_sp->SetSymbolContextScope(symbol_context_scope);
@@ -1966,7 +1966,6 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
           default_accessibility = eAccessPrivate;
         }
 
-        SymbolContext sc(die.GetLLDBCompileUnit());
         std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases;
         std::vector<int> member_accessibilities;
         bool is_a_class = false;
@@ -1974,7 +1973,7 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
         std::vector<DWARFDIE> member_function_dies;
 
         DelayedPropertyList delayed_properties;
-        ParseChildMembers(sc, die, clang_type, class_language, bases,
+        ParseChildMembers(die, clang_type, class_language, bases,
                           member_accessibilities, member_function_dies,
                           delayed_properties, default_accessibility, is_a_class,
                           layout_info);
@@ -2165,10 +2164,9 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
   case DW_TAG_enumeration_type:
     if (ClangASTContext::StartTagDeclarationDefinition(clang_type)) {
       if (die.HasChildren()) {
-        SymbolContext sc(die.GetLLDBCompileUnit());
         bool is_signed = false;
         clang_type.IsIntegerType(is_signed);
-        ParseChildEnumerators(sc, clang_type, is_signed,
+        ParseChildEnumerators(clang_type, is_signed,
                               type->GetByteSize().getValueOr(0), die);
       }
       ClangASTContext::CompleteTagDeclarationDefinition(clang_type);
@@ -2218,8 +2216,8 @@ DWARFASTParserClang::GetDeclContextContainingUIDFromDWARF(const DWARFDIE &die) {
 }
 
 size_t DWARFASTParserClang::ParseChildEnumerators(
-    const SymbolContext &sc, lldb_private::CompilerType &clang_type,
-    bool is_signed, uint32_t enumerator_byte_size, const DWARFDIE &parent_die) {
+    lldb_private::CompilerType &clang_type, bool is_signed,
+    uint32_t enumerator_byte_size, const DWARFDIE &parent_die) {
   if (!parent_die)
     return 0;
 
@@ -2258,8 +2256,7 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
             case DW_AT_description:
             default:
             case DW_AT_decl_file:
-              decl.SetFile(sc.comp_unit->GetSupportFiles().GetFileSpecAtIndex(
-                  form_value.Unsigned()));
+              decl.SetFile(die.GetCU()->GetFile(form_value.Unsigned()));
               break;
             case DW_AT_decl_line:
               decl.SetLine(form_value.Unsigned());
@@ -2393,9 +2390,9 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
 
         clang::DeclContext *containing_decl_ctx =
             GetClangDeclContextContainingDIE(die, nullptr);
-        ParseChildParameters(comp_unit, containing_decl_ctx, die, true,
-                             is_static, is_variadic, has_template_params,
-                             param_types, param_decls, type_quals);
+        ParseChildParameters(containing_decl_ctx, die, true, is_static,
+                             is_variadic, has_template_params, param_types,
+                             param_decls, type_quals);
         sstr << "(";
         for (size_t i = 0; i < param_types.size(); i++) {
           if (i > 0)
@@ -2415,9 +2412,8 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
       FunctionSP func_sp;
       std::unique_ptr<Declaration> decl_up;
       if (decl_file != 0 || decl_line != 0 || decl_column != 0)
-        decl_up.reset(new Declaration(
-            comp_unit.GetSupportFiles().GetFileSpecAtIndex(decl_file),
-            decl_line, decl_column));
+        decl_up.reset(new Declaration(die.GetCU()->GetFile(decl_file),
+                                      decl_line, decl_column));
 
       SymbolFileDWARF *dwarf = die.GetDWARF();
       // Supply the type _only_ if it has already been parsed
@@ -2446,8 +2442,8 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
 }
 
 bool DWARFASTParserClang::ParseChildMembers(
-    const SymbolContext &sc, const DWARFDIE &parent_die,
-    CompilerType &class_clang_type, const LanguageType class_language,
+    const DWARFDIE &parent_die, CompilerType &class_clang_type,
+    const LanguageType class_language,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
     std::vector<int> &member_accessibilities,
     std::vector<DWARFDIE> &member_function_dies,
@@ -2706,13 +2702,12 @@ bool DWARFASTParserClang::ParseChildMembers(
                   ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
                   objfile->GetModule()->ReportWarning(
                       "0x%8.8" PRIx64 ": %s bitfield named \"%s\" has invalid "
-                                      "bit offset (0x%8.8" PRIx64
+                      "bit offset (0x%8.8" PRIx64
                       ") member will be ignored. Please file a bug against the "
                       "compiler and include the preprocessed output for %s\n",
                       die.GetID(), DW_TAG_value_to_name(tag), name,
                       this_field_info.bit_offset,
-                      sc.comp_unit ? sc.comp_unit->GetPath().c_str()
-                                   : "the source file");
+                      GetUnitName(parent_die).c_str());
                   this_field_info.Clear();
                   continue;
                 }
@@ -2865,9 +2860,7 @@ bool DWARFASTParserClang::ParseChildMembers(
                       "complete definition.\nPlease file a bug against the "
                       "compiler and include the preprocessed output for %s",
                       parent_die.GetOffset(), parent_die.GetName(),
-                      die.GetOffset(), name,
-                      sc.comp_unit ? sc.comp_unit->GetPath().c_str()
-                                   : "the source file");
+                      die.GetOffset(), name, GetUnitName(parent_die).c_str());
                 // We have no choice other than to pretend that the member
                 // class is complete. If we don't do this, clang will crash
                 // when trying to layout the class. Since we provide layout
@@ -3064,10 +3057,9 @@ bool DWARFASTParserClang::ParseChildMembers(
 }
 
 size_t DWARFASTParserClang::ParseChildParameters(
-    CompileUnit &comp_unit, clang::DeclContext *containing_decl_ctx,
-    const DWARFDIE &parent_die, bool skip_artificial, bool &is_static,
-    bool &is_variadic, bool &has_template_params,
-    std::vector<CompilerType> &function_param_types,
+    clang::DeclContext *containing_decl_ctx, const DWARFDIE &parent_die,
+    bool skip_artificial, bool &is_static, bool &is_variadic,
+    bool &has_template_params, std::vector<CompilerType> &function_param_types,
     std::vector<clang::ParmVarDecl *> &function_param_decls,
     unsigned &type_quals) {
   if (!parent_die)

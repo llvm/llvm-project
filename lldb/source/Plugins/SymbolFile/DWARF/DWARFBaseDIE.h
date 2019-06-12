@@ -101,8 +101,6 @@ public:
 
   lldb::ModuleSP GetModule() const;
 
-  lldb_private::CompileUnit *GetLLDBCompileUnit() const;
-
   // Getting attribute values from the DIE.
   //
   // GetAttributeValueAsXXX() functions should only be used if you are
