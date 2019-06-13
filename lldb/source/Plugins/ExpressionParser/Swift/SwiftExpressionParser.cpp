@@ -544,7 +544,7 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
     return;
 
   SwiftLanguageRuntime *swift_runtime =
-      stack_frame_sp->GetThread()->GetProcess()->GetSwiftLanguageRuntime();
+      SwiftLanguageRuntime::Get(*stack_frame_sp->GetThread()->GetProcess());
   auto *stack_frame = stack_frame_sp.get();
   imported_self_type =
       swift_runtime->DoArchetypeBindingForType(*stack_frame,
@@ -743,7 +743,7 @@ static void RegisterAllVariables(
 
   if (stack_frame_sp) {
     language_runtime =
-        stack_frame_sp->GetThread()->GetProcess()->GetSwiftLanguageRuntime();
+        SwiftLanguageRuntime::Get(*stack_frame_sp->GetThread()->GetProcess());
     scope = stack_frame_sp.get();
   }
 
@@ -1042,9 +1042,8 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
       if (swift_type->hasTypeParameter()) {
         if (stack_frame_sp && stack_frame_sp->GetThread() &&
             stack_frame_sp->GetThread()->GetProcess()) {
-          SwiftLanguageRuntime *swift_runtime = stack_frame_sp->GetThread()
-                                                    ->GetProcess()
-                                                    ->GetSwiftLanguageRuntime();
+          SwiftLanguageRuntime *swift_runtime = SwiftLanguageRuntime::Get(
+              *stack_frame_sp->GetThread()->GetProcess());
           if (swift_runtime) {
             actual_type = swift_runtime->DoArchetypeBindingForType(
                 *stack_frame_sp, actual_type);
@@ -1273,7 +1272,7 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
     lldb::ProcessSP process_sp(this_frame_sp->CalculateProcess());
     if (!process_sp)
       return false;
-    auto *runtime = process_sp->GetSwiftLanguageRuntime();
+    auto *runtime = SwiftLanguageRuntime::Get(*process_sp);
     return !runtime->IsABIStable();
     return true;
   };
