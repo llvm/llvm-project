@@ -560,6 +560,13 @@ def FeatureEnableUnsafeDSOffsetFolding : SubtargetFeature <
   "Force using DS instruction immediate offsets on SI"
 >;
 
+def FeatureEnableScratchBoundsChecks : SubtargetFeature<
+  "enable-scratch-bounds-checks",
+  "EnableScratchBoundsChecks",
+  "true",
+  "Enable insertion of bounds checks on scratch accesses"
+>;
+
 def FeatureEnableSIScheduler : SubtargetFeature<"si-scheduler",
   "EnableSIScheduler",
   "true",

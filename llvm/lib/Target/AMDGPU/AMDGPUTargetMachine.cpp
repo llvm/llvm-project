@@ -926,6 +926,7 @@ void GCNPassConfig::addPreRegAlloc() {
   if (LateCFGStructurize) {
     addPass(createAMDGPUMachineCFGStructurizerPass());
   }
+  addPass(createSIInsertScratchBoundsPass());
   addPass(createSIWholeQuadModePass());
   addPass(createSIInsertWaterfallPass());
 }
@@ -993,6 +994,7 @@ void GCNPassConfig::addPreEmitPass() {
   addPass(createSIInsertWaitcntsPass());
   addPass(createSIShrinkInstructionsPass());
   addPass(createSIModeRegisterPass());
+  addPass(createSIFixScratchSizePass());
 
   // The hazard recognizer that runs as part of the post-ra scheduler does not
   // guarantee to be able handle all hazards correctly. This is because if there
