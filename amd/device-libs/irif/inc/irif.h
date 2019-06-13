@@ -149,8 +149,23 @@ extern __attribute__((const)) half __llvm_amdgcn_ldexp_f16(half, int) __asm("llv
 extern __attribute__((const)) half __llvm_amdgcn_frexp_mant_f16(half) __asm("llvm.amdgcn.frexp.mant.f16");
 extern __attribute__((const)) short __llvm_amdgcn_frexp_exp_i16_f16(half) __asm("llvm.amdgcn.frexp.exp.i16.f16");
 
+extern __attribute__((const)) half __llvm_amdgcn_fmed3_f16(half, half, half) __asm("llvm.amdgcn.fmed3.f16");
+
+extern __attribute__((const)) uint __llvm_amdgcn_wavefrontsize(void) __asm("llvm.amdgcn.wavefrontsize");
+
+// llvm.amdgcn.mov.dpp.i32 <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>
+
 // llvm.amdgcn.update.dpp.i32 <old> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>
 extern uint __llvm_amdgcn_update_dpp_i32(uint, uint, uint, uint, uint, bool) __asm("llvm.amdgcn.update.dpp.i32");
+
+// llvm.amdgcn.mov.dpp8.i32 <src> <sel>
+extern uint __llvm_amdgcn_dpp8_i32(uint, uint) __asm("llvm.amdgcn.dpp8.i32");
+
+// llvm.amdgcn.permlane16 <old> <src0> <src1> <src2> <fi> <bound_control>
+extern uint __llvm_amdgcn_permlane16(uint, uint, uint, uint, bool, bool) __asm("llvm.amdgcn.permlane16");
+
+// llvm.amdgcn.permlanex16 <old> <src0> <src1> <src2> <fi> <bound_control>
+extern uint __llvm_amdgcn_permlanex16(uint, uint, uint, uint, bool, bool) __asm("llvm.amdgcn.permlanex16");
 
 // Operand bits: [0..3]=VM_CNT, [4..6]=EXP_CNT (Export), [8..11]=LGKM_CNT (LDS, GDS, Konstant, Message)
 extern void __llvm_amdgcn_s_waitcnt(int) __asm("llvm.amdgcn.s.waitcnt");
@@ -171,6 +186,15 @@ extern __attribute__((const)) uint __llvm_amdgcn_sad_u8(uint, uint, uint) __asm(
 extern __attribute__((const)) uint __llvm_amdgcn_sad_hi_u8(uint, uint, uint) __asm("llvm.amdgcn.sad.hi.u8");
 extern __attribute__((const)) uint __llvm_amdgcn_sad_u16(uint, uint, uint) __asm("llvm.amdgcn.sad.u16");
 extern __attribute__((const)) uint __llvm_amdgcn_msad_u8(uint, uint, uint) __asm("llvm.amdgcn.msad.u8");
+
+extern __attribute__((const, convergent)) ulong __llvm_amdgcn_icmp_i64_i32(uint, uint, uint) __asm("llvm.amdgcn.icmp.i64.i32");
+extern __attribute__((const, convergent)) ulong __llvm_amdgcn_icmp_i64_i64(ulong, ulong, uint) __asm("llvm.amdgcn.icmp.i64.i64");
+extern __attribute__((const, convergent)) ulong __llvm_amdgcn_fcmp_i64_f32(float, float, uint) __asm("llvm.amdgcn.fcmp.i64.f32");
+extern __attribute__((const, convergent)) ulong __llvm_amdgcn_fcmp_i64_f64(double, double, uint) __asm("llvm.amdgcn.fcmp.i64.f64");
+extern __attribute__((const, convergent)) uint __llvm_amdgcn_icmp_i32_i32(uint, uint, uint) __asm("llvm.amdgcn.icmp.i32.i32");
+extern __attribute__((const, convergent)) uint __llvm_amdgcn_icmp_i32_i64(ulong, ulong, uint) __asm("llvm.amdgcn.icmp.i32.i64");
+extern __attribute__((const, convergent)) uint __llvm_amdgcn_fcmp_i32_f32(float, float, uint) __asm("llvm.amdgcn.fcmp.i32.f32");
+extern __attribute__((const, convergent)) uint __llvm_amdgcn_fcmp_i32_f64(double, double, uint) __asm("llvm.amdgcn.fcmp.i32.f64");
 
 // Buffer Load/Store
 

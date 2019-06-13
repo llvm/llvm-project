@@ -5,6 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
+#include "oclc.h"
 #include "irif.h"
 #include "ockl.h"
 
@@ -29,14 +30,22 @@ ATTR bool
 OCKL_MANGLE_I32(wfany)(int e)
 {
     e = optimizationBarrierHack(e);
-    return __builtin_amdgcn_sicmp(e, 0, ICMP_NE) != 0UL;
+    if (__oclc_wavefrontsize64) {
+        return __llvm_amdgcn_icmp_i64_i32(e, 0, ICMP_NE) != 0UL;
+    } else {
+        return __llvm_amdgcn_icmp_i32_i32(e, 0, ICMP_NE) != 0U;
+    }
 }
 
 ATTR bool
 OCKL_MANGLE_I32(wfall)(int e)
 {
     e = optimizationBarrierHack(e);
-    return __builtin_amdgcn_sicmp(e, 0, ICMP_NE) == __builtin_amdgcn_read_exec();
+    if (__oclc_wavefrontsize64) {
+        return __llvm_amdgcn_icmp_i64_i32(e, 0, ICMP_NE) == __builtin_amdgcn_read_exec();
+    } else {
+        return __llvm_amdgcn_icmp_i32_i32(e, 0, ICMP_NE) == __builtin_amdgcn_read_exec_lo();
+    }
 }
 
 
@@ -44,7 +53,12 @@ ATTR bool
 OCKL_MANGLE_I32(wfsame)(int e)
 {
     e = optimizationBarrierHack(e);
-    ulong u = __builtin_amdgcn_sicmp(e, 0, ICMP_NE) != 0;
-    return (u == 0UL) | (u == __builtin_amdgcn_read_exec());
+    if (__oclc_wavefrontsize64) {
+        ulong u = __llvm_amdgcn_icmp_i64_i32(e, 0, ICMP_NE) != 0UL;
+        return (u == 0UL) | (u == __builtin_amdgcn_read_exec());
+    } else {
+        uint u = __llvm_amdgcn_icmp_i32_i32(e, 0, ICMP_NE) != 0U;
+        return (u == 0UL) | (u == __builtin_amdgcn_read_exec_lo());
+    }
 }
 

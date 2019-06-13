@@ -39,6 +39,7 @@ extern const __constant bool __oclc_finite_only_opt;
 extern const __constant bool __oclc_unsafe_math_opt;
 extern const __constant bool __oclc_daz_opt;
 extern const __constant bool __oclc_correctly_rounded_sqrt32;
+extern const __constant bool __oclc_wavefrontsize64;
 extern const __constant int __oclc_ISA_version;
 
 #endif // OCLC_H
