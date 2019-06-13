@@ -54,12 +54,15 @@ FuncUnwinders::FuncUnwinders(UnwindTable &unwind_table, AddressRange range)
 
 FuncUnwinders::~FuncUnwinders() {}
 
-UnwindPlanSP FuncUnwinders::GetUnwindPlanAtCallSite(Target &target) {
+UnwindPlanSP FuncUnwinders::GetUnwindPlanAtCallSite(Target &target,
+                                                    Thread &thread) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  if (UnwindPlanSP plan_sp = GetEHFrameUnwindPlan(target))
+  if (UnwindPlanSP plan_sp = GetSymbolFileUnwindPlan(thread))
     return plan_sp;
   if (UnwindPlanSP plan_sp = GetDebugFrameUnwindPlan(target))
+    return plan_sp;
+  if (UnwindPlanSP plan_sp = GetEHFrameUnwindPlan(target))
     return plan_sp;
   if (UnwindPlanSP plan_sp = GetCompactUnwindUnwindPlan(target))
     return plan_sp;
@@ -357,9 +360,11 @@ UnwindPlanSP FuncUnwinders::GetUnwindPlanAtNonCallSite(Target &target,
     return eh_frame_sp;
   }
 
-  if (UnwindPlanSP plan_sp = GetEHFrameAugmentedUnwindPlan(target, thread))
+  if (UnwindPlanSP plan_sp = GetSymbolFileUnwindPlan(thread))
     return plan_sp;
   if (UnwindPlanSP plan_sp = GetDebugFrameAugmentedUnwindPlan(target, thread))
+    return plan_sp;
+  if (UnwindPlanSP plan_sp = GetEHFrameAugmentedUnwindPlan(target, thread))
     return plan_sp;
 
   return assembly_sp;

@@ -107,7 +107,7 @@ MipsAbiFlagsSection<ELFT> *MipsAbiFlagsSection<ELFT>::create() {
   for (InputSectionBase *Sec : InputSections) {
     if (Sec->Type != SHT_MIPS_ABIFLAGS)
       continue;
-    Sec->Live = false;
+    Sec->markDead();
     Create = true;
 
     std::string Filename = toString(Sec->File);
@@ -180,7 +180,7 @@ MipsOptionsSection<ELFT> *MipsOptionsSection<ELFT>::create() {
 
   Elf_Mips_RegInfo Reginfo = {};
   for (InputSectionBase *Sec : Sections) {
-    Sec->Live = false;
+    Sec->markDead();
 
     std::string Filename = toString(Sec->File);
     ArrayRef<uint8_t> D = Sec->data();
@@ -237,7 +237,7 @@ MipsReginfoSection<ELFT> *MipsReginfoSection<ELFT>::create() {
 
   Elf_Mips_RegInfo Reginfo = {};
   for (InputSectionBase *Sec : Sections) {
-    Sec->Live = false;
+    Sec->markDead();
 
     if (Sec->data().size() != sizeof(Elf_Mips_RegInfo)) {
       error(toString(Sec->File) + ": invalid size of .reginfo section");
@@ -259,7 +259,7 @@ InputSection *elf::createInterpSection() {
 
   auto *Sec = make<InputSection>(nullptr, SHF_ALLOC, SHT_PROGBITS, 1, Contents,
                                  ".interp");
-  Sec->Live = true;
+  Sec->markLive();
   return Sec;
 }
 
@@ -358,7 +358,7 @@ bool EhFrameSection::isFdeLive(EhSectionPiece &Fde, ArrayRef<RelTy> Rels) {
   // FDEs for garbage-collected or merged-by-ICF sections are dead.
   if (auto *D = dyn_cast<Defined>(&B))
     if (SectionBase *Sec = D->Section)
-      return Sec->Live;
+      return Sec->isLive();
   return false;
 }
 
@@ -1290,7 +1290,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   // as RelaIplt have. And we still want to emit proper dynamic tags for that
   // case, so here we always use RelaPlt as marker for the begining of
   // .rel[a].plt section.
-  if (In.RelaPlt->getParent()->Live) {
+  if (In.RelaPlt->getParent()->isLive()) {
     addInSec(DT_JMPREL, In.RelaPlt);
     Entries.push_back({DT_PLTRELSZ, addPltRelSz});
     switch (Config->EMachine) {
@@ -2370,7 +2370,7 @@ readAddressAreas(DWARFContext &Dwarf, InputSection *Sec) {
       if (R.SectionIndex == -1ULL)
         continue;
       InputSectionBase *S = Sections[R.SectionIndex];
-      if (!S || S == &InputSection::Discarded || !S->Live)
+      if (!S || S == &InputSection::Discarded || !S->isLive())
         continue;
       // Range list with zero size has no effect.
       if (R.LowPC == R.HighPC)
@@ -2503,7 +2503,7 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
   // a .gdb_index. So we can remove them from the output.
   for (InputSectionBase *S : InputSections)
     if (S->Name == ".debug_gnu_pubnames" || S->Name == ".debug_gnu_pubtypes")
-      S->Live = false;
+      S->markDead();
 
   std::vector<GdbChunk> Chunks(Sections.size());
   std::vector<std::vector<NameAttrEntry>> NameAttrs(Sections.size());
@@ -2945,7 +2945,7 @@ void elf::mergeSections() {
 
     // We do not want to handle sections that are not alive, so just remove
     // them instead of trying to merge.
-    if (!MS->Live) {
+    if (!MS->isLive()) {
       S = nullptr;
       continue;
     }
@@ -3256,6 +3256,8 @@ bool PPC64LongBranchTargetSection::isNeeded() const {
 }
 
 InStruct elf::In;
+
+std::vector<Partition> elf::Partitions;
 
 template GdbIndexSection *GdbIndexSection::create<ELF32LE>();
 template GdbIndexSection *GdbIndexSection::create<ELF32BE>();

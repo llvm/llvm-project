@@ -55,6 +55,7 @@ X86_64::X86_64() {
   PltRel = R_X86_64_JUMP_SLOT;
   RelativeRel = R_X86_64_RELATIVE;
   IRelativeRel = R_X86_64_IRELATIVE;
+  TlsDescRel = R_X86_64_TLSDESC;
   TlsGotRel = R_X86_64_TPOFF64;
   TlsModuleIndexRel = R_X86_64_DTPMOD64;
   TlsOffsetRel = R_X86_64_DTPOFF64;
@@ -88,6 +89,8 @@ RelExpr X86_64::getRelExpr(RelType Type, const Symbol &S,
     return R_DTPREL;
   case R_X86_64_TPOFF32:
     return R_TLS;
+  case R_X86_64_TLSDESC_CALL:
+    return R_TLSDESC_CALL;
   case R_X86_64_TLSLD:
     return R_TLSLD_PC;
   case R_X86_64_TLSGD:
@@ -105,6 +108,8 @@ RelExpr X86_64::getRelExpr(RelType Type, const Symbol &S,
   case R_X86_64_GOT32:
   case R_X86_64_GOT64:
     return R_GOTPLT;
+  case R_X86_64_GOTPC32_TLSDESC:
+    return R_TLSDESC_PC;
   case R_X86_64_GOTPCREL:
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
@@ -173,45 +178,82 @@ RelType X86_64::getDynRel(RelType Type) const {
 }
 
 void X86_64::relaxTlsGdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
-  // Convert
-  //   .byte 0x66
-  //   leaq x@tlsgd(%rip), %rdi
-  //   .word 0x6666
-  //   rex64
-  //   call __tls_get_addr@plt
-  // to
-  //   mov %fs:0x0,%rax
-  //   lea x@tpoff,%rax
-  const uint8_t Inst[] = {
-      0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00, // mov %fs:0x0,%rax
-      0x48, 0x8d, 0x80, 0, 0, 0, 0,                         // lea x@tpoff,%rax
-  };
-  memcpy(Loc - 4, Inst, sizeof(Inst));
+  if (Type == R_X86_64_TLSGD) {
+    // Convert
+    //   .byte 0x66
+    //   leaq x@tlsgd(%rip), %rdi
+    //   .word 0x6666
+    //   rex64
+    //   call __tls_get_addr@plt
+    // to the following two instructions.
+    const uint8_t Inst[] = {
+        0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00,
+        0x00, 0x00,                            // mov %fs:0x0,%rax
+        0x48, 0x8d, 0x80, 0,    0,    0,    0, // lea x@tpoff,%rax
+    };
+    memcpy(Loc - 4, Inst, sizeof(Inst));
 
-  // The original code used a pc relative relocation and so we have to
-  // compensate for the -4 in had in the addend.
-  write32le(Loc + 8, Val + 4);
+    // The original code used a pc relative relocation and so we have to
+    // compensate for the -4 in had in the addend.
+    write32le(Loc + 8, Val + 4);
+  } else {
+    // Convert
+    //   lea x@tlsgd(%rip), %rax
+    //   call *(%rax)
+    // to the following two instructions.
+    assert(Type == R_X86_64_GOTPC32_TLSDESC);
+    if (memcmp(Loc - 3, "\x48\x8d\x05", 3)) {
+      error(getErrorLocation(Loc - 3) + "R_X86_64_GOTPC32_TLSDESC must be used "
+                                        "in callq *x@tlsdesc(%rip), %rax");
+      return;
+    }
+    // movq $x@tpoff(%rip),%rax
+    Loc[-2] = 0xc7;
+    Loc[-1] = 0xc0;
+    write32le(Loc, Val + 4);
+    // xchg ax,ax
+    Loc[4] = 0x66;
+    Loc[5] = 0x90;
+  }
 }
 
 void X86_64::relaxTlsGdToIe(uint8_t *Loc, RelType Type, uint64_t Val) const {
-  // Convert
-  //   .byte 0x66
-  //   leaq x@tlsgd(%rip), %rdi
-  //   .word 0x6666
-  //   rex64
-  //   call __tls_get_addr@plt
-  // to
-  //   mov %fs:0x0,%rax
-  //   addq x@tpoff,%rax
-  const uint8_t Inst[] = {
-      0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00, // mov %fs:0x0,%rax
-      0x48, 0x03, 0x05, 0, 0, 0, 0,                         // addq x@tpoff,%rax
-  };
-  memcpy(Loc - 4, Inst, sizeof(Inst));
+  if (Type == R_X86_64_TLSGD) {
+    // Convert
+    //   .byte 0x66
+    //   leaq x@tlsgd(%rip), %rdi
+    //   .word 0x6666
+    //   rex64
+    //   call __tls_get_addr@plt
+    // to the following two instructions.
+    const uint8_t Inst[] = {
+        0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00,
+        0x00, 0x00,                            // mov %fs:0x0,%rax
+        0x48, 0x03, 0x05, 0,    0,    0,    0, // addq x@gottpoff(%rip),%rax
+    };
+    memcpy(Loc - 4, Inst, sizeof(Inst));
 
-  // Both code sequences are PC relatives, but since we are moving the constant
-  // forward by 8 bytes we have to subtract the value by 8.
-  write32le(Loc + 8, Val - 8);
+    // Both code sequences are PC relatives, but since we are moving the
+    // constant forward by 8 bytes we have to subtract the value by 8.
+    write32le(Loc + 8, Val - 8);
+  } else {
+    // Convert
+    //   lea x@tlsgd(%rip), %rax
+    //   call *(%rax)
+    // to the following two instructions.
+    assert(Type == R_X86_64_GOTPC32_TLSDESC);
+    if (memcmp(Loc - 3, "\x48\x8d\x05", 3)) {
+      error(getErrorLocation(Loc - 3) + "R_X86_64_GOTPC32_TLSDESC must be used "
+                                        "in callq *x@tlsdesc(%rip), %rax");
+      return;
+    }
+    // movq x@gottpoff(%rip),%rax
+    Loc[-2] = 0x8b;
+    write32le(Loc, Val);
+    // xchg ax,ax
+    Loc[4] = 0x66;
+    Loc[5] = 0x90;
+  }
 }
 
 // In some conditions, R_X86_64_GOTTPOFF relocation can be optimized to
@@ -331,6 +373,7 @@ void X86_64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_X86_64_TPOFF32:
   case R_X86_64_GOT32:
   case R_X86_64_GOTPC32:
+  case R_X86_64_GOTPC32_TLSDESC:
   case R_X86_64_GOTPCREL:
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:

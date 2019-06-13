@@ -1030,7 +1030,7 @@ void PDBLinker::mergeSymbolRecords(ObjFile *File, const CVIndexMap &IndexMap,
 static ArrayRef<uint8_t> relocateDebugChunk(BumpPtrAllocator &Alloc,
                                             SectionChunk &DebugChunk) {
   uint8_t *Buffer = Alloc.Allocate<uint8_t>(DebugChunk.getSize());
-  assert(DebugChunk.getOutputSection() == nullptr &&
+  assert(DebugChunk.getOutputSectionIdx() == 0 &&
          "debug sections should not be in output sections");
   DebugChunk.writeTo(Buffer);
   return makeArrayRef(Buffer, DebugChunk.getSize());

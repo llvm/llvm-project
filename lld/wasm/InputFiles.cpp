@@ -271,14 +271,16 @@ void ObjFile::parse(bool IgnoreComdats) {
     }
   }
 
-  // Find the code and data sections.  Wasm objects can have at most one code
-  // and one data section.
   uint32_t SectionIndex = 0;
+  SymbolIsCalledDirectly.resize(WasmObj->getNumberOfSymbols(), false);
   for (const SectionRef &Sec : WasmObj->sections()) {
     const WasmSection &Section = WasmObj->getWasmSection(Sec);
+    // Wasm objects can have at most one code and one data section.
     if (Section.Type == WASM_SEC_CODE) {
+      assert(!CodeSection);
       CodeSection = &Section;
     } else if (Section.Type == WASM_SEC_DATA) {
+      assert(!DataSection);
       DataSection = &Section;
     } else if (Section.Type == WASM_SEC_CUSTOM) {
       CustomSections.emplace_back(make<InputSection>(Section, this));
@@ -286,6 +288,11 @@ void ObjFile::parse(bool IgnoreComdats) {
       CustomSectionsByIndex[SectionIndex] = CustomSections.back();
     }
     SectionIndex++;
+    // Scans relocations to dermine determine if a function symbol is called
+    // directly
+    for (const WasmRelocation &Reloc : Section.Relocations)
+      if (Reloc.Type == R_WASM_FUNCTION_INDEX_LEB)
+        SymbolIsCalledDirectly[Reloc.Index] = true;
   }
 
   TypeMap.resize(getWasmObj()->types().size());
@@ -326,10 +333,16 @@ void ObjFile::parse(bool IgnoreComdats) {
   Symbols.reserve(WasmObj->getNumberOfSymbols());
   for (const SymbolRef &Sym : WasmObj->symbols()) {
     const WasmSymbol &WasmSym = WasmObj->getWasmSymbol(Sym.getRawDataRefImpl());
-    if (Symbol *Sym = createDefined(WasmSym))
-      Symbols.push_back(Sym);
-    else
-      Symbols.push_back(createUndefined(WasmSym));
+    if (WasmSym.isDefined()) {
+      // createDefined may fail if the symbol is comdat excluded in which case
+      // we fall back to creating an undefined symbol
+      if (Symbol *D = createDefined(WasmSym)) {
+        Symbols.push_back(D);
+        continue;
+      }
+    }
+    size_t Idx = Symbols.size();
+    Symbols.push_back(createUndefined(WasmSym, SymbolIsCalledDirectly[Idx]));
   }
 }
 
@@ -361,9 +374,6 @@ DataSymbol *ObjFile::getDataSymbol(uint32_t Index) const {
 }
 
 Symbol *ObjFile::createDefined(const WasmSymbol &Sym) {
-  if (!Sym.isDefined())
-    return nullptr;
-
   StringRef Name = Sym.Info.Name;
   uint32_t Flags = Sym.Info.Flags;
 
@@ -417,7 +427,7 @@ Symbol *ObjFile::createDefined(const WasmSymbol &Sym) {
   llvm_unreachable("unknown symbol kind");
 }
 
-Symbol *ObjFile::createUndefined(const WasmSymbol &Sym) {
+Symbol *ObjFile::createUndefined(const WasmSymbol &Sym, bool IsCalledDirectly) {
   StringRef Name = Sym.Info.Name;
   uint32_t Flags = Sym.Info.Flags;
 
@@ -425,7 +435,7 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &Sym) {
   case WASM_SYMBOL_TYPE_FUNCTION:
     return Symtab->addUndefinedFunction(Name, Sym.Info.ImportName,
                                         Sym.Info.ImportModule, Flags, this,
-                                        Sym.Signature);
+                                        Sym.Signature, IsCalledDirectly);
   case WASM_SYMBOL_TYPE_DATA:
     return Symtab->addUndefinedData(Name, Flags, this);
   case WASM_SYMBOL_TYPE_GLOBAL:
@@ -499,7 +509,7 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
   if (ObjSym.isUndefined() || ExcludedByComdat) {
     if (ObjSym.isExecutable())
       return Symtab->addUndefinedFunction(Name, Name, DefaultModule, Flags, &F,
-                                          nullptr);
+                                          nullptr, true);
     return Symtab->addUndefinedData(Name, Flags, &F);
   }
 

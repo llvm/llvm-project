@@ -364,7 +364,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     )
 
   add_custom_target(lldb-headers)
-  set_target_properties(lldb-headers PROPERTIES FOLDER "Misc")
+  set_target_properties(lldb-headers PROPERTIES FOLDER "lldb misc")
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_llvm_install_targets(install-lldb-headers

@@ -28,6 +28,8 @@ add_dependencies(lldb
   ${tablegen_deps}
 )
 
+set_target_properties(LLDBOptionsTableGen PROPERTIES FOLDER "lldb misc")
+
 if(LLDB_BUILD_FRAMEWORK)
   lldb_setup_framework_rpaths_in_tool(lldb)
 endif()

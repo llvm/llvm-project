@@ -114,6 +114,11 @@ public:
   // command line flag)
   unsigned ForceExport : 1;
 
+  // False if LTO shouldn't inline whatever this symbol points to. If a symbol
+  // is overwritten after LTO, LTO shouldn't inline the symbol because it
+  // doesn't know the final contents of the symbol.
+  unsigned CanInline : 1;
+
   // True if this symbol is specified by --trace-symbol option.
   unsigned Traced : 1;
 
@@ -131,8 +136,8 @@ public:
 
 protected:
   Symbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F)
-      : IsUsedInRegularObj(false), ForceExport(false), Traced(false),
-        Name(Name), SymbolKind(K), Flags(Flags), File(F),
+      : IsUsedInRegularObj(false), ForceExport(false), CanInline(false),
+        Traced(false), Name(Name), SymbolKind(K), Flags(Flags), File(F),
         Referenced(!Config->GcSections) {}
 
   StringRef Name;
@@ -189,9 +194,10 @@ public:
   UndefinedFunction(StringRef Name, StringRef ImportName,
                     StringRef ImportModule, uint32_t Flags,
                     InputFile *File = nullptr,
-                    const WasmSignature *Type = nullptr)
+                    const WasmSignature *Type = nullptr,
+                    bool IsCalledDirectly = true)
       : FunctionSymbol(Name, UndefinedFunctionKind, Flags, File, Type),
-        ImportName(ImportName), ImportModule(ImportModule) {}
+        ImportName(ImportName), ImportModule(ImportModule), IsCalledDirectly(IsCalledDirectly) {}
 
   static bool classof(const Symbol *S) {
     return S->kind() == UndefinedFunctionKind;
@@ -199,6 +205,7 @@ public:
 
   StringRef ImportName;
   StringRef ImportModule;
+  bool IsCalledDirectly;
 };
 
 // Section symbols for output sections are different from those for input
@@ -457,6 +464,7 @@ union SymbolUnion {
 };
 
 void printTraceSymbol(Symbol *Sym);
+void printTraceSymbolUndefined(StringRef Name, const InputFile* File);
 
 template <typename T, typename... ArgT>
 T *replaceSymbol(Symbol *S, ArgT &&... Arg) {
@@ -473,6 +481,7 @@ T *replaceSymbol(Symbol *S, ArgT &&... Arg) {
   T *S2 = new (S) T(std::forward<ArgT>(Arg)...);
   S2->IsUsedInRegularObj = SymCopy.IsUsedInRegularObj;
   S2->ForceExport = SymCopy.ForceExport;
+  S2->CanInline = SymCopy.CanInline;
   S2->Traced = SymCopy.Traced;
 
   // Print out a log message if --trace-symbol was specified.

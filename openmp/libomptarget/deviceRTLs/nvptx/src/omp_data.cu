@@ -31,8 +31,7 @@ __device__ omptarget_nvptx_SimpleMemoryManager
 __device__ __shared__ uint32_t usedMemIdx;
 __device__ __shared__ uint32_t usedSlotIdx;
 
-__device__ __shared__ volatile uint8_t
-    parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
+__device__ __shared__ uint8_t parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
 __device__ __shared__ uint16_t threadLimit;
 __device__ __shared__ uint16_t threadsInTeam;
 __device__ __shared__ uint16_t nThreads;

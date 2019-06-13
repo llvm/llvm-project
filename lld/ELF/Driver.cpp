@@ -98,6 +98,8 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
   Tar = nullptr;
   memset(&In, 0, sizeof(In));
 
+  Partitions = {Partition()};
+
   SharedFile::VernauxNum = 0;
 
   Config->ProgName = Args[0];
@@ -250,7 +252,7 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     // significant, as a user did not specify it. This behavior is
     // compatible with GNU.
     Files.push_back(
-        createSharedFile(MBRef, WithLOption ? path::filename(Path) : Path));
+        make<SharedFile>(MBRef, WithLOption ? path::filename(Path) : Path));
     return;
   case file_magic::bitcode:
   case file_magic::elf_relocatable:
@@ -1337,18 +1339,18 @@ static void handleLibcall(StringRef Name) {
 // result, the passes after the symbol resolution won't see any
 // symbols of type CommonSymbol.
 static void replaceCommonSymbols() {
-  for (Symbol *Sym : Symtab->getSymbols()) {
+  Symtab->forEachSymbol([](Symbol *Sym) {
     auto *S = dyn_cast<CommonSymbol>(Sym);
     if (!S)
-      continue;
+      return;
 
     auto *Bss = make<BssSection>("COMMON", S->Size, S->Alignment);
     Bss->File = S->File;
-    Bss->Live = !Config->GcSections;
+    Bss->markDead();
     InputSections.push_back(Bss);
     S->replace(Defined{S->File, S->getName(), S->Binding, S->StOther, S->Type,
                        /*Value=*/0, S->Size, Bss});
-  }
+  });
 }
 
 // If all references to a DSO happen to be weak, the DSO is not added
@@ -1356,15 +1358,15 @@ static void replaceCommonSymbols() {
 // created from the DSO. Otherwise, they become dangling references
 // that point to a non-existent DSO.
 static void demoteSharedSymbols() {
-  for (Symbol *Sym : Symtab->getSymbols()) {
+  Symtab->forEachSymbol([](Symbol *Sym) {
     auto *S = dyn_cast<SharedSymbol>(Sym);
     if (!S || S->getFile().IsNeeded)
-      continue;
+      return;
 
     bool Used = S->Used;
     S->replace(Undefined{nullptr, S->getName(), STB_WEAK, S->StOther, S->Type});
     S->Used = Used;
-  }
+  });
 }
 
 // The section referred to by S is considered address-significant. Set the
@@ -1400,9 +1402,10 @@ static void findKeepUniqueSections(opt::InputArgList &Args) {
 
   // Symbols in the dynsym could be address-significant in other executables
   // or DSOs, so we conservatively mark them as address-significant.
-  for (Symbol *S : Symtab->getSymbols())
-    if (S->includeInDynsym())
-      markAddrsig(S);
+  Symtab->forEachSymbol([&](Symbol *Sym) {
+    if (Sym->includeInDynsym())
+      markAddrsig(Sym);
+  });
 
   // Visit the address-significance table in each object file and mark each
   // referenced symbol as address-significant.
@@ -1429,6 +1432,55 @@ static void findKeepUniqueSections(opt::InputArgList &Args) {
         markAddrsig(S);
     }
   }
+}
+
+// This function reads a symbol partition specification section. These sections
+// are used to control which partition a symbol is allocated to. See
+// https://lld.llvm.org/Partitions.html for more details on partitions.
+template <typename ELFT>
+static void readSymbolPartitionSection(InputSectionBase *S) {
+  // Read the relocation that refers to the partition's entry point symbol.
+  Symbol *Sym;
+  if (S->AreRelocsRela)
+    Sym = &S->getFile<ELFT>()->getRelocTargetSym(S->template relas<ELFT>()[0]);
+  else
+    Sym = &S->getFile<ELFT>()->getRelocTargetSym(S->template rels<ELFT>()[0]);
+  if (!isa<Defined>(Sym) || !Sym->includeInDynsym())
+    return;
+
+  StringRef PartName = reinterpret_cast<const char *>(S->data().data());
+  for (Partition &Part : Partitions) {
+    if (Part.Name == PartName) {
+      Sym->Partition = Part.getNumber();
+      return;
+    }
+  }
+
+  // Forbid partitions from being used on incompatible targets, and forbid them
+  // from being used together with various linker features that assume a single
+  // set of output sections.
+  if (Script->HasSectionsCommand)
+    error(toString(S->File) +
+          ": partitions cannot be used with the SECTIONS command");
+  if (Script->hasPhdrsCommands())
+    error(toString(S->File) +
+          ": partitions cannot be used with the PHDRS command");
+  if (!Config->SectionStartMap.empty())
+    error(toString(S->File) + ": partitions cannot be used with "
+                              "--section-start, -Ttext, -Tdata or -Tbss");
+  if (Config->EMachine == EM_MIPS)
+    error(toString(S->File) + ": partitions cannot be used on this target");
+
+  // Impose a limit of no more than 254 partitions. This limit comes from the
+  // sizes of the Partition fields in InputSectionBase and Symbol, as well as
+  // the amount of space devoted to the partition number in RankFlags.
+  if (Partitions.size() == 254)
+    fatal("may not have more than 254 partitions");
+
+  Partitions.emplace_back();
+  Partition &NewPart = Partitions.back();
+  NewPart.Name = PartName;
+  Sym->Partition = NewPart.getNumber();
 }
 
 template <class ELFT> static Symbol *addUndefined(StringRef Name) {
@@ -1522,7 +1574,7 @@ static void wrapSymbols(ArrayRef<WrappedSymbol> Wrapped) {
 
   // Update pointers in input files.
   parallelForEach(ObjectFiles, [&](InputFile *File) {
-    std::vector<Symbol *> &Syms = File->getMutableSymbols();
+    MutableArrayRef<Symbol *> Syms = File->getMutableSymbols();
     for (size_t I = 0, E = Syms.size(); I != E; ++I)
       if (Symbol *S = Map.lookup(Syms[I]))
         Syms[I] = S;
@@ -1575,7 +1627,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Handle --trace-symbol.
   for (auto *Arg : Args.filtered(OPT_trace_symbol))
-    Symtab->trace(Arg->getValue());
+    Symtab->insert(Arg->getValue())->Traced = true;
 
   // Add all files to the symbol table. This will add almost all
   // symbols that we need to the symbol table. This process might
@@ -1699,13 +1751,17 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     for (InputSectionBase *S : F->getSections())
       InputSections.push_back(cast<InputSection>(S));
 
-  // We do not want to emit debug sections if --strip-all
-  // or -strip-debug are given.
-  if (Config->Strip != StripPolicy::None) {
-    llvm::erase_if(InputSections, [](InputSectionBase *S) {
-      return S->Name.startswith(".debug") || S->Name.startswith(".zdebug");
-    });
-  }
+  llvm::erase_if(InputSections, [](InputSectionBase *S) {
+    if (S->Type == SHT_LLVM_SYMPART) {
+      readSymbolPartitionSection<ELFT>(S);
+      return true;
+    }
+
+    // We do not want to emit debug sections if --strip-all
+    // or -strip-debug are given.
+    return Config->Strip != StripPolicy::None &&
+           (S->Name.startswith(".debug") || S->Name.startswith(".zdebug"));
+  });
 
   Config->EFlags = Target->calcEFlags();
   // MaxPageSize (sometimes called abi page size) is the maximum page size that

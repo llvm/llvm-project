@@ -236,9 +236,8 @@ public:
 
   const DWARFDebugInfo *DebugInfo() const;
 
-  DWARFDebugRangesBase *DebugRanges();
-
-  const DWARFDebugRangesBase *DebugRanges() const;
+  DWARFDebugRangesBase *GetDebugRanges();
+  DWARFDebugRangesBase *GetDebugRngLists();
 
   const lldb_private::DWARFDataExtractor &DebugLocData();
 
@@ -250,9 +249,7 @@ public:
   bool
   HasForwardDeclForClangType(const lldb_private::CompilerType &compiler_type);
 
-  lldb_private::CompileUnit *
-  GetCompUnitForDWARFCompUnit(DWARFUnit *dwarf_cu,
-                              uint32_t cu_idx = UINT32_MAX);
+  lldb_private::CompileUnit *GetCompUnitForDWARFCompUnit(DWARFUnit *dwarf_cu);
 
   virtual size_t GetObjCMethodDIEOffsets(lldb_private::ConstString class_name,
                                          DIEArray &method_die_offsets);
@@ -263,8 +260,7 @@ public:
 
   static DWARFDIE GetParentSymbolContextDIE(const DWARFDIE &die);
 
-  virtual lldb::CompUnitSP ParseCompileUnit(DWARFUnit *dwarf_cu,
-                                            uint32_t cu_idx);
+  virtual lldb::CompUnitSP ParseCompileUnit(DWARFUnit *dwarf_cu);
 
   virtual lldb_private::DWARFExpression::LocationListFormat
   GetLocationListFormat() const;
@@ -476,11 +472,9 @@ protected:
   DWARFDataSegment m_data_debug_rnglists;
 
   // The unique pointer items below are generated on demand if and when someone
-  // accesses
-  // them through a non const version of this class.
+  // accesses them through a non const version of this class.
   std::unique_ptr<DWARFDebugAbbrev> m_abbr;
   std::unique_ptr<DWARFDebugInfo> m_info;
-  std::unique_ptr<DWARFDebugLine> m_line;
   std::unique_ptr<GlobalVariableMap> m_global_aranges_up;
   std::unique_ptr<lldb_private::ClangASTImporter> m_clang_ast_importer_up;
 
@@ -497,6 +491,7 @@ protected:
   typedef std::unordered_map<std::string, DIERefSetSP> NameToOffsetMap;
   NameToOffsetMap m_function_scope_qualified_name_map;
   std::unique_ptr<DWARFDebugRangesBase> m_ranges;
+  std::unique_ptr<DWARFDebugRangesBase> m_rnglists;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
   DIEToTypePtr m_die_to_type;
   DIEToVariableSP m_die_to_variable_sp;

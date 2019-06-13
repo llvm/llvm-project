@@ -33,7 +33,6 @@ extern int g_verbose;
 
 bool DWARFDebugInfoEntry::FastExtract(
     const DWARFDataExtractor &debug_info_data, const DWARFUnit *cu,
-    const DWARFFormValue::FixedFormSizes &fixed_form_sizes,
     lldb::offset_t *offset_ptr) {
   m_offset = *offset_ptr;
   m_parent_idx = 0;
@@ -69,9 +68,9 @@ bool DWARFDebugInfoEntry::FastExtract(
     for (i = 0; i < numAttributes; ++i) {
       form = abbrevDecl->GetFormByIndexUnchecked(i);
 
-      const uint8_t fixed_skip_size = fixed_form_sizes.GetSize(form);
+      llvm::Optional<uint8_t> fixed_skip_size = DWARFFormValue::GetFixedSize(form, cu);
       if (fixed_skip_size)
-        offset += fixed_skip_size;
+        offset += *fixed_skip_size;
       else {
         bool form_is_indirect = false;
         do {
@@ -361,11 +360,22 @@ bool DWARFDebugInfoEntry::Extract(const DWARFUnit *cu,
   return false;
 }
 
-static dw_offset_t GetRangesOffset(const DWARFDebugRangesBase *debug_ranges,
-                                   DWARFFormValue &form_value) {
-  if (form_value.Form() == DW_FORM_rnglistx)
-    return debug_ranges->GetOffset(form_value.Unsigned());
-  return form_value.Unsigned();
+static DWARFRangeList GetRangesOrReportError(const DWARFUnit &unit,
+                                             const DWARFDebugInfoEntry &die,
+                                             const DWARFFormValue &value) {
+  llvm::Expected<DWARFRangeList> expected_ranges =
+      (value.Form() == DW_FORM_rnglistx)
+          ? unit.FindRnglistFromIndex(value.Unsigned())
+          : unit.FindRnglistFromOffset(value.Unsigned());
+  if (expected_ranges)
+    return std::move(*expected_ranges);
+  unit.GetSymbolFileDWARF()->GetObjectFile()->GetModule()->ReportError(
+      "{0x%8.8x}: DIE has DW_AT_ranges(0x%" PRIx64 ") attribute, but "
+      "range extraction failed (%s), please file a bug "
+      "and attach the file at the start of this error message",
+      die.GetOffset(), value.Unsigned(),
+      toString(expected_ranges.takeError()).c_str());
+  return DWARFRangeList();
 }
 
 // GetDIENamesAndRanges
@@ -438,17 +448,9 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
           }
           break;
 
-        case DW_AT_ranges: {
-          const DWARFDebugRangesBase *debug_ranges = dwarf2Data->DebugRanges();
-          if (debug_ranges)
-            debug_ranges->FindRanges(cu, GetRangesOffset(debug_ranges, form_value), ranges);
-          else
-            cu->GetSymbolFileDWARF()->GetObjectFile()->GetModule()->ReportError(
-                "{0x%8.8x}: DIE has DW_AT_ranges(0x%" PRIx64
-                ") attribute yet DWARF has no .debug_ranges, please file a bug "
-                "and attach the file at the start of this error message",
-                m_offset, form_value.Unsigned());
-        } break;
+        case DW_AT_ranges:
+          ranges = GetRangesOrReportError(*cu, *this, form_value);
+          break;
 
         case DW_AT_name:
           if (name == nullptr)
@@ -505,8 +507,8 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
               uint32_t block_offset =
                   form_value.BlockData() - debug_info_data.GetDataStart();
               uint32_t block_length = form_value.Unsigned();
-              frame_base->SetOpcodeData(module, debug_info_data, block_offset,
-                                        block_length);
+              *frame_base = DWARFExpression(module, debug_info_data, cu,
+                                            block_offset, block_length);
             } else {
               const DWARFDataExtractor &debug_loc_data =
                   dwarf2Data->DebugLocData();
@@ -515,8 +517,9 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
               size_t loc_list_length = DWARFExpression::LocationListSize(
                   cu, debug_loc_data, debug_loc_offset);
               if (loc_list_length > 0) {
-                frame_base->SetOpcodeData(module, debug_loc_data,
-                                          debug_loc_offset, loc_list_length);
+                *frame_base =
+                    DWARFExpression(module, debug_loc_data, cu,
+                                    debug_loc_offset, loc_list_length);
                 if (lo_pc != LLDB_INVALID_ADDRESS) {
                   assert(lo_pc >= cu->GetBaseAddress());
                   frame_base->SetLocationListSlide(lo_pc -
@@ -703,14 +706,6 @@ void DWARFDebugInfoEntry::DumpAttribute(
     s.PutCString(" )");
   } break;
 
-  case DW_AT_ranges: {
-    lldb::offset_t ranges_offset =
-        GetRangesOffset(dwarf2Data->DebugRanges(), form_value);
-    dw_addr_t base_addr = cu ? cu->GetBaseAddress() : 0;
-    DWARFDebugRanges::Dump(s, dwarf2Data->get_debug_ranges_data(),
-                           &ranges_offset, base_addr);
-  } break;
-
   default:
     break;
   }
@@ -723,8 +718,8 @@ void DWARFDebugInfoEntry::DumpAttribute(
 // results. Any duplicate attributes will have the first instance take
 // precedence (this can happen for declaration attributes).
 size_t DWARFDebugInfoEntry::GetAttributes(
-    const DWARFUnit *cu, DWARFFormValue::FixedFormSizes fixed_form_sizes,
-    DWARFAttributes &attributes, uint32_t curr_depth) const {
+    const DWARFUnit *cu, DWARFAttributes &attributes,
+    uint32_t curr_depth) const {
   const DWARFAbbreviationDeclaration *abbrevDecl = nullptr;
   lldb::offset_t offset = 0;
   if (cu)
@@ -732,10 +727,6 @@ size_t DWARFDebugInfoEntry::GetAttributes(
 
   if (abbrevDecl) {
     const DWARFDataExtractor &debug_info_data = cu->GetData();
-
-    if (fixed_form_sizes.Empty())
-      fixed_form_sizes = DWARFFormValue::GetFixedFormSizesForAddressSize(
-          cu->GetAddressByteSize());
 
     const uint32_t num_attributes = abbrevDecl->NumAttributes();
     for (uint32_t i = 0; i < num_attributes; ++i) {
@@ -769,9 +760,9 @@ size_t DWARFDebugInfoEntry::GetAttributes(
             spec_die.GetAttributes(attributes, curr_depth + 1);
         }
       } else {
-        const uint8_t fixed_skip_size = fixed_form_sizes.GetSize(form);
+        llvm::Optional<uint8_t> fixed_skip_size = DWARFFormValue::GetFixedSize(form, cu);
         if (fixed_skip_size)
-          offset += fixed_skip_size;
+          offset += *fixed_skip_size;
         else
           DWARFFormValue::SkipValue(form, debug_info_data, &offset, cu);
       }
@@ -976,13 +967,9 @@ size_t DWARFDebugInfoEntry::GetAttributeAddressRanges(
     bool check_specification_or_abstract_origin) const {
   ranges.Clear();
 
-  SymbolFileDWARF *dwarf2Data = cu->GetSymbolFileDWARF();
-
   DWARFFormValue form_value;
   if (GetAttributeValue(cu, DW_AT_ranges, form_value)) {
-    if (DWARFDebugRangesBase *debug_ranges = dwarf2Data->DebugRanges())
-      debug_ranges->FindRanges(cu, GetRangesOffset(debug_ranges, form_value),
-                               ranges);
+    ranges = GetRangesOrReportError(*cu, *this, form_value);
   } else if (check_hi_lo_pc) {
     dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
     dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
@@ -1130,7 +1117,7 @@ bool DWARFDebugInfoEntry::MatchesDWARFDeclContext(
 DWARFDIE
 DWARFDebugInfoEntry::GetParentDeclContextDIE(DWARFUnit *cu) const {
   DWARFAttributes attributes;
-  GetAttributes(cu, DWARFFormValue::FixedFormSizes(), attributes);
+  GetAttributes(cu, attributes);
   return GetParentDeclContextDIE(cu, attributes);
 }
 
@@ -1180,7 +1167,7 @@ DWARFDebugInfoEntry::GetParentDeclContextDIE(
 const char *DWARFDebugInfoEntry::GetQualifiedName(DWARFUnit *cu,
                                                   std::string &storage) const {
   DWARFAttributes attributes;
-  GetAttributes(cu, DWARFFormValue::FixedFormSizes(), attributes);
+  GetAttributes(cu, attributes);
   return GetQualifiedName(cu, attributes, storage);
 }
 
@@ -1427,45 +1414,38 @@ bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
               ((function_die != nullptr) || (block_die != nullptr));
         }
       } else {
-        DWARFFormValue form_value;
-        if (GetAttributeValue(cu, DW_AT_ranges, form_value)) {
-          DWARFRangeList ranges;
-          SymbolFileDWARF *dwarf2Data = cu->GetSymbolFileDWARF();
-          DWARFDebugRangesBase *debug_ranges = dwarf2Data->DebugRanges();
-          debug_ranges->FindRanges(
-              cu, GetRangesOffset(debug_ranges, form_value), ranges);
-
-          if (ranges.FindEntryThatContains(address)) {
-            found_address = true;
-            //  puts("***MATCH***");
-            switch (m_tag) {
-            case DW_TAG_compile_unit: // File
-            case DW_TAG_partial_unit: // File
+        DWARFRangeList ranges;
+        if (GetAttributeAddressRanges(cu, ranges, /*check_hi_lo_pc*/ false) &&
+            ranges.FindEntryThatContains(address)) {
+          found_address = true;
+          //  puts("***MATCH***");
+          switch (m_tag) {
+          case DW_TAG_compile_unit: // File
+          case DW_TAG_partial_unit: // File
               check_children =
                   ((function_die != nullptr) || (block_die != nullptr));
               break;
 
-            case DW_TAG_subprogram: // Function
-              if (function_die)
-                *function_die = this;
-              check_children = (block_die != nullptr);
-              break;
+          case DW_TAG_subprogram: // Function
+            if (function_die)
+              *function_die = this;
+            check_children = (block_die != nullptr);
+            break;
 
-            case DW_TAG_inlined_subroutine: // Inlined Function
-            case DW_TAG_lexical_block:      // Block { } in code
-              if (block_die) {
-                *block_die = this;
-                check_children = true;
-              }
-              break;
-
-            default:
+          case DW_TAG_inlined_subroutine: // Inlined Function
+          case DW_TAG_lexical_block:      // Block { } in code
+            if (block_die) {
+              *block_die = this;
               check_children = true;
-              break;
             }
-          } else {
-            check_children = false;
+            break;
+
+          default:
+            check_children = true;
+            break;
           }
+        } else {
+          check_children = false;
         }
       }
     }

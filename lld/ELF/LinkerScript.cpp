@@ -380,7 +380,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
     size_t SizeBefore = Ret.size();
 
     for (InputSectionBase *Sec : InputSections) {
-      if (!Sec->Live || Sec->Assigned)
+      if (!Sec->isLive() || Sec->Assigned)
         continue;
 
       // For -emit-relocs we have to ignore entries like
@@ -425,7 +425,7 @@ void LinkerScript::discard(ArrayRef<InputSection *> V) {
       In.HashTab = nullptr;
 
     S->Assigned = false;
-    S->Live = false;
+    S->markDead();
     discard(S->DependentSections);
   }
 }
@@ -544,8 +544,9 @@ static OutputSection *createSection(InputSectionBase *IS,
   return Sec;
 }
 
-static OutputSection *addInputSec(StringMap<OutputSection *> &Map,
-                                  InputSectionBase *IS, StringRef OutsecName) {
+static OutputSection *
+addInputSec(StringMap<TinyPtrVector<OutputSection *>> &Map,
+            InputSectionBase *IS, StringRef OutsecName) {
   // Sections with SHT_GROUP or SHF_GROUP attributes reach here only when the -r
   // option is given. A section with SHT_GROUP defines a "section group", and
   // its members have SHF_GROUP attribute. Usually these flags have already been
@@ -624,23 +625,26 @@ static OutputSection *addInputSec(StringMap<OutputSection *> &Map,
   //
   // Given the above issues, we instead merge sections by name and error on
   // incompatible types and flags.
-  OutputSection *&Sec = Map[OutsecName];
-  if (Sec) {
+  TinyPtrVector<OutputSection *> &V = Map[OutsecName];
+  for (OutputSection *Sec : V) {
+    if (Sec->Partition != IS->Partition)
+      continue;
     Sec->addSection(cast<InputSection>(IS));
     return nullptr;
   }
 
-  Sec = createSection(IS, OutsecName);
+  OutputSection *Sec = createSection(IS, OutsecName);
+  V.push_back(Sec);
   return Sec;
 }
 
 // Add sections that didn't match any sections command.
 void LinkerScript::addOrphanSections() {
-  StringMap<OutputSection *> Map;
+  StringMap<TinyPtrVector<OutputSection *>> Map;
   std::vector<OutputSection *> V;
 
   auto Add = [&](InputSectionBase *S) {
-    if (!S->Live || S->Parent)
+    if (!S->isLive() || S->Parent)
       return;
 
     StringRef Name = getOutputSectionName(S);
@@ -886,7 +890,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
     // A live output section means that some input section was added to it. It
     // might have been removed (if it was empty synthetic section), but we at
     // least know the flags.
-    if (Sec->Live)
+    if (Sec->isLive())
       Flags = Sec->Flags;
 
     // We do not want to keep any special flags for output section
@@ -897,7 +901,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
                             SHF_WRITE | SHF_EXECINSTR);
 
     if (IsEmpty && isDiscardable(*Sec)) {
-      Sec->Live = false;
+      Sec->markDead();
       Cmd = nullptr;
     }
   }

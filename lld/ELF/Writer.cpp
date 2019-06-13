@@ -157,7 +157,7 @@ template <class ELFT> void Writer<ELFT>::removeEmptyPTLoad() {
 
 template <class ELFT> static void combineEhSections() {
   for (InputSectionBase *&S : InputSections) {
-    if (!S->Live)
+    if (!S->isLive())
       continue;
 
     if (auto *ES = dyn_cast<EhInputSection>(S)) {
@@ -180,9 +180,9 @@ static Defined *addOptionalRegular(StringRef Name, SectionBase *Sec,
   if (!S || S->isDefined())
     return nullptr;
 
-  return cast<Defined>(Symtab->addSymbol(
-      Defined{/*File=*/nullptr, Name, Binding, StOther, STT_NOTYPE, Val,
-              /*Size=*/0, Sec}));
+  S->resolve(Defined{/*File=*/nullptr, Name, Binding, StOther, STT_NOTYPE, Val,
+                     /*Size=*/0, Sec});
+  return cast<Defined>(S);
 }
 
 static Defined *addAbsolute(StringRef Name) {
@@ -239,9 +239,8 @@ void elf::addReservedSymbols() {
     if (Config->EMachine == EM_PPC || Config->EMachine == EM_PPC64)
       GotOff = 0x8000;
 
-    Symtab->addSymbol(Defined{/*File=*/nullptr, GotSymName, STB_GLOBAL,
-                              STV_HIDDEN, STT_NOTYPE, GotOff, /*Size=*/0,
-                              Out::ElfHeader});
+    S->resolve(Defined{/*File=*/nullptr, GotSymName, STB_GLOBAL, STV_HIDDEN,
+                       STT_NOTYPE, GotOff, /*Size=*/0, Out::ElfHeader});
     ElfSym::GlobalOffsetTable = cast<Defined>(S);
   }
 
@@ -608,7 +607,7 @@ static bool includeInSymtab(const Symbol &B) {
     Sec = Sec->Repl;
 
     // Exclude symbols pointing to garbage-collected sections.
-    if (isa<InputSectionBase>(Sec) && !Sec->Live)
+    if (isa<InputSectionBase>(Sec) && !Sec->isLive())
       return false;
 
     if (auto *S = dyn_cast<MergeInputSection>(Sec))
@@ -762,8 +761,9 @@ static bool isRelroSection(const OutputSection *Sec) {
 // * It is easy to check if a give branch was taken.
 // * It is easy two see how similar two ranks are (see getRankProximity).
 enum RankFlags {
-  RF_NOT_ADDR_SET = 1 << 17,
-  RF_NOT_ALLOC = 1 << 16,
+  RF_NOT_ADDR_SET = 1 << 25,
+  RF_NOT_ALLOC = 1 << 24,
+  RF_PARTITION = 1 << 16, // Partition number (8 bits)
   RF_NOT_INTERP = 1 << 15,
   RF_NOT_NOTE = 1 << 14,
   RF_WRITE = 1 << 13,
@@ -783,7 +783,7 @@ enum RankFlags {
 };
 
 static unsigned getSectionRank(const OutputSection *Sec) {
-  unsigned Rank = 0;
+  unsigned Rank = Sec->Partition * RF_PARTITION;
 
   // We want to put section specified by -T option first, so we
   // can start assigning VA starting from them later.
@@ -954,11 +954,11 @@ void Writer<ELFT>::forEachRelSec(
   // Note that relocations for non-alloc sections are directly
   // processed by InputSection::relocateNonAlloc.
   for (InputSectionBase *IS : InputSections)
-    if (IS->Live && isa<InputSection>(IS) && (IS->Flags & SHF_ALLOC))
+    if (IS->isLive() && isa<InputSection>(IS) && (IS->Flags & SHF_ALLOC))
       Fn(*IS);
   for (EhInputSection *ES : In.EhFrame->Sections)
     Fn(*ES);
-  if (In.ARMExidx && In.ARMExidx->Live)
+  if (In.ARMExidx && In.ARMExidx->isLive())
     for (InputSection *Ex : In.ARMExidx->ExidxSections)
       Fn(*Ex);
 }
@@ -1055,7 +1055,7 @@ static int getRankProximityAux(OutputSection *A, OutputSection *B) {
 
 static int getRankProximity(OutputSection *A, BaseCommand *B) {
   auto *Sec = dyn_cast<OutputSection>(B);
-  return (Sec && Sec->Live) ? getRankProximityAux(A, Sec) : -1;
+  return (Sec && Sec->isLive()) ? getRankProximityAux(A, Sec) : -1;
 }
 
 // When placing orphan sections, we want to place them after symbol assignments
@@ -1097,7 +1097,7 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
   int Proximity = getRankProximity(Sec, *I);
   for (; I != E; ++I) {
     auto *CurSec = dyn_cast<OutputSection>(*I);
-    if (!CurSec || !CurSec->Live)
+    if (!CurSec || !CurSec->isLive())
       continue;
     if (getRankProximity(Sec, CurSec) != Proximity ||
         Sec->SortRank < CurSec->SortRank)
@@ -1106,7 +1106,7 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
 
   auto IsLiveOutputSec = [](BaseCommand *Cmd) {
     auto *OS = dyn_cast<OutputSection>(Cmd);
-    return OS && OS->Live;
+    return OS && OS->isLive();
   };
   auto J = std::find_if(llvm::make_reverse_iterator(I),
                         llvm::make_reverse_iterator(B), IsLiveOutputSec);
@@ -1169,9 +1169,11 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
 
   // We want both global and local symbols. We get the global ones from the
   // symbol table and iterate the object files for the local ones.
-  for (Symbol *Sym : Symtab->getSymbols())
+  Symtab->forEachSymbol([&](Symbol *Sym) {
     if (!Sym->isLazy())
       AddSym(*Sym);
+  });
+
   for (InputFile *File : ObjectFiles)
     for (Symbol *Sym : File->getSymbols())
       if (Sym->isLocal())
@@ -1609,9 +1611,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // earlier.
   finalizeSynthetic(In.EhFrame);
 
-  for (Symbol *S : Symtab->getSymbols())
+  Symtab->forEachSymbol([](Symbol *S) {
     if (!S->IsPreemptible)
       S->IsPreemptible = computeIsPreemptible(*S);
+  });
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
@@ -1638,18 +1641,20 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
           llvm::all_of(File->DtNeeded, [&](StringRef Needed) {
             return Symtab->SoNames.count(Needed);
           });
-    for (Symbol *Sym : Symtab->getSymbols())
+
+    Symtab->forEachSymbol([](Symbol *Sym) {
       if (Sym->isUndefined() && !Sym->isWeak())
         if (auto *F = dyn_cast_or_null<SharedFile>(Sym->File))
           if (F->AllNeededIsKnown)
             error(toString(F) + ": undefined reference to " + toString(*Sym));
+    });
   }
 
   // Now that we have defined all possible global symbols including linker-
   // synthesized ones. Visit all symbols to give the finishing touches.
-  for (Symbol *Sym : Symtab->getSymbols()) {
+  Symtab->forEachSymbol([](Symbol *Sym) {
     if (!includeInSymtab(*Sym))
-      continue;
+      return;
     if (In.SymTab)
       In.SymTab->addSymbol(Sym);
 
@@ -1659,7 +1664,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
         if (File->IsNeeded && !Sym->isUndefined())
           addVerneed(Sym);
     }
-  }
+  });
 
   // Do not proceed if there was an undefined symbol.
   if (errorCount())

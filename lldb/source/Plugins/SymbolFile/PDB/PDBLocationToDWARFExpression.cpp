@@ -69,7 +69,7 @@ DWARFExpression ConvertPDBLocationToDWARFExpression(
   is_constant = true;
 
   if (!module)
-    return DWARFExpression(nullptr);
+    return DWARFExpression();
 
   const ArchSpec &architecture = module->GetArchitecture();
   llvm::Triple::ArchType arch_type = architecture.GetMachine();
@@ -77,7 +77,7 @@ DWARFExpression ConvertPDBLocationToDWARFExpression(
   uint32_t address_size = architecture.GetAddressByteSize();
   uint32_t byte_size = architecture.GetDataByteSize();
   if (byte_order == eByteOrderInvalid || address_size == 0)
-    return DWARFExpression(nullptr);
+    return DWARFExpression();
 
   RegisterKind register_kind = eRegisterKindDWARF;
   StreamBuffer<32> stream(Stream::eBinary, address_size, byte_order);
@@ -88,13 +88,13 @@ DWARFExpression ConvertPDBLocationToDWARFExpression(
 
     SectionList *section_list = module->GetSectionList();
     if (!section_list)
-      return DWARFExpression(nullptr);
+      return DWARFExpression();
 
     uint32_t section_id = symbol.getAddressSection();
 
     auto section = section_list->FindSectionByID(section_id);
     if (!section)
-      return DWARFExpression(nullptr);
+      return DWARFExpression();
 
     uint32_t offset = symbol.getAddressOffset();
     stream.PutMaxHex64(section->GetFileAddress() + offset, address_size,
@@ -129,7 +129,7 @@ DWARFExpression ConvertPDBLocationToDWARFExpression(
       register_kind = eRegisterKindLLDB;
       reg_num = GetLLDBRegisterNumber(arch_type, reg_id);
       if (reg_num == LLDB_INVALID_REGNUM)
-        return DWARFExpression(nullptr);
+        return DWARFExpression();
     }
 
     if (reg_num > 31) {
@@ -149,7 +149,7 @@ DWARFExpression ConvertPDBLocationToDWARFExpression(
     register_kind = eRegisterKindLLDB;
     uint32_t reg_num = GetLLDBRegisterNumber(arch_type, symbol.getRegisterId());
     if (reg_num == LLDB_INVALID_REGNUM)
-      return DWARFExpression(nullptr);
+      return DWARFExpression();
 
     if (reg_num > 31) {
       stream.PutHex8(DW_OP_regx);
@@ -168,7 +168,7 @@ DWARFExpression ConvertPDBLocationToDWARFExpression(
     break;
   }
   default:
-    return DWARFExpression(nullptr);
+    return DWARFExpression();
   }
 
   DataBufferSP buffer =

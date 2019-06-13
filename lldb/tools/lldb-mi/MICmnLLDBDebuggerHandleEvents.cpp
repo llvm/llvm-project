@@ -951,7 +951,7 @@ bool CMICmnLLDBDebuggerHandleEvents::HandleProcessEventStateSuspended(
   } else {
     const MIuint nTargetIndex = rDebugger.GetIndexOfTarget(target);
     if (nTargetIndex != UINT_MAX)
-      streamOut.Printf("Target %d: (", nTargetIndex);
+      streamOut.Printf("Target %" PRIu64 ": (", (uint64_t)nTargetIndex);
     else
       streamOut.Printf("Target <unknown index>: (");
     target.GetDescription(streamOut, lldb::eDescriptionLevelBrief);
