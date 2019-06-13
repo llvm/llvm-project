@@ -817,7 +817,7 @@ SwiftLanguage::GetHardcodedSynthetics() {
             AddressType address_type;
             lldb::addr_t ptr = valobj.GetPointerValue(&address_type);
             SwiftLanguageRuntime *swift_runtime =
-                process_sp->GetSwiftLanguageRuntime();
+                SwiftLanguageRuntime::Get(*process_sp);
             if (!swift_runtime)
               return nullptr;
             if (swift_runtime->IsTaggedPointer(ptr, valobj.GetCompilerType()))
@@ -862,7 +862,7 @@ SwiftLanguage::GetHardcodedSynthetics() {
             if (!process_sp)
               return nullptr;
             SwiftLanguageRuntime *swift_runtime =
-                process_sp->GetSwiftLanguageRuntime();
+                SwiftLanguageRuntime::Get(*process_sp);
             return swift_runtime->GetBridgedSyntheticChildProvider(valobj);
           }
           return nullptr;
@@ -897,7 +897,7 @@ std::vector<ConstString> SwiftLanguage::GetPossibleFormattersMatches(
       lldb::ProcessSP process_sp = valobj.GetProcessSP();
       if (!process_sp)
         break;
-      SwiftLanguageRuntime *runtime = process_sp->GetSwiftLanguageRuntime();
+      SwiftLanguageRuntime *runtime = SwiftLanguageRuntime::Get(*process_sp);
       if (runtime == nullptr)
         break;
       TypeAndOrName type_and_or_name;

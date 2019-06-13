@@ -53,7 +53,6 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/StructuredDataPlugin.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
@@ -1898,13 +1897,6 @@ LanguageRuntime *Process::GetLanguageRuntime(lldb::LanguageType language,
     assert(runtime->GetLanguageType() == Language::GetPrimaryLanguage(language));
 
   return runtime;
-}
-
-SwiftLanguageRuntime *Process::GetSwiftLanguageRuntime(bool retry_if_null) {
-  std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
-  LanguageRuntime *runtime =
-      GetLanguageRuntime(eLanguageTypeSwift, retry_if_null);
-  return llvm::cast_or_null<SwiftLanguageRuntime>(runtime);
 }
 
 bool Process::IsPossibleDynamicValue(ValueObject &in_value) {

@@ -570,7 +570,7 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereImpl(Flags &flags,
       if (mangled_name.GuessLanguage() == lldb::eLanguageTypeSwift) {
         ProcessSP process_sp(GetThread().GetProcess());
         SwiftLanguageRuntime *swift_runtime =
-            process_sp->GetSwiftLanguageRuntime();
+            SwiftLanguageRuntime::Get(*process_sp);
         if (swift_runtime) {
           std::vector<Address> interesting_addresses;
           swift_runtime->FindFunctionPointersInCall(*frame,

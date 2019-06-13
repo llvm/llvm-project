@@ -87,6 +87,11 @@ public:
     return runtime->isA(&ID);
   }
 
+  static SwiftLanguageRuntime *Get(Process &process) {
+    return llvm::cast_or_null<SwiftLanguageRuntime>(
+        process.GetLanguageRuntime(lldb::eLanguageTypeSwift));
+  }
+
   //------------------------------------------------------------------
   // PluginInterface protocol
   //------------------------------------------------------------------

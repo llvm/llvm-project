@@ -2522,8 +2522,6 @@ public:
   LanguageRuntime *GetLanguageRuntime(lldb::LanguageType language,
                                       bool retry_if_null = true);
 
-  SwiftLanguageRuntime *GetSwiftLanguageRuntime(bool retry_if_null = true);
-
   bool IsPossibleDynamicValue(ValueObject &in_value);
 
   bool IsRunning() const;

@@ -180,7 +180,7 @@ ThreadPlanStepOut::ThreadPlanStepOut(
 
     if (stepping_from_swift) {
       SwiftLanguageRuntime *swift_runtime =
-          m_thread.GetProcess()->GetSwiftLanguageRuntime();
+          SwiftLanguageRuntime::Get(*m_thread.GetProcess());
       if (swift_runtime) {
         m_swift_error_return =
             swift_runtime->GetErrorReturnLocationBeforeReturn(frame_sp,
@@ -541,7 +541,7 @@ void ThreadPlanStepOut::CalculateReturnValue() {
   // First check if we have an error return address, and if that pointer
   // contains a valid error return, grab it:
   SwiftLanguageRuntime *swift_runtime =
-        m_thread.GetProcess()->GetSwiftLanguageRuntime();
+      SwiftLanguageRuntime::Get(*m_thread.GetProcess());
 
   if (swift_runtime) {
     // In some ABI's the error is in a memory location in the caller's frame
