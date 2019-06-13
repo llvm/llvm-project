@@ -10,6 +10,7 @@
 // This is included to enable __builtin_expect()
 #include <CL/sycl/detail/platform_util.hpp>
 #include <iostream>
+#include <cstring>
 
 namespace cl {
 namespace sycl {
@@ -105,7 +106,9 @@ static float half2Float(const uint16_t &Val) {
   Bits |= (Exp32 << 23);
   Bits |= Frac32;
 
-  return *reinterpret_cast<float *>(&Bits);
+  float Result;
+  std::memcpy(&Result, &Bits, sizeof(Result));
+  return Result;
 }
 
 std::ostream &operator<<(std::ostream &O, const half_impl::half &Val) {
