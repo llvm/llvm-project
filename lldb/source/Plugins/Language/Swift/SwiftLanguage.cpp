@@ -823,7 +823,7 @@ SwiftLanguage::GetHardcodedSynthetics() {
             if (swift_runtime->IsTaggedPointer(ptr, valobj.GetCompilerType()))
               return nullptr;
             ObjCLanguageRuntime *objc_runtime =
-                process_sp->GetObjCLanguageRuntime();
+                ObjCLanguageRuntime::Get(*process_sp);
             if (!objc_runtime)
               return nullptr;
             ObjCLanguageRuntime::ClassDescriptorSP valobj_descriptor_sp =

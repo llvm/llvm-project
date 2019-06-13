@@ -344,7 +344,7 @@ bool lldb_private::formatters::NSArraySummaryProvider(
   if (!process_sp)
     return false;
 
-  ObjCLanguageRuntime *runtime = process_sp->GetObjCLanguageRuntime();
+  ObjCLanguageRuntime *runtime = ObjCLanguageRuntime::Get(*process_sp);
 
   if (!runtime)
     return false;
@@ -797,7 +797,7 @@ lldb_private::formatters::NSArraySyntheticFrontEndCreator(
   if (!process_sp)
     return nullptr;
   AppleObjCRuntime *runtime = llvm::dyn_cast_or_null<AppleObjCRuntime>(
-      process_sp->GetObjCLanguageRuntime());
+      ObjCLanguageRuntime::Get(*process_sp));
   if (!runtime)
     return nullptr;
 

@@ -209,7 +209,7 @@ FindSymbolForSwiftObject(Target &target, ConstString object,
 }
 
 AppleObjCRuntimeV2 *SwiftLanguageRuntime::GetObjCRuntime() {
-  if (auto objc_runtime = GetProcess()->GetObjCLanguageRuntime()) {
+  if (auto objc_runtime = ObjCLanguageRuntime::Get(*GetProcess())) {
     if (objc_runtime->GetPluginName() ==
         AppleObjCRuntimeV2::GetPluginNameStatic())
       return (AppleObjCRuntimeV2 *)objc_runtime;

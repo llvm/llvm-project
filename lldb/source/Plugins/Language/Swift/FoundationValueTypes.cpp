@@ -160,7 +160,7 @@ bool lldb_private::formatters::swift::Measurement_SummaryProvider(
     return false;
 
   auto descriptor_sp(
-      process_sp->GetObjCLanguageRuntime()->GetClassDescriptor(*unit_sp));
+      ObjCLanguageRuntime::Get(*process_sp)->GetClassDescriptor(*unit_sp));
   if (!descriptor_sp)
     return false;
 
@@ -607,7 +607,7 @@ public:
       return false;
 
     ObjCLanguageRuntime *objc_runtime =
-        m_backend.GetProcessSP()->GetObjCLanguageRuntime();
+        ObjCLanguageRuntime::Get(*m_backend.GetProcessSP());
     if (!objc_runtime)
       return false;
 

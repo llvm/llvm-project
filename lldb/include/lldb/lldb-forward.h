@@ -137,7 +137,6 @@ class ModuleSpec;
 class ModuleSpecList;
 class Mutex;
 struct NameSearchContext;
-class ObjCLanguageRuntime;
 class ObjCRuntimeSyntheticProvider;
 class ObjectContainer;
 class OptionGroup;
