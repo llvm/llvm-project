@@ -196,11 +196,12 @@ protected:
 public:
   /// \name Scalar TTI Implementations
   /// @{
-  bool allowsMisalignedMemoryAccesses(LLVMContext &Context,
-                                      unsigned BitWidth, unsigned AddressSpace,
-                                      unsigned Alignment, bool *Fast) const {
+  bool allowsMisalignedMemoryAccesses(LLVMContext &Context, unsigned BitWidth,
+                                      unsigned AddressSpace, unsigned Alignment,
+                                      bool *Fast) const {
     EVT E = EVT::getIntegerVT(Context, BitWidth);
-    return getTLI()->allowsMisalignedMemoryAccesses(E, AddressSpace, Alignment, Fast);
+    return getTLI()->allowsMisalignedMemoryAccesses(
+        E, AddressSpace, Alignment, MachineMemOperand::MONone, Fast);
   }
 
   bool hasBranchDivergence() { return false; }

@@ -27,6 +27,12 @@ COMMANDS
   Take a single input file and verify the specified architectures are present in the file. 
   If so then exit with a status of 0 else exit with a status of 1.
 
+.. option:: -archs
+
+  Take a single input file and display the architectures present in the file.
+  Each architecture is separated by a single whitespace.
+  Unknown architectures are displayed as unknown(CPUtype,CPUsubtype).
+
 BUGS
 ----
 

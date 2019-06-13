@@ -625,9 +625,35 @@ def : ThreeOp_i32_Pats<xor, add, V_XAD_U32>;
 
 } // End SubtargetPredicate = isGFX9Plus
 
+def VOP3_PERMLANE_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>, VOP3_OPSEL> {
+  let Src0RC64 = VRegSrc_32;
+  let Src1RC64 = SCSrc_b32;
+  let Src2RC64 = SCSrc_b32;
+  let InsVOP3OpSel = (ins IntOpSelMods:$src0_modifiers, VRegSrc_32:$src0,
+                          IntOpSelMods:$src1_modifiers, SCSrc_b32:$src1,
+                          IntOpSelMods:$src2_modifiers, SCSrc_b32:$src2,
+                          VGPR_32:$vdst_in, op_sel:$op_sel);
+  let HasClamp = 0;
+  let HasOMod = 0;
+}
+
 let SubtargetPredicate = isGFX10Plus in {
   def V_XOR3_B32 : VOP3Inst <"v_xor3_b32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
   def : ThreeOp_i32_Pats<xor, xor, V_XOR3_B32>;
+
+  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+    def V_PERMLANE16_B32 : VOP3Inst <"v_permlane16_b32", VOP3_PERMLANE_Profile>;
+    def V_PERMLANEX16_B32 : VOP3Inst <"v_permlanex16_b32", VOP3_PERMLANE_Profile>;
+  } // End $vdst = $vdst_in, DisableEncoding $vdst_in
+
+  def : GCNPat<
+    (int_amdgcn_permlane16 i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2, imm:$fi, imm:$bc),
+    (V_PERMLANE16_B32 (as_i1imm $fi), $src0, (as_i1imm $bc), $src1, 0, $src2, $vdst_in)
+  >;
+  def : GCNPat<
+    (int_amdgcn_permlanex16 i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2, imm:$fi, imm:$bc),
+    (V_PERMLANEX16_B32 (as_i1imm $fi), $src0, (as_i1imm $bc), $src1, 0, $src2, $vdst_in)
+  >;
 } // End SubtargetPredicate = isGFX10Plus
 
 //===----------------------------------------------------------------------===//
@@ -790,6 +816,8 @@ defm V_MAX_I16         : VOP3_Real_gfx10_with_name<0x30a, "V_MAX_I16_e64", "v_ma
 defm V_MIN_U16         : VOP3_Real_gfx10_with_name<0x30b, "V_MIN_U16_e64", "v_min_u16">;
 defm V_MIN_I16         : VOP3_Real_gfx10_with_name<0x30c, "V_MIN_I16_e64", "v_min_i16">;
 defm V_LSHLREV_B16     : VOP3_Real_gfx10_with_name<0x314, "V_LSHLREV_B16_e64", "v_lshlrev_b16">;
+defm V_PERMLANE16_B32  : VOP3OpSel_Real_gfx10<0x377>;
+defm V_PERMLANEX16_B32 : VOP3OpSel_Real_gfx10<0x378>;
 
 //===----------------------------------------------------------------------===//
 // GFX7, GFX10.

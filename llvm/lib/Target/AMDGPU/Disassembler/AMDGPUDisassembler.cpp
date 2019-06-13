@@ -186,6 +186,16 @@ DecodeStatus AMDGPUDisassembler::tryDecodeInst(const uint8_t* Table,
   return MCDisassembler::Fail;
 }
 
+static bool isValidDPP8(const MCInst &MI) {
+  using namespace llvm::AMDGPU::DPP;
+  int FiIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::fi);
+  assert(FiIdx != -1);
+  if ((unsigned)FiIdx >= MI.getNumOperands())
+    return false;
+  unsigned Fi = MI.getOperand(FiIdx).getImm();
+  return Fi == DPP8_FI_0 || Fi == DPP8_FI_1;
+}
+
 DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                 ArrayRef<uint8_t> Bytes_,
                                                 uint64_t Address,
@@ -206,6 +216,13 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     // encodings
     if (Bytes.size() >= 8) {
       const uint64_t QW = eatBytes<uint64_t>(Bytes);
+
+      Res = tryDecodeInst(DecoderTableDPP864, MI, QW, Address);
+      if (Res && convertDPP8Inst(MI) == MCDisassembler::Success)
+        break;
+
+      MI = MCInst(); // clear
+
       Res = tryDecodeInst(DecoderTableDPP64, MI, QW, Address);
       if (Res) break;
 
@@ -361,6 +378,24 @@ DecodeStatus AMDGPUDisassembler::convertSDWAInst(MCInst &MI) const {
     }
   }
   return MCDisassembler::Success;
+}
+
+DecodeStatus AMDGPUDisassembler::convertDPP8Inst(MCInst &MI) const {
+  unsigned Opc = MI.getOpcode();
+  unsigned DescNumOps = MCII->get(Opc).getNumOperands();
+
+  // Insert dummy unused src modifiers.
+  if (MI.getNumOperands() < DescNumOps &&
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers) != -1)
+    insertNamedMCOperand(MI, MCOperand::createImm(0),
+                         AMDGPU::OpName::src0_modifiers);
+
+  if (MI.getNumOperands() < DescNumOps &&
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1_modifiers) != -1)
+    insertNamedMCOperand(MI, MCOperand::createImm(0),
+                         AMDGPU::OpName::src1_modifiers);
+
+  return isValidDPP8(MI) ? MCDisassembler::Success : MCDisassembler::SoftFail;
 }
 
 // Note that before gfx10, the MIMG encoding provided no information about

@@ -262,9 +262,10 @@ public:
 
   /// Returns true if the target allows unaligned memory accesses of the
   /// specified type.
-  bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AddrSpace = 0,
-                                      unsigned Align = 1,
-                                      bool *Fast = nullptr) const override;
+  bool allowsMisalignedMemoryAccesses(
+      EVT VT, unsigned AddrSpace = 0, unsigned Align = 1,
+      MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
+      bool *Fast = nullptr) const override;
 
   /// Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;

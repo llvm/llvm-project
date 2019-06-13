@@ -601,12 +601,15 @@ ArrayRef<uint8_t> SectionChunk::consumeDebugMagic(ArrayRef<uint8_t> Data,
   if (!SectionName.startswith(".debug$"))
     fatal("invalid section: " + SectionName);
 
-  unsigned Magic = support::endian::read32le(Data.data());
-  unsigned ExpectedMagic = SectionName == ".debug$H"
+  uint32_t Magic = support::endian::read32le(Data.data());
+  uint32_t ExpectedMagic = SectionName == ".debug$H"
                                ? DEBUG_HASHES_SECTION_MAGIC
                                : DEBUG_SECTION_MAGIC;
-  if (Magic != ExpectedMagic)
-    fatal("section: " + SectionName + " has an invalid magic: " + Twine(Magic));
+  if (Magic != ExpectedMagic) {
+    warn("ignoring section " + SectionName + " with unrecognized magic 0x" +
+         utohexstr(Magic));
+    return {};
+  }
   return Data.slice(4);
 }
 

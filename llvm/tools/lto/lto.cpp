@@ -18,6 +18,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/LTO/legacy/LTOCodeGenerator.h"
 #include "llvm/LTO/legacy/LTOModule.h"
 #include "llvm/LTO/legacy/ThinLTOCodeGenerator.h"
@@ -325,10 +326,6 @@ const char* lto_module_get_linkeropts(lto_module_t mod) {
   return unwrap(mod)->getLinkerOpts().data();
 }
 
-const char* lto_module_get_dependent_libraries(lto_module_t mod) {
-    return unwrap(mod)->getDependentLibraries().data();
-}
-
 void lto_codegen_set_diagnostic_handler(lto_code_gen_t cg,
                                         lto_diagnostic_handler_t diag_handler,
                                         void *ctxt) {
@@ -634,4 +631,24 @@ lto_bool_t thinlto_codegen_set_pic_model(thinlto_code_gen_t cg,
   }
   sLastErrorString = "Unknown PIC model";
   return true;
+}
+
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(lto::InputFile, lto_input_t)
+
+lto_input_t lto_input_create(const void *buffer, size_t buffer_size, const char *path) {
+  return wrap(LTOModule::createInputFile(buffer, buffer_size, path, sLastErrorString));
+}
+
+void lto_input_dispose(lto_input_t input) {
+  delete unwrap(input);
+}
+
+extern unsigned lto_input_get_num_dependent_libraries(lto_input_t input) {
+  return LTOModule::getDependentLibraryCount(unwrap(input));
+}
+
+extern const char *lto_input_get_dependent_library(lto_input_t input,
+                                                   size_t index,
+                                                   size_t *size) {
+  return LTOModule::getDependentLibrary(unwrap(input), index, size);
 }

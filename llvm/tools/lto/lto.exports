@@ -72,3 +72,7 @@ thinlto_codegen_disable_codegen
 thinlto_module_get_num_object_files
 thinlto_module_get_object_file
 thinlto_set_generated_objects_dir
+lto_input_create
+lto_input_dispose
+lto_input_get_num_dependent_libraries
+lto_input_get_dependent_library

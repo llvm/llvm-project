@@ -384,49 +384,49 @@ func AttributeKindID(name string) (id uint) {
 }
 
 func (c Context) CreateEnumAttribute(kind uint, val uint64) (a Attribute) {
-  a.C = C.LLVMCreateEnumAttribute(c.C, C.unsigned(kind), C.uint64_t(val))
-  return
+	a.C = C.LLVMCreateEnumAttribute(c.C, C.unsigned(kind), C.uint64_t(val))
+	return
 }
 
 func (a Attribute) GetEnumKind() (id int) {
-  id = int(C.LLVMGetEnumAttributeKind(a.C))
-  return
+	id = int(C.LLVMGetEnumAttributeKind(a.C))
+	return
 }
 
 func (a Attribute) GetEnumValue() (val uint64) {
-  val = uint64(C.LLVMGetEnumAttributeValue(a.C))
-  return
+	val = uint64(C.LLVMGetEnumAttributeValue(a.C))
+	return
 }
 
 func (c Context) CreateStringAttribute(kind string, val string) (a Attribute) {
-  ckind := C.CString(kind)
-  defer C.free(unsafe.Pointer(ckind))
-  cval := C.CString(val)
-  defer C.free(unsafe.Pointer(cval))
-  a.C = C.LLVMCreateStringAttribute(c.C,
-                                    ckind, C.unsigned(len(kind)),
-                                    cval, C.unsigned(len(val)))
-  return
+	ckind := C.CString(kind)
+	defer C.free(unsafe.Pointer(ckind))
+	cval := C.CString(val)
+	defer C.free(unsafe.Pointer(cval))
+	a.C = C.LLVMCreateStringAttribute(c.C,
+		ckind, C.unsigned(len(kind)),
+		cval, C.unsigned(len(val)))
+	return
 }
 
 func (a Attribute) GetStringKind() string {
-  length := C.unsigned(0)
-  ckind := C.LLVMGetStringAttributeKind(a.C, &length)
-  return C.GoStringN(ckind, C.int(length))
+	length := C.unsigned(0)
+	ckind := C.LLVMGetStringAttributeKind(a.C, &length)
+	return C.GoStringN(ckind, C.int(length))
 }
 
 func (a Attribute) GetStringValue() string {
-  length := C.unsigned(0)
-  ckind := C.LLVMGetStringAttributeValue(a.C, &length)
-  return C.GoStringN(ckind, C.int(length))
+	length := C.unsigned(0)
+	ckind := C.LLVMGetStringAttributeValue(a.C, &length)
+	return C.GoStringN(ckind, C.int(length))
 }
 
 func (a Attribute) IsEnum() bool {
-  return C.LLVMIsEnumAttribute(a.C) != 0;
+	return C.LLVMIsEnumAttribute(a.C) != 0
 }
 
 func (a Attribute) IsString() bool {
-  return C.LLVMIsStringAttribute(a.C) != 0;
+	return C.LLVMIsStringAttribute(a.C) != 0
 }
 
 //-------------------------------------------------------------------------
@@ -1150,36 +1150,36 @@ func (v Value) SetGC(name string) {
 	C.LLVMSetGC(v.C, cname)
 }
 func (v Value) AddAttributeAtIndex(i int, a Attribute) {
-  C.LLVMAddAttributeAtIndex(v.C, C.LLVMAttributeIndex(i), a.C)
+	C.LLVMAddAttributeAtIndex(v.C, C.LLVMAttributeIndex(i), a.C)
 }
 func (v Value) AddFunctionAttr(a Attribute) {
-  v.AddAttributeAtIndex(C.LLVMAttributeFunctionIndex, a);
+	v.AddAttributeAtIndex(C.LLVMAttributeFunctionIndex, a)
 }
 func (v Value) GetEnumAttributeAtIndex(i int, kind uint) (a Attribute) {
-  a.C = C.LLVMGetEnumAttributeAtIndex(v.C, C.LLVMAttributeIndex(i), C.unsigned(kind))
-  return
+	a.C = C.LLVMGetEnumAttributeAtIndex(v.C, C.LLVMAttributeIndex(i), C.unsigned(kind))
+	return
 }
 func (v Value) GetEnumFunctionAttribute(kind uint) Attribute {
-  return v.GetEnumAttributeAtIndex(C.LLVMAttributeFunctionIndex, kind)
+	return v.GetEnumAttributeAtIndex(C.LLVMAttributeFunctionIndex, kind)
 }
 func (v Value) GetStringAttributeAtIndex(i int, kind string) (a Attribute) {
-  ckind := C.CString(kind)
-  defer C.free(unsafe.Pointer(ckind))
-  a.C = C.LLVMGetStringAttributeAtIndex(v.C, C.LLVMAttributeIndex(i),
-                                        ckind, C.unsigned(len(kind)))
-  return
+	ckind := C.CString(kind)
+	defer C.free(unsafe.Pointer(ckind))
+	a.C = C.LLVMGetStringAttributeAtIndex(v.C, C.LLVMAttributeIndex(i),
+		ckind, C.unsigned(len(kind)))
+	return
 }
 func (v Value) RemoveEnumAttributeAtIndex(i int, kind uint) {
-  C.LLVMRemoveEnumAttributeAtIndex(v.C, C.LLVMAttributeIndex(i), C.unsigned(kind))
+	C.LLVMRemoveEnumAttributeAtIndex(v.C, C.LLVMAttributeIndex(i), C.unsigned(kind))
 }
 func (v Value) RemoveEnumFunctionAttribute(kind uint) {
-  v.RemoveEnumAttributeAtIndex(C.LLVMAttributeFunctionIndex, kind);
+	v.RemoveEnumAttributeAtIndex(C.LLVMAttributeFunctionIndex, kind)
 }
 func (v Value) RemoveStringAttributeAtIndex(i int, kind string) {
-  ckind := C.CString(kind)
-  defer C.free(unsafe.Pointer(ckind))
-  C.LLVMRemoveStringAttributeAtIndex(v.C, C.LLVMAttributeIndex(i),
-                                     ckind, C.unsigned(len(kind)))
+	ckind := C.CString(kind)
+	defer C.free(unsafe.Pointer(ckind))
+	C.LLVMRemoveStringAttributeAtIndex(v.C, C.LLVMAttributeIndex(i),
+		ckind, C.unsigned(len(kind)))
 }
 func (v Value) AddTargetDependentFunctionAttr(attr, value string) {
 	cattr := C.CString(attr)
@@ -1201,12 +1201,12 @@ func (v Value) Params() []Value {
 	}
 	return out
 }
-func (v Value) Param(i int) (rv Value)  { rv.C = C.LLVMGetParam(v.C, C.unsigned(i)); return }
-func (v Value) ParamParent() (rv Value) { rv.C = C.LLVMGetParamParent(v.C); return }
-func (v Value) FirstParam() (rv Value)  { rv.C = C.LLVMGetFirstParam(v.C); return }
-func (v Value) LastParam() (rv Value)   { rv.C = C.LLVMGetLastParam(v.C); return }
-func NextParam(v Value) (rv Value)      { rv.C = C.LLVMGetNextParam(v.C); return }
-func PrevParam(v Value) (rv Value)      { rv.C = C.LLVMGetPreviousParam(v.C); return }
+func (v Value) Param(i int) (rv Value)      { rv.C = C.LLVMGetParam(v.C, C.unsigned(i)); return }
+func (v Value) ParamParent() (rv Value)     { rv.C = C.LLVMGetParamParent(v.C); return }
+func (v Value) FirstParam() (rv Value)      { rv.C = C.LLVMGetFirstParam(v.C); return }
+func (v Value) LastParam() (rv Value)       { rv.C = C.LLVMGetLastParam(v.C); return }
+func NextParam(v Value) (rv Value)          { rv.C = C.LLVMGetNextParam(v.C); return }
+func PrevParam(v Value) (rv Value)          { rv.C = C.LLVMGetPreviousParam(v.C); return }
 func (v Value) SetParamAlignment(align int) { C.LLVMSetParamAlignment(v.C, C.unsigned(align)) }
 
 // Operations on basic blocks
@@ -1351,10 +1351,11 @@ func (b Builder) Dispose() { C.LLVMDisposeBuilder(b.C) }
 
 // Metadata
 type DebugLoc struct {
-	Line, Col      uint
-	Scope          Metadata
-	InlinedAt      Metadata
+	Line, Col uint
+	Scope     Metadata
+	InlinedAt Metadata
 }
+
 func (b Builder) SetCurrentDebugLocation(line, col uint, scope, inlinedAt Metadata) {
 	C.LLVMGoSetCurrentDebugLocation(b.C, C.unsigned(line), C.unsigned(col), scope.C, inlinedAt.C)
 }

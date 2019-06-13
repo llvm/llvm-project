@@ -6,16 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/Decl.h"
-
 #include "CommandObjectMemory.h"
-#include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
+#include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -23,15 +21,17 @@
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionGroupOutputFile.h"
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
+#include "lldb/Interpreter/OptionValueLanguage.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/Options.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeList.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/MemoryHistory.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -51,7 +51,9 @@ static constexpr OptionDefinition g_read_memory_options[] = {
   {LLDB_OPT_SET_1, false, "num-per-line", 'l', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeNumberPerLine, "The number of items per line to display." },
   {LLDB_OPT_SET_2, false, "binary",       'b', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,          "If true, memory will be saved as binary. If false, the memory is saved save as an ASCII dump that "
                                                                                                                             "uses the format, size, count and number per line settings." },
-  {LLDB_OPT_SET_3, true , "type",         't', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeNone,          "The name of a type to view memory as." },
+  {LLDB_OPT_SET_3 |
+   LLDB_OPT_SET_4, true , "type",         't', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeName,          "The name of a type to view memory as." },
+  {LLDB_OPT_SET_4, false, "language",     'x', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeLanguage,          "The language of the type to view memory as."},
   {LLDB_OPT_SET_3, false, "offset",       'E', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeCount,         "How many elements of the specified type to skip before starting to display data." },
   {LLDB_OPT_SET_1 |
    LLDB_OPT_SET_2 |
@@ -63,7 +65,7 @@ class OptionGroupReadMemory : public OptionGroup {
 public:
   OptionGroupReadMemory()
       : m_num_per_line(1, 1), m_output_as_binary(false), m_view_as_type(),
-        m_offset(0, 0) {}
+        m_offset(0, 0), m_language_for_type(eLanguageTypeUnknown) {}
 
   ~OptionGroupReadMemory() override = default;
 
@@ -97,6 +99,10 @@ public:
       m_force = true;
       break;
 
+    case 'x':
+      error = m_language_for_type.SetValueFromString(option_value);
+      break;
+
     case 'E':
       error = m_offset.SetValueFromString(option_value);
       break;
@@ -115,6 +121,7 @@ public:
     m_view_as_type.Clear();
     m_force = false;
     m_offset.Clear();
+    m_language_for_type.Clear();
   }
 
   Status FinalizeSettings(Target *target, OptionGroupFormat &format_options) {
@@ -277,7 +284,8 @@ public:
 
   bool AnyOptionWasSet() const {
     return m_num_per_line.OptionWasSet() || m_output_as_binary ||
-           m_view_as_type.OptionWasSet() || m_offset.OptionWasSet();
+           m_view_as_type.OptionWasSet() || m_offset.OptionWasSet() ||
+           m_language_for_type.OptionWasSet();
   }
 
   OptionValueUInt64 m_num_per_line;
@@ -285,6 +293,7 @@ public:
   OptionValueString m_view_as_type;
   bool m_force;
   OptionValueUInt64 m_offset;
+  OptionValueLanguage m_language_for_type;
 };
 
 // Read memory from the inferior process
@@ -372,7 +381,7 @@ protected:
       return false;
     }
 
-    CompilerType clang_ast_type;
+    CompilerType compiler_type;
     Status error;
 
     const char *view_as_type_cstr =
@@ -472,26 +481,43 @@ protected:
                                     exact_match, 1, searched_symbol_files,
                                     type_list);
 
-      if (type_list.GetSize() == 0 && lookup_type_name.GetCString() &&
-          *lookup_type_name.GetCString() == '$') {
-        if (ClangPersistentVariables *persistent_vars =
-                llvm::dyn_cast_or_null<ClangPersistentVariables>(
-                    target->GetPersistentExpressionStateForLanguage(
-                        lldb::eLanguageTypeC))) {
-          clang::TypeDecl *tdecl = llvm::dyn_cast_or_null<clang::TypeDecl>(
-              persistent_vars->GetPersistentDecl(
-                  ConstString(lookup_type_name)));
+      if (type_list.GetSize() == 0 && lookup_type_name.GetCString()) {
+        LanguageType language_for_type =
+            m_memory_options.m_language_for_type.GetCurrentValue();
+        std::set<LanguageType> languages_to_check;
+        if (language_for_type != eLanguageTypeUnknown) {
+          languages_to_check.insert(language_for_type);
+        } else {
+          languages_to_check = Language::GetSupportedLanguages();
+        }
 
-          if (tdecl) {
-            clang_ast_type.SetCompilerType(
-                ClangASTContext::GetASTContext(&tdecl->getASTContext()),
-                reinterpret_cast<lldb::opaque_compiler_type_t>(
-                    const_cast<clang::Type *>(tdecl->getTypeForDecl())));
+        std::set<CompilerType> user_defined_types;
+        for (auto lang : languages_to_check) {
+          if (auto *persistent_vars =
+                  target->GetPersistentExpressionStateForLanguage(lang)) {
+            if (llvm::Optional<CompilerType> type =
+                    persistent_vars->GetCompilerTypeFromPersistentDecl(
+                        lookup_type_name)) {
+              user_defined_types.emplace(*type);
+            }
           }
+        }
+
+        if (user_defined_types.size() > 1) {
+          result.AppendErrorWithFormat(
+              "Mutiple types found matching raw type '%s', please disambiguate "
+              "by specifying the language with -x",
+              lookup_type_name.GetCString());
+          result.SetStatus(eReturnStatusFailed);
+          return false;
+        }
+
+        if (user_defined_types.size() == 1) {
+          compiler_type = *user_defined_types.begin();
         }
       }
 
-      if (!clang_ast_type.IsValid()) {
+      if (!compiler_type.IsValid()) {
         if (type_list.GetSize() == 0) {
           result.AppendErrorWithFormat("unable to find any types that match "
                                        "the raw type '%s' for full type '%s'\n",
@@ -501,14 +527,14 @@ protected:
           return false;
         } else {
           TypeSP type_sp(type_list.GetTypeAtIndex(0));
-          clang_ast_type = type_sp->GetFullCompilerType();
+          compiler_type = type_sp->GetFullCompilerType();
         }
       }
 
       while (pointer_count > 0) {
-        CompilerType pointer_type = clang_ast_type.GetPointerType();
+        CompilerType pointer_type = compiler_type.GetPointerType();
         if (pointer_type.IsValid())
-          clang_ast_type = pointer_type;
+          compiler_type = pointer_type;
         else {
           result.AppendError("unable make a pointer type\n");
           result.SetStatus(eReturnStatusFailed);
@@ -517,7 +543,7 @@ protected:
         --pointer_count;
       }
 
-      llvm::Optional<uint64_t> size = clang_ast_type.GetByteSize(nullptr);
+      llvm::Optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
       if (!size) {
         result.AppendErrorWithFormat(
             "unable to get the byte size of the type '%s'\n",
@@ -547,7 +573,7 @@ protected:
       // options have been set
       addr = m_next_addr;
       total_byte_size = m_prev_byte_size;
-      clang_ast_type = m_prev_clang_ast_type;
+      compiler_type = m_prev_compiler_type;
       if (!m_format_options.AnyOptionWasSet() &&
           !m_memory_options.AnyOptionWasSet() &&
           !m_outfile_options.AnyOptionWasSet() &&
@@ -634,13 +660,13 @@ protected:
 
     DataBufferSP data_sp;
     size_t bytes_read = 0;
-    if (clang_ast_type.GetOpaqueQualType()) {
+    if (compiler_type.GetOpaqueQualType()) {
       // Make sure we don't display our type as ASCII bytes like the default
       // memory read
       if (!m_format_options.GetFormatValue().OptionWasSet())
         m_format_options.GetFormatValue().SetCurrentValue(eFormatDefault);
 
-      llvm::Optional<uint64_t> size = clang_ast_type.GetByteSize(nullptr);
+      llvm::Optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
       if (!size) {
         result.AppendError("can't get size of type");
         return false;
@@ -750,7 +776,7 @@ protected:
     m_prev_memory_options = m_memory_options;
     m_prev_outfile_options = m_outfile_options;
     m_prev_varobj_options = m_varobj_options;
-    m_prev_clang_ast_type = clang_ast_type;
+    m_prev_compiler_type = compiler_type;
 
     StreamFile outfile_stream;
     Stream *output_stream = nullptr;
@@ -800,14 +826,14 @@ protected:
     }
 
     ExecutionContextScope *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
-    if (clang_ast_type.GetOpaqueQualType()) {
+    if (compiler_type.GetOpaqueQualType()) {
       for (uint32_t i = 0; i < item_count; ++i) {
         addr_t item_addr = addr + (i * item_byte_size);
         Address address(item_addr);
         StreamString name_strm;
         name_strm.Printf("0x%" PRIx64, item_addr);
         ValueObjectSP valobj_sp(ValueObjectMemory::Create(
-            exe_scope, name_strm.GetString(), address, clang_ast_type));
+            exe_scope, name_strm.GetString(), address, compiler_type));
         if (valobj_sp) {
           Format format = m_format_options.GetFormat();
           if (format != eFormatDefault)
@@ -877,7 +903,7 @@ protected:
   OptionGroupReadMemory m_prev_memory_options;
   OptionGroupOutputFile m_prev_outfile_options;
   OptionGroupValueObjectDisplay m_prev_varobj_options;
-  CompilerType m_prev_clang_ast_type;
+  CompilerType m_prev_compiler_type;
 };
 
 static constexpr OptionDefinition g_memory_find_option_table[] = {

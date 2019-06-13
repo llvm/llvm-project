@@ -22,9 +22,7 @@ public:
 
   dw_offset_t GetTypeOffset() { return GetOffset() + m_header.GetTypeOffset(); }
 
-  static bool classof(const DWARFUnit *unit) {
-    return unit->GetUnitType() == DW_UT_type;
-  }
+  static bool classof(const DWARFUnit *unit) { return unit->IsTypeUnit(); }
 
 private:
   DWARFTypeUnit(SymbolFileDWARF *dwarf, lldb::user_id_t uid,

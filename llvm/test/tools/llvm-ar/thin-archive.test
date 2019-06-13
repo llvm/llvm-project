@@ -12,15 +12,15 @@ RUN: llvm-ar dT %t/absolute-1.ar delete.o
 RUN: FileCheck -input-file=%t/absolute-1.ar --check-prefixes=THIN,CHECK %s -DPATH=%/t/
 RUN: llvm-ar t %t/absolute-1.ar | FileCheck %s -DPATH=%/t/
 
+These tests must be run in %t/foo. cd %t is included on each line to make debugging this test case easier.
+
 Test that modules can be added with absolute paths when the archive is created using a relative path
 
-RUN: llvm-ar rTc Output/%basename_t.tmp/absolute-2.ar %t/foo/elf.o %t/delete.o %t/foo/bar/elf.o
-RUN: llvm-ar dT Output/%basename_t.tmp/absolute-2.ar %t/delete.o
+RUN: cd %t/foo && llvm-ar rTc bar/absolute-2.ar %t/foo/elf.o %t/delete.o %t/foo/bar/elf.o
+RUN: cd %t/foo && llvm-ar dT bar/absolute-2.ar %t/delete.o
 
-RUN: FileCheck -input-file=%t/absolute-2.ar --check-prefixes=THIN,CHECK %s -DPATH=%/t/
-RUN: llvm-ar t %t/absolute-2.ar | FileCheck %s -DPATH=%/t/
-
-These tests must be run in %t/foo. cd %t is included on each line to make debugging this test case easier.
+RUN: FileCheck -input-file=%t/foo/bar/absolute-2.ar --check-prefixes=THIN,CHECK %s -DPATH=%/t/
+RUN: llvm-ar t %t/foo/bar/absolute-2.ar | FileCheck %s -DPATH=%/t/
 
 Test that modules can be added with relative paths when the archive is created using a relative path
 

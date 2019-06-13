@@ -321,7 +321,7 @@ void ClangdServer::enumerateTweaks(PathRef File, Range Sel,
 }
 
 void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
-                              Callback<tooling::Replacements> CB) {
+                              Callback<std::vector<TextEdit>> CB) {
   auto Action = [Sel](decltype(CB) CB, std::string File, std::string TweakID,
                       Expected<InputsAndAST> InpAST) {
     if (!InpAST)
@@ -332,15 +332,18 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
     auto A = prepareTweak(TweakID, *Selection);
     if (!A)
       return CB(A.takeError());
-    auto RawReplacements = (*A)->apply(*Selection);
-    if (!RawReplacements)
-      return CB(RawReplacements.takeError());
+    auto Raw = (*A)->apply(*Selection);
+    if (!Raw)
+      return CB(Raw.takeError());
     // FIXME: this function has I/O operations (find .clang-format file), figure
     // out a way to cache the format style.
     auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
                                        InpAST->Inputs.FS.get());
-    return CB(
-        cleanupAndFormat(InpAST->Inputs.Contents, *RawReplacements, Style));
+    auto Formatted =
+        cleanupAndFormat(InpAST->Inputs.Contents, *Raw, Style);
+    if (!Formatted)
+      return CB(Formatted.takeError());
+    return CB(replacementsToEdits(InpAST->Inputs.Contents, *Formatted));
   };
   WorkScheduler.runWithAST(
       "ApplyTweak", File,

@@ -1157,10 +1157,9 @@ bool SITargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
   return true;
 }
 
-bool SITargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
-                                                      unsigned AddrSpace,
-                                                      unsigned Align,
-                                                      bool *IsFast) const {
+bool SITargetLowering::allowsMisalignedMemoryAccesses(
+    EVT VT, unsigned AddrSpace, unsigned Align, MachineMemOperand::Flags Flags,
+    bool *IsFast) const {
   if (IsFast)
     *IsFast = false;
 
@@ -9720,6 +9719,24 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
       Ops.push_back(Node->getOperand(I));
 
     Ops.push_back(ImpDef.getValue(1));
+    return DAG.getMachineNode(Opcode, SDLoc(Node), Node->getVTList(), Ops);
+  }
+  case AMDGPU::V_PERMLANE16_B32:
+  case AMDGPU::V_PERMLANEX16_B32: {
+    ConstantSDNode *FI = cast<ConstantSDNode>(Node->getOperand(0));
+    ConstantSDNode *BC = cast<ConstantSDNode>(Node->getOperand(2));
+    if (!FI->getZExtValue() && !BC->getZExtValue())
+      break;
+    SDValue VDstIn = Node->getOperand(6);
+    if (VDstIn.isMachineOpcode()
+        && VDstIn.getMachineOpcode() == AMDGPU::IMPLICIT_DEF)
+      break;
+    MachineSDNode *ImpDef = DAG.getMachineNode(TargetOpcode::IMPLICIT_DEF,
+                                               SDLoc(Node), MVT::i32);
+    SmallVector<SDValue, 8> Ops = { SDValue(FI, 0), Node->getOperand(1),
+                                    SDValue(BC, 0), Node->getOperand(3),
+                                    Node->getOperand(4), Node->getOperand(5),
+                                    SDValue(ImpDef, 0), Node->getOperand(7) };
     return DAG.getMachineNode(Opcode, SDLoc(Node), Node->getVTList(), Ops);
   }
   default:

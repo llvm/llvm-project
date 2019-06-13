@@ -41,7 +41,6 @@ add_lldb_library(lldbCommands
     lldbSymbol
     lldbTarget
     lldbUtility
-    lldbPluginExpressionParserClang
 
   LINK_COMPONENTS
     Support

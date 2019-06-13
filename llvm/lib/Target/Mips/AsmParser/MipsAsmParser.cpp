@@ -302,6 +302,9 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool expandLoadStoreDMacro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                              const MCSubtargetInfo *STI, bool IsLoad);
 
+  bool expandStoreDM1Macro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                           const MCSubtargetInfo *STI);
+
   bool expandSeq(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                  const MCSubtargetInfo *STI);
 
@@ -2536,6 +2539,10 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   case Mips::SDMacro:
     return expandLoadStoreDMacro(Inst, IDLoc, Out, STI,
                                  Inst.getOpcode() == Mips::LDMacro)
+               ? MER_Fail
+               : MER_Success;
+  case Mips::SDC1_M1:
+    return expandStoreDM1Macro(Inst, IDLoc, Out, STI)
                ? MER_Fail
                : MER_Success;
   case Mips::SEQMacro:
@@ -4840,6 +4847,49 @@ bool MipsAsmParser::expandLoadStoreDMacro(MCInst &Inst, SMLoc IDLoc,
     TOut.emitRRX(Opcode, SecondReg, BaseReg, SecondOffset, IDLoc, STI);
     TOut.emitRRX(Opcode, FirstReg, BaseReg, FirstOffset, IDLoc, STI);
   }
+
+  return false;
+}
+
+
+// Expand 's.d $<reg> offset($reg2)' to 'swc1 $<reg+1>, offset($reg2);
+//                                       swc1 $<reg>, offset+4($reg2)'
+// or if little endian to 'swc1 $<reg>, offset($reg2);
+//                         swc1 $<reg+1>, offset+4($reg2)'
+// for Mips1.
+bool MipsAsmParser::expandStoreDM1Macro(MCInst &Inst, SMLoc IDLoc,
+                                        MCStreamer &Out,
+                                        const MCSubtargetInfo *STI) {
+  if (!isABI_O32())
+    return true;
+
+  warnIfNoMacro(IDLoc);
+
+  MipsTargetStreamer &TOut = getTargetStreamer();
+  unsigned Opcode = Mips::SWC1;
+  unsigned FirstReg = Inst.getOperand(0).getReg();
+  unsigned SecondReg = nextReg(FirstReg);
+  unsigned BaseReg = Inst.getOperand(1).getReg();
+  if (!SecondReg)
+    return true;
+
+  warnIfRegIndexIsAT(FirstReg, IDLoc);
+
+  assert(Inst.getOperand(2).isImm() &&
+         "Offset for macro is not immediate!");
+
+  MCOperand &FirstOffset = Inst.getOperand(2);
+  signed NextOffset = FirstOffset.getImm() + 4;
+  MCOperand SecondOffset = MCOperand::createImm(NextOffset);
+
+  if (!isInt<16>(FirstOffset.getImm()) || !isInt<16>(NextOffset))
+    return true;
+
+  if (!IsLittleEndian)
+    std::swap(FirstReg, SecondReg);
+
+  TOut.emitRRX(Opcode, FirstReg, BaseReg, FirstOffset, IDLoc, STI);
+  TOut.emitRRX(Opcode, SecondReg, BaseReg, SecondOffset, IDLoc, STI);
 
   return false;
 }

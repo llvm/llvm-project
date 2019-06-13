@@ -57,6 +57,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-rename
   clang-refactor
   clang-diff
+  clang-scan-deps
   diagtool
   hmaptool
   )

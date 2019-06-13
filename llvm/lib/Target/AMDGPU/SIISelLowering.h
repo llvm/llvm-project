@@ -233,9 +233,10 @@ public:
   bool canMergeStoresTo(unsigned AS, EVT MemVT,
                         const SelectionDAG &DAG) const override;
 
-  bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS,
-                                      unsigned Align,
-                                      bool *IsFast) const override;
+  bool allowsMisalignedMemoryAccesses(
+      EVT VT, unsigned AS, unsigned Align,
+      MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
+      bool *IsFast = nullptr) const override;
 
   EVT getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
                           unsigned SrcAlign, bool IsMemset,

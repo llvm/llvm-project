@@ -115,6 +115,12 @@ static bool isSendMsgTraceDataOrGDS(const SIInstrInfo &TII,
   }
 }
 
+static bool isPermlane(const MachineInstr &MI) {
+  unsigned Opcode = MI.getOpcode();
+  return Opcode == AMDGPU::V_PERMLANE16_B32 ||
+         Opcode == AMDGPU::V_PERMLANEX16_B32;
+}
+
 static unsigned getHWReg(const SIInstrInfo *TII, const MachineInstr &RegInstr) {
   const MachineOperand *RegOp = TII->getNamedOperand(RegInstr,
                                                      AMDGPU::OpName::simm16);
@@ -835,9 +841,47 @@ int GCNHazardRecognizer::checkReadM0Hazards(MachineInstr *MI) {
 
 void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixVMEMtoScalarWriteHazards(MI);
+  fixVcmpxPermlaneHazards(MI);
   fixSMEMtoVectorWriteHazards(MI);
   fixVcmpxExecWARHazard(MI);
   fixLdsBranchVmemWARHazard(MI);
+}
+
+bool GCNHazardRecognizer::fixVcmpxPermlaneHazards(MachineInstr *MI) {
+  if (!ST.hasVcmpxPermlaneHazard() || !isPermlane(*MI))
+    return false;
+
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  auto IsHazardFn = [TII] (MachineInstr *MI) {
+    return TII->isVOPC(*MI);
+  };
+
+  auto IsExpiredFn = [] (MachineInstr *MI, int) {
+    if (!MI)
+      return false;
+    unsigned Opc = MI->getOpcode();
+    return SIInstrInfo::isVALU(*MI) &&
+           Opc != AMDGPU::V_NOP_e32 &&
+           Opc != AMDGPU::V_NOP_e64 &&
+           Opc != AMDGPU::V_NOP_sdwa;
+  };
+
+  if (::getWaitStatesSince(IsHazardFn, MI, IsExpiredFn) ==
+      std::numeric_limits<int>::max())
+    return false;
+
+  // V_NOP will be discarded by SQ.
+  // Use V_MOB_B32 v?, v?. Register must be alive so use src0 of V_PERMLANE*
+  // which is always a VGPR and available.
+  auto *Src0 = TII->getNamedOperand(*MI, AMDGPU::OpName::src0);
+  unsigned Reg = Src0->getReg();
+  bool IsUndef = Src0->isUndef();
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+          TII->get(AMDGPU::V_MOV_B32_e32))
+    .addReg(Reg, RegState::Define | (IsUndef ? RegState::Dead : 0))
+    .addReg(Reg, IsUndef ? RegState::Undef : RegState::Kill);
+
+  return true;
 }
 
 bool GCNHazardRecognizer::fixVMEMtoScalarWriteHazards(MachineInstr *MI) {

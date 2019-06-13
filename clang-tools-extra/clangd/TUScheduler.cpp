@@ -273,7 +273,7 @@ private:
   // The lifetime of the old/new ASTWorkers will overlap, but their handles
   // don't. When the old handle is destroyed, the old worker will stop reporting
   // diagnostics.
-  bool ReportDiagnostics = true; /* GUARDED_BY(DiagMu) */
+  bool ReportDiagnostics = true; /* GUARDED_BY(DiagsMu) */
 };
 
 /// A smart-pointer-like class that points to an active ASTWorker.
