@@ -522,6 +522,11 @@ public:
   /// no memory dependence cycles.
   bool canVectorizeMemory() const { return CanVecMem; }
 
+  /// Return true if there is a convergent operation in the loop. There may
+  /// still be reported runtime pointer checks that would be required, but it is
+  /// not legal to insert them.
+  bool hasConvergentOp() const { return HasConvergentOp; }
+
   const RuntimePointerChecking *getRuntimePointerChecking() const {
     return PtrRtChecking.get();
   }
@@ -642,6 +647,7 @@ private:
 
   /// Cache the result of analyzeLoop.
   bool CanVecMem;
+  bool HasConvergentOp;
 
   /// Indicator that there are non vectorizable stores to a uniform address.
   bool HasDependenceInvolvingLoopInvariantAddress;

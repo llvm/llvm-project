@@ -280,8 +280,9 @@ public:
     bool Changed = false;
     for (Loop *L : Worklist) {
       const LoopAccessInfo &LAI = LAA->getInfo(L);
-      if (L->isLoopSimplifyForm() && (LAI.getNumRuntimePointerChecks() ||
-          !LAI.getPSE().getUnionPredicate().isAlwaysTrue())) {
+      if (L->isLoopSimplifyForm() && !LAI.hasConvergentOp() &&
+          (LAI.getNumRuntimePointerChecks() ||
+           !LAI.getPSE().getUnionPredicate().isAlwaysTrue())) {
         LoopVersioning LVer(LAI, L, LI, DT, SE);
         LVer.versionLoop();
         LVer.annotateLoopWithNoAlias();

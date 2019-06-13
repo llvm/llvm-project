@@ -238,7 +238,8 @@ TargetLowering::findOptimalMemOpLowering(std::vector<EVT> &MemOps,
       // issuing a (or a pair of) unaligned and overlapping load / store.
       bool Fast;
       if (NumMemOps && AllowOverlap && NewVTSize < Size &&
-          allowsMisalignedMemoryAccesses(VT, DstAS, DstAlign, &Fast) &&
+          allowsMisalignedMemoryAccesses(VT, DstAS, DstAlign,
+                                         MachineMemOperand::MONone, &Fast) &&
           Fast)
         VTSize = Size;
       else {

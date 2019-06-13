@@ -1233,3 +1233,184 @@ define <16 x i8> @splatconstant_shift_v16i8(<16 x i8> %a) nounwind {
   %shift = lshr <16 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
   ret <16 x i8> %shift
 }
+
+define <4 x i32> @vector_variable_shift_right(<4 x i1> %cond, <4 x i32> %x, <4 x i32> %y, <4 x i32> %z) nounwind {
+; SSE2-LABEL: vector_variable_shift_right:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pslld $31, %xmm0
+; SSE2-NEXT:    psrad $31, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; SSE2-NEXT:    pand %xmm0, %xmm1
+; SSE2-NEXT:    pandn %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[2,3,3,3,4,5,6,7]
+; SSE2-NEXT:    movdqa %xmm3, %xmm2
+; SSE2-NEXT:    psrld %xmm1, %xmm2
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm4 = xmm0[0,1,1,1,4,5,6,7]
+; SSE2-NEXT:    movdqa %xmm3, %xmm1
+; SSE2-NEXT:    psrld %xmm4, %xmm1
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm0[2,3,3,3,4,5,6,7]
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    psrld %xmm2, %xmm4
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,1,1,4,5,6,7]
+; SSE2-NEXT:    psrld %xmm0, %xmm3
+; SSE2-NEXT:    punpckhqdq {{.*#+}} xmm3 = xmm3[1],xmm4[1]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,3],xmm3[0,3]
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: vector_variable_shift_right:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pslld $31, %xmm0
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; SSE41-NEXT:    blendvps %xmm0, %xmm1, %xmm2
+; SSE41-NEXT:    pshuflw {{.*#+}} xmm0 = xmm2[2,3,3,3,4,5,6,7]
+; SSE41-NEXT:    movdqa %xmm3, %xmm1
+; SSE41-NEXT:    psrld %xmm0, %xmm1
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,0,1]
+; SSE41-NEXT:    pshuflw {{.*#+}} xmm4 = xmm0[2,3,3,3,4,5,6,7]
+; SSE41-NEXT:    movdqa %xmm3, %xmm5
+; SSE41-NEXT:    psrld %xmm4, %xmm5
+; SSE41-NEXT:    pblendw {{.*#+}} xmm5 = xmm1[0,1,2,3],xmm5[4,5,6,7]
+; SSE41-NEXT:    pshuflw {{.*#+}} xmm1 = xmm2[0,1,1,1,4,5,6,7]
+; SSE41-NEXT:    movdqa %xmm3, %xmm2
+; SSE41-NEXT:    psrld %xmm1, %xmm2
+; SSE41-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,1,1,4,5,6,7]
+; SSE41-NEXT:    psrld %xmm0, %xmm3
+; SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm2[0,1,2,3],xmm3[4,5,6,7]
+; SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1],xmm5[2,3],xmm3[4,5],xmm5[6,7]
+; SSE41-NEXT:    movdqa %xmm3, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: vector_variable_shift_right:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; AVX1-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; AVX1-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX1-NEXT:    vpsrld %xmm1, %xmm3, %xmm1
+; AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm2
+; AVX1-NEXT:    vpsrld %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3],xmm1[4,5,6,7]
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; AVX1-NEXT:    vpsrld %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; AVX1-NEXT:    vpsrld %xmm0, %xmm3, %xmm0
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: vector_variable_shift_right:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX2-NEXT:    vbroadcastss %xmm1, %xmm1
+; AVX2-NEXT:    vbroadcastss %xmm2, %xmm2
+; AVX2-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; AVX2-NEXT:    vpsrlvd %xmm0, %xmm3, %xmm0
+; AVX2-NEXT:    retq
+;
+; XOPAVX1-LABEL: vector_variable_shift_right:
+; XOPAVX1:       # %bb.0:
+; XOPAVX1-NEXT:    vpslld $31, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; XOPAVX1-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; XOPAVX1-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; XOPAVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; XOPAVX1-NEXT:    vpshld %xmm0, %xmm3, %xmm0
+; XOPAVX1-NEXT:    retq
+;
+; XOPAVX2-LABEL: vector_variable_shift_right:
+; XOPAVX2:       # %bb.0:
+; XOPAVX2-NEXT:    vpslld $31, %xmm0, %xmm0
+; XOPAVX2-NEXT:    vbroadcastss %xmm1, %xmm1
+; XOPAVX2-NEXT:    vbroadcastss %xmm2, %xmm2
+; XOPAVX2-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; XOPAVX2-NEXT:    vpsrlvd %xmm0, %xmm3, %xmm0
+; XOPAVX2-NEXT:    retq
+;
+; AVX512DQ-LABEL: vector_variable_shift_right:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX512DQ-NEXT:    vpmovd2m %zmm0, %k1
+; AVX512DQ-NEXT:    vpbroadcastd %xmm1, %xmm0
+; AVX512DQ-NEXT:    vpbroadcastd %xmm2, %xmm1
+; AVX512DQ-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1}
+; AVX512DQ-NEXT:    vpsrlvd %xmm1, %xmm3, %xmm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
+;
+; AVX512BW-LABEL: vector_variable_shift_right:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX512BW-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; AVX512BW-NEXT:    vpbroadcastd %xmm1, %xmm0
+; AVX512BW-NEXT:    vpbroadcastd %xmm2, %xmm1
+; AVX512BW-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1}
+; AVX512BW-NEXT:    vpsrlvd %xmm1, %xmm3, %xmm0
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQVL-LABEL: vector_variable_shift_right:
+; AVX512DQVL:       # %bb.0:
+; AVX512DQVL-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX512DQVL-NEXT:    vpmovd2m %xmm0, %k1
+; AVX512DQVL-NEXT:    vpbroadcastd %xmm2, %xmm0
+; AVX512DQVL-NEXT:    vpbroadcastd %xmm1, %xmm0 {%k1}
+; AVX512DQVL-NEXT:    vpsrlvd %xmm0, %xmm3, %xmm0
+; AVX512DQVL-NEXT:    retq
+;
+; AVX512BWVL-LABEL: vector_variable_shift_right:
+; AVX512BWVL:       # %bb.0:
+; AVX512BWVL-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX512BWVL-NEXT:    vptestmd %xmm0, %xmm0, %k1
+; AVX512BWVL-NEXT:    vpbroadcastd %xmm2, %xmm0
+; AVX512BWVL-NEXT:    vpbroadcastd %xmm1, %xmm0 {%k1}
+; AVX512BWVL-NEXT:    vpsrlvd %xmm0, %xmm3, %xmm0
+; AVX512BWVL-NEXT:    retq
+;
+; X32-SSE-LABEL: vector_variable_shift_right:
+; X32-SSE:       # %bb.0:
+; X32-SSE-NEXT:    pushl %ebp
+; X32-SSE-NEXT:    movl %esp, %ebp
+; X32-SSE-NEXT:    andl $-16, %esp
+; X32-SSE-NEXT:    subl $16, %esp
+; X32-SSE-NEXT:    pslld $31, %xmm0
+; X32-SSE-NEXT:    psrad $31, %xmm0
+; X32-SSE-NEXT:    movdqa 8(%ebp), %xmm3
+; X32-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; X32-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; X32-SSE-NEXT:    pand %xmm0, %xmm1
+; X32-SSE-NEXT:    pandn %xmm2, %xmm0
+; X32-SSE-NEXT:    por %xmm1, %xmm0
+; X32-SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[2,3,3,3,4,5,6,7]
+; X32-SSE-NEXT:    movdqa %xmm3, %xmm2
+; X32-SSE-NEXT:    psrld %xmm1, %xmm2
+; X32-SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm0[0,1,1,1,4,5,6,7]
+; X32-SSE-NEXT:    movdqa %xmm3, %xmm1
+; X32-SSE-NEXT:    psrld %xmm4, %xmm1
+; X32-SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; X32-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X32-SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm0[2,3,3,3,4,5,6,7]
+; X32-SSE-NEXT:    movdqa %xmm3, %xmm4
+; X32-SSE-NEXT:    psrld %xmm2, %xmm4
+; X32-SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,1,1,4,5,6,7]
+; X32-SSE-NEXT:    psrld %xmm0, %xmm3
+; X32-SSE-NEXT:    punpckhqdq {{.*#+}} xmm3 = xmm3[1],xmm4[1]
+; X32-SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,3],xmm3[0,3]
+; X32-SSE-NEXT:    movaps %xmm1, %xmm0
+; X32-SSE-NEXT:    movl %ebp, %esp
+; X32-SSE-NEXT:    popl %ebp
+; X32-SSE-NEXT:    retl
+  %splat1 = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> zeroinitializer
+  %splat2 = shufflevector <4 x i32> %y, <4 x i32> undef, <4 x i32> zeroinitializer
+  %sel = select <4 x i1> %cond, <4 x i32> %splat1, <4 x i32> %splat2
+  %sh = lshr <4 x i32> %z, %sel
+  ret <4 x i32> %sh
+}

@@ -896,3 +896,21 @@ namespace Conditional {
   // CHECK: br label
   A &&r = b ? static_cast<A&&>(B()) : static_cast<A&&>(C());
 }
+
+#if __cplusplus >= 201703L
+namespace PR42220 {
+  struct X { X(); ~X(); };
+  struct A { X &&x; };
+  struct B : A {};
+  void g() noexcept;
+  // CHECK-CXX17-LABEL: define{{.*}} @_ZN7PR422201fEv(
+  void f() {
+    // CHECK-CXX17: call{{.*}} @_ZN7PR422201XC1Ev(
+    B &&b = {X()};
+    // CHECK-CXX17-NOT: call{{.*}} @_ZN7PR422201XD1Ev(
+    // CHECK-CXX17: call{{.*}} @_ZN7PR422201gEv(
+    g();
+    // CHECK-CXX17: call{{.*}} @_ZN7PR422201XD1Ev(
+  }
+}
+#endif

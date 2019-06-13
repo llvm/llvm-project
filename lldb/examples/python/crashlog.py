@@ -102,6 +102,7 @@ class CrashLog(symbolication.Symbolicator):
     app_backtrace_regex = re.compile(
         '^Application Specific Backtrace ([0-9]+)([^:]*):(.*)')
     frame_regex = re.compile('^([0-9]+)\s+(.+?)\s+(0x[0-9a-fA-F]{7}[0-9a-fA-F]+) +(.*)')
+    null_frame_regex = re.compile('^([0-9]+)\s+\?\?\?\s+(0{7}0+) +(.*)')
     image_regex_uuid = re.compile(
         '(0x[0-9a-fA-F]+)[-\s]+(0x[0-9a-fA-F]+)\s+[+]?(.+?)\s+(\(.+\))?\s?(<([-0-9a-fA-F]+)>)? (.*)')
     empty_line_regex = re.compile('^$')
@@ -467,6 +468,9 @@ class CrashLog(symbolication.Symbolicator):
                 self.info_lines.append(line.strip())
             elif parse_mode == PARSE_MODE_THREAD:
                 if line.startswith('Thread'):
+                    continue
+                if self.null_frame_regex.search(line):
+                    print('warning: thread parser ignored null-frame: "%s"' % line)
                     continue
                 frame_match = self.frame_regex.search(line)
                 if frame_match:

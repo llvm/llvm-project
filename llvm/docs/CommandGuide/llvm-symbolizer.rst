@@ -102,7 +102,7 @@ OPTIONS
 .. option:: -inlining, -inlines, -i
 
  If a source code location is in an inlined function, prints all the
- inlnied frames. Defaults to true.
+ inlined frames. Defaults to true.
 
 .. option:: -default-arch
 
@@ -172,4 +172,5 @@ OPTIONS
 EXIT STATUS
 -----------
 
-:program:`llvm-symbolizer` returns 0. Other exit codes imply internal program error.
+:program:`llvm-symbolizer` returns 0. Other exit codes imply an internal program
+error.

@@ -272,6 +272,7 @@ def VOP_MOVRELD : VOPProfile<[untyped, i32, untyped, untyped]> {
   let InsDPP = (ins DstRC:$vdst, DstRC:$old, Src0RC32:$src0,
                     dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
+  let InsDPP16 = !con(InsDPP, (ins FI:$fi));
 
   let InsSDWA = (ins Src0RC32:$vdst, Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
                      clampmod:$clamp, omod:$omod, dst_sel:$dst_sel, dst_unused:$dst_unused,
@@ -280,6 +281,7 @@ def VOP_MOVRELD : VOPProfile<[untyped, i32, untyped, untyped]> {
   let Asm32 = getAsm32<1, 1>.ret;
   let Asm64 = getAsm64<1, 1, 0, 0, 1>.ret;
   let AsmDPP = getAsmDPP<1, 1, 0>.ret;
+  let AsmDPP16 = getAsmDPP16<1, 1, 0>.ret;
   let AsmSDWA = getAsmSDWA<1, 1>.ret;
   let AsmSDWA9 = getAsmSDWA9<1, 0, 1>.ret;
 
@@ -432,8 +434,8 @@ let SubtargetPredicate = isGFX10Plus in {
 // Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
 
-class VOP1_DPP<bits<8> op, VOP1_Pseudo ps, VOPProfile p = ps.Pfl> :
-    VOP_DPP<ps.OpName, p> {
+class VOP1_DPP<bits<8> op, VOP1_Pseudo ps, VOPProfile p = ps.Pfl, bit isDPP16 = 0> :
+    VOP_DPP<ps.OpName, p, isDPP16> {
   let hasSideEffects = ps.hasSideEffects;
   let Defs = ps.Defs;
   let SchedRW = ps.SchedRW;
@@ -444,6 +446,29 @@ class VOP1_DPP<bits<8> op, VOP1_Pseudo ps, VOPProfile p = ps.Pfl> :
   let Inst{16-9}  = op;
   let Inst{24-17} = !if(p.EmitDst, vdst{7-0}, 0);
   let Inst{31-25} = 0x3f;
+}
+
+class VOP1_DPP16<bits<8> op, VOP1_Pseudo ps, VOPProfile p = ps.Pfl> :
+    VOP1_DPP<op, ps, p, 1> {
+  let AssemblerPredicate = !if(p.HasExt, HasDPP16, DisableInst);
+  let SubtargetPredicate = HasDPP16;
+}
+
+class VOP1_DPP8<bits<8> op, VOP1_Pseudo ps, VOPProfile p = ps.Pfl> :
+    VOP_DPP8<ps.OpName, p> {
+  let hasSideEffects = ps.hasSideEffects;
+  let Defs = ps.Defs;
+  let SchedRW = ps.SchedRW;
+  let Uses = ps.Uses;
+
+  bits<8> vdst;
+  let Inst{8-0}   = fi;
+  let Inst{16-9}  = op;
+  let Inst{24-17} = !if(p.EmitDst, vdst{7-0}, 0);
+  let Inst{31-25} = 0x3f;
+
+  let AssemblerPredicate = !if(p.HasExt, HasDPP8, DisableInst);
+  let SubtargetPredicate = HasDPP8;
 }
 
 //===----------------------------------------------------------------------===//
@@ -473,15 +498,28 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
       let DecoderNamespace = "SDWA10";
     }
   }
+  multiclass VOP1_Real_dpp_gfx10<bits<9> op> {
+    def _dpp_gfx10 : VOP1_DPP16<op{7-0}, !cast<VOP1_Pseudo>(NAME#"_e32")> {
+      let DecoderNamespace = "SDWA10";
+    }
+  }
+  multiclass VOP1_Real_dpp8_gfx10<bits<9> op> {
+    def _dpp8_gfx10 : VOP1_DPP8<op{7-0}, !cast<VOP1_Pseudo>(NAME#"_e32")> {
+      let DecoderNamespace = "DPP8";
+    }
+  }
 } // End AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10"
 
 multiclass VOP1_Real_gfx10_no_dpp<bits<9> op> :
   VOP1_Real_e32_gfx10<op>, VOP1_Real_e64_gfx10<op>,
   VOP1_Real_sdwa_gfx10<op>;
 
-multiclass VOP1_Real_gfx10<bits<9> op> :
+multiclass VOP1_Real_gfx10_no_dpp8<bits<9> op> :
   VOP1_Real_e32_gfx10<op>, VOP1_Real_e64_gfx10<op>,
-  VOP1_Real_sdwa_gfx10<op>;
+  VOP1_Real_sdwa_gfx10<op>, VOP1_Real_dpp_gfx10<op>;
+
+multiclass VOP1_Real_gfx10<bits<9> op> :
+  VOP1_Real_gfx10_no_dpp8<op>, VOP1_Real_dpp8_gfx10<op>;
 
 defm V_PIPEFLUSH         : VOP1_Real_gfx10<0x01b>;
 defm V_MOVRELSD_2_B32    : VOP1_Real_gfx10<0x048>;
@@ -564,6 +602,9 @@ multiclass VOP1_Real_gfx6_gfx7<bits<9> op> :
 multiclass VOP1_Real_gfx6_gfx7_gfx10<bits<9> op> :
   VOP1_Real_gfx6_gfx7<op>, VOP1_Real_gfx10<op>;
 
+multiclass VOP1_Real_gfx6_gfx7_gfx10_no_dpp8<bits<9> op> :
+  VOP1_Real_gfx6_gfx7<op>, VOP1_Real_gfx10_no_dpp8<op>;
+
 multiclass VOP1_Real_gfx6_gfx7_gfx10_no_dpp<bits<9> op> :
   VOP1_Real_gfx6_gfx7<op>, VOP1_Real_gfx10_no_dpp<op>;
 
@@ -625,8 +666,8 @@ defm V_FREXP_EXP_I32_F32 : VOP1_Real_gfx6_gfx7_gfx10<0x03f>;
 defm V_FREXP_MANT_F32    : VOP1_Real_gfx6_gfx7_gfx10<0x040>;
 defm V_CLREXCP           : VOP1_Real_gfx6_gfx7_gfx10<0x041>;
 defm V_MOVRELD_B32       : VOP1_Real_gfx6_gfx7_gfx10_no_dpp<0x042>;
-defm V_MOVRELS_B32       : VOP1_Real_gfx6_gfx7_gfx10_no_dpp<0x043>;
-defm V_MOVRELSD_B32      : VOP1_Real_gfx6_gfx7_gfx10_no_dpp<0x044>;
+defm V_MOVRELS_B32       : VOP1_Real_gfx6_gfx7_gfx10_no_dpp8<0x043>;
+defm V_MOVRELSD_B32      : VOP1_Real_gfx6_gfx7_gfx10_no_dpp8<0x044>;
 
 //===----------------------------------------------------------------------===//
 // GFX8, GFX9 (VI).
@@ -856,3 +897,30 @@ multiclass VOP1_Real_gfx9 <bits<10> op> {
 }
 
 defm V_SCREEN_PARTITION_4SE_B32 : VOP1_Real_gfx9 <0x37>;
+
+//===----------------------------------------------------------------------===//
+// GFX10
+//===----------------------------------------------------------------------===//
+
+let OtherPredicates = [isGFX10Plus] in {
+def : GCNPat <
+  (i32 (int_amdgcn_mov_dpp8 i32:$src, imm:$dpp8)),
+  (V_MOV_B32_dpp8_gfx10 $src, $src, (as_i32imm $dpp8), (i32 DPP8Mode.FI_0))
+>;
+
+def : GCNPat <
+  (i32 (int_amdgcn_mov_dpp i32:$src, imm:$dpp_ctrl, imm:$row_mask, imm:$bank_mask,
+                      imm:$bound_ctrl)),
+  (V_MOV_B32_dpp_gfx10 $src, $src, (as_i32imm $dpp_ctrl),
+                       (as_i32imm $row_mask), (as_i32imm $bank_mask),
+                       (as_i1imm $bound_ctrl), (i32 0))
+>;
+
+def : GCNPat <
+  (i32 (int_amdgcn_update_dpp i32:$old, i32:$src, imm:$dpp_ctrl, imm:$row_mask,
+                              imm:$bank_mask, imm:$bound_ctrl)),
+  (V_MOV_B32_dpp_gfx10 $old, $src, (as_i32imm $dpp_ctrl),
+                       (as_i32imm $row_mask), (as_i32imm $bank_mask),
+                       (as_i1imm $bound_ctrl), (i32 0))
+>;
+} // End OtherPredicates = [isGFX10Plus]

@@ -232,6 +232,9 @@ public:
   virtual void
   RemovePersistentVariable(lldb::ExpressionVariableSP variable) = 0;
 
+  virtual llvm::Optional<CompilerType>
+  GetCompilerTypeFromPersistentDecl(ConstString type_name) = 0;
+
   virtual lldb::addr_t LookupSymbol(ConstString name);
 
   void RegisterExecutionUnit(lldb::IRExecutionUnitSP &execution_unit_sp);

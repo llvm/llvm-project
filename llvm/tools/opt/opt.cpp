@@ -517,6 +517,7 @@ int main(int argc, char **argv) {
   initializeDwarfEHPreparePass(Registry);
   initializeSafeStackLegacyPassPass(Registry);
   initializeSjLjEHPreparePass(Registry);
+  initializeStackProtectorPass(Registry);
   initializePreISelIntrinsicLoweringLegacyPassPass(Registry);
   initializeGlobalMergePass(Registry);
   initializeIndirectBrExpandPassPass(Registry);

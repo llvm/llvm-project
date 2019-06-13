@@ -1474,7 +1474,8 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
         BranchTarget = MCSymbolRefExpr::create(
             GetExternalSymbolSymbol(MI->getOperand(1).getSymbolName()),
             OutContext);
-      }
+      } else
+        llvm_unreachable("Unhandled operand kind in Branch Future instruction");
 
       MCInst.addExpr(BranchTarget);
     }
