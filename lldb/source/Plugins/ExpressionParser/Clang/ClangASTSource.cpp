@@ -101,7 +101,7 @@ void ClangASTSource::InstallASTContext(clang::ASTContext &ast_context,
         break;
 
       sources.push_back(runtime_decl_vendor->GetImporterSource());
-    } while (0);
+    } while (false);
 
     do {
       DeclVendor *modules_decl_vendor =
@@ -111,7 +111,7 @@ void ClangASTSource::InstallASTContext(clang::ASTContext &ast_context,
         break;
 
       sources.push_back(modules_decl_vendor->GetImporterSource());
-    } while (0);
+    } while (false);
 
     if (!is_shared_context) {
       // Update the scratch AST context's merger to reflect any new sources we
@@ -125,7 +125,9 @@ void ClangASTSource::InstallASTContext(clang::ASTContext &ast_context,
       sources.push_back({*scratch_ast_context->getASTContext(),
                          *scratch_ast_context->getFileManager(),
                          scratch_ast_context->GetOriginMap()});
-    } while (0);
+    }
+    while (false)
+      ;
 
     m_merger_up =
         llvm::make_unique<clang::ExternalASTMerger>(target, sources);
@@ -937,7 +939,7 @@ void ClangASTSource::FindExternalVisibleDecls(
             context.m_found.type = true;
           }
         }
-      } while (0);
+      } while (false);
     }
 
     if (!context.m_found.type) {
@@ -988,10 +990,10 @@ void ClangASTSource::FindExternalVisibleDecls(
         }
 
         context.AddNamedDecl(copied_named_decl);
-      } while (0);
+      } while (false);
     }
 
-  } while (0);
+  } while (false);
 }
 
 template <class D> class TaggedASTDecl {
@@ -1176,7 +1178,7 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
     if (FindObjCMethodDeclsWithOrigin(current_id, context,
                                       original_interface_decl, "at origin"))
       return; // found it, no need to look any further
-  } while (0);
+  } while (false);
 
   StreamString ss;
 
@@ -1281,7 +1283,7 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
       if (*cursor == ' ' || *cursor == '(')
         sc_list.Append(candidate_sc);
     }
-  } while (0);
+  } while (false);
 
   if (sc_list.GetSize()) {
     // We found a good function symbol.  Use that.
@@ -1364,7 +1366,7 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
                                   "in debug info");
 
     return;
-  } while (0);
+  } while (false);
 
   do {
     // Check the modules only if the debug information didn't have a complete
@@ -1391,7 +1393,7 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
               current_id, context, interface_decl_from_modules, "in modules"))
         return;
     }
-  } while (0);
+  } while (false);
 
   do {
     // Check the runtime only if the debug information didn't have a complete
@@ -1428,7 +1430,7 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
 
     FindObjCMethodDeclsWithOrigin(current_id, context, runtime_interface_decl,
                                   "in runtime");
-  } while (0);
+  } while (false);
 }
 
 static bool FindObjCPropertyAndIvarDeclsWithOrigin(
@@ -1547,7 +1549,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
                                            complete_iface_decl);
 
     return;
-  } while (0);
+  } while (false);
 
   do {
     // Check the modules only if the debug information didn't have a complete
@@ -1583,7 +1585,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
     if (FindObjCPropertyAndIvarDeclsWithOrigin(current_id, context, *this,
                                                interface_decl_from_modules))
       return;
-  } while (0);
+  } while (false);
 
   do {
     // Check the runtime only if the debug information didn't have a complete
@@ -1628,7 +1630,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
     if (FindObjCPropertyAndIvarDeclsWithOrigin(
             current_id, context, *this, interface_decl_from_runtime))
       return;
-  } while (0);
+  } while (false);
 }
 
 typedef llvm::DenseMap<const FieldDecl *, uint64_t> FieldOffsetMap;

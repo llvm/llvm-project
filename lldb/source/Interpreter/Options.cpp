@@ -1007,7 +1007,7 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
   std::unique_lock<std::mutex> lock;
   OptionParser::Prepare(lock);
   int val;
-  while (1) {
+  while (true) {
     int long_options_index = -1;
     val = OptionParser::Parse(argv.size(), &*argv.begin(), sstr.GetString(),
                               long_options, &long_options_index);
@@ -1160,7 +1160,7 @@ OptionElementVector Options::ParseForCompletion(const Args &args,
   bool failed_once = false;
   uint32_t dash_dash_pos = -1;
 
-  while (1) {
+  while (true) {
     bool missing_argument = false;
     int long_options_index = -1;
 
@@ -1358,7 +1358,7 @@ llvm::Expected<Args> Options::Parse(const Args &args,
   std::unique_lock<std::mutex> lock;
   OptionParser::Prepare(lock);
   int val;
-  while (1) {
+  while (true) {
     int long_options_index = -1;
     val = OptionParser::Parse(argv.size(), &*argv.begin(), sstr.GetString(),
                               long_options, &long_options_index);

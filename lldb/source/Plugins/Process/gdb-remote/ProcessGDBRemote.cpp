@@ -3913,7 +3913,7 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
                 ") thread exiting...",
                 __FUNCTION__, arg, process->GetID());
 
-  return nullptr;
+  return {};
 }
 
 // uint32_t

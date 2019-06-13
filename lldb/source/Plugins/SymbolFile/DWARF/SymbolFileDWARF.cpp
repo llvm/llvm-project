@@ -2111,7 +2111,7 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
   if (die.Tag() == DW_TAG_inlined_subroutine) {
     inlined_die = die;
 
-    while (1) {
+    while (true) {
       die = die.GetParent();
 
       if (die) {

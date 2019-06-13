@@ -1729,7 +1729,7 @@ void Debugger::DefaultEventHandler() {
 
 lldb::thread_result_t Debugger::EventHandlerThread(lldb::thread_arg_t arg) {
   ((Debugger *)arg)->DefaultEventHandler();
-  return nullptr;
+  return {};
 }
 
 bool Debugger::StartEventHandlerThread() {
@@ -1774,7 +1774,7 @@ lldb::thread_result_t Debugger::IOHandlerThread(lldb::thread_arg_t arg) {
   Debugger *debugger = (Debugger *)arg;
   debugger->ExecuteIOHandlers();
   debugger->StopEventHandlerThread();
-  return nullptr;
+  return {};
 }
 
 bool Debugger::HasIOHandlerThread() { return m_io_handler_thread.IsJoinable(); }

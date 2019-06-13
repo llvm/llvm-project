@@ -3755,7 +3755,7 @@ public:
         break;
 
       case 'v':
-        m_verbose = 1;
+        m_verbose = true;
         break;
 
       case 'A':

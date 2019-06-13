@@ -162,7 +162,6 @@ bool ModuleListProperties::SetSwiftModuleLoadingMode(SwiftModuleLoadingMode mode
       nullptr, ePropertySwiftModuleLoadingMode, mode);
 }
 
-
 ModuleList::ModuleList()
     : m_modules(), m_modules_mutex(), m_notifier(nullptr) {}
 

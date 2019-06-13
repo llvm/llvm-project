@@ -27,8 +27,8 @@ namespace {
 class BroadcasterManagerWPMatcher {
 public:
   BroadcasterManagerWPMatcher(BroadcasterManagerSP manager_sp)
-      : m_manager_sp(manager_sp) {}
-  bool operator()(const BroadcasterManagerWP input_wp) const {
+      : m_manager_sp(std::move(manager_sp)) {}
+  bool operator()(const BroadcasterManagerWP &input_wp) const {
     BroadcasterManagerSP input_sp = input_wp.lock();
     return (input_sp && input_sp == m_manager_sp);
   }
@@ -191,7 +191,7 @@ void Listener::BroadcasterManagerWillDestruct(BroadcasterManagerSP manager_sp) {
       end_iter = m_broadcaster_managers.end();
   BroadcasterManagerWP manager_wp;
 
-  BroadcasterManagerWPMatcher matcher(manager_sp);
+  BroadcasterManagerWPMatcher matcher(std::move(manager_sp));
   iter = std::find_if<broadcaster_manager_collection::iterator,
                       BroadcasterManagerWPMatcher>(
       m_broadcaster_managers.begin(), end_iter, matcher);
@@ -424,7 +424,7 @@ size_t Listener::HandleBroadcastEvent(EventSP &event_sp) {
 }
 
 uint32_t
-Listener::StartListeningForEventSpec(BroadcasterManagerSP manager_sp,
+Listener::StartListeningForEventSpec(const BroadcasterManagerSP &manager_sp,
                                      const BroadcastEventSpec &event_spec) {
   if (!manager_sp)
     return 0;
@@ -452,7 +452,7 @@ Listener::StartListeningForEventSpec(BroadcasterManagerSP manager_sp,
   return bits_acquired;
 }
 
-bool Listener::StopListeningForEventSpec(BroadcasterManagerSP manager_sp,
+bool Listener::StopListeningForEventSpec(const BroadcasterManagerSP &manager_sp,
                                          const BroadcastEventSpec &event_spec) {
   if (!manager_sp)
     return false;

@@ -239,7 +239,7 @@ bool ASTResultSynthesizer::SynthesizeBodyResult(CompoundStmt *Body,
       break;
 
     last_expr = implicit_cast->getSubExpr();
-  } while (0);
+  } while (false);
 
   // is_lvalue is used to record whether the expression returns an assignable
   // Lvalue or an Rvalue.  This is relevant because they are handled
