@@ -107,13 +107,14 @@ amd_comgr_status_t addDeviceLibraries(DataAction *ActionInfo,
     return Status;
 
   bool CorrectlyRoundedSqrt = false, DazOpt = false, FiniteOnly = false,
-       UnsafeMath = false;
+       UnsafeMath = false, Wavefrontsize64 = false;
   for (auto &Option : ActionInfo->getOptions(true)) {
     bool *Flag = StringSwitch<bool *>(Option)
                      .Case("correctly_rounded_sqrt", &CorrectlyRoundedSqrt)
                      .Case("daz_opt", &DazOpt)
                      .Case("finite_only", &FiniteOnly)
                      .Case("unsafe_math", &UnsafeMath)
+                     .Case("wavefrontsize64", &Wavefrontsize64)
                      .Default(nullptr);
     // It is invalid to provide an unknown option and to repeat an option.
     if (!Flag || *Flag)
@@ -129,6 +130,9 @@ amd_comgr_status_t addDeviceLibraries(DataAction *ActionInfo,
   if (auto Status = addOCLCObject(ResultSet, get_oclc_finite_only(FiniteOnly)))
     return Status;
   if (auto Status = addOCLCObject(ResultSet, get_oclc_unsafe_math(UnsafeMath)))
+    return Status;
+  if (auto Status =
+          addOCLCObject(ResultSet, get_oclc_wavefrontsize64(Wavefrontsize64)))
     return Status;
 
   return AMD_COMGR_STATUS_SUCCESS;

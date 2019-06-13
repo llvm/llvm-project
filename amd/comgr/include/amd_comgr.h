@@ -1313,6 +1313,7 @@ typedef enum amd_comgr_action_kind_s {
    *    daz_opt
    *    finite_only
    *    unsafe_math
+   *    wavefrontsize64
    *
    * For example, to enable daz_opt and unsafe_math, the options should be set
    * as:

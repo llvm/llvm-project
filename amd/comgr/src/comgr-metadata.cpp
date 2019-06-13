@@ -227,6 +227,12 @@ getNoteIsaName(StringRef VendorName, StringRef ArchitectureName,
     NoteIsaName = "amdgcn-amd-amdhsa--gfx906";
   else if (OldName == "AMD:AMDGPU:9:0:9")
     NoteIsaName = "amdgcn-amd-amdhsa--gfx909";
+  else if (OldName == "AMD:AMDGPU:10:1:0")
+    NoteIsaName = "amdgcn-amd-amdhsa--gfx1010";
+  else if (OldName == "AMD:AMDGPU:10:1:1")
+    NoteIsaName = "amdgcn-amd-amdhsa--gfx1011";
+  else if (OldName == "AMD:AMDGPU:10:1:2")
+    NoteIsaName = "amdgcn-amd-amdhsa--gfx1012";
   else
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
@@ -424,6 +430,15 @@ static amd_comgr_status_t getElfIsaNameV3(const ELFObjectFile<ELFT> *Obj,
     break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX909:
     ElfIsaName += "gfx909";
+    break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010:
+    ElfIsaName += "gfx1010";
+    break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1011:
+    ElfIsaName += "gfx1011";
+    break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1012:
+    ElfIsaName += "gfx1012";
     break;
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
