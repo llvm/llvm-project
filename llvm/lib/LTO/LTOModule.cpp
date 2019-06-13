@@ -645,10 +645,32 @@ void LTOModule::parseMetadata() {
       continue;
     emitLinkerFlagsForGlobalCOFF(OS, Sym.symbol, TT, M);
   }
+}
 
-  // Dependent Libraries
-  raw_string_ostream OSD(DependentLibraries);
-  if (NamedMDNode *DependentLibraries = getModule().getNamedMetadata("llvm.dependent-libraries"))
-    for (MDNode *N : DependentLibraries->operands())
-      OSD << " " << cast<MDString>(N->getOperand(0))->getString();
+lto::InputFile *LTOModule::createInputFile(const void *buffer,
+                                           size_t buffer_size, const char *path,
+                                           std::string &outErr) {
+  StringRef Data((const char *)buffer, buffer_size);
+  MemoryBufferRef BufferRef(Data, path);
+
+  Expected<std::unique_ptr<lto::InputFile>> ObjOrErr =
+      lto::InputFile::create(BufferRef);
+
+  if (ObjOrErr)
+    return ObjOrErr->release();
+
+  outErr = std::string(path) +
+           ": Could not read LTO input file: " + toString(ObjOrErr.takeError());
+  return nullptr;
+}
+
+size_t LTOModule::getDependentLibraryCount(lto::InputFile *input) {
+  return input->getDependentLibraries().size();
+}
+
+const char *LTOModule::getDependentLibrary(lto::InputFile *input, size_t index,
+                                           size_t *size) {
+  StringRef S = input->getDependentLibraries()[index];
+  *size = S.size();
+  return S.data();
 }

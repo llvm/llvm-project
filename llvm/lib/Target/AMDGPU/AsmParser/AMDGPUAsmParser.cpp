@@ -147,10 +147,12 @@ public:
     ImmTyD16,
     ImmTyClampSI,
     ImmTyOModSI,
+    ImmTyDPP8,
     ImmTyDppCtrl,
     ImmTyDppRowMask,
     ImmTyDppBankMask,
     ImmTyDppBoundCtrl,
+    ImmTyDppFi,
     ImmTySdwaDstSel,
     ImmTySdwaSrc0Sel,
     ImmTySdwaSrc1Sel,
@@ -327,6 +329,7 @@ public:
   bool isBankMask() const { return isImmTy(ImmTyDppBankMask); }
   bool isRowMask() const { return isImmTy(ImmTyDppRowMask); }
   bool isBoundCtrl() const { return isImmTy(ImmTyDppBoundCtrl); }
+  bool isFI() const { return isImmTy(ImmTyDppFi); }
   bool isSDWADstSel() const { return isImmTy(ImmTySdwaDstSel); }
   bool isSDWASrc0Sel() const { return isImmTy(ImmTySdwaSrc0Sel); }
   bool isSDWASrc1Sel() const { return isImmTy(ImmTySdwaSrc1Sel); }
@@ -520,6 +523,7 @@ public:
   bool isSMRDOffset8() const;
   bool isSMRDOffset20() const;
   bool isSMRDLiteralOffset() const;
+  bool isDPP8() const;
   bool isDPPCtrl() const;
   bool isGPRIdxMode() const;
   bool isS16Imm() const;
@@ -687,10 +691,12 @@ public:
     case ImmTyFORMAT: OS << "FORMAT"; break;
     case ImmTyClampSI: OS << "ClampSI"; break;
     case ImmTyOModSI: OS << "OModSI"; break;
+    case ImmTyDPP8: OS << "DPP8"; break;
     case ImmTyDppCtrl: OS << "DppCtrl"; break;
     case ImmTyDppRowMask: OS << "DppRowMask"; break;
     case ImmTyDppBankMask: OS << "DppBankMask"; break;
     case ImmTyDppBoundCtrl: OS << "DppBoundCtrl"; break;
+    case ImmTyDppFi: OS << "FI"; break;
     case ImmTySdwaDstSel: OS << "SdwaDstSel"; break;
     case ImmTySdwaSrc0Sel: OS << "SdwaSrc0Sel"; break;
     case ImmTySdwaSrc1Sel: OS << "SdwaSrc1Sel"; break;
@@ -1148,6 +1154,7 @@ private:
   bool validateMIMGD16(const MCInst &Inst);
   bool validateMIMGDim(const MCInst &Inst);
   bool validateLdsDirect(const MCInst &Inst);
+  bool validateOpSel(const MCInst &Inst);
   bool validateVOP3Literal(const MCInst &Inst) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
@@ -1227,11 +1234,14 @@ public:
   void cvtMIMGAtomic(MCInst &Inst, const OperandVector &Operands);
 
   OperandMatchResultTy parseDim(OperandVector &Operands);
+  OperandMatchResultTy parseDPP8(OperandVector &Operands);
   OperandMatchResultTy parseDPPCtrl(OperandVector &Operands);
   AMDGPUOperand::Ptr defaultRowMask() const;
   AMDGPUOperand::Ptr defaultBankMask() const;
   AMDGPUOperand::Ptr defaultBoundCtrl() const;
-  void cvtDPP(MCInst &Inst, const OperandVector &Operands);
+  AMDGPUOperand::Ptr defaultFI() const;
+  void cvtDPP(MCInst &Inst, const OperandVector &Operands, bool IsDPP8 = false);
+  void cvtDPP8(MCInst &Inst, const OperandVector &Operands) { cvtDPP(Inst, Operands, true); }
 
   OperandMatchResultTy parseSDWASel(OperandVector &Operands, StringRef Prefix,
                                     AMDGPUOperand::ImmTy Type);
@@ -3003,6 +3013,19 @@ bool AMDGPUAsmParser::validateSOPLiteral(const MCInst &Inst) const {
   return NumLiterals <= 1;
 }
 
+bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
+  const unsigned Opc = Inst.getOpcode();
+  if (Opc == AMDGPU::V_PERMLANE16_B32_gfx10 ||
+      Opc == AMDGPU::V_PERMLANEX16_B32_gfx10) {
+    int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
+    unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
+
+    if (OpSel & ~3)
+      return false;
+  }
+  return true;
+}
+
 // VOP3 literal is only allowed in GFX10+ and only one can be used
 bool AMDGPUAsmParser::validateVOP3Literal(const MCInst &Inst) const {
   unsigned Opcode = Inst.getOpcode();
@@ -3069,6 +3092,11 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateIntClampSupported(Inst)) {
     Error(IDLoc,
       "integer clamping is not supported on this GPU");
+    return false;
+  }
+  if (!validateOpSel(Inst)) {
+    Error(IDLoc,
+      "invalid op_sel operand");
     return false;
   }
   // For MUBUF/MTBUF d16 is a part of opcode, so there is nothing to validate.
@@ -5673,6 +5701,7 @@ static const OptionalOperand AMDGPUOptionalOperandTable[] = {
   {"row_mask",   AMDGPUOperand::ImmTyDppRowMask, false, nullptr},
   {"bank_mask",  AMDGPUOperand::ImmTyDppBankMask, false, nullptr},
   {"bound_ctrl", AMDGPUOperand::ImmTyDppBoundCtrl, false, ConvertBoundCtrl},
+  {"fi",         AMDGPUOperand::ImmTyDppFi, false, nullptr},
   {"dst_sel",    AMDGPUOperand::ImmTySdwaDstSel, false, nullptr},
   {"src0_sel",   AMDGPUOperand::ImmTySdwaSrc0Sel, false, nullptr},
   {"src1_sel",   AMDGPUOperand::ImmTySdwaSrc1Sel, false, nullptr},
@@ -5996,6 +6025,10 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst,
 // dpp
 //===----------------------------------------------------------------------===//
 
+bool AMDGPUOperand::isDPP8() const {
+  return isImmTy(ImmTyDPP8);
+}
+
 bool AMDGPUOperand::isDPPCtrl() const {
   using namespace AMDGPU::DPP;
 
@@ -6013,7 +6046,9 @@ bool AMDGPUOperand::isDPPCtrl() const {
            (Imm == DppCtrl::ROW_MIRROR) ||
            (Imm == DppCtrl::ROW_HALF_MIRROR) ||
            (Imm == DppCtrl::BCAST15) ||
-           (Imm == DppCtrl::BCAST31);
+           (Imm == DppCtrl::BCAST31) ||
+           (Imm >= DppCtrl::ROW_SHARE_FIRST && Imm <= DppCtrl::ROW_SHARE_LAST) ||
+           (Imm >= DppCtrl::ROW_XMASK_FIRST && Imm <= DppCtrl::ROW_XMASK_LAST);
   }
   return false;
 }
@@ -6072,6 +6107,62 @@ OperandMatchResultTy AMDGPUAsmParser::parseDim(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
+OperandMatchResultTy AMDGPUAsmParser::parseDPP8(OperandVector &Operands) {
+  SMLoc S = Parser.getTok().getLoc();
+  StringRef Prefix;
+
+  if (getLexer().getKind() == AsmToken::Identifier) {
+    Prefix = Parser.getTok().getString();
+  } else {
+    return MatchOperand_NoMatch;
+  }
+
+  if (Prefix != "dpp8")
+    return parseDPPCtrl(Operands);
+  if (!isGFX10())
+    return MatchOperand_NoMatch;
+
+  // dpp8:[%d,%d,%d,%d,%d,%d,%d,%d]
+
+  int64_t Sels[8];
+
+  Parser.Lex();
+  if (getLexer().isNot(AsmToken::Colon))
+    return MatchOperand_ParseFail;
+
+  Parser.Lex();
+  if (getLexer().isNot(AsmToken::LBrac))
+    return MatchOperand_ParseFail;
+
+  Parser.Lex();
+  if (getParser().parseAbsoluteExpression(Sels[0]))
+    return MatchOperand_ParseFail;
+  if (0 > Sels[0] || 7 < Sels[0])
+    return MatchOperand_ParseFail;
+
+  for (size_t i = 1; i < 8; ++i) {
+    if (getLexer().isNot(AsmToken::Comma))
+      return MatchOperand_ParseFail;
+
+    Parser.Lex();
+    if (getParser().parseAbsoluteExpression(Sels[i]))
+      return MatchOperand_ParseFail;
+    if (0 > Sels[i] || 7 < Sels[i])
+      return MatchOperand_ParseFail;
+  }
+
+  if (getLexer().isNot(AsmToken::RBrac))
+    return MatchOperand_ParseFail;
+  Parser.Lex();
+
+  unsigned DPP8 = 0;
+  for (size_t i = 0; i < 8; ++i)
+    DPP8 |= (Sels[i] << (i * 3));
+
+  Operands.push_back(AMDGPUOperand::CreateImm(this, DPP8, S, AMDGPUOperand::ImmTyDPP8));
+  return MatchOperand_Success;
+}
+
 OperandMatchResultTy
 AMDGPUAsmParser::parseDPPCtrl(OperandVector &Operands) {
   using namespace AMDGPU::DPP;
@@ -6102,9 +6193,20 @@ AMDGPUAsmParser::parseDPPCtrl(OperandVector &Operands) {
         && Prefix != "wave_rol"
         && Prefix != "wave_shr"
         && Prefix != "wave_ror"
-        && Prefix != "row_bcast") {
+        && Prefix != "row_bcast"
+        && Prefix != "row_share"
+        && Prefix != "row_xmask") {
       return MatchOperand_NoMatch;
     }
+
+    if (!isGFX10() && (Prefix == "row_share" || Prefix == "row_xmask"))
+      return MatchOperand_NoMatch;
+
+    if (!isVI() && !isGFX9() &&
+        (Prefix == "wave_shl" || Prefix == "wave_shr" ||
+         Prefix == "wave_rol" || Prefix == "wave_ror" ||
+         Prefix == "row_bcast"))
+      return MatchOperand_NoMatch;
 
     Parser.Lex();
     if (getLexer().isNot(AsmToken::Colon))
@@ -6163,6 +6265,10 @@ AMDGPUAsmParser::parseDPPCtrl(OperandVector &Operands) {
         } else {
           return MatchOperand_ParseFail;
         }
+      } else if (Prefix == "row_share" && 0 <= Int && Int <= 15) {
+        Int |= DppCtrl::ROW_SHARE_FIRST;
+      } else if (Prefix == "row_xmask" && 0 <= Int && Int <= 15) {
+        Int |= DppCtrl::ROW_XMASK_FIRST;
       } else {
         return MatchOperand_ParseFail;
       }
@@ -6189,7 +6295,11 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultBoundCtrl() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyDppBoundCtrl);
 }
 
-void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands) {
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultFI() const {
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyDppFi);
+}
+
+void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool IsDPP8) {
   OptionalImmIndexMap OptionalIdx;
 
   unsigned I = 1;
@@ -6198,6 +6308,7 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands) {
     ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
   }
 
+  int Fi = 0;
   for (unsigned E = Operands.size(); I != E; ++I) {
     auto TiedTo = Desc.getOperandConstraint(Inst.getNumOperands(),
                                             MCOI::TIED_TO);
@@ -6213,21 +6324,44 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands) {
       // Skip it.
       continue;
     }
-    if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
-      Op.addRegWithFPInputModsOperands(Inst, 2);
-    } else if (Op.isDPPCtrl()) {
-      Op.addImmOperands(Inst, 1);
-    } else if (Op.isImm()) {
-      // Handle optional arguments
-      OptionalIdx[Op.getImmTy()] = I;
+
+    if (IsDPP8) {
+      if (Op.isDPP8()) {
+        Op.addImmOperands(Inst, 1);
+      } else if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
+        Op.addRegWithFPInputModsOperands(Inst, 2);
+      } else if (Op.isFI()) {
+        Fi = Op.getImm();
+      } else if (Op.isReg()) {
+        Op.addRegOperands(Inst, 1);
+      } else {
+        llvm_unreachable("Invalid operand type");
+      }
     } else {
-      llvm_unreachable("Invalid operand type");
+      if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
+        Op.addRegWithFPInputModsOperands(Inst, 2);
+      } else if (Op.isDPPCtrl()) {
+        Op.addImmOperands(Inst, 1);
+      } else if (Op.isImm()) {
+        // Handle optional arguments
+        OptionalIdx[Op.getImmTy()] = I;
+      } else {
+        llvm_unreachable("Invalid operand type");
+      }
     }
   }
 
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppRowMask, 0xf);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppBankMask, 0xf);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppBoundCtrl);
+  if (IsDPP8) {
+    using namespace llvm::AMDGPU::DPP;
+    Inst.addOperand(MCOperand::createImm(Fi? DPP8_FI_1 : DPP8_FI_0));
+  } else {
+    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppRowMask, 0xf);
+    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppBankMask, 0xf);
+    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppBoundCtrl);
+    if (AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::fi) != -1) {
+      addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppFi);
+    }
+  }
 }
 
 //===----------------------------------------------------------------------===//

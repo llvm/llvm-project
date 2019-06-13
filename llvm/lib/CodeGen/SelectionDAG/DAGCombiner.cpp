@@ -4638,7 +4638,8 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
   // Ensure that this isn't going to produce an unsupported unaligned access.
   if (ShAmt &&
       !TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), MemVT,
-                              LDST->getAddressSpace(), ShAmt / 8))
+                              LDST->getAddressSpace(), ShAmt / 8,
+                              LDST->getMemOperand()->getFlags()))
     return false;
 
   // It's not possible to generate a constant of extended or untyped type.

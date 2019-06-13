@@ -321,6 +321,7 @@ class VectorType;
     /// is "fast" by reference in the second argument.
     bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AddrSpace,
                                         unsigned Align,
+                                        MachineMemOperand::Flags Flags,
                                         bool *Fast) const override;
 
     EVT getOptimalMemOpType(uint64_t Size,

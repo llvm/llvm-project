@@ -123,6 +123,14 @@ static Error deepWriteArchive(StringRef ArcName,
   return Error::success();
 }
 
+/// The function executeObjcopyOnIHex does the dispatch based on the format
+/// of the output specified by the command line options.
+static Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
+                                  Buffer &Out) {
+  // TODO: support output formats other than ELF.
+  return elf::executeObjcopyOnIHex(Config, In, Out);
+}
+
 /// The function executeObjcopyOnRawBinary does the dispatch based on the format
 /// of the output specified by the command line options.
 static Error executeObjcopyOnRawBinary(const CopyConfig &Config,
@@ -210,12 +218,18 @@ static Error executeObjcopy(const CopyConfig &Config) {
     if (auto EC = sys::fs::status(Config.InputFilename, Stat))
       return createFileError(Config.InputFilename, EC);
 
-  if (Config.InputFormat == "binary") {
-    auto BufOrErr = MemoryBuffer::getFile(Config.InputFilename);
+  typedef Error (*ProcessRawFn)(const CopyConfig &, MemoryBuffer &, Buffer &);
+  auto ProcessRaw = StringSwitch<ProcessRawFn>(Config.InputFormat)
+                        .Case("binary", executeObjcopyOnRawBinary)
+                        .Case("ihex", executeObjcopyOnIHex)
+                        .Default(nullptr);
+
+  if (ProcessRaw) {
+    auto BufOrErr = MemoryBuffer::getFileOrSTDIN(Config.InputFilename);
     if (!BufOrErr)
       return createFileError(Config.InputFilename, BufOrErr.getError());
     FileBuffer FB(Config.OutputFilename);
-    if (Error E = executeObjcopyOnRawBinary(Config, *BufOrErr->get(), FB))
+    if (Error E = ProcessRaw(Config, *BufOrErr->get(), FB))
       return E;
   } else {
     Expected<OwningBinary<llvm::object::Binary>> BinaryOrErr =

@@ -162,6 +162,7 @@ copy("Headers") {
     "ppc_wrappers/mmintrin.h",
     "ppc_wrappers/xmmintrin.h",
     "ppc_wrappers/mm_malloc.h",
+    "ppc_wrappers/emmintrin.h",
     "openmp_wrappers/math.h",
     "openmp_wrappers/cmath",
     "openmp_wrappers/__clang_openmp_math.h",

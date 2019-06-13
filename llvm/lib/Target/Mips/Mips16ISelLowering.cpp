@@ -155,11 +155,8 @@ llvm::createMips16TargetLowering(const MipsTargetMachine &TM,
   return new Mips16TargetLowering(TM, STI);
 }
 
-bool
-Mips16TargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
-                                                     unsigned,
-                                                     unsigned,
-                                                     bool *Fast) const {
+bool Mips16TargetLowering::allowsMisalignedMemoryAccesses(
+    EVT VT, unsigned, unsigned, MachineMemOperand::Flags, bool *Fast) const {
   return false;
 }
 

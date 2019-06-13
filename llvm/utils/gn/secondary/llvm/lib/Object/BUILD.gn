@@ -35,6 +35,7 @@ static_library("Object") {
     "SymbolSize.cpp",
     "SymbolicFile.cpp",
     "WasmObjectFile.cpp",
+    "WindowsMachineFlag.cpp",
     "WindowsResource.cpp",
     "XCOFFObjectFile.cpp",
   ]

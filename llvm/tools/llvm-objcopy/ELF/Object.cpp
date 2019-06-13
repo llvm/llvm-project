@@ -205,6 +205,98 @@ IHexLineData IHexRecord::getLine(uint8_t Type, uint16_t Addr,
   return Line;
 }
 
+static Error checkRecord(const IHexRecord &R) {
+  switch (R.Type) {
+  case IHexRecord::Data:
+    if (R.HexData.size() == 0)
+      return createStringError(
+          errc::invalid_argument,
+          "zero data length is not allowed for data records");
+    break;
+  case IHexRecord::EndOfFile:
+    break;
+  case IHexRecord::SegmentAddr:
+    // 20-bit segment address. Data length must be 2 bytes
+    // (4 bytes in hex)
+    if (R.HexData.size() != 4)
+      return createStringError(
+          errc::invalid_argument,
+          "segment address data should be 2 bytes in size");
+    break;
+  case IHexRecord::StartAddr80x86:
+  case IHexRecord::StartAddr:
+    if (R.HexData.size() != 8)
+      return createStringError(errc::invalid_argument,
+                               "start address data should be 4 bytes in size");
+    // According to Intel HEX specification '03' record
+    // only specifies the code address within the 20-bit
+    // segmented address space of the 8086/80186. This
+    // means 12 high order bits should be zeroes.
+    if (R.Type == IHexRecord::StartAddr80x86 &&
+        R.HexData.take_front(3) != "000")
+      return createStringError(errc::invalid_argument,
+                               "start address exceeds 20 bit for 80x86");
+    break;
+  case IHexRecord::ExtendedAddr:
+    // 16-31 bits of linear base address
+    if (R.HexData.size() != 4)
+      return createStringError(
+          errc::invalid_argument,
+          "extended address data should be 2 bytes in size");
+    break;
+  default:
+    // Unknown record type
+    return createStringError(errc::invalid_argument, "unknown record type: %u",
+                             static_cast<unsigned>(R.Type));
+  }
+  return Error::success();
+}
+
+// Checks that IHEX line contains valid characters.
+// This allows converting hexadecimal data to integers
+// without extra verification.
+static Error checkChars(StringRef Line) {
+  assert(!Line.empty());
+  if (Line[0] != ':')
+    return createStringError(errc::invalid_argument,
+                             "missing ':' in the beginning of line.");
+
+  for (size_t Pos = 1; Pos < Line.size(); ++Pos)
+    if (hexDigitValue(Line[Pos]) == -1U)
+      return createStringError(errc::invalid_argument,
+                               "invalid character at position %zu.", Pos + 1);
+  return Error::success();
+}
+
+Expected<IHexRecord> IHexRecord::parse(StringRef Line) {
+  assert(!Line.empty());
+
+  // ':' + Length + Address + Type + Checksum with empty data ':LLAAAATTCC'
+  if (Line.size() < 11)
+    return createStringError(errc::invalid_argument,
+                             "line is too short: %zu chars.", Line.size());
+
+  if (Error E = checkChars(Line))
+    return std::move(E);
+
+  IHexRecord Rec;
+  size_t DataLen = checkedGetHex<uint8_t>(Line.substr(1, 2));
+  if (Line.size() != getLength(DataLen))
+    return createStringError(errc::invalid_argument,
+                             "invalid line length %zu (should be %zu)",
+                             Line.size(), getLength(DataLen));
+
+  Rec.Addr = checkedGetHex<uint16_t>(Line.substr(3, 4));
+  Rec.Type = checkedGetHex<uint8_t>(Line.substr(7, 2));
+  Rec.HexData = Line.substr(9, DataLen * 2);
+
+  if (getChecksum(Line.drop_front(1)) != 0)
+    return createStringError(errc::invalid_argument, "incorrect checksum.");
+  if (Error E = checkRecord(Rec))
+    return std::move(E);
+  return Rec;
+}
+
 static uint64_t sectionPhysicalAddr(const SectionBase *Sec) {
   Segment *Seg = Sec->ParentSegment;
   if (Seg && Seg->Type != ELF::PT_LOAD)
@@ -852,7 +944,8 @@ Error DynamicRelocationSection::removeSectionReferences(
   return Error::success();
 }
 
-Error Section::removeSectionReferences(bool AllowBrokenDependency,
+Error Section::removeSectionReferences(
+    bool AllowBrokenDependency,
     function_ref<bool(const SectionBase *)> ToRemove) {
   if (ToRemove(LinkSection)) {
     if (!AllowBrokenDependency)
@@ -1013,7 +1106,7 @@ static bool compareSegmentsByPAddr(const Segment *A, const Segment *B) {
   return A->Index < B->Index;
 }
 
-void BinaryELFBuilder::initFileHeader() {
+void BasicELFBuilder::initFileHeader() {
   Obj->Flags = 0x0;
   Obj->Type = ET_REL;
   Obj->OSABI = ELFOSABI_NONE;
@@ -1023,9 +1116,9 @@ void BinaryELFBuilder::initFileHeader() {
   Obj->Version = 1;
 }
 
-void BinaryELFBuilder::initHeaderSegment() { Obj->ElfHdrSegment.Index = 0; }
+void BasicELFBuilder::initHeaderSegment() { Obj->ElfHdrSegment.Index = 0; }
 
-StringTableSection *BinaryELFBuilder::addStrTab() {
+StringTableSection *BasicELFBuilder::addStrTab() {
   auto &StrTab = Obj->addSection<StringTableSection>();
   StrTab.Name = ".strtab";
 
@@ -1033,7 +1126,7 @@ StringTableSection *BinaryELFBuilder::addStrTab() {
   return &StrTab;
 }
 
-SymbolTableSection *BinaryELFBuilder::addSymTab(StringTableSection *StrTab) {
+SymbolTableSection *BasicELFBuilder::addSymTab(StringTableSection *StrTab) {
   auto &SymTab = Obj->addSection<SymbolTableSection>();
 
   SymTab.Name = ".symtab";
@@ -1044,6 +1137,11 @@ SymbolTableSection *BinaryELFBuilder::addSymTab(StringTableSection *StrTab) {
 
   Obj->SymbolTable = &SymTab;
   return &SymTab;
+}
+
+void BasicELFBuilder::initSections() {
+  for (auto &Section : Obj->sections())
+    Section.initialize(Obj->sections());
 }
 
 void BinaryELFBuilder::addData(SymbolTableSection *SymTab) {
@@ -1069,11 +1167,6 @@ void BinaryELFBuilder::addData(SymbolTableSection *SymTab) {
                     /*Value=*/DataSection.Size, STV_DEFAULT, SHN_ABS, 0);
 }
 
-void BinaryELFBuilder::initSections() {
-  for (SectionBase &Section : Obj->sections())
-    Section.initialize(Obj->sections());
-}
-
 std::unique_ptr<Object> BinaryELFBuilder::build() {
   initFileHeader();
   initHeaderSegment();
@@ -1081,6 +1174,62 @@ std::unique_ptr<Object> BinaryELFBuilder::build() {
   SymbolTableSection *SymTab = addSymTab(addStrTab());
   initSections();
   addData(SymTab);
+
+  return std::move(Obj);
+}
+
+// Adds sections from IHEX data file. Data should have been
+// fully validated by this time.
+void IHexELFBuilder::addDataSections() {
+  OwnedDataSection *Section = nullptr;
+  uint64_t SegmentAddr = 0, BaseAddr = 0;
+  uint32_t SecNo = 1;
+
+  for (const IHexRecord &R : Records) {
+    uint64_t RecAddr;
+    switch (R.Type) {
+    case IHexRecord::Data:
+      // Ignore empty data records
+      if (R.HexData.empty())
+        continue;
+      RecAddr = R.Addr + SegmentAddr + BaseAddr;
+      if (!Section || Section->Addr + Section->Size != RecAddr)
+        // OriginalOffset field is only used to sort section properly, so
+        // instead of keeping track of real offset in IHEX file, we use
+        // section number.
+        Section = &Obj->addSection<OwnedDataSection>(
+            ".sec" + std::to_string(SecNo++), RecAddr,
+            ELF::SHF_ALLOC | ELF::SHF_WRITE, SecNo);
+      Section->appendHexData(R.HexData);
+      break;
+    case IHexRecord::EndOfFile:
+      break;
+    case IHexRecord::SegmentAddr:
+      // 20-bit segment address.
+      SegmentAddr = checkedGetHex<uint16_t>(R.HexData) << 4;
+      break;
+    case IHexRecord::StartAddr80x86:
+    case IHexRecord::StartAddr:
+      Obj->Entry = checkedGetHex<uint32_t>(R.HexData);
+      assert(Obj->Entry <= 0xFFFFFU);
+      break;
+    case IHexRecord::ExtendedAddr:
+      // 16-31 bits of linear base address
+      BaseAddr = checkedGetHex<uint16_t>(R.HexData) << 16;
+      break;
+    default:
+      llvm_unreachable("unknown record type");
+    }
+  }
+}
+
+std::unique_ptr<Object> IHexELFBuilder::build() {
+  initFileHeader();
+  initHeaderSegment();
+  StringTableSection *StrTab = addStrTab();
+  addSymTab(StrTab);
+  initSections();
+  addDataSections();
 
   return std::move(Obj);
 }
@@ -1461,6 +1610,37 @@ Reader::~Reader() {}
 
 std::unique_ptr<Object> BinaryReader::create() const {
   return BinaryELFBuilder(MInfo.EMachine, MemBuf).build();
+}
+
+Expected<std::vector<IHexRecord>> IHexReader::parse() const {
+  SmallVector<StringRef, 16> Lines;
+  std::vector<IHexRecord> Records;
+  bool HasSections = false;
+
+  MemBuf->getBuffer().split(Lines, '\n');
+  Records.reserve(Lines.size());
+  for (size_t LineNo = 1; LineNo <= Lines.size(); ++LineNo) {
+    StringRef Line = Lines[LineNo - 1].trim();
+    if (Line.empty())
+      continue;
+
+    Expected<IHexRecord> R = IHexRecord::parse(Line);
+    if (!R)
+      return parseError(LineNo, R.takeError());
+    if (R->Type == IHexRecord::EndOfFile)
+      break;
+    HasSections |= (R->Type == IHexRecord::Data);
+    Records.push_back(*R);
+  }
+  if (!HasSections)
+    return parseError(-1U, "no sections");
+
+  return std::move(Records);
+}
+
+std::unique_ptr<Object> IHexReader::create() const {
+  std::vector<IHexRecord> Records = unwrapOrError(parse());
+  return IHexELFBuilder(Records).build();
 }
 
 std::unique_ptr<Object> ELFReader::create() const {

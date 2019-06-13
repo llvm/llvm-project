@@ -1019,13 +1019,12 @@ Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
   getIntrinsicInfoTableEntries(IID, Table);
   ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
 
+  // Validate function argument and return types, extracting overloaded types
+  // along the way.
   FunctionType *FTy = II->getCalledFunction()->getFunctionType();
   SmallVector<Type *, 6> OverloadTys;
-  Intrinsic::matchIntrinsicType(FTy->getReturnType(), TableRef, OverloadTys);
-  for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i)
-    Intrinsic::matchIntrinsicType(FTy->getParamType(i), TableRef, OverloadTys);
+  Intrinsic::matchIntrinsicSignature(FTy, TableRef, OverloadTys);
 
-  // Get the new return type overload of the intrinsic.
   Module *M = II->getParent()->getParent()->getParent();
   Type *EltTy = II->getType()->getVectorElementType();
   Type *NewTy = (NewNumElts == 1) ? EltTy : VectorType::get(EltTy, NewNumElts);

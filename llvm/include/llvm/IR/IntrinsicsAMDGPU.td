@@ -1437,6 +1437,26 @@ def int_amdgcn_ds_bpermute :
 // GFX10 Intrinsics
 //===----------------------------------------------------------------------===//
 
+// llvm.amdgcn.permlane16 <old> <src0> <src1> <src2> <fi> <bound_control>
+def int_amdgcn_permlane16 :
+  Intrinsic<[llvm_i32_ty],
+            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i1_ty],
+            [IntrNoMem, IntrConvergent]>;
+
+// llvm.amdgcn.permlanex16 <old> <src0> <src1> <src2> <fi> <bound_control>
+def int_amdgcn_permlanex16 :
+  Intrinsic<[llvm_i32_ty],
+            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i1_ty],
+            [IntrNoMem, IntrConvergent]>;
+
+// llvm.amdgcn.mov.dpp8.i32 <src> <sel>
+// <sel> is a 32-bit constant whose high 8 bits must be zero which selects
+// the lanes to read from.
+def int_amdgcn_mov_dpp8 :
+  Intrinsic<[llvm_anyint_ty],
+            [LLVMMatchType<0>, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent]>;
+
 def int_amdgcn_s_get_waveid_in_workgroup :
   GCCBuiltin<"__builtin_amdgcn_s_get_waveid_in_workgroup">,
   Intrinsic<[llvm_i32_ty], [], [IntrReadMem]>;

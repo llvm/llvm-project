@@ -591,9 +591,29 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
                                   TargetPrefix + ".'!");
   }
 
-  // Parse the list of return types.
+  ListInit *RetTypes = R->getValueAsListInit("RetTypes");
+  ListInit *ParamTypes = R->getValueAsListInit("ParamTypes");
+
+  // First collate a list of overloaded types.
   std::vector<MVT::SimpleValueType> OverloadedVTs;
-  ListInit *TypeList = R->getValueAsListInit("RetTypes");
+  for (ListInit *TypeList : {RetTypes, ParamTypes}) {
+    for (unsigned i = 0, e = TypeList->size(); i != e; ++i) {
+      Record *TyEl = TypeList->getElementAsRecord(i);
+      assert(TyEl->isSubClassOf("LLVMType") && "Expected a type!");
+
+      if (TyEl->isSubClassOf("LLVMMatchType"))
+        continue;
+
+      MVT::SimpleValueType VT = getValueType(TyEl->getValueAsDef("VT"));
+      if (MVT(VT).isOverloaded()) {
+        OverloadedVTs.push_back(VT);
+        isOverloaded = true;
+      }
+    }
+  }
+
+  // Parse the list of return types.
+  ListInit *TypeList = RetTypes;
   for (unsigned i = 0, e = TypeList->size(); i != e; ++i) {
     Record *TyEl = TypeList->getElementAsRecord(i);
     assert(TyEl->isSubClassOf("LLVMType") && "Expected a type!");
@@ -613,10 +633,6 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
     } else {
       VT = getValueType(TyEl->getValueAsDef("VT"));
     }
-    if (MVT(VT).isOverloaded()) {
-      OverloadedVTs.push_back(VT);
-      isOverloaded = true;
-    }
 
     // Reject invalid types.
     if (VT == MVT::isVoid)
@@ -628,7 +644,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
   }
 
   // Parse the list of parameter types.
-  TypeList = R->getValueAsListInit("ParamTypes");
+  TypeList = ParamTypes;
   for (unsigned i = 0, e = TypeList->size(); i != e; ++i) {
     Record *TyEl = TypeList->getElementAsRecord(i);
     assert(TyEl->isSubClassOf("LLVMType") && "Expected a type!");
@@ -653,11 +669,6 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
              "Expected iAny or vAny type");
     } else
       VT = getValueType(TyEl->getValueAsDef("VT"));
-
-    if (MVT(VT).isOverloaded()) {
-      OverloadedVTs.push_back(VT);
-      isOverloaded = true;
-    }
 
     // Reject invalid types.
     if (VT == MVT::isVoid && i != e-1 /*void at end means varargs*/)

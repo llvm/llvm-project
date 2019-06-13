@@ -100,7 +100,7 @@ static cl::opt<bool> VerifyIndvars(
   "verify-indvars", cl::Hidden,
   cl::desc("Verify the ScalarEvolution result after running indvars"));
 
-enum ReplaceExitVal { NeverRepl, OnlyCheapRepl, AlwaysRepl };
+enum ReplaceExitVal { NeverRepl, OnlyCheapRepl, NoHardUse, AlwaysRepl };
 
 static cl::opt<ReplaceExitVal> ReplaceExitValue(
     "replexitval", cl::Hidden, cl::init(OnlyCheapRepl),
@@ -108,6 +108,8 @@ static cl::opt<ReplaceExitVal> ReplaceExitValue(
     cl::values(clEnumValN(NeverRepl, "never", "never replace exit value"),
                clEnumValN(OnlyCheapRepl, "cheap",
                           "only replace exit value when the cost is cheap"),
+               clEnumValN(NoHardUse, "noharduse",
+                          "only replace exit values when loop def likely dead"),
                clEnumValN(AlwaysRepl, "always",
                           "always replace exit value whenever possible")));
 
@@ -632,7 +634,8 @@ bool IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
         // Computing the value outside of the loop brings no benefit if it is
         // definitely used inside the loop in a way which can not be optimized
         // away.
-        if (!isa<SCEVConstant>(ExitValue) && hasHardUserWithinLoop(L, Inst))
+        if (ReplaceExitValue != AlwaysRepl &&
+            !isa<SCEVConstant>(ExitValue) && hasHardUserWithinLoop(L, Inst))
           continue;
 
         bool HighCost = Rewriter.isHighCostExpansion(ExitValue, L, Inst);

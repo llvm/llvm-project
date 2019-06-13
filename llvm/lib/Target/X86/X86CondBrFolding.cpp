@@ -61,9 +61,7 @@ STATISTIC(NumFixedCondBrs, "Number of x86 condbr folded");
 namespace {
 class X86CondBrFoldingPass : public MachineFunctionPass {
 public:
-  X86CondBrFoldingPass() : MachineFunctionPass(ID) {
-    initializeX86CondBrFoldingPassPass(*PassRegistry::getPassRegistry());
-  }
+  X86CondBrFoldingPass() : MachineFunctionPass(ID) { }
   StringRef getPassName() const override { return "X86 CondBr Folding"; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;

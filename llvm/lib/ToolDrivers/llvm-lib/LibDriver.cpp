@@ -18,6 +18,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/WindowsMachineFlag.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -138,31 +139,6 @@ static void doList(opt::InputArgList& Args) {
     llvm::outs() << Name << '\n';
   }
   fatalOpenError(std::move(Err), B->getBufferIdentifier());
-}
-
-// Returns /machine's value.
-COFF::MachineTypes llvm::getMachineType(StringRef S) {
-  return StringSwitch<COFF::MachineTypes>(S.lower())
-      .Cases("x64", "amd64", COFF::IMAGE_FILE_MACHINE_AMD64)
-      .Cases("x86", "i386", COFF::IMAGE_FILE_MACHINE_I386)
-      .Case("arm", COFF::IMAGE_FILE_MACHINE_ARMNT)
-      .Case("arm64", COFF::IMAGE_FILE_MACHINE_ARM64)
-      .Default(COFF::IMAGE_FILE_MACHINE_UNKNOWN);
-}
-
-StringRef llvm::machineToStr(COFF::MachineTypes MT) {
-  switch (MT) {
-  case COFF::IMAGE_FILE_MACHINE_ARMNT:
-    return "arm";
-  case COFF::IMAGE_FILE_MACHINE_ARM64:
-    return "arm64";
-  case COFF::IMAGE_FILE_MACHINE_AMD64:
-    return "x64";
-  case COFF::IMAGE_FILE_MACHINE_I386:
-    return "x86";
-  default:
-    llvm_unreachable("unknown machine type");
-  }
 }
 
 int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {

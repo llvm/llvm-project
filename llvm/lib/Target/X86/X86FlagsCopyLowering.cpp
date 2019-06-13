@@ -70,12 +70,6 @@ STATISTIC(NumSetCCsInserted, "Number of setCC instructions inserted");
 STATISTIC(NumTestsInserted, "Number of test instructions inserted");
 STATISTIC(NumAddsInserted, "Number of adds instructions inserted");
 
-namespace llvm {
-
-void initializeX86FlagsCopyLoweringPassPass(PassRegistry &);
-
-} // end namespace llvm
-
 namespace {
 
 // Convenient array type for storing registers associated with each condition.
@@ -83,9 +77,7 @@ using CondRegArray = std::array<unsigned, X86::LAST_VALID_COND + 1>;
 
 class X86FlagsCopyLoweringPass : public MachineFunctionPass {
 public:
-  X86FlagsCopyLoweringPass() : MachineFunctionPass(ID) {
-    initializeX86FlagsCopyLoweringPassPass(*PassRegistry::getPassRegistry());
-  }
+  X86FlagsCopyLoweringPass() : MachineFunctionPass(ID) { }
 
   StringRef getPassName() const override { return "X86 EFLAGS copy lowering"; }
   bool runOnMachineFunction(MachineFunction &MF) override;

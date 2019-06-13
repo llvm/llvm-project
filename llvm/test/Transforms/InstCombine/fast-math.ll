@@ -830,6 +830,15 @@ define float @max1(float %a, float %b) {
   ret float %f
 }
 
+define float @fmax_no_fmf(float %a, float %b) {
+; CHECK-LABEL: @fmax_no_fmf(
+; CHECK-NEXT:    [[C:%.*]] = call float @fmaxf(float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    ret float [[C]]
+;
+  %c = call float @fmaxf(float %a, float %b)
+  ret float %c
+}
+
 define float @max2(float %a, float %b) {
 ; CHECK-LABEL: @max2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp nnan nsz ogt float [[A:%.*]], [[B:%.*]]
@@ -873,6 +882,15 @@ define float @min1(float %a, float %b) {
   %e = call nnan double @fmin(double %c, double %d)
   %f = fptrunc double %e to float
   ret float %f
+}
+
+define float @fmin_no_fmf(float %a, float %b) {
+; CHECK-LABEL: @fmin_no_fmf(
+; CHECK-NEXT:    [[C:%.*]] = call float @fminf(float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    ret float [[C]]
+;
+  %c = call float @fminf(float %a, float %b)
+  ret float %c
 }
 
 define float @min2(float %a, float %b) {

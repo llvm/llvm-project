@@ -13719,8 +13719,8 @@ Syntax:
 
 ::
 
-      declare i32 @llvm.experimental.vector.reduce.add.i32.v4i32(<4 x i32> %a)
-      declare i64 @llvm.experimental.vector.reduce.add.i64.v2i64(<2 x i64> %a)
+      declare i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %a)
+      declare i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %a)
 
 Overview:
 """""""""
@@ -13780,8 +13780,8 @@ Syntax:
 
 ::
 
-      declare i32 @llvm.experimental.vector.reduce.mul.i32.v4i32(<4 x i32> %a)
-      declare i64 @llvm.experimental.vector.reduce.mul.i64.v2i64(<2 x i64> %a)
+      declare i32 @llvm.experimental.vector.reduce.mul.v4i32(<4 x i32> %a)
+      declare i64 @llvm.experimental.vector.reduce.mul.v2i64(<2 x i64> %a)
 
 Overview:
 """""""""
@@ -13840,7 +13840,7 @@ Syntax:
 
 ::
 
-      declare i32 @llvm.experimental.vector.reduce.and.i32.v4i32(<4 x i32> %a)
+      declare i32 @llvm.experimental.vector.reduce.and.v4i32(<4 x i32> %a)
 
 Overview:
 """""""""
@@ -13861,7 +13861,7 @@ Syntax:
 
 ::
 
-      declare i32 @llvm.experimental.vector.reduce.or.i32.v4i32(<4 x i32> %a)
+      declare i32 @llvm.experimental.vector.reduce.or.v4i32(<4 x i32> %a)
 
 Overview:
 """""""""
@@ -13882,7 +13882,7 @@ Syntax:
 
 ::
 
-      declare i32 @llvm.experimental.vector.reduce.xor.i32.v4i32(<4 x i32> %a)
+      declare i32 @llvm.experimental.vector.reduce.xor.v4i32(<4 x i32> %a)
 
 Overview:
 """""""""
@@ -13903,7 +13903,7 @@ Syntax:
 
 ::
 
-      declare i32 @llvm.experimental.vector.reduce.smax.i32.v4i32(<4 x i32> %a)
+      declare i32 @llvm.experimental.vector.reduce.smax.v4i32(<4 x i32> %a)
 
 Overview:
 """""""""
@@ -13924,7 +13924,7 @@ Syntax:
 
 ::
 
-      declare i32 @llvm.experimental.vector.reduce.smin.i32.v4i32(<4 x i32> %a)
+      declare i32 @llvm.experimental.vector.reduce.smin.v4i32(<4 x i32> %a)
 
 Overview:
 """""""""
@@ -13945,7 +13945,7 @@ Syntax:
 
 ::
 
-      declare i32 @llvm.experimental.vector.reduce.umax.i32.v4i32(<4 x i32> %a)
+      declare i32 @llvm.experimental.vector.reduce.umax.v4i32(<4 x i32> %a)
 
 Overview:
 """""""""
@@ -13966,7 +13966,7 @@ Syntax:
 
 ::
 
-      declare i32 @llvm.experimental.vector.reduce.umin.i32.v4i32(<4 x i32> %a)
+      declare i32 @llvm.experimental.vector.reduce.umin.v4i32(<4 x i32> %a)
 
 Overview:
 """""""""
@@ -13987,8 +13987,8 @@ Syntax:
 
 ::
 
-      declare float @llvm.experimental.vector.reduce.fmax.f32.v4f32(<4 x float> %a)
-      declare double @llvm.experimental.vector.reduce.fmax.f64.v2f64(<2 x double> %a)
+      declare float @llvm.experimental.vector.reduce.fmax.v4f32(<4 x float> %a)
+      declare double @llvm.experimental.vector.reduce.fmax.v2f64(<2 x double> %a)
 
 Overview:
 """""""""
@@ -14012,8 +14012,8 @@ Syntax:
 
 ::
 
-      declare float @llvm.experimental.vector.reduce.fmin.f32.v4f32(<4 x float> %a)
-      declare double @llvm.experimental.vector.reduce.fmin.f64.v2f64(<2 x double> %a)
+      declare float @llvm.experimental.vector.reduce.fmin.v4f32(<4 x float> %a)
+      declare double @llvm.experimental.vector.reduce.fmin.v2f64(<2 x double> %a)
 
 Overview:
 """""""""

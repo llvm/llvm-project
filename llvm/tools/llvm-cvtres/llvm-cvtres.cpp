@@ -13,6 +13,7 @@
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/WindowsMachineFlag.h"
 #include "llvm/Object/WindowsResource.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -118,16 +119,12 @@ int main(int Argc, const char **Argv) {
 
   COFF::MachineTypes MachineType;
 
-  if (InputArgs.hasArg(OPT_MACHINE)) {
-    std::string MachineString = InputArgs.getLastArgValue(OPT_MACHINE).upper();
-    MachineType = StringSwitch<COFF::MachineTypes>(MachineString)
-                      .Case("ARM", COFF::IMAGE_FILE_MACHINE_ARMNT)
-                      .Case("ARM64", COFF::IMAGE_FILE_MACHINE_ARM64)
-                      .Case("X64", COFF::IMAGE_FILE_MACHINE_AMD64)
-                      .Case("X86", COFF::IMAGE_FILE_MACHINE_I386)
-                      .Default(COFF::IMAGE_FILE_MACHINE_UNKNOWN);
-    if (MachineType == COFF::IMAGE_FILE_MACHINE_UNKNOWN)
-      reportError("Unsupported machine architecture");
+  if (opt::Arg *Arg = InputArgs.getLastArg(OPT_MACHINE)) {
+    MachineType = getMachineType(Arg->getValue());
+    if (MachineType == COFF::IMAGE_FILE_MACHINE_UNKNOWN) {
+      reportError(Twine("Unsupported machine architecture ") + Arg->getValue() +
+                  "\n");
+    }
   } else {
     if (Verbose)
       outs() << "Machine architecture not specified; assumed X64.\n";
@@ -142,8 +139,8 @@ int main(int Argc, const char **Argv) {
 
   SmallString<128> OutputFile;
 
-  if (InputArgs.hasArg(OPT_OUT)) {
-    OutputFile = InputArgs.getLastArgValue(OPT_OUT);
+  if (opt::Arg *Arg = InputArgs.getLastArg(OPT_OUT)) {
+    OutputFile = Arg->getValue();
   } else {
     OutputFile = sys::path::filename(StringRef(InputFiles[0]));
     sys::path::replace_extension(OutputFile, ".obj");
@@ -159,22 +156,8 @@ int main(int Argc, const char **Argv) {
     DateTimeStamp = getTime();
   }
 
-  if (Verbose) {
-    outs() << "Machine: ";
-    switch (MachineType) {
-    case COFF::IMAGE_FILE_MACHINE_ARM64:
-      outs() << "ARM64\n";
-      break;
-    case COFF::IMAGE_FILE_MACHINE_ARMNT:
-      outs() << "ARM\n";
-      break;
-    case COFF::IMAGE_FILE_MACHINE_I386:
-      outs() << "X86\n";
-      break;
-    default:
-      outs() << "X64\n";
-    }
-  }
+  if (Verbose)
+    outs() << "Machine: " << machineToStr(MachineType) << '\n';
 
   WindowsResourceParser Parser;
 

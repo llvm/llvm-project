@@ -268,6 +268,11 @@ public:
         std::function<void(Error)> RecoverableErrorCallback,
         raw_ostream *OS = nullptr);
 
+    /// Get DWARF-version aware access to the file name entry at the provided
+    /// index.
+    const llvm::DWARFDebugLine::FileNameEntry &
+        getFileNameEntry(uint64_t Index) const;
+
     using RowVector = std::vector<Row>;
     using RowIter = RowVector::const_iterator;
     using SequenceVector = std::vector<Sequence>;
@@ -278,8 +283,6 @@ public:
     SequenceVector Sequences;
 
   private:
-    const llvm::DWARFDebugLine::FileNameEntry &
-    getFileNameEntry(uint64_t Index) const;
     uint32_t findRowInSeq(const DWARFDebugLine::Sequence &Seq,
                           object::SectionedAddress Address) const;
     Optional<StringRef>

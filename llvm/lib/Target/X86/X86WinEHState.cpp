@@ -40,9 +40,7 @@ class WinEHStatePass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid.
 
-  WinEHStatePass() : FunctionPass(ID) {
-    initializeWinEHStatePassPass(*PassRegistry::getPassRegistry());
-  }
+  WinEHStatePass() : FunctionPass(ID) { }
 
   bool runOnFunction(Function &Fn) override;
 
