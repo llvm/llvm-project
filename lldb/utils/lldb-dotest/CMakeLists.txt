@@ -7,7 +7,11 @@ get_property(LLDB_DOTEST_ARGS GLOBAL PROPERTY LLDB_DOTEST_ARGS_PROPERTY)
 
 # Generate lldb-dotest Python driver script for each build mode.
 if(LLDB_BUILT_STANDALONE)
-  foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
+  set(config_types ".")
+  if(CMAKE_CONFIGURATION_TYPES)
+    set(config_types ${CMAKE_CONFIGURATION_TYPES})
+  endif()
+  foreach(config_type ${config_types})
     # In paths to our build-tree, replace CMAKE_CFG_INTDIR with our actual configuration names.
     string(REPLACE ${CMAKE_CFG_INTDIR} ${config_type} config_runtime_output_dir ${LLVM_RUNTIME_OUTPUT_INTDIR})
     string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_DOTEST_ARGS "${LLDB_DOTEST_ARGS}")
