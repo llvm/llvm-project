@@ -8,7 +8,6 @@
 
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/LLDBAssert.h"
-#include "lldb/lldb-private.h"
 
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
@@ -270,7 +269,7 @@ void VersionProvider::Keep() {
   llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::F_Text);
   if (ec)
     return;
-  os << lldb_private::GetVersion() << "\n";
+  os << m_version << "\n";
 }
 
 void ProviderBase::anchor() {}
