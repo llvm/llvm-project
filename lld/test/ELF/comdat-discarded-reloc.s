@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/comdat-discarded-reloc.s -o %t2.o
-# RUN: ld.lld -gc-sections %t.o %t2.o -o %t
+# RUN: ld.lld -gc-sections --noinhibit-exec %t.o %t2.o -o /dev/null
 
 ## ELF spec doesn't allow a relocation to point to a deduplicated
 ## COMDAT section. Unfortunately this happens in practice (e.g. .eh_frame)

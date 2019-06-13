@@ -1,0 +1,24 @@
+# Test that we prefer debug_frame over eh_frame unwind plans. They usually
+# contain the same information, and we rarely have both kinds of entries for a
+# single function. However, in theory the debug_frame plan can be more complete,
+# whereas eh_frame is only required to be correct at places where exceptions can
+# be thrown.
+
+# UNSUPPORTED: system-windows
+# XFAIL: system-darwin
+# REQUIRES: target-x86_64, native
+
+# RUN: %clang -g %p/Inputs/call-asm.c %p/Inputs/prefer-debug-over-eh-frame.s -o %t
+# RUN: %lldb %t -s %s -o exit | FileCheck %s
+
+breakpoint set -n bar
+# CHECK: Breakpoint 1: where = {{.*}}`bar
+
+process launch
+# CHECK: stop reason = breakpoint 1.1
+
+target modules show-unwind -n foo
+# CHECK: Asynchronous (not restricted to call-sites) UnwindPlan is 'DWARF CFI plus augmentation from assembly parsing'
+# CHECK: Synchronous (restricted to call-sites) UnwindPlan is 'DWARF CFI'
+# CHECK: eh_frame UnwindPlan:
+# CHECK: debug_frame UnwindPlan:

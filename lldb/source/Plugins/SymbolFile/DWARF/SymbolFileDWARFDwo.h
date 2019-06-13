@@ -17,8 +17,7 @@ public:
 
   ~SymbolFileDWARFDwo() override = default;
 
-  lldb::CompUnitSP ParseCompileUnit(DWARFUnit *dwarf_cu,
-                                    uint32_t cu_idx) override;
+  lldb::CompUnitSP ParseCompileUnit(DWARFUnit *dwarf_cu) override;
 
   DWARFUnit *GetCompileUnit();
 

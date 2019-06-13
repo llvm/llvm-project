@@ -41,6 +41,10 @@ class DWARFUnitHeader {
   dw_offset_t m_abbr_offset = 0;
   uint8_t m_unit_type = 0;
   uint8_t m_addr_size = 0;
+
+  uint64_t m_type_hash = 0;
+  uint32_t m_type_offset = 0;
+
   uint64_t m_dwo_id = 0;
 
   DWARFUnitHeader() = default;
@@ -52,6 +56,8 @@ public:
   dw_offset_t GetLength() const { return m_length; }
   dw_offset_t GetAbbrOffset() const { return m_abbr_offset; }
   uint8_t GetUnitType() const { return m_unit_type; }
+  uint64_t GetTypeHash() const { return m_type_hash; }
+  dw_offset_t GetTypeOffset() const { return m_type_offset; }
   bool IsTypeUnit() const {
     return m_unit_type == DW_UT_type || m_unit_type == DW_UT_split_type;
   }
@@ -151,8 +157,6 @@ public:
 
   const DWARFDebugAranges &GetFunctionAranges();
 
-  DWARFFormValue::FixedFormSizes GetFixedFormSizes();
-
   void SetBaseAddress(dw_addr_t base_addr);
 
   DWARFBaseDIE GetUnitDIEOnly() { return DWARFDIE(this, GetUnitDIEPtrOnly()); }
@@ -204,6 +208,17 @@ public:
   }
 
   DIERef::Section GetDebugSection() const { return m_section; }
+
+  uint8_t GetUnitType() const { return m_header.GetUnitType(); }
+
+  /// Return a list of address ranges resulting from a (possibly encoded)
+  /// range list starting at a given offset in the appropriate ranges section.
+  llvm::Expected<DWARFRangeList> FindRnglistFromOffset(dw_offset_t offset) const;
+
+  /// Return a list of address ranges retrieved from an encoded range
+  /// list whose offset is found via a table lookup given an index (DWARF v5
+  /// and later).
+  llvm::Expected<DWARFRangeList> FindRnglistFromIndex(uint32_t index) const;
 
 protected:
   DWARFUnit(SymbolFileDWARF *dwarf, lldb::user_id_t uid,

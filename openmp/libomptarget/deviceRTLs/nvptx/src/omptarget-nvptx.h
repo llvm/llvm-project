@@ -398,7 +398,7 @@ extern __device__ omptarget_nvptx_SimpleMemoryManager
     omptarget_nvptx_simpleMemoryManager;
 extern __device__ __shared__ uint32_t usedMemIdx;
 extern __device__ __shared__ uint32_t usedSlotIdx;
-extern __device__ __shared__ volatile uint8_t
+extern __device__ __shared__ uint8_t
     parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
 extern __device__ __shared__ uint16_t threadLimit;
 extern __device__ __shared__ uint16_t threadsInTeam;

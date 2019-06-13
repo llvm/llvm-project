@@ -53,13 +53,13 @@ ReadAddressFromDebugAddrSection(const DWARFUnit *dwarf_cu,
 }
 
 // DWARFExpression constructor
-DWARFExpression::DWARFExpression(DWARFUnit *dwarf_cu)
-    : m_module_wp(), m_data(), m_dwarf_cu(dwarf_cu),
+DWARFExpression::DWARFExpression()
+    : m_module_wp(), m_data(), m_dwarf_cu(nullptr),
       m_reg_kind(eRegisterKindDWARF), m_loclist_slide(LLDB_INVALID_ADDRESS) {}
 
 DWARFExpression::DWARFExpression(lldb::ModuleSP module_sp,
                                  const DataExtractor &data,
-                                 DWARFUnit *dwarf_cu,
+                                 const DWARFUnit *dwarf_cu,
                                  lldb::offset_t data_offset,
                                  lldb::offset_t data_length)
     : m_module_wp(), m_data(data, data_offset, data_length),
@@ -74,51 +74,16 @@ DWARFExpression::~DWARFExpression() {}
 
 bool DWARFExpression::IsValid() const { return m_data.GetByteSize() > 0; }
 
-void DWARFExpression::SetOpcodeData(const DataExtractor &data) {
-  m_data = data;
-}
+void DWARFExpression::UpdateValue(uint64_t const_value,
+                                  lldb::offset_t const_value_byte_size,
+                                  uint8_t addr_byte_size) {
+  if (!const_value_byte_size)
+    return;
 
-void DWARFExpression::CopyOpcodeData(lldb::ModuleSP module_sp,
-                                     const DataExtractor &data,
-                                     lldb::offset_t data_offset,
-                                     lldb::offset_t data_length) {
-  const uint8_t *bytes = data.PeekData(data_offset, data_length);
-  if (bytes) {
-    m_module_wp = module_sp;
-    m_data.SetData(DataBufferSP(new DataBufferHeap(bytes, data_length)));
-    m_data.SetByteOrder(data.GetByteOrder());
-    m_data.SetAddressByteSize(data.GetAddressByteSize());
-  }
-}
-
-void DWARFExpression::CopyOpcodeData(const void *data,
-                                     lldb::offset_t data_length,
-                                     ByteOrder byte_order,
-                                     uint8_t addr_byte_size) {
-  if (data && data_length) {
-    m_data.SetData(DataBufferSP(new DataBufferHeap(data, data_length)));
-    m_data.SetByteOrder(byte_order);
-    m_data.SetAddressByteSize(addr_byte_size);
-  }
-}
-
-void DWARFExpression::CopyOpcodeData(uint64_t const_value,
-                                     lldb::offset_t const_value_byte_size,
-                                     uint8_t addr_byte_size) {
-  if (const_value_byte_size) {
-    m_data.SetData(
-        DataBufferSP(new DataBufferHeap(&const_value, const_value_byte_size)));
-    m_data.SetByteOrder(endian::InlHostByteOrder());
-    m_data.SetAddressByteSize(addr_byte_size);
-  }
-}
-
-void DWARFExpression::SetOpcodeData(lldb::ModuleSP module_sp,
-                                    const DataExtractor &data,
-                                    lldb::offset_t data_offset,
-                                    lldb::offset_t data_length) {
-  m_module_wp = module_sp;
-  m_data.SetData(data, data_offset, data_length);
+  m_data.SetData(
+      DataBufferSP(new DataBufferHeap(&const_value, const_value_byte_size)));
+  m_data.SetByteOrder(endian::InlHostByteOrder());
+  m_data.SetAddressByteSize(addr_byte_size);
 }
 
 void DWARFExpression::DumpLocation(Stream *s, lldb::offset_t offset,
@@ -483,23 +448,6 @@ void DWARFExpression::DumpLocation(Stream *s, lldb::offset_t offset,
     case DW_OP_call_ref: // 0x9a DWARF3 1 4- or 8-byte offset of DIE
       s->Printf("DW_OP_call_ref(0x%8.8" PRIx64 ")", m_data.GetAddress(&offset));
       break;
-    //      case DW_OP_call_frame_cfa: s << "call_frame_cfa"; break;
-    //      // 0x9c DWARF3
-    //      case DW_OP_bit_piece: // 0x9d DWARF3 2
-    //          s->Printf("DW_OP_bit_piece(0x%x, 0x%x)",
-    //          m_data.GetULEB128(&offset), m_data.GetULEB128(&offset));
-    //          break;
-    //      case DW_OP_lo_user:     s->PutCString("DW_OP_lo_user"); break;
-    //      // 0xe0
-    //      case DW_OP_hi_user:     s->PutCString("DW_OP_hi_user"); break;
-    //      // 0xff
-    //        case DW_OP_APPLE_extern:
-    //            s->Printf("DW_OP_APPLE_extern(%" PRIu64 ")",
-    //            m_data.GetULEB128(&offset));
-    //            break;
-    //        case DW_OP_APPLE_array_ref:
-    //            s->PutCString("DW_OP_APPLE_array_ref");
-    //            break;
     case DW_OP_form_tls_address:
       s->PutCString("DW_OP_form_tls_address"); // 0x9b
       break;
@@ -521,62 +469,6 @@ void DWARFExpression::DumpLocation(Stream *s, lldb::offset_t offset,
     case DW_OP_APPLE_uninit:
       s->PutCString("DW_OP_APPLE_uninit"); // 0xF0
       break;
-      //        case DW_OP_APPLE_assign:        // 0xF1 - pops value off and
-      //        assigns it to second item on stack (2nd item must have
-      //        assignable context)
-      //            s->PutCString("DW_OP_APPLE_assign");
-      //            break;
-      //        case DW_OP_APPLE_address_of:    // 0xF2 - gets the address of
-      //        the top stack item (top item must be a variable, or have
-      //        value_type that is an address already)
-      //            s->PutCString("DW_OP_APPLE_address_of");
-      //            break;
-      //        case DW_OP_APPLE_value_of:      // 0xF3 - pops the value off the
-      //        stack and pushes the value of that object (top item must be a
-      //        variable, or expression local)
-      //            s->PutCString("DW_OP_APPLE_value_of");
-      //            break;
-      //        case DW_OP_APPLE_deref_type:    // 0xF4 - gets the address of
-      //        the top stack item (top item must be a variable, or a clang
-      //        type)
-      //            s->PutCString("DW_OP_APPLE_deref_type");
-      //            break;
-      //        case DW_OP_APPLE_expr_local:    // 0xF5 - ULEB128 expression
-      //        local index
-      //            s->Printf("DW_OP_APPLE_expr_local(%" PRIu64 ")",
-      //            m_data.GetULEB128(&offset));
-      //            break;
-      //        case DW_OP_APPLE_constf:        // 0xF6 - 1 byte float size,
-      //        followed by constant float data
-      //            {
-      //                uint8_t float_length = m_data.GetU8(&offset);
-      //                s->Printf("DW_OP_APPLE_constf(<%u> ", float_length);
-      //                m_data.Dump(s, offset, eFormatHex, float_length, 1,
-      //                UINT32_MAX, DW_INVALID_ADDRESS, 0, 0);
-      //                s->PutChar(')');
-      //                // Consume the float data
-      //                m_data.GetData(&offset, float_length);
-      //            }
-      //            break;
-      //        case DW_OP_APPLE_scalar_cast:
-      //            s->Printf("DW_OP_APPLE_scalar_cast(%s)",
-      //            Scalar::GetValueTypeAsCString
-      //            ((Scalar::Type)m_data.GetU8(&offset)));
-      //            break;
-      //        case DW_OP_APPLE_clang_cast:
-      //            {
-      //                clang::Type *clang_type = (clang::Type
-      //                *)m_data.GetMaxU64(&offset, sizeof(void*));
-      //                s->Printf("DW_OP_APPLE_clang_cast(%p)", clang_type);
-      //            }
-      //            break;
-      //        case DW_OP_APPLE_clear:
-      //            s->PutCString("DW_OP_APPLE_clear");
-      //            break;
-      //        case DW_OP_APPLE_error:         // 0xFF - Stops expression
-      //        evaluation and returns an error (no args)
-      //            s->PutCString("DW_OP_APPLE_error");
-      //            break;
     }
   }
 }
@@ -690,52 +582,6 @@ static bool ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
   }
   return false;
 }
-
-// bool
-// DWARFExpression::LocationListContainsLoadAddress (Process* process, const
-// Address &addr) const
-//{
-//    return LocationListContainsLoadAddress(process,
-//    addr.GetLoadAddress(process));
-//}
-//
-// bool
-// DWARFExpression::LocationListContainsLoadAddress (Process* process, addr_t
-// load_addr) const
-//{
-//    if (load_addr == LLDB_INVALID_ADDRESS)
-//        return false;
-//
-//    if (IsLocationList())
-//    {
-//        lldb::offset_t offset = 0;
-//
-//        addr_t loc_list_base_addr = m_loclist_slide.GetLoadAddress(process);
-//
-//        if (loc_list_base_addr == LLDB_INVALID_ADDRESS)
-//            return false;
-//
-//        while (m_data.ValidOffset(offset))
-//        {
-//            // We need to figure out what the value is for the location.
-//            addr_t lo_pc = m_data.GetAddress(&offset);
-//            addr_t hi_pc = m_data.GetAddress(&offset);
-//            if (lo_pc == 0 && hi_pc == 0)
-//                break;
-//            else
-//            {
-//                lo_pc += loc_list_base_addr;
-//                hi_pc += loc_list_base_addr;
-//
-//                if (lo_pc <= load_addr && load_addr < hi_pc)
-//                    return true;
-//
-//                offset += m_data.GetU16(&offset);
-//            }
-//        }
-//    }
-//    return false;
-//}
 
 static offset_t GetOpcodeDataSize(const DataExtractor &data,
                                   const lldb::offset_t data_offset,
@@ -1310,7 +1156,7 @@ bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
 bool DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
-    DWARFUnit *dwarf_cu, const lldb::offset_t opcodes_offset,
+    const DWARFUnit *dwarf_cu, const lldb::offset_t opcodes_offset,
     const lldb::offset_t opcodes_length, const lldb::RegisterKind reg_kind,
     const Value *initial_value_ptr, const Value *object_address_ptr,
     Value &result, Status *error_ptr) {

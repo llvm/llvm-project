@@ -237,7 +237,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   AccessType accessibility = eAccessNone;
   if (!die)
     return nullptr;
-
   SymbolFileDWARF *dwarf = die.GetDWARF();
   if (log) {
     DWARFDIE context_die;
@@ -252,11 +251,27 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         die.GetTagAsCString(), die.GetName());
   }
 
+
   Type *type_ptr = dwarf->GetDIEToType().lookup(die.GetDIE());
   if (type_ptr == DIE_IS_BEING_PARSED)
     return nullptr;
   if (type_ptr)
     return type_ptr->shared_from_this();
+  // Set a bit that lets us know that we are currently parsing this
+  dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
+
+  if (DWARFDIE signature_die =
+          die.GetAttributeValueAsReferenceDIE(DW_AT_signature)) {
+    if (TypeSP type_sp =
+            ParseTypeFromDWARF(sc, signature_die, log, type_is_new_ptr)) {
+      dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
+      if (clang::DeclContext *decl_ctx =
+              GetCachedClangDeclContextForDIE(signature_die))
+        LinkDeclContextToDIE(decl_ctx, die);
+      return type_sp;
+    }
+    return nullptr;
+  }
 
   TypeList *type_list = dwarf->GetTypeList();
   if (type_is_new_ptr)
@@ -279,6 +294,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
   dw_attr_t attr;
   TypeSP type_sp;
+  LanguageType cu_language = die.GetLanguage();
   switch (tag) {
   case DW_TAG_typedef:
   case DW_TAG_base_type:
@@ -289,9 +305,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   case DW_TAG_restrict_type:
   case DW_TAG_volatile_type:
   case DW_TAG_unspecified_type: {
-    // Set a bit that lets us know that we are currently parsing this
-    dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
-
     const size_t num_attributes = die.GetAttributes(attributes);
     uint32_t encoding = 0;
     DWARFFormValue encoding_uid;
@@ -456,11 +469,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         }
       }
 
-      bool translation_unit_is_objc =
-          (sc.comp_unit->GetLanguage() == eLanguageTypeObjC ||
-           sc.comp_unit->GetLanguage() == eLanguageTypeObjC_plus_plus);
-
-      if (translation_unit_is_objc) {
+      if (cu_language == eLanguageTypeObjC ||
+          cu_language == eLanguageTypeObjC_plus_plus) {
         if (type_name_cstr != nullptr) {
           static ConstString g_objc_type_name_id("id");
           static ConstString g_objc_type_name_Class("Class");
@@ -540,9 +550,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   case DW_TAG_structure_type:
   case DW_TAG_union_type:
   case DW_TAG_class_type: {
-    // Set a bit that lets us know that we are currently parsing this
-    dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
-
     LanguageType class_language = eLanguageTypeUnknown;
     bool is_complete_objc_class = false;
     size_t calling_convention = llvm::dwarf::CallingConvention::DW_CC_normal;
@@ -620,8 +627,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
     Declaration unique_decl(decl);
 
     if (type_name_const_str) {
-      LanguageType die_language = die.GetLanguage();
-      if (Language::LanguageIsCPlusPlus(die_language)) {
+      if (Language::LanguageIsCPlusPlus(cu_language)) {
         // For C++, we rely solely upon the one definition rule that says
         // only one thing can exist at a given decl context. We ignore the
         // file and line that things are declared on.
@@ -659,7 +665,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
     }
 
     if (byte_size && *byte_size == 0 && type_name_cstr && !die.HasChildren() &&
-        sc.comp_unit->GetLanguage() == eLanguageTypeObjC) {
+        cu_language == eLanguageTypeObjC) {
       // Work around an issue with clang at the moment where forward
       // declarations for objective C classes are emitted as:
       //  DW_TAG_structure_type [2]
@@ -974,9 +980,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   } break;
 
   case DW_TAG_enumeration_type: {
-    // Set a bit that lets us know that we are currently parsing this
-    dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
-
     bool is_scoped = false;
     DWARFFormValue encoding_form;
 
@@ -1136,9 +1139,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   case DW_TAG_inlined_subroutine:
   case DW_TAG_subprogram:
   case DW_TAG_subroutine_type: {
-    // Set a bit that lets us know that we are currently parsing this
-    dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
-
     DWARFFormValue type_die_form;
     bool is_variadic = false;
     bool is_inline = false;
@@ -1658,9 +1658,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   } break;
 
   case DW_TAG_array_type: {
-    // Set a bit that lets us know that we are currently parsing this
-    dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
-
     DWARFFormValue type_die_form;
     uint32_t byte_stride = 0;
     uint32_t bit_stride = 0;
@@ -2553,7 +2550,7 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
   int call_file = 0;
   int call_line = 0;
   int call_column = 0;
-  DWARFExpression frame_base(die.GetCU());
+  DWARFExpression frame_base;
 
   const dw_tag_t tag = die.Tag();
 
@@ -2692,7 +2689,6 @@ bool DWARFASTParserClang::ParseChildMembers(
       const size_t num_attributes = die.GetAttributes(attributes);
       if (num_attributes > 0) {
         Declaration decl;
-        // DWARFExpression location;
         const char *name = nullptr;
         const char *prop_name = nullptr;
         const char *prop_getter_name = nullptr;
@@ -3172,7 +3168,6 @@ bool DWARFASTParserClang::ParseChildMembers(
       const size_t num_attributes = die.GetAttributes(attributes);
       if (num_attributes > 0) {
         Declaration decl;
-        DWARFExpression location(die.GetCU());
         DWARFFormValue encoding_form;
         AccessType accessibility = default_accessibility;
         bool is_virtual = false;

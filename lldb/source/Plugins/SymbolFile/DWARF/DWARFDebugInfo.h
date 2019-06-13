@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "DWARFDIE.h"
+#include "DWARFTypeUnit.h"
 #include "DWARFUnit.h"
 #include "SymbolFileDWARF.h"
 #include "lldb/Core/STLUtils.h"
@@ -46,6 +47,7 @@ public:
   DWARFUnit *GetUnitContainingDIEOffset(DIERef::Section section,
                                         dw_offset_t die_offset);
   DWARFUnit *GetUnit(const DIERef &die_ref);
+  DWARFTypeUnit *GetTypeUnitForHash(uint64_t hash);
   DWARFDIE GetDIEForDIEOffset(DIERef::Section section,
                               dw_offset_t die_offset);
   DWARFDIE GetDIE(const DIERef &die_ref);
@@ -69,10 +71,14 @@ protected:
   std::unique_ptr<DWARFDebugAranges>
       m_cu_aranges_up; // A quick address to compile unit table
 
+  std::vector<std::pair<uint64_t, uint32_t>> m_type_hash_to_unit_index;
+
 private:
   // All parsing needs to be done partially any managed by this class as
   // accessors are called.
   void ParseUnitHeadersIfNeeded();
+
+  void ParseUnitsFor(DIERef::Section section);
 
   uint32_t FindUnitIndex(DIERef::Section section, dw_offset_t offset);
 

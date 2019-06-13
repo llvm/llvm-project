@@ -60,10 +60,8 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
   // We are in our compile unit, parse starting at the offset we were told to
   // parse
   const DWARFDataExtractor &data = GetData();
-  DWARFFormValue::FixedFormSizes fixed_form_sizes =
-      DWARFFormValue::GetFixedFormSizesForAddressSize(GetAddressByteSize());
   if (offset < GetNextUnitOffset() &&
-      m_first_die.FastExtract(data, this, fixed_form_sizes, &offset)) {
+      m_first_die.FastExtract(data, this, &offset)) {
     AddUnitDIE(m_first_die);
     return;
   }
@@ -167,10 +165,7 @@ void DWARFUnit::ExtractDIEsRWLocked() {
   die_index_stack.reserve(32);
   die_index_stack.push_back(0);
   bool prev_die_had_children = false;
-  DWARFFormValue::FixedFormSizes fixed_form_sizes =
-      DWARFFormValue::GetFixedFormSizesForAddressSize(GetAddressByteSize());
-  while (offset < next_cu_offset &&
-         die.FastExtract(data, this, fixed_form_sizes, &offset)) {
+  while (offset < next_cu_offset && die.FastExtract(data, this, &offset)) {
     const bool null_die = die.IsNULL();
     if (depth == 0) {
       assert(m_die_array.empty() && "Compile unit DIE already added");
@@ -413,10 +408,6 @@ TypeSystem *DWARFUnit::GetTypeSystem() {
     return m_dwarf->GetTypeSystemForLanguage(GetLanguageType());
   else
     return nullptr;
-}
-
-DWARFFormValue::FixedFormSizes DWARFUnit::GetFixedFormSizes() {
-  return DWARFFormValue::GetFixedFormSizesForAddressSize(GetAddressByteSize());
 }
 
 void DWARFUnit::SetBaseAddress(dw_addr_t base_addr) { m_base_addr = base_addr; }
@@ -715,9 +706,16 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data, DIERef::Section section
         section == DIERef::Section::DebugTypes ? DW_UT_type : DW_UT_compile;
   }
 
+  if (header.IsTypeUnit()) {
+    header.m_type_hash = data.GetU64(offset_ptr);
+    header.m_type_offset = data.GetDWARFOffset(offset_ptr);
+  }
+
   bool length_OK = data.ValidOffset(header.GetNextUnitOffset() - 1);
   bool version_OK = SymbolFileDWARF::SupportedVersion(header.m_version);
   bool addr_size_OK = (header.m_addr_size == 4) || (header.m_addr_size == 8);
+  bool type_offset_OK =
+      !header.IsTypeUnit() || (header.m_type_offset <= header.GetLength());
 
   if (!length_OK)
     return llvm::make_error<llvm::object::GenericBinaryError>(
@@ -728,6 +726,9 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data, DIERef::Section section
   if (!addr_size_OK)
     return llvm::make_error<llvm::object::GenericBinaryError>(
         "Invalid unit address size");
+  if (!type_offset_OK)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "Type offset out of range");
 
   return header;
 }
@@ -787,4 +788,33 @@ uint32_t DWARFUnit::GetHeaderByteSize() const {
     return GetVersion() < 5 ? 23 : 24;
   }
   llvm_unreachable("invalid UnitType.");
+}
+
+llvm::Expected<DWARFRangeList>
+DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) const {
+  const DWARFDebugRangesBase *debug_ranges;
+  llvm::StringRef section;
+  if (GetVersion() <= 4) {
+    debug_ranges = m_dwarf->GetDebugRanges();
+    section = "debug_ranges";
+  } else {
+    debug_ranges = m_dwarf->GetDebugRngLists();
+    section = "debug_rnglists";
+  }
+  if (!debug_ranges)
+    return llvm::make_error<llvm::object::GenericBinaryError>("No " + section +
+                                                              " section");
+
+  DWARFRangeList ranges;
+  debug_ranges->FindRanges(this, offset, ranges);
+  return ranges;
+}
+
+llvm::Expected<DWARFRangeList>
+DWARFUnit::FindRnglistFromIndex(uint32_t index) const {
+  const DWARFDebugRangesBase *debug_rnglists = m_dwarf->GetDebugRngLists();
+  if (!debug_rnglists)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "No debug_rnglists section");
+  return FindRnglistFromOffset(debug_rnglists->GetOffset(index));
 }

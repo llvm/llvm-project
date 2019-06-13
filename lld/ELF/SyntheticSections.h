@@ -31,6 +31,7 @@
 namespace lld {
 namespace elf {
 class Defined;
+struct Partition;
 
 class SyntheticSection : public InputSection {
 public:
@@ -38,7 +39,7 @@ public:
                    StringRef Name)
       : InputSection(nullptr, Flags, Type, Alignment, {}, Name,
                      InputSectionBase::Synthetic) {
-    this->Live = true;
+    markLive();
   }
 
   virtual ~SyntheticSection() = default;
@@ -1061,6 +1062,14 @@ Defined *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
                            uint64_t Size, InputSectionBase &Section);
 
 void addVerneed(Symbol *SS);
+
+extern std::vector<Partition> Partitions;
+
+// Linker generated per-partition sections.
+struct Partition {
+  StringRef Name;
+  unsigned getNumber() const { return this - &Partitions[0] + 1; }
+};
 
 // Linker generated sections which can be used as inputs.
 struct InStruct {

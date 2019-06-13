@@ -10,3 +10,4 @@ add_lldb_unittest(LLDBMiUtilTests
   )
 
 target_sources(LLDBMiUtilTests PRIVATE $<TARGET_OBJECTS:lldb-mi-utils>)
+set_target_properties(lldb-mi-utils PROPERTIES FOLDER "lldb libraries")

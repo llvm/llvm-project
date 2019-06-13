@@ -69,7 +69,6 @@ public:
 
   bool FastExtract(const lldb_private::DWARFDataExtractor &debug_info_data,
                    const DWARFUnit *cu,
-                   const DWARFFormValue::FixedFormSizes &fixed_form_sizes,
                    lldb::offset_t *offset_ptr);
 
   bool Extract(const DWARFUnit *cu, lldb::offset_t *offset_ptr);
@@ -79,7 +78,6 @@ public:
                      DWARFDebugInfoEntry **block_die);
 
   size_t GetAttributes(const DWARFUnit *cu,
-                       DWARFFormValue::FixedFormSizes fixed_form_sizes,
                        DWARFAttributes &attrs,
                        uint32_t curr_depth = 0)
       const; // "curr_depth" for internal use only, don't set this yourself!!!
