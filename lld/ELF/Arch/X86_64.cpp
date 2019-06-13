@@ -59,8 +59,6 @@ X86_64::X86_64() {
   TlsGotRel = R_X86_64_TPOFF64;
   TlsModuleIndexRel = R_X86_64_DTPMOD64;
   TlsOffsetRel = R_X86_64_DTPOFF64;
-  GotEntrySize = 8;
-  GotPltEntrySize = 8;
   PltEntrySize = 16;
   PltHeaderSize = 16;
   TrapInstr = {0xcc, 0xcc, 0xcc, 0xcc}; // 0xcc = INT3

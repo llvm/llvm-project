@@ -56,8 +56,6 @@ ARM::ARM() {
   TlsModuleIndexRel = R_ARM_TLS_DTPMOD32;
   TlsOffsetRel = R_ARM_TLS_DTPOFF32;
   GotBaseSymInGotPlt = false;
-  GotEntrySize = 4;
-  GotPltEntrySize = 4;
   PltEntrySize = 16;
   PltHeaderSize = 32;
   TrapInstr = {0xd4, 0xd4, 0xd4, 0xd4};

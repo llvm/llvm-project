@@ -481,7 +481,6 @@ void LinkerScript::processSectionCommands() {
       if (Sec->Name == "/DISCARD/") {
         discard(V);
         Sec->SectionCommands.clear();
-        Sec->SectionIndex = 0; // Not an orphan.
         continue;
       }
 
@@ -824,6 +823,9 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
 }
 
 static bool isDiscardable(OutputSection &Sec) {
+  if (Sec.Name == "/DISCARD/")
+    return true;
+
   // We do not remove empty sections that are explicitly
   // assigned to any segment.
   if (!Sec.Phdrs.empty())
@@ -887,10 +889,9 @@ void LinkerScript::adjustSectionsBeforeSorting() {
       Sec->Alignment =
           std::max<uint32_t>(Sec->Alignment, Sec->AlignExpr().getValue());
 
-    // A live output section means that some input section was added to it. It
-    // might have been removed (if it was empty synthetic section), but we at
-    // least know the flags.
-    if (Sec->isLive())
+    // The input section might have been removed (if it was an empty synthetic
+    // section), but we at least know the flags.
+    if (Sec->HasInputSections)
       Flags = Sec->Flags;
 
     // We do not want to keep any special flags for output section

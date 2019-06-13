@@ -138,8 +138,7 @@ StringRef elf::getOutputSectionName(const InputSectionBase *S) {
 }
 
 static bool needsInterpSection() {
-  return !SharedFiles.empty() && !Config->DynamicLinker.empty() &&
-         Script->needsInterpSection();
+  return !Config->DynamicLinker.empty() && Script->needsInterpSection();
 }
 
 template <class ELFT> void elf::writeResult() { Writer<ELFT>().run(); }
@@ -188,8 +187,6 @@ static Defined *addOptionalRegular(StringRef Name, SectionBase *Sec,
 static Defined *addAbsolute(StringRef Name) {
   Symbol *Sym = Symtab->addSymbol(Defined{nullptr, Name, STB_GLOBAL, STV_HIDDEN,
                                           STT_NOTYPE, 0, 0, nullptr});
-  if (!Sym->isDefined())
-    error("duplicate symbol: " + toString(*Sym));
   return cast<Defined>(Sym);
 }
 
@@ -1055,7 +1052,7 @@ static int getRankProximityAux(OutputSection *A, OutputSection *B) {
 
 static int getRankProximity(OutputSection *A, BaseCommand *B) {
   auto *Sec = dyn_cast<OutputSection>(B);
-  return (Sec && Sec->isLive()) ? getRankProximityAux(A, Sec) : -1;
+  return (Sec && Sec->HasInputSections) ? getRankProximityAux(A, Sec) : -1;
 }
 
 // When placing orphan sections, we want to place them after symbol assignments
@@ -1097,19 +1094,20 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
   int Proximity = getRankProximity(Sec, *I);
   for (; I != E; ++I) {
     auto *CurSec = dyn_cast<OutputSection>(*I);
-    if (!CurSec || !CurSec->isLive())
+    if (!CurSec || !CurSec->HasInputSections)
       continue;
     if (getRankProximity(Sec, CurSec) != Proximity ||
         Sec->SortRank < CurSec->SortRank)
       break;
   }
 
-  auto IsLiveOutputSec = [](BaseCommand *Cmd) {
+  auto IsOutputSecWithInputSections = [](BaseCommand *Cmd) {
     auto *OS = dyn_cast<OutputSection>(Cmd);
-    return OS && OS->isLive();
+    return OS && OS->HasInputSections;
   };
   auto J = std::find_if(llvm::make_reverse_iterator(I),
-                        llvm::make_reverse_iterator(B), IsLiveOutputSec);
+                        llvm::make_reverse_iterator(B),
+                        IsOutputSecWithInputSections);
   I = J.base();
 
   // As a special case, if the orphan section is the last section, put
@@ -1117,7 +1115,7 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
   // This matches bfd's behavior and is convenient when the linker script fully
   // specifies the start of the file, but doesn't care about the end (the non
   // alloc sections for example).
-  auto NextSec = std::find_if(I, E, IsLiveOutputSec);
+  auto NextSec = std::find_if(I, E, IsOutputSecWithInputSections);
   if (NextSec == E)
     return E;
 
@@ -1605,6 +1603,27 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (Config->EMachine == EM_RISCV)
     if (!dyn_cast_or_null<Defined>(Symtab->find("__global_pointer$")))
       addOptionalRegular("__global_pointer$", findSection(".sdata"), 0x800);
+
+  if (Config->EMachine == EM_X86_64) {
+    // On targets that support TLSDESC, _TLS_MODULE_BASE_ is defined in such a
+    // way that:
+    //
+    // 1) Without relaxation: it produces a dynamic TLSDESC relocation that
+    // computes 0.
+    // 2) With LD->LE relaxation: _TLS_MODULE_BASE_@tpoff = 0 (lowest address in
+    // the TLS block).
+    //
+    // 2) is special cased in @tpoff computation. To satisfy 1), we define it as
+    // an absolute symbol of zero. This is different from GNU linkers which
+    // define _TLS_MODULE_BASE_ relative to the first TLS section.
+    Symbol *S = Symtab->find("_TLS_MODULE_BASE_");
+    if (S && S->isUndefined()) {
+      S->resolve(Defined{/*File=*/nullptr, S->getName(), STB_GLOBAL, STV_HIDDEN,
+                         STT_TLS, /*Value=*/0, 0,
+                         /*Section=*/nullptr});
+      ElfSym::TlsModuleBase = cast<Defined>(S);
+    }
+  }
 
   // This responsible for splitting up .eh_frame section into
   // pieces. The relocation scan uses those pieces, so this has to be

@@ -41,6 +41,8 @@ static TimerStack &GetTimerStackForCurrentThread() {
 
 Timer::Category::Category(const char *cat) : m_name(cat) {
   m_nanos.store(0, std::memory_order_release);
+  m_nanos_total.store(0, std::memory_order_release);
+  m_count.store(0, std::memory_order_release);
   Category *expected = g_categories;
   do {
     m_next = expected;
@@ -93,6 +95,8 @@ Timer::~Timer() {
 
   // Keep total results for each category so we can dump results.
   m_category.m_nanos += std::chrono::nanoseconds(timer_dur).count();
+  m_category.m_nanos_total += std::chrono::nanoseconds(total_dur).count();
+  m_category.m_count++;
 }
 
 void Timer::SetDisplayDepth(uint32_t depth) { g_display_depth = depth; }
@@ -100,25 +104,38 @@ void Timer::SetDisplayDepth(uint32_t depth) { g_display_depth = depth; }
 /* binary function predicate:
  * - returns whether a person is less than another person
  */
+namespace {
+struct Stats {
+  const char *name;
+  uint64_t nanos;
+  uint64_t nanos_total;
+  uint64_t count;
+};
+} // namespace
 
-typedef std::pair<const char *, uint64_t> TimerEntry;
-
-static bool CategoryMapIteratorSortCriterion(const TimerEntry &lhs,
-                                             const TimerEntry &rhs) {
-  return lhs.second > rhs.second;
+static bool CategoryMapIteratorSortCriterion(const Stats &lhs,
+                                             const Stats &rhs) {
+  return lhs.nanos > rhs.nanos;
 }
 
 void Timer::ResetCategoryTimes() {
-  for (Category *i = g_categories; i; i = i->m_next)
+  for (Category *i = g_categories; i; i = i->m_next) {
     i->m_nanos.store(0, std::memory_order_release);
+    i->m_nanos_total.store(0, std::memory_order_release);
+    i->m_count.store(0, std::memory_order_release);
+  }
 }
 
 void Timer::DumpCategoryTimes(Stream *s) {
-  std::vector<TimerEntry> sorted;
+  std::vector<Stats> sorted;
   for (Category *i = g_categories; i; i = i->m_next) {
     uint64_t nanos = i->m_nanos.load(std::memory_order_acquire);
-    if (nanos)
-      sorted.push_back(std::make_pair(i->m_name, nanos));
+    if (nanos) {
+      uint64_t nanos_total = i->m_nanos_total.load(std::memory_order_acquire);
+      uint64_t count = i->m_count.load(std::memory_order_acquire);
+      Stats stats{i->m_name, nanos, nanos_total, count};
+      sorted.push_back(stats);
+    }
   }
   if (sorted.empty())
     return; // Later code will break without any elements.
@@ -126,6 +143,10 @@ void Timer::DumpCategoryTimes(Stream *s) {
   // Sort by time
   llvm::sort(sorted.begin(), sorted.end(), CategoryMapIteratorSortCriterion);
 
-  for (const auto &timer : sorted)
-    s->Printf("%.9f sec for %s\n", timer.second / 1000000000., timer.first);
+  for (const auto &stats : sorted)
+    s->Printf("%.9f sec (total: %.3fs; child: %.3fs; count: %" PRIu64
+              ") for %s\n",
+              stats.nanos / 1000000000., stats.nanos_total / 1000000000.,
+              (stats.nanos_total - stats.nanos) / 1000000000., stats.count,
+              stats.name);
 }

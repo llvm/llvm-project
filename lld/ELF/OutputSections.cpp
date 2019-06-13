@@ -84,9 +84,10 @@ static bool canMergeToProgbits(unsigned Type) {
 }
 
 void OutputSection::addSection(InputSection *IS) {
-  if (!isLive()) {
+  if (!HasInputSections) {
     // If IS is the first section to be added to this section,
     // initialize Partition, Type, Entsize and flags from IS.
+    HasInputSections = true;
     Partition = IS->Partition;
     Type = IS->Type;
     Entsize = IS->Entsize;
@@ -273,11 +274,6 @@ static void finalizeShtGroup(OutputSection *OS,
 }
 
 void OutputSection::finalize() {
-  if (Type == SHT_NOBITS)
-    for (BaseCommand *Base : SectionCommands)
-      if (isa<ByteCommand>(Base))
-        Type = SHT_PROGBITS;
-
   std::vector<InputSection *> V = getInputSections(this);
   InputSection *First = V.empty() ? nullptr : V[0];
 

@@ -1483,7 +1483,7 @@ static void readSymbolPartitionSection(InputSectionBase *S) {
   Sym->Partition = NewPart.getNumber();
 }
 
-template <class ELFT> static Symbol *addUndefined(StringRef Name) {
+static Symbol *addUndefined(StringRef Name) {
   return Symtab->addSymbol(
       Undefined{nullptr, Name, STB_GLOBAL, STV_DEFAULT, 0});
 }
@@ -1530,7 +1530,6 @@ struct WrappedSymbol {
 // This function instantiates wrapper symbols. At this point, they seem
 // like they are not being used at all, so we explicitly set some flags so
 // that LTO won't eliminate them.
-template <class ELFT>
 static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &Args) {
   std::vector<WrappedSymbol> V;
   DenseSet<StringRef> Seen;
@@ -1544,8 +1543,8 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &Args) {
     if (!Sym)
       continue;
 
-    Symbol *Real = addUndefined<ELFT>(Saver.save("__real_" + Name));
-    Symbol *Wrap = addUndefined<ELFT>(Saver.save("__wrap_" + Name));
+    Symbol *Real = addUndefined(Saver.save("__real_" + Name));
+    Symbol *Wrap = addUndefined(Saver.save("__wrap_" + Name));
     V.push_back({Sym, Real, Wrap});
 
     // We want to tell LTO not to inline symbols to be overwritten
@@ -1648,7 +1647,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // Some symbols (such as __ehdr_start) are defined lazily only when there
   // are undefined symbols for them, so we add these to trigger that logic.
   for (StringRef Name : Script->ReferencedSymbols)
-    addUndefined<ELFT>(Name);
+    addUndefined(Name);
 
   // Handle the `--undefined <sym>` options.
   for (StringRef S : Config->Undefined)
@@ -1701,7 +1700,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Out::ElfHeader->Size = sizeof(typename ELFT::Ehdr);
 
   // Create wrapped symbols for -wrap option.
-  std::vector<WrappedSymbol> Wrapped = addWrappedSymbols<ELFT>(Args);
+  std::vector<WrappedSymbol> Wrapped = addWrappedSymbols(Args);
 
   // We need to create some reserved symbols such as _end. Create them.
   if (!Config->Relocatable)
