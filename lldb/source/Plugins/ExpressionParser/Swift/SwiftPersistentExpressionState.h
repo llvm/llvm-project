@@ -91,6 +91,9 @@ public:
 
   void RemovePersistentVariable(lldb::ExpressionVariableSP variable) override;
 
+  llvm::Optional<CompilerType>
+  GetCompilerTypeFromPersistentDecl(ConstString type_name) override;
+
   void RegisterSwiftPersistentDecl(swift::ValueDecl *value_decl);
 
   void RegisterSwiftPersistentDeclAlias(swift::ValueDecl *value_decl,

@@ -85,6 +85,12 @@ void SwiftPersistentExpressionState::RemovePersistentVariable(
   }
 }
 
+llvm::Optional<CompilerType>
+SwiftPersistentExpressionState::GetCompilerTypeFromPersistentDecl(
+    ConstString type_name) {
+  return llvm::None;
+}
+
 bool SwiftPersistentExpressionState::SwiftDeclMap::DeclsAreEquivalent(
     swift::Decl *lhs_decl, swift::Decl *rhs_decl) {
   swift::DeclKind lhs_kind = lhs_decl->getKind();
