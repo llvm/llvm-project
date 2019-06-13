@@ -59,10 +59,7 @@ namespace {
 
 class X86CallFrameOptimization : public MachineFunctionPass {
 public:
-  X86CallFrameOptimization() : MachineFunctionPass(ID) {
-    initializeX86CallFrameOptimizationPass(
-        *PassRegistry::getPassRegistry());
-  }
+  X86CallFrameOptimization() : MachineFunctionPass(ID) { }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

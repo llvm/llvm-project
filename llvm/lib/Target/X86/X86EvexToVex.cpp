@@ -68,9 +68,7 @@ class EvexToVexInstPass : public MachineFunctionPass {
 public:
   static char ID;
 
-  EvexToVexInstPass() : MachineFunctionPass(ID) {
-    initializeEvexToVexInstPassPass(*PassRegistry::getPassRegistry());
-  }
+  EvexToVexInstPass() : MachineFunctionPass(ID) { }
 
   StringRef getPassName() const override { return EVEX2VEX_DESC; }
 

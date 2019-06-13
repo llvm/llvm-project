@@ -16,6 +16,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/lldb-private.h"
 
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
@@ -67,10 +68,9 @@ llvm::Error SystemInitializerCommon::Initialize() {
       return e;
   }
 
-  // Initialize the file system.
   auto &r = repro::Reproducer::Instance();
   if (repro::Loader *loader = r.GetLoader()) {
-    FileSpec vfs_mapping = loader->GetFile<FileInfo>();
+    FileSpec vfs_mapping = loader->GetFile<FileProvider::Info>();
     if (vfs_mapping) {
       if (llvm::Error e = FileSystem::Initialize(vfs_mapping))
         return e;
@@ -78,6 +78,8 @@ llvm::Error SystemInitializerCommon::Initialize() {
       FileSystem::Initialize();
     }
   } else if (repro::Generator *g = r.GetGenerator()) {
+    repro::VersionProvider &vp = g->GetOrCreate<repro::VersionProvider>();
+    vp.SetVersion(lldb_private::GetVersion());
     repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
     FileSystem::Initialize(fp.GetFileCollector());
   } else {

@@ -101,9 +101,7 @@ namespace {
 /// Converts X86 cmov instructions into branches when profitable.
 class X86CmovConverterPass : public MachineFunctionPass {
 public:
-  X86CmovConverterPass() : MachineFunctionPass(ID) {
-    initializeX86CmovConverterPassPass(*PassRegistry::getPassRegistry());
-  }
+  X86CmovConverterPass() : MachineFunctionPass(ID) { }
 
   StringRef getPassName() const override { return "X86 cmov Conversion"; }
   bool runOnMachineFunction(MachineFunction &MF) override;

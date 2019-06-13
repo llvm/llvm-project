@@ -67,7 +67,7 @@ public:
     if (!loader)
       return {};
 
-    FileSpec file = loader->GetFile<repro::CommandInfo>();
+    FileSpec file = loader->GetFile<repro::CommandProvider::Info>();
     if (!file)
       return {};
 

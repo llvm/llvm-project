@@ -99,12 +99,6 @@ void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {
   case ProgramPoint::CallExitEndKind:
     Out << "CallExitEnd\"";
     break;
-  case ProgramPoint::PostStmtPurgeDeadSymbolsKind:
-    Out << "PostStmtPurgeDeadSymbols\"";
-    break;
-  case ProgramPoint::PreStmtPurgeDeadSymbolsKind:
-    Out << "PreStmtPurgeDeadSymbols\"";
-    break;
   case ProgramPoint::EpsilonKind:
     Out << "EpsilonPoint\"";
     break;
@@ -210,20 +204,35 @@ void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {
     Out << ", ";
     printLocJson(Out, S->getBeginLoc(), SM);
 
-    Out << ", \"stmt_point_kind\": ";
-    if (getAs<PreStmt>())
-      Out << "\"PreStmt\"";
-    else if (getAs<PostLoad>())
-      Out << "\"PostLoad\"";
-    else if (getAs<PostStore>())
-      Out << "\"PostStore\"";
-    else if (getAs<PostLValue>())
-      Out << "\"PostLValue\"";
+    Out << ", \"stmt_point_kind\": \"";
+    if (getAs<PreLoad>())
+      Out << "PreLoad";
+    else if (getAs<PreStore>())
+      Out << "PreStore";
     else if (getAs<PostAllocatorCall>())
-      Out << "\"PostAllocatorCall\"";
-    else
-      Out << "null";
+      Out << "PostAllocatorCall";
+    else if (getAs<PostCondition>())
+      Out << "PostCondition";
+    else if (getAs<PostLoad>())
+      Out << "PostLoad";
+    else if (getAs<PostLValue>())
+      Out << "PostLValue";
+    else if (getAs<PostStore>())
+      Out << "PostStore";
+    else if (getAs<PostStmt>())
+      Out << "PostStmt";
+    else if (getAs<PostStmtPurgeDeadSymbols>())
+      Out << "PostStmtPurgeDeadSymbols";
+    else if (getAs<PreStmtPurgeDeadSymbols>())
+      Out << "PreStmtPurgeDeadSymbols";
+    else if (getAs<PreStmt>())
+      Out << "PreStmt";
+    else {
+      Out << "\nKind: '" << getKind();
+      llvm_unreachable("' is unhandled StmtPoint kind!");
+    }
 
+    Out << '\"';
     break;
   }
   }

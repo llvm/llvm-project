@@ -102,9 +102,7 @@ public:
 
   StringRef getPassName() const override { return FIXUPBW_DESC; }
 
-  FixupBWInstPass() : MachineFunctionPass(ID) {
-    initializeFixupBWInstPassPass(*PassRegistry::getPassRegistry());
-  }
+  FixupBWInstPass() : MachineFunctionPass(ID) { }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineLoopInfo>(); // Machine loop info is used to

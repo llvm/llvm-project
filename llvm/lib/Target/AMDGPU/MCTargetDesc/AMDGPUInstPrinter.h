@@ -116,6 +116,8 @@ private:
                                   const MCSubtargetInfo &STI, raw_ostream &O);
   void printOperandAndIntInputMods(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O);
+  void printDPP8(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                 raw_ostream &O);
   void printDPPCtrl(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
   void printRowMask(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
@@ -124,6 +126,8 @@ private:
                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printBoundCtrl(const MCInst *MI, unsigned OpNo,
                       const MCSubtargetInfo &STI, raw_ostream &O);
+  void printFI(const MCInst *MI, unsigned OpNo,
+               const MCSubtargetInfo &STI, raw_ostream &O);
   void printSDWASel(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printSDWADstSel(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);

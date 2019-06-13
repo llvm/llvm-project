@@ -539,7 +539,7 @@ class Base_VOP_SDWA10_Real<VOP_SDWA_Pseudo ps> : Base_VOP_SDWA9_Real<ps> {
 class VOP_SDWA10_Real<VOP_SDWA_Pseudo ps> :
   Base_VOP_SDWA10_Real<ps>, SIMCInstr<ps.PseudoInstr, SIEncodingFamily.SDWA10>;
 
-class VOP_DPPe<VOPProfile P> : Enc64 {
+class VOP_DPPe<VOPProfile P, bit IsDPP16=0> : Enc64 {
   bits<2> src0_modifiers;
   bits<8> src0;
   bits<2> src1_modifiers;
@@ -551,6 +551,7 @@ class VOP_DPPe<VOPProfile P> : Enc64 {
 
   let Inst{39-32} = !if(P.HasSrc0, src0{7-0}, 0);
   let Inst{48-40} = dpp_ctrl;
+  let Inst{50}    = !if(IsDPP16, fi, ?);
   let Inst{51}    = bound_ctrl;
   let Inst{52}    = !if(P.HasSrc0Mods, src0_modifiers{0}, 0); // src0_neg
   let Inst{53}    = !if(P.HasSrc0Mods, src0_modifiers{1}, 0); // src0_abs
@@ -623,11 +624,11 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
   let TSFlags              = ps.TSFlags;
 }
 
-class VOP_DPP <string OpName, VOPProfile P,
-               dag InsDPP = P.InsDPP,
-               string AsmDPP = P.AsmDPP> :
+class VOP_DPP <string OpName, VOPProfile P, bit IsDPP16,
+               dag InsDPP = !if(IsDPP16, P.InsDPP16, P.InsDPP),
+               string AsmDPP = !if(IsDPP16, P.AsmDPP16, P.AsmDPP)> :
   InstSI <P.OutsDPP, InsDPP, OpName#AsmDPP, []>,
-  VOP_DPPe<P> {
+  VOP_DPPe<P, IsDPP16> {
 
   let mayLoad = 0;
   let mayStore = 0;
@@ -646,6 +647,42 @@ class VOP_DPP <string OpName, VOPProfile P,
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
   let DisableEncoding = !if(P.NumSrcArgs, P.TieRegDPP, "");
   let DecoderNamespace = "DPP";
+}
+
+class VOP_DPP8e<VOPProfile P> : Enc64 {
+  bits<8> src0;
+  bits<24> dpp8;
+  bits<9> fi;
+
+  let Inst{39-32} = !if(P.HasSrc0, src0{7-0}, 0);
+  let Inst{63-40} = dpp8{23-0};
+}
+
+class VOP_DPP8<string OpName, VOPProfile P> :
+  InstSI<P.OutsDPP8, P.InsDPP8, OpName#P.AsmDPP8, []>,
+  VOP_DPP8e<P> {
+
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let UseNamedOperandTable = 1;
+
+  let VALU = 1;
+  let DPP = 1;
+  let Size = 8;
+
+  let AsmMatchConverter = "cvtDPP8";
+  let SubtargetPredicate = HasDPP8;
+  let AssemblerPredicate = !if(P.HasExt, HasDPP8, DisableInst);
+  let AsmVariantName = !if(P.HasExt, AMDGPUAsmVariants.DPP,
+                                     AMDGPUAsmVariants.Disable);
+  let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
+  let DisableEncoding = !if(P.NumSrcArgs, P.TieRegDPP, "");
+}
+
+def DPP8Mode {
+  int FI_0 = 0xE9;
+  int FI_1 = 0xEA;
 }
 
 class getNumNodeArgs<SDPatternOperator Op> {

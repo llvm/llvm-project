@@ -68,9 +68,7 @@ using DisplacementSizeMap = std::map<int64_t, unsigned>;
 class X86AvoidSFBPass : public MachineFunctionPass {
 public:
   static char ID;
-  X86AvoidSFBPass() : MachineFunctionPass(ID) {
-    initializeX86AvoidSFBPassPass(*PassRegistry::getPassRegistry());
-  }
+  X86AvoidSFBPass() : MachineFunctionPass(ID) { }
 
   StringRef getPassName() const override {
     return "X86 Avoid Store Forwarding Blocks";

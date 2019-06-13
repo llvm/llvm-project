@@ -9,6 +9,7 @@
 #include "ClangPersistentVariables.h"
 
 #include "lldb/Core/Value.h"
+#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
@@ -50,6 +51,21 @@ void ClangPersistentVariables::RemovePersistentVariable(
 
   if (strtoul(name, nullptr, 0) == m_next_persistent_variable_id - 1)
     m_next_persistent_variable_id--;
+}
+
+llvm::Optional<CompilerType>
+ClangPersistentVariables::GetCompilerTypeFromPersistentDecl(
+    ConstString type_name) {
+  CompilerType compiler_type;
+  if (clang::TypeDecl *tdecl = llvm::dyn_cast_or_null<clang::TypeDecl>(
+          GetPersistentDecl(type_name))) {
+    compiler_type.SetCompilerType(
+        ClangASTContext::GetASTContext(&tdecl->getASTContext()),
+        reinterpret_cast<lldb::opaque_compiler_type_t>(
+            const_cast<clang::Type *>(tdecl->getTypeForDecl())));
+    return compiler_type;
+  }
+  return llvm::None;
 }
 
 void ClangPersistentVariables::RegisterPersistentDecl(ConstString name,
