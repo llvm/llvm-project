@@ -1445,10 +1445,9 @@ HoistTerminator:
 static bool canSinkInstructions(
     ArrayRef<Instruction *> Insts,
     DenseMap<Instruction *, SmallVector<Value *, 4>> &PHIOperands) {
-  // Prune out obviously bad instructions to move. Each instruction must have
-  // exactly zero or one use, and we check later that use is by a single, common
-  // PHI instruction in the successor.
-  bool HasUse = !Insts.front()->user_empty();
+  // Prune out obviously bad instructions to move. Any non-store instruction
+  // must have exactly one use, and we check later that use is by a single,
+  // common PHI instruction in the successor.
   for (auto *I : Insts) {
     // These instructions may change or break semantics if moved.
     if (isa<PHINode>(I) || I->isEHPad() || isa<AllocaInst>(I) ||
@@ -1462,10 +1461,9 @@ static bool canSinkInstructions(
       if (C->isInlineAsm())
         return false;
 
-    // Each instruction must have zero or one use.
-    if (HasUse && !I->hasOneUse())
-      return false;
-    if (!HasUse && !I->user_empty())
+    // Everything must have only one use too, apart from stores which
+    // have no uses.
+    if (!isa<StoreInst>(I) && !I->hasOneUse())
       return false;
   }
 
@@ -1474,11 +1472,11 @@ static bool canSinkInstructions(
     if (!I->isSameOperationAs(I0))
       return false;
 
-  // All instructions in Insts are known to be the same opcode. If they have a
-  // use, check that the only user is a PHI or in the same block as the
-  // instruction, because if a user is in the same block as an instruction we're
-  // contemplating sinking, it must already be determined to be sinkable.
-  if (HasUse) {
+  // All instructions in Insts are known to be the same opcode. If they aren't
+  // stores, check the only user of each is a PHI or in the same block as the
+  // instruction, because if a user is in the same block as an instruction
+  // we're contemplating sinking, it must already be determined to be sinkable.
+  if (!isa<StoreInst>(I0)) {
     auto *PNUse = dyn_cast<PHINode>(*I0->user_begin());
     auto *Succ = I0->getParent()->getTerminator()->getSuccessor(0);
     if (!all_of(Insts, [&PNUse,&Succ](const Instruction *I) -> bool {
@@ -1556,7 +1554,7 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   // it is slightly over-aggressive - it gets confused by commutative instructions
   // so double-check it here.
   Instruction *I0 = Insts.front();
-  if (!I0->user_empty()) {
+  if (!isa<StoreInst>(I0)) {
     auto *PNUse = dyn_cast<PHINode>(*I0->user_begin());
     if (!all_of(Insts, [&PNUse](const Instruction *I) -> bool {
           auto *U = cast<Instruction>(*I->user_begin());
@@ -1614,10 +1612,11 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
       I0->andIRFlags(I);
     }
 
-  if (!I0->user_empty()) {
+  if (!isa<StoreInst>(I0)) {
     // canSinkLastInstruction checked that all instructions were used by
     // one and only one PHI node. Find that now, RAUW it to our common
     // instruction and nuke it.
+    assert(I0->hasOneUse());
     auto *PN = cast<PHINode>(*I0->user_begin());
     PN->replaceAllUsesWith(I0);
     PN->eraseFromParent();
@@ -5560,25 +5559,23 @@ static bool ReduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   // Now we have signed numbers that have been shifted so that, given enough
   // precision, there are no negative values. Since the rest of the transform
   // is bitwise only, we switch now to an unsigned representation.
-  uint64_t GCD = 0;
-  for (auto &V : Values)
-    GCD = GreatestCommonDivisor64(GCD, (uint64_t)V);
 
-  // This transform can be done speculatively because it is so cheap - it results
-  // in a single rotate operation being inserted. This can only happen if the
-  // factor extracted is a power of 2.
-  // FIXME: If the GCD is an odd number we can multiply by the multiplicative
-  // inverse of GCD and then perform this transform.
+  // This transform can be done speculatively because it is so cheap - it
+  // results in a single rotate operation being inserted.
   // FIXME: It's possible that optimizing a switch on powers of two might also
   // be beneficial - flag values are often powers of two and we could use a CLZ
   // as the key function.
-  if (GCD <= 1 || !isPowerOf2_64(GCD))
-    // No common divisor found or too expensive to compute key function.
-    return false;
 
-  unsigned Shift = Log2_64(GCD);
+  // countTrailingZeros(0) returns 64. As Values is guaranteed to have more than
+  // one element and LLVM disallows duplicate cases, Shift is guaranteed to be
+  // less than 64.
+  unsigned Shift = 64;
   for (auto &V : Values)
-    V = (int64_t)((uint64_t)V >> Shift);
+    Shift = std::min(Shift, countTrailingZeros((uint64_t)V));
+  assert(Shift < 64);
+  if (Shift > 0)
+    for (auto &V : Values)
+      V = (int64_t)((uint64_t)V >> Shift);
 
   if (!isSwitchDense(Values))
     // Transform didn't create a dense switch.

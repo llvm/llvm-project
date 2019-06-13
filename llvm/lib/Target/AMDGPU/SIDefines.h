@@ -454,7 +454,20 @@ enum DppCtrl : unsigned {
   ROW_HALF_MIRROR   = 0x141,
   BCAST15           = 0x142,
   BCAST31           = 0x143,
-  DPP_LAST          = BCAST31
+  DPP_UNUSED8_FIRST = 0x144,
+  DPP_UNUSED8_LAST  = 0x14F,
+  ROW_SHARE_FIRST   = 0x150,
+  ROW_SHARE_LAST    = 0x15F,
+  ROW_XMASK_FIRST   = 0x160,
+  ROW_XMASK_LAST    = 0x16F,
+  DPP_LAST          = ROW_XMASK_LAST
+};
+
+enum DppFiMode {
+  DPP_FI_0  = 0,
+  DPP_FI_1  = 1,
+  DPP8_FI_0 = 0xE9,
+  DPP8_FI_1 = 0xEA,
 };
 
 } // namespace DPP

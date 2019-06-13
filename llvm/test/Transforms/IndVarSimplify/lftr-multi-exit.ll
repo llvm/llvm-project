@@ -274,3 +274,161 @@ latch:
 exit:
   ret void
 }
+
+;; Show the value of multiple exit LFTR (being able to eliminate all but
+;; one IV when exit tests involve multiple IVs).
+define void @combine_ivs(i32 %n) {
+; CHECK-LABEL: @combine_ivs(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ [[IV2_NEXT:%.*]], [[LATCH]] ]
+; CHECK-NEXT:    [[EARLYCND:%.*]] = icmp ult i32 [[IV]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EARLYCND]], label [[LATCH]], label [[EXIT:%.*]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[IV2_NEXT]] = add nuw nsw i32 [[IV2]], 1
+; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[IV2_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry], [ %iv.next, %latch]
+  %iv2 = phi i32 [ 1, %entry], [ %iv2.next, %latch]
+  %earlycnd = icmp ult i32 %iv, %n
+  br i1 %earlycnd, label %latch, label %exit
+
+latch:
+  %iv.next = add i32 %iv, 1
+  %iv2.next = add i32 %iv2, 1
+  store volatile i32 %iv, i32* @A
+  %c = icmp ult i32 %iv2.next, 1000
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; We can remove the decrementing IV entirely
+define void @combine_ivs2(i32 %n) {
+; CHECK-LABEL: @combine_ivs2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ 1000, [[ENTRY]] ], [ [[IV2_NEXT:%.*]], [[LATCH]] ]
+; CHECK-NEXT:    [[EARLYCND:%.*]] = icmp ult i32 [[IV]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EARLYCND]], label [[LATCH]], label [[EXIT:%.*]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[IV2_NEXT]] = sub nuw nsw i32 [[IV2]], 1
+; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[IV2_NEXT]], 0
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry], [ %iv.next, %latch]
+  %iv2 = phi i32 [ 1000, %entry], [ %iv2.next, %latch]
+  %earlycnd = icmp ult i32 %iv, %n
+  br i1 %earlycnd, label %latch, label %exit
+
+latch:
+  %iv.next = add i32 %iv, 1
+  %iv2.next = sub i32 %iv2, 1
+  store volatile i32 %iv, i32* @A
+  %c = icmp ugt i32 %iv2.next, 0
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; An example where we can eliminate an f(i) computation entirely
+; from a multiple exit loop with LFTR.
+define void @simplify_exit_test(i32 %n) {
+; CHECK-LABEL: @simplify_exit_test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[EARLYCND:%.*]] = icmp ult i32 [[IV]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EARLYCND]], label [[LATCH]], label [[EXIT:%.*]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[FX:%.*]] = shl i32 [[IV]], 4
+; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[FX]], 1024
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry], [ %iv.next, %latch]
+  %earlycnd = icmp ult i32 %iv, %n
+  br i1 %earlycnd, label %latch, label %exit
+
+latch:
+  %iv.next = add i32 %iv, 1
+  %fx = shl i32 %iv, 4
+  store volatile i32 %iv, i32* @A
+  %c = icmp ult i32 %fx, 1024
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+
+; Another example where we can remove an f(i) type computation, but this
+; time in a loop w/o a statically computable exit count.
+define void @simplify_exit_test2(i32 %n) {
+; CHECK-LABEL: @simplify_exit_test2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[VOL:%.*]] = load volatile i32, i32* @A
+; CHECK-NEXT:    [[EARLYCND:%.*]] = icmp ne i32 [[VOL]], 0
+; CHECK-NEXT:    br i1 [[EARLYCND]], label [[LATCH]], label [[EXIT:%.*]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[FX:%.*]] = udiv i32 [[IV]], 4
+; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[FX]], 1024
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry], [ %iv.next, %latch]
+  %vol = load volatile i32, i32* @A
+  %earlycnd = icmp ne i32 %vol, 0
+  br i1 %earlycnd, label %latch, label %exit
+
+latch:
+  %iv.next = add i32 %iv, 1
+  %fx = udiv i32 %iv, 4
+  store volatile i32 %iv, i32* @A
+  %c = icmp ult i32 %fx, 1024
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}

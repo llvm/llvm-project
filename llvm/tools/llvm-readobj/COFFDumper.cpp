@@ -1565,7 +1565,7 @@ void COFFDumper::printNeededLibraries() {
   llvm::stable_sort(Libs);
 
   for (const auto &L : Libs) {
-    outs() << "  " << L << "\n";
+    W.startLine() << L << "\n";
   }
 }
 

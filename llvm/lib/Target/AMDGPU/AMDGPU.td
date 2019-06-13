@@ -329,6 +329,13 @@ def FeatureDPP : SubtargetFeature<"dpp",
   "Support DPP (Data Parallel Primitives) extension"
 >;
 
+// DPP8 allows arbitrary cross-lane swizzling withing groups of 8 lanes.
+def FeatureDPP8 : SubtargetFeature<"dpp8",
+  "HasDPP8",
+  "true",
+  "Support DPP8 (Data Parallel Primitives) extension"
+>;
+
 def FeatureR128A16 : SubtargetFeature<"r128-a16",
   "HasR128A16",
   "true",
@@ -610,7 +617,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
    FeatureAddNoCarryInsts, FeatureFmaMixInsts, FeatureGFX8Insts,
    FeatureNoSdstCMPX, FeatureVscnt, FeatureRegisterBanking,
-   FeatureVOP3Literal, FeatureNoDataDepHazard,
+   FeatureVOP3Literal, FeatureDPP8, FeatureNoDataDepHazard,
    FeatureDoesNotSupportSRAMECC
   ]
 >;
@@ -962,8 +969,14 @@ def HasSDWA10 :
 def HasDPP : Predicate<"Subtarget->hasDPP()">,
   AssemblerPredicate<"FeatureGCN3Encoding,FeatureDPP">;
 
+def HasDPP8 : Predicate<"Subtarget->hasDPP8()">,
+  AssemblerPredicate<"!FeatureGCN3Encoding,FeatureGFX10Insts,FeatureDPP8">;
+
 def HasR128A16 : Predicate<"Subtarget->hasR128A16()">,
   AssemblerPredicate<"FeatureR128A16">;
+
+def HasDPP16 : Predicate<"Subtarget->hasDPP()">,
+  AssemblerPredicate<"!FeatureGCN3Encoding,FeatureGFX10Insts,FeatureDPP">;
 
 def HasIntClamp : Predicate<"Subtarget->hasIntClamp()">,
   AssemblerPredicate<"FeatureIntClamp">;

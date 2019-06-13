@@ -1,0 +1,12 @@
+[
+{
+  "directory": "DIR",
+  "command": "clang -c DIR/regular_cdb.cpp -IInputs -MD -MF DIR/regular_cdb.d",
+  "file": "DIR/regular_cdb.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang -c DIR/regular_cdb.cpp -IInputs -D INCLUDE_HEADER2 -MD -MF DIR/regular_cdb2.d",
+  "file": "DIR/regular_cdb.cpp"
+}
+]

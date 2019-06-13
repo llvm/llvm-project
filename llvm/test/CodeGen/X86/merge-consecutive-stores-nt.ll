@@ -10,7 +10,7 @@
 ; PR42123
 ;
 
-define void @merge_2_v4f32_align32(<4 x float>* %a0, <4 x float>* %a1)  {
+define void @merge_2_v4f32_align32(<4 x float>* %a0, <4 x float>* %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -71,7 +71,7 @@ define void @merge_2_v4f32_align32(<4 x float>* %a0, <4 x float>* %a1)  {
 }
 
 ; Don't merge nt and non-nt loads even if aligned.
-define void @merge_2_v4f32_align32_mix_ntload(<4 x float>* %a0, <4 x float>* %a1)  {
+define void @merge_2_v4f32_align32_mix_ntload(<4 x float>* %a0, <4 x float>* %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align32_mix_ntload:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -125,7 +125,7 @@ define void @merge_2_v4f32_align32_mix_ntload(<4 x float>* %a0, <4 x float>* %a1
 }
 
 ; Don't merge nt and non-nt stores even if aligned.
-define void @merge_2_v4f32_align32_mix_ntstore(<4 x float>* %a0, <4 x float>* %a1)  {
+define void @merge_2_v4f32_align32_mix_ntstore(<4 x float>* %a0, <4 x float>* %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align32_mix_ntstore:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -164,7 +164,7 @@ define void @merge_2_v4f32_align32_mix_ntstore(<4 x float>* %a0, <4 x float>* %a
 
 ; FIXME: AVX2 can't perform NT-load-ymm on 16-byte aligned memory.
 ; Must be kept seperate as VMOVNTDQA xmm.
-define void @merge_2_v4f32_align16_ntload(<4 x float>* %a0, <4 x float>* %a1)  {
+define void @merge_2_v4f32_align16_ntload(<4 x float>* %a0, <4 x float>* %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align16_ntload:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -226,7 +226,7 @@ define void @merge_2_v4f32_align16_ntload(<4 x float>* %a0, <4 x float>* %a1)  {
 
 ; FIXME: AVX can't perform NT-store-ymm on 16-byte aligned memory.
 ; Must be kept seperate as VMOVNTPS xmm.
-define void @merge_2_v4f32_align16_ntstore(<4 x float>* %a0, <4 x float>* %a1)  {
+define void @merge_2_v4f32_align16_ntstore(<4 x float>* %a0, <4 x float>* %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align16_ntstore:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -264,7 +264,7 @@ define void @merge_2_v4f32_align16_ntstore(<4 x float>* %a0, <4 x float>* %a1)  
 
 ; FIXME: Nothing can perform NT-load-vector on 1-byte aligned memory.
 ; Just perform regular loads.
-define void @merge_2_v4f32_align1_ntload(<4 x float>* %a0, <4 x float>* %a1)  {
+define void @merge_2_v4f32_align1_ntload(<4 x float>* %a0, <4 x float>* %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align1_ntload:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -302,7 +302,7 @@ define void @merge_2_v4f32_align1_ntload(<4 x float>* %a0, <4 x float>* %a1)  {
 
 ; FIXME: Nothing can perform NT-store-vector on 1-byte aligned memory.
 ; Must be scalarized to use MOVTNI/MOVNTSD.
-define void @merge_2_v4f32_align1_ntstore(<4 x float>* %a0, <4 x float>* %a1)  {
+define void @merge_2_v4f32_align1_ntstore(<4 x float>* %a0, <4 x float>* %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align1_ntstore:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -340,7 +340,7 @@ define void @merge_2_v4f32_align1_ntstore(<4 x float>* %a0, <4 x float>* %a1)  {
 
 ; FIXME: Nothing can perform NT-load-vector on 1-byte aligned memory.
 ; Just perform regular loads and scalarize NT-stores.
-define void @merge_2_v4f32_align1(<4 x float>* %a0, <4 x float>* %a1)  {
+define void @merge_2_v4f32_align1(<4 x float>* %a0, <4 x float>* %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax

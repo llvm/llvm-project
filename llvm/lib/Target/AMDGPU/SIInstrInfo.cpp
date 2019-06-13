@@ -3360,8 +3360,27 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         (DC >= DppCtrl::DPP_UNUSED4_FIRST && DC <= DppCtrl::DPP_UNUSED4_LAST) ||
         (DC >= DppCtrl::DPP_UNUSED5_FIRST && DC <= DppCtrl::DPP_UNUSED5_LAST) ||
         (DC >= DppCtrl::DPP_UNUSED6_FIRST && DC <= DppCtrl::DPP_UNUSED6_LAST) ||
-        (DC >= DppCtrl::DPP_UNUSED7_FIRST && DC <= DppCtrl::DPP_UNUSED7_LAST)) {
+        (DC >= DppCtrl::DPP_UNUSED7_FIRST && DC <= DppCtrl::DPP_UNUSED7_LAST) ||
+        (DC >= DppCtrl::DPP_UNUSED8_FIRST && DC <= DppCtrl::DPP_UNUSED8_LAST)) {
       ErrInfo = "Invalid dpp_ctrl value";
+      return false;
+    }
+    if (DC >= DppCtrl::WAVE_SHL1 && DC <= DppCtrl::WAVE_ROR1 &&
+        ST.getGeneration() >= AMDGPUSubtarget::GFX10) {
+      ErrInfo = "Invalid dpp_ctrl value: "
+                "wavefront shifts are not supported on GFX10+";
+      return false;
+    }
+    if (DC >= DppCtrl::BCAST15 && DC <= DppCtrl::BCAST31 &&
+        ST.getGeneration() >= AMDGPUSubtarget::GFX10) {
+      ErrInfo = "Invalid dpp_ctrl value: "
+                "broadcats are not supported on GFX10+";
+      return false;
+    }
+    if (DC >= DppCtrl::ROW_SHARE_FIRST && DC <= DppCtrl::ROW_XMASK_LAST &&
+        ST.getGeneration() < AMDGPUSubtarget::GFX10) {
+      ErrInfo = "Invalid dpp_ctrl value: "
+                "row_share and row_xmask are not supported before GFX10";
       return false;
     }
   }
@@ -3772,6 +3791,26 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
     AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1),
     AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2)
   };
+
+  if (Opc == AMDGPU::V_PERMLANE16_B32 ||
+      Opc == AMDGPU::V_PERMLANEX16_B32) {
+    // src1 and src2 must be scalar
+    MachineOperand &Src1 = MI.getOperand(VOP3Idx[1]);
+    MachineOperand &Src2 = MI.getOperand(VOP3Idx[2]);
+    const DebugLoc &DL = MI.getDebugLoc();
+    if (Src1.isReg() && !RI.isSGPRClass(MRI.getRegClass(Src1.getReg()))) {
+      unsigned Reg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+      BuildMI(*MI.getParent(), MI, DL, get(AMDGPU::V_READFIRSTLANE_B32), Reg)
+        .add(Src1);
+      Src1.ChangeToRegister(Reg, false);
+    }
+    if (Src2.isReg() && !RI.isSGPRClass(MRI.getRegClass(Src2.getReg()))) {
+      unsigned Reg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+      BuildMI(*MI.getParent(), MI, DL, get(AMDGPU::V_READFIRSTLANE_B32), Reg)
+        .add(Src2);
+      Src2.ChangeToRegister(Reg, false);
+    }
+  }
 
   // Find the one SGPR operand we are allowed to use.
   int ConstantBusLimit = ST.getConstantBusLimit(Opc);

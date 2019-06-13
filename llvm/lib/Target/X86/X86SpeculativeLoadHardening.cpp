@@ -122,10 +122,7 @@ namespace {
 
 class X86SpeculativeLoadHardeningPass : public MachineFunctionPass {
 public:
-  X86SpeculativeLoadHardeningPass() : MachineFunctionPass(ID) {
-    initializeX86SpeculativeLoadHardeningPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+  X86SpeculativeLoadHardeningPass() : MachineFunctionPass(ID) { }
 
   StringRef getPassName() const override {
     return "X86 speculative load hardening";

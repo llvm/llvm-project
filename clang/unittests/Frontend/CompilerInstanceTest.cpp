@@ -73,6 +73,10 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
 
 TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
   auto DiagOpts = new DiagnosticOptions();
+  // Tell the diagnostics engine to emit the diagnostic log to STDERR. This
+  // ensures that a chained diagnostic consumer is created so that the test can
+  // exercise the unowned diagnostic consumer in a chained consumer.
+  DiagOpts->DiagnosticLogFile = "-";
 
   // Create the diagnostic engine with unowned consumer.
   std::string DiagnosticOutput;
