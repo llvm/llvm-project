@@ -326,7 +326,7 @@
 		268900C613353E5F00698AC0 /* DWARFFormValue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C89D310F57C5600BB2B04 /* DWARFFormValue.cpp */; };
 		4CD44CFB20B37C440003557C /* DWARFIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44CF820B37C440003557C /* DWARFIndex.cpp */; };
 		4C38996421B9AECD002BAEF4 /* DWARFLocationExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C38996221B9AECC002BAEF4 /* DWARFLocationExpression.cpp */; };
-		4C645D042295D3B600D3C034 /* DWARFTypeUnit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C645D022295D3B500D3C034 /* DWARFTypeUnit.cpp */; };
+		4C645D0822961B3C00D3C034 /* DWARFTypeUnit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C645D022295D3B500D3C034 /* DWARFTypeUnit.cpp */; };
 		AFE228832060699D0042D0C8 /* DWARFUnit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7F2AAA5920601BE000A422D8 /* DWARFUnit.cpp */; };
 		26FFC19B14FC072100087D58 /* DYLDRendezvous.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26FFC19514FC072100087D58 /* DYLDRendezvous.cpp */; };
 		49CA96FC1E6AACC900C03FEE /* DataBufferHeap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49CA96E61E6AAC6600C03FEE /* DataBufferHeap.cpp */; };
@@ -8310,7 +8310,6 @@
 				26680337116005F1008E1FE4 /* SBBreakpoint.cpp in Sources */,
 				26DE204511618ADA00A093E2 /* SBAddress.cpp in Sources */,
 				26DE204711618AED00A093E2 /* SBSymbolContext.cpp in Sources */,
-				4C645D042295D3B600D3C034 /* DWARFTypeUnit.cpp in Sources */,
 				26DE204D11618E7A00A093E2 /* SBModule.cpp in Sources */,
 				26DE205D1161901400A093E2 /* SBFunction.cpp in Sources */,
 				26DE205F1161901B00A093E2 /* SBCompileUnit.cpp in Sources */,
@@ -8453,6 +8452,7 @@
 				2689002113353DDE00698AC0 /* CommandObjectQuit.cpp in Sources */,
 				2689002213353DDE00698AC0 /* CommandObjectRegister.cpp in Sources */,
 				26BC17AF18C7F4CB00D2196D /* RegisterContextPOSIXCore_x86_64.cpp in Sources */,
+				4C645D0822961B3C00D3C034 /* DWARFTypeUnit.cpp in Sources */,
 				2619C4842107A9A2009CDE81 /* RegisterContextMinidump_ARM64.cpp in Sources */,
 				2689002313353DDE00698AC0 /* CommandObjectScript.cpp in Sources */,
 				2689002413353DDE00698AC0 /* CommandObjectSettings.cpp in Sources */,

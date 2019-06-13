@@ -32,29 +32,6 @@ using namespace lld::elf;
 
 SymbolTable *elf::Symtab;
 
-// This function is where all the optimizations of link-time
-// optimization happens. When LTO is in use, some input files are
-// not in native object file format but in the LLVM bitcode format.
-// This function compiles bitcode files into a few big native files
-// using LLVM functions and replaces bitcode symbols with the results.
-// Because all bitcode files that the program consists of are passed
-// to the compiler at once, it can do whole-program optimization.
-template <class ELFT> void SymbolTable::addCombinedLTOObject() {
-  // Compile bitcode files and replace bitcode symbols.
-  LTO.reset(new BitcodeCompiler);
-  for (BitcodeFile *F : BitcodeFiles)
-    LTO->add(*F);
-
-  for (InputFile *File : LTO->compile()) {
-    DenseMap<CachedHashStringRef, const InputFile *> DummyGroups;
-    auto *Obj = cast<ObjFile<ELFT>>(File);
-    Obj->parse(DummyGroups);
-    for (Symbol *Sym : Obj->getGlobalSymbols())
-      Sym->parseSymbolVersion();
-    ObjectFiles.push_back(File);
-  }
-}
-
 // Set a flag for --trace-symbol so that we can print out a log message
 // if a new symbol with the same name is inserted into the symbol table.
 void SymbolTable::trace(StringRef Name) {
@@ -609,8 +586,3 @@ void elf::resolveSymbol(Symbol *Old, const Symbol &New) {
     llvm_unreachable("bad symbol kind");
   }
 }
-
-template void SymbolTable::addCombinedLTOObject<ELF32LE>();
-template void SymbolTable::addCombinedLTOObject<ELF32BE>();
-template void SymbolTable::addCombinedLTOObject<ELF64LE>();
-template void SymbolTable::addCombinedLTOObject<ELF64BE>();

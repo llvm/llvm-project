@@ -623,7 +623,7 @@ void Args::EncodeEscapeSequences(const char *src, std::string &dst) {
             p += i - 1;
             unsigned long octal_value = ::strtoul(oct_str, nullptr, 8);
             if (octal_value <= UINT8_MAX) {
-              dst.append(1, (char)octal_value);
+              dst.append(1, static_cast<char>(octal_value));
             }
           }
           break;
@@ -643,7 +643,7 @@ void Args::EncodeEscapeSequences(const char *src, std::string &dst) {
 
             unsigned long hex_value = strtoul(hex_str, nullptr, 16);
             if (hex_value <= UINT8_MAX)
-              dst.append(1, (char)hex_value);
+              dst.append(1, static_cast<char>(hex_value));
           } else {
             dst.append(1, 'x');
           }

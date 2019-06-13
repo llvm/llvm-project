@@ -1436,6 +1436,29 @@ template <class ELFT> static Symbol *addUndefined(StringRef Name) {
       Undefined{nullptr, Name, STB_GLOBAL, STV_DEFAULT, 0});
 }
 
+// This function is where all the optimizations of link-time
+// optimization takes place. When LTO is in use, some input files are
+// not in native object file format but in the LLVM bitcode format.
+// This function compiles bitcode files into a few big native files
+// using LLVM functions and replaces bitcode symbols with the results.
+// Because all bitcode files that the program consists of are passed to
+// the compiler at once, it can do a whole-program optimization.
+template <class ELFT> void LinkerDriver::compileBitcodeFiles() {
+  // Compile bitcode files and replace bitcode symbols.
+  LTO.reset(new BitcodeCompiler);
+  for (BitcodeFile *File : BitcodeFiles)
+    LTO->add(*File);
+
+  for (InputFile *File : LTO->compile()) {
+    DenseMap<CachedHashStringRef, const InputFile *> DummyGroups;
+    auto *Obj = cast<ObjFile<ELFT>>(File);
+    Obj->parse(DummyGroups);
+    for (Symbol *Sym : Obj->getGlobalSymbols())
+      Sym->parseSymbolVersion();
+    ObjectFiles.push_back(File);
+  }
+}
+
 // The --wrap option is a feature to rename symbols so that you can write
 // wrappers for existing functions. If you pass `-wrap=foo`, all
 // occurrences of symbol `foo` are resolved to `wrap_foo` (so, you are
@@ -1645,7 +1668,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   //
   // With this the symbol table should be complete. After this, no new names
   // except a few linker-synthesized ones will be added to the symbol table.
-  Symtab->addCombinedLTOObject<ELFT>();
+  compileBitcodeFiles<ELFT>();
   if (errorCount())
     return;
 
