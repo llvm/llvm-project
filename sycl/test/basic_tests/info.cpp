@@ -79,8 +79,8 @@ template <> std::string info_to_string(info::global_mem_cache_type info) {
     return "none";
   case info::global_mem_cache_type::read_only:
     return "read_only";
-  case info::global_mem_cache_type::write_only:
-    return "write_only";
+  case info::global_mem_cache_type::read_write:
+    return "read_write";
   }
 }
 

@@ -284,7 +284,7 @@ get_device_info_host<info::device::double_fp_config>() {
 template <>
 info::global_mem_cache_type
 get_device_info_host<info::device::global_mem_cache_type>() {
-  return info::global_mem_cache_type::write_only;
+  return info::global_mem_cache_type::read_write;
 }
 
 template <>

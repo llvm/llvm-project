@@ -162,7 +162,7 @@ enum class fp_config : cl_device_fp_config {
   soft_float
 };
 
-enum class global_mem_cache_type : int { none, read_only, write_only };
+enum class global_mem_cache_type : int { none, read_only, read_write };
 
 enum class execution_capability : unsigned int {
   exec_kernel,
