@@ -1314,7 +1314,7 @@ static void handleUndefined(StringRef Name) {
   Sym->IsUsedInRegularObj = true;
 
   if (Sym->isLazy())
-    Symtab->fetchLazy(Sym);
+    Sym->fetch();
 }
 
 static void handleLibcall(StringRef Name) {
@@ -1329,7 +1329,7 @@ static void handleLibcall(StringRef Name) {
     MB = cast<LazyArchive>(Sym)->getMemberBuffer();
 
   if (isBitcode(MB))
-    Symtab->fetchLazy(Sym);
+    Sym->fetch();
 }
 
 // Replaces common symbols with defined symbols reside in .bss sections.

@@ -654,7 +654,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
     std::string s;
     raw_string_ostream oss(s);
 
-    module.print(oss, NULL);
+    module.print(oss, nullptr);
 
     oss.flush();
 

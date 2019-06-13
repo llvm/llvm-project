@@ -4,6 +4,8 @@
 # compute address range for the type unit as type units don't describe any
 # addresses. The addresses should always resolve to the relevant compile units.
 
+# REQUIRES: lld
+
 # RUN: llvm-mc -dwarf-version=5 -triple x86_64-pc-linux %s -filetype=obj >%t.o
 # RUN: ld.lld %t.o -o %t -image-base=0x47000
 # RUN: %lldb %t -o "image lookup -a 0x48000 -v" -o exit | FileCheck %s

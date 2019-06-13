@@ -600,10 +600,9 @@ private:
     return DumpFacebook() || m_fb_logcat.GetOptionValue().GetCurrentValue();
   }
 public:
-
   CommandObjectProcessMinidumpDump(CommandInterpreter &interpreter)
   : CommandObjectParsed(interpreter, "process plugin dump",
-      "Dump information from the minidump file.", NULL),
+      "Dump information from the minidump file.", nullptr),
     m_option_group(),
     INIT_BOOL(m_dump_all, "all", 'a',
               "Dump the everything in the minidump."),

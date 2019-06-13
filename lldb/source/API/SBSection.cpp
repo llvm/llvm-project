@@ -54,7 +54,7 @@ SBSection::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBSection, operator bool);
 
   SectionSP section_sp(GetSP());
-  return section_sp && section_sp->GetModule().get() != NULL;
+  return section_sp && section_sp->GetModule().get() != nullptr;
 }
 
 const char *SBSection::GetName() {
@@ -63,7 +63,7 @@ const char *SBSection::GetName() {
   SectionSP section_sp(GetSP());
   if (section_sp)
     return section_sp->GetName().GetCString();
-  return NULL;
+  return nullptr;
 }
 
 lldb::SBSection SBSection::GetParent() {

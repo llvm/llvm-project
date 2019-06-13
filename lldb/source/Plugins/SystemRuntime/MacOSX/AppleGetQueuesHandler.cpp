@@ -158,7 +158,7 @@ AppleGetQueuesHandler::SetupGetQueuesFunction(Thread &thread,
     // First stage is to make the ClangUtility to hold our injected function:
 
     if (!m_get_queues_impl_code_up) {
-      if (g_get_current_queues_function_code != NULL) {
+      if (g_get_current_queues_function_code != nullptr) {
         Status error;
         m_get_queues_impl_code_up.reset(
             exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
@@ -335,7 +335,7 @@ AppleGetQueuesHandler::GetCurrentQueues(Thread &thread, addr_t page_to_free,
   FunctionCaller *get_queues_caller =
       m_get_queues_impl_code_up->GetFunctionCaller();
 
-  if (get_queues_caller == NULL) {
+  if (get_queues_caller == nullptr) {
     error.SetErrorString(
         "Unable to get caller for call __introspection_dispatch_get_queues");
     return return_value;

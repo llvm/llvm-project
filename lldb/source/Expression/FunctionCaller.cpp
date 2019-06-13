@@ -35,10 +35,9 @@ FunctionCaller::FunctionCaller(ExecutionContextScope &exe_scope,
                                const Address &functionAddress,
                                const ValueList &arg_value_list,
                                const char *name)
-    : Expression(exe_scope, eKindFunctionCaller),
-      m_execution_unit_sp(), m_parser(),
-      m_jit_module_wp(), m_name(name ? name : "<unknown>"),
-      m_function_ptr(NULL), m_function_addr(functionAddress),
+    : Expression(exe_scope, eKindFunctionCaller), m_execution_unit_sp(),
+      m_parser(), m_jit_module_wp(), m_name(name ? name : "<unknown>"),
+      m_function_ptr(nullptr), m_function_addr(functionAddress),
       m_function_return_type(return_type),
       m_wrapper_function_name("__lldb_caller_function"),
       m_wrapper_struct_name("__lldb_caller_struct"), m_wrapper_args_addrs(),
@@ -138,7 +137,7 @@ bool FunctionCaller::WriteFunctionArguments(
 
   Process *process = exe_ctx.GetProcessPtr();
 
-  if (process == NULL)
+  if (process == nullptr)
     return return_value;
 
   lldb::ProcessSP jit_process_sp(m_jit_process_wp.lock());
@@ -239,11 +238,11 @@ lldb::ThreadPlanSP FunctionCaller::GetThreadPlanToCallFunction(
 
   // FIXME: Use the errors Stream for better error reporting.
   Thread *thread = exe_ctx.GetThreadPtr();
-  if (thread == NULL) {
+  if (thread == nullptr) {
     diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "Can't call a function without a valid thread.");
-    return NULL;
+    return nullptr;
   }
 
   // Okay, now run the function:
@@ -279,7 +278,7 @@ bool FunctionCaller::FetchFunctionResults(ExecutionContext &exe_ctx,
 
   Process *process = exe_ctx.GetProcessPtr();
 
-  if (process == NULL)
+  if (process == nullptr)
     return false;
 
   lldb::ProcessSP jit_process_sp(m_jit_process_wp.lock());
@@ -326,7 +325,7 @@ lldb::ExpressionResults FunctionCaller::ExecuteFunction(
 
   lldb::addr_t args_addr;
 
-  if (args_addr_ptr != NULL)
+  if (args_addr_ptr != nullptr)
     args_addr = *args_addr_ptr;
   else
     args_addr = LLDB_INVALID_ADDRESS;
@@ -376,7 +375,7 @@ lldb::ExpressionResults FunctionCaller::ExecuteFunction(
   if (exe_ctx.GetProcessPtr())
     exe_ctx.GetProcessPtr()->SetRunningUserExpression(false);
 
-  if (args_addr_ptr != NULL)
+  if (args_addr_ptr != nullptr)
     *args_addr_ptr = args_addr;
 
   if (return_value != lldb::eExpressionCompleted)
@@ -384,7 +383,7 @@ lldb::ExpressionResults FunctionCaller::ExecuteFunction(
 
   FetchFunctionResults(exe_ctx, args_addr, results);
 
-  if (args_addr_ptr == NULL)
+  if (args_addr_ptr == nullptr)
     DeallocateFunctionResults(exe_ctx, args_addr);
 
   return lldb::eExpressionCompleted;

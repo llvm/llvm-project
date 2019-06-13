@@ -41,8 +41,8 @@ public:
 
   size_t GetNumUnits();
   DWARFUnit *GetUnitAtIndex(lldb::user_id_t idx);
-  DWARFUnit *GetUnitAtOffset(DIERef::Section section,
-                             dw_offset_t cu_offset, uint32_t *idx_ptr = NULL);
+  DWARFUnit *GetUnitAtOffset(DIERef::Section section, dw_offset_t cu_offset,
+                             uint32_t *idx_ptr = nullptr);
   DWARFUnit *GetUnitContainingDIEOffset(DIERef::Section section,
                                         dw_offset_t die_offset);
   DWARFUnit *GetUnit(const DIERef &die_ref);

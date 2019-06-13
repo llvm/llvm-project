@@ -30,7 +30,7 @@ CMIDriverBase::CMIDriverBase()
 // Return:  None.
 // Throws:  None.
 //--
-CMIDriverBase::~CMIDriverBase() { m_pDriverFallThru = NULL; }
+CMIDriverBase::~CMIDriverBase() { m_pDriverFallThru = nullptr; }
 
 //++
 // Details: This function allows *this driver to call on another driver to

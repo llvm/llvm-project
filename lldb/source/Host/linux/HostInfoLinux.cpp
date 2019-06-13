@@ -121,7 +121,8 @@ llvm::StringRef HostInfoLinux::GetDistributionId() {
 
       // retrieve the distribution id string.
       char distribution_id[256] = {'\0'};
-      if (fgets(distribution_id, sizeof(distribution_id) - 1, file) != NULL) {
+      if (fgets(distribution_id, sizeof(distribution_id) - 1, file) !=
+          nullptr) {
         if (log)
           log->Printf("distribution id command returned \"%s\"",
                       distribution_id);

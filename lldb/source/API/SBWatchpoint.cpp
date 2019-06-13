@@ -218,7 +218,7 @@ const char *SBWatchpoint::GetCondition() {
         watchpoint_sp->GetTarget().GetAPIMutex());
     return watchpoint_sp->GetConditionText();
   }
-  return NULL;
+  return nullptr;
 }
 
 void SBWatchpoint::SetCondition(const char *condition) {
@@ -277,7 +277,7 @@ bool SBWatchpoint::EventIsWatchpointEvent(const lldb::SBEvent &event) {
                             (const lldb::SBEvent &), event);
 
   return Watchpoint::WatchpointEventData::GetEventDataFromEvent(event.get()) !=
-         NULL;
+         nullptr;
 }
 
 WatchpointEventType

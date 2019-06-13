@@ -913,62 +913,90 @@ StringRef ObjFile<ELFT>::getSectionName(const Elf_Shdr &Sec) {
   return CHECK(getObj().getSectionName(&Sec, SectionStringTable), this);
 }
 
+// Initialize this->Symbols. this->Symbols is a parallel array as
+// its corresponding ELF symbol table.
 template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
-  this->Symbols.reserve(this->getELFSyms<ELFT>().size());
-  for (const Elf_Sym &Sym : this->getELFSyms<ELFT>())
-    this->Symbols.push_back(createSymbol(&Sym));
-}
+  ArrayRef<Elf_Sym> ESyms = this->getELFSyms<ELFT>();
+  this->Symbols.resize(ESyms.size());
 
-template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
-  uint32_t SecIdx = getSectionIndex(*Sym);
-  if (SecIdx >= this->Sections.size())
-    fatal(toString(this) + ": invalid section index: " + Twine(SecIdx));
+  // Our symbol table may have already been partially initialized
+  // because of LazyObjFile.
+  for (size_t I = 0, End = ESyms.size(); I != End; ++I)
+    if (!this->Symbols[I] && ESyms[I].getBinding() != STB_LOCAL)
+      this->Symbols[I] =
+          Symtab->insert(CHECK(ESyms[I].getName(this->StringTable), this));
 
-  InputSectionBase *Sec = this->Sections[SecIdx];
-  uint8_t Binding = Sym->getBinding();
-  uint8_t StOther = Sym->st_other;
-  uint8_t Type = Sym->getType();
-  uint64_t Value = Sym->st_value;
-  uint64_t Size = Sym->st_size;
+  // Fill this->Symbols. A symbol is either local or global.
+  for (size_t I = 0, End = ESyms.size(); I != End; ++I) {
+    const Elf_Sym &ESym = ESyms[I];
 
-  if (Binding == STB_LOCAL) {
-    if (Sym->getType() == STT_FILE)
-      SourceFile = CHECK(Sym->getName(this->StringTable), this);
+    // Read symbol attributes.
+    uint32_t SecIdx = getSectionIndex(ESym);
+    if (SecIdx >= this->Sections.size())
+      fatal(toString(this) + ": invalid section index: " + Twine(SecIdx));
 
-    if (this->StringTable.size() <= Sym->st_name)
-      fatal(toString(this) + ": invalid symbol name offset");
+    InputSectionBase *Sec = this->Sections[SecIdx];
+    uint8_t Binding = ESym.getBinding();
+    uint8_t StOther = ESym.st_other;
+    uint8_t Type = ESym.getType();
+    uint64_t Value = ESym.st_value;
+    uint64_t Size = ESym.st_size;
+    StringRefZ Name = this->StringTable.data() + ESym.st_name;
 
-    StringRefZ Name = this->StringTable.data() + Sym->st_name;
-    if (Sym->st_shndx == SHN_UNDEF)
-      return make<Undefined>(this, Name, Binding, StOther, Type);
-    return make<Defined>(this, Name, Binding, StOther, Type, Value, Size, Sec);
-  }
+    // Handle local symbols. Local symbols are not added to the symbol
+    // table because they are not visible from other object files. We
+    // allocate symbol instances and add their pointers to Symbols.
+    if (Binding == STB_LOCAL) {
+      if (ESym.getType() == STT_FILE)
+        SourceFile = CHECK(ESym.getName(this->StringTable), this);
 
-  StringRef Name = CHECK(Sym->getName(this->StringTable), this);
+      if (this->StringTable.size() <= ESym.st_name)
+        fatal(toString(this) + ": invalid symbol name offset");
 
-  if (Sym->st_shndx == SHN_UNDEF)
-    return Symtab->addSymbol(Undefined{this, Name, Binding, StOther, Type});
+      if (ESym.st_shndx == SHN_UNDEF)
+        this->Symbols[I] = make<Undefined>(this, Name, Binding, StOther, Type);
+      else
+        this->Symbols[I] =
+            make<Defined>(this, Name, Binding, StOther, Type, Value, Size, Sec);
+      continue;
+    }
 
-  if (Sec == &InputSection::Discarded)
-    return Symtab->addSymbol(Undefined{this, Name, Binding, StOther, Type,
-                                       /*DiscardedSecIdx=*/SecIdx});
+    // Handle global undefined symbols.
+    if (ESym.st_shndx == SHN_UNDEF) {
+      this->Symbols[I]->resolve(Undefined{this, Name, Binding, StOther, Type});
+      continue;
+    }
 
-  if (Sym->st_shndx == SHN_COMMON) {
-    if (Value == 0 || Value >= UINT32_MAX)
-      fatal(toString(this) + ": common symbol '" + Name +
-            "' has invalid alignment: " + Twine(Value));
-    return Symtab->addSymbol(
-        CommonSymbol{this, Name, Binding, StOther, Type, Value, Size});
-  }
+    // Handle global common symbols.
+    if (ESym.st_shndx == SHN_COMMON) {
+      if (Value == 0 || Value >= UINT32_MAX)
+        fatal(toString(this) + ": common symbol '" + StringRef(Name.Data) +
+              "' has invalid alignment: " + Twine(Value));
+      this->Symbols[I]->resolve(
+          CommonSymbol{this, Name, Binding, StOther, Type, Value, Size});
+      continue;
+    }
 
-  switch (Binding) {
-  default:
+    // If a defined symbol is in a discarded section, handle it as if it
+    // were an undefined symbol. Such symbol doesn't comply with the
+    // standard, but in practice, a .eh_frame often directly refer
+    // COMDAT member sections, and if a comdat group is discarded, some
+    // defined symbol in a .eh_frame becomes dangling symbols.
+    if (Sec == &InputSection::Discarded) {
+      this->Symbols[I]->resolve(
+          Undefined{this, Name, Binding, StOther, Type, SecIdx});
+      continue;
+    }
+
+    // Handle global defined symbols.
+    if (Binding == STB_GLOBAL || Binding == STB_WEAK ||
+        Binding == STB_GNU_UNIQUE) {
+      this->Symbols[I]->resolve(
+          Defined{this, Name, Binding, StOther, Type, Value, Size, Sec});
+      continue;
+    }
+
     fatal(toString(this) + ": unexpected binding: " + Twine((int)Binding));
-  case STB_GLOBAL:
-  case STB_WEAK:
-  case STB_GNU_UNIQUE:
-    return Symtab->addSymbol(
-        Defined{this, Name, Binding, StOther, Type, Value, Size, Sec});
   }
 }
 
@@ -982,14 +1010,14 @@ void ArchiveFile::parse() {
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
-InputFile *ArchiveFile::fetch(const Archive::Symbol &Sym) {
+void ArchiveFile::fetch(const Archive::Symbol &Sym) {
   Archive::Child C =
       CHECK(Sym.getMember(), toString(this) +
                                  ": could not get the member for symbol " +
                                  Sym.getName());
 
   if (!Seen.insert(C.getChildOffset()).second)
-    return nullptr;
+    return;
 
   MemoryBufferRef MB =
       CHECK(C.getMemoryBufferRef(),
@@ -1003,7 +1031,7 @@ InputFile *ArchiveFile::fetch(const Archive::Symbol &Sym) {
   InputFile *File = createObjectFile(
       MB, getName(), C.getParent()->isThin() ? 0 : C.getChildOffset());
   File->GroupId = GroupId;
-  return File;
+  parseFile(File);
 }
 
 unsigned SharedFile::VernauxNum;
@@ -1441,24 +1469,25 @@ InputFile *elf::createSharedFile(MemoryBufferRef MB, StringRef DefaultSoName) {
   return F;
 }
 
-MemoryBufferRef LazyObjFile::getBuffer() {
-  if (AddedToLink)
-    return MemoryBufferRef();
-  AddedToLink = true;
-  return MB;
-}
+void LazyObjFile::fetch() {
+  if (MB.getBuffer().empty())
+    return;
 
-InputFile *LazyObjFile::fetch() {
-  MemoryBufferRef MBRef = getBuffer();
-  if (MBRef.getBuffer().empty())
-    return nullptr;
-
-  InputFile *File = createObjectFile(MBRef, ArchiveName, OffsetInArchive);
+  InputFile *File = createObjectFile(MB, ArchiveName, OffsetInArchive);
   File->GroupId = GroupId;
-  return File;
+
+  MB = {};
+
+  // Copy symbol vector so that the new InputFile doesn't have to
+  // insert the same defined symbols to the symbol table again.
+  File->Symbols = std::move(Symbols);
+
+  parseFile(File);
 }
 
 template <class ELFT> void LazyObjFile::parse() {
+  using Elf_Sym = typename ELFT::Sym;
+
   // A lazy object file wraps either a bitcode file or an ELF file.
   if (isBitcode(this->MB)) {
     std::unique_ptr<lto::InputFile> Obj =
@@ -1476,6 +1505,7 @@ template <class ELFT> void LazyObjFile::parse() {
     return;
   }
 
+  // Find a symbol table.
   ELFFile<ELFT> Obj = check(ELFFile<ELFT>::create(MB.getBuffer()));
   ArrayRef<typename ELFT::Shdr> Sections = CHECK(Obj.sections(), this);
 
@@ -1483,16 +1513,30 @@ template <class ELFT> void LazyObjFile::parse() {
     if (Sec.sh_type != SHT_SYMTAB)
       continue;
 
-    typename ELFT::SymRange Syms = CHECK(Obj.symbols(&Sec), this);
+    // A symbol table is found.
+    ArrayRef<Elf_Sym> ESyms = CHECK(Obj.symbols(&Sec), this);
     uint32_t FirstGlobal = Sec.sh_info;
-    StringRef StringTable =
-        CHECK(Obj.getStringTableForSymtab(Sec, Sections), this);
+    StringRef Strtab = CHECK(Obj.getStringTableForSymtab(Sec, Sections), this);
+    this->Symbols.resize(ESyms.size());
 
-    for (const typename ELFT::Sym &Sym : Syms.slice(FirstGlobal)) {
-      if (Sym.st_shndx == SHN_UNDEF)
+    // Get existing symbols or insert placeholder symbols.
+    for (size_t I = FirstGlobal, End = ESyms.size(); I != End; ++I)
+      if (ESyms[I].st_shndx != SHN_UNDEF)
+        this->Symbols[I] = Symtab->insert(CHECK(ESyms[I].getName(Strtab), this));
+
+    // Replace existing symbols with LazyObject symbols.
+    //
+    // resolve() may trigger this->fetch() if an existing symbol is an
+    // undefined symbol. If that happens, this LazyObjFile has served
+    // its purpose, and we can exit from the loop early.
+    for (Symbol *Sym : this->Symbols) {
+      if (!Sym)
         continue;
-      Symtab->addSymbol(
-          LazyObject{*this, CHECK(Sym.getName(StringTable), this)});
+      Sym->resolve(LazyObject{*this, Sym->getName()});
+
+      // MemoryBuffer is emptied if this file is instantiated as ObjFile.
+      if (MB.getBuffer().empty())
+        return;
     }
     return;
   }

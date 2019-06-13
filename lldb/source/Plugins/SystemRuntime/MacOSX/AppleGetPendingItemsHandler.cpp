@@ -147,7 +147,7 @@ lldb::addr_t AppleGetPendingItemsHandler::SetupGetPendingItemsFunction(
     // First stage is to make the ClangUtility to hold our injected function:
 
     if (!m_get_pending_items_impl_code) {
-      if (g_get_pending_items_function_code != NULL) {
+      if (g_get_pending_items_function_code != nullptr) {
         Status error;
         m_get_pending_items_impl_code.reset(
             exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
@@ -347,7 +347,7 @@ AppleGetPendingItemsHandler::GetPendingItems(Thread &thread, addr_t queue,
   options.SetIsForUtilityExpr(true);
   thread.CalculateExecutionContext(exe_ctx);
 
-  if (get_pending_items_caller == NULL) {
+  if (get_pending_items_caller == nullptr) {
     error.SetErrorString("Unable to compile function to call "
                          "__introspection_dispatch_queue_get_pending_items");
     return return_value;

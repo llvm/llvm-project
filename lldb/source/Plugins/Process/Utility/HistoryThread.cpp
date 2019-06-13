@@ -66,7 +66,7 @@ lldb::StackFrameListSP HistoryThread::GetStackFrameList() {
   // FIXME do not throw away the lock after we acquire it..
   std::unique_lock<std::mutex> lock(m_framelist_mutex);
   lock.unlock();
-  if (m_framelist.get() == NULL) {
+  if (m_framelist.get() == nullptr) {
     m_framelist =
         std::make_shared<StackFrameList>(*this, StackFrameListSP(), true);
   }

@@ -68,7 +68,7 @@ DWARFDebugAranges::extract(const DWARFDataExtractor &debug_aranges_data) {
 }
 
 void DWARFDebugAranges::Dump(Log *log) const {
-  if (log == NULL)
+  if (log == nullptr)
     return;
 
   const size_t num_entries = m_aranges.GetSize();

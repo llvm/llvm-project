@@ -48,7 +48,7 @@ bool ItaniumABILanguageRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
   const bool check_objc = false;
   const bool check_swift = false;
   return in_value.GetCompilerType().IsPossibleDynamicType(
-      NULL, check_cxx, check_objc, check_swift);
+      nullptr, check_cxx, check_objc, check_swift);
 }
 
 TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(
@@ -70,7 +70,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(
         target.GetImages().ResolveSymbolContextForAddress(
             vtable_addr, eSymbolContextSymbol, sc);
         Symbol *symbol = sc.symbol;
-        if (symbol != NULL) {
+        if (symbol != nullptr) {
           const char *name =
               symbol->GetMangled()
                   .GetDemangledName(lldb::eLanguageTypeC_plus_plus)
@@ -307,7 +307,7 @@ TypeAndOrName ItaniumABILanguageRuntime::FixUpDynamicType(
 }
 
 bool ItaniumABILanguageRuntime::IsVTableName(const char *name) {
-  if (name == NULL)
+  if (name == nullptr)
     return false;
 
   // Can we maybe ask Clang about this?
@@ -327,7 +327,7 @@ ItaniumABILanguageRuntime::CreateInstance(Process *process,
       language == eLanguageTypeC_plus_plus_14)
     return new ItaniumABILanguageRuntime(process);
   else
-    return NULL;
+    return nullptr;
 }
 
 class CommandObjectMultiwordItaniumABI_Demangle : public CommandObjectParsed {
@@ -491,7 +491,7 @@ lldb::BreakpointSP ItaniumABILanguageRuntime::CreateExceptionBreakpoint(
   Target &target = m_process->GetTarget();
   FileSpecList filter_modules;
   BreakpointResolverSP exception_resolver_sp =
-      CreateExceptionResolver(NULL, catch_bp, throw_bp, for_expressions);
+      CreateExceptionResolver(nullptr, catch_bp, throw_bp, for_expressions);
   SearchFilterSP filter_sp(CreateExceptionSearchFilter());
   const bool hardware = false;
   const bool resolve_indirect_functions = false;

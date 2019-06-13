@@ -34,7 +34,7 @@ MapResultClassToResultClassText(CMICmnMIResultRecord::ResultClass_e veType) {
     return "exit";
   }
   assert(false && "unknown CMICmnMIResultRecord::ResultClass_e");
-  return NULL;
+  return nullptr;
 }
 
 //++

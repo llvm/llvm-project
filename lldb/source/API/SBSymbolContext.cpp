@@ -63,7 +63,7 @@ bool SBSymbolContext::IsValid() const {
 SBSymbolContext::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBSymbolContext, operator bool);
 
-  return m_opaque_up != NULL;
+  return m_opaque_up != nullptr;
 }
 
 SBModule SBSymbolContext::GetModule() {
@@ -84,13 +84,13 @@ SBCompileUnit SBSymbolContext::GetCompileUnit() {
                              GetCompileUnit);
 
   return LLDB_RECORD_RESULT(
-      SBCompileUnit(m_opaque_up ? m_opaque_up->comp_unit : NULL));
+      SBCompileUnit(m_opaque_up ? m_opaque_up->comp_unit : nullptr));
 }
 
 SBFunction SBSymbolContext::GetFunction() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBFunction, SBSymbolContext, GetFunction);
 
-  Function *function = NULL;
+  Function *function = nullptr;
 
   if (m_opaque_up)
     function = m_opaque_up->function;
@@ -103,7 +103,8 @@ SBFunction SBSymbolContext::GetFunction() {
 SBBlock SBSymbolContext::GetBlock() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBBlock, SBSymbolContext, GetBlock);
 
-  return LLDB_RECORD_RESULT(SBBlock(m_opaque_up ? m_opaque_up->block : NULL));
+  return LLDB_RECORD_RESULT(
+      SBBlock(m_opaque_up ? m_opaque_up->block : nullptr));
 }
 
 SBLineEntry SBSymbolContext::GetLineEntry() {
@@ -119,7 +120,7 @@ SBLineEntry SBSymbolContext::GetLineEntry() {
 SBSymbol SBSymbolContext::GetSymbol() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBSymbol, SBSymbolContext, GetSymbol);
 
-  Symbol *symbol = NULL;
+  Symbol *symbol = nullptr;
 
   if (m_opaque_up)
     symbol = m_opaque_up->symbol;
@@ -183,13 +184,13 @@ const lldb_private::SymbolContext &SBSymbolContext::operator*() const {
 }
 
 lldb_private::SymbolContext &SBSymbolContext::operator*() {
-  if (m_opaque_up == NULL)
+  if (m_opaque_up == nullptr)
     m_opaque_up.reset(new SymbolContext);
   return *m_opaque_up;
 }
 
 lldb_private::SymbolContext &SBSymbolContext::ref() {
-  if (m_opaque_up == NULL)
+  if (m_opaque_up == nullptr)
     m_opaque_up.reset(new SymbolContext);
   return *m_opaque_up;
 }
@@ -205,7 +206,7 @@ bool SBSymbolContext::GetDescription(SBStream &description) {
   Stream &strm = description.ref();
 
   if (m_opaque_up) {
-    m_opaque_up->GetDescription(&strm, lldb::eDescriptionLevelFull, NULL);
+    m_opaque_up->GetDescription(&strm, lldb::eDescriptionLevelFull, nullptr);
   } else
     strm.PutCString("No value");
 

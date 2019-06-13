@@ -1525,7 +1525,7 @@ Status Process::ResumeSynchronous(Stream *stream) {
   Status error = PrivateResume();
   if (error.Success()) {
     StateType state =
-        WaitForProcessToStop(llvm::None, NULL, true, listener_sp, stream);
+        WaitForProcessToStop(llvm::None, nullptr, true, listener_sp, stream);
     const bool must_be_alive =
         false; // eStateExited is ok, so this must be false
     if (!StateIsStoppedState(state, must_be_alive))
@@ -3777,7 +3777,7 @@ void Process::ControlPrivateStateThread(uint32_t signal) {
     }
 
     if (signal == eBroadcastInternalStateControlStop) {
-      thread_result_t result = NULL;
+      thread_result_t result = nullptr;
       m_private_state_thread.Join(&result);
       m_private_state_thread.Reset();
     }
@@ -4052,7 +4052,7 @@ thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
   // it was doing yet, so don't try to change it on the way out.
   if (!is_secondary_thread)
     m_public_run_lock.SetStopped();
-  return NULL;
+  return nullptr;
 }
 
 // Process Event Data

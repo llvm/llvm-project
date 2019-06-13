@@ -116,7 +116,7 @@ const RegisterInfo *RegisterContextLinux_mips::GetRegisterInfo() const {
     return g_register_infos_mips;
   default:
     assert(false && "Unhandled target architecture.");
-    return NULL;
+    return nullptr;
   }
 }
 

@@ -263,7 +263,7 @@ ExecutionContextScope *IRMemoryMap::GetBestExecutionContextScope() const {
   if (target_sp)
     return target_sp.get();
 
-  return NULL;
+  return nullptr;
 }
 
 IRMemoryMap::Allocation::Allocation(lldb::addr_t process_alloc,

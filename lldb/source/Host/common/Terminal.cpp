@@ -112,7 +112,7 @@ bool TerminalState::Save(int fd, bool save_process_group) {
     m_tflags = ::fcntl(fd, F_GETFL, 0);
 #endif
 #ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
-    if (m_termios_up == NULL)
+    if (m_termios_up == nullptr)
       m_termios_up.reset(new struct termios);
     int err = ::tcgetattr(fd, m_termios_up.get());
     if (err != 0)
@@ -151,7 +151,7 @@ bool TerminalState::Restore() const {
 
     if (ProcessGroupIsValid()) {
       // Save the original signal handler.
-      void (*saved_sigttou_callback)(int) = NULL;
+      void (*saved_sigttou_callback)(int) = nullptr;
       saved_sigttou_callback = (void (*)(int))signal(SIGTTOU, SIG_IGN);
       // Set the process group
       tcsetpgrp(fd, m_process_group);
@@ -177,7 +177,7 @@ bool TerminalState::TFlagsIsValid() const { return m_tflags != -1; }
 // Returns true if m_ttystate is valid
 bool TerminalState::TTYStateIsValid() const {
 #ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
-  return m_termios_up != 0;
+  return m_termios_up != nullptr;
 #else
   return false;
 #endif

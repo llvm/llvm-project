@@ -1176,5 +1176,5 @@ const Symbol *Symtab::GetParent(Symbol *child_symbol) const {
         return symbol;
     }
   }
-  return NULL;
+  return nullptr;
 }

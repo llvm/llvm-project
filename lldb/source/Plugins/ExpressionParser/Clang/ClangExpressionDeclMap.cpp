@@ -367,7 +367,7 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
   ExecutionContext &exe_ctx = m_parser_vars->m_exe_ctx;
   Target *target = exe_ctx.GetTargetPtr();
-  if (target == NULL)
+  if (target == nullptr)
     return false;
 
   ClangASTContext *context(target->GetScratchClangASTContext());
@@ -955,7 +955,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
 
       // Clang is looking for the type of "this"
 
-      if (frame == NULL)
+      if (frame == nullptr)
         return;
 
       // Find the block that defines the function represented by "sym_ctx"
@@ -1281,7 +1281,8 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
       }
     }
     if (target) {
-      var = FindGlobalVariable(*target, module_sp, name, &namespace_decl, NULL);
+      var = FindGlobalVariable(*target, module_sp, name, &namespace_decl,
+                               nullptr);
 
       if (var) {
         valobj = ValueObjectVariable::Create(target, var);
@@ -1438,8 +1439,8 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     }
 
     if (sc_list.GetSize()) {
-      Symbol *extern_symbol = NULL;
-      Symbol *non_extern_symbol = NULL;
+      Symbol *extern_symbol = nullptr;
+      Symbol *non_extern_symbol = nullptr;
 
       for (uint32_t index = 0, num_indices = sc_list.GetSize();
            index < num_indices; ++index) {
@@ -1456,13 +1457,13 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
           if (decl_ctx.IsClassMethod(nullptr, nullptr, nullptr))
             continue;
 
-          AddOneFunction(context, sym_ctx.function, NULL, current_id);
+          AddOneFunction(context, sym_ctx.function, nullptr, current_id);
           context.m_found.function_with_type_info = true;
           context.m_found.function = true;
         } else if (sym_ctx.symbol) {
           if (sym_ctx.symbol->GetType() == eSymbolTypeReExported && target) {
             sym_ctx.symbol = sym_ctx.symbol->ResolveReExportedSymbol(*target);
-            if (sym_ctx.symbol == NULL)
+            if (sym_ctx.symbol == nullptr)
               continue;
           }
 
@@ -1488,10 +1489,10 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
 
       if (!context.m_found.function_with_type_info) {
         if (extern_symbol) {
-          AddOneFunction(context, NULL, extern_symbol, current_id);
+          AddOneFunction(context, nullptr, extern_symbol, current_id);
           context.m_found.function = true;
         } else if (non_extern_symbol) {
-          AddOneFunction(context, NULL, non_extern_symbol, current_id);
+          AddOneFunction(context, nullptr, non_extern_symbol, current_id);
           context.m_found.function = true;
         }
       }
@@ -1743,7 +1744,7 @@ void ClangExpressionDeclMap::AddOneVariable(NameSearchContext &context,
 
   bool is_reference = pt.IsReferenceType();
 
-  NamedDecl *var_decl = NULL;
+  NamedDecl *var_decl = nullptr;
   if (is_reference)
     var_decl = context.AddVarDecl(pt);
   else
@@ -1760,7 +1761,7 @@ void ClangExpressionDeclMap::AddOneVariable(NameSearchContext &context,
       entity->GetParserVars(GetParserID());
   parser_vars->m_parser_type = pt;
   parser_vars->m_named_decl = var_decl;
-  parser_vars->m_llvm_value = NULL;
+  parser_vars->m_llvm_value = nullptr;
   parser_vars->m_lldb_value = var_location;
   parser_vars->m_lldb_var = var;
 
@@ -1803,7 +1804,7 @@ void ClangExpressionDeclMap::AddOneVariable(NameSearchContext &context,
           ->GetParserVars(GetParserID());
   parser_vars->m_parser_type = parser_type;
   parser_vars->m_named_decl = var_decl;
-  parser_vars->m_llvm_value = NULL;
+  parser_vars->m_llvm_value = nullptr;
   parser_vars->m_lldb_value.Clear();
 
   if (log) {
@@ -1822,7 +1823,7 @@ void ClangExpressionDeclMap::AddOneGenericVariable(NameSearchContext &context,
 
   Target *target = m_parser_vars->m_exe_ctx.GetTargetPtr();
 
-  if (target == NULL)
+  if (target == nullptr)
     return;
 
   ASTContext *scratch_ast_context =
@@ -1861,7 +1862,7 @@ void ClangExpressionDeclMap::AddOneGenericVariable(NameSearchContext &context,
 
   parser_vars->m_parser_type = parser_type;
   parser_vars->m_named_decl = var_decl;
-  parser_vars->m_llvm_value = NULL;
+  parser_vars->m_llvm_value = nullptr;
   parser_vars->m_lldb_sym = &symbol;
 
   if (log) {
@@ -1909,7 +1910,7 @@ bool ClangExpressionDeclMap::ResolveUnknownTypes() {
           var_type.getAsOpaquePtr(),
           ClangASTContext::GetASTContext(&var_decl->getASTContext()));
 
-      lldb::opaque_compiler_type_t copied_type = 0;
+      lldb::opaque_compiler_type_t copied_type = nullptr;
       if (m_ast_importer_sp) {
         copied_type = m_ast_importer_sp->CopyType(
             scratch_ast_context->getASTContext(), &var_decl->getASTContext(),
@@ -1982,7 +1983,7 @@ void ClangExpressionDeclMap::AddOneRegister(NameSearchContext &context,
       entity->GetParserVars(GetParserID());
   parser_vars->m_parser_type = parser_clang_type;
   parser_vars->m_named_decl = var_decl;
-  parser_vars->m_llvm_value = NULL;
+  parser_vars->m_llvm_value = nullptr;
   parser_vars->m_lldb_value.Clear();
   entity->m_flags |= ClangExpressionVariable::EVBareRegister;
 
@@ -2001,7 +2002,7 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  NamedDecl *function_decl = NULL;
+  NamedDecl *function_decl = nullptr;
   Address fun_address;
   CompilerType function_clang_type;
 
@@ -2161,7 +2162,7 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
   }
 
   parser_vars->m_named_decl = function_decl;
-  parser_vars->m_llvm_value = NULL;
+  parser_vars->m_llvm_value = nullptr;
 
   if (log) {
     std::string function_str =
@@ -2214,7 +2215,7 @@ void ClangExpressionDeclMap::AddThisType(NameSearchContext &context,
     CXXMethodDecl *method_decl =
         ClangASTContext::GetASTContext(m_ast_context)
             ->AddMethodToCXXRecordType(
-                copied_clang_type.GetOpaqueQualType(), "$__lldb_expr", NULL,
+                copied_clang_type.GetOpaqueQualType(), "$__lldb_expr", nullptr,
                 method_type, lldb::eAccessPublic, is_virtual, is_static,
                 is_inline, is_explicit, is_attr_used, is_artificial);
 

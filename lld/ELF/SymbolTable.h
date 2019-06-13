@@ -47,8 +47,6 @@ public:
 
   Symbol *addSymbol(const Symbol &New);
 
-  void fetchLazy(Symbol *Sym);
-
   void scanVersionScript();
 
   Symbol *find(StringRef Name);
@@ -93,9 +91,6 @@ private:
 };
 
 extern SymbolTable *Symtab;
-
-void mergeSymbolProperties(Symbol *Old, const Symbol &New);
-void resolveSymbol(Symbol *Old, const Symbol &New);
 
 } // namespace elf
 } // namespace lld

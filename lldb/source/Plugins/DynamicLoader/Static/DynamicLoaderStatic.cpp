@@ -43,7 +43,7 @@ DynamicLoader *DynamicLoaderStatic::CreateInstance(Process *process,
 
   if (create)
     return new DynamicLoaderStatic(process);
-  return NULL;
+  return nullptr;
 }
 
 // Constructor

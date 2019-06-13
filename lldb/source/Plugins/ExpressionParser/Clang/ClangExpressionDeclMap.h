@@ -242,9 +242,8 @@ public:
   /// \return
   ///     Valid load address for the symbol
   lldb::addr_t GetSymbolAddress(Target &target, Process *process,
-                                ConstString name,
-                                lldb::SymbolType symbol_type,
-                                Module *module = NULL);
+                                ConstString name, lldb::SymbolType symbol_type,
+                                Module *module = nullptr);
 
   lldb::addr_t GetSymbolAddress(ConstString name,
                                 lldb::SymbolType symbol_type);
@@ -331,7 +330,7 @@ private:
         return m_exe_ctx.GetTargetPtr();
       else if (m_sym_ctx.target_sp)
         m_sym_ctx.target_sp.get();
-      return NULL;
+      return nullptr;
     }
 
     ExecutionContext m_exe_ctx; ///< The execution context to use when parsing.
@@ -368,7 +367,7 @@ private:
   struct StructVars {
     StructVars()
         : m_struct_alignment(0), m_struct_size(0), m_struct_laid_out(false),
-          m_result_name(), m_object_pointer_type(NULL, NULL) {}
+          m_result_name(), m_object_pointer_type(nullptr, nullptr) {}
 
     lldb::offset_t
         m_struct_alignment; ///< The alignment of the struct in bytes.
@@ -421,7 +420,7 @@ private:
   lldb::VariableSP FindGlobalVariable(Target &target, lldb::ModuleSP &module,
                                       ConstString name,
                                       CompilerDeclContext *namespace_decl,
-                                      TypeFromUser *type = NULL);
+                                      TypeFromUser *type = nullptr);
 
   /// Get the value of a variable in a given execution context and return the
   /// associated Types if needed.
@@ -449,8 +448,8 @@ private:
   ///     Return true if the value was successfully filled in.
   bool GetVariableValue(lldb::VariableSP &var,
                         lldb_private::Value &var_location,
-                        TypeFromUser *found_type = NULL,
-                        TypeFromParser *parser_type = NULL);
+                        TypeFromUser *found_type = nullptr,
+                        TypeFromParser *parser_type = nullptr);
 
   /// Use the NameSearchContext to generate a Decl for the given LLDB
   /// Variable, and put it in the Tuple list.

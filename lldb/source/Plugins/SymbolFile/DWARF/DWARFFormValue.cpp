@@ -120,7 +120,7 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
 
   bool indirect = false;
   bool is_block = false;
-  m_value.data = NULL;
+  m_value.data = nullptr;
   uint8_t ref_addr_size;
   // Read the value for the form into value and follow and DW_FORM_indirect
   // instances we run into
@@ -223,7 +223,7 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
 
   if (is_block) {
     m_value.data = data.PeekData(*offset_ptr, m_value.value.uval);
-    if (m_value.data != NULL) {
+    if (m_value.data != nullptr) {
       *offset_ptr += m_value.value.uval;
     }
   }
@@ -687,7 +687,7 @@ int DWARFFormValue::Compare(const DWARFFormValue &a_value,
       return 0;
     else if (a_string && b_string)
       return strcmp(a_string, b_string);
-    else if (a_string == NULL)
+    else if (a_string == nullptr)
       return -1; // A string is NULL, and B is valid
     else
       return 1; // A string valid, and B is NULL

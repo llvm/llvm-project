@@ -1067,7 +1067,7 @@ bool CompilerType::ReadFromMemory(lldb_private::ExecutionContext *exe_ctx,
     return false;
 
   auto byte_size =
-      GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
+      GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr);
   if (!byte_size)
     return false;
 
@@ -1112,7 +1112,7 @@ bool CompilerType::WriteToMemory(lldb_private::ExecutionContext *exe_ctx,
     return false;
 
   auto byte_size =
-      GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
+      GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr);
   if (!byte_size)
     return false;
 

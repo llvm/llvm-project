@@ -56,13 +56,13 @@ bool SBStringList::IsValid() const {
 SBStringList::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStringList, operator bool);
 
-  return (m_opaque_up != NULL);
+  return (m_opaque_up != nullptr);
 }
 
 void SBStringList::AppendString(const char *str) {
   LLDB_RECORD_METHOD(void, SBStringList, AppendString, (const char *), str);
 
-  if (str != NULL) {
+  if (str != nullptr) {
     if (IsValid())
       m_opaque_up->AppendString(str);
     else
@@ -74,7 +74,7 @@ void SBStringList::AppendList(const char **strv, int strc) {
   LLDB_RECORD_METHOD(void, SBStringList, AppendList, (const char **, int), strv,
                      strc);
 
-  if ((strv != NULL) && (strc > 0)) {
+  if ((strv != nullptr) && (strc > 0)) {
     if (IsValid())
       m_opaque_up->AppendList(strv, strc);
     else
@@ -115,7 +115,7 @@ const char *SBStringList::GetStringAtIndex(size_t idx) {
   if (IsValid()) {
     return m_opaque_up->GetStringAtIndex(idx);
   }
-  return NULL;
+  return nullptr;
 }
 
 const char *SBStringList::GetStringAtIndex(size_t idx) const {
@@ -125,7 +125,7 @@ const char *SBStringList::GetStringAtIndex(size_t idx) const {
   if (IsValid()) {
     return m_opaque_up->GetStringAtIndex(idx);
   }
-  return NULL;
+  return nullptr;
 }
 
 void SBStringList::Clear() {

@@ -143,7 +143,7 @@ lldb::addr_t AppleGetItemInfoHandler::SetupGetItemInfoFunction(
     // function:
 
     if (!m_get_item_info_impl_code) {
-      if (g_get_item_info_function_code != NULL) {
+      if (g_get_item_info_function_code != nullptr) {
         Status error;
         m_get_item_info_impl_code.reset(
             exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(

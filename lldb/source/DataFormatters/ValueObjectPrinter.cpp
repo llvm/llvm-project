@@ -331,7 +331,7 @@ TypeSummaryImpl *ValueObjectPrinter::GetSummaryFormatter(bool null_if_omitted) {
                                  : m_valobj->GetSummaryFormat().get();
 
     if (m_options.m_omit_summary_depth > 0)
-      entry = NULL;
+      entry = nullptr;
     m_summary_formatter.first = entry;
     m_summary_formatter.second = true;
   }
@@ -415,8 +415,9 @@ bool ValueObjectPrinter::PrintValueAndSummaryIfNeeded(bool &value_printed,
       // explicitly)
       TypeSummaryImpl *entry = GetSummaryFormatter();
       if (!IsNil() && !IsUninitialized() && !m_value.empty() &&
-          (entry == NULL || (entry->DoesPrintValue(m_valobj) ||
-                             m_options.m_format != eFormatDefault) ||
+          (entry == nullptr ||
+           (entry->DoesPrintValue(m_valobj) ||
+            m_options.m_format != eFormatDefault) ||
            m_summary.empty()) &&
           !m_options.m_hide_value) {
         if (m_options.m_hide_pointer_value &&

@@ -57,7 +57,7 @@ ObjectContainer *ObjectContainerUniversalMachO::CreateInstance(
       }
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 bool ObjectContainerUniversalMachO::MagicBytesMatch(const DataExtractor &data) {

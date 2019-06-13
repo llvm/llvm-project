@@ -93,7 +93,7 @@ bool ProcessMachCore::CanDebug(lldb::TargetSP target_sp,
     // ModuleSpecList::FindMatchingModuleSpec enforces a strict arch mach.
     ModuleSpec core_module_spec(m_core_file);
     Status error(ModuleList::GetSharedModule(core_module_spec, m_core_module_sp,
-                                             NULL, NULL, NULL));
+                                             nullptr, nullptr, nullptr));
 
     if (m_core_module_sp) {
       ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
@@ -196,7 +196,7 @@ Status ProcessMachCore::DoLoadCore() {
   }
 
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
-  if (core_objfile == NULL) {
+  if (core_objfile == nullptr) {
     error.SetErrorString("invalid core object file");
     return error;
   }
@@ -209,7 +209,7 @@ Status ProcessMachCore::DoLoadCore() {
   }
 
   SectionList *section_list = core_objfile->GetSectionList();
-  if (section_list == NULL) {
+  if (section_list == nullptr) {
     error.SetErrorString("core file has no sections");
     return error;
   }
@@ -308,7 +308,7 @@ Status ProcessMachCore::DoLoadCore() {
       size_t p = corefile_identifier.find("stext=") + strlen("stext=");
       if (corefile_identifier[p] == '0' && corefile_identifier[p + 1] == 'x') {
         errno = 0;
-        addr = ::strtoul(corefile_identifier.c_str() + p, NULL, 16);
+        addr = ::strtoul(corefile_identifier.c_str() + p, nullptr, 16);
         if (errno != 0 || addr == 0)
           addr = LLDB_INVALID_ADDRESS;
       }
@@ -447,10 +447,10 @@ Status ProcessMachCore::DoLoadCore() {
 }
 
 lldb_private::DynamicLoader *ProcessMachCore::GetDynamicLoader() {
-  if (m_dyld_up.get() == NULL)
+  if (m_dyld_up.get() == nullptr)
     m_dyld_up.reset(DynamicLoader::FindPlugin(
-        this,
-        m_dyld_plugin_name.IsEmpty() ? NULL : m_dyld_plugin_name.GetCString()));
+        this, m_dyld_plugin_name.IsEmpty() ? nullptr
+                                           : m_dyld_plugin_name.GetCString()));
   return m_dyld_up.get();
 }
 

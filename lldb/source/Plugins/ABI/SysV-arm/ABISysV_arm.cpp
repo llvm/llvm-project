@@ -1739,8 +1739,8 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
           uint32_t index = 0;
           for (index = 0; index < num_children; index++) {
             std::string name;
-            base_type =
-                compiler_type.GetFieldAtIndex(index, name, NULL, NULL, NULL);
+            base_type = compiler_type.GetFieldAtIndex(index, name, nullptr,
+                                                      nullptr, nullptr);
 
             if (base_type.IsFloatingPointType(float_count, is_complex)) {
               llvm::Optional<uint64_t> base_byte_size =
@@ -1799,7 +1799,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
 
       const RegisterInfo *reg_info =
           reg_ctx->GetRegisterInfo(eRegisterKindDWARF, regnum);
-      if (reg_info == NULL)
+      if (reg_info == nullptr)
         break;
 
       RegisterValue reg_value;

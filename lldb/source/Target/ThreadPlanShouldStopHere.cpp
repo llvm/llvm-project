@@ -163,7 +163,7 @@ ThreadPlanSP ThreadPlanShouldStopHere::DefaultStepFromHereCallback(
                       "Queueing StepInRange plan to step through line 0 code.");
         return_plan_sp =
             current_plan->GetThread().QueueThreadPlanForStepInRangeNoShouldStop(
-                false, range, sc, NULL, eOnlyDuringStepping, status,
+                false, range, sc, nullptr, eOnlyDuringStepping, status,
                 eLazyBoolCalculate, eLazyBoolNo);
       } else {
         if (log)

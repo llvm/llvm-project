@@ -188,7 +188,7 @@ size_t RegisterContextFreeBSD_powerpc::GetGPRSize() const {
 const RegisterInfo *RegisterContextFreeBSD_powerpc::GetRegisterInfo() const {
   // assert (m_target_arch.GetCore() == ArchSpec::eCore_powerpc);
   llvm_unreachable("Abstract class!");
-  return NULL;
+  return nullptr;
 }
 
 uint32_t RegisterContextFreeBSD_powerpc::GetRegisterCount() const { return 0; }

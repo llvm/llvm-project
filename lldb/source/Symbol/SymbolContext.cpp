@@ -501,7 +501,7 @@ bool SymbolContext::GetParentOfInlinedScope(const Address &curr_frame_pc,
         }
 #ifdef LLDB_CONFIGURATION_DEBUG
         else {
-          ObjectFile *objfile = NULL;
+          ObjectFile *objfile = nullptr;
           if (module_sp) {
             SymbolVendor *symbol_vendor = module_sp->GetSymbolVendor();
             if (symbol_vendor) {

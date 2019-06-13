@@ -59,7 +59,7 @@ OperatingSystem *OperatingSystemPython::CreateInstance(Process *process,
     if (os_up.get() && os_up->IsValid())
       return os_up.release();
   }
-  return NULL;
+  return nullptr;
 }
 
 ConstString OperatingSystemPython::GetPluginNameStatic() {
@@ -75,7 +75,7 @@ const char *OperatingSystemPython::GetPluginDescriptionStatic() {
 OperatingSystemPython::OperatingSystemPython(lldb_private::Process *process,
                                              const FileSpec &python_module_path)
     : OperatingSystem(process), m_thread_list_valobj_sp(), m_register_info_up(),
-      m_interpreter(NULL), m_python_object_sp() {
+      m_interpreter(nullptr), m_python_object_sp() {
   if (!process)
     return;
   TargetSP target_sp = process->CalculateTarget();
@@ -115,9 +115,9 @@ OperatingSystemPython::OperatingSystemPython(lldb_private::Process *process,
 OperatingSystemPython::~OperatingSystemPython() {}
 
 DynamicRegisterInfo *OperatingSystemPython::GetDynamicRegisterInfo() {
-  if (m_register_info_up == NULL) {
+  if (m_register_info_up == nullptr) {
     if (!m_interpreter || !m_python_object_sp)
-      return NULL;
+      return nullptr;
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OS));
 
     if (log)
@@ -128,7 +128,7 @@ DynamicRegisterInfo *OperatingSystemPython::GetDynamicRegisterInfo() {
     StructuredData::DictionarySP dictionary =
         m_interpreter->OSPlugin_RegisterInfo(m_python_object_sp);
     if (!dictionary)
-      return NULL;
+      return nullptr;
 
     m_register_info_up.reset(new DynamicRegisterInfo(
         *dictionary, m_process->GetTarget().GetArchitecture()));
@@ -198,9 +198,9 @@ bool OperatingSystemPython::UpdateThreadList(ThreadList &old_thread_list,
       StructuredData::ObjectSP thread_dict_obj =
           threads_list->GetItemAtIndex(i);
       if (auto thread_dict = thread_dict_obj->GetAsDictionary()) {
-        ThreadSP thread_sp(
-            CreateThreadFromThreadInfo(*thread_dict, core_thread_list,
-                                       old_thread_list, core_used_map, NULL));
+        ThreadSP thread_sp(CreateThreadFromThreadInfo(
+            *thread_dict, core_thread_list, old_thread_list, core_used_map,
+            nullptr));
         if (thread_sp)
           new_thread_list.AddThread(thread_sp);
       }

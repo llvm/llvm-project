@@ -213,7 +213,7 @@ EmulateInstructionMIPS::CreateInstance(const ArchSpec &arch,
     }
   }
 
-  return NULL;
+  return nullptr;
 }
 
 bool EmulateInstructionMIPS::SetTargetTriple(const ArchSpec &arch) {
@@ -966,7 +966,7 @@ EmulateInstructionMIPS::GetOpcodeForInstruction(const char *op_name) {
       return &g_opcodes[i];
   }
 
-  return NULL;
+  return nullptr;
 }
 
 uint32_t
@@ -1095,7 +1095,7 @@ bool EmulateInstructionMIPS::EvaluateInstruction(uint32_t evaluate_options) {
   */
   MipsOpcode *opcode_data = GetOpcodeForInstruction(op_name);
 
-  if (opcode_data == NULL)
+  if (opcode_data == nullptr)
     return false;
 
   uint64_t old_pc = 0, new_pc = 0;
@@ -2905,7 +2905,7 @@ bool EmulateInstructionMIPS::Emulate_MSA_Branch_DF(llvm::MCInst &insn,
   bool success = false, branch_hit = true;
   int32_t target = 0;
   RegisterValue reg_value;
-  const uint8_t *ptr = NULL;
+  const uint8_t *ptr = nullptr;
 
   uint32_t wt = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   int32_t offset = insn.getOperand(1).getImm();

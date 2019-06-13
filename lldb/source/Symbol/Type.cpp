@@ -979,7 +979,7 @@ TypeSystem *TypeImpl::GetTypeSystem(bool prefer_dynamic) {
     }
     return m_static_type.GetTypeSystem();
   }
-  return NULL;
+  return nullptr;
 }
 
 bool TypeImpl::GetDescription(lldb_private::Stream &strm,
