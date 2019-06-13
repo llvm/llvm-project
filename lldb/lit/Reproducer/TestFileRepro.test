@@ -11,6 +11,7 @@
 # RUN: %lldb -x -b -s %S/Inputs/FileCapture.in --capture --capture-path %t.repro %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
 # RUN: rm %t.out
 # RUN: %lldb --replay %t.repro | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
+# RUN: cat %t.repro/version.txt | FileCheck %s --check-prefix VERSION
 
 # CAPTURE: testing
 # REPLAY-NOT: testing
@@ -19,3 +20,5 @@
 
 # CAPTURE: Reproducer is in capture mode.
 # CAPTURE: Reproducer written
+
+# VERSION: lldb version

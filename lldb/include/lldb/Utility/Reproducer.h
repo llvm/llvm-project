@@ -109,6 +109,26 @@ private:
   FileCollector m_collector;
 };
 
+/// Provider for the LLDB version number.
+///
+/// When the reproducer is kept, it writes the lldb version to a file named
+/// version.txt in the reproducer root.
+class VersionProvider : public Provider<VersionProvider> {
+public:
+  VersionProvider(const FileSpec &directory) : Provider(directory) {}
+  struct Info {
+    static const char *name;
+    static const char *file;
+  };
+  void SetVersion(std::string version) {
+    assert(m_version.empty());
+    m_version = std::move(version);
+  }
+  void Keep() override;
+  std::string m_version;
+  static char ID;
+};
+
 class DataRecorder {
 public:
   DataRecorder(FileSpec filename, std::error_code &ec)

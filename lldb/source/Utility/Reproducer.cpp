@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/lldb-private.h"
 
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
@@ -263,11 +264,23 @@ void CommandProvider::Keep() {
 
 void CommandProvider::Discard() { m_data_recorders.clear(); }
 
+void VersionProvider::Keep() {
+  FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
+  std::error_code ec;
+  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::F_Text);
+  if (ec)
+    return;
+  os << lldb_private::GetVersion() << "\n";
+}
+
 void ProviderBase::anchor() {}
 char ProviderBase::ID = 0;
-char FileProvider::ID = 0;
 char CommandProvider::ID = 0;
-const char *FileProvider::Info::name = "files";
-const char *FileProvider::Info::file = "files.yaml";
-const char *CommandProvider::Info::name = "command-interpreter";
+char FileProvider::ID = 0;
+char VersionProvider::ID = 0;
 const char *CommandProvider::Info::file = "command-interpreter.yaml";
+const char *CommandProvider::Info::name = "command-interpreter";
+const char *FileProvider::Info::file = "files.yaml";
+const char *FileProvider::Info::name = "files";
+const char *VersionProvider::Info::file = "version.txt";
+const char *VersionProvider::Info::name = "version";
