@@ -36,21 +36,8 @@ else()
 endif()
 
 # Target to capture extra steps for a fully functional framework bundle.
-add_custom_target(lldb-framework)
+add_custom_target(lldb-framework ALL)
 add_dependencies(lldb-framework liblldb)
-
-# Dependencies are defined once tools are added (see AddLLDB.cmake)
-if(LLDB_FRAMEWORK_TOOLS)
-  message(STATUS "LLDB.framework: adding tools ${LLDB_FRAMEWORK_TOOLS}")
-  foreach(tool ${LLDB_FRAMEWORK_TOOLS})
-    add_custom_command(TARGET lldb-framework POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${tool}> $<TARGET_FILE_DIR:liblldb>/Resources
-      COMMENT "LLDB.framework: copy additional tool ${tool}"
-    )
-  endforeach()
-else()
-  message(WARNING "LLDB.framework: no additional tools configured (set via LLDB_FRAMEWORK_TOOLS)")
-endif()
 
 # Apart from this one, CMake creates all required symlinks in the framework bundle.
 add_custom_command(TARGET lldb-framework POST_BUILD

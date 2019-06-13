@@ -265,6 +265,10 @@ if(build_and_sign_debugserver)
       ${entitlements}
     )
 
+  if(LLDB_BUILD_FRAMEWORK)
+    lldb_add_to_framework(debugserver)
+  endif()
+
   if(IOS)
     set_property(TARGET lldbDebugserverCommon APPEND PROPERTY COMPILE_DEFINITIONS
       WITH_LOCKDOWN
