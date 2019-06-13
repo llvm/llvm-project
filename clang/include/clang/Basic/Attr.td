@@ -1501,7 +1501,6 @@ def AMDGPUFlatWorkGroupSize : InheritableAttr {
   let Args = [ExprArgument<"Min">, ExprArgument<"Max">];
   let Documentation = [AMDGPUFlatWorkGroupSizeDocs];
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
-  let TemplateDependent = 1;
 }
 
 def AMDGPUWavesPerEU : InheritableAttr {
@@ -1509,7 +1508,6 @@ def AMDGPUWavesPerEU : InheritableAttr {
   let Args = [ExprArgument<"Min">, ExprArgument<"Max", 1>];
   let Documentation = [AMDGPUWavesPerEUDocs];
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
-  let TemplateDependent = 1;
 }
 
 def AMDGPUNumSGPR : InheritableAttr {
