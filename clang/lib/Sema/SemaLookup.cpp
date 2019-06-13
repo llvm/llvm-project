@@ -46,7 +46,7 @@
 #include <utility>
 #include <vector>
 
-#include "clang/Basic/OpenCLBuiltins.inc"
+#include "OpenCLBuiltins.inc"
 
 using namespace clang;
 using namespace sema;

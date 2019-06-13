@@ -41,12 +41,6 @@ clang_tablegen(AttrHasAttributeImpl.inc -gen-clang-attr-has-attribute-impl
   TARGET ClangAttrHasAttributeImpl
   )
 
-clang_tablegen(OpenCLBuiltins.inc
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../ -gen-clang-opencl-builtins
-  SOURCE OpenCLBuiltins.td
-  TARGET ClangOpenCLBuiltinsImpl
-  )
-
 # ARM NEON
 clang_tablegen(arm_neon.inc -gen-arm-neon-sema
   SOURCE arm_neon.td
