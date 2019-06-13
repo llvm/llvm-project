@@ -136,7 +136,7 @@ const char *SBReproducer::Replay(const char *path) {
     return error.c_str();
   }
 
-  FileSpec file = loader->GetFile<SBInfo>();
+  FileSpec file = loader->GetFile<SBProvider::Info>();
   if (!file) {
     error = "unable to get replay data from reproducer.";
     return error.c_str();
@@ -149,5 +149,5 @@ const char *SBReproducer::Replay(const char *path) {
 }
 
 char lldb_private::repro::SBProvider::ID = 0;
-const char *SBInfo::name = "sbapi";
-const char *SBInfo::file = "sbapi.bin";
+const char *SBProvider::Info::name = "sbapi";
+const char *SBProvider::Info::file = "sbapi.bin";
