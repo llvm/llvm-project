@@ -13,18 +13,19 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/LLDBAssert.h"
 
-#include "DWARFUnit.h"
+#include "DWARFCompileUnit.h"
 #include "DWARFDebugInfo.h"
+#include "DWARFUnit.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 SymbolFileDWARFDwo::SymbolFileDWARFDwo(ObjectFileSP objfile,
-                                       DWARFUnit *dwarf_cu)
+                                       DWARFCompileUnit &dwarf_cu)
     : SymbolFileDWARF(objfile.get(), objfile->GetSectionList(
                                          /*update_module_section_list*/ false)),
       m_obj_file_sp(objfile), m_base_dwarf_cu(dwarf_cu) {
-  SetID(((lldb::user_id_t)dwarf_cu->GetID()) << 32);
+  SetID(((lldb::user_id_t)dwarf_cu.GetID()) << 32);
 }
 
 void SymbolFileDWARFDwo::LoadSectionData(lldb::SectionType sect_type,
@@ -45,10 +46,11 @@ void SymbolFileDWARFDwo::LoadSectionData(lldb::SectionType sect_type,
   SymbolFileDWARF::LoadSectionData(sect_type, data);
 }
 
-lldb::CompUnitSP SymbolFileDWARFDwo::ParseCompileUnit(DWARFUnit *dwarf_cu) {
-  assert(GetCompileUnit() == dwarf_cu && "SymbolFileDWARFDwo::ParseCompileUnit "
-                                         "called with incompatible compile "
-                                         "unit");
+lldb::CompUnitSP
+SymbolFileDWARFDwo::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
+  assert(GetCompileUnit() == &dwarf_cu &&
+         "SymbolFileDWARFDwo::ParseCompileUnit called with incompatible "
+         "compile unit");
   return GetBaseSymbolFile()->ParseCompileUnit(m_base_dwarf_cu);
 }
 
@@ -106,12 +108,8 @@ lldb::TypeSP SymbolFileDWARFDwo::FindCompleteObjCDefinitionTypeForDIE(
       die, type_name, must_be_implementation);
 }
 
-DWARFUnit *SymbolFileDWARFDwo::GetBaseCompileUnit() {
-  return m_base_dwarf_cu;
-}
-
 SymbolFileDWARF *SymbolFileDWARFDwo::GetBaseSymbolFile() {
-  return m_base_dwarf_cu->GetSymbolFileDWARF();
+  return m_base_dwarf_cu.GetSymbolFileDWARF();
 }
 
 DWARFExpression::LocationListFormat
@@ -126,7 +124,7 @@ SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language) {
 
 DWARFDIE
 SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref) {
-  lldbassert(die_ref.cu_offset == m_base_dwarf_cu->GetOffset() ||
+  lldbassert(die_ref.cu_offset == m_base_dwarf_cu.GetOffset() ||
              die_ref.cu_offset == DW_INVALID_OFFSET);
   return DebugInfo()->GetDIEForDIEOffset(die_ref.section, die_ref.die_offset);
 }

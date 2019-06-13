@@ -182,6 +182,11 @@ DWARFTypeUnit *DWARFDebugInfo::GetTypeUnitForHash(uint64_t hash) {
   return llvm::cast<DWARFTypeUnit>(GetUnitAtIndex(pos->second));
 }
 
+bool DWARFDebugInfo::ContainsTypeUnits() {
+  ParseUnitHeadersIfNeeded();
+  return !m_type_hash_to_unit_index.empty();
+}
+
 DWARFDIE
 DWARFDebugInfo::GetDIEForDIEOffset(DIERef::Section section,
                                    dw_offset_t die_offset) {

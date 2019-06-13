@@ -21,7 +21,7 @@ using namespace lldb_private;
 
 SymbolFileDWARFDwoDwp::SymbolFileDWARFDwoDwp(SymbolFileDWARFDwp *dwp_symfile,
                                              ObjectFileSP objfile,
-                                             DWARFUnit *dwarf_cu,
+                                             DWARFCompileUnit &dwarf_cu,
                                              uint64_t dwo_id)
     : SymbolFileDWARFDwo(objfile, dwarf_cu), m_dwp_symfile(dwp_symfile),
       m_dwo_id(dwo_id) {}

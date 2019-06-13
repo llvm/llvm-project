@@ -169,6 +169,13 @@
         .byte   1                       # DW_CHILDREN_yes
         .byte   0                       # EOM(1)
         .byte   0                       # EOM(2)
+        .byte   5                       # Abbreviation Code
+        .byte   19                      # DW_TAG_structure_type
+        .byte   0                       # DW_CHILDREN_no
+        .byte   105                     # DW_AT_signature
+        .byte   32                      # DW_FORM_ref_sig8
+        .byte   0                       # EOM(1)
+        .byte   0                       # EOM(2)
         .byte   0                       # EOM(3)
         .section        .debug_info,"",@progbits
 .Lcu_begin0:
@@ -178,6 +185,16 @@
         .long   .debug_abbrev           # Offset Into Abbrev. Section
         .byte   8                       # Address Size (in bytes)
         .byte   4                       # Abbrev [4] 0xb:0x32 DW_TAG_compile_unit
+        .byte   5                       # Abbrev [5] DW_TAG_structure_type
+        .quad   5390450678491038984     # DW_AT_signature
+        .byte   5                       # Abbrev [5] DW_TAG_structure_type
+        .quad   5390450678491038985     # DW_AT_signature
+        .byte   5                       # Abbrev [5] DW_TAG_structure_type
+        .quad   5390450678491038986     # DW_AT_signature
+        .byte   5                       # Abbrev [5] DW_TAG_structure_type
+        .quad   5390450678491038987     # DW_AT_signature
+        .byte   5                       # Abbrev [5] DW_TAG_structure_type
+        .quad   5390450678491038988     # DW_AT_signature
         .byte   0                       # End Of Children Mark
 .Ldebug_info_end1:
 
