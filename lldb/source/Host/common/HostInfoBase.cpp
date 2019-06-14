@@ -321,7 +321,11 @@ bool HostInfoBase::ComputeUserPluginsDirectory(FileSpec &file_spec) {
 
 void HostInfoBase::ComputeHostArchitectureSupport(ArchSpec &arch_32,
                                                   ArchSpec &arch_64) {
+#if defined(USE_DPU)
+  llvm::Triple triple("dpu-upmem-dpurte");
+#else
   llvm::Triple triple(llvm::sys::getProcessTriple());
+#endif
 
   arch_32.Clear();
   arch_64.Clear();

@@ -10,7 +10,7 @@ add_lldb_library(lldbPluginProcessDpu PLUGIN
 
   LINK_LIBS
     lldbCore
-    lldbHost
+    lldbHostDpu
     lldbSymbol
     lldbTarget
     lldbUtility

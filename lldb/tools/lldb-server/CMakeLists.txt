@@ -89,7 +89,7 @@ add_lldb_tool(lldb-server-dpu INCLUDE_IN_SUITE
     LINK_LIBS
       lldbBase
       lldbCore
-      lldbHost
+      lldbHostDpu
       lldbInitialization
       lldbInterpreter
       ${LLDB_PLUGINS}

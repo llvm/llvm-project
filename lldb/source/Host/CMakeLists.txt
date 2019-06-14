@@ -177,3 +177,25 @@ add_lldb_library(lldbHost
 if (LLDB_ENABLE_LIBEDIT)
   target_include_directories(lldbHost PUBLIC ${LibEdit_INCLUDE_DIRS})
 endif()
+
+if(HAVE_LIBDPU)
+
+add_lldb_library(lldbHostDpu
+  ${HOST_SOURCES}
+
+  LINK_LIBS
+    lldbCore
+    lldbSymbol
+    lldbTarget
+    lldbUtility
+    ${EXTRA_LIBS}
+    ${LLDBObjCLibs}
+
+  LINK_COMPONENTS
+    Object
+    Support
+  )
+
+target_compile_options(lldbHostDpu PRIVATE -DUSE_DPU)
+
+endif()
