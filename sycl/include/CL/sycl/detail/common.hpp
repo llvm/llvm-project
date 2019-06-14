@@ -82,7 +82,7 @@ namespace detail {
 // Note! This function relies on the fact that all SYCL interface classes
 // contain "impl" field that points to implementation object. "impl" field
 // should be accessible from this function.
-template <class T> decltype(T::impl) getSyclObjImpl(const T &SyclObject) {
+template <class Obj> decltype(Obj::impl) getSyclObjImpl(const Obj &SyclObject) {
   return SyclObject.impl;
 }
 

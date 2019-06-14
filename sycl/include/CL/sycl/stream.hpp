@@ -101,8 +101,8 @@ private:
   char padding[sizeof(std::shared_ptr<detail::stream_impl>)];
 #else
   std::shared_ptr<detail::stream_impl> impl;
-  template <class T>
-  friend decltype(T::impl) detail::getSyclObjImpl(const T &SyclObject);
+  template <class Obj>
+  friend decltype(Obj::impl) detail::getSyclObjImpl(const Obj &SyclObject);
 #endif
 
   // Accessor to stream buffer

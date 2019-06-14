@@ -48,6 +48,8 @@
 #include <CL/sycl/half_type.hpp>
 #include <CL/sycl/multi_ptr.hpp>
 
+#include <array>
+
 // 4.10.1: Scalar data types
 // 4.10.2: SYCL vector types
 

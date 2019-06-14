@@ -184,7 +184,7 @@ private:
   }
 
 protected:
-  friend class detail::Builder;
+  friend struct detail::Builder;
   group(const range<dimensions> &G, const range<dimensions> &L,
         const id<dimensions> &I)
       : globalRange(G), localRange(L), index(I) {}

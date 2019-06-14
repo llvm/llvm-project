@@ -116,7 +116,7 @@ protected:
   void *getPtr() const { return const_cast<void *>(impl->MData); }
 
   template <class Obj>
-  friend decltype(Obj::impl) detail::getSyclObjImpl(const Obj &SyclObject);
+  friend decltype(Obj::impl) getSyclObjImpl(const Obj &SyclObject);
 
   AccessorImplPtr impl;
 };
@@ -150,7 +150,7 @@ public:
 
 protected:
   template <class Obj>
-  friend decltype(Obj::impl) detail::getSyclObjImpl(const Obj &SyclObject);
+  friend decltype(Obj::impl) getSyclObjImpl(const Obj &SyclObject);
 
   std::shared_ptr<LocalAccessorImplHost> impl;
 };

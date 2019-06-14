@@ -165,7 +165,7 @@ template <int dimensions = 1> struct nd_item {
   }
 
 protected:
-  friend class detail::Builder;
+  friend struct detail::Builder;
   nd_item(const item<dimensions, true> &GL, const item<dimensions, false> &L,
           const group<dimensions> &GR)
       : globalItem(GL), localItem(L), Group(GR) {}
