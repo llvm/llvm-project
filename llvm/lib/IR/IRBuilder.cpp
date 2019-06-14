@@ -313,7 +313,7 @@ static CallInst *getReductionIntrinsic(IRBuilderBase *Builder, Intrinsic::ID ID,
                                     Value *Src) {
   Module *M = Builder->GetInsertBlock()->getParent()->getParent();
   Value *Ops[] = {Src};
-  Type *Tys[] = { Src->getType()->getVectorElementType(), Src->getType() };
+  Type *Tys[] = { Src->getType() };
   auto Decl = Intrinsic::getDeclaration(M, ID, Tys);
   return createCallHelper(Decl, Ops, Builder);
 }

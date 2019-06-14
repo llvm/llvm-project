@@ -571,35 +571,32 @@ return:
 ; two_nosize - Same as two, but without the optsize attribute.
 ; Now two instructions are enough to be tail-duplicated.
 
-define void @two_nosize() nounwind {
+define void @two_nosize(i32 %x, i32 %y, i32 %z) nounwind {
 ; CHECK-LABEL: two_nosize:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB8_3
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    je .LBB8_3
 ; CHECK-NEXT:  # %bb.1: # %bby
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB8_4
+; CHECK-NEXT:    testl %esi, %esi
+; CHECK-NEXT:    je .LBB8_4
 ; CHECK-NEXT:  # %bb.2: # %bb7
 ; CHECK-NEXT:    movl $0, {{.*}}(%rip)
 ; CHECK-NEXT:    jmp tail_call_me # TAILCALL
 ; CHECK-NEXT:  .LBB8_3: # %bbx
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB8_5
-; CHECK-NEXT:  .LBB8_4: # %return
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB8_5: # %bb12
+; CHECK-NEXT:    cmpl $-1, %edx
+; CHECK-NEXT:    je .LBB8_4
+; CHECK-NEXT:  # %bb.5: # %bb12
 ; CHECK-NEXT:    movl $0, {{.*}}(%rip)
 ; CHECK-NEXT:    jmp tail_call_me # TAILCALL
+; CHECK-NEXT:  .LBB8_4: # %return
+; CHECK-NEXT:    retq
 entry:
-  %0 = icmp eq i32 undef, 0
+  %0 = icmp eq i32 %x, 0
   br i1 %0, label %bbx, label %bby
 
 bby:
-  switch i32 undef, label %bb7 [
-    i32 16, label %return
+  switch i32 %y, label %bb7 [
+    i32 0, label %return
   ]
 
 bb7:
@@ -608,8 +605,8 @@ bb7:
   ret void
 
 bbx:
-  switch i32 undef, label %bb12 [
-    i32 128, label %return
+  switch i32 %z, label %bb12 [
+    i32 -1, label %return
   ]
 
 bb12:

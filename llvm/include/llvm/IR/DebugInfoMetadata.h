@@ -2523,17 +2523,14 @@ public:
   createFragmentExpression(const DIExpression *Expr, unsigned OffsetInBits,
                            unsigned SizeInBits);
 
-  /// Determine the relative position of the fragments described by this
-  /// DIExpression and \p Other.
+  /// Determine the relative position of the fragments passed in.
   /// Returns -1 if this is entirely before Other, 0 if this and Other overlap,
   /// 1 if this is entirely after Other.
-  int fragmentCmp(const DIExpression *Other) const {
-    auto Fragment1 = *getFragmentInfo();
-    auto Fragment2 = *Other->getFragmentInfo();
-    unsigned l1 = Fragment1.OffsetInBits;
-    unsigned l2 = Fragment2.OffsetInBits;
-    unsigned r1 = l1 + Fragment1.SizeInBits;
-    unsigned r2 = l2 + Fragment2.SizeInBits;
+  static int fragmentCmp(const FragmentInfo &A, const FragmentInfo &B) {
+    uint64_t l1 = A.OffsetInBits;
+    uint64_t l2 = B.OffsetInBits;
+    uint64_t r1 = l1 + A.SizeInBits;
+    uint64_t r2 = l2 + B.SizeInBits;
     if (r1 <= l2)
       return -1;
     else if (r2 <= l1)
@@ -2542,12 +2539,52 @@ public:
       return 0;
   }
 
+  /// Check if fragments overlap between a pair of FragmentInfos.
+  static bool fragmentsOverlap(const FragmentInfo &A, const FragmentInfo &B) {
+    return fragmentCmp(A, B) == 0;
+  }
+
+  /// Determine the relative position of the fragments described by this
+  /// DIExpression and \p Other. Calls static fragmentCmp implementation.
+  int fragmentCmp(const DIExpression *Other) const {
+    auto Fragment1 = *getFragmentInfo();
+    auto Fragment2 = *Other->getFragmentInfo();
+    return fragmentCmp(Fragment1, Fragment2);
+  }
+
   /// Check if fragments overlap between this DIExpression and \p Other.
   bool fragmentsOverlap(const DIExpression *Other) const {
     if (!isFragment() || !Other->isFragment())
       return true;
     return fragmentCmp(Other) == 0;
   }
+};
+
+inline bool operator==(const DIExpression::FragmentInfo &A,
+                       const DIExpression::FragmentInfo &B) {
+  return std::tie(A.SizeInBits, A.OffsetInBits) ==
+         std::tie(B.SizeInBits, B.OffsetInBits);
+}
+
+inline bool operator<(const DIExpression::FragmentInfo &A,
+                      const DIExpression::FragmentInfo &B) {
+  return std::tie(A.SizeInBits, A.OffsetInBits) <
+         std::tie(B.SizeInBits, B.OffsetInBits);
+}
+
+template <> struct DenseMapInfo<DIExpression::FragmentInfo> {
+  using FragInfo = DIExpression::FragmentInfo;
+  static const uint64_t MaxVal = std::numeric_limits<uint64_t>::max();
+
+  static inline FragInfo getEmptyKey() { return {MaxVal, MaxVal}; }
+
+  static inline FragInfo getTombstoneKey() { return {MaxVal - 1, MaxVal - 1}; }
+
+  static unsigned getHashValue(const FragInfo &Frag) {
+    return (Frag.SizeInBits & 0xffff) << 16 | (Frag.OffsetInBits & 0xffff);
+  }
+
+  static bool isEqual(const FragInfo &A, const FragInfo &B) { return A == B; }
 };
 
 /// Global variables.

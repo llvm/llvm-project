@@ -150,10 +150,18 @@ unsigned getNumExtraSGPRs(const MCSubtargetInfo *STI, bool VCCUsed,
 unsigned getNumSGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs);
 
 /// \returns VGPR allocation granularity for given subtarget \p STI.
-unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI);
+///
+/// For subtargets which support it, \p EnableWavefrontSize32 should match
+/// the ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
+unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
+                             Optional<bool> EnableWavefrontSize32 = None);
 
 /// \returns VGPR encoding granularity for given subtarget \p STI.
-unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI);
+///
+/// For subtargets which support it, \p EnableWavefrontSize32 should match
+/// the ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
+unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
+                                Optional<bool> EnableWavefrontSize32 = None);
 
 /// \returns Total number of VGPRs for given subtarget \p STI.
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI);
@@ -171,7 +179,11 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
 
 /// \returns Number of VGPR blocks needed for given subtarget \p STI when
 /// \p NumVGPRs are used.
-unsigned getNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs);
+///
+/// For subtargets which support it, \p EnableWavefrontSize32 should match the
+/// ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
+unsigned getNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs,
+                          Optional<bool> EnableWavefrontSize32 = None);
 
 } // end namespace IsaInfo
 
@@ -405,6 +417,33 @@ unsigned encodeWaitcnt(const IsaVersion &Version,
                        unsigned Vmcnt, unsigned Expcnt, unsigned Lgkmcnt);
 
 unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded);
+
+namespace Hwreg {
+
+LLVM_READONLY
+int64_t getHwregId(const StringRef Name);
+
+LLVM_READNONE
+bool isValidHwreg(int64_t Id, const MCSubtargetInfo &STI);
+
+LLVM_READNONE
+bool isValidHwreg(int64_t Id);
+
+LLVM_READNONE
+bool isValidHwregOffset(int64_t Offset);
+
+LLVM_READNONE
+bool isValidHwregWidth(int64_t Width);
+
+LLVM_READNONE
+int64_t encodeHwreg(int64_t Id, int64_t Offset, int64_t Width);
+
+LLVM_READNONE
+StringRef getHwreg(unsigned Id, const MCSubtargetInfo &STI);
+
+void decodeHwreg(unsigned Val, unsigned &Id, unsigned &Offset, unsigned &Width);
+
+} // namespace Hwreg
 
 unsigned getInitialPSInputAddr(const Function &F);
 

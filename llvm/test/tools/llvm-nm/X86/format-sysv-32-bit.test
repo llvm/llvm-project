@@ -1,4 +1,3 @@
-RUN: llvm-nm -f sysv %p/Inputs/hello.obj.elf-i386 
 RUN: llvm-nm -f sysv %p/Inputs/hello.obj.elf-i386 | FileCheck %s --strict-whitespace
 
 CHECK: Name                  Value   Class        Type         Size     Line  Section

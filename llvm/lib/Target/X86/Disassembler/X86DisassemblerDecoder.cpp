@@ -882,7 +882,7 @@ static int getID(struct InternalInstruction* insn, const void *miiArg) {
       if (aaaFromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_EVEXK;
       if (lFromEVEX4of4(insn->vectorExtensionPrefix[3]))
-        attrMask |= ATTR_EVEXL;
+        attrMask |= ATTR_VEXL;
       if (l2FromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_EVEXL2;
     } else if (insn->vectorExtensionType == TYPE_VEX_3B) {

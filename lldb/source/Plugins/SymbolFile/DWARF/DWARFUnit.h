@@ -74,7 +74,7 @@ class DWARFUnit : public lldb_private::UserID {
 
 public:
   static llvm::Expected<DWARFUnitSP>
-  extract(SymbolFileDWARF *dwarf2Data, lldb::user_id_t uid,
+  extract(SymbolFileDWARF &dwarf2Data, lldb::user_id_t uid,
           const lldb_private::DWARFDataExtractor &debug_info,
           DIERef::Section section, lldb::offset_t *offset_ptr);
   virtual ~DWARFUnit();
@@ -86,7 +86,7 @@ public:
     DWARFUnit *m_cu;
   public:
     bool m_clear_dies = false;
-    ScopedExtractDIEs(DWARFUnit *cu);
+    ScopedExtractDIEs(DWARFUnit &cu);
     ~ScopedExtractDIEs();
     DISALLOW_COPY_AND_ASSIGN(ScopedExtractDIEs);
     ScopedExtractDIEs(ScopedExtractDIEs &&rhs);
@@ -180,7 +180,7 @@ public:
 
   bool Supports_unnamed_objc_bitfields();
 
-  SymbolFileDWARF *GetSymbolFileDWARF() const;
+  SymbolFileDWARF &GetSymbolFileDWARF() const { return m_dwarf; }
 
   DWARFProducer GetProducer();
 
@@ -225,12 +225,12 @@ public:
   llvm::Expected<DWARFRangeList> FindRnglistFromIndex(uint32_t index) const;
 
 protected:
-  DWARFUnit(SymbolFileDWARF *dwarf, lldb::user_id_t uid,
+  DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
             const DWARFUnitHeader &header,
             const DWARFAbbreviationDeclarationSet &abbrevs,
             DIERef::Section section);
 
-  llvm::Error ExtractHeader(SymbolFileDWARF *dwarf,
+  llvm::Error ExtractHeader(SymbolFileDWARF &dwarf,
                             const lldb_private::DWARFDataExtractor &data,
                             lldb::offset_t *offset_ptr);
 
@@ -252,7 +252,7 @@ protected:
     return &m_die_array[0];
   }
 
-  SymbolFileDWARF *m_dwarf = nullptr;
+  SymbolFileDWARF &m_dwarf;
   std::unique_ptr<SymbolFileDWARFDwo> m_dwo_symbol_file;
   DWARFUnitHeader m_header;
   const DWARFAbbreviationDeclarationSet *m_abbrevs = nullptr;

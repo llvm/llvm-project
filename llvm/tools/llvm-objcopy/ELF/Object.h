@@ -216,6 +216,10 @@ struct IHexRecord {
   static IHexLineData getLine(uint8_t Type, uint16_t Addr,
                               ArrayRef<uint8_t> Data);
 
+  // Parses the line and returns record if possible.
+  // Line should be trimmed from whitespace characters.
+  static Expected<IHexRecord> parse(StringRef Line);
+
   // Calculates checksum of stringified record representation
   // S must NOT contain leading ':' and trailing whitespace
   // characters
@@ -862,21 +866,41 @@ using object::ELFFile;
 using object::ELFObjectFile;
 using object::OwningBinary;
 
-class BinaryELFBuilder {
+class BasicELFBuilder {
+protected:
   uint16_t EMachine;
-  MemoryBuffer *MemBuf;
   std::unique_ptr<Object> Obj;
 
   void initFileHeader();
   void initHeaderSegment();
   StringTableSection *addStrTab();
   SymbolTableSection *addSymTab(StringTableSection *StrTab);
-  void addData(SymbolTableSection *SymTab);
   void initSections();
 
 public:
+  BasicELFBuilder(uint16_t EM)
+      : EMachine(EM), Obj(llvm::make_unique<Object>()) {}
+};
+
+class BinaryELFBuilder : public BasicELFBuilder {
+  MemoryBuffer *MemBuf;
+  void addData(SymbolTableSection *SymTab);
+
+public:
   BinaryELFBuilder(uint16_t EM, MemoryBuffer *MB)
-      : EMachine(EM), MemBuf(MB), Obj(llvm::make_unique<Object>()) {}
+      : BasicELFBuilder(EM), MemBuf(MB) {}
+
+  std::unique_ptr<Object> build();
+};
+
+class IHexELFBuilder : public BasicELFBuilder {
+  const std::vector<IHexRecord> &Records;
+
+  void addDataSections();
+
+public:
+  IHexELFBuilder(const std::vector<IHexRecord> &Records)
+      : BasicELFBuilder(ELF::EM_386), Records(Records) {}
 
   std::unique_ptr<Object> build();
 };
@@ -917,6 +941,28 @@ class BinaryReader : public Reader {
 public:
   BinaryReader(const MachineInfo &MI, MemoryBuffer *MB)
       : MInfo(MI), MemBuf(MB) {}
+  std::unique_ptr<Object> create() const override;
+};
+
+class IHexReader : public Reader {
+  MemoryBuffer *MemBuf;
+
+  Expected<std::vector<IHexRecord>> parse() const;
+  Error parseError(size_t LineNo, Error E) const {
+    return LineNo == -1U
+               ? createFileError(MemBuf->getBufferIdentifier(), std::move(E))
+               : createFileError(MemBuf->getBufferIdentifier(), LineNo,
+                                 std::move(E));
+  }
+  template <typename... Ts>
+  Error parseError(size_t LineNo, char const *Fmt, const Ts &... Vals) const {
+    Error E = createStringError(errc::invalid_argument, Fmt, Vals...);
+    return parseError(LineNo, std::move(E));
+  }
+
+public:
+  IHexReader(MemoryBuffer *MB) : MemBuf(MB) {}
+
   std::unique_ptr<Object> create() const override;
 };
 

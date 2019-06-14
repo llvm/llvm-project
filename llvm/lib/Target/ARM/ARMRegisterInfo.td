@@ -435,8 +435,10 @@ def DPR_8 : RegisterClass<"ARM", [f64, v8i8, v4i16, v2i32, v1i64, v2f32, v4f16],
 def QPR : RegisterClass<"ARM", [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16], 128,
                         (sequence "Q%u", 0, 15)> {
   // Allocate non-VFP2 aliases Q8-Q15 first.
-  let AltOrders = [(rotl QPR, 8)];
-  let AltOrderSelect = [{ return 1; }];
+  let AltOrders = [(rotl QPR, 8), (trunc QPR, 8)];
+  let AltOrderSelect = [{
+    return 1 + MF.getSubtarget<ARMSubtarget>().hasMVEIntegerOps();
+  }];
   let DiagnosticString = "operand must be a register in range [q0, q15]";
 }
 
@@ -451,6 +453,12 @@ def QPR_8 : RegisterClass<"ARM", [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
                            128, (trunc QPR, 4)> {
   let DiagnosticString = "operand must be a register in range [q0, q3]";
 }
+
+// MVE 128-bit vector register class. This class is only really needed for
+// parsing assembly, since we still have to truncate the register set in the QPR
+// class anyway.
+def MQPR : RegisterClass<"ARM", [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16],
+                         128, (trunc QPR, 8)>;
 
 // Pseudo-registers representing odd-even pairs of D registers. The even-odd
 // pairs are already represented by the Q registers.

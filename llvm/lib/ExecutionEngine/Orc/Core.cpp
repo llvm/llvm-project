@@ -367,9 +367,10 @@ SymbolNameSet MaterializationResponsibility::getRequestedSymbols() const {
   return JD.getRequestedSymbols(SymbolFlags);
 }
 
-void MaterializationResponsibility::resolve(const SymbolMap &Symbols) {
-  LLVM_DEBUG(
-      { dbgs() << "In " << JD.getName() << " resolving " << Symbols << "\n"; });
+void MaterializationResponsibility::notifyResolved(const SymbolMap &Symbols) {
+  LLVM_DEBUG({
+    dbgs() << "In " << JD.getName() << " resolving " << Symbols << "\n";
+  });
 #ifndef NDEBUG
   for (auto &KV : Symbols) {
     auto I = SymbolFlags.find(KV.first);
@@ -387,7 +388,7 @@ void MaterializationResponsibility::resolve(const SymbolMap &Symbols) {
   JD.resolve(Symbols);
 }
 
-void MaterializationResponsibility::emit() {
+void MaterializationResponsibility::notifyEmitted() {
 
   LLVM_DEBUG({
     dbgs() << "In " << JD.getName() << " emitting " << SymbolFlags << "\n";
@@ -484,8 +485,8 @@ StringRef AbsoluteSymbolsMaterializationUnit::getName() const {
 
 void AbsoluteSymbolsMaterializationUnit::materialize(
     MaterializationResponsibility R) {
-  R.resolve(Symbols);
-  R.emit();
+  R.notifyResolved(Symbols);
+  R.notifyEmitted();
 }
 
 void AbsoluteSymbolsMaterializationUnit::discard(const JITDylib &JD,
@@ -632,8 +633,8 @@ void ReExportsMaterializationUnit::materialize(
           ResolutionMap[KV.first] = JITEvaluatedSymbol(
               (*Result)[KV.second.Aliasee].getAddress(), KV.second.AliasFlags);
         }
-        QueryInfo->R.resolve(ResolutionMap);
-        QueryInfo->R.emit();
+        QueryInfo->R.notifyResolved(ResolutionMap);
+        QueryInfo->R.notifyEmitted();
       } else {
         auto &ES = QueryInfo->R.getTargetJITDylib().getExecutionSession();
         ES.reportError(Result.takeError());

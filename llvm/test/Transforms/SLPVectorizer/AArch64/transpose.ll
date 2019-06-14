@@ -260,7 +260,7 @@ define i32 @reduction_v4i32(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul nuw <4 x i32> [[TMP13]], <i32 65535, i32 65535, i32 65535, i32 65535>
 ; CHECK-NEXT:    [[TMP15:%.*]] = add <4 x i32> [[TMP14]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor <4 x i32> [[TMP15]], [[TMP14]]
-; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v4i32(<4 x i32> [[TMP16]])
+; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP16]])
 ; CHECK-NEXT:    ret i32 [[TMP17]]
 ;
   %v0.0 = extractelement <4 x i32> %v0, i32 0

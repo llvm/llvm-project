@@ -47,8 +47,7 @@ public:
   virtual void GetFunctions(const RegularExpression &regex,
                             DIEArray &offsets) = 0;
 
-  virtual void ReportInvalidDIEOffset(dw_offset_t offset,
-                                      llvm::StringRef name) = 0;
+  virtual void ReportInvalidDIERef(const DIERef &ref, llvm::StringRef name) = 0;
   virtual void Dump(Stream &s) = 0;
 
 protected:

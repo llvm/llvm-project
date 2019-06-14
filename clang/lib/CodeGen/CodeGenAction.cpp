@@ -262,35 +262,32 @@ namespace clang {
           Ctx.getDiagnosticHandler();
       Ctx.setDiagnosticHandler(llvm::make_unique<ClangDiagnosticHandler>(
         CodeGenOpts, this));
-      Ctx.setDiagnosticsHotnessRequested(CodeGenOpts.DiagnosticsWithHotness);
-      if (CodeGenOpts.DiagnosticsHotnessThreshold != 0)
-        Ctx.setDiagnosticsHotnessThreshold(
-            CodeGenOpts.DiagnosticsHotnessThreshold);
 
-      std::unique_ptr<llvm::ToolOutputFile> OptRecordFile;
-      if (!CodeGenOpts.OptRecordFile.empty()) {
-        std::error_code EC;
-        OptRecordFile = llvm::make_unique<llvm::ToolOutputFile>(
-            CodeGenOpts.OptRecordFile, EC, sys::fs::F_None);
-        if (EC) {
-          Diags.Report(diag::err_cannot_open_file) <<
-            CodeGenOpts.OptRecordFile << EC.message();
-          return;
-        }
+      Expected<std::unique_ptr<llvm::ToolOutputFile>> OptRecordFileOrErr =
+          setupOptimizationRemarks(Ctx, CodeGenOpts.OptRecordFile,
+                                   CodeGenOpts.OptRecordPasses,
+                                   CodeGenOpts.DiagnosticsWithHotness,
+                                   CodeGenOpts.DiagnosticsHotnessThreshold);
 
-        Ctx.setRemarkStreamer(llvm::make_unique<RemarkStreamer>(
-            CodeGenOpts.OptRecordFile,
-            llvm::make_unique<remarks::YAMLSerializer>(OptRecordFile->os())));
-
-        if (!CodeGenOpts.OptRecordPasses.empty())
-          if (Error E = Ctx.getRemarkStreamer()->setFilter(
-                  CodeGenOpts.OptRecordPasses))
-            Diags.Report(diag::err_drv_optimization_remark_pattern)
-                << toString(std::move(E)) << CodeGenOpts.OptRecordPasses;
-
-        if (CodeGenOpts.getProfileUse() != CodeGenOptions::ProfileNone)
-          Ctx.setDiagnosticsHotnessRequested(true);
+      if (Error E = OptRecordFileOrErr.takeError()) {
+        handleAllErrors(
+            std::move(E),
+            [&](const RemarkSetupFileError &E) {
+              Diags.Report(diag::err_cannot_open_file)
+                  << CodeGenOpts.OptRecordFile << E.message();
+            },
+            [&](const RemarkSetupPatternError &E) {
+              Diags.Report(diag::err_drv_optimization_remark_pattern)
+                  << E.message() << CodeGenOpts.OptRecordPasses;
+            });
+        return;
       }
+      std::unique_ptr<llvm::ToolOutputFile> OptRecordFile =
+          std::move(*OptRecordFileOrErr);
+
+      if (OptRecordFile &&
+          CodeGenOpts.getProfileUse() != CodeGenOptions::ProfileNone)
+        Ctx.setDiagnosticsHotnessRequested(true);
 
       // Link each LinkModule into our module.
       if (LinkInModules())

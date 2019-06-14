@@ -127,7 +127,7 @@ public:
       if (auto Err = MR.defineMaterializing(ExtraSymbolsToClaim))
         return notifyFailed(std::move(Err));
 
-    MR.resolve(InternedResult);
+    MR.notifyResolved(InternedResult);
 
     Layer.notifyLoaded(MR);
   }
@@ -141,7 +141,7 @@ public:
 
       return;
     }
-    MR.emit();
+    MR.notifyEmitted();
   }
 
   AtomGraphPassFunction getMarkLivePass(const Triple &TT) const override {

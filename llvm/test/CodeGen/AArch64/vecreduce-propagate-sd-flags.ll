@@ -24,8 +24,8 @@ entry:
  %1 = insertelement <4 x double> %0, double 1.0, i32 1
  %2 = insertelement <4 x double> %1, double 1.0, i32 2
  %3 = insertelement <4 x double> %2, double 1.0, i32 3
- %4 = call nnan reassoc double @llvm.experimental.vector.reduce.fmax.f64.v4f64(<4 x double> %3)
+ %4 = call nnan reassoc double @llvm.experimental.vector.reduce.fmax.v4f64(<4 x double> %3)
  ret double %4
 }
 
-declare double @llvm.experimental.vector.reduce.fmax.f64.v4f64(<4 x double>)
+declare double @llvm.experimental.vector.reduce.fmax.v4f64(<4 x double>)

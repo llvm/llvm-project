@@ -370,7 +370,7 @@ Sema::ExpressionEvaluationContextRecord::getMangleNumberingContext(
 CXXMethodDecl *Sema::startLambdaDefinition(
     CXXRecordDecl *Class, SourceRange IntroducerRange,
     TypeSourceInfo *MethodTypeInfo, SourceLocation EndLoc,
-    ArrayRef<ParmVarDecl *> Params, const bool IsConstexprSpecified,
+    ArrayRef<ParmVarDecl *> Params, ConstexprSpecKind ConstexprKind,
     Optional<std::pair<unsigned, Decl *>> Mangling) {
   QualType MethodType = MethodTypeInfo->getType();
   TemplateParameterList *TemplateParams =
@@ -400,16 +400,12 @@ CXXMethodDecl *Sema::startLambdaDefinition(
     = IntroducerRange.getBegin().getRawEncoding();
   MethodNameLoc.CXXOperatorName.EndOpNameLoc
     = IntroducerRange.getEnd().getRawEncoding();
-  CXXMethodDecl *Method
-    = CXXMethodDecl::Create(Context, Class, EndLoc,
-                            DeclarationNameInfo(MethodName,
-                                                IntroducerRange.getBegin(),
-                                                MethodNameLoc),
-                            MethodType, MethodTypeInfo,
-                            SC_None,
-                            /*isInline=*/true,
-                            IsConstexprSpecified,
-                            EndLoc);
+  CXXMethodDecl *Method = CXXMethodDecl::Create(
+      Context, Class, EndLoc,
+      DeclarationNameInfo(MethodName, IntroducerRange.getBegin(),
+                          MethodNameLoc),
+      MethodType, MethodTypeInfo, SC_None,
+      /*isInline=*/true, ConstexprKind, EndLoc);
   Method->setAccess(AS_public);
 
   // Temporarily set the lexical declaration context to the current
@@ -940,7 +936,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   CXXMethodDecl *Method =
       startLambdaDefinition(Class, Intro.Range, MethodTyInfo, EndLoc, Params,
-                            ParamInfo.getDeclSpec().isConstexprSpecified());
+                            ParamInfo.getDeclSpec().getConstexprSpecifier());
   if (ExplicitParams)
     CheckCXXDefaultArguments(Method);
 
@@ -1341,7 +1337,7 @@ static void addFunctionPointerConversion(Sema &S,
       S.Context, Class, Loc,
       DeclarationNameInfo(ConversionName, Loc, ConvNameLoc), ConvTy, ConvTSI,
       /*isInline=*/true, ExplicitSpecifier(),
-      /*isConstexpr=*/S.getLangOpts().CPlusPlus17,
+      S.getLangOpts().CPlusPlus17 ? CSK_constexpr : CSK_unspecified,
       CallOperator->getBody()->getEndLoc());
   Conversion->setAccess(AS_public);
   Conversion->setImplicit(true);
@@ -1380,8 +1376,7 @@ static void addFunctionPointerConversion(Sema &S,
   CXXMethodDecl *Invoke = CXXMethodDecl::Create(
       S.Context, Class, Loc, DeclarationNameInfo(InvokerName, Loc),
       InvokerFunctionTy, CallOperator->getTypeSourceInfo(), SC_Static,
-      /*IsInline=*/true,
-      /*IsConstexpr=*/false, CallOperator->getBody()->getEndLoc());
+      /*IsInline=*/true, CSK_unspecified, CallOperator->getBody()->getEndLoc());
   for (unsigned I = 0, N = CallOperator->getNumParams(); I != N; ++I)
     InvokerParams[I]->setOwningFunction(Invoke);
   Invoke->setParams(InvokerParams);
@@ -1427,8 +1422,8 @@ static void addBlockPointerConversion(Sema &S,
   CXXConversionDecl *Conversion = CXXConversionDecl::Create(
       S.Context, Class, Loc, DeclarationNameInfo(Name, Loc, NameLoc), ConvTy,
       S.Context.getTrivialTypeSourceInfo(ConvTy, Loc),
-      /*isInline=*/true, ExplicitSpecifier(),
-      /*isConstexpr=*/false, CallOperator->getBody()->getEndLoc());
+      /*isInline=*/true, ExplicitSpecifier(), CSK_unspecified,
+      CallOperator->getBody()->getEndLoc());
   Conversion->setAccess(AS_public);
   Conversion->setImplicit(true);
   Class->addDecl(Conversion);
@@ -1782,9 +1777,11 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
       !isa<CoroutineBodyStmt>(CallOperator->getBody()) &&
       !Class->getDeclContext()->isDependentContext()) {
     TentativeAnalysisScope DiagnosticScopeGuard(*this);
-    CallOperator->setConstexpr(
-        CheckConstexprFunctionDecl(CallOperator) &&
-        CheckConstexprFunctionBody(CallOperator, CallOperator->getBody()));
+    CallOperator->setConstexprKind(
+        (CheckConstexprFunctionDecl(CallOperator) &&
+         CheckConstexprFunctionBody(CallOperator, CallOperator->getBody()))
+            ? CSK_constexpr
+            : CSK_unspecified);
   }
 
   // Emit delayed shadowing warnings now that the full capture list is known.

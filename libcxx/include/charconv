@@ -314,7 +314,7 @@ __to_chars_itoa(char* __first, char* __last, _Tp __value, false_type)
 
 #if !defined(_LIBCPP_COMPILER_MSVC)
     if (__tx::digits <= __diff || __tx::__width(__value) <= __diff)
-        return {__tx::__convert(__value, __first), {}};
+        return {__tx::__convert(__value, __first), errc(0)};
     else
         return {__last, errc::value_too_large};
 #else

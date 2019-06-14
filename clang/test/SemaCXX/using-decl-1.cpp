@@ -396,3 +396,10 @@ namespace tag_vs_var {
   using N::Y;
   using N::Z;
 }
+
+// expected-error@+5 {{requires a qualified name}}
+// expected-error@+4 {{expected ';'}}
+// expected-error@+3 {{expected '}'}}
+// expected-note@+2 {{to match this '{'}}
+// expected-error@+1 {{expected ';'}}
+template<class> struct S { using S

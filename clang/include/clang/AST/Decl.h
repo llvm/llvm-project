@@ -1861,7 +1861,7 @@ protected:
   FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
                const DeclarationNameInfo &NameInfo, QualType T,
                TypeSourceInfo *TInfo, StorageClass S, bool isInlineSpecified,
-               bool isConstexprSpecified);
+               ConstexprSpecKind ConstexprKind);
 
   using redeclarable_base = Redeclarable<FunctionDecl>;
 
@@ -1891,29 +1891,24 @@ public:
   using redeclarable_base::getMostRecentDecl;
   using redeclarable_base::isFirstDecl;
 
-  static FunctionDecl *Create(ASTContext &C, DeclContext *DC,
-                              SourceLocation StartLoc, SourceLocation NLoc,
-                              DeclarationName N, QualType T,
-                              TypeSourceInfo *TInfo,
-                              StorageClass SC,
-                              bool isInlineSpecified = false,
-                              bool hasWrittenPrototype = true,
-                              bool isConstexprSpecified = false) {
+  static FunctionDecl *
+  Create(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+         SourceLocation NLoc, DeclarationName N, QualType T,
+         TypeSourceInfo *TInfo, StorageClass SC, bool isInlineSpecified = false,
+         bool hasWrittenPrototype = true,
+         ConstexprSpecKind ConstexprKind = CSK_unspecified) {
     DeclarationNameInfo NameInfo(N, NLoc);
-    return FunctionDecl::Create(C, DC, StartLoc, NameInfo, T, TInfo,
-                                SC,
+    return FunctionDecl::Create(C, DC, StartLoc, NameInfo, T, TInfo, SC,
                                 isInlineSpecified, hasWrittenPrototype,
-                                isConstexprSpecified);
+                                ConstexprKind);
   }
 
   static FunctionDecl *Create(ASTContext &C, DeclContext *DC,
                               SourceLocation StartLoc,
-                              const DeclarationNameInfo &NameInfo,
-                              QualType T, TypeSourceInfo *TInfo,
-                              StorageClass SC,
-                              bool isInlineSpecified,
-                              bool hasWrittenPrototype,
-                              bool isConstexprSpecified = false);
+                              const DeclarationNameInfo &NameInfo, QualType T,
+                              TypeSourceInfo *TInfo, StorageClass SC,
+                              bool isInlineSpecified, bool hasWrittenPrototype,
+                              ConstexprSpecKind ConstexprKind);
 
   static FunctionDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
@@ -2110,8 +2105,21 @@ public:
   }
 
   /// Whether this is a (C++11) constexpr function or constexpr constructor.
-  bool isConstexpr() const { return FunctionDeclBits.IsConstexpr; }
-  void setConstexpr(bool IC) { FunctionDeclBits.IsConstexpr = IC; }
+  bool isConstexpr() const {
+    return FunctionDeclBits.ConstexprKind != CSK_unspecified;
+  }
+  void setConstexprKind(ConstexprSpecKind CSK) {
+    FunctionDeclBits.ConstexprKind = CSK;
+  }
+  ConstexprSpecKind getConstexprKind() const {
+    return static_cast<ConstexprSpecKind>(FunctionDeclBits.ConstexprKind);
+  }
+  bool isConstexprSpecified() const {
+    return FunctionDeclBits.ConstexprKind == CSK_constexpr;
+  }
+  bool isConsteval() const {
+    return FunctionDeclBits.ConstexprKind == CSK_consteval;
+  }
 
   /// Whether the instantiation of this function is pending.
   /// This bit is set when the decision to instantiate this function is made

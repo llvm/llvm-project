@@ -437,6 +437,9 @@ struct ElfSym {
   static Defined *RelaIpltStart;
   static Defined *RelaIpltEnd;
 
+  // __global_pointer$ for RISC-V.
+  static Defined *RISCVGlobalPointer;
+
   // _TLS_MODULE_BASE_ on targets that support TLSDESC.
   static Defined *TlsModuleBase;
 };

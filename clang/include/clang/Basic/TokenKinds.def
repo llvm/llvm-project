@@ -384,8 +384,9 @@ COROUTINES_KEYWORD(co_yield)
 MODULES_KEYWORD(module)
 MODULES_KEYWORD(import)
 
-// C++ char8_t proposal
+// C++20 keywords.
 CXX2A_KEYWORD(char8_t               , CHAR8SUPPORT)
+CXX2A_KEYWORD(consteval             , 0)
 
 // C11 Extension
 KEYWORD(_Float16                    , KEYALL)

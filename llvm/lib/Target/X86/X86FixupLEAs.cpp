@@ -98,9 +98,7 @@ public:
 
   StringRef getPassName() const override { return FIXUPLEA_DESC; }
 
-  FixupLEAPass() : MachineFunctionPass(ID) {
-    initializeFixupLEAPassPass(*PassRegistry::getPassRegistry());
-  }
+  FixupLEAPass() : MachineFunctionPass(ID) { }
 
   /// Loop over all of the basic blocks,
   /// replacing instructions by equivalent LEA instructions

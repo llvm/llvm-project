@@ -1,0 +1,19 @@
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-nm --print-file-name %t.o | FileCheck %s -DFILE=%t.o
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-nm --print-file-name %t.o | FileCheck %s -DFILE=%t.o
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    symbol_a
+    Section: .text
+
+# CHECK: [[FILE]]: 0000000000000000 n symbol_a

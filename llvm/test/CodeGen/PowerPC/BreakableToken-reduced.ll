@@ -203,8 +203,8 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; Load a value into R0 before saving the LR
 ; CHECK: lwz 0, {{[0-9]+([0-9]+)}}
 
-; Ensure the LR is saved using a different register
-; CHECK: mflr {{[1-9]+}}
+; Ensure the LR is saved using a different register - edit:D63152 prevents stack pop befor loads and stores
+; CHECK-NOT: mflr {{[1-9]+}}
 
 ; Ensure the LR is restored using a different register
 ; CHECK: mtlr {{[0-9]+}}

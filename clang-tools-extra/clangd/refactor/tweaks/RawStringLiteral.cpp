@@ -99,4 +99,3 @@ std::string RawStringLiteral::title() const { return "Convert to raw string"; }
 } // namespace
 } // namespace clangd
 } // namespace clang
-

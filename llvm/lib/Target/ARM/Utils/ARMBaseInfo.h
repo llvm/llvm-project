@@ -66,6 +66,30 @@ inline static CondCodes getOppositeCondition(CondCodes CC) {
 }
 } // end namespace ARMCC
 
+namespace ARMVCC {
+  enum VPTCodes {
+    None = 0,
+    Then,
+    Else
+  };
+}
+
+inline static const char *ARMVPTPredToString(ARMVCC::VPTCodes CC) {
+  switch (CC) {
+  case ARMVCC::None:  return "none";
+  case ARMVCC::Then:  return "t";
+  case ARMVCC::Else:  return "e";
+  }
+  llvm_unreachable("Unknown VPT code");
+}
+
+inline static unsigned ARMVectorCondCodeFromString(StringRef CC) {
+  return StringSwitch<unsigned>(CC.lower())
+    .Case("t", ARMVCC::Then)
+    .Case("e", ARMVCC::Else)
+    .Default(~0U);
+}
+
 inline static const char *ARMCondCodeToString(ARMCC::CondCodes CC) {
   switch (CC) {
   case ARMCC::EQ:  return "eq";

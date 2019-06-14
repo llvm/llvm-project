@@ -1,0 +1,40 @@
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-nm %t.o | FileCheck %s --check-prefix=DEFAULT
+# RUN: llvm-nm --no-sort %t.o | FileCheck %s --check-prefix=NOSORT
+# RUN: llvm-nm -p %t.o | FileCheck %s --check-prefix=NOSORT
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    symbol_a
+    Section: .text
+    Value:   0x100
+  - Name:    symbol_b
+    Section: .text
+    Value:   0x25
+  - Name:    symbol_d
+    Section: .text
+    Value:   0x25
+  - Name:    symbol_c
+    Section: .text
+    Value:   0x50
+
+# The default is to sort by symbol name.
+# DEFAULT:      0000000000000100 n symbol_a
+# DEFAULT-NEXT: 0000000000000025 n symbol_b
+# DEFAULT-NEXT: 0000000000000050 n symbol_c
+# DEFAULT-NEXT: 0000000000000025 n symbol_d
+
+# When --no-sort is specified then the symbols are output in
+# symbol table order.
+# NOSORT:      0000000000000100 n symbol_a
+# NOSORT-NEXT: 0000000000000025 n symbol_b
+# NOSORT-NEXT: 0000000000000025 n symbol_d
+# NOSORT-NEXT: 0000000000000050 n symbol_c

@@ -155,8 +155,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWO(const DWARFDIE &die, Log *log) {
 
     // Since this this type is defined in one of the Clang modules imported by
     // this symbol file, search all of them.
-    auto *sym_file = die.GetCU()->GetSymbolFileDWARF();
-    for (const auto &name_module : sym_file->getExternalTypeModules()) {
+    auto &sym_file = die.GetCU()->GetSymbolFileDWARF();
+    for (const auto &name_module : sym_file.getExternalTypeModules()) {
       if (!name_module.second)
         continue;
       SymbolVendor *sym_vendor = name_module.second->GetSymbolVendor();

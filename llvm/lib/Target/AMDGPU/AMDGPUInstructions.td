@@ -69,9 +69,11 @@ class PredicateControl {
   Predicate SubtargetPredicate = TruePredicate;
   list<Predicate> AssemblerPredicates = [];
   Predicate AssemblerPredicate = TruePredicate;
+  Predicate WaveSizePredicate = TruePredicate;
   list<Predicate> OtherPredicates = [];
   list<Predicate> Predicates = !listconcat([SubtargetPredicate,
-                                            AssemblerPredicate],
+                                            AssemblerPredicate,
+                                            WaveSizePredicate],
                                             AssemblerPredicates,
                                             OtherPredicates);
 }

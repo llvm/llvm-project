@@ -476,6 +476,11 @@ template <class ELFT> static void createSyntheticSections() {
     Add(In.PPC64LongBranchTarget);
   }
 
+  if (Config->EMachine == EM_RISCV) {
+    In.RISCVSdata = make<RISCVSdataSection>();
+    Add(In.RISCVSdata);
+  }
+
   In.GotPlt = make<GotPltSection>();
   Add(In.GotPlt);
   In.IgotPlt = make<IgotPltSection>();
@@ -1692,9 +1697,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   addRelIpltSymbols();
 
   // RISC-V's gp can address +/- 2 KiB, set it to .sdata + 0x800 if not defined.
-  if (Config->EMachine == EM_RISCV)
-    if (!dyn_cast_or_null<Defined>(Symtab->find("__global_pointer$")))
-      addOptionalRegular("__global_pointer$", findSection(".sdata"), 0x800);
+  // This symbol should only be defined in an executable.
+  if (Config->EMachine == EM_RISCV && !Config->Shared)
+    ElfSym::RISCVGlobalPointer =
+        addOptionalRegular("__global_pointer$", findSection(".sdata"), 0x800,
+                           STV_DEFAULT, STB_GLOBAL);
 
   if (Config->EMachine == EM_X86_64) {
     // On targets that support TLSDESC, _TLS_MODULE_BASE_ is defined in such a
@@ -1871,6 +1878,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   finalizeSynthetic(In.Plt);
   finalizeSynthetic(In.Iplt);
   finalizeSynthetic(In.PPC32Got2);
+  finalizeSynthetic(In.RISCVSdata);
   finalizeSynthetic(In.PartIndex);
 
   // Dynamic section must be the last one in this list and dynamic

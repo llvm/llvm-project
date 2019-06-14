@@ -57,3 +57,12 @@ struct C {
 #error "the feature test macro __cpp_conditional_explicit isn't correct"
 #endif
 #endif
+
+auto l = []() consteval {};
+int consteval();
+#if __cplusplus <= 201703L
+// expected-warning@-3 {{'consteval' is a keyword in C++2a}}
+// expected-error@-4 {{expected body of lambda expression}}
+#else
+// expected-error@-5 {{expected unqualified-id}}
+#endif

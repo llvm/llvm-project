@@ -24,17 +24,17 @@
  
 --- !ELF
 FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_REL
-  Machine:         EM_X86_64
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
 Sections:
-  - Name:          .symtab
-    Info:          42
-    Type:          SHT_SYMTAB
-  - Name:          .dynsym
-    Info:          26
-    Type:          SHT_SYMTAB
+  - Name: .symtab
+    Info: 42
+    Type: SHT_SYMTAB
+  - Name: .dynsym
+    Info: 26
+    Type: SHT_DYNSYM
 Symbols:
   - Name:    foo
     Binding: STB_GLOBAL

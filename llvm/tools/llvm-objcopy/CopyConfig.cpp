@@ -118,7 +118,7 @@ parseSectionFlagSet(ArrayRef<StringRef> SectionFlags) {
     if (ParsedFlag == SectionFlag::SecNone)
       return createStringError(
           errc::invalid_argument,
-          "Unrecognized section flag '%s'. Flags supported for GNU "
+          "unrecognized section flag '%s'. Flags supported for GNU "
           "compatibility: alloc, load, noload, readonly, debug, code, data, "
           "rom, share, contents, merge, strings",
           Flag.str().c_str());
@@ -131,7 +131,7 @@ parseSectionFlagSet(ArrayRef<StringRef> SectionFlags) {
 static Expected<SectionRename> parseRenameSectionValue(StringRef FlagValue) {
   if (!FlagValue.contains('='))
     return createStringError(errc::invalid_argument,
-                             "Bad format for --rename-section: missing '='");
+                             "bad format for --rename-section: missing '='");
 
   // Initial split: ".foo" = ".bar,f1,f2,..."
   auto Old2New = FlagValue.split('=');
@@ -158,7 +158,7 @@ static Expected<SectionFlagsUpdate>
 parseSetSectionFlagValue(StringRef FlagValue) {
   if (!StringRef(FlagValue).contains('='))
     return createStringError(errc::invalid_argument,
-                             "Bad format for --set-section-flags: missing '='");
+                             "bad format for --set-section-flags: missing '='");
 
   // Initial split: ".foo" = "f1,f2,..."
   auto Section2Flags = StringRef(FlagValue).split('=');
@@ -263,7 +263,8 @@ static const StringMap<MachineInfo> ArchMap{
     {"powerpc:common64", {ELF::EM_PPC64, true, true}},
     {"riscv:rv32", {ELF::EM_RISCV, false, true}},
     {"riscv:rv64", {ELF::EM_RISCV, true, true}},
-    {"sparc", {ELF::EM_SPARC, false, true}},
+    {"sparc", {ELF::EM_SPARC, false, false}},
+    {"sparcel", {ELF::EM_SPARC, false, true}},
     {"x86-64", {ELF::EM_X86_64, true, true}},
 };
 
@@ -271,7 +272,7 @@ static Expected<const MachineInfo &> getMachineInfo(StringRef Arch) {
   auto Iter = ArchMap.find(Arch);
   if (Iter == std::end(ArchMap))
     return createStringError(errc::invalid_argument,
-                             "Invalid architecture: '%s'", Arch.str().c_str());
+                             "invalid architecture: '%s'", Arch.str().c_str());
   return Iter->getValue();
 }
 
@@ -313,7 +314,7 @@ static Expected<MachineInfo> getOutputFormatMachineInfo(StringRef Format) {
   auto Iter = OutputFormatMap.find(Format);
   if (Iter == std::end(OutputFormatMap))
     return createStringError(errc::invalid_argument,
-                             "Invalid output format: '%s'",
+                             "invalid output format: '%s'",
                              OriginalFormat.str().c_str());
   MachineInfo MI = Iter->getValue();
   if (IsFreeBSD)
@@ -423,11 +424,11 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
     Positional.push_back(Arg->getValue());
 
   if (Positional.empty())
-    return createStringError(errc::invalid_argument, "No input file specified");
+    return createStringError(errc::invalid_argument, "no input file specified");
 
   if (Positional.size() > 2)
     return createStringError(errc::invalid_argument,
-                             "Too many positional arguments");
+                             "too many positional arguments");
 
   CopyConfig Config;
   Config.InputFilename = Positional[0];
@@ -452,7 +453,7 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
     if (BinaryArch.empty())
       return createStringError(
           errc::invalid_argument,
-          "Specified binary input without specifiying an architecture");
+          "specified binary input without specifiying an architecture");
     Expected<const MachineInfo &> MI = getMachineInfo(BinaryArch);
     if (!MI)
       return MI.takeError();
@@ -480,7 +481,7 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
       if (Config.CompressionType == DebugCompressionType::None)
         return createStringError(
             errc::invalid_argument,
-            "Invalid or unsupported --compress-debug-sections format: %s",
+            "invalid or unsupported --compress-debug-sections format: %s",
             InputArgs.getLastArgValue(OBJCOPY_compress_debug_sections_eq)
                 .str()
                 .c_str());
@@ -525,11 +526,11 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   for (auto Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {
     if (!StringRef(Arg->getValue()).contains('='))
       return createStringError(errc::invalid_argument,
-                               "Bad format for --redefine-sym");
+                               "bad format for --redefine-sym");
     auto Old2New = StringRef(Arg->getValue()).split('=');
     if (!Config.SymbolsToRename.insert(Old2New).second)
       return createStringError(errc::invalid_argument,
-                               "Multiple redefinition of symbol %s",
+                               "multiple redefinition of symbol '%s'",
                                Old2New.first.str().c_str());
   }
 
@@ -545,7 +546,7 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
       return SR.takeError();
     if (!Config.SectionsToRename.try_emplace(SR->OriginalName, *SR).second)
       return createStringError(errc::invalid_argument,
-                               "Multiple renames of section %s",
+                               "multiple renames of section '%s'",
                                SR->OriginalName.str().c_str());
   }
   for (auto Arg : InputArgs.filtered(OBJCOPY_set_section_flags)) {
@@ -556,7 +557,7 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
     if (!Config.SetSectionFlags.try_emplace(SFU->Name, *SFU).second)
       return createStringError(
           errc::invalid_argument,
-          "--set-section-flags set multiple times for section %s",
+          "--set-section-flags set multiple times for section '%s'",
           SFU->Name.str().c_str());
   }
   // Prohibit combinations of --set-section-flags when the section name is used
@@ -692,8 +693,8 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
       Config.CompressionType != DebugCompressionType::None) {
     return createStringError(
         errc::invalid_argument,
-        "Cannot specify --compress-debug-sections at the same time as "
-        "--decompress-debug-sections at the same time");
+        "cannot specify both --compress-debug-sections and "
+        "--decompress-debug-sections");
   }
 
   if (Config.DecompressDebugSections && !zlib::isAvailable())
@@ -743,12 +744,12 @@ Expected<DriverConfig> parseStripOptions(ArrayRef<const char *> ArgsArr) {
     Positional.push_back(Arg->getValue());
 
   if (Positional.empty())
-    return createStringError(errc::invalid_argument, "No input file specified");
+    return createStringError(errc::invalid_argument, "no input file specified");
 
   if (Positional.size() > 1 && InputArgs.hasArg(STRIP_output))
     return createStringError(
         errc::invalid_argument,
-        "Multiple input files cannot be used in combination with -o");
+        "multiple input files cannot be used in combination with -o");
 
   CopyConfig Config;
   bool UseRegexp = InputArgs.hasArg(STRIP_regex);

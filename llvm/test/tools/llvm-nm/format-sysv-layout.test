@@ -1,0 +1,28 @@
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-nm %t.o --debug-syms --format=sysv | FileCheck %s -DFILE=%t.o --strict-whitespace
+# RUN: llvm-nm %t.o --debug-syms -f=sysv | FileCheck %s -DFILE=%t.o --strict-whitespace
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+Symbols:
+  - Name:    symbol_with_a_significantly_longer_name
+    Section: .text
+  - Name:    symbol
+    Section: .text
+  - Name:    symbol_2
+    Type:    STT_FUNC
+
+# CHECK:       Symbols from [[FILE]]:
+# CHECK-EMPTY:
+# CHECK-NEXT: Name                  Value           Class        Type         Size             Line  Section
+# CHECK-NEXT: symbol              |0000000000000000|   t  |            NOTYPE|0000000000000000|     |.text
+# CHECK-NEXT: symbol_2            |                |   U  |              FUNC|                |     |*UND*
+# CHECK-NEXT: symbol_with_a_significantly_longer_name|0000000000000000|   t  |            NOTYPE|0000000000000000|     |.text

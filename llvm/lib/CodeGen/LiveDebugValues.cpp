@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -57,6 +58,7 @@
 #include <cstdint>
 #include <functional>
 #include <queue>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -107,23 +109,62 @@ private:
     }
   };
 
-  /// Based on std::pair so it can be used as an index into a DenseMap.
-  using DebugVariableBase =
-      std::pair<const DILocalVariable *, const DILocation *>;
-  /// A potentially inlined instance of a variable.
-  struct DebugVariable : public DebugVariableBase {
-    DebugVariable(const DILocalVariable *Var, const DILocation *InlinedAt)
-        : DebugVariableBase(Var, InlinedAt) {}
+  using FragmentInfo = DIExpression::FragmentInfo;
+  using OptFragmentInfo = Optional<DIExpression::FragmentInfo>;
 
-    const DILocalVariable *getVar() const { return this->first; }
-    const DILocation *getInlinedAt() const { return this->second; }
+  /// Storage for identifying a potentially inlined instance of a variable,
+  /// or a fragment thereof.
+  class DebugVariable {
+    const DILocalVariable *Variable;
+    OptFragmentInfo Fragment;
+    const DILocation *InlinedAt;
 
-    bool operator<(const DebugVariable &DV) const {
-      if (getVar() == DV.getVar())
-        return getInlinedAt() < DV.getInlinedAt();
-      return getVar() < DV.getVar();
+    /// Fragment that will overlap all other fragments. Used as default when
+    /// caller demands a fragment.
+    static const FragmentInfo DefaultFragment;
+
+  public:
+    DebugVariable(const DILocalVariable *Var, OptFragmentInfo &&FragmentInfo,
+                  const DILocation *InlinedAt)
+        : Variable(Var), Fragment(FragmentInfo), InlinedAt(InlinedAt) {}
+
+    DebugVariable(const DILocalVariable *Var, OptFragmentInfo &FragmentInfo,
+                  const DILocation *InlinedAt)
+        : Variable(Var), Fragment(FragmentInfo), InlinedAt(InlinedAt) {}
+
+    DebugVariable(const DILocalVariable *Var, const DIExpression *DIExpr,
+                  const DILocation *InlinedAt)
+        : DebugVariable(Var, DIExpr->getFragmentInfo(), InlinedAt) {}
+
+    DebugVariable(const MachineInstr &MI)
+        : DebugVariable(MI.getDebugVariable(),
+                        MI.getDebugExpression()->getFragmentInfo(),
+                        MI.getDebugLoc()->getInlinedAt()) {}
+
+    const DILocalVariable *getVar() const { return Variable; }
+    const OptFragmentInfo &getFragment() const { return Fragment; }
+    const DILocation *getInlinedAt() const { return InlinedAt; }
+
+    const FragmentInfo getFragmentDefault() const {
+      return Fragment.getValueOr(DefaultFragment);
+    }
+
+    static bool isFragmentDefault(FragmentInfo &F) {
+      return F == DefaultFragment;
+    }
+
+    bool operator==(const DebugVariable &Other) const {
+      return std::tie(Variable, Fragment, InlinedAt) ==
+             std::tie(Other.Variable, Other.Fragment, Other.InlinedAt);
+    }
+
+    bool operator<(const DebugVariable &Other) const {
+      return std::tie(Variable, Fragment, InlinedAt) <
+             std::tie(Other.Variable, Other.Fragment, Other.InlinedAt);
     }
   };
+
+  friend struct llvm::DenseMapInfo<DebugVariable>;
 
   /// A pair of debug variable and value location.
   struct VarLoc {
@@ -159,8 +200,7 @@ private:
     } Loc;
 
     VarLoc(const MachineInstr &MI, LexicalScopes &LS)
-        : Var(MI.getDebugVariable(), MI.getDebugLoc()->getInlinedAt()), MI(MI),
-          UVS(MI.getDebugLoc(), LS) {
+        : Var(MI), MI(MI), UVS(MI.getDebugLoc(), LS) {
       static_assert((sizeof(Loc) == sizeof(uint64_t)),
                     "hash does not cover all members of Loc");
       assert(MI.isDebugValue() && "not a DBG_VALUE");
@@ -183,8 +223,7 @@ private:
     /// The constructor for spill locations.
     VarLoc(const MachineInstr &MI, unsigned SpillBase, int SpillOffset,
            LexicalScopes &LS)
-        : Var(MI.getDebugVariable(), MI.getDebugLoc()->getInlinedAt()), MI(MI),
-          UVS(MI.getDebugLoc(), LS) {
+        : Var(MI), MI(MI), UVS(MI.getDebugLoc(), LS) {
       assert(MI.isDebugValue() && "not a DBG_VALUE");
       assert(MI.getNumOperands() == 4 && "malformed DBG_VALUE");
       Kind = SpillLocKind;
@@ -232,26 +271,35 @@ private:
   };
   using TransferMap = SmallVector<TransferDebugPair, 4>;
 
+  // Types for recording sets of variable fragments that overlap. For a given
+  // local variable, we record all other fragments of that variable that could
+  // overlap it, to reduce search time.
+  using FragmentOfVar =
+      std::pair<const DILocalVariable *, DIExpression::FragmentInfo>;
+  using OverlapMap =
+      DenseMap<FragmentOfVar, SmallVector<DIExpression::FragmentInfo, 1>>;
+
+  // Helper while building OverlapMap, a map of all fragments seen for a given
+  // DILocalVariable.
+  using VarToFragments =
+      DenseMap<const DILocalVariable *, SmallSet<FragmentInfo, 4>>;
+
   /// This holds the working set of currently open ranges. For fast
   /// access, this is done both as a set of VarLocIDs, and a map of
   /// DebugVariable to recent VarLocID. Note that a DBG_VALUE ends all
   /// previous open ranges for the same variable.
   class OpenRangesSet {
     VarLocSet VarLocs;
-    SmallDenseMap<DebugVariableBase, unsigned, 8> Vars;
+    SmallDenseMap<DebugVariable, unsigned, 8> Vars;
+    OverlapMap &OverlappingFragments;
 
   public:
+    OpenRangesSet(OverlapMap &_OLapMap) : OverlappingFragments(_OLapMap) {}
+
     const VarLocSet &getVarLocs() const { return VarLocs; }
 
     /// Terminate all open ranges for Var by removing it from the set.
-    void erase(DebugVariable Var) {
-      auto It = Vars.find(Var);
-      if (It != Vars.end()) {
-        unsigned ID = It->second;
-        VarLocs.reset(ID);
-        Vars.erase(It);
-      }
-    }
+    void erase(DebugVariable Var);
 
     /// Terminate all open ranges listed in \c KillSet by removing
     /// them from the set.
@@ -262,7 +310,7 @@ private:
     }
 
     /// Insert a new range into the set.
-    void insert(unsigned VarLocID, DebugVariableBase Var) {
+    void insert(unsigned VarLocID, DebugVariable Var) {
       VarLocs.set(VarLocID);
       Vars.insert({Var, VarLocID});
     }
@@ -308,7 +356,11 @@ private:
 
   bool process(MachineInstr &MI, OpenRangesSet &OpenRanges,
                VarLocInMBB &OutLocs, VarLocMap &VarLocIDs,
-               TransferMap &Transfers, bool transferChanges);
+               TransferMap &Transfers, bool transferChanges,
+               OverlapMap &OverlapFragments, VarToFragments &SeenFragments);
+
+  void accumulateFragmentMap(MachineInstr &MI, VarToFragments &SeenFragments,
+                             OverlapMap &OLapMap);
 
   bool join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs, VarLocInMBB &InLocs,
             const VarLocMap &VarLocIDs,
@@ -343,9 +395,45 @@ public:
 
 } // end anonymous namespace
 
+namespace llvm {
+
+template <> struct DenseMapInfo<LiveDebugValues::DebugVariable> {
+  using DV = LiveDebugValues::DebugVariable;
+  using OptFragmentInfo = LiveDebugValues::OptFragmentInfo;
+  using FragmentInfo = LiveDebugValues::FragmentInfo;
+
+  // Empty key: no key should be generated that has no DILocalVariable.
+  static inline DV getEmptyKey() {
+    return DV(nullptr, OptFragmentInfo(), nullptr);
+  }
+
+  // Difference in tombstone is that the Optional is meaningful
+  static inline DV getTombstoneKey() {
+    return DV(nullptr, OptFragmentInfo({0, 0}), nullptr);
+  }
+
+  static unsigned getHashValue(const DV &D) {
+    unsigned HV = 0;
+    const OptFragmentInfo &Fragment = D.getFragment();
+    if (Fragment)
+      HV = DenseMapInfo<FragmentInfo>::getHashValue(*Fragment);
+
+    return hash_combine(D.getVar(), HV, D.getInlinedAt());
+  }
+
+  static bool isEqual(const DV &A, const DV &B) { return A == B; }
+};
+
+} // namespace llvm
+
 //===----------------------------------------------------------------------===//
 //            Implementation
 //===----------------------------------------------------------------------===//
+
+const DIExpression::FragmentInfo
+    LiveDebugValues::DebugVariable::DefaultFragment = {
+        std::numeric_limits<uint64_t>::max(),
+        std::numeric_limits<uint64_t>::min()};
 
 char LiveDebugValues::ID = 0;
 
@@ -364,6 +452,39 @@ LiveDebugValues::LiveDebugValues() : MachineFunctionPass(ID) {
 void LiveDebugValues::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   MachineFunctionPass::getAnalysisUsage(AU);
+}
+
+/// Erase a variable from the set of open ranges, and additionally erase any
+/// fragments that may overlap it.
+void LiveDebugValues::OpenRangesSet::erase(DebugVariable Var) {
+  // Erasure helper.
+  auto DoErase = [this](DebugVariable VarToErase) {
+    auto It = Vars.find(VarToErase);
+    if (It != Vars.end()) {
+      unsigned ID = It->second;
+      VarLocs.reset(ID);
+      Vars.erase(It);
+    }
+  };
+
+  // Erase the variable/fragment that ends here.
+  DoErase(Var);
+
+  // Extract the fragment. Interpret an empty fragment as one that covers all
+  // possible bits.
+  FragmentInfo ThisFragment = Var.getFragmentDefault();
+
+  // There may be fragments that overlap the designated fragment. Look them up
+  // in the pre-computed overlap map, and erase them too.
+  auto MapIt = OverlappingFragments.find({Var.getVar(), ThisFragment});
+  if (MapIt != OverlappingFragments.end()) {
+    for (auto Fragment : MapIt->second) {
+      LiveDebugValues::OptFragmentInfo FragmentHolder;
+      if (!DebugVariable::isFragmentDefault(Fragment))
+        FragmentHolder = LiveDebugValues::OptFragmentInfo(Fragment);
+      DoErase({Var.getVar(), FragmentHolder, Var.getInlinedAt()});
+    }
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -416,13 +537,14 @@ void LiveDebugValues::transferDebugValue(const MachineInstr &MI,
   if (!MI.isDebugValue())
     return;
   const DILocalVariable *Var = MI.getDebugVariable();
+  const DIExpression *Expr = MI.getDebugExpression();
   const DILocation *DebugLoc = MI.getDebugLoc();
   const DILocation *InlinedAt = DebugLoc->getInlinedAt();
   assert(Var->isValidLocationForIntrinsic(DebugLoc) &&
          "Expected inlined-at fields to agree");
 
   // End all previous ranges of Var.
-  DebugVariable V(Var, InlinedAt);
+  DebugVariable V(Var, Expr, InlinedAt);
   OpenRanges.erase(V);
 
   // Add the VarLoc to OpenRanges from this DBG_VALUE.
@@ -464,8 +586,7 @@ void LiveDebugValues::insertTransferDebugPair(
     unsigned LocId = VarLocIDs.insert(VL);
 
     // Close this variable's previous location range.
-    DebugVariable V(DebugInstr->getDebugVariable(),
-                    DebugInstr->getDebugLoc()->getInlinedAt());
+    DebugVariable V(*DebugInstr);
     OpenRanges.erase(V);
 
     OpenRanges.insert(LocId, VL.Var);
@@ -757,16 +878,82 @@ bool LiveDebugValues::transferTerminatorInst(MachineInstr &MI,
   return Changed;
 }
 
+/// Accumulate a mapping between each DILocalVariable fragment and other
+/// fragments of that DILocalVariable which overlap. This reduces work during
+/// the data-flow stage from "Find any overlapping fragments" to "Check if the
+/// known-to-overlap fragments are present".
+/// \param MI A previously unprocessed DEBUG_VALUE instruction to analyze for
+///           fragment usage.
+/// \param SeenFragments Map from DILocalVariable to all fragments of that
+///           Variable which are known to exist.
+/// \param OverlappingFragments The overlap map being constructed, from one
+///           Var/Fragment pair to a vector of fragments known to overlap.
+void LiveDebugValues::accumulateFragmentMap(MachineInstr &MI,
+                                            VarToFragments &SeenFragments,
+                                            OverlapMap &OverlappingFragments) {
+  DebugVariable MIVar(MI);
+  FragmentInfo ThisFragment = MIVar.getFragmentDefault();
+
+  // If this is the first sighting of this variable, then we are guaranteed
+  // there are currently no overlapping fragments either. Initialize the set
+  // of seen fragments, record no overlaps for the current one, and return.
+  auto SeenIt = SeenFragments.find(MIVar.getVar());
+  if (SeenIt == SeenFragments.end()) {
+    SmallSet<FragmentInfo, 4> OneFragment;
+    OneFragment.insert(ThisFragment);
+    SeenFragments.insert({MIVar.getVar(), OneFragment});
+
+    OverlappingFragments.insert({{MIVar.getVar(), ThisFragment}, {}});
+    return;
+  }
+
+  // If this particular Variable/Fragment pair already exists in the overlap
+  // map, it has already been accounted for.
+  auto IsInOLapMap =
+      OverlappingFragments.insert({{MIVar.getVar(), ThisFragment}, {}});
+  if (!IsInOLapMap.second)
+    return;
+
+  auto &ThisFragmentsOverlaps = IsInOLapMap.first->second;
+  auto &AllSeenFragments = SeenIt->second;
+
+  // Otherwise, examine all other seen fragments for this variable, with "this"
+  // fragment being a previously unseen fragment. Record any pair of
+  // overlapping fragments.
+  for (auto &ASeenFragment : AllSeenFragments) {
+    // Does this previously seen fragment overlap?
+    if (DIExpression::fragmentsOverlap(ThisFragment, ASeenFragment)) {
+      // Yes: Mark the current fragment as being overlapped.
+      ThisFragmentsOverlaps.push_back(ASeenFragment);
+      // Mark the previously seen fragment as being overlapped by the current
+      // one.
+      auto ASeenFragmentsOverlaps =
+          OverlappingFragments.find({MIVar.getVar(), ASeenFragment});
+      assert(ASeenFragmentsOverlaps != OverlappingFragments.end() &&
+             "Previously seen var fragment has no vector of overlaps");
+      ASeenFragmentsOverlaps->second.push_back(ThisFragment);
+    }
+  }
+
+  AllSeenFragments.insert(ThisFragment);
+}
+
 /// This routine creates OpenRanges and OutLocs.
 bool LiveDebugValues::process(MachineInstr &MI, OpenRangesSet &OpenRanges,
                               VarLocInMBB &OutLocs, VarLocMap &VarLocIDs,
-                              TransferMap &Transfers, bool transferChanges) {
+                              TransferMap &Transfers, bool transferChanges,
+                              OverlapMap &OverlapFragments,
+                              VarToFragments &SeenFragments) {
   bool Changed = false;
   transferDebugValue(MI, OpenRanges, VarLocIDs);
   transferRegisterDef(MI, OpenRanges, VarLocIDs);
   if (transferChanges) {
     transferRegisterCopy(MI, OpenRanges, VarLocIDs, Transfers);
     transferSpillOrRestoreInst(MI, OpenRanges, VarLocIDs, Transfers);
+  } else {
+    // Build up a map of overlapping fragments on the first run through.
+    if (MI.isDebugValue())
+      accumulateFragmentMap(MI, SeenFragments, OverlapFragments);
   }
   Changed = transferTerminatorInst(MI, OpenRanges, OutLocs, VarLocIDs);
   return Changed;
@@ -888,11 +1075,15 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
   bool OLChanged = false;
   bool MBBJoined = false;
 
-  VarLocMap VarLocIDs;      // Map VarLoc<>unique ID for use in bitvectors.
-  OpenRangesSet OpenRanges; // Ranges that are open until end of bb.
-  VarLocInMBB OutLocs;      // Ranges that exist beyond bb.
-  VarLocInMBB InLocs;       // Ranges that are incoming after joining.
-  TransferMap Transfers;    // DBG_VALUEs associated with spills.
+  VarLocMap VarLocIDs;         // Map VarLoc<>unique ID for use in bitvectors.
+  OverlapMap OverlapFragments; // Map of overlapping variable fragments
+  OpenRangesSet OpenRanges(OverlapFragments);
+                              // Ranges that are open until end of bb.
+  VarLocInMBB OutLocs;        // Ranges that exist beyond bb.
+  VarLocInMBB InLocs;         // Ranges that are incoming after joining.
+  TransferMap Transfers;      // DBG_VALUEs associated with spills.
+
+  VarToFragments SeenFragments;
 
   // Blocks which are artificial, i.e. blocks which exclusively contain
   // instructions without locations, or with line 0 locations.
@@ -914,10 +1105,12 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
   // over the BBs. The LiveDebugVariables pass has already created DBG_VALUE
   // instructions for spills of registers that are known to be user variables
   // within the BB in which the spill occurs.
-  for (auto &MBB : MF)
-    for (auto &MI : MBB)
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
       process(MI, OpenRanges, OutLocs, VarLocIDs, Transfers,
-              dontTransferChanges);
+              dontTransferChanges, OverlapFragments, SeenFragments);
+    }
+  }
 
   auto hasNonArtificialLocation = [](const MachineInstr &MI) -> bool {
     if (const DebugLoc &DL = MI.getDebugLoc())
@@ -963,8 +1156,9 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
         // examine spill instructions to see whether they spill registers that
         // correspond to user variables.
         for (auto &MI : *MBB)
-          OLChanged |= process(MI, OpenRanges, OutLocs, VarLocIDs, Transfers,
-                               transferChanges);
+          OLChanged |=
+              process(MI, OpenRanges, OutLocs, VarLocIDs, Transfers,
+                      transferChanges, OverlapFragments, SeenFragments);
 
         // Add any DBG_VALUE instructions necessitated by spills.
         for (auto &TR : Transfers)

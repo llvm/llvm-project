@@ -30,10 +30,9 @@ void DurationUnnecessaryConversionCheck::registerMatchers(MatchFinder *Finder) {
 
     // Matcher which matches the current scale's factory with a `1` argument,
     // e.g. `absl::Seconds(1)`.
-    auto factory_matcher = cxxConstructExpr(hasArgument(
-        0,
+    auto factory_matcher = ignoringElidableConstructorCall(
         callExpr(callee(functionDecl(hasName(DurationFactory))),
-                 hasArgument(0, ignoringImpCasts(integerLiteral(equals(1)))))));
+                 hasArgument(0, ignoringImpCasts(integerLiteral(equals(1))))));
 
     // Matcher which matches either inverse function and binds its argument,
     // e.g. `absl::ToDoubleSeconds(dur)`.

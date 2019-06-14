@@ -19,7 +19,9 @@
 #include "index/SymbolLocation.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
@@ -620,6 +622,23 @@ static llvm::Optional<Range> getTokenRange(SourceLocation Loc,
                          CharSourceRange::getCharRange(Loc, End));
 }
 
+static const FunctionDecl *getUnderlyingFunction(const Decl *D) {
+  // Extract lambda from variables.
+  if (const VarDecl *VD = llvm::dyn_cast<VarDecl>(D)) {
+    auto QT = VD->getType();
+    if (!QT.isNull()) {
+      while (!QT->getPointeeType().isNull())
+        QT = QT->getPointeeType();
+
+      if (const auto *CD = QT->getAsCXXRecordDecl())
+        return CD->getLambdaCallOperator();
+    }
+  }
+
+  // Non-lambda functions.
+  return D->getAsFunction();
+}
+
 /// Generate a \p Hover object given the declaration \p D.
 static HoverInfo getHoverContents(const Decl *D) {
   HoverInfo HI;
@@ -654,27 +673,21 @@ static HoverInfo getHoverContents(const Decl *D) {
   }
 
   // Fill in types and params.
-  if (const FunctionDecl *FD = D->getAsFunction()) {
+  if (const FunctionDecl *FD = getUnderlyingFunction(D)) {
     HI.ReturnType.emplace();
-    llvm::raw_string_ostream OS(*HI.ReturnType);
-    FD->getReturnType().print(OS, Policy);
-
-    HI.Type.emplace();
-    llvm::raw_string_ostream TypeOS(*HI.Type);
-    FD->getReturnType().print(TypeOS, Policy);
-    TypeOS << '(';
+    {
+      llvm::raw_string_ostream OS(*HI.ReturnType);
+      FD->getReturnType().print(OS, Policy);
+    }
 
     HI.Parameters.emplace();
     for (const ParmVarDecl *PVD : FD->parameters()) {
-      if (HI.Parameters->size())
-        TypeOS << ", ";
       HI.Parameters->emplace_back();
       auto &P = HI.Parameters->back();
       if (!PVD->getType().isNull()) {
         P.Type.emplace();
         llvm::raw_string_ostream OS(*P.Type);
         PVD->getType().print(OS, Policy);
-        PVD->getType().print(TypeOS, Policy);
       } else {
         std::string Param;
         llvm::raw_string_ostream OS(Param);
@@ -690,11 +703,17 @@ static HoverInfo getHoverContents(const Decl *D) {
         PVD->getDefaultArg()->printPretty(Out, nullptr, Policy);
       }
     }
-    TypeOS << ')';
+
+    HI.Type.emplace();
+    llvm::raw_string_ostream TypeOS(*HI.Type);
+    // Lambdas
+    if (const VarDecl *VD = llvm::dyn_cast<VarDecl>(D))
+      VD->getType().getDesugaredType(D->getASTContext()).print(TypeOS, Policy);
+    // Functions
+    else
+      FD->getType().print(TypeOS, Policy);
     // FIXME: handle variadics.
   } else if (const auto *VD = dyn_cast<ValueDecl>(D)) {
-    // FIXME: Currently lambdas are also handled as ValueDecls, they should be
-    // more similar to functions.
     HI.Type.emplace();
     llvm::raw_string_ostream OS(*HI.Type);
     VD->getType().print(OS, Policy);

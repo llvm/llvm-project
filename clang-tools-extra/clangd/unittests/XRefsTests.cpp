@@ -22,6 +22,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <string>
 
 namespace clang {
 namespace clangd {
@@ -588,7 +589,7 @@ TEST(Hover, Structured) {
          HI.Documentation = "Best foo ever.";
          HI.Definition = "void foo()";
          HI.ReturnType = "void";
-         HI.Type = "void()";
+         HI.Type = "void ()";
          HI.Parameters.emplace();
        }},
       // Inside namespace
@@ -605,7 +606,7 @@ TEST(Hover, Structured) {
          HI.Documentation = "Best foo ever.";
          HI.Definition = "void foo()";
          HI.ReturnType = "void";
-         HI.Type = "void()";
+         HI.Type = "void ()";
          HI.Parameters.emplace();
        }},
       // Field
@@ -733,7 +734,7 @@ class Foo {})cpp";
           bool Q = false, class... Ts>
 void foo())cpp";
          HI.ReturnType = "void";
-         HI.Type = "void()";
+         HI.Type = "void ()";
          HI.Parameters.emplace();
          HI.TemplateParameters = {
              {std::string("template <typename, bool...> class"),
@@ -759,11 +760,75 @@ void foo())cpp";
          HI.Kind = SymbolKind::Function;
          HI.Definition = "Foo<bool, true, false> foo(int, bool T = false)";
          HI.ReturnType = "Foo<bool, true, false>";
-         HI.Type = "Foo<bool, true, false>(int, bool)";
+         HI.Type = "Foo<bool, true, false> (int, bool)";
          HI.Parameters = {
              {std::string("int"), llvm::None, llvm::None},
              {std::string("bool"), std::string("T"), std::string("false")},
          };
+       }},
+      // Pointers to lambdas
+      {R"cpp(
+        void foo() {
+          auto lamb = [](int T, bool B) -> bool { return T && B; };
+          auto *b = &lamb;
+          auto *[[^c]] = &b;
+        }
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.LocalScope = "foo::";
+         HI.Name = "c";
+         HI.Kind = SymbolKind::Variable;
+         HI.Definition = "auto *c = &b";
+         HI.Type = "class (lambda) **";
+         HI.ReturnType = "bool";
+         HI.Parameters = {
+             {std::string("int"), std::string("T"), llvm::None},
+             {std::string("bool"), std::string("B"), llvm::None},
+         };
+         return HI;
+       }},
+      // Lambda parameter with decltype reference
+      {R"cpp(
+        auto lamb = [](int T, bool B) -> bool { return T && B; };
+        void foo(decltype(lamb)& bar) {
+          [[ba^r]](0, false);
+        }
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.LocalScope = "foo::";
+         HI.Name = "bar";
+         HI.Kind = SymbolKind::Variable;
+         HI.Definition = "decltype(lamb) &bar";
+         HI.Type = "decltype(lamb) &";
+         HI.ReturnType = "bool";
+         HI.Parameters = {
+             {std::string("int"), std::string("T"), llvm::None},
+             {std::string("bool"), std::string("B"), llvm::None},
+         };
+         return HI;
+       }},
+      // Lambda parameter with decltype
+      {R"cpp(
+        auto lamb = [](int T, bool B) -> bool { return T && B; };
+        void foo(decltype(lamb) bar) {
+          [[ba^r]](0, false);
+        }
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.LocalScope = "foo::";
+         HI.Name = "bar";
+         HI.Kind = SymbolKind::Variable;
+         HI.Definition = "decltype(lamb) bar";
+         HI.Type = "class (lambda)";
+         HI.ReturnType = "bool";
+         HI.Parameters = {
+             {std::string("int"), std::string("T"), llvm::None},
+             {std::string("bool"), std::string("B"), llvm::None},
+         };
+         return HI;
        }},
       // Lambda variable
       {R"cpp(
@@ -779,7 +844,12 @@ void foo())cpp";
          HI.Name = "lamb";
          HI.Kind = SymbolKind::Variable;
          HI.Definition = "auto lamb = [&bar](int T, bool B) -> bool {}";
-         HI.Type = std::string("class (lambda)");
+         HI.Type = "class (lambda)";
+         HI.ReturnType = "bool";
+         HI.Parameters = {
+             {std::string("int"), std::string("T"), llvm::None},
+             {std::string("bool"), std::string("B"), llvm::None},
+         };
          return HI;
        }},
       // Local variable in lambda

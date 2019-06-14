@@ -18,6 +18,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -90,24 +91,19 @@ Range diagnosticRange(const clang::Diagnostic &D, const LangOptions &L) {
     if (locationInRange(Loc, R, M))
       return halfOpenToRange(M, R);
   }
-  llvm::Optional<Range> FallbackRange;
   // The range may be given as a fixit hint instead.
   for (const auto &F : D.getFixItHints()) {
     auto R = Lexer::makeFileCharRange(F.RemoveRange, M, L);
     if (locationInRange(Loc, R, M))
       return halfOpenToRange(M, R);
-    // If there's a fixit that performs insertion, it has zero-width. Therefore
-    // it can't contain the location of the diag, but it might be possible that
-    // this should be reported as range. For example missing semicolon.
-    if (R.getBegin() == R.getEnd() && Loc == R.getBegin())
-      FallbackRange = halfOpenToRange(M, R);
   }
-  if (FallbackRange)
-    return *FallbackRange;
-  // If no suitable range is found, just use the token at the location.
-  auto R = Lexer::makeFileCharRange(CharSourceRange::getTokenRange(Loc), M, L);
-  if (!R.isValid()) // Fall back to location only, let the editor deal with it.
-    R = CharSourceRange::getCharRange(Loc);
+  // If the token at the location is not a comment, we use the token.
+  // If we can't get the token at the location, fall back to using the location
+  auto R = CharSourceRange::getCharRange(Loc);
+  Token Tok;
+  if (!Lexer::getRawToken(Loc, Tok, M, L, true) && Tok.isNot(tok::comment)) {
+    R = CharSourceRange::getTokenRange(Tok.getLocation(), Tok.getEndLoc());
+  }
   return halfOpenToRange(M, R);
 }
 
