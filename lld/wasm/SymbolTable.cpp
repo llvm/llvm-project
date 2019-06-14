@@ -199,10 +199,12 @@ DefinedFunction *SymbolTable::addSyntheticFunction(StringRef Name,
                                         Flags, nullptr, Function);
 }
 
+// Adds an optional, linker generated, data symbols.  The symbol will only be
+// added if there is an undefine reference to it, or if it is explictly exported
+// via the --export flag.  Otherwise we don't add the symbol and return nullptr.
 DefinedData *SymbolTable::addOptionalDataSymbol(StringRef Name, uint32_t Value,
                                                 uint32_t Flags) {
   Symbol *S = find(Name);
-  // Enable --export of optional symbols
   if (!S && (Config->ExportAll || Config->ExportedSymbols.count(Name) != 0))
     S = insertName(Name).first;
   else if (!S || S->isDefined())
