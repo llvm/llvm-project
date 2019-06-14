@@ -612,6 +612,8 @@ public:
 
   bool IsVoidType(lldb::opaque_compiler_type_t type) override;
 
+  bool CanPassInRegisters(const CompilerType &type) override;
+
   bool SupportsLanguage(lldb::LanguageType language) override;
 
   static bool GetCXXClassName(const CompilerType &type,

@@ -5162,6 +5162,11 @@ bool SwiftASTContext::IsVoidType(void *type) {
   return type == GetASTContext()->TheEmptyTupleType.getPointer();
 }
 
+bool SwiftASTContext::CanPassInRegisters(const CompilerType &type) {
+  abort();
+  return false;
+}
+
 bool SwiftASTContext::IsGenericType(const CompilerType &compiler_type) {
   if (!compiler_type.IsValid())
     return false;

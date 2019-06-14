@@ -301,6 +301,69 @@ return_one_int_one_pointer (struct one_int_one_pointer value)
   return value;
 }
 
+struct base_one_char {
+  char c;
+};
+
+struct nested_one_float_three_base {
+  float f;
+  struct base_one_char b1;
+  struct base_one_char b2;
+  struct base_one_char b3;
+}; // returned in RAX for both SysV and Windows
+
+struct nested_one_float_three_base
+return_nested_one_float_three_base (struct nested_one_float_three_base value)
+{
+  return value;
+}
+
+struct double_nested_one_float_one_nested {
+  float f;
+  struct nested_one_float_three_base ns;
+}; // SysV-ABI: returned in XMM0 + RAX
+// Windows-ABI: returned in memory
+
+struct double_nested_one_float_one_nested
+return_double_nested_one_float_one_nested(struct double_nested_one_float_one_nested value)
+{
+  return value;
+}
+
+struct base_float_struct {
+  float f1;
+  float f2;
+};
+
+struct nested_float_struct {
+  double d;
+  struct base_float_struct bfs;
+}; // SysV-ABI: return in xmm0 + xmm1
+// Windows-ABI: returned in memory
+
+struct nested_float_struct
+return_nested_float_struct (struct nested_float_struct value)
+{
+  return value;
+}
+
+struct six_double_three_int {
+  double d1;  // 8
+  double d2;  // 8
+  int i1;   // 4
+  double d3;  // 8
+  double d4;  // 8
+  int i2;   // 4
+  double d5;  // 8
+  double d6;  // 8
+  int i3;   // 4
+}; // returned in memeory on both SysV and Windows
+
+struct six_double_three_int
+return_six_double_three_int (struct six_double_three_int value) {
+  return value;
+}
+
 typedef float vector_size_float32_8 __attribute__((__vector_size__(8)));
 typedef float vector_size_float32_16 __attribute__((__vector_size__(16)));
 typedef float vector_size_float32_32 __attribute__((__vector_size__(32)));
@@ -343,6 +406,100 @@ ext_vector_size_float32_8
 return_ext_vector_size_float32_8 (ext_vector_size_float32_8 value)
 {
     return value;
+}
+
+class base_class_one_char {
+public:
+  char c = '!';
+}; // returned in RAX for both ABI
+
+base_class_one_char
+return_base_class_one_char(base_class_one_char value) {
+  return value;
+}
+
+class nested_class_float_and_base {
+public:
+  float f = 0.1;
+  base_class_one_char b;
+}; // returned in RAX for both ABI
+
+nested_class_float_and_base
+return_nested_class_float_and_base(nested_class_float_and_base value) {
+  return value;
+}
+
+class double_nested_class_float_and_nested {
+public:
+  float f = 0.2;
+  nested_class_float_and_base n;
+}; // SysV-ABI: returned in XMM0 + RAX
+// Windows-ABI: returned in memory
+
+double_nested_class_float_and_nested
+return_double_nested_class_float_and_nested(
+    double_nested_class_float_and_nested value) {
+  return value;
+}
+
+class base_class {
+public:
+  base_class() {
+    c = 'a';
+    c2 = 'b';
+  }
+private:
+  char c;
+protected:
+  char c2;
+}; // returned in RAX for both ABI
+
+base_class
+return_base_class(base_class value) {
+  return value;
+}
+
+class sub_class : base_class {
+public:
+  sub_class() {
+    c2 = '&';
+    i = 10;
+  }
+private:
+  int i;
+}; // size 8; should be returned in RAX
+// Since it's in register, lldb won't be able to get the
+// fields in base class, expected to fail.
+
+sub_class
+return_sub_class(sub_class value) {
+  return value;
+}
+
+class abstract_class {
+public:
+  virtual char getChar() = 0;
+private:
+  int i = 8;
+protected:
+  char c = '!';
+};
+
+class derived_class : abstract_class {
+public:
+  derived_class() {
+    c = '?';
+  }
+  char getChar() {
+    return this->c;
+  }
+private:
+  char c2 = '$';
+}; // size: 16; contains non POD member, returned in memory
+
+derived_class
+return_derived_class(derived_class value) {
+  return value;
 }
 
 int 
@@ -394,6 +551,49 @@ main ()
   return_two_float ((struct two_float) { 10.0, 20.0});
   return_one_int_one_double_packed ((struct one_int_one_double_packed) {10, 20.0});
   return_one_int_one_long ((struct one_int_one_long) {10, 20});
+
+  return_nested_one_float_three_base((struct nested_one_float_three_base) {
+                                        10.0,
+                                        (struct base_one_char) {
+                                          'x'
+                                        },
+                                        (struct base_one_char) {
+                                          'y'
+                                        },
+                                        (struct base_one_char) {
+                                          'z'
+                                        }
+                                      });
+  return_double_nested_one_float_one_nested((struct double_nested_one_float_one_nested) {
+                                              10.0,
+                                              (struct nested_one_float_three_base) {
+                                                20.0,
+                                                (struct base_one_char) {
+                                                  'x'
+                                                },
+                                                (struct base_one_char) {
+                                                  'y'
+                                                },
+                                                (struct base_one_char) {
+                                                  'z'
+                                                }
+                                              }});
+  return_nested_float_struct((struct nested_float_struct) {
+                                10.0,
+                                (struct base_float_struct) {
+                                  20.0,
+                                  30.0
+                                }});
+  return_six_double_three_int((struct six_double_three_int) {
+                                10.0, 20.0, 1, 30.0, 40.0, 2, 50.0, 60.0, 3});
+
+  return_base_class_one_char(base_class_one_char());
+  return_nested_class_float_and_base(nested_class_float_and_base());
+  return_double_nested_class_float_and_nested(double_nested_class_float_and_nested());
+  return_base_class(base_class());
+  // this is expected to fail
+  return_sub_class(sub_class());
+  return_derived_class(derived_class());
 
   return_vector_size_float32_8 (( vector_size_float32_8 ){1.5, 2.25});
   return_vector_size_float32_16 (( vector_size_float32_16 ){1.5, 2.25, 4.125, 8.0625});
