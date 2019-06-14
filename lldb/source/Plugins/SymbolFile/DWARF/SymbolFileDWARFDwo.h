@@ -65,7 +65,7 @@ protected:
       const DWARFDIE &die, lldb_private::ConstString type_name,
       bool must_be_implementation) override;
 
-  SymbolFileDWARF *GetBaseSymbolFile();
+  SymbolFileDWARF &GetBaseSymbolFile();
 
   lldb::ObjectFileSP m_obj_file_sp;
   DWARFCompileUnit &m_base_dwarf_cu;

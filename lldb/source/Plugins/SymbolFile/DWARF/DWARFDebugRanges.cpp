@@ -8,12 +8,9 @@
 
 #include "DWARFDebugRanges.h"
 #include "DWARFUnit.h"
-#include "SymbolFileDWARF.h"
 #include "lldb/Utility/Stream.h"
-#include <assert.h>
 
 using namespace lldb_private;
-using namespace std;
 
 static dw_addr_t GetBaseAddressMarker(uint32_t addr_size) {
   switch(addr_size) {
@@ -29,25 +26,24 @@ static dw_addr_t GetBaseAddressMarker(uint32_t addr_size) {
 
 DWARFDebugRanges::DWARFDebugRanges() : m_range_map() {}
 
-void DWARFDebugRanges::Extract(SymbolFileDWARF *dwarf2Data) {
+void DWARFDebugRanges::Extract(DWARFContext &context) {
   DWARFRangeList range_list;
   lldb::offset_t offset = 0;
   dw_offset_t debug_ranges_offset = offset;
-  while (Extract(dwarf2Data, &offset, range_list)) {
+  while (Extract(context, &offset, range_list)) {
     range_list.Sort();
     m_range_map[debug_ranges_offset] = range_list;
     debug_ranges_offset = offset;
   }
 }
 
-bool DWARFDebugRanges::Extract(SymbolFileDWARF *dwarf2Data,
+bool DWARFDebugRanges::Extract(DWARFContext &context,
                                lldb::offset_t *offset_ptr,
                                DWARFRangeList &range_list) {
   range_list.Clear();
 
   lldb::offset_t range_offset = *offset_ptr;
-  const DWARFDataExtractor &debug_ranges_data =
-      dwarf2Data->get_debug_ranges_data();
+  const DWARFDataExtractor &debug_ranges_data = context.getOrLoadRangesData();
   uint32_t addr_size = debug_ranges_data.GetAddressByteSize();
   dw_addr_t base_addr = 0;
   dw_addr_t base_addr_marker = GetBaseAddressMarker(addr_size);
@@ -205,7 +201,7 @@ static uint64_t ReadAddressFromDebugAddrSection(const DWARFUnit *cu,
   dw_offset_t addr_base = cu->GetAddrBase();
   lldb::offset_t offset = addr_base + index * index_size;
   return cu->GetSymbolFileDWARF()
-      ->GetDWARFContext()
+      .GetDWARFContext()
       .getOrLoadAddrData()
       .GetMaxU64(&offset, index_size);
 }
@@ -257,8 +253,8 @@ bool DWARFDebugRngLists::FindRanges(const DWARFUnit *cu,
   return false;
 }
 
-void DWARFDebugRngLists::Extract(SymbolFileDWARF *dwarf2Data) {
-  const DWARFDataExtractor &data = dwarf2Data->get_debug_rnglists_data();
+void DWARFDebugRngLists::Extract(DWARFContext &context) {
+  const DWARFDataExtractor &data = context.getOrLoadRngListsData();
   lldb::offset_t offset = 0;
 
   uint64_t length = data.GetU32(&offset);

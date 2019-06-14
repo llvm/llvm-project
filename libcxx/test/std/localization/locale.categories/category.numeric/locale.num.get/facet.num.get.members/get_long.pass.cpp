@@ -13,6 +13,16 @@
 // iter_type get(iter_type in, iter_type end, ios_base&,
 //               ios_base::iostate& err, long& v) const;
 
+// This test exercises the fix for PR28704, which isn't in the dylib for
+// some systems.
+// XFAIL: with_system_cxx_lib=macosx10.15
+// XFAIL: with_system_cxx_lib=macosx10.14
+// XFAIL: with_system_cxx_lib=macosx10.13
+// XFAIL: with_system_cxx_lib=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
+
 #include <locale>
 #include <ios>
 #include <cassert>

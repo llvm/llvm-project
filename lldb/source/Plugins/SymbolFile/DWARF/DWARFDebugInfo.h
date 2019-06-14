@@ -37,8 +37,8 @@ public:
                                   const dw_offset_t next_offset,
                                   const uint32_t depth, void *userData);
 
-  explicit DWARFDebugInfo(lldb_private::DWARFContext &context);
-  void SetDwarfData(SymbolFileDWARF *dwarf2Data);
+  explicit DWARFDebugInfo(SymbolFileDWARF &dwarf,
+                          lldb_private::DWARFContext &context);
 
   size_t GetNumUnits();
   DWARFUnit *GetUnitAtIndex(lldb::user_id_t idx);
@@ -65,8 +65,7 @@ public:
 protected:
   typedef std::vector<DWARFUnitSP> UnitColl;
 
-  // Member variables
-  SymbolFileDWARF *m_dwarf2Data;
+  SymbolFileDWARF &m_dwarf;
   lldb_private::DWARFContext &m_context;
   UnitColl m_units;
   std::unique_ptr<DWARFDebugAranges>

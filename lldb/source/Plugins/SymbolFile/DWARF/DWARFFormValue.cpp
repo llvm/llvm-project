@@ -451,26 +451,20 @@ void DWARFFormValue::Dump(Stream &s) const {
 }
 
 const char *DWARFFormValue::AsCString() const {
-  SymbolFileDWARF *symbol_file = m_unit->GetSymbolFileDWARF();
+  SymbolFileDWARF &symbol_file = m_unit->GetSymbolFileDWARF();
 
   if (m_form == DW_FORM_string) {
     return m_value.value.cstr;
   } else if (m_form == DW_FORM_strp) {
-    if (!symbol_file)
-      return nullptr;
-
-    return symbol_file->GetDWARFContext().getOrLoadStrData().PeekCStr(
+    return symbol_file.GetDWARFContext().getOrLoadStrData().PeekCStr(
         m_value.value.uval);
   } else if (m_form == DW_FORM_GNU_str_index) {
-    if (!symbol_file)
-      return nullptr;
-
     uint32_t index_size = 4;
     lldb::offset_t offset = m_value.value.uval * index_size;
     dw_offset_t str_offset =
-        symbol_file->GetDWARFContext().getOrLoadStrOffsetsData().GetMaxU64(
+        symbol_file.GetDWARFContext().getOrLoadStrOffsetsData().GetMaxU64(
             &offset, index_size);
-    return symbol_file->GetDWARFContext().getOrLoadStrData().PeekCStr(
+    return symbol_file.GetDWARFContext().getOrLoadStrData().PeekCStr(
         str_offset);
   }
 
@@ -479,28 +473,24 @@ const char *DWARFFormValue::AsCString() const {
       m_form == DW_FORM_strx4) {
 
     // The same code as above.
-    if (!symbol_file)
-      return nullptr;
-
     uint32_t indexSize = 4;
     lldb::offset_t offset =
         m_unit->GetStrOffsetsBase() + m_value.value.uval * indexSize;
     dw_offset_t strOffset =
-        symbol_file->GetDWARFContext().getOrLoadStrOffsetsData().GetMaxU64(
+        symbol_file.GetDWARFContext().getOrLoadStrOffsetsData().GetMaxU64(
             &offset, indexSize);
-    return symbol_file->GetDWARFContext().getOrLoadStrData().PeekCStr(
-        strOffset);
+    return symbol_file.GetDWARFContext().getOrLoadStrData().PeekCStr(strOffset);
   }
 
   if (m_form == DW_FORM_line_strp)
-    return symbol_file->GetDWARFContext().getOrLoadLineStrData().PeekCStr(
+    return symbol_file.GetDWARFContext().getOrLoadLineStrData().PeekCStr(
         m_value.value.uval);
 
   return nullptr;
 }
 
 dw_addr_t DWARFFormValue::Address() const {
-  SymbolFileDWARF *symbol_file = m_unit->GetSymbolFileDWARF();
+  SymbolFileDWARF &symbol_file = m_unit->GetSymbolFileDWARF();
 
   if (m_form == DW_FORM_addr)
     return Unsigned();
@@ -510,13 +500,10 @@ dw_addr_t DWARFFormValue::Address() const {
          m_form == DW_FORM_addrx1 || m_form == DW_FORM_addrx2 ||
          m_form == DW_FORM_addrx3 || m_form == DW_FORM_addrx4);
 
-  if (!symbol_file)
-    return 0;
-
   uint32_t index_size = m_unit->GetAddressByteSize();
   dw_offset_t addr_base = m_unit->GetAddrBase();
   lldb::offset_t offset = addr_base + m_value.value.uval * index_size;
-  return symbol_file->GetDWARFContext().getOrLoadAddrData().GetMaxU64(
+  return symbol_file.GetDWARFContext().getOrLoadAddrData().GetMaxU64(
       &offset, index_size);
 }
 
@@ -532,7 +519,7 @@ DWARFDIE DWARFFormValue::Reference() const {
                     // unit relative or we will get this wrong
     value += m_unit->GetOffset();
     if (!m_unit->ContainsDIEOffset(value)) {
-      m_unit->GetSymbolFileDWARF()->GetObjectFile()->GetModule()->ReportError(
+      m_unit->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
           "DW_FORM_ref* DIE reference 0x%" PRIx64 " is outside of its CU",
           value);
       return {};
@@ -541,10 +528,10 @@ DWARFDIE DWARFFormValue::Reference() const {
 
   case DW_FORM_ref_addr: {
     DWARFUnit *ref_cu =
-        m_unit->GetSymbolFileDWARF()->DebugInfo()->GetUnitContainingDIEOffset(
+        m_unit->GetSymbolFileDWARF().DebugInfo()->GetUnitContainingDIEOffset(
             DIERef::Section::DebugInfo, value);
     if (!ref_cu) {
-      m_unit->GetSymbolFileDWARF()->GetObjectFile()->GetModule()->ReportError(
+      m_unit->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
           "DW_FORM_ref_addr DIE reference 0x%" PRIx64 " has no matching CU",
           value);
       return {};
@@ -554,7 +541,7 @@ DWARFDIE DWARFFormValue::Reference() const {
 
   case DW_FORM_ref_sig8: {
     DWARFTypeUnit *tu =
-        m_unit->GetSymbolFileDWARF()->DebugInfo()->GetTypeUnitForHash(value);
+        m_unit->GetSymbolFileDWARF().DebugInfo()->GetTypeUnitForHash(value);
     if (!tu)
       return {};
     return tu->GetDIE(tu->GetTypeOffset());

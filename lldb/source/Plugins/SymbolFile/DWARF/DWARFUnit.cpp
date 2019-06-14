@@ -29,7 +29,7 @@ using namespace std;
 
 extern int g_verbose;
 
-DWARFUnit::DWARFUnit(SymbolFileDWARF *dwarf, lldb::user_id_t uid,
+DWARFUnit::DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                      const DWARFUnitHeader &header,
                      const DWARFAbbreviationDeclarationSet &abbrevs,
                      DIERef::Section section)
@@ -90,7 +90,7 @@ void DWARFUnit::ExtractDIEsIfNeeded() {
 // and no ExtractDIEsIfNeeded() has been executed during this ScopedExtractDIEs
 // lifetime.
 DWARFUnit::ScopedExtractDIEs DWARFUnit::ExtractDIEsScoped() {
-  ScopedExtractDIEs scoped(this);
+  ScopedExtractDIEs scoped(*this);
 
   {
     llvm::sys::ScopedReader lock(m_die_array_mutex);
@@ -109,8 +109,7 @@ DWARFUnit::ScopedExtractDIEs DWARFUnit::ExtractDIEsScoped() {
   return scoped;
 }
 
-DWARFUnit::ScopedExtractDIEs::ScopedExtractDIEs(DWARFUnit *cu) : m_cu(cu) {
-  lldbassert(m_cu);
+DWARFUnit::ScopedExtractDIEs::ScopedExtractDIEs(DWARFUnit &cu) : m_cu(&cu) {
   m_cu->m_die_array_scoped_mutex.lock_shared();
 }
 
@@ -266,7 +265,7 @@ static void SetDwoStrOffsetsBase(DWARFUnit *dwo_cu) {
   lldb::offset_t baseOffset = 0;
 
   const DWARFDataExtractor &strOffsets =
-      dwo_cu->GetSymbolFileDWARF()->GetDWARFContext().getOrLoadStrOffsetsData();
+      dwo_cu->GetSymbolFileDWARF().GetDWARFContext().getOrLoadStrOffsetsData();
   uint64_t length = strOffsets.GetU32(&baseOffset);
   if (length == 0xffffffff)
     length = strOffsets.GetU64(&baseOffset);
@@ -326,7 +325,7 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
   }
 
   std::unique_ptr<SymbolFileDWARFDwo> dwo_symbol_file =
-      m_dwarf->GetDwoSymbolFileForCompileUnit(*this, cu_die);
+      m_dwarf.GetDwoSymbolFileForCompileUnit(*this, cu_die);
   if (!dwo_symbol_file)
     return;
 
@@ -438,14 +437,11 @@ void DWARFUnit::ClearDIEsRWLocked() {
 }
 
 lldb::ByteOrder DWARFUnit::GetByteOrder() const {
-  return m_dwarf->GetObjectFile()->GetByteOrder();
+  return m_dwarf.GetObjectFile()->GetByteOrder();
 }
 
 TypeSystem *DWARFUnit::GetTypeSystem() {
-  if (m_dwarf)
-    return m_dwarf->GetTypeSystemForLanguage(GetLanguageType());
-  else
-    return nullptr;
+  return m_dwarf.GetTypeSystemForLanguage(GetLanguageType());
 }
 
 void DWARFUnit::SetBaseAddress(dw_addr_t base_addr) { m_base_addr = base_addr; }
@@ -477,7 +473,7 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
           return DWARFDIE(this, &(*pos));
       }
     } else
-      GetSymbolFileDWARF()->GetObjectFile()->GetModule()->ReportError(
+      GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
           "GetDIE for DIE 0x%" PRIx32 " is outside of its CU 0x%" PRIx32,
           die_offset, GetOffset());
   }
@@ -519,8 +515,6 @@ bool DWARFUnit::Supports_unnamed_objc_bitfields() {
   return true; // Assume all other compilers didn't have incorrect ObjC bitfield
                // info
 }
-
-SymbolFileDWARF *DWARFUnit::GetSymbolFileDWARF() const { return m_dwarf; }
 
 void DWARFUnit::ParseProducerInfo() {
   m_producer_version_major = UINT32_MAX;
@@ -645,7 +639,7 @@ const FileSpec &DWARFUnit::GetAbsolutePath() {
 }
 
 FileSpec DWARFUnit::GetFile(size_t file_idx) {
-  return m_dwarf->GetFile(*this, file_idx);
+  return m_dwarf.GetFile(*this, file_idx);
 }
 
 // DWARF2/3 suggests the form hostname:pathname for compilation directory.
@@ -796,9 +790,9 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data, DIERef::Section section
 }
 
 llvm::Expected<DWARFUnitSP>
-DWARFUnit::extract(SymbolFileDWARF *dwarf, user_id_t uid,
-                   const DWARFDataExtractor &debug_info, DIERef::Section section,
-                   lldb::offset_t *offset_ptr) {
+DWARFUnit::extract(SymbolFileDWARF &dwarf, user_id_t uid,
+                   const DWARFDataExtractor &debug_info,
+                   DIERef::Section section, lldb::offset_t *offset_ptr) {
   assert(debug_info.ValidOffset(*offset_ptr));
 
   auto expected_header =
@@ -806,13 +800,13 @@ DWARFUnit::extract(SymbolFileDWARF *dwarf, user_id_t uid,
   if (!expected_header)
     return expected_header.takeError();
 
-  const DWARFDebugAbbrev *abbr = dwarf->DebugAbbrev();
+  const DWARFDebugAbbrev *abbr = dwarf.DebugAbbrev();
   if (!abbr)
     return llvm::make_error<llvm::object::GenericBinaryError>(
         "No debug_abbrev data");
 
   bool abbr_offset_OK =
-      dwarf->GetDWARFContext().getOrLoadAbbrevData().ValidOffset(
+      dwarf.GetDWARFContext().getOrLoadAbbrevData().ValidOffset(
           expected_header->GetAbbrOffset());
   if (!abbr_offset_OK)
     return llvm::make_error<llvm::object::GenericBinaryError>(
@@ -833,8 +827,8 @@ DWARFUnit::extract(SymbolFileDWARF *dwarf, user_id_t uid,
 
 const lldb_private::DWARFDataExtractor &DWARFUnit::GetData() const {
   return m_section == DIERef::Section::DebugTypes
-             ? m_dwarf->GetDWARFContext().getOrLoadDebugTypesData()
-             : m_dwarf->GetDWARFContext().getOrLoadDebugInfoData();
+             ? m_dwarf.GetDWARFContext().getOrLoadDebugTypesData()
+             : m_dwarf.GetDWARFContext().getOrLoadDebugInfoData();
 }
 
 uint32_t DWARFUnit::GetHeaderByteSize() const {
@@ -857,10 +851,10 @@ DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) const {
   const DWARFDebugRangesBase *debug_ranges;
   llvm::StringRef section;
   if (GetVersion() <= 4) {
-    debug_ranges = m_dwarf->GetDebugRanges();
+    debug_ranges = m_dwarf.GetDebugRanges();
     section = "debug_ranges";
   } else {
-    debug_ranges = m_dwarf->GetDebugRngLists();
+    debug_ranges = m_dwarf.GetDebugRngLists();
     section = "debug_rnglists";
   }
   if (!debug_ranges)
@@ -874,7 +868,7 @@ DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) const {
 
 llvm::Expected<DWARFRangeList>
 DWARFUnit::FindRnglistFromIndex(uint32_t index) const {
-  const DWARFDebugRangesBase *debug_rnglists = m_dwarf->GetDebugRngLists();
+  const DWARFDebugRangesBase *debug_rnglists = m_dwarf.GetDebugRngLists();
   if (!debug_rnglists)
     return llvm::make_error<llvm::object::GenericBinaryError>(
         "No debug_rnglists section");

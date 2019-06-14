@@ -355,8 +355,7 @@ SymbolFileDWARF::SymbolFileDWARF(ObjectFile *objfile,
                                   // contain the .o file index/ID
       m_debug_map_module_wp(), m_debug_map_symfile(nullptr),
       m_context(objfile->GetModule()->GetSectionList(), dwo_section_list),
-      m_data_debug_loc(), m_data_debug_ranges(), m_data_debug_rnglists(),
-      m_abbr(), m_info(), m_fetched_external_modules(false),
+      m_data_debug_loc(), m_abbr(), m_info(), m_fetched_external_modules(false),
       m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate),
       m_unique_ast_type_map() {}
 
@@ -549,16 +548,6 @@ const DWARFDataExtractor &SymbolFileDWARF::get_debug_loclists_data() {
                               m_data_debug_loclists);
 }
 
-const DWARFDataExtractor &SymbolFileDWARF::get_debug_ranges_data() {
-  return GetCachedSectionData(eSectionTypeDWARFDebugRanges,
-                              m_data_debug_ranges);
-}
-
-const DWARFDataExtractor &SymbolFileDWARF::get_debug_rnglists_data() {
-  return GetCachedSectionData(eSectionTypeDWARFDebugRngLists,
-                              m_data_debug_rnglists);
-}
-
 DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
   if (m_abbr)
     return m_abbr.get();
@@ -589,10 +578,8 @@ DWARFDebugInfo *SymbolFileDWARF::DebugInfo() {
     static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
     Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
                        static_cast<void *>(this));
-    if (m_context.getOrLoadDebugInfoData().GetByteSize() > 0) {
-      m_info = llvm::make_unique<DWARFDebugInfo>(m_context);
-      m_info->SetDwarfData(this);
-    }
+    if (m_context.getOrLoadDebugInfoData().GetByteSize() > 0)
+      m_info = llvm::make_unique<DWARFDebugInfo>(*this, m_context);
   }
   return m_info.get();
 }
@@ -623,11 +610,11 @@ DWARFDebugRangesBase *SymbolFileDWARF::GetDebugRanges() {
     Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
                        static_cast<void *>(this));
 
-    if (get_debug_ranges_data().GetByteSize() > 0)
+    if (m_context.getOrLoadRangesData().GetByteSize() > 0)
       m_ranges.reset(new DWARFDebugRanges());
 
     if (m_ranges)
-      m_ranges->Extract(this);
+      m_ranges->Extract(m_context);
   }
   return m_ranges.get();
 }
@@ -638,11 +625,11 @@ DWARFDebugRangesBase *SymbolFileDWARF::GetDebugRngLists() {
     Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
                        static_cast<void *>(this));
 
-    if (get_debug_rnglists_data().GetByteSize() > 0)
+    if (m_context.getOrLoadRngListsData().GetByteSize() > 0)
       m_rnglists.reset(new DWARFDebugRngLists());
 
     if (m_rnglists)
-      m_rnglists->Extract(this);
+      m_rnglists->Extract(m_context);
   }
   return m_rnglists.get();
 }
@@ -654,8 +641,8 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
     // We already parsed this compile unit, had out a shared pointer to it
     cu_sp = comp_unit->shared_from_this();
   } else {
-    if (dwarf_cu.GetSymbolFileDWARF() != this) {
-      return dwarf_cu.GetSymbolFileDWARF()->ParseCompileUnit(dwarf_cu);
+    if (&dwarf_cu.GetSymbolFileDWARF() != this) {
+      return dwarf_cu.GetSymbolFileDWARF().ParseCompileUnit(dwarf_cu);
     } else if (dwarf_cu.GetOffset() == 0 && GetDebugMapSymfile()) {
       // Let the debug map create the compile unit
       cu_sp = m_debug_map_symfile->GetCompileUnit(this);
