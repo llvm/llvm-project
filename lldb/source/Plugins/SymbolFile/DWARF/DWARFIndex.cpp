@@ -24,7 +24,7 @@ void DWARFIndex::ProcessFunctionDIE(llvm::StringRef name, DIERef ref,
                                     std::vector<DWARFDIE> &dies) {
   DWARFDIE die = info.GetDIE(ref);
   if (!die) {
-    ReportInvalidDIEOffset(ref.die_offset, name);
+    ReportInvalidDIERef(ref, name);
     return;
   }
 

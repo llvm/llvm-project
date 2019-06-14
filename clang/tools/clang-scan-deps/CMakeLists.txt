@@ -16,6 +16,7 @@ set(CLANG_SCAN_DEPS_LIB_DEPS
   clangFrontendTool
   clangLex
   clangParse
+  clangSerialization
   clangTooling
   )
 

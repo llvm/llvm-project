@@ -610,7 +610,9 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     if (D->isInlineSpecified())  Out << "inline ";
     if (D->isVirtualAsWritten()) Out << "virtual ";
     if (D->isModulePrivate())    Out << "__module_private__ ";
-    if (D->isConstexpr() && !D->isExplicitlyDefaulted()) Out << "constexpr ";
+    if (D->isConstexprSpecified() && !D->isExplicitlyDefaulted())
+      Out << "constexpr ";
+    if (D->isConsteval())        Out << "consteval ";
     ExplicitSpecifier ExplicitSpec = ExplicitSpecifier::getFromDecl(D);
     if (ExplicitSpec.isSpecified())
       printExplicitSpecifier(ExplicitSpec, Out, Policy, Indentation);

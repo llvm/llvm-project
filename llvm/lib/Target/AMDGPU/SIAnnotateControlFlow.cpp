@@ -12,11 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUSubtarget.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
@@ -55,13 +57,13 @@ class SIAnnotateControlFlow : public FunctionPass {
 
   Type *Boolean;
   Type *Void;
-  Type *Int64;
+  Type *IntMask;
   Type *ReturnStruct;
 
   ConstantInt *BoolTrue;
   ConstantInt *BoolFalse;
   UndefValue *BoolUndef;
-  Constant *Int64Zero;
+  Constant *IntMaskZero;
 
   Function *If;
   Function *Else;
@@ -73,6 +75,8 @@ class SIAnnotateControlFlow : public FunctionPass {
   StackVector Stack;
 
   LoopInfo *LI;
+
+  void initialize(Module &M, const GCNSubtarget &ST);
 
   bool isUniform(BranchInst *T);
 
@@ -103,8 +107,6 @@ public:
 
   SIAnnotateControlFlow() : FunctionPass(ID) {}
 
-  bool doInitialization(Module &M) override;
-
   bool runOnFunction(Function &F) override;
 
   StringRef getPassName() const override { return "SI annotate control flow"; }
@@ -114,6 +116,7 @@ public:
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LegacyDivergenceAnalysis>();
     AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addRequired<TargetPassConfig>();
     FunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -124,31 +127,34 @@ INITIALIZE_PASS_BEGIN(SIAnnotateControlFlow, DEBUG_TYPE,
                       "Annotate SI Control Flow", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(SIAnnotateControlFlow, DEBUG_TYPE,
                     "Annotate SI Control Flow", false, false)
 
 char SIAnnotateControlFlow::ID = 0;
 
 /// Initialize all the types and constants used in the pass
-bool SIAnnotateControlFlow::doInitialization(Module &M) {
+void SIAnnotateControlFlow::initialize(Module &M, const GCNSubtarget &ST) {
   LLVMContext &Context = M.getContext();
 
   Void = Type::getVoidTy(Context);
   Boolean = Type::getInt1Ty(Context);
-  Int64 = Type::getInt64Ty(Context);
-  ReturnStruct = StructType::get(Boolean, Int64);
+  IntMask = ST.isWave32() ? Type::getInt32Ty(Context)
+                           : Type::getInt64Ty(Context);
+  ReturnStruct = StructType::get(Boolean, IntMask);
 
   BoolTrue = ConstantInt::getTrue(Context);
   BoolFalse = ConstantInt::getFalse(Context);
   BoolUndef = UndefValue::get(Boolean);
-  Int64Zero = ConstantInt::get(Int64, 0);
+  IntMaskZero = ConstantInt::get(IntMask, 0);
 
-  If = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_if);
-  Else = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_else);
-  IfBreak = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_if_break);
-  Loop = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_loop);
-  EndCf = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_end_cf);
-  return false;
+  If = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_if, { IntMask });
+  Else = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_else,
+                                   { IntMask, IntMask });
+  IfBreak = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_if_break,
+                                      { IntMask, IntMask });
+  Loop = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_loop, { IntMask });
+  EndCf = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_end_cf, { IntMask });
 }
 
 /// Is the branch condition uniform or did the StructurizeCFG pass
@@ -258,14 +264,14 @@ void SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
     return;
 
   BasicBlock *Target = Term->getSuccessor(1);
-  PHINode *Broken = PHINode::Create(Int64, 0, "phi.broken", &Target->front());
+  PHINode *Broken = PHINode::Create(IntMask, 0, "phi.broken", &Target->front());
 
   Value *Cond = Term->getCondition();
   Term->setCondition(BoolTrue);
   Value *Arg = handleLoopCondition(Cond, Broken, L, Term);
 
   for (BasicBlock *Pred : predecessors(Target)) {
-    Value *PHIValue = Int64Zero;
+    Value *PHIValue = IntMaskZero;
     if (Pred == BB) // Remember the value of the previous iteration.
       PHIValue = Arg;
     // If the backedge from Pred to Target could be executed before the exit
@@ -316,6 +322,10 @@ bool SIAnnotateControlFlow::runOnFunction(Function &F) {
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   DA = &getAnalysis<LegacyDivergenceAnalysis>();
+  TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
+  const TargetMachine &TM = TPC.getTM<TargetMachine>();
+
+  initialize(*F.getParent(), TM.getSubtarget<GCNSubtarget>(F));
 
   for (df_iterator<BasicBlock *> I = df_begin(&F.getEntryBlock()),
        E = df_end(&F.getEntryBlock()); I != E; ++I) {

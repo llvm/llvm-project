@@ -4361,13 +4361,18 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
   StringRef Name = VD->getName();
   llvm::DIType *Ty = getOrCreateType(VD->getType(), Unit);
 
-  // Do not use global variables for enums, unless for CodeView.
+  // Do not use global variables for enums, unless in CodeView.
   if (const auto *ECD = dyn_cast<EnumConstantDecl>(VD)) {
     const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
     assert(isa<EnumType>(ED->getTypeForDecl()) && "Enum without EnumType?");
     (void)ED;
 
-    if (!CGM.getCodeGenOpts().EmitCodeView)
+    // If CodeView, emit enums as global variables, unless they are defined
+    // inside a class. We do this because MSVC doesn't emit S_CONSTANTs for
+    // enums in classes, and because it is difficult to attach this scope
+    // information to the global variable.
+    if (!CGM.getCodeGenOpts().EmitCodeView ||
+        isa<RecordDecl>(ED->getDeclContext()))
       return;
   }
 

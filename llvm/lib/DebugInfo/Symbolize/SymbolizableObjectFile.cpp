@@ -44,6 +44,7 @@ getDILineInfoSpecifier(FunctionNameKind FNKind) {
 ErrorOr<std::unique_ptr<SymbolizableObjectFile>>
 SymbolizableObjectFile::create(object::ObjectFile *Obj,
                                std::unique_ptr<DIContext> DICtx) {
+  assert(DICtx);
   std::unique_ptr<SymbolizableObjectFile> res(
       new SymbolizableObjectFile(Obj, std::move(DICtx)));
   std::unique_ptr<DataExtractor> OpdExtractor;
@@ -244,16 +245,12 @@ DILineInfo
 SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
                                       FunctionNameKind FNKind,
                                       bool UseSymbolTable) const {
-  DILineInfo LineInfo;
-
   if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
     ModuleOffset.SectionIndex =
         getModuleSectionIndexForAddress(ModuleOffset.Address);
+  DILineInfo LineInfo = DebugInfoContext->getLineInfoForAddress(
+      ModuleOffset, getDILineInfoSpecifier(FNKind));
 
-  if (DebugInfoContext) {
-    LineInfo = DebugInfoContext->getLineInfoForAddress(
-        ModuleOffset, getDILineInfoSpecifier(FNKind));
-  }
   // Override function name from symbol table if necessary.
   if (shouldOverrideWithSymbolTable(FNKind, UseSymbolTable)) {
     std::string FunctionName;
@@ -269,15 +266,12 @@ SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
 DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
     object::SectionedAddress ModuleOffset, FunctionNameKind FNKind,
     bool UseSymbolTable) const {
-  DIInliningInfo InlinedContext;
-
   if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
     ModuleOffset.SectionIndex =
         getModuleSectionIndexForAddress(ModuleOffset.Address);
+  DIInliningInfo InlinedContext = DebugInfoContext->getInliningInfoForAddress(
+      ModuleOffset, getDILineInfoSpecifier(FNKind));
 
-  if (DebugInfoContext)
-    InlinedContext = DebugInfoContext->getInliningInfoForAddress(
-        ModuleOffset, getDILineInfoSpecifier(FNKind));
   // Make sure there is at least one frame in context.
   if (InlinedContext.getNumberOfFrames() == 0)
     InlinedContext.addFrame(DILineInfo());

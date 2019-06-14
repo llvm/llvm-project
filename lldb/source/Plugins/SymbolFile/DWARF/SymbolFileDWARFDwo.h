@@ -13,11 +13,11 @@
 
 class SymbolFileDWARFDwo : public SymbolFileDWARF {
 public:
-  SymbolFileDWARFDwo(lldb::ObjectFileSP objfile, DWARFUnit *dwarf_cu);
+  SymbolFileDWARFDwo(lldb::ObjectFileSP objfile, DWARFCompileUnit &dwarf_cu);
 
   ~SymbolFileDWARFDwo() override = default;
 
-  lldb::CompUnitSP ParseCompileUnit(DWARFUnit *dwarf_cu) override;
+  lldb::CompUnitSP ParseCompileUnit(DWARFCompileUnit &dwarf_cu) override;
 
   DWARFUnit *GetCompileUnit();
 
@@ -42,7 +42,7 @@ public:
     return nullptr;
   }
 
-  DWARFUnit *GetBaseCompileUnit() override;
+  DWARFCompileUnit *GetBaseCompileUnit() override { return &m_base_dwarf_cu; }
 
 protected:
   void LoadSectionData(lldb::SectionType sect_type,
@@ -65,10 +65,10 @@ protected:
       const DWARFDIE &die, lldb_private::ConstString type_name,
       bool must_be_implementation) override;
 
-  SymbolFileDWARF *GetBaseSymbolFile();
+  SymbolFileDWARF &GetBaseSymbolFile();
 
   lldb::ObjectFileSP m_obj_file_sp;
-  DWARFUnit *m_base_dwarf_cu;
+  DWARFCompileUnit &m_base_dwarf_cu;
 };
 
 #endif // SymbolFileDWARFDwo_SymbolFileDWARFDwo_h_

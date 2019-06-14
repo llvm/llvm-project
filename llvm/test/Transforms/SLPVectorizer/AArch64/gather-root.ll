@@ -24,7 +24,7 @@ define void @PR28330(i32 %n) {
 ; DEFAULT-NEXT:    [[P28:%.*]] = add i32 [[P26]], undef
 ; DEFAULT-NEXT:    [[P30:%.*]] = add i32 [[P28]], undef
 ; DEFAULT-NEXT:    [[P32:%.*]] = add i32 [[P30]], undef
-; DEFAULT-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v8i32(<8 x i32> [[TMP2]])
+; DEFAULT-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP2]])
 ; DEFAULT-NEXT:    [[OP_EXTRA]] = add i32 [[TMP3]], [[P17]]
 ; DEFAULT-NEXT:    [[P34:%.*]] = add i32 [[P32]], undef
 ; DEFAULT-NEXT:    br label [[FOR_BODY]]
@@ -76,7 +76,7 @@ define void @PR28330(i32 %n) {
 ; GATHER-NEXT:    [[TMP32:%.*]] = insertelement <8 x i32> [[TMP31]], i32 [[TMP25]], i32 6
 ; GATHER-NEXT:    [[TMP33:%.*]] = extractelement <8 x i32> [[TMP18]], i32 7
 ; GATHER-NEXT:    [[TMP34:%.*]] = insertelement <8 x i32> [[TMP32]], i32 [[TMP33]], i32 7
-; GATHER-NEXT:    [[TMP35:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v8i32(<8 x i32> [[TMP34]])
+; GATHER-NEXT:    [[TMP35:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP34]])
 ; GATHER-NEXT:    [[OP_EXTRA]] = add i32 [[TMP35]], [[P17]]
 ; GATHER-NEXT:    [[P34:%.*]] = add i32 [[P32]], [[TMP33]]
 ; GATHER-NEXT:    br label [[FOR_BODY]]
@@ -176,7 +176,7 @@ define void @PR32038(i32 %n) {
 ; DEFAULT-NEXT:    [[P28:%.*]] = add i32 [[P26]], undef
 ; DEFAULT-NEXT:    [[P30:%.*]] = add i32 [[P28]], undef
 ; DEFAULT-NEXT:    [[P32:%.*]] = add i32 [[P30]], undef
-; DEFAULT-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v8i32(<8 x i32> [[TMP2]])
+; DEFAULT-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP2]])
 ; DEFAULT-NEXT:    [[OP_EXTRA]] = add i32 [[TMP3]], -5
 ; DEFAULT-NEXT:    [[P34:%.*]] = add i32 [[P32]], undef
 ; DEFAULT-NEXT:    br label [[FOR_BODY]]
@@ -228,7 +228,7 @@ define void @PR32038(i32 %n) {
 ; GATHER-NEXT:    [[TMP32:%.*]] = insertelement <8 x i32> [[TMP31]], i32 [[TMP25]], i32 6
 ; GATHER-NEXT:    [[TMP33:%.*]] = extractelement <8 x i32> [[TMP18]], i32 7
 ; GATHER-NEXT:    [[TMP34:%.*]] = insertelement <8 x i32> [[TMP32]], i32 [[TMP33]], i32 7
-; GATHER-NEXT:    [[TMP35:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v8i32(<8 x i32> [[TMP34]])
+; GATHER-NEXT:    [[TMP35:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP34]])
 ; GATHER-NEXT:    [[OP_EXTRA]] = add i32 [[TMP35]], -5
 ; GATHER-NEXT:    [[P34:%.*]] = add i32 [[P32]], [[TMP33]]
 ; GATHER-NEXT:    br label [[FOR_BODY]]
@@ -266,7 +266,7 @@ define void @PR32038(i32 %n) {
 ; MAX-COST-NEXT:    [[P27:%.*]] = select i1 [[P9]], i32 -720, i32 -80
 ; MAX-COST-NEXT:    [[P28:%.*]] = add i32 [[P26]], [[P27]]
 ; MAX-COST-NEXT:    [[P29:%.*]] = select i1 [[P11]], i32 -720, i32 -80
-; MAX-COST-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v4i32(<4 x i32> [[TMP8]])
+; MAX-COST-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP8]])
 ; MAX-COST-NEXT:    [[TMP10:%.*]] = add i32 [[TMP9]], [[P27]]
 ; MAX-COST-NEXT:    [[TMP11:%.*]] = add i32 [[TMP10]], [[P29]]
 ; MAX-COST-NEXT:    [[OP_EXTRA:%.*]] = add i32 [[TMP11]], -5

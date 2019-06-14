@@ -430,6 +430,15 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
                                MMO->getOrdering(), MMO->getFailureOrdering());
 }
 
+MachineMemOperand *
+MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
+                                      MachineMemOperand::Flags Flags) {
+  return new (Allocator) MachineMemOperand(
+      MMO->getPointerInfo(), Flags, MMO->getSize(), MMO->getBaseAlignment(),
+      MMO->getAAInfo(), MMO->getRanges(), MMO->getSyncScopeID(),
+      MMO->getOrdering(), MMO->getFailureOrdering());
+}
+
 MachineInstr::ExtraInfo *
 MachineFunction::createMIExtraInfo(ArrayRef<MachineMemOperand *> MMOs,
                                    MCSymbol *PreInstrSymbol,

@@ -41,6 +41,17 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
   if (const Arg *dAbi = Args.getLastArg(options::OPT_mamdgpu_debugger_abi))
     D.Diag(diag::err_drv_clang_unsupported) << dAbi->getAsString(Args);
 
+  if (Args.getLastArg(options::OPT_mwavefrontsize64)) {
+    Features.push_back("-wavefrontsize16");
+    Features.push_back("-wavefrontsize32");
+    Features.push_back("+wavefrontsize64");
+  }
+  if (Args.getLastArg(options::OPT_mno_wavefrontsize64)) {
+    Features.push_back("-wavefrontsize16");
+    Features.push_back("+wavefrontsize32");
+    Features.push_back("-wavefrontsize64");
+  }
+
   handleTargetFeaturesGroup(
     Args, Features, options::OPT_m_amdgpu_Features_Group);
 }

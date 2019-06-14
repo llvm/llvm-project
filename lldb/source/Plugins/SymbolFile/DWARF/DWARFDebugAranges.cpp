@@ -7,19 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "DWARFDebugAranges.h"
-
-#include <assert.h>
-#include <stdio.h>
-
-#include <algorithm>
-
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/Timer.h"
-
+#include "DWARFDebugArangeSet.h"
 #include "DWARFUnit.h"
-#include "DWARFDebugInfo.h"
-#include "SymbolFileDWARF.h"
+#include "lldb/Utility/Log.h"
+#include "lldb/Utility/Timer.h"
 
 using namespace lldb;
 using namespace lldb_private;

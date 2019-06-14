@@ -425,7 +425,6 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
     Context =
         DWARFContext::create(*Objects.second, nullptr,
                              DWARFContext::defaultErrorHandler, Opts.DWPName);
-  assert(Context);
   auto InfoOrErr =
       SymbolizableObjectFile::create(Objects.first, std::move(Context));
   std::unique_ptr<SymbolizableModule> SymMod;

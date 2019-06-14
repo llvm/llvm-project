@@ -414,14 +414,22 @@ void InitHeaderSearch::AddDefaultIncludePaths(const LangOptions &Lang,
   default:
     break; // Everything else continues to use this routine's logic.
 
+  case llvm::Triple::Emscripten:
   case llvm::Triple::Linux:
   case llvm::Triple::Hurd:
   case llvm::Triple::Solaris:
+  case llvm::Triple::WASI:
     return;
 
   case llvm::Triple::Win32:
     if (triple.getEnvironment() != llvm::Triple::Cygnus ||
         triple.isOSBinFormatMachO())
+      return;
+    break;
+
+  case llvm::Triple::UnknownOS:
+    if (triple.getArch() == llvm::Triple::wasm32 ||
+        triple.getArch() == llvm::Triple::wasm64)
       return;
     break;
   }

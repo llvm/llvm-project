@@ -344,6 +344,11 @@ enum WidthMinusOne : unsigned { // WidthMinusOne, (5) [15:11]
   WIDTH_M1_SRC_PRIVATE_BASE = 15
 };
 
+// Some values from WidthMinusOne mapped into Width domain.
+enum Width : unsigned {
+  WIDTH_DEFAULT_ = WIDTH_M1_DEFAULT_ + 1,
+};
+
 } // namespace Hwreg
 
 namespace Swizzle { // Encoding of swizzle macro used in ds_swizzle_b32.

@@ -193,7 +193,7 @@ public:
     unsigned Cost = 0;
 
     /// Mapping of all the operands.
-    const ValueMapping *OperandsMapping;
+    const ValueMapping *OperandsMapping = nullptr;
 
     /// Number of operands.
     unsigned NumOperands = 0;
@@ -210,15 +210,11 @@ public:
     /// The rationale is that it is more efficient for the optimizers
     /// to be able to assume that the mapping of the ith operand is
     /// at the index i.
-    ///
-    /// \pre ID != InvalidMappingID
     InstructionMapping(unsigned ID, unsigned Cost,
                        const ValueMapping *OperandsMapping,
                        unsigned NumOperands)
         : ID(ID), Cost(Cost), OperandsMapping(OperandsMapping),
           NumOperands(NumOperands) {
-      assert(getID() != InvalidMappingID &&
-             "Use the default constructor for invalid mapping");
     }
 
     /// Default constructor.
@@ -619,6 +615,12 @@ public:
     // Otherwise assume a non-zero cost of 1. The targets are supposed
     // to override that properly anyway if they care.
     return &A != &B;
+  }
+
+  /// \returns true if emitting a copy from \p Src to \p Dst is impossible.
+  bool cannotCopy(const RegisterBank &Dst, const RegisterBank &Src,
+                  unsigned Size) const {
+    return copyCost(Dst, Src, Size) == std::numeric_limits<unsigned>::max();
   }
 
   /// Get the cost of using \p ValMapping to decompose a register. This is

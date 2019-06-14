@@ -320,6 +320,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasUnqualifiedDesugaredType);
   REGISTER_MATCHER(hasValueType);
   REGISTER_MATCHER(ifStmt);
+  REGISTER_MATCHER(ignoringElidableConstructorCall);
   REGISTER_MATCHER(ignoringImpCasts);
   REGISTER_MATCHER(ignoringImplicit);
   REGISTER_MATCHER(ignoringParenCasts);

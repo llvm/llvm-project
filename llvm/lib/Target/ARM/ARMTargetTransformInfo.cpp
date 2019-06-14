@@ -804,12 +804,39 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
     return false;
   };
 
+  auto IsHardwareLoopIntrinsic = [](Instruction &I) {
+    if (auto *Call = dyn_cast<IntrinsicInst>(&I)) {
+      switch (Call->getIntrinsicID()) {
+      default:
+        break;
+      case Intrinsic::set_loop_iterations:
+      case Intrinsic::loop_decrement:
+      case Intrinsic::loop_decrement_reg:
+        return true;
+      }
+    }
+    return false;
+  };
+
   // Scan the instructions to see if there's any that we know will turn into a
-  // call.
-  for (auto *BB : L->getBlocks())
-    for (auto &I : *BB)
-      if (MaybeCall(I))
-        return false;
+  // call or if this loop is already a low-overhead loop.
+  auto ScanLoop = [&](Loop *L) {
+    for (auto *BB : L->getBlocks()) {
+      for (auto &I : *BB) {
+        if (MaybeCall(I) || IsHardwareLoopIntrinsic(I))
+          return false;
+      }
+    }
+    return true;
+  };
+
+  // Visit inner loops.
+  for (auto Inner : *L)
+    if (!ScanLoop(Inner))
+      return false;
+
+  if (!ScanLoop(L))
+    return false;
 
   // TODO: Check whether the trip count calculation is expensive. If L is the
   // inner loop but we know it has a low trip count, calculating that trip
@@ -817,6 +844,7 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
 
   LLVMContext &C = L->getHeader()->getContext();
   HWLoopInfo.CounterInReg = true;
+  HWLoopInfo.IsNestingLegal = false;
   HWLoopInfo.CountType = Type::getInt32Ty(C);
   HWLoopInfo.LoopDecrement = ConstantInt::get(HWLoopInfo.CountType, 1);
   return true;

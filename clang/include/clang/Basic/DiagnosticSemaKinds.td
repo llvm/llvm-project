@@ -704,7 +704,7 @@ def ext_noreturn_main : ExtWarn<
   "'main' is not allowed to be declared _Noreturn">, InGroup<Main>;
 def note_main_remove_noreturn : Note<"remove '_Noreturn'">;
 def err_constexpr_main : Error<
-  "'main' is not allowed to be declared constexpr">;
+  "'main' is not allowed to be declared %select{constexpr|consteval}0">;
 def err_deleted_main : Error<"'main' is not allowed to be deleted">;
 def err_mainlike_template_decl : Error<"%0 cannot be a template">;
 def err_main_returns_nonint : Error<"'main' must return 'int'">;
@@ -2312,14 +2312,17 @@ def warn_cxx14_compat_constexpr_not_const : Warning<
   InGroup<DiagGroup<"constexpr-not-const">>;
 def err_invalid_constexpr : Error<
   "%select{function parameter|typedef|non-static data member}0 "
-  "cannot be constexpr">;
+  "cannot be %select{constexpr|consteval}1">;
 def err_invalid_constexpr_member : Error<"non-static data member cannot be "
   "constexpr%select{; did you intend to make it %select{const|static}0?|}1">;
 def err_constexpr_tag : Error<
-  "%select{class|struct|interface|union|enum}0 cannot be marked constexpr">;
-def err_constexpr_dtor : Error<"destructor cannot be marked constexpr">;
-def err_constexpr_no_declarators : Error<
-  "constexpr can only be used in variable and function declarations">;
+  "%select{class|struct|interface|union|enum}0 "
+  "cannot be marked %select{constexpr|consteval}1">;
+def err_constexpr_dtor : Error<
+  "destructor cannot be marked %select{constexpr|consteval}0">;
+def err_constexpr_wrong_decl_kind : Error<
+  "%select{constexpr|consteval}0 can only be used "
+  "in %select{variable and |}0function declarations">;
 def err_invalid_constexpr_var_decl : Error<
   "constexpr variable declaration must be a definition">;
 def err_constexpr_static_mem_var_requires_init : Error<
@@ -2329,8 +2332,8 @@ def err_constexpr_var_non_literal : Error<
 def err_constexpr_var_requires_const_init : Error<
   "constexpr variable %0 must be initialized by a constant expression">;
 def err_constexpr_redecl_mismatch : Error<
-  "%select{non-constexpr declaration of %0 follows constexpr declaration"
-  "|constexpr declaration of %0 follows non-constexpr declaration}1">;
+  "%select{non-constexpr|constexpr|consteval}1 declaration of %0"
+  " follows %select{non-constexpr|constexpr|consteval}2 declaration">;
 def err_constexpr_virtual : Error<"virtual function cannot be constexpr">;
 def warn_cxx17_compat_constexpr_virtual : Warning<
   "virtual constexpr functions are incompatible with "
@@ -2345,12 +2348,12 @@ def note_non_literal_virtual_base : Note<"%select{struct|interface|class}0 "
   "with virtual base %plural{1:class|:classes}1 is not a literal type">;
 def note_constexpr_virtual_base_here : Note<"virtual base class declared here">;
 def err_constexpr_non_literal_return : Error<
-  "constexpr function's return type %0 is not a literal type">;
+  "%select{constexpr|consteval}0 function's return type %1 is not a literal type">;
 def err_constexpr_non_literal_param : Error<
-  "constexpr %select{function|constructor}1's %ordinal0 parameter type %2 is "
+  "%select{constexpr|consteval}2 %select{function|constructor}1's %ordinal0 parameter type %3 is "
   "not a literal type">;
 def err_constexpr_body_invalid_stmt : Error<
-  "statement not allowed in constexpr %select{function|constructor}0">;
+  "statement not allowed in %select{constexpr|consteval}1 %select{function|constructor}0">;
 def ext_constexpr_body_invalid_stmt : ExtWarn<
   "use of this statement in a constexpr %select{function|constructor}0 "
   "is a C++14 extension">, InGroup<CXX14>;
@@ -2400,9 +2403,9 @@ def err_diagnose_if_invalid_diagnostic_type : Error<
   "invalid diagnostic type for 'diagnose_if'; use \"error\" or \"warning\" "
   "instead">;
 def err_constexpr_body_no_return : Error<
-  "no return statement in constexpr function">;
+  "no return statement in %select{constexpr|consteval}0 function">;
 def err_constexpr_return_missing_expr : Error<
-  "non-void constexpr function %0 should return a value">;
+  "non-void %select{constexpr|consteval}1 function %0 should return a value">;
 def warn_cxx11_compat_constexpr_body_no_return : Warning<
   "constexpr function with no return statements is incompatible with C++ "
   "standards before C++14">, InGroup<CXXPre14Compat>, DefaultIgnore;
@@ -7853,6 +7856,9 @@ def err_defaulted_copy_assign_not_ref : Error<
 def err_incorrect_defaulted_constexpr : Error<
   "defaulted definition of %sub{select_special_member_kind}0 "
   "is not constexpr">;
+def err_incorrect_defaulted_consteval : Error<
+  "defaulted declaration of %sub{select_special_member_kind}0 "
+  "cannot be consteval because implicit definition is not constexpr">;
 def warn_defaulted_method_deleted : Warning<
   "explicitly defaulted %sub{select_special_member_kind}0 is implicitly "
   "deleted">, InGroup<DiagGroup<"defaulted-function-deleted">>;
@@ -9422,7 +9428,7 @@ def err_coroutine_invalid_func_context : Error<
   "'%1' cannot be used in %select{a constructor|a destructor"
   "|a copy assignment operator|a move assignment operator|the 'main' function"
   "|a constexpr function|a function with a deduced return type"
-  "|a varargs function}0">;
+  "|a varargs function|a consteval function}0">;
 def err_implied_coroutine_type_not_found : Error<
   "%0 type was not found; include <experimental/coroutine> before defining "
   "a coroutine">;
@@ -9660,7 +9666,7 @@ def err_multiversion_doesnt_support : Error<
   "attribute '%select{target|cpu_specific|cpu_dispatch}0' multiversioned functions do not "
   "yet support %select{function templates|virtual functions|"
   "deduced return types|constructors|destructors|deleted functions|"
-  "defaulted functions|constexpr functions}1">;
+  "defaulted functions|constexpr functions|consteval function}1">;
 def err_multiversion_not_allowed_on_main : Error<
   "'main' cannot be a multiversioned function">;
 def err_multiversion_not_supported : Error<

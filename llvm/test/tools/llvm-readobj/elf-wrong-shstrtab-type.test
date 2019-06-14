@@ -1,0 +1,22 @@
+## Check we do not fail to dump the section headers when
+## a .shstrtab section does not have a SHT_STRTAB type.
+
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-readobj -S %t1 | FileCheck %s --check-prefix LLVM
+# RUN: llvm-readelf -S %t1 | FileCheck %s --check-prefix GNU
+
+# LLVM:      Name: .shstrtab
+# LLVM-NEXT: Type: SHT_PROGBITS
+
+# GNU: [Nr] Name      Type
+# GNU: [ 1] .shstrtab PROGBITS
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .shstrtab
+    Type: SHT_PROGBITS

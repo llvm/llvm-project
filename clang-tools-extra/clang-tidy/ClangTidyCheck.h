@@ -100,13 +100,6 @@ public:
   /// whether it has the default value or it has been overridden.
   virtual void storeOptions(ClangTidyOptions::OptionMap &Options) {}
 
-private:
-  void run(const ast_matchers::MatchFinder::MatchResult &Result) override;
-  StringRef getID() const override { return CheckName; }
-  std::string CheckName;
-  ClangTidyContext *Context;
-
-protected:
   /// \brief Provides access to the ``ClangTidyCheck`` options via check-local
   /// names.
   ///
@@ -181,6 +174,13 @@ protected:
     const ClangTidyOptions::OptionMap &CheckOptions;
   };
 
+private:
+  void run(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  StringRef getID() const override { return CheckName; }
+  std::string CheckName;
+  ClangTidyContext *Context;
+
+protected:
   OptionsView Options;
   /// \brief Returns the main file name of the current translation unit.
   StringRef getCurrentMainFile() const { return Context->getCurrentFile(); }

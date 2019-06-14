@@ -45,8 +45,10 @@
 // RUN: %clangxx -### -no-canonical-prefixes -target wasm32-wasi --sysroot=/foo --stdlib=c++ %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=COMPILE %s
 // COMPILE: clang{{.*}}" "-cc1"
+// COMPILE: "-resource-dir" "[[RESOURCE_DIR:[^"]*]]"
 // COMPILE: "-isysroot" "/foo"
 // COMPILE: "-internal-isystem" "/foo/include/wasm32-wasi/c++/v1"
 // COMPILE: "-internal-isystem" "/foo/include/c++/v1"
+// COMPILE: "-internal-isystem" "[[RESOURCE_DIR]]{{(/|\\\\)}}include"
 // COMPILE: "-internal-isystem" "/foo/include/wasm32-wasi"
 // COMPILE: "-internal-isystem" "/foo/include"

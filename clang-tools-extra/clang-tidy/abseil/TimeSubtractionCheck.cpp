@@ -29,33 +29,52 @@ static bool InsideMacroDefinition(const MatchFinder::MatchResult &Result,
 
 static bool isConstructorAssignment(const MatchFinder::MatchResult &Result,
                                     const Expr *Node) {
+  // For C++14 and earlier there are elidable constructors that must be matched
+  // in hasParent. The elidable constructors do not exist in C++17 and later and
+  // therefore an additional check that does not match against the elidable
+  // constructors are needed for this case.
   return selectFirst<const Expr>(
-             "e", match(expr(hasParent(materializeTemporaryExpr(hasParent(
-                                 cxxConstructExpr(hasParent(exprWithCleanups(
-                                     hasParent(varDecl()))))))))
-                            .bind("e"),
-                        *Node, *Result.Context)) != nullptr;
+             "e",
+             match(expr(anyOf(
+                       callExpr(hasParent(materializeTemporaryExpr(hasParent(
+                                    cxxConstructExpr(hasParent(exprWithCleanups(
+                                        hasParent(varDecl()))))))))
+                           .bind("e"),
+                       callExpr(hasParent(varDecl())).bind("e"))),
+                   *Node, *Result.Context)) != nullptr;
 }
 
 static bool isArgument(const MatchFinder::MatchResult &Result,
                        const Expr *Node) {
+  // For the same reason as in isConstructorAssignment two AST shapes need to be
+  // matched here.
   return selectFirst<const Expr>(
              "e",
-             match(expr(hasParent(
-                            materializeTemporaryExpr(hasParent(cxxConstructExpr(
-                                hasParent(callExpr()),
-                                unless(hasParent(cxxOperatorCallExpr())))))))
-                       .bind("e"),
-                   *Node, *Result.Context)) != nullptr;
+             match(
+                 expr(anyOf(
+                     expr(hasParent(materializeTemporaryExpr(
+                              hasParent(cxxConstructExpr(
+                                  hasParent(callExpr()),
+                                  unless(hasParent(cxxOperatorCallExpr())))))))
+                         .bind("e"),
+                     expr(hasParent(callExpr()),
+                          unless(hasParent(cxxOperatorCallExpr())))
+                         .bind("e"))),
+                 *Node, *Result.Context)) != nullptr;
 }
 
 static bool isReturn(const MatchFinder::MatchResult &Result, const Expr *Node) {
+  // For the same reason as in isConstructorAssignment two AST shapes need to be
+  // matched here.
   return selectFirst<const Expr>(
-             "e", match(expr(hasParent(materializeTemporaryExpr(hasParent(
-                                 cxxConstructExpr(hasParent(exprWithCleanups(
-                                     hasParent(returnStmt()))))))))
-                            .bind("e"),
-                        *Node, *Result.Context)) != nullptr;
+             "e",
+             match(expr(anyOf(
+                       expr(hasParent(materializeTemporaryExpr(hasParent(
+                                cxxConstructExpr(hasParent(exprWithCleanups(
+                                    hasParent(returnStmt()))))))))
+                           .bind("e"),
+                       expr(hasParent(returnStmt())).bind("e"))),
+                   *Node, *Result.Context)) != nullptr;
 }
 
 static bool parensRequired(const MatchFinder::MatchResult &Result,

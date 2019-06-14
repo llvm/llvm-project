@@ -1,0 +1,11 @@
+# RUN: llvm-mc -disassemble -triple=thumbv8.1m.main-none-eabi -mattr=+mve.fp,+fp64 -show-encoding %s | FileCheck %s
+# RUN: not llvm-mc -disassemble -triple=thumbv8.1m.main-none-eabi -show-encoding %s &> %t
+# RUN: FileCheck --check-prefix=CHECK-NOMVE < %t %s
+
+# CHECK: vmaxnm.f32 q0, q1, q4  @ encoding: [0x02,0xff,0x58,0x0f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x02,0xff,0x58,0x0f]
+
+# CHECK: vminnm.f16 q3, q0, q1  @ encoding: [0x30,0xff,0x52,0x6f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x30,0xff,0x52,0x6f]

@@ -15,5 +15,5 @@ FileHeader:
   Type:            ET_EXEC
   Machine:         EM_386
 
-# BAD-OUTPUT-FORMAT: Invalid output format: 'xyz'
-# BAD-OUTPUT-FORMAT-BSD: Invalid output format: 'xyz-freebsd'
+# BAD-OUTPUT-FORMAT: invalid output format: 'xyz'
+# BAD-OUTPUT-FORMAT-BSD: invalid output format: 'xyz-freebsd'

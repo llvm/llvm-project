@@ -59,7 +59,7 @@ static cl::opt<unsigned>
 static cl::opt<bool> DisableAttributor(
     "attributor-disable", cl::Hidden,
     cl::desc("Disable the attributor inter-procedural deduction pass."),
-    cl::init(false));
+    cl::init(true));
 
 static cl::opt<bool> VerifyAttributor(
     "attributor-verify", cl::Hidden,

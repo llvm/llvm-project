@@ -181,6 +181,9 @@ The :program:`llvm-cov show` command shows line by line coverage of the
 binaries *BIN*,...  using the profile data *PROFILE*. It can optionally be
 filtered to only show the coverage for the files listed in *SOURCES*.
 
+*BIN* may be an executable, object file, dynamic library, or archive (thin or
+otherwise).
+
 To use :program:`llvm-cov show`, you need a program that is compiled with
 instrumentation to emit profile and coverage data. To build such a program with
 ``clang`` use the ``-fprofile-instr-generate`` and ``-fcoverage-mapping``
@@ -330,6 +333,9 @@ DESCRIPTION
 The :program:`llvm-cov report` command displays a summary of the coverage of
 the binaries *BIN*,... using the profile data *PROFILE*. It can optionally be
 filtered to only show the coverage for the files listed in *SOURCES*.
+
+*BIN* may be an executable, object file, dynamic library, or archive (thin or
+otherwise).
 
 If no source files are provided, a summary line is printed for each file in the
 coverage data. If any files are provided, summaries can be shown for each

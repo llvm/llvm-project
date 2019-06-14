@@ -5149,10 +5149,7 @@ extractLoadMMOs(ArrayRef<MachineMemOperand *> MMOs, MachineFunction &MF) {
     } else {
       // Clone the MMO and unset the store flag.
       LoadMMOs.push_back(MF.getMachineMemOperand(
-          MMO->getPointerInfo(), MMO->getFlags() & ~MachineMemOperand::MOStore,
-          MMO->getSize(), MMO->getBaseAlignment(), MMO->getAAInfo(), nullptr,
-          MMO->getSyncScopeID(), MMO->getOrdering(),
-          MMO->getFailureOrdering()));
+          MMO, MMO->getFlags() & ~MachineMemOperand::MOStore));
     }
   }
 
@@ -5173,10 +5170,7 @@ extractStoreMMOs(ArrayRef<MachineMemOperand *> MMOs, MachineFunction &MF) {
     } else {
       // Clone the MMO and unset the load flag.
       StoreMMOs.push_back(MF.getMachineMemOperand(
-          MMO->getPointerInfo(), MMO->getFlags() & ~MachineMemOperand::MOLoad,
-          MMO->getSize(), MMO->getBaseAlignment(), MMO->getAAInfo(), nullptr,
-          MMO->getSyncScopeID(), MMO->getOrdering(),
-          MMO->getFailureOrdering()));
+          MMO, MMO->getFlags() & ~MachineMemOperand::MOLoad));
     }
   }
 

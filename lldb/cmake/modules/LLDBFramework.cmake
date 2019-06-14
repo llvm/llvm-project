@@ -26,6 +26,12 @@ set_target_properties(liblldb PROPERTIES
   MACOSX_FRAMEWORK_INFO_PLIST ${LLDB_SOURCE_DIR}/resources/LLDB-Info.plist.in
 )
 
+# Defined in AddLLVM.cmake; handles edge cases for multi-config generators
+set_output_directory(liblldb
+  BINARY_DIR ${framework_target_dir}
+  LIBRARY_DIR ${framework_target_dir}
+)
+
 # Affects the layout of the framework bundle (default is macOS layout).
 if(IOS)
   set_target_properties(liblldb PROPERTIES
@@ -84,11 +90,33 @@ add_custom_command(TARGET lldb-framework-headers POST_BUILD
 )
 
 # Copy vendor-specific headers from clang (without staging).
-if(NOT IOS AND NOT LLDB_BUILT_STANDALONE)
-  add_dependencies(lldb-framework clang-resource-headers)
+if(NOT IOS)
+  if (TARGET clang-resource-headers)
+    add_dependencies(lldb-framework clang-resource-headers)
+    set(clang_resource_headers_dir $<TARGET_PROPERTY:clang-resource-headers,RUNTIME_OUTPUT_DIRECTORY>)
+  else()
+    # In standalone builds try the best possible guess
+    if(Clang_DIR)
+      set(clang_lib_dir ${Clang_DIR}/../..)
+    elseif(LLVM_DIR)
+      set(clang_lib_dir ${LLVM_DIR}/../..)
+    elseif(LLVM_LIBRARY_DIRS)
+      set(clang_lib_dir ${LLVM_LIBRARY_DIRS})
+    elseif(LLVM_BUILD_LIBRARY_DIR)
+      set(clang_lib_dir ${LLVM_BUILD_LIBRARY_DIR})
+    elseif(LLVM_BINARY_DIR)
+      set(clang_lib_dir ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
+    endif()
+    set(clang_version ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH})
+    set(clang_resource_headers_dir ${clang_lib_dir}/clang/${clang_version}/include)
+    if(NOT EXISTS ${clang_resource_headers_dir})
+      message(WARNING "Expected directory for clang-resource headers not found: ${clang_resource_headers_dir}")
+    endif()
+  endif()
+
   add_custom_command(TARGET lldb-framework POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-            $<TARGET_PROPERTY:clang-resource-headers,RUNTIME_OUTPUT_DIRECTORY>
+            ${clang_resource_headers_dir}
             $<TARGET_FILE_DIR:liblldb>/Resources/Clang/include
     COMMENT "LLDB.framework: copy clang vendor-specific headers"
   )

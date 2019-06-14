@@ -117,7 +117,7 @@ Sections:
 # WRITE-NEXT:      SHF_WRITE (0x1)
 # CHECK-NEXT:    ]
 
-# BAD-FORMAT: Bad format for --set-section-flags: missing '='
-# MULTIPLE-SETS: --set-section-flags set multiple times for section .foo
+# BAD-FORMAT: bad format for --set-section-flags: missing '='
+# MULTIPLE-SETS: --set-section-flags set multiple times for section '.foo'
 
-# BAD-FLAG: Unrecognized section flag 'xyzzy'. Flags supported for GNU compatibility: alloc, load, noload, readonly, debug, code, data, rom, share, contents, merge, strings
+# BAD-FLAG: unrecognized section flag 'xyzzy'. Flags supported for GNU compatibility: alloc, load, noload, readonly, debug, code, data, rom, share, contents, merge, strings

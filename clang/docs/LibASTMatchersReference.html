@@ -5728,6 +5728,32 @@ Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt;</td><td class="name" onclick="toggle('ignoringElidableConstructorCall0')"><a name="ignoringElidableConstructorCall0Anchor">ignoringElidableConstructorCall</a></td><td>ast_matchers::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="ignoringElidableConstructorCall0"><pre>Matches expressions that match InnerMatcher that are possibly wrapped in an
+elidable constructor.
+
+In C++17 copy elidable constructors are no longer being
+generated in the AST as it is not permitted by the standard. They are
+however part of the AST in C++14 and earlier. Therefore, to write a matcher
+that works in all language modes, the matcher has to skip elidable
+constructor AST nodes if they appear in the AST. This matcher can be used to
+skip those elidable constructors.
+
+Given
+
+struct H {};
+H G();
+void f() {
+  H D = G();
+}
+
+``varDecl(hasInitializer(any(
+      ignoringElidableConstructorCall(callExpr()),
+      exprWithCleanups(ignoringElidableConstructorCall(callExpr()))))``
+matches ``H D = G()``
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt;</td><td class="name" onclick="toggle('ignoringImpCasts0')"><a name="ignoringImpCasts0Anchor">ignoringImpCasts</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="ignoringImpCasts0"><pre>Matches expressions that match InnerMatcher after any implicit casts
 are stripped off.

@@ -489,6 +489,21 @@ static_assert(__is_same(decltype(ta), TestSuppression<const char *>), "");
 }
 #pragma clang diagnostic pop
 
+namespace PR41549 {
+
+template <class H, class P> struct umm;
+
+template <class H = int, class P = int>
+struct umm {
+  umm(H h = 0, P p = 0);
+};
+
+template <class H, class P> struct umm;
+
+umm m(1);
+
+}
+
 #else
 
 // expected-no-diagnostics

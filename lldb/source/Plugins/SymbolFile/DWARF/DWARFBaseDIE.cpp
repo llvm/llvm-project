@@ -99,7 +99,7 @@ dw_offset_t DWARFBaseDIE::GetOffset() const {
 
 SymbolFileDWARF *DWARFBaseDIE::GetDWARF() const {
   if (m_cu)
-    return m_cu->GetSymbolFileDWARF();
+    return &m_cu->GetSymbolFileDWARF();
   else
     return nullptr;
 }

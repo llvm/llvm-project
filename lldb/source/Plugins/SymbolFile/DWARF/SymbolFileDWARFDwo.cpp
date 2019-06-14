@@ -13,18 +13,19 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/LLDBAssert.h"
 
-#include "DWARFUnit.h"
+#include "DWARFCompileUnit.h"
 #include "DWARFDebugInfo.h"
+#include "DWARFUnit.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 SymbolFileDWARFDwo::SymbolFileDWARFDwo(ObjectFileSP objfile,
-                                       DWARFUnit *dwarf_cu)
+                                       DWARFCompileUnit &dwarf_cu)
     : SymbolFileDWARF(objfile.get(), objfile->GetSectionList(
                                          /*update_module_section_list*/ false)),
       m_obj_file_sp(objfile), m_base_dwarf_cu(dwarf_cu) {
-  SetID(((lldb::user_id_t)dwarf_cu->GetID()) << 32);
+  SetID(((lldb::user_id_t)dwarf_cu.GetID()) << 32);
 }
 
 void SymbolFileDWARFDwo::LoadSectionData(lldb::SectionType sect_type,
@@ -45,11 +46,12 @@ void SymbolFileDWARFDwo::LoadSectionData(lldb::SectionType sect_type,
   SymbolFileDWARF::LoadSectionData(sect_type, data);
 }
 
-lldb::CompUnitSP SymbolFileDWARFDwo::ParseCompileUnit(DWARFUnit *dwarf_cu) {
-  assert(GetCompileUnit() == dwarf_cu && "SymbolFileDWARFDwo::ParseCompileUnit "
-                                         "called with incompatible compile "
-                                         "unit");
-  return GetBaseSymbolFile()->ParseCompileUnit(m_base_dwarf_cu);
+lldb::CompUnitSP
+SymbolFileDWARFDwo::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
+  assert(GetCompileUnit() == &dwarf_cu &&
+         "SymbolFileDWARFDwo::ParseCompileUnit called with incompatible "
+         "compile unit");
+  return GetBaseSymbolFile().ParseCompileUnit(m_base_dwarf_cu);
 }
 
 DWARFUnit *SymbolFileDWARFDwo::GetCompileUnit() {
@@ -66,52 +68,48 @@ SymbolFileDWARFDwo::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
 }
 
 SymbolFileDWARF::DIEToTypePtr &SymbolFileDWARFDwo::GetDIEToType() {
-  return GetBaseSymbolFile()->GetDIEToType();
+  return GetBaseSymbolFile().GetDIEToType();
 }
 
 SymbolFileDWARF::DIEToVariableSP &SymbolFileDWARFDwo::GetDIEToVariable() {
-  return GetBaseSymbolFile()->GetDIEToVariable();
+  return GetBaseSymbolFile().GetDIEToVariable();
 }
 
 SymbolFileDWARF::DIEToClangType &
 SymbolFileDWARFDwo::GetForwardDeclDieToClangType() {
-  return GetBaseSymbolFile()->GetForwardDeclDieToClangType();
+  return GetBaseSymbolFile().GetForwardDeclDieToClangType();
 }
 
 SymbolFileDWARF::ClangTypeToDIE &
 SymbolFileDWARFDwo::GetForwardDeclClangTypeToDie() {
-  return GetBaseSymbolFile()->GetForwardDeclClangTypeToDie();
+  return GetBaseSymbolFile().GetForwardDeclClangTypeToDie();
 }
 
 size_t SymbolFileDWARFDwo::GetObjCMethodDIEOffsets(
     lldb_private::ConstString class_name, DIEArray &method_die_offsets) {
-  return GetBaseSymbolFile()->GetObjCMethodDIEOffsets(
-      class_name, method_die_offsets);
+  return GetBaseSymbolFile().GetObjCMethodDIEOffsets(class_name,
+                                                     method_die_offsets);
 }
 
 UniqueDWARFASTTypeMap &SymbolFileDWARFDwo::GetUniqueDWARFASTTypeMap() {
-  return GetBaseSymbolFile()->GetUniqueDWARFASTTypeMap();
+  return GetBaseSymbolFile().GetUniqueDWARFASTTypeMap();
 }
 
 lldb::TypeSP SymbolFileDWARFDwo::FindDefinitionTypeForDWARFDeclContext(
     const DWARFDeclContext &die_decl_ctx) {
-  return GetBaseSymbolFile()->FindDefinitionTypeForDWARFDeclContext(
+  return GetBaseSymbolFile().FindDefinitionTypeForDWARFDeclContext(
       die_decl_ctx);
 }
 
 lldb::TypeSP SymbolFileDWARFDwo::FindCompleteObjCDefinitionTypeForDIE(
     const DWARFDIE &die, lldb_private::ConstString type_name,
     bool must_be_implementation) {
-  return GetBaseSymbolFile()->FindCompleteObjCDefinitionTypeForDIE(
+  return GetBaseSymbolFile().FindCompleteObjCDefinitionTypeForDIE(
       die, type_name, must_be_implementation);
 }
 
-DWARFUnit *SymbolFileDWARFDwo::GetBaseCompileUnit() {
-  return m_base_dwarf_cu;
-}
-
-SymbolFileDWARF *SymbolFileDWARFDwo::GetBaseSymbolFile() {
-  return m_base_dwarf_cu->GetSymbolFileDWARF();
+SymbolFileDWARF &SymbolFileDWARFDwo::GetBaseSymbolFile() {
+  return m_base_dwarf_cu.GetSymbolFileDWARF();
 }
 
 DWARFExpression::LocationListFormat
@@ -121,12 +119,12 @@ SymbolFileDWARFDwo::GetLocationListFormat() const {
 
 TypeSystem *
 SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language) {
-  return GetBaseSymbolFile()->GetTypeSystemForLanguage(language);
+  return GetBaseSymbolFile().GetTypeSystemForLanguage(language);
 }
 
 DWARFDIE
 SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref) {
-  lldbassert(die_ref.cu_offset == m_base_dwarf_cu->GetOffset() ||
+  lldbassert(die_ref.cu_offset == m_base_dwarf_cu.GetOffset() ||
              die_ref.cu_offset == DW_INVALID_OFFSET);
   return DebugInfo()->GetDIEForDIEOffset(die_ref.section, die_ref.die_offset);
 }

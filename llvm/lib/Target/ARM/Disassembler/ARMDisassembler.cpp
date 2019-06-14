@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ARMBaseInstrInfo.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
@@ -63,28 +64,66 @@ namespace {
         return ITStates.size() == 1;
       }
 
-      // Called when decoding an IT instruction. Sets the IT state for the following
-      // instructions that for the IT block. Firstcond and Mask correspond to the
-      // fields in the IT instruction encoding.
+      // Called when decoding an IT instruction. Sets the IT state for
+      // the following instructions that for the IT block. Firstcond
+      // corresponds to the field in the IT instruction encoding; Mask
+      // is in the MCOperand format in which 1 means 'else' and 0 'then'.
       void setITState(char Firstcond, char Mask) {
         // (3 - the number of trailing zeros) is the number of then / else.
-        unsigned CondBit0 = Firstcond & 1;
         unsigned NumTZ = countTrailingZeros<uint8_t>(Mask);
         unsigned char CCBits = static_cast<unsigned char>(Firstcond & 0xf);
         assert(NumTZ <= 3 && "Invalid IT mask!");
         // push condition codes onto the stack the correct order for the pops
         for (unsigned Pos = NumTZ+1; Pos <= 3; ++Pos) {
-          bool T = ((Mask >> Pos) & 1) == CondBit0;
-          if (T)
-            ITStates.push_back(CCBits);
-          else
-            ITStates.push_back(CCBits ^ 1);
+          unsigned Else = (Mask >> Pos) & 1;
+          ITStates.push_back(CCBits ^ Else);
         }
         ITStates.push_back(CCBits);
       }
 
     private:
       std::vector<unsigned char> ITStates;
+  };
+
+  class VPTStatus
+  {
+    public:
+      unsigned getVPTPred() {
+        unsigned Pred = ARMVCC::None;
+        if (instrInVPTBlock())
+          Pred = VPTStates.back();
+        return Pred;
+      }
+
+      void advanceVPTState() {
+        VPTStates.pop_back();
+      }
+
+      bool instrInVPTBlock() {
+        return !VPTStates.empty();
+      }
+
+      bool instrLastInVPTBlock() {
+        return VPTStates.size() == 1;
+      }
+
+      void setVPTState(char Mask) {
+        // (3 - the number of trailing zeros) is the number of then / else.
+        unsigned NumTZ = countTrailingZeros<uint8_t>(Mask);
+        assert(NumTZ <= 3 && "Invalid VPT mask!");
+        // push predicates onto the stack the correct order for the pops
+        for (unsigned Pos = NumTZ+1; Pos <= 3; ++Pos) {
+          bool T = ((Mask >> Pos) & 1) == 0;
+          if (T)
+            VPTStates.push_back(ARMVCC::Then);
+          else
+            VPTStates.push_back(ARMVCC::Else);
+        }
+        VPTStates.push_back(ARMVCC::Then);
+      }
+
+    private:
+      SmallVector<unsigned char, 4> VPTStates;
   };
 
 /// ARM disassembler for all ARM platforms.
@@ -118,6 +157,7 @@ public:
 
 private:
   mutable ITStatus ITBlock;
+  mutable VPTStatus VPTBlock;
 
   DecodeStatus AddThumbPredicate(MCInst&) const;
   void UpdateThumbVFPPredicate(DecodeStatus &, MCInst&) const;
@@ -182,6 +222,8 @@ static DecodeStatus DecodeDPR_VFP2RegisterClass(MCInst &Inst,
                                                 uint64_t Address,
                                                 const void *Decoder);
 static DecodeStatus DecodeQPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeMQPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeDPairRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
@@ -441,6 +483,23 @@ static DecodeStatus DecodeLongShiftOperand(MCInst &Inst, unsigned Val,
                                            const void *Decoder);
 static DecodeStatus DecodeVSCCLRM(MCInst &Inst, unsigned Insn, uint64_t Address,
                                   const void *Decoder);
+static DecodeStatus DecodeVPTMaskOperand(MCInst &Inst, unsigned Val,
+                                         uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeVpredROperand(MCInst &Inst, unsigned Val,
+                                        uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeRestrictedIPredicateOperand(MCInst &Inst, unsigned Val,
+                                                     uint64_t Address,
+                                                     const void *Decoder);
+static DecodeStatus DecodeRestrictedSPredicateOperand(MCInst &Inst, unsigned Val,
+                                                     uint64_t Address,
+                                                     const void *Decoder);
+static DecodeStatus DecodeRestrictedUPredicateOperand(MCInst &Inst, unsigned Val,
+                                                     uint64_t Address,
+                                                     const void *Decoder);
+static DecodeStatus DecodeRestrictedFPPredicateOperand(MCInst &Inst,
+                                                       unsigned Val,
+                                                       uint64_t Address,
+                                                       const void *Decoder);
 template<bool Writeback>
 static DecodeStatus DecodeVSTRVLDR_SYSREG(MCInst &Inst, unsigned Insn,
                                           uint64_t Address,
@@ -620,6 +679,16 @@ static void AddThumb1SBit(MCInst &MI, bool InITBlock) {
   MI.insert(I, MCOperand::createReg(InITBlock ? 0 : ARM::CPSR));
 }
 
+static bool isVectorPredicable(unsigned Opcode) {
+  const MCOperandInfo *OpInfo = ARMInsts[Opcode].OpInfo;
+  unsigned short NumOps = ARMInsts[Opcode].NumOperands;
+  for (unsigned i = 0; i < NumOps; ++i) {
+    if (ARM::isVpred(OpInfo[i].OperandType))
+      return true;
+  }
+  return false;
+}
+
 // Most Thumb instructions don't have explicit predicates in the
 // encoding, but rather get their predicates from IT context.  We need
 // to fix up the predicate operands using this context information as a
@@ -671,39 +740,66 @@ ThumbDisassembler::AddThumbPredicate(MCInst &MI) const {
       break;
   }
 
-  // If we're in an IT block, base the predicate on that.  Otherwise,
+  // Warn on non-VPT predicable instruction in a VPT block and a VPT
+  // predicable instruction in an IT block
+  if ((!isVectorPredicable(MI.getOpcode()) && VPTBlock.instrInVPTBlock()) ||
+       (isVectorPredicable(MI.getOpcode()) && ITBlock.instrInITBlock()))
+    S = SoftFail;
+
+  // If we're in an IT/VPT block, base the predicate on that.  Otherwise,
   // assume a predicate of AL.
-  unsigned CC;
-  CC = ITBlock.getITCC();
-  if (CC == 0xF)
-    CC = ARMCC::AL;
-  if (ITBlock.instrInITBlock())
+  unsigned CC = ARMCC::AL;
+  unsigned VCC = ARMVCC::None;
+  if (ITBlock.instrInITBlock()) {
+    CC = ITBlock.getITCC();
     ITBlock.advanceITState();
+  } else if (VPTBlock.instrInVPTBlock()) {
+    VCC = VPTBlock.getVPTPred();
+    VPTBlock.advanceVPTState();
+  }
 
   const MCOperandInfo *OpInfo = ARMInsts[MI.getOpcode()].OpInfo;
   unsigned short NumOps = ARMInsts[MI.getOpcode()].NumOperands;
-  MCInst::iterator I = MI.begin();
-  for (unsigned i = 0; i < NumOps; ++i, ++I) {
-    if (I == MI.end()) break;
-    if (OpInfo[i].isPredicate()) {
-      if (CC != ARMCC::AL && !ARMInsts[MI.getOpcode()].isPredicable())
-        Check(S, SoftFail);
-      I = MI.insert(I, MCOperand::createImm(CC));
-      ++I;
-      if (CC == ARMCC::AL)
-        MI.insert(I, MCOperand::createReg(0));
-      else
-        MI.insert(I, MCOperand::createReg(ARM::CPSR));
-      return S;
-    }
+
+  MCInst::iterator CCI = MI.begin();
+  for (unsigned i = 0; i < NumOps; ++i, ++CCI) {
+    if (OpInfo[i].isPredicate() || CCI == MI.end()) break;
   }
 
-  I = MI.insert(I, MCOperand::createImm(CC));
-  ++I;
-  if (CC == ARMCC::AL)
-    MI.insert(I, MCOperand::createReg(0));
-  else
-    MI.insert(I, MCOperand::createReg(ARM::CPSR));
+  if (ARMInsts[MI.getOpcode()].isPredicable()) {
+    CCI = MI.insert(CCI, MCOperand::createImm(CC));
+    ++CCI;
+    if (CC == ARMCC::AL)
+      MI.insert(CCI, MCOperand::createReg(0));
+    else
+      MI.insert(CCI, MCOperand::createReg(ARM::CPSR));
+  } else if (CC != ARMCC::AL) {
+    Check(S, SoftFail);
+  }
+
+  MCInst::iterator VCCI = MI.begin();
+  unsigned VCCPos;
+  for (VCCPos = 0; VCCPos < NumOps; ++VCCPos, ++VCCI) {
+    if (ARM::isVpred(OpInfo[VCCPos].OperandType) || VCCI == MI.end()) break;
+  }
+
+  if (isVectorPredicable(MI.getOpcode())) {
+    VCCI = MI.insert(VCCI, MCOperand::createImm(VCC));
+    ++VCCI;
+    if (VCC == ARMVCC::None)
+      MI.insert(VCCI, MCOperand::createReg(0));
+    else
+      MI.insert(VCCI, MCOperand::createReg(ARM::P0));
+    if (OpInfo[VCCPos].OperandType == ARM::OPERAND_VPRED_R) {
+      int TiedOp = ARMInsts[MI.getOpcode()].getOperandConstraint(
+        VCCPos + 2, MCOI::TIED_TO);
+      assert(TiedOp >= 0 &&
+             "Inactive register in vpred_r is not tied to an output!");
+      MI.insert(VCCI, MI.getOperand(TiedOp));
+    }
+  } else if (VCC != ARMVCC::None) {
+    Check(S, SoftFail);
+  }
 
   return S;
 }
@@ -721,6 +817,10 @@ void ThumbDisassembler::UpdateThumbVFPPredicate(
     CC = ARMCC::AL;
   if (ITBlock.instrInITBlock())
     ITBlock.advanceITState();
+  else if (VPTBlock.instrInVPTBlock()) {
+    CC = VPTBlock.getVPTPred();
+    VPTBlock.advanceVPTState();
+  }
 
   const MCOperandInfo *OpInfo = ARMInsts[MI.getOpcode()].OpInfo;
   MCInst::iterator I = MI.begin();
@@ -816,7 +916,19 @@ DecodeStatus ThumbDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       decodeInstruction(DecoderTableMVE32, MI, Insn32, Address, this, STI);
   if (Result != MCDisassembler::Fail) {
     Size = 4;
+
+    // Nested VPT blocks are UNPREDICTABLE. Must be checked before we add
+    // the VPT predicate.
+    if (isVPTOpcode(MI.getOpcode()) && VPTBlock.instrInVPTBlock())
+      Result = MCDisassembler::SoftFail;
+
     Check(Result, AddThumbPredicate(MI));
+
+    if (isVPTOpcode(MI.getOpcode())) {
+      unsigned Mask = MI.getOperand(0).getImm();
+      VPTBlock.setVPTState(Mask);
+    }
+
     return Result;
   }
 
@@ -5176,6 +5288,16 @@ static DecodeStatus DecodeIT(MCInst &Inst, unsigned Insn,
   if (mask == 0x0)
     return MCDisassembler::Fail;
 
+  // IT masks are encoded as a sequence of replacement low-order bits
+  // for the condition code. So if the low bit of the starting
+  // condition code is 1, then we have to flip all the bits above the
+  // terminating bit (which is the lowest 1 bit).
+  if (pred & 1) {
+    unsigned LowBit = mask & -mask;
+    unsigned BitsAboveLowBit = 0xF & (-LowBit << 1);
+    mask ^= BitsAboveLowBit;
+  }
+
   Inst.addOperand(MCOperand::createImm(pred));
   Inst.addOperand(MCOperand::createImm(mask));
   return S;
@@ -5719,6 +5841,130 @@ static DecodeStatus DecodeVSCCLRM(MCInst &Inst, unsigned Insn, uint64_t Address,
   Inst.addOperand(MCOperand::createReg(ARM::VPR));
 
   return S;
+}
+
+static DecodeStatus DecodeMQPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                              uint64_t Address,
+                              const void *Decoder) {
+  if (RegNo > 7)
+    return MCDisassembler::Fail;
+
+  unsigned Register = QPRDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Register));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeVPTMaskOperand(MCInst &Inst, unsigned Val,
+                                         uint64_t Address,
+                                         const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  // Parse VPT mask and encode it in the MCInst as an immediate with the same
+  // format as the it_mask.  That is, from the second 'e|t' encode 'e' as 1 and
+  // 't' as 0 and finish with a 1.
+  unsigned Imm = 0;
+  // We always start with a 't'.
+  unsigned CurBit = 0;
+  for (int i = 3; i >= 0; --i) {
+    // If the bit we are looking at is not the same as last one, invert the
+    // CurBit, if it is the same leave it as is.
+    CurBit ^= (Val >> i) & 1U;
+
+    // Encode the CurBit at the right place in the immediate.
+    Imm |= (CurBit << i);
+
+    // If we are done, finish the encoding with a 1.
+    if ((Val & ~(~0U << i)) == 0) {
+      Imm |= 1U << i;
+      break;
+    }
+  }
+
+  Inst.addOperand(MCOperand::createImm(Imm));
+
+  return S;
+}
+
+static DecodeStatus DecodeVpredROperand(MCInst &Inst, unsigned RegNo,
+                                        uint64_t Address, const void *Decoder) {
+  // The vpred_r operand type includes an MQPR register field derived
+  // from the encoding. But we don't actually want to add an operand
+  // to the MCInst at this stage, because AddThumbPredicate will do it
+  // later, and will infer the register number from the TIED_TO
+  // constraint. So this is a deliberately empty decoder method that
+  // will inhibit the auto-generated disassembly code from adding an
+  // operand at all.
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeRestrictedIPredicateOperand(MCInst &Inst,
+                                                      unsigned Val,
+                                                      uint64_t Address,
+                                                      const void *Decoder) {
+  Inst.addOperand(MCOperand::createImm((Val & 0x1) == 0 ? ARMCC::EQ : ARMCC::NE));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeRestrictedSPredicateOperand(MCInst &Inst,
+                                                      unsigned Val,
+                                                      uint64_t Address,
+                                                      const void *Decoder) {
+  unsigned Code;
+  switch (Val & 0x3) {
+  case 0:
+    Code = ARMCC::GE;
+    break;
+  case 1:
+    Code = ARMCC::LT;
+    break;
+  case 2:
+    Code = ARMCC::GT;
+    break;
+  case 3:
+    Code = ARMCC::LE;
+    break;
+  }
+  Inst.addOperand(MCOperand::createImm(Code));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeRestrictedUPredicateOperand(MCInst &Inst,
+                                                      unsigned Val,
+                                                      uint64_t Address,
+                                                      const void *Decoder) {
+  Inst.addOperand(MCOperand::createImm((Val & 0x1) == 0 ? ARMCC::HS : ARMCC::HI));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeRestrictedFPPredicateOperand(MCInst &Inst, unsigned Val,
+                                                     uint64_t Address,
+                                                     const void *Decoder) {
+  unsigned Code;
+  switch (Val) {
+  default:
+    return MCDisassembler::Fail;
+  case 0:
+    Code = ARMCC::EQ;
+    break;
+  case 1:
+    Code = ARMCC::NE;
+    break;
+  case 4:
+    Code = ARMCC::GE;
+    break;
+  case 5:
+    Code = ARMCC::LT;
+    break;
+  case 6:
+    Code = ARMCC::GT;
+    break;
+  case 7:
+    Code = ARMCC::LE;
+    break;
+  }
+
+  Inst.addOperand(MCOperand::createImm(Code));
+  return MCDisassembler::Success;
 }
 
 static unsigned FixedRegForVSTRVLDR_SYSREG(unsigned Opcode) {

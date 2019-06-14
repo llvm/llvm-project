@@ -210,6 +210,7 @@ static bool isValidCoroutineContext(Sema &S, SourceLocation Loc,
     DiagConstexpr,
     DiagAutoRet,
     DiagVarargs,
+    DiagConsteval,
   };
   bool Diagnosed = false;
   auto DiagInvalid = [&](InvalidFuncDiag ID) {
@@ -244,7 +245,7 @@ static bool isValidCoroutineContext(Sema &S, SourceLocation Loc,
   // evaluation of e [...] would evaluate one of the following expressions:
   // [...] an await-expression [...] a yield-expression."
   if (FD->isConstexpr())
-    DiagInvalid(DiagConstexpr);
+    DiagInvalid(FD->isConsteval() ? DiagConsteval : DiagConstexpr);
   // [dcl.spec.auto]p15: "A function declared with a return type that uses a
   // placeholder type shall not be a coroutine."
   if (FD->getReturnType()->isUndeducedType())

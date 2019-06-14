@@ -740,6 +740,12 @@ public:
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           const AAMDNodes &AAInfo);
 
+  /// Allocate a new MachineMemOperand by copying an existing one,
+  /// replacing the flags. MachineMemOperands are owned
+  /// by the MachineFunction and need not be explicitly deallocated.
+  MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
+                                          MachineMemOperand::Flags Flags);
+
   using OperandCapacity = ArrayRecycler<MachineOperand>::Capacity;
 
   /// Allocate an array of MachineOperands. This is only intended for use by

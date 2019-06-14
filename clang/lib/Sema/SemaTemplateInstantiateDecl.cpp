@@ -1779,7 +1779,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(FunctionDecl *D,
     Function = FunctionDecl::Create(
         SemaRef.Context, DC, D->getInnerLocStart(), NameInfo, T, TInfo,
         D->getCanonicalDecl()->getStorageClass(), D->isInlineSpecified(),
-        D->hasWrittenPrototype(), D->isConstexpr());
+        D->hasWrittenPrototype(), D->getConstexprKind());
     Function->setRangeEnd(D->getSourceRange().getEnd());
   }
 
@@ -2087,7 +2087,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
     Method = CXXConstructorDecl::Create(
         SemaRef.Context, Record, StartLoc, NameInfo, T, TInfo,
         InstantiatedExplicitSpecifier, Constructor->isInlineSpecified(), false,
-        Constructor->isConstexpr());
+        Constructor->getConstexprKind());
     Method->setRangeEnd(Constructor->getEndLoc());
   } else if (CXXDestructorDecl *Destructor = dyn_cast<CXXDestructorDecl>(D)) {
     Method = CXXDestructorDecl::Create(SemaRef.Context, Record,
@@ -2099,12 +2099,12 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
     Method = CXXConversionDecl::Create(
         SemaRef.Context, Record, StartLoc, NameInfo, T, TInfo,
         Conversion->isInlineSpecified(), InstantiatedExplicitSpecifier,
-        Conversion->isConstexpr(), Conversion->getEndLoc());
+        Conversion->getConstexprKind(), Conversion->getEndLoc());
   } else {
     StorageClass SC = D->isStatic() ? SC_Static : SC_None;
     Method = CXXMethodDecl::Create(SemaRef.Context, Record, StartLoc, NameInfo,
                                    T, TInfo, SC, D->isInlineSpecified(),
-                                   D->isConstexpr(), D->getEndLoc());
+                                   D->getConstexprKind(), D->getEndLoc());
   }
 
   if (D->isInlined())

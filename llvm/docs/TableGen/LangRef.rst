@@ -482,9 +482,9 @@ It supports the following directives:
            : "#else" (`WhiteSpaceOrAnyComment`)* `LineEnd`
    PrepEndif: `LineBegin` (`WhiteSpaceOrCStyleComment`)*
             : "#endif" (`WhiteSpaceOrAnyComment`)* `LineEnd`
-   PrepRegContentException: `PredIfdef` | `PredElse` | `PredEndif` | EOF
+   PrepRegContentException: `PrepIfdef` | `PrepElse` | `PrepEndif` | EOF
    PrepRegion: .* - `PrepRegContentException`
-             :| `PrepIfDef`
+             :| `PrepIfdef`
              :  (`PrepRegion`)*
              :  [`PrepElse`]
              :  (`PrepRegion`)*

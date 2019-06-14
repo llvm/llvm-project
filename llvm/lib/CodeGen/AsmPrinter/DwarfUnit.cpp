@@ -1393,6 +1393,9 @@ void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
       addFlag(Buffer, dwarf::DW_AT_enum_class);
   }
 
+  auto *Context = CTy->getScope();
+  bool IndexEnumerators = !Context || isa<DICompileUnit>(Context) || isa<DIFile>(Context) ||
+      isa<DINamespace>(Context) || isa<DICommonBlock>(Context);
   DINodeArray Elements = CTy->getElements();
 
   // Add enumerators to enumeration type.
@@ -1404,6 +1407,8 @@ void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
       addString(Enumerator, dwarf::DW_AT_name, Name);
       auto Value = static_cast<uint64_t>(Enum->getValue());
       addConstantValue(Enumerator, IsUnsigned, Value);
+      if (IndexEnumerators)
+        addGlobalName(Name, Enumerator, Context);
     }
   }
 }

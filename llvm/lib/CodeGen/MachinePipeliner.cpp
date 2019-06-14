@@ -3732,6 +3732,11 @@ void SwingSchedulerDAG::checkValidNodeOrder(const NodeSetType &Circuits) const {
 
     for (SDep &SuccEdge : SU->Succs) {
       SUnit *SuccSU = SuccEdge.getSUnit();
+      // Do not process a boundary node, it was not included in NodeOrder,
+      // hence not in Indices either, call to std::lower_bound() below will
+      // return Indices.end().
+      if (SuccSU->isBoundaryNode())
+        continue;
       unsigned SuccIndex =
           std::get<1>(*std::lower_bound(Indices.begin(), Indices.end(),
                                         std::make_pair(SuccSU, 0), CompareKey));

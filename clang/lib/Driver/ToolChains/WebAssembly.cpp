@@ -8,6 +8,7 @@
 
 #include "WebAssembly.h"
 #include "CommonArgs.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -170,14 +171,39 @@ WebAssembly::GetCXXStdlibType(const ArgList &Args) const {
 
 void WebAssembly::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                             ArgStringList &CC1Args) const {
-  if (!DriverArgs.hasArg(options::OPT_nostdinc)) {
-    if (getTriple().getOS() != llvm::Triple::UnknownOS) {
-      const std::string MultiarchTriple =
-          getMultiarchTriple(getDriver(), getTriple(), getDriver().SysRoot);
-      addSystemInclude(DriverArgs, CC1Args, getDriver().SysRoot + "/include/" + MultiarchTriple);
-    }
-    addSystemInclude(DriverArgs, CC1Args, getDriver().SysRoot + "/include");
+  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
+    return;
+
+  const Driver &D = getDriver();
+
+  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    SmallString<128> P(D.ResourceDir);
+    llvm::sys::path::append(P, "include");
+    addSystemInclude(DriverArgs, CC1Args, P);
   }
+
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc))
+    return;
+
+  // Check for configure-time C include directories.
+  StringRef CIncludeDirs(C_INCLUDE_DIRS);
+  if (CIncludeDirs != "") {
+    SmallVector<StringRef, 5> dirs;
+    CIncludeDirs.split(dirs, ":");
+    for (StringRef dir : dirs) {
+      StringRef Prefix =
+          llvm::sys::path::is_absolute(dir) ? StringRef(D.SysRoot) : "";
+      addExternCSystemInclude(DriverArgs, CC1Args, Prefix + dir);
+    }
+    return;
+  }
+
+  if (getTriple().getOS() != llvm::Triple::UnknownOS) {
+    const std::string MultiarchTriple =
+        getMultiarchTriple(D, getTriple(), D.SysRoot);
+    addSystemInclude(DriverArgs, CC1Args, D.SysRoot + "/include/" + MultiarchTriple);
+  }
+  addSystemInclude(DriverArgs, CC1Args, D.SysRoot + "/include");
 }
 
 void WebAssembly::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
@@ -188,7 +214,8 @@ void WebAssembly::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
       const std::string MultiarchTriple =
           getMultiarchTriple(getDriver(), getTriple(), getDriver().SysRoot);
       addSystemInclude(DriverArgs, CC1Args,
-                       getDriver().SysRoot + "/include/" + MultiarchTriple + "/c++/v1");
+                       getDriver().SysRoot + "/include/" + MultiarchTriple +
+                           "/c++/v1");
     }
     addSystemInclude(DriverArgs, CC1Args,
                      getDriver().SysRoot + "/include/c++/v1");

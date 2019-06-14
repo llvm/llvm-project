@@ -178,8 +178,8 @@ void LazyReexportsMaterializationUnit::materialize(
   for (auto &Alias : RequestedAliases)
     Stubs[Alias.first] = ISManager.findStub(*Alias.first, false);
 
-  R.resolve(Stubs);
-  R.emit();
+  R.notifyResolved(Stubs);
+  R.notifyEmitted();
 }
 
 void LazyReexportsMaterializationUnit::discard(const JITDylib &JD,

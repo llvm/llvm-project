@@ -316,15 +316,21 @@ void HIPToolChain::addClangTargetOptions(
     else
       FlushDenormalControlBC = "oclc_daz_opt_off.amdgcn.bc";
 
+    llvm::StringRef WaveFrontSizeBC;
+    if (stoi(GFXVersion) < 1000)
+      WaveFrontSizeBC = "oclc_wavefrontsize64_on.amdgcn.bc";
+    else
+      WaveFrontSizeBC = "oclc_wavefrontsize64_off.amdgcn.bc";
+
     BCLibs.append({"hip.amdgcn.bc", "opencl.amdgcn.bc", "ocml.amdgcn.bc",
                    "ockl.amdgcn.bc", "oclc_finite_only_off.amdgcn.bc",
                    FlushDenormalControlBC,
                    "oclc_correctly_rounded_sqrt_on.amdgcn.bc",
-                   "oclc_unsafe_math_off.amdgcn.bc", ISAVerBC});
+                   "oclc_unsafe_math_off.amdgcn.bc", ISAVerBC,
+                   WaveFrontSizeBC});
   }
   for (auto Lib : BCLibs)
     addBCLib(getDriver(), DriverArgs, CC1Args, LibraryPaths, Lib);
-
 }
 
 llvm::opt::DerivedArgList *

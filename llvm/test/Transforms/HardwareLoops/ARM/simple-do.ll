@@ -76,7 +76,7 @@ while.end:
 ; CHECK: while.body.lr.ph:
 ; CHECK: [[ROUND:%[^ ]+]] = add i32 %n, -1
 ; CHECK: [[HALVE:%[^ ]+]] = lshr i32 [[ROUND]], 1
-; CHECK: [[COUNT:%[^ ]+]] = add i32 [[HALVE]], 1
+; CHECK: [[COUNT:%[^ ]+]] = add nuw i32 [[HALVE]], 1
 ; CHECK: call void @llvm.set.loop.iterations.i32(i32 [[COUNT]])
 ; CHECK-NEXT: br label %while.body
 
@@ -119,7 +119,7 @@ while.end:
 ; CHECK: [[SMIN:%[^ ]+]] = select i1 [[CMP]], i32 %n, i32 2
 ; CHECK: [[SUB:%[^ ]+]] = sub i32 [[ROUND]], [[SMIN]]
 ; CHECK: [[HALVE:%[^ ]+]] = lshr i32 [[SUB]], 1
-; CHECK: [[COUNT:%[^ ]+]] = add i32 [[HALVE]], 1
+; CHECK: [[COUNT:%[^ ]+]] = add nuw i32 [[HALVE]], 1
 ; CHECK: call void @llvm.set.loop.iterations.i32(i32 [[COUNT]])
 ; CHECK-NEXT: br label %while.body
 

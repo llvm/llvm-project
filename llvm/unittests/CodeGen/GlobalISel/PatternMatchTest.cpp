@@ -484,6 +484,31 @@ TEST(PatternMatchInstr, MatchCombinators) {
       m_any_of(m_SpecificType(LLT::scalar(16)), m_GSub(m_Reg(), m_Reg())));
   EXPECT_FALSE(match);
 }
+
+TEST(PatternMatchInstr, MatchMiscellaneous) {
+  LLVMContext Context;
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  if (!TM)
+    return;
+  auto ModuleMMIPair = createDummyModule(Context, *TM, "");
+  MachineFunction *MF =
+      getMFFromMMI(ModuleMMIPair.first.get(), ModuleMMIPair.second.get());
+  SmallVector<unsigned, 4> Copies;
+  collectCopies(Copies, MF);
+  MachineBasicBlock *EntryMBB = &*MF->begin();
+  MachineIRBuilder B(*MF);
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  B.setInsertPt(*EntryMBB, EntryMBB->end());
+  LLT s64 = LLT::scalar(64);
+  auto MIBAdd = B.buildAdd(s64, Copies[0], Copies[1]);
+  // Make multiple uses of this add.
+  B.buildCast(LLT::pointer(0, 32), MIBAdd);
+  B.buildCast(LLT::pointer(1, 32), MIBAdd);
+  bool match = mi_match(MIBAdd.getReg(0), MRI, m_GAdd(m_Reg(), m_Reg()));
+  EXPECT_TRUE(match);
+  match = mi_match(MIBAdd.getReg(0), MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg())));
+  EXPECT_FALSE(match);
+}
 } // namespace
 
 int main(int argc, char **argv) {

@@ -57,6 +57,17 @@ private:
   const std::unique_ptr<BoundNodesCallback> FindResultReviewer;
 };
 
+enum class LanguageMode {
+  Cxx11,
+  Cxx14,
+  Cxx17,
+  Cxx2a,
+  Cxx11OrLater,
+  Cxx14OrLater,
+  Cxx17OrLater,
+  Cxx2aOrLater
+};
+
 template <typename T>
 testing::AssertionResult matchesConditionally(
     const std::string &Code, const T &AMatcher, bool ExpectMatch,
@@ -116,14 +127,71 @@ testing::AssertionResult matchesConditionally(
 }
 
 template <typename T>
-testing::AssertionResult matches(const std::string &Code, const T &AMatcher) {
-  return matchesConditionally(Code, AMatcher, true, "-std=c++11");
+testing::AssertionResult
+matchesConditionally(const std::string &Code, const T &AMatcher,
+                     bool ExpectMatch, const LanguageMode &Mode) {
+  std::vector<LanguageMode> LangModes;
+  switch (Mode) {
+  case LanguageMode::Cxx11:
+  case LanguageMode::Cxx14:
+  case LanguageMode::Cxx17:
+  case LanguageMode::Cxx2a:
+    LangModes = {Mode};
+    break;
+  case LanguageMode::Cxx11OrLater:
+    LangModes = {LanguageMode::Cxx11, LanguageMode::Cxx14, LanguageMode::Cxx17,
+                 LanguageMode::Cxx2a};
+    break;
+  case LanguageMode::Cxx14OrLater:
+    LangModes = {LanguageMode::Cxx14, LanguageMode::Cxx17, LanguageMode::Cxx2a};
+    break;
+  case LanguageMode::Cxx17OrLater:
+    LangModes = {LanguageMode::Cxx17, LanguageMode::Cxx2a};
+    break;
+  case LanguageMode::Cxx2aOrLater:
+    LangModes = {LanguageMode::Cxx2a};
+  }
+
+  for (auto Mode : LangModes) {
+    std::string LangModeArg;
+    switch (Mode) {
+    case LanguageMode::Cxx11:
+      LangModeArg = "-std=c++11";
+      break;
+    case LanguageMode::Cxx14:
+      LangModeArg = "-std=c++14";
+      break;
+    case LanguageMode::Cxx17:
+      LangModeArg = "-std=c++17";
+      break;
+    case LanguageMode::Cxx2a:
+      LangModeArg = "-std=c++2a";
+      break;
+    default:
+      llvm_unreachable("Invalid language mode");
+    }
+
+    auto Result =
+        matchesConditionally(Code, AMatcher, ExpectMatch, LangModeArg);
+    if (!Result)
+      return Result;
+  }
+
+  return testing::AssertionSuccess();
 }
 
 template <typename T>
-testing::AssertionResult notMatches(const std::string &Code,
-                                    const T &AMatcher) {
-  return matchesConditionally(Code, AMatcher, false, "-std=c++11");
+testing::AssertionResult
+matches(const std::string &Code, const T &AMatcher,
+        const LanguageMode &Mode = LanguageMode::Cxx11) {
+  return matchesConditionally(Code, AMatcher, true, Mode);
+}
+
+template <typename T>
+testing::AssertionResult
+notMatches(const std::string &Code, const T &AMatcher,
+           const LanguageMode &Mode = LanguageMode::Cxx11) {
+  return matchesConditionally(Code, AMatcher, false, Mode);
 }
 
 template <typename T>
