@@ -225,8 +225,6 @@ public:
 
   const lldb_private::DWARFDataExtractor &get_debug_loc_data();
   const lldb_private::DWARFDataExtractor &get_debug_loclists_data();
-  const lldb_private::DWARFDataExtractor &get_debug_ranges_data();
-  const lldb_private::DWARFDataExtractor &get_debug_rnglists_data();
 
   DWARFDebugAbbrev *DebugAbbrev();
 
@@ -476,8 +474,6 @@ protected:
 
   DWARFDataSegment m_data_debug_loc;
   DWARFDataSegment m_data_debug_loclists;
-  DWARFDataSegment m_data_debug_ranges;
-  DWARFDataSegment m_data_debug_rnglists;
 
   // The unique pointer items below are generated on demand if and when someone
   // accesses them through a non const version of this class.

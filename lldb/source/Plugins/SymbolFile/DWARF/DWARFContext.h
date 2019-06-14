@@ -33,6 +33,8 @@ private:
   SectionData m_data_debug_line;
   SectionData m_data_debug_line_str;
   SectionData m_data_debug_macro;
+  SectionData m_data_debug_ranges;
+  SectionData m_data_debug_rnglists;
   SectionData m_data_debug_str;
   SectionData m_data_debug_str_offsets;
   SectionData m_data_debug_types;
@@ -57,6 +59,8 @@ public:
   const DWARFDataExtractor &getOrLoadLineData();
   const DWARFDataExtractor &getOrLoadLineStrData();
   const DWARFDataExtractor &getOrLoadMacroData();
+  const DWARFDataExtractor &getOrLoadRangesData();
+  const DWARFDataExtractor &getOrLoadRngListsData();
   const DWARFDataExtractor &getOrLoadStrData();
   const DWARFDataExtractor &getOrLoadStrOffsetsData();
   const DWARFDataExtractor &getOrLoadDebugTypesData();

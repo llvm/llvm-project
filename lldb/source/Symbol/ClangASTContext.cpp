@@ -2212,7 +2212,7 @@ FunctionDecl *ClangASTContext::CreateFunctionDeclaration(
       *ast, decl_ctx, SourceLocation(), SourceLocation(), declarationName,
       ClangUtil::GetQualType(function_clang_type), nullptr,
       (clang::StorageClass)storage, is_inline, hasWrittenPrototype,
-      isConstexprSpecified);
+      isConstexprSpecified ? CSK_constexpr : CSK_unspecified);
   if (func_decl)
     decl_ctx->addDecl(func_decl);
 
@@ -8300,7 +8300,7 @@ clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
             clang::SourceLocation()),
         method_qual_type,
         nullptr, // TypeSourceInfo *
-        explicit_spec, is_inline, is_artificial, false /*is_constexpr*/);
+        explicit_spec, is_inline, is_artificial, CSK_unspecified);
     cxx_method_decl = cxx_ctor_decl;
   } else {
     clang::StorageClass SC = is_static ? clang::SC_Static : clang::SC_None;
@@ -8323,7 +8323,7 @@ clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
                 clang::SourceLocation()),
             method_qual_type,
             nullptr, // TypeSourceInfo *
-            SC, is_inline, false /*is_constexpr*/, clang::SourceLocation());
+            SC, is_inline, CSK_unspecified, clang::SourceLocation());
       } else if (num_params == 0) {
         // Conversion operators don't take params...
         cxx_method_decl = clang::CXXConversionDecl::Create(
@@ -8335,7 +8335,7 @@ clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
                 clang::SourceLocation()),
             method_qual_type,
             nullptr, // TypeSourceInfo *
-            is_inline, explicit_spec, false /*is_constexpr*/,
+            is_inline, explicit_spec, CSK_unspecified,
             clang::SourceLocation());
       }
     }
@@ -8346,7 +8346,7 @@ clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
           clang::DeclarationNameInfo(decl_name, clang::SourceLocation()),
           method_qual_type,
           nullptr, // TypeSourceInfo *
-          SC, is_inline, false /*is_constexpr*/, clang::SourceLocation());
+          SC, is_inline, CSK_unspecified, clang::SourceLocation());
     }
   }
 

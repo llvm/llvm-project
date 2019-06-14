@@ -25,7 +25,7 @@ public:
   static bool classof(const DWARFUnit *unit) { return unit->IsTypeUnit(); }
 
 private:
-  DWARFTypeUnit(SymbolFileDWARF *dwarf, lldb::user_id_t uid,
+  DWARFTypeUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                 const DWARFUnitHeader &header,
                 const DWARFAbbreviationDeclarationSet &abbrevs,
                 DIERef::Section section)
