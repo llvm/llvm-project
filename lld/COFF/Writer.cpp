@@ -797,7 +797,13 @@ void Writer::createSections() {
         SC->printDiscardedMessage();
       continue;
     }
-    PartialSection *PSec = createPartialSection(C->getSectionName(),
+    StringRef Name = C->getSectionName();
+    // On MinGW, comdat groups are formed by putting the comdat group name
+    // after the '$' in the section name. Such a section name suffix shouldn't
+    // imply separate alphabetical sorting of those section chunks though.
+    if (Config->MinGW && SC && SC->isCOMDAT())
+      Name = Name.split('$').first;
+    PartialSection *PSec = createPartialSection(Name,
                                                 C->getOutputCharacteristics());
     PSec->Chunks.push_back(C);
   }

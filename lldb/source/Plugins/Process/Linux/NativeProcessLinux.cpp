@@ -288,7 +288,7 @@ NativeProcessLinux::NativeProcessLinux(::pid_t pid, int terminal_fd,
                                        NativeDelegate &delegate,
                                        const ArchSpec &arch, MainLoop &mainloop,
                                        llvm::ArrayRef<::pid_t> tids)
-    : NativeProcessProtocol(pid, terminal_fd, delegate), m_arch(arch) {
+    : NativeProcessELF(pid, terminal_fd, delegate), m_arch(arch) {
   if (m_terminal_fd != -1) {
     Status status = EnsureFDFlags(m_terminal_fd, O_NONBLOCK);
     assert(status.Success());
@@ -1389,11 +1389,6 @@ Status NativeProcessLinux::DeallocateMemory(lldb::addr_t addr) {
   return Status("not implemented");
 }
 
-lldb::addr_t NativeProcessLinux::GetSharedLibraryInfoAddress() {
-  // punt on this for now
-  return LLDB_INVALID_ADDRESS;
-}
-
 size_t NativeProcessLinux::UpdateThreads() {
   // The NativeProcessLinux monitoring threads are always up to date with
   // respect to thread state and they keep the thread list populated properly.
@@ -2081,19 +2076,4 @@ Status NativeProcessLinux::StopProcessorTracingOnThread(lldb::user_id_t traceid,
   m_processor_trace_monitor.erase(iter);
 
   return error;
-}
-
-llvm::Optional<uint64_t>
-NativeProcessLinux::GetAuxValue(enum AuxVector::EntryType type) {
-  if (m_aux_vector == nullptr) {
-    auto buffer_or_error = GetAuxvData();
-    if (!buffer_or_error)
-      return llvm::None;
-    DataExtractor auxv_data(buffer_or_error.get()->getBufferStart(),
-                            buffer_or_error.get()->getBufferSize(),
-                            GetByteOrder(), GetAddressByteSize());
-    m_aux_vector = llvm::make_unique<AuxVector>(auxv_data);
-  }
-
-  return m_aux_vector->GetAuxValue(type);
 }
