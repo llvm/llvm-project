@@ -246,7 +246,8 @@ class CrashLog(symbolication.Symbolicator):
                 identifier,
                 version,
                 uuid,
-                path):
+                path,
+                verbose):
             symbolication.Image.__init__(self, path, uuid)
             self.add_section(
                 symbolication.Section(
@@ -255,6 +256,17 @@ class CrashLog(symbolication.Symbolicator):
                     "__TEXT"))
             self.identifier = identifier
             self.version = version
+            self.verbose = verbose
+
+        def show_symbol_progress(self):
+            """
+            Hide progress output and errors from system frameworks as they are plentiful.
+            """
+            if self.verbose:
+                return True
+            return not (self.path.startswith("/System/Library/") or
+                        self.path.startswith("/usr/lib/"))
+
 
         def find_matching_slice(self):
             dwarfdump_cmd_output = subprocess.check_output(
@@ -271,8 +283,9 @@ class CrashLog(symbolication.Symbolicator):
                         return True
             if not self.resolved_path:
                 self.unavailable = True
-                print(("error\n    error: unable to locate '%s' with UUID %s"
-                      % (self.path, self.get_normalized_uuid_string())))
+                if self.show_symbol_progress():
+                    print(("error\n    error: unable to locate '%s' with UUID %s"
+                           % (self.path, self.get_normalized_uuid_string())))
                 return False
 
         def locate_module_and_debug_symbols(self):
@@ -282,7 +295,8 @@ class CrashLog(symbolication.Symbolicator):
             # Mark this as resolved so we don't keep trying
             self.resolved = True
             uuid_str = self.get_normalized_uuid_string()
-            print('Getting symbols for %s %s...' % (uuid_str, self.path), end=' ')
+            if self.show_symbol_progress():
+                print('Getting symbols for %s %s...' % (uuid_str, self.path), end=' ')
             if os.path.exists(self.dsymForUUIDBinary):
                 dsym_for_uuid_command = '%s %s' % (
                     self.dsymForUUIDBinary, uuid_str)
@@ -332,7 +346,7 @@ class CrashLog(symbolication.Symbolicator):
                 self.unavailable = True
             return False
 
-    def __init__(self, path):
+    def __init__(self, path, verbose):
         """CrashLog constructor that take a path to a darwin crash log file"""
         symbolication.Symbolicator.__init__(self)
         self.path = os.path.expanduser(path)
@@ -345,6 +359,7 @@ class CrashLog(symbolication.Symbolicator):
         self.version = -1
         self.error = None
         self.target = None
+        self.verbose = verbose
         # With possible initial component of ~ or ~user replaced by that user's
         # home directory.
         try:
@@ -491,7 +506,8 @@ class CrashLog(symbolication.Symbolicator):
                                                  img_name.strip(),
                                                  img_version.strip()
                                                  if img_version else "",
-                                                 uuid.UUID(img_uuid), img_path)
+                                                 uuid.UUID(img_uuid), img_path,
+                                                 self.verbose)
                     self.images.append(image)
                 else:
                     print("error: image regex failed for: %s" % line)
@@ -557,7 +573,9 @@ class CrashLog(symbolication.Symbolicator):
                 if self.target:
                     return self.target  # success
             print('crashlog.create_target()...4')
-            print('error: unable to locate any executables from the crash log')
+            print('error: Unable to locate any executables from the crash log.')
+            print('       Try loading the executable into lldb before running crashlog')
+            print('       and/or make sure the .dSYM bundles can be found by Spotlight.')
         return self.target
 
     def get_target(self):
@@ -683,7 +701,7 @@ def interactive_crashlogs(options, args):
     crash_logs = list()
     for crash_log_file in crash_log_files:
         # print 'crash_log_file = "%s"' % crash_log_file
-        crash_log = CrashLog(crash_log_file)
+        crash_log = CrashLog(crash_log_file, options.verbose)
         if crash_log.error:
             print(crash_log.error)
             continue
@@ -1022,7 +1040,7 @@ be disassembled and lookups can be performed using the addresses found in the cr
             interactive_crashlogs(options, args)
         else:
             for crash_log_file in args:
-                crash_log = CrashLog(crash_log_file)
+                crash_log = CrashLog(crash_log_file, options.verbose)
                 SymbolicateCrashLog(crash_log, options)
 if __name__ == '__main__':
     # Create a new debugger instance
