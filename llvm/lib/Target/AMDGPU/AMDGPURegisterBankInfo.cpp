@@ -991,13 +991,81 @@ AMDGPURegisterBankInfo::getRegBankID(unsigned Reg,
 ///
 const RegisterBankInfo::InstructionMapping &
 AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
-  const RegisterBankInfo::InstructionMapping &Mapping = getInstrMappingImpl(MI);
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
 
+  if (MI.isRegSequence()) {
+    // If any input is a VGPR, the result must be a VGPR. The default handling
+    // assumes any copy between banks is legal.
+    unsigned BankID = AMDGPU::SGPRRegBankID;
+
+    for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
+      auto OpBank = getRegBankID(MI.getOperand(I).getReg(), MRI, *TRI);
+      // It doesn't make sense to use vcc or scc banks here, so just ignore
+      // them.
+      if (OpBank != AMDGPU::SGPRRegBankID) {
+        BankID = AMDGPU::VGPRRegBankID;
+        break;
+      }
+    }
+    unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
+
+    const ValueMapping &ValMap = getValueMapping(0, Size, getRegBank(BankID));
+    return getInstructionMapping(
+        1, /*Cost*/ 1,
+        /*OperandsMapping*/ getOperandsMapping({&ValMap}), 1);
+  }
+
+  // The default handling is broken and doesn't handle illegal SGPR->VGPR copies
+  // properly.
+  //
+  // TODO: There are additional exec masking dependencies to analyze.
+  if (MI.getOpcode() == TargetOpcode::G_PHI) {
+    // TODO: Generate proper invalid bank enum.
+    int ResultBank = -1;
+
+    for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
+      unsigned Reg = MI.getOperand(I).getReg();
+      const RegisterBank *Bank = getRegBank(Reg, MRI, *TRI);
+
+      // FIXME: Assuming VGPR for any undetermined inputs.
+      if (!Bank || Bank->getID() == AMDGPU::VGPRRegBankID) {
+        ResultBank = AMDGPU::VGPRRegBankID;
+        break;
+      }
+
+      unsigned OpBank = Bank->getID();
+      // scc, scc -> sgpr
+      if (OpBank == AMDGPU::SCCRegBankID) {
+        // There's only one SCC register, so a phi requires copying to SGPR.
+        OpBank = AMDGPU::SGPRRegBankID;
+      } else if (OpBank == AMDGPU::VCCRegBankID) {
+        // vcc, vcc -> vcc
+        // vcc, sgpr -> vgpr
+        if (ResultBank != -1 && ResultBank != AMDGPU::VCCRegBankID) {
+          ResultBank = AMDGPU::VGPRRegBankID;
+          break;
+        }
+      }
+
+      ResultBank = OpBank;
+    }
+
+    assert(ResultBank != -1);
+
+    unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+
+    const ValueMapping &ValMap =
+        getValueMapping(0, Size, getRegBank(ResultBank));
+    return getInstructionMapping(
+        1, /*Cost*/ 1,
+        /*OperandsMapping*/ getOperandsMapping({&ValMap}), 1);
+  }
+
+  const RegisterBankInfo::InstructionMapping &Mapping = getInstrMappingImpl(MI);
   if (Mapping.isValid())
     return Mapping;
 
-  const MachineFunction &MF = *MI.getParent()->getParent();
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallVector<const ValueMapping*, 8> OpdsMapping(MI.getNumOperands());
 
   switch (MI.getOpcode()) {

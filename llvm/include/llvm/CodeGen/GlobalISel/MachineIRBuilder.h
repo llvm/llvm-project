@@ -595,6 +595,20 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildBrIndirect(unsigned Tgt);
 
+  /// Build and insert G_BRJT \p TablePtr, \p JTI, \p IndexReg
+  ///
+  /// G_BRJT is a jump table branch using a table base pointer \p TablePtr,
+  /// jump table index \p JTI and index \p IndexReg
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p TablePtr must be a generic virtual register with pointer type.
+  /// \pre \p JTI must be be a jump table index.
+  /// \pre \p IndexReg must be a generic virtual register with pointer type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildBrJT(unsigned TablePtr, unsigned JTI,
+                                unsigned IndexReg);
+
   /// Build and insert \p Res = G_CONSTANT \p Val
   ///
   /// G_CONSTANT is an integer constant with the specified size and value. \p

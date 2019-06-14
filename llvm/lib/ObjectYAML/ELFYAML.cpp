@@ -900,7 +900,7 @@ StringRef MappingTraits<ELFYAML::Symbol>::validate(IO &IO,
 static void commonSectionMapping(IO &IO, ELFYAML::Section &Section) {
   IO.mapOptional("Name", Section.Name, StringRef());
   IO.mapRequired("Type", Section.Type);
-  IO.mapOptional("Flags", Section.Flags, ELFYAML::ELF_SHF(0));
+  IO.mapOptional("Flags", Section.Flags);
   IO.mapOptional("Address", Section.Address, Hex64(0));
   IO.mapOptional("Link", Section.Link, StringRef());
   IO.mapOptional("AddressAlign", Section.AddressAlign, Hex64(0));

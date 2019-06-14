@@ -220,18 +220,35 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
         } else {
           OperandsMapping[0] = ValMapping;
         }
-
-        CompleteMapping = true;
       }
 
+      // The default handling assumes any register bank can be copied to any
+      // other. If this isn't the case, the target should specially deal with
+      // reg_sequence/phi. There may also be unsatisfiable copies.
+      for (; OpIdx != EndIdx; ++OpIdx) {
+        const MachineOperand &MO = MI.getOperand(OpIdx);
+        if (!MO.isReg())
+          continue;
+        unsigned Reg = MO.getReg();
+        if (!Reg)
+          continue;
+
+        const RegisterBank *AltRegBank = getRegBank(Reg, MRI, TRI);
+        if (cannotCopy(*CurRegBank, *AltRegBank, getSizeInBits(Reg, MRI, TRI)))
+          return getInvalidInstructionMapping();
+      }
+
+      CompleteMapping = true;
       break;
     }
+
     OperandsMapping[OpIdx] = ValMapping;
   }
 
-  if (IsCopyLike && !CompleteMapping)
+  if (IsCopyLike && !CompleteMapping) {
     // No way to deduce the type from what we have.
     return getInvalidInstructionMapping();
+  }
 
   assert(CompleteMapping && "Setting an uncomplete mapping");
   return getInstructionMapping(
@@ -374,11 +391,8 @@ RegisterBankInfo::getInstructionMappingImpl(
   ++NumInstructionMappingsCreated;
 
   auto &InstrMapping = MapOfInstructionMappings[Hash];
-  if (IsInvalid)
-    InstrMapping = llvm::make_unique<InstructionMapping>();
-  else
-    InstrMapping = llvm::make_unique<InstructionMapping>(
-        ID, Cost, OperandsMapping, NumOperands);
+  InstrMapping = llvm::make_unique<InstructionMapping>(
+      ID, Cost, OperandsMapping, NumOperands);
   return *InstrMapping;
 }
 
@@ -393,8 +407,12 @@ RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 RegisterBankInfo::InstructionMappings
 RegisterBankInfo::getInstrPossibleMappings(const MachineInstr &MI) const {
   InstructionMappings PossibleMappings;
-  // Put the default mapping first.
-  PossibleMappings.push_back(&getInstrMapping(MI));
+  const auto &Mapping = getInstrMapping(MI);
+  if (Mapping.isValid()) {
+    // Put the default mapping first.
+    PossibleMappings.push_back(&Mapping);
+  }
+
   // Then the alternative mapping, if any.
   InstructionMappings AltMappings = getInstrAlternativeMappings(MI);
   for (const InstructionMapping *AltMapping : AltMappings)

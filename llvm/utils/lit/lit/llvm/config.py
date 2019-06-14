@@ -48,8 +48,6 @@ class LLVMConfig(object):
             # We should standardize on the former.
             features.add('system-linker-mach-o')
             features.add('system-darwin')
-            if config.enable_shared:
-                features.add("enable_shared")
         elif platform.system() == 'Windows':
             # For tests that require Windows to run.
             features.add('system-windows')

@@ -133,19 +133,20 @@ static cl::opt<bool> DiscardValueNames(
 
 static cl::list<std::string> IncludeDirs("I", cl::desc("include search path"));
 
-static cl::opt<bool> PassRemarksWithHotness(
+static cl::opt<bool> RemarksWithHotness(
     "pass-remarks-with-hotness",
     cl::desc("With PGO, include profile count in optimization remarks"),
     cl::Hidden);
 
-static cl::opt<unsigned> PassRemarksHotnessThreshold(
-    "pass-remarks-hotness-threshold",
-    cl::desc("Minimum profile count required for an optimization remark to be output"),
-    cl::Hidden);
+static cl::opt<unsigned>
+    RemarksHotnessThreshold("pass-remarks-hotness-threshold",
+                            cl::desc("Minimum profile count required for "
+                                     "an optimization remark to be output"),
+                            cl::Hidden);
 
 static cl::opt<std::string>
     RemarksFilename("pass-remarks-output",
-                    cl::desc("YAML output filename for pass remarks"),
+                    cl::desc("Output filename for pass remarks"),
                     cl::value_desc("filename"));
 
 static cl::opt<std::string>
@@ -326,31 +327,14 @@ int main(int argc, char **argv) {
       llvm::make_unique<LLCDiagnosticHandler>(&HasError));
   Context.setInlineAsmDiagnosticHandler(InlineAsmDiagHandler, &HasError);
 
-  if (PassRemarksWithHotness)
-    Context.setDiagnosticsHotnessRequested(true);
-
-  if (PassRemarksHotnessThreshold)
-    Context.setDiagnosticsHotnessThreshold(PassRemarksHotnessThreshold);
-
-  std::unique_ptr<ToolOutputFile> YamlFile;
-  if (RemarksFilename != "") {
-    std::error_code EC;
-    YamlFile =
-        llvm::make_unique<ToolOutputFile>(RemarksFilename, EC, sys::fs::F_None);
-    if (EC) {
-      WithColor::error(errs(), argv[0]) << EC.message() << '\n';
-      return 1;
-    }
-    Context.setRemarkStreamer(llvm::make_unique<RemarkStreamer>(
-        RemarksFilename,
-        llvm::make_unique<remarks::YAMLSerializer>(YamlFile->os())));
-
-    if (!RemarksPasses.empty())
-      if (Error E = Context.getRemarkStreamer()->setFilter(RemarksPasses)) {
-        WithColor::error(errs(), argv[0]) << E << '\n';
-        return 1;
-      }
+  Expected<std::unique_ptr<ToolOutputFile>> RemarksFileOrErr =
+      setupOptimizationRemarks(Context, RemarksFilename, RemarksPasses,
+                               RemarksWithHotness, RemarksHotnessThreshold);
+  if (Error E = RemarksFileOrErr.takeError()) {
+    WithColor::error(errs(), argv[0]) << toString(std::move(E)) << '\n';
+    return 1;
   }
+  std::unique_ptr<ToolOutputFile> RemarksFile = std::move(*RemarksFileOrErr);
 
   if (InputLanguage != "" && InputLanguage != "ir" &&
       InputLanguage != "mir") {
@@ -365,8 +349,8 @@ int main(int argc, char **argv) {
     if (int RetVal = compileModule(argv, Context))
       return RetVal;
 
-  if (YamlFile)
-    YamlFile->keep();
+  if (RemarksFile)
+    RemarksFile->keep();
   return 0;
 }
 

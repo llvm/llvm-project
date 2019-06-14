@@ -1,5 +1,7 @@
 import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/lib/Target/targets.gni")
+import("//llvm/lib/Target/targets_with_asm_parsers.gni")
+import("//llvm/lib/Target/targets_with_disassemblers.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/libs/edit/enable.gni")
@@ -367,12 +369,18 @@ template("write_target_def_file") {
     input = "$target_name.in"
     output = "$target_gen_dir/$target_name"
 
+    if (defined(invoker.all_targets)) {
+      all_targets = invoker.all_targets
+    } else {
+      all_targets = llvm_targets_to_build
+    }
+
     # Build something like
     # `LLVM_ENUM_ASM_PARSERS=LLVM_ASM_PARSER(ARM)\nLLVM_ASM_PARSER(X86)\n`. Note
     # that \n is a literal '\' followed by a literal 'n', not a newline
     # character.  (write_cmake_config.py replaces that with a real newline).
     value = ""
-    foreach(target, llvm_targets_to_build) {
+    foreach(target, all_targets) {
       value = "$value${invoker.value}($target)\n"
     }
     values = [ "${invoker.key}=$value" ]
@@ -382,6 +390,7 @@ template("write_target_def_file") {
 write_target_def_file("AsmParsers.def") {
   key = "LLVM_ENUM_ASM_PARSERS"
   value = "LLVM_ASM_PARSER"
+  all_targets = targets_with_asm_parsers
 }
 
 write_target_def_file("AsmPrinters.def") {
@@ -392,6 +401,7 @@ write_target_def_file("AsmPrinters.def") {
 write_target_def_file("Disassemblers.def") {
   key = "LLVM_ENUM_DISASSEMBLERS"
   value = "LLVM_DISASSEMBLER"
+  all_targets = targets_with_disassemblers
 }
 
 write_target_def_file("Targets.def") {

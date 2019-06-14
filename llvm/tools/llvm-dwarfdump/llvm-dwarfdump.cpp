@@ -173,14 +173,14 @@ static alias RegexAlias("x", desc("Alias for -regex"), aliasopt(UseRegex));
 static opt<bool>
     ShowChildren("show-children",
                  desc("Show a debug info entry's children when selectively "
-                      "printing with the =<offset> option."),
+                      "printing entries."),
                  cat(DwarfDumpCategory));
 static alias ShowChildrenAlias("c", desc("Alias for -show-children."),
                                aliasopt(ShowChildren));
 static opt<bool>
     ShowParents("show-parents",
                 desc("Show a debug info entry's parents when selectively "
-                     "printing with the =<offset> option."),
+                     "printing entries."),
                 cat(DwarfDumpCategory));
 static alias ShowParentsAlias("p", desc("Alias for -show-parents."),
                               aliasopt(ShowParents));

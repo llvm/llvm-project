@@ -2,20 +2,18 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-readobj --sections %t | FileCheck %s
 
-## TODO: the output is still SHT_SYMTAB because we do not yet
-## support changing it.
 # CHECK:      Name: .symtab
-# CHECK-NEXT: Type: SHT_SYMTAB
+# CHECK-NEXT: Type: SHT_DYNAMIC
 
 --- !ELF
-FileHeader:      
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_REL
-  Machine:         EM_X86_64
-Sections:        
-  - Name:            .symtab
-    Type:            SHT_DYNAMIC
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .symtab
+    Type: SHT_DYNAMIC
 Symbols:
   - Name:    foo
     Binding: STB_GLOBAL

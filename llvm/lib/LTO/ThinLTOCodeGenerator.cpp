@@ -29,6 +29,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/PassTimingInfo.h"
+#include "llvm/IR/RemarkStreamer.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTO.h"
@@ -69,9 +70,9 @@ using namespace llvm;
 namespace llvm {
 // Flags -discard-value-names, defined in LTOCodeGenerator.cpp
 extern cl::opt<bool> LTODiscardValueNames;
-extern cl::opt<std::string> LTORemarksFilename;
-extern cl::opt<std::string> LTORemarksPasses;
-extern cl::opt<bool> LTOPassRemarksWithHotness;
+extern cl::opt<std::string> RemarksFilename;
+extern cl::opt<std::string> RemarksPasses;
+extern cl::opt<bool> RemarksWithHotness;
 }
 
 namespace {
@@ -1019,8 +1020,8 @@ void ThinLTOCodeGenerator::run() {
         Context.setDiscardValueNames(LTODiscardValueNames);
         Context.enableDebugTypeODRUniquing();
         auto DiagFileOrErr = lto::setupOptimizationRemarks(
-            Context, LTORemarksFilename, LTORemarksPasses,
-            LTOPassRemarksWithHotness, count);
+            Context, RemarksFilename, RemarksPasses,
+            RemarksWithHotness, count);
         if (!DiagFileOrErr) {
           errs() << "Error: " << toString(DiagFileOrErr.takeError()) << "\n";
           report_fatal_error("ThinLTO: Can't get an output file for the "

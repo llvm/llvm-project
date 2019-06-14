@@ -35,9 +35,9 @@ OPTIONS
 
 .. option:: -c, --show-children
 
-            Show a debug info entry's children when using
-            the :option:`--debug-info`, :option:`--find`,
-            and :option:`--name` options.
+            Show a debug info entry's children when selectively printing with
+            the `=<offset>` argument of :option:`--debug-info`, or options such
+            as :option:`--find` or :option:`--name`.
 
 .. option:: --color
 
@@ -88,9 +88,9 @@ OPTIONS
 
 .. option:: -p, --show-parents
 
-            Show a debug info entry's parent objects when using the
-            :option:`--debug-info`, :option:`--find`, and
-            :option:`--name` options.
+            Show a debug info entry's parents when selectively printing with
+            the `=<offset>` argument of :option:`--debug-info`, or options such
+            as :option:`--find` or :option:`--name`.
 
 .. option:: --parent-recurse-depth=<N>
 

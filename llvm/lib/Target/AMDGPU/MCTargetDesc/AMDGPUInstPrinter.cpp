@@ -1439,7 +1439,7 @@ void AMDGPUInstPrinter::printEndpgm(const MCInst *MI, unsigned OpNo,
     return;
   }
 
-  O << formatDec(Imm);
+  O << ' ' << formatDec(Imm);
 }
 
 #include "AMDGPUGenAsmWriter.inc"

@@ -2432,6 +2432,62 @@ define void @kill_true() {
 }
 
 ; --------------------------------------------------------------------
+; llvm.amdgcn.readfirstlane
+; --------------------------------------------------------------------
+
+declare i32 @llvm.amdgcn.readfirstlane(i32)
+
+@gv = constant i32 0
+
+define amdgpu_kernel void @readfirstlane_constant(i32 %arg) {
+; CHECK-LABEL: @readfirstlane_constant(
+; CHECK-NEXT: %var = call i32 @llvm.amdgcn.readfirstlane(i32 %arg)
+; CHECK-NEXT: store volatile i32 %var, i32* undef, align 4
+; CHECK-NEXT: store volatile i32 0, i32* undef, align 4
+; CHECK-NEXT: store volatile i32 123, i32* undef, align 4
+; CHECK-NEXT: store volatile i32 ptrtoint (i32* @gv to i32), i32* undef, align 4
+; CHECK-NEXT: store volatile i32 undef, i32* undef, align 4
+  %var = call i32 @llvm.amdgcn.readfirstlane(i32 %arg)
+  %zero = call i32 @llvm.amdgcn.readfirstlane(i32 0)
+  %imm = call i32 @llvm.amdgcn.readfirstlane(i32 123)
+  %constexpr = call i32 @llvm.amdgcn.readfirstlane(i32 ptrtoint (i32* @gv to i32))
+  %undef = call i32 @llvm.amdgcn.readfirstlane(i32 undef)
+  store volatile i32 %var, i32* undef
+  store volatile i32 %zero, i32* undef
+  store volatile i32 %imm, i32* undef
+  store volatile i32 %constexpr, i32* undef
+  store volatile i32 %undef, i32* undef
+  ret void
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.readlane
+; --------------------------------------------------------------------
+
+declare i32 @llvm.amdgcn.readlane(i32, i32)
+
+define amdgpu_kernel void @readlane_constant(i32 %arg, i32 %lane) {
+; CHECK-LABEL: @readlane_constant(
+; CHECK-NEXT: %var = call i32 @llvm.amdgcn.readlane(i32 %arg, i32 7)
+; CHECK-NEXT: store volatile i32 %var, i32* undef, align 4
+; CHECK-NEXT: store volatile i32 0, i32* undef, align 4
+; CHECK-NEXT: store volatile i32 123, i32* undef, align 4
+; CHECK-NEXT: store volatile i32 ptrtoint (i32* @gv to i32), i32* undef, align 4
+; CHECK-NEXT: store volatile i32 undef, i32* undef, align 4
+  %var = call i32 @llvm.amdgcn.readlane(i32 %arg, i32 7)
+  %zero = call i32 @llvm.amdgcn.readlane(i32 0, i32 %lane)
+  %imm = call i32 @llvm.amdgcn.readlane(i32 123, i32 %lane)
+  %constexpr = call i32 @llvm.amdgcn.readlane(i32 ptrtoint (i32* @gv to i32), i32 %lane)
+  %undef = call i32 @llvm.amdgcn.readlane(i32 undef, i32 %lane)
+  store volatile i32 %var, i32* undef
+  store volatile i32 %zero, i32* undef
+  store volatile i32 %imm, i32* undef
+  store volatile i32 %constexpr, i32* undef
+  store volatile i32 %undef, i32* undef
+  ret void
+}
+
+; --------------------------------------------------------------------
 ; llvm.amdgcn.update.dpp.i32
 ; --------------------------------------------------------------------
 

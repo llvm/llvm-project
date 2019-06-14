@@ -3776,6 +3776,13 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     II->setOperand(0, UndefValue::get(Old->getType()));
     return II;
   }
+  case Intrinsic::amdgcn_readfirstlane:
+  case Intrinsic::amdgcn_readlane: {
+    // A constant value is trivially uniform.
+    if (Constant *C = dyn_cast<Constant>(II->getArgOperand(0)))
+      return replaceInstUsesWith(*II, C);
+    break;
+  }
   case Intrinsic::stackrestore: {
     // If the save is right next to the restore, remove the restore.  This can
     // happen when variable allocas are DCE'd.

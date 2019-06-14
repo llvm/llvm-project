@@ -31,7 +31,6 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -43,7 +42,6 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -151,7 +149,7 @@ class IndVarSimplify {
   bool hasHardUserWithinLoop(const Loop *L, const Instruction *I) const;
 
   bool linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
-                                 const SCEV *ExitCount,
+                                 const SCEV *BackedgeTakenCount,
                                  PHINode *IndVar, SCEVExpander &Rewriter);
 
   bool sinkUnusedInvariants(Loop *L);
@@ -2079,48 +2077,6 @@ static bool needsLFTR(Loop *L, BasicBlock *ExitingBB) {
   return Phi != getLoopPhiForCounter(IncV, L);
 }
 
-/// Return true if undefined behavior would provable be executed on the path to
-/// OnPathTo if Root produced a posion result.  Note that this doesn't say
-/// anything about whether OnPathTo is actually executed or whether Root is
-/// actually poison.  This can be used to assess whether a new use of Root can
-/// be added at a location which is control equivalent with OnPathTo (such as
-/// immediately before it) without introducing UB which didn't previously
-/// exist.  Note that a false result conveys no information.  
-static bool mustExecuteUBIfPoisonOnPathTo(Instruction *Root,
-                                          Instruction *OnPathTo, 
-                                          DominatorTree *DT) {
-  // Basic approach is to assume Root is poison, propagate poison forward
-  // through all users we can easily track, and then check whether any of those
-  // users are provable UB and must execute before out exiting block might
-  // exit.
-
-  // The set of all recursive users we've visited (which are assumed to all be
-  // poison because of said visit)
-  SmallSet<const Value *, 16> KnownPoison;
-  SmallVector<const Instruction*, 16> Worklist;
-  Worklist.push_back(Root);
-  while (!Worklist.empty()) {
-    const Instruction *I = Worklist.pop_back_val();
-
-    // If we know this must trigger UB on a path leading our target.
-    if (mustTriggerUB(I, KnownPoison) && DT->dominates(I, OnPathTo))
-      return true;
-    
-    // If we can't analyze propagation through this instruction, just skip it
-    // and transitive users.  Safe as false is a conservative result.
-    if (!propagatesFullPoison(I) && I != Root)
-      continue;
-
-    if (KnownPoison.insert(I).second)
-      for (const User *User : I->users())
-        Worklist.push_back(cast<Instruction>(User));
-  }
-
-  // Might be non-UB, or might have a path we couldn't prove must execute on
-  // way to exiting bb. 
-  return false;
-}
-
 /// Recursive helper for hasConcreteDef(). Unfortunately, this currently boils
 /// down to checking that all operands are constant and listing instructions
 /// that may hide undef.
@@ -2209,8 +2165,7 @@ static bool isLoopCounter(PHINode* Phi, Loop *L,
 /// valid count without scaling the address stride, so it remains a pointer
 /// expression as far as SCEV is concerned.
 static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
-                                const SCEV *BECount,
-                                ScalarEvolution *SE, DominatorTree *DT) {
+                                const SCEV *BECount, ScalarEvolution *SE) {
   uint64_t BCWidth = SE->getTypeSizeInBits(BECount->getType());
 
   Value *Cond = cast<BranchInst>(ExitingBB->getTerminator())->getCondition();
@@ -2255,18 +2210,6 @@ static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
             continue;
     }
 
-    // Avoid introducing undefined behavior due to poison which didn't exist in
-    // the original program.  (Annoyingly, the rules for poison and undef
-    // propagation are distinct, so this does NOT cover the undef case above.)
-    // We have to ensure that we don't introduce UB by introducing a use on an
-    // iteration where said IV produces poison.  Our strategy here differs for
-    // pointers and integer IVs.  For integers, we strip and reinfer as needed,
-    // see code in linearFunctionTestReplace.  For pointers, we restrict
-    // transforms as there is no good way to reinfer inbounds once lost.
-    if (!Phi->getType()->isIntegerTy() &&
-        !mustExecuteUBIfPoisonOnPathTo(Phi, ExitingBB->getTerminator(), DT))
-      continue;
-    
     const SCEV *Init = AR->getStart();
 
     if (BestPhi && !AlmostDeadIV(BestPhi, LatchBlock, Cond)) {
@@ -2382,42 +2325,28 @@ static Value *genLoopLimit(PHINode *IndVar, BasicBlock *ExitingBB,
 /// determine a loop-invariant trip count of the loop, which is actually a much
 /// broader range than just linear tests.
 bool IndVarSimplify::
-linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB, const SCEV *ExitCount,
+linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
+                          const SCEV *BackedgeTakenCount,
                           PHINode *IndVar, SCEVExpander &Rewriter) {
-  assert(isLoopCounter(IndVar, L, SE));
-  assert(L->getLoopLatch() && "Loop no longer in simplified form?");
-  Instruction * const IncVar =
-    cast<Instruction>(IndVar->getIncomingValueForBlock(L->getLoopLatch()));
-
   // Initialize CmpIndVar and IVCount to their preincremented values.
   Value *CmpIndVar = IndVar;
-  const SCEV *IVCount = ExitCount;
+  const SCEV *IVCount = BackedgeTakenCount;
+
+  assert(L->getLoopLatch() && "Loop no longer in simplified form?");
 
   // If the exiting block is the same as the backedge block, we prefer to
   // compare against the post-incremented value, otherwise we must compare
   // against the preincremented value.
   if (ExitingBB == L->getLoopLatch()) {
-    bool SafeToPostInc = IndVar->getType()->isIntegerTy();
-    if (!SafeToPostInc) {
-      // For pointer IVs, we chose to not strip inbounds which requires us not
-      // to add a potentially UB introducing use.  We need to either a) show
-      // the loop test we're modifying is already in post-inc form, or b) show
-      // that adding a use must not introduce UB.
-      ICmpInst *LoopTest = getLoopTest(L, ExitingBB);
-      SafeToPostInc = LoopTest->getOperand(0) == IncVar ||
-        LoopTest->getOperand(1) == IncVar ||
-        mustExecuteUBIfPoisonOnPathTo(IncVar, ExitingBB->getTerminator(), DT);
-    }
-    if (SafeToPostInc) {
-      // Add one to the "backedge-taken" count to get the trip count.
-      // This addition may overflow, which is valid as long as the comparison
-      // is truncated to ExitCount->getType().
-      IVCount = SE->getAddExpr(ExitCount, SE->getOne(ExitCount->getType()));
-      // The ExitCount expression contains the number of times that the
-      // backedge branches to the loop header.  This is one less than the
-      // number of times the loop executes, so use the incremented indvar.
-      CmpIndVar = IncVar;
-    }
+    // Add one to the "backedge-taken" count to get the trip count.
+    // This addition may overflow, which is valid as long as the comparison is
+    // truncated to BackedgeTakenCount->getType().
+    IVCount = SE->getAddExpr(BackedgeTakenCount,
+                             SE->getOne(BackedgeTakenCount->getType()));
+    // The BackedgeTaken expression contains the number of times that the
+    // backedge branches to the loop header.  This is one less than the
+    // number of times the loop executes, so use the incremented indvar.
+    CmpIndVar = IndVar->getIncomingValueForBlock(ExitingBB);
   }
 
   // It may be necessary to drop nowrap flags on the incrementing instruction
@@ -2432,6 +2361,7 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB, const SCEV *ExitCount,
   // dynamically dead IV that wraps on the first loop iteration only, which is
   // not covered by the post-inc addrec. (If the new IV was not dynamically
   // dead, it could not be poison on the first iteration in the first place.)
+  Value *IncVar = IndVar->getIncomingValueForBlock(L->getLoopLatch());
   if (auto *BO = dyn_cast<BinaryOperator>(IncVar)) {
     const SCEVAddRecExpr *AR = cast<SCEVAddRecExpr>(SE->getSCEV(IncVar));
     if (BO->hasNoUnsignedWrap())
@@ -2479,9 +2409,9 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB, const SCEV *ExitCount,
     if (isa<SCEVConstant>(ARStart) && isa<SCEVConstant>(IVCount)) {
       const APInt &Start = cast<SCEVConstant>(ARStart)->getAPInt();
       APInt Count = cast<SCEVConstant>(IVCount)->getAPInt();
-      // Note that the post-inc value of ExitCount may have overflowed
+      // Note that the post-inc value of BackedgeTakenCount may have overflowed
       // above such that IVCount is now zero.
-      if (IVCount != ExitCount && Count == 0) {
+      if (IVCount != BackedgeTakenCount && Count == 0) {
         Count = APInt::getMaxValue(Count.getBitWidth()).zext(CmpIndVarSize);
         ++Count;
       }
@@ -2708,21 +2638,21 @@ bool IndVarSimplify::run(Loop *L) {
       if (!needsLFTR(L, ExitingBB))
         continue;
 
-      const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
-      if (isa<SCEVCouldNotCompute>(ExitCount))
+      const SCEV *BETakenCount = SE->getExitCount(L, ExitingBB);
+      if (isa<SCEVCouldNotCompute>(BETakenCount))
         continue;
 
       // Better to fold to true (TODO: do so!)
-      if (ExitCount->isZero())
+      if (BETakenCount->isZero())
         continue;
       
-      PHINode *IndVar = FindLoopCounter(L, ExitingBB, ExitCount, SE, DT);
+      PHINode *IndVar = FindLoopCounter(L, ExitingBB, BETakenCount, SE);
       if (!IndVar)
         continue;
       
       // Avoid high cost expansions.  Note: This heuristic is questionable in
       // that our definition of "high cost" is not exactly principled.  
-      if (Rewriter.isHighCostExpansion(ExitCount, L))
+      if (Rewriter.isHighCostExpansion(BETakenCount, L))
         continue;
       
       // Check preconditions for proper SCEVExpander operation. SCEV does not
@@ -2734,9 +2664,10 @@ bool IndVarSimplify::run(Loop *L) {
       //
       // FIXME: SCEV expansion has no way to bail out, so the caller must
       // explicitly check any assumptions made by SCEV. Brittle.
-      const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(ExitCount);
+      const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(BETakenCount);
       if (!AR || AR->getLoop()->getLoopPreheader())
-        Changed |= linearFunctionTestReplace(L, ExitingBB, ExitCount, IndVar,
+        Changed |= linearFunctionTestReplace(L, ExitingBB,
+                                             BETakenCount, IndVar,
                                              Rewriter);
     }
   }

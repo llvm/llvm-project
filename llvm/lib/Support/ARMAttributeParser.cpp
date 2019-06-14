@@ -696,7 +696,7 @@ void ARMAttributeParser::ParseSubsection(const uint8_t *Data, uint32_t Length) {
 }
 
 void ARMAttributeParser::Parse(ArrayRef<uint8_t> Section, bool isLittle) {
-  size_t Offset = 1;
+  uint64_t Offset = 1;
   unsigned SectionNumber = 0;
 
   while (Offset < Section.size()) {

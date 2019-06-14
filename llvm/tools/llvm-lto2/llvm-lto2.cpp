@@ -91,20 +91,21 @@ static cl::opt<std::string> DefaultTriple(
     cl::desc(
         "Replace unspecified target triples in input files with this triple"));
 
-static cl::opt<std::string>
-    OptRemarksOutput("pass-remarks-output",
-                     cl::desc("YAML output file for optimization remarks"));
-
-static cl::opt<bool> OptRemarksWithHotness(
+static cl::opt<bool> RemarksWithHotness(
     "pass-remarks-with-hotness",
-    cl::desc("Whether to include hotness informations in the remarks.\n"
-             "Has effect only if -pass-remarks-output is specified."));
+    cl::desc("With PGO, include profile count in optimization remarks"),
+    cl::Hidden);
 
 static cl::opt<std::string>
-    OptRemarksPasses("pass-remarks-filter",
-                     cl::desc("Only record optimization remarks from passes "
-                              "whose names match the given regular expression"),
-                     cl::value_desc("regex"));
+    RemarksFilename("pass-remarks-output",
+                    cl::desc("Output filename for pass remarks"),
+                    cl::value_desc("filename"));
+
+static cl::opt<std::string>
+    RemarksPasses("pass-remarks-filter",
+                  cl::desc("Only record optimization remarks from passes whose "
+                           "names match the given regular expression"),
+                  cl::value_desc("regex"));
 
 static cl::opt<std::string>
     SamplePGOFile("lto-sample-profile-file",
@@ -225,9 +226,9 @@ static int run(int argc, char **argv) {
           "Config::addSaveTemps failed");
 
   // Optimization remarks.
-  Conf.RemarksFilename = OptRemarksOutput;
-  Conf.RemarksPasses = OptRemarksPasses;
-  Conf.RemarksWithHotness = OptRemarksWithHotness;
+  Conf.RemarksFilename = RemarksFilename;
+  Conf.RemarksPasses = RemarksPasses;
+  Conf.RemarksWithHotness = RemarksWithHotness;
 
   Conf.SampleProfile = SamplePGOFile;
   Conf.CSIRProfile = CSPGOFile;

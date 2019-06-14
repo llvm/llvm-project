@@ -266,6 +266,322 @@ def VABAVu8  : t2VABAV<"u8", 0b1, 0b00>;
 def VABAVu16 : t2VABAV<"u16", 0b1, 0b01>;
 def VABAVu32 : t2VABAV<"u32", 0b1, 0b10>;
 
+class t2VADDV<string iname, string suffix, dag iops, string cstr,
+              bit A, bit U, bits<2> size, list<dag> pattern=[]>
+  : MVE_rDest<(outs tGPREven:$Rda), iops, NoItinerary,
+              iname, suffix, "$Rda, $Qm", cstr, pattern> {
+  bits<3> Qm;
+  bits<4> Rda;
+
+  let Inst{28} = U;
+  let Inst{22-20} = 0b111;
+  let Inst{19-18} = size{1-0};
+  let Inst{17-16} = 0b01;
+  let Inst{15-13} = Rda{3-1};
+  let Inst{12} = 0b0;
+  let Inst{8-6} = 0b100;
+  let Inst{5} = A;
+  let Inst{3-1} = Qm{2-0};
+  let Inst{0} = 0b0;
+}
+
+multiclass t2VADDV_A<string suffix, bit U, bits<2> size, list<dag> pattern=[]> {
+  def acc    : t2VADDV<"vaddva", suffix,
+                       (ins tGPREven:$Rda_src, MQPR:$Qm), "$Rda = $Rda_src",
+                       0b1, U, size, pattern>;
+  def no_acc : t2VADDV<"vaddv", suffix,
+                       (ins MQPR:$Qm), "",
+                       0b0, U, size, pattern>;
+}
+
+defm VADDVs8  : t2VADDV_A<"s8",  0b0, 0b00>;
+defm VADDVs16 : t2VADDV_A<"s16", 0b0, 0b01>;
+defm VADDVs32 : t2VADDV_A<"s32", 0b0, 0b10>;
+defm VADDVu8  : t2VADDV_A<"u8",  0b1, 0b00>;
+defm VADDVu16 : t2VADDV_A<"u16", 0b1, 0b01>;
+defm VADDVu32 : t2VADDV_A<"u32", 0b1, 0b10>;
+
+class t2VADDLV<string iname, string suffix, dag iops, string cstr,
+               bit A, bit U, list<dag> pattern=[]>
+  : MVE_rDest<(outs tGPREven:$RdaLo, tGPROdd:$RdaHi), iops, NoItinerary, iname,
+              suffix, "$RdaLo, $RdaHi, $Qm", cstr, pattern> {
+  bits<3> Qm;
+  bits<4> RdaLo;
+  bits<4> RdaHi;
+
+  let Inst{28} = U;
+  let Inst{22-20} = RdaHi{3-1};
+  let Inst{19-18} = 0b10;
+  let Inst{17-16} = 0b01;
+  let Inst{15-13} = RdaLo{3-1};
+  let Inst{12} = 0b0;
+  let Inst{8-6} = 0b100;
+  let Inst{5} = A;
+  let Inst{3-1} = Qm{2-0};
+  let Inst{0} = 0b0;
+}
+
+multiclass t2VADDLV_A<string suffix, bit U, list<dag> pattern=[]> {
+  def acc    : t2VADDLV<"vaddlva", suffix,
+                        (ins tGPREven:$RdaLo_src, tGPROdd:$RdaHi_src, MQPR:$Qm),
+                        "$RdaLo = $RdaLo_src,$RdaHi = $RdaHi_src",
+                        0b1, U, pattern>;
+  def no_acc : t2VADDLV<"vaddlv", suffix,
+                        (ins MQPR:$Qm), "",
+                        0b0, U, pattern>;
+}
+
+
+defm VADDLVs32 : t2VADDLV_A<"s32", 0b0>;
+defm VADDLVu32 : t2VADDLV_A<"u32", 0b1>;
+
+class t2VMINMAXNMV<string iname, string suffix, bit sz, bit bit_17, bit bit_7,
+                   list<dag> pattern=[]>
+  : MVE_rDest<(outs rGPR:$RdaDest), (ins rGPR:$RdaSrc, MQPR:$Qm),
+              NoItinerary, iname, suffix, "$RdaSrc, $Qm",
+              "$RdaDest = $RdaSrc", pattern> {
+  bits<3> Qm;
+  bits<4> RdaDest;
+
+  let Inst{28} = sz;
+  let Inst{22-20} = 0b110;
+  let Inst{19-18} = 0b11;
+  let Inst{17} = bit_17;
+  let Inst{16} = 0b0;
+  let Inst{15-12} = RdaDest{3-0};
+  let Inst{8} = 0b1;
+  let Inst{7} = bit_7;
+  let Inst{6-5} = 0b00;
+  let Inst{3-1} = Qm{2-0};
+  let Inst{0} = 0b0;
+
+  let Predicates = [HasMVEFloat];
+}
+
+multiclass t2VMINMAXNMV_fty<string iname, bit bit_7, list<dag> pattern=[]> {
+  def f32 : t2VMINMAXNMV<iname, "f32", 0b0, 0b1, bit_7, pattern>;
+  def f16 : t2VMINMAXNMV<iname, "f16", 0b1, 0b1, bit_7, pattern>;
+}
+
+defm VMINNMV : t2VMINMAXNMV_fty<"vminnmv", 0b1>;
+defm VMAXNMV : t2VMINMAXNMV_fty<"vmaxnmv", 0b0>;
+
+multiclass t2VMINMAXNMAV_fty<string iname, bit bit_7, list<dag> pattern=[]> {
+  def f32 : t2VMINMAXNMV<iname, "f32", 0b0, 0b0, bit_7, pattern>;
+  def f16 : t2VMINMAXNMV<iname, "f16", 0b1, 0b0, bit_7, pattern>;
+}
+
+defm VMINNMAV : t2VMINMAXNMAV_fty<"vminnmav", 0b1>;
+defm VMAXNMAV : t2VMINMAXNMAV_fty<"vmaxnmav", 0b0>;
+
+class t2VMINMAXV<string iname, string suffix, bit U, bits<2> size,
+                 bit bit_17, bit bit_7, list<dag> pattern=[]>
+  : MVE_rDest<(outs rGPR:$RdaDest), (ins rGPR:$RdaSrc, MQPR:$Qm), NoItinerary,
+              iname, suffix, "$RdaSrc, $Qm", "$RdaDest = $RdaSrc", pattern> {
+  bits<3> Qm;
+  bits<4> RdaDest;
+
+  let Inst{28} = U;
+  let Inst{22-20} = 0b110;
+  let Inst{19-18} = size{1-0};
+  let Inst{17} = bit_17;
+  let Inst{16} = 0b0;
+  let Inst{15-12} = RdaDest{3-0};
+  let Inst{8} = 0b1;
+  let Inst{7} = bit_7;
+  let Inst{6-5} = 0b00;
+  let Inst{3-1} = Qm{2-0};
+  let Inst{0} = 0b0;
+}
+
+multiclass t2VMINMAXV_ty<string iname, bit bit_7, list<dag> pattern=[]> {
+  def s8  : t2VMINMAXV<iname, "s8",  0b0, 0b00, 0b1, bit_7>;
+  def s16 : t2VMINMAXV<iname, "s16", 0b0, 0b01, 0b1, bit_7>;
+  def s32 : t2VMINMAXV<iname, "s32", 0b0, 0b10, 0b1, bit_7>;
+  def u8  : t2VMINMAXV<iname, "u8",  0b1, 0b00, 0b1, bit_7>;
+  def u16 : t2VMINMAXV<iname, "u16", 0b1, 0b01, 0b1, bit_7>;
+  def u32 : t2VMINMAXV<iname, "u32", 0b1, 0b10, 0b1, bit_7>;
+}
+
+// Prefixed with MVE to prevent conflict with A57 scheduler.
+defm MVE_VMINV : t2VMINMAXV_ty<"vminv", 0b1>;
+defm MVE_VMAXV : t2VMINMAXV_ty<"vmaxv", 0b0>;
+
+multiclass t2VMINMAXAV_ty<string iname, bit bit_7, list<dag> pattern=[]> {
+  def s8  : t2VMINMAXV<iname, "s8",  0b0, 0b00, 0b0, bit_7>;
+  def s16 : t2VMINMAXV<iname, "s16", 0b0, 0b01, 0b0, bit_7>;
+  def s32 : t2VMINMAXV<iname, "s32", 0b0, 0b10, 0b0, bit_7>;
+}
+
+defm MVE_VMINAV : t2VMINMAXAV_ty<"vminav", 0b1>;
+defm MVE_VMAXAV : t2VMINMAXAV_ty<"vmaxav", 0b0>;
+
+class t2VMLAMLSDAV<string iname, string suffix, dag iops, string cstr,
+                   bit sz, bit bit_28, bit A, bit X, bit bit_8, bit bit_0,
+                   list<dag> pattern=[]>
+  : MVE_rDest<(outs tGPREven:$RdaDest), iops, NoItinerary, iname, suffix,
+              "$RdaDest, $Qn, $Qm", cstr, pattern> {
+  bits<4> RdaDest;
+  bits<3> Qm;
+  bits<3> Qn;
+
+  let Inst{28} = bit_28;
+  let Inst{22-20} = 0b111;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{16} = sz;
+  let Inst{15-13} = RdaDest{3-1};
+  let Inst{12} = X;
+  let Inst{8} = bit_8;
+  let Inst{7-6} = 0b00;
+  let Inst{5} = A;
+  let Inst{3-1} = Qm{2-0};
+  let Inst{0} = bit_0;
+}
+
+multiclass t2VMLAMLSDAV_X<string iname, string suffix, dag iops, string cstr,
+                          bit sz, bit bit_28, bit A, bit bit_8, bit bit_0,
+                          list<dag> pattern=[]> {
+  def _noexch : t2VMLAMLSDAV<iname, suffix, iops, cstr, sz,
+                            bit_28, A, 0b0, bit_8, bit_0, pattern>;
+  def _exch   : t2VMLAMLSDAV<iname # "x", suffix, iops, cstr, sz,
+                            bit_28, A, 0b1, bit_8, bit_0, pattern>;
+}
+
+multiclass t2VMLAMLSDAV_XA<string iname, string suffix, bit sz, bit bit_28,
+                           bit bit_8, bit bit_0, list<dag> pattern=[]> {
+  defm _noacc : t2VMLAMLSDAV_X<iname, suffix, (ins MQPR:$Qn, MQPR:$Qm), "",
+                              sz, bit_28, 0b0, bit_8, bit_0, pattern>;
+  defm _acc   : t2VMLAMLSDAV_X<iname # "a", suffix,
+                             (ins tGPREven:$RdaSrc, MQPR:$Qn, MQPR:$Qm),
+                             "$RdaDest = $RdaSrc",
+                              sz, bit_28, 0b1, bit_8, bit_0, pattern>;
+}
+
+multiclass t2VMLADAV_multi<string suffix, bit sz, bit U, bit bit_8,
+                           list<dag> pattern=[]> {
+  defm "" : t2VMLAMLSDAV_XA<"vmladav", suffix, sz, U, bit_8, 0b0, pattern>;
+}
+
+defm VMLADAVs16 : t2VMLADAV_multi<"s16", 0b0, 0b0, 0b0>;
+defm VMLADAVs32 : t2VMLADAV_multi<"s32", 0b1, 0b0, 0b0>;
+defm VMLADAVu16 : t2VMLADAV_multi<"u16", 0b0, 0b1, 0b0>;
+defm VMLADAVu32 : t2VMLADAV_multi<"u32", 0b1, 0b1, 0b0>;
+
+defm VMLADAVs8 : t2VMLADAV_multi<"s8", 0b0, 0b0, 0b1>;
+defm VMLADAVu8 : t2VMLADAV_multi<"u8", 0b0, 0b1, 0b1>;
+
+// vmlav aliases vmladav
+foreach acc = ["_acc", "_noacc"] in {
+  foreach suffix = ["s8", "s16", "s32", "u8", "u16", "u32"] in {
+    def : MVEInstAlias<!strconcat("vmlav", !if(!eq(acc, "_acc"), "a", ""),
+                       "${vp}.", suffix, "\t$RdaDest, $Qn, $Qm"),
+                       (!cast<Instruction>(!strconcat("VMLADAV", suffix, acc, "_noexch")) tGPREven:$RdaDest, MQPR:$Qn, MQPR:$Qm, vpred_n:$vp)>;
+  }
+}
+
+multiclass t2VMLSDAV_multi<string suffix, bit sz, bit bit_28,
+                           list<dag> pattern=[]> {
+  defm "" : t2VMLAMLSDAV_XA<"vmlsdav", suffix, sz, bit_28, 0b0, 0b1, pattern>;
+}
+
+defm t2VMLSDAVs8  : t2VMLSDAV_multi<"s8", 0, 0b1>;
+defm t2VMLSDAVs16 : t2VMLSDAV_multi<"s16", 0, 0b0>;
+defm t2VMLSDAVs32 : t2VMLSDAV_multi<"s32", 1, 0b0>;
+
+// Base class for VMLALDAV and VMLSLDAV, VRMLALDAVH, VRMLSLDAVH
+class t2VMLALDAVBase<string iname, string suffix, dag iops, string cstr, bit sz,
+                     bit bit_28, bit A, bit X, bit bit_8, bit bit_0,
+                     list<dag> pattern=[]>
+  : MVE_rDest<(outs tGPREven:$RdaLoDest, tGPROdd:$RdaHiDest), iops, NoItinerary,
+              iname, suffix, "$RdaLoDest, $RdaHiDest, $Qn, $Qm", cstr, pattern> {
+  bits<4> RdaLoDest;
+  bits<4> RdaHiDest;
+  bits<3> Qm;
+  bits<3> Qn;
+
+  let Inst{28} = bit_28;
+  let Inst{22-20} = RdaHiDest{3-1};
+  let Inst{19-17} = Qn{2-0};
+  let Inst{16} = sz;
+  let Inst{15-13} = RdaLoDest{3-1};
+  let Inst{12} = X;
+  let Inst{8} = bit_8;
+  let Inst{7-6} = 0b00;
+  let Inst{5} = A;
+  let Inst{3-1} = Qm{2-0};
+  let Inst{0} = bit_0;
+}
+
+multiclass t2VMLALDAVBase_X<string iname, string suffix, dag iops, string cstr,
+                          bit sz, bit bit_28, bit A, bit bit_8, bit bit_0,
+                          list<dag> pattern=[]> {
+  def _noexch : t2VMLALDAVBase<iname, suffix, iops, cstr, sz,
+                               bit_28, A, 0b0, bit_8, bit_0, pattern>;
+  def _exch   : t2VMLALDAVBase<iname # "x", suffix, iops, cstr, sz,
+                               bit_28, A, 0b1, bit_8, bit_0, pattern>;
+}
+
+multiclass t2VMLALDAVBase_XA<string iname, string suffix, bit sz, bit bit_28,
+                             bit bit_8, bit bit_0, list<dag> pattern=[]> {
+  defm _noacc : t2VMLALDAVBase_X<iname, suffix,
+                                 (ins MQPR:$Qn, MQPR:$Qm), "",
+                                 sz, bit_28, 0b0, bit_8, bit_0, pattern>;
+  defm _acc   : t2VMLALDAVBase_X<iname # "a", suffix,
+                                 (ins tGPREven:$RdaLoSrc, tGPROdd:$RdaHiSrc, MQPR:$Qn, MQPR:$Qm),
+                                 "$RdaLoDest = $RdaLoSrc,$RdaHiDest = $RdaHiSrc",
+                                 sz, bit_28, 0b1, bit_8, bit_0, pattern>;
+}
+
+multiclass t2VRMLALDAVH_multi<string suffix, bit U, list<dag> pattern=[]> {
+  defm "" : t2VMLALDAVBase_XA<"vrmlaldavh", suffix, 0b0, U, 0b1, 0b0, pattern>;
+}
+
+defm t2VRMLALDAVHs32 : t2VRMLALDAVH_multi<"s32", 0>;
+defm t2VRMLALDAVHu32 : t2VRMLALDAVH_multi<"u32", 1>;
+
+// vrmlalvh aliases for vrmlaldavh
+def : MVEInstAlias<"vrmlalvh${vp}.s32\t$RdaLo, $RdaHi, $Qn, $Qm",
+                  (t2VRMLALDAVHs32_noacc_noexch tGPREven:$RdaLo, tGPROdd:$RdaHi,
+                   MQPR:$Qn, MQPR:$Qm, vpred_n:$vp)>;
+def : MVEInstAlias<"vrmlalvha${vp}.s32\t$RdaLo, $RdaHi, $Qn, $Qm",
+                  (t2VRMLALDAVHs32_acc_noexch tGPREven:$RdaLo, tGPROdd:$RdaHi,
+                   MQPR:$Qn, MQPR:$Qm, vpred_n:$vp)>;
+def : MVEInstAlias<"vrmlalvh${vp}.u32\t$RdaLo, $RdaHi, $Qn, $Qm",
+                  (t2VRMLALDAVHu32_noacc_noexch tGPREven:$RdaLo, tGPROdd:$RdaHi,
+                   MQPR:$Qn, MQPR:$Qm, vpred_n:$vp)>;
+def : MVEInstAlias<"vrmlalvha${vp}.u32\t$RdaLo, $RdaHi, $Qn, $Qm",
+                  (t2VRMLALDAVHu32_acc_noexch tGPREven:$RdaLo, tGPROdd:$RdaHi,
+                   MQPR:$Qn, MQPR:$Qm, vpred_n:$vp)>;
+
+multiclass t2VMLALDAV_multi<string suffix, bit sz, bit U, list<dag> pattern=[]> {
+  defm "" : t2VMLALDAVBase_XA<"vmlaldav", suffix, sz, U, 0b0, 0b0, pattern>;
+}
+
+defm VMLALDAVs16 : t2VMLALDAV_multi<"s16", 0b0, 0b0>;
+defm VMLALDAVs32 : t2VMLALDAV_multi<"s32", 0b1, 0b0>;
+defm VMLALDAVu16 : t2VMLALDAV_multi<"u16", 0b0, 0b1>;
+defm VMLALDAVu32 : t2VMLALDAV_multi<"u32", 0b1, 0b1>;
+
+// vmlalv aliases vmlaldav
+foreach acc = ["_acc", "_noacc"] in {
+  foreach suffix = ["s16", "s32", "u16", "u32"] in {
+    def : MVEInstAlias<!strconcat("vmlalv", !if(!eq(acc, "_acc"), "a", ""),
+                       "${vp}.", suffix, "\t$RdaLoDest, $RdaHiDest, $Qn, $Qm"),
+                       (!cast<Instruction>(!strconcat("VMLALDAV", suffix, acc, "_noexch"))
+                       tGPREven:$RdaLoDest, tGPROdd:$RdaHiDest,
+                       MQPR:$Qn, MQPR:$Qm, vpred_n:$vp)>;
+  }
+}
+
+multiclass t2VMLSLDAV_multi<string iname, string suffix, bit sz,
+                            bit bit_28, list<dag> pattern=[]> {
+  defm "" : t2VMLALDAVBase_XA<iname, suffix, sz, bit_28, 0b0, 0b1, pattern>;
+}
+
+defm t2VMLSLDAVs16   : t2VMLSLDAV_multi<"vmlsldav", "s16", 0b0, 0b0>;
+defm t2VMLSLDAVs32   : t2VMLSLDAV_multi<"vmlsldav", "s32", 0b1, 0b0>;
+defm t2VRMLSLDAVHs32 : t2VMLSLDAV_multi<"vrmlsldavh", "s32", 0b0, 0b1>;
+
 // end of mve_rDest instructions
 
 // start of mve_comp instructions

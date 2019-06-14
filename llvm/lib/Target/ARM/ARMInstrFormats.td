@@ -366,6 +366,8 @@ class VFP3InstAlias<string Asm, dag Result, bit EmitPriority = 0>
       : InstAlias<Asm, Result, EmitPriority>, Requires<[HasVFP3]>;
 class NEONInstAlias<string Asm, dag Result, bit EmitPriority = 0>
       : InstAlias<Asm, Result, EmitPriority>, Requires<[HasNEON]>;
+class MVEInstAlias<string Asm, dag Result, bit EmitPriority = 1>
+      : InstAlias<Asm, Result, EmitPriority>, Requires<[HasMVEInt, IsThumb]>;
 
 
 class VFP2MnemonicAlias<string src, string dst> : MnemonicAlias<src, dst>,

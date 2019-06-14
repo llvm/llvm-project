@@ -218,7 +218,7 @@ InlineCost AMDGPUInliner::getInlineCost(CallSite CS) {
                              LocalParams, TTI, GetAssumptionCache, None, PSI,
                              RemarksEnabled ? &ORE : nullptr);
 
-  if (IC && !IC.isAlways()) {
+  if (IC && !IC.isAlways() && !Callee->hasFnAttribute(Attribute::InlineHint)) {
     // Single BB does not increase total BB amount, thus subtract 1
     size_t Size = Caller->size() + Callee->size() - 1;
     if (MaxBB && Size > MaxBB)

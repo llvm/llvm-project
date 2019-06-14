@@ -685,3 +685,28 @@ ARMCC::CondCodes llvm::getITInstrPredicate(const MachineInstr &MI,
     return ARMCC::AL;
   return getInstrPredicate(MI, PredReg);
 }
+
+int llvm::findFirstVPTPredOperandIdx(const MachineInstr &MI) {
+  const MCInstrDesc &MCID = MI.getDesc();
+
+  if (!MCID.OpInfo)
+    return -1;
+
+  for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i)
+    if (ARM::isVpred(MCID.OpInfo[i].OperandType))
+      return i;
+
+  return -1;
+}
+
+ARMVCC::VPTCodes llvm::getVPTInstrPredicate(const MachineInstr &MI,
+                                            unsigned &PredReg) {
+  int PIdx = findFirstVPTPredOperandIdx(MI);
+  if (PIdx == -1) {
+    PredReg = 0;
+    return ARMVCC::None;
+  }
+
+  PredReg = MI.getOperand(PIdx+1).getReg();
+  return (ARMVCC::VPTCodes)MI.getOperand(PIdx).getImm();
+}

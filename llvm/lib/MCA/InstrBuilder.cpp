@@ -65,6 +65,17 @@ static void initializeUsedResources(InstrDesc &ID,
   for (unsigned I = 0, E = SCDesc.NumWriteProcResEntries; I < E; ++I) {
     const MCWriteProcResEntry *PRE = STI.getWriteProcResBegin(&SCDesc) + I;
     const MCProcResourceDesc &PR = *SM.getProcResource(PRE->ProcResourceIdx);
+    if (!PRE->Cycles) {
+#ifndef NDEBUG
+      WithColor::warning()
+          << "Ignoring invalid write of zero cycles on processor resource "
+          << PR.Name << "\n";
+      WithColor::note() << "found in scheduling class " << SCDesc.Name
+                        << " (write index #" << I << ")\n";
+#endif
+      continue;
+    }
+
     uint64_t Mask = ProcResourceMasks[PRE->ProcResourceIdx];
     if (PR.BufferSize < 0) {
       AllInOrderResources = false;
@@ -189,8 +200,9 @@ static void initializeUsedResources(InstrDesc &ID,
              << "cy=" << R.second.size() << '\n';
     for (const uint64_t R : ID.Buffers)
       dbgs() << "\t\tBuffer Mask=" << format_hex(R, 16) << '\n';
-    dbgs()   << "\t\t Used Units=" << format_hex(ID.UsedProcResUnits, 16) << '\n';
-    dbgs()   << "\t\tUsed Groups=" << format_hex(ID.UsedProcResGroups, 16) << '\n';
+    dbgs() << "\t\t Used Units=" << format_hex(ID.UsedProcResUnits, 16) << '\n';
+    dbgs() << "\t\tUsed Groups=" << format_hex(ID.UsedProcResGroups, 16)
+           << '\n';
   });
 }
 

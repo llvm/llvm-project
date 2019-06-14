@@ -1338,34 +1338,22 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
 }
 
 Expected<std::unique_ptr<ToolOutputFile>>
-lto::setupOptimizationRemarks(LLVMContext &Context,
-                              StringRef LTORemarksFilename,
-                              StringRef LTORemarksPasses,
-                              bool LTOPassRemarksWithHotness, int Count) {
-  if (LTOPassRemarksWithHotness)
-    Context.setDiagnosticsHotnessRequested(true);
-  if (LTORemarksFilename.empty())
-    return nullptr;
-
-  std::string Filename = LTORemarksFilename;
-  if (Count != -1)
+lto::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
+                              StringRef RemarksPasses, bool RemarksWithHotness,
+                              int Count) {
+  std::string Filename = RemarksFilename;
+  if (!Filename.empty() && Count != -1)
     Filename += ".thin." + llvm::utostr(Count) + ".yaml";
 
-  std::error_code EC;
-  auto DiagnosticFile =
-      llvm::make_unique<ToolOutputFile>(Filename, EC, sys::fs::F_None);
-  if (EC)
-    return errorCodeToError(EC);
-  Context.setRemarkStreamer(llvm::make_unique<RemarkStreamer>(
-      Filename,
-      llvm::make_unique<remarks::YAMLSerializer>(DiagnosticFile->os())));
+  auto ResultOrErr = llvm::setupOptimizationRemarks(
+      Context, Filename, RemarksPasses, RemarksWithHotness);
+  if (Error E = ResultOrErr.takeError())
+    return std::move(E);
 
-  if (!LTORemarksPasses.empty())
-    if (Error E = Context.getRemarkStreamer()->setFilter(LTORemarksPasses))
-      return std::move(E);
+  if (*ResultOrErr)
+    (*ResultOrErr)->keep();
 
-  DiagnosticFile->keep();
-  return std::move(DiagnosticFile);
+  return ResultOrErr;
 }
 
 Expected<std::unique_ptr<ToolOutputFile>>
