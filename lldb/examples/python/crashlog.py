@@ -58,7 +58,7 @@ except ImportError:
     platform_system = platform.system()
     if platform_system == 'Darwin':
         # On Darwin, try the currently selected Xcode directory
-        xcode_dir = subprocess.check_output("xcode-select --print-path", shell=True)
+        xcode_dir = subprocess.check_output("xcode-select --print-path", shell=True).decode("utf-8")
         if xcode_dir:
             lldb_python_dirs.append(
                 os.path.realpath(
@@ -232,7 +232,7 @@ class CrashLog(symbolication.Symbolicator):
         if not os.path.exists(dsymForUUIDBinary):
             try:
                 dsymForUUIDBinary = subprocess.check_output('which dsymForUUID',
-                                                            shell=True).rstrip('\n')
+                                                            shell=True).decode("utf-8").rstrip('\n')
             except:
                 dsymForUUIDBinary = ""
 
@@ -300,7 +300,7 @@ class CrashLog(symbolication.Symbolicator):
             if os.path.exists(self.dsymForUUIDBinary):
                 dsym_for_uuid_command = '%s %s' % (
                     self.dsymForUUIDBinary, uuid_str)
-                s = subprocess.check_output(dsym_for_uuid_command, shell=True)
+                s = subprocess.check_output(dsym_for_uuid_command, shell=True).decode("utf-8")
                 if s:
                     try:
                         plist_root = read_plist(s)
@@ -326,7 +326,7 @@ class CrashLog(symbolication.Symbolicator):
                 try:
                     dsym = subprocess.check_output(
                         ["/usr/bin/mdfind",
-                         "com_apple_xcode_dsym_uuids == %s"%uuid_str])[:-1]
+                         "com_apple_xcode_dsym_uuids == %s"%uuid_str]).decode("utf-8")[:-1]
                     if dsym and os.path.exists(dsym):
                         print(('falling back to binary inside "%s"'%dsym))
                         self.symfile = dsym
@@ -764,7 +764,7 @@ def save_crashlog(debugger, command, exe_ctx, result, dict):
                        (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
         out_file.write(
             'OS Version:      Mac OS X %s (%s)\n' %
-            (platform.mac_ver()[0], subprocess.check_output('sysctl -n kern.osversion', shell=True)))
+            (platform.mac_ver()[0], subprocess.check_output('sysctl -n kern.osversion', shell=True).decode("utf-8")))
         out_file.write('Report Version:  9\n')
         for thread_idx in range(process.num_threads):
             thread = process.thread[thread_idx]
