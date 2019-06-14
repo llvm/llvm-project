@@ -5969,9 +5969,7 @@ SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   if (swift_can_type->hasTypeParameter()) {
     if (!exe_scope)
-      // FIMXE: This should be {}. lldb::Type also needs to also take an
-      //        optional size and resolve it at runtime if it is None.
-      return GetPointerByteSize() * 8;
+      return {};
     ExecutionContext exe_ctx;
     exe_scope->CalculateExecutionContext(exe_ctx);
     auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
