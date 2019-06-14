@@ -2678,13 +2678,13 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     static_cast<X86Operand &>(*Operands[0]).setTokenValue(Repl);
   }
 
-  // Moving a 32 or 16 bit value into a segment register has the same
-  // behavior. Modify such instructions to always take shorter form.
   if ((Name == "mov" || Name == "movw" || Name == "movl") &&
       (Operands.size() == 3)) {
     X86Operand &Op1 = (X86Operand &)*Operands[1];
     X86Operand &Op2 = (X86Operand &)*Operands[2];
     SMLoc Loc = Op1.getEndLoc();
+    // Moving a 32 or 16 bit value into a segment register has the same
+    // behavior. Modify such instructions to always take shorter form.
     if (Op1.isReg() && Op2.isReg() &&
         X86MCRegisterClasses[X86::SEGMENT_REGRegClassID].contains(
             Op2.getReg()) &&

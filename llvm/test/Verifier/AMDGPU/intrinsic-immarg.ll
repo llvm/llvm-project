@@ -123,22 +123,22 @@ define void @exp_compr_invalid_inputs(i32 %tgt, i32 %en, i1 %bool) {
   ret void
 }
 
-declare i64 @llvm.amdgcn.icmp.i32(i32, i32, i32)
+declare i64 @llvm.amdgcn.icmp.i64.i32(i32, i32, i32)
 
 define i64 @invalid_nonconstant_icmp_code(i32 %a, i32 %b, i32 %c) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i32 %c
-  ; CHECK-NEXT: %result = call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 %c)
-  %result = call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 %c)
+  ; CHECK-NEXT: %result = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %a, i32 %b, i32 %c)
+  %result = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %a, i32 %b, i32 %c)
   ret i64 %result
 }
 
-declare i64 @llvm.amdgcn.fcmp.f32(float, float, i32)
+declare i64 @llvm.amdgcn.fcmp.i64.f32(float, float, i32)
 define i64 @invalid_nonconstant_fcmp_code(float %a, float %b, i32 %c) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i32 %c
-  ; CHECK-NEXT: %result = call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 %c)
-  %result = call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 %c)
+  ; CHECK-NEXT: %result = call i64 @llvm.amdgcn.fcmp.i64.f32(float %a, float %b, i32 %c)
+  %result = call i64 @llvm.amdgcn.fcmp.i64.f32(float %a, float %b, i32 %c)
   ret i64 %result
 }
 
@@ -549,4 +549,32 @@ define i32 @test_udot4(i32 %arg0, i32 %arg1, i32 %arg2, i1 %arg3) {
   ; CHECK-NEXT: %val = call i32 @llvm.amdgcn.udot4(i32 %arg0, i32 %arg1, i32 %arg2, i1 %arg3)
   %val = call i32 @llvm.amdgcn.udot4(i32 %arg0, i32 %arg1, i32 %arg2, i1 %arg3)
   ret i32 %val
+}
+
+declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1, i1)
+define i32 @test_permlane16(i32 addrspace(1)* %out, i32 %arg0, i32 %arg1, i32 %arg2, i1 %arg3, i1 %arg4) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i1 %arg3
+  ; CHECK-NEXT: %v1 = call i32 @llvm.amdgcn.permlane16(i32 %arg0, i32 %arg0, i32 %arg1, i32 %arg2, i1 %arg3, i1 false)
+  %v1 = call i32 @llvm.amdgcn.permlane16(i32 %arg0, i32 %arg0, i32 %arg1, i32 %arg2, i1 %arg3, i1 false)
+
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i1 %arg4
+  ; CHECK-NEXT: call i32 @llvm.amdgcn.permlane16(i32 %v2, i32 %arg0, i32 %arg1, i32 %arg2, i1 false, i1 %arg4)
+  %v2 = call i32 @llvm.amdgcn.permlane16(i32 %v2, i32 %arg0, i32 %arg1, i32 %arg2, i1 false, i1 %arg4)
+  ret i32 %v2
+}
+
+declare i32 @llvm.amdgcn.permlanex16(i32, i32, i32, i32, i1, i1)
+define i32 @test_permlanex16(i32 addrspace(1)* %out, i32 %arg0, i32 %arg1, i32 %arg2, i1 %arg3, i1 %arg4) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i1 %arg3
+  ; CHECK-NEXT: %v1 = call i32 @llvm.amdgcn.permlanex16(i32 %arg0, i32 %arg0, i32 %arg1, i32 %arg2, i1 %arg3, i1 false)
+  %v1 = call i32 @llvm.amdgcn.permlanex16(i32 %arg0, i32 %arg0, i32 %arg1, i32 %arg2, i1 %arg3, i1 false)
+
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i1 %arg4
+  ; CHECK-NEXT: call i32 @llvm.amdgcn.permlanex16(i32 %v2, i32 %arg0, i32 %arg1, i32 %arg2, i1 false, i1 %arg4)
+  %v2 = call i32 @llvm.amdgcn.permlanex16(i32 %v2, i32 %arg0, i32 %arg1, i32 %arg2, i1 false, i1 %arg4)
+  ret i32 %v2
 }

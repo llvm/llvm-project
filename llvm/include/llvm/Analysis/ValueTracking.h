@@ -606,6 +606,12 @@ class Value;
     return Result;
   }
 
+  /// Determine the pattern that a select with the given compare as its
+  /// predicate and given values as its true/false operands would match.
+  SelectPatternResult matchDecomposedSelectPattern(
+      CmpInst *CmpI, Value *TrueVal, Value *FalseVal, Value *&LHS, Value *&RHS,
+      Instruction::CastOps *CastOp = nullptr, unsigned Depth = 0);
+
   /// Return the canonical comparison predicate for the specified
   /// minimum/maximum flavor.
   CmpInst::Predicate getMinMaxPred(SelectPatternFlavor SPF,

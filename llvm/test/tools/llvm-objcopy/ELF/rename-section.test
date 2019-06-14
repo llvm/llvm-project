@@ -26,5 +26,5 @@ Sections:
 # CHECK: Name: .strtab
 # CHECK: Name: .shstrtab
 
-#BAD-FORMAT: Bad format for --rename-section: missing '='
-#MULTIPLE-RENAMES: Multiple renames of section .foo
+#BAD-FORMAT: bad format for --rename-section: missing '='
+#MULTIPLE-RENAMES: multiple renames of section '.foo'

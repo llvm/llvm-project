@@ -1,0 +1,44 @@
+# XFAIL: *
+# For a symbol in a text section the class character for an unrecognised binding
+# value is '?' in gnu-nm but llvm-nm prints 'T'. Filed as:
+# https://bugs.llvm.org/show_bug.cgi?id=41711
+
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-nm %t.o --format=sysv | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+Symbols:
+  - Name:    symbol_local
+    Binding: STB_LOCAL
+    Section: .text
+    Value:   0x101
+    Size:    8
+  - Name:    symbol_weak
+    Binding: STB_WEAK
+    Section: .text
+    Value:   0x102
+    Size:    4
+  - Name:    symbol_undefined_binding
+    Binding: 5
+    Section: .text
+    Value:   0x1004
+    Size:    32
+  - Name:    symbol_global
+    Binding: STB_GLOBAL
+    Section: .text
+    Value:   0x103
+    Size:    16
+
+# CHECK:      symbol_global {{.*}}|   T  |
+# CHECK-NEXT: symbol_local  {{.*}}|   t  |
+# CHECK-NEXT: symbol_unrecognised_binding {{.*}}| ? |
+# CHECK-NEXT: symbol_weak {{.*}}|   W  |

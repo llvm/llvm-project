@@ -1,4 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SPLIT %s
+; RUN: llc -march=amdgcn -mcpu=gfx1011 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VECT %s
+; RUN: llc -march=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SPLIT %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -mattr=+cumode < %s | FileCheck -check-prefixes=GCN,VECT %s
 
 ; GCN-LABEL: test_local_misaligned_v2:
@@ -112,15 +114,17 @@ bb:
   ret void
 }
 
+; TODO: Reinstate the test below once v3i32/v3f32 is reinstated.
+
 ; GCN-LABEL: test_flat_misaligned_v3:
-; VECT-DAG:  flat_load_dwordx3 v
-; VECT-DAG:  flat_store_dwordx3 v
-; SPLIT-DAG: flat_load_dword v
-; SPLIT-DAG: flat_load_dword v
-; SPLIT-DAG: flat_load_dword v
-; SPLIT-DAG: flat_store_dword v
-; SPLIT-DAG: flat_store_dword v
-; SPLIT-DAG: flat_store_dword v
+; xVECT-DAG:  flat_load_dwordx3 v
+; xVECT-DAG:  flat_store_dwordx3 v
+; xSPLIT-DAG: flat_load_dword v
+; xSPLIT-DAG: flat_load_dword v
+; xSPLIT-DAG: flat_load_dword v
+; xSPLIT-DAG: flat_store_dword v
+; xSPLIT-DAG: flat_store_dword v
+; xSPLIT-DAG: flat_store_dword v
 define amdgpu_kernel void @test_flat_misaligned_v3(i32* %arg) {
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()

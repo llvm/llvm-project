@@ -275,6 +275,21 @@ let SubtargetPredicate = isGFX9Plus in {
 } // End SubtargetPredicate = isGFX9Plus
 
 let SubtargetPredicate = isGFX10Plus in {
+  let hasSideEffects = 1, Defs = [EXEC, SCC], Uses = [EXEC] in {
+    def S_AND_SAVEEXEC_B32   : SOP1_32<"s_and_saveexec_b32">;
+    def S_OR_SAVEEXEC_B32    : SOP1_32<"s_or_saveexec_b32">;
+    def S_XOR_SAVEEXEC_B32   : SOP1_32<"s_xor_saveexec_b32">;
+    def S_ANDN2_SAVEEXEC_B32 : SOP1_32<"s_andn2_saveexec_b32">;
+    def S_ORN2_SAVEEXEC_B32  : SOP1_32<"s_orn2_saveexec_b32">;
+    def S_NAND_SAVEEXEC_B32  : SOP1_32<"s_nand_saveexec_b32">;
+    def S_NOR_SAVEEXEC_B32   : SOP1_32<"s_nor_saveexec_b32">;
+    def S_XNOR_SAVEEXEC_B32  : SOP1_32<"s_xnor_saveexec_b32">;
+    def S_ANDN1_SAVEEXEC_B32 : SOP1_32<"s_andn1_saveexec_b32">;
+    def S_ORN1_SAVEEXEC_B32  : SOP1_32<"s_orn1_saveexec_b32">;
+    def S_ANDN1_WREXEC_B32   : SOP1_32<"s_andn1_wrexec_b32">;
+    def S_ANDN2_WREXEC_B32   : SOP1_32<"s_andn2_wrexec_b32">;
+  } // End hasSideEffects = 1, Defs = [EXEC, SCC], Uses = [EXEC]
+
   let Uses = [M0] in {
     def S_MOVRELSD_2_B32 : SOP1_32<"s_movrelsd_2_b32">;
   } // End Uses = [M0]
@@ -782,6 +797,9 @@ let SubtargetPredicate = isGFX10Plus in {
     let has_sdst = 0;
   }
 
+  def S_SUBVECTOR_LOOP_BEGIN : SOPK_32_BR<"s_subvector_loop_begin">;
+  def S_SUBVECTOR_LOOP_END   : SOPK_32_BR<"s_subvector_loop_end">;
+
   def S_WAITCNT_VSCNT   : SOPK_WAITCNT<"s_waitcnt_vscnt">;
   def S_WAITCNT_VMCNT   : SOPK_WAITCNT<"s_waitcnt_vmcnt">;
   def S_WAITCNT_EXPCNT  : SOPK_WAITCNT<"s_waitcnt_expcnt">;
@@ -1215,6 +1233,18 @@ defm S_ORN1_SAVEEXEC_B64    : SOP1_Real_gfx10<0x038>;
 defm S_ANDN1_WREXEC_B64     : SOP1_Real_gfx10<0x039>;
 defm S_ANDN2_WREXEC_B64     : SOP1_Real_gfx10<0x03a>;
 defm S_BITREPLICATE_B64_B32 : SOP1_Real_gfx10<0x03b>;
+defm S_AND_SAVEEXEC_B32     : SOP1_Real_gfx10<0x03c>;
+defm S_OR_SAVEEXEC_B32      : SOP1_Real_gfx10<0x03d>;
+defm S_XOR_SAVEEXEC_B32     : SOP1_Real_gfx10<0x03e>;
+defm S_ANDN2_SAVEEXEC_B32   : SOP1_Real_gfx10<0x03f>;
+defm S_ORN2_SAVEEXEC_B32    : SOP1_Real_gfx10<0x040>;
+defm S_NAND_SAVEEXEC_B32    : SOP1_Real_gfx10<0x041>;
+defm S_NOR_SAVEEXEC_B32     : SOP1_Real_gfx10<0x042>;
+defm S_XNOR_SAVEEXEC_B32    : SOP1_Real_gfx10<0x043>;
+defm S_ANDN1_SAVEEXEC_B32   : SOP1_Real_gfx10<0x044>;
+defm S_ORN1_SAVEEXEC_B32    : SOP1_Real_gfx10<0x045>;
+defm S_ANDN1_WREXEC_B32     : SOP1_Real_gfx10<0x046>;
+defm S_ANDN2_WREXEC_B32     : SOP1_Real_gfx10<0x047>;
 defm S_MOVRELSD_2_B32       : SOP1_Real_gfx10<0x049>;
 
 //===----------------------------------------------------------------------===//
@@ -1382,6 +1412,8 @@ defm S_WAITCNT_VSCNT        : SOPK_Real32_gfx10<0x017>;
 defm S_WAITCNT_VMCNT        : SOPK_Real32_gfx10<0x018>;
 defm S_WAITCNT_EXPCNT       : SOPK_Real32_gfx10<0x019>;
 defm S_WAITCNT_LGKMCNT      : SOPK_Real32_gfx10<0x01a>;
+defm S_SUBVECTOR_LOOP_BEGIN : SOPK_Real32_gfx10<0x01b>;
+defm S_SUBVECTOR_LOOP_END   : SOPK_Real32_gfx10<0x01c>;
 
 //===----------------------------------------------------------------------===//
 // SOPK - GFX6, GFX7.

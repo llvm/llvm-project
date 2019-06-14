@@ -188,9 +188,18 @@ class WrapTerminatorInst<SOP_Pseudo base_inst> : SPseudoInstSI<
   let CodeSize = base_inst.CodeSize;
 }
 
+let WaveSizePredicate = isWave64 in {
 def S_MOV_B64_term : WrapTerminatorInst<S_MOV_B64>;
 def S_XOR_B64_term : WrapTerminatorInst<S_XOR_B64>;
 def S_ANDN2_B64_term : WrapTerminatorInst<S_ANDN2_B64>;
+}
+
+let WaveSizePredicate = isWave32 in {
+def S_MOV_B32_term : WrapTerminatorInst<S_MOV_B32>;
+def S_XOR_B32_term : WrapTerminatorInst<S_XOR_B32>;
+def S_OR_B32_term : WrapTerminatorInst<S_OR_B32>;
+def S_ANDN2_B32_term : WrapTerminatorInst<S_ANDN2_B32>;
+}
 
 def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
   [(int_amdgcn_wave_barrier)]> {
@@ -343,6 +352,15 @@ def SI_INIT_EXEC : SPseudoInstSI <
   let Defs = [EXEC];
   let usesCustomInserter = 1;
   let isAsCheapAsAMove = 1;
+  let WaveSizePredicate = isWave64;
+}
+
+def SI_INIT_EXEC_LO : SPseudoInstSI <
+  (outs), (ins i32imm:$src), []> {
+  let Defs = [EXEC_LO];
+  let usesCustomInserter = 1;
+  let isAsCheapAsAMove = 1;
+  let WaveSizePredicate = isWave32;
 }
 
 def SI_INIT_EXEC_FROM_INPUT : SPseudoInstSI <
@@ -586,7 +604,12 @@ def : Pat <
   // TODO: we could add more variants for other types of conditionals
 
 def : Pat <
-  (int_amdgcn_icmp i1:$src, (i1 0), (i32 33)),
+  (i64 (int_amdgcn_icmp i1:$src, (i1 0), (i32 33))),
+  (COPY $src) // Return the SGPRs representing i1 src
+>;
+
+def : Pat <
+  (i32 (int_amdgcn_icmp i1:$src, (i1 0), (i32 33))),
   (COPY $src) // Return the SGPRs representing i1 src
 >;
 

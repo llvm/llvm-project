@@ -389,7 +389,7 @@ SIMCCodeEmitter::getSDWAVopcDstEncoding(const MCInst &MI, unsigned OpNo,
   const MCOperand &MO = MI.getOperand(OpNo);
 
   unsigned Reg = MO.getReg();
-  if (Reg != AMDGPU::VCC) {
+  if (Reg != AMDGPU::VCC && Reg != AMDGPU::VCC_LO) {
     RegEnc |= MRI.getEncodingValue(Reg);
     RegEnc &= SDWA9EncValues::VOPC_DST_SGPR_MASK;
     RegEnc |= SDWA9EncValues::VOPC_DST_VCC_MASK;

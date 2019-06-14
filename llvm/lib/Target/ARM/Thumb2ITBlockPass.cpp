@@ -245,7 +245,7 @@ bool Thumb2ITBlockPass::InsertITInstructions(MachineBasicBlock &MBB) {
         unsigned NPredReg = 0;
         ARMCC::CondCodes NCC = getITInstrPredicate(*NMI, NPredReg);
         if (NCC == CC || NCC == OCC) {
-          Mask |= (NCC & 1) << Pos;
+          Mask |= ((NCC ^ CC) & 1) << Pos;
           // Add implicit use of ITSTATE.
           NMI->addOperand(MachineOperand::CreateReg(ARM::ITSTATE, false/*ifDef*/,
                                                  true/*isImp*/, false/*isKill*/));
@@ -269,8 +269,6 @@ bool Thumb2ITBlockPass::InsertITInstructions(MachineBasicBlock &MBB) {
 
     // Finalize IT mask.
     Mask |= (1 << Pos);
-    // Tag along (firstcond[0] << 4) with the mask.
-    Mask |= (CC & 1) << 4;
     MIB.addImm(Mask);
 
     // Last instruction in IT block kills ITSTATE.

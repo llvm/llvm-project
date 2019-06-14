@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+def isWave32 : Predicate<"Subtarget->getWavefrontSize() == 32">,
+  AssemblerPredicate <"FeatureWavefrontSize32">;
+def isWave64 : Predicate<"Subtarget->getWavefrontSize() == 64">,
+  AssemblerPredicate <"FeatureWavefrontSize64">;
+
 def DisableInst : Predicate <"false">, AssemblerPredicate<"FeatureDisable">;
 
 class GCNPredicateControl : PredicateControl {

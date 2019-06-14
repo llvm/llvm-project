@@ -14,6 +14,10 @@ archives, and `.dSYM` bundles and prints their contents in
 human-readable form. Only the .debug_info section is printed unless one of
 the section-specific options or :option:`--all` is specified.
 
+If no input file is specified, `a.out` is used instead. If `-` is used as the
+input file, :program:`llvm-dwarfdump` reads the input from its standard input
+stream.
+
 OPTIONS
 -------
 
@@ -35,6 +39,10 @@ OPTIONS
             the :option:`--debug-info`, :option:`--find`,
             and :option:`--name` options.
 
+.. option:: --color
+
+            Use colors in output.
+
 .. option:: -f <name>, --find=<name>
 
             Search for the exact text <name> in the accelerator tables
@@ -50,6 +58,11 @@ OPTIONS
 .. option:: -h, --help
 
             Show help and usage for this command.
+
+.. option:: --help-list
+
+            Show help and usage for this command without grouping the options
+            into categories.
 
 .. option:: -i, --ignore-case
 
@@ -70,7 +83,8 @@ OPTIONS
 
 .. option:: -o <path>
 
-            Redirect output to a file specified by <path>.
+            Redirect output to a file specified by <path>, where `-` is the
+            standard output stream.
 
 .. option:: -p, --show-parents
 
@@ -78,15 +92,28 @@ OPTIONS
             :option:`--debug-info`, :option:`--find`, and
             :option:`--name` options.
 
-.. option:: -r <n>, --recurse-depth=<n>
+.. option:: --parent-recurse-depth=<N>
 
-            Only recurse to a maximum depth of <n> when dumping debug info
+            Only recurse to a maximum depth of <N> when displaying parents of
+            debug info entries.
+
+.. option:: --quiet
+
+            Use with :option:`--verify` to not emit to `STDOUT`.
+
+.. option:: -r <N>, --recurse-depth=<N>
+
+            Only recurse to a maximum depth of <N> when dumping debug info
             entries.
 
 .. option:: --statistics
 
             Collect debug info quality metrics and print the results
             as machine-readable single-line JSON output.
+
+.. option:: --summarize-types
+
+            Abbreviate the description of type unit entries.
 
 .. option:: -x, --regex
 
@@ -117,7 +144,7 @@ OPTIONS
 
             Display the version of the tool.
 
-.. option:: --debug-abbrev, --debug-aranges, --debug-cu-index, --debug-frame [=<offset>], --debug-gnu-pubnames, --debug-gnu-pubtypes, --debug-info [=<offset>], --debug-line [=<offset>], --debug-loc [=<offset>], --debug-macro, --debug-pubnames, --debug-pubtypes, --debug-ranges, --debug-str, --debug-str-offsets, --debug-tu-index, --debug-types, --eh-frame, --gdb-index, --apple-names, --apple-types, --apple-namespaces, --apple-objc
+.. option:: --debug-abbrev, --debug-addr, --debug-aranges, --debug-cu-index, --debug-frame [=<offset>], --debug-gnu-pubnames, --debug-gnu-pubtypes, --debug-info [=<offset>], --debug-line [=<offset>], --debug-line-str, --debug-loc [=<offset>], --debug-loclists [=<offset>], --debug-macro, --debug-names, --debug-pubnames, --debug-pubtypes, --debug-ranges, --debug-rnglists, --debug-str, --debug-str-offsets, --debug-tu-index, --debug-types, --eh-frame [=<offset>], --gdb-index, --apple-names, --apple-types, --apple-namespaces, --apple-objc
 
             Dump the specified DWARF section by name. Only the
             `.debug_info` section is shown by default. Some entries
@@ -128,6 +155,10 @@ OPTIONS
             section will be dumped. Children of items at a specific
             offset can be dumped by also using the
             :option:`--show-children` option where applicable.
+
+.. option:: @<FILE>
+
+            Read command-line options from `<FILE>`.
 
 EXIT STATUS
 -----------

@@ -1628,19 +1628,19 @@ define float @fmed3_0_1_undef_f32() {
 ; llvm.amdgcn.icmp
 ; --------------------------------------------------------------------
 
-declare i64 @llvm.amdgcn.icmp.i32(i32, i32, i32 immarg) nounwind readnone convergent
-declare i64 @llvm.amdgcn.icmp.i64(i64, i64, i32 immarg) nounwind readnone convergent
-declare i64 @llvm.amdgcn.icmp.i1(i1, i1, i32 immarg) nounwind readnone convergent
+declare i64 @llvm.amdgcn.icmp.i64.i32(i32, i32, i32 immarg) nounwind readnone convergent
+declare i64 @llvm.amdgcn.icmp.i64.i64(i64, i64, i32 immarg) nounwind readnone convergent
+declare i64 @llvm.amdgcn.icmp.i64.i1(i1, i1, i32 immarg) nounwind readnone convergent
 
 define i64 @invalid_icmp_code(i32 %a, i32 %b) {
 ; CHECK-LABEL: @invalid_icmp_code(
-; CHECK-NEXT:    [[UNDER:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 31)
-; CHECK-NEXT:    [[OVER:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[A]], i32 [[B]], i32 42)
+; CHECK-NEXT:    [[UNDER:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 31)
+; CHECK-NEXT:    [[OVER:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[A]], i32 [[B]], i32 42)
 ; CHECK-NEXT:    [[OR:%.*]] = or i64 [[UNDER]], [[OVER]]
 ; CHECK-NEXT:    ret i64 [[OR]]
 ;
-  %under = call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 31)
-  %over = call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 42)
+  %under = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %a, i32 %b, i32 31)
+  %over = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %a, i32 %b, i32 42)
   %or = or i64 %under, %over
   ret i64 %or
 }
@@ -1649,7 +1649,7 @@ define i64 @icmp_constant_inputs_false() {
 ; CHECK-LABEL: @icmp_constant_inputs_false(
 ; CHECK-NEXT:    ret i64 0
 ;
-  %result = call i64 @llvm.amdgcn.icmp.i32(i32 9, i32 8, i32 32)
+  %result = call i64 @llvm.amdgcn.icmp.i64.i32(i32 9, i32 8, i32 32)
   ret i64 %result
 }
 
@@ -1658,236 +1658,236 @@ define i64 @icmp_constant_inputs_true() {
 ; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata !0) #5
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
-  %result = call i64 @llvm.amdgcn.icmp.i32(i32 9, i32 8, i32 34)
+  %result = call i64 @llvm.amdgcn.icmp.i64.i32(i32 9, i32 8, i32 34)
   ret i64 %result
 }
 
 define i64 @icmp_constant_to_rhs_slt(i32 %x) {
 ; CHECK-LABEL: @icmp_constant_to_rhs_slt(
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[X:%.*]], i32 9, i32 38)
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[X:%.*]], i32 9, i32 38)
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
-  %result = call i64 @llvm.amdgcn.icmp.i32(i32 9, i32 %x, i32 40)
+  %result = call i64 @llvm.amdgcn.icmp.i64.i32(i32 9, i32 %x, i32 40)
   ret i64 %result
 }
 
 define i64 @fold_icmp_ne_0_zext_icmp_eq_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_eq_i32(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 32)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 32)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp eq i32 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_ne_0_zext_icmp_ne_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_ne_i32(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp ne i32 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_ne_0_zext_icmp_sle_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_sle_i32(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 41)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 41)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp sle i32 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_ne_0_zext_icmp_ugt_i64(i64 %a, i64 %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_ugt_i64(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64(i64 [[A:%.*]], i64 [[B:%.*]], i32 34)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i64(i64 [[A:%.*]], i64 [[B:%.*]], i32 34)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp ugt i64 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_ne_0_zext_icmp_ult_swap_i64(i64 %a, i64 %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_ult_swap_i64(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64(i64 [[A:%.*]], i64 [[B:%.*]], i32 34)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i64(i64 [[A:%.*]], i64 [[B:%.*]], i32 34)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp ugt i64 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 0, i32 %zext.cmp, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 0, i32 %zext.cmp, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_ne_0_zext_fcmp_oeq_f32(float %a, float %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_fcmp_oeq_f32(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.fcmp.f32(float [[A:%.*]], float [[B:%.*]], i32 1)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.fcmp.i64.f32(float [[A:%.*]], float [[B:%.*]], i32 1)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = fcmp oeq float %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_ne_0_zext_fcmp_une_f32(float %a, float %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_fcmp_une_f32(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.fcmp.f32(float [[A:%.*]], float [[B:%.*]], i32 14)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.fcmp.i64.f32(float [[A:%.*]], float [[B:%.*]], i32 14)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = fcmp une float %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_ne_0_zext_fcmp_olt_f64(double %a, double %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_fcmp_olt_f64(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.fcmp.f64(double [[A:%.*]], double [[B:%.*]], i32 4)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.fcmp.i64.f64(double [[A:%.*]], double [[B:%.*]], i32 4)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = fcmp olt double %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_sext_icmp_ne_0_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_icmp_sext_icmp_ne_0_i32(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 32)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 32)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp eq i32 %a, %b
   %sext.cmp = sext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %sext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %sext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_eq_0_zext_icmp_eq_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_icmp_eq_0_zext_icmp_eq_i32(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp eq i32 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 32)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 32)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_eq_0_zext_icmp_slt_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_icmp_eq_0_zext_icmp_slt_i32(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 39)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 39)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp slt i32 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 32)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 32)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_eq_0_zext_fcmp_oeq_f32(float %a, float %b) {
 ; CHECK-LABEL: @fold_icmp_eq_0_zext_fcmp_oeq_f32(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.fcmp.f32(float [[A:%.*]], float [[B:%.*]], i32 14)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.fcmp.i64.f32(float [[A:%.*]], float [[B:%.*]], i32 14)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = fcmp oeq float %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 32)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 32)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_eq_0_zext_fcmp_ule_f32(float %a, float %b) {
 ; CHECK-LABEL: @fold_icmp_eq_0_zext_fcmp_ule_f32(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.fcmp.f32(float [[A:%.*]], float [[B:%.*]], i32 2)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.fcmp.i64.f32(float [[A:%.*]], float [[B:%.*]], i32 2)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = fcmp ule float %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 32)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 32)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_eq_0_zext_fcmp_ogt_f32(float %a, float %b) {
 ; CHECK-LABEL: @fold_icmp_eq_0_zext_fcmp_ogt_f32(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.fcmp.f32(float [[A:%.*]], float [[B:%.*]], i32 13)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.fcmp.i64.f32(float [[A:%.*]], float [[B:%.*]], i32 13)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = fcmp ogt float %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 32)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 32)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_zext_icmp_eq_1_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_icmp_zext_icmp_eq_1_i32(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 32)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 32)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp eq i32 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 1, i32 32)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 1, i32 32)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_zext_argi1_eq_1_i32(i1 %cond) {
 ; CHECK-LABEL: @fold_icmp_zext_argi1_eq_1_i32(
 ; CHECK-NEXT:    [[ZEXT_COND:%.*]] = zext i1 [[COND:%.*]] to i32
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[ZEXT_COND]], i32 0, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[ZEXT_COND]], i32 0, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %zext.cond = zext i1 %cond to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cond, i32 1, i32 32)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cond, i32 1, i32 32)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_zext_argi1_eq_neg1_i32(i1 %cond) {
 ; CHECK-LABEL: @fold_icmp_zext_argi1_eq_neg1_i32(
 ; CHECK-NEXT:    [[ZEXT_COND:%.*]] = zext i1 [[COND:%.*]] to i32
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[ZEXT_COND]], i32 -1, i32 32)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[ZEXT_COND]], i32 -1, i32 32)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %zext.cond = zext i1 %cond to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cond, i32 -1, i32 32)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cond, i32 -1, i32 32)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_sext_argi1_eq_1_i32(i1 %cond) {
 ; CHECK-LABEL: @fold_icmp_sext_argi1_eq_1_i32(
 ; CHECK-NEXT:    [[SEXT_COND:%.*]] = sext i1 [[COND:%.*]] to i32
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[SEXT_COND]], i32 1, i32 32)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[SEXT_COND]], i32 1, i32 32)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %sext.cond = sext i1 %cond to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %sext.cond, i32 1, i32 32)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %sext.cond, i32 1, i32 32)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_sext_argi1_eq_neg1_i32(i1 %cond) {
 ; CHECK-LABEL: @fold_icmp_sext_argi1_eq_neg1_i32(
 ; CHECK-NEXT:    [[SEXT_COND:%.*]] = sext i1 [[COND:%.*]] to i32
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[SEXT_COND]], i32 0, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[SEXT_COND]], i32 0, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %sext.cond = sext i1 %cond to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %sext.cond, i32 -1, i32 32)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %sext.cond, i32 -1, i32 32)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_sext_argi1_eq_neg1_i64(i1 %cond) {
 ; CHECK-LABEL: @fold_icmp_sext_argi1_eq_neg1_i64(
 ; CHECK-NEXT:    [[SEXT_COND:%.*]] = sext i1 [[COND:%.*]] to i64
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64(i64 [[SEXT_COND]], i64 0, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i64(i64 [[SEXT_COND]], i64 0, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %sext.cond = sext i1 %cond to i64
-  %mask = call i64 @llvm.amdgcn.icmp.i64(i64 %sext.cond, i64 -1, i32 32)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i64(i64 %sext.cond, i64 -1, i32 32)
   ret i64 %mask
 }
 
@@ -1896,46 +1896,46 @@ define i64 @fold_icmp_sext_icmp_eq_1_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_icmp_sext_icmp_eq_1_i32(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[SEXT_CMP:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[SEXT_CMP]], i32 1, i32 32)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[SEXT_CMP]], i32 1, i32 32)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp eq i32 %a, %b
   %sext.cmp = sext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %sext.cmp, i32 1, i32 32)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %sext.cmp, i32 1, i32 32)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_sext_icmp_eq_neg1_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_icmp_sext_icmp_eq_neg1_i32(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 32)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 32)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp eq i32 %a, %b
   %sext.cmp = sext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %sext.cmp, i32 -1, i32 32)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %sext.cmp, i32 -1, i32 32)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_sext_icmp_sge_neg1_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_icmp_sext_icmp_sge_neg1_i32(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 39)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 39)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp sge i32 %a, %b
   %sext.cmp = sext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %sext.cmp, i32 -1, i32 32)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %sext.cmp, i32 -1, i32 32)
   ret i64 %mask
 }
 
 define i64 @fold_not_icmp_ne_0_zext_icmp_sle_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_not_icmp_ne_0_zext_icmp_sle_i32(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 38)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 38)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp sle i32 %a, %b
   %not = xor i1 %cmp, true
   %zext.cmp = zext i1 %not to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
@@ -1943,12 +1943,12 @@ define i64 @fold_icmp_ne_0_zext_icmp_eq_i4(i4 %a, i4 %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_eq_i4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[A:%.*]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i4 [[B:%.*]] to i16
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i16(i16 [[TMP1]], i16 [[TMP2]], i32 32)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i16(i16 [[TMP1]], i16 [[TMP2]], i32 32)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp eq i4 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
@@ -1956,23 +1956,23 @@ define i64 @fold_icmp_ne_0_zext_icmp_eq_i8(i8 %a, i8 %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_eq_i8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[A:%.*]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[B:%.*]] to i16
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i16(i16 [[TMP1]], i16 [[TMP2]], i32 32)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i16(i16 [[TMP1]], i16 [[TMP2]], i32 32)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp eq i8 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_ne_0_zext_icmp_eq_i16(i16 %a, i16 %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_eq_i16(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i16(i16 [[A:%.*]], i16 [[B:%.*]], i32 32)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i16(i16 [[A:%.*]], i16 [[B:%.*]], i32 32)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp eq i16 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
@@ -1980,12 +1980,12 @@ define i64 @fold_icmp_ne_0_zext_icmp_eq_i36(i36 %a, i36 %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_eq_i36(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i36 [[A:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i36 [[B:%.*]] to i64
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64(i64 [[TMP1]], i64 [[TMP2]], i32 32)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i64(i64 [[TMP1]], i64 [[TMP2]], i32 32)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp eq i36 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
@@ -1993,37 +1993,36 @@ define i64 @fold_icmp_ne_0_zext_icmp_eq_i128(i128 %a, i128 %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_eq_i128(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i128 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[ZEXT_CMP:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[ZEXT_CMP]], i32 0, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[ZEXT_CMP]], i32 0, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp eq i128 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_ne_0_zext_fcmp_oeq_f16(half %a, half %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_fcmp_oeq_f16(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.fcmp.f16(half [[A:%.*]], half [[B:%.*]], i32 1)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.fcmp.i64.f16(half [[A:%.*]], half [[B:%.*]], i32 1)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = fcmp oeq half %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_ne_0_zext_fcmp_oeq_f128(fp128 %a, fp128 %b) {
-;
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_fcmp_oeq_f128(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq fp128 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[ZEXT_CMP:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[ZEXT_CMP]], i32 0, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i32(i32 [[ZEXT_CMP]], i32 0, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = fcmp oeq fp128 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
@@ -2031,12 +2030,12 @@ define i64 @fold_icmp_ne_0_zext_icmp_slt_i4(i4 %a, i4 %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_slt_i4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[A:%.*]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i4 [[B:%.*]] to i16
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i16(i16 [[TMP1]], i16 [[TMP2]], i32 40)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i16(i16 [[TMP1]], i16 [[TMP2]], i32 40)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp slt i4 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
@@ -2044,23 +2043,23 @@ define i64 @fold_icmp_ne_0_zext_icmp_slt_i8(i8 %a, i8 %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_slt_i8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[A:%.*]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i8 [[B:%.*]] to i16
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i16(i16 [[TMP1]], i16 [[TMP2]], i32 40)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i16(i16 [[TMP1]], i16 [[TMP2]], i32 40)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp slt i8 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_ne_0_zext_icmp_slt_i16(i16 %a, i16 %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_slt_i16(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i16(i16 [[A:%.*]], i16 [[B:%.*]], i32 40)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i16(i16 [[A:%.*]], i16 [[B:%.*]], i32 40)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp slt i16 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
@@ -2068,12 +2067,12 @@ define i64 @fold_icmp_ne_0_zext_icmp_ult_i4(i4 %a, i4 %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_ult_i4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[A:%.*]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i4 [[B:%.*]] to i16
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i16(i16 [[TMP1]], i16 [[TMP2]], i32 36)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i16(i16 [[TMP1]], i16 [[TMP2]], i32 36)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp ult i4 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
@@ -2081,23 +2080,23 @@ define i64 @fold_icmp_ne_0_zext_icmp_ult_i8(i8 %a, i8 %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_ult_i8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[A:%.*]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[B:%.*]] to i16
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i16(i16 [[TMP1]], i16 [[TMP2]], i32 36)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i16(i16 [[TMP1]], i16 [[TMP2]], i32 36)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp ult i8 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_ne_0_zext_icmp_ult_i16(i16 %a, i16 %b) {
 ; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_ult_i16(
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i16(i16 [[A:%.*]], i16 [[B:%.*]], i32 36)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i16(i16 [[A:%.*]], i16 [[B:%.*]], i32 36)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp ult i16 %a, %b
   %zext.cmp = zext i1 %cmp to i32
-  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %zext.cmp, i32 0, i32 33)
   ret i64 %mask
 }
 
@@ -2106,232 +2105,231 @@ define i64 @fold_icmp_ne_0_zext_icmp_ult_i16(i16 %a, i16 %b) {
 define i64 @fold_icmp_i1_ne_0_icmp_eq_i1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_icmp_eq_i1(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp eq i32 %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_icmp_ne_i1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_icmp_ne_i1(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp ne i32 %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_icmp_sle_i1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_icmp_sle_i1(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp sle i32 %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_icmp_ugt_i64(i64 %a, i64 %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_icmp_ugt_i64(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp ugt i64 %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_icmp_ult_swap_i64(i64 %a, i64 %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_icmp_ult_swap_i64(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp ugt i64 %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 false, i1 %cmp, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 false, i1 %cmp, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_fcmp_oeq_f32(float %a, float %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_fcmp_oeq_f32(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = fcmp oeq float %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_fcmp_une_f32(float %a, float %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_fcmp_une_f32(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = fcmp une float %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_fcmp_olt_f64(double %a, double %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_fcmp_olt_f64(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = fcmp olt double %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_icmp_eq_i4(i4 %a, i4 %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_icmp_eq_i4(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i4 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp eq i4 %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_icmp_eq_i8(i8 %a, i8 %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_icmp_eq_i8(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp eq i8 %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_icmp_eq_i16(i16 %a, i16 %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_icmp_eq_i16(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp eq i16 %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_icmp_eq_i36(i36 %a, i36 %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_icmp_eq_i36(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i36 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp eq i36 %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_icmp_eq_i128(i128 %a, i128 %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_icmp_eq_i128(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i128 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp eq i128 %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_fcmp_oeq_f16(half %a, half %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_fcmp_oeq_f16(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq half [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = fcmp oeq half %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_fcmp_oeq_f128(fp128 %a, fp128 %b) {
-;
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_fcmp_oeq_f128(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq fp128 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = fcmp oeq fp128 %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_icmp_slt_i4(i4 %a, i4 %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_icmp_slt_i4(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i4 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp slt i4 %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_icmp_slt_i8(i8 %a, i8 %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_icmp_slt_i8(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp slt i8 %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_icmp_slt_i16(i16 %a, i16 %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_icmp_slt_i16(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp slt i16 %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_icmp_ult_i4(i4 %a, i4 %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_icmp_ult_i4(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i4 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp ult i4 %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_icmp_ult_i8(i8 %a, i8 %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_icmp_ult_i8(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp ult i8 %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
 define i64 @fold_icmp_i1_ne_0_icmp_ult_i16(i16 %a, i16 %b) {
 ; CHECK-LABEL: @fold_icmp_i1_ne_0_icmp_ult_i16(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i1(i1 [[CMP]], i1 false, i32 33)
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i1(i1 [[CMP]], i1 false, i32 33)
 ; CHECK-NEXT:    ret i64 [[MASK]]
 ;
   %cmp = icmp ult i16 %a, %b
-  %mask = call i64 @llvm.amdgcn.icmp.i1(i1 %cmp, i1 false, i32 33)
+  %mask = call i64 @llvm.amdgcn.icmp.i64.i1(i1 %cmp, i1 false, i32 33)
   ret i64 %mask
 }
 
@@ -2339,17 +2337,17 @@ define i64 @fold_icmp_i1_ne_0_icmp_ult_i16(i16 %a, i16 %b) {
 ; llvm.amdgcn.fcmp
 ; --------------------------------------------------------------------
 
-declare i64 @llvm.amdgcn.fcmp.f32(float, float, i32 immarg) nounwind readnone convergent
+declare i64 @llvm.amdgcn.fcmp.i64.f32(float, float, i32 immarg) nounwind readnone convergent
 
 define i64 @invalid_fcmp_code(float %a, float %b) {
 ; CHECK-LABEL: @invalid_fcmp_code(
-; CHECK-NEXT:    [[UNDER:%.*]] = call i64 @llvm.amdgcn.fcmp.f32(float [[A:%.*]], float [[B:%.*]], i32 -1)
-; CHECK-NEXT:    [[OVER:%.*]] = call i64 @llvm.amdgcn.fcmp.f32(float [[A]], float [[B]], i32 16)
+; CHECK-NEXT:    [[UNDER:%.*]] = call i64 @llvm.amdgcn.fcmp.i64.f32(float [[A:%.*]], float [[B:%.*]], i32 -1)
+; CHECK-NEXT:    [[OVER:%.*]] = call i64 @llvm.amdgcn.fcmp.i64.f32(float [[A]], float [[B]], i32 16)
 ; CHECK-NEXT:    [[OR:%.*]] = or i64 [[UNDER]], [[OVER]]
 ; CHECK-NEXT:    ret i64 [[OR]]
 ;
-  %under = call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 -1)
-  %over = call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 16)
+  %under = call i64 @llvm.amdgcn.fcmp.i64.f32(float %a, float %b, i32 -1)
+  %over = call i64 @llvm.amdgcn.fcmp.i64.f32(float %a, float %b, i32 16)
   %or = or i64 %under, %over
   ret i64 %or
 }
@@ -2358,7 +2356,7 @@ define i64 @fcmp_constant_inputs_false() {
 ; CHECK-LABEL: @fcmp_constant_inputs_false(
 ; CHECK-NEXT:    ret i64 0
 ;
-  %result = call i64 @llvm.amdgcn.fcmp.f32(float 2.0, float 4.0, i32 1)
+  %result = call i64 @llvm.amdgcn.fcmp.i64.f32(float 2.0, float 4.0, i32 1)
   ret i64 %result
 }
 
@@ -2367,16 +2365,16 @@ define i64 @fcmp_constant_inputs_true() {
 ; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata !0) #5
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
-  %result = call i64 @llvm.amdgcn.fcmp.f32(float 2.0, float 4.0, i32 4)
+  %result = call i64 @llvm.amdgcn.fcmp.i64.f32(float 2.0, float 4.0, i32 4)
   ret i64 %result
 }
 
 define i64 @fcmp_constant_to_rhs_olt(float %x) {
 ; CHECK-LABEL: @fcmp_constant_to_rhs_olt(
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.amdgcn.fcmp.f32(float [[X:%.*]], float 4.000000e+00, i32 2)
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.amdgcn.fcmp.i64.f32(float [[X:%.*]], float 4.000000e+00, i32 2)
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
-  %result = call i64 @llvm.amdgcn.fcmp.f32(float 4.0, float %x, i32 4)
+  %result = call i64 @llvm.amdgcn.fcmp.i64.f32(float 4.0, float %x, i32 4)
   ret i64 %result
 }
 

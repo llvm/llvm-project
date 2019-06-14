@@ -171,3 +171,11 @@ def : ProcessorModel<"gfx909", SIQuarterSpeedModel,
 def : ProcessorModel<"gfx1010", GFX10SpeedModel,
   FeatureISAVersion10_1_0.Features
 >;
+
+def : ProcessorModel<"gfx1011", GFX10SpeedModel,
+  FeatureISAVersion10_1_1.Features
+>;
+
+def : ProcessorModel<"gfx1012", GFX10SpeedModel,
+  FeatureISAVersion10_1_2.Features
+>;

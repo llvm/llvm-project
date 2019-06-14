@@ -9,12 +9,8 @@
 ; CHECK-LABEL: use_dbg_addr:
 ; CHECK: #DEBUG_VALUE: use_dbg_addr:o <- [$rsp+0]
 
-; FIXME: Avoid the use of a single-location location list and use
-; DW_AT_start_offset instead.
-
 ; DWARF: DW_TAG_variable
-; DWARF-NEXT:              DW_AT_location (0x00000000
-; DWARF-NEXT:                          [0x{{.*}}, 0x{{.*}}): DW_OP_breg7 RSP+0)
+; DWARF-NEXT:              DW_AT_location (DW_OP_fbreg +0)
 ; DWARF-NEXT:              DW_AT_name ("o")
 
 

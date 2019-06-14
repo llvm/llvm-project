@@ -412,3 +412,20 @@ defm V_PK_MAX_F16     : VOP3P_Real_gfx10<0x012>;
 defm V_FMA_MIX_F32    : VOP3P_Real_gfx10<0x020>;
 defm V_FMA_MIXLO_F16  : VOP3P_Real_gfx10<0x021>;
 defm V_FMA_MIXHI_F16  : VOP3P_Real_gfx10<0x022>;
+
+let SubtargetPredicate = HasDot2Insts in {
+
+defm V_DOT2_F32_F16 : VOP3P_Real_gfx10 <0x013>;
+defm V_DOT2_I32_I16 : VOP3P_Real_gfx10 <0x014>;
+defm V_DOT2_U32_U16 : VOP3P_Real_gfx10 <0x015>;
+defm V_DOT4_U32_U8  : VOP3P_Real_gfx10 <0x017>;
+defm V_DOT8_U32_U4  : VOP3P_Real_gfx10 <0x019>;
+
+} // End SubtargetPredicate = HasDot2Insts
+
+let SubtargetPredicate = HasDot1Insts in {
+
+defm V_DOT4_I32_I8  : VOP3P_Real_gfx10 <0x016>;
+defm V_DOT8_I32_I4  : VOP3P_Real_gfx10 <0x018>;
+
+} // End SubtargetPredicate = HasDot1Insts

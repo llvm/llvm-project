@@ -53,8 +53,7 @@ namespace objcopy {
 StringRef ToolName;
 
 LLVM_ATTRIBUTE_NORETURN void error(Twine Message) {
-  WithColor::error(errs(), ToolName) << Message << ".\n";
-  errs().flush();
+  WithColor::error(errs(), ToolName) << Message << "\n";
   exit(1);
 }
 
@@ -154,7 +153,7 @@ static Error executeObjcopyOnBinary(const CopyConfig &Config,
     return macho::executeObjcopyOnBinary(Config, *MachOBinary, Out);
   else
     return createStringError(object_error::invalid_file_type,
-                             "Unsupported object file format");
+                             "unsupported object file format");
 }
 
 static Error executeObjcopyOnArchive(const CopyConfig &Config,

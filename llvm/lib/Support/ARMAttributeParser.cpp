@@ -709,6 +709,12 @@ void ARMAttributeParser::Parse(ArrayRef<uint8_t> Section, bool isLittle) {
       SW->indent();
     }
 
+    if (SectionLength == 0 || (SectionLength + Offset) > Section.size()) {
+      errs() << "invalid subsection length " << SectionLength << " at offset "
+             << Offset << "\n";
+      return;
+    }
+
     ParseSubsection(Section.data() + Offset, SectionLength);
     Offset = Offset + SectionLength;
 

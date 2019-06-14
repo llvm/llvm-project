@@ -186,6 +186,86 @@ def s_cc_out : OptionalDefOperand<OtherVT, (ops CCR), (ops (i32 CPSR))> {
   let DecoderMethod = "DecodeCCOutOperand";
 }
 
+// VPT predicate
+
+def VPTPredNOperand : AsmOperandClass {
+  let Name = "VPTPredN";
+  let PredicateMethod = "isVPTPred";
+}
+def VPTPredROperand : AsmOperandClass {
+  let Name = "VPTPredR";
+  let PredicateMethod = "isVPTPred";
+}
+def undef_tied_input;
+
+// Operand classes for the cluster of MC operands describing a
+// VPT-predicated MVE instruction.
+//
+// There are two of these classes. Both of them have the same first
+// two options:
+//
+// $cond (an integer) indicates the instruction's predication status:
+//   * ARMVCC::None means it's unpredicated
+//   * ARMVCC::Then means it's in a VPT block and appears with the T suffix
+//   * ARMVCC::Else means it's in a VPT block and appears with the E suffix.
+// During code generation, unpredicated and predicated instructions
+// are indicated by setting this parameter to 'None' or to 'Then'; the
+// third value 'Else' is only used for assembly and disassembly.
+//
+// $cond_reg (type VCCR) gives the input predicate register. This is
+// always either zero_reg or VPR, but needs to be modelled as an
+// explicit operand so that it can be register-allocated and spilled
+// when these operands are used in code generation).
+//
+// For 'vpred_r', there's an extra operand $inactive, which specifies
+// the vector register which will supply any lanes of the output
+// register that the predication mask prevents from being written by
+// this instruction. It's always tied to the actual output register
+// (i.e. must be allocated into the same physical reg), but again,
+// code generation will need to model it as a separate input value.
+//
+// 'vpred_n' doesn't have that extra operand: it only has $cond and
+// $cond_reg. This variant is used for any instruction that can't, or
+// doesn't want to, tie $inactive to the output register. Sometimes
+// that's because another input parameter is already tied to it (e.g.
+// instructions that both read and write their Qd register even when
+// unpredicated, either because they only partially overwrite it like
+// a narrowing integer conversion, or simply because the instruction
+// encoding doesn't have enough register fields to make the output
+// independent of all inputs). It can also be because the instruction
+// is defined to set disabled output lanes to zero rather than leaving
+// them unchanged (vector loads), or because it doesn't output a
+// vector register at all (stores, compares). In any of these
+// situations it's unnecessary to have an extra operand tied to the
+// output, and inconvenient to leave it there unused.
+
+// Base class for both kinds of vpred.
+class vpred_ops<dag extra_op, dag extra_mi> : OperandWithDefaultOps<OtherVT,
+            !con((ops (i32 0), (i32 zero_reg)), extra_op)> {
+  let PrintMethod = "printVPTPredicateOperand";
+  let OperandNamespace = "ARM";
+  let MIOperandInfo = !con((ops i32imm:$cond, VCCR:$cond_reg), extra_mi);
+
+  // For convenience, we provide a string value that can be appended
+  // to the constraints string. It's empty for vpred_n, and for
+  // vpred_r it ties the $inactive operand to the output q-register
+  // (which by convention will be called $Qd).
+  string vpred_constraint;
+}
+
+def vpred_r : vpred_ops<(ops (v4i32 undef_tied_input)), (ops MQPR:$inactive)> {
+  let ParserMatchClass = VPTPredROperand;
+  let OperandType = "OPERAND_VPRED_R";
+  let DecoderMethod = "DecodeVpredROperand";
+  let vpred_constraint = ",$Qd = $vp.inactive";
+}
+
+def vpred_n : vpred_ops<(ops), (ops)> {
+  let ParserMatchClass = VPTPredNOperand;
+  let OperandType = "OPERAND_VPRED_N";
+  let vpred_constraint = "";
+}
+
 // ARM special operands for disassembly only.
 //
 def SetEndAsmOperand : ImmAsmOperand<0,1> {

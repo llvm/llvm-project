@@ -160,6 +160,10 @@ ARMRegisterBankInfo::ARMRegisterBankInfo(const TargetRegisterInfo &TRI)
          "Subclass not added?");
   assert(RBGPR.covers(*TRI.getRegClass(ARM::tGPR_and_tcGPRRegClassID)) &&
          "Subclass not added?");
+  assert(RBGPR.covers(*TRI.getRegClass(ARM::tGPREven_and_tGPR_and_tcGPRRegClassID)) &&
+         "Subclass not added?");
+  assert(RBGPR.covers(*TRI.getRegClass(ARM::tGPROdd_and_tcGPRRegClassID)) &&
+         "Subclass not added?");
   assert(RBGPR.getSize() == 32 && "GPRs should hold up to 32-bit");
 
 #ifndef NDEBUG

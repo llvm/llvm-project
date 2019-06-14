@@ -31,8 +31,17 @@ using namespace llvm;
 
 #define DEBUG_TYPE "inline"
 
-PreservedAnalyses AlwaysInlinerPass::run(Module &M, ModuleAnalysisManager &) {
-  InlineFunctionInfo IFI;
+PreservedAnalyses AlwaysInlinerPass::run(Module &M,
+                                         ModuleAnalysisManager &MAM) {
+  // Add inline assumptions during code generation.
+  FunctionAnalysisManager &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  std::function<AssumptionCache &(Function &)> GetAssumptionCache =
+      [&](Function &F) -> AssumptionCache & {
+    return FAM.getResult<AssumptionAnalysis>(F);
+  };
+  InlineFunctionInfo IFI(/*cg=*/nullptr, &GetAssumptionCache);
+
   SmallSetVector<CallSite, 16> Calls;
   bool Changed = false;
   SmallVector<Function *, 16> InlinedFunctions;

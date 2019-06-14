@@ -3733,7 +3733,9 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         break;
 
       Function *NewF =
-          Intrinsic::getDeclaration(II->getModule(), NewIID, SrcLHS->getType());
+          Intrinsic::getDeclaration(II->getModule(), NewIID,
+                                    { II->getType(),
+                                      SrcLHS->getType() });
       Value *Args[] = { SrcLHS, SrcRHS,
                         ConstantInt::get(CC->getType(), SrcPred) };
       CallInst *NewCall = Builder.CreateCall(NewF, Args);
