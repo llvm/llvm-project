@@ -3576,7 +3576,11 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
     StringView Res = parseBareSourceName();
     if (Res.empty())
       return nullptr;
-    return make<NameType>(Res);
+    // Typically, <builtin-type>s are not considered substitution candidates,
+    // but the exception to that exception is vendor extended types (Itanium C++
+    // ABI 5.9.1).
+    Result = make<NameType>(Res);
+    break;
   }
   case 'D':
     switch (look(1)) {

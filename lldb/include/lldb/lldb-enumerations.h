@@ -689,6 +689,7 @@ enum SectionType {
   eSectionTypeDWARFDebugInfoDwo,
   eSectionTypeDWARFDebugStrDwo,
   eSectionTypeDWARFDebugStrOffsetsDwo,
+  eSectionTypeDWARFDebugTypesDwo,
 };
 
 FLAGS_ENUM(EmulateInstructionOptions){

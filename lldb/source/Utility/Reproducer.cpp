@@ -231,7 +231,7 @@ DataRecorder::Create(const FileSpec &filename) {
 
 DataRecorder *CommandProvider::GetNewDataRecorder() {
   std::size_t i = m_data_recorders.size() + 1;
-  std::string filename = (llvm::Twine(info::name) + llvm::Twine("-") +
+  std::string filename = (llvm::Twine(Info::name) + llvm::Twine("-") +
                           llvm::Twine(i) + llvm::Twine(".txt"))
                              .str();
   auto recorder_or_error =
@@ -252,7 +252,7 @@ void CommandProvider::Keep() {
     files.push_back(recorder->GetFilename().GetPath());
   }
 
-  FileSpec file = GetRoot().CopyByAppendingPathComponent(info::file);
+  FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
   std::error_code ec;
   llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::F_Text);
   if (ec)
@@ -263,11 +263,23 @@ void CommandProvider::Keep() {
 
 void CommandProvider::Discard() { m_data_recorders.clear(); }
 
+void VersionProvider::Keep() {
+  FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
+  std::error_code ec;
+  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::F_Text);
+  if (ec)
+    return;
+  os << m_version << "\n";
+}
+
 void ProviderBase::anchor() {}
 char ProviderBase::ID = 0;
-char FileProvider::ID = 0;
 char CommandProvider::ID = 0;
-const char *FileInfo::name = "files";
-const char *FileInfo::file = "files.yaml";
-const char *CommandInfo::name = "command-interpreter";
-const char *CommandInfo::file = "command-interpreter.yaml";
+char FileProvider::ID = 0;
+char VersionProvider::ID = 0;
+const char *CommandProvider::Info::file = "command-interpreter.yaml";
+const char *CommandProvider::Info::name = "command-interpreter";
+const char *FileProvider::Info::file = "files.yaml";
+const char *FileProvider::Info::name = "files";
+const char *VersionProvider::Info::file = "version.txt";
+const char *VersionProvider::Info::name = "version";

@@ -70,7 +70,7 @@ void DWARFCompileUnit::BuildAddressRangeTable(
     // We got nothing from the functions, maybe we have a line tables only
     // situation. Check the line tables and build the arange table from this.
     SymbolContext sc;
-    sc.comp_unit = m_dwarf->GetCompUnitForDWARFCompUnit(this);
+    sc.comp_unit = m_dwarf->GetCompUnitForDWARFCompUnit(*this);
     if (sc.comp_unit) {
       SymbolFileDWARFDebugMap *debug_map_sym_file =
           m_dwarf->GetDebugMapSymfile();
@@ -96,7 +96,7 @@ void DWARFCompileUnit::BuildAddressRangeTable(
     // We got nothing from the functions, maybe we have a line tables only
     // situation. Check the line tables and build the arange table from this.
     SymbolContext sc;
-    sc.comp_unit = m_dwarf->GetCompUnitForDWARFCompUnit(this);
+    sc.comp_unit = m_dwarf->GetCompUnitForDWARFCompUnit(*this);
     if (sc.comp_unit) {
       if (LineTable *line_table = sc.comp_unit->GetLineTable()) {
         LineTable::FileAddressRanges file_ranges;

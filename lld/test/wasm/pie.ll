@@ -2,7 +2,7 @@
 ; RUN: wasm-ld --no-gc-sections --allow-undefined -pie -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
-target triple = "wasm32-unknown-unknown"
+target triple = "wasm32-unknown-emscripten"
 
 @data = global i32 2, align 4
 @data_external = external global i32

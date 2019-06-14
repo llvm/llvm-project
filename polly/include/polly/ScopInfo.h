@@ -49,6 +49,11 @@ class MemoryAccess;
 
 extern bool UseInstructionNames;
 
+// The maximal number of basic sets we allow during domain construction to
+// be created. More complex scops will result in very high compile time and
+// are also unlikely to result in good code
+extern int const MaxDisjunctsInDomain;
+
 /// Enumeration of assumptions Polly can take.
 enum AssumptionKind {
   ALIASING,
@@ -2028,73 +2033,6 @@ private:
   /// Return the access for the base ptr of @p MA if any.
   MemoryAccess *lookupBasePtrAccess(MemoryAccess *MA);
 
-  /// Check if the base ptr of @p MA is in the SCoP but not hoistable.
-  bool hasNonHoistableBasePtrInScop(MemoryAccess *MA, isl::union_map Writes);
-
-  /// Return the context under which the access cannot be hoisted.
-  ///
-  /// @param Access The access to check.
-  /// @param Writes The set of all memory writes in the scop.
-  ///
-  /// @return Return the context under which the access cannot be hoisted or a
-  ///         nullptr if it cannot be hoisted at all.
-  isl::set getNonHoistableCtx(MemoryAccess *Access, isl::union_map Writes);
-
-  /// Hoist invariant memory loads and check for required ones.
-  ///
-  /// We first identify "common" invariant loads, thus loads that are invariant
-  /// and can be hoisted. Then we check if all required invariant loads have
-  /// been identified as (common) invariant. A load is a required invariant load
-  /// if it was assumed to be invariant during SCoP detection, e.g., to assume
-  /// loop bounds to be affine or runtime alias checks to be placeable. In case
-  /// a required invariant load was not identified as (common) invariant we will
-  /// drop this SCoP. An example for both "common" as well as required invariant
-  /// loads is given below:
-  ///
-  /// for (int i = 1; i < *LB[0]; i++)
-  ///   for (int j = 1; j < *LB[1]; j++)
-  ///     A[i][j] += A[0][0] + (*V);
-  ///
-  /// Common inv. loads: V, A[0][0], LB[0], LB[1]
-  /// Required inv. loads: LB[0], LB[1], (V, if it may alias with A or LB)
-  void hoistInvariantLoads();
-
-  /// Canonicalize arrays with base pointers from the same equivalence class.
-  ///
-  /// Some context: in our normal model we assume that each base pointer is
-  /// related to a single specific memory region, where memory regions
-  /// associated with different base pointers are disjoint. Consequently we do
-  /// not need to compute additional data dependences that model possible
-  /// overlaps of these memory regions. To verify our assumption we compute
-  /// alias checks that verify that modeled arrays indeed do not overlap. In
-  /// case an overlap is detected the runtime check fails and we fall back to
-  /// the original code.
-  ///
-  /// In case of arrays where the base pointers are know to be identical,
-  /// because they are dynamically loaded by accesses that are in the same
-  /// invariant load equivalence class, such run-time alias check would always
-  /// be false.
-  ///
-  /// This function makes sure that we do not generate consistently failing
-  /// run-time checks for code that contains distinct arrays with known
-  /// equivalent base pointers. It identifies for each invariant load
-  /// equivalence class a single canonical array and canonicalizes all memory
-  /// accesses that reference arrays that have base pointers that are known to
-  /// be equal to the base pointer of such a canonical array to this canonical
-  /// array.
-  ///
-  /// We currently do not canonicalize arrays for which certain memory accesses
-  /// have been hoisted as loop invariant.
-  void canonicalizeDynamicBasePtrs();
-
-  /// Check if @p MA can always be hoisted without execution context.
-  bool canAlwaysBeHoisted(MemoryAccess *MA, bool StmtInvalidCtxIsEmpty,
-                          bool MAInvalidCtxIsEmpty,
-                          bool NonHoistableCtxIsEmpty);
-
-  /// Add invariant loads listed in @p InvMAs with the domain of @p Stmt.
-  void addInvariantLoads(ScopStmt &Stmt, InvariantAccessesTy &InvMAs);
-
   /// Create an id for @p Param and store it in the ParameterIds map.
   void createParameterId(const SCEV *Param);
 
@@ -2392,6 +2330,12 @@ public:
   /// Return an iterator range containing the scop parameters.
   iterator_range<ParameterSetTy::iterator> parameters() const {
     return make_range(Parameters.begin(), Parameters.end());
+  }
+
+  /// Return an iterator range containing invariant accesses.
+  iterator_range<InvariantEquivClassesTy::iterator> invariantEquivClasses() {
+    return make_range(InvariantEquivClasses.begin(),
+                      InvariantEquivClasses.end());
   }
 
   /// Return whether this scop is empty, i.e. contains no statements that
@@ -2762,11 +2706,6 @@ public:
 
   /// Add @p LI to the set of required invariant loads.
   void addRequiredInvariantLoad(LoadInst *LI) { DC.RequiredILS.insert(LI); }
-
-  /// Return true if and only if @p LI is a required invariant load.
-  bool isRequiredInvariantLoad(LoadInst *LI) const {
-    return getRequiredInvariantLoads().count(LI);
-  }
 
   /// Return the set of boxed (thus overapproximated) loops.
   const BoxedLoopsSetTy &getBoxedLoops() const { return DC.BoxedLoopsSet; }

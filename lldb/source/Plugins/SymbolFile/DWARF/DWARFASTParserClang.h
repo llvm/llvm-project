@@ -81,8 +81,7 @@ protected:
           &template_param_infos);
 
   bool ParseChildMembers(
-      const lldb_private::SymbolContext &sc, const DWARFDIE &die,
-      lldb_private::CompilerType &class_compiler_type,
+      const DWARFDIE &die, lldb_private::CompilerType &class_compiler_type,
       const lldb::LanguageType class_language,
       std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
       std::vector<int> &member_accessibilities,
@@ -92,8 +91,7 @@ protected:
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 
   size_t
-  ParseChildParameters(lldb_private::CompileUnit &comp_unit,
-                       clang::DeclContext *containing_decl_ctx,
+  ParseChildParameters(clang::DeclContext *containing_decl_ctx,
                        const DWARFDIE &parent_die, bool skip_artificial,
                        bool &is_static, bool &is_variadic,
                        bool &has_template_params,
@@ -101,8 +99,7 @@ protected:
                        std::vector<clang::ParmVarDecl *> &function_param_decls,
                        unsigned &type_quals);
 
-  size_t ParseChildEnumerators(const lldb_private::SymbolContext &sc,
-                               lldb_private::CompilerType &compiler_type,
+  size_t ParseChildEnumerators(lldb_private::CompilerType &compiler_type,
                                bool is_signed, uint32_t enumerator_byte_size,
                                const DWARFDIE &parent_die);
 

@@ -108,6 +108,8 @@ private:
 
   Symbol *addUndefined(StringRef Sym);
 
+  StringRef mangleMaybe(Symbol *S);
+
   // Windows specific -- "main" is not the only main function in Windows.
   // You can choose one from these four -- {w,}{WinMain,main}.
   // There are four different entry point functions for them,
@@ -135,10 +137,6 @@ private:
 // Functions below this line are defined in DriverUtils.cpp.
 
 void printHelp(const char *Argv0);
-
-// For /machine option.
-MachineTypes getMachineType(StringRef Arg);
-StringRef machineToStr(MachineTypes MT);
 
 // Parses a string in the form of "<integer>[,<integer>]".
 void parseNumbers(StringRef Arg, uint64_t *Addr, uint64_t *Size = nullptr);

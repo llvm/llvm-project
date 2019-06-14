@@ -1706,6 +1706,7 @@ static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
       .Case(".debug_str_offsets", eSectionTypeDWARFDebugStrOffsets)
       .Case(".debug_str_offsets.dwo", eSectionTypeDWARFDebugStrOffsetsDwo)
       .Case(".debug_types", eSectionTypeDWARFDebugTypes)
+      .Case(".debug_types.dwo", eSectionTypeDWARFDebugTypesDwo)
       .Case(".eh_frame", eSectionTypeEHFrame)
       .Case(".gnu_debugaltlink", eSectionTypeDWARFGNUDebugAltLink)
       .Case(".gosymtab", eSectionTypeGoSymtab)

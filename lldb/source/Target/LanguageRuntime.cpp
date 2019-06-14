@@ -303,4 +303,3 @@ void LanguageRuntime::InitializeCommands(CommandObject *parent) {
 bool LanguageRuntime::IsSymbolAnyRuntimeThunk(Symbol &symbol) {
   return SwiftLanguageRuntime::IsSymbolARuntimeThunk(symbol);
 }
-

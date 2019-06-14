@@ -334,6 +334,16 @@ static void checkOptions() {
     if (Config->SingleRoRx && !Script->HasSectionsCommand)
       error("-execute-only and -no-rosegment cannot be used together");
   }
+
+  if (Config->ZRetpolineplt && Config->RequireCET)
+    error("--require-cet may not be used with -z retpolineplt");
+
+  if (Config->EMachine != EM_AARCH64) {
+    if (Config->PacPlt)
+      error("--pac-plt only supported on AArch64");
+    if (Config->ForceBTI)
+      error("--force-bti only supported on AArch64");
+  }
 }
 
 static const char *getReproduceOption(opt::InputArgList &Args) {
@@ -813,6 +823,8 @@ static void readConfigs(opt::InputArgList &Args) {
   Config->FilterList = args::getStrings(Args, OPT_filter);
   Config->Fini = Args.getLastArgValue(OPT_fini, "_fini");
   Config->FixCortexA53Errata843419 = Args.hasArg(OPT_fix_cortex_a53_843419);
+  Config->ForceBTI = Args.hasArg(OPT_force_bti);
+  Config->RequireCET = Args.hasArg(OPT_require_cet);
   Config->GcSections = Args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false);
   Config->GnuUnique = Args.hasFlag(OPT_gnu_unique, OPT_no_gnu_unique, true);
   Config->GdbIndex = Args.hasFlag(OPT_gdb_index, OPT_no_gdb_index, false);
@@ -847,6 +859,7 @@ static void readConfigs(opt::InputArgList &Args) {
   Config->Optimize = args::getInteger(Args, OPT_O, 1);
   Config->OrphanHandling = getOrphanHandling(Args);
   Config->OutputFile = Args.getLastArgValue(OPT_o);
+  Config->PacPlt = Args.hasArg(OPT_pac_plt);
   Config->Pie = Args.hasFlag(OPT_pie, OPT_no_pie, false);
   Config->PrintIcfSections =
       Args.hasFlag(OPT_print_icf_sections, OPT_no_print_icf_sections, false);
@@ -1502,9 +1515,8 @@ template <class ELFT> void LinkerDriver::compileBitcodeFiles() {
     LTO->add(*File);
 
   for (InputFile *File : LTO->compile()) {
-    DenseMap<CachedHashStringRef, const InputFile *> DummyGroups;
     auto *Obj = cast<ObjFile<ELFT>>(File);
-    Obj->parse(DummyGroups);
+    Obj->parse(/*IgnoreComdats=*/true);
     for (Symbol *Sym : Obj->getGlobalSymbols())
       Sym->parseSymbolVersion();
     ObjectFiles.push_back(File);
@@ -1582,6 +1594,42 @@ static void wrapSymbols(ArrayRef<WrappedSymbol> Wrapped) {
   // Update pointers in the symbol table.
   for (const WrappedSymbol &W : Wrapped)
     Symtab->wrap(W.Sym, W.Real, W.Wrap);
+}
+
+// To enable CET (x86's hardware-assited control flow enforcement), each
+// source file must be compiled with -fcf-protection. Object files compiled
+// with the flag contain feature flags indicating that they are compatible
+// with CET. We enable the feature only when all object files are compatible
+// with CET.
+//
+// This function returns the merged feature flags. If 0, we cannot enable CET.
+// This is also the case with AARCH64's BTI and PAC which use the similar
+// GNU_PROPERTY_AARCH64_FEATURE_1_AND mechanism.
+//
+// Note that the CET-aware PLT is not implemented yet. We do error
+// check only.
+template <class ELFT> static uint32_t getAndFeatures() {
+  if (Config->EMachine != EM_386 && Config->EMachine != EM_X86_64 &&
+      Config->EMachine != EM_AARCH64)
+    return 0;
+
+  uint32_t Ret = -1;
+  for (InputFile *F : ObjectFiles) {
+    uint32_t Features = cast<ObjFile<ELFT>>(F)->AndFeatures;
+    if (Config->ForceBTI && !(Features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
+      warn(toString(F) + ": --force-bti: file does not have BTI property");
+      Features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
+    } else if (!Features && Config->RequireCET)
+      error(toString(F) + ": --require-cet: file is not compatible with CET");
+    Ret &= Features;
+  }
+
+  // Force enable pointer authentication Plt, we don't warn in this case as
+  // this does not require support in the object for correctness.
+  if (Config->PacPlt)
+    Ret |= GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
+
+  return Ret;
 }
 
 static const char *LibcallRoutineNames[] = {
@@ -1761,6 +1809,19 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     return Config->Strip != StripPolicy::None &&
            (S->Name.startswith(".debug") || S->Name.startswith(".zdebug"));
   });
+
+  // Now that the number of partitions is fixed, save a pointer to the main
+  // partition.
+  Main = &Partitions[0];
+
+  // Read .note.gnu.property sections from input object files which
+  // contain a hint to tweak linker's and loader's behaviors.
+  Config->AndFeatures = getAndFeatures<ELFT>();
+
+  // The Target instance handles target-specific stuff, such as applying
+  // relocations or writing a PLT section. It also contains target-dependent
+  // values such as a default image base address.
+  Target = getTarget();
 
   Config->EFlags = Target->calcEFlags();
   // MaxPageSize (sometimes called abi page size) is the maximum page size that

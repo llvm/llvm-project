@@ -438,11 +438,13 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       // relocation in it pointing to discarded sections with R_*_NONE, which
       // hopefully creates a frame that is ignored at runtime. Also, don't warn
       // on .gcc_except_table and debug sections.
+      //
+      // See the comment in maybeReportUndefined for PPC64 .toc .
       auto *D = dyn_cast<Defined>(&Sym);
       if (!D) {
         if (!Sec->Name.startswith(".debug") &&
             !Sec->Name.startswith(".zdebug") && Sec->Name != ".eh_frame" &&
-            Sec->Name != ".gcc_except_table") {
+            Sec->Name != ".gcc_except_table" && Sec->Name != ".toc") {
           uint32_t SecIdx = cast<Undefined>(Sym).DiscardedSecIdx;
           Elf_Shdr_Impl<ELFT> Sec =
               CHECK(File->getObj().sections(), File)[SecIdx];
@@ -611,6 +613,7 @@ static int64_t getTlsTpOffset(const Symbol &S) {
   case EM_X86_64:
     // Variant 2. The TLS segment is located just before the thread pointer.
     return S.getVA(0) - alignTo(Out::TlsPhdr->p_memsz, Out::TlsPhdr->p_align);
+  case EM_PPC:
   case EM_PPC64:
     // The thread pointer points to a fixed offset from the start of the
     // executable's TLS segment. An offset of 0x7000 allows a signed 16-bit
@@ -629,6 +632,7 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_DTPREL:
   case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:
+  case R_RISCV_ADD:
     return Sym.getVA(A);
   case R_ADDEND:
     return A;
@@ -718,6 +722,8 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
         Dest = getARMUndefinedRelativeWeakVA(Type, A, P);
       else if (Config->EMachine == EM_AARCH64)
         Dest = getAArch64UndefinedRelativeWeakVA(Type, A, P);
+      else if (Config->EMachine == EM_PPC)
+        Dest = P;
       else
         Dest = Sym.getVA(A);
     } else {
@@ -730,6 +736,11 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_PLT_PC:
   case R_PPC64_CALL_PLT:
     return Sym.getPltVA() + A - P;
+  case R_PPC32_PLTREL:
+    // R_PPC_PLTREL24 uses the addend (usually 0 or 0x8000) to indicate r30
+    // stores _GLOBAL_OFFSET_TABLE_ or .got2+0x8000. The addend is ignored for
+    // target VA compuation.
+    return Sym.getPltVA() - P;
   case R_PPC64_CALL: {
     uint64_t SymVA = Sym.getVA(A);
     // If we have an undefined weak symbol, we might get here with a symbol

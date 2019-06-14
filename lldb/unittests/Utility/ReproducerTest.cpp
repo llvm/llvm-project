@@ -19,22 +19,20 @@ using namespace llvm;
 using namespace lldb_private;
 using namespace lldb_private::repro;
 
-struct DummyInfo {
-  static const char *name;
-  static const char *file;
-};
-
-const char *DummyInfo::name = "dummy";
-const char *DummyInfo::file = "dummy.yaml";
-
 class DummyProvider : public repro::Provider<DummyProvider> {
 public:
-  typedef DummyInfo info;
+  struct Info {
+    static const char *name;
+    static const char *file;
+  };
 
   DummyProvider(const FileSpec &directory) : Provider(directory) {}
 
   static char ID;
 };
+
+const char *DummyProvider::Info::name = "dummy";
+const char *DummyProvider::Info::file = "dummy.yaml";
 
 class DummyReproducer : public Reproducer {
 public:

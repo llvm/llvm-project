@@ -55,6 +55,7 @@ X86_64::X86_64() {
   PltRel = R_X86_64_JUMP_SLOT;
   RelativeRel = R_X86_64_RELATIVE;
   IRelativeRel = R_X86_64_IRELATIVE;
+  SymbolicRel = R_X86_64_64;
   TlsDescRel = R_X86_64_TLSDESC;
   TlsGotRel = R_X86_64_TPOFF64;
   TlsModuleIndexRel = R_X86_64_DTPMOD64;
@@ -132,7 +133,7 @@ void X86_64::writeGotPltHeader(uint8_t *Buf) const {
   // required, but it is documented in the psabi and the glibc dynamic linker
   // seems to use it (note that this is relevant for linking ld.so, not any
   // other program).
-  write64le(Buf, In.Dynamic->getVA());
+  write64le(Buf, Main->Dynamic->getVA());
 }
 
 void X86_64::writeGotPlt(uint8_t *Buf, const Symbol &S) const {
@@ -387,7 +388,6 @@ void X86_64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   case R_X86_64_64:
   case R_X86_64_DTPOFF64:
-  case R_X86_64_GLOB_DAT:
   case R_X86_64_PC64:
   case R_X86_64_SIZE64:
   case R_X86_64_GOT64:

@@ -167,6 +167,8 @@ def export_all_symbols : F<"export-all-symbols">;
 defm demangle : B<"demangle",
     "Demangle symbols in output (default)",
     "Do not demangle symbols in output">;
+def include_optional : Joined<["/", "-", "/?", "-?"], "includeoptional:">,
+    HelpText<"Add symbol as undefined, but allow it to remain undefined">;
 def kill_at : F<"kill-at">;
 def lldmingw : F<"lldmingw">;
 def output_def : Joined<["/", "-", "/?", "-?"], "output-def:">;

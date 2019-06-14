@@ -72,34 +72,6 @@ private:
 
 } // anonymous namespace
 
-// Returns /machine's value.
-MachineTypes getMachineType(StringRef S) {
-  MachineTypes MT = StringSwitch<MachineTypes>(S.lower())
-                        .Cases("x64", "amd64", AMD64)
-                        .Cases("x86", "i386", I386)
-                        .Case("arm", ARMNT)
-                        .Case("arm64", ARM64)
-                        .Default(IMAGE_FILE_MACHINE_UNKNOWN);
-  if (MT != IMAGE_FILE_MACHINE_UNKNOWN)
-    return MT;
-  fatal("unknown /machine argument: " + S);
-}
-
-StringRef machineToStr(MachineTypes MT) {
-  switch (MT) {
-  case ARMNT:
-    return "arm";
-  case ARM64:
-    return "arm64";
-  case AMD64:
-    return "x64";
-  case I386:
-    return "x86";
-  default:
-    llvm_unreachable("unknown machine type");
-  }
-}
-
 // Parses a string in the form of "<integer>[,<integer>]".
 void parseNumbers(StringRef Arg, uint64_t *Addr, uint64_t *Size) {
   StringRef S1, S2;
@@ -655,18 +627,6 @@ void fixupExports() {
   }
 
   for (Export &E : Config->Exports) {
-    Symbol *Sym = E.Sym;
-    if (!E.ForwardTo.empty() || !Sym) {
-      E.SymbolName = E.Name;
-    } else {
-      if (auto *U = dyn_cast<Undefined>(Sym))
-        if (U->WeakAlias)
-          Sym = U->WeakAlias;
-      E.SymbolName = Sym->getName();
-    }
-  }
-
-  for (Export &E : Config->Exports) {
     if (!E.ForwardTo.empty()) {
       E.ExportName = undecorate(E.Name);
     } else {
@@ -737,6 +697,7 @@ void checkFailIfMismatch(StringRef Arg, InputFile *Source) {
 }
 
 // Convert Windows resource files (.res files) to a .obj file.
+// Does what cvtres.exe does, but in-process and cross-platform.
 MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> MBs) {
   object::WindowsResourceParser Parser;
 
@@ -758,7 +719,8 @@ MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> MBs) {
   }
 
   Expected<std::unique_ptr<MemoryBuffer>> E =
-      llvm::object::writeWindowsResourceCOFF(Config->Machine, Parser);
+      llvm::object::writeWindowsResourceCOFF(Config->Machine, Parser,
+                                             Config->Timestamp);
   if (!E)
     fatal("failed to write .res to COFF: " + toString(E.takeError()));
 

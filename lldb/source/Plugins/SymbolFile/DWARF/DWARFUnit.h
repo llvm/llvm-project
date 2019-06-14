@@ -141,8 +141,9 @@ public:
   const DWARFAbbreviationDeclarationSet *GetAbbreviations() const;
   dw_offset_t GetAbbrevOffset() const;
   uint8_t GetAddressByteSize() const { return m_header.GetAddressByteSize(); }
-  dw_addr_t GetBaseAddress() const { return m_base_addr; }
   dw_addr_t GetAddrBase() const { return m_addr_base; }
+  dw_addr_t GetBaseAddress() const { return m_base_addr; }
+  dw_offset_t GetLineTableOffset();
   dw_addr_t GetRangesBase() const { return m_ranges_base; }
   dw_addr_t GetStrOffsetsBase() const { return m_str_offsets_base; }
   void SetAddrBase(dw_addr_t addr_base);
@@ -196,6 +197,8 @@ public:
   bool GetIsOptimized();
 
   const lldb_private::FileSpec &GetCompilationDirectory();
+  const lldb_private::FileSpec &GetAbsolutePath();
+  lldb_private::FileSpec GetFile(size_t file_idx);
   lldb_private::FileSpec::Style GetPathStyle();
 
   SymbolFileDWARFDwo *GetDwoSymbolFile() const;
@@ -210,6 +213,7 @@ public:
   DIERef::Section GetDebugSection() const { return m_section; }
 
   uint8_t GetUnitType() const { return m_header.GetUnitType(); }
+  bool IsTypeUnit() const { return m_header.IsTypeUnit(); }
 
   /// Return a list of address ranges resulting from a (possibly encoded)
   /// range list starting at a given offset in the appropriate ranges section.
@@ -277,11 +281,16 @@ protected:
   lldb::LanguageType m_language_type = lldb::eLanguageTypeUnknown;
   lldb_private::LazyBool m_is_optimized = lldb_private::eLazyBoolCalculate;
   llvm::Optional<lldb_private::FileSpec> m_comp_dir;
+  llvm::Optional<lldb_private::FileSpec> m_file_spec;
   dw_addr_t m_addr_base = 0;   // Value of DW_AT_addr_base
   dw_addr_t m_ranges_base = 0; // Value of DW_AT_ranges_base
   // If this is a dwo compile unit this is the offset of the base compile unit
   // in the main object file
   dw_offset_t m_base_obj_offset = DW_INVALID_OFFSET;
+
+  /// Value of DW_AT_stmt_list.
+  dw_offset_t m_line_table_offset = DW_INVALID_OFFSET;
+
   dw_offset_t m_str_offsets_base = 0; // Value of DW_AT_str_offsets_base.
   const DIERef::Section m_section;
 
@@ -293,6 +302,7 @@ private:
   void AddUnitDIE(const DWARFDebugInfoEntry &cu_die);
 
   void ComputeCompDirAndGuessPathStyle();
+  void ComputeAbsolutePath();
 
   DISALLOW_COPY_AND_ASSIGN(DWARFUnit);
 };

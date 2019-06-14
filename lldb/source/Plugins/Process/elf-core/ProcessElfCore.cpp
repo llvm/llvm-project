@@ -894,11 +894,11 @@ ArchSpec ProcessElfCore::GetArchitecture() {
   return arch;
 }
 
-const lldb::DataBufferSP ProcessElfCore::GetAuxvData() {
+DataExtractor ProcessElfCore::GetAuxvData() {
   const uint8_t *start = m_auxv.GetDataStart();
   size_t len = m_auxv.GetByteSize();
   lldb::DataBufferSP buffer(new lldb_private::DataBufferHeap(start, len));
-  return buffer;
+  return DataExtractor(buffer, GetByteOrder(), GetAddressByteSize());
 }
 
 bool ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info) {

@@ -171,14 +171,6 @@ Status NativeProcessDarwin::FinalizeLaunch(LaunchFlavor launch_flavor,
   Status error;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
-#if 0
-    m_path = path;
-    size_t i;
-    char const *arg;
-    for (i=0; (arg = argv[i]) != NULL; i++)
-        m_args.push_back(arg);
-#endif
-
   error = StartExceptionThread();
   if (!error.Success()) {
     if (log)

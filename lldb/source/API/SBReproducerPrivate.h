@@ -30,14 +30,12 @@ public:
   SBRegistry();
 };
 
-struct SBInfo {
-  static const char *name;
-  static const char *file;
-};
-
 class SBProvider : public Provider<SBProvider> {
 public:
-  typedef SBInfo info;
+  struct Info {
+    static const char *name;
+    static const char *file;
+  };
 
   SBProvider(const FileSpec &directory)
       : Provider(directory),
