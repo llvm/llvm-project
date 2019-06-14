@@ -58,7 +58,7 @@ except ImportError:
     platform_system = platform.system()
     if platform_system == 'Darwin':
         # On Darwin, try the currently selected Xcode directory
-        xcode_dir = subprocess.check_output("xcode-select --print-path", shell=True)
+        xcode_dir = subprocess.check_output("xcode-select --print-path", shell=True).decode("utf-8")
         if xcode_dir:
             lldb_python_dirs.append(
                 os.path.realpath(
@@ -102,6 +102,7 @@ class CrashLog(symbolication.Symbolicator):
     app_backtrace_regex = re.compile(
         '^Application Specific Backtrace ([0-9]+)([^:]*):(.*)')
     frame_regex = re.compile('^([0-9]+)\s+(.+?)\s+(0x[0-9a-fA-F]{7}[0-9a-fA-F]+) +(.*)')
+    null_frame_regex = re.compile('^([0-9]+)\s+\?\?\?\s+(0{7}0+) +(.*)')
     image_regex_uuid = re.compile(
         '(0x[0-9a-fA-F]+)[-\s]+(0x[0-9a-fA-F]+)\s+[+]?(.+?)\s+(\(.+\))?\s?(<([-0-9a-fA-F]+)>)? (.*)')
     empty_line_regex = re.compile('^$')
@@ -231,7 +232,7 @@ class CrashLog(symbolication.Symbolicator):
         if not os.path.exists(dsymForUUIDBinary):
             try:
                 dsymForUUIDBinary = subprocess.check_output('which dsymForUUID',
-                                                            shell=True)
+                                                            shell=True).decode("utf-8").rstrip('\n')
             except:
                 dsymForUUIDBinary = ""
 
@@ -245,7 +246,8 @@ class CrashLog(symbolication.Symbolicator):
                 identifier,
                 version,
                 uuid,
-                path):
+                path,
+                verbose):
             symbolication.Image.__init__(self, path, uuid)
             self.add_section(
                 symbolication.Section(
@@ -254,6 +256,17 @@ class CrashLog(symbolication.Symbolicator):
                     "__TEXT"))
             self.identifier = identifier
             self.version = version
+            self.verbose = verbose
+
+        def show_symbol_progress(self):
+            """
+            Hide progress output and errors from system frameworks as they are plentiful.
+            """
+            if self.verbose:
+                return True
+            return not (self.path.startswith("/System/Library/") or
+                        self.path.startswith("/usr/lib/"))
+
 
         def find_matching_slice(self):
             dwarfdump_cmd_output = subprocess.check_output(
@@ -270,8 +283,9 @@ class CrashLog(symbolication.Symbolicator):
                         return True
             if not self.resolved_path:
                 self.unavailable = True
-                print(("error\n    error: unable to locate '%s' with UUID %s"
-                      % (self.path, self.get_normalized_uuid_string())))
+                if self.show_symbol_progress():
+                    print(("error\n    error: unable to locate '%s' with UUID %s"
+                           % (self.path, self.get_normalized_uuid_string())))
                 return False
 
         def locate_module_and_debug_symbols(self):
@@ -281,11 +295,12 @@ class CrashLog(symbolication.Symbolicator):
             # Mark this as resolved so we don't keep trying
             self.resolved = True
             uuid_str = self.get_normalized_uuid_string()
-            print('Getting symbols for %s %s...' % (uuid_str, self.path), end=' ')
+            if self.show_symbol_progress():
+                print('Getting symbols for %s %s...' % (uuid_str, self.path), end=' ')
             if os.path.exists(self.dsymForUUIDBinary):
                 dsym_for_uuid_command = '%s %s' % (
                     self.dsymForUUIDBinary, uuid_str)
-                s = subprocess.check_output(dsym_for_uuid_command, shell=True)
+                s = subprocess.check_output(dsym_for_uuid_command, shell=True).decode("utf-8")
                 if s:
                     try:
                         plist_root = read_plist(s)
@@ -311,7 +326,7 @@ class CrashLog(symbolication.Symbolicator):
                 try:
                     dsym = subprocess.check_output(
                         ["/usr/bin/mdfind",
-                         "com_apple_xcode_dsym_uuids == %s"%uuid_str])[:-1]
+                         "com_apple_xcode_dsym_uuids == %s"%uuid_str]).decode("utf-8")[:-1]
                     if dsym and os.path.exists(dsym):
                         print(('falling back to binary inside "%s"'%dsym))
                         self.symfile = dsym
@@ -331,7 +346,7 @@ class CrashLog(symbolication.Symbolicator):
                 self.unavailable = True
             return False
 
-    def __init__(self, path):
+    def __init__(self, path, verbose):
         """CrashLog constructor that take a path to a darwin crash log file"""
         symbolication.Symbolicator.__init__(self)
         self.path = os.path.expanduser(path)
@@ -344,6 +359,7 @@ class CrashLog(symbolication.Symbolicator):
         self.version = -1
         self.error = None
         self.target = None
+        self.verbose = verbose
         # With possible initial component of ~ or ~user replaced by that user's
         # home directory.
         try:
@@ -468,6 +484,9 @@ class CrashLog(symbolication.Symbolicator):
             elif parse_mode == PARSE_MODE_THREAD:
                 if line.startswith('Thread'):
                     continue
+                if self.null_frame_regex.search(line):
+                    print('warning: thread parser ignored null-frame: "%s"' % line)
+                    continue
                 frame_match = self.frame_regex.search(line)
                 if frame_match:
                     ident = frame_match.group(2)
@@ -487,7 +506,8 @@ class CrashLog(symbolication.Symbolicator):
                                                  img_name.strip(),
                                                  img_version.strip()
                                                  if img_version else "",
-                                                 uuid.UUID(img_uuid), img_path)
+                                                 uuid.UUID(img_uuid), img_path,
+                                                 self.verbose)
                     self.images.append(image)
                 else:
                     print("error: image regex failed for: %s" % line)
@@ -553,7 +573,9 @@ class CrashLog(symbolication.Symbolicator):
                 if self.target:
                     return self.target  # success
             print('crashlog.create_target()...4')
-            print('error: unable to locate any executables from the crash log')
+            print('error: Unable to locate any executables from the crash log.')
+            print('       Try loading the executable into lldb before running crashlog')
+            print('       and/or make sure the .dSYM bundles can be found by Spotlight.')
         return self.target
 
     def get_target(self):
@@ -679,7 +701,7 @@ def interactive_crashlogs(options, args):
     crash_logs = list()
     for crash_log_file in crash_log_files:
         # print 'crash_log_file = "%s"' % crash_log_file
-        crash_log = CrashLog(crash_log_file)
+        crash_log = CrashLog(crash_log_file, options.verbose)
         if crash_log.error:
             print(crash_log.error)
             continue
@@ -742,7 +764,7 @@ def save_crashlog(debugger, command, exe_ctx, result, dict):
                        (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
         out_file.write(
             'OS Version:      Mac OS X %s (%s)\n' %
-            (platform.mac_ver()[0], subprocess.check_output('sysctl -n kern.osversion', shell=True)))
+            (platform.mac_ver()[0], subprocess.check_output('sysctl -n kern.osversion', shell=True).decode("utf-8")))
         out_file.write('Report Version:  9\n')
         for thread_idx in range(process.num_threads):
             thread = process.thread[thread_idx]
@@ -1018,7 +1040,7 @@ be disassembled and lookups can be performed using the addresses found in the cr
             interactive_crashlogs(options, args)
         else:
             for crash_log_file in args:
-                crash_log = CrashLog(crash_log_file)
+                crash_log = CrashLog(crash_log_file, options.verbose)
                 SymbolicateCrashLog(crash_log, options)
 if __name__ == '__main__':
     # Create a new debugger instance
