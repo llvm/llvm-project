@@ -204,12 +204,12 @@ public:
   /// symbols must be ones covered by this MaterializationResponsibility
   /// instance. Individual calls to this method may resolve a subset of the
   /// symbols, but all symbols must have been resolved prior to calling emit.
-  void resolve(const SymbolMap &Symbols);
+  void notifyResolved(const SymbolMap &Symbols);
 
   /// Notifies the target JITDylib (and any pending queries on that JITDylib)
   /// that all symbols covered by this MaterializationResponsibility instance
   /// have been emitted.
-  void emit();
+  void notifyEmitted();
 
   /// Adds new symbols to the JITDylib and this responsibility instance.
   ///        JITDylib entries start out in the materializing state.

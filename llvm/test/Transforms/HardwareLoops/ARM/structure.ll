@@ -70,3 +70,71 @@ while.cond1.while.end_crit_edge.us:
 while.end7:
   ret void
 }
+
+; CHECK-LABEL: pre_existing
+; CHECK: llvm.set.loop.iterations
+; CHECK-NOT: llvm.set.loop.iterations
+; CHECK: call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %0, i32 1)
+; CHECK-NOT: call i32 @llvm.loop.decrement.reg
+define i32 @pre_existing(i32 %n, i32* nocapture %p, i32* nocapture readonly %q) {
+entry:
+  call void @llvm.set.loop.iterations.i32(i32 %n)
+  br label %while.body
+
+while.body:                                       ; preds = %while.body, %entry
+  %q.addr.05 = phi i32* [ %incdec.ptr, %while.body ], [ %q, %entry ]
+  %p.addr.04 = phi i32* [ %incdec.ptr1, %while.body ], [ %p, %entry ]
+  %0 = phi i32 [ %n, %entry ], [ %2, %while.body ]
+  %incdec.ptr = getelementptr inbounds i32, i32* %q.addr.05, i32 1
+  %1 = load i32, i32* %q.addr.05, align 4
+  %incdec.ptr1 = getelementptr inbounds i32, i32* %p.addr.04, i32 1
+  store i32 %1, i32* %p.addr.04, align 4
+  %2 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %0, i32 1)
+  %3 = icmp ne i32 %2, 0
+  br i1 %3, label %while.body, label %while.end
+
+while.end:                                        ; preds = %while.body
+  ret i32 0
+}
+
+; CHECK-LABEL: pre_existing_inner
+; CHECK-NOT: llvm.set.loop.iterations
+; CHECK: while.cond1.preheader.us:
+; CHECK: call void @llvm.set.loop.iterations.i32(i32 %N)
+; CHECK: call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %0, i32 1)
+; CHECK: br i1
+; CHECK-NOT: call i32 @llvm.loop.decrement
+define void @pre_existing_inner(i32* nocapture %A, i32 %N) {
+entry:
+  %cmp20 = icmp eq i32 %N, 0
+  br i1 %cmp20, label %while.end7, label %while.cond1.preheader.us
+
+while.cond1.preheader.us:
+  %i.021.us = phi i32 [ %inc6.us, %while.cond1.while.end_crit_edge.us ], [ 0, %entry ]
+  %mul.us = mul i32 %i.021.us, %N
+  call void @llvm.set.loop.iterations.i32(i32 %N)
+  br label %while.body3.us
+
+while.body3.us:
+  %j.019.us = phi i32 [ 0, %while.cond1.preheader.us ], [ %inc.us, %while.body3.us ]
+  %0 = phi i32 [ %N, %while.cond1.preheader.us ], [ %1, %while.body3.us ]
+  %add.us = add i32 %j.019.us, %mul.us
+  %arrayidx.us = getelementptr inbounds i32, i32* %A, i32 %add.us
+  store i32 %add.us, i32* %arrayidx.us, align 4
+  %inc.us = add nuw i32 %j.019.us, 1
+  %1 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %0, i32 1)
+  %2 = icmp ne i32 %1, 0
+  br i1 %2, label %while.body3.us, label %while.cond1.while.end_crit_edge.us
+
+while.cond1.while.end_crit_edge.us:
+  %inc6.us = add nuw i32 %i.021.us, 1
+  %exitcond23 = icmp eq i32 %inc6.us, %N
+  br i1 %exitcond23, label %while.end7, label %while.cond1.preheader.us
+
+while.end7:
+  ret void
+}
+
+declare void @llvm.set.loop.iterations.i32(i32) #0
+declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #0
+

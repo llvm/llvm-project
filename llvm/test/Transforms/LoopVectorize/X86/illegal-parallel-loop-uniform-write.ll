@@ -27,7 +27,7 @@ define void @foo(i32* nocapture %a, i32* nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK:       for.body3.lr.ph.us.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[M]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[K:%.*]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY3_LR_PH_US:%.*]]
 ; CHECK:       for.end.us:

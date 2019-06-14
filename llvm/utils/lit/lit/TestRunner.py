@@ -1133,9 +1133,12 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
 
     # Write script file
     mode = 'w'
+    open_kwargs = {}
     if litConfig.isWindows and not isWin32CMDEXE:
-      mode += 'b'  # Avoid CRLFs when writing bash scripts.
-    f = open(script, mode)
+        mode += 'b'  # Avoid CRLFs when writing bash scripts.
+    elif sys.version_info > (3,0):
+        open_kwargs['encoding'] = 'utf-8'
+    f = open(script, mode, **open_kwargs)
     if isWin32CMDEXE:
         for i, ln in enumerate(commands):
             commands[i] = re.sub(kPdbgRegex, "echo '\\1' > nul && ", ln)

@@ -184,7 +184,7 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
     if (auto Err = R.defineMaterializing(ExtraSymbolsToClaim))
       return Err;
 
-  R.resolve(Symbols);
+  R.notifyResolved(Symbols);
 
   if (NotifyLoaded)
     NotifyLoaded(K, Obj, *LoadedObjInfo);
@@ -201,7 +201,7 @@ void RTDyldObjectLinkingLayer::onObjEmit(
     return;
   }
 
-  R.emit();
+  R.notifyEmitted();
 
   if (NotifyEmitted)
     NotifyEmitted(K, std::move(ObjBuffer));

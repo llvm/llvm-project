@@ -50,6 +50,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
@@ -1319,17 +1320,36 @@ static void excludeLibs(opt::InputArgList &Args) {
 }
 
 // Force Sym to be entered in the output. Used for -u or equivalent.
-static void handleUndefined(StringRef Name) {
-  Symbol *Sym = Symtab->find(Name);
-  if (!Sym)
-    return;
-
-  // Since symbol S may not be used inside the program, LTO may
+static void handleUndefined(Symbol *Sym) {
+  // Since a symbol may not be used inside the program, LTO may
   // eliminate it. Mark the symbol as "used" to prevent it.
   Sym->IsUsedInRegularObj = true;
 
   if (Sym->isLazy())
     Sym->fetch();
+}
+
+// As an extention to GNU linkers, lld supports a variant of `-u`
+// which accepts wildcard patterns. All symbols that match a given
+// pattern are handled as if they were given by `-u`.
+static void handleUndefinedGlob(StringRef Arg) {
+  Expected<GlobPattern> Pat = GlobPattern::create(Arg);
+  if (!Pat) {
+    error("--undefined-glob: " + toString(Pat.takeError()));
+    return;
+  }
+
+  std::vector<Symbol *> Syms;
+  Symtab->forEachSymbol([&](Symbol *Sym) {
+    // Calling Sym->fetch() from here is not safe because it may
+    // add new symbols to the symbol table, invalidating the
+    // current iterator. So we just keep a note.
+    if (Pat->match(Sym->getName()))
+      Syms.push_back(Sym);
+  });
+
+  for (Symbol *Sym : Syms)
+    handleUndefined(Sym);
 }
 
 static void handleLibcall(StringRef Name) {
@@ -1698,11 +1718,17 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     addUndefined(Name);
 
   // Handle the `--undefined <sym>` options.
-  for (StringRef S : Config->Undefined)
-    handleUndefined(S);
+  for (StringRef Arg : Config->Undefined)
+    if (Symbol *Sym = Symtab->find(Arg))
+      handleUndefined(Sym);
 
   // If an entry symbol is in a static archive, pull out that file now.
-  handleUndefined(Config->Entry);
+  if (Symbol *Sym = Symtab->find(Config->Entry))
+    handleUndefined(Sym);
+
+  // Handle the `--undefined-glob <pattern>` options.
+  for (StringRef Pat : args::getStrings(Args, OPT_undefined_glob))
+    handleUndefinedGlob(Pat);
 
   // If any of our inputs are bitcode files, the LTO code generator may create
   // references to certain library functions that might not be explicit in the

@@ -33,7 +33,7 @@ define void @decrementing_loop(i32 *%arr, i32 *%a_len_ptr, i32 %n) {
 ; CHECK:   [[len_hiclamp:[^ ]+]] = select i1 [[len_hiclamp_cmp]], i32 %len, i32 %n
 ; CHECK:   [[not_exit_preloop_at_cmp:[^ ]+]] = icmp sgt i32 [[len_hiclamp]], 0
 ; CHECK:   [[not_exit_preloop_at:[^ ]+]] = select i1 [[not_exit_preloop_at_cmp]], i32 [[len_hiclamp]], i32 0
-; CHECK:   %exit.preloop.at = add i32 [[not_exit_preloop_at]], -1
+; CHECK:   %exit.preloop.at = add nsw i32 [[not_exit_preloop_at]], -1
 }
 
 ; Make sure that we can eliminate the range check when the loop looks like:

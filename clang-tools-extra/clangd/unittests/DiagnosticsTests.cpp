@@ -101,6 +101,7 @@ TEST(DiagnosticsTest, DiagnosticRanges) {
   Annotations Test(R"cpp(
     namespace test{};
     void $decl[[foo]]();
+    class T{$explicit[[]]$constructor[[T]](int a);};
     int main() {
       $typo[[go\
 o]]();
@@ -112,8 +113,10 @@ o]]();
       test::$nomembernamespace[[test]];
     }
   )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.ClangTidyChecks = "-*,google-explicit-constructor";
   EXPECT_THAT(
-      TestTU::withCode(Test.code()).build().getDiagnostics(),
+      TU.build().getDiagnostics(),
       ElementsAre(
           // This range spans lines.
           AllOf(Diag(Test.range("typo"),
@@ -135,7 +138,13 @@ o]]();
                "of type 'const char [4]'"),
           Diag(Test.range("nomember"), "no member named 'y' in 'Foo'"),
           Diag(Test.range("nomembernamespace"),
-               "no member named 'test' in namespace 'test'")));
+               "no member named 'test' in namespace 'test'"),
+          // We make sure here that the entire token is highlighted
+          AllOf(Diag(Test.range("constructor"),
+                     "single-argument constructors must be marked explicit to "
+                     "avoid unintentional implicit conversions"),
+                WithFix(Fix(Test.range("explicit"), "explicit ",
+                            "insert 'explicit '")))));
 }
 
 TEST(DiagnosticsTest, FlagsMatter) {

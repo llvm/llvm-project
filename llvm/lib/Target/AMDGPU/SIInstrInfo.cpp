@@ -5973,7 +5973,7 @@ MachineInstr *llvm::getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
 }
 
 bool llvm::isEXECMaskConstantBetweenDefAndUses(unsigned VReg,
-                                               MachineRegisterInfo &MRI) {
+                                               const MachineRegisterInfo &MRI) {
   assert(MRI.isSSA() && "Must be run on SSA");
   auto *TRI = MRI.getTargetRegisterInfo();
 

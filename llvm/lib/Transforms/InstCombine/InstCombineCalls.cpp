@@ -3733,7 +3733,9 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         break;
 
       Function *NewF =
-          Intrinsic::getDeclaration(II->getModule(), NewIID, SrcLHS->getType());
+          Intrinsic::getDeclaration(II->getModule(), NewIID,
+                                    { II->getType(),
+                                      SrcLHS->getType() });
       Value *Args[] = { SrcLHS, SrcRHS,
                         ConstantInt::get(CC->getType(), SrcPred) };
       CallInst *NewCall = Builder.CreateCall(NewF, Args);
@@ -3773,6 +3775,13 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // If bound_ctrl = 1, row mask = bank mask = 0xf we can omit old value.
     II->setOperand(0, UndefValue::get(Old->getType()));
     return II;
+  }
+  case Intrinsic::amdgcn_readfirstlane:
+  case Intrinsic::amdgcn_readlane: {
+    // A constant value is trivially uniform.
+    if (Constant *C = dyn_cast<Constant>(II->getArgOperand(0)))
+      return replaceInstUsesWith(*II, C);
+    break;
   }
   case Intrinsic::stackrestore: {
     // If the save is right next to the restore, remove the restore.  This can

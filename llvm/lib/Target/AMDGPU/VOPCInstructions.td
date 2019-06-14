@@ -165,9 +165,16 @@ class VOPCInstAlias <VOP3_Pseudo ps, Instruction inst,
 multiclass VOPCInstAliases <string OpName, string Arch> {
   def : VOPCInstAlias <!cast<VOP3_Pseudo>(OpName#"_e64"),
                        !cast<Instruction>(OpName#"_e32_"#Arch)>;
+  let WaveSizePredicate = isWave32 in {
+    def : VOPCInstAlias <!cast<VOP3_Pseudo>(OpName#"_e64"),
+                         !cast<Instruction>(OpName#"_e32_"#Arch),
+                         "vcc_lo, "#!cast<VOP3_Pseudo>(OpName#"_e64").Pfl.Asm32>;
+  }
+  let WaveSizePredicate = isWave64 in {
     def : VOPCInstAlias <!cast<VOP3_Pseudo>(OpName#"_e64"),
                          !cast<Instruction>(OpName#"_e32_"#Arch),
                          "vcc, "#!cast<VOP3_Pseudo>(OpName#"_e64").Pfl.Asm32>;
+  }
 }
 
 multiclass VOPCXInstAliases <string OpName, string Arch> {
@@ -740,9 +747,16 @@ defm V_CMPX_CLASS_F16 : VOPCX_CLASS_F16 <"v_cmpx_class_f16">;
 // We need to use COPY_TO_REGCLASS to w/a the problem when ReplaceAllUsesWith()
 // complaints it cannot replace i1 <-> i64/i32 if node was not morphed in place.
 multiclass ICMP_Pattern <PatLeaf cond, Instruction inst, ValueType vt> {
+  let WaveSizePredicate = isWave64 in
   def : GCNPat <
     (i64 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
     (i64 (COPY_TO_REGCLASS (inst $src0, $src1), SReg_64))
+  >;
+
+  let WaveSizePredicate = isWave32 in
+  def : GCNPat <
+    (i32 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
+    (i32 (COPY_TO_REGCLASS (inst $src0, $src1), SReg_32))
   >;
 }
 
@@ -780,11 +794,20 @@ defm : ICMP_Pattern <COND_SLT, V_CMP_LT_I16_e64, i16>;
 defm : ICMP_Pattern <COND_SLE, V_CMP_LE_I16_e64, i16>;
 
 multiclass FCMP_Pattern <PatLeaf cond, Instruction inst, ValueType vt> {
+  let WaveSizePredicate = isWave64 in
   def : GCNPat <
     (i64 (AMDGPUsetcc (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
                  (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)), cond)),
     (i64 (COPY_TO_REGCLASS (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
                            DSTCLAMP.NONE), SReg_64))
+  >;
+
+  let WaveSizePredicate = isWave32 in
+  def : GCNPat <
+    (i32 (AMDGPUsetcc (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
+                 (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)), cond)),
+    (i32 (COPY_TO_REGCLASS (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
+                           DSTCLAMP.NONE), SReg_32))
   >;
 }
 

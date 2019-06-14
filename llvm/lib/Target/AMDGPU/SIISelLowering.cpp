@@ -3839,7 +3839,6 @@ static SDValue lowerICMPIntrinsic(const SITargetLowering &TLI,
 
   ICmpInst::Predicate IcInput = static_cast<ICmpInst::Predicate>(CondCode);
 
-
   SDValue LHS = N->getOperand(1);
   SDValue RHS = N->getOperand(2);
 
@@ -3855,8 +3854,14 @@ static SDValue lowerICMPIntrinsic(const SITargetLowering &TLI,
 
   ISD::CondCode CCOpcode = getICmpCondCode(IcInput);
 
-  return DAG.getNode(AMDGPUISD::SETCC, DL, VT, LHS, RHS,
-                     DAG.getCondCode(CCOpcode));
+  unsigned WavefrontSize = TLI.getSubtarget()->getWavefrontSize();
+  EVT CCVT = EVT::getIntegerVT(*DAG.getContext(), WavefrontSize);
+
+  SDValue SetCC = DAG.getNode(AMDGPUISD::SETCC, DL, CCVT, LHS, RHS,
+                              DAG.getCondCode(CCOpcode));
+  if (VT.bitsEq(CCVT))
+    return SetCC;
+  return DAG.getZExtOrTrunc(SetCC, DL, VT);
 }
 
 static SDValue lowerFCMPIntrinsic(const SITargetLowering &TLI,
@@ -3882,8 +3887,13 @@ static SDValue lowerFCMPIntrinsic(const SITargetLowering &TLI,
 
   FCmpInst::Predicate IcInput = static_cast<FCmpInst::Predicate>(CondCode);
   ISD::CondCode CCOpcode = getFCmpCondCode(IcInput);
-  return DAG.getNode(AMDGPUISD::SETCC, SL, VT, Src0,
-                     Src1, DAG.getCondCode(CCOpcode));
+  unsigned WavefrontSize = TLI.getSubtarget()->getWavefrontSize();
+  EVT CCVT = EVT::getIntegerVT(*DAG.getContext(), WavefrontSize);
+  SDValue SetCC = DAG.getNode(AMDGPUISD::SETCC, SL, CCVT, Src0,
+                              Src1, DAG.getCondCode(CCOpcode));
+  if (VT.bitsEq(CCVT))
+    return SetCC;
+  return DAG.getZExtOrTrunc(SetCC, SL, VT);
 }
 
 void SITargetLowering::ReplaceNodeResults(SDNode *N,
@@ -5394,6 +5404,9 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
                           SDLoc(DAG.getEntryNode()),
                           MFI->getArgInfo().WorkItemIDZ);
+  case Intrinsic::amdgcn_wavefrontsize:
+    return DAG.getConstant(MF.getSubtarget<GCNSubtarget>().getWavefrontSize(),
+                           SDLoc(Op), MVT::i32);
   case Intrinsic::amdgcn_s_buffer_load: {
     unsigned Cache = cast<ConstantSDNode>(Op.getOperand(3))->getZExtValue();
     return lowerSBuffer(VT, DL, Op.getOperand(1), Op.getOperand(2),
@@ -5598,6 +5611,11 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_fmad_ftz:
     return DAG.getNode(AMDGPUISD::FMAD_FTZ, DL, VT, Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3));
+
+  case Intrinsic::amdgcn_if_break:
+    return SDValue(DAG.getMachineNode(AMDGPU::SI_IF_BREAK, DL, VT,
+                                      Op->getOperand(1), Op->getOperand(2)), 0);
+
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))
@@ -6494,6 +6512,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getMemIntrinsicNode(Opc, DL, Op->getVTList(), Ops,
                                    M->getMemoryVT(), M->getMemOperand());
   }
+
+  case Intrinsic::amdgcn_end_cf:
+    return SDValue(DAG.getMachineNode(AMDGPU::SI_END_CF, DL, MVT::Other,
+                                      Op->getOperand(2), Chain), 0);
 
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =

@@ -696,7 +696,7 @@ void ARMAttributeParser::ParseSubsection(const uint8_t *Data, uint32_t Length) {
 }
 
 void ARMAttributeParser::Parse(ArrayRef<uint8_t> Section, bool isLittle) {
-  size_t Offset = 1;
+  uint64_t Offset = 1;
   unsigned SectionNumber = 0;
 
   while (Offset < Section.size()) {
@@ -707,6 +707,12 @@ void ARMAttributeParser::Parse(ArrayRef<uint8_t> Section, bool isLittle) {
     if (SW) {
       SW->startLine() << "Section " << ++SectionNumber << " {\n";
       SW->indent();
+    }
+
+    if (SectionLength == 0 || (SectionLength + Offset) > Section.size()) {
+      errs() << "invalid subsection length " << SectionLength << " at offset "
+             << Offset << "\n";
+      return;
     }
 
     ParseSubsection(Section.data() + Offset, SectionLength);

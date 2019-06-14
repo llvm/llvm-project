@@ -118,7 +118,7 @@ class DbgVariable : public DbgEntity {
   /// Offset in DebugLocs.
   unsigned DebugLocListIndex = ~0u;
   /// Single value location description.
-  std::unique_ptr<DebugLocEntry::Value> ValueLoc = nullptr;
+  std::unique_ptr<DbgValueLoc> ValueLoc = nullptr;
 
   struct FrameIndexExpr {
     int FI;
@@ -147,12 +147,12 @@ public:
   }
 
   // Initialize variable's location.
-  void initializeDbgValue(DebugLocEntry::Value Value) {
+  void initializeDbgValue(DbgValueLoc Value) {
     assert(FrameIndexExprs.empty() && "Already initialized?");
     assert(!ValueLoc && "Already initialized?");
     assert(!Value.getExpression()->isFragment() && "Fragments not supported.");
 
-    ValueLoc = llvm::make_unique<DebugLocEntry::Value>(Value);
+    ValueLoc = llvm::make_unique<DbgValueLoc>(Value);
     if (auto *E = ValueLoc->getExpression())
       if (E->getNumElements())
         FrameIndexExprs.push_back({0, E});
@@ -174,7 +174,7 @@ public:
   void setDebugLocListIndex(unsigned O) { DebugLocListIndex = O; }
   unsigned getDebugLocListIndex() const { return DebugLocListIndex; }
   StringRef getName() const { return getVariable()->getName(); }
-  const DebugLocEntry::Value *getValueLoc() const { return ValueLoc.get(); }
+  const DbgValueLoc *getValueLoc() const { return ValueLoc.get(); }
   /// Get the FI entries, sorted by fragment offset.
   ArrayRef<FrameIndexExpr> getFrameIndexExprs() const;
   bool hasFrameIndexExprs() const { return !FrameIndexExprs.empty(); }

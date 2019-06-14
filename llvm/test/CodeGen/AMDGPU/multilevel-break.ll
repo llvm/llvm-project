@@ -5,7 +5,7 @@
 ; OPT: main_body:
 ; OPT: LOOP.outer:
 ; OPT: LOOP:
-; OPT:     [[if:%[0-9]+]] = call { i1, i64 } @llvm.amdgcn.if(
+; OPT:     [[if:%[0-9]+]] = call { i1, i64 } @llvm.amdgcn.if.i64(
 ; OPT:     [[if_exec:%[0-9]+]] = extractvalue { i1, i64 } [[if]], 1
 ;
 ; OPT: Flow:
@@ -13,9 +13,9 @@
 ; Ensure two if.break calls, for both the inner and outer loops
 
 ; OPT:        call void @llvm.amdgcn.end.cf
-; OPT-NEXT:   call i64 @llvm.amdgcn.if.break(i1
-; OPT-NEXT:   call i1 @llvm.amdgcn.loop(i64
-; OPT-NEXT:   call i64 @llvm.amdgcn.if.break(i1
+; OPT-NEXT:   call i64 @llvm.amdgcn.if.break.i64.i64(i1
+; OPT-NEXT:   call i1 @llvm.amdgcn.loop.i64(i64
+; OPT-NEXT:   call i64 @llvm.amdgcn.if.break.i64.i64(i1
 ;
 ; OPT: Flow1:
 

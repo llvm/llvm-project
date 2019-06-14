@@ -37,8 +37,8 @@ private:
   void materialize(MaterializationResponsibility R) override {
     SymbolMap Result;
     Result[Name] = JITEvaluatedSymbol(Compile(), JITSymbolFlags::Exported);
-    R.resolve(Result);
-    R.emit();
+    R.notifyResolved(Result);
+    R.notifyEmitted();
   }
 
   void discard(const JITDylib &JD, const SymbolStringPtr &Name) override {

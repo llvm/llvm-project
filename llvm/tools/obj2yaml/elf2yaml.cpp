@@ -329,7 +329,8 @@ template <class ELFT>
 std::error_code ELFDumper<ELFT>::dumpCommonSection(const Elf_Shdr *Shdr,
                                                    ELFYAML::Section &S) {
   S.Type = Shdr->sh_type;
-  S.Flags = Shdr->sh_flags;
+  if (Shdr->sh_flags)
+    S.Flags = static_cast<ELFYAML::ELF_SHF>(Shdr->sh_flags);
   S.Address = Shdr->sh_addr;
   S.AddressAlign = Shdr->sh_addralign;
   if (Shdr->sh_entsize)

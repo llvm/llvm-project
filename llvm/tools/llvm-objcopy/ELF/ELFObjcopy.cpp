@@ -741,6 +741,17 @@ static Error writeOutput(const CopyConfig &Config, Object &Obj, Buffer &Out,
   return Writer->write();
 }
 
+Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
+                           Buffer &Out) {
+  IHexReader Reader(&In);
+  std::unique_ptr<Object> Obj = Reader.create();
+  const ElfType OutputElfType =
+      getOutputElfType(Config.OutputArch.getValueOr(Config.BinaryArch));
+  if (Error E = handleArgs(Config, *Obj, Reader, OutputElfType))
+    return E;
+  return writeOutput(Config, *Obj, Out, OutputElfType);
+}
+
 Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
                                 Buffer &Out) {
   BinaryReader Reader(Config.BinaryArch, &In);

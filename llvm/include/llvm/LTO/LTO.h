@@ -84,9 +84,9 @@ std::string getThinLTOOutputFile(const std::string &Path,
 
 /// Setup optimization remarks.
 Expected<std::unique_ptr<ToolOutputFile>>
-setupOptimizationRemarks(LLVMContext &Context, StringRef LTORemarksFilename,
-                         StringRef LTORemarksPasses,
-                         bool LTOPassRemarksWithHotness, int Count = -1);
+setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
+                         StringRef RemarksPasses, bool RemarksWithHotness,
+                         int Count = -1);
 
 /// Setups the output file for saving statistics.
 Expected<std::unique_ptr<ToolOutputFile>>

@@ -47,7 +47,7 @@ ReadAddressFromDebugAddrSection(const DWARFUnit *dwarf_cu,
   dw_offset_t addr_base = dwarf_cu->GetAddrBase();
   lldb::offset_t offset = addr_base + index * index_size;
   return dwarf_cu->GetSymbolFileDWARF()
-      ->GetDWARFContext()
+      .GetDWARFContext()
       .getOrLoadAddrData()
       .GetMaxU64(&offset, index_size);
 }
@@ -2750,7 +2750,7 @@ bool DWARFExpression::AddressRangeForLocationListEntry(
     return false;
 
   DWARFExpression::LocationListFormat format =
-      dwarf_cu->GetSymbolFileDWARF()->GetLocationListFormat();
+      dwarf_cu->GetSymbolFileDWARF().GetLocationListFormat();
   switch (format) {
   case NonLocationList:
     return false;

@@ -26,16 +26,10 @@ namespace lldb_private {
 template <typename T> class UniqueCStringMap {
 public:
   struct Entry {
-    Entry() {}
-
-    Entry(ConstString cstr) : cstring(cstr), value() {}
-
     Entry(ConstString cstr, const T &v) : cstring(cstr), value(v) {}
 
-    // This is only for uniqueness, not lexicographical ordering, so we can
-    // just compare pointers.
-    bool operator<(const Entry &rhs) const {
-      return cstring.GetCString() < rhs.cstring.GetCString();
+    friend bool operator<(const Entry &lhs, const Entry &rhs) {
+      return Compare()(lhs, rhs);
     }
 
     ConstString cstring;
@@ -52,17 +46,6 @@ public:
   void Append(const Entry &e) { m_map.push_back(e); }
 
   void Clear() { m_map.clear(); }
-
-  // Call this function to always keep the map sorted when putting entries into
-  // the map.
-  void Insert(ConstString unique_cstr, const T &value) {
-    typename UniqueCStringMap<T>::Entry e(unique_cstr, value);
-    m_map.insert(std::upper_bound(m_map.begin(), m_map.end(), e), e);
-  }
-
-  void Insert(const Entry &e) {
-    m_map.insert(std::upper_bound(m_map.begin(), m_map.end(), e), e);
-  }
 
   // Get an entries by index in a variety of forms.
   //
@@ -101,13 +84,9 @@ public:
   // T values and only if there is a sensible failure value that can
   // be returned and that won't match any existing values.
   T Find(ConstString unique_cstr, T fail_value) const {
-    Entry search_entry(unique_cstr);
-    const_iterator end = m_map.end();
-    const_iterator pos = std::lower_bound(m_map.begin(), end, search_entry);
-    if (pos != end) {
-      if (pos->cstring == unique_cstr)
-        return pos->value;
-    }
+    auto pos = llvm::lower_bound(m_map, unique_cstr, Compare());
+    if (pos != m_map.end() && pos->cstring == unique_cstr)
+      return pos->value;
     return fail_value;
   }
 
@@ -117,10 +96,8 @@ public:
   // The caller is responsible for ensuring that the collection does not change
   // during while using the returned pointer.
   const Entry *FindFirstValueForName(ConstString unique_cstr) const {
-    Entry search_entry(unique_cstr);
-    const_iterator end = m_map.end();
-    const_iterator pos = std::lower_bound(m_map.begin(), end, search_entry);
-    if (pos != end && pos->cstring == unique_cstr)
+    auto pos = llvm::lower_bound(m_map, unique_cstr, Compare());
+    if (pos != m_map.end() && pos->cstring == unique_cstr)
       return &(*pos);
     return nullptr;
   }
@@ -147,15 +124,9 @@ public:
   size_t GetValues(ConstString unique_cstr, std::vector<T> &values) const {
     const size_t start_size = values.size();
 
-    Entry search_entry(unique_cstr);
-    const_iterator pos, end = m_map.end();
-    for (pos = std::lower_bound(m_map.begin(), end, search_entry); pos != end;
-         ++pos) {
-      if (pos->cstring == unique_cstr)
-        values.push_back(pos->value);
-      else
-        break;
-    }
+    for (const Entry &entry : llvm::make_range(std::equal_range(
+             m_map.begin(), m_map.end(), unique_cstr, Compare())))
+      values.push_back(entry.value);
 
     return values.size() - start_size;
   }
@@ -208,28 +179,27 @@ public:
     }
   }
 
-  size_t Erase(ConstString unique_cstr) {
-    size_t num_removed = 0;
-    Entry search_entry(unique_cstr);
-    iterator end = m_map.end();
-    iterator begin = m_map.begin();
-    iterator lower_pos = std::lower_bound(begin, end, search_entry);
-    if (lower_pos != end) {
-      if (lower_pos->cstring == unique_cstr) {
-        iterator upper_pos = std::upper_bound(lower_pos, end, search_entry);
-        if (lower_pos == upper_pos) {
-          m_map.erase(lower_pos);
-          num_removed = 1;
-        } else {
-          num_removed = std::distance(lower_pos, upper_pos);
-          m_map.erase(lower_pos, upper_pos);
-        }
-      }
-    }
-    return num_removed;
-  }
-
 protected:
+  struct Compare {
+    bool operator()(const Entry &lhs, const Entry &rhs) {
+      return operator()(lhs.cstring, rhs.cstring);
+    }
+
+    bool operator()(const Entry &lhs, ConstString rhs) {
+      return operator()(lhs.cstring, rhs);
+    }
+
+    bool operator()(ConstString lhs, const Entry &rhs) {
+      return operator()(lhs, rhs.cstring);
+    }
+
+    // This is only for uniqueness, not lexicographical ordering, so we can
+    // just compare pointers. *However*, comparing pointers from different
+    // allocations is UB, so we need compare their integral values instead.
+    bool operator()(ConstString lhs, ConstString rhs) {
+      return uintptr_t(lhs.GetCString()) < uintptr_t(rhs.GetCString());
+    }
+  };
   typedef std::vector<Entry> collection;
   typedef typename collection::iterator iterator;
   typedef typename collection::const_iterator const_iterator;

@@ -504,9 +504,23 @@ Print the names of the input files.
 Trace references to
 .Ar symbol .
 .It Fl -undefined Ns = Ns Ar symbol , Fl u Ar symbol
-Force
+If
 .Ar symbol
-to be an undefined symbol during linking.
+is not defined after symbol resolution, and there's a static library
+that contains an object file defining the symbol, load the member
+to include the object file in the output file.
+.It Fl -undefined-glob Ns = Ns Ar pattern
+Synonym for
+.Fl -undefined ,
+except that it takes a glob pattern. In a glob pattern,
+.Cm *
+matches zero or more characters,
+.Cm ?
+matches any single character, and
+.Cm [...]
+matches the characters within brackets. All symbols that match
+a given pattern are handled as if they were given as arguments of
+.Fl -undefined .
 .It Fl -unresolved-symbols Ns = Ns Ar value
 Determine how to handle unresolved symbols.
 .It Fl -use-android-relr-tags

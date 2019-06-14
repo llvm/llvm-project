@@ -129,7 +129,7 @@ struct Section {
   SectionKind Kind;
   StringRef Name;
   ELF_SHT Type;
-  ELF_SHF Flags;
+  Optional<ELF_SHF> Flags;
   llvm::yaml::Hex64 Address;
   StringRef Link;
   llvm::yaml::Hex64 AddressAlign;

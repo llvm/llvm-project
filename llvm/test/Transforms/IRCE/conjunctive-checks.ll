@@ -5,7 +5,7 @@ define void @f_0(i32 *%arr, i32 *%a_len_ptr, i32 %n, i1* %cond_buf) {
 ; CHECK-LABEL: @f_0(
 
 ; CHECK: loop.preheader:
-; CHECK: [[len_sub:[^ ]+]] = add i32 %len, -4
+; CHECK: [[len_sub:[^ ]+]] = add nsw i32 %len, -4
 ; CHECK: [[exit_main_loop_at_hiclamp_cmp:[^ ]+]] = icmp slt i32 %n, [[len_sub]]
 ; CHECK: [[exit_main_loop_at_hiclamp:[^ ]+]] = select i1 [[exit_main_loop_at_hiclamp_cmp]], i32 %n, i32 [[len_sub]]
 ; CHECK: [[exit_main_loop_at_loclamp_cmp:[^ ]+]] = icmp sgt i32 [[exit_main_loop_at_hiclamp]], 0

@@ -136,7 +136,11 @@ public:
     LLVM_DEBUG(dbgs() << "Checking DILocation from " << *CurrInst
                       << " was copied to " << MI);
 #endif
-    assert(CurrInst->getDebugLoc() == MI.getDebugLoc() &&
+    // We allow insts in the entry block to have a debug loc line of 0 because
+    // they could have originated from constants, and we don't want a jumpy
+    // debug experience.
+    assert((CurrInst->getDebugLoc() == MI.getDebugLoc() ||
+            MI.getDebugLoc().getLine() == 0) &&
            "Line info was not transferred to all instructions");
   }
 };
@@ -1713,8 +1717,15 @@ bool IRTranslator::valueIsSplit(const Value &V,
 
 bool IRTranslator::translate(const Instruction &Inst) {
   CurBuilder->setDebugLoc(Inst.getDebugLoc());
-  EntryBuilder->setDebugLoc(Inst.getDebugLoc());
-  switch(Inst.getOpcode()) {
+  // We only emit constants into the entry block from here. To prevent jumpy
+  // debug behaviour set the line to 0.
+  if (const DebugLoc &DL = Inst.getDebugLoc())
+    EntryBuilder->setDebugLoc(
+        DebugLoc::get(0, 0, DL.getScope(), DL.getInlinedAt()));
+  else
+    EntryBuilder->setDebugLoc(DebugLoc());
+
+  switch (Inst.getOpcode()) {
 #define HANDLE_INST(NUM, OPCODE, CLASS)                                        \
   case Instruction::OPCODE:                                                    \
     return translate##OPCODE(Inst, *CurBuilder.get());

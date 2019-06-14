@@ -9,12 +9,9 @@
 #ifndef SymbolFileDWARF_DWARFDebugAranges_h_
 #define SymbolFileDWARF_DWARFDebugAranges_h_
 
-#include "DWARFDebugArangeSet.h"
+#include "lldb/Core/dwarf.h"
 #include "lldb/Utility/RangeMap.h"
 #include "llvm/Support/Error.h"
-#include <list>
-
-class SymbolFileDWARF;
 
 class DWARFDebugAranges {
 protected:

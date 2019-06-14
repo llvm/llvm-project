@@ -366,6 +366,9 @@ defm trace_symbol: Eq<"trace-symbol", "Trace references to symbols">;
 defm undefined: Eq<"undefined", "Force undefined symbol during linking">,
   MetaVarName<"<symbol>">;
 
+defm undefined_glob: Eq<"undefined-glob", "Force undefined symbol during linking">,
+  MetaVarName<"<pattern>">;
+
 defm unresolved_symbols:
   Eq<"unresolved-symbols", "Determine how to handle unresolved symbols">;
 

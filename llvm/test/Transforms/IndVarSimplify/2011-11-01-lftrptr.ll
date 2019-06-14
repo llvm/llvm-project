@@ -301,13 +301,12 @@ define void @testnullptr([512 x i8]* %base) nounwind {
 ; PTR64-NEXT:    [[CMP1604192:%.*]] = icmp ult i8* undef, [[ADD_PTR1603]]
 ; PTR64-NEXT:    br i1 [[CMP1604192]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END1609:%.*]]
 ; PTR64:       for.body.preheader:
-; PTR64-NEXT:    [[SCEVGEP:%.*]] = getelementptr [512 x i8], [512 x i8]* [[BASE]], i64 1, i64 0
 ; PTR64-NEXT:    br label [[FOR_BODY:%.*]]
 ; PTR64:       for.body:
 ; PTR64-NEXT:    [[R_17193:%.*]] = phi i8* [ [[INCDEC_PTR1608:%.*]], [[FOR_BODY]] ], [ null, [[FOR_BODY_PREHEADER]] ]
 ; PTR64-NEXT:    [[INCDEC_PTR1608]] = getelementptr i8, i8* [[R_17193]], i64 1
-; PTR64-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[INCDEC_PTR1608]], [[SCEVGEP]]
-; PTR64-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END1609_LOOPEXIT:%.*]]
+; PTR64-NEXT:    [[CMP1604:%.*]] = icmp ult i8* [[INCDEC_PTR1608]], [[ADD_PTR1603]]
+; PTR64-NEXT:    br i1 [[CMP1604]], label [[FOR_BODY]], label [[FOR_END1609_LOOPEXIT:%.*]]
 ; PTR64:       for.end1609.loopexit:
 ; PTR64-NEXT:    br label [[FOR_END1609]]
 ; PTR64:       for.end1609:
@@ -321,13 +320,12 @@ define void @testnullptr([512 x i8]* %base) nounwind {
 ; PTR32-NEXT:    [[CMP1604192:%.*]] = icmp ult i8* undef, [[ADD_PTR1603]]
 ; PTR32-NEXT:    br i1 [[CMP1604192]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END1609:%.*]]
 ; PTR32:       for.body.preheader:
-; PTR32-NEXT:    [[SCEVGEP:%.*]] = getelementptr [512 x i8], [512 x i8]* [[BASE]], i32 1, i32 0
 ; PTR32-NEXT:    br label [[FOR_BODY:%.*]]
 ; PTR32:       for.body:
 ; PTR32-NEXT:    [[R_17193:%.*]] = phi i8* [ [[INCDEC_PTR1608:%.*]], [[FOR_BODY]] ], [ null, [[FOR_BODY_PREHEADER]] ]
 ; PTR32-NEXT:    [[INCDEC_PTR1608]] = getelementptr i8, i8* [[R_17193]], i64 1
-; PTR32-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[INCDEC_PTR1608]], [[SCEVGEP]]
-; PTR32-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END1609_LOOPEXIT:%.*]]
+; PTR32-NEXT:    [[CMP1604:%.*]] = icmp ult i8* [[INCDEC_PTR1608]], [[ADD_PTR1603]]
+; PTR32-NEXT:    br i1 [[CMP1604]], label [[FOR_BODY]], label [[FOR_END1609_LOOPEXIT:%.*]]
 ; PTR32:       for.end1609.loopexit:
 ; PTR32-NEXT:    br label [[FOR_END1609]]
 ; PTR32:       for.end1609:

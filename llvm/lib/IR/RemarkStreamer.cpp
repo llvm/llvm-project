@@ -106,3 +106,38 @@ void RemarkStreamer::emit(const DiagnosticInfoOptimizationBase &Diag) {
   // Then, emit the remark through the serializer.
   Serializer->emit(R);
 }
+
+char RemarkSetupFileError::ID = 0;
+char RemarkSetupPatternError::ID = 0;
+
+Expected<std::unique_ptr<ToolOutputFile>>
+llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
+                               StringRef RemarksPasses, bool RemarksWithHotness,
+                               unsigned RemarksHotnessThreshold) {
+  if (RemarksWithHotness)
+    Context.setDiagnosticsHotnessRequested(true);
+
+  if (RemarksHotnessThreshold)
+    Context.setDiagnosticsHotnessThreshold(RemarksHotnessThreshold);
+
+  if (RemarksFilename.empty())
+    return nullptr;
+
+  std::error_code EC;
+  auto RemarksFile =
+      llvm::make_unique<ToolOutputFile>(RemarksFilename, EC, sys::fs::F_None);
+  // We don't use llvm::FileError here because some diagnostics want the file
+  // name separately.
+  if (EC)
+    return errorCodeToError(EC);
+
+  Context.setRemarkStreamer(llvm::make_unique<RemarkStreamer>(
+      RemarksFilename,
+      llvm::make_unique<remarks::YAMLSerializer>(RemarksFile->os())));
+
+  if (!RemarksPasses.empty())
+    if (Error E = Context.getRemarkStreamer()->setFilter(RemarksPasses))
+      return std::move(E);
+
+  return std::move(RemarksFile);
+}

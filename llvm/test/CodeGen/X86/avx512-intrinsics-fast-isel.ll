@@ -3099,27 +3099,6 @@ entry:
   ret <8 x double> %2
 }
 
-define <8 x double> @test_mm512_mask_fmsub_round_pd_unary_fneg(<8 x double> %__A, i8 zeroext %__U, <8 x double> %__B, <8 x double> %__C) {
-; X86-LABEL: test_mm512_mask_fmsub_round_pd_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfmsub132pd {rn-sae}, %zmm1, %zmm2, %zmm0 {%k1}
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_mask_fmsub_round_pd_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfmsub132pd {rn-sae}, %zmm1, %zmm2, %zmm0 {%k1}
-; X64-NEXT:    retq
-entry:
-  %neg = fneg <8 x double> %__C
-  %0 = tail call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %__A, <8 x double> %__B, <8 x double> %neg, i32 8)
-  %1 = bitcast i8 %__U to <8 x i1>
-  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> %__A
-  ret <8 x double> %2
-}
-
 define <8 x double> @test_mm512_maskz_fmsub_round_pd(i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
 ; X86-LABEL: test_mm512_maskz_fmsub_round_pd:
 ; X86:       # %bb.0: # %entry
@@ -3141,27 +3120,6 @@ entry:
   ret <8 x double> %2
 }
 
-define <8 x double> @test_mm512_maskz_fmsub_round_pd_unary_fneg(i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
-; X86-LABEL: test_mm512_maskz_fmsub_round_pd_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfmsub213pd {rn-sae}, %zmm2, %zmm1, %zmm0 {%k1} {z}
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_maskz_fmsub_round_pd_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfmsub213pd {rn-sae}, %zmm2, %zmm1, %zmm0 {%k1} {z}
-; X64-NEXT:    retq
-entry:
-  %neg = fneg <8 x double> %__C
-  %0 = tail call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %__A, <8 x double> %__B, <8 x double> %neg, i32 8)
-  %1 = bitcast i8 %__U to <8 x i1>
-  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> zeroinitializer
-  ret <8 x double> %2
-}
-
 define <8 x double> @test_mm512_fnmadd_round_pd(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
 ; X86-LABEL: test_mm512_fnmadd_round_pd:
 ; X86:       # %bb.0: # %entry
@@ -3177,24 +3135,6 @@ define <8 x double> @test_mm512_fnmadd_round_pd(<8 x double> %__A, <8 x double> 
 entry:
   %sub = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %__A
   %0 = tail call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %sub, <8 x double> %__B, <8 x double> %__C, i32 8)
-  ret <8 x double> %0
-}
-
-define <8 x double> @test_mm512_fnmadd_round_pd_unary_fneg(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
-; X86-LABEL: test_mm512_fnmadd_round_pd_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpxorq {{\.LCPI.*}}{1to8}, %zmm0, %zmm0
-; X86-NEXT:    vfmadd213pd {rn-sae}, %zmm2, %zmm1, %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_fnmadd_round_pd_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    vpxorq {{.*}}(%rip){1to8}, %zmm0, %zmm0
-; X64-NEXT:    vfmadd213pd {rn-sae}, %zmm2, %zmm1, %zmm0
-; X64-NEXT:    retq
-entry:
-  %neg = fneg <8 x double> %__A
-  %0 = tail call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %neg, <8 x double> %__B, <8 x double> %__C, i32 8)
   ret <8 x double> %0
 }
 
@@ -3221,29 +3161,6 @@ entry:
   ret <8 x double> %2
 }
 
-define <8 x double> @test_mm512_mask3_fnmadd_round_pd_unary_fneg(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C, i8 zeroext %__U) {
-; X86-LABEL: test_mm512_mask3_fnmadd_round_pd_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfnmadd231pd {rn-sae}, %zmm1, %zmm0, %zmm2 {%k1}
-; X86-NEXT:    vmovapd %zmm2, %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_mask3_fnmadd_round_pd_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfnmadd231pd {rn-sae}, %zmm1, %zmm0, %zmm2 {%k1}
-; X64-NEXT:    vmovapd %zmm2, %zmm0
-; X64-NEXT:    retq
-entry:
-  %neg = fneg <8 x double> %__A
-  %0 = tail call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %neg, <8 x double> %__B, <8 x double> %__C, i32 8)
-  %1 = bitcast i8 %__U to <8 x i1>
-  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> %__C
-  ret <8 x double> %2
-}
-
 define <8 x double> @test_mm512_maskz_fnmadd_round_pd(i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
 ; X86-LABEL: test_mm512_maskz_fnmadd_round_pd:
 ; X86:       # %bb.0: # %entry
@@ -3265,27 +3182,6 @@ entry:
   ret <8 x double> %2
 }
 
-define <8 x double> @test_mm512_maskz_fnmadd_round_pd_unary_fneg(i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
-; X86-LABEL: test_mm512_maskz_fnmadd_round_pd_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfnmadd213pd {rn-sae}, %zmm2, %zmm1, %zmm0 {%k1} {z}
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_maskz_fnmadd_round_pd_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfnmadd213pd {rn-sae}, %zmm2, %zmm1, %zmm0 {%k1} {z}
-; X64-NEXT:    retq
-entry:
-  %neg = fneg <8 x double> %__A
-  %0 = tail call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %neg, <8 x double> %__B, <8 x double> %__C, i32 8)
-  %1 = bitcast i8 %__U to <8 x i1>
-  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> zeroinitializer
-  ret <8 x double> %2
-}
-
 define <8 x double> @test_mm512_fnmsub_round_pd(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
 ; CHECK-LABEL: test_mm512_fnmsub_round_pd:
 ; CHECK:       # %bb.0: # %entry
@@ -3298,21 +3194,6 @@ entry:
   %sub = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %__A
   %sub1 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %__C
   %0 = tail call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %sub, <8 x double> %__B, <8 x double> %sub1, i32 8)
-  ret <8 x double> %0
-}
-
-define <8 x double> @test_mm512_fnmsub_round_pd_unary_fneg(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
-; CHECK-LABEL: test_mm512_fnmsub_round_pd_unary_fneg:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; CHECK-NEXT:    vpxorq %zmm3, %zmm0, %zmm4
-; CHECK-NEXT:    vpxorq %zmm3, %zmm2, %zmm0
-; CHECK-NEXT:    vfmadd231pd {rn-sae}, %zmm4, %zmm1, %zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
-entry:
-  %neg = fneg <8 x double> %__A
-  %neg1 = fneg <8 x double> %__C
-  %0 = tail call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %neg, <8 x double> %__B, <8 x double> %neg1, i32 8)
   ret <8 x double> %0
 }
 
@@ -3333,28 +3214,6 @@ entry:
   %sub = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %__A
   %sub1 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %__C
   %0 = tail call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %sub, <8 x double> %__B, <8 x double> %sub1, i32 8)
-  %1 = bitcast i8 %__U to <8 x i1>
-  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> zeroinitializer
-  ret <8 x double> %2
-}
-
-define <8 x double> @test_mm512_maskz_fnmsub_round_pd_unary_fneg(i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
-; X86-LABEL: test_mm512_maskz_fnmsub_round_pd_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfnmsub213pd {rn-sae}, %zmm2, %zmm1, %zmm0 {%k1} {z}
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_maskz_fnmsub_round_pd_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfnmsub213pd {rn-sae}, %zmm2, %zmm1, %zmm0 {%k1} {z}
-; X64-NEXT:    retq
-entry:
-  %neg = fneg <8 x double> %__A
-  %neg1 = fneg <8 x double> %__C
-  %0 = tail call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %neg, <8 x double> %__B, <8 x double> %neg1, i32 8)
   %1 = bitcast i8 %__U to <8 x i1>
   %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> zeroinitializer
   ret <8 x double> %2
@@ -3450,24 +3309,6 @@ entry:
   ret <8 x double> %0
 }
 
-define <8 x double> @test_mm512_fmsub_pd_unary_fneg(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
-; X86-LABEL: test_mm512_fmsub_pd_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpxorq {{\.LCPI.*}}{1to8}, %zmm2, %zmm2
-; X86-NEXT:    vfmadd213pd {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_fmsub_pd_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    vpxorq {{.*}}(%rip){1to8}, %zmm2, %zmm2
-; X64-NEXT:    vfmadd213pd {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
-; X64-NEXT:    retq
-entry:
-  %neg.i = fneg <8 x double> %__C
-  %0 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %__A, <8 x double> %__B, <8 x double> %neg.i) #10
-  ret <8 x double> %0
-}
-
 define <8 x double> @test_mm512_mask_fmsub_pd(<8 x double> %__A, i8 zeroext %__U, <8 x double> %__B, <8 x double> %__C) {
 ; X86-LABEL: test_mm512_mask_fmsub_pd:
 ; X86:       # %bb.0: # %entry
@@ -3484,27 +3325,6 @@ define <8 x double> @test_mm512_mask_fmsub_pd(<8 x double> %__A, i8 zeroext %__U
 entry:
   %sub.i = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %__C
   %0 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %__A, <8 x double> %__B, <8 x double> %sub.i) #10
-  %1 = bitcast i8 %__U to <8 x i1>
-  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> %__A
-  ret <8 x double> %2
-}
-
-define <8 x double> @test_mm512_mask_fmsub_pd_unary_fneg(<8 x double> %__A, i8 zeroext %__U, <8 x double> %__B, <8 x double> %__C) {
-; X86-LABEL: test_mm512_mask_fmsub_pd_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfmsub132pd {{.*#+}} zmm0 = (zmm0 * zmm1) - zmm2
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_mask_fmsub_pd_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfmsub132pd {{.*#+}} zmm0 = (zmm0 * zmm1) - zmm2
-; X64-NEXT:    retq
-entry:
-  %neg.i = fneg <8 x double> %__C
-  %0 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %__A, <8 x double> %__B, <8 x double> %neg.i) #10
   %1 = bitcast i8 %__U to <8 x i1>
   %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> %__A
   ret <8 x double> %2
@@ -3531,27 +3351,6 @@ entry:
   ret <8 x double> %2
 }
 
-define <8 x double> @test_mm512_maskz_fmsub_pd_unary_fneg(i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
-; X86-LABEL: test_mm512_maskz_fmsub_pd_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfmsub213pd {{.*#+}} zmm0 = (zmm1 * zmm0) - zmm2
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_maskz_fmsub_pd_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfmsub213pd {{.*#+}} zmm0 = (zmm1 * zmm0) - zmm2
-; X64-NEXT:    retq
-entry:
-  %neg.i = fneg <8 x double> %__C
-  %0 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %__A, <8 x double> %__B, <8 x double> %neg.i) #10
-  %1 = bitcast i8 %__U to <8 x i1>
-  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> zeroinitializer
-  ret <8 x double> %2
-}
-
 define <8 x double> @test_mm512_fnmadd_pd(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
 ; X86-LABEL: test_mm512_fnmadd_pd:
 ; X86:       # %bb.0: # %entry
@@ -3567,24 +3366,6 @@ define <8 x double> @test_mm512_fnmadd_pd(<8 x double> %__A, <8 x double> %__B, 
 entry:
   %sub.i = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %__A
   %0 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %sub.i, <8 x double> %__B, <8 x double> %__C) #10
-  ret <8 x double> %0
-}
-
-define <8 x double> @test_mm512_fnmadd_pd_unary_fneg(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
-; X86-LABEL: test_mm512_fnmadd_pd_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpxorq {{\.LCPI.*}}{1to8}, %zmm0, %zmm0
-; X86-NEXT:    vfmadd213pd {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_fnmadd_pd_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    vpxorq {{.*}}(%rip){1to8}, %zmm0, %zmm0
-; X64-NEXT:    vfmadd213pd {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
-; X64-NEXT:    retq
-entry:
-  %neg.i = fneg <8 x double> %__A
-  %0 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %neg.i, <8 x double> %__B, <8 x double> %__C) #10
   ret <8 x double> %0
 }
 
@@ -3611,29 +3392,6 @@ entry:
   ret <8 x double> %2
 }
 
-define <8 x double> @test_mm512_mask3_fnmadd_pd_unary_fneg(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C, i8 zeroext %__U) {
-; X86-LABEL: test_mm512_mask3_fnmadd_pd_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfnmadd231pd {{.*#+}} zmm2 = -(zmm0 * zmm1) + zmm2
-; X86-NEXT:    vmovapd %zmm2, %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_mask3_fnmadd_pd_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfnmadd231pd {{.*#+}} zmm2 = -(zmm0 * zmm1) + zmm2
-; X64-NEXT:    vmovapd %zmm2, %zmm0
-; X64-NEXT:    retq
-entry:
-  %neg.i = fneg <8 x double> %__A
-  %0 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %neg.i, <8 x double> %__B, <8 x double> %__C) #10
-  %1 = bitcast i8 %__U to <8 x i1>
-  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> %__C
-  ret <8 x double> %2
-}
-
 define <8 x double> @test_mm512_maskz_fnmadd_pd(i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
 ; X86-LABEL: test_mm512_maskz_fnmadd_pd:
 ; X86:       # %bb.0: # %entry
@@ -3655,27 +3413,6 @@ entry:
   ret <8 x double> %2
 }
 
-define <8 x double> @test_mm512_maskz_fnmadd_pd_unary_fneg(i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
-; X86-LABEL: test_mm512_maskz_fnmadd_pd_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfnmadd213pd {{.*#+}} zmm0 = -(zmm1 * zmm0) + zmm2
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_maskz_fnmadd_pd_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfnmadd213pd {{.*#+}} zmm0 = -(zmm1 * zmm0) + zmm2
-; X64-NEXT:    retq
-entry:
-  %neg.i = fneg <8 x double> %__A
-  %0 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %neg.i, <8 x double> %__B, <8 x double> %__C) #10
-  %1 = bitcast i8 %__U to <8 x i1>
-  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> zeroinitializer
-  ret <8 x double> %2
-}
-
 define <8 x double> @test_mm512_fnmsub_pd(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
 ; CHECK-LABEL: test_mm512_fnmsub_pd:
 ; CHECK:       # %bb.0: # %entry
@@ -3688,21 +3425,6 @@ entry:
   %sub.i = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %__A
   %sub1.i = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %__C
   %0 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %sub.i, <8 x double> %__B, <8 x double> %sub1.i) #10
-  ret <8 x double> %0
-}
-
-define <8 x double> @test_mm512_fnmsub_pd_unary_fneg(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
-; CHECK-LABEL: test_mm512_fnmsub_pd_unary_fneg:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; CHECK-NEXT:    vpxorq %zmm3, %zmm0, %zmm4
-; CHECK-NEXT:    vpxorq %zmm3, %zmm2, %zmm0
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm0 = (zmm1 * zmm4) + zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
-entry:
-  %neg.i = fneg <8 x double> %__A
-  %neg1.i = fneg <8 x double> %__C
-  %0 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %neg.i, <8 x double> %__B, <8 x double> %neg1.i) #10
   ret <8 x double> %0
 }
 
@@ -3723,28 +3445,6 @@ entry:
   %sub.i = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %__A
   %sub1.i = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %__C
   %0 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %sub.i, <8 x double> %__B, <8 x double> %sub1.i) #10
-  %1 = bitcast i8 %__U to <8 x i1>
-  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> zeroinitializer
-  ret <8 x double> %2
-}
-
-define <8 x double> @test_mm512_maskz_fnmsub_pd_unary_fneg(i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
-; X86-LABEL: test_mm512_maskz_fnmsub_pd_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfnmsub213pd {{.*#+}} zmm0 = -(zmm1 * zmm0) - zmm2
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_maskz_fnmsub_pd_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfnmsub213pd {{.*#+}} zmm0 = -(zmm1 * zmm0) - zmm2
-; X64-NEXT:    retq
-entry:
-  %neg.i = fneg <8 x double> %__A
-  %neg1.i = fneg <8 x double> %__C
-  %0 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %neg.i, <8 x double> %__B, <8 x double> %neg1.i) #10
   %1 = bitcast i8 %__U to <8 x i1>
   %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> zeroinitializer
   ret <8 x double> %2
@@ -3842,24 +3542,6 @@ entry:
   ret <16 x float> %0
 }
 
-define <16 x float> @test_mm512_fmsub_round_ps_unary_fneg(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
-; X86-LABEL: test_mm512_fmsub_round_ps_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpxord {{\.LCPI.*}}{1to16}, %zmm2, %zmm2
-; X86-NEXT:    vfmadd213ps {rn-sae}, %zmm2, %zmm1, %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_fmsub_round_ps_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    vpxord {{.*}}(%rip){1to16}, %zmm2, %zmm2
-; X64-NEXT:    vfmadd213ps {rn-sae}, %zmm2, %zmm1, %zmm0
-; X64-NEXT:    retq
-entry:
-  %neg = fneg <16 x float> %__C
-  %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %__A, <16 x float> %__B, <16 x float> %neg, i32 8)
-  ret <16 x float> %0
-}
-
 define <16 x float> @test_mm512_mask_fmsub_round_ps(<16 x float> %__A, i16 zeroext %__U, <16 x float> %__B, <16 x float> %__C) {
 ; X86-LABEL: test_mm512_mask_fmsub_round_ps:
 ; X86:       # %bb.0: # %entry
@@ -3876,27 +3558,6 @@ define <16 x float> @test_mm512_mask_fmsub_round_ps(<16 x float> %__A, i16 zeroe
 entry:
   %sub = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %__C
   %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %__A, <16 x float> %__B, <16 x float> %sub, i32 8)
-  %1 = bitcast i16 %__U to <16 x i1>
-  %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> %__A
-  ret <16 x float> %2
-}
-
-define <16 x float> @test_mm512_mask_fmsub_round_ps_unary_fneg(<16 x float> %__A, i16 zeroext %__U, <16 x float> %__B, <16 x float> %__C) {
-; X86-LABEL: test_mm512_mask_fmsub_round_ps_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfmsub132ps {rn-sae}, %zmm1, %zmm2, %zmm0 {%k1}
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_mask_fmsub_round_ps_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfmsub132ps {rn-sae}, %zmm1, %zmm2, %zmm0 {%k1}
-; X64-NEXT:    retq
-entry:
-  %neg = fneg <16 x float> %__C
-  %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %__A, <16 x float> %__B, <16 x float> %neg, i32 8)
   %1 = bitcast i16 %__U to <16 x i1>
   %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> %__A
   ret <16 x float> %2
@@ -3923,27 +3584,6 @@ entry:
   ret <16 x float> %2
 }
 
-define <16 x float> @test_mm512_maskz_fmsub_round_ps_unary_fneg(i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
-; X86-LABEL: test_mm512_maskz_fmsub_round_ps_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfmsub213ps {rn-sae}, %zmm2, %zmm1, %zmm0 {%k1} {z}
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_maskz_fmsub_round_ps_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfmsub213ps {rn-sae}, %zmm2, %zmm1, %zmm0 {%k1} {z}
-; X64-NEXT:    retq
-entry:
-  %neg = fneg <16 x float> %__C
-  %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %__A, <16 x float> %__B, <16 x float> %neg, i32 8)
-  %1 = bitcast i16 %__U to <16 x i1>
-  %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> zeroinitializer
-  ret <16 x float> %2
-}
-
 define <16 x float> @test_mm512_fnmadd_round_ps(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
 ; X86-LABEL: test_mm512_fnmadd_round_ps:
 ; X86:       # %bb.0: # %entry
@@ -3959,24 +3599,6 @@ define <16 x float> @test_mm512_fnmadd_round_ps(<16 x float> %__A, <16 x float> 
 entry:
   %sub = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %__A
   %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %sub, <16 x float> %__B, <16 x float> %__C, i32 8)
-  ret <16 x float> %0
-}
-
-define <16 x float> @test_mm512_fnmadd_round_ps_unary_fneg(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
-; X86-LABEL: test_mm512_fnmadd_round_ps_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpxord {{\.LCPI.*}}{1to16}, %zmm0, %zmm0
-; X86-NEXT:    vfmadd213ps {rn-sae}, %zmm2, %zmm1, %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_fnmadd_round_ps_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    vpxord {{.*}}(%rip){1to16}, %zmm0, %zmm0
-; X64-NEXT:    vfmadd213ps {rn-sae}, %zmm2, %zmm1, %zmm0
-; X64-NEXT:    retq
-entry:
-  %neg = fneg <16 x float> %__A
-  %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %neg, <16 x float> %__B, <16 x float> %__C, i32 8)
   ret <16 x float> %0
 }
 
@@ -4003,29 +3625,6 @@ entry:
   ret <16 x float> %2
 }
 
-define <16 x float> @test_mm512_mask3_fnmadd_round_ps_unary_fneg(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C, i16 zeroext %__U) {
-; X86-LABEL: test_mm512_mask3_fnmadd_round_ps_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfnmadd231ps {rn-sae}, %zmm1, %zmm0, %zmm2 {%k1}
-; X86-NEXT:    vmovaps %zmm2, %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_mask3_fnmadd_round_ps_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfnmadd231ps {rn-sae}, %zmm1, %zmm0, %zmm2 {%k1}
-; X64-NEXT:    vmovaps %zmm2, %zmm0
-; X64-NEXT:    retq
-entry:
-  %neg = fneg <16 x float> %__A
-  %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %neg, <16 x float> %__B, <16 x float> %__C, i32 8)
-  %1 = bitcast i16 %__U to <16 x i1>
-  %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> %__C
-  ret <16 x float> %2
-}
-
 define <16 x float> @test_mm512_maskz_fnmadd_round_ps(i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
 ; X86-LABEL: test_mm512_maskz_fnmadd_round_ps:
 ; X86:       # %bb.0: # %entry
@@ -4047,27 +3646,6 @@ entry:
   ret <16 x float> %2
 }
 
-define <16 x float> @test_mm512_maskz_fnmadd_round_ps_unary_fneg(i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
-; X86-LABEL: test_mm512_maskz_fnmadd_round_ps_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfnmadd213ps {rn-sae}, %zmm2, %zmm1, %zmm0 {%k1} {z}
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_maskz_fnmadd_round_ps_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfnmadd213ps {rn-sae}, %zmm2, %zmm1, %zmm0 {%k1} {z}
-; X64-NEXT:    retq
-entry:
-  %neg = fneg <16 x float> %__A
-  %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %neg, <16 x float> %__B, <16 x float> %__C, i32 8)
-  %1 = bitcast i16 %__U to <16 x i1>
-  %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> zeroinitializer
-  ret <16 x float> %2
-}
-
 define <16 x float> @test_mm512_fnmsub_round_ps(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
 ; CHECK-LABEL: test_mm512_fnmsub_round_ps:
 ; CHECK:       # %bb.0: # %entry
@@ -4080,21 +3658,6 @@ entry:
   %sub = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %__A
   %sub1 = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %__C
   %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %sub, <16 x float> %__B, <16 x float> %sub1, i32 8)
-  ret <16 x float> %0
-}
-
-define <16 x float> @test_mm512_fnmsub_round_ps_unary_fneg(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
-; CHECK-LABEL: test_mm512_fnmsub_round_ps_unary_fneg:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; CHECK-NEXT:    vpxord %zmm3, %zmm0, %zmm4
-; CHECK-NEXT:    vpxord %zmm3, %zmm2, %zmm0
-; CHECK-NEXT:    vfmadd231ps {rn-sae}, %zmm4, %zmm1, %zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
-entry:
-  %neg = fneg <16 x float> %__A
-  %neg1 = fneg <16 x float> %__C
-  %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %neg, <16 x float> %__B, <16 x float> %neg1, i32 8)
   ret <16 x float> %0
 }
 
@@ -4115,28 +3678,6 @@ entry:
   %sub = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %__A
   %sub1 = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %__C
   %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %sub, <16 x float> %__B, <16 x float> %sub1, i32 8)
-  %1 = bitcast i16 %__U to <16 x i1>
-  %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> zeroinitializer
-  ret <16 x float> %2
-}
-
-define <16 x float> @test_mm512_maskz_fnmsub_round_ps_unary_fneg(i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
-; X86-LABEL: test_mm512_maskz_fnmsub_round_ps_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfnmsub213ps {rn-sae}, %zmm2, %zmm1, %zmm0 {%k1} {z}
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_maskz_fnmsub_round_ps_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfnmsub213ps {rn-sae}, %zmm2, %zmm1, %zmm0 {%k1} {z}
-; X64-NEXT:    retq
-entry:
-  %neg = fneg <16 x float> %__A
-  %neg1 = fneg <16 x float> %__C
-  %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %neg, <16 x float> %__B, <16 x float> %neg1, i32 8)
   %1 = bitcast i16 %__U to <16 x i1>
   %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> zeroinitializer
   ret <16 x float> %2
@@ -4232,24 +3773,6 @@ entry:
   ret <16 x float> %0
 }
 
-define <16 x float> @test_mm512_fmsub_ps_unary_fneg(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
-; X86-LABEL: test_mm512_fmsub_ps_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpxord {{\.LCPI.*}}{1to16}, %zmm2, %zmm2
-; X86-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_fmsub_ps_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    vpxord {{.*}}(%rip){1to16}, %zmm2, %zmm2
-; X64-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
-; X64-NEXT:    retq
-entry:
-  %neg.i = fneg <16 x float> %__C
-  %0 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %__A, <16 x float> %__B, <16 x float> %neg.i) #10
-  ret <16 x float> %0
-}
-
 define <16 x float> @test_mm512_mask_fmsub_ps(<16 x float> %__A, i16 zeroext %__U, <16 x float> %__B, <16 x float> %__C) {
 ; X86-LABEL: test_mm512_mask_fmsub_ps:
 ; X86:       # %bb.0: # %entry
@@ -4266,27 +3789,6 @@ define <16 x float> @test_mm512_mask_fmsub_ps(<16 x float> %__A, i16 zeroext %__
 entry:
   %sub.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %__C
   %0 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %__A, <16 x float> %__B, <16 x float> %sub.i) #10
-  %1 = bitcast i16 %__U to <16 x i1>
-  %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> %__A
-  ret <16 x float> %2
-}
-
-define <16 x float> @test_mm512_mask_fmsub_ps_unary_fneg(<16 x float> %__A, i16 zeroext %__U, <16 x float> %__B, <16 x float> %__C) {
-; X86-LABEL: test_mm512_mask_fmsub_ps_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfmsub132ps {{.*#+}} zmm0 = (zmm0 * zmm1) - zmm2
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_mask_fmsub_ps_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfmsub132ps {{.*#+}} zmm0 = (zmm0 * zmm1) - zmm2
-; X64-NEXT:    retq
-entry:
-  %neg.i = fneg <16 x float> %__C
-  %0 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %__A, <16 x float> %__B, <16 x float> %neg.i) #10
   %1 = bitcast i16 %__U to <16 x i1>
   %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> %__A
   ret <16 x float> %2
@@ -4313,27 +3815,6 @@ entry:
   ret <16 x float> %2
 }
 
-define <16 x float> @test_mm512_maskz_fmsub_ps_unary_fneg(i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
-; X86-LABEL: test_mm512_maskz_fmsub_ps_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfmsub213ps {{.*#+}} zmm0 = (zmm1 * zmm0) - zmm2
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_maskz_fmsub_ps_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfmsub213ps {{.*#+}} zmm0 = (zmm1 * zmm0) - zmm2
-; X64-NEXT:    retq
-entry:
-  %neg.i = fneg <16 x float> %__C
-  %0 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %__A, <16 x float> %__B, <16 x float> %neg.i) #10
-  %1 = bitcast i16 %__U to <16 x i1>
-  %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> zeroinitializer
-  ret <16 x float> %2
-}
-
 define <16 x float> @test_mm512_fnmadd_ps(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
 ; X86-LABEL: test_mm512_fnmadd_ps:
 ; X86:       # %bb.0: # %entry
@@ -4349,24 +3830,6 @@ define <16 x float> @test_mm512_fnmadd_ps(<16 x float> %__A, <16 x float> %__B, 
 entry:
   %sub.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %__A
   %0 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %sub.i, <16 x float> %__B, <16 x float> %__C) #10
-  ret <16 x float> %0
-}
-
-define <16 x float> @test_mm512_fnmadd_ps_unary_fneg(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
-; X86-LABEL: test_mm512_fnmadd_ps_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpxord {{\.LCPI.*}}{1to16}, %zmm0, %zmm0
-; X86-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_fnmadd_ps_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    vpxord {{.*}}(%rip){1to16}, %zmm0, %zmm0
-; X64-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
-; X64-NEXT:    retq
-entry:
-  %neg.i = fneg <16 x float> %__A
-  %0 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %neg.i, <16 x float> %__B, <16 x float> %__C) #10
   ret <16 x float> %0
 }
 
@@ -4393,29 +3856,6 @@ entry:
   ret <16 x float> %2
 }
 
-define <16 x float> @test_mm512_mask3_fnmadd_ps_unary_fneg(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C, i16 zeroext %__U) {
-; X86-LABEL: test_mm512_mask3_fnmadd_ps_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfnmadd231ps {{.*#+}} zmm2 = -(zmm0 * zmm1) + zmm2
-; X86-NEXT:    vmovaps %zmm2, %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_mask3_fnmadd_ps_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfnmadd231ps {{.*#+}} zmm2 = -(zmm0 * zmm1) + zmm2
-; X64-NEXT:    vmovaps %zmm2, %zmm0
-; X64-NEXT:    retq
-entry:
-  %neg.i = fneg <16 x float> %__A
-  %0 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %neg.i, <16 x float> %__B, <16 x float> %__C) #10
-  %1 = bitcast i16 %__U to <16 x i1>
-  %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> %__C
-  ret <16 x float> %2
-}
-
 define <16 x float> @test_mm512_maskz_fnmadd_ps(i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
 ; X86-LABEL: test_mm512_maskz_fnmadd_ps:
 ; X86:       # %bb.0: # %entry
@@ -4437,27 +3877,6 @@ entry:
   ret <16 x float> %2
 }
 
-define <16 x float> @test_mm512_maskz_fnmadd_ps_unary_fneg(i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
-; X86-LABEL: test_mm512_maskz_fnmadd_ps_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfnmadd213ps {{.*#+}} zmm0 = -(zmm1 * zmm0) + zmm2
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_maskz_fnmadd_ps_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfnmadd213ps {{.*#+}} zmm0 = -(zmm1 * zmm0) + zmm2
-; X64-NEXT:    retq
-entry:
-  %neg.i = fneg <16 x float> %__A
-  %0 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %neg.i, <16 x float> %__B, <16 x float> %__C) #10
-  %1 = bitcast i16 %__U to <16 x i1>
-  %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> zeroinitializer
-  ret <16 x float> %2
-}
-
 define <16 x float> @test_mm512_fnmsub_ps(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
 ; CHECK-LABEL: test_mm512_fnmsub_ps:
 ; CHECK:       # %bb.0: # %entry
@@ -4470,21 +3889,6 @@ entry:
   %sub.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %__A
   %sub1.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %__C
   %0 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %sub.i, <16 x float> %__B, <16 x float> %sub1.i) #10
-  ret <16 x float> %0
-}
-
-define <16 x float> @test_mm512_fnmsub_ps_unary_fneg(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
-; CHECK-LABEL: test_mm512_fnmsub_ps_unary_fneg:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; CHECK-NEXT:    vpxord %zmm3, %zmm0, %zmm4
-; CHECK-NEXT:    vpxord %zmm3, %zmm2, %zmm0
-; CHECK-NEXT:    vfmadd231ps {{.*#+}} zmm0 = (zmm1 * zmm4) + zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
-entry:
-  %neg.i = fneg <16 x float> %__A
-  %neg1.i = fneg <16 x float> %__C
-  %0 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %neg.i, <16 x float> %__B, <16 x float> %neg1.i) #10
   ret <16 x float> %0
 }
 
@@ -4505,28 +3909,6 @@ entry:
   %sub.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %__A
   %sub1.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %__C
   %0 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %sub.i, <16 x float> %__B, <16 x float> %sub1.i) #10
-  %1 = bitcast i16 %__U to <16 x i1>
-  %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> zeroinitializer
-  ret <16 x float> %2
-}
-
-define <16 x float> @test_mm512_maskz_fnmsub_ps_unary_fneg(i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
-; X86-LABEL: test_mm512_maskz_fnmsub_ps_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfnmsub213ps {{.*#+}} zmm0 = -(zmm1 * zmm0) - zmm2
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_maskz_fnmsub_ps_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfnmsub213ps {{.*#+}} zmm0 = -(zmm1 * zmm0) - zmm2
-; X64-NEXT:    retq
-entry:
-  %neg.i = fneg <16 x float> %__A
-  %neg1.i = fneg <16 x float> %__C
-  %0 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %neg.i, <16 x float> %__B, <16 x float> %neg1.i) #10
   %1 = bitcast i16 %__U to <16 x i1>
   %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> zeroinitializer
   ret <16 x float> %2
@@ -4624,24 +4006,6 @@ entry:
   ret <8 x double> %0
 }
 
-define <8 x double> @test_mm512_fmsubadd_round_pd_unary_fneg(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
-; X86-LABEL: test_mm512_fmsubadd_round_pd_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpxorq {{\.LCPI.*}}{1to8}, %zmm2, %zmm2
-; X86-NEXT:    vfmaddsub213pd {rn-sae}, %zmm2, %zmm1, %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_fmsubadd_round_pd_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    vpxorq {{.*}}(%rip){1to8}, %zmm2, %zmm2
-; X64-NEXT:    vfmaddsub213pd {rn-sae}, %zmm2, %zmm1, %zmm0
-; X64-NEXT:    retq
-entry:
-  %neg = fneg <8 x double> %__C
-  %0 = tail call <8 x double> @llvm.x86.avx512.vfmaddsub.pd.512(<8 x double> %__A, <8 x double> %__B, <8 x double> %neg, i32 8)
-  ret <8 x double> %0
-}
-
 define <8 x double> @test_mm512_mask_fmsubadd_round_pd(<8 x double> %__A, i8 zeroext %__U, <8 x double> %__B, <8 x double> %__C) {
 ; X86-LABEL: test_mm512_mask_fmsubadd_round_pd:
 ; X86:       # %bb.0: # %entry
@@ -4658,27 +4022,6 @@ define <8 x double> @test_mm512_mask_fmsubadd_round_pd(<8 x double> %__A, i8 zer
 entry:
   %sub = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %__C
   %0 = tail call <8 x double> @llvm.x86.avx512.vfmaddsub.pd.512(<8 x double> %__A, <8 x double> %__B, <8 x double> %sub, i32 8)
-  %1 = bitcast i8 %__U to <8 x i1>
-  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> %__A
-  ret <8 x double> %2
-}
-
-define <8 x double> @test_mm512_mask_fmsubadd_round_pd_unary_fneg(<8 x double> %__A, i8 zeroext %__U, <8 x double> %__B, <8 x double> %__C) {
-; X86-LABEL: test_mm512_mask_fmsubadd_round_pd_unary_fneg:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vfmsubadd132pd {rn-sae}, %zmm1, %zmm2, %zmm0 {%k1}
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_mask_fmsubadd_round_pd_unary_fneg:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vfmsubadd132pd {rn-sae}, %zmm1, %zmm2, %zmm0 {%k1}
-; X64-NEXT:    retq
-entry:
-  %neg = fneg <8 x double> %__C
-  %0 = tail call <8 x double> @llvm.x86.avx512.vfmaddsub.pd.512(<8 x double> %__A, <8 x double> %__B, <8 x double> %neg, i32 8)
   %1 = bitcast i8 %__U to <8 x i1>
   %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> %__A
   ret <8 x double> %2

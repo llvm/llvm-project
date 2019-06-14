@@ -924,13 +924,28 @@ template <class ELFT, class RelTy>
 static void processRelocAux(InputSectionBase &Sec, RelExpr Expr, RelType Type,
                             uint64_t Offset, Symbol &Sym, const RelTy &Rel,
                             int64_t Addend) {
-  if (isStaticLinkTimeConstant(Expr, Type, Sym, Sec, Offset)) {
+  // If the relocation is known to be a link-time constant, we know no dynamic
+  // relocation will be created, pass the control to relocateAlloc() or
+  // relocateNonAlloc() to resolve it.
+  //
+  // The behavior of an undefined weak reference is implementation defined. If
+  // the relocation is to a weak undef, and we are producing an executable, let
+  // relocate{,Non}Alloc() resolve it.
+  if (isStaticLinkTimeConstant(Expr, Type, Sym, Sec, Offset) ||
+      (!Config->Shared && Sym.isUndefWeak())) {
     Sec.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
     return;
   }
+
   bool CanWrite = (Sec.Flags & SHF_WRITE) || !Config->ZText;
   if (CanWrite) {
-    if ((!Sym.IsPreemptible && Type == Target->SymbolicRel) || Expr == R_GOT) {
+    // FIXME Improve the way we handle absolute relocation types that will
+    // change to relative relocations. ARM has a relocation type R_ARM_TARGET1
+    // that is similar to SymbolicRel. PPC64 may have similar relocation types.
+    if ((!Sym.IsPreemptible &&
+         (Config->EMachine == EM_ARM || Config->EMachine == EM_PPC64 ||
+          Type == Target->SymbolicRel)) ||
+        Expr == R_GOT) {
       // If this is a symbolic relocation to a non-preemptable symbol, or an
       // R_GOT, its address is its link-time value plus load address. Represent
       // it with a relative relocation.
@@ -959,13 +974,6 @@ static void processRelocAux(InputSectionBase &Sec, RelExpr Expr, RelType Type,
         In.MipsGot->addEntry(*Sec.File, Sym, Addend, Expr);
       return;
     }
-  }
-
-  // If the relocation is to a weak undef, and we are producing
-  // executable, give up on it and produce a non preemptible 0.
-  if (!Config->Shared && Sym.isUndefWeak()) {
-    Sec.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
-    return;
   }
 
   if (!CanWrite && (Config->Pic && !isRelExpr(Expr))) {

@@ -25,6 +25,7 @@ def it_mask_asmoperand : AsmOperandClass { let Name = "ITMask"; }
 def it_mask : Operand<i32> {
   let PrintMethod = "printThumbITMask";
   let ParserMatchClass = it_mask_asmoperand;
+  let EncoderMethod = "getITMaskOpValue";
 }
 
 // t2_shift_imm: An integer that encodes a shift amount and the type of shift

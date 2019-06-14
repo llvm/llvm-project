@@ -109,7 +109,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
   // the tokens and store them for parsing at the end of the translation unit.
   if (getLangOpts().DelayedTemplateParsing &&
       D.getFunctionDefinitionKind() == FDK_Definition &&
-      !D.getDeclSpec().isConstexprSpecified() &&
+      !D.getDeclSpec().hasConstexprSpecifier() &&
       !(FnD && FnD->getAsFunction() &&
         FnD->getAsFunction()->getReturnType()->getContainedAutoType()) &&
       ((Actions.CurContext->isDependentContext() ||

@@ -34,16 +34,6 @@ define float @fadd_produce_zero(float %x) {
   ret float %r
 }
 
-define float @fadd_produce_zero_unary_fneg(float %x) {
-; ANY-LABEL: fadd_produce_zero_unary_fneg:
-; ANY:       # %bb.0:
-; ANY-NEXT:    xorps %xmm0, %xmm0
-; ANY-NEXT:    retq
-  %neg = fneg nsz float %x
-  %r = fadd nnan float %neg, %x
-  ret float %r
-}
-
 define float @fadd_reassociate(float %x) {
 ; ANY-LABEL: fadd_reassociate:
 ; ANY:       # %bb.0:
@@ -94,17 +84,6 @@ define float @fsub_neg_x_y(float %x, float %y) {
 ; ANY-NEXT:    movaps %xmm1, %xmm0
 ; ANY-NEXT:    retq
   %neg = fsub nsz float 0.0, %x
-  %r = fadd nsz float %neg, %y
-  ret float %r
-}
-
-define float @unary_neg_x_y(float %x, float %y) {
-; ANY-LABEL: unary_neg_x_y:
-; ANY:       # %bb.0:
-; ANY-NEXT:    subss %xmm0, %xmm1
-; ANY-NEXT:    movaps %xmm1, %xmm0
-; ANY-NEXT:    retq
-  %neg = fneg nsz float %x
   %r = fadd nsz float %neg, %y
   ret float %r
 }

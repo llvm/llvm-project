@@ -26,6 +26,8 @@ fun:dfsan_has_label_with_desc=uninstrumented
 fun:dfsan_has_label_with_desc=discard
 fun:dfsan_set_write_callback=uninstrumented
 fun:dfsan_set_write_callback=custom
+fun:dfsan_flush=uninstrumented
+fun:dfsan_flush=discard
 
 ###############################################################################
 # glibc

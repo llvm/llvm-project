@@ -4617,6 +4617,8 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       TC = llvm::make_unique<toolchains::Solaris>(*this, Target, Args);
       break;
     case llvm::Triple::AMDHSA:
+    case llvm::Triple::AMDPAL:
+    case llvm::Triple::Mesa3D:
       TC = llvm::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args);
       break;
     case llvm::Triple::Win32:

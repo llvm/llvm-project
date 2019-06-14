@@ -203,9 +203,15 @@ public:
   BinaryCoverageReader(const BinaryCoverageReader &) = delete;
   BinaryCoverageReader &operator=(const BinaryCoverageReader &) = delete;
 
+  static Expected<std::vector<std::unique_ptr<BinaryCoverageReader>>>
+  create(MemoryBufferRef ObjectBuffer, StringRef Arch,
+         SmallVectorImpl<std::unique_ptr<MemoryBuffer>> &ObjectFileBuffers);
+
   static Expected<std::unique_ptr<BinaryCoverageReader>>
-  create(std::unique_ptr<MemoryBuffer> &ObjectBuffer,
-         StringRef Arch);
+  createCoverageReaderFromBuffer(StringRef Coverage,
+                                 InstrProfSymtab &&ProfileNames,
+                                 uint8_t BytesInAddress,
+                                 support::endianness Endian);
 
   Error readNextRecord(CoverageMappingRecord &Record) override;
 };

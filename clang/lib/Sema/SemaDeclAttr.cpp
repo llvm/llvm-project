@@ -7460,12 +7460,10 @@ NamedDecl * Sema::DeclClonePragmaWeak(NamedDecl *ND, IdentifierInfo *II,
     // FIXME: Mangling?
     // FIXME: Is the qualifier info correct?
     // FIXME: Is the DeclContext correct?
-    NewFD = FunctionDecl::Create(FD->getASTContext(), FD->getDeclContext(),
-                                 Loc, Loc, DeclarationName(II),
-                                 FD->getType(), FD->getTypeSourceInfo(),
-                                 SC_None, false/*isInlineSpecified*/,
-                                 FD->hasPrototype(),
-                                 false/*isConstexprSpecified*/);
+    NewFD = FunctionDecl::Create(
+        FD->getASTContext(), FD->getDeclContext(), Loc, Loc,
+        DeclarationName(II), FD->getType(), FD->getTypeSourceInfo(), SC_None,
+        false /*isInlineSpecified*/, FD->hasPrototype(), CSK_unspecified);
     NewD = NewFD;
 
     if (FD->getQualifier())

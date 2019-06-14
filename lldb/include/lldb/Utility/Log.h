@@ -69,7 +69,7 @@ public:
         : log_ptr(nullptr), categories(categories),
           default_flags(default_flags) {}
 
-    // This function is safe to call at any time If the channel is disabled
+    // This function is safe to call at any time. If the channel is disabled
     // after (or concurrently with) this function returning a non-null Log
     // pointer, it is still safe to attempt to write to the Log object -- the
     // output will be discarded.
@@ -80,7 +80,7 @@ public:
       return nullptr;
     }
 
-    // This function is safe to call at any time If the channel is disabled
+    // This function is safe to call at any time. If the channel is disabled
     // after (or concurrently with) this function returning a non-null Log
     // pointer, it is still safe to attempt to write to the Log object -- the
     // output will be discarded.

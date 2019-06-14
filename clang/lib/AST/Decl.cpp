@@ -2724,7 +2724,8 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
                            SourceLocation StartLoc,
                            const DeclarationNameInfo &NameInfo, QualType T,
                            TypeSourceInfo *TInfo, StorageClass S,
-                           bool isInlineSpecified, bool isConstexprSpecified)
+                           bool isInlineSpecified,
+                           ConstexprSpecKind ConstexprKind)
     : DeclaratorDecl(DK, DC, NameInfo.getLoc(), NameInfo.getName(), T, TInfo,
                      StartLoc),
       DeclContext(DK), redeclarable_base(C), ODRHash(0),
@@ -2744,7 +2745,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.IsExplicitlyDefaulted = false;
   FunctionDeclBits.HasImplicitReturnZero = false;
   FunctionDeclBits.IsLateTemplateParsed = false;
-  FunctionDeclBits.IsConstexpr = isConstexprSpecified;
+  FunctionDeclBits.ConstexprKind = ConstexprKind;
   FunctionDeclBits.InstantiationIsPending = false;
   FunctionDeclBits.UsesSEHTry = false;
   FunctionDeclBits.HasSkippedBody = false;
@@ -4541,13 +4542,12 @@ FunctionDecl *FunctionDecl::Create(ASTContext &C, DeclContext *DC,
                                    SourceLocation StartLoc,
                                    const DeclarationNameInfo &NameInfo,
                                    QualType T, TypeSourceInfo *TInfo,
-                                   StorageClass SC,
-                                   bool isInlineSpecified,
+                                   StorageClass SC, bool isInlineSpecified,
                                    bool hasWrittenPrototype,
-                                   bool isConstexprSpecified) {
+                                   ConstexprSpecKind ConstexprKind) {
   FunctionDecl *New =
       new (C, DC) FunctionDecl(Function, C, DC, StartLoc, NameInfo, T, TInfo,
-                               SC, isInlineSpecified, isConstexprSpecified);
+                               SC, isInlineSpecified, ConstexprKind);
   New->setHasWrittenPrototype(hasWrittenPrototype);
   return New;
 }
@@ -4555,7 +4555,7 @@ FunctionDecl *FunctionDecl::Create(ASTContext &C, DeclContext *DC,
 FunctionDecl *FunctionDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
   return new (C, ID) FunctionDecl(Function, C, nullptr, SourceLocation(),
                                   DeclarationNameInfo(), QualType(), nullptr,
-                                  SC_None, false, false);
+                                  SC_None, false, CSK_unspecified);
 }
 
 BlockDecl *BlockDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L) {

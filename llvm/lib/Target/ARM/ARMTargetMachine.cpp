@@ -95,6 +95,7 @@ extern "C" void LLVMInitializeARMTarget() {
   initializeARMExecutionDomainFixPass(Registry);
   initializeARMExpandPseudoPass(Registry);
   initializeThumb2SizeReducePass(Registry);
+  initializeMVEVPTBlockPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -508,6 +509,7 @@ void ARMPassConfig::addPreSched2() {
       return !MF.getSubtarget<ARMSubtarget>().isThumb1Only();
     }));
   }
+  addPass(createMVEVPTBlockPass());
   addPass(createThumb2ITBlockPass());
 }
 

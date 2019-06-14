@@ -245,7 +245,7 @@ const DIType *DbgVariable::getType() const {
 }
 
 /// Get .debug_loc entry for the instruction range starting at MI.
-static DebugLocEntry::Value getDebugLocValue(const MachineInstr *MI) {
+static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
   const DIExpression *Expr = MI->getDebugExpression();
   assert(MI->getNumOperands() == 4);
   if (MI->getOperand(0).isReg()) {
@@ -255,14 +255,14 @@ static DebugLocEntry::Value getDebugLocValue(const MachineInstr *MI) {
     // register-indirect address.
     assert((!Op1.isImm() || (Op1.getImm() == 0)) && "unexpected offset");
     MachineLocation MLoc(RegOp.getReg(), Op1.isImm());
-    return DebugLocEntry::Value(Expr, MLoc);
+    return DbgValueLoc(Expr, MLoc);
   }
   if (MI->getOperand(0).isImm())
-    return DebugLocEntry::Value(Expr, MI->getOperand(0).getImm());
+    return DbgValueLoc(Expr, MI->getOperand(0).getImm());
   if (MI->getOperand(0).isFPImm())
-    return DebugLocEntry::Value(Expr, MI->getOperand(0).getFPImm());
+    return DbgValueLoc(Expr, MI->getOperand(0).getFPImm());
   if (MI->getOperand(0).isCImm())
-    return DebugLocEntry::Value(Expr, MI->getOperand(0).getCImm());
+    return DbgValueLoc(Expr, MI->getOperand(0).getCImm());
 
   llvm_unreachable("Unexpected 4-operand DBG_VALUE instruction!");
 }
@@ -275,7 +275,7 @@ void DbgVariable::initializeDbgValue(const MachineInstr *DbgValue) {
   assert(getInlinedAt() == DbgValue->getDebugLoc()->getInlinedAt() &&
          "Wrong inlined-at");
 
-  ValueLoc = llvm::make_unique<DebugLocEntry::Value>(getDebugLocValue(DbgValue));
+  ValueLoc = llvm::make_unique<DbgValueLoc>(getDebugLocValue(DbgValue));
   if (auto *E = DbgValue->getDebugExpression())
     if (E->getNumElements())
       FrameIndexExprs.push_back({0, E});
@@ -1206,7 +1206,7 @@ static bool validThroughout(LexicalScopes &LScopes,
 bool DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
                                    const DbgValueHistoryMap::Entries &Entries) {
   using OpenRange =
-      std::pair<DbgValueHistoryMap::EntryIndex, DebugLocEntry::Value>;
+      std::pair<DbgValueHistoryMap::EntryIndex, DbgValueLoc>;
   SmallVector<OpenRange, 4> OpenRanges;
   bool isSafeForSingleLocation = true;
   const MachineInstr *StartDebugMI = nullptr;
@@ -1279,7 +1279,7 @@ bool DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
       continue;
     }
 
-    SmallVector<DebugLocEntry::Value, 4> Values;
+    SmallVector<DbgValueLoc, 4> Values;
     for (auto &R : OpenRanges)
       Values.push_back(R.second);
     DebugLoc.emplace_back(StartLabel, EndLabel, Values);
@@ -1995,7 +1995,7 @@ void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
 }
 
 static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
-                              const DebugLocEntry::Value &Value,
+                              const DbgValueLoc &Value,
                               DwarfExpression &DwarfExpr) {
   auto *DIExpr = Value.getExpression();
   DIExpressionCursor ExprCursor(DIExpr);
@@ -2033,10 +2033,10 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
   DebugLocStream::EntryBuilder Entry(List, Begin, End);
   BufferByteStreamer Streamer = Entry.getStreamer();
   DebugLocDwarfExpression DwarfExpr(AP.getDwarfVersion(), Streamer, TheCU);
-  const DebugLocEntry::Value &Value = Values[0];
+  const DbgValueLoc &Value = Values[0];
   if (Value.isFragment()) {
     // Emit all fragments that belong to the same variable and range.
-    assert(llvm::all_of(Values, [](DebugLocEntry::Value P) {
+    assert(llvm::all_of(Values, [](DbgValueLoc P) {
           return P.isFragment();
         }) && "all values are expected to be fragments");
     assert(std::is_sorted(Values.begin(), Values.end()) &&

@@ -408,6 +408,11 @@ public:
     static const mask punct  = _ISpunct;
     static const mask xdigit = _ISxdigit;
     static const mask blank  = _ISblank;
+#if defined(__mips__)
+    static const mask __regex_word = static_cast<char_class_type>(_ISbit(15));
+#else
+    static const mask __regex_word = 0x80;
+#endif
 #elif defined(_LIBCPP_MSVCRT_LIKE)
     typedef unsigned short mask;
     static const mask space  = _SPACE;
@@ -420,6 +425,7 @@ public:
     static const mask punct  = _PUNCT;
     static const mask xdigit = _HEX;
     static const mask blank  = _BLANK;
+    static const mask __regex_word = 0x80;
 # define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_PRINT
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__EMSCRIPTEN__) || defined(__NetBSD__)
 # ifdef __APPLE__
@@ -441,8 +447,12 @@ public:
 
 # if defined(__NetBSD__)
     static const mask blank  = _CTYPE_BL;
+    // NetBSD defines classes up to 0x2000
+    // see sys/ctype_bits.h, _CTYPE_Q
+    static const mask __regex_word = 0x8000;
 # else
     static const mask blank  = _CTYPE_B;
+    static const mask __regex_word = 0x80;
 # endif
 #elif defined(__sun__) || defined(_AIX)
     typedef unsigned int mask;
@@ -456,6 +466,7 @@ public:
     static const mask punct  = _ISPUNCT;
     static const mask xdigit = _ISXDIGIT;
     static const mask blank  = _ISBLANK;
+    static const mask __regex_word = 0x80;
 #elif defined(_NEWLIB_VERSION)
     // Same type as Newlib's _ctype_ array in newlib/libc/include/ctype.h.
     typedef char mask;
@@ -469,6 +480,7 @@ public:
     static const mask punct  = _P;
     static const mask xdigit = _X | _N;
     static const mask blank  = _B;
+    static const mask __regex_word = 0x80;
 # define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_PRINT
 # define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_ALPHA
 # define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_XDIGIT
@@ -484,6 +496,7 @@ public:
     static const mask punct  = 1<<7;
     static const mask xdigit = 1<<8;
     static const mask blank  = 1<<9;
+    static const mask __regex_word = 1<<10;
 #endif
     static const mask alnum  = alpha | digit;
     static const mask graph  = alnum | punct;

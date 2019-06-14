@@ -363,7 +363,7 @@ private:
   unsigned Friend_specified : 1;
 
   // constexpr-specifier
-  unsigned Constexpr_specified : 1;
+  ConstexprSpecKind ConstexprSpecifier : 2;
 
   union {
     UnionParsedType TypeRep;
@@ -433,7 +433,7 @@ public:
         TypeSpecPipe(false), TypeSpecSat(false), TypeQualifiers(TQ_unspecified),
         FS_inline_specified(false), FS_forceinline_specified(false),
         FS_virtual_specified(false), FS_noreturn_specified(false),
-        Friend_specified(false), Constexpr_specified(false),
+        Friend_specified(false), ConstexprSpecifier(CSK_unspecified),
         FS_explicit_specifier(), Attrs(attrFactory), writtenBS(),
         ObjCQualifiers(nullptr) {}
 
@@ -530,6 +530,7 @@ public:
   static const char *getSpecifierName(DeclSpec::TSW W);
   static const char *getSpecifierName(DeclSpec::SCS S);
   static const char *getSpecifierName(DeclSpec::TSCS S);
+  static const char *getSpecifierName(ConstexprSpecKind C);
 
   // type-qualifiers
 
@@ -718,8 +719,8 @@ public:
                      unsigned &DiagID);
   bool setModulePrivateSpec(SourceLocation Loc, const char *&PrevSpec,
                             unsigned &DiagID);
-  bool SetConstexprSpec(SourceLocation Loc, const char *&PrevSpec,
-                        unsigned &DiagID);
+  bool SetConstexprSpec(ConstexprSpecKind ConstexprKind, SourceLocation Loc,
+                        const char *&PrevSpec, unsigned &DiagID);
 
   bool isFriendSpecified() const { return Friend_specified; }
   SourceLocation getFriendSpecLoc() const { return FriendLoc; }
@@ -727,11 +728,14 @@ public:
   bool isModulePrivateSpecified() const { return ModulePrivateLoc.isValid(); }
   SourceLocation getModulePrivateSpecLoc() const { return ModulePrivateLoc; }
 
-  bool isConstexprSpecified() const { return Constexpr_specified; }
+  ConstexprSpecKind getConstexprSpecifier() const { return ConstexprSpecifier; }
   SourceLocation getConstexprSpecLoc() const { return ConstexprLoc; }
+  bool hasConstexprSpecifier() const {
+    return ConstexprSpecifier != CSK_unspecified;
+  }
 
   void ClearConstexprSpec() {
-    Constexpr_specified = false;
+    ConstexprSpecifier = CSK_unspecified;
     ConstexprLoc = SourceLocation();
   }
 

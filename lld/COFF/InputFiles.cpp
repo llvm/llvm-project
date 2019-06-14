@@ -728,11 +728,10 @@ StringRef ltrim1(StringRef S, const char *Chars) {
 
 void ImportFile::parse() {
   const char *Buf = MB.getBufferStart();
-  const char *End = MB.getBufferEnd();
   const auto *Hdr = reinterpret_cast<const coff_import_header *>(Buf);
 
   // Check if the total size is valid.
-  if ((size_t)(End - Buf) != (sizeof(*Hdr) + Hdr->SizeOfData))
+  if (MB.getBufferSize() != sizeof(*Hdr) + Hdr->SizeOfData)
     fatal("broken import library");
 
   // Read names and create an __imp_ symbol.

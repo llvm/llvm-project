@@ -477,6 +477,21 @@ bool isUncondBranchOpcode(int Opc) {
   return Opc == ARM::B || Opc == ARM::tB || Opc == ARM::t2B;
 }
 
+static inline bool isVPTOpcode(int Opc) {
+  return Opc == ARM::t2VPTv16i8 || Opc == ARM::t2VPTv16u8 ||
+         Opc == ARM::t2VPTv16s8 || Opc == ARM::t2VPTv8i16 ||
+         Opc == ARM::t2VPTv8u16 || Opc == ARM::t2VPTv8s16 ||
+         Opc == ARM::t2VPTv4i32 || Opc == ARM::t2VPTv4u32 ||
+         Opc == ARM::t2VPTv4s32 || Opc == ARM::t2VPTv4f32 ||
+         Opc == ARM::t2VPTv8f16 || Opc == ARM::t2VPTv16i8r ||
+         Opc == ARM::t2VPTv16u8r || Opc == ARM::t2VPTv16s8r ||
+         Opc == ARM::t2VPTv8i16r || Opc == ARM::t2VPTv8u16r ||
+         Opc == ARM::t2VPTv8s16r || Opc == ARM::t2VPTv4i32r ||
+         Opc == ARM::t2VPTv4u32r || Opc == ARM::t2VPTv4s32r ||
+         Opc == ARM::t2VPTv4f32r || Opc == ARM::t2VPTv8f16r ||
+         Opc == ARM::t2VPST;
+}
+
 static inline
 bool isCondBranchOpcode(int Opc) {
   return Opc == ARM::Bcc || Opc == ARM::tBcc || Opc == ARM::t2Bcc;

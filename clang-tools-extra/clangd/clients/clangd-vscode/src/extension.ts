@@ -72,18 +72,19 @@ export function activate(context: vscode.ExtensionContext) {
     // having a corresponding 'onLanguage:...' activation event in package.json.
     // However, VSCode does not have CUDA as a supported language yet, so we
     // cannot add a corresponding activationEvent for CUDA files and clangd will
-    // *not* load itself automatically on '.cu' files. When any of the files
-    // with other extensions are open, clangd will load itself and will also
-    // work on '.cu' files.
-    const filePattern: string = '**/*.{' +
-        ['cpp', 'c', 'cc', 'cu', 'cxx', 'c++', 'm', 'mm',
-            'h', 'hh', 'hpp', 'hxx', 'inc'].join()
-        + '}';
+    // *not* load itself automatically on '.cu' files.
+    const cudaFilePattern: string = '**/*.{' +['cu'].join()+ '}';
     const clientOptions: vscodelc.LanguageClientOptions = {
-        // Register the server for C/C++ files
-        documentSelector: [{ scheme: 'file', pattern: filePattern }],
+        // Register the server for c-family and cuda files.
+        documentSelector: [
+            { scheme: 'file', language: 'c' },
+            { scheme: 'file', language: 'cpp' },
+            { scheme: 'file', language: 'objective-c'},
+            { scheme: 'file', language: 'objective-cpp'},
+            { scheme: 'file', pattern: cudaFilePattern },
+        ],
         synchronize: !syncFileEvents ? undefined : {
-            fileEvents: vscode.workspace.createFileSystemWatcher(filePattern)
+        // FIXME: send sync file events when clangd provides implemenatations.
         },
         initializationOptions: { clangdFileStatus: true },
         // Do not switch to output window when clangd returns output

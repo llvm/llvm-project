@@ -135,6 +135,13 @@ bool AMDGPUTargetInfo::initFeatureMap(
       CPU = "gfx600";
 
     switch (llvm::AMDGPU::parseArchAMDGCN(CPU)) {
+    case GK_GFX1012:
+    case GK_GFX1011:
+      Features["dot1-insts"] = true;
+      Features["dot2-insts"] = true;
+      Features["dot5-insts"] = true;
+      Features["dot6-insts"] = true;
+      LLVM_FALLTHROUGH;
     case GK_GFX1010:
       Features["dl-insts"] = true;
       Features["16-bit-insts"] = true;
