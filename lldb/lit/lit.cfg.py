@@ -68,7 +68,7 @@ llvm_config.feature_config(
 # so doing it once per lit.py invocation is close enough.
 
 for i in ['module-cache-clang', 'module-cache-lldb']:
-    cachedir = os.path.join(config.lldb_libs_dir, '..',
+    cachedir = os.path.join(os.path.dirname(config.lldb_libs_dir),
                             'lldb-test-build.noindex', i)
     if os.path.isdir(cachedir):
         print("Deleting module cache at %s."%cachedir)
