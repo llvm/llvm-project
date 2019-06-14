@@ -590,7 +590,7 @@ public:
           lldb::ProcessSP process_sp =
               map.GetBestExecutionContextScope()->CalculateProcess();
           SwiftLanguageRuntime *language_runtime =
-              process_sp->GetSwiftLanguageRuntime();
+              SwiftLanguageRuntime::Get(*process_sp);
           if (language_runtime && frame_sp)
             layout_type = language_runtime->DoArchetypeBindingForType(
                 *frame_sp, layout_type);
@@ -988,7 +988,7 @@ public:
 
     if (lang == lldb::eLanguageTypeSwift) {
       SwiftLanguageRuntime *language_runtime =
-          process_sp->GetSwiftLanguageRuntime();
+          SwiftLanguageRuntime::Get(*process_sp);
       if (language_runtime && frame_sp)
         m_type = language_runtime->DoArchetypeBindingForType(*frame_sp, m_type);
     }

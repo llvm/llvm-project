@@ -171,7 +171,7 @@ bool AppleThreadPlanStepThroughObjCTrampoline::ShouldStop(Event *event_ptr) {
                   target_addr);
 
     ObjCLanguageRuntime *objc_runtime =
-        GetThread().GetProcess()->GetObjCLanguageRuntime();
+        ObjCLanguageRuntime::Get(*GetThread().GetProcess());
     assert(objc_runtime != nullptr);
     objc_runtime->AddToMethodCache(m_isa_addr, m_sel_addr, target_addr);
     if (log)

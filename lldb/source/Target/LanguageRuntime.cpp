@@ -18,6 +18,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+char LanguageRuntime::ID = 0;
+
 ExceptionSearchFilter::ExceptionSearchFilter(const lldb::TargetSP &target_sp,
                                              lldb::LanguageType language,
                                              bool update_module_list)
@@ -298,12 +300,7 @@ void LanguageRuntime::InitializeCommands(CommandObject *parent) {
   }
 }
 
-lldb::SearchFilterSP LanguageRuntime::CreateExceptionSearchFilter() {
-  return m_process->GetTarget().GetSearchFilterForModule(nullptr);
-}
-
 bool LanguageRuntime::IsSymbolAnyRuntimeThunk(Symbol &symbol) {
   return SwiftLanguageRuntime::IsSymbolARuntimeThunk(symbol);
 }
-
 

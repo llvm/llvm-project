@@ -153,7 +153,9 @@ public:
   virtual lldb::BreakpointResolverSP
   CreateExceptionResolver(Breakpoint *bkpt, bool catch_bp, bool throw_bp) = 0;
 
-  virtual lldb::SearchFilterSP CreateExceptionSearchFilter();
+  virtual lldb::SearchFilterSP CreateExceptionSearchFilter() {
+    return m_process->GetTarget().GetSearchFilterForModule(nullptr);
+  }
 
   virtual bool GetTypeBitSize(const CompilerType &compiler_type,
                               uint64_t &size) {
@@ -193,6 +195,9 @@ public:
   virtual lldb::addr_t LookupRuntimeSymbol(ConstString name) {
     return LLDB_INVALID_ADDRESS;
   }
+
+  virtual bool isA(const void *ClassID) const { return ClassID == &ID; }
+  static char ID;
 
 protected:
   // Classes that inherit from LanguageRuntime can see and modify these

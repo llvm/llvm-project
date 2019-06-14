@@ -131,6 +131,7 @@ class ModuleSpec;
 class ModuleSpecList;
 struct NameSearchContext;
 class ObjCLanguageRuntime;
+class ObjCRuntimeSyntheticProvider;
 class ObjectContainer;
 class OptionGroup;
 class OptionGroupOptions;

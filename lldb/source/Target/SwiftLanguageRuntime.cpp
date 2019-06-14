@@ -85,6 +85,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+char SwiftLanguageRuntime::ID = 0;
+
 static constexpr std::chrono::seconds g_po_function_timeout(15);
 static const char *g_dollar_tau_underscore = u8"$\u03C4_";
 static ConstString g_self = ConstString("self");
@@ -207,7 +209,7 @@ FindSymbolForSwiftObject(Target &target, ConstString object,
 }
 
 AppleObjCRuntimeV2 *SwiftLanguageRuntime::GetObjCRuntime() {
-  if (auto objc_runtime = GetProcess()->GetObjCLanguageRuntime()) {
+  if (auto objc_runtime = ObjCLanguageRuntime::Get(*GetProcess())) {
     if (objc_runtime->GetPluginName() ==
         AppleObjCRuntimeV2::GetPluginNameStatic())
       return (AppleObjCRuntimeV2 *)objc_runtime;
@@ -3210,7 +3212,7 @@ SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
   Target *target = frame_sp->CalculateTarget().get();
   ValueObjectSP error_valobj_sp;
 
-  auto *runtime = process_sp->GetSwiftLanguageRuntime();
+  auto *runtime = Get(*process_sp);
   if (!runtime)
     return error_valobj_sp;
 

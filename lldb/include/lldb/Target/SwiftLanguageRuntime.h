@@ -65,6 +65,12 @@ public:
   class MetadataPromise;
   typedef std::shared_ptr<MetadataPromise> MetadataPromiseSP;
 
+  static char ID;
+
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || LanguageRuntime::isA(ClassID);
+  }
+
   //------------------------------------------------------------------
   // Static Functions
   //------------------------------------------------------------------
@@ -76,6 +82,15 @@ public:
   CreateInstance(Process *process, lldb::LanguageType language);
 
   static lldb_private::ConstString GetPluginNameStatic();
+
+  static bool classof(const LanguageRuntime *runtime) {
+    return runtime->isA(&ID);
+  }
+
+  static SwiftLanguageRuntime *Get(Process &process) {
+    return llvm::cast_or_null<SwiftLanguageRuntime>(
+        process.GetLanguageRuntime(lldb::eLanguageTypeSwift));
+  }
 
   //------------------------------------------------------------------
   // PluginInterface protocol

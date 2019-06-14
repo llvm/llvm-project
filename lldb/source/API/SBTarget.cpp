@@ -1884,7 +1884,7 @@ lldb::SBType SBTarget::FindFirstType(const char *typename_cstr) {
 
     if (process_sp) {
       ObjCLanguageRuntime *objc_language_runtime =
-          process_sp->GetObjCLanguageRuntime();
+          ObjCLanguageRuntime::Get(*process_sp);
 
       if (objc_language_runtime) {
         DeclVendor *objc_decl_vendor = objc_language_runtime->GetDeclVendor();
@@ -1954,7 +1954,7 @@ lldb::SBTypeList SBTarget::FindTypes(const char *typename_cstr) {
 
     if (process_sp) {
       ObjCLanguageRuntime *objc_language_runtime =
-          process_sp->GetObjCLanguageRuntime();
+          ObjCLanguageRuntime::Get(*process_sp);
 
       if (objc_language_runtime) {
         DeclVendor *objc_decl_vendor = objc_language_runtime->GetDeclVendor();

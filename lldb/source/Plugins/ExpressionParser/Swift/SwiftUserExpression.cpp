@@ -62,7 +62,7 @@ SwiftUserExpression::~SwiftUserExpression() {}
 
 void SwiftUserExpression::WillStartExecuting() {
   if (auto process = m_jit_process_wp.lock()) {
-    if (auto *swift_runtime = process->GetSwiftLanguageRuntime())
+    if (auto *swift_runtime = SwiftLanguageRuntime::Get(*process))
       swift_runtime->WillStartExecutingUserExpression(
           m_runs_in_playground_or_repl);
     else
@@ -73,7 +73,7 @@ void SwiftUserExpression::WillStartExecuting() {
 
 void SwiftUserExpression::DidFinishExecuting() {
   if (auto process = m_jit_process_wp.lock()) {
-    if (auto swift_runtime = process->GetSwiftLanguageRuntime())
+    if (auto swift_runtime = SwiftLanguageRuntime::Get(*process))
       swift_runtime->DidFinishExecutingUserExpression(
           m_runs_in_playground_or_repl);
     else
@@ -86,7 +86,7 @@ static CompilerType GetConcreteType(ExecutionContext &exe_ctx,
   auto swift_type = GetSwiftType(type.GetOpaqueQualType());
   StreamString type_name;
   if (SwiftLanguageRuntime::GetAbstractTypeName(type_name, swift_type)) {
-    auto *runtime = exe_ctx.GetProcessRef().GetSwiftLanguageRuntime();
+    auto *runtime = SwiftLanguageRuntime::Get(exe_ctx.GetProcessRef());
     return runtime->GetConcreteType(frame, ConstString(type_name.GetString()));
   }
   return type;
@@ -534,7 +534,7 @@ lldb::ExpressionVariableSP SwiftUserExpression::GetResultAfterDematerialization(
           lldb::ProcessSP process_sp = exe_scope->CalculateProcess();
           if (process_sp) {
             SwiftLanguageRuntime *swift_runtime =
-                process_sp->GetSwiftLanguageRuntime();
+                SwiftLanguageRuntime::Get(*process_sp);
             if (swift_runtime)
               error_is_valid = swift_runtime->IsValidErrorValue(*val_sp.get());
           }
