@@ -130,6 +130,18 @@ bool ValueObjectVariable::UpdateValue() {
   m_error.Clear();
 
   Variable *variable = m_variable_sp.get();
+  // Check if the type has size 0. If so, there is nothing to update.
+  CompilerType var_type(GetCompilerTypeImpl());
+  if (var_type.IsValid()) {
+    ExecutionContext exe_ctx(GetExecutionContextRef());
+    llvm::Optional<uint64_t> size =
+      var_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+    if (size && *size == 0) {
+      m_value.SetCompilerType(var_type);
+      return m_error.Success();
+    }
+  }
+
   DWARFExpression &expr = variable->LocationExpression();
 
   if (variable->GetLocationIsConstantValueData()) {
@@ -139,18 +151,8 @@ bool ValueObjectVariable::UpdateValue() {
       if (m_data.GetDataStart() && m_data.GetByteSize())
         m_value.SetBytes(m_data.GetDataStart(), m_data.GetByteSize());
       m_value.SetContext(Value::eContextTypeVariable, variable);
-    } else {
-      CompilerType var_type(GetCompilerTypeImpl());
-      if (var_type.IsValid()) {
-        ExecutionContext exe_ctx(GetExecutionContextRef());
-        llvm::Optional<uint64_t> size =
-            var_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
-        if (size && *size == 0)
-          m_value.SetCompilerType(var_type);
-        else
-          m_error.SetErrorString("empty constant data");
-      }
-    }
+    } else
+      m_error.SetErrorString("empty constant data");
     // constant bytes can't be edited - sorry
     m_resolved_value.SetContext(Value::eContextTypeInvalid, NULL);
     SetAddressTypeOfChildren(eAddressTypeInvalid);
