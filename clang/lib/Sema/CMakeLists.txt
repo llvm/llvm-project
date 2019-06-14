@@ -72,4 +72,4 @@ clang_tablegen(OpenCLBuiltins.inc -gen-clang-opencl-builtins
   TARGET ClangOpenCLBuiltinsImpl
   )
 
-set_source_files_properties(SemaLookup.cpp OBJECT_DEPENDS ClangOpenCLBuiltinsImpl)
+add_dependencies(clangSema ClangOpenCLBuiltinsImpl)
