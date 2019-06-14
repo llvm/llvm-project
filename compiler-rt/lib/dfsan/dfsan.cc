@@ -421,6 +421,12 @@ static void dfsan_fini() {
   }
 }
 
+extern "C" void dfsan_flush() {
+  UnmapOrDie((void*)ShadowAddr(), UnusedAddr() - ShadowAddr());
+  if (!MmapFixedNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr()))
+    Die();
+}
+
 static void dfsan_init(int argc, char **argv, char **envp) {
   InitializeFlags();
 

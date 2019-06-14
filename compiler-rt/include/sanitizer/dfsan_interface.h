@@ -79,6 +79,12 @@ dfsan_label dfsan_has_label_with_desc(dfsan_label label, const char *desc);
 /// Returns the number of labels allocated.
 size_t dfsan_get_label_count(void);
 
+/// Flushes the DFSan shadow, i.e. forgets about all labels currently associated
+/// with the application memory. Will work only if there are no other
+/// threads executing DFSan-instrumented code concurrently.
+/// Use this call to start over the taint tracking within the same procces.
+void dfsan_flush(void);
+
 /// Sets a callback to be invoked on calls to write().  The callback is invoked
 /// before the write is done.  The write is not guaranteed to succeed when the
 /// callback executes.  Pass in NULL to remove any callback.
