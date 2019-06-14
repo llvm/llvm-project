@@ -2313,6 +2313,44 @@ EmitMramSubLoadWithCustomInserter(MachineInstr &MI, MachineBasicBlock *BB,
 }
 
 static MachineBasicBlock *
+EmitMramLoadDoubleWithCustomInserter(MachineInstr &MI, MachineBasicBlock *BB) {
+  const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
+  DebugLoc dl = MI.getDebugLoc();
+  MachineFunction *F = BB->getParent();
+
+  MachineRegisterInfo &RI = F->getRegInfo();
+  unsigned WramCacheAddrReg = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+  unsigned MramAddrReg = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+
+  // todo __sw_cache_buffer should have abstract representation
+
+  BuildMI(*BB, MI, dl, TII.get(DPU::ADDrri), WramCacheAddrReg)
+      .addReg(DPU::ID8)
+      .addExternalSymbol("__sw_cache_buffer");
+
+  if (MI.getOperand(2).getImm() == 0) {
+    BuildMI(*BB, MI, dl, TII.get(DPU::COPY), MramAddrReg).add(MI.getOperand(1));
+  } else {
+    BuildMI(*BB, MI, dl, TII.get(DPU::ADDrri), MramAddrReg)
+        .add(MI.getOperand(1))
+        .add(MI.getOperand(2));
+  }
+
+  BuildMI(*BB, MI, dl, TII.get(DPU::LDMArri))
+      .addReg(WramCacheAddrReg)
+      .addReg(MramAddrReg)
+      .addImm(0);
+
+  BuildMI(*BB, MI, dl, TII.get(DPU::LDrri))
+      .add(MI.getOperand(0))
+      .addReg(WramCacheAddrReg)
+      .addImm(0);
+
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
+  return BB;
+}
+
+static MachineBasicBlock *
 EmitAlignedStoreWramDoubleRegisterWithCustomInserter(MachineInstr &MI,
                                                      MachineBasicBlock *BB) {
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
@@ -3482,6 +3520,8 @@ DPUTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case DPU::MRAM_LOAD_U32mr:
   case DPU::MRAM_LOADmr:
     return EmitMramSubLoadWithCustomInserter(MI, BB, 4, DPU::LWrri);
+  case DPU::MRAM_LOAD_DOUBLEmr:
+    return EmitMramLoadDoubleWithCustomInserter(MI, BB);
   case DPU::WRAM_STORE_DOUBLErm:
     return EmitUnalignedStoreWramDoubleRegisterWithCustomInserter(MI, BB);
   case DPU::WRAM_STORE_DOUBLE_ALIGNEDrm:

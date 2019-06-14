@@ -72,8 +72,6 @@ def IsOrAdd: PatFrag<(ops node:$A, node:$B), (or node:$A, node:$B), [{
   return isOrEquivalentToAdd(N);
 }]>;
 
-def loadi64  : PatFrag<(ops node:$ptr), (i64 (load node:$ptr))>;
-
 class wram_load_frag<PatFrag base_load> : PatFrag<(ops node:$ptr), (base_load node:$ptr), [{
     return IsALoadFromAddrSpace(N, DPUADDR_SPACE::WRAM);
 }]>;
@@ -81,6 +79,8 @@ class wram_load_frag<PatFrag base_load> : PatFrag<(ops node:$ptr), (base_load no
 class wram_store_frag<PatFrag base_store> : PatFrag<(ops node:$val, node:$ptr), (base_store node:$val, node:$ptr), [{
     return IsAStoreToAddrSpace(N, DPUADDR_SPACE::WRAM);
 }]>;
+
+def wram_loadi64  : PatFrag<(ops node:$ptr), (i64 (wram_load_frag<load> node:$ptr))>;
 
 multiclass WramLoadXPat<ImmOperand LdTy, PatFrag LoadOp, DPUInstruction Inst> {
   def : Pat<(LdTy (wram_load_frag<LoadOp> SimpleRegOrCst:$ra)), (Inst SimpleRegOrCst:$ra, 0)>;
@@ -633,7 +633,7 @@ let usesCustomInserter = 1 in {
     def WRAM_LOAD_DOUBLErm : PseudoDPUInstruction<
            (outs GP64_REG:$dc), (ins MEMri24:$addr),
            "",
-           [(set i64:$dc, (loadi64 ADDRESS_IN_STACK:$addr))]>;
+           [(set i64:$dc, (wram_loadi64 ADDRESS_IN_STACK:$addr))]>;
 
     def WRAM_LOAD_DOUBLE_ALIGNEDrm : PseudoDPUInstruction<
            (outs GP64_REG:$dc), (ins MEMri24:$addr),
@@ -700,8 +700,6 @@ let usesCustomInserter = 1 in {
                       [(MramStore64 i64:$db, ADDRESS_IN_STACK:$addr)]
                       >;
 
-    // TODO: MRAM LOAD DOUBLE
-
     def MRAM_LOADmr     : MRAM_LOAD_X_mr<mram_load>;
 
     def MRAM_LOAD_U8mr  : MRAM_LOAD_X_mr<mram_zextloadi8>;
@@ -715,4 +713,9 @@ let usesCustomInserter = 1 in {
     // Notice that this applies to "anyext from iXX, where XX is 8 or 16"
     def MRAM_LOAD_X8mr  : MRAM_LOAD_X_mr<mram_extloadi8>;
     def MRAM_LOAD_X16mr : MRAM_LOAD_X_mr<mram_extloadi16>;
+
+    def MRAM_LOAD_DOUBLEmr: PseudoDPUInstruction<
+                      (outs GP64_REG:$dc), (ins MEMri24:$addr),
+                      "",
+                      [(set i64:$dc, (mram_load ADDRESS_IN_STACK:$addr))]>;
 }
