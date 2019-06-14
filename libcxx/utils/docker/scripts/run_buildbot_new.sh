@@ -73,8 +73,11 @@ function try_start_builder {
   sudo -u buildbot /usr/bin/buildslave start $BOT_DIR
 
   sleep 30
-  cat /tmp/twistd.log
+  cat $BOT_DIR/twistd.log
   if grep --quiet "slave is ready" $BOT_DIR/twistd.log; then
+    return 0
+  fi
+  if grep --quiet "configuration update complete" $BOT_DIR/twistd.log; then
     return 0
   fi
   if grep "rejecting duplicate slave" $BOT_DIR/twistd.log; then

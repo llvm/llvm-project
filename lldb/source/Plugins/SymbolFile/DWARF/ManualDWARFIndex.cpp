@@ -249,26 +249,30 @@ void ManualDWARFIndex::IndexUnitImpl(
     case DW_TAG_subprogram:
       if (has_address) {
         if (name) {
-          ObjCLanguage::MethodName objc_method(name, true);
-          if (objc_method.IsValid(true)) {
-            ConstString objc_class_name_with_category(
-                objc_method.GetClassNameWithCategory());
-            ConstString objc_selector_name(objc_method.GetSelector());
-            ConstString objc_fullname_no_category_name(
-                objc_method.GetFullNameWithoutCategory(true));
-            ConstString objc_class_name_no_category(objc_method.GetClassName());
-            set.function_fullnames.Insert(ConstString(name), ref);
-            if (objc_class_name_with_category)
-              set.objc_class_selectors.Insert(objc_class_name_with_category,
+          bool is_objc_method = false;
+          if (cu_language == eLanguageTypeObjC ||
+              cu_language == eLanguageTypeObjC_plus_plus) {
+            ObjCLanguage::MethodName objc_method(name, true);
+            if (objc_method.IsValid(true)) {
+              is_objc_method = true;
+              ConstString class_name_with_category(
+                  objc_method.GetClassNameWithCategory());
+              ConstString objc_selector_name(objc_method.GetSelector());
+              ConstString objc_fullname_no_category_name(
+                  objc_method.GetFullNameWithoutCategory(true));
+              ConstString class_name_no_category(objc_method.GetClassName());
+              set.function_fullnames.Insert(ConstString(name), ref);
+              if (class_name_with_category)
+                set.objc_class_selectors.Insert(class_name_with_category, ref);
+              if (class_name_no_category &&
+                  class_name_no_category != class_name_with_category)
+                set.objc_class_selectors.Insert(class_name_no_category, ref);
+              if (objc_selector_name)
+                set.function_selectors.Insert(objc_selector_name, ref);
+              if (objc_fullname_no_category_name)
+                set.function_fullnames.Insert(objc_fullname_no_category_name,
                                               ref);
-            if (objc_class_name_no_category &&
-                objc_class_name_no_category != objc_class_name_with_category)
-              set.objc_class_selectors.Insert(objc_class_name_no_category, ref);
-            if (objc_selector_name)
-              set.function_selectors.Insert(objc_selector_name, ref);
-            if (objc_fullname_no_category_name)
-              set.function_fullnames.Insert(objc_fullname_no_category_name,
-                                            ref);
+            }
           }
           // If we have a mangled name, then the DW_AT_name attribute is
           // usually the method name without the class or any parameters
@@ -279,7 +283,7 @@ void ManualDWARFIndex::IndexUnitImpl(
           else
             set.function_basenames.Insert(ConstString(name), ref);
 
-          if (!is_method && !mangled_cstr && !objc_method.IsValid(true))
+          if (!is_method && !mangled_cstr && !is_objc_method)
             set.function_fullnames.Insert(ConstString(name), ref);
         }
         if (mangled_cstr) {
