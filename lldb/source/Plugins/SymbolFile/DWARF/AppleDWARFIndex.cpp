@@ -155,12 +155,12 @@ void AppleDWARFIndex::GetFunctions(const RegularExpression &regex,
     DWARFMappedHash::ExtractDIEArray(hash_data, offsets);
 }
 
-void AppleDWARFIndex::ReportInvalidDIEOffset(dw_offset_t offset,
-                                             llvm::StringRef name) {
+void AppleDWARFIndex::ReportInvalidDIERef(const DIERef &ref,
+                                          llvm::StringRef name) {
   m_module.ReportErrorIfModifyDetected(
       "the DWARF debug information has been modified (accelerator table had "
       "bad die 0x%8.8x for '%s')\n",
-      offset, name.str().c_str());
+      ref.die_offset, name.str().c_str());
 }
 
 void AppleDWARFIndex::Dump(Stream &s) {
