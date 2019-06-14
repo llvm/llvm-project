@@ -2127,7 +2127,7 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
   clang::FunctionDecl *func_decl = FunctionDecl::Create(
       *ast, context, SourceLocation(), SourceLocation(), decl_name, qual_type,
       nullptr, SC_Extern, isInlineSpecified, hasWrittenPrototype,
-      isConstexprSpecified);
+      isConstexprSpecified ? CSK_constexpr : CSK_unspecified);
 
   // We have to do more than just synthesize the FunctionDecl.  We have to
   // synthesize ParmVarDecls for all of the FunctionDecl's arguments.  To do
