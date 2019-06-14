@@ -114,9 +114,11 @@ void parseSubsystem(StringRef Arg, WindowsSubsystem *Sys, uint32_t *Major,
                     uint32_t *Minor) {
   StringRef SysStr, Ver;
   std::tie(SysStr, Ver) = Arg.split(',');
-  *Sys = StringSwitch<WindowsSubsystem>(SysStr.lower())
+  std::string SysStrLower = SysStr.lower();
+  *Sys = StringSwitch<WindowsSubsystem>(SysStrLower)
     .Case("boot_application", IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
     .Case("console", IMAGE_SUBSYSTEM_WINDOWS_CUI)
+    .Case("default", IMAGE_SUBSYSTEM_UNKNOWN)
     .Case("efi_application", IMAGE_SUBSYSTEM_EFI_APPLICATION)
     .Case("efi_boot_service_driver", IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
     .Case("efi_rom", IMAGE_SUBSYSTEM_EFI_ROM)
@@ -125,7 +127,7 @@ void parseSubsystem(StringRef Arg, WindowsSubsystem *Sys, uint32_t *Major,
     .Case("posix", IMAGE_SUBSYSTEM_POSIX_CUI)
     .Case("windows", IMAGE_SUBSYSTEM_WINDOWS_GUI)
     .Default(IMAGE_SUBSYSTEM_UNKNOWN);
-  if (*Sys == IMAGE_SUBSYSTEM_UNKNOWN)
+  if (*Sys == IMAGE_SUBSYSTEM_UNKNOWN && SysStrLower != "default")
     fatal("unknown subsystem: " + SysStr);
   if (!Ver.empty())
     parseVersion(Ver, Major, Minor);

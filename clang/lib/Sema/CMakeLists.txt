@@ -68,10 +68,3 @@ add_clang_library(clangSema
   clangLex
   clangAPINotes
   )
-
-clang_tablegen(OpenCLBuiltins.inc -gen-clang-opencl-builtins
-  SOURCE OpenCLBuiltins.td
-  TARGET ClangOpenCLBuiltinsImpl
-  )
-
-set_source_files_properties(SemaLookup.cpp OBJECT_DEPENDS ClangOpenCLBuiltinsImpl)

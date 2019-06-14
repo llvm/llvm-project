@@ -1077,17 +1077,16 @@ static llvm::Constant *constWithPadding(CodeGenModule &CGM, IsPattern isPattern,
   return constant;
 }
 
-static Address createUnnamedGlobalFrom(CodeGenModule &CGM, const VarDecl &D,
-                                       CGBuilderTy &Builder,
-                                       llvm::Constant *Constant,
-                                       CharUnits Align) {
+Address CodeGenModule::createUnnamedGlobalFrom(const VarDecl &D,
+                                               llvm::Constant *Constant,
+                                               CharUnits Align) {
   auto FunctionName = [&](const DeclContext *DC) -> std::string {
     if (const auto *FD = dyn_cast<FunctionDecl>(DC)) {
       if (const auto *CC = dyn_cast<CXXConstructorDecl>(FD))
         return CC->getNameAsString();
       if (const auto *CD = dyn_cast<CXXDestructorDecl>(FD))
         return CD->getNameAsString();
-      return CGM.getMangledName(FD);
+      return getMangledName(FD);
     } else if (const auto *OM = dyn_cast<ObjCMethodDecl>(DC)) {
       return OM->getNameAsString();
     } else if (isa<BlockDecl>(DC)) {
@@ -1095,26 +1094,47 @@ static Address createUnnamedGlobalFrom(CodeGenModule &CGM, const VarDecl &D,
     } else if (isa<CapturedDecl>(DC)) {
       return "<captured>";
     } else {
-      llvm::llvm_unreachable_internal("expected a function or method");
+      llvm_unreachable("expected a function or method");
     }
   };
 
-  auto *Ty = Constant->getType();
-  bool isConstant = true;
-  llvm::GlobalVariable *InsertBefore = nullptr;
-  unsigned AS = CGM.getContext().getTargetAddressSpace(
-      CGM.getStringLiteralAddressSpace());
-  llvm::GlobalVariable *GV = new llvm::GlobalVariable(
-      CGM.getModule(), Ty, isConstant, llvm::GlobalValue::PrivateLinkage,
-      Constant,
-      "__const." + FunctionName(D.getParentFunctionOrMethod()) + "." +
-          D.getName(),
-      InsertBefore, llvm::GlobalValue::NotThreadLocal, AS);
-  GV->setAlignment(Align.getQuantity());
-  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  // Form a simple per-variable cache of these values in case we find we
+  // want to reuse them.
+  llvm::GlobalVariable *&CacheEntry = InitializerConstants[&D];
+  if (!CacheEntry || CacheEntry->getInitializer() != Constant) {
+    auto *Ty = Constant->getType();
+    bool isConstant = true;
+    llvm::GlobalVariable *InsertBefore = nullptr;
+    unsigned AS =
+        getContext().getTargetAddressSpace(getStringLiteralAddressSpace());
+    std::string Name;
+    if (D.hasGlobalStorage())
+      Name = getMangledName(&D).str() + ".const";
+    else if (const DeclContext *DC = D.getParentFunctionOrMethod())
+      Name = ("__const." + FunctionName(DC) + "." + D.getName()).str();
+    else
+      llvm_unreachable("local variable has no parent function or method");
+    llvm::GlobalVariable *GV = new llvm::GlobalVariable(
+        getModule(), Ty, isConstant, llvm::GlobalValue::PrivateLinkage,
+        Constant, Name, InsertBefore, llvm::GlobalValue::NotThreadLocal, AS);
+    GV->setAlignment(Align.getQuantity());
+    GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+    CacheEntry = GV;
+  } else if (CacheEntry->getAlignment() < Align.getQuantity()) {
+    CacheEntry->setAlignment(Align.getQuantity());
+  }
 
-  Address SrcPtr = Address(GV, Align);
-  llvm::Type *BP = llvm::PointerType::getInt8PtrTy(CGM.getLLVMContext(), AS);
+  return Address(CacheEntry, Align);
+}
+
+static Address createUnnamedGlobalForMemcpyFrom(CodeGenModule &CGM,
+                                                const VarDecl &D,
+                                                CGBuilderTy &Builder,
+                                                llvm::Constant *Constant,
+                                                CharUnits Align) {
+  Address SrcPtr = CGM.createUnnamedGlobalFrom(D, Constant, Align);
+  llvm::Type *BP = llvm::PointerType::getInt8PtrTy(CGM.getLLVMContext(),
+                                                   SrcPtr.getAddressSpace());
   if (SrcPtr.getType() != BP)
     SrcPtr = Builder.CreateBitCast(SrcPtr, BP);
   return SrcPtr;
@@ -1197,10 +1217,10 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
   }
 
   // Copy from a global.
-  Builder.CreateMemCpy(
-      Loc,
-      createUnnamedGlobalFrom(CGM, D, Builder, constant, Loc.getAlignment()),
-      SizeVal, isVolatile);
+  Builder.CreateMemCpy(Loc,
+                       createUnnamedGlobalForMemcpyFrom(
+                           CGM, D, Builder, constant, Loc.getAlignment()),
+                       SizeVal, isVolatile);
 }
 
 static void emitStoresForZeroInit(CodeGenModule &CGM, const VarDecl &D,
@@ -1763,10 +1783,10 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
       llvm::PHINode *Cur = Builder.CreatePHI(Begin.getType(), 2, "vla.cur");
       Cur->addIncoming(Begin.getPointer(), OriginBB);
       CharUnits CurAlign = Loc.getAlignment().alignmentOfArrayElement(EltSize);
-      Builder.CreateMemCpy(
-          Address(Cur, CurAlign),
-          createUnnamedGlobalFrom(CGM, D, Builder, Constant, ConstantAlign),
-          BaseSizeInChars, isVolatile);
+      Builder.CreateMemCpy(Address(Cur, CurAlign),
+                           createUnnamedGlobalForMemcpyFrom(
+                               CGM, D, Builder, Constant, ConstantAlign),
+                           BaseSizeInChars, isVolatile);
       llvm::Value *Next =
           Builder.CreateInBoundsGEP(Int8Ty, Cur, BaseSizeInChars, "vla.next");
       llvm::Value *Done = Builder.CreateICmpEQ(Next, End, "vla-init.isdone");

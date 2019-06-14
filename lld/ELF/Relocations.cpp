@@ -673,8 +673,7 @@ static int64_t computeAddend(const RelTy &Rel, const RelTy *End,
 
 // Custom error message if Sym is defined in a discarded section.
 template <class ELFT>
-static std::string maybeReportDiscarded(Undefined &Sym, InputSectionBase &Sec,
-                                        uint64_t Offset) {
+static std::string maybeReportDiscarded(Undefined &Sym) {
   auto *File = dyn_cast_or_null<ObjFile<ELFT>>(Sym.File);
   if (!File || !Sym.DiscardedSecIdx ||
       File->getSections()[Sym.DiscardedSecIdx] != &InputSection::Discarded)
@@ -741,8 +740,7 @@ static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
     }
   };
 
-  std::string Msg =
-      maybeReportDiscarded<ELFT>(cast<Undefined>(Sym), Sec, Offset);
+  std::string Msg = maybeReportDiscarded<ELFT>(cast<Undefined>(Sym));
   if (Msg.empty())
     Msg = "undefined " + Visibility() + "symbol: " + toString(Sym);
 
