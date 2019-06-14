@@ -217,6 +217,7 @@ private:
   void SelectBRCOND(SDNode *N);
   void SelectFMAD_FMA(SDNode *N);
   void SelectATOMIC_CMP_SWAP(SDNode *N);
+  void SelectDSAppendConsume(SDNode *N, unsigned IntrID);
   void SelectINTRINSIC_W_CHAIN(SDNode *N);
 
 protected:
@@ -500,13 +501,16 @@ SDNode *AMDGPUDAGToDAGISel::glueCopyToM0(SDNode *N, SDValue Val) const {
 
   // Write max value to m0 before each load operation
 
-  SDValue M0 = Lowering.copyToM0(*CurDAG, CurDAG->getEntryNode(), SDLoc(N),
+  assert(N->getOperand(0).getValueType() == MVT::Other && "Expected chain");
+
+  SDValue M0 = Lowering.copyToM0(*CurDAG, N->getOperand(0), SDLoc(N),
                                  Val);
 
   SDValue Glue = M0.getValue(1);
 
   SmallVector <SDValue, 8> Ops;
-  for (unsigned i = 0, e = N->getNumOperands(); i != e; ++i)
+  Ops.push_back(M0); // Replace the chain.
+  for (unsigned i = 1, e = N->getNumOperands(); i != e; ++i)
     Ops.push_back(N->getOperand(i));
 
   Ops.push_back(Glue);
@@ -1976,15 +1980,7 @@ void AMDGPUDAGToDAGISel::SelectATOMIC_CMP_SWAP(SDNode *N) {
   CurDAG->RemoveDeadNode(N);
 }
 
-void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
-  unsigned IntrID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
-  if ((IntrID != Intrinsic::amdgcn_ds_append &&
-       IntrID != Intrinsic::amdgcn_ds_consume) ||
-      N->getValueType(0) != MVT::i32) {
-    SelectCode(N);
-    return;
-  }
-
+void AMDGPUDAGToDAGISel::SelectDSAppendConsume(SDNode *N, unsigned IntrID) {
   // The address is assumed to be uniform, so if it ends up in a VGPR, it will
   // be copied to an SGPR with readfirstlane.
   unsigned Opc = IntrID == Intrinsic::amdgcn_ds_append ?
@@ -2020,6 +2016,23 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
   };
 
   CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
+}
+
+void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
+  unsigned IntrID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  switch (IntrID) {
+  case Intrinsic::amdgcn_ds_append:
+  case Intrinsic::amdgcn_ds_consume: {
+    if (N->getValueType(0) != MVT::i32)
+      break;
+    SelectDSAppendConsume(N, IntrID);
+    return;
+  }
+  default:
+    break;
+  }
+
+  SelectCode(N);
 }
 
 bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,

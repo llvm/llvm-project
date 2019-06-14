@@ -976,7 +976,7 @@ MachineInstr *getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
 /// all uses of VReg. Currently if def and uses are in different BBs -
 /// simply return false. Should be run on SSA.
 bool isEXECMaskConstantBetweenDefAndUses(unsigned VReg,
-                                         MachineRegisterInfo &MRI);
+                                         const MachineRegisterInfo &MRI);
 
 namespace AMDGPU {
 

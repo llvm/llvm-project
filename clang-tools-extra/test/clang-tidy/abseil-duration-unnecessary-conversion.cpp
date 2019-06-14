@@ -1,5 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11,c++14 %s abseil-duration-unnecessary-conversion %t -- -- -I %S/Inputs
-// FIXME: Fix the checker to work in C++17 mode.
+// RUN: %check_clang_tidy -std=c++11-or-later %s abseil-duration-unnecessary-conversion %t -- -- -I %S/Inputs
 
 #include "absl/time/time.h"
 

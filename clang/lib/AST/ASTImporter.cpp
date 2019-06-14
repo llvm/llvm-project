@@ -3093,7 +3093,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
             ExplicitSpecifier(
                 ExplicitExpr,
                 FromConstructor->getExplicitSpecifier().getKind()),
-            D->isInlineSpecified(), D->isImplicit(), D->isConstexpr()))
+            D->isInlineSpecified(), D->isImplicit(), D->getConstexprKind()))
       return ToFunction;
   } else if (CXXDestructorDecl *FromDtor = dyn_cast<CXXDestructorDecl>(D)) {
 
@@ -3131,19 +3131,20 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
             ToInnerLocStart, NameInfo, T, TInfo, D->isInlineSpecified(),
             ExplicitSpecifier(ExplicitExpr,
                               FromConversion->getExplicitSpecifier().getKind()),
-            D->isConstexpr(), SourceLocation()))
+            D->getConstexprKind(), SourceLocation()))
       return ToFunction;
   } else if (auto *Method = dyn_cast<CXXMethodDecl>(D)) {
     if (GetImportedOrCreateDecl<CXXMethodDecl>(
             ToFunction, D, Importer.getToContext(), cast<CXXRecordDecl>(DC),
             ToInnerLocStart, NameInfo, T, TInfo, Method->getStorageClass(),
-            Method->isInlineSpecified(), D->isConstexpr(), SourceLocation()))
+            Method->isInlineSpecified(), D->getConstexprKind(),
+            SourceLocation()))
       return ToFunction;
   } else {
-    if (GetImportedOrCreateDecl(ToFunction, D, Importer.getToContext(), DC,
-                                ToInnerLocStart, NameInfo, T, TInfo,
-                                D->getStorageClass(), D->isInlineSpecified(),
-                                D->hasWrittenPrototype(), D->isConstexpr()))
+    if (GetImportedOrCreateDecl(
+            ToFunction, D, Importer.getToContext(), DC, ToInnerLocStart,
+            NameInfo, T, TInfo, D->getStorageClass(), D->isInlineSpecified(),
+            D->hasWrittenPrototype(), D->getConstexprKind()))
       return ToFunction;
   }
 

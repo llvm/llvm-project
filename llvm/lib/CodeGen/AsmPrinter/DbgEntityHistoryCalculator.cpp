@@ -275,9 +275,12 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
             clobberRegisterUses(RegVars, MO.getReg(), DbgValues, LiveEntries,
                                 MI);
           // If this is a register def operand, it may end a debug value
-          // range. Ignore defs of the frame register in the prologue.
+          // range. Ignore frame-register defs in the epilogue and prologue,
+          // we expect debuggers to understand that stack-locations are
+          // invalid outside of the function body.
           else if (MO.getReg() != FrameReg ||
-                   !MI.getFlag(MachineInstr::FrameSetup)) {
+                   (!MI.getFlag(MachineInstr::FrameDestroy) &&
+                   !MI.getFlag(MachineInstr::FrameSetup))) {
             for (MCRegAliasIterator AI(MO.getReg(), TRI, true); AI.isValid();
                  ++AI)
               clobberRegisterUses(RegVars, *AI, DbgValues, LiveEntries, MI);

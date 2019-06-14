@@ -49,7 +49,7 @@ define i32 @test_select(i32* noalias nocapture readonly %blk1, i32* noalias noca
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 undef, [[S_026]]
 ; CHECK-NEXT:    [[ADD11:%.*]] = add nsw i32 [[ADD]], undef
 ; CHECK-NEXT:    [[ADD19:%.*]] = add nsw i32 [[ADD11]], undef
-; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v4i32(<4 x i32> [[TMP7]])
+; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP7]])
 ; CHECK-NEXT:    [[OP_EXTRA]] = add nsw i32 [[TMP8]], [[S_026]]
 ; CHECK-NEXT:    [[ADD27:%.*]] = add nsw i32 [[ADD19]], undef
 ; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i32, i32* [[P1_023]], i64 [[IDX_EXT]]
@@ -176,7 +176,7 @@ define i32 @reduction_with_br(i32* noalias nocapture readonly %blk1, i32* noalia
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 undef, [[S_020]]
 ; CHECK-NEXT:    [[ADD5:%.*]] = add nsw i32 [[ADD]], undef
 ; CHECK-NEXT:    [[ADD9:%.*]] = add nsw i32 [[ADD5]], undef
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v4i32(<4 x i32> [[TMP4]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[OP_EXTRA]] = add nsw i32 [[TMP5]], [[S_020]]
 ; CHECK-NEXT:    [[ADD13:%.*]] = add nsw i32 [[ADD9]], undef
 ; CHECK-NEXT:    [[CMP14:%.*]] = icmp slt i32 [[OP_EXTRA]], [[LIM:%.*]]
@@ -300,7 +300,7 @@ define i32 @test_unrolled_select(i8* noalias nocapture readonly %blk1, i8* noali
 ; CHECK-NEXT:    [[ADD49:%.*]] = add nsw i32 [[ADD38]], undef
 ; CHECK-NEXT:    [[ADD60:%.*]] = add nsw i32 [[ADD49]], undef
 ; CHECK-NEXT:    [[ADD71:%.*]] = add nsw i32 [[ADD60]], undef
-; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v8i32(<8 x i32> [[TMP9]])
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP9]])
 ; CHECK-NEXT:    [[OP_EXTRA]] = add nsw i32 [[TMP10]], [[S_047]]
 ; CHECK-NEXT:    [[ADD82:%.*]] = add nsw i32 [[ADD71]], undef
 ; CHECK-NEXT:    [[CMP83:%.*]] = icmp slt i32 [[OP_EXTRA]], [[LIM:%.*]]

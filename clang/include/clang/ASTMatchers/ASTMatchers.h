@@ -6452,6 +6452,44 @@ AST_MATCHER(FunctionDecl, hasTrailingReturn) {
   return false;
 }
 
+/// Matches expressions that match InnerMatcher that are possibly wrapped in an
+/// elidable constructor.
+///
+/// In C++17 copy elidable constructors are no longer being
+/// generated in the AST as it is not permitted by the standard. They are
+/// however part of the AST in C++14 and earlier. Therefore, to write a matcher
+/// that works in all language modes, the matcher has to skip elidable
+/// constructor AST nodes if they appear in the AST. This matcher can be used to
+/// skip those elidable constructors.
+///
+/// Given
+///
+/// \code
+/// struct H {};
+/// H G();
+/// void f() {
+///   H D = G();
+/// }
+/// \endcode
+///
+/// ``varDecl(hasInitializer(any(
+///       ignoringElidableConstructorCall(callExpr()),
+///       exprWithCleanups(ignoringElidableConstructorCall(callExpr()))))``
+/// matches ``H D = G()``
+AST_MATCHER_P(Expr, ignoringElidableConstructorCall,
+              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(&Node)) {
+    if (CtorExpr->isElidable()) {
+      if (const auto *MaterializeTemp =
+              dyn_cast<MaterializeTemporaryExpr>(CtorExpr->getArg(0))) {
+        return InnerMatcher.matches(*MaterializeTemp->GetTemporaryExpr(),
+                                    Finder, Builder);
+      }
+    }
+  }
+  return InnerMatcher.matches(Node, Finder, Builder);
+}
+
 //----------------------------------------------------------------------------//
 // OpenMP handling.
 //----------------------------------------------------------------------------//

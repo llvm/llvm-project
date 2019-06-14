@@ -11,6 +11,7 @@
 #include <cwchar>
 #include <ctime>
 #include <cstdarg>
+#include <cstdio>
 #include <type_traits>
 
 #include "test_macros.h"

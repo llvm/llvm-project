@@ -74,7 +74,7 @@ OPTIONS
 
 .. _llvm-symbolizer-opt-f:
 
-.. option:: -functions[=<none|short|linkage>], -f
+.. option:: -functions [<none|short|linkage>], -f
 
   Specify the way function names are printed (omit function name,
   print short function name, or print full linkage name, respectively).
@@ -112,7 +112,7 @@ OPTIONS
  input (see example above). If architecture is not specified in either way,
  address will not be symbolized. Defaults to empty string.
 
-.. option:: -dsym-hint=<path/to/file.dSYM>
+.. option:: -dsym-hint <path/to/file.dSYM>
 
  (Darwin-only flag). If the debug info for a binary isn't present in the default
  location, look for the debug info at the .dSYM path provided via the
@@ -131,14 +131,14 @@ OPTIONS
 
  Strip directories when printing the file path.
 
-.. option:: -adjust-vma=<offset>
+.. option:: -adjust-vma <offset>
 
  Add the specified offset to object file addresses when performing lookups. This
  can be used to perform lookups as if the object were relocated by the offset.
 
 .. _llvm-symbolizer-opt-output-style:
 
-.. option:: -output-style=<LLVM|GNU>
+.. option:: -output-style <LLVM|GNU>
 
   Specify the preferred output style. Defaults to ``LLVM``. When the output
   style is set to ``GNU``, the tool follows the style of GNU's **addr2line**.

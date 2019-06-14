@@ -41,12 +41,12 @@ TEST_F(LazyReexportsTest, BasicLocalCallThroughManagerOperation) {
       SymbolFlagsMap({{DummyTarget, JITSymbolFlags::Exported}}),
       [&](MaterializationResponsibility R) {
         DummyTargetMaterialized = true;
-        R.resolve(
+        R.notifyResolved(
             {{DummyTarget,
               JITEvaluatedSymbol(static_cast<JITTargetAddress>(
                                      reinterpret_cast<uintptr_t>(&dummyTarget)),
                                  JITSymbolFlags::Exported)}});
-        R.emit();
+        R.notifyEmitted();
       })));
 
   unsigned NotifyResolvedCount = 0;

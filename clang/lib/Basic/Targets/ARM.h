@@ -124,6 +124,12 @@ public:
                  StringRef CPU,
                  const std::vector<std::string> &FeaturesVec) const override;
 
+  bool isValidFeatureName(StringRef Feature) const override {
+    // We pass soft-float-abi in as a -target-feature, but the backend figures
+    // this out through other means.
+    return Feature != "soft-float-abi";
+  }
+
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;
 

@@ -41,7 +41,7 @@ define void @single_access_with_preloop(i32 *%arr, i32 *%a_len_ptr, i32 %n, i32 
 ; CHECK: [[exit_preloop_at:[^ ]+]] = select i1 [[exit_preloop_at_cond]], i32 [[exit_preloop_at_loclamp]], i32 0
 
 
-; CHECK: [[len_minus_sint_max:[^ ]+]] = add i32 %len, -2147483647
+; CHECK: [[len_minus_sint_max:[^ ]+]] = add nuw nsw i32 %len, -2147483647
 ; CHECK: [[check_len_min_sint_offset:[^ ]+]] = icmp sgt i32 %offset, [[len_minus_sint_max]]
 ; CHECK: [[safe_offset_mainloop:[^ ]+]] = select i1 [[check_len_min_sint_offset]], i32 %offset, i32 [[len_minus_sint_max]]
 ; If Offset was a SINT_MIN, we could have an overflow here. That is why we calculated its safe version.

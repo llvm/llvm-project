@@ -23,7 +23,7 @@ define void @test_01(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NOT:     preloop
 ; CHECK:         entry:
 ; CHECK-NEXT:      %len = load i32, i32* %a_len_ptr, !range !0
-; CHECK-NEXT:      [[SUB1:%[^ ]+]] = add i32 %len, -13
+; CHECK-NEXT:      [[SUB1:%[^ ]+]] = add nsw i32 %len, -13
 ; CHECK-NEXT:      [[CMP1:%[^ ]+]] = icmp slt i32 [[SUB1]], 101
 ; CHECK-NEXT:      [[SMAX:%[^ ]+]] = select i1 [[CMP1]], i32 [[SUB1]], i32 101
 ; CHECK-NEXT:      [[CMP2:%[^ ]+]] = icmp sgt i32 [[SMAX]], 0
@@ -79,7 +79,7 @@ define void @test_02(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-LABEL: test_02(
 ; CHECK:         entry:
 ; CHECK-NEXT:      %len = load i32, i32* %a_len_ptr, !range !0
-; CHECK-NEXT:      [[LEN_MINUS_SMAX:%[^ ]+]] = add i32 %len, -2147483647
+; CHECK-NEXT:      [[LEN_MINUS_SMAX:%[^ ]+]] = add nuw nsw i32 %len, -2147483647
 ; CHECK-NEXT:      [[CMP1:%[^ ]+]] = icmp sgt i32 [[LEN_MINUS_SMAX]], -13
 ; CHECK-NEXT:      [[SMAX1:%[^ ]+]] = select i1 [[CMP1]], i32 [[LEN_MINUS_SMAX]], i32 -13
 ; CHECK-NEXT:      [[SUB1:%[^ ]+]] = sub i32 %len, [[SMAX1]]
@@ -202,7 +202,7 @@ define void @test_04(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-LABEL: test_04(
 ; CHECK:         entry:
 ; CHECK-NEXT:      %len = load i32, i32* %a_len_ptr, !range !0
-; CHECK-NEXT:      [[SUB1:%[^ ]+]] = add i32 %len, 13
+; CHECK-NEXT:      [[SUB1:%[^ ]+]] = add nuw i32 %len, 13
 ; CHECK-NEXT:      [[CMP1:%[^ ]+]] = icmp ult i32 [[SUB1]], 101
 ; CHECK-NEXT:      %exit.mainloop.at = select i1 [[CMP1]], i32 [[SUB1]], i32 101
 ; CHECK-NEXT:      br i1 true, label %loop.preloop.preheader
@@ -245,7 +245,7 @@ define void @test_05(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NOT:     preloop
 ; CHECK:         entry:
 ; CHECK-NEXT:      %len = load i32, i32* %a_len_ptr, !range !0
-; CHECK-NEXT:      [[SUB1:%[^ ]+]] = add i32 %len, -13
+; CHECK-NEXT:      [[SUB1:%[^ ]+]] = add nsw i32 %len, -13
 ; CHECK-NEXT:      [[CMP1:%[^ ]+]] = icmp slt i32 [[SUB1]], 101
 ; CHECK-NEXT:      [[SMAX:%[^ ]+]] = select i1 [[CMP1]], i32 [[SUB1]], i32 101
 ; CHECK-NEXT:      [[CMP2:%[^ ]+]] = icmp sgt i32 [[SMAX]], 0
@@ -286,7 +286,7 @@ define void @test_06(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-LABEL: test_06(
 ; CHECK:         entry:
 ; CHECK-NEXT:      %len = load i32, i32* %a_len_ptr, !range !0
-; CHECK-NEXT:      [[LEN_MINUS_SMAX:%[^ ]+]] = add i32 %len, -2147483647
+; CHECK-NEXT:      [[LEN_MINUS_SMAX:%[^ ]+]] = add nuw nsw i32 %len, -2147483647
 ; CHECK-NEXT:      [[CMP1:%[^ ]+]] = icmp sgt i32 [[LEN_MINUS_SMAX]], -13
 ; CHECK-NEXT:      [[SMAX1:%[^ ]+]] = select i1 [[CMP1]], i32 [[LEN_MINUS_SMAX]], i32 -13
 ; CHECK-NEXT:      [[SUB1:%[^ ]+]] = sub i32 %len, [[SMAX1]]
@@ -375,7 +375,7 @@ define void @test_08(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-LABEL: test_08(
 ; CHECK:         entry:
 ; CHECK-NEXT:      %len = load i32, i32* %a_len_ptr, !range !0
-; CHECK-NEXT:      [[SUB1:%[^ ]+]] = add i32 %len, 13
+; CHECK-NEXT:      [[SUB1:%[^ ]+]] = add nuw i32 %len, 13
 ; CHECK-NEXT:      [[CMP1:%[^ ]+]] = icmp ult i32 [[SUB1]], 101
 ; CHECK-NEXT:      %exit.mainloop.at = select i1 [[CMP1]], i32 [[SUB1]], i32 101
 ; CHECK-NEXT:      br i1 true, label %loop.preloop.preheader

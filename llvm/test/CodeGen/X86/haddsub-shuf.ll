@@ -263,6 +263,60 @@ define <4 x double> @hadd_v4f64_scalar_splat(<4 x double> %a) {
   ret <4 x double> %shuf
 }
 
+define <4 x double> @hadd_v4f64_scalar_broadcast(<4 x double> %a) {
+; SSSE3_SLOW-LABEL: hadd_v4f64_scalar_broadcast:
+; SSSE3_SLOW:       # %bb.0:
+; SSSE3_SLOW-NEXT:    movapd %xmm0, %xmm1
+; SSSE3_SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSSE3_SLOW-NEXT:    addsd %xmm0, %xmm1
+; SSSE3_SLOW-NEXT:    movddup {{.*#+}} xmm0 = xmm1[0,0]
+; SSSE3_SLOW-NEXT:    movapd %xmm0, %xmm1
+; SSSE3_SLOW-NEXT:    retq
+;
+; SSSE3_FAST-LABEL: hadd_v4f64_scalar_broadcast:
+; SSSE3_FAST:       # %bb.0:
+; SSSE3_FAST-NEXT:    haddpd %xmm0, %xmm0
+; SSSE3_FAST-NEXT:    movapd %xmm0, %xmm1
+; SSSE3_FAST-NEXT:    retq
+;
+; AVX1_SLOW-LABEL: hadd_v4f64_scalar_broadcast:
+; AVX1_SLOW:       # %bb.0:
+; AVX1_SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX1_SLOW-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; AVX1_SLOW-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX1_SLOW-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1_SLOW-NEXT:    retq
+;
+; AVX1_FAST-LABEL: hadd_v4f64_scalar_broadcast:
+; AVX1_FAST:       # %bb.0:
+; AVX1_FAST-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
+; AVX1_FAST-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1_FAST-NEXT:    retq
+;
+; AVX2_SLOW-LABEL: hadd_v4f64_scalar_broadcast:
+; AVX2_SLOW:       # %bb.0:
+; AVX2_SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX2_SLOW-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; AVX2_SLOW-NEXT:    vbroadcastsd %xmm0, %ymm0
+; AVX2_SLOW-NEXT:    retq
+;
+; AVX2_FAST-LABEL: hadd_v4f64_scalar_broadcast:
+; AVX2_FAST:       # %bb.0:
+; AVX2_FAST-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
+; AVX2_FAST-NEXT:    vbroadcastsd %xmm0, %ymm0
+; AVX2_FAST-NEXT:    retq
+  %a0 = extractelement <4 x double> %a, i32 0
+  %a1 = extractelement <4 x double> %a, i32 1
+  %hop0 = fadd double %a0, %a1
+  %a2 = extractelement <4 x double> %a, i32 2
+  %a3 = extractelement <4 x double> %a, i32 3
+  %hop1 = fadd double %a2, %a3
+  %ins = insertelement <4 x double> undef, double %hop0, i32 0
+  %ins2 = insertelement <4 x double> %ins,  double %hop1, i32 2
+  %shuf = shufflevector <4 x double> %ins2, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
+  ret <4 x double> %shuf
+}
+
 define <4 x double> @hadd_v4f64(<4 x double> %a) {
 ; SSSE3_SLOW-LABEL: hadd_v4f64:
 ; SSSE3_SLOW:       # %bb.0:
@@ -700,3 +754,28 @@ define <16 x i16> @hsub_v16i16b(<16 x i16> %a) {
   %shuf = shufflevector <16 x i16> %hop, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 8, i32 9, i32 10, i32 11>
   ret <16 x i16> %shuf
 }
+
+define <4 x float> @broadcast_haddps_v4f32(<4 x float> %a0) {
+; SSSE3-LABEL: broadcast_haddps_v4f32:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    haddps %xmm0, %xmm0
+; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSSE3-NEXT:    retq
+;
+; AVX1-LABEL: broadcast_haddps_v4f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: broadcast_haddps_v4f32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vbroadcastss %xmm0, %xmm0
+; AVX2-NEXT:    retq
+  %1 = tail call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %a0, <4 x float> %a0)
+  %2 = shufflevector <4 x float> %1, <4 x float> undef, <4 x i32> zeroinitializer
+  ret <4 x float> %2
+}
+
+declare <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float>, <4 x float>)

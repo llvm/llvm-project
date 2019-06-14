@@ -1,4 +1,4 @@
-//===- P9InstrResources.td - P9 Instruction Resource Defs  -*- tablegen -*-===//
+//===- P9InstrResources.td - P9 Instruction Resource Defs  -*-tablegen-*- ===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the resources required by P9 instructions. This is part
-// P9 processor model used for instruction scheduling. This file should contain
-// all of the instructions that may be used on Power 9. This is not just
-// instructions that are new on Power 9 but also instructions that were
+// This file defines the resources required by P9 instructions. This is part of
+// the P9 processor model used for instruction scheduling. This file should
+// contain all the instructions that may be used on Power 9. This is not
+// just instructions that are new on Power 9 but also instructions that were
 // available on earlier architectures and are still used in Power 9.
 //
 // The makeup of the P9 CPU is modeled as follows:
 //   - Each CPU is made up of two superslices.
 //   - Each superslice is made up of two slices. Therefore, there are 4 slices
-//      for each CPU.
+//   for each CPU.
 //   - Up to 6 instructions can be dispatched to each CPU. Three per superslice.
 //   - Each CPU has:
 //     - One CY (Crypto) unit P9_CY_*
@@ -32,7 +32,7 @@
 
 // Two cycle ALU vector operation that uses an entire superslice.
 // Uses both ALU units (the even ALUE and odd ALUO units), two pipelines
-// (EXECE, EXECO) and 1 dispatches (DISP) to the given superslice.
+// (EXECE, EXECO) and 1 dispatch (DISP) to the given superslice.
 def : InstRW<[P9_ALUE_2C, P9_ALUO_2C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C],
       (instrs
     (instregex "VADDU(B|H|W|D)M$"),
@@ -83,7 +83,7 @@ def : InstRW<[P9_ALUE_2C, P9_ALUO_2C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C],
 )>;
 
 // Restricted Dispatch ALU operation for 3 cycles. The operation runs on a
-// single slice. However, since it is Restricted it requires all 3 dispatches
+// single slice. However, since it is Restricted, it requires all 3 dispatches
 // (DISP) for that superslice.
 def : InstRW<[P9_ALU_3C, IP_EXEC_1C, DISP_3SLOTS_1C],
       (instrs
@@ -169,8 +169,8 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C],
 )>;
 
 // Restricted Dispatch ALU operation for 2 cycles. The operation runs on a
-//  single slice. However, since it is Restricted it requires all 3 dispatches
-//  (DISP) for that superslice.
+// single slice. However, since it is Restricted, it requires all 3 dispatches
+// (DISP) for that superslice.
 def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_3SLOTS_1C],
       (instrs
     (instregex "RLDC(L|R)$"),
@@ -198,7 +198,7 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_3SLOTS_1C],
 
 // Three cycle ALU vector operation that uses an entire superslice.
 // Uses both ALU units (the even ALUE and odd ALUO units), two pipelines
-// (EXECE, EXECO) and 1 dispatches (DISP) to the given superslice.
+// (EXECE, EXECO) and 1 dispatch (DISP) to the given superslice.
 def : InstRW<[P9_ALUE_3C, P9_ALUO_3C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C],
       (instrs
     (instregex "M(T|F)VSCR$"),
@@ -282,8 +282,8 @@ def : InstRW<[P9_ALUE_3C, P9_ALUO_3C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C],
 )>;
 
 // 7 cycle DP vector operation that uses an entire superslice.
-//  Uses both DP units (the even DPE and odd DPO units), two pipelines
-//  (EXECE, EXECO) and all three dispatches (DISP) to the given superslice.
+// Uses both DP units (the even DPE and odd DPO units), two pipelines (EXECE,
+// EXECO) and all three dispatches (DISP) to the given superslice.
 def : InstRW<[P9_DPE_7C, P9_DPO_7C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C],
       (instrs
     VADDFP,
@@ -391,9 +391,8 @@ def : InstRW<[P9_DPE_7C, P9_DPO_7C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C],
     VSUMSWS
 )>;
 
-
 // 5 cycle Restricted DP operation. One DP unit, one EXEC pipeline and all three
-//  dispatch units for the superslice.
+// dispatch units for the superslice.
 def : InstRW<[P9_DP_5C, IP_EXEC_1C, DISP_3SLOTS_1C],
       (instrs
     (instregex "MADD(HD|HDU|LD|LD8)$"),
@@ -401,7 +400,7 @@ def : InstRW<[P9_DP_5C, IP_EXEC_1C, DISP_3SLOTS_1C],
 )>;
 
 // 7 cycle Restricted DP operation. One DP unit, one EXEC pipeline and all three
-//  dispatch units for the superslice.
+// dispatch units for the superslice.
 def : InstRW<[P9_DP_7C, IP_EXEC_1C, DISP_3SLOTS_1C],
       (instrs
     FRSP,
@@ -444,8 +443,8 @@ def : InstRW<[P9_DP_7C, IP_EXEC_1C, DISP_3SLOTS_1C],
 )>;
 
 // 7 cycle Restricted DP operation and one 3 cycle ALU operation.
-// These operations can be done in parallel.
-//  The DP is restricted so we need a full 4 dispatches.
+// These operations can be done in parallel. The DP is restricted so we need a
+// full 4 dispatches.
 def : InstRW<[P9_DP_7C, P9_ALU_3C, IP_EXEC_1C, IP_EXEC_1C,
               DISP_3SLOTS_1C, DISP_1C],
       (instrs
@@ -460,8 +459,8 @@ def : InstRW<[P9_DPOpAndALUOp_7C, IP_EXEC_1C, IP_EXEC_1C,
 )>;
 
 // 7 cycle Restricted DP operation and one 3 cycle ALU operation.
-// These operations must be done sequentially.
-//  The DP is restricted so we need a full 4 dispatches.
+// These operations must be done sequentially.The DP is restricted so we need a
+// full 4 dispatches.
 def : InstRW<[P9_DPOpAndALU2Op_10C, IP_EXEC_1C, IP_EXEC_1C,
               DISP_3SLOTS_1C, DISP_1C],
       (instrs
@@ -516,8 +515,8 @@ def : InstRW<[P9_DP_7C, IP_EXEC_1C, DISP_1C],
 )>;
 
 // Three Cycle PM operation. Only one PM unit per superslice so we use the whole
-//  superslice. That includes both exec pipelines (EXECO, EXECE) and one
-//  dispatches.
+// superslice. That includes both exec pipelines (EXECO, EXECE) and one
+// dispatch.
 def : InstRW<[P9_PM_3C, IP_EXECO_1C, IP_EXECE_1C, DISP_1C],
       (instrs
     (instregex "LVS(L|R)$"),
@@ -624,8 +623,8 @@ def : InstRW<[P9_PM_3C, IP_EXECO_1C, IP_EXECE_1C, DISP_1C],
 )>;
 
 // 12 Cycle DFU operation. Only one DFU unit per CPU so we use a whole
-//  superslice. That includes both exec pipelines (EXECO, EXECE) and one
-//  dispatches.
+// superslice. That includes both exec pipelines (EXECO, EXECE) and one
+// dispatch.
 def : InstRW<[P9_DFU_12C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C],
       (instrs
     BCDSRo,
@@ -648,16 +647,16 @@ def : InstRW<[P9_DFU_12C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C],
 )>;
 
 // 23 Cycle DFU operation. Only one DFU unit per CPU so we use a whole
-//  superslice. That includes both exec pipelines (EXECO, EXECE) and one 
-//  dispatches.
+// superslice. That includes both exec pipelines (EXECO, EXECE) and one
+// dispatch.
 def : InstRW<[P9_DFU_23C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C],
       (instrs
     BCDCTSQo
 )>;
 
 // 24 Cycle DFU operation. Only one DFU unit per CPU so we use a whole
-//  superslice. That includes both exec pipelines (EXECO, EXECE) and one
-//  dispatches.
+// superslice. That includes both exec pipelines (EXECO, EXECE) and one
+// dispatch.
 def : InstRW<[P9_DFU_24C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C],
       (instrs
     XSMADDQP,
@@ -673,16 +672,16 @@ def : InstRW<[P9_DFU_24C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C],
 )>;
 
 // 37 Cycle DFU operation. Only one DFU unit per CPU so we use a whole
-//  superslice. That includes both exec pipelines (EXECO, EXECE) and one
-//  dispatches.
+// superslice. That includes both exec pipelines (EXECO, EXECE) and one
+// dispatch.
 def : InstRW<[P9_DFU_37C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C],
       (instrs
     BCDCFSQo
 )>;
 
 // 58 Cycle DFU operation. Only one DFU unit per CPU so we use a whole
-//  superslice. That includes both exec pipelines (EXECO, EXECE) and one
-//  dispatches.
+// superslice. That includes both exec pipelines (EXECO, EXECE) and one
+// dispatch.
 def : InstRW<[P9_DFU_58C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C],
       (instrs
     XSDIVQP,
@@ -690,8 +689,8 @@ def : InstRW<[P9_DFU_58C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C],
 )>;
 
 // 76 Cycle DFU operation. Only one DFU unit per CPU so we use a whole
-//  superslice. That includes both exec pipelines (EXECO, EXECE) and all three
-//  dispatches.
+// superslice. That includes both exec pipelines (EXECO, EXECE) and all three
+// dispatches.
 def : InstRW<[P9_DFU_76C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C],
       (instrs
     XSSQRTQP,
@@ -753,7 +752,7 @@ def : InstRW<[P9_LS_4C, IP_AGEN_1C, DISP_1C],
 )>;
 
 // 4 Cycle Restricted load uses a single slice but the dispatch for the whole
-//  superslice.
+// superslice.
 def : InstRW<[P9_LS_4C, IP_AGEN_1C, DISP_3SLOTS_1C],
       (instrs
     LFIWZX,
@@ -812,7 +811,7 @@ def : InstRW<[P9_LoadAndLoadOp_8C, IP_AGEN_1C, IP_AGEN_1C,
 
 // Cracked Load instruction.
 // Requires consecutive Load and ALU pieces totaling 6 cycles. The Load and ALU
-//  operations cannot be done at the same time and so their latencies are added.
+// operations cannot be done at the same time and so their latencies are added.
 def : InstRW<[P9_LoadAndALUOp_6C, IP_EXEC_1C, IP_AGEN_1C,
               DISP_1C, DISP_1C],
       (instrs
@@ -824,7 +823,7 @@ def : InstRW<[P9_LoadAndALUOp_6C, IP_EXEC_1C, IP_AGEN_1C,
 
 // Cracked Restricted Load instruction.
 // Requires consecutive Load and ALU pieces totaling 6 cycles. The Load and ALU
-//  operations cannot be done at the same time and so their latencies are added.
+// operations cannot be done at the same time and so their latencies are added.
 // Full 6 dispatches are required as this is both cracked and restricted.
 def : InstRW<[P9_LoadAndALUOp_6C, IP_EXEC_1C, IP_AGEN_1C,
               DISP_3SLOTS_1C, DISP_3SLOTS_1C],
@@ -834,7 +833,7 @@ def : InstRW<[P9_LoadAndALUOp_6C, IP_EXEC_1C, IP_AGEN_1C,
 
 // Cracked Load instruction.
 // Requires consecutive Load and ALU pieces totaling 7 cycles. The Load and ALU
-//  operations cannot be done at the same time and so their latencies are added.
+// operations cannot be done at the same time and so their latencies are added.
 // Full 4 dispatches are required as this is a cracked instruction.
 def : InstRW<[P9_LoadAndALUOp_7C, IP_AGEN_1C, IP_EXEC_1C, DISP_1C, DISP_1C],
       (instrs
@@ -856,7 +855,7 @@ def : InstRW<[P9_LoadAndALU2Op_7C, IP_AGEN_1C, IP_EXEC_1C,
 
 // Cracked Load instruction.
 // Requires consecutive Load and ALU pieces totaling 8 cycles. The Load and ALU
-//  operations cannot be done at the same time and so their latencies are added.
+// operations cannot be done at the same time and so their latencies are added.
 // Full 4 dispatches are required as this is a cracked instruction.
 def : InstRW<[P9_LoadAndALU2Op_8C, IP_AGEN_1C, IP_EXEC_1C, DISP_1C, DISP_1C],
       (instrs
@@ -877,10 +876,9 @@ def : InstRW<[P9_LoadAndALUOp_6C, P9_ALU_2C, IP_AGEN_1C, IP_EXEC_1C, IP_EXEC_1C,
 
 // Cracked Load that requires the PM resource.
 // Since the Load and the PM cannot be done at the same time the latencies are
-//  added. Requires 8 cycles.
-// Since the PM requires the full superslice we need both EXECE, EXECO pipelines
-//  as well as 1 dispatches for the PM. The Load requires the remaining 1
-//  dispatches.
+// added. Requires 8 cycles. Since the PM requires the full superslice we need
+// both EXECE, EXECO pipelines as well as 1 dispatch for the PM. The Load
+// requires the remaining 1 dispatch.
 def : InstRW<[P9_LoadAndPMOp_8C, IP_AGEN_1C, IP_EXECE_1C, IP_EXECO_1C,
               DISP_1C, DISP_1C],
       (instrs
@@ -890,7 +888,7 @@ def : InstRW<[P9_LoadAndPMOp_8C, IP_AGEN_1C, IP_EXECE_1C, IP_EXECO_1C,
 )>;
 
 // Single slice Restricted store operation. The restricted operation requires
-//  all three dispatches for the superslice.
+// all three dispatches for the superslice.
 def : InstRW<[P9_LS_1C, IP_EXEC_1C, IP_AGEN_1C, DISP_3SLOTS_1C],
       (instrs
     (instregex "STF(S|D|IWX|SX|DX)$"),
@@ -908,7 +906,7 @@ def : InstRW<[P9_LS_1C, IP_EXEC_1C, IP_AGEN_1C, DISP_3SLOTS_1C],
 )>;
 
 // Vector Store Instruction
-// Requires the whole superslice and therefore requires one dispatches
+// Requires the whole superslice and therefore requires one dispatch
 // as well as both the Even and Odd exec pipelines.
 def : InstRW<[P9_LS_1C, IP_EXECE_1C, IP_EXECO_1C, IP_AGEN_1C, DISP_1C],
       (instrs
@@ -940,8 +938,8 @@ def : InstRW<[P9_DIV_12C, IP_EXECE_1C, IP_EXECO_1C, DISP_EVEN_1C],
 )>;
 
 // 16 Cycle DIV operation. Only one DIV unit per superslice so we use the whole
-//  superslice. That includes both exec pipelines (EXECO, EXECE) and two
-//  dispatches.
+// superslice. That includes both exec pipelines (EXECO, EXECE) and two
+// dispatches.
 def : InstRW<[P9_DIV_16C_8, IP_EXECO_1C, IP_EXECE_1C, DISP_EVEN_1C],
       (instrs
     DIVW,
@@ -950,8 +948,8 @@ def : InstRW<[P9_DIV_16C_8, IP_EXECO_1C, IP_EXECE_1C, DISP_EVEN_1C],
 )>;
 
 // 24 Cycle DIV operation. Only one DIV unit per superslice so we use the whole
-//  superslice. That includes both exec pipelines (EXECO, EXECE) and two
-//  dispatches.
+// superslice. That includes both exec pipelines (EXECO, EXECE) and two
+// dispatches.
 def : InstRW<[P9_DIV_24C_8, IP_EXECO_1C, IP_EXECE_1C, DISP_EVEN_1C],
       (instrs
     DIVWE,
@@ -964,8 +962,8 @@ def : InstRW<[P9_DIV_24C_8, IP_EXECO_1C, IP_EXECE_1C, DISP_EVEN_1C],
 )>;
 
 // 40 Cycle DIV operation. Only one DIV unit per superslice so we use the whole
-//  superslice. That includes both exec pipelines (EXECO, EXECE) and all three
-//  dispatches.
+// superslice. That includes both exec pipelines (EXECO, EXECE) and all three
+// dispatches.
 def : InstRW<[P9_DIV_40C_8, IP_EXECO_1C, IP_EXECE_1C, DISP_EVEN_1C],
       (instrs
     DIVDE,
@@ -973,8 +971,8 @@ def : InstRW<[P9_DIV_40C_8, IP_EXECO_1C, IP_EXECE_1C, DISP_EVEN_1C],
 )>;
 
 // Cracked DIV and ALU operation. Requires one full slice for the ALU operation
-//  and one full superslice for the DIV operation since there is only one DIV
-//  per superslice. Latency of DIV plus ALU is 26.
+// and one full superslice for the DIV operation since there is only one DIV per
+// superslice. Latency of DIV plus ALU is 26.
 def : InstRW<[P9_IntDivAndALUOp_18C_8, IP_EXECE_1C, IP_EXECO_1C, IP_EXEC_1C,
               DISP_EVEN_1C, DISP_1C],
       (instrs
@@ -982,8 +980,8 @@ def : InstRW<[P9_IntDivAndALUOp_18C_8, IP_EXECE_1C, IP_EXECO_1C, IP_EXEC_1C,
 )>;
 
 // Cracked DIV and ALU operation. Requires one full slice for the ALU operation
-//  and one full superslice for the DIV operation since there is only one DIV
-//  per superslice. Latency of DIV plus ALU is 26.
+// and one full superslice for the DIV operation since there is only one DIV per
+// superslice. Latency of DIV plus ALU is 26.
 def : InstRW<[P9_IntDivAndALUOp_26C_8, IP_EXECE_1C, IP_EXECO_1C, IP_EXEC_1C,
               DISP_EVEN_1C, DISP_1C],
       (instrs
@@ -994,8 +992,8 @@ def : InstRW<[P9_IntDivAndALUOp_26C_8, IP_EXECE_1C, IP_EXECO_1C, IP_EXEC_1C,
 )>;
 
 // Cracked DIV and ALU operation. Requires one full slice for the ALU operation
-//  and one full superslice for the DIV operation since there is only one DIV
-//  per superslice. Latency of DIV plus ALU is 42.
+// and one full superslice for the DIV operation since there is only one DIV per
+// superslice. Latency of DIV plus ALU is 42.
 def : InstRW<[P9_IntDivAndALUOp_42C_8, IP_EXECE_1C, IP_EXECO_1C, IP_EXEC_1C,
               DISP_EVEN_1C, DISP_1C],
       (instrs
@@ -1007,9 +1005,9 @@ def : InstRW<[P9_IntDivAndALUOp_42C_8, IP_EXECE_1C, IP_EXECO_1C, IP_EXEC_1C,
 
 // Cracked, restricted, ALU operations.
 // Here the two ALU ops can actually be done in parallel and therefore the
-//  latencies are not added together. Otherwise this is like having two
-//  instructions running together on two pipelines and 6 dispatches.
-// ALU ops are 2 cycles each.
+// latencies are not added together. Otherwise this is like having two
+// instructions running together on two pipelines and 6 dispatches. ALU ops are
+// 2 cycles each.
 def : InstRW<[P9_ALU_2C, P9_ALU_2C, IP_EXEC_1C, IP_EXEC_1C,
               DISP_3SLOTS_1C, DISP_3SLOTS_1C],
       (instrs
@@ -1019,9 +1017,9 @@ def : InstRW<[P9_ALU_2C, P9_ALU_2C, IP_EXEC_1C, IP_EXEC_1C,
 
 // Cracked ALU operations.
 // Here the two ALU ops can actually be done in parallel and therefore the
-//  latencies are not added together. Otherwise this is like having two
-//  instructions running together on two pipelines and 2 dispatches.
-// ALU ops are 2 cycles each.
+// latencies are not added together. Otherwise this is like having two
+// instructions running together on two pipelines and 2 dispatches. ALU ops are
+// 2 cycles each.
 def : InstRW<[P9_ALU_2C, P9_ALU_2C, IP_EXEC_1C, IP_EXEC_1C,
               DISP_1C, DISP_1C],
       (instrs
@@ -1045,8 +1043,8 @@ def : InstRW<[P9_ALU_2C, P9_ALU_3C, IP_EXEC_1C, IP_EXEC_1C,
 
 // Cracked ALU operations.
 // Here the two ALU ops can actually be done in parallel and therefore the
-//  latencies are not added together. Otherwise this is like having two
-//  instructions running together on two pipelines and 2 dispatches.
+// latencies are not added together. Otherwise this is like having two
+// instructions running together on two pipelines and 2 dispatches.
 // ALU ops are 3 cycles each.
 def : InstRW<[P9_ALU_3C, P9_ALU_3C, IP_EXEC_1C, IP_EXEC_1C,
               DISP_1C, DISP_1C],
@@ -1056,8 +1054,8 @@ def : InstRW<[P9_ALU_3C, P9_ALU_3C, IP_EXEC_1C, IP_EXEC_1C,
 
 // Cracked Restricted ALU operations.
 // Here the two ALU ops can actually be done in parallel and therefore the
-//  latencies are not added together. Otherwise this is like having two
-//  instructions running together on two pipelines and 6 dispatches.
+// latencies are not added together. Otherwise this is like having two
+// instructions running together on two pipelines and 6 dispatches.
 // ALU ops are 3 cycles each.
 def : InstRW<[P9_ALU_3C, P9_ALU_3C, IP_EXEC_1C, IP_EXEC_1C,
               DISP_3SLOTS_1C, DISP_3SLOTS_1C],
@@ -1176,7 +1174,7 @@ def : InstRW<[P9_DPOpAndALU2Op_29C_5, IP_EXEC_1C, IP_EXEC_1C,
     FSQRTSo
 )>;
 
-// 33 Cycle DP Instruction. Takes one slice and 1 dispatches.
+// 33 Cycle DP Instruction. Takes one slice and 1 dispatch.
 def : InstRW<[P9_DP_33C_8, IP_EXEC_1C, DISP_1C],
       (instrs
     XSDIVDP
@@ -1195,7 +1193,7 @@ def : InstRW<[P9_DPOpAndALU2Op_25C_5, IP_EXEC_1C, IP_EXEC_1C,
     FDIVSo
 )>;
 
-// 22 Cycle DP Instruction. Takes one slice and 1 dispatches.
+// 22 Cycle DP Instruction. Takes one slice and 1 dispatch.
 def : InstRW<[P9_DP_22C_5, IP_EXEC_1C, DISP_1C],
       (instrs
     XSDIVSP
@@ -1203,7 +1201,7 @@ def : InstRW<[P9_DP_22C_5, IP_EXEC_1C, DISP_1C],
 
 // 24 Cycle DP Vector Instruction. Takes one full superslice.
 // Includes both EXECE, EXECO pipelines and 1 dispatch for the given
-//  superslice.
+// superslice.
 def : InstRW<[P9_DPE_24C_8, P9_DPO_24C_8, IP_EXECE_1C, IP_EXECO_1C,
               DISP_1C],
       (instrs
@@ -1212,7 +1210,7 @@ def : InstRW<[P9_DPE_24C_8, P9_DPO_24C_8, IP_EXECE_1C, IP_EXECO_1C,
 
 // 33 Cycle DP Vector Instruction. Takes one full superslice.
 // Includes both EXECE, EXECO pipelines and 1 dispatch for the given
-//  superslice.
+// superslice.
 def : InstRW<[P9_DPE_33C_8, P9_DPO_33C_8, IP_EXECE_1C, IP_EXECO_1C,
               DISP_1C],
       (instrs
@@ -1221,9 +1219,9 @@ def : InstRW<[P9_DPE_33C_8, P9_DPO_33C_8, IP_EXECE_1C, IP_EXECO_1C,
 
 // Instruction cracked into three pieces. One Load and two ALU operations.
 // The Load and one of the ALU ops cannot be run at the same time and so the
-//  latencies are added together for 6 cycles. The remainaing ALU is 2 cycles.
+// latencies are added together for 6 cycles. The remainaing ALU is 2 cycles.
 // Both the load and the ALU that depends on it are restricted and so they take
-//  a total of 7 dispatches. The final 2 dispatches come from the second ALU op.
+// a total of 7 dispatches. The final 2 dispatches come from the second ALU op.
 // The two EXEC pipelines are for the 2 ALUs while the AGEN is for the load.
 def : InstRW<[P9_LoadAndALU2Op_7C, P9_ALU_2C,
               IP_AGEN_1C, IP_EXEC_1C, IP_EXEC_1C,
@@ -1251,12 +1249,11 @@ def : InstRW<[P9_LS_4C, P9_ALU_2C, IP_AGEN_1C, IP_EXEC_1C,
     (instregex "LDU(X)?$")
 )>;
 
-
 // Cracked instruction made up of a Load and an ALU. The ALU does not depend on
-//  the load and so it can be run at the same time as the load. The load is also
-//  restricted. 3 dispatches are from the restricted load while the other two
-//  are from the ALU. The AGEN pipeline is from the load and the EXEC pipeline
-//  is required for the ALU.
+// the load and so it can be run at the same time as the load. The load is also
+// restricted. 3 dispatches are from the restricted load while the other two
+// are from the ALU. The AGEN pipeline is from the load and the EXEC pipeline
+// is required for the ALU.
 def : InstRW<[P9_LS_4C, P9_ALU_2C, IP_AGEN_1C, IP_EXEC_1C,
               DISP_3SLOTS_1C, DISP_1C],
       (instrs
@@ -1266,8 +1263,8 @@ def : InstRW<[P9_LS_4C, P9_ALU_2C, IP_AGEN_1C, IP_EXEC_1C,
 // Crypto Instructions
 
 // 6 Cycle CY operation. Only one CY unit per CPU so we use a whole
-//  superslice. That includes both exec pipelines (EXECO, EXECE) and one
-//  dispatch.
+// superslice. That includes both exec pipelines (EXECO, EXECE) and one
+// dispatch.
 def : InstRW<[P9_CY_6C, IP_EXECO_1C, IP_EXECE_1C, DISP_1C],
       (instrs
     (instregex "VPMSUM(B|H|W|D)$"),

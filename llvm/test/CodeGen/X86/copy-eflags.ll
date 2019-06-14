@@ -43,6 +43,7 @@ define i32 @test1() nounwind {
 ;
 ; X64-LABEL: test1:
 ; X64:       # %bb.0: # %entry
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movb {{.*}}(%rip), %cl
 ; X64-NEXT:    leal 1(%rcx), %eax
 ; X64-NEXT:    movb %al, {{.*}}(%rip)
@@ -56,12 +57,11 @@ define i32 @test1() nounwind {
 ; X64-NEXT:    testb %dl, %dl
 ; X64-NEXT:    jne .LBB0_2
 ; X64-NEXT:  # %bb.1: # %if.then
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movsbl %al, %edi
 ; X64-NEXT:    callq external
-; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB0_2: # %if.end
 ; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
 entry:
   %bval = load i8, i8* @b

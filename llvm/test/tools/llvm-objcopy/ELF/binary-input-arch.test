@@ -25,7 +25,10 @@
 # RUN: llvm-readobj --file-headers %t.rv64.o | FileCheck %s --check-prefixes=CHECK,LE,RISCV64,64
 
 # RUN: llvm-objcopy -I binary -B sparc %t.txt %t.sparc.o
-# RUN: llvm-readobj --file-headers %t.sparc.o | FileCheck %s --check-prefixes=CHECK,LE,SPARC,32
+# RUN: llvm-readobj --file-headers %t.sparc.o | FileCheck %s --check-prefixes=CHECK,BE,SPARC,32
+
+# RUN: llvm-objcopy -I binary -B sparcel %t.txt %t.sparcel.o
+# RUN: llvm-readobj --file-headers %t.sparcel.o | FileCheck %s --check-prefixes=CHECK,LE,SPARCEL,32
 
 # RUN: llvm-objcopy -I binary -B x86-64 %t.txt %t.x86-64.o
 # RUN: llvm-readobj --file-headers %t.x86-64.o | FileCheck %s --check-prefixes=CHECK,LE,X86-64,64
@@ -41,6 +44,7 @@
 # RISCV64-SAME: riscv{{$}}
 # PPC-SAME:     ppc64
 # SPARC-SAME:   sparc
+# SPARCEL-SAME: sparc
 # X86-64-SAME:  x86-64
 
 # AARCH64-NEXT: Arch: aarch64
@@ -50,7 +54,8 @@
 # PPC-NEXT:     Arch: powerpc64le
 # RISCV32-NEXT: Arch: riscv32
 # RISCV64-NEXT: Arch: riscv64
-# SPARC-NEXT:   Arch: sparcel
+# SPARC-NEXT:   Arch: sparc{{$}}
+# SPARCEL-NEXT: Arch: sparcel
 # X86-64-NEXT:  Arch: x86_64
 
 # 32-NEXT:      AddressSize: 32bit
@@ -77,6 +82,7 @@
 # RISCV32-NEXT:   Machine: EM_RISCV (0xF3)
 # RISCV64-NEXT:   Machine: EM_RISCV (0xF3)
 # SPARC-NEXT:     Machine: EM_SPARC (0x2)
+# SPARCEL-NEXT:   Machine: EM_SPARC (0x2)
 # X86-64-NEXT:    Machine: EM_X86_64 (0x3E)
 # CHECK-NEXT:     Version: 1
 # CHECK-NEXT:     Entry: 0x0

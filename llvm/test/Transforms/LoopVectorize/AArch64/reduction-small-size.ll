@@ -20,7 +20,7 @@ target triple = "aarch64--linux-gnu"
 ; CHECK:   add <16 x i8>
 ;
 ; CHECK: middle.block:
-; CHECK:   [[Rdx:%[a-zA-Z0-9.]+]] = call i8 @llvm.experimental.vector.reduce.add.i8.v16i8(<16 x i8>
+; CHECK:   [[Rdx:%[a-zA-Z0-9.]+]] = call i8 @llvm.experimental.vector.reduce.add.v16i8(<16 x i8>
 ; CHECK:   zext i8 [[Rdx]] to i32
 ;
 define i8 @reduction_i8(i8* nocapture readonly %a, i8* nocapture readonly %b, i32 %n) {
@@ -75,7 +75,7 @@ for.body:
 ; CHECK:   add <8 x i16>
 ;
 ; CHECK: middle.block:
-; CHECK:   [[Rdx:%[a-zA-Z0-9.]+]] = call i16 @llvm.experimental.vector.reduce.add.i16.v8i16(<8 x i16>
+; CHECK:   [[Rdx:%[a-zA-Z0-9.]+]] = call i16 @llvm.experimental.vector.reduce.add.v8i16(<8 x i16>
 ; CHECK:   zext i16 [[Rdx]] to i32
 ;
 define i16 @reduction_i16_1(i16* nocapture readonly %a, i16* nocapture readonly %b, i32 %n) {
@@ -132,7 +132,7 @@ for.body:
 ; CHECK:   add <8 x i16>
 ;
 ; CHECK: middle.block:
-; CHECK:   [[Rdx:%[a-zA-Z0-9.]+]] = call i16 @llvm.experimental.vector.reduce.add.i16.v8i16(<8 x i16>
+; CHECK:   [[Rdx:%[a-zA-Z0-9.]+]] = call i16 @llvm.experimental.vector.reduce.add.v8i16(<8 x i16>
 ; CHECK:   zext i16 [[Rdx]] to i32
 ;
 define i16 @reduction_i16_2(i8* nocapture readonly %a, i8* nocapture readonly %b, i32 %n) {

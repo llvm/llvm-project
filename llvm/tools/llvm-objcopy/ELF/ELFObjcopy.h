@@ -22,6 +22,8 @@ struct CopyConfig;
 class Buffer;
 
 namespace elf {
+Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
+                           Buffer &Out);
 Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
                                 Buffer &Out);
 Error executeObjcopyOnBinary(const CopyConfig &Config,

@@ -80,6 +80,11 @@ static cl::opt<unsigned> EarlyCSEMssaOptCap(
     cl::desc("Enable imprecision in EarlyCSE in pathological cases, in exchange "
              "for faster compile. Caps the MemorySSA clobbering calls."));
 
+static cl::opt<bool> EarlyCSEDebugHash(
+    "earlycse-debug-hash", cl::init(false), cl::Hidden,
+    cl::desc("Perform extra assertion checking to verify that SimpleValue's hash "
+             "function is well-behaved w.r.t. its isEqual predicate"));
+
 //===----------------------------------------------------------------------===//
 // SimpleValue
 //===----------------------------------------------------------------------===//
@@ -130,22 +135,33 @@ template <> struct DenseMapInfo<SimpleValue> {
 
 } // end namespace llvm
 
-/// Match a 'select' including an optional 'not' of the condition.
-static bool matchSelectWithOptionalNotCond(Value *V, Value *&Cond,
-                                           Value *&T, Value *&F) {
-  if (match(V, m_Select(m_Value(Cond), m_Value(T), m_Value(F)))) {
-    // Look through a 'not' of the condition operand by swapping true/false.
-    Value *CondNot;
-    if (match(Cond, m_Not(m_Value(CondNot)))) {
-      Cond = CondNot;
-      std::swap(T, F);
-    }
-    return true;
+/// Match a 'select' including an optional 'not's of the condition.
+static bool matchSelectWithOptionalNotCond(Value *V, Value *&Cond, Value *&A,
+                                           Value *&B,
+                                           SelectPatternFlavor &Flavor) {
+  // Return false if V is not even a select.
+  if (!match(V, m_Select(m_Value(Cond), m_Value(A), m_Value(B))))
+    return false;
+
+  // Look through a 'not' of the condition operand by swapping A/B.
+  Value *CondNot;
+  if (match(Cond, m_Not(m_Value(CondNot)))) {
+    Cond = CondNot;
+    std::swap(A, B);
   }
-  return false;
+
+  // Set flavor if we find a match, or set it to unknown otherwise; in
+  // either case, return true to indicate that this is a select we can
+  // process.
+  if (auto *CmpI = dyn_cast<ICmpInst>(Cond))
+    Flavor = matchDecomposedSelectPattern(CmpI, A, B, A, B).Flavor;
+  else
+    Flavor = SPF_UNKNOWN;
+
+  return true;
 }
 
-unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
+static unsigned getHashValueImpl(SimpleValue Val) {
   Instruction *Inst = Val.Inst;
   // Hash in all of the operands as pointers.
   if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(Inst)) {
@@ -168,40 +184,41 @@ unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
     return hash_combine(Inst->getOpcode(), Pred, LHS, RHS);
   }
 
-  // Hash min/max/abs (cmp + select) to allow for commuted operands.
-  // Min/max may also have non-canonical compare predicate (eg, the compare for
-  // smin may use 'sgt' rather than 'slt'), and non-canonical operands in the
-  // compare.
-  Value *A, *B;
-  SelectPatternFlavor SPF = matchSelectPattern(Inst, A, B).Flavor;
-  // TODO: We should also detect FP min/max.
-  if (SPF == SPF_SMIN || SPF == SPF_SMAX ||
-      SPF == SPF_UMIN || SPF == SPF_UMAX) {
-    if (A > B)
-      std::swap(A, B);
-    return hash_combine(Inst->getOpcode(), SPF, A, B);
-  }
-  if (SPF == SPF_ABS || SPF == SPF_NABS) {
-    // ABS/NABS always puts the input in A and its negation in B.
-    return hash_combine(Inst->getOpcode(), SPF, A, B);
-  }
-
   // Hash general selects to allow matching commuted true/false operands.
-  Value *Cond, *TVal, *FVal;
-  if (matchSelectWithOptionalNotCond(Inst, Cond, TVal, FVal)) {
+  SelectPatternFlavor SPF;
+  Value *Cond, *A, *B;
+  if (matchSelectWithOptionalNotCond(Inst, Cond, A, B, SPF)) {
+    // Hash min/max/abs (cmp + select) to allow for commuted operands.
+    // Min/max may also have non-canonical compare predicate (eg, the compare for
+    // smin may use 'sgt' rather than 'slt'), and non-canonical operands in the
+    // compare.
+    // TODO: We should also detect FP min/max.
+    if (SPF == SPF_SMIN || SPF == SPF_SMAX ||
+        SPF == SPF_UMIN || SPF == SPF_UMAX) {
+      if (A > B)
+        std::swap(A, B);
+      return hash_combine(Inst->getOpcode(), SPF, A, B);
+    }
+    if (SPF == SPF_ABS || SPF == SPF_NABS) {
+      // ABS/NABS always puts the input in A and its negation in B.
+      return hash_combine(Inst->getOpcode(), SPF, A, B);
+    }
+
+    // Hash general selects to allow matching commuted true/false operands.
+
     // If we do not have a compare as the condition, just hash in the condition.
     CmpInst::Predicate Pred;
     Value *X, *Y;
     if (!match(Cond, m_Cmp(Pred, m_Value(X), m_Value(Y))))
-      return hash_combine(Inst->getOpcode(), Cond, TVal, FVal);
+      return hash_combine(Inst->getOpcode(), Cond, A, B);
 
     // Similar to cmp normalization (above) - canonicalize the predicate value:
-    // select (icmp Pred, X, Y), T, F --> select (icmp InvPred, X, Y), F, T
+    // select (icmp Pred, X, Y), A, B --> select (icmp InvPred, X, Y), B, A
     if (CmpInst::getInversePredicate(Pred) < Pred) {
       Pred = CmpInst::getInversePredicate(Pred);
-      std::swap(TVal, FVal);
+      std::swap(A, B);
     }
-    return hash_combine(Inst->getOpcode(), Pred, X, Y, TVal, FVal);
+    return hash_combine(Inst->getOpcode(), Pred, X, Y, A, B);
   }
 
   if (CastInst *CI = dyn_cast<CastInst>(Inst))
@@ -227,7 +244,19 @@ unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
       hash_combine_range(Inst->value_op_begin(), Inst->value_op_end()));
 }
 
-bool DenseMapInfo<SimpleValue>::isEqual(SimpleValue LHS, SimpleValue RHS) {
+unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
+#ifndef NDEBUG
+  // If -earlycse-debug-hash was specified, return a constant -- this
+  // will force all hashing to collide, so we'll exhaustively search
+  // the table for a match, and the assertion in isEqual will fire if
+  // there's a bug causing equal keys to hash differently.
+  if (EarlyCSEDebugHash)
+    return 0;
+#endif
+  return getHashValueImpl(Val);
+}
+
+static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
   Instruction *LHSI = LHS.Inst, *RHSI = RHS.Inst;
 
   if (LHS.isSentinel() || RHS.isSentinel())
@@ -263,39 +292,47 @@ bool DenseMapInfo<SimpleValue>::isEqual(SimpleValue LHS, SimpleValue RHS) {
 
   // Min/max/abs can occur with commuted operands, non-canonical predicates,
   // and/or non-canonical operands.
-  Value *LHSA, *LHSB;
-  SelectPatternFlavor LSPF = matchSelectPattern(LHSI, LHSA, LHSB).Flavor;
-  // TODO: We should also detect FP min/max.
-  if (LSPF == SPF_SMIN || LSPF == SPF_SMAX ||
-      LSPF == SPF_UMIN || LSPF == SPF_UMAX ||
-      LSPF == SPF_ABS || LSPF == SPF_NABS) {
-    Value *RHSA, *RHSB;
-    SelectPatternFlavor RSPF = matchSelectPattern(RHSI, RHSA, RHSB).Flavor;
-    if (LSPF == RSPF) {
-      // Abs results are placed in a defined order by matchSelectPattern.
-      if (LSPF == SPF_ABS || LSPF == SPF_NABS)
-        return LHSA == RHSA && LHSB == RHSB;
-      return ((LHSA == RHSA && LHSB == RHSB) ||
-              (LHSA == RHSB && LHSB == RHSA));
-    }
-  }
-
   // Selects can be non-trivially equivalent via inverted conditions and swaps.
-  Value *CondL, *CondR, *TrueL, *TrueR, *FalseL, *FalseR;
-  if (matchSelectWithOptionalNotCond(LHSI, CondL, TrueL, FalseL) &&
-      matchSelectWithOptionalNotCond(RHSI, CondR, TrueR, FalseR)) {
-    // select Cond, T, F <--> select not(Cond), F, T
-    if (CondL == CondR && TrueL == TrueR && FalseL == FalseR)
-      return true;
+  SelectPatternFlavor LSPF, RSPF;
+  Value *CondL, *CondR, *LHSA, *RHSA, *LHSB, *RHSB;
+  if (matchSelectWithOptionalNotCond(LHSI, CondL, LHSA, LHSB, LSPF) &&
+      matchSelectWithOptionalNotCond(RHSI, CondR, RHSA, RHSB, RSPF)) {
+    if (LSPF == RSPF) {
+      // TODO: We should also detect FP min/max.
+      if (LSPF == SPF_SMIN || LSPF == SPF_SMAX ||
+          LSPF == SPF_UMIN || LSPF == SPF_UMAX)
+        return ((LHSA == RHSA && LHSB == RHSB) ||
+                (LHSA == RHSB && LHSB == RHSA));
+
+      if (LSPF == SPF_ABS || LSPF == SPF_NABS) {
+        // Abs results are placed in a defined order by matchSelectPattern.
+        return LHSA == RHSA && LHSB == RHSB;
+      }
+
+      // select Cond, A, B <--> select not(Cond), B, A
+      if (CondL == CondR && LHSA == RHSA && LHSB == RHSB)
+        return true;
+    }
 
     // If the true/false operands are swapped and the conditions are compares
     // with inverted predicates, the selects are equal:
-    // select (icmp Pred, X, Y), T, F <--> select (icmp InvPred, X, Y), F, T
+    // select (icmp Pred, X, Y), A, B <--> select (icmp InvPred, X, Y), B, A
     //
-    // This also handles patterns with a double-negation because we looked
-    // through a 'not' in the matching function and swapped T/F:
-    // select (cmp Pred, X, Y), T, F <--> select (not (cmp InvPred, X, Y)), T, F
-    if (TrueL == FalseR && FalseL == TrueR) {
+    // This also handles patterns with a double-negation in the sense of not +
+    // inverse, because we looked through a 'not' in the matching function and
+    // swapped A/B:
+    // select (cmp Pred, X, Y), A, B <--> select (not (cmp InvPred, X, Y)), B, A
+    //
+    // This intentionally does NOT handle patterns with a double-negation in
+    // the sense of not + not, because doing so could result in values
+    // comparing
+    // as equal that hash differently in the min/max/abs cases like:
+    // select (cmp slt, X, Y), X, Y <--> select (not (not (cmp slt, X, Y))), X, Y
+    //   ^ hashes as min                  ^ would not hash as min
+    // In the context of the EarlyCSE pass, however, such cases never reach
+    // this code, as we simplify the double-negation before hashing the second
+    // select (and so still succeed at CSEing them).
+    if (LHSA == RHSB && LHSB == RHSA) {
       CmpInst::Predicate PredL, PredR;
       Value *X, *Y;
       if (match(CondL, m_Cmp(PredL, m_Value(X), m_Value(Y))) &&
@@ -306,6 +343,15 @@ bool DenseMapInfo<SimpleValue>::isEqual(SimpleValue LHS, SimpleValue RHS) {
   }
 
   return false;
+}
+
+bool DenseMapInfo<SimpleValue>::isEqual(SimpleValue LHS, SimpleValue RHS) {
+  // These comparisons are nontrivial, so assert that equality implies
+  // hash equality (DenseMap demands this as an invariant).
+  bool Result = isEqualImpl(LHS, RHS);
+  assert(!Result || (LHS.isSentinel() && LHS.Inst == RHS.Inst) ||
+         getHashValueImpl(LHS) == getHashValueImpl(RHS));
+  return Result;
 }
 
 //===----------------------------------------------------------------------===//

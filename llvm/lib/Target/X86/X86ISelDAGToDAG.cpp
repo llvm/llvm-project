@@ -931,59 +931,124 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     // and the node legalization.  As such this pass basically does "really
     // late" legalization of these inline with the X86 isel pass.
     // FIXME: This should only happen when not compiled with -O0.
-    if (N->getOpcode() != ISD::FP_ROUND && N->getOpcode() != ISD::FP_EXTEND)
-      continue;
+    switch (N->getOpcode()) {
+    default: continue;
+    case ISD::FP_ROUND:
+    case ISD::FP_EXTEND:
+    {
+      MVT SrcVT = N->getOperand(0).getSimpleValueType();
+      MVT DstVT = N->getSimpleValueType(0);
 
-    MVT SrcVT = N->getOperand(0).getSimpleValueType();
-    MVT DstVT = N->getSimpleValueType(0);
-
-    // If any of the sources are vectors, no fp stack involved.
-    if (SrcVT.isVector() || DstVT.isVector())
-      continue;
-
-    // If the source and destination are SSE registers, then this is a legal
-    // conversion that should not be lowered.
-    const X86TargetLowering *X86Lowering =
-        static_cast<const X86TargetLowering *>(TLI);
-    bool SrcIsSSE = X86Lowering->isScalarFPTypeInSSEReg(SrcVT);
-    bool DstIsSSE = X86Lowering->isScalarFPTypeInSSEReg(DstVT);
-    if (SrcIsSSE && DstIsSSE)
-      continue;
-
-    if (!SrcIsSSE && !DstIsSSE) {
-      // If this is an FPStack extension, it is a noop.
-      if (N->getOpcode() == ISD::FP_EXTEND)
+      // If any of the sources are vectors, no fp stack involved.
+      if (SrcVT.isVector() || DstVT.isVector())
         continue;
-      // If this is a value-preserving FPStack truncation, it is a noop.
-      if (N->getConstantOperandVal(1))
+
+      // If the source and destination are SSE registers, then this is a legal
+      // conversion that should not be lowered.
+      const X86TargetLowering *X86Lowering =
+          static_cast<const X86TargetLowering *>(TLI);
+      bool SrcIsSSE = X86Lowering->isScalarFPTypeInSSEReg(SrcVT);
+      bool DstIsSSE = X86Lowering->isScalarFPTypeInSSEReg(DstVT);
+      if (SrcIsSSE && DstIsSSE)
         continue;
+
+      if (!SrcIsSSE && !DstIsSSE) {
+        // If this is an FPStack extension, it is a noop.
+        if (N->getOpcode() == ISD::FP_EXTEND)
+          continue;
+        // If this is a value-preserving FPStack truncation, it is a noop.
+        if (N->getConstantOperandVal(1))
+          continue;
+      }
+
+      // Here we could have an FP stack truncation or an FPStack <-> SSE convert.
+      // FPStack has extload and truncstore.  SSE can fold direct loads into other
+      // operations.  Based on this, decide what we want to do.
+      MVT MemVT;
+      if (N->getOpcode() == ISD::FP_ROUND)
+        MemVT = DstVT;  // FP_ROUND must use DstVT, we can't do a 'trunc load'.
+      else
+        MemVT = SrcIsSSE ? SrcVT : DstVT;
+
+      SDValue MemTmp = CurDAG->CreateStackTemporary(MemVT);
+      SDLoc dl(N);
+
+      // FIXME: optimize the case where the src/dest is a load or store?
+
+      SDValue Store = CurDAG->getTruncStore(CurDAG->getEntryNode(), dl, N->getOperand(0),
+                                          MemTmp, MachinePointerInfo(), MemVT);
+      SDValue Result = CurDAG->getExtLoad(ISD::EXTLOAD, dl, DstVT, Store, MemTmp,
+                                          MachinePointerInfo(), MemVT);
+
+      // We're about to replace all uses of the FP_ROUND/FP_EXTEND with the
+      // extload we created.  This will cause general havok on the dag because
+      // anything below the conversion could be folded into other existing nodes.
+      // To avoid invalidating 'I', back it up to the convert node.
+      --I;
+      CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Result);
+      break;
     }
 
-    // Here we could have an FP stack truncation or an FPStack <-> SSE convert.
-    // FPStack has extload and truncstore.  SSE can fold direct loads into other
-    // operations.  Based on this, decide what we want to do.
-    MVT MemVT;
-    if (N->getOpcode() == ISD::FP_ROUND)
-      MemVT = DstVT;  // FP_ROUND must use DstVT, we can't do a 'trunc load'.
-    else
-      MemVT = SrcIsSSE ? SrcVT : DstVT;
+    //The sequence of events for lowering STRICT_FP versions of these nodes requires
+    //dealing with the chain differently, as there is already a preexisting chain.
+    case ISD::STRICT_FP_ROUND:
+    case ISD::STRICT_FP_EXTEND:
+    {
+      MVT SrcVT = N->getOperand(1).getSimpleValueType();
+      MVT DstVT = N->getSimpleValueType(0);
 
-    SDValue MemTmp = CurDAG->CreateStackTemporary(MemVT);
-    SDLoc dl(N);
+      // If any of the sources are vectors, no fp stack involved.
+      if (SrcVT.isVector() || DstVT.isVector())
+        continue;
 
-    // FIXME: optimize the case where the src/dest is a load or store?
-    SDValue Store =
-        CurDAG->getTruncStore(CurDAG->getEntryNode(), dl, N->getOperand(0),
-                              MemTmp, MachinePointerInfo(), MemVT);
-    SDValue Result = CurDAG->getExtLoad(ISD::EXTLOAD, dl, DstVT, Store, MemTmp,
-                                        MachinePointerInfo(), MemVT);
+      // If the source and destination are SSE registers, then this is a legal
+      // conversion that should not be lowered.
+      const X86TargetLowering *X86Lowering =
+          static_cast<const X86TargetLowering *>(TLI);
+      bool SrcIsSSE = X86Lowering->isScalarFPTypeInSSEReg(SrcVT);
+      bool DstIsSSE = X86Lowering->isScalarFPTypeInSSEReg(DstVT);
+      if (SrcIsSSE && DstIsSSE)
+        continue;
 
-    // We're about to replace all uses of the FP_ROUND/FP_EXTEND with the
-    // extload we created.  This will cause general havok on the dag because
-    // anything below the conversion could be folded into other existing nodes.
-    // To avoid invalidating 'I', back it up to the convert node.
-    --I;
-    CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Result);
+      if (!SrcIsSSE && !DstIsSSE) {
+        // If this is an FPStack extension, it is a noop.
+        if (N->getOpcode() == ISD::STRICT_FP_EXTEND)
+          continue;
+        // If this is a value-preserving FPStack truncation, it is a noop.
+        if (N->getConstantOperandVal(2))
+          continue;
+      }
+
+      // Here we could have an FP stack truncation or an FPStack <-> SSE convert.
+      // FPStack has extload and truncstore.  SSE can fold direct loads into other
+      // operations.  Based on this, decide what we want to do.
+      MVT MemVT;
+      if (N->getOpcode() == ISD::STRICT_FP_ROUND)
+        MemVT = DstVT;  // FP_ROUND must use DstVT, we can't do a 'trunc load'.
+      else
+        MemVT = SrcIsSSE ? SrcVT : DstVT;
+
+      SDValue MemTmp = CurDAG->CreateStackTemporary(MemVT);
+      SDLoc dl(N);
+
+      // FIXME: optimize the case where the src/dest is a load or store?
+
+      //Since the operation is StrictFP, use the preexisting chain.
+      SDValue Store = CurDAG->getTruncStore(N->getOperand(0), dl, N->getOperand(1),
+                                MemTmp, MachinePointerInfo(), MemVT);
+      SDValue Result = CurDAG->getExtLoad(ISD::EXTLOAD, dl, DstVT, Store, MemTmp,
+                                          MachinePointerInfo(), MemVT);
+
+      // We're about to replace all uses of the FP_ROUND/FP_EXTEND with the
+      // extload we created.  This will cause general havok on the dag because
+      // anything below the conversion could be folded into other existing nodes.
+      // To avoid invalidating 'I', back it up to the convert node.
+      --I;
+      CurDAG->ReplaceAllUsesWith(N, Result.getNode());
+      break;
+    }
+    }
+
 
     // Now that we did that, the node is dead.  Increment the iterator to the
     // next node to process, then delete N.

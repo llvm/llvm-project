@@ -10,6 +10,7 @@
 
 #include <wchar.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <type_traits>
 
 #include "test_macros.h"

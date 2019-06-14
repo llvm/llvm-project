@@ -1098,6 +1098,15 @@ public:
   void writeTo(uint8_t *Buf) override;
 };
 
+// Create a dummy .sdata for __global_pointer$ if .sdata does not exist.
+class RISCVSdataSection final : public SyntheticSection {
+public:
+  RISCVSdataSection();
+  size_t getSize() const override { return 0; }
+  bool isNeeded() const override;
+  void writeTo(uint8_t *Buf) override {}
+};
+
 InputSection *createInterpSection();
 MergeInputSection *createCommentSection();
 template <class ELFT> void splitSections();
@@ -1162,6 +1171,7 @@ struct InStruct {
   PltSection *Plt;
   PltSection *Iplt;
   PPC32Got2Section *PPC32Got2;
+  RISCVSdataSection *RISCVSdata;
   RelocationBaseSection *RelaPlt;
   RelocationBaseSection *RelaIplt;
   StringTableSection *ShStrTab;

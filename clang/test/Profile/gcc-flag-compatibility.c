@@ -7,25 +7,29 @@
 // -fprofile-use=<dir>        Uses the profile file <dir>/default.profdata
 // -fprofile-use=<dir>/file   Uses the profile file <dir>/file
 
-// RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate | FileCheck -check-prefix=PROFILE-GEN %s
+// RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate -fno-experimental-new-pass-manager | FileCheck -check-prefix=PROFILE-GEN %s
+// RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate -fexperimental-new-pass-manager | FileCheck -check-prefix=PROFILE-GEN %s
 // PROFILE-GEN: __llvm_profile_filename
 
 // Check that -fprofile-generate=/path/to generates /path/to/default.profraw
-// RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate=/path/to | FileCheck -check-prefix=PROFILE-GEN-EQ %s
+// RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate=/path/to -fno-experimental-new-pass-manager | FileCheck -check-prefix=PROFILE-GEN-EQ %s
+// RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate=/path/to -fexperimental-new-pass-manager | FileCheck -check-prefix=PROFILE-GEN-EQ %s
 // PROFILE-GEN-EQ: constant [{{.*}} x i8] c"/path/to{{/|\\5C}}{{.*}}\00"
 
 // Check that -fprofile-use=some/path reads some/path/default.profdata
 // RUN: rm -rf %t.dir
 // RUN: mkdir -p %t.dir/some/path
 // RUN: llvm-profdata merge %S/Inputs/gcc-flag-compatibility.proftext -o %t.dir/some/path/default.profdata
-// RUN: %clang %s -o - -Xclang -disable-llvm-passes -emit-llvm -S -fprofile-use=%t.dir/some/path | FileCheck -check-prefix=PROFILE-USE-2 %s
+// RUN: %clang %s -o - -Xclang -disable-llvm-passes -emit-llvm -S -fprofile-use=%t.dir/some/path -fno-experimental-new-pass-manager | FileCheck -check-prefix=PROFILE-USE-2 %s
+// RUN: %clang %s -o - -Xclang -disable-llvm-passes -emit-llvm -S -fprofile-use=%t.dir/some/path -fexperimental-new-pass-manager | FileCheck -check-prefix=PROFILE-USE-2 %s
 // PROFILE-USE-2: = !{!"branch_weights", i32 101, i32 2}
 
 // Check that -fprofile-use=some/path/file.prof reads some/path/file.prof
 // RUN: rm -rf %t.dir
 // RUN: mkdir -p %t.dir/some/path
 // RUN: llvm-profdata merge %S/Inputs/gcc-flag-compatibility.proftext -o %t.dir/some/path/file.prof
-// RUN: %clang %s -o - -Xclang -disable-llvm-passes -emit-llvm -S -fprofile-use=%t.dir/some/path/file.prof | FileCheck -check-prefix=PROFILE-USE-3 %s
+// RUN: %clang %s -o - -Xclang -disable-llvm-passes -emit-llvm -S -fprofile-use=%t.dir/some/path/file.prof -fno-experimental-new-pass-manager | FileCheck -check-prefix=PROFILE-USE-3 %s
+// RUN: %clang %s -o - -Xclang -disable-llvm-passes -emit-llvm -S -fprofile-use=%t.dir/some/path/file.prof -fexperimental-new-pass-manager | FileCheck -check-prefix=PROFILE-USE-3 %s
 // PROFILE-USE-3: = !{!"branch_weights", i32 101, i32 2}
 
 int X = 0;

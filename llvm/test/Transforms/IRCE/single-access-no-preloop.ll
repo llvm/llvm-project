@@ -86,7 +86,7 @@ define void @single_access_no_preloop_with_offset(i32 *%arr, i32 *%a_len_ptr, i3
 ; CHECK-LABEL: @single_access_no_preloop_with_offset(
 
 ; CHECK: loop.preheader:
-; CHECK: [[safe_range_end:[^ ]+]] = add i32 %len, -4
+; CHECK: [[safe_range_end:[^ ]+]] = add nsw i32 %len, -4
 ; CHECK: [[exit_main_loop_at_hiclamp_cmp:[^ ]+]] = icmp slt i32 %n, [[safe_range_end]]
 ; CHECK: [[exit_main_loop_at_hiclamp:[^ ]+]] = select i1 [[exit_main_loop_at_hiclamp_cmp]], i32 %n, i32 [[safe_range_end]]
 ; CHECK: [[exit_main_loop_at_loclamp_cmp:[^ ]+]] = icmp sgt i32 [[exit_main_loop_at_hiclamp]], 0
