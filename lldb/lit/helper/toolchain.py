@@ -108,14 +108,18 @@ def use_support_substitutions(config):
     config.substitutions.append(('%target-shared-library-suffix', config.target_shared_library_suffix))
 
     # Swift support
-    swift_sdk = [' -sdk ', sdk_path] if platform.system() in ['Darwin'] else []
+    swift_args = ['-module-cache-path',
+                  os.path.join(os.path.dirname(config.lldb_libs_dir),
+                               'lldb-test-build.noindex',
+                               'module-cache-clang')]
+    if platform.system() in ['Darwin']:
+      swift_args += ['-sdk', sdk_path]
     tools = [
         ToolSubst(
-            '%target-swiftc', command=config.swiftc, extra_args=swift_sdk),
+            '%target-swiftc', command=config.swiftc, extra_args=swift_args),
         ToolSubst(
-            '%target-swift-frontend',
-            command=config.swiftc[:-1],
-            extra_args=['-frontend'] + swift_sdk)
+            '%target-swift-frontend', command=config.swiftc[:-1],
+            extra_args=(['-frontend'] + swift_args))
     ]
     llvm_config.add_tool_substitutions(tools)
 
