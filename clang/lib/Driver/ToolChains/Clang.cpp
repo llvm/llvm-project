@@ -4108,11 +4108,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     TC.getTriple().isOSBinFormatELF() &&
                     (isa<AssembleJobAction>(JA) || isa<CompileJobAction>(JA) ||
                      isa<BackendJobAction>(JA));
-  const char *SplitDWARFOut;
   if (SplitDWARF) {
+    const char *SplitDWARFOut = SplitDebugName(Args, Input, Output);
     CmdArgs.push_back("-split-dwarf-file");
-    SplitDWARFOut = SplitDebugName(Args, Input, Output);
     CmdArgs.push_back(SplitDWARFOut);
+    if (DwarfFission == DwarfFissionKind::Split) {
+      CmdArgs.push_back("-split-dwarf-output");
+      CmdArgs.push_back(SplitDWARFOut);
+    }
   }
 
   // Pass the linker version in use.
@@ -6180,7 +6183,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   Arg *A;
   if (getDebugFissionKind(D, Args, A) == DwarfFissionKind::Split &&
       T.isOSBinFormatELF()) {
-    CmdArgs.push_back("-split-dwarf-file");
+    CmdArgs.push_back("-split-dwarf-output");
     CmdArgs.push_back(SplitDebugName(Args, Input, Output));
   }
 

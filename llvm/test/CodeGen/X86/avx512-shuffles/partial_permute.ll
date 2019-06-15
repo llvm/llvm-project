@@ -1805,10 +1805,8 @@ define <4 x i32> @test_masked_z_16xi32_to_4xi32_perm_mem_mask3(<16 x i32>* %vp, 
 define <4 x i32> @test_16xi32_to_4xi32_perm_mask9(<16 x i32> %vec) {
 ; CHECK-LABEL: test_16xi32_to_4xi32_perm_mask9:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,12,3]
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,1,0,2]
-; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
-; CHECK-NEXT:    vpermd %ymm3, %ymm1, %ymm1
+; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,1,12,2]
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; CHECK-NEXT:    vpermt2d %ymm0, %ymm2, %ymm1
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper

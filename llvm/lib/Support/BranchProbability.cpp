@@ -88,10 +88,6 @@ static uint64_t scale(uint64_t Num, uint32_t N, uint32_t D) {
   // Carry.
   Upper32 += Mid32 < Mid32Partial;
 
-  // Check for overflow.
-  if (Upper32 >= D)
-    return UINT64_MAX;
-
   uint64_t Rem = (uint64_t(Upper32) << 32) | Mid32;
   uint64_t UpperQ = Rem / D;
 

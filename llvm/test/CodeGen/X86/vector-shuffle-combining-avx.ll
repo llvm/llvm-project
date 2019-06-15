@@ -207,23 +207,10 @@ define <8 x float> @combine_vpermilvar_8f32_movsldup(<8 x float> %a0) {
   ret <8 x float> %1
 }
 define <8 x float> @demandedelts_vpermilvar_8f32_movsldup(<8 x float> %a0, i32 %a1) {
-; AVX1-LABEL: demandedelts_vpermilvar_8f32_movsldup:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm1 = <u,0,2,2,4,4,6,6>
-; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3],mem[4,5,6,7]
-; AVX1-NEXT:    vpermilps %ymm1, %ymm0, %ymm0
-; AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,1,2,3,4,5,6,7]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX2-LABEL: demandedelts_vpermilvar_8f32_movsldup:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6]
-; AVX2-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: demandedelts_vpermilvar_8f32_movsldup:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6]
-; AVX512-NEXT:    ret{{[l|q]}}
+; CHECK-LABEL: demandedelts_vpermilvar_8f32_movsldup:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6]
+; CHECK-NEXT:    ret{{[l|q]}}
   %1 = insertelement <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>, i32 %a1, i32 0
   %2 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> %1)
   %3 = shufflevector <8 x float> %2, <8 x float> undef, <8 x i32> <i32 1, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
