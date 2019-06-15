@@ -62,6 +62,12 @@ public:
                      Refs.insert(Sym.first, Ref);
                  }
                },
+               [&](RelationSlab S) {
+                 std::lock_guard<std::mutex> Lock(SymbolsMu);
+                 for (const auto &R : S) {
+                   Relations.insert(R);
+                 }
+               },
                /*IncludeGraphCallback=*/nullptr)
         .release();
   }
@@ -71,6 +77,7 @@ public:
   ~IndexActionFactory() {
     Result.Symbols = std::move(Symbols).build();
     Result.Refs = std::move(Refs).build();
+    Result.Relations = std::move(Relations).build();
   }
 
 private:
@@ -78,6 +85,7 @@ private:
   std::mutex SymbolsMu;
   SymbolSlab::Builder Symbols;
   RefSlab::Builder Refs;
+  RelationSlab::Builder Relations;
 };
 
 } // namespace
