@@ -345,6 +345,18 @@ output format of the diagnostics that it generates.
    after the primary file being compiled. If that's "foo.c", for example,
    optimization records are output to "foo.opt.yaml".
 
+.. _opt_foptimization-record-passes:
+
+**-foptimization-record-passes**
+   Only include passes which match a specified regular expression.
+
+   When optimization reports are being output (see
+   :ref:`-fsave-optimization-record <opt_fsave-optimization-record>`), this
+   option controls the passes that will be included in the final report.
+
+   If this option is not used, all the passes are included in the optimization
+   record.
+
 .. _opt_fdiagnostics-show-hotness:
 
 **-f[no-]diagnostics-show-hotness**

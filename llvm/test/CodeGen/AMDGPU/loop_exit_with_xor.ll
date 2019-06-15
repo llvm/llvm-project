@@ -61,9 +61,9 @@ loopexit:
 
 ; GCN-LABEL: {{^}}break_cond_is_arg:
 ; GCN: s_xor_b64 [[REG1:[^ ,]*]], {{[^ ,]*, -1$}}
+; GCN: s_andn2_b64 exec, exec, [[REG3:[^ ,]*]]
 ; GCN: s_and_b64 [[REG2:[^ ,]*]], exec, [[REG1]]
-; GCN: s_or_b64 [[REG3:[^ ,]*]], [[REG2]],
-; GCN: s_andn2_b64 exec, exec, [[REG3]]
+; GCN: s_or_b64 [[REG3]], [[REG2]],
 
 define void @break_cond_is_arg(i32 %arg, i1 %breakcond) {
 entry:

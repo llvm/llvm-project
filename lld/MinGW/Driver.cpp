@@ -181,8 +181,31 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
       Add("-entry:" + S);
   }
 
-  if (auto *A = Args.getLastArg(OPT_subs))
+  if (Args.hasArg(OPT_major_os_version, OPT_minor_os_version,
+                  OPT_major_subsystem_version, OPT_minor_subsystem_version)) {
+    auto *MajOSVer = Args.getLastArg(OPT_major_os_version);
+    auto *MinOSVer = Args.getLastArg(OPT_minor_os_version);
+    auto *MajSubSysVer = Args.getLastArg(OPT_major_subsystem_version);
+    auto *MinSubSysVer = Args.getLastArg(OPT_minor_subsystem_version);
+    if (MajOSVer && MajSubSysVer &&
+        StringRef(MajOSVer->getValue()) != StringRef(MajSubSysVer->getValue()))
+      warn("--major-os-version and --major-subsystem-version set to differing "
+           "versions, not supported");
+    if (MinOSVer && MinSubSysVer &&
+        StringRef(MinOSVer->getValue()) != StringRef(MinSubSysVer->getValue()))
+      warn("--minor-os-version and --minor-subsystem-version set to differing "
+           "versions, not supported");
+    StringRef SubSys = Args.getLastArgValue(OPT_subs, "default");
+    StringRef Major = MajOSVer ? MajOSVer->getValue()
+                               : MajSubSysVer ? MajSubSysVer->getValue() : "6";
+    StringRef Minor = MinOSVer ? MinOSVer->getValue()
+                               : MinSubSysVer ? MinSubSysVer->getValue() : "";
+    StringRef Sep = Minor.empty() ? "" : ".";
+    Add("-subsystem:" + SubSys + "," + Major + Sep + Minor);
+  } else if (auto *A = Args.getLastArg(OPT_subs)) {
     Add("-subsystem:" + StringRef(A->getValue()));
+  }
+
   if (auto *A = Args.getLastArg(OPT_out_implib))
     Add("-implib:" + StringRef(A->getValue()));
   if (auto *A = Args.getLastArg(OPT_stack))

@@ -39,7 +39,7 @@ ASM_FUNCTION_AMDGPU_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*;+[ \t]*@(?P=func)\n[^:]*?'
     r'(?P<body>.*?)\n' # (body of the function)
     # This list is incomplete
-    r'.Lfunc_end[0-9]+:\n',
+    r'^\s*(\.Lfunc_end[0-9]+:\n|\.section)',
     flags=(re.M | re.S))
 
 ASM_FUNCTION_HEXAGON_RE = re.compile(

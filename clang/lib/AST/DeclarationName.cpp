@@ -161,13 +161,7 @@ void DeclarationName::print(raw_ostream &OS, const PrintingPolicy &Policy) {
     return;
 
   case DeclarationName::CXXOperatorName: {
-    static const char *const OperatorNames[NUM_OVERLOADED_OPERATORS] = {
-        nullptr,
-#define OVERLOADED_OPERATOR(Name, Spelling, Token, Unary, Binary, MemberOnly)  \
-  Spelling,
-#include "clang/Basic/OperatorKinds.def"
-    };
-    const char *OpName = OperatorNames[getCXXOverloadedOperator()];
+    const char *OpName = getOperatorSpelling(getCXXOverloadedOperator());
     assert(OpName && "not an overloaded operator");
 
     OS << "operator";

@@ -74,6 +74,10 @@ bool IsForwarding(ARCInstKind Class);
 /// passed a null pointer.
 bool IsNoopOnNull(ARCInstKind Class);
 
+/// Test if the given class represents instructions which do nothing if
+/// passed a global variable.
+bool IsNoopOnGlobal(ARCInstKind Class);
+
 /// Test if the given class represents instructions which are always safe
 /// to mark with the "tail" keyword.
 bool IsAlwaysTail(ARCInstKind Class);

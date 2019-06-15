@@ -111,8 +111,8 @@ entry:
   %sgpr101 = tail call i32 asm sideeffect "s_mov_b32 s101, 0", "={s101}"() #0
   %sgpr102 = tail call i32 asm sideeffect "s_mov_b32 s102, 0", "={s102}"() #0
   %sgpr103 = tail call i32 asm sideeffect "s_mov_b32 s103, 0", "={s103}"() #0
-  %vcc_lo = tail call i32 asm sideeffect "s_mov_b32 $0, 0", "={VCC_LO}"() #0
-  %vcc_hi = tail call i32 asm sideeffect "s_mov_b32 $0, 0", "={VCC_HI}"() #0
+  %vcc_lo = tail call i32 asm sideeffect "s_mov_b32 $0, 0", "={vcc_lo}"() #0
+  %vcc_hi = tail call i32 asm sideeffect "s_mov_b32 $0, 0", "={vcc_hi}"() #0
   %cmp = icmp eq i32 %cnd, 0
   br i1 %cmp, label %bb3, label %bb2 ; +8 dword branch
 

@@ -1037,9 +1037,9 @@ bool DeclSpec::setModulePrivateSpec(SourceLocation Loc, const char *&PrevSpec,
 bool DeclSpec::SetConstexprSpec(ConstexprSpecKind ConstexprKind,
                                 SourceLocation Loc, const char *&PrevSpec,
                                 unsigned &DiagID) {
-  if (ConstexprSpecifier != CSK_unspecified) {
-    if (ConstexprSpecifier == CSK_consteval || ConstexprKind == CSK_consteval)
-      return BadSpecifier(ConstexprKind, ConstexprSpecifier, PrevSpec, DiagID);
+  if (getConstexprSpecifier() != CSK_unspecified) {
+    if (getConstexprSpecifier() == CSK_consteval || ConstexprKind == CSK_consteval)
+      return BadSpecifier(ConstexprKind, getConstexprSpecifier(), PrevSpec, DiagID);
     DiagID = diag::warn_duplicate_declspec;
     PrevSpec = "constexpr";
     return true;

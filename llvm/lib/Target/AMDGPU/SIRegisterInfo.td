@@ -504,6 +504,18 @@ def SReg_64 : RegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f16]
   let AllocationPriority = 9;
 }
 
+def SReg_1_XEXEC : RegisterClass<"AMDGPU", [i1], 32,
+  (add SReg_64_XEXEC, SReg_32_XM0_XEXEC)> {
+  let CopyCost = 1;
+  let isAllocatable = 0;
+}
+
+def SReg_1 : RegisterClass<"AMDGPU", [i1], 32,
+  (add SReg_1_XEXEC, EXEC, EXEC_LO)> {
+  let CopyCost = 1;
+  let isAllocatable = 0;
+}
+
 // Requires 2 s_mov_b64 to copy
 let CopyCost = 2 in {
 

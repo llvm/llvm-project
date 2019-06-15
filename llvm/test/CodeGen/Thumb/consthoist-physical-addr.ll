@@ -10,8 +10,9 @@ define i32 @C(i32 %x, i32* nocapture %y) #0 {
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    movs r2, #0
 ; CHECK-NEXT:    ldr r3, .LCPI0_0
-; CHECK-NEXT:    b .LBB0_4
 ; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:    cmp r2, #128
+; CHECK-NEXT:    beq .LBB0_5
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    str r4, [r3, #8]
 ; CHECK-NEXT:    lsls r4, r2, #2
@@ -20,16 +21,15 @@ define i32 @C(i32 %x, i32* nocapture %y) #0 {
 ; CHECK-NEXT:    movs r5, #1
 ; CHECK-NEXT:    str r5, [r3, #12]
 ; CHECK-NEXT:    isb sy
-; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    ldr r5, [r3, #12]
 ; CHECK-NEXT:    cmp r5, #0
-; CHECK-NEXT:    bne .LBB0_2
+; CHECK-NEXT:    bne .LBB0_3
 ; CHECK-NEXT:    ldr r5, [r3, #4]
 ; CHECK-NEXT:    str r5, [r1, r4]
 ; CHECK-NEXT:    adds r2, r2, #1
-; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    cmp r2, #128
-; CHECK-NEXT:    bne .LBB0_1
+; CHECK-NEXT:    b .LBB0_1
+; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-NEXT:    .p2align 2

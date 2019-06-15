@@ -417,7 +417,9 @@ class AMDGPUDSAppendConsumedIntrinsic : Intrinsic<
   [llvm_i32_ty],
   [llvm_anyptr_ty, // LDS or GDS ptr
    llvm_i1_ty], // isVolatile
-   [IntrConvergent, IntrArgMemOnly, NoCapture<0>, ImmArg<1>]
+   [IntrConvergent, IntrArgMemOnly, NoCapture<0>, ImmArg<1>],
+   "",
+   [SDNPMemOperand]
 >;
 
 def int_amdgcn_ds_ordered_add : AMDGPUDSOrderedIntrinsic;

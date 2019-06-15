@@ -30,8 +30,7 @@ template <typename SubPatternT> struct OneUse_match {
   SubPatternT SubPat;
   OneUse_match(const SubPatternT &SP) : SubPat(SP) {}
 
-  template <typename OpTy>
-  bool match(const MachineRegisterInfo &MRI, unsigned Reg) {
+  bool match(MachineRegisterInfo &MRI, unsigned Reg) {
     return MRI.hasOneUse(Reg) && SubPat.match(MRI, Reg);
   }
 };

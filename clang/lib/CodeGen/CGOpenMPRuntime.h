@@ -1623,6 +1623,9 @@ public:
   /// the predefined allocator and translates it into the corresponding address
   /// space.
   virtual bool hasAllocateAttributeForGlobalVar(const VarDecl *VD, LangAS &AS);
+
+  /// Return whether the unified_shared_memory has been specified.
+  bool hasRequiresUnifiedSharedMemory() const;
 };
 
 /// Class supports emissionof SIMD-only code.

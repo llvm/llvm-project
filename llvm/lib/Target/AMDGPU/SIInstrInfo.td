@@ -727,6 +727,26 @@ def WAIT_FLAG : Operand <i32> {
 include "SIInstrFormats.td"
 include "VIInstrFormats.td"
 
+def BoolReg : AsmOperandClass {
+  let Name = "BoolReg";
+  let ParserMethod = "parseBoolReg";
+  let RenderMethod = "addRegOperands";
+}
+
+class BoolRC : RegisterOperand<SReg_1> {
+  let ParserMatchClass = BoolReg;
+  let DecoderMethod = "decodeBoolReg";
+}
+
+def SSrc_i1 : RegisterOperand<SReg_1_XEXEC> {
+  let ParserMatchClass = BoolReg;
+  let DecoderMethod = "decodeBoolReg";
+}
+
+def VOPDstS64orS32 : BoolRC {
+  let PrintMethod = "printVOPDst";
+}
+
 // ===----------------------------------------------------------------------===//
 // ExpSrc* Special cases for exp src operands which are printed as
 // "off" depending on en operand.

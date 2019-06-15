@@ -25,16 +25,14 @@ define void @neg_dynamically_dead_inbounds(i1 %always_false) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I_0:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[TMP4:%.*]], [[CONT:%.*]] ]
-; CHECK-NEXT:    [[P_0:%.*]] = phi i8* [ getelementptr inbounds ([240 x i8], [240 x i8]* @data, i64 0, i64 0), [[ENTRY]] ], [ [[TMP3:%.*]], [[CONT]] ]
+; CHECK-NEXT:    [[P_0:%.*]] = phi i8* [ getelementptr inbounds ([240 x i8], [240 x i8]* @data, i64 0, i64 0), [[ENTRY:%.*]] ], [ [[TMP3:%.*]], [[CONT:%.*]] ]
 ; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i8, i8* [[P_0]], i64 1
 ; CHECK-NEXT:    br i1 [[ALWAYS_FALSE:%.*]], label [[NEVER_EXECUTED:%.*]], label [[CONT]]
 ; CHECK:       never_executed:
 ; CHECK-NEXT:    store volatile i8 0, i8* [[TMP3]]
 ; CHECK-NEXT:    br label [[CONT]]
 ; CHECK:       cont:
-; CHECK-NEXT:    [[TMP4]] = add nuw i8 [[I_0]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8 [[TMP4]], -10
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[TMP3]], getelementptr (i8, i8* getelementptr inbounds ([240 x i8], [240 x i8]* @data, i64 0, i64 0), i64 246)
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -112,7 +110,7 @@ define void @dom_store_preinc() #0 {
 ; CHECK-NEXT:    [[P_0:%.*]] = phi i8* [ getelementptr inbounds ([240 x i8], [240 x i8]* @data, i64 0, i64 0), [[ENTRY:%.*]] ], [ [[TMP3:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    store volatile i8 0, i8* [[P_0]]
 ; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i8, i8* [[P_0]], i64 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[P_0]], getelementptr (i8, i8* getelementptr inbounds ([240 x i8], [240 x i8]* @data, i64 0, i64 0), i64 245)
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[TMP3]], getelementptr (i8, i8* getelementptr inbounds ([240 x i8], [240 x i8]* @data, i64 0, i64 0), i64 246)
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

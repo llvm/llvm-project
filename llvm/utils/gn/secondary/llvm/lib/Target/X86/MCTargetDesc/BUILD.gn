@@ -16,42 +16,33 @@ tablegen("X86GenAsmWriter1") {
 }
 
 tablegen("X86GenInstrInfo") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-instr-info" ]
   td_file = "../X86.td"
 }
 
 tablegen("X86GenRegisterInfo") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-register-info" ]
   td_file = "../X86.td"
 }
 
 tablegen("X86GenSubtargetInfo") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-subtarget" ]
   td_file = "../X86.td"
 }
 
-# This should contain tablegen targets generating .inc files included
-# by other targets. .inc files only used by .cpp files in this directory
-# should be in deps on the static_library instead.
-group("tablegen") {
-  visibility = [
-    ":MCTargetDesc",
-    "../TargetInfo",
-  ]
+static_library("MCTargetDesc") {
+  output_name = "LLVMX86Desc"
+
+  # This should contain tablegen targets generating .inc files included
+  # by other targets. .inc files only used by .cpp files in this directory
+  # should be in deps instead.
   public_deps = [
     ":X86GenInstrInfo",
     ":X86GenRegisterInfo",
     ":X86GenSubtargetInfo",
-  ]
-}
-
-static_library("MCTargetDesc") {
-  output_name = "LLVMX86Desc"
-  public_deps = [
-    ":tablegen",
   ]
   deps = [
     ":X86GenAsmWriter",
