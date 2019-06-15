@@ -1181,6 +1181,8 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
     Invalid = true;
   }
 
+  CheckFunctionOrTemplateParamDeclarator(S, D);
+
   IdentifierInfo *ParamName = D.getIdentifier();
   bool IsParameterPack = D.hasEllipsis();
   NonTypeTemplateParmDecl *Param = NonTypeTemplateParmDecl::Create(

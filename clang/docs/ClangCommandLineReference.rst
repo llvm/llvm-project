@@ -610,6 +610,10 @@ C++ standard library to use
 
 Generate code for the given target
 
+.. option:: --print-supported-cpus
+
+Print supported cpu models for the given target
+
 .. option:: -time
 
 Time individual commands

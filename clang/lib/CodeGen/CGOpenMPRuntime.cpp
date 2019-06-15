@@ -475,6 +475,12 @@ enum OpenMPOffloadingRequiresDirFlags : int64_t {
   OMP_REQ_DYNAMIC_ALLOCATORS      = 0x010,
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/OMP_REQ_DYNAMIC_ALLOCATORS)
 };
+
+enum OpenMPOffloadingReservedDeviceIDs {
+  /// Device ID if the device was not defined, runtime should get it
+  /// from environment variables in the spec.
+  OMP_DEVICEID_UNDEF = -1,
+};
 } // anonymous namespace
 
 /// Describes ident structure that describes a source location.
@@ -604,6 +610,11 @@ enum OpenMPRTLFunction {
   // kmp_int32 flags, size_t sizeof_kmp_task_t, size_t sizeof_shareds,
   // kmp_routine_entry_t *task_entry);
   OMPRTL__kmpc_omp_task_alloc,
+  // Call to kmp_task_t * __kmpc_omp_target_task_alloc(ident_t *,
+  // kmp_int32 gtid, kmp_int32 flags, size_t sizeof_kmp_task_t,
+  // size_t sizeof_shareds, kmp_routine_entry_t *task_entry,
+  // kmp_int64 device_id);
+  OMPRTL__kmpc_omp_target_task_alloc,
   // Call to kmp_int32 __kmpc_omp_task(ident_t *, kmp_int32 gtid, kmp_task_t *
   // new_task);
   OMPRTL__kmpc_omp_task,
@@ -1910,6 +1921,21 @@ llvm::FunctionCallee CGOpenMPRuntime::createRuntimeFunction(unsigned Function) {
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidPtrTy, TypeParams, /*isVarArg=*/false);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, /*Name=*/"__kmpc_omp_task_alloc");
+    break;
+  }
+  case OMPRTL__kmpc_omp_target_task_alloc: {
+    // Build kmp_task_t *__kmpc_omp_target_task_alloc(ident_t *, kmp_int32 gtid,
+    // kmp_int32 flags, size_t sizeof_kmp_task_t, size_t sizeof_shareds,
+    // kmp_routine_entry_t *task_entry, kmp_int64 device_id);
+    assert(KmpRoutineEntryPtrTy != nullptr &&
+           "Type kmp_routine_entry_t must be created.");
+    llvm::Type *TypeParams[] = {getIdentTyPointerTy(), CGM.Int32Ty, CGM.Int32Ty,
+                                CGM.SizeTy, CGM.SizeTy, KmpRoutineEntryPtrTy,
+                                CGM.Int64Ty};
+    // Return void * and then cast to particular kmp_task_t type.
+    auto *FnTy =
+        llvm::FunctionType::get(CGM.VoidPtrTy, TypeParams, /*isVarArg=*/false);
+    RTLFn = CGM.CreateRuntimeFunction(FnTy, /*Name=*/"__kmpc_omp_target_task_alloc");
     break;
   }
   case OMPRTL__kmpc_omp_task: {
@@ -5074,13 +5100,30 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
           : CGF.Builder.getInt32(Data.Final.getInt() ? FinalFlag : 0);
   TaskFlags = CGF.Builder.CreateOr(TaskFlags, CGF.Builder.getInt32(Flags));
   llvm::Value *SharedsSize = CGM.getSize(C.getTypeSizeInChars(SharedsTy));
-  llvm::Value *AllocArgs[] = {emitUpdateLocation(CGF, Loc),
-                              getThreadID(CGF, Loc), TaskFlags,
-                              KmpTaskTWithPrivatesTySize, SharedsSize,
-                              CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-                                  TaskEntry, KmpRoutineEntryPtrTy)};
-  llvm::Value *NewTask = CGF.EmitRuntimeCall(
+  SmallVector<llvm::Value *, 8> AllocArgs = {emitUpdateLocation(CGF, Loc),
+      getThreadID(CGF, Loc), TaskFlags, KmpTaskTWithPrivatesTySize,
+      SharedsSize, CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+          TaskEntry, KmpRoutineEntryPtrTy)};
+  llvm::Value *NewTask;
+  if (D.hasClausesOfKind<OMPNowaitClause>()) {
+    // Check if we have any device clause associated with the directive.
+    const Expr *Device = nullptr;
+    if (auto *C = D.getSingleClause<OMPDeviceClause>())
+      Device = C->getDevice();
+    // Emit device ID if any otherwise use default value.
+    llvm::Value *DeviceID;
+    if (Device)
+      DeviceID = CGF.Builder.CreateIntCast(CGF.EmitScalarExpr(Device),
+                                           CGF.Int64Ty, /*isSigned=*/true);
+    else
+      DeviceID = CGF.Builder.getInt64(OMP_DEVICEID_UNDEF);
+    AllocArgs.push_back(DeviceID);
+    NewTask = CGF.EmitRuntimeCall(
+      createRuntimeFunction(OMPRTL__kmpc_omp_target_task_alloc), AllocArgs);
+  } else {
+    NewTask = CGF.EmitRuntimeCall(
       createRuntimeFunction(OMPRTL__kmpc_omp_task_alloc), AllocArgs);
+  }
   llvm::Value *NewTaskNewTaskTTy =
       CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
           NewTask, KmpTaskTWithPrivatesPtrTy);
@@ -8350,12 +8393,6 @@ public:
     // Add flag stating this is an implicit map.
     CurMapTypes.back() |= OMP_MAP_IMPLICIT;
   }
-};
-
-enum OpenMPOffloadingReservedDeviceIDs {
-  /// Device ID if the device was not defined, runtime should get it
-  /// from environment variables in the spec.
-  OMP_DEVICEID_UNDEF = -1,
 };
 } // anonymous namespace
 
