@@ -1,12 +1,13 @@
-; RUN: llc < %s -mtriple=arm64-- -debug-only=isel -o /dev/null 2>&1 | FileCheck %s --check-prefix=FMFDEBUG
+; RUN: llc < %s -mtriple=arm64-- | FileCheck %s
 
 ; This test provides fmf coverage for DAG combining of selects
 
-; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'select_select_fold_select_and:'
-; FMFDEBUG:         [[AND:t[0-9]+]]: i1 = and {{t[0-9]+}}, {{t[0-9]+}}
-; FMFDEBUG:         [[FMAX:t[0-9]+]]: f32 = fmaxnum nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}, {{t[0-9]+}}
-; FMFDEBUG-NEXT:    select nnan ninf nsz arcp contract afn reassoc [[AND]], [[FMAX]], {{t[0-9]+}}
-; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'select_select_fold_select_and:'
+; CHECK-LABEL: select_select_fold_select_and
+; CHECK:         fminnm	s1, s1, s2
+; CHECK-NEXT:    fmaxnm	s2, s0, s3
+; CHECK-NEXT:    fmov
+; CHECK-NEXT:    fccmp	s1, s0, #4, lt
+; CHECK-NEXT:    fcsel	s2, s2, s0, gt
 
 ; select Cond0, (select Cond1, X, Y), Y -> select (and Cond0, Cond1), X, Y
 define float @select_select_fold_select_and(float %w, float %x, float %y, float %z) {
@@ -38,11 +39,13 @@ exit:                                     ; preds = %if.end.i159.i.i, %if.then.i
   ret float %phi1
 }
 
-; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'select_select_fold_select_or:'
-; FMFDEBUG:         [[OR:t[0-9]+]]: i1 = or {{t[0-9]+}}, {{t[0-9]+}}
-; FMFDEBUG:         [[FMAX:t[0-9]+]]: f32 = fmaxnum nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}, {{t[0-9]+}}
-; FMFDEBUG-NEXT:    select nnan ninf nsz arcp contract afn reassoc [[OR]], {{t[0-9]+}}, [[FMAX]]
-; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'select_select_fold_select_or:'
+; CHECK-LABEL: select_select_fold_select_or
+; CHECK:         fcmp	s1, s2
+; CHECK-NEXT:    fminnm	s1, s1, s2
+; CHECK-NEXT:    fmaxnm	s2, s0, s3
+; CHECK-NEXT:    fmov
+; CHECK-NEXT:    fccmp	s1, s0, #0, ge
+; CHECK-NEXT:    fcsel	s2, s0, s2, gt
 
 ; select Cond0, X, (select Cond1, X, Y) -> select (or Cond0, Cond1), X, Y
 define float @select_select_fold_select_or(float %w, float %x, float %y, float %z) {

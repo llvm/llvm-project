@@ -1,5 +1,4 @@
-; RUN: llc < %s -mtriple=arm64-eabi -enable-no-nans-fp-math | FileCheck %s --check-prefix=CHECK
-; RUN: llc < %s -mtriple=arm64-eabi -enable-no-nans-fp-math -debug-only=isel -o /dev/null 2>&1 | FileCheck %s --check-prefix=FMFDEBUG
+; RUN: llc < %s -mtriple=arm64-eabi -enable-no-nans-fp-math | FileCheck %s
 
 define double @test_direct(float %in) {
 ; CHECK-LABEL: test_direct:
@@ -21,7 +20,6 @@ define double @test_cross(float %in) {
 ; CHECK: fmin
 }
 
-
 ; Same as previous, but with ordered comparison;
 ; can't be converted in safe-math mode.
 define double @test_cross_fail_nan(float %in) {
@@ -33,10 +31,6 @@ define double @test_cross_fail_nan(float %in) {
 
 ; CHECK: fmin
 }
-
-; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'test_cross_fail:'
-; FMFDEBUG:         select_cc nnan {{t[0-9]+}}, {{t[0-9]+}}, {{t[0-9]+}}, {{t[0-9]+}}, setne:ch
-; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'test_cross_fail:'
 
 ; This isn't a min or a max, but passes the first condition for swapping the
 ; results. Make sure they're put back before we resort to the normal fcsel.

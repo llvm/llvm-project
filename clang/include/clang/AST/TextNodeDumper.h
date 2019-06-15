@@ -146,6 +146,8 @@ class TextNodeDumper
 
   const comments::CommandTraits *Traits;
 
+  const ASTContext *Context;
+
   const char *getCommandName(unsigned CommandID);
 
 public:
@@ -228,6 +230,7 @@ public:
   void VisitLabelStmt(const LabelStmt *Node);
   void VisitGotoStmt(const GotoStmt *Node);
   void VisitCaseStmt(const CaseStmt *Node);
+  void VisitConstantExpr(const ConstantExpr *Node);
   void VisitCallExpr(const CallExpr *Node);
   void VisitCastExpr(const CastExpr *Node);
   void VisitImplicitCastExpr(const ImplicitCastExpr *Node);

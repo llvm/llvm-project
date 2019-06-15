@@ -6376,6 +6376,13 @@ ExpectedStmt ASTNodeImporter::VisitConstantExpr(ConstantExpr *E) {
   Expr *ToSubExpr;
   std::tie(ToSubExpr) = *Imp;
 
+  // TODO : Handle APValue::ValueKind that require importing.
+  APValue::ValueKind Kind = E->getResultAPValueKind();
+  if (Kind == APValue::Int || Kind == APValue::Float ||
+      Kind == APValue::FixedPoint || Kind == APValue::ComplexFloat ||
+      Kind == APValue::ComplexInt)
+    return ConstantExpr::Create(Importer.getToContext(), ToSubExpr,
+                                E->getAPValueResult());
   return ConstantExpr::Create(Importer.getToContext(), ToSubExpr);
 }
 
