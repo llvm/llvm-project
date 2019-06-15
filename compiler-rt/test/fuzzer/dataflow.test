@@ -4,7 +4,7 @@ REQUIRES: linux, x86_64
 # Build the tracer and the test.
 RUN: %no_fuzzer_cpp_compiler -c -fno-sanitize=all -fsanitize=dataflow  %S/../../lib/fuzzer/dataflow/DataFlow.cpp -o  %t-DataFlow.o
 RUN: %no_fuzzer_cpp_compiler    -fno-sanitize=all -fsanitize=dataflow -fsanitize-coverage=trace-pc-guard,pc-table,bb,trace-cmp   %S/ThreeFunctionsTest.cpp     %t-DataFlow.o -o %t-ThreeFunctionsTestDF
-RUN: %no_fuzzer_cpp_compiler    -fno-sanitize=all -fsanitize=dataflow -fsanitize-coverage=trace-pc-guard,pc-table,bb,trace-cmp   %S/ExplodeDFSanLabelsTest.cpp %t-DataFlow.o -o %t-ExplodeDFSanLabelsTestDF
+RUN: %no_fuzzer_cpp_compiler    -fno-sanitize=all -fsanitize=dataflow -fsanitize-coverage=trace-pc-guard,pc-table,bb,trace-cmp   %S/Labels20Test.cpp     %t-DataFlow.o -o %t-Labels20TestDF
 RUN: %cpp_compiler %S/ThreeFunctionsTest.cpp -o %t-ThreeFunctionsTest
 
 # Dump the function list.
@@ -14,8 +14,8 @@ FUNC_LIST-DAG: Func1
 FUNC_LIST-DAG: Func2
 
 # Prepare the inputs.
-RUN: rm -rf %t/IN
-RUN: mkdir -p %t/IN
+RUN: rm -rf %t/IN %t/IN20
+RUN: mkdir -p %t/IN %t/IN20
 RUN: echo -n ABC    > %t/IN/ABC
 RUN: echo -n FUABC  > %t/IN/FUABC
 RUN: echo -n FUZZR  > %t/IN/FUZZR
@@ -23,71 +23,83 @@ RUN: echo -n FUZZM  > %t/IN/FUZZM
 RUN: echo -n FUZZMU > %t/IN/FUZZMU
 RUN: echo -n 1234567890123456 > %t/IN/1234567890123456
 
+RUN: echo -n FUZZxxxxxxxxxxxxxxxx > %t/IN20/FUZZxxxxxxxxxxxxxxxx
+RUN: echo -n FUZZxxxxxxxxxxxxMxxx > %t/IN20/FUZZxxxxxxxxxxxxMxxx
+RUN: echo -n FUZxxxxxxxxxxxxxxxxx > %t/IN20/FUZxxxxxxxxxxxxxxxxx
+RUN: echo -n FUxxxxxxxxxxxxxxxxxx > %t/IN20/FUxxxxxxxxxxxxxxxxxx
+
+
+RUN: export DFSAN_OPTIONS=fast16labels=1:warn_unimplemented=0
+
 # This test assumes that the functions in ThreeFunctionsTestDF are instrumented
 # in a specific order:
 # LLVMFuzzerTestOneInput: F0
 # Func1: F1
 # Func2: F2
 
-# ABC: No data is used, the only used label is 4 (corresponds to the size)
-RUN:%t-ThreeFunctionsTestDF 0 3 %t/IN/ABC    | FileCheck %s --check-prefix=IN_ABC
-IN_ABC: F0 0001
-IN_ABC-NOT: F
-IN_ABC-NEXT: C0
+# ABC: No data is used
+RUN:%t-ThreeFunctionsTestDF %t/IN/ABC    | FileCheck %s --check-prefix=IN_ABC
+IN_ABC-NOT: F0
+IN_ABC: C0
 IN_ABC-NOT: C
 
 # FUABC: First 3 bytes are checked, Func1/Func2 are not called.
-RUN:%t-ThreeFunctionsTestDF 0 5 %t/IN/FUABC  | FileCheck %s --check-prefix=IN_FUABC
-IN_FUABC: F0 111001
+RUN:%t-ThreeFunctionsTestDF %t/IN/FUABC  | FileCheck %s --check-prefix=IN_FUABC
+IN_FUABC: F0 11100{{$}}
 IN_FUABC-NOT: F
 IN_FUABC-NEXT: C0
 IN_FUABC-NOT: C
 
 # FUZZR: 5 bytes are used (4 in one function, 5-th in the other), Func2 is not called.
-RUN:%t-ThreeFunctionsTestDF 0 5 %t/IN/FUZZR  | FileCheck %s --check-prefix=IN_FUZZR
-IN_FUZZR: F0 111101
-IN_FUZZR: F1 000010
+RUN:%t-ThreeFunctionsTestDF %t/IN/FUZZR  | FileCheck %s --check-prefix=IN_FUZZR
+IN_FUZZR: F0 11110
+IN_FUZZR: F1 00001
 IN_FUZZR-NOT: F
 IN_FUZZR: C0
 IN_FUZZR: C1
 IN_FUZZR-NOT: C
 
-# FUZZM: 5 bytes are used, both Func1 and Func2 are called, Func2 depends only on size (label 6).
-RUN:%t-ThreeFunctionsTestDF 0 5 %t/IN/FUZZM  | FileCheck %s --check-prefix=IN_FUZZM
-IN_FUZZM: F0 111101
-IN_FUZZM: F1 000010
-IN_FUZZM: F2 000001
+# FUZZM: 5 bytes are used, both Func1 and Func2 are called, Func2 depends only on size.
+RUN:%t-ThreeFunctionsTestDF %t/IN/FUZZM  | FileCheck %s --check-prefix=IN_FUZZM
+IN_FUZZM: F0 11110
+IN_FUZZM: F1 00001
+IN_FUZZM-NOT: F2
 IN_FUZZM: C0
 IN_FUZZM: C1
 IN_FUZZM: C2
 
-# FUZZMU: 6 bytes are used, both Func1 and Func2 are called, Func2 depends on byte 6 and size (label 7)
-RUN:%t-ThreeFunctionsTestDF 0 6 %t/IN/FUZZMU  | FileCheck %s --check-prefix=IN_FUZZMU
+# FUZZMU: 6 bytes are used, both Func1 and Func2 are called, Func2 depends on byte 6 and size.
+RUN:%t-ThreeFunctionsTestDF %t/IN/FUZZMU  | FileCheck %s --check-prefix=IN_FUZZMU
 
-# Test merge_data_flow
-RUN:rm -f %t-merge-*
-RUN:%t-ThreeFunctionsTestDF 0 2 %t/IN/FUZZMU > %t-merge-1
-RUN:%t-ThreeFunctionsTestDF 2 4 %t/IN/FUZZMU > %t-merge-2
-RUN:%t-ThreeFunctionsTestDF 4 6 %t/IN/FUZZMU > %t-merge-3
+
+# Test Labels20TestDF
+RUN:%t-Labels20TestDF %t/IN20/FUxxxxxxxxxxxxxxxxxx | FileCheck %s --check-prefix=L20_FU
+L20_FU: F0 11100000000000000000{{$}}
+L20_FU-NOT: F
+
+RUN:%t-Labels20TestDF %t/IN20/FUZxxxxxxxxxxxxxxxxx | FileCheck %s --check-prefix=L20_FUZ
+L20_FUZ: F0 11110000000000000000{{$}}
+L20_FUZ-NOT: F
+
+RUN:%t-Labels20TestDF %t/IN20/FUZZxxxxxxxxxxxxxxxx | FileCheck %s --check-prefix=L20_FUZZ
+L20_FUZZ: F0 11110000000000000000{{$}}
+L20_FUZZ-NEXT: F1 00000000000000001000{{$}}
+L20_FUZZ-NOT: F
+
+RUN:%t-Labels20TestDF %t/IN20/FUZZxxxxxxxxxxxxMxxx | FileCheck %s --check-prefix=L20_FUZZM
+L20_FUZZM: F0 11110000000000000000{{$}}
+L20_FUZZM-NEXT: F1 00000000000000001000{{$}}
+L20_FUZZM-NEXT: F2 00000000000000000001{{$}}
+L20_FUZZM-NOT: F
 
 # Test libFuzzer's built in DFT collection.
 RUN: rm -rf %t-DFT
 RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t-DFT %t/IN/FUZZMU
 RUN: cat %t-DFT/* | sort | FileCheck %s --check-prefix=IN_FUZZMU
 
-IN_FUZZMU: F0 1111001
-IN_FUZZMU: F1 0000100
-IN_FUZZMU: F2 0000011
-
-# A very simple test will cause DFSan to die with "out of labels"
-RUN: not %t-ExplodeDFSanLabelsTestDF 0 16 %t/IN/1234567890123456 2>&1 | FileCheck %s --check-prefix=OUT_OF_LABELS
-OUT_OF_LABELS: ==FATAL: DataFlowSanitizer: out of labels
-# However we can run the same test piece by piece.
-RUN: %t-ExplodeDFSanLabelsTestDF 0 2  %t/IN/1234567890123456
-RUN: %t-ExplodeDFSanLabelsTestDF 2 4  %t/IN/1234567890123456
-RUN: %t-ExplodeDFSanLabelsTestDF 4 6  %t/IN/1234567890123456
-# Test libFuzzer's builtin collect_data_flow.
-RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t-DFT %t/IN/1234567890123456
+IN_FUZZMU: F0 111100
+IN_FUZZMU: F1 000010
+IN_FUZZMU: F2 000001
 
 # Test that we can run collect_data_flow on the entire corpus dir
 RUN: rm -rf %t/OUT
@@ -96,18 +108,12 @@ RUN: %t-ThreeFunctionsTest -data_flow_trace=%t/OUT -runs=0 -focus_function=Func2
 
 
 USE_DATA_FLOW_TRACE: INFO: DataFlowTrace: reading from {{.*}}/OUT
-USE_DATA_FLOW_TRACE-DAG: ca8eefe2fd5d6b32028f355fafa3e739a6bf5edc => |000001|
-USE_DATA_FLOW_TRACE-DAG: d28cb407e8e1a702c72d25473f0553d3ec172262 => |0000011|
-USE_DATA_FLOW_TRACE: INFO: DataFlowTrace: 6 trace files, 3 functions, 2 traces with focus function
+USE_DATA_FLOW_TRACE: d28cb407e8e1a702c72d25473f0553d3ec172262 => |000001|
+USE_DATA_FLOW_TRACE: INFO: DataFlowTrace: 6 trace files, 3 functions, 1 traces with focus function
 USE_DATA_FLOW_TRACE: INFO: Focus function is set to 'Func2'
 
 # Test that we can run collect_data_flow on a long input (>2**16 bytes)
 RUN: printf "%0.sA" {1..150001} > %t/IN/very_long_input
 RUN: rm -rf %t/OUT
-RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t/OUT %t/IN/very_long_input 2>&1 | FileCheck %s --check-prefix=COLLECT_TRACE_FOR_LONG_INPUT
+RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t/OUT %t/IN/very_long_input
 RUN: rm %t/IN/very_long_input
-COLLECT_TRACE_FOR_LONG_INPUT: ******* Trying:{{[ ]+}}[0, 150001
-COLLECT_TRACE_FOR_LONG_INPUT-DAG: ******* Trying:{{[ ]+}}[75000, 150001
-COLLECT_TRACE_FOR_LONG_INPUT-DAG: ******* Trying:{{[ ]+}}[112500, 150001
-COLLECT_TRACE_FOR_LONG_INPUT-DAG: ******* Success:{{[ ]+}}[{{[0123456789]+}}, 150001
-COLLECT_TRACE_FOR_LONG_INPUT-DAG: ******* Success:{{[ ]+}}[0, {{[0123456789]+}}

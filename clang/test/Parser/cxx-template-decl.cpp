@@ -253,3 +253,11 @@ namespace class_scope_instantiation {
       void f(double);
   };
 }
+
+namespace PR42071 {
+  template<int SomeTemplateName<void>> struct A; // expected-error {{parameter name cannot have template arguments}}
+  template<int operator+> struct B; // expected-error {{'operator+' cannot be the name of a parameter}}
+  struct Q {};
+  template<int Q::N> struct C; // expected-error {{parameter declarator cannot be qualified}}
+  template<int f(int a = 0)> struct D; // expected-error {{default arguments can only be specified for parameters in a function declaration}}
+}

@@ -85,4 +85,31 @@ private:
 } // namespace clangd
 } // namespace clang
 
+namespace llvm {
+
+// Support index::SymbolRole as a DenseMap key for the purpose of looking up
+// relations.
+template <> struct DenseMapInfo<clang::index::SymbolRole> {
+  static inline clang::index::SymbolRole getEmptyKey() {
+    // Choose an enumerator that's not a relation.
+    return clang::index::SymbolRole::Declaration;
+  }
+
+  static inline clang::index::SymbolRole getTombstoneKey() {
+    // Choose another enumerator that's not a relation.
+    return clang::index::SymbolRole::Definition;
+  }
+
+  static unsigned getHashValue(const clang::index::SymbolRole &Key) {
+    return hash_value(Key);
+  }
+
+  static bool isEqual(const clang::index::SymbolRole &LHS,
+                      const clang::index::SymbolRole &RHS) {
+    return LHS == RHS;
+  }
+};
+
+} // namespace llvm
+
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_RELATION_H

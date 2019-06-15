@@ -656,8 +656,10 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
   size_t NumRelations = Relations.size();
 
   trace::Span Tracer("BuildIndex");
-  auto Index = UseDex ? dex::Dex::build(std::move(Symbols), std::move(Refs))
-                      : MemIndex::build(std::move(Symbols), std::move(Refs));
+  auto Index = UseDex ? dex::Dex::build(std::move(Symbols), std::move(Refs),
+                                        std::move(Relations))
+                      : MemIndex::build(std::move(Symbols), std::move(Refs),
+                                        std::move(Relations));
   vlog("Loaded {0} from {1} with estimated memory usage {2} bytes\n"
        "  - number of symbols: {3}\n"
        "  - number of refs: {4}\n"

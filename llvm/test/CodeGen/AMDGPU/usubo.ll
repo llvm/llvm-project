@@ -84,7 +84,7 @@ define amdgpu_kernel void @v_usubo_i32_novcc(i32 addrspace(1)* %out, i1 addrspac
   %val = extractvalue { i32, i1 } %uadd, 0
   %carry = extractvalue { i32, i1 } %uadd, 1
   store volatile i32 %val, i32 addrspace(1)* %out, align 4
-  call void asm sideeffect "", "~{VCC}"() #0
+  call void asm sideeffect "", "~{vcc}"() #0
   store volatile i1 %carry, i1 addrspace(1)* %carryout
   ret void
 }

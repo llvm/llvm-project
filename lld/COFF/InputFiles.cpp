@@ -288,6 +288,8 @@ void ObjFile::recordPrevailingSymbolForMingw(
   if (SC && SC->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE) {
     StringRef Name;
     COFFObj->getSymbolName(Sym, Name);
+    if (getMachineType() == I386)
+      Name.consume_front("_");
     PrevailingSectionMap[Name] = SectionNumber;
   }
 }
@@ -297,9 +299,10 @@ void ObjFile::maybeAssociateSEHForMingw(
     const DenseMap<StringRef, uint32_t> &PrevailingSectionMap) {
   StringRef Name;
   COFFObj->getSymbolName(Sym, Name);
-  if (Name.consume_front(".pdata$") || Name.consume_front(".xdata$")) {
-    // For MinGW, treat .[px]data$<func> as implicitly associative to
-    // the symbol <func>.
+  if (Name.consume_front(".pdata$") || Name.consume_front(".xdata$") ||
+      Name.consume_front(".eh_frame$")) {
+    // For MinGW, treat .[px]data$<func> and .eh_frame$<func> as implicitly
+    // associative to the symbol <func>.
     auto ParentSym = PrevailingSectionMap.find(Name);
     if (ParentSym != PrevailingSectionMap.end())
       readAssociativeDefinition(Sym, Def, ParentSym->second);

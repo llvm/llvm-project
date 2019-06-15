@@ -1,7 +1,7 @@
 ; Test BRCTH.
 
 ; RUN: llc < %s -verify-machineinstrs -mtriple=s390x-linux-gnu -mcpu=z196 \
-; RUN:   -no-integrated-as | FileCheck %s
+; RUN:   -no-integrated-as -disable-block-placement | FileCheck %s
 
 ; Test a loop that should be converted into dbr form and then use BRCTH.
 define void @f2(i32 *%src, i32 *%dest) {

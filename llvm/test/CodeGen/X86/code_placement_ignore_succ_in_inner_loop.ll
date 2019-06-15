@@ -1,13 +1,12 @@
 ; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux < %s | FileCheck %s
 
 define void @foo() {
-; Test that when determining the edge probability from a node in an inner loop
-; to a node in an outer loop, the weights on edges in the inner loop should be
-; ignored if we are building the chain for the outer loop.
+; After moving the latch to the top of loop, there is no fall through from the
+; latch to outer loop.
 ;
 ; CHECK-LABEL: foo:
-; CHECK: callq c
 ; CHECK: callq b
+; CHECK: callq c
 
 entry:
   %call = call zeroext i1 @a()

@@ -1622,21 +1622,14 @@ void StmtPrinter::VisitAtomicExpr(AtomicExpr *Node) {
 
 // C++
 void StmtPrinter::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *Node) {
-  const char *OpStrings[NUM_OVERLOADED_OPERATORS] = {
-    "",
-#define OVERLOADED_OPERATOR(Name,Spelling,Token,Unary,Binary,MemberOnly) \
-    Spelling,
-#include "clang/Basic/OperatorKinds.def"
-  };
-
   OverloadedOperatorKind Kind = Node->getOperator();
   if (Kind == OO_PlusPlus || Kind == OO_MinusMinus) {
     if (Node->getNumArgs() == 1) {
-      OS << OpStrings[Kind] << ' ';
+      OS << getOperatorSpelling(Kind) << ' ';
       PrintExpr(Node->getArg(0));
     } else {
       PrintExpr(Node->getArg(0));
-      OS << ' ' << OpStrings[Kind];
+      OS << ' ' << getOperatorSpelling(Kind);
     }
   } else if (Kind == OO_Arrow) {
     PrintExpr(Node->getArg(0));
@@ -1656,11 +1649,11 @@ void StmtPrinter::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *Node) {
     PrintExpr(Node->getArg(1));
     OS << ']';
   } else if (Node->getNumArgs() == 1) {
-    OS << OpStrings[Kind] << ' ';
+    OS << getOperatorSpelling(Kind) << ' ';
     PrintExpr(Node->getArg(0));
   } else if (Node->getNumArgs() == 2) {
     PrintExpr(Node->getArg(0));
-    OS << ' ' << OpStrings[Kind] << ' ';
+    OS << ' ' << getOperatorSpelling(Kind) << ' ';
     PrintExpr(Node->getArg(1));
   } else {
     llvm_unreachable("unknown overloaded operator");

@@ -69,8 +69,9 @@ ParsedAST TestTU::build() const {
 
 SymbolSlab TestTU::headerSymbols() const {
   auto AST = build();
-  return indexHeaderSymbols(AST.getASTContext(), AST.getPreprocessorPtr(),
-                            AST.getCanonicalIncludes());
+  return std::get<0>(indexHeaderSymbols(AST.getASTContext(),
+                                        AST.getPreprocessorPtr(),
+                                        AST.getCanonicalIncludes()));
 }
 
 std::unique_ptr<SymbolIndex> TestTU::index() const {

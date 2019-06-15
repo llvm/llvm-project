@@ -19,38 +19,39 @@ define amdgpu_ps void @main(i32, float) {
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    ; implicit-def: $sgpr2_sgpr3
 ; CHECK-NEXT:    ; implicit-def: $sgpr6_sgpr7
-; CHECK-NEXT:  BB0_1: ; %loop
+; CHECK-NEXT:    s_branch BB0_3
+; CHECK-NEXT:  BB0_1: ; in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    ; implicit-def: $vgpr1
+; CHECK-NEXT:  BB0_2: ; %Flow
+; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    s_and_b64 s[8:9], exec, s[6:7]
+; CHECK-NEXT:    s_or_b64 s[8:9], s[8:9], s[4:5]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[8:9]
+; CHECK-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; CHECK-NEXT:    s_cbranch_execz BB0_7
+; CHECK-NEXT:  BB0_3: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, 32, v1
 ; CHECK-NEXT:    s_and_b64 vcc, exec, vcc
 ; CHECK-NEXT:    s_or_b64 s[6:7], s[6:7], exec
 ; CHECK-NEXT:    s_or_b64 s[2:3], s[2:3], exec
-; CHECK-NEXT:    s_cbranch_vccz BB0_5
-; CHECK-NEXT:  ; %bb.2: ; %endif1
-; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    s_cbranch_vccz BB0_1
+; CHECK-NEXT:  ; %bb.4: ; %endif1
+; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[6:7], -1
 ; CHECK-NEXT:    s_and_saveexec_b64 s[8:9], s[0:1]
 ; CHECK-NEXT:    s_xor_b64 s[8:9], exec, s[8:9]
-; CHECK-NEXT:    ; mask branch BB0_4
-; CHECK-NEXT:  BB0_3: ; %endif2
-; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    ; mask branch BB0_6
+; CHECK-NEXT:  BB0_5: ; %endif2
+; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    v_add_u32_e32 v1, 1, v1
 ; CHECK-NEXT:    s_xor_b64 s[6:7], exec, -1
-; CHECK-NEXT:  BB0_4: ; %Flow1
-; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:  BB0_6: ; %Flow1
+; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; CHECK-NEXT:    s_andn2_b64 s[2:3], s[2:3], exec
-; CHECK-NEXT:    s_branch BB0_6
-; CHECK-NEXT:  BB0_5: ; in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:  BB0_6: ; %Flow
-; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    s_and_b64 s[8:9], exec, s[6:7]
-; CHECK-NEXT:    s_or_b64 s[8:9], s[8:9], s[4:5]
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[8:9]
-; CHECK-NEXT:    s_andn2_b64 exec, exec, s[8:9]
-; CHECK-NEXT:    s_cbranch_execnz BB0_1
-; CHECK-NEXT:  ; %bb.7: ; %Flow2
+; CHECK-NEXT:    s_branch BB0_2
+; CHECK-NEXT:  BB0_7: ; %Flow2
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; this is the divergent branch with the condition not marked as divergent

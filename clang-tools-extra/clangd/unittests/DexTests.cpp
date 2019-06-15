@@ -456,7 +456,8 @@ TEST(DexSearchTokens, SymbolPath) {
 //===----------------------------------------------------------------------===//
 
 TEST(Dex, Lookup) {
-  auto I = Dex::build(generateSymbols({"ns::abc", "ns::xyz"}), RefSlab());
+  auto I = Dex::build(generateSymbols({"ns::abc", "ns::xyz"}), RefSlab(),
+                      RelationSlab());
   EXPECT_THAT(lookup(*I, SymbolID("ns::abc")), UnorderedElementsAre("ns::abc"));
   EXPECT_THAT(lookup(*I, {SymbolID("ns::abc"), SymbolID("ns::xyz")}),
               UnorderedElementsAre("ns::abc", "ns::xyz"));
@@ -469,7 +470,7 @@ TEST(Dex, FuzzyFind) {
   auto Index =
       Dex::build(generateSymbols({"ns::ABC", "ns::BCD", "::ABC",
                                   "ns::nested::ABC", "other::ABC", "other::A"}),
-                 RefSlab());
+                 RefSlab(), RelationSlab());
   FuzzyFindRequest Req;
   Req.Query = "ABC";
   Req.Scopes = {"ns::"};
@@ -491,7 +492,7 @@ TEST(Dex, FuzzyFind) {
 }
 
 TEST(DexTest, DexLimitedNumMatches) {
-  auto I = Dex::build(generateNumSymbols(0, 100), RefSlab());
+  auto I = Dex::build(generateNumSymbols(0, 100), RefSlab(), RelationSlab());
   FuzzyFindRequest Req;
   Req.Query = "5";
   Req.AnyScope = true;
@@ -506,7 +507,7 @@ TEST(DexTest, DexLimitedNumMatches) {
 TEST(DexTest, FuzzyMatch) {
   auto I = Dex::build(
       generateSymbols({"LaughingOutLoud", "LionPopulation", "LittleOldLady"}),
-      RefSlab());
+      RefSlab(), RelationSlab());
   FuzzyFindRequest Req;
   Req.Query = "lol";
   Req.AnyScope = true;
@@ -516,7 +517,8 @@ TEST(DexTest, FuzzyMatch) {
 }
 
 TEST(DexTest, ShortQuery) {
-  auto I = Dex::build(generateSymbols({"OneTwoThreeFour"}), RefSlab());
+  auto I = Dex::build(generateSymbols({"OneTwoThreeFour"}), RefSlab(),
+                      RelationSlab());
   FuzzyFindRequest Req;
   Req.AnyScope = true;
   bool Incomplete;
@@ -538,7 +540,8 @@ TEST(DexTest, ShortQuery) {
 }
 
 TEST(DexTest, MatchQualifiedNamesWithoutSpecificScope) {
-  auto I = Dex::build(generateSymbols({"a::y1", "b::y2", "y3"}), RefSlab());
+  auto I = Dex::build(generateSymbols({"a::y1", "b::y2", "y3"}), RefSlab(),
+                      RelationSlab());
   FuzzyFindRequest Req;
   Req.AnyScope = true;
   Req.Query = "y";
@@ -546,7 +549,8 @@ TEST(DexTest, MatchQualifiedNamesWithoutSpecificScope) {
 }
 
 TEST(DexTest, MatchQualifiedNamesWithGlobalScope) {
-  auto I = Dex::build(generateSymbols({"a::y1", "b::y2", "y3"}), RefSlab());
+  auto I = Dex::build(generateSymbols({"a::y1", "b::y2", "y3"}), RefSlab(),
+                      RelationSlab());
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {""};
@@ -554,8 +558,9 @@ TEST(DexTest, MatchQualifiedNamesWithGlobalScope) {
 }
 
 TEST(DexTest, MatchQualifiedNamesWithOneScope) {
-  auto I = Dex::build(
-      generateSymbols({"a::y1", "a::y2", "a::x", "b::y2", "y3"}), RefSlab());
+  auto I =
+      Dex::build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y2", "y3"}),
+                 RefSlab(), RelationSlab());
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::"};
@@ -563,8 +568,9 @@ TEST(DexTest, MatchQualifiedNamesWithOneScope) {
 }
 
 TEST(DexTest, MatchQualifiedNamesWithMultipleScopes) {
-  auto I = Dex::build(
-      generateSymbols({"a::y1", "a::y2", "a::x", "b::y3", "y3"}), RefSlab());
+  auto I =
+      Dex::build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y3", "y3"}),
+                 RefSlab(), RelationSlab());
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::", "b::"};
@@ -572,7 +578,8 @@ TEST(DexTest, MatchQualifiedNamesWithMultipleScopes) {
 }
 
 TEST(DexTest, NoMatchNestedScopes) {
-  auto I = Dex::build(generateSymbols({"a::y1", "a::b::y2"}), RefSlab());
+  auto I = Dex::build(generateSymbols({"a::y1", "a::b::y2"}), RefSlab(),
+                      RelationSlab());
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::"};
@@ -580,8 +587,8 @@ TEST(DexTest, NoMatchNestedScopes) {
 }
 
 TEST(DexTest, WildcardScope) {
-  auto I =
-      Dex::build(generateSymbols({"a::y1", "a::b::y2", "c::y3"}), RefSlab());
+  auto I = Dex::build(generateSymbols({"a::y1", "a::b::y2", "c::y3"}),
+                      RefSlab(), RelationSlab());
   FuzzyFindRequest Req;
   Req.AnyScope = true;
   Req.Query = "y";
@@ -591,7 +598,8 @@ TEST(DexTest, WildcardScope) {
 }
 
 TEST(DexTest, IgnoreCases) {
-  auto I = Dex::build(generateSymbols({"ns::ABC", "ns::abc"}), RefSlab());
+  auto I = Dex::build(generateSymbols({"ns::ABC", "ns::abc"}), RefSlab(),
+                      RelationSlab());
   FuzzyFindRequest Req;
   Req.Query = "AB";
   Req.Scopes = {"ns::"};
@@ -600,14 +608,16 @@ TEST(DexTest, IgnoreCases) {
 
 TEST(DexTest, UnknownPostingList) {
   // Regression test: we used to ignore unknown scopes and accept any symbol.
-  auto I = Dex::build(generateSymbols({"ns::ABC", "ns::abc"}), RefSlab());
+  auto I = Dex::build(generateSymbols({"ns::ABC", "ns::abc"}), RefSlab(),
+                      RelationSlab());
   FuzzyFindRequest Req;
   Req.Scopes = {"ns2::"};
   EXPECT_THAT(match(*I, Req), UnorderedElementsAre());
 }
 
 TEST(DexTest, Lookup) {
-  auto I = Dex::build(generateSymbols({"ns::abc", "ns::xyz"}), RefSlab());
+  auto I = Dex::build(generateSymbols({"ns::abc", "ns::xyz"}), RefSlab(),
+                      RelationSlab());
   EXPECT_THAT(lookup(*I, SymbolID("ns::abc")), UnorderedElementsAre("ns::abc"));
   EXPECT_THAT(lookup(*I, {SymbolID("ns::abc"), SymbolID("ns::xyz")}),
               UnorderedElementsAre("ns::abc", "ns::xyz"));
@@ -622,7 +632,7 @@ TEST(DexTest, SymbolIndexOptionsFilter) {
   CodeCompletionSymbol.Flags = Symbol::SymbolFlag::IndexedForCodeCompletion;
   NonCodeCompletionSymbol.Flags = Symbol::SymbolFlag::None;
   std::vector<Symbol> Symbols{CodeCompletionSymbol, NonCodeCompletionSymbol};
-  Dex I(Symbols, RefSlab());
+  Dex I(Symbols, RefSlab(), RelationSlab());
   FuzzyFindRequest Req;
   Req.AnyScope = true;
   Req.RestrictForCodeCompletion = false;
@@ -638,7 +648,7 @@ TEST(DexTest, ProximityPathsBoosting) {
   CloseSymbol.CanonicalDeclaration.FileURI = "unittest:///a/b/c/d/e/f/file.h";
 
   std::vector<Symbol> Symbols{CloseSymbol, RootSymbol};
-  Dex I(Symbols, RefSlab());
+  Dex I(Symbols, RefSlab(), RelationSlab());
 
   FuzzyFindRequest Req;
   Req.AnyScope = true;
@@ -677,17 +687,38 @@ TEST(DexTests, Refs) {
   Req.Filter = RefKind::Declaration | RefKind::Definition;
 
   std::vector<std::string> Files;
-  Dex(std::vector<Symbol>{Foo, Bar}, Refs).refs(Req, [&](const Ref &R) {
-    Files.push_back(R.Location.FileURI);
-  });
+  Dex(std::vector<Symbol>{Foo, Bar}, Refs, RelationSlab())
+      .refs(Req, [&](const Ref &R) { Files.push_back(R.Location.FileURI); });
   EXPECT_THAT(Files, UnorderedElementsAre("foo.h", "foo.cc"));
 
   Req.Limit = 1;
   Files.clear();
-  Dex(std::vector<Symbol>{Foo, Bar}, Refs).refs(Req, [&](const Ref &R) {
-    Files.push_back(R.Location.FileURI);
-  });
+  Dex(std::vector<Symbol>{Foo, Bar}, Refs, RelationSlab())
+      .refs(Req, [&](const Ref &R) { Files.push_back(R.Location.FileURI); });
   EXPECT_THAT(Files, ElementsAre(AnyOf("foo.h", "foo.cc")));
+}
+
+TEST(DexTests, Relations) {
+  auto Parent = symbol("Parent");
+  auto Child1 = symbol("Child1");
+  auto Child2 = symbol("Child2");
+
+  std::vector<Symbol> Symbols{Parent, Child1, Child2};
+
+  std::vector<Relation> Relations{
+      {Parent.ID, index::SymbolRole::RelationBaseOf, Child1.ID},
+      {Parent.ID, index::SymbolRole::RelationBaseOf, Child2.ID}};
+
+  Dex I{Symbols, RefSlab(), Relations};
+
+  std::vector<SymbolID> Results;
+  RelationsRequest Req;
+  Req.Subjects.insert(Parent.ID);
+  Req.Predicate = index::SymbolRole::RelationBaseOf;
+  I.relations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
+    Results.push_back(Object.ID);
+  });
+  EXPECT_THAT(Results, UnorderedElementsAre(Child1.ID, Child2.ID));
 }
 
 TEST(DexTest, PreferredTypesBoosting) {
@@ -697,7 +728,7 @@ TEST(DexTest, PreferredTypesBoosting) {
   Sym2.Type = "T2";
 
   std::vector<Symbol> Symbols{Sym1, Sym2};
-  Dex I(Symbols, RefSlab());
+  Dex I(Symbols, RefSlab(), RelationSlab());
 
   FuzzyFindRequest Req;
   Req.AnyScope = true;
@@ -733,7 +764,7 @@ TEST(DexTest, TemplateSpecialization) {
       index::SymbolProperty::TemplatePartialSpecialization);
   B.insert(S);
 
-  auto I = dex::Dex::build(std::move(B).build(), RefSlab());
+  auto I = dex::Dex::build(std::move(B).build(), RefSlab(), RelationSlab());
   FuzzyFindRequest Req;
   Req.AnyScope = true;
 

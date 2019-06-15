@@ -92,9 +92,16 @@ static size_t getLongestEntryLength(ArrayRef<T> Table) {
   return MaxLen;
 }
 
-/// Display help for feature choices.
+/// Display help for feature and mcpu choices.
 static void Help(ArrayRef<SubtargetSubTypeKV> CPUTable,
                  ArrayRef<SubtargetFeatureKV> FeatTable) {
+  // the static variable ensures that the help information only gets
+  // printed once even though a target machine creates multiple subtargets
+  static bool PrintOnce = false;
+  if (PrintOnce) {
+    return;
+  }
+
   // Determine the length of the longest CPU and Feature entries.
   unsigned MaxCPULen  = getLongestEntryLength(CPUTable);
   unsigned MaxFeatLen = getLongestEntryLength(FeatTable);
@@ -114,6 +121,30 @@ static void Help(ArrayRef<SubtargetSubTypeKV> CPUTable,
 
   errs() << "Use +feature to enable a feature, or -feature to disable it.\n"
             "For example, llc -mcpu=mycpu -mattr=+feature1,-feature2\n";
+
+  PrintOnce = true;
+}
+
+/// Display help for mcpu choices only
+static void cpuHelp(ArrayRef<SubtargetSubTypeKV> CPUTable) {
+  // the static variable ensures that the help information only gets
+  // printed once even though a target machine creates multiple subtargets
+  static bool PrintOnce = false;
+  if (PrintOnce) {
+    return;
+  }
+
+  // Print the CPU table.
+  errs() << "Available CPUs for this target:\n\n";
+  for (auto &CPU : CPUTable)
+    errs() << "\t" << CPU.Key << "\n";
+  errs() << '\n';
+
+  errs() << "Use -mcpu or -mtune to specify the target's processor.\n"
+            "For example, clang --target=aarch64-unknown-linux-gui "
+            "-mcpu=cortex-a35\n";
+
+  PrintOnce = true;
 }
 
 static FeatureBitset getFeatures(StringRef CPU, StringRef FS,
@@ -154,6 +185,8 @@ static FeatureBitset getFeatures(StringRef CPU, StringRef FS,
     // Check for help
     if (Feature == "+help")
       Help(ProcDesc, ProcFeatures);
+    else if (Feature == "+cpuHelp")
+      cpuHelp(ProcDesc);
     else
       ApplyFeatureFlag(Bits, Feature, ProcFeatures);
   }

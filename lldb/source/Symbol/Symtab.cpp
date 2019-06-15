@@ -216,7 +216,6 @@ const Symbol *Symtab::SymbolAtIndex(size_t idx) const {
   return nullptr;
 }
 
-// InitNameIndexes
 static bool lldb_skip_name(llvm::StringRef mangled,
                            Mangled::ManglingScheme scheme) {
   switch (scheme) {
@@ -259,25 +258,7 @@ void Symtab::InitNameIndexes() {
     Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
     // Create the name index vector to be able to quickly search by name
     const size_t num_symbols = m_symbols.size();
-#if 1
     m_name_to_index.Reserve(num_symbols);
-#else
-    // TODO: benchmark this to see if we save any memory. Otherwise we
-    // will always keep the memory reserved in the vector unless we pull some
-    // STL swap magic and then recopy...
-    uint32_t actual_count = 0;
-    for (const_iterator pos = m_symbols.begin(), end = m_symbols.end();
-         pos != end; ++pos) {
-      const Mangled &mangled = pos->GetMangled();
-      if (mangled.GetMangledName())
-        ++actual_count;
-
-      if (mangled.GetDemangledName())
-        ++actual_count;
-    }
-
-    m_name_to_index.Reserve(actual_count);
-#endif
 
     // The "const char *" in "class_contexts" and backlog::value_type::second
     // must come from a ConstString::GetCString()
