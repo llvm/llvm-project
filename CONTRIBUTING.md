@@ -64,3 +64,31 @@ Then you just add a line to every git commit message:
 Use your real name (sorry, no pseudonyms or anonymous contributions.)
 
 If you set your `user.name` and `user.email` git configs, you can sign your commit automatically with `git commit -s`.
+
+## Contribution process
+
+### Development
+
+ - Create a personal fork of the project on GitHub.
+ - Use **sycl** branch as baseline for your changes.
+ - Prepare your patch (follow [LLVM coding standards](https://llvm.org/docs/CodingStandards.html)).
+ - Build the project and run all tests (see [GetStartedWithSYCLCompiler.md](https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md))
+
+### Review and acceptance testing
+
+ - Create a pull request for your changes following [Creating a pull request instructions](https://help.github.com/articles/creating-a-pull-request/).
+ - When the pull request is created signed-off check is done.
+     - **check_pr** - verifies that the signed-off mark is added to each commit message.
+ - Once the pull request is approved by an Intel representative, build and functional testing are started.
+     - **sycl-ubu-x64-pr** - runs all LIT tests on machine with OpenCL runtimes for CPU and GPU.
+ - Approval is lost once the PR branch is updated. New approval and checks rerun are required.
+ - Once approval is received and all checks pass, the pull request is ready to be merged.
+
+### Merge
+
+Merge of pull request is done only by project maintainers. There are three options:
+ - [Rebase and merge] The preferable choice for PRs containing a single commit.
+ - [Squash and merge] Used when there are multiple commits in the PR. 
+   Squashing is done to shorten history and make sure that the project is buildable on any commit.
+ - [Create a merge commit] Used for pull down PRs to avoid duplication of
+   LLVM commits.

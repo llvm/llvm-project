@@ -49,6 +49,7 @@ Run LIT testing using the command below after building SYCL compiler and runtime
 ```bash
 make -j`nproc` check-all
 ```
+If no OpenCL GPU/CPU runtimes are available, the corresponding LIT tests are skipped
 
 # Creating a simple SYCL program
 
