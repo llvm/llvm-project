@@ -827,6 +827,9 @@ ASTContext::~ASTContext() {
 
   for (const auto &Value : ModuleInitializers)
     Value.second->~PerModuleInitializers();
+
+  for (APValue *Value : APValueCleanups)
+    Value->~APValue();
 }
 
 class ASTContext::ParentMap {
