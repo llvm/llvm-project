@@ -1993,6 +1993,7 @@ void AMDGPUDAGToDAGISel::SelectDSAppendConsume(SDNode *N, unsigned IntrID) {
   SDValue Chain = N->getOperand(0);
   SDValue Ptr = N->getOperand(2);
   MemIntrinsicSDNode *M = cast<MemIntrinsicSDNode>(N);
+  MachineMemOperand *MMO = M->getMemOperand();
   bool IsGDS = M->getAddressSpace() == AMDGPUAS::REGION_ADDRESS;
 
   SDValue Offset;
@@ -2019,7 +2020,8 @@ void AMDGPUDAGToDAGISel::SelectDSAppendConsume(SDNode *N, unsigned IntrID) {
     N->getOperand(N->getNumOperands() - 1) // New glue
   };
 
-  CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
+  SDNode *Selected = CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {MMO});
 }
 
 void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {

@@ -630,12 +630,7 @@ define amdgpu_kernel void @insertelement_v16f32_or_index(<16 x float> addrspace(
 ; GCN-LABEL: {{^}}broken_phi_bb:
 ; GCN: v_mov_b32_e32 [[PHIREG:v[0-9]+]], 8
 
-; GCN: s_branch [[BB2:BB[0-9]+_[0-9]+]]
-
-; GCN: {{^BB[0-9]+_[0-9]+}}:
-; GCN: s_mov_b64 exec,
-
-; GCN: [[BB2]]:
+; GCN: [[BB2:BB[0-9]+_[0-9]+]]:
 ; GCN: v_cmp_le_i32_e32 vcc, s{{[0-9]+}}, [[PHIREG]]
 ; GCN: buffer_load_dword
 
@@ -647,6 +642,11 @@ define amdgpu_kernel void @insertelement_v16f32_or_index(<16 x float> addrspace(
 ; IDXMODE: s_set_gpr_idx_off
 
 ; GCN: s_cbranch_execnz [[REGLOOP]]
+
+; GCN: {{^; %bb.[0-9]}}:
+; GCN: s_mov_b64 exec,
+; GCN: s_branch [[BB2]]
+
 define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) #0 {
 bb:
   br label %bb2

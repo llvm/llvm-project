@@ -7,12 +7,14 @@
 ; order to avoid a branch within the loop.
 
 ; CHECK-LABEL: simple:
-;      CHECK:   jmp   .LBB0_1
-; CHECK-NEXT:   align
-; CHECK-NEXT: .LBB0_2:
-; CHECK-NEXT:   callq loop_latch
+;      CHECK:   align
 ; CHECK-NEXT: .LBB0_1:
 ; CHECK-NEXT:   callq loop_header
+;      CHECK:   js .LBB0_3
+; CHECK-NEXT:   callq loop_latch
+; CHECK-NEXT:   jmp .LBB0_1
+; CHECK-NEXT: .LBB0_3:
+; CHECK-NEXT:   callq exit
 
 define void @simple() nounwind {
 entry:
@@ -75,17 +77,21 @@ exit:
 ; CHECK-LABEL: yet_more_involved:
 ;      CHECK:   jmp .LBB2_1
 ; CHECK-NEXT:   align
-; CHECK-NEXT: .LBB2_5:
-; CHECK-NEXT:   callq block_a_true_func
-; CHECK-NEXT:   callq block_a_merge_func
-; CHECK-NEXT: .LBB2_1:
+
+;      CHECK: .LBB2_1:
 ; CHECK-NEXT:   callq body
-;
-; LBB2_4
-;      CHECK:   callq bar99
+; CHECK-NEXT:   callq get
+; CHECK-NEXT:   cmpl $2, %eax
+; CHECK-NEXT:   jge .LBB2_2
+; CHECK-NEXT:   callq bar99
 ; CHECK-NEXT:   callq get
 ; CHECK-NEXT:   cmpl $2999, %eax
-; CHECK-NEXT:   jle .LBB2_5
+; CHECK-NEXT:   jg .LBB2_6
+; CHECK-NEXT:   callq block_a_true_func
+; CHECK-NEXT:   callq block_a_merge_func
+; CHECK-NEXT:   jmp .LBB2_1
+; CHECK-NEXT:   align
+; CHECK-NEXT: .LBB2_6:
 ; CHECK-NEXT:   callq block_a_false_func
 ; CHECK-NEXT:   callq block_a_merge_func
 ; CHECK-NEXT:   jmp .LBB2_1
@@ -201,12 +207,12 @@ block102:
 }
 
 ; CHECK-LABEL: check_minsize:
-;      CHECK:   jmp   .LBB4_1
 ; CHECK-NOT:   align
-; CHECK-NEXT: .LBB4_2:
-; CHECK-NEXT:   callq loop_latch
-; CHECK-NEXT: .LBB4_1:
+; CHECK:      .LBB4_1:
 ; CHECK-NEXT:   callq loop_header
+; CHECK:        callq loop_latch
+; CHECK:      .LBB4_3:
+; CHECK:        callq exit
 
 
 define void @check_minsize() minsize nounwind {

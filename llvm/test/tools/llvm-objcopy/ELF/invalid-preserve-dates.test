@@ -1,0 +1,23 @@
+## This tests for an expected error when --preserve dates is
+## specified at the same time as using stdin or stdout as input or
+## output files.
+
+# RUN: not llvm-objcopy --preserve-dates - %t 2>&1 | FileCheck %s
+# RUN: not llvm-objcopy --preserve-dates %p/Inputs/alloc-symtab.o - 2>&1 | FileCheck %s
+
+## Testing N args.
+# RUN: not llvm-strip --preserve-dates - < %p/Inputs/alloc-symtab.o 2>&1 | FileCheck %s
+# RUN: not llvm-strip --preserve-dates %p/Inputs/alloc-symtab.o - < \
+# RUN:      %p/Inputs/alloc-symtab.o 2>&1 | FileCheck %s
+# RUN: not llvm-strip --preserve-dates - %p/Inputs/alloc-symtab.o < \
+# RUN:      %p/Inputs/alloc-symtab.o 2>&1 | FileCheck %s
+# RUN: not llvm-strip --preserve-dates %p/Inputs/alloc-symtab.o - \
+# RUN:      %p/Inputs/alloc-symtab.o < %p/Inputs/alloc-symtab.o 2>&1 | FileCheck %s
+
+## Testing -o.
+# RUN: not llvm-strip --preserve-dates - -o %p/Inputs/alloc-symtab.o < \
+# RUN:      %p/Inputs/alloc-symtab.o 2>&1 | FileCheck %s
+# RUN: not llvm-strip --preserve-dates %p/Inputs/alloc-symtab.o -o - < \
+# RUN:      %p/Inputs/alloc-symtab.o 2>&1 | FileCheck %s
+
+# CHECK: error: --preserve-dates requires a file

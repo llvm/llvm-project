@@ -1,8 +1,8 @@
 ; Test 8-bit atomic min/max operations.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CHECK-SHIFT1
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CHECK-SHIFT2
+; RUN: llc < %s -mtriple=s390x-linux-gnu -disable-block-placement | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -disable-block-placement | FileCheck %s -check-prefix=CHECK-SHIFT1
+; RUN: llc < %s -mtriple=s390x-linux-gnu -disable-block-placement | FileCheck %s -check-prefix=CHECK-SHIFT2
 
 ; Check signed minimum.
 ; - CHECK is for the main loop.

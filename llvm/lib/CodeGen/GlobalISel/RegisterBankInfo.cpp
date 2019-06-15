@@ -234,7 +234,8 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
           continue;
 
         const RegisterBank *AltRegBank = getRegBank(Reg, MRI, TRI);
-        if (cannotCopy(*CurRegBank, *AltRegBank, getSizeInBits(Reg, MRI, TRI)))
+        if (AltRegBank &&
+            cannotCopy(*CurRegBank, *AltRegBank, getSizeInBits(Reg, MRI, TRI)))
           return getInvalidInstructionMapping();
       }
 

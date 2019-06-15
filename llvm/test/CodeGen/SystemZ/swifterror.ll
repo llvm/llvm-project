@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=s390x-linux-gnu| FileCheck %s
-; RUN: llc < %s -O0 -mtriple=s390x-linux-gnu | FileCheck --check-prefix=CHECK-O0 %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -disable-block-placement | FileCheck %s
+; RUN: llc < %s -O0 -mtriple=s390x-linux-gnu -disable-block-placement | FileCheck --check-prefix=CHECK-O0 %s
 
 declare i8* @malloc(i64)
 declare void @free(i8*)

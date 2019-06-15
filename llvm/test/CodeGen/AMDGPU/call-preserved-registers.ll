@@ -85,7 +85,7 @@ define void @void_func_void_clobber_s30_s31() #2 {
 ; GCN-NEXT: ;;#ASMEND
 ; GCN-NEXT: s_setpc_b64 s[30:31]
 define hidden void @void_func_void_clobber_vcc() #2 {
-  call void asm sideeffect "", "~{VCC}"() #0
+  call void asm sideeffect "", "~{vcc}"() #0
   ret void
 }
 
