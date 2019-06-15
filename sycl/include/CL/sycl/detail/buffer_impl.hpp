@@ -227,6 +227,15 @@ public:
     };
   }
 
+  template <template <typename T> class C, typename T>
+  void set_final_data(
+      C<T> FinalData,
+      typename std::enable_if<
+          std::is_convertible<C<T>, weak_ptr_class<T>>::value>::type * = 0) {
+    weak_ptr_class<T> WeakFinalData(FinalData);
+    set_final_data(WeakFinalData);
+  }
+
   template <typename Destination>
   void set_final_data(
       Destination FinalData,

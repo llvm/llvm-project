@@ -193,6 +193,22 @@ int main() {
       queue myQueue;
       myQueue.submit([&](handler &cgh) {
         auto B = Buffer.get_access<access::mode::write>(cgh);
+        cgh.parallel_for<class weakPointer>(
+            range<1>{10}, [=](id<1> index) { B[index] = 1; });
+      });
+    }
+    checkAllOf(result.get(), 10, 1, __LINE__);
+  }
+
+  {
+    int data[10] = {0};
+    std::shared_ptr<int> result(new int[10]());
+    {
+      buffer<int, 1> Buffer(data, range<1>(10));
+      Buffer.set_final_data(result);
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto B = Buffer.get_access<access::mode::write>(cgh);
         cgh.parallel_for<class sharedPointer>(
             range<1>{10}, [=](id<1> index) { B[index] = 1; });
       });
