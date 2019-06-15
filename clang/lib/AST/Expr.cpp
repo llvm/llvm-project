@@ -229,6 +229,110 @@ SourceLocation Expr::getExprLoc() const {
 // Primary Expressions.
 //===----------------------------------------------------------------------===//
 
+static void AssertResultStorageKind(ConstantExpr::ResultStorageKind Kind) {
+  assert((Kind == ConstantExpr::RSK_APValue ||
+          Kind == ConstantExpr::RSK_Int64 || Kind == ConstantExpr::RSK_None) &&
+         "Invalid StorageKind Value");
+}
+
+ConstantExpr::ResultStorageKind
+ConstantExpr::getStorageKind(const APValue &Value) {
+  switch (Value.getKind()) {
+  case APValue::None:
+    return ConstantExpr::RSK_None;
+  case APValue::Int:
+    if (!Value.getInt().needsCleanup())
+      return ConstantExpr::RSK_Int64;
+    LLVM_FALLTHROUGH;
+  default:
+    return ConstantExpr::RSK_APValue;
+  }
+}
+
+void ConstantExpr::DefaultInit(ResultStorageKind StorageKind) {
+  ConstantExprBits.ResultKind = StorageKind;
+  if (StorageKind == RSK_APValue)
+    ::new (getTrailingObjects<APValue>()) APValue();
+}
+
+ConstantExpr::ConstantExpr(Expr *subexpr, ResultStorageKind StorageKind)
+    : FullExpr(ConstantExprClass, subexpr) {
+  DefaultInit(StorageKind);
+}
+
+ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
+                                   ResultStorageKind StorageKind) {
+  assert(!isa<ConstantExpr>(E));
+  AssertResultStorageKind(StorageKind);
+  unsigned Size = totalSizeToAlloc<APValue, uint64_t>(
+      StorageKind == ConstantExpr::RSK_APValue,
+      StorageKind == ConstantExpr::RSK_Int64);
+  void *Mem = Context.Allocate(Size, alignof(ConstantExpr));
+  ConstantExpr *Self = new (Mem) ConstantExpr(E, StorageKind);
+  if (StorageKind == ConstantExpr::RSK_APValue)
+    Context.AddAPValueCleanup(&Self->APValueResult());
+  return Self;
+}
+
+ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
+                                   const APValue &Result) {
+  ResultStorageKind StorageKind = getStorageKind(Result);
+  ConstantExpr *Self = Create(Context, E, StorageKind);
+  Self->SetResult(Result);
+  return Self;
+}
+
+ConstantExpr::ConstantExpr(ResultStorageKind StorageKind, EmptyShell Empty)
+    : FullExpr(ConstantExprClass, Empty) {
+  DefaultInit(StorageKind);
+}
+
+ConstantExpr *ConstantExpr::CreateEmpty(const ASTContext &Context,
+                                        ResultStorageKind StorageKind,
+                                        EmptyShell Empty) {
+  AssertResultStorageKind(StorageKind);
+  unsigned Size = totalSizeToAlloc<APValue, uint64_t>(
+      StorageKind == ConstantExpr::RSK_APValue,
+      StorageKind == ConstantExpr::RSK_Int64);
+  void *Mem = Context.Allocate(Size, alignof(ConstantExpr));
+  ConstantExpr *Self = new (Mem) ConstantExpr(StorageKind, Empty);
+  if (StorageKind == ConstantExpr::RSK_APValue)
+    Context.AddAPValueCleanup(&Self->APValueResult());
+  return Self;
+}
+
+void ConstantExpr::MoveIntoResult(APValue &Value) {
+  assert(getStorageKind(Value) == ConstantExprBits.ResultKind &&
+         "Invalid storage for this value kind");
+  switch (ConstantExprBits.ResultKind) {
+  case RSK_None:
+    return;
+  case RSK_Int64:
+    Int64Result() = *Value.getInt().getRawData();
+    ConstantExprBits.BitWidth = Value.getInt().getBitWidth();
+    ConstantExprBits.IsUnsigned = Value.getInt().isUnsigned();
+    return;
+  case RSK_APValue:
+    APValueResult() = std::move(Value);
+    return;
+  }
+  llvm_unreachable("Invalid ResultKind Bits");
+}
+
+APValue ConstantExpr::getAPValueResult() const {
+  switch (ConstantExprBits.ResultKind) {
+  case ConstantExpr::RSK_APValue:
+    return APValueResult();
+  case ConstantExpr::RSK_Int64:
+    return APValue(
+        llvm::APSInt(llvm::APInt(ConstantExprBits.BitWidth, Int64Result()),
+                     ConstantExprBits.IsUnsigned));
+  case ConstantExpr::RSK_None:
+    return APValue();
+  }
+  llvm_unreachable("invalid ResultKind");
+}
+
 /// Compute the type-, value-, and instantiation-dependence of a
 /// declaration reference
 /// based on the declaration being referenced.
@@ -840,7 +944,7 @@ FloatingLiteral::FloatingLiteral(const ASTContext &C, const llvm::APFloat &V,
 
 FloatingLiteral::FloatingLiteral(const ASTContext &C, EmptyShell Empty)
   : Expr(FloatingLiteralClass, Empty) {
-  setRawSemantics(IEEEhalf);
+  setRawSemantics(llvm::APFloatBase::S_IEEEhalf);
   FloatingLiteralBits.IsExact = false;
 }
 
@@ -853,41 +957,6 @@ FloatingLiteral::Create(const ASTContext &C, const llvm::APFloat &V,
 FloatingLiteral *
 FloatingLiteral::Create(const ASTContext &C, EmptyShell Empty) {
   return new (C) FloatingLiteral(C, Empty);
-}
-
-const llvm::fltSemantics &FloatingLiteral::getSemantics() const {
-  switch(FloatingLiteralBits.Semantics) {
-  case IEEEhalf:
-    return llvm::APFloat::IEEEhalf();
-  case IEEEsingle:
-    return llvm::APFloat::IEEEsingle();
-  case IEEEdouble:
-    return llvm::APFloat::IEEEdouble();
-  case x87DoubleExtended:
-    return llvm::APFloat::x87DoubleExtended();
-  case IEEEquad:
-    return llvm::APFloat::IEEEquad();
-  case PPCDoubleDouble:
-    return llvm::APFloat::PPCDoubleDouble();
-  }
-  llvm_unreachable("Unrecognised floating semantics");
-}
-
-void FloatingLiteral::setSemantics(const llvm::fltSemantics &Sem) {
-  if (&Sem == &llvm::APFloat::IEEEhalf())
-    FloatingLiteralBits.Semantics = IEEEhalf;
-  else if (&Sem == &llvm::APFloat::IEEEsingle())
-    FloatingLiteralBits.Semantics = IEEEsingle;
-  else if (&Sem == &llvm::APFloat::IEEEdouble())
-    FloatingLiteralBits.Semantics = IEEEdouble;
-  else if (&Sem == &llvm::APFloat::x87DoubleExtended())
-    FloatingLiteralBits.Semantics = x87DoubleExtended;
-  else if (&Sem == &llvm::APFloat::IEEEquad())
-    FloatingLiteralBits.Semantics = IEEEquad;
-  else if (&Sem == &llvm::APFloat::PPCDoubleDouble())
-    FloatingLiteralBits.Semantics = PPCDoubleDouble;
-  else
-    llvm_unreachable("Unknown floating semantics");
 }
 
 /// getValueAsApproximateDouble - This returns the value as an inaccurate

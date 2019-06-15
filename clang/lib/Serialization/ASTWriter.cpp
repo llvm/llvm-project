@@ -5399,6 +5399,61 @@ void ASTRecordWriter::AddAPFloat(const llvm::APFloat &Value) {
   AddAPInt(Value.bitcastToAPInt());
 }
 
+static void WriteFixedPointSemantics(ASTRecordWriter &Record,
+                                     FixedPointSemantics FPSema) {
+  Record.push_back(FPSema.getWidth());
+  Record.push_back(FPSema.getScale());
+  Record.push_back(FPSema.isSigned() | FPSema.isSaturated() << 1 |
+                   FPSema.hasUnsignedPadding() << 2);
+}
+
+void ASTRecordWriter::AddAPValue(const APValue &Value) {
+  APValue::ValueKind Kind = Value.getKind();
+  push_back(static_cast<uint64_t>(Kind));
+  switch (Kind) {
+  case APValue::None:
+  case APValue::Indeterminate:
+    return;
+  case APValue::Int:
+    AddAPSInt(Value.getInt());
+    return;
+  case APValue::Float:
+    push_back(static_cast<uint64_t>(
+        llvm::APFloatBase::SemanticsToEnum(Value.getFloat().getSemantics())));
+    AddAPFloat(Value.getFloat());
+    return;
+  case APValue::FixedPoint: {
+    WriteFixedPointSemantics(*this, Value.getFixedPoint().getSemantics());
+    AddAPSInt(Value.getFixedPoint().getValue());
+    return;
+  }
+  case APValue::ComplexInt: {
+    AddAPSInt(Value.getComplexIntReal());
+    AddAPSInt(Value.getComplexIntImag());
+    return;
+  }
+  case APValue::ComplexFloat: {
+    push_back(static_cast<uint64_t>(llvm::APFloatBase::SemanticsToEnum(
+        Value.getComplexFloatReal().getSemantics())));
+    AddAPFloat(Value.getComplexFloatReal());
+    push_back(static_cast<uint64_t>(llvm::APFloatBase::SemanticsToEnum(
+        Value.getComplexFloatImag().getSemantics())));
+    AddAPFloat(Value.getComplexFloatImag());
+    return;
+  }
+  case APValue::LValue:
+  case APValue::Vector:
+  case APValue::Array:
+  case APValue::Struct:
+  case APValue::Union:
+  case APValue::MemberPointer:
+  case APValue::AddrLabelDiff:
+    // TODO : Handle all these APValue::ValueKind.
+    return;
+  }
+  llvm_unreachable("Invalid APValue::ValueKind");
+}
+
 void ASTWriter::AddIdentifierRef(const IdentifierInfo *II, RecordDataImpl &Record) {
   Record.push_back(getIdentifierRef(II));
 }

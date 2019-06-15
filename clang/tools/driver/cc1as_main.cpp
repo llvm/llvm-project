@@ -98,7 +98,7 @@ struct AssemblerInvocation {
   llvm::DebugCompressionType CompressDebugSections =
       llvm::DebugCompressionType::None;
   std::string MainFileName;
-  std::string SplitDwarfFile;
+  std::string SplitDwarfOutput;
 
   /// @}
   /// @name Frontend Options
@@ -258,7 +258,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   }
   Opts.LLVMArgs = Args.getAllArgValues(OPT_mllvm);
   Opts.OutputPath = Args.getLastArgValue(OPT_o);
-  Opts.SplitDwarfFile = Args.getLastArgValue(OPT_split_dwarf_file);
+  Opts.SplitDwarfOutput = Args.getLastArgValue(OPT_split_dwarf_output);
   if (Arg *A = Args.getLastArg(OPT_filetype)) {
     StringRef Name = A->getValue();
     unsigned OutputType = StringSwitch<unsigned>(Name)
@@ -367,8 +367,8 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
   if (!FDOS)
     return true;
   std::unique_ptr<raw_fd_ostream> DwoOS;
-  if (!Opts.SplitDwarfFile.empty())
-    DwoOS = getOutputStream(Opts.SplitDwarfFile, Diags, IsBinary);
+  if (!Opts.SplitDwarfOutput.empty())
+    DwoOS = getOutputStream(Opts.SplitDwarfOutput, Diags, IsBinary);
 
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
@@ -527,8 +527,8 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
   if (Failed) {
     if (Opts.OutputPath != "-")
       sys::fs::remove(Opts.OutputPath);
-    if (!Opts.SplitDwarfFile.empty() && Opts.SplitDwarfFile != "-")
-      sys::fs::remove(Opts.SplitDwarfFile);
+    if (!Opts.SplitDwarfOutput.empty() && Opts.SplitDwarfOutput != "-")
+      sys::fs::remove(Opts.SplitDwarfOutput);
   }
 
   return Failed;

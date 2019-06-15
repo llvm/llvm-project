@@ -113,6 +113,9 @@ cl::desc("disable unaligned load/store generation on PPC"), cl::Hidden);
 static cl::opt<bool> DisableSCO("disable-ppc-sco",
 cl::desc("disable sibling call optimization on ppc"), cl::Hidden);
 
+static cl::opt<bool> DisableInnermostLoopAlign32("disable-ppc-innermost-loop-align32",
+cl::desc("don't always align innermost loop to 32 bytes on ppc"), cl::Hidden);
+
 static cl::opt<bool> EnableQuadPrecision("enable-ppc-quad-precision",
 cl::desc("enable quad precision float support on ppc"), cl::Hidden);
 
@@ -13842,6 +13845,15 @@ unsigned PPCTargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   case PPC::DIR_PWR9: {
     if (!ML)
       break;
+
+    if (!DisableInnermostLoopAlign32) {
+      // If the nested loop is an innermost loop, prefer to a 32-byte alignment,
+      // so that we can decrease cache misses and branch-prediction misses. 
+      // Actual alignment of the loop will depend on the hotness check and other
+      // logic in alignBlocks.
+      if (ML->getLoopDepth() > 1 && ML->getSubLoops().empty()) 
+        return 5;
+    }
 
     const PPCInstrInfo *TII = Subtarget.getInstrInfo();
 

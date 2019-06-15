@@ -271,6 +271,9 @@ private:
   llvm::DenseMap<const MaterializeTemporaryExpr *, APValue *>
     MaterializedTemporaryValues;
 
+  /// Used to cleanups APValues stored in the AST.
+  mutable llvm::SmallVector<APValue *, 0> APValueCleanups;
+
   /// A cache mapping a string value to a StringLiteral object with the same
   /// value.
   ///
@@ -2815,6 +2818,10 @@ public:
   /// of static storage duration.
   APValue *getMaterializedTemporaryValue(const MaterializeTemporaryExpr *E,
                                          bool MayCreate);
+
+  /// Adds an APValue that will be destructed during the destruction of the
+  /// ASTContext.
+  void AddAPValueCleanup(APValue *Ptr) const { APValueCleanups.push_back(Ptr); }
 
   /// Return a string representing the human readable name for the specified
   /// function declaration or file name. Used by SourceLocExpr and

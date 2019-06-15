@@ -841,16 +841,38 @@ public:
       return;
 
     // First, find when we processed the statement.
+    // If we work with a 'CXXNewExpr' that is going to be purged away before
+    // its call take place. We would catch that purge in the last condition
+    // as a 'StmtPoint' so we have to bypass it.
+    const bool BypassCXXNewExprEval = isa<CXXNewExpr>(S);
+
+    // This is moving forward when we enter into another context.
+    const StackFrameContext *CurrentSFC = Node->getStackFrame();
+
     do {
-      if (auto CEE = Node->getLocationAs<CallExitEnd>())
+      // If that is satisfied we found our statement as an inlined call.
+      if (Optional<CallExitEnd> CEE = Node->getLocationAs<CallExitEnd>())
         if (CEE->getCalleeContext()->getCallSite() == S)
           break;
-      if (auto SP = Node->getLocationAs<StmtPoint>())
-        if (SP->getStmt() == S)
-          break;
 
+      // Try to move forward to the end of the call-chain.
       Node = Node->getFirstPred();
-    } while (Node);
+      if (!Node)
+        break;
+
+      const StackFrameContext *PredSFC = Node->getStackFrame();
+
+      // If that is satisfied we found our statement.
+      // FIXME: This code currently bypasses the call site for the
+      //        conservatively evaluated allocator.
+      if (!BypassCXXNewExprEval)
+        if (Optional<StmtPoint> SP = Node->getLocationAs<StmtPoint>())
+          // See if we do not enter into another context.
+          if (SP->getStmt() == S && CurrentSFC == PredSFC)
+            break;
+
+      CurrentSFC = PredSFC;
+    } while (Node->getStackFrame() == CurrentSFC);
 
     // Next, step over any post-statement checks.
     while (Node && Node->getLocation().getAs<PostStmt>())

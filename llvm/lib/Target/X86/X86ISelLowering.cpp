@@ -5967,6 +5967,29 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
     return CastBitData(UndefSrcElts, SrcEltBits);
   }
 
+  // Insert constant bits from a base and sub vector sources.
+  if (Op.getOpcode() == ISD::INSERT_SUBVECTOR &&
+      isa<ConstantSDNode>(Op.getOperand(2))) {
+    // TODO - support insert_subvector through bitcasts.
+    if (EltSizeInBits != VT.getScalarSizeInBits())
+      return false;
+
+    APInt UndefSubElts;
+    SmallVector<APInt, 32> EltSubBits;
+    if (getTargetConstantBitsFromNode(Op.getOperand(1), EltSizeInBits,
+                                      UndefSubElts, EltSubBits,
+                                      AllowWholeUndefs, AllowPartialUndefs) &&
+        getTargetConstantBitsFromNode(Op.getOperand(0), EltSizeInBits,
+                                      UndefElts, EltBits, AllowWholeUndefs,
+                                      AllowPartialUndefs)) {
+      unsigned BaseIdx = Op.getConstantOperandVal(2);
+      UndefElts.insertBits(UndefSubElts, BaseIdx);
+      for (unsigned i = 0, e = EltSubBits.size(); i != e; ++i)
+        EltBits[BaseIdx + i] = EltSubBits[i];
+      return true;
+    }
+  }
+
   // Extract constant bits from a subvector's source.
   if (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       isa<ConstantSDNode>(Op.getOperand(1))) {
