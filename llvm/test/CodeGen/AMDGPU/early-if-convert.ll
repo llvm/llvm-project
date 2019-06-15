@@ -65,7 +65,7 @@ entry:
   br i1 %cc, label %if, label %endif
 
 if:
-  call void asm "; clobber $0", "~{VCC}"() #0
+  call void asm "; clobber $0", "~{vcc}"() #0
   %u = add i32 %v, %v
   br label %endif
 

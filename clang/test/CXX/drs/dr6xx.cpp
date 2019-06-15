@@ -1132,3 +1132,20 @@ namespace dr692 { // dr692: no
     template void f(int*); // expected-error {{ambiguous}}
   }
 }
+
+namespace dr696 { // dr696: yes
+  void f(const int*);
+  void g() {
+    const int N = 10; // expected-note 1+{{here}}
+    struct A {
+      void h() {
+        int arr[N]; (void)arr;
+        f(&N); // expected-error {{declared in enclosing}}
+      }
+    };
+#if __cplusplus >= 201103L
+    (void) [] { int arr[N]; (void)arr; };
+    (void) [] { f(&N); }; // expected-error {{cannot be implicitly captured}} expected-note {{here}}
+#endif
+  }
+}

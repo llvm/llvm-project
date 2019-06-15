@@ -17,6 +17,42 @@ namespace dr705 { // dr705: yes
   }
 }
 
+namespace dr712 { // dr712: partial
+  void use(int);
+  void f() {
+    const int a = 0; // expected-note 5{{here}}
+    struct X {
+      void g(bool cond) {
+        use(a);
+        use((a));
+        use(cond ? a : a);
+        use((cond, a)); // expected-warning 2{{unused}} FIXME: should only warn once
+
+        (void)a; // FIXME: expected-error {{declared in enclosing}}
+        (void)(a); // FIXME: expected-error {{declared in enclosing}}
+        (void)(cond ? a : a); // FIXME: expected-error 2{{declared in enclosing}}
+        (void)(cond, a); // FIXME: expected-error {{declared in enclosing}} expected-warning {{unused}}
+      }
+    };
+  }
+
+#if __cplusplus >= 201103L
+  void g() {
+    struct A { int n; };
+    constexpr A a = {0}; // expected-note 2{{here}}
+    struct X {
+      void g(bool cond) {
+        use(a.n);
+        use(a.*&A::n);
+
+        (void)a.n; // FIXME: expected-error {{declared in enclosing}}
+        (void)(a.*&A::n); // FIXME: expected-error {{declared in enclosing}}
+      }
+    };
+  }
+#endif
+}
+
 namespace dr727 { // dr727: partial
   struct A {
     template<typename T> struct C; // expected-note 6{{here}}

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/Stack.h"
+#include "clang/Basic/TargetOptions.h"
 #include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -36,10 +37,12 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <cstdio>
 
 #ifdef CLANG_HAVE_RLIMITS
@@ -166,6 +169,23 @@ static void ensureSufficientStack() {
 static void ensureSufficientStack() {}
 #endif
 
+/// print supported cpus of the given target
+int PrintSupportedCPUs(std::string TargetStr) {
+  std::string Error;
+  const llvm::Target *TheTarget =
+      llvm::TargetRegistry::lookupTarget(TargetStr, Error);
+  if (!TheTarget) {
+    llvm::errs() << Error;
+    return 1;
+  }
+
+  // the target machine will handle the mcpu printing
+  llvm::TargetOptions Options;
+  std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
+      TheTarget->createTargetMachine(TargetStr, "", "+cpuHelp", Options, None));
+  return 0;
+}
+
 int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   ensureSufficientStack();
 
@@ -198,6 +218,11 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   if (Clang->getFrontendOpts().TimeTrace)
     llvm::timeTraceProfilerInitialize();
+
+  // --print-supported-cpus takes priority over the actual compilation
+  if (Clang->getFrontendOpts().PrintSupportedCPUs) {
+    return PrintSupportedCPUs(Clang->getTargetOpts().Triple);
+  }
 
   // Infer the builtin include path if unspecified.
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&

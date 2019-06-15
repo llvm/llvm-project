@@ -45,7 +45,6 @@ tablegen("AArch64GenSubtargetInfo") {
 group("tablegen") {
   visibility = [
     ":MCTargetDesc",
-    "../TargetInfo",
     "../Utils",
   ]
   public_deps = [

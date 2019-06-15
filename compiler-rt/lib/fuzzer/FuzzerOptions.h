@@ -53,6 +53,7 @@ struct FuzzingOptions {
   std::string DataFlowTrace;
   std::string CollectDataFlow;
   std::string FeaturesDir;
+  std::string StopFile;
   bool SaveArtifacts = true;
   bool PrintNEW = true; // Print a status line when new units are found;
   bool PrintNewCovPcs = false;

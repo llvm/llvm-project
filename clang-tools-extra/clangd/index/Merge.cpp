@@ -95,7 +95,7 @@ void MergedIndex::refs(const RefsRequest &Req,
   uint32_t Remaining =
       Req.Limit.getValueOr(std::numeric_limits<uint32_t>::max());
   // We don't want duplicated refs from the static/dynamic indexes,
-  // and we can't reliably duplicate them because offsets may differ slightly.
+  // and we can't reliably deduplicate them because offsets may differ slightly.
   // We consider the dynamic index authoritative and report all its refs,
   // and only report static index refs from other files.
   //
@@ -116,6 +116,31 @@ void MergedIndex::refs(const RefsRequest &Req,
     if (Remaining > 0 && !DynamicIndexFileURIs.count(O.Location.FileURI)) {
       --Remaining;
       Callback(O);
+    }
+  });
+}
+
+void MergedIndex::relations(
+    const RelationsRequest &Req,
+    llvm::function_ref<void(const SymbolID &, const Symbol &)> Callback) const {
+  uint32_t Remaining =
+      Req.Limit.getValueOr(std::numeric_limits<uint32_t>::max());
+  // Return results from both indexes but avoid duplicates.
+  // We might return stale relations from the static index;
+  // we don't currently have a good way of identifying them.
+  llvm::DenseSet<std::pair<SymbolID, SymbolID>> SeenRelations;
+  Dynamic->relations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
+    Callback(Subject, Object);
+    SeenRelations.insert(std::make_pair(Subject, Object.ID));
+    --Remaining;
+  });
+  if (Remaining == 0)
+    return;
+  Static->relations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
+    if (Remaining > 0 &&
+        !SeenRelations.count(std::make_pair(Subject, Object.ID))) {
+      --Remaining;
+      Callback(Subject, Object);
     }
   });
 }

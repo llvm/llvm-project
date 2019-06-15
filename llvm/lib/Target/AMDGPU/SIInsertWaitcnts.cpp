@@ -808,6 +808,21 @@ static bool readsVCCZ(const MachineInstr &MI) {
          !MI.getOperand(1).isUndef();
 }
 
+/// \returns true if the callee inserts an s_waitcnt 0 on function entry.
+static bool callWaitsOnFunctionEntry(const MachineInstr &MI) {
+  // Currently all conventions wait, but this may not always be the case.
+  //
+  // TODO: If IPRA is enabled, and the callee is isSafeForNoCSROpt, it may make
+  // senses to omit the wait and do it in the caller.
+  return true;
+}
+
+/// \returns true if the callee is expected to wait for any outstanding waits
+/// before returning.
+static bool callWaitsOnFunctionReturn(const MachineInstr &MI) {
+  return true;
+}
+
 ///  Generate s_waitcnt instruction to be placed before cur_Inst.
 ///  Instructions of a given type are returned in order,
 ///  but instructions of different types can complete out of order.
@@ -843,7 +858,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   // NOTE: this could be improved with knowledge of all call sites or
   //   with knowledge of the called routines.
   if (MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||
-      MI.getOpcode() == AMDGPU::S_SETPC_B64_return) {
+      MI.getOpcode() == AMDGPU::S_SETPC_B64_return ||
+      (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry(MI))) {
     Wait = Wait.combined(AMDGPU::Waitcnt::allZero(IV));
   }
   // Resolve vm waits before gs-done.
@@ -923,91 +939,91 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
       }
     }
 
-#if 0 // TODO: the following code to handle CALL.
-    // The argument passing for CALLs should suffice for VM_CNT and LGKM_CNT.
-    // However, there is a problem with EXP_CNT, because the call cannot
-    // easily tell if a register is used in the function, and if it did, then
-    // the referring instruction would have to have an S_WAITCNT, which is
-    // dependent on all call sites. So Instead, force S_WAITCNT for EXP_CNTs
-    // before the call.
-    if (MI.getOpcode() == SC_CALL) {
-      if (ScoreBrackets->getScoreUB(EXP_CNT) >
-        ScoreBrackets->getScoreLB(EXP_CNT)) {
-        ScoreBrackets->setScoreLB(EXP_CNT, ScoreBrackets->getScoreUB(EXP_CNT));
-        EmitWaitcnt |= CNT_MASK(EXP_CNT);
-      }
-    }
-#endif
+    if (MI.isCall() && callWaitsOnFunctionEntry(MI)) {
+      // Don't bother waiting on anything except the call address. The function
+      // is going to insert a wait on everything in its prolog. This still needs
+      // to be careful if the call target is a load (e.g. a GOT load).
+      Wait = AMDGPU::Waitcnt();
 
-    // FIXME: Should not be relying on memoperands.
-    // Look at the source operands of every instruction to see if
-    // any of them results from a previous memory operation that affects
-    // its current usage. If so, an s_waitcnt instruction needs to be
-    // emitted.
-    // If the source operand was defined by a load, add the s_waitcnt
-    // instruction.
-    for (const MachineMemOperand *Memop : MI.memoperands()) {
-      unsigned AS = Memop->getAddrSpace();
-      if (AS != AMDGPUAS::LOCAL_ADDRESS)
-        continue;
-      unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
-      // VM_CNT is only relevant to vgpr or LDS.
-      ScoreBrackets.determineWait(
-          VM_CNT, ScoreBrackets.getRegScore(RegNo, VM_CNT), Wait);
-    }
-
-    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
-      const MachineOperand &Op = MI.getOperand(I);
-      const MachineRegisterInfo &MRIA = *MRI;
-      RegInterval Interval =
-          ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I, false);
+      int CallAddrOpIdx =
+          AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
+      RegInterval Interval = ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI,
+                                                          CallAddrOpIdx, false);
       for (signed RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-        if (TRI->isVGPR(MRIA, Op.getReg())) {
-          // VM_CNT is only relevant to vgpr or LDS.
-          ScoreBrackets.determineWait(
-              VM_CNT, ScoreBrackets.getRegScore(RegNo, VM_CNT), Wait);
-        }
         ScoreBrackets.determineWait(
             LGKM_CNT, ScoreBrackets.getRegScore(RegNo, LGKM_CNT), Wait);
       }
-    }
-    // End of for loop that looks at all source operands to decide vm_wait_cnt
-    // and lgk_wait_cnt.
-
-    // Two cases are handled for destination operands:
-    // 1) If the destination operand was defined by a load, add the s_waitcnt
-    // instruction to guarantee the right WAW order.
-    // 2) If a destination operand that was used by a recent export/store ins,
-    // add s_waitcnt on exp_cnt to guarantee the WAR order.
-    if (MI.mayStore()) {
+    } else {
       // FIXME: Should not be relying on memoperands.
+      // Look at the source operands of every instruction to see if
+      // any of them results from a previous memory operation that affects
+      // its current usage. If so, an s_waitcnt instruction needs to be
+      // emitted.
+      // If the source operand was defined by a load, add the s_waitcnt
+      // instruction.
       for (const MachineMemOperand *Memop : MI.memoperands()) {
         unsigned AS = Memop->getAddrSpace();
         if (AS != AMDGPUAS::LOCAL_ADDRESS)
           continue;
         unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
+        // VM_CNT is only relevant to vgpr or LDS.
         ScoreBrackets.determineWait(
             VM_CNT, ScoreBrackets.getRegScore(RegNo, VM_CNT), Wait);
-        ScoreBrackets.determineWait(
-            EXP_CNT, ScoreBrackets.getRegScore(RegNo, EXP_CNT), Wait);
       }
-    }
-    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
-      MachineOperand &Def = MI.getOperand(I);
-      const MachineRegisterInfo &MRIA = *MRI;
-      RegInterval Interval =
-          ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I, true);
-      for (signed RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-        if (TRI->isVGPR(MRIA, Def.getReg())) {
+
+      for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
+        const MachineOperand &Op = MI.getOperand(I);
+        const MachineRegisterInfo &MRIA = *MRI;
+        RegInterval Interval =
+            ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I, false);
+        for (signed RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
+          if (TRI->isVGPR(MRIA, Op.getReg())) {
+            // VM_CNT is only relevant to vgpr or LDS.
+            ScoreBrackets.determineWait(
+                VM_CNT, ScoreBrackets.getRegScore(RegNo, VM_CNT), Wait);
+          }
+          ScoreBrackets.determineWait(
+              LGKM_CNT, ScoreBrackets.getRegScore(RegNo, LGKM_CNT), Wait);
+        }
+      }
+      // End of for loop that looks at all source operands to decide vm_wait_cnt
+      // and lgk_wait_cnt.
+
+      // Two cases are handled for destination operands:
+      // 1) If the destination operand was defined by a load, add the s_waitcnt
+      // instruction to guarantee the right WAW order.
+      // 2) If a destination operand that was used by a recent export/store ins,
+      // add s_waitcnt on exp_cnt to guarantee the WAR order.
+      if (MI.mayStore()) {
+        // FIXME: Should not be relying on memoperands.
+        for (const MachineMemOperand *Memop : MI.memoperands()) {
+          unsigned AS = Memop->getAddrSpace();
+          if (AS != AMDGPUAS::LOCAL_ADDRESS)
+            continue;
+          unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
           ScoreBrackets.determineWait(
               VM_CNT, ScoreBrackets.getRegScore(RegNo, VM_CNT), Wait);
           ScoreBrackets.determineWait(
               EXP_CNT, ScoreBrackets.getRegScore(RegNo, EXP_CNT), Wait);
         }
-        ScoreBrackets.determineWait(
-            LGKM_CNT, ScoreBrackets.getRegScore(RegNo, LGKM_CNT), Wait);
       }
-    } // End of for loop that looks at all dest operands.
+      for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
+        MachineOperand &Def = MI.getOperand(I);
+        const MachineRegisterInfo &MRIA = *MRI;
+        RegInterval Interval =
+            ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I, true);
+        for (signed RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
+          if (TRI->isVGPR(MRIA, Def.getReg())) {
+            ScoreBrackets.determineWait(
+                VM_CNT, ScoreBrackets.getRegScore(RegNo, VM_CNT), Wait);
+            ScoreBrackets.determineWait(
+                EXP_CNT, ScoreBrackets.getRegScore(RegNo, EXP_CNT), Wait);
+          }
+          ScoreBrackets.determineWait(
+              LGKM_CNT, ScoreBrackets.getRegScore(RegNo, LGKM_CNT), Wait);
+        }
+      } // End of for loop that looks at all dest operands.
+    }
   }
 
   // Check to see if this is an S_BARRIER, and if an implicit S_WAITCNT 0
@@ -1224,6 +1240,14 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     }
   } else if (TII->isSMRD(Inst)) {
     ScoreBrackets->updateByEvent(TII, TRI, MRI, SMEM_ACCESS, Inst);
+  } else if (Inst.isCall()) {
+    if (callWaitsOnFunctionReturn(Inst)) {
+      // Act as a wait on everything
+      ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt::allZero(IV));
+    } else {
+      // May need to way wait for anything.
+      ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt());
+    }
   } else {
     switch (Inst.getOpcode()) {
     case AMDGPU::S_SENDMSG:

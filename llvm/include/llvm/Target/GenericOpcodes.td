@@ -857,6 +857,15 @@ def G_BRINDIRECT : GenericInstruction {
   let isTerminator = 1;
 }
 
+// Generic branch to jump table entry
+def G_BRJT : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins ptype0:$tbl, unknown:$jti, type1:$idx);
+  let hasSideEffects = 0;
+  let isBranch = 1;
+  let isTerminator = 1;
+}
+
 //------------------------------------------------------------------------------
 // Vector ops
 //------------------------------------------------------------------------------

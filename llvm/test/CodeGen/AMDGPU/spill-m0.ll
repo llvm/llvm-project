@@ -43,7 +43,7 @@
 ; GCN: s_add_i32 s{{[0-9]+}}, m0, 1
 define amdgpu_kernel void @spill_m0(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
-  %m0 = call i32 asm sideeffect "s_mov_b32 m0, 0", "={M0}"() #0
+  %m0 = call i32 asm sideeffect "s_mov_b32 m0, 0", "={m0}"() #0
   %cmp0 = icmp eq i32 %cond, 0
   br i1 %cmp0, label %if, label %endif
 
@@ -52,7 +52,7 @@ if:
   br label %endif
 
 endif:
-  %foo = call i32 asm sideeffect "s_add_i32 $0, $1, 1", "=s,{M0}"(i32 %m0) #0
+  %foo = call i32 asm sideeffect "s_add_i32 $0, $1, 1", "=s,{m0}"(i32 %m0) #0
   store i32 %foo, i32 addrspace(1)* %out
   ret void
 }
@@ -138,9 +138,9 @@ endif:                                            ; preds = %else, %if
 ; GCN-NOT: s_buffer_load_dword m0
 define amdgpu_kernel void @m0_unavailable_spill(i32 %m0.arg) #0 {
 main_body:
-  %m0 = call i32 asm sideeffect "; def $0, 1", "={M0}"() #0
+  %m0 = call i32 asm sideeffect "; def $0, 1", "={m0}"() #0
   %tmp = call float @llvm.amdgcn.interp.mov(i32 2, i32 0, i32 0, i32 %m0.arg)
-  call void asm sideeffect "; clobber $0", "~{M0}"() #0
+  call void asm sideeffect "; clobber $0", "~{m0}"() #0
   %cmp = fcmp ueq float 0.000000e+00, %tmp
    br i1 %cmp, label %if, label %else
 
@@ -191,14 +191,14 @@ endif:
 ; TOSMEM: s_dcache_wb
 ; TOSMEM: s_endpgm
 define amdgpu_kernel void @restore_m0_lds(i32 %arg) {
-  %m0 = call i32 asm sideeffect "s_mov_b32 m0, 0", "={M0}"() #0
+  %m0 = call i32 asm sideeffect "s_mov_b32 m0, 0", "={m0}"() #0
   %sval = load volatile i64, i64 addrspace(4)* undef
   %cmp = icmp eq i32 %arg, 0
   br i1 %cmp, label %ret, label %bb
 
 bb:
   store volatile i64 %sval, i64 addrspace(3)* undef
-  call void asm sideeffect "; use $0", "{M0}"(i32 %m0) #0
+  call void asm sideeffect "; use $0", "{m0}"(i32 %m0) #0
   br label %ret
 
 ret:

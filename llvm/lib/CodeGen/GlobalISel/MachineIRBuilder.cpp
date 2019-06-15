@@ -245,6 +245,17 @@ MachineInstrBuilder MachineIRBuilder::buildBrIndirect(unsigned Tgt) {
   return buildInstr(TargetOpcode::G_BRINDIRECT).addUse(Tgt);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildBrJT(unsigned TablePtr,
+                                                unsigned JTI,
+                                                unsigned IndexReg) {
+  assert(getMRI()->getType(TablePtr).isPointer() &&
+         "Table reg must be a pointer");
+  return buildInstr(TargetOpcode::G_BRJT)
+      .addUse(TablePtr)
+      .addJumpTableIndex(JTI)
+      .addUse(IndexReg);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildCopy(const DstOp &Res,
                                                 const SrcOp &Op) {
   return buildInstr(TargetOpcode::COPY, Res, Op);

@@ -635,8 +635,10 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   if (E->getType().getObjCLifetime() == Qualifiers::OCL_Weak)
     Cleanup.setExprNeedsCleanups(true);
 
-  Res = ImplicitCastExpr::Create(Context, T, CK_LValueToRValue, E, nullptr,
-                                 VK_RValue);
+  // C++ [conv.lval]p3:
+  //   If T is cv std::nullptr_t, the result is a null pointer constant.
+  CastKind CK = T->isNullPtrType() ? CK_NullToPointer : CK_LValueToRValue;
+  Res = ImplicitCastExpr::Create(Context, T, CK, E, nullptr, VK_RValue);
 
   // C11 6.3.2.1p2:
   //   ... if the lvalue has atomic type, the value has the non-atomic version
@@ -15806,6 +15808,32 @@ QualType Sema::getCapturedDeclRefType(VarDecl *Var, SourceLocation Loc) {
   return DeclRefType;
 }
 
+namespace {
+// Helper to copy the template arguments from a DeclRefExpr or MemberExpr.
+// The produced TemplateArgumentListInfo* points to data stored within this
+// object, so should only be used in contexts where the pointer will not be
+// used after the CopiedTemplateArgs object is destroyed.
+class CopiedTemplateArgs {
+  bool HasArgs;
+  TemplateArgumentListInfo TemplateArgStorage;
+public:
+  template<typename RefExpr>
+  CopiedTemplateArgs(RefExpr *E) : HasArgs(E->hasExplicitTemplateArgs()) {
+    if (HasArgs)
+      E->copyTemplateArgumentsInto(TemplateArgStorage);
+  }
+  operator TemplateArgumentListInfo*()
+#ifdef __has_cpp_attribute
+#if __has_cpp_attribute(clang::lifetimebound)
+  [[clang::lifetimebound]]
+#endif
+#endif
+  {
+    return HasArgs ? &TemplateArgStorage : nullptr;
+  }
+};
+}
+
 /// Walk the set of potential results of an expression and mark them all as
 /// non-odr-uses if they satisfy the side-conditions of the NonOdrUseReason.
 ///
@@ -15897,16 +15925,11 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
 
     // Rebuild as a non-odr-use DeclRefExpr.
     MarkNotOdrUsed();
-    TemplateArgumentListInfo TemplateArgStorage, *TemplateArgs = nullptr;
-    if (DRE->hasExplicitTemplateArgs()) {
-      DRE->copyTemplateArgumentsInto(TemplateArgStorage);
-      TemplateArgs = &TemplateArgStorage;
-    }
     return DeclRefExpr::Create(
         S.Context, DRE->getQualifierLoc(), DRE->getTemplateKeywordLoc(),
         DRE->getDecl(), DRE->refersToEnclosingVariableOrCapture(),
         DRE->getNameInfo(), DRE->getType(), DRE->getValueKind(),
-        DRE->getFoundDecl(), TemplateArgs, NOUR);
+        DRE->getFoundDecl(), CopiedTemplateArgs(DRE), NOUR);
   }
 
   case Expr::FunctionParmPackExprClass: {
@@ -15924,52 +15947,107 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
     break;
   }
 
-  // FIXME: Implement these.
   //   -- If e is a subscripting operation with an array operand...
-  //   -- If e is a class member access expression [...] naming a non-static
-  //      data member...
+  case Expr::ArraySubscriptExprClass: {
+    auto *ASE = cast<ArraySubscriptExpr>(E);
+    Expr *OldBase = ASE->getBase()->IgnoreImplicit();
+    if (!OldBase->getType()->isArrayType())
+      break;
+    ExprResult Base = Rebuild(OldBase);
+    if (!Base.isUsable())
+      return Base;
+    Expr *LHS = ASE->getBase() == ASE->getLHS() ? Base.get() : ASE->getLHS();
+    Expr *RHS = ASE->getBase() == ASE->getRHS() ? Base.get() : ASE->getRHS();
+    SourceLocation LBracketLoc = ASE->getBeginLoc(); // FIXME: Not stored.
+    return S.ActOnArraySubscriptExpr(nullptr, LHS, LBracketLoc, RHS,
+                                     ASE->getRBracketLoc());
+  }
 
-  //   -- If e is a class member access expression naming a static data member,
-  //      ...
   case Expr::MemberExprClass: {
     auto *ME = cast<MemberExpr>(E);
+    // -- If e is a class member access expression [...] naming a non-static
+    //    data member...
+    if (isa<FieldDecl>(ME->getMemberDecl())) {
+      ExprResult Base = Rebuild(ME->getBase());
+      if (!Base.isUsable())
+        return Base;
+      return MemberExpr::Create(
+          S.Context, Base.get(), ME->isArrow(), ME->getOperatorLoc(),
+          ME->getQualifierLoc(), ME->getTemplateKeywordLoc(),
+          ME->getMemberDecl(), ME->getFoundDecl(), ME->getMemberNameInfo(),
+          CopiedTemplateArgs(ME), ME->getType(), ME->getValueKind(),
+          ME->getObjectKind(), ME->isNonOdrUse());
+    }
+
     if (ME->getMemberDecl()->isCXXInstanceMember())
-      // FIXME: Recurse to the left-hand side.
       break;
 
+    // -- If e is a class member access expression naming a static data member,
+    //    ...
     if (ME->isNonOdrUse() || IsPotentialResultOdrUsed(ME->getMemberDecl()))
       break;
 
     // Rebuild as a non-odr-use MemberExpr.
     MarkNotOdrUsed();
-    TemplateArgumentListInfo TemplateArgStorage, *TemplateArgs = nullptr;
-    if (ME->hasExplicitTemplateArgs()) {
-      ME->copyTemplateArgumentsInto(TemplateArgStorage);
-      TemplateArgs = &TemplateArgStorage;
-    }
     return MemberExpr::Create(
         S.Context, ME->getBase(), ME->isArrow(), ME->getOperatorLoc(),
         ME->getQualifierLoc(), ME->getTemplateKeywordLoc(), ME->getMemberDecl(),
-        ME->getFoundDecl(), ME->getMemberNameInfo(), TemplateArgs,
+        ME->getFoundDecl(), ME->getMemberNameInfo(), CopiedTemplateArgs(ME),
         ME->getType(), ME->getValueKind(), ME->getObjectKind(), NOUR);
     return ExprEmpty();
   }
 
-  // FIXME: Implement this.
-  //   -- If e is a pointer-to-member expression of the form e1 .* e2 ...
+  case Expr::BinaryOperatorClass: {
+    auto *BO = cast<BinaryOperator>(E);
+    Expr *LHS = BO->getLHS();
+    Expr *RHS = BO->getRHS();
+    // -- If e is a pointer-to-member expression of the form e1 .* e2 ...
+    if (BO->getOpcode() == BO_PtrMemD) {
+      ExprResult Sub = Rebuild(LHS);
+      if (!Sub.isUsable())
+        return Sub;
+      LHS = Sub.get();
+    //   -- If e is a comma expression, ...
+    } else if (BO->getOpcode() == BO_Comma) {
+      ExprResult Sub = Rebuild(RHS);
+      if (!Sub.isUsable())
+        return Sub;
+      RHS = Sub.get();
+    } else {
+      break;
+    }
+    return S.BuildBinOp(nullptr, BO->getOperatorLoc(), BO->getOpcode(),
+                        LHS, RHS);
+  }
 
   //   -- If e has the form (e1)...
   case Expr::ParenExprClass: {
-    auto *PE = dyn_cast<ParenExpr>(E);
+    auto *PE = cast<ParenExpr>(E);
     ExprResult Sub = Rebuild(PE->getSubExpr());
     if (!Sub.isUsable())
       return Sub;
     return S.ActOnParenExpr(PE->getLParen(), PE->getRParen(), Sub.get());
   }
 
-  // FIXME: Implement these.
   //   -- If e is a glvalue conditional expression, ...
-  //   -- If e is a comma expression, ...
+  // We don't apply this to a binary conditional operator. FIXME: Should we?
+  case Expr::ConditionalOperatorClass: {
+    auto *CO = cast<ConditionalOperator>(E);
+    ExprResult LHS = Rebuild(CO->getLHS());
+    if (LHS.isInvalid())
+      return ExprError();
+    ExprResult RHS = Rebuild(CO->getRHS());
+    if (RHS.isInvalid())
+      return ExprError();
+    if (!LHS.isUsable() && !RHS.isUsable())
+      return ExprEmpty();
+    if (!LHS.isUsable())
+      LHS = CO->getLHS();
+    if (!RHS.isUsable())
+      RHS = CO->getRHS();
+    return S.ActOnConditionalOp(CO->getQuestionLoc(), CO->getColonLoc(),
+                                CO->getCond(), LHS.get(), RHS.get());
+  }
 
   // [Clang extension]
   //   -- If e has the form __extension__ e1...
@@ -15988,7 +16066,7 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
   //   -- If e has the form _Generic(...), the set of potential results is the
   //      union of the sets of potential results of the associated expressions.
   case Expr::GenericSelectionExprClass: {
-    auto *GSE = dyn_cast<GenericSelectionExpr>(E);
+    auto *GSE = cast<GenericSelectionExpr>(E);
 
     SmallVector<Expr *, 4> AssocExprs;
     bool AnyChanged = false;
@@ -16016,7 +16094,7 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
   //      results is the union of the sets of potential results of the
   //      second and third subexpressions.
   case Expr::ChooseExprClass: {
-    auto *CE = dyn_cast<ChooseExpr>(E);
+    auto *CE = cast<ChooseExpr>(E);
 
     ExprResult LHS = Rebuild(CE->getLHS());
     if (LHS.isInvalid())
@@ -16039,11 +16117,36 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
 
   // Step through non-syntactic nodes.
   case Expr::ConstantExprClass: {
-    auto *CE = dyn_cast<ConstantExpr>(E);
+    auto *CE = cast<ConstantExpr>(E);
     ExprResult Sub = Rebuild(CE->getSubExpr());
     if (!Sub.isUsable())
       return Sub;
     return ConstantExpr::Create(S.Context, Sub.get());
+  }
+
+  // We could mostly rely on the recursive rebuilding to rebuild implicit
+  // casts, but not at the top level, so rebuild them here.
+  case Expr::ImplicitCastExprClass: {
+    auto *ICE = cast<ImplicitCastExpr>(E);
+    // Only step through the narrow set of cast kinds we expect to encounter.
+    // Anything else suggests we've left the region in which potential results
+    // can be found.
+    switch (ICE->getCastKind()) {
+    case CK_NoOp:
+    case CK_DerivedToBase:
+    case CK_UncheckedDerivedToBase: {
+      ExprResult Sub = Rebuild(ICE->getSubExpr());
+      if (!Sub.isUsable())
+        return Sub;
+      CXXCastPath Path(ICE->path());
+      return S.ImpCastExprToType(Sub.get(), ICE->getType(), ICE->getCastKind(),
+                                 ICE->getValueKind(), &Path);
+    }
+
+    default:
+      break;
+    }
+    break;
   }
 
   default:

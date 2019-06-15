@@ -63,7 +63,7 @@ void foo(int arg) {
   // CK1: [[CAP_DEVICE:%.+]] = getelementptr inbounds %struct.anon, %struct.anon* [[CAPTURES:%.+]], i32 0, i32 0
   // CK1: [[DEVICE:%.+]] = load i32, i32* %{{.+}}
   // CK1: store i32 [[DEVICE]], i32* [[CAP_DEVICE]],
-  // CK1: [[RES:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* {{.+}}, i32 {{.+}}, i32 1, i[[sz]] [[sz]], i[[sz]] 4, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates*)* [[TASK_ENTRY0:@.+]] to i32 (i32, i8*)*))
+  // CK1: [[RES:%.+]] = call i8* @__kmpc_omp_target_task_alloc(%struct.ident_t* {{.+}}, i32 {{.+}}, i32 1, i[[sz]] [[sz]], i[[sz]] 4, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates*)* [[TASK_ENTRY0:@.+]] to i32 (i32, i8*)*), i64
   // CK1: [[BC:%.+]] = bitcast i8* [[RES]] to %struct.kmp_task_t_with_privates*
   // CK1: [[TASK_T:%.+]] = getelementptr inbounds %struct.kmp_task_t_with_privates, %struct.kmp_task_t_with_privates* [[BC]], i32 0, i32 0
   // CK1: [[SHAREDS:%.+]] = getelementptr inbounds %struct.kmp_task_t, %struct.kmp_task_t* [[TASK_T]], i32 0, i32 0
