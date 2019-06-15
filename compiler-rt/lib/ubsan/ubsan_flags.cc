@@ -69,7 +69,7 @@ void InitializeFlags() {
   // Override from user-specified string.
   parser.ParseString(MaybeCallUbsanDefaultOptions());
   // Override from environment variable.
-  parser.ParseString(GetFlag("UBSAN_OPTIONS"));
+  parser.ParseStringFromEnv("UBSAN_OPTIONS");
   InitializeCommonFlags();
   if (Verbosity()) ReportUnrecognizedFlags();
 

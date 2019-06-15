@@ -107,6 +107,8 @@ class BlockCoverage {
   // Function ID => vector of counters.
   // Each counter represents how many input files trigger the given basic block.
   std::unordered_map<size_t, CoverageVector> Functions;
+  // Functions that have DFT entry.
+  std::unordered_set<size_t> FunctionsWithDFT;
 };
 
 class DataFlowTrace {

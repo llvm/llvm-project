@@ -350,10 +350,11 @@ void Initialize(ThreadState *thr) {
   SetCheckFailedCallback(TsanCheckFailed);
 
   ctx = new(ctx_placeholder) Context;
-  const char *options = GetEnv(SANITIZER_GO ? "GORACE" : "TSAN_OPTIONS");
+  const char *env_name = SANITIZER_GO ? "GORACE" : "TSAN_OPTIONS";
+  const char *options = GetEnv(env_name);
   CacheBinaryName();
   CheckASLR();
-  InitializeFlags(&ctx->flags, options);
+  InitializeFlags(&ctx->flags, options, env_name);
   AvoidCVE_2016_2143();
   __sanitizer::InitializePlatformEarly();
   __tsan::InitializePlatformEarly();

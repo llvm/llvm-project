@@ -129,13 +129,10 @@ static void InitializeFlags() {
   ubsan_parser.ParseString(ubsan_default_options);
 #endif
 
-  const char *hwasan_options = GetEnv("HWASAN_OPTIONS");
-  parser.ParseString(hwasan_options);
+  parser.ParseStringFromEnv("HWASAN_OPTIONS");
 #if HWASAN_CONTAINS_UBSAN
-  ubsan_parser.ParseString(GetEnv("UBSAN_OPTIONS"));
+  ubsan_parser.ParseStringFromEnv("UBSAN_OPTIONS");
 #endif
-  VPrintf(1, "HWASAN_OPTIONS: %s\n",
-          hwasan_options ? hwasan_options : "<empty>");
 
   InitializeCommonFlags();
 

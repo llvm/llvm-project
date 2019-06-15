@@ -61,9 +61,9 @@ versioned_functions = set(['memcpy', 'pthread_attr_getaffinity_np',
                            'pthread_cond_wait', 'realpath',
                            'sched_getaffinity'])
 
-def get_global_functions(library):
+def get_global_functions(nm_executable, library):
   functions = []
-  nm = os.environ.get('NM', 'nm')
+  nm = os.environ.get('NM', nm_executable)
   nm_proc = subprocess.Popen([nm, library], stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
   nm_out = nm_proc.communicate()[0].decode().split('\n')
@@ -84,6 +84,7 @@ def main(argv):
   parser.add_argument('--version-list', action='store_true')
   parser.add_argument('--extra', default=[], action='append')
   parser.add_argument('libraries', default=[], nargs='+')
+  parser.add_argument('--nm-executable', required=True)
   parser.add_argument('-o', '--output', required=True)
   args = parser.parse_args()
 
@@ -91,7 +92,7 @@ def main(argv):
 
   all_functions = []
   for library in args.libraries:
-    all_functions.extend(get_global_functions(library))
+    all_functions.extend(get_global_functions(args.nm_executable, library))
   function_set = set(all_functions)
   for func in all_functions:
     # Export new/delete operators.
