@@ -53,6 +53,56 @@ entry:
 	ret i32 %result
 }
 
+; If bitcast isn't considered a safe phi/select use, the alloca
+; remains as an array.
+; FIXME: Why isn't this identical to test2?
+
+; CHECK-LABEL: @test2_bitcast(
+; CHECK: alloca i32
+; CHECK-NEXT: alloca i32
+
+; CHECK: %select = select i1 %cond, i32* %a.sroa.3, i32* %a.sroa.0
+; CHECK-NEXT: %select.bc = bitcast i32* %select to float*
+; CHECK-NEXT: %result = load float, float* %select.bc, align 4
+define float @test2_bitcast() {
+entry:
+  %a = alloca [2 x i32]
+  %a0 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 0
+  %a1 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 1
+  store i32 0, i32* %a0
+  store i32 1, i32* %a1
+  %v0 = load i32, i32* %a0
+  %v1 = load i32, i32* %a1
+  %cond = icmp sle i32 %v0, %v1
+  %select = select i1 %cond, i32* %a1, i32* %a0
+  %select.bc = bitcast i32* %select to float*
+  %result = load float, float* %select.bc
+  ret float %result
+}
+
+; CHECK-LABEL: @test2_addrspacecast(
+; CHECK: alloca i32
+; CHECK-NEXT: alloca i32
+
+; CHECK: %select = select i1 %cond, i32* %a.sroa.3, i32* %a.sroa.0
+; CHECK-NEXT: %select.asc = addrspacecast i32* %select to i32 addrspace(1)*
+; CHECK-NEXT: load i32, i32 addrspace(1)* %select.asc, align 4
+define i32 @test2_addrspacecast() {
+entry:
+  %a = alloca [2 x i32]
+  %a0 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 0
+  %a1 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 1
+  store i32 0, i32* %a0
+  store i32 1, i32* %a1
+  %v0 = load i32, i32* %a0
+  %v1 = load i32, i32* %a1
+  %cond = icmp sle i32 %v0, %v1
+  %select = select i1 %cond, i32* %a1, i32* %a0
+  %select.asc = addrspacecast i32* %select to i32 addrspace(1)*
+  %result = load i32, i32 addrspace(1)* %select.asc
+  ret i32 %result
+}
+
 define i32 @test3(i32 %x) {
 ; CHECK-LABEL: @test3(
 entry:

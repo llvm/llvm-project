@@ -2667,7 +2667,8 @@ public:
       llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
           OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
       if (VD->hasGlobalStorage() && CS && !CS->capturesVariable(VD) &&
-          (!Res || *Res != OMPDeclareTargetDeclAttr::MT_Link))
+          (Stack->hasRequiresDeclWithClause<OMPUnifiedSharedMemoryClause>() ||
+           !Res || *Res != OMPDeclareTargetDeclAttr::MT_Link))
         return;
 
       SourceLocation ELoc = E->getExprLoc();

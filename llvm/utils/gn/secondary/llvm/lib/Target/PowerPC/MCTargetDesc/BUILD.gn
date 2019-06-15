@@ -7,7 +7,7 @@ tablegen("PPCGenAsmWriter") {
 }
 
 tablegen("PPCGenInstrInfo") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-instr-info" ]
   td_file = "../PPC.td"
 }
@@ -19,37 +19,27 @@ tablegen("PPCGenMCCodeEmitter") {
 }
 
 tablegen("PPCGenRegisterInfo") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-register-info" ]
   td_file = "../PPC.td"
 }
 
 tablegen("PPCGenSubtargetInfo") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-subtarget" ]
   td_file = "../PPC.td"
 }
 
-# This should contain tablegen targets generating .inc files included
-# by other targets. .inc files only used by .cpp files in this directory
-# should be in deps on the static_library instead.
-group("tablegen") {
-  visibility = [
-    ":MCTargetDesc",
-    "../InstPrinter",
-    "../TargetInfo",
-  ]
+static_library("MCTargetDesc") {
+  output_name = "LLVMPowerPCDesc"
+
+  # This should contain tablegen targets generating .inc files included
+  # by other targets. .inc files only used by .cpp files in this directory
+  # should be in deps instead.
   public_deps = [
     ":PPCGenInstrInfo",
     ":PPCGenRegisterInfo",
     ":PPCGenSubtargetInfo",
-  ]
-}
-
-static_library("MCTargetDesc") {
-  output_name = "LLVMPowerPCDesc"
-  public_deps = [
-    ":tablegen",
   ]
   deps = [
     ":PPCGenAsmWriter",

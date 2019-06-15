@@ -120,12 +120,6 @@ static Vector<uint8_t> DFTStringToVector(const std::string &DFTString) {
   return DFT;
 }
 
-static std::ostream &operator<<(std::ostream &OS, const Vector<uint8_t> &DFT) {
-  for (auto B : DFT)
-    OS << (B ? "1" : "0");
-  return OS;
-}
-
 static bool ParseError(const char *Err, const std::string &Line) {
   Printf("DataFlowTrace: parse error: %s: Line: %s\n", Err, Line.c_str());
   return false;
@@ -246,74 +240,25 @@ int CollectDataFlow(const std::string &DFTBinary, const std::string &DirPath,
                     const Vector<SizedFile> &CorporaFiles) {
   Printf("INFO: collecting data flow: bin: %s dir: %s files: %zd\n",
          DFTBinary.c_str(), DirPath.c_str(), CorporaFiles.size());
+  static char DFSanEnv[] = "DFSAN_OPTIONS=fast16labels=1:warn_unimplemented=0";
+  putenv(DFSanEnv);
   MkDir(DirPath);
-  auto Temp = TempPath(".dft");
   for (auto &F : CorporaFiles) {
     // For every input F we need to collect the data flow and the coverage.
     // Data flow collection may fail if we request too many DFSan tags at once.
     // So, we start from requesting all tags in range [0,Size) and if that fails
     // we then request tags in [0,Size/2) and [Size/2, Size), and so on.
     // Function number => DFT.
+    auto OutPath = DirPlusFile(DirPath, Hash(FileToVector(F.File)));
     std::unordered_map<size_t, Vector<uint8_t>> DFTMap;
     std::unordered_set<std::string> Cov;
-    std::queue<std::pair<size_t, size_t>> Q;
-    Q.push({0, F.Size});
-    while (!Q.empty()) {
-      auto R = Q.front();
-      Printf("\n\n\n********* Trying: [%zd, %zd)\n", R.first, R.second);
-      Q.pop();
-      Command Cmd;
-      Cmd.addArgument(DFTBinary);
-      Cmd.addArgument(std::to_string(R.first));
-      Cmd.addArgument(std::to_string(R.second));
-      Cmd.addArgument(F.File);
-      Cmd.addArgument(Temp);
-      Printf("CMD: %s\n", Cmd.toString().c_str());
-      if (ExecuteCommand(Cmd)) {
-        // DFSan has failed, collect tags for two subsets.
-        if (R.second - R.first >= 2) {
-          size_t Mid = (R.second + R.first) / 2;
-          Q.push({R.first, Mid});
-          Q.push({Mid, R.second});
-        }
-      } else {
-        Printf("********* Success: [%zd, %zd)\n", R.first, R.second);
-        std::ifstream IF(Temp);
-        std::string L;
-        while (std::getline(IF, L, '\n')) {
-          // Data flow collection has succeeded.
-          // Merge the results with the other runs.
-          if (L.empty()) continue;
-          if (L[0] == 'C') {
-            // Take coverage lines as is, they will be the same in all attempts.
-            Cov.insert(L);
-          } else if (L[0] == 'F') {
-            size_t FunctionNum = 0;
-            std::string DFTString;
-            if (ParseDFTLine(L, &FunctionNum, &DFTString)) {
-              auto &DFT = DFTMap[FunctionNum];
-              if (DFT.empty()) {
-                // Haven't seen this function before, take DFT as is.
-                DFT = DFTStringToVector(DFTString);
-              } else if (DFT.size() == DFTString.size()) {
-                // Have seen this function already, merge DFTs.
-                DFTStringAppendToVector(&DFT, DFTString);
-              }
-            }
-          }
-        }
-      }
-    }
-    auto OutPath = DirPlusFile(DirPath, Hash(FileToVector(F.File)));
-    // Dump combined DFT to disk.
-    Printf("Producing DFT for %s\n", OutPath.c_str());
-    std::ofstream OF(OutPath);
-    for (auto &DFT: DFTMap)
-      OF << "F" << DFT.first << " " << DFT.second << std::endl;
-    for (auto &C : Cov)
-      OF << C << std::endl;
+    Command Cmd;
+    Cmd.addArgument(DFTBinary);
+    Cmd.addArgument(F.File);
+    Cmd.addArgument(OutPath);
+    Printf("CMD: %s\n", Cmd.toString().c_str());
+    ExecuteCommand(Cmd);
   }
-  RemoveFile(Temp);
   // Write functions.txt if it's currently empty or doesn't exist.
   auto FunctionsTxtPath = DirPlusFile(DirPath, kFunctionsTxt);
   if (FileToString(FunctionsTxtPath).empty()) {

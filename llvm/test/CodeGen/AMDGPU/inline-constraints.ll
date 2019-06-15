@@ -36,7 +36,7 @@ entry:
 ; GCN: s_mov_b32 [[COPY_M0:s[0-9]+]], m0
 ; GCN: ; use [[COPY_M0]]
 define amdgpu_kernel void @inline_sreg_constraint_m0() {
-  %m0 = tail call i32 asm sideeffect "s_mov_b32 m0, -1", "={M0}"()
+  %m0 = tail call i32 asm sideeffect "s_mov_b32 m0, -1", "={m0}"()
   tail call void asm sideeffect "; use $0", "s"(i32 %m0)
   ret void
 }

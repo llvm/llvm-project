@@ -12,7 +12,6 @@
 #include <csignal>
 #include <unordered_set>
 
-#include "Plugins/Process/Utility/AuxVector.h"
 #include "lldb/Host/Debug.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/linux/Support.h"
@@ -22,8 +21,8 @@
 #include "lldb/lldb-types.h"
 
 #include "NativeThreadLinux.h"
+#include "Plugins/Process/POSIX/NativeProcessELF.h"
 #include "ProcessorTrace.h"
-#include "lldb/Host/common/NativeProcessProtocol.h"
 
 namespace lldb_private {
 class Status;
@@ -37,7 +36,7 @@ namespace process_linux {
 /// for debugging.
 ///
 /// Changes in the inferior process state are broadcasted.
-class NativeProcessLinux : public NativeProcessProtocol {
+class NativeProcessLinux : public NativeProcessELF {
 public:
   class Factory : public NativeProcessProtocol::Factory {
   public:
@@ -77,8 +76,6 @@ public:
 
   Status DeallocateMemory(lldb::addr_t addr) override;
 
-  lldb::addr_t GetSharedLibraryInfoAddress() override;
-
   size_t UpdateThreads() override;
 
   const ArchSpec &GetArchitecture() const override { return m_arch; }
@@ -102,8 +99,6 @@ public:
   GetAuxvData() const override {
     return getProcFile(GetID(), "auxv");
   }
-
-  llvm::Optional<uint64_t> GetAuxValue(enum AuxVector::EntryType type);
 
   lldb::user_id_t StartTrace(const TraceOptions &config,
                              Status &error) override;
@@ -135,7 +130,6 @@ protected:
 private:
   MainLoop::SignalHandleUP m_sigchld_handle;
   ArchSpec m_arch;
-  std::unique_ptr<AuxVector> m_aux_vector;
 
   LazyBool m_supports_mem_region = eLazyBoolCalculate;
   std::vector<std::pair<MemoryRegionInfo, FileSpec>> m_mem_region_cache;

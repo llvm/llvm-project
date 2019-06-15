@@ -512,6 +512,9 @@ HANDLE_TARGET_OPCODE(G_UMAX)
 /// Generic BRANCH instruction. This is an unconditional branch.
 HANDLE_TARGET_OPCODE(G_BR)
 
+/// Generic branch to jump table entry.
+HANDLE_TARGET_OPCODE(G_BRJT)
+
 /// Generic insertelement.
 HANDLE_TARGET_OPCODE(G_INSERT_VECTOR_ELT)
 

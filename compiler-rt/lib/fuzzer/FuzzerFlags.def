@@ -19,7 +19,7 @@ FUZZER_FLAG_INT(max_len, 0, "Maximum length of the test input. "
 FUZZER_FLAG_INT(len_control, 100, "Try generating small inputs first, "
   "then try larger inputs over time.  Specifies the rate at which the length "
   "limit is increased (smaller == faster).  If 0, immediately try inputs with "
-  "size up to max_len.")
+  "size up to max_len. Default value is 0, if LLVMFuzzerCustomMutator is used.")
 FUZZER_FLAG_STRING(seed_inputs, "A comma-separated list of input files "
   "to use as an additional seed corpus. Alternatively, an \"@\" followed by "
   "the name of a file containing the comma-seperated list.")

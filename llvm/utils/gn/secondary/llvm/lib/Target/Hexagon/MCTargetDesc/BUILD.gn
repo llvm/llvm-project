@@ -7,7 +7,7 @@ tablegen("HexagonGenAsmWriter") {
 }
 
 tablegen("HexagonGenInstrInfo") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-instr-info" ]
   td_file = "../Hexagon.td"
 }
@@ -19,33 +19,27 @@ tablegen("HexagonGenMCCodeEmitter") {
 }
 
 tablegen("HexagonGenRegisterInfo") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-register-info" ]
   td_file = "../Hexagon.td"
 }
 
 tablegen("HexagonGenSubtargetInfo") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-subtarget" ]
   td_file = "../Hexagon.td"
 }
 
-group("tablegen") {
-  visibility = [
-    ":MCTargetDesc",
-    "../TargetInfo",
-  ]
+static_library("MCTargetDesc") {
+  output_name = "LLVMHexagonDesc"
+
+  # This should contain tablegen targets generating .inc files included
+  # by other targets. .inc files only used by .cpp files in this directory
+  # should be in deps instead.
   public_deps = [
     ":HexagonGenInstrInfo",
     ":HexagonGenRegisterInfo",
     ":HexagonGenSubtargetInfo",
-  ]
-}
-
-static_library("MCTargetDesc") {
-  output_name = "LLVMHexagonDesc"
-  public_deps = [
-    ":tablegen",
   ]
   deps = [
     ":HexagonGenAsmWriter",

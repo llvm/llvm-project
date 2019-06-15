@@ -106,7 +106,7 @@ define amdgpu_ps half @interp_p1_m0_setup(float inreg %i, float inreg %j, i32 in
 ; GFX8-16BANK-NEXT:    v_add_f16_e32 v0, s3, v0
 ; GFX8-16BANK-NEXT:    ; return to shader part epilog
 main_body:
-  %mx = call i32 asm sideeffect "s_mov_b32 m0, 0", "={M0}"() #0
+  %mx = call i32 asm sideeffect "s_mov_b32 m0, 0", "={m0}"() #0
   %p1_0 = call float @llvm.amdgcn.interp.p1.f16(float %i, i32 1, i32 2, i1 0, i32 %m0)
   %p2_0 = call half @llvm.amdgcn.interp.p2.f16(float %p1_0, float %j, i32 1, i32 2, i1 0, i32 %m0)
   %my = trunc i32 %mx to i16
@@ -170,7 +170,7 @@ define amdgpu_ps half @interp_p2_m0_setup(float inreg %i, float inreg %j, i32 in
 ; GFX8-16BANK-NEXT:    ; return to shader part epilog
 main_body:
   %p1_0 = call float @llvm.amdgcn.interp.p1.f16(float %i, i32 1, i32 2, i1 0, i32 %m0)
-  %mx = call i32 asm sideeffect "s_mov_b32 m0, 0", "={M0}"() #0
+  %mx = call i32 asm sideeffect "s_mov_b32 m0, 0", "={m0}"() #0
   %p2_0 = call half @llvm.amdgcn.interp.p2.f16(float %p1_0, float %j, i32 1, i32 2, i1 0, i32 %m0)
   %my = trunc i32 %mx to i16
   %mh = bitcast i16 %my to half

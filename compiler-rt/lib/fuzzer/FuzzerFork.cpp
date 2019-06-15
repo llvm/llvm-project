@@ -89,6 +89,7 @@ struct GlobalEnv {
   std::string DFTDir;
   std::string DataFlowBinary;
   Set<uint32_t> Features, Cov;
+  Set<std::string> FilesWithDFT;
   Vector<std::string> Files;
   Random *Rand;
   std::chrono::system_clock::time_point ProcessStartTime;
@@ -126,10 +127,13 @@ struct GlobalEnv {
     auto Job = new FuzzJob;
     std::string Seeds;
     if (size_t CorpusSubsetSize =
-            std::min(Files.size(), (size_t)sqrt(Files.size() + 2)))
-      for (size_t i = 0; i < CorpusSubsetSize; i++)
-        Seeds += (Seeds.empty() ? "" : ",") +
-                 Files[Rand->SkewTowardsLast(Files.size())];
+            std::min(Files.size(), (size_t)sqrt(Files.size() + 2))) {
+      for (size_t i = 0; i < CorpusSubsetSize; i++) {
+        auto &SF = Files[Rand->SkewTowardsLast(Files.size())];
+        Seeds += (Seeds.empty() ? "" : ",") + SF;
+        CollectDFT(SF);
+      }
+    }
     if (!Seeds.empty()) {
       Job->SeedListPath =
           DirPlusFile(TempDir, std::to_string(JobId) + ".seeds");
@@ -196,7 +200,6 @@ struct GlobalEnv {
       auto NewPath = DirPlusFile(MainCorpusDir, Hash(U));
       WriteToFile(U, NewPath);
       Files.push_back(NewPath);
-      CollectDFT(NewPath);
     }
     Features.insert(NewFeatures.begin(), NewFeatures.end());
     Cov.insert(NewCov.begin(), NewCov.end());
@@ -217,6 +220,7 @@ struct GlobalEnv {
 
   void CollectDFT(const std::string &InputPath) {
     if (DataFlowBinary.empty()) return;
+    if (!FilesWithDFT.insert(InputPath).second) return;
     Command Cmd(Args);
     Cmd.removeFlag("fork");
     Cmd.removeFlag("runs");
@@ -226,7 +230,7 @@ struct GlobalEnv {
       Cmd.removeArgument(C);
     Cmd.setOutputFile(DirPlusFile(TempDir, "dft.log"));
     Cmd.combineOutAndErr();
-    // Printf("CollectDFT: %s %s\n", InputPath.c_str(), Cmd.toString().c_str());
+    // Printf("CollectDFT: %s\n", Cmd.toString().c_str());
     ExecuteCommand(Cmd);
   }
 
@@ -296,9 +300,6 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
   CrashResistantMerge(Env.Args, {}, SeedFiles, &Env.Files, {}, &Env.Features,
                       {}, &Env.Cov,
                       CFPath, false);
-  for (auto &F : Env.Files)
-    Env.CollectDFT(F);
-
   RemoveFile(CFPath);
   Printf("INFO: -fork=%d: %zd seed inputs, starting to fuzz in %s\n", NumJobs,
          Env.Files.size(), Env.TempDir.c_str());

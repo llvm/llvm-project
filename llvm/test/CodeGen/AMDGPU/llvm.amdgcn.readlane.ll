@@ -40,7 +40,7 @@ define amdgpu_kernel void @test_readlane_vregs(i32 addrspace(1)* %out, <2 x i32>
 ; CHECK: v_mov_b32_e32 [[VVAL:v[0-9]]], [[COPY_M0]]
 ; CHECK: v_readlane_b32 s{{[0-9]+}}, [[VVAL]], s{{[0-9]+}}
 define amdgpu_kernel void @test_readlane_m0_sreg(i32 addrspace(1)* %out, i32 %src1) #1 {
-  %m0 = call i32 asm "s_mov_b32 m0, -1", "={M0}"()
+  %m0 = call i32 asm "s_mov_b32 m0, -1", "={m0}"()
   %readlane = call i32 @llvm.amdgcn.readlane(i32 %m0, i32 %src1)
   store i32 %readlane, i32 addrspace(1)* %out, align 4
   ret void

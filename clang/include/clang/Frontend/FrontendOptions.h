@@ -260,6 +260,9 @@ public:
   /// Show timers for individual actions.
   unsigned ShowTimers : 1;
 
+  /// print the supported cpus for the current target
+  unsigned PrintSupportedCPUs : 1;
+
   /// Output time trace profile.
   unsigned TimeTrace : 1;
 

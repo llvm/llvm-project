@@ -218,11 +218,11 @@ define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
 define void @func_other_fi_user_non_inline_imm_offset_i32_vcc_live() #0 {
   %alloca0 = alloca [128 x i32], align 4, addrspace(5)
   %alloca1 = alloca [8 x i32], align 4, addrspace(5)
-  %vcc = call i64 asm sideeffect "; def $0", "={VCC}"()
+  %vcc = call i64 asm sideeffect "; def $0", "={vcc}"()
   %gep0 = getelementptr inbounds [128 x i32], [128 x i32] addrspace(5)* %alloca0, i32 0, i32 65
   %gep1 = getelementptr inbounds [8 x i32], [8 x i32] addrspace(5)* %alloca1, i32 0, i32 0
   store volatile i32 7, i32 addrspace(5)* %gep0
-  call void asm sideeffect "; use $0", "{VCC}"(i64 %vcc)
+  call void asm sideeffect "; use $0", "{vcc}"(i64 %vcc)
   %ptrtoint = ptrtoint i32 addrspace(5)* %gep1 to i32
   %mul = mul i32 %ptrtoint, 9
   store volatile i32 %mul, i32 addrspace(3)* undef

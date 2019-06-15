@@ -26,7 +26,7 @@ define amdgpu_kernel void @test_readfirstlane_imm(i32 addrspace(1)* %out) #1 {
 ; CHECK: v_mov_b32_e32 [[VVAL:v[0-9]]], [[COPY_M0]]
 ; CHECK: v_readfirstlane_b32 s{{[0-9]+}}, [[VVAL]]
 define amdgpu_kernel void @test_readfirstlane_m0(i32 addrspace(1)* %out) #1 {
-  %m0 = call i32 asm "s_mov_b32 m0, -1", "={M0}"()
+  %m0 = call i32 asm "s_mov_b32 m0, -1", "={m0}"()
   %readfirstlane = call i32 @llvm.amdgcn.readfirstlane(i32 %m0)
   store i32 %readfirstlane, i32 addrspace(1)* %out, align 4
   ret void

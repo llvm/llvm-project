@@ -129,7 +129,7 @@ llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
   // We don't use llvm::FileError here because some diagnostics want the file
   // name separately.
   if (EC)
-    return errorCodeToError(EC);
+    return make_error<RemarkSetupFileError>(errorCodeToError(EC));
 
   Context.setRemarkStreamer(llvm::make_unique<RemarkStreamer>(
       RemarksFilename,
@@ -137,7 +137,7 @@ llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
 
   if (!RemarksPasses.empty())
     if (Error E = Context.getRemarkStreamer()->setFilter(RemarksPasses))
-      return std::move(E);
+      return make_error<RemarkSetupPatternError>(std::move(E));
 
   return std::move(RemarksFile);
 }

@@ -7,7 +7,7 @@ tablegen("BPFGenAsmWriter") {
 }
 
 tablegen("BPFGenInstrInfo") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-instr-info" ]
   td_file = "../BPF.td"
 }
@@ -19,36 +19,27 @@ tablegen("BPFGenMCCodeEmitter") {
 }
 
 tablegen("BPFGenRegisterInfo") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-register-info" ]
   td_file = "../BPF.td"
 }
 
 tablegen("BPFGenSubtargetInfo") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-subtarget" ]
   td_file = "../BPF.td"
 }
 
-# This should contain tablegen targets generating .inc files included
-# by other targets. .inc files only used by .cpp files in this directory
-# should be in deps on the static_library instead.
-group("tablegen") {
-  visibility = [
-    ":MCTargetDesc",
-    "../TargetInfo",
-  ]
+static_library("MCTargetDesc") {
+  output_name = "LLVMBPFDesc"
+
+  # This should contain tablegen targets generating .inc files included
+  # by other targets. .inc files only used by .cpp files in this directory
+  # should be in deps instead.
   public_deps = [
     ":BPFGenInstrInfo",
     ":BPFGenRegisterInfo",
     ":BPFGenSubtargetInfo",
-  ]
-}
-
-static_library("MCTargetDesc") {
-  output_name = "LLVMBPFDesc"
-  public_deps = [
-    ":tablegen",
   ]
   deps = [
     ":BPFGenAsmWriter",

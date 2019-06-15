@@ -821,9 +821,6 @@ public:
     /// Perform a conversion adding _Atomic to a type.
     SK_AtomicConversion,
 
-    /// Perform a load from a glvalue, producing an rvalue.
-    SK_LValueToRValue,
-
     /// Perform an implicit conversion sequence.
     SK_ConversionSequence,
 
@@ -1269,12 +1266,6 @@ public:
   /// Add a new step that performs conversion from non-atomic to atomic
   /// type.
   void AddAtomicConversionStep(QualType Ty);
-
-  /// Add a new step that performs a load of the given type.
-  ///
-  /// Although the term "LValueToRValue" is conventional, this applies to both
-  /// lvalues and xvalues.
-  void AddLValueToRValueStep(QualType Ty);
 
   /// Add a new step that applies an implicit conversion sequence.
   void AddConversionSequenceStep(const ImplicitConversionSequence &ICS,

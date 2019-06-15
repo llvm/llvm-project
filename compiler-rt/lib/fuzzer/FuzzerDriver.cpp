@@ -182,7 +182,8 @@ static bool ParseOneFlag(const char *Param) {
 }
 
 // We don't use any library to minimize dependencies.
-static void ParseFlags(const Vector<std::string> &Args) {
+static void ParseFlags(const Vector<std::string> &Args,
+                       const ExternalFunctions *EF) {
   for (size_t F = 0; F < kNumFlags; F++) {
     if (FlagDescriptions[F].IntFlag)
       *FlagDescriptions[F].IntFlag = FlagDescriptions[F].Default;
@@ -192,6 +193,11 @@ static void ParseFlags(const Vector<std::string> &Args) {
     if (FlagDescriptions[F].StrFlag)
       *FlagDescriptions[F].StrFlag = nullptr;
   }
+
+  // Disable len_control by default, if LLVMFuzzerCustomMutator is used.
+  if (EF->LLVMFuzzerCustomMutator)
+    Flags.len_control = 0;
+
   Inputs = new Vector<std::string>;
   for (size_t A = 1; A < Args.size(); A++) {
     if (ParseOneFlag(Args[A].c_str())) {
@@ -616,7 +622,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Printf("ERROR: argv[0] has been modified in LLVMFuzzerInitialize\n");
     exit(1);
   }
-  ParseFlags(Args);
+  ParseFlags(Args, EF);
   if (Flags.help) {
     PrintHelp();
     return 0;

@@ -12453,6 +12453,45 @@ void Sema::ActOnDocumentableDecls(ArrayRef<Decl *> Group) {
   }
 }
 
+/// Common checks for a parameter-declaration that should apply to both function
+/// parameters and non-type template parameters.
+void Sema::CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D) {
+  // Check that there are no default arguments inside the type of this
+  // parameter.
+  if (getLangOpts().CPlusPlus)
+    CheckExtraCXXDefaultArguments(D);
+
+  // Parameter declarators cannot be qualified (C++ [dcl.meaning]p1).
+  if (D.getCXXScopeSpec().isSet()) {
+    Diag(D.getIdentifierLoc(), diag::err_qualified_param_declarator)
+      << D.getCXXScopeSpec().getRange();
+  }
+
+  // [dcl.meaning]p1: An unqualified-id occurring in a declarator-id shall be a
+  // simple identifier except [...irrelevant cases...].
+  switch (D.getName().getKind()) {
+  case UnqualifiedIdKind::IK_Identifier:
+    break;
+
+  case UnqualifiedIdKind::IK_OperatorFunctionId:
+  case UnqualifiedIdKind::IK_ConversionFunctionId:
+  case UnqualifiedIdKind::IK_LiteralOperatorId:
+  case UnqualifiedIdKind::IK_ConstructorName:
+  case UnqualifiedIdKind::IK_DestructorName:
+  case UnqualifiedIdKind::IK_ImplicitSelfParam:
+  case UnqualifiedIdKind::IK_DeductionGuideName:
+    Diag(D.getIdentifierLoc(), diag::err_bad_parameter_name)
+      << GetNameForDeclarator(D).getName();
+    break;
+
+  case UnqualifiedIdKind::IK_TemplateId:
+  case UnqualifiedIdKind::IK_ConstructorTemplateId:
+    // GetNameForDeclarator would not produce a useful name in this case.
+    Diag(D.getIdentifierLoc(), diag::err_bad_parameter_name_template_id);
+    break;
+  }
+}
+
 /// ActOnParamDeclarator - Called from Parser::ParseFunctionDeclarator()
 /// to introduce parameters into function prototype scope.
 Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D) {
@@ -12493,34 +12532,13 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D) {
 
   DiagnoseFunctionSpecifiers(DS);
 
+  CheckFunctionOrTemplateParamDeclarator(S, D);
+
   TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
   QualType parmDeclType = TInfo->getType();
 
-  if (getLangOpts().CPlusPlus) {
-    // Check that there are no default arguments inside the type of this
-    // parameter.
-    CheckExtraCXXDefaultArguments(D);
-
-    // Parameter declarators cannot be qualified (C++ [dcl.meaning]p1).
-    if (D.getCXXScopeSpec().isSet()) {
-      Diag(D.getIdentifierLoc(), diag::err_qualified_param_declarator)
-        << D.getCXXScopeSpec().getRange();
-      D.getCXXScopeSpec().clear();
-    }
-  }
-
-  // Ensure we have a valid name
-  IdentifierInfo *II = nullptr;
-  if (D.hasName()) {
-    II = D.getIdentifier();
-    if (!II) {
-      Diag(D.getIdentifierLoc(), diag::err_bad_parameter_name)
-        << GetNameForDeclarator(D).getName();
-      D.setInvalidType(true);
-    }
-  }
-
   // Check for redeclaration of parameters, e.g. int foo(int x, int x);
+  IdentifierInfo *II = D.getIdentifier();
   if (II) {
     LookupResult R(*this, II, D.getIdentifierLoc(), LookupOrdinaryName,
                    ForVisibleRedeclaration);

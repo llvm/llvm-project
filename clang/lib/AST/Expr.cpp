@@ -1885,6 +1885,11 @@ ImplicitCastExpr *ImplicitCastExpr::Create(const ASTContext &C, QualType T,
                                            ExprValueKind VK) {
   unsigned PathSize = (BasePath ? BasePath->size() : 0);
   void *Buffer = C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *>(PathSize));
+  // Per C++ [conv.lval]p3, lvalue-to-rvalue conversions on class and
+  // std::nullptr_t have special semantics not captured by CK_LValueToRValue.
+  assert((Kind != CK_LValueToRValue ||
+          !(T->isNullPtrType() || T->getAsCXXRecordDecl())) &&
+         "invalid type for lvalue-to-rvalue conversion");
   ImplicitCastExpr *E =
     new (Buffer) ImplicitCastExpr(T, Kind, Operand, PathSize, VK);
   if (PathSize)
