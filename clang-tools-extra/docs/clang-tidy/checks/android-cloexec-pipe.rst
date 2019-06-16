@@ -17,4 +17,5 @@ Examples:
 Suggested replacement:
 
 .. code-block:: c++
+
   pipe2(pipefd, O_CLOEXEC);
