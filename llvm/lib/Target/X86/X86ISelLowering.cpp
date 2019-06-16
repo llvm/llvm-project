@@ -31939,6 +31939,59 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   bool MaskContainsZeros =
       any_of(Mask, [](int M) { return M == SM_SentinelZero; });
 
+  // Unwrap shuffle(extract_subvector(x,c1),extract_subvector(y,c2),m1) ->
+  // shuffle(x,y,m2)
+  auto CombineShuffleWithExtract =
+      [&](SDValue &NewRoot, SmallVectorImpl<int> &NewMask,
+          SmallVectorImpl<SDValue> &NewInputs) -> bool {
+    assert(NewMask.empty() && NewInputs.empty() && "Non-empty shuffle mask");
+    if (UnaryShuffle || V1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+        V2.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+        !isa<ConstantSDNode>(V1.getOperand(1)) ||
+        !isa<ConstantSDNode>(V2.getOperand(1)))
+      return false;
+
+    SDValue Src1 = V1.getOperand(0);
+    SDValue Src2 = V2.getOperand(0);
+    if (Src1.getValueType() != Src2.getValueType())
+      return false;
+
+    unsigned Offset1 = V1.getConstantOperandVal(1);
+    unsigned Offset2 = V2.getConstantOperandVal(1);
+    assert(((Offset1 % VT1.getVectorNumElements()) == 0 ||
+            (Offset2 % VT2.getVectorNumElements()) == 0 ||
+            (Src1.getValueSizeInBits() % RootSizeInBits) == 0 ||
+            (Src2.getValueSizeInBits() % RootSizeInBits) == 0) &&
+           "Unexpected subvector extraction");
+    unsigned Scale = Src1.getValueSizeInBits() / RootSizeInBits;
+
+    // Convert extraction indices to mask size.
+    Offset1 /= VT1.getVectorNumElements();
+    Offset2 /= VT2.getVectorNumElements();
+    Offset1 *= NumMaskElts;
+    Offset2 *= NumMaskElts;
+
+    NewInputs.push_back(Src1);
+    if (Src1 != Src2) {
+      NewInputs.push_back(Src2);
+      Offset2 += Scale * NumMaskElts;
+    }
+
+    // Create new mask for larger type.
+    NewMask.append(Mask.begin(), Mask.end());
+    for (int &M : NewMask) {
+      if (M < 0)
+        continue;
+      if (M < (int)NumMaskElts)
+        M += Offset1;
+      else
+        M = (M - NumMaskElts) + Offset2;
+    }
+    NewMask.append((Scale - 1) * NumMaskElts, SM_SentinelUndef);
+    NewRoot = Src1;
+    return true;
+  };
+
   if (is128BitLaneCrossingShuffleMask(MaskVT, Mask)) {
     // If we have a single input lane-crossing shuffle then lower to VPERMV.
     if (UnaryShuffle && AllowVariableMask && !MaskContainsZeros &&
@@ -31980,6 +32033,21 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       SDValue Zero = getZeroVector(MaskVT, Subtarget, DAG, DL);
       Res = DAG.getNode(X86ISD::VPERMV3, DL, MaskVT, Res, VPermMask, Zero);
       return DAG.getBitcast(RootVT, Res);
+    }
+
+    // If that failed and both inputs are extracted from the same source type
+    // then try to combine as an unary shuffle with the larger type.
+    SDValue NewRoot;
+    SmallVector<int, 64> NewMask;
+    SmallVector<SDValue, 2> NewInputs;
+    if (CombineShuffleWithExtract(NewRoot, NewMask, NewInputs)) {
+      if (SDValue Res = combineX86ShuffleChain(
+              NewInputs, NewRoot, NewMask, Depth, HasVariableMask,
+              AllowVariableMask, DAG, Subtarget)) {
+        Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT1, Res,
+                          DAG.getIntPtrConstant(0, DL));
+        return DAG.getBitcast(RootVT, Res);
+      }
     }
 
     // If we have a dual input lane-crossing shuffle then lower to VPERMV3.
@@ -32147,55 +32215,18 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     return DAG.getBitcast(RootVT, Res);
   }
 
-  // If that failed and both inputs are extracted from the same source then
-  // try to combine as an unary shuffle with the larger type.
-  if (!UnaryShuffle && V1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-      V2.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-      isa<ConstantSDNode>(V1.getOperand(1)) &&
-      isa<ConstantSDNode>(V2.getOperand(1))) {
-    SDValue Src1 = V1.getOperand(0);
-    SDValue Src2 = V2.getOperand(0);
-    if (Src1.getValueType() == Src2.getValueType()) {
-      unsigned Offset1 = V1.getConstantOperandVal(1);
-      unsigned Offset2 = V2.getConstantOperandVal(1);
-      assert(((Offset1 % VT1.getVectorNumElements()) == 0 ||
-              (Offset2 % VT2.getVectorNumElements()) == 0 ||
-              (Src1.getValueSizeInBits() % RootSizeInBits) == 0) &&
-             "Unexpected subvector extraction");
-      unsigned Scale = Src1.getValueSizeInBits() / RootSizeInBits;
-
-      // Convert extraction indices to mask size.
-      Offset1 /= VT1.getVectorNumElements();
-      Offset2 /= VT2.getVectorNumElements();
-      Offset1 *= NumMaskElts;
-      Offset2 *= NumMaskElts;
-
-      SmallVector<SDValue, 2> NewInputs;
-      NewInputs.push_back(Src1);
-      if (Src1 != Src2) {
-        NewInputs.push_back(Src2);
-        Offset2 += Scale * NumMaskElts;
-      }
-
-      // Create new mask for larger type.
-      SmallVector<int, 64> NewMask(Mask);
-      for (int &M : NewMask) {
-        if (M < 0)
-          continue;
-        if (M < (int)NumMaskElts)
-          M += Offset1;
-        else
-          M = (M - NumMaskElts) + Offset2;
-      }
-      NewMask.append((Scale - 1) * NumMaskElts, SM_SentinelUndef);
-
-      if (SDValue Res = combineX86ShuffleChain(
-              NewInputs, Src1, NewMask, Depth, HasVariableMask,
-              AllowVariableMask, DAG, Subtarget)) {
-        Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT1, Res,
-                          DAG.getIntPtrConstant(0, DL));
-        return DAG.getBitcast(RootVT, Res);
-      }
+  // If that failed and both inputs are extracted from the same source type
+  // then try to combine as an unary shuffle with the larger type.
+  SDValue NewRoot;
+  SmallVector<int, 64> NewMask;
+  SmallVector<SDValue, 2> NewInputs;
+  if (CombineShuffleWithExtract(NewRoot, NewMask, NewInputs)) {
+    if (SDValue Res = combineX86ShuffleChain(NewInputs, NewRoot, NewMask, Depth,
+                                             HasVariableMask, AllowVariableMask,
+                                             DAG, Subtarget)) {
+      Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT1, Res,
+                        DAG.getIntPtrConstant(0, DL));
+      return DAG.getBitcast(RootVT, Res);
     }
   }
 
