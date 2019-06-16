@@ -339,8 +339,7 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
     // out a way to cache the format style.
     auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
                                        InpAST->Inputs.FS.get());
-    auto Formatted =
-        cleanupAndFormat(InpAST->Inputs.Contents, *Raw, Style);
+    auto Formatted = cleanupAndFormat(InpAST->Inputs.Contents, *Raw, Style);
     if (!Formatted)
       return CB(Formatted.takeError());
     return CB(replacementsToEdits(InpAST->Inputs.Contents, *Formatted));
@@ -487,11 +486,13 @@ void ClangdServer::findHover(PathRef File, Position Pos,
 void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
                                  TypeHierarchyDirection Direction,
                                  Callback<Optional<TypeHierarchyItem>> CB) {
-  auto Action = [Pos, Resolve, Direction](decltype(CB) CB,
-                                          Expected<InputsAndAST> InpAST) {
+  std::string FileCopy = File; // copy will be captured by the lambda
+  auto Action = [FileCopy, Pos, Resolve, Direction,
+                 this](decltype(CB) CB, Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
-    CB(clangd::getTypeHierarchy(InpAST->AST, Pos, Resolve, Direction));
+    CB(clangd::getTypeHierarchy(InpAST->AST, Pos, Resolve, Direction, Index,
+                                FileCopy));
   };
 
   WorkScheduler.runWithAST("Type Hierarchy", File, Bind(Action, std::move(CB)));

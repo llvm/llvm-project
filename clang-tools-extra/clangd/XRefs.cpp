@@ -1065,6 +1065,45 @@ declToTypeHierarchyItem(ASTContext &Ctx, const NamedDecl &ND) {
   return THI;
 }
 
+static Optional<TypeHierarchyItem>
+symbolToTypeHierarchyItem(const Symbol &S, const SymbolIndex *Index,
+                          PathRef TUPath) {
+  auto Loc = symbolToLocation(S, TUPath);
+  if (!Loc) {
+    log("Type hierarchy: {0}", Loc.takeError());
+    return llvm::None;
+  }
+  TypeHierarchyItem THI;
+  THI.name = S.Name;
+  THI.kind = indexSymbolKindToSymbolKind(S.SymInfo.Kind);
+  THI.deprecated = (S.Flags & Symbol::Deprecated);
+  THI.selectionRange = Loc->range;
+  // FIXME: Populate 'range' correctly
+  // (https://github.com/clangd/clangd/issues/59).
+  THI.range = THI.selectionRange;
+  THI.uri = Loc->uri;
+
+  return std::move(THI);
+}
+
+static void fillSubTypes(const SymbolID &ID,
+                         std::vector<TypeHierarchyItem> &SubTypes,
+                         const SymbolIndex *Index, int Levels, PathRef TUPath) {
+  RelationsRequest Req;
+  Req.Subjects.insert(ID);
+  Req.Predicate = index::SymbolRole::RelationBaseOf;
+  Index->relations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
+    if (Optional<TypeHierarchyItem> ChildSym =
+            symbolToTypeHierarchyItem(Object, Index, TUPath)) {
+      if (Levels > 1) {
+        ChildSym->children.emplace();
+        fillSubTypes(Object.ID, *ChildSym->children, Index, Levels - 1, TUPath);
+      }
+      SubTypes.emplace_back(std::move(*ChildSym));
+    }
+  });
+}
+
 using RecursionProtectionSet = llvm::SmallSet<const CXXRecordDecl *, 4>;
 
 static Optional<TypeHierarchyItem>
@@ -1160,7 +1199,8 @@ std::vector<const CXXRecordDecl *> typeParents(const CXXRecordDecl *CXXRD) {
 
 llvm::Optional<TypeHierarchyItem>
 getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
-                 TypeHierarchyDirection Direction) {
+                 TypeHierarchyDirection Direction, const SymbolIndex *Index,
+                 PathRef TUPath) {
   const CXXRecordDecl *CXXRD = findRecordTypeAt(AST, Pos);
   if (!CXXRD)
     return llvm::None;
@@ -1169,8 +1209,16 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
   Optional<TypeHierarchyItem> Result =
       getTypeAncestors(*CXXRD, AST.getASTContext(), RPSet);
 
-  // FIXME(nridge): Resolve type descendants if direction is Children or Both,
-  // and ResolveLevels > 0.
+  if ((Direction == TypeHierarchyDirection::Children ||
+       Direction == TypeHierarchyDirection::Both) &&
+      ResolveLevels > 0) {
+    Result->children.emplace();
+
+    if (Index) {
+      if (Optional<SymbolID> ID = getSymbolID(CXXRD))
+        fillSubTypes(*ID, *Result->children, Index, ResolveLevels, TUPath);
+    }
+  }
 
   return Result;
 }
