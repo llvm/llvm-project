@@ -134,9 +134,9 @@ const CXXRecordDecl *findRecordTypeAt(ParsedAST &AST, Position Pos);
 std::vector<const CXXRecordDecl *> typeParents(const CXXRecordDecl *CXXRD);
 
 /// Get type hierarchy information at \p Pos.
-llvm::Optional<TypeHierarchyItem>
-getTypeHierarchy(ParsedAST &AST, Position Pos, int Resolve,
-                 TypeHierarchyDirection Direction);
+llvm::Optional<TypeHierarchyItem> getTypeHierarchy(
+    ParsedAST &AST, Position Pos, int Resolve, TypeHierarchyDirection Direction,
+    const SymbolIndex *Index = nullptr, PathRef TUPath = PathRef{});
 
 } // namespace clangd
 } // namespace clang
