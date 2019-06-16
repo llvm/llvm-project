@@ -627,9 +627,11 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
       ScratchExecCopy
         = findScratchNonCalleeSaveRegister(MF, LiveRegs,
-                                           AMDGPU::SReg_64_XEXECRegClass);
+                                           *TRI.getWaveMaskRegClass());
 
-      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_OR_SAVEEXEC_B64),
+      const unsigned OrSaveExec = ST.isWave32() ?
+        AMDGPU::S_OR_SAVEEXEC_B32 : AMDGPU::S_OR_SAVEEXEC_B64;
+      BuildMI(MBB, MBBI, DL, TII->get(OrSaveExec),
               ScratchExecCopy)
         .addImm(-1);
     }
@@ -641,7 +643,9 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   if (ScratchExecCopy != AMDGPU::NoRegister) {
     // FIXME: Split block and make terminator.
-    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_MOV_B64), AMDGPU::EXEC)
+    unsigned ExecMov = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+    unsigned Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+    BuildMI(MBB, MBBI, DL, TII->get(ExecMov), Exec)
       .addReg(ScratchExecCopy);
   }
 }
@@ -663,6 +667,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
     if (!Reg.FI.hasValue())
       continue;
 
+    const SIRegisterInfo &TRI = TII->getRegisterInfo();
     if (ScratchExecCopy == AMDGPU::NoRegister) {
       // See emitPrologue
       LivePhysRegs LiveRegs(*ST.getRegisterInfo());
@@ -670,9 +675,12 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
 
       ScratchExecCopy
         = findScratchNonCalleeSaveRegister(MF, LiveRegs,
-                                           AMDGPU::SReg_64_XEXECRegClass);
+                                           *TRI.getWaveMaskRegClass());
 
-      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_OR_SAVEEXEC_B64), ScratchExecCopy)
+      const unsigned OrSaveExec = ST.isWave32() ?
+      AMDGPU::S_OR_SAVEEXEC_B32 : AMDGPU::S_OR_SAVEEXEC_B64;
+
+      BuildMI(MBB, MBBI, DL, TII->get(OrSaveExec), ScratchExecCopy)
         .addImm(-1);
     }
 
@@ -683,7 +691,9 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (ScratchExecCopy != AMDGPU::NoRegister) {
     // FIXME: Split block and make terminator.
-    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_MOV_B64), AMDGPU::EXEC)
+    unsigned ExecMov = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+    unsigned Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+    BuildMI(MBB, MBBI, DL, TII->get(ExecMov), Exec)
       .addReg(ScratchExecCopy);
   }
 

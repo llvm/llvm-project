@@ -31951,19 +31951,41 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
         !isa<ConstantSDNode>(V2.getOperand(1)))
       return false;
 
+    // If the src vector types aren't the same, see if we can extend
+    // one to match the other.
     SDValue Src1 = V1.getOperand(0);
     SDValue Src2 = V2.getOperand(0);
-    if (Src1.getValueType() != Src2.getValueType())
+    if ((Src1.getValueType().getScalarType() !=
+         Src2.getValueType().getScalarType()) ||
+        !DAG.getTargetLoweringInfo().isTypeLegal(Src1.getValueType()) ||
+        !DAG.getTargetLoweringInfo().isTypeLegal(Src2.getValueType()))
       return false;
+
+    unsigned Src1SizeInBits = Src1.getValueSizeInBits();
+    unsigned Src2SizeInBits = Src2.getValueSizeInBits();
+    assert(((Src1SizeInBits % Src2SizeInBits) == 0 ||
+            (Src2SizeInBits % Src1SizeInBits) == 0) &&
+           "Shuffle vector size mismatch");
+    if (Src1SizeInBits != Src2SizeInBits) {
+      if (Src1SizeInBits > Src2SizeInBits) {
+        Src2 = insertSubVector(DAG.getUNDEF(Src1.getValueType()), Src2, 0, DAG,
+                               DL, Src2SizeInBits);
+        Src2SizeInBits = Src1SizeInBits;
+      } else {
+        Src1 = insertSubVector(DAG.getUNDEF(Src2.getValueType()), Src1, 0, DAG,
+                               DL, Src1SizeInBits);
+        Src1SizeInBits = Src2SizeInBits;
+      }
+    }
 
     unsigned Offset1 = V1.getConstantOperandVal(1);
     unsigned Offset2 = V2.getConstantOperandVal(1);
-    assert(((Offset1 % VT1.getVectorNumElements()) == 0 ||
-            (Offset2 % VT2.getVectorNumElements()) == 0 ||
-            (Src1.getValueSizeInBits() % RootSizeInBits) == 0 ||
-            (Src2.getValueSizeInBits() % RootSizeInBits) == 0) &&
+    assert(((Offset1 % VT1.getVectorNumElements()) == 0 &&
+            (Offset2 % VT2.getVectorNumElements()) == 0 &&
+            (Src1SizeInBits % RootSizeInBits) == 0 &&
+            Src1SizeInBits == Src2SizeInBits) &&
            "Unexpected subvector extraction");
-    unsigned Scale = Src1.getValueSizeInBits() / RootSizeInBits;
+    unsigned Scale = Src1SizeInBits / RootSizeInBits;
 
     // Convert extraction indices to mask size.
     Offset1 /= VT1.getVectorNumElements();
@@ -35520,6 +35542,39 @@ combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+/// If both arms of a vector select are concatenated vectors, split the select,
+/// and concatenate the result to eliminate a wide (256-bit) vector instruction:
+///   vselect Cond, (concat T0, T1), (concat F0, F1) -->
+///   concat (vselect (split Cond), T0, F0), (vselect (split Cond), T1, F1)
+static SDValue narrowVectorSelect(SDNode *N, SelectionDAG &DAG,
+                                  const X86Subtarget &Subtarget) {
+  unsigned Opcode = N->getOpcode();
+  if (Opcode != X86ISD::BLENDV && Opcode != ISD::VSELECT)
+    return SDValue();
+
+  // TODO: Split 512-bit vectors too?
+  EVT VT = N->getValueType(0);
+  if (!VT.is256BitVector())
+    return SDValue();
+
+  // TODO: Split as long as any 2 of the 3 operands are concatenated?
+  SDValue Cond = N->getOperand(0);
+  SDValue TVal = N->getOperand(1);
+  SDValue FVal = N->getOperand(2);
+  SmallVector<SDValue, 4> CatOpsT, CatOpsF;
+  if (!TVal.hasOneUse() || !FVal.hasOneUse() ||
+      !collectConcatOps(TVal.getNode(), CatOpsT) ||
+      !collectConcatOps(FVal.getNode(), CatOpsF))
+    return SDValue();
+
+  auto makeBlend = [Opcode](SelectionDAG &DAG, const SDLoc &DL,
+                            ArrayRef<SDValue> Ops) {
+    return DAG.getNode(Opcode, DL, Ops[1].getValueType(), Ops);
+  };
+  return SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT, { Cond, TVal, FVal },
+                          makeBlend, /*CheckBWI*/ false);
+}
+
 static SDValue combineSelectOfTwoConstants(SDNode *N, SelectionDAG &DAG) {
   SDValue Cond = N->getOperand(0);
   SDValue LHS = N->getOperand(1);
@@ -36081,6 +36136,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     return V;
 
   if (SDValue V = combineVSelectToBLENDV(N, DAG, DCI, Subtarget))
+    return V;
+
+  if (SDValue V = narrowVectorSelect(N, DAG, Subtarget))
     return V;
 
   // Custom action for SELECT MMX

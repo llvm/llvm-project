@@ -4,12 +4,21 @@
 ; RUN: opt -codegenprepare -mtriple=x86_64-- -mattr=avx -S -enable-debugify < %s 2>&1 | FileCheck %s -check-prefix=DEBUG
 
 define <4 x i32> @vector_variable_shift_right(<4 x i1> %cond, <4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
-; ALL-LABEL: @vector_variable_shift_right(
-; ALL-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> undef, <4 x i32> zeroinitializer
-; ALL-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> undef, <4 x i32> zeroinitializer
-; ALL-NEXT:    [[SEL:%.*]] = select <4 x i1> [[COND:%.*]], <4 x i32> [[SPLAT1]], <4 x i32> [[SPLAT2]]
-; ALL-NEXT:    [[SH:%.*]] = lshr <4 x i32> [[Z:%.*]], [[SEL]]
-; ALL-NEXT:    ret <4 x i32> [[SH]]
+; AVX-LABEL: @vector_variable_shift_right(
+; AVX-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX-NEXT:    [[SEL:%.*]] = select <4 x i1> [[COND:%.*]], <4 x i32> [[SPLAT1]], <4 x i32> [[SPLAT2]]
+; AVX-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> [[Z:%.*]], [[SPLAT1]]
+; AVX-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[Z]], [[SPLAT2]]
+; AVX-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[COND]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]]
+; AVX-NEXT:    ret <4 x i32> [[TMP3]]
+;
+; AVX2-LABEL: @vector_variable_shift_right(
+; AVX2-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX2-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX2-NEXT:    [[SEL:%.*]] = select <4 x i1> [[COND:%.*]], <4 x i32> [[SPLAT1]], <4 x i32> [[SPLAT2]]
+; AVX2-NEXT:    [[SH:%.*]] = lshr <4 x i32> [[Z:%.*]], [[SEL]]
+; AVX2-NEXT:    ret <4 x i32> [[SH]]
 ;
   %splat1 = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> zeroinitializer
   %splat2 = shufflevector <4 x i32> %y, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -36,19 +45,23 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; AVX-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX:       vector.body:
 ; AVX-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; AVX-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[SPLATINSERT22]], <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, i8* [[CONTROL:%.*]], i64 [[INDEX]]
-; AVX-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to <4 x i8>*
-; AVX-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, <4 x i8>* [[TMP2]], align 1
-; AVX-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
-; AVX-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[SPLAT1]], <4 x i32> [[SPLAT2]]
-; AVX-NEXT:    [[TMP5:%.*]] = shl <4 x i32> [[TMP0]], [[TMP4]]
-; AVX-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 [[INDEX]]
-; AVX-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP6]] to <4 x i32>*
-; AVX-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* [[TMP7]], align 4
+; AVX-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[SPLATINSERT20]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[SPLATINSERT18]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[SPLATINSERT22]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, i8* [[CONTROL:%.*]], i64 [[INDEX]]
+; AVX-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP3]] to <4 x i8>*
+; AVX-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, <4 x i8>* [[TMP4]], align 1
+; AVX-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
+; AVX-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[SPLAT1]], <4 x i32> [[SPLAT2]]
+; AVX-NEXT:    [[TMP7:%.*]] = shl <4 x i32> [[TMP2]], [[TMP1]]
+; AVX-NEXT:    [[TMP8:%.*]] = shl <4 x i32> [[TMP2]], [[TMP0]]
+; AVX-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP7]], <4 x i32> [[TMP8]]
+; AVX-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 [[INDEX]]
+; AVX-NEXT:    [[TMP11:%.*]] = bitcast i32* [[TMP10]] to <4 x i32>*
+; AVX-NEXT:    store <4 x i32> [[TMP9]], <4 x i32>* [[TMP11]], align 4
 ; AVX-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; AVX-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; AVX-NEXT:    br i1 [[TMP8]], label [[EXIT]], label [[VECTOR_BODY]]
+; AVX-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; AVX-NEXT:    br i1 [[TMP12]], label [[EXIT]], label [[VECTOR_BODY]]
 ; AVX:       exit:
 ; AVX-NEXT:    ret void
 ;

@@ -3166,11 +3166,9 @@ define <4 x float> @test_masked_z_16xfloat_to_4xfloat_perm_mask2(<16 x float> %v
 define <4 x float> @test_16xfloat_to_4xfloat_perm_mask3(<16 x float> %vec) {
 ; CHECK-LABEL: test_16xfloat_to_4xfloat_perm_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [0,2,4,6,4,6,6,7]
-; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm1
-; CHECK-NEXT:    vextractf32x4 $2, %zmm0, %xmm2
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = [2,5,3,7]
-; CHECK-NEXT:    vpermi2ps %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm1 = [10,18,11,22]
+; CHECK-NEXT:    vpermt2ps %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %res = shufflevector <16 x float> %vec, <16 x float> undef, <4 x i32> <i32 10, i32 2, i32 11, i32 6>
@@ -3179,14 +3177,11 @@ define <4 x float> @test_16xfloat_to_4xfloat_perm_mask3(<16 x float> %vec) {
 define <4 x float> @test_masked_16xfloat_to_4xfloat_perm_mask3(<16 x float> %vec, <4 x float> %vec2, <4 x float> %mask) {
 ; CHECK-LABEL: test_masked_16xfloat_to_4xfloat_perm_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm3 = [0,2,4,6,4,6,6,7]
-; CHECK-NEXT:    vpermps %ymm0, %ymm3, %ymm3
-; CHECK-NEXT:    vextractf32x4 $2, %zmm0, %xmm0
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm4 = [2,5,3,7]
-; CHECK-NEXT:    vpermi2ps %xmm3, %xmm0, %xmm4
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm3 = [10,18,11,22]
+; CHECK-NEXT:    vpermi2ps %zmm0, %zmm0, %zmm3
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vcmpeqps %xmm0, %xmm2, %k1
-; CHECK-NEXT:    vblendmps %xmm4, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    vblendmps %xmm3, %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <4 x i32> <i32 10, i32 2, i32 11, i32 6>
@@ -3198,13 +3193,12 @@ define <4 x float> @test_masked_16xfloat_to_4xfloat_perm_mask3(<16 x float> %vec
 define <4 x float> @test_masked_z_16xfloat_to_4xfloat_perm_mask3(<16 x float> %vec, <4 x float> %mask) {
 ; CHECK-LABEL: test_masked_z_16xfloat_to_4xfloat_perm_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [0,2,4,6,4,6,6,7]
-; CHECK-NEXT:    vpermps %ymm0, %ymm2, %ymm2
-; CHECK-NEXT:    vextractf32x4 $2, %zmm0, %xmm3
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = [2,5,3,7]
-; CHECK-NEXT:    vxorps %xmm4, %xmm4, %xmm4
-; CHECK-NEXT:    vcmpeqps %xmm4, %xmm1, %k1
-; CHECK-NEXT:    vpermi2ps %xmm2, %xmm3, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [10,18,11,22,10,18,11,22]
+; CHECK-NEXT:    # ymm2 = mem[0,1,0,1]
+; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vcmpeqps %xmm3, %xmm1, %k1
+; CHECK-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm0 {%k1} {z}
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <4 x i32> <i32 10, i32 2, i32 11, i32 6>

@@ -34,7 +34,7 @@ using ::testing::Field;
 using ::testing::IsEmpty;
 using ::testing::Matcher;
 using ::testing::Pointee;
-using ::testing::UnorderedElementsAreArray;
+using ::testing::UnorderedElementsAre;
 
 // GMock helpers for matching TypeHierarchyItem.
 MATCHER_P(WithName, N, "") { return arg.name == N; }
@@ -448,6 +448,158 @@ TEST(TypeHierarchy, RecursiveHierarchyBounded) {
       AllOf(WithName("S"), WithKind(SymbolKind::Struct),
             Parents(AllOf(WithName("S"), WithKind(SymbolKind::Struct),
                           SelectionRangeIs(Source.range("SDef")), Parents()))));
+}
+
+SymbolID findSymbolIDByName(SymbolIndex *Index, llvm::StringRef Name,
+                            llvm::StringRef TemplateArgs = "") {
+  SymbolID Result;
+  FuzzyFindRequest Request;
+  Request.Query = Name;
+  Request.AnyScope = true;
+  bool GotResult = false;
+  Index->fuzzyFind(Request, [&](const Symbol &S) {
+    if (TemplateArgs == S.TemplateSpecializationArgs) {
+      EXPECT_FALSE(GotResult);
+      Result = S.ID;
+      GotResult = true;
+    }
+  });
+  EXPECT_TRUE(GotResult);
+  return Result;
+}
+
+std::vector<SymbolID> collectSubtypes(SymbolID Subject, SymbolIndex *Index) {
+  std::vector<SymbolID> Result;
+  RelationsRequest Req;
+  Req.Subjects.insert(Subject);
+  Req.Predicate = index::SymbolRole::RelationBaseOf;
+  Index->relations(Req,
+                   [&Result](const SymbolID &Subject, const Symbol &Object) {
+                     Result.push_back(Object.ID);
+                   });
+  return Result;
+}
+
+TEST(Subtypes, SimpleInheritance) {
+  Annotations Source(R"cpp(
+struct Parent {};
+struct Child1a : Parent {};
+struct Child1b : Parent {};
+struct Child2 : Child1a {};
+)cpp");
+
+  TestTU TU = TestTU::withCode(Source.code());
+  auto Index = TU.index();
+
+  SymbolID Parent = findSymbolIDByName(Index.get(), "Parent");
+  SymbolID Child1a = findSymbolIDByName(Index.get(), "Child1a");
+  SymbolID Child1b = findSymbolIDByName(Index.get(), "Child1b");
+  SymbolID Child2 = findSymbolIDByName(Index.get(), "Child2");
+
+  EXPECT_THAT(collectSubtypes(Parent, Index.get()),
+              UnorderedElementsAre(Child1a, Child1b));
+  EXPECT_THAT(collectSubtypes(Child1a, Index.get()), ElementsAre(Child2));
+}
+
+TEST(Subtypes, MultipleInheritance) {
+  Annotations Source(R"cpp(
+struct Parent1 {};
+struct Parent2 {};
+struct Parent3 : Parent2 {};
+struct Child : Parent1, Parent3 {};
+)cpp");
+
+  TestTU TU = TestTU::withCode(Source.code());
+  auto Index = TU.index();
+
+  SymbolID Parent1 = findSymbolIDByName(Index.get(), "Parent1");
+  SymbolID Parent2 = findSymbolIDByName(Index.get(), "Parent2");
+  SymbolID Parent3 = findSymbolIDByName(Index.get(), "Parent3");
+  SymbolID Child = findSymbolIDByName(Index.get(), "Child");
+
+  EXPECT_THAT(collectSubtypes(Parent1, Index.get()), ElementsAre(Child));
+  EXPECT_THAT(collectSubtypes(Parent2, Index.get()), ElementsAre(Parent3));
+  EXPECT_THAT(collectSubtypes(Parent3, Index.get()), ElementsAre(Child));
+}
+
+TEST(Subtypes, ClassTemplate) {
+  Annotations Source(R"cpp(
+struct Parent {};
+
+template <typename T>
+struct Child : Parent {};
+)cpp");
+
+  TestTU TU = TestTU::withCode(Source.code());
+  auto Index = TU.index();
+
+  SymbolID Parent = findSymbolIDByName(Index.get(), "Parent");
+  SymbolID Child = findSymbolIDByName(Index.get(), "Child");
+
+  EXPECT_THAT(collectSubtypes(Parent, Index.get()), ElementsAre(Child));
+}
+
+TEST(Subtypes, TemplateSpec1) {
+  Annotations Source(R"cpp(
+template <typename T>
+struct Parent {};
+
+template <>
+struct Parent<int> {};
+
+struct Child1 : Parent<float> {};
+
+struct Child2 : Parent<int> {};
+)cpp");
+
+  TestTU TU = TestTU::withCode(Source.code());
+  auto Index = TU.index();
+
+  SymbolID Parent = findSymbolIDByName(Index.get(), "Parent");
+  SymbolID ParentSpec = findSymbolIDByName(Index.get(), "Parent", "<int>");
+  SymbolID Child1 = findSymbolIDByName(Index.get(), "Child1");
+  SymbolID Child2 = findSymbolIDByName(Index.get(), "Child2");
+
+  EXPECT_THAT(collectSubtypes(Parent, Index.get()), ElementsAre(Child1));
+  EXPECT_THAT(collectSubtypes(ParentSpec, Index.get()), ElementsAre(Child2));
+}
+
+TEST(Subtypes, TemplateSpec2) {
+  Annotations Source(R"cpp(
+struct Parent {};
+
+template <typename T>
+struct Child {};
+
+template <>
+struct Child<int> : Parent {};
+)cpp");
+
+  TestTU TU = TestTU::withCode(Source.code());
+  auto Index = TU.index();
+
+  SymbolID Parent = findSymbolIDByName(Index.get(), "Parent");
+  SymbolID ChildSpec = findSymbolIDByName(Index.get(), "Child", "<int>");
+
+  EXPECT_THAT(collectSubtypes(Parent, Index.get()), ElementsAre(ChildSpec));
+}
+
+TEST(Subtypes, DependentBase) {
+  Annotations Source(R"cpp(
+template <typename T>
+struct Parent {};
+
+template <typename T>
+struct Child : Parent<T> {};
+)cpp");
+
+  TestTU TU = TestTU::withCode(Source.code());
+  auto Index = TU.index();
+
+  SymbolID Parent = findSymbolIDByName(Index.get(), "Parent");
+  SymbolID Child = findSymbolIDByName(Index.get(), "Child");
+
+  EXPECT_THAT(collectSubtypes(Parent, Index.get()), ElementsAre(Child));
 }
 
 } // namespace

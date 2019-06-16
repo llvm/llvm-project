@@ -1426,9 +1426,9 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       // bit is updated, so we can restore the bit by reading the value of
       // vcc and then writing it back to the register.
       BuildMI(Block, Inst, Inst.getDebugLoc(),
-              TII->get(AMDGPU::S_MOV_B64),
-              AMDGPU::VCC)
-          .addReg(AMDGPU::VCC);
+              TII->get(ST->isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64),
+              TRI->getVCC())
+          .addReg(TRI->getVCC());
       VCCZBugHandledSet.insert(&Inst);
       Modified = true;
     }

@@ -167,7 +167,7 @@ define <32 x i8> @PR22706(<32 x i1> %x) {
   ret <32 x i8> %tmp
 }
 
-; TODO: Split a 256-bit select into two 128-bit selects when the operands are concatenated.
+; Split a 256-bit select into two 128-bit selects when the operands are concatenated.
 
 define void @blendv_split(<8 x i32>* %p, <8 x i32> %cond, <8 x i32> %a, <8 x i32> %x, <8 x i32> %y, <8 x i32> %z, <8 x i32> %w) {
 ; AVX1-LABEL: blendv_split:
@@ -177,12 +177,13 @@ define void @blendv_split(<8 x i32>* %p, <8 x i32> %cond, <8 x i32> %a, <8 x i32
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
 ; AVX1-NEXT:    vpslld %xmm2, %xmm4, %xmm5
 ; AVX1-NEXT:    vpslld %xmm2, %xmm1, %xmm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm2, %ymm2
 ; AVX1-NEXT:    vpslld %xmm3, %xmm4, %xmm4
 ; AVX1-NEXT:    vpslld %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
-; AVX1-NEXT:    vblendvps %ymm0, %ymm2, %ymm1, %ymm0
-; AVX1-NEXT:    vmovups %ymm0, (%rdi)
+; AVX1-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vblendvps %xmm0, %xmm5, %xmm4, %xmm0
+; AVX1-NEXT:    vmovups %xmm0, 16(%rdi)
+; AVX1-NEXT:    vmovups %xmm1, (%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;

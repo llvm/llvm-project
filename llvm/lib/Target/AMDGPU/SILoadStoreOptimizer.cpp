@@ -1144,9 +1144,10 @@ unsigned SILoadStoreOptimizer::computeBase(MachineInstr &MI,
   MachineOperand OffsetLo = createRegOrImm(static_cast<int32_t>(Addr.Offset), MI);
   MachineOperand OffsetHi =
     createRegOrImm(static_cast<int32_t>(Addr.Offset >> 32), MI);
-  unsigned CarryReg = MRI->createVirtualRegister(&AMDGPU::SReg_64_XEXECRegClass);
-  unsigned DeadCarryReg =
-    MRI->createVirtualRegister(&AMDGPU::SReg_64_XEXECRegClass);
+
+  const auto *CarryRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
+  unsigned CarryReg = MRI->createVirtualRegister(CarryRC);
+  unsigned DeadCarryReg = MRI->createVirtualRegister(CarryRC);
 
   unsigned DestSub0 = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
   unsigned DestSub1 = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
