@@ -99,6 +99,7 @@ static lto::Config createConfig() {
   C.RemarksFilename = Config->OptRemarksFilename;
   C.RemarksPasses = Config->OptRemarksPasses;
   C.RemarksWithHotness = Config->OptRemarksWithHotness;
+  C.RemarksFormat = Config->OptRemarksFormat;
 
   C.SampleProfile = Config->LTOSampleProfile;
   C.UseNewPM = Config->LTONewPassManager;
