@@ -20,13 +20,13 @@
 // Check that ifunc call sites still require relocation
 // DISASM: Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: 0000000000401000 foo:
+// DISASM-NEXT: 00401000 foo:
 // DISASM-NEXT:   401000:      	retl
 // DISASM-EMPTY:
-// DISASM-NEXT: 0000000000401001 bar:
+// DISASM-NEXT: 00401001 bar:
 // DISASM-NEXT:   401001:      	retl
 // DISASM-EMPTY:
-// DISASM-NEXT: 0000000000401002 _start:
+// DISASM-NEXT: 00401002 _start:
 // DISASM-NEXT:   401002:      	calll	-4 <_start+0x1>
 // DISASM-NEXT:   401007:      	calll	-4 <_start+0x6>
 // DISASM-NEXT:   40100c:      	calll	31 <bar2@plt>
@@ -34,7 +34,7 @@
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:
-// DISASM-NEXT: 0000000000401020 .plt:
+// DISASM-NEXT: 00401020 .plt:
 // DISASM-NEXT:   401020:      	pushl	4206596
 // DISASM-NEXT:   401026:      	jmpl	*4206600
 // DISASM-NEXT:   40102c:      	nop
@@ -42,12 +42,12 @@
 // DISASM-NEXT:   40102e:      	nop
 // DISASM-NEXT:   40102f:      	nop
 // DISASM-EMPTY:
-// DISASM-NEXT: 0000000000401030 bar2@plt:
+// DISASM-NEXT: 00401030 bar2@plt:
 // DISASM-NEXT:   401030:      	jmpl	*4206604
 // DISASM-NEXT:   401036:      	pushl	$0
 // DISASM-NEXT:   40103b:      	jmp	-32 <.plt>
 // DISASM-EMPTY:
-// DISASM-NEXT: 0000000000401040 zed2@plt:
+// DISASM-NEXT: 00401040 zed2@plt:
 // DISASM-NEXT:   401040:      	jmpl	*4206608
 // DISASM-NEXT:   401046:      	pushl	$8
 // DISASM-NEXT:   40104b:      	jmp	-48 <.plt>
