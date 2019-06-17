@@ -702,10 +702,6 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
   if (!ST->hasLOB() || DisableLowOverheadLoops)
     return false;
 
-  // For now, for simplicity, only support loops with one exit block.
-  if (!L->getExitBlock())
-    return false;
-
   if (!SE.hasLoopInvariantBackedgeTakenCount(L))
     return false;
 

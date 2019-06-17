@@ -2826,8 +2826,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
           }
         }
         // Update PHI Node.
-        PHIs[i]->setIncomingValue(PHIs[i]->getBasicBlockIndex(PBI->getParent()),
-                                  MergedCond);
+	PHIs[i]->setIncomingValueForBlock(PBI->getParent(), MergedCond);
       }
 
       // PBI is changed to branch to TrueDest below. Remove itself from

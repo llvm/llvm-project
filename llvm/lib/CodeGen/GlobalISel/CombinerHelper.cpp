@@ -131,7 +131,8 @@ PreferredTuple ChoosePreferredUse(PreferredTuple &CurrentUse,
 /// want to try harder to find a dominating block.
 static void InsertInsnsWithoutSideEffectsBeforeUse(
     MachineIRBuilder &Builder, MachineInstr &DefMI, MachineOperand &UseMO,
-    std::function<void(MachineBasicBlock *, MachineBasicBlock::iterator)>
+    std::function<void(MachineBasicBlock *, MachineBasicBlock::iterator,
+                       MachineOperand &UseMO)>
         Inserter) {
   MachineInstr &UseMI = *UseMO.getParent();
 
@@ -147,12 +148,12 @@ static void InsertInsnsWithoutSideEffectsBeforeUse(
   // the def instead of at the start of the block.
   if (InsertBB == DefMI.getParent()) {
     MachineBasicBlock::iterator InsertPt = &DefMI;
-    Inserter(InsertBB, std::next(InsertPt));
+    Inserter(InsertBB, std::next(InsertPt), UseMO);
     return;
   }
 
   // Otherwise we want the start of the BB
-  Inserter(InsertBB, InsertBB->getFirstNonPHI());
+  Inserter(InsertBB, InsertBB->getFirstNonPHI(), UseMO);
 }
 } // end anonymous namespace
 
@@ -233,18 +234,30 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
 
 void CombinerHelper::applyCombineExtendingLoads(MachineInstr &MI,
                                                 PreferredTuple &Preferred) {
-  struct InsertionPoint {
-    MachineOperand *UseMO;
-    MachineBasicBlock *InsertIntoBB;
-    MachineBasicBlock::iterator InsertBefore;
-    InsertionPoint(MachineOperand *UseMO, MachineBasicBlock *InsertIntoBB,
-                   MachineBasicBlock::iterator InsertBefore)
-        : UseMO(UseMO), InsertIntoBB(InsertIntoBB), InsertBefore(InsertBefore) {
-    }
-  };
-
   // Rewrite the load to the chosen extending load.
   unsigned ChosenDstReg = Preferred.MI->getOperand(0).getReg();
+
+  // Inserter to insert a truncate back to the original type at a given point
+  // with some basic CSE to limit truncate duplication to one per BB.
+  DenseMap<MachineBasicBlock *, MachineInstr *> EmittedInsns;
+  auto InsertTruncAt = [&](MachineBasicBlock *InsertIntoBB,
+                           MachineBasicBlock::iterator InsertBefore,
+                           MachineOperand &UseMO) {
+    MachineInstr *PreviouslyEmitted = EmittedInsns.lookup(InsertIntoBB);
+    if (PreviouslyEmitted) {
+      Observer.changingInstr(*UseMO.getParent());
+      UseMO.setReg(PreviouslyEmitted->getOperand(0).getReg());
+      Observer.changedInstr(*UseMO.getParent());
+      return;
+    }
+
+    Builder.setInsertPt(*InsertIntoBB, InsertBefore);
+    unsigned NewDstReg = MRI.cloneVirtualRegister(MI.getOperand(0).getReg());
+    MachineInstr *NewMI = Builder.buildTrunc(NewDstReg, ChosenDstReg);
+    EmittedInsns[InsertIntoBB] = NewMI;
+    replaceRegOpWith(MRI, UseMO, NewDstReg);
+  };
+
   Observer.changingInstr(MI);
   MI.setDesc(
       Builder.getTII().get(Preferred.ExtendOpcode == TargetOpcode::G_SEXT
@@ -254,11 +267,13 @@ void CombinerHelper::applyCombineExtendingLoads(MachineInstr &MI,
                                      : TargetOpcode::G_LOAD));
 
   // Rewrite all the uses to fix up the types.
-  SmallVector<MachineInstr *, 1> ScheduleForErase;
-  SmallVector<InsertionPoint, 4> ScheduleForInsert;
   auto &LoadValue = MI.getOperand(0);
-  for (auto &UseMO : MRI.use_operands(LoadValue.getReg())) {
-    MachineInstr *UseMI = UseMO.getParent();
+  SmallVector<MachineOperand *, 4> Uses;
+  for (auto &UseMO : MRI.use_operands(LoadValue.getReg()))
+    Uses.push_back(&UseMO);
+
+  for (auto *UseMO : Uses) {
+    MachineInstr *UseMI = UseMO->getParent();
 
     // If the extend is compatible with the preferred extend then we should fix
     // up the type and extend so that it uses the preferred use.
@@ -279,7 +294,8 @@ void CombinerHelper::applyCombineExtendingLoads(MachineInstr &MI,
           //    %2:_(s32) = G_SEXTLOAD ...
           //    ... = ... %2(s32)
           replaceRegWith(MRI, UseDstReg, ChosenDstReg);
-          ScheduleForErase.push_back(UseMO.getParent());
+          Observer.erasingInstr(*UseMO->getParent());
+          UseMO->getParent()->eraseFromParent();
         } else if (Preferred.Ty.getSizeInBits() < UseDstTy.getSizeInBits()) {
           // If the preferred size is smaller, then keep the extend but extend
           // from the result of the extending load. For example:
@@ -304,56 +320,24 @@ void CombinerHelper::applyCombineExtendingLoads(MachineInstr &MI,
           //    %4:_(s8) = G_TRUNC %2:_(s32)
           //    %3:_(s64) = G_ZEXT %2:_(s8)
           //    ... = ... %3(s64)
-          InsertInsnsWithoutSideEffectsBeforeUse(
-              Builder, MI, UseMO,
-              [&](MachineBasicBlock *InsertIntoBB,
-                  MachineBasicBlock::iterator InsertBefore) {
-                ScheduleForInsert.emplace_back(&UseMO, InsertIntoBB, InsertBefore);
-              });
+          InsertInsnsWithoutSideEffectsBeforeUse(Builder, MI, *UseMO,
+                                                 InsertTruncAt);
         }
         continue;
       }
       // The use is (one of) the uses of the preferred use we chose earlier.
       // We're going to update the load to def this value later so just erase
       // the old extend.
-      ScheduleForErase.push_back(UseMO.getParent());
+      Observer.erasingInstr(*UseMO->getParent());
+      UseMO->getParent()->eraseFromParent();
       continue;
     }
 
     // The use isn't an extend. Truncate back to the type we originally loaded.
     // This is free on many targets.
-    InsertInsnsWithoutSideEffectsBeforeUse(
-        Builder, MI, UseMO,
-        [&](MachineBasicBlock *InsertIntoBB,
-            MachineBasicBlock::iterator InsertBefore) {
-          ScheduleForInsert.emplace_back(&UseMO, InsertIntoBB, InsertBefore);
-        });
+    InsertInsnsWithoutSideEffectsBeforeUse(Builder, MI, *UseMO, InsertTruncAt);
   }
 
-  DenseMap<MachineBasicBlock *, MachineInstr *> EmittedInsns;
-  for (auto &InsertionInfo : ScheduleForInsert) {
-    MachineOperand *UseMO = InsertionInfo.UseMO;
-    MachineBasicBlock *InsertIntoBB = InsertionInfo.InsertIntoBB;
-    MachineBasicBlock::iterator InsertBefore = InsertionInfo.InsertBefore;
-
-    MachineInstr *PreviouslyEmitted = EmittedInsns.lookup(InsertIntoBB);
-    if (PreviouslyEmitted) {
-      Observer.changingInstr(*UseMO->getParent());
-      UseMO->setReg(PreviouslyEmitted->getOperand(0).getReg());
-      Observer.changedInstr(*UseMO->getParent());
-      continue;
-    }
-
-    Builder.setInsertPt(*InsertIntoBB, InsertBefore);
-    unsigned NewDstReg = MRI.cloneVirtualRegister(MI.getOperand(0).getReg());
-    MachineInstr *NewMI = Builder.buildTrunc(NewDstReg, ChosenDstReg);
-    EmittedInsns[InsertIntoBB] = NewMI;
-    replaceRegOpWith(MRI, *UseMO, NewDstReg);
-  }
-  for (auto &EraseMI : ScheduleForErase) {
-    Observer.erasingInstr(*EraseMI);
-    EraseMI->eraseFromParent();
-  }
   MI.getOperand(0).setReg(ChosenDstReg);
   Observer.changedInstr(MI);
 }

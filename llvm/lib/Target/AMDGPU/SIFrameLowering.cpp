@@ -545,14 +545,13 @@ static unsigned findScratchNonCalleeSaveRegister(MachineFunction &MF,
 }
 
 bool SIFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
-    switch (ID) {
-    default:
-      return false;
-    case TargetStackID::Default:
-    case TargetStackID::NoAlloc:
-    case TargetStackID::SGPRSpill:
-      return true;
-    }
+  switch (ID) {
+  case TargetStackID::Default:
+  case TargetStackID::NoAlloc:
+  case TargetStackID::SGPRSpill:
+    return true;
+  }
+  llvm_unreachable("Invalid TargetStackID::Value");
 }
 
 void SIFrameLowering::emitPrologue(MachineFunction &MF,

@@ -6,6 +6,7 @@
 ; RUN: llvm-lto -thinlto-action=run \
 ; RUN:          -lto-pass-remarks-output=%t.yaml \
 ; RUN:          -lto-pass-remarks-filter=inline \
+; RUN:          -lto-pass-remarks-format=yaml \
 ; RUN:          -exported-symbol _func2 \
 ; RUN:          -exported-symbol _main %t1.bc %t2.bc 2>&1 | \
 ; RUN:     FileCheck %s -allow-empty

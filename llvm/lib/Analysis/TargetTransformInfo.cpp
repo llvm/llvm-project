@@ -183,6 +183,16 @@ bool TargetTransformInfo::isLegalMaskedLoad(Type *DataType) const {
   return TTIImpl->isLegalMaskedLoad(DataType);
 }
 
+bool TargetTransformInfo::isLegalNTStore(Type *DataType,
+                                         unsigned Alignment) const {
+  return TTIImpl->isLegalNTStore(DataType, Alignment);
+}
+
+bool TargetTransformInfo::isLegalNTLoad(Type *DataType,
+                                        unsigned Alignment) const {
+  return TTIImpl->isLegalNTLoad(DataType, Alignment);
+}
+
 bool TargetTransformInfo::isLegalMaskedGather(Type *DataType) const {
   return TTIImpl->isLegalMaskedGather(DataType);
 }
@@ -712,6 +722,10 @@ bool TargetTransformInfo::useReductionIntrinsic(unsigned Opcode,
 
 bool TargetTransformInfo::shouldExpandReduction(const IntrinsicInst *II) const {
   return TTIImpl->shouldExpandReduction(II);
+}
+
+unsigned TargetTransformInfo::getGISelRematGlobalCost() const {
+  return TTIImpl->getGISelRematGlobalCost();
 }
 
 int TargetTransformInfo::getInstructionLatency(const Instruction *I) const {

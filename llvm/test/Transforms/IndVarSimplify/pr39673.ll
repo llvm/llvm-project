@@ -58,15 +58,13 @@ define i16 @dom_argument(i16 %arg1, i16 %arg2) {
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
 ; CHECK:       loop1:
 ; CHECK-NEXT:    [[L1:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[L1_ADD:%.*]], [[LOOP1]] ]
-; CHECK-NEXT:    [[SELECTOR:%.*]] = phi i16 [ [[ARG1:%.*]], [[ENTRY]] ], [ [[ARG2:%.*]], [[LOOP1]] ]
 ; CHECK-NEXT:    [[L1_ADD]] = add nuw nsw i16 [[L1]], 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i16 [[L1_ADD]], 2
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LOOP1]], label [[LOOP2_PREHEADER:%.*]]
 ; CHECK:       loop2.preheader:
-; CHECK-NEXT:    [[K1_ADD_LCSSA:%.*]] = phi i16 [ [[SELECTOR]], [[LOOP1]] ]
 ; CHECK-NEXT:    br label [[LOOP2:%.*]]
 ; CHECK:       loop2:
-; CHECK-NEXT:    [[K2:%.*]] = phi i16 [ [[K2_ADD:%.*]], [[LOOP2]] ], [ [[K1_ADD_LCSSA]], [[LOOP2_PREHEADER]] ]
+; CHECK-NEXT:    [[K2:%.*]] = phi i16 [ [[K2_ADD:%.*]], [[LOOP2]] ], [ [[ARG2:%.*]], [[LOOP2_PREHEADER]] ]
 ; CHECK-NEXT:    [[L2:%.*]] = phi i16 [ [[L2_ADD:%.*]], [[LOOP2]] ], [ 0, [[LOOP2_PREHEADER]] ]
 ; CHECK-NEXT:    [[L2_ADD]] = add nuw nsw i16 [[L2]], 1
 ; CHECK-NEXT:    tail call void @foo(i16 [[K2]])

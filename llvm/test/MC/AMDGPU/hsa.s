@@ -120,7 +120,7 @@ amd_kernel_code_t_test_all:
     kernarg_segment_alignment = 5
     group_segment_alignment = 5
     private_segment_alignment = 5
-    wavefront_size = 5
+    wavefront_size = 6
     call_convention = 1
     runtime_loader_kernel_symbol = 1
 .end_amd_kernel_code_t
@@ -185,7 +185,7 @@ amd_kernel_code_t_test_all:
 // ASM: kernarg_segment_alignment = 5
 // ASM: group_segment_alignment = 5
 // ASM: private_segment_alignment = 5
-// ASM: wavefront_size = 5
+// ASM: wavefront_size = 6
 // ASM: call_convention = 1
 // ASM: runtime_loader_kernel_symbol = 1
 // ASM: .end_amd_kernel_code_t

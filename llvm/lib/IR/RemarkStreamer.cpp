@@ -109,10 +109,37 @@ void RemarkStreamer::emit(const DiagnosticInfoOptimizationBase &Diag) {
 
 char RemarkSetupFileError::ID = 0;
 char RemarkSetupPatternError::ID = 0;
+char RemarkSetupFormatError::ID = 0;
+
+static std::unique_ptr<remarks::Serializer>
+formatToSerializer(RemarksSerializerFormat RemarksFormat, raw_ostream &OS) {
+  switch (RemarksFormat) {
+  default:
+    llvm_unreachable("Unknown remark serializer format.");
+    return nullptr;
+  case RemarksSerializerFormat::YAML:
+    return llvm::make_unique<remarks::YAMLSerializer>(OS);
+  };
+}
+
+Expected<RemarksSerializerFormat>
+llvm::parseSerializerFormat(StringRef StrFormat) {
+  auto Format = StringSwitch<RemarksSerializerFormat>(StrFormat)
+                    .Cases("", "yaml", RemarksSerializerFormat::YAML)
+                    .Default(RemarksSerializerFormat::Unknown);
+
+  if (Format == RemarksSerializerFormat::Unknown)
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "Unknown remark serializer format: '%s'",
+                             StrFormat.data());
+
+  return Format;
+}
 
 Expected<std::unique_ptr<ToolOutputFile>>
 llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
-                               StringRef RemarksPasses, bool RemarksWithHotness,
+                               StringRef RemarksPasses, StringRef RemarksFormat,
+                               bool RemarksWithHotness,
                                unsigned RemarksHotnessThreshold) {
   if (RemarksWithHotness)
     Context.setDiagnosticsHotnessRequested(true);
@@ -131,9 +158,13 @@ llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
   if (EC)
     return make_error<RemarkSetupFileError>(errorCodeToError(EC));
 
+  Expected<RemarksSerializerFormat> Format =
+      parseSerializerFormat(RemarksFormat);
+  if (Error E = Format.takeError())
+    return make_error<RemarkSetupFormatError>(std::move(E));
+
   Context.setRemarkStreamer(llvm::make_unique<RemarkStreamer>(
-      RemarksFilename,
-      llvm::make_unique<remarks::YAMLSerializer>(RemarksFile->os())));
+      RemarksFilename, formatToSerializer(*Format, RemarksFile->os())));
 
   if (!RemarksPasses.empty())
     if (Error E = Context.getRemarkStreamer()->setFilter(RemarksPasses))

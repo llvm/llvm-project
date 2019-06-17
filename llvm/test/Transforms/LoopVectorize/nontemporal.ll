@@ -14,19 +14,19 @@ for.body.preheader:                               ; preds = %entry
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
 
-; Check that we don't lose !nontemporal hint when vectorizing loads.
-; CHECK: %wide.load{{[0-9]*}} = load <4 x float>, <4 x float>* %{{[0-9]+}}, align 4, !nontemporal !0
+; Check that we don't lose !nontemporal hint when attempting vectorizing of loads.
+; CHECK: load {{.*}} align 4, !nontemporal !0
   %arrayidx = getelementptr inbounds float, float* %b, i64 %indvars.iv
   %0 = load float, float* %arrayidx, align 4, !nontemporal !0
 
 ; Check that we don't introduce !nontemporal hint when the original scalar loads didn't have it.
-; CHECK: %wide.load{{[0-9]+}} = load <4 x float>, <4 x float>* %{{[0-9]+}}, align 4{{$}}
+; CHECK: load {{.*}} align 4{{$}}
   %arrayidx2 = getelementptr inbounds float, float* %c, i64 %indvars.iv
   %1 = load float, float* %arrayidx2, align 4
   %add = fadd float %0, %1
 
-; Check that we don't lose !nontemporal hint when vectorizing stores.
-; CHECK: store <4 x float> %{{[0-9]+}}, <4 x float>* %{{[0-9]+}}, align 4, !nontemporal !0
+; Check that we don't lose !nontemporal hint when attempting vectorizing of stores.
+; CHECK: store {{.*}} align 4, !nontemporal !0
   %arrayidx4 = getelementptr inbounds float, float* %a, i64 %indvars.iv
   store float %add, float* %arrayidx4, align 4, !nontemporal !0
 
