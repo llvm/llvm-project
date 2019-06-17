@@ -262,8 +262,8 @@ void DWARFASTParserSwift::GetClangType(const DWARFDIE &die,
   };
   fixup_typedef();
 
-  auto *sym_file = die.GetCU()->GetSymbolFileDWARF();
-  sym_file->UpdateExternalModuleListIfNeeded();
+  auto &sym_file = die.GetCU()->GetSymbolFileDWARF();
+  sym_file.UpdateExternalModuleListIfNeeded();
 
   CompilerContextKind kinds[] = {decl_context.back().type,
                                  CompilerContextKind::Union,
@@ -273,17 +273,18 @@ void DWARFASTParserSwift::GetClangType(const DWARFDIE &die,
   for (CompilerContextKind kind : kinds) {
     decl_context.back().type = kind;
     // Search any modules referenced by DWARF.
-    for (const auto &name_module : sym_file->getExternalTypeModules()) {
+    for (const auto &name_module : sym_file.getExternalTypeModules()) {
       if (!name_module.second)
         continue;
       SymbolVendor *sym_vendor = name_module.second->GetSymbolVendor();
       if (sym_vendor->FindTypes(decl_context, true, clang_types))
         return;
     }
+
     // Next search the .dSYM the DIE came from, if applicable.
-    if (SymbolFileDWARF *sym_file = die.GetCU()->GetSymbolFileDWARF())
-      if (sym_file->FindTypes(decl_context, true, clang_types))
-        return;
+    SymbolFileDWARF &sym_file = die.GetCU()->GetSymbolFileDWARF();
+    if (sym_file.FindTypes(decl_context, true, clang_types))
+      return;
   }
 }
 
