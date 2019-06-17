@@ -26,7 +26,6 @@
 #include "lldb/Symbol/ObjectFile.h"
 
 extern "C" {
-#include <cni.h>
 #include <dpu.h>
 }
 
@@ -44,16 +43,15 @@ public:
   bool Reset();
   Dpu *GetDpu(size_t index);
 
-  dpu_description_t GetDesc() { return &m_desc; }
+  dpu_description_t GetDesc() { return m_desc; }
   int GetNrThreads() { return nr_threads; }
-  dpulink_t GetLink() { return m_link; }
   std::mutex &GetLock() { return m_lock; }
 
 private:
   dpu_type_t m_type;
   const char *m_profile;
-  dpulink_t m_link;
-  struct _dpu_description_t m_desc;
+  dpu_rank_t *m_rank;;
+  dpu_description_t m_desc;
   int nr_threads;
   int nr_dpus;
   std::mutex m_lock; /* protect rank resources including the comm channel */
@@ -62,7 +60,7 @@ private:
 
 class Dpu {
 public:
-  Dpu(DpuRank *rank, dpu_slice_id_t slice_id, dpu_id_t dpu_id);
+  Dpu(DpuRank *rank, dpu_t *dpu);
   ~Dpu();
 
   bool LoadElf(const FileSpec &elf_file_path);
@@ -88,11 +86,9 @@ public:
 
 private:
   DpuRank *m_rank;
-  dpu_slice_id_t m_slice_id;
-  dpu_id_t m_dpu_id;
+  dpu_t *m_dpu;
   int nr_threads;
   int nr_of_work_registers_per_thread;
-  dpulink_t m_link;
   struct _dpu_context_t m_context;
   bool dpu_is_running = false;
   bool dpu_is_in_fault = false;

@@ -27,7 +27,6 @@
 #include "RegisterContextDpu.h"
 
 extern "C" {
-#include <cni.h>
 #include <dpu.h>
 }
 
@@ -48,54 +47,52 @@ const ArchSpec k_dpu_arch("dpu-upmem-dpurte");
 DpuRank::DpuRank(dpu_type_t backend_type, const char *profile)
     : m_type(backend_type), m_profile(profile), nr_threads(0), nr_dpus(0),
       m_lock() {
-  m_link = nullptr;
+  m_rank = NULL;
 }
 
 bool DpuRank::Open() {
   std::lock_guard<std::mutex> guard(m_lock);
 
-  int ret = dpu_cni_get_rank_of_type(m_type, m_profile, &m_link);
+  int ret = dpu_get_rank_of_type(m_type, m_profile, &m_rank);
   fprintf(stderr, "get_rank=>%d\n", ret);
-  if (ret != DPU_CNI_SUCCESS)
+  if (ret != DPU_API_SUCCESS)
     return false;
-  dpu_cni_get_target_description(m_link, &m_desc);
+  m_desc = dpu_get_description(m_rank);
 
-  fprintf(stderr, "rank desc threads %d dpus %d\n", m_desc.dpu.nr_of_threads,
-          m_desc.topology.nr_of_control_interfaces *
-              m_desc.topology.nr_of_dpus_per_control_interface);
-  nr_threads = m_desc.dpu.nr_of_threads;
-  nr_dpus = m_desc.topology.nr_of_control_interfaces *
-            m_desc.topology.nr_of_dpus_per_control_interface;
+  fprintf(stderr, "rank desc threads %d dpus %d\n", m_desc->dpu.nr_of_threads,
+          m_desc->topology.nr_of_control_interfaces *
+              m_desc->topology.nr_of_dpus_per_control_interface);
+  nr_threads = m_desc->dpu.nr_of_threads;
+  nr_dpus = m_desc->topology.nr_of_control_interfaces *
+            m_desc->topology.nr_of_dpus_per_control_interface;
 
   m_dpus.reserve(nr_dpus);
   for (int id = 0; id < nr_dpus; id++) {
     dpu_slice_id_t slice_id =
-        (dpu_slice_id_t)(id / m_desc.topology.nr_of_dpus_per_control_interface);
+        (dpu_slice_id_t)(id / m_desc->topology.nr_of_dpus_per_control_interface);
     dpu_id_t dpu_id =
-        (dpu_id_t)(id % m_desc.topology.nr_of_dpus_per_control_interface);
-    m_dpus.push_back(llvm::make_unique<Dpu>(this, slice_id, dpu_id));
+        (dpu_id_t)(id % m_desc->topology.nr_of_dpus_per_control_interface);
+    m_dpus.push_back(llvm::make_unique<Dpu>(this, dpu_get(m_rank, slice_id, dpu_id)));
   }
 
   return true;
 }
 
-bool DpuRank::IsValid() { return m_link ? true : false; }
+bool DpuRank::IsValid() { return m_rank ? true : false; }
 
 bool DpuRank::Reset() {
   std::lock_guard<std::mutex> guard(m_lock);
-  return dpu_cni_reset_for_all(m_link) == DPU_CNI_SUCCESS;
+  return dpu_reset_rank(m_rank) == DPU_API_SUCCESS;
 }
 
 Dpu *DpuRank::GetDpu(size_t index) {
   return index < m_dpus.size() ? m_dpus[index].get() : nullptr;
 }
 
-Dpu::Dpu(DpuRank *rank, dpu_slice_id_t slice_id, dpu_id_t dpu_id)
-    : m_rank(rank), m_slice_id(slice_id), m_dpu_id(dpu_id) {
+Dpu::Dpu(DpuRank *rank, dpu_t *dpu) : m_rank(rank), m_dpu(dpu) {
   nr_threads = m_rank->GetNrThreads();
   nr_of_work_registers_per_thread =
       rank->GetDesc()->dpu.nr_of_work_registers_per_thread;
-  m_link = m_rank->GetLink();
 
   uint32_t nr_of_atomic_bits = rank->GetDesc()->dpu.nr_of_atomic_bits;
   m_context.registers =
@@ -141,17 +138,17 @@ bool Dpu::LoadElf(const FileSpec &elf_file_path) {
   {
     std::lock_guard<std::mutex> guard(m_rank->GetLock());
 
-    int res = dpu_cni_copy_to_iram_for_dpu(
-        m_link, m_slice_id, m_dpu_id, 0,
+    int res = dpu_copy_to_iram_for_dpu(
+        m_dpu, 0,
         reinterpret_cast<const dpuinstruction_t *>(text_content.GetDataStart()),
         text_content.GetByteSize() / sizeof(dpuinstruction_t));
-    if (res != DPU_CNI_SUCCESS)
+    if (res != DPU_API_SUCCESS)
       return false;
-    res = dpu_cni_copy_to_wram_for_dpu(
-        m_link, m_slice_id, m_dpu_id, 0,
+    res = dpu_copy_to_wram_for_dpu(
+        m_dpu, 0,
         reinterpret_cast<const dpuword_t *>(data_content.GetDataStart()),
         data_content.GetByteSize() / sizeof(dpuword_t));
-    if (res != DPU_CNI_SUCCESS)
+    if (res != DPU_API_SUCCESS)
       return false;
   }
 
@@ -161,14 +158,13 @@ bool Dpu::LoadElf(const FileSpec &elf_file_path) {
 bool Dpu::Boot() {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
 
-  int res = dpu_cni_preexecution_for_dpu(m_link, m_slice_id, m_dpu_id);
-  if (res != DPU_CNI_SUCCESS)
+  int res = dpu_custom_for_dpu(m_dpu, DPU_COMMAND_DPU_PREEXECUTION, NULL);
+  if (res != DPU_API_SUCCESS)
     return false;
 
   bool ignored;
-  res = dpu_cni_launch_thread_for_dpu(m_link, m_slice_id, m_dpu_id, 0, false,
-                                      &ignored);
-  if (res != DPU_CNI_SUCCESS)
+  res = dpu_launch_thread_on_dpu(m_dpu, DPU_BOOT_THREAD, false, &ignored);
+  if (res != DPU_API_SUCCESS)
     return false;
 
   return true;
@@ -181,8 +177,7 @@ StateType Dpu::PollStatus(unsigned int *exit_status) {
   if (!dpu_is_running)
     return StateType::eStateInvalid;
 
-  int res = dpu_cni_poll_for_dpu(m_link, m_slice_id, m_dpu_id, &dpu_is_running,
-                                 &dpu_is_in_fault);
+  dpu_poll_dpu(m_dpu, &dpu_is_running, &dpu_is_in_fault);
   if (dpu_is_in_fault) {
     dpu_is_running = false;
     result_state = StateType::eStateStopped;
@@ -192,9 +187,8 @@ StateType Dpu::PollStatus(unsigned int *exit_status) {
     return StateType::eStateRunning;
   }
 
-  dpu_cni_initialize_fault_process_for_dpu(m_link, m_slice_id, m_dpu_id,
-                                           &m_context);
-  dpu_cni_extract_context_for_dpu(m_link, m_slice_id, m_dpu_id, &m_context);
+  dpu_initialize_fault_process_for_dpu(m_dpu, &m_context);
+  dpu_extract_context_for_dpu(m_dpu, &m_context);
   *exit_status = m_context.registers[lldb_private::r21_dpu];
 
   return result_state;
@@ -212,82 +206,75 @@ bool Dpu::StopThreads() {
   m_context.dma_fault = false;
   m_context.mem_fault = false;
 
-  int ret = DPU_CNI_SUCCESS;
-  ret |= dpu_cni_initialize_fault_process_for_dpu(m_link, m_slice_id, m_dpu_id,
-                                                  &m_context);
-  ret |=
-      dpu_cni_extract_context_for_dpu(m_link, m_slice_id, m_dpu_id, &m_context);
-  return ret == DPU_CNI_SUCCESS;
+  int ret = DPU_API_SUCCESS;
+  ret |= dpu_initialize_fault_process_for_dpu(m_dpu, &m_context);
+  ret |= dpu_extract_context_for_dpu(m_dpu, &m_context);
+  return ret == DPU_API_SUCCESS;
 }
 
 bool Dpu::ResumeThreads() {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
 
-  int ret = DPU_CNI_SUCCESS;
-  ret |= dpu_cni_clear_fault_on_all(m_link);
-  ret |= dpu_cni_finalize_fault_process_for_dpu(m_link, m_slice_id, m_dpu_id,
-                                                &m_context);
+  int ret = DPU_API_SUCCESS;
+  ret |= dpu_clear_fault_on_dpu(m_dpu);
+  ret |= dpu_finalize_fault_process_for_dpu(m_dpu, &m_context);
 
   dpu_is_running = true;
-  return ret == DPU_CNI_SUCCESS;
+  return ret == DPU_API_SUCCESS;
 }
 
 bool Dpu::WriteWRAM(uint32_t offset, const void *buf, size_t size) {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
   const dpuword_t *words = static_cast<const dpuword_t *>(buf);
 
-  dpu_cni_status_t ret = dpu_cni_copy_to_wram_for_dpu(
-      m_link, m_slice_id, m_dpu_id, offset / sizeof(dpuword_t), words,
-      size / sizeof(dpuword_t));
-  return ret == DPU_CNI_SUCCESS;
+  dpu_api_status_t ret = dpu_copy_to_wram_for_dpu(
+      m_dpu, offset / sizeof(dpuword_t), words, size / sizeof(dpuword_t));
+  return ret == DPU_API_SUCCESS;
 }
 
 bool Dpu::ReadWRAM(uint32_t offset, void *buf, size_t size) {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
   dpuword_t *words = static_cast<dpuword_t *>(buf);
 
-  dpu_cni_status_t ret = dpu_cni_copy_from_wram_for_dpu(
-      m_link, m_slice_id, m_dpu_id, words, offset / sizeof(dpuword_t),
-      size / sizeof(dpuword_t));
-  return ret == DPU_CNI_SUCCESS;
+  dpu_api_status_t ret = dpu_copy_from_wram_for_dpu(
+      m_dpu, words, offset / sizeof(dpuword_t), size / sizeof(dpuword_t));
+  return ret == DPU_API_SUCCESS;
 }
 
 bool Dpu::WriteIRAM(uint32_t offset, const void *buf, size_t size) {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
   const dpuinstruction_t *instrs = static_cast<const dpuinstruction_t *>(buf);
 
-  dpu_cni_status_t ret = dpu_cni_copy_to_iram_for_dpu(
-      m_link, m_slice_id, m_dpu_id, offset / sizeof(dpuinstruction_t), instrs,
-      size / sizeof(dpuinstruction_t));
-  return ret == DPU_CNI_SUCCESS;
+  dpu_api_status_t ret =
+      dpu_copy_to_iram_for_dpu(m_dpu, offset / sizeof(dpuinstruction_t), instrs,
+                               size / sizeof(dpuinstruction_t));
+  return ret == DPU_API_SUCCESS;
 }
 
 bool Dpu::ReadIRAM(uint32_t offset, void *buf, size_t size) {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
   dpuinstruction_t *instrs = static_cast<dpuinstruction_t *>(buf);
 
-  dpu_cni_status_t ret = dpu_cni_copy_from_iram_for_dpu(
-      m_link, m_slice_id, m_dpu_id, instrs, offset / sizeof(dpuinstruction_t),
+  dpu_api_status_t ret = dpu_copy_from_iram_for_dpu(
+      m_dpu, instrs, offset / sizeof(dpuinstruction_t),
       size / sizeof(dpuinstruction_t));
-  return ret == DPU_CNI_SUCCESS;
+  return ret == DPU_API_SUCCESS;
 }
 
 bool Dpu::WriteMRAM(uint32_t offset, const void *buf, size_t size) {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
   const uint8_t *bytes = static_cast<const uint8_t *>(buf);
 
-  dpu_cni_status_t ret = dpu_cni_copy_to_mram_number_for_dpu(
-      m_link, m_slice_id, m_dpu_id, offset, bytes, size, 0);
-  return ret == DPU_CNI_SUCCESS;
+  dpu_api_status_t ret = dpu_copy_to_mram(m_dpu, offset, bytes, size, 0);
+  return ret == DPU_API_SUCCESS;
 }
 
 bool Dpu::ReadMRAM(uint32_t offset, void *buf, size_t size) {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
   uint8_t *bytes = static_cast<uint8_t *>(buf);
 
-  dpu_cni_status_t ret = dpu_cni_copy_from_mram_number_for_dpu(
-      m_link, m_slice_id, m_dpu_id, bytes, offset, size, 0);
-  return ret == DPU_CNI_SUCCESS;
+  dpu_api_status_t ret = dpu_copy_from_mram(m_dpu, bytes, offset, size, 0);
+  return ret == DPU_API_SUCCESS;
 }
 
 uint32_t *Dpu::ThreadContextRegs(int thread_index) {

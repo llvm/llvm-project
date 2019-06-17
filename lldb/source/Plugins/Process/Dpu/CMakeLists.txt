@@ -21,4 +21,4 @@ add_lldb_library(lldbPluginProcessDpu PLUGIN
   EXTRA_CXXFLAGS -g
   )
 
-lldb_append_link_flags(lldbPluginProcessDpu "-L${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../../backends/build/cni -ldpucni-2019.2.0")
+lldb_append_link_flags(lldbPluginProcessDpu "-L${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../../backends/build/api -ldpu-2019.2.0")
