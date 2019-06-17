@@ -1058,7 +1058,7 @@ void DebugSHandler::handleDebugS(lld::coff::SectionChunk &DebugS) {
 
     default:
       warn("ignoring unknown debug$S subsection kind 0x" +
-           utohexstr(uint32_t(SS.kind())));
+           utohexstr(uint32_t(SS.kind())) + " in file " + toString(&File));
       break;
     }
   }

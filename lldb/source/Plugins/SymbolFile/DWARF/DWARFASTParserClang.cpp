@@ -998,7 +998,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
             clang_type.GetOpaqueQualType();
         dwarf->GetForwardDeclClangTypeToDie()
             [ClangUtil::RemoveFastQualifiers(clang_type).GetOpaqueQualType()] =
-            die.GetDIERef();
+            die.GetID();
         m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), true);
       }
     }
