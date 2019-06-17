@@ -275,6 +275,8 @@ SymbolRoleSet index::getSymbolRoles(uint64_t Roles) {
     SymbolRoles |= (SymbolRoleSet)SymbolRole::RelationIBTypeOf;
   if (Roles & INDEXSTORE_SYMBOL_ROLE_REL_SPECIALIZATIONOF)
     SymbolRoles |= (SymbolRoleSet)SymbolRole::RelationSpecializationOf;
+  if (Roles & INDEXSTORE_SYMBOL_ROLE_NAMEREFERENCE)
+    SymbolRoles |= (SymbolRoleSet)SymbolRole::NameReference;
 
   return SymbolRoles;
 }
@@ -512,7 +514,7 @@ uint64_t index::getIndexStoreRoles(SymbolRoleSet Roles) {
       storeRoles |= INDEXSTORE_SYMBOL_ROLE_REL_SPECIALIZATIONOF;
       break;
     case SymbolRole::NameReference:
-      storeRoles |= INDEXSTORE_SYMBOL_ROLE_REFERENCE;
+      storeRoles |= INDEXSTORE_SYMBOL_ROLE_NAMEREFERENCE;
       break;
     }
   });
