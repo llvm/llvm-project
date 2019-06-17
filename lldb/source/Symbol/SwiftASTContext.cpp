@@ -5994,9 +5994,7 @@ SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
     return {};
   if (auto *runtime = SwiftLanguageRuntime::Get(*exe_scope->CalculateProcess()))
     return runtime->GetBitSize({this, type});
-
-  // FIXME: This should be {}.
-  return 0;
+  return {};
 }
 
 uint64_t SwiftASTContext::GetByteStride(lldb::opaque_compiler_type_t type) {
