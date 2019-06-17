@@ -6,6 +6,9 @@
 # Check that we have a valid target created via '%lldbmi %t'.
 # CHECK: ^done
 
+settings set symbols.enable-external-lookup false
+# CHECK: ^done
+
 -break-insert main
 # CHECK: ^done,bkpt={number="1"
 

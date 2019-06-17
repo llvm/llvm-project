@@ -55,6 +55,7 @@ public:
   SwiftModuleLoadingMode GetSwiftModuleLoadingMode() const;
   bool SetSwiftModuleLoadingMode(SwiftModuleLoadingMode);
   bool GetEnableExternalLookup() const;
+  bool SetEnableExternalLookup(bool new_value);
 }; 
 
 /// \class ModuleList ModuleList.h "lldb/Core/ModuleList.h"

@@ -975,6 +975,7 @@ int main(int argc, const char *argv[]) {
   CleanUp TerminateDebugger([&] { DebuggerLifetime.Terminate(); });
 
   auto Dbg = lldb_private::Debugger::CreateInstance();
+  ModuleList::GetGlobalModuleListProperties().SetEnableExternalLookup(false);
 
   if (!opts::Log.empty())
     Dbg->EnableLog("lldb", {"all"}, opts::Log, 0, errs());

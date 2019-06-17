@@ -7,6 +7,9 @@
 
 # Test for enabling pending breakpoints globally
 
+settings set symbols.enable-external-lookup false
+# CHECK: ^done
+
 -break-insert printf
 # CHECK: ^error,msg="Command 'break-insert'. Breakpoint location 'printf' not found
 

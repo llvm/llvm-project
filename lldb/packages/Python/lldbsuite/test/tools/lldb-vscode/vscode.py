@@ -447,8 +447,10 @@ class DebugCommunication(object):
             args_dict['waitFor'] = waitFor
         if trace:
             args_dict['trace'] = trace
+        args_dict['initCommands'] = [
+            'settings set symbols.enable-external-lookup false']
         if initCommands:
-            args_dict['initCommands'] = initCommands
+            args_dict['initCommands'].extend(initCommands)
         if preRunCommands:
             args_dict['preRunCommands'] = preRunCommands
         if stopCommands:
@@ -582,8 +584,10 @@ class DebugCommunication(object):
             args_dict['shellExpandArguments'] = shellExpandArguments
         if trace:
             args_dict['trace'] = trace
+        args_dict['initCommands'] = [
+            'settings set symbols.enable-external-lookup false']
         if initCommands:
-            args_dict['initCommands'] = initCommands
+            args_dict['initCommands'].extend(initCommands)
         if preRunCommands:
             args_dict['preRunCommands'] = preRunCommands
         if stopCommands:
