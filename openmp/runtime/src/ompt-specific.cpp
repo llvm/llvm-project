@@ -211,7 +211,7 @@ ompt_data_t *__ompt_get_thread_data_internal() {
 void __ompt_thread_assign_wait_id(void *variable) {
   kmp_info_t *ti = ompt_get_thread();
 
-  ti->th.ompt_thread_info.wait_id = (ompt_wait_id_t)variable;
+  ti->th.ompt_thread_info.wait_id = (ompt_wait_id_t)(uintptr_t)variable;
 }
 
 int __ompt_get_state_internal(ompt_wait_id_t *omp_wait_id) {
