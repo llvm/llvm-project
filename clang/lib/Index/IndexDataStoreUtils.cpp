@@ -511,6 +511,9 @@ uint64_t index::getIndexStoreRoles(SymbolRoleSet Roles) {
     case SymbolRole::RelationSpecializationOf:
       storeRoles |= INDEXSTORE_SYMBOL_ROLE_REL_SPECIALIZATIONOF;
       break;
+    case SymbolRole::NameReference:
+      storeRoles |= INDEXSTORE_SYMBOL_ROLE_REFERENCE;
+      break;
     }
   });
   return storeRoles;
