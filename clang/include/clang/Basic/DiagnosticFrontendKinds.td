@@ -224,6 +224,8 @@ def remark_index_producing_module_file_data : Remark<"producing index data for "
   "module file '%0'">,
   InGroup<IndexStore>;
 
+def err_interface_stubs : Error<"clang-ifs (-emit-iterface-stubs): %0">;
+
 def err_test_module_file_extension_version : Error<
   "test module file extension '%0' has different version (%1.%2) than expected "
   "(%3.%4)">;

@@ -333,7 +333,7 @@
 //
 // RUN: %clang -target x86_64-apple-darwin12 %t.o -fsave-optimization-record=some-format -### -o foo/bar.out 2> %t.log
 // RUN: FileCheck -check-prefix=PASS_REMARKS_WITH_FORMAT %s < %t.log
-// PASS_REMARKS_WITH_FORMAT: "-mllvm" "-lto-pass-remarks-output" "-mllvm" "foo/bar.out.opt.yaml" "-mllvm" "-lto-pass-remarks-format=some-format"
+// PASS_REMARKS_WITH_FORMAT: "-mllvm" "-lto-pass-remarks-output" "-mllvm" "foo/bar.out.opt.some-format" "-mllvm" "-lto-pass-remarks-format=some-format"
 
 // RUN: %clang -target x86_64-apple-ios6.0 -miphoneos-version-min=6.0 -fprofile-instr-generate -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_PROFILE_FIRST %s < %t.log

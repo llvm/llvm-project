@@ -37,6 +37,7 @@
 // CHECK-FOPT-DISABLE-PASSES-NOT: "-fno-save-optimization-record"
 
 // CHECK-EQ-FORMAT: "-cc1"
+// CHECK-EQ-FORMAT: "-opt-record-file" "FOO.opt.some-format"
 // CHECK-EQ-FORMAT: "-opt-record-format" "some-format"
 
 // CHECK-FOPT-DISABLE-FORMAT-NOT: "-fno-save-optimization-record"
