@@ -90,6 +90,10 @@ static MCSymbolRefExpr::VariantKind getVariantKind(unsigned MOFlags) {
     return MCSymbolRefExpr::VK_AMDGPU_REL32_LO;
   case SIInstrInfo::MO_REL32_HI:
     return MCSymbolRefExpr::VK_AMDGPU_REL32_HI;
+  case SIInstrInfo::MO_ABS32_LO:
+    return MCSymbolRefExpr::VK_AMDGPU_ABS32_LO;
+  case SIInstrInfo::MO_ABS32_HI:
+    return MCSymbolRefExpr::VK_AMDGPU_ABS32_HI;
   }
 }
 
@@ -146,10 +150,13 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
     SmallString<128> SymbolName;
     AP.getNameWithPrefix(SymbolName, GV);
     MCSymbol *Sym = Ctx.getOrCreateSymbol(SymbolName);
-    const MCExpr *SymExpr =
+    const MCExpr *Expr =
       MCSymbolRefExpr::create(Sym, getVariantKind(MO.getTargetFlags()),Ctx);
-    const MCExpr *Expr = MCBinaryExpr::createAdd(SymExpr,
-      MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
+    int64_t Offset = MO.getOffset();
+    if (Offset != 0) {
+      Expr = MCBinaryExpr::createAdd(Expr,
+                                     MCConstantExpr::create(Offset, Ctx), Ctx);
+    }
     MCOp = MCOperand::createExpr(Expr);
     return true;
   }

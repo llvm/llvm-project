@@ -293,6 +293,8 @@ public:
     VK_AMDGPU_REL32_LO,      // symbol@rel32@lo
     VK_AMDGPU_REL32_HI,      // symbol@rel32@hi
     VK_AMDGPU_REL64,         // symbol@rel64
+    VK_AMDGPU_ABS32_LO,      // symbol@abs32@lo
+    VK_AMDGPU_ABS32_HI,      // symbol@abs32@hi
 
     VK_TPREL,
     VK_DTPREL
