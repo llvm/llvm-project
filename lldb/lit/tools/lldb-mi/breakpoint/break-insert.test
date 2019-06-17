@@ -6,6 +6,9 @@
 
 # Test that a breakpoint can be inserted before creating a target.
 
+settings set symbols.enable-external-lookup false
+# CHECK: ^done
+
 -break-insert breakpoint
 # CHECK: ^done,bkpt={number="1"
 

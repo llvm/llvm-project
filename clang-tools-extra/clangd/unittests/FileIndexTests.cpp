@@ -46,6 +46,7 @@ MATCHER_P(DefURI, U, "") {
 }
 MATCHER_P(QName, N, "") { return (arg.Scope + arg.Name).str() == N; }
 MATCHER_P(NumReferences, N, "") { return arg.References == N; }
+MATCHER_P(hasOrign, O, "") { return bool(arg.Origin & O); }
 
 namespace clang {
 namespace clangd {
@@ -384,6 +385,27 @@ TEST(FileIndexTest, ReferencesInMainFileWithPreamble) {
   // because we only index main AST.
   EXPECT_THAT(getRefs(Index, findSymbol(TU.headerSymbols(), "Foo").ID),
               RefsAre({RefRange(Main.range())}));
+}
+
+TEST(FileIndexTest, MergeMainFileSymbols) {
+  const char* CommonHeader = "void foo();";
+  TestTU Header = TestTU::withCode(CommonHeader);
+  TestTU Cpp = TestTU::withCode("void foo() {}");
+  Cpp.Filename = "foo.cpp";
+  Cpp.HeaderFilename = "foo.h";
+  Cpp.HeaderCode = CommonHeader;
+
+  FileIndex Index;
+  auto HeaderAST = Header.build();
+  auto CppAST = Cpp.build();
+  Index.updateMain(testPath("foo.h"), HeaderAST);
+  Index.updateMain(testPath("foo.cpp"), CppAST);
+
+  auto Symbols = runFuzzyFind(Index, "");
+  // Check foo is merged, foo in Cpp wins (as we see the definition there).
+  EXPECT_THAT(Symbols, ElementsAre(AllOf(DeclURI("unittest:///foo.h"),
+                                         DefURI("unittest:///foo.cpp"),
+                                         hasOrign(SymbolOrigin::Merge))));
 }
 
 TEST(FileSymbolsTest, CountReferencesNoRefSlabs) {

@@ -260,7 +260,7 @@ void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
       llvm::make_unique<RelationSlab>(std::move(std::get<2>(Contents))),
       /*CountReferences=*/true);
   MainFileIndex.reset(
-      MainFileSymbols.buildIndex(IndexType::Light, DuplicateHandling::PickOne));
+      MainFileSymbols.buildIndex(IndexType::Light, DuplicateHandling::Merge));
 }
 
 } // namespace clangd
