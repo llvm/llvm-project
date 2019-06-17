@@ -143,7 +143,7 @@ protected:
 
 public:
   enum TargetOperandFlags {
-    MO_MASK = 0x7,
+    MO_MASK = 0xf,
 
     MO_NONE = 0,
     // MO_GOTPCREL -> symbol@GOTPCREL -> R_AMDGPU_GOTPCREL.
@@ -160,7 +160,10 @@ public:
     MO_REL32_HI = 5,
 
     MO_LONG_BRANCH_FORWARD = 6,
-    MO_LONG_BRANCH_BACKWARD = 7
+    MO_LONG_BRANCH_BACKWARD = 7,
+
+    MO_ABS32_LO = 8,
+    MO_ABS32_HI = 9,
   };
 
   explicit SIInstrInfo(const GCNSubtarget &ST);

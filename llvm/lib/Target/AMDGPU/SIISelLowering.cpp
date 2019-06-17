@@ -4644,11 +4644,18 @@ buildPCRelGlobalAddress(SelectionDAG &DAG, const GlobalValue *GV,
   // of the s_add_u32 instruction, we end up with an offset that is 4 bytes too
   // small. This requires us to add 4 to the global variable offset in order to
   // compute the correct address.
-  SDValue PtrLo = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset + 4,
-                                             GAFlags);
-  SDValue PtrHi = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset + 4,
-                                             GAFlags == SIInstrInfo::MO_NONE ?
-                                             GAFlags : GAFlags + 1);
+  unsigned LoFlags = GAFlags;
+  if (LoFlags == SIInstrInfo::MO_NONE)
+    LoFlags = SIInstrInfo::MO_REL32;
+  SDValue PtrLo =
+      DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset + 4, LoFlags);
+  SDValue PtrHi;
+  if (GAFlags == SIInstrInfo::MO_NONE) {
+    PtrHi = DAG.getTargetConstant(0, DL, MVT::i32);
+  } else {
+    PtrHi =
+        DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset + 4, GAFlags + 1);
+  }
   return DAG.getNode(AMDGPUISD::PC_ADD_REL_OFFSET, DL, PtrVT, PtrLo, PtrHi);
 }
 

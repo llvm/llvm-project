@@ -91,7 +91,7 @@ def RetCC_PPC : CallingConv<[
   CCIfSubtarget<"hasSPE()",
        CCIfType<[f32], CCAssignToReg<[R3, R4, R5, R6, R7, R8, R9, R10]>>>,
   CCIfSubtarget<"hasSPE()",
-       CCIfType<[f64], CCAssignToReg<[S3, S4, S5, S6, S7, S8, S9, S10]>>>,
+       CCIfType<[f64], CCCustom<"CC_PPC32_SPE_RetF64">>>,
 
   // For P9, f128 are passed in vector registers.
   CCIfType<[f128],
@@ -182,6 +182,9 @@ def CC_PPC32_SVR4_Common : CallingConv<[
   CCIfType<[i32],
   CCIfSplit<CCIfNotSubtarget<"useSoftFloat()", 
                             CCCustom<"CC_PPC32_SVR4_Custom_AlignArgRegs">>>>,
+  CCIfType<[f64],
+  CCIfSubtarget<"hasSPE()",
+                CCCustom<"CC_PPC32_SVR4_Custom_AlignArgRegs">>>,
   CCIfSplit<CCIfSubtarget<"useSoftFloat()",
                           CCIfOrigArgWasPPCF128<CCCustom<
                           "CC_PPC32_SVR4_Custom_SkipLastArgRegsPPCF128">>>>,
@@ -202,7 +205,7 @@ def CC_PPC32_SVR4_Common : CallingConv<[
                             CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8]>>>,
   CCIfType<[f64],
            CCIfSubtarget<"hasSPE()",
-                         CCAssignToReg<[S3, S4, S5, S6, S7, S8, S9, S10]>>>,
+                         CCCustom<"CC_PPC32_SPE_CustomSplitFP64">>>,
   CCIfType<[f32],
            CCIfSubtarget<"hasSPE()",
                          CCAssignToReg<[R3, R4, R5, R6, R7, R8, R9, R10]>>>,

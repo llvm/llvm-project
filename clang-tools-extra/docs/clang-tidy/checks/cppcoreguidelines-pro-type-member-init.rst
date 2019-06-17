@@ -34,6 +34,7 @@ Options
    be important to not initialize fixed-size array members. Default is `0`.
 
 .. option:: UseAssignment
+
    If set to non-zero, the check will provide fix-its with literal initializers
    \( ``int i = 0;`` \) instead of curly braces \( ``int i{};`` \).
 

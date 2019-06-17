@@ -472,10 +472,8 @@ entry:
 ; CHECK-LABEL: test_dselect
 ; CHECK: andi.
 ; CHECK: bc
-; CHECK: evldd
-; CHECK: b
-; CHECK: evldd
-; CHECK: evstdd
+; CHECK: evor
+; CHECK: evmergehi
 ; CHECK: blr
 }
 
@@ -519,7 +517,7 @@ entry:
   %1 = call i32 asm sideeffect "efdctsi $0, $1", "=d,d"(double %0)
   ret i32 %1
 ; CHECK-LABEL: test_dasmconst
-; CHECK: evldd
+; CHECK: evmergelo
 ; CHECK: #APP
 ; CHECK: efdctsi
 ; CHECK: #NO_APP
