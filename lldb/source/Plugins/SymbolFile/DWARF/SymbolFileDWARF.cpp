@@ -2327,15 +2327,9 @@ void SymbolFileDWARF::GetMangledNamesForFunction(
       dwo->GetMangledNamesForFunction(scope_qualified_name, mangled_names);
   }
 
-  NameToOffsetMap::iterator iter =
-      m_function_scope_qualified_name_map.find(scope_qualified_name);
-  if (iter == m_function_scope_qualified_name_map.end())
-    return;
-
-  DIERefSetSP set_sp = (*iter).second;
-  std::set<DIERef>::iterator set_iter;
-  for (set_iter = set_sp->begin(); set_iter != set_sp->end(); set_iter++) {
-    DWARFDIE die = DebugInfo()->GetDIE(*set_iter);
+  for (lldb::user_id_t uid :
+       m_function_scope_qualified_name_map.lookup(scope_qualified_name)) {
+    DWARFDIE die = GetDIE(uid);
     mangled_names.push_back(ConstString(die.GetMangledName()));
   }
 }
@@ -2952,42 +2946,32 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
 
 TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
                                   bool *type_is_new_ptr) {
-  TypeSP type_sp;
+  if (!die)
+    return {};
 
-  if (die) {
-    TypeSystem *type_system =
-        GetTypeSystemForLanguage(die.GetCU()->GetLanguageType());
+  TypeSystem *type_system =
+      GetTypeSystemForLanguage(die.GetCU()->GetLanguageType());
+  if (!type_system)
+    return {};
 
-    if (type_system) {
-      DWARFASTParser *dwarf_ast = type_system->GetDWARFParser();
-      if (dwarf_ast) {
-        Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
-        type_sp = dwarf_ast->ParseTypeFromDWARF(sc, die, log, type_is_new_ptr);
-        if (type_sp) {
-          TypeList *type_list = GetTypeList();
-          if (type_list)
-            type_list->Insert(type_sp);
+  DWARFASTParser *dwarf_ast = type_system->GetDWARFParser();
+  if (!dwarf_ast)
+    return {};
 
-          if (die.Tag() == DW_TAG_subprogram) {
-            DIERef die_ref = die.GetDIERef();
-            std::string scope_qualified_name(GetDeclContextForUID(die.GetID())
-                                                 .GetScopeQualifiedName()
-                                                 .AsCString(""));
-            if (scope_qualified_name.size()) {
-              NameToOffsetMap::iterator iter =
-                  m_function_scope_qualified_name_map.find(
-                      scope_qualified_name);
-              if (iter != m_function_scope_qualified_name_map.end())
-                (*iter).second->insert(die_ref);
-              else {
-                DIERefSetSP new_set(new std::set<DIERef>);
-                new_set->insert(die_ref);
-                m_function_scope_qualified_name_map.emplace(
-                    std::make_pair(scope_qualified_name, new_set));
-              }
-            }
-          }
-        }
+  Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
+  TypeSP type_sp = dwarf_ast->ParseTypeFromDWARF(sc, die, log, type_is_new_ptr);
+  if (type_sp) {
+    TypeList *type_list = GetTypeList();
+    if (type_list)
+      type_list->Insert(type_sp);
+
+    if (die.Tag() == DW_TAG_subprogram) {
+      std::string scope_qualified_name(GetDeclContextForUID(die.GetID())
+                                           .GetScopeQualifiedName()
+                                           .AsCString(""));
+      if (scope_qualified_name.size()) {
+        m_function_scope_qualified_name_map[scope_qualified_name].insert(
+            die.GetID());
       }
     }
   }

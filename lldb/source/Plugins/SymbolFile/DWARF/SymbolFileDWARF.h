@@ -309,7 +309,8 @@ protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *,
                          lldb::opaque_compiler_type_t>
       DIEToClangType;
-  typedef llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> ClangTypeToDIE;
+  typedef llvm::DenseMap<lldb::opaque_compiler_type_t, lldb::user_id_t>
+      ClangTypeToDIE;
 
   struct DWARFDataSegment {
     llvm::once_flag m_flag;
@@ -471,8 +472,8 @@ protected:
   bool m_fetched_external_modules : 1;
   lldb_private::LazyBool m_supports_DW_AT_APPLE_objc_complete_type;
 
-  typedef std::shared_ptr<std::set<DIERef>> DIERefSetSP;
-  typedef std::unordered_map<std::string, DIERefSetSP> NameToOffsetMap;
+  typedef std::set<lldb::user_id_t> DIERefSet;
+  typedef llvm::StringMap<DIERefSet> NameToOffsetMap;
   NameToOffsetMap m_function_scope_qualified_name_map;
   std::unique_ptr<DWARFDebugRangesBase> m_ranges;
   std::unique_ptr<DWARFDebugRangesBase> m_rnglists;
