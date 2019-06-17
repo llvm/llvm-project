@@ -25,6 +25,11 @@
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_quarantine.h"
 
+#ifdef GWP_ASAN_HOOKS
+# include "gwp_asan/guarded_pool_allocator.h"
+# include "gwp_asan/optional/options_parser.h"
+#endif // GWP_ASAN_HOOKS
+
 #include <errno.h>
 #include <string.h>
 
@@ -213,6 +218,10 @@ QuarantineCacheT *getQuarantineCache(ScudoTSD *TSD) {
   return reinterpret_cast<QuarantineCacheT *>(TSD->QuarantineCachePlaceHolder);
 }
 
+#ifdef GWP_ASAN_HOOKS
+static gwp_asan::GuardedPoolAllocator GuardedAlloc;
+#endif // GWP_ASAN_HOOKS
+
 struct Allocator {
   static const uptr MaxAllowedMallocSize =
       FIRST_32_SECOND_64(2UL << 30, 1ULL << 40);
@@ -291,6 +300,14 @@ struct Allocator {
   void *allocate(uptr Size, uptr Alignment, AllocType Type,
                  bool ForceZeroContents = false) {
     initThreadMaybe();
+
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.shouldSample())) {
+      if (void *Ptr = GuardedAlloc.allocate(Size))
+        return Ptr;
+    }
+#endif // GWP_ASAN_HOOKS
+
     if (UNLIKELY(Alignment > MaxAlignment)) {
       if (AllocatorMayReturnNull())
         return nullptr;
@@ -434,6 +451,14 @@ struct Allocator {
       __sanitizer_free_hook(Ptr);
     if (UNLIKELY(!Ptr))
       return;
+
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr))) {
+      GuardedAlloc.deallocate(Ptr);
+      return;
+    }
+#endif // GWP_ASAN_HOOKS
+
     if (UNLIKELY(!Chunk::isAligned(Ptr)))
       dieWithMessage("misaligned pointer when deallocating address %p\n", Ptr);
     UnpackedHeader Header;
@@ -463,6 +488,18 @@ struct Allocator {
   // size still fits in the chunk.
   void *reallocate(void *OldPtr, uptr NewSize) {
     initThreadMaybe();
+
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.pointerIsMine(OldPtr))) {
+      size_t OldSize = GuardedAlloc.getSize(OldPtr);
+      void *NewPtr = allocate(NewSize, MinAlignment, FromMalloc);
+      if (NewPtr)
+        memcpy(NewPtr, OldPtr, (NewSize < OldSize) ? NewSize : OldSize);
+      GuardedAlloc.deallocate(OldPtr);
+      return NewPtr;
+    }
+#endif // GWP_ASAN_HOOKS
+
     if (UNLIKELY(!Chunk::isAligned(OldPtr)))
       dieWithMessage("misaligned address when reallocating address %p\n",
                      OldPtr);
@@ -504,6 +541,12 @@ struct Allocator {
     initThreadMaybe();
     if (UNLIKELY(!Ptr))
       return 0;
+
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr)))
+      return GuardedAlloc.getSize(Ptr);
+#endif // GWP_ASAN_HOOKS
+
     UnpackedHeader Header;
     Chunk::loadHeader(Ptr, &Header);
     // Getting the usable size of a chunk only makes sense if it's allocated.
@@ -626,6 +669,10 @@ static BackendT &getBackend() {
 
 void initScudo() {
   Instance.init();
+#ifdef GWP_ASAN_HOOKS
+  gwp_asan::options::initOptions();
+  GuardedAlloc.init(gwp_asan::options::getOptions());
+#endif // GWP_ASAN_HOOKS
 }
 
 void ScudoTSD::init() {

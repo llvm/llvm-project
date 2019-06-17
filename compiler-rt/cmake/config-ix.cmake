@@ -687,8 +687,10 @@ endif()
 # Note: Fuchsia and Windows are not currently supported by GWP-ASan. Support
 # is planned for these platforms. Darwin is also not supported due to TLS
 # calling malloc on first use.
+# TODO(hctim): Enable this on Android again. Looks like it's causing a SIGSEGV
+# for Scudo and GWP-ASan, further testing needed.
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND GWP_ASAN_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Android|Linux")
+    OS_NAME MATCHES "Linux")
   set(COMPILER_RT_HAS_GWP_ASAN TRUE)
 else()
   set(COMPILER_RT_HAS_GWP_ASAN FALSE)

@@ -57,10 +57,12 @@ if (COMPILER_RT_HAS_MCRC_FLAG)
 endif()
 
 set(SCUDO_HEADERS
+  allocator_config.h
   atomic_helpers.h
   bytemap.h
   checksum.h
   chunk.h
+  combined.h
   flags.h
   flags_parser.h
   fuchsia.h

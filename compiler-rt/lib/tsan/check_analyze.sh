@@ -37,13 +37,11 @@ check() {
 for f in write1 write2 write4 write8; do
   check $f rsp 1
   check $f push 2
-  check $f pop 16
 done
 
 for f in read1 read2 read4 read8; do
   check $f rsp 1
   check $f push 3
-  check $f pop 24
 done
 
 for f in func_entry func_exit; do
