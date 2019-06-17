@@ -1269,22 +1269,6 @@ unsigned PPCTargetLowering::getByValTypeAlignment(Type *Ty,
   return Align;
 }
 
-unsigned PPCTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
-                                                          CallingConv:: ID CC,
-                                                          EVT VT) const {
-  if (Subtarget.hasSPE() && VT == MVT::f64)
-    return 2;
-  return PPCTargetLowering::getNumRegisters(Context, VT);
-}
-
-MVT PPCTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
-                                                     CallingConv:: ID CC,
-                                                     EVT VT) const {
-  if (Subtarget.hasSPE() && VT == MVT::f64)
-    return MVT::i32;
-  return PPCTargetLowering::getRegisterType(Context, VT);
-}
-
 bool PPCTargetLowering::useSoftFloat() const {
   return Subtarget.useSoftFloat();
 }
@@ -1402,6 +1386,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::QBFLT:           return "PPCISD::QBFLT";
   case PPCISD::QVLFSb:          return "PPCISD::QVLFSb";
   case PPCISD::BUILD_FP128:     return "PPCISD::BUILD_FP128";
+  case PPCISD::BUILD_SPE64:     return "PPCISD::BUILD_SPE64";
+  case PPCISD::EXTRACT_SPE:     return "PPCISD::EXTRACT_SPE";
   case PPCISD::EXTSWSLI:        return "PPCISD::EXTSWSLI";
   case PPCISD::LD_VSX_LH:       return "PPCISD::LD_VSX_LH";
   case PPCISD::FP_EXTEND_LH:    return "PPCISD::FP_EXTEND_LH";
@@ -3427,7 +3413,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_32SVR4(
   // Reserve space for the linkage area on the stack.
   unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
   CCInfo.AllocateStack(LinkageSize, PtrByteSize);
-  if (useSoftFloat() || hasSPE())
+  if (useSoftFloat())
     CCInfo.PreAnalyzeFormalArguments(Ins);
 
   CCInfo.AnalyzeFormalArguments(Ins, CC_PPC32_SVR4);
@@ -3460,7 +3446,8 @@ SDValue PPCTargetLowering::LowerFormalArguments_32SVR4(
           if (Subtarget.hasVSX())
             RC = &PPC::VSFRCRegClass;
           else if (Subtarget.hasSPE())
-            RC = &PPC::SPERCRegClass;
+            // SPE passes doubles in GPR pairs.
+            RC = &PPC::GPRCRegClass;
           else
             RC = &PPC::F8RCRegClass;
           break;
@@ -3484,13 +3471,26 @@ SDValue PPCTargetLowering::LowerFormalArguments_32SVR4(
           break;
       }
 
-      // Transform the arguments stored in physical registers into virtual ones.
-      unsigned Reg = MF.addLiveIn(VA.getLocReg(), RC);
-      SDValue ArgValue = DAG.getCopyFromReg(Chain, dl, Reg,
-                                            ValVT == MVT::i1 ? MVT::i32 : ValVT);
-
-      if (ValVT == MVT::i1)
-        ArgValue = DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, ArgValue);
+      SDValue ArgValue;
+      // Transform the arguments stored in physical registers into
+      // virtual ones.
+      if (VA.getLocVT() == MVT::f64 && Subtarget.hasSPE()) {
+        assert(i + 1 < e && "No second half of double precision argument");
+        unsigned RegLo = MF.addLiveIn(VA.getLocReg(), RC);
+        unsigned RegHi = MF.addLiveIn(ArgLocs[++i].getLocReg(), RC);
+        SDValue ArgValueLo = DAG.getCopyFromReg(Chain, dl, RegLo, MVT::i32);
+        SDValue ArgValueHi = DAG.getCopyFromReg(Chain, dl, RegHi, MVT::i32);
+        if (!Subtarget.isLittleEndian())
+          std::swap (ArgValueLo, ArgValueHi);
+        ArgValue = DAG.getNode(PPCISD::BUILD_SPE64, dl, MVT::f64, ArgValueLo,
+                               ArgValueHi);
+      } else {
+        unsigned Reg = MF.addLiveIn(VA.getLocReg(), RC);
+        ArgValue = DAG.getCopyFromReg(Chain, dl, Reg,
+                                      ValVT == MVT::i1 ? MVT::i32 : ValVT);
+        if (ValVT == MVT::i1)
+          ArgValue = DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, ArgValue);
+      }
 
       InVals.push_back(ArgValue);
     } else {
@@ -5135,10 +5135,27 @@ SDValue PPCTargetLowering::LowerCallResult(
     CCValAssign &VA = RVLocs[i];
     assert(VA.isRegLoc() && "Can only return in registers!");
 
-    SDValue Val = DAG.getCopyFromReg(Chain, dl,
-                                     VA.getLocReg(), VA.getLocVT(), InFlag);
-    Chain = Val.getValue(1);
-    InFlag = Val.getValue(2);
+    SDValue Val;
+
+    if (Subtarget.hasSPE() && VA.getLocVT() == MVT::f64) {
+      SDValue Lo = DAG.getCopyFromReg(Chain, dl, VA.getLocReg(), MVT::i32,
+                                      InFlag);
+      Chain = Lo.getValue(1);
+      InFlag = Lo.getValue(2);
+      VA = RVLocs[++i]; // skip ahead to next loc
+      SDValue Hi = DAG.getCopyFromReg(Chain, dl, VA.getLocReg(), MVT::i32,
+                                      InFlag);
+      Chain = Hi.getValue(1);
+      InFlag = Hi.getValue(2);
+      if (!Subtarget.isLittleEndian())
+        std::swap (Lo, Hi);
+      Val = DAG.getNode(PPCISD::BUILD_SPE64, dl, MVT::f64, Lo, Hi);
+    } else {
+      Val = DAG.getCopyFromReg(Chain, dl,
+                               VA.getLocReg(), VA.getLocVT(), InFlag);
+      Chain = Val.getValue(1);
+      InFlag = Val.getValue(2);
+    }
 
     switch (VA.getLocInfo()) {
     default: llvm_unreachable("Unknown loc info!");
@@ -5459,12 +5476,15 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
 
   bool seenFloatArg = false;
   // Walk the register/memloc assignments, inserting copies/loads.
-  for (unsigned i = 0, j = 0, e = ArgLocs.size();
+  // i - Tracks the index into the list of registers allocated for the call
+  // RealArgIdx - Tracks the index into the list of actual function arguments
+  // j - Tracks the index into the list of byval arguments
+  for (unsigned i = 0, RealArgIdx = 0, j = 0, e = ArgLocs.size();
        i != e;
-       ++i) {
+       ++i, ++RealArgIdx) {
     CCValAssign &VA = ArgLocs[i];
-    SDValue Arg = OutVals[i];
-    ISD::ArgFlagsTy Flags = Outs[i].Flags;
+    SDValue Arg = OutVals[RealArgIdx];
+    ISD::ArgFlagsTy Flags = Outs[RealArgIdx].Flags;
 
     if (Flags.isByVal()) {
       // Argument is an aggregate which is passed by value, thus we need to
@@ -5513,7 +5533,17 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
     if (VA.isRegLoc()) {
       seenFloatArg |= VA.getLocVT().isFloatingPoint();
       // Put argument in a physical register.
-      RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
+      if (Subtarget.hasSPE() && Arg.getValueType() == MVT::f64) {
+        bool IsLE = Subtarget.isLittleEndian();
+        SDValue SVal = DAG.getNode(PPCISD::EXTRACT_SPE, dl, MVT::i32, Arg,
+                        DAG.getIntPtrConstant(IsLE ? 0 : 1, dl));
+        RegsToPass.push_back(std::make_pair(VA.getLocReg(), SVal.getValue(0)));
+        SVal = DAG.getNode(PPCISD::EXTRACT_SPE, dl, MVT::i32, Arg,
+                           DAG.getIntPtrConstant(IsLE ? 1 : 0, dl));
+        RegsToPass.push_back(std::make_pair(ArgLocs[++i].getLocReg(),
+                             SVal.getValue(0)));
+      } else
+        RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
     } else {
       // Put argument in the parameter list area of the current stack frame.
       assert(VA.isMemLoc());
@@ -6781,11 +6811,11 @@ PPCTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   SmallVector<SDValue, 4> RetOps(1, Chain);
 
   // Copy the result values into the output registers.
-  for (unsigned i = 0; i != RVLocs.size(); ++i) {
+  for (unsigned i = 0, RealResIdx = 0; i != RVLocs.size(); ++i, ++RealResIdx) {
     CCValAssign &VA = RVLocs[i];
     assert(VA.isRegLoc() && "Can only return in registers!");
 
-    SDValue Arg = OutVals[i];
+    SDValue Arg = OutVals[RealResIdx];
 
     switch (VA.getLocInfo()) {
     default: llvm_unreachable("Unknown loc info!");
@@ -6800,8 +6830,21 @@ PPCTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       Arg = DAG.getNode(ISD::SIGN_EXTEND, dl, VA.getLocVT(), Arg);
       break;
     }
-
-    Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), Arg, Flag);
+    if (Subtarget.hasSPE() && VA.getLocVT() == MVT::f64) {
+      bool isLittleEndian = Subtarget.isLittleEndian();
+      // Legalize ret f64 -> ret 2 x i32.
+      SDValue SVal =
+          DAG.getNode(PPCISD::EXTRACT_SPE, dl, MVT::i32, Arg,
+                      DAG.getIntPtrConstant(isLittleEndian ? 0 : 1, dl));
+      Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), SVal, Flag);
+      RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
+      SVal = DAG.getNode(PPCISD::EXTRACT_SPE, dl, MVT::i32, Arg,
+                         DAG.getIntPtrConstant(isLittleEndian ? 1 : 0, dl));
+      Flag = Chain.getValue(1);
+      VA = RVLocs[++i]; // skip ahead to next loc
+      Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), SVal, Flag);
+    } else
+      Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), Arg, Flag);
     Flag = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }

@@ -620,6 +620,13 @@ public:
   virtual void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
                                 const MCSubtargetInfo *EndInfo) const;
 
+  /// This emits visibility information about symbol, if this is supported by
+  /// the target.
+  void EmitVisibility(MCSymbol *Sym, unsigned Visibility,
+                      bool IsDefinition = true) const;
+
+  void EmitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const;
+
 private:
   /// Private state for PrintSpecial()
   // Assign a unique ID to this machine instruction.
@@ -649,13 +656,6 @@ private:
   //===------------------------------------------------------------------===//
   // Internal Implementation Details
   //===------------------------------------------------------------------===//
-
-  /// This emits visibility information about symbol, if this is supported by
-  /// the target.
-  void EmitVisibility(MCSymbol *Sym, unsigned Visibility,
-                      bool IsDefinition = true) const;
-
-  void EmitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const;
 
   void EmitJumpTableEntry(const MachineJumpTableInfo *MJTI,
                           const MachineBasicBlock *MBB, unsigned uid) const;

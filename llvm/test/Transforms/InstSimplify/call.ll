@@ -29,7 +29,7 @@ define i8 @test_uadd2() {
 
 define {i8, i1} @test_uadd3(i8 %v) {
 ; CHECK-LABEL: @test_uadd3(
-; CHECK-NEXT:    ret { i8, i1 } undef
+; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
 ;
   %result = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 %v, i8 undef)
   ret {i8, i1} %result
@@ -37,7 +37,7 @@ define {i8, i1} @test_uadd3(i8 %v) {
 
 define {i8, i1} @test_uadd4(i8 %v) {
 ; CHECK-LABEL: @test_uadd4(
-; CHECK-NEXT:    ret { i8, i1 } undef
+; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
 ;
   %result = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 undef, i8 %v)
   ret {i8, i1} %result
@@ -63,7 +63,7 @@ define i8 @test_sadd2() {
 
 define {i8, i1} @test_sadd3(i8 %v) {
 ; CHECK-LABEL: @test_sadd3(
-; CHECK-NEXT:    ret { i8, i1 } undef
+; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
 ;
   %result = call {i8, i1} @llvm.sadd.with.overflow.i8(i8 %v, i8 undef)
   ret {i8, i1} %result
@@ -71,7 +71,7 @@ define {i8, i1} @test_sadd3(i8 %v) {
 
 define {i8, i1} @test_sadd4(i8 %v) {
 ; CHECK-LABEL: @test_sadd4(
-; CHECK-NEXT:    ret { i8, i1 } undef
+; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
 ;
   %result = call {i8, i1} @llvm.sadd.with.overflow.i8(i8 undef, i8 %v)
   ret {i8, i1} %result
@@ -87,7 +87,7 @@ define {i8, i1} @test_usub1(i8 %V) {
 
 define {i8, i1} @test_usub2(i8 %V) {
 ; CHECK-LABEL: @test_usub2(
-; CHECK-NEXT:    ret { i8, i1 } undef
+; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
 ;
   %x = call {i8, i1} @llvm.usub.with.overflow.i8(i8 %V, i8 undef)
   ret {i8, i1} %x
@@ -95,7 +95,7 @@ define {i8, i1} @test_usub2(i8 %V) {
 
 define {i8, i1} @test_usub3(i8 %V) {
 ; CHECK-LABEL: @test_usub3(
-; CHECK-NEXT:    ret { i8, i1 } undef
+; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
 ;
   %x = call {i8, i1} @llvm.usub.with.overflow.i8(i8 undef, i8 %V)
   ret {i8, i1} %x
@@ -111,7 +111,7 @@ define {i8, i1} @test_ssub1(i8 %V) {
 
 define {i8, i1} @test_ssub2(i8 %V) {
 ; CHECK-LABEL: @test_ssub2(
-; CHECK-NEXT:    ret { i8, i1 } undef
+; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
 ;
   %x = call {i8, i1} @llvm.ssub.with.overflow.i8(i8 %V, i8 undef)
   ret {i8, i1} %x
@@ -119,7 +119,7 @@ define {i8, i1} @test_ssub2(i8 %V) {
 
 define {i8, i1} @test_ssub3(i8 %V) {
 ; CHECK-LABEL: @test_ssub3(
-; CHECK-NEXT:    ret { i8, i1 } undef
+; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
 ;
   %x = call {i8, i1} @llvm.ssub.with.overflow.i8(i8 undef, i8 %V)
   ret {i8, i1} %x

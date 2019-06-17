@@ -11,9 +11,8 @@
 // expected-no-diagnostics
 #endif
 
+#include <stdint.h>
 #include "../Inputs/system-header-simulator-cxx.h"
-
-typedef unsigned long uintptr_t;
 
 void error();
 void *malloc(size_t);
