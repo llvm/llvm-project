@@ -120,8 +120,8 @@ public:
 
   buffer(buffer<T, dimensions, AllocatorT> &b, const id<dimensions> &baseIndex,
          const range<dimensions> &subRange)
-      : impl(b.impl), Offset(baseIndex + b.Offset), Range(subRange), MemRange(b.MemRange),
-        IsSubBuffer(true) {}
+      : impl(b.impl), Range(subRange), MemRange(b.MemRange), IsSubBuffer(true),
+        Offset(baseIndex + b.Offset) {}
 
   template <int N = dimensions, typename = EnableIfOneDimension<N>>
   buffer(cl_mem MemObject, const context &SyclContext,
@@ -237,11 +237,11 @@ private:
   template <typename DataT, int dims, access::mode mode,
             access::target target, access::placeholder isPlaceholder>
   friend class accessor;
+  range<dimensions> Range;
   // If this buffer is subbuffer - this range represents range of the parent
   // buffer
   range<dimensions> MemRange;
   bool IsSubBuffer = false;
-  range<dimensions> Range;
   // If this buffer is sub-buffer - offset field specifies the origin of the
   // sub-buffer inside the parent buffer
   id<dimensions> Offset;

@@ -204,7 +204,7 @@ AllocaCommand *ExecCGCommand::getAllocaForReq(Requirement *Req) {
 }
 
 void ExecCGCommand::flushStreams() {
-  assert(CommandGroup->getType() == CG::KERNEL && "Expected kernel");
+  assert(MCommandGroup->getType() == CG::KERNEL && "Expected kernel");
   for (auto StreamImplPtr :
        ((CGExecKernel *)MCommandGroup.get())->getStreams()) {
     StreamImplPtr->flush();
