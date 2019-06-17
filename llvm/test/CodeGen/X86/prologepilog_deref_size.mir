@@ -43,7 +43,7 @@
 name:            foo
 tracksRegLiveness: true
 fixedStack:
-  - { id: 0, type: default, offset: 24, size: 2, alignment: 8, stack-id: 0,
+  - { id: 0, type: default, offset: 24, size: 2, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 stack:           []

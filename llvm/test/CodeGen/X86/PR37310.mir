@@ -101,10 +101,10 @@ frameInfo:
 fixedStack:      
 stack:           
   - { id: 0, name: q, type: default, offset: 0, size: 512, alignment: 16, 
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 1, name: r, type: default, offset: 0, size: 512, alignment: 16, 
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 constants:       
 body:             |

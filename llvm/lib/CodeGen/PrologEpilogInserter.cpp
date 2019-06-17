@@ -662,11 +662,11 @@ computeFreeStackSlots(MachineFrameInfo &MFI, bool StackGrowsDown,
   // Add fixed objects.
   for (int i = MFI.getObjectIndexBegin(); i != 0; ++i)
     // StackSlot scavenging is only implemented for the default stack.
-    if (MFI.getStackID(i) == 0)
+    if (MFI.getStackID(i) == TargetStackID::Default)
       AllocatedFrameSlots.push_back(i);
   // Add callee-save objects.
   for (int i = MinCSFrameIndex; i <= (int)MaxCSFrameIndex; ++i)
-    if (MFI.getStackID(i) == 0)
+    if (MFI.getStackID(i) == TargetStackID::Default)
       AllocatedFrameSlots.push_back(i);
 
   for (int i : AllocatedFrameSlots) {
@@ -791,7 +791,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
 
 #ifdef EXPENSIVE_CHECKS
   for (unsigned i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i)
-    if (!MFI.isDeadObjectIndex(i) && MFI.getStackID(i) == 0)
+    if (!MFI.isDeadObjectIndex(i) &&
+        MFI.getStackID(i) == TargetStackID::Default)
       assert(MFI.getObjectAlignment(i) <= MFI.getMaxAlignment() &&
              "MaxAlignment is invalid");
 #endif
@@ -801,7 +802,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
   // Adjust 'Offset' to point to the end of last fixed sized preallocated
   // object.
   for (int i = MFI.getObjectIndexBegin(); i != 0; ++i) {
-    if (MFI.getStackID(i)) // Only allocate objects on the default stack.
+    if (MFI.getStackID(i) !=
+        TargetStackID::Default) // Only allocate objects on the default stack.
       continue;
 
     int64_t FixedOff;
@@ -822,7 +824,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
   // callee saved registers.
   if (StackGrowsDown) {
     for (unsigned i = MinCSFrameIndex; i <= MaxCSFrameIndex; ++i) {
-      if (MFI.getStackID(i)) // Only allocate objects on the default stack.
+      if (MFI.getStackID(i) !=
+          TargetStackID::Default) // Only allocate objects on the default stack.
         continue;
 
       // If the stack grows down, we need to add the size to find the lowest
@@ -839,7 +842,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
   } else if (MaxCSFrameIndex >= MinCSFrameIndex) {
     // Be careful about underflow in comparisons agains MinCSFrameIndex.
     for (unsigned i = MaxCSFrameIndex; i != MinCSFrameIndex - 1; --i) {
-      if (MFI.getStackID(i)) // Only allocate objects on the default stack.
+      if (MFI.getStackID(i) !=
+          TargetStackID::Default) // Only allocate objects on the default stack.
         continue;
 
       if (MFI.isDeadObjectIndex(i))
@@ -932,7 +936,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
       if (MFI.getStackProtectorIndex() == (int)i ||
           EHRegNodeFrameIndex == (int)i)
         continue;
-      if (MFI.getStackID(i)) // Only allocate objects on the default stack.
+      if (MFI.getStackID(i) !=
+          TargetStackID::Default) // Only allocate objects on the default stack.
         continue;
 
       switch (MFI.getObjectSSPLayout(i)) {
@@ -977,7 +982,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
       continue;
     if (ProtectedObjs.count(i))
       continue;
-    if (MFI.getStackID(i)) // Only allocate objects on the default stack.
+    if (MFI.getStackID(i) !=
+        TargetStackID::Default) // Only allocate objects on the default stack.
       continue;
 
     // Add the objects that we need to allocate to our working set.

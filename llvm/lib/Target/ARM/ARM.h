@@ -57,11 +57,6 @@ createARMInstructionSelector(const ARMBaseTargetMachine &TM, const ARMSubtarget 
 void LowerARMMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                   ARMAsmPrinter &AP);
 
-void computeBlockSize(MachineFunction *MF, MachineBasicBlock *MBB,
-                      BasicBlockInfo &BBI);
-std::vector<BasicBlockInfo> computeAllBlockSizes(MachineFunction *MF);
-
-
 void initializeARMParallelDSPPass(PassRegistry &);
 void initializeARMLoadStoreOptPass(PassRegistry &);
 void initializeARMPreAllocLoadStoreOptPass(PassRegistry &);

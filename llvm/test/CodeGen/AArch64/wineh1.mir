@@ -53,25 +53,25 @@ frameInfo:
   maxCallFrameSize: 0
   hasOpaqueSPAdjustment: true
 stack:
-  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, stack-id: 0,
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$x19' }
-  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, stack-id: 0,
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$x20' }
-  - { id: 2, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: 0,
+  - { id: 2, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$x21' }
-  - { id: 3, type: spill-slot, offset: -32, size: 8, alignment: 8, stack-id: 0,
+  - { id: 3, type: spill-slot, offset: -32, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$x22' }
-  - { id: 4, type: spill-slot, offset: -40, size: 8, alignment: 8, stack-id: 0,
+  - { id: 4, type: spill-slot, offset: -40, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$x23' }
-  - { id: 5, type: spill-slot, offset: -48, size: 8, alignment: 8, stack-id: 0,
+  - { id: 5, type: spill-slot, offset: -48, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$x24' }
-  - { id: 6, type: spill-slot, offset: -56, size: 8, alignment: 8, stack-id: 0,
+  - { id: 6, type: spill-slot, offset: -56, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$x25' }
-  - { id: 7, type: spill-slot, offset: -64, size: 8, alignment: 8, stack-id: 0,
+  - { id: 7, type: spill-slot, offset: -64, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$x26' }
-  - { id: 8, type: spill-slot, offset: -72, size: 8, alignment: 8, stack-id: 0,
+  - { id: 8, type: spill-slot, offset: -72, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$x27' }
-  - { id: 9, type: spill-slot, offset: -80, size: 8, alignment: 8, stack-id: 0,
+  - { id: 9, type: spill-slot, offset: -80, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$x28' }
 body:             |
   bb.0.entry:

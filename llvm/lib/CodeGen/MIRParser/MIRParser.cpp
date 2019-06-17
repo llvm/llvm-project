@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -579,6 +580,7 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
                                         const yaml::MachineFunction &YamlMF) {
   MachineFunction &MF = PFS.MF;
   MachineFrameInfo &MFI = MF.getFrameInfo();
+  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const Function &F = MF.getFunction();
   const yaml::MachineFrameInfo &YamlMFI = YamlMF.FrameInfo;
   MFI.setFrameAddressIsTaken(YamlMFI.IsFrameAddressTaken);
@@ -620,6 +622,10 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
                                         Object.IsImmutable, Object.IsAliased);
     else
       ObjectIdx = MFI.CreateFixedSpillStackObject(Object.Size, Object.Offset);
+
+    if (!TFI->isSupportedStackID(Object.StackID))
+      return error(Object.ID.SourceRange.Start,
+                   Twine("StackID is not supported by target"));
     MFI.setStackID(ObjectIdx, Object.StackID);
     MFI.setObjectAlignment(ObjectIdx, Object.Alignment);
     if (!PFS.FixedStackObjectSlots.insert(std::make_pair(Object.ID.Value,
@@ -649,6 +655,9 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
                          "' isn't defined in the function '" + F.getName() +
                          "'");
     }
+    if (!TFI->isSupportedStackID(Object.StackID))
+      return error(Object.ID.SourceRange.Start,
+                   Twine("StackID is not supported by target"));
     if (Object.Type == yaml::MachineStackObject::VariableSized)
       ObjectIdx = MFI.CreateVariableSizedObject(Object.Alignment, Alloca);
     else

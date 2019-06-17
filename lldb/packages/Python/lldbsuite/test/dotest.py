@@ -1181,6 +1181,30 @@ def checkLibstdcxxSupport():
     print("libstdcxx tests will not be run because: " + reason)
     configuration.skipCategories.append("libstdcxx")
 
+def canRunWatchpointTests():
+    from lldbsuite.test import lldbplatformutil
+
+    platform = lldbplatformutil.getPlatform()
+    if platform == "netbsd":
+      try:
+        output = subprocess.check_output(["/sbin/sysctl", "-n",
+          "security.models.extensions.user_set_dbregs"]).decode().strip()
+        if output == "1":
+          return True, "security.models.extensions.user_set_dbregs enabled"
+      except subprocess.CalledProcessError:
+        pass
+      return False, "security.models.extensions.user_set_dbregs disabled"
+    return True, "watchpoint support available"
+
+def checkWatchpointSupport():
+    result, reason = canRunWatchpointTests()
+    if result:
+        return # watchpoints supported
+    if "watchpoint" in configuration.categoriesList:
+        return # watchpoint category explicitly requested, let it run.
+    print("watchpoint tests will not be run because: " + reason)
+    configuration.skipCategories.append("watchpoint")
+
 def checkDebugInfoSupport():
     import lldb
 
@@ -1305,6 +1329,7 @@ def run_suite():
 
     checkLibcxxSupport()
     checkLibstdcxxSupport()
+    checkWatchpointSupport()
     checkDebugInfoSupport()
 
     # Don't do debugserver tests on anything except OS X.

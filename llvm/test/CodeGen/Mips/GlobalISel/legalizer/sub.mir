@@ -255,10 +255,10 @@ name:            sub_i128
 alignment:       2
 tracksRegLiveness: true
 fixedStack:
-  - { id: 0, offset: 28, size: 4, alignment: 4, stack-id: 0, isImmutable: true }
-  - { id: 1, offset: 24, size: 4, alignment: 8, stack-id: 0, isImmutable: true }
-  - { id: 2, offset: 20, size: 4, alignment: 4, stack-id: 0, isImmutable: true }
-  - { id: 3, offset: 16, size: 4, alignment: 8, stack-id: 0, isImmutable: true }
+  - { id: 0, offset: 28, size: 4, alignment: 4, stack-id: default, isImmutable: true }
+  - { id: 1, offset: 24, size: 4, alignment: 8, stack-id: default, isImmutable: true }
+  - { id: 2, offset: 20, size: 4, alignment: 4, stack-id: default, isImmutable: true }
+  - { id: 3, offset: 16, size: 4, alignment: 8, stack-id: default, isImmutable: true }
 body:             |
   bb.1.entry:
     liveins: $a0, $a1, $a2, $a3

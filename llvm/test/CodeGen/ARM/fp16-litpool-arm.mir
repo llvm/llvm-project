@@ -42,7 +42,7 @@ frameInfo:
   maxAlignment:    2
   maxCallFrameSize: 0
 stack:
-  - { id: 0, name: S, offset: -2, size: 2, alignment: 2, stack-id: 0, local-offset: -2 }
+  - { id: 0, name: S, offset: -2, size: 2, alignment: 2, stack-id: default, local-offset: -2 }
 constants:
   - id:              0
     value:           i32 1576323506

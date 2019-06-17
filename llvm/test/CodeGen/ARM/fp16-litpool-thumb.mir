@@ -42,8 +42,8 @@ frameInfo:
   maxAlignment:    4
   maxCallFrameSize: 0
 stack:
-  - { id: 0, name: F, offset: -4, size: 4, alignment: 4, stack-id: 0, local-offset: -4 }
-  - { id: 1, name: S, offset: -6, size: 2, alignment: 2, stack-id: 0, local-offset: -6 }
+  - { id: 0, name: F, offset: -4, size: 4, alignment: 4, stack-id: default, local-offset: -4 }
+  - { id: 1, name: S, offset: -6, size: 2, alignment: 2, stack-id: default, local-offset: -6 }
 constants:
   - id:              0
     value:           i32 1109917696

@@ -91,7 +91,7 @@ x:
 // SEC-NEXT: 0x2058 R_ARM_TLS_DTPOFF32 y
 
 
-// CHECK-LABEL: 0000000000001000 func:
+// CHECK-LABEL: 00001000 func:
 // CHECK-NEXT:    1000:      00 f0 20 e3     nop
 // CHECK-NEXT:    1004:      00 f0 20 e3     nop
 // CHECK-NEXT:    1008:      00 f0 20 e3     nop

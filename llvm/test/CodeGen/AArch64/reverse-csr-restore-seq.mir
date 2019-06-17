@@ -47,7 +47,7 @@ name:            bar
 tracksRegLiveness: true
 stack:
   - { id : 0, size: 8, alignment: 4,
-  stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+  stack-id: default, callee-saved-register: '', callee-saved-restored: true,
   local-offset: -4, debug-info-variable: '', debug-info-expression: '',
   debug-info-location: '' }
 

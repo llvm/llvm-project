@@ -46,7 +46,7 @@
 # HEX: 0x10030000 10010040 10010044
 
 ## These instructions are referenced by .plt entries.
-# CHECK: 0000000010010040 .glink:
+# CHECK: 10010040 .glink:
 # CHECK-NEXT: b .+8
 # CHECK-NEXT: b .+4
 

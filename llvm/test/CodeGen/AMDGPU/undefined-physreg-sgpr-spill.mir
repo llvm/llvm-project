@@ -34,7 +34,7 @@ liveins:
   - { reg: '$sgpr4_sgpr5', virtual-reg: '' }
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 4,
-      stack-id: 1, callee-saved-register: '', callee-saved-restored: true,
+      stack-id: sgpr-spill, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
 constants:
@@ -98,7 +98,7 @@ liveins:
   - { reg: '$sgpr4_sgpr5', virtual-reg: '' }
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 4,
-      stack-id: 1, callee-saved-register: '', callee-saved-restored: true,
+      stack-id: sgpr-spill, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
 constants:
