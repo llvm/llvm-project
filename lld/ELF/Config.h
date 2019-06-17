@@ -100,6 +100,7 @@ struct Configuration {
   llvm::StringRef OutputFile;
   llvm::StringRef OptRemarksFilename;
   llvm::StringRef OptRemarksPasses;
+  llvm::StringRef OptRemarksFormat;
   llvm::StringRef ProgName;
   llvm::StringRef PrintSymbolOrder;
   llvm::StringRef SoName;
