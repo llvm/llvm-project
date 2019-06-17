@@ -262,7 +262,7 @@ void* sycl_malloc(size_t size, const sycl::device& dev);
 
 Parameters::
   * `size_t size` - number of bytes to allocate
-  * `const sycl::device& dev - the SYCL device to allocate on
+  * `const sycl::device& dev` - the SYCL device to allocate on
 Return value:: Returns a pointer to the newly allocated `shared` memory on the specified `device` on success.  Memory allocated by `sycl_malloc` must be deallocated with `sycl_free` to avoid memory leaks.  On failure, returns `nullptr`.
 
 '''
