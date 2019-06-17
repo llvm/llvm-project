@@ -5,6 +5,8 @@
 // RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 // RUN: %clang_cc1 -triple arm64-apple-ios -S -o /dev/null %s -O2 -dwarf-column-info -opt-record-file %t.yaml -opt-record-passes asm-printer
 // RUN: cat %t.yaml | FileCheck -check-prefix=PASSES %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -S -o /dev/null %s -O2 -dwarf-column-info -opt-record-file %t.yaml -opt-record-format yaml
+// RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 
 void bar(float);
 

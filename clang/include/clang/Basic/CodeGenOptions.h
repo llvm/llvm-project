@@ -246,6 +246,9 @@ public:
   /// records.
   std::string OptRecordPasses;
 
+  /// The format used for serializing remarks (default: YAML)
+  std::string OptRecordFormat;
+
   /// The name of the partition that symbols are assigned to, specified with
   /// -fsymbol-partition (see https://lld.llvm.org/Partitions.html).
   std::string SymbolPartition;

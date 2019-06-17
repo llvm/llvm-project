@@ -121,7 +121,10 @@ static constexpr OptionEnumValueElement g_language_enumerators[] = {
   "{${frame.no-debug}${function.pc-offset}}}}"
 
 #define FILE_AND_LINE                                                          \
-  "{ at ${line.file.basename}:${line.number}{:${line.column}}}"
+  "{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}"                    \
+  ":${ansi.fg.yellow}${line.number}${ansi.normal}"                             \
+  "{:${ansi.fg.yellow}${line.column}${ansi.normal}}}"
+
 #define IS_OPTIMIZED "{${function.is-optimized} [opt]}"
 
 #define IS_ARTIFICIAL "{${frame.is-artificial} [artificial]}"
@@ -129,32 +132,36 @@ static constexpr OptionEnumValueElement g_language_enumerators[] = {
 #define DEFAULT_THREAD_FORMAT                                                  \
   "thread #${thread.index}: tid = ${thread.id%tid}"                            \
   "{, ${frame.pc}}" MODULE_WITH_FUNC FILE_AND_LINE                             \
-  "{, name = '${thread.name}'}"                                                \
-  "{, queue = '${thread.queue}'}"                                              \
-  "{, activity = '${thread.info.activity.name}'}"                              \
+  "{, name = ${ansi.fg.green}'${thread.name}'${ansi.normal}}"                  \
+  "{, queue = ${ansi.fg.green}'${thread.queue}'${ansi.normal}}"                \
+  "{, activity = "                                                             \
+  "${ansi.fg.green}'${thread.info.activity.name}'${ansi.normal}}"              \
   "{, ${thread.info.trace_messages} messages}"                                 \
-  "{, stop reason = ${thread.stop-reason}}"                                    \
+  "{, stop reason = ${ansi.fg.red}${thread.stop-reason}${ansi.normal}}"        \
   "{\\nReturn value: ${thread.return-value}}"                                  \
   "{\\nCompleted expression: ${thread.completed-expression}}"                  \
   "\\n"
 
 #define DEFAULT_THREAD_STOP_FORMAT                                             \
   "thread #${thread.index}{, name = '${thread.name}'}"                         \
-  "{, queue = '${thread.queue}'}"                                              \
-  "{, activity = '${thread.info.activity.name}'}"                              \
+  "{, queue = ${ansi.fg.green}'${thread.queue}'${ansi.normal}}"                \
+  "{, activity = "                                                             \
+  "${ansi.fg.green}'${thread.info.activity.name}'${ansi.normal}}"              \
   "{, ${thread.info.trace_messages} messages}"                                 \
-  "{, stop reason = ${thread.stop-reason}}"                                    \
+  "{, stop reason = ${ansi.fg.red}${thread.stop-reason}${ansi.normal}}"        \
   "{\\nReturn value: ${thread.return-value}}"                                  \
   "{\\nCompleted expression: ${thread.completed-expression}}"                  \
   "\\n"
 
 #define DEFAULT_FRAME_FORMAT                                                   \
-  "frame #${frame.index}: ${frame.pc}" MODULE_WITH_FUNC FILE_AND_LINE          \
+  "frame #${frame.index}: "                                                    \
+  "${ansi.fg.yellow}${frame.pc}${ansi.normal}" MODULE_WITH_FUNC FILE_AND_LINE  \
       IS_OPTIMIZED IS_ARTIFICIAL "\\n"
 
 #define DEFAULT_FRAME_FORMAT_NO_ARGS                                           \
-  "frame #${frame.index}: ${frame.pc}" MODULE_WITH_FUNC_NO_ARGS FILE_AND_LINE  \
-      IS_OPTIMIZED IS_ARTIFICIAL "\\n"
+  "frame #${frame.index}: "                                                    \
+  "${ansi.fg.yellow}${frame.pc}${ansi.normal}" MODULE_WITH_FUNC_NO_ARGS        \
+      FILE_AND_LINE IS_OPTIMIZED IS_ARTIFICIAL "\\n"
 
 // Three parts to this disassembly format specification:
 //   1. If this is a new function/symbol (no previous symbol/function), print

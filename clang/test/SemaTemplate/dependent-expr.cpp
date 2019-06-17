@@ -63,6 +63,14 @@ namespace test5 {
   };
 }
 
+namespace test6 {
+  template<typename T> T f() {
+    const T &v(0);
+    return v;
+  }
+  int use = f<int>();
+}
+
 namespace PR8795 {
   template <class _CharT> int test(_CharT t)
   {
