@@ -43,6 +43,8 @@ public:
 private:
   uint32_t *m_context_reg;
   uint16_t *m_context_pc;
+  bool *m_context_zf;
+  bool *m_context_cf;
 };
 
 } // namespace process_dpu

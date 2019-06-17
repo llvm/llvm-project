@@ -44,6 +44,8 @@ enum {
   sp_dpu = r22_dpu,
   lr_dpu = r23_dpu,
   pc_dpu,
+  zf_dpu,
+  cf_dpu,
 
   k_num_registers_dpu,
 };

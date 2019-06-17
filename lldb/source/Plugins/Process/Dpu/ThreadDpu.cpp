@@ -37,6 +37,10 @@ std::string ThreadDpu::GetName() {
   return "DPUthread" + llvm::to_string(m_thread_index);
 }
 
+void ThreadDpu::SetThreadStepping() {
+  m_state = lldb::StateType::eStateStepping;
+}
+
 lldb::StateType ThreadDpu::GetState() { return m_state; }
 
 bool ThreadDpu::GetStopReason(ThreadStopInfo &stop_info,

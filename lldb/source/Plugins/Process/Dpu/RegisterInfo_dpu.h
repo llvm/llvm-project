@@ -19,6 +19,8 @@ public:
   struct GPR {
     uint32_t r[24]; // R0-R23
     uint32_t pc;    // PC
+    uint32_t zf;
+    uint32_t cf;
   };
 
   RegisterInfo_dpu();

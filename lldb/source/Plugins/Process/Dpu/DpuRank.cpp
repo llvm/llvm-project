@@ -116,43 +116,9 @@ Dpu::~Dpu() {
 bool Dpu::LoadElf(const FileSpec &elf_file_path) {
   ModuleSP elf_mod(new Module(elf_file_path, k_dpu_arch));
 
-  ObjectFile *exe = elf_mod->GetObjectFile();
-  if (exe == nullptr)
-    return false;
-
-  const SectionList *sections = exe->GetSectionList();
-  Section *section_text =
-      sections->FindSectionByName(ConstString(".text")).get();
-  Section *section_data =
-      sections->FindSectionByName(ConstString(".data")).get();
-  if (!section_text || !section_data)
-    return false;
-
-  DataExtractor text_content;
-  exe->ReadSectionData(section_text, text_content);
-  fprintf(stderr, "text +%ld\n", text_content.GetByteSize());
-  DataExtractor data_content;
-  exe->ReadSectionData(section_data, data_content);
-  fprintf(stderr, "data +%ld\n", data_content.GetByteSize());
-
-  {
-    std::lock_guard<std::mutex> guard(m_rank->GetLock());
-
-    int res = dpu_copy_to_iram_for_dpu(
-        m_dpu, 0,
-        reinterpret_cast<const dpuinstruction_t *>(text_content.GetDataStart()),
-        text_content.GetByteSize() / sizeof(dpuinstruction_t));
-    if (res != DPU_API_SUCCESS)
-      return false;
-    res = dpu_copy_to_wram_for_dpu(
-        m_dpu, 0,
-        reinterpret_cast<const dpuword_t *>(data_content.GetDataStart()),
-        data_content.GetByteSize() / sizeof(dpuword_t));
-    if (res != DPU_API_SUCCESS)
-      return false;
-  }
-
-  return true;
+  dpu_api_status_t status =
+      dpu_load_individual(m_dpu, elf_file_path.GetCString());
+  return status == DPU_API_SUCCESS;
 }
 
 bool Dpu::Boot() {
@@ -172,6 +138,7 @@ bool Dpu::Boot() {
 
 StateType Dpu::PollStatus(unsigned int *exit_status) {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
+  bool dpu_is_in_fault;
   StateType result_state = StateType::eStateRunning;
 
   if (!dpu_is_running)
@@ -181,13 +148,13 @@ StateType Dpu::PollStatus(unsigned int *exit_status) {
   if (dpu_is_in_fault) {
     dpu_is_running = false;
     result_state = StateType::eStateStopped;
+    dpu_initialize_fault_process_for_dpu(m_dpu, &m_context);
   } else if (!dpu_is_running) {
     result_state = StateType::eStateExited;
   } else {
     return StateType::eStateRunning;
   }
 
-  dpu_initialize_fault_process_for_dpu(m_dpu, &m_context);
   dpu_extract_context_for_dpu(m_dpu, &m_context);
   *exit_status = m_context.registers[lldb_private::r21_dpu];
 
@@ -198,6 +165,7 @@ bool Dpu::StopThreads() {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
 
   dpu_is_running = false;
+
   for (dpu_thread_t each_thread = 0; each_thread < nr_threads; ++each_thread) {
     m_context.scheduling[each_thread] = 0xFF;
   }
@@ -215,11 +183,36 @@ bool Dpu::StopThreads() {
 bool Dpu::ResumeThreads() {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
 
+  if (m_context.dma_fault || m_context.mem_fault) {
+    return false;
+  }
+  m_context.bkp_fault = false;
+
   int ret = DPU_API_SUCCESS;
   ret |= dpu_clear_fault_on_dpu(m_dpu);
   ret |= dpu_finalize_fault_process_for_dpu(m_dpu, &m_context);
 
   dpu_is_running = true;
+  return ret == DPU_API_SUCCESS;
+}
+
+bool Dpu::StepThread(uint32_t thread_index) {
+  std::lock_guard<std::mutex> guard(m_rank->GetLock());
+  m_context.bkp_fault = false;
+
+  for (dpu_thread_t each_thread = 0; each_thread < nr_threads; ++each_thread) {
+    fprintf(stderr, "[%u] 0x%x\n", each_thread,
+            m_context.scheduling[each_thread]);
+  }
+
+  int ret = DPU_API_SUCCESS;
+  ret |= dpu_execute_thread_step_in_fault_for_dpu(m_dpu, thread_index, &m_context);
+
+  for (dpu_thread_t each_thread = 0; each_thread < nr_threads; ++each_thread) {
+    fprintf(stderr, "[%u] 0x%x\n", each_thread,
+            m_context.scheduling[each_thread]);
+  }
+
   return ret == DPU_API_SUCCESS;
 }
 
@@ -285,30 +278,27 @@ uint16_t *Dpu::ThreadContextPC(int thread_index) {
   return m_context.pcs + thread_index;
 }
 
+bool *Dpu::ThreadContextZF(int thread_index) {
+  return m_context.zero_flags + thread_index;
+}
+
+bool *Dpu::ThreadContextCF(int thread_index) {
+  return m_context.carry_flags + thread_index;
+}
+
 lldb::StateType Dpu::GetThreadState(int thread_index, std::string &description,
                                     lldb::StopReason &stop_reason) {
   if (m_context.bkp_fault && m_context.bkp_fault_thread_index == thread_index) {
     description = "breakpoint hit";
-    stop_reason = eStopReasonBreakpoint;
-    return eStateStopped;
   } else if (m_context.dma_fault && m_context.dma_fault_thread_index == thread_index) {
     description = "dma fault";
-    stop_reason = eStopReasonBreakpoint;
-    return eStateStopped;
   } else if (m_context.mem_fault && m_context.mem_fault_thread_index == thread_index) {
     description = "memory fault";
-    stop_reason = eStopReasonBreakpoint;
-    return eStateStopped;
   } else if (m_context.scheduling[thread_index] != 0xff) {
     description = "suspended";
-    stop_reason = eStopReasonSignal;
-    return eStateStopped;
   } else if (m_context.pcs[thread_index] != 0) {
     description = "stopped";
-    stop_reason = eStopReasonNone;
-    return eStateStopped;
-  } else {
-    stop_reason = eStopReasonNone;
-    return eStateExited;
   }
+  stop_reason = eStopReasonNone;
+  return eStateStopped;
 }

@@ -59,6 +59,8 @@ static const uint32_t g_regnums_dpu[] = {
     r22_dpu,
     r23_dpu,
     pc_dpu,
+    zf_dpu,
+    cf_dpu,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert(((sizeof g_regnums_dpu / sizeof g_regnums_dpu[0]) - 1) ==
@@ -73,8 +75,8 @@ constexpr size_t k_dpu_reg_context_size =
 
 RegisterContextDpu::RegisterContextDpu(ThreadDpu &thread, ProcessDpu &process)
     : NativeRegisterContextRegisterInfo(thread, new RegisterInfo_dpu()) {
-
-  process.GetThreadContext(thread.GetIndex(), m_context_reg, m_context_pc);
+  process.GetThreadContext(thread.GetIndex(), m_context_reg, m_context_pc,
+                           m_context_zf, m_context_cf);
 }
 
 uint32_t RegisterContextDpu::GetRegisterSetCount() const { return 1; }
@@ -101,6 +103,10 @@ Status RegisterContextDpu::ReadRegister(const RegisterInfo *info,
   if (reg == pc_dpu)
     value.SetUInt32(*m_context_pc * 8 /*sizeof(iram_instruction_t)*/ +
                     k_dpu_iram_base);
+  else if (reg == zf_dpu)
+    value.SetUInt32(*m_context_zf ? 1 : 0);
+  else if (reg == cf_dpu)
+    value.SetUInt32(*m_context_cf ? 1 : 0);
   else
     value.SetUInt32(m_context_reg[reg]);
 
@@ -117,6 +123,10 @@ Status RegisterContextDpu::WriteRegister(const RegisterInfo *info,
   if (reg == pc_dpu)
     *m_context_pc = (value.GetAsUInt32() - k_dpu_iram_base) /
                     8 /*sizeof(iram_instruction_t)*/;
+  else if (reg == zf_dpu)
+    *m_context_zf = (value.GetAsUInt32() == 1);
+  else if (reg == cf_dpu)
+    *m_context_cf = (value.GetAsUInt32() == 1);
   else
     m_context_reg[reg] = value.GetAsUInt32();
 
@@ -135,9 +145,13 @@ Status RegisterContextDpu::ReadAllRegisterValues(lldb::DataBufferSP &data_sp) {
 
   uint32_t pc =
       *m_context_pc * 8 /*sizeof(iram_instruction_t)*/ + k_dpu_iram_base;
+  uint32_t zf = m_context_zf ? 1 : 0;
+  uint32_t cf = m_context_cf ? 1 : 0;
 
-  ::memcpy(dst, m_context_reg, k_dpu_reg_context_size - sizeof(pc));
-  ::memcpy(dst + k_dpu_reg_context_size - sizeof(pc), &pc, sizeof(pc));
+  ::memcpy(dst, m_context_reg, k_dpu_reg_context_size - sizeof(pc) - sizeof(zf) - sizeof(cf));
+  ::memcpy(dst + k_dpu_reg_context_size - sizeof(pc) - sizeof(zf) - sizeof(cf), &pc, sizeof(pc));
+  ::memcpy(dst + k_dpu_reg_context_size - sizeof(zf) - sizeof(cf), &zf, sizeof(zf));
+  ::memcpy(dst + k_dpu_reg_context_size - sizeof(cf), &cf, sizeof(cf));
 
   return error;
 }
@@ -161,10 +175,16 @@ RegisterContextDpu::WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) {
   }
 
   uint32_t pc;
+  uint32_t zf, cf;
 
-  ::memcpy(m_context_reg, src, k_dpu_reg_context_size - sizeof(pc));
-  ::memcpy(&pc, src + k_dpu_reg_context_size - sizeof(pc), sizeof(pc));
+  ::memcpy(m_context_reg, src, k_dpu_reg_context_size - sizeof(pc) - sizeof(zf) - sizeof(cf));
+  ::memcpy(&pc, src + k_dpu_reg_context_size - sizeof(pc) - sizeof(zf) - sizeof(cf), sizeof(pc));
+  ::memcpy(&zf, src + k_dpu_reg_context_size - sizeof(zf) - sizeof(cf), sizeof(zf));
+  ::memcpy(&cf, src + k_dpu_reg_context_size - sizeof(cf), sizeof(cf));
+
   *m_context_pc = (pc - k_dpu_iram_base) / 8 /*sizeof(iram_instruction_t)*/;
+  *m_context_zf = zf == 1;
+  *m_context_cf = cf == 1;
 
   return error;
 }

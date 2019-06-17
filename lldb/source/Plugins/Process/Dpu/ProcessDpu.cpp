@@ -144,7 +144,8 @@ ProcessDpu::ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
   assert(m_timer_handle && status.Success());
 
   for (int thread_id = 0; thread_id < m_dpu->GetNrThreads(); thread_id++) {
-    m_threads.push_back(llvm::make_unique<ThreadDpu>(*this, pid | thread_id, thread_id));
+    m_threads.push_back(
+        llvm::make_unique<ThreadDpu>(*this, pid | thread_id, thread_id));
   }
   SetCurrentThreadID(pid);
 
@@ -164,7 +165,7 @@ void ProcessDpu::InterfaceTimerCallback() {
   }
 }
 
-bool ProcessDpu::SupportHardwareSingleStepping() const { return false; }
+bool ProcessDpu::SupportHardwareSingleStepping() const { return true; }
 
 Status ProcessDpu::Resume(const ResumeActionList &resume_actions) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
@@ -174,16 +175,27 @@ Status ProcessDpu::Resume(const ResumeActionList &resume_actions) {
   const ResumeAction *action =
       resume_actions.GetActionForThread(thread_id, true);
   if (action == NULL) {
-    LLDB_LOG(log, "No action to perform...");
-    return Status();
+    return Status("No action to perform...");
   }
   assert(action->tid == thread_id || action->tid == LLDB_INVALID_THREAD_ID);
-  if (action->state != lldb::StateType::eStateRunning) {
-    LLDB_LOG(log, "Resume function is not asked to run the threads... weird");
-    return Status();
+  switch (action->state) {
+  case lldb::StateType::eStateRunning:
+    if (!m_dpu->ResumeThreads())
+      return Status("CNI cannot resume");
+    break;
+  case lldb::StateType::eStateStepping: {
+    ThreadDpu * thread = GetThreadByID(thread_id);
+    uint32_t thread_index = thread->GetIndex();
+    thread->SetThreadStepping();
+    SetState(lldb::StateType::eStateStepping, true);
+    LLDB_LOG(log, "stepping thread {0} with signal {1}", thread_index, action->signal);
+    if (!m_dpu->StepThread(thread_index))
+      return Status("CNI cannot step");
+    SetState(lldb::StateType::eStateStopped, true);
+  } break;
+  default:
+    return Status("Unknown resume action!");
   }
-  if (!m_dpu->ResumeThreads())
-    return Status("CNI cannot resume");
 
   return Status();
 }
@@ -290,8 +302,8 @@ Status
 ProcessDpu::GetSoftwareBreakpointTrapOpcode(size_t trap_opcode_size_hint,
                                             size_t &actual_opcode_size,
                                             const uint8_t *&trap_opcode_bytes) {
-  static const uint8_t g_dpu_breakpoint_opcode[] = {
-      0x00, 0x00, 0x00, 0x20, 0x63, 0x7e /*, 0x00, 0x00*/};
+  static const uint8_t g_dpu_breakpoint_opcode[] = {0x00, 0x00, 0x00, 0x20,
+                                                    0x63, 0x7e, 0x00, 0x00};
 
   trap_opcode_bytes = g_dpu_breakpoint_opcode;
   actual_opcode_size = sizeof(g_dpu_breakpoint_opcode);
@@ -363,9 +375,11 @@ ThreadDpu *ProcessDpu::GetThreadByID(lldb::tid_t tid) {
 }
 
 void ProcessDpu::GetThreadContext(int thread_index, uint32_t *&regs,
-                                  uint16_t *&pc) {
+                                  uint16_t *&pc, bool *&zf, bool *&cf) {
   regs = m_dpu->ThreadContextRegs(thread_index);
   pc = m_dpu->ThreadContextPC(thread_index);
+  zf = m_dpu->ThreadContextZF(thread_index);
+  cf = m_dpu->ThreadContextCF(thread_index);
 }
 
 lldb::StateType ProcessDpu::GetThreadState(int thread_index,

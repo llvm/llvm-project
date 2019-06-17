@@ -48,6 +48,8 @@ enum {
   dwarf_r22,
   dwarf_r23,
   dwarf_pc,
+  dwarf_zf,
+  dwarf_cf,
 };
 // The register numbers used in the eh_frame unwind information.
 // Should be the same as DWARF register numbers.
@@ -77,6 +79,8 @@ enum {
   ehframe_r22 = dwarf_r22,
   ehframe_r23 = dwarf_r23,
   ehframe_pc = dwarf_pc,
+  ehframe_zf = dwarf_zf,
+  ehframe_cf = dwarf_cf,
 };
 
 enum {
@@ -107,6 +111,8 @@ enum {
   gpr_sp = gpr_r22,
   gpr_lr = gpr_r23,
   gpr_pc,
+  gpr_zf,
+  gpr_cf,
 };
 
 #define XSTR(s) STR(s)
@@ -114,8 +120,8 @@ enum {
 #define DEFINE_GPR(idx, generic)                                               \
   {                                                                            \
     "r" STR(idx), nullptr, 4, ((idx)*4), eEncodingUint, eFormatHex,            \
-        {ehframe_r##idx, dwarf_r##idx, LLDB_REGNUM_GENERIC_ARG1,               \
-         LLDB_INVALID_REGNUM, gpr_r##idx},                                     \
+        {ehframe_r##idx, dwarf_r##idx, generic, gpr_r##idx,           \
+         gpr_r##idx},                                                          \
         nullptr, nullptr, nullptr, 0                                           \
   }
 
@@ -158,7 +164,32 @@ static RegisterInfo g_register_infos_dpu[] = {
      nullptr,
      nullptr,
      nullptr,
-     0}};
+     0},
+    {"zf",
+     nullptr,
+     4,
+     25 * 4,
+     lldb::eEncodingUint,
+     lldb::eFormatHex,
+     {ehframe_zf, dwarf_zf, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+      gpr_zf},
+     nullptr,
+     nullptr,
+     nullptr,
+     0},
+    {"cf",
+     nullptr,
+     4,
+     26 * 4,
+     lldb::eEncodingUint,
+     lldb::eFormatHex,
+     {ehframe_cf, dwarf_cf, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+      gpr_cf},
+     nullptr,
+     nullptr,
+     nullptr,
+     0},
+};
 
 const uint32_t k_register_infos_count =
     sizeof(g_register_infos_dpu) / sizeof(g_register_infos_dpu[0]);

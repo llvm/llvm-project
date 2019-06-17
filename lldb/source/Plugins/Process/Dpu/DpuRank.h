@@ -69,6 +69,8 @@ public:
   bool ResumeThreads();
   bool StopThreads();
 
+  bool StepThread(uint32_t thread_index);
+
   bool WriteWRAM(uint32_t offset, const void *buf, size_t size);
   bool ReadWRAM(uint32_t offset, void *buf, size_t size);
   bool WriteIRAM(uint32_t offset, const void *buf, size_t size);
@@ -80,6 +82,8 @@ public:
 
   uint32_t *ThreadContextRegs(int thread_index);
   uint16_t *ThreadContextPC(int thread_index);
+  bool *ThreadContextZF(int thread_index);
+  bool *ThreadContextCF(int thread_index);
 
   lldb::StateType GetThreadState(int thread_index, std::string &description,
                                  lldb::StopReason &stop_reason);
@@ -91,7 +95,6 @@ private:
   int nr_of_work_registers_per_thread;
   struct _dpu_context_t m_context;
   bool dpu_is_running = false;
-  bool dpu_is_in_fault = false;
 };
 
 } // namespace dpu
