@@ -356,7 +356,7 @@ bool ConstantAggregateBuilder::split(size_t Index, CharUnits Hint) {
     return true;
   }
 
-  if (auto *CAZ = dyn_cast<llvm::ConstantAggregateZero>(C)) {
+  if (isa<llvm::ConstantAggregateZero>(C)) {
     CharUnits ElemSize = getSize(C);
     assert(Hint > Offset && Hint < Offset + ElemSize && "nothing to split");
     replace(Elems, Index, Index + 1,

@@ -264,7 +264,7 @@ let DecoderNamespace = "MicroMips" in {
                      ROUND_W_FM_MM<0b1, 0b01001000>, ISA_MICROMIPS, FGR_64;
   def RSQRT_S_MM : MMRel, ABSS_FT<"rsqrt.s", FGR32Opnd, FGR32Opnd,
                                   II_RECIP_S>,
-                   ROUND_W_FM_MM<0b0, 0b00001000>;
+                   ROUND_W_FM_MM<0b0, 0b00001000>, ISA_MICROMIPS;
   def RSQRT_D32_MM : MMRel, ABSS_FT<"rsqrt.d", AFGR64Opnd, AFGR64Opnd,
                                   II_RECIP_D>,
                    ROUND_W_FM_MM<0b1, 0b00001000>, ISA_MICROMIPS, FGR_32 {

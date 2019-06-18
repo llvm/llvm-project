@@ -440,8 +440,6 @@ namespace llvm {
                                   SectionKind Kind,
                                   const char *BeginSymName = nullptr);
 
-    MCSectionCOFF *getCOFFSection(StringRef Section);
-
     /// Gets or creates a section equivalent to Sec that is associated with the
     /// section containing KeySym. For example, to create a debug info section
     /// associated with an inline function, pass the normal debug info section
@@ -488,12 +486,6 @@ namespace llvm {
     /// Set the compilation directory for DW_AT_comp_dir
     void setCompilationDir(StringRef S) { CompilationDir = S.str(); }
 
-    /// Get the debug prefix map.
-    const std::map<const std::string, const std::string> &
-    getDebugPrefixMap() const {
-      return DebugPrefixMap;
-    }
-
     /// Add an entry to the debug prefix map.
     void addDebugPrefixMapEntry(const std::string &From, const std::string &To);
 
@@ -536,13 +528,6 @@ namespace llvm {
 
     const SmallVectorImpl<std::string> &getMCDwarfDirs(unsigned CUID = 0) {
       return getMCDwarfLineTable(CUID).getMCDwarfDirs();
-    }
-
-    bool hasMCLineSections() const {
-      for (const auto &Table : MCDwarfLineTablesCUMap)
-        if (!Table.second.getMCDwarfFiles().empty() || Table.second.getLabel())
-          return true;
-      return false;
     }
 
     unsigned getDwarfCompileUnitID() { return DwarfCompileUnitID; }

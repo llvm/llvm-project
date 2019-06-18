@@ -28,10 +28,6 @@ public:
   struct Entry {
     Entry(ConstString cstr, const T &v) : cstring(cstr), value(v) {}
 
-    friend bool operator<(const Entry &lhs, const Entry &rhs) {
-      return Compare()(lhs, rhs);
-    }
-
     ConstString cstring;
     T value;
   };
@@ -165,7 +161,7 @@ public:
   //      my_map.Append (UniqueCStringMap::Entry(GetName(...), GetValue(...)));
   // }
   // my_map.Sort();
-  void Sort() { llvm::sort(m_map.begin(), m_map.end()); }
+  void Sort() { llvm::sort(m_map.begin(), m_map.end(), Compare()); }
 
   // Since we are using a vector to contain our items it will always double its
   // memory consumption as things are added to the vector, so if you intend to

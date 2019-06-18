@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// Tweaks are small refactoring-like actions that run over the AST and produce
-// the set of edits as a result. They are local, i.e. they should take the
-// current editor context, e.g. the cursor position and selection into account.
+// Tweaks are small actions that run over the AST and produce edits, messages
+// etc as a result. They are local, i.e. they should take the current editor
+// context, e.g. the cursor position and selection into account.
 // The actions are executed in two stages:
 //   - Stage 1 should check whether the action is available in a current
 //     context. It should be cheap and fast to compute as it is executed for all
@@ -47,10 +47,36 @@ public:
     ParsedAST &AST;
     /// A location of the cursor in the editor.
     SourceLocation Cursor;
-    // The AST nodes that were selected.
+    /// The AST nodes that were selected.
     SelectionTree ASTSelection;
     // FIXME: provide a way to get sources and ASTs for other files.
   };
+
+  /// Output of a tweak.
+  enum Intent {
+    /// Apply changes that preserve the behavior of the code.
+    Refactor,
+    /// Provide information to the user.
+    Info,
+  };
+  struct Effect {
+    /// A message to be displayed to the user.
+    llvm::Optional<std::string> ShowMessage;
+    /// An edit to apply to the input file.
+    llvm::Optional<tooling::Replacements> ApplyEdit;
+
+    static Effect applyEdit(tooling::Replacements R) {
+      Effect E;
+      E.ApplyEdit = std::move(R);
+      return E;
+    }
+    static Effect showMessage(StringRef S) {
+      Effect E;
+      E.ShowMessage = S;
+      return E;
+    }
+  };
+
   virtual ~Tweak() = default;
   /// A unique id of the action, it is always equal to the name of the class
   /// defining the Tweak. Definition is provided automatically by
@@ -63,13 +89,19 @@ public:
   /// should be moved into 'apply'.
   /// Returns true iff the action is available and apply() can be called on it.
   virtual bool prepare(const Selection &Sel) = 0;
-  /// Run the second stage of the action that would produce the actual changes.
+  /// Run the second stage of the action that would produce the actual effect.
   /// EXPECTS: prepare() was called and returned true.
-  virtual Expected<tooling::Replacements> apply(const Selection &Sel) = 0;
+  virtual Expected<Effect> apply(const Selection &Sel) = 0;
+
   /// A one-line title of the action that should be shown to the users in the
   /// UI.
   /// EXPECTS: prepare() was called and returned true.
   virtual std::string title() const = 0;
+  /// Describes what kind of action this is.
+  /// EXPECTS: prepare() was called and returned true.
+  virtual Intent intent() const = 0;
+  /// Is this a 'hidden' tweak, which are off by default.
+  virtual bool hidden() const { return false; }
 };
 
 // All tweaks must be registered in the .cpp file next to their definition.

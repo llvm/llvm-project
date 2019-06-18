@@ -9732,41 +9732,6 @@ multiclass AVX512_pmovx_patterns_base<string OpcPrefix, SDNode ExtOp> {
   }
 }
 
-multiclass AVX512_pmovx_patterns_aext<string OpcPrefix, SDNode ExtOp> :
-    AVX512_pmovx_patterns_base<OpcPrefix, ExtOp> {
-  let Predicates = [HasVLX, HasBWI] in {
-    def : Pat<(v16i16 (ExtOp (v16i8 VR128X:$src))),
-              (!cast<I>(OpcPrefix#BWZ256rr) VR128X:$src)>;
-  }
-
-  let Predicates = [HasVLX] in {
-    def : Pat<(v8i32 (ExtOp (v8i16 VR128X:$src))),
-              (!cast<I>(OpcPrefix#WDZ256rr) VR128X:$src)>;
-
-    def : Pat<(v4i64 (ExtOp (v4i32 VR128X:$src))),
-              (!cast<I>(OpcPrefix#DQZ256rr) VR128X:$src)>;
-  }
-
-  // 512-bit patterns
-  let Predicates = [HasBWI] in {
-    def : Pat<(v32i16 (ExtOp (v32i8 VR256X:$src))),
-              (!cast<I>(OpcPrefix#BWZrr) VR256X:$src)>;
-  }
-  let Predicates = [HasAVX512] in {
-    def : Pat<(v16i32 (ExtOp (v16i8 VR128X:$src))),
-              (!cast<I>(OpcPrefix#BDZrr) VR128X:$src)>;
-    def : Pat<(v16i32 (ExtOp (v16i16 VR256X:$src))),
-              (!cast<I>(OpcPrefix#WDZrr) VR256X:$src)>;
-
-    def : Pat<(v8i64 (ExtOp (v8i16 VR128X:$src))),
-              (!cast<I>(OpcPrefix#WQZrr) VR128X:$src)>;
-
-    def : Pat<(v8i64 (ExtOp (v8i32 VR256X:$src))),
-              (!cast<I>(OpcPrefix#DQZrr) VR256X:$src)>;
-  }
-}
-
-
 multiclass AVX512_pmovx_patterns<string OpcPrefix, SDNode ExtOp,
                                  SDNode InVecOp> :
     AVX512_pmovx_patterns_base<OpcPrefix, ExtOp> {
@@ -9872,7 +9837,6 @@ multiclass AVX512_pmovx_patterns<string OpcPrefix, SDNode ExtOp,
 
 defm : AVX512_pmovx_patterns<"VPMOVSX", sext, sext_invec>;
 defm : AVX512_pmovx_patterns<"VPMOVZX", zext, zext_invec>;
-defm : AVX512_pmovx_patterns_aext<"VPMOVZX", anyext>;
 
 // Without BWI we can't do a trunc from v16i16 to v16i8. DAG combine can merge
 // ext+trunc aggresively making it impossible to legalize the DAG to this

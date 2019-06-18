@@ -43,6 +43,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "LLVMContextImpl.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -318,6 +319,31 @@ public:
 
   bool hasBrokenDebugInfo() const { return BrokenDebugInfo; }
 
+  void verifyTypes() {
+    LLVMContext &Ctx = M.getContext();
+    for (auto &Entry : Ctx.pImpl->ArrayTypes) {
+      Type *EltTy = Entry.second->getElementType();
+      if (auto *VTy = dyn_cast<VectorType>(EltTy))
+        if (VTy->isScalable())
+          CheckFailed("Arrays cannot contain scalable vectors",
+                      Entry.second, &M);
+    }
+
+    for (StructType* STy : Ctx.pImpl->AnonStructTypes)
+      for (Type *EltTy : STy->elements())
+        if (auto *VTy = dyn_cast<VectorType>(EltTy))
+          if (VTy->isScalable())
+            CheckFailed("Structs cannot contain scalable vectors", STy, &M);
+
+    for (auto &Entry : Ctx.pImpl->NamedStructTypes) {
+      StructType *STy = Entry.second;
+      for (Type *EltTy : STy->elements())
+        if (auto *VTy = dyn_cast<VectorType>(EltTy))
+          if (VTy->isScalable())
+            CheckFailed("Structs cannot contain scalable vectors", STy, &M);
+    }
+  }
+
   bool verify(const Function &F) {
     assert(F.getParent() == &M &&
            "An instance of this class only works with a specific module!");
@@ -386,6 +412,8 @@ public:
     visitModuleCommandLines(M);
 
     verifyCompileUnits();
+
+    verifyTypes();
 
     verifyDeoptimizeCallingConvs();
     DISubprogramAttachments.clear();
@@ -690,6 +718,13 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
       AssertDI(false, "!dbg attachment of global variable must be a "
                       "DIGlobalVariableExpression");
   }
+
+  // Scalable vectors cannot be global variables, since we don't know
+  // the runtime size. If the global is a struct or an array containing
+  // scalable vectors, that will be caught be verifyTypes instead.
+  if (auto *VTy = dyn_cast<VectorType>(GV.getValueType()))
+    if (VTy->isScalable())
+      CheckFailed("Globals cannot contain scalable vectors", &GV);
 
   if (!GV.hasInitializer()) {
     visitGlobalValue(GV);

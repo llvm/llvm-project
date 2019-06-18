@@ -105,7 +105,7 @@ struct ScopedFile {
 TEST(FileCollectorTest, AddFile) {
   ScopedDir root("add_file_root", true);
   FileSpec root_fs(root.Path);
-  TestingFileCollector file_collector(root_fs);
+  TestingFileCollector file_collector(root_fs, root_fs);
 
   file_collector.AddFile(FileSpec("/path/to/a"));
   file_collector.AddFile(FileSpec("/path/to/b"));
@@ -132,7 +132,7 @@ TEST(FileCollectorTest, CopyFiles) {
   // Create file collector and add files.
   ScopedDir root("copy_files_root", true);
   FileSpec root_fs(root.Path);
-  TestingFileCollector file_collector(root_fs);
+  TestingFileCollector file_collector(root_fs, root_fs);
   file_collector.AddFile(a.Path);
   file_collector.AddFile(b.Path);
   file_collector.AddFile(c.Path);
@@ -174,7 +174,7 @@ TEST(FileCollectorTest, Symlinks) {
   // Root where files are copied to.
   ScopedDir reproducer_root("reproducer_root", true);
   FileSpec root_fs(reproducer_root.Path);
-  TestingFileCollector file_collector(root_fs);
+  TestingFileCollector file_collector(root_fs, root_fs);
 
   // Add all the files to the collector.
   file_collector.AddFile(a.Path);

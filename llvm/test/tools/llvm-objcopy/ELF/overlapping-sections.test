@@ -37,6 +37,7 @@
 
 # CONTENTS:      Hex dump of section '.first':
 # CONTENTS-NEXT: 0x00000000 01234567
+# CONTENTS-EMPTY:
 # CONTENTS-NEXT: Hex dump of section '.second':
 # CONTENTS-NEXT: 0x00000000 23456789
 

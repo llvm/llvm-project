@@ -271,17 +271,9 @@ static bool updateOperand(FoldCandidate &Fold,
   }
 
   MachineOperand *New = Fold.OpToFold;
-  if (TargetRegisterInfo::isVirtualRegister(Old.getReg()) &&
-      TargetRegisterInfo::isVirtualRegister(New->getReg())) {
-    Old.substVirtReg(New->getReg(), New->getSubReg(), TRI);
-
-    Old.setIsUndef(New->isUndef());
-    return true;
-  }
-
-  // FIXME: Handle physical registers.
-
-  return false;
+  Old.substVirtReg(New->getReg(), New->getSubReg(), TRI);
+  Old.setIsUndef(New->isUndef());
+  return true;
 }
 
 static bool isUseMIInFoldList(ArrayRef<FoldCandidate> FoldList,
@@ -503,7 +495,6 @@ void SIFoldOperands::foldOperand(
   } else {
     if (UseMI->isCopy() && OpToFold.isReg() &&
         TargetRegisterInfo::isVirtualRegister(UseMI->getOperand(0).getReg()) &&
-        TargetRegisterInfo::isVirtualRegister(UseMI->getOperand(1).getReg()) &&
         TRI->isVGPR(*MRI, UseMI->getOperand(0).getReg()) &&
         TRI->isVGPR(*MRI, UseMI->getOperand(1).getReg()) &&
         !UseMI->getOperand(1).getSubReg()) {
@@ -513,6 +504,45 @@ void SIFoldOperands::foldOperand(
       CopiesToReplace.push_back(UseMI);
       OpToFold.setIsKill(false);
       return;
+    }
+
+    unsigned UseOpc = UseMI->getOpcode();
+    if (UseOpc == AMDGPU::V_READFIRSTLANE_B32 ||
+        (UseOpc == AMDGPU::V_READLANE_B32 &&
+         (int)UseOpIdx ==
+         AMDGPU::getNamedOperandIdx(UseOpc, AMDGPU::OpName::src0))) {
+      // %vgpr = V_MOV_B32 imm
+      // %sgpr = V_READFIRSTLANE_B32 %vgpr
+      // =>
+      // %sgpr = S_MOV_B32 imm
+      if (FoldingImm) {
+        if (execMayBeModifiedBeforeUse(*MRI,
+                                       UseMI->getOperand(UseOpIdx).getReg(),
+                                       *OpToFold.getParent(),
+                                       UseMI))
+          return;
+
+        UseMI->setDesc(TII->get(AMDGPU::S_MOV_B32));
+        UseMI->getOperand(1).ChangeToImmediate(OpToFold.getImm());
+        UseMI->RemoveOperand(2); // Remove exec read (or src1 for readlane)
+        return;
+      }
+
+      if (OpToFold.isReg() && TRI->isSGPRReg(*MRI, OpToFold.getReg())) {
+        if (execMayBeModifiedBeforeUse(*MRI,
+                                       UseMI->getOperand(UseOpIdx).getReg(),
+                                       *OpToFold.getParent(),
+                                       UseMI))
+          return;
+
+        // %vgpr = COPY %sgpr0
+        // %sgpr1 = V_READFIRSTLANE_B32 %vgpr
+        // =>
+        // %sgpr1 = COPY %sgpr0
+        UseMI->setDesc(TII->get(AMDGPU::COPY));
+        UseMI->RemoveOperand(2); // Remove exec read (or src1 for readlane)
+        return;
+      }
     }
 
     const MCInstrDesc &UseDesc = UseMI->getDesc();
@@ -539,14 +569,10 @@ void SIFoldOperands::foldOperand(
   const TargetRegisterClass *FoldRC =
     TRI->getRegClass(FoldDesc.OpInfo[0].RegClass);
 
-
   // Split 64-bit constants into 32-bits for folding.
   if (UseOp.getSubReg() && AMDGPU::getRegBitWidth(FoldRC->getID()) == 64) {
     unsigned UseReg = UseOp.getReg();
-    const TargetRegisterClass *UseRC
-      = TargetRegisterInfo::isVirtualRegister(UseReg) ?
-      MRI->getRegClass(UseReg) :
-      TRI->getPhysRegClass(UseReg);
+    const TargetRegisterClass *UseRC = MRI->getRegClass(UseReg);
 
     if (AMDGPU::getRegBitWidth(UseRC->getID()) != 64)
       return;

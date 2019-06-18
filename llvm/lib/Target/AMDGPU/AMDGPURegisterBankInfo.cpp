@@ -1378,6 +1378,20 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[4] = nullptr;
       break;
     }
+    case Intrinsic::amdgcn_div_scale: {
+      unsigned Dst0Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+      unsigned Dst1Size = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Dst0Size);
+      OpdsMapping[1] = AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, Dst1Size);
+
+      unsigned SrcSize = MRI.getType(MI.getOperand(3).getReg()).getSizeInBits();
+      OpdsMapping[3] = AMDGPU::getValueMapping(
+        getRegBankID(MI.getOperand(3).getReg(), MRI, *TRI), SrcSize);
+      OpdsMapping[4] = AMDGPU::getValueMapping(
+        getRegBankID(MI.getOperand(4).getReg(), MRI, *TRI), SrcSize);
+
+      break;
+    }
     }
     break;
   }

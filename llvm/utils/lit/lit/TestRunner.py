@@ -991,6 +991,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     for i,f in stderrTempFiles:
         f.seek(0, 0)
         procData[i] = (procData[i][0], f.read())
+        f.close()
 
     exitCode = None
     for i,(out,err) in enumerate(procData):
