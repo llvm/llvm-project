@@ -628,11 +628,8 @@ void StructurizeCFG::setPhiValues() {
       if (!Dominator.resultIsRememberedBlock())
         Updater.AddAvailableValue(Dominator.result(), Undef);
 
-      for (BasicBlock *FI : From) {
-        int Idx = Phi->getBasicBlockIndex(FI);
-        assert(Idx != -1);
-        Phi->setIncomingValue(Idx, Updater.GetValueAtEndOfBlock(FI));
-      }
+      for (BasicBlock *FI : From)
+        Phi->setIncomingValueForBlock(FI, Updater.GetValueAtEndOfBlock(FI));
     }
 
     DeletedPhis.erase(To);

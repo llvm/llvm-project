@@ -1075,9 +1075,12 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     Src1Name = getRegName(MI->getOperand(1).getReg());
     LLVM_FALLTHROUGH;
 
+  case X86::MOVSDrm_alt:
   case X86::MOVSDrm:
+  case X86::VMOVSDrm_alt:
   case X86::VMOVSDrm:
   case X86::VMOVSDZrm:
+  case X86::VMOVSDZrm_alt:
     DecodeScalarMoveMask(2, nullptr == Src2Name, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
@@ -1090,8 +1093,11 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     LLVM_FALLTHROUGH;
 
   case X86::MOVSSrm:
+  case X86::MOVSSrm_alt:
   case X86::VMOVSSrm:
+  case X86::VMOVSSrm_alt:
   case X86::VMOVSSZrm:
+  case X86::VMOVSSZrm_alt:
     DecodeScalarMoveMask(4, nullptr == Src2Name, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;

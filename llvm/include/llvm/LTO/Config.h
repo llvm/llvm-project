@@ -108,6 +108,9 @@ struct Config {
   /// Whether to emit optimization remarks with hotness informations.
   bool RemarksWithHotness = false;
 
+  /// The format used for serializing remarks (default: YAML).
+  std::string RemarksFormat = "";
+
   /// Whether to emit the pass manager debuggging informations.
   bool DebugPassManager = false;
 

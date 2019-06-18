@@ -1463,9 +1463,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     auto Zero = MIRBuilder.buildFConstant(Ty, ZeroForNegation);
     unsigned SubByReg = MI.getOperand(1).getReg();
     unsigned ZeroReg = Zero->getOperand(0).getReg();
-    MachineInstr *SrcMI = MRI.getVRegDef(SubByReg);
     MIRBuilder.buildInstr(TargetOpcode::G_FSUB, {Res}, {ZeroReg, SubByReg},
-                          SrcMI->getFlags());
+                          MI.getFlags());
     MI.eraseFromParent();
     return Legalized;
   }

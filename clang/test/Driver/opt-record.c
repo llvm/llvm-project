@@ -15,6 +15,9 @@
 // RUN: %clang -### -S -o FOO -fsave-optimization-record -foptimization-record-passes=inline %s 2>&1 | FileCheck %s -check-prefix=CHECK-EQ-PASSES
 // RUN: %clang -### -S -o FOO -foptimization-record-passes=inline %s 2>&1 | FileCheck %s -check-prefix=CHECK-EQ-PASSES
 // RUN: %clang -### -S -o FOO -foptimization-record-passes=inline -fno-save-optimization-record %s 2>&1 | FileCheck %s --check-prefix=CHECK-FOPT-DISABLE-PASSES
+// RUN: %clang -### -S -o FOO -fsave-optimization-record -fsave-optimization-record=some-format %s 2>&1 | FileCheck %s -check-prefix=CHECK-EQ-FORMAT
+// RUN: %clang -### -S -o FOO -fsave-optimization-record=some-format %s 2>&1 | FileCheck %s -check-prefix=CHECK-EQ-FORMAT
+// RUN: %clang -### -S -o FOO -fsave-optimization-record=some-format -fno-save-optimization-record %s 2>&1 | FileCheck %s --check-prefix=CHECK-FOPT-DISABLE-FORMAT
 //
 // CHECK: "-cc1"
 // CHECK: "-opt-record-file" "FOO.opt.yaml"
@@ -32,3 +35,9 @@
 // CHECK-EQ-PASSES: "-opt-record-passes" "inline"
 
 // CHECK-FOPT-DISABLE-PASSES-NOT: "-fno-save-optimization-record"
+
+// CHECK-EQ-FORMAT: "-cc1"
+// CHECK-EQ-FORMAT: "-opt-record-file" "FOO.opt.some-format"
+// CHECK-EQ-FORMAT: "-opt-record-format" "some-format"
+
+// CHECK-FOPT-DISABLE-FORMAT-NOT: "-fno-save-optimization-record"

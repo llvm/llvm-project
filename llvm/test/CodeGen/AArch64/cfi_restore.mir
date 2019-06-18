@@ -8,9 +8,9 @@ frameInfo:
   maxAlignment:    8
   hasCalls:        true
 stack:
-  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, stack-id: 0,
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$lr' }
-  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, stack-id: 0,
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$fp' }
 body:             |
   bb.0:

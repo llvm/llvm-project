@@ -167,7 +167,7 @@ define void @test_zext(i8* %a) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, i8* [[DOT0]], align 1
 ; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i8, i8* [[P_0]], i64 1
 ; CHECK-NEXT:    store i8 [[TMP2]], i8* [[P_0]], align 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[TMP3]], getelementptr (i8, i8* getelementptr inbounds ([240 x i8], [240 x i8]* @data, i64 0, i64 0), i64 240)
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[P_0]], getelementptr inbounds ([240 x i8], [240 x i8]* @data, i64 0, i64 239)
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -599,3 +599,34 @@ for.end:                                          ; preds = %for.end.loopexit, %
   %sum.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %add1.lcssa, %for.end.loopexit ]
   ret float %sum.0.lcssa
 }
+
+define void @ptr_non_cmp_exit_test() {
+; CHECK-LABEL: @ptr_non_cmp_exit_test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY29:%.*]]
+; CHECK:       for.body29:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8* [ null, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY29]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, i8* [[IV]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = getelementptr inbounds i8, i8* [[IV]], i64 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[IV]], inttoptr (i64 10 to i8*)
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY29]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body29
+
+for.body29:
+  %iv = phi i8* [ null, %entry ], [ %iv.next, %for.body29 ]
+  load volatile i8, i8* %iv, align 1
+  %iv.next = getelementptr inbounds i8, i8* %iv, i64 1
+  %cmp = icmp ne i8* %iv.next, inttoptr (i64 11 to i8*)
+  %and = and i1 %cmp, %cmp
+  br i1 %and, label %for.body29, label %exit
+
+exit:
+  ret void
+}
+
+
+

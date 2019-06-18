@@ -217,6 +217,8 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUOpenCLEnqueuedBlockLoweringPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
+  initializeAMDGPUPropagateAttributesEarlyPass(*PR);
+  initializeAMDGPUPropagateAttributesLatePass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowPass(*PR);
@@ -410,13 +412,14 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
 
   Builder.addExtension(
     PassManagerBuilder::EP_ModuleOptimizerEarly,
-    [Internalize, EarlyInline, AMDGPUAA](const PassManagerBuilder &,
-                                         legacy::PassManagerBase &PM) {
+    [Internalize, EarlyInline, AMDGPUAA, this](const PassManagerBuilder &,
+                                               legacy::PassManagerBase &PM) {
       if (AMDGPUAA) {
         PM.add(createAMDGPUAAWrapperPass());
         PM.add(createAMDGPUExternalAAWrapperPass());
       }
       PM.add(createAMDGPUUnifyMetadataPass());
+      PM.add(createAMDGPUPropagateAttributesLatePass(this));
       if (Internalize) {
         PM.add(createInternalizePass(mustPreserveGV));
         PM.add(createGlobalDCEPass());
@@ -428,15 +431,16 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
   const auto &Opt = Options;
   Builder.addExtension(
     PassManagerBuilder::EP_EarlyAsPossible,
-    [AMDGPUAA, LibCallSimplify, &Opt](const PassManagerBuilder &,
-                                      legacy::PassManagerBase &PM) {
+    [AMDGPUAA, LibCallSimplify, &Opt, this](const PassManagerBuilder &,
+                                            legacy::PassManagerBase &PM) {
       if (AMDGPUAA) {
         PM.add(createAMDGPUAAWrapperPass());
         PM.add(createAMDGPUExternalAAWrapperPass());
       }
+      PM.add(llvm::createAMDGPUPropagateAttributesEarlyPass(this));
       PM.add(llvm::createAMDGPUUseNativeCallsPass());
       if (LibCallSimplify)
-        PM.add(llvm::createAMDGPUSimplifyLibCallsPass(Opt));
+        PM.add(llvm::createAMDGPUSimplifyLibCallsPass(Opt, this));
   });
 
   Builder.addExtension(
@@ -669,6 +673,12 @@ void AMDGPUPassConfig::addIRPasses() {
   addPass(createAtomicExpandPass());
   // this pass should be performed on linked module
   addPass(createAMDGPULowerKernelCallsPass());
+  // A call to propagate attributes pass in the backend in case opt was not run.
+  addPass(createAMDGPUPropagateAttributesEarlyPass(&TM));
+
+  addPass(createAtomicExpandPass());
+
+
   addPass(createAMDGPULowerIntrinsicsPass());
 
   // Function calls are not supported, so make sure we inline everything.

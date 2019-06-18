@@ -1109,11 +1109,11 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
         Debugger &debugger = target->GetDebugger();
         if (debugger.GetUseColor()) {
           s.PutCString(entry.string);
-          return true;
         }
       }
     }
-    return false;
+    // Always return true, so colors being disabled is transparent.
+    return true;
 
   case Entry::Type::Root:
     for (const auto &child : entry.children) {

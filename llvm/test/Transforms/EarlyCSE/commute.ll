@@ -72,6 +72,22 @@ define void @test5(i32 %A, i32 %B, i1* %PA, i1* %PB) {
   ret void
 }
 
+; Test degenerate case of commuted compare of identical comparands.
+
+define void @test6(float %f, i1* %p1, i1* %p2) {
+; CHECK-LABEL: @test6(
+; CHECK-NEXT:    [[C1:%.*]] = fcmp ult float [[F:%.*]], [[F]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[P1:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[P2:%.*]]
+; CHECK-NEXT:    ret void
+;
+  %c1 = fcmp ult float %f, %f
+  %c2 = fcmp ugt float %f, %f
+  store i1 %c1, i1* %p1
+  store i1 %c2, i1* %p2
+  ret void
+}
+
 ; Min/max operands may be commuted in the compare and select.
 
 define i8 @smin_commute(i8 %a, i8 %b) {

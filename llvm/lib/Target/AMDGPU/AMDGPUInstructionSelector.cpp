@@ -59,11 +59,52 @@ AMDGPUInstructionSelector::AMDGPUInstructionSelector(
 
 const char *AMDGPUInstructionSelector::getName() { return DEBUG_TYPE; }
 
+static bool isSCC(unsigned Reg, const MachineRegisterInfo &MRI) {
+  if (Reg == AMDGPU::SCC)
+    return true;
+
+  if (TargetRegisterInfo::isPhysicalRegister(Reg))
+    return false;
+
+  auto &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
+  const TargetRegisterClass *RC =
+      RegClassOrBank.dyn_cast<const TargetRegisterClass*>();
+  if (RC)
+    return RC->getID() == AMDGPU::SReg_32_XM0RegClassID &&
+           MRI.getType(Reg).getSizeInBits() == 1;
+
+  const RegisterBank *RB = RegClassOrBank.get<const RegisterBank *>();
+  return RB->getID() == AMDGPU::SCCRegBankID;
+}
+
 bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
   MachineFunction *MF = BB->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   I.setDesc(TII.get(TargetOpcode::COPY));
+
+  // Special case for COPY from the scc register bank.  The scc register bank
+  // is modeled using 32-bit sgprs.
+  const MachineOperand &Src = I.getOperand(1);
+  unsigned SrcReg = Src.getReg();
+  if (!TargetRegisterInfo::isPhysicalRegister(SrcReg) && isSCC(SrcReg, MRI)) {
+    unsigned DstReg = TRI.getRegSizeInBits(I.getOperand(0).getReg(), MRI);
+    unsigned DstSize = TRI.getRegSizeInBits(DstReg, MRI);
+
+    // We have a copy from a 32-bit to 64-bit register.  This happens
+    // when we are selecting scc->vcc copies.
+    if (DstSize == 64) {
+      const DebugLoc &DL = I.getDebugLoc();
+      BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_CMP_NE_U32_e64), I.getOperand(0).getReg())
+        .addImm(0)
+        .addReg(SrcReg);
+      if (!MRI.getRegClassOrNull(SrcReg))
+        MRI.setRegClass(SrcReg, TRI.getConstrainedRegClassForOperand(Src, MRI));
+      I.eraseFromParent();
+      return true;
+    }
+  }
+
   for (const MachineOperand &MO : I.operands()) {
     if (TargetRegisterInfo::isPhysicalRegister(MO.getReg()))
       continue;
@@ -229,8 +270,7 @@ bool AMDGPUInstructionSelector::selectG_INSERT(MachineInstr &I) const {
 
 bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I,
                                           CodeGenCoverage &CoverageInfo) const {
-  unsigned IntrinsicID =  I.getOperand(1).getIntrinsicID();
-
+  unsigned IntrinsicID =  I.getOperand(I.getNumExplicitDefs()).getIntrinsicID();
   switch (IntrinsicID) {
   default:
     break;
@@ -260,6 +300,101 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I,
   }
   }
   return false;
+}
+
+static unsigned getV_CMPOpcode(CmpInst::Predicate P, unsigned Size) {
+  assert(Size == 32 || Size == 64);
+  switch (P) {
+  default:
+    llvm_unreachable("Unknown condition code!");
+  case CmpInst::ICMP_NE:
+    return Size == 32 ? AMDGPU::V_CMP_NE_U32_e64 : AMDGPU::V_CMP_NE_U64_e64;
+  case CmpInst::ICMP_EQ:
+    return Size == 32 ? AMDGPU::V_CMP_EQ_U32_e64 : AMDGPU::V_CMP_EQ_U64_e64;
+  case CmpInst::ICMP_SGT:
+    return Size == 32 ? AMDGPU::V_CMP_GT_I32_e64 : AMDGPU::V_CMP_GT_I64_e64;
+  case CmpInst::ICMP_SGE:
+    return Size == 32 ? AMDGPU::V_CMP_GE_I32_e64 : AMDGPU::V_CMP_GE_I64_e64;
+  case CmpInst::ICMP_SLT:
+    return Size == 32 ? AMDGPU::V_CMP_LT_I32_e64 : AMDGPU::V_CMP_LT_I64_e64;
+  case CmpInst::ICMP_SLE:
+    return Size == 32 ? AMDGPU::V_CMP_LE_I32_e64 : AMDGPU::V_CMP_LE_I64_e64;
+  case CmpInst::ICMP_UGT:
+    return Size == 32 ? AMDGPU::V_CMP_GT_U32_e64 : AMDGPU::V_CMP_GT_U64_e64;
+  case CmpInst::ICMP_UGE:
+    return Size == 32 ? AMDGPU::V_CMP_GE_U32_e64 : AMDGPU::V_CMP_GE_U64_e64;
+  case CmpInst::ICMP_ULT:
+    return Size == 32 ? AMDGPU::V_CMP_LT_U32_e64 : AMDGPU::V_CMP_LT_U64_e64;
+  case CmpInst::ICMP_ULE:
+    return Size == 32 ? AMDGPU::V_CMP_LE_U32_e64 : AMDGPU::V_CMP_LE_U64_e64;
+  }
+}
+
+static unsigned getS_CMPOpcode(CmpInst::Predicate P, unsigned Size) {
+  // FIXME: VI supports 64-bit comparse.
+  assert(Size == 32);
+  switch (P) {
+  default:
+    llvm_unreachable("Unknown condition code!");
+  case CmpInst::ICMP_NE:
+    return AMDGPU::S_CMP_LG_U32;
+  case CmpInst::ICMP_EQ:
+    return AMDGPU::S_CMP_EQ_U32;
+  case CmpInst::ICMP_SGT:
+    return AMDGPU::S_CMP_GT_I32;
+  case CmpInst::ICMP_SGE:
+    return AMDGPU::S_CMP_GE_I32;
+  case CmpInst::ICMP_SLT:
+    return AMDGPU::S_CMP_LT_I32;
+  case CmpInst::ICMP_SLE:
+    return AMDGPU::S_CMP_LE_I32;
+  case CmpInst::ICMP_UGT:
+    return AMDGPU::S_CMP_GT_U32;
+  case CmpInst::ICMP_UGE:
+    return AMDGPU::S_CMP_GE_U32;
+  case CmpInst::ICMP_ULT:
+    return AMDGPU::S_CMP_LT_U32;
+  case CmpInst::ICMP_ULE:
+    return AMDGPU::S_CMP_LE_U32;
+  }
+}
+
+bool AMDGPUInstructionSelector::selectG_ICMP(MachineInstr &I) const {
+  MachineBasicBlock *BB = I.getParent();
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  DebugLoc DL = I.getDebugLoc();
+
+  unsigned SrcReg = I.getOperand(2).getReg();
+  unsigned Size = RBI.getSizeInBits(SrcReg, MRI, TRI);
+  // FIXME: VI supports 64-bit compares.
+  assert(Size == 32);
+
+  unsigned CCReg = I.getOperand(0).getReg();
+  if (isSCC(CCReg, MRI)) {
+    unsigned Opcode = getS_CMPOpcode((CmpInst::Predicate)I.getOperand(1).getPredicate(), Size);
+    MachineInstr *ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode))
+            .add(I.getOperand(2))
+            .add(I.getOperand(3));
+    MachineInstr *Copy = BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), CCReg)
+            .addReg(AMDGPU::SCC);
+    bool Ret = constrainSelectedInstRegOperands(*ICmp, TII, TRI, RBI) |
+               constrainSelectedInstRegOperands(*Copy, TII, TRI, RBI);
+    I.eraseFromParent();
+    return Ret;
+  }
+
+  assert(Size == 32 || Size == 64);
+  unsigned Opcode = getV_CMPOpcode((CmpInst::Predicate)I.getOperand(1).getPredicate(), Size);
+  MachineInstr *ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode),
+            I.getOperand(0).getReg())
+            .add(I.getOperand(2))
+            .add(I.getOperand(3));
+  RBI.constrainGenericRegister(ICmp->getOperand(0).getReg(),
+                               AMDGPU::SReg_64RegClass, MRI);
+  bool Ret = constrainSelectedInstRegOperands(*ICmp, TII, TRI, RBI);
+  I.eraseFromParent();
+  return Ret;
 }
 
 static MachineInstr *
@@ -323,6 +458,53 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   }
   }
   return false;
+}
+
+bool AMDGPUInstructionSelector::selectG_SELECT(MachineInstr &I) const {
+  MachineBasicBlock *BB = I.getParent();
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  const DebugLoc &DL = I.getDebugLoc();
+
+  unsigned DstReg = I.getOperand(0).getReg();
+  unsigned Size = RBI.getSizeInBits(DstReg, MRI, TRI);
+  assert(Size == 32 || Size == 64);
+  const MachineOperand &CCOp = I.getOperand(1);
+  unsigned CCReg = CCOp.getReg();
+  if (isSCC(CCReg, MRI)) {
+    unsigned SelectOpcode = Size == 32 ? AMDGPU::S_CSELECT_B32 :
+                                         AMDGPU::S_CSELECT_B64;
+    MachineInstr *CopySCC = BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), AMDGPU::SCC)
+            .addReg(CCReg);
+
+    // The generic constrainSelectedInstRegOperands doesn't work for the scc register
+    // bank, because it does not cover the register class that we used to represent
+    // for it.  So we need to manually set the register class here.
+    if (!MRI.getRegClassOrNull(CCReg))
+        MRI.setRegClass(CCReg, TRI.getConstrainedRegClassForOperand(CCOp, MRI));
+    MachineInstr *Select = BuildMI(*BB, &I, DL, TII.get(SelectOpcode), DstReg)
+            .add(I.getOperand(2))
+            .add(I.getOperand(3));
+
+    bool Ret = constrainSelectedInstRegOperands(*Select, TII, TRI, RBI) |
+               constrainSelectedInstRegOperands(*CopySCC, TII, TRI, RBI);
+    I.eraseFromParent();
+    return Ret;
+  }
+
+  assert(Size == 32);
+  // FIXME: Support 64-bit select
+  MachineInstr *Select =
+      BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_CNDMASK_B32_e64), DstReg)
+              .addImm(0)
+              .add(I.getOperand(3))
+              .addImm(0)
+              .add(I.getOperand(2))
+              .add(I.getOperand(1));
+
+  bool Ret = constrainSelectedInstRegOperands(*Select, TII, TRI, RBI);
+  I.eraseFromParent();
+  return Ret;
 }
 
 bool AMDGPUInstructionSelector::selectG_STORE(MachineInstr &I) const {
@@ -573,10 +755,14 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I,
     return selectG_INTRINSIC(I, CoverageInfo);
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     return selectG_INTRINSIC_W_SIDE_EFFECTS(I, CoverageInfo);
+  case TargetOpcode::G_ICMP:
+    return selectG_ICMP(I);
   case TargetOpcode::G_LOAD:
     if (selectImpl(I, CoverageInfo))
       return true;
     return selectG_LOAD(I);
+  case TargetOpcode::G_SELECT:
+    return selectG_SELECT(I);
   case TargetOpcode::G_STORE:
     return selectG_STORE(I);
   }

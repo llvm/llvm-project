@@ -17,6 +17,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -212,7 +213,7 @@ struct MachineStackObject {
   int64_t Offset = 0;
   uint64_t Size = 0;
   unsigned Alignment = 0;
-  uint8_t StackID = 0;
+  TargetStackID::Value StackID;
   StringValue CalleeSavedRegister;
   bool CalleeSavedRestored = true;
   Optional<int64_t> LocalOffset;
@@ -252,7 +253,7 @@ template <> struct MappingTraits<MachineStackObject> {
     if (Object.Type != MachineStackObject::VariableSized)
       YamlIO.mapRequired("size", Object.Size);
     YamlIO.mapOptional("alignment", Object.Alignment, (unsigned)0);
-    YamlIO.mapOptional("stack-id", Object.StackID);
+    YamlIO.mapOptional("stack-id", Object.StackID, TargetStackID::Default);
     YamlIO.mapOptional("callee-saved-register", Object.CalleeSavedRegister,
                        StringValue()); // Don't print it out when it's empty.
     YamlIO.mapOptional("callee-saved-restored", Object.CalleeSavedRestored,
@@ -278,7 +279,7 @@ struct FixedMachineStackObject {
   int64_t Offset = 0;
   uint64_t Size = 0;
   unsigned Alignment = 0;
-  uint8_t StackID = 0;
+  TargetStackID::Value StackID;
   bool IsImmutable = false;
   bool IsAliased = false;
   StringValue CalleeSavedRegister;
@@ -308,6 +309,15 @@ struct ScalarEnumerationTraits<FixedMachineStackObject::ObjectType> {
   }
 };
 
+template <>
+struct ScalarEnumerationTraits<TargetStackID::Value> {
+  static void enumeration(yaml::IO &IO, TargetStackID::Value &ID) {
+    IO.enumCase(ID, "default", TargetStackID::Default);
+    IO.enumCase(ID, "sgpr-spill", TargetStackID::SGPRSpill);
+    IO.enumCase(ID, "noalloc", TargetStackID::NoAlloc);
+  }
+};
+
 template <> struct MappingTraits<FixedMachineStackObject> {
   static void mapping(yaml::IO &YamlIO, FixedMachineStackObject &Object) {
     YamlIO.mapRequired("id", Object.ID);
@@ -317,7 +327,7 @@ template <> struct MappingTraits<FixedMachineStackObject> {
     YamlIO.mapOptional("offset", Object.Offset, (int64_t)0);
     YamlIO.mapOptional("size", Object.Size, (uint64_t)0);
     YamlIO.mapOptional("alignment", Object.Alignment, (unsigned)0);
-    YamlIO.mapOptional("stack-id", Object.StackID);
+    YamlIO.mapOptional("stack-id", Object.StackID, TargetStackID::Default);
     if (Object.Type != FixedMachineStackObject::SpillSlot) {
       YamlIO.mapOptional("isImmutable", Object.IsImmutable, false);
       YamlIO.mapOptional("isAliased", Object.IsAliased, false);

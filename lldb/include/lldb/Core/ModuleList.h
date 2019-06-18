@@ -52,6 +52,7 @@ public:
   FileSpec GetClangModulesCachePath() const;
   bool SetClangModulesCachePath(llvm::StringRef path);
   bool GetEnableExternalLookup() const;
+  bool SetEnableExternalLookup(bool new_value);
 }; 
 
 /// \class ModuleList ModuleList.h "lldb/Core/ModuleList.h"

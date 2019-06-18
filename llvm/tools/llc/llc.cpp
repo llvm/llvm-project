@@ -155,6 +155,11 @@ static cl::opt<std::string>
                            "names match the given regular expression"),
                   cl::value_desc("regex"));
 
+static cl::opt<std::string> RemarksFormat(
+    "pass-remarks-format",
+    cl::desc("The format used for serializing remarks (default: YAML)"),
+    cl::value_desc("format"), cl::init("yaml"));
+
 namespace {
 static ManagedStatic<std::vector<std::string>> RunPassNames;
 
@@ -329,7 +334,8 @@ int main(int argc, char **argv) {
 
   Expected<std::unique_ptr<ToolOutputFile>> RemarksFileOrErr =
       setupOptimizationRemarks(Context, RemarksFilename, RemarksPasses,
-                               RemarksWithHotness, RemarksHotnessThreshold);
+                               RemarksFormat, RemarksWithHotness,
+                               RemarksHotnessThreshold);
   if (Error E = RemarksFileOrErr.takeError()) {
     WithColor::error(errs(), argv[0]) << toString(std::move(E)) << '\n';
     return 1;

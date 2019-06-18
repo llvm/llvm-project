@@ -46,13 +46,13 @@ frameInfo:
 fixedStack:
 stack:
   - { id: 0, name: alpha, type: default, offset: 0, size: 1, alignment: 1,
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 1, name: foxtrot, type: default, offset: 0, size: 16, alignment: 16,
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 2, name: india, type: default, offset: 0, size: 16, alignment: 16,
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
 constants:
@@ -89,10 +89,10 @@ body:             |
     %1:vr128 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load 16 from %ir.india)
 
     ; First faulty sequence; %1 spilt
-    %12:fr64 = MOVSDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load 8 from %ir.india)
+    %12:fr64 = MOVSDrm_alt %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load 8 from %ir.india)
     %13:vr128 = COPY killed %12
     MOVAPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed %13 :: (volatile store 16 into %ir.india)
-    ; CHECK: renamable $xmm{{[0-9]+}} = MOVSDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load 8 from %ir.india)
+    ; CHECK: renamable $xmm{{[0-9]+}} = MOVSDrm_alt %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load 8 from %ir.india)
     ; CHECK-NEXT: MOVAPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed renamable $xmm{{[0-9]+}} :: (volatile store 16 into %ir.india)
 
     ; Store %1 to avoid it being optimised out, will result in a load-from-spill
@@ -102,11 +102,11 @@ body:             |
     ; will get coloured and merged.
     %2:vr128 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load 16 from %ir.india)
 
-    %22:fr64 = MOVSDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load 8 from %ir.india)
+    %22:fr64 = MOVSDrm_alt %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load 8 from %ir.india)
     %23:vr128 = COPY killed %22
     MOVAPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed %23 :: (volatile store 16 into %ir.india)
 
-    ; CHECK: renamable $xmm{{[0-9]+}} = MOVSDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load 8 from %ir.india)
+    ; CHECK: renamable $xmm{{[0-9]+}} = MOVSDrm_alt %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load 8 from %ir.india)
     ; CHECK-NEXT: MOVAPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed renamable $xmm{{[0-9]+}} :: (volatile store 16 into %ir.india)
 
     MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed %2 :: (volatile dereferenceable store 16 into %ir.india)
@@ -115,7 +115,7 @@ body:             |
     ; Test some sequences that _should_ be eliminated
     %3:vr128 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load 16 from %ir.india)
 
-    %32:fr64 = VMOVSDrm %stack.2.india, 1, $noreg, 0, $noreg :: (dereferenceable load 8 from %ir.india)
+    %32:fr64 = VMOVSDrm_alt %stack.2.india, 1, $noreg, 0, $noreg :: (dereferenceable load 8 from %ir.india)
     %33:fr64 = COPY killed %32
     VMOVSDmr %stack.2.india, 1, $noreg, 0, $noreg, killed %33 :: (store 8 into %ir.india)
 
@@ -130,7 +130,7 @@ body:             |
     ; Moves with different encodings but same size should be eliminated
     %4:vr128 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load 16 from %ir.india)
 
-    %42:fr32 = MOVSSrm %stack.2.india, 1, $noreg, 0, $noreg :: (dereferenceable load 4 from %ir.india)
+    %42:fr32 = MOVSSrm_alt %stack.2.india, 1, $noreg, 0, $noreg :: (dereferenceable load 4 from %ir.india)
     %43:fr32 = COPY killed %42
     VMOVSSZmr %stack.2.india, 1, $noreg, 0, $noreg, killed %43 :: (store 4 into %ir.india)
 
@@ -143,7 +143,7 @@ body:             |
     ; Same deal with double-size
     %5:vr128 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load 16 from %ir.india)
 
-    %52:fr64 = MOVSDrm %stack.2.india, 1, $noreg, 0, $noreg :: (dereferenceable load 8 from %ir.india)
+    %52:fr64 = MOVSDrm_alt %stack.2.india, 1, $noreg, 0, $noreg :: (dereferenceable load 8 from %ir.india)
     %53:fr64 = COPY killed %52
     VMOVSDZmr %stack.2.india, 1, $noreg, 0, $noreg, killed %53 :: (store 8 into %ir.india)
 
@@ -156,7 +156,7 @@ body:             |
     ; Last two repeated, with load/store opcode flipped
     %6:vr128 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load 16 from %ir.india)
 
-    %62:fr32 = VMOVSSZrm %stack.2.india, 1, $noreg, 0, $noreg :: (dereferenceable load 4 from %ir.india)
+    %62:fr32 = VMOVSSZrm_alt %stack.2.india, 1, $noreg, 0, $noreg :: (dereferenceable load 4 from %ir.india)
     %63:fr32 = COPY killed %62
     MOVSSmr %stack.2.india, 1, $noreg, 0, $noreg, killed %63 :: (store 4 into %ir.india)
 
@@ -169,7 +169,7 @@ body:             |
     ; Flipped double-size different-encoding test
     %7:vr128 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load 16 from %ir.india)
 
-    %72:fr64 = VMOVSDZrm %stack.2.india, 1, $noreg, 0, $noreg :: (dereferenceable load 8 from %ir.india)
+    %72:fr64 = VMOVSDZrm_alt %stack.2.india, 1, $noreg, 0, $noreg :: (dereferenceable load 8 from %ir.india)
     %73:fr64 = COPY killed %72
     MOVSDmr %stack.2.india, 1, $noreg, 0, $noreg, killed %73 :: (store 8 into %ir.india)
 

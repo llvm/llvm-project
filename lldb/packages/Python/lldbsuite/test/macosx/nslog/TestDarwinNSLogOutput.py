@@ -97,7 +97,7 @@ class DarwinNSLogOutputTestCase(TestBase):
 
         # Ensure we stopped at a breakpoint.
         self.runCmd("thread list")
-        self.expect(re.compile(r"stop reason = breakpoint"))
+        self.expect(re.compile(r"stop reason = .*breakpoint"))
 
     def runCmd(self, cmd):
         if self.child:

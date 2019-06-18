@@ -462,6 +462,9 @@ namespace {
     SDValue visitFMULForFMADistributiveCombine(SDNode *N);
 
     SDValue XformToShuffleWithZero(SDNode *N);
+    bool reassociationCanBreakAddressingModePattern(unsigned Opc,
+                                                    const SDLoc &DL, SDValue N0,
+                                                    SDValue N1);
     SDValue reassociateOpsCommutative(unsigned Opc, const SDLoc &DL, SDValue N0,
                                       SDValue N1);
     SDValue reassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
@@ -1037,6 +1040,62 @@ static bool isAnyConstantBuildVector(SDValue V, bool NoOpaques = false) {
     return false;
   return isConstantOrConstantVector(V, NoOpaques) ||
          ISD::isBuildVectorOfConstantFPSDNodes(V.getNode());
+}
+
+bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
+                                                             const SDLoc &DL,
+                                                             SDValue N0,
+                                                             SDValue N1) {
+  // Currently this only tries to ensure we don't undo the GEP splits done by
+  // CodeGenPrepare when shouldConsiderGEPOffsetSplit is true. To ensure this,
+  // we check if the following transformation would be problematic:
+  // (load/store (add, (add, x, offset1), offset2)) ->
+  // (load/store (add, x, offset1+offset2)).
+
+  if (Opc != ISD::ADD || N0.getOpcode() != ISD::ADD)
+    return false;
+
+  if (N0.hasOneUse())
+    return false;
+
+  auto *C1 = dyn_cast<ConstantSDNode>(N0.getOperand(1));
+  auto *C2 = dyn_cast<ConstantSDNode>(N1);
+  if (!C1 || !C2)
+    return false;
+
+  const APInt &C1APIntVal = C1->getAPIntValue();
+  const APInt &C2APIntVal = C2->getAPIntValue();
+  if (C1APIntVal.getBitWidth() > 64 || C2APIntVal.getBitWidth() > 64)
+    return false;
+
+  const APInt CombinedValueIntVal = C1APIntVal + C2APIntVal;
+  if (CombinedValueIntVal.getBitWidth() > 64)
+    return false;
+  const int64_t CombinedValue = CombinedValueIntVal.getSExtValue();
+
+  for (SDNode *Node : N0->uses()) {
+    auto LoadStore = dyn_cast<MemSDNode>(Node);
+    if (LoadStore) {
+      // Is x[offset2] already not a legal addressing mode? If so then
+      // reassociating the constants breaks nothing (we test offset2 because
+      // that's the one we hope to fold into the load or store).
+      TargetLoweringBase::AddrMode AM;
+      AM.HasBaseReg = true;
+      AM.BaseOffs = C2APIntVal.getSExtValue();
+      EVT VT = LoadStore->getMemoryVT();
+      unsigned AS = LoadStore->getAddressSpace();
+      Type *AccessTy = VT.getTypeForEVT(*DAG.getContext());
+      if (!TLI.isLegalAddressingMode(DAG.getDataLayout(), AM, AccessTy, AS))
+        continue;
+
+      // Would x[offset1+offset2] still be a legal addressing mode?
+      AM.BaseOffs = CombinedValue;
+      if (!TLI.isLegalAddressingMode(DAG.getDataLayout(), AM, AccessTy, AS))
+        return true;
+    }
+  }
+
+  return false;
 }
 
 // Helper for DAGCombiner::reassociateOps. Try to reassociate an expression
@@ -2262,9 +2321,10 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
     return NewSel;
 
   // reassociate add
-  if (SDValue RADD = reassociateOps(ISD::ADD, DL, N0, N1, N->getFlags()))
-    return RADD;
-
+  if (!reassociationCanBreakAddressingModePattern(ISD::ADD, DL, N0, N1)) {
+    if (SDValue RADD = reassociateOps(ISD::ADD, DL, N0, N1, N->getFlags()))
+      return RADD;
+  }
   // fold ((0-A) + B) -> B-A
   if (N0.getOpcode() == ISD::SUB && isNullOrNullSplat(N0.getOperand(0)))
     return DAG.getNode(ISD::SUB, DL, VT, N1, N0.getOperand(1));

@@ -9,12 +9,12 @@
 ; whole subregion.
 
 ; CHECK-LABEL:  polly.stmt.if.then.110:
-; CHECK:          %[[R1_1:[0-9]*]] = mul i64 %polly.indvar[[R0_1:[0-9]*]], 30
+; CHECK:          %[[R1_1:[0-9]*]] = mul nuw nsw i64 %polly.indvar[[R0_1:[0-9]*]], 30
 ; CHECK:          %scevgep[[R1_2:[0-9]*]] = getelementptr i32, i32* %scevgep{{[0-9]*}}, i64 %[[R1_1]]
 ; CHECK:          store i32 0, i32* %scevgep[[R1_2]], align 8
 
 ; CHECK-LABEL:  polly.stmt.if.else:
-; CHECK:          %[[R2_1:[0-9]*]] = mul i64 %polly.indvar[[R0_1]], 30
+; CHECK:          %[[R2_1:[0-9]*]] = mul nuw nsw i64 %polly.indvar[[R0_1]], 30
 ; CHECK:          %scevgep[[R2_2:[0-9]*]] = getelementptr i32, i32* %scevgep{{[0-9]*}}, i64 %[[R2_1]]
 ; CHECK:          store i32 21, i32* %scevgep[[R2_2]], align 8
 

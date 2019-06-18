@@ -261,6 +261,23 @@
 {'is_defined': True, 'name': '__ZNKSt3__221__basic_string_commonILb1EE20__throw_out_of_rangeEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__223__match_any_but_newlineIcE6__execERNS_7__stateIcEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__223__match_any_but_newlineIwE6__execERNS_7__stateIwEE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__24__fs10filesystem18directory_iterator13__dereferenceEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__24__fs10filesystem28recursive_directory_iterator13__dereferenceEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__24__fs10filesystem28recursive_directory_iterator5depthEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__24__fs10filesystem28recursive_directory_iterator7optionsEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__24__fs10filesystem4path10__filenameEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__24__fs10filesystem4path11__extensionEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__24__fs10filesystem4path11__root_nameEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__24__fs10filesystem4path13__parent_pathEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__24__fs10filesystem4path15__relative_pathEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__24__fs10filesystem4path15__root_path_rawEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__24__fs10filesystem4path16__root_directoryEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__24__fs10filesystem4path16lexically_normalEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__24__fs10filesystem4path18lexically_relativeERKS2_', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__24__fs10filesystem4path3endEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__24__fs10filesystem4path5beginEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__24__fs10filesystem4path6__stemEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__24__fs10filesystem4path9__compareENS_17basic_string_viewIcNS_11char_traitsIcEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__25ctypeIcE10do_tolowerEPcPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__25ctypeIcE10do_tolowerEc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__25ctypeIcE10do_toupperEPcPKc', 'type': 'FUNC'}
@@ -1142,6 +1159,57 @@
 {'is_defined': True, 'name': '__ZNSt3__227__libcpp_set_debug_functionEPFvRKNS_19__libcpp_debug_infoEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__229__libcpp_abort_debug_functionERKNS_19__libcpp_debug_infoE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__23cinE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem10__absoluteERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem10hash_valueERKNS1_4pathE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem11__canonicalERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem11__copy_fileERKNS1_4pathES4_NS1_12copy_optionsEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem11__file_sizeERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem12__equivalentERKNS1_4pathES4_PNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem12__remove_allERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem13__fs_is_emptyERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem13__permissionsERKNS1_4pathENS1_5permsENS1_12perm_optionsEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem13__resize_fileERKNS1_4pathEmPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem14__copy_symlinkERKNS1_4pathES4_PNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem14__current_pathEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem14__current_pathERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem14__read_symlinkERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem15directory_entry12__do_refreshEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem16_FilesystemClock3nowEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem16_FilesystemClock9is_steadyE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem16__create_symlinkERKNS1_4pathES4_PNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem16__symlink_statusERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem16filesystem_error13__create_whatEi', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem16filesystem_errorD0Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem16filesystem_errorD1Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem16filesystem_errorD2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem17__hard_link_countERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem17__last_write_timeERKNS1_4pathENS_6chrono10time_pointINS1_16_FilesystemClockENS5_8durationInNS_5ratioILl1ELl1000000000EEEEEEEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem17__last_write_timeERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem18__create_directoryERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem18__create_directoryERKNS1_4pathES4_PNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem18__create_hard_linkERKNS1_4pathES4_PNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem18__weakly_canonicalERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem18directory_iterator11__incrementEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem18directory_iteratorC1ERKNS1_4pathEPNS_10error_codeENS1_17directory_optionsE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem18directory_iteratorC2ERKNS1_4pathEPNS_10error_codeENS1_17directory_optionsE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem20__create_directoriesERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem21__temp_directory_pathEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem26__create_directory_symlinkERKNS1_4pathES4_PNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem28recursive_directory_iterator11__incrementEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem28recursive_directory_iterator15__try_recursionEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem28recursive_directory_iterator5__popEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem28recursive_directory_iterator9__advanceEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem28recursive_directory_iteratorC1ERKNS1_4pathENS1_17directory_optionsEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem28recursive_directory_iteratorC2ERKNS1_4pathENS1_17directory_optionsEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem4path17replace_extensionERKS2_', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem4path19preferred_separatorE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem4path8iterator11__decrementEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem4path8iterator11__incrementEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem6__copyERKNS1_4pathES4_NS1_12copy_optionsEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem7__spaceERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem8__removeERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem8__renameERKNS1_4pathES4_PNS_10error_codeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__24__fs10filesystem8__statusERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__24cerrE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__24clogE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__24coutE', 'size': 0, 'type': 'OBJECT'}
@@ -1563,6 +1631,7 @@
 {'is_defined': True, 'name': '__ZTINSt3__220__codecvt_utf8_utf16IwEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__220__time_get_c_storageIcEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__220__time_get_c_storageIwEE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTINSt3__24__fs10filesystem16filesystem_errorE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__25ctypeIcEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__25ctypeIwEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__26locale5facetE', 'size': 0, 'type': 'OBJECT'}
@@ -1852,6 +1921,7 @@
 {'is_defined': True, 'name': '__ZTSNSt3__220__codecvt_utf8_utf16IwEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__220__time_get_c_storageIcEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__220__time_get_c_storageIwEE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTSNSt3__24__fs10filesystem16filesystem_errorE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__25ctypeIcEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__25ctypeIwEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__26locale5facetE', 'size': 0, 'type': 'OBJECT'}
@@ -2127,6 +2197,7 @@
 {'is_defined': True, 'name': '__ZTVNSt3__220__codecvt_utf8_utf16IDiEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__220__codecvt_utf8_utf16IDsEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__220__codecvt_utf8_utf16IwEE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTVNSt3__24__fs10filesystem16filesystem_errorE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__25ctypeIcEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__25ctypeIwEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__26locale5facetE', 'size': 0, 'type': 'OBJECT'}
@@ -2277,7 +2348,10 @@
 {'is_defined': False, 'name': '___cxa_rethrow_primary_exception', 'type': 'U'}
 {'is_defined': False, 'name': '___cxa_throw', 'type': 'U'}
 {'is_defined': True, 'name': '___cxa_throw', 'type': 'I'}
+{'is_defined': False, 'name': '___cxa_throw_bad_array_new_length', 'type': 'U'}
+{'is_defined': True, 'name': '___cxa_throw_bad_array_new_length', 'type': 'I'}
 {'is_defined': False, 'name': '___cxa_uncaught_exceptions', 'type': 'U'}
+{'is_defined': True, 'name': '___cxa_uncaught_exceptions', 'type': 'I'}
 {'is_defined': False, 'name': '___cxa_vec_cctor', 'type': 'U'}
 {'is_defined': True, 'name': '___cxa_vec_cctor', 'type': 'I'}
 {'is_defined': False, 'name': '___cxa_vec_cleanup', 'type': 'U'}

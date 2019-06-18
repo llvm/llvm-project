@@ -27,6 +27,11 @@ static u32 RandomSeed() {
 
 void Thread::InitRandomState() {
   random_state_ = flags()->random_tags ? RandomSeed() : unique_id_;
+
+  // Push a random number of zeros onto the ring buffer so that the first stack
+  // tag base will be random.
+  for (tag_t i = 0, e = GenerateRandomTag(); i != e; ++i)
+    stack_allocations_->push(0);
 }
 
 void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size) {

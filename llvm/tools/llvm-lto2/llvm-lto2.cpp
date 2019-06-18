@@ -107,6 +107,11 @@ static cl::opt<std::string>
                            "names match the given regular expression"),
                   cl::value_desc("regex"));
 
+static cl::opt<std::string> RemarksFormat(
+    "pass-remarks-format",
+    cl::desc("The format used for serializing remarks (default: YAML)"),
+    cl::value_desc("format"), cl::init("yaml"));
+
 static cl::opt<std::string>
     SamplePGOFile("lto-sample-profile-file",
                   cl::desc("Specify a SamplePGO profile file"));
@@ -229,6 +234,7 @@ static int run(int argc, char **argv) {
   Conf.RemarksFilename = RemarksFilename;
   Conf.RemarksPasses = RemarksPasses;
   Conf.RemarksWithHotness = RemarksWithHotness;
+  Conf.RemarksFormat = RemarksFormat;
 
   Conf.SampleProfile = SamplePGOFile;
   Conf.CSIRProfile = CSPGOFile;

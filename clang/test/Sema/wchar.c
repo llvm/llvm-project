@@ -9,7 +9,11 @@ typedef __WCHAR_TYPE__ wchar_t;
 #elif defined(__arm) || defined(__aarch64__)
   #define WCHAR_T_TYPE unsigned int
 #elif defined(__sun)
-  #define WCHAR_T_TYPE long
+  #if defined(__LP64__)
+    #define WCHAR_T_TYPE int
+  #else
+    #define WCHAR_T_TYPE long
+  #endif
 #else /* Solaris. */
   #define WCHAR_T_TYPE int
 #endif
