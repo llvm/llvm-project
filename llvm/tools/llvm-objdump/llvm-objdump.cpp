@@ -658,6 +658,7 @@ public:
   }
 };
 PrettyPrinter PrettyPrinterInst;
+
 class HexagonPrettyPrinter : public PrettyPrinter {
 public:
   void printLead(ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -748,8 +749,6 @@ public:
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address);
 
-    typedef support::ulittle32_t U32;
-
     if (MI) {
       SmallString<40> InstStr;
       raw_svector_ostream IS(InstStr);
@@ -763,7 +762,7 @@ public:
       // remaining
       if (Bytes.size() >= 4) {
         OS << format("\t.long 0x%08" PRIx32 " ",
-                     static_cast<uint32_t>(*reinterpret_cast<const U32*>(Bytes.data())));
+                     support::endian::read32<support::little>(Bytes.data()));
         OS.indent(42);
       } else {
           OS << format("\t.byte 0x%02" PRIx8, Bytes[0]);
@@ -773,20 +772,21 @@ public:
       }
     }
 
-    OS << format("// %012" PRIX64 ": ", Address.Address);
-    if (Bytes.size() >=4) {
-      for (auto D : makeArrayRef(reinterpret_cast<const U32*>(Bytes.data()),
-                                 Bytes.size() / sizeof(U32)))
-        // D should be explicitly casted to uint32_t here as it is passed
-        // by format to snprintf as vararg.
-        OS << format("%08" PRIX32 " ", static_cast<uint32_t>(D));
+    OS << format("// %012" PRIX64 ":", Address.Address);
+    if (Bytes.size() >= 4) {
+      // D should be casted to uint32_t here as it is passed by format to
+      // snprintf as vararg.
+      for (uint32_t D : makeArrayRef(
+               reinterpret_cast<const support::little32_t *>(Bytes.data()),
+               Bytes.size() / 4))
+        OS << format(" %08" PRIX32, D);
     } else {
-      for (unsigned int i = 0; i < Bytes.size(); i++)
-        OS << format("%02" PRIX8 " ", Bytes[i]);
+      for (unsigned char B : Bytes)
+        OS << format(" %02" PRIX8, B);
     }
 
     if (!Annot.empty())
-      OS << "// " << Annot;
+      OS << " // " << Annot;
   }
 };
 AMDGCNPrettyPrinter AMDGCNPrettyPrinterInst;

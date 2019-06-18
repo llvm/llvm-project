@@ -288,6 +288,15 @@ if(DEFINED TARGET_powerpc64le_CFLAGS)
   append_list_if(COMPILER_RT_HAS_FNO_FUNCTION_SECTIONS_FLAG -fno-function-sections TARGET_powerpc64le_CFLAGS)
 endif()
 
+# The following is a workaround for s390x.  This avoids creation of "partial
+# inline" function fragments when building the asan libraries with certain
+# GCC versions.  The presence of those fragments, in particular for the
+# interceptors, changes backtraces seen in asan error cases, which causes
+# testsuite failures.
+if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "s390x")
+  append_list_if(COMPILER_RT_HAS_FNO_PARTIAL_INLINING_FLAG -fno-partial-inlining SANITIZER_COMMON_CFLAGS)
+endif()
+
 if(MSVC)
   # Replace the /M[DT][d] flags with /MT, and strip any definitions of _DEBUG,
   # which cause definition mismatches at link time.

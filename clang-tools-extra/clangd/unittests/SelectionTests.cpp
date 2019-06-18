@@ -216,6 +216,16 @@ TEST(SelectionTest, CommonAncestor) {
   }
 }
 
+// Regression test: this used to match the injected X, not the outer X.
+TEST(SelectionTest, InjectedClassName) {
+  const char* Code = "struct ^X { int x; };";
+  auto AST = TestTU::withCode(Annotations(Code).code()).build();
+  auto T = makeSelectionTree(Code, AST);
+  ASSERT_EQ("CXXRecordDecl", nodeKind(T.commonAncestor())) << T;
+  auto *D = dyn_cast<CXXRecordDecl>(T.commonAncestor()->ASTNode.get<Decl>());
+  EXPECT_FALSE(D->isInjectedClassName());
+}
+
 TEST(SelectionTest, Selected) {
   // Selection with ^marks^.
   // Partially selected nodes marked with a [[range]].

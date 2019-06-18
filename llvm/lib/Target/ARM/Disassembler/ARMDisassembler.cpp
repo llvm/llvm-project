@@ -6042,13 +6042,13 @@ static DecodeStatus DecodeMVEOverlappingLongShift(
     unsigned Rda = fieldFromInstruction(Insn, 16, 4);
 
     switch (Inst.getOpcode()) {
-      case ARM::t2ASRLr:
-      case ARM::t2SQRSHRL:
-        Inst.setOpcode(ARM::t2SQRSHR);
+      case ARM::MVE_ASRLr:
+      case ARM::MVE_SQRSHRL:
+        Inst.setOpcode(ARM::MVE_SQRSHR);
         break;
-      case ARM::t2LSLLr:
-      case ARM::t2UQRSHLL:
-        Inst.setOpcode(ARM::t2UQRSHL);
+      case ARM::MVE_LSLLr:
+      case ARM::MVE_UQRSHLL:
+        Inst.setOpcode(ARM::MVE_UQRSHL);
         break;
       default:
         llvm_unreachable("Unexpected starting opcode!");

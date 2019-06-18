@@ -293,6 +293,8 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R) {
             return false;
         }
       }
+      if (auto EditsNearCursor = Completion->getBoolean("editsNearCursor"))
+        R.CompletionFixes = *EditsNearCursor;
     }
     if (auto *CodeAction = TextDocument->getObject("codeAction")) {
       if (CodeAction->getObject("codeActionLiteralSupport"))
@@ -355,6 +357,14 @@ bool fromJSON(const llvm::json::Value &Params, InitializeParams &R) {
   O.map("trace", R.trace);
   O.map("initializationOptions", R.initializationOptions);
   return true;
+}
+
+llvm::json::Value toJSON(const MessageType &R) {
+  return static_cast<int64_t>(R);
+}
+
+llvm::json::Value toJSON(const ShowMessageParams &R) {
+  return llvm::json::Object{{"type", R.type}, {"message", R.message}};
 }
 
 bool fromJSON(const llvm::json::Value &Params, DidOpenTextDocumentParams &R) {
@@ -591,6 +601,7 @@ llvm::json::Value toJSON(const Command &C) {
 
 const llvm::StringLiteral CodeAction::QUICKFIX_KIND = "quickfix";
 const llvm::StringLiteral CodeAction::REFACTOR_KIND = "refactor";
+const llvm::StringLiteral CodeAction::INFO_KIND = "info";
 
 llvm::json::Value toJSON(const CodeAction &CA) {
   auto CodeAction = llvm::json::Object{{"title", CA.title}};

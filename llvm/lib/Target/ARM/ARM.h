@@ -64,6 +64,7 @@ void initializeARMCodeGenPreparePass(PassRegistry &);
 void initializeARMConstantIslandsPass(PassRegistry &);
 void initializeARMExpandPseudoPass(PassRegistry &);
 void initializeThumb2SizeReducePass(PassRegistry &);
+void initializeThumb2ITBlockPass(PassRegistry &);
 void initializeMVEVPTBlockPass(PassRegistry &);
 
 } // end namespace llvm

@@ -815,6 +815,26 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       CurDAG->DeleteNode(N);
       continue;
     }
+    case ISD::ANY_EXTEND:
+    case ISD::ANY_EXTEND_VECTOR_INREG: {
+      // Replace vector any extend with the zero extend equivalents so we don't
+      // need 2 sets of patterns. Ignore vXi1 extensions.
+      if (!N->getValueType(0).isVector() ||
+          N->getOperand(0).getScalarValueSizeInBits() == 1)
+        break;
+
+      unsigned NewOpc = N->getOpcode() == ISD::ANY_EXTEND
+                            ? ISD::ZERO_EXTEND
+                            : ISD::ZERO_EXTEND_VECTOR_INREG;
+
+      SDValue Res = CurDAG->getNode(NewOpc, SDLoc(N), N->getValueType(0),
+                                    N->getOperand(0));
+      --I;
+      CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
+      ++I;
+      CurDAG->DeleteNode(N);
+      continue;
+    }
     case ISD::FCEIL:
     case ISD::FFLOOR:
     case ISD::FTRUNC:

@@ -2156,6 +2156,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     }
     break;
   }
+  case ISD::ANY_EXTEND_VECTOR_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
   case ISD::ZERO_EXTEND_VECTOR_INREG: {
     APInt SrcUndef, SrcZero;
@@ -2167,6 +2168,13 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       return true;
     KnownZero = SrcZero.zextOrTrunc(NumElts);
     KnownUndef = SrcUndef.zextOrTrunc(NumElts);
+
+    if (Op.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG &&
+        Op.getValueSizeInBits() == Src.getValueSizeInBits() &&
+        DemandedSrcElts == 1 && TLO.DAG.getDataLayout().isLittleEndian()) {
+      // aext - if we just need the bottom element then we can bitcast.
+      return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Src));
+    }
 
     if (Op.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG) {
       // zext(undef) upper bits are guaranteed to be zero.
@@ -2201,6 +2209,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     KnownUndef = getKnownUndefForVectorBinop(Op, TLO.DAG, UndefLHS, UndefRHS);
     break;
   }
+  case ISD::MUL:
   case ISD::AND: {
     APInt SrcUndef, SrcZero;
     if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedElts, SrcUndef,

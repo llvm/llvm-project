@@ -2530,7 +2530,8 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
   //       given the typical code patterns.
   if (Opcode == AMDGPU::S_SENDMSG || Opcode == AMDGPU::S_SENDMSGHALT ||
       Opcode == AMDGPU::EXP || Opcode == AMDGPU::EXP_DONE ||
-      Opcode == AMDGPU::DS_ORDERED_COUNT || Opcode == AMDGPU::S_TRAP)
+      Opcode == AMDGPU::DS_ORDERED_COUNT || Opcode == AMDGPU::S_TRAP ||
+      Opcode == AMDGPU::DS_GWS_INIT || Opcode == AMDGPU::DS_GWS_BARRIER)
     return true;
 
   if (MI.isCall() || MI.isInlineAsm())
@@ -6056,28 +6057,49 @@ MachineInstr *llvm::getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
   return nullptr;
 }
 
-bool llvm::isEXECMaskConstantBetweenDefAndUses(unsigned VReg,
-                                               const MachineRegisterInfo &MRI) {
+bool llvm::execMayBeModifiedBeforeUse(const MachineRegisterInfo &MRI,
+                                      unsigned VReg,
+                                      const MachineInstr &DefMI,
+                                      const MachineInstr *UseMI) {
   assert(MRI.isSSA() && "Must be run on SSA");
+  assert(DefMI.definesRegister(VReg) && "wrong def instruction");
+
   auto *TRI = MRI.getTargetRegisterInfo();
+  auto *DefBB = DefMI.getParent();
 
-  auto *DefI = MRI.getVRegDef(VReg);
-  auto *BB = DefI->getParent();
+  if (UseMI) {
+    // Don't bother searching between blocks, although it is possible this block
+    // doesn't modify exec.
+    if (UseMI->getParent() != DefBB)
+      return true;
+  } else {
+    int NumUse = 0;
+    const int MaxUseScan = 10;
 
-  DenseSet<MachineInstr*> Uses;
-  for (auto &Use : MRI.use_nodbg_operands(VReg)) {
-    auto *I = Use.getParent();
-    if (I->getParent() != BB)
-      return false;
-    Uses.insert(I);
+    for (auto &UseInst : MRI.use_nodbg_instructions(VReg)) {
+      if (UseInst.getParent() != DefBB)
+        return true;
+
+      if (NumUse++ > MaxUseScan)
+        return true;
+    }
   }
 
-  auto E = BB->end();
-  for (auto I = std::next(DefI->getIterator()); I != E; ++I) {
-    Uses.erase(&*I);
-    // don't check the last use
-    if (Uses.empty() || I->modifiesRegister(AMDGPU::EXEC, TRI))
-      break;
+  const int MaxInstScan = 20;
+  int NumScan = 0;
+
+  // Stop scan at the use if known.
+  auto E = UseMI ? UseMI->getIterator() : DefBB->end();
+  for (auto I = std::next(DefMI.getIterator()); I != E; ++I) {
+    if (I->isDebugInstr())
+      continue;
+
+    if (NumScan++ > MaxInstScan)
+      return true;
+
+    if (I->modifiesRegister(AMDGPU::EXEC, TRI))
+      return true;
   }
-  return Uses.empty();
+
+  return false;
 }

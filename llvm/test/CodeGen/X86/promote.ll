@@ -55,13 +55,9 @@ entry:
 }
 
 define <2 x float> @bitcast_widen(<4 x i32> %in) nounwind readnone {
-; X86-LABEL: bitcast_widen:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    retl
-;
-; X64-LABEL: bitcast_widen:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    retq
+; CHECK-LABEL: bitcast_widen:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ret{{[l|q]}}
 entry:
  %x = shufflevector <4 x i32> %in, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
  %y = bitcast <2 x i32> %x to <2 x float>
