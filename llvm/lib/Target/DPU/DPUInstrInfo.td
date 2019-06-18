@@ -63,6 +63,10 @@ def WramStore64Aligned   : SDNode<"DPUISD::WRAM_STORE_64_ALIGNED", SDT_STORE_OP,
 def MramStore64   : SDNode<"DPUISD::MRAM_STORE_64", SDT_STORE_OP, [SDNPHasChain, SDNPMayStore]>;
 def WramLoad64Aligned   : SDNode<"DPUISD::WRAM_LOAD_64_ALIGNED", SDT_LOAD_OP, [SDNPHasChain, SDNPMayLoad]>;
 
+// To promote special types of operands to registers (see the patterns below).
+def SDTDPUWrapper       : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>, SDTCisPtrTy<0>]>;
+def DPUWrapper          : SDNode<"DPUISD::Wrapper", SDTDPUWrapper>;
+
 include "DPUInstrFormats.td"
 
 // Necessary because a frameindex can't be matched directly in a pattern.
@@ -85,10 +89,15 @@ def wram_loadi64  : PatFrag<(ops node:$ptr), (i64 (wram_load_frag<load> node:$pt
 multiclass WramLoadXPat<ImmOperand LdTy, PatFrag LoadOp, DPUInstruction Inst> {
   def : Pat<(LdTy (wram_load_frag<LoadOp> SimpleRegOrCst:$ra)), (Inst SimpleRegOrCst:$ra, 0)>;
   def : Pat<(LdTy (wram_load_frag<LoadOp> AddrFI:$ra)), (Inst AddrFI:$ra, 0)>;
+  def : Pat<(LdTy (wram_load_frag<LoadOp> (DPUWrapper i32:$off))), (Inst ZERO, i32:$off)>;
   def : Pat<(LdTy (wram_load_frag<LoadOp> (add SimpleRegOrCst:$ra, s24_imm:$off))), (Inst SimpleRegOrCst:$ra, s24_imm:$off)>;
+  def : Pat<(LdTy (wram_load_frag<LoadOp> (add SimpleRegOrCst:$ra, (DPUWrapper i32:$off)))), (Inst SimpleRegOrCst:$ra, i32:$off)>;
   def : Pat<(LdTy (wram_load_frag<LoadOp> (add AddrFI:$ra, s24_imm:$off))), (Inst AddrFI:$ra, s24_imm:$off)>;
+  def : Pat<(LdTy (wram_load_frag<LoadOp> (add AddrFI:$ra, (DPUWrapper i32:$off)))), (Inst AddrFI:$ra, i32:$off)>;
   def : Pat<(LdTy (wram_load_frag<LoadOp> (IsOrAdd SimpleRegOrCst:$ra, s24_imm:$off))), (Inst SimpleRegOrCst:$ra, s24_imm:$off)>;
+  def : Pat<(LdTy (wram_load_frag<LoadOp> (IsOrAdd SimpleRegOrCst:$ra, (DPUWrapper i32:$off)))), (Inst SimpleRegOrCst:$ra, i32:$off)>;
   def : Pat<(LdTy (wram_load_frag<LoadOp> (IsOrAdd AddrFI:$ra, s24_imm:$off))), (Inst AddrFI:$ra, s24_imm:$off)>;
+  def : Pat<(LdTy (wram_load_frag<LoadOp> (IsOrAdd AddrFI:$ra, (DPUWrapper i32:$off)))), (Inst AddrFI:$ra, i32:$off)>;
 }
 
 multiclass WramLoadPat<PatFrag LoadOp, DPUInstruction Inst, DPUInstruction Inst64> {
@@ -99,19 +108,29 @@ multiclass WramLoadPat<PatFrag LoadOp, DPUInstruction Inst, DPUInstruction Inst6
 multiclass WramStorePat<PatFrag StoreOp, DPUInstruction Inst, RegisterClass StTy> {
   def : Pat<(wram_store_frag<StoreOp> StTy:$rb, SimpleRegOrCst:$ra), (Inst SimpleRegOrCst:$ra, 0, StTy:$rb)>;
   def : Pat<(wram_store_frag<StoreOp> StTy:$rb, AddrFI:$ra), (Inst AddrFI:$ra, 0, StTy:$rb)>;
+  def : Pat<(wram_store_frag<StoreOp> StTy:$rb, (DPUWrapper i32:$off)), (Inst ZERO, i32:$off, StTy:$rb)>;
   def : Pat<(wram_store_frag<StoreOp> StTy:$rb, (add SimpleRegOrCst:$ra, s24_imm:$off)), (Inst SimpleRegOrCst:$ra, s24_imm:$off, StTy:$rb)>;
+  def : Pat<(wram_store_frag<StoreOp> StTy:$rb, (add SimpleRegOrCst:$ra, (DPUWrapper i32:$off))), (Inst SimpleRegOrCst:$ra, i32:$off, StTy:$rb)>;
   def : Pat<(wram_store_frag<StoreOp> StTy:$rb, (add AddrFI:$ra, s24_imm:$off)), (Inst AddrFI:$ra, s24_imm:$off, StTy:$rb)>;
+  def : Pat<(wram_store_frag<StoreOp> StTy:$rb, (add AddrFI:$ra, (DPUWrapper i32:$off))), (Inst AddrFI:$ra, i32:$off, StTy:$rb)>;
   def : Pat<(wram_store_frag<StoreOp> StTy:$rb, (IsOrAdd SimpleRegOrCst:$ra, s24_imm:$off)), (Inst SimpleRegOrCst:$ra, s24_imm:$off, StTy:$rb)>;
+  def : Pat<(wram_store_frag<StoreOp> StTy:$rb, (IsOrAdd SimpleRegOrCst:$ra, (DPUWrapper i32:$off))), (Inst SimpleRegOrCst:$ra, i32:$off, StTy:$rb)>;
   def : Pat<(wram_store_frag<StoreOp> StTy:$rb, (IsOrAdd AddrFI:$ra, s24_imm:$off)), (Inst AddrFI:$ra, s24_imm:$off, StTy:$rb)>;
+  def : Pat<(wram_store_frag<StoreOp> StTy:$rb, (IsOrAdd AddrFI:$ra, (DPUWrapper i32:$off))), (Inst AddrFI:$ra, i32:$off, StTy:$rb)>;
 }
 
 multiclass WramStoreSub64Pat<PatFrag StoreOp, DPUInstruction Inst> {
   def : Pat<(wram_store_frag<StoreOp> DoubleReg:$rb, SimpleRegOrCst:$ra), (Inst SimpleRegOrCst:$ra, 0, (EXTRACT_SUBREG DoubleReg:$rb, sub_32bit))>;
   def : Pat<(wram_store_frag<StoreOp> DoubleReg:$rb, AddrFI:$ra), (Inst AddrFI:$ra, 0, (EXTRACT_SUBREG DoubleReg:$rb, sub_32bit))>;
+  def : Pat<(wram_store_frag<StoreOp> DoubleReg:$rb, (DPUWrapper i32:$off)), (Inst ZERO, i32:$off, (EXTRACT_SUBREG DoubleReg:$rb, sub_32bit))>;
   def : Pat<(wram_store_frag<StoreOp> DoubleReg:$rb, (add SimpleRegOrCst:$ra, s24_imm:$off)), (Inst SimpleRegOrCst:$ra, s24_imm:$off, (EXTRACT_SUBREG DoubleReg:$rb, sub_32bit))>;
+  def : Pat<(wram_store_frag<StoreOp> DoubleReg:$rb, (add SimpleRegOrCst:$ra, (DPUWrapper i32:$off))), (Inst SimpleRegOrCst:$ra, i32:$off, (EXTRACT_SUBREG DoubleReg:$rb, sub_32bit))>;
   def : Pat<(wram_store_frag<StoreOp> DoubleReg:$rb, (add AddrFI:$ra, s24_imm:$off)), (Inst AddrFI:$ra, s24_imm:$off, (EXTRACT_SUBREG DoubleReg:$rb, sub_32bit))>;
+  def : Pat<(wram_store_frag<StoreOp> DoubleReg:$rb, (add AddrFI:$ra, (DPUWrapper i32:$off))), (Inst AddrFI:$ra, i32:$off, (EXTRACT_SUBREG DoubleReg:$rb, sub_32bit))>;
   def : Pat<(wram_store_frag<StoreOp> DoubleReg:$rb, (IsOrAdd SimpleRegOrCst:$ra, s24_imm:$off)), (Inst SimpleRegOrCst:$ra, s24_imm:$off, (EXTRACT_SUBREG DoubleReg:$rb, sub_32bit))>;
+  def : Pat<(wram_store_frag<StoreOp> DoubleReg:$rb, (IsOrAdd SimpleRegOrCst:$ra, (DPUWrapper i32:$off))), (Inst SimpleRegOrCst:$ra, i32:$off, (EXTRACT_SUBREG DoubleReg:$rb, sub_32bit))>;
   def : Pat<(wram_store_frag<StoreOp> DoubleReg:$rb, (IsOrAdd AddrFI:$ra, s24_imm:$off)), (Inst AddrFI:$ra, s24_imm:$off, (EXTRACT_SUBREG DoubleReg:$rb, sub_32bit))>;
+  def : Pat<(wram_store_frag<StoreOp> DoubleReg:$rb, (IsOrAdd AddrFI:$ra, (DPUWrapper i32:$off))), (Inst AddrFI:$ra, i32:$off, (EXTRACT_SUBREG DoubleReg:$rb, sub_32bit))>;
 }
 
 multiclass WramStoreImmPat<PatFrag WramStoreImmOp, DPUInstruction Inst, ImmOperand StTy> {
@@ -121,6 +140,7 @@ multiclass WramStoreImmPat<PatFrag WramStoreImmOp, DPUInstruction Inst, ImmOpera
   def : Pat<(WramStoreImmOp (StTy:$imm), (add AddrFI:$ra, s12_imm:$off)), (Inst AddrFI:$ra, s12_imm:$off, StTy:$imm)>;
   def : Pat<(WramStoreImmOp (StTy:$imm), (IsOrAdd SimpleRegOrCst:$ra, s12_imm:$off)), (Inst SimpleRegOrCst:$ra, s12_imm:$off, StTy:$imm)>;
   def : Pat<(WramStoreImmOp (StTy:$imm), (IsOrAdd AddrFI:$ra, s12_imm:$off)), (Inst AddrFI:$ra, s12_imm:$off, StTy:$imm)>;
+  // todo: we could add the DPUWrapper Patterns here, if we could check that $off is at the start of the memory (in section ".data.immediate_memory")
 }
 
 defm : WramLoadPat<zextloadi8, LBUrri, LBU_Urri>;
@@ -592,10 +612,6 @@ def MEMri24 : Operand<i32> {
   let EncoderMethod = "getMemoryOpValue";
   let MIOperandInfo = (ops OP_REG, i32imm);
 }
-
-// To promote special types of operands to registers (see the patterns below).
-def SDTDPUWrapper       : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>, SDTCisPtrTy<0>]>;
-def DPUWrapper          : SDNode<"DPUISD::Wrapper", SDTDPUWrapper>;
 
 // See DPUTargetLowering.cpp // LowerOperation
 // Promote ConstantPool, GlobalAddress, ExternalSymbol, JumpTable... to immediate into
