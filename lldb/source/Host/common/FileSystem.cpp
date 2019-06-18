@@ -63,8 +63,9 @@ llvm::Error FileSystem::Initialize(const FileSpec &mapping) {
   if (!buffer)
     return llvm::errorCodeToError(buffer.getError());
 
-  InstanceImpl().emplace(
-      llvm::vfs::getVFSFromYAML(std::move(buffer.get()), nullptr, ""), true);
+  InstanceImpl().emplace(llvm::vfs::getVFSFromYAML(std::move(buffer.get()),
+                                                   nullptr, mapping.GetPath()),
+                         true);
 
   return llvm::Error::success();
 }

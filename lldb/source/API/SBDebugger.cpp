@@ -67,7 +67,7 @@ public:
     if (!loader)
       return {};
 
-    FileSpec file = loader->GetFile<repro::CommandInfo>();
+    FileSpec file = loader->GetFile<repro::CommandProvider::Info>();
     if (!file)
       return {};
 
@@ -81,6 +81,12 @@ public:
 
     if (auto err = yin.error())
       return {};
+
+    for (auto &file : files) {
+      FileSpec absolute_path =
+          loader->GetRoot().CopyByAppendingPathComponent(file);
+      file = absolute_path.GetPath();
+    }
 
     return llvm::make_unique<CommandLoader>(std::move(files));
   }

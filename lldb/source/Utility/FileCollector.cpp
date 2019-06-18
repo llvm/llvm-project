@@ -33,7 +33,8 @@ static bool IsCaseSensitivePath(StringRef path) {
   return true;
 }
 
-FileCollector::FileCollector(const FileSpec &root) : m_root(root) {
+FileCollector::FileCollector(const FileSpec &root, const FileSpec &overlay_root)
+    : m_root(root), m_overlay_root(overlay_root) {
   sys::fs::create_directories(m_root.GetPath(), true);
 }
 
@@ -133,7 +134,9 @@ std::error_code FileCollector::CopyFiles(bool stop_on_error) {
 std::error_code FileCollector::WriteMapping(const FileSpec &mapping_file) {
   std::lock_guard<std::mutex> lock(m_mutex);
 
-  const std::string root = m_root.GetPath();
+  llvm::StringRef root = m_overlay_root.GetPath();
+
+  m_vfs_writer.setOverlayDir(root);
   m_vfs_writer.setCaseSensitivity(IsCaseSensitivePath(root));
   m_vfs_writer.setUseExternalNames(false);
 

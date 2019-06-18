@@ -25,7 +25,7 @@ namespace lldb_private {
 /// the VFS.
 class FileCollector {
 public:
-  FileCollector(const FileSpec &root);
+  FileCollector(const FileSpec &root, const FileSpec &overlay);
 
   void AddFile(const llvm::Twine &file);
   void AddFile(const FileSpec &file) { return AddFile(file.GetPath()); }
@@ -58,6 +58,9 @@ protected:
 
   /// The root directory where files are copied.
   FileSpec m_root;
+
+  /// The root directory where the VFS overlay lives.
+  FileSpec m_overlay_root;
 
   /// Tracks already seen files so they can be skipped.
   llvm::StringSet<> m_seen;
