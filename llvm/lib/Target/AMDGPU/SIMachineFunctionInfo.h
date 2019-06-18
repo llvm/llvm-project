@@ -43,7 +43,8 @@ class AMDGPUPseudoSourceValue : public PseudoSourceValue {
 public:
   enum AMDGPUPSVKind : unsigned {
     PSVBuffer = PseudoSourceValue::TargetCustom,
-    PSVImage
+    PSVImage,
+    GWSResource
   };
 
 protected:
@@ -84,6 +85,30 @@ public:
 
   static bool classof(const PseudoSourceValue *V) {
     return V->kind() == PSVImage;
+  }
+};
+
+class AMDGPUGWSResourcePseudoSourceValue final : public AMDGPUPseudoSourceValue {
+public:
+  explicit AMDGPUGWSResourcePseudoSourceValue(const TargetInstrInfo &TII)
+      : AMDGPUPseudoSourceValue(GWSResource, TII) {}
+
+  static bool classof(const PseudoSourceValue *V) {
+    return V->kind() == GWSResource;
+  }
+
+  // These are inaccessible memory from IR.
+  bool isAliased(const MachineFrameInfo *) const override {
+    return false;
+  }
+
+  // These are inaccessible memory from IR.
+  bool mayAlias(const MachineFrameInfo *) const override {
+    return false;
+  }
+
+  void printCustom(raw_ostream &OS) const override {
+    OS << "GWSResource";
   }
 };
 
@@ -188,6 +213,7 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
            std::unique_ptr<const AMDGPUBufferPseudoSourceValue>> BufferPSVs;
   DenseMap<const Value *,
            std::unique_ptr<const AMDGPUImagePseudoSourceValue>> ImagePSVs;
+  std::unique_ptr<const AMDGPUGWSResourcePseudoSourceValue> GWSResourcePSV;
 
 private:
   unsigned LDSWaveSpillSize = 0;
@@ -672,6 +698,15 @@ public:
       ImgRsrc,
       llvm::make_unique<AMDGPUImagePseudoSourceValue>(TII));
     return PSV.first->second.get();
+  }
+
+  const AMDGPUGWSResourcePseudoSourceValue *getGWSPSV(const SIInstrInfo &TII) {
+    if (!GWSResourcePSV) {
+      GWSResourcePSV =
+          llvm::make_unique<AMDGPUGWSResourcePseudoSourceValue>(TII);
+    }
+
+    return GWSResourcePSV.get();
   }
 
   unsigned getOccupancy() const {

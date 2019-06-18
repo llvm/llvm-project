@@ -6875,6 +6875,7 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
     return true;
   }
   case ISD::ZERO_EXTEND:
+  case ISD::ANY_EXTEND:
   case ISD::ZERO_EXTEND_VECTOR_INREG:
   case ISD::ANY_EXTEND_VECTOR_INREG: {
     SDValue Src = N.getOperand(0);
@@ -6886,7 +6887,8 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
       return false;
 
     unsigned NumSrcBitsPerElt = SrcVT.getScalarSizeInBits();
-    bool IsAnyExtend = (ISD::ANY_EXTEND_VECTOR_INREG == Opcode);
+    bool IsAnyExtend =
+        (ISD::ANY_EXTEND == Opcode || ISD::ANY_EXTEND_VECTOR_INREG == Opcode);
     DecodeZeroExtendMask(NumSrcBitsPerElt, NumBitsPerElt, NumElts, IsAnyExtend,
                          Mask);
 
@@ -43541,9 +43543,13 @@ static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
          InOpcode == ISD::SIGN_EXTEND) &&
         VT.is128BitVector() &&
         InVec.getOperand(0).getSimpleValueType().is128BitVector()) {
-      unsigned ExtOp = InOpcode == ISD::SIGN_EXTEND
-                           ? ISD::SIGN_EXTEND_VECTOR_INREG
-                           : ISD::ZERO_EXTEND_VECTOR_INREG;
+      unsigned ExtOp;
+      switch(InOpcode) {
+      default: llvm_unreachable("Unknown extension opcode");
+      case ISD::ANY_EXTEND: ExtOp = ISD::ANY_EXTEND_VECTOR_INREG; break;
+      case ISD::SIGN_EXTEND: ExtOp = ISD::SIGN_EXTEND_VECTOR_INREG; break;
+      case ISD::ZERO_EXTEND: ExtOp = ISD::ZERO_EXTEND_VECTOR_INREG; break;
+      }
       return DAG.getNode(ExtOp, SDLoc(N), VT, InVec.getOperand(0));
     }
     if ((InOpcode == ISD::ANY_EXTEND_VECTOR_INREG ||

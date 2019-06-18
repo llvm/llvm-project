@@ -82,6 +82,12 @@ public:
     if (auto err = yin.error())
       return {};
 
+    for (auto &file : files) {
+      FileSpec absolute_path =
+          loader->GetRoot().CopyByAppendingPathComponent(file);
+      file = absolute_path.GetPath();
+    }
+
     return llvm::make_unique<CommandLoader>(std::move(files));
   }
 

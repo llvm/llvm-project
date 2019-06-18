@@ -3613,25 +3613,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (JA.getType() == types::TY_LLVM_BC ||
                JA.getType() == types::TY_LTO_BC) {
       CmdArgs.push_back("-emit-llvm-bc");
-    } else if (JA.getType() == types::TY_IFS) {
-      StringRef StubFormat =
-          llvm::StringSwitch<StringRef>(
-              Args.hasArg(options::OPT_iterface_stub_version_EQ)
-                  ? Args.getLastArgValue(options::OPT_iterface_stub_version_EQ)
-                  : "")
-              .Case("experimental-yaml-elf-v1", "experimental-yaml-elf-v1")
-              .Case("experimental-tapi-elf-v1", "experimental-tapi-elf-v1")
-              .Default("");
-
-      if (StubFormat.empty())
-        D.Diag(diag::err_drv_invalid_value)
-            << "Must specify a valid interface stub format type using "
-            << "-interface-stub-version=<experimental-tapi-elf-v1 | "
-               "experimental-yaml-elf-v1>";
-
-      CmdArgs.push_back("-emit-interface-stubs");
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine("-interface-stub-version=") + StubFormat));
     } else if (JA.getType() == types::TY_PP_Asm) {
       CmdArgs.push_back("-S");
     } else if (JA.getType() == types::TY_AST) {

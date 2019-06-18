@@ -2733,6 +2733,7 @@ public:
         Found = true;
         setIncomingValue(Op, V);
       }
+    (void)Found;
     assert(Found && "Invalid basic block argument to set!");
   }
 

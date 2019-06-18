@@ -143,114 +143,118 @@ void PressureTracker::handlePressureEvent(const HWPressureEvent &Event) {
 }
 
 #ifndef NDEBUG
-void DependencyGraph::dumpDependencyEdge(raw_ostream &OS, unsigned FromIID,
-                                         const DependencyEdge &DE,
+void DependencyGraph::dumpDependencyEdge(raw_ostream &OS,
+                                         const DependencyEdge &DepEdge,
                                          MCInstPrinter &MCIP) const {
-  bool LoopCarried = FromIID >= DE.IID;
-  OS << " FROM: " << FromIID << " TO: " << DE.IID
-     << (LoopCarried ? " (loop carried)" : "             ");
-  if (DE.Type == DT_REGISTER) {
+  unsigned FromIID = DepEdge.FromIID;
+  unsigned ToIID = DepEdge.ToIID;
+  assert(FromIID < ToIID && "Graph should be acyclic!");
+
+  const DependencyEdge::Dependency &DE = DepEdge.Dep;
+  assert(DE.Type != DependencyEdge::DT_INVALID && "Unexpected invalid edge!");
+
+  OS << " FROM: " << FromIID << " TO: " << ToIID << "             ";
+  if (DE.Type == DependencyEdge::DT_REGISTER) {
     OS << " - REGISTER: ";
     MCIP.printRegName(OS, DE.ResourceOrRegID);
-  } else if (DE.Type == DT_MEMORY) {
+  } else if (DE.Type == DependencyEdge::DT_MEMORY) {
     OS << " - MEMORY";
   } else {
-    assert(DE.Type == DT_RESOURCE && "Unexpected unsupported dependency type!");
+    assert(DE.Type == DependencyEdge::DT_RESOURCE &&
+           "Unexpected unsupported dependency type!");
     OS << " - RESOURCE MASK: " << DE.ResourceOrRegID;
   }
-  OS << " - CYCLES: " << DE.Cycles << '\n';
+  OS << " - CYCLES: " << DE.Cost << '\n';
 }
 
 void DependencyGraph::dump(raw_ostream &OS, MCInstPrinter &MCIP) const {
   OS << "\nREG DEPS\n";
-  for (unsigned I = 0, E = Nodes.size(); I < E; ++I) {
-    const DGNode &Node = Nodes[I];
-    for (const DependencyEdge &DE : Node.OutgoingEdges) {
-      if (DE.Type == DT_REGISTER)
-        dumpDependencyEdge(OS, I, DE, MCIP);
-    }
-  }
+  for (const DGNode &Node : Nodes)
+    for (const DependencyEdge &DE : Node.OutgoingEdges)
+      if (DE.Dep.Type == DependencyEdge::DT_REGISTER)
+        dumpDependencyEdge(OS, DE, MCIP);
 
   OS << "\nMEM DEPS\n";
-  for (unsigned I = 0, E = Nodes.size(); I < E; ++I) {
-    const DGNode &Node = Nodes[I];
-    for (const DependencyEdge &DE : Node.OutgoingEdges) {
-      if (DE.Type == DT_MEMORY)
-        dumpDependencyEdge(OS, I, DE, MCIP);
-    }
-  }
+  for (const DGNode &Node : Nodes)
+    for (const DependencyEdge &DE : Node.OutgoingEdges)
+      if (DE.Dep.Type == DependencyEdge::DT_MEMORY)
+        dumpDependencyEdge(OS, DE, MCIP);
 
   OS << "\nRESOURCE DEPS\n";
-  for (unsigned I = 0, E = Nodes.size(); I < E; ++I) {
-    const DGNode &Node = Nodes[I];
-    for (const DependencyEdge &DE : Node.OutgoingEdges) {
-      if (DE.Type == DT_RESOURCE)
-        dumpDependencyEdge(OS, I, DE, MCIP);
-    }
-  }
+  for (const DGNode &Node : Nodes)
+    for (const DependencyEdge &DE : Node.OutgoingEdges)
+      if (DE.Dep.Type == DependencyEdge::DT_RESOURCE)
+        dumpDependencyEdge(OS, DE, MCIP);
 }
 #endif // NDEBUG
 
-void DependencyGraph::addDependency(unsigned From, DependencyEdge &&Dep) {
+void DependencyGraph::addDependency(unsigned From, unsigned To,
+                                    DependencyEdge::Dependency &&Dep) {
   DGNode &NodeFrom = Nodes[From];
-  DGNode &NodeTo = Nodes[Dep.IID];
+  DGNode &NodeTo = Nodes[To];
   SmallVectorImpl<DependencyEdge> &Vec = NodeFrom.OutgoingEdges;
 
-  auto It = find_if(Vec, [Dep](DependencyEdge &DE) {
-    return DE.IID == Dep.IID && DE.ResourceOrRegID == Dep.ResourceOrRegID;
+  auto It = find_if(Vec, [To, Dep](DependencyEdge &DE) {
+    return DE.ToIID == To && DE.Dep.ResourceOrRegID == Dep.ResourceOrRegID;
   });
 
   if (It != Vec.end()) {
-    It->Cycles += Dep.Cycles;
+    It->Dep.Cost += Dep.Cost;
     return;
   }
 
-  Vec.emplace_back(Dep);
+  DependencyEdge DE = {Dep, From, To};
+  Vec.emplace_back(DE);
   NodeTo.NumPredecessors++;
 }
 
 BottleneckAnalysis::BottleneckAnalysis(const MCSubtargetInfo &sti,
                                        MCInstPrinter &Printer,
-                                       ArrayRef<MCInst> S)
+                                       ArrayRef<MCInst> S, unsigned NumIter)
     : STI(sti), Tracker(STI.getSchedModel()), DG(S.size() * 3),
-      Source(S), TotalCycles(0), PressureIncreasedBecauseOfResources(false),
+      Source(S), Iterations(NumIter), TotalCycles(0),
+      PressureIncreasedBecauseOfResources(false),
       PressureIncreasedBecauseOfRegisterDependencies(false),
       PressureIncreasedBecauseOfMemoryDependencies(false),
       SeenStallCycles(false), BPI() {}
 
 void BottleneckAnalysis::addRegisterDep(unsigned From, unsigned To,
-                                        unsigned RegID, unsigned Cy) {
+                                        unsigned RegID, unsigned Cost) {
   bool IsLoopCarried = From >= To;
   unsigned SourceSize = Source.size();
   if (IsLoopCarried) {
-    DG.addRegisterDep(From, To + SourceSize, RegID, Cy);
-    DG.addRegisterDep(From + SourceSize, To + (SourceSize * 2), RegID, Cy);
+    Cost *= Iterations / 2;
+    DG.addRegisterDep(From, To + SourceSize, RegID, Cost);
+    DG.addRegisterDep(From + SourceSize, To + (SourceSize * 2), RegID, Cost);
     return;
   }
-  DG.addRegisterDep(From + SourceSize, To + SourceSize, RegID, Cy);
+  DG.addRegisterDep(From + SourceSize, To + SourceSize, RegID, Cost);
 }
 
-void BottleneckAnalysis::addMemoryDep(unsigned From, unsigned To, unsigned Cy) {
+void BottleneckAnalysis::addMemoryDep(unsigned From, unsigned To,
+                                      unsigned Cost) {
   bool IsLoopCarried = From >= To;
   unsigned SourceSize = Source.size();
   if (IsLoopCarried) {
-    DG.addMemoryDep(From, To + SourceSize, Cy);
-    DG.addMemoryDep(From + SourceSize, To + (SourceSize * 2), Cy);
+    Cost *= Iterations / 2;
+    DG.addMemoryDep(From, To + SourceSize, Cost);
+    DG.addMemoryDep(From + SourceSize, To + (SourceSize * 2), Cost);
     return;
   }
-  DG.addMemoryDep(From + SourceSize, To + SourceSize, Cy);
+  DG.addMemoryDep(From + SourceSize, To + SourceSize, Cost);
 }
 
 void BottleneckAnalysis::addResourceDep(unsigned From, unsigned To,
-                                        uint64_t Mask, unsigned Cy) {
+                                        uint64_t Mask, unsigned Cost) {
   bool IsLoopCarried = From >= To;
   unsigned SourceSize = Source.size();
   if (IsLoopCarried) {
-    DG.addResourceDep(From, To + SourceSize, Mask, Cy);
-    DG.addResourceDep(From + SourceSize, To + (SourceSize * 2), Mask, Cy);
+    Cost *= Iterations / 2;
+    DG.addResourceDep(From, To + SourceSize, Mask, Cost);
+    DG.addResourceDep(From + SourceSize, To + (SourceSize * 2), Mask, Cost);
     return;
   }
-  DG.addResourceDep(From + SourceSize, To + SourceSize, Mask, Cy);
+  DG.addResourceDep(From + SourceSize, To + SourceSize, Mask, Cost);
 }
 
 void BottleneckAnalysis::onEvent(const HWInstructionEvent &Event) {

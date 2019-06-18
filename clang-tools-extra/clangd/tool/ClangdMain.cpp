@@ -263,6 +263,11 @@ static llvm::cl::opt<CodeCompleteOptions::CodeCompletionParse>
                                     "Always used text-based completion")),
         llvm::cl::init(CodeCompleteOptions().RunParser), llvm::cl::Hidden);
 
+static llvm::cl::opt<bool> HiddenFeatures(
+    "hidden-features",
+    llvm::cl::desc("Enable hidden features mostly useful to clangd developers"),
+    llvm::cl::init(false), llvm::cl::Hidden);
+
 namespace {
 
 /// \brief Supports a test URI scheme with relaxed constraints for lit tests.
@@ -459,6 +464,7 @@ int main(int argc, char *argv[]) {
   }
   Opts.StaticIndex = StaticIdx.get();
   Opts.AsyncThreadsCount = WorkerThreadsCount;
+  Opts.HiddenFeatures = HiddenFeatures;
 
   clangd::CodeCompleteOptions CCOpts;
   CCOpts.IncludeIneligibleResults = IncludeIneligibleResults;

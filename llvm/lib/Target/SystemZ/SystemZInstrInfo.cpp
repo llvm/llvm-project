@@ -168,11 +168,13 @@ void SystemZInstrInfo::expandRIEPseudo(MachineInstr &MI, unsigned LowOpcode,
   if (!DestIsHigh && !SrcIsHigh)
     MI.setDesc(get(LowOpcodeK));
   else {
-    emitGRX32Move(*MI.getParent(), MI, MI.getDebugLoc(), DestReg, SrcReg,
-                  SystemZ::LR, 32, MI.getOperand(1).isKill(),
-                  MI.getOperand(1).isUndef());
+    if (DestReg != SrcReg) {
+      emitGRX32Move(*MI.getParent(), MI, MI.getDebugLoc(), DestReg, SrcReg,
+                    SystemZ::LR, 32, MI.getOperand(1).isKill(),
+                    MI.getOperand(1).isUndef());
+      MI.getOperand(1).setReg(DestReg);
+    }
     MI.setDesc(get(DestIsHigh ? HighOpcode : LowOpcode));
-    MI.getOperand(1).setReg(DestReg);
     MI.tieOperands(0, 1);
   }
 }

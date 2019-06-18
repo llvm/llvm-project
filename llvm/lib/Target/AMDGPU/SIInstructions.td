@@ -1696,6 +1696,13 @@ def : GCNPat<
   (S_SUB_I32 $src0, NegSubInlineConst32:$src1)
 >;
 
+// Avoid pointlessly materializing a constant in VGPR.
+// FIXME: Should also do this for readlane, but tablegen crashes on
+// the ignored src1.
+def : GCNPat<
+  (int_amdgcn_readfirstlane (i32 imm:$src)),
+  (S_MOV_B32 $src)
+>;
 
 multiclass BFMPatterns <ValueType vt, InstSI BFM, InstSI MOV> {
   def : GCNPat <

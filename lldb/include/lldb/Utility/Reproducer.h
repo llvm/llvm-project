@@ -91,7 +91,8 @@ public:
 
   FileProvider(const FileSpec &directory)
       : Provider(directory),
-        m_collector(directory.CopyByAppendingPathComponent("root")) {}
+        m_collector(directory.CopyByAppendingPathComponent("root"), directory) {
+  }
 
   FileCollector &GetFileCollector() { return m_collector; }
 
@@ -132,8 +133,8 @@ public:
 class DataRecorder {
 public:
   DataRecorder(const FileSpec &filename, std::error_code &ec)
-      : m_filename(std::move(filename)),
-        m_os(m_filename.GetPath(), ec, llvm::sys::fs::F_Text), m_record(true) {}
+      : m_filename(filename.GetFilename().GetStringRef()),
+        m_os(filename.GetPath(), ec, llvm::sys::fs::F_Text), m_record(true) {}
 
   static llvm::Expected<std::unique_ptr<DataRecorder>>
   Create(const FileSpec &filename);

@@ -199,6 +199,32 @@ TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
                   : LastSpelled + 1);
 }
 
+llvm::Optional<TokenBuffer::Expansion>
+TokenBuffer::expansionStartingAt(const syntax::Token *Spelled) const {
+  assert(Spelled);
+  assert(Spelled->location().isFileID() && "not a spelled token");
+  auto FileIt = Files.find(SourceMgr->getFileID(Spelled->location()));
+  assert(FileIt != Files.end() && "file not tracked by token buffer");
+
+  auto &File = FileIt->second;
+  assert(File.SpelledTokens.data() <= Spelled &&
+         Spelled < (File.SpelledTokens.data() + File.SpelledTokens.size()));
+
+  unsigned SpelledIndex = Spelled - File.SpelledTokens.data();
+  auto M = llvm::bsearch(File.Mappings, [&](const Mapping &M) {
+    return SpelledIndex <= M.BeginSpelled;
+  });
+  if (M == File.Mappings.end() || M->BeginSpelled != SpelledIndex)
+    return llvm::None;
+
+  Expansion E;
+  E.Spelled = llvm::makeArrayRef(File.SpelledTokens.data() + M->BeginSpelled,
+                                 File.SpelledTokens.data() + M->EndSpelled);
+  E.Expanded = llvm::makeArrayRef(ExpandedTokens.data() + M->BeginExpanded,
+                                  ExpandedTokens.data() + M->EndExpanded);
+  return E;
+}
+
 std::vector<syntax::Token> syntax::tokenize(FileID FID, const SourceManager &SM,
                                             const LangOptions &LO) {
   std::vector<syntax::Token> Tokens;

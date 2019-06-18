@@ -74,6 +74,7 @@ check_cxx_compiler_flag("-Werror -msse3" COMPILER_RT_HAS_MSSE3_FLAG)
 check_cxx_compiler_flag("-Werror -msse4.2"   COMPILER_RT_HAS_MSSE4_2_FLAG)
 check_cxx_compiler_flag(--sysroot=.          COMPILER_RT_HAS_SYSROOT_FLAG)
 check_cxx_compiler_flag("-Werror -mcrc"      COMPILER_RT_HAS_MCRC_FLAG)
+check_cxx_compiler_flag(-fno-partial-inlining COMPILER_RT_HAS_FNO_PARTIAL_INLINING_FLAG)
 
 if(NOT WIN32 AND NOT CYGWIN)
   # MinGW warns if -fvisibility-inlines-hidden is used.

@@ -5933,7 +5933,10 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
   if (Mnemonic != "adcs" && Mnemonic != "bics" && Mnemonic != "movs" &&
       Mnemonic != "muls" && Mnemonic != "smlals" && Mnemonic != "smulls" &&
       Mnemonic != "umlals" && Mnemonic != "umulls" && Mnemonic != "lsls" &&
-      Mnemonic != "sbcs" && Mnemonic != "rscs") {
+      Mnemonic != "sbcs" && Mnemonic != "rscs" &&
+      !(hasMVE() &&
+        (Mnemonic == "vmine" ||
+         Mnemonic == "vshle" || Mnemonic == "vshlt" || Mnemonic == "vshllt"))) {
     unsigned CC = ARMCondCodeFromString(Mnemonic.substr(Mnemonic.size()-2));
     if (CC != ~0U) {
       Mnemonic = Mnemonic.slice(0, Mnemonic.size() - 2);
@@ -5974,7 +5977,10 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
     }
   }
 
-  if (isMnemonicVPTPredicable(Mnemonic, ExtraToken)) {
+  if (isMnemonicVPTPredicable(Mnemonic, ExtraToken) && Mnemonic != "vmovlt" &&
+      Mnemonic != "vshllt" && Mnemonic != "vrshrnt" && Mnemonic != "vshrnt" &&
+      Mnemonic != "vqrshrunt" && Mnemonic != "vqshrunt" &&
+      Mnemonic != "vqrshrnt" && Mnemonic != "vqshrnt") {
     unsigned CC = ARMVectorCondCodeFromString(Mnemonic.substr(Mnemonic.size()-1));
     if (CC != ~0U) {
       Mnemonic = Mnemonic.slice(0, Mnemonic.size()-1);
@@ -6508,7 +6514,13 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   }
 
   // Add the VPT predication code operand, if necessary.
-  if (CanAcceptVPTPredicationCode) {
+  // FIXME: We don't add them for the instructions filtered below as these can
+  // have custom operands which need special parsing.  This parsing requires
+  // the operand to be in the same place in the OperandVector as their
+  // definition in tblgen.  Since these instructions may also have the
+  // scalar predication operand we do not add the vector one and leave until
+  // now to fix it up.
+  if (CanAcceptVPTPredicationCode && Mnemonic != "vmov") {
     SMLoc Loc = SMLoc::getFromPointer(NameLoc.getPointer() + Mnemonic.size() +
                                       CarrySetting);
     Operands.push_back(ARMOperand::CreateVPTPred(
@@ -6592,7 +6604,21 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
 
   if (hasMVE()) {
-    if (CanAcceptVPTPredicationCode) {
+    if (!shouldOmitVectorPredicateOperand(Mnemonic, Operands) &&
+        Mnemonic == "vmov" && PredicationCode == ARMCC::LT) {
+      // Very nasty hack to deal with the vector predicated variant of vmovlt
+      // the scalar predicated vmov with condition 'lt'.  We can not tell them
+      // apart until we have parsed their operands.
+      Operands.erase(Operands.begin() + 1);
+      Operands.erase(Operands.begin());
+      SMLoc MLoc = SMLoc::getFromPointer(NameLoc.getPointer());
+      SMLoc PLoc = SMLoc::getFromPointer(NameLoc.getPointer() +
+                                         Mnemonic.size() - 1 + CarrySetting);
+      Operands.insert(Operands.begin(),
+                      ARMOperand::CreateVPTPred(ARMVCC::None, PLoc));
+      Operands.insert(Operands.begin(),
+                      ARMOperand::CreateToken(StringRef("vmovlt"), MLoc));
+    } else if (CanAcceptVPTPredicationCode) {
       // For all other instructions, make sure only one of the two
       // predication operands is left behind, depending on whether we should
       // use the vector predication.
@@ -9590,29 +9616,29 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
       return true;
     }
     return false;
-  case ARM::t2VPST:
-  case ARM::t2VPTv16i8:
-  case ARM::t2VPTv8i16:
-  case ARM::t2VPTv4i32:
-  case ARM::t2VPTv16u8:
-  case ARM::t2VPTv8u16:
-  case ARM::t2VPTv4u32:
-  case ARM::t2VPTv16s8:
-  case ARM::t2VPTv8s16:
-  case ARM::t2VPTv4s32:
-  case ARM::t2VPTv4f32:
-  case ARM::t2VPTv8f16:
-  case ARM::t2VPTv16i8r:
-  case ARM::t2VPTv8i16r:
-  case ARM::t2VPTv4i32r:
-  case ARM::t2VPTv16u8r:
-  case ARM::t2VPTv8u16r:
-  case ARM::t2VPTv4u32r:
-  case ARM::t2VPTv16s8r:
-  case ARM::t2VPTv8s16r:
-  case ARM::t2VPTv4s32r:
-  case ARM::t2VPTv4f32r:
-  case ARM::t2VPTv8f16r: {
+  case ARM::MVE_VPST:
+  case ARM::MVE_VPTv16i8:
+  case ARM::MVE_VPTv8i16:
+  case ARM::MVE_VPTv4i32:
+  case ARM::MVE_VPTv16u8:
+  case ARM::MVE_VPTv8u16:
+  case ARM::MVE_VPTv4u32:
+  case ARM::MVE_VPTv16s8:
+  case ARM::MVE_VPTv8s16:
+  case ARM::MVE_VPTv4s32:
+  case ARM::MVE_VPTv4f32:
+  case ARM::MVE_VPTv8f16:
+  case ARM::MVE_VPTv16i8r:
+  case ARM::MVE_VPTv8i16r:
+  case ARM::MVE_VPTv4i32r:
+  case ARM::MVE_VPTv16u8r:
+  case ARM::MVE_VPTv8u16r:
+  case ARM::MVE_VPTv4u32r:
+  case ARM::MVE_VPTv16s8r:
+  case ARM::MVE_VPTv8s16r:
+  case ARM::MVE_VPTv4s32r:
+  case ARM::MVE_VPTv4f32r:
+  case ARM::MVE_VPTv8f16r: {
     assert(!inVPTBlock() && "Nested VPT blocks are not allowed");
     MCOperand &MO = Inst.getOperand(0);
     VPTState.Mask = MO.getImm();
@@ -11241,6 +11267,18 @@ unsigned ARMAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     if (Op.isImm())
       if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm()))
         if (CE->getValue() == 0)
+          return Match_Success;
+    break;
+  case MCK__35_8:
+    if (Op.isImm())
+      if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm()))
+        if (CE->getValue() == 8)
+          return Match_Success;
+    break;
+  case MCK__35_16:
+    if (Op.isImm())
+      if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm()))
+        if (CE->getValue() == 16)
           return Match_Success;
     break;
   case MCK_ModImm:

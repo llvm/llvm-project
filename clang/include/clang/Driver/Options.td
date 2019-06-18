@@ -623,9 +623,6 @@ def emit_ast : Flag<["-"], "emit-ast">,
   HelpText<"Emit Clang AST files for source inputs">;
 def emit_llvm : Flag<["-"], "emit-llvm">, Flags<[CC1Option]>, Group<Action_Group>,
   HelpText<"Use the LLVM representation for assembler and object files">;
-def emit_iterface_stubs : Flag<["-"], "emit-interface-stubs">, Flags<[CC1Option]>, Group<Action_Group>,
-  HelpText<"Generate Inteface Stub Files.">;
-def iterface_stub_version_EQ : JoinedOrSeparate<["-"], "interface-stub-version=">, Flags<[CC1Option]>;
 def exported__symbols__list : Separate<["-"], "exported_symbols_list">;
 def e : JoinedOrSeparate<["-"], "e">, Group<Link_Group>;
 def fPIC : Flag<["-"], "fPIC">, Group<f_Group>;

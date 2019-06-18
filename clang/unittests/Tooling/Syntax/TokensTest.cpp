@@ -55,6 +55,7 @@ using llvm::ValueIs;
 using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::ElementsAre;
+using ::testing::Field;
 using ::testing::Matcher;
 using ::testing::Not;
 using ::testing::StartsWith;
@@ -64,6 +65,13 @@ namespace {
 // argument.
 MATCHER_P(SameRange, A, "") {
   return A.begin() == arg.begin() && A.end() == arg.end();
+}
+
+Matcher<TokenBuffer::Expansion>
+IsExpansion(Matcher<llvm::ArrayRef<syntax::Token>> Spelled,
+            Matcher<llvm::ArrayRef<syntax::Token>> Expanded) {
+  return AllOf(Field(&TokenBuffer::Expansion::Spelled, Spelled),
+               Field(&TokenBuffer::Expansion::Expanded, Expanded));
 }
 // Matchers for syntax::Token.
 MATCHER_P(Kind, K, "") { return arg.kind() == K; }
@@ -627,6 +635,76 @@ TEST_F(TokenBufferTest, SpelledByExpanded) {
   )cpp");
   EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("not_mapped")),
               ValueIs(SameRange(findSpelled("not_mapped"))));
+}
+
+TEST_F(TokenBufferTest, ExpansionStartingAt) {
+  // Object-like macro expansions.
+  recordTokens(R"cpp(
+    #define FOO 3+4
+    int a = FOO 1;
+    int b = FOO 2;
+  )cpp");
+
+  llvm::ArrayRef<syntax::Token> Foo1 = findSpelled("FOO 1").drop_back();
+  EXPECT_THAT(
+      Buffer.expansionStartingAt(Foo1.data()),
+      ValueIs(IsExpansion(SameRange(Foo1),
+                          SameRange(findExpanded("3 + 4 1").drop_back()))));
+
+  llvm::ArrayRef<syntax::Token> Foo2 = findSpelled("FOO 2").drop_back();
+  EXPECT_THAT(
+      Buffer.expansionStartingAt(Foo2.data()),
+      ValueIs(IsExpansion(SameRange(Foo2),
+                          SameRange(findExpanded("3 + 4 2").drop_back()))));
+
+  // Function-like macro expansions.
+  recordTokens(R"cpp(
+    #define ID(X) X
+    int a = ID(1+2+3);
+    int b = ID(ID(2+3+4));
+  )cpp");
+
+  llvm::ArrayRef<syntax::Token> ID1 = findSpelled("ID ( 1 + 2 + 3 )");
+  EXPECT_THAT(Buffer.expansionStartingAt(&ID1.front()),
+              ValueIs(IsExpansion(SameRange(ID1),
+                                  SameRange(findExpanded("1 + 2 + 3")))));
+  // Only the first spelled token should be found.
+  for (const auto &T : ID1.drop_front())
+    EXPECT_EQ(Buffer.expansionStartingAt(&T), llvm::None);
+
+  llvm::ArrayRef<syntax::Token> ID2 = findSpelled("ID ( ID ( 2 + 3 + 4 ) )");
+  EXPECT_THAT(Buffer.expansionStartingAt(&ID2.front()),
+              ValueIs(IsExpansion(SameRange(ID2),
+                                  SameRange(findExpanded("2 + 3 + 4")))));
+  // Only the first spelled token should be found.
+  for (const auto &T : ID2.drop_front())
+    EXPECT_EQ(Buffer.expansionStartingAt(&T), llvm::None);
+
+  // PP directives.
+  recordTokens(R"cpp(
+#define FOO 1
+int a = FOO;
+#pragma once
+int b = 1;
+  )cpp");
+
+  llvm::ArrayRef<syntax::Token> DefineFoo = findSpelled("# define FOO 1");
+  EXPECT_THAT(
+      Buffer.expansionStartingAt(&DefineFoo.front()),
+      ValueIs(IsExpansion(SameRange(DefineFoo),
+                          SameRange(findExpanded("int a").take_front(0)))));
+  // Only the first spelled token should be found.
+  for (const auto &T : DefineFoo.drop_front())
+    EXPECT_EQ(Buffer.expansionStartingAt(&T), llvm::None);
+
+  llvm::ArrayRef<syntax::Token> PragmaOnce = findSpelled("# pragma once");
+  EXPECT_THAT(
+      Buffer.expansionStartingAt(&PragmaOnce.front()),
+      ValueIs(IsExpansion(SameRange(PragmaOnce),
+                          SameRange(findExpanded("int b").take_front(0)))));
+  // Only the first spelled token should be found.
+  for (const auto &T : PragmaOnce.drop_front())
+    EXPECT_EQ(Buffer.expansionStartingAt(&T), llvm::None);
 }
 
 TEST_F(TokenBufferTest, TokensToFileRange) {
