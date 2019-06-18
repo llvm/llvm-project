@@ -8,3 +8,10 @@
 # RUN: %lldb -x -b -s %S/Inputs/GDBRemoteCapture.in --capture --capture-path %t.repro %t.out | FileCheck %S/TestGDBRemoteRepro.test --check-prefix CHECK --check-prefix CAPTURE
 # RUN: %lldb -x -b -s %S/Inputs/GDBRemoteCapture.in --capture --capture-path %t.repro %t.out | FileCheck %S/TestGDBRemoteRepro.test --check-prefix CHECK --check-prefix CAPTURE
 # RUN: %lldb --replay %t.repro | FileCheck %S/TestGDBRemoteRepro.test --check-prefix CHECK --check-prefix REPLAY
+
+# Test that we can replay from a different location, i.e. that the reproducer
+# is relocatable.
+
+# RUN: rm -rf %t.repro_moved
+# RUN: mv %t.repro %t.repro_moved
+# RUN: %lldb --replay %t.repro_moved | FileCheck %S/TestGDBRemoteRepro.test --check-prefix CHECK --check-prefix REPLAY
