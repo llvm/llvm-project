@@ -383,6 +383,7 @@ class SymbolizationLoop(object):
       self.dsym_hints = set([])
       self.frame_no = 0
       self.process_line = self.process_line_posix
+      self.using_module_map = plugin_proxy.has_plugin(ModuleMapPlugIn.get_name())
 
   def symbolize_address(self, addr, binary, offset, arch):
     # On non-Darwin (i.e. on platforms without .dSYM debug info) always use
@@ -451,14 +452,26 @@ class SymbolizationLoop(object):
 
   def process_line_posix(self, line):
     self.current_line = line.rstrip()
-    #0 0x7f6e35cf2e45  (/blah/foo.so+0x11fe45)
+    # Unsymbolicated:
+    # #0 0x7f6e35cf2e45  (/blah/foo.so+0x11fe45)
+    # Partially symbolicated:
+    # #0 0x7f6e35cf2e45 in foo (foo.so+0x11fe45)
+    # NOTE: We have to very liberal with symbol
+    # names in the regex because it could be an
+    # Objective-C or C++ demangled name.
     stack_trace_line_format = (
-        '^( *#([0-9]+) *)(0x[0-9a-f]+) *\((.*)\+(0x[0-9a-f]+)\)')
+        '^( *#([0-9]+) *)(0x[0-9a-f]+) *(?:in *.+)? *\((.*)\+(0x[0-9a-f]+)\)')
     match = re.match(stack_trace_line_format, line)
     if not match:
       return [self.current_line]
     logging.debug(line)
     _, frameno_str, addr, binary, offset = match.groups()
+    if not self.using_module_map and not os.path.isabs(binary):
+      # Do not try to symbolicate if the binary is just the module file name
+      # and a module map is unavailable.
+      # FIXME(dliew): This is currently necessary for reports on Darwin that are
+      # partially symbolicated by `atos`.
+      return [self.current_line]
     arch = ""
     # Arch can be embedded in the filename, e.g.: "libabc.dylib:x86_64h"
     colon_pos = binary.rfind(":")

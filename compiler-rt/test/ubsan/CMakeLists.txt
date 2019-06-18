@@ -113,7 +113,11 @@ if(APPLE)
   endif()
   foreach(platform ${UBSAN_APPLE_PLATFORMS})
     foreach(arch ${DARWIN_${platform}_ARCHS})
-      set(UBSAN_TEST_TARGET_CFLAGS "-arch ${arch} -isysroot ${DARWIN_${platform}_SYSROOT}")
+      get_test_cflags_for_apple_platform(
+        "${platform}"
+        "${arch}"
+        UBSAN_TEST_TARGET_CFLAGS
+      )
       if (";${UBSAN_SUPPORTED_ARCH};" MATCHES ";${arch};")
         add_ubsan_device_testsuite("Standalone" ubsan ${platform} ${arch})
       endif()
