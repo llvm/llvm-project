@@ -71,7 +71,6 @@ INITIALIZE_PASS_END(RegBankSelect, DEBUG_TYPE,
 
 RegBankSelect::RegBankSelect(Mode RunningMode)
     : MachineFunctionPass(ID), OptMode(RunningMode) {
-  initializeRegBankSelectPass(*PassRegistry::getPassRegistry());
   if (RegBankSelectMode.getNumOccurrences() != 0) {
     OptMode = RegBankSelectMode;
     if (RegBankSelectMode != RunningMode)

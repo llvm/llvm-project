@@ -3771,19 +3771,10 @@ def VMOV64toSDZrr : AVX512BI<0x6E, MRMSrcReg, (outs FR64X:$dst), (ins GR64:$src)
                        "vmovq\t{$src, $dst|$dst, $src}",
                        [(set FR64X:$dst, (bitconvert GR64:$src))]>,
                        EVEX, VEX_W, Sched<[WriteVecMoveFromGpr]>;
-def VMOV64toSDZrm : AVX512XSI<0x7E, MRMSrcMem, (outs FR64X:$dst), (ins i64mem:$src),
-                      "vmovq\t{$src, $dst|$dst, $src}",
-                      [(set FR64X:$dst, (bitconvert (loadi64 addr:$src)))]>,
-                      EVEX, VEX_W, EVEX_CD8<8, CD8VT8>, Sched<[WriteVecLoad]>;
 def VMOVSDto64Zrr : AVX512BI<0x7E, MRMDestReg, (outs GR64:$dst), (ins FR64X:$src),
                          "vmovq\t{$src, $dst|$dst, $src}",
                          [(set GR64:$dst, (bitconvert FR64X:$src))]>,
                          EVEX, VEX_W, Sched<[WriteVecMoveFromGpr]>;
-def VMOVSDto64Zmr : AVX512BI<0x7E, MRMDestMem, (outs), (ins i64mem:$dst, FR64X:$src),
-                         "vmovq\t{$src, $dst|$dst, $src}",
-                         [(store (i64 (bitconvert FR64X:$src)), addr:$dst)]>,
-                         EVEX, VEX_W, Sched<[WriteVecStore]>,
-                         EVEX_CD8<64, CD8VT1>;
 }
 } // ExeDomain = SSEPackedInt
 
@@ -3794,11 +3785,6 @@ def VMOVDI2SSZrr  : AVX512BI<0x6E, MRMSrcReg, (outs FR32X:$dst), (ins GR32:$src)
                       "vmovd\t{$src, $dst|$dst, $src}",
                       [(set FR32X:$dst, (bitconvert GR32:$src))]>,
                       EVEX, Sched<[WriteVecMoveFromGpr]>;
-
-def VMOVDI2SSZrm  : AVX512BI<0x6E, MRMSrcMem, (outs FR32X:$dst), (ins i32mem:$src),
-                      "vmovd\t{$src, $dst|$dst, $src}",
-                      [(set FR32X:$dst, (bitconvert (loadi32 addr:$src)))]>,
-                      EVEX, EVEX_CD8<32, CD8VT1>, Sched<[WriteVecLoad]>;
 } // ExeDomain = SSEPackedInt, isCodeGenOnly = 1
 
 // Move doubleword from xmm register to r/m32
@@ -3864,11 +3850,6 @@ def VMOVSS2DIZrr  : AVX512BI<0x7E, MRMDestReg, (outs GR32:$dst),
                       "vmovd\t{$src, $dst|$dst, $src}",
                       [(set GR32:$dst, (bitconvert FR32X:$src))]>,
                       EVEX, Sched<[WriteVecMoveToGpr]>;
-def VMOVSS2DIZmr  : AVX512BI<0x7E, MRMDestMem, (outs),
-                      (ins i32mem:$dst, FR32X:$src),
-                      "vmovd\t{$src, $dst|$dst, $src}",
-                      [(store (i32 (bitconvert FR32X:$src)), addr:$dst)]>,
-                      EVEX, EVEX_CD8<32, CD8VT1>, Sched<[WriteVecStore]>;
 } // ExeDomain = SSEPackedInt, isCodeGenOnly = 1
 
 // Move Quadword Int to Packed Quadword Int
@@ -3917,11 +3898,18 @@ multiclass avx512_move_scalar<string asm, SDNode OpNode,
                                      (_.VT (OpNode _.RC:$src1, _.RC:$src2)),
                                      (_.VT _.RC:$src0))))],
              _.ExeDomain>, EVEX_4V, EVEX_K, Sched<[SchedWriteFShuffle.XMM]>;
-  let canFoldAsLoad = 1, isReMaterializable = 1 in
-  def rm : AVX512PI<0x10, MRMSrcMem, (outs _.FRC:$dst), (ins _.ScalarMemOp:$src),
+  let canFoldAsLoad = 1, isReMaterializable = 1 in {
+  def rm : AVX512PI<0x10, MRMSrcMem, (outs _.RC:$dst), (ins _.ScalarMemOp:$src),
              !strconcat(asm, "\t{$src, $dst|$dst, $src}"),
-             [(set _.FRC:$dst, (_.ScalarLdFrag addr:$src))],
+             [(set _.RC:$dst, (_.VT (X86vzload addr:$src)))],
              _.ExeDomain>, EVEX, Sched<[WriteFLoad]>;
+  // _alt version uses FR32/FR64 register class.
+  let isCodeGenOnly = 1 in
+  def rm_alt : AVX512PI<0x10, MRMSrcMem, (outs _.FRC:$dst), (ins _.ScalarMemOp:$src),
+                 !strconcat(asm, "\t{$src, $dst|$dst, $src}"),
+                 [(set _.FRC:$dst, (_.ScalarLdFrag addr:$src))],
+                 _.ExeDomain>, EVEX, Sched<[WriteFLoad]>;
+  }
   let mayLoad = 1, hasSideEffects = 0 in {
     let Constraints = "$src0 = $dst" in
     def rmk : AVX512PI<0x10, MRMSrcMem, (outs _.RC:$dst),
@@ -4359,20 +4347,16 @@ let Predicates = [HasAVX512] in {
   // MOVSSrm zeros the high parts of the register; represent this
   // with SUBREG_TO_REG. The AVX versions also write: DST[255:128] <- 0
   def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (loadf32 addr:$src))))),
-            (COPY_TO_REGCLASS (VMOVSSZrm addr:$src), VR128X)>;
+            (VMOVSSZrm addr:$src)>;
   def : Pat<(v4f32 (X86vzmovl (loadv4f32 addr:$src))),
-            (COPY_TO_REGCLASS (VMOVSSZrm addr:$src), VR128X)>;
-  def : Pat<(v4f32 (X86vzload addr:$src)),
-            (COPY_TO_REGCLASS (VMOVSSZrm addr:$src), VR128X)>;
+            (VMOVSSZrm addr:$src)>;
 
   // MOVSDrm zeros the high parts of the register; represent this
   // with SUBREG_TO_REG. The AVX versions also write: DST[255:128] <- 0
   def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (loadf64 addr:$src))))),
-            (COPY_TO_REGCLASS (VMOVSDZrm addr:$src), VR128X)>;
+            (VMOVSDZrm addr:$src)>;
   def : Pat<(v2f64 (X86vzmovl (loadv2f64 addr:$src))),
-            (COPY_TO_REGCLASS (VMOVSDZrm addr:$src), VR128X)>;
-  def : Pat<(v2f64 (X86vzload addr:$src)),
-            (COPY_TO_REGCLASS (VMOVSDZrm addr:$src), VR128X)>;
+            (VMOVSDZrm addr:$src)>;
 
   // Represent the same patterns above but in the form they appear for
   // 256-bit types

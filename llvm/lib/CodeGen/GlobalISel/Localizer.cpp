@@ -29,9 +29,7 @@ INITIALIZE_PASS_END(Localizer, DEBUG_TYPE,
                     "Move/duplicate certain instructions close to their use",
                     false, false)
 
-Localizer::Localizer() : MachineFunctionPass(ID) {
-  initializeLocalizerPass(*PassRegistry::getPassRegistry());
-}
+Localizer::Localizer() : MachineFunctionPass(ID) { }
 
 void Localizer::init(MachineFunction &MF) {
   MRI = &MF.getRegInfo();

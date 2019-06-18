@@ -219,16 +219,22 @@ static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
     return true;
   case X86::MOV32rm:
   case X86::MOVSSrm:
-  case X86::VMOVSSZrm:
+  case X86::MOVSSrm_alt:
   case X86::VMOVSSrm:
+  case X86::VMOVSSrm_alt:
+  case X86::VMOVSSZrm:
+  case X86::VMOVSSZrm_alt:
   case X86::KMOVDkm:
     MemBytes = 4;
     return true;
   case X86::MOV64rm:
   case X86::LD_Fp64m:
   case X86::MOVSDrm:
+  case X86::MOVSDrm_alt:
   case X86::VMOVSDrm:
+  case X86::VMOVSDrm_alt:
   case X86::VMOVSDZrm:
+  case X86::VMOVSDZrm_alt:
   case X86::MMX_MOVD64rm:
   case X86::MMX_MOVQ64rm:
   case X86::KMOVQkm:
@@ -483,7 +489,9 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case X86::MOV32rm:
   case X86::MOV64rm:
   case X86::MOVSSrm:
+  case X86::MOVSSrm_alt:
   case X86::MOVSDrm:
+  case X86::MOVSDrm_alt:
   case X86::MOVAPSrm:
   case X86::MOVUPSrm:
   case X86::MOVAPDrm:
@@ -491,7 +499,9 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case X86::MOVDQArm:
   case X86::MOVDQUrm:
   case X86::VMOVSSrm:
+  case X86::VMOVSSrm_alt:
   case X86::VMOVSDrm:
+  case X86::VMOVSDrm_alt:
   case X86::VMOVAPSrm:
   case X86::VMOVUPSrm:
   case X86::VMOVAPDrm:
@@ -508,7 +518,9 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case X86::MMX_MOVQ64rm:
   // AVX-512
   case X86::VMOVSSZrm:
+  case X86::VMOVSSZrm_alt:
   case X86::VMOVSDZrm:
+  case X86::VMOVSDZrm_alt:
   case X86::VMOVAPDZ128rm:
   case X86::VMOVAPDZ256rm:
   case X86::VMOVAPDZrm:
@@ -2879,8 +2891,12 @@ static unsigned getLoadStoreRegOpcode(unsigned Reg,
       return load ? X86::MOV32rm : X86::MOV32mr;
     if (X86::FR32XRegClass.hasSubClassEq(RC))
       return load ?
-        (HasAVX512 ? X86::VMOVSSZrm : HasAVX ? X86::VMOVSSrm : X86::MOVSSrm) :
-        (HasAVX512 ? X86::VMOVSSZmr : HasAVX ? X86::VMOVSSmr : X86::MOVSSmr);
+        (HasAVX512 ? X86::VMOVSSZrm_alt :
+         HasAVX    ? X86::VMOVSSrm_alt :
+                     X86::MOVSSrm_alt) :
+        (HasAVX512 ? X86::VMOVSSZmr :
+         HasAVX    ? X86::VMOVSSmr :
+                     X86::MOVSSmr);
     if (X86::RFP32RegClass.hasSubClassEq(RC))
       return load ? X86::LD_Fp32m : X86::ST_Fp32m;
     if (X86::VK32RegClass.hasSubClassEq(RC)) {
@@ -2901,8 +2917,12 @@ static unsigned getLoadStoreRegOpcode(unsigned Reg,
       return load ? X86::MOV64rm : X86::MOV64mr;
     if (X86::FR64XRegClass.hasSubClassEq(RC))
       return load ?
-        (HasAVX512 ? X86::VMOVSDZrm : HasAVX ? X86::VMOVSDrm : X86::MOVSDrm) :
-        (HasAVX512 ? X86::VMOVSDZmr : HasAVX ? X86::VMOVSDmr : X86::MOVSDmr);
+        (HasAVX512 ? X86::VMOVSDZrm_alt :
+         HasAVX    ? X86::VMOVSDrm_alt :
+                     X86::MOVSDrm_alt) :
+        (HasAVX512 ? X86::VMOVSDZmr :
+         HasAVX    ? X86::VMOVSDmr :
+                     X86::MOVSDmr);
     if (X86::VR64RegClass.hasSubClassEq(RC))
       return load ? X86::MMX_MOVQ64rm : X86::MMX_MOVQ64mr;
     if (X86::RFP64RegClass.hasSubClassEq(RC))
@@ -4861,7 +4881,9 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
       MF.getRegInfo().getRegClass(LoadMI.getOperand(0).getReg());
   unsigned RegSize = TRI.getRegSizeInBits(*RC);
 
-  if ((Opc == X86::MOVSSrm || Opc == X86::VMOVSSrm || Opc == X86::VMOVSSZrm) &&
+  if ((Opc == X86::MOVSSrm || Opc == X86::VMOVSSrm || Opc == X86::VMOVSSZrm ||
+       Opc == X86::MOVSSrm_alt || Opc == X86::VMOVSSrm_alt ||
+       Opc == X86::VMOVSSZrm_alt) &&
       RegSize > 32) {
     // These instructions only load 32 bits, we can't fold them if the
     // destination register is wider than 32 bits (4 bytes), and its user
@@ -4913,7 +4935,9 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     }
   }
 
-  if ((Opc == X86::MOVSDrm || Opc == X86::VMOVSDrm || Opc == X86::VMOVSDZrm) &&
+  if ((Opc == X86::MOVSDrm || Opc == X86::VMOVSDrm || Opc == X86::VMOVSDZrm ||
+       Opc == X86::MOVSDrm_alt || Opc == X86::VMOVSDrm_alt ||
+       Opc == X86::VMOVSDZrm_alt) &&
       RegSize > 64) {
     // These instructions only load 64 bits, we can't fold them if the
     // destination register is wider than 64 bits (8 bytes), and its user
@@ -5452,7 +5476,9 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   case X86::LD_Fp64m:
   case X86::LD_Fp80m:
   case X86::MOVSSrm:
+  case X86::MOVSSrm_alt:
   case X86::MOVSDrm:
+  case X86::MOVSDrm_alt:
   case X86::MMX_MOVD64rm:
   case X86::MMX_MOVQ64rm:
   case X86::MOVAPSrm:
@@ -5463,7 +5489,9 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   case X86::MOVDQUrm:
   // AVX load instructions
   case X86::VMOVSSrm:
+  case X86::VMOVSSrm_alt:
   case X86::VMOVSDrm:
+  case X86::VMOVSDrm_alt:
   case X86::VMOVAPSrm:
   case X86::VMOVUPSrm:
   case X86::VMOVAPDrm:
@@ -5478,7 +5506,9 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   case X86::VMOVDQUYrm:
   // AVX512 load instructions
   case X86::VMOVSSZrm:
+  case X86::VMOVSSZrm_alt:
   case X86::VMOVSDZrm:
+  case X86::VMOVSDZrm_alt:
   case X86::VMOVAPSZ128rm:
   case X86::VMOVUPSZ128rm:
   case X86::VMOVAPSZ128rm_NOVLX:
@@ -5529,7 +5559,9 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   case X86::LD_Fp64m:
   case X86::LD_Fp80m:
   case X86::MOVSSrm:
+  case X86::MOVSSrm_alt:
   case X86::MOVSDrm:
+  case X86::MOVSDrm_alt:
   case X86::MMX_MOVD64rm:
   case X86::MMX_MOVQ64rm:
   case X86::MOVAPSrm:
@@ -5540,7 +5572,9 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   case X86::MOVDQUrm:
   // AVX load instructions
   case X86::VMOVSSrm:
+  case X86::VMOVSSrm_alt:
   case X86::VMOVSDrm:
+  case X86::VMOVSDrm_alt:
   case X86::VMOVAPSrm:
   case X86::VMOVUPSrm:
   case X86::VMOVAPDrm:
@@ -5555,7 +5589,9 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   case X86::VMOVDQUYrm:
   // AVX512 load instructions
   case X86::VMOVSSZrm:
+  case X86::VMOVSSZrm_alt:
   case X86::VMOVSDZrm:
+  case X86::VMOVSDZrm_alt:
   case X86::VMOVAPSZ128rm:
   case X86::VMOVUPSZ128rm:
   case X86::VMOVAPSZ128rm_NOVLX:
@@ -5727,7 +5763,9 @@ static const uint16_t ReplaceableInstrs[][3] = {
   { X86::MOVSDmr,    X86::MOVSDmr,   X86::MOVPQI2QImr },
   { X86::MOVSSmr,    X86::MOVSSmr,   X86::MOVPDI2DImr },
   { X86::MOVSDrm,    X86::MOVSDrm,   X86::MOVQI2PQIrm },
+  { X86::MOVSDrm_alt,X86::MOVSDrm_alt,X86::MOVQI2PQIrm },
   { X86::MOVSSrm,    X86::MOVSSrm,   X86::MOVDI2PDIrm },
+  { X86::MOVSSrm_alt,X86::MOVSSrm_alt,X86::MOVDI2PDIrm },
   { X86::MOVNTPSmr,  X86::MOVNTPDmr, X86::MOVNTDQmr },
   { X86::ANDNPSrm,   X86::ANDNPDrm,  X86::PANDNrm   },
   { X86::ANDNPSrr,   X86::ANDNPDrr,  X86::PANDNrr   },
@@ -5757,7 +5795,9 @@ static const uint16_t ReplaceableInstrs[][3] = {
   { X86::VMOVSDmr,   X86::VMOVSDmr,   X86::VMOVPQI2QImr },
   { X86::VMOVSSmr,   X86::VMOVSSmr,   X86::VMOVPDI2DImr },
   { X86::VMOVSDrm,   X86::VMOVSDrm,   X86::VMOVQI2PQIrm },
+  { X86::VMOVSDrm_alt,X86::VMOVSDrm_alt,X86::VMOVQI2PQIrm },
   { X86::VMOVSSrm,   X86::VMOVSSrm,   X86::VMOVDI2PDIrm },
+  { X86::VMOVSSrm_alt,X86::VMOVSSrm_alt,X86::VMOVDI2PDIrm },
   { X86::VMOVNTPSmr, X86::VMOVNTPDmr, X86::VMOVNTDQmr },
   { X86::VANDNPSrm,  X86::VANDNPDrm,  X86::VPANDNrm   },
   { X86::VANDNPSrr,  X86::VANDNPDrr,  X86::VPANDNrr   },
@@ -5796,7 +5836,9 @@ static const uint16_t ReplaceableInstrs[][3] = {
   { X86::VMOVSDZmr,      X86::VMOVSDZmr,      X86::VMOVPQI2QIZmr  },
   { X86::VMOVSSZmr,      X86::VMOVSSZmr,      X86::VMOVPDI2DIZmr  },
   { X86::VMOVSDZrm,      X86::VMOVSDZrm,      X86::VMOVQI2PQIZrm  },
+  { X86::VMOVSDZrm_alt,  X86::VMOVSDZrm_alt,  X86::VMOVQI2PQIZrm  },
   { X86::VMOVSSZrm,      X86::VMOVSSZrm,      X86::VMOVDI2PDIZrm  },
+  { X86::VMOVSSZrm_alt,  X86::VMOVSSZrm_alt,  X86::VMOVDI2PDIZrm  },
   { X86::VBROADCASTSSZ128r, X86::VBROADCASTSSZ128r, X86::VPBROADCASTDZ128r },
   { X86::VBROADCASTSSZ128m, X86::VBROADCASTSSZ128m, X86::VPBROADCASTDZ128m },
   { X86::VBROADCASTSSZ256r, X86::VBROADCASTSSZ256r, X86::VPBROADCASTDZ256r },
