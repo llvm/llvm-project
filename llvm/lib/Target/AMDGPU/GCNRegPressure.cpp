@@ -63,9 +63,10 @@ void llvm::printLivesAt(SlotIndex SI,
   }
   if (!Num) dbgs() << "  <none>\n";
 }
+#endif
 
-static bool isEqual(const GCNRPTracker::LiveRegSet &S1,
-                    const GCNRPTracker::LiveRegSet &S2) {
+bool llvm::isEqual(const GCNRPTracker::LiveRegSet &S1,
+                   const GCNRPTracker::LiveRegSet &S2) {
   if (S1.size() != S2.size())
     return false;
 
@@ -76,7 +77,7 @@ static bool isEqual(const GCNRPTracker::LiveRegSet &S1,
   }
   return true;
 }
-#endif
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // GCNRegPressure

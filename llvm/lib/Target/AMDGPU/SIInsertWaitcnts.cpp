@@ -536,15 +536,19 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
     // Put score on the source vgprs. If this is a store, just use those
     // specific register(s).
     if (TII->isDS(Inst) && (Inst.mayStore() || Inst.mayLoad())) {
+      int AddrOpIdx =
+          AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::addr);
       // All GDS operations must protect their address register (same as
       // export.)
-      if (Inst.getOpcode() != AMDGPU::DS_APPEND &&
-          Inst.getOpcode() != AMDGPU::DS_CONSUME) {
-        setExpScore(
-            &Inst, TII, TRI, MRI,
-            AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::addr),
-            CurrScore);
+      if (AddrOpIdx != -1) {
+        setExpScore(&Inst, TII, TRI, MRI, AddrOpIdx, CurrScore);
+      } else {
+        assert(Inst.getOpcode() == AMDGPU::DS_APPEND ||
+               Inst.getOpcode() == AMDGPU::DS_CONSUME ||
+               Inst.getOpcode() == AMDGPU::DS_GWS_INIT ||
+               Inst.getOpcode() == AMDGPU::DS_GWS_BARRIER);
       }
+
       if (Inst.mayStore()) {
         if (AMDGPU::getNamedOperandIdx(Inst.getOpcode(),
                                        AMDGPU::OpName::data0) != -1) {
@@ -1406,18 +1410,6 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       Inst.print(dbgs());
       ScoreBrackets.dump();
     });
-
-    // Check to see if this is a GWS instruction. If so, and if this is CI or
-    // VI, then the generated code sequence will include an S_WAITCNT 0.
-    // TODO: Are these the only GWS instructions?
-    if (Inst.getOpcode() == AMDGPU::DS_GWS_INIT ||
-        Inst.getOpcode() == AMDGPU::DS_GWS_SEMA_V ||
-        Inst.getOpcode() == AMDGPU::DS_GWS_SEMA_BR ||
-        Inst.getOpcode() == AMDGPU::DS_GWS_SEMA_P ||
-        Inst.getOpcode() == AMDGPU::DS_GWS_BARRIER) {
-      // TODO: && context->target_info->GwsRequiresMemViolTest() ) {
-      ScoreBrackets.applyWaitcnt(AMDGPU::Waitcnt::allZeroExceptVsCnt());
-    }
 
     // TODO: Remove this work-around after fixing the scheduler and enable the
     // assert above.

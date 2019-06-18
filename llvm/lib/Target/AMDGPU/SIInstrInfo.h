@@ -977,11 +977,14 @@ TargetInstrInfo::RegSubRegPair getRegSequenceSubReg(MachineInstr &MI,
 MachineInstr *getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
                                MachineRegisterInfo &MRI);
 
-/// \brief Return true if EXEC mask isnt' changed between the def and
-/// all uses of VReg. Currently if def and uses are in different BBs -
-/// simply return false. Should be run on SSA.
-bool isEXECMaskConstantBetweenDefAndUses(unsigned VReg,
-                                         const MachineRegisterInfo &MRI);
+/// \brief Return false if EXEC is not changed between the def of \p VReg at \p
+/// DefMI and uses. If \p UseMI is not specified, this checks all uses of \p
+/// VReg. Should be run on SSA. Currently does not attempt to track between
+/// blocks.
+bool execMayBeModifiedBeforeUse(const MachineRegisterInfo &MRI,
+                                unsigned VReg,
+                                const MachineInstr &DefMI,
+                                const MachineInstr *UseMI = nullptr);
 
 namespace AMDGPU {
 

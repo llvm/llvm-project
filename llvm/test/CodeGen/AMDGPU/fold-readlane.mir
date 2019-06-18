@@ -1,0 +1,250 @@
+# RUN: llc -march=amdgcn -run-pass si-fold-operands -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: name: fold-imm-readfirstlane{{$}}
+# GCN: %1:sreg_32_xm0 = S_MOV_B32 123
+---
+name: fold-imm-readfirstlane
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
+    %1:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
+...
+
+# GCN-LABEL: name: fold-imm-readfirstlane-readfirstlane{{$}}
+# GCN: %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
+# GCN: %1:sreg_32_xm0 = S_MOV_B32 123
+# GCN: %2:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
+# GCN: %3:sreg_32_xm0 = S_MOV_B32 123
+
+---
+name: fold-imm-readfirstlane-readfirstlane
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
+    %1:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
+    %2:vgpr_32 = COPY %1
+    %3:sreg_32_xm0 = V_READFIRSTLANE_B32 %2, implicit $exec
+
+...
+
+
+# GCN-LABEL: name: fold-copy-readfirstlane{{$}}
+# GCN: %0:sreg_32_xm0 = COPY $sgpr10
+# GCN: %1:vgpr_32 = COPY %0
+# GCN: %2:sreg_32_xm0 = COPY %1
+---
+name: fold-copy-readfirstlane
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr10
+    %0:sreg_32_xm0 = COPY $sgpr10
+    %1:vgpr_32 = COPY %0
+    %2:sreg_32_xm0 = V_READFIRSTLANE_B32 %1, implicit $exec
+
+...
+
+# GCN-LABEL: name: no-fold-copy-readfirstlane-physreg0{{$}}
+# GCN: %0:vgpr_32 = COPY $sgpr10
+# GCN-NEXT: %1:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
+---
+name: no-fold-copy-readfirstlane-physreg0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr10
+    %0:vgpr_32 = COPY $sgpr10
+    %1:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
+
+...
+
+# GCN-LABEL: name: no-fold-copy-readfirstlane-physreg1{{$}}
+# GCN: $vgpr0 = COPY $sgpr10
+# GCN-NEXT: %0:sreg_32_xm0 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
+---
+name: no-fold-copy-readfirstlane-physreg1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr10
+    $vgpr0 = COPY $sgpr10
+    %0:sreg_32_xm0 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
+
+...
+
+# GCN-LABEL: name: no-fold-imm-readfirstlane-physreg{{$}}
+# GCN: $vgpr0 = V_MOV_B32_e32 123, implicit $exec
+# GCN-NEXT: V_READFIRSTLANE_B32 $vgpr0, implicit $exec
+
+---
+name: no-fold-imm-readfirstlane-physreg
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vgpr0 = V_MOV_B32_e32 123, implicit $exec
+    %0:sreg_32_xm0 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
+...
+
+# TODO: This could be folded, if the search for exec modifications was
+# smarter.
+
+# GCN-LABEL: name: fold-imm-readfirstlane-cross-block{{$}}
+# GCN: V_MOV_B32
+# GCN: V_READFIRSTLANE_B32
+---
+name: fold-imm-readfirstlane-cross-block
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
+
+  bb.1:
+    %1:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
+...
+
+# TODO: This could be folded, if the search for exec modifications was
+# smarter.
+
+# GCN-LABEL: name: fold-copy-readfirstlane-cross-block{{$}}
+# GCN: V_MOV_B32
+# GCN: V_READFIRSTLANE_B32
+---
+name: fold-copy-readfirstlane-cross-block
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr12
+    %0:sreg_32_xm0 = COPY $sgpr12
+    %1:vgpr_32 = V_MOV_B32_e32 %0, implicit $exec
+
+  bb.1:
+    %2:sreg_32_xm0 = V_READFIRSTLANE_B32 %1, implicit $exec
+...
+
+# GCN-LABEL: name: fold-copy-readfirstlane-cross-block-exec-def{{$}}
+# GCN: V_MOV_B32
+# GCN: $exec = S_MOV_B64_term
+# GCN: V_READFIRSTLANE_B32
+---
+name: fold-copy-readfirstlane-cross-block-exec-def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr10_sgpr11, $sgpr12
+    %0:sreg_32_xm0 = COPY $sgpr12
+    %1:vgpr_32 = V_MOV_B32_e32 %0, implicit $exec
+    $exec = S_MOV_B64_term $sgpr10_sgpr11
+
+  bb.1:
+    %2:sreg_32_xm0 = V_READFIRSTLANE_B32 %1, implicit $exec
+...
+
+# GCN-LABEL: name: fold-copy-readfirstlane-same-block-exec-def{{$}}
+# GCN: COPY
+# GCN-NEXT: %1:vgpr_32 = COPY %0
+# GCN-NEXT: $exec = S_MOV_B64
+# GCN-NEXT: V_READFIRSTLANE_B32
+---
+name: fold-copy-readfirstlane-same-block-exec-def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr10_sgpr11, $sgpr12
+    %0:sreg_32_xm0 = COPY $sgpr12
+    %1:vgpr_32 = COPY %0, implicit $exec
+    $exec = S_MOV_B64 $sgpr10_sgpr11
+    %2:sreg_32_xm0 = V_READFIRSTLANE_B32 %1, implicit $exec
+
+...
+
+# GCN-LABEL: name: fold-imm-readfirstlane-cross-block-exec-def{{$}}
+# GCN: V_MOV_B32
+# GCN: $exec = S_MOV_B64
+# GCN: V_READFIRSTLANE_B32
+
+---
+name: fold-imm-readfirstlane-cross-block-exec-def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr10_sgpr11, $sgpr12_sgpr13
+    %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
+    $exec = S_MOV_B64_term $sgpr10_sgpr11
+
+  bb.1:
+    %1:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
+...
+
+# GCN-LABEL: name: fold-imm-readfirstlane-same-block-exec-def{{$}}
+# GCN: V_MOV_B32
+# GCN-NEXT: $exec = S_MOV_B64
+# GCN-NEXT: V_READFIRSTLANE_B32
+---
+name: fold-imm-readfirstlane-same-block-exec-def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr10_sgpr11
+    %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
+    $exec = S_MOV_B64 $sgpr10_sgpr11
+    %1:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
+
+...
+
+# GCN-LABEL: name: fold-sgpr-copy-readfirstlane-same-block-exec-def{{$}}
+# GCN: COPY
+# GCN-NEXT: $exec = S_MOV_B64
+# GCN-NEXT: V_READFIRSTLANE_B32
+---
+name: fold-sgpr-copy-readfirstlane-same-block-exec-def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr10_sgpr11, $sgpr12
+    %0:vgpr_32 = COPY $sgpr12
+    $exec = S_MOV_B64 $sgpr10_sgpr11
+    %1:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
+...
+
+# GCN-LABEL: name: fold-imm-readfirstlane-user{{$}}
+# GCN: %3:sreg_32_xm0 = S_MOV_B32 123
+---
+name: fold-imm-readfirstlane-user
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr0_sgpr1
+    %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
+    %1:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
+    %2:sreg_32_xm0 = COPY %1
+    %3:sreg_32_xm0 = COPY %2
+    S_ENDPGM 0, implicit %3
+...
+
+# GCN-LABEL: name: fold-imm-readlane{{$}}
+# GCN: %1:sreg_32_xm0 = S_MOV_B32 123
+---
+name: fold-imm-readlane
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr0_sgpr1
+    %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
+    %1:sreg_32_xm0 = V_READLANE_B32 %0, 0, implicit $exec
+...
+
+# GCN-LABEL: name: fold-imm-readlane-src1{{$}}
+# GCN: %0:vgpr_32 = COPY $vgpr0
+# GCN: V_READLANE_B32 %0, 12, implicit $exec
+---
+name: fold-imm-readlane-src1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    %0:vgpr_32 = COPY $vgpr0
+    %1:sreg_32_xm0 = S_MOV_B32 12
+    %2:sreg_32_xm0 = V_READLANE_B32 %0, %1, implicit $exec
+...
