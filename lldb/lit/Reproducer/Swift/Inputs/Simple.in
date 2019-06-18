@@ -1,0 +1,6 @@
+breakpoint set -f Simple.swift -l 2
+run
+bt
+cont
+reproducer status
+reproducer generate
