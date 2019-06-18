@@ -835,6 +835,7 @@ unsigned DIExpression::ExprOperand::getSize() const {
   case dwarf::DW_OP_constu:
   case dwarf::DW_OP_deref_size:
   case dwarf::DW_OP_plus_uconst:
+  case dwarf::DW_OP_LLVM_tag_offset:
     return 2;
   default:
     return 1;
@@ -876,6 +877,7 @@ bool DIExpression::isValid() const {
       break;
     }
     case dwarf::DW_OP_LLVM_convert:
+    case dwarf::DW_OP_LLVM_tag_offset:
     case dwarf::DW_OP_constu:
     case dwarf::DW_OP_plus_uconst:
     case dwarf::DW_OP_plus:
@@ -905,7 +907,9 @@ bool DIExpression::isImplicit() const {
   unsigned N = getNumElements();
   if (isValid() && N > 0) {
     switch (getElement(N-1)) {
-      case dwarf::DW_OP_stack_value: return true;
+      case dwarf::DW_OP_stack_value:
+      case dwarf::DW_OP_LLVM_tag_offset:
+        return true;
       case dwarf::DW_OP_LLVM_fragment:
         return N > 1 && getElement(N-2) == dwarf::DW_OP_stack_value;
       default: break;

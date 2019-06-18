@@ -347,13 +347,17 @@ bool X86FastISel::X86FastEmitLoad(MVT VT, X86AddressMode &AM,
     break;
   case MVT::f32:
     if (X86ScalarSSEf32)
-      Opc = HasAVX512 ? X86::VMOVSSZrm : HasAVX ? X86::VMOVSSrm : X86::MOVSSrm;
+      Opc = HasAVX512 ? X86::VMOVSSZrm_alt :
+            HasAVX    ? X86::VMOVSSrm_alt :
+                        X86::MOVSSrm_alt;
     else
       Opc = X86::LD_Fp32m;
     break;
   case MVT::f64:
     if (X86ScalarSSEf64)
-      Opc = HasAVX512 ? X86::VMOVSDZrm : HasAVX ? X86::VMOVSDrm : X86::MOVSDrm;
+      Opc = HasAVX512 ? X86::VMOVSDZrm_alt :
+            HasAVX    ? X86::VMOVSDrm_alt :
+                        X86::MOVSDrm_alt;
     else
       Opc = X86::LD_Fp64m;
     break;
@@ -3575,7 +3579,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
       addFrameReference(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                                 TII.get(Opc)), FI)
         .addReg(CopyReg);
-      Opc = ResVT == MVT::f32 ? X86::MOVSSrm : X86::MOVSDrm;
+      Opc = ResVT == MVT::f32 ? X86::MOVSSrm_alt : X86::MOVSDrm_alt;
       addFrameReference(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                                 TII.get(Opc), ResultReg + i), FI);
     }
@@ -3743,13 +3747,17 @@ unsigned X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
   default: return 0;
   case MVT::f32:
     if (X86ScalarSSEf32)
-      Opc = HasAVX512 ? X86::VMOVSSZrm : HasAVX ? X86::VMOVSSrm : X86::MOVSSrm;
+      Opc = HasAVX512 ? X86::VMOVSSZrm_alt :
+            HasAVX    ? X86::VMOVSSrm_alt :
+                        X86::MOVSSrm_alt;
     else
       Opc = X86::LD_Fp32m;
     break;
   case MVT::f64:
     if (X86ScalarSSEf64)
-      Opc = HasAVX512 ? X86::VMOVSDZrm : HasAVX ? X86::VMOVSDrm : X86::MOVSDrm;
+      Opc = HasAVX512 ? X86::VMOVSDZrm_alt :
+            HasAVX    ? X86::VMOVSDrm_alt :
+                        X86::MOVSDrm_alt;
     else
       Opc = X86::LD_Fp64m;
     break;

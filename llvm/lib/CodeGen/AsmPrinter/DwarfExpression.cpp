@@ -438,6 +438,9 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       emitOp(dwarf::DW_OP_deref_size);
       emitData1(Op->getArg(0));
       break;
+    case dwarf::DW_OP_LLVM_tag_offset:
+      TagOffset = Op->getArg(0);
+      break;
     default:
       llvm_unreachable("unhandled opcode found in expression");
     }

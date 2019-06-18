@@ -729,4 +729,50 @@ TEST_F(GISelMITest, FewerElementsPhi) {
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
+
+// FNEG expansion in terms of FSUB
+TEST_F(GISelMITest, LowerFNEG) {
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_FSUB).legalFor({s64});
+  });
+
+  // Build Instr. Make sure FMF are preserved.
+  auto FAdd =
+    B.buildInstr(TargetOpcode::G_FADD, {LLT::scalar(64)}, {Copies[0], Copies[1]},
+                 MachineInstr::MIFlag::FmNsz);
+
+  // Should not propagate the flags of src instruction.
+  auto FNeg0 =
+    B.buildInstr(TargetOpcode::G_FNEG, {LLT::scalar(64)}, {FAdd.getReg(0)},
+                 {MachineInstr::MIFlag::FmArcp});
+
+  // Preserve the one flag.
+  auto FNeg1 =
+    B.buildInstr(TargetOpcode::G_FNEG, {LLT::scalar(64)}, {Copies[0]},
+                 MachineInstr::MIFlag::FmNoInfs);
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+  // Perform Legalization
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*FNeg0, 0, LLT::scalar(64)));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*FNeg1, 0, LLT::scalar(64)));
+
+  auto CheckStr = R"(
+  CHECK: [[FADD:%[0-9]+]]:_(s64) = nsz G_FADD %0:_, %1:_
+  CHECK: [[CONST0:%[0-9]+]]:_(s64) = G_FCONSTANT double -0.000000e+00
+  CHECK: [[FSUB0:%[0-9]+]]:_(s64) = arcp G_FSUB [[CONST0]]:_, [[FADD]]:_
+  CHECK: [[CONST1:%[0-9]+]]:_(s64) = G_FCONSTANT double -0.000000e+00
+  CHECK: [[FSUB1:%[0-9]+]]:_(s64) = ninf G_FSUB [[CONST1]]:_, %0:_
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
 } // namespace

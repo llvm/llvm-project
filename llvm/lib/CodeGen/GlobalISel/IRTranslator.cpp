@@ -106,9 +106,7 @@ static void reportTranslationError(MachineFunction &MF,
     ORE.emit(R);
 }
 
-IRTranslator::IRTranslator() : MachineFunctionPass(ID) {
-  initializeIRTranslatorPass(*PassRegistry::getPassRegistry());
-}
+IRTranslator::IRTranslator() : MachineFunctionPass(ID) { }
 
 #ifndef NDEBUG
 namespace {
