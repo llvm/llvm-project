@@ -173,9 +173,9 @@ SymbolContext *SymbolHelper::createBinary(StringRef Ins, const char *Name,
     // problem, but basically the reason is unknown.
 
     // Found the specified symbol, fill the SymbolContext values
-    SymbolContext *Symp = new (std::nothrow) SymbolContext();
-    if (Symp == NULL)
-      return NULL; // out of space
+    std::unique_ptr<SymbolContext> Symp(new (std::nothrow) SymbolContext());
+    if (!Symp)
+      return NULL;
 
     Symp->setName(Name);
     Symp->Value = Fsym.getValue();
@@ -201,7 +201,7 @@ SymbolContext *SymbolHelper::createBinary(StringRef Ins, const char *Name,
     else
       Symp->Undefined = false;
 
-    return Symp;
+    return Symp.release();
   }
 
   return NULL;
@@ -240,14 +240,11 @@ amd_comgr_status_t SymbolHelper::iterateTable(
       }
     }
 
-    // iterate all symbols
     for (auto &Symbol : SymbolList) {
-      // create symbol context
-      SymbolContext *Ctxp = new (std::nothrow) SymbolContext();
-      if (Ctxp == NULL)
+      std::unique_ptr<SymbolContext> Ctxp(new (std::nothrow) SymbolContext());
+      if (!Ctxp)
         return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
 
-      // get name
       Expected<StringRef> SymNameOrErr = Symbol.getName();
       if (!SymNameOrErr)
         return AMD_COMGR_STATUS_ERROR;
@@ -255,7 +252,6 @@ amd_comgr_status_t SymbolHelper::iterateTable(
       Ctxp->setName(SymName);
       Ctxp->Value = Symbol.getValue();
 
-      // get type
       Expected<SymbolRef::Type> TypeOrErr = Symbol.getType();
       if (!TypeOrErr)
         return AMD_COMGR_STATUS_ERROR;
@@ -263,27 +259,19 @@ amd_comgr_status_t SymbolHelper::iterateTable(
       uint64_t Flags = Symbol.getObject()->getSymbolFlags(Symb);
       Ctxp->Type = mapToComgrSymbolType(*TypeOrErr, Flags);
 
-      // get size
       ELFSymbolRef Esym(Symbol);
       Ctxp->Size = Esym.getSize();
 
-      // set undefined
       Ctxp->Undefined = (Flags & SymbolRef::SF_Undefined) ? true : false;
 
-      // create amd_comgr_symbol_t
-      COMGR::DataSymbol *Symp = new (std::nothrow) COMGR::DataSymbol(Ctxp);
-      if (Symp == NULL)
+      std::unique_ptr<COMGR::DataSymbol> Symp(
+          new (std::nothrow) COMGR::DataSymbol(Ctxp.release()));
+      if (!Symp)
         return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
-      amd_comgr_symbol_t Symt = COMGR::DataSymbol::convert(Symp);
+      amd_comgr_symbol_t Symt = COMGR::DataSymbol::convert(Symp.get());
 
-      // invoke callback(symbol, user_data)
       (*Callback)(Symt, UserData);
-
-      // delete symt completely to avoid memory leak,
-      // user needs to save if necessary in callback
-      delete Symp;
-
-    } // next symbol in list
+    }
 
     return AMD_COMGR_STATUS_SUCCESS;
   } // ObjectFile

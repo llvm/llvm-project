@@ -72,42 +72,46 @@ DisassemblyInfo::create(const TargetIdentifier &Ident,
   if (!TheTarget)
     return AMD_COMGR_STATUS_ERROR;
 
-  const MCRegisterInfo *MRI = TheTarget->createMCRegInfo(TT);
+  std::unique_ptr<const MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
   if (!MRI)
     return AMD_COMGR_STATUS_ERROR;
 
-  const MCAsmInfo *MAI = TheTarget->createMCAsmInfo(*MRI, TT);
+  std::unique_ptr<const MCAsmInfo> MAI(TheTarget->createMCAsmInfo(*MRI, TT));
   if (!MAI)
     return AMD_COMGR_STATUS_ERROR;
 
-  const MCInstrInfo *MII = TheTarget->createMCInstrInfo();
+  std::unique_ptr<const MCInstrInfo> MII(TheTarget->createMCInstrInfo());
   if (!MII)
     return AMD_COMGR_STATUS_ERROR;
 
-  const MCSubtargetInfo *STI =
-      TheTarget->createMCSubtargetInfo(TT, Ident.Processor, Features);
+  std::unique_ptr<const MCSubtargetInfo> STI(
+      TheTarget->createMCSubtargetInfo(TT, Ident.Processor, Features));
   if (!STI)
     return AMD_COMGR_STATUS_ERROR;
 
-  MCContext *Ctx = new MCContext(MAI, MRI, nullptr);
+  std::unique_ptr<MCContext> Ctx(new (std::nothrow)
+                                     MCContext(MAI.get(), MRI.get(), nullptr));
   if (!Ctx)
     return AMD_COMGR_STATUS_ERROR;
 
-  const MCDisassembler *DisAsm = TheTarget->createMCDisassembler(*STI, *Ctx);
+  std::unique_ptr<const MCDisassembler> DisAsm(
+      TheTarget->createMCDisassembler(*STI, *Ctx));
   if (!DisAsm)
     return AMD_COMGR_STATUS_ERROR;
 
   // Optional; currently AMDGPU does not implement this.
-  const MCInstrAnalysis *MIA = TheTarget->createMCInstrAnalysis(MII);
+  std::unique_ptr<const MCInstrAnalysis> MIA(
+      TheTarget->createMCInstrAnalysis(MII.get()));
 
-  MCInstPrinter *IP = TheTarget->createMCInstPrinter(
-      Triple(TT), MAI->getAssemblerDialect(), *MAI, *MII, *MRI);
+  std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
+      Triple(TT), MAI->getAssemblerDialect(), *MAI, *MII, *MRI));
   if (!IP)
     return AMD_COMGR_STATUS_ERROR;
 
-  DisassemblyInfo *DI = new (std::nothrow)
-      DisassemblyInfo(ReadMemory, PrintInstruction, PrintAddressAnnotation,
-                      TheTarget, MAI, MRI, STI, MII, Ctx, DisAsm, MIA, IP);
+  DisassemblyInfo *DI = new (std::nothrow) DisassemblyInfo(
+      ReadMemory, PrintInstruction, PrintAddressAnnotation, TheTarget,
+      std::move(MAI), std::move(MRI), std::move(STI), std::move(MII),
+      std::move(Ctx), std::move(DisAsm), std::move(MIA), std::move(IP));
   if (!DI)
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
 

@@ -518,14 +518,14 @@ amd_comgr_status_t AMD_API
   if (!IsaName || !MetadataNode)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  DataMeta *MetaP = new (std::nothrow) DataMeta();
+  std::unique_ptr<DataMeta> MetaP(new (std::nothrow) DataMeta());
   if (!MetaP)
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
 
-  if (auto Status = metadata::getIsaMetadata(IsaName, MetaP))
+  if (auto Status = metadata::getIsaMetadata(IsaName, MetaP.get()))
     return Status;
 
-  *MetadataNode = DataMeta::convert(MetaP);
+  *MetadataNode = DataMeta::convert(MetaP.release());
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -1146,17 +1146,17 @@ amd_comgr_status_t AMD_API
       DataP->DataKind == AMD_COMGR_DATA_KIND_UNDEF || !MetadataNode)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  DataMeta *MetaP = new (std::nothrow) DataMeta();
+  std::unique_ptr<DataMeta> MetaP(new (std::nothrow) DataMeta());
   if (!MetaP)
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
 
-  if (auto Status = metadata::getMetadataRoot(DataP, MetaP))
+  if (auto Status = metadata::getMetadataRoot(DataP, MetaP.get()))
     return Status;
 
   // if no metadata found in this data object, still return SUCCESS but
   // with default NULL kind
 
-  *MetadataNode = DataMeta::convert(MetaP);
+  *MetadataNode = DataMeta::convert(MetaP.release());
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -1264,42 +1264,16 @@ static amd_comgr_status_t iterateMapMetadataYAML(
 
   for (YAML::const_iterator IT = MetaP->YAMLNode.begin();
        IT != MetaP->YAMLNode.end(); ++IT) {
-    DataMeta *KeyP;
-    DataMeta *ValueP;
-    amd_comgr_metadata_node_t KeyMeta;
-    amd_comgr_metadata_node_t ValueMeta;
-
-    // create new metadata node for key (usually string, but can be anything)
-    if (IT->first) {
-      KeyP = new (std::nothrow) DataMeta();
-      if (KeyP != NULL) {
-        KeyP->YAMLNode = IT->first;
-        KeyMeta = DataMeta::convert(KeyP);
-      } else
-        return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
-    } else
-      // something wrong, no key for this map entry
+    if (!IT->first || !IT->second)
       return AMD_COMGR_STATUS_ERROR;
-
-    // create new metadata node from entry value
-    if (IT->second) {
-      ValueP = new (std::nothrow) DataMeta();
-      if (ValueP != NULL) {
-        ValueP->YAMLNode = IT->second;
-        ValueMeta = DataMeta::convert(ValueP);
-      } else
-        return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
-    } else {
-      // something wrong, no value for this map entry
-      delete KeyP;
-      return AMD_COMGR_STATUS_ERROR;
-    }
-
-    // call user Callback function
-    (*Callback)(KeyMeta, ValueMeta, UserData);
-
-    delete KeyP;
-    delete ValueP;
+    std::unique_ptr<DataMeta> KeyP(new (std::nothrow) DataMeta());
+    std::unique_ptr<DataMeta> ValueP(new (std::nothrow) DataMeta());
+    if (!KeyP || !ValueP)
+      return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+    KeyP->YAMLNode = IT->first;
+    ValueP->YAMLNode = IT->second;
+    (*Callback)(DataMeta::convert(KeyP.get()), DataMeta::convert(ValueP.get()),
+                UserData);
   }
 
   return AMD_COMGR_STATUS_SUCCESS;
@@ -1325,8 +1299,8 @@ amd_comgr_status_t AMD_API
   for (auto &KV : Map->Elements) {
     if (!KV.first || !KV.second)
       return AMD_COMGR_STATUS_ERROR;
-    auto KeyP = std::unique_ptr<DataMeta>(new (std::nothrow) DataMeta());
-    auto ValueP = std::unique_ptr<DataMeta>(new (std::nothrow) DataMeta());
+    std::unique_ptr<DataMeta> KeyP(new (std::nothrow) DataMeta());
+    std::unique_ptr<DataMeta> ValueP(new (std::nothrow) DataMeta());
     if (!KeyP || !ValueP)
       return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
     KeyP->MsgPackNode = KV.first;
@@ -1344,15 +1318,14 @@ static amd_comgr_status_t metadataLookupYAML(DataMeta *MetaP, const char *Key,
       MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_MAP)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
+  if (!MetaP->YAMLNode[Key])
+    return AMD_COMGR_STATUS_ERROR;
+
   DataMeta *NewMetaP = new (std::nothrow) DataMeta();
   if (!NewMetaP)
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
 
-  if (MetaP->YAMLNode[Key])
-    NewMetaP->YAMLNode = MetaP->YAMLNode[Key];
-  else
-    return AMD_COMGR_STATUS_ERROR;
-
+  NewMetaP->YAMLNode = MetaP->YAMLNode[Key];
   *Value = DataMeta::convert(NewMetaP);
 
   return AMD_COMGR_STATUS_SUCCESS;
@@ -1430,15 +1403,14 @@ indexListMetadataYAML(DataMeta *MetaP, size_t Index,
       Index >= MetaP->YAMLNode.size())
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
+  if (!MetaP->YAMLNode[Index])
+    return AMD_COMGR_STATUS_ERROR;
+
   DataMeta *NewMetaP = new (std::nothrow) DataMeta();
   if (!NewMetaP)
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
 
-  if (MetaP->YAMLNode[Index])
-    NewMetaP->YAMLNode = MetaP->YAMLNode[Index];
-  else
-    return AMD_COMGR_STATUS_ERROR;
-
+  NewMetaP->YAMLNode = MetaP->YAMLNode[Index];
   *Value = DataMeta::convert(NewMetaP);
 
   return AMD_COMGR_STATUS_SUCCESS;
@@ -1459,15 +1431,14 @@ amd_comgr_status_t AMD_API
   if (!List)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
+  if (Index >= List->Elements.size())
+    return AMD_COMGR_STATUS_ERROR;
+
   DataMeta *NewMetaP = new (std::nothrow) DataMeta();
   if (!NewMetaP)
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
 
-  if (Index < List->Elements.size())
-    NewMetaP->MsgPackNode = List->Elements[Index];
-  else
-    return AMD_COMGR_STATUS_ERROR;
-
+  NewMetaP->MsgPackNode = List->Elements[Index];
   *Value = DataMeta::convert(NewMetaP);
 
   return AMD_COMGR_STATUS_SUCCESS;
