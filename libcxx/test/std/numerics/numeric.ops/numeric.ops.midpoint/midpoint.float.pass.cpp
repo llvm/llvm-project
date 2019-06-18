@@ -43,11 +43,11 @@ void fp_test()
     constexpr T minV = std::numeric_limits<T>::min();
     
 //  Things that can be compared exactly
-    assert((std::midpoint(T(0), T(0)) == T(0)));
-    assert((std::midpoint(T(2), T(4)) == T(3)));
-    assert((std::midpoint(T(4), T(2)) == T(3)));
-    assert((std::midpoint(T(3), T(4)) == T(3.5)));
-    assert((std::midpoint(T(0), T(0.4)) == T(0.2)));
+    static_assert((std::midpoint(T(0), T(0))   == T(0)),   "");
+    static_assert((std::midpoint(T(2), T(4))   == T(3)),   "");
+    static_assert((std::midpoint(T(4), T(2))   == T(3)),   "");
+    static_assert((std::midpoint(T(3), T(4))   == T(3.5)), "");
+    static_assert((std::midpoint(T(0), T(0.4)) == T(0.2)), "");
 
 //  Things that can't be compared exactly
     constexpr T pct = fp_error_pct<T>();
@@ -70,6 +70,17 @@ void fp_test()
     assert((fptest_close_pct(std::midpoint(T(0), minV), minV/2, pct)));
     assert((fptest_close_pct(std::midpoint(maxV, maxV), maxV,   pct)));
     assert((fptest_close_pct(std::midpoint(minV, minV), minV,   pct)));
+    assert((fptest_close_pct(std::midpoint(maxV, minV), maxV/2, pct)));
+    assert((fptest_close_pct(std::midpoint(minV, maxV), maxV/2, pct)));
+
+//  Near the min and the max
+    assert((fptest_close_pct(std::midpoint(maxV*T(0.75), maxV*T(0.50)),  maxV*T(0.625), pct)));
+    assert((fptest_close_pct(std::midpoint(maxV*T(0.50), maxV*T(0.75)),  maxV*T(0.625), pct)));
+    assert((fptest_close_pct(std::midpoint(minV*T(2),    minV*T(8)),     minV*T(5),     pct)));
+
+//  Big numbers of different signs
+    assert((fptest_close_pct(std::midpoint(maxV*T( 0.75),  maxV*T(-0.5)), maxV*T( 0.125), pct)));
+    assert((fptest_close_pct(std::midpoint(maxV*T(-0.75),  maxV*T( 0.5)), maxV*T(-0.125), pct)));
 
 //  Denormalized values
 //  TODO
