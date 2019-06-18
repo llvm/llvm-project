@@ -413,10 +413,6 @@ typedef __char32_t char32_t;
 #define _LIBCPP_HAS_NO_STRONG_ENUMS
 #endif
 
-#if !(__has_feature(cxx_decltype))
-#define _LIBCPP_HAS_NO_DECLTYPE
-#endif
-
 #if __has_feature(cxx_attributes)
 #  define _LIBCPP_NORETURN [[noreturn]]
 #else
@@ -548,7 +544,6 @@ typedef __char32_t char32_t;
 #ifndef __GXX_EXPERIMENTAL_CXX0X__
 
 #define _LIBCPP_HAS_NO_CONSTEXPR
-#define _LIBCPP_HAS_NO_DECLTYPE
 #define _LIBCPP_HAS_NO_NULLPTR
 #define _LIBCPP_HAS_NO_UNICODE_CHARS
 #define _LIBCPP_HAS_NO_VARIADICS
@@ -853,28 +848,9 @@ typedef unsigned int   char32_t;
 #endif
 
 #ifdef _LIBCPP_CXX03_LANG
-#  if __has_extension(c_static_assert)
-#    define static_assert(__b, __m) _Static_assert(__b, __m)
-#  else
-extern "C++" {
-template <bool> struct __static_assert_test;
-template <> struct __static_assert_test<true> {};
-template <unsigned> struct __static_assert_check {};
-}
-#    define static_assert(__b, __m) \
-       typedef __static_assert_check<sizeof(__static_assert_test<(__b)>)> \
-       _LIBCPP_CONCAT(__t, __LINE__)
-#  endif // __has_extension(c_static_assert)
+# define static_assert(...) _Static_assert(__VA_ARGS__)
+# define decltype(...) __decltype(__VA_ARGS__)
 #endif  // _LIBCPP_CXX03_LANG
-
-#ifdef _LIBCPP_HAS_NO_DECLTYPE
-// GCC 4.6 provides __decltype in all standard modes.
-#  if __has_keyword(__decltype) || _LIBCPP_CLANG_VER >= 304 || defined(_LIBCPP_COMPILER_GCC)
-#    define decltype(__x) __decltype(__x)
-#  else
-#    define decltype(__x) __typeof__(__x)
-#  endif
-#endif
 
 #ifdef _LIBCPP_HAS_NO_CONSTEXPR
 #  define _LIBCPP_CONSTEXPR
