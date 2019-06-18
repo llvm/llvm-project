@@ -803,7 +803,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleDtorFunction() {
 std::string CGNVCUDARuntime::getDeviceStubName(llvm::StringRef Name) const {
   if (!CGM.getLangOpts().HIP)
     return Name;
-  return (Name + ".stub").str();
+  return ("__device_stub_" + Name).str();
 }
 
 CGCUDARuntime *CodeGen::CreateNVCUDARuntime(CodeGenModule &CGM) {
