@@ -58,6 +58,12 @@ args = parser.parse_args()
 debugger = lldb.SBDebugger.Create()
 debugger.SkipLLDBInitFiles(args.n)
 
+# Make sure to clean up the debugger on exit.
+import atexit
+def on_exit():
+    debugger.Terminate()
+atexit.register(on_exit)
+
 # Don't return from lldb function calls until the process stops.
 debugger.SetAsync(False)
 
@@ -150,7 +156,6 @@ NOTE: There are several reasons why this may happen:
             print debugger.HandleCommand(' '.join(cmd))
 
     except SystemExit:
-        lldb.SBDebugger_Terminate()
         raise
     except:
         print 'Could not handle the command "%s"' % ' '.join(cmd)
