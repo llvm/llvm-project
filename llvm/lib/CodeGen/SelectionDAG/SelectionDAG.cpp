@@ -5539,6 +5539,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       // Trivial insertion.
       if (VT.getSimpleVT() == N2.getSimpleValueType())
         return N2;
+
+      // If this is an insert of an extracted vector into an undef vector, we
+      // can just use the input to the extract.
+      if (N1.isUndef() && N2.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+          N2.getOperand(1) == N3 && N2.getOperand(0).getValueType() == VT)
+        return N2.getOperand(0);
     }
     break;
   }

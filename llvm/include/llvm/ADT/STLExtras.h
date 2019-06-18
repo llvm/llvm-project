@@ -1392,6 +1392,33 @@ void erase_if(Container &C, UnaryPredicate P) {
   C.erase(remove_if(C, P), C.end());
 }
 
+/// Given a sequence container Cont, replace the range [ContIt, ContEnd) with
+/// the range [ValIt, ValEnd) (which is not from the same container).
+template<typename Container, typename RandomAccessIterator>
+void replace(Container &Cont, typename Container::iterator ContIt,
+             typename Container::iterator ContEnd, RandomAccessIterator ValIt,
+             RandomAccessIterator ValEnd) {
+  while (true) {
+    if (ValIt == ValEnd) {
+      Cont.erase(ContIt, ContEnd);
+      return;
+    } else if (ContIt == ContEnd) {
+      Cont.insert(ContIt, ValIt, ValEnd);
+      return;
+    }
+    *ContIt++ = *ValIt++;
+  }
+}
+
+/// Given a sequence container Cont, replace the range [ContIt, ContEnd) with
+/// the range R.
+template<typename Container, typename Range = std::initializer_list<
+                                 typename Container::value_type>>
+void replace(Container &Cont, typename Container::iterator ContIt,
+             typename Container::iterator ContEnd, Range R) {
+  replace(Cont, ContIt, ContEnd, R.begin(), R.end());
+}
+
 //===----------------------------------------------------------------------===//
 //     Extra additions to <memory>
 //===----------------------------------------------------------------------===//

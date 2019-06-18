@@ -21,6 +21,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -205,8 +206,10 @@ public:
   bool tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag);
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
-  bool instrumentStack(SmallVectorImpl<AllocaInst *> &Allocas,
-                       SmallVectorImpl<Instruction *> &RetVec, Value *StackTag);
+  bool instrumentStack(
+      SmallVectorImpl<AllocaInst *> &Allocas,
+      DenseMap<AllocaInst *, std::vector<DbgDeclareInst *>> &AllocaDeclareMap,
+      SmallVectorImpl<Instruction *> &RetVec, Value *StackTag);
   bool instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
   Value *getNextTagWithCall(IRBuilder<> &IRB);
   Value *getStackBaseTag(IRBuilder<> &IRB);
@@ -215,7 +218,7 @@ public:
   Value *getUARTag(IRBuilder<> &IRB, Value *StackTag);
 
   Value *getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty);
-  Value *emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord);
+  void emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord);
 
 private:
   LLVMContext *C;
@@ -281,6 +284,7 @@ private:
   Constant *ShadowGlobal;
 
   Value *LocalDynamicShadow = nullptr;
+  Value *StackBaseTag = nullptr;
   GlobalValue *ThreadPtrGlobal = nullptr;
 };
 
@@ -747,10 +751,16 @@ static unsigned RetagMask(unsigned AllocaNo) {
   // x = x ^ (mask << 56) can be encoded as a single armv8 instruction for these
   // masks.
   // The list does not include the value 255, which is used for UAR.
-  static unsigned FastMasks[] = {
-      0,   1,   2,   3,   4,   6,   7,   8,   12,  14,  15, 16,  24,
-      28,  30,  31,  32,  48,  56,  60,  62,  63,  64,  96, 112, 120,
-      124, 126, 127, 128, 192, 224, 240, 248, 252, 254};
+  //
+  // Because we are more likely to use earlier elements of this list than later
+  // ones, it is sorted in increasing order of probability of collision with a
+  // mask allocated (temporally) nearby. The program that generated this list
+  // can be found at:
+  // https://github.com/google/sanitizers/blob/master/hwaddress-sanitizer/sort_masks.py
+  static unsigned FastMasks[] = {0,  128, 64,  192, 32,  96,  224, 112, 240,
+                                 48, 16,  120, 248, 56,  24,  8,   124, 252,
+                                 60, 28,  12,  4,   126, 254, 62,  30,  14,
+                                 6,  2,   127, 63,  31,  15,  7,   3,   1};
   return FastMasks[AllocaNo % (sizeof(FastMasks) / sizeof(FastMasks[0]))];
 }
 
@@ -761,6 +771,8 @@ Value *HWAddressSanitizer::getNextTagWithCall(IRBuilder<> &IRB) {
 Value *HWAddressSanitizer::getStackBaseTag(IRBuilder<> &IRB) {
   if (ClGenerateTagsWithCalls)
     return getNextTagWithCall(IRB);
+  if (StackBaseTag)
+    return StackBaseTag;
   // FIXME: use addressofreturnaddress (but implement it in aarch64 backend
   // first).
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
@@ -878,13 +890,16 @@ void HWAddressSanitizer::createFrameGlobal(Function &F,
     GV->setComdat(Comdat);
 }
 
-Value *HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB,
-                                        bool WithFrameRecord) {
-  if (!Mapping.InTls)
-    return getDynamicShadowNonTls(IRB);
+void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
+  if (!Mapping.InTls) {
+    LocalDynamicShadow = getDynamicShadowNonTls(IRB);
+    return;
+  }
 
-  if (!WithFrameRecord && TargetTriple.isAndroid())
-    return getDynamicShadowIfunc(IRB);
+  if (!WithFrameRecord && TargetTriple.isAndroid()) {
+    LocalDynamicShadow = getDynamicShadowIfunc(IRB);
+    return;
+  }
 
   Value *SlotPtr = getHwasanThreadSlotPtr(IRB, IntptrTy);
   assert(SlotPtr);
@@ -917,6 +932,8 @@ Value *HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB,
       TargetTriple.isAArch64() ? ThreadLong : untagPointer(IRB, ThreadLong);
 
   if (WithFrameRecord) {
+    StackBaseTag = IRB.CreateAShr(ThreadLong, 3);
+
     // Prepare ring buffer data.
     auto PC = IRB.CreatePtrToInt(F, IntptrTy);
     auto GetStackPointerFn =
@@ -925,7 +942,7 @@ Value *HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB,
         IRB.CreateCall(GetStackPointerFn,
                        {Constant::getNullValue(IRB.getInt32Ty())}),
         IntptrTy);
-    // Mix SP and PC. TODO: also add the tag to the mix.
+    // Mix SP and PC.
     // Assumptions:
     // PC is 0x0000PPPPPPPPPPPP  (48 bits are meaningful, others are zero)
     // SP is 0xsssssssssssSSSS0  (4 lower bits are zero)
@@ -956,13 +973,12 @@ Value *HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB,
   // Get shadow base address by aligning RecordPtr up.
   // Note: this is not correct if the pointer is already aligned.
   // Runtime library will make sure this never happens.
-  Value *ShadowBase = IRB.CreateAdd(
+  LocalDynamicShadow = IRB.CreateAdd(
       IRB.CreateOr(
           ThreadLongMaybeUntagged,
           ConstantInt::get(IntptrTy, (1ULL << kShadowBaseAlignment) - 1)),
       ConstantInt::get(IntptrTy, 1), "hwasan.shadow");
-  ShadowBase = IRB.CreateIntToPtr(ShadowBase, Int8PtrTy);
-  return ShadowBase;
+  LocalDynamicShadow = IRB.CreateIntToPtr(LocalDynamicShadow, Int8PtrTy);
 }
 
 bool HWAddressSanitizer::instrumentLandingPads(
@@ -984,6 +1000,7 @@ bool HWAddressSanitizer::instrumentLandingPads(
 
 bool HWAddressSanitizer::instrumentStack(
     SmallVectorImpl<AllocaInst *> &Allocas,
+    DenseMap<AllocaInst *, std::vector<DbgDeclareInst *>> &AllocaDeclareMap,
     SmallVectorImpl<Instruction *> &RetVec, Value *StackTag) {
   // Ideally, we want to calculate tagged stack base pointer, and rewrite all
   // alloca addresses using that. Unfortunately, offsets are not known yet
@@ -1006,6 +1023,13 @@ bool HWAddressSanitizer::instrumentStack(
       Use &U = *UI++;
       if (U.getUser() != AILong)
         U.set(Replacement);
+    }
+
+    for (auto *DDI : AllocaDeclareMap.lookup(AI)) {
+      DIExpression *OldExpr = DDI->getExpression();
+      DIExpression *NewExpr = DIExpression::append(
+          OldExpr, {dwarf::DW_OP_LLVM_tag_offset, RetagMask(N)});
+      DDI->setArgOperand(2, MetadataAsValue::get(*C, NewExpr));
     }
 
     tagAlloca(IRB, AI, Tag);
@@ -1051,6 +1075,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
   SmallVector<AllocaInst*, 8> AllocasToInstrument;
   SmallVector<Instruction*, 8> RetVec;
   SmallVector<Instruction*, 8> LandingPadVec;
+  DenseMap<AllocaInst *, std::vector<DbgDeclareInst *>> AllocaDeclareMap;
   for (auto &BB : F) {
     for (auto &Inst : BB) {
       if (ClInstrumentStack)
@@ -1068,6 +1093,10 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
       if (isa<ReturnInst>(Inst) || isa<ResumeInst>(Inst) ||
           isa<CleanupReturnInst>(Inst))
         RetVec.push_back(&Inst);
+
+      if (auto *DDI = dyn_cast<DbgDeclareInst>(&Inst))
+        if (auto *Alloca = dyn_cast_or_null<AllocaInst>(DDI->getAddress()))
+          AllocaDeclareMap[Alloca].push_back(DDI);
 
       if (ClInstrumentLandingPads && isa<LandingPadInst>(Inst))
         LandingPadVec.push_back(&Inst);
@@ -1099,15 +1128,16 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
 
   Instruction *InsertPt = &*F.getEntryBlock().begin();
   IRBuilder<> EntryIRB(InsertPt);
-  LocalDynamicShadow = emitPrologue(EntryIRB,
-                                    /*WithFrameRecord*/ ClRecordStackHistory &&
-                                        !AllocasToInstrument.empty());
+  emitPrologue(EntryIRB,
+               /*WithFrameRecord*/ ClRecordStackHistory &&
+                   !AllocasToInstrument.empty());
 
   bool Changed = false;
   if (!AllocasToInstrument.empty()) {
     Value *StackTag =
         ClGenerateTagsWithCalls ? nullptr : getStackBaseTag(EntryIRB);
-    Changed |= instrumentStack(AllocasToInstrument, RetVec, StackTag);
+    Changed |= instrumentStack(AllocasToInstrument, AllocaDeclareMap, RetVec,
+                               StackTag);
   }
 
   // If we split the entry block, move any allocas that were originally in the
@@ -1129,6 +1159,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
     Changed |= instrumentMemAccess(Inst);
 
   LocalDynamicShadow = nullptr;
+  StackBaseTag = nullptr;
 
   return Changed;
 }

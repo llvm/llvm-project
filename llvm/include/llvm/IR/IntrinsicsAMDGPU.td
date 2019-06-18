@@ -1122,7 +1122,7 @@ def int_amdgcn_exp : Intrinsic <[], [
   llvm_i1_ty,        // done
   llvm_i1_ty         // vm
   ],
-  [ImmArg<0>, ImmArg<1>, ImmArg<6>, ImmArg<7>]
+  [ImmArg<0>, ImmArg<1>, ImmArg<6>, ImmArg<7>, IntrInaccessibleMemOnly]
 >;
 
 // exp with compr bit set.
@@ -1133,7 +1133,7 @@ def int_amdgcn_exp_compr : Intrinsic <[], [
   LLVMMatchType<0>,  // src1
   llvm_i1_ty,        // done
   llvm_i1_ty],       // vm
-  [ImmArg<0>, ImmArg<1>, ImmArg<4>, ImmArg<5>]
+  [ImmArg<0>, ImmArg<1>, ImmArg<4>, ImmArg<5>, IntrInaccessibleMemOnly]
 >;
 
 def int_amdgcn_buffer_wbinvl1_sc :
@@ -1170,7 +1170,7 @@ def int_amdgcn_s_decperflevel :
 def int_amdgcn_s_getreg :
   GCCBuiltin<"__builtin_amdgcn_s_getreg">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
-  [IntrReadMem, IntrSpeculatable, ImmArg<0>]
+  [IntrInaccessibleMemOnly, IntrReadMem, IntrSpeculatable, ImmArg<0>]
 >;
 
 // int_amdgcn_s_getpc is provided to allow a specific style of position

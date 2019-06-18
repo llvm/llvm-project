@@ -34,7 +34,7 @@ tracksRegLiveness: true
 frameInfo:
   maxAlignment:    8
 fixedStack:
-  - { id: 0, size: 4, alignment: 16, stack-id: 0, debug-info-variable: '!3', debug-info-expression: '!DIExpression()',
+  - { id: 0, size: 4, alignment: 16, stack-id: default, debug-info-variable: '!3', debug-info-expression: '!DIExpression()',
       debug-info-location: '!5' }
 body:             |
   bb.0.entry:

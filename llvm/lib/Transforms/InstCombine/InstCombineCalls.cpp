@@ -3781,6 +3781,30 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // A constant value is trivially uniform.
     if (Constant *C = dyn_cast<Constant>(II->getArgOperand(0)))
       return replaceInstUsesWith(*II, C);
+
+    // The rest of these may not be safe if the exec may not be the same between
+    // the def and use.
+    Value *Src = II->getArgOperand(0);
+    Instruction *SrcInst = dyn_cast<Instruction>(Src);
+    if (SrcInst && SrcInst->getParent() != II->getParent())
+      break;
+
+    // readfirstlane (readfirstlane x) -> readfirstlane x
+    // readlane (readfirstlane x), y -> readfirstlane x
+    if (match(Src, m_Intrinsic<Intrinsic::amdgcn_readfirstlane>()))
+      return replaceInstUsesWith(*II, Src);
+
+    if (IID == Intrinsic::amdgcn_readfirstlane) {
+      // readfirstlane (readlane x, y) -> readlane x, y
+      if (match(Src, m_Intrinsic<Intrinsic::amdgcn_readlane>()))
+        return replaceInstUsesWith(*II, Src);
+    } else {
+      // readlane (readlane x, y), y -> readlane x, y
+      if (match(Src, m_Intrinsic<Intrinsic::amdgcn_readlane>(
+                  m_Value(), m_Specific(II->getArgOperand(1)))))
+        return replaceInstUsesWith(*II, Src);
+    }
+
     break;
   }
   case Intrinsic::stackrestore: {

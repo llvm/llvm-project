@@ -66,7 +66,7 @@ frameInfo:
 fixedStack:
 stack:
   - { id: 0, name: res, type: default, offset: -2, size: 2, alignment: 2,
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       local-offset: -2, debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
 constants:

@@ -4202,15 +4202,11 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
         if (isa<Argument>(Base) || isa<GlobalValue>(Base) ||
             (BaseI && !isa<CastInst>(BaseI) &&
              !isa<GetElementPtrInst>(BaseI))) {
-          // If the base is an instruction, make sure the GEP is not in the same
-          // basic block as the base. If the base is an argument or global
-          // value, make sure the GEP is not in the entry block.  Otherwise,
-          // instruction selection can undo the split.  Also make sure the
-          // parent block allows inserting non-PHI instructions before the
-          // terminator.
+          // Make sure the parent block allows inserting non-PHI instructions
+          // before the terminator.
           BasicBlock *Parent =
               BaseI ? BaseI->getParent() : &GEP->getFunction()->getEntryBlock();
-          if (GEP->getParent() != Parent && !Parent->getTerminator()->isEHPad())
+          if (!Parent->getTerminator()->isEHPad())
             LargeOffsetGEP = std::make_pair(GEP, ConstantOffset);
         }
       }
@@ -4740,8 +4736,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
         InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP);
 
     GetElementPtrInst *GEP = LargeOffsetGEP.first;
-    if (GEP && GEP->getParent() != MemoryInst->getParent() &&
-        !NewGEPBases.count(GEP)) {
+    if (GEP && !NewGEPBases.count(GEP)) {
       // If splitting the underlying data structure can reduce the offset of a
       // GEP, collect the GEP.  Skip the GEPs that are the new bases of
       // previously split data structures.

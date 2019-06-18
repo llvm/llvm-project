@@ -153,16 +153,7 @@ loopexit:		; preds = %loop
 define i32 @unroll_phi_select_constant_nonzero(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: @unroll_phi_select_constant_nonzero(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SELECTOR:%.*]] = phi i32 [ [[ARG1:%.*]], [[ENTRY]] ], [ [[ARG2:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[I]], 4
-; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
-; CHECK:       loopexit:
-; CHECK-NEXT:    [[SELECTOR_LCSSA:%.*]] = phi i32 [ [[SELECTOR]], [[LOOP]] ]
-; CHECK-NEXT:    ret i32 [[SELECTOR_LCSSA]]
+; CHECK-NEXT:    ret i32 [[ARG2:%.*]]
 ;
 entry:
   br label %loop
@@ -177,6 +168,41 @@ loop:
 loopexit:
   ret i32 %selector
 }
+
+declare i32 @f()
+
+; After LCSSA formation, there's no LCSSA phi for %f since it isn't directly
+; used outside the loop, and thus we can't directly replace %selector w/ %f.
+define i32 @neg_unroll_phi_select_constant_nonzero(i32 %arg) {
+; CHECK-LABEL: @neg_unroll_phi_select_constant_nonzero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[SELECTOR:%.*]] = phi i32 [ [[ARG:%.*]], [[ENTRY]] ], [ [[F:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[F]] = call i32 @f()
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[I]], 4
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
+; CHECK:       loopexit:
+; CHECK-NEXT:    [[SELECTOR_LCSSA:%.*]] = phi i32 [ [[SELECTOR]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[SELECTOR_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %selector = phi i32 [%arg, %entry], [%f, %loop]
+  %f = call i32 @f()
+  %i.next = add nsw nuw i32 %i, 1
+  %c = icmp ult i32 %i, 4
+  br i1 %c, label %loop, label %loopexit
+
+loopexit:
+  ret i32 %selector
+}
+
 
 define i32 @unroll_phi_select_constant_zero(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: @unroll_phi_select_constant_zero(
@@ -201,16 +227,7 @@ define i32 @unroll_phi_select(i32 %arg1, i32 %arg2, i16 %len) {
 ; CHECK-LABEL: @unroll_phi_select(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LENGTH:%.*]] = zext i16 [[LEN:%.*]] to i32
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SELECTOR:%.*]] = phi i32 [ [[ARG1:%.*]], [[ENTRY]] ], [ [[ARG2:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I_NEXT]] = add nsw i32 [[I]], 1
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[I]], [[LENGTH]]
-; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
-; CHECK:       loopexit:
-; CHECK-NEXT:    [[SELECTOR_LCSSA:%.*]] = phi i32 [ [[SELECTOR]], [[LOOP]] ]
-; CHECK-NEXT:    ret i32 [[SELECTOR_LCSSA]]
+; CHECK-NEXT:    ret i32 [[ARG2:%.*]]
 ;
 entry:
   %length = zext i16 %len to i32

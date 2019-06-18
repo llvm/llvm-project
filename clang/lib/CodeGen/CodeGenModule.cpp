@@ -1088,13 +1088,11 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
   const auto *ND = cast<NamedDecl>(GD.getDecl());
   std::string MangledName = getMangledNameImpl(*this, GD, ND);
 
-  // Postfix kernel stub names with .stub to differentiate them from kernel
-  // names in device binaries. This is to facilitate the debugger to find
-  // the correct symbols for kernels in the device binary.
+  // Adjust kernel stub mangling as we may need to be able to differentiate
+  // them from the kernel itself (e.g., for HIP).
   if (auto *FD = dyn_cast<FunctionDecl>(GD.getDecl()))
-    if (getLangOpts().HIP && !getLangOpts().CUDAIsDevice &&
-        FD->hasAttr<CUDAGlobalAttr>())
-      MangledName = MangledName + ".stub";
+    if (!getLangOpts().CUDAIsDevice && FD->hasAttr<CUDAGlobalAttr>())
+      MangledName = getCUDARuntime().getDeviceStubName(MangledName);
 
   auto Result = Manglings.insert(std::make_pair(MangledName, GD));
   return MangledDeclNames[CanonicalGD] = Result.first->first();

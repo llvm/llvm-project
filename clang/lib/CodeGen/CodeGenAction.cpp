@@ -266,6 +266,7 @@ namespace clang {
       Expected<std::unique_ptr<llvm::ToolOutputFile>> OptRecordFileOrErr =
           setupOptimizationRemarks(Ctx, CodeGenOpts.OptRecordFile,
                                    CodeGenOpts.OptRecordPasses,
+                                   CodeGenOpts.OptRecordFormat,
                                    CodeGenOpts.DiagnosticsWithHotness,
                                    CodeGenOpts.DiagnosticsHotnessThreshold);
 
@@ -279,6 +280,10 @@ namespace clang {
             [&](const RemarkSetupPatternError &E) {
               Diags.Report(diag::err_drv_optimization_remark_pattern)
                   << E.message() << CodeGenOpts.OptRecordPasses;
+            },
+            [&](const RemarkSetupFormatError &E) {
+              Diags.Report(diag::err_drv_optimization_remark_format)
+                  << CodeGenOpts.OptRecordFormat;
             });
         return;
       }

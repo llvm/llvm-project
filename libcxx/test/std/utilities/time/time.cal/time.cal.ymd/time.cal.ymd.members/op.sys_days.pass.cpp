@@ -90,5 +90,28 @@ int main(int, char**)
     assert( year_month_day{sd} == ymd); // and back
     }
 
+//  These two tests check the wording for LWG 3206
+    {
+    constexpr year_month_day ymd{year{1971}, month{1}, day{0}}; // bad day
+    static_assert(!ymd.ok(),         "");
+    static_assert( ymd.year().ok(),  "");
+    static_assert( ymd.month().ok(), "");
+    static_assert(!ymd.day().ok(),   "");
+    constexpr sys_days sd{ymd};
+    static_assert(sd.time_since_epoch() == days{364}, "");
+    static_assert(sd == sys_days{ymd.year()/ymd.month()/day{1}} + (ymd.day() - day{1}), "");
+    }
+
+    {
+    constexpr year_month_day ymd{year{1970}, month{12}, day{32}}; // bad day
+    static_assert(!ymd.ok(),         "");
+    static_assert( ymd.year().ok(),  "");
+    static_assert( ymd.month().ok(), "");
+    static_assert(!ymd.day().ok(),   "");
+    constexpr sys_days sd{ymd};
+    static_assert(sd.time_since_epoch() == days{365}, "");
+    static_assert(sd == sys_days{ymd.year()/ymd.month()/day{1}} + (ymd.day() - day{1}), "");
+    }
+
     return 0;
 }

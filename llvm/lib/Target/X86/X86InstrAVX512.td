@@ -3941,7 +3941,7 @@ multiclass avx512_move_scalar<string asm, SDNode OpNode,
              EVEX, Sched<[WriteFStore]>;
   let mayStore = 1, hasSideEffects = 0 in
   def mrk: AVX512PI<0x11, MRMDestMem, (outs),
-              (ins _.ScalarMemOp:$dst, VK1WM:$mask, _.FRC:$src),
+              (ins _.ScalarMemOp:$dst, VK1WM:$mask, _.RC:$src),
               !strconcat(asm, "\t{$src, $dst {${mask}}|$dst {${mask}}, $src}"),
               [], _.ExeDomain>, EVEX, EVEX_K, Sched<[WriteFStore]>,
               NotMemoryFoldable;
@@ -3988,7 +3988,7 @@ def : Pat<(masked_store
                                (iPTR 0))), addr:$dst, Mask),
           (!cast<Instruction>(InstrStr#mrk) addr:$dst,
                       (COPY_TO_REGCLASS MaskRC:$mask, VK1WM),
-                      (COPY_TO_REGCLASS _.info128.RC:$src, _.info128.FRC))>;
+                      _.info128.RC:$src)>;
 
 }
 
@@ -4003,7 +4003,7 @@ def : Pat<(masked_store
                                (iPTR 0))), addr:$dst, Mask),
           (!cast<Instruction>(InstrStr#mrk) addr:$dst,
                       (COPY_TO_REGCLASS (i32 (INSERT_SUBREG (IMPLICIT_DEF), MaskRC:$mask, subreg)), VK1WM),
-                      (COPY_TO_REGCLASS _.info128.RC:$src, _.info128.FRC))>;
+                      _.info128.RC:$src)>;
 
 }
 
@@ -4023,13 +4023,13 @@ def : Pat<(masked_store
                                (iPTR 0))), addr:$dst, Mask512),
           (!cast<Instruction>(InstrStr#mrk) addr:$dst,
                       (COPY_TO_REGCLASS (i32 (INSERT_SUBREG (IMPLICIT_DEF), MaskRC:$mask, subreg)), VK1WM),
-                      (COPY_TO_REGCLASS _.info128.RC:$src, _.info128.FRC))>;
+                      _.info128.RC:$src)>;
 
 // AVX512VL pattern.
 def : Pat<(masked_store (_.info128.VT _.info128.RC:$src), addr:$dst, Mask128),
           (!cast<Instruction>(InstrStr#mrk) addr:$dst,
                       (COPY_TO_REGCLASS (i32 (INSERT_SUBREG (IMPLICIT_DEF), MaskRC:$mask, subreg)), VK1WM),
-                      (COPY_TO_REGCLASS _.info128.RC:$src, _.info128.FRC))>;
+                      _.info128.RC:$src)>;
 }
 
 multiclass avx512_load_scalar_lowering<string InstrStr, AVX512VLVectorVTInfo _,

@@ -11,6 +11,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
@@ -722,7 +723,9 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
 // ParseStripOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseStripOptions will print the help messege and
 // exit.
-Expected<DriverConfig> parseStripOptions(ArrayRef<const char *> ArgsArr) {
+Expected<DriverConfig>
+parseStripOptions(ArrayRef<const char *> ArgsArr,
+                  std::function<Error(Error)> ErrorCallback) {
   StripOptTable T;
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
@@ -809,7 +812,18 @@ Expected<DriverConfig> parseStripOptions(ArrayRef<const char *> ArgsArr) {
         InputArgs.getLastArgValue(STRIP_output, Positional[0]);
     DC.CopyConfigs.push_back(std::move(Config));
   } else {
+    StringMap<unsigned> InputFiles;
     for (StringRef Filename : Positional) {
+      if (InputFiles[Filename]++ == 1) {
+        if (Filename == "-")
+          return createStringError(
+              errc::invalid_argument,
+              "cannot specify '-' as an input file more than once");
+        if (Error E = ErrorCallback(createStringError(
+                errc::invalid_argument, "'%s' was already specified",
+                Filename.str().c_str())))
+          return std::move(E);
+      }
       Config.InputFilename = Filename;
       Config.OutputFilename = Filename;
       DC.CopyConfigs.push_back(Config);

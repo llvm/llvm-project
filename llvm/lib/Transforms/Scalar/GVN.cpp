@@ -2467,8 +2467,7 @@ void GVN::addDeadBlock(BasicBlock *BB) {
 
       for (BasicBlock::iterator II = B->begin(); isa<PHINode>(II); ++II) {
         PHINode &Phi = cast<PHINode>(*II);
-        Phi.setIncomingValue(Phi.getBasicBlockIndex(P),
-                             UndefValue::get(Phi.getType()));
+        Phi.setIncomingValueForBlock(P, UndefValue::get(Phi.getType()));
         if (MD)
           MD->invalidateCachedPointerInfo(&Phi);
       }

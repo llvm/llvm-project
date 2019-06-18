@@ -612,9 +612,8 @@ static bool isArmElf(const ObjectFile *Obj) {
 }
 
 static void printRelocation(const RelocationRef &Rel, uint64_t Address,
-                            uint8_t AddrSize) {
-  StringRef Fmt =
-      AddrSize > 4 ? "\t\t%016" PRIx64 ":  " : "\t\t\t%08" PRIx64 ":  ";
+                            bool Is64Bits) {
+  StringRef Fmt = Is64Bits ? "\t\t%016" PRIx64 ":  " : "\t\t\t%08" PRIx64 ":  ";
   SmallString<16> Name;
   SmallString<32> Val;
   Rel.getTypeName(Name);
@@ -704,7 +703,7 @@ public:
     auto PrintReloc = [&]() -> void {
       while ((RelCur != RelEnd) && (RelCur->getOffset() <= Address.Address)) {
         if (RelCur->getOffset() == Address.Address) {
-          printRelocation(*RelCur, Address.Address, 4);
+          printRelocation(*RelCur, Address.Address, false);
           return;
         }
         ++RelCur;
@@ -1032,6 +1031,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
   std::map<SectionRef, std::vector<RelocationRef>> RelocMap;
   if (InlineRelocs)
     RelocMap = getRelocsMap(*Obj);
+  bool Is64Bits = Obj->getBytesInAddress() > 4;
 
   // Create a mapping from virtual address to symbol name.  This is used to
   // pretty print the symbols while disassembling.
@@ -1229,7 +1229,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 
       outs() << '\n';
       if (!NoLeadingAddr)
-        outs() << format("%016" PRIx64 " ",
+        outs() << format(Is64Bits ? "%016" PRIx64 " " : "%08" PRIx64 " ",
                          SectionAddr + Start + VMAAdjustment);
 
       StringRef SymbolName = std::get<1>(Symbols[SI]);
@@ -1401,8 +1401,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
                 Offset += AdjustVMA;
             }
 
-            printRelocation(*RelCur, SectionAddr + Offset,
-                            Obj->getBytesInAddress());
+            printRelocation(*RelCur, SectionAddr + Offset, Is64Bits);
             ++RelCur;
           }
         }

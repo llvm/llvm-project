@@ -205,12 +205,13 @@ class LoopVectorizationLegality {
 public:
   LoopVectorizationLegality(
       Loop *L, PredicatedScalarEvolution &PSE, DominatorTree *DT,
-      TargetLibraryInfo *TLI, AliasAnalysis *AA, Function *F,
-      std::function<const LoopAccessInfo &(Loop &)> *GetLAA, LoopInfo *LI,
-      OptimizationRemarkEmitter *ORE, LoopVectorizationRequirements *R,
-      LoopVectorizeHints *H, DemandedBits *DB, AssumptionCache *AC)
-      : TheLoop(L), LI(LI), PSE(PSE), TLI(TLI), DT(DT), GetLAA(GetLAA),
-        ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC) {}
+      TargetTransformInfo *TTI, TargetLibraryInfo *TLI, AliasAnalysis *AA,
+      Function *F, std::function<const LoopAccessInfo &(Loop &)> *GetLAA,
+      LoopInfo *LI, OptimizationRemarkEmitter *ORE,
+      LoopVectorizationRequirements *R, LoopVectorizeHints *H, DemandedBits *DB,
+      AssumptionCache *AC)
+      : TheLoop(L), LI(LI), PSE(PSE), TTI(TTI), TLI(TLI), DT(DT),
+        GetLAA(GetLAA), ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC) {}
 
   /// ReductionList contains the reduction descriptors for all
   /// of the reductions that were found in the loop.
@@ -401,6 +402,9 @@ private:
   /// of new predicates if this is required to enable vectorization and
   /// unrolling.
   PredicatedScalarEvolution &PSE;
+
+  /// Target Transform Info.
+  TargetTransformInfo *TTI;
 
   /// Target Library Info.
   TargetLibraryInfo *TLI;

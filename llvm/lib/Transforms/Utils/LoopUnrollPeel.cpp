@@ -644,7 +644,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     if (LatchInst && L->contains(LatchInst))
       NewVal = LVMap[LatchInst];
 
-    PHI->setIncomingValue(PHI->getBasicBlockIndex(NewPreHeader), NewVal);
+    PHI->setIncomingValueForBlock(NewPreHeader, NewVal);
   }
 
   // Adjust the branch weights on the loop exit.

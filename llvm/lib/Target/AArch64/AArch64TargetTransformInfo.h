@@ -165,6 +165,10 @@ public:
     return false;
   }
 
+  unsigned getGISelRematGlobalCost() const {
+    return 2;
+  }
+
   bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
                              TTI::ReductionFlags Flags) const;
 

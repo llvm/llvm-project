@@ -958,7 +958,7 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     // needing them, and need to ensure that the reserved registers are
     // correctly handled.
 
-    FrameInfo.setStackID(FrameIndex, SIStackID::SGPR_SPILL);
+    FrameInfo.setStackID(FrameIndex, TargetStackID::SGPRSpill);
     if (ST.hasScalarStores()) {
       // m0 is used for offset to scalar stores if used to spill.
       Spill.addReg(AMDGPU::M0, RegState::ImplicitDefine | RegState::Dead);
@@ -1052,7 +1052,7 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       MRI.constrainRegClass(DestReg, &AMDGPU::SReg_32_XM0RegClass);
     }
 
-    FrameInfo.setStackID(FrameIndex, SIStackID::SGPR_SPILL);
+    FrameInfo.setStackID(FrameIndex, TargetStackID::SGPRSpill);
     MachineInstrBuilder Spill = BuildMI(MBB, MI, DL, OpDesc, DestReg)
       .addFrameIndex(FrameIndex) // addr
       .addMemOperand(MMO)

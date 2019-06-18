@@ -125,7 +125,7 @@ frameInfo:
   maxCallFrameSize: 0
   localFrameSize:  64
 stack:
-  - { id: 0, name: rstack, size: 64, alignment: 4, stack-id: 0, local-offset: -64 }
+  - { id: 0, name: rstack, size: 64, alignment: 4, stack-id: default, local-offset: -64 }
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
@@ -184,7 +184,7 @@ frameInfo:
   maxCallFrameSize: 0
   localFrameSize:  4
 stack:
-  - { id: 0, name: tmp, size: 4, alignment: 4, stack-id: 0, local-offset: -4 }
+  - { id: 0, name: tmp, size: 4, alignment: 4, stack-id: default, local-offset: -4 }
 machineFunctionInfo: {}
 body:             |
   bb.0.bb:

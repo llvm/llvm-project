@@ -2282,7 +2282,7 @@ bool VarDecl::isUsableInConstantExpressions(ASTContext &Context) const {
   //   declaration is encountered...
   const VarDecl *DefVD = nullptr;
   const Expr *Init = getAnyInitializer(DefVD);
-  if (!Init || Init->isValueDependent())
+  if (!Init || Init->isValueDependent() || getType()->isDependentType())
     return false;
   //   ... if it is a constexpr variable, or it is of reference type or of
   //   const-qualified integral or enumeration type, ...

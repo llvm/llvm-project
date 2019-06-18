@@ -120,39 +120,39 @@ frameInfo:
 fixedStack:
 stack:
   - { id: 0, name: retval, type: default, offset: -36, size: 4, alignment: 4,
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       local-offset: -4, debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
   - { id: 1, name: i.addr, type: default, offset: -40, size: 4, alignment: 4,
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       local-offset: -8, debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
   - { id: 2, name: A, type: default, offset: -2992812, size: 2992772, alignment: 4,
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       local-offset: -2992780, debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
   - { id: 3, name: a, type: default, offset: -2992816, size: 4, alignment: 4,
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       local-offset: -2992784, debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
   - { id: 4, name: B, type: default, offset: -2993308, size: 492, alignment: 4,
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       local-offset: -2993276, debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
   - { id: 5, name: '', type: spill-slot, offset: -2993320, size: 8, alignment: 8,
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 6, name: '', type: spill-slot, offset: -2993324, size: 4, alignment: 4,
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 7, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8,
-      stack-id: 0, callee-saved-register: '$fp', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$fp', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 8, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
-      stack-id: 0, callee-saved-register: '$lr', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 9, name: '', type: spill-slot, offset: -32, size: 8, alignment: 16,
-      stack-id: 0, callee-saved-register: '$x28', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$x28', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 constants:
 body:             |

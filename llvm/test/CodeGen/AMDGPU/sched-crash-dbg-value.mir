@@ -187,7 +187,7 @@ liveins:
 fixedStack:
 stack:
   - { id: 0, name: tmp5, type: default, offset: 0, size: 128, alignment: 16,
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       local-offset: 0, debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
 constants:

@@ -22,6 +22,8 @@ action("version_script") {
     rebase_path(
         "$crt_current_out_dir/libclang_rt.hwasan_cxx$crt_current_target_suffix.a",
         root_build_dir),
+    "--nm-executable",
+    "nm",
     "-o",
     rebase_path(outputs[0], root_build_dir),
   ]

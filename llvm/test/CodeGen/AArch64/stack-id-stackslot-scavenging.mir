@@ -13,7 +13,7 @@ tracksRegLiveness: true
 frameInfo:
   maxAlignment:  16
 stack:
-  - { id: 0, stack-id: 42, size: 8, alignment: 8 }
+  - { id: 0, stack-id: noalloc, size: 8, alignment: 8 }
 body:             |
   bb.0.entry:
     liveins: $x0

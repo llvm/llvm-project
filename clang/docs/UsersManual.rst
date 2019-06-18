@@ -324,13 +324,21 @@ output format of the diagnostics that it generates.
 
 .. _opt_fsave-optimization-record:
 
-**-fsave-optimization-record**
-   Write optimization remarks to a YAML file.
+.. option:: -fsave-optimization-record[=<format>]
+
+   Write optimization remarks to a separate file.
 
    This option, which defaults to off, controls whether Clang writes
-   optimization reports to a YAML file. By recording diagnostics in a file,
-   using a structured YAML format, users can parse or sort the remarks in a
-   convenient way.
+   optimization reports to a separate file. By recording diagnostics in a file,
+   users can parse or sort the remarks in a convenient way.
+
+   By default, the serialization format is YAML.
+
+   The supported serialization formats are:
+
+   -  .. _opt_fsave_optimization_record_yaml:
+
+      ``-fsave-optimization-record=yaml``: A structured YAML format.
 
 .. _opt_foptimization-record-file:
 
@@ -343,7 +351,9 @@ output format of the diagnostics that it generates.
 
    If this option is not used, optimization records are output to a file named
    after the primary file being compiled. If that's "foo.c", for example,
-   optimization records are output to "foo.opt.yaml".
+   optimization records are output to "foo.opt.yaml". If a specific
+   serialization format is specified, the file will be named
+   "foo.opt.<format>".
 
 .. _opt_foptimization-record-passes:
 

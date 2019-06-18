@@ -625,6 +625,8 @@ public:
   void EmitVisibility(MCSymbol *Sym, unsigned Visibility,
                       bool IsDefinition = true) const;
 
+  /// This emits linkage information about \p GVSym based on \p GV, if this is
+  /// supported by the target.
   void EmitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const;
 
 private:

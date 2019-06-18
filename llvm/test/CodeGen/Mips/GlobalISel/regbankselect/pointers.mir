@@ -34,7 +34,7 @@ alignment:       2
 legalized:       true
 tracksRegLiveness: true
 fixedStack:
-  - { id: 0, offset: 16, size: 4, alignment: 8, stack-id: 0, isImmutable: true }
+  - { id: 0, offset: 16, size: 4, alignment: 8, stack-id: default, isImmutable: true }
 body:             |
   bb.1.entry:
     liveins: $a0, $a1, $a2, $a3
