@@ -127,7 +127,7 @@ Objective-C Language Changes in Clang
 
 - Fixed encoding of ObjC pointer types that are pointers to typedefs.
 
-.. code-block:: c++
+.. code-block:: objc
 
       typedef NSArray<NSObject *> MyArray;
 

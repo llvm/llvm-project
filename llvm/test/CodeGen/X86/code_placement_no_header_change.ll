@@ -7,9 +7,9 @@ define i32 @bar(i32 %count) {
 ; Later backedge1 and backedge2 is rotated before loop header.
 ; CHECK-LABEL: bar
 ; CHECK: %.entry
+; CHECK: %.header
 ; CHECK: %.backedge1
 ; CHECK: %.backedge2
-; CHECK: %.header
 ; CHECK: %.exit
 .entry:
   %c = shl nsw i32 %count, 2

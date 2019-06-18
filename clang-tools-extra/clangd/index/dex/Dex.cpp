@@ -23,10 +23,14 @@ namespace clang {
 namespace clangd {
 namespace dex {
 
-std::unique_ptr<SymbolIndex> Dex::build(SymbolSlab Symbols, RefSlab Refs) {
+std::unique_ptr<SymbolIndex> Dex::build(SymbolSlab Symbols, RefSlab Refs,
+                                        RelationSlab Rels) {
   auto Size = Symbols.bytes() + Refs.bytes();
+  // There is no need to include "Rels" in Data because the relations are self-
+  // contained, without references into a backing store.
   auto Data = std::make_pair(std::move(Symbols), std::move(Refs));
-  return llvm::make_unique<Dex>(Data.first, Data.second, std::move(Data), Size);
+  return llvm::make_unique<Dex>(Data.first, Data.second, Rels, std::move(Data),
+                                Size);
 }
 
 namespace {
@@ -259,6 +263,27 @@ void Dex::refs(const RefsRequest &Req,
     }
 }
 
+void Dex::relations(
+    const RelationsRequest &Req,
+    llvm::function_ref<void(const SymbolID &, const Symbol &)> Callback) const {
+  trace::Span Tracer("Dex relations");
+  uint32_t Remaining =
+      Req.Limit.getValueOr(std::numeric_limits<uint32_t>::max());
+  for (const SymbolID &Subject : Req.Subjects) {
+    LookupRequest LookupReq;
+    auto It = Relations.find(std::make_pair(Subject, Req.Predicate));
+    if (It != Relations.end()) {
+      for (const auto &Object : It->second) {
+        if (Remaining > 0) {
+          --Remaining;
+          LookupReq.IDs.insert(Object);
+        }
+      }
+    }
+    lookup(LookupReq, [&](const Symbol &Object) { Callback(Subject, Object); });
+  }
+}
+
 size_t Dex::estimateMemoryUsage() const {
   size_t Bytes = Symbols.size() * sizeof(const Symbol *);
   Bytes += SymbolQuality.size() * sizeof(float);
@@ -267,6 +292,7 @@ size_t Dex::estimateMemoryUsage() const {
   for (const auto &TokenToPostingList : InvertedIndex)
     Bytes += TokenToPostingList.second.bytes();
   Bytes += Refs.getMemorySize();
+  Bytes += Relations.getMemorySize();
   return Bytes + BackingDataSize;
 }
 

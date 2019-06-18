@@ -44,8 +44,8 @@ define void @nested_loop_0(i1 %flag) !prof !1 {
 ; CHECK-LABEL: nested_loop_0:
 ; CHECK: callq c
 ; CHECK: callq d
-; CHECK: callq e
 ; CHECK: callq b
+; CHECK: callq e
 ; CHECK: callq f
 
 entry:

@@ -17,4 +17,4 @@
 
 // RUN: not llvm-objdump --section-headers %t-raw/DependsOnModule.pcm
 
-// RUN: %clang_cc1 -split-dwarf-file t-split.dwo -triple=x86_64-linux-elf -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t-ELF_SPLIT -F %S/Inputs %s -o %t-split.o
+// RUN: %clang_cc1 -split-dwarf-output t-split.dwo -triple=x86_64-linux-elf -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t-ELF_SPLIT -F %S/Inputs %s -o %t-split.o

@@ -68,7 +68,7 @@ void initializeFlags() XRAY_NEVER_INSTRUMENT {
   XRayParser.ParseString(XRayCompileFlags);
 
   // Override from environment variables.
-  XRayParser.ParseString(GetEnv("XRAY_OPTIONS"));
+  XRayParser.ParseStringFromEnv("XRAY_OPTIONS");
 
   // Override from command line.
   InitializeCommonFlags();

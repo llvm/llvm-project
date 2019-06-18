@@ -5,13 +5,13 @@ define void @foo() {
 ; Test a nested loop case when profile data is not available.
 ;
 ; CHECK-LABEL: foo:
-; CHECK: callq b
-; CHECK: callq c
-; CHECK: callq d
-; CHECK: callq e
-; CHECK: callq f
 ; CHECK: callq g
 ; CHECK: callq h
+; CHECK: callq b
+; CHECK: callq e
+; CHECK: callq f
+; CHECK: callq c
+; CHECK: callq d
 
 entry:
   br label %header
@@ -59,13 +59,13 @@ define void @bar() !prof !1 {
 ; Test a nested loop case when profile data is available.
 ;
 ; CHECK-PROFILE-LABEL: bar:
+; CHECK-PROFILE: callq h
+; CHECK-PROFILE: callq b
+; CHECK-PROFILE: callq g
 ; CHECK-PROFILE: callq e
 ; CHECK-PROFILE: callq f
 ; CHECK-PROFILE: callq c
 ; CHECK-PROFILE: callq d
-; CHECK-PROFILE: callq h
-; CHECK-PROFILE: callq b
-; CHECK-PROFILE: callq g
 
 entry:
   br label %header

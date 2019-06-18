@@ -120,12 +120,12 @@ void InitializeFlags() {
 #endif
 
   // Override from command line.
-  asan_parser.ParseString(GetEnv("ASAN_OPTIONS"));
+  asan_parser.ParseStringFromEnv("ASAN_OPTIONS");
 #if CAN_SANITIZE_LEAKS
-  lsan_parser.ParseString(GetEnv("LSAN_OPTIONS"));
+  lsan_parser.ParseStringFromEnv("LSAN_OPTIONS");
 #endif
 #if CAN_SANITIZE_UB
-  ubsan_parser.ParseString(GetEnv("UBSAN_OPTIONS"));
+  ubsan_parser.ParseStringFromEnv("UBSAN_OPTIONS");
 #endif
 
   InitializeCommonFlags();

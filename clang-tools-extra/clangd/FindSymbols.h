@@ -13,12 +13,17 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FINDSYMBOLS_H
 
 #include "Protocol.h"
+#include "index/Symbol.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
 namespace clangd {
 class ParsedAST;
 class SymbolIndex;
+
+/// Helper function for deriving an LSP Location for a Symbol.
+llvm::Expected<Location> symbolToLocation(const Symbol &Sym,
+                                          llvm::StringRef HintPath);
 
 /// Searches for the symbols matching \p Query. The syntax of \p Query can be
 /// the non-qualified name or fully qualified of a symbol. For example,

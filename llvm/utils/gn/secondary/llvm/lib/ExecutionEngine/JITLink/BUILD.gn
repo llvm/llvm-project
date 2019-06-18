@@ -9,6 +9,7 @@ static_library("JITLink") {
     "EHFrameSupport.cpp",
     "JITLink.cpp",
     "JITLinkGeneric.cpp",
+    "JITLinkMemoryManager.cpp",
     "MachO.cpp",
     "MachOAtomGraphBuilder.cpp",
     "MachO_x86_64.cpp",

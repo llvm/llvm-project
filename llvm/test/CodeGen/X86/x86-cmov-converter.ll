@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-linux -x86-cmov-converter=true -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap %s
+; RUN: llc -mtriple=x86_64-pc-linux -x86-cmov-converter=true -verify-machineinstrs -disable-block-placement < %s | FileCheck -allow-deprecated-dag-overlap %s
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; This test checks that x86-cmov-converter optimization transform CMOV

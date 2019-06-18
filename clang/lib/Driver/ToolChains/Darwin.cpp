@@ -462,6 +462,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // For LTO, pass the name of the optimization record file and other
   // opt-remarks flags.
   if (Args.hasFlag(options::OPT_fsave_optimization_record,
+                   options::OPT_fsave_optimization_record_EQ,
                    options::OPT_fno_save_optimization_record, false)) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-lto-pass-remarks-output");
@@ -491,6 +492,14 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       std::string Passes =
           std::string("-lto-pass-remarks-filter=") + A->getValue();
       CmdArgs.push_back(Args.MakeArgString(Passes));
+    }
+
+    if (const Arg *A =
+            Args.getLastArg(options::OPT_fsave_optimization_record_EQ)) {
+      CmdArgs.push_back("-mllvm");
+      std::string Format =
+          std::string("-lto-pass-remarks-format=") + A->getValue();
+      CmdArgs.push_back(Args.MakeArgString(Format));
     }
   }
 

@@ -840,9 +840,15 @@ TEST(DFT, FunctionWeights) {
   Weights = Cov.FunctionWeights(2);
   EXPECT_GT(Weights[0], Weights[1]);
 
-  // A function with more uncovered bclocks gets more weight.
+  // A function with more uncovered blocks gets more weight.
   Cov.clear();
   EXPECT_TRUE(Cov.AppendCoverage("C0 1 2 3 5\nC1 2 4\n"));
+  Weights = Cov.FunctionWeights(2);
+  EXPECT_GT(Weights[1], Weights[0]);
+
+  // A function with DFT gets more weight than the function w/o DFT.
+  Cov.clear();
+  EXPECT_TRUE(Cov.AppendCoverage("F1 111\nC0 3\nC1 1 2 3\n"));
   Weights = Cov.FunctionWeights(2);
   EXPECT_GT(Weights[1], Weights[0]);
 }

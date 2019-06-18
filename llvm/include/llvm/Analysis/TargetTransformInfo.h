@@ -448,9 +448,7 @@ public:
   void getUnrollingPreferences(Loop *L, ScalarEvolution &,
                                UnrollingPreferences &UP) const;
 
-  /// Attributes of a target dependent hardware loop. Here, the term 'element'
-  /// describes the work performed by an IR loop that has not been vectorized
-  /// by the compiler.
+  /// Attributes of a target dependent hardware loop.
   struct HardwareLoopInfo {
     HardwareLoopInfo()        = delete;
     HardwareLoopInfo(Loop *L) : L(L) { }
@@ -459,10 +457,10 @@ public:
     BranchInst *ExitBranch    = nullptr;
     const SCEV *ExitCount     = nullptr;
     IntegerType *CountType    = nullptr;
-    Value *LoopDecrement      = nullptr;  // The maximum number of elements
-                                          // processed in the loop body.
+    Value *LoopDecrement      = nullptr;  // Decrement the loop counter by this
+                                          // value in every iteration.
     bool IsNestingLegal       = false;    // Can a hardware loop be a parent to
-                                          // another hardware loop.
+                                          // another hardware loop?
     bool CounterInReg         = false;    // Should loop counter be updated in
                                           // the loop via a phi?
   };

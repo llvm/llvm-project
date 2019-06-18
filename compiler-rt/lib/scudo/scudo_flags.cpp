@@ -68,7 +68,7 @@ void initFlags() {
   ScudoParser.ParseString(getScudoDefaultOptions());
 
   // Override from environment.
-  ScudoParser.ParseString(GetEnv("SCUDO_OPTIONS"));
+  ScudoParser.ParseStringFromEnv("SCUDO_OPTIONS");
 
   InitializeCommonFlags();
 

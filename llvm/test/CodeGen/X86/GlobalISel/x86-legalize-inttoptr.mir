@@ -21,7 +21,7 @@ registers:
 frameInfo:
   maxAlignment:    4
 fixedStack:
-  - { id: 0, size: 4, alignment: 16, stack-id: 0, isImmutable: true }
+  - { id: 0, size: 4, alignment: 16, stack-id: default, isImmutable: true }
 body:             |
   bb.1.entry:
     ; CHECK-LABEL: name: inttoptr_p0_s32

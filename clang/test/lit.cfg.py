@@ -183,3 +183,6 @@ if macOSSDKVersion is not None:
 
 if os.path.exists('/etc/gentoo-release'):
     config.available_features.add('gentoo')
+
+if config.enable_shared:
+    config.available_features.add("enable_shared")

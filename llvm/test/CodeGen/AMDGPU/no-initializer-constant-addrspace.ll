@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -filetype=obj < %s | llvm-readobj -r --symbols | FileCheck %s -check-prefix=GCN
 ; RUN: llc -march=r600 -mcpu=cypress -filetype=obj < %s | llvm-readobj -r --symbols | FileCheck %s -check-prefix=EG
 
-; GCN: R_AMDGPU_REL32 extern_const_addrspace
+; GCN: R_AMDGPU_REL32_LO extern_const_addrspace
 ; EG: R_AMDGPU_ABS32 extern_const_addrspace
 
 ; CHECK-DAG: Name: extern_const_addrspace

@@ -63,7 +63,8 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST) :
   SGPRPressureSets(getNumRegPressureSets()),
   VGPRPressureSets(getNumRegPressureSets()),
   SpillSGPRToVGPR(false),
-  SpillSGPRToSMEM(false) {
+  SpillSGPRToSMEM(false),
+  isWave32(ST.isWave32()) {
   if (EnableSpillSGPRToSMEM && ST.hasScalarStores())
     SpillSGPRToSMEM = true;
   else if (EnableSpillSGPRToVGPR)
@@ -183,6 +184,13 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // Reserve null register - it shall never be allocated
   reserveRegisterTuples(Reserved, AMDGPU::SGPR_NULL);
+
+  // Disallow vcc_hi allocation in wave32. It may be allocated but most likely
+  // will result in bugs.
+  if (isWave32) {
+    Reserved.set(AMDGPU::VCC);
+    Reserved.set(AMDGPU::VCC_HI);
+  }
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
@@ -1703,6 +1711,25 @@ SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
                                                   &AMDGPU::SReg_512RegClass;
   default:
     llvm_unreachable("not implemented");
+  }
+}
+
+unsigned SIRegisterInfo::getVCC() const {
+  return isWave32 ? AMDGPU::VCC_LO : AMDGPU::VCC;
+}
+
+const TargetRegisterClass *
+SIRegisterInfo::getRegClass(unsigned RCID) const {
+  switch ((int)RCID) {
+  case AMDGPU::SReg_1RegClassID:
+    return getBoolRC();
+  case AMDGPU::SReg_1_XEXECRegClassID:
+    return isWave32 ? &AMDGPU::SReg_32_XM0_XEXECRegClass
+      : &AMDGPU::SReg_64_XEXECRegClass;
+  case -1:
+    return nullptr;
+  default:
+    return AMDGPURegisterInfo::getRegClass(RCID);
   }
 }
 

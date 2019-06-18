@@ -77,6 +77,7 @@ public:
         SymbolCollector::Options(),
         [&](SymbolSlab S) { IndexFile.Symbols = std::move(S); },
         [&](RefSlab R) { IndexFile.Refs = std::move(R); },
+        [&](RelationSlab R) { IndexFile.Relations = std::move(R); },
         [&](IncludeGraph IG) { IndexFile.Sources = std::move(IG); });
 
     std::vector<std::string> Args = {"index_action", "-fsyntax-only",

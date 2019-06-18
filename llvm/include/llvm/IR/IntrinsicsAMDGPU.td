@@ -864,7 +864,7 @@ def int_amdgcn_s_buffer_load : Intrinsic <
   [llvm_any_ty],
   [llvm_v4i32_ty,     // rsrc(SGPR)
    llvm_i32_ty,       // byte offset(SGPR/imm)
-   llvm_i32_ty],      // cachepolicy(imm; bit 0 = glc)
+   llvm_i32_ty],      // cachepolicy(imm; bit 0 = glc, bit 2 = dlc)
   [IntrNoMem, ImmArg<2>]>,
   AMDGPURsrcIntrinsic<0>;
 
@@ -1122,7 +1122,7 @@ def int_amdgcn_exp : Intrinsic <[], [
   llvm_i1_ty,        // done
   llvm_i1_ty         // vm
   ],
-  [ImmArg<0>, ImmArg<1>, ImmArg<6>, ImmArg<7>]
+  [ImmArg<0>, ImmArg<1>, ImmArg<6>, ImmArg<7>, IntrInaccessibleMemOnly]
 >;
 
 // exp with compr bit set.
@@ -1133,7 +1133,7 @@ def int_amdgcn_exp_compr : Intrinsic <[], [
   LLVMMatchType<0>,  // src1
   llvm_i1_ty,        // done
   llvm_i1_ty],       // vm
-  [ImmArg<0>, ImmArg<1>, ImmArg<4>, ImmArg<5>]
+  [ImmArg<0>, ImmArg<1>, ImmArg<4>, ImmArg<5>, IntrInaccessibleMemOnly]
 >;
 
 def int_amdgcn_buffer_wbinvl1_sc :

@@ -163,7 +163,7 @@ define void @merge_2_v4f32_align32_mix_ntstore(<4 x float>* %a0, <4 x float>* %a
   ret void
 }
 
-; FIXME: AVX2 can't perform NT-load-ymm on 16-byte aligned memory.
+; AVX2 can't perform NT-load-ymm on 16-byte aligned memory.
 ; Must be kept seperate as VMOVNTDQA xmm.
 define void @merge_2_v4f32_align16_ntload(<4 x float>* %a0, <4 x float>* %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align16_ntload:
@@ -200,20 +200,13 @@ define void @merge_2_v4f32_align16_ntload(<4 x float>* %a0, <4 x float>* %a1) no
 ; X64-SSE41-NEXT:    movdqa %xmm1, 16(%rsi)
 ; X64-SSE41-NEXT:    retq
 ;
-; X64-AVX1-LABEL: merge_2_v4f32_align16_ntload:
-; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
-; X64-AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm1
-; X64-AVX1-NEXT:    vmovdqa %xmm1, 16(%rsi)
-; X64-AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; X64-AVX1-NEXT:    retq
-;
-; X64-AVX2-LABEL: merge_2_v4f32_align16_ntload:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vmovups (%rdi), %ymm0
-; X64-AVX2-NEXT:    vmovups %ymm0, (%rsi)
-; X64-AVX2-NEXT:    vzeroupper
-; X64-AVX2-NEXT:    retq
+; X64-AVX-LABEL: merge_2_v4f32_align16_ntload:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vmovntdqa (%rdi), %xmm0
+; X64-AVX-NEXT:    vmovntdqa 16(%rdi), %xmm1
+; X64-AVX-NEXT:    vmovdqa %xmm0, (%rsi)
+; X64-AVX-NEXT:    vmovdqa %xmm1, 16(%rsi)
+; X64-AVX-NEXT:    retq
   %1 = getelementptr inbounds <4 x float>, <4 x float>* %a0, i64 1, i64 0
   %2 = bitcast float* %1 to <4 x float>*
   %3 = load <4 x float>, <4 x float>* %a0, align 16, !nontemporal !0
@@ -225,7 +218,7 @@ define void @merge_2_v4f32_align16_ntload(<4 x float>* %a0, <4 x float>* %a1) no
   ret void
 }
 
-; FIXME: AVX can't perform NT-store-ymm on 16-byte aligned memory.
+; AVX can't perform NT-store-ymm on 16-byte aligned memory.
 ; Must be kept seperate as VMOVNTPS xmm.
 define void @merge_2_v4f32_align16_ntstore(<4 x float>* %a0, <4 x float>* %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align16_ntstore:
@@ -248,9 +241,10 @@ define void @merge_2_v4f32_align16_ntstore(<4 x float>* %a0, <4 x float>* %a1) n
 ;
 ; X64-AVX-LABEL: merge_2_v4f32_align16_ntstore:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovups (%rdi), %ymm0
-; X64-AVX-NEXT:    vmovups %ymm0, (%rsi)
-; X64-AVX-NEXT:    vzeroupper
+; X64-AVX-NEXT:    vmovaps (%rdi), %xmm0
+; X64-AVX-NEXT:    vmovaps 16(%rdi), %xmm1
+; X64-AVX-NEXT:    vmovntps %xmm0, (%rsi)
+; X64-AVX-NEXT:    vmovntps %xmm1, 16(%rsi)
 ; X64-AVX-NEXT:    retq
   %1 = getelementptr inbounds <4 x float>, <4 x float>* %a0, i64 1, i64 0
   %2 = bitcast float* %1 to <4 x float>*
@@ -263,7 +257,7 @@ define void @merge_2_v4f32_align16_ntstore(<4 x float>* %a0, <4 x float>* %a1) n
   ret void
 }
 
-; FIXME: Nothing can perform NT-load-vector on 1-byte aligned memory.
+; Nothing can perform NT-load-vector on 1-byte aligned memory.
 ; Just perform regular loads.
 define void @merge_2_v4f32_align1_ntload(<4 x float>* %a0, <4 x float>* %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align1_ntload:
@@ -301,32 +295,71 @@ define void @merge_2_v4f32_align1_ntload(<4 x float>* %a0, <4 x float>* %a1) nou
   ret void
 }
 
-; FIXME: Nothing can perform NT-store-vector on 1-byte aligned memory.
+; Nothing can perform NT-store-vector on 1-byte aligned memory.
 ; Must be scalarized to use MOVTNI/MOVNTSD.
 define void @merge_2_v4f32_align1_ntstore(<4 x float>* %a0, <4 x float>* %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align1_ntstore:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $48, %esp
+; X86-NEXT:    movl 12(%ebp), %eax
+; X86-NEXT:    movl 8(%ebp), %ecx
 ; X86-NEXT:    movups (%ecx), %xmm0
 ; X86-NEXT:    movups 16(%ecx), %xmm1
-; X86-NEXT:    movups %xmm0, (%eax)
-; X86-NEXT:    movups %xmm1, 16(%eax)
+; X86-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movntil %ecx, 12(%eax)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movntil %ecx, 8(%eax)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movntil %edx, 4(%eax)
+; X86-NEXT:    movntil %ecx, (%eax)
+; X86-NEXT:    movaps %xmm1, (%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movntil %ecx, 28(%eax)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movntil %ecx, 24(%eax)
+; X86-NEXT:    movl (%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movntil %edx, 20(%eax)
+; X86-NEXT:    movntil %ecx, 16(%eax)
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
 ; X64-SSE-LABEL: merge_2_v4f32_align1_ntstore:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movups (%rdi), %xmm0
 ; X64-SSE-NEXT:    movups 16(%rdi), %xmm1
-; X64-SSE-NEXT:    movups %xmm0, (%rsi)
-; X64-SSE-NEXT:    movups %xmm1, 16(%rsi)
+; X64-SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
+; X64-SSE-NEXT:    movntiq %rcx, 8(%rsi)
+; X64-SSE-NEXT:    movntiq %rax, (%rsi)
+; X64-SSE-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
+; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
+; X64-SSE-NEXT:    movntiq %rcx, 24(%rsi)
+; X64-SSE-NEXT:    movntiq %rax, 16(%rsi)
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: merge_2_v4f32_align1_ntstore:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovups (%rdi), %ymm0
-; X64-AVX-NEXT:    vmovups %ymm0, (%rsi)
-; X64-AVX-NEXT:    vzeroupper
+; X64-AVX-NEXT:    vmovups (%rdi), %xmm0
+; X64-AVX-NEXT:    vmovups 16(%rdi), %xmm1
+; X64-AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
+; X64-AVX-NEXT:    movntiq %rcx, 8(%rsi)
+; X64-AVX-NEXT:    movntiq %rax, (%rsi)
+; X64-AVX-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
+; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
+; X64-AVX-NEXT:    movntiq %rcx, 24(%rsi)
+; X64-AVX-NEXT:    movntiq %rax, 16(%rsi)
 ; X64-AVX-NEXT:    retq
   %1 = getelementptr inbounds <4 x float>, <4 x float>* %a0, i64 1, i64 0
   %2 = bitcast float* %1 to <4 x float>*
@@ -339,32 +372,71 @@ define void @merge_2_v4f32_align1_ntstore(<4 x float>* %a0, <4 x float>* %a1) no
   ret void
 }
 
-; FIXME: Nothing can perform NT-load-vector on 1-byte aligned memory.
+; Nothing can perform NT-load-vector on 1-byte aligned memory.
 ; Just perform regular loads and scalarize NT-stores.
 define void @merge_2_v4f32_align1(<4 x float>* %a0, <4 x float>* %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align1:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $48, %esp
+; X86-NEXT:    movl 12(%ebp), %eax
+; X86-NEXT:    movl 8(%ebp), %ecx
 ; X86-NEXT:    movups (%ecx), %xmm0
 ; X86-NEXT:    movups 16(%ecx), %xmm1
-; X86-NEXT:    movups %xmm0, (%eax)
-; X86-NEXT:    movups %xmm1, 16(%eax)
+; X86-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movntil %ecx, 12(%eax)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movntil %ecx, 8(%eax)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movntil %edx, 4(%eax)
+; X86-NEXT:    movntil %ecx, (%eax)
+; X86-NEXT:    movaps %xmm1, (%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movntil %ecx, 28(%eax)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movntil %ecx, 24(%eax)
+; X86-NEXT:    movl (%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movntil %edx, 20(%eax)
+; X86-NEXT:    movntil %ecx, 16(%eax)
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
 ; X64-SSE-LABEL: merge_2_v4f32_align1:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movups (%rdi), %xmm0
 ; X64-SSE-NEXT:    movups 16(%rdi), %xmm1
-; X64-SSE-NEXT:    movups %xmm0, (%rsi)
-; X64-SSE-NEXT:    movups %xmm1, 16(%rsi)
+; X64-SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
+; X64-SSE-NEXT:    movntiq %rcx, 8(%rsi)
+; X64-SSE-NEXT:    movntiq %rax, (%rsi)
+; X64-SSE-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
+; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
+; X64-SSE-NEXT:    movntiq %rcx, 24(%rsi)
+; X64-SSE-NEXT:    movntiq %rax, 16(%rsi)
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: merge_2_v4f32_align1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovups (%rdi), %ymm0
-; X64-AVX-NEXT:    vmovups %ymm0, (%rsi)
-; X64-AVX-NEXT:    vzeroupper
+; X64-AVX-NEXT:    vmovups (%rdi), %xmm0
+; X64-AVX-NEXT:    vmovups 16(%rdi), %xmm1
+; X64-AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
+; X64-AVX-NEXT:    movntiq %rcx, 8(%rsi)
+; X64-AVX-NEXT:    movntiq %rax, (%rsi)
+; X64-AVX-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
+; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
+; X64-AVX-NEXT:    movntiq %rcx, 24(%rsi)
+; X64-AVX-NEXT:    movntiq %rax, 16(%rsi)
 ; X64-AVX-NEXT:    retq
   %1 = getelementptr inbounds <4 x float>, <4 x float>* %a0, i64 1, i64 0
   %2 = bitcast float* %1 to <4 x float>*

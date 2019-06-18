@@ -276,6 +276,7 @@ void BackgroundIndex::update(llvm::StringRef MainFile, IndexFileIn Index,
   struct File {
     llvm::DenseSet<const Symbol *> Symbols;
     llvm::DenseSet<const Ref *> Refs;
+    llvm::DenseSet<const Relation *> Relations;
     FileDigest Digest;
   };
   llvm::StringMap<File> Files;
@@ -288,12 +289,16 @@ void BackgroundIndex::update(llvm::StringRef MainFile, IndexFileIn Index,
     if (DigestIt == DigestsSnapshot.end() || DigestIt->getValue() != IGN.Digest)
       Files.try_emplace(AbsPath).first->getValue().Digest = IGN.Digest;
   }
+  // This map is used to figure out where to store relations.
+  llvm::DenseMap<SymbolID, File *> SymbolIDToFile;
   for (const auto &Sym : *Index.Symbols) {
     if (Sym.CanonicalDeclaration) {
       auto DeclPath = URICache.resolve(Sym.CanonicalDeclaration.FileURI);
       const auto FileIt = Files.find(DeclPath);
-      if (FileIt != Files.end())
+      if (FileIt != Files.end()) {
         FileIt->second.Symbols.insert(&Sym);
+        SymbolIDToFile[Sym.ID] = &FileIt->second;
+      }
     }
     // For symbols with different declaration and definition locations, we store
     // the full symbol in both the header file and the implementation file, so
@@ -319,18 +324,27 @@ void BackgroundIndex::update(llvm::StringRef MainFile, IndexFileIn Index,
       }
     }
   }
+  for (const auto &Rel : *Index.Relations) {
+    const auto FileIt = SymbolIDToFile.find(Rel.Subject);
+    if (FileIt != SymbolIDToFile.end())
+      FileIt->second->Relations.insert(&Rel);
+  }
 
   // Build and store new slabs for each updated file.
   for (const auto &FileIt : Files) {
     llvm::StringRef Path = FileIt.getKey();
     SymbolSlab::Builder Syms;
     RefSlab::Builder Refs;
+    RelationSlab::Builder Relations;
     for (const auto *S : FileIt.second.Symbols)
       Syms.insert(*S);
     for (const auto *R : FileIt.second.Refs)
       Refs.insert(RefToIDs[R], *R);
+    for (const auto *Rel : FileIt.second.Relations)
+      Relations.insert(*Rel);
     auto SS = llvm::make_unique<SymbolSlab>(std::move(Syms).build());
     auto RS = llvm::make_unique<RefSlab>(std::move(Refs).build());
+    auto RelS = llvm::make_unique<RelationSlab>(std::move(Relations).build());
     auto IG = llvm::make_unique<IncludeGraph>(
         getSubGraph(URI::create(Path), Index.Sources.getValue()));
     // We need to store shards before updating the index, since the latter
@@ -339,6 +353,7 @@ void BackgroundIndex::update(llvm::StringRef MainFile, IndexFileIn Index,
       IndexFileOut Shard;
       Shard.Symbols = SS.get();
       Shard.Refs = RS.get();
+      Shard.Relations = RelS.get();
       Shard.Sources = IG.get();
 
       if (auto Error = IndexStorage->storeShard(Path, Shard))
@@ -356,7 +371,7 @@ void BackgroundIndex::update(llvm::StringRef MainFile, IndexFileIn Index,
       // This can override a newer version that is added in another thread, if
       // this thread sees the older version but finishes later. This should be
       // rare in practice.
-      IndexedSymbols.update(Path, std::move(SS), std::move(RS),
+      IndexedSymbols.update(Path, std::move(SS), std::move(RS), std::move(RelS),
                             Path == MainFile);
     }
   }
@@ -429,6 +444,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd,
   auto Action = createStaticIndexingAction(
       IndexOpts, [&](SymbolSlab S) { Index.Symbols = std::move(S); },
       [&](RefSlab R) { Index.Refs = std::move(R); },
+      [&](RelationSlab R) { Index.Relations = std::move(R); },
       [&](IncludeGraph IG) { Index.Sources = std::move(IG); });
 
   // We're going to run clang here, and it could potentially crash.
@@ -570,9 +586,13 @@ BackgroundIndex::loadShard(const tooling::CompileCommand &Cmd,
       auto RS = SI.Shard->Refs
                     ? llvm::make_unique<RefSlab>(std::move(*SI.Shard->Refs))
                     : nullptr;
+      auto RelS =
+          SI.Shard->Relations
+              ? llvm::make_unique<RelationSlab>(std::move(*SI.Shard->Relations))
+              : nullptr;
       IndexedFileDigests[SI.AbsolutePath] = SI.Digest;
       IndexedSymbols.update(SI.AbsolutePath, std::move(SS), std::move(RS),
-                            SI.CountReferences);
+                            std::move(RelS), SI.CountReferences);
     }
   }
 

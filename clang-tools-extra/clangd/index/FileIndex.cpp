@@ -28,10 +28,10 @@
 namespace clang {
 namespace clangd {
 
-static std::pair<SymbolSlab, RefSlab>
-indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
-             llvm::ArrayRef<Decl *> DeclsToIndex,
-             const CanonicalIncludes &Includes, bool IsIndexMainAST) {
+static SlabTuple indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
+                              llvm::ArrayRef<Decl *> DeclsToIndex,
+                              const CanonicalIncludes &Includes,
+                              bool IsIndexMainAST) {
   SymbolCollector::Options CollectorOpts;
   CollectorOpts.CollectIncludePath = true;
   CollectorOpts.Includes = &Includes;
@@ -65,32 +65,36 @@ indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
 
   auto Syms = Collector.takeSymbols();
   auto Refs = Collector.takeRefs();
+  auto Relations = Collector.takeRelations();
   vlog("index AST for {0} (main={1}): \n"
        "  symbol slab: {2} symbols, {3} bytes\n"
-       "  ref slab: {4} symbols, {5} refs, {6} bytes",
+       "  ref slab: {4} symbols, {5} refs, {6} bytes\n"
+       "  relations slab: {7} relations, {8} bytes",
        FileName, IsIndexMainAST, Syms.size(), Syms.bytes(), Refs.size(),
-       Refs.numRefs(), Refs.bytes());
-  return {std::move(Syms), std::move(Refs)};
+       Refs.numRefs(), Refs.bytes(), Relations.size(), Relations.bytes());
+  return std::make_tuple(std::move(Syms), std::move(Refs),
+                         std::move(Relations));
 }
 
-std::pair<SymbolSlab, RefSlab> indexMainDecls(ParsedAST &AST) {
+SlabTuple indexMainDecls(ParsedAST &AST) {
   return indexSymbols(AST.getASTContext(), AST.getPreprocessorPtr(),
                       AST.getLocalTopLevelDecls(), AST.getCanonicalIncludes(),
                       /*IsIndexMainAST=*/true);
 }
 
-SymbolSlab indexHeaderSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
-                              const CanonicalIncludes &Includes) {
+SlabTuple indexHeaderSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
+                             const CanonicalIncludes &Includes) {
   std::vector<Decl *> DeclsToIndex(
       AST.getTranslationUnitDecl()->decls().begin(),
       AST.getTranslationUnitDecl()->decls().end());
   return indexSymbols(AST, std::move(PP), DeclsToIndex, Includes,
-                      /*IsIndexMainAST=*/false)
-      .first;
+                      /*IsIndexMainAST=*/false);
 }
 
 void FileSymbols::update(PathRef Path, std::unique_ptr<SymbolSlab> Symbols,
-                         std::unique_ptr<RefSlab> Refs, bool CountReferences) {
+                         std::unique_ptr<RefSlab> Refs,
+                         std::unique_ptr<RelationSlab> Relations,
+                         bool CountReferences) {
   std::lock_guard<std::mutex> Lock(Mutex);
   if (!Symbols)
     FileToSymbols.erase(Path);
@@ -98,18 +102,23 @@ void FileSymbols::update(PathRef Path, std::unique_ptr<SymbolSlab> Symbols,
     FileToSymbols[Path] = std::move(Symbols);
   if (!Refs) {
     FileToRefs.erase(Path);
-    return;
+  } else {
+    RefSlabAndCountReferences Item;
+    Item.CountReferences = CountReferences;
+    Item.Slab = std::move(Refs);
+    FileToRefs[Path] = std::move(Item);
   }
-  RefSlabAndCountReferences Item;
-  Item.CountReferences = CountReferences;
-  Item.Slab = std::move(Refs);
-  FileToRefs[Path] = std::move(Item);
+  if (!Relations)
+    FileToRelations.erase(Path);
+  else
+    FileToRelations[Path] = std::move(Relations);
 }
 
 std::unique_ptr<SymbolIndex>
 FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle) {
   std::vector<std::shared_ptr<SymbolSlab>> SymbolSlabs;
   std::vector<std::shared_ptr<RefSlab>> RefSlabs;
+  std::vector<std::shared_ptr<RelationSlab>> RelationSlabs;
   std::vector<RefSlab *> MainFileRefs;
   {
     std::lock_guard<std::mutex> Lock(Mutex);
@@ -120,6 +129,8 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle) {
       if (FileAndRefs.second.CountReferences)
         MainFileRefs.push_back(RefSlabs.back().get());
     }
+    for (const auto &FileAndRelations : FileToRelations)
+      RelationSlabs.push_back(FileAndRelations.second);
   }
   std::vector<const Symbol *> AllSymbols;
   std::vector<Symbol> SymsStorage;
@@ -187,24 +198,34 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle) {
     }
   }
 
+  std::vector<Relation> AllRelations;
+  for (const auto &RelationSlab : RelationSlabs) {
+    for (const auto &R : *RelationSlab)
+      AllRelations.push_back(R);
+  }
+
   size_t StorageSize =
       RefsStorage.size() * sizeof(Ref) + SymsStorage.size() * sizeof(Symbol);
   for (const auto &Slab : SymbolSlabs)
     StorageSize += Slab->bytes();
   for (const auto &RefSlab : RefSlabs)
     StorageSize += RefSlab->bytes();
+  for (const auto &RelationSlab : RelationSlabs)
+    StorageSize += RelationSlab->bytes();
 
   // Index must keep the slabs and contiguous ranges alive.
   switch (Type) {
   case IndexType::Light:
     return llvm::make_unique<MemIndex>(
         llvm::make_pointee_range(AllSymbols), std::move(AllRefs),
+        std::move(AllRelations),
         std::make_tuple(std::move(SymbolSlabs), std::move(RefSlabs),
                         std::move(RefsStorage), std::move(SymsStorage)),
         StorageSize);
   case IndexType::Heavy:
     return llvm::make_unique<dex::Dex>(
         llvm::make_pointee_range(AllSymbols), std::move(AllRefs),
+        std::move(AllRelations),
         std::make_tuple(std::move(SymbolSlabs), std::move(RefSlabs),
                         std::move(RefsStorage), std::move(SymsStorage)),
         StorageSize);
@@ -220,10 +241,12 @@ FileIndex::FileIndex(bool UseDex)
 void FileIndex::updatePreamble(PathRef Path, ASTContext &AST,
                                std::shared_ptr<Preprocessor> PP,
                                const CanonicalIncludes &Includes) {
-  auto Symbols = indexHeaderSymbols(AST, std::move(PP), Includes);
+  auto Slabs = indexHeaderSymbols(AST, std::move(PP), Includes);
   PreambleSymbols.update(
-      Path, llvm::make_unique<SymbolSlab>(std::move(Symbols)),
-      llvm::make_unique<RefSlab>(), /*CountReferences=*/false);
+      Path, llvm::make_unique<SymbolSlab>(std::move(std::get<0>(Slabs))),
+      llvm::make_unique<RefSlab>(),
+      llvm::make_unique<RelationSlab>(std::move(std::get<2>(Slabs))),
+      /*CountReferences=*/false);
   PreambleIndex.reset(
       PreambleSymbols.buildIndex(UseDex ? IndexType::Heavy : IndexType::Light,
                                  DuplicateHandling::PickOne));
@@ -232,11 +255,12 @@ void FileIndex::updatePreamble(PathRef Path, ASTContext &AST,
 void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
   auto Contents = indexMainDecls(AST);
   MainFileSymbols.update(
-      Path, llvm::make_unique<SymbolSlab>(std::move(Contents.first)),
-      llvm::make_unique<RefSlab>(std::move(Contents.second)),
+      Path, llvm::make_unique<SymbolSlab>(std::move(std::get<0>(Contents))),
+      llvm::make_unique<RefSlab>(std::move(std::get<1>(Contents))),
+      llvm::make_unique<RelationSlab>(std::move(std::get<2>(Contents))),
       /*CountReferences=*/true);
   MainFileIndex.reset(
-      MainFileSymbols.buildIndex(IndexType::Light, DuplicateHandling::PickOne));
+      MainFileSymbols.buildIndex(IndexType::Light, DuplicateHandling::Merge));
 }
 
 } // namespace clangd

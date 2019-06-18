@@ -383,7 +383,7 @@ static void InitializeFlags() {
   FlagParser parser;
   RegisterCommonFlags(&parser);
   RegisterDfsanFlags(&parser, &flags());
-  parser.ParseString(GetEnv("DFSAN_OPTIONS"));
+  parser.ParseStringFromEnv("DFSAN_OPTIONS");
   InitializeCommonFlags();
   if (Verbosity()) ReportUnrecognizedFlags();
   if (common_flags()->help) parser.PrintFlagDescriptions();

@@ -478,7 +478,7 @@ buildIndexWithSymbol(llvm::ArrayRef<SymbolWithHeader> Syms) {
     Sym.IncludeHeaders.emplace_back(S.IncludeHeader, 1);
     Slab.insert(Sym);
   }
-  return MemIndex::build(std::move(Slab).build(), RefSlab());
+  return MemIndex::build(std::move(Slab).build(), RefSlab(), RelationSlab());
 }
 
 TEST(IncludeFixerTest, IncompleteType) {
@@ -534,7 +534,8 @@ int main() {
 
   SymbolSlab::Builder Slab;
   Slab.insert(Sym);
-  auto Index = MemIndex::build(std::move(Slab).build(), RefSlab());
+  auto Index =
+      MemIndex::build(std::move(Slab).build(), RefSlab(), RelationSlab());
   TU.ExternalIndex = Index.get();
 
   EXPECT_THAT(TU.build().getDiagnostics(),

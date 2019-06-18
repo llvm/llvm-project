@@ -32,6 +32,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -363,6 +364,7 @@ class TypePromotionTransaction;
     bool optimizeExt(Instruction *&I);
     bool optimizeExtUses(Instruction *I);
     bool optimizeLoadExt(LoadInst *Load);
+    bool optimizeShiftInst(BinaryOperator *BO);
     bool optimizeSelectInst(SelectInst *SI);
     bool optimizeShuffleVectorInst(ShuffleVectorInst *SVI);
     bool optimizeSwitchInst(SwitchInst *SI);
@@ -4200,15 +4202,11 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
         if (isa<Argument>(Base) || isa<GlobalValue>(Base) ||
             (BaseI && !isa<CastInst>(BaseI) &&
              !isa<GetElementPtrInst>(BaseI))) {
-          // If the base is an instruction, make sure the GEP is not in the same
-          // basic block as the base. If the base is an argument or global
-          // value, make sure the GEP is not in the entry block.  Otherwise,
-          // instruction selection can undo the split.  Also make sure the
-          // parent block allows inserting non-PHI instructions before the
-          // terminator.
+          // Make sure the parent block allows inserting non-PHI instructions
+          // before the terminator.
           BasicBlock *Parent =
               BaseI ? BaseI->getParent() : &GEP->getFunction()->getEntryBlock();
-          if (GEP->getParent() != Parent && !Parent->getTerminator()->isEHPad())
+          if (!Parent->getTerminator()->isEHPad())
             LargeOffsetGEP = std::make_pair(GEP, ConstantOffset);
         }
       }
@@ -4738,8 +4736,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
         InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP);
 
     GetElementPtrInst *GEP = LargeOffsetGEP.first;
-    if (GEP && GEP->getParent() != MemoryInst->getParent() &&
-        !NewGEPBases.count(GEP)) {
+    if (GEP && !NewGEPBases.count(GEP)) {
       // If splitting the underlying data structure can reduce the offset of a
       // GEP, collect the GEP.  Skip the GEPs that are the new bases of
       // previously split data structures.
@@ -5917,6 +5914,39 @@ static Value *getTrueOrFalseValue(
   return V;
 }
 
+bool CodeGenPrepare::optimizeShiftInst(BinaryOperator *Shift) {
+  assert(Shift->isShift() && "Expected a shift");
+
+  // If this is (1) a vector shift, (2) shifts by scalars are cheaper than
+  // general vector shifts, and (3) the shift amount is a select-of-splatted
+  // values, hoist the shifts before the select:
+  //   shift Op0, (select Cond, TVal, FVal) -->
+  //   select Cond, (shift Op0, TVal), (shift Op0, FVal)
+  //
+  // This is inverting a generic IR transform when we know that the cost of a
+  // general vector shift is more than the cost of 2 shift-by-scalars.
+  // We can't do this effectively in SDAG because we may not be able to
+  // determine if the select operands are splats from within a basic block.
+  Type *Ty = Shift->getType();
+  if (!Ty->isVectorTy() || !TLI->isVectorShiftByScalarCheap(Ty))
+    return false;
+  Value *Cond, *TVal, *FVal;
+  if (!match(Shift->getOperand(1),
+             m_OneUse(m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))))
+    return false;
+  if (!isSplatValue(TVal) || !isSplatValue(FVal))
+    return false;
+
+  IRBuilder<> Builder(Shift);
+  BinaryOperator::BinaryOps Opcode = Shift->getOpcode();
+  Value *NewTVal = Builder.CreateBinOp(Opcode, Shift->getOperand(0), TVal);
+  Value *NewFVal = Builder.CreateBinOp(Opcode, Shift->getOperand(0), FVal);
+  Value *NewSel = Builder.CreateSelect(Cond, NewTVal, NewFVal);
+  Shift->replaceAllUsesWith(NewSel);
+  Shift->eraseFromParent();
+  return true;
+}
+
 /// If we have a SelectInst that will likely profit from branch prediction,
 /// turn it into a branch.
 bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
@@ -6988,13 +7018,13 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
       EnableAndCmpSinking && TLI)
     return sinkAndCmp0Expression(BinOp, *TLI, InsertedInsts);
 
+  // TODO: Move this into the switch on opcode - it handles shifts already.
   if (BinOp && (BinOp->getOpcode() == Instruction::AShr ||
                 BinOp->getOpcode() == Instruction::LShr)) {
     ConstantInt *CI = dyn_cast<ConstantInt>(BinOp->getOperand(1));
     if (TLI && CI && TLI->hasExtractBitsInsn())
-      return OptimizeExtractBits(BinOp, CI, *TLI, *DL);
-
-    return false;
+      if (OptimizeExtractBits(BinOp, CI, *TLI, *DL))
+        return true;
   }
 
   if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(I)) {
@@ -7019,6 +7049,10 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
     return true;
 
   switch (I->getOpcode()) {
+  case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr:
+    return optimizeShiftInst(cast<BinaryOperator>(I));
   case Instruction::Call:
     return optimizeCallInst(cast<CallInst>(I), ModifiedDT);
   case Instruction::Select:

@@ -745,7 +745,7 @@ define void @pointer_bitcast_baseinst(i16* %arg, i8* %arg1, i64 %arg2) {
 ; CHECK-LABEL: @pointer_bitcast_baseinst(
 ; CHECK:       bb3:
 ; CHECK-NEXT:    %indvar = phi i64 [ %indvar.next, %bb3 ], [ 0, %bb ]
-; CHECK-NEXT:    %4 = shl i64 %indvar, 3
+; CHECK-NEXT:    %4 = shl nuw i64 %indvar, 3
 ; CHECK-NEXT:    %5 = add i64 %4, 1
 ; CHECK-NEXT:    %tmp5 = shl nuw i64 %5, 1
 ; CHECK-NEXT:    %tmp6 = getelementptr i8, i8* %arg1, i64 %tmp5

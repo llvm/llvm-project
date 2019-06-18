@@ -3,9 +3,9 @@
 // RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -c -### %s 2> %t
 // RUN: FileCheck -check-prefix=CHECK-ACTIONS < %t %s
 //
-// CHECK-ACTIONS: "-split-dwarf-file" "split-debug.dwo"
+// CHECK-ACTIONS: "-split-dwarf-output" "split-debug.dwo"
 
-// Check we pass -split-dwarf-file to `as` if -gsplit-dwarf=split.
+// Check we pass -split-dwarf-output to `as` if -gsplit-dwarf=split.
 // RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf=split -c -### %s 2> %t
 // RUN: FileCheck -check-prefix=CHECK-ACTIONS < %t %s
 

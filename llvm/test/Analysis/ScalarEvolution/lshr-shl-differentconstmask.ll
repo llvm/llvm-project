@@ -121,7 +121,7 @@ define i32 @masky_biggerShr(i32 %val) {
 ; CHECK-NEXT:    %tmp1 = shl i32 %val, 2
 ; CHECK-NEXT:    -->  (4 * %val) U: [0,-3) S: [-2147483648,2147483645)
 ; CHECK-NEXT:    %tmp2 = and i32 %tmp1, -64
-; CHECK-NEXT:    -->  (64 * (zext i26 (trunc i32 (%val /u 16) to i26) to i32))<nuw> U: [0,-63) S: [0,-63)
+; CHECK-NEXT:    -->  (64 * (zext i26 (trunc i32 (%val /u 16) to i26) to i32))<nuw> U: [0,-63) S: [-2147483648,2147483585)
 ; CHECK-NEXT:  Determining loop execution counts for: @masky_biggerShr
 ;
   %tmp1 = shl i32 %val, 2

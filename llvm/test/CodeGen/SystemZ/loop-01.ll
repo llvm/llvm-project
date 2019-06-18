@@ -1,7 +1,7 @@
 ; Test loop tuning.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 | FileCheck %s
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 \
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 -disable-block-placement | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 -disable-block-placement \
 ; RUN:  | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-Z13
 
 ; Test that strength reduction is applied to addresses with a scale factor,

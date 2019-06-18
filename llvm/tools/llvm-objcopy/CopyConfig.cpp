@@ -306,6 +306,9 @@ static const StringMap<MachineInfo> OutputFormatMap{
     {"elf32-tradlittlemips", {ELF::EM_MIPS, false, true}},
     {"elf64-tradbigmips", {ELF::EM_MIPS, true, false}},
     {"elf64-tradlittlemips", {ELF::EM_MIPS, true, true}},
+    // SPARC
+    {"elf32-sparc", {ELF::EM_SPARC, false, false}},
+    {"elf32-sparcel", {ELF::EM_SPARC, false, true}},
 };
 
 static Expected<MachineInfo> getOutputFormatMachineInfo(StringRef Format) {
@@ -668,6 +671,11 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
 
   Config.PreserveDates = InputArgs.hasArg(OBJCOPY_preserve_dates);
 
+  if (Config.PreserveDates &&
+      (Config.OutputFilename == "-" || Config.InputFilename == "-"))
+    return createStringError(errc::invalid_argument,
+                             "--preserve-dates requires a file");
+
   for (auto Arg : InputArgs)
     if (Arg->getOption().matches(OBJCOPY_set_start)) {
       auto EAddr = getAsInteger<uint64_t>(Arg->getValue());
@@ -736,7 +744,7 @@ Expected<DriverConfig> parseStripOptions(ArrayRef<const char *> ArgsArr) {
     exit(0);
   }
 
-  SmallVector<const char *, 2> Positional;
+  SmallVector<StringRef, 2> Positional;
   for (auto Arg : InputArgs.filtered(STRIP_UNKNOWN))
     return createStringError(errc::invalid_argument, "unknown argument '%s'",
                              Arg->getAsString(InputArgs).c_str());
@@ -801,12 +809,17 @@ Expected<DriverConfig> parseStripOptions(ArrayRef<const char *> ArgsArr) {
         InputArgs.getLastArgValue(STRIP_output, Positional[0]);
     DC.CopyConfigs.push_back(std::move(Config));
   } else {
-    for (const char *Filename : Positional) {
+    for (StringRef Filename : Positional) {
       Config.InputFilename = Filename;
       Config.OutputFilename = Filename;
       DC.CopyConfigs.push_back(Config);
     }
   }
+
+  if (Config.PreserveDates && (is_contained(Positional, "-") ||
+                               InputArgs.getLastArgValue(STRIP_output) == "-"))
+    return createStringError(errc::invalid_argument,
+                             "--preserve-dates requires a file");
 
   return std::move(DC);
 }

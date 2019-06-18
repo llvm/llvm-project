@@ -1339,14 +1339,14 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
 
 Expected<std::unique_ptr<ToolOutputFile>>
 lto::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
-                              StringRef RemarksPasses, bool RemarksWithHotness,
-                              int Count) {
+                              StringRef RemarksPasses, StringRef RemarksFormat,
+                              bool RemarksWithHotness, int Count) {
   std::string Filename = RemarksFilename;
   if (!Filename.empty() && Count != -1)
     Filename += ".thin." + llvm::utostr(Count) + ".yaml";
 
   auto ResultOrErr = llvm::setupOptimizationRemarks(
-      Context, Filename, RemarksPasses, RemarksWithHotness);
+      Context, Filename, RemarksPasses, RemarksFormat, RemarksWithHotness);
   if (Error E = ResultOrErr.takeError())
     return std::move(E);
 

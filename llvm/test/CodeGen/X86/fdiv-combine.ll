@@ -108,7 +108,7 @@ define float @div_select_constant_fold(i1 zeroext %arg) {
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    retq
   %tmp = select i1 %arg, float 5.000000e+00, float 6.000000e+00
-  %B2 = fdiv float %tmp, 1.000000e+00
+  %B2 = fdiv nnan float %tmp, 2.000000e+00
   ret float %B2
 }
 

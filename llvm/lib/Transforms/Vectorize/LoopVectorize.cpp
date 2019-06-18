@@ -2883,13 +2883,11 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
     BCResumeVal->addIncoming(EndValue, MiddleBlock);
 
     // Fix the scalar body counter (PHI node).
-    unsigned BlockIdx = OrigPhi->getBasicBlockIndex(ScalarPH);
-
     // The old induction's phi node in the scalar body needs the truncated
     // value.
     for (BasicBlock *BB : LoopBypassBlocks)
       BCResumeVal->addIncoming(II.getStartValue(), BB);
-    OrigPhi->setIncomingValue(BlockIdx, BCResumeVal);
+    OrigPhi->setIncomingValueForBlock(ScalarPH, BCResumeVal);
   }
 
   // We need the OrigLoop (scalar loop part) latch terminator to help
@@ -3480,7 +3478,7 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
     Start->addIncoming(Incoming, BB);
   }
 
-  Phi->setIncomingValue(Phi->getBasicBlockIndex(LoopScalarPreHeader), Start);
+  Phi->setIncomingValueForBlock(LoopScalarPreHeader, Start);
   Phi->setName("scalar.recur");
 
   // Finally, fix users of the recurrence outside the loop. The users will need
@@ -4411,6 +4409,13 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(Instruction *I,
          "Decision should not be set yet.");
   auto *Group = getInterleavedAccessGroup(I);
   assert(Group && "Must have a group.");
+
+  // If the instruction's allocated size doesn't equal it's type size, it
+  // requires padding and will be scalarized.
+  auto &DL = I->getModule()->getDataLayout();
+  auto *ScalarTy = getMemInstValueType(I);
+  if (hasIrregularType(ScalarTy, DL, VF))
+    return false;
 
   // Check if masking is required.
   // A Group may need masking for one of two reasons: it resides in a block that

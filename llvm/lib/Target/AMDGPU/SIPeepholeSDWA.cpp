@@ -954,7 +954,8 @@ bool SIPeepholeSDWA::isConvertibleToSDWA(MachineInstr &MI,
   if (TII->isVOPC(Opc)) {
     if (!ST.hasSDWASdst()) {
       const MachineOperand *SDst = TII->getNamedOperand(MI, AMDGPU::OpName::sdst);
-      if (SDst && SDst->getReg() != AMDGPU::VCC)
+      if (SDst && (SDst->getReg() != AMDGPU::VCC &&
+                   SDst->getReg() != AMDGPU::VCC_LO))
         return false;
     }
 
@@ -1019,7 +1020,7 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
     SDWAInst.add(*Dst);
   } else {
     assert(AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::sdst) != -1);
-    SDWAInst.addReg(AMDGPU::VCC, RegState::Define);
+    SDWAInst.addReg(TRI->getVCC(), RegState::Define);
   }
 
   // Copy src0, initialize src0_modifiers. All sdwa instructions has src0 and

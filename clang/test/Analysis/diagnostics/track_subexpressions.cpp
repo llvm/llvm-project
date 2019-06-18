@@ -17,3 +17,67 @@ void shift_by_undefined_value() {
   (void)(TCP_MAXWIN << shift_amount); // expected-warning{{The result of the left shift is undefined due to shifting by '255', which is greater or equal to the width of type 'int'}}
                                       // expected-note@-1{{The result of the left shift is undefined due to shifting by '255', which is greater or equal to the width of type 'int'}}
 }
+
+namespace array_index_tracking {
+void consume(int);
+
+int getIndex(int x) {
+  int a;
+  if (x > 0) // expected-note {{Assuming 'x' is > 0}}
+             // expected-note@-1 {{Taking true branch}}
+    a = 3; // expected-note {{The value 3 is assigned to 'a'}}
+  else
+    a = 2;
+  return a; // expected-note {{Returning the value 3 (loaded from 'a')}}
+}
+
+int getInt();
+
+void testArrayIndexTracking() {
+  int arr[10];
+
+  for (int i = 0; i < 3; ++i)
+    // expected-note@-1 3{{Loop condition is true.  Entering loop body}}
+    // expected-note@-2 {{Loop condition is false. Execution continues on line 43}}
+    arr[i] = 0;
+  int x = getInt();
+  int n = getIndex(x); // expected-note {{Calling 'getIndex'}}
+                       // expected-note@-1 {{Returning from 'getIndex'}}
+                       // expected-note@-2 {{'n' initialized to 3}}
+  consume(arr[n]);
+  // expected-note@-1 {{1st function call argument is an uninitialized value}}
+  // expected-warning@-2{{1st function call argument is an uninitialized value}}
+}
+} // end of namespace array_index_tracking
+
+namespace multi_array_index_tracking {
+void consume(int);
+
+int getIndex(int x) {
+  int a;
+  if (x > 0) // expected-note {{Assuming 'x' is > 0}}
+             // expected-note@-1 {{Taking true branch}}
+    a = 3; // expected-note {{The value 3 is assigned to 'a'}}
+  else
+    a = 2;
+  return a; // expected-note {{Returning the value 3 (loaded from 'a')}}
+}
+
+int getInt();
+
+void testArrayIndexTracking() {
+  int arr[2][10];
+
+  for (int i = 0; i < 3; ++i)
+    // expected-note@-1 3{{Loop condition is true.  Entering loop body}}
+    // expected-note@-2 {{Loop condition is false. Execution continues on line 75}}
+    arr[1][i] = 0;
+  int x = getInt();
+  int n = getIndex(x); // expected-note {{Calling 'getIndex'}}
+                       // expected-note@-1 {{Returning from 'getIndex'}}
+                       // expected-note@-2 {{'n' initialized to 3}}
+  consume(arr[1][n]);
+  // expected-note@-1 {{1st function call argument is an uninitialized value}}
+  // expected-warning@-2{{1st function call argument is an uninitialized value}}
+}
+} // end of namespace mulit_array_index_tracking

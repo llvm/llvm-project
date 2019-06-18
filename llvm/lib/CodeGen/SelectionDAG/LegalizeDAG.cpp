@@ -3591,6 +3591,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       // Use the new condition code and swap true and false
       Legalized = true;
       Tmp1 = DAG.getSelectCC(dl, Tmp1, Tmp2, Tmp4, Tmp3, InvCC);
+      Tmp1->setFlags(Node->getFlags());
     } else {
       // If The inverse is not legal, then try to swap the arguments using
       // the inverse condition code.
@@ -3600,6 +3601,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
         // lhs and rhs.
         Legalized = true;
         Tmp1 = DAG.getSelectCC(dl, Tmp2, Tmp1, Tmp4, Tmp3, SwapInvCC);
+        Tmp1->setFlags(Node->getFlags());
       }
     }
 
@@ -3626,6 +3628,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
         Tmp1 = DAG.getNode(ISD::SELECT_CC, dl, Node->getValueType(0), Tmp1,
                            Tmp2, Tmp3, Tmp4, CC);
       }
+      Tmp1->setFlags(Node->getFlags());
     }
     Results.push_back(Tmp1);
     break;

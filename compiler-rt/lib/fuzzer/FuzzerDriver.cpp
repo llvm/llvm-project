@@ -709,6 +709,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   if (Flags.collect_data_flow)
     Options.CollectDataFlow = Flags.collect_data_flow;
   Options.LazyCounters = Flags.lazy_counters;
+  if (Flags.stop_file)
+    Options.StopFile = Flags.stop_file;
 
   unsigned Seed = Flags.seed;
   // Initialize Seed.

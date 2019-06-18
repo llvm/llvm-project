@@ -46,6 +46,7 @@ MATCHER_P(DefURI, U, "") {
 }
 MATCHER_P(QName, N, "") { return (arg.Scope + arg.Name).str() == N; }
 MATCHER_P(NumReferences, N, "") { return arg.References == N; }
+MATCHER_P(hasOrign, O, "") { return bool(arg.Origin & O); }
 
 namespace clang {
 namespace clangd {
@@ -82,7 +83,8 @@ TEST(FileSymbolsTest, UpdateAndGet) {
   FileSymbols FS;
   EXPECT_THAT(runFuzzyFind(*FS.buildIndex(IndexType::Light), ""), IsEmpty());
 
-  FS.update("f1", numSlab(1, 3), refSlab(SymbolID("1"), "f1.cc"), false);
+  FS.update("f1", numSlab(1, 3), refSlab(SymbolID("1"), "f1.cc"), nullptr,
+            false);
   EXPECT_THAT(runFuzzyFind(*FS.buildIndex(IndexType::Light), ""),
               UnorderedElementsAre(QName("1"), QName("2"), QName("3")));
   EXPECT_THAT(getRefs(*FS.buildIndex(IndexType::Light), SymbolID("1")),
@@ -91,8 +93,8 @@ TEST(FileSymbolsTest, UpdateAndGet) {
 
 TEST(FileSymbolsTest, Overlap) {
   FileSymbols FS;
-  FS.update("f1", numSlab(1, 3), nullptr, false);
-  FS.update("f2", numSlab(3, 5), nullptr, false);
+  FS.update("f1", numSlab(1, 3), nullptr, nullptr, false);
+  FS.update("f2", numSlab(3, 5), nullptr, nullptr, false);
   for (auto Type : {IndexType::Light, IndexType::Heavy})
     EXPECT_THAT(runFuzzyFind(*FS.buildIndex(Type), ""),
                 UnorderedElementsAre(QName("1"), QName("2"), QName("3"),
@@ -111,8 +113,8 @@ TEST(FileSymbolsTest, MergeOverlap) {
   auto X2 = symbol("x");
   X2.Definition.FileURI = "file:///x2";
 
-  FS.update("f1", OneSymboSlab(X1), nullptr, false);
-  FS.update("f2", OneSymboSlab(X2), nullptr, false);
+  FS.update("f1", OneSymboSlab(X1), nullptr, nullptr, false);
+  FS.update("f2", OneSymboSlab(X2), nullptr, nullptr, false);
   for (auto Type : {IndexType::Light, IndexType::Heavy})
     EXPECT_THAT(
         runFuzzyFind(*FS.buildIndex(Type, DuplicateHandling::Merge), "x"),
@@ -124,14 +126,14 @@ TEST(FileSymbolsTest, SnapshotAliveAfterRemove) {
   FileSymbols FS;
 
   SymbolID ID("1");
-  FS.update("f1", numSlab(1, 3), refSlab(ID, "f1.cc"), false);
+  FS.update("f1", numSlab(1, 3), refSlab(ID, "f1.cc"), nullptr, false);
 
   auto Symbols = FS.buildIndex(IndexType::Light);
   EXPECT_THAT(runFuzzyFind(*Symbols, ""),
               UnorderedElementsAre(QName("1"), QName("2"), QName("3")));
   EXPECT_THAT(getRefs(*Symbols, ID), RefsAre({FileURI("f1.cc")}));
 
-  FS.update("f1", nullptr, nullptr, false);
+  FS.update("f1", nullptr, nullptr, nullptr, false);
   auto Empty = FS.buildIndex(IndexType::Light);
   EXPECT_THAT(runFuzzyFind(*Empty, ""), IsEmpty());
   EXPECT_THAT(getRefs(*Empty, ID), ElementsAre());
@@ -347,6 +349,24 @@ TEST(FileIndexTest, CollectMacros) {
   EXPECT_THAT(runFuzzyFind(M, ""), Contains(QName("CLANGD")));
 }
 
+TEST(FileIndexTest, Relations) {
+  TestTU TU;
+  TU.Filename = "f.cpp";
+  TU.HeaderFilename = "f.h";
+  TU.HeaderCode = "class A {}; class B : public A {};";
+  auto AST = TU.build();
+  FileIndex Index;
+  Index.updatePreamble(TU.Filename, AST.getASTContext(),
+                       AST.getPreprocessorPtr(), AST.getCanonicalIncludes());
+  SymbolID A = findSymbol(TU.headerSymbols(), "A").ID;
+  uint32_t Results = 0;
+  RelationsRequest Req;
+  Req.Subjects.insert(A);
+  Req.Predicate = index::SymbolRole::RelationBaseOf;
+  Index.relations(Req, [&](const SymbolID &, const Symbol &) { ++Results; });
+  EXPECT_EQ(Results, 1u);
+}
+
 TEST(FileIndexTest, ReferencesInMainFileWithPreamble) {
   TestTU TU;
   TU.HeaderCode = "class Foo{};";
@@ -367,10 +387,31 @@ TEST(FileIndexTest, ReferencesInMainFileWithPreamble) {
               RefsAre({RefRange(Main.range())}));
 }
 
+TEST(FileIndexTest, MergeMainFileSymbols) {
+  const char* CommonHeader = "void foo();";
+  TestTU Header = TestTU::withCode(CommonHeader);
+  TestTU Cpp = TestTU::withCode("void foo() {}");
+  Cpp.Filename = "foo.cpp";
+  Cpp.HeaderFilename = "foo.h";
+  Cpp.HeaderCode = CommonHeader;
+
+  FileIndex Index;
+  auto HeaderAST = Header.build();
+  auto CppAST = Cpp.build();
+  Index.updateMain(testPath("foo.h"), HeaderAST);
+  Index.updateMain(testPath("foo.cpp"), CppAST);
+
+  auto Symbols = runFuzzyFind(Index, "");
+  // Check foo is merged, foo in Cpp wins (as we see the definition there).
+  EXPECT_THAT(Symbols, ElementsAre(AllOf(DeclURI("unittest:///foo.h"),
+                                         DefURI("unittest:///foo.cpp"),
+                                         hasOrign(SymbolOrigin::Merge))));
+}
+
 TEST(FileSymbolsTest, CountReferencesNoRefSlabs) {
   FileSymbols FS;
-  FS.update("f1", numSlab(1, 3), nullptr, true);
-  FS.update("f2", numSlab(1, 3), nullptr, false);
+  FS.update("f1", numSlab(1, 3), nullptr, nullptr, true);
+  FS.update("f2", numSlab(1, 3), nullptr, nullptr, false);
   EXPECT_THAT(
       runFuzzyFind(*FS.buildIndex(IndexType::Light, DuplicateHandling::Merge),
                    ""),
@@ -381,12 +422,18 @@ TEST(FileSymbolsTest, CountReferencesNoRefSlabs) {
 
 TEST(FileSymbolsTest, CountReferencesWithRefSlabs) {
   FileSymbols FS;
-  FS.update("f1cpp", numSlab(1, 3), refSlab(SymbolID("1"), "f1.cpp"), true);
-  FS.update("f1h", numSlab(1, 3), refSlab(SymbolID("1"), "f1.h"), false);
-  FS.update("f2cpp", numSlab(1, 3), refSlab(SymbolID("2"), "f2.cpp"), true);
-  FS.update("f2h", numSlab(1, 3), refSlab(SymbolID("2"), "f2.h"), false);
-  FS.update("f3cpp", numSlab(1, 3), refSlab(SymbolID("3"), "f3.cpp"), true);
-  FS.update("f3h", numSlab(1, 3), refSlab(SymbolID("3"), "f3.h"), false);
+  FS.update("f1cpp", numSlab(1, 3), refSlab(SymbolID("1"), "f1.cpp"), nullptr,
+            true);
+  FS.update("f1h", numSlab(1, 3), refSlab(SymbolID("1"), "f1.h"), nullptr,
+            false);
+  FS.update("f2cpp", numSlab(1, 3), refSlab(SymbolID("2"), "f2.cpp"), nullptr,
+            true);
+  FS.update("f2h", numSlab(1, 3), refSlab(SymbolID("2"), "f2.h"), nullptr,
+            false);
+  FS.update("f3cpp", numSlab(1, 3), refSlab(SymbolID("3"), "f3.cpp"), nullptr,
+            true);
+  FS.update("f3h", numSlab(1, 3), refSlab(SymbolID("3"), "f3.h"), nullptr,
+            false);
   EXPECT_THAT(
       runFuzzyFind(*FS.buildIndex(IndexType::Light, DuplicateHandling::Merge),
                    ""),

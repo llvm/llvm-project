@@ -82,14 +82,14 @@ define i32 @test_loop_cold_blocks(i32 %i, i32* %a) {
 ; Check that we sink cold loop blocks after the hot loop body.
 ; CHECK-LABEL: test_loop_cold_blocks:
 ; CHECK: %entry
-; CHECK-NOT: .p2align
-; CHECK: %unlikely1
-; CHECK-NOT: .p2align
-; CHECK: %unlikely2
 ; CHECK: .p2align
 ; CHECK: %body1
 ; CHECK: %body2
 ; CHECK: %body3
+; CHECK-NOT: .p2align
+; CHECK: %unlikely1
+; CHECK-NOT: .p2align
+; CHECK: %unlikely2
 ; CHECK: %exit
 
 entry:
@@ -125,7 +125,7 @@ exit:
   ret i32 %sum
 }
 
-!0 = !{!"branch_weights", i32 4, i32 64}
+!0 = !{!"branch_weights", i32 1, i32 64}
 
 define i32 @test_loop_early_exits(i32 %i, i32* %a) {
 ; Check that we sink early exit blocks out of loop bodies.
@@ -189,8 +189,8 @@ define i32 @test_loop_rotate(i32 %i, i32* %a) {
 ; loop, eliminating unconditional branches to the top.
 ; CHECK-LABEL: test_loop_rotate:
 ; CHECK: %entry
-; CHECK: %body1
 ; CHECK: %body0
+; CHECK: %body1
 ; CHECK: %exit
 
 entry:
@@ -957,16 +957,15 @@ define void @benchmark_heapsort(i32 %n, double* nocapture %ra) {
 ; CHECK: %if.else
 ; CHECK: %if.end10
 ; Second rotated loop top
-; CHECK: .p2align
-; CHECK: %if.then24
 ; CHECK: %while.cond.outer
 ; Third rotated loop top
 ; CHECK: .p2align
+; CHECK: %if.end20
 ; CHECK: %while.cond
 ; CHECK: %while.body
 ; CHECK: %land.lhs.true
 ; CHECK: %if.then19
-; CHECK: %if.end20
+; CHECK: %if.then24
 ; CHECK: %if.then8
 ; CHECK: ret
 
@@ -1546,8 +1545,8 @@ define i32 @not_rotate_if_extra_branch_regression(i32 %count, i32 %init) {
 ; CHECK-LABEL: not_rotate_if_extra_branch_regression
 ; CHECK: %.entry
 ; CHECK: %.first_backedge
-; CHECK: %.slow
 ; CHECK: %.second_header
+; CHECK: %.slow
 .entry:
   %sum.0 = shl nsw i32 %count, 1
   br label %.first_header

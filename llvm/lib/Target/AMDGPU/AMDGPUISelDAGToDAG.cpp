@@ -1014,6 +1014,9 @@ void AMDGPUDAGToDAGISel::SelectDIV_SCALE(SDNode *N) {
 }
 
 void AMDGPUDAGToDAGISel::SelectDIV_FMAS(SDNode *N) {
+  const GCNSubtarget *ST = static_cast<const GCNSubtarget *>(Subtarget);
+  const SIRegisterInfo *TRI = ST->getRegisterInfo();
+
   SDLoc SL(N);
   EVT VT = N->getValueType(0);
 
@@ -1025,7 +1028,7 @@ void AMDGPUDAGToDAGISel::SelectDIV_FMAS(SDNode *N) {
   SDValue CarryIn = N->getOperand(3);
   // V_DIV_FMAS implicitly reads VCC.
   SDValue VCC = CurDAG->getCopyToReg(CurDAG->getEntryNode(), SL,
-                                     AMDGPU::VCC, CarryIn, SDValue());
+                                     TRI->getVCC(), CarryIn, SDValue());
 
   SDValue Ops[10];
 
@@ -1842,9 +1845,12 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
     return;
   }
 
+  const GCNSubtarget *ST = static_cast<const GCNSubtarget *>(Subtarget);
+  const SIRegisterInfo *TRI = ST->getRegisterInfo();
+
   bool UseSCCBr = isCBranchSCC(N) && isUniformBr(N);
   unsigned BrOp = UseSCCBr ? AMDGPU::S_CBRANCH_SCC1 : AMDGPU::S_CBRANCH_VCCNZ;
-  unsigned CondReg = UseSCCBr ? AMDGPU::SCC : AMDGPU::VCC;
+  unsigned CondReg = UseSCCBr ? (unsigned)AMDGPU::SCC : TRI->getVCC();
   SDLoc SL(N);
 
   if (!UseSCCBr) {
@@ -1861,9 +1867,13 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
     // the S_AND when is unnecessary. But it would be better to add a separate
     // pass after SIFixSGPRCopies to do the unnecessary S_AND removal, so it
     // catches both cases.
-    Cond = SDValue(CurDAG->getMachineNode(AMDGPU::S_AND_B64, SL, MVT::i1,
-                               CurDAG->getRegister(AMDGPU::EXEC, MVT::i1),
-                               Cond),
+    Cond = SDValue(CurDAG->getMachineNode(ST->isWave32() ? AMDGPU::S_AND_B32
+                                                         : AMDGPU::S_AND_B64,
+                     SL, MVT::i1,
+                     CurDAG->getRegister(ST->isWave32() ? AMDGPU::EXEC_LO
+                                                        : AMDGPU::EXEC,
+                                         MVT::i1),
+                    Cond),
                    0);
   }
 

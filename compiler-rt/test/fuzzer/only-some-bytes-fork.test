@@ -8,5 +8,5 @@ RUN: %cpp_compiler %S/OnlySomeBytesTest.cpp -o %t-Fuzz
 
 # Test that the fork mode can collect and use the DFT
 RUN: rm -rf %t && mkdir %t
-RUN: not %t-Fuzz -collect_data_flow=%t-DFT -use_value_profile=1 -runs=100000000 -fork=1 2> %t/log
+RUN: not %t-Fuzz -collect_data_flow=%t-DFT -use_value_profile=1 -runs=100000000 -fork=20 2> %t/log
 RUN: grep BINGO %t/log

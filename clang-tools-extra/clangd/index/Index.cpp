@@ -69,6 +69,12 @@ void SwapIndex::refs(const RefsRequest &R,
                      llvm::function_ref<void(const Ref &)> CB) const {
   return snapshot()->refs(R, CB);
 }
+void SwapIndex::relations(
+    const RelationsRequest &R,
+    llvm::function_ref<void(const SymbolID &, const Symbol &)> CB) const {
+  return snapshot()->relations(R, CB);
+}
+
 size_t SwapIndex::estimateMemoryUsage() const {
   return snapshot()->estimateMemoryUsage();
 }

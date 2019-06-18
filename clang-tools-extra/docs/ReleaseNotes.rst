@@ -192,11 +192,12 @@ Improvements to clang-tidy
   Rewrites function signatures to use a trailing return type.
 
 - The :doc:`misc-throw-by-value-catch-by-reference
-  <clang-tidy/checks/misc-throw-by-value-catch-by-reference.rst>` now supports
+  <clang-tidy/checks/misc-throw-by-value-catch-by-reference>` now supports
   `WarnOnLargeObject` and `MaxSize` options to warn on any large trivial
   object caught by value.
 
-- Added `UseAssignment` option to :doc:`cppcoreguidelines-pro-type-member-init`
+- Added `UseAssignment` option to :doc:`cppcoreguidelines-pro-type-member-init
+  <clang-tidy/checks/cppcoreguidelines-pro-type-member-init>`
 
   If set to true, the check will provide fix-its with literal initializers
   (``int i = 0;``) instead of curly braces (``int i{};``).

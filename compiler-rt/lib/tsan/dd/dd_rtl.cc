@@ -83,7 +83,7 @@ static void InitializeFlags() {
   FlagParser parser;
   RegisterFlag(&parser, "second_deadlock_stack", "", &f->second_deadlock_stack);
   RegisterCommonFlags(&parser);
-  parser.ParseString(GetEnv("DSAN_OPTIONS"));
+  parser.ParseStringFromEnv("DSAN_OPTIONS");
   SetVerbosity(common_flags()->verbosity);
 }
 

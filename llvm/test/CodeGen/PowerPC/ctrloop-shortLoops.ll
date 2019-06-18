@@ -88,7 +88,8 @@ for.body:                                         ; preds = %entry, %for.body
 ; Function Attrs: norecurse nounwind
 define signext i32 @testTripCount2NonSmallLoop() {
 ; CHECK-LABEL: testTripCount2NonSmallLoop:
-; CHECK: bge
+; CHECK: blt
+; CHECK: beq
 ; CHECK: blr
 
 entry:

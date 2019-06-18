@@ -50,7 +50,7 @@ define double @test_constant_fold_rcp_f64_half() nounwind {
 
 define float @test_constant_fold_rcp_f32_43() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_43(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) #4
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) #5
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) nounwind readnone
@@ -59,7 +59,7 @@ define float @test_constant_fold_rcp_f32_43() nounwind {
 
 define double @test_constant_fold_rcp_f64_43() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f64_43(
-; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.rcp.f64(double 4.300000e+01) #4
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.rcp.f64(double 4.300000e+01) #5
 ; CHECK-NEXT:    ret double [[VAL]]
 ;
   %val = call double @llvm.amdgcn.rcp.f64(double 4.300000e+01) nounwind readnone
@@ -1655,7 +1655,7 @@ define i64 @icmp_constant_inputs_false() {
 
 define i64 @icmp_constant_inputs_true() {
 ; CHECK-LABEL: @icmp_constant_inputs_true(
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata !0) #5
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata !0) #6
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %result = call i64 @llvm.amdgcn.icmp.i64.i32(i32 9, i32 8, i32 34)
@@ -2362,7 +2362,7 @@ define i64 @fcmp_constant_inputs_false() {
 
 define i64 @fcmp_constant_inputs_true() {
 ; CHECK-LABEL: @fcmp_constant_inputs_true(
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata !0) #5
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata !0) #6
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %result = call i64 @llvm.amdgcn.fcmp.i64.f32(float 2.0, float 4.0, i32 4)
@@ -2441,12 +2441,14 @@ declare i32 @llvm.amdgcn.readfirstlane(i32)
 
 define amdgpu_kernel void @readfirstlane_constant(i32 %arg) {
 ; CHECK-LABEL: @readfirstlane_constant(
-; CHECK-NEXT: %var = call i32 @llvm.amdgcn.readfirstlane(i32 %arg)
-; CHECK-NEXT: store volatile i32 %var, i32* undef, align 4
-; CHECK-NEXT: store volatile i32 0, i32* undef, align 4
-; CHECK-NEXT: store volatile i32 123, i32* undef, align 4
-; CHECK-NEXT: store volatile i32 ptrtoint (i32* @gv to i32), i32* undef, align 4
-; CHECK-NEXT: store volatile i32 undef, i32* undef, align 4
+; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[ARG:%.*]])
+; CHECK-NEXT:    store volatile i32 [[VAR]], i32* undef, align 4
+; CHECK-NEXT:    store volatile i32 0, i32* undef, align 4
+; CHECK-NEXT:    store volatile i32 123, i32* undef, align 4
+; CHECK-NEXT:    store volatile i32 ptrtoint (i32* @gv to i32), i32* undef, align 4
+; CHECK-NEXT:    store volatile i32 undef, i32* undef, align 4
+; CHECK-NEXT:    ret void
+;
   %var = call i32 @llvm.amdgcn.readfirstlane(i32 %arg)
   %zero = call i32 @llvm.amdgcn.readfirstlane(i32 0)
   %imm = call i32 @llvm.amdgcn.readfirstlane(i32 123)
@@ -2468,12 +2470,14 @@ declare i32 @llvm.amdgcn.readlane(i32, i32)
 
 define amdgpu_kernel void @readlane_constant(i32 %arg, i32 %lane) {
 ; CHECK-LABEL: @readlane_constant(
-; CHECK-NEXT: %var = call i32 @llvm.amdgcn.readlane(i32 %arg, i32 7)
-; CHECK-NEXT: store volatile i32 %var, i32* undef, align 4
-; CHECK-NEXT: store volatile i32 0, i32* undef, align 4
-; CHECK-NEXT: store volatile i32 123, i32* undef, align 4
-; CHECK-NEXT: store volatile i32 ptrtoint (i32* @gv to i32), i32* undef, align 4
-; CHECK-NEXT: store volatile i32 undef, i32* undef, align 4
+; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[ARG:%.*]], i32 7)
+; CHECK-NEXT:    store volatile i32 [[VAR]], i32* undef, align 4
+; CHECK-NEXT:    store volatile i32 0, i32* undef, align 4
+; CHECK-NEXT:    store volatile i32 123, i32* undef, align 4
+; CHECK-NEXT:    store volatile i32 ptrtoint (i32* @gv to i32), i32* undef, align 4
+; CHECK-NEXT:    store volatile i32 undef, i32* undef, align 4
+; CHECK-NEXT:    ret void
+;
   %var = call i32 @llvm.amdgcn.readlane(i32 %arg, i32 7)
   %zero = call i32 @llvm.amdgcn.readlane(i32 0, i32 %lane)
   %imm = call i32 @llvm.amdgcn.readlane(i32 123, i32 %lane)
@@ -2526,5 +2530,5 @@ define amdgpu_kernel void @update_dpp_undef_old(i32 addrspace(1)* %out, i32 %in1
   ret void
 }
 
-; CHECK: attributes #5 = { convergent }
+; CHECK: attributes #6 = { convergent }
 

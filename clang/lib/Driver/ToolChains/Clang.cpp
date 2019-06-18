@@ -618,7 +618,11 @@ static bool shouldUseLeafFramePointer(const ArgList &Args,
 /// Add a CC1 option to specify the debug compilation directory.
 static void addDebugCompDirArg(const ArgList &Args, ArgStringList &CmdArgs,
                                const llvm::vfs::FileSystem &VFS) {
-  if (llvm::ErrorOr<std::string> CWD = VFS.getCurrentWorkingDirectory()) {
+  if (Arg *A = Args.getLastArg(options::OPT_fdebug_compilation_dir)) {
+    CmdArgs.push_back("-fdebug-compilation-dir");
+    CmdArgs.push_back(A->getValue());
+  } else if (llvm::ErrorOr<std::string> CWD =
+                 VFS.getCurrentWorkingDirectory()) {
     CmdArgs.push_back("-fdebug-compilation-dir");
     CmdArgs.push_back(Args.MakeArgString(*CWD));
   }
@@ -637,7 +641,8 @@ static void addDebugPrefixMapArg(const Driver &D, const ArgList &Args, ArgString
 }
 
 /// Vectorize at all optimization levels greater than 1 except for -Oz.
-/// For -Oz the loop vectorizer is disable, while the slp vectorizer is enabled.
+/// For -Oz the loop vectorizer is disabled, while the slp vectorizer is
+/// enabled.
 static bool shouldEnableVectorizerAtOLevel(const ArgList &Args, bool isSlpVec) {
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
     if (A->getOption().matches(options::OPT_O4) ||
@@ -4108,11 +4113,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     TC.getTriple().isOSBinFormatELF() &&
                     (isa<AssembleJobAction>(JA) || isa<CompileJobAction>(JA) ||
                      isa<BackendJobAction>(JA));
-  const char *SplitDWARFOut;
   if (SplitDWARF) {
+    const char *SplitDWARFOut = SplitDebugName(Args, Input, Output);
     CmdArgs.push_back("-split-dwarf-file");
-    SplitDWARFOut = SplitDebugName(Args, Input, Output);
     CmdArgs.push_back(SplitDWARFOut);
+    if (DwarfFission == DwarfFissionKind::Split) {
+      CmdArgs.push_back("-split-dwarf-output");
+      CmdArgs.push_back(SplitDWARFOut);
+    }
   }
 
   // Pass the linker version in use.
@@ -5071,6 +5079,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fsave_optimization_record,
                    options::OPT_foptimization_record_file_EQ,
                    options::OPT_fno_save_optimization_record, false) ||
+      Args.hasFlag(options::OPT_fsave_optimization_record_EQ,
+                   options::OPT_fno_save_optimization_record, false) ||
       Args.hasFlag(options::OPT_foptimization_record_passes_EQ,
                    options::OPT_fno_save_optimization_record, false)) {
     CmdArgs.push_back("-opt-record-file");
@@ -5109,6 +5119,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (const Arg *A =
             Args.getLastArg(options::OPT_foptimization_record_passes_EQ)) {
       CmdArgs.push_back("-opt-record-passes");
+      CmdArgs.push_back(A->getValue());
+    }
+
+    if (const Arg *A =
+            Args.getLastArg(options::OPT_fsave_optimization_record_EQ)) {
+      CmdArgs.push_back("-opt-record-format");
       CmdArgs.push_back(A->getValue());
     }
   }
@@ -6180,7 +6196,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   Arg *A;
   if (getDebugFissionKind(D, Args, A) == DwarfFissionKind::Split &&
       T.isOSBinFormatELF()) {
-    CmdArgs.push_back("-split-dwarf-file");
+    CmdArgs.push_back("-split-dwarf-output");
     CmdArgs.push_back(SplitDebugName(Args, Input, Output));
   }
 

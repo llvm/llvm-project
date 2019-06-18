@@ -760,6 +760,19 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
 
     LLVM_DEBUG(dbgs() << "Visiting: Class: " << Class << "; " << *Inst << "\n");
 
+    // Some of the ARC calls can be deleted if their arguments are global
+    // variables that are inert in ARC.
+    if (IsNoopOnGlobal(Class)) {
+      Value *Opnd = Inst->getOperand(0);
+      if (auto *GV = dyn_cast<GlobalVariable>(Opnd->stripPointerCasts()))
+        if (GV->hasAttribute("objc_arc_inert")) {
+          if (!Inst->getType()->isVoidTy())
+            Inst->replaceAllUsesWith(Opnd);
+          Inst->eraseFromParent();
+          continue;
+        }
+    }
+
     switch (Class) {
     default: break;
 

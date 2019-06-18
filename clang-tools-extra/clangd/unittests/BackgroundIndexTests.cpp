@@ -1,5 +1,6 @@
 #include "SyncAPI.h"
 #include "TestFS.h"
+#include "TestTU.h"
 #include "index/Background.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Threading.h"
@@ -170,8 +171,12 @@ TEST_F(BackgroundIndexTest, ShardStorageTest) {
       void f_b();
       class A_CC {};
       )cpp";
-  std::string A_CC = "#include \"A.h\"\nvoid g() { (void)common; }";
-  FS.Files[testPath("root/A.cc")] = A_CC;
+  std::string A_CC = "";
+  FS.Files[testPath("root/A.cc")] = R"cpp(
+      #include "A.h"
+      void g() { (void)common; }
+      class B_CC : public A_CC {};
+      )cpp";
 
   llvm::StringMap<std::string> Storage;
   size_t CacheHits = 0;
@@ -214,8 +219,21 @@ TEST_F(BackgroundIndexTest, ShardStorageTest) {
 
   auto ShardSource = MSS.loadShard(testPath("root/A.cc"));
   EXPECT_NE(ShardSource, nullptr);
-  EXPECT_THAT(*ShardSource->Symbols, UnorderedElementsAre(Named("g")));
-  EXPECT_THAT(*ShardSource->Refs, RefsAre({FileURI("unittest:///root/A.cc")}));
+  EXPECT_THAT(*ShardSource->Symbols,
+              UnorderedElementsAre(Named("g"), Named("B_CC")));
+  for (const auto &Ref : *ShardSource->Refs)
+    EXPECT_THAT(Ref.second,
+                UnorderedElementsAre(FileURI("unittest:///root/A.cc")));
+
+  // The BaseOf relationship between A_CC and B_CC is stored in the file
+  // containing the definition of the subject (A_CC)
+  SymbolID A = findSymbol(*ShardHeader->Symbols, "A_CC").ID;
+  SymbolID B = findSymbol(*ShardSource->Symbols, "B_CC").ID;
+  EXPECT_THAT(
+      *ShardHeader->Relations,
+      UnorderedElementsAre(Relation{A, index::SymbolRole::RelationBaseOf, B}));
+  // (and not in the file containing the definition of the object (B_CC)).
+  EXPECT_EQ(ShardSource->Relations->size(), 0u);
 }
 
 TEST_F(BackgroundIndexTest, DirectIncludesTest) {

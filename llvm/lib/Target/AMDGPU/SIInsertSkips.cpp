@@ -271,6 +271,9 @@ void SIInsertSkips::kill(MachineInstr &MI) {
     break;
   }
   case AMDGPU::SI_KILL_I1_TERMINATOR: {
+    const MachineFunction *MF = MI.getParent()->getParent();
+    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+    unsigned Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
     const MachineOperand &Op = MI.getOperand(0);
     int64_t KillVal = MI.getOperand(1).getImm();
     assert(KillVal == 0 || KillVal == -1);
@@ -281,14 +284,17 @@ void SIInsertSkips::kill(MachineInstr &MI) {
       assert(Imm == 0 || Imm == -1);
 
       if (Imm == KillVal)
-        BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_MOV_B64), AMDGPU::EXEC)
+        BuildMI(MBB, &MI, DL, TII->get(ST.isWave32() ? AMDGPU::S_MOV_B32
+                                                     : AMDGPU::S_MOV_B64), Exec)
           .addImm(0);
       break;
     }
 
     unsigned Opcode = KillVal ? AMDGPU::S_ANDN2_B64 : AMDGPU::S_AND_B64;
-    BuildMI(MBB, &MI, DL, TII->get(Opcode), AMDGPU::EXEC)
-        .addReg(AMDGPU::EXEC)
+    if (ST.isWave32())
+      Opcode = KillVal ? AMDGPU::S_ANDN2_B32 : AMDGPU::S_AND_B32;
+    BuildMI(MBB, &MI, DL, TII->get(Opcode), Exec)
+        .addReg(Exec)
         .add(Op);
     break;
   }
@@ -337,9 +343,11 @@ bool SIInsertSkips::optimizeVccBranch(MachineInstr &MI) const {
   // S_CBRANCH_EXEC[N]Z
   bool Changed = false;
   MachineBasicBlock &MBB = *MI.getParent();
-  const unsigned CondReg = AMDGPU::VCC;
-  const unsigned ExecReg = AMDGPU::EXEC;
-  const unsigned And = AMDGPU::S_AND_B64;
+  const GCNSubtarget &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
+  const bool IsWave32 = ST.isWave32();
+  const unsigned CondReg = TRI->getVCC();
+  const unsigned ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+  const unsigned And = IsWave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
 
   MachineBasicBlock::reverse_iterator A = MI.getReverseIterator(),
                                       E = MBB.rend();

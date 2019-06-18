@@ -372,7 +372,7 @@ void InitializeFlags() {
 
   FlagParser cfi_parser;
   RegisterCommonFlags(&cfi_parser);
-  cfi_parser.ParseString(GetEnv("CFI_OPTIONS"));
+  cfi_parser.ParseStringFromEnv("CFI_OPTIONS");
 
 #ifdef CFI_ENABLE_DIAG
   FlagParser ubsan_parser;
@@ -381,7 +381,7 @@ void InitializeFlags() {
 
   const char *ubsan_default_options = __ubsan::MaybeCallUbsanDefaultOptions();
   ubsan_parser.ParseString(ubsan_default_options);
-  ubsan_parser.ParseString(GetEnv("UBSAN_OPTIONS"));
+  ubsan_parser.ParseStringFromEnv("UBSAN_OPTIONS");
 #endif
 
   InitializeCommonFlags();

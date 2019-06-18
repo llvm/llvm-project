@@ -462,6 +462,9 @@ namespace {
     SDValue visitFMULForFMADistributiveCombine(SDNode *N);
 
     SDValue XformToShuffleWithZero(SDNode *N);
+    bool reassociationCanBreakAddressingModePattern(unsigned Opc,
+                                                    const SDLoc &DL, SDValue N0,
+                                                    SDValue N1);
     SDValue reassociateOpsCommutative(unsigned Opc, const SDLoc &DL, SDValue N0,
                                       SDValue N1);
     SDValue reassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
@@ -1037,6 +1040,62 @@ static bool isAnyConstantBuildVector(SDValue V, bool NoOpaques = false) {
     return false;
   return isConstantOrConstantVector(V, NoOpaques) ||
          ISD::isBuildVectorOfConstantFPSDNodes(V.getNode());
+}
+
+bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
+                                                             const SDLoc &DL,
+                                                             SDValue N0,
+                                                             SDValue N1) {
+  // Currently this only tries to ensure we don't undo the GEP splits done by
+  // CodeGenPrepare when shouldConsiderGEPOffsetSplit is true. To ensure this,
+  // we check if the following transformation would be problematic:
+  // (load/store (add, (add, x, offset1), offset2)) ->
+  // (load/store (add, x, offset1+offset2)).
+
+  if (Opc != ISD::ADD || N0.getOpcode() != ISD::ADD)
+    return false;
+
+  if (N0.hasOneUse())
+    return false;
+
+  auto *C1 = dyn_cast<ConstantSDNode>(N0.getOperand(1));
+  auto *C2 = dyn_cast<ConstantSDNode>(N1);
+  if (!C1 || !C2)
+    return false;
+
+  const APInt &C1APIntVal = C1->getAPIntValue();
+  const APInt &C2APIntVal = C2->getAPIntValue();
+  if (C1APIntVal.getBitWidth() > 64 || C2APIntVal.getBitWidth() > 64)
+    return false;
+
+  const APInt CombinedValueIntVal = C1APIntVal + C2APIntVal;
+  if (CombinedValueIntVal.getBitWidth() > 64)
+    return false;
+  const int64_t CombinedValue = CombinedValueIntVal.getSExtValue();
+
+  for (SDNode *Node : N0->uses()) {
+    auto LoadStore = dyn_cast<MemSDNode>(Node);
+    if (LoadStore) {
+      // Is x[offset2] already not a legal addressing mode? If so then
+      // reassociating the constants breaks nothing (we test offset2 because
+      // that's the one we hope to fold into the load or store).
+      TargetLoweringBase::AddrMode AM;
+      AM.HasBaseReg = true;
+      AM.BaseOffs = C2APIntVal.getSExtValue();
+      EVT VT = LoadStore->getMemoryVT();
+      unsigned AS = LoadStore->getAddressSpace();
+      Type *AccessTy = VT.getTypeForEVT(*DAG.getContext());
+      if (!TLI.isLegalAddressingMode(DAG.getDataLayout(), AM, AccessTy, AS))
+        continue;
+
+      // Would x[offset1+offset2] still be a legal addressing mode?
+      AM.BaseOffs = CombinedValue;
+      if (!TLI.isLegalAddressingMode(DAG.getDataLayout(), AM, AccessTy, AS))
+        return true;
+    }
+  }
+
+  return false;
 }
 
 // Helper for DAGCombiner::reassociateOps. Try to reassociate an expression
@@ -2091,7 +2150,9 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
       !isConstantFPBuildVectorOrConstantFP(NewCF))
     return SDValue();
 
-  return DAG.getSelect(DL, VT, Sel.getOperand(0), NewCT, NewCF);
+  SDValue SelectOp = DAG.getSelect(DL, VT, Sel.getOperand(0), NewCT, NewCF);
+  SelectOp->setFlags(BO->getFlags());
+  return SelectOp;
 }
 
 static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, SelectionDAG &DAG) {
@@ -2260,9 +2321,10 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
     return NewSel;
 
   // reassociate add
-  if (SDValue RADD = reassociateOps(ISD::ADD, DL, N0, N1, N->getFlags()))
-    return RADD;
-
+  if (!reassociationCanBreakAddressingModePattern(ISD::ADD, DL, N0, N1)) {
+    if (SDValue RADD = reassociateOps(ISD::ADD, DL, N0, N1, N->getFlags()))
+      return RADD;
+  }
   // fold ((0-A) + B) -> B-A
   if (N0.getOpcode() == ISD::SUB && isNullOrNullSplat(N0.getOperand(0)))
     return DAG.getNode(ISD::SUB, DL, VT, N1, N0.getOperand(1));
@@ -7997,6 +8059,7 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT VT0 = N0.getValueType();
   SDLoc DL(N);
+  SDNodeFlags Flags = N->getFlags();
 
   if (SDValue V = DAG.simplifySelect(N0, N1, N2))
     return V;
@@ -8047,10 +8110,10 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
       SDValue Cond0 = N0->getOperand(0);
       SDValue Cond1 = N0->getOperand(1);
       SDValue InnerSelect =
-          DAG.getNode(ISD::SELECT, DL, N1.getValueType(), Cond1, N1, N2);
+          DAG.getNode(ISD::SELECT, DL, N1.getValueType(), Cond1, N1, N2, Flags);
       if (normalizeToSequence || !InnerSelect.use_empty())
         return DAG.getNode(ISD::SELECT, DL, N1.getValueType(), Cond0,
-                           InnerSelect, N2);
+                           InnerSelect, N2, Flags);
       // Cleanup on failure.
       if (InnerSelect.use_empty())
         recursivelyDeleteUnusedNodes(InnerSelect.getNode());
@@ -8059,11 +8122,11 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     if (N0->getOpcode() == ISD::OR && N0->hasOneUse()) {
       SDValue Cond0 = N0->getOperand(0);
       SDValue Cond1 = N0->getOperand(1);
-      SDValue InnerSelect =
-          DAG.getNode(ISD::SELECT, DL, N1.getValueType(), Cond1, N1, N2);
+      SDValue InnerSelect = DAG.getNode(ISD::SELECT, DL, N1.getValueType(),
+                                        Cond1, N1, N2, Flags);
       if (normalizeToSequence || !InnerSelect.use_empty())
         return DAG.getNode(ISD::SELECT, DL, N1.getValueType(), Cond0, N1,
-                           InnerSelect);
+                           InnerSelect, Flags);
       // Cleanup on failure.
       if (InnerSelect.use_empty())
         recursivelyDeleteUnusedNodes(InnerSelect.getNode());
@@ -8078,12 +8141,14 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
         // Create the actual and node if we can generate good code for it.
         if (!normalizeToSequence) {
           SDValue And = DAG.getNode(ISD::AND, DL, N0.getValueType(), N0, N1_0);
-          return DAG.getNode(ISD::SELECT, DL, N1.getValueType(), And, N1_1, N2);
+          return DAG.getNode(ISD::SELECT, DL, N1.getValueType(), And, N1_1,
+                             N2, Flags);
         }
         // Otherwise see if we can optimize the "and" to a better pattern.
-        if (SDValue Combined = visitANDLike(N0, N1_0, N))
+        if (SDValue Combined = visitANDLike(N0, N1_0, N)) {
           return DAG.getNode(ISD::SELECT, DL, N1.getValueType(), Combined, N1_1,
-                             N2);
+                             N2, Flags);
+        }
       }
     }
     // select Cond0, X, (select Cond1, X, Y) -> select (or Cond0, Cond1), X, Y
@@ -8095,19 +8160,23 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
         // Create the actual or node if we can generate good code for it.
         if (!normalizeToSequence) {
           SDValue Or = DAG.getNode(ISD::OR, DL, N0.getValueType(), N0, N2_0);
-          return DAG.getNode(ISD::SELECT, DL, N1.getValueType(), Or, N1, N2_2);
+          return DAG.getNode(ISD::SELECT, DL, N1.getValueType(), Or, N1, 
+                             N2_2, Flags);
         }
         // Otherwise see if we can optimize to a better pattern.
         if (SDValue Combined = visitORLike(N0, N2_0, N))
           return DAG.getNode(ISD::SELECT, DL, N1.getValueType(), Combined, N1,
-                             N2_2);
+                             N2_2, Flags);
       }
     }
   }
 
   // select (not Cond), N1, N2 -> select Cond, N2, N1
-  if (SDValue F = extractBooleanFlip(N0, TLI))
-    return DAG.getSelect(DL, VT, F, N2, N1);
+  if (SDValue F = extractBooleanFlip(N0, TLI)) {
+    SDValue SelectOp = DAG.getSelect(DL, VT, F, N2, N1);
+    SelectOp->setFlags(Flags);
+    return SelectOp;
+  }
 
   // Fold selects based on a setcc into other things, such as min/max/abs.
   if (N0.getOpcode() == ISD::SETCC) {
@@ -8157,7 +8226,7 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
          TLI.isOperationLegalOrCustom(ISD::SELECT_CC, VT))) {
       // Any flags available in a select/setcc fold will be on the setcc as they
       // migrated from fcmp
-      const SDNodeFlags Flags = N0.getNode()->getFlags();
+      Flags = N0.getNode()->getFlags();
       SDValue SelectNode = DAG.getNode(ISD::SELECT_CC, DL, VT, Cond0, Cond1, N1,
                                        N2, N0.getOperand(2));
       SelectNode->setFlags(Flags);
@@ -8743,9 +8812,11 @@ SDValue DAGCombiner::visitSELECT_CC(SDNode *N) {
       return N2;
     } else if (SCC.getOpcode() == ISD::SETCC) {
       // Fold to a simpler select_cc
-      return DAG.getNode(ISD::SELECT_CC, SDLoc(N), N2.getValueType(),
-                         SCC.getOperand(0), SCC.getOperand(1), N2, N3,
-                         SCC.getOperand(2));
+      SDValue SelectOp = DAG.getNode(
+          ISD::SELECT_CC, SDLoc(N), N2.getValueType(), SCC.getOperand(0),
+          SCC.getOperand(1), N2, N3, SCC.getOperand(2));
+      SelectOp->setFlags(SCC->getFlags());
+      return SelectOp;
     }
   }
 
@@ -19412,13 +19483,16 @@ SDValue DAGCombiner::SimplifySelect(const SDLoc &DL, SDValue N0, SDValue N1,
     // Check to see if we got a select_cc back (to turn into setcc/select).
     // Otherwise, just return whatever node we got back, like fabs.
     if (SCC.getOpcode() == ISD::SELECT_CC) {
+      const SDNodeFlags Flags = N0.getNode()->getFlags();
       SDValue SETCC = DAG.getNode(ISD::SETCC, SDLoc(N0),
                                   N0.getValueType(),
                                   SCC.getOperand(0), SCC.getOperand(1),
-                                  SCC.getOperand(4));
+                                  SCC.getOperand(4), Flags);
       AddToWorklist(SETCC.getNode());
-      return DAG.getSelect(SDLoc(SCC), SCC.getValueType(), SETCC,
-                           SCC.getOperand(2), SCC.getOperand(3));
+      SDValue SelectNode = DAG.getSelect(SDLoc(SCC), SCC.getValueType(), SETCC,
+                                         SCC.getOperand(2), SCC.getOperand(3));
+      SelectNode->setFlags(Flags);
+      return SelectNode;
     }
 
     return SCC;

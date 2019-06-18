@@ -240,6 +240,13 @@ inline mapped_iterator<ItTy, FuncTy> map_iterator(ItTy I, FuncTy F) {
   return mapped_iterator<ItTy, FuncTy>(std::move(I), std::move(F));
 }
 
+template <class ContainerTy, class FuncTy>
+auto map_range(ContainerTy &&C, FuncTy F)
+    -> decltype(make_range(map_iterator(C.begin(), F),
+                           map_iterator(C.end(), F))) {
+  return make_range(map_iterator(C.begin(), F), map_iterator(C.end(), F));
+}
+
 /// Helper to determine if type T has a member called rbegin().
 template <typename Ty> class has_rbegin_impl {
   using yes = char[1];

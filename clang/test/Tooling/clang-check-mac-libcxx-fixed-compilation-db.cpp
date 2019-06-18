@@ -16,5 +16,7 @@
 //
 // ^ -ccc-install-dir passed to unbreak tests on *BSD where
 //   getMainExecutable() relies on real argv[0] being passed
+//
+// UNSUPPORTED: enable_shared
 #include <mock_vector>
 vector v;

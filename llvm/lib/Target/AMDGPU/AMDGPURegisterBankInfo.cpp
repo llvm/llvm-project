@@ -917,7 +917,11 @@ AMDGPURegisterBankInfo::getDefaultMappingVOP(const MachineInstr &MI) const {
   OpdsMapping[OpdIdx++] = AMDGPU::getValueMapping(Bank1, Size1);
 
   for (unsigned e = MI.getNumOperands(); OpdIdx != e; ++OpdIdx) {
-    unsigned Size = getSizeInBits(MI.getOperand(OpdIdx).getReg(), MRI, *TRI);
+    const MachineOperand &MO = MI.getOperand(OpdIdx);
+    if (!MO.isReg())
+      continue;
+
+    unsigned Size = getSizeInBits(MO.getReg(), MRI, *TRI);
     unsigned BankID = Size == 1 ? AMDGPU::VCCRegBankID : AMDGPU::VGPRRegBankID;
     OpdsMapping[OpdIdx] = AMDGPU::getValueMapping(BankID, Size);
   }

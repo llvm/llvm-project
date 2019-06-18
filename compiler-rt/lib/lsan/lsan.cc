@@ -76,7 +76,7 @@ static void InitializeFlags() {
   // Override from user-specified string.
   const char *lsan_default_options = MaybeCallLsanDefaultOptions();
   parser.ParseString(lsan_default_options);
-  parser.ParseString(GetEnv("LSAN_OPTIONS"));
+  parser.ParseStringFromEnv("LSAN_OPTIONS");
 
   SetVerbosity(common_flags()->verbosity);
 

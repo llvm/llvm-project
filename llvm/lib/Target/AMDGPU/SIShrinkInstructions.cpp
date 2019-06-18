@@ -551,6 +551,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
+  unsigned VCCReg = ST.isWave32() ? AMDGPU::VCC_LO : AMDGPU::VCC;
 
   std::vector<unsigned> I1Defs;
 
@@ -726,10 +727,10 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
           // So, instead of forcing the instruction to write to VCC, we provide
           // a hint to the register allocator to use VCC and then we will run
           // this pass again after RA and shrink it if it outputs to VCC.
-          MRI.setRegAllocationHint(MI.getOperand(0).getReg(), 0, AMDGPU::VCC);
+          MRI.setRegAllocationHint(MI.getOperand(0).getReg(), 0, VCCReg);
           continue;
         }
-        if (DstReg != AMDGPU::VCC)
+        if (DstReg != VCCReg)
           continue;
       }
 
@@ -742,10 +743,10 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
           continue;
         unsigned SReg = Src2->getReg();
         if (TargetRegisterInfo::isVirtualRegister(SReg)) {
-          MRI.setRegAllocationHint(SReg, 0, AMDGPU::VCC);
+          MRI.setRegAllocationHint(SReg, 0, VCCReg);
           continue;
         }
-        if (SReg != AMDGPU::VCC)
+        if (SReg != VCCReg)
           continue;
       }
 
@@ -758,20 +759,24 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
                                                         AMDGPU::OpName::src2);
 
       if (SDst) {
-        if (SDst->getReg() != AMDGPU::VCC) {
+        bool Next = false;
+
+        if (SDst->getReg() != VCCReg) {
           if (TargetRegisterInfo::isVirtualRegister(SDst->getReg()))
-            MRI.setRegAllocationHint(SDst->getReg(), 0, AMDGPU::VCC);
-          continue;
+            MRI.setRegAllocationHint(SDst->getReg(), 0, VCCReg);
+          Next = true;
         }
 
         // All of the instructions with carry outs also have an SGPR input in
         // src2.
-        if (Src2 && Src2->getReg() != AMDGPU::VCC) {
+        if (Src2 && Src2->getReg() != VCCReg) {
           if (TargetRegisterInfo::isVirtualRegister(Src2->getReg()))
-            MRI.setRegAllocationHint(Src2->getReg(), 0, AMDGPU::VCC);
-
-          continue;
+            MRI.setRegAllocationHint(Src2->getReg(), 0, VCCReg);
+          Next = true;
         }
+
+        if (Next)
+          continue;
       }
 
       // We can shrink this instruction

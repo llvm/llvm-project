@@ -1550,8 +1550,7 @@ void LoopUnswitch::RewriteLoopBodyWithConditionConstant(Loop *L, Value *LIC,
                        ConstantInt::getTrue(Context), NewSISucc);
     // Release the PHI operands for this edge.
     for (PHINode &PN : NewSISucc->phis())
-      PN.setIncomingValue(PN.getBasicBlockIndex(Switch),
-                          UndefValue::get(PN.getType()));
+      PN.setIncomingValueForBlock(Switch, UndefValue::get(PN.getType()));
     // Tell the domtree about the new block. We don't fully update the
     // domtree here -- instead we force it to do a full recomputation
     // after the pass is complete -- but we do need to inform it of

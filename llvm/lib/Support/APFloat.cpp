@@ -113,6 +113,42 @@ namespace llvm {
   static const fltSemantics semPPCDoubleDoubleLegacy = {1023, -1022 + 53,
                                                         53 + 53, 128};
 
+  const llvm::fltSemantics &APFloatBase::EnumToSemantics(Semantics S) {
+    switch (S) {
+    case S_IEEEhalf:
+      return IEEEhalf();
+    case S_IEEEsingle:
+      return IEEEsingle();
+    case S_IEEEdouble:
+      return IEEEdouble();
+    case S_x87DoubleExtended:
+      return x87DoubleExtended();
+    case S_IEEEquad:
+      return IEEEquad();
+    case S_PPCDoubleDouble:
+      return PPCDoubleDouble();
+    }
+    llvm_unreachable("Unrecognised floating semantics");
+  }
+
+  APFloatBase::Semantics
+  APFloatBase::SemanticsToEnum(const llvm::fltSemantics &Sem) {
+    if (&Sem == &llvm::APFloat::IEEEhalf())
+      return S_IEEEhalf;
+    else if (&Sem == &llvm::APFloat::IEEEsingle())
+      return S_IEEEsingle;
+    else if (&Sem == &llvm::APFloat::IEEEdouble())
+      return S_IEEEdouble;
+    else if (&Sem == &llvm::APFloat::x87DoubleExtended())
+      return S_x87DoubleExtended;
+    else if (&Sem == &llvm::APFloat::IEEEquad())
+      return S_IEEEquad;
+    else if (&Sem == &llvm::APFloat::PPCDoubleDouble())
+      return S_PPCDoubleDouble;
+    else
+      llvm_unreachable("Unknown floating semantics");
+  }
+
   const fltSemantics &APFloatBase::IEEEhalf() {
     return semIEEEhalf;
   }

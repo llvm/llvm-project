@@ -204,4 +204,4 @@
 // RUN: %clang %s -### --target=x86_64-fuchsia \
 // RUN:     -gsplit-dwarf -c %s 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SPLIT-DWARF
-// CHECK-SPLIT-DWARF: "-split-dwarf-file" "fuchsia.dwo"
+// CHECK-SPLIT-DWARF: "-split-dwarf-output" "fuchsia.dwo"

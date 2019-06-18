@@ -185,9 +185,12 @@ public:
   /// file, for example with -save-temps.
   std::string MainFileName;
 
-  /// The name for the split debug info file that we'll break out. This is used
-  /// in the backend for setting the name in the skeleton cu.
+  /// The name for the split debug info file used for the DW_AT_[GNU_]dwo_name
+  /// attribute in the skeleton CU.
   std::string SplitDwarfFile;
+
+  /// Output filename for the split debug info, not used in the skeleton CU.
+  std::string SplitDwarfOutput;
 
   /// The name of the relocation model to use.
   llvm::Reloc::Model RelocationModel;
@@ -242,6 +245,9 @@ public:
   /// The regex that filters the passes that should be saved to the optimization
   /// records.
   std::string OptRecordPasses;
+
+  /// The format used for serializing remarks (default: YAML)
+  std::string OptRecordFormat;
 
   /// The name of the partition that symbols are assigned to, specified with
   /// -fsymbol-partition (see https://lld.llvm.org/Partitions.html).

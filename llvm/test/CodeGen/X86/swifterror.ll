@@ -1,6 +1,6 @@
-; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-apple-darwin | FileCheck --check-prefix=CHECK-APPLE %s
-; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-apple-darwin -O0 | FileCheck --check-prefix=CHECK-O0 %s
-; RUN: llc < %s -verify-machineinstrs -mtriple=i386-apple-darwin | FileCheck --check-prefix=CHECK-i386 %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=x86_64-apple-darwin -disable-block-placement | FileCheck --check-prefix=CHECK-APPLE %s
+; RUN: llc -verify-machineinstrs -O0 < %s -mtriple=x86_64-apple-darwin -disable-block-placement | FileCheck --check-prefix=CHECK-O0 %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=i386-apple-darwin -disable-block-placement | FileCheck --check-prefix=CHECK-i386 %s
 
 declare i8* @malloc(i64)
 declare void @free(i8*)

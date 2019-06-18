@@ -85,10 +85,20 @@ struct RemarkSetupPatternError : RemarkSetupErrorInfo<RemarkSetupPatternError> {
   using RemarkSetupErrorInfo<RemarkSetupPatternError>::RemarkSetupErrorInfo;
 };
 
+struct RemarkSetupFormatError : RemarkSetupErrorInfo<RemarkSetupFormatError> {
+  static char ID;
+  using RemarkSetupErrorInfo<RemarkSetupFormatError>::RemarkSetupErrorInfo;
+};
+
+enum class RemarksSerializerFormat { Unknown, YAML };
+
+Expected<RemarksSerializerFormat> parseSerializerFormat(StringRef Format);
+
 /// Setup optimization remarks.
 Expected<std::unique_ptr<ToolOutputFile>>
 setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
-                         StringRef RemarksPasses, bool RemarksWithHotness,
+                         StringRef RemarksPasses, StringRef RemarksFormat,
+                         bool RemarksWithHotness,
                          unsigned RemarksHotnessThreshold = 0);
 
 } // end namespace llvm

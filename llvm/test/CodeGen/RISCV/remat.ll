@@ -52,24 +52,32 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    lui s0, %hi(d)
 ; RV32I-NEXT:    lui s10, %hi(c)
 ; RV32I-NEXT:    lui s11, %hi(b)
-; RV32I-NEXT:  .LBB0_2: # %for.body
-; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    lw a1, %lo(l)(s2)
-; RV32I-NEXT:    beqz a1, .LBB0_4
-; RV32I-NEXT:  # %bb.3: # %if.then
-; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
+; RV32I-NEXT:    bnez a1, .LBB0_4
+; RV32I-NEXT:    j .LBB0_5
+; RV32I-NEXT:  .LBB0_2: # %for.inc
+; RV32I-NEXT:    # in Loop: Header=BB0_5 Depth=1
+; RV32I-NEXT:    lw a0, %lo(a)(s9)
+; RV32I-NEXT:    addi a0, a0, -1
+; RV32I-NEXT:    sw a0, %lo(a)(s9)
+; RV32I-NEXT:    beqz a0, .LBB0_11
+; RV32I-NEXT:  # %bb.3: # %for.body
+; RV32I-NEXT:    # in Loop: Header=BB0_5 Depth=1
+; RV32I-NEXT:    lw a1, %lo(l)(s2)
+; RV32I-NEXT:    beqz a1, .LBB0_5
+; RV32I-NEXT:  .LBB0_4: # %if.then
 ; RV32I-NEXT:    lw a4, %lo(e)(s1)
 ; RV32I-NEXT:    lw a3, %lo(d)(s0)
 ; RV32I-NEXT:    lw a2, %lo(c)(s10)
 ; RV32I-NEXT:    lw a1, %lo(b)(s11)
 ; RV32I-NEXT:    addi a5, zero, 32
 ; RV32I-NEXT:    call foo
-; RV32I-NEXT:  .LBB0_4: # %if.end
-; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
+; RV32I-NEXT:  .LBB0_5: # %if.end
+; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    lw a0, %lo(k)(s3)
-; RV32I-NEXT:    beqz a0, .LBB0_6
-; RV32I-NEXT:  # %bb.5: # %if.then3
-; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
+; RV32I-NEXT:    beqz a0, .LBB0_7
+; RV32I-NEXT:  # %bb.6: # %if.then3
+; RV32I-NEXT:    # in Loop: Header=BB0_5 Depth=1
 ; RV32I-NEXT:    lw a4, %lo(f)(s8)
 ; RV32I-NEXT:    lw a3, %lo(e)(s1)
 ; RV32I-NEXT:    lw a2, %lo(d)(s0)
@@ -77,12 +85,12 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    lw a0, %lo(b)(s11)
 ; RV32I-NEXT:    addi a5, zero, 64
 ; RV32I-NEXT:    call foo
-; RV32I-NEXT:  .LBB0_6: # %if.end5
-; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
+; RV32I-NEXT:  .LBB0_7: # %if.end5
+; RV32I-NEXT:    # in Loop: Header=BB0_5 Depth=1
 ; RV32I-NEXT:    lw a0, %lo(j)(s4)
-; RV32I-NEXT:    beqz a0, .LBB0_8
-; RV32I-NEXT:  # %bb.7: # %if.then7
-; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
+; RV32I-NEXT:    beqz a0, .LBB0_9
+; RV32I-NEXT:  # %bb.8: # %if.then7
+; RV32I-NEXT:    # in Loop: Header=BB0_5 Depth=1
 ; RV32I-NEXT:    lw a4, %lo(g)(s7)
 ; RV32I-NEXT:    lw a3, %lo(f)(s8)
 ; RV32I-NEXT:    lw a2, %lo(e)(s1)
@@ -90,12 +98,12 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    lw a0, %lo(c)(s10)
 ; RV32I-NEXT:    addi a5, zero, 32
 ; RV32I-NEXT:    call foo
-; RV32I-NEXT:  .LBB0_8: # %if.end9
-; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
+; RV32I-NEXT:  .LBB0_9: # %if.end9
+; RV32I-NEXT:    # in Loop: Header=BB0_5 Depth=1
 ; RV32I-NEXT:    lw a0, %lo(i)(s6)
-; RV32I-NEXT:    beqz a0, .LBB0_10
-; RV32I-NEXT:  # %bb.9: # %if.then11
-; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
+; RV32I-NEXT:    beqz a0, .LBB0_2
+; RV32I-NEXT:  # %bb.10: # %if.then11
+; RV32I-NEXT:    # in Loop: Header=BB0_5 Depth=1
 ; RV32I-NEXT:    lw a4, %lo(h)(s5)
 ; RV32I-NEXT:    lw a3, %lo(g)(s7)
 ; RV32I-NEXT:    lw a2, %lo(f)(s8)
@@ -103,12 +111,7 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    lw a0, %lo(d)(s0)
 ; RV32I-NEXT:    addi a5, zero, 32
 ; RV32I-NEXT:    call foo
-; RV32I-NEXT:  .LBB0_10: # %for.inc
-; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
-; RV32I-NEXT:    lw a0, %lo(a)(s9)
-; RV32I-NEXT:    addi a0, a0, -1
-; RV32I-NEXT:    sw a0, %lo(a)(s9)
-; RV32I-NEXT:    bnez a0, .LBB0_2
+; RV32I-NEXT:    j .LBB0_2
 ; RV32I-NEXT:  .LBB0_11: # %for.end
 ; RV32I-NEXT:    addi a0, zero, 1
 ; RV32I-NEXT:    lw s11, 12(sp)

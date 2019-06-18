@@ -105,7 +105,7 @@ frameInfo:
   maxAlignment:    4
   hasCalls:        true
 fixedStack:      
-  - { id: 0, size: 4, alignment: 4, stack-id: 0, isImmutable: true }
+  - { id: 0, size: 4, alignment: 4, stack-id: default, isImmutable: true }
 body:             |
   bb.0:
     successors: %bb.1(0x00000001), %bb.2(0x7fffffff)

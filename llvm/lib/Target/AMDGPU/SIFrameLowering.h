@@ -37,6 +37,8 @@ public:
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS = nullptr) const override;
 
+  bool isSupportedStackID(TargetStackID::Value ID) const override;
+
   void processFunctionBeforeFrameFinalized(
     MachineFunction &MF,
     RegScavenger *RS = nullptr) const override;

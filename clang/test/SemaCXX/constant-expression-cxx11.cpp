@@ -438,8 +438,8 @@ static_assert(MangleChars(U"constexpr!") == 1768383, "");
 
 constexpr char c0 = "nought index"[0];
 constexpr char c1 = "nice index"[10];
-constexpr char c2 = "nasty index"[12]; // expected-error {{must be initialized by a constant expression}} expected-warning {{is past the end}} expected-note {{read of dereferenced one-past-the-end pointer}}
-constexpr char c3 = "negative index"[-1]; // expected-error {{must be initialized by a constant expression}} expected-warning {{is before the beginning}} expected-note {{cannot refer to element -1 of array of 15 elements}}
+constexpr char c2 = "nasty index"[12]; // expected-error {{must be initialized by a constant expression}} expected-note {{read of dereferenced one-past-the-end pointer}}
+constexpr char c3 = "negative index"[-1]; // expected-error {{must be initialized by a constant expression}} expected-note {{cannot refer to element -1 of array of 15 elements}}
 constexpr char c4 = ((char*)(int*)"no reinterpret_casts allowed")[14]; // expected-error {{must be initialized by a constant expression}} expected-note {{cast that performs the conversions of a reinterpret_cast}}
 
 constexpr const char *p = "test" + 2;
@@ -547,7 +547,7 @@ constexpr int xs6 = p[3]; // expected-error {{constant expression}} expected-not
 constexpr int xs0 = p[-3]; // ok
 constexpr int xs_1 = p[-4]; // expected-error {{constant expression}} expected-note {{cannot refer to element -1}}
 
-constexpr int zs[2][2][2][2] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 }; // expected-note {{array 'zs' declared here}}
+constexpr int zs[2][2][2][2] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
 static_assert(zs[0][0][0][0] == 1, "");
 static_assert(zs[1][1][1][1] == 16, "");
 static_assert(zs[0][0][0][2] == 3, ""); // expected-error {{constant expression}} expected-note {{read of dereferenced one-past-the-end pointer}}
@@ -557,8 +557,7 @@ static_assert(*(&(&(*(*&(&zs[2] - 1)[0] + 2 - 2))[2])[-1][-1] + 1) == 11, ""); /
 static_assert(*(&(&(*(*&(&zs[2] - 1)[0] + 2 - 2))[2])[-1][2] - 2) == 11, "");
 constexpr int err_zs_1_2_0_0 = zs[1][2][0][0]; // \
 expected-error {{constant expression}} \
-expected-note {{cannot access array element of pointer past the end}} \
-expected-warning {{array index 2 is past the end of the array (which contains 2 elements)}}
+expected-note {{cannot access array element of pointer past the end}}
 
 constexpr int fail(const int &p) {
   return (&p)[64]; // expected-note {{cannot refer to element 64 of array of 2 elements}}

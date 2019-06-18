@@ -42,6 +42,9 @@ public:
               llvm::function_ref<void(const Symbol &)>) const override;
   void refs(const RefsRequest &,
             llvm::function_ref<void(const Ref &)>) const override;
+  void relations(const RelationsRequest &,
+                 llvm::function_ref<void(const SymbolID &, const Symbol &)>)
+      const override;
   size_t estimateMemoryUsage() const override {
     return Dynamic->estimateMemoryUsage() + Static->estimateMemoryUsage();
   }

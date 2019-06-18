@@ -38,15 +38,16 @@ define <8 x i32> @sext(<8 x float> %a, <8 x float> %b, <8 x i16> %c, <8 x i16> %
 ; AVX1-LABEL: sext:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vcmpltps %ymm1, %ymm0, %ymm0
-; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm1
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm2[2,3,0,1]
+; AVX1-NEXT:    vpmovsxwd %xmm4, %xmm4
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm3[2,3,0,1]
+; AVX1-NEXT:    vpmovsxwd %xmm5, %xmm5
+; AVX1-NEXT:    vblendvps %xmm1, %xmm4, %xmm5, %xmm1
 ; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX1-NEXT:    vpmovsxwd %xmm3, %xmm2
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[2,3,0,1]
 ; AVX1-NEXT:    vpmovsxwd %xmm3, %xmm3
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX1-NEXT:    vblendvps %ymm0, %ymm1, %ymm2, %ymm0
+; AVX1-NEXT:    vblendvps %xmm0, %xmm2, %xmm3, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: sext:
@@ -95,12 +96,13 @@ define <8 x i32> @zext(<8 x float> %a, <8 x float> %b, <8 x i16> %c, <8 x i16> %
 ; AVX1-NEXT:    vcmpltps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm4 = xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
-; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm2
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm3[4],xmm1[4],xmm3[5],xmm1[5],xmm3[6],xmm1[6],xmm3[7],xmm1[7]
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
+; AVX1-NEXT:    vblendvps %xmm5, %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
 ; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm3 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm1
-; AVX1-NEXT:    vblendvps %ymm0, %ymm2, %ymm1, %ymm0
+; AVX1-NEXT:    vblendvps %xmm0, %xmm2, %xmm3, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: zext:
@@ -403,6 +405,8 @@ for.end:
   ret void
 }
 
+; TODO: AVX1 could have used 256-bit ops for a likely improvement.
+
 define void @example24(i16 signext %x, i16 signext %y) nounwind {
 ; SSE2-LABEL: example24:
 ; SSE2:       # %bb.0: # %vector.ph
@@ -469,26 +473,27 @@ define void @example24(i16 signext %x, i16 signext %y) nounwind {
 ; AVX1:       # %bb.0: # %vector.ph
 ; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,2,3,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; AVX1-NEXT:    vmovd %esi, %xmm1
-; AVX1-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[0,0,2,3,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vmovd %esi, %xmm0
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,2,3,4,5,6,7]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    movq $-4096, %rax # imm = 0xF000
-; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm2
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
-; AVX1-NEXT:    vpmovsxwd %xmm1, %xmm2
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
-; AVX1-NEXT:    vpmovsxwd %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm0
+; AVX1-NEXT:    vpmovsxwd %xmm3, %xmm1
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
+; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[2,3,0,1]
+; AVX1-NEXT:    vpmovsxwd %xmm3, %xmm3
 ; AVX1-NEXT:    .p2align 4, 0x90
 ; AVX1-NEXT:  .LBB6_1: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX1-NEXT:    vmovups da+4096(%rax), %ymm2
-; AVX1-NEXT:    vcmpltps db+4096(%rax), %ymm2, %ymm2
-; AVX1-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm2
-; AVX1-NEXT:    vmovups %ymm2, dj+4096(%rax)
+; AVX1-NEXT:    vmovups da+4096(%rax), %ymm4
+; AVX1-NEXT:    vcmpltps db+4096(%rax), %ymm4, %ymm4
+; AVX1-NEXT:    vblendvps %xmm4, %xmm0, %xmm1, %xmm5
+; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm4
+; AVX1-NEXT:    vblendvps %xmm4, %xmm2, %xmm3, %xmm4
+; AVX1-NEXT:    vmovaps %xmm4, dj+4112(%rax)
+; AVX1-NEXT:    vmovaps %xmm5, dj+4096(%rax)
 ; AVX1-NEXT:    addq $32, %rax
 ; AVX1-NEXT:    jne .LBB6_1
 ; AVX1-NEXT:  # %bb.2: # %for.end

@@ -456,7 +456,8 @@ void APValue::dump(raw_ostream &OS) const {
   llvm_unreachable("Unknown APValue kind!");
 }
 
-void APValue::printPretty(raw_ostream &Out, ASTContext &Ctx, QualType Ty) const{
+void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
+                          QualType Ty) const {
   switch (getKind()) {
   case APValue::None:
     Out << "<out of lifetime>";
@@ -675,7 +676,7 @@ void APValue::printPretty(raw_ostream &Out, ASTContext &Ctx, QualType Ty) const{
   llvm_unreachable("Unknown APValue kind!");
 }
 
-std::string APValue::getAsString(ASTContext &Ctx, QualType Ty) const {
+std::string APValue::getAsString(const ASTContext &Ctx, QualType Ty) const {
   std::string Result;
   llvm::raw_string_ostream Out(Result);
   printPretty(Out, Ctx, Ty);

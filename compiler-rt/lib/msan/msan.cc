@@ -175,12 +175,10 @@ static void InitializeFlags() {
   ubsan_parser.ParseString(ubsan_default_options);
 #endif
 
-  const char *msan_options = GetEnv("MSAN_OPTIONS");
-  parser.ParseString(msan_options);
+  parser.ParseStringFromEnv("MSAN_OPTIONS");
 #if MSAN_CONTAINS_UBSAN
-  ubsan_parser.ParseString(GetEnv("UBSAN_OPTIONS"));
+  ubsan_parser.ParseStringFromEnv("UBSAN_OPTIONS");
 #endif
-  VPrintf(1, "MSAN_OPTIONS: %s\n", msan_options ? msan_options : "<empty>");
 
   InitializeCommonFlags();
 

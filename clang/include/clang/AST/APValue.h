@@ -182,6 +182,10 @@ public:
   struct NoLValuePath {};
   struct UninitArray {};
   struct UninitStruct {};
+
+  friend class ASTReader;
+  friend class ASTWriter;
+
 private:
   ValueKind Kind;
 
@@ -326,8 +330,8 @@ public:
   void dump() const;
   void dump(raw_ostream &OS) const;
 
-  void printPretty(raw_ostream &OS, ASTContext &Ctx, QualType Ty) const;
-  std::string getAsString(ASTContext &Ctx, QualType Ty) const;
+  void printPretty(raw_ostream &OS, const ASTContext &Ctx, QualType Ty) const;
+  std::string getAsString(const ASTContext &Ctx, QualType Ty) const;
 
   APSInt &getInt() {
     assert(isInt() && "Invalid accessor");

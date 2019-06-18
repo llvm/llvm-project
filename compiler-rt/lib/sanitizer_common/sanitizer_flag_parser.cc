@@ -62,7 +62,7 @@ void FlagParser::PrintFlagDescriptions() {
 }
 
 void FlagParser::fatal_error(const char *err) {
-  Printf("ERROR: %s\n", err);
+  Printf("%s: ERROR: %s\n", SanitizerToolName, err);
   Die();
 }
 
@@ -75,10 +75,17 @@ void FlagParser::skip_whitespace() {
   while (is_space(buf_[pos_])) ++pos_;
 }
 
-void FlagParser::parse_flag() {
+void FlagParser::parse_flag(const char *env_option_name) {
   uptr name_start = pos_;
   while (buf_[pos_] != 0 && buf_[pos_] != '=' && !is_space(buf_[pos_])) ++pos_;
-  if (buf_[pos_] != '=') fatal_error("expected '='");
+  if (buf_[pos_] != '=') {
+    if (env_option_name) {
+      Printf("%s: ERROR: expected '=' in %s\n", SanitizerToolName,
+             env_option_name);
+      Die();
+    } else
+      fatal_error("expected '='");
+  }
   char *name = ll_strndup(buf_ + name_start, pos_ - name_start);
 
   uptr value_start = ++pos_;
@@ -100,11 +107,11 @@ void FlagParser::parse_flag() {
   if (!res) fatal_error("Flag parsing failed.");
 }
 
-void FlagParser::parse_flags() {
+void FlagParser::parse_flags(const char *env_option_name) {
   while (true) {
     skip_whitespace();
     if (buf_[pos_] == 0) break;
-    parse_flag();
+    parse_flag(env_option_name);
   }
 
   // Do a sanity check for certain flags.
@@ -112,7 +119,13 @@ void FlagParser::parse_flags() {
     common_flags_dont_use.malloc_context_size = 1;
 }
 
-void FlagParser::ParseString(const char *s) {
+void FlagParser::ParseStringFromEnv(const char *env_name) {
+  const char *env = GetEnv(env_name);
+  VPrintf(1, "%s: %s\n", env_name, env ? env : "<empty>");
+  ParseString(env, env_name);
+}
+
+void FlagParser::ParseString(const char *s, const char *env_option_name) {
   if (!s) return;
   // Backup current parser state to allow nested ParseString() calls.
   const char *old_buf_ = buf_;
@@ -120,7 +133,7 @@ void FlagParser::ParseString(const char *s) {
   buf_ = s;
   pos_ = 0;
 
-  parse_flags();
+  parse_flags(env_option_name);
 
   buf_ = old_buf_;
   pos_ = old_pos_;
@@ -139,7 +152,7 @@ bool FlagParser::ParseFile(const char *path, bool ignore_missing) {
     Printf("Failed to read options from '%s': error %d\n", path, err);
     return false;
   }
-  ParseString(data);
+  ParseString(data, path);
   UnmapOrDie(data, data_mapped_size);
   return true;
 }
