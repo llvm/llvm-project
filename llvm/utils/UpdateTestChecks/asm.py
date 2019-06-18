@@ -96,6 +96,29 @@ ASM_FUNCTION_SYSTEMZ_RE = re.compile(
     r'.Lfunc_end[0-9]+:\n',
     flags=(re.M | re.S))
 
+ASM_FUNCTION_AARCH64_DARWIN_RE = re.compile(
+     r'^_(?P<func>[^:]+):[ \t]*;[ \t]@(?P=func)\n'
+     r'([ \t]*.cfi_startproc\n[\s]*)?'
+     r'(?P<body>.*?)'
+     r'([ \t]*.cfi_endproc\n[\s]*)?'
+     r'^[ \t]*;[ \t]--[ \t]End[ \t]function',
+     flags=(re.M | re.S))
+
+ASM_FUNCTION_ARM_MACHO_RE = re.compile(
+     r'^_(?P<func>[^:]+):[ \t]*\n'
+     r'([ \t]*.cfi_startproc\n[ \t]*)?'
+     r'(?P<body>.*?)\n'
+     r'[ \t]*\.cfi_endproc\n',
+     flags=(re.M | re.S))
+
+ASM_FUNCTION_ARM_IOS_RE = re.compile(
+     r'^_(?P<func>[^:]+):[ \t]*\n'
+     r'^Lfunc_begin(?P<id>[0-9][1-9]*):\n'
+     r'(?P<body>.*?)'
+     r'^Lfunc_end(?P=id):\n'
+     r'^[ \t]*@[ \t]--[ \t]End[ \t]function',
+     flags=(re.M | re.S))
+
 ASM_FUNCTION_WASM32_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n'
     r'(?P<body>.*?)\n'
@@ -270,33 +293,19 @@ def build_function_body_dictionary_for_triple(args, raw_tool_output, triple, pre
       'i686': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
       'x86': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
       'i386': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
-      'arm64-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_RE),
       'aarch64': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_RE),
+      'aarch64-apple-darwin': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
       'hexagon': (scrub_asm_hexagon, ASM_FUNCTION_HEXAGON_RE),
       'r600': (scrub_asm_amdgpu, ASM_FUNCTION_AMDGPU_RE),
       'amdgcn': (scrub_asm_amdgpu, ASM_FUNCTION_AMDGPU_RE),
-      'arm-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'thumb-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'thumbv6': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'thumbv6-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'thumbv6t2': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'thumbv6t2-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'thumbv6m': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'thumbv6m-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'thumbv7': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'thumbv7-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'thumbv7m': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'thumbv7m-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'thumbv8-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'thumbv8m.base': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'thumbv8m.main': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'armv6': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'armv7': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'armv7-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'armeb-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'armv7eb-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'armv7eb': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'armv8a': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
+      'arm': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
+      'arm64': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_RE),
+      'arm64-apple-ios': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
+      'armv7-apple-ios' : (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_IOS_RE),
+      'thumb': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
+      'thumb-macho': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_MACHO_RE),
+      'thumbv5-macho': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_MACHO_RE),
+      'thumbv7-apple-ios' : (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_IOS_RE),
       'mips': (scrub_asm_mips, ASM_FUNCTION_MIPS_RE),
       'ppc32': (scrub_asm_powerpc, ASM_FUNCTION_PPC_RE),
       'powerpc64': (scrub_asm_powerpc, ASM_FUNCTION_PPC_RE),
@@ -309,15 +318,17 @@ def build_function_body_dictionary_for_triple(args, raw_tool_output, triple, pre
       's390x': (scrub_asm_systemz, ASM_FUNCTION_SYSTEMZ_RE),
       'wasm32': (scrub_asm_wasm32, ASM_FUNCTION_WASM32_RE),
   }
-  handlers = None
+  handler = None
+  best_prefix = ''
   for prefix, s in target_handlers.items():
-    if triple.startswith(prefix):
-      handlers = s
-      break
-  else:
+    if triple.startswith(prefix) and len(prefix) > len(best_prefix):
+      handler = s
+      best_prefix = prefix
+
+  if handler is None:
     raise KeyError('Triple %r is not supported' % (triple))
 
-  scrubber, function_re = handlers
+  scrubber, function_re = handler
   common.build_function_body_dictionary(
           function_re, scrubber, [args], raw_tool_output, prefixes,
           func_dict, args.verbose)
