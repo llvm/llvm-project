@@ -130,9 +130,11 @@ bool ValueObjectVariable::UpdateValue() {
   m_error.Clear();
 
   Variable *variable = m_variable_sp.get();
-  // Check if the type has size 0. If so, there is nothing to update.
+  // Check if the type has size 0. If so, there is nothing to update,
+  // unless the type is C++ where even empty structs have a non-zero
+  // size.
   CompilerType var_type(GetCompilerTypeImpl());
-  if (var_type.IsValid()) {
+  if (var_type.IsValid() && var_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
     ExecutionContext exe_ctx(GetExecutionContextRef());
     llvm::Optional<uint64_t> size =
       var_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
