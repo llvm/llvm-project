@@ -144,6 +144,8 @@ bool TypeSystem::IsMeaninglessWithoutDynamicResolution(void *type) {
   return false;
 }
 
+void TypeSystem::DiagnoseWarnings(Process &process, Module &module) const {}
+
 Status TypeSystem::IsCompatible() {
   // Assume a language is compatible. Override this virtual function
   // in your TypeSystem plug-in if version checking is desired.
@@ -310,3 +312,4 @@ void TypeSystemMap::AddToMap(lldb::LanguageType language,
   if (!m_clear_in_progress)
     m_map[language] = type_system_sp;
 }
+
