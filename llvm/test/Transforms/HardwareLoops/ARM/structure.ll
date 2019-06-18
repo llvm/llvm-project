@@ -135,6 +135,82 @@ while.end7:
   ret void
 }
 
+; CHECK-LABEL: not_rotated
+; CHECK-NOT: call void @llvm.set.loop.iterations
+; CHECK-NOT: call i32 @llvm.loop.decrement.i32
+define void @not_rotated(i32, i16* nocapture, i16 signext) {
+  br label %4
+
+4:
+  %5 = phi i32 [ 0, %3 ], [ %19, %18 ]
+  %6 = icmp eq i32 %5, %0
+  br i1 %6, label %20, label %7
+
+7:
+  %8 = mul i32 %5, %0
+  br label %9
+
+9:
+  %10 = phi i32 [ %17, %12 ], [ 0, %7 ]
+  %11 = icmp eq i32 %10, %0
+  br i1 %11, label %18, label %12
+
+12:
+  %13 = add i32 %10, %8
+  %14 = getelementptr inbounds i16, i16* %1, i32 %13
+  %15 = load i16, i16* %14, align 2
+  %16 = add i16 %15, %2
+  store i16 %16, i16* %14, align 2
+  %17 = add i32 %10, 1
+  br label %9
+
+18:
+  %19 = add i32 %5, 1
+  br label %4
+
+20:
+  ret void
+}
+
+; CHECK-LABEL: multi_latch
+; CHECK-NOT: call void @llvm.set.loop.iterations
+; CHECK-NOT: call i32 @llvm.loop.decrement
+define void @multi_latch(i32* %a, i32* %b, i32 %N) {
+entry:
+  %half = lshr i32 %N, 1
+  br label %header
+
+header:
+  %iv = phi i32 [ 0, %entry ], [ %count.next, %latch.0 ], [ %count.next, %latch.1 ]
+  %cmp = icmp ult i32 %iv, %half
+  %addr.a = getelementptr i32, i32* %a, i32 %iv
+  %addr.b = getelementptr i32, i32* %b, i32 %iv
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  store i32 %iv, i32* %addr.a
+  br label %latch.0
+
+if.else:
+  store i32 %iv, i32* %addr.b
+  br label %latch.0
+
+latch.0:
+  %count.next = add nuw i32 %iv, 1
+  %cmp.1 = icmp ult i32 %count.next, %half
+  br i1 %cmp.1, label %header, label %latch.1
+
+latch.1:
+  %ld = load i32, i32* %addr.a
+  store i32 %ld, i32* %addr.b
+  %cmp.2 = icmp ult i32 %count.next, %N
+  br i1 %cmp.2, label %header, label %latch.1
+
+exit:
+  ret void
+}
+
+
 declare void @llvm.set.loop.iterations.i32(i32) #0
 declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #0
 

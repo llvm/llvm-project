@@ -49,9 +49,7 @@ INITIALIZE_PASS_END(InstructionSelect, DEBUG_TYPE,
                     "Select target instructions out of generic instructions",
                     false, false)
 
-InstructionSelect::InstructionSelect() : MachineFunctionPass(ID) {
-  initializeInstructionSelectPass(*PassRegistry::getPassRegistry());
-}
+InstructionSelect::InstructionSelect() : MachineFunctionPass(ID) { }
 
 void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();

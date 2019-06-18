@@ -230,6 +230,18 @@ def PPCbuild_fp128: SDNode<"PPCISD::BUILD_FP128",
                               SDTCisSameAs<1,2>]>,
                            []>;
 
+def PPCbuild_spe64: SDNode<"PPCISD::BUILD_SPE64",
+                           SDTypeProfile<1, 2,
+                             [SDTCisVT<0, f64>, SDTCisVT<1,i32>,
+                             SDTCisVT<1,i32>]>,
+                           []>;
+
+def PPCextract_spe : SDNode<"PPCISD::EXTRACT_SPE",
+                            SDTypeProfile<1, 2,
+                              [SDTCisVT<0, i32>, SDTCisVT<1, f64>,
+                              SDTCisPtrTy<2>]>,
+                              []>;
+
 // These are target-independent nodes, but have target-specific formats.
 def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_PPCCallSeqStart,
                            [SDNPHasChain, SDNPOutGlue]>;

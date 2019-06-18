@@ -97,6 +97,11 @@ cl::opt<std::string>
                            "names match the given regular expression"),
                   cl::value_desc("regex"));
 
+cl::opt<std::string> RemarksFormat(
+    "lto-pass-remarks-format",
+    cl::desc("The format used for serializing remarks (default: YAML)"),
+    cl::value_desc("format"), cl::init("yaml"));
+
 cl::opt<std::string> LTOStatsFile(
     "lto-stats-file",
     cl::desc("Save statistics to the specified file"),
@@ -517,8 +522,9 @@ bool LTOCodeGenerator::optimize(bool DisableVerify, bool DisableInline,
   if (!this->determineTarget())
     return false;
 
-  auto DiagFileOrErr = lto::setupOptimizationRemarks(
-      Context, RemarksFilename, RemarksPasses, RemarksWithHotness);
+  auto DiagFileOrErr =
+      lto::setupOptimizationRemarks(Context, RemarksFilename, RemarksPasses,
+                                    RemarksFormat, RemarksWithHotness);
   if (!DiagFileOrErr) {
     errs() << "Error: " << toString(DiagFileOrErr.takeError()) << "\n";
     report_fatal_error("Can't get an output file for the remarks");

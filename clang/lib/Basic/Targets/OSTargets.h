@@ -632,7 +632,11 @@ protected:
 public:
   SolarisTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {
-    // FIXME: WIntType should be SignedLong
+    if (this->PointerWidth == 64) {
+      this->WCharType = this->WIntType = this->SignedInt;
+    } else {
+      this->WCharType = this->WIntType = this->SignedLong;
+    }
     switch (Triple.getArch()) {
     default:
       break;

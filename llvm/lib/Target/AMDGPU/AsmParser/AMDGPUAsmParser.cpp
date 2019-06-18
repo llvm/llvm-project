@@ -3433,6 +3433,14 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE,
                        Val, ValRange);
       UserSGPRCount += 1;
+    } else if (ID == ".amdhsa_wavefront_size32") {
+      if (IVersion.Major < 10)
+        return getParser().Error(IDRange.Start, "directive requires gfx10+",
+                                 IDRange);
+      EnableWavefrontSize32 = Val;
+      PARSE_BITS_ENTRY(KD.kernel_code_properties,
+                       KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
+                       Val, ValRange);
     } else if (ID == ".amdhsa_system_sgpr_private_segment_wavefront_offset") {
       PARSE_BITS_ENTRY(
           KD.compute_pgm_rsrc2,
@@ -3679,6 +3687,30 @@ bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
     return TokError(Err.str());
   }
   Lex();
+
+  if (ID == "enable_wavefront_size32") {
+    if (Header.code_properties & AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32) {
+      if (!isGFX10())
+        return TokError("enable_wavefront_size32=1 is only allowed on GFX10+");
+      if (!getFeatureBits()[AMDGPU::FeatureWavefrontSize32])
+        return TokError("enable_wavefront_size32=1 requires +WavefrontSize32");
+    } else {
+      if (!getFeatureBits()[AMDGPU::FeatureWavefrontSize64])
+        return TokError("enable_wavefront_size32=0 requires +WavefrontSize64");
+    }
+  }
+
+  if (ID == "wavefront_size") {
+    if (Header.wavefront_size == 5) {
+      if (!isGFX10())
+        return TokError("wavefront_size=5 is only allowed on GFX10+");
+      if (!getFeatureBits()[AMDGPU::FeatureWavefrontSize32])
+        return TokError("wavefront_size=5 requires +WavefrontSize32");
+    } else if (Header.wavefront_size == 6) {
+      if (!getFeatureBits()[AMDGPU::FeatureWavefrontSize64])
+        return TokError("wavefront_size=6 requires +WavefrontSize64");
+    }
+  }
 
   if (ID == "enable_wgp_mode") {
     if (G_00B848_WGP_MODE(Header.compute_pgm_resource_registers) && !isGFX10())

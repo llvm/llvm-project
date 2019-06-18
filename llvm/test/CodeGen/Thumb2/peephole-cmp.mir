@@ -14,7 +14,7 @@ liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 stack:
   - { id: 0, name: f, type: default, offset: 0, size: 1, alignment: 4,
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       local-offset: -4, debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
 body:             |

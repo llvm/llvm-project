@@ -58,6 +58,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUMCInstLower.cpp
   AMDGPUOpenCLEnqueuedBlockLowering.cpp
   AMDGPUPromoteAlloca.cpp
+  AMDGPUPropagateAttributes.cpp
   AMDGPURegAsmNames.inc.cpp
   AMDGPURegisterBankInfo.cpp
   AMDGPURegisterInfo.cpp

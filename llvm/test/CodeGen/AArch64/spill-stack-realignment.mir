@@ -11,10 +11,10 @@ frameInfo:
   maxAlignment:    64
 # CHECK:      stack:
 # CHECK:        id: 0, name: '', type: default, offset: -64, size: 4, alignment: 64
-# CHECK-NEXT:     stack-id: 0
+# CHECK-NEXT:     stack-id: default
 # CHECK-NEXT:     local-offset: -64
 # CHECK:        id: 1, name: '', type: default, offset: -20, size: 4, alignment: 4
-# CHECK-NEXT:     stack-id: 0
+# CHECK-NEXT:     stack-id: default
 # CHECK-NEXT:     local-offset: -68
 stack:
   - { id: 0, size: 4, alignment: 64, local-offset: -64 }

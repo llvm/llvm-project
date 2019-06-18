@@ -12,8 +12,8 @@ target datalayout = "n8:16:32:64"
 ; CHECK-LABEL: @test(
 ; multiplies are hoisted out of the loop
 ; CHECK: while.body.lr.ph:
-; CHECK: shl i64
-; CHECK: shl i64
+; CHECK: shl nsw i64
+; CHECK: shl nsw i64
 ; GEPs are ugly
 ; CHECK: while.body:
 ; CHECK: phi

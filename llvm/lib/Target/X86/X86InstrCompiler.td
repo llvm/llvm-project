@@ -1105,18 +1105,18 @@ def : Pat<(atomic_store_64 addr:$dst, (i64 (bitconvert (f64 FR64:$src)))),
           (VMOVSDmr addr:$dst, FR64:$src)>, Requires<[HasAVX512]>;
 
 def : Pat<(f32 (bitconvert (i32 (atomic_load_32 addr:$src)))),
-          (MOVSSrm addr:$src)>, Requires<[UseSSE1]>;
+          (MOVSSrm_alt addr:$src)>, Requires<[UseSSE1]>;
 def : Pat<(f32 (bitconvert (i32 (atomic_load_32 addr:$src)))),
-          (VMOVSSrm addr:$src)>, Requires<[UseAVX]>;
+          (VMOVSSrm_alt addr:$src)>, Requires<[UseAVX]>;
 def : Pat<(f32 (bitconvert (i32 (atomic_load_32 addr:$src)))),
-          (VMOVSSZrm addr:$src)>, Requires<[HasAVX512]>;
+          (VMOVSSZrm_alt addr:$src)>, Requires<[HasAVX512]>;
 
 def : Pat<(f64 (bitconvert (i64 (atomic_load_64 addr:$src)))),
-          (MOVSDrm addr:$src)>, Requires<[UseSSE2]>;
+          (MOVSDrm_alt addr:$src)>, Requires<[UseSSE2]>;
 def : Pat<(f64 (bitconvert (i64 (atomic_load_64 addr:$src)))),
-          (VMOVSDrm addr:$src)>, Requires<[UseAVX]>;
+          (VMOVSDrm_alt addr:$src)>, Requires<[UseAVX]>;
 def : Pat<(f64 (bitconvert (i64 (atomic_load_64 addr:$src)))),
-          (VMOVSDZrm addr:$src)>, Requires<[HasAVX512]>;
+          (VMOVSDZrm_alt addr:$src)>, Requires<[HasAVX512]>;
 
 //===----------------------------------------------------------------------===//
 // DAG Pattern Matching Rules

@@ -207,6 +207,32 @@ macro(get_test_cc_for_arch arch cc_out cflags_out)
   endif()
 endmacro()
 
+# Returns CFLAGS that should be used to run tests for the
+# specific apple platform and architecture.
+function(get_test_cflags_for_apple_platform platform arch cflags_out)
+  is_valid_apple_platform("${platform}" is_valid_platform)
+  if (NOT is_valid_platform)
+    message(FATAL_ERROR "\"${platform}\" is not a valid apple platform")
+  endif()
+  set(test_cflags "")
+  get_target_flags_for_arch(${arch} test_cflags)
+  list(APPEND test_cflags ${DARWIN_${platform}_CFLAGS})
+  string(REPLACE ";" " " test_cflags_str "${test_cflags}")
+  string(APPEND test_cflags_str "${COMPILER_RT_TEST_COMPILER_CFLAGS}")
+  set(${cflags_out} "${test_cflags_str}" PARENT_SCOPE)
+endfunction()
+
+function(is_valid_apple_platform platform is_valid_out)
+  set(is_valid FALSE)
+  if ("${platform}" STREQUAL "")
+    message(FATAL_ERROR "platform cannot be empty")
+  endif()
+  if ("${platform}" MATCHES "^(osx|((ios|watchos|tvos)(sim)?))$")
+    set(is_valid TRUE)
+  endif()
+  set(${is_valid_out} ${is_valid} PARENT_SCOPE)
+endfunction()
+
 set(ARM64 aarch64)
 set(ARM32 arm armhf)
 set(HEXAGON hexagon)
@@ -687,8 +713,10 @@ endif()
 # Note: Fuchsia and Windows are not currently supported by GWP-ASan. Support
 # is planned for these platforms. Darwin is also not supported due to TLS
 # calling malloc on first use.
+# TODO(hctim): Enable this on Android again. Looks like it's causing a SIGSEGV
+# for Scudo and GWP-ASan, further testing needed.
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND GWP_ASAN_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Android|Linux")
+    OS_NAME MATCHES "Linux")
   set(COMPILER_RT_HAS_GWP_ASAN TRUE)
 else()
   set(COMPILER_RT_HAS_GWP_ASAN FALSE)

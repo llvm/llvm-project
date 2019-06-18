@@ -1480,6 +1480,7 @@ static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
   Conf.RemarksWithHotness = CGOpts.DiagnosticsWithHotness;
   Conf.RemarksFilename = CGOpts.OptRecordFile;
   Conf.RemarksPasses = CGOpts.OptRecordPasses;
+  Conf.RemarksFormat = CGOpts.OptRecordFormat;
   Conf.SplitDwarfFile = CGOpts.SplitDwarfFile;
   Conf.SplitDwarfOutput = CGOpts.SplitDwarfOutput;
   switch (Action) {

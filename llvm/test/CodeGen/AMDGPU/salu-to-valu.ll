@@ -1,5 +1,5 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NOHSA -check-prefix=SI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NOHSA -check-prefix=CI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NOHSA -check-prefix=CI -check-prefix=CI-NOHSA %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CI --check-prefix=GCN-HSA %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
@@ -172,9 +172,10 @@ entry:
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset_x8:
 ; GCN-NOHSA: s_mov_b32 [[OFFSET0:s[0-9]+]], 0x9a40{{$}}
 ; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: s_mov_b32 [[OFFSET1:s[0-9]+]], 0x9a50{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET1]] addr64{{$}}
+; CI-NOHSA: s_mov_b32 [[OFFSET1:s[0-9]+]], 0x9a50{{$}}
+; CI-NOHSA-NOT: v_add
+; SI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:16
+; CI-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET1]] addr64{{$}}
 ; GCN-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET0]] addr64{{$}}
 
 ; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
@@ -202,14 +203,19 @@ entry:
 
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset_x16:
 
-; GCN-NOHSA-DAG: s_mov_b32 [[OFFSET0:s[0-9]+]], 0x13480{{$}}
-; GCN-NOHSA-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET0]] addr64{{$}}
-; GCN-NOHSA-DAG: s_mov_b32 [[OFFSET1:s[0-9]+]], 0x13490{{$}}
-; GCN-NOHSA-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET1]] addr64{{$}}
-; GCN-NOHSA-DAG: s_mov_b32 [[OFFSET2:s[0-9]+]], 0x134a0{{$}}
-; GCN-NOHSA-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET2]] addr64{{$}}
-; GCN-NOHSA-DAG: s_mov_b32 [[OFFSET3:s[0-9]+]], 0x134b0{{$}}
-; GCN-NOHSA-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET3]] addr64{{$}}
+; SI: s_mov_b32 {{s[0-9]+}}, 0x13480
+; SI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:16
+; SI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:32
+; SI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:48
+; SI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], {{s[0-9]+}} addr64
+; CI-NOHSA-DAG: s_mov_b32 [[OFFSET0:s[0-9]+]], 0x13480{{$}}
+; CI-NOHSA-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET0]] addr64{{$}}
+; CI-NOHSA-DAG: s_mov_b32 [[OFFSET1:s[0-9]+]], 0x13490{{$}}
+; CI-NOHSA-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET1]] addr64{{$}}
+; CI-NOHSA-DAG: s_mov_b32 [[OFFSET2:s[0-9]+]], 0x134a0{{$}}
+; CI-NOHSA-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET2]] addr64{{$}}
+; CI-NOHSA-DAG: s_mov_b32 [[OFFSET3:s[0-9]+]], 0x134b0{{$}}
+; CI-NOHSA-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET3]] addr64{{$}}
 
 ; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 ; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}

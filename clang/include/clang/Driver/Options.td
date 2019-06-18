@@ -623,6 +623,9 @@ def emit_ast : Flag<["-"], "emit-ast">,
   HelpText<"Emit Clang AST files for source inputs">;
 def emit_llvm : Flag<["-"], "emit-llvm">, Flags<[CC1Option]>, Group<Action_Group>,
   HelpText<"Use the LLVM representation for assembler and object files">;
+def emit_iterface_stubs : Flag<["-"], "emit-interface-stubs">, Flags<[CC1Option]>, Group<Action_Group>,
+  HelpText<"Generate Inteface Stub Files.">;
+def iterface_stub_version_EQ : JoinedOrSeparate<["-"], "interface-stub-version=">, Flags<[CC1Option]>;
 def exported__symbols__list : Separate<["-"], "exported_symbols_list">;
 def e : JoinedOrSeparate<["-"], "e">, Group<Link_Group>;
 def fPIC : Flag<["-"], "fPIC">, Group<f_Group>;
@@ -713,11 +716,14 @@ def fauto_profile_accurate : Flag<["-"], "fauto-profile-accurate">,
     Group<f_Group>, Alias<fprofile_sample_accurate>;
 def fno_auto_profile_accurate : Flag<["-"], "fno-auto-profile-accurate">,
     Group<f_Group>, Alias<fno_profile_sample_accurate>;
-def fdebug_info_for_profiling : Flag<["-"], "fdebug-info-for-profiling">, Group<f_Group>,
-    Flags<[CC1Option]>,
+def fdebug_compilation_dir : Separate<["-"], "fdebug-compilation-dir">,
+    Group<f_Group>, Flags<[CC1Option, CC1AsOption, CoreOption]>,
+    HelpText<"The compilation directory to embed in the debug info.">;
+def fdebug_info_for_profiling : Flag<["-"], "fdebug-info-for-profiling">,
+    Group<f_Group>, Flags<[CC1Option]>,
     HelpText<"Emit extra debug info to make sample profile more accurate.">;
-def fno_debug_info_for_profiling : Flag<["-"], "fno-debug-info-for-profiling">, Group<f_Group>,
-    Flags<[DriverOption]>,
+def fno_debug_info_for_profiling : Flag<["-"], "fno-debug-info-for-profiling">,
+    Group<f_Group>, Flags<[DriverOption]>,
     HelpText<"Do not emit extra debug info for sample profiler.">;
 def fprofile_instr_generate : Flag<["-"], "fprofile-instr-generate">,
     Group<f_Group>, Flags<[CoreOption]>,
@@ -1714,6 +1720,8 @@ def foperator_arrow_depth_EQ : Joined<["-"], "foperator-arrow-depth=">,
 
 def fsave_optimization_record : Flag<["-"], "fsave-optimization-record">,
   Group<f_Group>, HelpText<"Generate a YAML optimization record file">;
+def fsave_optimization_record_EQ : Joined<["-"], "fsave-optimization-record=">,
+  Group<f_Group>, HelpText<"Generate an optimization record file in a specific format (default: YAML)">;
 def fno_save_optimization_record : Flag<["-"], "fno-save-optimization-record">,
   Group<f_Group>, Flags<[NoArgumentUnused]>;
 def foptimization_record_file_EQ : Joined<["-"], "foptimization-record-file=">,

@@ -25,10 +25,6 @@ struct DIERef {
 
   explicit DIERef(const DWARFFormValue &form_value);
 
-  bool operator<(const DIERef &ref) const {
-    return die_offset < ref.die_offset;
-  }
-
   explicit operator bool() const {
     return cu_offset != DW_INVALID_OFFSET || die_offset != DW_INVALID_OFFSET;
   }

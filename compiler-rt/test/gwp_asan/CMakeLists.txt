@@ -6,7 +6,8 @@ set(GWP_ASAN_TESTSUITES)
 set(GWP_ASAN_UNITTEST_DEPS)
 set(GWP_ASAN_TEST_DEPS
   ${SANITIZER_COMMON_LIT_TEST_DEPS}
-  gwp_asan)
+  gwp_asan
+  scudo)
 
 # Longstanding issues in the Android test runner means that compiler-rt unit
 # tests don't work on Android due to libc++ link-time issues. Looks like the

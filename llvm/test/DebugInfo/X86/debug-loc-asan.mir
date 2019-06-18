@@ -197,18 +197,18 @@ frameInfo:
   hasCalls:        true
   maxCallFrameSize: 0
 fixedStack:      
-  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: 0 }
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: default }
 stack:           
-  - { id: 0, name: MyAlloca, offset: -96, size: 64, alignment: 32, stack-id: 0 }
-  - { id: 1, type: spill-slot, offset: -100, size: 4, alignment: 4, stack-id: 0 }
-  - { id: 2, type: spill-slot, offset: -112, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 3, type: spill-slot, offset: -120, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 4, type: spill-slot, offset: -128, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 5, type: spill-slot, offset: -136, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 6, type: spill-slot, offset: -144, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 7, type: spill-slot, offset: -145, size: 1, alignment: 1, stack-id: 0 }
-  - { id: 8, type: spill-slot, offset: -146, size: 1, alignment: 1, stack-id: 0 }
-  - { id: 9, type: spill-slot, offset: -152, size: 4, alignment: 4, stack-id: 0 }
+  - { id: 0, name: MyAlloca, offset: -96, size: 64, alignment: 32, stack-id: default }
+  - { id: 1, type: spill-slot, offset: -100, size: 4, alignment: 4, stack-id: default }
+  - { id: 2, type: spill-slot, offset: -112, size: 8, alignment: 8, stack-id: default }
+  - { id: 3, type: spill-slot, offset: -120, size: 8, alignment: 8, stack-id: default }
+  - { id: 4, type: spill-slot, offset: -128, size: 8, alignment: 8, stack-id: default }
+  - { id: 5, type: spill-slot, offset: -136, size: 8, alignment: 8, stack-id: default }
+  - { id: 6, type: spill-slot, offset: -144, size: 8, alignment: 8, stack-id: default }
+  - { id: 7, type: spill-slot, offset: -145, size: 1, alignment: 1, stack-id: default }
+  - { id: 8, type: spill-slot, offset: -146, size: 1, alignment: 1, stack-id: default }
+  - { id: 9, type: spill-slot, offset: -152, size: 4, alignment: 4, stack-id: default }
 body:             |
   bb.0.entry:
     liveins: $edi

@@ -544,6 +544,16 @@ static unsigned findScratchNonCalleeSaveRegister(MachineFunction &MF,
   return AMDGPU::NoRegister;
 }
 
+bool SIFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
+  switch (ID) {
+  case TargetStackID::Default:
+  case TargetStackID::NoAlloc:
+  case TargetStackID::SGPRSpill:
+    return true;
+  }
+  llvm_unreachable("Invalid TargetStackID::Value");
+}
+
 void SIFrameLowering::emitPrologue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
@@ -762,7 +772,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
 
         if (TII->isSGPRSpill(MI)) {
           int FI = TII->getNamedOperand(MI, AMDGPU::OpName::addr)->getIndex();
-          assert(MFI.getStackID(FI) == SIStackID::SGPR_SPILL);
+          assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
           if (FuncInfo->allocateSGPRSpillToVGPR(MF, FI)) {
             bool Spilled = TRI.eliminateSGPRToVGPRSpillFrameIndex(MI, FI, RS);
             (void)Spilled;

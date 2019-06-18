@@ -15,6 +15,8 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGCUDARUNTIME_H
 #define LLVM_CLANG_LIB_CODEGEN_CGCUDARUNTIME_H
 
+#include "llvm/ADT/StringRef.h"
+
 namespace llvm {
 class Function;
 class GlobalVariable;
@@ -63,6 +65,9 @@ public:
   /// Returns a module cleanup function or nullptr if it's not needed.
   /// Must be called after ModuleCtorFunction
   virtual llvm::Function *makeModuleDtorFunction() = 0;
+
+  /// Construct and return the stub name of a kernel.
+  virtual std::string getDeviceStubName(llvm::StringRef Name) const = 0;
 };
 
 /// Creates an instance of a CUDA runtime class.

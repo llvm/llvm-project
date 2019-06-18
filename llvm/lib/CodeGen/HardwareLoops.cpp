@@ -235,7 +235,17 @@ bool HardwareLoops::TryConvertLoop(TTI::HardwareLoopInfo &HWLoopInfo) {
 
   for (SmallVectorImpl<BasicBlock *>::iterator I = ExitingBlocks.begin(),
        IE = ExitingBlocks.end(); I != IE; ++I) {
-    const SCEV *EC = SE->getExitCount(L, *I);
+    BasicBlock *BB = *I;
+
+    // If we pass the updated counter back through a phi, we need to know
+    // which latch the updated value will be coming from.
+    if (!L->isLoopLatch(BB)) {
+      if ((ForceHardwareLoopPHI.getNumOccurrences() && ForceHardwareLoopPHI) ||
+          HWLoopInfo.CounterInReg)
+        continue;
+    }
+
+    const SCEV *EC = SE->getExitCount(L, BB);
     if (isa<SCEVCouldNotCompute>(EC))
       continue;
     if (const SCEVConstant *ConstEC = dyn_cast<SCEVConstant>(EC)) {
@@ -251,7 +261,7 @@ bool HardwareLoops::TryConvertLoop(TTI::HardwareLoopInfo &HWLoopInfo) {
     // If this exiting block is contained in a nested loop, it is not eligible
     // for insertion of the branch-and-decrement since the inner loop would
     // end up messing up the value in the CTR.
-    if (!HWLoopInfo.IsNestingLegal && LI->getLoopFor(*I) != L &&
+    if (!HWLoopInfo.IsNestingLegal && LI->getLoopFor(BB) != L &&
         !ForceNestedLoop)
       continue;
 
@@ -278,7 +288,7 @@ bool HardwareLoops::TryConvertLoop(TTI::HardwareLoopInfo &HWLoopInfo) {
       continue;
 
     // Make sure this blocks ends with a conditional branch.
-    Instruction *TI = (*I)->getTerminator();
+    Instruction *TI = BB->getTerminator();
     if (!TI)
       continue;
 

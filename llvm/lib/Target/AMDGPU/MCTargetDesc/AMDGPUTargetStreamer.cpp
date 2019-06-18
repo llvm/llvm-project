@@ -284,6 +284,10 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   PRINT_FIELD(OS, ".amdhsa_user_sgpr_private_segment_size", KD,
               kernel_code_properties,
               amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE);
+  if (IVersion.Major >= 10)
+    PRINT_FIELD(OS, ".amdhsa_wavefront_size32", KD,
+                kernel_code_properties,
+                amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
   PRINT_FIELD(
       OS, ".amdhsa_system_sgpr_private_segment_wavefront_offset", KD,
       compute_pgm_rsrc2,

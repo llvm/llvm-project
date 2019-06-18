@@ -80,6 +80,10 @@ public:
   // Set the scratch size in the metadata.
   void setScratchSize(unsigned CC, unsigned Val);
 
+  // Set the hardware register bit in PAL metadata to enable wave32 on the
+  // shader of the given calling convention.
+  void setWave32(unsigned CC);
+
   // Emit the accumulated PAL metadata as asm directives.
   // This is called from AMDGPUTargetAsmStreamer::Finish().
   void toString(std::string &S);

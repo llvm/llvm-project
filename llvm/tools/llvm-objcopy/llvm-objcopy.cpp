@@ -82,6 +82,12 @@ LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
   exit(1);
 }
 
+ErrorSuccess reportWarning(Error E) {
+  assert(E);
+  WithColor::warning(errs(), ToolName) << toString(std::move(E));
+  return Error::success();
+}
+
 } // end namespace objcopy
 } // end namespace llvm
 
@@ -263,7 +269,7 @@ int main(int argc, char **argv) {
   ToolName = argv[0];
   bool IsStrip = sys::path::stem(ToolName).contains("strip");
   Expected<DriverConfig> DriverConfig =
-      IsStrip ? parseStripOptions(makeArrayRef(argv + 1, argc))
+      IsStrip ? parseStripOptions(makeArrayRef(argv + 1, argc), reportWarning)
               : parseObjcopyOptions(makeArrayRef(argv + 1, argc));
   if (!DriverConfig) {
     logAllUnhandledErrors(DriverConfig.takeError(),

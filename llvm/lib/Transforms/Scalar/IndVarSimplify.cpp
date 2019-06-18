@@ -31,6 +31,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -42,6 +43,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -633,9 +635,12 @@ bool IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
 
         // Computing the value outside of the loop brings no benefit if it is
         // definitely used inside the loop in a way which can not be optimized
-        // away.
+        // away.  Avoid doing so unless we know we have a value which computes
+        // the ExitValue already.  TODO: This should be merged into SCEV
+        // expander to leverage its knowledge of existing expressions.
         if (ReplaceExitValue != AlwaysRepl &&
-            !isa<SCEVConstant>(ExitValue) && hasHardUserWithinLoop(L, Inst))
+            !isa<SCEVConstant>(ExitValue) && !isa<SCEVUnknown>(ExitValue) &&
+            hasHardUserWithinLoop(L, Inst))
           continue;
 
         bool HighCost = Rewriter.isHighCostExpansion(ExitValue, L, Inst);
@@ -2077,6 +2082,48 @@ static bool needsLFTR(Loop *L, BasicBlock *ExitingBB) {
   return Phi != getLoopPhiForCounter(IncV, L);
 }
 
+/// Return true if undefined behavior would provable be executed on the path to
+/// OnPathTo if Root produced a posion result.  Note that this doesn't say
+/// anything about whether OnPathTo is actually executed or whether Root is
+/// actually poison.  This can be used to assess whether a new use of Root can
+/// be added at a location which is control equivalent with OnPathTo (such as
+/// immediately before it) without introducing UB which didn't previously
+/// exist.  Note that a false result conveys no information.  
+static bool mustExecuteUBIfPoisonOnPathTo(Instruction *Root,
+                                          Instruction *OnPathTo, 
+                                          DominatorTree *DT) {
+  // Basic approach is to assume Root is poison, propagate poison forward
+  // through all users we can easily track, and then check whether any of those
+  // users are provable UB and must execute before out exiting block might
+  // exit.
+
+  // The set of all recursive users we've visited (which are assumed to all be
+  // poison because of said visit)
+  SmallSet<const Value *, 16> KnownPoison;
+  SmallVector<const Instruction*, 16> Worklist;
+  Worklist.push_back(Root);
+  while (!Worklist.empty()) {
+    const Instruction *I = Worklist.pop_back_val();
+
+    // If we know this must trigger UB on a path leading our target.
+    if (mustTriggerUB(I, KnownPoison) && DT->dominates(I, OnPathTo))
+      return true;
+    
+    // If we can't analyze propagation through this instruction, just skip it
+    // and transitive users.  Safe as false is a conservative result.
+    if (!propagatesFullPoison(I) && I != Root)
+      continue;
+
+    if (KnownPoison.insert(I).second)
+      for (const User *User : I->users())
+        Worklist.push_back(cast<Instruction>(User));
+  }
+
+  // Might be non-UB, or might have a path we couldn't prove must execute on
+  // way to exiting bb. 
+  return false;
+}
+
 /// Recursive helper for hasConcreteDef(). Unfortunately, this currently boils
 /// down to checking that all operands are constant and listing instructions
 /// that may hide undef.
@@ -2165,7 +2212,8 @@ static bool isLoopCounter(PHINode* Phi, Loop *L,
 /// valid count without scaling the address stride, so it remains a pointer
 /// expression as far as SCEV is concerned.
 static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
-                                const SCEV *BECount, ScalarEvolution *SE) {
+                                const SCEV *BECount,
+                                ScalarEvolution *SE, DominatorTree *DT) {
   uint64_t BCWidth = SE->getTypeSizeInBits(BECount->getType());
 
   Value *Cond = cast<BranchInst>(ExitingBB->getTerminator())->getCondition();
@@ -2210,6 +2258,18 @@ static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
             continue;
     }
 
+    // Avoid introducing undefined behavior due to poison which didn't exist in
+    // the original program.  (Annoyingly, the rules for poison and undef
+    // propagation are distinct, so this does NOT cover the undef case above.)
+    // We have to ensure that we don't introduce UB by introducing a use on an
+    // iteration where said IV produces poison.  Our strategy here differs for
+    // pointers and integer IVs.  For integers, we strip and reinfer as needed,
+    // see code in linearFunctionTestReplace.  For pointers, we restrict
+    // transforms as there is no good way to reinfer inbounds once lost.
+    if (!Phi->getType()->isIntegerTy() &&
+        !mustExecuteUBIfPoisonOnPathTo(Phi, ExitingBB->getTerminator(), DT))
+      continue;
+    
     const SCEV *Init = AR->getStart();
 
     if (BestPhi && !AlmostDeadIV(BestPhi, LatchBlock, Cond)) {
@@ -2338,15 +2398,32 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
   // compare against the post-incremented value, otherwise we must compare
   // against the preincremented value.
   if (ExitingBB == L->getLoopLatch()) {
-    // Add one to the "backedge-taken" count to get the trip count.
-    // This addition may overflow, which is valid as long as the comparison is
-    // truncated to BackedgeTakenCount->getType().
-    IVCount = SE->getAddExpr(BackedgeTakenCount,
-                             SE->getOne(BackedgeTakenCount->getType()));
-    // The BackedgeTaken expression contains the number of times that the
-    // backedge branches to the loop header.  This is one less than the
-    // number of times the loop executes, so use the incremented indvar.
-    CmpIndVar = IndVar->getIncomingValueForBlock(ExitingBB);
+    bool SafeToPostInc = IndVar->getType()->isIntegerTy();
+    if (!SafeToPostInc) {
+      // For pointer IVs, we chose to not strip inbounds which requires us not
+      // to add a potentially UB introducing use.  We need to either a) show
+      // the loop test we're modifying is already in post-inc form, or b) show
+      // that adding a use must not introduce UB.
+      Instruction *Inc =
+        cast<Instruction>(IndVar->getIncomingValueForBlock(L->getLoopLatch()));
+      if (ICmpInst *LoopTest = getLoopTest(L, ExitingBB))
+        SafeToPostInc = LoopTest->getOperand(0) == Inc ||
+          LoopTest->getOperand(1) == Inc;
+      if (!SafeToPostInc)
+        SafeToPostInc =
+          mustExecuteUBIfPoisonOnPathTo(Inc, ExitingBB->getTerminator(), DT);
+    }
+    if (SafeToPostInc) {
+      // Add one to the "backedge-taken" count to get the trip count.
+      // This addition may overflow, which is valid as long as the comparison
+      // is truncated to BackedgeTakenCount->getType().
+      IVCount = SE->getAddExpr(BackedgeTakenCount,
+                               SE->getOne(BackedgeTakenCount->getType()));
+      // The BackedgeTaken expression contains the number of times that the
+      // backedge branches to the loop header.  This is one less than the
+      // number of times the loop executes, so use the incremented indvar.
+      CmpIndVar = IndVar->getIncomingValueForBlock(ExitingBB);
+    }
   }
 
   // It may be necessary to drop nowrap flags on the incrementing instruction
@@ -2646,7 +2723,7 @@ bool IndVarSimplify::run(Loop *L) {
       if (BETakenCount->isZero())
         continue;
       
-      PHINode *IndVar = FindLoopCounter(L, ExitingBB, BETakenCount, SE);
+      PHINode *IndVar = FindLoopCounter(L, ExitingBB, BETakenCount, SE, DT);
       if (!IndVar)
         continue;
       

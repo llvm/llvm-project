@@ -39,12 +39,18 @@ class MachineFrameInfo;
 class MachineFunction;
 class TargetRegisterClass;
 
-class AMDGPUImagePseudoSourceValue : public PseudoSourceValue {
+class AMDGPUPseudoSourceValue : public PseudoSourceValue {
 public:
-  // TODO: Is the img rsrc useful?
-  explicit AMDGPUImagePseudoSourceValue(const TargetInstrInfo &TII) :
-    PseudoSourceValue(PseudoSourceValue::TargetCustom, TII) {}
+  enum AMDGPUPSVKind : unsigned {
+    PSVBuffer = PseudoSourceValue::TargetCustom,
+    PSVImage
+  };
 
+protected:
+  AMDGPUPseudoSourceValue(unsigned Kind, const TargetInstrInfo &TII)
+      : PseudoSourceValue(Kind, TII) {}
+
+public:
   bool isConstant(const MachineFrameInfo *) const override {
     // This should probably be true for most images, but we will start by being
     // conservative.
@@ -60,23 +66,24 @@ public:
   }
 };
 
-class AMDGPUBufferPseudoSourceValue : public PseudoSourceValue {
+class AMDGPUBufferPseudoSourceValue final : public AMDGPUPseudoSourceValue {
 public:
-  explicit AMDGPUBufferPseudoSourceValue(const TargetInstrInfo &TII) :
-    PseudoSourceValue(PseudoSourceValue::TargetCustom, TII) { }
+  explicit AMDGPUBufferPseudoSourceValue(const TargetInstrInfo &TII)
+      : AMDGPUPseudoSourceValue(PSVBuffer, TII) {}
 
-  bool isConstant(const MachineFrameInfo *) const override {
-    // This should probably be true for most images, but we will start by being
-    // conservative.
-    return false;
+  static bool classof(const PseudoSourceValue *V) {
+    return V->kind() == PSVBuffer;
   }
+};
 
-  bool isAliased(const MachineFrameInfo *) const override {
-    return true;
-  }
+class AMDGPUImagePseudoSourceValue final : public AMDGPUPseudoSourceValue {
+public:
+  // TODO: Is the img rsrc useful?
+  explicit AMDGPUImagePseudoSourceValue(const TargetInstrInfo &TII)
+      : AMDGPUPseudoSourceValue(PSVImage, TII) {}
 
-  bool mayAlias(const MachineFrameInfo *) const override {
-    return true;
+  static bool classof(const PseudoSourceValue *V) {
+    return V->kind() == PSVImage;
   }
 };
 

@@ -50,9 +50,7 @@ INITIALIZE_PASS_END(Legalizer, DEBUG_TYPE,
                     "Legalize the Machine IR a function's Machine IR", false,
                     false)
 
-Legalizer::Legalizer() : MachineFunctionPass(ID) {
-  initializeLegalizerPass(*PassRegistry::getPassRegistry());
-}
+Legalizer::Legalizer() : MachineFunctionPass(ID) { }
 
 void Legalizer::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();

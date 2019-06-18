@@ -618,7 +618,11 @@ static bool shouldUseLeafFramePointer(const ArgList &Args,
 /// Add a CC1 option to specify the debug compilation directory.
 static void addDebugCompDirArg(const ArgList &Args, ArgStringList &CmdArgs,
                                const llvm::vfs::FileSystem &VFS) {
-  if (llvm::ErrorOr<std::string> CWD = VFS.getCurrentWorkingDirectory()) {
+  if (Arg *A = Args.getLastArg(options::OPT_fdebug_compilation_dir)) {
+    CmdArgs.push_back("-fdebug-compilation-dir");
+    CmdArgs.push_back(A->getValue());
+  } else if (llvm::ErrorOr<std::string> CWD =
+                 VFS.getCurrentWorkingDirectory()) {
     CmdArgs.push_back("-fdebug-compilation-dir");
     CmdArgs.push_back(Args.MakeArgString(*CWD));
   }
@@ -637,7 +641,8 @@ static void addDebugPrefixMapArg(const Driver &D, const ArgList &Args, ArgString
 }
 
 /// Vectorize at all optimization levels greater than 1 except for -Oz.
-/// For -Oz the loop vectorizer is disable, while the slp vectorizer is enabled.
+/// For -Oz the loop vectorizer is disabled, while the slp vectorizer is
+/// enabled.
 static bool shouldEnableVectorizerAtOLevel(const ArgList &Args, bool isSlpVec) {
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
     if (A->getOption().matches(options::OPT_O4) ||
@@ -3608,6 +3613,25 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (JA.getType() == types::TY_LLVM_BC ||
                JA.getType() == types::TY_LTO_BC) {
       CmdArgs.push_back("-emit-llvm-bc");
+    } else if (JA.getType() == types::TY_IFS) {
+      StringRef StubFormat =
+          llvm::StringSwitch<StringRef>(
+              Args.hasArg(options::OPT_iterface_stub_version_EQ)
+                  ? Args.getLastArgValue(options::OPT_iterface_stub_version_EQ)
+                  : "")
+              .Case("experimental-yaml-elf-v1", "experimental-yaml-elf-v1")
+              .Case("experimental-tapi-elf-v1", "experimental-tapi-elf-v1")
+              .Default("");
+
+      if (StubFormat.empty())
+        D.Diag(diag::err_drv_invalid_value)
+            << "Must specify a valid interface stub format type using "
+            << "-interface-stub-version=<experimental-tapi-elf-v1 | "
+               "experimental-yaml-elf-v1>";
+
+      CmdArgs.push_back("-emit-interface-stubs");
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine("-interface-stub-version=") + StubFormat));
     } else if (JA.getType() == types::TY_PP_Asm) {
       CmdArgs.push_back("-S");
     } else if (JA.getType() == types::TY_AST) {
@@ -5074,6 +5098,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fsave_optimization_record,
                    options::OPT_foptimization_record_file_EQ,
                    options::OPT_fno_save_optimization_record, false) ||
+      Args.hasFlag(options::OPT_fsave_optimization_record_EQ,
+                   options::OPT_fno_save_optimization_record, false) ||
       Args.hasFlag(options::OPT_foptimization_record_passes_EQ,
                    options::OPT_fno_save_optimization_record, false)) {
     CmdArgs.push_back("-opt-record-file");
@@ -5106,12 +5132,26 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         }
       }
 
-      llvm::sys::path::replace_extension(F, "opt.yaml");
+      std::string Extension = "opt.";
+      if (const Arg *A =
+              Args.getLastArg(options::OPT_fsave_optimization_record_EQ))
+        Extension += A->getValue();
+      else
+        Extension += "yaml";
+
+      llvm::sys::path::replace_extension(F, Extension);
       CmdArgs.push_back(Args.MakeArgString(F));
     }
+
     if (const Arg *A =
             Args.getLastArg(options::OPT_foptimization_record_passes_EQ)) {
       CmdArgs.push_back("-opt-record-passes");
+      CmdArgs.push_back(A->getValue());
+    }
+
+    if (const Arg *A =
+            Args.getLastArg(options::OPT_fsave_optimization_record_EQ)) {
+      CmdArgs.push_back("-opt-record-format");
       CmdArgs.push_back(A->getValue());
     }
   }

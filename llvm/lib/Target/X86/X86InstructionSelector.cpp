@@ -418,18 +418,22 @@ unsigned X86InstructionSelector::getLoadStoreOp(const LLT &Ty,
     if (X86::GPRRegBankID == RB.getID())
       return Isload ? X86::MOV32rm : X86::MOV32mr;
     if (X86::VECRRegBankID == RB.getID())
-      return Isload ? (HasAVX512 ? X86::VMOVSSZrm
-                                 : HasAVX ? X86::VMOVSSrm : X86::MOVSSrm)
-                    : (HasAVX512 ? X86::VMOVSSZmr
-                                 : HasAVX ? X86::VMOVSSmr : X86::MOVSSmr);
+      return Isload ? (HasAVX512 ? X86::VMOVSSZrm_alt :
+                       HasAVX    ? X86::VMOVSSrm_alt :
+                                   X86::MOVSSrm_alt)
+                    : (HasAVX512 ? X86::VMOVSSZmr :
+                       HasAVX    ? X86::VMOVSSmr :
+                                   X86::MOVSSmr);
   } else if (Ty == LLT::scalar(64) || Ty == LLT::pointer(0, 64)) {
     if (X86::GPRRegBankID == RB.getID())
       return Isload ? X86::MOV64rm : X86::MOV64mr;
     if (X86::VECRRegBankID == RB.getID())
-      return Isload ? (HasAVX512 ? X86::VMOVSDZrm
-                                 : HasAVX ? X86::VMOVSDrm : X86::MOVSDrm)
-                    : (HasAVX512 ? X86::VMOVSDZmr
-                                 : HasAVX ? X86::VMOVSDmr : X86::MOVSDmr);
+      return Isload ? (HasAVX512 ? X86::VMOVSDZrm_alt :
+                       HasAVX    ? X86::VMOVSDrm_alt :
+                                   X86::MOVSDrm_alt)
+                    : (HasAVX512 ? X86::VMOVSDZmr :
+                       HasAVX    ? X86::VMOVSDmr :
+                                   X86::MOVSDmr);
   } else if (Ty.isVector() && Ty.getSizeInBits() == 128) {
     if (Alignment >= 16)
       return Isload ? (HasVLX ? X86::VMOVAPSZ128rm
