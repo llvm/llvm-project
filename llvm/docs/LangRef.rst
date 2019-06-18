@@ -3117,6 +3117,11 @@ operation may modify the memory at that address. A volatile operation
 may not modify any other memory accessible by the module being compiled.
 A volatile operation may not call any code in the current module.
 
+In general (without target specific context), the address space of a
+volatile operation may not be changed. Different address spaces may
+have different trapping behavior when dereferencing an invalid
+pointer.
+
 The compiler may assume execution will continue after a volatile operation,
 so operations which modify memory or may have undefined behavior can be
 hoisted past a volatile operation.
@@ -3633,11 +3638,21 @@ Pointer Type
 The pointer type ``ptr`` is used to specify memory locations. Pointers are
 commonly used to reference objects in memory.
 
-Pointer types may have an optional address space attribute defining the
-numbered address space where the pointed-to object resides. The default
-address space is number zero. The semantics of non-zero address spaces
-are target-specific. For example, ``ptr addrspace(5)`` is a pointer
-to address space 5.
+Pointer types may have an optional address space attribute defining
+the numbered address space where the pointed-to object resides. For
+example, ``ptr addrspace(5)`` is a pointer to address space 5.
+
+The default address space is number zero.
+
+The semantics of non-zero address spaces are target-specific. Memory
+access through a non-dereferenceable pointer is undefined behavior in
+any address space. Pointers with the bit-value 0 are only assumed to
+be non-dereferenceable in address space 0, unless the function is
+marked with the ``null_pointer_is_valid attribute``.
+
+If an object can be proven accessible through a pointer with a
+different address space, the access may be modified to use that
+address space. Exceptions apply if the operation is ``volatile``.
 
 Prior to LLVM 15, pointer types also specified a pointee type, such as
 ``i8*``, ``[4 x i32]*`` or ``i32 (i32*)*``. In LLVM 15, such "typed
@@ -11309,9 +11324,19 @@ The '``addrspacecast``' instruction converts the pointer value
 ``ptrval`` to type ``pty2``. It can be a *no-op cast* or a complex
 value modification, depending on the target and the address space
 pair. Pointer conversions within the same address space must be
-performed with the ``bitcast`` instruction. Note that if the address space
-conversion is legal then both result and operand refer to the same memory
-location.
+performed with the ``bitcast`` instruction. Note that if the address
+space conversion produces a dereferenceable result then both result
+and operand refer to the same memory location. The conversion must
+have no side effects, and must not capture the value of the pointer.
+
+If the source is :ref:`poison <poisonvalues>`, the result is
+:ref:`poison <poisonvalues>`.
+
+If the source is not :ref:`poison <poisonvalues>`, and both source and
+destination are :ref:`integral pointers <nointptrtype>`, and the
+result pointer is dereferenceable, the cast is assumed to be
+reversible (i.e. casting the result back to the original address space
+should yield the original bit pattern).
 
 Example:
 """"""""
