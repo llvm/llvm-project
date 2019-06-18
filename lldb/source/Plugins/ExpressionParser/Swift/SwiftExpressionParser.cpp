@@ -572,17 +572,6 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
     imported_self_type = CompilerType(imported_self_type.GetTypeSystem(),
                                       object_type.getPointer());
 
-  // If the type of 'self' is a bound generic type, get the unbound version.
-  bool is_generic = imported_self_type_flags.AllSet(lldb::eTypeIsSwift |
-                                                    lldb::eTypeIsGeneric);
-  bool is_bound =
-      imported_self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeIsBound);
-
-  if (is_generic) {
-    if (is_bound)
-      imported_self_type = imported_self_type.GetUnboundType();
-  }
-
   // If 'self' is a weak storage type, it must be an optional.  Look
   // through it and unpack the argument of "optional".
   if (swift::WeakStorageType *weak_storage_type =
