@@ -2042,9 +2042,9 @@ MachineInstr *ARMBaseInstrInfo::commuteInstructionImpl(MachineInstr &MI,
 
 /// Identify instructions that can be folded into a MOVCC instruction, and
 /// return the defining instruction.
-static MachineInstr *canFoldIntoMOVCC(unsigned Reg,
-                                      const MachineRegisterInfo &MRI,
-                                      const TargetInstrInfo *TII) {
+MachineInstr *
+ARMBaseInstrInfo::canFoldIntoMOVCC(unsigned Reg, const MachineRegisterInfo &MRI,
+                                   const TargetInstrInfo *TII) const {
   if (!TargetRegisterInfo::isVirtualRegister(Reg))
     return nullptr;
   if (!MRI.hasOneNonDBGUse(Reg))
@@ -2052,8 +2052,8 @@ static MachineInstr *canFoldIntoMOVCC(unsigned Reg,
   MachineInstr *MI = MRI.getVRegDef(Reg);
   if (!MI)
     return nullptr;
-  // MI is folded into the MOVCC by predicating it.
-  if (!MI->isPredicable())
+  // Check if MI can be predicated and folded into the MOVCC.
+  if (!isPredicable(*MI))
     return nullptr;
   // Check if MI has any non-dead defs or physreg uses. This also detects
   // predicated instructions which will be reading CPSR.

@@ -1039,6 +1039,8 @@ MCOperand AMDGPUDisassembler::decodeSDWAVopcDst(unsigned Val) const {
           STI.getFeatureBits()[AMDGPU::FeatureGFX10]) &&
          "SDWAVopcDst should be present only on GFX9+");
 
+  bool IsWave64 = STI.getFeatureBits()[AMDGPU::FeatureWavefrontSize64];
+
   if (Val & SDWA9EncValues::VOPC_DST_VCC_MASK) {
     Val &= SDWA9EncValues::VOPC_DST_SGPR_MASK;
 
@@ -1046,13 +1048,19 @@ MCOperand AMDGPUDisassembler::decodeSDWAVopcDst(unsigned Val) const {
     if (TTmpIdx >= 0) {
       return createSRegOperand(getTtmpClassId(OPW64), TTmpIdx);
     } else if (Val > SGPR_MAX) {
-      return decodeSpecialReg64(Val);
+      return IsWave64 ? decodeSpecialReg64(Val)
+                      : decodeSpecialReg32(Val);
     } else {
-      return createSRegOperand(getSgprClassId(OPW64), Val);
+      return createSRegOperand(getSgprClassId(IsWave64 ? OPW64 : OPW32), Val);
     }
   } else {
-    return createRegOperand(AMDGPU::VCC);
+    return createRegOperand(IsWave64 ? AMDGPU::VCC : AMDGPU::VCC_LO);
   }
+}
+
+MCOperand AMDGPUDisassembler::decodeBoolReg(unsigned Val) const {
+  return STI.getFeatureBits()[AMDGPU::FeatureWavefrontSize64] ?
+    decodeOperand_SReg_64(Val) : decodeOperand_SReg_32(Val);
 }
 
 bool AMDGPUDisassembler::isVI() const {

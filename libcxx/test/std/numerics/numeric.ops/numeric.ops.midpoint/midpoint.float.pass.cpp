@@ -43,11 +43,11 @@ void fp_test()
     constexpr T minV = std::numeric_limits<T>::min();
     
 //  Things that can be compared exactly
-    assert((std::midpoint(T(0), T(0)) == T(0)));
-    assert((std::midpoint(T(2), T(4)) == T(3)));
-    assert((std::midpoint(T(4), T(2)) == T(3)));
-    assert((std::midpoint(T(3), T(4)) == T(3.5)));
-    assert((std::midpoint(T(0), T(0.4)) == T(0.2)));
+    static_assert((std::midpoint(T(0), T(0))   == T(0)),   "");
+    static_assert((std::midpoint(T(2), T(4))   == T(3)),   "");
+    static_assert((std::midpoint(T(4), T(2))   == T(3)),   "");
+    static_assert((std::midpoint(T(3), T(4))   == T(3.5)), "");
+    static_assert((std::midpoint(T(0), T(0.4)) == T(0.2)), "");
 
 //  Things that can't be compared exactly
     constexpr T pct = fp_error_pct<T>();
@@ -70,6 +70,17 @@ void fp_test()
     assert((fptest_close_pct(std::midpoint(T(0), minV), minV/2, pct)));
     assert((fptest_close_pct(std::midpoint(maxV, maxV), maxV,   pct)));
     assert((fptest_close_pct(std::midpoint(minV, minV), minV,   pct)));
+    assert((fptest_close_pct(std::midpoint(maxV, minV), maxV/2, pct)));
+    assert((fptest_close_pct(std::midpoint(minV, maxV), maxV/2, pct)));
+
+//  Near the min and the max
+    assert((fptest_close_pct(std::midpoint(maxV*T(0.75), maxV*T(0.50)),  maxV*T(0.625), pct)));
+    assert((fptest_close_pct(std::midpoint(maxV*T(0.50), maxV*T(0.75)),  maxV*T(0.625), pct)));
+    assert((fptest_close_pct(std::midpoint(minV*T(2),    minV*T(8)),     minV*T(5),     pct)));
+
+//  Big numbers of different signs
+    assert((fptest_close_pct(std::midpoint(maxV*T( 0.75),  maxV*T(-0.5)), maxV*T( 0.125), pct)));
+    assert((fptest_close_pct(std::midpoint(maxV*T(-0.75),  maxV*T( 0.5)), maxV*T(-0.125), pct)));
 
 //  Denormalized values
 //  TODO
@@ -81,25 +92,33 @@ void fp_test()
     assert(d0 < d1);  // sanity checking
     assert(d1 < d2);  // sanity checking
 
-//  Since there's nothing in between, the midpoint has to be one or the other
-    T res;
-    res = std::midpoint(d0, d1);
-    assert(res == d0 || res == d1);
-    assert(d0 <= res);
-    assert(res <= d1);
-    res = std::midpoint(d1, d0);
-    assert(res == d0 || res == d1);
-    assert(d0 <= res);
-    assert(res <= d1);
+#if defined(__PPC__) && __LONG_DOUBLE_128__ && !__LONG_DOUBLE_IEEE128__
+//	For 128 bit long double implemented as 2 doubles on PowerPC,
+//	nextafterl() of libm gives imprecise results which fails the
+//	midpoint() tests below. So skip the test for this case.
+    if constexpr (sizeof(T) != 16)
+#endif
+    {
+	//  Since there's nothing in between, the midpoint has to be one or the other
+		T res;
+		res = std::midpoint(d0, d1);
+		assert(res == d0 || res == d1);
+		assert(d0 <= res);
+		assert(res <= d1);
+		res = std::midpoint(d1, d0);
+		assert(res == d0 || res == d1);
+		assert(d0 <= res);
+		assert(res <= d1);
 
-    res = std::midpoint(d1, d2);
-    assert(res == d1 || res == d2);
-    assert(d1 <= res);
-    assert(res <= d2);
-    res = std::midpoint(d2, d1);
-    assert(res == d1 || res == d2);
-    assert(d1 <= res);
-    assert(res <= d2);
+		res = std::midpoint(d1, d2);
+		assert(res == d1 || res == d2);
+		assert(d1 <= res);
+		assert(res <= d2);
+		res = std::midpoint(d2, d1);
+		assert(res == d1 || res == d2);
+		assert(d1 <= res);
+		assert(res <= d2);
+    }
 }
 
 

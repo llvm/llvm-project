@@ -1,4 +1,4 @@
-; RUN: llc -start-after=codegenprepare -stop-before expand-isel-pseudos -o - %s | FileCheck %s
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s | FileCheck %s
 
 ; Test that dbg.values of an SSA variable that's not used in a basic block,
 ; is converted to a DBG_VALUE in that same basic block. We know that %1 is

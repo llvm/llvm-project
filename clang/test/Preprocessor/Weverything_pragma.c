@@ -7,6 +7,7 @@
 #define UNUSED_MACRO1 1 // expected-warning{{macro is not used}}
 
 void foo() // expected-warning {{no previous prototype for function}}
+// expected-note@-1{{declare 'static' if the function is not intended to be used outside of this translation unit}}
 {
  // A diagnostic without DefaultIgnore, and not part of a group.
  (void) L'ab'; // expected-warning {{extraneous characters in character constant ignored}}

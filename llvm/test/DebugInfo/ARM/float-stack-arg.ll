@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=armv4t-unknown-unknown -start-after=codegenprepare -stop-before=expand-isel-pseudos -o - %s | FileCheck %s
+; RUN: llc -mtriple=armv4t-unknown-unknown -start-after=codegenprepare -stop-before=finalize-isel -o - %s | FileCheck %s
 
 ; Verify that a stack-referencing DBG_VALUE is emitted for p5 at the start of
 ; the function.

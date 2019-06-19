@@ -115,7 +115,7 @@ bool Localizer::localizeInterBlock(
   // we start doing CSE across blocks.
   auto &MBB = MF.front();
   for (MachineInstr &MI : MBB) {
-    if (LocalizedInstrs.count(&MI) || !shouldLocalize(MI))
+    if (!shouldLocalize(MI))
       continue;
     LLVM_DEBUG(dbgs() << "Should localize: " << MI);
     assert(MI.getDesc().getNumDefs() == 1 &&

@@ -17,6 +17,7 @@
 #include "RISCVRegisterInfo.h"
 #include "RISCVSubtarget.h"
 #include "RISCVTargetMachine.h"
+#include "Utils/RISCVMatInt.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -852,6 +853,50 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   }
 
   return SDValue();
+}
+
+bool RISCVTargetLowering::isDesirableToCommuteWithShift(
+    const SDNode *N, CombineLevel Level) const {
+  // The following folds are only desirable if `(OP _, c1 << c2)` can be
+  // materialised in fewer instructions than `(OP _, c1)`:
+  //
+  //   (shl (add x, c1), c2) -> (add (shl x, c2), c1 << c2)
+  //   (shl (or x, c1), c2) -> (or (shl x, c2), c1 << c2)
+  SDValue N0 = N->getOperand(0);
+  MVT Ty = N0.getSimpleValueType();
+  if (Ty.isScalarInteger() &&
+      (N0.getOpcode() == ISD::ADD || N0.getOpcode() == ISD::OR)) {
+    auto *C1 = dyn_cast<ConstantSDNode>(N0->getOperand(1));
+    auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
+    if (C1 && C2) {
+      APInt C1Int = C1->getAPIntValue();
+      APInt ShiftedC1Int = C1Int << C2->getAPIntValue();
+
+      // We can materialise `c1 << c2` into an add immediate, so it's "free",
+      // and the combine should happen, to potentially allow further combines
+      // later.
+      if (isLegalAddImmediate(ShiftedC1Int.getSExtValue()))
+        return true;
+
+      // We can materialise `c1` in an add immediate, so it's "free", and the
+      // combine should be prevented.
+      if (isLegalAddImmediate(C1Int.getSExtValue()))
+        return false;
+
+      // Neither constant will fit into an immediate, so find materialisation
+      // costs.
+      int C1Cost = RISCVMatInt::getIntMatCost(C1Int, Ty.getSizeInBits(),
+                                              Subtarget.is64Bit());
+      int ShiftedC1Cost = RISCVMatInt::getIntMatCost(
+          ShiftedC1Int, Ty.getSizeInBits(), Subtarget.is64Bit());
+
+      // Materialising `c1` is cheaper than materialising `c1 << c2`, so the
+      // combine should be prevented.
+      if (C1Cost < ShiftedC1Cost)
+        return false;
+    }
+  }
+  return true;
 }
 
 unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(

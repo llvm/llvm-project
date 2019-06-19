@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm64--- -stop-after=expand-isel-pseudos -o - %s | FileCheck %s
+; RUN: llc -mtriple=arm64--- -stop-after=finalize-isel -o - %s | FileCheck %s
 
 ; Check that we ignore the zeroext attribute on the return type of the tail
 ; call, since the return value is unused. This happens during CodeGenPrepare in

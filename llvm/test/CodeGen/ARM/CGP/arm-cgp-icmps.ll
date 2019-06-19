@@ -235,7 +235,7 @@ entry:
 }
 
 ; CHECK-COMMON-LABEL: icmp_eq_minus_one
-; CHECK-COMMON: cmp r0, #255
+; CHECK-COMMON: cmp {{r[0-9]+}}, #255
 define i32 @icmp_eq_minus_one(i8* %ptr) {
   %load = load i8, i8* %ptr, align 1
   %conv = zext i8 %load to i32

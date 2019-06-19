@@ -37,6 +37,13 @@ protected:
   template <typename ELF_EHDR, typename ELF_PHDR, typename ELF_DYN>
   lldb::addr_t GetELFImageInfoAddress();
 
+  llvm::Expected<std::vector<SVR4LibraryInfo>>
+  GetLoadedSVR4Libraries() override;
+
+  template <typename T>
+  llvm::Expected<SVR4LibraryInfo>
+  ReadSVR4LibraryInfo(lldb::addr_t link_map_addr);
+
   std::unique_ptr<AuxVector> m_aux_vector;
   llvm::Optional<lldb::addr_t> m_shared_library_info_addr;
 };

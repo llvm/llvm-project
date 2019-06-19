@@ -1,4 +1,4 @@
-; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s -check-prefix CHECK-DIV
+; RUN: llc -mtriple thumbv7--windows-itanium -print-after=finalize-isel -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s -check-prefix CHECK-DIV
 
 ; int f(int n, int d) {
 ;   if (n / d)
@@ -40,7 +40,7 @@ return:
 ; CHECK-DIV-DAG: successors: %bb.3
 ; CHECK-DIV-DAG: %bb.3
 
-; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s -check-prefix CHECK-MOD
+; RUN: llc -mtriple thumbv7--windows-itanium -print-after=finalize-isel -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s -check-prefix CHECK-MOD
 
 ; int r;
 ; int g(int l, int m) {
@@ -74,7 +74,7 @@ return:
 ; CHECK-MOD-DAG: successors: %bb.2
 ; CHECK-MOD-DAG: %bb.2
 
-; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -verify-machineinstrs -filetype asm -o /dev/null %s 2>&1 | FileCheck %s -check-prefix CHECK-CFG
+; RUN: llc -mtriple thumbv7--windows-itanium -print-after=finalize-isel -verify-machineinstrs -filetype asm -o /dev/null %s 2>&1 | FileCheck %s -check-prefix CHECK-CFG
 ; RUN: llc -mtriple thumbv7--windows-itanium -verify-machineinstrs -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-CFG-ASM
 
 ; unsigned c;

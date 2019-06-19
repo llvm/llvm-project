@@ -184,7 +184,7 @@ public:
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                 AssumptionCache &AC,
                                 TargetLibraryInfo *LibInfo,
-                                TTI::HardwareLoopInfo &HWLoopInfo);
+                                HardwareLoopInfo &HWLoopInfo);
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);

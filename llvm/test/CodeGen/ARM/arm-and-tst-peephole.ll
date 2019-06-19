@@ -168,10 +168,11 @@ define i32 @test_tst_assessment(i32 %a, i32 %b) {
 ;
 ; V8-LABEL: test_tst_assessment:
 ; V8:       @ %bb.0:
-; V8-NEXT:    and r0, r0, #1
+; V8-NEXT:    and r2, r0, #1
+; V8-NEXT:    subs r0, r2, #1
 ; V8-NEXT:    lsls r1, r1, #31
-; V8-NEXT:    it ne
-; V8-NEXT:    subne r0, #1
+; V8-NEXT:    it eq
+; V8-NEXT:    moveq r0, r2
 ; V8-NEXT:    bx lr
   %and1 = and i32 %a, 1
   %sub = sub i32 %and1, 1
