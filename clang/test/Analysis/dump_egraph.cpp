@@ -18,9 +18,9 @@ void foo() {
   new S;
 }
 
-// CHECK: \"location_context\": \"#0 Call\", \"calling\": \"foo\", \"call_line\": null, \"items\": [\l&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\{ \"lctx_id\": 1, \"stmt_id\": {{[0-9]+}}, \"kind\": \"construct into local variable\", \"argument_index\": null, \"pretty\": \"T t;\", \"value\": \"&t\"
+// CHECK: \"location_context\": \"#0 Call\", \"calling\": \"foo\", \"call_line\": null, \"items\": [\l&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\{ \"stmt_id\": {{[0-9]+}}, \"kind\": \"construct into local variable\", \"argument_index\": null, \"pretty\": \"T t;\", \"value\": \"&t\"
 
-// CHECK: \"location_context\": \"#0 Call\", \"calling\": \"T::T\", \"call_line\": \"16\", \"items\": [\l&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\{ \"lctx_id\": 2, \"init_id\": {{[0-9]+}}, \"kind\": \"construct into member variable\", \"argument_index\": null, \"pretty\": \"s\", \"value\": \"&t-\>s\"
+// CHECK: \"location_context\": \"#0 Call\", \"calling\": \"T::T\", \"call_line\": \"16\", \"items\": [\l&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\{ \"init_id\": {{[0-9]+}}, \"kind\": \"construct into member variable\", \"argument_index\": null, \"pretty\": \"s\", \"value\": \"&t-\>s\"
 
 // CHECK: \"cluster\": \"t\", \"items\": [\l&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\{ \"kind\": \"Default\", \"offset\": 0, \"value\": \"conj_$2\{int, LC5, no stmt, #1\}\"
 

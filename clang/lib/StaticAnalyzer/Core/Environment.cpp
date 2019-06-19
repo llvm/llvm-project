@@ -261,8 +261,7 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
 
       const Stmt *S = I->first.getStmt();
       Indent(Out, InnerSpace, IsDot)
-          << "{ \"lctx_id\": " << LC->getID()
-          << ", \"stmt_id\": " << S->getID(Ctx) << ", \"pretty\": ";
+          << "{ \"stmt_id\": " << S->getID(Ctx) << ", \"pretty\": ";
       S->printJson(Out, nullptr, PP, /*AddQuotes=*/true);
 
       Out << ", \"value\": ";

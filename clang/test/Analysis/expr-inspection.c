@@ -30,8 +30,8 @@ void foo(int x) {
 // CHECK-NEXT:     ]}
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "environment": [
-// CHECK-NEXT:     { "location_context": "#0 Call", "calling": "foo", "call_line": null, "items": [
-// CHECK-NEXT:       { "lctx_id": 1, "stmt_id": {{[0-9]+}}, "pretty": "clang_analyzer_printState", "value": "&code{clang_analyzer_printState}" }
+// CHECK-NEXT:     { "lctx_id": 1, "location_context": "#0 Call", "calling": "foo", "call_line": null, "items": [
+// CHECK-NEXT:       { "stmt_id": {{[0-9]+}}, "pretty": "clang_analyzer_printState", "value": "&code{clang_analyzer_printState}" }
 // CHECK-NEXT:     ]}
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "constraints": [
