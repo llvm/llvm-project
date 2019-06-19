@@ -134,7 +134,7 @@ std::error_code FileCollector::CopyFiles(bool stop_on_error) {
 std::error_code FileCollector::WriteMapping(const FileSpec &mapping_file) {
   std::lock_guard<std::mutex> lock(m_mutex);
 
-  llvm::StringRef root = m_overlay_root.GetPath();
+  std::string root = m_overlay_root.GetPath();
 
   m_vfs_writer.setOverlayDir(root);
   m_vfs_writer.setCaseSensitivity(IsCaseSensitivePath(root));
