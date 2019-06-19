@@ -11,32 +11,28 @@
 define void @foo(i32 %new, i32 %old) {
 ; O32-LABEL: foo:
 ; O32:       # %bb.0: # %entry
-; O32-NEXT:    addiu $sp, $sp, -16
-; O32-NEXT:    .cfi_def_cfa_offset 16
-; O32-NEXT:    move $1, $5
-; O32-NEXT:    move $2, $4
-; O32-NEXT:    lui $3, %hi(sym)
-; O32-NEXT:    lw $3, %lo(sym)($3)
+; O32-NEXT:    addiu $sp, $sp, -8
+; O32-NEXT:    .cfi_def_cfa_offset 8
+; O32-NEXT:    lui $1, %hi(sym)
+; O32-NEXT:    lw $1, %lo(sym)($1)
 ; O32-NEXT:    sync
-; O32-NEXT:    lw $6, 12($sp) # 4-byte Folded Reload
+; O32-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
 ; O32-NEXT:  $BB0_1: # %entry
 ; O32-NEXT:    # =>This Inner Loop Header: Depth=1
-; O32-NEXT:    ll $7, 0($3)
-; O32-NEXT:    bne $7, $4, $BB0_3
+; O32-NEXT:    ll $3, 0($1)
+; O32-NEXT:    bne $3, $4, $BB0_3
 ; O32-NEXT:    nop
 ; O32-NEXT:  # %bb.2: # %entry
 ; O32-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; O32-NEXT:    move $8, $5
-; O32-NEXT:    sc $8, 0($3)
-; O32-NEXT:    beqz $8, $BB0_1
+; O32-NEXT:    move $6, $5
+; O32-NEXT:    sc $6, 0($1)
+; O32-NEXT:    beqz $6, $BB0_1
 ; O32-NEXT:    nop
 ; O32-NEXT:  $BB0_3: # %entry
 ; O32-NEXT:    sync
-; O32-NEXT:    sw $1, 8($sp) # 4-byte Folded Spill
-; O32-NEXT:    sw $2, 4($sp) # 4-byte Folded Spill
-; O32-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
-; O32-NEXT:    sw $6, 0($sp) # 4-byte Folded Spill
-; O32-NEXT:    addiu $sp, $sp, 16
+; O32-NEXT:    sw $3, 4($sp) # 4-byte Folded Spill
+; O32-NEXT:    sw $2, 0($sp) # 4-byte Folded Spill
+; O32-NEXT:    addiu $sp, $sp, 8
 ; O32-NEXT:    jr $ra
 ; O32-NEXT:    nop
 ;
