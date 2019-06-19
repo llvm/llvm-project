@@ -2,31 +2,31 @@ protocol P {}
 
 extension Int: P {}
 
-@available(macOS 9999, *)
+@available(macOS 10.15, *)
 func foo() -> some P { return 0 }
 
-@available(macOS 9999, *)
+@available(macOS 10.15, *)
 func genericOpaque<T: P>(_ x: T) -> some P { return x }
 
 struct Wrapper<T: P>: P {
   var value: T
 
-  @available(macOS 9999, *)
+  @available(macOS 10.15, *)
   subscript(unwrapped _: ()) -> some P {
     return value
   }
-  @available(macOS 9999, *)
+  @available(macOS 10.15, *)
   subscript(wrapped _: ()) -> some P {
     return self
   }
 }
 
-@available(macOS 9999, *)
+@available(macOS 10.15, *)
 func genericWrapOpaque<T: P>(_ x: T) -> some P {
   return Wrapper(value: genericOpaque(x))
 }
 
-if #available(macOS 9999, *) {
+if #available(macOS 10.15, *) {
   var prop: some P { return 0 }
   var wrapProp: some P { return Wrapper(value: prop) }
 
