@@ -200,6 +200,25 @@ public:
   llvm::Optional<llvm::ArrayRef<syntax::Token>>
   spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const;
 
+  /// An expansion produced by the preprocessor, includes macro expansions and
+  /// preprocessor directives. Preprocessor always maps a non-empty range of
+  /// spelled tokens to a (possibly empty) range of expanded tokens. Here is a
+  /// few examples of expansions:
+  ///    #pragma once      // Expands to an empty range.
+  ///    #define FOO 1 2 3 // Expands an empty range.
+  ///    FOO               // Expands to "1 2 3".
+  /// FIXME(ibiryukov): implement this, currently #include expansions are empty.
+  ///    #include <vector> // Expands to tokens produced by the include.
+  struct Expansion {
+    llvm::ArrayRef<syntax::Token> Spelled;
+    llvm::ArrayRef<syntax::Token> Expanded;
+  };
+  /// If \p Spelled starts a mapping (e.g. if it's a macro name or '#' starting
+  /// a preprocessor directive) return the subrange of expanded tokens that the
+  /// macro expands to.
+  llvm::Optional<Expansion>
+  expansionStartingAt(const syntax::Token *Spelled) const;
+
   /// Lexed tokens of a file before preprocessing. E.g. for the following input
   ///     #define DECL(name) int name = 10
   ///     DECL(a);

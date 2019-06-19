@@ -54,7 +54,7 @@ public:
 
   DWARFDebugInfoEntry *GetDIE() const { return m_die; }
 
-  DIERef GetDIERef() const;
+  llvm::Optional<DIERef> GetDIERef() const;
 
   lldb_private::TypeSystem *GetTypeSystem() const;
 
