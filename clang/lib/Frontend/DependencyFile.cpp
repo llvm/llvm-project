@@ -112,6 +112,36 @@ struct DepCollectorMMCallbacks : public ModuleMapCallbacks {
   }
 };
 
+// FIXME: This should not be separate from upstream, but we haven't
+// upstreamed support for SkipUnusedModuleMaps.
+struct DFGMMCallback : public ModuleMapCallbacks {
+  DependencyCollector &DepCollector;
+  bool SkipUnusedModuleMaps;
+  DFGMMCallback(DependencyCollector &DC, bool SkipUnusedModuleMaps)
+      : DepCollector(DC), SkipUnusedModuleMaps(SkipUnusedModuleMaps) {}
+
+  void moduleMapFileRead(SourceLocation Loc, const FileEntry &Entry,
+                         bool IsSystem) override {
+    if (SkipUnusedModuleMaps)
+      return;
+    StringRef Filename = Entry.getName();
+    DepCollector.maybeAddDependency(Filename, /*FromModule*/ false,
+                                    /*IsSystem*/ IsSystem,
+                                    /*IsModuleFile*/ false,
+                                    /*IsMissing*/ false);
+  }
+
+  void moduleMapFoundForModule(const FileEntry &Entry, const Module *M,
+                               bool IsSystem) override {
+    if (!SkipUnusedModuleMaps)
+      return;
+    DepCollector.maybeAddDependency(Entry.getName(), /*FromModule*/ false,
+                                    /*IsSystem*/ IsSystem,
+                                    /*IsModuleFile*/ false,
+                                    /*IsMissing*/ false);
+  }
+};
+
 struct DepCollectorASTListener : public ASTReaderListener {
   DependencyCollector &DepCollector;
   DepCollectorASTListener(DependencyCollector &L) : DepCollector(L) { }
@@ -184,6 +214,7 @@ DependencyFileGenerator::DependencyFileGenerator(
       PhonyTarget(Opts.UsePhonyTargets),
       AddMissingHeaderDeps(Opts.AddMissingHeaderDeps), SeenMissingHeader(false),
       IncludeModuleFiles(Opts.IncludeModuleFiles),
+      SkipUnusedModuleMaps(Opts.SkipUnusedModuleMaps),
       OutputFormat(Opts.OutputFormat), InputFileIndex(0) {
   for (const auto &ExtraDep : Opts.ExtraDeps) {
     if (addDependency(ExtraDep))
@@ -201,7 +232,12 @@ void DependencyFileGenerator::attachToPreprocessor(Preprocessor &PP) {
   if (AddMissingHeaderDeps)
     PP.SetSuppressIncludeNotFoundError(true);
 
-  DependencyCollector::attachToPreprocessor(PP);
+  // FIXME: Restore the call to DependencyCollector::attachToPreprocessor(PP);
+  // once the SkipUnusedModuleMaps is upstreamed.
+  PP.addPPCallbacks(llvm::make_unique<DepCollectorPPCallbacks>(
+      *this, PP.getSourceManager(), PP.getDiagnostics()));
+  PP.getHeaderSearchInfo().getModuleMap().addModuleMapCallbacks(
+      llvm::make_unique<DFGMMCallback>(*this, SkipUnusedModuleMaps));
 }
 
 bool DependencyFileGenerator::sawDependency(StringRef Filename, bool FromModule,
