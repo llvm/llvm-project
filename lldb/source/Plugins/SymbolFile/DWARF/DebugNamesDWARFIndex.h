@@ -66,7 +66,7 @@ private:
   std::unique_ptr<DebugNames> m_debug_names_up;
   ManualDWARFIndex m_fallback;
 
-  DIERef ToDIERef(const DebugNames::Entry &entry);
+  llvm::Optional<DIERef> ToDIERef(const DebugNames::Entry &entry);
   void Append(const DebugNames::Entry &entry, DIEArray &offsets);
 
   static void MaybeLogLookupError(llvm::Error error,

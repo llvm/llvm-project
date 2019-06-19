@@ -223,8 +223,6 @@ private:
     static_assert(sizeof(TS) == sizeof(TU), "Incompatible data types.");
     static_assert(!std::numeric_limits<TU>::is_signed,
                   "Source type must be unsigned.");
-    static_assert(std::numeric_limits<TS>::is_signed,
-                  "Destination type must be signed.");
 
     // TODO(Dor1s): change to `if constexpr` once C++17 becomes mainstream.
     if (std::numeric_limits<TS>::is_modulo)

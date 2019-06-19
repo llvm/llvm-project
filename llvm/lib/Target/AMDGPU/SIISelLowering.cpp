@@ -961,24 +961,6 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
     return true;
   }
-  case Intrinsic::amdgcn_ds_gws_init:
-  case Intrinsic::amdgcn_ds_gws_barrier: {
-    Info.opc = ISD::INTRINSIC_VOID;
-
-    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    Info.ptrVal =
-        MFI->getGWSPSV(*MF.getSubtarget<GCNSubtarget>().getInstrInfo());
-
-    // This is an abstract access, but we need to specify a type and size.
-    Info.memVT = MVT::i32;
-    Info.size = 4;
-    Info.align = 4;
-
-    Info.flags = MachineMemOperand::MOStore;
-    if (IntrID == Intrinsic::amdgcn_ds_gws_barrier)
-      Info.flags = MachineMemOperand::MOLoad;
-    return true;
-  }
   default:
     return false;
   }

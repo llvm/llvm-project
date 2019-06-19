@@ -1209,8 +1209,8 @@ def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VLEI(B|F|G|H)$")>;
 // Vector: Loads
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[LSULatency, LSU, NormalGr], (instregex "VL(BB)?$")>;
-def : InstRW<[LSULatency, LSU, NormalGr], (instregex "VLL$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "VL(Align)?$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "VL(L|BB)$")>;
 def : InstRW<[LSULatency, LSU, NormalGr], (instregex "VL(32|64)$")>;
 def : InstRW<[LSULatency, LSU, NormalGr], (instregex "VLLEZ(B|F|G|H|LF)?$")>;
 def : InstRW<[LSULatency, LSU, NormalGr], (instregex "VLREP(B|F|G|H)?$")>;
@@ -1218,17 +1218,18 @@ def : InstRW<[WLat2LSU, RegReadAdv, VecXsPm, LSU, NormalGr],
              (instregex "VLE(B|F|G|H)$")>;
 def : InstRW<[WLat5LSU, RegReadAdv, FXb, LSU, VecXsPm, Cracked],
              (instregex "VGE(F|G)$")>;
-def : InstRW<[WLat4LSU, WLat4LSU, LSU5, GroupAlone], (instregex "VLM$")>;
+def : InstRW<[WLat4LSU, WLat4LSU, LSU5, GroupAlone],
+             (instregex "VLM(Align)?$")>;
 def : InstRW<[LSULatency, LSU, NormalGr], (instregex "VLRL(R)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Vector: Stores
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "VST(L|32|64)?$")>;
+def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "VST(Align|L|32|64)?$")>;
 def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "VSTE(F|G)$")>;
 def : InstRW<[WLat1, FXb, LSU, VecXsPm, Cracked], (instregex "VSTE(B|H)$")>;
-def : InstRW<[WLat1, LSU2, FXb3, GroupAlone2], (instregex "VSTM$")>;
+def : InstRW<[WLat1, LSU2, FXb3, GroupAlone2], (instregex "VSTM(Align)?$")>;
 def : InstRW<[WLat1, FXb2, LSU, Cracked], (instregex "VSCE(F|G)$")>;
 def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "VSTRL(R)?$")>;
 

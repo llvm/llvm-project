@@ -1348,28 +1348,6 @@ def int_amdgcn_alignbyte : Intrinsic<[llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
 
-// llvm.amdgcn.ds.gws.init(i32 bar_val, i32 resource_id)
-//
-// bar_val is the total number of waves that will wait on this
-// barrier, minus 1.
-def int_amdgcn_ds_gws_init :
-  GCCBuiltin<"__builtin_amdgcn_ds_gws_init">,
-  Intrinsic<[],
-  [llvm_i32_ty, llvm_i32_ty],
-  [IntrConvergent, IntrWriteMem, IntrInaccessibleMemOnly], "",
-  [SDNPMemOperand]
->;
-
-// llvm.amdgcn.ds.gws.barrier(i32 vsrc0, i32 resource_id)
-// bar_val is the total number of waves that will wait on this
-// barrier, minus 1.
-def int_amdgcn_ds_gws_barrier :
-  GCCBuiltin<"__builtin_amdgcn_ds_gws_barrier">,
-  Intrinsic<[],
-  [llvm_i32_ty, llvm_i32_ty],
-  [IntrConvergent, IntrInaccessibleMemOnly], "",
-  [SDNPMemOperand]
->;
 
 // Copies the source value to the destination value, with the guarantee that
 // the source value is computed as if the entire program were executed in WQM.

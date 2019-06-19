@@ -5,7 +5,7 @@
 ; Test v16i8 loads.
 define <16 x i8> @f1(<16 x i8> *%ptr) {
 ; CHECK-LABEL: f1:
-; CHECK: vl %v24, 0(%r2)
+; CHECK: vl %v24, 0(%r2), 3
 ; CHECK: br %r14
   %ret = load <16 x i8>, <16 x i8> *%ptr
   ret <16 x i8> %ret
@@ -14,7 +14,7 @@ define <16 x i8> @f1(<16 x i8> *%ptr) {
 ; Test v8i16 loads.
 define <8 x i16> @f2(<8 x i16> *%ptr) {
 ; CHECK-LABEL: f2:
-; CHECK: vl %v24, 0(%r2)
+; CHECK: vl %v24, 0(%r2), 3
 ; CHECK: br %r14
   %ret = load <8 x i16>, <8 x i16> *%ptr
   ret <8 x i16> %ret
@@ -23,7 +23,7 @@ define <8 x i16> @f2(<8 x i16> *%ptr) {
 ; Test v4i32 loads.
 define <4 x i32> @f3(<4 x i32> *%ptr) {
 ; CHECK-LABEL: f3:
-; CHECK: vl %v24, 0(%r2)
+; CHECK: vl %v24, 0(%r2), 3
 ; CHECK: br %r14
   %ret = load <4 x i32>, <4 x i32> *%ptr
   ret <4 x i32> %ret
@@ -32,7 +32,7 @@ define <4 x i32> @f3(<4 x i32> *%ptr) {
 ; Test v2i64 loads.
 define <2 x i64> @f4(<2 x i64> *%ptr) {
 ; CHECK-LABEL: f4:
-; CHECK: vl %v24, 0(%r2)
+; CHECK: vl %v24, 0(%r2), 3
 ; CHECK: br %r14
   %ret = load <2 x i64>, <2 x i64> *%ptr
   ret <2 x i64> %ret
@@ -41,7 +41,7 @@ define <2 x i64> @f4(<2 x i64> *%ptr) {
 ; Test v4f32 loads.
 define <4 x float> @f5(<4 x float> *%ptr) {
 ; CHECK-LABEL: f5:
-; CHECK: vl %v24, 0(%r2)
+; CHECK: vl %v24, 0(%r2), 3
 ; CHECK: br %r14
   %ret = load <4 x float>, <4 x float> *%ptr
   ret <4 x float> %ret
@@ -50,7 +50,7 @@ define <4 x float> @f5(<4 x float> *%ptr) {
 ; Test v2f64 loads.
 define <2 x double> @f6(<2 x double> *%ptr) {
 ; CHECK-LABEL: f6:
-; CHECK: vl %v24, 0(%r2)
+; CHECK: vl %v24, 0(%r2), 3
 ; CHECK: br %r14
   %ret = load <2 x double>, <2 x double> *%ptr
   ret <2 x double> %ret
@@ -59,7 +59,7 @@ define <2 x double> @f6(<2 x double> *%ptr) {
 ; Test the highest aligned in-range offset.
 define <16 x i8> @f7(<16 x i8> *%base) {
 ; CHECK-LABEL: f7:
-; CHECK: vl %v24, 4080(%r2)
+; CHECK: vl %v24, 4080(%r2), 3
 ; CHECK: br %r14
   %ptr = getelementptr <16 x i8>, <16 x i8> *%base, i64 255
   %ret = load <16 x i8>, <16 x i8> *%ptr
@@ -81,7 +81,7 @@ define <16 x i8> @f8(i8 *%base) {
 define <16 x i8> @f9(<16 x i8> *%base) {
 ; CHECK-LABEL: f9:
 ; CHECK: aghi %r2, 4096
-; CHECK: vl %v24, 0(%r2)
+; CHECK: vl %v24, 0(%r2), 3
 ; CHECK: br %r14
   %ptr = getelementptr <16 x i8>, <16 x i8> *%base, i64 256
   %ret = load <16 x i8>, <16 x i8> *%ptr
@@ -92,7 +92,7 @@ define <16 x i8> @f9(<16 x i8> *%base) {
 define <16 x i8> @f10(<16 x i8> *%base) {
 ; CHECK-LABEL: f10:
 ; CHECK: aghi %r2, -16
-; CHECK: vl %v24, 0(%r2)
+; CHECK: vl %v24, 0(%r2), 3
 ; CHECK: br %r14
   %ptr = getelementptr <16 x i8>, <16 x i8> *%base, i64 -1
   %ret = load <16 x i8>, <16 x i8> *%ptr
@@ -172,3 +172,13 @@ define <2 x float> @f18(<2 x float> *%ptr) {
   %ret = load <2 x float>, <2 x float> *%ptr
   ret <2 x float> %ret
 }
+
+; Test quadword-aligned loads.
+define <16 x i8> @f19(<16 x i8> *%ptr) {
+; CHECK-LABEL: f19:
+; CHECK: vl %v24, 0(%r2), 4
+; CHECK: br %r14
+  %ret = load <16 x i8>, <16 x i8> *%ptr, align 16
+  ret <16 x i8> %ret
+}
+

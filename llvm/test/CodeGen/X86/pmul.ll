@@ -1326,15 +1326,13 @@ define <8 x i64> @mul_v8i64_sext(<8 x i16> %val1, <8 x i32> %val2) {
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,2,3]
 ; SSE41-NEXT:    pmovsxwq %xmm3, %xmm6
 ; SSE41-NEXT:    pmovsxwq %xmm0, %xmm7
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,0,1]
-; SSE41-NEXT:    pmovsxdq %xmm0, %xmm3
+; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[2,2,3,3]
 ; SSE41-NEXT:    pmuldq %xmm4, %xmm3
-; SSE41-NEXT:    pmovsxdq %xmm2, %xmm2
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero
 ; SSE41-NEXT:    pmuldq %xmm5, %xmm2
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
-; SSE41-NEXT:    pmovsxdq %xmm0, %xmm4
+; SSE41-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,2,3,3]
 ; SSE41-NEXT:    pmuldq %xmm6, %xmm4
-; SSE41-NEXT:    pmovsxdq %xmm1, %xmm0
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero
 ; SSE41-NEXT:    pmuldq %xmm7, %xmm0
 ; SSE41-NEXT:    movdqa %xmm4, %xmm1
 ; SSE41-NEXT:    retq

@@ -42,7 +42,7 @@ public:
   lldb_private::Type *ResolveType() const;
 
   // Resolve a type by UID using this DIE's DWARF file
-  lldb_private::Type *ResolveTypeUID(const DIERef &die_ref) const;
+  lldb_private::Type *ResolveTypeUID(const DWARFDIE &die) const;
 
   // Functions for obtaining DIE relations and references
 

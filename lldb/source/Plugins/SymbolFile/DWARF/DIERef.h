@@ -10,28 +10,17 @@
 #define SymbolFileDWARF_DIERef_h_
 
 #include "lldb/Core/dwarf.h"
-#include "lldb/lldb-defines.h"
-
-class DWARFFormValue;
-class SymbolFileDWARF;
+#include <vector>
 
 struct DIERef {
   enum Section : uint8_t { DebugInfo, DebugTypes };
 
-  DIERef() = default;
-
   DIERef(Section s, dw_offset_t c, dw_offset_t d)
       : section(s), cu_offset(c), die_offset(d) {}
 
-  explicit DIERef(const DWARFFormValue &form_value);
-
-  explicit operator bool() const {
-    return cu_offset != DW_INVALID_OFFSET || die_offset != DW_INVALID_OFFSET;
-  }
-
-  Section section = Section::DebugInfo;
-  dw_offset_t cu_offset = DW_INVALID_OFFSET;
-  dw_offset_t die_offset = DW_INVALID_OFFSET;
+  Section section;
+  dw_offset_t cu_offset;
+  dw_offset_t die_offset;
 };
 
 typedef std::vector<DIERef> DIEArray;

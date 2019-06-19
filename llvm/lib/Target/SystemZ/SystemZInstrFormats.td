@@ -2425,11 +2425,16 @@ class LoadMultipleSSe<string mnemonic, bits<8> opcode, RegisterOperand cls>
   let mayLoad = 1;
 }
 
-class LoadMultipleVRSa<string mnemonic, bits<16> opcode>
-  : InstVRSa<opcode, (outs VR128:$V1, VR128:$V3), (ins bdaddr12only:$BD2),
-             mnemonic#"\t$V1, $V3, $BD2", []> {
-  let M4 = 0;
-  let mayLoad = 1;
+multiclass LoadMultipleVRSaAlign<string mnemonic, bits<16> opcode> {
+  let mayLoad = 1 in {
+    def Align : InstVRSa<opcode, (outs VR128:$V1, VR128:$V3),
+                        (ins bdaddr12only:$BD2, imm32zx4:$M4),
+                        mnemonic#"\t$V1, $V3, $BD2, $M4", []>;
+    let M4 = 0 in
+      def "" : InstVRSa<opcode, (outs VR128:$V1, VR128:$V3),
+                        (ins bdaddr12only:$BD2),
+                        mnemonic#"\t$V1, $V3, $BD2", []>;
+  }
 }
 
 class StoreRILPC<string mnemonic, bits<12> opcode, SDPatternOperator operator,
@@ -2490,6 +2495,17 @@ class StoreVRX<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let AccessBytes = bytes;
 }
 
+multiclass StoreVRXAlign<string mnemonic, bits<16> opcode> {
+  let mayStore = 1, AccessBytes = 16 in {
+    def Align : InstVRX<opcode, (outs),
+                        (ins VR128:$V1, bdxaddr12only:$XBD2, imm32zx4:$M3),
+                        mnemonic#"\t$V1, $XBD2, $M3", []>;
+    let M3 = 0 in
+      def "" : InstVRX<opcode, (outs), (ins VR128:$V1, bdxaddr12only:$XBD2),
+                       mnemonic#"\t$V1, $XBD2", []>;
+  }
+}
+
 class StoreLengthVRSb<string mnemonic, bits<16> opcode,
                       SDPatternOperator operator, bits<5> bytes>
   : InstVRSb<opcode, (outs), (ins VR128:$V1, GR32:$R3, bdaddr12only:$BD2),
@@ -2542,11 +2558,16 @@ multiclass StoreMultipleRSPair<string mnemonic, bits<8> rsOpcode,
   }
 }
 
-class StoreMultipleVRSa<string mnemonic, bits<16> opcode>
-  : InstVRSa<opcode, (outs), (ins VR128:$V1, VR128:$V3, bdaddr12only:$BD2),
-             mnemonic#"\t$V1, $V3, $BD2", []> {
-  let M4 = 0;
-  let mayStore = 1;
+multiclass StoreMultipleVRSaAlign<string mnemonic, bits<16> opcode> {
+  let mayStore = 1 in {
+    def Align : InstVRSa<opcode, (outs), (ins VR128:$V1, VR128:$V3,
+                                              bdaddr12only:$BD2, imm32zx4:$M4),
+                         mnemonic#"\t$V1, $V3, $BD2, $M4", []>;
+    let M4 = 0 in
+      def "" : InstVRSa<opcode, (outs), (ins VR128:$V1, VR128:$V3,
+                                             bdaddr12only:$BD2),
+                        mnemonic#"\t$V1, $V3, $BD2", []>;
+  }
 }
 
 // StoreSI* instructions are used to store an integer to memory, but the
@@ -2938,6 +2959,17 @@ class UnaryVRXGeneric<string mnemonic, bits<16> opcode>
   : InstVRX<opcode, (outs VR128:$V1), (ins bdxaddr12only:$XBD2, imm32zx4:$M3),
             mnemonic#"\t$V1, $XBD2, $M3", []> {
   let mayLoad = 1;
+}
+
+multiclass UnaryVRXAlign<string mnemonic, bits<16> opcode> {
+  let mayLoad = 1, AccessBytes = 16 in {
+    def Align : InstVRX<opcode, (outs VR128:$V1),
+                        (ins bdxaddr12only:$XBD2, imm32zx4:$M3),
+                        mnemonic#"\t$V1, $XBD2, $M3", []>;
+    let M3 = 0 in
+      def "" : InstVRX<opcode, (outs VR128:$V1), (ins bdxaddr12only:$XBD2),
+                       mnemonic#"\t$V1, $XBD2", []>;
+  }
 }
 
 class SideEffectBinaryRX<string mnemonic, bits<8> opcode,

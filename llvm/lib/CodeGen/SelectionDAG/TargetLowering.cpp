@@ -1413,9 +1413,11 @@ bool TargetLowering::SimplifyDemandedBits(
     bool IsVecInReg = Op.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG;
 
     // If none of the top bits are demanded, convert this into an any_extend.
-    // TODO: Add SIGN_EXTEND_VECTOR_INREG - ANY_EXTEND_VECTOR_INREG fold.
-    if (DemandedBits.getActiveBits() <= InBits && !IsVecInReg)
-      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ANY_EXTEND, dl, VT, Src));
+    if (DemandedBits.getActiveBits() <= InBits)
+      return TLO.CombineTo(
+          Op, TLO.DAG.getNode(IsVecInReg ? ISD::ANY_EXTEND_VECTOR_INREG
+                                         : ISD::ANY_EXTEND,
+                              dl, VT, Src));
 
     APInt InDemandedBits = DemandedBits.trunc(InBits);
     APInt InDemandedElts = DemandedElts.zextOrSelf(InElts);
@@ -1434,9 +1436,11 @@ bool TargetLowering::SimplifyDemandedBits(
     Known = Known.sext(BitWidth);
 
     // If the sign bit is known zero, convert this to a zero extend.
-    // TODO: Add SIGN_EXTEND_VECTOR_INREG - ZERO_EXTEND_VECTOR_INREG fold.
-    if (Known.isNonNegative() && !IsVecInReg)
-      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ZERO_EXTEND, dl, VT, Src));
+    if (Known.isNonNegative())
+      return TLO.CombineTo(
+          Op, TLO.DAG.getNode(IsVecInReg ? ISD::ZERO_EXTEND_VECTOR_INREG
+                                         : ISD::ZERO_EXTEND,
+                              dl, VT, Src));
     break;
   }
   case ISD::ANY_EXTEND: {

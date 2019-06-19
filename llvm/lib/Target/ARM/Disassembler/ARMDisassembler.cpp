@@ -504,6 +504,10 @@ template<bool Writeback>
 static DecodeStatus DecodeVSTRVLDR_SYSREG(MCInst &Inst, unsigned Insn,
                                           uint64_t Address,
                                           const void *Decoder);
+template <int shift>
+static DecodeStatus DecodeExpandedImmOperand(MCInst &Inst, unsigned Val,
+                                             uint64_t Address,
+                                             const void *Decoder);
 static DecodeStatus DecodeMVEOverlappingLongShift(MCInst &Inst, unsigned Insn,
                                                   uint64_t Address,
                                                   const void *Decoder);
@@ -6023,6 +6027,16 @@ static DecodeStatus DecodeVSTRVLDR_SYSREG(MCInst &Inst, unsigned Val,
   Inst.addOperand(MCOperand::createReg(0));
 
   return S;
+}
+
+template <int shift>
+static DecodeStatus DecodeExpandedImmOperand(MCInst &Inst, unsigned Val,
+                                             uint64_t Address,
+                                             const void *Decoder) {
+    Val <<= shift;
+
+    Inst.addOperand(MCOperand::createImm(Val));
+    return MCDisassembler::Success;
 }
 
 static DecodeStatus DecodeMVEOverlappingLongShift(

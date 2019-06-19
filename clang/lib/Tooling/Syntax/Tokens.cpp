@@ -477,8 +477,7 @@ std::string TokenBuffer::dumpForTests() const {
 
   auto DumpTokens = [this, &PrintToken](llvm::raw_ostream &OS,
                                         llvm::ArrayRef<syntax::Token> Tokens) {
-    if (Tokens.size() == 1) {
-      assert(Tokens[0].kind() == tok::eof);
+    if (Tokens.empty()) {
       OS << "<empty>";
       return;
     }
@@ -495,7 +494,8 @@ std::string TokenBuffer::dumpForTests() const {
 
   OS << "expanded tokens:\n"
      << "  ";
-  DumpTokens(OS, ExpandedTokens);
+  // (!) we do not show '<eof>'.
+  DumpTokens(OS, llvm::makeArrayRef(ExpandedTokens).drop_back());
   OS << "\n";
 
   std::vector<FileID> Keys;

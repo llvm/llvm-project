@@ -120,7 +120,7 @@ bool DWARFGdbIndex::parseImpl(DataExtractor Data) {
     return false;
 
   CuListOffset = Data.getU32(&Offset);
-  uint32_t CuTypesOffset = Data.getU32(&Offset);
+  TuListOffset = Data.getU32(&Offset);
   AddressAreaOffset = Data.getU32(&Offset);
   SymbolTableOffset = Data.getU32(&Offset);
   ConstantPoolOffset = Data.getU32(&Offset);
@@ -128,7 +128,7 @@ bool DWARFGdbIndex::parseImpl(DataExtractor Data) {
   if (Offset != CuListOffset)
     return false;
 
-  uint32_t CuListSize = (CuTypesOffset - CuListOffset) / 16;
+  uint32_t CuListSize = (TuListOffset - CuListOffset) / 16;
   CuList.reserve(CuListSize);
   for (uint32_t i = 0; i < CuListSize; ++i) {
     uint64_t CuOffset = Data.getU64(&Offset);
@@ -138,7 +138,7 @@ bool DWARFGdbIndex::parseImpl(DataExtractor Data) {
 
   // CU Types are no longer needed as DWARF skeleton type units never made it
   // into the standard.
-  uint32_t TuListSize = (AddressAreaOffset - CuTypesOffset) / 24;
+  uint32_t TuListSize = (AddressAreaOffset - TuListOffset) / 24;
   TuList.resize(TuListSize);
   for (uint32_t I = 0; I < TuListSize; ++I) {
     uint64_t CuOffset = Data.getU64(&Offset);

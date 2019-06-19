@@ -6,8 +6,6 @@
 declare void @nonconvergent_func() #0
 declare void @convergent_func() #1
 declare void @llvm.amdgcn.s.barrier() #1
-declare void @llvm.amdgcn.ds.gws.init(i32, i32) #2
-declare void @llvm.amdgcn.ds.gws.barrier(i32, i32) #2
 
 ; barrier shouldn't be duplicated.
 
@@ -102,52 +100,6 @@ call:
   ret void
 }
 
-; GCN-LABEL: {{^}}taildup_gws_init:
-; GCN: ds_gws_init
-; GCN-NOT: ds_gws_init
-define amdgpu_kernel void @taildup_gws_init(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i1 %cond, i32 %val, i32 %offset) #0 {
-entry:
-  br i1 %cond, label %bb1, label %bb2
-
-bb1:
-  store i32 0, i32 addrspace(1)* %a
-  br label %call
-
-bb2:
-  store i32 1, i32 addrspace(1)* %a
-  br label %call
-
-call:
-  call void @llvm.amdgcn.ds.gws.init(i32 %val, i32 %offset)
-  br label %ret
-
-ret:
-  ret void
-}
-
-; GCN-LABEL: {{^}}taildup_gws_barrier:
-; GCN: ds_gws_barrier
-; GCN-NOT: ds_gws_barrier
-define amdgpu_kernel void @taildup_gws_barrier(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i1 %cond, i32 %val, i32 %offset) #0 {
-entry:
-  br i1 %cond, label %bb1, label %bb2
-
-bb1:
-  store i32 0, i32 addrspace(1)* %a
-  br label %call
-
-bb2:
-  store i32 1, i32 addrspace(1)* %a
-  br label %call
-
-call:
-  call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 %offset)
-  br label %ret
-
-ret:
-  ret void
-}
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind convergent }
-attributes #2 = { convergent inaccessiblememonly nounwind }

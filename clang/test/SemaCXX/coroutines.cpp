@@ -296,18 +296,17 @@ struct CtorDtor {
   ~CtorDtor() {
     co_return 0; // expected-error {{'co_return' cannot be used in a destructor}}
   }
-  // FIXME: The spec says this is ill-formed.
   void operator=(CtorDtor&) {
-    co_yield 0; // expected-error {{'co_yield' cannot be used in a copy assignment operator}}
+    co_yield 0; // OK.
   }
   void operator=(CtorDtor const &) {
-    co_yield 0; // expected-error {{'co_yield' cannot be used in a copy assignment operator}}
+    co_yield 0; // OK.
   }
   void operator=(CtorDtor &&) {
-    co_await a; // expected-error {{'co_await' cannot be used in a move assignment operator}}
+    co_await a; // OK.
   }
   void operator=(CtorDtor const &&) {
-    co_await a; // expected-error {{'co_await' cannot be used in a move assignment operator}}
+    co_await a; // OK.
   }
   void operator=(int) {
     co_await a; // OK. Not a special member

@@ -487,11 +487,11 @@ enum class MessageType {
   /// An error message.
   Error = 1,
   /// A warning message.
-  Warning = 1,
+  Warning = 2,
   /// An information message.
-  Info = 1,
+  Info = 3,
   /// A log message.
-  Log = 1,
+  Log = 4,
 };
 llvm::json::Value toJSON(const MessageType &);
 

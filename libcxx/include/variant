@@ -1098,39 +1098,11 @@ struct __overload<> { void operator()() const; };
 template <class _Tp, class... _Types>
 struct __overload<_Tp, _Types...> : __overload<_Types...> {
   using __overload<_Types...>::operator();
-
-  static auto __test(_Tp (&&)[1]) -> __identity<_Tp>;
-
-  template <class _Up>
-  auto operator()(_Tp, _Up&& __t) const
-      -> decltype(__test({ _VSTD::forward<_Up>(__t) }));
+  __identity<_Tp> operator()(_Tp) const;
 };
-
-template <class _Base, class _Tp>
-struct __overload_bool : _Base {
-  using _Base::operator();
-
-  template <class _Up, class _Ap = __uncvref_t<_Up>>
-  auto operator()(bool, _Up&&) const
-      -> enable_if_t<is_same_v<_Ap, bool>, __identity<_Tp>>;
-};
-
-template <class... _Types>
-struct __overload<bool, _Types...>
-    : __overload_bool<__overload<_Types...>, bool> {};
-template <class... _Types>
-struct __overload<bool const, _Types...>
-    : __overload_bool<__overload<_Types...>, bool const> {};
-template <class... _Types>
-struct __overload<bool volatile, _Types...>
-    : __overload_bool<__overload<_Types...>, bool volatile> {};
-template <class... _Types>
-struct __overload<bool const volatile, _Types...>
-    : __overload_bool<__overload<_Types...>, bool const volatile> {};
 
 template <class _Tp, class... _Types>
-using __best_match_t =
-    typename invoke_result_t<__overload<_Types...>, _Tp, _Tp>::type;
+using __best_match_t = typename result_of_t<__overload<_Types...>(_Tp&&)>::type;
 
 } // __variant_detail
 

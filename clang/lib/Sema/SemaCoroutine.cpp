@@ -204,8 +204,6 @@ static bool isValidCoroutineContext(Sema &S, SourceLocation Loc,
   enum InvalidFuncDiag {
     DiagCtor = 0,
     DiagDtor,
-    DiagCopyAssign,
-    DiagMoveAssign,
     DiagMain,
     DiagConstexpr,
     DiagAutoRet,
@@ -219,23 +217,15 @@ static bool isValidCoroutineContext(Sema &S, SourceLocation Loc,
     return false;
   };
 
-  // Diagnose when a constructor, destructor, copy/move assignment operator,
+  // Diagnose when a constructor, destructor
   // or the function 'main' are declared as a coroutine.
   auto *MD = dyn_cast<CXXMethodDecl>(FD);
-  // [class.ctor]p6: "A constructor shall not be a coroutine."
+  // [class.ctor]p11: "A constructor shall not be a coroutine."
   if (MD && isa<CXXConstructorDecl>(MD))
     return DiagInvalid(DiagCtor);
   // [class.dtor]p17: "A destructor shall not be a coroutine."
   else if (MD && isa<CXXDestructorDecl>(MD))
     return DiagInvalid(DiagDtor);
-  // N4499 [special]p6: "A special member function shall not be a coroutine."
-  // Per C++ [special]p1, special member functions are the "default constructor,
-  // copy constructor and copy assignment operator, move constructor and move
-  // assignment operator, and destructor."
-  else if (MD && MD->isCopyAssignmentOperator())
-    return DiagInvalid(DiagCopyAssign);
-  else if (MD && MD->isMoveAssignmentOperator())
-    return DiagInvalid(DiagMoveAssign);
   // [basic.start.main]p3: "The function main shall not be a coroutine."
   else if (FD->isMain())
     return DiagInvalid(DiagMain);

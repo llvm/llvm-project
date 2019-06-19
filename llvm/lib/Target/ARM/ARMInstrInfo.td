@@ -461,6 +461,19 @@ def rot_imm : Operand<i32>, PatLeaf<(i32 imm), [{
   let ParserMatchClass = RotImmAsmOperand;
 }
 
+// Vector indexing
+class MVEVectorIndexOperand<int NumLanes> : AsmOperandClass {
+  let Name = "MVEVectorIndex"#NumLanes;
+  let RenderMethod = "addMVEVectorIndexOperands";
+  let PredicateMethod = "isVectorIndexInRange<"#NumLanes#">";
+}
+
+class MVEVectorIndex<int NumLanes> : Operand<i32> {
+  let PrintMethod = "printVectorIndex";
+  let ParserMatchClass = MVEVectorIndexOperand<NumLanes>;
+  let MIOperandInfo = (ops i32imm);
+}
+
 // shift_imm: An integer that encodes a shift amount and the type of shift
 // (asr or lsl). The 6-bit immediate encodes as:
 //    {5}     0 ==> lsl
