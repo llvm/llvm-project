@@ -210,6 +210,7 @@ public:
   void printJson(raw_ostream &Out, const char *NL = "\n",
                  unsigned int Space = 0, bool IsDot = false) const {
     for (iterator I = begin(); I != end(); ++I) {
+      // TODO: We might need a .printJson for I.getKey() as well.
       Indent(Out, Space, IsDot)
           << "{ \"cluster\": \"" << I.getKey() << "\", \"pointer\": \""
           << (const void *)I.getKey() << "\", \"items\": [" << NL;
@@ -217,8 +218,9 @@ public:
       ++Space;
       const ClusterBindings &CB = I.getData();
       for (ClusterBindings::iterator CI = CB.begin(); CI != CB.end(); ++CI) {
-        Indent(Out, Space, IsDot) << "{ " << CI.getKey() << ", \"value\": \""
-                                  << CI.getData() << "\" }";
+        Indent(Out, Space, IsDot) << "{ " << CI.getKey() << ", \"value\": ";
+        CI.getData().printJson(Out, /*AddQuotes=*/true);
+        Out << " }";
         if (std::next(CI) != CB.end())
           Out << ',';
         Out << NL;

@@ -199,6 +199,7 @@ class ExplodedGraph(object):
                                         .replace('\\"', '"') \
                                         .replace('\\{', '{') \
                                         .replace('\\}', '}') \
+                                        .replace('\\\\', '\\') \
                                         .replace('\\<', '\\\\<') \
                                         .replace('\\>', '\\\\>') \
                                         .rstrip(',')
