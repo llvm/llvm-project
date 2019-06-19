@@ -285,6 +285,15 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
     auto Changes = renameWithinFile(InpAST->AST, File, Pos, NewName);
     if (!Changes)
       return CB(Changes.takeError());
+
+    auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
+                                       InpAST->Inputs.FS.get());
+    if (auto Formatted =
+            cleanupAndFormat(InpAST->Inputs.Contents, *Changes, Style))
+      *Changes = std::move(*Formatted);
+    else
+      elog("Failed to format replacements: {0}", Formatted.takeError());
+
     std::vector<TextEdit> Edits;
     for (const auto &Rep : *Changes)
       Edits.push_back(replacementToEdit(InpAST->Inputs.Contents, Rep));
@@ -351,6 +360,8 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
       if (auto Formatted = cleanupAndFormat(InpAST->Inputs.Contents,
                                             *Effect->ApplyEdit, Style))
         Effect->ApplyEdit = std::move(*Formatted);
+      else
+        elog("Failed to format replacements: {0}", Formatted.takeError());
     }
     return CB(std::move(*Effect));
   };
