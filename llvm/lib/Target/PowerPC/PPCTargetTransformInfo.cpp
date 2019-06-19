@@ -492,7 +492,7 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB,
 bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                           AssumptionCache &AC,
                                           TargetLibraryInfo *LibInfo,
-                                          TTI::HardwareLoopInfo &HWLoopInfo) {
+                                          HardwareLoopInfo &HWLoopInfo) {
   const PPCTargetMachine &TM = ST->getTargetMachine();
   TargetSchedModel SchedModel;
   SchedModel.init(ST);

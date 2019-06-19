@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -start-after=codegenprepare -stop-before=expand-isel-pseudos -o - %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -start-after=codegenprepare -stop-before=finalize-isel -o - %s | FileCheck %s
 
 ; Input to this test looked like this and was compiled using: clang -g -O1 -mllvm -stop-after=codegenprepare -S
 ;

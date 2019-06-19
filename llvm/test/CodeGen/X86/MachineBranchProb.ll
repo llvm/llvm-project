@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -print-machineinstrs=expand-isel-pseudos -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -print-after=finalize-isel -o /dev/null 2>&1 | FileCheck %s
 
 ;; Make sure a transformation in SelectionDAGBuilder that converts "or + br" to
 ;; two branches correctly updates the branch probability.

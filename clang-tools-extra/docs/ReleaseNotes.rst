@@ -125,6 +125,20 @@ Improvements to clang-tidy
   repeated branches in ``switch`` statements and indentical true and false
   branches in conditional operators.
 
+- New :doc:`fuchsia-default-arguments-calls
+  <clang-tidy/checks/fuchsia-default-arguments-calls>` check.
+
+  Warns if a function or method is called with default arguments.
+  This was previously done by `fuchsia-default-arguments check`, which has been
+  removed.
+
+- New :doc:`fuchsia-default-arguments-calls
+  <clang-tidy/checks/fuchsia-default-arguments-calls>` check.
+
+  Warns if a function or method is declared with default parameters.
+  This was previously done by `fuchsia-default-arguments check` check, which has
+  been removed.
+
 - New :doc:`google-readability-avoid-underscore-in-googletest-name
   <clang-tidy/checks/google-readability-avoid-underscore-in-googletest-name>`
   check.
@@ -165,6 +179,14 @@ Improvements to clang-tidy
   `MagnitudeBitsUpperLimit` option. The default value was set to 16,
   which greatly reduces warnings related to loops which are unlikely to
   cause an actual functional bug.
+
+- The ‘fuchsia-default-arguments’ check has been removed.
+
+  Warnings of function or method calls and declarations with default arguments
+  were moved to :doc:`fuchsia-default-arguments-calls
+  <clang-tidy/checks/fuchsia-default-arguments-calls>` and
+  :doc:`fuchsia-default-arguments-calls
+  <clang-tidy/checks/fuchsia-default-arguments-calls>` checks respectively.
 
 - The :doc:`google-runtime-int <clang-tidy/checks/google-runtime-int>`
   check has been disabled in Objective-C++.

@@ -54,9 +54,9 @@ entry:
 ; CHECK-DSP: cmp
 ; CHECK-DSP: cmp
 
-; CHECK-DSP-IMM: sxth [[ARG:r[0-9]+]], r2
 ; CHECK-DSP-IMM: uadd16 [[ADD:r[0-9]+]],
 ; CHECK-DSP-IMM: sxth.w [[SEXT:r[0-9]+]], [[ADD]]
+; CHECK-DSP-IMM: sxth [[ARG:r[0-9]+]], r2
 ; CHECK-DSP-IMM: cmp [[SEXT]], [[ARG]]
 ; CHECK-DSP-IMM-NOT: uxt
 ; CHECK-DSP-IMM: movs [[ONE:r[0-9]+]], #1

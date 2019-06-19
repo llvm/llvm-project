@@ -16,8 +16,9 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 ; CHECK-LABEL: function
+; CHECK: mul r2, r0, r0
 ; CHECK: cmp r0, r1
 ; CHECK-NOT: mulseq r0, r0, r0
-; CHECK: muleq r0, r0, r0
+; CHECK: moveq r0, r2
 ; CHECK: bx lr
 

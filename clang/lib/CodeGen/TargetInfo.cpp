@@ -6330,7 +6330,9 @@ private:
 static bool isUnsupportedType(ASTContext &Context, QualType T) {
   if (!Context.getTargetInfo().hasFloat16Type() && T->isFloat16Type())
     return true;
-  if (!Context.getTargetInfo().hasFloat128Type() && T->isFloat128Type())
+  if (!Context.getTargetInfo().hasFloat128Type() &&
+      (T->isFloat128Type() ||
+       (T->isRealFloatingType() && Context.getTypeSize(T) == 128)))
     return true;
   if (!Context.getTargetInfo().hasInt128Type() && T->isIntegerType() &&
       Context.getTypeSize(T) > 64)

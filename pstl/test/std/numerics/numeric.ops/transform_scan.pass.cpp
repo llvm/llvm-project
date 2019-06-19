@@ -42,9 +42,9 @@ struct test_transform_scan
     {
         using namespace std;
 
-        auto orr1 = inclusive ? transform_inclusive_scan(pstl::execution::seq, first, last, expected_first, binary_op,
+        auto orr1 = inclusive ? transform_inclusive_scan(std::execution::seq, first, last, expected_first, binary_op,
                                                          unary_op, init)
-                              : transform_exclusive_scan(pstl::execution::seq, first, last, expected_first, init,
+                              : transform_exclusive_scan(std::execution::seq, first, last, expected_first, init,
                                                          binary_op, unary_op);
         auto orr2 = inclusive ? transform_inclusive_scan(exec, first, last, out_first, binary_op, unary_op, init)
                               : transform_exclusive_scan(exec, first, last, out_first, init, binary_op, unary_op);
@@ -54,7 +54,7 @@ struct test_transform_scan
         // Checks inclusive scan if init is not provided
         if (inclusive && n > 0)
         {
-            orr1 = transform_inclusive_scan(pstl::execution::seq, first, last, expected_first, binary_op, unary_op);
+            orr1 = transform_inclusive_scan(std::execution::seq, first, last, expected_first, binary_op, unary_op);
             orr2 = transform_inclusive_scan(exec, first, last, out_first, binary_op, unary_op);
             EXPECT_TRUE(out_last == orr2, "transform...scan returned wrong iterator");
             check_and_reset(expected_first, out_first, n, trash);

@@ -1,7 +1,8 @@
 set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyFuchsiaModule
-  DefaultArgumentsCheck.cpp
+  DefaultArgumentsCallsCheck.cpp
+  DefaultArgumentsDeclarationsCheck.cpp
   FuchsiaTidyModule.cpp
   MultipleInheritanceCheck.cpp
   OverloadedOperatorCheck.cpp

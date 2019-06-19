@@ -1,4 +1,4 @@
-; RUN: llc < %s -stop-before=expand-isel-pseudos -o - | FileCheck %s
+; RUN: llc < %s -stop-before=finalize-isel -o - | FileCheck %s
 
 source_filename = "foo.c"
 target datalayout = "E-m:e-p:32:32-i64:64-n32"

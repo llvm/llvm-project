@@ -101,7 +101,7 @@ namespace {
 
     // Given that the target believes the loop to be profitable, try to
     // convert it.
-    bool TryConvertLoop(TTI::HardwareLoopInfo &HWLoopInfo);
+    bool TryConvertLoop(HardwareLoopInfo &HWLoopInfo);
 
   private:
     ScalarEvolution *SE = nullptr;
@@ -139,7 +139,7 @@ namespace {
     void UpdateBranch(Value *EltsRem);
 
   public:
-    HardwareLoop(TTI::HardwareLoopInfo &Info, ScalarEvolution &SE,
+    HardwareLoop(HardwareLoopInfo &Info, ScalarEvolution &SE,
                  const DataLayout &DL) :
       SE(SE), DL(DL), L(Info.L), M(L->getHeader()->getModule()),
       ExitCount(Info.ExitCount),
@@ -205,7 +205,7 @@ bool HardwareLoops::TryConvertLoop(Loop *L) {
   if (containsIrreducibleCFG<const BasicBlock *>(RPOT, *LI))
     return false;
 
-  TTI::HardwareLoopInfo HWLoopInfo(L);
+  HardwareLoopInfo HWLoopInfo(L);
   if (TTI->isHardwareLoopProfitable(L, *SE, *AC, LibInfo, HWLoopInfo) ||
       ForceHardwareLoops) {
 
@@ -225,90 +225,18 @@ bool HardwareLoops::TryConvertLoop(Loop *L) {
   return false;
 }
 
-bool HardwareLoops::TryConvertLoop(TTI::HardwareLoopInfo &HWLoopInfo) {
+bool HardwareLoops::TryConvertLoop(HardwareLoopInfo &HWLoopInfo) {
 
   Loop *L = HWLoopInfo.L;
   LLVM_DEBUG(dbgs() << "HWLoops: Try to convert profitable loop: " << *L);
 
-  SmallVector<BasicBlock*, 4> ExitingBlocks;
-  L->getExitingBlocks(ExitingBlocks);
-
-  for (SmallVectorImpl<BasicBlock *>::iterator I = ExitingBlocks.begin(),
-       IE = ExitingBlocks.end(); I != IE; ++I) {
-    BasicBlock *BB = *I;
-
-    // If we pass the updated counter back through a phi, we need to know
-    // which latch the updated value will be coming from.
-    if (!L->isLoopLatch(BB)) {
-      if ((ForceHardwareLoopPHI.getNumOccurrences() && ForceHardwareLoopPHI) ||
-          HWLoopInfo.CounterInReg)
-        continue;
-    }
-
-    const SCEV *EC = SE->getExitCount(L, BB);
-    if (isa<SCEVCouldNotCompute>(EC))
-      continue;
-    if (const SCEVConstant *ConstEC = dyn_cast<SCEVConstant>(EC)) {
-      if (ConstEC->getValue()->isZero())
-        continue;
-    } else if (!SE->isLoopInvariant(EC, L))
-      continue;
-
-    if (SE->getTypeSizeInBits(EC->getType()) >
-        HWLoopInfo.CountType->getBitWidth())
-      continue;
-
-    // If this exiting block is contained in a nested loop, it is not eligible
-    // for insertion of the branch-and-decrement since the inner loop would
-    // end up messing up the value in the CTR.
-    if (!HWLoopInfo.IsNestingLegal && LI->getLoopFor(BB) != L &&
-        !ForceNestedLoop)
-      continue;
-
-    // We now have a loop-invariant count of loop iterations (which is not the
-    // constant zero) for which we know that this loop will not exit via this
-    // existing block.
-
-    // We need to make sure that this block will run on every loop iteration.
-    // For this to be true, we must dominate all blocks with backedges. Such
-    // blocks are in-loop predecessors to the header block.
-    bool NotAlways = false;
-    for (pred_iterator PI = pred_begin(L->getHeader()),
-         PIE = pred_end(L->getHeader()); PI != PIE; ++PI) {
-      if (!L->contains(*PI))
-        continue;
-
-      if (!DT->dominates(*I, *PI)) {
-        NotAlways = true;
-        break;
-      }
-    }
-
-    if (NotAlways)
-      continue;
-
-    // Make sure this blocks ends with a conditional branch.
-    Instruction *TI = BB->getTerminator();
-    if (!TI)
-      continue;
-
-    if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
-      if (!BI->isConditional())
-        continue;
-
-      HWLoopInfo.ExitBranch = BI;
-    } else
-      continue;
-
-    // Note that this block may not be the loop latch block, even if the loop
-    // has a latch block.
-    HWLoopInfo.ExitBlock = *I;
-    HWLoopInfo.ExitCount = EC;
-    break;
-  }
-
-  if (!HWLoopInfo.ExitBlock)
+  if (!HWLoopInfo.isHardwareLoopCandidate(*SE, *LI, *DT, ForceNestedLoop,
+                                          ForceHardwareLoopPHI))
     return false;
+
+  assert(
+      (HWLoopInfo.ExitBlock && HWLoopInfo.ExitBranch && HWLoopInfo.ExitCount) &&
+      "Hardware Loop must have set exit info.");
 
   BasicBlock *Preheader = L->getLoopPreheader();
 

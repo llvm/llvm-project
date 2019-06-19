@@ -527,6 +527,28 @@ defm ANYTRUE : SIMDReduce<int_wasm_anytrue, "any_true", 82>;
 // All lanes true: all_true
 defm ALLTRUE : SIMDReduce<int_wasm_alltrue, "all_true", 83>;
 
+// Reductions already return 0 or 1, so and 1, setne 0, and seteq 1
+// can be folded out
+foreach reduction =
+  [["int_wasm_anytrue", "ANYTRUE"], ["int_wasm_alltrue", "ALLTRUE"]] in
+foreach ty = [v16i8, v8i16, v4i32, v2i64] in {
+def : Pat<(i32 (and
+            (i32 (!cast<Intrinsic>(reduction[0]) (ty V128:$x))),
+            (i32 1)
+          )),
+          (i32 (!cast<NI>(reduction[1]#"_"#ty) (ty V128:$x)))>;
+def : Pat<(i32 (setne
+            (i32 (!cast<Intrinsic>(reduction[0]) (ty V128:$x))),
+            (i32 0)
+          )),
+          (i32 (!cast<NI>(reduction[1]#"_"#ty) (ty V128:$x)))>;
+def : Pat<(i32 (seteq
+            (i32 (!cast<Intrinsic>(reduction[0]) (ty V128:$x))),
+            (i32 1)
+          )),
+          (i32 (!cast<NI>(reduction[1]#"_"#ty) (ty V128:$x)))>;
+}
+
 //===----------------------------------------------------------------------===//
 // Bit shifts
 //===----------------------------------------------------------------------===//

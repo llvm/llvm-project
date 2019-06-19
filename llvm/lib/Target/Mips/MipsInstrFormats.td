@@ -145,6 +145,7 @@ class PseudoSE<dag outs, dag ins, list<dag> pattern,
 class MipsAsmPseudoInst<dag outs, dag ins, string asmstr>:
   MipsInst<outs, ins, asmstr, [], IIPseudo, Pseudo> {
   let isPseudo = 1;
+  let hasNoSchedulingInfo = 1;
   let Pattern = [];
 }
 //===----------------------------------------------------------------------===//

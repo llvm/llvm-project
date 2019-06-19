@@ -84,14 +84,22 @@ void releasePagesToOS(uptr BaseAddress, uptr Offset, uptr Size,
 // Calling getenv should be fine (c)(tm) at any time.
 const char *getEnv(const char *Name) { return getenv(Name); }
 
-void BlockingMutex::wait() {
-  syscall(SYS_futex, reinterpret_cast<uptr>(OpaqueStorage), FUTEX_WAIT_PRIVATE,
-          MtxSleeping, nullptr, nullptr, 0);
+void BlockingMutex::lock() {
+  atomic_u32 *M = reinterpret_cast<atomic_u32 *>(&OpaqueStorage);
+  if (atomic_exchange(M, MtxLocked, memory_order_acquire) == MtxUnlocked)
+    return;
+  while (atomic_exchange(M, MtxSleeping, memory_order_acquire) != MtxUnlocked)
+    syscall(SYS_futex, reinterpret_cast<uptr>(OpaqueStorage),
+            FUTEX_WAIT_PRIVATE, MtxSleeping, nullptr, nullptr, 0);
 }
 
-void BlockingMutex::wake() {
-  syscall(SYS_futex, reinterpret_cast<uptr>(OpaqueStorage), FUTEX_WAKE_PRIVATE,
-          1, nullptr, nullptr, 0);
+void BlockingMutex::unlock() {
+  atomic_u32 *M = reinterpret_cast<atomic_u32 *>(&OpaqueStorage);
+  const u32 V = atomic_exchange(M, MtxUnlocked, memory_order_release);
+  DCHECK_NE(V, MtxUnlocked);
+  if (V == MtxSleeping)
+    syscall(SYS_futex, reinterpret_cast<uptr>(OpaqueStorage),
+            FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0);
 }
 
 u64 getMonotonicTime() {
