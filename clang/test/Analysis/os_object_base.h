@@ -12,6 +12,8 @@
 
 #define OSDynamicCast(type, inst)   \
     ((type *) OSMetaClassBase::safeMetaCast((inst), OSTypeID(type)))
+#define OSRequiredCast(type, inst)   \
+    ((type *) OSMetaClassBase::requiredMetaCast((inst), OSTypeID(type)))
 
 #define OSTypeAlloc(type)   ((type *) ((type::metaClass)->alloc()))
 
@@ -22,6 +24,8 @@ struct OSMetaClass;
 struct OSMetaClassBase {
   static OSMetaClassBase *safeMetaCast(const OSMetaClassBase *inst,
                                        const OSMetaClass *meta);
+  static OSMetaClassBase *requiredMetaCast(const OSMetaClassBase *inst,
+                                           const OSMetaClass *meta);
 
   OSMetaClassBase *metaCast(const char *toMeta);
 

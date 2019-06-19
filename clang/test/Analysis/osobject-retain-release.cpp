@@ -1,8 +1,10 @@
 // RUN: %clang_analyze_cc1 -fblocks -analyze -analyzer-output=text\
-// RUN:                    -analyzer-checker=core,osx -verify %s
+// RUN:   -analyzer-checker=core,osx,debug.ExprInspection -verify %s
 
 #include "os_object_base.h"
 #include "os_smart_ptr.h"
+
+void clang_analyzer_eval(bool);
 
 struct OSIterator : public OSObject {
   static const OSMetaClass * const metaClass;
@@ -481,6 +483,23 @@ void check_rc_create() {
 void check_dynamic_cast() {
   OSArray *arr = OSDynamicCast(OSArray, OSObject::generateObject(1));
   arr->release();
+}
+
+void check_required_cast() {
+  OSArray *arr = OSRequiredCast(OSArray, OSObject::generateObject(1));
+  arr->release(); // no-warning
+}
+
+void check_cast_behavior(OSObject *obj) {
+  OSArray *arr1 = OSDynamicCast(OSArray, obj);
+  clang_analyzer_eval(arr1 == obj); // expected-warning{{TRUE}}
+                                    // expected-note@-1{{TRUE}}
+                                    // expected-note@-2{{Assuming 'arr1' is not equal to 'obj'}}
+                                    // expected-warning@-3{{FALSE}}
+                                    // expected-note@-4   {{FALSE}}
+  OSArray *arr2 = OSRequiredCast(OSArray, obj);
+  clang_analyzer_eval(arr2 == obj); // expected-warning{{TRUE}}
+                                    // expected-note@-1{{TRUE}}
 }
 
 unsigned int check_dynamic_cast_no_null_on_orig(OSObject *obj) {
