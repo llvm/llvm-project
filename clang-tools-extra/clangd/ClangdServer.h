@@ -123,6 +123,10 @@ public:
         std::chrono::milliseconds(500);
 
     bool SuggestMissingIncludes = false;
+
+    /// Enable hidden features mostly useful to clangd developers.
+    /// e.g. tweaks to dump the AST.
+    bool HiddenFeatures = false;
   };
   // Sensible default options for use in tests.
   // Features like indexing must be enabled if desired.
@@ -150,6 +154,9 @@ public:
   /// constructor will receive onDiagnosticsReady callback.
   void addDocument(PathRef File, StringRef Contents,
                    WantDiagnostics WD = WantDiagnostics::Auto);
+
+  /// Get the contents of \p File, which should have been added.
+  llvm::StringRef getDocument(PathRef File) const;
 
   /// Remove \p File from list of tracked files, schedule a request to free
   /// resources associated with it. Pending diagnostics for closed files may not
@@ -227,6 +234,7 @@ public:
   struct TweakRef {
     std::string ID;    /// ID to pass for applyTweak.
     std::string Title; /// A single-line message to show in the UI.
+    Tweak::Intent Intent;
   };
   /// Enumerate the code tweaks available to the user at a specified point.
   void enumerateTweaks(PathRef File, Range Sel,
@@ -234,7 +242,7 @@ public:
 
   /// Apply the code tweak with a specified \p ID.
   void applyTweak(PathRef File, Range Sel, StringRef ID,
-                  Callback<std::vector<TextEdit>> CB);
+                  Callback<Tweak::Effect> CB);
 
   /// Only for testing purposes.
   /// Waits until all requests to worker thread are finished and dumps AST for
@@ -291,6 +299,7 @@ private:
   // If this is true, suggest include insertion fixes for diagnostic errors that
   // can be caused by missing includes (e.g. member access in incomplete type).
   bool SuggestMissingIncludes = false;
+  bool EnableHiddenFeatures = false;
 
   // GUARDED_BY(CachedCompletionFuzzyFindRequestMutex)
   llvm::StringMap<llvm::Optional<FuzzyFindRequest>>

@@ -155,6 +155,10 @@ public:
   /// if requested with WantDiags::Auto or WantDiags::Yes.
   void remove(PathRef File);
 
+  /// Returns the current contents of the buffer for File, per last update().
+  /// The returned StringRef may be invalidated by any write to TUScheduler.
+  llvm::StringRef getContents(PathRef File) const;
+
   /// Schedule an async task with no dependencies.
   void run(llvm::StringRef Name, llvm::unique_function<void()> Action);
 

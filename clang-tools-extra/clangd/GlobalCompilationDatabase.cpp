@@ -58,9 +58,11 @@ static std::string getFallbackClangPath() {
 tooling::CompileCommand
 GlobalCompilationDatabase::getFallbackCommand(PathRef File) const {
   std::vector<std::string> Argv = {getFallbackClangPath()};
-  // Clang treats .h files as C by default, resulting in unhelpful diagnostics.
+  // Clang treats .h files as C by default and files without extension as linker
+  // input, resulting in unhelpful diagnostics.
   // Parsing as Objective C++ is friendly to more cases.
-  if (llvm::sys::path::extension(File) == ".h")
+  auto FileExtension = llvm::sys::path::extension(File);
+  if (FileExtension.empty() || FileExtension == ".h")
     Argv.push_back("-xobjective-c++-header");
   Argv.push_back(File);
   tooling::CompileCommand Cmd(llvm::sys::path::parent_path(File),

@@ -13,6 +13,7 @@
 #include "SourceCode.h"
 #include "Trace.h"
 #include "URI.h"
+#include "refactor/Tweak.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -31,7 +32,14 @@ CodeAction toCodeAction(const ClangdServer::TweakRef &T, const URIForFile &File,
                         Range Selection) {
   CodeAction CA;
   CA.title = T.Title;
-  CA.kind = CodeAction::REFACTOR_KIND;
+  switch (T.Intent) {
+  case Tweak::Refactor:
+    CA.kind = CodeAction::REFACTOR_KIND;
+    break;
+  case Tweak::Info:
+    CA.kind = CodeAction::INFO_KIND;
+    break;
+  }
   // This tweak may have an expensive second stage, we only run it if the user
   // actually chooses it in the UI. We reply with a command that would run the
   // corresponding tweak.
@@ -337,6 +345,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   applyConfiguration(Params.initializationOptions.ConfigSettings);
 
   CCOpts.EnableSnippets = Params.capabilities.CompletionSnippets;
+  CCOpts.IncludeFixIts = Params.capabilities.CompletionFixes;
   DiagOpts.EmbedFixesInDiagnostics = Params.capabilities.DiagnosticFixes;
   DiagOpts.SendDiagnosticCategory = Params.capabilities.DiagnosticCategory;
   DiagOpts.EmitRelatedLocations =
@@ -480,18 +489,25 @@ void ClangdLSPServer::onCommand(const ExecuteCommandParams &Params,
           llvm::inconvertibleErrorCode(),
           "trying to apply a code action for a non-added file"));
 
-    auto Action = [ApplyEdit](decltype(Reply) Reply, URIForFile File,
-                              std::string Code,
-                              llvm::Expected<std::vector<TextEdit>> R) {
+    auto Action = [this, ApplyEdit](decltype(Reply) Reply, URIForFile File,
+                                    std::string Code,
+                                    llvm::Expected<Tweak::Effect> R) {
       if (!R)
         return Reply(R.takeError());
 
-      WorkspaceEdit WE;
-      WE.changes.emplace();
-      (*WE.changes)[File.uri()] = std::move(*R);
-
-      Reply("Fix applied.");
-      ApplyEdit(std::move(WE));
+      if (R->ApplyEdit) {
+        WorkspaceEdit WE;
+        WE.changes.emplace();
+        (*WE.changes)[File.uri()] = replacementsToEdits(Code, *R->ApplyEdit);
+        ApplyEdit(std::move(WE));
+      }
+      if (R->ShowMessage) {
+        ShowMessageParams Msg;
+        Msg.message = *R->ShowMessage;
+        Msg.type = MessageType::Info;
+        notify("window/showMessage", Msg);
+      }
+      Reply("Tweak applied.");
     };
     Server->applyTweak(Params.tweakArgs->file.file(),
                        Params.tweakArgs->selection, Params.tweakArgs->tweakID,

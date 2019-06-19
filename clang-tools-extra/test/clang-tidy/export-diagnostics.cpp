@@ -8,6 +8,8 @@ X(f)
 // CHECK-MESSAGES: -input.cpp:2:1: warning: no previous prototype for function 'ff' [clang-diagnostic-missing-prototypes]
 // CHECK-MESSAGES: -input.cpp:1:19: note: expanded from macro 'X'
 // CHECK-MESSAGES: {{^}}note: expanded from here{{$}}
+// CHECK-MESSAGES: -input.cpp:2:1: note: declare 'static' if the function is not intended to be used outside of this translation unit
+// CHECK-MESSAGES: -input.cpp:1:14: note: expanded from macro 'X'
 
 // CHECK-YAML: ---
 // CHECK-YAML-NEXT: MainSourceFile:  '{{.*}}-input.cpp'
@@ -27,5 +29,17 @@ X(f)
 // CHECK-YAML-NEXT:       - Message:         expanded from here
 // CHECK-YAML-NEXT:         FilePath:        ''
 // CHECK-YAML-NEXT:         FileOffset:      0
+// CHECK-YAML-NEXT:         Replacements:    []
+// CHECK-YAML-NEXT:       - Message:         'declare ''static'' if the function is not intended to be used outside of this translation unit'
+// CHECK-YAML-NEXT:         FilePath:        '{{.*}}-input.cpp'
+// CHECK-YAML-NEXT:         FileOffset:      30
+// CHECK-YAML-NEXT:         Replacements:
+// CHECK-YAML-NEXT:           - FilePath:        '{{.*}}-input.cpp'
+// CHECK-YAML-NEXT:             Offset:          30
+// CHECK-YAML-NEXT:             Length:          0
+// CHECK-YAML-NEXT:             ReplacementText: 'static '
+// CHECK-YAML-NEXT:       - Message:         'expanded from macro ''X'''
+// CHECK-YAML-NEXT:         FilePath:        '{{.*}}-input.cpp'
+// CHECK-YAML-NEXT:         FileOffset:      13
 // CHECK-YAML-NEXT:         Replacements:    []
 // CHECK-YAML-NEXT: ...

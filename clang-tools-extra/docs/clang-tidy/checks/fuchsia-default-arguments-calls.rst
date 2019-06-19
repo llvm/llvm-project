@@ -1,17 +1,15 @@
-.. title:: clang-tidy - fuchsia-default-arguments
+.. title:: clang-tidy - fuchsia-default-arguments-calls
 
-fuchsia-default-arguments
-=========================
+fuchsia-default-arguments-calls
+===============================
 
-Warns if a function or method is declared or called with default arguments.
+Warns if a function or method is called with default arguments.
 
-For example, the declaration:
+For example, given the declaration:
 
 .. code-block:: c++
 
   int foo(int value = 5) { return value; }
-
-will cause a warning.
 
 A function call expression that uses a default argument will be diagnosed.
 Calling it without defaults will not cause a warning:
