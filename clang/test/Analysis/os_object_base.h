@@ -19,6 +19,9 @@
 
 using size_t = decltype(sizeof(int));
 
+typedef int kern_return_t;
+struct IORPC {};
+
 struct OSMetaClass;
 
 struct OSMetaClassBase {
@@ -37,7 +40,12 @@ struct OSMetaClassBase {
 
   virtual void free();
   virtual ~OSMetaClassBase(){};
+
+  kern_return_t Invoke(IORPC invoke);
 };
+
+typedef kern_return_t (*OSDispatchMethod)(OSMetaClassBase *self,
+                                          const IORPC rpc);
 
 struct OSObject : public OSMetaClassBase {
   virtual ~OSObject(){}
