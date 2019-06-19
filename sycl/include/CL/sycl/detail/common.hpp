@@ -103,16 +103,6 @@ template <class T> T createSyclObjFromImpl(decltype(T::impl) ImplObj) {
   return T(ImplObj);
 }
 
-#ifdef __SYCL_DEVICE_ONLY__
-// The flag type for passing flag arguments to barrier(), mem_fence(),
-// read_mem_fence(), and write_mem_fence() functions.
-typedef uint cl_mem_fence_flags;
-
-const cl_mem_fence_flags CLK_LOCAL_MEM_FENCE   = 0x01;
-const cl_mem_fence_flags CLK_GLOBAL_MEM_FENCE  = 0x02;
-const cl_mem_fence_flags CLK_CHANNEL_MEM_FENCE = 0x04;
-#endif // __SYCL_DEVICE_ONLY__
-
 } // namespace detail
 } // namespace sycl
 } // namespace cl
