@@ -89,19 +89,12 @@ if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
 endif()
 
 if (APPLE)
-  # FIXME(dliew): This logic should be refactored to the way UBSan Darwin
-  # testing is done.
   set(EXCLUDE_FROM_ALL ON)
 
-  list_intersect(FUZZER_TEST_IOS_ARCHS FUZZER_SUPPORTED_ARCH DARWIN_ios_ARCHS)
-  foreach(arch ${FUZZER_TEST_IOS_ARCHS})
+  foreach(arch ${DARWIN_ios_ARCHS})
     set(LIBFUZZER_TEST_APPLE_PLATFORM "ios")
     set(LIBFUZZER_TEST_TARGET_ARCH ${arch})
-    get_test_cflags_for_apple_platform(
-      "${LIBFUZZER_TEST_APPLE_PLATFORM}"
-      "${LIBFUZZER_TEST_TARGET_ARCH}"
-      LIBFUZZER_TEST_FLAGS
-      )
+    set(LIBFUZZER_TEST_FLAGS "-arch ${arch} -isysroot ${DARWIN_ios_SYSROOT} ${COMPILER_RT_TEST_COMPILER_CFLAGS}")
     set(LIBFUZZER_TEST_CONFIG_SUFFIX "-${arch}-${LIBFUZZER_TEST_APPLE_PLATFORM}")
     string(TOUPPER ${arch} ARCH_UPPER_CASE)
     set(CONFIG_NAME "IOS${ARCH_UPPER_CASE}Config")

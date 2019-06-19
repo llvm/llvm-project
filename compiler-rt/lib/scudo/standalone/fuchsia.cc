@@ -14,8 +14,10 @@
 #include "mutex.h"
 #include "string_utils.h"
 
-#include <limits.h> // for PAGE_SIZE
-#include <stdlib.h> // for getenv()
+#include <lib/sync/mutex.h> // for sync_mutex_t
+#include <limits.h>         // for PAGE_SIZE
+#include <stdlib.h>         // for getenv()
+#include <zircon/compiler.h>
 #include <zircon/sanitizer.h>
 #include <zircon/syscalls.h>
 
@@ -90,7 +92,8 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
   }
 
   uintptr_t P;
-  zx_vm_option_t MapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
+  zx_vm_option_t MapFlags =
+      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_ALLOW_FAULTS;
   const uint64_t Offset =
       Addr ? reinterpret_cast<uintptr_t>(Addr) - Data->VmarBase : 0;
   if (Offset)
@@ -149,18 +152,21 @@ void releasePagesToOS(UNUSED uptr BaseAddress, uptr Offset, uptr Size,
 
 const char *getEnv(const char *Name) { return getenv(Name); }
 
-void BlockingMutex::wait() {
-  const zx_status_t Status =
-      _zx_futex_wait(reinterpret_cast<zx_futex_t *>(OpaqueStorage), MtxSleeping,
-                     ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
-  if (Status != ZX_ERR_BAD_STATE)
-    CHECK_EQ(Status, ZX_OK); // Normal race
+// Note: we need to flag these methods with __TA_NO_THREAD_SAFETY_ANALYSIS
+// because the Fuchsia implementation of sync_mutex_t has clang thread safety
+// annotations. Were we to apply proper capability annotations to the top level
+// BlockingMutex class itself, they would not be needed. As it stands, the
+// thread analysis thinks that we are locking the mutex and accidentally leaving
+// it locked on the way out.
+void BlockingMutex::lock() __TA_NO_THREAD_SAFETY_ANALYSIS {
+  // Size and alignment must be compatible between both types.
+  COMPILER_CHECK(sizeof(sync_mutex_t) <= sizeof(OpaqueStorage));
+  COMPILER_CHECK(!(alignof(decltype(OpaqueStorage)) % alignof(sync_mutex_t)));
+  sync_mutex_lock(reinterpret_cast<sync_mutex_t *>(OpaqueStorage));
 }
 
-void BlockingMutex::wake() {
-  const zx_status_t Status =
-      _zx_futex_wake(reinterpret_cast<zx_futex_t *>(OpaqueStorage), 1);
-  CHECK_EQ(Status, ZX_OK);
+void BlockingMutex::unlock() __TA_NO_THREAD_SAFETY_ANALYSIS {
+  sync_mutex_unlock(reinterpret_cast<sync_mutex_t *>(OpaqueStorage));
 }
 
 u64 getMonotonicTime() { return _zx_clock_get_monotonic(); }
