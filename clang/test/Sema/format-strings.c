@@ -329,7 +329,11 @@ void test_unicode_conversions(wchar_t *s) {
   printf("%S", s); // no-warning
   printf("%s", s); // expected-warning{{format specifies type 'char *' but the argument has type 'wchar_t *'}}
   printf("%C", s[0]); // no-warning
+#if defined(__sun) && !defined(__LP64__)
+  printf("%c", s[0]); // expected-warning{{format specifies type 'int' but the argument has type 'wchar_t' (aka 'long')}}
+#else
   printf("%c", s[0]);
+#endif
   // FIXME: This test reports inconsistent results. On Windows, '%C' expects
   // 'unsigned short'.
   // printf("%C", 10);
@@ -401,7 +405,7 @@ void bug7377_bad_length_mod_usage() {
 void pr7981(wint_t c, wchar_t c2) {
   printf("%lc", c); // no-warning
   printf("%lc", 1.0); // expected-warning{{the argument has type 'double'}}
-#if __WINT_WIDTH__ == 32
+#if __WINT_WIDTH__ == 32 && !(defined(__sun) && !defined(__LP64__))
   printf("%lc", (char) 1); // no-warning
 #else
   printf("%lc", (char) 1); // expected-warning{{the argument has type 'char'}}

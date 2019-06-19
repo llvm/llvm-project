@@ -5113,9 +5113,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         }
       }
 
-      llvm::sys::path::replace_extension(F, "opt.yaml");
+      std::string Extension = "opt.";
+      if (const Arg *A =
+              Args.getLastArg(options::OPT_fsave_optimization_record_EQ))
+        Extension += A->getValue();
+      else
+        Extension += "yaml";
+
+      llvm::sys::path::replace_extension(F, Extension);
       CmdArgs.push_back(Args.MakeArgString(F));
     }
+
     if (const Arg *A =
             Args.getLastArg(options::OPT_foptimization_record_passes_EQ)) {
       CmdArgs.push_back("-opt-record-passes");

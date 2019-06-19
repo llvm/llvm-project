@@ -22,6 +22,7 @@
 #include <string>
 #include <type_traits>
 #include <variant>
+#include <memory>
 
 #include "test_macros.h"
 #include "variant_test_helpers.hpp"
@@ -122,7 +123,7 @@ void test_T_assignment_noexcept() {
 
 void test_T_assignment_sfinae() {
   {
-    using V = std::variant<long, unsigned>;
+    using V = std::variant<long, long long>;
     static_assert(!std::is_assignable<V, int>::value, "ambiguous");
   }
   {
@@ -132,6 +133,31 @@ void test_T_assignment_sfinae() {
   {
     using V = std::variant<std::string, void *>;
     static_assert(!std::is_assignable<V, int>::value, "no matching operator=");
+  }
+  {
+    using V = std::variant<std::string, float>;
+    static_assert(!std::is_assignable<V, int>::value, "no matching operator=");
+  }
+  {
+    using V = std::variant<std::unique_ptr<int>, bool>;
+    static_assert(!std::is_assignable<V, std::unique_ptr<char>>::value,
+                  "no explicit bool in operator=");
+    struct X {
+      operator void*();
+    };
+    static_assert(!std::is_assignable<V, X>::value,
+                  "no boolean conversion in operator=");
+    static_assert(!std::is_assignable<V, std::false_type>::value,
+                  "no converted to bool in operator=");
+  }
+  {
+    struct X {};
+    struct Y {
+      operator X();
+    };
+    using V = std::variant<X>;
+    static_assert(std::is_assignable<V, Y>::value,
+                  "regression on user-defined conversions in operator=");
   }
 #if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
   {
@@ -160,6 +186,37 @@ void test_T_assignment_basic() {
     v = 43l;
     assert(v.index() == 1);
     assert(std::get<1>(v) == 43);
+  }
+  {
+    std::variant<unsigned, long> v;
+    v = 42;
+    assert(v.index() == 1);
+    assert(std::get<1>(v) == 42);
+    v = 43u;
+    assert(v.index() == 0);
+    assert(std::get<0>(v) == 43);
+  }
+  {
+    std::variant<std::string, bool> v = true;
+    v = "bar";
+    assert(v.index() == 0);
+    assert(std::get<0>(v) == "bar");
+  }
+  {
+    std::variant<bool, std::unique_ptr<int>> v;
+    v = nullptr;
+    assert(v.index() == 1);
+    assert(std::get<1>(v) == nullptr);
+  }
+  {
+    std::variant<bool volatile, int> v = 42;
+    v = false;
+    assert(v.index() == 0);
+    assert(!std::get<0>(v));
+    bool lvt = true;
+    v = lvt;
+    assert(v.index() == 0);
+    assert(std::get<0>(v));
   }
 #if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
   {

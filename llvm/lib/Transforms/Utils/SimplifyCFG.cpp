@@ -864,7 +864,7 @@ bool SimplifyCFGOpt::SimplifyEqualityComparisonWithOnlyPredecessor(
       return true;
     }
 
-    SwitchInst *SI = cast<SwitchInst>(TI);
+    SwitchInstProfUpdateWrapper SI = *cast<SwitchInst>(TI);
     // Okay, TI has cases that are statically dead, prune them away.
     SmallPtrSet<Constant *, 16> DeadCases;
     for (unsigned i = 0, e = PredCases.size(); i != e; ++i)
@@ -873,30 +873,13 @@ bool SimplifyCFGOpt::SimplifyEqualityComparisonWithOnlyPredecessor(
     LLVM_DEBUG(dbgs() << "Threading pred instr: " << *Pred->getTerminator()
                       << "Through successor TI: " << *TI);
 
-    // Collect branch weights into a vector.
-    SmallVector<uint32_t, 8> Weights;
-    MDNode *MD = SI->getMetadata(LLVMContext::MD_prof);
-    bool HasWeight = MD && (MD->getNumOperands() == 2 + SI->getNumCases());
-    if (HasWeight)
-      for (unsigned MD_i = 1, MD_e = MD->getNumOperands(); MD_i < MD_e;
-           ++MD_i) {
-        ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(MD_i));
-        Weights.push_back(CI->getValue().getZExtValue());
-      }
     for (SwitchInst::CaseIt i = SI->case_end(), e = SI->case_begin(); i != e;) {
       --i;
       if (DeadCases.count(i->getCaseValue())) {
-        if (HasWeight) {
-          std::swap(Weights[i->getCaseIndex() + 1], Weights.back());
-          Weights.pop_back();
-        }
         i->getCaseSuccessor()->removePredecessor(TI->getParent());
-        SI->removeCase(i);
+        SI.removeCase(i);
       }
     }
-    if (HasWeight && Weights.size() >= 2)
-      setBranchWeights(SI, Weights);
-
     LLVM_DEBUG(dbgs() << "Leaving: " << *TI << "\n");
     return true;
   }
@@ -3643,20 +3626,16 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpInIt(
   // the switch to the merge point on the compared value.
   BasicBlock *NewBB =
       BasicBlock::Create(BB->getContext(), "switch.edge", BB->getParent(), BB);
-  SmallVector<uint64_t, 8> Weights;
-  bool HasWeights = HasBranchWeights(SI);
-  if (HasWeights) {
-    GetBranchWeights(SI, Weights);
-    if (Weights.size() == 1 + SI->getNumCases()) {
-      // Split weight for default case to case for "Cst".
-      Weights[0] = (Weights[0] + 1) >> 1;
-      Weights.push_back(Weights[0]);
-
-      SmallVector<uint32_t, 8> MDWeights(Weights.begin(), Weights.end());
-      setBranchWeights(SI, MDWeights);
+  {
+    SwitchInstProfUpdateWrapper SIW(*SI);
+    auto W0 = SIW.getSuccessorWeight(0);
+    SwitchInstProfUpdateWrapper::CaseWeightOpt NewW;
+    if (W0) {
+      NewW = ((uint64_t(*W0) + 1) >> 1);
+      SIW.setSuccessorWeight(0, *NewW);
     }
+    SIW.addCase(Cst, NewBB, NewW);
   }
-  SI->addCase(Cst, NewBB);
 
   // NewBB branches to the phi block, add the uncond branch and the phi entry.
   Builder.SetInsertPoint(NewBB);
@@ -4460,33 +4439,20 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, AssumptionCache *AC,
     return true;
   }
 
-  SmallVector<uint64_t, 8> Weights;
-  bool HasWeight = HasBranchWeights(SI);
-  if (HasWeight) {
-    GetBranchWeights(SI, Weights);
-    HasWeight = (Weights.size() == 1 + SI->getNumCases());
-  }
+  if (DeadCases.empty())
+    return false;
 
-  // Remove dead cases from the switch.
+  SwitchInstProfUpdateWrapper SIW(*SI);
   for (ConstantInt *DeadCase : DeadCases) {
     SwitchInst::CaseIt CaseI = SI->findCaseValue(DeadCase);
     assert(CaseI != SI->case_default() &&
            "Case was not found. Probably mistake in DeadCases forming.");
-    if (HasWeight) {
-      std::swap(Weights[CaseI->getCaseIndex() + 1], Weights.back());
-      Weights.pop_back();
-    }
-
     // Prune unused values from PHI nodes.
     CaseI->getCaseSuccessor()->removePredecessor(SI->getParent());
-    SI->removeCase(CaseI);
-  }
-  if (HasWeight && Weights.size() >= 2) {
-    SmallVector<uint32_t, 8> MDWeights(Weights.begin(), Weights.end());
-    setBranchWeights(SI, MDWeights);
+    SIW.removeCase(CaseI);
   }
 
-  return !DeadCases.empty();
+  return true;
 }
 
 /// If BB would be eligible for simplification by

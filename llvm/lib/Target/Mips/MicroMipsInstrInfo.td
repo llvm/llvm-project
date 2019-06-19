@@ -1121,7 +1121,8 @@ let AdditionalPredicates = [NotDSP] in {
                        ISA_MICROMIPS32_NOT_MIPS32R6;
 }
 
-def TAILCALL_MM : TailCall<J_MM, jmptarget_mm>, ISA_MIPS1_NOT_32R6_64R6;
+def TAILCALL_MM : TailCall<J_MM, jmptarget_mm>,
+                  ISA_MICROMIPS32_NOT_MIPS32R6;
 
 def TAILCALLREG_MM  : TailCallReg<JRC16_MM, GPR32Opnd>,
                       ISA_MICROMIPS32_NOT_MIPS32R6;

@@ -247,7 +247,9 @@ body: |
     ; CHECK-LABEL: name: test_1anyext64_1signext32
     ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_SEXTLOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK-NOT: [[T1]]
     ; CHECK: [[T2:%[0-9]+]]:_(s64) = G_ANYEXT [[T1]]
+    ; CHECK-NOT: [[T1]]
     ; CHECK: $x0 = COPY [[T2]](s64)
     ; CHECK: $w1 = COPY [[T1]](s32)
     %0:_(p0) = COPY $x0

@@ -158,7 +158,7 @@ public:
   }
 
   void cycleEvent() {
-    if (CriticalPredecessor.Cycles)
+    if (isWaiting() && CriticalPredecessor.Cycles)
       CriticalPredecessor.Cycles--;
   }
 };

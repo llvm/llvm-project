@@ -57,34 +57,19 @@ private:
   void operator=(const SpinMutex &) = delete;
 };
 
-enum MutexState { MtxUnlocked = 0, MtxLocked = 1, MtxSleeping = 2 };
-
 class BlockingMutex {
 public:
-  explicit constexpr BlockingMutex(LinkerInitialized) : OpaqueStorage{0} {}
+  explicit constexpr BlockingMutex(LinkerInitialized) : OpaqueStorage{} {}
   BlockingMutex() { memset(this, 0, sizeof(*this)); }
-  void wait();
-  void wake();
-  void lock() {
-    atomic_u32 *M = reinterpret_cast<atomic_u32 *>(&OpaqueStorage);
-    if (atomic_exchange(M, MtxLocked, memory_order_acquire) == MtxUnlocked)
-      return;
-    while (atomic_exchange(M, MtxSleeping, memory_order_acquire) != MtxUnlocked)
-      wait();
-  }
-  void unlock() {
-    atomic_u32 *M = reinterpret_cast<atomic_u32 *>(&OpaqueStorage);
-    const u32 V = atomic_exchange(M, MtxUnlocked, memory_order_release);
-    DCHECK_NE(V, MtxUnlocked);
-    if (V == MtxSleeping)
-      wake();
-  }
+  void lock();
+  void unlock();
   void checkLocked() {
     atomic_u32 *M = reinterpret_cast<atomic_u32 *>(&OpaqueStorage);
     CHECK_NE(MtxUnlocked, atomic_load_relaxed(M));
   }
 
 private:
+  enum MutexState { MtxUnlocked = 0, MtxLocked = 1, MtxSleeping = 2 };
   uptr OpaqueStorage[1];
 };
 

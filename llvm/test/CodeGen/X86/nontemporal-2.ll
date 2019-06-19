@@ -1230,9 +1230,7 @@ define void @test_op_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8>* %dst) {
 }
 
 ; 256-bit NT stores require 256-bit alignment.
-; FIXME: For AVX, we could lower this to 2x movntps %xmm. Taken further, we
-; could even scalarize to movnti when we have 1-alignment: nontemporal is
-; probably always worth even some 20 instruction scalarization.
+; For AVX, we lower 128-bit alignment as 2x movntps %xmm.
 define void @test_unaligned_v8f32(<8 x float> %a, <8 x float> %b, <8 x float>* %dst) {
 ; SSE-LABEL: test_unaligned_v8f32:
 ; SSE:       # %bb.0:
@@ -1245,14 +1243,18 @@ define void @test_unaligned_v8f32(<8 x float> %a, <8 x float> %b, <8 x float>* %
 ; AVX-LABEL: test_unaligned_v8f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX-NEXT:    vmovups %ymm0, (%rdi)
+; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX-NEXT:    vmovntps %xmm1, 16(%rdi)
+; AVX-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; VLX-LABEL: test_unaligned_v8f32:
 ; VLX:       # %bb.0:
 ; VLX-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; VLX-NEXT:    vmovups %ymm0, (%rdi)
+; VLX-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; VLX-NEXT:    vmovntps %xmm1, 16(%rdi)
+; VLX-NEXT:    vmovntps %xmm0, (%rdi)
 ; VLX-NEXT:    vzeroupper
 ; VLX-NEXT:    retq
   %r = fadd <8 x float> %a, %b

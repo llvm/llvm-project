@@ -767,6 +767,38 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           return false;
         }
 
+        // For nontemporal stores, check that a nontemporal vector version is
+        // supported on the target.
+        if (ST->getMetadata(LLVMContext::MD_nontemporal)) {
+          // Arbitrarily try a vector of 2 elements.
+          Type *VecTy = VectorType::get(T, /*NumElements=*/2);
+          assert(VecTy && "did not find vectorized version of stored type");
+          unsigned Alignment = getLoadStoreAlignment(ST);
+          if (!TTI->isLegalNTStore(VecTy, Alignment)) {
+            reportVectorizationFailure(
+                "nontemporal store instruction cannot be vectorized",
+                "nontemporal store instruction cannot be vectorized",
+                "CantVectorizeNontemporalStore", ST);
+            return false;
+          }
+        }
+
+      } else if (auto *LD = dyn_cast<LoadInst>(&I)) {
+        if (LD->getMetadata(LLVMContext::MD_nontemporal)) {
+          // For nontemporal loads, check that a nontemporal vector version is
+          // supported on the target (arbitrarily try a vector of 2 elements).
+          Type *VecTy = VectorType::get(I.getType(), /*NumElements=*/2);
+          assert(VecTy && "did not find vectorized version of load type");
+          unsigned Alignment = getLoadStoreAlignment(LD);
+          if (!TTI->isLegalNTLoad(VecTy, Alignment)) {
+            reportVectorizationFailure(
+                "nontemporal load instruction cannot be vectorized",
+                "nontemporal load instruction cannot be vectorized",
+                "CantVectorizeNontemporalLoad", LD);
+            return false;
+          }
+        }
+
         // FP instructions can allow unsafe algebra, thus vectorizable by
         // non-IEEE-754 compliant SIMD units.
         // This applies to floating-point math operations and calls, not memory

@@ -1,13 +1,24 @@
 // Test target codegen - host bc file has to be created first.
 // RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -fsyntax-only
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -aux-triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -fsyntax-only
+// RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-linux-gnu -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -aux-triple powerpc64le-unknown-linux-gnu -fopenmp-targets=nvptx64-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -fsyntax-only
 
 struct T {
   char a;
+#ifndef _ARCH_PPC
   __float128 f;
+#else
+  long double f;
+#endif
   char c;
   T() : a(12), f(15) {}
-  T &operator+(T &b) { f += b.a; return *this;} // expected-error {{'__float128' is not supported on this target}}
+#ifndef _ARCH_PPC
+// expected-error@+4 {{'__float128' is not supported on this target}}
+#else
+// expected-error@+2 {{'long double' is not supported on this target}}
+#endif
+  T &operator+(T &b) { f += b.a; return *this;}
 };
 
 struct T1 {

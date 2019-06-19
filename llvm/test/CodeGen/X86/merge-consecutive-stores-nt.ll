@@ -298,67 +298,105 @@ define void @merge_2_v4f32_align1_ntload(<4 x float>* %a0, <4 x float>* %a1) nou
 ; Nothing can perform NT-store-vector on 1-byte aligned memory.
 ; Must be scalarized to use MOVTNI/MOVNTSD.
 define void @merge_2_v4f32_align1_ntstore(<4 x float>* %a0, <4 x float>* %a1) nounwind {
-; X86-LABEL: merge_2_v4f32_align1_ntstore:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $48, %esp
-; X86-NEXT:    movl 12(%ebp), %eax
-; X86-NEXT:    movl 8(%ebp), %ecx
-; X86-NEXT:    movups (%ecx), %xmm0
-; X86-NEXT:    movups 16(%ecx), %xmm1
-; X86-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movntil %ecx, 12(%eax)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movntil %ecx, 8(%eax)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movntil %edx, 4(%eax)
-; X86-NEXT:    movntil %ecx, (%eax)
-; X86-NEXT:    movaps %xmm1, (%esp)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movntil %ecx, 28(%eax)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movntil %ecx, 24(%eax)
-; X86-NEXT:    movl (%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movntil %edx, 20(%eax)
-; X86-NEXT:    movntil %ecx, 16(%eax)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
-; X86-NEXT:    retl
+; X86-SSE2-LABEL: merge_2_v4f32_align1_ntstore:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    movdqu (%ecx), %xmm0
+; X86-SSE2-NEXT:    movdqu 16(%ecx), %xmm1
+; X86-SSE2-NEXT:    movd %xmm0, %ecx
+; X86-SSE2-NEXT:    movntil %ecx, (%eax)
+; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
+; X86-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,1],xmm0[2,3]
+; X86-SSE2-NEXT:    movd %xmm2, %ecx
+; X86-SSE2-NEXT:    movntil %ecx, 12(%eax)
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
+; X86-SSE2-NEXT:    movd %xmm2, %ecx
+; X86-SSE2-NEXT:    movntil %ecx, 8(%eax)
+; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X86-SSE2-NEXT:    movd %xmm0, %ecx
+; X86-SSE2-NEXT:    movntil %ecx, 4(%eax)
+; X86-SSE2-NEXT:    movd %xmm1, %ecx
+; X86-SSE2-NEXT:    movntil %ecx, 16(%eax)
+; X86-SSE2-NEXT:    movdqa %xmm1, %xmm0
+; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1],xmm1[2,3]
+; X86-SSE2-NEXT:    movd %xmm0, %ecx
+; X86-SSE2-NEXT:    movntil %ecx, 28(%eax)
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; X86-SSE2-NEXT:    movd %xmm0, %ecx
+; X86-SSE2-NEXT:    movntil %ecx, 24(%eax)
+; X86-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; X86-SSE2-NEXT:    movd %xmm1, %ecx
+; X86-SSE2-NEXT:    movntil %ecx, 20(%eax)
+; X86-SSE2-NEXT:    retl
 ;
-; X64-SSE-LABEL: merge_2_v4f32_align1_ntstore:
-; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movups (%rdi), %xmm0
-; X64-SSE-NEXT:    movups 16(%rdi), %xmm1
-; X64-SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; X64-SSE-NEXT:    movntiq %rcx, 8(%rsi)
-; X64-SSE-NEXT:    movntiq %rax, (%rsi)
-; X64-SSE-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; X64-SSE-NEXT:    movntiq %rcx, 24(%rsi)
-; X64-SSE-NEXT:    movntiq %rax, 16(%rsi)
-; X64-SSE-NEXT:    retq
+; X86-SSE4A-LABEL: merge_2_v4f32_align1_ntstore:
+; X86-SSE4A:       # %bb.0:
+; X86-SSE4A-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE4A-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE4A-NEXT:    movups (%ecx), %xmm0
+; X86-SSE4A-NEXT:    movups 16(%ecx), %xmm1
+; X86-SSE4A-NEXT:    movntsd %xmm0, (%eax)
+; X86-SSE4A-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; X86-SSE4A-NEXT:    movntsd %xmm0, 8(%eax)
+; X86-SSE4A-NEXT:    movntsd %xmm1, 16(%eax)
+; X86-SSE4A-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; X86-SSE4A-NEXT:    movntsd %xmm1, 24(%eax)
+; X86-SSE4A-NEXT:    retl
+;
+; X64-SSE2-LABEL: merge_2_v4f32_align1_ntstore:
+; X64-SSE2:       # %bb.0:
+; X64-SSE2-NEXT:    movdqu (%rdi), %xmm0
+; X64-SSE2-NEXT:    movdqu 16(%rdi), %xmm1
+; X64-SSE2-NEXT:    movq %xmm0, %rax
+; X64-SSE2-NEXT:    movntiq %rax, (%rsi)
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X64-SSE2-NEXT:    movq %xmm0, %rax
+; X64-SSE2-NEXT:    movntiq %rax, 8(%rsi)
+; X64-SSE2-NEXT:    movq %xmm1, %rax
+; X64-SSE2-NEXT:    movntiq %rax, 16(%rsi)
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; X64-SSE2-NEXT:    movq %xmm0, %rax
+; X64-SSE2-NEXT:    movntiq %rax, 24(%rsi)
+; X64-SSE2-NEXT:    retq
+;
+; X64-SSE4A-LABEL: merge_2_v4f32_align1_ntstore:
+; X64-SSE4A:       # %bb.0:
+; X64-SSE4A-NEXT:    movups (%rdi), %xmm0
+; X64-SSE4A-NEXT:    movups 16(%rdi), %xmm1
+; X64-SSE4A-NEXT:    movntsd %xmm0, (%rsi)
+; X64-SSE4A-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; X64-SSE4A-NEXT:    movntsd %xmm0, 8(%rsi)
+; X64-SSE4A-NEXT:    movntsd %xmm1, 16(%rsi)
+; X64-SSE4A-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; X64-SSE4A-NEXT:    movntsd %xmm1, 24(%rsi)
+; X64-SSE4A-NEXT:    retq
+;
+; X64-SSE41-LABEL: merge_2_v4f32_align1_ntstore:
+; X64-SSE41:       # %bb.0:
+; X64-SSE41-NEXT:    movdqu (%rdi), %xmm0
+; X64-SSE41-NEXT:    movdqu 16(%rdi), %xmm1
+; X64-SSE41-NEXT:    pextrq $1, %xmm0, %rax
+; X64-SSE41-NEXT:    movntiq %rax, 8(%rsi)
+; X64-SSE41-NEXT:    movq %xmm0, %rax
+; X64-SSE41-NEXT:    movntiq %rax, (%rsi)
+; X64-SSE41-NEXT:    pextrq $1, %xmm1, %rax
+; X64-SSE41-NEXT:    movntiq %rax, 24(%rsi)
+; X64-SSE41-NEXT:    movq %xmm1, %rax
+; X64-SSE41-NEXT:    movntiq %rax, 16(%rsi)
+; X64-SSE41-NEXT:    retq
 ;
 ; X64-AVX-LABEL: merge_2_v4f32_align1_ntstore:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovups (%rdi), %xmm0
-; X64-AVX-NEXT:    vmovups 16(%rdi), %xmm1
-; X64-AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; X64-AVX-NEXT:    movntiq %rcx, 8(%rsi)
+; X64-AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; X64-AVX-NEXT:    vmovdqu 16(%rdi), %xmm1
+; X64-AVX-NEXT:    vpextrq $1, %xmm0, %rax
+; X64-AVX-NEXT:    movntiq %rax, 8(%rsi)
+; X64-AVX-NEXT:    vmovq %xmm0, %rax
 ; X64-AVX-NEXT:    movntiq %rax, (%rsi)
-; X64-AVX-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; X64-AVX-NEXT:    movntiq %rcx, 24(%rsi)
+; X64-AVX-NEXT:    vpextrq $1, %xmm1, %rax
+; X64-AVX-NEXT:    movntiq %rax, 24(%rsi)
+; X64-AVX-NEXT:    vmovq %xmm1, %rax
 ; X64-AVX-NEXT:    movntiq %rax, 16(%rsi)
 ; X64-AVX-NEXT:    retq
   %1 = getelementptr inbounds <4 x float>, <4 x float>* %a0, i64 1, i64 0
@@ -375,67 +413,105 @@ define void @merge_2_v4f32_align1_ntstore(<4 x float>* %a0, <4 x float>* %a1) no
 ; Nothing can perform NT-load-vector on 1-byte aligned memory.
 ; Just perform regular loads and scalarize NT-stores.
 define void @merge_2_v4f32_align1(<4 x float>* %a0, <4 x float>* %a1) nounwind {
-; X86-LABEL: merge_2_v4f32_align1:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $48, %esp
-; X86-NEXT:    movl 12(%ebp), %eax
-; X86-NEXT:    movl 8(%ebp), %ecx
-; X86-NEXT:    movups (%ecx), %xmm0
-; X86-NEXT:    movups 16(%ecx), %xmm1
-; X86-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movntil %ecx, 12(%eax)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movntil %ecx, 8(%eax)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movntil %edx, 4(%eax)
-; X86-NEXT:    movntil %ecx, (%eax)
-; X86-NEXT:    movaps %xmm1, (%esp)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movntil %ecx, 28(%eax)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movntil %ecx, 24(%eax)
-; X86-NEXT:    movl (%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movntil %edx, 20(%eax)
-; X86-NEXT:    movntil %ecx, 16(%eax)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
-; X86-NEXT:    retl
+; X86-SSE2-LABEL: merge_2_v4f32_align1:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    movdqu (%ecx), %xmm0
+; X86-SSE2-NEXT:    movdqu 16(%ecx), %xmm1
+; X86-SSE2-NEXT:    movd %xmm0, %ecx
+; X86-SSE2-NEXT:    movntil %ecx, (%eax)
+; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
+; X86-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,1],xmm0[2,3]
+; X86-SSE2-NEXT:    movd %xmm2, %ecx
+; X86-SSE2-NEXT:    movntil %ecx, 12(%eax)
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
+; X86-SSE2-NEXT:    movd %xmm2, %ecx
+; X86-SSE2-NEXT:    movntil %ecx, 8(%eax)
+; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X86-SSE2-NEXT:    movd %xmm0, %ecx
+; X86-SSE2-NEXT:    movntil %ecx, 4(%eax)
+; X86-SSE2-NEXT:    movd %xmm1, %ecx
+; X86-SSE2-NEXT:    movntil %ecx, 16(%eax)
+; X86-SSE2-NEXT:    movdqa %xmm1, %xmm0
+; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1],xmm1[2,3]
+; X86-SSE2-NEXT:    movd %xmm0, %ecx
+; X86-SSE2-NEXT:    movntil %ecx, 28(%eax)
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; X86-SSE2-NEXT:    movd %xmm0, %ecx
+; X86-SSE2-NEXT:    movntil %ecx, 24(%eax)
+; X86-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; X86-SSE2-NEXT:    movd %xmm1, %ecx
+; X86-SSE2-NEXT:    movntil %ecx, 20(%eax)
+; X86-SSE2-NEXT:    retl
 ;
-; X64-SSE-LABEL: merge_2_v4f32_align1:
-; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movups (%rdi), %xmm0
-; X64-SSE-NEXT:    movups 16(%rdi), %xmm1
-; X64-SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; X64-SSE-NEXT:    movntiq %rcx, 8(%rsi)
-; X64-SSE-NEXT:    movntiq %rax, (%rsi)
-; X64-SSE-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; X64-SSE-NEXT:    movntiq %rcx, 24(%rsi)
-; X64-SSE-NEXT:    movntiq %rax, 16(%rsi)
-; X64-SSE-NEXT:    retq
+; X86-SSE4A-LABEL: merge_2_v4f32_align1:
+; X86-SSE4A:       # %bb.0:
+; X86-SSE4A-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE4A-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE4A-NEXT:    movups (%ecx), %xmm0
+; X86-SSE4A-NEXT:    movups 16(%ecx), %xmm1
+; X86-SSE4A-NEXT:    movntsd %xmm0, (%eax)
+; X86-SSE4A-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; X86-SSE4A-NEXT:    movntsd %xmm0, 8(%eax)
+; X86-SSE4A-NEXT:    movntsd %xmm1, 16(%eax)
+; X86-SSE4A-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; X86-SSE4A-NEXT:    movntsd %xmm1, 24(%eax)
+; X86-SSE4A-NEXT:    retl
+;
+; X64-SSE2-LABEL: merge_2_v4f32_align1:
+; X64-SSE2:       # %bb.0:
+; X64-SSE2-NEXT:    movdqu (%rdi), %xmm0
+; X64-SSE2-NEXT:    movdqu 16(%rdi), %xmm1
+; X64-SSE2-NEXT:    movq %xmm0, %rax
+; X64-SSE2-NEXT:    movntiq %rax, (%rsi)
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X64-SSE2-NEXT:    movq %xmm0, %rax
+; X64-SSE2-NEXT:    movntiq %rax, 8(%rsi)
+; X64-SSE2-NEXT:    movq %xmm1, %rax
+; X64-SSE2-NEXT:    movntiq %rax, 16(%rsi)
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; X64-SSE2-NEXT:    movq %xmm0, %rax
+; X64-SSE2-NEXT:    movntiq %rax, 24(%rsi)
+; X64-SSE2-NEXT:    retq
+;
+; X64-SSE4A-LABEL: merge_2_v4f32_align1:
+; X64-SSE4A:       # %bb.0:
+; X64-SSE4A-NEXT:    movups (%rdi), %xmm0
+; X64-SSE4A-NEXT:    movups 16(%rdi), %xmm1
+; X64-SSE4A-NEXT:    movntsd %xmm0, (%rsi)
+; X64-SSE4A-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; X64-SSE4A-NEXT:    movntsd %xmm0, 8(%rsi)
+; X64-SSE4A-NEXT:    movntsd %xmm1, 16(%rsi)
+; X64-SSE4A-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; X64-SSE4A-NEXT:    movntsd %xmm1, 24(%rsi)
+; X64-SSE4A-NEXT:    retq
+;
+; X64-SSE41-LABEL: merge_2_v4f32_align1:
+; X64-SSE41:       # %bb.0:
+; X64-SSE41-NEXT:    movdqu (%rdi), %xmm0
+; X64-SSE41-NEXT:    movdqu 16(%rdi), %xmm1
+; X64-SSE41-NEXT:    pextrq $1, %xmm0, %rax
+; X64-SSE41-NEXT:    movntiq %rax, 8(%rsi)
+; X64-SSE41-NEXT:    movq %xmm0, %rax
+; X64-SSE41-NEXT:    movntiq %rax, (%rsi)
+; X64-SSE41-NEXT:    pextrq $1, %xmm1, %rax
+; X64-SSE41-NEXT:    movntiq %rax, 24(%rsi)
+; X64-SSE41-NEXT:    movq %xmm1, %rax
+; X64-SSE41-NEXT:    movntiq %rax, 16(%rsi)
+; X64-SSE41-NEXT:    retq
 ;
 ; X64-AVX-LABEL: merge_2_v4f32_align1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovups (%rdi), %xmm0
-; X64-AVX-NEXT:    vmovups 16(%rdi), %xmm1
-; X64-AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; X64-AVX-NEXT:    movntiq %rcx, 8(%rsi)
+; X64-AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; X64-AVX-NEXT:    vmovdqu 16(%rdi), %xmm1
+; X64-AVX-NEXT:    vpextrq $1, %xmm0, %rax
+; X64-AVX-NEXT:    movntiq %rax, 8(%rsi)
+; X64-AVX-NEXT:    vmovq %xmm0, %rax
 ; X64-AVX-NEXT:    movntiq %rax, (%rsi)
-; X64-AVX-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; X64-AVX-NEXT:    movntiq %rcx, 24(%rsi)
+; X64-AVX-NEXT:    vpextrq $1, %xmm1, %rax
+; X64-AVX-NEXT:    movntiq %rax, 24(%rsi)
+; X64-AVX-NEXT:    vmovq %xmm1, %rax
 ; X64-AVX-NEXT:    movntiq %rax, 16(%rsi)
 ; X64-AVX-NEXT:    retq
   %1 = getelementptr inbounds <4 x float>, <4 x float>* %a0, i64 1, i64 0

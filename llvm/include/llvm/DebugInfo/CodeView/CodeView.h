@@ -304,6 +304,9 @@ enum class ModifierOptions : uint16_t {
 };
 CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(ModifierOptions)
 
+// If the subsection kind has this bit set, then the linker should ignore it.
+enum : uint32_t { SubsectionIgnoreFlag = 0x80000000 };
+
 enum class DebugSubsectionKind : uint32_t {
   None = 0,
   Symbols = 0xf1,

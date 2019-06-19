@@ -115,16 +115,27 @@ public:
   void handleInstructionIssuedEvent(const HWInstructionIssuedEvent &Event);
 };
 
-class DependencyGraph {
-  enum DependencyType { DT_REGISTER, DT_MEMORY, DT_RESOURCE };
+// An edge of a dependency graph.
+// Vertices of the graph are instructions identified by their ID.
+struct DependencyEdge {
+  enum DependencyType { DT_INVALID, DT_REGISTER, DT_MEMORY, DT_RESOURCE };
 
-  struct DependencyEdge {
+  // Dependency edge descriptor.
+  //
+  // It describe the dependency reason, as well as the edge cost in cycles.
+  struct Dependency {
     DependencyType Type;
-    unsigned IID;
     uint64_t ResourceOrRegID;
-    uint64_t Cycles;
+    uint64_t Cost;
   };
+  Dependency Dep;
 
+  // Pair of vertices connected by this edge.
+  unsigned FromIID;
+  unsigned ToIID;
+};
+
+class DependencyGraph {
   struct DGNode {
     unsigned NumPredecessors;
     SmallVector<DependencyEdge, 8> OutgoingEdges;
@@ -134,26 +145,29 @@ class DependencyGraph {
   DependencyGraph(const DependencyGraph &) = delete;
   DependencyGraph &operator=(const DependencyGraph &) = delete;
 
-  void addDependency(unsigned From, DependencyEdge &&DE);
+  void addDependency(unsigned From, unsigned To,
+                     DependencyEdge::Dependency &&DE);
 
 #ifndef NDEBUG
-  void dumpDependencyEdge(raw_ostream &OS, unsigned FromIID,
-                          const DependencyEdge &DE, MCInstPrinter &MCIP) const;
+  void dumpDependencyEdge(raw_ostream &OS, const DependencyEdge &DE,
+                          MCInstPrinter &MCIP) const;
 #endif
 
 public:
   DependencyGraph(unsigned Size) : Nodes(Size) {}
 
-  void addRegisterDep(unsigned From, unsigned To, unsigned RegID, unsigned Cy) {
-    addDependency(From, {DT_REGISTER, To, RegID, Cy});
+  void addRegisterDep(unsigned From, unsigned To, unsigned RegID,
+                      unsigned Cost) {
+    addDependency(From, To, {DependencyEdge::DT_REGISTER, RegID, Cost});
   }
 
-  void addMemoryDep(unsigned From, unsigned To, unsigned Cy) {
-    addDependency(From, {DT_MEMORY, To, /* unused */ 0, Cy});
+  void addMemoryDep(unsigned From, unsigned To, unsigned Cost) {
+    addDependency(From, To, {DependencyEdge::DT_MEMORY, /* unused */ 0, Cost});
   }
 
-  void addResourceDep(unsigned From, unsigned To, uint64_t Mask, unsigned Cy) {
-    addDependency(From, {DT_RESOURCE, To, Mask, Cy});
+  void addResourceDep(unsigned From, unsigned To, uint64_t Mask,
+                      unsigned Cost) {
+    addDependency(From, To, {DependencyEdge::DT_RESOURCE, Mask, Cost});
   }
 
 #ifndef NDEBUG
@@ -168,6 +182,7 @@ class BottleneckAnalysis : public View {
   DependencyGraph DG;
 
   ArrayRef<MCInst> Source;
+  unsigned Iterations;
   unsigned TotalCycles;
 
   bool PressureIncreasedBecauseOfResources;
@@ -190,17 +205,17 @@ class BottleneckAnalysis : public View {
   };
   BackPressureInfo BPI;
 
-  // Prints a bottleneck message to OS.
-  void printBottleneckHints(raw_ostream &OS) const;
-
   // Used to populate the dependency graph DG.
   void addRegisterDep(unsigned From, unsigned To, unsigned RegID, unsigned Cy);
   void addMemoryDep(unsigned From, unsigned To, unsigned Cy);
   void addResourceDep(unsigned From, unsigned To, uint64_t Mask, unsigned Cy);
 
+  // Prints a bottleneck message to OS.
+  void printBottleneckHints(raw_ostream &OS) const;
+
 public:
   BottleneckAnalysis(const MCSubtargetInfo &STI, MCInstPrinter &MCIP,
-                     ArrayRef<MCInst> Sequence);
+                     ArrayRef<MCInst> Sequence, unsigned Iterations);
 
   void onCycleEnd() override;
   void onEvent(const HWStallEvent &Event) override { SeenStallCycles = true; }

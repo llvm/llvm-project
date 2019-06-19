@@ -1372,35 +1372,27 @@ bool TargetLowering::SimplifyDemandedBits(
                 KnownHi.One.zext(BitWidth).shl(HalfBitWidth);
     break;
   }
-  case ISD::ZERO_EXTEND: {
-    SDValue Src = Op.getOperand(0);
-    unsigned InBits = Src.getScalarValueSizeInBits();
-
-    // If none of the top bits are demanded, convert this into an any_extend.
-    if (DemandedBits.getActiveBits() <= InBits)
-      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ANY_EXTEND, dl, VT, Src));
-
-    APInt InDemandedBits = DemandedBits.trunc(InBits);
-    if (SimplifyDemandedBits(Src, InDemandedBits, Known, TLO, Depth + 1))
-      return true;
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-    assert(Known.getBitWidth() == InBits && "Src width has changed?");
-    Known = Known.zext(BitWidth, true /* ExtendedBitsAreKnownZero */);
-    break;
-  }
+  case ISD::ZERO_EXTEND:
   case ISD::ZERO_EXTEND_VECTOR_INREG: {
-    // TODO - merge this with ZERO_EXTEND above?
     SDValue Src = Op.getOperand(0);
     EVT SrcVT = Src.getValueType();
     unsigned InBits = SrcVT.getScalarSizeInBits();
-    unsigned InElts = SrcVT.getVectorNumElements();
+    unsigned InElts = SrcVT.isVector() ? SrcVT.getVectorNumElements() : 1;
+    bool IsVecInReg = Op.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG;
 
-    // If we only need the non-extended bits of the bottom element
-    // then we can just bitcast to the result.
-    if (DemandedBits.getActiveBits() <= InBits && DemandedElts == 1 &&
-        VT.getSizeInBits() == SrcVT.getSizeInBits() &&
-        TLO.DAG.getDataLayout().isLittleEndian())
-      return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Src));
+    // If none of the top bits are demanded, convert this into an any_extend.
+    // TODO: Add ZERO_EXTEND_VECTOR_INREG - ANY_EXTEND_VECTOR_INREG fold.
+    if (DemandedBits.getActiveBits() <= InBits) {
+      // If we only need the non-extended bits of the bottom element
+      // then we can just bitcast to the result.
+      if (IsVecInReg && DemandedElts == 1 &&
+          VT.getSizeInBits() == SrcVT.getSizeInBits() &&
+          TLO.DAG.getDataLayout().isLittleEndian())
+        return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Src));
+
+      if (!IsVecInReg)
+        return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ANY_EXTEND, dl, VT, Src));
+    }
 
     APInt InDemandedBits = DemandedBits.trunc(InBits);
     APInt InDemandedElts = DemandedElts.zextOrSelf(InElts);
@@ -1412,56 +1404,54 @@ bool TargetLowering::SimplifyDemandedBits(
     Known = Known.zext(BitWidth, true /* ExtendedBitsAreKnownZero */);
     break;
   }
-  case ISD::SIGN_EXTEND: {
+  case ISD::SIGN_EXTEND:
+  case ISD::SIGN_EXTEND_VECTOR_INREG: {
     SDValue Src = Op.getOperand(0);
-    unsigned InBits = Src.getScalarValueSizeInBits();
+    EVT SrcVT = Src.getValueType();
+    unsigned InBits = SrcVT.getScalarSizeInBits();
+    unsigned InElts = SrcVT.isVector() ? SrcVT.getVectorNumElements() : 1;
+    bool IsVecInReg = Op.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG;
 
     // If none of the top bits are demanded, convert this into an any_extend.
-    if (DemandedBits.getActiveBits() <= InBits)
+    // TODO: Add SIGN_EXTEND_VECTOR_INREG - ANY_EXTEND_VECTOR_INREG fold.
+    if (DemandedBits.getActiveBits() <= InBits && !IsVecInReg)
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ANY_EXTEND, dl, VT, Src));
+
+    APInt InDemandedBits = DemandedBits.trunc(InBits);
+    APInt InDemandedElts = DemandedElts.zextOrSelf(InElts);
 
     // Since some of the sign extended bits are demanded, we know that the sign
     // bit is demanded.
-    APInt InDemandedBits = DemandedBits.trunc(InBits);
     InDemandedBits.setBit(InBits - 1);
 
-    if (SimplifyDemandedBits(Src, InDemandedBits, Known, TLO, Depth + 1))
+    if (SimplifyDemandedBits(Src, InDemandedBits, InDemandedElts, Known, TLO,
+                             Depth + 1))
       return true;
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
+    assert(Known.getBitWidth() == InBits && "Src width has changed?");
+
     // If the sign bit is known one, the top bits match.
     Known = Known.sext(BitWidth);
 
     // If the sign bit is known zero, convert this to a zero extend.
-    if (Known.isNonNegative())
+    // TODO: Add SIGN_EXTEND_VECTOR_INREG - ZERO_EXTEND_VECTOR_INREG fold.
+    if (Known.isNonNegative() && !IsVecInReg)
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ZERO_EXTEND, dl, VT, Src));
     break;
   }
-  case ISD::SIGN_EXTEND_VECTOR_INREG: {
-    // TODO - merge this with SIGN_EXTEND above?
-    SDValue Src = Op.getOperand(0);
-    unsigned InBits = Src.getScalarValueSizeInBits();
-
-    APInt InDemandedBits = DemandedBits.trunc(InBits);
-
-    // If some of the sign extended bits are demanded, we know that the sign
-    // bit is demanded.
-    if (InBits < DemandedBits.getActiveBits())
-      InDemandedBits.setBit(InBits - 1);
-
-    if (SimplifyDemandedBits(Src, InDemandedBits, Known, TLO, Depth + 1))
-      return true;
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-    // If the sign bit is known one, the top bits match.
-    Known = Known.sext(BitWidth);
-    break;
-  }
   case ISD::ANY_EXTEND: {
+    // TODO: Add ISD::ANY_EXTEND_VECTOR_INREG support.
     SDValue Src = Op.getOperand(0);
-    unsigned InBits = Src.getScalarValueSizeInBits();
+    EVT SrcVT = Src.getValueType();
+    unsigned InBits = SrcVT.getScalarSizeInBits();
+    unsigned InElts = SrcVT.isVector() ? SrcVT.getVectorNumElements() : 1;
     APInt InDemandedBits = DemandedBits.trunc(InBits);
-    if (SimplifyDemandedBits(Src, InDemandedBits, Known, TLO, Depth + 1))
+    APInt InDemandedElts = DemandedElts.zextOrSelf(InElts);
+    if (SimplifyDemandedBits(Src, InDemandedBits, InDemandedElts, Known, TLO,
+                             Depth + 1))
       return true;
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
+    assert(Known.getBitWidth() == InBits && "Src width has changed?");
     Known = Known.zext(BitWidth, false /* => any extend */);
     break;
   }
@@ -2156,6 +2146,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     }
     break;
   }
+  case ISD::ANY_EXTEND_VECTOR_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
   case ISD::ZERO_EXTEND_VECTOR_INREG: {
     APInt SrcUndef, SrcZero;
@@ -2167,6 +2158,13 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       return true;
     KnownZero = SrcZero.zextOrTrunc(NumElts);
     KnownUndef = SrcUndef.zextOrTrunc(NumElts);
+
+    if (Op.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG &&
+        Op.getValueSizeInBits() == Src.getValueSizeInBits() &&
+        DemandedSrcElts == 1 && TLO.DAG.getDataLayout().isLittleEndian()) {
+      // aext - if we just need the bottom element then we can bitcast.
+      return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Src));
+    }
 
     if (Op.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG) {
       // zext(undef) upper bits are guaranteed to be zero.
@@ -2201,6 +2199,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     KnownUndef = getKnownUndefForVectorBinop(Op, TLO.DAG, UndefLHS, UndefRHS);
     break;
   }
+  case ISD::MUL:
   case ISD::AND: {
     APInt SrcUndef, SrcZero;
     if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedElts, SrcUndef,

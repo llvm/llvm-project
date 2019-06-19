@@ -470,7 +470,13 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     SmallString<128> F;
     F = Output.getFilename();
-    F += ".opt.yaml";
+    F += ".opt.";
+    if (const Arg *A =
+            Args.getLastArg(options::OPT_fsave_optimization_record_EQ))
+      F += A->getValue();
+    else
+      F += "yaml";
+
     CmdArgs.push_back(Args.MakeArgString(F));
 
     if (getLastProfileUseArg(Args)) {

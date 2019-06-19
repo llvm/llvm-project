@@ -27,6 +27,7 @@
 namespace llvm {
 // Forward declarations.
 class MachineRegisterInfo;
+class TargetTransformInfo;
 
 /// This pass implements the localization mechanism described at the
 /// top of this file. One specificity of the implementation is that
@@ -43,9 +44,11 @@ private:
   /// MRI contains all the register class/bank information that this
   /// pass uses and updates.
   MachineRegisterInfo *MRI;
+  /// TTI used for getting remat costs for instructions.
+  TargetTransformInfo *TTI;
 
   /// Check whether or not \p MI needs to be moved close to its uses.
-  static bool shouldLocalize(const MachineInstr &MI);
+  bool shouldLocalize(const MachineInstr &MI);
 
   /// Check if \p MOUse is used in the same basic block as \p Def.
   /// If the use is in the same block, we say it is local.
@@ -56,6 +59,13 @@ private:
 
   /// Initialize the field members using \p MF.
   void init(MachineFunction &MF);
+
+  /// Do inter-block localization from the entry block.
+  bool localizeInterBlock(MachineFunction &MF,
+                          SmallPtrSetImpl<MachineInstr *> &LocalizedInstrs);
+
+  /// Do intra-block localization of already localized instructions.
+  bool localizeIntraBlock(SmallPtrSetImpl<MachineInstr *> &LocalizedInstrs);
 
 public:
   Localizer();

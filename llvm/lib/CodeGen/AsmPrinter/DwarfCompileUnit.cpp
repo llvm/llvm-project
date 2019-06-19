@@ -683,6 +683,9 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
             NVPTXAddressSpace ? *NVPTXAddressSpace : NVPTX_ADDR_local_space);
   }
   addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+  if (DwarfExpr.TagOffset)
+    addUInt(*VariableDie, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
+            *DwarfExpr.TagOffset);
 
   return VariableDie;
 }

@@ -36,6 +36,10 @@ TEST(GlobalCompilationDatabaseTest, FallbackCommand) {
   EXPECT_THAT(Cmd.CommandLine,
               ElementsAre(EndsWith("clang"), "-xobjective-c++-header",
                           testPath("foo/bar.h")));
+  Cmd = DB.getFallbackCommand(testPath("foo/bar"));
+  EXPECT_THAT(Cmd.CommandLine,
+              ElementsAre(EndsWith("clang"), "-xobjective-c++-header",
+                          testPath("foo/bar")));
 }
 
 static tooling::CompileCommand cmd(llvm::StringRef File, llvm::StringRef Arg) {

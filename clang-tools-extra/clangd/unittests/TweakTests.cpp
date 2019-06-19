@@ -75,7 +75,8 @@ void checkAvailable(StringRef ID, llvm::StringRef Input) {
 void checkNotAvailable(StringRef ID, llvm::StringRef Input) {
   return checkAvailable(ID, Input, /*Available=*/false);
 }
-llvm::Expected<std::string> apply(StringRef ID, llvm::StringRef Input) {
+
+llvm::Expected<Tweak::Effect> apply(StringRef ID, llvm::StringRef Input) {
   Annotations Code(Input);
   Range SelectionRng;
   if (Code.points().size() != 0) {
@@ -97,15 +98,30 @@ llvm::Expected<std::string> apply(StringRef ID, llvm::StringRef Input) {
   auto T = prepareTweak(ID, S);
   if (!T)
     return T.takeError();
-  auto Replacements = (*T)->apply(S);
-  if (!Replacements)
-    return Replacements.takeError();
-  return applyAllReplacements(Code.code(), *Replacements);
+  return (*T)->apply(S);
+}
+
+llvm::Expected<std::string> applyEdit(StringRef ID, llvm::StringRef Input) {
+  auto Effect = apply(ID, Input);
+  if (!Effect)
+    return Effect.takeError();
+  if (!Effect->ApplyEdit)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "No replacements");
+  Annotations Code(Input);
+  return applyAllReplacements(Code.code(), *Effect->ApplyEdit);
+}
+
+std::string getMessage(StringRef ID, llvm::StringRef Input) {
+  auto Effect = apply(ID, Input);
+  if (!Effect)
+    return "error: " + llvm::toString(Effect.takeError());
+  return Effect->ShowMessage.getValueOr("no message produced!");
 }
 
 void checkTransform(llvm::StringRef ID, llvm::StringRef Input,
                     std::string Output) {
-  auto Result = apply(ID, Input);
+  auto Result = applyEdit(ID, Input);
   ASSERT_TRUE(bool(Result)) << llvm::toString(Result.takeError()) << Input;
   EXPECT_EQ(Output, std::string(*Result)) << Input;
 }
@@ -214,6 +230,49 @@ literal)";
     }
   )cpp";
   checkTransform(ID, Input, Output);
+}
+
+TEST(TweakTest, DumpAST) {
+  llvm::StringLiteral ID = "DumpAST";
+
+  checkAvailable(ID, "^int f^oo() { re^turn 2 ^+ 2; }");
+  checkNotAvailable(ID, "/*c^omment*/ int foo() return 2 ^ + 2; }");
+
+  const char *Input = "int x = 2 ^+ 2;";
+  const char *Output = R"(BinaryOperator.*'\+'.*
+.*IntegerLiteral.*'int' 2.*
+.*IntegerLiteral.*'int' 2.*)";
+  EXPECT_THAT(getMessage(ID, Input), ::testing::MatchesRegex(Output));
+}
+
+TEST(TweakTest, ShowSelectionTree) {
+  llvm::StringLiteral ID = "ShowSelectionTree";
+
+  checkAvailable(ID, "^int f^oo() { re^turn 2 ^+ 2; }");
+  checkNotAvailable(ID, "/*c^omment*/ int foo() return 2 ^ + 2; }");
+
+  const char *Input = "int fcall(int); int x = fca[[ll(2 +]]2);";
+  const char *Output = R"(TranslationUnitDecl 
+  VarDecl int x = fcall(2 + 2)
+   .CallExpr fcall(2 + 2)
+      ImplicitCastExpr fcall
+       .DeclRefExpr fcall
+     .BinaryOperator 2 + 2
+       *IntegerLiteral 2
+)";
+  EXPECT_EQ(Output, getMessage(ID, Input));
+}
+
+TEST(TweakTest, DumpRecordLayout) {
+  llvm::StringLiteral ID = "DumpRecordLayout";
+  checkAvailable(ID, "^s^truct ^X ^{ int x; ^};");
+  checkNotAvailable(ID, "struct X { int ^a; };");
+  checkNotAvailable(ID, "struct ^X;");
+  checkNotAvailable(ID, "template <typename T> struct ^X { T t; };");
+  checkNotAvailable(ID, "enum ^X {};");
+
+  const char *Input = "struct ^X { int x; int y; }";
+  EXPECT_THAT(getMessage(ID, Input), ::testing::HasSubstr("0 |   int x"));
 }
 
 } // namespace

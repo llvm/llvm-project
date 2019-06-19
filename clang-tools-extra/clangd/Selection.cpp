@@ -53,6 +53,9 @@ public:
   bool TraverseDecl(Decl *X) {
     if (X && isa<TranslationUnitDecl>(X))
       return Base::TraverseDecl(X); // Already pushed by constructor.
+    // Base::TraverseDecl will suppress children, but not this node itself.
+    if (X && X->isImplicit())
+      return true;
     return traverseNode(X, [&] { return Base::TraverseDecl(X); });
   }
   bool TraverseTypeLoc(TypeLoc X) {

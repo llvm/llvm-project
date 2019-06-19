@@ -174,12 +174,17 @@ static unsigned getHashValueImpl(SimpleValue Val) {
   }
 
   if (CmpInst *CI = dyn_cast<CmpInst>(Inst)) {
+    // Compares can be commuted by swapping the comparands and
+    // updating the predicate.  Choose the form that has the
+    // comparands in sorted order, or in the case of a tie, the
+    // one with the lower predicate.
     Value *LHS = CI->getOperand(0);
     Value *RHS = CI->getOperand(1);
     CmpInst::Predicate Pred = CI->getPredicate();
-    if (Inst->getOperand(0) > Inst->getOperand(1)) {
+    CmpInst::Predicate SwappedPred = CI->getSwappedPredicate();
+    if (std::tie(LHS, Pred) > std::tie(RHS, SwappedPred)) {
       std::swap(LHS, RHS);
-      Pred = CI->getSwappedPredicate();
+      Pred = SwappedPred;
     }
     return hash_combine(Inst->getOpcode(), Pred, LHS, RHS);
   }

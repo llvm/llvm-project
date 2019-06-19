@@ -849,6 +849,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VECTOR_SHUFFLE:
     SplitVecRes_VECTOR_SHUFFLE(cast<ShuffleVectorSDNode>(N), Lo, Hi);
     break;
+  case ISD::VAARG:
+    SplitVecRes_VAARG(N, Lo, Hi);
+    break;
 
   case ISD::ANY_EXTEND_VECTOR_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
@@ -1897,6 +1900,26 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
 
     Ops.clear();
   }
+}
+
+void DAGTypeLegalizer::SplitVecRes_VAARG(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  EVT OVT = N->getValueType(0);
+  EVT NVT = OVT.getHalfNumVectorElementsVT(*DAG.getContext());
+  SDValue Chain = N->getOperand(0);
+  SDValue Ptr = N->getOperand(1);
+  SDValue SV = N->getOperand(2);
+  SDLoc dl(N);
+
+  const unsigned Alignment = DAG.getDataLayout().getABITypeAlignment(
+      NVT.getTypeForEVT(*DAG.getContext()));
+
+  Lo = DAG.getVAArg(NVT, dl, Chain, Ptr, SV, Alignment);
+  Hi = DAG.getVAArg(NVT, dl, Lo.getValue(1), Ptr, SV, Alignment);
+  Chain = Hi.getValue(1);
+
+  // Modified the chain - switch anything that used the old chain to use
+  // the new one.
+  ReplaceValueWith(SDValue(N, 1), Chain);
 }
 
 

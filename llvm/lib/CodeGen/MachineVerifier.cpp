@@ -1332,6 +1332,35 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("G_BRJT src operand 2 must be a scalar reg type", MI);
     break;
   }
+  case TargetOpcode::G_INTRINSIC:
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS: {
+    // TODO: Should verify number of def and use operands, but the current
+    // interface requires passing in IR types for mangling.
+    const MachineOperand &IntrIDOp = MI->getOperand(MI->getNumExplicitDefs());
+    if (!IntrIDOp.isIntrinsicID()) {
+      report("G_INTRINSIC first src operand must be an intrinsic ID", MI);
+      break;
+    }
+
+    bool NoSideEffects = MI->getOpcode() == TargetOpcode::G_INTRINSIC;
+    unsigned IntrID = IntrIDOp.getIntrinsicID();
+    if (IntrID != 0 && IntrID < Intrinsic::num_intrinsics) {
+      AttributeList Attrs
+        = Intrinsic::getAttributes(MF->getFunction().getContext(),
+                                   static_cast<Intrinsic::ID>(IntrID));
+      bool DeclHasSideEffects = !Attrs.hasFnAttribute(Attribute::ReadNone);
+      if (NoSideEffects && DeclHasSideEffects) {
+        report("G_INTRINSIC used with intrinsic that accesses memory", MI);
+        break;
+      }
+      if (!NoSideEffects && !DeclHasSideEffects) {
+        report("G_INTRINSIC_W_SIDE_EFFECTS used with readnone intrinsic", MI);
+        break;
+      }
+    }
+
+    break;
+  }
   default:
     break;
   }

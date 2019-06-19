@@ -15,8 +15,9 @@ def MipsP5600Model : SchedMachineModel {
   let CompleteModel = 0;
   let FullInstRWOverlapCheck = 1;
 
-  list<Predicate> UnsupportedFeatures = [HasMips32r6, HasMips64r6,
+  list<Predicate> UnsupportedFeatures = [HasMips32r6, HasMips64r6, HasMips64,
                                          HasMips3, HasMips64r2, HasCnMips,
+                                         IsGP64bit, IsPTR64bit,
                                          InMicroMips, InMips16Mode,
                                          HasDSP, HasDSPR2, HasMT, HasCRC];
 }

@@ -8122,27 +8122,35 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
           // count.  If so, we may be able to force computation of the exit
           // value.
           const SCEV *BackedgeTakenCount = getBackedgeTakenCount(LI);
-          if (const SCEVConstant *BTCC =
-                dyn_cast<SCEVConstant>(BackedgeTakenCount)) {
-
-            // This trivial case can show up in some degenerate cases where
-            // the incoming IR has not yet been fully simplified.
-            if (BTCC->getValue()->isZero()) {
-              Value *InitValue = nullptr;
-              bool MultipleInitValues = false;
-              for (unsigned i = 0; i < PN->getNumIncomingValues(); i++) {
-                if (!LI->contains(PN->getIncomingBlock(i))) {
-                  if (!InitValue)
-                    InitValue = PN->getIncomingValue(i);
-                  else if (InitValue != PN->getIncomingValue(i)) {
-                    MultipleInitValues = true;
-                    break;
-                  }
+          // This trivial case can show up in some degenerate cases where
+          // the incoming IR has not yet been fully simplified.
+          if (BackedgeTakenCount->isZero()) {
+            Value *InitValue = nullptr;
+            bool MultipleInitValues = false;
+            for (unsigned i = 0; i < PN->getNumIncomingValues(); i++) {
+              if (!LI->contains(PN->getIncomingBlock(i))) {
+                if (!InitValue)
+                  InitValue = PN->getIncomingValue(i);
+                else if (InitValue != PN->getIncomingValue(i)) {
+                  MultipleInitValues = true;
+                  break;
                 }
               }
-              if (!MultipleInitValues && InitValue)
-                return getSCEV(InitValue);
             }
+            if (!MultipleInitValues && InitValue)
+              return getSCEV(InitValue);
+          }
+          // Do we have a loop invariant value flowing around the backedge
+          // for a loop which must execute the backedge?
+          if (!isa<SCEVCouldNotCompute>(BackedgeTakenCount) &&
+              isKnownPositive(BackedgeTakenCount) &&
+              PN->getNumIncomingValues() == 2) {
+            unsigned InLoopPred = LI->contains(PN->getIncomingBlock(0)) ? 0 : 1;
+            const SCEV *OnBackedge = getSCEV(PN->getIncomingValue(InLoopPred));
+            if (IsAvailableOnEntry(LI, DT, OnBackedge, PN->getParent()))
+              return OnBackedge;
+          }
+          if (auto *BTCC = dyn_cast<SCEVConstant>(BackedgeTakenCount)) {
             // Okay, we know how many times the containing loop executes.  If
             // this is a constant evolving PHI node, get the final value at
             // the specified iteration number.

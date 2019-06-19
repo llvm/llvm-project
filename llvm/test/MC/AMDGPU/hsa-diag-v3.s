@@ -1,4 +1,5 @@
 // RUN: not llvm-mc -mattr=+code-object-v3 -triple amdgcn-amd-amdhsa -mcpu=gfx803 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s
+// RUN: not llvm-mc -mattr=+code-object-v3 -triple amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefix=GFX10
 // RUN: not llvm-mc -mattr=+code-object-v3 -triple amdgcn-amd- -mcpu=gfx803 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefix=NOT-AMDHSA
 
 .text
@@ -42,6 +43,46 @@
 .amdhsa_kernel foo
   1
   // CHECK: error: expected .amdhsa_ directive or .end_amdhsa_kernel
+.end_amdhsa_kernel
+
+.amdhsa_kernel foo
+  .amdhsa_wavefront_size32 1
+  // CHECK: error: directive requires gfx10+
+.end_amdhsa_kernel
+
+.amdhsa_kernel foo
+  .amdhsa_workgroup_processor_mode 1
+  // CHECK: error: directive requires gfx10+
+.end_amdhsa_kernel
+
+.amdhsa_kernel foo
+  .amdhsa_memory_ordered 1
+  // CHECK: error: directive requires gfx10+
+.end_amdhsa_kernel
+
+.amdhsa_kernel foo
+  .amdhsa_forward_progress 1
+  // CHECK: error: directive requires gfx10+
+.end_amdhsa_kernel
+
+.amdhsa_kernel foo
+  .amdhsa_wavefront_size32 5
+  // GFX10: error: value out of range
+.end_amdhsa_kernel
+
+.amdhsa_kernel foo
+  .amdhsa_workgroup_processor_mode 5
+  // GFX10: error: value out of range
+.end_amdhsa_kernel
+
+.amdhsa_kernel foo
+  .amdhsa_memory_ordered 5
+  // GFX10: error: value out of range
+.end_amdhsa_kernel
+
+.amdhsa_kernel foo
+  .amdhsa_forward_progress 5
+  // GFX10: error: value out of range
 .end_amdhsa_kernel
 
 .set .amdgcn.next_free_vgpr, "foo"

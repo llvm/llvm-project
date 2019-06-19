@@ -57,6 +57,8 @@ public:
                   const llvm::opt::ArgList &Args);
   unsigned GetDefaultDwarfVersion() const override { return 5; }
   bool IsIntegratedAssemblerDefault() const override { return true; }
+  bool IsMathErrnoDefault() const override { return false; }
+
   llvm::opt::DerivedArgList *
   TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;

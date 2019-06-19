@@ -123,6 +123,8 @@ public:
   MCOperand decodeSDWASrc32(unsigned Val) const;
   MCOperand decodeSDWAVopcDst(unsigned Val) const;
 
+  MCOperand decodeBoolReg(unsigned Val) const;
+
   int getTTmpIdx(unsigned Val) const;
 
   bool isVI() const;

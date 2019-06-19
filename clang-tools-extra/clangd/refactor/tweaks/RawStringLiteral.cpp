@@ -39,8 +39,9 @@ public:
   const char *id() const override final;
 
   bool prepare(const Selection &Inputs) override;
-  Expected<tooling::Replacements> apply(const Selection &Inputs) override;
-  std::string title() const override;
+  Expected<Effect> apply(const Selection &Inputs) override;
+  std::string title() const override { return "Convert to raw string"; }
+  Intent intent() const override { return Refactor; }
 
 private:
   const clang::StringLiteral *Str = nullptr;
@@ -86,15 +87,12 @@ bool RawStringLiteral::prepare(const Selection &Inputs) {
          needsRaw(Str->getBytes()) && canBeRaw(Str->getBytes());
 }
 
-Expected<tooling::Replacements>
-RawStringLiteral::apply(const Selection &Inputs) {
-  return tooling::Replacements(
+Expected<Tweak::Effect> RawStringLiteral::apply(const Selection &Inputs) {
+  return Effect::applyEdit(tooling::Replacements(
       tooling::Replacement(Inputs.AST.getSourceManager(), Str,
                            ("R\"(" + Str->getBytes() + ")\"").str(),
-                           Inputs.AST.getASTContext().getLangOpts()));
+                           Inputs.AST.getASTContext().getLangOpts())));
 }
-
-std::string RawStringLiteral::title() const { return "Convert to raw string"; }
 
 } // namespace
 } // namespace clangd

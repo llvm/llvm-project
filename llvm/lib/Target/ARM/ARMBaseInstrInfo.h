@@ -478,18 +478,18 @@ bool isUncondBranchOpcode(int Opc) {
 }
 
 static inline bool isVPTOpcode(int Opc) {
-  return Opc == ARM::t2VPTv16i8 || Opc == ARM::t2VPTv16u8 ||
-         Opc == ARM::t2VPTv16s8 || Opc == ARM::t2VPTv8i16 ||
-         Opc == ARM::t2VPTv8u16 || Opc == ARM::t2VPTv8s16 ||
-         Opc == ARM::t2VPTv4i32 || Opc == ARM::t2VPTv4u32 ||
-         Opc == ARM::t2VPTv4s32 || Opc == ARM::t2VPTv4f32 ||
-         Opc == ARM::t2VPTv8f16 || Opc == ARM::t2VPTv16i8r ||
-         Opc == ARM::t2VPTv16u8r || Opc == ARM::t2VPTv16s8r ||
-         Opc == ARM::t2VPTv8i16r || Opc == ARM::t2VPTv8u16r ||
-         Opc == ARM::t2VPTv8s16r || Opc == ARM::t2VPTv4i32r ||
-         Opc == ARM::t2VPTv4u32r || Opc == ARM::t2VPTv4s32r ||
-         Opc == ARM::t2VPTv4f32r || Opc == ARM::t2VPTv8f16r ||
-         Opc == ARM::t2VPST;
+  return Opc == ARM::MVE_VPTv16i8 || Opc == ARM::MVE_VPTv16u8 ||
+         Opc == ARM::MVE_VPTv16s8 || Opc == ARM::MVE_VPTv8i16 ||
+         Opc == ARM::MVE_VPTv8u16 || Opc == ARM::MVE_VPTv8s16 ||
+         Opc == ARM::MVE_VPTv4i32 || Opc == ARM::MVE_VPTv4u32 ||
+         Opc == ARM::MVE_VPTv4s32 || Opc == ARM::MVE_VPTv4f32 ||
+         Opc == ARM::MVE_VPTv8f16 || Opc == ARM::MVE_VPTv16i8r ||
+         Opc == ARM::MVE_VPTv16u8r || Opc == ARM::MVE_VPTv16s8r ||
+         Opc == ARM::MVE_VPTv8i16r || Opc == ARM::MVE_VPTv8u16r ||
+         Opc == ARM::MVE_VPTv8s16r || Opc == ARM::MVE_VPTv4i32r ||
+         Opc == ARM::MVE_VPTv4u32r || Opc == ARM::MVE_VPTv4s32r ||
+         Opc == ARM::MVE_VPTv4f32r || Opc == ARM::MVE_VPTv8f16r ||
+         Opc == ARM::MVE_VPST;
 }
 
 static inline

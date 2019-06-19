@@ -351,7 +351,9 @@ output format of the diagnostics that it generates.
 
    If this option is not used, optimization records are output to a file named
    after the primary file being compiled. If that's "foo.c", for example,
-   optimization records are output to "foo.opt.yaml".
+   optimization records are output to "foo.opt.yaml". If a specific
+   serialization format is specified, the file will be named
+   "foo.opt.<format>".
 
 .. _opt_foptimization-record-passes:
 
