@@ -874,28 +874,47 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
   }
 
   KMP_DEBUG_ASSERT(taskdata->td_flags.complete == 0);
-  taskdata->td_flags.complete = 1; // mark the task as completed
+  bool detach = false;
+#if OMP_50_ENABLED
+  if (taskdata->td_flags.detachable == TASK_DETACHABLE) {
+    if (taskdata->td_allow_completion_event.type ==
+        KMP_EVENT_ALLOW_COMPLETION) {
+      // event hasn't been fulfilled yet. Try to detach task.
+      __kmp_acquire_tas_lock(&taskdata->td_allow_completion_event.lock, gtid);
+      if (taskdata->td_allow_completion_event.type ==
+          KMP_EVENT_ALLOW_COMPLETION) {
+        taskdata->td_flags.proxy = TASK_PROXY; // proxify!
+        detach = true;
+      }
+      __kmp_release_tas_lock(&taskdata->td_allow_completion_event.lock, gtid);
+    }
+  }
+#endif
   KMP_DEBUG_ASSERT(taskdata->td_flags.started == 1);
   KMP_DEBUG_ASSERT(taskdata->td_flags.freed == 0);
 
-  // Only need to keep track of count if team parallel and tasking not
-  // serialized
-  if (!(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser)) {
-    // Predecrement simulated by "- 1" calculation
-    children =
-        KMP_ATOMIC_DEC(&taskdata->td_parent->td_incomplete_child_tasks) - 1;
-    KMP_DEBUG_ASSERT(children >= 0);
+  if (!detach) {
+    taskdata->td_flags.complete = 1; // mark the task as completed
+
+    // Only need to keep track of count if team parallel and tasking not
+    // serialized
+    if (!(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser)) {
+      // Predecrement simulated by "- 1" calculation
+      children =
+          KMP_ATOMIC_DEC(&taskdata->td_parent->td_incomplete_child_tasks) - 1;
+      KMP_DEBUG_ASSERT(children >= 0);
 #if OMP_40_ENABLED
-    if (taskdata->td_taskgroup)
-      KMP_ATOMIC_DEC(&taskdata->td_taskgroup->count);
-    __kmp_release_deps(gtid, taskdata);
+      if (taskdata->td_taskgroup)
+        KMP_ATOMIC_DEC(&taskdata->td_taskgroup->count);
+      __kmp_release_deps(gtid, taskdata);
 #if OMP_45_ENABLED
-  } else if (task_team && task_team->tt.tt_found_proxy_tasks) {
-    // if we found proxy tasks there could exist a dependency chain
-    // with the proxy task as origin
-    __kmp_release_deps(gtid, taskdata);
+    } else if (task_team && task_team->tt.tt_found_proxy_tasks) {
+      // if we found proxy tasks there could exist a dependency chain
+      // with the proxy task as origin
+      __kmp_release_deps(gtid, taskdata);
 #endif // OMP_45_ENABLED
 #endif // OMP_40_ENABLED
+    }
   }
 
   // td_flags.executing must be marked as 0 after __kmp_release_deps has been
@@ -942,7 +961,8 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
   // johnmc: if an asynchronous inquiry peers into the runtime system
   // it doesn't see the freed task as the current task.
   thread->th.th_current_task = resumed_task;
-  __kmp_free_task_and_ancestors(gtid, taskdata, thread);
+  if (!detach)
+    __kmp_free_task_and_ancestors(gtid, taskdata, thread);
 
   // TODO: GEH - make sure root team implicit task is initialized properly.
   // KMP_DEBUG_ASSERT( resumed_task->td_flags.executing == 0 );
@@ -1069,6 +1089,9 @@ void __kmp_init_implicit_task(ident_t *loc_ref, kmp_info_t *this_thr,
   task->td_depnode = NULL;
 #endif
   task->td_last_tied = task;
+#if OMP_50_ENABLED
+  task->td_allow_completion_event.type = KMP_EVENT_UNINITIALIZED;
+#endif
 
   if (set_curr_task) { // only do this init first time thread is created
     KMP_ATOMIC_ST_REL(&task->td_incomplete_child_tasks, 0);
@@ -1187,11 +1210,19 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
     KMP_CHECK_UPDATE(thread->th.th_task_team->tt.tt_untied_task_encountered, 1);
   }
 
+#if OMP_50_ENABLED
+  // Detachable tasks are not proxy tasks yet but could be in the future. Doing
+  // the tasking setup
+  // when that happens is too late.
+  if (flags->proxy == TASK_PROXY || flags->detachable == TASK_DETACHABLE) {
+#endif
 #if OMP_45_ENABLED
-  if (flags->proxy == TASK_PROXY) {
-    flags->tiedness = TASK_UNTIED;
-    flags->merged_if0 = 1;
-
+    if (flags->proxy == TASK_PROXY) {
+      flags->tiedness = TASK_UNTIED;
+      flags->merged_if0 = 1;
+#if OMP_50_ENABLED
+    }
+#endif
     /* are we running in a sequential parallel or tskm_immediate_exec... we need
        tasking support enabled */
     if ((thread->th.th_task_team) == NULL) {
@@ -1295,6 +1326,9 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
 #endif // OMP_40_ENABLED
 #if OMP_45_ENABLED
   taskdata->td_flags.proxy = flags->proxy;
+#if OMP_50_ENABLED
+  taskdata->td_flags.detachable = flags->detachable;
+#endif
   taskdata->td_task_team = thread->th.th_task_team;
   taskdata->td_size_alloc = shareds_offset + sizeof_shareds;
 #endif
@@ -1334,15 +1368,20 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
     taskdata->td_last_tied = NULL; // will be set when the task is scheduled
   else
     taskdata->td_last_tied = taskdata;
-
+#if OMP_50_ENABLED
+  taskdata->td_allow_completion_event.type = KMP_EVENT_UNINITIALIZED;
+#endif
 #if OMPT_SUPPORT
   if (UNLIKELY(ompt_enabled.enabled))
     __ompt_task_init(taskdata, gtid);
 #endif
 // Only need to keep track of child task counts if team parallel and tasking not
-// serialized or if it is a proxy task
+// serialized or if it is a proxy or detachable task
 #if OMP_45_ENABLED
   if (flags->proxy == TASK_PROXY ||
+#if OMP_50_ENABLED
+      flags->detachable == TASK_DETACHABLE ||
+#endif
       !(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser))
 #else
   if (!(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser))
@@ -1378,11 +1417,20 @@ kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
 // __kmp_task_alloc() sets up all other runtime flags
 
 #if OMP_45_ENABLED
+#if OMP_50_ENABLED
+  KA_TRACE(10, ("__kmpc_omp_task_alloc(enter): T#%d loc=%p, flags=(%s %s %s) "
+                "sizeof_task=%ld sizeof_shared=%ld entry=%p\n",
+                gtid, loc_ref, input_flags->tiedness ? "tied  " : "untied",
+                input_flags->proxy ? "proxy" : "",
+                input_flags->detachable ? "detachable" : "", sizeof_kmp_task_t,
+                sizeof_shareds, task_entry));
+#else
   KA_TRACE(10, ("__kmpc_omp_task_alloc(enter): T#%d loc=%p, flags=(%s %s) "
                 "sizeof_task=%ld sizeof_shared=%ld entry=%p\n",
                 gtid, loc_ref, input_flags->tiedness ? "tied  " : "untied",
                 input_flags->proxy ? "proxy" : "", sizeof_kmp_task_t,
                 sizeof_shareds, task_entry));
+#endif
 #else
   KA_TRACE(10, ("__kmpc_omp_task_alloc(enter): T#%d loc=%p, flags=(%s) "
                 "sizeof_task=%ld sizeof_shared=%ld entry=%p\n",
@@ -3913,6 +3961,58 @@ void __kmpc_proxy_task_completed_ooo(kmp_task_t *ptask) {
       ("__kmp_proxy_task_completed_ooo(exit): proxy task completing ooo %p\n",
        taskdata));
 }
+
+#if OMP_50_ENABLED
+kmp_event_t *__kmpc_task_allow_completion_event(ident_t *loc_ref, int gtid,
+                                                kmp_task_t *task) {
+  kmp_taskdata_t *td = KMP_TASK_TO_TASKDATA(task);
+  if (td->td_allow_completion_event.type == KMP_EVENT_UNINITIALIZED) {
+    td->td_allow_completion_event.type = KMP_EVENT_ALLOW_COMPLETION;
+    td->td_allow_completion_event.ed.task = task;
+    __kmp_init_tas_lock(&td->td_allow_completion_event.lock);
+  }
+  return &td->td_allow_completion_event;
+}
+
+void __kmp_fulfill_event(kmp_event_t *event) {
+  if (event->type == KMP_EVENT_ALLOW_COMPLETION) {
+    kmp_task_t *ptask = event->ed.task;
+    kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(ptask);
+    bool detached = false;
+    int gtid = __kmp_get_gtid();
+
+    if (taskdata->td_flags.proxy == TASK_PROXY) {
+      // The associated task code completed before this call and detached.
+      detached = true;
+      event->type = KMP_EVENT_UNINITIALIZED;
+    } else {
+      // The associated task has not completed but could be completing at this
+      // point.
+      // We need to take the lock to avoid races
+      __kmp_acquire_tas_lock(&event->lock, gtid);
+      if (taskdata->td_flags.proxy == TASK_PROXY)
+        detached = true;
+      event->type = KMP_EVENT_UNINITIALIZED;
+      __kmp_release_tas_lock(&event->lock, gtid);
+    }
+
+    if (detached) {
+      // If the task detached complete the proxy task
+      if (gtid >= 0) {
+        kmp_team_t *team = taskdata->td_team;
+        kmp_info_t *thread = __kmp_get_thread();
+        if (thread->th.th_team == team) {
+          __kmpc_proxy_task_completed(gtid, ptask);
+          return;
+        }
+      }
+
+      // fallback
+      __kmpc_proxy_task_completed_ooo(ptask);
+    }
+  }
+}
+#endif
 
 // __kmp_task_dup_alloc: Allocate the taskdata and make a copy of source task
 // for taskloop

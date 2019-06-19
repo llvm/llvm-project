@@ -448,9 +448,18 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
           DPxPTR(e - HostBegin), e->name, DPxPTR(cuptr));
       entry.addr = (void *)cuptr;
 
-      if (DeviceInfo.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
-          e->flags & OMP_DECLARE_TARGET_LINK) {
-        // If unified memory is present any target link variables
+      // Note: In the current implementation declare target variables
+      // can either be link or to. This means that once unified
+      // memory is activated via the requires directive, the variable
+      // can be used directly from the host in both cases.
+      // TODO: when variables types other than to or link are added,
+      // the below condition should be changed to explicitely
+      // check for to and link variables types:
+      //  (DeviceInfo.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+      //   (e->flags & OMP_DECLARE_TARGET_LINK ||
+      //    e->flags == OMP_DECLARE_TARGET_TO))
+      if (DeviceInfo.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+        // If unified memory is present any target link or to variables
         // can access host addresses directly. There is no longer a
         // need for device copies.
         cuMemcpyHtoD(cuptr, e->addr, sizeof(void *));

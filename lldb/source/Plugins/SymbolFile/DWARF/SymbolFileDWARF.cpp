@@ -1206,7 +1206,8 @@ void SymbolFileDWARF::ParseDeclsForContext(CompilerDeclContext decl_ctx) {
       ast_parser->GetDeclForUIDFromDWARF(decl);
 }
 
-SymbolFileDWARF::DecodedUID SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
+llvm::Optional<SymbolFileDWARF::DecodedUID>
+SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
   // This method can be called without going through the symbol vendor so we
   // need to lock the module.
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
@@ -1220,7 +1221,9 @@ SymbolFileDWARF::DecodedUID SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
   if (SymbolFileDWARFDebugMap *debug_map = GetDebugMapSymfile()) {
     SymbolFileDWARF *dwarf = debug_map->GetSymbolFileByOSOIndex(
         debug_map->GetOSOIndexFromUserID(uid));
-    return {dwarf, {DIERef::Section::DebugInfo, DW_INVALID_OFFSET, dw_offset_t(uid)}};
+    return DecodedUID{
+        *dwarf,
+        {DIERef::Section::DebugInfo, DW_INVALID_OFFSET, dw_offset_t(uid)}};
   }
   DIERef::Section section =
       uid >> 63 ? DIERef::Section::DebugTypes : DIERef::Section::DebugInfo;
@@ -1228,7 +1231,7 @@ SymbolFileDWARF::DecodedUID SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
   dw_offset_t die_offset = uid;
 
   if (die_offset == DW_INVALID_OFFSET)
-    return {nullptr, DIERef()};
+    return llvm::None;
 
   SymbolFileDWARF *dwarf = this;
   if (DebugInfo()) {
@@ -1237,7 +1240,7 @@ SymbolFileDWARF::DecodedUID SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
         dwarf = unit->GetDwoSymbolFile();
     }
   }
-  return {dwarf, {section, DW_INVALID_OFFSET, die_offset}};
+  return DecodedUID{*dwarf, {section, DW_INVALID_OFFSET, die_offset}};
 }
 
 DWARFDIE
@@ -1246,10 +1249,10 @@ SymbolFileDWARF::GetDIE(lldb::user_id_t uid) {
   // need to lock the module.
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
-  DecodedUID decoded = DecodeUID(uid);
+  llvm::Optional<DecodedUID> decoded = DecodeUID(uid);
 
-  if (decoded.dwarf)
-    return decoded.dwarf->GetDIE(decoded.ref);
+  if (decoded)
+    return decoded->dwarf.GetDIE(decoded->ref);
 
   return DWARFDIE();
 }
@@ -3598,7 +3601,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
 
       if (symbol_context_scope) {
         SymbolFileTypeSP type_sp(
-            new SymbolFileType(*this, GetUID(DIERef(type_die_form))));
+            new SymbolFileType(*this, GetUID(type_die_form.Reference())));
 
         if (const_value.Form() && type_sp && type_sp->GetType())
           location.UpdateValue(const_value.Unsigned(),
