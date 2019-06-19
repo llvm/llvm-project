@@ -14,6 +14,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
@@ -37,53 +38,44 @@ bool isRootChanged(intptr_t k) { return k == ROOT_CHANGED; }
 //         ROOT_CHANGED<--chdir(..)--      JAIL_ENTERED<--chdir(..)--
 //                                  |                               |
 //                      bug<--foo()--          JAIL_ENTERED<--foo()--
-class ChrootChecker : public Checker<eval::Call, check::PreStmt<CallExpr> > {
-  mutable IdentifierInfo *II_chroot, *II_chdir;
+class ChrootChecker : public Checker<eval::Call, check::PreCall> {
   // This bug refers to possibly break out of a chroot() jail.
   mutable std::unique_ptr<BuiltinBug> BT_BreakJail;
 
+  const CallDescription Chroot{"chroot", 1}, Chdir{"chdir", 1};
+
 public:
-  ChrootChecker() : II_chroot(nullptr), II_chdir(nullptr) {}
+  ChrootChecker() {}
 
   static void *getTag() {
     static int x;
     return &x;
   }
 
-  bool evalCall(const CallExpr *CE, CheckerContext &C) const;
-  void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
+  bool evalCall(const CallEvent &Call, CheckerContext &C) const;
+  void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
 
 private:
-  void Chroot(CheckerContext &C, const CallExpr *CE) const;
-  void Chdir(CheckerContext &C, const CallExpr *CE) const;
+  void evalChroot(const CallEvent &Call, CheckerContext &C) const;
+  void evalChdir(const CallEvent &Call, CheckerContext &C) const;
 };
 
 } // end anonymous namespace
 
-bool ChrootChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
-  const FunctionDecl *FD = C.getCalleeDecl(CE);
-  if (!FD)
-    return false;
-
-  ASTContext &Ctx = C.getASTContext();
-  if (!II_chroot)
-    II_chroot = &Ctx.Idents.get("chroot");
-  if (!II_chdir)
-    II_chdir = &Ctx.Idents.get("chdir");
-
-  if (FD->getIdentifier() == II_chroot) {
-    Chroot(C, CE);
+bool ChrootChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
+  if (Call.isCalled(Chroot)) {
+    evalChroot(Call, C);
     return true;
   }
-  if (FD->getIdentifier() == II_chdir) {
-    Chdir(C, CE);
+  if (Call.isCalled(Chdir)) {
+    evalChdir(Call, C);
     return true;
   }
 
   return false;
 }
 
-void ChrootChecker::Chroot(CheckerContext &C, const CallExpr *CE) const {
+void ChrootChecker::evalChroot(const CallEvent &Call, CheckerContext &C) const {
   ProgramStateRef state = C.getState();
   ProgramStateManager &Mgr = state->getStateManager();
 
@@ -93,7 +85,7 @@ void ChrootChecker::Chroot(CheckerContext &C, const CallExpr *CE) const {
   C.addTransition(state);
 }
 
-void ChrootChecker::Chdir(CheckerContext &C, const CallExpr *CE) const {
+void ChrootChecker::evalChdir(const CallEvent &Call, CheckerContext &C) const {
   ProgramStateRef state = C.getState();
   ProgramStateManager &Mgr = state->getStateManager();
 
@@ -103,7 +95,7 @@ void ChrootChecker::Chdir(CheckerContext &C, const CallExpr *CE) const {
     return;
 
   // After chdir("/"), enter the jail, set the enum value JAIL_ENTERED.
-  const Expr *ArgExpr = CE->getArg(0);
+  const Expr *ArgExpr = Call.getArgExpr(0);
   SVal ArgVal = C.getSVal(ArgExpr);
 
   if (const MemRegion *R = ArgVal.getAsRegion()) {
@@ -120,19 +112,10 @@ void ChrootChecker::Chdir(CheckerContext &C, const CallExpr *CE) const {
 }
 
 // Check the jail state before any function call except chroot and chdir().
-void ChrootChecker::checkPreStmt(const CallExpr *CE, CheckerContext &C) const {
-  const FunctionDecl *FD = C.getCalleeDecl(CE);
-  if (!FD)
-    return;
-
-  ASTContext &Ctx = C.getASTContext();
-  if (!II_chroot)
-    II_chroot = &Ctx.Idents.get("chroot");
-  if (!II_chdir)
-    II_chdir = &Ctx.Idents.get("chdir");
-
+void ChrootChecker::checkPreCall(const CallEvent &Call,
+                                 CheckerContext &C) const {
   // Ignore chroot and chdir.
-  if (FD->getIdentifier() == II_chroot || FD->getIdentifier() == II_chdir)
+  if (Call.isCalled(Chroot) || Call.isCalled(Chdir))
     return;
 
   // If jail state is ROOT_CHANGED, generate BugReport.

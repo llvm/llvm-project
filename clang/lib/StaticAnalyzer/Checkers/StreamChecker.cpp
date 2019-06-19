@@ -14,6 +14,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
@@ -71,7 +72,7 @@ public:
       II_fsetpos(nullptr), II_clearerr(nullptr), II_feof(nullptr),
       II_ferror(nullptr), II_fileno(nullptr) {}
 
-  bool evalCall(const CallExpr *CE, CheckerContext &C) const;
+  bool evalCall(const CallEvent &Call, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
 
 private:
@@ -103,9 +104,13 @@ private:
 REGISTER_MAP_WITH_PROGRAMSTATE(StreamMap, SymbolRef, StreamState)
 
 
-bool StreamChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
-  const FunctionDecl *FD = C.getCalleeDecl(CE);
+bool StreamChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
   if (!FD || FD->getKind() != Decl::Function)
+    return false;
+
+  const auto *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
+  if (!CE)
     return false;
 
   ASTContext &Ctx = C.getASTContext();

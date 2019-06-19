@@ -886,14 +886,19 @@ void RetainCountChecker::processNonLeakError(ProgramStateRef St,
 // Handle the return values of retain-count-related functions.
 //===----------------------------------------------------------------------===//
 
-bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
+bool RetainCountChecker::evalCall(const CallEvent &Call,
+                                  CheckerContext &C) const {
   ProgramStateRef state = C.getState();
-  const FunctionDecl *FD = C.getCalleeDecl(CE);
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
   if (!FD)
     return false;
 
+  const auto *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
+  if (!CE)
+    return false;
+
   RetainSummaryManager &SmrMgr = getSummaryManager(C);
-  QualType ResultTy = CE->getCallReturnType(C.getASTContext());
+  QualType ResultTy = Call.getResultType();
 
   // See if the function has 'rc_ownership_trusted_implementation'
   // annotate attribute. If it does, we will not inline it.
