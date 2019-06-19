@@ -1002,6 +1002,11 @@ void DebugSHandler::handleDebugS(lld::coff::SectionChunk &DebugS) {
   ExitOnErr(Reader.readArray(Subsections, RelocatedDebugContents.size()));
 
   for (const DebugSubsectionRecord &SS : Subsections) {
+    // Ignore subsections with the 'ignore' bit. Some versions of the Visual C++
+    // runtime have subsections with this bit set.
+    if (uint32_t(SS.kind()) & codeview::SubsectionIgnoreFlag)
+      continue;
+
     switch (SS.kind()) {
     case DebugSubsectionKind::StringTable: {
       assert(!CVStrTab.valid() &&

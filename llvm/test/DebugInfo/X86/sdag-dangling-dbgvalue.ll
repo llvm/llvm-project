@@ -1,4 +1,4 @@
-; RUN: llc %s -stop-before expand-isel-pseudos -o - | FileCheck %s
+; RUN: llc %s -stop-before finalize-isel -o - | FileCheck %s
 
 ;--------------------------------------------------------------------
 ; This test case is basically generated from the following C code.

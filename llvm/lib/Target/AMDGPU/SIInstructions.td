@@ -167,7 +167,6 @@ def S_ADD_U64_CO_PSEUDO : SPseudoInstSI <
 def S_SUB_U64_CO_PSEUDO : SPseudoInstSI <
   (outs SReg_64:$vdst, VOPDstS64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
 >;
-
 } // End usesCustomInserter = 1, Defs = [SCC]
 
 let usesCustomInserter = 1 in {
@@ -563,7 +562,16 @@ def : GCNPat <
 def : GCNPat <
   (AMDGPUinit_exec i64:$src),
   (SI_INIT_EXEC (as_i64imm $src))
->;
+> {
+  let WaveSizePredicate = isWave64;
+}
+
+def : GCNPat <
+  (AMDGPUinit_exec i64:$src),
+  (SI_INIT_EXEC_LO (as_i32imm $src))
+> {
+  let WaveSizePredicate = isWave32;
+}
 
 def : GCNPat <
   (AMDGPUinit_exec_from_input i32:$input, i32:$shift),
@@ -1170,7 +1178,16 @@ def : GCNPat <
 def : GCNPat <
   (i1 imm:$imm),
   (S_MOV_B64 (i64 (as_i64imm $imm)))
->;
+> {
+  let WaveSizePredicate = isWave64;
+}
+
+def : GCNPat <
+  (i1 imm:$imm),
+  (S_MOV_B32 (i32 (as_i32imm $imm)))
+> {
+  let WaveSizePredicate = isWave32;
+}
 
 def : GCNPat <
   (f64 InlineFPImm<f64>:$imm),
@@ -1361,10 +1378,12 @@ def : FPToI1Pat<V_CMP_EQ_F64_e64, CONST.FP64_NEG_ONE, i64, f64, fp_to_sint>;
 
 // If we need to perform a logical operation on i1 values, we need to
 // use vector comparisons since there is only one SCC register. Vector
-// comparisons still write to a pair of SGPRs, so treat these as
-// 64-bit comparisons. When legalizing SGPR copies, instructions
-// resulting in the copies from SCC to these instructions will be
-// moved to the VALU.
+// comparisons may write to a pair of SGPRs or a single SGPR, so treat
+// these as 32 or 64-bit comparisons. When legalizing SGPR copies,
+// instructions resulting in the copies from SCC to these instructions
+// will be moved to the VALU.
+
+let WaveSizePredicate = isWave64 in {
 def : GCNPat <
   (i1 (and i1:$src0, i1:$src1)),
   (S_AND_B64 $src0, $src1)
@@ -1401,6 +1420,46 @@ def : GCNPat <
   (S_NOT_B64 $src0)
 >;
 }
+} // end isWave64
+
+let WaveSizePredicate = isWave32 in {
+def : GCNPat <
+  (i1 (and i1:$src0, i1:$src1)),
+  (S_AND_B32 $src0, $src1)
+>;
+
+def : GCNPat <
+  (i1 (or i1:$src0, i1:$src1)),
+  (S_OR_B32 $src0, $src1)
+>;
+
+def : GCNPat <
+  (i1 (xor i1:$src0, i1:$src1)),
+  (S_XOR_B32 $src0, $src1)
+>;
+
+def : GCNPat <
+  (i1 (add i1:$src0, i1:$src1)),
+  (S_XOR_B32 $src0, $src1)
+>;
+
+def : GCNPat <
+  (i1 (sub i1:$src0, i1:$src1)),
+  (S_XOR_B32 $src0, $src1)
+>;
+
+let AddedComplexity = 1 in {
+def : GCNPat <
+  (i1 (add i1:$src0, (i1 -1))),
+  (S_NOT_B32 $src0)
+>;
+
+def : GCNPat <
+  (i1 (sub i1:$src0, (i1 -1))),
+  (S_NOT_B32 $src0)
+>;
+}
+} // end isWave32
 
 def : GCNPat <
   (f16 (sint_to_fp i1:$src)),

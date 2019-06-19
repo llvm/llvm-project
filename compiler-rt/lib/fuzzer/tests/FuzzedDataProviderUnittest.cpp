@@ -107,12 +107,13 @@ const uint8_t Data[] = {
 
 TEST(FuzzedDataProvider, ConsumeBytes) {
   FuzzedDataProvider DataProv(Data, sizeof(Data));
-  EXPECT_EQ(std::vector<char>(1, 0x8A), DataProv.ConsumeBytes<char>(1));
+  EXPECT_EQ(std::vector<unsigned char>(1, 0x8A),
+            DataProv.ConsumeBytes<unsigned char>(1));
   EXPECT_EQ(std::vector<uint8_t>(
                 {0x19, 0x0D, 0x44, 0x37, 0x0D, 0x38, 0x5E, 0x9B, 0xAA, 0xF3}),
             DataProv.ConsumeBytes<uint8_t>(10));
 
-  std::vector<unsigned char> UChars = DataProv.ConsumeBytes(24);
+  std::vector<unsigned char> UChars = DataProv.ConsumeBytes<unsigned char>(24);
   EXPECT_EQ(std::vector<unsigned char>({0xDA, 0xAA, 0x88, 0xF2, 0x9B, 0x6C,
                                         0xBA, 0xBE, 0xB1, 0xF2, 0xCF, 0x13,
                                         0xB8, 0xAC, 0x1A, 0x7F, 0x1C, 0xC9,
@@ -121,6 +122,28 @@ TEST(FuzzedDataProvider, ConsumeBytes) {
 
   EXPECT_EQ(std::vector<signed char>(Data + 1 + 10 + 24, Data + sizeof(Data)),
             DataProv.ConsumeBytes<signed char>(31337));
+}
+
+TEST(FuzzedDataProvider, ConsumeBytesWithTerminator) {
+  FuzzedDataProvider DataProv(Data, sizeof(Data));
+  EXPECT_EQ(std::vector<unsigned char>({0x8A, 0x00}),
+            DataProv.ConsumeBytesWithTerminator<unsigned char>(1));
+  EXPECT_EQ(std::vector<uint8_t>({0x19, 0x0D, 0x44, 0x37, 0x0D, 0x38, 0x5E,
+                                  0x9B, 0xAA, 0xF3, 111}),
+            DataProv.ConsumeBytesWithTerminator<uint8_t>(10, 111));
+
+  std::vector<unsigned char> UChars =
+      DataProv.ConsumeBytesWithTerminator<unsigned char>(24);
+  EXPECT_EQ(std::vector<unsigned char>(
+                {0xDA, 0xAA, 0x88, 0xF2, 0x9B, 0x6C, 0xBA, 0xBE, 0xB1,
+                 0xF2, 0xCF, 0x13, 0xB8, 0xAC, 0x1A, 0x7F, 0x1C, 0xC9,
+                 0x90, 0xD0, 0xD9, 0x5C, 0x42, 0xB3, 0x00}),
+            UChars);
+
+  std::vector<signed char> Expected(Data + 1 + 10 + 24, Data + sizeof(Data));
+  Expected.push_back(65);
+  EXPECT_EQ(Expected,
+            DataProv.ConsumeBytesWithTerminator<signed char>(31337, 65));
 }
 
 TEST(FuzzedDataProvider, ConsumeBytesAsString) {
@@ -182,14 +205,15 @@ TEST(FuzzedDataProvider, ConsumeRemainingBytes) {
   {
     FuzzedDataProvider DataProv(Data, sizeof(Data));
     EXPECT_EQ(std::vector<uint8_t>(Data, Data + sizeof(Data)),
-              DataProv.ConsumeRemainingBytes());
-    EXPECT_EQ(std::vector<uint8_t>(), DataProv.ConsumeRemainingBytes());
+              DataProv.ConsumeRemainingBytes<uint8_t>());
+    EXPECT_EQ(std::vector<uint8_t>(),
+              DataProv.ConsumeRemainingBytes<uint8_t>());
   }
 
   {
     FuzzedDataProvider DataProv(Data, sizeof(Data));
     EXPECT_EQ(std::vector<uint8_t>(Data, Data + 123),
-              DataProv.ConsumeBytes(123));
+              DataProv.ConsumeBytes<uint8_t>(123));
     EXPECT_EQ(std::vector<char>(Data + 123, Data + sizeof(Data)),
               DataProv.ConsumeRemainingBytes<char>());
   }
@@ -206,7 +230,7 @@ TEST(FuzzedDataProvider, ConsumeRemainingBytesAsString) {
   {
     FuzzedDataProvider DataProv(Data, sizeof(Data));
     EXPECT_EQ(std::vector<uint8_t>(Data, Data + 123),
-              DataProv.ConsumeBytes(123));
+              DataProv.ConsumeBytes<uint8_t>(123));
     EXPECT_EQ(std::string(Data + 123, Data + sizeof(Data)),
               DataProv.ConsumeRemainingBytesAsString());
   }
@@ -265,9 +289,17 @@ TEST(FuzzedDataProvider, PickValueInArray) {
   EXPECT_EQ(uint8_t(0x69), DataProv.PickValueInArray(Data));
   EXPECT_EQ(uint8_t(0xD6), DataProv.PickValueInArray(Data));
 
+  EXPECT_EQ(uint32_t(777), DataProv.PickValueInArray<uint32_t>({1337, 777}));
+  EXPECT_EQ(uint32_t(777), DataProv.PickValueInArray<uint32_t>({1337, 777}));
+  EXPECT_EQ(uint64_t(1337), DataProv.PickValueInArray<uint64_t>({1337, 777}));
+  EXPECT_EQ(size_t(777), DataProv.PickValueInArray<size_t>({1337, 777}));
+  EXPECT_EQ(int16_t(1337), DataProv.PickValueInArray<int16_t>({1337, 777}));
+  EXPECT_EQ(int32_t(777), DataProv.PickValueInArray<int32_t>({1337, 777}));
+  EXPECT_EQ(int64_t(777), DataProv.PickValueInArray<int64_t>({1337, 777}));
+
   // Exhaust the buffer.
   auto String = DataProv.ConsumeBytesAsString(31337);
-  EXPECT_EQ(size_t(1007), String.length());
+  EXPECT_EQ(size_t(1000), String.length());
   EXPECT_EQ(uint8_t(0x8A), DataProv.PickValueInArray(Data));
 }
 
@@ -306,12 +338,13 @@ TEST(FuzzedDataProvider, remaining_bytes) {
   EXPECT_EQ(size_t(1024), DataProv.remaining_bytes());
   EXPECT_EQ(false, DataProv.ConsumeBool());
   EXPECT_EQ(size_t(1024 - 1), DataProv.remaining_bytes());
-  EXPECT_EQ(std::vector<uint8_t>(Data, Data + 8), DataProv.ConsumeBytes(8));
+  EXPECT_EQ(std::vector<uint8_t>(Data, Data + 8),
+            DataProv.ConsumeBytes<uint8_t>(8));
   EXPECT_EQ(size_t(1024 - 1 - 8), DataProv.remaining_bytes());
 
   // Exhaust the buffer.
   EXPECT_EQ(std::vector<uint8_t>(Data + 8, Data + sizeof(Data) - 1),
-            DataProv.ConsumeRemainingBytes());
+            DataProv.ConsumeRemainingBytes<uint8_t>());
   EXPECT_EQ(size_t(0), DataProv.remaining_bytes());
 }
 

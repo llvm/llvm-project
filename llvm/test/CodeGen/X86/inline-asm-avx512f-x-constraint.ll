@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512f -stop-after=expand-isel-pseudos | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512f -stop-after=finalize-isel | FileCheck %s
 
 ; CHECK: %[[REG1:.*]]:vr512_0_15 = COPY %1
 ; CHECK: %[[REG2:.*]]:vr512_0_15 = COPY %2

@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 // A single header library providing an utility class to break up an array of
-// bytes (supposedly provided by a fuzzing engine) for multiple consumers.
-// Whenever run on the same input, provides the same output, as long as its
-// methods are called in the same order, with the same arguments.
+// bytes. Whenever run on the same input, provides the same output, as long as
+// its methods are called in the same order, with the same arguments.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_FUZZER_FUZZED_DATA_PROVIDER_H_
@@ -20,68 +19,63 @@
 
 #include <algorithm>
 #include <cstring>
+#include <initializer_list>
 #include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 class FuzzedDataProvider {
- public:
-  typedef uint8_t data_type;
-
+public:
   // |data| is an array of length |size| that the FuzzedDataProvider wraps to
   // provide more granular access. |data| must outlive the FuzzedDataProvider.
-  FuzzedDataProvider(const uint8_t* data, size_t size)
+  FuzzedDataProvider(const uint8_t *data, size_t size)
       : data_ptr_(data), remaining_bytes_(size) {}
   ~FuzzedDataProvider() = default;
 
   // Returns a std::vector containing |num_bytes| of input data. If fewer than
   // |num_bytes| of data remain, returns a shorter std::vector containing all
-  // of the data that's left.
-  template <typename T = data_type>
-  std::vector<T> ConsumeBytes(size_t num_bytes) {
-    static_assert(sizeof(T) == sizeof(data_type), "Incompatible data type.");
-
+  // of the data that's left. Can be used with any byte sized type, such as
+  // char, unsigned char, uint8_t, etc.
+  template <typename T> std::vector<T> ConsumeBytes(size_t num_bytes) {
     num_bytes = std::min(num_bytes, remaining_bytes_);
+    return ConsumeBytes<T>(num_bytes, num_bytes);
+  }
 
-    // The point of using the size-based constructor below is to increase the
-    // odds of having a vector object with capacity being equal to the length.
-    // That part is always implementation specific, but at least both libc++ and
-    // libstdc++ allocate the requested number of bytes in that constructor,
-    // which seems to be a natual choice for other implementations as well.
-    // To increase the odds even more, we also call |shrink_to_fit| below.
-    std::vector<T> result(num_bytes);
-    std::memcpy(result.data(), data_ptr_, num_bytes);
-    Advance(num_bytes);
-
-    // Even though |shrink_to_fit| is also implementation specific, we expect it
-    // to provide an additional assurance in case vector's constructor allocated
-    // a buffer which is larger than the actual amount of data we put inside it.
-    result.shrink_to_fit();
+  // Similar to |ConsumeBytes|, but also appends the terminator value at the end
+  // of the resulting vector. Useful, when a mutable null-terminated C-string is
+  // needed, for example. But that is a rare case. Better avoid it, if possible,
+  // and prefer using |ConsumeBytes| or |ConsumeBytesAsString| methods.
+  template <typename T>
+  std::vector<T> ConsumeBytesWithTerminator(size_t num_bytes,
+                                            T terminator = 0) {
+    num_bytes = std::min(num_bytes, remaining_bytes_);
+    std::vector<T> result = ConsumeBytes<T>(num_bytes + 1, num_bytes);
+    result.back() = terminator;
     return result;
   }
 
-  // Prefer using |ConsumeBytes| unless you actually need a std::string object.
-  // Returns a std::string containing |num_bytes| of input data. If fewer than
-  // |num_bytes| of data remain, returns a shorter std::string containing all
-  // of the data that's left.
+  // Returns a std::string containing |num_bytes| of input data. Using this and
+  // |.c_str()| on the resulting string is the best way to get an immutable
+  // null-terminated C string. If fewer than |num_bytes| of data remain, returns
+  // a shorter std::string containing all of the data that's left.
   std::string ConsumeBytesAsString(size_t num_bytes) {
-    static_assert(sizeof(std::string::value_type) == sizeof(data_type),
+    static_assert(sizeof(std::string::value_type) == sizeof(uint8_t),
                   "ConsumeBytesAsString cannot convert the data to a string.");
 
     num_bytes = std::min(num_bytes, remaining_bytes_);
     std::string result(
-        reinterpret_cast<const std::string::value_type*>(data_ptr_), num_bytes);
+        reinterpret_cast<const std::string::value_type *>(data_ptr_),
+        num_bytes);
     Advance(num_bytes);
     return result;
   }
 
-  // Returns a number in the range [min, max] by consuming bytes from the input
-  // data. The value might not be uniformly distributed in the given range. If
-  // there's no input data left, always returns |min|. |min| must be less than
-  // or equal to |max|.
-  template <typename T>
-  T ConsumeIntegralInRange(T min, T max) {
+  // Returns a number in the range [min, max] by consuming bytes from the
+  // input data. The value might not be uniformly distributed in the given
+  // range. If there's no input data left, always returns |min|. |min| must
+  // be less than or equal to |max|.
+  template <typename T> T ConsumeIntegralInRange(T min, T max) {
     static_assert(std::is_integral<T>::value, "An integral type is required.");
     static_assert(sizeof(T) <= sizeof(uint64_t), "Unsupported integral type.");
 
@@ -106,7 +100,7 @@ class FuzzedDataProvider {
       offset += CHAR_BIT;
     }
 
-    // Avoid division by 0, in the case |range + 1| results in overflow.
+    // Avoid division by 0, in case |range + 1| results in overflow.
     if (range != std::numeric_limits<decltype(range)>::max())
       result = result % (range + 1);
 
@@ -125,14 +119,17 @@ class FuzzedDataProvider {
     // stable fuzzer than picking the length of a string independently from
     // picking its contents.
     std::string result;
+
+    // Reserve the anticipated capaticity to prevent several reallocations.
+    result.reserve(std::min(max_length, remaining_bytes_));
     for (size_t i = 0; i < max_length && remaining_bytes_ != 0; ++i) {
-      char next = static_cast<char>(data_ptr_[0]);
+      char next = ConvertUnsignedToSigned<char>(data_ptr_[0]);
       Advance(1);
       if (next == '\\' && remaining_bytes_ != 0) {
-        next = static_cast<char>(data_ptr_[0]);
+        next = ConvertUnsignedToSigned<char>(data_ptr_[0]);
         Advance(1);
         if (next != '\\')
-          return result;
+          break;
       }
       result += next;
     }
@@ -142,8 +139,7 @@ class FuzzedDataProvider {
   }
 
   // Returns a std::vector containing all remaining bytes of the input data.
-  template <typename T = data_type>
-  std::vector<T> ConsumeRemainingBytes() {
+  template <typename T> std::vector<T> ConsumeRemainingBytes() {
     return ConsumeBytes<T>(remaining_bytes_);
   }
 
@@ -157,8 +153,7 @@ class FuzzedDataProvider {
   // Returns a number in the range [Type's min, Type's max]. The value might
   // not be uniformly distributed in the given range. If there's no input data
   // left, always returns |min|.
-  template <typename T>
-  T ConsumeIntegral() {
+  template <typename T> T ConsumeIntegral() {
     return ConsumeIntegralInRange(std::numeric_limits<T>::min(),
                                   std::numeric_limits<T>::max());
   }
@@ -166,18 +161,23 @@ class FuzzedDataProvider {
   // Reads one byte and returns a bool, or false when no data remains.
   bool ConsumeBool() { return 1 & ConsumeIntegral<uint8_t>(); }
 
-  // Returns a value from |array|, consuming as many bytes as needed to do so.
-  // |array| must be a fixed-size array.
+  // Returns a copy of a value selected from a fixed-size |array|.
   template <typename T, size_t size>
-  T PickValueInArray(T (&array)[size]) {
+  T PickValueInArray(const T (&array)[size]) {
+    static_assert(size > 0, "The array must be non empty.");
     return array[ConsumeIntegralInRange<size_t>(0, size - 1)];
+  }
+
+  template <typename T>
+  T PickValueInArray(std::initializer_list<const T> list) {
+    // static_assert(list.size() > 0, "The array must be non empty.");
+    return *(list.begin() + ConsumeIntegralInRange<size_t>(0, list.size() - 1));
   }
 
   // Return an enum value. The enum must start at 0 and be contiguous. It must
   // also contain |kMaxValue| aliased to its largest (inclusive) value. Such as:
   // enum class Foo { SomeValue, OtherValue, kMaxValue = OtherValue };
-  template <typename T>
-  T ConsumeEnum() {
+  template <typename T> T ConsumeEnum() {
     static_assert(std::is_enum<T>::value, "|T| must be an enum type.");
     return static_cast<T>(ConsumeIntegralInRange<uint32_t>(
         0, static_cast<uint32_t>(T::kMaxValue)));
@@ -186,9 +186,9 @@ class FuzzedDataProvider {
   // Reports the remaining bytes available for fuzzed input.
   size_t remaining_bytes() { return remaining_bytes_; }
 
- private:
-  FuzzedDataProvider(const FuzzedDataProvider&) = delete;
-  FuzzedDataProvider& operator=(const FuzzedDataProvider&) = delete;
+private:
+  FuzzedDataProvider(const FuzzedDataProvider &) = delete;
+  FuzzedDataProvider &operator=(const FuzzedDataProvider &) = delete;
 
   void Advance(size_t num_bytes) {
     if (num_bytes > remaining_bytes_)
@@ -198,8 +198,50 @@ class FuzzedDataProvider {
     remaining_bytes_ -= num_bytes;
   }
 
-  const data_type* data_ptr_;
+  template <typename T>
+  std::vector<T> ConsumeBytes(size_t size, size_t num_bytes_to_consume) {
+    static_assert(sizeof(T) == sizeof(uint8_t), "Incompatible data type.");
+
+    // The point of using the size-based constructor below is to increase the
+    // odds of having a vector object with capacity being equal to the length.
+    // That part is always implementation specific, but at least both libc++ and
+    // libstdc++ allocate the requested number of bytes in that constructor,
+    // which seems to be a natural choice for other implementations as well.
+    // To increase the odds even more, we also call |shrink_to_fit| below.
+    std::vector<T> result(size);
+    std::memcpy(result.data(), data_ptr_, num_bytes_to_consume);
+    Advance(num_bytes_to_consume);
+
+    // Even though |shrink_to_fit| is also implementation specific, we expect it
+    // to provide an additional assurance in case vector's constructor allocated
+    // a buffer which is larger than the actual amount of data we put inside it.
+    result.shrink_to_fit();
+    return result;
+  }
+
+  template <typename TS, typename TU> TS ConvertUnsignedToSigned(TU value) {
+    static_assert(sizeof(TS) == sizeof(TU), "Incompatible data types.");
+    static_assert(!std::numeric_limits<TU>::is_signed,
+                  "Source type must be unsigned.");
+    static_assert(std::numeric_limits<TS>::is_signed,
+                  "Destination type must be signed.");
+
+    // TODO(Dor1s): change to `if constexpr` once C++17 becomes mainstream.
+    if (std::numeric_limits<TS>::is_modulo)
+      return static_cast<TS>(value);
+
+    // Avoid using implementation-defined unsigned to signer conversions.
+    // To learn more, see https://stackoverflow.com/questions/13150449.
+    if (value <= std::numeric_limits<TS>::max())
+      return static_cast<TS>(value);
+    else {
+      constexpr auto TS_min = std::numeric_limits<TS>::min();
+      return TS_min + static_cast<char>(value - TS_min);
+    }
+  }
+
+  const uint8_t *data_ptr_;
   size_t remaining_bytes_;
 };
 
-#endif  // LLVM_FUZZER_FUZZED_DATA_PROVIDER_H_
+#endif // LLVM_FUZZER_FUZZED_DATA_PROVIDER_H_

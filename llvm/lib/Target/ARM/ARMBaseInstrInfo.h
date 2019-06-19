@@ -398,6 +398,11 @@ private:
 
   void expandMEMCPY(MachineBasicBlock::iterator) const;
 
+  /// Identify instructions that can be folded into a MOVCC instruction, and
+  /// return the defining instruction.
+  MachineInstr *canFoldIntoMOVCC(unsigned Reg, const MachineRegisterInfo &MRI,
+                                 const TargetInstrInfo *TII) const;
+
 private:
   /// Modeling special VFP / NEON fp MLA / MLS hazards.
 
@@ -525,12 +530,6 @@ static inline bool isPushOpcode(int Opc) {
 ARMCC::CondCodes getInstrPredicate(const MachineInstr &MI, unsigned &PredReg);
 
 unsigned getMatchingCondBranchOpcode(unsigned Opc);
-
-/// Determine if MI can be folded into an ARM MOVCC instruction, and return the
-/// opcode of the SSA instruction representing the conditional MI.
-unsigned canFoldARMInstrIntoMOVCC(unsigned Reg,
-                                  MachineInstr *&MI,
-                                  const MachineRegisterInfo &MRI);
 
 /// Map pseudo instructions that imply an 'S' bit onto real opcodes. Whether
 /// the instruction is encoded with an 'S' bit is determined by the optional

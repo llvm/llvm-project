@@ -752,7 +752,8 @@ bool AMDGPUPassConfig::addPreISel() {
 }
 
 bool AMDGPUPassConfig::addInstSelector() {
-  addPass(createAMDGPUISelDag(&getAMDGPUTargetMachine(), getOptLevel()));
+  // Defer the verifier until FinalizeISel.
+  addPass(createAMDGPUISelDag(&getAMDGPUTargetMachine(), getOptLevel()), false);
   return false;
 }
 

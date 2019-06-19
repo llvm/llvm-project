@@ -16,7 +16,7 @@
 namespace llvm {
 
 namespace RISCVMatInt {
-void generateInstSeq(int64_t Val, bool Is64Bit, InstSeq &Res) {
+void generateInstSeq(int64_t Val, bool IsRV64, InstSeq &Res) {
   if (isInt<32>(Val)) {
     // Depending on the active bits in the immediate Value v, the following
     // instruction sequences are emitted:
@@ -32,13 +32,13 @@ void generateInstSeq(int64_t Val, bool Is64Bit, InstSeq &Res) {
       Res.push_back(Inst(RISCV::LUI, Hi20));
 
     if (Lo12 || Hi20 == 0) {
-      unsigned AddiOpc = (Is64Bit && Hi20) ? RISCV::ADDIW : RISCV::ADDI;
+      unsigned AddiOpc = (IsRV64 && Hi20) ? RISCV::ADDIW : RISCV::ADDI;
       Res.push_back(Inst(AddiOpc, Lo12));
     }
     return;
   }
 
-  assert(Is64Bit && "Can't emit >32-bit imm for non-RV64 target");
+  assert(IsRV64 && "Can't emit >32-bit imm for non-RV64 target");
 
   // In the worst case, for a full 64-bit constant, a sequence of 8 instructions
   // (i.e., LUI+ADDIW+SLLI+ADDI+SLLI+ADDI+SLLI+ADDI) has to be emmitted. Note
@@ -68,11 +68,26 @@ void generateInstSeq(int64_t Val, bool Is64Bit, InstSeq &Res) {
   int ShiftAmount = 12 + findFirstSet((uint64_t)Hi52);
   Hi52 = SignExtend64(Hi52 >> (ShiftAmount - 12), 64 - ShiftAmount);
 
-  generateInstSeq(Hi52, Is64Bit, Res);
+  generateInstSeq(Hi52, IsRV64, Res);
 
   Res.push_back(Inst(RISCV::SLLI, ShiftAmount));
   if (Lo12)
     Res.push_back(Inst(RISCV::ADDI, Lo12));
+}
+
+int getIntMatCost(const APInt &Val, unsigned Size, bool IsRV64) {
+  int PlatRegSize = IsRV64 ? 64 : 32;
+
+  // Split the constant into platform register sized chunks, and calculate cost
+  // of each chunk.
+  int Cost = 0;
+  for (unsigned ShiftVal = 0; ShiftVal < Size; ShiftVal += PlatRegSize) {
+    APInt Chunk = Val.ashr(ShiftVal).sextOrTrunc(PlatRegSize);
+    InstSeq MatSeq;
+    generateInstSeq(Chunk.getSExtValue(), IsRV64, MatSeq);
+    Cost += MatSeq.size();
+  }
+  return std::max(1, Cost);
 }
 } // namespace RISCVMatInt
 } // namespace llvm

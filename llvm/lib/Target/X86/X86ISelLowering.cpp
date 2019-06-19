@@ -1143,7 +1143,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_TO_SINT,         MVT::v8i32, Legal);
 
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i32, Legal);
-    setOperationAction(ISD::FP_ROUND,           MVT::v4f32, Legal);
 
     if (!Subtarget.hasAVX512())
       setOperationAction(ISD::BITCAST, MVT::v32i1, Custom);
@@ -23386,7 +23385,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
       MFI.setHasCopyImplyingStackAdjustment(true);
       // Don't do anything here, we will expand these intrinsics out later
-      // during ExpandISelPseudos in EmitInstrWithCustomInserter.
+      // during FinalizeISel in EmitInstrWithCustomInserter.
       return SDValue();
     }
     case Intrinsic::x86_lwpins32:

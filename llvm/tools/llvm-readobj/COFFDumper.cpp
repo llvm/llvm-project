@@ -961,6 +961,11 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
     error(consume(Data, SubSectionSize));
 
     ListScope S(W, "Subsection");
+    // Dump the subsection as normal even if the ignore bit is set.
+    if (SubType & SubsectionIgnoreFlag) {
+      W.printHex("IgnoredSubsectionKind", SubType);
+      SubType &= ~SubsectionIgnoreFlag;
+    }
     W.printEnum("SubSectionType", SubType, makeArrayRef(SubSectionTypes));
     W.printHex("SubSectionSize", SubSectionSize);
 

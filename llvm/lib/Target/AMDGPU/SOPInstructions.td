@@ -152,11 +152,23 @@ let Defs = [SCC] in {
     [(set i64:$sdst, (not i64:$src0))]
   >;
   def S_WQM_B32 : SOP1_32 <"s_wqm_b32">;
-  def S_WQM_B64 : SOP1_64 <"s_wqm_b64",
-    [(set i1:$sdst, (int_amdgcn_wqm_vote i1:$src0))]
-  >;
+  def S_WQM_B64 : SOP1_64 <"s_wqm_b64">;
 } // End Defs = [SCC]
 
+
+let WaveSizePredicate = isWave32 in {
+def : GCNPat <
+  (int_amdgcn_wqm_vote i1:$src0),
+  (S_WQM_B32 $src0)
+>;
+}
+
+let WaveSizePredicate = isWave64 in {
+def : GCNPat <
+  (int_amdgcn_wqm_vote i1:$src0),
+  (S_WQM_B64 $src0)
+>;
+}
 
 def S_BREV_B32 : SOP1_32 <"s_brev_b32",
   [(set i32:$sdst, (bitreverse i32:$src0))]

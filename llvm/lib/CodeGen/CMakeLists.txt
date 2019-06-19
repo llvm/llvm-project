@@ -21,12 +21,12 @@ add_llvm_library(LLVMCodeGen
   EarlyIfConversion.cpp
   EdgeBundles.cpp
   ExecutionDomainFix.cpp
-  ExpandISelPseudos.cpp
   ExpandMemCmp.cpp
   ExpandPostRAPseudos.cpp
   ExpandReductions.cpp
   FaultMaps.cpp
   FEntryInserter.cpp
+  FinalizeISel.cpp
   FuncletLayout.cpp
   GCMetadata.cpp
   GCMetadataPrinter.cpp

@@ -67,7 +67,7 @@
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Local Dynamic TLS Access Clean-up
 ; CHECK-NEXT:       X86 PIC Global Base Reg Initialization
-; CHECK-NEXT:       Expand ISel Pseudo-instructions
+; CHECK-NEXT:        Finalize ISel and expand pseudo-instructions
 ; CHECK-NEXT:       X86 Domain Reassignment Pass
 ; CHECK-NEXT:       Early Tail Duplication
 ; CHECK-NEXT:       Optimize machine instruction PHIs

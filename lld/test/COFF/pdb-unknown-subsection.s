@@ -6,7 +6,9 @@
 # RUN: lld-link -subsystem:console -debug -nodefaultlib -entry:foo -out:%t.exe -pdb:%t.pdb %t.obj 2>&1 | FileCheck %s --check-prefix=WARNING
 # RUN: llvm-pdbutil dump -symbols %t.pdb | FileCheck %s
 
+# WARNING-NOT: ignoring unknown
 # WARNING: ignoring unknown debug$S subsection kind 0xFF
+# WARNING-NOT: ignoring unknown
 
 # CHECK:                           Symbols
 # CHECK:        4 | S_COMPILE3 [size = 52]
@@ -42,5 +44,17 @@ ret
 .Ltmp8:
 .Ltmp6:
 	.long	0xFF # Unknown subsection kind
+	.long	4           # Subsection size
+	.long  0
+	.long	0x800000F1 # Unknown subsection kind
+	.long	4           # Subsection size
+	.long  0
+	.long	0x800000F2 # Unknown subsection kind
+	.long	4           # Subsection size
+	.long  0
+	.long	0x800000F3 # Unknown subsection kind
+	.long	4           # Subsection size
+	.long  0
+	.long	0x800000F4 # Unknown subsection kind
 	.long	4           # Subsection size
 	.long  0
