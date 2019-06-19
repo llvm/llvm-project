@@ -90,58 +90,6 @@ static const RegisterSet g_reg_sets_x86_64[k_num_register_sets] = {
 };
 
 #define REG_CONTEXT_SIZE (GetRegisterInfoInterface().GetGPRSize())
-
-const int fpu_present = []() -> int {
-  int mib[2];
-  int error;
-  size_t len;
-  int val;
-
-  len = sizeof(val);
-  mib[0] = CTL_MACHDEP;
-  mib[1] = CPU_FPU_PRESENT;
-
-  error = sysctl(mib, __arraycount(mib), &val, &len, NULL, 0);
-  if (error)
-    errx(EXIT_FAILURE, "sysctl");
-
-  return val;
-}();
-
-const int osfxsr = []() -> int {
-  int mib[2];
-  int error;
-  size_t len;
-  int val;
-
-  len = sizeof(val);
-  mib[0] = CTL_MACHDEP;
-  mib[1] = CPU_OSFXSR;
-
-  error = sysctl(mib, __arraycount(mib), &val, &len, NULL, 0);
-  if (error)
-    errx(EXIT_FAILURE, "sysctl");
-
-  return val;
-}();
-
-const int fpu_save = []() -> int {
-  int mib[2];
-  int error;
-  size_t len;
-  int val;
-
-  len = sizeof(val);
-  mib[0] = CTL_MACHDEP;
-  mib[1] = CPU_FPU_SAVE;
-
-  error = sysctl(mib, __arraycount(mib), &val, &len, NULL, 0);
-  if (error)
-    errx(EXIT_FAILURE, "sysctl");
-
-  return val;
-}();
-
 } // namespace
 
 NativeRegisterContextNetBSD *
@@ -197,7 +145,7 @@ int NativeRegisterContextNetBSD_x86_64::GetSetForNativeRegNum(
   if (reg_num <= k_last_gpr_x86_64)
     return GPRegSet;
   else if (reg_num <= k_last_fpr_x86_64)
-    return (fpu_present == 1 && osfxsr == 1 && fpu_save >= 1) ? FPRegSet : -1;
+    return FPRegSet;
   else if (reg_num <= k_last_avx_x86_64)
     return -1; // AVX
   else if (reg_num <= k_last_mpxr_x86_64)
