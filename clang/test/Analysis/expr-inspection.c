@@ -25,7 +25,7 @@ void foo(int x) {
 
 // CHECK:      "program_state": {
 // CHECK-NEXT:   "store": [
-// CHECK-NEXT:     { "cluster": "y", "items": [
+// CHECK-NEXT:     { "cluster": "y", "pointer": "{{0x[0-9a-f]+}}", "items": [
 // CHECK-NEXT:       { "kind": "Direct", "offset": 0, "value": "2 S32b" }
 // CHECK-NEXT:     ]}
 // CHECK-NEXT:   ],

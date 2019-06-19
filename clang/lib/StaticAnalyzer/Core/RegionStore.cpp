@@ -211,7 +211,8 @@ public:
                  unsigned int Space = 0, bool IsDot = false) const {
     for (iterator I = begin(); I != end(); ++I) {
       Indent(Out, Space, IsDot)
-          << "{ \"cluster\": \"" << I.getKey() << "\", \"items\": [" << NL;
+          << "{ \"cluster\": \"" << I.getKey() << "\", \"pointer\": \""
+          << (const void *)I.getKey() << "\", \"items\": [" << NL;
 
       ++Space;
       const ClusterBindings &CB = I.getData();
