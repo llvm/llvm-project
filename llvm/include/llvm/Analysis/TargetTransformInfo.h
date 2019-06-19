@@ -27,6 +27,9 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/IR/Dominators.h"
 #include <functional>
 
 namespace llvm {
@@ -73,6 +76,26 @@ struct MemIntrinsicInfo {
     return (Ordering == AtomicOrdering::NotAtomic ||
             Ordering == AtomicOrdering::Unordered) && !IsVolatile;
   }
+};
+
+/// Attributes of a target dependent hardware loop.
+struct HardwareLoopInfo {
+  HardwareLoopInfo() = delete;
+  HardwareLoopInfo(Loop *L) : L(L) {}
+  Loop *L = nullptr;
+  BasicBlock *ExitBlock = nullptr;
+  BranchInst *ExitBranch = nullptr;
+  const SCEV *ExitCount = nullptr;
+  IntegerType *CountType = nullptr;
+  Value *LoopDecrement = nullptr; // Decrement the loop counter by this
+                                  // value in every iteration.
+  bool IsNestingLegal = false;    // Can a hardware loop be a parent to
+                                  // another hardware loop?
+  bool CounterInReg = false;      // Should loop counter be updated in
+                                  // the loop via a phi?
+  bool isHardwareLoopCandidate(ScalarEvolution &SE, LoopInfo &LI,
+                               DominatorTree &DT, bool ForceNestedLoop = false,
+                               bool ForceHardwareLoopPHI = false);
 };
 
 /// This pass provides access to the codegen interfaces that are needed
@@ -447,23 +470,6 @@ public:
   /// target-independent defaults.
   void getUnrollingPreferences(Loop *L, ScalarEvolution &,
                                UnrollingPreferences &UP) const;
-
-  /// Attributes of a target dependent hardware loop.
-  struct HardwareLoopInfo {
-    HardwareLoopInfo()        = delete;
-    HardwareLoopInfo(Loop *L) : L(L) { }
-    Loop *L                   = nullptr;
-    BasicBlock *ExitBlock     = nullptr;
-    BranchInst *ExitBranch    = nullptr;
-    const SCEV *ExitCount     = nullptr;
-    IntegerType *CountType    = nullptr;
-    Value *LoopDecrement      = nullptr;  // Decrement the loop counter by this
-                                          // value in every iteration.
-    bool IsNestingLegal       = false;    // Can a hardware loop be a parent to
-                                          // another hardware loop?
-    bool CounterInReg         = false;    // Should loop counter be updated in
-                                          // the loop via a phi?
-  };
 
   /// Query the target whether it would be profitable to convert the given loop
   /// into a hardware loop.

@@ -218,7 +218,7 @@ namespace {
 
     bool isAllocatable(unsigned Reg) const {
       return Reg < TRI->getNumRegs() && TRI->isInAllocatableClass(Reg) &&
-        !regsReserved.test(Reg);
+             !regsReserved.test(Reg);
     }
 
     // Analysis information if available

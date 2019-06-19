@@ -387,7 +387,7 @@ bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
     }
 
     MachineInstrBuilder MIBuilder =
-        BuildMI(Block, MBIter, dl, TII->get(ARM::t2VPST));
+        BuildMI(Block, MBIter, dl, TII->get(ARM::MVE_VPST));
     MachineInstr *LastMI = MI;
     MachineBasicBlock::iterator InsertPos = MIBuilder.getInstr();
 

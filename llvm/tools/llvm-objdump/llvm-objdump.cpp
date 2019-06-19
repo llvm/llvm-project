@@ -572,6 +572,7 @@ void SourcePrinter::printSourceLine(raw_ostream &OS,
                                     StringRef Delimiter) {
   if (!Symbolizer)
     return;
+
   DILineInfo LineInfo = DILineInfo();
   auto ExpectedLineInfo =
       Symbolizer->symbolizeCode(Obj->getFileName(), Address);

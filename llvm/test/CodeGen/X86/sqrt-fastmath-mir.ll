@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx2,fma -stop-after=expand-isel-pseudos 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx2,fma -stop-after=finalize-isel 2>&1 | FileCheck %s
 
 declare float @llvm.sqrt.f32(float) #0
 

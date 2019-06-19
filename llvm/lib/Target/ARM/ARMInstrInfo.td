@@ -779,6 +779,32 @@ def imm1_16 : Operand<i32>, ImmLeaf<i32, [{
   let ParserMatchClass = Imm1_16AsmOperand;
 }
 
+def MVEShiftImm1_7AsmOperand: ImmAsmOperand<1,7> {
+  let Name = "MVEShiftImm1_7";
+  // Reason we're doing this is because instruction vshll.s8 t1 encoding
+  // accepts 1,7 but the t2 encoding accepts 8.  By doing this we can get a
+  // better diagnostic message if someone uses bigger immediate than the t1/t2
+  // encodings allow.
+  let DiagnosticString = "operand must be an immediate in the range [1,8]";
+}
+def mve_shift_imm1_7 : Operand<i32> {
+  let ParserMatchClass = MVEShiftImm1_7AsmOperand;
+  let EncoderMethod = "getMVEShiftImmOpValue";
+}
+
+def MVEShiftImm1_15AsmOperand: ImmAsmOperand<1,15> {
+  let Name = "MVEShiftImm1_15";
+  // Reason we're doing this is because instruction vshll.s16 t1 encoding
+  // accepts 1,15 but the t2 encoding accepts 16.  By doing this we can get a
+  // better diagnostic message if someone uses bigger immediate than the t1/t2
+  // encodings allow.
+  let DiagnosticString = "operand must be an immediate in the range [1,16]";
+}
+def mve_shift_imm1_15 : Operand<i32> {
+  let ParserMatchClass = MVEShiftImm1_15AsmOperand;
+  let EncoderMethod = "getMVEShiftImmOpValue";
+}
+
 // Define ARM specific addressing modes.
 // addrmode_imm12 := reg +/- imm12
 //

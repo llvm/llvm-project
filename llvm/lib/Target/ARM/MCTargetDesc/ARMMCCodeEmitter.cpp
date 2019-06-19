@@ -166,6 +166,12 @@ public:
                             SmallVectorImpl<MCFixup> &Fixups,
                             const MCSubtargetInfo &STI) const;
 
+  /// getMVEShiftImmOpValue - Return encoding info for the 'sz:imm5'
+  /// operand.
+  uint32_t getMVEShiftImmOpValue(const MCInst &MI, unsigned OpIdx,
+                                 SmallVectorImpl<MCFixup> &Fixups,
+                                 const MCSubtargetInfo &STI) const;
+
   /// getAddrModeImm12OpValue - Return encoding info for 'reg +/- imm12'
   /// operand.
   uint32_t getAddrModeImm12OpValue(const MCInst &MI, unsigned OpIdx,
@@ -901,6 +907,41 @@ getThumbAddrModeRegRegOpValue(const MCInst &MI, unsigned OpIdx,
   unsigned Rn = CTX.getRegisterInfo()->getEncodingValue(MO1.getReg());
   unsigned Rm = CTX.getRegisterInfo()->getEncodingValue(MO2.getReg());
   return (Rm << 3) | Rn;
+}
+
+/// getMVEShiftImmOpValue - Return encoding info for the 'sz:imm5'
+/// operand.
+uint32_t
+ARMMCCodeEmitter::getMVEShiftImmOpValue(const MCInst &MI, unsigned OpIdx,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
+  // {4-0} = szimm5
+  // The value we are trying to encode is an immediate between either the
+  // range of [1-7] or [1-15] depending on whether we are dealing with the
+  // u8/s8 or the u16/s16 variants respectively.
+  // This value is encoded as follows, if ShiftImm is the value within those
+  // ranges then the encoding szimm5 = ShiftImm + size, where size is either 8
+  // or 16.
+
+  unsigned Size, ShiftImm;
+  switch(MI.getOpcode()) {
+    case ARM::MVE_VSHLL_imms16bh:
+    case ARM::MVE_VSHLL_imms16th:
+    case ARM::MVE_VSHLL_immu16bh:
+    case ARM::MVE_VSHLL_immu16th:
+      Size = 16;
+      break;
+    case ARM::MVE_VSHLL_imms8bh:
+    case ARM::MVE_VSHLL_imms8th:
+    case ARM::MVE_VSHLL_immu8bh:
+    case ARM::MVE_VSHLL_immu8th:
+      Size = 8;
+      break;
+    default:
+      llvm_unreachable("Use of operand not supported by this instruction");
+  }
+  ShiftImm = MI.getOperand(OpIdx).getImm();
+  return Size + ShiftImm;
 }
 
 /// getAddrModeImm12OpValue - Return encoding info for 'reg +/- imm12' operand.

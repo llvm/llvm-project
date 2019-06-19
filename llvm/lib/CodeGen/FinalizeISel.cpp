@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/ExpandISelPseudos.cpp ----------------------*- C++ -*-===//
+//===-- llvm/CodeGen/FinalizeISel.cpp ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Expand Pseudo-instructions produced by ISel. These are usually to allow
-// the expansion to contain control flow, such as a conditional move
-// implemented with a conditional branch and a phi, or an atomic operation
-// implemented with a loop.
+/// This pass expands Pseudo-instructions produced by ISel, fixes register
+/// reservations and may do machine frame information adjustments.
+/// The pseudo instructions are used to allow the expansion to contain control
+/// flow, such as a conditional move implemented with a conditional branch and a
+/// phi, or an atomic operation implemented with a loop.
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,13 +22,13 @@
 #include "llvm/Support/Debug.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "expand-isel-pseudos"
+#define DEBUG_TYPE "finalize-isel"
 
 namespace {
-  class ExpandISelPseudos : public MachineFunctionPass {
+  class FinalizeISel : public MachineFunctionPass {
   public:
     static char ID; // Pass identification, replacement for typeid
-    ExpandISelPseudos() : MachineFunctionPass(ID) {}
+    FinalizeISel() : MachineFunctionPass(ID) {}
 
   private:
     bool runOnMachineFunction(MachineFunction &MF) override;
@@ -38,12 +39,12 @@ namespace {
   };
 } // end anonymous namespace
 
-char ExpandISelPseudos::ID = 0;
-char &llvm::ExpandISelPseudosID = ExpandISelPseudos::ID;
-INITIALIZE_PASS(ExpandISelPseudos, DEBUG_TYPE,
-                "Expand ISel Pseudo-instructions", false, false)
+char FinalizeISel::ID = 0;
+char &llvm::FinalizeISelID = FinalizeISel::ID;
+INITIALIZE_PASS(FinalizeISel, DEBUG_TYPE,
+                "Finalize ISel and expand pseudo-instructions", false, false)
 
-bool ExpandISelPseudos::runOnMachineFunction(MachineFunction &MF) {
+bool FinalizeISel::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   const TargetLowering *TLI = MF.getSubtarget().getTargetLowering();
 
@@ -68,6 +69,8 @@ bool ExpandISelPseudos::runOnMachineFunction(MachineFunction &MF) {
       }
     }
   }
+
+  TLI->finalizeLowering(MF);
 
   return Changed;
 }

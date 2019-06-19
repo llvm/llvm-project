@@ -1,4 +1,4 @@
-; RUN: llc -start-after=codegenprepare -stop-before=expand-isel-pseudos < %s -o - | FileCheck %s
+; RUN: llc -start-after=codegenprepare -stop-before=finalize-isel < %s -o - | FileCheck %s
 
 ; Test that stack frame dbg.values are lowered to DBG_VALUEs, in blocks that
 ; are local to the alloca, and elsewhere. Differs from dbg-value-frame-index.ll
