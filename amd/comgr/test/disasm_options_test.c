@@ -61,20 +61,12 @@ const char *expectedOut = "\n"
 
 // TODO: Fix Options
 const char *expectedLog =
-    "amd_comgr_do_action:\n"
-    "\t  ActionKind: AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE\n"
-    "\t     IsaName: amdgcn-amd-amdhsa--gfx803\n"
-    "\t     Options: \"-file-headers\" \"-file-header\""
-    " \"-file headers\" \"-file\\\\headers\"\n"
-    "\t        Path: \n"
-    "\t    Language: AMD_COMGR_LANGUAGE_NONE\n"
     ": Unknown command line argument '-file-header'.  Try: ' --help'\n"
     ": Did you mean '  --file-headers'?\n"
     ": Unknown command line argument '-file headers'.  Try: ' --help'\n"
     ": Did you mean '  --file-headers'?\n"
     ": Unknown command line argument '-file\\headers'.  Try: ' --help'\n"
-    ": Did you mean '  --file-headers'?\n"
-    "\tReturnStatus: AMD_COMGR_STATUS_SUCCESS\n\n";
+    ": Did you mean '  --file-headers'?\n";
 
 void printChars(const char *bytes, size_t count) {
   for (size_t i = 0; i < count; i++)

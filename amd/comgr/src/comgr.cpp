@@ -1076,18 +1076,21 @@ amd_comgr_status_t AMD_API
     }
   }
 
-  *LogP << "amd_comgr_do_action:\n"
-        << "\t  ActionKind: " << getActionKindName(ActionKind) << '\n'
-        << "\t     IsaName: " << ActionInfoP->IsaName << '\n'
-        << "\t     Options:";
-  for (auto &Option : ActionInfoP->getOptions(
-           ActionKind == AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES)) {
-    *LogP << ' ';
-    printQuotedOption(*LogP, Option);
+  if (env::shouldEmitVerboseLogs()) {
+    *LogP << "amd_comgr_do_action:\n"
+          << "\t  ActionKind: " << getActionKindName(ActionKind) << '\n'
+          << "\t     IsaName: " << ActionInfoP->IsaName << '\n'
+          << "\t     Options:";
+    for (auto &Option : ActionInfoP->getOptions(
+             ActionKind == AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES)) {
+      *LogP << ' ';
+      printQuotedOption(*LogP, Option);
+    }
+    *LogP << '\n'
+          << "\t        Path: " << ActionInfoP->Path << '\n'
+          << "\t    Language: " << getLanguageName(ActionInfoP->Language)
+          << '\n';
   }
-  *LogP << '\n'
-        << "\t        Path: " << ActionInfoP->Path << '\n'
-        << "\t    Language: " << getLanguageName(ActionInfoP->Language) << '\n';
 
   amd_comgr_status_t ActionStatus;
   switch (ActionKind) {
@@ -1117,7 +1120,8 @@ amd_comgr_status_t AMD_API
     ActionStatus = AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
 
-  *LogP << "\tReturnStatus: " << getStatusName(ActionStatus) << "\n\n";
+  if (env::shouldEmitVerboseLogs())
+    *LogP << "\tReturnStatus: " << getStatusName(ActionStatus) << "\n\n";
 
   if (ActionInfoP->Logging) {
     amd_comgr_data_t LogT;

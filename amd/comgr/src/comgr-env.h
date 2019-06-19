@@ -48,6 +48,9 @@ bool shouldSaveTemps();
 /// of where to redirect. Otherwise return @p None.
 llvm::Optional<llvm::StringRef> getRedirectLogs();
 
+/// Return whether the environment requests verbose logging.
+bool shouldEmitVerboseLogs();
+
 } // namespace env
 } // namespace COMGR
 

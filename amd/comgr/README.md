@@ -94,6 +94,8 @@ Comgr supports some environment variables to aid in debugging. These include:
   logs are instead redirected to the standard output or error stream,
   respectively. If this is set to any other value, it is interpreted as a
   filename which logs should be appended to.
+* `AMD_COMGR_EMIT_VERBOSE_LOGS`: If this is set, and is not "0", logs will
+  include additional Comgr-specific informational messages.
 
 Versioning
 ----------

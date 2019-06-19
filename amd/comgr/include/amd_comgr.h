@@ -136,6 +136,8 @@ extern "C" {
  *   stream, respectively. If this is set to any other value, it is interpreted
  *   as a filename which logs should be appended to. Logs may be redirected
  *   irrespective of whether logging is enabled.
+ * - @p AMD_COMGR_EMIT_VERBOSE_LOGS: If this is set, and is not "0", logs will
+ *   include additional Comgr-specific informational messages.
  */
 
 /**

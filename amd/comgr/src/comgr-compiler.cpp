@@ -606,7 +606,8 @@ amd_comgr_status_t InProcessDriver::execute(ArrayRef<const char *> Args) {
     clearLLVMOptions();
 
     if (Argv[1] == StringRef("-cc1")) {
-      logArgv(DiagOS, "clang", Argv);
+      if (env::shouldEmitVerboseLogs())
+        logArgv(DiagOS, "clang", Argv);
       std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
       Clang->createDiagnostics(DiagClient, /* ShouldOwnClient */ false);
       if (!Clang->hasDiagnostics())
@@ -618,7 +619,8 @@ amd_comgr_status_t InProcessDriver::execute(ArrayRef<const char *> Args) {
       if (!ExecuteCompilerInvocation(Clang.get()))
         return AMD_COMGR_STATUS_ERROR;
     } else if (Argv[1] == StringRef("-cc1as")) {
-      logArgv(DiagOS, "clang", Argv);
+      if (env::shouldEmitVerboseLogs())
+        logArgv(DiagOS, "clang", Argv);
       Argv.erase(Argv.begin() + 1);
       AssemblerInvocation Asm;
       if (!AssemblerInvocation::CreateFromArgs(Asm, Argv, Diags))
@@ -628,7 +630,8 @@ amd_comgr_status_t InProcessDriver::execute(ArrayRef<const char *> Args) {
       if (ExecuteAssembler(Asm, Diags, DiagOS))
         return AMD_COMGR_STATUS_ERROR;
     } else if (Job.getCreator().getName() == LinkerJobName) {
-      logArgv(DiagOS, "lld", Argv);
+      if (env::shouldEmitVerboseLogs())
+        logArgv(DiagOS, "lld", Argv);
       if (auto Status = linkWithLLD(Arguments, DiagOS))
         return Status;
     } else {
