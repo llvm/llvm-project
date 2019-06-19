@@ -548,18 +548,6 @@ kernel void test_ds_consume_lds(global int* out, local int* ptr) {
   *out = __builtin_amdgcn_ds_consume(ptr);
 }
 
-// CHECK-LABEL: @test_gws_init(
-// CHECK: call void @llvm.amdgcn.ds.gws.init(i32 %value, i32 %id)
-kernel void test_gws_init(uint value, uint id) {
-  __builtin_amdgcn_ds_gws_init(value, id);
-}
-
-// CHECK-LABEL: @test_gws_barrier(
-// CHECK: call void @llvm.amdgcn.ds.gws.barrier(i32 %value, i32 %id)
-kernel void test_gws_barrier(uint value, uint id) {
-  __builtin_amdgcn_ds_gws_barrier(value, id);
-}
-
 // CHECK-DAG: [[$WI_RANGE]] = !{i32 0, i32 1024}
 // CHECK-DAG: attributes #[[$NOUNWIND_READONLY:[0-9]+]] = { nounwind readonly }
 // CHECK-DAG: attributes #[[$READ_EXEC_ATTRS]] = { convergent }

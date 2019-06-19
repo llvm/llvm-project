@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fblocks -debug-info-kind=limited -gcodeview -emit-llvm %s \
 // RUN:       -o - -triple=x86_64-pc-win32 -std=c++98 | \
-// RUN:    grep 'DISubprogram\|DICompositeType' | sed -e 's/.*name: "\([^"]*\)".*/"\1"/' | \
+// RUN:    grep -E 'DISubprogram|DICompositeType' | sed -e 's/.*name: "\([^"]*\)".*/"\1"/' | \
 // RUN:    FileCheck %s --check-prefix=CHECK --check-prefix=UNQUAL
 // RUN: %clang_cc1 -fblocks -debug-info-kind=line-tables-only -gcodeview -emit-llvm %s \
 // RUN:       -o - -triple=x86_64-pc-win32 -std=c++98 | \

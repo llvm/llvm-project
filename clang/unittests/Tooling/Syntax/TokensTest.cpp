@@ -290,6 +290,14 @@ file './input.cpp'
     # pragma GCC visibility push ( public ) # pragma GCC visibility pop
   mappings:
     ['#'_0, '<eof>'_13) => ['<eof>'_0, '<eof>'_0)
+)"},
+      // Empty files should not crash.
+      {R"cpp()cpp", R"(expanded tokens:
+  <empty>
+file './input.cpp'
+  spelled tokens:
+    <empty>
+  no mappings.
 )"}};
   for (auto &Test : TestCases)
     EXPECT_EQ(collectAndDump(Test.first), Test.second)

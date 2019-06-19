@@ -222,6 +222,18 @@ llvm::json::Object JSONNodeDumper::createQualType(QualType QT, bool Desugar) {
   return Ret;
 }
 
+void JSONNodeDumper::writeBareDeclRef(const Decl *D) {
+  JOS.attribute("id", createPointerRepresentation(D));
+  if (!D)
+    return;
+
+  JOS.attribute("kind", (llvm::Twine(D->getDeclKindName()) + "Decl").str());
+  if (const auto *ND = dyn_cast<NamedDecl>(D))
+    JOS.attribute("name", ND->getDeclName().getAsString());
+  if (const auto *VD = dyn_cast<ValueDecl>(D))
+    JOS.attribute("type", createQualType(VD->getType()));
+}
+
 llvm::json::Object JSONNodeDumper::createBareDeclRef(const Decl *D) {
   llvm::json::Object Ret{{"id", createPointerRepresentation(D)}};
   if (!D)
@@ -621,6 +633,13 @@ void JSONNodeDumper::VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
   JOS.attribute("depth", D->getDepth());
   JOS.attribute("index", D->getIndex());
   attributeOnlyIfTrue("isParameterPack", D->isParameterPack());
+
+  if (D->hasDefaultArgument())
+    JOS.attributeObject("defaultArg", [=] {
+      Visit(D->getDefaultArgument(), SourceRange(),
+            D->getDefaultArgStorage().getInheritedFrom(),
+            D->defaultArgumentWasInherited() ? "inherited from" : "previous");
+    });
 }
 
 void JSONNodeDumper::VisitNonTypeTemplateParmDecl(
@@ -630,6 +649,13 @@ void JSONNodeDumper::VisitNonTypeTemplateParmDecl(
   JOS.attribute("depth", D->getDepth());
   JOS.attribute("index", D->getIndex());
   attributeOnlyIfTrue("isParameterPack", D->isParameterPack());
+
+  if (D->hasDefaultArgument())
+    JOS.attributeObject("defaultArg", [=] {
+      Visit(D->getDefaultArgument(), SourceRange(),
+            D->getDefaultArgStorage().getInheritedFrom(),
+            D->defaultArgumentWasInherited() ? "inherited from" : "previous");
+    });
 }
 
 void JSONNodeDumper::VisitTemplateTemplateParmDecl(
@@ -638,6 +664,14 @@ void JSONNodeDumper::VisitTemplateTemplateParmDecl(
   JOS.attribute("depth", D->getDepth());
   JOS.attribute("index", D->getIndex());
   attributeOnlyIfTrue("isParameterPack", D->isParameterPack());
+
+  if (D->hasDefaultArgument())
+    JOS.attributeObject("defaultArg", [=] {
+      Visit(D->getDefaultArgument().getArgument(),
+            D->getDefaultArgStorage().getInheritedFrom()->getSourceRange(),
+            D->getDefaultArgStorage().getInheritedFrom(),
+            D->defaultArgumentWasInherited() ? "inherited from" : "previous");
+    });
 }
 
 void JSONNodeDumper::VisitLinkageSpecDecl(const LinkageSpecDecl *LSD) {
@@ -1002,6 +1036,39 @@ void JSONNodeDumper::VisitObjCAtCatchStmt(const ObjCAtCatchStmt* OACS) {
   // parameter the same way for C++ and ObjC rather. In this case, C++ gets a
   // null child node and ObjC gets no child node.
   attributeOnlyIfTrue("isCatchAll", OACS->getCatchParamDecl() == nullptr);
+}
+
+void JSONNodeDumper::VisitNullTemplateArgument(const TemplateArgument &TA) {
+  JOS.attribute("isNull", true);
+}
+void JSONNodeDumper::VisitTypeTemplateArgument(const TemplateArgument &TA) {
+  JOS.attribute("type", createQualType(TA.getAsType()));
+}
+void JSONNodeDumper::VisitDeclarationTemplateArgument(
+    const TemplateArgument &TA) {
+  JOS.attribute("decl", createBareDeclRef(TA.getAsDecl()));
+}
+void JSONNodeDumper::VisitNullPtrTemplateArgument(const TemplateArgument &TA) {
+  JOS.attribute("isNullptr", true);
+}
+void JSONNodeDumper::VisitIntegralTemplateArgument(const TemplateArgument &TA) {
+  JOS.attribute("value", TA.getAsIntegral().getSExtValue());
+}
+void JSONNodeDumper::VisitTemplateTemplateArgument(const TemplateArgument &TA) {
+  // FIXME: cannot just call dump() on the argument, as that doesn't specify
+  // the output format.
+}
+void JSONNodeDumper::VisitTemplateExpansionTemplateArgument(
+    const TemplateArgument &TA) {
+  // FIXME: cannot just call dump() on the argument, as that doesn't specify
+  // the output format.
+}
+void JSONNodeDumper::VisitExpressionTemplateArgument(
+    const TemplateArgument &TA) {
+  JOS.attribute("isExpr", true);
+}
+void JSONNodeDumper::VisitPackTemplateArgument(const TemplateArgument &TA) {
+  JOS.attribute("isPack", true);
 }
 
 StringRef JSONNodeDumper::getCommentCommandName(unsigned CommandID) const {
