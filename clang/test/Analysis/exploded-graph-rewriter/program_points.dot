@@ -7,7 +7,6 @@
 // CHECK-SAME: <table border="0" align="left" width="0">
 // CHECK-SAME:   <tr>
 // CHECK-SAME:     <td width="0">
-// CHECK-SAME:       -
 // CHECK-SAME:     </td>
 // CHECK-SAME:     <td align="left" width="0">
 // CHECK-SAME:       <font color="gold3">Edge</font>

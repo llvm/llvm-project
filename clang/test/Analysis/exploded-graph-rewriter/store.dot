@@ -31,6 +31,7 @@ Node0x1 [shape=record,label=
         "store": [
           {
             "cluster": "x",
+            "pointer": "0x3",
             "items": [
               {
                 "kind": "Default",
