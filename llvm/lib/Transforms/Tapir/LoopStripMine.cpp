@@ -990,6 +990,7 @@ Loop *llvm::StripMineLoop(
 
   // Move the detach/reattach instructions to surround the stripmined loop.
   BasicBlock *NewHeader;
+  bool RecalculateDT = false;
   {
     SmallVector<BasicBlock*, 4> HeaderPreds;
     for (BasicBlock *Pred : predecessors(Header))
@@ -1015,16 +1016,31 @@ Loop *llvm::StripMineLoop(
   MoveStaticAllocasInBlock(NewEntry, TaskEntry, Reattaches);
 
   // Insert a new detach instruction
-  if (DI->hasUnwindDest()) {
+  BasicBlock *OrigUnwindDest = DI->getUnwindDest();
+  if (OrigUnwindDest) {
     ReplaceInstWithInst(NewHeader->getTerminator(),
                         DetachInst::Create(NewEntry, NewLatch,
-                                           DI->getUnwindDest(), NewSyncReg));
+                                           OrigUnwindDest, NewSyncReg));
     // Update the PHI nodes in the unwind destination of the detach.
-    for (PHINode &PN : DI->getUnwindDest()->phis())
+    for (PHINode &PN : OrigUnwindDest->phis())
       PN.setIncomingBlock(PN.getBasicBlockIndex(Header), NewHeader);
 
     // Update DT
-    DT->changeImmediateDominator(DI->getUnwindDest(), NewHeader);
+    BasicBlock *OldIDom =
+      DT->getNode(OrigUnwindDest)->getIDom()->getBlock();
+    DT->changeImmediateDominator(
+        OrigUnwindDest, DT->findNearestCommonDominator(OldIDom, NewHeader));
+    if (TI->getSpindleFor(OrigUnwindDest) == TI->getSpindleFor(Header)) {
+      // The detach's unwind destination has been split from other relevant
+      // landing pads.
+
+      // In this case, the DT is generally hard to update; we would have to
+      // search for the common destination of the detach's unwind destination,
+      // the detached-rethrow's unwind destination, and the unwind desintation
+      // of the task code in the epilogue.  Instead, we simply fall back to
+      // recalculating the DT at the end.
+      RecalculateDT = true;
+    }
   } else
     ReplaceInstWithInst(NewHeader->getTerminator(),
                         DetachInst::Create(NewEntry, NewLatch, NewSyncReg));
@@ -1052,7 +1068,6 @@ Loop *llvm::StripMineLoop(
     DT->changeImmediateDominator(LoopReattach, NewLatch);
   else
     EpilogPred = NewLatch;
-
 
   // The block structure of the stripmined loop should now look like so:
   //
@@ -1259,6 +1274,12 @@ Loop *llvm::StripMineLoop(
   simplifyLoopAfterStripMine(NewLoop, /*SimplifyIVs*/true, LI, SE, DT, AC);
   simplifyLoopAfterStripMine(remainderLoop, /*SimplifyIVs*/true, LI, SE, DT,
                              AC);
+
+  // Recalculate DT if necessary
+  if (RecalculateDT) {
+    LLVM_DEBUG(dbgs() << "[LoopStripMine] Recalculating DT.\n");
+    DT->recalculate(*F);
+  }
 
 #ifndef NDEBUG
   DT->verify();
