@@ -14,11 +14,10 @@ def do_configure(args):
 
     cmake_cmd = ["cmake",
                  "-DCMAKE_BUILD_TYPE={}".format(args.build_type),
-                 "-DLLVM_ENABLE_PROJECTS=clang",
+                 "-DLLVM_EXTERNAL_PROJECTS=sycl;llvm-spirv",
                  "-DLLVM_EXTERNAL_SYCL_SOURCE_DIR={}".format(sycl_dir),
                  "-DLLVM_EXTERNAL_LLVM_SPIRV_SOURCE_DIR={}".format(spirv_dir),
-                 "-DLLVM_TOOL_SYCL_BUILD=ON",
-                 "-DLLVM_TOOL_LLVM_SPIRV_BUILD=ON",
+                 "-DLLVM_ENABLE_PROJECTS=clang;llvm-spirv;sycl",
                  "-DOpenCL_INCLUDE_DIR={}".format(ocl_header_dir),
                  "-DOpenCL_LIBRARY={}".format(icd_loader_lib),
                  "-DLLVM_BUILD_TOOLS=OFF",
