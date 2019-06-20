@@ -538,6 +538,22 @@ struct __is_exactly_input_iterator
          __has_iterator_category_convertible_to<_Tp, input_iterator_tag>::value &&
         !__has_iterator_category_convertible_to<_Tp, forward_iterator_tag>::value> {};
 
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template<class _InputIterator>
+using __iter_value_type = typename iterator_traits<_InputIterator>::value_type;
+
+template<class _InputIterator>
+using __iter_key_type = remove_const_t<typename iterator_traits<_InputIterator>::value_type::first_type>;
+
+template<class _InputIterator>
+using __iter_mapped_type = typename iterator_traits<_InputIterator>::value_type::second_type;
+
+template<class _InputIterator>
+using __iter_to_alloc_type = pair<
+    add_const_t<typename iterator_traits<_InputIterator>::value_type::first_type>,
+    typename iterator_traits<_InputIterator>::value_type::second_type>;
+#endif
+
 template<class _Category, class _Tp, class _Distance = ptrdiff_t,
          class _Pointer = _Tp*, class _Reference = _Tp&>
 struct _LIBCPP_TEMPLATE_VIS iterator
