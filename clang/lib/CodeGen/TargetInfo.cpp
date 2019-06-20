@@ -8035,17 +8035,7 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
     Name = "wavefront";
   }
 
-  // FIXME: It is incorrect for HIP and HCC to use one-as since
-  // it appears their memory model has a single happens-before
-  // relation across all address spaces. However, the recent fix
-  // in the backend to produce correct code has caused a
-  // performance regression in HIP/HCC. This can be mitigated by
-  // a backend optimization that is planned. Until that is
-  // implemented, this change makes HIP/HCC continue to generate
-  // the incorrect code. This will only break code that relies
-  // on a single happens-before between address spaces.
-  if (!LangOpts.OpenCL ||
-      Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
+  if(Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
     if (!Name.empty())
       Name = Twine(Twine(Name) + Twine("-")).str();
 
