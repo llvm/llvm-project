@@ -250,6 +250,9 @@ public:
   void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr *ULE);
   void VisitAddrLabelExpr(const AddrLabelExpr *ALE);
   void VisitCXXTypeidExpr(const CXXTypeidExpr *CTE);
+  void VisitConstantExpr(const ConstantExpr *CE);
+  void VisitInitListExpr(const InitListExpr *ILE);
+  void VisitGenericSelectionExpr(const GenericSelectionExpr *GSE);
 
   void VisitIntegerLiteral(const IntegerLiteral *IL);
   void VisitCharacterLiteral(const CharacterLiteral *CL);

@@ -1735,6 +1735,56 @@ TEST(SwitchCase, MatchesEachCase) {
     llvm::make_unique<VerifyIdIsBoundTo<CaseStmt>>("x", 3)));
 }
 
+TEST(Declaration, HasExplicitSpecifier) {
+  EXPECT_TRUE(matchesConditionally(
+      "void f();", functionDecl(hasExplicitSpecifier(constantExpr())), false,
+      "-std=c++2a"));
+  EXPECT_TRUE(matchesConditionally(
+      "template<bool b> struct S { explicit operator int(); };",
+      cxxConversionDecl(hasExplicitSpecifier(constantExpr(has(cxxBoolLiteral())))),
+      false, "-std=c++2a"));
+  EXPECT_TRUE(matchesConditionally(
+      "template<bool b> struct S { explicit(b) operator int(); };",
+      cxxConversionDecl(hasExplicitSpecifier(constantExpr(has(cxxBoolLiteral())))),
+      false, "-std=c++2a"));
+  EXPECT_TRUE(matchesConditionally(
+      "struct S { explicit(true) operator int(); };",
+      cxxConversionDecl(hasExplicitSpecifier(constantExpr(has(cxxBoolLiteral())))),
+      true, "-std=c++2a"));
+  EXPECT_TRUE(matchesConditionally(
+      "struct S { explicit(false) operator int(); };",
+      cxxConversionDecl(hasExplicitSpecifier(constantExpr(has(cxxBoolLiteral())))),
+      true, "-std=c++2a"));
+  EXPECT_TRUE(matchesConditionally(
+      "template<bool b> struct S { explicit(b) S(int); };",
+      cxxConstructorDecl(hasExplicitSpecifier(constantExpr(has(cxxBoolLiteral())))),
+      false, "-std=c++2a"));
+  EXPECT_TRUE(matchesConditionally(
+      "struct S { explicit(true) S(int); };",
+      cxxConstructorDecl(hasExplicitSpecifier(constantExpr(has(cxxBoolLiteral())))),
+      true, "-std=c++2a"));
+  EXPECT_TRUE(matchesConditionally(
+      "struct S { explicit(false) S(int); };",
+      cxxConstructorDecl(hasExplicitSpecifier(constantExpr(has(cxxBoolLiteral())))),
+      true, "-std=c++2a"));
+  EXPECT_TRUE(matchesConditionally(
+      "template<typename T> struct S { S(int); };"
+      "template<bool b = true> explicit(b) S(int) -> S<int>;",
+      cxxDeductionGuideDecl(
+          hasExplicitSpecifier(constantExpr(has(cxxBoolLiteral())))),
+      false, "-std=c++2a"));
+  EXPECT_TRUE(matchesConditionally("template<typename T> struct S { S(int); };"
+                                   "explicit(true) S(int) -> S<int>;",
+                                   cxxDeductionGuideDecl(hasExplicitSpecifier(
+                                       constantExpr(has(cxxBoolLiteral())))),
+                                   true, "-std=c++2a"));
+  EXPECT_TRUE(matchesConditionally("template<typename T> struct S { S(int); };"
+                                   "explicit(false) S(int) -> S<int>;",
+                                   cxxDeductionGuideDecl(hasExplicitSpecifier(
+                                       constantExpr(has(cxxBoolLiteral())))),
+                                   true, "-std=c++2a"));
+}
+
 TEST(ForEachConstructorInitializer, MatchesInitializers) {
   EXPECT_TRUE(matches(
     "struct X { X() : i(42), j(42) {} int i, j; };",
