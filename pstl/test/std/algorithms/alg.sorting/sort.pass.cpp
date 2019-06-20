@@ -160,7 +160,7 @@ struct test_sort_with_compare
     typename std::enable_if<is_same_iterator_category<InputIterator, std::random_access_iterator_tag>::value,
                             void>::type
     operator()(Policy&& exec, OutputIterator tmp_first, OutputIterator tmp_last, OutputIterator2 expected_first,
-               OutputIterator2 expected_last, InputIterator first, InputIterator last, Size n, Compare compare)
+               OutputIterator2 expected_last, InputIterator first, InputIterator, Size n, Compare compare)
     {
         using namespace std;
         copy_n(first, n, expected_first);
@@ -187,8 +187,8 @@ struct test_sort_with_compare
               typename Compare>
     typename std::enable_if<!is_same_iterator_category<InputIterator, std::random_access_iterator_tag>::value,
                             void>::type
-    operator()(Policy&& exec, OutputIterator tmp_first, OutputIterator tmp_last, OutputIterator2 expected_first,
-               OutputIterator2 expected_last, InputIterator first, InputIterator last, Size n, Compare compare)
+    operator()(Policy&&, OutputIterator, OutputIterator, OutputIterator2,
+               OutputIterator2, InputIterator, InputIterator, Size, Compare)
     {
     }
 };

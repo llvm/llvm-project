@@ -137,7 +137,6 @@ protected:
   enum { kHaveInitializedOSOs = (1 << 0), kNumFlags };
 
   friend class DebugMapModule;
-  friend struct DIERef;
   friend class DWARFASTParserClang;
   friend class DWARFASTParserSwift;
   friend class DWARFCompileUnit;

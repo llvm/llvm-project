@@ -50,7 +50,7 @@ template <typename T>
 struct check_swap
 {
     bool
-    operator()(T& a)
+    operator()(T&)
     {
         return true;
     }

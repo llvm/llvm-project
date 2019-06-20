@@ -26,7 +26,9 @@ class Symbol;
 class TargetInfo {
 public:
   virtual uint32_t calcEFlags() const { return 0; }
-  virtual RelType getDynRel(RelType Type) const { return Type; }
+  virtual RelExpr getRelExpr(RelType Type, const Symbol &S,
+                             const uint8_t *Loc) const = 0;
+  virtual RelType getDynRel(RelType Type) const { return 0; }
   virtual void writeGotPltHeader(uint8_t *Buf) const {}
   virtual void writeGotHeader(uint8_t *Buf) const {}
   virtual void writeGotPlt(uint8_t *Buf, const Symbol &S) const {};
@@ -74,8 +76,6 @@ public:
   // Return true if we can reach Dst from Src with Relocation RelocType
   virtual bool inBranchRange(RelType Type, uint64_t Src,
                              uint64_t Dst) const;
-  virtual RelExpr getRelExpr(RelType Type, const Symbol &S,
-                             const uint8_t *Loc) const = 0;
 
   virtual void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const = 0;
 

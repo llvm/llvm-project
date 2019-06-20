@@ -26,6 +26,7 @@ void NameToDIE::Finalize() {
 }
 
 void NameToDIE::Insert(ConstString name, const DIERef &die_ref) {
+  assert(die_ref.unit_offset().hasValue());
   m_map.Append(name, die_ref);
 }
 
@@ -44,7 +45,7 @@ size_t NameToDIE::FindAllEntriesForCompileUnit(dw_offset_t cu_offset,
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
     const DIERef &die_ref = m_map.GetValueAtIndexUnchecked(i);
-    if (cu_offset == die_ref.cu_offset)
+    if (cu_offset == *die_ref.unit_offset())
       info_array.push_back(die_ref);
   }
   return info_array.size() - initial_size;
@@ -53,10 +54,8 @@ size_t NameToDIE::FindAllEntriesForCompileUnit(dw_offset_t cu_offset,
 void NameToDIE::Dump(Stream *s) {
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
-    ConstString cstr = m_map.GetCStringAtIndex(i);
-    const DIERef &die_ref = m_map.GetValueAtIndexUnchecked(i);
-    s->Printf("%p: {0x%8.8x/0x%8.8x} \"%s\"\n", (const void *)cstr.GetCString(),
-              die_ref.cu_offset, die_ref.die_offset, cstr.GetCString());
+    s->Format("{0} \"{1}\"\n", m_map.GetValueAtIndexUnchecked(i),
+              m_map.GetCStringAtIndexUnchecked(i));
   }
 }
 

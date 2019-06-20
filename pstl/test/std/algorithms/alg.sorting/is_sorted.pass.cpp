@@ -65,7 +65,7 @@ test_is_sorted_by_type()
     invoke_on_all_policies(test_is_sorted(), in0.cbegin(), in0.cend(), std::is_sorted(in0.begin(), in0.end()));
 
     //non-descending order
-    Sequence<T> in1(9, [](size_t v) -> T { return T(0); });
+    Sequence<T> in1(9, [](size_t) -> T { return T(0); });
     invoke_on_all_policies(test_is_sorted(), in1.begin(), in1.end(), std::is_sorted(in1.begin(), in1.end()));
     invoke_on_all_policies(test_is_sorted(), in1.cbegin(), in1.cend(), std::is_sorted(in1.begin(), in1.end()));
 }

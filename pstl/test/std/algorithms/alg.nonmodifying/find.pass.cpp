@@ -82,7 +82,7 @@ int32_t
 main()
 {
     // Note that the "hit" and "miss" functions here avoid overflow issues.
-    test<Number>(Weird(42, OddTag()), [](int32_t j) { return Number(42, OddTag()); }, // hit
+    test<Number>(Weird(42, OddTag()), [](int32_t) { return Number(42, OddTag()); }, // hit
                  [](int32_t j) { return Number(j == 42 ? 0 : j, OddTag()); });        // miss
 
     // Test with value that is equal to two different bit patterns (-0.0 and 0.0)

@@ -45,7 +45,7 @@ test(size_t bits)
     {
 
         // Sequence of odd values
-        Sequence<T> in(n, [n, bits](size_t k) { return T(2 * HashBits(n, bits - 1) ^ 1); });
+        Sequence<T> in(n, [n, bits](size_t) { return T(2 * HashBits(n, bits - 1) ^ 1); });
 
         // Even value, or false when T is bool.
         T spike(2 * HashBits(n, bits - 1));

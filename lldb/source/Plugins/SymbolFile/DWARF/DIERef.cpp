@@ -7,3 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "DIERef.h"
+#include "llvm/Support/Format.h"
+
+void llvm::format_provider<DIERef>::format(const DIERef &ref, raw_ostream &OS,
+                                           StringRef Style) {
+  OS << (ref.section() == DIERef::DebugInfo ? "INFO" : "TYPE");
+  if (ref.unit_offset())
+    OS << "/" << format_hex_no_prefix(*ref.unit_offset(), 8);
+  OS << "/" << format_hex_no_prefix(ref.die_offset(), 8);
+}

@@ -166,7 +166,7 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(ConstString class_name,
       continue;
 
     DWARFUnit *cu = m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo,
-                                                 ref->cu_offset);
+                                                 *ref->unit_offset());
     if (!cu || !cu->Supports_DW_AT_APPLE_objc_complete_type()) {
       incomplete_types.push_back(*ref);
       continue;

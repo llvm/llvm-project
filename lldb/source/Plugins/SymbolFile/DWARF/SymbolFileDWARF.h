@@ -62,7 +62,6 @@ public:
   friend class SymbolFileDWARFDebugMap;
   friend class SymbolFileDWARFDwo;
   friend class DebugMapModule;
-  friend struct DIERef;
   friend class DWARFCompileUnit;
   friend class DWARFDIE;
   friend class DWARFASTParserClang;
@@ -287,8 +286,9 @@ public:
   }
 
   lldb::user_id_t GetUID(const DIERef &ref) {
-    return GetID() | ref.die_offset |
-           (lldb::user_id_t(ref.section == DIERef::Section::DebugTypes) << 63);
+    return GetID() | ref.die_offset() |
+           (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes)
+            << 63);
   }
 
   virtual std::unique_ptr<SymbolFileDWARFDwo>
