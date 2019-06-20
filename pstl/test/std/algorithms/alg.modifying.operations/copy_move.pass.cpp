@@ -7,8 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Tests for copy, move and copy_n
+// UNSUPPORTED: c++98, c++03, c++11, c++14
 
+// Tests for copy, move and copy_n
 #include "support/pstl_test_config.h"
 
 #include <execution>

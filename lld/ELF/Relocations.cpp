@@ -678,8 +678,94 @@ static std::string maybeReportDiscarded(Undefined &Sym) {
   return Msg;
 }
 
+// Undefined diagnostics are collected in a vector and emitted once all of
+// them are known, so that some postprocessing on the list of undefined symbols
+// can happen before lld emits diagnostics.
+struct UndefinedDiag {
+  Symbol *Sym;
+  struct Loc {
+    InputSectionBase *Sec;
+    uint64_t Offset;
+  };
+  std::vector<Loc> Locs;
+  bool IsWarning;
+};
+
+static std::vector<UndefinedDiag> Undefs;
+
+template <class ELFT>
+static void reportUndefinedSymbol(const UndefinedDiag &Undef) {
+  Symbol &Sym = *Undef.Sym;
+
+  auto Visibility = [&]() -> std::string {
+    switch (Sym.Visibility) {
+    case STV_INTERNAL:
+      return "internal ";
+    case STV_HIDDEN:
+      return "hidden ";
+    case STV_PROTECTED:
+      return "protected ";
+    default:
+      return "";
+    }
+  };
+
+  std::string Msg = maybeReportDiscarded<ELFT>(cast<Undefined>(Sym));
+  if (Msg.empty())
+    Msg = "undefined " + Visibility() + "symbol: " + toString(Sym);
+
+  const size_t MaxUndefReferences = 10;
+  size_t I = 0;
+  for (UndefinedDiag::Loc L : Undef.Locs) {
+    if (I >= MaxUndefReferences)
+      break;
+    InputSectionBase &Sec = *L.Sec;
+    uint64_t Offset = L.Offset;
+
+    Msg += "\n>>> referenced by ";
+    std::string Src = Sec.getSrcMsg(Sym, Offset);
+    if (!Src.empty())
+      Msg += Src + "\n>>>               ";
+    Msg += Sec.getObjMsg(Offset);
+    I++;
+  }
+
+  if (I < Undef.Locs.size())
+    Msg += ("\n>>> referenced " + Twine(Undef.Locs.size() - I) + " more times")
+               .str();
+
+  if (Sym.getName().startswith("_ZTV"))
+    Msg += "\nthe vtable symbol may be undefined because the class is missing "
+           "its key function (see https://lld.llvm.org/missingkeyfunction)";
+
+  if (Undef.IsWarning)
+    warn(Msg);
+  else
+    error(Msg);
+}
+
+template <class ELFT> void elf::reportUndefinedSymbols() {
+  // Find the first "undefined symbol" diagnostic for each diagnostic, and
+  // collect all "referenced from" lines at the first diagnostic.
+  DenseMap<Symbol *, UndefinedDiag *> FirstRef;
+  for (UndefinedDiag &Undef : Undefs) {
+    assert(Undef.Locs.size() == 1);
+    if (UndefinedDiag *Canon = FirstRef.lookup(Undef.Sym)) {
+      Canon->Locs.push_back(Undef.Locs[0]);
+      Undef.Locs.clear();
+    } else
+      FirstRef[Undef.Sym] = &Undef;
+  }
+
+  for (const UndefinedDiag &Undef : Undefs) {
+    if (!Undef.Locs.empty())
+      reportUndefinedSymbol<ELFT>(Undef);
+  }
+  Undefs.clear();
+}
+
 // Report an undefined symbol if necessary.
-// Returns true if this function printed out an error message.
+// Returns true if the undefined symbol will produce an error message.
 template <class ELFT>
 static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
                                  uint64_t Offset) {
@@ -700,41 +786,11 @@ static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
       cast<Undefined>(Sym).DiscardedSecIdx != 0 && Sec.Name == ".toc")
     return false;
 
-  auto Visibility = [&]() -> std::string {
-    switch (Sym.Visibility) {
-    case STV_INTERNAL:
-      return "internal ";
-    case STV_HIDDEN:
-      return "hidden ";
-    case STV_PROTECTED:
-      return "protected ";
-    default:
-      return "";
-    }
-  };
-
-  std::string Msg = maybeReportDiscarded<ELFT>(cast<Undefined>(Sym));
-  if (Msg.empty())
-    Msg = "undefined " + Visibility() + "symbol: " + toString(Sym);
-
-  Msg += "\n>>> referenced by ";
-  std::string Src = Sec.getSrcMsg(Sym, Offset);
-  if (!Src.empty())
-    Msg += Src + "\n>>>               ";
-  Msg += Sec.getObjMsg(Offset);
-
-  if (Sym.getName().startswith("_ZTV"))
-    Msg += "\nthe vtable symbol may be undefined because the class is missing "
-           "its key function (see https://lld.llvm.org/missingkeyfunction)";
-
-  if ((Config->UnresolvedSymbols == UnresolvedPolicy::Warn && CanBeExternal) ||
-      Config->NoinhibitExec) {
-    warn(Msg);
-    return false;
-  }
-
-  error(Msg);
-  return true;
+  bool IsWarning =
+      (Config->UnresolvedSymbols == UnresolvedPolicy::Warn && CanBeExternal) ||
+      Config->NoinhibitExec;
+  Undefs.push_back({&Sym, {{&Sec, Offset}}, IsWarning});
+  return !IsWarning;
 }
 
 // MIPS N32 ABI treats series of successive relocations with the same offset
@@ -1734,7 +1790,8 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> OutputSections) {
             Rel.Sym = T->getThunkTargetSym();
             Rel.Expr = fromPlt(Rel.Expr);
 
-            // Addend of R_PPC_PLTREL24 should be ignored after changing to R_PC.
+            // The addend of R_PPC_PLTREL24 should be ignored after changing to
+            // R_PC.
             if (Config->EMachine == EM_PPC && Rel.Type == R_PPC_PLTREL24)
               Rel.Addend = 0;
           }
@@ -1756,3 +1813,7 @@ template void elf::scanRelocations<ELF32LE>(InputSectionBase &);
 template void elf::scanRelocations<ELF32BE>(InputSectionBase &);
 template void elf::scanRelocations<ELF64LE>(InputSectionBase &);
 template void elf::scanRelocations<ELF64BE>(InputSectionBase &);
+template void elf::reportUndefinedSymbols<ELF32LE>();
+template void elf::reportUndefinedSymbols<ELF32BE>();
+template void elf::reportUndefinedSymbols<ELF64LE>();
+template void elf::reportUndefinedSymbols<ELF64BE>();

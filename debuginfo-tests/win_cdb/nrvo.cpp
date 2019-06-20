@@ -1,12 +1,10 @@
 // This ensures that DW_OP_deref is inserted when necessary, such as when NRVO
 // of a string object occurs in C++.
 //
-// RUN: %clangxx -O0 -fno-exceptions %target_itanium_abi_host_triple %s -o %t.out -g
-// RUN: %test_debuginfo %s %t.out
-// RUN: %clangxx -O1 -fno-exceptions %target_itanium_abi_host_triple %s -o %t.out -g
-// RUN: %test_debuginfo %s %t.out
+// RUN: %clang_cl %s -o %t.exe -fuse-ld=lld -Z7
+// RUN: grep DE[B]UGGER: %s | sed -e 's/.*DE[B]UGGER: //' > %t.script
+// RUN: %cdb -cf %t.script %t.exe | FileCheck %s --check-prefixes=DEBUGGER,CHECK
 //
-// PR34513
 
 struct string {
   string() {}
@@ -17,7 +15,7 @@ struct string {
 string get_string() {
   string unused;
   string result = 3;
-  // DEBUGGER: break 21
+  __debugbreak();
   return result;
 }
 void some_function(int) {}
@@ -32,7 +30,7 @@ string2 get_string2() {
   some_function(result.i);
   // Test that the debugger can get the value of result after another
   // function is called.
-  // DEBUGGER: break 35
+  __debugbreak();
   return result;
 }
 int main() {
@@ -40,9 +38,12 @@ int main() {
   get_string2();
 }
 
-// DEBUGGER: r
-// DEBUGGER: print result.i
-// CHECK:  = 3
-// DEBUGGER: c
-// DEBUGGER: print result.i
-// CHECK:  = 5
+// DEBUGGER: g
+// DEBUGGER: ?? result
+// CHECK: struct string *
+// CHECK:    +0x000 i : 0n3
+// DEBUGGER: g
+// DEBUGGER: ?? result
+// CHECK: struct string2 *
+// CHECK:    +0x000 i : 0n5
+// DEBUGGER: q
