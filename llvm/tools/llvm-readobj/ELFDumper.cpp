@@ -206,8 +206,6 @@ private:
   void loadDynamicTable(const ELFFile<ELFT> *Obj);
   void parseDynamicTable();
 
-  void printDynamicString(uint64_t Offset, raw_ostream &OS,
-                          bool WithBracket = true) const;
   StringRef getSymbolVersion(StringRef StrTab, const Elf_Sym *symb,
                              bool &IsDefault) const;
   void LoadVersionMap() const;
@@ -1791,22 +1789,6 @@ void printFlags(T Value, ArrayRef<EnumEntry<TFlag>> Flags, raw_ostream &OS) {
 }
 
 template <class ELFT>
-void ELFDumper<ELFT>::printDynamicString(uint64_t Value,
-                                         raw_ostream &OS,
-                                         bool WithBracket) const {
-  if (DynamicStringTable.empty())
-    OS << "<String table is empty or was not found> ";
-  else if (Value < DynamicStringTable.size()) {
-    if (WithBracket)
-      OS << "[";
-    OS << StringRef(DynamicStringTable.data() + Value);
-    if (WithBracket)
-      OS << "]";
-  } else
-    OS << "<Invalid offset 0x" << utohexstr(Value) << ">";
-}
-
-template <class ELFT>
 void ELFDumper<ELFT>::printDynamicEntry(raw_ostream &OS, uint64_t Type,
                                         uint64_t Value) const {
   const char *ConvChar =
@@ -1952,22 +1934,27 @@ void ELFDumper<ELFT>::printDynamicEntry(raw_ostream &OS, uint64_t Type,
   case DT_SONAME:
   case DT_AUXILIARY:
   case DT_USED:
-  case DT_FILTER: {
+  case DT_FILTER:
+  case DT_RPATH:
+  case DT_RUNPATH: {
     const std::map<uint64_t, const char*> TagNames = {
       {DT_NEEDED,    "Shared library"},
       {DT_SONAME,    "Library soname"},
       {DT_AUXILIARY, "Auxiliary library"},
       {DT_USED,      "Not needed object"},
       {DT_FILTER,    "Filter library"},
+      {DT_RPATH,     "Library rpath"},
+      {DT_RUNPATH,   "Library runpath"},
     };
     OS << TagNames.at(Type) << ": ";
-    printDynamicString(Value, OS);
+    if (DynamicStringTable.empty())
+      OS << "<String table is empty or was not found> ";
+    else if (Value < DynamicStringTable.size())
+      OS << "[" << StringRef(DynamicStringTable.data() + Value) << "]";
+    else
+      OS << "<Invalid offset 0x" << utohexstr(Value) << ">";
     break;
   }
-  case DT_RPATH:
-  case DT_RUNPATH:
-    printDynamicString(Value, OS, false);
-    break;
   case DT_FLAGS:
     printFlags(Value, makeArrayRef(ElfDynamicDTFlags), OS);
     break;

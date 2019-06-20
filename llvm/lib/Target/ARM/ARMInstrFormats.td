@@ -465,6 +465,8 @@ class VFP2AsmPseudo<string asm, dag iops, dag oops = (outs)>
   : AsmPseudoInst<asm, iops, oops>, Requires<[HasVFP2]>;
 class NEONAsmPseudo<string asm, dag iops, dag oops = (outs)>
   : AsmPseudoInst<asm, iops, oops>, Requires<[HasNEON]>;
+class MVEAsmPseudo<string asm, dag iops, dag oops = (outs)>
+  : AsmPseudoInst<asm, iops, oops>, Requires<[HasMVEInt]>;
 
 // Pseudo instructions for the code generator.
 class PseudoInst<dag oops, dag iops, InstrItinClass itin, list<dag> pattern>

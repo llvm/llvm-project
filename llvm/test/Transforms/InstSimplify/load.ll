@@ -28,3 +28,13 @@ define <8 x i32> @partial_load() {
   %load = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr ([8 x i32], [8 x i32]* @GV, i64 0, i64 -1) to <8 x i32>*)
   ret <8 x i32> %load
 }
+
+@constvec = internal constant <3 x float> <float 0xBFDA20BC40000000, float 0xBFE6A09EE0000000, float 0x3FE279A760000000>
+
+; This does an out of bounds load from the global constant
+define <3 x float> @load_vec3() {
+; CHECK-LABEL: @load_vec3(
+; CHECK-NEXT:    ret <3 x float> undef
+  %1 = load <3 x float>, <3 x float>* getelementptr inbounds (<3 x float>, <3 x float>* @constvec, i64 1)
+  ret <3 x float> %1
+}

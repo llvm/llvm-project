@@ -484,6 +484,12 @@ public:
     return (getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS);
   }
 
+  // Return true if the target only has the reverse operand versions of VALU
+  // shift instructions (e.g. v_lshrrev_b32, and no v_lshr_b32).
+  bool hasOnlyRevVALUShifts() const {
+    return getGeneration() >= VOLCANIC_ISLANDS;
+  }
+
   bool hasBFE() const {
     return true;
   }
@@ -536,8 +542,46 @@ public:
     return isAmdHsaOS() ? TrapHandlerAbiHsa : TrapHandlerAbiNone;
   }
 
+  /// True if the offset field of DS instructions works as expected. On SI, the
+  /// offset uses a 16-bit adder and does not always wrap properly.
+  bool hasUsableDSOffset() const {
+    return getGeneration() >= SEA_ISLANDS;
+  }
+
   bool unsafeDSOffsetFoldingEnabled() const {
     return EnableUnsafeDSOffsetFolding;
+  }
+
+  /// Condition output from div_scale is usable.
+  bool hasUsableDivScaleConditionOutput() const {
+    return getGeneration() != SOUTHERN_ISLANDS;
+  }
+
+  /// Extra wait hazard is needed in some cases before
+  /// s_cbranch_vccnz/s_cbranch_vccz.
+  bool hasReadVCCZBug() const {
+    return getGeneration() <= SEA_ISLANDS;
+  }
+
+  /// A read of an SGPR by SMRD instruction requires 4 wait states when the SGPR
+  /// was written by a VALU instruction.
+  bool hasSMRDReadVALUDefHazard() const {
+    return getGeneration() == SOUTHERN_ISLANDS;
+  }
+
+  /// A read of an SGPR by a VMEM instruction requires 5 wait states when the
+  /// SGPR was written by a VALU Instruction.
+  bool hasVMEMReadSGPRVALUDefHazard() const {
+    return getGeneration() >= VOLCANIC_ISLANDS;
+  }
+
+  bool hasRFEHazards() const {
+    return getGeneration() >= VOLCANIC_ISLANDS;
+  }
+
+  /// Number of hazard wait states for s_setreg_b32/s_setreg_imm32_b32.
+  unsigned getSetRegWaitStates() const {
+    return getGeneration() <= SEA_ISLANDS ? 1 : 2;
   }
 
   bool dumpCode() const {
@@ -569,6 +613,11 @@ public:
   /// of ds_read/write_b128.
   bool useDS128() const {
     return CIInsts && EnableDS128;
+  }
+
+  /// Have v_trunc_f64, v_ceil_f64, v_rndne_f64
+  bool haveRoundOpsF64() const {
+    return CIInsts;
   }
 
   /// \returns If MUBUF instructions always perform range checking, even for
@@ -620,6 +669,10 @@ public:
     return FlatAddressSpace;
   }
 
+  bool hasFlatScrRegister() const {
+    return hasFlatAddressSpace();
+  }
+
   bool hasFlatInstOffsets() const {
     return FlatInstOffsets;
   }
@@ -650,6 +703,10 @@ public:
 
   bool d16PreservesUnusedBits() const {
     return hasD16LoadStore() && !isSRAMECCEnabled();
+  }
+
+  bool hasD16Images() const {
+    return getGeneration() >= VOLCANIC_ISLANDS;
   }
 
   /// Return if most LDS instructions have an m0 use that require m0 to be

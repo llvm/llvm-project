@@ -15,8 +15,8 @@ define void @f1(<16 x i8> *%ptr) {
 ; CHECK-DAG: std %f13,
 ; CHECK-DAG: std %f14,
 ; CHECK-DAG: std %f15,
-; CHECK: vst {{%v[0-9]+}}, 160(%r15)
-; CHECK: vl {{%v[0-9]+}}, 160(%r15)
+; CHECK: vst {{%v[0-9]+}}, 160(%r15), 3
+; CHECK: vl {{%v[0-9]+}}, 160(%r15), 3
 ; CHECK-DAG: ld %f8,
 ; CHECK-DAG: ld %f9,
 ; CHECK-DAG: ld %f10,

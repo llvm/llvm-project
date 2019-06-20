@@ -866,7 +866,6 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
   for (auto *BB : NewBlocks)
     PredMap.erase(BB);
 
-  SmallVector<BasicBlock *, 8> BlocksToProcess;
   SmallVector<BasicBlock *, 16> BlocksWithDefsToReplace;
   SmallVector<WeakVH, 8> InsertedPhis;
 
@@ -942,10 +941,6 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
       for (auto *Pred : PrevBlockSet)
         for (int I = 0, E = EdgeCountMap[{Pred, BB}]; I < E; ++I)
           NewPhi->addIncoming(DefP1, Pred);
-
-      // Insert BB in the set of blocks that now have definition. We'll use this
-      // to compute IDF and add Phis there next.
-      BlocksToProcess.push_back(BB);
     }
 
     // Get all blocks that used to dominate BB and no longer do after adding
@@ -960,10 +955,18 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
     GetNoLongerDomBlocks(PrevIDom, NewIDom, BlocksWithDefsToReplace);
   }
 
+  tryRemoveTrivialPhis(InsertedPhis);
+  // Create the set of blocks that now have a definition. We'll use this to
+  // compute IDF and add Phis there next.
+  SmallVector<BasicBlock *, 8> BlocksToProcess;
+  for (auto &VH : InsertedPhis)
+    if (auto *MPhi = cast_or_null<MemoryPhi>(VH))
+      BlocksToProcess.push_back(MPhi->getBlock());
+
   // Compute IDF and add Phis in all IDF blocks that do not have one.
   SmallVector<BasicBlock *, 32> IDFBlocks;
   if (!BlocksToProcess.empty()) {
-    ForwardIDFCalculator IDFs(DT);
+    ForwardIDFCalculator IDFs(DT, GD);
     SmallPtrSet<BasicBlock *, 16> DefiningBlocks(BlocksToProcess.begin(),
                                                  BlocksToProcess.end());
     IDFs.setDefiningBlocks(DefiningBlocks);

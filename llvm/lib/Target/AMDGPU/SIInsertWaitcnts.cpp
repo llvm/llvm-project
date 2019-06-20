@@ -1042,7 +1042,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   // TODO: Remove this work-around, enable the assert for Bug 457939
   //       after fixing the scheduler. Also, the Shader Compiler code is
   //       independent of target.
-  if (readsVCCZ(MI) && ST->getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS) {
+  if (readsVCCZ(MI) && ST->hasReadVCCZBug()) {
     if (ScoreBrackets.getScoreLB(LGKM_CNT) <
             ScoreBrackets.getScoreUB(LGKM_CNT) &&
         ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {

@@ -1143,6 +1143,34 @@ public:
     return isImmediate<1, 33>();
   }
 
+  template<int shift>
+  bool isExpImmValue(uint64_t Value) const {
+    uint64_t mask = (1 << shift) - 1;
+    if ((Value & mask) != 0 || (Value >> shift) > 0xff)
+      return false;
+    return true;
+  }
+
+  template<int shift>
+  bool isExpImm() const {
+    if (!isImm()) return false;
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    if (!CE) return false;
+
+    return isExpImmValue<shift>(CE->getValue());
+  }
+
+  template<int shift, int size>
+  bool isInvertedExpImm() const {
+    if (!isImm()) return false;
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    if (!CE) return false;
+
+    uint64_t OriginalValue = CE->getValue();
+    uint64_t InvertedValue = OriginalValue ^ (((uint64_t)1 << size) - 1);
+    return isExpImmValue<shift>(InvertedValue);
+  }
+
   bool isPKHLSLImm() const {
     return isImmediate<0, 32>();
   }
@@ -1897,24 +1925,16 @@ public:
 
   bool isVectorIndex() const { return Kind == k_VectorIndex; }
 
-  bool isVectorIndex8() const {
+  template <unsigned NumLanes>
+  bool isVectorIndexInRange() const {
     if (Kind != k_VectorIndex) return false;
-    return VectorIndex.Val < 8;
+    return VectorIndex.Val < NumLanes;
   }
 
-  bool isVectorIndex16() const {
-    if (Kind != k_VectorIndex) return false;
-    return VectorIndex.Val < 4;
-  }
-
-  bool isVectorIndex32() const {
-    if (Kind != k_VectorIndex) return false;
-    return VectorIndex.Val < 2;
-  }
-  bool isVectorIndex64() const {
-    if (Kind != k_VectorIndex) return false;
-    return VectorIndex.Val < 1;
-  }
+  bool isVectorIndex8()  const { return isVectorIndexInRange<8>(); }
+  bool isVectorIndex16() const { return isVectorIndexInRange<4>(); }
+  bool isVectorIndex32() const { return isVectorIndexInRange<2>(); }
+  bool isVectorIndex64() const { return isVectorIndexInRange<1>(); }
 
   bool isNEONi8splat() const {
     if (!isImm()) return false;
@@ -2957,6 +2977,11 @@ public:
   }
 
   void addVectorIndex64Operands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(getVectorIndex()));
+  }
+
+  void addMVEVectorIndexOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createImm(getVectorIndex()));
   }
@@ -5936,7 +5961,8 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
       Mnemonic != "sbcs" && Mnemonic != "rscs" &&
       !(hasMVE() &&
         (Mnemonic == "vmine" ||
-         Mnemonic == "vshle" || Mnemonic == "vshlt" || Mnemonic == "vshllt"))) {
+         Mnemonic == "vshle" || Mnemonic == "vshlt" || Mnemonic == "vshllt" ||
+         Mnemonic == "vmvne" || Mnemonic == "vorne"))) {
     unsigned CC = ARMCondCodeFromString(Mnemonic.substr(Mnemonic.size()-2));
     if (CC != ~0U) {
       Mnemonic = Mnemonic.slice(0, Mnemonic.size() - 2);
@@ -6310,17 +6336,33 @@ bool ARMAsmParser::shouldOmitVectorPredicateOperand(StringRef Mnemonic,
   if (!hasMVE() || Operands.size() < 3)
     return true;
 
-  for (auto &Operand : Operands) {
-    // We check the larger class QPR instead of just the legal class
-    // MQPR, to more accurately report errors when using Q registers
-    // outside of the allowed range.
-    if (static_cast<ARMOperand &>(*Operand).isVectorIndex() ||
-        (Operand->isReg() &&
-         (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(
+  if (Mnemonic.startswith("vmov") &&
+      !(Mnemonic.startswith("vmovl") || Mnemonic.startswith("vmovn") ||
+        Mnemonic.startswith("vmovx"))) {
+    for (auto &Operand : Operands) {
+      if (static_cast<ARMOperand &>(*Operand).isVectorIndex() ||
+          ((*Operand).isReg() &&
+           (ARMMCRegisterClasses[ARM::SPRRegClassID].contains(
+             (*Operand).getReg()) ||
+            ARMMCRegisterClasses[ARM::DPRRegClassID].contains(
+              (*Operand).getReg())))) {
+        return true;
+      }
+    }
+    return false;
+  } else {
+    for (auto &Operand : Operands) {
+      // We check the larger class QPR instead of just the legal class
+      // MQPR, to more accurately report errors when using Q registers
+      // outside of the allowed range.
+      if (static_cast<ARMOperand &>(*Operand).isVectorIndex() ||
+          (Operand->isReg() &&
+           (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(
              Operand->getReg()))))
-      return false;
+        return false;
+    }
+    return true;
   }
-  return true;
 }
 
 static bool isDataTypeToken(StringRef Tok) {
@@ -6618,6 +6660,21 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                       ARMOperand::CreateVPTPred(ARMVCC::None, PLoc));
       Operands.insert(Operands.begin(),
                       ARMOperand::CreateToken(StringRef("vmovlt"), MLoc));
+    }
+    // For vmov instructions, as mentioned earlier, we did not add the vector
+    // predication code, since these may contain operands that require
+    // special parsing.  So now we have to see if they require vector
+    // predication and replace the scalar one with the vector predication
+    // operand if that is the case.
+    else if (Mnemonic == "vmov") {
+      if (!shouldOmitVectorPredicateOperand(Mnemonic, Operands)) {
+        Operands.erase(Operands.begin() + 1);
+        SMLoc PLoc = SMLoc::getFromPointer(NameLoc.getPointer() +
+                                          Mnemonic.size() + CarrySetting);
+        Operands.insert(Operands.begin() + 1,
+                        ARMOperand::CreateVPTPred(
+                            ARMVCC::VPTCodes(VPTPredicationCode), PLoc));
+      }
     } else if (CanAcceptVPTPredicationCode) {
       // For all other instructions, make sure only one of the two
       // predication operands is left behind, depending on whether we should
@@ -7714,6 +7771,50 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
   }
 
   switch (Inst.getOpcode()) {
+  case ARM::MVE_VORNIZ0v4i32:
+  case ARM::MVE_VORNIZ0v8i16:
+  case ARM::MVE_VORNIZ8v4i32:
+  case ARM::MVE_VORNIZ8v8i16:
+  case ARM::MVE_VORNIZ16v4i32:
+  case ARM::MVE_VORNIZ24v4i32:
+  case ARM::MVE_VANDIZ0v4i32:
+  case ARM::MVE_VANDIZ0v8i16:
+  case ARM::MVE_VANDIZ8v4i32:
+  case ARM::MVE_VANDIZ8v8i16:
+  case ARM::MVE_VANDIZ16v4i32:
+  case ARM::MVE_VANDIZ24v4i32: {
+    unsigned Opcode;
+    bool imm16 = false;
+    switch(Inst.getOpcode()) {
+    case ARM::MVE_VORNIZ0v4i32: Opcode = ARM::MVE_VORRIZ0v4i32; break;
+    case ARM::MVE_VORNIZ0v8i16: Opcode = ARM::MVE_VORRIZ0v8i16; imm16 = true; break;
+    case ARM::MVE_VORNIZ8v4i32: Opcode = ARM::MVE_VORRIZ8v4i32; break;
+    case ARM::MVE_VORNIZ8v8i16: Opcode = ARM::MVE_VORRIZ8v8i16; imm16 = true; break;
+    case ARM::MVE_VORNIZ16v4i32: Opcode = ARM::MVE_VORRIZ16v4i32; break;
+    case ARM::MVE_VORNIZ24v4i32: Opcode = ARM::MVE_VORRIZ24v4i32; break;
+    case ARM::MVE_VANDIZ0v4i32: Opcode = ARM::MVE_VBICIZ0v4i32; break;
+    case ARM::MVE_VANDIZ0v8i16: Opcode = ARM::MVE_VBICIZ0v8i16; imm16 = true; break;
+    case ARM::MVE_VANDIZ8v4i32: Opcode = ARM::MVE_VBICIZ8v4i32; break;
+    case ARM::MVE_VANDIZ8v8i16: Opcode = ARM::MVE_VBICIZ8v8i16; imm16 = true; break;
+    case ARM::MVE_VANDIZ16v4i32: Opcode = ARM::MVE_VBICIZ16v4i32; break;
+    case ARM::MVE_VANDIZ24v4i32: Opcode = ARM::MVE_VBICIZ24v4i32; break;
+    default: llvm_unreachable("unexpected opcode");
+    }
+
+    MCInst TmpInst;
+    TmpInst.setOpcode(Opcode);
+    TmpInst.addOperand(Inst.getOperand(0));
+    TmpInst.addOperand(Inst.getOperand(1));
+
+    // invert immediate
+    unsigned imm = ~Inst.getOperand(2).getImm() & (imm16 ? 0xffff : 0xffffffff);
+    TmpInst.addOperand(MCOperand::createImm(imm));
+
+    TmpInst.addOperand(Inst.getOperand(3));
+    TmpInst.addOperand(Inst.getOperand(4));
+    Inst = TmpInst;
+    return true;
+  }
   // Alias for alternate form of 'ldr{,b}t Rt, [Rn], #imm' instruction.
   case ARM::LDRT_POST:
   case ARM::LDRBT_POST: {

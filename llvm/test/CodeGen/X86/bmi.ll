@@ -1223,3 +1223,68 @@ define void @pr42118_i64(i64 %x) {
 
   ret void
 }
+
+define i32 @blsi_cflag_32(i32 %x, i32 %y) nounwind {
+; X86-LABEL: blsi_cflag_32:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    jne .LBB50_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB50_1:
+; X86-NEXT:    blsil %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsi_cflag_32:
+; X64:       # %bb.0:
+; X64-NEXT:    blsil %edi, %eax
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    cmovel %esi, %eax
+; X64-NEXT:    retq
+  %tobool = icmp eq i32 %x, 0
+  %sub = sub nsw i32 0, %x
+  %and = and i32 %sub, %x
+  %cond = select i1 %tobool, i32 %y, i32 %and
+  ret i32 %cond
+}
+
+define i64 @blsi_cflag_64(i64 %x, i64 %y) nounwind {
+; X86-LABEL: blsi_cflag_64:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    sbbl %esi, %edx
+; X86-NEXT:    movl %ecx, %edi
+; X86-NEXT:    orl %esi, %edi
+; X86-NEXT:    jne .LBB51_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    jmp .LBB51_3
+; X86-NEXT:  .LBB51_1:
+; X86-NEXT:    andl %esi, %edx
+; X86-NEXT:    andl %ecx, %eax
+; X86-NEXT:  .LBB51_3:
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsi_cflag_64:
+; X64:       # %bb.0:
+; X64-NEXT:    blsiq %rdi, %rax
+; X64-NEXT:    testq %rdi, %rdi
+; X64-NEXT:    cmoveq %rsi, %rax
+; X64-NEXT:    retq
+  %tobool = icmp eq i64 %x, 0
+  %sub = sub nsw i64 0, %x
+  %and = and i64 %sub, %x
+  %cond = select i1 %tobool, i64 %y, i64 %and
+  ret i64 %cond
+}

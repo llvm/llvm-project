@@ -401,7 +401,7 @@ int GCNTTIImpl::getArithmeticInstrCost(
     if (SLT == MVT::f64) {
       int Cost = 4 * get64BitInstrCost() + 7 * getQuarterRateInstrCost();
       // Add cost of workaround.
-      if (ST->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS)
+      if (!ST->hasUsableDivScaleConditionOutput())
         Cost += 3 * getFullRateInstrCost();
 
       return LT.first * Cost * NElts;
