@@ -448,12 +448,6 @@ void TextNodeDumper::dumpAccessSpecifier(AccessSpecifier AS) {
   }
 }
 
-void TextNodeDumper::dumpCXXTemporary(const CXXTemporary *Temporary) {
-  OS << "(CXXTemporary";
-  dumpPointer(Temporary);
-  OS << ")";
-}
-
 void TextNodeDumper::dumpDeclRef(const Decl *D, StringRef Label) {
   if (!D)
     return;
@@ -914,8 +908,9 @@ void TextNodeDumper::VisitCXXConstructExpr(const CXXConstructExpr *Node) {
 
 void TextNodeDumper::VisitCXXBindTemporaryExpr(
     const CXXBindTemporaryExpr *Node) {
-  OS << " ";
-  dumpCXXTemporary(Node->getTemporary());
+  OS << " (CXXTemporary";
+  dumpPointer(Node);
+  OS << ")";
 }
 
 void TextNodeDumper::VisitCXXNewExpr(const CXXNewExpr *Node) {

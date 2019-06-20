@@ -994,6 +994,83 @@ void JSONNodeDumper::VisitGenericSelectionExpr(
   attributeOnlyIfTrue("resultDependent", GSE->isResultDependent());
 }
 
+void JSONNodeDumper::VisitCXXUnresolvedConstructExpr(
+    const CXXUnresolvedConstructExpr *UCE) {
+  if (UCE->getType() != UCE->getTypeAsWritten())
+    JOS.attribute("typeAsWritten", createQualType(UCE->getTypeAsWritten()));
+  attributeOnlyIfTrue("list", UCE->isListInitialization());
+}
+
+void JSONNodeDumper::VisitCXXConstructExpr(const CXXConstructExpr *CE) {
+  CXXConstructorDecl *Ctor = CE->getConstructor();
+  JOS.attribute("ctorType", createQualType(Ctor->getType()));
+  attributeOnlyIfTrue("elidable", CE->isElidable());
+  attributeOnlyIfTrue("list", CE->isListInitialization());
+  attributeOnlyIfTrue("initializer_list", CE->isStdInitListInitialization());
+  attributeOnlyIfTrue("zeroing", CE->requiresZeroInitialization());
+  attributeOnlyIfTrue("hadMultipleCandidates", CE->hadMultipleCandidates());
+
+  switch (CE->getConstructionKind()) {
+  case CXXConstructExpr::CK_Complete:
+    JOS.attribute("constructionKind", "complete");
+    break;
+  case CXXConstructExpr::CK_Delegating:
+    JOS.attribute("constructionKind", "delegating");
+    break;
+  case CXXConstructExpr::CK_NonVirtualBase:
+    JOS.attribute("constructionKind", "non-virtual base");
+    break;
+  case CXXConstructExpr::CK_VirtualBase:
+    JOS.attribute("constructionKind", "virtual base");
+    break;
+  }
+}
+
+void JSONNodeDumper::VisitExprWithCleanups(const ExprWithCleanups *EWC) {
+  attributeOnlyIfTrue("cleanupsHaveSideEffects",
+                      EWC->cleanupsHaveSideEffects());
+  if (EWC->getNumObjects()) {
+    JOS.attributeArray("cleanups", [this, EWC] {
+      for (const ExprWithCleanups::CleanupObject &CO : EWC->getObjects())
+        JOS.value(createBareDeclRef(CO));
+    });
+  }
+}
+
+void JSONNodeDumper::VisitCXXBindTemporaryExpr(
+    const CXXBindTemporaryExpr *BTE) {
+  const CXXTemporary *Temp = BTE->getTemporary();
+  JOS.attribute("temp", createPointerRepresentation(Temp));
+  if (const CXXDestructorDecl *Dtor = Temp->getDestructor())
+    JOS.attribute("dtor", createBareDeclRef(Dtor));
+}
+
+void JSONNodeDumper::VisitMaterializeTemporaryExpr(
+    const MaterializeTemporaryExpr *MTE) {
+  if (const ValueDecl *VD = MTE->getExtendingDecl())
+    JOS.attribute("extendingDecl", createBareDeclRef(VD));
+
+  switch (MTE->getStorageDuration()) {
+  case SD_Automatic:
+    JOS.attribute("storageDuration", "automatic");
+    break;
+  case SD_Dynamic:
+    JOS.attribute("storageDuration", "dynamic");
+    break;
+  case SD_FullExpression:
+    JOS.attribute("storageDuration", "full expression");
+    break;
+  case SD_Static:
+    JOS.attribute("storageDuration", "static");
+    break;
+  case SD_Thread:
+    JOS.attribute("storageDuration", "thread");
+    break;
+  }
+
+  attributeOnlyIfTrue("boundToLValueRef", MTE->isBoundToLvalueReference());
+}
+
 void JSONNodeDumper::VisitIntegerLiteral(const IntegerLiteral *IL) {
   JOS.attribute("value",
                 IL->getValue().toString(

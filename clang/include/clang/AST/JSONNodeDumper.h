@@ -253,6 +253,11 @@ public:
   void VisitConstantExpr(const ConstantExpr *CE);
   void VisitInitListExpr(const InitListExpr *ILE);
   void VisitGenericSelectionExpr(const GenericSelectionExpr *GSE);
+  void VisitCXXUnresolvedConstructExpr(const CXXUnresolvedConstructExpr *UCE);
+  void VisitCXXConstructExpr(const CXXConstructExpr *CE);
+  void VisitExprWithCleanups(const ExprWithCleanups *EWC);
+  void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE);
+  void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
 
   void VisitIntegerLiteral(const IntegerLiteral *IL);
   void VisitCharacterLiteral(const CharacterLiteral *CL);

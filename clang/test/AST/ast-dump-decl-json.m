@@ -83,6 +83,7 @@ void f() {
   __typeof__(B.foo) Test;
 }
 
+
 // CHECK:  "kind": "ObjCInterfaceDecl", 
 // CHECK-NEXT:  "loc": {
 // CHECK-NEXT:   "col": 12, 
@@ -1492,6 +1493,13 @@ void f() {
 // CHECK-NEXT:       "qualType": "void (^)(int, ...)"
 // CHECK-NEXT:      }, 
 // CHECK-NEXT:      "valueCategory": "rvalue", 
+// CHECK-NEXT:      "cleanupsHaveSideEffects": true, 
+// CHECK-NEXT:      "cleanups": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}", 
+// CHECK-NEXT:        "kind": "BlockDecl"
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ], 
 // CHECK-NEXT:      "inner": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}", 
@@ -1701,4 +1709,3 @@ void f() {
 // CHECK-NEXT:   "qualType": "typeof (B.foo)"
 // CHECK-NEXT:  }
 // CHECK-NEXT: }
-

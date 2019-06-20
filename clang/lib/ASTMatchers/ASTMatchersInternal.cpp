@@ -849,6 +849,8 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, OMPExecutableDirective>
     ompExecutableDirective;
 const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPDefaultClause>
     ompDefaultClause;
+const internal::VariadicDynCastAllOfMatcher<Decl, CXXDeductionGuideDecl>
+    cxxDeductionGuideDecl;
 
 } // end namespace ast_matchers
 } // end namespace clang
