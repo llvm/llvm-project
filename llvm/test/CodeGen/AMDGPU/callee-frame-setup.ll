@@ -9,15 +9,22 @@ define void @callee_no_stack() #0 {
   ret void
 }
 
-; GCN-LABEL: {{^}}callee_no_stack_no_fp_elim:
+; GCN-LABEL: {{^}}callee_no_stack_no_fp_elim_all:
 ; GCN: ; %bb.0:
 ; GCN-NEXT: s_waitcnt
+; GCN-NEXT: s_mov_b32 s5, s32
 ; GCN-NEXT: s_setpc_b64
-define void @callee_no_stack_no_fp_elim() #1 {
+define void @callee_no_stack_no_fp_elim_all() #1 {
   ret void
 }
 
-; Requires frame pointer for access to local regular object.
+; GCN-LABEL: {{^}}callee_no_stack_no_fp_elim_nonleaf:
+; GCN: ; %bb.0:
+; GCN-NEXT: s_waitcnt
+; GCN-NEXT: s_setpc_b64
+define void @callee_no_stack_no_fp_elim_nonleaf() #2 {
+  ret void
+}
 
 ; GCN-LABEL: {{^}}callee_with_stack:
 ; GCN: ; %bb.0:
@@ -27,6 +34,35 @@ define void @callee_no_stack_no_fp_elim() #1 {
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @callee_with_stack() #0 {
+  %alloca = alloca i32, addrspace(5)
+  store volatile i32 0, i32 addrspace(5)* %alloca
+  ret void
+}
+
+; GCN-LABEL: {{^}}callee_with_stack_no_fp_elim_all:
+; GCN: ; %bb.0:
+; GCN-NEXT: s_waitcnt
+; GCN-NEXT: s_mov_b32 s5, s32
+; GCN-NEXT: s_add_u32 s32, s32, 0x200
+; GCN-NEXT: v_mov_b32_e32 v0, 0{{$}}
+; GCN-NEXT: buffer_store_dword v0, off, s[0:3], s5 offset:4{{$}}
+; GCN-NEXT: s_sub_u32 s32, s32, 0x200
+; GCN-NEXT: s_waitcnt vmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define void @callee_with_stack_no_fp_elim_all() #1 {
+  %alloca = alloca i32, addrspace(5)
+  store volatile i32 0, i32 addrspace(5)* %alloca
+  ret void
+}
+
+; GCN-LABEL: {{^}}callee_with_stack_no_fp_elim_non_leaf:
+; GCN: ; %bb.0:
+; GCN-NEXT: s_waitcnt
+; GCN-NEXT: v_mov_b32_e32 v0, 0{{$}}
+; GCN-NEXT: buffer_store_dword v0, off, s[0:3], s32{{$}}
+; GCN-NEXT: s_waitcnt
+; GCN-NEXT: s_setpc_b64
+define void @callee_with_stack_no_fp_elim_non_leaf() #2 {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %alloca
   ret void
@@ -151,4 +187,5 @@ define void @spill_only_csr_sgpr() {
 }
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind "no-frame-pointer-elim"="true" }
+attributes #1 = { nounwind "frame-pointer"="all" }
+attributes #2 = { nounwind "frame-pointer"="non-leaf" }

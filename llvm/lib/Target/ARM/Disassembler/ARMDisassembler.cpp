@@ -310,6 +310,8 @@ static DecodeStatus DecodeVLD4DupInstruction(MCInst &Inst, unsigned Val,
                                uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeNEONModImmInstruction(MCInst &Inst,unsigned Val,
                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeMVEModImmInstruction(MCInst &Inst,unsigned Val,
+                               uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeVSHLMaxInstruction(MCInst &Inst, unsigned Val,
                                uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeShiftRight8Imm(MCInst &Inst, unsigned Val,
@@ -3418,6 +3420,35 @@ DecodeNEONModImmInstruction(MCInst &Inst, unsigned Insn,
     default:
       break;
   }
+
+  return S;
+}
+
+static DecodeStatus
+DecodeMVEModImmInstruction(MCInst &Inst, unsigned Insn,
+                           uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Qd = ((fieldFromInstruction(Insn, 22, 1) << 3) |
+                 fieldFromInstruction(Insn, 13, 3));
+  unsigned cmode = fieldFromInstruction(Insn, 8, 4);
+  unsigned imm = fieldFromInstruction(Insn, 0, 4);
+  imm |= fieldFromInstruction(Insn, 16, 3) << 4;
+  imm |= fieldFromInstruction(Insn, 28, 1) << 7;
+  imm |= cmode                             << 8;
+  imm |= fieldFromInstruction(Insn, 5, 1)  << 12;
+
+  if (cmode == 0xF && Inst.getOpcode() == ARM::MVE_VMVNimmi32)
+    return MCDisassembler::Fail;
+
+  if (!Check(S, DecodeMQPRRegisterClass(Inst, Qd, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createImm(imm));
+
+  Inst.addOperand(MCOperand::createImm(ARMVCC::None));
+  Inst.addOperand(MCOperand::createReg(0));
+  Inst.addOperand(MCOperand::createImm(0));
 
   return S;
 }

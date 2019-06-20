@@ -71,4 +71,3 @@ bb8: tail call void @ext(i32 8, i32 14) br label %return
 
 return: ret i32 %b
 }
-

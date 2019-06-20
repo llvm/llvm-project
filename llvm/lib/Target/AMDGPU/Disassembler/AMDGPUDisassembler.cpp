@@ -101,6 +101,12 @@ static DecodeStatus decodeSoppBrTarget(MCInst &Inst, unsigned Imm,
   return addOperand(Inst, MCOperand::createImm(Imm));
 }
 
+static DecodeStatus decodeBoolReg(MCInst &Inst, unsigned Val,
+                                  uint64_t Addr, const void *Decoder) {
+  auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
+  return addOperand(Inst, DAsm->decodeBoolReg(Val));
+}
+
 #define DECODE_OPERAND(StaticDecoderName, DecoderName) \
 static DecodeStatus StaticDecoderName(MCInst &Inst, \
                                        unsigned Imm, \

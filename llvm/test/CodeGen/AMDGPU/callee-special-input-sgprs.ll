@@ -5,7 +5,7 @@
 ; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s6
 ; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s7
 ; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
-define void @use_dispatch_ptr() #1 {
+define hidden void @use_dispatch_ptr() #1 {
   %dispatch_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
   %header_ptr = bitcast i8 addrspace(4)* %dispatch_ptr to i32 addrspace(4)*
   %value = load volatile i32, i32 addrspace(4)* %header_ptr
@@ -24,7 +24,7 @@ define amdgpu_kernel void @kern_indirect_use_dispatch_ptr(i32) #1 {
 ; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s6
 ; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s7
 ; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
-define void @use_queue_ptr() #1 {
+define hidden void @use_queue_ptr() #1 {
   %queue_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.queue.ptr() #0
   %header_ptr = bitcast i8 addrspace(4)* %queue_ptr to i32 addrspace(4)*
   %value = load volatile i32, i32 addrspace(4)* %header_ptr
@@ -47,7 +47,7 @@ define amdgpu_kernel void @kern_indirect_use_queue_ptr(i32) #1 {
 ; GFX9: v_mov_b32_e32 v[[HI:[0-9]+]], [[APERTURE_LOAD]]
 ; GFX9: {{flat|global}}_store_dword v{{\[[0-9]+}}:[[HI]]{{\]}}
 ; CIVI: {{flat|global}}_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}
-define void @use_queue_ptr_addrspacecast() #1 {
+define hidden void @use_queue_ptr_addrspacecast() #1 {
   %asc = addrspacecast i32 addrspace(3)* inttoptr (i32 16 to i32 addrspace(3)*) to i32*
   store volatile i32 0, i32* %asc
   ret void
@@ -68,7 +68,7 @@ define amdgpu_kernel void @kern_indirect_use_queue_ptr_addrspacecast(i32) #1 {
 ; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s6
 ; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s7
 ; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
-define void @use_kernarg_segment_ptr() #1 {
+define hidden void @use_kernarg_segment_ptr() #1 {
   %kernarg_segment_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
   %header_ptr = bitcast i8 addrspace(4)* %kernarg_segment_ptr to i32 addrspace(4)*
   %value = load volatile i32, i32 addrspace(4)* %header_ptr
@@ -86,7 +86,7 @@ define amdgpu_kernel void @kern_indirect_use_kernarg_segment_ptr(i32) #1 {
 
 ; GCN-LABEL: {{^}}use_dispatch_id:
 ; GCN: ; use s[6:7]
-define void @use_dispatch_id() #1 {
+define hidden void @use_dispatch_id() #1 {
   %id = call i64 @llvm.amdgcn.dispatch.id()
   call void asm sideeffect "; use $0", "s"(i64 %id)
   ret void
@@ -107,7 +107,7 @@ define amdgpu_kernel void @kern_indirect_use_dispatch_id() #1 {
 ; GCN-LABEL: {{^}}use_workgroup_id_x:
 ; GCN: s_waitcnt
 ; GCN: ; use s6
-define void @use_workgroup_id_x() #1 {
+define hidden void @use_workgroup_id_x() #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.x()
   call void asm sideeffect "; use $0", "s"(i32 %val)
   ret void
@@ -119,7 +119,7 @@ define void @use_workgroup_id_x() #1 {
 ; GCN: buffer_store_dword v0, off, s[0:3], s32{{$}}
 ; GCN: ; use s6
 ; GCN: s_setpc_b64
-define void @use_stack_workgroup_id_x() #1 {
+define hidden void @use_stack_workgroup_id_x() #1 {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %alloca
   %val = call i32 @llvm.amdgcn.workgroup.id.x()
@@ -130,7 +130,7 @@ define void @use_stack_workgroup_id_x() #1 {
 ; GCN-LABEL: {{^}}use_workgroup_id_y:
 ; GCN: s_waitcnt
 ; GCN: ; use s6
-define void @use_workgroup_id_y() #1 {
+define hidden void @use_workgroup_id_y() #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.y()
   call void asm sideeffect "; use $0", "s"(i32 %val)
   ret void
@@ -139,7 +139,7 @@ define void @use_workgroup_id_y() #1 {
 ; GCN-LABEL: {{^}}use_workgroup_id_z:
 ; GCN: s_waitcnt
 ; GCN: ; use s6
-define void @use_workgroup_id_z() #1 {
+define hidden void @use_workgroup_id_z() #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.z()
   call void asm sideeffect "; use $0", "s"(i32 %val)
   ret void
@@ -148,7 +148,7 @@ define void @use_workgroup_id_z() #1 {
 ; GCN-LABEL: {{^}}use_workgroup_id_xy:
 ; GCN: ; use s6
 ; GCN: ; use s7
-define void @use_workgroup_id_xy() #1 {
+define hidden void @use_workgroup_id_xy() #1 {
   %val0 = call i32 @llvm.amdgcn.workgroup.id.x()
   %val1 = call i32 @llvm.amdgcn.workgroup.id.y()
   call void asm sideeffect "; use $0", "s"(i32 %val0)
@@ -160,7 +160,7 @@ define void @use_workgroup_id_xy() #1 {
 ; GCN: ; use s6
 ; GCN: ; use s7
 ; GCN: ; use s8
-define void @use_workgroup_id_xyz() #1 {
+define hidden void @use_workgroup_id_xyz() #1 {
   %val0 = call i32 @llvm.amdgcn.workgroup.id.x()
   %val1 = call i32 @llvm.amdgcn.workgroup.id.y()
   %val2 = call i32 @llvm.amdgcn.workgroup.id.z()
@@ -173,7 +173,7 @@ define void @use_workgroup_id_xyz() #1 {
 ; GCN-LABEL: {{^}}use_workgroup_id_xz:
 ; GCN: ; use s6
 ; GCN: ; use s7
-define void @use_workgroup_id_xz() #1 {
+define hidden void @use_workgroup_id_xz() #1 {
   %val0 = call i32 @llvm.amdgcn.workgroup.id.x()
   %val1 = call i32 @llvm.amdgcn.workgroup.id.z()
   call void asm sideeffect "; use $0", "s"(i32 %val0)
@@ -184,7 +184,7 @@ define void @use_workgroup_id_xz() #1 {
 ; GCN-LABEL: {{^}}use_workgroup_id_yz:
 ; GCN: ; use s6
 ; GCN: ; use s7
-define void @use_workgroup_id_yz() #1 {
+define hidden void @use_workgroup_id_yz() #1 {
   %val0 = call i32 @llvm.amdgcn.workgroup.id.y()
   %val1 = call i32 @llvm.amdgcn.workgroup.id.z()
   call void asm sideeffect "; use $0", "s"(i32 %val0)
@@ -329,21 +329,21 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_yz() #1 {
 ; Argument is in right place already
 ; GCN-LABEL: {{^}}func_indirect_use_workgroup_id_x:
 ; GCN-NOT: s6
-define void @func_indirect_use_workgroup_id_x() #1 {
+define hidden void @func_indirect_use_workgroup_id_x() #1 {
   call void @use_workgroup_id_x()
   ret void
 }
 
 ; GCN-LABEL: {{^}}func_indirect_use_workgroup_id_y:
 ; GCN-NOT: s6
-define void @func_indirect_use_workgroup_id_y() #1 {
+define hidden void @func_indirect_use_workgroup_id_y() #1 {
   call void @use_workgroup_id_y()
   ret void
 }
 
 ; GCN-LABEL: {{^}}func_indirect_use_workgroup_id_z:
 ; GCN-NOT: s6
-define void @func_indirect_use_workgroup_id_z() #1 {
+define hidden void @func_indirect_use_workgroup_id_z() #1 {
   call void @use_workgroup_id_z()
   ret void
 }
@@ -351,7 +351,7 @@ define void @func_indirect_use_workgroup_id_z() #1 {
 ; GCN-LABEL: {{^}}other_arg_use_workgroup_id_x:
 ; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GCN: ; use s6
-define void @other_arg_use_workgroup_id_x(i32 %arg0) #1 {
+define hidden void @other_arg_use_workgroup_id_x(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.x()
   store volatile i32 %arg0, i32 addrspace(1)* undef
   call void asm sideeffect "; use $0", "s"(i32 %val)
@@ -361,7 +361,7 @@ define void @other_arg_use_workgroup_id_x(i32 %arg0) #1 {
 ; GCN-LABEL: {{^}}other_arg_use_workgroup_id_y:
 ; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GCN: ; use s6
-define void @other_arg_use_workgroup_id_y(i32 %arg0) #1 {
+define hidden void @other_arg_use_workgroup_id_y(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.y()
   store volatile i32 %arg0, i32 addrspace(1)* undef
   call void asm sideeffect "; use $0", "s"(i32 %val)
@@ -371,7 +371,7 @@ define void @other_arg_use_workgroup_id_y(i32 %arg0) #1 {
 ; GCN-LABEL: {{^}}other_arg_use_workgroup_id_z:
 ; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GCN: ; use s6
-define void @other_arg_use_workgroup_id_z(i32 %arg0) #1 {
+define hidden void @other_arg_use_workgroup_id_z(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.z()
   store volatile i32 %arg0, i32 addrspace(1)* undef
   call void asm sideeffect "; use $0", "s"(i32 %val)
@@ -443,7 +443,7 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_z() #1 {
 ; GCN: ; use s14
 ; GCN: ; use s15
 ; GCN: ; use s16
-define void @use_every_sgpr_input() #1 {
+define hidden void @use_every_sgpr_input() #1 {
   %alloca = alloca i32, align 4, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %alloca
 
@@ -513,7 +513,7 @@ define amdgpu_kernel void @kern_indirect_use_every_sgpr_input() #1 {
 ; GCN-NOT: s[8:9]
 ; GCN-NOT: s[10:11]
 ; GCN-NOT: s[12:13]
-define void @func_indirect_use_every_sgpr_input() #1 {
+define hidden void @func_indirect_use_every_sgpr_input() #1 {
   call void @use_every_sgpr_input()
   ret void
 }
@@ -523,7 +523,7 @@ define void @func_indirect_use_every_sgpr_input() #1 {
 ; GCN-DAG: s_mov_b32 s7, s15
 ; GCN-DAG: s_mov_b32 s8, s16
 ; GCN: s_swappc_b64
-define void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
+define hidden void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
   %alloca = alloca i32, align 4, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %alloca
 
@@ -591,7 +591,7 @@ define void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
 ; GCN: ; use [[SAVE_X]]
 ; GCN: ; use [[SAVE_Y]]
 ; GCN: ; use [[SAVE_Z]]
-define void @func_use_every_sgpr_input_call_use_workgroup_id_xyz_spill() #1 {
+define hidden void @func_use_every_sgpr_input_call_use_workgroup_id_xyz_spill() #1 {
   %alloca = alloca i32, align 4, addrspace(5)
   call void @use_workgroup_id_xyz()
 

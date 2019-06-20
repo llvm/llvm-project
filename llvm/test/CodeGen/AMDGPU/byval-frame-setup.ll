@@ -346,4 +346,4 @@ declare void @llvm.lifetime.end.p5i8(i64, i8 addrspace(5)* nocapture) #3
 
 attributes #0 = { nounwind }
 attributes #1 = { noinline norecurse nounwind }
-attributes #2 = { nounwind norecurse "no-frame-pointer-elim"="true" }
+attributes #2 = { nounwind norecurse "frame-pointer"="all" }

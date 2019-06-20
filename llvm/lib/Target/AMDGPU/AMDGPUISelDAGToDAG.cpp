@@ -67,7 +67,22 @@ class R600InstrInfo;
 
 namespace {
 
+static bool isNullConstantOrUndef(SDValue V) {
+  if (V.isUndef())
+    return true;
+
+  ConstantSDNode *Const = dyn_cast<ConstantSDNode>(V);
+  return Const != nullptr && Const->isNullValue();
+}
+
 static bool getConstantValue(SDValue N, uint32_t &Out) {
+  // This is only used for packed vectors, where ussing 0 for undef should
+  // always be good.
+  if (N.isUndef()) {
+    Out = 0;
+    return true;
+  }
+
   if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(N)) {
     Out = C->getAPIntValue().getSExtValue();
     return true;
@@ -479,7 +494,8 @@ bool AMDGPUDAGToDAGISel::isNoNanSrc(SDValue N) const {
 
 bool AMDGPUDAGToDAGISel::isInlineImmediate(const SDNode *N,
                                            bool Negated) const {
-  // TODO: Handle undef
+  if (N->isUndef())
+    return true;
 
   const SIInstrInfo *TII = Subtarget->getInstrInfo();
   if (Negated) {

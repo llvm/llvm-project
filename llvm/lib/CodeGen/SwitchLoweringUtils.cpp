@@ -27,7 +27,6 @@ uint64_t SwitchCG::getJumpTableRange(const CaseClusterVector &Clusters,
   // FIXME: A range of consecutive cases has 100% density, but only requires one
   // comparison to lower. We should discriminate against such consecutive ranges
   // in jump tables.
-
   return (HighCase - LowCase).getLimitedValue((UINT64_MAX - 1) / 100) + 1;
 }
 
@@ -56,14 +55,15 @@ void SwitchCG::SwitchLowering::findJumpTables(CaseClusterVector &Clusters,
   if (!TLI->areJTsAllowed(SI->getParent()->getParent()))
     return;
 
-  const int64_t N = Clusters.size();
   const unsigned MinJumpTableEntries = TLI->getMinimumJumpTableEntries();
   const unsigned SmallNumberOfEntries = MinJumpTableEntries / 2;
 
+  // Bail if not enough cases.
+  const int64_t N = Clusters.size();
   if (N < 2 || N < MinJumpTableEntries)
     return;
 
-  // TotalCases[i]: Total nbr of cases in Clusters[0..i].
+  // Accumulated number of cases in each cluster and those prior to it.
   SmallVector<unsigned, 8> TotalCases(N);
   for (unsigned i = 0; i < N; ++i) {
     const APInt &Hi = Clusters[i].High->getValue();
@@ -73,11 +73,12 @@ void SwitchCG::SwitchLowering::findJumpTables(CaseClusterVector &Clusters,
       TotalCases[i] += TotalCases[i - 1];
   }
 
-  // Cheap case: the whole range may be suitable for jump table.
   uint64_t Range = getJumpTableRange(Clusters,0, N - 1);
   uint64_t NumCases = getJumpTableNumCases(TotalCases, 0, N - 1);
   assert(NumCases < UINT64_MAX / 100);
   assert(Range >= NumCases);
+
+  // Cheap case: the whole range may be suitable for jump table.
   if (TLI->isSuitableForJumpTable(SI, NumCases, Range)) {
     CaseCluster JTCluster;
     if (buildJumpTable(Clusters, 0, N - 1, SI, DefaultMBB, JTCluster)) {
@@ -131,10 +132,11 @@ void SwitchCG::SwitchLowering::findJumpTables(CaseClusterVector &Clusters,
     // Search for a solution that results in fewer partitions.
     for (int64_t j = N - 1; j > i; j--) {
       // Try building a partition from Clusters[i..j].
-      uint64_t Range = getJumpTableRange(Clusters, i, j);
-      uint64_t NumCases = getJumpTableNumCases(TotalCases, i, j);
+      Range = getJumpTableRange(Clusters, i, j);
+      NumCases = getJumpTableNumCases(TotalCases, i, j);
       assert(NumCases < UINT64_MAX / 100);
       assert(Range >= NumCases);
+
       if (TLI->isSuitableForJumpTable(SI, NumCases, Range)) {
         unsigned NumPartitions = 1 + (j == N - 1 ? 0 : MinPartitions[j + 1]);
         unsigned Score = j == N - 1 ? 0 : PartitionsScore[j + 1];

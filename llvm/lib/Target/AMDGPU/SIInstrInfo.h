@@ -946,6 +946,15 @@ public:
   /// not exist. If Opcode is not a pseudo instruction, this is identity.
   int pseudoToMCOpcode(int Opcode) const;
 
+  const TargetRegisterClass *getRegClass(const MCInstrDesc &TID, unsigned OpNum,
+                                         const TargetRegisterInfo *TRI,
+                                         const MachineFunction &MF)
+    const override {
+    if (OpNum >= TID.getNumOperands())
+      return nullptr;
+    return RI.getRegClass(TID.OpInfo[OpNum].RegClass);
+  }
+
   void fixImplicitOperands(MachineInstr &MI) const;
 };
 

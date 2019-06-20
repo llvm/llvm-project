@@ -427,3 +427,67 @@ latch:
 exit:
   ret void
 }
+
+; Demonstrate a case where two nested loops share a single exiting block.
+; The key point is that the exit count is *different* for the two loops, and
+; thus we can't rewrite the exit for the outer one.  There are three sub-cases
+; which can happen here: a) the outer loop has a backedge taken count of zero
+; (for the case where we know the inner exit is known taken), b) the exit is
+; known never taken (but may have an exit count outside the range of the IV)
+; or c) the outer loop has an unanalyzable exit count (where we can't tell).
+define void @nested(i32 %n) {
+; CHECK-LABEL: @nested(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N:%.*]], 1
+; CHECK-NEXT:    br label [[OUTER:%.*]]
+; CHECK:       outer:
+; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV1_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
+; CHECK-NEXT:    store volatile i32 [[IV1]], i32* @A
+; CHECK-NEXT:    [[IV1_NEXT]] = add nuw nsw i32 [[IV1]], 1
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ 0, [[OUTER]] ], [ [[IV2_NEXT:%.*]], [[INNER_LATCH:%.*]] ]
+; CHECK-NEXT:    store volatile i32 [[IV2]], i32* @A
+; CHECK-NEXT:    [[IV2_NEXT]] = add nuw nsw i32 [[IV2]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV2]], 20
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_LATCH]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK:       inner_latch:
+; CHECK-NEXT:    [[EXITCOND2:%.*]] = icmp ne i32 [[IV2_NEXT]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[EXITCOND2]], label [[INNER]], label [[OUTER_LATCH]]
+; CHECK:       outer_latch:
+; CHECK-NEXT:    [[EXITCOND3:%.*]] = icmp ne i32 [[IV1_NEXT]], 21
+; CHECK-NEXT:    br i1 [[EXITCOND3]], label [[OUTER]], label [[EXIT_LOOPEXIT1:%.*]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit.loopexit1:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer
+
+outer:
+  %iv1 = phi i32 [ 0, %entry ], [ %iv1.next, %outer_latch ]
+  store volatile i32 %iv1, i32* @A
+  %iv1.next = add i32 %iv1, 1
+  br label %inner
+
+inner:
+  %iv2 = phi i32 [ 0, %outer ], [ %iv2.next, %inner_latch ]
+  store volatile i32 %iv2, i32* @A
+  %iv2.next = add i32 %iv2, 1
+  %innertest = icmp ult i32 %iv2, 20
+  br i1 %innertest, label %inner_latch, label %exit
+
+inner_latch:
+  %innertestb = icmp ult i32 %iv2, %n
+  br i1 %innertestb, label %inner, label %outer_latch
+
+outer_latch:
+  %outertest = icmp ult i32 %iv1, 20
+  br i1 %outertest, label %outer, label %exit
+
+exit:
+  ret void
+}

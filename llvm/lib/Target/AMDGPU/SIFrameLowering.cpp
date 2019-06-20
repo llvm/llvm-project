@@ -707,12 +707,12 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
       .addReg(ScratchExecCopy);
   }
 
-  if (hasFP(MF)) {
-    const MachineFrameInfo &MFI = MF.getFrameInfo();
-    uint32_t NumBytes = MFI.getStackSize();
-    uint32_t RoundedSize = FuncInfo->isStackRealigned() ?
-      NumBytes + MFI.getMaxAlignment() : NumBytes;
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  uint32_t NumBytes = MFI.getStackSize();
+  uint32_t RoundedSize = FuncInfo->isStackRealigned() ?
+    NumBytes + MFI.getMaxAlignment() : NumBytes;
 
+  if (RoundedSize != 0 && hasFP(MF)) {
     const unsigned StackPtrReg = FuncInfo->getStackPtrOffsetReg();
     BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_SUB_U32), StackPtrReg)
       .addReg(StackPtrReg)
@@ -863,14 +863,10 @@ bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
     // API SP if there are calls.
     if (MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction())
       return true;
-
-    // Retain behavior of always omitting the FP for leaf functions when
-    // possible.
-    if (MF.getTarget().Options.DisableFramePointerElim(MF))
-      return true;
   }
 
   return MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
     MFI.hasStackMap() || MFI.hasPatchPoint() ||
-    MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->needsStackRealignment(MF);
+    MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->needsStackRealignment(MF) ||
+    MF.getTarget().Options.DisableFramePointerElim(MF);
 }

@@ -33,3 +33,13 @@ v_div_fmas_f64 v[5:6], v[1:2], s[2:3], v[3:4]
 
 v_div_fmas_f64 v[5:6], v[1:2], s[2:3], 0x123456
 // GFX10-ERR: error: invalid operand (violates constant bus restrictions)
+
+//-----------------------------------------------------------------------------------------
+// v_mad_u64_u32 has operands of different sizes.
+// When these operands are literals, they are counted as 2 scalar values even if literals are identical.
+
+v_mad_u64_u32 v[5:6], s12, v1, 0x12345678, 0x12345678
+// GFX10: v_mad_u64_u32 v[5:6], s12, v1, 0x12345678, 0x12345678 ; encoding: [0x05,0x0c,0x76,0xd5,0x01,0xff,0xfd,0x03,0x78,0x56,0x34,0x12]
+
+v_mad_u64_u32 v[5:6], s12, s1, 0x12345678, 0x12345678
+// GFX10-ERR: error: invalid operand (violates constant bus restrictions)
