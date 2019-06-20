@@ -603,13 +603,18 @@ void SourcePrinter::printSourceLine(raw_ostream &OS,
   OldLineInfo = LineInfo;
 }
 
+static bool isAArch64Elf(const ObjectFile *Obj) {
+  const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj);
+  return Elf && Elf->getEMachine() == ELF::EM_AARCH64;
+}
+
 static bool isArmElf(const ObjectFile *Obj) {
-  return (Obj->isELF() &&
-          (Obj->getArch() == Triple::aarch64 ||
-           Obj->getArch() == Triple::aarch64_be ||
-           Obj->getArch() == Triple::arm || Obj->getArch() == Triple::armeb ||
-           Obj->getArch() == Triple::thumb ||
-           Obj->getArch() == Triple::thumbeb));
+  const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj);
+  return Elf && Elf->getEMachine() == ELF::EM_ARM;
+}
+
+static bool hasMappingSymbols(const ObjectFile *Obj) {
+  return isArmElf(Obj) || isAArch64Elf(Obj);
 }
 
 static void printRelocation(const RelocationRef &Rel, uint64_t Address,
@@ -954,10 +959,24 @@ static bool shouldAdjustVA(const SectionRef &Section) {
   return false;
 }
 
+
+typedef std::pair<uint64_t, char> MappingSymbolPair;
+static char getMappingSymbolKind(ArrayRef<MappingSymbolPair> MappingSymbols,
+                                 uint64_t Address) {
+  auto Sym = bsearch(MappingSymbols, [Address](const MappingSymbolPair &Val) {
+      return Val.first > Address;
+  });
+  // Return zero for any address before the first mapping symbol; this means
+  // we should use the default disassembly mode, depending on the target.
+  if (Sym == MappingSymbols.begin())
+    return '\x00';
+  return (Sym - 1)->second;
+}
+
 static uint64_t
 dumpARMELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
                const ObjectFile *Obj, ArrayRef<uint8_t> Bytes,
-               const std::vector<uint64_t> &TextMappingSymsAddr) {
+               ArrayRef<MappingSymbolPair> MappingSymbols) {
   support::endianness Endian =
       Obj->isLittleEndian() ? support::little : support::big;
   while (Index < End) {
@@ -981,8 +1000,7 @@ dumpARMELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
       ++Index;
     }
     outs() << "\n";
-    if (std::binary_search(TextMappingSymsAddr.begin(),
-                           TextMappingSymsAddr.end(), Index))
+    if (getMappingSymbolKind(MappingSymbols, Index) != 'd')
       break;
   }
   return Index;
@@ -1025,10 +1043,19 @@ static void dumpELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
 }
 
 static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
-                              MCContext &Ctx, MCDisassembler *DisAsm,
+                              MCContext &Ctx, MCDisassembler *PrimaryDisAsm,
+                              MCDisassembler *SecondaryDisAsm,
                               const MCInstrAnalysis *MIA, MCInstPrinter *IP,
-                              const MCSubtargetInfo *STI, PrettyPrinter &PIP,
+                              const MCSubtargetInfo *PrimarySTI,
+                              const MCSubtargetInfo *SecondarySTI,
+                              PrettyPrinter &PIP,
                               SourcePrinter &SP, bool InlineRelocs) {
+  const MCSubtargetInfo *STI = PrimarySTI;
+  MCDisassembler *DisAsm = PrimaryDisAsm;
+  bool PrimaryIsThumb = false;
+  if (isArmElf(Obj))
+    PrimaryIsThumb = STI->checkFeatures("+thumb-mode");
+
   std::map<SectionRef, std::vector<RelocationRef>> RelocMap;
   if (InlineRelocs)
     RelocMap = getRelocsMap(*Obj);
@@ -1115,25 +1142,23 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 
     // Get the list of all the symbols in this section.
     SectionSymbolsTy &Symbols = AllSymbols[Section];
-    std::vector<uint64_t> DataMappingSymsAddr;
-    std::vector<uint64_t> TextMappingSymsAddr;
-    if (isArmElf(Obj)) {
+    std::vector<MappingSymbolPair> MappingSymbols;
+    if (hasMappingSymbols(Obj)) {
       for (const auto &Symb : Symbols) {
         uint64_t Address = std::get<0>(Symb);
         StringRef Name = std::get<1>(Symb);
         if (Name.startswith("$d"))
-          DataMappingSymsAddr.push_back(Address - SectionAddr);
+          MappingSymbols.emplace_back(Address - SectionAddr, 'd');
         if (Name.startswith("$x"))
-          TextMappingSymsAddr.push_back(Address - SectionAddr);
+          MappingSymbols.emplace_back(Address - SectionAddr, 'x');
         if (Name.startswith("$a"))
-          TextMappingSymsAddr.push_back(Address - SectionAddr);
+          MappingSymbols.emplace_back(Address - SectionAddr, 'a');
         if (Name.startswith("$t"))
-          TextMappingSymsAddr.push_back(Address - SectionAddr);
+          MappingSymbols.emplace_back(Address - SectionAddr, 't');
       }
     }
 
-    llvm::sort(DataMappingSymsAddr);
-    llvm::sort(TextMappingSymsAddr);
+    llvm::sort(MappingSymbols);
 
     if (Obj->isELF() && Obj->getArch() == Triple::amdgcn) {
       // AMDGPU disassembler uses symbolizer for printing labels
@@ -1271,19 +1296,18 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         Index = End;
       }
 
-      bool CheckARMELFData = isArmElf(Obj) &&
+      bool CheckARMELFData = hasMappingSymbols(Obj) &&
                              std::get<2>(Symbols[SI]) != ELF::STT_OBJECT &&
                              !DisassembleAll;
       while (Index < End) {
-        // AArch64 ELF binaries can interleave data and text in the same
-        // section. We rely on the markers introduced to understand what we
-        // need to dump. If the data marker is within a function, it is
+        // ARM and AArch64 ELF binaries can interleave data and text in the
+        // same section. We rely on the markers introduced to understand what
+        // we need to dump. If the data marker is within a function, it is
         // denoted as a word/short etc.
         if (CheckARMELFData &&
-            std::binary_search(DataMappingSymsAddr.begin(),
-                               DataMappingSymsAddr.end(), Index)) {
+            getMappingSymbolKind(MappingSymbols, Index) == 'd') {
           Index = dumpARMELFData(SectionAddr, Index, End, Obj, Bytes,
-                                 TextMappingSymsAddr);
+                                 MappingSymbols);
           continue;
         }
 
@@ -1301,6 +1325,16 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
             outs() << "\t\t..." << '\n';
             Index += N;
             continue;
+          }
+        }
+
+        if (SecondarySTI) {
+          if (getMappingSymbolKind(MappingSymbols, Index) == 'a') {
+            STI = PrimaryIsThumb ? SecondarySTI : PrimarySTI;
+            DisAsm = PrimaryIsThumb ? SecondaryDisAsm : PrimaryDisAsm;
+          } else if (getMappingSymbolKind(MappingSymbols, Index) == 't') {
+            STI = PrimaryIsThumb ? PrimarySTI : SecondarySTI;
+            DisAsm = PrimaryIsThumb ? PrimaryDisAsm : SecondaryDisAsm;
           }
         }
 
@@ -1461,6 +1495,22 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
     report_error(Obj->getFileName(),
                  "no disassembler for target " + TripleName);
 
+  // If we have an ARM object file, we need a second disassembler, because
+  // ARM CPUs have two different instruction sets: ARM mode, and Thumb mode.
+  // We use mapping symbols to switch between the two assemblers, where
+  // appropriate.
+  std::unique_ptr<MCDisassembler> SecondaryDisAsm;
+  std::unique_ptr<const MCSubtargetInfo> SecondarySTI;
+  if (isArmElf(Obj) && !STI->checkFeatures("+mclass")) {
+    if (STI->checkFeatures("+thumb-mode"))
+      Features.AddFeature("-thumb-mode");
+    else
+      Features.AddFeature("+thumb-mode");
+    SecondarySTI.reset(TheTarget->createMCSubtargetInfo(TripleName, MCPU,
+                                                        Features.getString()));
+    SecondaryDisAsm.reset(TheTarget->createMCDisassembler(*SecondarySTI, Ctx));
+  }
+
   std::unique_ptr<const MCInstrAnalysis> MIA(
       TheTarget->createMCInstrAnalysis(MII.get()));
 
@@ -1479,8 +1529,9 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
     if (!IP->applyTargetSpecificCLOption(Opt))
       error("Unrecognized disassembler option: " + Opt);
 
-  disassembleObject(TheTarget, Obj, Ctx, DisAsm.get(), MIA.get(), IP.get(),
-                    STI.get(), PIP, SP, InlineRelocs);
+  disassembleObject(TheTarget, Obj, Ctx, DisAsm.get(), SecondaryDisAsm.get(),
+                    MIA.get(), IP.get(), STI.get(), SecondarySTI.get(), PIP,
+                    SP, InlineRelocs);
 }
 
 void printRelocations(const ObjectFile *Obj) {

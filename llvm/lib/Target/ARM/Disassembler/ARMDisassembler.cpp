@@ -139,23 +139,18 @@ public:
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &VStream,
                               raw_ostream &CStream) const override;
-};
-
-/// Thumb disassembler for all Thumb platforms.
-class ThumbDisassembler : public MCDisassembler {
-public:
-  ThumbDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx) :
-    MCDisassembler(STI, Ctx) {
-  }
-
-  ~ThumbDisassembler() override = default;
-
-  DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
-                              ArrayRef<uint8_t> Bytes, uint64_t Address,
-                              raw_ostream &VStream,
-                              raw_ostream &CStream) const override;
 
 private:
+  DecodeStatus getARMInstruction(MCInst &Instr, uint64_t &Size,
+                                 ArrayRef<uint8_t> Bytes, uint64_t Address,
+                                 raw_ostream &VStream,
+                                 raw_ostream &CStream) const;
+
+  DecodeStatus getThumbInstruction(MCInst &Instr, uint64_t &Size,
+                                   ArrayRef<uint8_t> Bytes, uint64_t Address,
+                                   raw_ostream &VStream,
+                                   raw_ostream &CStream) const;
+
   mutable ITStatus ITBlock;
   mutable VPTStatus VPTBlock;
 
@@ -515,12 +510,6 @@ static MCDisassembler *createARMDisassembler(const Target &T,
   return new ARMDisassembler(STI, Ctx);
 }
 
-static MCDisassembler *createThumbDisassembler(const Target &T,
-                                               const MCSubtargetInfo &STI,
-                                               MCContext &Ctx) {
-  return new ThumbDisassembler(STI, Ctx);
-}
-
 // Post-decoding checks
 static DecodeStatus checkDecodedInstruction(MCInst &MI, uint64_t &Size,
                                             uint64_t Address, raw_ostream &OS,
@@ -558,6 +547,16 @@ DecodeStatus ARMDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                              ArrayRef<uint8_t> Bytes,
                                              uint64_t Address, raw_ostream &OS,
                                              raw_ostream &CS) const {
+  if (STI.getFeatureBits()[ARM::ModeThumb])
+    return getThumbInstruction(MI, Size, Bytes, Address, OS, CS);
+  return getARMInstruction(MI, Size, Bytes, Address, OS, CS);
+}
+
+DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
+                                                ArrayRef<uint8_t> Bytes,
+                                                uint64_t Address,
+                                                raw_ostream &OS,
+                                                raw_ostream &CS) const {
   CommentStream = &CS;
 
   assert(!STI.getFeatureBits()[ARM::ModeThumb] &&
@@ -694,7 +693,7 @@ static bool isVectorPredicable(unsigned Opcode) {
 // to fix up the predicate operands using this context information as a
 // post-pass.
 MCDisassembler::DecodeStatus
-ThumbDisassembler::AddThumbPredicate(MCInst &MI) const {
+ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
   MCDisassembler::DecodeStatus S = Success;
 
   const FeatureBitset &FeatureBits = getSubtargetInfo().getFeatureBits();
@@ -809,7 +808,7 @@ ThumbDisassembler::AddThumbPredicate(MCInst &MI) const {
 // mode, the auto-generated decoder will give them an (incorrect)
 // predicate operand.  We need to rewrite these operands based on the IT
 // context as a post-pass.
-void ThumbDisassembler::UpdateThumbVFPPredicate(
+void ARMDisassembler::UpdateThumbVFPPredicate(
   DecodeStatus &S, MCInst &MI) const {
   unsigned CC;
   CC = ITBlock.getITCC();
@@ -840,11 +839,11 @@ void ThumbDisassembler::UpdateThumbVFPPredicate(
   }
 }
 
-DecodeStatus ThumbDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
-                                               ArrayRef<uint8_t> Bytes,
-                                               uint64_t Address,
-                                               raw_ostream &OS,
-                                               raw_ostream &CS) const {
+DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
+                                                  ArrayRef<uint8_t> Bytes,
+                                                  uint64_t Address,
+                                                  raw_ostream &OS,
+                                                  raw_ostream &CS) const {
   CommentStream = &CS;
 
   assert(STI.getFeatureBits()[ARM::ModeThumb] &&
@@ -1042,9 +1041,9 @@ extern "C" void LLVMInitializeARMDisassembler() {
   TargetRegistry::RegisterMCDisassembler(getTheARMBETarget(),
                                          createARMDisassembler);
   TargetRegistry::RegisterMCDisassembler(getTheThumbLETarget(),
-                                         createThumbDisassembler);
+                                         createARMDisassembler);
   TargetRegistry::RegisterMCDisassembler(getTheThumbBETarget(),
-                                         createThumbDisassembler);
+                                         createARMDisassembler);
 }
 
 static const uint16_t GPRDecoderTable[] = {
