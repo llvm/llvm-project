@@ -15,13 +15,13 @@ typedef const uint8_t *IN;
 
 static volatile int one = 1;
 
-extern "C" {
 __attribute__((noinline)) void bad() {
   fprintf(stderr, "BINGO\n");
   if (one)
     abort();
 }
 
+extern "C"
 __attribute__((noinline)) void f0(IN in) {
   uint32_t x = in[5] + 251 * in[7] + 251 * 251 * in[9];
   if (x == 'F' + 251 * 'U' + 251 * 251 * 'Z') {
@@ -40,8 +40,6 @@ __attribute__((noinline)) void fD(IN in) { f0(in); }
 __attribute__((noinline)) void fC(IN in) { if (in[2] == 'C') fD(in); }
 __attribute__((noinline)) void fB(IN in) { if (in[1] == 'B') fC(in); }
 __attribute__((noinline)) void fA(IN in) { if (in[0] == 'A') fB(in); }
-
-} // extern "C"
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   if (Size < N) return 0;

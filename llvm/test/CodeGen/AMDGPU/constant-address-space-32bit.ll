@@ -279,12 +279,24 @@ define amdgpu_vs float @load_addr_no_fold(i32 addrspace(6)* inreg noalias %p0) #
   ret float %r2
 }
 
+; CHECK-LABEL: {{^}}vgpr_arg_src:
+; CHECK: v_readfirstlane_b32 s[[READLANE:[0-9]+]], v0
+; CHECK: s_mov_b32 s[[ZERO:[0-9]+]]
+; CHECK: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[READLANE]]:[[ZERO]]{{\]}}
+define amdgpu_vs float @vgpr_arg_src(<4 x i32> addrspace(6)* %arg) {
+main_body:
+  %tmp9 = load <4 x i32>, <4 x i32> addrspace(6)* %arg
+  %tmp10 = call nsz float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32> %tmp9, i32 undef, i32 0, i32 0, i32 0) #1
+  ret float %tmp10
+}
+
 ; Function Attrs: nounwind readnone speculatable
 declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) #6
 
 ; Function Attrs: nounwind readonly
 declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #7
 
+declare float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32>, i32, i32, i32, i32) #7
 
 !0 = !{}
 

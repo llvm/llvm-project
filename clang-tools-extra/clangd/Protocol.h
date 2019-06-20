@@ -616,7 +616,6 @@ struct DocumentSymbolParams {
 };
 bool fromJSON(const llvm::json::Value &, DocumentSymbolParams &);
 
-
 /// Represents a related message and source code location for a diagnostic.
 /// This should be used to point to code locations that cause or related to a
 /// diagnostics, e.g when duplicating a symbol in a scope.
@@ -666,11 +665,17 @@ llvm::json::Value toJSON(const Diagnostic &);
 
 /// A LSP-specific comparator used to find diagnostic in a container like
 /// std:map.
-/// We only use the required fields of Diagnostic to do the comparsion to avoid
-/// any regression issues from LSP clients (e.g. VScode), see
-/// https://git.io/vbr29
+/// We only use as many fields of Diagnostic as is needed to make distinct
+/// diagnostics unique in practice, to avoid  regression issues from LSP clients
+/// (e.g. VScode), see https://git.io/vbr29
 struct LSPDiagnosticCompare {
   bool operator()(const Diagnostic &LHS, const Diagnostic &RHS) const {
+    if (!LHS.code.empty() && !RHS.code.empty()) {
+      // If the code is known for both, use the code to diambiguate, as e.g.
+      // two checkers could produce diagnostics with the same range and message.
+      return std::tie(LHS.range, LHS.message, LHS.code) <
+             std::tie(RHS.range, RHS.message, RHS.code);
+    }
     return std::tie(LHS.range, LHS.message) < std::tie(RHS.range, RHS.message);
   }
 };

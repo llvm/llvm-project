@@ -114,6 +114,7 @@ copy("Headers") {
     "mwaitxintrin.h",
     "nmmintrin.h",
     "opencl-c.h",
+    "opencl-c-base.h",
     "pconfigintrin.h",
     "pkuintrin.h",
     "pmmintrin.h",

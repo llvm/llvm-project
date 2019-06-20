@@ -67,7 +67,7 @@ test()
             }
             for (auto r : res)
             {
-                Sequence<T> in(n1, [](std::size_t k) { return T(0); });
+                Sequence<T> in(n1, [](std::size_t) { return T(0); });
                 std::size_t i = r, isub = 0;
                 for (; i < n1 & isub < n2; ++i, ++isub)
                     in[i] = value;

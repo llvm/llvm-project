@@ -103,6 +103,12 @@ void TestIteration() {
     ;
 }
 
+template <typename Ty>
+void TestDependentGenericSelectionExpr(Ty T) {
+  _Generic(T, int : 1, default : 0);
+  _Generic(T, default : 0);
+}
+
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
@@ -2415,7 +2421,15 @@ void TestIteration() {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "U"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue"
+// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "field": {
+// CHECK-NEXT:             "id": "0x{{.*}}",
+// CHECK-NEXT:             "kind": "FieldDecl",
+// CHECK-NEXT:             "name": "i",
+// CHECK-NEXT:             "type": {
+// CHECK-NEXT:              "qualType": "int"
+// CHECK-NEXT:             }
+// CHECK-NEXT:            }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:            "id": "0x{{.*}}",
@@ -2436,6 +2450,14 @@ void TestIteration() {
 // CHECK-NEXT:             "qualType": "U"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "field": {
+// CHECK-NEXT:             "id": "0x{{.*}}",
+// CHECK-NEXT:             "kind": "FieldDecl",
+// CHECK-NEXT:             "name": "i",
+// CHECK-NEXT:             "type": {
+// CHECK-NEXT:              "qualType": "int"
+// CHECK-NEXT:             }
+// CHECK-NEXT:            },
 // CHECK-NEXT:            "inner": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:              "id": "0x{{.*}}",
@@ -2951,6 +2973,7 @@ void TestIteration() {
 // CHECK-NEXT:         "qualType": "bool"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "value": "true",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -3150,6 +3173,7 @@ void TestIteration() {
 // CHECK-NEXT:         "qualType": "bool"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "value": "true",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -5974,3 +5998,330 @@ void TestIteration() {
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
 
+
+// CHECK:  "kind": "FunctionTemplateDecl",
+// CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "col": 6,
+// CHECK-NEXT:   "file": "{{.*}}",
+// CHECK-NEXT:   "line": 107
+// CHECK-NEXT:  },
+// CHECK-NEXT:  "range": {
+// CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "col": 1,
+// CHECK-NEXT:    "file": "{{.*}}",
+// CHECK-NEXT:    "line": 106
+// CHECK-NEXT:   },
+// CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "col": 1,
+// CHECK-NEXT:    "file": "{{.*}}",
+// CHECK-NEXT:    "line": 110
+// CHECK-NEXT:   }
+// CHECK-NEXT:  },
+// CHECK-NEXT:  "name": "TestDependentGenericSelectionExpr",
+// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "TemplateTypeParmDecl",
+// CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "col": 20,
+// CHECK-NEXT:     "file": "{{.*}}",
+// CHECK-NEXT:     "line": 106
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "range": {
+// CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "col": 11,
+// CHECK-NEXT:      "file": "{{.*}}",
+// CHECK-NEXT:      "line": 106
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "col": 20,
+// CHECK-NEXT:      "file": "{{.*}}",
+// CHECK-NEXT:      "line": 106
+// CHECK-NEXT:     }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "isReferenced": true,
+// CHECK-NEXT:    "name": "Ty",
+// CHECK-NEXT:    "tagUsed": "typename",
+// CHECK-NEXT:    "depth": 0,
+// CHECK-NEXT:    "index": 0
+// CHECK-NEXT:   },
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "FunctionDecl",
+// CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "col": 6,
+// CHECK-NEXT:     "file": "{{.*}}",
+// CHECK-NEXT:     "line": 107
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "range": {
+// CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "col": 1,
+// CHECK-NEXT:      "file": "{{.*}}",
+// CHECK-NEXT:      "line": 107
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "col": 1,
+// CHECK-NEXT:      "file": "{{.*}}",
+// CHECK-NEXT:      "line": 110
+// CHECK-NEXT:     }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "name": "TestDependentGenericSelectionExpr",
+// CHECK-NEXT:    "type": {
+// CHECK-NEXT:     "qualType": "void (Ty)"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "ParmVarDecl",
+// CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "col": 43,
+// CHECK-NEXT:       "file": "{{.*}}",
+// CHECK-NEXT:       "line": 107
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "col": 40,
+// CHECK-NEXT:        "file": "{{.*}}",
+// CHECK-NEXT:        "line": 107
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "col": 43,
+// CHECK-NEXT:        "file": "{{.*}}",
+// CHECK-NEXT:        "line": 107
+// CHECK-NEXT:       }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "isReferenced": true,
+// CHECK-NEXT:      "name": "T",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "Ty"
+// CHECK-NEXT:      }
+// CHECK-NEXT:     },
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "CompoundStmt",
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "col": 46,
+// CHECK-NEXT:        "file": "{{.*}}",
+// CHECK-NEXT:        "line": 107
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "col": 1,
+// CHECK-NEXT:        "file": "{{.*}}",
+// CHECK-NEXT:        "line": 110
+// CHECK-NEXT:       }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "inner": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "GenericSelectionExpr",
+// CHECK-NEXT:        "range": {
+// CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "col": 3,
+// CHECK-NEXT:          "file": "{{.*}}",
+// CHECK-NEXT:          "line": 108
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "col": 35,
+// CHECK-NEXT:          "file": "{{.*}}",
+// CHECK-NEXT:          "line": 108
+// CHECK-NEXT:         }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "<dependent type>"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "resultDependent": true,
+// CHECK-NEXT:        "inner": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "DeclRefExpr",
+// CHECK-NEXT:          "range": {
+// CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "col": 12,
+// CHECK-NEXT:            "file": "{{.*}}",
+// CHECK-NEXT:            "line": 108
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "col": 12,
+// CHECK-NEXT:            "file": "{{.*}}",
+// CHECK-NEXT:            "line": 108
+// CHECK-NEXT:           }
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "Ty"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "valueCategory": "lvalue",
+// CHECK-NEXT:          "referencedDecl": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "ParmVarDecl",
+// CHECK-NEXT:           "name": "T",
+// CHECK-NEXT:           "type": {
+// CHECK-NEXT:            "qualType": "Ty"
+// CHECK-NEXT:           }
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "nonOdrUseReason": "unevaluated"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "TemplateTypeParmType",
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "Ty"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "isDependent": true,
+// CHECK-NEXT:          "isInstantiationDependent": true
+// CHECK-NEXT:         },
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "associationKind": "case",
+// CHECK-NEXT:          "inner": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "BuiltinType",
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "int"
+// CHECK-NEXT:            }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "IntegerLiteral",
+// CHECK-NEXT:            "range": {
+// CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "col": 21,
+// CHECK-NEXT:              "file": "{{.*}}",
+// CHECK-NEXT:              "line": 108
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "col": 21,
+// CHECK-NEXT:              "file": "{{.*}}",
+// CHECK-NEXT:              "line": 108
+// CHECK-NEXT:             }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "int"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "value": "1"
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         },
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "associationKind": "default",
+// CHECK-NEXT:          "inner": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "IntegerLiteral",
+// CHECK-NEXT:            "range": {
+// CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "col": 34,
+// CHECK-NEXT:              "file": "{{.*}}",
+// CHECK-NEXT:              "line": 108
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "col": 34,
+// CHECK-NEXT:              "file": "{{.*}}",
+// CHECK-NEXT:              "line": 108
+// CHECK-NEXT:             }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "int"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "value": "0"
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       },
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "GenericSelectionExpr",
+// CHECK-NEXT:        "range": {
+// CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "col": 3,
+// CHECK-NEXT:          "file": "{{.*}}",
+// CHECK-NEXT:          "line": 109
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "col": 26,
+// CHECK-NEXT:          "file": "{{.*}}",
+// CHECK-NEXT:          "line": 109
+// CHECK-NEXT:         }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "<dependent type>"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "resultDependent": true,
+// CHECK-NEXT:        "inner": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "DeclRefExpr",
+// CHECK-NEXT:          "range": {
+// CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "col": 12,
+// CHECK-NEXT:            "file": "{{.*}}",
+// CHECK-NEXT:            "line": 109
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "col": 12,
+// CHECK-NEXT:            "file": "{{.*}}",
+// CHECK-NEXT:            "line": 109
+// CHECK-NEXT:           }
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "Ty"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "valueCategory": "lvalue",
+// CHECK-NEXT:          "referencedDecl": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "ParmVarDecl",
+// CHECK-NEXT:           "name": "T",
+// CHECK-NEXT:           "type": {
+// CHECK-NEXT:            "qualType": "Ty"
+// CHECK-NEXT:           }
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "nonOdrUseReason": "unevaluated"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "TemplateTypeParmType",
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "Ty"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "isDependent": true,
+// CHECK-NEXT:          "isInstantiationDependent": true
+// CHECK-NEXT:         },
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "associationKind": "default",
+// CHECK-NEXT:          "inner": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "IntegerLiteral",
+// CHECK-NEXT:            "range": {
+// CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "col": 25,
+// CHECK-NEXT:              "file": "{{.*}}",
+// CHECK-NEXT:              "line": 109
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "col": 25,
+// CHECK-NEXT:              "file": "{{.*}}",
+// CHECK-NEXT:              "line": 109
+// CHECK-NEXT:             }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "int"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "value": "0"
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   }
+// CHECK-NEXT:  ]
+// CHECK-NEXT: }

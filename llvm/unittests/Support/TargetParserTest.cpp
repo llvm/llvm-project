@@ -569,13 +569,14 @@ TEST(TargetParserTest, ARMFPURestriction) {
 }
 
 TEST(TargetParserTest, ARMExtensionFeatures) {
+  std::vector<StringRef> Features;
   unsigned Extensions = ARM::AEK_CRC | ARM::AEK_CRYPTO | ARM::AEK_DSP |
                         ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_MP |
                         ARM::AEK_SEC | ARM::AEK_VIRT | ARM::AEK_RAS | ARM::AEK_FP16 |
                         ARM::AEK_FP16FML | ARM::AEK_FP_DP;
 
   for (unsigned i = 0; i <= Extensions; i++) {
-    std::vector<StringRef> Features;
+    Features.clear();
     EXPECT_TRUE(i == 0 ? !ARM::getExtensionFeatures(i, Features)
                        : ARM::getExtensionFeatures(i, Features));
   }
@@ -1028,9 +1029,11 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
                         AArch64::AEK_SVE2 | AArch64::AEK_DOTPROD |
                         AArch64::AEK_RCPC | AArch64::AEK_FP16FML;
 
-  for (unsigned i = 0; i <= Extensions; i++)
+  for (unsigned i = 0; i <= Extensions; i++) {
+    Features.clear();
     EXPECT_TRUE(i == 0 ? !AArch64::getExtensionFeatures(i, Features)
                        : AArch64::getExtensionFeatures(i, Features));
+  }
 }
 
 TEST(TargetParserTest, AArch64ArchFeatures) {

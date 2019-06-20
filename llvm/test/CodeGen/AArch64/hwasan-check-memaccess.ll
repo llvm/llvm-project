@@ -38,8 +38,7 @@ declare void @llvm.hwasan.check.memaccess(i8*, i8*, i32)
 ; CHECK-NEXT: __hwasan_check_x0_456:
 ; CHECK-NEXT: ubfx x16, x0, #4, #52
 ; CHECK-NEXT: ldrb w16, [x9, x16]
-; CHECK-NEXT: lsr x17, x0, #56
-; CHECK-NEXT: cmp w16, w17
+; CHECK-NEXT: cmp x16, x0, lsr #56
 ; CHECK-NEXT: b.ne .Ltmp0
 ; CHECK-NEXT: ret
 ; CHECK-NEXT: .Ltmp0:
@@ -58,8 +57,7 @@ declare void @llvm.hwasan.check.memaccess(i8*, i8*, i32)
 ; CHECK-NEXT: __hwasan_check_x1_123:
 ; CHECK-NEXT: ubfx x16, x1, #4, #52
 ; CHECK-NEXT: ldrb w16, [x9, x16]
-; CHECK-NEXT: lsr x17, x1, #56
-; CHECK-NEXT: cmp w16, w17
+; CHECK-NEXT: cmp x16, x1, lsr #56
 ; CHECK-NEXT: b.ne .Ltmp1
 ; CHECK-NEXT: ret
 ; CHECK-NEXT: .Ltmp1:

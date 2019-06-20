@@ -9,9 +9,8 @@
 
 define i1 @scalar_i8_shl_and_signbit_eq(i8 %x, i8 %y) {
 ; CHECK-LABEL: @scalar_i8_shl_and_signbit_eq(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 -128, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP2]], 0
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[SHL]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i8 %x, %y
@@ -22,9 +21,8 @@ define i1 @scalar_i8_shl_and_signbit_eq(i8 %x, i8 %y) {
 
 define i1 @scalar_i16_shl_and_signbit_eq(i16 %x, i16 %y) {
 ; CHECK-LABEL: @scalar_i16_shl_and_signbit_eq(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i16 -32768, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[TMP2]], 0
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i16 [[SHL]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i16 %x, %y
@@ -35,9 +33,8 @@ define i1 @scalar_i16_shl_and_signbit_eq(i16 %x, i16 %y) {
 
 define i1 @scalar_i32_shl_and_signbit_eq(i32 %x, i32 %y) {
 ; CHECK-LABEL: @scalar_i32_shl_and_signbit_eq(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 -2147483648, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP2]], 0
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[SHL]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i32 %x, %y
@@ -48,9 +45,8 @@ define i1 @scalar_i32_shl_and_signbit_eq(i32 %x, i32 %y) {
 
 define i1 @scalar_i64_shl_and_signbit_eq(i64 %x, i64 %y) {
 ; CHECK-LABEL: @scalar_i64_shl_and_signbit_eq(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 -9223372036854775808, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i64 [[TMP2]], 0
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i64 [[SHL]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i64 %x, %y
@@ -61,9 +57,8 @@ define i1 @scalar_i64_shl_and_signbit_eq(i64 %x, i64 %y) {
 
 define i1 @scalar_i32_shl_and_signbit_ne(i32 %x, i32 %y) {
 ; CHECK-LABEL: @scalar_i32_shl_and_signbit_ne(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 -2147483648, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i32 [[SHL]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i32 %x, %y
@@ -76,9 +71,8 @@ define i1 @scalar_i32_shl_and_signbit_ne(i32 %x, i32 %y) {
 
 define <4 x i1> @vec_4xi32_shl_and_signbit_eq(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @vec_4xi32_shl_and_signbit_eq(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i32> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <4 x i32> [[SHL]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %shl = shl <4 x i32> %x, %y

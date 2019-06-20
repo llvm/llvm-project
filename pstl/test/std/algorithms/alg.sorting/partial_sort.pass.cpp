@@ -78,19 +78,18 @@ struct test_brick_partial_sort
             //checking upper bound number of comparisons; O(p*(last-first)log(middle-first)); where p - number of threads;
             if (m1 - first > 1)
             {
-                auto complex = std::ceil(n * std::log(float32_t(m1 - first)));
-#if defined(_PSTL_PAR_BACKEND_TBB)
-                auto p = tbb::this_task_arena::max_concurrency();
-#else
-                auto p = 1;
-#endif
-
 #ifdef _DEBUG
+#   if defined(_PSTL_PAR_BACKEND_TBB)
+                auto p = tbb::this_task_arena::max_concurrency();
+#   else
+                auto p = 1;
+#   endif
+                auto complex = std::ceil(n * std::log(float32_t(m1 - first)));
                 if (count_comp > complex * p)
                 {
                     std::cout << "complexity exceeded" << std::endl;
                 }
-#endif
+#endif // _DEBUG
             }
         }
     }
@@ -98,8 +97,8 @@ struct test_brick_partial_sort
     template <typename Policy, typename InputIterator, typename Compare>
     typename std::enable_if<!is_same_iterator_category<InputIterator, std::random_access_iterator_tag>::value,
                             void>::type
-    operator()(Policy&& exec, InputIterator first, InputIterator last, InputIterator exp_first, InputIterator exp_last,
-               Compare compare)
+    operator()(Policy&&, InputIterator, InputIterator, InputIterator, InputIterator,
+               Compare)
     {
     }
 };

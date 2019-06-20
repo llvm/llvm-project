@@ -88,7 +88,7 @@ INVALID OPERATOR
 NUMVAR*2: 22
 INVAL-OP-LABEL: INVALID OPERATOR
 INVAL-OP-NEXT: NUMVAR*2: [[#NUMVAR*2]]
-INVAL-OP-MSG: numeric-expression.txt:[[#@LINE-1]]:35: error: unsupported numeric operation '*'
+INVAL-OP-MSG: numeric-expression.txt:[[#@LINE-1]]:35: error: unsupported operation '*'
 INVAL-OP-MSG-NEXT: {{I}}NVAL-OP-NEXT: NUMVAR*2: {{\[\[#NUMVAR\*2\]\]}}
 INVAL-OP-MSG-NEXT: {{^                                  \^$}}
 
@@ -128,3 +128,15 @@ INPUT-NUM-CONFLICT-NEXT: {{^                     \^$}}
 CLI-NUM-CONFLICT: Global defines:2:20: error: string variable with name 'STRVAR' already exists
 CLI-NUM-CONFLICT-NEXT: Global define #2: #STRVAR=42
 CLI-NUM-CONFLICT-NEXT: {{^                   \^$}}
+
+; Numeric variable definition with too big value.
+RUN: not FileCheck --check-prefix BIGVAL --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix BIGVAL-MSG %s
+
+BIG VALUE
+NUMVAR: 10000000000000000000000
+BIGVAL-LABEL: BIG VALUE
+BIGVAL-NEXT: NUMVAR: [[#NUMVAR:]]
+BIGVAL-MSG: numeric-expression.txt:[[#@LINE-3]]:9: error: Unable to represent numeric value
+BIGVAL-MSG-NEXT: {{N}}UMVAR: 10000000000000000000000
+BIGVAL-MSG-NEXT: {{^        \^$}}

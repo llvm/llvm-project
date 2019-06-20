@@ -2033,6 +2033,9 @@ public:
   // if the given declaration has no explicit. the returned explicit specifier
   // is defaulted. .isSpecified() will be false.
   static ExplicitSpecifier getFromDecl(FunctionDecl *Function);
+  static const ExplicitSpecifier getFromDecl(const FunctionDecl *Function) {
+    return getFromDecl(const_cast<FunctionDecl *>(Function));
+  }
   static ExplicitSpecifier Invalid() {
     return ExplicitSpecifier(nullptr, ExplicitSpecKind::Unresolved);
   }

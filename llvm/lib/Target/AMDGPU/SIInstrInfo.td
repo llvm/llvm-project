@@ -606,6 +606,24 @@ def ShiftAmt32Imm : PatLeaf <(imm), [{
   return N->getZExtValue() < 32;
 }]>;
 
+def getNegV2I16Imm : SDNodeXForm<build_vector, [{
+  return SDValue(packNegConstantV2I16(N, *CurDAG), 0);
+}]>;
+
+
+// TODO: Handle undef as 0
+def NegSubInlineConstV216 : PatLeaf<(build_vector), [{
+  assert(N->getNumOperands() == 2);
+  assert(N->getOperand(0).getValueType().getSizeInBits() == 16);
+  SDValue Src0 = N->getOperand(0);
+  SDValue Src1 = N->getOperand(1);
+  if (Src0 == Src1)
+    return isNegInlineImmediate(Src0.getNode());
+
+  return (isNullConstant(Src0) && isNegInlineImmediate(Src1.getNode())) ||
+         (isNullConstant(Src1) && isNegInlineImmediate(Src0.getNode()));
+}], getNegV2I16Imm>;
+
 //===----------------------------------------------------------------------===//
 // Custom Operands
 //===----------------------------------------------------------------------===//

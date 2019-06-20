@@ -2218,7 +2218,7 @@ static SDValue foldAddSubOfSignBit(SDNode *N, SelectionDAG &DAG) {
   EVT VT = ShiftOp.getValueType();
   SDValue ShAmt = ShiftOp.getOperand(1);
   ConstantSDNode *ShAmtC = isConstOrConstSplat(ShAmt);
-  if (!ShAmtC || ShAmtC->getZExtValue() != VT.getScalarSizeInBits() - 1)
+  if (!ShAmtC || ShAmtC->getAPIntValue() != (VT.getScalarSizeInBits() - 1))
     return SDValue();
 
   // Eliminate the 'not' by adjusting the shift and add/sub constant:
@@ -2957,7 +2957,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     // -(X >>s 31) -> (X >>u 31)
     if (N1->getOpcode() == ISD::SRA || N1->getOpcode() == ISD::SRL) {
       ConstantSDNode *ShiftAmt = isConstOrConstSplat(N1.getOperand(1));
-      if (ShiftAmt && ShiftAmt->getZExtValue() == BitWidth - 1) {
+      if (ShiftAmt && ShiftAmt->getAPIntValue() == (BitWidth - 1)) {
         auto NewSh = N1->getOpcode() == ISD::SRA ? ISD::SRL : ISD::SRA;
         if (!LegalOperations || TLI.isOperationLegal(NewSh, VT))
           return DAG.getNode(NewSh, DL, VT, N1.getOperand(0), N1.getOperand(1));

@@ -79,7 +79,6 @@ struct test_one_policy
     {
         using namespace std;
         using T = typename iterator_traits<Iterator1>::value_type;
-        using DifferenceType = typename iterator_traits<Iterator1>::difference_type;
 
         fill(actual_b, actual_e, T(-123));
         Iterator1 actual_return = reverse_copy(exec, data_b, data_e, actual_b);

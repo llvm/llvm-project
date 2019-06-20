@@ -2453,12 +2453,13 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     // If only one of the LHS or RHS is a warning, the operator might
     // be being used for control flow. Only warn if both the LHS and
     // RHS are warnings.
-    const ConditionalOperator *Exp = cast<ConditionalOperator>(this);
-    if (!Exp->getRHS()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx))
-      return false;
-    if (!Exp->getLHS())
-      return true;
-    return Exp->getLHS()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+    const auto *Exp = cast<ConditionalOperator>(this);
+    return Exp->getLHS()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx) &&
+           Exp->getRHS()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+  }
+  case BinaryConditionalOperatorClass: {
+    const auto *Exp = cast<BinaryConditionalOperator>(this);
+    return Exp->getFalseExpr()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
   }
 
   case MemberExprClass:

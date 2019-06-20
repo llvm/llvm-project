@@ -4810,6 +4810,26 @@ bool X86TargetLowering::shouldReduceLoadWidth(SDNode *Load,
   if (BasePtr.getOpcode() == X86ISD::WrapperRIP)
     if (const auto *GA = dyn_cast<GlobalAddressSDNode>(BasePtr.getOperand(0)))
       return GA->getTargetFlags() != X86II::MO_GOTTPOFF;
+
+  // If this is an (1) AVX vector load with (2) multiple uses and (3) all of
+  // those uses are extracted directly into a store, then the extract + store
+  // can be store-folded. Therefore, it's probably not worth splitting the load.
+  EVT VT = Load->getValueType(0);
+  if ((VT.is256BitVector() || VT.is512BitVector()) && !Load->hasOneUse()) {
+    for (auto UI = Load->use_begin(), UE = Load->use_end(); UI != UE; ++UI) {
+      // Skip uses of the chain value. Result 0 of the node is the load value.
+      if (UI.getUse().getResNo() != 0)
+        continue;
+
+      // If this use is not an extract + store, it's probably worth splitting.
+      if (UI->getOpcode() != ISD::EXTRACT_SUBVECTOR || !UI->hasOneUse() ||
+          UI->use_begin()->getOpcode() != ISD::STORE)
+        return true;
+    }
+    // All non-chain uses are extract + store.
+    return false;
+  }
+
   return true;
 }
 
@@ -41345,6 +41365,7 @@ static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   unsigned Opcode = N->getOpcode();
+  // TODO - add ANY_EXTEND support.
   if (Opcode != ISD::SIGN_EXTEND && Opcode != ISD::ZERO_EXTEND)
     return SDValue();
   if (!DCI.isBeforeLegalizeOps())
