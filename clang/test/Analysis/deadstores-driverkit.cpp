@@ -1,4 +1,4 @@
-/* iig generated from SomethingSomething.iig */
+/* iig(DriverKit-60) generated from SomethingSomething.iig */
 
 // The comment above is the whole point of the test.
 // That's how the suppression works.
