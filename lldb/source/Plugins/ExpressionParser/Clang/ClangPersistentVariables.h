@@ -80,6 +80,9 @@ public:
     return true;
   }
 
+  llvm::Optional<CompilerType>
+  GetCompilerTypeFromPersistentDecl(ConstString type_name) override;
+
   void RegisterPersistentDecl(ConstString name, clang::NamedDecl *decl);
 
   clang::NamedDecl *GetPersistentDecl(ConstString name);

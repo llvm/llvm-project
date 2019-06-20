@@ -56,6 +56,16 @@ class PersistenttypesTestCase(TestBase):
                 "d = 'l'"])  # persistent types are OK to use for memory read
 
         self.expect(
+            "memory read foo -t $foobar -x c",
+            substrs=[
+                '($foobar) 0x',
+                ' = ',
+                "a = 'H'",
+                "b = 'e'",
+                "c = 'l'",
+                "d = 'l'"])  # persistent types are OK to use for memory read
+
+        self.expect(
             "memory read foo -t foobar",
             substrs=[
                 '($foobar) 0x',
