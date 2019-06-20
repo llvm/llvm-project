@@ -1525,7 +1525,8 @@ void CSIImpl::generateInitCallsiteToFunction() {
     GlobalVariable *GV = nullptr;
     if ((GV = M.getGlobalVariable(GVName)) == nullptr) {
       GV = new GlobalVariable(M, IRB.getInt64Ty(), false,
-                              GlobalValue::WeakAnyLinkage,
+                              (Options.jitMode ? GlobalValue::ExternalLinkage :
+                               GlobalValue::WeakAnyLinkage),
                               IRB.getInt64(CsiCallsiteUnknownTargetId), GVName);
     }
     assert(GV);
