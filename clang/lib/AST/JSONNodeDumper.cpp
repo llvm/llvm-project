@@ -834,6 +834,10 @@ void JSONNodeDumper::VisitBlockDecl(const BlockDecl *D) {
   attributeOnlyIfTrue("capturesThis", D->capturesCXXThis());
 }
 
+void JSONNodeDumper::VisitObjCEncodeExpr(const ObjCEncodeExpr *OEE) {
+  JOS.attribute("encodedType", createQualType(OEE->getEncodedType()));
+}
+
 void JSONNodeDumper::VisitDeclRefExpr(const DeclRefExpr *DRE) {
   JOS.attribute("referencedDecl", createBareDeclRef(DRE->getDecl()));
   if (DRE->getDecl() != DRE->getFoundDecl())
@@ -1069,6 +1073,23 @@ void JSONNodeDumper::VisitMaterializeTemporaryExpr(
   }
 
   attributeOnlyIfTrue("boundToLValueRef", MTE->isBoundToLvalueReference());
+}
+
+void JSONNodeDumper::VisitCXXDependentScopeMemberExpr(
+    const CXXDependentScopeMemberExpr *DSME) {
+  JOS.attribute("isArrow", DSME->isArrow());
+  JOS.attribute("member", DSME->getMember().getAsString());
+  attributeOnlyIfTrue("hasTemplateKeyword", DSME->hasTemplateKeyword());
+  attributeOnlyIfTrue("hasExplicitTemplateArgs",
+                      DSME->hasExplicitTemplateArgs());
+
+  if (DSME->getNumTemplateArgs()) {
+    JOS.attributeArray("explicitTemplateArgs", [DSME, this] {
+      for (const TemplateArgumentLoc &TAL : DSME->template_arguments())
+        JOS.object(
+            [&TAL, this] { Visit(TAL.getArgument(), TAL.getSourceRange()); });
+    });
+  }
 }
 
 void JSONNodeDumper::VisitIntegerLiteral(const IntegerLiteral *IL) {

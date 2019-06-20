@@ -9726,25 +9726,25 @@ __m256 test_mm256_maskz_cvtph_ps(__mmask8 __U, __m128i __A) {
 __m128i test_mm_mask_cvtps_ph(__m128i __W, __mmask8 __U, __m128 __A) {
   // CHECK-LABEL: @test_mm_mask_cvtps_ph
   // CHECK: @llvm.x86.avx512.mask.vcvtps2ph.128
-  return _mm_mask_cvtps_ph(__W, __U, __A);
+  return _mm_mask_cvtps_ph(__W, __U, __A, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
 }
 
 __m128i test_mm_maskz_cvtps_ph(__mmask8 __U, __m128 __A) {
   // CHECK-LABEL: @test_mm_maskz_cvtps_ph
   // CHECK: @llvm.x86.avx512.mask.vcvtps2ph.128
-  return _mm_maskz_cvtps_ph(__U, __A);
+  return _mm_maskz_cvtps_ph(__U, __A, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
 }
 
 __m128i test_mm256_mask_cvtps_ph(__m128i __W, __mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm256_mask_cvtps_ph
   // CHECK: @llvm.x86.avx512.mask.vcvtps2ph.256
-  return _mm256_mask_cvtps_ph(__W, __U, __A);
+  return _mm256_mask_cvtps_ph(__W, __U, __A, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
 }
 
 __m128i test_mm256_maskz_cvtps_ph(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm256_maskz_cvtps_ph
   // CHECK: @llvm.x86.avx512.mask.vcvtps2ph.256
-  return _mm256_maskz_cvtps_ph(__U, __A);
+  return _mm256_maskz_cvtps_ph(__U, __A, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
 }
 
 __m128i test_mm_mask_cvt_roundps_ph(__m128i __W, __mmask8 __U, __m128 __A) {

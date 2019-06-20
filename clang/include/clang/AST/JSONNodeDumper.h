@@ -232,6 +232,7 @@ public:
   void VisitObjCPropertyDecl(const ObjCPropertyDecl *D);
   void VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D);
   void VisitBlockDecl(const BlockDecl *D);
+  void VisitObjCEncodeExpr(const ObjCEncodeExpr *OEE);
 
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitPredefinedExpr(const PredefinedExpr *PE);
@@ -258,6 +259,7 @@ public:
   void VisitExprWithCleanups(const ExprWithCleanups *EWC);
   void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE);
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
+  void VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *ME);
 
   void VisitIntegerLiteral(const IntegerLiteral *IL);
   void VisitCharacterLiteral(const CharacterLiteral *CL);

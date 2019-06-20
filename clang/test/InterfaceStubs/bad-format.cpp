@@ -1,3 +1,4 @@
+// REQUIRES: x86-registered-target
 // RUN: not %clang -target x86_64-linux-gnu -o - -emit-interface-stubs \
 // RUN: -interface-stub-version=bar-format %s 2>&1 | FileCheck %s
 

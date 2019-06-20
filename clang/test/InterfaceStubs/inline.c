@@ -1,3 +1,4 @@
+// REQUIRES: x86-registered-target
 // RUN: %clang -DINLINE=inline -target x86_64-unknown-linux-gnu -o - \
 // RUN: -emit-interface-stubs \
 // RUN: -interface-stub-version=experimental-yaml-elf-v1 -std=gnu89 -xc %s | \

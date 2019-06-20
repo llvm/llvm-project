@@ -1,3 +1,4 @@
+// REQUIRES: x86-registered-target
 // RUN: %clang -target x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
 // RUN: -interface-stub-version=experimental-tapi-elf-v1 -fvisibility=hidden \
 // RUN: %s | FileCheck --check-prefix=CHECK-CMD-HIDDEN %s

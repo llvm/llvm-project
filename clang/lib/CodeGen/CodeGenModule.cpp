@@ -2475,13 +2475,19 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
         // Emit declaration of the must-be-emitted declare target variable.
         if (llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
                 OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD)) {
-          if (*Res == OMPDeclareTargetDeclAttr::MT_To) {
+          bool UnifiedMemoryEnabled =
+              getOpenMPRuntime().hasRequiresUnifiedSharedMemory();
+          if (*Res == OMPDeclareTargetDeclAttr::MT_To &&
+              !UnifiedMemoryEnabled) {
             (void)GetAddrOfGlobalVar(VD);
           } else {
-            assert(*Res == OMPDeclareTargetDeclAttr::MT_Link &&
-                   "link claue expected.");
-            (void)getOpenMPRuntime().getAddrOfDeclareTargetLink(VD);
+            assert(((*Res == OMPDeclareTargetDeclAttr::MT_Link) ||
+                    (*Res == OMPDeclareTargetDeclAttr::MT_To &&
+                     UnifiedMemoryEnabled)) &&
+                   "Link clause or to clause with unified memory expected.");
+            (void)getOpenMPRuntime().getAddrOfDeclareTargetVar(VD);
           }
+
           return;
         }
       }

@@ -2295,15 +2295,22 @@ static LValue EmitThreadPrivateVarDeclLValue(
   return CGF.MakeAddrLValue(Addr, T, AlignmentSource::Decl);
 }
 
-static Address emitDeclTargetLinkVarDeclLValue(CodeGenFunction &CGF,
-                                               const VarDecl *VD, QualType T) {
+static Address emitDeclTargetVarDeclLValue(CodeGenFunction &CGF,
+                                           const VarDecl *VD, QualType T) {
   llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
-  if (!Res || *Res == OMPDeclareTargetDeclAttr::MT_To)
+  // Return an invalid address if variable is MT_To and unified
+  // memory is not enabled. For all other cases: MT_Link and
+  // MT_To with unified memory, return a valid address.
+  if (!Res || (*Res == OMPDeclareTargetDeclAttr::MT_To &&
+               !CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory()))
     return Address::invalid();
-  assert(*Res == OMPDeclareTargetDeclAttr::MT_Link && "Expected link clause");
+  assert(((*Res == OMPDeclareTargetDeclAttr::MT_Link) ||
+          (*Res == OMPDeclareTargetDeclAttr::MT_To &&
+           CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory())) &&
+         "Expected link clause OR to clause with unified memory enabled.");
   QualType PtrTy = CGF.getContext().getPointerType(VD->getType());
-  Address Addr = CGF.CGM.getOpenMPRuntime().getAddrOfDeclareTargetLink(VD);
+  Address Addr = CGF.CGM.getOpenMPRuntime().getAddrOfDeclareTargetVar(VD);
   return CGF.EmitLoadOfPointer(Addr, PtrTy->castAs<PointerType>());
 }
 
@@ -2359,7 +2366,7 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
   // Check if the variable is marked as declare target with link clause in
   // device codegen.
   if (CGF.getLangOpts().OpenMPIsDevice) {
-    Address Addr = emitDeclTargetLinkVarDeclLValue(CGF, VD, T);
+    Address Addr = emitDeclTargetVarDeclLValue(CGF, VD, T);
     if (Addr.isValid())
       return CGF.MakeAddrLValue(Addr, T, AlignmentSource::Decl);
   }
