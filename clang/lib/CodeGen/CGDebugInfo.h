@@ -422,9 +422,10 @@ public:
   /// declaration.
   /// Returns a pointer to the DILocalVariable associated with the
   /// llvm.dbg.declare, or nullptr otherwise.
-  llvm::DILocalVariable *EmitDeclareOfAutoVariable(const VarDecl *Decl,
-                                                   llvm::Value *AI,
-                                                   CGBuilderTy &Builder);
+  llvm::DILocalVariable *
+  EmitDeclareOfAutoVariable(const VarDecl *Decl, llvm::Value *AI,
+                            CGBuilderTy &Builder,
+                            const bool UsePointerValue = false);
 
   /// Emit call to \c llvm.dbg.label for an label.
   void EmitLabel(const LabelDecl *D, CGBuilderTy &Builder);
@@ -507,7 +508,8 @@ private:
   /// llvm.dbg.declare, or nullptr otherwise.
   llvm::DILocalVariable *EmitDeclare(const VarDecl *decl, llvm::Value *AI,
                                      llvm::Optional<unsigned> ArgNo,
-                                     CGBuilderTy &Builder);
+                                     CGBuilderTy &Builder,
+                                     const bool UsePointerValue = false);
 
   struct BlockByRefType {
     /// The wrapper struct used inside the __block_literal struct.

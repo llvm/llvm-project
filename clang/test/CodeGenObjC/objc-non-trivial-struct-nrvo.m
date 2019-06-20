@@ -38,7 +38,6 @@ Trivial testTrivial(void) {
 void func1(TrivialBig *);
 
 // CHECK: define void @testTrivialBig(%[[STRUCT_TRIVIALBIG]]* noalias sret %[[AGG_RESULT:.*]])
-// CHECK-NOT: alloca
 // CHECK: call void @func1(%[[STRUCT_TRIVIALBIG]]* %[[AGG_RESULT]])
 // CHECK-NEXT: ret void
 
