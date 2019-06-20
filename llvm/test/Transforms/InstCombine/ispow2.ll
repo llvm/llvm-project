@@ -3,9 +3,9 @@
 
 define i1 @is_pow2or0_negate_op(i32 %x) {
 ; CHECK-LABEL: @is_pow2or0_negate_op(
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NEG]], [[X]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %neg = sub i32 0, %x
@@ -16,9 +16,9 @@ define i1 @is_pow2or0_negate_op(i32 %x) {
 
 define <2 x i1> @is_pow2or0_negate_op_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @is_pow2or0_negate_op_vec(
-; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i32> zeroinitializer, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[NEG]], [[X]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[AND]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %neg = sub <2 x i32> zeroinitializer, %x
@@ -55,9 +55,9 @@ define <2 x i1> @is_pow2or0_decrement_op_vec(<2 x i8> %x) {
 
 define i1 @isnot_pow2or0_negate_op(i32 %x) {
 ; CHECK-LABEL: @isnot_pow2or0_negate_op(
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NEG]], [[X]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %neg = sub i32 0, %x
@@ -68,9 +68,9 @@ define i1 @isnot_pow2or0_negate_op(i32 %x) {
 
 define <2 x i1> @isnot_pow2or0_negate_op_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @isnot_pow2or0_negate_op_vec(
-; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i32> zeroinitializer, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[NEG]], [[X]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[AND]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %neg = sub <2 x i32> zeroinitializer, %x
@@ -108,9 +108,9 @@ define <2 x i1> @isnot_pow2or0_decrement_op_vec(<2 x i8> %x) {
 define i1 @is_pow2or0_negate_op_commute1(i32 %p) {
 ; CHECK-LABEL: @is_pow2or0_negate_op_commute1(
 ; CHECK-NEXT:    [[X:%.*]] = srem i32 42, [[P:%.*]]
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], [[NEG]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[X]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x = srem i32 42, %p ; thwart complexity-based canonicalization
@@ -125,9 +125,9 @@ define i1 @is_pow2or0_negate_op_commute1(i32 %p) {
 define i1 @isnot_pow2or0_negate_op_commute2(i32 %p) {
 ; CHECK-LABEL: @isnot_pow2or0_negate_op_commute2(
 ; CHECK-NEXT:    [[X:%.*]] = urem i32 42, [[P:%.*]]
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], [[NEG]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X]], [[AND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[X]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x = urem i32 42, %p ; thwart complexity-based canonicalization
@@ -140,9 +140,9 @@ define i1 @isnot_pow2or0_negate_op_commute2(i32 %p) {
 define i1 @isnot_pow2or0_negate_op_commute3(i32 %p) {
 ; CHECK-LABEL: @isnot_pow2or0_negate_op_commute3(
 ; CHECK-NEXT:    [[X:%.*]] = urem i32 42, [[P:%.*]]
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], [[NEG]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X]], [[AND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[X]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x = urem i32 42, %p ; thwart complexity-based canonicalization

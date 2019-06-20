@@ -1240,8 +1240,7 @@ define i32 @blsi_cflag_32(i32 %x, i32 %y) nounwind {
 ; X64-LABEL: blsi_cflag_32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    blsil %edi, %eax
-; X64-NEXT:    testl %edi, %edi
-; X64-NEXT:    cmovel %esi, %eax
+; X64-NEXT:    cmovael %esi, %eax
 ; X64-NEXT:    retq
   %tobool = icmp eq i32 %x, 0
   %sub = sub nsw i32 0, %x
@@ -1279,8 +1278,7 @@ define i64 @blsi_cflag_64(i64 %x, i64 %y) nounwind {
 ; X64-LABEL: blsi_cflag_64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    blsiq %rdi, %rax
-; X64-NEXT:    testq %rdi, %rdi
-; X64-NEXT:    cmoveq %rsi, %rax
+; X64-NEXT:    cmovaeq %rsi, %rax
 ; X64-NEXT:    retq
   %tobool = icmp eq i64 %x, 0
   %sub = sub nsw i64 0, %x
