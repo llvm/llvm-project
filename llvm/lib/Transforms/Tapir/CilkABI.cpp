@@ -869,7 +869,6 @@ Function *CilkABI::GetCilkCatchExceptionFn(Type *ExnTy) {
   // Get or create the __cilk_catch_exception function.
   LLVMContext &Ctx = M.getContext();
 
-  Type *VoidTy = Type::getVoidTy(Ctx);
   PointerType *StackFramePtrTy = PointerType::getUnqual(StackFrameTy);
   Function *Fn = nullptr;
   if (GetOrCreateFunction(M, "__cilk_catch_exception",

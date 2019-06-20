@@ -55,8 +55,6 @@ class CilkRABI : public TapirTarget {
   Function *CilkRTSLeaveFrame = nullptr;
   // Function *CilkRTSRethrow = nullptr;
   Function *CilkRTSSync = nullptr;
-  Function *CilkRTSDetach = nullptr;
-  Function *CilkRTSPopFrame = nullptr;
   Function *CilkRTSGetNworkers = nullptr;
   Function *CilkRTSGetTLSWorker = nullptr;
 
