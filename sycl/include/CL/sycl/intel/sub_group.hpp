@@ -10,6 +10,7 @@
 
 #include <CL/__spirv/spirv_vars.hpp>
 #include <CL/sycl/access/access.hpp>
+#include <CL/sycl/detail/helpers.hpp>
 #include <CL/sycl/id.hpp>
 #include <CL/sycl/range.hpp>
 #include <CL/sycl/types.hpp>
@@ -334,25 +335,8 @@ struct sub_group {
   /* --- synchronization functions --- */
   void barrier(access::fence_space accessSpace =
                    access::fence_space::global_and_local) const {
-    uint32_t flags = static_cast<uint32_t>(
-        __spv::MemorySemanticsMask::SequentiallyConsistent);
-    switch (accessSpace) {
-    case access::fence_space::global_space:
-      flags |= static_cast<uint32_t>(
-          __spv::MemorySemanticsMask::CrossWorkgroupMemory);
-      break;
-    case access::fence_space::local_space:
-      flags |=
-          static_cast<uint32_t>(__spv::MemorySemanticsMask::SubgroupMemory);
-      break;
-    case access::fence_space::global_and_local:
-    default:
-      flags |=
-          static_cast<uint32_t>(
-              __spv::MemorySemanticsMask::CrossWorkgroupMemory) |
-          static_cast<uint32_t>(__spv::MemorySemanticsMask::SubgroupMemory);
-      break;
-    }
+    uint32_t flags = detail::getSPIRVMemorySemanticsMask(
+        accessSpace, __spv::MemorySemanticsMask::SubgroupMemory);
     __spirv_ControlBarrier(__spv::Scope::Subgroup, __spv::Scope::Workgroup,
                            flags);
   }

@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include <CL/__spirv/spirv_types.hpp>
+#include <CL/sycl/access/access.hpp>
 #include <CL/sycl/detail/common.hpp>
 
 #include <memory>
@@ -24,6 +26,7 @@ template <int dimensions> class group;
 template <int dimensions> class range;
 template <int dimensions> struct id;
 template <int dimensions> class nd_item;
+enum class memory_order;
 namespace detail {
 class context_impl;
 // The function returns list of events that can be passed to OpenCL API as
@@ -67,6 +70,35 @@ struct Builder {
     return cl::sycl::nd_item<dimensions>(GL, L, GR);
   }
 };
+
+inline __spv::MemorySemanticsMask getSPIRVMemorySemanticsMask(memory_order) {
+  return __spv::MemorySemanticsMask::None;
+}
+
+inline uint32_t
+getSPIRVMemorySemanticsMask(access::fence_space AccessSpace,
+                            __spv::MemorySemanticsMask LocalScopeMask =
+                                __spv::MemorySemanticsMask::WorkgroupMemory) {
+  uint32_t Flags =
+      static_cast<uint32_t>(__spv::MemorySemanticsMask::SequentiallyConsistent);
+  switch (AccessSpace) {
+  case access::fence_space::global_space:
+    Flags |=
+        static_cast<uint32_t>(__spv::MemorySemanticsMask::CrossWorkgroupMemory);
+    break;
+  case access::fence_space::local_space:
+    Flags |= static_cast<uint32_t>(LocalScopeMask);
+    break;
+  case access::fence_space::global_and_local:
+  default:
+    Flags |= static_cast<uint32_t>(
+                 __spv::MemorySemanticsMask::CrossWorkgroupMemory) |
+             static_cast<uint32_t>(LocalScopeMask);
+    break;
+  }
+
+  return Flags;
+}
 
 } // namespace detail
 } // namespace sycl

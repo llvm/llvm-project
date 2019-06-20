@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #pragma once
-#include <CL/sycl/access/access.hpp>
-#ifdef __SYCL_DEVICE_ONLY__
+
 #include <CL/__spirv/spirv_ops.hpp>
-#else
-#include <CL/__spirv/spirv_types.hpp>
+#include <CL/sycl/access/access.hpp>
+#include <CL/sycl/detail/helpers.hpp>
+
+#ifndef __SYCL_DEVICE_ONLY__
 #include <atomic>
 #endif
 #include <type_traits>
@@ -56,12 +57,6 @@ template <> struct GetSpirvMemoryScope<access::address_space::global_space> {
 template <> struct GetSpirvMemoryScope<access::address_space::local_space> {
   static constexpr auto scope = __spv::Scope::Workgroup;
 };
-
-// Translate the cl::sycl::memory_order to a SPIR-V builtin order
-static inline __spv::MemorySemanticsMask
-getSpirvMemorySemanticsMask(memory_order Order) {
-  return __spv::MemorySemanticsMask::None;
-}
 
 } // namespace detail
 } // namespace sycl
@@ -196,17 +191,17 @@ public:
 
   void store(T Operand, memory_order Order = memory_order::relaxed) {
     __spirv_AtomicStore(
-        Ptr, SpirvScope, detail::getSpirvMemorySemanticsMask(Order), Operand);
+        Ptr, SpirvScope, detail::getSPIRVMemorySemanticsMask(Order), Operand);
   }
 
   T load(memory_order Order = memory_order::relaxed) const {
     return __spirv_AtomicLoad(Ptr, SpirvScope,
-                              detail::getSpirvMemorySemanticsMask(Order));
+                              detail::getSPIRVMemorySemanticsMask(Order));
   }
 
   T exchange(T Operand, memory_order Order = memory_order::relaxed) {
     return __spirv_AtomicExchange(
-        Ptr, SpirvScope, detail::getSpirvMemorySemanticsMask(Order), Operand);
+        Ptr, SpirvScope, detail::getSPIRVMemorySemanticsMask(Order), Operand);
   }
 
   bool
@@ -216,8 +211,8 @@ public:
     STATIC_ASSERT_NOT_FLOAT(T);
 #ifdef __SYCL_DEVICE_ONLY__
     T Value = __spirv_AtomicCompareExchange(
-        Ptr, SpirvScope, detail::getSpirvMemorySemanticsMask(SuccessOrder),
-        detail::getSpirvMemorySemanticsMask(FailOrder), Desired, Expected);
+        Ptr, SpirvScope, detail::getSPIRVMemorySemanticsMask(SuccessOrder),
+        detail::getSPIRVMemorySemanticsMask(FailOrder), Desired, Expected);
     return (Value == Expected);
 #else
     return Ptr->compare_exchange_strong(Expected, Desired,
@@ -229,43 +224,43 @@ public:
   T fetch_add(T Operand, memory_order Order = memory_order::relaxed) {
     STATIC_ASSERT_NOT_FLOAT(T);
     return __spirv_AtomicIAdd(
-        Ptr, SpirvScope, detail::getSpirvMemorySemanticsMask(Order), Operand);
+        Ptr, SpirvScope, detail::getSPIRVMemorySemanticsMask(Order), Operand);
   }
 
   T fetch_sub(T Operand, memory_order Order = memory_order::relaxed) {
     STATIC_ASSERT_NOT_FLOAT(T);
     return __spirv_AtomicISub(
-        Ptr, SpirvScope, detail::getSpirvMemorySemanticsMask(Order), Operand);
+        Ptr, SpirvScope, detail::getSPIRVMemorySemanticsMask(Order), Operand);
   }
 
   T fetch_and(T Operand, memory_order Order = memory_order::relaxed) {
     STATIC_ASSERT_NOT_FLOAT(T);
     return __spirv_AtomicAnd(
-        Ptr, SpirvScope, detail::getSpirvMemorySemanticsMask(Order), Operand);
+        Ptr, SpirvScope, detail::getSPIRVMemorySemanticsMask(Order), Operand);
   }
 
   T fetch_or(T Operand, memory_order Order = memory_order::relaxed) {
     STATIC_ASSERT_NOT_FLOAT(T);
     return __spirv_AtomicOr(
-        Ptr, SpirvScope, detail::getSpirvMemorySemanticsMask(Order), Operand);
+        Ptr, SpirvScope, detail::getSPIRVMemorySemanticsMask(Order), Operand);
   }
 
   T fetch_xor(T Operand, memory_order Order = memory_order::relaxed) {
     STATIC_ASSERT_NOT_FLOAT(T);
     return __spirv_AtomicXor(
-        Ptr, SpirvScope, detail::getSpirvMemorySemanticsMask(Order), Operand);
+        Ptr, SpirvScope, detail::getSPIRVMemorySemanticsMask(Order), Operand);
   }
 
   T fetch_min(T Operand, memory_order Order = memory_order::relaxed) {
     STATIC_ASSERT_NOT_FLOAT(T);
     return __spirv_AtomicMin(
-        Ptr, SpirvScope, detail::getSpirvMemorySemanticsMask(Order), Operand);
+        Ptr, SpirvScope, detail::getSPIRVMemorySemanticsMask(Order), Operand);
   }
 
   T fetch_max(T Operand, memory_order Order = memory_order::relaxed) {
     STATIC_ASSERT_NOT_FLOAT(T);
     return __spirv_AtomicMax(
-        Ptr, SpirvScope, detail::getSpirvMemorySemanticsMask(Order), Operand);
+        Ptr, SpirvScope, detail::getSPIRVMemorySemanticsMask(Order), Operand);
   }
 
 private:

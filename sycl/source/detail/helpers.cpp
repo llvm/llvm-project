@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <CL/sycl/detail/context_impl.hpp>
 #include <CL/sycl/detail/helpers.hpp>
+
+#include <CL/sycl/detail/context_impl.hpp>
 #include <CL/sycl/event.hpp>
 
 #include <memory>

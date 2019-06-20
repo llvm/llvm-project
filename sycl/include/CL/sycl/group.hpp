@@ -9,6 +9,7 @@
 #pragma once
 
 #include <CL/__spirv/spirv_ops.hpp>
+#include <CL/sycl/detail/helpers.hpp>
 #include <CL/sycl/device_event.hpp>
 #include <CL/sycl/id.hpp>
 #include <CL/sycl/pointers.hpp>
@@ -81,25 +82,7 @@ public:
                      accessMode == access::mode::read_write,
                      access::fence_space>::type accessSpace =
                      access::fence_space::global_and_local) const {
-    uint32_t flags = static_cast<uint32_t>(
-        __spv::MemorySemanticsMask::SequentiallyConsistent);
-    switch (accessSpace) {
-    case access::fence_space::global_space:
-      flags |= static_cast<uint32_t>(
-          __spv::MemorySemanticsMask::CrossWorkgroupMemory);
-      break;
-    case access::fence_space::local_space:
-      flags |=
-          static_cast<uint32_t>(__spv::MemorySemanticsMask::WorkgroupMemory);
-      break;
-    case access::fence_space::global_and_local:
-    default:
-      flags |=
-          static_cast<uint32_t>(
-              __spv::MemorySemanticsMask::CrossWorkgroupMemory) |
-          static_cast<uint32_t>(__spv::MemorySemanticsMask::WorkgroupMemory);
-      break;
-    }
+    uint32_t flags = detail::getSPIRVMemorySemanticsMask(accessSpace);
     // TODO: currently, there is no good way in SPIRV to set the memory
     // barrier only for load operations or only for store operations.
     // The full read-and-write barrier is used and the template parameter

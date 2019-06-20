@@ -8,14 +8,16 @@
 
 #pragma once
 
+#include <CL/__spirv/spirv_ops.hpp>
 #include <CL/sycl/access/access.hpp>
+#include <CL/sycl/detail/helpers.hpp>
 #include <CL/sycl/group.hpp>
 #include <CL/sycl/id.hpp>
 #include <CL/sycl/intel/sub_group.hpp>
 #include <CL/sycl/item.hpp>
 #include <CL/sycl/nd_range.hpp>
 #include <CL/sycl/range.hpp>
-#include <CL/__spirv/spirv_ops.hpp>
+
 #include <stdexcept>
 #include <type_traits>
 
@@ -81,25 +83,7 @@ template <int dimensions = 1> struct nd_item {
 
   void barrier(access::fence_space accessSpace =
                    access::fence_space::global_and_local) const {
-    uint32_t flags = static_cast<uint32_t>(
-        __spv::MemorySemanticsMask::SequentiallyConsistent);
-    switch (accessSpace) {
-    case access::fence_space::global_space:
-      flags |= static_cast<uint32_t>(
-          __spv::MemorySemanticsMask::CrossWorkgroupMemory);
-      break;
-    case access::fence_space::local_space:
-      flags |=
-          static_cast<uint32_t>(__spv::MemorySemanticsMask::WorkgroupMemory);
-      break;
-    case access::fence_space::global_and_local:
-    default:
-      flags |=
-          static_cast<uint32_t>(
-              __spv::MemorySemanticsMask::CrossWorkgroupMemory) |
-          static_cast<uint32_t>(__spv::MemorySemanticsMask::WorkgroupMemory);
-      break;
-    }
+    uint32_t flags = detail::getSPIRVMemorySemanticsMask(accessSpace);
     __spirv_ControlBarrier(__spv::Scope::Workgroup, __spv::Scope::Workgroup,
                            flags);
   }
