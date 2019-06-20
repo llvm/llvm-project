@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include "comgr-compiler.h"
+#include "comgr-env.h"
 #include "lld/Common/Driver.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Driver/Compilation.h"
@@ -1039,8 +1040,7 @@ AMDGPUCompiler::AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet,
 }
 
 AMDGPUCompiler::~AMDGPUCompiler() {
-  const char *SaveTemps = getenv("AMD_COMGR_SAVE_TEMPS");
-  if (!SaveTemps || StringRef(SaveTemps) == "0")
+  if (!env::shouldSaveTemps())
     removeTmpDirs();
 }
 

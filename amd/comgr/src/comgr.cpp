@@ -39,6 +39,7 @@
 #include "comgr-device-libs.h"
 #endif
 #include "comgr-disassembly.h"
+#include "comgr-env.h"
 #include "comgr-metadata.h"
 #include "comgr-objdump.h"
 #include "comgr-symbol.h"
@@ -1056,13 +1057,13 @@ amd_comgr_status_t AMD_API
   // Pointer to the currently selected log stream.
   raw_ostream *LogP = &LogS;
 
-  if (const char *ComgrRedirectLog = getenv("AMD_COMGR_REDIRECT_LOGS")) {
-    StringRef RedirectLog = ComgrRedirectLog;
+  if (Optional<StringRef> RedirectLogs = env::getRedirectLogs()) {
+    StringRef RedirectLog = *RedirectLogs;
     if (RedirectLog == "stdout")
       LogP = &outs();
     else if (RedirectLog == "stderr")
       LogP = &errs();
-    else if (RedirectLog != "0") {
+    else {
       std::error_code EC;
       LogF.reset(new (std::nothrow) raw_fd_ostream(
           RedirectLog, EC, sys::fs::OF_Text | sys::fs::OF_Append));
