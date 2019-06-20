@@ -56,6 +56,24 @@ struct _ImplT {
     id<dim> Offset;
 };
 
+template <typename dataT, access::target accessTarget>
+struct DeviceValueType;
+
+template <typename dataT>
+struct DeviceValueType<dataT, access::target::global_buffer> {
+  using type = __global dataT;
+};
+
+template <typename dataT>
+struct DeviceValueType<dataT, access::target::constant_buffer> {
+  using type = __constant dataT;
+};
+
+template <typename dataT>
+struct DeviceValueType<dataT, access::target::local> {
+  using type = __local dataT;
+};
+
 template <typename dataT, int dimensions, access::mode accessmode,
           access::target accessTarget = access::target::global_buffer,
           access::placeholder isPlaceholder = access::placeholder::false_t>
@@ -67,7 +85,8 @@ public:
   _ImplT<dimensions> impl;
 
 private:
-  void __init(__global dataT *Ptr, range<dimensions> AccessRange,
+  using PtrType = typename DeviceValueType<dataT, accessTarget>::type *;
+  void __init(PtrType Ptr, range<dimensions> AccessRange,
               range<dimensions> MemRange, id<dimensions> Offset) {}
 };
 

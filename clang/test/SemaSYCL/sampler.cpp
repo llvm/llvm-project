@@ -16,10 +16,10 @@ int main() {
 }
 
 // Check declaration of the test kernel
-// CHECK: FunctionDecl {{.*}}use_kernel_for_test 'void (__ocl_sampler_t)'
+// CHECK: FunctionDecl {{.*}}use_kernel_for_test 'void (sampler_t)'
 //
 // Check parameters of the test kernel
-// CHECK: ParmVarDecl {{.*}} used [[_arg_sampler:[0-9a-zA-Z_]+]] '__ocl_sampler_t'
+// CHECK: ParmVarDecl {{.*}} used [[_arg_sampler:[0-9a-zA-Z_]+]] 'sampler_t'
 //
 // Check that sampler field of the test kernel object is initialized using __init method
 // CHECK: CXXMemberCallExpr {{.*}} 'void'
@@ -29,5 +29,4 @@ int main() {
 //
 // Check the parameters of __init method
 // CHECK-NEXT: ImplicitCastExpr {{.*}} '__ocl_sampler_t':'sampler_t' <LValueToRValue>
-// CHECK-NEXT: ImplicitCastExpr {{.*}} '__ocl_sampler_t':'sampler_t' lvalue <NoOp>
-// CHECK-NEXT: DeclRefExpr {{.*}} '__ocl_sampler_t':'sampler_t' lvalue ParmVar {{.*}} '[[_arg_sampler]]' '__ocl_sampler_t':'sampler_t'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'sampler_t' lvalue ParmVar {{.*}} '[[_arg_sampler]]' 'sampler_t'

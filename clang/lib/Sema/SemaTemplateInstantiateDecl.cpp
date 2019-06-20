@@ -5523,7 +5523,7 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
                 // so we are checking for SYCL kernel attribute after instantination.
                 if (getLangOpts().SYCLIsDevice &&
                         CurFD->hasAttr<SYCLKernelAttr>()) {
-                  ConstructSYCLKernel(CurFD);
+                  ConstructOpenCLKernel(CurFD);
                 }
                 CurFD->setInstantiationIsPending(false);
               }
@@ -5537,7 +5537,7 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
           // so we are checking for SYCL kernel attribute after instantination.
           if (getLangOpts().SYCLIsDevice &&
                   Function->hasAttr<SYCLKernelAttr>()) {
-              ConstructSYCLKernel(Function);
+              ConstructOpenCLKernel(Function);
           }
           Function->setInstantiationIsPending(false);
         }

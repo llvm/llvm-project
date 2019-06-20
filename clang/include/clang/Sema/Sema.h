@@ -11266,7 +11266,7 @@ public:
     return *SyclIntHeader.get();
   }
 
-  void ConstructSYCLKernel(FunctionDecl *KernelCallerFunc);
+  void ConstructOpenCLKernel(FunctionDecl *KernelCallerFunc);
   void MarkDevice(void);
 };
 
