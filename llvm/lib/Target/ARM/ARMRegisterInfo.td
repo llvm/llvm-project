@@ -336,6 +336,8 @@ def tGPROdd : RegisterClass<"ARM", [i32], 32, (add R1, R3, R5, R7, R9, R11)> {
   let AltOrderSelect = [{
       return MF.getSubtarget<ARMSubtarget>().isThumb1Only();
   }];
+  let DiagnosticString =
+    "operand must be an odd-numbered register in range [r1,r11]";
 }
 
 def tGPREven : RegisterClass<"ARM", [i32], 32, (add R0, R2, R4, R6, R8, R10, R12, LR)> {
@@ -343,6 +345,7 @@ def tGPREven : RegisterClass<"ARM", [i32], 32, (add R0, R2, R4, R6, R8, R10, R12
   let AltOrderSelect = [{
       return MF.getSubtarget<ARMSubtarget>().isThumb1Only();
   }];
+  let DiagnosticString = "operand must be an even-numbered register";
 }
 
 // Condition code registers.

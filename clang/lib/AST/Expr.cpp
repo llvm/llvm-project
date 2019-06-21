@@ -239,6 +239,7 @@ ConstantExpr::ResultStorageKind
 ConstantExpr::getStorageKind(const APValue &Value) {
   switch (Value.getKind()) {
   case APValue::None:
+  case APValue::Indeterminate:
     return ConstantExpr::RSK_None;
   case APValue::Int:
     if (!Value.getInt().needsCleanup())
@@ -249,9 +250,18 @@ ConstantExpr::getStorageKind(const APValue &Value) {
   }
 }
 
+ConstantExpr::ResultStorageKind
+ConstantExpr::getStorageKind(const Type *T, const ASTContext &Context) {
+  if (T->isIntegralOrEnumerationType() && Context.getTypeInfo(T).Width <= 64)
+    return ConstantExpr::RSK_Int64;
+  return ConstantExpr::RSK_APValue;
+}
+
 void ConstantExpr::DefaultInit(ResultStorageKind StorageKind) {
   ConstantExprBits.ResultKind = StorageKind;
-  if (StorageKind == RSK_APValue)
+  ConstantExprBits.APValueKind = APValue::None;
+  ConstantExprBits.HasCleanup = false;
+  if (StorageKind == ConstantExpr::RSK_APValue)
     ::new (getTrailingObjects<APValue>()) APValue();
 }
 
@@ -269,8 +279,6 @@ ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
       StorageKind == ConstantExpr::RSK_Int64);
   void *Mem = Context.Allocate(Size, alignof(ConstantExpr));
   ConstantExpr *Self = new (Mem) ConstantExpr(E, StorageKind);
-  if (StorageKind == ConstantExpr::RSK_APValue)
-    Context.AddAPValueCleanup(&Self->APValueResult());
   return Self;
 }
 
@@ -278,7 +286,7 @@ ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
                                    const APValue &Result) {
   ResultStorageKind StorageKind = getStorageKind(Result);
   ConstantExpr *Self = Create(Context, E, StorageKind);
-  Self->SetResult(Result);
+  Self->SetResult(Result, Context);
   return Self;
 }
 
@@ -296,14 +304,13 @@ ConstantExpr *ConstantExpr::CreateEmpty(const ASTContext &Context,
       StorageKind == ConstantExpr::RSK_Int64);
   void *Mem = Context.Allocate(Size, alignof(ConstantExpr));
   ConstantExpr *Self = new (Mem) ConstantExpr(StorageKind, Empty);
-  if (StorageKind == ConstantExpr::RSK_APValue)
-    Context.AddAPValueCleanup(&Self->APValueResult());
   return Self;
 }
 
-void ConstantExpr::MoveIntoResult(APValue &Value) {
+void ConstantExpr::MoveIntoResult(APValue &Value, const ASTContext &Context) {
   assert(getStorageKind(Value) == ConstantExprBits.ResultKind &&
          "Invalid storage for this value kind");
+  ConstantExprBits.APValueKind = Value.getKind();
   switch (ConstantExprBits.ResultKind) {
   case RSK_None:
     return;
@@ -313,10 +320,26 @@ void ConstantExpr::MoveIntoResult(APValue &Value) {
     ConstantExprBits.IsUnsigned = Value.getInt().isUnsigned();
     return;
   case RSK_APValue:
+    if (!ConstantExprBits.HasCleanup && Value.needsCleanup()) {
+      ConstantExprBits.HasCleanup = true;
+      Context.addDestruction(&APValueResult());
+    }
     APValueResult() = std::move(Value);
     return;
   }
   llvm_unreachable("Invalid ResultKind Bits");
+}
+
+llvm::APSInt ConstantExpr::getResultAsAPSInt() const {
+  switch (ConstantExprBits.ResultKind) {
+  case ConstantExpr::RSK_APValue:
+    return APValueResult().getInt();
+  case ConstantExpr::RSK_Int64:
+    return llvm::APSInt(llvm::APInt(ConstantExprBits.BitWidth, Int64Result()),
+                        ConstantExprBits.IsUnsigned);
+  default:
+    llvm_unreachable("invalid Accessor");
+  }
 }
 
 APValue ConstantExpr::getAPValueResult() const {

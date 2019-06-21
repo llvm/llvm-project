@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-darwin-apple -fobjc-arc -O2 | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-darwin-apple -fobjc-arc -O2 -fno-experimental-new-pass-manager | FileCheck %s --check-prefixes=CHECK,CHECK-LEGACY
+// RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-darwin-apple -fobjc-arc -O2 -fexperimental-new-pass-manager | FileCheck %s --check-prefixes=CHECK,CHECK-NEWPM
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-darwin-apple -fobjc-arc -O0 | FileCheck %s -check-prefix=CHECK-O0
 
 // Make sure we emit clang.arc.use before calling objc_release as part of the
@@ -22,7 +23,8 @@ void *test_builtin_os_log(void *buf) {
   // CHECK: %[[CALL:.*]] = tail call %[[TY0:.*]]* (...) @GenString()
   // CHECK: %[[V0:.*]] = bitcast %[[TY0]]* %[[CALL]] to i8*
   // CHECK: %[[V1:.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %[[V0]])
-  // CHECK: %[[V2:.*]] = ptrtoint %[[TY0]]* %[[CALL]] to i64
+  // CHECK-LEGACY: %[[V2:.*]] = ptrtoint %[[TY0]]* %[[CALL]] to i64
+  // CHECK-NEWPM: %[[V2:.*]] = ptrtoint i8* %[[V1]] to i64
   // CHECK: store i8 2, i8* %[[BUF]], align 1
   // CHECK: %[[NUMARGS_I:.*]] = getelementptr i8, i8* %[[BUF]], i64 1
   // CHECK: store i8 1, i8* %[[NUMARGS_I]], align 1
@@ -33,8 +35,10 @@ void *test_builtin_os_log(void *buf) {
   // CHECK: %[[ARGDATA_I:.*]] = getelementptr i8, i8* %[[BUF]], i64 4
   // CHECK: %[[ARGDATACAST_I:.*]] = bitcast i8* %[[ARGDATA_I]] to i64*
   // CHECK: store i64 %[[V2]], i64* %[[ARGDATACAST_I]], align 1
-  // CHECK: tail call void (...) @llvm.objc.clang.arc.use(%[[TY0]]* %[[CALL]])
-  // CHECK: tail call void @llvm.objc.release(i8* %[[V0]])
+  // CHECK-LEGACY: tail call void (...) @llvm.objc.clang.arc.use(%[[TY0]]* %[[CALL]])
+  // CHECK-LEGACY: tail call void @llvm.objc.release(i8* %[[V0]])
+  // CHECK-NEWPM: tail call void (...) @llvm.objc.clang.arc.use(i8* %[[V1]])
+  // CHECK-NEWPM: tail call void @llvm.objc.release(i8* %[[V1]])
   // CHECK: ret i8* %[[BUF]]
 
   // clang.arc.use is used and removed in IR optimizations. At O0, we should not

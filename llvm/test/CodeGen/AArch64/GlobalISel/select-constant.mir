@@ -4,6 +4,8 @@
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
+  define i8 @const_s8() { ret i8 42 }
+  define i16 @const_s16() { ret i16 42 }
   define i32 @const_s32() { ret i32 42 }
   define i64 @const_s64() { ret i64 1234567890123 }
 
@@ -11,6 +13,36 @@
   define i64 @fconst_s64() { ret i64 1234567890123 }
   define float @fconst_s32_0() { ret float 0.0 }
   define double @fconst_s64_0() { ret double 0.0 }
+...
+
+---
+name:            const_s8
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: const_s8
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 42
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32all = COPY [[MOVi32imm]]
+    ; CHECK: $w0 = COPY [[COPY]]
+    %0:gpr(s8) = G_CONSTANT i8 42
+    %1:gpr(s32) = G_ANYEXT %0(s8)
+    $w0 = COPY %1(s32)
+...
+
+---
+name:            const_s16
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: const_s16
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 42
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32all = COPY [[MOVi32imm]]
+    ; CHECK: $w0 = COPY [[COPY]]
+    %0:gpr(s16) = G_CONSTANT i16 42
+    %1:gpr(s32) = G_ANYEXT %0(s16)
+    $w0 = COPY %1(s32)
 ...
 
 ---

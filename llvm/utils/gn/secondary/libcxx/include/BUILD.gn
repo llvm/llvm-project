@@ -253,6 +253,6 @@ copy("include") {
     }
   }
   outputs = [
-    "$clang_resource_dir/include/c++/v1/{{source_target_relative}}",
+    "$root_build_dir/include/c++/v1/{{source_target_relative}}",
   ]
 }

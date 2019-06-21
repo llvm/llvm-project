@@ -124,8 +124,7 @@ SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language) {
 
 DWARFDIE
 SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref) {
-  lldbassert(!die_ref.unit_offset() ||
-             *die_ref.unit_offset() == m_base_dwarf_cu.GetOffset());
-  return DebugInfo()->GetDIEForDIEOffset(die_ref.section(),
-                                         die_ref.die_offset());
+  if (*die_ref.dwo_num() == GetDwoNum())
+    return DebugInfo()->GetDIE(die_ref);
+  return GetBaseSymbolFile().GetDIE(die_ref);
 }

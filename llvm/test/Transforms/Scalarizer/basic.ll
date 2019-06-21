@@ -506,6 +506,59 @@ exit:
   ret void
 }
 
+; Check that IR flags are preserved.
+define <2 x i32> @f16(<2 x i32> %i, <2 x i32> %j) {
+; CHECK-LABEL: @f16(
+; CHECK: %res.i0 = add nuw nsw i32
+; CHECK: %res.i1 = add nuw nsw i32
+  %res = add nuw nsw <2 x i32> %i, %j
+  ret <2 x i32> %res
+}
+define <2 x i32> @f17(<2 x i32> %i, <2 x i32> %j) {
+; CHECK-LABEL: @f17(
+; CHECK: %res.i0 = sdiv exact i32
+; CHECK: %res.i1 = sdiv exact i32
+  %res = sdiv exact <2 x i32> %i, %j
+  ret <2 x i32> %res
+}
+define <2 x float> @f18(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @f18(
+; CHECK: %res.i0 = fadd fast float
+; CHECK: %res.i1 = fadd fast float
+  %res = fadd fast <2 x float> %x, %y
+  ret <2 x float> %res
+}
+define <2 x float> @f19(<2 x float> %x) {
+; CHECK-LABEL: @f19(
+; CHECK: %res.i0 = fneg fast float
+; CHECK: %res.i1 = fneg fast float
+  %res = fneg fast <2 x float> %x
+  ret <2 x float> %res
+}
+define <2 x i1> @f20(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @f20(
+; CHECK: %res.i0 = fcmp fast ogt float
+; CHECK: %res.i1 = fcmp fast ogt float
+  %res = fcmp fast ogt <2 x float> %x, %y
+  ret <2 x i1> %res
+}
+declare <2 x float> @llvm.sqrt.v2f32(<2 x float>)
+define <2 x float> @f21(<2 x float> %x) {
+; CHECK-LABEL: @f21(
+; CHECK: %res.i0 = call fast float @llvm.sqrt.f32
+; CHECK: %res.i1 = call fast float @llvm.sqrt.f32
+  %res = call fast <2 x float> @llvm.sqrt.v2f32(<2 x float> %x)
+  ret <2 x float> %res
+}
+declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>)
+define <2 x float> @f22(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
+; CHECK-LABEL: @f22(
+; CHECK: %res.i0 = call fast float @llvm.fma.f32
+; CHECK: %res.i1 = call fast float @llvm.fma.f32
+  %res = call fast <2 x float> @llvm.fma.v2f32(<2 x float> %x, <2 x float> %y, <2 x float> %z)
+  ret <2 x float> %res
+}
+
 !0 = !{ !"root" }
 !1 = !{ !"set1", !0 }
 !2 = !{ !"set2", !0 }

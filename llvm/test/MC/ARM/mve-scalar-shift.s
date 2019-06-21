@@ -30,7 +30,7 @@ asrl    r3, r2, #33
 # ERROR-NOMVE: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
 asrl    r0, r1, #33
 
-# ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
+# ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: operand must be an odd-numbered register in range [r1,r11]
 # ERROR-NOMVE: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
 asrl    r0, r0, #32
 
@@ -38,7 +38,7 @@ asrl    r0, r0, #32
 # ERROR-NOMVE: [[@LINE+1]]:{{[0-9]+}}: error: instruction requires: mve
 asrl    r0, r1, r4
 
-# ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
+# ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: operand must be an odd-numbered register in range [r1,r11]
 # ERROR-NOMVE: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
 asrl    r0, r0, r4
 

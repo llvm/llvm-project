@@ -62,6 +62,23 @@ public:
       markInstAndDefDead(MI, *ExtMI, DeadInsts);
       return true;
     }
+
+    // Try to fold aext(g_constant) when the larger constant type is legal.
+    // Can't use MIPattern because we don't have a specific constant in mind.
+    auto *SrcMI = MRI.getVRegDef(SrcReg);
+    if (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT) {
+      const LLT &DstTy = MRI.getType(DstReg);
+      if (isInstLegal({TargetOpcode::G_CONSTANT, {DstTy}})) {
+        auto CstVal = SrcMI->getOperand(1);
+        APInt Val = CstVal.isImm()
+                        ? APInt(DstTy.getSizeInBits(), CstVal.getImm())
+                        : CstVal.getCImm()->getValue();
+        Val = Val.sext(DstTy.getSizeInBits());
+        Builder.buildConstant(DstReg, Val);
+        markInstAndDefDead(MI, *SrcMI, DeadInsts);
+        return true;
+      }
+    }
     return tryFoldImplicitDef(MI, DeadInsts);
   }
 
@@ -423,6 +440,10 @@ private:
     using namespace LegalizeActions;
     auto Step = LI.getAction(Query);
     return Step.Action == Unsupported || Step.Action == NotFound;
+  }
+
+  bool isInstLegal(const LegalityQuery &Query) const {
+    return LI.getAction(Query).Action == LegalizeActions::Legal;
   }
 
   bool isConstantUnsupported(LLT Ty) const {

@@ -3,6 +3,10 @@ RUN: llvm-dwarfdump --help 2>&1 | FileCheck --check-prefix=HELP %s --implicit-ch
 HELP: USAGE: llvm-dwarfdump{{[^ ]*}} [options] <input object files or .dSYM bundles>
 HELP: Color Options
 HELP: -color
+HELP: Generic Options
+HELP: -help
+HELP: -help-list
+HELP: -version
 HELP: Section-specific Dump Options
 HELP: -debug-info            - Dump the .debug_info section
 HELP: -eh-frame
@@ -21,6 +25,7 @@ HELP: -show-form
 HELP: -show-parents
 HELP: -statistics
 HELP: -summarize-types
+HELP: @FILE
 
 RUN: llvm-dwarfdump --version 2>&1 | FileCheck --check-prefix=VERSION %s
 VERSION: {{ version }}

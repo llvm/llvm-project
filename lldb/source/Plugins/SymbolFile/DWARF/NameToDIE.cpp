@@ -7,15 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "NameToDIE.h"
+#include "DWARFUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
-
-#include "DWARFDebugInfo.h"
-#include "DWARFDebugInfoEntry.h"
-#include "SymbolFileDWARF.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -26,7 +23,6 @@ void NameToDIE::Finalize() {
 }
 
 void NameToDIE::Insert(ConstString name, const DIERef &die_ref) {
-  assert(die_ref.unit_offset().hasValue());
   m_map.Append(name, die_ref);
 }
 
@@ -39,13 +35,16 @@ size_t NameToDIE::Find(const RegularExpression &regex,
   return m_map.GetValues(regex, info_array);
 }
 
-size_t NameToDIE::FindAllEntriesForCompileUnit(dw_offset_t cu_offset,
-                                               DIEArray &info_array) const {
+size_t NameToDIE::FindAllEntriesForUnit(const DWARFUnit &unit,
+                                        DIEArray &info_array) const {
   const size_t initial_size = info_array.size();
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
     const DIERef &die_ref = m_map.GetValueAtIndexUnchecked(i);
-    if (cu_offset == *die_ref.unit_offset())
+    if (unit.GetSymbolFileDWARF().GetDwoNum() == die_ref.dwo_num() &&
+        unit.GetDebugSection() == die_ref.section() &&
+        unit.GetOffset() <= die_ref.die_offset() &&
+        die_ref.die_offset() < unit.GetNextUnitOffset())
       info_array.push_back(die_ref);
   }
   return info_array.size() - initial_size;

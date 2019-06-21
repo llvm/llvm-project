@@ -93,7 +93,10 @@ enum : uint64_t {
   IsNonFlatSeg = UINT64_C(1) << 51,
 
   // Uses floating point double precision rounding mode
-  FPDPRounding = UINT64_C(1) << 52
+  FPDPRounding = UINT64_C(1) << 52,
+
+  // Instruction is FP atomic.
+  FPAtomic = UINT64_C(1) << 53
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.

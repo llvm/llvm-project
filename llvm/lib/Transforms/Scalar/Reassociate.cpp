@@ -1826,7 +1826,7 @@ Value *ReassociatePass::OptimizeMul(BinaryOperator *I,
     return V;
 
   ValueEntry NewEntry = ValueEntry(getRank(V), V);
-  Ops.insert(std::lower_bound(Ops.begin(), Ops.end(), NewEntry), NewEntry);
+  Ops.insert(llvm::lower_bound(Ops, NewEntry), NewEntry);
   return nullptr;
 }
 

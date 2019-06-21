@@ -84,7 +84,8 @@ collectIWYUHeaderMaps(CanonicalIncludes *Includes);
 ///   - Compiler extensions, e.g. include/avx512bwintrin.h$ -> <immintrin.h>
 /// The mapping is hardcoded and hand-maintained, so it might not cover all
 /// headers.
-void addSystemHeadersMapping(CanonicalIncludes *Includes);
+void addSystemHeadersMapping(CanonicalIncludes *Includes,
+                             const LangOptions &Language);
 
 } // namespace clangd
 } // namespace clang

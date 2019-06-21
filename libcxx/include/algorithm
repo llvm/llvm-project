@@ -3181,11 +3181,7 @@ _SampleIterator sample(_PopulationIterator __first,
 
 template<class _RandomAccessIterator, class _UniformRandomNumberGenerator>
     void shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last,
-#ifndef _LIBCPP_CXX03_LANG
                  _UniformRandomNumberGenerator&& __g)
-#else
-                 _UniformRandomNumberGenerator& __g)
-#endif
 {
     typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
     typedef uniform_int_distribution<ptrdiff_t> _Dp;

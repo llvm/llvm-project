@@ -54,6 +54,9 @@ static cl::opt<radix>
           cl::init(none));
 static cl::alias RadixShort("t", cl::desc(""), cl::aliasopt(Radix));
 
+static cl::extrahelp
+    HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
+
 static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
   auto print = [&OS, FileName](unsigned Offset, StringRef L) {
     if (L.size() < static_cast<size_t>(MinLength))

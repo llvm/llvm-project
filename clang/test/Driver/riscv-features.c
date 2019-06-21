@@ -3,11 +3,23 @@
 
 // CHECK: fno-signed-char
 
+// RUN: %clang -target riscv32-unknown-elf -### %s 2>&1 | FileCheck %s -check-prefix=DEFAULT
+
 // RUN: %clang -target riscv32-unknown-elf -### %s -mrelax 2>&1 | FileCheck %s -check-prefix=RELAX
 // RUN: %clang -target riscv32-unknown-elf -### %s -mno-relax 2>&1 | FileCheck %s -check-prefix=NO-RELAX
-// RUN: %clang -target riscv32-unknown-elf -### %s 2>&1 | FileCheck %s -check-prefix=DEFAULT
 
 // RELAX: "-target-feature" "+relax"
 // NO-RELAX: "-target-feature" "-relax"
 // DEFAULT: "-target-feature" "+relax"
 // DEFAULT-NOT: "-target-feature" "-relax"
+
+// RUN: %clang -target riscv32-unknown-elf -### %s -msave-restore 2>&1 | FileCheck %s -check-prefix=SAVE-RESTORE
+// RUN: %clang -target riscv32-unknown-elf -### %s -mno-save-restore 2>&1 | FileCheck %s -check-prefix=NO-SAVE-RESTORE
+
+// SAVE-RESTORE: warning: the clang compiler does not support '-msave-restore'
+// DEFAULT-NOT: warning: the clang compiler does not support
+
+// SAVE-RESTORE: "-target-feature" "+save-restore"
+// NO-SAVE-RESTORE: "-target-feature" "-save-restore"
+// DEFAULT: "-target-feature" "-save-restore"
+// DEFAULT-NOT: "-target-feature" "+save-restore"

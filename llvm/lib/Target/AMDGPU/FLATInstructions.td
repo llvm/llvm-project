@@ -273,7 +273,8 @@ multiclass FLAT_Atomic_Pseudo<
   ValueType vt,
   SDPatternOperator atomic = null_frag,
   ValueType data_vt = vt,
-  RegisterClass data_rc = vdst_rc> {
+  RegisterClass data_rc = vdst_rc,
+  bit isFP = getIsFP<data_vt>.ret> {
   def "" : FLAT_AtomicNoRet_Pseudo <opName,
     (outs),
     (ins VReg_64:$vaddr, data_rc:$vdata, offset_u12:$offset, SLC:$slc),
@@ -281,6 +282,7 @@ multiclass FLAT_Atomic_Pseudo<
     GlobalSaddrTable<0, opName>,
     AtomicNoRet <opName, 0> {
     let PseudoInstr = NAME;
+    let FPAtomic = isFP;
   }
 
   def _RTN : FLAT_AtomicRet_Pseudo <opName,
@@ -290,7 +292,9 @@ multiclass FLAT_Atomic_Pseudo<
     [(set vt:$vdst,
       (atomic (FLATAtomic i64:$vaddr, i16:$offset, i1:$slc), data_vt:$vdata))]>,
        GlobalSaddrTable<0, opName#"_rtn">,
-       AtomicNoRet <opName, 1>;
+       AtomicNoRet <opName, 1>{
+    let FPAtomic = isFP;
+  }
 }
 
 multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
@@ -299,7 +303,8 @@ multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
   ValueType vt,
   SDPatternOperator atomic = null_frag,
   ValueType data_vt = vt,
-  RegisterClass data_rc = vdst_rc> {
+  RegisterClass data_rc = vdst_rc,
+  bit isFP = getIsFP<data_vt>.ret> {
 
   def "" : FLAT_AtomicNoRet_Pseudo <opName,
     (outs),
@@ -309,6 +314,7 @@ multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
     AtomicNoRet <opName, 0> {
     let has_saddr = 1;
     let PseudoInstr = NAME;
+    let FPAtomic = isFP;
   }
 
   def _SADDR : FLAT_AtomicNoRet_Pseudo <opName,
@@ -320,6 +326,7 @@ multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
     let has_saddr = 1;
     let enabled_saddr = 1;
     let PseudoInstr = NAME#"_SADDR";
+    let FPAtomic = isFP;
   }
 }
 
@@ -329,7 +336,8 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
   ValueType vt,
   SDPatternOperator atomic = null_frag,
   ValueType data_vt = vt,
-  RegisterClass data_rc = vdst_rc> {
+  RegisterClass data_rc = vdst_rc,
+  bit isFP = getIsFP<data_vt>.ret> {
 
   def _RTN : FLAT_AtomicRet_Pseudo <opName,
     (outs vdst_rc:$vdst),
@@ -340,6 +348,7 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
       GlobalSaddrTable<0, opName#"_rtn">,
       AtomicNoRet <opName, 1> {
     let has_saddr = 1;
+    let FPAtomic = isFP;
   }
 
   def _SADDR_RTN : FLAT_AtomicRet_Pseudo <opName,
@@ -351,6 +360,7 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
      let has_saddr = 1;
      let enabled_saddr = 1;
      let PseudoInstr = NAME#"_SADDR_RTN";
+     let FPAtomic = isFP;
   }
 }
 

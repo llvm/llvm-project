@@ -332,6 +332,9 @@ protected:
     /// The kind of result that is trail-allocated.
     unsigned ResultKind : 2;
 
+    /// Kind of Result as defined by APValue::Kind
+    unsigned APValueKind : 4;
+
     /// When ResultKind == RSK_Int64. whether the trail-allocated integer is
     /// signed.
     unsigned IsUnsigned : 1;
@@ -340,6 +343,10 @@ protected:
     /// integer. 7 bits because it is the minimal number of bit to represent a
     /// value from 0 to 64 (the size of the trail-allocated number).
     unsigned BitWidth : 7;
+
+    /// When ResultKind == RSK_APValue. Wether the ASTContext will cleanup the
+    /// destructor on the trail-allocated APValue.
+    unsigned HasCleanup : 1;
   };
 
   class PredefinedExprBitfields {

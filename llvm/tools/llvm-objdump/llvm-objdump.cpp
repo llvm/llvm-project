@@ -330,6 +330,9 @@ static cl::opt<bool>
          cl::cat(ObjdumpCat));
 static cl::alias WideShort("w", cl::Grouping, cl::aliasopt(Wide));
 
+static cl::extrahelp
+    HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
+
 static StringSet<> DisasmFuncsSet;
 static StringRef ToolName;
 

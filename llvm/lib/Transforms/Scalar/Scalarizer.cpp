@@ -200,7 +200,7 @@ private:
   Scatterer scatter(Instruction *Point, Value *V);
   void gather(Instruction *Op, const ValueVector &CV);
   bool canTransferMetadata(unsigned Kind);
-  void transferMetadata(Instruction *Op, const ValueVector &CV);
+  void transferMetadataAndIRFlags(Instruction *Op, const ValueVector &CV);
   bool getVectorLayout(Type *Ty, unsigned Alignment, VectorLayout &Layout,
                        const DataLayout &DL);
   bool finish();
@@ -361,7 +361,7 @@ void ScalarizerVisitor::gather(Instruction *Op, const ValueVector &CV) {
   for (unsigned I = 0, E = Op->getNumOperands(); I != E; ++I)
     Op->setOperand(I, UndefValue::get(Op->getOperand(I)->getType()));
 
-  transferMetadata(Op, CV);
+  transferMetadataAndIRFlags(Op, CV);
 
   // If we already have a scattered form of Op (created from ExtractElements
   // of Op itself), replace them with the new form.
@@ -397,7 +397,8 @@ bool ScalarizerVisitor::canTransferMetadata(unsigned Tag) {
 
 // Transfer metadata from Op to the instructions in CV if it is known
 // to be safe to do so.
-void ScalarizerVisitor::transferMetadata(Instruction *Op, const ValueVector &CV) {
+void ScalarizerVisitor::transferMetadataAndIRFlags(Instruction *Op,
+                                                   const ValueVector &CV) {
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   Op->getAllMetadataOtherThanDebugLoc(MDs);
   for (unsigned I = 0, E = CV.size(); I != E; ++I) {
@@ -405,6 +406,7 @@ void ScalarizerVisitor::transferMetadata(Instruction *Op, const ValueVector &CV)
       for (const auto &MD : MDs)
         if (canTransferMetadata(MD.first))
           New->setMetadata(MD.first, MD.second);
+      New->copyIRFlags(Op);
       if (Op->getDebugLoc() && !New->getDebugLoc())
         New->setDebugLoc(Op->getDebugLoc());
     }
@@ -809,7 +811,7 @@ bool ScalarizerVisitor::visitStoreInst(StoreInst &SI) {
     unsigned Align = Layout.getElemAlign(I);
     Stores[I] = Builder.CreateAlignedStore(Val[I], Ptr[I], Align);
   }
-  transferMetadata(&SI, Stores);
+  transferMetadataAndIRFlags(&SI, Stores);
   return true;
 }
 

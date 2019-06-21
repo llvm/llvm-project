@@ -33,8 +33,14 @@ RUN: llvm-readelf --version | FileCheck %s --check-prefix=VERSION
 VERSION: version
 
 # Test help switch.
-RUN: llvm-readobj --help | FileCheck %s --check-prefixes=HELP,USAGE-OBJ
-RUN: llvm-readelf --help | FileCheck %s --check-prefixes=HELP,USAGE-ELF
+RUN: llvm-readobj --help | FileCheck %s --check-prefixes=HELP,OBJ
+RUN: llvm-readelf --help | FileCheck %s --check-prefixes=HELP,ELF
 HELP: OVERVIEW: LLVM Object Reader
-USAGE-OBJ: llvm-readobj{{.*}} [options] <input object files>
-USAGE-ELF: llvm-readelf{{.*}} [options] <input object files>
+OBJ: llvm-readobj{{.*}} [options] <input object files>
+ELF: llvm-readelf{{.*}} [options] <input object files>
+HELP: OPTIONS:
+OBJ: -s - Alias for --section-headers
+OBJ: -t - Alias for --symbols
+ELF: -s - Alias for --symbols
+ELF-NOT: {{ }}-t{{ }}
+HELP: @FILE

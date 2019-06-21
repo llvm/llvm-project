@@ -631,6 +631,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FPDPRounding;
   }
 
+  static bool isFPAtomic(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::FPAtomic;
+  }
+
+  bool isFPAtomic(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::FPAtomic;
+  }
+
   bool isVGPRCopy(const MachineInstr &MI) const {
     assert(MI.isCopy());
     unsigned Dest = MI.getOperand(0).getReg();

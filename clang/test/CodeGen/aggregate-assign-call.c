@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=O1
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -fno-experimental-new-pass-manager -S -emit-llvm -o - %s | FileCheck %s --check-prefixes=O1,O1-LEGACY
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -fexperimental-new-pass-manager -S -emit-llvm -o - %s | FileCheck %s --check-prefixes=O1,O1-NEWPM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O0 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=O0
 //
 // Ensure that we place appropriate lifetime markers around indirectly returned
@@ -50,34 +51,32 @@ struct S baz(int i, volatile int *j) {
   struct S r;
   // O1: %[[TMP1_ALLOCA:[^ ]+]] = alloca %struct.S
   // O1: %[[TMP2_ALLOCA:[^ ]+]] = alloca %struct.S
-  // O1: br label %[[DO_BODY:.+]]
 
   do {
-    // O1: [[DO_BODY]]:
     // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP1_ALLOCA]] to i8*
-    // O1: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* %[[P]])
-    // O1: br i1 {{[^,]+}}, label %[[IF_THEN:[^,]+]], label %[[IF_END:[^,]+]]
+    // O1-LEGACY: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* %[[P]])
+    // O1-NEWPM: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* nonnull %[[P]])
     //
-    // O1: [[IF_THEN]]:
-    // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP1_ALLOCA]] to i8*
-    // O1: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* %[[P]])
-    // O1: br label %[[DO_END:.*]]
+    // O1-LEGACY: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP1_ALLOCA]] to i8*
+    // O1-LEGACY: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* %[[P]])
+    // O1-NEWPM: %[[TMP3:.*]] = bitcast %struct.S* %[[TMP2_ALLOCA]] to i8*
+    // O1-NEWPM: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* nonnull %[[P]])
     //
-    // O1: [[IF_END]]:
-    // O1: call void @foo_int(%struct.S* sret %[[TMP1_ALLOCA]],
+    // O1-LEGACY: call void @foo_int(%struct.S* sret %[[TMP1_ALLOCA]],
+    // O1-NEWPM: call void @foo_int(%struct.S* nonnull sret %[[TMP1_ALLOCA]],
     // O1: call void @llvm.memcpy
-    // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP1_ALLOCA]] to i8*
-    // O1: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* %[[P]])
-    // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP2_ALLOCA]] to i8*
-    // O1: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* %[[P]])
-    // O1: call void @foo_int(%struct.S* sret %[[TMP2_ALLOCA]],
+    // O1-LEGACY: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP1_ALLOCA]] to i8*
+    // O1-LEGACY: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* %[[P]])
+    // O1-NEWPM: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* nonnull %[[P]])
+    // O1-LEGACY: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP2_ALLOCA]] to i8*
+    // O1-LEGACY: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* %[[P]])
+    // O1-NEWPM: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* nonnull %[[TMP3]])
+    // O1-LEGACY: call void @foo_int(%struct.S* sret %[[TMP2_ALLOCA]],
+    // O1-NEWPM: call void @foo_int(%struct.S* nonnull sret %[[TMP2_ALLOCA]],
     // O1: call void @llvm.memcpy
-    // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP2_ALLOCA]] to i8*
-    // O1: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* %[[P]])
-    // O1: br label %[[DO_COND:.*]]
-    //
-    // O1: [[DO_COND]]:
-    // O1: br label %[[DO_BODY]]
+    // O1-LEGACY: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP2_ALLOCA]] to i8*
+    // O1-LEGACY: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* %[[P]])
+    // O1-NEWPM: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* nonnull %[[TMP3]])
     r = foo_int(({
       if (*j)
         break;
@@ -87,7 +86,5 @@ struct S baz(int i, volatile int *j) {
     r = foo_int(i++);
    } while (1);
 
-  // O1: [[DO_END]]:
-  // O1-NEXT: ret void
   return r;
 }

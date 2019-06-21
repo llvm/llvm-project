@@ -13,12 +13,24 @@ namespace clang {
 namespace clangd {
 namespace {
 
+TEST(CanonicalIncludesTest, CStandardLibrary) {
+  CanonicalIncludes CI;
+  auto Language = LangOptions();
+  Language.C11 = true;
+  addSystemHeadersMapping(&CI, Language);
+  // Usual standard library symbols are mapped correctly.
+  EXPECT_EQ("<stdio.h>", CI.mapHeader("path/stdio.h", "printf"));
+}
+
 TEST(CanonicalIncludesTest, CXXStandardLibrary) {
   CanonicalIncludes CI;
-  addSystemHeadersMapping(&CI);
+  auto Language = LangOptions();
+  Language.CPlusPlus = true;
+  addSystemHeadersMapping(&CI, Language);
 
   // Usual standard library symbols are mapped correctly.
   EXPECT_EQ("<vector>", CI.mapHeader("path/vector.h", "std::vector"));
+  EXPECT_EQ("<cstdio>", CI.mapHeader("path/stdio.h", "std::printf"));
   // std::move is ambiguous, currently mapped only based on path
   EXPECT_EQ("<utility>", CI.mapHeader("libstdc++/bits/move.h", "std::move"));
   EXPECT_EQ("path/utility.h", CI.mapHeader("path/utility.h", "std::move"));
