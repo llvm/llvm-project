@@ -107,18 +107,17 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, IndexSet &set) {
 
   const LanguageType cu_language = unit.GetLanguageType();
 
-  IndexUnitImpl(unit, cu_language, unit.GetOffset(), set);
+  IndexUnitImpl(unit, cu_language, set);
 
   SymbolFileDWARFDwo *dwo_symbol_file = unit.GetDwoSymbolFile();
   if (dwo_symbol_file && dwo_symbol_file->GetCompileUnit()) {
-    IndexUnitImpl(*dwo_symbol_file->GetCompileUnit(), cu_language,
-                  unit.GetOffset(), set);
+    IndexUnitImpl(*dwo_symbol_file->GetCompileUnit(), cu_language, set);
   }
 }
 
-void ManualDWARFIndex::IndexUnitImpl(
-    DWARFUnit &unit, const LanguageType cu_language,
-    const dw_offset_t cu_offset, IndexSet &set) {
+void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
+                                     const LanguageType cu_language,
+                                     IndexSet &set) {
   for (const DWARFDebugInfoEntry &die : unit.dies()) {
     const dw_tag_t tag = die.Tag();
 
@@ -248,7 +247,7 @@ void ManualDWARFIndex::IndexUnitImpl(
       }
     }
 
-    DIERef ref(unit.GetDebugSection(), cu_offset, die.GetOffset());
+    DIERef ref = *DWARFDIE(&unit, &die).GetDIERef();
     switch (tag) {
     case DW_TAG_inlined_subroutine:
     case DW_TAG_subprogram:
@@ -363,10 +362,10 @@ void ManualDWARFIndex::GetGlobalVariables(const RegularExpression &regex,
   m_set.globals.Find(regex, offsets);
 }
 
-void ManualDWARFIndex::GetGlobalVariables(const DWARFUnit &cu,
+void ManualDWARFIndex::GetGlobalVariables(const DWARFUnit &unit,
                                           DIEArray &offsets) {
   Index();
-  m_set.globals.FindAllEntriesForCompileUnit(cu.GetOffset(), offsets);
+  m_set.globals.FindAllEntriesForUnit(unit, offsets);
 }
 
 void ManualDWARFIndex::GetObjCMethods(ConstString class_name,
@@ -398,7 +397,7 @@ void ManualDWARFIndex::GetNamespaces(ConstString name, DIEArray &offsets) {
   m_set.namespaces.Find(name, offsets);
 }
 
-void ManualDWARFIndex::GetFunctions(ConstString name, DWARFDebugInfo &info,
+void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
                                     const CompilerDeclContext &parent_decl_ctx,
                                     uint32_t name_type_mask,
                                     std::vector<DWARFDIE> &dies) {
@@ -410,7 +409,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, DWARFDebugInfo &info,
     m_set.function_methods.Find(name, offsets);
     m_set.function_fullnames.Find(name, offsets);
     for (const DIERef &die_ref: offsets) {
-      DWARFDIE die = info.GetDIE(die_ref);
+      DWARFDIE die = dwarf.GetDIE(die_ref);
       if (!die)
         continue;
       if (SymbolFileDWARF::DIEInDeclContext(&parent_decl_ctx, die))
@@ -421,7 +420,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, DWARFDebugInfo &info,
     DIEArray offsets;
     m_set.function_basenames.Find(name, offsets);
     for (const DIERef &die_ref: offsets) {
-      DWARFDIE die = info.GetDIE(die_ref);
+      DWARFDIE die = dwarf.GetDIE(die_ref);
       if (!die)
         continue;
       if (SymbolFileDWARF::DIEInDeclContext(&parent_decl_ctx, die))
@@ -434,7 +433,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, DWARFDebugInfo &info,
     DIEArray offsets;
     m_set.function_methods.Find(name, offsets);
     for (const DIERef &die_ref: offsets) {
-      if (DWARFDIE die = info.GetDIE(die_ref))
+      if (DWARFDIE die = dwarf.GetDIE(die_ref))
         dies.push_back(die);
     }
   }
@@ -444,7 +443,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, DWARFDebugInfo &info,
     DIEArray offsets;
     m_set.function_selectors.Find(name, offsets);
     for (const DIERef &die_ref: offsets) {
-      if (DWARFDIE die = info.GetDIE(die_ref))
+      if (DWARFDIE die = dwarf.GetDIE(die_ref))
         dies.push_back(die);
     }
   }

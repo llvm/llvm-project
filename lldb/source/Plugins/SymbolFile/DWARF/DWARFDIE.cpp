@@ -151,9 +151,9 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t file_addr) const {
         if (cu->ContainsDIEOffset(block_die->GetOffset()))
           return DWARFDIE(cu, block_die);
         else
-          return DWARFDIE(dwarf->DebugInfo()->GetUnit(
-                              DIERef(cu->GetDebugSection(), cu->GetOffset(),
-                                     block_die->GetOffset())),
+          return DWARFDIE(dwarf->DebugInfo()->GetUnit(DIERef(
+                              cu->GetSymbolFileDWARF().GetDwoNum(),
+                              cu->GetDebugSection(), block_die->GetOffset())),
                           block_die);
       }
     }
