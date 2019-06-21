@@ -334,10 +334,12 @@ class CXXRecordDecl : public RecordDecl {
     /// True when this class is a POD-type.
     unsigned PlainOldData : 1;
 
-    /// true when this class is empty for traits purposes,
-    /// i.e. has no data members other than 0-width bit-fields, has no
-    /// virtual function/base, and doesn't inherit from a non-empty
-    /// class. Doesn't take union-ness into account.
+    /// True when this class is empty for traits purposes, that is:
+    ///  * has no data members other than 0-width bit-fields and empty fields
+    ///    marked [[no_unique_address]]
+    ///  * has no virtual function/base, and
+    ///  * doesn't inherit from a non-empty class.
+    /// Doesn't take union-ness into account.
     unsigned Empty : 1;
 
     /// True when this class is polymorphic, i.e., has at

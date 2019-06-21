@@ -838,6 +838,96 @@ void JSONNodeDumper::VisitObjCEncodeExpr(const ObjCEncodeExpr *OEE) {
   JOS.attribute("encodedType", createQualType(OEE->getEncodedType()));
 }
 
+void JSONNodeDumper::VisitObjCMessageExpr(const ObjCMessageExpr *OME) {
+  std::string Str;
+  llvm::raw_string_ostream OS(Str);
+
+  OME->getSelector().print(OS);
+  JOS.attribute("selector", OS.str());
+
+  switch (OME->getReceiverKind()) {
+  case ObjCMessageExpr::Instance:
+    JOS.attribute("receiverKind", "instance");
+    break;
+  case ObjCMessageExpr::Class:
+    JOS.attribute("receiverKind", "class");
+    JOS.attribute("classType", createQualType(OME->getClassReceiver()));
+    break;
+  case ObjCMessageExpr::SuperInstance:
+    JOS.attribute("receiverKind", "super (instance)");
+    JOS.attribute("superType", createQualType(OME->getSuperType()));
+    break;
+  case ObjCMessageExpr::SuperClass:
+    JOS.attribute("receiverKind", "super (class)");
+    JOS.attribute("superType", createQualType(OME->getSuperType()));
+    break;
+  }
+
+  QualType CallReturnTy = OME->getCallReturnType(Ctx);
+  if (OME->getType() != CallReturnTy)
+    JOS.attribute("callReturnType", createQualType(CallReturnTy));
+}
+
+void JSONNodeDumper::VisitObjCBoxedExpr(const ObjCBoxedExpr *OBE) {
+  if (const ObjCMethodDecl *MD = OBE->getBoxingMethod()) {
+    std::string Str;
+    llvm::raw_string_ostream OS(Str);
+
+    MD->getSelector().print(OS);
+    JOS.attribute("selector", OS.str());
+  }
+}
+
+void JSONNodeDumper::VisitObjCSelectorExpr(const ObjCSelectorExpr *OSE) {
+  std::string Str;
+  llvm::raw_string_ostream OS(Str);
+
+  OSE->getSelector().print(OS);
+  JOS.attribute("selector", OS.str());
+}
+
+void JSONNodeDumper::VisitObjCProtocolExpr(const ObjCProtocolExpr *OPE) {
+  JOS.attribute("protocol", createBareDeclRef(OPE->getProtocol()));
+}
+
+void JSONNodeDumper::VisitObjCPropertyRefExpr(const ObjCPropertyRefExpr *OPRE) {
+  if (OPRE->isImplicitProperty()) {
+    JOS.attribute("propertyKind", "implicit");
+    if (const ObjCMethodDecl *MD = OPRE->getImplicitPropertyGetter())
+      JOS.attribute("getter", createBareDeclRef(MD));
+    if (const ObjCMethodDecl *MD = OPRE->getImplicitPropertySetter())
+      JOS.attribute("setter", createBareDeclRef(MD));
+  } else {
+    JOS.attribute("propertyKind", "explicit");
+    JOS.attribute("property", createBareDeclRef(OPRE->getExplicitProperty()));
+  }
+
+  attributeOnlyIfTrue("isSuperReceiver", OPRE->isSuperReceiver());
+  attributeOnlyIfTrue("isMessagingGetter", OPRE->isMessagingGetter());
+  attributeOnlyIfTrue("isMessagingSetter", OPRE->isMessagingSetter());
+}
+
+void JSONNodeDumper::VisitObjCSubscriptRefExpr(
+    const ObjCSubscriptRefExpr *OSRE) {
+  JOS.attribute("subscriptKind",
+                OSRE->isArraySubscriptRefExpr() ? "array" : "dictionary");
+
+  if (const ObjCMethodDecl *MD = OSRE->getAtIndexMethodDecl())
+    JOS.attribute("getter", createBareDeclRef(MD));
+  if (const ObjCMethodDecl *MD = OSRE->setAtIndexMethodDecl())
+    JOS.attribute("setter", createBareDeclRef(MD));
+}
+
+void JSONNodeDumper::VisitObjCIvarRefExpr(const ObjCIvarRefExpr *OIRE) {
+  JOS.attribute("decl", createBareDeclRef(OIRE->getDecl()));
+  attributeOnlyIfTrue("isFreeIvar", OIRE->isFreeIvar());
+  JOS.attribute("isArrow", OIRE->isArrow());
+}
+
+void JSONNodeDumper::VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *OBLE) {
+  JOS.attribute("value", OBLE->getValue() ? "__objc_yes" : "__objc_no");
+}
+
 void JSONNodeDumper::VisitDeclRefExpr(const DeclRefExpr *DRE) {
   JOS.attribute("referencedDecl", createBareDeclRef(DRE->getDecl()));
   if (DRE->getDecl() != DRE->getFoundDecl())

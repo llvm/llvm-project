@@ -605,12 +605,17 @@ bool CXXRecordDecl::hasSubobjectAtOffsetZeroOfEmptyBaseType(
     // that sure looks like a wording bug.
 
     //   -- If X is a non-union class type with a non-static data member
-    //      [recurse to] the first non-static data member of X
+    //      [recurse to each field] that is either of zero size or is the
+    //      first non-static data member of X
     //   -- If X is a union type, [recurse to union members]
+    bool IsFirstField = true;
     for (auto *FD : X->fields()) {
       // FIXME: Should we really care about the type of the first non-static
       // data member of a non-union if there are preceding unnamed bit-fields?
       if (FD->isUnnamedBitfield())
+        continue;
+
+      if (!IsFirstField && !FD->isZeroSize(Ctx))
         continue;
 
       //   -- If X is n array type, [visit the element type]
@@ -620,7 +625,7 @@ bool CXXRecordDecl::hasSubobjectAtOffsetZeroOfEmptyBaseType(
           return true;
 
       if (!X->isUnion())
-        break;
+        IsFirstField = false;
     }
   }
 
@@ -1068,6 +1073,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
     if (T->isReferenceType())
       data().DefaultedMoveAssignmentIsDeleted = true;
 
+    // Bitfields of length 0 are also zero-sized, but we already bailed out for
+    // those because they are always unnamed.
+    bool IsZeroSize = Field->isZeroSize(Context);
+
     if (const auto *RecordTy = T->getAs<RecordType>()) {
       auto *FieldRec = cast<CXXRecordDecl>(RecordTy->getDecl());
       if (FieldRec->getDefinition()) {
@@ -1183,7 +1192,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
         //   A standard-layout class is a class that:
         //    [...]
         //    -- has no element of the set M(S) of types as a base class.
-        if (data().IsStandardLayout && (isUnion() || IsFirstField) &&
+        if (data().IsStandardLayout &&
+            (isUnion() || IsFirstField || IsZeroSize) &&
             hasSubobjectAtOffsetZeroOfEmptyBaseType(Context, FieldRec))
           data().IsStandardLayout = false;
 
@@ -1265,8 +1275,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
     }
 
     // C++14 [meta.unary.prop]p4:
-    //   T is a class type [...] with [...] no non-static data members
-    data().Empty = false;
+    //   T is a class type [...] with [...] no non-static data members other
+    //   than subobjects of zero size
+    if (data().Empty && !IsZeroSize)
+      data().Empty = false;
   }
 
   // Handle using declarations of conversion functions.

@@ -675,11 +675,12 @@ bool ConstStructBuilder::Build(InitListExpr *ILE, bool AllowOverwrite) {
     ++FieldNo;
 
     // If this is a union, skip all the fields that aren't being initialized.
-    if (RD->isUnion() && ILE->getInitializedFieldInUnion() != Field)
+    if (RD->isUnion() &&
+        !declaresSameEntity(ILE->getInitializedFieldInUnion(), Field))
       continue;
 
-    // Don't emit anonymous bitfields, they just affect layout.
-    if (Field->isUnnamedBitfield())
+    // Don't emit anonymous bitfields or zero-sized fields.
+    if (Field->isUnnamedBitfield() || Field->isZeroSize(CGM.getContext()))
       continue;
 
     // Get the initializer.  A struct can include fields without initializers,
@@ -720,6 +721,10 @@ bool ConstStructBuilder::Build(InitListExpr *ILE, bool AllowOverwrite) {
       if (!AppendField(Field, Layout.getFieldOffset(FieldNo), EltInit,
                        AllowOverwrite))
         return false;
+      // After emitting a non-empty field with [[no_unique_address]], we may
+      // need to overwrite its tail padding.
+      if (Field->hasAttr<NoUniqueAddressAttr>())
+        AllowOverwrite = true;
     } else {
       // Otherwise we have a bitfield.
       if (auto *CI = dyn_cast<llvm::ConstantInt>(EltInit)) {
@@ -793,14 +798,15 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
   unsigned FieldNo = 0;
   uint64_t OffsetBits = CGM.getContext().toBits(Offset);
 
+  bool AllowOverwrite = false;
   for (RecordDecl::field_iterator Field = RD->field_begin(),
        FieldEnd = RD->field_end(); Field != FieldEnd; ++Field, ++FieldNo) {
     // If this is a union, skip all the fields that aren't being initialized.
     if (RD->isUnion() && !declaresSameEntity(Val.getUnionField(), *Field))
       continue;
 
-    // Don't emit anonymous bitfields, they just affect layout.
-    if (Field->isUnnamedBitfield())
+    // Don't emit anonymous bitfields or zero-sized fields.
+    if (Field->isUnnamedBitfield() || Field->isZeroSize(CGM.getContext()))
       continue;
 
     // Emit the value of the initializer.
@@ -814,12 +820,16 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
     if (!Field->isBitField()) {
       // Handle non-bitfield members.
       if (!AppendField(*Field, Layout.getFieldOffset(FieldNo) + OffsetBits,
-                       EltInit))
+                       EltInit, AllowOverwrite))
         return false;
+      // After emitting a non-empty field with [[no_unique_address]], we may
+      // need to overwrite its tail padding.
+      if (Field->hasAttr<NoUniqueAddressAttr>())
+        AllowOverwrite = true;
     } else {
       // Otherwise we have a bitfield.
       if (!AppendBitField(*Field, Layout.getFieldOffset(FieldNo) + OffsetBits,
-                          cast<llvm::ConstantInt>(EltInit)))
+                          cast<llvm::ConstantInt>(EltInit), AllowOverwrite))
         return false;
     }
   }
@@ -2216,7 +2226,7 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
   for (const auto *Field : record->fields()) {
     // Fill in non-bitfields. (Bitfields always use a zero pattern, which we
     // will fill in later.)
-    if (!Field->isBitField()) {
+    if (!Field->isBitField() && !Field->isZeroSize(CGM.getContext())) {
       unsigned fieldIndex = layout.getLLVMFieldNo(Field);
       elements[fieldIndex] = CGM.EmitNullConstant(Field->getType());
     }
