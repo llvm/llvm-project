@@ -6,6 +6,6 @@ copy("include") {
     "cxxabi.h",
   ]
   outputs = [
-    "$clang_resource_dir/include/c++/v1/{{source_target_relative}}",
+    "$root_build_dir/include/c++/v1/{{source_target_relative}}",
   ]
 }

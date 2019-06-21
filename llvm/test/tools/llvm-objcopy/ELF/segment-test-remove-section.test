@@ -7,7 +7,7 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy -R .text2 %t %t2
 # RUN: llvm-readobj --file-headers --program-headers --sections %t2 | FileCheck %s
-# RUN: od -t x1 -j 8192 %t2 | FileCheck %s --check-prefix=DATA
+# RUN: od -t x1 -j 8192 -N 4 %t2 | FileCheck %s --check-prefix=DATA
 
 !ELF
 FileHeader:
@@ -44,7 +44,7 @@ ProgramHeaders:
       - Section: .text3
 
 # Make sure that when we remove a section we overwrite it with zeros
-# DATA: 0020000 00 00 00 00
+# DATA: {{^[^[:blank:]]+}} 00 00 00 00
 
 #CHECK: SectionHeaderCount: 6
 

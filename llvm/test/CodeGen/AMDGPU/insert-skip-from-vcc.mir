@@ -1,4 +1,5 @@
 # RUN: llc -march=amdgcn -mcpu=fiji -run-pass si-insert-skips -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass si-insert-skips -verify-machineinstrs -o - %s | FileCheck -check-prefix=W32 %s
 
 ---
 # GCN-LABEL: name: and_execz_mov_vccz
@@ -317,4 +318,23 @@ body:             |
     $vcc = S_AND_B64 $exec, -1, implicit-def $scc
     S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
     S_ENDPGM 0, implicit $scc
+...
+---
+# W32-LABEL: name: and_execz_mov_vccz_w32
+# W32-NOT: S_MOV_
+# W32-NOT: S_AND_
+# W32: S_CBRANCH_EXECZ %bb.1, implicit $exec
+name:            and_execz_mov_vccz_w32
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0 = S_MOV_B32 -1
+    $vcc_lo = S_AND_B32 $exec_lo, killed $sgpr0, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM 0
 ...

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -O2 -tail-dup-size=1000 -tail-dup-placement-threshold=1000 -enable-tail-merge=0 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -O2 -tail-dup-size=1000 -tail-dup-placement-threshold=1000 -enable-tail-merge=0 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; Need to to trigger tail duplication this during
 ; MachineBlockPlacement, since calls aren't tail duplicated pre-RA.
@@ -8,6 +8,7 @@ declare void @convergent_func() #1
 declare void @llvm.amdgcn.s.barrier() #1
 declare void @llvm.amdgcn.ds.gws.init(i32, i32) #2
 declare void @llvm.amdgcn.ds.gws.barrier(i32, i32) #2
+declare void @llvm.amdgcn.ds.gws.sema.release.all(i32 %offset) #2
 
 ; barrier shouldn't be duplicated.
 
@@ -142,6 +143,29 @@ bb2:
 
 call:
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 %offset)
+  br label %ret
+
+ret:
+  ret void
+}
+
+; GCN-LABEL: {{^}}taildup_gws_sema_release_all:
+; GCN: ds_gws_sema_release_all
+; GCN-NOT: ds_gws
+define amdgpu_kernel void @taildup_gws_sema_release_all(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i1 %cond, i32 %offset) #0 {
+entry:
+  br i1 %cond, label %bb1, label %bb2
+
+bb1:
+  store i32 0, i32 addrspace(1)* %a
+  br label %call
+
+bb2:
+  store i32 1, i32 addrspace(1)* %a
+  br label %call
+
+call:
+  call void @llvm.amdgcn.ds.gws.sema.release.all(i32 %offset)
   br label %ret
 
 ret:

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 #include "support/pstl_test_config.h"
 
 #include <iostream>
@@ -111,8 +113,8 @@ struct test_one_policy
     template <typename Policy, typename Iterator1, typename Size, typename Generator1, typename Generator2,
               typename Compare>
     typename std::enable_if<!is_same_iterator_category<Iterator1, std::random_access_iterator_tag>::value, void>::type
-    operator()(Policy&& exec, Iterator1 first1, Iterator1 last1, Iterator1 first2, Iterator1 last2, Size n, Size m,
-               Generator1 generator1, Generator2 generator2, Compare comp)
+    operator()(Policy&&, Iterator1, Iterator1, Iterator1, Iterator1, Size, Size,
+               Generator1, Generator2, Compare)
     {
     }
 };

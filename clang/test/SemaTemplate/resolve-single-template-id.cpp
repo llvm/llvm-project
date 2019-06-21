@@ -88,3 +88,15 @@ struct rdar9108698 {
 void test_rdar9108698(rdar9108698 x) {
   x.f<int>; // expected-error{{reference to non-static member function must be called}}
 }
+
+namespace GCC_PR67898 {
+  void f(int);
+  void f(float);
+  template<typename T, T F, T G, bool b = F == G> struct X {
+    static_assert(b, "");
+  };
+  template<typename T> void test1() { X<void(T), f, f>(); }
+  template<typename T> void test2() { X<void(*)(T), f, f>(); }
+  template void test1<int>();
+  template void test2<int>();
+}

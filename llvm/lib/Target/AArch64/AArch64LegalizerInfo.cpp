@@ -279,8 +279,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
 
   // Constants
   getActionDefinitionsBuilder(G_CONSTANT)
-      .legalFor({p0, s32, s64})
-      .clampScalar(0, s32, s64)
+    .legalFor({p0, s8, s16, s32, s64})
+      .clampScalar(0, s8, s64)
       .widenScalarToNextPow2(0);
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalFor({s32, s64})

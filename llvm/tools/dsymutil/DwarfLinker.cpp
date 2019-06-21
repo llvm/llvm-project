@@ -1766,18 +1766,16 @@ static void insertLineSequence(std::vector<DWARFDebugLine::Row> &Seq,
     return;
   }
 
-  auto InsertPoint = std::lower_bound(
-      Rows.begin(), Rows.end(), Seq.front(),
-      [](const DWARFDebugLine::Row &LHS, const DWARFDebugLine::Row &RHS) {
-        return LHS.Address < RHS.Address;
-      });
+  object::SectionedAddress Front = Seq.front().Address;
+  auto InsertPoint = llvm::bsearch(
+      Rows, [=](const DWARFDebugLine::Row &O) { return !(O.Address < Front); });
 
   // FIXME: this only removes the unneeded end_sequence if the
   // sequences have been inserted in order. Using a global sort like
   // described in patchLineTableForUnit() and delaying the end_sequene
   // elimination to emitLineTableForUnit() we can get rid of all of them.
-  if (InsertPoint != Rows.end() &&
-      InsertPoint->Address == Seq.front().Address && InsertPoint->EndSequence) {
+  if (InsertPoint != Rows.end() && InsertPoint->Address == Front &&
+      InsertPoint->EndSequence) {
     *InsertPoint = Seq.front();
     Rows.insert(InsertPoint + 1, Seq.begin() + 1, Seq.end());
   } else {

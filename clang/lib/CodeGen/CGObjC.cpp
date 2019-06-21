@@ -1157,7 +1157,7 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
       // that's not necessarily the same as "on the stack", so
       // we still potentially need objc_memmove_collectable.
       EmitAggregateCopy(/* Dest= */ MakeAddrLValue(ReturnValue, ivarType),
-                        /* Src= */ LV, ivarType, overlapForReturnValue());
+                        /* Src= */ LV, ivarType, getOverlapForReturnValue());
       return;
     }
     case TEK_Scalar: {

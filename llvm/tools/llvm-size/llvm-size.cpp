@@ -99,6 +99,9 @@ static cl::alias TotalSizesShort("t", cl::desc("Short for --totals"),
 static cl::list<std::string>
     InputFilenames(cl::Positional, cl::desc("<input files>"), cl::ZeroOrMore);
 
+static cl::extrahelp
+    HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
+
 static bool HadError = false;
 
 static std::string ToolName;

@@ -103,7 +103,7 @@ let Predicates = [FeatureVector] in {
 
 let Predicates = [FeatureVector] in {
   // Load.
-  def VL : UnaryVRX<"vl", 0xE706, null_frag, v128any, 16>;
+  defm VL : UnaryVRXAlign<"vl", 0xE706>;
 
   // Load to block boundary.  The number of loaded bytes is only known
   // at run time.  The instruction is really polymorphic, but v128b matches
@@ -122,7 +122,7 @@ let Predicates = [FeatureVector] in {
   def VLL : BinaryVRSb<"vll", 0xE737, int_s390_vll, 0>;
 
   // Load multiple.
-  def VLM : LoadMultipleVRSa<"vlm", 0xE736>;
+  defm VLM : LoadMultipleVRSaAlign<"vlm", 0xE736>;
 
   // Load and replicate
   def VLREP  : UnaryVRXGeneric<"vlrep", 0xE705>;
@@ -207,13 +207,13 @@ defm : ReplicatePeephole<VLREPG, v2f64, load, f64>;
 
 let Predicates = [FeatureVector] in {
   // Store.
-  def VST : StoreVRX<"vst", 0xE70E, null_frag, v128any, 16>;
+  defm VST : StoreVRXAlign<"vst", 0xE70E>;
 
   // Store with length.  The number of stored bytes is only known at run time.
   def VSTL : StoreLengthVRSb<"vstl", 0xE73F, int_s390_vstl, 0>;
 
   // Store multiple.
-  def VSTM : StoreMultipleVRSa<"vstm", 0xE73E>;
+  defm VSTM : StoreMultipleVRSaAlign<"vstm", 0xE73E>;
 
   // Store element.
   def VSTEB : StoreBinaryVRX<"vsteb", 0xE708, z_vstei8,  v128b, 1, imm32zx4>;

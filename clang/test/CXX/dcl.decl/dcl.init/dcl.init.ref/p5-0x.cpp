@@ -122,8 +122,8 @@ namespace std_example_2 {
 
   const double& rcd2 = 2;
   double&& rrd = 2;
-  const volatile int cvi = 1; 
-  const int& r2 = cvi; // expected-error{{binding value of type 'const volatile int' to reference to type 'const int' drops 'volatile' qualifier}}
+  const volatile int cvi = 1;
+  const int& r2 = cvi; // expected-error{{binding reference of type 'const int' to value of type 'const volatile int' drops 'volatile' qualifier}}
 
   double d;
   double&& rrd2 = d; // expected-error{{rvalue reference to type 'double' cannot bind to lvalue of type 'double'}}

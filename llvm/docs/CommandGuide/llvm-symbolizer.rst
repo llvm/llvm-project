@@ -169,6 +169,10 @@ OPTIONS
     inc at /tmp/x.c:3
     main at /tmp/x.c:14
 
+.. option:: @<FILE>
+
+ Read command-line options from response file `<FILE>`.
+
 EXIT STATUS
 -----------
 

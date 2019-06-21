@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/SymbolFile/DWARF/AppleDWARFIndex.h"
-#include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
@@ -133,14 +132,14 @@ void AppleDWARFIndex::GetNamespaces(ConstString name, DIEArray &offsets) {
     m_apple_namespaces_up->FindByName(name.GetStringRef(), offsets);
 }
 
-void AppleDWARFIndex::GetFunctions(ConstString name, DWARFDebugInfo &info,
+void AppleDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
                                    const CompilerDeclContext &parent_decl_ctx,
                                    uint32_t name_type_mask,
                                    std::vector<DWARFDIE> &dies) {
   DIEArray offsets;
   m_apple_names_up->FindByName(name.GetStringRef(), offsets);
   for (const DIERef &die_ref : offsets) {
-    ProcessFunctionDIE(name.GetStringRef(), die_ref, info, parent_decl_ctx,
+    ProcessFunctionDIE(name.GetStringRef(), die_ref, dwarf, parent_decl_ctx,
                        name_type_mask, dies);
   }
 }
@@ -160,7 +159,7 @@ void AppleDWARFIndex::ReportInvalidDIERef(const DIERef &ref,
   m_module.ReportErrorIfModifyDetected(
       "the DWARF debug information has been modified (accelerator table had "
       "bad die 0x%8.8x for '%s')\n",
-      ref.die_offset, name.str().c_str());
+      ref.die_offset(), name.str().c_str());
 }
 
 void AppleDWARFIndex::Dump(Stream &s) {

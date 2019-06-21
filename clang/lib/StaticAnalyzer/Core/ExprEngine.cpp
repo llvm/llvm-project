@@ -149,9 +149,6 @@ public:
     if (!S)
       I = getItem().getCXXCtorInitializer();
 
-    // IDs
-    Out << "\"lctx_id\": " << getLocationContext()->getID() << ", ";
-
     if (S)
       Out << "\"stmt_id\": " << S->getID(getASTContext());
     else

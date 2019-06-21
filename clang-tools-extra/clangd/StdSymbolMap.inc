@@ -1,6 +1,6 @@
 //===-- gen_std.py generated file -------------------------------*- C++ -*-===//
 //
-// Used to build a lookup table (qualified names => include headers) for C++
+// Used to build a lookup table (qualified names => include headers) for CPP
 // Standard Library symbols.
 //
 // Automatically generated file, DO NOT EDIT!

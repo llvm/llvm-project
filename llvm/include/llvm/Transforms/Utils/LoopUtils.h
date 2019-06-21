@@ -106,6 +106,7 @@ struct SinkAndHoistLICMFlags {
   unsigned LicmMssaOptCounter;
   unsigned LicmMssaOptCap;
   unsigned LicmMssaNoAccForPromotionCap;
+  bool IsSink;
 };
 
 /// Walk the specified region of the CFG (defined by all blocks

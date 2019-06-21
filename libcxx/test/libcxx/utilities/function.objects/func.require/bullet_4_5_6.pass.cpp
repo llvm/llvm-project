@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// FIXME(EricWF): Make this test pass in C++03 with Clang once the transition
+// has gotten far enough that __invoke works.
+// XFAIL: c++98 || c++03
+
 // <functional>
 
 // INVOKE (f, t1, t2, ..., tN)

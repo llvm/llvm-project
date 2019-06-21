@@ -95,7 +95,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
                Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
     endif()
   else()
-    message("-- Found PythonInterp: ${PYTHON_EXECUTABLE}")
+    message(STATUS "Found PythonInterp: ${PYTHON_EXECUTABLE}")
   endif()
 
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")

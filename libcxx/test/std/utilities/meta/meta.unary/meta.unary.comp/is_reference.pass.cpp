@@ -75,10 +75,7 @@ typedef void (*FunctionPtr)();
 int main(int, char**)
 {
     test_is_reference<int&>();
-#if TEST_STD_VER >= 11
     test_is_reference<int&&>();
-#endif
-
     test_is_not_reference<std::nullptr_t>();
     test_is_not_reference<void>();
     test_is_not_reference<int>();

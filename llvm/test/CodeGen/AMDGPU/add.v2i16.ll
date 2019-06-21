@@ -103,7 +103,7 @@ define amdgpu_kernel void @v_test_add_v2i16_neg_constant(<2 x i16> addrspace(1)*
 }
 
 ; GCN-LABEL: {{^}}v_test_add_v2i16_inline_neg1:
-; GFX9: v_pk_add_u16 v{{[0-9]+}}, v{{[0-9]+}}, -1 op_sel_hi:[1,0]{{$}}
+; GFX9: v_pk_sub_u16 v{{[0-9]+}}, v{{[0-9]+}}, 1 op_sel_hi:[1,0]{{$}}
 
 ; VI: v_mov_b32_e32 v[[SCONST:[0-9]+]], -1
 ; VI: flat_load_dword [[LOAD:v[0-9]+]]

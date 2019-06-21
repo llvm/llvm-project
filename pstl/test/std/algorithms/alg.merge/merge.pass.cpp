@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 #include "support/pstl_test_config.h"
 
 #include <execution>
@@ -47,7 +49,7 @@ struct test_merge
     operator()(Policy&& exec, std::reverse_iterator<InputIterator1> first1, std::reverse_iterator<InputIterator1> last1,
                std::reverse_iterator<InputIterator2> first2, std::reverse_iterator<InputIterator2> last2,
                std::reverse_iterator<OutputIterator> out_first, std::reverse_iterator<OutputIterator> out_last,
-               Compare comp)
+               Compare)
     {
         using namespace std;
         typedef typename std::iterator_traits<std::reverse_iterator<InputIterator1>>::value_type T;

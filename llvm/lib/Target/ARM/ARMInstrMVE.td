@@ -10,6 +10,44 @@
 //
 //===----------------------------------------------------------------------===//
 
+class ExpandImmAsmOp<string shift> : AsmOperandClass {
+  let Name = !strconcat("ExpandImm", shift);
+  let PredicateMethod = !strconcat("isExpImm<", shift, ">");
+  let RenderMethod = "addImmOperands";
+}
+class InvertedExpandImmAsmOp<string shift, string size> : AsmOperandClass {
+  let Name = !strconcat("InvertedExpandImm", shift, "_", size);
+  let PredicateMethod = !strconcat("isInvertedExpImm<", shift, ",", size, ">");
+  let RenderMethod = "addImmOperands";
+}
+
+class ExpandImm<string shift> : Operand<i32> {
+  let ParserMatchClass = ExpandImmAsmOp<shift>;
+  let EncoderMethod = !strconcat("getExpandedImmOpValue<",shift,",false>");
+  let DecoderMethod = !strconcat("DecodeExpandedImmOperand<",shift,">");
+  let PrintMethod = "printExpandedImmOperand";
+}
+class InvertedExpandImm<string shift, string size> : Operand<i32> {
+  let ParserMatchClass = InvertedExpandImmAsmOp<shift, size>;
+  let EncoderMethod = !strconcat("getExpandedImmOpValue<",shift,",true>");
+  let PrintMethod = "printExpandedImmOperand";
+  // No decoder method needed, because this operand type is only used
+  // by aliases (VAND and VORN)
+}
+
+def expzero00 : ExpandImm<"0">;
+def expzero08 : ExpandImm<"8">;
+def expzero16 : ExpandImm<"16">;
+def expzero24 : ExpandImm<"24">;
+
+def expzero00inv16 : InvertedExpandImm<"0", "16">;
+def expzero08inv16 : InvertedExpandImm<"8", "16">;
+
+def expzero00inv32 : InvertedExpandImm<"0", "32">;
+def expzero08inv32 : InvertedExpandImm<"8", "32">;
+def expzero16inv32 : InvertedExpandImm<"16", "32">;
+def expzero24inv32 : InvertedExpandImm<"24", "32">;
+
 // VPT condition mask
 def vpt_mask : Operand<i32> {
   let PrintMethod = "printVPTMask";
@@ -24,6 +62,8 @@ def pred_restricted_i_asmoperand : AsmOperandClass {
   let RenderMethod = "addITCondCodeOperands";
   let PredicateMethod = "isITCondCodeRestrictedI";
   let ParserMethod = "parseITCondCode";
+  let DiagnosticString = "condition code for sign-independent integer "#
+                         "comparison must be EQ or NE";
 }
 
 // VPT/VCMP restricted predicate for signed types
@@ -32,6 +72,8 @@ def pred_restricted_s_asmoperand : AsmOperandClass {
   let RenderMethod = "addITCondCodeOperands";
   let PredicateMethod = "isITCondCodeRestrictedS";
   let ParserMethod = "parseITCondCode";
+  let DiagnosticString = "condition code for signed integer "#
+                         "comparison must be EQ, NE, LT, GT, LE or GE";
 }
 
 // VPT/VCMP restricted predicate for unsigned types
@@ -40,6 +82,8 @@ def pred_restricted_u_asmoperand : AsmOperandClass {
   let RenderMethod = "addITCondCodeOperands";
   let PredicateMethod = "isITCondCodeRestrictedU";
   let ParserMethod = "parseITCondCode";
+  let DiagnosticString = "condition code for unsigned integer "#
+                         "comparison must be EQ, NE, HS or HI";
 }
 
 // VPT/VCMP restricted predicate for floating point
@@ -48,30 +92,34 @@ def pred_restricted_fp_asmoperand : AsmOperandClass {
   let RenderMethod = "addITCondCodeOperands";
   let PredicateMethod = "isITCondCodeRestrictedFP";
   let ParserMethod = "parseITCondCode";
+  let DiagnosticString = "condition code for floating-point "#
+                         "comparison must be EQ, NE, LT, GT, LE or GE";
 }
 
-def pred_basic_i : Operand<i32> {
+class VCMPPredicateOperand : Operand<i32>;
+
+def pred_basic_i : VCMPPredicateOperand {
   let PrintMethod = "printMandatoryRestrictedPredicateOperand";
   let ParserMatchClass = pred_restricted_i_asmoperand;
   let DecoderMethod = "DecodeRestrictedIPredicateOperand";
   let EncoderMethod = "getRestrictedCondCodeOpValue";
 }
 
-def pred_basic_u : Operand<i32> {
+def pred_basic_u : VCMPPredicateOperand {
   let PrintMethod = "printMandatoryRestrictedPredicateOperand";
   let ParserMatchClass = pred_restricted_u_asmoperand;
   let DecoderMethod = "DecodeRestrictedUPredicateOperand";
   let EncoderMethod = "getRestrictedCondCodeOpValue";
 }
 
-def pred_basic_s : Operand<i32> {
+def pred_basic_s : VCMPPredicateOperand {
   let PrintMethod = "printMandatoryRestrictedPredicateOperand";
   let ParserMatchClass = pred_restricted_s_asmoperand;
   let DecoderMethod = "DecodeRestrictedSPredicateOperand";
   let EncoderMethod = "getRestrictedCondCodeOpValue";
 }
 
-def pred_basic_fp : Operand<i32> {
+def pred_basic_fp : VCMPPredicateOperand {
   let PrintMethod = "printMandatoryRestrictedPredicateOperand";
   let ParserMatchClass = pred_restricted_fp_asmoperand;
   let DecoderMethod = "DecodeRestrictedFPPredicateOperand";
@@ -104,10 +152,28 @@ class MVE_p<dag oops, dag iops, InstrItinClass itin, string iname,
   let Inst{27-26} = 0b11;
 }
 
+class MVE_f<dag oops, dag iops, InstrItinClass itin, string iname,
+            string suffix, string ops, vpred_ops vpred, string cstr,
+            list<dag> pattern=[]>
+  : MVE_p<oops, iops, itin, iname, suffix, ops, vpred, cstr, pattern> {
+  let Predicates = [HasMVEFloat];
+}
+
 class MVE_MI_with_pred<dag oops, dag iops, InstrItinClass itin, string asm,
                        string ops, string cstr, list<dag> pattern>
   : Thumb2I<oops, iops, AddrModeNone, 4, itin, asm, !strconcat("\t", ops), cstr,
              pattern>,
+    Requires<[HasV8_1MMainline, HasMVEInt]> {
+  let D = MVEDomain;
+  let DecoderNamespace = "MVE";
+}
+
+class MVE_VMOV_lane_base<dag oops, dag iops, InstrItinClass itin, string asm,
+                         string suffix, string ops, string cstr,
+                         list<dag> pattern>
+  : Thumb2I<oops, iops, AddrModeNone, 4, itin, asm,
+            !if(!eq(suffix, ""), "", "." # suffix) # "\t" # ops,
+            cstr, pattern>,
     Requires<[HasV8_1MMainline, HasMVEInt]> {
   let D = MVEDomain;
   let DecoderNamespace = "MVE";
@@ -1216,6 +1282,1834 @@ def MVE_VSHL_immi32 : MVE_VSHL_imm<"i32", (ins imm0_31:$imm)> {
   let Inst{21} = 0b1;
 }
 // end of mve_shift instructions
+
+// start of mve_bit instructions
+
+class MVE_bit_arith<dag oops, dag iops, string iname, string suffix,
+                    string ops, string cstr, list<dag> pattern=[]>
+  : MVE_p<oops, iops, NoItinerary, iname, suffix, ops, vpred_r, cstr, pattern> {
+  bits<4> Qd;
+  bits<4> Qm;
+
+  let Inst{22} = Qd{3};
+  let Inst{15-13} = Qd{2-0};
+  let Inst{5} = Qm{3};
+  let Inst{3-1} = Qm{2-0};
+}
+
+def MVE_VBIC : MVE_bit_arith<(outs MQPR:$Qd), (ins MQPR:$Qn, MQPR:$Qm),
+                             "vbic", "", "$Qd, $Qn, $Qm", ""> {
+  bits<4> Qn;
+
+  let Inst{28} = 0b0;
+  let Inst{25-23} = 0b110;
+  let Inst{21-20} = 0b01;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{16} = 0b0;
+  let Inst{12-8} = 0b00001;
+  let Inst{7} = Qn{3};
+  let Inst{6} = 0b1;
+  let Inst{4} = 0b1;
+  let Inst{0} = 0b0;
+}
+
+class MVE_VREV<string iname, string suffix, bits<2> size, bits<2> bit_8_7>
+  : MVE_bit_arith<(outs MQPR:$Qd), (ins MQPR:$Qm), iname,
+                  suffix, "$Qd, $Qm", ""> {
+
+  let Inst{28} = 0b1;
+  let Inst{25-23} = 0b111;
+  let Inst{21-20} = 0b11;
+  let Inst{19-18} = size;
+  let Inst{17-16} = 0b00;
+  let Inst{12-9} = 0b0000;
+  let Inst{8-7} = bit_8_7;
+  let Inst{6} = 0b1;
+  let Inst{4} = 0b0;
+  let Inst{0} = 0b0;
+}
+
+def MVE_VREV64_8  : MVE_VREV<"vrev64", "8", 0b00, 0b00>;
+def MVE_VREV64_16 : MVE_VREV<"vrev64", "16", 0b01, 0b00>;
+def MVE_VREV64_32 : MVE_VREV<"vrev64", "32", 0b10, 0b00>;
+
+def MVE_VREV32_8  : MVE_VREV<"vrev32", "8", 0b00, 0b01>;
+def MVE_VREV32_16 : MVE_VREV<"vrev32", "16", 0b01, 0b01>;
+
+def MVE_VREV16_8  : MVE_VREV<"vrev16", "8", 0b00, 0b10>;
+
+def MVE_VMVN : MVE_bit_arith<(outs MQPR:$Qd), (ins MQPR:$Qm),
+                             "vmvn", "", "$Qd, $Qm", ""> {
+  let Inst{28} = 0b1;
+  let Inst{25-23} = 0b111;
+  let Inst{21-16} = 0b110000;
+  let Inst{12-6} = 0b0010111;
+  let Inst{4} = 0b0;
+  let Inst{0} = 0b0;
+}
+
+class MVE_bit_ops<string iname, bits<2> bit_21_20, bit bit_28>
+  : MVE_bit_arith<(outs MQPR:$Qd), (ins MQPR:$Qn, MQPR:$Qm),
+                  iname, "", "$Qd, $Qn, $Qm", ""> {
+  bits<4> Qn;
+
+  let Inst{28} = bit_28;
+  let Inst{25-23} = 0b110;
+  let Inst{21-20} = bit_21_20;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{16} = 0b0;
+  let Inst{12-8} = 0b00001;
+  let Inst{7} = Qn{3};
+  let Inst{6} = 0b1;
+  let Inst{4} = 0b1;
+  let Inst{0} = 0b0;
+}
+
+def MVE_VEOR : MVE_bit_ops<"veor", 0b00, 0b1>;
+def MVE_VORN : MVE_bit_ops<"vorn", 0b11, 0b0>;
+def MVE_VORR : MVE_bit_ops<"vorr", 0b10, 0b0>;
+def MVE_VAND : MVE_bit_ops<"vand", 0b00, 0b0>;
+
+// add ignored suffixes as aliases
+
+foreach s=["s8", "s16", "s32", "u8", "u16", "u32", "i8", "i16", "i32", "f16", "f32"] in {
+  def : MVEInstAlias<"vbic${vp}." # s # "\t$QdSrc, $QnSrc, $QmSrc",
+        (MVE_VBIC MQPR:$QdSrc, MQPR:$QnSrc, MQPR:$QmSrc, vpred_r:$vp)>;
+  def : MVEInstAlias<"veor${vp}." # s # "\t$QdSrc, $QnSrc, $QmSrc",
+        (MVE_VEOR MQPR:$QdSrc, MQPR:$QnSrc, MQPR:$QmSrc, vpred_r:$vp)>;
+  def : MVEInstAlias<"vorn${vp}." # s # "\t$QdSrc, $QnSrc, $QmSrc",
+        (MVE_VORN MQPR:$QdSrc, MQPR:$QnSrc, MQPR:$QmSrc, vpred_r:$vp)>;
+  def : MVEInstAlias<"vorr${vp}." # s # "\t$QdSrc, $QnSrc, $QmSrc",
+        (MVE_VORR MQPR:$QdSrc, MQPR:$QnSrc, MQPR:$QmSrc, vpred_r:$vp)>;
+  def : MVEInstAlias<"vand${vp}." # s # "\t$QdSrc, $QnSrc, $QmSrc",
+        (MVE_VAND MQPR:$QdSrc, MQPR:$QnSrc, MQPR:$QmSrc, vpred_r:$vp)>;
+}
+
+class MVE_bit_cmode<string iname, string suffix, bits<4> cmode, dag inOps>
+  : MVE_p<(outs MQPR:$Qd), inOps, NoItinerary,
+          iname, suffix, "$Qd, $imm", vpred_n, "$Qd = $Qd_src"> {
+  bits<8> imm;
+  bits<4> Qd;
+
+  let Inst{28} = imm{7};
+  let Inst{27-23} = 0b11111;
+  let Inst{22} = Qd{3};
+  let Inst{21-19} = 0b000;
+  let Inst{18-16} = imm{6-4};
+  let Inst{15-13} = Qd{2-0};
+  let Inst{12} = 0b0;
+  let Inst{11-8} = cmode;
+  let Inst{7-6} = 0b01;
+  let Inst{4} = 0b1;
+  let Inst{3-0} = imm{3-0};
+}
+
+class MVE_VORR<string suffix, bits<4> cmode, ExpandImm imm_type>
+  : MVE_bit_cmode<"vorr", suffix, cmode, (ins MQPR:$Qd_src, imm_type:$imm)> {
+  let Inst{5} = 0b0;
+}
+
+def MVE_VORRIZ0v4i32  : MVE_VORR<"i32", 0b0001, expzero00>;
+def MVE_VORRIZ0v8i16  : MVE_VORR<"i16", 0b1001, expzero00>;
+def MVE_VORRIZ8v4i32  : MVE_VORR<"i32", 0b0011, expzero08>;
+def MVE_VORRIZ8v8i16  : MVE_VORR<"i16", 0b1011, expzero08>;
+def MVE_VORRIZ16v4i32 : MVE_VORR<"i32", 0b0101, expzero16>;
+def MVE_VORRIZ24v4i32 : MVE_VORR<"i32", 0b0111, expzero24>;
+
+def MVE_VORNIZ0v4i32 : MVEAsmPseudo<"vorn${vp}.i32\t$Qd, $imm",
+    (ins MQPR:$Qd_src, expzero00inv32:$imm, vpred_n:$vp), (outs MQPR:$Qd)>;
+def MVE_VORNIZ0v8i16 : MVEAsmPseudo<"vorn${vp}.i16\t$Qd, $imm",
+    (ins MQPR:$Qd_src, expzero00inv16:$imm, vpred_n:$vp), (outs MQPR:$Qd)>;
+def MVE_VORNIZ8v4i32 : MVEAsmPseudo<"vorn${vp}.i32\t$Qd, $imm",
+    (ins MQPR:$Qd_src, expzero08inv32:$imm, vpred_n:$vp), (outs MQPR:$Qd)>;
+def MVE_VORNIZ8v8i16 : MVEAsmPseudo<"vorn${vp}.i16\t$Qd, $imm",
+    (ins MQPR:$Qd_src, expzero08inv16:$imm, vpred_n:$vp), (outs MQPR:$Qd)>;
+def MVE_VORNIZ16v4i32 : MVEAsmPseudo<"vorn${vp}.i32\t$Qd, $imm",
+    (ins MQPR:$Qd_src, expzero16inv32:$imm, vpred_n:$vp), (outs MQPR:$Qd)>;
+def MVE_VORNIZ24v4i32 : MVEAsmPseudo<"vorn${vp}.i32\t$Qd, $imm",
+    (ins MQPR:$Qd_src, expzero24inv32:$imm, vpred_n:$vp), (outs MQPR:$Qd)>;
+
+def MVE_VMOV : MVEInstAlias<"vmov${vp}\t$Qd, $Qm",
+    (MVE_VORR MQPR:$Qd, MQPR:$Qm, MQPR:$Qm, vpred_r:$vp)>;
+
+class MVE_VBIC<string suffix, bits<4> cmode, ExpandImm imm_type>
+  : MVE_bit_cmode<"vbic", suffix, cmode, (ins MQPR:$Qd_src, imm_type:$imm)> {
+  let Inst{5} = 0b1;
+}
+
+def MVE_VBICIZ0v4i32  : MVE_VBIC<"i32", 0b0001, expzero00>;
+def MVE_VBICIZ0v8i16  : MVE_VBIC<"i16", 0b1001, expzero00>;
+def MVE_VBICIZ8v4i32  : MVE_VBIC<"i32", 0b0011, expzero08>;
+def MVE_VBICIZ8v8i16  : MVE_VBIC<"i16", 0b1011, expzero08>;
+def MVE_VBICIZ16v4i32 : MVE_VBIC<"i32", 0b0101, expzero16>;
+def MVE_VBICIZ24v4i32 : MVE_VBIC<"i32", 0b0111, expzero24>;
+
+def MVE_VANDIZ0v4i32 : MVEAsmPseudo<"vand${vp}.i32\t$Qda, $imm",
+    (ins MQPR:$Qda_src, expzero00inv32:$imm, vpred_n:$vp), (outs MQPR:$Qda)>;
+def MVE_VANDIZ0v8i16 : MVEAsmPseudo<"vand${vp}.i16\t$Qda, $imm",
+    (ins MQPR:$Qda_src, expzero00inv16:$imm, vpred_n:$vp), (outs MQPR:$Qda)>;
+def MVE_VANDIZ8v4i32 : MVEAsmPseudo<"vand${vp}.i32\t$Qda, $imm",
+    (ins MQPR:$Qda_src, expzero08inv32:$imm, vpred_n:$vp), (outs MQPR:$Qda)>;
+def MVE_VANDIZ8v8i16 : MVEAsmPseudo<"vand${vp}.i16\t$Qda, $imm",
+    (ins MQPR:$Qda_src, expzero08inv16:$imm, vpred_n:$vp), (outs MQPR:$Qda)>;
+def MVE_VANDIZ16v4i32 : MVEAsmPseudo<"vand${vp}.i32\t$Qda, $imm",
+    (ins MQPR:$Qda_src, expzero16inv32:$imm, vpred_n:$vp), (outs MQPR:$Qda)>;
+def MVE_VANDIZ24v4i32 : MVEAsmPseudo<"vand${vp}.i32\t$Qda, $imm",
+    (ins MQPR:$Qda_src, expzero24inv32:$imm, vpred_n:$vp), (outs MQPR:$Qda)>;
+
+class MVE_VMOV_lane_direction {
+  bit bit_20;
+  dag oops;
+  dag iops;
+  string ops;
+  string cstr;
+}
+def MVE_VMOV_from_lane : MVE_VMOV_lane_direction {
+  let bit_20 = 0b1;
+  let oops = (outs rGPR:$Rt);
+  let iops = (ins MQPR:$Qd);
+  let ops = "$Rt, $Qd$Idx";
+  let cstr = "";
+}
+def MVE_VMOV_to_lane : MVE_VMOV_lane_direction {
+  let bit_20 = 0b0;
+  let oops = (outs MQPR:$Qd);
+  let iops = (ins MQPR:$Qd_src, rGPR:$Rt);
+  let ops = "$Qd$Idx, $Rt";
+  let cstr = "$Qd = $Qd_src";
+}
+
+class MVE_VMOV_lane<string suffix, bit U, dag indexop,
+                    MVE_VMOV_lane_direction dir>
+  : MVE_VMOV_lane_base<dir.oops, !con(dir.iops, indexop), NoItinerary,
+                       "vmov", suffix, dir.ops, dir.cstr, []> {
+  bits<4> Qd;
+  bits<4> Rt;
+
+  let Inst{31-24} = 0b11101110;
+  let Inst{23} = U;
+  let Inst{20} = dir.bit_20;
+  let Inst{19-17} = Qd{2-0};
+  let Inst{15-12} = Rt{3-0};
+  let Inst{11-8} = 0b1011;
+  let Inst{7} = Qd{3};
+  let Inst{4-0} = 0b10000;
+}
+
+class MVE_VMOV_lane_32<MVE_VMOV_lane_direction dir>
+    : MVE_VMOV_lane<"32", 0b0, (ins MVEVectorIndex<4>:$Idx), dir> {
+  bits<2> Idx;
+  let Inst{22} = 0b0;
+  let Inst{6-5} = 0b00;
+  let Inst{16} = Idx{1};
+  let Inst{21} = Idx{0};
+
+  let Predicates = [HasFPRegsV8_1M];
+}
+
+class MVE_VMOV_lane_16<string suffix, bit U, MVE_VMOV_lane_direction dir>
+  : MVE_VMOV_lane<suffix, U, (ins MVEVectorIndex<8>:$Idx), dir> {
+  bits<3> Idx;
+  let Inst{22} = 0b0;
+  let Inst{5} = 0b1;
+  let Inst{16} = Idx{2};
+  let Inst{21} = Idx{1};
+  let Inst{6} = Idx{0};
+}
+
+class MVE_VMOV_lane_8<string suffix, bit U, MVE_VMOV_lane_direction dir>
+  : MVE_VMOV_lane<suffix, U, (ins MVEVectorIndex<16>:$Idx), dir> {
+  bits<4> Idx;
+  let Inst{22} = 0b1;
+  let Inst{16} = Idx{3};
+  let Inst{21} = Idx{2};
+  let Inst{6} = Idx{1};
+  let Inst{5} = Idx{0};
+}
+
+def MVE_VMOV_from_lane_32  : MVE_VMOV_lane_32<            MVE_VMOV_from_lane>;
+def MVE_VMOV_to_lane_32    : MVE_VMOV_lane_32<            MVE_VMOV_to_lane>;
+def MVE_VMOV_from_lane_s16 : MVE_VMOV_lane_16<"s16", 0b0, MVE_VMOV_from_lane>;
+def MVE_VMOV_from_lane_u16 : MVE_VMOV_lane_16<"u16", 0b1, MVE_VMOV_from_lane>;
+def MVE_VMOV_to_lane_16    : MVE_VMOV_lane_16< "16", 0b0, MVE_VMOV_to_lane>;
+def MVE_VMOV_from_lane_s8  : MVE_VMOV_lane_8 < "s8", 0b0, MVE_VMOV_from_lane>;
+def MVE_VMOV_from_lane_u8  : MVE_VMOV_lane_8 < "u8", 0b1, MVE_VMOV_from_lane>;
+def MVE_VMOV_to_lane_8     : MVE_VMOV_lane_8 <  "8", 0b0, MVE_VMOV_to_lane>;
+
+// end of mve_bit instructions
+
+// start of MVE Integer instructions
+
+class MVE_int<string iname, string suffix, bits<2> size, list<dag> pattern=[]>
+  : MVE_p<(outs MQPR:$Qd), (ins MQPR:$Qn, MQPR:$Qm), NoItinerary,
+          iname, suffix, "$Qd, $Qn, $Qm", vpred_r, "", pattern> {
+  bits<4> Qd;
+  bits<4> Qn;
+  bits<4> Qm;
+
+  let Inst{22} = Qd{3};
+  let Inst{21-20} = size;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{15-13} = Qd{2-0};
+  let Inst{7} = Qn{3};
+  let Inst{6} = 0b1;
+  let Inst{5} = Qm{3};
+  let Inst{3-1} = Qm{2-0};
+}
+
+class MVE_VMULt1<string suffix, bits<2> size, list<dag> pattern=[]>
+  : MVE_int<"vmul", suffix, size, pattern> {
+
+  let Inst{28} = 0b0;
+  let Inst{25-23} = 0b110;
+  let Inst{16} = 0b0;
+  let Inst{12-8} = 0b01001;
+  let Inst{4} = 0b1;
+  let Inst{0} = 0b0;
+}
+
+def MVE_VMULt1i8  : MVE_VMULt1<"i8", 0b00>;
+def MVE_VMULt1i16 : MVE_VMULt1<"i16", 0b01>;
+def MVE_VMULt1i32 : MVE_VMULt1<"i32", 0b10>;
+
+class MVE_VQxDMULH<string iname, string suffix, bits<2> size, bit rounding,
+                  list<dag> pattern=[]>
+  : MVE_int<iname, suffix, size, pattern> {
+
+  let Inst{28} = rounding;
+  let Inst{25-23} = 0b110;
+  let Inst{16} = 0b0;
+  let Inst{12-8} = 0b01011;
+  let Inst{4} = 0b0;
+  let Inst{0} = 0b0;
+}
+
+class MVE_VQDMULH<string suffix, bits<2> size, list<dag> pattern=[]>
+  : MVE_VQxDMULH<"vqdmulh", suffix, size, 0b0, pattern>;
+class MVE_VQRDMULH<string suffix, bits<2> size, list<dag> pattern=[]>
+  : MVE_VQxDMULH<"vqrdmulh", suffix, size, 0b1, pattern>;
+
+def MVE_VQDMULHi8   : MVE_VQDMULH<"s8",  0b00>;
+def MVE_VQDMULHi16  : MVE_VQDMULH<"s16", 0b01>;
+def MVE_VQDMULHi32  : MVE_VQDMULH<"s32", 0b10>;
+
+def MVE_VQRDMULHi8  : MVE_VQRDMULH<"s8",  0b00>;
+def MVE_VQRDMULHi16 : MVE_VQRDMULH<"s16", 0b01>;
+def MVE_VQRDMULHi32 : MVE_VQRDMULH<"s32", 0b10>;
+
+class MVE_VADDSUB<string iname, string suffix, bits<2> size, bit subtract,
+                    list<dag> pattern=[]>
+  : MVE_int<iname, suffix, size, pattern> {
+
+  let Inst{28} = subtract;
+  let Inst{25-23} = 0b110;
+  let Inst{16} = 0b0;
+  let Inst{12-8} = 0b01000;
+  let Inst{4} = 0b0;
+  let Inst{0} = 0b0;
+}
+
+class MVE_VADD<string suffix, bits<2> size, list<dag> pattern=[]>
+  : MVE_VADDSUB<"vadd", suffix, size, 0b0, pattern>;
+class MVE_VSUB<string suffix, bits<2> size, list<dag> pattern=[]>
+  : MVE_VADDSUB<"vsub", suffix, size, 0b1, pattern>;
+
+def MVE_VADDi8  : MVE_VADD<"i8",  0b00>;
+def MVE_VADDi16 : MVE_VADD<"i16", 0b01>;
+def MVE_VADDi32 : MVE_VADD<"i32", 0b10>;
+
+def MVE_VSUBi8  : MVE_VSUB<"i8",  0b00>;
+def MVE_VSUBi16 : MVE_VSUB<"i16", 0b01>;
+def MVE_VSUBi32 : MVE_VSUB<"i32", 0b10>;
+
+class MVE_VQADDSUB<string iname, string suffix, bit U, bit subtract,
+                   bits<2> size, list<dag> pattern=[]>
+  : MVE_int<iname, suffix, size, pattern> {
+
+  let Inst{28} = U;
+  let Inst{25-23} = 0b110;
+  let Inst{16} = 0b0;
+  let Inst{12-10} = 0b000;
+  let Inst{9} = subtract;
+  let Inst{8} = 0b0;
+  let Inst{4} = 0b1;
+  let Inst{0} = 0b0;
+}
+
+class MVE_VQADD<string suffix, bit U, bits<2> size, list<dag> pattern=[]>
+  : MVE_VQADDSUB<"vqadd", suffix, U, 0b0, size, pattern>;
+class MVE_VQSUB<string suffix, bit U, bits<2> size, list<dag> pattern=[]>
+  : MVE_VQADDSUB<"vqsub", suffix, U, 0b1, size, pattern>;
+
+def MVE_VQADDs8  : MVE_VQADD<"s8",  0b0, 0b00>;
+def MVE_VQADDs16 : MVE_VQADD<"s16", 0b0, 0b01>;
+def MVE_VQADDs32 : MVE_VQADD<"s32", 0b0, 0b10>;
+def MVE_VQADDu8  : MVE_VQADD<"u8",  0b1, 0b00>;
+def MVE_VQADDu16 : MVE_VQADD<"u16", 0b1, 0b01>;
+def MVE_VQADDu32 : MVE_VQADD<"u32", 0b1, 0b10>;
+
+def MVE_VQSUBs8  : MVE_VQSUB<"s8",  0b0, 0b00>;
+def MVE_VQSUBs16 : MVE_VQSUB<"s16", 0b0, 0b01>;
+def MVE_VQSUBs32 : MVE_VQSUB<"s32", 0b0, 0b10>;
+def MVE_VQSUBu8  : MVE_VQSUB<"u8",  0b1, 0b00>;
+def MVE_VQSUBu16 : MVE_VQSUB<"u16", 0b1, 0b01>;
+def MVE_VQSUBu32 : MVE_VQSUB<"u32", 0b1, 0b10>;
+
+class MVE_VABD_int<string suffix, bit U, bits<2> size, list<dag> pattern=[]>
+  : MVE_int<"vabd", suffix, size, pattern> {
+
+  let Inst{28} = U;
+  let Inst{25-23} = 0b110;
+  let Inst{16} = 0b0;
+  let Inst{12-8} = 0b00111;
+  let Inst{4} = 0b0;
+  let Inst{0} = 0b0;
+}
+
+def MVE_VABDs8  : MVE_VABD_int<"s8", 0b0, 0b00>;
+def MVE_VABDs16 : MVE_VABD_int<"s16", 0b0, 0b01>;
+def MVE_VABDs32 : MVE_VABD_int<"s32", 0b0, 0b10>;
+def MVE_VABDu8  : MVE_VABD_int<"u8", 0b1, 0b00>;
+def MVE_VABDu16 : MVE_VABD_int<"u16", 0b1, 0b01>;
+def MVE_VABDu32 : MVE_VABD_int<"u32", 0b1, 0b10>;
+
+class MVE_VRHADD<string suffix, bit U, bits<2> size, list<dag> pattern=[]>
+  : MVE_int<"vrhadd", suffix, size, pattern> {
+
+  let Inst{28} = U;
+  let Inst{25-23} = 0b110;
+  let Inst{16} = 0b0;
+  let Inst{12-8} = 0b00001;
+  let Inst{4} = 0b0;
+  let Inst{0} = 0b0;
+}
+
+def MVE_VRHADDs8  : MVE_VRHADD<"s8", 0b0, 0b00>;
+def MVE_VRHADDs16 : MVE_VRHADD<"s16", 0b0, 0b01>;
+def MVE_VRHADDs32 : MVE_VRHADD<"s32", 0b0, 0b10>;
+def MVE_VRHADDu8  : MVE_VRHADD<"u8", 0b1, 0b00>;
+def MVE_VRHADDu16 : MVE_VRHADD<"u16", 0b1, 0b01>;
+def MVE_VRHADDu32 : MVE_VRHADD<"u32", 0b1, 0b10>;
+
+class MVE_VHADDSUB<string iname, string suffix, bit U, bit subtract,
+                   bits<2> size, list<dag> pattern=[]>
+  : MVE_int<iname, suffix, size, pattern> {
+
+  let Inst{28} = U;
+  let Inst{25-23} = 0b110;
+  let Inst{16} = 0b0;
+  let Inst{12-10} = 0b000;
+  let Inst{9} = subtract;
+  let Inst{8} = 0b0;
+  let Inst{4} = 0b0;
+  let Inst{0} = 0b0;
+}
+
+class MVE_VHADD<string suffix, bit U, bits<2> size,
+              list<dag> pattern=[]>
+  : MVE_VHADDSUB<"vhadd", suffix, U, 0b0, size, pattern>;
+class MVE_VHSUB<string suffix, bit U, bits<2> size,
+              list<dag> pattern=[]>
+  : MVE_VHADDSUB<"vhsub", suffix, U, 0b1, size, pattern>;
+
+def MVE_VHADDs8  : MVE_VHADD<"s8",  0b0, 0b00>;
+def MVE_VHADDs16 : MVE_VHADD<"s16", 0b0, 0b01>;
+def MVE_VHADDs32 : MVE_VHADD<"s32", 0b0, 0b10>;
+def MVE_VHADDu8  : MVE_VHADD<"u8",  0b1, 0b00>;
+def MVE_VHADDu16 : MVE_VHADD<"u16", 0b1, 0b01>;
+def MVE_VHADDu32 : MVE_VHADD<"u32", 0b1, 0b10>;
+
+def MVE_VHSUBs8  : MVE_VHSUB<"s8",  0b0, 0b00>;
+def MVE_VHSUBs16 : MVE_VHSUB<"s16", 0b0, 0b01>;
+def MVE_VHSUBs32 : MVE_VHSUB<"s32", 0b0, 0b10>;
+def MVE_VHSUBu8  : MVE_VHSUB<"u8",  0b1, 0b00>;
+def MVE_VHSUBu16 : MVE_VHSUB<"u16", 0b1, 0b01>;
+def MVE_VHSUBu32 : MVE_VHSUB<"u32", 0b1, 0b10>;
+
+class MVE_VDUP<string suffix, bit B, bit E, list<dag> pattern=[]>
+  : MVE_p<(outs MQPR:$Qd), (ins rGPR:$Rt), NoItinerary,
+          "vdup", suffix, "$Qd, $Rt", vpred_r, "", pattern> {
+  bits<4> Qd;
+  bits<4> Rt;
+
+  let Inst{28} = 0b0;
+  let Inst{25-23} = 0b101;
+  let Inst{22} = B;
+  let Inst{21-20} = 0b10;
+  let Inst{19-17} = Qd{2-0};
+  let Inst{16} = 0b0;
+  let Inst{15-12} = Rt;
+  let Inst{11-8} = 0b1011;
+  let Inst{7} = Qd{3};
+  let Inst{6} = 0b0;
+  let Inst{5} = E;
+  let Inst{4-0} = 0b10000;
+}
+
+def MVE_VDUP32 : MVE_VDUP<"32", 0b0, 0b0>;
+def MVE_VDUP16 : MVE_VDUP<"16", 0b0, 0b1>;
+def MVE_VDUP8  : MVE_VDUP<"8",  0b1, 0b0>;
+
+class MVEIntSingleSrc<string iname, string suffix, bits<2> size,
+                         list<dag> pattern=[]>
+  : MVE_p<(outs MQPR:$Qd), (ins MQPR:$Qm), NoItinerary,
+          iname, suffix, "$Qd, $Qm", vpred_r, "", pattern> {
+  bits<4> Qd;
+  bits<4> Qm;
+
+  let Inst{22} = Qd{3};
+  let Inst{19-18} = size{1-0};
+  let Inst{15-13} = Qd{2-0};
+  let Inst{5} = Qm{3};
+  let Inst{3-1} = Qm{2-0};
+}
+
+class MVE_VCLSCLZ<string iname, string suffix, bits<2> size,
+                   bit count_zeroes, list<dag> pattern=[]>
+  : MVEIntSingleSrc<iname, suffix, size, pattern> {
+
+  let Inst{28} = 0b1;
+  let Inst{25-23} = 0b111;
+  let Inst{21-20} = 0b11;
+  let Inst{17-16} = 0b00;
+  let Inst{12-8} = 0b00100;
+  let Inst{7} = count_zeroes;
+  let Inst{6} = 0b1;
+  let Inst{4} = 0b0;
+  let Inst{0} = 0b0;
+}
+
+def MVE_VCLSs8  : MVE_VCLSCLZ<"vcls", "s8",  0b00, 0b0>;
+def MVE_VCLSs16 : MVE_VCLSCLZ<"vcls", "s16", 0b01, 0b0>;
+def MVE_VCLSs32 : MVE_VCLSCLZ<"vcls", "s32", 0b10, 0b0>;
+
+def MVE_VCLZs8  : MVE_VCLSCLZ<"vclz", "i8",  0b00, 0b1>;
+def MVE_VCLZs16 : MVE_VCLSCLZ<"vclz", "i16", 0b01, 0b1>;
+def MVE_VCLZs32 : MVE_VCLSCLZ<"vclz", "i32", 0b10, 0b1>;
+
+class MVE_VABSNEG_int<string iname, string suffix, bits<2> size, bit negate,
+                      list<dag> pattern=[]>
+  : MVEIntSingleSrc<iname, suffix, size, pattern> {
+
+  let Inst{28} = 0b1;
+  let Inst{25-23} = 0b111;
+  let Inst{21-20} = 0b11;
+  let Inst{17-16} = 0b01;
+  let Inst{12-8} = 0b00011;
+  let Inst{7} = negate;
+  let Inst{6} = 0b1;
+  let Inst{4} = 0b0;
+  let Inst{0} = 0b0;
+}
+
+def MVE_VABSs8  : MVE_VABSNEG_int<"vabs", "s8",  0b00, 0b0>;
+def MVE_VABSs16 : MVE_VABSNEG_int<"vabs", "s16", 0b01, 0b0>;
+def MVE_VABSs32 : MVE_VABSNEG_int<"vabs", "s32", 0b10, 0b0>;
+
+def MVE_VNEGs8  : MVE_VABSNEG_int<"vneg", "s8",  0b00, 0b1>;
+def MVE_VNEGs16 : MVE_VABSNEG_int<"vneg", "s16", 0b01, 0b1>;
+def MVE_VNEGs32 : MVE_VABSNEG_int<"vneg", "s32", 0b10, 0b1>;
+
+class MVE_VQABSNEG<string iname, string suffix, bits<2> size,
+                   bit negate, list<dag> pattern=[]>
+  : MVEIntSingleSrc<iname, suffix, size, pattern> {
+
+  let Inst{28} = 0b1;
+  let Inst{25-23} = 0b111;
+  let Inst{21-20} = 0b11;
+  let Inst{17-16} = 0b00;
+  let Inst{12-8} = 0b00111;
+  let Inst{7} = negate;
+  let Inst{6} = 0b1;
+  let Inst{4} = 0b0;
+  let Inst{0} = 0b0;
+}
+
+def MVE_VQABSs8  : MVE_VQABSNEG<"vqabs", "s8",  0b00, 0b0>;
+def MVE_VQABSs16 : MVE_VQABSNEG<"vqabs", "s16", 0b01, 0b0>;
+def MVE_VQABSs32 : MVE_VQABSNEG<"vqabs", "s32", 0b10, 0b0>;
+
+def MVE_VQNEGs8  : MVE_VQABSNEG<"vqneg", "s8",  0b00, 0b1>;
+def MVE_VQNEGs16 : MVE_VQABSNEG<"vqneg", "s16", 0b01, 0b1>;
+def MVE_VQNEGs32 : MVE_VQABSNEG<"vqneg", "s32", 0b10, 0b1>;
+
+class MVE_mod_imm<string iname, string suffix, bits<4> cmode, bit op,
+                  dag iops, list<dag> pattern=[]>
+  : MVE_p<(outs MQPR:$Qd), iops, NoItinerary, iname, suffix, "$Qd, $imm",
+          vpred_r, "", pattern> {
+  bits<13> imm;
+  bits<4> Qd;
+
+  let Inst{28} = imm{7};
+  let Inst{25-23} = 0b111;
+  let Inst{22} = Qd{3};
+  let Inst{21-19} = 0b000;
+  let Inst{18-16} = imm{6-4};
+  let Inst{15-13} = Qd{2-0};
+  let Inst{12} = 0b0;
+  let Inst{11-8} = cmode{3-0};
+  let Inst{7-6} = 0b01;
+  let Inst{5} = op;
+  let Inst{4} = 0b1;
+  let Inst{3-0} = imm{3-0};
+
+  let DecoderMethod = "DecodeMVEModImmInstruction";
+}
+
+let isReMaterializable = 1 in {
+let isAsCheapAsAMove = 1 in {
+def MVE_VMOVimmi8  : MVE_mod_imm<"vmov", "i8",  {1,1,1,0}, 0b0, (ins nImmSplatI8:$imm)>;
+def MVE_VMOVimmi16 : MVE_mod_imm<"vmov", "i16", {1,0,?,0}, 0b0, (ins nImmSplatI16:$imm)> {
+  let Inst{9} = imm{9};
+}
+def MVE_VMOVimmi32 : MVE_mod_imm<"vmov", "i32", {?,?,?,?}, 0b0, (ins nImmVMOVI32:$imm)> {
+  let Inst{11-8} = imm{11-8};
+}
+def MVE_VMOVimmi64 : MVE_mod_imm<"vmov", "i64", {1,1,1,0}, 0b1, (ins nImmSplatI64:$imm)>;
+def MVE_VMOVimmf32 : MVE_mod_imm<"vmov", "f32", {1,1,1,1}, 0b0, (ins nImmVMOVF32:$imm)>;
+} // let isAsCheapAsAMove = 1
+
+def MVE_VMVNimmi16 : MVE_mod_imm<"vmvn", "i16", {1,0,?,0}, 0b1, (ins nImmSplatI16:$imm)> {
+  let Inst{9} = imm{9};
+}
+def MVE_VMVNimmi32 : MVE_mod_imm<"vmvn", "i32", {?,?,?,?}, 0b1, (ins nImmVMOVI32:$imm)> {
+  let Inst{11-8} = imm{11-8};
+}
+} // let isReMaterializable = 1
+
+class MVE_VMINMAXA<string iname, string suffix, bits<2> size,
+                   bit bit_12, list<dag> pattern=[]>
+  : MVE_p<(outs MQPR:$Qd), (ins MQPR:$Qd_src, MQPR:$Qm),
+          NoItinerary, iname, suffix, "$Qd, $Qm", vpred_n, "$Qd = $Qd_src",
+          pattern> {
+  bits<4> Qd;
+  bits<4> Qm;
+
+  let Inst{28} = 0b0;
+  let Inst{25-23} = 0b100;
+  let Inst{22} = Qd{3};
+  let Inst{21-20} = 0b11;
+  let Inst{19-18} = size;
+  let Inst{17-16} = 0b11;
+  let Inst{15-13} = Qd{2-0};
+  let Inst{12} = bit_12;
+  let Inst{11-6} = 0b111010;
+  let Inst{5} = Qm{3};
+  let Inst{4} = 0b0;
+  let Inst{3-1} = Qm{2-0};
+  let Inst{0} = 0b1;
+}
+
+def MVE_VMAXAs8  : MVE_VMINMAXA<"vmaxa", "s8",  0b00, 0b0>;
+def MVE_VMAXAs16 : MVE_VMINMAXA<"vmaxa", "s16", 0b01, 0b0>;
+def MVE_VMAXAs32 : MVE_VMINMAXA<"vmaxa", "s32", 0b10, 0b0>;
+
+def MVE_VMINAs8  : MVE_VMINMAXA<"vmina", "s8",  0b00, 0b1>;
+def MVE_VMINAs16 : MVE_VMINMAXA<"vmina", "s16", 0b01, 0b1>;
+def MVE_VMINAs32 : MVE_VMINMAXA<"vmina", "s32", 0b10, 0b1>;
+
+// end of MVE Integer instructions
+
+// start of MVE Floating Point instructions
+
+class MVE_float<string iname, string suffix, dag oops, dag iops, string ops,
+                vpred_ops vpred, string cstr, list<dag> pattern=[]>
+  : MVE_f<oops, iops, NoItinerary, iname, suffix, ops, vpred, cstr, pattern> {
+  bits<4> Qm;
+
+  let Inst{12} = 0b0;
+  let Inst{6} = 0b1;
+  let Inst{5} = Qm{3};
+  let Inst{3-1} = Qm{2-0};
+  let Inst{0} = 0b0;
+}
+
+class MVE_VRINT<string rmode, bits<3> op, string suffix, bits<2> size,
+                list<dag> pattern=[]>
+  : MVE_float<!strconcat("vrint", rmode), suffix, (outs MQPR:$Qd),
+              (ins MQPR:$Qm), "$Qd, $Qm", vpred_r, "", pattern> {
+  bits<4> Qd;
+
+  let Inst{28} = 0b1;
+  let Inst{25-23} = 0b111;
+  let Inst{22} = Qd{3};
+  let Inst{21-20} = 0b11;
+  let Inst{19-18} = size;
+  let Inst{17-16} = 0b10;
+  let Inst{15-13} = Qd{2-0};
+  let Inst{11-10} = 0b01;
+  let Inst{9-7} = op{2-0};
+  let Inst{4} = 0b0;
+
+}
+
+multiclass MVE_VRINT_ops<string suffix, bits<2> size, list<dag> pattern=[]> {
+  def N : MVE_VRINT<"n", 0b000, suffix, size, pattern>;
+  def X : MVE_VRINT<"x", 0b001, suffix, size, pattern>;
+  def A : MVE_VRINT<"a", 0b010, suffix, size, pattern>;
+  def Z : MVE_VRINT<"z", 0b011, suffix, size, pattern>;
+  def M : MVE_VRINT<"m", 0b101, suffix, size, pattern>;
+  def P : MVE_VRINT<"p", 0b111, suffix, size, pattern>;
+}
+
+defm MVE_VRINTf16 : MVE_VRINT_ops<"f16", 0b01>;
+defm MVE_VRINTf32 : MVE_VRINT_ops<"f32", 0b10>;
+
+class MVEFloatArithNeon<string iname, string suffix, bit size,
+                           dag oops, dag iops, string ops,
+                           vpred_ops vpred, string cstr, list<dag> pattern=[]>
+  : MVE_float<iname, suffix, oops, iops, ops, vpred, cstr, pattern> {
+  let Inst{20} = size;
+  let Inst{16} = 0b0;
+}
+
+class MVE_VMUL_fp<string suffix, bit size, list<dag> pattern=[]>
+  : MVEFloatArithNeon<"vmul", suffix, size, (outs MQPR:$Qd),
+                      (ins MQPR:$Qn, MQPR:$Qm), "$Qd, $Qn, $Qm", vpred_r, "",
+                      pattern> {
+  bits<4> Qd;
+  bits<4> Qn;
+
+  let Inst{28} = 0b1;
+  let Inst{25-23} = 0b110;
+  let Inst{22} = Qd{3};
+  let Inst{21} = 0b0;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{15-13} = Qd{2-0};
+  let Inst{12-8} = 0b01101;
+  let Inst{7} = Qn{3};
+  let Inst{4} = 0b1;
+}
+
+def MVE_VMULf32 : MVE_VMUL_fp<"f32", 0b0>;
+def MVE_VMULf16 : MVE_VMUL_fp<"f16", 0b1>;
+
+class MVE_VCMLA<string suffix, bit size, list<dag> pattern=[]>
+  : MVEFloatArithNeon<"vcmla", suffix, size, (outs MQPR:$Qd),
+                         (ins MQPR:$Qd_src, MQPR:$Qn, MQPR:$Qm, complexrotateop:$rot),
+                         "$Qd, $Qn, $Qm, $rot", vpred_n, "$Qd = $Qd_src", pattern> {
+  bits<4> Qd;
+  bits<4> Qn;
+  bits<2> rot;
+
+  let Inst{28} = 0b1;
+  let Inst{25} = 0b0;
+  let Inst{24-23} = rot;
+  let Inst{22} = Qd{3};
+  let Inst{21} = 0b1;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{15-13} = Qd{2-0};
+  let Inst{12-8} = 0b01000;
+  let Inst{7} = Qn{3};
+  let Inst{4} = 0b0;
+}
+
+def MVE_VCMLAf16 : MVE_VCMLA<"f16", 0b0>;
+def MVE_VCMLAf32 : MVE_VCMLA<"f32", 0b1>;
+
+class MVE_VADDSUBFMA_fp<string iname, string suffix, bit size, bit bit_4,
+                        bit bit_8, bit bit_21, dag iops=(ins),
+                        vpred_ops vpred=vpred_r, string cstr="",
+                        list<dag> pattern=[]>
+  : MVEFloatArithNeon<iname, suffix, size, (outs MQPR:$Qd),
+                      !con(iops, (ins MQPR:$Qn, MQPR:$Qm)), "$Qd, $Qn, $Qm",
+                      vpred, cstr, pattern> {
+  bits<4> Qd;
+  bits<4> Qn;
+
+  let Inst{28} = 0b0;
+  let Inst{25-23} = 0b110;
+  let Inst{22} = Qd{3};
+  let Inst{21} = bit_21;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{15-13} = Qd{2-0};
+  let Inst{11-9} = 0b110;
+  let Inst{8} = bit_8;
+  let Inst{7} = Qn{3};
+  let Inst{4} = bit_4;
+}
+
+def MVE_VFMAf32 : MVE_VADDSUBFMA_fp<"vfma", "f32", 0b0, 0b1, 0b0, 0b0,
+    (ins MQPR:$Qd_src), vpred_n, "$Qd = $Qd_src">;
+def MVE_VFMAf16 : MVE_VADDSUBFMA_fp<"vfma", "f16", 0b1, 0b1, 0b0, 0b0,
+    (ins MQPR:$Qd_src), vpred_n, "$Qd = $Qd_src">;
+
+def MVE_VFMSf32 : MVE_VADDSUBFMA_fp<"vfms", "f32", 0b0, 0b1, 0b0, 0b1,
+    (ins MQPR:$Qd_src), vpred_n, "$Qd = $Qd_src">;
+def MVE_VFMSf16 : MVE_VADDSUBFMA_fp<"vfms", "f16", 0b1, 0b1, 0b0, 0b1,
+    (ins MQPR:$Qd_src), vpred_n, "$Qd = $Qd_src">;
+
+def MVE_VADDf32 : MVE_VADDSUBFMA_fp<"vadd", "f32", 0b0, 0b0, 0b1, 0b0>;
+def MVE_VADDf16 : MVE_VADDSUBFMA_fp<"vadd", "f16", 0b1, 0b0, 0b1, 0b0>;
+
+def MVE_VSUBf32 : MVE_VADDSUBFMA_fp<"vsub", "f32", 0b0, 0b0, 0b1, 0b1>;
+def MVE_VSUBf16 : MVE_VADDSUBFMA_fp<"vsub", "f16", 0b1, 0b0, 0b1, 0b1>;
+
+class MVE_VCADD<string suffix, bit size, list<dag> pattern=[]>
+  : MVEFloatArithNeon<"vcadd", suffix, size, (outs MQPR:$Qd),
+                         (ins MQPR:$Qn, MQPR:$Qm, complexrotateopodd:$rot),
+                         "$Qd, $Qn, $Qm, $rot", vpred_r, "", pattern> {
+  bits<4> Qd;
+  bits<4> Qn;
+  bit rot;
+
+  let Inst{28} = 0b1;
+  let Inst{25} = 0b0;
+  let Inst{24} = rot;
+  let Inst{23} = 0b1;
+  let Inst{22} = Qd{3};
+  let Inst{21} = 0b0;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{15-13} = Qd{2-0};
+  let Inst{12-8} = 0b01000;
+  let Inst{7} = Qn{3};
+  let Inst{4} = 0b0;
+}
+
+def MVE_VCADDf16 : MVE_VCADD<"f16", 0b0>;
+def MVE_VCADDf32 : MVE_VCADD<"f32", 0b1>;
+
+class MVE_VABD_fp<string suffix, bit size>
+  : MVE_float<"vabd", suffix, (outs MQPR:$Qd), (ins MQPR:$Qn, MQPR:$Qm),
+              "$Qd, $Qn, $Qm", vpred_r, ""> {
+  bits<4> Qd;
+  bits<4> Qn;
+
+  let Inst{28} = 0b1;
+  let Inst{25-23} = 0b110;
+  let Inst{22} = Qd{3};
+  let Inst{21} = 0b1;
+  let Inst{20} = size;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{16} = 0b0;
+  let Inst{15-13} = Qd{2-0};
+  let Inst{11-8} = 0b1101;
+  let Inst{7} = Qn{3};
+  let Inst{4} = 0b0;
+}
+
+def MVE_VABDf32 : MVE_VABD_fp<"f32", 0b0>;
+def MVE_VABDf16 : MVE_VABD_fp<"f16", 0b1>;
+
+class MVE_VCVT_fix<string suffix, bit fsi, bit U, bit op,
+                   Operand imm_operand_type, list<dag> pattern=[]>
+  : MVE_float<"vcvt", suffix,
+              (outs MQPR:$Qd), (ins MQPR:$Qm, imm_operand_type:$imm6),
+              "$Qd, $Qm, $imm6", vpred_r, "", pattern> {
+  bits<4> Qd;
+  bits<6> imm6;
+
+  let Inst{28} = U;
+  let Inst{25-23} = 0b111;
+  let Inst{22} = Qd{3};
+  let Inst{21} = 0b1;
+  let Inst{19-16} = imm6{3-0};
+  let Inst{15-13} = Qd{2-0};
+  let Inst{11-10} = 0b11;
+  let Inst{9} = fsi;
+  let Inst{8} = op;
+  let Inst{7} = 0b0;
+  let Inst{4} = 0b1;
+
+  let DecoderMethod = "DecodeMVEVCVTt1fp";
+}
+
+class MVE_VCVT_imm_asmop<int Bits> : AsmOperandClass {
+  let PredicateMethod = "isImmediate<1," # Bits # ">";
+  let DiagnosticString =
+      "MVE fixed-point immediate operand must be between 1 and " # Bits;
+  let Name = "MVEVcvtImm" # Bits;
+  let RenderMethod = "addImmOperands";
+}
+class MVE_VCVT_imm<int Bits>: Operand<i32> {
+  let ParserMatchClass = MVE_VCVT_imm_asmop<Bits>;
+  let EncoderMethod = "getNEONVcvtImm32OpValue";
+  let DecoderMethod = "DecodeVCVTImmOperand";
+}
+
+class MVE_VCVT_fix_f32<string suffix, bit U, bit op>
+    : MVE_VCVT_fix<suffix, 0b1, U, op, MVE_VCVT_imm<32>> {
+  let Inst{20} = imm6{4};
+}
+class MVE_VCVT_fix_f16<string suffix, bit U, bit op>
+    : MVE_VCVT_fix<suffix, 0b0, U, op, MVE_VCVT_imm<16>> {
+  let Inst{20} = 0b1;
+}
+
+def MVE_VCVTf16s16_fix : MVE_VCVT_fix_f16<"f16.s16", 0b0, 0b0>;
+def MVE_VCVTs16f16_fix : MVE_VCVT_fix_f16<"s16.f16", 0b0, 0b1>;
+def MVE_VCVTf16u16_fix : MVE_VCVT_fix_f16<"f16.u16", 0b1, 0b0>;
+def MVE_VCVTu16f16_fix : MVE_VCVT_fix_f16<"u16.f16", 0b1, 0b1>;
+def MVE_VCVTf32s32_fix : MVE_VCVT_fix_f32<"f32.s32", 0b0, 0b0>;
+def MVE_VCVTs32f32_fix : MVE_VCVT_fix_f32<"s32.f32", 0b0, 0b1>;
+def MVE_VCVTf32u32_fix : MVE_VCVT_fix_f32<"f32.u32", 0b1, 0b0>;
+def MVE_VCVTu32f32_fix : MVE_VCVT_fix_f32<"u32.f32", 0b1, 0b1>;
+
+class MVE_VCVT_fp_int_anpm<string suffix, bits<2> size, bit op, string anpm,
+                bits<2> rm, list<dag> pattern=[]>
+  : MVE_float<!strconcat("vcvt", anpm), suffix, (outs MQPR:$Qd),
+              (ins MQPR:$Qm), "$Qd, $Qm", vpred_r, "", pattern> {
+  bits<4> Qd;
+
+  let Inst{28} = 0b1;
+  let Inst{25-23} = 0b111;
+  let Inst{22} = Qd{3};
+  let Inst{21-20} = 0b11;
+  let Inst{19-18} = size;
+  let Inst{17-16} = 0b11;
+  let Inst{15-13} = Qd{2-0};
+  let Inst{12-10} = 0b000;
+  let Inst{9-8} = rm;
+  let Inst{7} = op;
+  let Inst{4} = 0b0;
+}
+
+multiclass MVE_VCVT_fp_int_anpm_multi<string suffix, bits<2> size, bit op,
+                                list<dag> pattern=[]> {
+  def a : MVE_VCVT_fp_int_anpm<suffix, size, op, "a", 0b00>;
+  def n : MVE_VCVT_fp_int_anpm<suffix, size, op, "n", 0b01>;
+  def p : MVE_VCVT_fp_int_anpm<suffix, size, op, "p", 0b10>;
+  def m : MVE_VCVT_fp_int_anpm<suffix, size, op, "m", 0b11>;
+}
+
+// This defines instructions such as MVE_VCVTu16f16a, with an explicit
+// rounding-mode suffix on the mnemonic. The class below will define
+// the bare MVE_VCVTu16f16 (with implied rounding toward zero).
+defm MVE_VCVTs16f16 : MVE_VCVT_fp_int_anpm_multi<"s16.f16", 0b01, 0b0>;
+defm MVE_VCVTu16f16 : MVE_VCVT_fp_int_anpm_multi<"u16.f16", 0b01, 0b1>;
+defm MVE_VCVTs32f32 : MVE_VCVT_fp_int_anpm_multi<"s32.f32", 0b10, 0b0>;
+defm MVE_VCVTu32f32 : MVE_VCVT_fp_int_anpm_multi<"u32.f32", 0b10, 0b1>;
+
+class MVE_VCVT_fp_int<string suffix, bits<2> size, bits<2> op,
+                      list<dag> pattern=[]>
+  : MVE_float<"vcvt", suffix, (outs MQPR:$Qd),
+              (ins MQPR:$Qm), "$Qd, $Qm", vpred_r, "", pattern> {
+  bits<4> Qd;
+
+  let Inst{28} = 0b1;
+  let Inst{25-23} = 0b111;
+  let Inst{22} = Qd{3};
+  let Inst{21-20} = 0b11;
+  let Inst{19-18} = size;
+  let Inst{17-16} = 0b11;
+  let Inst{15-13} = Qd{2-0};
+  let Inst{12-9} = 0b0011;
+  let Inst{8-7} = op;
+  let Inst{4} = 0b0;
+}
+
+// The unsuffixed VCVT for float->int implicitly rounds toward zero,
+// which I reflect here in the llvm instruction names
+def MVE_VCVTs16f16z : MVE_VCVT_fp_int<"s16.f16", 0b01, 0b10>;
+def MVE_VCVTu16f16z : MVE_VCVT_fp_int<"u16.f16", 0b01, 0b11>;
+def MVE_VCVTs32f32z : MVE_VCVT_fp_int<"s32.f32", 0b10, 0b10>;
+def MVE_VCVTu32f32z : MVE_VCVT_fp_int<"u32.f32", 0b10, 0b11>;
+// Whereas VCVT for int->float rounds to nearest
+def MVE_VCVTf16s16n : MVE_VCVT_fp_int<"f16.s16", 0b01, 0b00>;
+def MVE_VCVTf16u16n : MVE_VCVT_fp_int<"f16.u16", 0b01, 0b01>;
+def MVE_VCVTf32s32n : MVE_VCVT_fp_int<"f32.s32", 0b10, 0b00>;
+def MVE_VCVTf32u32n : MVE_VCVT_fp_int<"f32.u32", 0b10, 0b01>;
+
+class MVE_VABSNEG_fp<string iname, string suffix, bits<2> size, bit negate,
+                   list<dag> pattern=[]>
+  : MVE_float<iname, suffix, (outs MQPR:$Qd),
+              (ins MQPR:$Qm), "$Qd, $Qm", vpred_r, "", pattern> {
+  bits<4> Qd;
+
+  let Inst{28} = 0b1;
+  let Inst{25-23} = 0b111;
+  let Inst{22} = Qd{3};
+  let Inst{21-20} = 0b11;
+  let Inst{19-18} = size;
+  let Inst{17-16} = 0b01;
+  let Inst{15-13} = Qd{2-0};
+  let Inst{11-8} = 0b0111;
+  let Inst{7} = negate;
+  let Inst{4} = 0b0;
+}
+
+def MVE_VABSf16 : MVE_VABSNEG_fp<"vabs", "f16", 0b01, 0b0>;
+def MVE_VABSf32 : MVE_VABSNEG_fp<"vabs", "f32", 0b10, 0b0>;
+
+def MVE_VNEGf16 : MVE_VABSNEG_fp<"vneg", "f16", 0b01, 0b1>;
+def MVE_VNEGf32 : MVE_VABSNEG_fp<"vneg", "f32", 0b10, 0b1>;
+
+class MVE_VMAXMINNMA<string iname, string suffix, bit size, bit bit_12,
+                     list<dag> pattern=[]>
+  : MVE_f<(outs MQPR:$Qd), (ins MQPR:$Qd_src, MQPR:$Qm),
+          NoItinerary, iname, suffix, "$Qd, $Qm", vpred_n, "$Qd = $Qd_src",
+          pattern> {
+  bits<4> Qd;
+  bits<4> Qm;
+
+  let Inst{28} = size;
+  let Inst{25-23} = 0b100;
+  let Inst{22} = Qd{3};
+  let Inst{21-16} = 0b111111;
+  let Inst{15-13} = Qd{2-0};
+  let Inst{12} = bit_12;
+  let Inst{11-6} = 0b111010;
+  let Inst{5} = Qm{3};
+  let Inst{4} = 0b0;
+  let Inst{3-1} = Qm{2-0};
+  let Inst{0} = 0b1;
+}
+
+def MVE_VMAXNMAf32 : MVE_VMAXMINNMA<"vmaxnma", "f32", 0b0, 0b0>;
+def MVE_VMAXNMAf16 : MVE_VMAXMINNMA<"vmaxnma", "f16", 0b1, 0b0>;
+
+def MVE_VMINNMAf32 : MVE_VMAXMINNMA<"vminnma", "f32", 0b0, 0b1>;
+def MVE_VMINNMAf16 : MVE_VMAXMINNMA<"vminnma", "f16", 0b1, 0b1>;
+
+// end of MVE Floating Point instructions
+
+// start of MVE compares
+
+class MVE_VCMPqq<string suffix, bit bit_28, bits<2> bits_21_20,
+                 VCMPPredicateOperand predtype, list<dag> pattern=[]>
+  : MVE_p<(outs VCCR:$P0), (ins MQPR:$Qn, MQPR:$Qm, predtype:$fc),
+           NoItinerary, "vcmp", suffix, "$fc, $Qn, $Qm", vpred_n, "", pattern> {
+  // Base class for comparing two vector registers
+  bits<3> fc;
+  bits<4> Qn;
+  bits<4> Qm;
+
+  let Inst{28} = bit_28;
+  let Inst{25-22} = 0b1000;
+  let Inst{21-20} = bits_21_20;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{16-13} = 0b1000;
+  let Inst{12} = fc{2};
+  let Inst{11-8} = 0b1111;
+  let Inst{7} = fc{0};
+  let Inst{6} = 0b0;
+  let Inst{5} = Qm{3};
+  let Inst{4} = 0b0;
+  let Inst{3-1} = Qm{2-0};
+  let Inst{0} = fc{1};
+
+  let Constraints = "";
+
+  // We need a custom decoder method for these instructions because of
+  // the output VCCR operand, which isn't encoded in the instruction
+  // bits anywhere (there is only one choice for it) but has to be
+  // included in the MC operands so that codegen will be able to track
+  // its data flow between instructions, spill/reload it when
+  // necessary, etc. There seems to be no way to get the Tablegen
+  // decoder to emit an operand that isn't affected by any instruction
+  // bit.
+  let DecoderMethod = "DecodeMVEVCMP<false," # predtype.DecoderMethod # ">";
+}
+
+class MVE_VCMPqqf<string suffix, bit size>
+    : MVE_VCMPqq<suffix, size, 0b11, pred_basic_fp> {
+  let Predicates = [HasMVEFloat];
+}
+
+class MVE_VCMPqqi<string suffix, bits<2> size>
+    : MVE_VCMPqq<suffix, 0b1, size, pred_basic_i> {
+  let Inst{12} = 0b0;
+  let Inst{0} = 0b0;
+}
+
+class MVE_VCMPqqu<string suffix, bits<2> size>
+    : MVE_VCMPqq<suffix, 0b1, size, pred_basic_u> {
+  let Inst{12} = 0b0;
+  let Inst{0} = 0b1;
+}
+
+class MVE_VCMPqqs<string suffix, bits<2> size>
+    : MVE_VCMPqq<suffix, 0b1, size, pred_basic_s> {
+  let Inst{12} = 0b1;
+}
+
+def MVE_VCMPf32 : MVE_VCMPqqf<"f32", 0b0>;
+def MVE_VCMPf16 : MVE_VCMPqqf<"f16", 0b1>;
+
+def MVE_VCMPi8  : MVE_VCMPqqi<"i8",  0b00>;
+def MVE_VCMPi16 : MVE_VCMPqqi<"i16", 0b01>;
+def MVE_VCMPi32 : MVE_VCMPqqi<"i32", 0b10>;
+
+def MVE_VCMPu8  : MVE_VCMPqqu<"u8",  0b00>;
+def MVE_VCMPu16 : MVE_VCMPqqu<"u16", 0b01>;
+def MVE_VCMPu32 : MVE_VCMPqqu<"u32", 0b10>;
+
+def MVE_VCMPs8  : MVE_VCMPqqs<"s8",  0b00>;
+def MVE_VCMPs16 : MVE_VCMPqqs<"s16", 0b01>;
+def MVE_VCMPs32 : MVE_VCMPqqs<"s32", 0b10>;
+
+class MVE_VCMPqr<string suffix, bit bit_28, bits<2> bits_21_20,
+                 VCMPPredicateOperand predtype, list<dag> pattern=[]>
+  : MVE_p<(outs VCCR:$P0), (ins MQPR:$Qn, GPRwithZR:$Rm, predtype:$fc),
+           NoItinerary, "vcmp", suffix, "$fc, $Qn, $Rm", vpred_n, "", pattern> {
+  // Base class for comparing a vector register with a scalar
+  bits<3> fc;
+  bits<4> Qn;
+  bits<4> Rm;
+
+  let Inst{28} = bit_28;
+  let Inst{25-22} = 0b1000;
+  let Inst{21-20} = bits_21_20;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{16-13} = 0b1000;
+  let Inst{12} = fc{2};
+  let Inst{11-8} = 0b1111;
+  let Inst{7} = fc{0};
+  let Inst{6} = 0b1;
+  let Inst{5} = fc{1};
+  let Inst{4} = 0b0;
+  let Inst{3-0} = Rm{3-0};
+
+  let Constraints = "";
+  // Custom decoder method, for the same reason as MVE_VCMPqq
+  let DecoderMethod = "DecodeMVEVCMP<true," # predtype.DecoderMethod # ">";
+}
+
+class MVE_VCMPqrf<string suffix, bit size>
+    : MVE_VCMPqr<suffix, size, 0b11, pred_basic_fp> {
+  let Predicates = [HasMVEFloat];
+}
+
+class MVE_VCMPqri<string suffix, bits<2> size>
+    : MVE_VCMPqr<suffix, 0b1, size, pred_basic_i> {
+  let Inst{12} = 0b0;
+  let Inst{5} = 0b0;
+}
+
+class MVE_VCMPqru<string suffix, bits<2> size>
+    : MVE_VCMPqr<suffix, 0b1, size, pred_basic_u> {
+  let Inst{12} = 0b0;
+  let Inst{5} = 0b1;
+}
+
+class MVE_VCMPqrs<string suffix, bits<2> size>
+    : MVE_VCMPqr<suffix, 0b1, size, pred_basic_s> {
+  let Inst{12} = 0b1;
+}
+
+def MVE_VCMPf32r : MVE_VCMPqrf<"f32", 0b0>;
+def MVE_VCMPf16r : MVE_VCMPqrf<"f16", 0b1>;
+
+def MVE_VCMPi8r  : MVE_VCMPqri<"i8",  0b00>;
+def MVE_VCMPi16r : MVE_VCMPqri<"i16", 0b01>;
+def MVE_VCMPi32r : MVE_VCMPqri<"i32", 0b10>;
+
+def MVE_VCMPu8r  : MVE_VCMPqru<"u8",  0b00>;
+def MVE_VCMPu16r : MVE_VCMPqru<"u16", 0b01>;
+def MVE_VCMPu32r : MVE_VCMPqru<"u32", 0b10>;
+
+def MVE_VCMPs8r  : MVE_VCMPqrs<"s8",  0b00>;
+def MVE_VCMPs16r : MVE_VCMPqrs<"s16", 0b01>;
+def MVE_VCMPs32r : MVE_VCMPqrs<"s32", 0b10>;
+
+// end of MVE compares
+
+// start of MVE_qDest_qSrc
+
+class MVE_qDest_qSrc<string iname, string suffix, dag oops, dag iops,
+                     string ops, vpred_ops vpred, string cstr,
+                     list<dag> pattern=[]>
+  : MVE_p<oops, iops, NoItinerary, iname, suffix,
+          ops, vpred, cstr, pattern> {
+  bits<4> Qd;
+  bits<4> Qm;
+
+  let Inst{25-23} = 0b100;
+  let Inst{22} = Qd{3};
+  let Inst{15-13} = Qd{2-0};
+  let Inst{11-9} = 0b111;
+  let Inst{6} = 0b0;
+  let Inst{5} = Qm{3};
+  let Inst{4} = 0b0;
+  let Inst{3-1} = Qm{2-0};
+}
+
+class MVE_VQxDMLxDH<string iname, bit exch, bit round, bit subtract,
+                    string suffix, bits<2> size, list<dag> pattern=[]>
+  : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd),
+                   (ins MQPR:$Qn, MQPR:$Qm), "$Qd, $Qn, $Qm",
+                   vpred_r, "", pattern> {
+  bits<4> Qn;
+
+  let Inst{28} = subtract;
+  let Inst{21-20} = size;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{16} = 0b0;
+  let Inst{12} = exch;
+  let Inst{8} = 0b0;
+  let Inst{7} = Qn{3};
+  let Inst{0} = round;
+}
+
+multiclass MVE_VQxDMLxDH_multi<string iname, bit exch,
+                               bit round, bit subtract> {
+  def s8  : MVE_VQxDMLxDH<iname, exch, round, subtract, "s8",  0b00>;
+  def s16 : MVE_VQxDMLxDH<iname, exch, round, subtract, "s16", 0b01>;
+  def s32 : MVE_VQxDMLxDH<iname, exch, round, subtract, "s32", 0b10>;
+}
+
+defm MVE_VQDMLADH   : MVE_VQxDMLxDH_multi<"vqdmladh",   0b0, 0b0, 0b0>;
+defm MVE_VQDMLADHX  : MVE_VQxDMLxDH_multi<"vqdmladhx",  0b1, 0b0, 0b0>;
+defm MVE_VQRDMLADH  : MVE_VQxDMLxDH_multi<"vqrdmladh",  0b0, 0b1, 0b0>;
+defm MVE_VQRDMLADHX : MVE_VQxDMLxDH_multi<"vqrdmladhx", 0b1, 0b1, 0b0>;
+defm MVE_VQDMLSDH   : MVE_VQxDMLxDH_multi<"vqdmlsdh",   0b0, 0b0, 0b1>;
+defm MVE_VQDMLSDHX  : MVE_VQxDMLxDH_multi<"vqdmlsdhx",  0b1, 0b0, 0b1>;
+defm MVE_VQRDMLSDH  : MVE_VQxDMLxDH_multi<"vqrdmlsdh",  0b0, 0b1, 0b1>;
+defm MVE_VQRDMLSDHX : MVE_VQxDMLxDH_multi<"vqrdmlsdhx", 0b1, 0b1, 0b1>;
+
+class MVE_VCMUL<string iname, string suffix, bit size, list<dag> pattern=[]>
+  : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd),
+                   (ins MQPR:$Qn, MQPR:$Qm, complexrotateop:$rot),
+                   "$Qd, $Qn, $Qm, $rot", vpred_r, "", pattern> {
+  bits<4> Qn;
+  bits<2> rot;
+
+  let Inst{28} = size;
+  let Inst{21-20} = 0b11;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{16} = 0b0;
+  let Inst{12} = rot{1};
+  let Inst{8} = 0b0;
+  let Inst{7} = Qn{3};
+  let Inst{0} = rot{0};
+
+  let Predicates = [HasMVEFloat];
+}
+
+def MVE_VCMULf16 : MVE_VCMUL<"vcmul", "f16", 0b0>;
+def MVE_VCMULf32 : MVE_VCMUL<"vcmul", "f32", 0b1>;
+
+class MVE_VMULL<string iname, string suffix, bit bit_28, bits<2> bits_21_20,
+                bit T, list<dag> pattern=[]>
+  : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd),
+                   (ins MQPR:$Qn, MQPR:$Qm), "$Qd, $Qn, $Qm",
+                   vpred_r, "", pattern> {
+  bits<4> Qd;
+  bits<4> Qn;
+  bits<4> Qm;
+
+  let Inst{28} = bit_28;
+  let Inst{21-20} = bits_21_20;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{16} = 0b1;
+  let Inst{12} = T;
+  let Inst{8} = 0b0;
+  let Inst{7} = Qn{3};
+  let Inst{0} = 0b0;
+}
+
+multiclass MVE_VMULL_multi<string iname, string suffix,
+                           bit bit_28, bits<2> bits_21_20> {
+  def bh : MVE_VMULL<iname # "b", suffix, bit_28, bits_21_20, 0b0>;
+  def th : MVE_VMULL<iname # "t", suffix, bit_28, bits_21_20, 0b1>;
+}
+
+// For integer multiplies, bits 21:20 encode size, and bit 28 signedness.
+// For polynomial multiplies, bits 21:20 take the unused value 0b11, and
+// bit 28 switches to encoding the size.
+
+defm MVE_VMULLs8  : MVE_VMULL_multi<"vmull", "s8",  0b0, 0b00>;
+defm MVE_VMULLs16 : MVE_VMULL_multi<"vmull", "s16", 0b0, 0b01>;
+defm MVE_VMULLs32 : MVE_VMULL_multi<"vmull", "s32", 0b0, 0b10>;
+defm MVE_VMULLu8  : MVE_VMULL_multi<"vmull", "u8",  0b1, 0b00>;
+defm MVE_VMULLu16 : MVE_VMULL_multi<"vmull", "u16", 0b1, 0b01>;
+defm MVE_VMULLu32 : MVE_VMULL_multi<"vmull", "u32", 0b1, 0b10>;
+defm MVE_VMULLp8  : MVE_VMULL_multi<"vmull", "p8",  0b0, 0b11>;
+defm MVE_VMULLp16 : MVE_VMULL_multi<"vmull", "p16", 0b1, 0b11>;
+
+class MVE_VxMULH<string iname, string suffix, bit U, bits<2> size,
+                 bit round, list<dag> pattern=[]>
+  : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd),
+                   (ins MQPR:$Qn, MQPR:$Qm), "$Qd, $Qn, $Qm",
+                   vpred_r, "", pattern> {
+  bits<4> Qn;
+
+  let Inst{28} = U;
+  let Inst{21-20} = size;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{16} = 0b1;
+  let Inst{12} = round;
+  let Inst{8} = 0b0;
+  let Inst{7} = Qn{3};
+  let Inst{0} = 0b1;
+}
+
+def MVE_VMULHs8   : MVE_VxMULH<"vmulh",  "s8",  0b0, 0b00, 0b0>;
+def MVE_VMULHs16  : MVE_VxMULH<"vmulh",  "s16", 0b0, 0b01, 0b0>;
+def MVE_VMULHs32  : MVE_VxMULH<"vmulh",  "s32", 0b0, 0b10, 0b0>;
+def MVE_VMULHu8   : MVE_VxMULH<"vmulh",  "u8",  0b1, 0b00, 0b0>;
+def MVE_VMULHu16  : MVE_VxMULH<"vmulh",  "u16", 0b1, 0b01, 0b0>;
+def MVE_VMULHu32  : MVE_VxMULH<"vmulh",  "u32", 0b1, 0b10, 0b0>;
+
+def MVE_VRMULHs8  : MVE_VxMULH<"vrmulh", "s8",  0b0, 0b00, 0b1>;
+def MVE_VRMULHs16 : MVE_VxMULH<"vrmulh", "s16", 0b0, 0b01, 0b1>;
+def MVE_VRMULHs32 : MVE_VxMULH<"vrmulh", "s32", 0b0, 0b10, 0b1>;
+def MVE_VRMULHu8  : MVE_VxMULH<"vrmulh", "u8",  0b1, 0b00, 0b1>;
+def MVE_VRMULHu16 : MVE_VxMULH<"vrmulh", "u16", 0b1, 0b01, 0b1>;
+def MVE_VRMULHu32 : MVE_VxMULH<"vrmulh", "u32", 0b1, 0b10, 0b1>;
+
+class MVE_VxMOVxN<string iname, string suffix, bit bit_28, bit bit_17,
+                  bits<2> size, bit T, list<dag> pattern=[]>
+  : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd),
+                   (ins MQPR:$Qd_src, MQPR:$Qm), "$Qd, $Qm",
+                   vpred_n, "$Qd = $Qd_src", pattern> {
+
+  let Inst{28} = bit_28;
+  let Inst{21-20} = 0b11;
+  let Inst{19-18} = size;
+  let Inst{17} = bit_17;
+  let Inst{16} = 0b1;
+  let Inst{12} = T;
+  let Inst{8} = 0b0;
+  let Inst{7} = !if(!eq(bit_17, 0), 1, 0);
+  let Inst{0} = 0b1;
+}
+
+multiclass MVE_VxMOVxN_halves<string iname, string suffix,
+                              bit bit_28, bit bit_17, bits<2> size> {
+  def bh : MVE_VxMOVxN<iname # "b", suffix, bit_28, bit_17, size, 0b0>;
+  def th : MVE_VxMOVxN<iname # "t", suffix, bit_28, bit_17, size, 0b1>;
+}
+
+defm MVE_VMOVNi16   : MVE_VxMOVxN_halves<"vmovn",   "i16", 0b1, 0b0, 0b00>;
+defm MVE_VMOVNi32   : MVE_VxMOVxN_halves<"vmovn",   "i32", 0b1, 0b0, 0b01>;
+defm MVE_VQMOVNs16  : MVE_VxMOVxN_halves<"vqmovn",  "s16", 0b0, 0b1, 0b00>;
+defm MVE_VQMOVNs32  : MVE_VxMOVxN_halves<"vqmovn",  "s32", 0b0, 0b1, 0b01>;
+defm MVE_VQMOVNu16  : MVE_VxMOVxN_halves<"vqmovn",  "u16", 0b1, 0b1, 0b00>;
+defm MVE_VQMOVNu32  : MVE_VxMOVxN_halves<"vqmovn",  "u32", 0b1, 0b1, 0b01>;
+defm MVE_VQMOVUNs16 : MVE_VxMOVxN_halves<"vqmovun", "s16", 0b0, 0b0, 0b00>;
+defm MVE_VQMOVUNs32 : MVE_VxMOVxN_halves<"vqmovun", "s32", 0b0, 0b0, 0b01>;
+
+class MVE_VCVT_ff<string iname, string suffix, bit op, bit T,
+                  list<dag> pattern=[]>
+  : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd), (ins MQPR:$Qd_src, MQPR:$Qm),
+                   "$Qd, $Qm", vpred_n, "$Qd = $Qd_src", pattern> {
+  let Inst{28} = op;
+  let Inst{21-16} = 0b111111;
+  let Inst{12} = T;
+  let Inst{8-7} = 0b00;
+  let Inst{0} = 0b1;
+
+  let Predicates = [HasMVEFloat];
+}
+
+multiclass MVE_VCVT_ff_halves<string suffix, bit op> {
+  def bh : MVE_VCVT_ff<"vcvtb", suffix, op, 0b0>;
+  def th : MVE_VCVT_ff<"vcvtt", suffix, op, 0b1>;
+}
+
+defm MVE_VCVTf16f32 : MVE_VCVT_ff_halves<"f16.f32", 0b0>;
+defm MVE_VCVTf32f16 : MVE_VCVT_ff_halves<"f32.f16", 0b1>;
+
+class MVE_VxCADD<string iname, string suffix, bits<2> size, bit halve,
+                 list<dag> pattern=[]>
+  : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd),
+                   (ins MQPR:$Qn, MQPR:$Qm, complexrotateopodd:$rot),
+                   "$Qd, $Qn, $Qm, $rot", vpred_r, "",
+          pattern> {
+  bits<4> Qn;
+  bit rot;
+
+  let Inst{28} = halve;
+  let Inst{21-20} = size;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{16} = 0b0;
+  let Inst{12} = rot;
+  let Inst{8} = 0b1;
+  let Inst{7} = Qn{3};
+  let Inst{0} = 0b0;
+}
+
+def MVE_VCADDi8   : MVE_VxCADD<"vcadd", "i8", 0b00, 0b1>;
+def MVE_VCADDi16  : MVE_VxCADD<"vcadd", "i16", 0b01, 0b1>;
+def MVE_VCADDi32  : MVE_VxCADD<"vcadd", "i32", 0b10, 0b1>;
+
+def MVE_VHCADDs8  : MVE_VxCADD<"vhcadd", "s8", 0b00, 0b0>;
+def MVE_VHCADDs16 : MVE_VxCADD<"vhcadd", "s16", 0b01, 0b0>;
+def MVE_VHCADDs32 : MVE_VxCADD<"vhcadd", "s32", 0b10, 0b0>;
+
+class MVE_VADCSBC<string iname, bit I, bit subtract,
+                  dag carryin, list<dag> pattern=[]>
+  : MVE_qDest_qSrc<iname, "i32", (outs MQPR:$Qd, cl_FPSCR_NZCV:$carryout),
+                   !con((ins MQPR:$Qn, MQPR:$Qm), carryin),
+                   "$Qd, $Qn, $Qm", vpred_r, "", pattern> {
+  bits<4> Qn;
+
+  let Inst{28} = subtract;
+  let Inst{21-20} = 0b11;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{16} = 0b0;
+  let Inst{12} = I;
+  let Inst{8} = 0b1;
+  let Inst{7} = Qn{3};
+  let Inst{0} = 0b0;
+
+  // Custom decoder method in order to add the FPSCR operand(s), which
+  // Tablegen won't do right
+  let DecoderMethod = "DecodeMVEVADCInstruction";
+}
+
+def MVE_VADC  : MVE_VADCSBC<"vadc",  0b0, 0b0, (ins cl_FPSCR_NZCV:$carryin)>;
+def MVE_VADCI : MVE_VADCSBC<"vadci", 0b1, 0b0, (ins)>;
+
+def MVE_VSBC  : MVE_VADCSBC<"vsbc",  0b0, 0b1, (ins cl_FPSCR_NZCV:$carryin)>;
+def MVE_VSBCI : MVE_VADCSBC<"vsbci", 0b1, 0b1, (ins)>;
+
+class MVE_VQDMULL<string iname, string suffix, bit size, bit T,
+                  list<dag> pattern=[]>
+  : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd),
+                   (ins MQPR:$Qn, MQPR:$Qm), "$Qd, $Qn, $Qm",
+                   vpred_r, "", pattern> {
+  bits<4> Qn;
+
+  let Inst{28} = size;
+  let Inst{21-20} = 0b11;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{16} = 0b0;
+  let Inst{12} = T;
+  let Inst{8} = 0b1;
+  let Inst{7} = Qn{3};
+  let Inst{0} = 0b1;
+}
+
+multiclass MVE_VQDMULL_halves<string suffix, bit size> {
+  def bh : MVE_VQDMULL<"vqdmullb", suffix, size, 0b0>;
+  def th : MVE_VQDMULL<"vqdmullt", suffix, size, 0b1>;
+}
+
+defm MVE_VQDMULLs16 : MVE_VQDMULL_halves<"s16", 0b0>;
+defm MVE_VQDMULLs32 : MVE_VQDMULL_halves<"s32", 0b1>;
+
+// end of mve_qDest_qSrc
+
+// start of mve_qDest_rSrc
+
+class MVE_qr_base<dag oops, dag iops, InstrItinClass itin, string iname,
+                  string suffix, string ops, vpred_ops vpred, string cstr,
+                  list<dag> pattern=[]>
+   : MVE_p<oops, iops, NoItinerary, iname, suffix, ops, vpred, cstr, pattern> {
+  bits<4> Qd;
+  bits<4> Qn;
+  bits<4> Rm;
+
+  let Inst{25-23} = 0b100;
+  let Inst{22} = Qd{3};
+  let Inst{19-17} = Qn{2-0};
+  let Inst{15-13} = Qd{2-0};
+  let Inst{11-9} = 0b111;
+  let Inst{7} = Qn{3};
+  let Inst{6} = 0b1;
+  let Inst{4} = 0b0;
+  let Inst{3-0} = Rm{3-0};
+}
+
+class MVE_qDest_rSrc<string iname, string suffix, list<dag> pattern=[]>
+  : MVE_qr_base<(outs MQPR:$Qd), (ins MQPR:$Qn, rGPR:$Rm),
+          NoItinerary, iname, suffix, "$Qd, $Qn, $Rm", vpred_r, "",
+           pattern>;
+
+class MVE_qDestSrc_rSrc<string iname, string suffix, list<dag> pattern=[]>
+  : MVE_qr_base<(outs MQPR:$Qd), (ins MQPR:$Qd_src, MQPR:$Qn, rGPR:$Rm),
+          NoItinerary, iname, suffix, "$Qd, $Qn, $Rm", vpred_n, "$Qd = $Qd_src",
+           pattern>;
+
+class MVE_qDest_single_rSrc<string iname, string suffix, list<dag> pattern=[]>
+  : MVE_p<(outs MQPR:$Qd), (ins MQPR:$Qd_src, rGPR:$Rm), NoItinerary, iname,
+          suffix, "$Qd, $Rm", vpred_n, "$Qd = $Qd_src", pattern> {
+  bits<4> Qd;
+  bits<4> Rm;
+
+  let Inst{22} = Qd{3};
+  let Inst{15-13} = Qd{2-0};
+  let Inst{3-0} = Rm{3-0};
+}
+
+class MVE_VADDSUB_qr<string iname, string suffix, bits<2> size,
+                     bit bit_5, bit bit_12, bit bit_16,
+                     bit bit_28, list<dag> pattern=[]>
+  : MVE_qDest_rSrc<iname, suffix, pattern> {
+
+  let Inst{28} = bit_28;
+  let Inst{21-20} = size;
+  let Inst{16} = bit_16;
+  let Inst{12} = bit_12;
+  let Inst{8} = 0b1;
+  let Inst{5} = bit_5;
+}
+
+multiclass MVE_VADDSUB_qr_sizes<string iname, string suffix,
+                                bit bit_5, bit bit_12, bit bit_16,
+                                bit bit_28, list<dag> pattern=[]> {
+  def "8"  : MVE_VADDSUB_qr<iname, suffix#"8",  0b00,
+                            bit_5, bit_12, bit_16, bit_28>;
+  def "16" : MVE_VADDSUB_qr<iname, suffix#"16", 0b01,
+                            bit_5, bit_12, bit_16, bit_28>;
+  def "32" : MVE_VADDSUB_qr<iname, suffix#"32", 0b10,
+                            bit_5, bit_12, bit_16, bit_28>;
+}
+
+defm MVE_VADD_qr_i  : MVE_VADDSUB_qr_sizes<"vadd",  "i", 0b0, 0b0, 0b1, 0b0>;
+defm MVE_VQADD_qr_s : MVE_VADDSUB_qr_sizes<"vqadd", "s", 0b1, 0b0, 0b0, 0b0>;
+defm MVE_VQADD_qr_u : MVE_VADDSUB_qr_sizes<"vqadd", "u", 0b1, 0b0, 0b0, 0b1>;
+
+defm MVE_VSUB_qr_i  : MVE_VADDSUB_qr_sizes<"vsub",  "i", 0b0, 0b1, 0b1, 0b0>;
+defm MVE_VQSUB_qr_s : MVE_VADDSUB_qr_sizes<"vqsub", "s", 0b1, 0b1, 0b0, 0b0>;
+defm MVE_VQSUB_qr_u : MVE_VADDSUB_qr_sizes<"vqsub", "u", 0b1, 0b1, 0b0, 0b1>;
+
+class MVE_VQDMULL_qr<string iname, string suffix, bit size,
+                     bit T, list<dag> pattern=[]>
+  : MVE_qDest_rSrc<iname, suffix, pattern> {
+
+  let Inst{28} = size;
+  let Inst{21-20} = 0b11;
+  let Inst{16} = 0b0;
+  let Inst{12} = T;
+  let Inst{8} = 0b1;
+  let Inst{5} = 0b1;
+}
+
+multiclass MVE_VQDMULL_qr_halves<string suffix, bit size> {
+  def bh : MVE_VQDMULL_qr<"vqdmullb", suffix, size, 0b0>;
+  def th : MVE_VQDMULL_qr<"vqdmullt", suffix, size, 0b1>;
+}
+
+defm MVE_VQDMULL_qr_s16 : MVE_VQDMULL_qr_halves<"s16", 0b0>;
+defm MVE_VQDMULL_qr_s32 : MVE_VQDMULL_qr_halves<"s32", 0b1>;
+
+class MVE_VxADDSUB_qr<string iname, string suffix,
+                      bit bit_28, bits<2> bits_21_20, bit subtract,
+                      list<dag> pattern=[]>
+  : MVE_qDest_rSrc<iname, suffix, pattern> {
+
+  let Inst{28} = bit_28;
+  let Inst{21-20} = bits_21_20;
+  let Inst{16} = 0b0;
+  let Inst{12} = subtract;
+  let Inst{8} = 0b1;
+  let Inst{5} = 0b0;
+}
+
+def MVE_VHADD_qr_s8   : MVE_VxADDSUB_qr<"vhadd", "s8",  0b0, 0b00, 0b0>;
+def MVE_VHADD_qr_s16  : MVE_VxADDSUB_qr<"vhadd", "s16", 0b0, 0b01, 0b0>;
+def MVE_VHADD_qr_s32  : MVE_VxADDSUB_qr<"vhadd", "s32", 0b0, 0b10, 0b0>;
+def MVE_VHADD_qr_u8   : MVE_VxADDSUB_qr<"vhadd", "u8",  0b1, 0b00, 0b0>;
+def MVE_VHADD_qr_u16  : MVE_VxADDSUB_qr<"vhadd", "u16", 0b1, 0b01, 0b0>;
+def MVE_VHADD_qr_u32  : MVE_VxADDSUB_qr<"vhadd", "u32", 0b1, 0b10, 0b0>;
+
+def MVE_VHSUB_qr_s8   : MVE_VxADDSUB_qr<"vhsub", "s8",  0b0, 0b00, 0b1>;
+def MVE_VHSUB_qr_s16  : MVE_VxADDSUB_qr<"vhsub", "s16", 0b0, 0b01, 0b1>;
+def MVE_VHSUB_qr_s32  : MVE_VxADDSUB_qr<"vhsub", "s32", 0b0, 0b10, 0b1>;
+def MVE_VHSUB_qr_u8   : MVE_VxADDSUB_qr<"vhsub", "u8",  0b1, 0b00, 0b1>;
+def MVE_VHSUB_qr_u16  : MVE_VxADDSUB_qr<"vhsub", "u16", 0b1, 0b01, 0b1>;
+def MVE_VHSUB_qr_u32  : MVE_VxADDSUB_qr<"vhsub", "u32", 0b1, 0b10, 0b1>;
+
+let Predicates = [HasMVEFloat] in {
+  def MVE_VADD_qr_f32 : MVE_VxADDSUB_qr<"vadd",  "f32", 0b0, 0b11, 0b0>;
+  def MVE_VADD_qr_f16 : MVE_VxADDSUB_qr<"vadd",  "f16", 0b1, 0b11, 0b0>;
+
+  def MVE_VSUB_qr_f32 : MVE_VxADDSUB_qr<"vsub",  "f32", 0b0, 0b11, 0b1>;
+  def MVE_VSUB_qr_f16 : MVE_VxADDSUB_qr<"vsub",  "f16", 0b1, 0b11, 0b1>;
+}
+
+class MVE_VxSHL_qr<string iname, string suffix, bit U, bits<2> size,
+                   bit bit_7, bit bit_17, list<dag> pattern=[]>
+  : MVE_qDest_single_rSrc<iname, suffix, pattern> {
+
+  let Inst{28} = U;
+  let Inst{25-23} = 0b100;
+  let Inst{21-20} = 0b11;
+  let Inst{19-18} = size;
+  let Inst{17} = bit_17;
+  let Inst{16} = 0b1;
+  let Inst{12-8} = 0b11110;
+  let Inst{7} = bit_7;
+  let Inst{6-4} = 0b110;
+}
+
+multiclass MVE_VxSHL_qr_types<string iname, bit bit_7, bit bit_17> {
+  def s8  : MVE_VxSHL_qr<iname, "s8", 0b0, 0b00, bit_7, bit_17>;
+  def s16 : MVE_VxSHL_qr<iname, "s16", 0b0, 0b01, bit_7, bit_17>;
+  def s32 : MVE_VxSHL_qr<iname, "s32", 0b0, 0b10, bit_7, bit_17>;
+  def u8  : MVE_VxSHL_qr<iname, "u8", 0b1, 0b00, bit_7, bit_17>;
+  def u16 : MVE_VxSHL_qr<iname, "u16", 0b1, 0b01, bit_7, bit_17>;
+  def u32 : MVE_VxSHL_qr<iname, "u32", 0b1, 0b10, bit_7, bit_17>;
+}
+
+defm MVE_VSHL_qr   : MVE_VxSHL_qr_types<"vshl",   0b0, 0b0>;
+defm MVE_VRSHL_qr  : MVE_VxSHL_qr_types<"vrshl",  0b0, 0b1>;
+defm MVE_VQSHL_qr  : MVE_VxSHL_qr_types<"vqshl",  0b1, 0b0>;
+defm MVE_VQRSHL_qr : MVE_VxSHL_qr_types<"vqrshl", 0b1, 0b1>;
+
+class MVE_VBRSR<string iname, string suffix, bits<2> size, list<dag> pattern=[]>
+  : MVE_qDest_rSrc<iname, suffix, pattern> {
+
+  let Inst{28} = 0b1;
+  let Inst{21-20} = size;
+  let Inst{16} = 0b1;
+  let Inst{12} = 0b1;
+  let Inst{8} = 0b0;
+  let Inst{5} = 0b1;
+}
+
+def MVE_VBRSR8  : MVE_VBRSR<"vbrsr", "8", 0b00>;
+def MVE_VBRSR16 : MVE_VBRSR<"vbrsr", "16", 0b01>;
+def MVE_VBRSR32 : MVE_VBRSR<"vbrsr", "32", 0b10>;
+
+class MVE_VMUL_qr_int<string iname, string suffix,
+                      bits<2> size, list<dag> pattern=[]>
+  : MVE_qDest_rSrc<iname, suffix, pattern> {
+
+  let Inst{28} = 0b0;
+  let Inst{21-20} = size;
+  let Inst{16} = 0b1;
+  let Inst{12} = 0b1;
+  let Inst{8} = 0b0;
+  let Inst{5} = 0b1;
+}
+
+def MVE_VMUL_qr_i8  : MVE_VMUL_qr_int<"vmul", "i8",  0b00>;
+def MVE_VMUL_qr_i16 : MVE_VMUL_qr_int<"vmul", "i16", 0b01>;
+def MVE_VMUL_qr_i32 : MVE_VMUL_qr_int<"vmul", "i32", 0b10>;
+
+class MVE_VxxMUL_qr<string iname, string suffix,
+                    bit bit_28, bits<2> bits_21_20, list<dag> pattern=[]>
+  : MVE_qDest_rSrc<iname, suffix, pattern> {
+
+  let Inst{28} = bit_28;
+  let Inst{21-20} = bits_21_20;
+  let Inst{16} = 0b1;
+  let Inst{12} = 0b0;
+  let Inst{8} = 0b0;
+  let Inst{5} = 0b1;
+}
+
+def MVE_VQDMULH_qr_s8   : MVE_VxxMUL_qr<"vqdmulh",  "s8",  0b0, 0b00>;
+def MVE_VQDMULH_qr_s16  : MVE_VxxMUL_qr<"vqdmulh",  "s16", 0b0, 0b01>;
+def MVE_VQDMULH_qr_s32  : MVE_VxxMUL_qr<"vqdmulh",  "s32", 0b0, 0b10>;
+
+def MVE_VQRDMULH_qr_s8  : MVE_VxxMUL_qr<"vqrdmulh", "s8",  0b1, 0b00>;
+def MVE_VQRDMULH_qr_s16 : MVE_VxxMUL_qr<"vqrdmulh", "s16", 0b1, 0b01>;
+def MVE_VQRDMULH_qr_s32 : MVE_VxxMUL_qr<"vqrdmulh", "s32", 0b1, 0b10>;
+
+let Predicates = [HasMVEFloat] in {
+  def MVE_VMUL_qr_f16   : MVE_VxxMUL_qr<"vmul", "f16", 0b1, 0b11>;
+  def MVE_VMUL_qr_f32   : MVE_VxxMUL_qr<"vmul", "f32", 0b0, 0b11>;
+}
+
+class MVE_VFMAMLA_qr<string iname, string suffix,
+                   bit bit_28, bits<2> bits_21_20, bit S,
+                   list<dag> pattern=[]>
+  : MVE_qDestSrc_rSrc<iname, suffix, pattern> {
+
+  let Inst{28} = bit_28;
+  let Inst{21-20} = bits_21_20;
+  let Inst{16} = 0b1;
+  let Inst{12} = S;
+  let Inst{8} = 0b0;
+  let Inst{5} = 0b0;
+}
+
+def MVE_VMLA_qr_s8     : MVE_VFMAMLA_qr<"vmla",  "s8",  0b0, 0b00, 0b0>;
+def MVE_VMLA_qr_s16    : MVE_VFMAMLA_qr<"vmla",  "s16", 0b0, 0b01, 0b0>;
+def MVE_VMLA_qr_s32    : MVE_VFMAMLA_qr<"vmla",  "s32", 0b0, 0b10, 0b0>;
+def MVE_VMLA_qr_u8     : MVE_VFMAMLA_qr<"vmla",  "u8",  0b1, 0b00, 0b0>;
+def MVE_VMLA_qr_u16    : MVE_VFMAMLA_qr<"vmla",  "u16", 0b1, 0b01, 0b0>;
+def MVE_VMLA_qr_u32    : MVE_VFMAMLA_qr<"vmla",  "u32", 0b1, 0b10, 0b0>;
+
+def MVE_VMLAS_qr_s8    : MVE_VFMAMLA_qr<"vmlas", "s8",  0b0, 0b00, 0b1>;
+def MVE_VMLAS_qr_s16   : MVE_VFMAMLA_qr<"vmlas", "s16", 0b0, 0b01, 0b1>;
+def MVE_VMLAS_qr_s32   : MVE_VFMAMLA_qr<"vmlas", "s32", 0b0, 0b10, 0b1>;
+def MVE_VMLAS_qr_u8    : MVE_VFMAMLA_qr<"vmlas", "u8",  0b1, 0b00, 0b1>;
+def MVE_VMLAS_qr_u16   : MVE_VFMAMLA_qr<"vmlas", "u16", 0b1, 0b01, 0b1>;
+def MVE_VMLAS_qr_u32   : MVE_VFMAMLA_qr<"vmlas", "u32", 0b1, 0b10, 0b1>;
+
+let Predicates = [HasMVEFloat] in {
+  def MVE_VFMA_qr_f16  : MVE_VFMAMLA_qr<"vfma",  "f16", 0b1, 0b11, 0b0>;
+  def MVE_VFMA_qr_f32  : MVE_VFMAMLA_qr<"vfma",  "f32", 0b0, 0b11, 0b0>;
+  def MVE_VFMA_qr_Sf16 : MVE_VFMAMLA_qr<"vfmas", "f16", 0b1, 0b11, 0b1>;
+  def MVE_VFMA_qr_Sf32 : MVE_VFMAMLA_qr<"vfmas", "f32", 0b0, 0b11, 0b1>;
+}
+
+class MVE_VQDMLAH_qr<string iname, string suffix, bit U, bits<2> size,
+                     bit bit_5, bit bit_12, list<dag> pattern=[]>
+  : MVE_qDestSrc_rSrc<iname, suffix, pattern> {
+
+  let Inst{28} = U;
+  let Inst{21-20} = size;
+  let Inst{16} = 0b0;
+  let Inst{12} = bit_12;
+  let Inst{8} = 0b0;
+  let Inst{5} = bit_5;
+}
+
+multiclass MVE_VQDMLAH_qr_types<string iname, bit bit_5, bit bit_12> {
+  def s8  : MVE_VQDMLAH_qr<iname, "s8",  0b0, 0b00, bit_5, bit_12>;
+  def s16 : MVE_VQDMLAH_qr<iname, "s16", 0b0, 0b01, bit_5, bit_12>;
+  def s32 : MVE_VQDMLAH_qr<iname, "s32", 0b0, 0b10, bit_5, bit_12>;
+  def u8  : MVE_VQDMLAH_qr<iname, "u8",  0b1, 0b00, bit_5, bit_12>;
+  def u16 : MVE_VQDMLAH_qr<iname, "u16", 0b1, 0b01, bit_5, bit_12>;
+  def u32 : MVE_VQDMLAH_qr<iname, "u32", 0b1, 0b10, bit_5, bit_12>;
+}
+
+defm MVE_VQDMLAH_qr   : MVE_VQDMLAH_qr_types<"vqdmlah",   0b1, 0b0>;
+defm MVE_VQRDMLAH_qr  : MVE_VQDMLAH_qr_types<"vqrdmlah",  0b0, 0b0>;
+defm MVE_VQDMLASH_qr  : MVE_VQDMLAH_qr_types<"vqdmlash",  0b1, 0b1>;
+defm MVE_VQRDMLASH_qr : MVE_VQDMLAH_qr_types<"vqrdmlash", 0b0, 0b1>;
+
+class MVE_VxDUP<string iname, string suffix, bits<2> size, bit bit_12,
+              list<dag> pattern=[]>
+  : MVE_p<(outs MQPR:$Qd, tGPREven:$Rn),
+          (ins tGPREven:$Rn_src, MVE_VIDUP_imm:$imm), NoItinerary,
+          iname, suffix, "$Qd, $Rn, $imm", vpred_r, "$Rn = $Rn_src",
+          pattern> {
+  bits<4> Qd;
+  bits<4> Rn;
+  bits<2> imm;
+
+  let Inst{28} = 0b0;
+  let Inst{25-23} = 0b100;
+  let Inst{22} = Qd{3};
+  let Inst{21-20} = size;
+  let Inst{19-17} = Rn{3-1};
+  let Inst{16} = 0b1;
+  let Inst{15-13} = Qd{2-0};
+  let Inst{12} = bit_12;
+  let Inst{11-8} = 0b1111;
+  let Inst{7} = imm{1};
+  let Inst{6-1} = 0b110111;
+  let Inst{0} = imm{0};
+}
+
+def MVE_VIDUPu8  : MVE_VxDUP<"vidup", "u8",  0b00, 0b0>;
+def MVE_VIDUPu16 : MVE_VxDUP<"vidup", "u16", 0b01, 0b0>;
+def MVE_VIDUPu32 : MVE_VxDUP<"vidup", "u32", 0b10, 0b0>;
+
+def MVE_VDDUPu8  : MVE_VxDUP<"vddup", "u8",  0b00, 0b1>;
+def MVE_VDDUPu16 : MVE_VxDUP<"vddup", "u16", 0b01, 0b1>;
+def MVE_VDDUPu32 : MVE_VxDUP<"vddup", "u32", 0b10, 0b1>;
+
+class MVE_VxWDUP<string iname, string suffix, bits<2> size, bit bit_12,
+                 list<dag> pattern=[]>
+  : MVE_p<(outs MQPR:$Qd, tGPREven:$Rn),
+          (ins tGPREven:$Rn_src, tGPROdd:$Rm, MVE_VIDUP_imm:$imm), NoItinerary,
+          iname, suffix, "$Qd, $Rn, $Rm, $imm", vpred_r, "$Rn = $Rn_src",
+          pattern> {
+  bits<4> Qd;
+  bits<4> Rm;
+  bits<4> Rn;
+  bits<2> imm;
+
+  let Inst{28} = 0b0;
+  let Inst{25-23} = 0b100;
+  let Inst{22} = Qd{3};
+  let Inst{21-20} = size;
+  let Inst{19-17} = Rn{3-1};
+  let Inst{16} = 0b1;
+  let Inst{15-13} = Qd{2-0};
+  let Inst{12} = bit_12;
+  let Inst{11-8} = 0b1111;
+  let Inst{7} = imm{1};
+  let Inst{6-4} = 0b110;
+  let Inst{3-1} = Rm{3-1};
+  let Inst{0} = imm{0};
+}
+
+def MVE_VIWDUPu8  : MVE_VxWDUP<"viwdup", "u8",  0b00, 0b0>;
+def MVE_VIWDUPu16 : MVE_VxWDUP<"viwdup", "u16", 0b01, 0b0>;
+def MVE_VIWDUPu32 : MVE_VxWDUP<"viwdup", "u32", 0b10, 0b0>;
+
+def MVE_VDWDUPu8  : MVE_VxWDUP<"vdwdup", "u8",  0b00, 0b1>;
+def MVE_VDWDUPu16 : MVE_VxWDUP<"vdwdup", "u16", 0b01, 0b1>;
+def MVE_VDWDUPu32 : MVE_VxWDUP<"vdwdup", "u32", 0b10, 0b1>;
+
+class MVE_VCTP<string suffix, bits<2> size, list<dag> pattern=[]>
+  : MVE_p<(outs VCCR:$P0), (ins rGPR:$Rn), NoItinerary, "vctp", suffix,
+          "$Rn", vpred_n, "", pattern> {
+  bits<4> Rn;
+
+  let Inst{28-27} = 0b10;
+  let Inst{26-22} = 0b00000;
+  let Inst{21-20} = size;
+  let Inst{19-16} = Rn{3-0};
+  let Inst{15-11} = 0b11101;
+  let Inst{10-0}  = 0b00000000001;
+  let Unpredictable{10-0} = 0b11111111111;
+
+  let Constraints = "";
+  let DecoderMethod = "DecodeMveVCTP";
+}
+
+def MVE_VCTP8  : MVE_VCTP<"8",  0b00>;
+def MVE_VCTP16 : MVE_VCTP<"16", 0b01>;
+def MVE_VCTP32 : MVE_VCTP<"32", 0b10>;
+def MVE_VCTP64 : MVE_VCTP<"64", 0b11>;
+
+// end of mve_qDest_rSrc
+
+// start of coproc mov
+
+class MVE_VMOV_64bit<dag oops, dag iops, bit to_qreg, string ops, string cstr>
+  : MVE_VMOV_lane_base<oops, !con(iops, (ins MVEPairVectorIndex2:$idx,
+                                             MVEPairVectorIndex0:$idx2)),
+                       NoItinerary, "vmov", "", ops, cstr, []> {
+  bits<5> Rt;
+  bits<5> Rt2;
+  bits<4> Qd;
+  bit idx;
+  bit idx2;
+
+  let Inst{31-23} = 0b111011000;
+  let Inst{22} = Qd{3};
+  let Inst{21} = 0b0;
+  let Inst{20} = to_qreg;
+  let Inst{19-16} = Rt2{3-0};
+  let Inst{15-13} = Qd{2-0};
+  let Inst{12-5} = 0b01111000;
+  let Inst{4} = idx2;
+  let Inst{3-0} = Rt{3-0};
+}
+
+// The assembly syntax for these instructions mentions the vector
+// register name twice, e.g.
+//
+//    vmov q2[2], q2[0], r0, r1
+//    vmov r0, r1, q2[2], q2[0]
+//
+// which needs a bit of juggling with MC operand handling.
+//
+// For the move _into_ a vector register, the MC operand list also has
+// to mention the register name twice: once as the output, and once as
+// an extra input to represent where the unchanged half of the output
+// register comes from (when this instruction is used in code
+// generation). So we arrange that the first mention of the vector reg
+// in the instruction is considered by the AsmMatcher to be the output
+// ($Qd), and the second one is the input ($QdSrc). Binding them
+// together with the existing 'tie' constraint is enough to enforce at
+// register allocation time that they have to be the same register.
+//
+// For the move _from_ a vector register, there's no way to get round
+// the fact that both instances of that register name have to be
+// inputs. They have to be the same register again, but this time, we
+// can't use a tie constraint, because that has to be between an
+// output and an input operand. So this time, we have to arrange that
+// the q-reg appears just once in the MC operand list, in spite of
+// being mentioned twice in the asm syntax - which needs a custom
+// AsmMatchConverter.
+
+def MVE_VMOV_q_rr : MVE_VMOV_64bit<(outs MQPR:$Qd),
+                                   (ins MQPR:$QdSrc, rGPR:$Rt, rGPR:$Rt2),
+                                   0b1, "$Qd$idx, $QdSrc$idx2, $Rt, $Rt2",
+                                   "$Qd = $QdSrc"> {
+  let DecoderMethod = "DecodeMVEVMOVDRegtoQ";
+}
+
+def MVE_VMOV_rr_q : MVE_VMOV_64bit<(outs rGPR:$Rt, rGPR:$Rt2), (ins MQPR:$Qd),
+                                   0b0, "$Rt, $Rt2, $Qd$idx, $Qd$idx2", ""> {
+  let DecoderMethod = "DecodeMVEVMOVQtoDReg";
+  let AsmMatchConverter = "cvtMVEVMOVQtoDReg";
+}
+
+// end of coproc mov
 
 class MVE_VPT<string suffix, bits<2> size, dag iops, string asm, list<dag> pattern=[]>
   : MVE_MI<(outs ), iops, NoItinerary, !strconcat("vpt", "${Mk}", ".", suffix), asm, "", pattern> {

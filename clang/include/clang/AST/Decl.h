@@ -2729,6 +2729,11 @@ public:
   /// bit-fields.
   bool isZeroLengthBitField(const ASTContext &Ctx) const;
 
+  /// Determine if this field is a subobject of zero size, that is, either a
+  /// zero-length bit-field or a field of empty class type with the
+  /// [[no_unique_address]] attribute.
+  bool isZeroSize(const ASTContext &Ctx) const;
+
   /// Get the kind of (C++11) default member initializer that this field has.
   InClassInitStyle getInClassInitStyle() const {
     InitStorageKind storageKind = InitStorage.getInt();

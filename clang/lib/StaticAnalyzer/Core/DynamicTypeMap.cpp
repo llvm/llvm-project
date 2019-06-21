@@ -72,12 +72,12 @@ void printDynamicTypeInfoJson(raw_ostream &Out, ProgramStateRef State,
     Out << "{ \"region\": \"" << MR << "\", \"dyn_type\": ";
     if (DTI.isValid()) {
       Out << '\"' << DTI.getType()->getPointeeType().getAsString()
-          << "\" \"sub_classable\": "
+          << "\", \"sub_classable\": "
           << (DTI.canBeASubClass() ? "true" : "false");
     } else {
       Out << "null"; // Invalid type info
     }
-    Out << "\" }";
+    Out << "}";
 
     if (std::next(I) != DTM.end())
       Out << ',';

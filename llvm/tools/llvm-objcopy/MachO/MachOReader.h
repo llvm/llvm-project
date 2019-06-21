@@ -30,7 +30,7 @@ class MachOReader : public Reader {
   void readHeader(Object &O) const;
   void readLoadCommands(Object &O) const;
   void readSymbolTable(Object &O) const;
-  void readStringTable(Object &O) const;
+  void setSymbolInRelocationInfo(Object &O) const;
   void readRebaseInfo(Object &O) const;
   void readBindInfo(Object &O) const;
   void readWeakBindInfo(Object &O) const;

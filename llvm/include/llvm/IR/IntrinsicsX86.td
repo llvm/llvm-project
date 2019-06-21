@@ -277,9 +277,17 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 // Control register.
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_sse_stmxcsr :
-              Intrinsic<[], [llvm_ptr_ty], []>;
+              Intrinsic<[], [llvm_ptr_ty],
+                         [IntrWriteMem, IntrArgMemOnly,
+                         // This prevents reordering with ldmxcsr
+                         IntrHasSideEffects]>;
   def int_x86_sse_ldmxcsr :
-              Intrinsic<[], [llvm_ptr_ty], []>;
+              Intrinsic<[], [llvm_ptr_ty],
+                        [IntrReadMem, IntrArgMemOnly, IntrHasSideEffects,
+                         // FIXME: LDMXCSR does not actualy write to memory,
+                         // but Fast and DAG Isel both use writing to memory
+                         // as a proxy for having side effects.
+                         IntrWriteMem]>;
 }
 
 // Misc.

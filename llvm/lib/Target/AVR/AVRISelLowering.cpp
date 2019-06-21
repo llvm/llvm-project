@@ -237,7 +237,7 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
   setLibcallName(RTLIB::COS_F32, "cos");
 
   setMinFunctionAlignment(1);
-  setMinimumJumpTableEntries(INT_MAX);
+  setMinimumJumpTableEntries(UINT_MAX);
 }
 
 const char *AVRTargetLowering::getTargetNodeName(unsigned Opcode) const {

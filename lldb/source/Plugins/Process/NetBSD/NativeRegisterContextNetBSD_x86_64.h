@@ -66,11 +66,6 @@ public:
 
   uint32_t NumSupportedHardwareWatchpoints() override;
 
-protected:
-  void *GetGPRBuffer() override { return &m_gpr_x86_64; }
-  void *GetFPRBuffer() override { return &m_fpr_x86_64; }
-  void *GetDBRBuffer() override { return &m_dbr_x86_64; }
-
 private:
   // Private member types.
   enum { GPRegSet, FPRegSet, DBRegSet };

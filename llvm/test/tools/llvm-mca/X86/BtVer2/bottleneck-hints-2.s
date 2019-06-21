@@ -22,6 +22,19 @@ vhaddps %xmm0, %xmm0, %xmm1
 # CHECK-NEXT:   - Register Dependencies [ 0.00% ]
 # CHECK-NEXT:   - Memory Dependencies   [ 0.00% ]
 
+# CHECK:      Critical sequence based on the simulation:
+
+# CHECK:                    Instruction                                 Dependency Information
+# CHECK-NEXT:  +----< 0.    vhaddps	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT:  |
+# CHECK-NEXT:  |    < loop carried >
+# CHECK-NEXT:  |
+# CHECK-NEXT:  +----> 0.    vhaddps	%xmm0, %xmm0, %xmm1               ## RESOURCE interference:  JFPA [ probability: 99% ]
+# CHECK-NEXT:  |
+# CHECK-NEXT:  |    < loop carried >
+# CHECK-NEXT:  |
+# CHECK-NEXT:  +----> 0.    vhaddps	%xmm0, %xmm0, %xmm1               ## RESOURCE interference:  JFPA [ probability: 99% ]
+
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
 # CHECK-NEXT: [2]: Latency

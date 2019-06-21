@@ -42,6 +42,7 @@
 
         integer, parameter :: omp_pause_resource_kind = omp_integer_kind
         integer, parameter :: omp_depend_kind = c_intptr_t
+        integer, parameter :: omp_event_handle_kind = c_intptr_t
 
       end module omp_lib_kinds
 
@@ -365,6 +366,11 @@
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_get_supported_active_levels
           end function omp_get_supported_active_levels
+
+          subroutine omp_fulfill_event(event) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_event_handle_kind), value :: event
+          end subroutine omp_fulfill_event
 
           subroutine omp_init_lock(svar) bind(c)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)

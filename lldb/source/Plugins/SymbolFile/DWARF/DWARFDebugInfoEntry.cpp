@@ -226,15 +226,9 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
     DWARFRangeList &ranges, int &decl_file, int &decl_line, int &decl_column,
     int &call_file, int &call_line, int &call_column,
     DWARFExpression *frame_base) const {
-  SymbolFileDWARFDwo *dwo_symbol_file = cu->GetDwoSymbolFile();
-  if (dwo_symbol_file)
-    return GetDIENamesAndRanges(
-        dwo_symbol_file->GetCompileUnit(), name, mangled, ranges, decl_file,
-        decl_line, decl_column, call_file, call_line, call_column, frame_base);
-
   dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
   dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
-  std::vector<DIERef> die_refs;
+  std::vector<DWARFDIE> dies;
   bool set_frame_base_loclist_addr = false;
 
   auto abbrevDecl = GetAbbreviationDeclarationPtr(cu);
@@ -302,11 +296,11 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
           break;
 
         case DW_AT_abstract_origin:
-          die_refs.emplace_back(form_value);
+          dies.push_back(form_value.Reference());
           break;
 
         case DW_AT_specification:
-          die_refs.emplace_back(form_value);
+          dies.push_back(form_value.Reference());
           break;
 
         case DW_AT_decl_file:
@@ -392,13 +386,11 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
   }
 
   if (ranges.IsEmpty() || name == nullptr || mangled == nullptr) {
-    for (const DIERef &die_ref : die_refs) {
-      if (die_ref.die_offset != DW_INVALID_OFFSET) {
-        DWARFDIE die = dwarf.GetDIE(die_ref);
-        if (die)
-          die.GetDIE()->GetDIENamesAndRanges(die.GetCU(), name, mangled, ranges,
-                                             decl_file, decl_line, decl_column,
-                                             call_file, call_line, call_column);
+    for (const DWARFDIE &die : dies) {
+      if (die) {
+        die.GetDIE()->GetDIENamesAndRanges(die.GetCU(), name, mangled, ranges,
+                                           decl_file, decl_line, decl_column,
+                                           call_file, call_line, call_column);
       }
     }
   }
@@ -613,16 +605,7 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
     const DWARFUnit *cu, const dw_attr_t attr, DWARFFormValue &form_value,
     dw_offset_t *end_attr_offset_ptr,
     bool check_specification_or_abstract_origin) const {
-  SymbolFileDWARFDwo *dwo_symbol_file = cu->GetDwoSymbolFile();
-  if (dwo_symbol_file && m_tag != DW_TAG_compile_unit &&
-                         m_tag != DW_TAG_partial_unit)
-    return GetAttributeValue(dwo_symbol_file->GetCompileUnit(), attr,
-                             form_value, end_attr_offset_ptr,
-                             check_specification_or_abstract_origin);
-
-  auto abbrevDecl = GetAbbreviationDeclarationPtr(cu);
-
-  if (abbrevDecl) {
+  if (auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu)) {
     uint32_t attr_idx = abbrevDecl->FindAttributeIndex(attr);
 
     if (attr_idx != DW_INVALID_INDEX) {
@@ -667,6 +650,10 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
     }
   }
 
+  // If we're a unit DIE, also check the attributes of the dwo unit (if any).
+  if (GetParent())
+    return 0;
+  SymbolFileDWARFDwo *dwo_symbol_file = cu->GetDwoSymbolFile();
   if (!dwo_symbol_file)
     return 0;
 

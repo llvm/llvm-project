@@ -38,6 +38,17 @@ Or for Intel syntax:
 
   $ clang foo.c -O2 -target x86_64-unknown-unknown -mllvm -x86-asm-syntax=intel -S -o - | llvm-mca -mcpu=btver2
 
+Scheduling models are not just used to compute instruction latencies and
+throughput, but also to understand what processor resources are available
+and how to simulate them.
+
+By design, the quality of the analysis conducted by :program:`llvm-mca` is
+inevitably affected by the quality of the scheduling models in LLVM.
+
+If you see that the performance report is not accurate for a processor,
+please `file a bug <https://bugs.llvm.org/enter_bug.cgi?product=libraries>`_
+against the appropriate backend.
+
 OPTIONS
 -------
 

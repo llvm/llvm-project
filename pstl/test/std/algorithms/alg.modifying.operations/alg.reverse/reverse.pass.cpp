@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 #include "support/pstl_test_config.h"
 
 #include <iterator>
@@ -52,7 +54,7 @@ struct test_one_policy
 
     template <typename ExecutionPolicy, typename Iterator1, typename Iterator2>
     typename std::enable_if<is_same_iterator_category<Iterator1, std::forward_iterator_tag>::value>::type
-    operator()(ExecutionPolicy&& exec, Iterator1 data_b, Iterator1 data_e, Iterator2 actual_b, Iterator2 actual_e)
+    operator()(ExecutionPolicy&&, Iterator1, Iterator1, Iterator2, Iterator2)
     {
     }
 };

@@ -73,6 +73,14 @@ void test_image3dwo(write_only image3d_t img) {
 }
 #endif //__OPENCL_C_VERSION__
 
+#if defined(__OPENCL_CPP_VERSION__)
+// Test old atomic overloaded with generic addr space.
+void test_atomics(__generic volatile unsigned int* a) {
+  atomic_add(a, 1);
+}
+#endif
+
+
 // Verify that non-builtin cl_intel_planar_yuv extension is defined from
 // OpenCL 1.2 onwards.
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)

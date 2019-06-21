@@ -274,7 +274,7 @@ let AdditionalPredicates = [NotInMicroMips],
   def JR_HB64 : JR_HB_DESC<GPR64Opnd>, JR_HB_ENC, ISA_MIPS64_NOT_64R6;
   def JALR_HB64 : JALR_HB_DESC<GPR64Opnd>, JALR_HB_ENC, ISA_MIPS64R2;
 }
-def PseudoReturn64 : PseudoReturnBase<GPR64Opnd>;
+def PseudoReturn64 : PseudoReturnBase<GPR64Opnd>, GPR_64;
 
 let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
                             NoIndirectJumpGuards] in {
@@ -290,7 +290,7 @@ let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
                         ISA_MIPS32R2_NOT_32R6_64R6, PTR_64;
   def PseudoIndirectHazardBranch64 : PseudoIndirectBranchBase<JR_HB64,
                                                               GPR64Opnd>,
-                                     ISA_MIPS32R2_NOT_32R6_64R6;
+                                     ISA_MIPS32R2_NOT_32R6_64R6, PTR_64;
 }
 
 /// Multiply and Divide Instructions.

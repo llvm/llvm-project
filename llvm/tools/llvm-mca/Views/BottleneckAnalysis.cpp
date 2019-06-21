@@ -16,6 +16,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MCA/Support.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormattedStream.h"
 
 namespace llvm {
 namespace mca {
@@ -161,12 +162,219 @@ void DependencyGraph::dumpDependencyEdge(raw_ostream &OS,
     OS << " - MEMORY";
   } else {
     assert(DE.Type == DependencyEdge::DT_RESOURCE &&
-           "Unexpected unsupported dependency type!");
+           "Unsupported dependency type!");
     OS << " - RESOURCE MASK: " << DE.ResourceOrRegID;
   }
   OS << " - CYCLES: " << DE.Cost << '\n';
 }
+#endif // NDEBUG
 
+void DependencyGraph::initializeRootSet(
+    SmallVectorImpl<unsigned> &RootSet) const {
+  for (unsigned I = 0, E = Nodes.size(); I < E; ++I) {
+    const DGNode &N = Nodes[I];
+    if (N.NumPredecessors == 0 && !N.OutgoingEdges.empty())
+      RootSet.emplace_back(I);
+  }
+}
+
+void DependencyGraph::propagateThroughEdges(
+    SmallVectorImpl<unsigned> &RootSet) {
+  SmallVector<unsigned, 8> ToVisit;
+
+  // A critical sequence is computed as the longest path from a node of the
+  // RootSet to a leaf node (i.e. a node with no successors).  The RootSet is
+  // composed of nodes with at least one successor, and no predecessors.
+  //
+  // Each node of the graph starts with an initial default cost of zero.  The
+  // cost of a node is a measure of criticality: the higher the cost, the bigger
+  // is the performance impact.
+  //
+  // This algorithm is very similar to a (reverse) Dijkstra.  Every iteration of
+  // the inner loop selects (i.e. visits) a node N from a set of `unvisited
+  // nodes`, and then propagates the cost of N to all its neighbors.
+  //
+  // The `unvisited nodes` set initially contains all the nodes from the
+  // RootSet.  A node N is added to the `unvisited nodes` if all its
+  // predecessors have been visited already.
+  // 
+  // For simplicity, every node tracks the number of unvisited incoming edges in
+  // field `NumVisitedPredecessors`.  When the value of that field drops to
+  // zero, then the corresponding node is added to a `ToVisit` set.
+  //
+  // At the end of every iteration of the outer loop, set `ToVisit` becomes our
+  // new `unvisited nodes` set.
+  // 
+  // The algorithm terminates when the set of unvisited nodes (i.e. our RootSet)
+  // is empty. This algorithm works under the assumption that the graph is
+  // acyclic.
+  do {
+    for (unsigned IID : RootSet) {
+      const DGNode &N = Nodes[IID];
+      for (const DependencyEdge &DepEdge : N.OutgoingEdges) {
+        unsigned ToIID = DepEdge.ToIID;
+        DGNode &To = Nodes[ToIID];
+        uint64_t Cost = N.Cost + DepEdge.Dep.Cost;
+        // Check if this is the most expensive incoming edge seen so far.  In
+        // case, update the total cost of the destination node (ToIID), as well
+        // its field `CriticalPredecessor`.
+        if (Cost > To.Cost) {
+          To.CriticalPredecessor = DepEdge;
+          To.Cost = Cost;
+          To.Depth = N.Depth + 1;
+        }
+        To.NumVisitedPredecessors++;
+        if (To.NumVisitedPredecessors == To.NumPredecessors)
+          ToVisit.emplace_back(ToIID);
+      }
+    }
+
+    std::swap(RootSet, ToVisit);
+    ToVisit.clear();
+  } while (!RootSet.empty());
+}
+
+void DependencyGraph::getCriticalSequence(
+    SmallVectorImpl<const DependencyEdge *> &Seq) const {
+  // At this stage, nodes of the graph have been already visited, and costs have
+  // been propagated through the edges (see method `propagateThroughEdges()`).
+
+  // Identify the node N with the highest cost in the graph. By construction,
+  // that node is the last instruction of our critical sequence.
+  // Field N.Depth would tell us the total length of the sequence.
+  //
+  // To obtain the sequence of critical edges, we simply follow the chain of critical
+  // predecessors starting from node N (field DGNode::CriticalPredecessor).
+  const auto It = std::max_element(
+      Nodes.begin(), Nodes.end(),
+      [](const DGNode &Lhs, const DGNode &Rhs) { return Lhs.Cost < Rhs.Cost; });
+  unsigned IID = std::distance(Nodes.begin(), It);
+  Seq.resize(Nodes[IID].Depth);
+  for (unsigned I = Seq.size(), E = 0; I > E; --I) {
+    const DGNode &N = Nodes[IID];
+    Seq[I - 1] = &N.CriticalPredecessor;
+    IID = N.CriticalPredecessor.FromIID;
+  }
+}
+
+static void printInstruction(formatted_raw_ostream &FOS,
+                             const MCSubtargetInfo &STI, MCInstPrinter &MCIP,
+                             const MCInst &MCI,
+                             bool UseDifferentColor = false) {
+  std::string Instruction;
+  raw_string_ostream InstrStream(Instruction);
+
+  FOS.PadToColumn(14);
+
+  MCIP.printInst(&MCI, InstrStream, "", STI);
+  InstrStream.flush();
+
+  if (UseDifferentColor)
+    FOS.changeColor(raw_ostream::CYAN, true, false);
+  FOS << StringRef(Instruction).ltrim();
+  if (UseDifferentColor)
+    FOS.resetColor();
+}
+
+void BottleneckAnalysis::printCriticalSequence(raw_ostream &OS) const {
+  SmallVector<const DependencyEdge *, 16> Seq;
+  DG.getCriticalSequence(Seq);
+  if (Seq.empty())
+    return;
+
+  OS << "\nCritical sequence based on the simulation:\n\n";
+
+  const DependencyEdge &FirstEdge = *Seq[0];
+  unsigned FromIID = FirstEdge.FromIID % Source.size();
+  unsigned ToIID = FirstEdge.ToIID % Source.size();
+  bool IsLoopCarried = FromIID >= ToIID;
+
+  formatted_raw_ostream FOS(OS);
+  FOS.PadToColumn(14);
+  FOS << "Instruction";
+  FOS.PadToColumn(58);
+  FOS << "Dependency Information";
+
+  bool HasColors = FOS.has_colors();
+
+  unsigned CurrentIID = 0;
+  if (IsLoopCarried) {
+    FOS << "\n +----< " << FromIID << ".";
+    printInstruction(FOS, STI, MCIP, Source[FromIID], HasColors);
+    FOS << "\n |\n |    < loop carried > \n |";
+  } else {
+    while (CurrentIID < FromIID) {
+      FOS << "\n        " << CurrentIID << ".";
+      printInstruction(FOS, STI, MCIP, Source[CurrentIID]);
+      CurrentIID++;
+    }
+
+    FOS << "\n +----< " << CurrentIID << ".";
+    printInstruction(FOS, STI, MCIP, Source[CurrentIID], HasColors);
+    CurrentIID++;
+  }
+
+  for (const DependencyEdge *&DE : Seq) {
+    ToIID = DE->ToIID % Source.size();
+    unsigned LastIID = CurrentIID > ToIID ? Source.size() : ToIID;
+
+    while (CurrentIID < LastIID) {
+      FOS << "\n |      " << CurrentIID << ".";
+      printInstruction(FOS, STI, MCIP, Source[CurrentIID]);
+      CurrentIID++;
+    }
+
+    if (CurrentIID == ToIID) {
+      FOS << "\n +----> " << ToIID << ".";
+      printInstruction(FOS, STI, MCIP, Source[CurrentIID], HasColors);
+    } else {
+      FOS << "\n |\n |    < loop carried > \n |"
+          << "\n +----> " << ToIID << ".";
+      printInstruction(FOS, STI, MCIP, Source[ToIID], HasColors);
+    }
+    FOS.PadToColumn(58);
+
+    const DependencyEdge::Dependency &Dep = DE->Dep;
+    if (HasColors)
+      FOS.changeColor(raw_ostream::SAVEDCOLOR, true, false);
+
+    if (Dep.Type == DependencyEdge::DT_REGISTER) {
+      FOS << "## REGISTER dependency:  ";
+      if (HasColors)
+        FOS.changeColor(raw_ostream::MAGENTA, true, false);
+      MCIP.printRegName(FOS, Dep.ResourceOrRegID);
+    } else if (Dep.Type == DependencyEdge::DT_MEMORY) {
+      FOS << "## MEMORY dependency.";
+    } else {
+      assert(Dep.Type == DependencyEdge::DT_RESOURCE &&
+             "Unsupported dependency type!");
+      FOS << "## RESOURCE interference:  ";
+      if (HasColors)
+        FOS.changeColor(raw_ostream::MAGENTA, true, false);
+      FOS << Tracker.resolveResourceName(Dep.ResourceOrRegID);
+      if (HasColors) {
+        FOS.resetColor();
+        FOS.changeColor(raw_ostream::SAVEDCOLOR, true, false);
+      }
+      FOS << " [ probability: " << ((DE->Frequency * 100) / Iterations)
+          << "% ]";
+    }
+    if (HasColors)
+      FOS.resetColor();
+    ++CurrentIID;
+  }
+
+  while (CurrentIID < Source.size()) {
+    FOS << "\n        " << CurrentIID << ".";
+    printInstruction(FOS, STI, MCIP, Source[CurrentIID]);
+    CurrentIID++;
+  }
+
+  FOS << '\n';
+  FOS.flush();
+}
+
+#ifndef NDEBUG
 void DependencyGraph::dump(raw_ostream &OS, MCInstPrinter &MCIP) const {
   OS << "\nREG DEPS\n";
   for (const DGNode &Node : Nodes)
@@ -200,10 +408,11 @@ void DependencyGraph::addDependency(unsigned From, unsigned To,
 
   if (It != Vec.end()) {
     It->Dep.Cost += Dep.Cost;
+    It->Frequency++;
     return;
   }
 
-  DependencyEdge DE = {Dep, From, To};
+  DependencyEdge DE = {Dep, From, To, 1};
   Vec.emplace_back(DE);
   NodeTo.NumPredecessors++;
 }
@@ -211,7 +420,7 @@ void DependencyGraph::addDependency(unsigned From, unsigned To,
 BottleneckAnalysis::BottleneckAnalysis(const MCSubtargetInfo &sti,
                                        MCInstPrinter &Printer,
                                        ArrayRef<MCInst> S, unsigned NumIter)
-    : STI(sti), Tracker(STI.getSchedModel()), DG(S.size() * 3),
+    : STI(sti), MCIP(Printer), Tracker(STI.getSchedModel()), DG(S.size() * 3),
       Source(S), Iterations(NumIter), TotalCycles(0),
       PressureIncreasedBecauseOfResources(false),
       PressureIncreasedBecauseOfRegisterDependencies(false),
@@ -274,38 +483,38 @@ void BottleneckAnalysis::onEvent(const HWInstructionEvent &Event) {
   const Instruction &IS = *Event.IR.getInstruction();
   unsigned To = IID % Source.size();
 
-  unsigned Cycles = Tracker.getResourcePressureCycles(IID);
-  if (Cycles) {
-    uint64_t ResourceMask = IS.getCriticalResourceMask();
-    SmallVector<std::pair<unsigned, unsigned>, 4> Users;
-    while (ResourceMask) {
-      uint64_t Current = ResourceMask & (-ResourceMask);
-      Tracker.getResourceUsers(Current, Users);
-      for (const std::pair<unsigned, unsigned> &U : Users) {
-        unsigned Cost = std::min(U.second, Cycles);
-        addResourceDep(U.first % Source.size(), To, Current, Cost);
-      }
-      Users.clear();
-      ResourceMask ^= Current;
-    }
+  unsigned Cycles = 2 * Tracker.getResourcePressureCycles(IID);
+  uint64_t ResourceMask = IS.getCriticalResourceMask();
+  SmallVector<std::pair<unsigned, unsigned>, 4> Users;
+  while (ResourceMask) {
+    uint64_t Current = ResourceMask & (-ResourceMask);
+    Tracker.getResourceUsers(Current, Users);
+    for (const std::pair<unsigned, unsigned> &U : Users)
+      addResourceDep(U.first % Source.size(), To, Current, U.second + Cycles);
+    Users.clear();
+    ResourceMask ^= Current;
   }
 
-  Cycles = Tracker.getRegisterPressureCycles(IID);
-  if (Cycles) {
-    const CriticalDependency &RegDep = IS.getCriticalRegDep();
+  const CriticalDependency &RegDep = IS.getCriticalRegDep();
+  if (RegDep.Cycles) {
+    Cycles = RegDep.Cycles + 2 * Tracker.getRegisterPressureCycles(IID);
     unsigned From = RegDep.IID % Source.size();
     addRegisterDep(From, To, RegDep.RegID, Cycles);
   }
 
-  Cycles = Tracker.getMemoryPressureCycles(IID);
-  if (Cycles) {
-    const CriticalDependency &MemDep = IS.getCriticalMemDep();
+  const CriticalDependency &MemDep = IS.getCriticalMemDep();
+  if (MemDep.Cycles) {
+    Cycles = MemDep.Cycles + 2 * Tracker.getMemoryPressureCycles(IID);
     unsigned From = MemDep.IID % Source.size();
     addMemoryDep(From, To, Cycles);
   }
 
   Tracker.handleInstructionIssuedEvent(
       static_cast<const HWInstructionIssuedEvent &>(Event));
+
+  // Check if this is the last simulated instruction.
+  if (IID == ((Iterations * Source.size()) - 1))
+    DG.finalizeGraph();
 }
 
 void BottleneckAnalysis::onEvent(const HWPressureEvent &Event) {
@@ -356,7 +565,7 @@ void BottleneckAnalysis::onCycleEnd() {
 
 void BottleneckAnalysis::printBottleneckHints(raw_ostream &OS) const {
   if (!SeenStallCycles || !BPI.PressureIncreaseCycles) {
-    OS << "\nNo resource or data dependency bottlenecks discovered.\n";
+    OS << "\n\nNo resource or data dependency bottlenecks discovered.\n";
     return;
   }
 
@@ -370,7 +579,7 @@ void BottleneckAnalysis::printBottleneckHints(raw_ostream &OS) const {
   double MemDepPressurePerCycle =
       (double)BPI.MemoryDependencyCycles * 100 / TotalCycles;
 
-  OS << "\nCycles with backend pressure increase [ "
+  OS << "\n\nCycles with backend pressure increase [ "
      << format("%.2f", floor((PressurePerCycle * 100) + 0.5) / 100) << "% ]";
 
   OS << "\nThroughput Bottlenecks: "
@@ -399,7 +608,7 @@ void BottleneckAnalysis::printBottleneckHints(raw_ostream &OS) const {
      << "% ]";
   OS << "\n  - Memory Dependencies   [ "
      << format("%.2f", floor((MemDepPressurePerCycle * 100) + 0.5) / 100)
-     << "% ]\n\n";
+     << "% ]\n";
 }
 
 void BottleneckAnalysis::printView(raw_ostream &OS) const {
@@ -408,6 +617,7 @@ void BottleneckAnalysis::printView(raw_ostream &OS) const {
   printBottleneckHints(TempStream);
   TempStream.flush();
   OS << Buffer;
+  printCriticalSequence(OS);
 }
 
 } // namespace mca.

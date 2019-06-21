@@ -78,7 +78,7 @@ DynamicSymbols:
 # CASE4-NEXT: Offset: 0x180
 # CASE4-NEXT: Size: 2
 # CASE4-NEXT: Link: 0
-# CASE4-NEXT: Info: 0
+# CASE4-NEXT: Info: 1
 # CASE4-NEXT: AddressAlignment: 0
 # CASE4-NEXT: EntrySize: 24
 # CASE4-NEXT: SectionData (
@@ -110,7 +110,7 @@ Sections:
 # CASE5-NEXT: Offset: 0x180
 # CASE5-NEXT: Size: 5
 # CASE5-NEXT: Link: 0
-# CASE5-NEXT: Info: 0
+# CASE5-NEXT: Info: 1
 # CASE5-NEXT: AddressAlignment: 0
 # CASE5-NEXT: EntrySize: 24
 # CASE5-NEXT: SectionData (
@@ -144,7 +144,7 @@ Sections:
 # CASE6-NEXT: Offset: 0x180
 # CASE6-NEXT: Size: 4
 # CASE6-NEXT: Link: 0
-# CASE6-NEXT: Info: 0
+# CASE6-NEXT: Info: 1
 # CASE6-NEXT: AddressAlignment: 0
 # CASE6-NEXT: EntrySize: 24
 # CASE6-NEXT: SectionData (
@@ -178,7 +178,7 @@ Sections:
 # CASE7-NEXT:  Offset: 0x180
 # CASE7-NEXT:  Size: 2
 # CASE7-NEXT:  Link: 0
-# CASE7-NEXT:  Info: 0
+# CASE7-NEXT:  Info: 1
 # CASE7-NEXT:  AddressAlignment: 0
 # CASE7-NEXT:  EntrySize: 24
 # CASE7-NEXT:  SectionData (

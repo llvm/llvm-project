@@ -111,7 +111,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
       // integer types.
       if ((PT->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
            PT->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) &&
-          ST.getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS)
+          !ST.hasUsableDSOffset())
         continue;
 
       // FIXME: We can replace this with equivalent alias.scope/noalias

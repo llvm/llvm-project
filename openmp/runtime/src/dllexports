@@ -408,7 +408,7 @@ kmpc_set_disp_num_buffers                   267
         __kmpc_pause_resource               273
         __kmpc_task_reduction_modifier_init 274
         __kmpc_task_reduction_modifier_fini 275
-      # __kmpc_task_allow_completion_event  276
+        __kmpc_task_allow_completion_event  276
         __kmpc_taskred_init                 277
         __kmpc_taskred_modifier_init        278
     %endif
@@ -572,6 +572,7 @@ kmp_set_disp_num_buffers                    890
     omp_pause_resource                      756
     omp_pause_resource_all                  757
     omp_get_supported_active_levels         758
+    omp_fulfill_event                       759
 
     omp_null_allocator                     DATA
     omp_default_mem_alloc                  DATA

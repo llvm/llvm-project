@@ -146,10 +146,10 @@ define void @load_split(<8 x float>* %ld, <4 x float>* %st1, <4 x float>* %st2) 
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-AVX-NEXT:    vmovups (%edx), %xmm0
-; X86-AVX-NEXT:    vmovups 16(%edx), %xmm1
+; X86-AVX-NEXT:    vmovups (%edx), %ymm0
 ; X86-AVX-NEXT:    vmovups %xmm0, (%ecx)
-; X86-AVX-NEXT:    vmovups %xmm1, (%eax)
+; X86-AVX-NEXT:    vextractf128 $1, %ymm0, (%eax)
+; X86-AVX-NEXT:    vzeroupper
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: load_split:
@@ -162,10 +162,10 @@ define void @load_split(<8 x float>* %ld, <4 x float>* %st1, <4 x float>* %st2) 
 ;
 ; X64-AVX-LABEL: load_split:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovups (%rdi), %xmm0
-; X64-AVX-NEXT:    vmovups 16(%rdi), %xmm1
+; X64-AVX-NEXT:    vmovups (%rdi), %ymm0
 ; X64-AVX-NEXT:    vmovups %xmm0, (%rsi)
-; X64-AVX-NEXT:    vmovups %xmm1, (%rdx)
+; X64-AVX-NEXT:    vextractf128 $1, %ymm0, (%rdx)
+; X64-AVX-NEXT:    vzeroupper
 ; X64-AVX-NEXT:    retq
   %t256 = load <8 x float>, <8 x float>* %ld, align 1
   %b128 = shufflevector <8 x float> %t256, <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -178,39 +178,35 @@ define void @load_split(<8 x float>* %ld, <4 x float>* %st1, <4 x float>* %st2) 
 define void @load_split_more(float* %src, i32* %idx, float* %dst) nounwind {
 ; X86-SSE-LABEL: load_split_more:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE-NEXT:    movl (%edx), %esi
-; X86-SSE-NEXT:    movups (%ecx), %xmm0
-; X86-SSE-NEXT:    movups 16(%ecx), %xmm1
-; X86-SSE-NEXT:    movups %xmm0, (%eax,%esi,4)
-; X86-SSE-NEXT:    movl 4(%edx), %ecx
+; X86-SSE-NEXT:    movups (%edx), %xmm0
+; X86-SSE-NEXT:    movups 16(%edx), %xmm1
+; X86-SSE-NEXT:    movl (%ecx), %edx
+; X86-SSE-NEXT:    movups %xmm0, (%eax,%edx,4)
+; X86-SSE-NEXT:    movl 4(%ecx), %ecx
 ; X86-SSE-NEXT:    movups %xmm1, (%eax,%ecx,4)
-; X86-SSE-NEXT:    popl %esi
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX-LABEL: load_split_more:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    pushl %esi
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-AVX-NEXT:    movl (%edx), %esi
-; X86-AVX-NEXT:    vmovups (%ecx), %xmm0
-; X86-AVX-NEXT:    vmovups 16(%ecx), %xmm1
-; X86-AVX-NEXT:    vmovups %xmm0, (%eax,%esi,4)
-; X86-AVX-NEXT:    movl 4(%edx), %ecx
-; X86-AVX-NEXT:    vmovups %xmm1, (%eax,%ecx,4)
-; X86-AVX-NEXT:    popl %esi
+; X86-AVX-NEXT:    vmovups (%edx), %ymm0
+; X86-AVX-NEXT:    movl (%ecx), %edx
+; X86-AVX-NEXT:    vmovups %xmm0, (%eax,%edx,4)
+; X86-AVX-NEXT:    movl 4(%ecx), %ecx
+; X86-AVX-NEXT:    vextractf128 $1, %ymm0, (%eax,%ecx,4)
+; X86-AVX-NEXT:    vzeroupper
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: load_split_more:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movslq (%rsi), %rax
 ; X64-SSE-NEXT:    movups (%rdi), %xmm0
 ; X64-SSE-NEXT:    movups 16(%rdi), %xmm1
+; X64-SSE-NEXT:    movslq (%rsi), %rax
 ; X64-SSE-NEXT:    movups %xmm0, (%rdx,%rax,4)
 ; X64-SSE-NEXT:    movslq 4(%rsi), %rax
 ; X64-SSE-NEXT:    movups %xmm1, (%rdx,%rax,4)
@@ -218,12 +214,12 @@ define void @load_split_more(float* %src, i32* %idx, float* %dst) nounwind {
 ;
 ; X64-AVX-LABEL: load_split_more:
 ; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vmovups (%rdi), %ymm0
 ; X64-AVX-NEXT:    movslq (%rsi), %rax
-; X64-AVX-NEXT:    vmovups (%rdi), %xmm0
-; X64-AVX-NEXT:    vmovups 16(%rdi), %xmm1
 ; X64-AVX-NEXT:    vmovups %xmm0, (%rdx,%rax,4)
 ; X64-AVX-NEXT:    movslq 4(%rsi), %rax
-; X64-AVX-NEXT:    vmovups %xmm1, (%rdx,%rax,4)
+; X64-AVX-NEXT:    vextractf128 $1, %ymm0, (%rdx,%rax,4)
+; X64-AVX-NEXT:    vzeroupper
 ; X64-AVX-NEXT:    retq
   %v.i = bitcast float* %src to <8 x float>*
   %tmp = load <8 x float>, <8 x float>* %v.i, align 1

@@ -1218,7 +1218,7 @@ vzeroupper
 # CHECK-NEXT:  1      7     1.50    *                   vinsertps	$1, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      5     1.50    *                   vlddqu	(%rax), %xmm2
 # CHECK-NEXT:  2      5     1.50    *                   vlddqu	(%rax), %ymm2
-# CHECK-NEXT:  1      5     0.50    *      *      U     vldmxcsr	(%rax)
+# CHECK-NEXT:  1      5     0.50    *             U     vldmxcsr	(%rax)
 # CHECK-NEXT:  1      1     1.50    *      *      U     vmaskmovdqu	%xmm0, %xmm1
 # CHECK-NEXT:  1      6     2.00    *                   vmaskmovpd	(%rax), %xmm0, %xmm2
 # CHECK-NEXT:  2      6     2.00    *                   vmaskmovpd	(%rax), %ymm0, %ymm2
@@ -1670,7 +1670,7 @@ vzeroupper
 # CHECK-NEXT:  1      14    4.50    *                   vsqrtsd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      9     4.50                        vsqrtss	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      14    4.50    *                   vsqrtss	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  2      1     18.00   *      *      U     vstmxcsr	(%rax)
+# CHECK-NEXT:  2      1     18.00          *      U     vstmxcsr	(%rax)
 # CHECK-NEXT:  1      5     1.00                        vsubpd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      10    1.50    *                   vsubpd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  2      5     1.00                        vsubpd	%ymm0, %ymm1, %ymm2

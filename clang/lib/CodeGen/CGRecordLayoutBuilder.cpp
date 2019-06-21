@@ -347,18 +347,21 @@ void CGRecordLowering::lowerUnion() {
 void CGRecordLowering::accumulateFields() {
   for (RecordDecl::field_iterator Field = D->field_begin(),
                                   FieldEnd = D->field_end();
-    Field != FieldEnd;)
+    Field != FieldEnd;) {
     if (Field->isBitField()) {
       RecordDecl::field_iterator Start = Field;
       // Iterate to gather the list of bitfields.
       for (++Field; Field != FieldEnd && Field->isBitField(); ++Field);
       accumulateBitFields(Start, Field);
-    } else {
+    } else if (!Field->isZeroSize(Context)) {
       Members.push_back(MemberInfo(
           bitsToCharUnits(getFieldBitOffset(*Field)), MemberInfo::Field,
           getStorageType(*Field), *Field));
       ++Field;
+    } else {
+      ++Field;
     }
+  }
 }
 
 void
@@ -590,10 +593,17 @@ void CGRecordLowering::clipTailPadding() {
     if (!Member->Data && Member->Kind != MemberInfo::Scissor)
       continue;
     if (Member->Offset < Tail) {
-      assert(Prior->Kind == MemberInfo::Field && !Prior->FD &&
+      assert(Prior->Kind == MemberInfo::Field &&
              "Only storage fields have tail padding!");
-      Prior->Data = getByteArrayType(bitsToCharUnits(llvm::alignTo(
-          cast<llvm::IntegerType>(Prior->Data)->getIntegerBitWidth(), 8)));
+      if (!Prior->FD || Prior->FD->isBitField())
+        Prior->Data = getByteArrayType(bitsToCharUnits(llvm::alignTo(
+            cast<llvm::IntegerType>(Prior->Data)->getIntegerBitWidth(), 8)));
+      else {
+        assert(Prior->FD->hasAttr<NoUniqueAddressAttr>() &&
+               "should not have reused this field's tail padding");
+        Prior->Data = getByteArrayType(
+            Context.getTypeInfoDataSizeInChars(Prior->FD->getType()).first);
+      }
     }
     if (Member->Data)
       Prior = Member;
@@ -797,6 +807,10 @@ CGRecordLayout *CodeGenTypes::ComputeRecordLayout(const RecordDecl *D,
   for (unsigned i = 0, e = AST_RL.getFieldCount(); i != e; ++i, ++it) {
     const FieldDecl *FD = *it;
 
+    // Ignore zero-sized fields.
+    if (FD->isZeroSize(getContext()))
+      continue;
+
     // For non-bit-fields, just check that the LLVM struct offset matches the
     // AST offset.
     if (!FD->isBitField()) {
@@ -808,10 +822,6 @@ CGRecordLayout *CodeGenTypes::ComputeRecordLayout(const RecordDecl *D,
 
     // Ignore unnamed bit-fields.
     if (!FD->getDeclName())
-      continue;
-
-    // Don't inspect zero-length bitfields.
-    if (FD->isZeroLengthBitField(getContext()))
       continue;
 
     const CGBitFieldInfo &Info = RL->getBitFieldInfo(FD);

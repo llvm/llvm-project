@@ -67,6 +67,57 @@ class R600InstrInfo;
 
 namespace {
 
+static bool isNullConstantOrUndef(SDValue V) {
+  if (V.isUndef())
+    return true;
+
+  ConstantSDNode *Const = dyn_cast<ConstantSDNode>(V);
+  return Const != nullptr && Const->isNullValue();
+}
+
+static bool getConstantValue(SDValue N, uint32_t &Out) {
+  // This is only used for packed vectors, where ussing 0 for undef should
+  // always be good.
+  if (N.isUndef()) {
+    Out = 0;
+    return true;
+  }
+
+  if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(N)) {
+    Out = C->getAPIntValue().getSExtValue();
+    return true;
+  }
+
+  if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N)) {
+    Out = C->getValueAPF().bitcastToAPInt().getSExtValue();
+    return true;
+  }
+
+  return false;
+}
+
+// TODO: Handle undef as zero
+static SDNode *packConstantV2I16(const SDNode *N, SelectionDAG &DAG,
+                                 bool Negate = false) {
+  assert(N->getOpcode() == ISD::BUILD_VECTOR && N->getNumOperands() == 2);
+  uint32_t LHSVal, RHSVal;
+  if (getConstantValue(N->getOperand(0), LHSVal) &&
+      getConstantValue(N->getOperand(1), RHSVal)) {
+    SDLoc SL(N);
+    uint32_t K = Negate ?
+      (-LHSVal & 0xffff) | (-RHSVal << 16) :
+      (LHSVal & 0xffff) | (RHSVal << 16);
+    return DAG.getMachineNode(AMDGPU::S_MOV_B32, SL, N->getValueType(0),
+                              DAG.getTargetConstant(K, SL, MVT::i32));
+  }
+
+  return nullptr;
+}
+
+static SDNode *packNegConstantV2I16(const SDNode *N, SelectionDAG &DAG) {
+  return packConstantV2I16(N, DAG, true);
+}
+
 /// AMDGPU specific code to select AMDGPU machine instructions for
 /// SelectionDAG operations.
 class AMDGPUDAGToDAGISel : public SelectionDAGISel {
@@ -104,7 +155,11 @@ protected:
 private:
   std::pair<SDValue, SDValue> foldFrameIndex(SDValue N) const;
   bool isNoNanSrc(SDValue N) const;
-  bool isInlineImmediate(const SDNode *N) const;
+  bool isInlineImmediate(const SDNode *N, bool Negated = false) const;
+  bool isNegInlineImmediate(const SDNode *N) const {
+    return isInlineImmediate(N, true);
+  }
+
   bool isVGPRImm(const SDNode *N) const;
   bool isUniformLoad(const SDNode *N) const;
   bool isUniformBr(const SDNode *N) const;
@@ -437,14 +492,26 @@ bool AMDGPUDAGToDAGISel::isNoNanSrc(SDValue N) const {
   return CurDAG->isKnownNeverNaN(N);
 }
 
-bool AMDGPUDAGToDAGISel::isInlineImmediate(const SDNode *N) const {
+bool AMDGPUDAGToDAGISel::isInlineImmediate(const SDNode *N,
+                                           bool Negated) const {
+  if (N->isUndef())
+    return true;
+
   const SIInstrInfo *TII = Subtarget->getInstrInfo();
+  if (Negated) {
+    if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(N))
+      return TII->isInlineConstant(-C->getAPIntValue());
 
-  if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(N))
-    return TII->isInlineConstant(C->getAPIntValue());
+    if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N))
+      return TII->isInlineConstant(-C->getValueAPF().bitcastToAPInt());
 
-  if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N))
-    return TII->isInlineConstant(C->getValueAPF().bitcastToAPInt());
+  } else {
+    if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(N))
+      return TII->isInlineConstant(C->getAPIntValue());
+
+    if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N))
+      return TII->isInlineConstant(C->getValueAPF().bitcastToAPInt());
+  }
 
   return false;
 }
@@ -563,20 +630,6 @@ static unsigned selectSGPRVectorRegClassID(unsigned NumVectorElts) {
   llvm_unreachable("invalid vector size");
 }
 
-static bool getConstantValue(SDValue N, uint32_t &Out) {
-  if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(N)) {
-    Out = C->getAPIntValue().getZExtValue();
-    return true;
-  }
-
-  if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N)) {
-    Out = C->getValueAPF().bitcastToAPInt().getZExtValue();
-    return true;
-  }
-
-  return false;
-}
-
 void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   EVT VT = N->getValueType(0);
   unsigned NumVectorElts = VT.getVectorNumElements();
@@ -685,12 +738,8 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     unsigned NumVectorElts = VT.getVectorNumElements();
     if (VT.getScalarSizeInBits() == 16) {
       if (Opc == ISD::BUILD_VECTOR && NumVectorElts == 2) {
-        uint32_t LHSVal, RHSVal;
-        if (getConstantValue(N->getOperand(0), LHSVal) &&
-            getConstantValue(N->getOperand(1), RHSVal)) {
-          uint32_t K = LHSVal | (RHSVal << 16);
-          CurDAG->SelectNodeTo(N, AMDGPU::S_MOV_B32, VT,
-                               CurDAG->getTargetConstant(K, SDLoc(N), MVT::i32));
+        if (SDNode *Packed = packConstantV2I16(N, *CurDAG)) {
+          ReplaceNode(N, Packed);
           return;
         }
       }
@@ -1067,7 +1116,7 @@ bool AMDGPUDAGToDAGISel::isDSOffsetLegal(SDValue Base, unsigned Offset,
       (OffsetBits == 8 && !isUInt<8>(Offset)))
     return false;
 
-  if (Subtarget->getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS ||
+  if (Subtarget->hasUsableDSOffset() ||
       Subtarget->unsafeDSOffsetFoldingEnabled())
     return true;
 
@@ -1330,7 +1379,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFAddr64(SDValue Addr, SDValue &SRsrc,
   SDValue Ptr, Offen, Idxen, Addr64;
 
   // addr64 bit was removed for volcanic islands.
-  if (Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+  if (!Subtarget->hasAddr64())
     return false;
 
   if (!SelectMUBUF(Addr, Ptr, VAddr, SOffset, Offset, Offen, Idxen, Addr64,
@@ -2040,12 +2089,40 @@ void AMDGPUDAGToDAGISel::SelectDSAppendConsume(SDNode *N, unsigned IntrID) {
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {MMO});
 }
 
+static unsigned gwsIntrinToOpcode(unsigned IntrID) {
+  switch (IntrID) {
+  case Intrinsic::amdgcn_ds_gws_init:
+    return AMDGPU::DS_GWS_INIT;
+  case Intrinsic::amdgcn_ds_gws_barrier:
+    return AMDGPU::DS_GWS_BARRIER;
+  case Intrinsic::amdgcn_ds_gws_sema_v:
+    return AMDGPU::DS_GWS_SEMA_V;
+  case Intrinsic::amdgcn_ds_gws_sema_br:
+    return AMDGPU::DS_GWS_SEMA_BR;
+  case Intrinsic::amdgcn_ds_gws_sema_p:
+    return AMDGPU::DS_GWS_SEMA_P;
+  case Intrinsic::amdgcn_ds_gws_sema_release_all:
+    return AMDGPU::DS_GWS_SEMA_RELEASE_ALL;
+  default:
+    llvm_unreachable("not a gws intrinsic");
+  }
+}
+
 void AMDGPUDAGToDAGISel::SelectDS_GWS(SDNode *N, unsigned IntrID) {
+  if (IntrID == Intrinsic::amdgcn_ds_gws_sema_release_all &&
+      !Subtarget->hasGWSSemaReleaseAll()) {
+    // Let this error.
+    SelectCode(N);
+    return;
+  }
+
+  // Chain, intrinsic ID, vsrc, offset
+  const bool HasVSrc = N->getNumOperands() == 4;
+  assert(HasVSrc || N->getNumOperands() == 3);
+
   SDLoc SL(N);
-  SDValue VSrc0 = N->getOperand(2);
-  SDValue BaseOffset = N->getOperand(3);
+  SDValue BaseOffset = N->getOperand(HasVSrc ? 3 : 2);
   int ImmOffset = 0;
-  SDNode *CopyToM0;
   MemIntrinsicSDNode *M = cast<MemIntrinsicSDNode>(N);
   MachineMemOperand *MMO = M->getMemOperand();
 
@@ -2058,7 +2135,7 @@ void AMDGPUDAGToDAGISel::SelectDS_GWS(SDNode *N, unsigned IntrID) {
   if (ConstantSDNode *ConstOffset = dyn_cast<ConstantSDNode>(BaseOffset)) {
     // If we have a constant offset, try to use the default value for m0 as a
     // base to possibly avoid setting it up.
-    CopyToM0 = glueCopyToM0(N, CurDAG->getTargetConstant(-1, SL, MVT::i32));
+    glueCopyToM0(N, CurDAG->getTargetConstant(-1, SL, MVT::i32));
     ImmOffset = ConstOffset->getZExtValue() + 1;
   } else {
     if (CurDAG->isBaseWithConstantOffset(BaseOffset)) {
@@ -2077,31 +2154,40 @@ void AMDGPUDAGToDAGISel::SelectDS_GWS(SDNode *N, unsigned IntrID) {
       = CurDAG->getMachineNode(AMDGPU::S_LSHL_B32, SL, MVT::i32,
                                SDValue(SGPROffset, 0),
                                CurDAG->getTargetConstant(16, SL, MVT::i32));
-    CopyToM0 = glueCopyToM0(N, SDValue(M0Base, 0));
+    glueCopyToM0(N, SDValue(M0Base, 0));
   }
 
-  // The manual doesn't mention this, but it seems only v0 works.
-  SDValue V0 = CurDAG->getRegister(AMDGPU::VGPR0, MVT::i32);
+  SDValue V0;
+  SDValue Chain = N->getOperand(0);
+  SDValue Glue;
+  if (HasVSrc) {
+    SDValue VSrc0 = N->getOperand(2);
 
-  SDValue CopyToV0 = CurDAG->getCopyToReg(
-    SDValue(CopyToM0, 0), SL, V0, VSrc0,
-    N->getOperand(N->getNumOperands() - 1));
+    // The manual doesn't mention this, but it seems only v0 works.
+    V0 = CurDAG->getRegister(AMDGPU::VGPR0, MVT::i32);
+
+    SDValue CopyToV0 = CurDAG->getCopyToReg(
+      N->getOperand(0), SL, V0, VSrc0,
+      N->getOperand(N->getNumOperands() - 1));
+    Chain = CopyToV0;
+    Glue = CopyToV0.getValue(1);
+  }
 
   SDValue OffsetField = CurDAG->getTargetConstant(ImmOffset, SL, MVT::i32);
 
   // TODO: Can this just be removed from the instruction?
   SDValue GDS = CurDAG->getTargetConstant(1, SL, MVT::i1);
 
-  unsigned Opc = IntrID == Intrinsic::amdgcn_ds_gws_init ?
-    AMDGPU::DS_GWS_INIT : AMDGPU::DS_GWS_BARRIER;
+  const unsigned Opc = gwsIntrinToOpcode(IntrID);
+  SmallVector<SDValue, 5> Ops;
+  if (HasVSrc)
+    Ops.push_back(V0);
+  Ops.push_back(OffsetField);
+  Ops.push_back(GDS);
+  Ops.push_back(Chain);
 
-  SDValue Ops[] = {
-    V0,
-    OffsetField,
-    GDS,
-    CopyToV0, // Chain
-    CopyToV0.getValue(1) // Glue
-  };
+  if (HasVSrc)
+    Ops.push_back(Glue);
 
   SDNode *Selected = CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {MMO});
@@ -2127,6 +2213,10 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {
   switch (IntrID) {
   case Intrinsic::amdgcn_ds_gws_init:
   case Intrinsic::amdgcn_ds_gws_barrier:
+  case Intrinsic::amdgcn_ds_gws_sema_v:
+  case Intrinsic::amdgcn_ds_gws_sema_br:
+  case Intrinsic::amdgcn_ds_gws_sema_p:
+  case Intrinsic::amdgcn_ds_gws_sema_release_all:
     SelectDS_GWS(N, IntrID);
     return;
   default:
@@ -2383,9 +2473,8 @@ SDValue AMDGPUDAGToDAGISel::getHi16Elt(SDValue In) const {
 }
 
 bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
-  if (Subtarget->getGeneration() < AMDGPUSubtarget::SOUTHERN_ISLANDS) {
-    return false;
-  }
+  assert(CurDAG->getTarget().getTargetTriple().getArch() == Triple::amdgcn);
+
   const SIRegisterInfo *SIRI =
     static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
   const SIInstrInfo * SII =

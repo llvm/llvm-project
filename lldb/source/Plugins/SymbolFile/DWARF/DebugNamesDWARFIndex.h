@@ -34,7 +34,7 @@ public:
   void GetTypes(ConstString name, DIEArray &offsets) override;
   void GetTypes(const DWARFDeclContext &context, DIEArray &offsets) override;
   void GetNamespaces(ConstString name, DIEArray &offsets) override;
-  void GetFunctions(ConstString name, DWARFDebugInfo &info,
+  void GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
                     const CompilerDeclContext &parent_decl_ctx,
                     uint32_t name_type_mask,
                     std::vector<DWARFDIE> &dies) override;
@@ -66,7 +66,7 @@ private:
   std::unique_ptr<DebugNames> m_debug_names_up;
   ManualDWARFIndex m_fallback;
 
-  DIERef ToDIERef(const DebugNames::Entry &entry);
+  llvm::Optional<DIERef> ToDIERef(const DebugNames::Entry &entry);
   void Append(const DebugNames::Entry &entry, DIEArray &offsets);
 
   static void MaybeLogLookupError(llvm::Error error,

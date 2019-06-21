@@ -592,12 +592,12 @@ The syntax of a numeric substitution is ``[[#<NUMVAR><op><offset>]]`` where:
 
 * ``<NUMVAR>`` is the name of a defined numeric variable.
 
-* ``<op>`` is an optional numeric operation to perform on the value of
-  ``<NUMVAR>``. Currently supported numeric operations are ``+`` and ``-``.
+* ``<op>`` is an optional operation to perform on the value of ``<NUMVAR>``.
+  Currently supported operations are ``+`` and ``-``.
 
 * ``<offset>`` is the immediate value that constitutes the second operand of
-  the numeric operation <op>. It must be present if ``<op>`` is present,
-  absent otherwise.
+  the operation ``<op>``. It must be present if ``<op>`` is present, absent
+  otherwise.
 
 Spaces are accepted before, after and between any of these elements.
 
@@ -627,8 +627,8 @@ due to ``7`` being unequal to ``5 + 1``.
 The ``--enable-var-scope`` option has the same effect on numeric variables as
 on string variables.
 
-Important note: In its current implementation, a numeric expression cannot use
-a numeric variable defined on the same line.
+Important note: In its current implementation, an expression cannot use a
+numeric variable defined on the same line.
 
 FileCheck Pseudo Numeric Variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -639,9 +639,9 @@ fragility of the match file structure, as "``CHECK:``" lines contain absolute
 line numbers in the same file, which have to be updated whenever line numbers
 change due to text addition or deletion.
 
-To support this case, FileCheck numeric expressions understand the ``@LINE``
-pseudo numeric variable which evaluates to the line number of the CHECK pattern
-where it is found.
+To support this case, FileCheck expressions understand the ``@LINE`` pseudo
+numeric variable which evaluates to the line number of the CHECK pattern where
+it is found.
 
 This way match patterns can be put near the relevant test lines and include
 relative line number references, for example:

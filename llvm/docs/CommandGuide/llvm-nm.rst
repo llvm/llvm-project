@@ -136,6 +136,10 @@ OPTIONS
  Specify the radix of the symbol address(es). Values accepted d(decimal),
  x(hexadecimal) and o(octal).
 
+.. option:: @<FILE>
+
+ Read command-line options from response file `<FILE>`.
+
 BUGS
 ----
 

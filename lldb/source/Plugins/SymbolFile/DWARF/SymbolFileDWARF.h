@@ -62,7 +62,6 @@ public:
   friend class SymbolFileDWARFDebugMap;
   friend class SymbolFileDWARFDwo;
   friend class DebugMapModule;
-  friend struct DIERef;
   friend class DWARFCompileUnit;
   friend class DWARFDIE;
   friend class DWARFASTParserClang;
@@ -272,10 +271,11 @@ public:
     return GetUID(die.GetDIERef());
   }
 
-  lldb::user_id_t GetUID(const DIERef &ref) {
-    return GetID() | ref.die_offset |
-           (lldb::user_id_t(ref.section == DIERef::Section::DebugTypes) << 63);
+  lldb::user_id_t GetUID(const llvm::Optional<DIERef> &ref) {
+    return ref ? GetUID(*ref) : LLDB_INVALID_UID;
   }
+
+  lldb::user_id_t GetUID(DIERef ref);
 
   virtual std::unique_ptr<SymbolFileDWARFDwo>
   GetDwoSymbolFileForCompileUnit(DWARFUnit &dwarf_cu,
@@ -285,6 +285,8 @@ public:
   // for the instances of the subclass SymbolFileDWARFDwo
   // the method returns a pointer to the base compile unit.
   virtual DWARFCompileUnit *GetBaseCompileUnit() { return nullptr; }
+
+  virtual llvm::Optional<uint32_t> GetDwoNum() { return llvm::None; }
 
   static bool
   DIEInDeclContext(const lldb_private::CompilerDeclContext *parent_decl_ctx,
@@ -437,10 +439,10 @@ protected:
   llvm::Optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
 
   struct DecodedUID {
-    SymbolFileDWARF *dwarf;
+    SymbolFileDWARF &dwarf;
     DIERef ref;
   };
-  DecodedUID DecodeUID(lldb::user_id_t uid);
+  llvm::Optional<DecodedUID> DecodeUID(lldb::user_id_t uid);
 
   SymbolFileDWARFDwp *GetDwpSymbolFile();
 

@@ -17,6 +17,8 @@ RUN: llvm-dwarfdump -gdb-index %p/Inputs/dwarfdump-gdbindex-v7.elf-x86-64 | File
 ; CHECK-NEXT:   0: Offset = 0x0, Length = 0x34
 ; CHECK-NEXT:   1: Offset = 0x34, Length = 0x34
 
+; CHECK:      Types CU list offset = 0x38, has 0 entries:
+
 ; CHECK:      Address area offset = 0x38, has 2 entries:
 ; CHECK-NEXT:   Low/High address = [0x4000e8, 0x4000f3) (Size: 0xb), CU id = 0
 ; CHECK-NEXT:   Low/High address = [0x4000f3, 0x4000fe) (Size: 0xb), CU id = 1
